@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Load Data From Production</title>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <h1>Load Data From Production</h1>
+  <h2>Load by data path</h2>
+  <p>Use this form to load a given master/system/test/graph/trace and all
+  associated alerts from prod onto a dev server.</p>
+  <form method="POST">
+    Test path:
+    <input name="test_path" type="text" size=200
+           value="ChromiumPerf/linux-perf/kraken/Total"><br>
+    Number of points:
+    <input name="num_points" type="number" min="5" max="500" value="300"><br>
+    End revision (leave blank for latest):
+    <input name="end_rev" type="number"><br>
+    <input type="submit">
+  </form>
+  <br />
+  <h2>Load recent alerts for a sheriff</h2>
+  <form method="POST">
+    Sheriff: <input name="sheriff"
+                    type="text"
+                    size=50
+                    value="Chromium Perf Sheriff"><br>
+    Number of alerts: <input name="num_alerts"
+                             type="number"
+                             min="1"
+                             max="30"
+                             value="10"></input><br>
+    Number of points: <input name="num_points"
+                             type="number"
+                             min="1"
+                             max="500"
+                             value="100"></input><br>
+    <input type="submit" value="Load alerts"></input>
+  </form>
+  <br />
+  <h2>Load from raw json</h2>
+  <p>This can be used if the any of above methods fail. The error page
+    contains an URL which can be entered in the location bar. Save the
+    result to disk and upload it using this form.</p>
+  <p>You can also manually construct the URL. The formats are:
+    <ul>
+      <li>
+        <code>HOST/dump_graph_json?test_path= <b>TEST_PATH</b>
+          &num_points= <b>NUM_POINTS</b> &end_rev= <b>END_REVISION</b></code>
+      </li>
+      <li>
+        <code>HOST/dump_graph_json?sheriff= <b>SHERIFF%20NAME</b>
+          &num_alerts= <b>NUM_ALERTS</b> &num_points= <b>NUM_POINTS</b></code>
+      </li>
+    </ul>
+  </p>
+  <form method="POST" enctype="multipart/form-data" >
+    Raw json data file:
+    <input type="file" name="raw_json">
+    <input type="submit">
+  </form>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<map id="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRCore/pfx" name="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRCore/pfx">
+<area shape="rect" id="node1" href="dir_5b93a470bc2b721272153d1755944db9.html" title="pfx" alt="" coords="91,52,163,100"/>
+<area shape="rect" id="node2" href="dir_0915e692cfbbbcec09b4fada39107977.html" title="strings" alt="" coords="5,244,77,292"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000007_000009.html" title="1" alt="" coords="30,217,40,231"/>
+<area shape="rect" id="node3" href="dir_a7bd38b94198de746abfb2189f144116.html" title="stream" alt="" coords="43,148,115,196"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000007_000008.html" title="1" alt="" coords="102,128,111,142"/>
+<area shape="rect" id="node4" href="dir_de39db45e7a1186ec0ba176b27c01a3b.html" title="types" alt="" coords="139,148,211,196"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000007_000012.html" title="1" alt="" coords="157,120,167,135"/>
+<area shape="rect" id="node5" href="dir_e23366fd95d6dda0b3182468dfb9aad1.html" title="texture" alt="" coords="235,148,307,196"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000007_000010.html" title="1" alt="" coords="219,123,229,138"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000008_000009.html" title="1" alt="" coords="61,222,70,237"/>
+<area shape="rect" id="clust1" href="dir_7bacd90915c3ae4dddac2dfb275bbe0d.html" title="PVRCore" alt="" coords="80,16,173,111"/>
+</map>

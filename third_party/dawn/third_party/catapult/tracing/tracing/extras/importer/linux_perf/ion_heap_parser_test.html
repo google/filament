@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('ionHeapRE', function() {
+    const re = tr.e.importer.linux_perf._IonHeapParserTestExports.ionHeapRE;
+    let x = re.exec('ion_heap_shrink: heap_name=system, len=20480, ' +
+        'total_allocated=181116928');
+    assert.isNotNull(x);
+    assert.strictEqual(x[1], 'system');
+    assert.strictEqual(x[2], '20480');
+    assert.strictEqual(x[3], '181116928');
+
+    x = re.exec('ion_heap_grow: heap_name=system, len=17526784, ' +
+        'total_allocated=181096448');
+    assert.isNotNull(x);
+    assert.strictEqual(x[1], 'system');
+    assert.strictEqual(x[2], '17526784');
+    assert.strictEqual(x[3], '181096448');
+  });
+});
+</script>
+

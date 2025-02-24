@@ -1,0 +1,12 @@
+boto v2.41.0
+============
+
+:date: 2016/06/27
+
+Update documentation and endpoints file.
+
+Changes
+-------
+* Update endpoints.json (:issue:`3564`, :sha:`5e786b4`)
+* Remove the broken link to PDF's (:issue:`3562`, :sha:`46ffb0c`)
+

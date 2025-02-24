@@ -1,0 +1,417 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Build integration for glmark2.
+
+import("../../gni/angle.gni")
+
+_glmark2_glad_common_sources = [
+  "src/src/glad/include/glad/egl.h",
+  "src/src/glad/include/glad/wgl.h",
+  "src/src/glad/src/egl.c",
+]
+
+if (is_win) {
+  _glmark2_glad_common_sources += [ "src/src/glad/src/wgl.c" ]
+}
+
+config("glmark2_glad_config") {
+  include_dirs = [ "src/src/glad/include" ]
+}
+
+source_set("glmark2_glad_gles") {
+  sources = _glmark2_glad_common_sources + [
+              "src/src/glad/include/glad/gles2.h",
+              "src/src/glad/src/gles2.c",
+            ]
+  public_configs = [ ":glmark2_glad_config" ]
+}
+
+source_set("glmark2_glad_gl") {
+  sources = _glmark2_glad_common_sources + [
+              "src/src/glad/include/glad/gl.h",
+              "src/src/glad/src/gl.c",
+            ]
+  public_configs = [ ":glmark2_glad_config" ]
+}
+
+glmark_data_path = "${angle_root}/third_party/glmark2/src/data"
+raw_glmark_data_path = rebase_path(glmark_data_path, root_build_dir)
+
+config("glmark2_common_config") {
+  defines = [ "GLMARK_DATA_PATH=\"${raw_glmark_data_path}\"" ]
+  include_dirs = [ "src/src" ]
+  cflags = []
+
+  if (is_clang) {
+    cflags += [ "-Wno-shadow" ]
+  }
+
+  if (is_win) {
+    include_dirs += [ "src/src/include" ]
+
+    # M_PI is nonstandard.
+    defines += [ "_USE_MATH_DEFINES" ]
+
+    if (!is_clang) {
+      cflags += [
+        # MSVC warns about the copyright character being illegal.
+        "/wd4828",
+
+        # A warning generated in scene-effect-2d in vec2::calc_offset
+        "/wd4146",
+
+        # Needs to be explicitly disabled after http://crrev.com/c/3189512
+        "/wd4312",
+      ]
+    }
+  }
+}
+
+config("glmark2_gles_config") {
+  defines = [ "GLMARK2_USE_GLESv2" ]
+}
+
+config("glmark2_gl_config") {
+  defines = [ "GLMARK2_USE_GL" ]
+}
+
+group("glmark2_gles") {
+  public_configs = [
+    ":glmark2_common_config",
+    ":glmark2_gles_config",
+  ]
+  public_deps = [ ":glmark2_glad_gles" ]
+}
+
+group("glmark2_gl") {
+  public_configs = [
+    ":glmark2_common_config",
+    ":glmark2_gl_config",
+  ]
+  public_deps = [ ":glmark2_glad_gl" ]
+}
+
+# Supplies compatible headers on Win32.
+config("glmark2_headers_config") {
+  if (is_win) {
+    if (is_clang) {
+      cflags = [
+        "-Wno-unused-function",
+        "-Wno-writable-strings",
+        "-Wno-extra-tokens",
+      ]
+    }
+  }
+}
+
+source_set("glmark2_headers") {
+  sources = [
+    "src/src/canvas.h",
+    "src/src/gl-headers.h",
+    "src/src/gl-state-egl.h",
+    "src/src/gl-state.h",
+    "src/src/gl-visual-config.h",
+    "src/src/mesh.h",
+    "src/src/options.h",
+    "src/src/scene.h",
+    "src/src/shared-library.h",
+    "src/src/texture.h",
+  ]
+
+  if (is_linux || is_chromeos) {
+    sources += [ "src/src/gl-state-glx.h" ]
+  }
+  if (is_win) {
+    sources += [
+      "src/src/gl-state-wgl.h",
+      "src/src/include/getopt.h",
+    ]
+  }
+  public_configs = [ ":glmark2_headers_config" ]
+  include_dirs = [ "src/src" ]
+}
+
+config("glmark2_libmatrix_config") {
+  include_dirs = [ "src/src/libmatrix" ]
+}
+
+template("glmark2_libmatrix") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    sources = [
+      "src/src/libmatrix/gl-if.h",
+      "src/src/libmatrix/log.cc",
+      "src/src/libmatrix/log.h",
+      "src/src/libmatrix/mat.cc",
+      "src/src/libmatrix/mat.h",
+      "src/src/libmatrix/program.cc",
+      "src/src/libmatrix/program.h",
+      "src/src/libmatrix/shader-source.cc",
+      "src/src/libmatrix/shader-source.h",
+      "src/src/libmatrix/stack.h",
+      "src/src/libmatrix/util.cc",
+      "src/src/libmatrix/util.h",
+      "src/src/libmatrix/vec.h",
+    ]
+
+    if (is_clang) {
+      cflags_cc = [ "-Wno-implicit-fallthrough" ]
+    }
+    public_deps = [ ":glmark2_headers" ]
+    public_configs = [ ":glmark2_libmatrix_config" ]
+    configs += [ "//build/config/compiler:exceptions" ]
+    configs -= [ "//build/config/compiler:no_exceptions" ]
+  }
+}
+
+glmark2_libmatrix("glmark2_libmatrix_gles") {
+  deps = [ ":glmark2_gles" ]
+}
+
+glmark2_libmatrix("glmark2_libmatrix_gl") {
+  deps = [ ":glmark2_gl" ]
+}
+
+config("glmark2_scene_ideas_config") {
+  include_dirs = [ "src/src/scene-ideas" ]
+}
+
+template("glmark2_scene_ideas") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    sources = [
+      "src/src/scene-ideas/a.cc",
+      "src/src/scene-ideas/characters.h",
+      "src/src/scene-ideas/d.cc",
+      "src/src/scene-ideas/e.cc",
+      "src/src/scene-ideas/i.cc",
+      "src/src/scene-ideas/lamp.cc",
+      "src/src/scene-ideas/lamp.h",
+      "src/src/scene-ideas/logo.cc",
+      "src/src/scene-ideas/logo.h",
+      "src/src/scene-ideas/m.cc",
+      "src/src/scene-ideas/n.cc",
+      "src/src/scene-ideas/o.cc",
+      "src/src/scene-ideas/s.cc",
+      "src/src/scene-ideas/splines.cc",
+      "src/src/scene-ideas/splines.h",
+      "src/src/scene-ideas/t.cc",
+      "src/src/scene-ideas/table.cc",
+      "src/src/scene-ideas/table.h",
+    ]
+    public_configs = [ ":glmark2_scene_ideas_config" ]
+  }
+}
+
+glmark2_scene_ideas("glmark2_scene_ideas_gles") {
+  deps = [
+    ":glmark2_gles",
+    ":glmark2_libmatrix_gles",
+  ]
+}
+
+glmark2_scene_ideas("glmark2_scene_ideas_gl") {
+  deps = [
+    ":glmark2_gl",
+    ":glmark2_libmatrix_gl",
+  ]
+}
+
+config("glmark2_scene_terrain_config") {
+  include_dirs = [ "src/src/scene-terrain" ]
+}
+
+template("glmark2_scene_terrain") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    sources = [
+      "src/src/scene-terrain/base-renderer.cpp",
+      "src/src/scene-terrain/blur-renderer.cpp",
+      "src/src/scene-terrain/copy-renderer.cpp",
+      "src/src/scene-terrain/luminance-renderer.cpp",
+      "src/src/scene-terrain/normal-from-height-renderer.cpp",
+      "src/src/scene-terrain/overlay-renderer.cpp",
+      "src/src/scene-terrain/renderer-chain.cpp",
+      "src/src/scene-terrain/renderer.h",
+      "src/src/scene-terrain/simplex-noise-renderer.cpp",
+      "src/src/scene-terrain/terrain-renderer.cpp",
+      "src/src/scene-terrain/texture-renderer.cpp",
+    ]
+
+    public_configs = [ ":glmark2_scene_terrain_config" ]
+  }
+}
+
+glmark2_scene_terrain("glmark2_scene_terrain_gles") {
+  deps = [
+    ":glmark2_gles",
+    ":glmark2_libmatrix_gles",
+  ]
+}
+
+glmark2_scene_terrain("glmark2_scene_terrain_gl") {
+  deps = [
+    ":glmark2_gl",
+    ":glmark2_libmatrix_gl",
+  ]
+}
+
+template("glmark2_common") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    sources = [
+      "src/src/benchmark-collection.cpp",
+      "src/src/benchmark-collection.h",
+      "src/src/benchmark.cpp",
+      "src/src/benchmark.h",
+      "src/src/default-benchmarks.h",
+      "src/src/gl-headers.cpp",
+      "src/src/gl-visual-config.cpp",
+      "src/src/gl-visual-config.h",
+      "src/src/image-reader.cpp",
+      "src/src/image-reader.h",
+      "src/src/main-loop.cpp",
+      "src/src/main-loop.h",
+      "src/src/mesh.cpp",
+      "src/src/model.cpp",
+      "src/src/model.h",
+      "src/src/native-state.h",
+      "src/src/options.cpp",
+      "src/src/results-file.cpp",
+      "src/src/scene-buffer.cpp",
+      "src/src/scene-build.cpp",
+      "src/src/scene-bump.cpp",
+      "src/src/scene-clear.cpp",
+      "src/src/scene-collection.h",
+      "src/src/scene-conditionals.cpp",
+      "src/src/scene-default-options.cpp",
+      "src/src/scene-desktop.cpp",
+      "src/src/scene-effect-2d.cpp",
+      "src/src/scene-function.cpp",
+      "src/src/scene-grid.cpp",
+      "src/src/scene-ideas.cpp",
+      "src/src/scene-jellyfish.cpp",
+      "src/src/scene-jellyfish.h",
+      "src/src/scene-loop.cpp",
+      "src/src/scene-pulsar.cpp",
+      "src/src/scene-refract.cpp",
+      "src/src/scene-refract.h",
+      "src/src/scene-shading.cpp",
+      "src/src/scene-shadow.cpp",
+      "src/src/scene-terrain.cpp",
+      "src/src/scene-texture.cpp",
+      "src/src/scene.cpp",
+      "src/src/shared-library.cpp",
+      "src/src/text-renderer.cpp",
+      "src/src/text-renderer.h",
+      "src/src/texture.cpp",
+    ]
+
+    public_deps += [
+      ":glmark2_headers",
+      "${angle_libpng_dir}:libpng",
+      "${angle_root}/third_party:jpeg",
+    ]
+
+    configs += [ "//build/config/compiler:exceptions" ]
+    configs -= [ "//build/config/compiler:no_exceptions" ]
+  }
+}
+
+glmark2_common("glmark2_common_gles") {
+  public_deps = [
+    ":glmark2_gles",
+    ":glmark2_libmatrix_gles",
+    ":glmark2_scene_ideas_gles",
+    ":glmark2_scene_terrain_gles",
+  ]
+}
+
+glmark2_common("glmark2_common_gl") {
+  public_deps = [
+    ":glmark2_gl",
+    ":glmark2_libmatrix_gl",
+    ":glmark2_scene_ideas_gl",
+    ":glmark2_scene_terrain_gl",
+  ]
+}
+
+glmark2_version = "2017.07"
+
+template("glmark2_exe") {
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
+    sources += [
+      "src/src/canvas-generic.cpp",
+      "src/src/canvas-generic.h",
+      "src/src/main.cpp",
+    ]
+    data = [ "src/data/" ]
+
+    defines += [
+      "GLMARK_VERSION=\"${glmark2_version}\"",
+      "GLMARK2_EXECUTABLE=\"${target_name}\"",
+    ]
+
+    if (is_win) {
+      defines += [ "GLMARK2_USE_WIN32" ]
+      sources += [
+        "src/src/native-state-win32.cpp",
+        "src/src/native-state-win32.h",
+      ]
+    }
+    if (is_linux || is_chromeos) {
+      defines += [ "GLMARK2_USE_X11" ]
+      sources += [
+        "src/src/native-state-x11.cpp",
+        "src/src/native-state-x11.h",
+      ]
+      libs = [ "X11" ]
+    }
+  }
+}
+
+glmark2_exe("glmark2_angle") {
+  sources = [ "src/src/gl-state-egl.cpp" ]
+  deps = [ ":glmark2_common_gles" ]
+  data_deps = [
+    "${angle_root}:libEGL",
+    "${angle_root}:libGLESv2",
+  ]
+
+  defines = [
+    "EGL_EGL_PROTOTYPES=1",
+    "GLMARK2_USE_EGL",
+  ]
+
+  if ((is_linux || is_chromeos) && !is_component_build) {
+    # Set rpath to find shared libs in a non-component build.
+    public_configs = [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
+  }
+}
+
+if (is_linux || is_chromeos) {
+  glmark2_exe("glmark2_glx") {
+    sources = [
+      "src/src/gl-state-glx.cpp",
+      "src/src/glad/include/glad/glx.h",
+      "src/src/glad/src/glx.c",
+    ]
+    deps = [ ":glmark2_common_gl" ]
+
+    defines = [ "GLMARK2_USE_GLX" ]
+  }
+}
+
+# opengl32.lib/opengl32.dll are not available on Windows ARM64.
+if (is_win && target_cpu != "arm64") {
+  glmark2_exe("glmark2_wgl") {
+    sources = [ "src/src/gl-state-wgl.cpp" ]
+    deps = [ ":glmark2_common_gl" ]
+
+    libs = [ "opengl32.lib" ]
+    defines = [ "GLMARK2_USE_WGL" ]
+  }
+}

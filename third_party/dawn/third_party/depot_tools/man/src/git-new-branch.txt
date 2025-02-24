@@ -1,0 +1,92 @@
+git-new-branch(1)
+=================
+
+NAME
+----
+git-new-branch -
+include::_git-new-branch_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git new-branch' <branch_name>
+'git new-branch' --upstream_current <branch_name>
+'git new-branch' --upstream <REF> <branch_name>
+'git new-branch' --lkgr <branch_name>
+'git new-branch' --inject_current <branch_name>
+
+DESCRIPTION
+-----------
+
+Creates a new branch. By default the new branch will track the configured
+upstream for the repo (defaults to 'origin/main'). If one of the other options
+is specified, it will track that other ref instead.
+
+Conceptually, each branch in your repo represents one 'Change List (CL)'. If you
+have many independent CLs (i.e. the changes in one do not interact with/depend
+on the changes in another), then you should create them as new branches tracking
+the default upstream (i.e. `git new-branch <branch_name>`). If you have features
+which depend on each other, you should create stacked branches using `git
+new-branch --upstream_current <branch_name>`.
+
+OPTIONS
+-------
+
+--upstream_current::
+  Set the tracking (upstream) branch to the currently-checked-out branch.
+
+--upstream <REF>::
+  Set the tracking (upstream) branch to <REF>. <REF> may be a local branch,
+  remote branch, or a tag.
+
+--lkgr::
+  Alias for `--upstream lkgr`.
+
+--inject_current::
+  Set the tracking (upstream) branch of the newly-created branch to the
+  tracking (upstream) branch of the currently-checked-out branch and set the
+  tracking (upstream) branch of the currently-checked-out branch to the
+  newly-created branch.
+
+  Before: current > upstream
+  After: current > new > upstream
+
+<branch_name>::
+  The name for the new branch.
+
+
+CONFIGURATION VARIABLES
+-----------------------
+
+depot-tools.upstream
+~~~~~~~~~~~~~~~~~~~~
+
+This configures the default 'upstream' for all new branches. If it is unset, it
+defaults to 'origin''s default branch or 'origin/main' if that can't be found.
+This is considered to be the 'root' branch.
+
+EXAMPLE
+-------
+demo:1[]
+
+1. Note that these branches are cyan because they are currently the same
+'commit' object. See linkgit:git-map-branches[1] for more detail.
+
+include::_aliases.txt[]
+
+----
+[alias]
+  nb = new-branch
+  tb = new-branch --upstream_current  <1>
+----
+<1> mnemonic: tb -> "track branch"
+
+
+SEE ALSO
+--------
+linkgit:git-rebase-update[1], linkgit:git-reparent-branch[1],
+linkgit:git-rename-branch[1], linkgit:git-upstream-diff[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

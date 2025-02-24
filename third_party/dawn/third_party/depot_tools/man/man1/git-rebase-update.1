@@ -1,0 +1,177 @@
+'\" t
+.\"     Title: git-rebase-update
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-REBASE\-UPDATE" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-rebase-update \- Updates all branches to have the latest changes from their upstreams\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit rebase\-update\fR [\-v | \-\-verbose] [\-n | \-\-no\-fetch] [\-k | \-\-keep\-going]
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Brings all branches up\-to\-date with their tracking branches\&. This involves several phases:
+.PP
+Preparation
+.RS 4
+If you currently have a branch checked out, any changes on that branch are
+\fIfrozen\fR
+(See
+\fBgit-freeze\fR(1)
+for more detail)\&. Additionally, the current branch is recorded for the
+\fIRestoration\fR
+phase later (see
+\fICONFIGURATION VARIABLES\fR
+for details on
+\fBdepot\-tools\&.rebase\-update\&.starting\-branch\fR)\&.
+.RE
+.PP
+Fetching
+.RS 4
+All branches are examined to find their upstream references\&. The correct set of git remotes is determined, and fetched accordingly\&. Note that if any branches have a tag as their upstream, we are forced to pull all remotes\&.
+.sp
+Pass
+\fB\-\-no\-fetch\fR
+to skip this phase\&.
+.RE
+.PP
+Rebasing
+.RS 4
+All branches are rebased in topological order from roots (upstreams) to leaves\&. Each branch is rebased from its marked merge\-base (see
+\fICONFIGURATION VARIABLES\fR) to the branch tip on top of its parent branch\&. If the parent branch is
+\fIfrozen\fR
+(see
+\fBgit-freeze\fR(1)), the branch will be rebased onto the last non\-freeze commit on the parent branch\&.
+.sp
+Things get interesting when there are merge conflicts on rebase\&. The
+\fBmost common\fR
+cause for conflicts is when your branch has been committed to the upstream in squashed form, ala
+\fBgit-squash-branch\fR(1), which is what
+\fBgit-cl\fR(1)
+and the
+\fICommit Queue\fR
+will do\&. Because of that,
+\fBgit rebase\-update\fR
+will attempt to squash your conflicted branch to see if the squashed version applies cleanly to its upstream\&.
+.sp
+If it does not apply cleanly, then your original (non\-squashed) branch will be left in mid\-rebase and
+\fBgit rebase\-update\fR
+will exit\&. You can deal with this like any other conflicted rebase\&. When you\(cqre done, just
+\fBgit rebase\-update\fR
+again to pick up where you left off\&.
+.RE
+.sp
+If you\(cqd like to rebase all rebaseable branches in one pass and manually process the unrebaseable ones later, use \-k or \-\-keep\-going\&. Cleanup will not happen until all branches apply cleanly\&.
+.PP
+Cleanup
+.RS 4
+Once all the branches have been rebased, any empty branches (i\&.e\&. branches with no commits on them) are removed\&. If a branch is removed in this fashion, any branches which depend on it are reparented to the parent of the removed branch (see
+\fBgit-reparent-branch\fR(1))\&.
+.RE
+.PP
+Restoration
+.RS 4
+\fBgit rebase\-update\fR
+checks out the branch that you started on, and
+\fIthaws\fR
+it, if necessary (see
+\fBgit-thaw\fR(1))\&. If the branch you started on got cleaned up,
+\fBgit rebase\-update\fR
+will checkout the
+\fIroot\fR
+ref (defaults to
+\fIorigin\fR\*(Aqs default branch, as configured by
+\fBdepot\-tools\&.upstream\fR, see
+\fBgit-new-branch\fR(1))\&.
+.RE
+.SH "OPTIONS"
+.PP
+\-k, \-\-keep\-going
+.RS 4
+Keep processing past failed rebases\&.
+.RE
+.PP
+\-n, \-\-no\-fetch
+.RS 4
+Skip the
+\fBgit fetch\fR
+phase of rebase\-update\&.
+.RE
+.PP
+\-v, \-\-verbose
+.RS 4
+More text than your terminal can handle\&.
+.RE
+.PP
+\-\-current
+.RS 4
+Only rebase the current branch\&.
+.RE
+.SH "CONFIGURATION VARIABLES"
+.SS "depot\-tools\&.rebase\-update\&.starting\-branch"
+.sp
+When \fBgit rebase\-update\fR first runs, it will record the current branch here so that when it completes successfully, it will return back to the same branch you started on, even if \fBgit rebase\-update\fR is interrupted due to rebase conflicts\&. When \fBgit rebase\-update\fR completes successfully, this configuration variable is removed\&.
+.SS "branch\&.<name>\&.dormant"
+.sp
+If \fBtrue\fR, will cause rebase\-update to skip all processing on the branch\&. Useful for old/high\-conflict branches which you want to keep for posterity, but don\(cqt want to deal with when running \fBgit rebase\-update\fR
+.SS "branch\&.<name>\&.base"
+.sp
+Holds the \fIbase\fR reference for this branch\&. By default this is equivalent to \fBgit merge\-base <name> <name>@{upstream}\fR\&. However, it can diverge if \fB<name>@{upstream}\fR is manually rebased\&. In this case, it correctly preserves the value it had before, where \fBgit merge\-base\fR would now report the wrong value\&.
+.sp
+All of the tools in the \fBdepot_tools\fR(1) suite collude to keep this value as up\-to\-date as possible, including \fBgit-reparent-branch\fR(1), and \fBgit-new-branch\fR(1)\&. \fBgit-map\fR(1) also shows the location of these marker values in \fBwhite\fR\&.
+.sp
+\fBgit-mark-merge-base\fR(1) allows easy manual interaction for this value, in the unlikely event that it gets out of sync\&.
+.SH "SUGGESTED ALIASES"
+.sp
+Some common short\-hand aliases\&. Feel free to add these to your \fI~/\&.gitconfig\fR file\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[alias]
+  reup = rebase\-update
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "SEE ALSO"
+.sp
+\fBgit-new-branch\fR(1), \fBgit-reparent-branch\fR(1), \fBgit-rename-branch\fR(1), \fBgit-upstream-diff\fR(1), \fBgit-freeze\fR(1), \fBgit-mark-merge-base\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

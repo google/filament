@@ -1,0 +1,69 @@
+//===- subzero/src/IceTargetLoweringARM32.def - ARM32 X-macros --*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines certain patterns for lowering to ARM32 target
+// instructions, in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETARGETLOWERINGARM32_DEF
+#define SUBZERO_SRC_ICETARGETLOWERINGARM32_DEF
+
+// Patterns for lowering fcmp. These are expected to be used in the following
+// manner:
+//
+// Scalar:
+//   mov reg, #0
+//   movCC0 reg, #1 /* only if CC0 != kNone */
+//   movCC1 reg, #1 /* only if CC1 != kNone */
+//
+// Vector:
+//   vcCC0_V Cmp0, Src0, Src1 /* only if CC0_V != none */
+//   vcCC1_V Cmp1, Src1, Src0 /* only if CC1_V != none */
+//   vorr    Cmp2, Cmp0, Cmp1 /* only if CC1_V != none */
+//   vmvn    Reg3, Cmp?       /* only if NEG_V = true */
+//
+//   If INV_V = true, then Src0 and Src1 should be swapped.
+//
+#define FCMPARM32_TABLE                                                        \
+  /*val  , CC0  , CC1  , CC0_V, CC1_V, INV_V, NEG_V */                         \
+  X(False, kNone, kNone, none , none , false, false)                           \
+  X(Oeq  , EQ   , kNone, eq   , none , false, false)                           \
+  X(Ogt  , GT   , kNone, gt   , none , false, false)                           \
+  X(Oge  , GE   , kNone, ge   , none , false, false)                           \
+  X(Olt  , MI   , kNone, gt   , none , true , false)                           \
+  X(Ole  , LS   , kNone, ge   , none , true , false)                           \
+  X(One  , MI   , GT   , gt   , gt   , false, false)                           \
+  X(Ord  , VC   , kNone, ge   , gt   , false, false)                           \
+  X(Ueq  , EQ   , VS   , gt   , gt   , false, true)                            \
+  X(Ugt  , HI   , kNone, ge   , none , true , true)                            \
+  X(Uge  , PL   , kNone, gt   , none , true , true)                            \
+  X(Ult  , LT   , kNone, ge   , none , false, true)                            \
+  X(Ule  , LE   , kNone, gt   , none , false, true)                            \
+  X(Une  , NE   , kNone, eq   , none , false, true)                            \
+  X(Uno  , VS   , kNone, ge   , gt   , false, true)                            \
+  X(True , AL   , kNone, none , none , false, false)
+//#define X(val, CC0, CC1, CC0_V, CC1_V, INV_V, NEG_V)
+
+// Patterns for lowering icmp.
+#define ICMPARM32_TABLE                                                       \
+  /*val, is_signed, swapped64, C_32, C1_64, C2_64, C_V, INV_V, NEG_V */       \
+  X(Eq , false    , false    , EQ,   EQ   , NE   , eq , false, false)         \
+  X(Ne , false    , false    , NE,   NE   , EQ   , eq , false, true)          \
+  X(Ugt, false    , false    , HI,   HI   , LS   , gt , false, false)         \
+  X(Uge, false    , false    , CS,   CS   , CC   , ge , false, false)         \
+  X(Ult, false    , false    , CC,   CC   , CS   , gt , true , false)         \
+  X(Ule, false    , false    , LS,   LS   , HI   , ge , true , false)         \
+  X(Sgt, true     , true     , GT,   LT   , GE   , gt , false, false)         \
+  X(Sge, true     , false    , GE,   GE   , LT   , ge , false, false)         \
+  X(Slt, true     , false    , LT,   LT   , GE   , gt , true , false)         \
+  X(Sle, true     , true     , LE,   GE   , LT   , ge , true , false)
+//#define X(val, is_signed, swapped64, C_32, C1_64, C2_64, C_V, INV_V, NEG_V)
+
+#endif // SUBZERO_SRC_ICETARGETLOWERINGARM32_DEF

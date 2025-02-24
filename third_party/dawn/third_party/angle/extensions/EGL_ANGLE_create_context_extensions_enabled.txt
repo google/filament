@@ -1,0 +1,88 @@
+Name
+
+    ANGLE_create_context_extensions_enabled
+
+Name Strings
+
+    EGL_ANGLE_create_context_extensions_enabled
+
+Contributors
+
+    Geoff Lang
+
+Contacts
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Marchh 14, 2018
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+    This extension has interactions with
+    EGL_ANGLE_create_context_webgl_compatibility.
+
+Overview
+
+    This extension allows the creation of an OpenGL or OpenGL ES context that
+    enables or disables all requestable extensions by default.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_EXTENSIONS_ENABLED_ANGLE 0x345F
+
+Additions to the EGL 1.4 Specification
+
+    Add the following to section 3.7.1 "Creating Rendering Contexts":
+
+    EGL_EXTENSIONS_ENABLED_ANGLE indicates whether the context should be
+    created with all requestable extensions initially enabled or disabled. The
+    default value of EGL_EXTENSIONS_ENABLED_ANGLE is EGL_TRUE.  However, if
+    EGL_ANGLE_create_context_webgl_compatibility is also supported and
+    EGL_CONTEXT_WEBGL_COMPATIBILITY_ANGLE has a value of EGL_TRUE, the default
+    value of EGL_EXTENSIONS_ENABLED_ANGLE is EGL_FALSE.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Mar 14, 2018   geofflang  Initial version

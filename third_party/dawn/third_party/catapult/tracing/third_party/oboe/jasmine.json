@@ -1,0 +1,8 @@
+{
+  "spec_dir": "test",
+  "spec_files": [
+    "specs/oboe.*.spec.js"
+  ],
+  "stopSpecOnExpectationFailure": false,
+  "random": false
+}

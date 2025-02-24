@@ -1,0 +1,158 @@
+Name
+
+    EGL_ANGLE_feature_control
+
+Name Strings
+
+    EGL_ANGLE_feature_control
+
+Contributors
+
+    Jonah Ryan-Davis  (jonahr 'at' google.com)
+
+Contact
+
+    Jonah Ryan-Davis  (jonahr 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, May 23, 2019
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+    EGL_EXT_device_query affects the definition of this extension.
+
+Overview
+
+    This extension adds two methods to query arrays holding
+    information about the available features for a given device.
+    One method is used to query the total count of available
+    features. Another method is used to query a string property
+    of an individual feature given the feature's index.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    const char *eglQueryStringiANGLE(
+        EGLDisplay dpy,
+        EGLint name,
+        EGLint index);
+
+    EGLBoolean eglQueryDisplayAttribANGLE(
+        EGLDisplay dpy,
+        EGLint attribute,
+        EGLAttrib *value);
+
+New Tokens
+
+    Accepted as a queried <name> in eglQueryStringiANGLE:
+
+        EGL_FEATURE_NAME_ANGLE          0x3460
+        EGL_FEATURE_CATEGORY_ANGLE      0x3461
+        EGL_FEATURE_STATUS_ANGLE        0x3464
+
+    Accepted as a queried <attribute> in eglQueryDisplayAttribANGLE
+
+        EGL_FEATURE_COUNT_ANGLE         0x3465
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplay
+
+        EGL_FEATURE_OVERRIDES_ENABLED_ANGLE   0x3466
+        EGL_FEATURE_OVERRIDES_DISABLED_ANGLE  0x3467
+        EGL_FEATURE_ALL_DISABLED_ANGLE  0x3469
+
+New Behavior
+
+        EGLDisplay eglGetPlatformDisplay(EGLenum platform, void
+            *native_display, const EGLAttrib *attrib_list);
+
+    The attribute following EGL_FEATURE_OVERRIDES_ENABLED_ANGLE or
+    EGL_FEATURE_OVERRIDES_DISABLED_ANGLE should be of type char**,
+    which should contain a null-terminated array of C strings naming
+    the features to be enabled or disabled upon display creation.
+    Any features unspecified in one of these arrays will be
+    initialized with an internal heuristic.
+    The attribute following EGL_FEATURE_ALL_DISABLED_ANGLE should be
+    either EGL_TRUE to disable all features that are not overridden,
+    or EGL_FALSE to let ANGLE determine which features to enable.
+
+Add the following to the end of section 3.3 "EGL Queries":
+
+        const char *eglQueryStringiANGLE(EGLDisplay dpy,
+            EGLint name, EGLint index);
+
+    eGLQueryStringiANGLE returns a pointer to a static, null-
+    terminated string describing some aspect of the EGL
+    implementation running on the specified display, from an array of
+    strings. name may be one of EGL_FEATURE_NAME_ANGLE,
+    EGL_FEATURE_CATEGORY_ANGLE, EGL_FEATURE_STATUS_ANGLE. Index
+    must be a valid index to access into the array of strings.
+        The EGL_FEATURE_NAME_ANGLE array contains strings that
+    describe the name of each feature available in the display.
+        The EGL_FEATURE_CATEGORY_ANGLE array contains strings
+    with corresponding indices to the array of names. Each string
+    describes the category of the feature at the specified index.
+        The EGL_FEATURE_STATUS_ANGLE array contains strings
+    with corresponding indices to the array of names. Each string has
+    the value "enabled" if the feature is currently enabled, or
+    "disabled" if the feature is currently disabled.
+
+    Errors
+
+    On failure, NULL is returned.
+    An EGL_BAD_DISPLAY error is generated if dpy is not a valid
+    display.
+    An EGL_BAD_PARAMETER error is generated if name is not one of the
+    values described above.
+    An EGL_BAD_PARAMETER error is generated if index is not within
+    the valid range of indices for the array.
+
+Add a section "3.4 Display Attributes" after "3.3 EGL Versioning"
+
+    To query attributes of an initialized display, use:
+
+        EGLBoolean eglQueryDisplayAttribANGLE(EGLDisplay dpy,
+                                            EGLint attribute,
+                                            EGLAttrib *value);
+
+    On success, EGL_TRUE is returned.
+    If <attribute> is EGL_FEATURE_COUNT_ANGLE, the total count of
+    available features is returned in <value>.
+
+    On failure, EGL_FALSE is returned.
+    An EGL_BAD_DISPLAY error is generated if dpy is not a valid
+    display.
+    An EGL_BAD_ATTRIBUTE error is generated if <attribute> is not a
+    valid value.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, May 23, 2019 (Jonah Ryan-Davis)
+        - Initial Draft

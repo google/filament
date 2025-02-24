@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/speed-releasing-table.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  const testData = {
+    '123':
+    {
+      'master/bot':
+      {
+        'test/test': 10001,
+        'test/test1': 50001,
+        'test2/test3': 20001,
+        'test2/test4': 0,
+        'test2/test5': null,  // null is returned from server if no value.
+        'test2/test6': 40002,
+      },
+
+      'master2/bot2':
+      {
+        'test/test': 30001,
+        'test/test1': 62001,
+        'test2/test3': 40007,
+        'test2/test4': 41002,
+        'test2/test5': 40002,
+        'test2/test6': 40002,
+      }
+    },
+
+    '456':
+    {
+      'master/bot':
+      {
+        'test/test': 10000,
+        'test/test1': 50402,
+        'test2/test3': 20002,
+        'test2/test4': 0,  // Removed test2/test5 to get the 'undefined'.
+        'test2/test6': 40002,
+      },
+
+      'master2/bot2':
+      {
+        'test/test': 30012,
+        'test/test1': 60222,
+        'test2/test3': 40007,
+        'test2/test4': 40052,
+        'test2/test5': 40012,
+        'test2/test6': 40002,
+      }
+    },
+  };
+
+  const testLayout = {
+    'test/test': ['foreground', 'Pretty Name'],
+    'test/test1': ['foreground', 'Prettier Name'],
+    'test2/test3': ['foreground', 'Prettiester Name'],
+    'test2/test4': ['background', 'Prettiestest Name'],
+    'test2/test5': ['background', 'Prettiestestest Name'],
+    'test2/test6': ['middleground', 'Different Name'],
+  };
+
+  const unitMap = {
+    'test/test': 'timeStampInMs',
+    'test/test1': 'sizeInBytes',
+    'test2/test3': 'powerInWatts',
+    'test2/test4': 'count',
+    'test2/test5': 'bytes',
+    'test2/test6': 'sizeInBytes',
+  };
+
+  const categories = {
+    'foreground': 3,
+    'background': 2,
+    'middleground': 1
+  };
+
+  const urlMap = {
+    'master/bot/test/test': '/do/not/click/me',
+    'master/bot/test/test1': '/do/not/click/me',
+    'master/bot/test2/test3': '/do/not/click/me',
+    'master/bot/test2/test4': '/do/not/click/me',
+    'master/bot/test2/test5': '/do/not/click/me',
+    'master/bot/test2/test6': '/do/not/click/me',
+    'master2/bot2/test/test': '/do/not/click/me',
+    'master2/bot2/test/test1': '/do/not/click/me',
+    'master2/bot2/test2/test3': '/do/not/click/me',
+    'master2/bot2/test2/test4': '/do/not/click/me',
+    'master2/bot2/test2/test5': '/do/not/click/me',
+    'master2/bot2/test2/test6': '/do/not/click/me',
+  };
+
+  const revisions = [456, 123];
+  const displayRevisions = ['456-b', '123-a'];
+  const mockResponse = {
+    'table_bots': ['master/bot', 'master2/bot2'],
+    'table_tests': ['test/test', 'test/test1', 'test2/test3',
+      'test2/test4', 'test2/test5', 'test2/test6'],
+    'table_layout': testLayout,
+    'name': 'fakeTable',
+    'values': testData,
+    'units': unitMap,
+    revisions,
+    categories,
+    'urls': urlMap,
+    'display_revisions': displayRevisions,
+    'display_milestones': [55, 55],
+    'navigation_milestones': [54, 56],
+  };
+
+  test('instantiation', function() {
+    testing_common.addXhrMock('/speed_releasing/undefined?=',
+        JSON.stringify(mockResponse));
+    const table = document.createElement('speed-releasing-table');
+    this.addHTMLOutput(table);
+  }, testOptions);
+
+  test('firstInCategory', function() {
+    testing_common.addXhrMock('/speed_releasing/undefined?=',
+        JSON.stringify(mockResponse));
+    const testTable = document.createElement('speed-releasing-table');
+    assert.strictEqual(testTable.isFirstInCategory(0, 'test/test', 'false'),
+        true);
+    assert.strictEqual(testTable.isFirstInCategory(1, 'test/test1', 'false'),
+        false);
+    assert.strictEqual(testTable.isFirstInCategory(2, 'test2/test3', 'false'),
+        false);
+    assert.strictEqual(testTable.isFirstInCategory(3, 'test2/test4', 'false'),
+        true);
+    assert.strictEqual(testTable.isFirstInCategory(4, 'test2/test5', 'false'),
+        false);
+    assert.strictEqual(testTable.isFirstInCategory(5, 'test2/test6', 'false'),
+        true);
+    assert.strictEqual(testTable.isFirstInCategory(5, 'test/test', 'false'),
+        false);
+  }, testOptions);
+});
+</script>

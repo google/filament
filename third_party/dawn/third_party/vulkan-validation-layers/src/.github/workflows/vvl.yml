@@ -1,0 +1,441 @@
+# Copyright (c) 2021-2025 Valve Corporation
+# Copyright (c) 2021-2025 LunarG, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: VVL (Build/Tests)
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  # github.head_ref is only defined on pull_request
+  # Fallback to the run ID, which is guaranteed to be both unique and defined for the run.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id  }}
+  cancel-in-progress: true
+
+on:
+    push:
+    pull_request:
+        branches:
+            - main
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+permissions:
+  contents: read
+
+jobs:
+  code-format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: clang-format version
+        run: clang-format --version
+      - name: Execute Source Code Format Checking Script
+        run: python3 scripts/check_code_format.py --fetch-main --target-refspec=FETCH_HEAD
+
+  linux:
+    needs: check_vvl
+    runs-on: ubuntu-24.04
+    name: "linux (address sanitizer, ${{matrix.config}}, robinhood ${{matrix.robin_hood}} )"
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ release ]
+        # Test with Robin Hood disabled
+        # Chromium build, and some package managers don't use it.
+        robin_hood: [ "ON", "OFF" ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.config }}-address-${{matrix.robin_hood}}
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: python scripts/tests.py --build --config ${{ matrix.config }} --cmake='-DUSE_ROBIN_HOOD_HASHING=${{matrix.robin_hood}}'
+        env:
+          CFLAGS: -fsanitize=address
+          CXXFLAGS: -fsanitize=address
+          LDFLAGS: -fsanitize=address
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      - name: Test Max Profile
+        run: python scripts/tests.py --test
+        env:
+          VK_KHRONOS_PROFILES_PROFILE_FILE: ${{ github.workspace }}/tests/device_profiles/max_profile.json
+      - name: Test Max Core
+        run: python scripts/tests.py --test
+        env:
+          VK_KHRONOS_PROFILES_PROFILE_FILE: ${{ github.workspace }}/tests/device_profiles/max_core.json
+      - name: Test Min Core
+        run: python scripts/tests.py --test
+        env:
+          VK_KHRONOS_PROFILES_PROFILE_FILE: ${{ github.workspace }}/tests/device_profiles/min_core.json
+
+  # Make sure a debug version builds, but no need to run tests on it (since we do with release already)
+  linux-debug:
+    needs: check_vvl
+    runs-on: ubuntu-24.04
+    name: "linux (Build Only, ${{matrix.config}}, robinhood ${{matrix.robin_hood}} )"
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ debug ]
+        robin_hood: [ "ON" ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.config }}-buildOnly-${{matrix.robin_hood}}
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: python scripts/tests.py --build --config ${{ matrix.config }} --cmake='-DUSE_ROBIN_HOOD_HASHING=${{matrix.robin_hood}}'
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+  linux-tsan:
+    needs: check_vvl
+    runs-on: ubuntu-24.04
+    name: "linux (thread sanitizer, ${{matrix.config}}, robinhood ${{matrix.robin_hood}} )"
+    strategy:
+      fail-fast: false
+      matrix:
+        # Have found over time debug finds nothing extra, while taking the longest and using the most CI minutes.
+        config: [ release ]
+        robin_hood: [ "ON" ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.config }}-thread-${{matrix.robin_hood}}
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: python scripts/tests.py --build --config ${{ matrix.config }} --cmake='-DUSE_ROBIN_HOOD_HASHING=${{matrix.robin_hood}}'
+        env:
+          CFLAGS: -fsanitize=thread
+          CXXFLAGS: -fsanitize=thread
+          LDFLAGS: -fsanitize=thread
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      # Thread Sanitize will take about 9x longer to run than Address Sanitize.
+      # The main reason we have Max Core and Min Core is to catch issues with Vulkan 1.x vs Vulkan 1.y version issues.
+      # In effort to reduce the bottle neck time in testing, skipping these for Thread Sanitize.
+      - name: Test Max Profile
+        run: python scripts/tests.py --test --tsan
+        env:
+          VK_KHRONOS_PROFILES_PROFILE_FILE: ${{ github.workspace }}/tests/device_profiles/max_profile.json
+
+  # Ensure we can build on an older Ubuntu distro with an older version of CMake.
+  linux_back_compat:
+    needs: check_vvl
+    runs-on: ubuntu-22.04
+    name: "Ubuntu Backcompat"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Minimum CMake Version
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.22.1
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux_back_compat
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: cmake -S . -B build/ -D UPDATE_DEPS=ON -D CMAKE_BUILD_TYPE=Debug
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          # Linker warnings as errors
+          LDFLAGS: -Wl,--fatal-warnings
+      - run: cmake --build build
+      - run: cmake --install build --prefix /tmp
+
+
+  linuxUpload:
+    needs: linux
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    name: "linux Upload"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-upload-ccache
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: python scripts/tests.py --build --config release
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Validation_Layers_Linux_64
+          path: /home/runner/work/Vulkan-ValidationLayers/Vulkan-ValidationLayers/build-ci/install/lib/libVkLayer_khronos_validation.so
+          retention-days: 3
+
+  androidOnLinux:
+    needs: check_vvl
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: androidOnLinux-ccache
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - name: Build
+        run: python scripts/tests.py --build --mockAndroid --config release
+        env:
+          CC: clang
+          CXX: clang++
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      - name: Test Max Profile
+        run: python scripts/tests.py --test --mockAndroid
+        env:
+          VK_KHRONOS_PROFILES_PROFILE_FILE: ${{ github.workspace }}/tests/device_profiles/max_profile.json
+
+  windows:
+    needs: check_vvl
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [ amd64, amd64_x86 ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Cache known_good.json installations
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            build-ci/external/glslang/build/install
+            build-ci/external/googltest/build/install
+            build-ci/external/mimalloc/build/install
+            build-ci/external/robin-hood-hashing/build/install
+            build-ci/external/SPIRV-Headers/build/install
+            build-ci/external/SPIRV-Tools/build/install
+            build-ci/external/Vulkan-Headers/build/install
+            build-ci/external/Vulkan-Utility-Libraries/build/install
+          key: windows-dependencies-${{ matrix.arch }}-${{ hashfiles('scripts/known_good.json') }}
+      - name: Build
+        run: python3 scripts/tests.py --build --config debug --cmake='-DUPDATE_DEPS_SKIP_EXISTING_INSTALL=ON'
+
+  windowsUpload:
+    needs: windows
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+      - name: Cache known_good.json installations
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            build-ci/external/glslang/build/install
+            build-ci/external/googltest/build/install
+            build-ci/external/mimalloc/build/install
+            build-ci/external/robin-hood-hashing/build/install
+            build-ci/external/SPIRV-Headers/build/install
+            build-ci/external/SPIRV-Tools/build/install
+            build-ci/external/Vulkan-Headers/build/install
+            build-ci/external/Vulkan-Utility-Libraries/build/install
+          key: windows-dependencies-release-amd64-${{ hashfiles('scripts/known_good.json') }}
+      - name: Build
+        run: python3 scripts/tests.py --build --config release --cmake='-DUPDATE_DEPS_SKIP_EXISTING_INSTALL=ON'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Validation_Layers_Windows_64
+          path: D:\\a\\Vulkan-ValidationLayers\\Vulkan-ValidationLayers\\build-ci/install/bin/VkLayer_khronos_validation.dll
+          retention-days: 3
+
+  android:
+      needs: check_vvl
+      runs-on: ubuntu-24.04
+      strategy:
+        matrix:
+          abi: [ arm64-v8a ]
+          build_tests: [ "ON" ]
+          stl_type: ["c++_shared"]
+          include:
+          - abi: armeabi-v7a
+            build_tests: "OFF"
+            stl_type: c++_static
+
+      steps:
+        - uses: actions/checkout@v4
+        - uses: lukka/get-cmake@latest
+        - name: Setup ccache
+          uses: hendrikmuhs/ccache-action@v1.2
+          with:
+            key: android-${{ matrix.abi }}-${{ matrix.build_tests }}-${{ matrix.stl_type }}
+        - name: Configure
+          run: |
+            cmake -S . -B build/ --toolchain $ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -D ANDROID_PLATFORM=26 \
+            -D CMAKE_ANDROID_ARCH_ABI=${{ matrix.abi }} \
+            -D CMAKE_ANDROID_STL_TYPE=${{ matrix.stl_type }} \
+            -D ANDROID_USE_LEGACY_TOOLCHAIN_FILE=NO \
+            -D CMAKE_BUILD_TYPE=Debug \
+            -D BUILD_TESTS=${{ matrix.build_tests }} \
+            -D UPDATE_DEPS=ON \
+            -D BUILD_WERROR=ON
+          env:
+            CMAKE_C_COMPILER_LAUNCHER: ccache
+            CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        - run: cmake --build build/
+        - run: cmake --install build/ --prefix /tmp
+        - run: ctest --output-on-failure -C Debug --test-dir build/
+
+  androidUpload:
+      needs: android
+      if: github.ref == 'refs/heads/main'
+      runs-on: ubuntu-24.04
+      steps:
+        - uses: actions/checkout@v4
+        - uses: lukka/get-cmake@latest
+        - name: Setup ccache
+          uses: hendrikmuhs/ccache-action@v1.2
+          with:
+            key: android-upload
+        - name: Configure
+          run: |
+            cmake -S . -B build/ --toolchain $ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -D ANDROID_PLATFORM=26 \
+            -D CMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+            -D CMAKE_ANDROID_STL_TYPE=c++_shared \
+            -D ANDROID_USE_LEGACY_TOOLCHAIN_FILE=NO \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D BUILD_TESTS=OFF \
+            -D UPDATE_DEPS=ON \
+            -D BUILD_WERROR=ON
+          env:
+            CMAKE_C_COMPILER_LAUNCHER: ccache
+            CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        - run: cmake --build build/
+        - run: cmake --install build/ --prefix /tmp
+        - name: Strip
+          run: $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip /tmp/lib/libVkLayer_khronos_validation.so
+        - uses: actions/upload-artifact@v4
+          with:
+            name: Validation_Layers_Android_64
+            path: /tmp/lib/libVkLayer_khronos_validation.so
+            retention-days: 3
+
+  iOS:
+    # iOS is 10x expensive to run on GitHub machines, so only run if we know something else fast/simple passed as well
+    # androidOnLinux does a basic build and only takes a 2 or 3 minutes to normally run
+    needs: androidOnLinux
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: iOS-cache
+      - uses: lukka/get-cmake@latest
+      - name: Configure for iOS
+        run: |
+          cmake -S . -B build/ \
+          -D CMAKE_SYSTEM_NAME=iOS \
+          -D CMAKE_OSX_ARCHITECTURES=arm64 \
+          -D BUILD_WERROR=ON \
+          -D UPDATE_DEPS=ON \
+          -D CMAKE_BUILD_TYPE=Debug
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          LDFLAGS: -Wl,-fatal_warnings
+      - run: cmake --build build
+      - run: cmake --install build --prefix /tmp
+      # Helps verify install location and prints the exported symbols.
+      - run: nm -gU /tmp/lib/VkLayer_khronos_validation.framework/VkLayer_khronos_validation
+      # Helps verify useful details about the dylib (platform, minos, sdk)
+      - run: vtool -show-build /tmp/lib/VkLayer_khronos_validation.framework/VkLayer_khronos_validation
+
+  mingw:
+    needs: check_vvl
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: mingw-ccache
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: lukka/get-cmake@latest
+      - run: |
+          cmake -S. -B build \
+          -D BUILD_WERROR=ON \
+          -D UPDATE_DEPS=ON \
+          -D CMAKE_BUILD_TYPE=Release
+        env:
+          LDFLAGS: -fuse-ld=lld # MINGW linking is very slow. Use llvm linker instead.
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      - run: cmake --build build
+      - run: cmake --install build --prefix /tmp
+
+  chromium:
+    needs: check_vvl
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        args:
+          - 'target_os="linux" target_cpu="x64"'
+          - 'target_os="android" target_cpu="arm64"'
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - run: python scripts/gn/gn.py --args='${{ matrix.args }}'
+
+  check_vvl:
+    needs: code-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python3 -m pip install pyparsing
+      - run: scripts/update_deps.py --dir ext --no-build
+      - run: scripts/generate_source.py --verify ext/Vulkan-Headers/registry/ ext/SPIRV-Headers/include/spirv/unified1/
+      - run: scripts/vk_validation_stats.py ext/Vulkan-Headers/registry/validusage.json -summary -c

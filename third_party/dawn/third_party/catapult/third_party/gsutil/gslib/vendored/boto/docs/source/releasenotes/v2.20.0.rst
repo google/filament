@@ -1,0 +1,31 @@
+boto v2.20.0
+============
+
+:date: 2013/12/12
+
+This release adds support for Amazon Kinesis and AWS Direct Connect. Amazon EC2 gets support for new i2 instance types and is more resilient against metadata failures, Amazon DynamoDB gets support for global secondary indexes and Amazon Relational Database Service (RDS) supports new DBInstance and DBSnapshot attributes. There are several other fixes for various services, including updated support for CloudStack and Eucalyptus.
+
+
+Features
+--------
+* Add support for Amazon Kinesis (:sha:`d0b684e`)
+* Add support for i2 instance types to EC2. (:sha:`0f5371f`)
+* Add support for DynamoDB Global Secondary Indexes (:sha:`297cacb`)
+* Add support for AWS Direct Connect. (:issue:`1894`, :issue:`1894`, :sha:`3cbca26`)
+* Add option for sorting SDB dumps to sdbadmin. (:issue:`1888`, :issue:`1888`, :sha:`070e4f6`)
+* Add a retry when EC2 metadata is returned as corrupt JSON. (:issue:`1883`, :issue:`1883`, :issue:`1868`, :sha:`41470a0`)
+* Added some missing attributes to DBInstance and DBSnapshot. (:issue:`1880`, :issue:`1880`, :sha:`2751dff`)
+
+
+Bugfixes
+--------
+* Implement nonzero for DynamoDB Item to consider empty items falsey (:issue:`1899`, :sha:`808e550`)
+* Remove `dimensions` from Metric.query() docstring. (:issue:`1901`, :issue:`1901`, :sha:`ba6b8c7`)
+* Make trailing slashes for EC2 metadata URLs explicit & remove them from userdata requests. This fixes using boto for CloudStack (:issue:`1900`, :issue:`1900`, :issue:`1897`, :issue:`1856`, :sha:`5f4506e`)
+* Fix the DynamoDB 'scan in' filter to compare the same attribute types in a list rather than using an attribute set. (:issue:`1896`, :issue:`1896`, :sha:`5fc59d6`)
+* Updating Amazon ElastiCache parameters to be optional when creating a new cache cluster. (:issue:`1876`, :issue:`1876`, :sha:`342b8df`)
+* Fix honor cooldown AutoScaling parameter serialization to prevent an exception and bad request. (:issue:`1895`, :issue:`1895`, :issue:`1892`, :sha:`fc4674f`)
+* Fix ignored RDS backup_retention_period when value was 0. (:issue:`1887`, :issue:`1887`, :issue:`1886`, :sha:`a19eb14`)
+* Use auth_handler to specify host header value including custom ports if possible, which are used by Eucalyptus. (:issue:`1862`, :issue:`1862`, :sha:`ce6df03`)
+* Fix documentation of launch config in Autoscaling Group. (:issue:`1881`, :issue:`1881`, :sha:`6f704d9`)
+* typo: AIM -> IAM (:issue:`1882`, :sha:`7ea2d5c`)

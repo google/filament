@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# Copyright (c) 2010 Chris Moyer http://coredumped.org/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+
+#
+# Send Mail from a PYAMI instance, or anything that has a boto.cfg
+# properly set up
+#
+VERSION="0.1"
+usage = """%prog [options]
+Sends whatever is on stdin to the recipient specified by your boto.cfg
+or whoevery you specify in the options here.
+"""
+
+if __name__ == "__main__":
+    from boto.utils import notify
+    import sys
+    from optparse import OptionParser
+    parser = OptionParser(version=VERSION, usage=usage)
+    parser.add_option("-t", "--to", help="Optional to address to send to (default from your boto.cfg)", action="store", default=None, dest="to")
+    parser.add_option("-s", "--subject", help="Optional Subject to send this report as", action="store", default="Report", dest="subject")
+    parser.add_option("-f", "--file", help="Optionally, read from a file instead of STDIN", action="store", default=None, dest="file")
+    parser.add_option("--html", help="HTML Format the email", action="store_true", default=False, dest="html")
+    parser.add_option("--no-instance-id", help="If set, don't append the instance id", action="store_false", default=True, dest="append_instance_id")
+
+    (options, args) = parser.parse_args()
+    if options.file:
+        body = open(options.file, 'r').read()
+    else:
+        body = sys.stdin.read()
+
+    if options.html:
+        notify(options.subject, html_body=body, to_string=options.to, append_instance_id=options.append_instance_id)
+    else:
+        notify(options.subject, body=body, to_string=options.to, append_instance_id=options.append_instance_id)

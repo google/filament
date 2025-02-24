@@ -1,0 +1,75 @@
+{
+    "description": [
+        "Copyright 2020 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "egl_get_labeled_object_data.json: Associates entry points and labeled objects.",
+        "",
+        "If an entry point has no data in this list it is associated with an",
+        "EGLDisplay if the EGLDisplay is the first parameter the function.",
+        "Otherise missing entry points have no association.",
+        "",
+        "We omit extension suffixes in this file. The generator takes care of that."
+    ],
+    "Context": [
+        "DestroyContext",
+        "MakeCurrent",
+        "QueryContext",
+        "WaitClient"
+    ],
+    "Device": [
+        "QueryDeviceAttrib",
+        "QueryDeviceString",
+        "ReleaseDevice"
+    ],
+    "Image": [
+        "DestroyImage"
+    ],
+    "LabeledObject": [
+        "LabelObject"
+    ],
+    "Stream": [
+        "CreateStreamProducerD3DTexture",
+        "DestroyStream",
+        "QueryStream",
+        "QueryStreamu64",
+        "StreamAttrib",
+        "StreamConsumerAcquire",
+        "StreamConsumerGLTextureExternal",
+        "StreamConsumerGLTextureExternalAttribsNV",
+        "StreamConsumerRelease",
+        "StreamPostD3DTexture"
+    ],
+    "Surface": [
+        "BindTexImage",
+        "CopyBuffers",
+        "DestroySurface",
+        "GetCompositorTiming",
+        "GetCompositorTimingSupported",
+        "GetFrameTimestamps",
+        "GetFrameTimestampSupported",
+        "GetNextFrameId",
+        "GetMscRate",
+        "GetSyncValues",
+        "PresentationTime",
+        "QuerySuface",
+        "ReleaseTexImage",
+        "SurfaceAttrib",
+        "SwapBuffers",
+        "SwapBuffersWithDamage"
+    ],
+    "Sync": [
+        "ClientWaitSync",
+        "DupNativeFenceFD",
+        "GetSyncAttrib",
+        "SignalSync",
+        "WaitSync"
+    ],
+    "Thread": [
+        "BindAPI",
+        "CreateDevice",
+        "GetPlatformDisplay",
+        "WaitNative"
+    ]
+}

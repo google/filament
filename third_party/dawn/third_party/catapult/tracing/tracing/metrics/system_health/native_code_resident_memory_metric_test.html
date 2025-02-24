@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/system_health/native_code_resident_memory_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeEvent(cat, name, NativeCodeResidentMemory, timestamp) {
+    return {
+      cat,
+      name,
+      args: {NativeCodeResidentMemory},
+      ts: timestamp,
+      pid: 52,
+      tid: 53,
+      ph: 'i'
+    };
+  }
+
+  test('nativeCodeResidentMemoryMetric', function() {
+    const histograms = new tr.v.HistogramSet();
+    const residentMemoryBytes = [20718592, 19767296, 40004608, 1294336];
+    const sum = (residentMemoryBytes.reduce((a, b) => a + b, 0));
+    const events = [];
+    let timestamp = 10;
+    for (const index in residentMemoryBytes) {
+      events.push(makeEvent('disabled-by-default-memory-infra',
+          'ReportGlobalNativeCodeResidentMemoryKb',
+          residentMemoryBytes[index], timestamp = timestamp + 10));
+    }
+    timestamp = 5;
+    events.push(makeEvent('disabled-by-default-memory-infra',
+        'ReportGlobalNativeCodeResidentMemoryKb', 0,
+        timestamp = timestamp + 10));
+    events.push(makeEvent('disabled-by-default-memory-infra', 'foo', 10000,
+        timestamp = timestamp + 10));
+    events.push(makeEvent('foo', 'ReportGlobalNativeCodeResidentMemoryKb',
+        200000, timestamp = timestamp + 10));
+    events.push(makeEvent('foo', 'bar', 10000, timestamp = timestamp + 10));
+
+    tr.metrics.sh.nativeCodeResidentMemoryMetric(histograms,
+        tr.c.TestUtils.newModelWithEvents([events]));
+
+    const all = histograms.getHistogramNamed(
+        'NativeCodeResidentMemory').running;
+
+    assert.strictEqual(all.count, residentMemoryBytes.length);
+    assert.strictEqual(all.sum, sum);
+    assert.strictEqual(all.mean, sum / residentMemoryBytes.length);
+    assert.strictEqual(all.max, Math.max.apply(null, residentMemoryBytes));
+    assert.strictEqual(all.min, Math.min.apply(null, residentMemoryBytes));
+  });
+});
+</script>

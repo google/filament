@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id="tr-v-ui-scalar-map-table">
+  <template>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+Polymer({
+  is: 'tr-v-ui-scalar-map-table',
+
+  created() {
+    /** @type {!Map.<string, !tr.b.Scalar>} */
+    this.scalarMap_ = new Map();
+
+    /** @type {!Map.<string, !tr.b.math.Statistics.Significance>} */
+    this.significance_ = new Map();
+  },
+
+  ready() {
+    this.$.table.showHeader = false;
+    this.$.table.tableColumns = [
+      {
+        value(row) {
+          return row.name;
+        }
+      },
+      {
+        value(row) {
+          const span = tr.v.ui.createScalarSpan(row.value);
+          if (row.significance !== undefined) {
+            span.significance = row.significance;
+          } else if (row.anyRowsHaveSignificance) {
+            // Ensure vertical alignment.
+            span.style.marginRight = '18px';
+          }
+          span.style.whiteSpace = 'nowrap';
+          return span;
+        }
+      }
+    ];
+  },
+
+  get scalarMap() {
+    return this.scalarMap_;
+  },
+
+  /**
+   * @param {!Map.<string,!tr.b.Scalar>} map
+   */
+  set scalarMap(map) {
+    this.scalarMap_ = map;
+    this.updateContents_();
+  },
+
+  /**
+   * @param {string} key
+   * @param {!tr.b.math.Statistics.Significance} significance
+   */
+  setSignificanceForKey(key, significance) {
+    this.significance_.set(key, significance);
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    const rows = [];
+    for (const [key, scalar] of this.scalarMap) {
+      rows.push({
+        name: key,
+        value: scalar,
+        significance: this.significance_.get(key),
+        anyRowsHaveSignificance: (this.significance_.size > 0)
+      });
+    }
+    this.$.table.tableRows = rows;
+    this.$.table.rebuild();
+  }
+});
+</script>

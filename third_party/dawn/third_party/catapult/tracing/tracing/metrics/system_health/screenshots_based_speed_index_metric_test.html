@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/screenshots_based_speed_index_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('speedIndexScreenshotsBasedMetric', function() {
+    // Base64 jpeg of a 2 x 2 image with all white pixels
+    const data1 =
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA' +
+    'QH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQH/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAA' +
+    'AAAAAAACv/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8Q' +
+    'AFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AfwD/2Q==';
+
+    // Base64 jpeg of a 2 x 2 image with 1 red pixel and 3 white pixels.
+    const data2 =
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA' +
+    'QH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQH/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAA' +
+    'AAAAAAACv/EABgQAQEBAQEAAAAAAAAAAAAAAAUEAwYC/8QAFQEBAQAAAAAAAAAAAAAAAAA' +
+    'AAwX/xAAZEQADAQEBAAAAAAAAAAAAAAADBAUCAQD/2gAMAwEAAhEDEQA/AHxAABcoELy3L' +
+    'Ck81zPNEmgc7zoBsY4QAQ8eJxAopB2Mx5RJR808JpsM+EcMeGMsuOWGXjx5JdcCoAqqhEs' +
+    'ssIa66648BAAAcZGEIQjzkYhCHnOBjxnOMYznOc8zznPUK1arfq07t2nQtW7VB2tYsVnWa' +
+    'NWtVoskcoU6dBwhm36D7ZjNOutGKy0yUhzkIUmtd//Z';
+
+    // Base64 jpeg of a 2 x 2 image with with 1 red pixel, 1 green pixel and 2
+    // white pixels.
+    const data3 =
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA' +
+    'QH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQH/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAA' +
+    'AAAAAAACv/EABsQAAMAAwEBAAAAAAAAAAAAAAIDBAEFCAYH/8QAFAEBAAAAAAAAAAAAAAA' +
+    'AAAAAB//EABsRAAIDAQEBAAAAAAAAAAAAAAMGAgQFBwEA/9oADAMBAAIRAxEAPwBw0XMHN' +
+    'Wtjk12u55+Gwa+CZEUMMXyXwMscUcqgRLJJKjz60TTTIWCUISAKSoAWsBAcYwYH4lxi0c1' +
+    'mzyLmFizYKQ9iwdBVDHOc0/SFMYpMmRClKSUpkJOUpznL2UvfZe++/GLTxPjLwzMTq68k5' +
+    'i4OThu67S2trShKrAzNLMwaFjW3mJi3tbJt6u3u7erbt6evr6du1oaWhasXblg1kxCS/9k' +
+    '=';
+
+    // Base64 jpeg of a 2 x 2 image with with 1 red pixel, 1 green pixel, 1
+    // blue pixel and 1 white pixel.
+    const data4 =
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA' +
+    'QH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQH/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAA' +
+    'AAAAAAACv/EABsQAAIDAQEBAAAAAAAAAAAAAAQFAwYHAggJ/8QAFQEBAQAAAAAAAAAAAAA' +
+    'AAAAABgf/xAAbEQACAwEBAQAAAAAAAAAAAAAEBgMFBwIIAf/aAAwDAQACEQMRAD8AWB84M' +
+    'Iw+y/PHwZYrFjWUv7A/8YeXHT166zuoNXLpy1w+jHNGzZocnnNZM2Rs85h55k8xRhU0pBE' +
+    'sk0nffSD1D58wOq9MeiaurxDIK2trd01sCurgM0TAwQAQ39gHECCEHpYxxRBR444BxoI44' +
+    'YIY+IouOeOeefkfPxfHX0416esnzR0dnQslscXFsRFZjamxqY5u7hhZmZhuKoy3vmC9tzD' +
+    'LS5ubQwqxtLEok44mcmeWXr//2Q==';
+
+    // Base64 jpeg of a 2 x 2 image with with 1 red pixel, 1 green pixel, 1
+    // blue pixel and 1 yellow pixel.
+    const data5 =
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA' +
+    'QH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE' +
+    'BAQEBAQEBAQEBAQEBAQEBAQH/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAA' +
+    'AAAAAAACv/EABsQAAMAAwEBAAAAAAAAAAAAAAMEBQIGCAcB/8QAFQEBAQAAAAAAAAAAAAA' +
+    'AAAAABgr/xAAbEQADAQEAAwAAAAAAAAAAAAAEBQYDBwIICf/aAAwDAQACEQMRAD8AQdwH5' +
+    'X5he4S4puXPONCs2rPJPOFWxYq6fr1GpVqUfHdNcoUqVBycZt595sxmnHGjFYaYKQ5yZlz' +
+    'yy+yH/T1w3i/pV9DI6OaMZORk/eT2zmpaWmjiUU5NTiLvl+rST6BGr1FWJkiZYKKuVKlwo' +
+    'wC4AbAQTDEfHPPxQi+vvBehCjX9/wAR5DcXdwPjYWtrYc1jKatsK2mz8XVHU1NG6SmuKCj' +
+    'oHBpjZ27bGFs2rMso88ogojXXz//Z';
+
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browserProcess = model.browserProcess;
+      const rendererProcess = model.rendererProcess;
+      model.userModel.expectations.push(new tr.model.um.LoadExpectation(
+          model, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 300, 2100,
+          rendererProcess, {
+            cat: 'blink.user_timing',
+            title: 'navigationStart',
+            start: 0,
+            duration: 0.0,
+            args: {frame: '0xdeadbeef', data: {navigationId: '0xfirstnav'}}},
+          {}, {}, {}, {}, ' ', 0xdeadbeef));
+      browserProcess.objects.addSnapshot('ptr',
+          'disabled-by-default-devtools.screenshot',
+          'Screenshot', 100, data1);
+      browserProcess.objects.addSnapshot('ptr',
+          'disabled-by-default-devtools.screenshot',
+          'Screenshot', 200, data2);
+      browserProcess.objects.addSnapshot('ptr',
+          'disabled-by-default-devtools.screenshot',
+          'Screenshot', 300, data3);
+      browserProcess.objects.addSnapshot('ptr',
+          'disabled-by-default-devtools.screenshot',
+          'Screenshot', 400, data4);
+      browserProcess.objects.addSnapshot('ptr',
+          'disabled-by-default-devtools.screenshot',
+          'Screenshot', 500, data5);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.screenshotsBasedSpeedIndexMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('speedIndexScreenshotsBased');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(329, hist.running.mean);
+  });
+});
+</script>

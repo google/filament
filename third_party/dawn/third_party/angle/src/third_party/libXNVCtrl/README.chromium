@@ -1,0 +1,17 @@
+Name: NVidia Control X Extension Library
+Short Name: libXNVCtrl
+URL: http://cgit.freedesktop.org/~aplattner/nvidia-settings/
+Revision: ffa5183362ed4ace5b1cfd031a272f72e7d68c1b
+Version: N/A
+Date: 2012-05-19
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: yes
+
+Description:
+This package provides access to NVidia Control X Extension. It is used to determine the version of the NVIDIA driver in use.
+
+The current version is pulled from nvidia-settings-302.17.
+
+Local Modifications:

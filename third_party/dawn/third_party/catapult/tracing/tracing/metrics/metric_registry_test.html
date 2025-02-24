@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('FindMetricByName', function() {
+    function aMetric(histograms, model) {
+      const n1 = new tr.v.Histogram('foo', tr.b.Unit.byName.count);
+      n1.addSample(1);
+      histograms.addHistogram(n1);
+    }
+    tr.metrics.MetricRegistry.register(aMetric);
+
+    function bMetric(histograms, model) {
+      const n1 = new tr.v.Histogram('foo', tr.b.Unit.byName.count);
+      const n2 = new tr.v.Histogram('bar', tr.b.Unit.byName.count);
+      n1.addSample(1);
+      n2.addSample(2);
+      histograms.addHistogram(n1);
+      histograms.addHistogram(n2);
+    }
+    tr.metrics.MetricRegistry.register(bMetric);
+
+    function cMetric(histograms, model) {
+      const n1 = new tr.v.Histogram('foo', tr.b.Unit.byName.count);
+      const n2 = new tr.v.Histogram('bar', tr.b.Unit.byName.count);
+      const n3 = new tr.v.Histogram('baz', tr.b.Unit.byName.count);
+      n1.addSample(1);
+      n2.addSample(2);
+      n3.addSample(3);
+      histograms.addHistogram(n1);
+      histograms.addHistogram(n2);
+      histograms.addHistogram(n3);
+    }
+    tr.metrics.MetricRegistry.register(cMetric);
+
+    const typeInfo = tr.metrics.MetricRegistry.findTypeInfoWithName(
+        'bMetric');
+    assert.strictEqual(typeInfo.constructor, bMetric);
+  });
+
+  test('registerNonFunctionThrows', function() {
+    // Metrics must be functions.
+    assert.throws(function() {
+      tr.metrics.MetricRegistry.register('not a function');
+    });
+
+    // Metric names must end with "Metric" or "Metrics".
+    assert.throws(function() {
+      tr.metrics.MetricRegistry.register(function foo(histograms, model) {});
+    });
+
+    // Metrics take a HistogramSet and a Model and optionally an options
+    // dictionary.
+    assert.throws(function() {
+      tr.metrics.MetricRegistry.register(function fooMetric() {});
+    });
+
+    // Metrics take a HistogramSet and a Model and optionally an options
+    // dictionary.
+    assert.throws(function() {
+      tr.metrics.MetricRegistry.register(function fooMetric(a) {});
+    });
+  });
+
+  test('checkFilename', function() {
+    tr.metrics.MetricRegistry.checkFilename(
+        'aMetric', ['metrics', 'a_metric.html']);
+    tr.metrics.MetricRegistry.checkFilename(
+        'fooBarMetric', ['foo', 'bar_metric.html']);
+
+    // Expected fooMetric to be in a file named foo_metric.html; actual:
+    // foo/bar_metric.html
+    assert.throws(() => tr.metrics.MetricRegistry.checkFilename(
+        'fooMetric', ['foo', 'bar_metric.html']));
+
+    // Expected fooMetric to be in a file named foo_metric.html; actual:
+    // cat/bar_metric.html
+    assert.throws(() => tr.metrics.MetricRegistry.checkFilename(
+        'fooMetric', ['cat', 'bar_metric.html']));
+  });
+});
+</script>

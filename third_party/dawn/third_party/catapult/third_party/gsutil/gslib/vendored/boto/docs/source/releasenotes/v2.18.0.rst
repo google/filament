@@ -1,0 +1,41 @@
+boto v2.18.0
+============
+
+:date: 2013/11/22
+
+This release adds support for new AWS Identity and Access Management (IAM),
+AWS Security Token Service (STS), Elastic Load Balancing (ELB), Amazon Elastic
+Compute Cloud (EC2),  Amazon Relational Database Service (RDS), and Amazon
+Elastic Transcoder APIs and parameters. Amazon Redshift SNS notifications are
+now supported. CloudWatch is updated to use signature version four, issues
+encoding HTTP headers are fixed and several services received documentation
+fixes.
+
+
+Features
+--------
+* Add support for new STS and IAM calls related to SAML. (:issue:`1867`,
+    :issue:`1867`, :sha:`1c51d17`)
+* Add SigV4 support to Cloudwatch (:sha:`ef43035`)
+* Add support for ELB Attributes and Cross Zone Balancing. (:issue:`1852`,
+    :issue:`1852`, :sha:`76f8b7f`)
+* Add RDS promote and rename support. (:issue:`1857`, :issue:`1857`,
+    :sha:`0b62c70`)
+* Update EC2 ``get_all_snapshots`` and add support for registering an image
+    with a snapshot. (:issue:`1850`, :issue:`1850`, :sha:`3007956`)
+
+
+Bugfixes
+--------
+* Fix issues related to encoding of values in HTTP headers when using
+    unicode. (:issue:`1864`, :issue:`1864`, :issue:`1839`, :issue:`1829`,
+    :issue:`1828`, :issue:`702`, :sha:`5610dd7`)
+* Fix order of Beanstalk documetation to match param order. (:issue:`1863`,
+    :issue:`1863`, :sha:`a3a29f8`)
+* Make sure file is closed before attempting to delete it when downloading
+    an S3 key. (:issue:`1791`, :sha:`0e6dcbe`)
+* Fix minor CloudTrail documentation typos. (:issue:`1861`, :issue:`1861`,
+    :sha:`256a115`)
+* Fix DynamoDBv2 tutorial sentence with missing verb. (:issue:`1859`,
+    :issue:`1825`, :issue:`1859`, :sha:`0fd5300`)
+* Fix parameter validation for gs (:issue:`1858`, :sha:`6b9a869`)

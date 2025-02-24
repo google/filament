@@ -1,0 +1,16 @@
+Name: pako - zlib port to javascript, very fast!
+Short Name: pako
+URL: https://github.com/nodeca/pako
+Version: 1.0.3
+Revision: 653c0b00d8941c89d09ed4546d2179001ec44efc
+Date: Sat Oct 1 12:51:09 2016 -0800
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: yes
+
+Description:
+high speed zlib port to javascript, works in browser & node.js
+
+Local Modifications:
+None

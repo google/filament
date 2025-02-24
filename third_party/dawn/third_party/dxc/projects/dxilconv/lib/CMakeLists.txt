@@ -1,0 +1,3 @@
+add_subdirectory(DxilConvPasses)
+add_subdirectory(DxbcConverter)
+add_subdirectory(ShaderBinary)

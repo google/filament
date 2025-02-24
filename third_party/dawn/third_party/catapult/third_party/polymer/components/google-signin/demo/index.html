@@ -1,0 +1,208 @@
+<!doctype html>
+<!-- Copyright (c) 2014 Google Inc. All rights reserved. -->
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+  <title>google-signin Demo</title>
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="../google-signin.html">
+  <link rel="import" href="../google-signin-aware.html">
+
+  <!-- Demo only styles -->
+  <style>
+    body {
+      font-family: 'RobotoDraft', 'Roboto', sans-serif;
+      line-height:1.2;
+      vertical-align:middle;
+      background: rgba(204, 204, 204, 0.31);
+    }
+
+
+    .map {
+      background: whitesmoke;
+      margin: .5rem -1.5rem 0 -1.5rem;
+      padding: 0.5rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight:200;
+      clear: both;
+    }
+
+    h1 strong {
+      font-weight:300;
+      color:#539D00;
+    }
+
+    h2 {
+      font-size:.9rem;
+      line-height:2.5;
+      color:gray;
+      font-weight:400;
+      clear: both;
+    }
+
+    .showcase {
+      display: inline-block;
+      margin-right: 2rem;
+      float: left;
+    }
+  </style>
+
+</head>
+
+<body>
+  <p>A <code>&lt;google-signin&gt;</code> element looks like this button:</p>
+
+  <p><google-signin brand="google" client-id="1054047045356-j8pgqgls9vdef3rl09hapoicumbte0bo.apps.googleusercontent.com"></google-signin>
+or like this if plus scopes are present
+  <google-signin brand="google-plus"></google-signin>
+  </p>
+  <p>Signin button can vary its appearance:</p>
+  <p>Width:
+    <google-signin brand="google" width="wide"></google-signin>
+    <google-signin brand="google" width="iconOnly"></google-signin>
+  Height:
+    <google-signin brand="google" height="tall"></google-signin>
+    <google-signin brand="google" height="standard"></google-signin>
+    <google-signin brand="google" height="short"></google-signin>
+  </p>
+  <p>
+  Theme:
+    <google-signin brand="google" theme="dark"></google-signin>
+    <google-signin brand="google" theme="light"></google-signin>
+    <google-signin brand="google-plus" theme="dark"></google-signin>
+    <google-signin brand="google-plus" theme="light"></google-signin>
+    <google-signin brand="google-plus" theme="light" raised></google-signin>
+  </p>
+  <!-- Demo the ability to use the google-signin-aware element. -->
+  <p><code>&lt;google-signin-aware&gt;</code> is a companion element.</p>
+  <p>You can use it inside your components to request additional scopes.</p>
+  <p>Every signin button will request all the scopes present in the document,
+  and change its appearance to match</p>
+  <p>For example, here is a signin-aware scope. You can change its scopes via popup</p>
+  <dom-bind id="awareness">
+    <template is="dom-bind">
+      <div><code>&lt;google-signin-aware
+        <div>scope=
+          <select value="{{scope::change}}">
+            <option value="">None</option>
+            <option value="https://www.googleapis.com/auth/analytics">Google Analytics</option>
+            <option value="https://www.googleapis.com/auth/plus.login">Google Plus view circles</option>
+            <option value="https://www.googleapis.com/auth/youtube">YouTube</option>
+            <option value="https://www.googleapis.com/auth/calendar">Calendar</option>
+            <option value="profile">Profile info</option>
+          </select>
+        </div>
+        <div>openid-prompt=
+          <input type="checkbox" checked="{{openidPrompt.none::change}}">none
+          <input type="checkbox" checked="{{openidPrompt.login::change}}">login
+          <input type="checkbox" checked="{{openidPrompt.consent::change}}">consent
+          <input type="checkbox"
+              checked="{{openidPrompt.select_account::change}}">select_account
+        </div>
+        <div>offline=<input type="checkbox" checked="{{offline::change}}"></div>
+        <div>initialized="<span>{{initialized}}</span>"</div>
+        <div>signedIn="<span>{{signedIn}}</span>"</div>
+        <div>isAuthorized="<span>{{isAuthorized}}</span>"</div>
+        <div>needAdditionalAuth:"<span>{{needAdditionalAuth}}</span>"&gt;</div>
+      </code></div>
+      <p>Every new scope you select will be added to requested scopes.</p>
+      <p>When you select a Google Plus scope, button will turn red.</p>
+        <google-signin></google-signin>
+      </p>
+      <google-signin-aware
+          scopes="{{scope}}"
+          openid-prompt="{{openidPromptValue}}"
+          initialized="{{initialized}}"
+          signed-in="{{signedIn}}"
+          offline="{{offline}}"
+          is-authorized="{{isAuthorized}}"
+          need-additional-auth="{{needAdditionalAuth}}"
+          on-google-signin-aware-error="handleSignInError"
+          on-google-signin-aware-success="handleSignIn"
+          on-google-signin-offline-success="handleOffline"
+          on-google-signin-aware-signed-out="handleSignOut"
+          on-signed-in-changed="handleStateChange"
+          on-initialized-changed="handleStateChange"></google-signin-aware>
+      <p>User name:<span>{{userName}}</span></p>
+      <p>Testing <code>google-signin-aware</code> events: <span>{{status}}</span></p>
+      <p>Testing <code>google-signin-offline</code> events: <span>{{offlineCode}}</span></p>
+      <p>Only display "not signed in" element after auth state is initialized (avoid flickering): <b hidden id="not-signed-in">Not signed in!</b></p>
+      <p><button on-click="disconnect">Disconnect to start over</button></p>
+    </template>
+  </dom-bind>
+  <script>
+    var aware = document.querySelector('#awareness');
+    if (!Polymer.Element) {
+      aware = aware.querySelector('template');
+    }
+
+    aware.status = 'Not granted';
+    aware.offlineCode = 'No offline login.';
+    aware.userName = 'N/A';
+    aware.openidPrompt = {};
+
+    aware.handleSignInError = function(event) {
+      this.status = JSON.stringify(event.detail);
+    };
+    aware.handleSignIn = function(response) {
+      this.status = 'Signin granted';
+      // console.log('[Aware] Signin Response', response);
+      this.userName = gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile().getName();
+    };
+    aware.handleOffline = function(response) {
+      this.offlineCode = response.detail.code;
+    };
+    aware.handleSignOut = function(response) {
+      this.status = 'Signed out';
+      // console.log('[Aware] Signout Response', response);
+      this.userName = 'N/A';
+    };
+    aware.disconnect = function() {
+      var currentUser = gapi.auth2.getAuthInstance().currentUser.get();
+      if (currentUser) {
+        currentUser.disconnect();
+      }
+      gapi.auth2.getAuthInstance().signOut();
+    };
+
+    aware.handleStateChange = function(e) {
+      var signedIn = e.target.signedIn;
+      var initialized = e.target.initialized;
+      if(initialized && !signedIn) {
+        document.querySelector("#not-signed-in").removeAttribute("hidden");
+      } else {
+        document.querySelector("#not-signed-in").setAttribute("hidden", true);
+      }
+    };
+
+    aware.addEventListener('openid-prompt-changed', function(e) {
+      if (e.detail.value) {
+        if (e.detail.path === 'openidPrompt.none') {
+          aware.set('openidPrompt', {
+            none: true,
+            login: false,
+            consent: false,
+            select_account: false
+          });
+        } else {
+          aware.set('openidPrompt.none', false);
+        }
+      }
+
+      var values = [];
+      Object.keys(aware.openidPrompt).forEach(function(k) {
+        if (aware.openidPrompt[k]) {
+          values.push(k);
+        }
+      });
+      this.set('openidPromptValue', values.join(' '));
+    });
+
+  </script>
+</body>
+</html>

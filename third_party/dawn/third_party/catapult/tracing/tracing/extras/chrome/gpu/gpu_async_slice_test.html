@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/gpu/gpu_async_slice.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+  const GpuAsyncSlice = tr.e.gpu.GpuAsyncSlice;
+
+  test('construct', function() {
+    assert.strictEqual(AsyncSlice.subTypes.getConstructor(
+        'disabled-by-default-gpu.device', 'gpu1'),
+    GpuAsyncSlice);
+    assert.strictEqual(AsyncSlice.subTypes.getConstructor(
+        'disabled-by-default-gpu.service', 'gpu2'),
+    GpuAsyncSlice);
+  });
+
+  test('subgroup', function() {
+    const sDevice = new GpuAsyncSlice('disabled-by-default-gpu.device', 'gpu1',
+        7, 0, {'channel': 'test_channel1'});
+
+    const sService = new GpuAsyncSlice(
+        'disabled-by-default-gpu.service', 'gpu2', 7, 0,
+        {'channel': 'test_channel2'});
+
+    assert.strictEqual(sDevice.viewSubGroupTitle, 'Device.test_channel1');
+    assert.strictEqual(sService.viewSubGroupTitle, 'Service.test_channel2');
+  });
+
+  test('import', function() {
+    const events = [
+      {name: 'trace1', args: {}, pid: 1, ts: 100,
+        cat: 'disabled-by-default-gpu.service', tid: 2, ph: 'b', id: 71},
+      {name: 'trace1', args: {}, pid: 1, ts: 200,
+        cat: 'disabled-by-default-gpu.service', tid: 2, ph: 'e', id: 71},
+      {name: 'trace2', args: {'channel': 'test_channel'}, pid: 1, ts: 100,
+        cat: 'disabled-by-default-gpu.service', tid: 2, ph: 'b', id: 72},
+      {name: 'trace2', args: {'channel': 'test_channel'}, pid: 1, ts: 200,
+        cat: 'disabled-by-default-gpu.service', tid: 2, ph: 'e', id: 72},
+      {name: 'trace3', args: {'channel': 'test_channel'}, pid: 1, ts: 100,
+        cat: 'disabled-by-default-gpu.device', tid: 2, ph: 'b', id: 73},
+      {name: 'trace3', args: {'channel': 'test_channel'}, pid: 1, ts: 200,
+        cat: 'disabled-by-default-gpu.device', tid: 2, ph: 'e', id: 73}
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents([events]);
+    const t2 = m.getOrCreateProcess(1).getOrCreateThread(2);
+    assert.strictEqual(t2.asyncSliceGroup.length, 3);
+
+    const slice1 = t2.asyncSliceGroup.slices[0];
+    const slice2 = t2.asyncSliceGroup.slices[1];
+    const slice3 = t2.asyncSliceGroup.slices[2];
+
+    assert.instanceOf(slice1, GpuAsyncSlice);
+    assert.instanceOf(slice2, GpuAsyncSlice);
+    assert.instanceOf(slice3, GpuAsyncSlice);
+
+    assert.strictEqual(slice1.viewSubGroupTitle, 'trace1');
+    assert.strictEqual(slice2.viewSubGroupTitle, 'Service.test_channel');
+    assert.strictEqual(slice3.viewSubGroupTitle, 'Device.test_channel');
+  });
+});
+</script>

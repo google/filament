@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/kernel.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events, callback) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback: callback
+    });
+  }
+
+  test('bestGuessAtCpuCountWithNoData', function() {
+    const m = newModel([]);
+    assert.isUndefined(m.kernel.bestGuessAtCpuCount);
+  });
+
+  test('bestGuessAtCpuCountWithCpuData', function() {
+    const m = newModel([], function(m) {
+      const c1 = m.kernel.getOrCreateCpu(1);
+      const c2 = m.kernel.getOrCreateCpu(2);
+    });
+    assert.strictEqual(m.kernel.bestGuessAtCpuCount, 2);
+  });
+
+  test('bestGuessAtCpuCountWithSoftwareCpuCount', function() {
+    const m = newModel([], function(m) {
+      m.kernel.softwareMeasuredCpuCount = 2;
+    });
+    assert.strictEqual(m.kernel.bestGuessAtCpuCount, 2);
+  });
+
+  test('kernelStableId', function() {
+    const model = newModel([]);
+    assert.strictEqual(model.kernel.stableId, 'Kernel');
+  });
+
+  test('kernelTimeShifting', function() {
+    const m = newModel([]);
+    const ctr1 = m.kernel.getOrCreateCounter('cat', 'ctr1');
+    const series1 = new tr.model.CounterSeries('a', 0);
+    series1.addCounterSample(100, 5);
+    series1.addCounterSample(200, 5);
+    ctr1.addSeries(series1);
+
+    const ctr2 = m.kernel.getOrCreateCpu(1).getOrCreateCounter('cat', 'ctr2');
+    const series2 = new tr.model.CounterSeries('b', 0);
+    series2.addCounterSample(300, 5);
+    series2.addCounterSample(400, 5);
+    ctr2.addSeries(series2);
+
+    m.kernel.shiftTimestampsForward(2);
+
+    assert.strictEqual(ctr1.series[0].samples[0].timestamp, 102);
+    assert.strictEqual(ctr1.series[0].samples[1].timestamp, 202);
+
+    assert.strictEqual(ctr2.series[0].samples[0].timestamp, 302);
+    assert.strictEqual(ctr2.series[0].samples[1].timestamp, 402);
+  });
+});
+</script>
+

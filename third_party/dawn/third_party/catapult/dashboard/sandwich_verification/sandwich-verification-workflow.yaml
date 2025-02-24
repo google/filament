@@ -1,0 +1,149 @@
+main:
+  params: [input]
+  steps:
+    - init:
+        assign:
+          - anomaly: ${input.anomaly}
+          - execution_id: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+          - version: ${text.replace_all(sys.get_env("GOOGLE_CLOUD_WORKFLOW_ID"),
+                "sandwich-verification-workflow-",
+                "")}
+          - get_function_url: ${"https://cloudfunctions.googleapis.com/v2/projects/"+sys.get_env("GOOGLE_CLOUD_PROJECT_ID")+"/locations/"+sys.get_env("GOOGLE_CLOUD_LOCATION")+"/functions/"}
+          - job_id: ${default(map.get(input, "job_id"), null)}
+          - status: null
+          - statistic: null
+          - decision: null
+    - checkJobId:
+        switch:
+          - condition: ${job_id != null}
+            next: pollPinpointJob
+        next: startPinpointJob
+    - startPinpointJob:
+        steps:
+          - getFunctionStartPinpointJob:
+              try:
+                call: http.get
+                args:
+                  url: ${get_function_url+"start-pinpoint-job-"+version}
+                  auth:
+                    type: OAuth2
+                result: functionResponse
+              retry: ${http.default_retry}
+          - postStartPinpointJob:
+              try:
+                call: http.post
+                args:
+                  url: ${functionResponse.body.serviceConfig.uri}
+                  body:
+                    anomaly: ${anomaly}
+                    execution_id: ${execution_id}
+                  auth:
+                    type: OIDC
+                result: startPinpointJobResult
+              retry: ${http.default_retry_non_idempotent}
+          - assignJobId:
+              assign:
+              - job_id: ${startPinpointJobResult.body.job_id}
+    - pollPinpointJob:
+        steps:
+          - getFunctionPollPinpointJob:
+              try:
+                call: http.get
+                args:
+                  url: ${get_function_url+"poll-pinpoint-job-"+version}
+                  auth:
+                    type: OAuth2
+                result: functionResponse
+              retry: ${http.default_retry}
+          - postPollPinpointJob:
+              try:
+                call: http.post
+                args:
+                  url: ${functionResponse.body.serviceConfig.uri}
+                  body:
+                    job_id: ${job_id}
+                  auth:
+                    type: OIDC
+                result: pollPinpointJobResult
+              retry: ${http.default_retry}
+          - assignStatus:
+              assign:
+                - status: ${pollPinpointJobResult.body.status}
+          - checkIfJobDone:
+              switch:
+                - condition: ${status == "Completed"}
+                  next: getCabeAnalysis
+                - condition: ${status == "Failed"}
+                  raise: "Pinpoint Job failed."
+                - condition: ${status == "Cancelled"}
+                  raise: "Pinpoint Job cancelled."
+          - wait:
+              call: sys.sleep
+              args:
+                seconds: 60
+              next: pollPinpointJob
+    - getCabeAnalysis:
+        steps:
+          - getFunctionGetCabeAnalysis:
+              try:
+                call: http.get
+                args:
+                  url: ${get_function_url+"get-cabe-analysis-"+version}
+                  auth:
+                    type: OAuth2
+                result: functionResponse
+              retry: ${http.default_retry}
+          - postGetCabeAnalysis:
+              try:
+                call: http.post
+                args:
+                  url: ${functionResponse.body.serviceConfig.uri}
+                  body:
+                    anomaly: ${anomaly}
+                    job_id: ${job_id}
+                  auth:
+                    type: OIDC
+                  timeout: 600
+                result: getCabeAnalysisResult
+              retry: ${http.default_retry}
+          - assignStatistic:
+              assign:
+                - statistic: ${getCabeAnalysisResult.body[anomaly.benchmark][anomaly.measurement]}
+    - regressionDetection:
+        steps:
+          - getFunctionRegressionDetection:
+              try:
+                call: http.get
+                args:
+                  url: ${get_function_url+"regression-detection-"+version}
+                  auth:
+                    type: OAuth2
+                result: functionResponse
+              retry: ${http.default_retry}
+          - postRegressionDetection:
+              try:
+                call: http.post
+                args:
+                  url: ${functionResponse.body.serviceConfig.uri}
+                  body:
+                    anomaly: ${anomaly}
+                    statistic: ${statistic}
+                    job_id: ${job_id}
+                  auth:
+                    type: OIDC
+                result: regressionDetectionResult
+              retry: ${http.default_retry}
+          - assignDecision:
+              assign:
+                - decision: ${regressionDetectionResult.body.decision}
+    - finishExecution:
+        steps:
+          - createOutput:
+              assign:
+                - response:
+                    anomaly: ${anomaly}
+                    job_id: ${job_id}
+                    statistic: ${statistic}
+                    decision: ${decision}
+          - returnOutput:
+              return: ${response}

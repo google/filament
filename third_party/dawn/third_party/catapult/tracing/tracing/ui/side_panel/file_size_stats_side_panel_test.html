@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/side_panel/file_size_stats_side_panel.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TestUtils = tr.c.TestUtils;
+
+  function createModel(opt_customizeModelCallback) {
+    return TestUtils.newModel(function(model) {
+      const modelStats = model.stats;
+      modelStats.willProcessBasicTraceEvent('X', 'cat1', 'title1');
+      modelStats.willProcessBasicTraceEvent('X', 'cat1', 'title1');
+      modelStats.willProcessBasicTraceEvent('X', 'cat2', 'title1');
+      modelStats.willProcessBasicTraceEvent('X', 'cat2', 'title3');
+      modelStats.willProcessBasicTraceEvent('Y', 'cat3', 'title3');
+    });
+  }
+
+  test('instantiate', function() {
+    const panel = document.createElement('tr-ui-sp-file-size-stats-side-panel');
+    panel.model = createModel();
+    panel.style.height = '200px';
+    this.addHTMLOutput(panel);
+  });
+});
+</script>

@@ -1,0 +1,152 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+
+{
+  # This is a map of builder group names -> builder names -> config names
+  # (where each config name is a key in the 'configs' dict, below). MB uses
+  # this dict to look up which config to use for a given bot.
+  'builder_groups': {
+    'angle': {
+      'android-arm-compile': 'angle_reclient_android_arm_release_bot',
+      'android-arm-dbg-compile': 'angle_reclient_android_arm_debug_bot',
+      'android-arm64-dbg-compile': 'angle_reclient_android_arm64_debug_bot',
+      'android-arm64-exp-s22-test': 'angle_reclient_android_arm64_release_bot',
+      'android-arm64-exp-test': 'angle_reclient_android_arm64_release_bot',
+      'android-arm64-test': 'angle_reclient_android_arm64_release_bot',
+      'android-pixel4-perf': 'angle_reclient_android_perf_bot',
+      'android-pixel6-perf': 'angle_reclient_android_perf_bot',
+      'linux-asan-test': 'angle_asan_lsan_ubsan_bot',
+      'linux-dbg-compile': 'angle_reclient_debug_openclcts_bot',
+      'linux-exp-asan-test': 'angle_asan_lsan_ubsan_bot',
+      'linux-exp-test': 'angle_reclient_release_openclcts_bot',
+      'linux-exp-tsan-test': 'angle_tsan_bot',
+      'linux-intel-uhd630-perf': 'angle_reclient_perf_bot',
+      'linux-nvidia-gtx1660-perf': 'angle_reclient_perf_bot',
+      'linux-test': 'angle_reclient_release_openclcts_bot',
+      'linux-tsan-test': 'angle_tsan_bot',
+      'linux-ubsan-test': 'angle_ubsan_bot',
+      'mac-dbg-compile': 'angle_reclient_x64_debug_bot',
+      'mac-exp-test': 'angle_reclient_x64_release_bot',
+      'mac-test': 'angle_reclient_x64_release_bot',
+      'win-asan-test': 'angle_asan_bot',
+      'win-dbg-compile': 'angle_reclient_debug_bot',
+      'win-exp-test': 'angle_reclient_release_bot',
+      'win-msvc-compile': 'angle_non_clang_release_bot',
+      'win-msvc-dbg-compile': 'angle_non_clang_debug_bot',
+      'win-msvc-x86-compile': 'angle_non_clang_x86_release_bot',
+      'win-msvc-x86-dbg-compile': 'angle_non_clang_x86_debug_bot',
+      'win-test': 'angle_reclient_release_bot',
+      'win-x86-dbg-compile': 'angle_reclient_x86_debug_bot',
+      'win-x86-test': 'angle_reclient_x86_release_bot',
+      'win10-intel-uhd630-perf': 'angle_reclient_perf_bot',
+      'win10-nvidia-gtx1660-perf': 'angle_reclient_perf_bot',
+      'winuwp-compile': 'angle_winuwp_non_clang_release_bot',
+      'winuwp-dbg-compile': 'angle_winuwp_non_clang_debug_bot',
+    },
+  },
+
+  # This is the list of configs that you can pass to mb; each config
+  # represents a particular combination of gn args that
+  # we must support. A given config *may* be platform-specific but
+  # is not necessarily so (i.e., we might have mac, win, and linux
+  # bots all using the 'release_bot' config).
+  'configs': {
+    'angle_asan_bot': ['angle', 'opencl', 'reclient', 'asan', 'release'],
+    'angle_asan_lsan_ubsan_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'asan', 'lsan', 'ubsan', 'release'],
+    'angle_non_clang_debug_bot': ['angle', 'non_clang', 'debug'],
+    'angle_non_clang_release_bot': ['angle', 'non_clang', 'release'],
+    'angle_non_clang_x86_debug_bot': ['angle', 'non_clang', 'x86', 'debug', 'cxx17'],
+    'angle_non_clang_x86_release_bot': ['angle', 'non_clang', 'x86', 'release'],
+    'angle_reclient_android_arm64_debug_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'android', 'arm64', 'debug'],
+    'angle_reclient_android_arm64_release_bot': ['angle', 'capture', 'opencl', 'openclcts', 'reclient', 'android', 'arm64', 'release'],
+    'angle_reclient_android_arm_debug_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'android', 'arm', 'debug', 'cxx17'],
+    'angle_reclient_android_arm_release_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'android', 'arm', 'release'],
+    'angle_reclient_android_perf_bot': ['angle', 'reclient', 'android', 'arm64', 'perf'],
+    'angle_reclient_debug_bot': ['angle', 'opencl', 'reclient', 'debug'],
+    'angle_reclient_debug_openclcts_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'debug'],
+    'angle_reclient_perf_bot': ['angle', 'reclient', 'perf'],
+    'angle_reclient_release_bot': ['angle', 'capture', 'opencl', 'reclient', 'release'],
+    'angle_reclient_release_openclcts_bot': ['angle', 'capture', 'opencl', 'openclcts', 'reclient', 'release'],
+    'angle_reclient_x64_debug_bot': ['angle', 'opencl', 'reclient', 'x64', 'debug'],
+    'angle_reclient_x64_release_bot': ['angle', 'capture', 'opencl', 'reclient', 'x64', 'release'],
+    'angle_reclient_x86_debug_bot': ['angle', 'opencl', 'reclient', 'x86', 'debug'],
+    'angle_reclient_x86_release_bot': ['angle', 'opencl', 'reclient', 'x86', 'release'],
+    'angle_tsan_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'tsan', 'release'],
+    'angle_ubsan_bot': ['angle', 'opencl', 'openclcts', 'reclient', 'ubsan', 'release'],
+    'angle_winuwp_non_clang_debug_bot': ['angle', 'winuwp', 'non_clang', 'debug'],
+    'angle_winuwp_non_clang_release_bot': ['angle', 'winuwp', 'non_clang', 'release'],
+  },
+
+  # This is a dict mapping a given 'mixin' name to a dict of settings that
+  # mb should use. See //tools/mb/docs/user_guide.md for more information.
+  'mixins': {
+    'android': {
+      'gn_args': 'target_os="android"',
+    },
+    'angle': {
+      'gn_args': 'is_component_build=true',
+    },
+    'arm': {
+      'gn_args': 'target_cpu="arm"',
+    },
+    'arm64': {
+      'gn_args': 'target_cpu="arm64"',
+    },
+    'asan': {
+      'gn_args': 'is_asan=true',
+    },
+    'capture': {
+      'gn_args': 'angle_with_capture_by_default=true',
+    },
+    'cxx17': {
+      # Android does not fully support C++20 yet: b/330910097
+      'gn_args': 'use_cxx17=true',
+    },
+    'debug': {
+      'gn_args': 'is_debug=true',
+    },
+    'lsan': {
+      'gn_args': 'is_lsan=true',
+    },
+    'non_clang': {
+      'gn_args': 'is_clang=false treat_warnings_as_errors=false use_custom_libcxx=false',
+    },
+    'opencl': {
+      'gn_args': 'angle_enable_cl=true',
+    },
+    'openclcts': {
+      'gn_args': 'angle_enable_cl_testing=true',
+    },
+    'perf': {
+      'gn_args': 'is_debug=false dcheck_always_on=false symbol_level=1',
+    },
+    'reclient': {
+      'gn_args': 'use_remoteexec=true',
+    },
+    'release': {
+      'gn_args': 'is_debug=false dcheck_always_on=true symbol_level=1',
+    },
+    'tsan': {
+      'gn_args': 'is_tsan=true',
+    },
+    'ubsan': {
+      'gn_args': 'is_ubsan=true',
+    },
+    'winuwp': {
+      'gn_args': 'target_os="winuwp"',
+    },
+    'x64': {
+      'gn_args': 'target_cpu="x64"',
+    },
+    'x86': {
+      'gn_args': 'target_cpu="x86"',
+    },
+  },
+}

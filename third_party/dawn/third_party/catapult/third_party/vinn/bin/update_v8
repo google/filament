@@ -1,0 +1,286 @@
+#!/usr/bin/env python
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Updates the 64 bit d8 binary for the current OS to match the v8 version used
+in the current version of the specified Chromium channel. If no channel is
+specified, we default to the 'stable' channel.
+
+This script assumes that git is installed and the computer meets all
+other prerequisites to build v8 normally (like having depot_tools installed and
+in $PATH).
+
+Example usage:
+$ tracing/bin/update_v8
+"""
+
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import distutils.spawn
+
+from urllib.request import urlopen
+
+OMAHAPROXY_VERSION_MAP_URL = 'https://omahaproxy.appspot.com/all.json'
+
+V8_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), os.path.pardir, 'third_party',
+    'v8')
+V8_DST_PATH = os.path.join(V8_PATH, '{os}', '{arch}')
+V8_README_PATH = os.path.join(V8_PATH, 'README.chromium')
+
+V8_CHECKOUT_BINARY_PATH = os.path.join(
+    '{v8_root}', 'v8', '{out}', 'Default', 'd8')
+V8_GN_GEN_CMD = ('gn gen ' +
+    os.path.join('out', 'Default') +
+    ' --args="is_debug=false icu_use_data_file=false' +
+    ' v8_use_external_startup_data=false v8_static_library=true"')
+V8_GN_GEN_ARM_CMD = ('gn gen ' +
+    os.path.join('out_arm', 'Default') +
+    r' --args="target_cpu=\"arm64\" is_debug=false' +
+    ' v8_use_external_startup_data=false v8_static_library=true' +
+    ' icu_use_data_file=false"')
+V8_GN_GEN_MIPS_CMD = ('gn gen ' +
+    os.path.join('out_mips', 'Default') +
+    r' --args="target_cpu=\"mipsel\" is_debug=false' +
+    ' v8_use_external_startup_data=false v8_static_library=true' +
+    ' icu_use_data_file=false"')
+V8_GN_GEN_MIPS64_CMD = ('gn gen ' +
+    os.path.join('out_mips64', 'Default') +
+    r' --args="target_cpu=\"mips64el\" is_debug=false' +
+    ' v8_use_external_startup_data=false v8_static_library=true' +
+    ' icu_use_data_file=false"')
+V8_COMPILE_CMD = 'ninja -C {out} d8'
+V8_STRIP_CMD = '{strip} -x {d8}'
+
+V8_INSTALL_SYSROOT_CMD = (
+    os.path.join('build', 'linux', 'sysroot_scripts', 'install-sysroot.py') +
+    ' --arch="arm"')
+V8_INSTALL_SYSROOT_MIPS_CMD = (
+    os.path.join('build', 'linux', 'sysroot_scripts', 'install-sysroot.py') +
+    ' --arch="mips"')
+V8_INSTALL_SYSROOT_MIPS64_CMD = (
+    os.path.join('build', 'linux', 'sysroot_scripts', 'install-sysroot.py') +
+    ' --arch="mips64el"')
+
+VALID_CHANNEL_LIST = ['stable', 'canary', 'beta', 'dev']
+# Dict from the acceptable return values for Python's platform.system() to the
+# corresponding Chromium OS name.
+PYTHON_SYSTEM_TO_CHROME_OS = {
+  'Linux': 'linux',
+  'Windows': 'win',
+  'Darwin': 'mac'
+}
+# Dict from the acceptable return values for Python's platform.machine() to the
+# corresponding ninja architecture name.
+PYTHON_MACHINE_TO_NINJA_ARCH = {
+  'x86_64': 'x64',
+  'AMD64': 'x64'
+}
+
+def Main(args):
+  if len(args) > 1:
+    print('Usage: update_v8 [TARGET_CHANNEL]')
+    return 1
+
+  target_channel = args[0] if len(args) == 1 else 'stable'
+  target_arch = platform.machine()
+
+  if target_channel not in VALID_CHANNEL_LIST:
+    print('Invalid target channel %s. Valid: %s' % (
+        target_channel, VALID_CHANNEL_LIST))
+    return 1
+
+  if platform.system() not in PYTHON_SYSTEM_TO_CHROME_OS:
+    print('System not supported %s. Valid: %s' % (
+        platform.system(), PYTHON_SYSTEM_TO_CHROME_OS))
+    return 1
+  target_os = PYTHON_SYSTEM_TO_CHROME_OS[platform.system()]
+
+  if target_arch not in PYTHON_MACHINE_TO_NINJA_ARCH:
+    print('Invalid target architecture %s. Valid: %s' % (
+        target_arch, PYTHON_MACHINE_TO_NINJA_ARCH))
+    return 1
+
+  v8_version = GetV8Version(target_os, target_channel)
+  UpdateV8Binary(v8_version, target_os, target_arch)
+  UpdateReadmeFile(v8_version, target_os)
+
+  return 0
+
+def GetV8Version(target_os, target_channel):
+  """Returns the v8 version that corresponds to the specified OS and channel."""
+  # Fetch the current version map from omahaproxy.
+  response = urlopen(OMAHAPROXY_VERSION_MAP_URL)
+  versions = json.loads(response.read())
+
+  # Return the v8 version that corresponds to the target OS and channel in the
+  # version map.
+  v8_version = None
+  for curr_os in versions:
+    for curr_version in curr_os['versions']:
+      if (curr_version['os'] == target_os and
+          curr_version['channel'] == target_channel):
+        return curr_version['v8_version']
+
+def _RunCommand(command):
+  print('Run: %s' % command)
+  subprocess.check_call(command, shell=True, stderr=sys.stderr,
+                        stdout=sys.stdout)
+
+def UpdateV8Binary(v8_version, target_os, target_arch):
+  """Updates the catapult V8 binary for the specified OS to be the specified V8
+  version."""
+  # Clone v8, checkout the version that corresponds to our target OS and target
+  # channel, and build the d8 binary.
+  with TempDir() as v8_checkout_path:
+    with ChangeDirectory(v8_checkout_path):
+      if 'DEPOT_TOOLS_WIN_TOOLCHAIN' not in os.environ:
+        # If the user doesn't specify that they're using the Googler Windows
+        # build toolchain, assume that they're not.
+        os.environ['DEPOT_TOOLS_WIN_TOOLCHAIN'] = '0'
+
+      _RunCommand('fetch v8')
+      with ChangeDirectory('v8'):
+        _RunCommand('git checkout {0}'.format(v8_version))
+        _RunCommand('gclient sync')
+
+        # Build for x86 (any OS)
+        _RunCommand(V8_GN_GEN_CMD)
+        _RunCommand(
+            V8_COMPILE_CMD.format(out=os.path.join('out', 'Default')))
+
+        if target_os in ['linux', 'mac']:
+          _RunCommand(
+              V8_STRIP_CMD.format(strip='strip',
+                                  d8=os.path.join('out', 'Default', 'd8')))
+
+        # Build for ARM Mac if we haven't already
+        if target_os == 'mac' and 'arm' not in target_arch:
+          _RunCommand(V8_GN_GEN_ARM_CMD)
+          _RunCommand(
+              V8_COMPILE_CMD.format(out=os.path.join('out_arm', 'Default')))
+          _RunCommand(
+                V8_STRIP_CMD.format(strip='strip',
+                                    d8=os.path.join('out_arm', 'Default', 'd8')))
+
+        # Build the cross compiled version for ARM for direct testing on
+        # Chrome OS devices. For now we build 32-bit only for both armv7l
+        # and aarch64.
+        if (target_os == 'linux' and
+            os.path.isfile('/usr/bin/arm-linux-gnueabihf-gcc')):
+          _RunCommand(V8_INSTALL_SYSROOT_CMD)
+          _RunCommand(V8_GN_GEN_ARM_CMD)
+          _RunCommand(
+              V8_COMPILE_CMD.format(out=os.path.join('out_arm', 'Default')))
+          _RunCommand(
+              V8_STRIP_CMD.format(strip='arm-linux-gnueabihf-strip',
+                                  d8=os.path.join('out_arm', 'Default', 'd8')))
+
+        # Build the cross compiled version for 32-bit MIPS. mipsel toolchain
+        # must be present in PATH.
+        mipsel_gcc_exec = distutils.spawn.find_executable('mipsel-linux-gnu-gcc')
+        if (target_os == 'linux' and
+            mipsel_gcc_exec is not None and
+            os.path.isfile(mipsel_gcc_exec)):
+          _RunCommand(V8_INSTALL_SYSROOT_MIPS_CMD)
+          _RunCommand(V8_GN_GEN_MIPS_CMD)
+          _RunCommand(
+              V8_COMPILE_CMD.format(out=os.path.join('out_mips', 'Default')))
+          _RunCommand(
+              V8_STRIP_CMD.format(strip=distutils.spawn.find_executable('mipsel-linux-gnu-strip'),
+                                  d8=os.path.join('out_mips', 'Default', 'd8')))
+
+        # Build the cross compiled version for 64-bit MIPS. mips64el toolchain
+        # must be present in PATH.
+        mipsel_gcc_exec = distutils.spawn.find_executable('mips64el-linux-gnu-gcc')
+        if (target_os == 'linux' and
+            mipsel_gcc_exec is not None and
+            os.path.isfile(mipsel_gcc_exec)):
+          _RunCommand(V8_INSTALL_SYSROOT_MIPS64_CMD)
+          _RunCommand(V8_GN_GEN_MIPS64_CMD)
+          _RunCommand(
+              V8_COMPILE_CMD.format(out=os.path.join('out_mips64', 'Default')))
+          _RunCommand(
+              V8_STRIP_CMD.format(strip=distutils.spawn.find_executable('mips64el-linux-gnu-strip'),
+                                  d8=os.path.join('out_mips64', 'Default', 'd8')))
+
+    # Copy the d8 binary into place.
+    d8_bin_src = V8_CHECKOUT_BINARY_PATH.format(v8_root=v8_checkout_path,
+                                                out='out')
+    d8_dst_dir = V8_DST_PATH.format(os=target_os, arch=target_arch)
+
+    # Append .exe extension on win
+    if target_os == 'win':
+      d8_bin_src += '.exe'
+    shutil.copy(d8_bin_src, d8_dst_dir)
+    # Also copy dll files on win
+    if target_os == 'win':
+      d8_dir_src = os.path.dirname(d8_bin_src)
+      for f in os.listdir(d8_dir_src):
+        if f.endswith('.dll') or f.endswith('.dat'):
+          lib_path = os.path.join(d8_dir_src, f)
+          shutil.copy(lib_path, d8_dst_dir)
+
+    # If the 32-bit ARM d8 binary exists, use it for both aarch64 and armv7l
+    arm_d8_bin_src = V8_CHECKOUT_BINARY_PATH.format(v8_root=v8_checkout_path,
+                                                    out='out_arm')
+    mips_d8_bin_src = V8_CHECKOUT_BINARY_PATH.format(v8_root=v8_checkout_path,
+                                                    out='out_mips')
+    mips64_d8_bin_src = V8_CHECKOUT_BINARY_PATH.format(v8_root=v8_checkout_path,
+                                                    out='out_mips64')
+    if os.path.isfile(arm_d8_bin_src):
+        shutil.copy(arm_d8_bin_src,
+                    V8_DST_PATH.format(os=target_os, arch='arm'))
+    if os.path.isfile(mips_d8_bin_src):
+        shutil.copy(mips_d8_bin_src,
+                    V8_DST_PATH.format(os=target_os, arch='mips'))
+    if os.path.isfile(mips64_d8_bin_src):
+        shutil.copy(mips64_d8_bin_src,
+                    V8_DST_PATH.format(os=target_os, arch='mips64'))
+
+def UpdateReadmeFile(v8_version, target_os):
+  """Updates the V8 version number in the V8 README.chromium file."""
+  # Get the contents of the new README file with the replaced version number.
+  new_readme_contents = ''
+  with open(V8_README_PATH, 'r') as v8_readme:
+    new_readme_contents = re.sub(r'[0-9\.]+ \({0}\)'.format(target_os),
+                                 r'{0} ({1})'.format(v8_version, target_os),
+                                 v8_readme.read())
+
+  # Overwrite the old README file with the new one.
+  with open(V8_README_PATH, 'w') as v8_readme:
+    v8_readme.write(new_readme_contents)
+
+class ChangeDirectory:
+  """A context manager that changes a directory while in scope."""
+  def __init__(self, newPath):
+    self.newPath = newPath
+
+  def __enter__(self):
+    self.oldPath = os.getcwd()
+    os.chdir(self.newPath)
+
+  def __exit__(self, etype, value, traceback):
+    os.chdir(self.oldPath)
+
+class TempDir:
+  """A context manager that creates a temporary directory while in scope."""
+  def __enter__(self):
+    self.path = tempfile.mkdtemp()
+    print("creating {0}".format(self.path))
+    return self.path
+
+  def __exit__(self, etype, value, traceback):
+    shutil.rmtree(self.path, ignore_errors=True)
+    if os.path.isdir(self.path):
+      print('%s still exists. You may want to delete it' % self.path)
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv[1:]))

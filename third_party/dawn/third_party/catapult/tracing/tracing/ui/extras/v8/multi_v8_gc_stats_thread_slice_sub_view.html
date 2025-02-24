@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/extras/v8/gc_objects_stats_table.html">
+
+<dom-module id='tr-ui-e-multi-v8-gc-stats-thread-slice-sub-view'>
+  <template>
+    <style>
+    </style>
+    <tr-ui-e-v8-gc-objects-stats-table id="gcObjectsStats">
+    </tr-ui-e-v8-gc-objects-stats-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-e-multi-v8-gc-stats-thread-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  get selection() {
+    return this.$.content.selection;
+  },
+
+  set selection(selection) {
+    this.$.gcObjectsStats.selection = selection;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-e-multi-v8-gc-stats-thread-slice-sub-view',
+    tr.e.v8.V8GCStatsThreadSlice,
+    {
+      multi: true,
+      title: 'V8 GC Stats slices'
+    }
+);
+
+</script>

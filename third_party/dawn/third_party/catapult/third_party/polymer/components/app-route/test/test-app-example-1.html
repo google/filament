@@ -1,0 +1,137 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <title>app-route</title>
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../../polymer/polymer.html">
+  <link rel="import" href="./app-example-1.html">
+</head>
+<body>
+  <test-fixture id="ExampleApp">
+    <template>
+      <app-example-1></app-example-1>
+    </template>
+  </test-fixture>
+<script>
+  'use strict';
+
+  function setLocation(url) {
+    window.history.pushState({}, '', url);
+    Polymer.Base.fire('location-changed', {}, { node: window });
+  }
+
+  suite('<test-app-example-1>', function () {
+    var originalLocation;
+    var exampleApp;
+
+    setup(function() {
+      originalLocation = window.location.href;
+      exampleApp = fixture('ExampleApp');
+    });
+
+    teardown(function() {
+      window.history.replaceState({}, '', originalLocation);
+    });
+
+    test('runs through basic usage', function() {
+      // Navigate to /lol
+      setLocation('/lol');
+
+      expect(exampleApp.data).to.be.deep.eq({
+        page: 'lol'
+      });
+      expect(exampleApp.userData).to.be.deep.eq({
+      });
+      expect(exampleApp.route).to.be.deep.eq({
+        prefix: '',
+        path: '/lol',
+        __queryParams: {}
+      });
+      expect(exampleApp.userRoute).to.be.deep.eq({
+        prefix: null,
+        path: null,
+        __queryParams: {}
+      });
+      expect(window.location.pathname).to.be.equal('/lol');
+
+      // Navigate to /user
+      setLocation('/user');
+      expect(exampleApp.data).to.be.deep.eq({
+        page: 'user'
+      });
+
+      // We should have redirected to /user/view because of a redirect in
+      // the example app code.
+      expect(exampleApp.route).to.be.deep.eq({
+        prefix: '',
+        path: '/user/view',
+        __queryParams: {}
+      });
+      expect(exampleApp.userRoute).to.be.deep.eq({
+        prefix: '/user',
+        path: '/view',
+        __queryParams: {}
+      });
+      expect(window.location.pathname).to.be.equal('/user/view');
+
+      // Navigate to /user/details
+      setLocation('/user/details');
+      expect(exampleApp.data).to.be.deep.eq({
+        page: 'user'
+      });
+      expect(exampleApp.userData).to.be.deep.eq({
+        page: 'details'
+      });
+      expect(exampleApp.route).to.be.deep.eq({
+        prefix: '',
+        path: '/user/details',
+        __queryParams: {}
+      });
+      expect(exampleApp.userRoute).to.be.deep.eq({
+        prefix: '/user',
+        path: '/details',
+        __queryParams: {}
+      });
+      expect(window.location.pathname).to.be.equal('/user/details');
+
+      exampleApp.set('data.page', 'redirectToUser');
+      expect(window.location.pathname).to.be.equal('/user/view');
+
+      // This triggers two redirects in a row!
+      setLocation('/redirectToUser');
+      expect(window.location.pathname).to.be.equal('/user/view');
+
+      // Data binding changes to a different user subpage.
+      exampleApp.set('userData.page', 'profile');
+      expect(window.location.pathname).to.be.eq('/user/profile');
+
+      // Data binding changes to the aunt of the current page.
+      exampleApp.set('data.page', 'feed');
+      expect(window.location.pathname).to.be.eq('/feed');
+
+      setLocation('/user/etc');
+      exampleApp.set('userData.page', 'details');
+      expect(window.location.pathname).to.be.eq('/user/details')
+
+      expect(window.location.search).to.be.eq('');
+      exampleApp.set('userQueryParams.foo', 'bar');
+      expect(window.location.search).to.be.eq('?foo=bar');
+
+      exampleApp.userQueryParams = {bar: 'baz'};
+      expect(window.location.search).to.be.eq('?bar=baz');
+    });
+  });
+</script>
+</body>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  function iterateElementDeeplyImpl(element, cb, thisArg, includeElement) {
+    if (includeElement && cb.call(thisArg, element)) return true;
+
+    if (element.root &&
+        element.root !== element &&
+        iterateElementDeeplyImpl(element.root, cb, thisArg, false)) {
+      // Some elements, most notably Polymer template dom-repeat='...'
+      // elements, are their own shadow root. Make sure that we avoid infinite
+      // recursion by avoiding these elements.
+      return true;
+    }
+    const children = Polymer.dom(element).children;
+    for (let i = 0; i < children.length; i++) {
+      if (iterateElementDeeplyImpl(children[i], cb, thisArg, true)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function iterateElementDeeply(element, cb, thisArg) {
+    iterateElementDeeplyImpl(element, cb, thisArg, false);
+  }
+
+  function findDeepElementMatchingPredicate(element, predicate) {
+    let foundElement = undefined;
+    function matches(element) {
+      const match = predicate(element);
+      if (!match) {
+        return false;
+      }
+      foundElement = element;
+      return true;
+    }
+    iterateElementDeeply(element, matches);
+    return foundElement;
+  }
+
+  function findDeepElementsMatchingPredicate(element, predicate) {
+    const foundElements = [];
+    function matches(element) {
+      const match = predicate(element);
+      if (match) {
+        foundElements.push(element);
+      }
+      return false;
+    }
+    iterateElementDeeply(element, matches);
+    return foundElements;
+  }
+
+  function findDeepElementMatching(element, selector) {
+    return findDeepElementMatchingPredicate(element, function(element) {
+      return element.matches(selector);
+    });
+  }
+  function findDeepElementsMatching(element, selector) {
+    return findDeepElementsMatchingPredicate(element, function(element) {
+      return element.matches(selector);
+    });
+  }
+  function findDeepElementWithTextContent(element, re) {
+    return findDeepElementMatchingPredicate(element, function(element) {
+      if (element.children.length !== 0) return false;
+      return re.test(Polymer.dom(element).textContent);
+    });
+  }
+
+  return {
+    findDeepElementMatching,
+    findDeepElementsMatching,
+    findDeepElementMatchingPredicate,
+    findDeepElementsMatchingPredicate,
+    findDeepElementWithTextContent,
+  };
+});
+</script>

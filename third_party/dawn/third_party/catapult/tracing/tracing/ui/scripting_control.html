@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/tquery/tquery.html">
+
+<dom-module id='tr-ui-scripting-control'>
+  <template>
+    <style>
+      :host {
+        flex: 1 1 auto;
+      }
+      .root {
+        font-family: monospace;
+        cursor: text;
+
+        padding: 2px;
+        margin: 2px;
+        border: 1px solid rgba(0, 0, 0, 0.5);
+        background: white;
+
+        height: 100px;
+        overflow-y: auto;
+
+        transition-property: opacity, height, padding, margin;
+        transition-duration: .2s;
+        transition-timing-function: ease-out;
+      }
+      .hidden {
+        margin-top: 0px;
+        margin-bottom: 0px;
+        padding-top: 0px;
+        padding-bottom: 0px;
+        height: 0px;
+        opacity: 0;
+      }
+      .focused {
+        outline: auto 5px -webkit-focus-ring-color;
+      }
+      #history {
+        -webkit-user-select: text;
+        color: #777;
+      }
+      #promptContainer {
+        display: flex;
+      }
+      #promptMark {
+        width: 1em;
+        color: #468;
+      }
+      #prompt {
+        flex: 1;
+        width: 100%;
+        border: none !important;
+        background-color: inherit !important;
+        font: inherit !important;
+        text-overflow: clip !important;
+        text-decoration: none !important;
+      }
+      #prompt:focus {
+        outline: none;
+      }
+    </style>
+
+    <div id="root" class="root hidden" tabindex="0"
+         on-focus="onConsoleFocus">
+      <div id='history'></div>
+      <div id='promptContainer'>
+        <span id='promptMark'>&gt;</span>
+        <input id='prompt' type='text'
+             on-keypress="promptKeyPress"
+             on-keydown="promptKeyDown"
+             on-blur="onConsoleBlur">
+       </div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-scripting-control',
+
+  isEnterKey_(event) {
+    // Check if in IME.
+    // Remove keyIdentifier after reference build rolls past M51 when
+    // KeyboardEvent.key was added.
+    return event.keyCode !== 229 &&
+      (event.key === 'Enter' || event.keyIdentifier === 'Enter');
+  },
+
+  setFocus_(focused) {
+    const promptEl = this.$.prompt;
+    if (focused) {
+      promptEl.focus();
+      Polymer.dom(this.$.root).classList.add('focused');
+      // Move cursor to the end of any existing text.
+      if (promptEl.value.length > 0) {
+        const sel = window.getSelection();
+        sel.collapse(
+            Polymer.dom(promptEl).firstChild, promptEl.value.length);
+      }
+    } else {
+      promptEl.blur();
+      Polymer.dom(this.$.root).classList.remove('focused');
+      // Workaround for crbug.com/89026 to ensure the prompt doesn't retain
+      // keyboard focus.
+      const parent = promptEl.parentElement;
+      const nextEl = Polymer.dom(promptEl).nextSibling;
+      promptEl.remove();
+      Polymer.dom(parent).insertBefore(promptEl, nextEl);
+    }
+  },
+
+  onConsoleFocus(e) {
+    e.stopPropagation();
+    this.setFocus_(true);
+  },
+
+  onConsoleBlur(e) {
+    e.stopPropagation();
+    this.setFocus_(false);
+  },
+
+  promptKeyDown(e) {
+    e.stopPropagation();
+    if (!this.isEnterKey_(e)) return;
+
+    e.preventDefault();
+    const promptEl = this.$.prompt;
+    const command = promptEl.value;
+    if (command.length === 0) return;
+
+    promptEl.value = '';
+    this.addLine_(String.fromCharCode(187) + ' ' + command);
+
+    let result;
+    try {
+      result = this.controller_.executeCommand(command);
+    } catch (e) {
+      result = e.stack || e.stackTrace;
+    }
+
+    if (result instanceof tr.e.tquery.TQuery) {
+      // TODO(skyostil): Show a cool spinner.
+      result.ready().then(function(selection) {
+        this.addLine_(selection.length + ' matches');
+        this.controller_.brushingStateController.
+            showScriptControlSelection(selection);
+      }.bind(this));
+    } else {
+      this.addLine_(result);
+    }
+    promptEl.scrollIntoView();
+  },
+
+  addLine_(line) {
+    const historyEl = this.$.history;
+    if (historyEl.innerText.length !== 0) {
+      historyEl.innerText += '\n';
+    }
+    historyEl.innerText += line;
+  },
+
+  promptKeyPress(e) {
+    e.stopPropagation();
+  },
+
+  toggleVisibility() {
+    const root = this.$.root;
+    if (!this.visible) {
+      Polymer.dom(root).classList.remove('hidden');
+      this.setFocus_(true);
+    } else {
+      Polymer.dom(root).classList.add('hidden');
+      this.setFocus_(false);
+    }
+  },
+
+  get hasFocus() {
+    return this === document.activeElement;
+  },
+
+  get visible() {
+    const root = this.$.root;
+    return !Polymer.dom(root).classList.contains('hidden');
+  },
+
+  get controller() {
+    return this.controller_;
+  },
+
+  set controller(c) {
+    this.controller_ = c;
+  }
+});
+</script>

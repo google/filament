@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/serializable.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  class Stuff extends tr.b.Serializable {
+    constructor() {
+      super();
+      this.define('boole', false);
+      this.define('answer', 0);
+      this.define('hipparchus', new Map());
+      this.define('ary', []);
+      this.define('cantor', new Set());
+    }
+  }
+
+  tr.b.Serializable.register(Stuff);
+
+  test('serializable', function() {
+    const stuff = new Stuff();
+    stuff.boole = true;
+    stuff.answer = 42;
+    stuff.hipparchus.set('thing', new Stuff());
+    stuff.hipparchus.get('thing').answer = -1;
+    stuff.ary.push('holy');
+    stuff.cantor.add('handgrenade');
+
+    const clone = stuff.clone();
+    assert.isTrue(clone.boole);
+    assert.strictEqual(42, clone.answer);
+    assert.strictEqual(-1, clone.hipparchus.get('thing').answer);
+    assert.strictEqual('holy', tr.b.getOnlyElement(clone.ary));
+    assert.strictEqual('handgrenade', tr.b.getOnlyElement(clone.cantor));
+  });
+});
+</script>

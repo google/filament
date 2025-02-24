@@ -1,0 +1,96 @@
+# This file is subset of DEPS file from https://chromium.googlesource.com/angle/angle
+# with the minimum toolchain necessary to build Vulkan-ValidationLayers
+
+# Avoids the need for a custom root variable.
+use_relative_paths = True
+
+gclient_gn_args_file = 'build/config/gclient_args.gni'
+
+vars = {
+  'android_git': 'https://android.googlesource.com',
+  'chromium_git': 'https://chromium.googlesource.com',
+
+  # This variable is overrided in Chromium's DEPS file.
+  'build_with_chromium': False,
+
+  # ninja CIPD package version.
+  # https://chrome-infra-packages.appspot.com/p/infra/3pp/tools/ninja
+  'ninja_version': 'version:2@1.11.1.chromium.2',
+}
+
+deps = {
+
+  'build': {
+    'url': Var('chromium_git') + '/chromium/src/build.git@52f862e694826a8ba07d55a4a4207f6521bf06c2',
+    'condition': 'not build_with_chromium',
+  },
+
+  'buildtools': {
+    'url': Var('chromium_git') + '/chromium/src/buildtools.git@2054b2e6d5951659f522f23e73c728398703d5a5',
+    'condition': 'not build_with_chromium',
+  },
+
+  'buildtools/linux64': {
+    'packages': [
+      {
+        'package': 'gn/gn/linux-${{arch}}',
+        'version': 'git_revision:b2afae122eeb6ce09c52d63f67dc53fc517dbdc8',
+      }
+    ],
+    'dep_type': 'cipd',
+    'condition': 'not build_with_chromium and host_os == "linux"',
+  },
+
+  'testing': {
+    'url': '{chromium_git}/chromium/src/testing@601765ed01fb4c61990126ac4a89a624c48191a8',
+    'condition': 'not build_with_chromium',
+  },
+
+  'third_party/android_toolchain/ndk': {
+      'packages': [
+            {
+                'package': 'chromium/third_party/android_toolchain/android_toolchain',
+                'version': 'wpJvg81kuXdMM66r_l9Doa-pLfR6S26Jd1x40LpwWEoC',
+            },
+      ],
+      'condition': 'checkout_android and not build_with_chromium',
+      'dep_type': 'cipd',
+  },
+
+  'third_party/ninja': {
+    'packages': [
+      {
+        'package': 'infra/3pp/build_support/ninja-1_11_1/${{platform}}',
+        'version': Var('ninja_version'),
+      }
+    ],
+    'dep_type': 'cipd',
+    'condition': 'not build_with_chromium',
+  },
+
+  'tools/clang': {
+    'url': Var('chromium_git') + '/chromium/src/tools/clang.git@210eabb02a077da81a41a63cf9c297e8f778e1b0',
+    'condition': 'not build_with_chromium',
+  },
+}
+
+hooks = [
+  {
+    'name': 'sysroot_x64',
+    'pattern': '.',
+    'condition': 'checkout_linux and (checkout_x64 and not build_with_chromium)',
+    'action': ['python3', 'build/linux/sysroot_scripts/install-sysroot.py',
+               '--arch=x64'],
+  },
+  {
+    # Note: On Win, this should run after win_toolchain, as it may use it.
+    'name': 'clang',
+    'pattern': '.',
+    'action': ['python3', 'tools/clang/scripts/update.py'],
+    'condition': 'not build_with_chromium',
+  },
+]
+
+recursedeps = [
+  'buildtools',
+]

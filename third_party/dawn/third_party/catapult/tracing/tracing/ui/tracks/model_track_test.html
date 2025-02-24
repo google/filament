@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/thread.html">
+<link rel="import" href="/tracing/ui/tracks/model_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Range = tr.b.math.Range;
+  const VIEW_L_WORLD = 100;
+  const VIEW_R_WORLD = 1000;
+
+  function testGenerateStripes(times, expectedRanges) {
+    const ranges = tr.ui.tracks.ModelTrack.generateStripes_(
+        times, VIEW_L_WORLD, VIEW_R_WORLD);
+
+    assert.sameDeepMembers(ranges, expectedRanges);
+  }
+
+  test('generateStripesInside', function() {
+    const range200To500 = Range.fromExplicitRange(200, 500);
+    const range800To900 = Range.fromExplicitRange(800, 900);
+    const range998To999 = Range.fromExplicitRange(998, 999);
+    testGenerateStripes([], []);
+    testGenerateStripes([200, 500], [range200To500]);
+    testGenerateStripes([200, 500, 800, 900], [range200To500, range800To900]);
+    testGenerateStripes(
+        [200, 500, 800, 900, 998, 999],
+        [range200To500, range800To900, range998To999]);
+  });
+
+  test('generateStripesOutside', function() {
+    const range101To999 = Range.fromExplicitRange(101, 999);
+    // Far left.
+    testGenerateStripes([0, 99], []);
+    testGenerateStripes([0, 10, 50, 99], []);
+    testGenerateStripes([0, 99, 101, 999], [range101To999]);
+    testGenerateStripes([0, 10, 50, 99, 101, 999], [range101To999]);
+
+    // Far right.
+    testGenerateStripes([1001, 2000], []);
+    testGenerateStripes([1001, 2000, 3000, 4000], []);
+    testGenerateStripes([101, 999, 1001, 2000], [range101To999]);
+    testGenerateStripes([101, 999, 1001, 2000, 3000, 4000], [range101To999]);
+
+    // Far both.
+    testGenerateStripes([0, 99, 1001, 2000], []);
+    testGenerateStripes([0, 10, 50, 99, 1001, 2000], []);
+    testGenerateStripes([0, 10, 50, 99, 1001, 2000, 3000, 4000], []);
+    testGenerateStripes([0, 99, 101, 999, 1001, 2000], [range101To999]);
+  });
+
+  test('generateStripesOverlap', function() {
+    const rangeLeftWorldTo101 = Range.fromExplicitRange(VIEW_L_WORLD, 101);
+    const range102To103 = Range.fromExplicitRange(102, 103);
+    const range200To900 = Range.fromExplicitRange(200, 900);
+    const range997To998 = Range.fromExplicitRange(997, 998);
+    const range999ToRightWorld = Range.fromExplicitRange(999, VIEW_R_WORLD);
+    const rangeLeftWorldToRightWorld =
+        Range.fromExplicitRange(VIEW_L_WORLD, VIEW_R_WORLD);
+
+
+    // Left overlap.
+    testGenerateStripes([0, 101], [rangeLeftWorldTo101]);
+    testGenerateStripes([0, 1, 2, 101], [rangeLeftWorldTo101]);
+    testGenerateStripes(
+        [2, 101, 102, 103],
+        [rangeLeftWorldTo101, range102To103]);
+    testGenerateStripes(
+        [0, 1, 2, 101, 102, 103],
+        [rangeLeftWorldTo101, range102To103]);
+    testGenerateStripes(
+        [0, 1, 2, 101, 102, 103, 1001, 3000],
+        [rangeLeftWorldTo101, range102To103]);
+
+    // Right overlap.
+    testGenerateStripes([999, 2000], [range999ToRightWorld]);
+    testGenerateStripes([999, 2000, 3000, 4000], [range999ToRightWorld]);
+    testGenerateStripes(
+        [997, 998, 999, 2000],
+        [range997To998, range999ToRightWorld]);
+    testGenerateStripes(
+        [997, 998, 999, 2000, 3000, 4000],
+        [range997To998, range999ToRightWorld]);
+    testGenerateStripes(
+        [0, 10, 997, 998, 999, 2000, 3000, 4000],
+        [range997To998, range999ToRightWorld]);
+
+    // Both overlap.
+    testGenerateStripes([0, 2000], [rangeLeftWorldToRightWorld]);
+    testGenerateStripes(
+        [0, 101, 999, 2000],
+        [rangeLeftWorldTo101, range999ToRightWorld]);
+    testGenerateStripes(
+        [0, 101, 200, 900, 999, 2000],
+        [rangeLeftWorldTo101, range200To900, range999ToRightWorld]);
+    testGenerateStripes(
+        [0, 10, 90, 101, 999, 2000, 3000, 4000],
+        [rangeLeftWorldTo101, range999ToRightWorld]);
+    testGenerateStripes(
+        [0, 10, 90, 101, 200, 900, 999, 2000, 3000, 4000],
+        [rangeLeftWorldTo101, range200To900, range999ToRightWorld]);
+  });
+
+  test('generateStripesOdd', function() {
+    const range500To900 = Range.fromExplicitRange(500, 900);
+    const rangeLeftWorldTo200 = Range.fromExplicitRange(VIEW_L_WORLD, 200);
+    const rangeLeftWorldTo500 = Range.fromExplicitRange(VIEW_L_WORLD, 500);
+    const range500ToRightWorld = Range.fromExplicitRange(500, VIEW_R_WORLD);
+    const rangeLeftWorldToRightWorld =
+        Range.fromExplicitRange(VIEW_L_WORLD, VIEW_R_WORLD);
+
+    // One VSync.
+    testGenerateStripes([0], [rangeLeftWorldToRightWorld]);
+    testGenerateStripes([500], [range500ToRightWorld]);
+    testGenerateStripes([1500], []);
+
+    // Multiple VSyncs.
+    testGenerateStripes([0, 10, 20], [rangeLeftWorldToRightWorld]);
+    testGenerateStripes([0, 500, 2000], [rangeLeftWorldTo500]);
+    testGenerateStripes([0, 10, 500], [range500ToRightWorld]);
+    testGenerateStripes([0, 10, 2000], []);
+    testGenerateStripes(
+        [0, 200, 500],
+        [rangeLeftWorldTo200, range500ToRightWorld]);
+    testGenerateStripes(
+        [0, 200, 500, 900],
+        [rangeLeftWorldTo200, range500To900]);
+  });
+
+  test('generateStripesBorder', function() {
+    const rangeLeftWorldToLeftWorld =
+        Range.fromExplicitRange(VIEW_L_WORLD, VIEW_L_WORLD);
+    const rangeRightWorldToRightWorld =
+        Range.fromExplicitRange(VIEW_R_WORLD, VIEW_R_WORLD);
+    const rangeLeftWorldToRightWorld =
+        Range.fromExplicitRange(VIEW_L_WORLD, VIEW_R_WORLD);
+    const rangeLeftWorldTo200 = Range.fromExplicitRange(VIEW_L_WORLD, 200);
+    const range200To500 = Range.fromExplicitRange(200, 500);
+    const range500ToRightWorld = Range.fromExplicitRange(500, VIEW_R_WORLD);
+    testGenerateStripes([0, VIEW_L_WORLD], [rangeLeftWorldToLeftWorld]);
+    testGenerateStripes(
+        [VIEW_L_WORLD, VIEW_L_WORLD],
+        [rangeLeftWorldToLeftWorld]);
+    testGenerateStripes(
+        [VIEW_R_WORLD, 2000],
+        [rangeRightWorldToRightWorld]);
+    testGenerateStripes(
+        [VIEW_R_WORLD, VIEW_R_WORLD],
+        [rangeRightWorldToRightWorld]);
+    testGenerateStripes(
+        [VIEW_L_WORLD, VIEW_R_WORLD],
+        [rangeLeftWorldToRightWorld]);
+    testGenerateStripes(
+        [VIEW_L_WORLD, 200, 500, VIEW_R_WORLD],
+        [rangeLeftWorldTo200, range500ToRightWorld]);
+    testGenerateStripes(
+        [0, VIEW_L_WORLD, VIEW_R_WORLD, 2000],
+        [rangeLeftWorldToLeftWorld, rangeRightWorldToRightWorld]);
+    testGenerateStripes(
+        [0, VIEW_L_WORLD, VIEW_R_WORLD, 2000],
+        [rangeLeftWorldToLeftWorld, rangeRightWorldToRightWorld]);
+    testGenerateStripes(
+        [0, VIEW_L_WORLD, 200, 500, VIEW_R_WORLD, 2000],
+        [rangeLeftWorldToLeftWorld, range200To500,
+          rangeRightWorldToRightWorld]);
+    testGenerateStripes(
+        [0, 10, VIEW_L_WORLD, VIEW_R_WORLD, 2000, 3000],
+        [rangeLeftWorldToRightWorld]);
+  });
+});
+</script>

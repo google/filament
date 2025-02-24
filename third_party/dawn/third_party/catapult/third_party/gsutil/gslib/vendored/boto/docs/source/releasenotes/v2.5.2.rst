@@ -1,0 +1,9 @@
+===========
+boto v2.5.2
+===========
+
+Release 2.5.2 is a bugfix release.  It fixes the following critical issues:
+* :issue:`830`
+
+This issue only affects you if you are using DynamoDB on an EC2 instance with
+IAM Roles.

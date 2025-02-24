@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  // Required quiet window size for Time to Interactive.
+  const TIME_TO_INTERACTIVE_WINDOW_SIZE_MS = 5000;
+
+  // Number of requests tolerated before network is considered busy.
+  const ACTIVE_REQUEST_TOLERANCE = 2;
+
+  // Minimum gap between task clusters for determining First CPU Idle.
+  const FCI_MIN_CLUSTER_SEPARATION_MS = 1000;
+
+  // Minimum duration of a task cluster to consider it heavy.
+  const TASK_CLUSTER_HEAVINESS_THRESHOLD_MS = 250;
+
+  /**
+   * Enum for endpoint types.
+   * @enum {string}
+   */
+  const ENDPOINT_TYPES = {
+    LONG_TASK_START: 'LONG_TASK_START',
+    LONG_TASK_END: 'LONG_TASK_END',
+    REQUEST_START: 'REQUEST_START',
+    REQUEST_END: 'REQUEST_END'
+  };
+
+  /**
+   * @typedef {Object} Endpoint
+   * @property {number} time - timestamp of endpoint.
+   * @property {string} type - A type defined in |ENDPOINT_TYPES|.
+   * originates from.
+   */
+
+  /**
+   * Returns an array of endpoints. An endpoint is either the start or end
+   * timestamp of a TimedEvent.
+   *
+   * @param {Array.<!tr.model.TimedEvent>} events - Events to extract endpoints
+   * from.
+   * @param {string} startType - Endpoint type for a start time endpoint.
+   * @param {string} endType - Endpoint type for an end time endpoint.
+   * @returns {Array.<!Endpoint>}
+   */
+  function getEndpoints_(events, startType, endType) {
+    const endpoints = [];
+    for (const event of events) {
+      endpoints.push({
+        time: event.start,
+        type: startType
+      });
+      endpoints.push({
+        time: event.end,
+        type: endType
+      });
+    }
+
+    return endpoints;
+  }
+
+  /**
+   * Returns true if at time |timestamp| we have a long enough quiet window for
+   * determining Time to Interactive.
+   *
+   * @param {number} timestamp - Timestamp of interest.
+   * @param {number} networkQuietWindowStart - Most recent timestamp when the
+   * renderer became network 2-quiet. Undefined if renderer is not network
+   * 2-quiet at |timestamp|.
+   * @param {number} mainThreadQuietWindowStart - End of most recent long task.
+   * Undefined if a long task is in progress at |timestamp|.
+   * @returns {boolean}
+   */
+  function reachedTTIQuiscence_(timestamp,
+      networkQuietWindowStart, mainThreadQuietWindowStart) {
+    if (networkQuietWindowStart === undefined ||
+        mainThreadQuietWindowStart === undefined) {
+      return false;
+    }
+
+    const mainThreadQuietForLongEnough =
+          timestamp - mainThreadQuietWindowStart >=
+          TIME_TO_INTERACTIVE_WINDOW_SIZE_MS;
+
+    const networkQuietForLongEnough =
+          timestamp - networkQuietWindowStart >=
+          TIME_TO_INTERACTIVE_WINDOW_SIZE_MS;
+
+    return mainThreadQuietForLongEnough && networkQuietForLongEnough;
+  }
+
+  /**
+   * Returns the timestamp for when the page first becomes Interactive.
+   *
+   * See https://goo.gl/IN68jL for detailed explanation of definition and
+   * motivations. This metric was previously known as "Consistently
+   * Interactive". To summarize, we look for a 5 second window starting from
+   * between |searchBegin| and |searchEnd| such that there is no long task
+   * overlapping with that window, and the entire window is network 2-quiet. A
+   * long task is defined as a main thread task with wall duration longer than
+   * 50ms, and network 2-quiet means the window never has more than 2 concurrent
+   * in-flight network requests. Interactive 'candidate' is defined as end of
+   * the last long task before this quiet window, or as |searchBegin| if there
+   * is no long task before that window. We define Interactive as max of
+   * Interactive candidate and domContentLoadedEnd.
+   *
+   * Returns undefined if no suitable quiet window is found.
+   *
+   * @param {number} searchBegin - The left boundary for our search for quiet
+   * window. Ideally, this is First Meaningful Paint, but if FMP is not
+   * available, First Contentful Paint or domContentLoadedEnd may be used as an
+   * approximation.
+   * @param {number} searchEnd - The right boundary for our search for quiet
+   * window. This is either the start of next navigationStart request, or end of
+   * traces.
+   * @param {number} domContentLoadedEnd - Timestamp of domContentLoadedEnd
+   * event for the main loading frame.
+   * @param {Array.<!tr.model.TimedEvent>} longTasks - Main thread tasks longer
+   * than 50ms overlapping with the search window.
+   * @param {Array.<!tr.model.TimedEvent>} networkRequests - Resource
+   * requests overlapping with the search window.
+   * @returns {number|undefined}
+   */
+  function findInteractiveTime(searchBegin, searchEnd,
+      domContentLoadedEnd, longTasksInWindow, networkRequests) {
+    // It is sufficient to only look at the end points of long tasks and network
+    // requests. These are the points where any meaningful changes happen.
+    const longTaskEndpoints = getEndpoints_(longTasksInWindow,
+        ENDPOINT_TYPES.LONG_TASK_START, ENDPOINT_TYPES.LONG_TASK_END);
+    const networkRequestEndpoints = getEndpoints_(networkRequests,
+        ENDPOINT_TYPES.REQUEST_START, ENDPOINT_TYPES.REQUEST_END);
+    const endpoints = longTaskEndpoints.concat(networkRequestEndpoints);
+    endpoints.sort((a, b) => a.time - b.time);
+
+    let networkQuietWindowStart = searchBegin;
+    let mainThreadQuietWindowStart = searchBegin;
+    let interactiveCandidate = undefined;
+    let activeRequests = 0;
+
+    for (const endpoint of endpoints) {
+      if (reachedTTIQuiscence_(endpoint.time,
+          networkQuietWindowStart, mainThreadQuietWindowStart)) {
+        interactiveCandidate = mainThreadQuietWindowStart;
+        break;
+      }
+
+      switch (endpoint.type) {
+        case ENDPOINT_TYPES.LONG_TASK_START:
+          mainThreadQuietWindowStart = undefined;
+          break;
+        case ENDPOINT_TYPES.LONG_TASK_END:
+          mainThreadQuietWindowStart = endpoint.time;
+          break;
+        case ENDPOINT_TYPES.REQUEST_START:
+          activeRequests++;
+          if (activeRequests > ACTIVE_REQUEST_TOLERANCE) {
+            networkQuietWindowStart = undefined;
+          }
+          break;
+        case ENDPOINT_TYPES.REQUEST_END:
+          activeRequests--;
+          if (activeRequests === ACTIVE_REQUEST_TOLERANCE) {
+            // Just became network 2-quiet.
+            networkQuietWindowStart = endpoint.time;
+          }
+          break;
+        default:
+          // This should never happen.
+          throw new Error('Internal Error: Unhandled endpoint type.');
+      }
+    }
+
+    if (interactiveCandidate === undefined &&
+        reachedTTIQuiscence_(searchEnd,
+            networkQuietWindowStart, mainThreadQuietWindowStart)) {
+      interactiveCandidate = mainThreadQuietWindowStart;
+    }
+
+    if (interactiveCandidate === undefined) return undefined;
+
+    return Math.max(interactiveCandidate, domContentLoadedEnd);
+  }
+
+  /**
+   * Returns the required quiet window size for First CPU Idle at
+   * |timeSinceSearchBeginMs| after searchBegin.
+   *
+   * Required quiet window size is modeled as an exponential decay. See
+   * https://goo.gl/kQXGLW for development of the exact equation used here.
+   *
+   * @param {number} timeSinceSearchBeginMs - Time since the beginning of search
+   *     window for First CPU Idle.
+   */
+  function requiredFCIWindowSizeMs(timeSinceSearchBeginMs) {
+    const timeCoefficient = 1 / 15 * Math.log(2);
+
+    const timeSinceSearchBeginSeconds = tr.b.convertUnit(timeSinceSearchBeginMs,
+        tr.b.UnitPrefixScale.METRIC.MILLI, tr.b.UnitPrefixScale.METRIC.NONE);
+    const windowSizeSeconds =
+        4 * Math.exp(- timeCoefficient * timeSinceSearchBeginSeconds) + 1;
+    return tr.b.convertUnit(windowSizeSeconds,
+        tr.b.UnitPrefixScale.METRIC.NONE, tr.b.UnitPrefixScale.METRIC.MILLI);
+  }
+
+  /**
+   * TaskCluster represents a group of long tasks such that they are at least 1s
+   * away from any other long task that is not in the group.
+   *
+   * A TaskCluster instance is meant to be immutable once constructed.
+   */
+  class TaskCluster {
+    /**
+     * Create a TaskCluster.
+     * @param {Array.<!tr.model.TimedEvent>} tasksInClusterSorted - Tasks in the
+     *     cluster. Assumed sorted by start time.
+     */
+    constructor(tasksInClusterSorted) {
+      if (tasksInClusterSorted.length === 0) {
+        throw new Error('Internal Error: TaskCluster must have non zero tasks');
+      }
+
+      for (let i = 0; i < tasksInClusterSorted.length - 1; i++) {
+        const durationBetweenTasks = tasksInClusterSorted[i + 1].start -
+            tasksInClusterSorted[i].end;
+        if (durationBetweenTasks >= FCI_MIN_CLUSTER_SEPARATION_MS) {
+          throw new Error('Internal Error: Tasks in a TaskCluster cannot be ' +
+                          'more than ' + FCI_MIN_CLUSTER_SEPARATION_MS +
+                          ' miliseconds apart');
+        }
+
+        // Ideally the condition below should be durationBetweenTasks < 0, but
+        // sometimes, for rounding errors, the end time of one task may very
+        // slightly extend past the start time of the next.
+        if (durationBetweenTasks < -1e7) {
+          throw new Error('Internal Error: List of tasks used to construct ' +
+                          'TaskCluster must be sorted.');
+        }
+      }
+
+      this._clusterTasks = tasksInClusterSorted;
+    }
+
+    /**
+     * @type{number}
+     */
+    get start() {
+      return this._clusterTasks[0].start;
+    }
+
+    /**
+     * @type{number}
+     */
+    get end() {
+      return this._clusterTasks[this._clusterTasks.length - 1].end;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isHeavy() {
+      return this.end - this.start > TASK_CLUSTER_HEAVINESS_THRESHOLD_MS;
+    }
+  }
+
+
+  /**
+   * Returns all the task clusters of |sortedLongTasks|.
+   *
+   * @param {Array.<!tr.model.TimedEvent>} sortedLongTasks - Main thread tasks
+   *     longer than 50ms, sorted by task start time.
+   * @returns {Array.<!TaskCluster>}
+   */
+  function findFCITaskClusters(sortedLongTasks) {
+    const clusters = [];
+    if (sortedLongTasks.length === 0) return clusters;
+
+    const firstTask = sortedLongTasks[0];
+    const restOfTasks = sortedLongTasks.slice(1);
+
+    let currentClusterTasks = [firstTask];
+
+    for (const currTask of restOfTasks) {
+      const prevTask = currentClusterTasks[currentClusterTasks.length - 1];
+      if (currTask.start - prevTask.end < FCI_MIN_CLUSTER_SEPARATION_MS) {
+        // Add task to current task cluster.
+        currentClusterTasks.push(currTask);
+      } else {
+        // Wrap up the current cluster and add task to a fresh cluster.
+        clusters.push(new TaskCluster(currentClusterTasks));
+        currentClusterTasks = [currTask];
+      }
+    }
+
+    clusters.push(new TaskCluster(currentClusterTasks));
+
+    return clusters;
+  }
+
+  /**
+   * Returns true if at time |timestamp|, assuming |timestamp| is not in the
+   * middle of a heavy task cluster, we have a long enough quiet window for
+   * determining First CPU Idle.
+   *
+   * @param {number} timestamp - Timestamp of interest. We assume |timestamp| is
+   *     not in the middle of a heavy task cluster.
+   * @param {number} mainThreadQuietWindowStart - Most recent timestamp when we
+   *     considered the main thread to be quiet. Usually end of most recent
+   *     heavy task cluster or |searchBegin| where there are no heavy task
+   *     cluster.
+   * @param {number} searchBegin - Left boundary for quiet window search.
+   * @returns {boolean}
+   */
+  function reachedFCIQuiescence_(timestamp, mainThreadQuietWindowStart,
+      searchBegin) {
+    const quietWindowSize = timestamp - mainThreadQuietWindowStart;
+    const timeSinceSearchBegin = mainThreadQuietWindowStart - searchBegin;
+    const requiredWindowSize = requiredFCIWindowSizeMs(timeSinceSearchBegin);
+    return quietWindowSize > requiredWindowSize;
+  }
+
+  /**
+   * Returns the timestamp for First CPU Idle for a page.
+   *
+   * See https://goo.gl/1a1XwZ for definition, and https://goo.gl/IN68jL for an
+   * explanation of how the definition was developed. This metric was previously
+   * known as "First Interactive". To summarize, in order to find First
+   * Interactive we look for a long enough window between |searchBegin| and
+   * |searchEnd| such that it doesn't contain a heavy task cluster. The required
+   * length of the window decreases the further we move away from |searchBegin|.
+   * A "task cluster" is defined as a group of long tasks such that they are at
+   * least 1s away from any other long task that is not in the group. A task
+   * cluster is considered "heavy" if the duration of the task cluster (the time
+   * interval from the beginning of first task to the end of last task) is
+   * longer than 250ms. We call the beginning of the quiet window FCI candidate,
+   * and define First Cpu Idle as max of FCI candidate and
+   * domContentLoadedEnd.
+   *
+   * Returns undefined if no suitable quiet window is found.
+   *
+   * @param {number} searchBegin - The left boundary for our search for quiet
+   *     window. Ideally, this is First Meaningful Paint, but if FMP is not
+   *     available, First Contentful Paint or domContentLoadedEnd may be used as
+   *     an approximation.
+   * @param {number} searchEnd - The right boundary for our search for quiet
+   *     window. This is either the start of next navigationStart request, or
+   *     end of traces.
+   * @param {number} domContentLoadedEnd - Timestamp of domContentLoadedEnd
+   *     event for the main loading frame.
+   * @param {Array.<!tr.model.TimedEvent>} longTasks - Main thread tasks longer
+   *     than 50ms overlapping with the search window.
+   * @returns {number|undefined}
+   */
+  function findFirstCpuIdleTime(searchBegin, searchEnd,
+      domContentLoadedEnd, longTasksInWindow) {
+    const sortedLongTasks = longTasksInWindow.sort((a, b) => a.start - b.start);
+    const taskClusters = findFCITaskClusters(sortedLongTasks);
+    const heavyTaskClusters = taskClusters.filter(cluster => cluster.isHeavy());
+
+    let quietWindowBegin = searchBegin;
+    let fiCandidate = undefined;
+    for (const cluster of heavyTaskClusters) {
+      if (reachedFCIQuiescence_(cluster.start, quietWindowBegin, searchBegin)) {
+        fiCandidate = quietWindowBegin;
+        break;
+      }
+      quietWindowBegin = cluster.end;
+    }
+
+    if (fiCandidate === undefined) {
+      // Check if quiescence was reached at the end of the search window.
+      if (reachedFCIQuiescence_(searchEnd, quietWindowBegin, searchBegin)) {
+        fiCandidate = quietWindowBegin;
+      } else {
+        // We never reached quiescence.
+        return undefined;
+      }
+    }
+
+    return Math.max(fiCandidate, domContentLoadedEnd);
+  }
+
+  return {
+    findInteractiveTime,
+    findFirstCpuIdleTime,
+    requiredFCIWindowSizeMs,
+    findFCITaskClusters,
+  };
+});
+</script>

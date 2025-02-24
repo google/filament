@@ -1,0 +1,13 @@
+Name: Autoconf M4 macros used by Bison
+Short Name: m4sugar
+URL: https://git.savannah.gnu.org/r/autoconf.git/
+Version: N/A
+Date: 2019-12-01
+License: GPL-2.0
+License File: LICENSE
+Shipped: no
+Security critical: no
+
+Description:
+Bison uses M4 to generate its output, and uses the utility M4 macros in this
+directory.

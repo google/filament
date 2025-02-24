@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/v8/v8_ic_stats_thread_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.v8', function() {
+  const IC_STATS_PROPERTIES = [
+    'type', 'category', 'scriptName', 'filePosition', 'state', 'isNative',
+    'map', 'propertiesMode', 'numberOfOwnProperties', 'instanceType'
+  ];
+
+  class ICStatsEntry {
+    constructor(obj) {
+      this.type_ = obj.type;
+      if (this.type_.includes('Store')) {
+        this.category_ = 'Store';
+      } else if (this.type_.includes('Load')) {
+        this.category_ = 'Load';
+      }
+      this.state_ = obj.state;
+      if (obj.functionName) {
+        this.functionName_ = obj.optimized ? '*' : '~';
+        this.functionName_ += obj.functionName.length === 0 ?
+          '(anonymous function)' : obj.functionName;
+      }
+      this.offset_ = obj.offset;
+      this.scriptName_ = obj.scriptName ? obj.scriptName : 'unknown';
+      this.isNative_ = obj.scriptName && obj.scriptName.includes('native');
+      this.lineNum_ = obj.lineNum ? obj.lineNum : 'unknown';
+      this.filePosition_ = this.scriptName_ + ':' + this.lineNum_;
+      if (this.functionName_) {
+        this.filePosition_ += ' ' + this.functionName_ + '+' + this.offset_;
+      }
+      this.constructor_ = obj.constructor ? false : true;
+      this.map_ = obj.map;
+      if (this.map_) {
+        this.propertiesMode_ = obj.dict === 1 ? 'slow' : 'fast';
+      } else {
+        this.propertiesMode_ = 'unknown';
+      }
+      this.numberOfOwnProperties_ = obj.own;
+      this.instanceType_ = obj.instanceType;
+      this.key_ = obj.key;
+    }
+
+    get type() {
+      return this.type_;
+    }
+
+    get category() {
+      return this.category_;
+    }
+
+    get state() {
+      return this.state_;
+    }
+
+    get functionName() {
+      return this.functionName_;
+    }
+
+    get offset() {
+      return this.offset_;
+    }
+
+    get scriptName() {
+      return this.scriptName_;
+    }
+
+    get isNative() {
+      return this.isNative_;
+    }
+
+    get lineNumber() {
+      return this.lineNum_;
+    }
+
+    get isConstructor() {
+      return this.constructor_;
+    }
+
+    get map() {
+      return this.map_;
+    }
+
+    get propertiesMode() {
+      return this.propertiesMode_;
+    }
+
+    get numberOfOwnProperties() {
+      return this.numberOfOwnProperties_;
+    }
+
+    get instanceType() {
+      return this.instanceType_;
+    }
+
+    get filePosition() {
+      return this.filePosition_;
+    }
+  }
+
+  class ICStatsEntryGroup {
+    constructor(property, key) {
+      this.property_ = property;
+      this.key_ = key;
+      this.percentage_ = 0;
+      this.entries_ = [];
+      // This is map used to cache all sub grouping result
+      this.subGroup_ = undefined;
+    }
+
+    static groupBy(groups, entries, property) {
+      for (const entry of entries) {
+        const key = entry[property];
+        let group = groups.get(key);
+        if (!group) {
+          group = new ICStatsEntryGroup(property, key);
+          groups.set(key, group);
+        }
+        group.add(entry);
+      }
+      for (const group of groups.values()) {
+        group.percentage = group.length / entries.length;
+      }
+    }
+
+    add(entry) {
+      this.entries_.push(entry);
+    }
+
+    createSubGroup() {
+      if (this.subGroup_) return this.subGroup_;
+      this.subGroup_ = new Map();
+      for (const property of IC_STATS_PROPERTIES) {
+        if (property === this.property_) continue;
+        const groups = new Map();
+        this.subGroup_.set(property, groups);
+        ICStatsEntryGroup.groupBy(groups, this.entries_, property);
+      }
+      return this.subGroup_;
+    }
+
+    get entries() {
+      return this.entries_;
+    }
+
+    get key() {
+      return this.key_;
+    }
+
+    get length() {
+      return this.entries_.length;
+    }
+
+    get percentage() {
+      return this.percentage_;
+    }
+
+    set percentage(value) {
+      this.percentage_ = value;
+    }
+  }
+
+  class ICStatsCollection {
+    constructor() {
+      this.entries_ = [];
+      // Used to cache property grouping result.
+      this.groupedEntries_ = new Map();
+    }
+
+    add(entry) {
+      this.entries_.push(entry);
+    }
+
+    groupBy(property) {
+      if (this.groupedEntries_.has(property)) {
+        return Array.from(this.groupedEntries_.get(property).values());
+      }
+      const groups = new Map();
+      this.groupedEntries_.set(property, groups);
+      ICStatsEntryGroup.groupBy(groups, this.entries_, property);
+      return Array.from(groups.values());
+    }
+
+    get entries() {
+      return this.entries_;
+    }
+
+    get length() {
+      return this.entries_.length;
+    }
+  }
+
+  return {
+    IC_STATS_PROPERTIES,
+    ICStatsEntry,
+    ICStatsEntryGroup,
+    ICStatsCollection,
+  };
+});
+</script>

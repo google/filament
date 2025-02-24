@@ -1,0 +1,152 @@
+[
+  {
+    "cmd": [
+      "cipd.bat",
+      "ensure",
+      "-root",
+      "[CACHE]\\windows_sdk",
+      "-ensure-file",
+      "chrome_internal/third_party/sdk/windows uploaded:2018-06-13",
+      "-max-threads",
+      "0",
+      "-json-output",
+      "/path/to/tmp/json"
+    ],
+    "infra_step": true,
+    "name": "ensure_installed",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"result\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"instance_id\": \"resolved-instance_id-of-uploaded:2018-06\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"package\": \"chrome_internal/third_party/sdk/windows\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    ]@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "RECIPE_MODULE[depot_tools::windows_sdk]\\resources\\find_env_json.py",
+      "--sdk_root",
+      "[CACHE]\\windows_sdk",
+      "--target_arch",
+      "x64",
+      "--output_json",
+      "/path/to/tmp/json"
+    ],
+    "name": "read SetEnv json",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"env\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"INCLUDE\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      [@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"Windows Kits\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"10\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"Include\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"10.0.19041.0\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"um\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      ]@@@",
+      "@@@STEP_LOG_LINE@json.output@    ],@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"PATH\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      [@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"Windows Kits\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"10\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"bin\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"x64\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      ]@@@",
+      "@@@STEP_LOG_LINE@json.output@    ]@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "gn",
+      "gen",
+      "out/Release"
+    ],
+    "env": {
+      "INCLUDE": "[CACHE]\\windows_sdk\\Windows Kits\\10\\Include\\10.0.19041.0\\um"
+    },
+    "env_prefixes": {
+      "PATH": [
+        "[CACHE]\\windows_sdk\\Windows Kits\\10\\bin\\x64"
+      ]
+    },
+    "name": "gn"
+  },
+  {
+    "cmd": [
+      "ninja",
+      "-C",
+      "out/Release"
+    ],
+    "env": {
+      "INCLUDE": "[CACHE]\\windows_sdk\\Windows Kits\\10\\Include\\10.0.19041.0\\um"
+    },
+    "env_prefixes": {
+      "PATH": [
+        "[CACHE]\\windows_sdk\\Windows Kits\\10\\bin\\x64"
+      ]
+    },
+    "name": "ninja"
+  },
+  {
+    "cmd": [
+      "taskkill.exe",
+      "/f",
+      "/t",
+      "/im",
+      "mspdbsrv.exe"
+    ],
+    "name": "taskkill mspdbsrv"
+  },
+  {
+    "cmd": [
+      "cipd.bat",
+      "ensure",
+      "-root",
+      "[CACHE]\\windows_sdk",
+      "-ensure-file",
+      "chrome_internal/third_party/sdk/windows uploaded:2018-06-13",
+      "-max-threads",
+      "0",
+      "-json-output",
+      "/path/to/tmp/json"
+    ],
+    "infra_step": true,
+    "name": "ensure_installed (2)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"result\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"instance_id\": \"resolved-instance_id-of-uploaded:2018-06\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"package\": \"chrome_internal/third_party/sdk/windows\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    ]@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "taskkill.exe",
+      "/f",
+      "/t",
+      "/im",
+      "mspdbsrv.exe"
+    ],
+    "name": "taskkill mspdbsrv (2)"
+  },
+  {
+    "name": "$result"
+  }
+]

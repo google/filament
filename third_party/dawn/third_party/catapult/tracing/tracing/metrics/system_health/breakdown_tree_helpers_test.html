@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/loading_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const rendererPid = 12345;
+  const model = tr.c.TestUtils.newModel(function(model) {
+    const rendererProcess = model.getOrCreateProcess(rendererPid);
+    const mainThread = rendererProcess.getOrCreateThread(2);
+    mainThread.name = 'CrRendererMain';
+
+    // Our main thread looks like:
+    //
+    //      [      parseHTML     ]    [  layout   ]      [      V8.Exec       ]
+    //      |   [  V8.Exec  ]    |    |           |      |     [ layout ]     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      v   v           v    v    v           v      v     v        v     v
+    // Ts: 200  250         300  400  450         550    570   600     620  650
+    // Cpu:1160 1200        1240 1320 1360       1440    1456  1480    1496 1520
+
+    // Add layout categories
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink',
+      title: 'HTMLDocumentParser::DeferredPumpTokenizerIfPossible',
+      start: 200,
+      duration: 200,
+      cpuStart: 1160,
+      cpuDuration: 160,
+    }));
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'devtools.timeline',
+      title: 'Script',
+      start: 250,
+      duration: 50,
+      cpuStart: 1200,
+      cpuDuration: 40,
+    }));
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'v8',
+      title: 'V8.Execute',
+      start: 250,
+      duration: 50,
+      args: {'runtime-call-stat': '{"ICMiss": [3, 150], "GC": [10, 60]}'},
+      cpuStart: 1200,
+      cpuDuration: 40,
+    }));
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink',
+      title: 'LocalFrameView::layout',
+      start: 450,
+      duration: 100,
+      cpuStart: 1360,
+      cpuDuration: 80,
+    }));
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'v8',
+      title: 'V8.Execute',
+      start: 570,
+      duration: 80,
+      args: {'runtime-call-stat': '{"DeOptimize": [1, 42], "GC": [3, 50]}'},
+      cpuStart: 1456,
+      cpuDuration: 64,
+    }));
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink',
+      title: 'WebViewImpl::updateAllLifecyclePhases',
+      start: 600,
+      duration: 20,
+      cpuStart: 1480,
+      cpuDuration: 16,
+    }));
+  });
+
+  const chromeHelper = model.getOrCreateHelper(
+      tr.model.helpers.ChromeModelHelper);
+
+  const rendererHelper = chromeHelper.rendererHelpers[rendererPid];
+
+  test('testWallClockTimeBreakdownNoIntersectingBoundary', function() {
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(0, 1000);
+    const networkEvents = tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, rangeOfInterest);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, rangeOfInterest);
+    assert.deepEqual({
+      total: 150,
+      events: {
+        'HTMLDocumentParser::DeferredPumpTokenizerIfPossible': 150
+      }
+    }, breakdownTree.parseHTML);
+    assert.deepEqual({
+      total: 120,
+      events: {
+        'LocalFrameView::layout': 100,
+        'WebViewImpl::updateAllLifecyclePhases': 20,
+      }
+    }, breakdownTree.layout);
+    assert.deepEqual({
+      total: 110,
+      events: {
+        'V8.Execute': 110,
+      }
+    }, breakdownTree.script_execute);
+    assert.deepEqual({
+      total: 0.302,
+      events: {
+        'DeOptimize': 0.042,
+        'GC': 0.11,
+        'ICMiss': 0.15,
+      }
+    }, breakdownTree.v8_runtime);
+  });
+
+  test('testWallClockTimeBreakdownIntersectingBoundary', function() {
+    // Our main thread looks like:
+    //
+    //      [      parseHTML     ]    [  layout   ]      [      V8.Exec       ]
+    //      |   [  V8.Exec  ]    |    |           |      |     [ layout ]     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      v   v           v    v    v           v      v     v        v     v
+    // Ts: 200  250         300  400  450         550    570   600     620  650
+    //                |                                           |
+    //               275                                         610
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(275, 610);
+    const networkEvents = tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, rangeOfInterest);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, rangeOfInterest);
+    assert.deepEqual({
+      total: 100,
+      events: {
+        'HTMLDocumentParser::DeferredPumpTokenizerIfPossible': 100
+      }
+    }, breakdownTree.parseHTML);
+    assert.deepEqual({
+      total: 110,
+      events: {
+        'LocalFrameView::layout': 100,
+        'WebViewImpl::updateAllLifecyclePhases': 10,
+      }
+    }, breakdownTree.layout);
+    assert.deepEqual({
+      total: 55,
+      events: {
+        'V8.Execute': 55,
+      }
+    }, breakdownTree.script_execute);
+    assert.deepEqual({
+      total: 0.151,
+      events: {
+        'DeOptimize': 0.021,
+        'GC': 0.055,
+        'ICMiss': 0.075,
+      }
+    }, breakdownTree.v8_runtime);
+  });
+
+  test('testCpuTimeBreakdownNoIntersectingBoundary', function() {
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(100, 800);
+    const breakdownTree = tr.metrics.sh.generateCpuTimeBreakdownTree(
+        rendererHelper.mainThread,
+        rangeOfInterest);
+    assert.deepEqual({
+      total: 120,
+      events: {
+        'HTMLDocumentParser::DeferredPumpTokenizerIfPossible': 120
+      }
+    }, breakdownTree.parseHTML);
+    assert.deepEqual({
+      total: 96,
+      events: {
+        'LocalFrameView::layout': 80,
+        'WebViewImpl::updateAllLifecyclePhases': 16,
+      }
+    }, breakdownTree.layout);
+    assert.deepEqual({
+      total: 88,
+      events: {
+        'V8.Execute': 88,
+      }
+    }, breakdownTree.script_execute);
+    assert.deepEqual({
+      total: 0.302,
+      events: {
+        'DeOptimize': 0.042,
+        'GC': 0.11,
+        'ICMiss': 0.15,
+      }
+    }, breakdownTree.v8_runtime);
+  });
+
+  test('testCpuTimeBreakdownIntersectingBoundary', function() {
+    // Our main thread looks like:
+    //
+    //      [      parseHTML     ]    [  layout   ]      [      V8.Exec       ]
+    //      |   [  V8.Exec  ]    |    |           |      |     [ layout ]     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      |   |           |    |    |           |      |     |        |     |
+    //      v   v           v    v    v           v      v     v        v     v
+    // Ts: 200  250         300  400  450         550    570   600     620  650
+    // Cpu:1160 1200        1240 1320 1360       1440    1456  1480    1496 1520
+    //                [                                           ]
+    // Ts RoI        275                                         610
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(275, 610);
+    const breakdownTree = tr.metrics.sh.generateCpuTimeBreakdownTree(
+        rendererHelper.mainThread,
+        rangeOfInterest);
+    assert.deepEqual({
+      total: 80,
+      events: {
+        'HTMLDocumentParser::DeferredPumpTokenizerIfPossible': 80
+      }
+    }, breakdownTree.parseHTML);
+    assert.deepEqual({
+      total: 88,
+      events: {
+        'LocalFrameView::layout': 80,
+        'WebViewImpl::updateAllLifecyclePhases': 8,
+      }
+    }, breakdownTree.layout);
+    assert.deepEqual({
+      total: 44,
+      events: {
+        'V8.Execute': 44,
+      }
+    }, breakdownTree.script_execute);
+    assert.deepEqual({
+      total: 0.151,
+      events: {
+        'DeOptimize': 0.021,
+        'GC': 0.055,
+        'ICMiss': 0.075
+      }
+    }, breakdownTree.v8_runtime);
+  });
+
+  function createNetworkEvent(start, end, cat) {
+    return tr.c.TestUtils.newAsyncSliceEx({
+      cat,
+      title: 'network events',
+      start,
+      duration: end - start,
+    });
+  }
+
+  test('testBlockedOnNetwork_onlyNetEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      const mainThread = model.getOrCreateProcess(0)
+          .getOrCreateThread(0);
+      mainThread.name = 'CrRendererMain';
+      const networkEvent = createNetworkEvent(100, 200, 'net');
+      mainThread.asyncSliceGroup.push(networkEvent);
+    });
+    const rendererHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper)
+        .rendererHelpers[0];
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(0, 150);
+    const networkEvents = tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, rangeOfInterest);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, rangeOfInterest);
+    assert.strictEqual(breakdownTree.blocked_on_network.total, 50);
+    assert.strictEqual(breakdownTree.idle.total, 100);
+  });
+
+  test('testBlockedOnNetwork_netEventAndMainThreadEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      const mainThread = model.getOrCreateProcess(0)
+          .getOrCreateThread(0);
+      mainThread.name = 'CrRendererMain';
+      const networkEvent = createNetworkEvent(100, 200, 'net');
+      mainThread.asyncSliceGroup.push(networkEvent);
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink',
+        title: 'LocalFrameView::layout',
+        start: 160,
+        duration: 140,
+      }));
+    });
+    const rendererHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper)
+        .rendererHelpers[0];
+    const rangeOfInterest = tr.b.math.Range.fromExplicitRange(150, 320);
+    const networkEvents = tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, rangeOfInterest);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, rangeOfInterest);
+    assert.strictEqual(breakdownTree.layout.total, 140);
+    assert.strictEqual(breakdownTree.blocked_on_network.total, 10);
+    assert.strictEqual(breakdownTree.idle.total, 20);
+  });
+
+  test('testBlockedOnNetwork_rangeEmpty', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      const mainThread = model.getOrCreateProcess(0)
+          .getOrCreateThread(0);
+      mainThread.name = 'CrRendererMain';
+      const networkEvent = createNetworkEvent(100, 200, 'net');
+      mainThread.asyncSliceGroup.push(networkEvent);
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink',
+        title: 'FrameView::layout',
+        start: 160,
+        duration: 140,
+      }));
+    });
+    const rendererHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper)
+        .rendererHelpers[0];
+    const rangeOfInterest = new tr.b.math.Range();
+    const networkEvents = tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, rangeOfInterest);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, rangeOfInterest);
+    assert.strictEqual(breakdownTree.layout.total, 0);
+    assert.strictEqual(breakdownTree.blocked_on_network.total, 0);
+    assert.strictEqual(breakdownTree.idle.total, 0);
+  });
+});
+</script>

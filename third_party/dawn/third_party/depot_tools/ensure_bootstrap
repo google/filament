@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO: This duplicates logic in "update_depot_tools". Update that script to
+# invoke this script instead of manually calling "cipd_bin_setup" and other
+# operations.
+
+usage() {
+  cat <<EOF
+Usage: $0
+
+This is a shell script to ensure that all of the "depot_tools" bootstrap
+programs are locally downloaded and ready for execution.
+
+Unlike "update_depot_tools", this script works with the current
+checkout, and will not update/sync the "depot_tools" repository.
+EOF
+}
+
+if [ $# -ne 0 ]; then
+  case $1 in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "$0: ERROR: script takes no arguments: $*" >&2
+    exit 1
+    ;;
+  esac
+fi
+
+# Export for other depot_tools scripts to re-use.
+export DEPOT_TOOLS_DIR="${DEPOT_TOOLS_DIR:-$(dirname "${BASH_SOURCE[0]}")}"
+
+# Test if this script is running under a MinGW install.  If it is, we will
+# hardcode the paths to Git where possible.
+OUTPUT="$(uname | grep 'MINGW')"
+MINGW=$?
+
+base_dir="${DEPOT_TOOLS_DIR}"
+if [ $MINGW != 0 ]; then
+  # Don't bootstrap Python 3 on windows, since it is already done by
+  # bootstrap/win_tools.bat.
+  if [ "X$DEPOT_TOOLS_BOOTSTRAP_PYTHON3" != "X0" ]; then
+    source "$base_dir/bootstrap_python3"
+    bootstrap_python3
+  fi
+fi
+
+# Sync CIPD-boostrapped packages.
+source "$base_dir/cipd_bin_setup.sh"
+cipd_bin_setup &> /dev/null
+
+# Sync "gsutil.py".
+python3 "$base_dir/gsutil.py" -- version 1> /dev/null &
+
+# Sync all the pylint versions.
+for script in "$base_dir"/pylint-[0-9].[0-9]; do
+  # We have to silence stderr too because newer pylint versions will emit
+  # a spurious log to tell us what pylintrc file it's using.  Ugh.
+  "$script" --version >/dev/null 2>&1 &
+done
+
+# Run bootstraps in parallel to help speed things up.
+wait
+
+# Cleanup.
+find "$base_dir" -iname "*.pyc" -delete || true

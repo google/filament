@@ -1,0 +1,16 @@
+Name: Khronos dEQP / CTS
+Short Name: VK-GL-CTS
+Version: 1.0
+URL: https://chromium.googlesource.com/external/github.com/KhronosGroup/VK-GL-CTS
+SOURCE CODE: git clone -b VK-GL-CTS https://chromium.googlesource.com/external/github.com/KhronosGroup/VK-GL-CTS
+Date: 2016-06-20
+Revision: f4f3d8079e7a37d7675ab93583e6438d0bca0e58
+Security Critical: no
+Shipped: no
+License: Apache 2.0
+License File: LICENSE
+
+Description:
+VK-GL-CTS (formally dEQP) is a set of tests and testing tools for GPUs and their drivers. It
+currently supports OpenGL ES 2.0 - 3.1 & AEP, EGL and Vulkan (though ANGLE only uses the GLES
+pieces). The dEQP has been part of the Android CTS since the L release.

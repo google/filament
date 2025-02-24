@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_registry.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const EventRegistry = tr.model.EventRegistry;
+
+  const RequestSelectionChangeEvent = tr.b.Event.bind(
+      undefined, 'requestSelectionChange', true, false);
+
+  /**
+   * Represents a event set within a  and its associated set of tracks.
+   * @constructor
+   */
+  function EventSet(opt_events) {
+    this.bounds_ = new tr.b.math.Range();
+    this.events_ = new Set();
+    this.guid_ = tr.b.GUID.allocateSimple();
+
+    if (opt_events) {
+      if (opt_events instanceof Array) {
+        for (const event of opt_events) {
+          this.push(event);
+        }
+      } else if (opt_events instanceof EventSet) {
+        this.addEventSet(opt_events);
+      } else {
+        this.push(opt_events);
+      }
+    }
+  }
+
+  EventSet.prototype = {
+    __proto__: Object.prototype,
+
+    get bounds() {
+      return this.bounds_;
+    },
+
+    get duration() {
+      if (this.bounds_.isEmpty) return 0;
+      return this.bounds_.max - this.bounds_.min;
+    },
+
+    get length() {
+      return this.events_.size;
+    },
+
+    get guid() {
+      return this.guid_;
+    },
+
+    * [Symbol.iterator]() {
+      for (const event of this.events_) {
+        yield event;
+      }
+    },
+
+    clear() {
+      this.bounds_ = new tr.b.math.Range();
+      this.events_.clear();
+    },
+
+    /**
+     * Pushes each argument onto the EventSet. Returns the number of
+     * arguments pushed.
+     */
+    push(...events) {
+      let numPushed;
+      for (const event of events) {
+        if (event.guid === undefined) {
+          throw new Error('Event must have a GUID');
+        }
+
+        if (!this.events_.has(event)) {
+          this.events_.add(event);
+          // Some uses of eventSet (e.g. in tests) have Events as objects that
+          // don't have addBoundsToRange as a function. Thus we need to handle
+          // this case.
+          if (event.addBoundsToRange) {
+            if (this.bounds_ !== undefined) {
+              event.addBoundsToRange(this.bounds_);
+            }
+          }
+        }
+        numPushed++;
+      }
+      return numPushed;
+    },
+
+    contains(event) {
+      if (this.events_.has(event)) return event;
+      return undefined;
+    },
+
+    addEventSet(eventSet) {
+      for (const event of eventSet) {
+        this.push(event);
+      }
+    },
+
+    intersectionIsEmpty(otherEventSet) {
+      return !this.some(event => otherEventSet.contains(event));
+    },
+
+    equals(that) {
+      if (this.length !== that.length) return false;
+      return this.every(event => that.contains(event));
+    },
+
+    sortEvents(compare) {
+      // Convert to array, then sort, then convert back
+      const ary = this.toArray();
+      ary.sort(compare);
+
+      this.clear();
+      for (const event of ary) {
+        this.push(event);
+      }
+    },
+
+    getEventsOrganizedByBaseType(opt_pruneEmpty) {
+      const allTypeInfos = EventRegistry.getAllRegisteredTypeInfos();
+
+      const events = this.getEventsOrganizedByCallback(function(event) {
+        let maxEventIndex = -1;
+        let maxEventTypeInfo = undefined;
+
+        allTypeInfos.forEach(function(eventTypeInfo, eventIndex) {
+          if (!(event instanceof eventTypeInfo.constructor)) return;
+
+          if (eventIndex > maxEventIndex) {
+            maxEventIndex = eventIndex;
+            maxEventTypeInfo = eventTypeInfo;
+          }
+        });
+
+        if (maxEventIndex === -1) {
+          throw new Error(`Unrecognized event type: ${event.constructor.name}`);
+        }
+
+        return maxEventTypeInfo.metadata.name;
+      });
+
+      if (!opt_pruneEmpty) {
+        allTypeInfos.forEach(function(eventTypeInfo) {
+          if (events[eventTypeInfo.metadata.name] === undefined) {
+            events[eventTypeInfo.metadata.name] = new EventSet();
+          }
+        });
+      }
+
+      return events;
+    },
+
+    getEventsOrganizedByTitle() {
+      return this.getEventsOrganizedByCallback(function(event) {
+        if (event.title === undefined) {
+          throw new Error('An event didn\'t have a title!');
+        }
+        return event.title;
+      });
+    },
+
+    /**
+     * @param {!function(!tr.model.Event):string} cb
+     * @param {*=} opt_this
+     * @return {!Object}  TODO(#3432) Return Map.
+     */
+    getEventsOrganizedByCallback(cb, opt_this) {
+      const groupedEvents = tr.b.groupIntoMap(this, cb, opt_this || this);
+      const groupedEventsDict = {};
+      for (const [k, events] of groupedEvents) {
+        groupedEventsDict[k] = new EventSet(events);
+      }
+      return groupedEventsDict;
+    },
+
+    enumEventsOfType(type, func) {
+      for (const event of this) {
+        if (event instanceof type) {
+          func(event);
+        }
+      }
+    },
+
+    get userFriendlyName() {
+      if (this.length === 0) {
+        throw new Error('Empty event set');
+      }
+
+      const eventsByBaseType = this.getEventsOrganizedByBaseType(true);
+      const eventTypeName = Object.keys(eventsByBaseType)[0];
+
+      if (this.length === 1) {
+        const tmp = EventRegistry.getUserFriendlySingularName(eventTypeName);
+        return tr.b.getOnlyElement(this.events_).userFriendlyName;
+      }
+
+      const numEventTypes = Object.keys(eventsByBaseType).length;
+      if (numEventTypes !== 1) {
+        return this.length + ' events of various types';
+      }
+
+      const tmp = EventRegistry.getUserFriendlyPluralName(eventTypeName);
+      return this.length + ' ' + tmp;
+    },
+
+    filter(fn, opt_this) {
+      const res = new EventSet();
+      for (const event of this) {
+        if (fn.call(opt_this, event)) {
+          res.push(event);
+        }
+      }
+
+      return res;
+    },
+
+    toArray() {
+      const ary = [];
+      for (const event of this) {
+        ary.push(event);
+      }
+      return ary;
+    },
+
+    forEach(fn, opt_this) {
+      for (const event of this) {
+        fn.call(opt_this, event);
+      }
+    },
+
+    map(fn, opt_this) {
+      const res = [];
+      for (const event of this) {
+        res.push(fn.call(opt_this, event));
+      }
+      return res;
+    },
+
+    every(fn, opt_this) {
+      for (const event of this) {
+        if (!fn.call(opt_this, event)) {
+          return false;
+        }
+      }
+      return true;
+    },
+
+    some(fn, opt_this) {
+      for (const event of this) {
+        if (fn.call(opt_this, event)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    asDict() {
+      const stableIds = [];
+      for (const event of this) {
+        stableIds.push(event.stableId);
+      }
+      return {'events': stableIds};
+    },
+
+    asSet() {
+      return this.events_;
+    }
+  };
+
+  EventSet.IMMUTABLE_EMPTY_SET = (function() {
+    const s = new EventSet();
+    s.push = function() {
+      throw new Error('Cannot push to an immutable event set');
+    };
+    s.addEventSet = function() {
+      throw new Error('Cannot add to an immutable event set');
+    };
+    Object.freeze(s);
+    return s;
+  })();
+
+  return {
+    EventSet,
+    RequestSelectionChangeEvent,
+  };
+});
+</script>

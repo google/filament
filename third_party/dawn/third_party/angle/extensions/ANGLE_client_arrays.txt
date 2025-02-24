@@ -1,0 +1,103 @@
+Name
+
+    ANGLE_client_arrays
+
+Name Strings
+
+    GL_ANGLE_client_arrays
+
+Contributors
+
+    Geoff Lang
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, February 13, 2016
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 2.0 specification.
+
+Overview
+
+    This extension allows the OpenGL context to indicate if it supports drawing
+    with client-side vertex or index data.  Client-side can be very inefficient
+    and unsafe, it is convenient for some users to completely disable its usage.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter to IsEnabled and the <pname> parameter to
+    GetBooleanv, GetIntegerv, GetFloatv, and GetInteger64v:
+
+    CLIENT_ARRAYS_ANGLE                 0x93AA
+
+Additions to the OpenGL ES Specification
+
+    Add after paragraph 3 of section 2.8 "Vertex Arrays":
+
+    If VertexAttribPointer is called while zero is bound to the ARRAY_BUFFER
+    buffer object binding point, the pointer argument is not NULL, and
+    CLIENT_ARRAYS_ANGLE is TRUE, an INVALID_OPERATION error is generated.
+
+    Add to the end of section 2.9.1 "Vertex Arrays in Buffer Objects":
+
+    Rendering commands that draw more than 0 primitives using enabled vertex
+    attributes with no buffer bound when CLIENT_ARRAYS_ANGLE is TRUE generate
+    an INVALID_OPERATION error.
+
+    Add to the end of section 2.9.2 "Array Indices in Buffer Objects":
+
+    Rendering commands that draw using index data when no buffer is bound to
+    the ELEMENT_ARRAY_BUFFER binding point when CLIENT_ARRAYS_ANGLE is TRUE
+    generate an INVALID_OPERATION error.
+
+New State
+
+    Modify Table 6.22, Miscellaneous
+
+    Add:
+
+                                          Initial
+    Get Value            Type Get Command Value   Description
+    -------------------- ---- ----------- ------- ---------------------
+    CLIENT_ARRAYS_ANGLE  B    IsEnabled   TRUE    Client arrays enabled
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      2   Jun 12, 2018   Brandon Jones (Intel)  Remove primitives > 0 requirement to error
+                                                when doing an indexed draw with no bound
+                                                ELEMENT_ARRAY_BUFFER
+      1   Feb 13, 2016   geofflang              Initial version

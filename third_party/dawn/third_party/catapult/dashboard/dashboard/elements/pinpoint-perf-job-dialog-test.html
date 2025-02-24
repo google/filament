@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/pinpoint-perf-job-dialog.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const page = document.createElement('pinpoint-perf-job-dialog');
+    page.show();
+    this.addHTMLOutput(page);
+    page.close();
+  }, testOptions);
+
+  test('onSendToTrybot success fires toast', async function() {
+    const mockResponse = {
+      'jobId': 12345,
+      'jobUrl': 'http://abc'
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('pinpoint-perf-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.show();
+
+    let fired = false;
+    page.fire = function(eventName) {
+      if (eventName === 'display-toast') {
+        fired = true;
+      }
+    };
+    await page.onSendToTrybot();
+    page.close();
+
+    assert.strictEqual(page.error, '');
+    assert.isTrue(fired);
+  }, testOptions);
+
+  test('onSendToTrybot failure shows error', async function() {
+    const mockResponse = {
+      'error': 'foo'
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('pinpoint-perf-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.show();
+
+    let fired = false;
+    page.fire = function(eventName) {
+      if (eventName === 'display-toast') {
+        fired = true;
+      }
+    };
+    await page.onSendToTrybot();
+    page.close();
+
+    assert.strictEqual(page.error, 'foo');
+    assert.isFalse(fired);
+  }, testOptions);
+
+  const originalAsPromise = simple_xhr.asPromise;
+  const testOptionsOverwriteSimpleXhr = {
+    tearDown() {
+      simple_xhr.asPromise = originalAsPromise;
+    }
+  };
+
+  test('onSendToTrybot trace_categories included', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-perf-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.testPath = 'master/bot/suite/foo';
+    page.startCommit = '1234567890';
+    page.endCommit = '0987654321';
+    page.startRepository = 'chromium';
+    page.endRepository = 'chromium';
+    page.show();
+    page.traceCategories = 'a,b,c';
+    page.useTrace = true;
+    page.atraceCategories = '1,2,3';
+    page.useAtrace = false;
+
+    let params;
+    simple_xhr.asPromise = function(_, p) {
+      params = p;
+      return new Promise(function(resolve, reject) {
+        resolve({jobId: 12345});
+      });
+    };
+
+    await page.onSendToTrybot();
+    page.close();
+
+    assert.strictEqual(params.test_path, 'master/bot/suite/foo');
+    assert.strictEqual(params.start_commit, '1234567890');
+    assert.strictEqual(params.end_commit, '0987654321');
+    assert.deepEqual(JSON.parse(params.extra_test_args), [
+      '--extra-chrome-categories', 'a,b,c'
+    ]);
+  }, testOptionsOverwriteSimpleXhr);
+
+  test('onSendToTrybot atrace_categories included', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-perf-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.testPath = 'master/bot/suite/foo';
+    page.startCommit = '1234567890';
+    page.endCommit = '0987654321';
+    page.startRepository = 'chromium';
+    page.endRepository = 'chromium';
+    page.show();
+    page.traceCategories = 'a,b,c';
+    page.useTrace = false;
+    page.atraceCategories = '1,2,3';
+    page.useAtrace = true;
+
+    let params;
+    simple_xhr.asPromise = function(_, p) {
+      params = p;
+      return new Promise(function(resolve, reject) {
+        resolve({jobId: 12345});
+      });
+    };
+
+    await page.onSendToTrybot();
+    page.close();
+
+    assert.strictEqual(params.test_path, 'master/bot/suite/foo');
+    assert.strictEqual(params.start_commit, '1234567890');
+    assert.strictEqual(params.end_commit, '0987654321');
+    assert.deepEqual(JSON.parse(params.extra_test_args), [
+      '--extra-atrace-categories', '1,2,3'
+    ]);
+  }, testOptionsOverwriteSimpleXhr);
+});
+</script>

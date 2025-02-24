@@ -1,0 +1,49 @@
+# Copyright 2022 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Build integration for astc-encoder.
+
+source_set("astcenc") {
+  sources = [
+    "src/Source/astcenc.h",
+    "src/Source/astcenc_averages_and_directions.cpp",
+    "src/Source/astcenc_block_sizes.cpp",
+    "src/Source/astcenc_color_quantize.cpp",
+    "src/Source/astcenc_color_unquantize.cpp",
+    "src/Source/astcenc_compress_symbolic.cpp",
+    "src/Source/astcenc_compute_variance.cpp",
+    "src/Source/astcenc_decompress_symbolic.cpp",
+    "src/Source/astcenc_diagnostic_trace.cpp",
+    "src/Source/astcenc_diagnostic_trace.h",
+    "src/Source/astcenc_entry.cpp",
+    "src/Source/astcenc_find_best_partitioning.cpp",
+    "src/Source/astcenc_ideal_endpoints_and_weights.cpp",
+    "src/Source/astcenc_image.cpp",
+    "src/Source/astcenc_integer_sequence.cpp",
+    "src/Source/astcenc_internal.h",
+    "src/Source/astcenc_mathlib.cpp",
+    "src/Source/astcenc_mathlib.h",
+    "src/Source/astcenc_mathlib_softfloat.cpp",
+    "src/Source/astcenc_partition_tables.cpp",
+    "src/Source/astcenc_percentile_tables.cpp",
+    "src/Source/astcenc_pick_best_endpoint_format.cpp",
+    "src/Source/astcenc_platform_isa_detection.cpp",
+    "src/Source/astcenc_quantization.cpp",
+    "src/Source/astcenc_symbolic_physical.cpp",
+    "src/Source/astcenc_vecmathlib.h",
+    "src/Source/astcenc_weight_align.cpp",
+    "src/Source/astcenc_weight_quant_xfer_tables.cpp",
+  ]
+
+  defines = [ "ASTCENC_DECOMPRESS_ONLY=1" ]
+
+  # To improve performance on debug builds, enable optimization for them.
+  if (is_debug) {
+    configs += [ "//build/config/compiler:optimize" ]
+  }
+
+  if (is_clang) {
+    cflags_cc = [ "-Wno-unused-but-set-variable" ]
+  }
+}

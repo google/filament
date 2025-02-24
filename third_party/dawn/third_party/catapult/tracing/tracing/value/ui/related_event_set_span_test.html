@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/related_event_set.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  test('instantiate_RelatedEventSet0', function() {
+    const diagnostic = new tr.v.d.RelatedEventSet();
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-RELATED-EVENT-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    assert.strictEqual('0 events', span.textContent);
+  });
+
+  test('instantiate_RelatedEventSet1', function() {
+    const diagnostic = new tr.v.d.RelatedEventSet();
+    tr.c.TestUtils.newModel(function(model) {
+      const proc = model.getOrCreateProcess(1);
+      const thread = proc.getOrCreateThread(2);
+      const event = tr.c.TestUtils.newSliceEx(
+          {title: 'a', start: 0, duration: 1});
+      thread.sliceGroup.pushSlice(event);
+      diagnostic.add(event);
+    });
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-RELATED-EVENT-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    assert.strictEqual('a 1.000 ms', span.textContent);
+  });
+
+  test('instantiate_RelatedEventSet2', function() {
+    const diagnostic = new tr.v.d.RelatedEventSet();
+    tr.c.TestUtils.newModel(function(model) {
+      const proc = model.getOrCreateProcess(1);
+      const thread = proc.getOrCreateThread(2);
+      let event = tr.c.TestUtils.newSliceEx({start: 0, duration: 1});
+      thread.sliceGroup.pushSlice(event);
+      diagnostic.add(event);
+      event = tr.c.TestUtils.newSliceEx({start: 1, duration: 1});
+      thread.sliceGroup.pushSlice(event);
+      diagnostic.add(event);
+    });
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-RELATED-EVENT-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    assert.strictEqual('2 events', span.textContent);
+  });
+});
+</script>

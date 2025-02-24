@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/rect_track.css">
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/proxy_selectable_item.html">
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/base/fast_rect_renderer.html">
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays an array of Rect objects.
+   * @constructor
+   * @extends {Track}
+   */
+  const RectTrack = tr.ui.b.define(
+      'rect-track', tr.ui.tracks.Track);
+
+  RectTrack.prototype = {
+
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('rect-track');
+      this.asyncStyle_ = false;
+      this.rects_ = null;
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    set heading(heading) {
+      this.heading_.heading = heading;
+    },
+
+    get heading() {
+      return this.heading_.heading;
+    },
+
+    set tooltip(tooltip) {
+      this.heading_.tooltip = tooltip;
+    },
+
+    set selectionGenerator(generator) {
+      this.heading_.selectionGenerator = generator;
+    },
+
+    set expanded(expanded) {
+      this.heading_.expanded = !!expanded;
+    },
+
+    set arrowVisible(arrowVisible) {
+      this.heading_.arrowVisible = !!arrowVisible;
+    },
+
+    get expanded() {
+      return this.heading_.expanded;
+    },
+
+    get asyncStyle() {
+      return this.asyncStyle_;
+    },
+
+    set asyncStyle(v) {
+      this.asyncStyle_ = !!v;
+    },
+
+    get rects() {
+      return this.rects_;
+    },
+
+    set rects(rects) {
+      this.rects_ = rects || [];
+      this.invalidateDrawingContainer();
+    },
+
+    get height() {
+      return window.getComputedStyle(this).height;
+    },
+
+    set height(height) {
+      this.style.height = height;
+      this.invalidateDrawingContainer();
+    },
+
+    get hasVisibleContent() {
+      return this.rects_.length > 0;
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.GENERAL_EVENT:
+          this.drawRects_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawRects_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+
+      ctx.save();
+      const bounds = this.getBoundingClientRect();
+      tr.ui.b.drawSlices(
+          ctx,
+          this.viewport.currentDisplayTransform,
+          viewLWorld,
+          viewRWorld,
+          bounds.height,
+          this.rects_,
+          this.asyncStyle_);
+      ctx.restore();
+
+      if (bounds.height <= 6) return;
+
+      let fontSize;
+      let yOffset;
+      if (bounds.height < 15) {
+        fontSize = 6;
+        yOffset = 1.0;
+      } else {
+        fontSize = 10;
+        yOffset = 2.5;
+      }
+      tr.ui.b.drawLabels(
+          ctx,
+          this.viewport.currentDisplayTransform,
+          viewLWorld,
+          viewRWorld,
+          this.rects_,
+          this.asyncStyle_,
+          fontSize,
+          yOffset);
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      if (this.rects_ === undefined || this.rects_ === null) {
+        return;
+      }
+
+      this.rects_.forEach(function(rect) {
+        rect.addToTrackMap(eventToTrackMap, this);
+      }, this);
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      function onRect(rect) {
+        rect.addToSelection(selection);
+      }
+      onRect = onRect.bind(this);
+      const instantEventWidth = 2 * viewPixWidthWorld;
+      tr.b.iterateOverIntersectingIntervals(this.rects_,
+          function(x) { return x.start; },
+          function(x) {
+            return x.duration === 0 ?
+              x.duration + instantEventWidth :
+              x.duration;
+          },
+          loWX, hiWX,
+          onRect);
+    },
+
+    /**
+     * Add the item to the left or right of the provided event, if any, to the
+     * selection.
+     * @param {rect} The current rect.
+     * @param {Number} offset Number of rects away from the event to look.
+     * @param {Selection} selection The selection to add an event to,
+     * if found.
+     * @return {boolean} Whether an event was found.
+     * @private
+     */
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      const index = this.rects_.findIndex(rect => rect.modelItem === event);
+      if (index === -1) return false;
+
+      const newIndex = index + offset;
+      if (newIndex < 0 || newIndex >= this.rects_.length) return false;
+
+      this.rects_[newIndex].addToSelection(selection);
+      return true;
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+      for (let i = 0; i < this.rects_.length; ++i) {
+        // TODO(petrcermak): Rather than unpacking the proxy item here,
+        // we should probably add an addToSelectionIfMatching(selection, filter)
+        // method to SelectableItem (#900).
+        const modelItem = this.rects_[i].modelItem;
+        if (!modelItem) continue;
+
+        if (filter.matchSlice(modelItem)) {
+          selection.push(modelItem);
+        }
+      }
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      const rect = tr.b.findClosestIntervalInSortedIntervals(
+          this.rects_,
+          function(x) { return x.start; },
+          function(x) { return x.end; },
+          worldX,
+          worldMaxDist);
+
+      if (!rect) return;
+
+      rect.addToSelection(selection);
+    }
+  };
+
+  /**
+   * A filled rectangle with a title.
+   *
+   * @constructor
+   * @extends {ProxySelectableItem}
+   */
+  function Rect(modelItem, title, colorId, start, duration) {
+    tr.model.ProxySelectableItem.call(this, modelItem);
+    this.title = title;
+    this.colorId = colorId;
+    this.start = start;
+    this.duration = duration;
+    this.end = start + duration;
+  }
+
+  Rect.prototype = {
+    __proto__: tr.model.ProxySelectableItem.prototype
+  };
+
+  return {
+    RectTrack,
+    Rect,
+  };
+});
+</script>

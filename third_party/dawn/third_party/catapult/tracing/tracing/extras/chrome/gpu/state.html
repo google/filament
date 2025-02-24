@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.gpu', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function StateSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  StateSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    preInitialize() {
+      this.screenshot_ = undefined;
+    },
+
+    initialize() {
+      if (this.args.screenshot) {
+        this.screenshot_ = this.args.screenshot;
+      }
+    },
+
+    /**
+     * @return {String} a base64 encoded screenshot if available.
+     */
+    get screenshot() {
+      return this.screenshot_;
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      StateSnapshot,
+      {typeName: 'gpu::State'});
+
+  return {
+    StateSnapshot,
+  };
+});
+</script>

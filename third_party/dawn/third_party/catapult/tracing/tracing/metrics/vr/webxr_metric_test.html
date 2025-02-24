@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/vr/webxr_metric.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/instant_event.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const HIST_NAME_FRAME_TIME_JS = 'webxr_frame_time_javascript';
+  const HIST_NAME_FRAME_TIME_RENDERING = 'webxr_frame_time_rendering';
+  const HIST_NAME_FPS = 'webxr_fps';
+  const HIST_NAME_POSE_PREDICTION = 'webxr_pose_prediction';
+
+  function getOrCreateCompositorThread(model) {
+    const serviceProcess = model.getOrCreateProcess(2);
+    serviceProcess.name = 'Service: xr_device_service';
+    const compositorThread = serviceProcess.getOrCreateThread(1);
+    compositorThread.name = 'WindowsXRCompositor';
+    return compositorThread;
+  }
+
+  function createBaseModel() {
+    const model = tr.c.TestUtils.newModel(
+        function(model) {
+          model.userModel.expectations.push(
+              new tr.model.um.AnimationExpectation(model,
+                  tr.model.um.INITIATOR_TYPE.VR, 0, 5));
+        });
+    return model;
+  }
+
+  function getAnimationExpectation(model) {
+    for (const expectation of model.userModel.expectations.asSet()) {
+      if (expectation.initiatorType === tr.model.um.INITIATOR_TYPE.VR) {
+        return expectation;
+      }
+    }
+    return undefined;
+  }
+
+  function pushCompositorSlicesToExpectation(model) {
+    const compositorThread = getOrCreateCompositorThread(model);
+    compositorThread.sliceGroup.createSubSlices();
+    compositorThread.sliceGroup.slices.forEach(function(slice) {
+      getAnimationExpectation(model).associatedEvents.push(slice);
+    });
+  }
+
+  function addFPSCounter(model) {
+    // The calculations involving counters shouldn't care about what process is
+    // used.
+    const counterProcess = model.getOrCreateProcess(1);
+    const fpsCounter = counterProcess.getOrCreateCounter('gpu', 'WebXR FPS');
+    const fpsSeries = new tr.model.CounterSeries('value', 0);
+    fpsSeries.addCounterSample(1, 59);
+    fpsSeries.addCounterSample(3, 60);
+    fpsCounter.addSeries(fpsSeries);
+
+    return model;
+  }
+
+  function addFrameTimeEvents(model) {
+    // Instant events, on the other hand, do care about process and thread
+    // names.
+    const compositorThread = getOrCreateCompositorThread(model);
+    const group = compositorThread.sliceGroup;
+
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 1,
+      end: 1,
+      args: {
+        javascript: 5
+      }
+    }));
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 2,
+      end: 2,
+      args: {
+        rendering: 3
+      }
+    }));
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 3,
+      end: 3,
+      args: {
+        javascript: 6,
+        rendering: 4,
+      }
+    }));
+
+    return model;
+  }
+
+  function addPosePredictionEvents(model) {
+    const compositorThread = getOrCreateCompositorThread(model);
+    const group = compositorThread.sliceGroup;
+
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR pose prediction',
+      start: 1,
+      end: 1,
+      args: {
+        milliseconds: 5,
+      }
+    }));
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR pose prediction',
+      start: 2,
+      end: 2,
+      args: {
+        milliseconds: 10,
+      }
+    }));
+    group.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR pose prediction',
+      start: 3,
+      end: 3,
+      args: {
+        milliseconds: 15,
+      }
+    }));
+
+    return model;
+  }
+
+  test('webxrMetric', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = addPosePredictionEvents(
+        addFrameTimeEvents(addFPSCounter(createBaseModel())));
+    pushCompositorSlicesToExpectation(model);
+    tr.metrics.vr.webxrMetric(histograms, model);
+
+    const fpsValue = histograms.getHistogramNamed(HIST_NAME_FPS);
+    assert.strictEqual(fpsValue.max, 60);
+    assert.strictEqual(fpsValue.min, 59);
+    assert.strictEqual(fpsValue.average, 59.5);
+
+    const renderingValue = histograms.getHistogramNamed(
+        HIST_NAME_FRAME_TIME_RENDERING);
+    assert.strictEqual(renderingValue.max, 4);
+    assert.strictEqual(renderingValue.min, 3);
+    assert.strictEqual(renderingValue.average, 3.5);
+
+    const javascriptValue = histograms.getHistogramNamed(
+        HIST_NAME_FRAME_TIME_JS);
+    assert.strictEqual(javascriptValue.max, 6);
+    assert.strictEqual(javascriptValue.min, 5);
+    assert.strictEqual(javascriptValue.average, 5.5);
+
+    const predictionValue = histograms.getHistogramNamed(
+        HIST_NAME_POSE_PREDICTION);
+    assert.strictEqual(predictionValue.max, 15);
+    assert.strictEqual(predictionValue.min, 5);
+    assert.strictEqual(predictionValue.average, 10);
+  });
+
+  test('webxrMetric_misnamedArgs', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = createBaseModel();
+    const compositorThread = getOrCreateCompositorThread(model);
+
+    compositorThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 1,
+      end: 1,
+      args: {
+        js: 5
+      }
+    }));
+    compositorThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 2,
+      end: 2,
+      args: {
+        rendering: 3
+      }
+    }));
+    compositorThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      title: 'WebXR frame time (ms)',
+      start: 3,
+      end: 3,
+      args: {
+        js: 6,
+        rendering: 4,
+      }
+    }));
+
+    pushCompositorSlicesToExpectation(model);
+    tr.metrics.vr.webxrMetric(histograms, model);
+
+    // Should still have all histograms, but not have added samples to the
+    // misnamed one.
+    assert.strictEqual(histograms.length, 4);
+    assert.strictEqual(
+        histograms.getHistogramNamed(HIST_NAME_FRAME_TIME_JS).numValues, 0);
+
+    const renderingValue = histograms.getHistogramNamed(
+        HIST_NAME_FRAME_TIME_RENDERING);
+    assert.strictEqual(renderingValue.max, 4);
+    assert.strictEqual(renderingValue.min, 3);
+    assert.strictEqual(renderingValue.average, 3.5);
+  });
+
+  test('webxrMetric_alwaysReportFps', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = createBaseModel();
+    tr.metrics.vr.webxrMetric(histograms, model);
+
+    const fpsValue = histograms.getHistogramNamed('webxr_fps');
+    assert.strictEqual(fpsValue.max, 0);
+    assert.strictEqual(fpsValue.min, 0);
+  });
+});
+</script>

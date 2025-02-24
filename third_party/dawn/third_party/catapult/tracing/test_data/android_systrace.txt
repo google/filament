@@ -1,0 +1,95 @@
+# tracer: nop\n\
+#\n\
+#           TASK-PID    CPU#    TIMESTAMP  FUNCTION\n\
+#              | |       |          |         |\n\
+          atrace-14662 [000] 50260.647576: sched_switch: prev_comm=atrace prev_pid=14662 prev_prio=120 prev_state=S ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.647590: sched_wakeup: comm=mmcqd/0 pid=95 prio=120 success=1 target_cpu=000\n\
+     kworker/0:0-13696 [000] 50260.647602: sched_wakeup: comm=adbd pid=14582 prio=120 success=1 target_cpu=000\n\
+     kworker/0:0-13696 [000] 50260.647610: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=S ==> next_comm=adbd next_pid=14582 next_prio=120\n\
+            adbd-14582 [000] 50260.647722: sched_wakeup: comm=adbd pid=14584 prio=120 success=1 target_cpu=000\n\
+            adbd-14582 [000] 50260.647756: sched_switch: prev_comm=adbd prev_pid=14582 prev_prio=120 prev_state=S ==> next_comm=adbd next_pid=14584 next_prio=120\n\
+            adbd-14584 [000] 50260.647833: sched_switch: prev_comm=adbd prev_pid=14584 prev_prio=120 prev_state=S ==> next_comm=mmcqd/0 next_pid=95 next_prio=120\n\
+         mmcqd/0-95    [000] 50260.647846: sched_switch: prev_comm=mmcqd/0 prev_pid=95 prev_prio=120 prev_state=S ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.648275: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.648739: sched_wakeup: comm=adbd pid=14585 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.648751: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=adbd next_pid=14585 next_prio=120\n\
+            adbd-14585 [000] 50260.648784: sched_wakeup: comm=adbd pid=14582 prio=120 success=1 target_cpu=000\n\
+            adbd-14585 [000] 50260.648804: sched_switch: prev_comm=adbd prev_pid=14585 prev_prio=120 prev_state=S ==> next_comm=adbd next_pid=14582 next_prio=120\n\
+            adbd-14582 [000] 50260.648851: sched_wakeup: comm=adbd pid=14584 prio=120 success=1 target_cpu=000\n\
+            adbd-14582 [000] 50260.648887: sched_switch: prev_comm=adbd prev_pid=14582 prev_prio=120 prev_state=S ==> next_comm=adbd next_pid=14584 next_prio=120\n\
+            adbd-14584 [000] 50260.648897: sched_switch: prev_comm=adbd prev_pid=14584 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.663310: sched_wakeup: comm=WebViewCoreThre pid=11043 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.663322: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.665164: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.680341: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.680357: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.680584: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.680675: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.680707: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.680789: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.680884: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.680912: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.681130: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.681218: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.681250: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.681328: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.681419: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.681448: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.681522: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.681616: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.681643: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.681720: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.688221: sched_wakeup: comm=WebViewCoreThre pid=11043 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.688252: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.693454: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.693662: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.693690: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.693799: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.693996: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.694014: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.694049: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.694362: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.694378: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.694444: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.694655: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.694671: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.694704: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.695382: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.695398: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.695459: sched_wakeup: comm=SensorService pid=373 prio=112 success=1 target_cpu=000\n\
+ irq/409-inv_irq-99    [000] 50260.695488: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=S ==> next_comm=SensorService next_pid=373 next_prio=112\n\
+   SensorService-373   [000] 50260.696049: sched_wakeup: comm=er$SensorThread pid=409 prio=112 success=1 target_cpu=000\n\
+   SensorService-373   [000] 50260.696121: sched_switch: prev_comm=SensorService prev_pid=373 prev_prio=112 prev_state=S ==> next_comm=er$SensorThread next_pid=409 next_prio=112\n\
+ er$SensorThread-409   [000] 50260.696542: sched_wakeup: comm=er.ServerThread pid=374 prio=118 success=1 target_cpu=000\n\
+ er$SensorThread-409   [000] 50260.696689: sched_switch: prev_comm=er$SensorThread prev_pid=409 prev_prio=112 prev_state=S ==> next_comm=er.ServerThread next_pid=374 next_prio=118\n\
+ er.ServerThread-374   [000] 50260.697163: sched_switch: prev_comm=er.ServerThread prev_pid=374 prev_prio=118 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.700423: sched_wakeup: comm=kinteractiveup pid=81 prio=0 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.700458: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=kinteractiveup next_pid=81 next_prio=0\n\
+  kinteractiveup-81    [000] 50260.700870: sched_switch: prev_comm=kinteractiveup prev_pid=81 prev_prio=0 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.713459: sched_wakeup: comm=WebViewCoreThre pid=11043 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.713484: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.717023: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.739056: sched_wakeup: comm=WebViewCoreThre pid=11043 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.739084: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.740377: sched_wakeup: comm=kworker/0:0 pid=13696 prio=120 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.740405: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=kworker/0:0 next_pid=13696 next_prio=120\n\
+     kworker/0:0-13696 [000] 50260.740707: sched_switch: prev_comm=kworker/0:0 prev_pid=13696 prev_prio=120 prev_state=S ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.743261: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=S ==> next_comm=swapper next_pid=0 next_prio=120\n\
+          <idle>-0     [000] 50260.764279: sched_wakeup: comm=WebViewCoreThre pid=11043 prio=120 success=1 target_cpu=000\n\
+          <idle>-0     [000] 50260.764316: sched_switch: prev_comm=swapper prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.765604: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.765641: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.765730: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.765946: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.765975: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.766013: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.766320: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.766347: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.766422: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.766641: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.766669: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.766705: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=D ==> next_comm=WebViewCoreThre next_pid=11043 next_prio=120\n\
+ WebViewCoreThre-11043 [000] 50260.767381: sched_wakeup: comm=irq/409-inv_irq pid=99 prio=49 success=1 target_cpu=000\n\
+ WebViewCoreThre-11043 [000] 50260.767410: sched_switch: prev_comm=WebViewCoreThre prev_pid=11043 prev_prio=120 prev_state=R ==> next_comm=irq/409-inv_irq next_pid=99 next_prio=49\n\
+ irq/409-inv_irq-99    [000] 50260.767463: sched_wakeup: comm=SensorService pid=373 prio=112 success=1 target_cpu=000\n\
+ irq/409-inv_irq-99    [000] 50260.767491: sched_switch: prev_comm=irq/409-inv_irq prev_pid=99 prev_prio=49 prev_state=S ==> next_comm=SensorService next_pid=373 next_prio=112\n\

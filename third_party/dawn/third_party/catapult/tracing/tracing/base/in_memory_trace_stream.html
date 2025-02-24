@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/trace_stream.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  const MAX_FUNCTION_ARGS_COUNT = Math.pow(2, 15) - 1;
+
+  class InMemoryTraceStream extends tr.b.TraceStream {
+    constructor(buffer, isBinary, opt_headerSize) {
+      super();
+      if (!buffer instanceof Uint8Array) {
+        throw new Error('buffer should be a Uint8Array');
+      }
+      const headerSize = opt_headerSize || tr.b.TraceStream.HEADER_SIZE;
+
+      this.data_ = buffer;
+      this.isBinary_ = isBinary;
+      this.header_ = InMemoryTraceStream.uint8ArrayToString_(
+          this.data_.subarray(0, headerSize));
+      this.cursor_ = 0;
+    }
+
+    get isBinary() {
+      return this.isBinary_;
+    }
+
+    get hasData() {
+      return this.cursor_ < this.data_.length;
+    }
+
+    get header() {
+      return this.header_;
+    }
+
+    get data() {
+      return this.data_;
+    }
+
+    toString() {
+      this.rewind();
+      return this.readNumBytes(Number.MAX_VALUE);
+    }
+
+    readUntilDelimiter(delim) {
+      if (delim.length !== 1) {
+        throw new Error('delim must be exactly one character');
+      }
+      const offset = this.data_.indexOf(delim.charCodeAt(0), this.cursor_) + 1;
+      return this.readToOffset_(
+          offset > 0 ? Math.min(offset, this.data_.length) : this.data_.length);
+    }
+
+    readNumBytes(opt_size) {
+      if (opt_size !== undefined && opt_size <= 0) {
+        throw new Error(
+            `readNumBytes expects a positive size (${opt_size} given)`);
+      }
+
+      const size = opt_size || tr.b.TraceStream.CHUNK_SIZE;
+      const offset = Math.min(this.cursor_ + size, this.data_.length);
+      return this.readToOffset_(offset);
+    }
+
+    rewind() {
+      this.cursor_ = 0;
+    }
+
+    // The underlying buffer is not copied.
+    substream(startOffset, opt_endOffset, opt_headerSize) {
+      return new InMemoryTraceStream(
+          this.data_.subarray(startOffset, opt_endOffset), this.isBinary_,
+          opt_headerSize);
+    }
+
+    /**
+     * @returns {string} The contents of the stream between the current cursor
+     * location (inclusive) and |offset| (exclusive). The cursor location is
+     * moved forward to |offset|.
+     */
+    readToOffset_(offset) {
+      const out = InMemoryTraceStream.uint8ArrayToString_(
+          this.data_.subarray(this.cursor_, offset));
+      this.cursor_ = offset;
+      return out;
+    }
+
+    static uint8ArrayToString_(arr) {
+      if (typeof TextDecoder !== 'undefined') {
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(arr);
+      }
+      const c = [];
+      for (let i = 0; i < arr.length; i += MAX_FUNCTION_ARGS_COUNT) {
+        c.push(String.fromCharCode(...arr.subarray(
+            i, i + MAX_FUNCTION_ARGS_COUNT)));
+      }
+      return c.join('');
+    }
+  }
+
+  return {
+    InMemoryTraceStream,
+  };
+});
+</script>

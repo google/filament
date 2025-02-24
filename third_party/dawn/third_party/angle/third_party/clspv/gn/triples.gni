@@ -1,0 +1,38 @@
+# Target Triple for the build
+#
+# Currently only linux/android and x86/x64/arm/arm64 configurations are
+# supported
+
+import("//build_overrides/clspv.gni")
+
+if (current_os == "linux") {
+  if (current_cpu == "x86") {
+    llvm_current_triple = "i386-unknown-linux-gnu"
+  } else if (current_cpu == "x64") {
+    llvm_current_triple = "x86_64-unknown-linux-gnu"
+  } else if (current_cpu == "arm64") {
+    llvm_current_triple = "aarch64-unknown-linux-gnu"
+  } else {
+    llvm_current_triple = "host"
+  }
+} else if (current_os == "android") {
+  if (current_cpu == "x86") {
+    llvm_current_triple = "i686-linux-android29"
+  } else if (current_cpu == "x64") {
+    llvm_current_triple = "x86_64-linux-android29"
+  } else if (current_cpu == "arm") {
+    llvm_current_triple = "arm-linux-androideabi29"
+  } else if (current_cpu == "arm64") {
+    llvm_current_triple = "aarch64-linux-android29"
+  } else {
+    llvm_current_triple = "host"
+  }
+} else {
+  # Default to host arch for llvm's target output for all other platforms for now (win32/macOS)
+  llvm_current_triple = "host"
+}
+
+declare_args() {
+  # The default target triple.
+  llvm_target_triple = llvm_current_triple
+}

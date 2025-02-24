@@ -1,0 +1,22 @@
+# Copyright 2023 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build_overrides/angle.gni")
+import("//gni/angle.gni")
+
+# LLVM source location
+clspv_llvm_dir = angle_llvm_dir
+
+# clspv gn dir location
+clspv_gn_dir = "//third_party/clspv/gn"
+
+# SPIRV tools
+spirv_tools_dir = angle_spirv_tools_dir
+
+# configs that need adjustment
+clspv_configs_to_append = []
+clspv_configs_to_remove = [ "//build/config/compiler:chromium_code" ]
+if (is_clang) {
+  clspv_configs_to_remove += [ "//build/config/clang:extra_warnings" ]
+}

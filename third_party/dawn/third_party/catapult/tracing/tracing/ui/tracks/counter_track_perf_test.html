@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function getSynchronous(url) {
+    const req = new XMLHttpRequest();
+    req.open('GET', url, false);
+    // Without the mime type specified like this, the file's bytes are not
+    // retrieved correctly.
+    req.overrideMimeType('text/plain; charset=x-user-defined');
+    req.send(null);
+    return req.responseText;
+  }
+
+  const ZOOM_STEPS = 10;
+  const ZOOM_COEFFICIENT = 1.2;
+
+  let model = undefined;
+
+  let drawingContainer;
+  let viewportDiv;
+
+  let viewportWidth;
+  let worldMid;
+
+  let startScale = undefined;
+
+  function timedCounterTrackPerfTest(name, testFn, iterations) {
+    function setUpOnce() {
+      if (model !== undefined) return;
+
+      const fileUrl = '/test_data/counter_tracks.html';
+      const events = getSynchronous(fileUrl);
+      model = tr.c.TestUtils.newModelWithEvents([events]);
+    }
+
+    function setUp() {
+      setUpOnce();
+      viewportDiv = document.createElement('div');
+
+      const viewport = new tr.ui.TimelineViewport(viewportDiv);
+
+      drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+      viewport.modelTrackContainer = drawingContainer;
+
+      const modelTrack = new tr.ui.tracks.ModelTrack(viewport);
+      Polymer.dom(drawingContainer).appendChild(modelTrack);
+
+      modelTrack.model = model;
+
+      Polymer.dom(viewportDiv).appendChild(drawingContainer);
+
+      this.addHTMLOutput(viewportDiv);
+
+      // Size the canvas.
+      drawingContainer.updateCanvasSizeIfNeeded_();
+
+      // Size the viewport.
+      viewportWidth = drawingContainer.canvas.width;
+      const min = model.bounds.min;
+      const range = model.bounds.range;
+      worldMid = min + range / 2;
+
+      const boost = range * 0.15;
+      const dt = new tr.ui.TimelineDisplayTransform();
+      dt.xSetWorldBounds(min - boost, min + range + boost, viewportWidth);
+      modelTrack.viewport.setDisplayTransformImmediately(dt);
+      startScale = dt.scaleX;
+
+      // Select half of the counter samples.
+      for (const pid in model.processes) {
+        const counters = model.processes[pid].counters;
+        for (const cid in counters) {
+          const series = counters[cid].series;
+          for (let i = 0; i < series.length; i++) {
+            const samples = series[i].samples;
+            for (let j = Math.floor(samples.length / 2); j < samples.length;
+              j++) {
+              samples[j].selectionState =
+                  tr.model.SelectionState.SELECTED;
+            }
+          }
+        }
+      }
+    }
+
+    function tearDown() {
+      viewportDiv.innerText = '';
+      drawingContainer = undefined;
+    }
+
+    timedPerfTest(name, testFn, {
+      setUp,
+      tearDown,
+      iterations
+    });
+  }
+
+  const n110100 = [1, 10, 100];
+  n110100.forEach(function(val) {
+    timedCounterTrackPerfTest(
+        'draw_softwareCanvas_' + val,
+        function() {
+          let scale = startScale;
+          for (let i = 0; i < ZOOM_STEPS; i++) {
+            const dt =
+              drawingContainer.viewport.currentDisplayTransform.clone();
+            scale *= ZOOM_COEFFICIENT;
+            dt.scaleX = scale;
+            dt.xPanWorldPosToViewPos(worldMid, 'center', viewportWidth);
+            drawingContainer.viewport.setDisplayTransformImmediately(dt);
+            drawingContainer.draw_();
+          }
+        }, val);
+  });
+});
+</script>
+

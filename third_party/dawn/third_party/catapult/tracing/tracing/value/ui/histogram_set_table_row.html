@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/ui/histogram_set_table_cell.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_table_name_cell.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  class HistogramSetTableRow {
+    /**
+     * @param {!tr.v.HistogramSetHierarchy} hierarchy
+     * @param {!Element} baseTable tr-ui-b-table
+     * @param {!tr.v.ui.HistogramSetViewState} rootViewState
+     */
+    constructor(hierarchy, baseTable, rootViewState) {
+      this.hierarchy_ = hierarchy;
+      this.baseTable_ = baseTable;
+      this.rootViewState_ = rootViewState;
+      this.viewState_ = new tr.v.ui.HistogramSetTableRowState();
+      this.viewState_.addUpdateListener(this.onViewStateUpdate_.bind(this));
+      this.overviewDataRange_ = undefined;
+      this.nameCell_ = undefined;
+      this.cells_ = new Map();
+      this.subRows_ = [];
+
+      // Don't assign viewState.subRows or cells. There can't be anything
+      // listening to viewState, so avoid the overhead of dispatching an event.
+      for (const subHierarchy of hierarchy.subRows) {
+        const subRow = new HistogramSetTableRow(
+            subHierarchy, baseTable, rootViewState);
+        this.subRows_.push(subRow);
+        this.viewState.subRows.set(subRow.name, subRow.viewState);
+      }
+      for (const columnName of this.columns.keys()) {
+        this.viewState.cells.set(
+            columnName, new tr.v.ui.HistogramSetTableCellState());
+      }
+    }
+
+    /**
+     * @return {string}
+     */
+    get name() {
+      return this.hierarchy_.name;
+    }
+
+    /**
+     * @return {number}
+     */
+    get depth() {
+      return this.hierarchy_.depth;
+    }
+
+    /**
+     * @return {string}
+     */
+    get description() {
+      return this.hierarchy_.description;
+    }
+
+    /**
+     * @return {!Map.<string, !(undefined|tr.v.Histogram|tr.v.HistogramSet)>}
+     */
+    get columns() {
+      return this.hierarchy_.columns;
+    }
+
+    * sortedColumns() {
+      for (const col of this.baseTable_.tableColumns) {
+        yield [
+          col.displayLabel,
+          this.hierarchy_.columns.get(col.displayLabel),
+        ];
+      }
+    }
+
+    /**
+     * @return {!tr.b.Range}
+     */
+    get overviewDataRange() {
+      if (this.overviewDataRange_ === undefined) {
+        this.overviewDataRange_ = new tr.b.math.Range();
+
+        const displayStatisticName =
+          this.rootViewState.displayStatisticName;
+        const referenceDisplayLabel =
+          this.rootViewState.referenceDisplayLabel;
+
+        for (const [displayLabel, hist] of this.columns) {
+          if (hist instanceof tr.v.Histogram) {
+            const statName = hist.getAvailableStatisticName(
+                displayStatisticName);
+            const statScalar = hist.getStatisticScalar(statName);
+            if (statScalar !== undefined) {
+              this.overviewDataRange_.addValue(statScalar.value);
+            }
+          }
+
+          for (const subRow of this.subRows) {
+            const subHist = subRow.columns.get(displayLabel);
+            if (!(subHist instanceof tr.v.Histogram)) continue;
+
+            const refHist = subRow.columns.get(referenceDisplayLabel);
+            const statName = subHist.getAvailableStatisticName(
+                displayStatisticName, refHist);
+            const statScalar = subHist.getStatisticScalar(
+                statName, refHist);
+
+            if (statScalar !== undefined) {
+              this.overviewDataRange_.addValue(statScalar.value);
+            }
+          }
+        }
+      }
+      return this.overviewDataRange_;
+    }
+
+    /**
+     * overviewDataRange is used by histogram-set-table-cell (hstc) and
+     * histogram-set-table-name-cell (hstnc) to display overview line charts
+     * with consistent y-axes.
+     * overviewDataRange depends on HistogramSetViewState.displayStatisticName
+     * and referenceDisplayLabel, so it must be recomputed when either of those
+     * changes.
+     * overviewDataRange should not be recomputed for each hstc in the row; it
+     * should only be computed once when necessary, and cached.
+     * HistogramSetTableRow (HSTR) cannot listen to HistogramSetViewState
+     * (HSVS) updates because there is no way for it to remove the listener.
+     * However, Polymer has detached callbacks, so dom-modules can listen to
+     * HSVS updates without leaking memory.
+     * overviewDataRange should be recomputed only once whenever
+     * displayStatisticName or referenceDisplayLabel changes.
+     * There is exactly one hstnc per row.
+     * histogram-set-table-name-cell resets overviewDataRange when
+     * displayStatisticName or referenceDisplayLabel changes.
+     */
+    resetOverviewDataRange() {
+      this.overviewDataRange_ = undefined;
+    }
+
+    /**
+     * @return {!tr.v.ui.HistogramSetViewState}
+     */
+    get rootViewState() {
+      return this.rootViewState_;
+    }
+
+    /**
+     * @return {!Map.<string, !Element>} tr-v-ui-histogram-set-table-cell
+     */
+    get cells() {
+      return this.cells_;
+    }
+
+    /**
+     * @return {!Array.<tr.v.ui.HistogramSetTableRow>}
+     */
+    get subRows() {
+      return this.subRows_;
+    }
+
+    /**
+     * @return {!Array.<tr.v.ui.HistogramSetTableRowState>}
+     */
+    get viewState() {
+      return this.viewState_;
+    }
+
+    * walk() {
+      yield this;
+      for (const row of this.subRows) yield* row.walk();
+    }
+
+    static* walkAll(rootRows) {
+      for (const rootRow of rootRows) yield* rootRow.walk();
+    }
+
+    get nameCell() {
+      if (this.nameCell_ === undefined) {
+        this.nameCell_ = document.createElement(
+            'tr-v-ui-histogram-set-table-name-cell');
+        this.nameCell_.build(this);
+      }
+      return this.nameCell_;
+    }
+
+    getCell(columnName) {
+      if (this.cells.has(columnName)) return this.cells.get(columnName);
+      const cell = document.createElement('tr-v-ui-histogram-set-table-cell');
+      cell.build(this, columnName, this.viewState.cells.get(columnName));
+      this.cells.set(columnName, cell);
+      return cell;
+    }
+
+    compareNames(other) {
+      return this.name.localeCompare(other.name);
+    }
+
+    compareCells(other, displayLabel) {
+      // If a reference column is selected, compare the absolute deltas
+      // between the two cells and their references.
+      const referenceDisplayLabel = this.rootViewState.referenceDisplayLabel;
+      let referenceCellA;
+      let referenceCellB;
+      if (referenceDisplayLabel &&
+          referenceDisplayLabel !== displayLabel) {
+        referenceCellA = this.columns.get(referenceDisplayLabel);
+        referenceCellB = other.columns.get(referenceDisplayLabel);
+      }
+
+      const cellA = this.columns.get(displayLabel);
+      let valueA = 0;
+      if (cellA instanceof tr.v.Histogram) {
+        const statisticA = cellA.getAvailableStatisticName(
+            this.rootViewState.displayStatisticName, referenceCellA);
+        const scalarA = cellA.getStatisticScalar(statisticA, referenceCellA);
+        if (scalarA) {
+          valueA = scalarA.value;
+          if (scalarA.unit.unitName == "normalizedPercentageDelta_smallerIsBetter") {
+            valueA = -valueA;
+          }
+        }
+      }
+
+      const cellB = other.columns.get(displayLabel);
+      let valueB = 0;
+      if (cellB instanceof tr.v.Histogram) {
+        const statisticB = cellB.getAvailableStatisticName(
+            this.rootViewState.displayStatisticName, referenceCellB);
+        const scalarB = cellB.getStatisticScalar(statisticB, referenceCellB);
+        if (scalarB) {
+          valueB = scalarB.value;
+          if (scalarB.unit.unitName == "normalizedPercentageDelta_smallerIsBetter") {
+            valueB = -valueB;
+          }
+        }
+      }
+
+      return valueA - valueB;
+    }
+
+    onViewStateUpdate_(event) {
+      if (event.delta.isExpanded) {
+        this.baseTable_.setExpandedForTableRow(this, this.viewState.isExpanded);
+      }
+
+      if (event.delta.subRows) {
+        throw new Error('HistogramSetTableRow.subRows must not be reassigned.');
+      }
+
+      if (event.delta.cells) {
+        // Only validate the cells that have already been built.
+        // Cells may not have been built yet, so only validate the cells that
+        // have been built.
+        for (const [displayLabel, cell] of this.cells) {
+          if (cell.viewState !== this.viewState.cells.get(displayLabel)) {
+            throw new Error('Only HistogramSetTableRow may update cells');
+          }
+        }
+      }
+    }
+
+    async restoreState(vs) {
+      // Don't use updateFromViewState() because it would overwrite cells and
+      // subRows, but we just want to restore them.
+      await this.viewState.update({
+        isExpanded: vs.isExpanded,
+        isOverviewed: vs.isOverviewed,
+      });
+
+      // If cells haven't been built yet, then their state will be restored when
+      // they are built.
+      for (const [displayLabel, cell] of this.cells) {
+        const previousState = vs.cells.get(displayLabel);
+        if (!previousState) continue;
+        await cell.viewState.updateFromViewState(previousState);
+      }
+      for (const row of this.subRows) {
+        const previousState = vs.subRows.get(row.name);
+        if (!previousState) continue;
+        await row.restoreState(previousState);
+      }
+    }
+
+    sortSubRows() {
+      const sortColumn = this.baseTable_.tableColumns[
+          this.rootViewState_.sortColumnIndex];
+      if (sortColumn === undefined) return;
+      this.subRows_.sort(sortColumn.cmp);
+      if (this.rootViewState_.sortDescending) {
+        this.subRows_.reverse();
+      }
+    }
+  }
+
+  return {
+    HistogramSetTableRow,
+  };
+});
+</script>

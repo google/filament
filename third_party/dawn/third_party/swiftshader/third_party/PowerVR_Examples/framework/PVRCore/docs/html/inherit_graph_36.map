@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structpvr_1_1_generic_extent2_d.html" title="pvr::GenericExtent2D\l\&lt; Txy \&gt;" alt="" coords="5,5,167,47"/>
+<area shape="rect" id="node2" href="$structpvr_1_1_generic_extent3_d.html" title="Contains a 3D Integer size (width, height, depth)" alt="" coords="215,5,376,47"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_image_range.html" title="Represents a specific 3&#45;D range in an image (an orthogonal cuboid anywhere in the image)..." alt="" coords="424,46,557,73"/>
+<area shape="rect" id="node4" href="$structpvr_1_1_generic_offset2_d.html" title="pvr::GenericOffset2D\l\&lt; Txy \&gt;" alt="" coords="7,71,165,112"/>
+<area shape="rect" id="node5" href="$structpvr_1_1_generic_offset3_d.html" title="The GenericOffset3D contains the offsets in 3 dimension (offsetX, offsetY, offsetZ)" alt="" coords="216,71,375,112"/>
+</map>

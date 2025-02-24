@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.mre', function() {
+  function Failure(job, functionHandleString, traceCanonicalUrl,
+      failureTypeName, description, stack) {
+    this.job = job;
+    this.functionHandleString = functionHandleString;
+    this.traceCanonicalUrl = traceCanonicalUrl;
+    this.failureTypeName = failureTypeName;
+    this.description = description;
+    this.stack = stack;
+  }
+
+  Failure.prototype = {
+    asDict() {
+      // TODO(eakuefner): Serialize job once reduction is implemented.
+      return {
+        function_handle_string: this.functionHandleString,
+        trace_canonical_url: this.traceCanonicalUrl,
+        type: this.failureTypeName,
+        description: this.description,
+        stack: this.stack
+      };
+    }
+  };
+
+  Failure.fromDict = function(failureDict) {
+    return new Failure(undefined, failureDict.function_handle_string,
+        failureDict.trace_canonical_url, failureDict.type,
+        failureDict.description, failureDict.stack);
+  };
+
+  return {
+    Failure,
+  };
+});
+
+</script>

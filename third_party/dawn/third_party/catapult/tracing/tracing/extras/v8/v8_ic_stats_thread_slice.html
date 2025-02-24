@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/thread_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.v8', function() {
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  function V8ICStatsThreadSlice() {
+    ThreadSlice.apply(this, arguments);
+    this.icStats_ = undefined;
+    if (this.args['ic-stats']) {
+      this.icStats_ = this.args['ic-stats'].data;
+      delete this.args['ic-stats'];
+    }
+  }
+
+  V8ICStatsThreadSlice.prototype = {
+    __proto__: ThreadSlice.prototype,
+
+    get icStats() {
+      return this.icStats_;
+    }
+  };
+
+  ThreadSlice.subTypes.register(
+      V8ICStatsThreadSlice,
+      {
+        categoryParts: ['disabled-by-default-v8.ic_stats'],
+        name: 'v8 ic stats slice',
+        pluralName: 'v8 ic stats slices'
+      }
+  );
+
+  return {
+    V8ICStatsThreadSlice,
+  };
+});
+</script>

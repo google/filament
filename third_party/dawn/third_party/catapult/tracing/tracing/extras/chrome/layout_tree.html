@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_registry.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+  const ObjectInstance = tr.model.ObjectInstance;
+
+  function LayoutTreeInstance() {
+    ObjectInstance.apply(this, arguments);
+  }
+
+  LayoutTreeInstance.prototype = {
+    __proto__: ObjectInstance.prototype,
+  };
+
+  ObjectInstance.subTypes.register(
+      LayoutTreeInstance, {typeName: 'LayoutTree'});
+
+  function LayoutTreeSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+    this.rootLayoutObject = new tr.e.chrome.LayoutObject(this, this.args);
+  }
+
+  LayoutTreeSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+  };
+
+  ObjectSnapshot.subTypes.register(
+      LayoutTreeSnapshot, {typeName: 'LayoutTree'});
+
+  return {
+    LayoutTreeInstance,
+    LayoutTreeSnapshot,
+  };
+});
+</script>
+

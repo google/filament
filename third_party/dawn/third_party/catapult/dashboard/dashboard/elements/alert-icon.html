@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-icon/iron-icon.html">
+
+<dom-module id="alert-icon">
+  <template>
+    <style>
+
+      .highlighted {
+        box-shadow: 0px 0px 5px #ffba02;
+        border: 2px solid #ffba02;
+        border-radius: 14px;
+      }
+
+    </style>
+
+    <iron-icon id="icon"></iron-icon>
+
+  </template>
+
+</dom-module>
+
+<script>
+  'use strict';
+  Polymer({
+
+    is: 'alert-icon',
+    initialize(alertAnnotation, alertKey) {
+      const bugId = alertAnnotation.bug_id;
+      const improvement = alertAnnotation.improvement;
+      const recovered = alertAnnotation.recovered;
+      const key = alertAnnotation.key;
+
+      this.$.icon.icon = 'report';
+      let color = 'black';
+      if (!bugId && !improvement) {
+        color = 'red';
+      } else if (!bugId && improvement) {
+        color = 'green';
+        this.$.icon.icon = 'info';
+      }
+
+      this.$.icon.style.color = color;
+
+      if (bugId && bugId < 0 || recovered) {
+        // Triaged as invalid, ignored, or recovered; lower opacity.
+        this.$.icon.style.opacity = 0.25;
+      }
+
+      // alertKey is an optional attribute to specify that this chart
+      // is associated with an alert. If this alert is the one alert that
+      // this chart is meant to draw attention to, we want to distinguish
+      // this alert from any others on the chart.
+      if (alertKey == key) {
+        Polymer.dom(this.$.icon).classList.add('highlighted');
+      }
+    },
+
+    setPosition(top, left) {
+      this.$.icon.style.top = top + 'px';
+      this.$.icon.style.left = left + 'px';
+    }
+  });
+</script>

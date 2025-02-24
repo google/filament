@@ -1,0 +1,56 @@
+boto v2.9.6
+===========
+
+:date: 2013/06/18
+
+This release adds large payload support to Amazon SNS/SQS (from 32k to 256k
+bodies), several minor API additions, new regions for Redshift/Cloudsearch &
+a host of bugfixes.
+
+
+Features
+--------
+
+* Added large body support to SNS/SQS. There's nothing to change in your
+  application code, but you can now send payloads of up to 256k in size.
+  (:sha:`b64947`)
+* Added ``Vault.retrieve_inventory_job`` to Glacier. (:issue:`1532`, :sha:`33de29`)
+* Added ``Item.get(...)`` support to DynamoDB v2. (:sha:`938cb6`)
+* Added the ``ap-northeast-1`` region to Redshift. (:sha:`d3eb61`)
+* Added all the current regions to Cloudsearch. (:issue:`1465`, :sha:`22b3b7`)
+
+
+Bugfixes
+--------
+
+* Fixed a bug where ``date`` metadata couldn't be set on an S3 key.
+  (:issue:`1519`, :sha:`1efde8`)
+* Fixed Python 2.5/Jython support in ``NetworkInterfaceCollection``.
+  (:issue:`1518`, :sha:`0d6af2`)
+* Fixed a XML parsing error with ``InstanceStatusSet``. (:issue:`1493`,
+  :sha:`55d4f6`)
+* Added a test case to try to demonstrate :issue:`443`. (:sha:`084dd5`)
+* Exposed the current tree-hash & upload size on Glacier's ``Writer``.
+  (:issue:`1520`, :sha:`ade462`)
+* Updated EC2 Autoscale to incorporate new cron-like parameters. (:issue:`1433`,
+  :sha:`266e25`, :sha:`871588` & :sha:`473e42`)
+* Fixed ``AttributeError`` being thrown from ``LoadBalancerZones``.
+  (:issue:`1524`, :sha:`215ffa`)
+* Fixed a bug with empty facets in Cloudsearch. (:issue:`1366`, :sha:`7a108e`)
+* Fixed an S3 timeout/retry bug where HTTP 400s weren't being honored.
+  (:issue:`1528`, :sha:`efd9af` & :sha:`16ae74`)
+* Fixed ``get_path`` when ``suppress_consec_slashes=False``. (:issue:`1522`,
+  :sha:`c5dffc`)
+* Factored out how some of S3's ``query_args`` are constructed. (:sha:`9f73de`)
+* Added the ``generation`` query param to ``gs.Key.open_read``. (:sha:`cb4427`)
+* Fixed a bug with the canonicalization of URLs with trailing slashes in
+  the SigV4 signer. (:issue:`1541`, :sha:`dec541`, :sha:`3f2b33`)
+* Several documentation improvements/fixes:
+
+    * Updated the release notes slightly. (:sha:`7b6079`)
+    * Corrected the ``num_cb`` param on ``set_contents_from_filename``.
+      (:issue:`1523`, :sha:`44be69`)
+    * Fixed some example code in the DDB migration guide. (:issue:`1525`,
+      :sha:`6210ca`)
+    * Fixed a typo in one of the DynamoDB v2 examples. (:issue:`1551`,
+      :sha:`b0df3e`)

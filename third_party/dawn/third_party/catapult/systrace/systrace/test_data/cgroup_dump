@@ -1,0 +1,17 @@
+# tracer: 
+CGROUP DUMP
+#subsys_name	hierarchy	num_cgroups	enabled
+cpuset	4	7	1
+cpu	2	1	1
+cpuacct	3	565	1
+schedtune	7	7	1
+blkio	1	2	1
+memory	6	3	1
+freezer	5	2	1
+# cgroup task attachment
+/background (root=4) : 466 467 484 485 486 514 518 520 923 925
+/camera-daemon (root=4) : 971 1155 1209 1298 1299 1312 1313 1314
+/foreground (root=4) : 653 669 670 671 959 960 968 972 975 976 977 991 993
+/restricted (root=4) : 
+/system-background (root=4) : 632 633 634 635 636 639
+/top-app (root=4) : 466 467 484 485 486 514 518 520 925

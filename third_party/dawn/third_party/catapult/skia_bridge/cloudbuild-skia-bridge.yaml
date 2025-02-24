@@ -1,0 +1,24 @@
+timeout: 1800s  # Wait for 30 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  dir: 'skia_bridge'
+  args: [
+    app, deploy, '--no-promote', '--version', 'cloud-build-${SHORT_SHA}',
+    skia-bridge.yaml,
+  ]
+# Stop the newly deployed version so that it doesn't consume resources
+# until it is configured to receive traffic
+- name: 'gcr.io/cloud-builders/gcloud'
+  dir: 'skia_bridge'
+  args: [
+    app, versions, 'stop', '-s', 'skia-bridge', 'cloud-build-${SHORT_SHA}'
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args: [
+    '-x', '-e', 'dashboard/dev_dockerfiles/cleanup_versions.sh',
+    '28', 'skia-bridge'
+  ]

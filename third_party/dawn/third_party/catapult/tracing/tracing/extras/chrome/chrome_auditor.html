@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import"
+    href="/tracing/extras/chrome/cc/input_latency_async_slice.html">
+<link rel="import"
+    href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/model/alert.html">
+<link rel="import" href="/tracing/model/constants.html">
+<link rel="import" href="/tracing/model/event_info.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Base class for trace data Auditors.
+ */
+tr.exportTo('tr.e.audits', function() {
+  const Auditor = tr.c.Auditor;
+  const Alert = tr.model.Alert;
+  const EventInfo = tr.model.EventInfo;
+
+  /**
+   * Auditor for Chrome-specific traces.
+   * @constructor
+   */
+  function ChromeAuditor(model) {
+    Auditor.call(this, model);
+
+    const modelHelper = this.model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (modelHelper && modelHelper.browserHelper) {
+      // Must be a browserHelper in order to do audits.
+      this.modelHelper = modelHelper;
+    } else {
+      this.modelHelper = undefined;
+    }
+  }
+
+  function getMissedFrameAlerts(rendererHelpers) {
+    const alerts = [];
+    for (const rendererHelper of rendererHelpers) {
+      if (!rendererHelper.compositorThread) continue;
+      const thread = rendererHelper.compositorThread;
+      const asyncSlices = Object.values(thread.asyncSliceGroup.slices);
+      for (const slice of asyncSlices) {
+        if (slice.title === 'PipelineReporter' &&
+            slice.args.chrome_frame_reporter &&
+            slice.args.chrome_frame_reporter.state === 'STATE_DROPPED' &&
+            slice.args.chrome_frame_reporter.affects_smoothness) {
+          const alertSlices = [slice].concat(slice.subSlices);
+          alerts.push(new Alert(
+              new EventInfo(
+                  'Dropped Frame affecting smoothness',
+                  'Frame was dropped (i.e. not produced/presented).'),
+              slice.start,
+              alertSlices));
+        }
+      }
+    }
+    return alerts;
+  }
+
+  ChromeAuditor.prototype = {
+    __proto__: Auditor.prototype,
+
+    runAnnotate() {
+      if (!this.modelHelper) return;
+
+      for (const pid in this.modelHelper.rendererHelpers) {
+        const rendererHelper = this.modelHelper.rendererHelpers[pid];
+
+        if (rendererHelper.isChromeTracingUI) {
+          rendererHelper.process.important = false;
+        }
+      }
+    },
+
+    /**
+     * Called by import to install userFriendlyCategoryDriver.
+     */
+    installUserFriendlyCategoryDriverIfNeeded() {
+      this.model.addUserFriendlyCategoryDriver(
+          tr.e.chrome.ChromeUserFriendlyCategoryDriver);
+    },
+
+    runAudit() {
+      if (!this.modelHelper) return;
+
+      this.model.replacePIDRefsInPatchups(
+          tr.model.BROWSER_PROCESS_PID_REF,
+          this.modelHelper.browserProcess.pid);
+      this.model.applyObjectRefPatchups();
+
+      const alerts = getMissedFrameAlerts(
+          Object.values(this.modelHelper.rendererHelpers));
+      this.model.alerts = this.model.alerts.concat(alerts);
+    }
+  };
+
+  Auditor.register(ChromeAuditor);
+
+  return {
+    ChromeAuditor,
+  };
+});
+</script>

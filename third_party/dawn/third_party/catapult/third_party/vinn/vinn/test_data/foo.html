@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<style>
+.div {
+  font-size: 3.1415em;
+}
+</style>
+
+<div>
+  This is foo.html
+</div>
+
+<script>
+  'use strict';
+  var x = 1;
+  HTMLImportsLoader.loadScript('/error.js');
+  print('File foo.html is loaded');
+  print('x = ' + x);
+</script>
+
+<script>
+  'use strict';
+  var u = 100;
+  (function(global) {
+    /**
+     * Define this method of headless_global so top level file can call this.
+     */
+    global.maybeRaiseExceptionInFoo = function() {
+      maybeRaiseException();
+    };
+  })(this);
+  print('File foo.html\'s second script is loaded');
+  x = x + 1;
+  print('x = ' + x);
+</script>
+

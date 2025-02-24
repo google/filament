@@ -1,0 +1,133 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <title>iron-jsonp-library Demo</title>
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <link rel="import" href="../../paper-styles/color.html">
+    <link rel="import" href="../../paper-styles/demo-pages.html">
+    <link rel="import" href="../../paper-spinner/paper-spinner.html">
+    <link rel="import" href="../iron-jsonp-library.html">
+    <style is="custom-style">
+
+      .loading {
+        color: var(--google-grey-500);
+      }
+
+      .success {
+        color: var(--paper-green-800);
+      }
+
+      .failure {
+        color: var(--paper-red-800);
+      }
+
+      paper-spinner {
+        --paper-spinner-layer-1-color: var(--google-grey-500);
+        --paper-spinner-layer-2-color: var(--google-grey-500);
+        --paper-spinner-layer-3-color: var(--google-grey-500);
+        --paper-spinner-layer-4-color: var(--google-grey-500);
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="vertical-section vertical-section-container centered">
+      <h1>&lt;iron-jsonp-library&gt;</h1>
+      <dom-bind>
+        <template is="dom-bind">
+          <h3>Good loader</h3>
+          <iron-jsonp-library
+            library-url="https://apis.google.com/js/plusone.js?onload=%%callback%%"
+            notify-event="api-load"
+            library-loaded="{{loaded}}"
+            library-error-message="{{errorMessage}}"></iron-jsonp-library>
+          <template is="dom-if" if="{{loaded}}">
+            <p class="success">The <code>Google+ API</code> has been loaded</p>
+          </template>
+          <template is="dom-if" if="{{!loaded}}">
+            <template is="dom-if" if="{{errorMessage}}">
+              <p class="failure">{{errorMessage}}</p>
+            </template>
+            <template is="dom-if" if="{{!errorMessage}}">
+              <p class="loading">Loading...</p>
+            </template>
+          </template>
+        </template>
+      </dom-bind>
+
+      <hr>
+      <dom-bind>
+        <template is="dom-bind">
+          <h3>Bad loader</h3>
+          <iron-jsonp-library
+            library-url="https://badapis.google.com/js/plusone.js?onload=%%callback%%"
+            notify-event="api-load"
+            library-loaded="{{loaded}}"
+            library-error-message="{{errorMessage}}"></iron-jsonp-library>
+          <template is="dom-if" if="{{loaded}}">
+            <p><code>badapis</code> has been loaded</p>
+          </template>
+          <template is="dom-if" if="{{!loaded}}">
+            <template is="dom-if" if="{{errorMessage}}">
+              <p class="failure">{{errorMessage}}</p>
+            </template>
+            <template is="dom-if" if="{{!errorMessage}}">
+              <p class="loading">Loading...</p>
+            </template>
+          </template>
+        </template>
+      </dom-bind>
+
+      <hr>
+      <dom-bind>
+        <template is="dom-bind" id="delayedLoader">
+          <h3>Delayed libraryUrl loader</h3>
+          <iron-jsonp-library
+            library-url="{{libraryUrl}}"
+            library-loaded="{{loaded}}"
+            library-error-message="{{errorMessage}}">
+          </iron-jsonp-library>
+          <template is="dom-if" if="{{loaded}}">
+            <p><code>{{libraryUrl}}</code> has been loaded</p>
+          </template>
+          <template is="dom-if" if="{{!loaded}}">
+            <template is="dom-if" if="{{errorMessage}}">
+              <p class="failure">{{errorMessage}}</p>
+            </template>
+            <template is="dom-if" if="{{!errorMessage}}">
+              <p class="loading">Loading...<code>{{libraryUrl}}</code></p>
+            </template>
+          </template>
+        </template>
+      </dom-bind>
+
+    </div>
+
+    <script>
+      // kick off delayed loader by setting libraryUrl
+      window.setTimeout(function() {
+        var t = document.querySelector('#delayedLoader');
+
+        if (Polymer.Element) {
+          // value is set on the dom-bind in 2.x
+          t.parentNode.libraryUrl = 'https://apis.google.com/js/drive-realtime.js?onload=%%callback%%';
+        } else {
+          // value is set on template in Polymer 1.x
+          t.libraryUrl = 'https://apis.google.com/js/drive-realtime.js?onload=%%callback%%';
+        }
+      },
+      1000);
+    </script>
+  </body>
+</html>

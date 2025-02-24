@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<dom-module id="reporting-view">
+  <template>
+    <div id=reporting-view-tab-content class=content-box>
+      <!-- Only one of these two are shown -->
+      <div id=reporting-view-disabled-content><h4>Reporting is disabled</h4></div>
+      <div id=reporting-view-enabled-content>
+        <h4 style='margin-top:0'>Queued reports</h4>
+        <table id=reporting-view-reports-table class="styled-table">
+          <thead>
+            <tr>
+              <th>Queued</th>
+              <th>URL</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Network Anonymization Key</th>
+              <th>Content</th>
+            </tr>
+          </thead>
+          <tbody id=reporting-view-reports-tbody>
+          </tbody>
+        </table>
+        <div id=reporting-view-reports-empty>There are no queued reports</div>
+
+        <h4>Per-origin config</h4>
+        <table id=reporting-view-clients-table class="styled-table">
+          <thead>
+            <tr>
+              <th>Origin</th>
+              <th>Network Anonymization Key</th>
+              <th>Group</th>
+              <th>Subdomains?</th>
+              <th>Expires</th>
+              <th>Endpoint</th>
+              <th>Priority</th>
+              <th>Weight</th>
+              <th>Uploads</th>
+              <th>Failed uploads</th>
+            </tr>
+          </thead>
+          <tbody id=reporting-view-clients-tbody>
+          </tbody>
+        </table>
+        <div id=reporting-view-clients-empty>
+          No origins have provided Reporting headers
+        </div>
+
+        <h4>Network Error Logging policies</h4>
+        <table id=reporting-view-nel-policies-table class="styled-table">
+          <thead>
+            <tr>
+              <th>Origin</th>
+              <th>Subdomains?</th>
+              <th>Expires</th>
+              <th>Group</th>
+              <th>Network Anonymization Key</th>
+              <th>Success %</th>
+              <th>Failure %</th>
+            </tr>
+          </thead>
+          <tbody id=reporting-view-nel-policies-tbody>
+          </tbody>
+        </table>
+        <div id=reporting-view-nel-policies-disabled>
+          NEL is disabled
+        </div>
+        <div id=reporting-view-nel-policies-empty>
+          No origins have provided NEL headers
+        </div>
+      </div>
+    </div>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'reporting-view'
+    });
+  </script>
+</dom-module>
+

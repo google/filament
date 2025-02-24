@@ -1,0 +1,128 @@
+Name
+
+    ANGLE_memory_size
+
+Name Strings
+
+    GL_ANGLE_memory_size
+
+Contributors
+
+    Geoff Lang
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2018 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, November 1, 2018
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 3.1 specification.
+
+Overview
+
+    This extension allows the user to query the estimated memory internally
+    allocated for an OpenGL resource. This information can be useful for
+    determining which resources should be deleted under memory pressure.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <name> parameter of GetTexParameter*,
+    GetTexLevelParameter*, GetBufferParameter* and GetRenderbufferParameter*
+    functions:
+
+        GL_MEMORY_SIZE_ANGLE              0x93AD
+
+Additions to the OpenGL ES 3.1 Specification
+
+    Add an entry to Table 6.2, Buffer object parameters and their values:
+
+    Name              Type  Initial Value Legal Values
+    ----------------- ----- ------------- ------------------------
+    MEMORY_SIZE_ANGLE int64 0             any non-negative integer
+
+    Change the last sentence of the first paragraph of section 8.10.2,
+    Texture Parameter Queries:
+
+    - pname must be IMAGE_FORMAT_COMPATIBILITY_TYPE, TEXTURE_-
+    - IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, or one of the symbolic
+    - values in table 8.20.
+    + pname must be IMAGE_FORMAT_COMPATIBILITY_TYPE, TEXTURE_-
+    + IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, MEMORY_SIZE_ANGLE,
+    + or one of the symbolic values in table 8.20.
+
+    Add to the end of the fifth paragraph of section 8.10.3, Texture Level
+    Parameter Queries:
+
+    + queries of pname MEMORY_SIZE_ANGLE return the estimated number of bytes
+    + allocated for level of the texture bound to target.
+
+    Add a new paragraph after paragraph 3 in section 9.2.6, Renderbuffer
+    Object Queries:
+
+    If pname is MEMORY_SIZE_ANGLE, then params will contain the esimated
+    number of bytes allocated for the renderbuffer bound to target.
+
+New State
+
+    Add to Table 20.4: Buffer Object State
+
+    Get value           Type Get Cmd                Min Value Description               Sec.
+    ------------------- ---- ---------------------  --------- ------------------------- ----
+    MEMORY_SIZE_ANGLE   Z+   GetBufferParameter64v  -         Estimated bytes allocated 6
+
+    Add to Table 20.9: Textures (state per texture object)
+
+    Get value           Type Get Cmd               Min Value Description               Sec.
+    ------------------- ---- --------------------  --------- ------------------------- -----
+    MEMORY_SIZE_ANGLE   Z+   GetTexParameter       -         Estimated bytes allocated 6.1.3
+                             GetTexLevelParameter
+
+    Add to Table 20.16: Renderbuffer (state per renderbuffer object)
+
+    Get value           Type Get Cmd                     Min Value Description               Sec.
+    ------------------- ---- --------------------------  --------- ------------------------- -----
+    MEMORY_SIZE_ANGLE   Z+   GetRenderbufferParameteriv  -         Estimated bytes allocated 9.2.6
+
+
+Interactions with the OpenGL ES 2.0 and 3.0 specifications:
+
+    Remove all references to GetTexLevelParameter and replace references to
+    GetBufferParameter64v with GetBufferParameteriv.
+
+Issues
+
+    (1) Could the estimated number of bytes be specified more tightly to an
+        upper or lower bound?
+
+        RESOLVED: Implementations should attempt to return the lower bound on
+        the allocated memory if exact numbers are not known. The lower bound is
+        the most actionable value for making decisions when caching.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1    Nov 1, 2018   geofflang  Initial version

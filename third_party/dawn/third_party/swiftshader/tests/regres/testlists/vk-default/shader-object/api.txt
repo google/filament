@@ -1,0 +1,5 @@
+dEQP-VK.shader_object.api.discard_rectangles
+dEQP-VK.shader_object.api.dynamic_rendering
+dEQP-VK.shader_object.api.get_device_proc_addr
+dEQP-VK.shader_object.api.scissor_exclusive
+dEQP-VK.shader_object.api.shader_binary_uuid

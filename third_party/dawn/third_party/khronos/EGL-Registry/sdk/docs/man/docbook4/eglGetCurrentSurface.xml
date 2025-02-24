@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglGetCurrentSurface">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglGetCurrentSurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetCurrentSurface</refname>
+        <refpurpose>
+            return the read or draw surface for the current <acronym>EGL</acronym> rendering context
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglGetCurrentSurface</function></funcdef>
+                <paramdef>EGLint <parameter>readdraw</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>readdraw</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies whether the <acronym>EGL</acronym> read or draw surface
+                        is to be returned.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglGetCurrentSurface</function> returns the read or draw
+            surface attached to the current
+            <acronym>EGL</acronym> rendering context, as specified by
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+            If no context is current, <constant>EGL_NO_SURFACE</constant> is returned.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>    </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

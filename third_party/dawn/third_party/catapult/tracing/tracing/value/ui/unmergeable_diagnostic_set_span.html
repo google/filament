@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+  This file only depends on diagnostic_span.html, but it must be imported from
+  diagnostic_span.html.
+  Fortunately, this file is only imported from diagnostic_span.html, so it can
+  just not import anything.
+-->
+
+<link rel="import" href="/tracing/value/ui/diagnostic_span_behavior.html">
+
+<dom-module id="tr-v-ui-unmergeable-diagnostic-set-span">
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-unmergeable-diagnostic-set-span',
+    behaviors: [tr.v.ui.DIAGNOSTIC_SPAN_BEHAVIOR],
+
+    updateContents_() {
+      Polymer.dom(this).textContent = '';
+      for (const diagnostic of this.diagnostic) {
+        if (diagnostic instanceof tr.v.d.RelatedNameMap) continue;
+        const div = document.createElement('div');
+        div.appendChild(tr.v.ui.createDiagnosticSpan(
+            diagnostic, this.name_, this.histogram_));
+        Polymer.dom(this).appendChild(div);
+      }
+    }
+  });
+
+  return {};
+});
+</script>

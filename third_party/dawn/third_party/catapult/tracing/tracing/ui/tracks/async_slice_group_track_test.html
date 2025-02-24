@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AsyncSliceGroup = tr.model.AsyncSliceGroup;
+  const AsyncSliceGroupTrack = tr.ui.tracks.AsyncSliceGroupTrack;
+  const Process = tr.model.Process;
+  const ProcessTrack = tr.ui.tracks.ProcessTrack;
+  const Thread = tr.model.Thread;
+  const ThreadTrack = tr.ui.tracks.ThreadTrack;
+  const newAsyncSlice = tr.c.TestUtils.newAsyncSlice;
+  const newAsyncSliceNamed = tr.c.TestUtils.newAsyncSliceNamed;
+  const groupAsyncSlicesIntoSubRows = tr.ui.tracks.groupAsyncSlicesIntoSubRows;
+
+  test('filterSubRows', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+    g.push(newAsyncSlice(0, 1, t1, t1));
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+
+    assert.strictEqual(track.children.length, 1);
+    assert.isTrue(track.hasVisibleContent);
+  });
+
+  test('groupAsyncSlicesIntoSubRows_empty', function() {
+    const rows = groupAsyncSlicesIntoSubRows([]);
+    assert.strictEqual(rows.length, 0);
+  });
+
+  test('groupAsyncSlicesIntoSubRows_trivial', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+
+    const s1 = newAsyncSlice(10, 200, t1, t1);
+    const s2 = newAsyncSlice(300, 30, t1, t1);
+
+    const slices = [s2, s1];
+    const rows = groupAsyncSlicesIntoSubRows(slices);
+
+    assert.strictEqual(rows.length, 1);
+    assert.sameMembers(rows[0], [s1, s2]);
+  });
+
+  test('groupAsyncSlicesIntoSubRows_nonTrivial', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+
+    const s1 = newAsyncSlice(10, 200, t1, t1);  // Should be stripped.
+    const s1s1 = newAsyncSlice(10, 200, t1, t1);
+    s1.subSlices = [s1s1];
+
+    const s2 = newAsyncSlice(300, 30, t1, t1);
+    const s2s1 = newAsyncSlice(300, 10, t1, t1);
+    const s2s2 = newAsyncSlice(310, 20, t1, t1);  // Should not be stripped.
+    const s2s2s1 = newAsyncSlice(310, 20, t1, t1);
+    s2s2.subSlices = [s2s2s1];
+    s2.subSlices = [s2s2, s2s1];
+
+    const s3 = newAsyncSlice(200, 50, t1, t1);  // Overlaps with s1.
+    const s3s1 = newAsyncSlice(220, 5, t1, t1);
+    s3.subSlices = [s3s1];
+
+    const slices = [s2, s3, s1];
+    const rows = groupAsyncSlicesIntoSubRows(slices);
+
+    assert.strictEqual(rows.length, 5);
+    assert.sameMembers(rows[0], [s1s1, s2]);
+    assert.sameMembers(rows[1], [s2s1, s2s2]);
+    assert.sameMembers(rows[2], [s2s2s1]);
+    assert.sameMembers(rows[3], [s3]);
+    assert.sameMembers(rows[4], [s3s1]);
+  });
+
+  test('rebuildSubRows_twoNonOverlappingSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+    const s1 = newAsyncSlice(0, 1, t1, t1);
+    const subs1 = newAsyncSliceNamed('b', 0, 1, t1, t1);
+    s1.subSlices = [subs1];
+    g.push(s1);
+    g.push(newAsyncSlice(1, 1, t1, t1));
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+    const subRows = track.subRows;
+    assert.strictEqual(subRows.length, 1);
+    assert.strictEqual(subRows[0].length, 2);
+    assert.sameMembers(g.slices[1].subSlices, []);
+  });
+
+  test('rebuildSubRows_twoOverlappingSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+
+    const s1 = newAsyncSlice(0, 1, t1, t1);
+    const subs1 = newAsyncSliceNamed('b', 0, 1, t1, t1);
+    s1.subSlices = [subs1];
+    const s2 = newAsyncSlice(0, 1.5, t1, t1);
+    const subs2 = newAsyncSliceNamed('b', 0, 1, t1, t1);
+    s2.subSlices = [subs2];
+    g.push(s1);
+    g.push(s2);
+
+    g.updateBounds();
+
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+
+    const subRows = track.subRows;
+
+    assert.strictEqual(subRows.length, 2);
+    assert.strictEqual(subRows[0].length, 1);
+    assert.strictEqual(subRows[1].length, 1);
+    assert.strictEqual(subRows[1][0], g.slices[1].subSlices[0]);
+  });
+
+  test('rebuildSubRows_threePartlyOverlappingSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+    g.push(newAsyncSlice(0, 1, t1, t1));
+    g.push(newAsyncSlice(0, 1.5, t1, t1));
+    g.push(newAsyncSlice(1, 1.5, t1, t1));
+    g.updateBounds();
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+    const subRows = track.subRows;
+
+    assert.strictEqual(subRows.length, 2);
+    assert.strictEqual(subRows[0].length, 2);
+    assert.strictEqual(subRows[0][0], g.slices[0]);
+    assert.strictEqual(subRows[0][1], g.slices[2]);
+    assert.strictEqual(subRows[1][0], g.slices[1]);
+    assert.strictEqual(subRows[1].length, 1);
+    assert.sameMembers(g.slices[0].subSlices, []);
+    assert.sameMembers(g.slices[1].subSlices, []);
+    assert.sameMembers(g.slices[2].subSlices, []);
+  });
+
+  test('rebuildSubRows_threeOverlappingSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+
+    g.push(newAsyncSlice(0, 1, t1, t1));
+    g.push(newAsyncSlice(0, 1.5, t1, t1));
+    g.push(newAsyncSlice(2, 1, t1, t1));
+    g.updateBounds();
+
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+
+    const subRows = track.subRows;
+    assert.strictEqual(subRows.length, 2);
+    assert.strictEqual(subRows[0].length, 2);
+    assert.strictEqual(subRows[1].length, 1);
+    assert.strictEqual(subRows[0][0], g.slices[0]);
+    assert.strictEqual(subRows[1][0], g.slices[1]);
+    assert.strictEqual(subRows[0][1], g.slices[2]);
+  });
+
+  test('rebuildSubRows_twoViewSubGroups', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+    g.push(newAsyncSliceNamed('foo', 0, 1, t1, t1));
+    g.push(newAsyncSliceNamed('foo', 2, 1, t1, t1));
+    g.push(newAsyncSliceNamed('bar', 1, 2, t1, t1));
+    g.push(newAsyncSliceNamed('bar', 3, 2, t1, t1));
+    g.updateBounds();
+
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+    track.heading = 'sup';
+
+    assert.strictEqual(track.subRows.length, 2);
+    const subTracks = Polymer.dom(track).children;
+    assert.strictEqual(subTracks.length, 3);
+    assert.strictEqual(subTracks[0].slices.length, 0);
+    assert.strictEqual(subTracks[1].slices.length, 2);
+    assert.strictEqual(subTracks[2].slices.length, 2);
+    const headings =
+        [subTracks[0].heading, subTracks[1].heading, subTracks[2].heading];
+    assert.sameMembers(headings, ['foo', 'bar', 'sup']);
+  });
+
+  // Tests that no slices and their sub slices overlap.
+  test('rebuildSubRows_NonOverlappingSubSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+
+    const slice1 = newAsyncSlice(0, 5, t1, t1);
+    const slice1Child = newAsyncSlice(1, 2, t1, t1);
+    slice1.subSlices = [slice1Child];
+    const slice2 = newAsyncSlice(3, 5, t1, t1);
+    const slice3 = newAsyncSlice(5, 4, t1, t1);
+    const slice3Child = newAsyncSlice(6, 2, t1, t1);
+    slice3.subSlices = [slice3Child];
+    g.push(slice1);
+    g.push(slice2);
+    g.push(slice3);
+    g.updateBounds();
+
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+
+    const subRows = track.subRows;
+    // Checks each sub row to see that we don't have any overlapping slices.
+    for (let i = 0; i < subRows.length; i++) {
+      const row = subRows[i];
+      for (let j = 0; j < row.length; j++) {
+        for (let k = j + 1; k < row.length; k++) {
+          assert.isTrue(row[j].end <= row[k].start);
+        }
+      }
+    }
+  });
+
+  test('rebuildSubRows_NonOverlappingSubSlicesThreeNestedLevels', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const g = new AsyncSliceGroup(t1);
+
+    const slice1 = newAsyncSlice(0, 4, t1, t1);
+    const slice1Child = newAsyncSlice(1, 2, t1, t1);
+    slice1.subSlices = [slice1Child];
+    const slice2 = newAsyncSlice(2, 7, t1, t1);
+    const slice3 = newAsyncSlice(5, 5, t1, t1);
+    const slice3Child = newAsyncSlice(6, 3, t1, t1);
+    const slice3Child2 = newAsyncSlice(7, 1, t1, t1);
+    slice3.subSlices = [slice3Child];
+    slice3Child.subSlices = [slice3Child2];
+    g.push(slice1);
+    g.push(slice2);
+    g.push(slice3);
+    g.updateBounds();
+
+    const track = new AsyncSliceGroupTrack(new tr.ui.TimelineViewport());
+    track.group = g;
+
+    const subRows = track.subRows;
+    // Checks each sub row to see that we don't have any overlapping slices.
+    for (let i = 0; i < subRows.length; i++) {
+      const row = subRows[i];
+      for (let j = 0; j < row.length; j++) {
+        for (let k = j + 1; k < row.length; k++) {
+          assert.isTrue(row[j].end <= row[k].start);
+        }
+      }
+    }
+  });
+
+  test('asyncSliceGroupContainerMap', function() {
+    const vp = new tr.ui.TimelineViewport();
+    const containerToTrack = vp.containerToTrackMap;
+    const model = new tr.Model();
+    const process = model.getOrCreateProcess(123);
+    const thread = process.getOrCreateThread(456);
+    const group = new AsyncSliceGroup(thread);
+
+    const processTrack = new ProcessTrack(vp);
+    const threadTrack = new ThreadTrack(vp);
+    const groupTrack = new AsyncSliceGroupTrack(vp);
+    processTrack.process = process;
+    threadTrack.thread = thread;
+    groupTrack.group = group;
+    Polymer.dom(processTrack).appendChild(threadTrack);
+    Polymer.dom(threadTrack).appendChild(groupTrack);
+
+    assert.strictEqual(processTrack.eventContainer, process);
+    assert.strictEqual(threadTrack.eventContainer, thread);
+    assert.strictEqual(groupTrack.eventContainer, group);
+
+    assert.isUndefined(containerToTrack.getTrackByStableId('123'));
+    assert.isUndefined(containerToTrack.getTrackByStableId('123.456'));
+    assert.isUndefined(
+        containerToTrack.getTrackByStableId('123.456.AsyncSliceGroup'));
+
+    vp.modelTrackContainer = {
+      addContainersToTrackMap(containerToTrackMap) {
+        processTrack.addContainersToTrackMap(containerToTrackMap);
+      },
+      addEventListener() {}
+    };
+    vp.rebuildContainerToTrackMap();
+
+    // Check that all tracks call childs' addContainersToTrackMap()
+    // by checking the resulting map.
+    assert.strictEqual(
+        containerToTrack.getTrackByStableId('123'), processTrack);
+    assert.strictEqual(
+        containerToTrack.getTrackByStableId('123.456'), threadTrack);
+    assert.strictEqual(
+        containerToTrack.getTrackByStableId('123.456.AsyncSliceGroup'),
+        groupTrack);
+
+    // Check the track's eventContainer getter.
+    assert.strictEqual(processTrack.eventContainer, process);
+    assert.strictEqual(threadTrack.eventContainer, thread);
+    assert.strictEqual(groupTrack.eventContainer, group);
+  });
+});
+</script>

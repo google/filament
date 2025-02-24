@@ -1,0 +1,56 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Custom GN integration for VulkanMemoryAllocator.
+
+# To use this template, instantiate a vulkan_memory_allocator with the right
+# dependencies that you need. For example:
+#
+# vulkan_memory_allocator("my_vma") {
+#   deps = [ ":my_vulkan_headers" ]
+#   vulkan_memory_allocator_dir = "$my_vma_path"
+# }
+#
+# Because some projects may load entry points differently this template pattern
+# lets us handle different implementations in the same code base.
+
+template("vulkan_memory_allocator") {
+  config("${target_name}_config") {
+    include_dirs = [ "${invoker.vulkan_memory_allocator_dir}/src" ]
+    if (is_clang) {
+      cflags_cc = [
+        "-Wno-implicit-fallthrough",
+        "-Wno-nullability-completeness",
+        "-Wno-unused-private-field",
+        "-Wno-unused-variable",
+      ]
+    }
+    if (is_win && !is_clang) {
+      cflags_cc = [
+        "/wd4189",  # local variable is initialized but not referenced
+      ]
+    }
+  }
+
+  source_set(target_name) {
+    sources = [
+      # vk_mem_alloc.cpp allows the functions to be compiled into an object file
+      # and the consumers of vulkan_memory_allocator to use the prototypes.
+      "${invoker.vulkan_memory_allocator_dir}/src/vk_mem_alloc.h",
+    ]
+
+    forward_variables_from(invoker, "*")
+    if (defined(defines)) {
+      defines += [ "VMA_IMPLEMENTATION" ]
+    } else {
+      defines = [ "VMA_IMPLEMENTATION" ]
+    }
+
+    if (defined(public_configs)) {
+      public_configs += [ ":${target_name}_config" ]
+    } else {
+      public_configs = [ ":${target_name}_config" ]
+    }
+  }
+}

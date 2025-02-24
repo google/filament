@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/rect_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays an array of Slice objects.
+   * @constructor
+   * @extends {RectTrack}
+   */
+  const SliceTrack = tr.ui.b.define(
+      'slice-track', tr.ui.tracks.RectTrack);
+
+  SliceTrack.prototype = {
+
+    __proto__: tr.ui.tracks.RectTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.RectTrack.prototype.decorate.call(this, viewport);
+    },
+
+    get slices() {
+      return this.rects;
+    },
+
+    set slices(slices) {
+      this.rects = slices;
+    }
+  };
+
+  return {
+    SliceTrack,
+  };
+});
+</script>
+

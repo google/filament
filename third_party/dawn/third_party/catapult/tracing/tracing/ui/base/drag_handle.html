@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id="tr-ui-b-drag-handle">
+  <template>
+    <style>
+    :host {
+      -webkit-user-select: none;
+      box-sizing: border-box;
+      display: block;
+    }
+
+    :host(.horizontal-drag-handle) {
+      background-image: -webkit-gradient(linear,
+                                         0 0, 0 100%,
+                                         from(#E5E5E5),
+                                         to(#D1D1D1));
+      border-bottom: 1px solid #8e8e8e;
+      border-top: 1px solid white;
+      cursor: ns-resize;
+      flex: 0 0 auto;
+      height: 7px;
+      position: relative;
+    }
+
+    :host(.vertical-drag-handle) {
+      background-image: -webkit-gradient(linear,
+                                         0 0, 100% 0,
+                                         from(#E5E5E5),
+                                         to(#D1D1D1));
+      border-left: 1px solid white;
+      border-right: 1px solid #8e8e8e;
+      cursor: ew-resize;
+      flex: 0 0 auto;
+      position: relative;
+      width: 7px;
+    }
+    </style>
+    <div></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-drag-handle',
+
+  created() {
+    this.lastMousePos_ = 0;
+    this.onMouseMove_ = this.onMouseMove_.bind(this);
+    this.onMouseUp_ = this.onMouseUp_.bind(this);
+    this.addEventListener('mousedown', this.onMouseDown_);
+    this.target_ = undefined;
+    this.horizontal = true;
+    this.observer_ = new MutationObserver(
+        this.didTargetMutate_.bind(this));
+    this.targetSizesByModeKey_ = {};
+    this.currentDraggingSize_ = undefined;
+  },
+
+  get modeKey_() {
+    return this.target_.className === '' ? '.' : this.target_.className;
+  },
+
+  get target() {
+    return this.target_;
+  },
+
+  set target(target) {
+    this.observer_.disconnect();
+    this.target_ = target;
+    if (!this.target_) return;
+    this.observer_.observe(this.target_, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+  },
+
+  get horizontal() {
+    return this.horizontal_;
+  },
+
+  set horizontal(h) {
+    this.horizontal_ = h;
+    if (this.horizontal_) {
+      this.className = 'horizontal-drag-handle';
+    } else {
+      this.className = 'vertical-drag-handle';
+    }
+  },
+
+  get vertical() {
+    return !this.horizontal_;
+  },
+
+  set vertical(v) {
+    this.horizontal = !v;
+  },
+
+  forceMutationObserverFlush_() {
+    const records = this.observer_.takeRecords();
+    if (records.length) {
+      this.didTargetMutate_(records);
+    }
+  },
+
+  didTargetMutate_(e) {
+    const modeSize = this.targetSizesByModeKey_[this.modeKey_];
+    if (modeSize !== undefined) {
+      this.setTargetSize_(modeSize);
+      return;
+    }
+
+    // If we hadn't previously sized the target, then just remove any manual
+    // sizing that we applied.
+    this.target_.style[this.targetStyleKey_] = '';
+  },
+
+  get targetStyleKey_() {
+    return this.horizontal_ ? 'height' : 'width';
+  },
+
+  getTargetSize_() {
+    // Get the actual size, which may be different from the expected size
+    // because of size constraints (e.g. min-width) etc.
+    const size =
+        parseInt(window.getComputedStyle(this.target_)[this.targetStyleKey_]);
+    this.targetSizesByModeKey_[this.modeKey_] = size;
+    return size;
+  },
+
+  setTargetSize_(s) {
+    this.target_.style[this.targetStyleKey_] = s + 'px';
+    this.targetSizesByModeKey_[this.modeKey_] = this.getTargetSize_();
+    tr.b.dispatchSimpleEvent(this, 'drag-handle-resize', true, false);
+  },
+
+  applyDelta_(delta) {
+    // Apply new size to the target.
+    if (this.target_ === this.nextElementSibling) {
+      this.currentDraggingSize_ += delta;
+    } else {
+      this.currentDraggingSize_ -= delta;
+    }
+    this.setTargetSize_(this.currentDraggingSize_);
+  },
+
+  onMouseMove_(e) {
+    // Compute the difference in height position.
+    const curMousePos = this.horizontal_ ? e.clientY : e.clientX;
+    const delta = this.lastMousePos_ - curMousePos;
+
+    this.applyDelta_(delta);
+
+    this.lastMousePos_ = curMousePos;
+    e.preventDefault();
+    return true;
+  },
+
+  onMouseDown_(e) {
+    if (!this.target_) return;
+    this.forceMutationObserverFlush_();
+    // Start with the current actual size.
+    this.currentDraggingSize_ = this.getTargetSize_();
+    this.lastMousePos_ = this.horizontal_ ? e.clientY : e.clientX;
+    document.addEventListener('mousemove', this.onMouseMove_);
+    document.addEventListener('mouseup', this.onMouseUp_);
+    e.preventDefault();
+    return true;
+  },
+
+  onMouseUp_(e) {
+    document.removeEventListener('mousemove', this.onMouseMove_);
+    document.removeEventListener('mouseup', this.onMouseUp_);
+    e.preventDefault();
+    this.currentDraggingSize_ = undefined;
+  }
+});
+</script>

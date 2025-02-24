@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unittest/constants.html">
+<link rel="import" href="/tracing/base/unittest/test_case.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.unittest', function() {
+  const TestCase = tr.b.unittest.TestCase;
+  const PerfTestCase = tr.b.unittest.PerfTestCase;
+
+  const TestTypes = tr.b.unittest.TestTypes;
+
+  function TestSuite(name, suiteConstructor, opt_suiteOptions) {
+    this.guid = tr.b.GUID.allocateSimple();
+    this.name_ = name;
+    this.tests_ = [];
+    this.testNames_ = {}; // For dupe checking.
+
+    global.flakyTest = function(testCaseOrName, opt_testFn, opt_options) {
+      if (testCaseOrName instanceof TestCase) {
+        testCaseOrName.options.flaky = true;
+        test(testCaseOrName);
+      } else {
+        const options = Object.assign({}, opt_options || {});
+        options.flaky = true;
+        test(testCaseOrName, opt_testFn, options);
+      }
+    }.bind(this);
+
+    global.skipTest = function(testCaseOrName, opt_testFn, opt_options) {
+      if (testCaseOrName instanceof TestCase) {
+        testCaseOrName.options.skipped = true;
+        test(testCaseOrName);
+      } else {
+        const options = Object.assign({}, opt_options || {});
+        options.skipped = true;
+        test(testCaseOrName, opt_testFn, options);
+      }
+    }.bind(this);
+
+    global.test = function(testCaseOrName, opt_testFn, opt_options) {
+      if (testCaseOrName instanceof TestCase) {
+        if (opt_testFn !== undefined) {
+          throw new Error('opt_testFn cannot be given when giving a TestCase');
+        }
+        if (opt_options !== undefined) {
+          throw new Error('opt_options cannot be given when giving a TestCase');
+        }
+        if (opt_suiteOptions && opt_suiteOptions.skipped) {
+          testCaseOrName.options.skipped = true;
+        }
+        this.addTest(testCaseOrName);
+        return;
+      }
+
+      let testName = testCaseOrName;
+      const testFn = opt_testFn;
+      const options = opt_options || {};
+      if (opt_suiteOptions && opt_suiteOptions.skipped) {
+        options.skipped = true;
+      }
+      if (testFn === undefined) {
+        throw new Error('Must provide opt_testFn');
+      }
+
+      // If the test cares about DPI settings then we first push a test
+      // that fakes the DPI as the low or hi Dpi version, depending on what
+      // we're current using.
+      if (options.dpiAware) {
+        const defaultDevicePixelRatio = window.devicePixelRatio;
+        const dpi = defaultDevicePixelRatio > 1 ? 1 : 2;
+
+        const testWrapper = function() {
+          window.devicePixelRatio = dpi;
+          try {
+            testFn.bind(this).call();
+          } finally {
+            window.devicePixelRatio = defaultDevicePixelRatio;
+          }
+        };
+
+        let newName = name;
+        if (dpi === 1) {
+          newName += '_loDPI';
+          testName += '_hiDPI';
+        } else {
+          newName += '_hiDPI';
+          testName += '_loDPI';
+        }
+
+        this.addTest(new TestCase(newName,
+            testWrapper, options || {}));
+      }
+
+      this.addTest(new TestCase(testName,
+          testFn, options || {}));
+    }.bind(this);
+
+    global.timedPerfTest = function(name, testFn, options) {
+      if (options === undefined || options.iterations === undefined) {
+        throw new Error('timedPerfTest must have iteration option provided.');
+      }
+      this.addTest(new PerfTestCase(name, testFn, options));
+    }.bind(this);
+
+    try {
+      suiteConstructor.call();
+    } finally {
+      global.test = undefined;
+      global.timedPerfTest = undefined;
+      global.flakyTest = undefined;
+      global.skipTest = undefined;
+    }
+  }
+
+  TestSuite.prototype = {
+    __proto__: Object.prototype,
+
+    get tests() {
+      return this.tests_;
+    },
+
+    addTest(test) {
+      if (test.suite !== undefined) {
+        throw new Error('Test suite is already assigned');
+      }
+      if (this.testNames_[test.name] !== undefined) {
+        throw new Error('Test name already used');
+      }
+      test.suite = this;
+      this.testNames_[test.name] = true;
+      this.tests_.push(test);
+    },
+
+    get name() {
+      return this.name_;
+    }
+  };
+
+  function testSuite(suiteConstructor, opt_suiteOptions) {
+    if (!global._currentSuiteLoader) {
+      throw new Error('testSuites can only be defined during suite loading');
+    }
+    global._currentSuiteLoader.constructAndRegisterTestSuite(
+        suiteConstructor, opt_suiteOptions);
+  }
+
+  function skippedTestSuite(suiteConstructor) {
+    testSuite(suiteConstructor, {skipped: true});
+  }
+
+  return {
+    TestSuite,
+    testSuite,
+    skippedTestSuite,
+  };
+});
+</script>

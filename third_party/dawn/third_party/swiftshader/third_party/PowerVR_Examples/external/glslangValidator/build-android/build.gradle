@@ -1,0 +1,66 @@
+apply plugin: 'com.android.library'
+
+def projectDependencies = ["glslang"]
+
+android {
+	compileSdkVersion 28
+	defaultConfig {
+		minSdkVersion 21
+		targetSdkVersion 26
+		versionCode 1
+		versionName "1.0"
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../../glslang/CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+// This block specifies dependencies required to build only the module itself
+dependencies {
+	// Add the dependencies to the external modules
+	projectDependencies.each { 
+		s-> implementation project(":${s}")
+	}
+}
+
+tasks.whenTaskAdded { task -> 	
+	// Workaround library native code dependency issue in gradle
+	// This should normally be handled by the dependencies above: (implementation project(':...'))
+	// refer to https://issuetracker.google.com/issues/69616088.
+	// We add a dependency on all external projects' corresponding externalNativeBuild tasks - If these lines are removed, the external is not built as it should be.
+	if (task.name == 'generateJsonModelRelease') {
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuildRelease" }
+	} else if (task.name == 'generateJsonModelDebug') {
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuildDebug" }
+	}
+}
+
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}

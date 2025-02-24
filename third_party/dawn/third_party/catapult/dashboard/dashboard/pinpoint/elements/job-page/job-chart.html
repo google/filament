@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-icon/iron-icon.html">
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/iron-selector/iron-selector.html">
+
+<link rel="import" href="/elements/base-style.html">
+
+<dom-module id="job-chart">
+  <template>
+    <style include="base-style">
+      :host {
+        display: grid;
+        font-size: 12px;
+        grid-template-columns: max-content max-content;
+        line-height: 16px;
+        text-align: center;
+      }
+
+      svg {
+        overflow: visible;
+      }
+
+      rect {
+        opacity: 0.25;
+      }
+
+      #yaxis_title {
+        max-height: 256px;
+        overflow: hidden;
+        text-orientation: mixed;
+        text-overflow: ellipsis;
+        writing-mode: vertical-lr;
+        transform: rotate(-180deg);
+      }
+
+      #yaxis {
+        margin-top: 16px;
+        width: 64px;
+      }
+
+      #plot {
+        display: flex;
+        flex-direction: row-reverse;
+      }
+
+      #xaxis_title {
+        grid-column: 3;
+      }
+
+      .change-plot {
+        align-items: center;
+        display: flex;
+        height: 224px;
+        justify-content: center;
+        width: 100%;
+      }
+
+      .difference-label {
+        height: 16px;
+      }
+
+      .vertical {
+        margin: 0 auto;
+        text-orientation: mixed;
+        transform: rotate(-45deg);
+        writing-mode: vertical-rl;
+      }
+
+      .change-div {
+        color: var(--paper-grey-500);
+        fill: var(--paper-grey-700);
+        width: 100%;
+      }
+
+      .change-div iron-icon {
+        fill: inherit;
+      }
+
+      .change-div line {
+        stroke: black;
+      }
+
+      .change-div.difference {
+        color: black;
+      }
+
+      .change-div.iron-selected {
+        color: var(--paper-pink-a200);
+        fill: var(--paper-pink-a400);
+      }
+
+      .change-div.iron-selected line {
+        stroke: var(--paper-pink-a400);
+      }
+
+      .change-div.iron-selected + .change-div {
+        color: var(--paper-indigo-500);
+        fill: var(--paper-indigo-700);
+      }
+
+      .change-div.iron-selected + .change-div line {
+        stroke: var(--paper-indigo-700);
+      }
+
+      .change-div:hover {
+        color: var(--paper-pink-a100) !important;
+        fill: var(--paper-pink-a200) !important;
+      }
+
+      .change-div:hover line {
+        stroke: var(--paper-pink-a200) !important;
+      }
+    </style>
+
+    <div id="yaxis_title">
+      [[_getImprovementDirection(job)]]<br>
+      [[job.metric]]
+    </div>
+    <svg id="yaxis">
+      <g id="yaxis_group" transform="translate(64, 0)"></g>
+    </svg>
+    <iron-selector id="plot" selected="{{reverseChangeIndex}}"></iron-selector>
+    <div id="xaxis_title">Commit position or git hash</div>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'job-chart',
+
+      properties: {
+        job: {
+          type: Object,
+          observer: '_jobChanged',
+        },
+
+        changeIndex: {
+          type: Number,
+          notify: true,
+          observer: '_changeIndexChanged',
+        },
+
+        reverseChangeIndex: {
+          type: Number,
+          observer: '_reverseChangeIndexChanged',
+        },
+      },
+
+      _getImprovementDirection(job){
+        // improvement direction is 0, 1, or 4
+        // 0 is higher is better, 1 is lower is better, 4 is unknown
+        if (!job || job.improvement_direction === null || job.improvement_direction === 4){
+          return 'Unknown improvement direction'
+        }
+        if (job.improvement_direction === 0) {
+          return 'Higher is better'
+        }
+        return 'Lower is better'
+      },
+
+      _jobChanged() {
+        this.async(this.draw, 1);
+        this._changeIndexChanged();
+      },
+
+      _changeIndexChanged() {
+        if (!this.job) {
+          return;
+        }
+        const reverseChangeIndex = this.job.state.length - this.changeIndex - 1;
+        if (reverseChangeIndex == this.reverseChangeIndex) {
+          return;
+        }
+        this.reverseChangeIndex = reverseChangeIndex;
+      },
+
+      _reverseChangeIndexChanged() {
+        if (!this.job) {
+          return;
+        }
+        const changeIndex = this.job.state.length - this.reverseChangeIndex - 1;
+        if (changeIndex == this.changeIndex) {
+          return;
+        }
+        this.changeIndex = changeIndex;
+      },
+
+      draw() {
+        const [x, y] = computeScales(this.job);
+
+        // Draw y-axis.
+        d3.select(this.$.yaxis_group)
+            .call(d3.axisLeft(y).ticks(5));
+
+        // For each change, create an enclosing <div>.
+        // Put the changes in reverse order. We need to highlight the
+        // previous element, and CSS has no "previous element" selector.
+        const changeDiv = d3.select(this.$.plot).selectAll('.change-div')
+            .data(this.job.state.slice().reverse());
+        changeDiv.enter().append('div').merge(changeDiv)
+            .html('')
+            .attr('class', 'change-div')
+            .call(drawChange, x, y);
+        changeDiv.exit().remove();
+
+        // Update Polymer about changes.
+        this.$.plot._updateItems();
+        this.$.plot._updateSelected();
+        this.scopeSubtree(this.$.yaxis_group);
+        this.scopeSubtree(this.$.plot);
+      }
+    });
+
+    function computeScales(job) {
+      // Compute y bounds and y scale.
+      const valuesByChange = job.state.map(s => s.result_values);
+      let domain;
+      if (job.comparison_mode == 'functional') {
+        domain = [0, 1];
+      } else {
+        // Some jobs have extreme outliers. Use the 1st and 99th percentiles.
+        const allValues = [].concat(...valuesByChange);
+        allValues.sort((a, b) => a - b);
+        domain = [d3.quantile(allValues, 0.01), d3.quantile(allValues, 0.99)];
+      }
+      const y = d3.scaleLinear()
+          .domain(domain).nice(5)
+          .rangeRound([224, 0]);
+
+      // Compute x scale. First, compute all the buckets, then scale all
+      // numbers to the bucket with the largest frequency percentage.
+      const histogram = d3.histogram()
+          .domain(y.domain())
+          .thresholds(y.ticks(20));
+      const histograms = valuesByChange.map(values => bins(histogram, values));
+      const maxBucket =
+          d3.max(d3.merge(histograms), bucket => bucket.proportion);
+      const x = d3.scaleLinear()
+          .domain([0, maxBucket])
+          .range([0, 100]);
+
+      return [x, y];
+    }
+
+    function drawChange(div, x, y) {
+      div.classed('difference', d => d.comparisons.prev == 'different')
+          .style('margin-left', d => {
+            if (d.comparisons.prev == 'different') {
+              return '8px';
+            }
+          })
+          .style('margin-right', d => {
+            if (d.comparisons.next == 'different') {
+              return '8px';
+            }
+          });
+
+      // Draw the difference if significant.
+      div.append('div')
+          .attr('class', 'difference-label')
+          .classed('vertical', div.data().length >= 15)
+          .text((d, i) => differenceString(div.data()[i + 1], d));
+      // Draw the plot or icon.
+      div.filter(d => d.result_values.length).append('svg')
+          .attr('class', 'change-plot')
+          .call(drawChangePlot, x, y);
+      div.filter(d => !d.result_values.length).append('div')
+          .attr('class', 'change-plot')
+          .call(drawChangeIcon);
+      // Add an x-axis label.
+      div.append('div')
+          .classed('vertical', div.data().length >= 15)
+          .text(d => changeString(d.change));
+    }
+
+    function drawChangePlot(svg, x, y) {
+      // Draw the histogram.
+      const histogram = d3.histogram()
+          .domain(y.domain())
+          .thresholds(y.ticks(20));
+      const rect = svg.selectAll('rect')
+          .data(d => bins(histogram, d.result_values)
+              .filter(bin => bin.length));
+      rect.enter().append('rect')
+          .attr('x', d => (100 - x(d.proportion)) / 2 + '%')
+          .attr('width', d => x(d.proportion) + '%')
+          .attr('y', d => y(d.x1))
+          .attr('height', d => y(d.x0) - y(d.x1));
+
+      // Draw the center line.
+      svg.append('line')
+          .attr('stroke-width', 1)
+          .attr('x1', '50%')
+          .attr('x2', '50%')
+          .attr('y2', '100%')
+          .attr('opacity', 0.1);
+
+      // Draw the mean line.
+      svg.append('line')
+          .attr('stroke-width', 2)
+          .attr('x2', '100%')
+          .attr('y1', d => y(d3.mean(d.result_values)))
+          .attr('y2', d => y(d3.mean(d.result_values)));
+    }
+
+    function drawChangeIcon(div) {
+      div.append('iron-icon')
+          // TODO(dtu): Plumb through real "pending" information from the Job.
+          .attr('icon', d => {
+            if (d.comparisons.prev == 'pending' ||
+                d.comparisons.next == 'pending') {
+              return 'watch-later';
+            }
+            return 'clear';
+          })
+          // Because we dynamically added the <iron-icon>, Polymer didn't
+          // populate the properties. we need to update them manually.
+          .each(function() {
+            this._meta = Polymer.Base.create('iron-meta', {type: 'iconset'});
+            this._iconChanged(this.icon);
+          });
+    }
+
+    function differenceString(prevState, state) {
+      if (!prevState) {
+        return null;
+      }
+      if (state.comparisons.prev != 'different') {
+        return null;
+      }
+      if (!(prevState.result_values.length && state.result_values.length)) {
+        return '+??';
+      }
+
+      const meanDifference =
+          d3.mean(state.result_values) - d3.mean(prevState.result_values);
+      let differenceString = Math.abs(meanDifference).toPrecision(2);
+      if (meanDifference >= 0) {
+        differenceString = '+' + differenceString;
+      } else {
+        // Use &minus; instead of a hypen to match the '+' width.
+        differenceString = '−' + differenceString;
+      }
+      return differenceString;
+    }
+
+    function changeString(change) {
+      const lastCommit = change.commits[change.commits.length - 1];
+      let changeString = lastCommit.commit_position ||
+        lastCommit.git_hash.substring(0, 7);
+      if (change.patch) {
+        changeString += ' + ' + change.patch.author.split('@')[0];
+      }
+      return changeString;
+    }
+
+    function bins(histogram, values) {
+      const bins = histogram(values);
+      for (const bin of bins) {
+        bin.proportion = bin.length / values.length;
+      }
+      return bins;
+    }
+  </script>
+</dom-module>

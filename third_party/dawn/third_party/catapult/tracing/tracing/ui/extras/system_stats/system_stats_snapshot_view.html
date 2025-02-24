@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet"
+    href="/tracing/ui/extras/system_stats/system_stats_snapshot_view.css">
+
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.system_stats', function() {
+  /*
+   * Displays a system stats snapshot in a human readable form. @constructor
+   */
+  const SystemStatsSnapshotView = tr.ui.b.define(
+      'tr-ui-e-system-stats-snapshot-view', tr.ui.analysis.ObjectSnapshotView);
+
+  SystemStatsSnapshotView.prototype = {
+    __proto__: tr.ui.analysis.ObjectSnapshotView.prototype,
+
+    decorate() {
+      Polymer.dom(this).classList.add('tr-ui-e-system-stats-snapshot-view');
+    },
+
+    updateContents() {
+      const snapshot = this.objectSnapshot_;
+      if (!snapshot || !snapshot.getStats()) {
+        Polymer.dom(this).textContent = 'No system stats snapshot found.';
+        return;
+      }
+      // Clear old snapshot view.
+      Polymer.dom(this).textContent = '';
+
+      const stats = snapshot.getStats();
+      Polymer.dom(this).appendChild(this.buildList_(stats));
+    },
+
+    isFloat(n) {
+      return typeof n === 'number' && n % 1 !== 0;
+    },
+
+    /**
+     * Creates nested lists.
+     *
+     * @param {Object} stats The current trace system stats entry.
+     * @return {Element} A ul list element.
+     */
+    buildList_(stats) {
+      const statList = document.createElement('ul');
+
+      for (const statName in stats) {
+        const statText = document.createElement('li');
+        Polymer.dom(statText).textContent = '' + statName + ': ';
+        Polymer.dom(statList).appendChild(statText);
+
+        if (stats[statName] instanceof Object) {
+          Polymer.dom(statList).appendChild(this.buildList_(stats[statName]));
+        } else {
+          if (this.isFloat(stats[statName])) {
+            Polymer.dom(statText).textContent += stats[statName].toFixed(2);
+          } else {
+            Polymer.dom(statText).textContent += stats[statName];
+          }
+        }
+      }
+
+      return statList;
+    }
+  };
+
+  tr.ui.analysis.ObjectSnapshotView.register(
+      SystemStatsSnapshotView,
+      {typeName: 'base::TraceEventSystemStatsMonitor::SystemStats'});
+
+  return {
+    SystemStatsSnapshotView,
+  };
+});
+</script>

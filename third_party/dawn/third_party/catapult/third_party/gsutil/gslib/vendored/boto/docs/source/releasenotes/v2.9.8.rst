@@ -1,0 +1,35 @@
+boto v2.9.8
+===========
+
+:date: 2013/07/18
+
+This release is adds new methods in AWS Security Token Service (STS), AWS
+CloudFormation, updates AWS Relational Database Service (RDS) & Google Storage.
+It also has several bugfixes & documentation improvements.
+
+
+Features
+--------
+
+* Added support for the ``DecodeAuthorizationMessage`` in STS (:sha:`1ada5ac`).
+* Added support for creating/deleting/describing ``OptionGroup`` in RDS.
+  (:sha:`d629228` & :sha:`d059a3b`)
+* Added ``CancelUpdateStack`` to CloudFormation. (:issue:`1476`, :sha:`5bae130`)
+* Added support for getting/setting lifecycle configurations on GS buckets.
+  (:issue:`1604`, :sha:`652fc81`)
+
+
+Bugfixes
+--------
+
+* Added region support to ``bin/elbadmin``. (:issue:`1586`,
+  :sha:`2ffbc60`)
+* Changed the mock storage to use case-insensitive headers. (:issue:`1594`,
+  :sha:`71849cb`)
+* Added ``complex_listeners`` to ELB. (:issue:`1048`, :sha:`b782ce2`)
+* Added tests for Route53's ``ResourceRecordSets``. (:sha:`fad5bde`)
+* Several documentation improvements/fixes:
+
+    * Updated CloudFront docs. (:issue:`1546`, :sha:`a811197`)
+    * Updated the URL explaining the use of base64 in SQS messages.
+      (:issue:`1596`, :sha:`00de3a2`)

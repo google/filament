@@ -1,0 +1,16 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("c11_atomics") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/c11_atomics" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/c11_atomics/common.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/c11_atomics/host_atomics.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/c11_atomics/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/c11_atomics/test_atomics.cpp",
+  ]
+}

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglWaitGL - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglWaitGL">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglWaitGL — 
+            Complete GL execution prior to subsequent native rendering
+            calls
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglWaitGL</strong>(</code>
+              </td>
+              <td><code>void)</code>;</td>
+              <td> </td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            All OpenGL ES rendering calls for the currently bound OpenGL
+            ES context made prior to <code class="function">eglWaitGL</code> are
+            guaranteed to be executed before native rendering calls made
+            after <code class="function">eglWaitGL</code>. The same result can be
+            achieved using
+            <a class="citerefentry" href="glFinish.xhtml"><span class="citerefentry"><span class="refentrytitle">glFinish</span></span></a>.
+        </p>
+        <p>
+            <code class="function">eglWaitGL</code> is ignored if there is no
+            current EGL rendering context for OpenGL ES.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglWaitClient</code> is supported only if the
+            EGL version is 1.2 or greater.
+        </p>
+        <p>
+            <code class="function">eglWaitClient</code> is a generalized version
+            of <code class="function">eglWaitGL</code>, supporting multiple
+            client APIs. For backwards compatibility,
+            <code class="function">eglWaitGL</code> continues to be supported and
+            is equivalent to the series of commands
+        </p>
+        <pre class="programlisting">
+              EGLenum api = <code class="function">eglQueryAPI</code>();
+              <code class="function">eglBindAPI</code>(<code class="constant">EGL_OPENGL_ES_API</code>);
+              <code class="function">eglWaitClient</code>();
+              <code class="function">eglBindAPI</code>(api);
+        </pre>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned if
+            <code class="function">eglWaitGL</code> fails,
+            <code class="constant">EGL_TRUE</code> otherwise.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_CURRENT_SURFACE</code> is generated if
+            the surface associated with the current context has a native
+            window or pixmap, and that window or pixmap is no longer
+            valid.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="glFinish.xhtml"><span class="citerefentry"><span class="refentrytitle">glFinish</span></span></a>,
+            <a class="citerefentry" href="eglWaitClient.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitClient</span></span></a>
+            <a class="citerefentry" href="eglWaitNative.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitNative</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

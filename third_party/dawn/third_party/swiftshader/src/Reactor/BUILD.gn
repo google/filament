@@ -1,0 +1,356 @@
+# Copyright 2016 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("reactor.gni")
+import("../swiftshader.gni")
+
+config("swiftshader_llvm_reactor_private_config") {
+  if (is_win) {
+    cflags = [
+      "/wd4141",  # 'inline' used more than once. (LLVM 7.0)
+      "/wd4146",  # unary minus operator applied to unsigned type. (LLVM 7.0)
+      "/wd4201",  # nameless struct/union
+      "/wd4244",  # conversion' conversion from 'type1' to 'type2'
+      "/wd4245",  # conversion from int to unsigned int (llvm)
+      "/wd4624",  # destructor was implicitly defined as deleted (LLVM 7.0)
+    ]
+  } else {
+    cflags = [ "-Wno-unused-local-typedef" ]
+  }
+}
+
+config("swiftshader_reactor_base_private_config") {
+  defines = [
+    "REACTOR_ANONYMOUS_MMAP_NAME=swiftshader_jit",
+  ]
+}
+
+swiftshader_source_set("swiftshader_reactor_base") {
+  sources = [
+    "Assert.cpp",
+    "Debug.cpp",
+    "ExecutableMemory.cpp",
+    "Pragma.cpp",
+    "Reactor.cpp",
+    "SIMD.cpp",
+  ]
+
+  configs = [
+      ":swiftshader_reactor_base_private_config",
+  ]
+}
+
+if (supports_subzero) {
+  # Need a separate config to ensure the warnings are added to the end.
+  config("swiftshader_subzero_common_private_config") {
+    defines = [
+      "ALLOW_DUMP=0",
+      "ALLOW_TIMERS=0",
+      "ALLOW_LLVM_CL=0",
+      "ALLOW_LLVM_IR=0",
+      "ALLOW_LLVM_IR_AS_INPUT=0",
+      "ALLOW_MINIMAL_BUILD=0",
+      "ALLOW_WASM=0",
+      "ICE_THREAD_LOCAL_HACK=0",
+    ]
+
+    if (current_cpu == "x64") {
+      defines += [
+        "SZTARGET=X8664",
+        "SUBZERO_TARGET=X8664",
+      ]
+    } else if (current_cpu == "x86") {
+      defines += [
+        "SZTARGET=X8632",
+        "SUBZERO_TARGET=X8632",
+      ]
+    } else if (current_cpu == "mipsel") {
+      defines += [
+        "SZTARGET=MIPS32",
+        "SUBZERO_TARGET=MIPS32",
+      ]
+    } else if (current_cpu == "arm") {
+      defines += [
+        "SZTARGET=ARM32",
+        "SUBZERO_TARGET=ARM32",
+      ]
+    }
+
+    include_dirs = [
+      "../../third_party/subzero",
+      "../../third_party/subzero/pnacl-llvm/include/",
+      "../../third_party/llvm-subzero/include/",
+    ]
+
+    if (is_win) {
+      include_dirs +=
+          [ "../../third_party/llvm-subzero/build/Windows/include/" ]
+    } else if (is_linux || is_chromeos) {
+      include_dirs += [ "../../third_party/llvm-subzero/build/Linux/include/" ]
+    } else if (is_fuchsia) {
+      include_dirs +=
+          [ "../../third_party/llvm-subzero/build/Fuchsia/include/" ]
+    } else if (is_mac) {
+      include_dirs += [ "../../third_party/llvm-subzero/build/MacOS/include/" ]
+    }
+  }
+
+  config("swiftshader_subzero_private_config") {
+    cflags = []
+
+    if (is_win) {
+      cflags += [
+        "/wd4005",
+        "/wd4018",
+        "/wd4141",
+        "/wd4146",
+        "/wd4245",  # conversion from int to unsigned int (llvm)
+        "/wd4267",
+        "/wd4291",
+        "/wd4310",
+        "/wd4334",
+        "/wd4389",
+        "/wd4701",
+        "/wd4702",
+        "/wd4703",
+        "/wd4706",
+        "/wd4800",
+      ]
+
+      if (!is_debug) {
+        cflags += [ "/wd4718" ]
+      }
+
+      if (is_clang) {
+        if (is_debug) {
+          cflags += [ "-Wno-sign-compare" ]
+        }
+      }
+    } else if (is_linux || is_chromeos || is_mac || is_fuchsia) {
+      cflags += [ "-Wno-macro-redefined" ]
+    }
+
+    if (is_clang) {
+      cflags += [
+        "-Wno-header-hygiene",
+        "-Wno-deprecated-declarations", # (llvm)
+        "-Wno-enum-compare-switch",
+        "-Wno-unused-lambda-capture",
+        "-Wno-unused-function",
+      ]
+    }
+  }
+
+  config("swiftshader_reactor_with_subzero_private_config") {
+    cflags = []
+
+    if (is_win) {
+      cflags += [
+        "/wd4141",
+        "/wd4146",
+        "/wd4245",  # conversion from int to unsigned int (llvm)
+        "/wd4267",
+        "/wd4291",
+        "/wd4309",
+        "/wd4702",
+        "/wd4800",
+      ]
+
+      cflags += [
+        "/wd4018",  # signed/unsigned mismatch (llvm)
+        "/wd4310",  # cast truncates constant value (llvm)
+      ]
+
+      if (is_clang) {
+        if (is_debug) {
+          cflags += [ "-Wno-sign-compare" ]
+        }
+      }
+    }
+
+    if (is_clang) {
+      cflags += [
+        "-Wno-header-hygiene",
+        "-Wno-deprecated-declarations", # (llvm)
+      ]
+    }
+  }
+
+  swiftshader_source_set("swiftshader_subzero") {
+    subzero_dir = "../../third_party/subzero"
+    subzero_llvm_dir = "../../third_party/llvm-subzero"
+
+    sources = [
+      "$subzero_dir/src/IceAssembler.cpp",
+      "$subzero_dir/src/IceCfg.cpp",
+      "$subzero_dir/src/IceCfgNode.cpp",
+      "$subzero_dir/src/IceClFlags.cpp",
+      "$subzero_dir/src/IceELFObjectWriter.cpp",
+      "$subzero_dir/src/IceELFSection.cpp",
+      "$subzero_dir/src/IceFixups.cpp",
+      "$subzero_dir/src/IceGlobalContext.cpp",
+      "$subzero_dir/src/IceGlobalInits.cpp",
+      "$subzero_dir/src/IceInst.cpp",
+      "$subzero_dir/src/IceInstrumentation.cpp",
+      "$subzero_dir/src/IceIntrinsics.cpp",
+      "$subzero_dir/src/IceLiveness.cpp",
+      "$subzero_dir/src/IceLoopAnalyzer.cpp",
+      "$subzero_dir/src/IceMangling.cpp",
+      "$subzero_dir/src/IceMemory.cpp",
+      "$subzero_dir/src/IceOperand.cpp",
+      "$subzero_dir/src/IceRangeSpec.cpp",
+      "$subzero_dir/src/IceRegAlloc.cpp",
+      "$subzero_dir/src/IceRevision.cpp",
+      "$subzero_dir/src/IceSwitchLowering.cpp",
+      "$subzero_dir/src/IceTargetLowering.cpp",
+      "$subzero_dir/src/IceThreading.cpp",
+      "$subzero_dir/src/IceTimerTree.cpp",
+      "$subzero_dir/src/IceTypes.cpp",
+      "$subzero_dir/src/IceVariableSplitting.cpp",
+      "$subzero_llvm_dir/lib/Demangle/ItaniumDemangle.cpp",
+      "$subzero_llvm_dir/lib/Support/APInt.cpp",
+      "$subzero_llvm_dir/lib/Support/Atomic.cpp",
+      "$subzero_llvm_dir/lib/Support/CommandLine.cpp",
+      "$subzero_llvm_dir/lib/Support/Debug.cpp",
+      "$subzero_llvm_dir/lib/Support/Errno.cpp",
+      "$subzero_llvm_dir/lib/Support/ErrorHandling.cpp",
+      "$subzero_llvm_dir/lib/Support/Hashing.cpp",
+      "$subzero_llvm_dir/lib/Support/ManagedStatic.cpp",
+      "$subzero_llvm_dir/lib/Support/MemoryBuffer.cpp",
+      "$subzero_llvm_dir/lib/Support/Mutex.cpp",
+      "$subzero_llvm_dir/lib/Support/NativeFormatting.cpp",
+      "$subzero_llvm_dir/lib/Support/Path.cpp",
+      "$subzero_llvm_dir/lib/Support/Process.cpp",
+      "$subzero_llvm_dir/lib/Support/Program.cpp",
+      "$subzero_llvm_dir/lib/Support/Regex.cpp",
+      "$subzero_llvm_dir/lib/Support/Signals.cpp",
+      "$subzero_llvm_dir/lib/Support/SmallPtrSet.cpp",
+      "$subzero_llvm_dir/lib/Support/SmallVector.cpp",
+      "$subzero_llvm_dir/lib/Support/StringExtras.cpp",
+      "$subzero_llvm_dir/lib/Support/StringMap.cpp",
+      "$subzero_llvm_dir/lib/Support/StringRef.cpp",
+      "$subzero_llvm_dir/lib/Support/StringSaver.cpp",
+      "$subzero_llvm_dir/lib/Support/Threading.cpp",
+      "$subzero_llvm_dir/lib/Support/Timer.cpp",
+      "$subzero_llvm_dir/lib/Support/Twine.cpp",
+      "$subzero_llvm_dir/lib/Support/circular_raw_ostream.cpp",
+      "$subzero_llvm_dir/lib/Support/raw_os_ostream.cpp",
+      "$subzero_llvm_dir/lib/Support/raw_ostream.cpp",
+      "$subzero_llvm_dir/lib/Support/regcomp.c",
+      "$subzero_llvm_dir/lib/Support/regerror.c",
+      "$subzero_llvm_dir/lib/Support/regexec.c",
+      "$subzero_llvm_dir/lib/Support/regfree.c",
+      "$subzero_llvm_dir/lib/Support/regstrlcpy.c",
+    ]
+
+    if (current_cpu == "x64") {
+      sources += [
+        "$subzero_dir/src/IceAssemblerX8664.cpp",
+        "$subzero_dir/src/IceInstX8664.cpp",
+        "$subzero_dir/src/IceTargetLoweringX8664.cpp",
+      ]
+    } else if (current_cpu == "x86") {
+      sources += [
+        "$subzero_dir/src/IceAssemblerX8632.cpp",
+        "$subzero_dir/src/IceInstX8632.cpp",
+        "$subzero_dir/src/IceTargetLoweringX8632.cpp",
+      ]
+    } else if (current_cpu == "mipsel") {
+      sources += [
+        "$subzero_dir/src/IceAssemblerMIPS32.cpp",
+        "$subzero_dir/src/IceInstMIPS32.cpp",
+        "$subzero_dir/src/IceTargetLoweringMIPS32.cpp",
+      ]
+    } else if (current_cpu == "arm") {
+      sources += [
+        "$subzero_dir/src/IceAssemblerARM32.cpp",
+        "$subzero_dir/src/IceInstARM32.cpp",
+        "$subzero_dir/src/IceTargetLoweringARM32.cpp",
+      ]
+    }
+
+    configs = [
+      ":swiftshader_subzero_common_private_config",
+      ":swiftshader_subzero_private_config",
+    ]
+  }
+
+  swiftshader_source_set("swiftshader_subzero_reactor") {
+    deps = [
+      "../../third_party/marl:Marl",
+      ":swiftshader_reactor_base",
+      ":swiftshader_subzero",
+    ]
+
+    sources = [
+      "Optimizer.cpp",
+      "SubzeroReactor.cpp",
+    ]
+
+    configs = [
+      ":swiftshader_subzero_common_private_config",
+      ":swiftshader_reactor_with_subzero_private_config",
+    ]
+  }
+}
+
+if (supports_llvm) {
+  swiftshader_source_set("swiftshader_llvm_reactor") {
+    llvm_dir = "../../third_party/llvm-10.0"
+
+    deps = [
+      ":swiftshader_reactor_base",
+      "$llvm_dir:swiftshader_llvm",
+    ]
+
+    sources = [
+      "CPUID.cpp",
+      "LLVMJIT.cpp",
+      "LLVMReactor.cpp",
+    ]
+
+    configs = [ ":swiftshader_llvm_reactor_private_config" ]
+
+    include_dirs = [
+      "$llvm_dir/llvm/include/",
+      "$llvm_dir/configs/common/include/",
+    ]
+
+    if (is_linux || is_chromeos) {
+      include_dirs += [ "$llvm_dir/configs/linux/include/" ]
+    } else if (is_fuchsia) {
+      include_dirs += [ "$llvm_dir/configs/fuchsia/include/" ]
+    } else if (is_win) {
+      include_dirs += [ "$llvm_dir/configs/windows/include/" ]
+    } else if (is_android) {
+      include_dirs += [ "$llvm_dir/configs/android/include/" ]
+    } else if (is_mac) {
+      include_dirs += [ "$llvm_dir/configs/darwin/include/" ]
+    } else {
+      assert(false, "llvm not configured for target platform")
+    }
+  }
+}
+
+swiftshader_source_set("swiftshader_reactor") {
+  if (use_swiftshader_with_subzero) {
+    deps = [
+      ":swiftshader_subzero_reactor",
+    ]
+  } else {
+    deps = [
+      ":swiftshader_llvm_reactor",
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+===========
+boto v2.5.1
+===========
+
+Release 2.5.1 is a bugfix release.  It fixes the following critical issues:
+* :issue:`819`

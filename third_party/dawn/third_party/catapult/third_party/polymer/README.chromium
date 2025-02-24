@@ -1,0 +1,27 @@
+Name: Polymer
+Short Name: polymer
+URL: http://www.polymer-project.org
+Version: 0.5.2-4
+Revision: (See components/<component>/.bower.json)
+License: BSD
+License File: LICENSE.polymer
+Security Critical: no
+Shipped: yes
+
+Description:
+This directory contains a subset of the components provided by the
+Polymer project. See bower.json for a full list of components.
+
+The version can be found in header of polymer/polymer.js. The license can
+be found in polymer/LICENSE.
+
+The source git repositories can be found at:
+https://github.com/Polymer/<component>
+
+Note on Bower:
+New components can be added by editing bower.json and running `bower update`,
+which requires first installing bower (see http://bower.io/).
+
+Local Modifications:
+Removed unused file with no license header:
+components/web-animations-js/.travis-setup.sh

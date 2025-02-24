@@ -1,0 +1,98 @@
+<!-- Copyright 2017 The Chromium Authors. All rights reserved.
+     Use of this source code is governed by a BSD-style license that can be
+     found in the LICENSE file. -->
+
+<!--
+   This is an example of writing JavaScript to use Cross-Origin Resource Sharing
+  to authenticate to the perf dashboard API client-side. It creates a login
+  button and makes an API request for logged in users. It is based on the
+  example here, with makeApiCall method edited:
+  https://developers.google.com/api-client-library/javascript/samples/samples
+
+  Steps to get this working:
+  1. If you don't already have a client id, create one. See
+     https://developers.google.com/identity/sign-in/web/devconsole-project
+  2. Send a CL out for review to add your client id to
+     dashboard/dashboard/api/api_auth.py and add your hostname(s) to
+     dashboard/dashboard/api/api_request_handler.py
+  3. Update the code that posts to chromeperf.appspot.com below with the
+     API calls you need.
+-->
+<!DOCTYPE html>
+<html>
+  <body>
+    <script type="text/javascript">
+      'use strict';
+      const CLIENT_ID = '<YOUR_ID_HERE>.apps.googleusercontent.com';
+
+      function handleClientLoad() {
+        // Loads the client library and the auth2 library.
+        gapi.load('client:auth2', initClient);
+      }
+
+      function initClient() {
+        // Initialize the client with client id and scope, and initialize OAuth
+        // with an OAuth 2.0 client ID and scopes (space delimited string) to
+        // request access.
+        gapi.client.init({
+          clientId: CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/userinfo.email'
+        }).then(function() {
+          // Listen for sign-in state changes.
+          gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+          // Handle the initial sign-in state.
+          updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+        });
+      }
+
+      function updateSigninStatus(isSignedIn) {
+        // When signin status changes, this function is called.
+        // If the signin status is changed to signedIn, we make an API call.
+        if (isSignedIn) {
+          makeApiCall();
+        }
+      }
+
+      function handleSignInClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
+
+      function handleSignOutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+
+      function getUserToken() {
+        return gapi.auth2.getAuthInstance()
+            .currentUser.get()
+            .getAuthResponse()
+            .access_token;
+      }
+
+      function makeApiCall() {
+        // Make an XHR to perf dashboard API, setting the Authorization header.
+        const request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (request.readyState == 4) {
+            document.getElementById('results').innerHTML =
+                request.response.anomalies.length + ' anomalies found';
+          }
+        };
+        request.responseType = 'json';
+        request.open(
+            'POST',
+            'https://chromeperf.appspot.com/api/alerts/rev/494502', true);
+        request.setRequestHeader('Authorization', 'Bearer ' + getUserToken());
+        request.setRequestHeader('Accept', 'text/plain');
+        request.send();
+      }
+    </script>
+    <script async defer src="https://apis.google.com/js/api.js"
+      onload="this.onload=function(){};handleClientLoad()"
+      onreadystatechange="if (this.readyState === 'complete') this.onload()">
+    </script>
+    <button id="signin-button" onclick="handleSignInClick()">Sign In</button>
+    <button id="signout-button" onclick="handleSignOutClick()">Sign Out</button>
+    <div id="results"></div>
+  </body>
+</html>

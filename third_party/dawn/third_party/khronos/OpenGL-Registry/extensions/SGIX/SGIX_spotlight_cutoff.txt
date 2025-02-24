@@ -1,0 +1,155 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_spotlight_cutoff
+
+Name Strings
+
+    GL_SGIX_spotlight_cutoff
+
+Version
+
+    $Date: 1997/09/29 21:22:36 $ $Revision: 1.5 $
+
+Number
+
+    131
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    SGIX_fragment_light affects the definition of this extension.
+
+Overview
+
+    As specified, the transition to black at the edge of a spotlight cone
+    is abrupt and, therefore, can cause aliasing in fragment lighting.
+    This extension adds a new parameter to vertex and fragment lights that
+    defines an angular region just within the cutoff angle over which the
+    spotlight attenuation is transitioned smoothly to zero.  The extension
+    is modeled on that from the RenderMan Interface from Pixar.
+
+Issues
+
+    *   Should this single parameter be included in the fragment_light
+	spec (and thus removing the requirement of this spec)?
+
+    *	Do we want this to apply to per-vertex lights too?  I would say
+	yes at this point because this feature can be used for visual
+	effects like those of area light sources.  Vertex lights can
+	benefit almost as much as fragment lights in this situation.
+
+    *   Do we want to force a certain falloff function or leave it up to
+	the implementation?  I think we should leave it open, but force
+	it to be monotonic.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of Lightf, Lighti, Lightfv, and
+    Lightiv and by the <pname> parameter of GetLightfv and GetLightiv:
+
+    SPOT_CUTOFF_DELTA_SGIX		0x8193
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Insert in Table 2.7 (need to replicate whole table...):
+
+    Param	Type	Default		Description
+    ----------------------------------------------------------------
+    d_rli	real	0.0		spotlight delta cutoff angle
+					(range:  [0.0,90.0])
+
+    Equation 2.5 becomes:
+
+    If d_rli<=c_rli:
+
+    spot_i = (P_pliV.s_dli)^s_rli   c_rli!=180.0 P_pliV.s_dli>=cos(c_rli-d_rli)
+             smooth falloff         c_rli!=180.0 cos(c_rli)>=P_pliV.s_dli>cos(c_rli-d_rli)
+             0.0                    c_rli!=180.0 P_pliV.s_dli<cos(c_rli)
+             1.0                    c_rli==180.0
+
+    If d_rli>c_rli:
+
+    spot_i = (P_pliV.s_dli)^s_rli   c_rli!=180.0 P_pliV.s_dli>=cos(c_rli)
+             0.0                    c_rli!=180.0 P_pliV.s_dli<cos(c_rli)
+             1.0                    c_rli==180.0
+
+
+    Before the paragraph beginning "The value of A produced..." insert:
+
+    When d_rli<=c_rli, the spotlight attenuation transitions smoothly to
+    0.0 at the cutoff angle over an angle d_rli.  The falloff is
+    implementation specific and may be, for instance, linear or cubic,
+    however it must monotonically decrease from (cos(c_rli-d_rli))^s_rli
+    to 0.0.
+
+    Insert in Table 2.8 (need to replicate whole table...):
+
+    Param	Name			Number of Values
+    ----------------------------------------------------
+    d_rli	SPOT_CUTOFF_DELTA_SGIX	1
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    In Section 3.9.2 Lighting Operation insert after lighting equation:
+
+    If d_rli<=c_rli:
+
+    spot_i = (P_pliV.s_dli)^s_rli   c_rli!=180.0 P_pliV.s_dli>=cos(c_rli-d_rli)
+             smooth falloff         c_rli!=180.0 cos(c_rli)>=P_pliV.s_dli>cos(c_rli-d_rli)
+             0.0                    c_rli!=180.0 P_pliV.s_dli<cos(c_rli)
+             1.0                    c_rli==180.0
+
+    If d_rli>c_rli:
+
+    spot_i = (P_pliV.s_dli)^s_rli   c_rli!=180.0 P_pliV.s_dli>=cos(c_rli)
+             0.0                    c_rli!=180.0 P_pliV.s_dli<cos(c_rli)
+             1.0                    c_rli==180.0
+
+    When d_rli<=c_rli, the spotlight attenuation transitions smoothly to
+    0.0 at the cutoff angle over an angle d_rli.  The falloff is
+    implementation specific and may be, for instance, linear or cubic,
+    however it must monotonically decrease from (cos(c_rli-d_rli))^s_rli
+    to 0.0.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    TBD
+
+Additions to the GLX Specification
+
+    TBD
+
+Dependencies on SGIX_fragment_light
+
+    If SGIX_fragment_light is not implemented, references to fragment
+    lighting in this document are invalid and should be ignored.
+
+Errors
+
+    GL_INVALID_VALUE is generated if SPOT_CUTOFF_DELTA_SGIX is outside the
+    range [0,90].
+
+New State
+
+    Get Value			Get Command	Type		Initial Value		Attribute
+    ---------			-----------	----		-------------		---------
+    SPOT_CUTOFF_DELTA_SGIX	GetLightfv	1*xR+		0.0			lighting
+
+New Implementation Dependent State
+
+    None

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/quad.html">
+<link rel="import" href="/tracing/base/math/rect.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+<script>
+
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const convertedNameCache = {};
+  function convertNameToJSConvention(name) {
+    if (name in convertedNameCache) {
+      return convertedNameCache[name];
+    }
+
+    if (name[0] === '_' ||
+        name[name.length - 1] === '_') {
+      convertedNameCache[name] = name;
+      return name;
+    }
+
+    const words = name.split('_');
+    if (words.length === 1) {
+      convertedNameCache[name] = words[0];
+      return words[0];
+    }
+
+    for (let i = 1; i < words.length; i++) {
+      words[i] = words[i][0].toUpperCase() + words[i].substring(1);
+    }
+
+    convertedNameCache[name] = words.join('');
+    return convertedNameCache[name];
+  }
+
+  function moveRequiredFieldsFromArgsToToplevel(object, fields) {
+    for (let i = 0; i < fields.length; i++) {
+      const key = fields[i];
+      if (object.args[key] === undefined) {
+        throw Error('Expected field ' + key + ' not found in args');
+      }
+      if (object[key] !== undefined) {
+        throw Error('Field ' + key + ' already in object');
+      }
+      object[key] = object.args[key];
+      delete object.args[key];
+    }
+  }
+
+  function moveOptionalFieldsFromArgsToToplevel(object, fields) {
+    for (let i = 0; i < fields.length; i++) {
+      const key = fields[i];
+      if (object.args[key] === undefined) continue;
+      if (object[key] !== undefined) {
+        throw Error('Field ' + key + ' already in object');
+      }
+      object[key] = object.args[key];
+      delete object.args[key];
+    }
+  }
+
+  function preInitializeObject(object) {
+    preInitializeObjectInner(object.args, false);
+  }
+
+  function preInitializeObjectInner(object, hasRecursed) {
+    if (!(object instanceof Object)) return;
+
+    if (object instanceof Array) {
+      for (let i = 0; i < object.length; i++) {
+        preInitializeObjectInner(object[i], true);
+      }
+      return;
+    }
+
+    if (hasRecursed &&
+        (object instanceof tr.model.ObjectSnapshot ||
+         object instanceof tr.model.ObjectInstance)) {
+      return;
+    }
+
+    for (let key in object) {
+      const newKey = convertNameToJSConvention(key);
+      if (newKey !== key) {
+        const value = object[key];
+        delete object[key];
+        object[newKey] = value;
+        key = newKey;
+      }
+
+      // Convert objects with keys ending with Quad to tr.b.math.Quad type.
+      if (/Quad$/.test(key) && !(object[key] instanceof tr.b.math.Quad)) {
+        let q;
+        try {
+          q = tr.b.math.Quad.from8Array(object[key]);
+        } catch (e) {
+        }
+        object[key] = q;
+        continue;
+      }
+
+      // Convert objects with keys ending with Rect to tr.b.math.Rect type.
+      if (/Rect$/.test(key) && !(object[key] instanceof tr.b.math.Rect)) {
+        let r;
+        try {
+          r = tr.b.math.Rect.fromArray(object[key]);
+        } catch (e) {
+        }
+        object[key] = r;
+      }
+
+      preInitializeObjectInner(object[key], true);
+    }
+  }
+
+  return {
+    preInitializeObject,
+    convertNameToJSConvention,
+    moveRequiredFieldsFromArgsToToplevel,
+    moveOptionalFieldsFromArgsToToplevel,
+  };
+});
+</script>

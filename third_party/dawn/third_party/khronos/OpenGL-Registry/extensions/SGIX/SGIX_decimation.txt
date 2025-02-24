@@ -1,0 +1,199 @@
+Name
+
+    SGIX_decimation
+
+Name Strings
+
+    GL_SGIX_decimation
+
+Version
+
+    $Date: 1997/07/18 00:49:00 $ $Revision: 1.4 $
+
+Number
+
+    125
+
+Dependencies
+
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+
+Overview
+
+    This extension adds a decimation operation to the pixel transfer
+    path.  
+
+    Decimation occurs after convolution and prior to the post-convolution
+    color table.
+
+    The operation is controlled by two positive integer parameters, stepx
+    and stepy, that specify the decimation step size in the x and y
+    directions, respectively.  During a pixel transfer, the decimation
+    operation passes only those pixels which are at a position (i*stepx,
+    j*stepy), for integers (i, j), relative to the bottom left corner of
+    the image that is being transferred.  All other pixels are discarded. 
+    Decimation is applied to the image that results from convolution,
+    which may differ in size from the source image if convolution is
+    enabled.
+
+    By default, stepx and stepy are both 1.
+
+Issues
+
+    * This spec allows for future extension to 3D decimation.
+    
+    * What is a reasonable minimum maximum decimation step that we should
+      enforce?  Two is probably sufficient.
+      
+    * Future extensions that redefine the convolution operation at the border
+      of an image may affect this specification.
+    
+    * Decimation doesn't apply to bitmaps because they are not affected
+      by the PixelTransfer state.  This is probably best.
+
+    * Decimation is related to interlacing, as defined in the
+      SGIX_interlace extension.  In fact, it provides the inverse of
+      interlacing.  It appears useful to be able to enable decimation and
+      interlacing on the same transfer.  Interactions between these
+      two extensions should be examined further.
+
+New Procedures and Functions
+
+    None
+    
+New Tokens
+
+    Accepted by the <pname> parameter of glPixelTransferf,
+    glPixelTransferi, GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        DECIMATION_X_SGIX                     0xXXXX
+        DECIMATION_Y_SGIX                     0xXXXX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_DECIMATION_X_SGIX                 0xXXXX
+        MAX_DECIMATION_Y_SGIX                 0xXXXX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of the decimation operation is added to the GL
+    Specification in section 3.6.2, "Pixel Transfer Modes."  
+    
+    The decimation operation is added to the GL Specification in section
+    3.6.3, "Rasterization of Pixel Rectangles, immediately following the
+    operations described in EXT_convolution, and prior to the
+    post-convolution color table operation that is described in the
+    SGI_color_table extension.  
+
+    Decimation operates on the image of pixels resulting from the
+    convolution stage of the pixel transfer path.  If stepx and stepy are
+    the  current decimation step parameters, then the decimation
+    operation passes only those pixels which are at a position (i*stepx,
+    j*stepy), for integers (i, j), relative to the bottom left corner of
+    the image.   All other pixels are discarded. If the image size prior
+    to decimation is (nx, ny), where nx >= 1 and ny >= 1, then its size
+    after decimation will be (floor((nx-1)/stepx) + 1,
+    floor((ny-1)/stepy) + 1)).
+
+    Decimation is applied to the image that results from convolution,
+    which may differ in size from the source image if convolution is
+    enabled.
+
+    In cases where errors can result from the specification of invalid
+    image dimensions, it is these resulting dimensions that are tested,
+    not the dimensions of the source image.
+
+    If this extension is implemented, decimation is always active, and is
+    applied to any pixel transfer, regardless of the command used to
+    generate it.  (There is no enable or disable of decimation.)       
+
+    The x and y decimation parameters are specified by calling
+    PixelTransfer with <pname> set to DECIMATION_X_SGIX, and
+    DECIMATION_Y_SGIX, respectively.  Each parameter value must be a
+    positive integer less than or equal to MAX_DECIMATION_X_SGIX and
+    MAX_DECIMATION_Y_SGIX, respectively.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of decimation during pixel copy and query operations is
+    identical to the operation during pixel drawing and texture image
+    definition.  This operation occurs immediately after the operations
+    described by EXT_convolution, and prior to the post-convolution color
+    table operation that is described in the SGI_color_table extension,
+    which follow section 4.3.2 (Reading Pixels) of the GL Specification.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The x decimation step parameter is queried using GetIntegerv with
+    <pname> set to DECIMATION_X_SGIX.
+
+    The y decimation step parameter is queried using GetIntegerv with
+    <pname> set to DECIMATION_Y_SGIX.
+
+    The maximum allowed x decimation step parameter is queried using
+    GetIntegerv with <pname> set to MAX_DECIMATION_X_SGIX.
+
+    The maximum allowed y decimation step parameter is queried using
+    GetIntegerv with <pname> set to MAX_DECIMATION_Y_SGIX.
+
+Additions to the GLX Specification
+
+    None
+    
+GLX Protocol
+
+    None 
+                    
+Dependencies on EXT_convolution
+
+    The decimation operation follows the convolution operation (and its
+    scale and bias).  If convolution is not supported, the location of
+    the decimation operation with respect to all other pixel operations
+    remains the same.
+
+Dependencies on SGI_color_table
+
+    The decimation operation precedes the post-convolution color table
+    operation.  If the post-convolution color table operation is not
+    supported, the location of the decimation operation with respect to
+    all other pixel operations remains the same.
+
+Errors
+
+    INVALID_VALUE is generated if PixelTransfer is called with parameter
+    <pname> equal to DECIMATION_X_SGIX and parameter <param> less
+    than 1 or greater than MAX_DECIMATION_X_SGIX as queried using
+    GetIntegerv with <pname> MAX_DECIMATION_X_SGIX.
+
+    INVALID_VALUE is generated if PixelTransfer is called with parameter
+    <pname> equal to DECIMATION_Y_SGIX and parameter <param> less
+    than 1 or greater than MAX_DECIMATION_Y_SGIX as queried using
+    GetIntegerv with <pname> MAX_DECIMATION_Y_SGIX.
+
+New State
+
+    Get Value                           Get Command                     Type            Initial Value           Attribute
+    ---------                           -----------                     ----            -------------           ---------
+    DECIMATION_X_SGIX                    GetIntegerv                     Z+              1                       pixel
+    DECIMATION_Y_SGIX                    GetIntegerv                     Z+              1                       pixel
+
+New Implementation Dependent State
+
+    Get Value                           Get Command                     Type            Minimum Value
+    ---------                           -----------                     ----            -------------
+    MAX_DECIMATION_X_SGIX                GetIntegerv                     Z+              2
+    MAX_DECIMATION_Y_SGIX                GetIntegerv                     Z+              2
+    
+    

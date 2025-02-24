@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.c', function() {
+  function makeCaseInsensitiveRegex(pattern) {
+    // See https://developer.mozilla.org/en/docs/Web/JavaScript/Guide/
+    // Regular_Expressions.
+    pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(pattern, 'i');
+  }
+
+  /**
+   * @constructor The generic base class for filtering a Model based on
+   * various rules. The base class returns true for everything.
+   */
+  function Filter() { }
+
+  Filter.prototype = {
+    __proto__: Object.prototype,
+
+    matchCounter(counter) {
+      return true;
+    },
+
+    matchCpu(cpu) {
+      return true;
+    },
+
+    matchProcess(process) {
+      return true;
+    },
+
+    matchSlice(slice) {
+      return true;
+    },
+
+    matchThread(thread) {
+      return true;
+    }
+  };
+
+  /**
+   * @constructor A filter that matches objects by their name or category
+   * case insensitive.
+   * .findAllObjectsMatchingFilter
+   */
+  function TitleOrCategoryFilter(text) {
+    Filter.call(this);
+    this.regex_ = makeCaseInsensitiveRegex(text);
+
+    if (!text.length) {
+      throw new Error('Filter text is empty.');
+    }
+  }
+  TitleOrCategoryFilter.prototype = {
+    __proto__: Filter.prototype,
+
+    matchSlice(slice) {
+      if (slice.title === undefined && slice.category === undefined) {
+        return false;
+      }
+
+      return this.regex_.test(slice.title) ||
+          (!!slice.category && this.regex_.test(slice.category));
+    }
+  };
+
+  /**
+   * @constructor A filter that matches objects with the exact given title.
+   */
+  function ExactTitleFilter(text) {
+    Filter.call(this);
+    this.text_ = text;
+
+    if (!text.length) {
+      throw new Error('Filter text is empty.');
+    }
+  }
+  ExactTitleFilter.prototype = {
+    __proto__: Filter.prototype,
+
+    matchSlice(slice) {
+      return slice.title === this.text_;
+    }
+  };
+
+  /**
+   * @constructor A filter that matches objects by their full text contents
+   * (title, category, args). Note that for performance this filter applies a
+   * regex against all the keys of the slice arguments instead of recursing
+   * through any embedded sub-objects.
+   */
+  function FullTextFilter(text) {
+    Filter.call(this);
+    this.regex_ = makeCaseInsensitiveRegex(text);
+    this.titleOrCategoryFilter_ = new TitleOrCategoryFilter(text);
+  }
+  FullTextFilter.prototype = {
+    __proto__: Filter.prototype,
+
+    matchObject_(obj) {
+      for (const key in obj) {
+        if (!obj.hasOwnProperty(key)) continue;
+        if (this.regex_.test(key)) return true;
+        if (this.regex_.test(obj[key])) return true;
+      }
+      return false;
+    },
+
+    matchSlice(slice) {
+      if (this.titleOrCategoryFilter_.matchSlice(slice)) return true;
+      return this.matchObject_(slice.args);
+    }
+  };
+
+  return {
+    Filter,
+    TitleOrCategoryFilter,
+    ExactTitleFilter,
+    FullTextFilter,
+  };
+});
+</script>

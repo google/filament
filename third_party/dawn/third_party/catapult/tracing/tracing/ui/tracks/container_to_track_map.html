@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * ContainerToTrackMap is a class to handle building and accessing a map
+   * between an EventContainer's stableId and its handling track.
+   *
+   * @constructor
+   */
+  function ContainerToTrackMap() {
+    this.stableIdToTrackMap_ = {};
+  }
+
+  ContainerToTrackMap.prototype = {
+    addContainer(container, track) {
+      if (!track) {
+        throw new Error('Must provide a track.');
+      }
+      this.stableIdToTrackMap_[container.stableId] = track;
+    },
+
+    clear() {
+      this.stableIdToTrackMap_ = {};
+    },
+
+    getTrackByStableId(stableId) {
+      return this.stableIdToTrackMap_[stableId];
+    }
+  };
+
+  return {
+    ContainerToTrackMap,
+  };
+});
+</script>

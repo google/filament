@@ -1,0 +1,113 @@
+boto v2.32.0
+============
+
+:date: 2014/07/30
+
+This release includes backward-compatible support for Python 3.3 and 3.4,
+support for IPv6, Amazon VPC connection peering, Amazon SNS message
+attributes, new regions for Amazon Kinesis, and several fixes.
+
+
+Python 3 Support
+----------------
+* DynamoDB (:issue:`2441`, :sha:`0ef0466`, :issue:`2473`, :sha:`102c3b6`,
+  :issue:`2453`)
+* CloudWatch Logs (:issue:`2448`, :sha:`23cbcd1`)
+* Support (:issue:`2406`, :sha:`7b489a0`)
+* Elastic Beanstalk (:issue:`2372`, :sha:`d45d00e`)
+* CloudSearch (:issue:`2439`, :sha:`25416f9`, :issue:`2432`, :sha:`b17f2d9`)
+* STS (:issue:`2435`, :sha:`1c1239b`)
+* SimpleDB (:issue:`2403`, :sha:`604318d`)
+* EC2 (:issue:`2424`, :sha:`5e5dc4c`)
+* VPC (:issue:`2399`, :sha:`356da91`)
+* OpsWorks (:issue:`2402`, :sha:`68d15a5`)
+* CloudWatch (:issue:`2400`, :sha:`a4d0a7a`)
+* SWF (:issue:`2397`, :sha:`6db918e`)
+* MWS (:issue:`2385`, :sha:`5347fbd`)
+* ELB (:issue:`2384`, :sha:`4dcc9be`)
+* Elastic Transcoder (:issue:`2382`, :sha:`40c5e35`)
+* EMR (:issue:`2381`, :sha:`edf4020`)
+* Route53 (:issue:`2359`, :sha:`15514f7`)
+* Glacier (:issue:`2357`, :sha:`a41042e`)
+* RedShift (:issue:`2362`, :sha:`b8888cc`)
+* CloudFront (:issue:`2355`, :sha:`f2f54b1`)
+* ECS (:issue:`2364`, :sha:`ab84969`)
+* Fix pylintrc to run with pylint/python 3. (:issue:`2366`, :sha:`6292ab2`)
+* SNS (:issue:`2365`, :sha:`170f735`)
+* AutoScaling (:issue:`2393`, :sha:`6a78057`)
+* Direct Connect (:issue:`2361`, :sha:`8488d94`)
+* CloudFormation (:issue:`2373`, :sha:`9872f27`)
+* IAM (:issue:`2358`, :sha:`29ad3e3`)
+* ElastiCache (:issue:`2356`, :sha:`2880f91`)
+* SES (:issue:`2354`, :sha:`1db129e`)
+* Fix S3 integration test on Py3. (:issue:`2466`, :sha:`f3eb4cd`)
+* Use unittest.mock if exists. (:issue:`2451`, :sha:`cc58978`)
+* Add tests/compat.py for test-only imports. (:issue:`2442`, :sha:`556f3cf`)
+* Add backward-compatible support for Python 3.3+ (S3, SQS, Kinesis,
+  CloudTrail). (:issue:`2344`, :issue:`677`, :sha:`b503f4b`)
+
+
+Features
+--------
+* Add marker param to describe all ELBs. (:issue:`2433`, :sha:`49af8b6`)
+* Update .travis.yml to add pypy. (:issue:`2440`, :sha:`4b8667c`)
+* Add 'include_all_instances' support to 'get_all_instance_status'.
+  (:issue:`2446`, :issue:`2230`, :sha:`5949012`)
+* Support security tokens in configuration file profiles.
+  (:issue:`2445`, :sha:`a16bcfd`)
+* Singapore, Sydney and Tokyo are missing in Kinesis Region.
+  (:issue:`2434`, :sha:`723290d`)
+* Add support for VPC connection peering. (:issue:`2438`, :sha:`63c78a8`)
+* Add seperate doc requirements. (:issue:`2412`, :sha:`2922d89`)
+* Route53 support IP health checks (:issue:`2195`, :sha:`319d44e`)
+* IPv6 support when making connections (:issue:`2380`, :sha:`1e70179`)
+* Support SNS message attributes (:issue:`2360`, :sha:`ec106bd`)
+* Add "attributes" argument to boto.dynamodb2.table.Table.batch_get.
+  (:issue:`2276`, :sha:`fe67f43`)
+* Add documentation for top-level S3 module. (:issue:`2379`, :sha:`db77546`)
+
+
+Fixes
+-----
+* Prevent an infinite loop. (:issue:`2465`, :sha:`71b795a`)
+* Updated documentation for copy_image. (:issue:`2471`, :sha:`f9f683a`)
+* Fixed #2464 added keyword "detailed" to docs. (:issue:`2467`, :issue:`2464`,
+  :sha:`eb26fdc`)
+* Retry installation commands on Travis CI. (:issue:`2457`, :sha:`a9e8057`)
+* Fix for run_instances() network_interfaces argument documentation.
+  (:issue:`2461`, :sha:`798fd70`)
+* pyami module: tidy up to meet PEP8 better. (:issue:`2460`, :sha:`e5a23ed`)
+* Updating documentation on cloudsearch regions. (:issue:`2455`, :sha:`de284a4`)
+* Fixing lost errors bug in cloudsearch2 commit implementation.
+  (:issue:`2408`, :sha:`fedb937`)
+* Import json from boto.compat for several modules.
+  (:issue:`2450`, :sha:`55e716b`)
+* Relocate MWS requirements checks; closes #2304, #2314.
+  (:issue:`2314`, :issue:`2304`, :sha:`6a8f98b`)
+* Added support for creating EMR clusters with a ServiceRole.
+  (:issue:`2389`, :sha:`7693956`)
+* Doc fix: doc_service instead of service on Deleting.
+  (:issue:`2419`, :sha:`f7b7980`)
+* Fix dummy value typo on aws_access_key_id. (:issue:`2418`, :sha:`fc2a212`)
+* Fix typo; add test. (:issue:`2447`, :sha:`effa8a8`)
+* Fix CloudWatch Logs docstring. (:issue:`2444`, :sha:`d4a2b02`)
+* Fix S3 mock encoding bug (:issue:`2443`, :sha:`8dca89b`)
+* Skip the ETag header check in responce while using SSE-C encrpytion of S3.
+  (:issue:`2368`, :sha:`907fc6d`)
+* Fix Beanstalk exception handling. (:issue:`2431`, :sha:`40f4b5d`)
+* EC2 UserData encoding fix (Full version of #1698).
+  (:issue:`2396`, :issue:`1698`, :sha:`78300f1`)
+* Fetch S3 key storage class on-demand. (:issue:`2404`, :sha:`8c4cc67`)
+* Added documentation for /manage/cmdshell.py. (:issue:`2395`, :sha:`5a28d1c`)
+* Remove redundant lines in auth.py. (:issue:`2374`, :sha:`317e322`)
+* Fix SWF continue_as_new_workflow_execution start_to_close_timeout.
+  (:issue:`2378`, :sha:`5101b06`)
+* Fix StringIO imports and invocations. (:issue:`2390`, :sha:`03952c7`)
+* Fixed wrong call of urlparse. (:issue:`2387`, :sha:`4935f67`)
+* Update documentation on Valid Values for ses:SetIdentityNotificationTopic.
+  (:issue:`2367`, :sha:`3f5de0d`)
+* Correct list_saml_providers to return all items.
+  (:issue:`2338`, :sha:`9e9427f`)
+* Fixing ELB unit tests.  Also did some PEP8 cleanup on ELB code.
+  (:issue:`2352`, :sha:`5220621`)
+* Documentation updates. (:issue:`2353`, :sha:`c9233d4`)

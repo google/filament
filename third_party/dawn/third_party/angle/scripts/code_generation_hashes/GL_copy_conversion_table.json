@@ -1,0 +1,10 @@
+{
+  "src/libANGLE/es3_copy_conversion_formats.json":
+    "3f9c923d25fd886f502932eae2c42f83",
+  "src/libANGLE/es3_copy_conversion_table_autogen.cpp":
+    "999fd97281071f520fa57ee1bbba8d47",
+  "src/libANGLE/gen_copy_conversion_table.py":
+    "3b1f0182a41af78b44930fb415ff0fb6",
+  "src/libANGLE/renderer/angle_format.py":
+    "45ffbde9a8edc7cec1c6c3afc5517b30"
+}

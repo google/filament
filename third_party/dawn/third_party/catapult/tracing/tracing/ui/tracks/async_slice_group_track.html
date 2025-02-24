@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/multi_row_track.html">
+<link rel="import" href="/tracing/ui/tracks/slice_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays a AsyncSliceGroup.
+   * @constructor
+   * @extends {MultiRowTrack}
+   */
+  const AsyncSliceGroupTrack = tr.ui.b.define(
+      'async-slice-group-track',
+      tr.ui.tracks.MultiRowTrack);
+
+  AsyncSliceGroupTrack.prototype = {
+
+    __proto__: tr.ui.tracks.MultiRowTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.MultiRowTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('async-slice-group-track');
+      this.group_ = undefined;
+      // Set the collapse threshold so we don't collapse by default, but the
+      // user can explicitly collapse if they want it.
+      this.defaultToCollapsedWhenSubRowCountMoreThan = 30;
+    },
+
+    addSubTrack_(slices) {
+      const track = new tr.ui.tracks.SliceTrack(this.viewport);
+      track.slices = slices;
+      Polymer.dom(this).appendChild(track);
+      track.asyncStyle = true;
+      return track;
+    },
+
+    get group() {
+      return this.group_;
+    },
+
+    set group(group) {
+      this.group_ = group;
+      this.buildAndSetSubRows_();
+    },
+
+    get eventContainer() {
+      return this.group;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.MultiRowTrack.prototype.addContainersToTrackMap.apply(
+          this, arguments);
+      containerToTrackMap.addContainer(this.group, this);
+    },
+
+    buildAndSetSubRows_() {
+      if (this.group_.viewSubGroups.length <= 1) {
+        // No nested groups or just only one, the most common case.
+        const rows = groupAsyncSlicesIntoSubRows(this.group_.slices);
+        const rowsWithHeadings = rows.map(row => {
+          return {row, heading: undefined};
+        });
+        this.setPrebuiltSubRows(this.group_, rowsWithHeadings);
+        return;
+      }
+
+      // We have nested grouping level (no further levels supported),
+      // so process sub-groups separately and preserve their titles.
+      const rowsWithHeadings = [];
+      for (const subGroup of this.group_.viewSubGroups) {
+        const subGroupRows = groupAsyncSlicesIntoSubRows(subGroup.slices);
+        if (subGroupRows.length === 0) {
+          continue;
+        }
+        for (let i = 0; i < subGroupRows.length; i++) {
+          rowsWithHeadings.push({
+            row: subGroupRows[i],
+            heading: (i === 0 ? subGroup.title : '')
+          });
+        }
+      }
+      this.setPrebuiltSubRows(this.group_, rowsWithHeadings);
+    }
+  };
+
+  /**
+   * Strip away wrapper slice which are used to group slices into
+   * a single track but provide no information themselves.
+   */
+  function stripSlice_(slice) {
+    if (slice.subSlices !== undefined && slice.subSlices.length === 1
+        && !slice.args) {
+      const subSlice = slice.subSlices[0];
+      if (tr.b.math.approximately(subSlice.start, slice.start, 1) &&
+          tr.b.math.approximately(subSlice.duration, slice.duration, 1)) {
+        return subSlice;
+      }
+    }
+    return slice;
+  }
+
+  /**
+   * Unwrap the list of non-overlapping slices into a number of rows where
+   * the top row holds original slices and additional rows hold nested slices
+   * of ones from the row above them.
+   */
+  function makeLevelSubRows_(slices) {
+    const rows = [];
+    const putSlice = (slice, level) => {
+      if (slice.hidden) {
+        return;
+      }
+      while (rows.length <= level) {
+        rows.push([]);
+      }
+      rows[level].push(slice);
+    };
+    const putSliceRecursively = (slice, level) => {
+      putSlice(slice, level);
+      if (slice.subSlices !== undefined) {
+        for (const subSlice of slice.subSlices) {
+          putSliceRecursively(subSlice, level + 1);
+        }
+      }
+    };
+
+    for (const slice of slices) {
+      putSliceRecursively(stripSlice_(slice), 0);
+    }
+    return rows;
+  }
+
+  /**
+   * Breaks up the list of slices into a number of rows:
+   * - Which contain non-overlapping slices.
+   * - If slice has nested slices, they're placed onto the row below.
+   * Sorting may be skipped if slices are already sorted by start timestamp.
+   */
+  function groupAsyncSlicesIntoSubRows(slices, opt_skipSort) {
+    if (!opt_skipSort) {
+      slices.sort((x, y) => x.start - y.start);
+    }
+
+    // The algorithm is fairly simple:
+    // - Level is a group of rows, where the top row holds original slices and
+    //   additional rows hold nested slices of ones from the row above them.
+    // - Make a level by putting sorted slices, skipping if one's overlapping.
+    // - Repeat and make more levels while we're having residual slices left.
+    const rows = [];
+    let slicesLeft = slices;
+    while (slicesLeft.length !== 0) {
+      // Make a level.
+      const fit = [];
+      const unfit = [];
+      let levelEndTime = -1;
+
+      for (const slice of slicesLeft) {
+        if (slice.start >= levelEndTime) {
+          // Assuming nested slices lie within parent's boundaries.
+          levelEndTime = slice.end;
+          fit.push(slice);
+        } else {
+          unfit.push(slice);
+        }
+      }
+      rows.push(...makeLevelSubRows_(fit));
+      slicesLeft = unfit;
+    }
+    return rows;
+  }
+
+  return {
+    AsyncSliceGroupTrack,
+    groupAsyncSlicesIntoSubRows,
+  };
+});
+</script>

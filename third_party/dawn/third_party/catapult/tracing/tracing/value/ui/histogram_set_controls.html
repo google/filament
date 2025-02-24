@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/dropdown.html">
+<link rel="import" href="/tracing/ui/base/grouping_table_groupby_picker.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_controls_export.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view_state.html">
+
+<dom-module id="tr-v-ui-histogram-set-controls">
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+
+    #help, #feedback {
+      display: none;
+      margin-left: 20px;
+    }
+
+    #search_container {
+      display: inline-flex;
+      margin-right: 20px;
+      padding-bottom: 1px;
+      border-bottom: 1px solid darkgrey;
+    }
+
+    #search {
+      border: 0;
+      max-width: 20em;
+      outline: none;
+    }
+
+    #clear_search {
+      visibility: hidden;
+      height: 1em;
+      stroke: black;
+      stroke-width: 16;
+    }
+
+    #controls {
+      white-space: nowrap;
+    }
+
+    #show_overview, #hide_overview {
+      height: 1em;
+      margin-right: 20px;
+    }
+
+    #show_overview {
+      stroke: blue;
+      stroke-width: 16;
+    }
+
+    #show_overview:hover {
+      background: blue;
+      stroke: white;
+    }
+
+    #hide_overview {
+      display: none;
+      stroke-width: 18;
+      stroke: black;
+    }
+
+    #hide_overview:hover {
+      background: black;
+      stroke: white;
+    }
+
+    #reference_display_label {
+      display: none;
+      margin-right: 20px;
+    }
+
+    #alpha, #alpha_slider_container {
+      display: none;
+    }
+
+    #alpha {
+      margin-right: 20px;
+    }
+
+    #alpha_slider_container {
+      background: white;
+      border: 1px solid black;
+      flex-direction: column;
+      padding: 0.5em;
+      position: absolute;
+      z-index: 10; /* scalar-span uses z-index :-( */
+    }
+
+    #alpha_slider {
+      -webkit-appearance: slider-vertical;
+      align-self: center;
+      height: 200px;
+      width: 30px;
+    }
+
+    #statistic {
+      display: none;
+      margin-right: 20px;
+    }
+
+    #export {
+      margin-right: 20px;
+    }
+    </style>
+
+    <div id="controls">
+      <span id="search_container">
+        <input id="search" value="{{searchQuery::keyup}}" placeholder="Find Histogram name">
+        <svg viewbox="0 0 128 128" id="clear_search" on-tap="clearSearch_">
+          <g>
+          <title>Clear search</title>
+          <line x1="28" y1="28" x2="100" y2="100"/>
+          <line x1="28" y1="100" x2="100" y2="28"/>
+          </g>
+        </svg>
+      </span>
+
+      <svg viewbox="0 0 128 128" id="show_overview"
+        on-tap="toggleOverviewLineCharts_">
+        <g>
+        <title>Show overview charts</title>
+        <line x1="19" y1="109" x2="49" y2="49"/>
+        <line x1="49" y1="49" x2="79" y2="79"/>
+        <line x1="79" y1="79" x2="109" y2="19"/>
+        </g>
+      </svg>
+      <svg viewbox="0 0 128 128" id="hide_overview"
+        on-tap="toggleOverviewLineCharts_">
+        <g>
+        <title>Hide overview charts</title>
+        <line x1="28" y1="28" x2="100" y2="100"/>
+        <line x1="28" y1="100" x2="100" y2="28"/>
+        </g>
+      </svg>
+
+      <select id="reference_display_label" value="{{referenceDisplayLabel::change}}">
+        <option value="">Select a reference column</option>
+      </select>
+
+      <button id="alpha" on-tap="openAlphaSlider_">&#945;=[[alphaString]]</button>
+      <div id="alpha_slider_container">
+        <input type="range" id="alpha_slider" value="{{alphaIndex::change}}" min="0" max="18" on-blur="closeAlphaSlider_" on-input="updateAlpha_">
+      </div>
+
+      <select id="statistic" value="{{displayStatisticName::change}}">
+      </select>
+
+      <tr-ui-b-dropdown label="Export">
+        <tr-v-ui-histogram-set-controls-export>
+        </tr-v-ui-histogram-set-controls-export>
+      </tr-ui-b-dropdown>
+
+      <input type="checkbox" id="show_all" checked="{{showAll::change}}" title="When unchecked, less important histograms are hidden.">
+      <label for="show_all" title="When unchecked, less important histograms are hidden.">Show all</label>
+
+      <a id="help">Help</a>
+      <a id="feedback">Feedback</a>
+    </div>
+
+    <tr-ui-b-grouping-table-groupby-picker id="picker">
+    </tr-ui-b-grouping-table-groupby-picker>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  const ALPHA_OPTIONS = [];
+  for (let i = 1; i < 10; ++i) ALPHA_OPTIONS.push(i * 1e-3);
+  for (let i = 1; i < 10; ++i) ALPHA_OPTIONS.push(i * 1e-2);
+  ALPHA_OPTIONS.push(0.1);
+
+  Polymer({
+    is: 'tr-v-ui-histogram-set-controls',
+
+    properties: {
+      searchQuery: {
+        type: String,
+        value: '',
+        observer: 'onSearchQueryChange_',
+      },
+      showAll: {
+        type: Boolean,
+        value: true,
+        observer: 'onUserChange_',
+      },
+      referenceDisplayLabel: {
+        type: String,
+        value: '',
+        observer: 'onUserChange_',
+      },
+      displayStatisticName: {
+        type: String,
+        value: '',
+        observer: 'onUserChange_',
+      },
+      alphaString: {
+        type: String,
+        computed: 'getAlphaString_(alphaIndex)',
+      },
+      alphaIndex: {
+        type: Number,
+        value: 9,
+        observer: 'onUserChange_',
+      },
+    },
+
+    created() {
+      this.viewState_ = undefined;
+      this.rowListener_ = this.onRowViewStateUpdate_.bind(this);
+      this.baseStatisticNames_ = [];
+
+      // When onViewStateUpdate_() copies multiple properties from the viewState
+      // to polymer properties, disable onUserChange_ until all properties are
+      // copied in order to prevent nested mutations to the ViewState.
+      this.isInOnViewStateUpdate_ = false;
+      this.searchQueryDebounceMs = 200;
+    },
+
+    ready() {
+      this.$.picker.addEventListener('current-groups-changed',
+          this.onGroupsChanged_.bind(this));
+    },
+
+    get viewState() {
+      return this.viewState_;
+    },
+
+    set viewState(vs) {
+      if (this.viewState_) {
+        throw new Error('viewState must be set exactly once.');
+      }
+      this.viewState_ = vs;
+      this.viewState.addUpdateListener(this.onViewStateUpdate_.bind(this));
+      // It would be arduous to construct a delta and call viewStateListener_
+      // here in case vs contains non-default values, so callers must set
+      // viewState first and then update it.
+    },
+
+    async onSearchQueryChange_() {
+      // Bypass debouncing for testing purpose:
+      if (this.searchQueryDebounceMs === 0) return this.onUserChange_();
+      // Limit the update rate for instance caused by typing in a search.
+      this.debounce('onSearchQueryDebounce', this.onUserChange_,
+          this.searchQueryDebounceMs);
+    },
+
+    async onUserChange_() {
+      if (!this.viewState) return;
+      if (this.isInOnViewStateUpdate_) return;
+
+      const marks = [];
+      if (this.searchQuery !== this.viewState.searchQuery) {
+        marks.push(tr.b.Timing.mark('histogram-set-controls', 'search'));
+      }
+      if (this.showAll !== this.viewState.showAll) {
+        marks.push(tr.b.Timing.mark('histogram-set-controls', 'showAll'));
+      }
+      if (this.referenceDisplayLabel !== this.viewState.referenceDisplayLabel) {
+        marks.push(tr.b.Timing.mark(
+            'histogram-set-controls', 'referenceColumn'));
+      }
+      if (this.displayStatisticName !== this.viewState.displayStatisticName) {
+        marks.push(tr.b.Timing.mark('histogram-set-controls', 'statistic'));
+      }
+      if (parseInt(this.alphaIndex) !== this.getAlphaIndexFromViewState_()) {
+        marks.push(tr.b.Timing.mark('histogram-set-controls', 'alpha'));
+      }
+
+      this.$.clear_search.style.visibility =
+        this.searchQuery ? 'visible' : 'hidden';
+
+      let displayStatisticName = this.displayStatisticName;
+      if (this.viewState.referenceDisplayLabel === '' &&
+          this.referenceDisplayLabel !== '' &&
+          this.baseStatisticNames.length) {
+        // The user selected a reference display label.
+        displayStatisticName = `%${tr.v.DELTA}${this.displayStatisticName}`;
+        // Can't set this.displayStatisticName before updating viewState -- that
+        // would cause an infinite loop of onUserChange_().
+      }
+      if (this.referenceDisplayLabel === '' &&
+          this.viewState.referenceDisplayLabel !== '' &&
+          this.baseStatisticNames.length) {
+        // The user unset the reference display label.
+        // Ensure that displayStatisticName is not a delta statistic.
+        const deltaIndex = displayStatisticName.indexOf(tr.v.DELTA);
+        if (deltaIndex >= 0) {
+          displayStatisticName = displayStatisticName.slice(deltaIndex + 1);
+        } else if (!this.baseStatisticNames.includes(displayStatisticName)) {
+          displayStatisticName = 'avg';
+        }
+      }
+
+      // Propagate updates from the user to the view state.
+      await this.viewState.update({
+        searchQuery: this.searchQuery,
+        showAll: this.showAll,
+        referenceDisplayLabel: this.referenceDisplayLabel,
+        displayStatisticName,
+        alpha: ALPHA_OPTIONS[this.alphaIndex],
+      });
+
+      if (this.referenceDisplayLabel &&
+          this.statisticNames.length === this.baseStatisticNames.length) {
+        // When a reference column is selected, delta statistics should be
+        // available.
+        this.statisticNames = this.baseStatisticNames.concat(
+            tr.v.Histogram.getDeltaStatisticsNames(this.baseStatisticNames));
+      } else if (!this.referenceDisplayLabel &&
+          this.statisticNames.length > this.baseStatisticNames.length) {
+        // When a reference column is not selected, delta statistics should not
+        // be available.
+        this.statisticNames = this.baseStatisticNames;
+      }
+
+      for (const mark of marks) mark.end();
+    },
+
+    onViewStateUpdate_(event) {
+      this.isInOnViewStateUpdate_ = true;
+
+      if (event.delta.searchQuery) {
+        this.searchQuery = this.viewState.searchQuery;
+      }
+
+      if (event.delta.showAll) this.showAll = this.viewState.showAll;
+
+      if (event.delta.displayStatisticName) {
+        this.displayStatisticName = this.viewState.displayStatisticName;
+      }
+
+      if (event.delta.referenceDisplayLabel) {
+        this.referenceDisplayLabel = this.viewState.referenceDisplayLabel;
+        this.$.alpha.style.display = this.referenceDisplayLabel ? 'inline' : '';
+      }
+
+      if (event.delta.groupings) {
+        this.$.picker.currentGroupKeys = this.viewState.groupings.map(
+            g => g.key);
+      }
+
+      if (event.delta.tableRowStates) {
+        for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+            this.viewState.tableRowStates.values())) {
+          row.addUpdateListener(this.rowListener_);
+        }
+
+        const anyShowing = this.anyOverviewCharts_;
+        this.$.hide_overview.style.display = anyShowing ? 'inline' : 'none';
+        this.$.show_overview.style.display = anyShowing ? 'none' : 'inline';
+      }
+
+      if (event.delta.alpha) {
+        this.alphaIndex = this.getAlphaIndexFromViewState_();
+      }
+
+      this.isInOnViewStateUpdate_ = false;
+      this.onUserChange_();
+    },
+
+    onRowViewStateUpdate_(event) {
+      if (event.delta.isOverviewed) {
+        const anyShowing = event.delta.isOverviewed.current ||
+            this.anyOverviewCharts_;
+        this.$.hide_overview.style.display = anyShowing ? 'inline' : 'none';
+        this.$.show_overview.style.display = anyShowing ? 'none' : 'inline';
+      }
+
+      if (event.delta.subRows) {
+        for (const subRow of event.delta.subRows.previous) {
+          subRow.removeUpdateListener(this.rowListener_);
+        }
+        for (const subRow of event.delta.subRows.current) {
+          subRow.addUpdateListener(this.rowListener_);
+        }
+      }
+    },
+
+    onGroupsChanged_() {
+      if (this.$.picker.currentGroups.length === 0 &&
+          this.$.picker.possibleGroups.length > 0) {
+        // If the current groupings are now empty but there are possible
+        // groupings, then force there to be at least one grouping.
+        // The histogram-set-table requires there to be at least one grouping.
+        this.$.picker.currentGroupKeys = [this.$.picker.possibleGroups[0].key];
+      }
+      this.viewState.groupings = this.$.picker.currentGroups;
+    },
+
+    set showAllEnabled(enable) {
+      if (!enable) this.$.show_all.checked = true;
+      this.$.show_all.disabled = !enable;
+    },
+
+    set possibleGroupings(groupings) {
+      this.$.picker.possibleGroups = groupings;
+      this.$.picker.style.display = (groupings.length < 2) ? 'none' : 'block';
+      this.onGroupsChanged_();
+    },
+
+    set displayLabels(labels) {
+      this.$.reference_display_label.style.display =
+          (labels.length < 2) ? 'none' : 'inline';
+
+      while (this.$.reference_display_label.children.length > 1) {
+        this.$.reference_display_label.removeChild(
+            this.$.reference_display_label.lastChild);
+      }
+
+      for (const displayLabel of labels) {
+        const option = document.createElement('option');
+        option.textContent = displayLabel;
+        option.value = displayLabel;
+        this.$.reference_display_label.appendChild(option);
+      }
+
+      if (labels.includes(this.viewState.referenceDisplayLabel)) {
+        this.referenceDisplayLabel = this.viewState.referenceDisplayLabel;
+      } else {
+        this.viewState.referenceDisplayLabel = '';
+      }
+    },
+
+    get baseStatisticNames() {
+      return this.baseStatisticNames_;
+    },
+
+    set baseStatisticNames(names) {
+      this.baseStatisticNames_ = names;
+      this.statisticNames = names;
+    },
+
+    get statisticNames() {
+      return Array.from(this.$.statistic.options).map(o => o.value);
+    },
+
+    set statisticNames(names) {
+      this.$.statistic.style.display = (names.length < 2) ? 'none' : 'inline';
+
+      while (this.$.statistic.children.length) {
+        this.$.statistic.removeChild(this.$.statistic.lastChild);
+      }
+
+      for (const name of names) {
+        const option = document.createElement('option');
+        option.textContent = name;
+        this.$.statistic.appendChild(option);
+      }
+
+      if (names.includes(this.viewState.displayStatisticName)) {
+        this.displayStatisticName = this.viewState.displayStatisticName;
+        // Polymer doesn't reset the value when the options change, so do that
+        // manually.
+        this.$.statistic.value = this.displayStatisticName;
+      } else {
+        this.viewState.displayStatisticName = names[0] || '';
+      }
+    },
+
+    get anyOverviewCharts_() {
+      for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+          this.viewState.tableRowStates.values())) {
+        if (row.isOverviewed) return true;
+      }
+      return false;
+    },
+
+    async toggleOverviewLineCharts_() {
+      const showOverviews = !this.anyOverviewCharts_;
+      const mark = tr.b.Timing.mark('histogram-set-controls',
+          (showOverviews ? 'show' : 'hide') + 'OverviewCharts');
+
+      for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+          this.viewState.tableRowStates.values())) {
+        await row.update({isOverviewed: showOverviews});
+      }
+
+      this.$.hide_overview.style.display = showOverviews ? 'inline' : 'none';
+      this.$.show_overview.style.display = showOverviews ? 'none' : 'inline';
+
+      await tr.b.animationFrame();
+      mark.end();
+    },
+
+    set helpHref(href) {
+      this.$.help.href = href;
+      this.$.help.style.display = 'inline';
+    },
+
+    set feedbackHref(href) {
+      this.$.feedback.href = href;
+      this.$.feedback.style.display = 'inline';
+    },
+
+    clearSearch_() {
+      this.set('searchQuery', '');
+      this.$.search.focus();
+    },
+
+    getAlphaString_(alphaIndex) {
+      // (9 * 1e-3).toString() is "0.009000000000000001", so truncate.
+      return ('' + ALPHA_OPTIONS[alphaIndex]).substr(0, 5);
+    },
+
+    openAlphaSlider_() {
+      const alphaButtonRect = this.$.alpha.getBoundingClientRect();
+      this.$.alpha_slider_container.style.display = 'flex';
+      this.$.alpha_slider_container.style.top = alphaButtonRect.bottom + 'px';
+      this.$.alpha_slider_container.style.left = alphaButtonRect.left + 'px';
+      this.$.alpha_slider.focus();
+    },
+
+    closeAlphaSlider_() {
+      this.$.alpha_slider_container.style.display = '';
+    },
+
+    updateAlpha_() {
+      this.alphaIndex = this.$.alpha_slider.value;
+    },
+
+    getAlphaIndexFromViewState_() {
+      for (let i = 0; i < ALPHA_OPTIONS.length; ++i) {
+        if (ALPHA_OPTIONS[i] >= this.viewState.alpha) return i;
+      }
+      return ALPHA_OPTIONS.length - 1;
+    },
+  });
+
+  return {
+  };
+});
+</script>

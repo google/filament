@@ -1,0 +1,25 @@
+Name: Polymer
+Short Name: polymer
+URL: http://www.polymer-project.org
+Version: 3.0.0
+Revision: (Run `bower install` and see bower_components/polymer/.bower.json)
+License: BSD
+License File: LICENSE.polymer
+Security Critical: no
+Shipped: yes
+
+Description:
+This directory contains a subset of the components provided by the
+Polymer project. See bower.json for a full list of components.
+
+The license can be found in bower_components/polymer/LICENSE.txt.
+
+The source git repositories can be found at:
+https://github.com/Polymer/<component>
+
+Note on Bower:
+Install bower using `npm install -g bower`.
+Install new bower components using `bower install --save $COMPONENT_NAME`.
+
+Local Modifications:
+None

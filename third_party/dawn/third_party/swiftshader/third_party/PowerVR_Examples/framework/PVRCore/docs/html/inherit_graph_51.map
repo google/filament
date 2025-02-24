@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structpvr_1_1_image_layers_size.html" title="Structure describes the number of array levels and mip levels an image contains" alt="" coords="10,5,173,32"/>
+<area shape="rect" id="node2" href="$structpvr_1_1_image_subresource_range.html" title="Represents a subresource range: A specified range of Array Layers and Mipmap levels of specific aspec..." alt="" coords="226,5,439,32"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_image_subresource.html" title="Describes a single &quot;layer&quot; of an image: a single array layer of a single mip level, or the offset of a layer range." alt="" coords="5,56,177,83"/>
+<area shape="rect" id="node4" href="$structpvr_1_1_image_subresource_layers.html" title="Represents a specific subresource layer: A specified Array Layer and Mipmap level of specific aspect ..." alt="" coords="225,56,440,83"/>
+</map>

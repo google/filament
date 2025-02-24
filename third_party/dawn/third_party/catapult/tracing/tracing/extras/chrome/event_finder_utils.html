@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  // We want to ignore chrome internal URLs when computing metrics.
+  const CHROME_INTERNAL_URLS = [
+    // Blank URLs are usually initial empty document.
+    '',
+    'about:blank',
+    // Chrome on Android creates main frames with the below URL for plugins.
+    'data:text/html,pluginplaceholderdata',
+    // Special URL used to start a navigation to an unreachable error page.
+    'chrome-error://chromewebdata/'
+  ];
+
+
+  // Title for top level tasks in the scheduler. Any input event queued during a
+  // top level scheduler task cannot be handled until the end of that task.
+  const SCHEDULER_TOP_LEVEL_TASK_TITLE = 'ThreadControllerImpl::RunTask';
+
+  const SCHEDULER_TOP_LEVEL_TASKS = new Set([
+    // Current title for the scheduler top level task.
+    SCHEDULER_TOP_LEVEL_TASK_TITLE,
+    // Previous names scheduler top level tasks, kept for backwards
+    // compatibility.
+    'ThreadControllerImpl::DoWork',
+    'TaskQueueManager::ProcessTaskFromWorkQueue'
+  ]);
+
+  /**
+   * Utility class providing methods to efficiently find events.
+   * TODO(4023) This should be merged with thread/process helper.
+   */
+  class EventFinderUtils {
+    /**
+     * Returns true if |category| is one of the categories of |event|, and
+     * |event| has title |title|.
+     *
+     * TODO(dproy): Make this a method on a suitable parent class of the
+     * event/slice classes that are used with this function.
+     */
+    static hasCategoryAndName(event, category, title) {
+      return event.title === title && event.category &&
+        tr.b.getCategoryParts(event.category).includes(category);
+    }
+
+    /**
+     * Returns the list of main thread slices of |rendererHelper|
+     * with title |eventTitle| and category |eventCategory|.
+     * Returned slices do not include telemetry internal events.
+     *
+     * @param {tr.model.helpers.ChromeRendererHelper} rendererHelper
+     * @param {string} eventTitle
+     * @param {string} eventCategory
+     * @returns {Array<!tr.model.ThreadSlice>}
+     */
+    static* getMainThreadEvents(
+        rendererHelper, eventTitle, eventCategory) {
+      if (!rendererHelper.mainThread) return;
+      // Events yielded by childEvents() are sorted by start time.
+      for (const ev of rendererHelper.mainThread.sliceGroup.childEvents()) {
+        if (rendererHelper.modelHelper.isTelemetryInternalEvent(ev)) {
+          continue;
+        }
+        if (!this.hasCategoryAndName(ev, eventCategory, eventTitle)) {
+          continue;
+        }
+        yield ev;
+      }
+    }
+
+    /**
+     * @param  {!tr.model.Process} process
+     * @param  {!tr.b.math.Range} range
+     * @return {Array.<tr.model.Event>} An array of network events of a process
+     * and that are intersecting a range.
+     */
+    static getNetworkEventsInRange(process, range) {
+      const networkEvents = [];
+      for (const thread of Object.values(process.threads)) {
+        const threadHelper = new tr.model.helpers.ChromeThreadHelper(thread);
+        const events = threadHelper.getNetworkEvents();
+        for (const event of events) {
+          if (range.intersectsExplicitRangeInclusive(event.start, event.end)) {
+            networkEvents.push(event);
+          }
+        }
+      }
+      return networkEvents;
+    }
+
+    /**
+     * Returns a map of frame id to main thread slices of |rendererHelper| with
+     * title |eventTitle| and categry |eventCategory|, sorted by start
+     * time. Returned slices do not include telemetry internal events.
+     *
+     * @param {tr.model.helpers.ChromeRendererHelper} rendererHelper
+     * @param {string} eventTitle
+     * @param {string} eventCategory
+     * @returns {Map.<string, Array<!tr.model.ThreadSlice>>}
+     */
+    static getSortedMainThreadEventsByFrame(
+        rendererHelper, eventTitle, eventCategory) {
+      const eventsByFrame = new Map();
+      const events = this.getMainThreadEvents(
+          rendererHelper, eventTitle, eventCategory);
+      for (const ev of events) {
+        const frameIdRef = ev.args.frame;
+        if (frameIdRef === undefined) continue;
+        if (!eventsByFrame.has(frameIdRef)) {
+          eventsByFrame.set(frameIdRef, []);
+        }
+        eventsByFrame.get(frameIdRef).push(ev);
+      }
+
+      return eventsByFrame;
+    }
+
+    /**
+     * Returns a map of navigation id to main thread slices of |rendererHelper|
+     * with title |eventTitle| and categry |eventCategory|.
+     * Returned slices do not include telemetry internal events.
+     *
+     * @param {tr.model.helpers.ChromeRendererHelper} rendererHelper
+     * @param {string} eventTitle
+     * @param {string} eventCategory
+     * @returns {Map.<string, tr.model.ThreadSlice>}
+     */
+    static getSortedMainThreadEventsByNavId(
+        rendererHelper, eventTitle, eventCategory) {
+      const eventsByNavId = new Map();
+      const events = this.getMainThreadEvents(
+          rendererHelper, eventTitle, eventCategory);
+      for (const ev of events) {
+        if (ev.args.data === undefined) continue;
+        const navIdRef = ev.args.data.navigationId;
+        if (navIdRef === undefined) continue;
+        eventsByNavId.set(navIdRef, ev);
+      }
+
+      return eventsByNavId;
+    }
+
+    /**
+     * Returns latest event in |sortedEvents| that starts on or before
+     * |timestamp|, or undefined if no such event exists.
+     *
+     * @param {!Array<!tr.model.TimedEvent>} sortedEvents - events sorted by
+     *     start time.
+     * @param {number} timestamp
+     * @returns {tr.model.TimedEvent|undefined}
+     */
+    static findLastEventStartingOnOrBeforeTimestamp(sortedEvents, timestamp) {
+      const firstIndexAfterTimestamp =
+          tr.b.findFirstTrueIndexInSortedArray(
+              sortedEvents, e => e.start > timestamp);
+      // We found the first index after the timestamp, so the index immediately
+      // before it is the index we're looking for. If the first index after
+      // timestamp is 0, then there is no index on or before timestamp.
+      if (firstIndexAfterTimestamp === 0) return undefined;
+      return sortedEvents[firstIndexAfterTimestamp - 1];
+    }
+
+    /**
+     * Returns latest event in |sortedEvents| that starts before
+     * |timestamp|, or undefined if no such event exists.
+     *
+     * @param {!Array<!tr.model.TimedEvent>} sortedEvents - events sorted by
+     *     start time.
+     * @param {number} timestamp
+     * @returns {tr.model.TimedEvent|undefined}
+     */
+    static findLastEventStartingBeforeTimestamp(sortedEvents, timestamp) {
+      const firstIndexAfterTimestamp =
+          tr.b.findFirstTrueIndexInSortedArray(
+              sortedEvents, e => e.start >= timestamp);
+      // We found the first index after the timestamp, so the index immediately
+      // before it is the index we're looking for. If the first index after
+      // timestamp is 0, then there is no index on or before timestamp.
+      if (firstIndexAfterTimestamp === 0) return undefined;
+      return sortedEvents[firstIndexAfterTimestamp - 1];
+    }
+
+
+    /**
+     * Returns earliest event in |sortedEvents| that starts on or after
+     * |timestamp|, or undefined if no such event exists.
+     *
+     * @param {!Array<!tr.model.TimedEvent>} sortedEvents - events sorted by
+     *     start time.
+     * @param {number} timestamp
+     * @returns {tr.model.Event|undefined}
+     */
+    static findNextEventStartingOnOrAfterTimestamp(sortedEvents, timestamp) {
+      const firstIndexOnOrAfterTimestamp =
+          tr.b.findFirstTrueIndexInSortedArray(
+              sortedEvents, e => e.start >= timestamp);
+
+      if (firstIndexOnOrAfterTimestamp === sortedEvents.length) {
+        return undefined;
+      }
+      return sortedEvents[firstIndexOnOrAfterTimestamp];
+    }
+
+    /**
+     * Returns earliest event in |sortedEvents| that starts after |timestamp|,
+     * or undefined if no such event exists.
+     *
+     * @param {!Array<!tr.model.TimedEvent>} sortedEvents - events sorted by
+     *     start time.
+     * @param {number} timestamp
+     * @returns {tr.model.Event|undefined}
+     */
+    static findNextEventStartingAfterTimestamp(sortedEvents, timestamp) {
+      const firstIndexOnOrAfterTimestamp =
+          tr.b.findFirstTrueIndexInSortedArray(
+              sortedEvents, e => e.start > timestamp);
+
+      if (firstIndexOnOrAfterTimestamp === sortedEvents.length) {
+        return undefined;
+      }
+      return sortedEvents[firstIndexOnOrAfterTimestamp];
+    }
+
+    /**
+     * Returns a list of top level scheduler tasks.
+     * It is used by TTI and EQT metrics.
+     * @param {!tr.model.Thread} mainThread - the main thead of the renderer.
+     * @returns {!Array<tr.model.Slice>}
+     */
+    static findToplevelSchedulerTasks(mainThread) {
+      const tasks = [];
+      for (const task of mainThread.findTopmostSlices(
+          slice => slice.category === 'toplevel' &&
+          SCHEDULER_TOP_LEVEL_TASKS.has(slice.title))) {
+        tasks.push(task);
+      }
+      return tasks;
+    }
+  }
+
+  return {
+    EventFinderUtils,
+    CHROME_INTERNAL_URLS,
+    SCHEDULER_TOP_LEVEL_TASK_TITLE,
+  };
+});
+</script>

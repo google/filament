@@ -1,0 +1,117 @@
+Name
+
+    ANGLE_yuv_internal_format
+
+Name Strings
+
+    GL_ANGLE_yuv_internal_format
+
+Contributors
+
+    Mohan Maiya, Samsung
+    Jamie Madill, Google
+
+Contacts
+
+    Mohan Maiya, Samsung (m.maiya 'at' samsung 'dot' com)
+
+Notice
+
+    Copyright (c) 2021 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft.
+
+Version
+
+    Version 5, June 23, 2021
+
+Number
+
+    OpenGL ES Extension ###
+
+Dependencies
+
+    OpenGL ES 3.0 is required.
+
+Overview
+
+    This extension introduces a few sized internal YUV texture formats
+    that can be used to create immutable textures using the TexStorage2D API.
+    The only valid texture target supported is TEXTURE_2D, an INVALID_ENUM
+    error is generated otherwise. There is no mipmap support and only NEAREST
+    minification and magnification filters are supported.
+
+    Support for the extension only requires the support of the commonly used 8-bit
+    2-plane YUV format listed in the "New Tokens" section, refer to [fn1] for details
+    about the formats and layout. It is up to the implementation to extend support
+    for the other YUV formats.
+
+    [fn1] : https://www.fourcc.org/yuv.php
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    List of non-standard YUV internal formats
+
+    // 8-bit YUV formats
+    G8_B8R8_2PLANE_420_UNORM_ANGLE                    0x96B1
+    G8_B8_R8_3PLANE_420_UNORM_ANGLE                   0x96B2
+
+    // 10-bit YUV formats
+    G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_ANGLE   0x96B3
+    G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_ANGLE  0x96B4
+
+    // 12-bit YUV formats
+    G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_ANGLE   0x96B5
+    G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_ANGLE  0x96B6
+
+    // 16-bit YUV formats
+    G16_B16R16_2PLANE_420_UNORM_ANGLE                 0x96B7
+    G16_B16_R16_3PLANE_420_UNORM_ANGLE                0x96B8
+
+
+Issues
+
+    1. How was the new format list chosen?
+
+       Commonly used planar YUV formats across various platforms were surveyed,
+       including new platforms that support HDR content. A subset of those were
+       chosen to be required. It is up to the implementations to extend support
+       for the rest of the formats.
+
+    2. What is the colorspace of image data of a texture created with the new formats?
+
+       The texture or sampler parameter APIs can be expanded to indicate the colorspace
+       in a layered extension and is outside the scope of this extension. The colorspace
+       for textures with the above YUV formats is assumed to be ITU-R BT.601 with YUV
+       values in limited range. Refer to ITU-R BT.601 spec for further details.
+
+Revision History
+
+    #5 - (June 23, 2021) Mohan Maiya
+         Renamed format enums from *_ANGLEX to *_ANGLE
+
+    #4 - (June 23, 2021) Mohan Maiya
+         Removed references to GL_OES_EGL_image_external
+         and restricted the spec to simply introducing new
+         sized internal YUV formats. Also updated enum values
+
+    #3 - (June 8, 2021) Mohan Maiya
+         Clarification regarding default colorspace
+
+    #2 - (May 10, 2021) Mohan Maiya
+         Update overview section to specify support for
+         immutable textures
+
+    #1 - (April 10, 2021) Mohan Maiya
+         Original draft

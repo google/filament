@@ -1,0 +1,17 @@
+Name: pyfakefs
+URL: https://pypi.python.org/pypi/pyfakefs
+Version: 2.7
+Date: 2016-01-04
+License: Apache 2.0
+License File: COPYING
+Security Critical: no
+Shipped: yes
+
+Description:
+pyfakefs implements a fake file system that mocks the Python file system
+modules. Using pyfakefs, your tests operate on a fake file system in memory
+without touching the real disk. The software under test requires no modification
+to work with pyfakefs.
+
+Local Modifications:
+Remove everything except pyfakefs/ and COPYING.

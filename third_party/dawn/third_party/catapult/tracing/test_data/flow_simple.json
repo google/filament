@@ -1,0 +1,127 @@
+{
+  "traceEvents": [
+    {
+      "cat": "ipc",
+      "pid": 15902,
+      "tid": 15903,
+      "ts": 3002,
+      "ph": "X",
+      "name": "SenderA",
+      "args":{},
+      "dur": 10
+    },
+    {
+      "cat": "ipc",
+      "pid": 15902,
+      "tid": 15903,
+      "ts": 3002,
+      "ph": "s",
+      "name": "IPC",
+      "args":{},
+      "id":"8780d402",
+      "sf": "7"
+    },
+
+    {
+      "cat": "ipc",
+      "pid": 15903,
+      "tid": 15904,
+      "ts": 0,
+      "ph": "X",
+      "name": "SenderB",
+      "args":{},
+      "dur": 10
+    },
+    {
+      "cat": "ipc",
+      "pid": 15903,
+      "tid": 15904,
+      "ts": 1,
+      "ph": "s",
+      "name": "IPC",
+      "args":{},
+      "id":"8780d403"
+    },
+
+    {
+      "cat": "ipc",
+      "pid": 15875,
+      "tid": 15895,
+      "ts": 1001,
+      "ph": "f",
+      "name": "IPC",
+      "args": {},
+      "id": "8780d403"
+    },
+    {
+      "cat": "ipc",
+      "pid": 15875,
+      "tid": 15895,
+      "ts": 1001,
+      "ph": "X",
+      "name": "Blergh",
+      "args": {},
+      "dur": 100
+    },
+
+    {
+      "cat": "ipc",
+      "pid": 15774,
+      "tid": 15794,
+      "ts": 3200,
+      "ph": "X",
+      "name": "OtherSlice",
+      "args": {},
+      "dur": 500
+    },
+    {
+      "cat": "ipc",
+      "pid": 15774,
+      "tid": 15794,
+      "ts": 3220,
+      "ph": "t",
+      "name": "IPC",
+      "args": {},
+      "id": "8780d402",
+      "sf": 8
+    },
+
+    {
+      "cat": "ipc",
+      "pid": 15874,
+      "tid": 15894,
+      "ts": 3330,
+      "ph": "f",
+      "name": "IPC",
+      "args": {},
+      "id": "8780d402",
+      "sf": "1"
+    },
+    {
+      "cat": "ipc",
+      "pid": 15874,
+      "tid": 15894,
+      "ts": 3331,
+      "ph": "X",
+      "name": "SomeSlice",
+      "args": {},
+      "dur": 400
+    }
+  ],
+  "stackFrames": {
+    "1": {
+      "category": "m1",
+      "name": "main"
+    },
+    "7": {
+      "category": "m2",
+      "name": "frame7",
+      "parent": "1"
+    },
+    "8": {
+      "category": "m2",
+      "name": "frame8",
+      "parent": "1"
+    }
+  }
+}

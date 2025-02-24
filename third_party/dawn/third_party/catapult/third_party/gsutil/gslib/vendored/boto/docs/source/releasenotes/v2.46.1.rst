@@ -1,0 +1,14 @@
+Bumped to 2.46.1
+
+boto v2.46.1
+============
+
+:date: 2017/02/20
+
+Fixes a bug where a recently added module was not added to setup.py
+
+Changes
+-------
+* Add boto.vendored.regions to setup.py (:issue:`3682`, :sha:`43e796d1`)
+
+

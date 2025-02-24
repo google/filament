@@ -1,0 +1,86 @@
+Name
+
+    ANGLE_colorspace_attribute_passthrough
+
+Name Strings
+
+    EGL_ANGLE_colorspace_attribute_passthrough
+
+Contributors
+
+    Mohan Maiya
+
+Contacts
+
+    Mohan Maiya, Samsung (m.maiya 'at' samsung 'dot' com)
+
+Notice
+
+    Copyright (c) 2022 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft.
+
+Version
+
+    Version 1, August 23, 2022
+
+Number
+
+    EGL Extension ###
+
+Dependencies
+
+    Requires support for the following extension
+        - EGL_EXT_gl_colorspace_display_p3
+        - EGL_EXT_gl_colorspace_display_p3_linear
+        - EGL_EXT_gl_colorspace_display_p3_passthrough
+        - EGL_EXT_gl_colorspace_scrgb
+        - EGL_EXT_gl_colorspace_scrgb_linear
+    Refer to the above specifications for indirect dependencies.
+
+Overview
+
+    On Android, the support for colorspace extensions listed above are determined
+    based on -
+    1. The EGL implementation supporting EGL_KHR_gl_colorspace extension
+    2. Device's display supporting wide color gamut
+
+    In such cases the Android EGL loader handles the implementation of the above
+    extensions. However, vendors using ANGLE as their EGL/GLES implementations,
+    which layers GLES APIs over Vulkan, need to know the value of these colorspace
+    attributes in order to create Vulkan swapchain images or other images with the
+    appropriate colorspace flags.
+
+    This extension allows ANGLE's EGL implementation to rely on the Android EGL loader
+    to support and implement the above extensions with the exception that ANGLE's EGL
+    implementation will passthrough, without generating validation errors, the colorspace
+    attribute values introduced by the extensions listed above, to the underlying Vulkan
+    implementation.
+
+    For details about colorspace and related terminology please refer to the extensions
+    listed in the "Dependencies" section.
+
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Issues
+
+    None.
+
+Revision History
+
+    #1 - (August 23, 2022) Mohan Maiya
+         Original draft

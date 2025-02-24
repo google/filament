@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/multi_cpu_slice_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createBasicModel() {
+    const lines = [
+      'Android.launcher-584   [001] d..3 12622.506890: sched_switch: prev_comm=Android.launcher prev_pid=584 prev_prio=120 prev_state=R+ ==> next_comm=Binder_1 next_pid=217 next_prio=120', // @suppress longLineCheck
+      '       Binder_1-217   [001] d..3 12622.506918: sched_switch: prev_comm=Binder_1 prev_pid=217 prev_prio=120 prev_state=D ==> next_comm=Android.launcher next_pid=584 next_prio=120', // @suppress longLineCheck
+      'Android.launcher-584   [001] d..4 12622.506936: sched_wakeup: comm=Binder_1 pid=217 prio=120 success=1 target_cpu=001', // @suppress longLineCheck
+      'Android.launcher-584   [001] d..3 12622.506950: sched_switch: prev_comm=Android.launcher prev_pid=584 prev_prio=120 prev_state=R+ ==> next_comm=Binder_1 next_pid=217 next_prio=120', // @suppress longLineCheck
+      '       Binder_1-217   [001] ...1 12622.507057: tracing_mark_write: B|128|queueBuffer', // @suppress longLineCheck
+      '       Binder_1-217   [001] ...1 12622.507175: tracing_mark_write: E',
+      '       Binder_1-217   [001] d..3 12622.507253: sched_switch: prev_comm=Binder_1 prev_pid=217 prev_prio=120 prev_state=S ==> next_comm=Android.launcher next_pid=584 next_prio=120' // @suppress longLineCheck
+    ];
+
+    return tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('instantiate', function() {
+    const m = createBasicModel();
+    const cpu = m.kernel.cpus[1];
+    assert.isDefined(cpu);
+
+    const selection = new tr.model.EventSet();
+    selection.push(cpu.slices[0]);
+    selection.push(cpu.slices[1]);
+
+    const viewEl = document.createElement('tr-ui-a-multi-cpu-slice-sub-view');
+    viewEl.selection = selection;
+    this.addHTMLOutput(viewEl);
+  });
+});
+</script>

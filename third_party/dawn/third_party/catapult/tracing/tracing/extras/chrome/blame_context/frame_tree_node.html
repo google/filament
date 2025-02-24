@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/blame_context/blame_context.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Trace Viewer side's correspondence of Chrome's
+ * content::FrameTreeNode class.
+ *
+ */
+tr.exportTo('tr.e.chrome', function() {
+  const BlameContextSnapshot = tr.e.chrome.BlameContextSnapshot;
+  const BlameContextInstance = tr.e.chrome.BlameContextInstance;
+
+  function FrameTreeNodeSnapshot() {
+    BlameContextSnapshot.apply(this, arguments);
+  }
+
+  FrameTreeNodeSnapshot.prototype = {
+    __proto__: BlameContextSnapshot.prototype,
+
+    get renderFrame() {
+      if (this.args.renderFrame instanceof tr.e.chrome.RenderFrameSnapshot) {
+        return this.args.renderFrame;
+      }
+      return undefined;
+    },
+
+    get url() {
+      return this.args.url;
+    },
+
+    get userFriendlyName() {
+      return 'FrameTreeNode';
+    }
+  };
+
+  tr.model.ObjectSnapshot.subTypes.register(
+      FrameTreeNodeSnapshot,
+      {typeName: 'FrameTreeNode'});
+
+  function FrameTreeNodeInstance() {
+    BlameContextInstance.apply(this, arguments);
+  }
+
+  FrameTreeNodeInstance.prototype = {
+    __proto__: BlameContextInstance.prototype,
+
+    get blameContextType() {
+      return 'Frame';
+    }
+  };
+
+  tr.model.ObjectInstance.subTypes.register(
+      FrameTreeNodeInstance,
+      {typeName: 'FrameTreeNode'});
+
+  return {
+    FrameTreeNodeSnapshot,
+    FrameTreeNodeInstance,
+  };
+});
+</script>

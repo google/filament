@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/extras/about_tracing/record_selection_dialog.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  function beginRecording(tracingControllerClient) {
+    let finalPromiseResolver;
+    const finalPromise = new Promise(function(resolve, reject) {
+      finalPromiseResolver = {
+        resolve,
+        reject
+      };
+    });
+    finalPromise.selectionDlg = undefined;
+    finalPromise.progressDlg = undefined;
+
+    function beginRecordingError(err) {
+      finalPromiseResolver.reject(err);
+    }
+
+    // Step 0: End recording. This is necessary when the user reloads the
+    // about:tracing page when we are recording. Window.onbeforeunload is not
+    // reliable to end recording on reload.
+    endRecording(tracingControllerClient).then(
+        getCategories,
+        getCategories);  // Ignore error.
+
+    // But just in case, bind onbeforeunload anyway.
+    window.onbeforeunload = function(e) {
+      endRecording(tracingControllerClient);
+    };
+
+    // Step 1: Get categories.
+    function getCategories() {
+      const p = tracingControllerClient.getCategories().then(
+          showTracingDialog,
+          beginRecordingError);
+      p.catch(function(err) {
+        beginRecordingError(err);
+      });
+    }
+
+    // Step 2: Show tracing dialog.
+    let selectionDlg;
+    function showTracingDialog(categories) {
+      selectionDlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+      selectionDlg.categories = categories;
+      selectionDlg.settings_key =
+          'tr.ui.e.about_tracing.record_selection_dialog';
+      selectionDlg.addEventListener('recordclick', startTracing);
+      selectionDlg.addEventListener('closeclick', cancelRecording);
+      selectionDlg.visible = true;
+
+      finalPromise.selectionDlg = selectionDlg;
+    }
+
+    function cancelRecording() {
+      finalPromise.selectionDlg = undefined;
+      finalPromiseResolver.reject(new UserCancelledError());
+    }
+
+    // Step 2: Do the actual tracing dialog.
+    let progressDlg;
+    let bufferPercentFullDiv;
+    function startTracing() {
+      progressDlg = new tr.ui.b.Overlay();
+      Polymer.dom(progressDlg).textContent = 'Recording...';
+      progressDlg.userCanClose = false;
+
+      bufferPercentFullDiv = document.createElement('div');
+      Polymer.dom(progressDlg).appendChild(bufferPercentFullDiv);
+
+      const stopButton = document.createElement('button');
+      Polymer.dom(stopButton).textContent = 'Stop';
+      progressDlg.clickStopButton = function() {
+        stopButton.click();
+      };
+      Polymer.dom(progressDlg).appendChild(stopButton);
+
+      const categories = selectionDlg.includedAndExcludedCategories();
+      const recordingOptions = {
+        included_categories: categories.included,
+        excluded_categories: categories.excluded,
+        enable_systrace: selectionDlg.useSystemTracing,
+        record_mode: selectionDlg.tracingRecordMode,
+        stream_format: selectionDlg.useProtobuf ? 'protobuf' : 'json',
+      };
+      if (categories.included.indexOf(
+          'disabled-by-default-memory-infra') !== -1) {
+        const memoryConfig = { triggers: [] };
+        memoryConfig.triggers.push(
+            {'mode': 'detailed', 'periodic_interval_ms': 10000});
+        recordingOptions.memory_dump_config = memoryConfig;
+      }
+
+      const requestPromise = tracingControllerClient.beginRecording(
+          recordingOptions);
+      requestPromise.then(
+          function() {
+            progressDlg.visible = true;
+            stopButton.focus();
+            updateBufferPercentFull('0');
+          },
+          recordFailed);
+
+      stopButton.addEventListener('click', function() {
+        // TODO(chrishenry): Currently, this only dismiss the progress
+        // dialog when tracingComplete event is received. When performing
+        // remote debugging, the tracingComplete event may be delayed
+        // considerable. We should indicate to user that we are waiting
+        // for tracingComplete event instead of being unresponsive. (For
+        // now, I disable the "stop" button, since clicking on the button
+        // again now cause exception.)
+        const recordingPromise = endRecording(tracingControllerClient);
+        recordingPromise.then(
+            recordFinished,
+            recordFailed);
+        stopButton.disabled = true;
+        bufferPercentFullDiv = undefined;
+      });
+      finalPromise.progressDlg = progressDlg;
+    }
+
+    function recordFinished(tracedData) {
+      progressDlg.visible = false;
+      finalPromise.progressDlg = undefined;
+      finalPromiseResolver.resolve(tracedData);
+    }
+
+    function recordFailed(err) {
+      progressDlg.visible = false;
+      finalPromise.progressDlg = undefined;
+      finalPromiseResolver.reject(err);
+    }
+
+    function getBufferPercentFull() {
+      if (!bufferPercentFullDiv) return;
+
+      tracingControllerClient.beginGetBufferPercentFull().then(
+          updateBufferPercentFull);
+    }
+
+    function updateBufferPercentFull(percentFull) {
+      if (!bufferPercentFullDiv) return;
+
+      percentFull = Math.round(100 * parseFloat(percentFull));
+      const newText = 'Buffer usage: ' + percentFull + '%';
+      if (Polymer.dom(bufferPercentFullDiv).textContent !== newText) {
+        Polymer.dom(bufferPercentFullDiv).textContent = newText;
+      }
+
+      window.setTimeout(getBufferPercentFull, 500);
+    }
+
+    // Thats it! We're done.
+    return finalPromise;
+  }
+
+  function endRecording(tracingControllerClient) {
+    return tracingControllerClient.endRecording();
+  }
+
+  function defaultTraceName(tracingControllerClient) {
+    return tracingControllerClient.defaultTraceName();
+  }
+
+  function UserCancelledError() {
+    Error.apply(this, arguments);
+  }
+  UserCancelledError.prototype = {
+    __proto__: Error.prototype
+  };
+
+  return {
+    beginRecording,
+    UserCancelledError,
+    defaultTraceName,
+  };
+});
+</script>

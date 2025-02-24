@@ -1,0 +1,831 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "branch",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--project",
+      "v8/v8",
+      "--branch",
+      "test",
+      "--commit",
+      "67ebf73496383c6777035e374d2d664009e2aa5c",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--allow-existent-branch"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit create_gerrit_branch (v8/v8 test)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"can_delete\": true,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"ref\": \"refs/heads/test\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revision\": \"76016386a0d8ecc7b6be212424978bb45959d668\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "branchinfo",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--project",
+      "v8/v8",
+      "--branch",
+      "main",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit get_gerrit_branch (v8/v8 main)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"ref\": \"refs/heads/main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revision\": \"67ebf73496383c6777035e374d2d664009e2aa5c\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "tag",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--project",
+      "v8/v8",
+      "--tag",
+      "1.0",
+      "--commit",
+      "67ebf73496383c6777035e374d2d664009e2aa5c",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit create_gerrit_tag (v8/v8 1.0)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"can_delete\": true,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"ref\": \"refs/tags/1.0\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revision\": \"67ebf73496383c6777035e374d2d664009e2aa5c\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "rawapi",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--path",
+      "/projects/v8/v8/tags/1.0",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--method",
+      "PUT",
+      "--body",
+      "{\"revision\": \"67ebf73496383c6777035e374d2d664009e2aa5c\"}",
+      "--accept_status",
+      "201"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit raw_create_tag",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"can_delete\": true,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"ref\": \"refs/tags/1.0\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revision\": \"67ebf73496383c6777035e374d2d664009e2aa5c\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "movechanges",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "-p",
+      "project=v8/v8",
+      "-p",
+      "branch=master",
+      "-p",
+      "status=open",
+      "--destination_branch",
+      "main",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit move changes",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"91827\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "createchange",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--project",
+      "v8/v8",
+      "--branch",
+      "main",
+      "--subject",
+      "Dummy CL.",
+      "--json_file",
+      "/path/to/tmp/json",
+      "-p",
+      "status=NEW",
+      "--cc",
+      "foo@example.com"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit create change at (v8/v8 main)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"_number\": \"91827\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  },@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@",
+      "@@@STEP_LINK@change 91827@https://chromium-review.googlesource.com/#/q/91827@@@"
+    ]
+  },
+  {
+    "cmd": [],
+    "name": "update contents in CL 91827"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[recipe_engine::file]/resources/fileutil.py",
+      "--json-output",
+      "/path/to/tmp/json",
+      "copy",
+      "99.99.99.99",
+      "[CLEANUP]/tmp_tmp_1"
+    ],
+    "infra_step": true,
+    "name": "update contents in CL 91827.store the new content for chrome/VERSION",
+    "~followup_annotations": [
+      "@@@STEP_NEST_LEVEL@1@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changeedit",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "91827",
+      "--path",
+      "chrome/VERSION",
+      "--file",
+      "[CLEANUP]/tmp_tmp_1"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "update contents in CL 91827.gerrit edit file chrome/VERSION",
+    "~followup_annotations": [
+      "@@@STEP_NEST_LEVEL@1@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "publishchangeedit",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "91827"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit publish edit"
+  },
+  {
+    "cmd": [],
+    "name": "verify the patchset exists on CL 91827"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--limit",
+      "1",
+      "-p",
+      "change=91827",
+      "-o",
+      "ALL_REVISIONS",
+      "-o",
+      "ALL_COMMITS"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "verify the patchset exists on CL 91827.gerrit changes",
+    "~followup_annotations": [
+      "@@@STEP_NEST_LEVEL@1@@@",
+      "@@@STEP_LOG_LINE@json.output@[]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [],
+    "name": "verify the patchset exists on CL 91827.waiting before retry",
+    "~followup_annotations": [
+      "@@@STEP_NEST_LEVEL@1@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--limit",
+      "1",
+      "-p",
+      "change=91827",
+      "-o",
+      "ALL_REVISIONS",
+      "-o",
+      "ALL_COMMITS"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "verify the patchset exists on CL 91827.gerrit changes (2)",
+    "~followup_annotations": [
+      "@@@STEP_NEST_LEVEL@1@@@",
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"91827\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"2\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "setbotcommit",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "91827"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit set Bot-Commit+1 for change 91827"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "submitchange",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "91827",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit submit change 91827",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"_number\": \"91827\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  },@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"status\": \"MERGED\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--start",
+      "1",
+      "--limit",
+      "1",
+      "-p",
+      "project=chromium/src",
+      "-p",
+      "status=open",
+      "-p",
+      "label=Commit-Queue>0"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit changes",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"91827\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "relatedchanges",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "58478",
+      "--revision",
+      "2",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit relatedchanges",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"changes\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@    {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"_change_number\": 58478,@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"_current_revision_number\": 2,@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"_revision_number\": 2,@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"change_id\": \"Ic62ae3103fca2214904dbf2faf4c861b5f0ae9b5\",@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"author\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"date\": \"2014-07-12 15:04:24.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"email\": \"example@example.com\",@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"name\": \"Example Name\",@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"tz\": 120@@@",
+      "@@@STEP_LOG_LINE@json.output@        },@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": \"78847477532e386f5a2185a4e8c90b2509e354e3\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"parents\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@          {@@@",
+      "@@@STEP_LOG_LINE@json.output@            \"commit\": \"bb499510bbcdbc9164d96b0dbabb4aa45f59a87e\"@@@",
+      "@@@STEP_LOG_LINE@json.output@          }@@@",
+      "@@@STEP_LOG_LINE@json.output@        ],@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"subject\": \"Remove Solr\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      },@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"project\": \"gerrit\",@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"status\": \"NEW\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  ]@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "-p",
+      "project=chromium/src",
+      "-p",
+      "status=open",
+      "-p",
+      "label=Commit-Queue>2"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit changes empty query",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--limit",
+      "1",
+      "-p",
+      "change=123",
+      "-o",
+      "ALL_REVISIONS",
+      "-o",
+      "ALL_COMMITS"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit changes (2)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"123\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "setlabel",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--json_file",
+      "/path/to/tmp/json",
+      "-l",
+      "code-review",
+      "-1"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit setlabel",
+    "~followup_annotations": [
+      "@@@STEP_LOG_END@json.output (invalid)@@@",
+      "@@@STEP_LOG_LINE@json.output (exception)@Expecting value: line 1 column 1 (char 0)@@@",
+      "@@@STEP_LOG_END@json.output (exception)@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "setlabel",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--json_file",
+      "/path/to/tmp/json",
+      "-l",
+      "commit-queue",
+      "1"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit setlabel (2)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_END@json.output (invalid)@@@",
+      "@@@STEP_LOG_LINE@json.output (exception)@Expecting value: line 1 column 1 (char 0)@@@",
+      "@@@STEP_LOG_END@json.output (exception)@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "addmessage",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--revision",
+      "current",
+      "--message",
+      "This is a non-attention message",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--no-automatic-attention-set-update"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit add message",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "addmessage",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--revision",
+      "current",
+      "--message",
+      "This is a comment message",
+      "--json_file",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit add message (2)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "abandon",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--message",
+      "bad roll"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit abandon",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"123\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"ABANDONED\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "restore",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--change",
+      "123",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--message",
+      "nevermind"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit restore",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"_number\": \"123\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"change_id\": \"Ideadbeef\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"created\": \"2017-01-30 13:11:20.000000000\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"has_review_started\": false,@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"id\": \"fully~qualified~changeid\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"project\": \"chromium/src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"commit\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"message\": \"Change commit message\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"status\": \"NEW\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"subject\": \"Change title\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--limit",
+      "1",
+      "-p",
+      "change=122",
+      "-o",
+      "ALL_REVISIONS",
+      "-o",
+      "ALL_COMMITS"
+    ],
+    "env": {
+      "PATH": "<PATH>:RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit changes (3)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "failure": {
+      "humanReason": "Error querying for CL description: host:'https://chromium-review.googlesource.com' change:122; patchset:3"
+    },
+    "name": "$result"
+  }
+]

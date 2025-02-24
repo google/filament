@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/battor_importer.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/clock_sync_manager.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains end-to-end clock sync tests that ensure
+ * clock sync behavior works as expected across traces. There are too many
+ * possible combinations of trace types to test all of them, but we aim to test
+ * many of the important ones in this file.
+ */
+tr.b.unittest.testSuite(function() {
+  test('import_noClockDomains', function() {
+    const m = tr.c.TestUtils.newModelWithEvents([]);
+
+    assert.isFalse(m.hasImportWarnings);
+  });
+
+  test('import_traceEvent', function() {
+    const trace = JSON.stringify({
+      traceEvents: [
+        {ts: 0, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}},
+        {ts: 1000, pid: 0, tid: 0, ph: 'c', cat: 'metadata',
+          args: { issue_ts: 500, sync_id: 'abc' }},
+        {ts: 2000, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}}
+      ]});
+    const m = tr.c.TestUtils.newModelWithEvents([trace]);
+
+    assert.isFalse(m.hasImportWarnings);
+
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[0].start, 0);
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[1].start, 2);
+  });
+
+
+  test('import_ftrace', function() {
+    const ftrace =
+      'SurfaceFlinger-0  [001] ...1 0.001: 0: B|1|taskA\n' +
+      '        chrome-3  [001] ...1 0.010: 0: trace_event_clock_sync: ' +
+          'parent_ts=0.020\n';
+
+    const m = tr.c.TestUtils.newModelWithEvents([ftrace]);
+
+    assert.isFalse(m.hasImportWarnings);
+    assert.strictEqual(m.processes[1].threads[0].sliceGroup.slices[0].start, 0);
+  });
+
+  test('import_traceEventWithNoClockDomainAndFtrace', function() {
+    // Include a clock sync marker that indicates the LINUX_CLOCK_MONOTONIC time
+    // of 20ms is equal to the LINUX_FTRACE_GLOBAL time of 10ms, effectively
+    // shifting all ftrace timestamps forward by 10ms.
+    const ftrace =
+      'SurfaceFlinger-0  [001] ...1 0.001: 0: B|1|taskA\n' +
+      '        chrome-3  [001] ...1 0.010: 0: trace_event_clock_sync: ' +
+          'parent_ts=0.020\n';
+
+    const trace = JSON.stringify({
+      traceEvents: [
+        {ts: 0, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}},
+        {ts: 1000, pid: 0, tid: 0, ph: 'c', cat: 'metadata',
+          args: { issue_ts: 500, sync_id: 'abc' }},
+        {ts: 2000, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}}
+      ],
+      systemTraceEvents: ftrace
+    });
+    const m = tr.c.TestUtils.newModelWithEvents([trace]);
+
+    assert.isFalse(m.hasImportWarnings);
+
+    // Chrome events shouldn't be shifted.
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[0].start, 0);
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[1].start, 2);
+
+    // Ftrace events should be shifted forward by 10ms.
+    assert.strictEqual(
+        m.processes[1].threads[0].sliceGroup.slices[0].start, 11);
+  });
+
+  test('import_traceEventWithClockDomainAndFtrace', function() {
+    // Include a clock sync marker that indicates the LINUX_CLOCK_MONOTONIC time
+    // of 20ms is equal to the LINUX_FTRACE_GLOBAL time of 10ms, effectively
+    // shifting all ftrace timestamps forward by 10ms.
+    const ftrace =
+      'SurfaceFlinger-0  [001] ...1 0.001: 0: B|1|taskA\n' +
+      '        chrome-3  [001] ...1 0.010: 0: trace_event_clock_sync: ' +
+          'parent_ts=0.020\n';
+
+    const trace = JSON.stringify({
+      traceEvents: [
+        {ts: 0, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}},
+        {ts: 1000, pid: 0, tid: 0, ph: 'c', cat: 'metadata',
+          args: { issue_ts: 500, sync_id: 'abc' }},
+        {ts: 2000, pid: 0, tid: 0, ph: 'i', cat: 'c', name: 'taskA', args: {}}
+      ],
+      metadata: {
+        'clock-domain': 'LINUX_CLOCK_MONOTONIC'
+      },
+      systemTraceEvents: ftrace
+    });
+    const m = tr.c.TestUtils.newModelWithEvents([trace]);
+
+    assert.isFalse(m.hasImportWarnings);
+
+    // Chrome events shouldn't be shifted.
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[0].start, 0);
+    assert.strictEqual(m.processes[0].threads[0].sliceGroup.slices[1].start, 2);
+
+    // Ftrace events should be shifted forward by 10ms.
+    assert.strictEqual(
+        m.processes[1].threads[0].sliceGroup.slices[0].start, 11);
+  });
+});
+</script>

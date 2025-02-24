@@ -1,0 +1,191 @@
+Name
+
+    OES_vertex_type_10_10_10_2
+
+Name Strings
+
+    GL_OES_vertex_type_10_10_10_2
+
+Contributors
+
+    Daniel Ginsburg
+    Gary King
+    Petri Kero
+    Aaftab Munshi
+    Acorn Pooley
+    Mark Callow
+    Ben Bowman
+
+Contact
+
+    Aaftab Munshi (amunshi@apple.com)
+
+Notice
+
+    Copyright (c) 2006-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    None.
+
+Status
+
+    Ratified by the Khronos BOP, March 20, 2008.
+
+Version
+
+    Last Modified Date: July 17, 2007
+
+Number
+
+    OpenGL ES Extension #46
+
+Dependencies
+
+    This extension is written against the OpenGL ES 2.0 specification
+
+Overview
+
+    This extension adds the following data formats:
+    
+    Two new vertex attribute data formats: a signed 10.10.10.2 and an unsigned 
+    10.10.10.2 vertex data format.  These vertex data formats describe a 3- or 4-tuple 
+    stream which can be used to store normals or other attributes in a quantized
+    form.  Normals, tangents, binormals and other vertex attributes can often be specified 
+    at reduced precision without introducing noticeable artifacts, reducing the 
+    amount of memory and memory bandwidth they consume.
+
+Issues
+
+    1.  Should VertexAttrib{1234}[v] functions take UNSIGNED_INT_10_10_10_2_OES and 
+        INT_10_10_10_2_OES data formats?
+
+    RESOLUTION: No.  
+    
+    There is no reason to support this, as these functions are not performance or memory 
+    footprint critical.  It is much more important that the vertex data specified using 
+    vertex arrays be able to support these new formats.  In addition, we would need a 
+    new data type suffix (similar to "f" for float, "x" for fixed) to denote these two
+    new data types which is not desirable.
+
+    2.  Should unsigned 10.10.10.2 RGBA and unsigned 10.10.10 RGB texture formats be
+        supported by this extension?
+
+    RESOLUTION: No.
+
+    This extension should focus on enabling 10.10.10{.2} vertex data formats.  
+    The 10.10.10{.2} texture formats should be a separate extension.
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexAttribPointer
+
+        UNSIGNED_INT_10_10_10_2_OES                 0x8DF6
+        INT_10_10_10_2_OES                          0x8DF7
+
+Additions to Chapter 2 of the OpenGL ES 2.0 Specification (OpenGL Operation)
+
+    Modifications to section 2.8 (Vertex Arrays)
+
+        Add INT_10_10_10_2_OES and UNSIGNED_INT_10_10_10_2_OES as a valid <type> value in Table 2.4.
+        
+    Add a new section 2.8.1 - UNSIGNED_INT_10_10_10_2_OES and INT_10_10_10_2_OES vertex data formats  
+
+        UNSIGNED_INT_10_10_10_2_OES and INT_10_10_10_2_OES vertex data formats describe packed
+        3- or 4- component formats stored in a 32-bit word.  These components are expanded to 
+        (x, y, z, 1.0) if <size> = 3, or (x, y, z, w) if <size> = 4.
+    
+        For UNSIGNED_INT_10_10_10_2_OES vertex data format, the x, y and z components are 
+        represented as a 10-bit unsigned integer value and the w component is represented as a 
+        2-bit unsigned integer value.
+        
+        For INT_10_10_10_2_OES vertex data format, the x, y and z components are represented 
+        as a 10-bit signed two's complement integer value and the w component is represented 
+        as a 2-bit signed two's complement integer value.  
+        
+        The <normalized> value is used to indicate whether to normalize the data to 
+        [0, 1] (for unsigned type) or [-1, 1] (for signed type).
+
+        The following figure describes how these components are laid out in a 32-bit word.
+
+  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+  -------------------------------------------------------------------------------------
+ |            x                |                y            |          z          | w |                   
+  -------------------------------------------------------------------------------------
+
+        Calls to VertexAttribPointer with <type> of INT_10_10_10_2_OES and 
+        UNSIGNED_INT_10_10_10_2_OES  can only be made with <size> = 3 or 4.  
+        <size> values other than 3 or 4 will return an INVALID_VALUE error.  
+
+
+    Modifications to table 2.9 (Component conversions)
+
+        Add the following entries:
+
+            GLType                     Conversion of (x, y, z)  Conversion of w
+            -------                    ----------------------   ===============
+            INT_10_10_10_2_OES        (2c + 1)/(2^10 - 1)       (2c + 1)/(2^2 - 1)
+            UNSIGNED_10_10_10_2_OES    c / (2^10 - 1)            c / (2^2 - 1)
+
+Errors
+
+    The error INVALID_VALUE is generated if glVertexAttribPointer is called
+    with <type> = UNSIGNED_INT_10_10_10_2_OES or INT_10_10_10_2_OES and the
+    <size> parameter is not set to 3 or 4.
+
+New State
+
+    None
+
+Revision History
+
+    March 2, 2006    Aaftab Munshi    First draft of extension.
+
+    March 3, 2006    Aaftab Munshi    Changed DEC3N, UDEC3N to INT_10_10_10_2
+                                      and UNSIGNED_INT_10_10_10_2 resp.
+                                      use <normalize> parameter to mark
+                                      whether data is to be normalized or not.
+
+                                      Changed extension name to GL_ATI_vertex_type_10_10_10_2
+
+                                      Changed error returned from INVALID_ENUM
+                                      to INVALID_VALUE if <size> != 3
+
+    March 3, 2006    Aaftab Munshi    Added Contributors section.
+
+    April 10,2006    Aaftab Munshi    Support for *_10_10_10_2 as a texture format
+
+    June  3, 2006    Aaftab Munshi    Renamed to use OES suffixes.
+
+    June 14, 2006    Aaftab Munshi    Allow 10_10_10_2 to be (x,y,z,1) or (x,y,z,w)
+                                      when used as a vertex attribute data format.
+
+    Oct  20, 2006    Aaftab Munshi    Fixed errors to say 3- or 4- tuples instead
+                                          of just 3- tuples.
+
+    Jun  13, 2007    Aaftab Munshi    Removed 10.10.10{.2} texture formats.
+
+    Jul  10, 2007    Aaftab Munshi    Clarified that each component is a signed 2's complement
+                                      integer or unsigned integer value.
+                                      Shorten the extension name from OES_vertex_data_type_10_10_10_2.
+
+    Jul  17, 2007    Aaftab Munshi    Corrections to section 2.8
+
+
+ 

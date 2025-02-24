@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import"
+    href="/tracing/ui/analysis/container_memory_dump_sub_view.html">
+<link rel="import"
+    href="/tracing/ui/analysis/memory_dump_sub_view_test_utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const EventSet = tr.model.EventSet;
+  const extractVmRegions = tr.ui.analysis.extractVmRegions;
+  const extractMemoryAllocatorDumps =
+    tr.ui.analysis.extractMemoryAllocatorDumps;
+  const extractHeapDumps = tr.ui.analysis.extractHeapDumps;
+
+  function createViewWithSelection(selection, opt_parentElement) {
+    const viewEl = document.createElement(
+        'tr-ui-a-container-memory-dump-sub-view');
+    if (opt_parentElement) {
+      Polymer.dom(opt_parentElement).appendChild(viewEl);
+    }
+    if (selection === undefined) {
+      viewEl.selection = undefined;
+    } else {
+      // Rotate the list of selected dumps to check that the sub-view sorts
+      // them properly.
+      const length = selection.length;
+      viewEl.selection = new tr.model.EventSet(
+          selection.slice(length / 2, length).concat(
+              selection.slice(0, length / 2)));
+    }
+    return viewEl;
+  }
+
+  function createAndCheckContainerMemoryDumpView(
+      test, containerMemoryDumps, detailsCheckCallback, opt_parentElement) {
+    const viewEl =
+        createViewWithSelection(containerMemoryDumps, opt_parentElement);
+    if (!opt_parentElement) {
+      test.addHTMLOutput(viewEl);
+    }
+
+    // The view should contain a stacked pane view with memory dump header and
+    // overview panes.
+    const stackedPaneViewEl = tr.ui.b.findDeepElementMatching(
+        viewEl, 'tr-ui-a-stacked-pane-view');
+    const headerPaneEl = tr.ui.b.findDeepElementMatching(
+        stackedPaneViewEl, 'tr-ui-a-memory-dump-header-pane');
+    const overviewPaneEl = tr.ui.b.findDeepElementMatching(
+        stackedPaneViewEl, 'tr-ui-a-memory-dump-overview-pane');
+
+    // Check that the header pane and overview pane are correctly set up.
+    const processMemoryDumps = containerMemoryDumps.map(
+        containerDump => containerDump.processMemoryDumps);
+    assert.deepEqual(
+        Array.from(headerPaneEl.containerMemoryDumps), containerMemoryDumps);
+    assert.deepEqual(overviewPaneEl.processMemoryDumps, processMemoryDumps);
+    assert.strictEqual(
+        overviewPaneEl.aggregationMode, headerPaneEl.aggregationMode);
+
+    // Get the overview pane table to drive the details pane checks.
+    const overviewTableEl = tr.ui.b.findDeepElementMatching(
+        overviewPaneEl, 'tr-ui-b-table');
+
+    function checkVmRegionsPane(pid) {
+      const detailsPaneEl = tr.ui.b.findDeepElementMatching(
+          stackedPaneViewEl, 'tr-ui-a-memory-dump-vm-regions-details-pane');
+      if (pid === undefined) {
+        assert.isUndefined(detailsPaneEl);
+      } else {
+        assert.deepEqual(Array.from(detailsPaneEl.vmRegions),
+            extractVmRegions(processMemoryDumps, pid));
+        assert.strictEqual(
+            detailsPaneEl.aggregationMode, headerPaneEl.aggregationMode);
+      }
+    }
+
+    function checkAllocatorPane(pid, allocatorName, withHeapDetailsPane) {
+      const allocatorDetailsPaneEl = tr.ui.b.findDeepElementMatching(
+          stackedPaneViewEl, 'tr-ui-a-memory-dump-allocator-details-pane');
+      if (pid === undefined) {
+        assert.isUndefined(allocatorDetailsPaneEl);
+        assert.isUndefined(allocatorName);  // Test sanity check.
+        assert.isUndefined(withHeapDetailsPane);  // Test sanity check.
+        return;
+      }
+
+      assert.deepEqual(
+          Array.from(allocatorDetailsPaneEl.memoryAllocatorDumps),
+          extractMemoryAllocatorDumps(processMemoryDumps, pid, allocatorName));
+      assert.strictEqual(
+          allocatorDetailsPaneEl.aggregationMode, headerPaneEl.aggregationMode);
+
+      const heapDetailsPaneEl = tr.ui.b.findDeepElementMatching(
+          stackedPaneViewEl, 'tr-ui-a-memory-dump-heap-details-pane');
+      if (!withHeapDetailsPane) {
+        assert.isUndefined(heapDetailsPaneEl);
+        return;
+      }
+
+      assert.deepEqual(Array.from(heapDetailsPaneEl.heapDumps),
+          extractHeapDumps(processMemoryDumps, pid, allocatorName));
+      assert.strictEqual(
+          heapDetailsPaneEl.aggregationMode, headerPaneEl.aggregationMode);
+    }
+
+    detailsCheckCallback(
+        overviewTableEl, checkVmRegionsPane, checkAllocatorPane);
+  }
+
+  test('instantiate_empty', function() {
+    // All these views should be completely empty.
+    const unsetViewEl = document.createElement(
+        'tr-ui-a-container-memory-dump-sub-view');
+    this.addHTMLOutput(unsetViewEl);
+    assert.strictEqual(unsetViewEl.getBoundingClientRect().width, 0);
+    assert.strictEqual(unsetViewEl.getBoundingClientRect().height, 0);
+
+    const undefinedViewEl = createViewWithSelection(undefined);
+    this.addHTMLOutput(undefinedViewEl);
+    assert.strictEqual(undefinedViewEl.getBoundingClientRect().width, 0);
+    assert.strictEqual(undefinedViewEl.getBoundingClientRect().height, 0);
+
+    const emptyViewEl = createViewWithSelection([]);
+    this.addHTMLOutput(emptyViewEl);
+    assert.strictEqual(emptyViewEl.getBoundingClientRect().width, 0);
+    assert.strictEqual(emptyViewEl.getBoundingClientRect().height, 0);
+  });
+
+  test('instantiate_singleGlobalMemoryDump', function() {
+    createAndCheckContainerMemoryDumpView(this,
+        [tr.ui.analysis.createSingleTestGlobalMemoryDump()],
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // Nothing should be selected initially.
+          assert.isUndefined(overviewTableEl.selectedTableRow);
+          assert.isUndefined(overviewTableEl.selectedColumnIndex);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Total resident of Process 1.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[0];
+          overviewTableEl.selectedColumnIndex = 1;
+          checkVmRegionsPane(1 /* PID */);
+          checkAllocatorPane(undefined);
+
+          // PSS of process 4.
+          overviewTableEl.selectedColumnIndex = 3;
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[2];
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Malloc of process 2.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[1];
+          overviewTableEl.selectedColumnIndex = 10;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'malloc',
+              false /* no heap details pane */);
+        });
+  });
+
+  test('instantiate_multipleGlobalMemoryDumps', function() {
+    createAndCheckContainerMemoryDumpView(this,
+        tr.ui.analysis.createMultipleTestGlobalMemoryDumps(),
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // Nothing should be selected initially.
+          assert.isUndefined(overviewTableEl.selectedTableRow);
+          assert.isUndefined(overviewTableEl.selectedColumnIndex);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Blink of Process 1.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[0];
+          overviewTableEl.selectedColumnIndex = 8;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Peak total resident of Process 4.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[3];
+          overviewTableEl.selectedColumnIndex = 2;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // V8 of Process 3.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[2];
+          overviewTableEl.selectedColumnIndex = 12;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(3 /* PID */, 'v8', true /* heap details pane */);
+        });
+  });
+
+  test('instantiate_singleProcessMemoryDump', function() {
+    createAndCheckContainerMemoryDumpView(this,
+        [tr.ui.analysis.createSingleTestProcessMemoryDump()],
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // Nothing should be selected initially.
+          assert.isUndefined(overviewTableEl.selectedTableRow);
+          assert.isUndefined(overviewTableEl.selectedColumnIndex);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Tracing of Process 2.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[0];
+          overviewTableEl.selectedColumnIndex = 13;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'tracing',
+              false /* no heap details pane */);
+
+          // Blink of Process 2.
+          overviewTableEl.selectedColumnIndex = 8;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'blink',
+              false /* no heap details pane */);
+
+          // Total resident of Process 2.
+          overviewTableEl.selectedColumnIndex = 1;
+          checkVmRegionsPane(2 /* PID */);
+          checkAllocatorPane(undefined);
+        });
+  });
+
+  test('instantiate_multipleProcessMemoryDumps', function() {
+    createAndCheckContainerMemoryDumpView(this,
+        tr.ui.analysis.createMultipleTestProcessMemoryDumps(),
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // Nothing should be selected initially.
+          assert.isUndefined(overviewTableEl.selectedTableRow);
+          assert.isUndefined(overviewTableEl.selectedColumnIndex);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Tracing of Process 2.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[0];
+          overviewTableEl.selectedColumnIndex = 13;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'tracing',
+              false /* no heap details pane */);
+
+          // V8 of Process 2.
+          overviewTableEl.selectedColumnIndex = 12;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'v8',
+              false /* no heap details pane */);
+
+          // PSS of Process 2.
+          overviewTableEl.selectedColumnIndex = 3;
+          checkVmRegionsPane(2 /* PID */);
+          checkAllocatorPane(undefined);
+        });
+  });
+
+  test('memory', function() {
+    const containerEl = document.createElement('div');
+    containerEl.brushingStateController =
+        new tr.c.BrushingStateController(undefined);
+
+    // Create the first container memory view.
+    createAndCheckContainerMemoryDumpView(this,
+        [tr.ui.analysis.createSingleTestProcessMemoryDump()],
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // Nothing should be selected initially.
+          assert.isUndefined(overviewTableEl.selectedTableRow);
+          assert.isUndefined(overviewTableEl.selectedColumnIndex);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(undefined);
+
+          // Select V8 of Process 2.
+          overviewTableEl.selectedTableRow = overviewTableEl.tableRows[0];
+          overviewTableEl.selectedColumnIndex = 12;
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'v8',
+              false /* no heap details pane */);
+        }, containerEl);
+
+    // Destroy the first container memory view.
+    Polymer.dom(containerEl).textContent = '';
+
+    // Create the second container memory view.
+    createAndCheckContainerMemoryDumpView(this,
+        tr.ui.analysis.createMultipleTestGlobalMemoryDumps(),
+        function(overviewTableEl, checkVmRegionsPane, checkAllocatorPane) {
+          // V8 of Process 2 should still be selected (even though the selection
+          // changed).
+          assert.strictEqual(
+              overviewTableEl.selectedTableRow, overviewTableEl.tableRows[1]);
+          assert.strictEqual(overviewTableEl.selectedColumnIndex, 12);
+          checkVmRegionsPane(undefined);
+          checkAllocatorPane(2 /* PID */, 'v8',
+              false /* no heap details pane */);
+        }, containerEl);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_differentProcessMemoryDumps', function() {
+    const globalMemoryDumps =
+        tr.ui.analysis.createMultipleTestGlobalMemoryDumps();
+    // 2 dumps in Process 1, 3 dumps in Process 2, and 1 dump in Process 4
+    // (intentionally shuffled to check sorting).
+    const differentProcessDumps = [
+      globalMemoryDumps[1].processMemoryDumps[2],
+      globalMemoryDumps[0].processMemoryDumps[1],
+      globalMemoryDumps[0].processMemoryDumps[2],
+      globalMemoryDumps[1].processMemoryDumps[4],
+      globalMemoryDumps[1].processMemoryDumps[1],
+      globalMemoryDumps[2].processMemoryDumps[2]
+    ];
+
+    const viewEl = createViewWithSelection(differentProcessDumps);
+    this.addHTMLOutput(viewEl);
+
+    const tableEl = tr.ui.b.findDeepElementMatching(viewEl, 'tr-ui-b-table');
+    assert.lengthOf(tableEl.tableRows, 3);
+    assert.lengthOf(tableEl.tableColumns, 1);
+    const rows = tableEl.tableRows;
+    const col = tableEl.tableColumns[0];
+
+    assert.strictEqual(Polymer.dom(col.value(rows[0])).textContent,
+        '2 memory dumps in Process 1');
+    assert.strictEqual(Polymer.dom(col.value(rows[1])).textContent,
+        '3 memory dumps in Process 2');
+    assert.strictEqual(Polymer.dom(col.value(rows[2])).textContent,
+        '1 memory dump in Process 4');
+
+    // Check that the analysis link is associated with the right dumps.
+    assert.isTrue(col.value(rows[1]).selection.equals(new tr.model.EventSet([
+      globalMemoryDumps[0].processMemoryDumps[2],
+      globalMemoryDumps[1].processMemoryDumps[2],
+      globalMemoryDumps[2].processMemoryDumps[2]
+    ])));
+
+    assert.lengthOf(rows[1].subRows, 3);
+    const subRow = rows[1].subRows[0];
+
+    // Check the timestamp.
+    assert.strictEqual(col.value(subRow).children[0].value, 42);
+
+    // Check that the analysis link is associated with the right dump.
+    assert.isTrue(col.value(subRow).selection.equals(
+        new tr.model.EventSet(globalMemoryDumps[0].processMemoryDumps[2])));
+  });
+});
+</script>

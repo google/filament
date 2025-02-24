@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  const timeDurationInMs_smallerIsBetter =
+      tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const EventFinderUtils = tr.e.chrome.EventFinderUtils;
+
+  const METRIC_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 1e3, 20)  // 50ms step to 1s
+      .addLinearBins(3e3, 20) // 100ms step to 3s
+      .addExponentialBins(80e3, 30);
+
+  const SUMMARY_OPTIONS = {
+    avg: true,
+    count: false,
+    max: true,
+    min: true,
+    std: true,
+    sum: false,
+  };
+
+  /**
+   * Computes the following results
+   * - reported_by_page:time_to_viewable,
+   * - reported_by_page:time_to_interactive,
+   * - reported_by_page:benchmark_time.
+   *
+   * The metric is intended for pages that call
+   * - performance.mark(telemetry:reported_by_page:viewable),
+   *   when the page showed meaningful content to the user.
+   * - performance.mark(telemetry:reported_by_page:interactive)
+   *   when the page is ready to interact with the user.
+   * - performance.mark(telemetry:reported_by_page:benchmark_begin)
+   *   when an important operation starts.
+   * - performance.mark(telemetry:reported_by_page:benchmark_end)
+   *   when the important operation ends.
+   */
+  function reportedByPageMetric(histograms, model) {
+    const timeToViewable = histograms.createHistogram(
+        'reported_by_page:time_to_viewable',
+        timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: METRIC_BOUNDARIES,
+          description: 'Time from navigation start' +
+              'to telemetry:reported_by_page:viewable',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const timeToInteractive = histograms.createHistogram(
+        'reported_by_page:time_to_interactive',
+        timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: METRIC_BOUNDARIES,
+          description: 'Time from navigation start ' +
+              'to telemetry:reported_by_page:interactive',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const benchmarkTime = histograms.createHistogram(
+        'reported_by_page:benchmark_time',
+        timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: METRIC_BOUNDARIES,
+          description:
+              'Time from telemetry:reported_by_page:benchmark_begin ' +
+              'to telemetry:reported_by_page:benchmark_end',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    for (const pid in chromeHelper.rendererHelpers) {
+      const rendererHelper = chromeHelper.rendererHelpers[pid];
+      if (rendererHelper.isChromeTracingUI) continue;
+      // Main thread may be missing. See crbug.com/1059726 for an example.
+      if (rendererHelper.mainThread === undefined) continue;
+      measureUserTime(rendererHelper,
+          'navigationStart',
+          'telemetry:reported_by_page:viewable',
+          timeToViewable);
+      measureUserTime(rendererHelper,
+          'navigationStart',
+          'telemetry:reported_by_page:interactive',
+          timeToInteractive);
+      measureUserTime(rendererHelper,
+          'telemetry:reported_by_page:benchmark_begin',
+          'telemetry:reported_by_page:benchmark_end',
+          benchmarkTime);
+    }
+  }
+
+  /*
+   * Finds all |startName|,|endName| event pairs that have the matching
+   * navigation ids on the main thread of the given renderer process
+   * and adds the duration from the start event to the end event to the
+   * given |histogram|.
+   */
+  function measureUserTime(rendererHelper, startName, endName, histogram) {
+    // Maps navigation ids to the start events.
+    const startEventByNavId = new Map();
+    // Iterate events in the sorted order.
+    for (const event of rendererHelper.mainThread.sliceGroup.childEvents()) {
+      const navId = getNavigationId(event);
+      if (!navId) continue;
+      if (EventFinderUtils.hasCategoryAndName(
+          event, 'blink.user_timing', startName)) {
+        // Found a start event, save it.
+        startEventByNavId.set(navId, event);
+      }
+      if (EventFinderUtils.hasCategoryAndName(
+          event, 'blink.user_timing', endName)) {
+        if (!startEventByNavId.has(navId)) {
+          throw Error(`Missing ${startName} for ${endName} at {event.start}`);
+        }
+        // Found an end event. Compute the time from the previous start event.
+        const range = tr.b.math.Range.fromExplicitRange(
+            startEventByNavId.get(navId).start, event.start);
+        histogram.addSample(range.duration);
+        startEventByNavId.delete(navId);
+      }
+    }
+  }
+
+  function getNavigationId(event) {
+    return event.args.data && event.args.data.navigationId;
+  }
+
+  tr.metrics.MetricRegistry.register(reportedByPageMetric);
+
+  return {
+    reportedByPageMetric
+  };
+});
+</script>

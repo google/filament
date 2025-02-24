@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.um', function() {
+  /**
+   * Segment represents a range of time during which the set of active
+   * UserExpectations does not change. Segments are guaranteed to not overlap,
+   * whereas UserExpectations can overlap. After UserModelBuilder builds the
+   * UserExpectations in the model, it segments the timeline into
+   * non-overlapping Segments and adds the constituent UserExpectations to each
+   * Segment.
+   */
+  class Segment extends tr.model.TimedEvent {
+    constructor(start, duration) {
+      super(start);
+      this.duration = duration;
+      this.expectations_ = [];
+    }
+
+    get expectations() {
+      return this.expectations_;
+    }
+
+    clone() {
+      const clone = new Segment(this.start, this.duration);
+      clone.expectations.push(...this.expectations);
+      return clone;
+    }
+
+    addSegment(other) {
+      this.duration += other.duration;
+      this.expectations.push(...other.expectations);
+    }
+  }
+
+  return {
+    Segment,
+  };
+});
+</script>

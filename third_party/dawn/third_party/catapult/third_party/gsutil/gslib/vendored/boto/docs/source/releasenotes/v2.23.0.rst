@@ -1,0 +1,49 @@
+boto v2.23.0
+============
+
+:date: 2014/01/10
+
+This release adds new pagination & date range filtering to Amazon Glacier, more
+support for selecting specific attributes within Amazon DynamoDB, security
+tokens from environment/config variables & many bugfixes/small improvements.
+
+
+Features
+--------
+
+* Added pagination & date range filtering to Glacier inventory options.
+  (:issue:`1977`, :sha:`402a305`)
+* Added the ability to select the specific attributes to fetch in the ``scan``
+  & ``get_item`` calls within DynamoDB v2. (:issue:`1945`, :issue:`1972`,
+  :sha:`f6451fb` & :sha:`96cd413`)
+* Allow getting a security token from either an environment or configuration
+  variable. (:issue:``, :sha:``)
+* Ported the ``has_item`` call from the original DynamoDB (v1) module to
+  DynamoDB v2. (:issue:`1973`, :issue:`1822`, :sha:`f96e9e3`)
+* Added an ``associate_address_object`` method to EC2. (:issue:`1967`,
+  :issue:`1874`, :issue:`1893`, :sha:`dd6180c`)
+* Added a ``download_to_fileobj`` method to Glacier,similar to the S3 call
+  of the same name. (:issue:`1960`, :issue:`1941`, :sha:`67266e5`)
+* Added support for arbitrary ``dict`` inputs to MWS. (:issue:`1966`,
+  :sha:`46f193f`)
+
+
+Bugfixes
+--------
+
+* Made the usage of ``is/is not`` more consistent. (:issue:`1930`,
+  :sha:`8597c54`)
+* Imported ``with_statement`` for old Python versions (:issue:`1975`,
+  :sha:`a53a574`)
+* Changed the ``Binary`` data object within DynamoDB to throw an error if an
+  invalid data type is used. (:issue:`1963`, :issue:`1956`, :sha:`e5d30c8`)
+* Altered the integration tests to avoid connection errors to certain regions.
+  (:sha:`2555b8a`)
+* Changed the GCS resumable upload handler to save tracker files with protection
+  0600. (:sha:`7cb344c`)
+* Documentation:
+
+    * Clarified documentation around the ``list_metrics`` call in
+      CloudFormation. (:issue:`1962`, :sha:`c996a72`)
+    * Added ``Tag`` to the Autoscale API docs. (:issue:`1964`, :sha:`31118d9`)
+    * Updated the AWS Support documentation to the latest. (:sha:`29f9264`)

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const event = tr.c.TestUtils.newSliceEx({
+      title: 'event',
+      start: 0,
+      duration: 1,
+    });
+    event.parentContainer = {
+      sliceGroup: {
+        stableId: 'fake_thread',
+        slices: [event],
+      },
+    };
+    const diagnostics = new tr.v.d.UnmergeableDiagnosticSet([
+      new tr.v.d.GenericSet(['generic diagnostic']),
+      new tr.v.d.RelatedNameMap(),
+      new tr.v.d.RelatedEventSet([
+        event,
+      ]),
+    ]);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostics);
+    assert.strictEqual('TR-V-UI-UNMERGEABLE-DIAGNOSTIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+});
+</script>

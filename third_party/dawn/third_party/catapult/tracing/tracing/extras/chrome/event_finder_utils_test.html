@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+const EventFinderUtils = tr.e.chrome.EventFinderUtils;
+
+tr.b.unittest.testSuite(function() {
+  test('getSortedMainThreadEventsByFrame', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const rendererProcess = model.getOrCreateProcess(1);
+      const mainThread = rendererProcess.getOrCreateThread(2);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 300,
+        duration: 0.0,
+        args: {frame: '0x1'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 400,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'devtools.timeline',
+        title: 'navigationStart',
+        start: 500,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'firstPaint',
+        start: 600,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+    });
+
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelper = chromeHelper.rendererHelpers[1];
+    const frameToSlices = EventFinderUtils.getSortedMainThreadEventsByFrame(
+        rendererHelper, 'navigationStart', 'blink.user_timing');
+
+    assert.strictEqual(frameToSlices.size, 2);
+    assert.strictEqual(frameToSlices.get('0x0').length, 2);
+    assert.strictEqual(frameToSlices.get('0x0')[0].start, 200);
+    assert.strictEqual(frameToSlices.get('0x0')[1].start, 400);
+    assert.strictEqual(frameToSlices.get('0x1').length, 1);
+    assert.strictEqual(frameToSlices.get('0x1')[0].start, 300);
+  });
+
+  test('getSortedMainThreadEventsByNavId', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const rendererProcess = model.getOrCreateProcess(1);
+      const mainThread = rendererProcess.getOrCreateThread(2);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0x0', data: { navigationId: '0xa' }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 300,
+        duration: 0.0,
+        args: {frame: '0x1', data: { navigationId: '0xb' }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 400,
+        duration: 0.0,
+        args: {frame: '0x0', data: { navigationId: '0xc' }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'devtools.timeline',
+        title: 'navigationStart',
+        start: 500,
+        duration: 0.0,
+        args: {frame: '0x0', data: { navigationId: '0xd' }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'firstPaint',
+        start: 600,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+    });
+
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelper = chromeHelper.rendererHelpers[1];
+    const navIdToSlices = EventFinderUtils.getSortedMainThreadEventsByNavId(
+        rendererHelper, 'navigationStart', 'blink.user_timing');
+
+    assert.strictEqual(navIdToSlices.size, 3);
+    assert.strictEqual(navIdToSlices.get('0xa').start, 200);
+    assert.strictEqual(navIdToSlices.get('0xb').start, 300);
+    assert.strictEqual(navIdToSlices.get('0xc').start, 400);
+  });
+
+  test('multipleCategoriesOnAnEvent', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const rendererProcess = model.getOrCreateProcess(1);
+      const mainThread = rendererProcess.getOrCreateThread(2);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing,rail',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0x0'}
+      }));
+    });
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelper = chromeHelper.rendererHelpers[1];
+    const frameToSlices = EventFinderUtils.getSortedMainThreadEventsByFrame(
+        rendererHelper, 'navigationStart', 'blink.user_timing');
+
+    assert.strictEqual(frameToSlices.get('0x0')[0].start, 200);
+  });
+
+  test('findLastEventStartingOnOrBeforeTimestamp', () => {
+    const sortedEvents = [50, 100, 150, 200].map(ts =>
+      tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: ts,
+        duration: 40.0}));
+
+    assert.strictEqual(
+        EventFinderUtils.findLastEventStartingOnOrBeforeTimestamp(
+            sortedEvents, 100).start,
+        100);
+    assert.strictEqual(
+        EventFinderUtils.findLastEventStartingOnOrBeforeTimestamp(
+            sortedEvents, 99).start,
+        50);
+    assert.isUndefined(
+        EventFinderUtils.findLastEventStartingOnOrBeforeTimestamp(
+            sortedEvents, 49));
+  });
+
+  test('findNextEventStartingAfterTimestamp', () => {
+    const sortedEvents = [50, 50, 50, 200].map(ts =>
+      tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: ts,
+        duration: 40.0}));
+
+    assert.strictEqual(
+        EventFinderUtils.findNextEventStartingAfterTimestamp(
+            sortedEvents, 49).start,
+        50);
+    assert.strictEqual(
+        EventFinderUtils.findNextEventStartingAfterTimestamp(
+            sortedEvents, 50).start,
+        200);
+    assert.isUndefined(
+        EventFinderUtils.findNextEventStartingAfterTimestamp(
+            sortedEvents, 201));
+  });
+
+  test('findToplevelSchedulerTasks', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const rendererProcess = model.getOrCreateProcess(1);
+      const mainThread = rendererProcess.getOrCreateThread(2);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: 'ThreadControllerImpl::RunTask',
+        start: 10,
+        duration: 1,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: 'ThreadControllerImpl::DoWork',
+        start: 20,
+        duration: 2,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: 'TaskQueueManager::ProcessTaskFromWorkQueue',
+        start: 30,
+        duration: 3,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: 'MessageLoop::RunTask',
+        start: 40,
+        duration: 4,
+      }));
+      // The category of 'ThreadControllerImpl::DoWork' slice was changed to
+      // 'sequence_manager' because it is not longer a scheduler top level task.
+      // See crbug.com/871204 for context.
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'sequence_manager',
+        title: 'ThreadControllerImpl::DoWork',
+        start: 50,
+        duration: 5,
+      }));
+    });
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelper = chromeHelper.rendererHelpers[1];
+    const tasks = EventFinderUtils.findToplevelSchedulerTasks(
+        rendererHelper.mainThread);
+
+    assert.strictEqual(tasks.length, 3);
+    assert.strictEqual(tasks[0].title,
+        'ThreadControllerImpl::RunTask');
+    assert.strictEqual(tasks[0].start, 10);
+    assert.strictEqual(tasks[0].duration, 1);
+    assert.strictEqual(tasks[1].title,
+        'ThreadControllerImpl::DoWork');
+    assert.strictEqual(tasks[1].start, 20);
+    assert.strictEqual(tasks[1].duration, 2);
+    assert.strictEqual(tasks[2].title,
+        'TaskQueueManager::ProcessTaskFromWorkQueue');
+    assert.strictEqual(tasks[2].start, 30);
+    assert.strictEqual(tasks[2].duration, 3);
+  });
+});
+</script>

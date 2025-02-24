@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['maxcolorattachments',['MaxColorAttachments',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a6cd018a45b57a0f4e48071a2443248e2',1,'pvrvk::FrameworkCaps']]],
+  ['maxdepthstencilattachments',['MaxDepthStencilAttachments',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a1b249cfc97307146f465b6a51efe4925',1,'pvrvk::FrameworkCaps']]],
+  ['maxdescriptordynamicoffsets',['MaxDescriptorDynamicOffsets',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a4d32b8e9e8448825e78876d5014cff73',1,'pvrvk::FrameworkCaps']]],
+  ['maxdescriptorsetbindings',['MaxDescriptorSetBindings',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a7691dd6cbf1168a9852acd6c34186a6a',1,'pvrvk::FrameworkCaps']]],
+  ['maxdescriptorsets',['MaxDescriptorSets',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a7d898b7b1aab343f6a1cd3fb345d4a88',1,'pvrvk::FrameworkCaps']]],
+  ['maxdynamicstates',['MaxDynamicStates',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124ad7476e7d060474563fe49124a1781493',1,'pvrvk::FrameworkCaps']]],
+  ['maxinputattachments',['MaxInputAttachments',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124afbcb9b149747484647e0c204f282474d',1,'pvrvk::FrameworkCaps']]],
+  ['maxpreserveattachments',['MaxPreserveAttachments',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124ad7df4a80303a945e3033c9cdd5b0ad5b',1,'pvrvk::FrameworkCaps']]],
+  ['maxresolveattachments',['MaxResolveAttachments',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124aa8572c4df3203518043707cfe25cd412',1,'pvrvk::FrameworkCaps']]],
+  ['maxscissorregions',['MaxScissorRegions',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a38ad34d47f2c76e01ce31711ad8ec7ce',1,'pvrvk::FrameworkCaps']]],
+  ['maxscissorviewports',['MaxScissorViewports',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a337385f6f806d249da3cc7ca283e2b22',1,'pvrvk::FrameworkCaps']]],
+  ['maxspecialisationinfodatasize',['MaxSpecialisationInfoDataSize',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a9ac40cba6504741744cac793907f8c31',1,'pvrvk::FrameworkCaps']]],
+  ['maxspecialisationinfos',['MaxSpecialisationInfos',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a9390c4b4a9800f35dff56eeb7972c3c8',1,'pvrvk::FrameworkCaps']]],
+  ['maxspecialisationmapentries',['MaxSpecialisationMapEntries',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124afbcc21685fde086905013b9309003af8',1,'pvrvk::FrameworkCaps']]],
+  ['maxswapchains',['MaxSwapChains',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a0c5c428d5919d67c72f1f5d14c925a65',1,'pvrvk::FrameworkCaps']]],
+  ['maxvertexattributes',['MaxVertexAttributes',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a3066afecd108b56694d50327be8e381b',1,'pvrvk::FrameworkCaps']]],
+  ['maxvertexbindings',['MaxVertexBindings',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a4464075a09d454742d3ad8722f870362',1,'pvrvk::FrameworkCaps']]],
+  ['maxviewportregions',['MaxViewportRegions',['../namespacepvrvk_1_1_framework_caps.html#a20083be34c1c1140044619f55f9cb124a3cd932fc25716130e71b09f4aceff637',1,'pvrvk::FrameworkCaps']]]
+];

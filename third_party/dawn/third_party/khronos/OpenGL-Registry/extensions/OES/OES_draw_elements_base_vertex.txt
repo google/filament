@@ -1,0 +1,379 @@
+Name
+
+    OES_draw_elements_base_vertex
+
+Name Strings
+
+    GL_OES_draw_elements_base_vertex
+
+Contact
+
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Shannon Woods, Google
+    Dominik Witczak, Mobica
+    Contributors to ARB_draw_elements_base_vertex
+
+Notice
+
+    Copyright (c) 2009-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+    Portions Copyright (c) 2014 NVIDIA Corporation.
+
+Status
+
+    Approved by the OpenGL ES Working Group on October 8, 2014
+    Ratified by the Khronos Board of Promoters on November 21, 2014
+
+Version
+
+    Last Modified Date:  September 30, 2014
+    Version:             2
+
+Number
+
+    OpenGL ES Extension #219
+
+Dependencies
+
+    This specification is written against the OpenGL ES 3.1 (June 4, 2014)
+    Specifications, but can apply to prior specifications.
+
+    Requires OpenGL ES 2.0.
+
+    This extension interacts with OpenGL ES 3.1.
+
+    This extension interacts with OpenGL ES 3.0.
+
+    This extension interacts with EXT_draw_instanced.
+
+    This extension interacts with NV_draw_instanced.
+
+    This extension interacts with EXT_instanced_arrays.
+
+    This extension interacts with ANGLE_instanced_arrays.
+
+    This extension interacts with NV_instanced_arrays.
+
+    This extension interacts with EXT_multi_draw_arrays.
+
+Overview
+
+    This extension provides a method to specify a "base vertex offset"
+    value which is effectively added to every vertex index that is
+    transferred through DrawElements.
+
+    This mechanism can be used to decouple a set of indices from the
+    actual vertex array that it is referencing. This is useful if an
+    application stores multiple indexed models in a single vertex array.
+    The same index array can be used to draw the model no matter where
+    it ends up in a larger vertex array simply by changing the base
+    vertex value. Without this functionality, it would be necessary to
+    rebind all the vertex attributes every time geometry is switched and
+    this can have larger performance penalty.
+
+    For example consider the (very contrived and simple) example of
+    drawing two triangles to form a quad. In the typical example you
+    have the following setup:
+
+          vertices                indices
+         ----------                -----
+      0 | (-1,  1) |            0 |  0  |
+      1 | (-1, -1) |            1 |  1  |
+      2 | ( 1, -1) |            2 |  2  |
+      3 | ( 1,  1) |            3 |  3  |
+         ----------             4 |  0  |
+                                5 |  2  |
+                                   -----
+    which is normally rendered with the call
+
+       DrawElements(TRIANGLES, 6, UNSIGNED_BYTE, &indices).
+
+    Now consider the case where the vertices you want to draw are not at
+    the start of a vertex array but are instead located at offset 100
+    into a larger array:
+
+           vertices2             indices2
+           ----------             -----
+              ....             0 | 100 |
+      100 | (-1,  1) |         1 | 101 |
+      101 | (-1, -1) |         2 | 102 |
+      102 | ( 1, -1) |         3 | 103 |
+      103 | ( 1,  1) |         4 | 100 |
+              ....             5 | 102 |
+           ----------             -----
+
+    The typical choices for rendering this are to rebind your vertex
+    attributes with an additional offset of 100*stride, or to create an
+    new array of indices (as indices2 in the example). However both
+    rebinding vertex attributes and rebuilding index arrays can be quite
+    costly activities.
+
+    With the new drawing commands introduced by this extension you can
+    instead draw using vertices2 and the new draw call:
+
+       DrawElementsBaseVertexOES(TRIANGLES, 6, UNSIGNED_BYTE, &indices, 100)
+
+New Procedures and Functions
+
+    void DrawElementsBaseVertexOES(enum mode, sizei count, enum type,
+                                   const void *indices, int basevertex);
+
+    [[ If OpenGL ES 3.0 is supported: ]]
+
+    void DrawRangeElementsBaseVertexOES(enum mode, uint start, uint end,
+                                        sizei count, enum type,
+                                        const void *indices, int basevertex);
+
+    void DrawElementsInstancedBaseVertexOES(enum mode, sizei count,
+                                            enum type, const void *indices,
+                                            sizei instancecount,
+                                            int basevertex);
+
+    [[ If EXT_multi_draw_arrays is supported: ]]
+
+    void MultiDrawElementsBaseVertexEXT(enum mode,
+                                        const sizei *count,
+                                        enum type,
+                                        const void * const *indices,
+                                        sizei primcount,
+                                        const int *basevertex);
+
+New Tokens
+
+    None
+
+Additions to Chapter 10 of the OpenGL ES 3.1 Specification (Vertex
+Specification and Drawing Commands)
+
+    Modify section 10.3.7 "Array Indices in Buffer Objects" p. 244,
+    adding the following to the end of the third paragraph (beginning
+    with "While a non-zero buffer object name..."
+
+    "DrawElementsBaseVertexOES, DrawRangeElementsBaseVertexOES, and
+    DrawElementsInstancedBaseVertexOES also source their indices from that
+    buffer object, adding the <basevertex> offset to the appropriate vertex
+    index as a final step before indexing into the vertex buffer; this does
+    not affect the calculation of the base pointer for the index array."
+
+    [[ If EXT_multi_draw_arrays is supported: ]]
+
+    "Finally, MultiDrawElementsEXT and MultiDrawElementsBaseVertexEXT also
+    source their indices from that buffer object, using its <indices>
+    parameter as a pointer to an array of pointers that represent
+    offsets into the buffer object."
+
+
+    Modify section 10.5 "Drawing Commands Using Vertex Arrays" as follows:
+
+    Replace the definition and paragraph describing
+    DrawElementsInstancedBaseVertex, bottom of p. 252 with the following:
+
+    "The commands
+      void DrawElementsBaseVertexOES(enum mode, sizei count, enum type,
+                                    const void *indices, int basevertex);
+
+      void DrawRangeElementsBaseVertexOES(enum mode, uint start, uint end,
+                                          sizei count, enum type,
+                                          const void *indices, int basevertex);
+
+      void DrawElementsInstancedBaseVertexOES(enum mode, sizei count,
+                                              enum type, const void *indices,
+                                              sizei instancecount,
+                                              int basevertex);
+
+    are equivalent to the commands with the same base name (without the
+    "BaseVertexOES" suffix) except that the <i>th element transferred by
+    the corresponding draw call will be taken from element
+       <indices>[<i>] + <basevertex>
+    of each enabled array. If the resulting value is larger than the maximum
+    value representable by <type> it should behave as if the calculation were
+    upconverted to 32-bit unsigned integers (with wrapping on overflow
+    conditions). The operation is undefined if the sum would be negative and
+    should be handled as described in Section 6.4. For
+    DrawRangeElementsBaseVertexOES, the index values must lie between <start>
+    and <end> inclusive, prior to adding the <basevertex> offset. Index values
+    lying outside the range [<start>,<end>] are treated in the same way as
+    DrawRangeElements."
+
+    [[ If EXT_multi_draw_arrays is supported: ]]
+
+    "The command
+
+      void MultiDrawElementsBaseVertexEXT(enum mode,
+                                          const sizei *count,
+                                          enum type,
+                                          const void *const *indices,
+                                          sizei drawcount,
+                                          const int *basevertex);
+
+    behaves identically to DrawElementsBaseVertexOES except that
+    <drawcount> separate lists of elements are specified instead. It has
+    the same effect as:
+
+      if (<mode> or <drawcount> is invalid)
+          generate appropriate error
+      else {
+          for (i = 0; i < <drawcount>; i++)
+              if (<count>[i] > 0)
+                  DrawElementsBaseVertexOES(<mode>, <count>[i], <type>,
+                                            <indices>[i], <basevertex>[i]);
+      }"
+
+Additions to the EGL/AGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on OpenGL ES 3.1
+
+    If OpenGL ES 3.1 is not supported apply the following modifications to the
+    OpenGL ES 3.0.3 specification:
+
+    Add the following to the end of Section 2.8.1 "Transferring Array Elements"
+
+    "When one of the *BaseVertex drawing commands specified in section
+    2.8.3 is used, the primitive restart comparison occurs before the
+    <basevertex> offset is added to the array index."
+
+    Replace the following references relative to the ES 3.1 specification
+    with the following references to the ES 3.0.3 specification:
+
+    Edits to section 10.3.7 "Array Indices in Buffer Objects" in ES 3.1 become
+    edits to section 2.9.7 "Array Indices in Buffer Objects" in ES 3.0.3.
+
+    Edits to section 10.5 "Draw Command using Vertex Arrays" in ES 3.1 become
+    edits to section 2.8.3 "Drawing Commands" in ES 3.0.3.
+
+    Replace references to section 6.4 in ES 3.1 with references to section
+    2.9.4 in ES 3.0.3.
+
+Dependencies on OpenGL ES 3.0
+
+    If OpenGL ES 3.0 is not supported, ignore all references to
+    DrawElementsInstanced and DrawElementsInstancedBaseVertexOES (unless one
+    of the instanced_array or draw_instanced extensions is present).
+
+    If OpenGL ES 3.0 is not supported, ignore all references to
+    DrawRangeElements and DrawRangeElementsBaseVertexOES.
+
+    If OpenGL ES 3.0 is not supported, ignore all references to primitive
+    restart index.
+
+Dependencies on the EXT_draw_instanced extension
+
+    If EXT_draw_instanced is supported, the functionality provided by
+    DrawElementsInstancedBaseVertexOES can also be described in terms of
+    DrawElementsInstancedEXT instead of DrawElementsInstanced.
+
+Dependencies on the NV_draw_instanced extension
+
+    If NV_draw_instanced is supported, the functionality provided by
+    DrawElementsInstancedBaseVertexOES can also be described in terms of
+    DrawElementsInstancedNV instead of DrawElementsInstanced.
+
+Dependencies on the EXT_instanced_arrays extension
+
+    If EXT_instanced_arrays is supported, the functionality provided by
+    DrawElementsInstancedBaseVertexOES can also be described in
+    terms of DrawElementsInstancedEXT instead of DrawElementsInstanced.
+
+Dependencies on the ANGLE_instanced_arrays extension
+
+    If ANGLE_instanced_arrays is supported, the functionality provided by
+    DrawElementsInstancedBaseVertexOES can also be described in
+    terms of DrawElementsInstancedANGLE instead of DrawElementsInstanced.
+
+Dependencies on the NV_instanced_arrays extension
+
+    If ARB_instanced_arrays is supported, the functionality provided by
+    DrawElementsInstancedBaseVertexOES can also be described in
+    terms of DrawElementsInstancedNV instead of DrawElementsInstanced.
+
+Errors
+
+    The *BaseVertexOES commands have identical error conditions to the
+    non-*BaseVertexOES functions, and all values of <basevertex> are legal
+    (with the exception of ones which cause accesses outside of vertex
+    arrays or bound buffers as described in Section 6.4).
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    OES_draw_elements_base_vertex specification, which is based on the OpenGL
+    extension ARB_draw_elements_base_vertex as updated in OpenGL 4.4.
+    ARB_draw_elements_base_vertex can be found in the OpenGL Registry.
+
+    (0) This extension is based on ARB_draw_elements_base_vertex.  What are
+    the major differences?
+
+        - rebased on OpenGL ES 3.1
+        - renamed the "primcount" parameter to "instancecount" per GL4
+        - MultiDrawElementsBaseVertexEXT is only available if
+          GL_EXT_multi_draw_arrays is supported.
+
+    (1) Should we include MultiDrawElementsBaseVertexEXT in this extension?
+
+    RESOLVED: Yes, but only if EXT_multi_draw_arrays is supported, since
+    multi draw calls are not available in unextended OpenGL ES 2 or 3.
+
+    (2) Should we allow client memory to be used for vertex attributes and
+    for the <indices> in the *BaseVertexOES commands?
+
+    RESOLVED: Yes. Since these are defined in terms of the non-BaseVertex
+    commands which already supports client memory for vertex attributes and
+    indices it makes sense to include support for these new commands as well.
+
+    (3) Which commands are supported on OpenGL ES 2.0 implementations that
+    support this extension?
+
+    RESOLVED: Only DrawElementsBaseVertexOES, unless one of the instancing
+    extensions is supported in which case DrawElementsInstancedBaseVertexOES
+    is also supported. DrawRangeElementsBaseVertexOES is not supported because
+    OpenGL ES 2.0 doesn't include DrawRangeElements.
+
+    (4) Which commands are supported on OpenGL ES 3.0 implementations?
+
+    RESOLVED: All of the new drawing commands are applicable to OpenGL ES 3.0
+    implementations.
+
+    (5) Does the value of gl_VertexID in the shading language include the
+    the value of the <basevertex> offset?
+
+    RESOLVED: Yes. This is as clarified by Khronos bugs 12202 and 12756
+    and is consistent with the overview of ARB_shader_draw_parameters.
+    Essentially, the value of gl_VertexID should be the index of the
+    vertex that is being passed to the shader.
+     - DrawArrays: first + i
+     - DrawElements: indices[i]
+     - DrawElementsBaseVertex: indices[i] + basevertex
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------
+     2    09/30/14  dkoch     Resolve issues 1, 2 as proposed.
+                              Add Issue 5.
+
+     1    09/24/14  dkoch     Initial OES version based on EXT.
+                              No functional changes.

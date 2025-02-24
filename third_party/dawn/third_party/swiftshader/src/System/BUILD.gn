@@ -1,0 +1,66 @@
+# Copyright 2019 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../swiftshader.gni")
+
+swiftshader_source_set("System_headers") {
+  sources = [
+    "Build.hpp",
+    "CPUID.hpp",
+    "Configurator.hpp",
+    "Debug.hpp",
+    "Half.hpp",
+    "LRUCache.hpp",
+    "Math.hpp",
+    "Memory.hpp",
+    "Socket.cpp",
+    "Socket.hpp",
+    "SwiftConfig.hpp",
+    "Timer.hpp",
+  ]
+  if (is_linux || is_chromeos || is_android) {
+    sources += [
+      "Linux/MemFd.hpp",
+    ]
+  }
+}
+
+swiftshader_source_set("System") {
+  sources = [
+    "Build.cpp",
+    "CPUID.cpp",
+    "Configurator.cpp",
+    "Debug.cpp",
+    "Half.cpp",
+    "Math.cpp",
+    "Memory.cpp",
+    "SwiftConfig.cpp",
+    "Timer.cpp",
+  ]
+  if (is_linux || is_chromeos || is_android) {
+    sources += [
+      "Linux/MemFd.cpp",
+    ]
+  }
+
+  include_dirs = [ ".." ]
+
+  deps = [
+    "../../third_party/marl:Marl",
+  ]
+
+  public_deps = [
+    ":System_headers",
+  ]
+}

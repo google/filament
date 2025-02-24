@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import"
+    href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ufcFromEvent = tr.e.chrome.ChromeUserFriendlyCategoryDriver.fromEvent;
+
+  test('userFriendlyCategory', function() {
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'LocalFrameView::layout',
+      category: 'cat'
+    }), 'layout');
+
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'V8.Execute',
+      category: 'cat'
+    }), 'script_execute');
+
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'Paint',
+      category: 'cat'
+    }), 'record');
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'Document::updateStyle',
+      category: 'cat'
+    }), 'style');
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'HTMLDocumentParser::DeferredPumpTokenizerIfPossible',
+      category: 'cat'
+    }), 'parseHTML');
+
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'constructor',
+      category: 'cat'
+    }), 'other');
+  });
+
+  test('ufcFromTraceCategory', function() {
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'a',
+      category: 'netlog'
+    }), 'net');
+
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'a',
+      category: 'foobar,overhead'
+    }), 'overhead');
+
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'a',
+      category: 'startup'
+    }), 'startup');
+  });
+
+  test('ufcOther', function() {
+    assert.strictEqual(ufcFromEvent({
+      guid: tr.b.GUID.allocateSimple(),
+      title: 'a',
+      category: 'other'
+    }), 'other');
+  });
+});
+</script>

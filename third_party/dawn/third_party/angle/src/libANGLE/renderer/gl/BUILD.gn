@@ -1,0 +1,82 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE GL back-ends.
+
+import("../../../../gni/angle.gni")
+import("gl_backend.gni")
+
+if (angle_has_build && ozone_platform_gbm) {
+  import("//build/config/linux/pkg_config.gni")
+}
+
+assert(angle_enable_gl)
+
+config("angle_gl_backend_config") {
+  defines = [ "ANGLE_ENABLE_OPENGL" ]
+  if (angle_enable_gl_desktop_backend) {
+    defines += [ "ANGLE_ENABLE_GL_DESKTOP_BACKEND" ]
+  }
+  if (angle_enable_gl_null) {
+    defines += [ "ANGLE_ENABLE_OPENGL_NULL" ]
+  }
+  if (ozone_platform_gbm) {
+    defines += [ "ANGLE_USE_GBM" ]
+  }
+  if (is_apple) {
+    if (angle_enable_cgl) {
+      defines += [
+        "GL_SILENCE_DEPRECATION",
+        "ANGLE_ENABLE_CGL",
+      ]
+    }
+  }
+  if (angle_has_build && (is_linux || is_chromeos)) {
+    defines += [ "ANGLE_HAS_LIBDRM" ]
+  }
+  include_dirs = [ "../../../third_party/khronos" ]
+}
+
+angle_source_set("angle_gl_backend") {
+  sources = gl_backend_sources
+
+  public_configs = [ ":angle_gl_backend_config" ]
+  public_deps = [ "$angle_root:libANGLE_headers" ]
+
+  deps = [
+    "$angle_root:angle_gpu_info_util",
+    "$angle_root:angle_image_util",
+  ]
+
+  if (angle_has_build && (is_linux || is_chromeos)) {
+    deps += [ "//build/config/linux/libdrm" ]
+  }
+
+  if (is_win) {
+    deps += [ "$angle_root:angle_d3d_format_tables" ]
+  }
+
+  if (angle_use_x11) {
+    libs = [
+      "X11",
+      "Xi",
+      "Xext",
+    ]
+  }
+  if (is_android || is_linux || is_chromeos) {
+    deps += [ "$angle_root/src/common/linux:angle_dma_buf" ]
+  }
+  if (is_apple) {
+    frameworks = [
+      "IOSurface.framework",
+      "QuartzCore.framework",
+    ]
+    if (angle_enable_cgl) {
+      frameworks += [ "OpenGL.framework" ]
+    }
+    if (is_mac) {
+      frameworks += [ "Cocoa.framework" ]
+    }
+  }
+}

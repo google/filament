@@ -1,0 +1,28 @@
+# Copyright 2016 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This warning disable must be appended to the command line after the general
+# warnings setup, so must be in a config.
+config("libXNVCtrl_config") {
+  # This will build under most configurations with this warning enabled, but
+  # some older system headers are missing a "const" on the third parameter of
+  # XextAddDisplay which will cause a failure.
+  cflags = [
+    "-Wno-incompatible-pointer-types-discards-qualifiers",
+    "-Wno-deprecated-non-prototype",
+  ]
+}
+
+source_set("libXNVCtrl") {
+  sources = [
+    "NVCtrl.c",
+    "NVCtrl.h",
+    "NVCtrlLib.h",
+    "nv_control.h",
+  ]
+
+  configs += [ ":libXNVCtrl_config" ]
+
+  libs = [ "xcb" ]
+}

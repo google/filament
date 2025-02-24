@@ -1,0 +1,98 @@
+# Ignore any python bytecode.
+*.pyc
+
+# ignore cipd client files
+/.cipd_bin/
+/.cipd_bin_cros_python2
+/.cipd_client*
+/.cipd_client_cache/
+/.versions/
+
+# Ignore "disable auto update" sentinel file.
+.disable_auto_update
+
+# Ignore the batch files produced by the Windows bootstrapping.
+/git-bash
+/git.bat
+/gitk.bat
+/.pylint.d/
+/python
+/python.bat
+/python3.bat
+/ssh.bat
+/ssh-keygen.bat
+/svn
+/svn.bat
+/svnversion.bat
+/.bleeding_edge
+/.codereview_upload_cookies
+/.gitconfig
+/.git_bleeding_edge
+/.git_cl_description_backup
+/.last_codereview_email_address
+/.ssh
+/.subversion
+
+# Ignore locations where third-party tools are placed during bootstrapping.
+/bootstrap*_bin
+/python*_bin
+/python_bin_reldir.txt
+/python3_bin_reldir.txt
+/win_tools*_bin
+/git_bin
+/git-*_bin
+/svn_bin
+/external_bin/
+/win_toolchain/vs2013_files
+/win_toolchain/vs_files
+/win_toolchain/*.timestamps
+/win_toolchain/.vspro
+/win_toolchain/data.json
+/win_toolchain/vs_files.ciopfs
+
+# Ignore ctags/cscope index files
+/TAGS
+/cscope.files
+/cscope.in.out
+/cscope.out
+/cscope.po.out
+/tags
+
+# Ignore unittest related files.
+/testing_support/_infra
+/testing_support/_rietveld
+/tests/git-svn-submodule/
+/tests/subversion_config/README.txt
+/tests/subversion_config/auth
+/tests/subversion_config/servers
+/tests/svn/
+/tests/svnrepo/
+
+# Ignore intermediate isolate files
+*.isolated
+*.isolated.state
+
+# Ignore recipe working directory.
+/.recipe_deps
+/infra/.recipe_deps
+/recipes/.recipe_deps
+
+# Ignore google AE downloaded for running testing only.
+testing_support/google_appengine
+
+# Ignore emacs / vim backup files.
+*~
+*.swp
+
+# Ignore win/mac monitoring config. It is unique for each depot_tools checkout.
+/metrics.cfg
+/build_telemetry.cfg
+
+# Ignore git traces produced by git push on git-cl upload.
+/traces
+
+# Ignore VsChromium configuration file.
+/vs-chromium-project.txt
+
+# Ignore the file that logs Python 2 scripts run during presubmits.
+/python2_usage.txt

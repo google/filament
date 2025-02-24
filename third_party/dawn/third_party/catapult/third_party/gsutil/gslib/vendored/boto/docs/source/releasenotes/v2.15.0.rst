@@ -1,0 +1,40 @@
+boto v2.15.0
+============
+
+:date: 2013/10/17
+
+This release adds support for Amazon Elastic Transcoder audio transcoding, new
+regions for Amazon Simple Storage Service (S3), Amazon Glacier, and Amazon
+Redshift as well as new parameters in Amazon Simple Queue Service (SQS), Amazon
+Elastic Compute Cloud (EC2), and the ``lss3`` utility. Also included are
+documentation updates and fixes for S3, Amazon DynamoDB, Amazon Simple Workflow
+Service (SWF) and Amazon Marketplace Web Service (MWS).
+
+
+Features
+--------
+
+* Add SWF tutorial and code sample (:issue:`1769`, :sha:`36524f5`)
+* Add ap-southeast-2 region to S3WebsiteEndpointTranslate (:issue:`1777`,
+  :sha:`e7b0b39`)
+* Add support for ``owner_acct_id`` in SQS ``get_queue`` (:issue:`1786`,
+  :sha:`c1ad303`)
+* Add ap-southeast-2 region to Glacier (:sha:`c316266`)
+* Add ap-southeast-1 and ap-southeast-2 to Redshift (:sha:`3d67a03`)
+* Add SSH timeout option (:issue:`1755`, :sha:`d8e70ef`, :sha:`653b82b`)
+* Add support for markers in ``lss3`` (:issue:`1783`, :sha:`8ee4b1f`)
+* Add ``block_device_mapping`` to EC2 ``create_image`` (:issue:`1794`,
+  :sha:`86afe2e`)
+* Updated SWF tutorial (:issue:`1797`, :sha:`3804b16`)
+* Support Elastic Transcoder audio transcoding (:sha:`03a5087`)
+
+Bugfixes
+--------
+
+* Fix VPC module docs, ELB docs, some formatting (:issue:`1770`,
+  :sha:`75de377`)
+* Fix DynamoDB item ``attrs`` initialization (:issue:`1776`, :sha:`8454a2b`)
+* Fix parsing of empty member lists for MWS (:issue:`1785`, :sha:`7b46ca5`)
+* Fix link to release notes in docs (:sha:`a6bf794`)
+* Do not validate bucket when copying a key (:issue:`1763`, :sha:`5505113`)
+* Retry HTTP 502, 504 errors (:issue:`1798`, :sha:`c832e2d`)

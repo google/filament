@@ -1,0 +1,88 @@
+Name
+
+    ANGLE_robust_fragment_shader_output
+
+Name Strings
+
+    GL_ANGLE_robust_fragment_shader_output
+
+Contributors
+
+    Jamie Madill
+
+Contact
+
+    Jamie Madill (jmadill 'at' google.com)
+
+Notice
+
+    Copyright (c) 2021 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, October 15, 2021
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 3.0
+
+    Written against the OpenGL ES 3.2 specification.
+
+Overview
+
+    This extension allows the OpenGL context to indicate if it supports rendering
+    defined pixel values when there's an interface mismatch between the fragment
+    shader and the draw framebuffer.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter to IsEnabled and the <pname> parameter to
+    GetBooleanv, GetIntegerv, GetFloatv, and GetInteger64v:
+
+    ROBUST_FRAGMENT_SHADER_OUTPUT_ANGLE             0x96B9
+
+Additions to the OpenGL ES Specification
+
+    Add to the end of section 15.2.1 "Selecting Buffers for Writing"
+
+    If the fragment shader does not declare output variables that would be
+    written to a bound draw buffer, the contents of the bound draw buffer
+    remain unchanged.
+
+New State
+
+    Modify Table 6.22, Miscellaneous
+
+    Add:
+
+                                                         Initial
+    Get Value                           Type Get Command Value   Description
+    ----------------------------------- ---- ----------- ------- ---------------------
+    ROBUST_FRAGMENT_SHADER_OUTPUT_ANGLE  B    IsEnabled   TRUE    Robust fragment outputs
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      1   Oct 15, 2021   jmadill              Initial version

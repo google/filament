@@ -1,0 +1,17 @@
+Name: Khronos OpenCL API, OpenCL C, Extensions, SPIR-V Environment Specs, Ref page, and C++ for OpenCL doc sources.
+Short Name: OpenCL-Docs
+Version: N/A
+URL: https://github.com/KhronosGroup/OpenCL-Docs
+SOURCE CODE: git clone -b OpenCL-Docs https://github.com/KhronosGroup/OpenCL-Docs
+Revision: DEPS
+Security Critical: no
+Shipped: yes
+License: Apache 2.0
+License File: Not Included
+
+Description:
+
+This repository contains the source and tool chain used to generate the formal
+OpenCL API, OpenCL C, OpenCL Extensions, OpenCL SPIR-V Environment, OpenCL C
+Specifications, as well as the OpenCL Reference Pages and documentation for
+the C for OpenCL kernel language.

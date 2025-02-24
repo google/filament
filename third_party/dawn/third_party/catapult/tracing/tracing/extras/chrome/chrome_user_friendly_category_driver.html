@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/sinebow_color_generator.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  const SAME_AS_PARENT = 'same-as-parent';
+
+  const TITLES_FOR_USER_FRIENDLY_CATEGORY = {
+    composite: [
+      'CompositingInputsUpdater::update',
+      'ThreadProxy::SetNeedsUpdateLayers',
+      'LayerTreeHost::DoUpdateLayers',
+      'LayerTreeHost::UpdateLayers::BuildPropertyTrees',
+      'LocalFrameView::pushPaintArtifactToCompositor',
+      'LocalFrameView::updateCompositedSelectionIfNeeded',
+      'LocalFrameView::RunCompositingLifecyclePhase',
+      'UpdateLayerTree',
+    ],
+
+    gc: [
+      'minorGC',
+      'majorGC',
+      'MajorGC',
+      'MinorGC',
+      'V8.GCScavenger',
+      'V8.GCIncrementalMarking',
+      'V8.GCIdleNotification',
+      'V8.GCContext',
+      'V8.GCCompactor',
+      'V8GCController::traceDOMWrappers',
+    ],
+
+    iframe_creation: [
+      'WebLocalFrameImpl::createChildframe',
+    ],
+
+    imageDecode: [
+      'Decode Image',
+      'ImageFrameGenerator::decode',
+      'ImageFrameGenerator::decodeAndScale',
+      'ImageFrameGenerator::decodeToYUV',
+      'ImageResourceContent::updateImage',
+    ],
+
+    input: [
+      'HitTest',
+      'ScrollableArea::scrollPositionChanged',
+      'EventHandler::handleMouseMoveEvent',
+    ],
+
+    layout: [
+      'IntersectionObserverController::computeTrackedIntersectionObservations',
+      'LocalFrameView::invalidateTree',
+      'LocalFrameView::layout',
+      'LocalFrameView::performLayout',
+      'LocalFrameView::performPostLayoutTasks',
+      'LocalFrameView::performPreLayoutTasks',
+      'LocalFrameView::RunStyleAndLayoutCompositingPhases',
+      'Layout',
+      'PaintLayer::updateLayerPositionsAfterLayout',
+      'ResourceLoadPriorityOptimizer::updateAllImageResourcePriorities',
+      'WebViewImpl::updateAllLifecyclePhases',
+      'WebViewImpl::beginFrame',
+    ],
+
+    parseHTML: [
+      'BackgroundHTMLParser::pumpTokenizer',
+      'BackgroundHTMLParser::sendTokensToMainThread',
+      'HTMLDocumentParser::didReceiveParsedChunkFromBackgroundParser',
+      'HTMLDocumentParser::documentElementAvailable',
+      'HTMLDocumentParser::notifyPendingTokenizedChunks',
+      'HTMLDocumentParser::processParsedChunkFromBackgroundParser',
+      'HTMLDocumentParser::processTokenizedChunkFromBackgroundParser',
+      'ParseHTML',
+      'HTMLDocumentParser::DeferredPumpTokenizerIfPossible',
+      'HTMLDocumentParser::PumpTokenizer',
+      'HTMLDocumentParser::appendBytes',
+    ],
+
+    raster: [
+      'DisplayListRasterSource::PerformSolidColorAnalysis',
+      'Picture::Raster',
+      'RasterBufferImpl::Playback',
+      'RasterTask',
+      'RasterizerTaskImpl::RunOnWorkerThread',
+      'SkCanvas::drawImageRect()',
+      'SkCanvas::drawPicture()',
+      'SkCanvas::drawTextBlob()',
+      'TileTaskWorkerPool::PlaybackToMemory',
+    ],
+
+    record: [
+      'Canvas2DLayerBridge::flushRecordingOnly',
+      'CompositingInputsUpdater::update',
+      'CompositingRequirementsUpdater::updateRecursive',
+      'ContentLayerDelegate::paintContents',
+      'DisplayItemList::Finalize',
+      'LocalFrameView::RunPaintLifecyclePhase',
+      'LocalFrameView::RunPrePaintLifecyclePhase',
+      'Paint',
+      'PaintController::commitNewDisplayItems',
+      'PaintLayerCompositor::updateIfNeededRecursive',
+      'Picture::Record',
+      'PictureLayer::Update',
+    ],
+
+    style: [
+      'CSSParserImpl::parseStyleSheet.parse',
+      'CSSParserImpl::parseStyleSheet.tokenize',
+      'Document::rebuildLayoutTree',
+      'Document::recalcStyle',
+      'Document::updateActiveStyle',
+      'Document::updateStyle',
+      'Document::updateStyleInvalidationIfNeeded',
+      'LocalFrameView::updateStyleAndLayoutIfNeededRecursive',
+      'ParseAuthorStyleSheet',
+      'RuleSet::addRulesFromSheet',
+      'StyleElement::processStyleSheet',
+      'StyleEngine::createResolver',
+      'StyleEngine::updateActiveStyleSheets',
+      'StyleSheetContents::parseAuthorStyleSheet',
+      'UpdateLayoutTree',
+    ],
+
+    script_parse_and_compile: [
+      'V8.CompileFullCode',
+      'V8.NewContext',
+      'V8.Parse',
+      'V8.ParseLazy',
+      'V8.RecompileSynchronous',
+      'V8.ScriptCompiler',
+      'v8.compile',
+      'v8.parseOnBackground',
+    ],
+
+    script_execute: [
+      'EvaluateScript',
+      'FunctionCall',
+      'HTMLParserScriptRunner ExecuteScript',
+      'V8.Execute',
+      'V8.RunMicrotasks',
+      'V8.Task',
+      'WindowProxy::initialize',
+      'v8.callFunction',
+      'v8.run',
+    ],
+
+    resource_loading: [
+      'RenderFrameImpl::didFinishDocumentLoad',
+      'RenderFrameImpl::didFinishLoad',
+      'Resource::appendData',
+      'ResourceDispatcher::OnReceivedData',
+      'ResourceDispatcher::OnReceivedResponse',
+      'ResourceDispatcher::OnRequestComplete',
+      'ResourceFetcher::requestResource',
+      'WebURLLoaderImpl::Context::Cancel',
+      'WebURLLoaderImpl::Context::OnCompletedRequest',
+      'WebURLLoaderImpl::Context::OnReceivedData',
+      'WebURLLoaderImpl::Context::OnReceivedRedirect',
+      'WebURLLoaderImpl::Context::OnReceivedResponse',
+      'WebURLLoaderImpl::Context::Start',
+      'WebURLLoaderImpl::loadAsynchronously',
+      'WebURLLoaderImpl::loadSynchronously',
+      'content::mojom::URLLoaderClient',
+    ],
+
+    // Where do these go?
+    renderer_misc: [
+      'DecodeFont',
+      'ThreadState::completeSweep',  // blink_gc
+    ],
+
+    // TODO(fmeawad): https://github.com/catapult-project/catapult/issues/2572
+    v8_runtime: [
+      // Dynamically populated.
+    ],
+
+    [SAME_AS_PARENT]: [
+      'SyncChannel::Send',
+    ]
+  };
+
+  const COLOR_FOR_USER_FRIENDLY_CATEGORY = new tr.b.SinebowColorGenerator();
+  const USER_FRIENDLY_CATEGORY_FOR_TITLE = new Map();
+
+  for (const category in TITLES_FOR_USER_FRIENDLY_CATEGORY) {
+    TITLES_FOR_USER_FRIENDLY_CATEGORY[category].forEach(function(title) {
+      USER_FRIENDLY_CATEGORY_FOR_TITLE.set(title, category);
+    });
+  }
+
+  // keys: event.category part
+  // values: user friendly category
+  const USER_FRIENDLY_CATEGORY_FOR_EVENT_CATEGORY = {
+    netlog: 'net',
+    overhead: 'overhead',
+    startup: 'startup',
+    gpu: 'gpu',
+  };
+
+  function ChromeUserFriendlyCategoryDriver() {
+  }
+
+  ChromeUserFriendlyCategoryDriver.fromEvent = function(event) {
+    let userFriendlyCategory =
+        USER_FRIENDLY_CATEGORY_FOR_TITLE.get(event.title);
+    if (userFriendlyCategory) {
+      if (userFriendlyCategory === SAME_AS_PARENT) {
+        if (event.parentSlice) {
+          return ChromeUserFriendlyCategoryDriver.fromEvent(event.parentSlice);
+        }
+      } else {
+        return userFriendlyCategory;
+      }
+    }
+
+    const eventCategoryParts = tr.b.getCategoryParts(event.category);
+    for (let i = 0; i < eventCategoryParts.length; ++i) {
+      const eventCategory = eventCategoryParts[i];
+      userFriendlyCategory = USER_FRIENDLY_CATEGORY_FOR_EVENT_CATEGORY[
+          eventCategory];
+      if (userFriendlyCategory) {
+        return userFriendlyCategory;
+      }
+    }
+
+    return 'other';
+  };
+
+  ChromeUserFriendlyCategoryDriver.getColor = function(ufc) {
+    return COLOR_FOR_USER_FRIENDLY_CATEGORY.colorForKey(ufc);
+  };
+
+  ChromeUserFriendlyCategoryDriver.ALL_TITLES = ['other'];
+  for (const category in TITLES_FOR_USER_FRIENDLY_CATEGORY) {
+    if (category === SAME_AS_PARENT) continue;
+    ChromeUserFriendlyCategoryDriver.ALL_TITLES.push(category);
+  }
+  for (const category of Object.values(
+      USER_FRIENDLY_CATEGORY_FOR_EVENT_CATEGORY)) {
+    ChromeUserFriendlyCategoryDriver.ALL_TITLES.push(category);
+  }
+  ChromeUserFriendlyCategoryDriver.ALL_TITLES.sort();
+
+  // Prime the color generator by iterating through all UFCs in alphabetical
+  // order.
+  for (const category of ChromeUserFriendlyCategoryDriver.ALL_TITLES) {
+    ChromeUserFriendlyCategoryDriver.getColor(category);
+  }
+
+  return {
+    ChromeUserFriendlyCategoryDriver,
+  };
+});
+</script>

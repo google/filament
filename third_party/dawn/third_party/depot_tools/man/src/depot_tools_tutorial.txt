@@ -1,0 +1,436 @@
+depot_tools_tutorial(7)
+=======================
+
+NAME
+----
+depot_tools_tutorial - A tutorial introduction to the Chromium depot_tools git
+extensions.
+
+DESCRIPTION
+-----------
+
+The Chromium linkgit:depot_tools[7] suite contains many git workflow-enhancing
+tools which are designed to work together to enable anyone to wrangle the
+Chromium codebase expertly. This tutorial explains how to do development on
+Chromium using these tools. This will cover:
+
+* <<_setting_up,Setting up>>
+* <<_getting_the_code,Getting the code>>
+* <<_tl_dr,TL;DR>>
+* <<_creating_uploading_a_cl,Creating / Uploading a CL>>
+* <<_updating_the_code,Updating the code>>
+* <<_managing_multiple_cls,Managing multiple CLs>>
+* <<_managing_dependent_cls,Managing dependent CLs>>
+* <<_example_walkthrough,Example Walkthrough>>
+
+Please refer to the manpages (or `--help` output) for details about any of the
+commands mentioned in this tutorial.
+
+[NOTE]
+If your platform does not support manpages (or you prefer something a bit more
+expressive than plain text) you can find all documentation in 'html' form in the
+`[DEPOT_TOOLS]/man/html` folder.
+
+PREREQUISITES
+~~~~~~~~~~~~~
+This tutorial assumes basic familiarity with git terminology and concepts. If you
+need to brush up on these, the following are very good resources:
+
+* link:http://think-like-a-git.net/[Think like (a) Git] - A lighthearted
+  overview of git. If you're sorta-familiar with git, but not 'comfortable' with
+  it, then give this a look.
+* link:http://gitimmersion.com/[Git Immersion Tutorial] - An in-depth git
+  tutorial.
+* link:http://pcottle.github.io/learnGitBranching[pcottle's Visual Git
+  Branching] - An excellent interactive/graphical demo on how git handles
+  commits, branches, and shows the operations git performs on them.
+* link:http://git-scm.com/book[Pro Git book] - ``The'' book for learning git
+  from basics to advanced concepts. A bit dry, but very through.
+
+If you've tried these out and are still having some trouble getting started,
+there are 'many' other resources online which should help. If you're 'really'
+**'really'** stuck, then chat up one of the Chromium infrastructure team
+members for some pointers.
+
+Litmus Test::
+  If you know what `git add`, `git status`, `git commit` do and you know
+  'essentially' what `git rebase` does, then you should know enough to follow
+  along.
+
+SETTING UP
+----------
+
+GET DEPOT TOOLS
+~~~~~~~~~~~~~~~
+
+ifdef::backend-xhtml11[]
+LINUX / MAC
+^^^^^^^^^^^
+endif::backend-xhtml11[]
+Clone the 'depot_tools' repository:
+
+[subs="quotes"]
+----
+[white]**$ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git**
+----
+
+Add 'depot_tools' to the 'front' of your PATH (you will probably want to put this
+in your `~/.bashrc` or `~/.zshrc`). Assuming you cloned 'depot_tools' to
+`/path/to/depot_tools`:
+
+[postsubs="quotes"]
+----
+[white]**$ export PATH=/path/to/depot_tools:$PATH**
+----
+
+// No need to show the Windows stuff on the manpage output.
+ifdef::backend-xhtml11[]
+WINDOWS
+^^^^^^^
+Download the 'depot_tools'
+link:https://storage.googleapis.com/chrome-infra/depot_tools.zip[bundle] and
+extract it somewhere.
+
+[WARNING]
+*DO NOT* use drag-n-drop or copy-n-paste extract from Explorer, this will not
+extract the hidden ``.git'' folder which is necessary for 'depot_tools' to
+autoupdate itself. You can use ``Extract all...'' from the context menu though.
+
+Add 'depot_tools' to the 'front' of your PATH (must be ahead of any installs of
+Python). Assuming you unzipped the bundle to `C:\workspace\depot_tools`:
+
+With Administrator access: ::
+  *Control Panel -> System and Security -> System -> Advanced system settings*
++
+Modify the PATH system variable to include `C:\workspace\depot_tools`.
+
+Without Administrator access: ::
+  *Control Panel -> User Accounts -> User Accounts -> Change my environment variables*
++
+Add a PATH user variable: `C:\workspace\depot_tools;%PATH%`.
+
+From a `cmd.exe` shell, run the command `gclient` (without arguments). On first
+run, gclient will install all the Windows-specific bits needed to work with the
+code, including msysgit and python.
+
+[NOTE]
+=====
+* If you run gclient from a non-cmd shell (e.g., cygwin, PowerShell), it
+  may appear to run properly, but msysgit, python, and other tools may not get
+  installed correctly.
+* If you see strange errors with the file system on the first run of gclient,
+  you may want to link:http://tortoisesvn.tigris.org/faq.html#cantmove2[disable
+  Windows Indexing].
+* After running gclient open a command prompt and type `where python` and confirm that
+  the depot_tools python.bat comes ahead of any copies of python.exe. Failing to ensure
+  this can lead to overbuilding when using gn - see
+  link:https://issues.chromium.org/issues/41253477[crbug.com/41253477].
+=====
+endif::backend-xhtml11[]
+
+BOOTSTRAPPING CONFIGURATION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you have never used git before, you’ll need to set some global git
+configurations; substitute your name and email address in the following
+commands:
+
+[subs="quotes,attributes"]
+----
+[white]**$ git config --global user.name "John Doe"**
+[white]**$ git config --global user.email "jdoe@email.com"**
+[white]**$ git config --global core.autocrlf false**
+[white]**$ git config --global core.filemode false**
+[white]**$** # and for fun!
+[white]**$ git config --global color.ui true**
+----
+
+TL;DR
+-----
+[postsubs="quotes"]
+----
+[white]**$** # get the code
+[white]**$** # In an empty directory:
+[white]**$ fetch {chromium,...}**
+
+[white]**$** # Update third_party repos and run pre-compile hooks
+[white]**$ gclient sync**
+
+[white]**$** # Make a new change and upload it for review
+[white]**$ git new-branch <branch_name>**
+[white]**$** # repeat: [edit, git add, git commit]
+[white]**$ git cl upload**
+
+[white]**$** # After change is reviewed, commit with the CQ
+[white]**$ git cl set_commit**
+[white]**$** # Note that the committed hash which lands will /not/ match the
+[white]**$** # commit hashes of your local branch.
+----
+
+
+GETTING THE CODE
+----------------
+Pick an empty directory and run one of the following:
+
+[subs="quotes"]
+----
+[white]**$ fetch chromium**  # Basic checkout for desktop Chromium
+[white]**$ fetch android**   # Chromium checkout for Android platform
+[white]**$ fetch ios**       # Chromium checkout for iOS platform
+----
+
+When the `fetch` tool completes you should have the following in your working
+directory:
+
+[subs="quotes"]
+----
+[white]**.gclient**   # A configuration file for you source checkout
+[white]**src/**       # Top-level Chromium source checkout.
+----
+
+If you are on linux and fetching the code for the first time, then you'll need
+to run:
+
+[subs="specialcharacters,quotes"]
+----
+[white]**$ cd src && ./build/install-build-deps.sh**
+----
+
+And finally:
+
+[postsubs="quotes"]
+----
+[white]**$ gclient sync**
+----
+
+This will pull all dependencies of the Chromium src checkout. You will need
+to run this any time you update the main src checkout, including when you
+switch branches.
+
+
+CREATING / UPLOADING A CL
+-------------------------
+NOTE: The remainder of the tutorial assumes that your current working directory
+is the `src/` folder mentioned in <<_getting_the_code,Getting the code>>.
+
+Each CL corresponds exactly with a single branch in git. Any time you want to
+begin a new CL:
+
+[subs="specialcharacters,quotes"]
+----
+[white]**$ git new-branch <branch_name>**
+----
+
+This will create and checkout a new branch named `branch_name` which will track
+the default upstream branch (`origin/main`). See
+linkgit:git-new-branch[1] for more features.
+
+Commit as many changes as you like to this branch. When you want to upload it
+for review, run:
+
+[subs="quotes"]
+----
+[white]**$ git cl upload**
+----
+
+This will take the diff of your branch against its upstream branch (in that
+case origin/main), and will post it to the
+link:https://chromium-review.googlesource.com[Chromium code review site].
+
+
+UPDATING THE CODE
+-----------------
+Inevitably, you'll want to pull in changes from the main Chromium repo. This is
+pretty easy with 'depot_tools':
+
+[subs="quotes"]
+----
+[white]**$ git rebase-update**
+----
+
+This command will update all of your CLs to contain the latest code from their
+upstreams. It will also automatically clean up CLs which have been committed and
+a couple other nice things. See linkgit:git-rebase-update[1] for the full
+scoop.
+
+One thing to look out for are 'merge conflicts'. These happen for exactly the
+same as they do with SVN, but the experience is a little more controllable with
+git. `git rebase-update` will try to rebase all your branches for you, but if it
+encounters a merge conflict in one, it will halt and leave you in a rebase
+conflict state (see linkgit:git-rebase[1]). Resolving `git rebase` merge
+conflicts is beyond the scope of this tutorial, but there are many good sources
+online (see the <<_prerequisites,Prerequisites>> for some).
+
+Sometimes you're pretty certain that you've committed a certain branch, but `git
+rebase-update` isn't able to tell that for sure. This is usually because your
+branch doesn't rebase cleanly. You could just delete the branch with `git branch
+-D <branch>`, but you'd like to double check the diff of your branch against its
+upstream before deleting it. If this is the case you can abort the rebase
+started by `git rebase-update`, and then run linkgit:git-squash-branch[1] to
+flatten your branch into a single commit. When you run `git rebase-update`
+again, you'll get a (hopefully) much smaller / saner diff. If it turns out you
+were wrong about your branch being fully committed, you can use
+linkgit:git-reflog[1] to reset your branch back to where it was before. If the
+diff looks inconsequential, you can use `git rebase --skip` to ignore it, and
+then `git rebase-update` will clean it up for you.
+
+Once you're done resolving all of the merge conflict, just run `git
+rebase-update`, and it will pick up where it left off. Once the command has
+finished updating all of your branches, it will return you back to the branch
+you started on.
+
+[NOTE]
+Running `git rebase-update` will update all your branches, but it will not
+automatically run `gclient sync` to update your dependencies. Use caution when
+running `git reset` on branches managed by 'depot_tools'. These tools track the
+set of "commits contained in the branch" from a branch's "merge point" to the
+current branch value. See `git help mark-merge-base` for more discussion of the
+merge base.
+
+
+MANAGING MULTIPLE CLS
+---------------------
+Sometimes you want to work on more than one CL at once (say, you have a CL
+posted for review and want to work on something else). For each CL that you
+want to work on, just use `git new-branch <branch_name>`.
+
+Once you start to have more than one CL at a time, it can be easy to lose your
+bearings. Fortunately, 'depot_tools' has two tools to help you out:
+
+[subs="specialcharacters,quotes,attributes"]
+----
+[white]**$ git map**
+[white blue-background]##*##{zwsp}[blue-background red]** 7dcfe47       ** [green]##(##{zwsp}[aqua]**frozen_changes**{zwsp}[green]##)## [yellow]##2014-03-12## \~ FREEZE.unindexed
+* [red]**4b0c180**        [yellow]##2014-03-12## \~ modfile
+* [red]**59a7cca**        [yellow]##2014-03-12## \~ a deleted file
+* [red]**6bec695**        [green]##(##{zwsp}[red]##origin/main##{zwsp}[green]##)## [yellow]##2014-03-11## \~ Add neat feature    [white]**<(frozen_changes)**
+* [red]**d15a38a**        [yellow]##2014-03-11## \~ Epic README update
+* [red]**d559894**        [green]##(##{zwsp}[lime]**main**{zwsp}[green]##)## [yellow]##2014-03-11## \~ Important upstream change
+[red]##|## * [red]**9c311fd**      [green]##(##{zwsp}[lime]**cool_feature**{zwsp}[green]##)## [yellow]##2014-03-11## \~ Respond to CL comments
+[red]##|## [green]##|## * [red]**2a1eeb2**    [green]##(##{zwsp}[lime]**subfeature**{zwsp}[green]##)## [yellow]##2014-03-11## \~ integrate with CoolService
+[red]##|## [green]##|## * [red]**d777af6**    [yellow]##2014-03-11## \~ slick commenting action
+[red]##|## [green]##|/##
+[red]##|## * [red]**265803a**      [yellow]##2014-03-11## \~ another improvement    [white]**<(subfeature)**
+[red]##|## * [red]**6d831ac**      [green]##(##{zwsp}[fuchsia]**spleen_tag**{zwsp}[green]##)## [yellow]##2014-03-11## \~ Refactor spleen
+[red]##|## * [red]**82e74ab**      [yellow]##2014-03-11## \~ Add widget
+[red]##|/##
+* [red]**d08c5b3**        [green]##(##{zwsp}[lime]**bogus_noparent**{zwsp}[green]##)## [yellow]##2014-03-11## ~ Wonderful beginnings    [white]**<(cool_feature)**
+----
+Note that this example repo is in dire need of a linkgit:git-rebase-update[1]!
+
+[subs="quotes"]
+----
+[white]**$ git map-branches**
+[red]#origin/main#
+  [green]#cool_feature#
+    [green]#subfeature#
+  [aqua]#frozen_changes *#
+  [green]#main#
+----
+
+linkgit:git-map[1]::
+  This tool shows you the history of all of your branches in a pseudo-graphical
+  format. In particular, it will show you which commits all of your branches
+  are on, which commit you currently have checked out, and more. Check out the
+  doc for the full details.
+
+linkgit:git-map-branches[1]::
+  This tool just shows you which branches you have in your repo, and their
+  upstream relationship to each other (as well as which branch you have checked
+  out at the moment).
+
+Additionally, sometimes you need to switch between branches, but you've got work
+in progress. You could use linkgit:git-stash[1], but that can be tricky to
+manage because you need to remember which branches you stashed what changes on.
+Helpfully 'depot_tools' includes two tools which can greatly assist in case:
+
+linkgit:git-freeze[1] allows you to put the current branch in \'suspended
+animation' by committing your changes to a specially-named commit on the top of
+your current branch. When you come back to your branch later, you can just run
+linkgit:git-thaw[1] to get your work-in-progress changes back to what they were.
+
+Another useful tool is linkgit:git-rename-branch[1]. Unlike `git branch -m <old>
+<new>`, this tool will correctly preserve the upstream relationships of your
+branch compared to its downstreams.
+
+Finally, take a look at linkgit:git-upstream-diff[1]. This will show you the
+combined diff for all the commits on your branch against the upstream tracking
+branch. This is 'exactly' what `git cl upload` will push up to code review.
+Additionally, consider trying the `--wordwise` argument to get a colorized
+per-word diff (instead of a per-line diff).
+
+MANAGING DEPENDENT CLS
+----------------------
+Now that you know how to manage 'independent' CLs, we'll see how to manage
+'dependent' CLs. Dependent CLs are useful when your second (or third or fourth
+or ...) CL depends on the changes in one of your other CLs (such as: CL 2 won't
+compile without CL 1, but you want to submit them as two separate reviews).
+
+Like all of the other CLs we've created, we use linkgit:git-new-branch[1], but
+this time with an extra argument. First, `git checkout` the branch
+you want to base the new one on (i.e. CL 1), and then run:
+
+[subs="specialcharacters,quotes"]
+----
+[white]**$ git new-branch --upstream_current <branch_name>**
+----
+
+This will make a new branch which tracks the 'current' branch as its upstream
+(as opposed to 'origin/main'). All changes you commit to this branch will be
+in addition to the previous branch, but when you `git cl upload`, you will only
+upload the diff for the dependent (child) branch. You may have as many branches
+nested in this fashion as you like.
+
+linkgit:git-map[1] and linkgit:git-map-branches[1] are particularly helpful when
+you have dependent branches. In addition, there are two helper commands which
+let you traverse your working copy up and down this tree of branches:
+linkgit:git-nav-upstream[1] and linkgit:git-nav-downstream[1].
+
+Sometimes when dealing with dependent CLs, it turns out that you accidentally
+based a branch on the wrong upstream, but since then you've committed changes to
+it, or even based 'another' branch off of that one. Or you discover that you
+have two independent CLs that would actually be much better off as dependent
+CLs. In instances like these, you can check out the offending branch and use
+linkgit:git-reparent-branch[1] to move it to track a different parent. Note that
+this can also be used to move a branch from tracking `origin/main` to `lkgr`
+or vice versa.
+
+
+EXAMPLE WALKTHROUGH
+-------------------
+This section will demo what a typical workflow looks like when writing,
+updating, and committing multiple CLs.
+
+demo:walkthrough[]
+
+So there you have the basic flow. Note that you don't 'have' to do chromium
+development using these tools. Any git workflow is compatible, as long as
+`git cl upload` is able to upload good patches.
+
+
+CONCLUSION
+----------
+Hopefully that gives you a good starting overview on Chromium development using
+'depot_tools'. If you have questions which weren't answered by this tutorial or
+the man pages for the tools (see the index of all tools here:
+linkgit:depot_tools[7]), please feel free to ask.
+
+
+GLOSSARY
+--------
+
+CL::
+  A 'change-list'. This is a diff which you would like to commit to the
+  codebase.
+
+DEPS::
+  A file in the chromium checkout which `gclient sync` uses to determine what
+  dependencies to pull in. This file also contains 'hooks'.
+
+LKGR::
+  Last Known Good Revision. This is a linkgit:git-tag[1] which tracks the last
+  version of `origin/main` which has passed the full set of testing on the
+  link:http://build.chromium.org[main Chromium waterfall].
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

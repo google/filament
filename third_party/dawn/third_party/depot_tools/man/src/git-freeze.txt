@@ -1,0 +1,54 @@
+git-freeze(1)
+=============
+
+NAME
+----
+git-freeze -
+include::_git-freeze_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git freeze'
+
+DESCRIPTION
+-----------
+
+`git freeze` works a lot like `git stash`, in that it stores the current changes
+in your working copy and index 'somewhere'. Unlike `git stash`, `git freeze`
+stores those changes on your current branch. This effectively allows you to
+'pause' development of a branch, work on something else, and then come back to
+exactly the same working state later (by running `git thaw`).
+
+`git freeze` will make up to 2 commits on your branch. A commit with the message
+`FREEZE.indexed` will contain all changes which you’ve added to your index (like
+with 'git add', 'git mv', 'git rm', etc.). A commit with the message
+`FREEZE.unindexed` will contain all changes which were not in your index at the
+time you ran git freeze (freshly modified files, new files, etc.).
+
+By default `git freeze` will only freeze up to 100MB of untracked files. See
+'CONFIGURATION VARIABLES' for more details.
+
+
+EXAMPLE
+-------
+demo:1[]
+
+
+CONFIGURATION VARIABLES
+-----------------------
+
+depot-tools.freeze-size-limit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This sets the size limit as an integer number of megabytes of untracked files
+that git-freeze will be willing to put in suspended animation. A 0 or negative
+limit disables the size-limit check entirely. *100* by default.
+
+
+SEE ALSO
+--------
+linkgit:git-thaw[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

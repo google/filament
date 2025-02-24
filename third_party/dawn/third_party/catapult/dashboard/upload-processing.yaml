@@ -1,0 +1,28 @@
+service: upload-processing
+
+runtime: python38
+# The default workers number is 1, increase it to improve throughput.
+entrypoint: gunicorn -b:$PORT dashboard.dispatcher:APP --workers 8 --worker-class gthread --threads 10 --timeout 300
+app_engine_apis: true
+# 3072MB Memory, 2.4GHz CPU limit, support auto scaling, support 8 workers.
+instance_class: F4_1G
+
+automatic_scaling:
+  max_instances: 1800
+  min_instances: 24
+  # Define max_idle_instance to reduce the number of billed instance.
+  max_idle_instances: 30
+  # 8 worker * 10 threads = 80 concurrent requests.
+  max_concurrent_requests: 80
+  # Auto scaling will be triggered when reach 90% of the max concurrent.
+  target_throughput_utilization: 0.90
+  target_cpu_utilization: 0.90
+  max_pending_latency: automatic
+
+env_variables:
+  GAE_USE_SOCKETS_HTTPLIB: 'true'
+
+handlers:
+- url: /.*
+  script: dashboard.dispatcher.APP
+  secure: always

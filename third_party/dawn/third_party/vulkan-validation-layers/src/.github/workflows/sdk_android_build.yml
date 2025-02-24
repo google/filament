@@ -1,0 +1,163 @@
+# Copyright (c) 2024 Valve Corporation
+# Copyright (c) 2024 LunarG, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: SDK Android Build
+
+# Perform an Android build, create a release, and attach build
+# artifacts to the release when a Vulkan SDK tag is pushed. The
+# Vulkan SDK does not include binaries for Android, so we publish
+# them here to provide Android binaries built from the same source
+# used to build the Vulkan SDK.
+#
+# The tag needs to be pushed by name, as `git push --tags` to push all
+# tags does not appear to trigger the action.
+#
+# The Vulkan SDK release process is similar to the following:
+# 1. Add a lightweight tag with the sdk version string.
+#        git tag vulkan-sdk-1.3.266.0
+# 2. Push the tag to GitHub.
+#        git push origin vulkan-sdk-1.3.266.0
+
+# NOTE: Vulkan Layers are effectively `middleware` in Android terminology.
+#
+# https://developer.android.com/ndk/guides/middleware-vendors
+#
+# "If you're writing C++ and using the STL, your choice between libc++_shared and libc++_static
+# affects your users if you distribute a shared library. If you distribute a shared library,
+# you must either use libc++_shared or ensure that libc++'s symbols are not exposed by your library.
+#
+# The most important thing for us is that we can safely link against the static
+# version of the stl. Because we don't expose a C++ interface anywhere.
+# We only export C symbols in our binary. Making our library easier for users to simply
+# drop into their APK.
+
+on:
+  push:
+    tags:
+      - vulkan-sdk-*
+
+jobs:
+  android:
+    name: Android SDK Release
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        abi: [ armeabi-v7a, arm64-v8a, x86, x86_64 ]
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+    - uses: lukka/get-cmake@latest
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: CMake Build
+      run: python scripts/android.py --config Release --app-abi ${{ matrix.abi }} --app-stl c++_static
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: vvl-android-${{ matrix.abi }}
+        path: ./build-android/libs/lib/
+
+  release:
+    name: Create Release for Tag
+    permissions: write-all
+    runs-on: ubuntu-22.04
+    needs: android
+    steps:
+    - name: Get sdk version string
+      id: get_sdk_version
+      run: |
+        sdk_version=`echo "${{ github.ref }}" | cut -d "-" -f 3`
+        echo "sdk_version=$sdk_version" >> $GITHUB_OUTPUT
+    - name: Get NDK version
+      id: get_ndk_version
+      run: |
+        ndk_version=$(basename $ANDROID_NDK | sed 's/^android-ndk-r//')
+        echo "ndk_version=$ndk_version" >> $GITHUB_OUTPUT
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Android binaries for ${{ steps.get_sdk_version.outputs.sdk_version }} SDK release
+        body: |
+            These Android Validation Layer binaries were built with ndk version ${{ steps.get_ndk_version.outputs.ndk_version }}
+
+            The validation binaries can only be used with a device that supports Android API version 26 or higher.
+        draft: false
+        prerelease: false
+    - name: Get release URL
+      run: |
+        echo "${{ steps.create_release.outputs.upload_url }}" > ./release_url
+    - name: Upload release URL
+      uses: actions/upload-artifact@v4
+      with:
+        name: release_url
+        path: ./release_url
+
+  publish:
+    runs-on: ubuntu-22.04
+    permissions: write-all
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - name: "Upload Android Release Tar Gzip Artifact"
+          artifact: "vvl-android"
+          command: "tar cvzf"
+          suffix: "tar.gz"
+          type: "application/x-gtar"
+        - name: "Upload Android Release Zip Artifact"
+          artifact: "vvl-android"
+          command: "zip -r"
+          suffix: "zip"
+          type: "application/zip"
+    steps:
+    - name: Get sdk version string
+      id: get_sdk_version
+      run: |
+        sdk_version=`echo "${{ github.ref }}" | cut -d "-" -f 3`
+        echo "sdk_version=$sdk_version" >> $GITHUB_OUTPUT
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./android-binaries-${{ steps.get_sdk_version.outputs.sdk_version }}
+        merge-multiple: true
+        pattern: ${{ matrix.config.artifact }}-*
+    - name: Make release artifacts
+      run: |
+        ${{ matrix.config.command }} android-binaries-${{ steps.get_sdk_version.outputs.sdk_version }}.${{ matrix.config.suffix }} android-binaries-${{ steps.get_sdk_version.outputs.sdk_version }}
+    - name: Download release URL
+      uses: actions/download-artifact@v4
+      with:
+        name: release_url
+        path: ./
+    - name: Set upload URL
+      id: set_upload_url
+      run: |
+        upload_url=`cat ./release_url`
+        echo upload_url=$upload_url >> $GITHUB_OUTPUT
+    - name: Upload release artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
+        asset_name: android-binaries-${{ steps.get_sdk_version.outputs.sdk_version }}.${{ matrix.config.suffix }}
+        asset_path: ./android-binaries-${{ steps.get_sdk_version.outputs.sdk_version }}.${{ matrix.config.suffix }}
+        asset_content_type: ${{ matrix.config.type }}

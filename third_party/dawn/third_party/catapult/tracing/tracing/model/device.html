@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/cpu.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/power_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Device class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * Device represents the device-level objects in the model.
+   * @constructor
+   * @extends {tr.model.EventContainer}
+   */
+  function Device(model) {
+    if (!model) {
+      throw new Error('Must provide a model.');
+    }
+
+    tr.model.EventContainer.call(this);
+
+    this.powerSeries_ = undefined;
+    this.cpuUsageSeries_ = undefined;
+    this.vSyncTimestamps_ = [];
+  }
+
+  Device.compare = function(x, y) {
+    return x.guid - y.guid;
+  };
+
+  Device.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    compareTo(that) {
+      return Device.compare(this, that);
+    },
+
+    get userFriendlyName() {
+      return 'Device';
+    },
+
+    get userFriendlyDetails() {
+      return 'Device';
+    },
+
+    get stableId() {
+      return 'Device';
+    },
+
+    getSettingsKey() {
+      return 'device';
+    },
+
+    get powerSeries() {
+      return this.powerSeries_;
+    },
+
+    set powerSeries(powerSeries) {
+      this.powerSeries_ = powerSeries;
+    },
+
+    get cpuUsageSeries() {
+      return this.cpuUsageSeries_;
+    },
+
+    set cpuUsageSeries(cpuUsageSeries) {
+      this.cpuUsageSeries_ = cpuUsageSeries;
+    },
+
+    get vSyncTimestamps() {
+      return this.vSyncTimestamps_;
+    },
+
+    set vSyncTimestamps(value) {
+      this.vSyncTimestamps_ = value;
+    },
+
+    updateBounds() {
+      this.bounds.reset();
+      for (const child of this.childEventContainers()) {
+        child.updateBounds();
+        this.bounds.addRange(child.bounds);
+      }
+    },
+
+    shiftTimestampsForward(amount) {
+      for (const child of this.childEventContainers()) {
+        child.shiftTimestampsForward(amount);
+      }
+
+      for (let i = 0; i < this.vSyncTimestamps_.length; i++) {
+        this.vSyncTimestamps_[i] += amount;
+      }
+    },
+
+    addCategoriesToDict(categoriesDict) {
+    },
+
+    * childEventContainers() {
+      if (this.powerSeries_) {
+        yield this.powerSeries_;
+      }
+      if (this.cpuUsageSeries_) {
+        yield this.cpuUsageSeries_;
+      }
+    }
+  };
+
+  return {
+    Device,
+  };
+});
+</script>

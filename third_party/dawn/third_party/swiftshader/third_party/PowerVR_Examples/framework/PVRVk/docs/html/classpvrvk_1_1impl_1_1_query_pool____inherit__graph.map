@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::QueryPool_" name="pvrvk::impl::QueryPool_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkQueryPool,\l ObjectType::e_QUERY_POOL \&gt;" alt="" coords="299,5,521,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkQueryPool, PVRVkObject\lType \&gt;" alt="" coords="5,5,251,61"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; QueryPool_ \&gt;" alt="" coords="311,86,509,127"/>
+</map>

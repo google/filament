@@ -1,0 +1,74 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE D3D back-ends.
+
+import("../../../../gni/angle.gni")
+import("d3d_backend.gni")
+
+assert(angle_enable_d3d11 || angle_enable_d3d9)
+
+config("angle_d3d_shared_config") {
+  defines = [ "ANGLE_PRELOADED_D3DCOMPILER_MODULE_NAMES={ " + "\"d3dcompiler_47.dll\", \"d3dcompiler_46.dll\", \"d3dcompiler_43.dll\" }" ]
+}
+
+angle_source_set("angle_d3d_shared") {
+  sources = d3d_shared_sources
+  public_deps = [
+    "$angle_root:angle_d3d_format_tables",
+    "$angle_root:angle_gpu_info_util",
+    "$angle_root:angle_image_util",
+    "$angle_root:libANGLE_headers",
+  ]
+  public_configs = [ ":angle_d3d_shared_config" ]
+}
+
+if (angle_enable_d3d9) {
+  config("angle_d3d9_backend_config") {
+    defines = [ "ANGLE_ENABLE_D3D9" ]
+    ldflags = [ "/DELAYLOAD:d3d9.dll" ]
+  }
+
+  angle_source_set("angle_d3d9_backend") {
+    sources = d3d9_backend_sources
+    libs = [
+      "d3d9.lib",
+      "delayimp.lib",
+    ]
+    public_deps = [ ":angle_d3d_shared" ]
+    public_configs = [ ":angle_d3d9_backend_config" ]
+  }
+}
+
+if (angle_enable_d3d11) {
+  config("angle_d3d11_backend_config") {
+    defines = [ "ANGLE_ENABLE_D3D11" ]
+    if (angle_enable_d3d11_compositor_native_window) {
+      defines += [ "ANGLE_ENABLE_D3D11_COMPOSITOR_NATIVE_WINDOW" ]
+    }
+  }
+
+  angle_source_set("angle_d3d11_backend") {
+    sources = d3d11_backend_sources
+
+    libs = [ "dxguid.lib" ]
+
+    public_deps = [ ":angle_d3d_shared" ]
+    public_configs = [ ":angle_d3d11_backend_config" ]
+  }
+
+  config("angle_enable_winuwp_config") {
+    defines = [ "ANGLE_ENABLE_WINDOWS_UWP=1" ]
+    if (angle_is_winappsdk) {
+      libs = [ "WindowsApp.lib" ]
+      defines += [ "ANGLE_ENABLE_WINDOWS_APP_SDK=1" ]
+      include_dirs = [ "$winappsdk_dir/include" ]
+      lib_dirs = [ "$winappsdk_dir/lib/win10-${target_cpu}" ]
+    }
+  }
+
+  angle_source_set("angle_enable_winuwp") {
+    public_configs = [ ":angle_enable_winuwp_config" ]
+  }
+}

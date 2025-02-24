@@ -1,0 +1,42 @@
+)]}'
+{
+  "log": [
+    {
+      "commit": "3861789af25e2d3502f0fb7080da5785d31308aa",
+      "tree": "97c4006bdd97695879ff6e38b6905d628f3ec56a",
+      "parents": [
+        "8fcc8af20a3d41b0512e3b1486e4dc7de528a72b"
+      ],
+      "author": {
+        "name": "v8-autoroll",
+        "email": "v8-autoroll@chromium.org",
+        "time": "Tue Oct 27 21:16:25 2015"
+      },
+      "committer": {
+        "name": "Commit bot",
+        "email": "commit-bot@chromium.org",
+        "time": "Tue Oct 27 21:17:57 2015"
+      },
+      "message": "Update V8 to version 4.8.161.\n\nSummary of changes available at:\nhttps://chromium.googlesource.com/v8/v8/+log/bb6df7e1..1eef3579\n\nPlease follow these instructions for assigning/CC\u0027ing issues:\nhttps://code.google.com/p/v8-wiki/wiki/TriagingIssues\n\nPlease close rolling in case of a roll revert:\nhttps://v8-roll.appspot.com/\n\nTBR\u003dhablich@chromium.org,machenbach@chromium.org,yangguo@chromium.org,vogelheim@chromium.org\n\nReview URL: https://codereview.chromium.org/1430483003\n\nCr-Commit-Position: refs/heads/master@{#356397}\n"
+    },
+    {
+      "commit": "8fcc8af20a3d41b0512e3b1486e4dc7de528a72b",
+      "tree": "a1c05b121ec2e8694dcaca9ef54b9817801d40e6",
+      "parents": [
+        "f1c777e3f97a16cc6a3aa922a23602fa59412989"
+      ],
+      "author": {
+        "name": "oshima",
+        "email": "oshima@chromium.org",
+        "time": "Tue Oct 27 21:16:08 2015"
+      },
+      "committer": {
+        "name": "Commit bot",
+        "email": "commit-bot@chromium.org",
+        "time": "Tue Oct 27 21:16:50 2015"
+      },
+      "message": "Reland of Add dimming to the background during sign in  (patchset #1 id:1 of https://codereview.chromium.org/1424513003/ )\n\nReason for revert:\nThe asan issue has been fixed in the new CL https://codereview.chromium.org/1426573004/\n\nOriginal issue\u0027s description:\n\u003e Revert of Add dimming to the background during sign in  (patchset #4 id:160001 of https://codereview.chromium.org/1400153002/ )\n\u003e\n\u003e Reason for revert:\n\u003e https://code.google.com/p/chromium/issues/detail?id\u003d547178\n\u003e\n\u003e Original issue\u0027s description:\n\u003e \u003e Add dimming to the background during sign in\n\u003e \u003e\n\u003e \u003e * Add option to put the dim layer at the bottom. Login screen put this dim layer at the bottom of login container containers so that\n\u003e \u003e  dim layer stays during login transition.\n\u003e \u003e\n\u003e \u003e BUG\u003d478438\n\u003e \u003e TEST\u003dScreenDimmer.DimAtBottom\n\u003e \u003e\n\u003e \u003e Committed: https://crrev.com/c527600749bfc6970ba39e4ed6b24404b0f7b256\n\u003e \u003e Cr-Commit-Position: refs/heads/master@{#355481}\n\u003e\n\u003e TBR\u003ddzhioev@chromium.org,alemate@chromium.org,oshima@chromium.org\n\u003e NOPRESUBMIT\u003dtrue\n\u003e NOTREECHECKS\u003dtrue\n\u003e NOTRY\u003dtrue\n\u003e BUG\u003d478438\n\u003e\n\u003e Committed: https://crrev.com/ccb7824284975a271967334f86b4fc7a17378de5\n\u003e Cr-Commit-Position: refs/heads/master@{#355885}\n\nTBR\u003ddzhioev@chromium.org,alemate@chromium.org,dalecurtis@chromium.org\nNOPRESUBMIT\u003dtrue\nNOTREECHECKS\u003dtrue\nNOTRY\u003dtrue\nBUG\u003d478438\n\nReview URL: https://codereview.chromium.org/1413523005\n\nCr-Commit-Position: refs/heads/master@{#356396}\n"
+    }
+  ],
+  "next": "f1c777e3f97a16cc6a3aa922a23602fa59412989"
+}

@@ -1,0 +1,71 @@
+Name
+
+    ANGLE_get_serialized_context_string
+
+Name Strings
+
+    GL_ANGLE_get_serialized_context_string
+
+Contributors
+
+    Jamie Madill, Google
+
+Contact
+
+    Jamie Madill, Google (jmadill 'at' google.com)
+
+Status
+
+    Implemented in ANGLE.
+
+Version
+
+    Last Modified Date: April 2, 2021
+    Revision: #1
+
+Number
+
+    TBD
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+Overview
+
+    Adds a query for a serialized string representation of a context.
+    Useful for testing to easily compare two states.
+
+New Tokens
+
+    Accepted by the <name> parameter of glGetString:
+
+        SERIALIZED_CONTEXT_STRING_ANGLE   0x96B0
+
+Additions to Chapter 6 of the OpenGL ES 2.0 Specification (Querying GL State)
+
+    Update Section 6.1.5 "String Queries" to accept the new enum specified
+    above. The SERIALIZED_CONTEXT_STRING_ANGLE string is an implementation-
+    dependent representation of the current context state. Two contexts
+    with the same internal state are guaranteed to have the same value. Note
+    that the reverse is not true - two contexts with different states are
+    may also have the same serialized string.
+
+New State
+
+    None.
+
+Issues
+
+    1) Should two contexts with different states return different strings?
+
+    RESOLVED: We don't provide a guarantee that every state is serialized
+      into the string. This loose wording lets the extension provide
+      some additional extra validation without being overly strict and
+      making the implementation difficult. It also allow a no-op
+      implementation to satisfy the extension requirements.
+
+Revision History
+
+    2021/04/02  jmadill  Initial revision.
+

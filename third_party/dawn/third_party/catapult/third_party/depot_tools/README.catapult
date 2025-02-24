@@ -1,0 +1,16 @@
+Name: depot_tools
+Short Name: depot_tools
+URL: https://chromium.googlesource.com/chromium/tools/depot_tools.git
+Revision: 66df2a3ec70d0628d47df1fdba69838a870a1303
+License: BSD
+
+Description:
+Tools for Chromium developers.
+
+Local Modifications:
+- Kept only gclient_eval.py, tests/gclient_eval_unittest.py and third_party/schema/*.
+- Moved under depot_tools/ subdirectory and added __init__.py.
+- gclient_eval.py: Removed import of gclient_utils with inline definition of gclient_utils.Error.
+- gclient_eval.py: Added import of threading.
+- gclient_eval.py: Adjusted import of third_party/schema for our environment.
+- tests/gclient_eval_unittest.py: Changed imports.

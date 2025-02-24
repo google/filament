@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+
+// Launch a server that runs tests server-side on demand.
+
+require('../src/common/tools/setup-ts-in-node.js');
+require('../src/common/runtime/server.ts');

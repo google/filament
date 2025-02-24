@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+function bootstrap_python3 {
+  base_dir=$(dirname "${BASH_SOURCE[0]}")
+
+  cd "${base_dir}"
+
+  if [ -e ".bleeding_edge" ]; then
+    CIPD_MANIFEST="bootstrap/manifest_bleeding_edge.txt"
+  else
+    CIPD_MANIFEST="bootstrap/manifest.txt"
+  fi
+
+  while IFS= read -r line; do
+    if [[ $line =~ ^[^#].*cpython3/.*version:(.*)$ ]]; then
+      PYTHON3_VERSION=${BASH_REMATCH[1]}
+      PYTHON3_VERSION=${PYTHON3_VERSION//[[:space:]]/}
+    fi
+  done < $CIPD_MANIFEST
+  if [ "X$PYTHON3_VERSION" == "X" ]; then
+    echo Could not extract Python 3 version from manifest.
+    return 1
+  fi
+
+  BOOTSTRAP_PATH="bootstrap-${PYTHON3_VERSION}_bin"
+
+  # Install CIPD packages. The CIPD client self-bootstraps.
+  "./cipd" ensure -log-level warning -ensure-file "${CIPD_MANIFEST}" \
+      -root "$BOOTSTRAP_PATH"
+
+  BOOTSTRAP_PYTHON_BIN="${BOOTSTRAP_PATH}/python3/bin/python3"
+  "$BOOTSTRAP_PYTHON_BIN" "bootstrap/bootstrap.py" --bootstrap-name "$BOOTSTRAP_PATH"
+
+  cd - > /dev/null
+}

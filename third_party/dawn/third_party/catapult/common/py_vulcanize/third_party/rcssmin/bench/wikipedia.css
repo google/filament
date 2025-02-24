@@ -1,0 +1,3861 @@
+/*
+ * This CSS is taken from wikipedia / mediawiki, it's the combined files of
+ * the vector skin described at:
+ *
+ * http://en.wikipedia.org/wiki/Wikipedia:Catalogue_of_CSS_classes
+ */
+
+/*
+ * Any rules which should not be flipped automatically in right-to-left situations should be
+ * prepended with @noflip in a comment block. Images that should be embedded as base64 data-URLs
+ * should be prepended with @embed in a comment block.
+ *
+ * This style-sheet employs a few CSS trick to accomplish compatibility with a wide range of web
+ * browsers. The most common trick is to use some styles in IE6 only. This is accomplished by using
+ * a rule that makes things work in IE6, and then following it with a rule that begins with
+ * "html > body" or use a child selector ">", which is ignored by IE6 because it does not support
+ * the child selector. You can spot this by looking for the "OVERRIDDEN BY COMPLIANT BROWSERS" and
+ * "IGNORED BY IE6" comments.
+ */
+
+/* Framework */
+html,
+body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	font-family: sans-serif;
+	font-size: 1em;
+}
+body {
+	background-color: #f3f3f3;
+	/* @embed */
+	background-image: url(images/page-base.png);
+}
+/* Content */
+div#content {
+	margin-left: 10em;
+	padding: 1em;
+	/* @embed */
+	background-image: url(images/border.png);
+	background-position: top left;
+	background-repeat: repeat-y;
+	background-color: white;
+	color: black;
+	direction: ltr;
+}
+/* Head */
+#mw-page-base {
+	height: 5em;
+	background-color: white;
+	/* @embed */
+	background-image: url(images/page-fade.png);
+	background-position: bottom left;
+	background-repeat: repeat-x;
+}
+#mw-head-base {
+	margin-top: -5em;
+	margin-left: 10em;
+	height: 5em;
+	/* @embed */
+	background-image: url(images/border.png);
+	background-position: bottom left;
+	background-repeat: repeat-x;
+}
+div#mw-head {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 100%;
+}
+div#mw-head h5 {
+	margin: 0;
+	padding: 0;
+}
+/* Hide empty portlets */
+div.emptyPortlet {
+		display: none;
+}
+/* Personal */
+#p-personal {
+	position: absolute;
+	top: 0;
+	right: 0.75em;
+}
+#p-personal h5 {
+	display: none;
+}
+#p-personal ul {
+	list-style: none;
+	margin: 0;
+	padding-left: 10em; /* Keep from overlapping logo */
+}
+/* @noflip */
+#p-personal li {
+	line-height: 1.125em;
+	float: left;
+}
+/* This one flips! */
+#p-personal li {
+	margin-left: 0.75em;
+	margin-top: 0.5em;
+	font-size: 0.75em;
+	white-space: nowrap;
+}
+/* Navigation Containers */
+#left-navigation {
+	position: absolute;
+	left: 10em;
+	top: 2.5em;
+}
+#right-navigation {
+	float: right;
+	margin-top: 2.5em;
+}
+/* Navigation Labels */
+div.vectorTabs h5,
+div.vectorMenu h5 span {
+	display: none;
+}
+/* Namespaces and Views */
+/* @noflip */
+div.vectorTabs {
+	float: left;
+	height: 2.5em;
+}
+div.vectorTabs {
+	/* @embed */
+	background-image: url(images/tab-break.png);
+	background-position: bottom left;
+	background-repeat: no-repeat;
+	padding-left: 1px;
+}
+/* @noflip */
+div.vectorTabs ul {
+	float: left;
+}
+div.vectorTabs ul {
+	height: 100%;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+/* @noflip */
+div.vectorTabs ul li {
+	float: left;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+div.vectorTabs ul li {
+	line-height: 1.125em;
+	display: inline-block;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background-color: #f3f3f3;
+	/* @embed */
+	background-image: url(images/tab-normal-fade.png);
+	background-position: bottom left;
+	background-repeat: repeat-x;
+	white-space:nowrap;
+}
+/* IGNORED BY IE6 */
+div.vectorTabs ul > li {
+	display: block;
+}
+div.vectorTabs li.selected {
+	/* @embed */
+	background-image: url(images/tab-current-fade.png);
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+div.vectorTabs li a {
+	display: inline-block;
+	height: 1.9em;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	color: #0645ad;
+	cursor: pointer;
+	font-size: 0.8em;
+}
+/* IGNORED BY IE6 */
+div.vectorTabs li > a {
+	display: block;
+}
+div.vectorTabs li.icon a {
+	background-position: bottom right;
+	background-repeat: no-repeat;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+div.vectorTabs span a  {
+	display: inline-block;
+	padding-top: 1.25em;
+}
+/* IGNORED BY IE6 */
+/* @noflip */
+div.vectorTabs span > a {
+	float: left;
+	display: block;
+}
+div.vectorTabs span {
+	display: inline-block;
+	/* @embed */
+	background-image: url(images/tab-break.png);
+	background-position: bottom right;
+	background-repeat: no-repeat;
+}
+div.vectorTabs li.selected a,
+div.vectorTabs li.selected a:visited{
+	color: #333333;
+	text-decoration: none;
+}
+div.vectorTabs li.new a,
+div.vectorTabs li.new a:visited{
+	color: #a55858;
+}
+/* Variants and Actions */
+/* @noflip */
+div.vectorMenu {
+	direction: ltr;
+	float: left;
+	/* @embed */
+	background-image: url(images/arrow-down-icon.png);
+	background-position: 100% 60%;
+	background-repeat: no-repeat;
+	cursor: pointer;
+}
+div.vectorMenuFocus {
+	/* @embed */
+	background-image: url(images/arrow-down-focus-icon.png);
+	background-position: 100% 60%;
+}
+/* @noflip */
+body.rtl div.vectorMenu {
+	direction: rtl;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+/* @noflip */
+div#mw-head div.vectorMenu h5 {
+	float: left;
+	/* @embed */
+	background-image: url(images/tab-break.png);
+	background-repeat: no-repeat;
+}
+/* This will be flipped - unlike the one above it */
+div#mw-head div.vectorMenu h5 {
+	background-position: bottom left;
+	margin-left: -1px;
+}
+/* IGNORED BY IE6 */
+div#mw-head div.vectorMenu > h5 {
+	background-image: none;
+}
+div#mw-head div.vectorMenu h4 {
+	display: inline-block;
+	float: left;
+	font-size: 0.8em;
+	padding-left: 0.5em;
+	padding-top: 1.375em;
+	font-weight: normal;
+	border: none;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+/* @noflip */
+div.vectorMenu h5 a {
+	display: inline-block;
+	width: 24px;
+	height: 2.5em;
+	text-decoration: none;
+	/* @embed */
+	background-image: url(images/tab-break.png);
+	background-repeat: no-repeat;
+}
+/* This will be flipped - unlike the one above it */
+div.vectorMenu h5 a {
+	background-position: bottom right;
+}
+/* IGNORED BY IE6 */
+div.vectorMenu h5 > a {
+	display: block;
+}
+div.vectorMenu div.menu {
+	position: relative;
+	display: none;
+	clear: both;
+	text-align: left;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+/* @noflip */
+body.rtl div.vectorMenu div.menu {
+	margin-left: 24px;
+}
+/* IGNORED BY IE6 */
+/* @noflip */
+body.rtl div.vectorMenu > div.menu {
+	margin-left: auto;
+}
+/* IGNORED BY IE6 */
+/* Also fixes old versions of FireFox */
+/* @noflip */
+body.rtl div.vectorMenu > div.menu,
+x:-moz-any-link {
+	margin-left: 23px;
+}
+/* Enable forcing showing of the menu for accessibility */
+div.vectorMenu:hover div.menu,
+div.vectorMenu div.menuForceShow {
+	display: block;
+}
+div.vectorMenu ul {
+	position: absolute;
+	background-color: white;
+	border: solid 1px silver;
+	border-top-width: 0;
+	list-style: none;
+	list-style-image: none;
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+	margin-left: -1px;
+	text-align: left;
+}
+/* Fixes old versions of FireFox */
+div.vectorMenu ul,
+x:-moz-any-link {
+	min-width: 5em;
+}
+/* Returns things back to normal in modern versions of FireFox */
+div.vectorMenu ul,
+x:-moz-any-link,
+x:default {
+	min-width: 0;
+}
+div.vectorMenu li {
+	padding: 0;
+	margin: 0;
+	text-align: left;
+	line-height: 1em;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+div.vectorMenu li a {
+	display: inline-block;
+	padding: 0.5em;
+	white-space: nowrap;
+	color: #0645ad;
+	cursor: pointer;
+	font-size: 0.8em;
+}
+/* IGNORED BY IE6 */
+div.vectorMenu li > a {
+	display: block;
+}
+div.vectorMenu li.selected a,
+div.vectorMenu li.selected a:visited {
+	color: #333333;
+	text-decoration: none;
+}
+/* Search */
+#p-search h5 {
+	display: none;
+}
+/* @noflip */
+#p-search {
+	float: left;
+}
+#p-search {
+	margin-right: 0.5em;
+	margin-left: 0.5em;
+}
+#p-search form,
+#p-search input {
+	margin: 0;
+	margin-top: 0.4em;
+}
+div#simpleSearch {
+	display: block;
+	width: 14em;
+	height: 1.4em;
+	margin-top: 0.65em;
+	position: relative;
+	min-height: 1px; /* Gotta trigger hasLayout for IE7 */
+	border: solid 1px #AAAAAA;
+	color: black;
+	background-color: white;
+	/* @embed */
+	background-image: url(images/search-fade.png);
+	background-position: top left;
+	background-repeat: repeat-x;
+}
+div#simpleSearch label {
+	/*
+	 * DON'T PANIC! Browsers that won't scale this properly are the same browsers that have JS issues that prevent
+	 * this from ever being shown anyways.
+	*/
+	font-size: 13px;
+	top: 0.25em;
+	direction: ltr;
+}
+div#simpleSearch input {
+	color: black;
+	direction: ltr;
+}
+div#simpleSearch input:focus {
+	outline: none;
+}
+div#simpleSearch input.placeholder {
+	color: #999999;
+}
+div#simpleSearch input::-webkit-input-placeholder {
+	color: #999999;
+}
+div#simpleSearch input#searchInput {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 90%;
+	margin: 0;
+	padding: 0;
+	padding-left: 0.2em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	outline: none;
+	border: none;
+	/*
+	 * DON'T PANIC! Browsers that won't scale this properly are the same browsers that have JS issues that prevent
+	 * this from ever being shown anyways.
+	*/
+	font-size: 13px;
+	background-color: transparent;
+	direction: ltr;
+}
+div#simpleSearch button#searchButton {
+	position: absolute;
+	width: 10%;
+	right: 0;
+	top: 0;
+	padding: 0;
+	padding-top: 0.3em;
+	padding-bottom: 0.2em;
+	padding-right: 0.4em;
+	margin: 0;
+	border: none;
+	cursor: pointer;
+	background-color: transparent;
+	background-image: none;
+}
+/* OVERRIDDEN BY COMPLIANT BROWSERS */
+div#simpleSearch button#searchButton img {
+	border: none;
+	margin: 0;
+	margin-top: -3px;
+	padding: 0;
+}
+/* IGNORED BY IE6 */
+div#simpleSearch button#searchButton > img {
+	margin: 0;
+}
+/* Panel */
+div#mw-panel {
+	position: absolute;
+	top: 160px;
+	padding-top: 1em;
+	width: 10em;
+	left: 0;
+}
+div#mw-panel div.portal {
+	padding-bottom: 1.5em;
+	direction: ltr;
+}
+div#mw-panel div.portal h5 {
+	font-weight: normal;
+	color: #444444;
+	padding: 0.25em;
+	padding-top: 0;
+	padding-left: 1.75em;
+	cursor: default;
+	border: none;
+	font-size: 0.75em;
+}
+div#mw-panel div.portal div.body {
+	margin: 0;
+	padding-top: 0.5em;
+	margin-left: 1.25em;
+	/* @embed */
+	background-image: url(images/portal-break.png);
+	background-repeat: no-repeat;
+	background-position: top left;
+}
+div#mw-panel div.portal div.body ul {
+	list-style: none;
+	list-style-image: none;
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+div#mw-panel div.portal div.body ul li {
+	line-height: 1.125em;
+	padding: 0;
+	padding-bottom: 0.5em;
+	margin: 0;
+	overflow: hidden;
+	font-size: 0.75em;
+}
+div#mw-panel div.portal div.body ul li a {
+	color: #0645ad;
+}
+div#mw-panel div.portal div.body ul li a:visited {
+	color: #0b0080;
+}
+/* Footer */
+div#footer {
+	margin-left: 10em;
+	margin-top: 0;
+	padding: 0.75em;
+	/* @embed */
+	background-image: url(images/border.png);
+	background-position: top left;
+	background-repeat: repeat-x;
+	direction: ltr;
+}
+div#footer ul {
+	list-style: none;
+	list-style-image: none;
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+div#footer ul li {
+	margin: 0;
+	padding: 0;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	color: #333333;
+	font-size: 0.7em;
+}
+div#footer #footer-icons {
+	float: right;
+}
+/* @noflip */
+body.ltr div#footer #footer-places {
+	float: left;
+}
+div#footer #footer-info li {
+	line-height: 1.4em;
+}
+div#footer #footer-icons li {
+	float: left;
+	margin-left: 0.5em;
+	line-height: 2em;
+	text-align: right;
+}
+div#footer #footer-places li {
+	float: left;
+	margin-right: 1em;
+	line-height: 2em;
+}
+/* Logo */
+#p-logo {
+	position: absolute;
+	top: -160px;
+	left: 0;
+	width: 10em;
+	height: 160px;
+}
+#p-logo a {
+	display: block;
+	width: 10em;
+	height: 160px;
+	background-repeat: no-repeat;
+	background-position: center center;
+	text-decoration: none;
+}
+
+/*
+ *
+ * The following code is highly modified from monobook. It would be nice if the
+ * preftoc id was more human readable like preferences-toc for instance,
+ * howerver this would require backporting the other skins.
+ */
+
+/* Preferences */
+#preftoc {
+	/* Tabs */
+	width: 100%;
+	float: left;
+	clear: both;
+	margin: 0 !important;
+	padding: 0 !important;
+	/* @embed */
+	background-image: url(images/preferences-break.png);
+	background-position: bottom left;
+	background-repeat: no-repeat;
+}
+	#preftoc li {
+		/* Tab */
+		float: left;
+		margin: 0;
+		padding: 0;
+		padding-right: 1px;
+		height: 2.25em;
+		white-space: nowrap;
+		list-style-type: none;
+		list-style-image: none;
+		/* @embed */
+		background-image: url(images/preferences-break.png);
+		background-position: bottom right;
+		background-repeat: no-repeat;
+	}
+	/* Sadly, IE6 won't understand this */
+	#preftoc li:first-child {
+		margin-left: 1px;
+	}
+	#preftoc a,
+	#preftoc a:active {
+		display: inline-block;
+		position: relative;
+		color: #0645ad;
+		padding: 0.5em;
+		text-decoration: none;
+		background-image: none;
+		font-size: 0.9em;
+	}
+	#preftoc a:hover,
+	#preftoc a:focus {
+		text-decoration: underline;
+	}
+	#preftoc li.selected a {
+		/* @embed */
+		background-image: url(images/preferences-fade.png);
+		background-position: bottom;
+		background-repeat: repeat-x;
+		color: #333333;
+		text-decoration: none;
+	}
+#preferences {
+	float: left;
+	width: 100%;
+	margin: 0;
+	margin-top: -2px;
+	clear: both;
+	border: solid 1px #cccccc;
+	background-color: #f9f9f9;
+	/* @embed */
+	background-image: url(images/preferences-base.png);
+}
+#preferences fieldset {
+	border: none;
+	border-top: solid 1px #cccccc;
+}
+#preferences fieldset.prefsection {
+	border: none;
+	padding: 0;
+	margin: 1em;
+}
+#preferences legend {
+	color: #666666;
+}
+#preferences fieldset.prefsection legend.mainLegend {
+	display: none;
+}
+#preferences td {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+#preferences td.htmlform-tip {
+	font-size: x-small;
+	padding: .2em 2em;
+	color: #666666;
+}
+#preferences div.mw-prefs-buttons {
+	padding: 1em;
+}
+#preferences div.mw-prefs-buttons input {
+	margin-right: 0.25em;
+}
+
+/**
+ * The following code is slightly modified from monobook
+ */
+div#content {
+	line-height: 1.5em;
+}
+#bodyContent {
+	font-size: 0.8em;
+}
+
+.editsection {
+	float: right;
+}
+
+ul {
+	/* @embed */
+	list-style-image: url(images/bullet-icon.png);
+}
+
+pre {
+	line-height: 1.3em;
+}
+
+/* Site Notice (includes notices from CentralNotice extension) */
+#siteNotice {
+	font-size: 0.8em;
+}
+#firstHeading {
+	padding-top: 0;
+	margin-top: 0;
+	padding-top: 0;
+	font-size: 1.6em;
+}
+div#content a.external,
+div#content a.external[href ^="gopher://"] {
+	/* @embed */
+	background: url(images/external-link-ltr-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href ^="https://"],
+.link-https {
+	/* @embed */
+	background: url(images/lock-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href ^="mailto:"],
+.link-mailto {
+	/* @embed */
+	background: url(images/mail-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href ^="news:"] {
+	/* @embed */
+	background: url(images/news-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href ^="ftp://"],
+.link-ftp {
+	/* @embed */
+	background: url(images/file-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href ^="irc://"],
+div#content a.external[href ^="ircs://"],
+.link-irc {
+	/* @embed */
+	background: url(images/talk-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href $=".ogg"], div#content a.external[href $=".OGG"],
+div#content a.external[href $=".mid"], div#content a.external[href $=".MID"],
+div#content a.external[href $=".midi"], div#content a.external[href $=".MIDI"],
+div#content a.external[href $=".mp3"], div#content a.external[href $=".MP3"],
+div#content a.external[href $=".wav"], div#content a.external[href $=".WAV"],
+div#content a.external[href $=".wma"], div#content a.external[href $=".WMA"],
+.link-audio {
+	/* @embed */
+	background: url(images/audio-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href $=".ogm"], div#content a.external[href $=".OGM"],
+div#content a.external[href $=".avi"], div#content a.external[href $=".AVI"],
+div#content a.external[href $=".mpeg"], div#content a.external[href $=".MPEG"],
+div#content a.external[href $=".mpg"], div#content a.external[href $=".MPG"],
+.link-video {
+	/* @embed */
+	background: url(images/video-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+div#content a.external[href $=".pdf"], div#content a.external[href $=".PDF"],
+div#content a.external[href *=".pdf#"], div#content a.external[href *=".PDF#"],
+div#content a.external[href *=".pdf?"], div#content a.external[href *=".PDF?"],
+.link-document {
+	/* @embed */
+	background: url(images/document-icon.png) center right no-repeat;
+	padding-right: 13px;
+}
+
+/* Icon for Usernames */
+#pt-userpage,
+#pt-anonuserpage,
+#pt-login {
+	/* @embed */
+	background: url(images/user-icon.png) left top no-repeat;
+	padding-left: 15px !important;
+	text-transform: none;
+}
+
+.redirectText {
+	font-size: 140%;
+}
+
+.redirectMsg img {
+	vertical-align: text-bottom;
+}
+
+#bodyContent {
+	position: relative;
+	width: 100%;
+}
+#mw-js-message {
+	font-size: 0.8em;
+}
+div#bodyContent {
+	line-height: 1.5em;
+}
+
+/* Watch/Unwatch Icon Styling */
+#ca-unwatch.icon a,
+#ca-watch.icon a {
+	margin: 0;
+	padding: 0;
+	outline: none;
+	display: block;
+	width: 26px;
+	/* This hides the text but shows the background image */
+	padding-top: 3.1em;
+	margin-top: 0;
+	/* Only applied in IE6 */
+	margin-top: -0.8em !ie;
+	height: 0;
+	overflow: hidden;
+	/* @embed */
+	background-image: url(images/watch-icons.png);
+}
+#ca-unwatch.icon a {
+	background-position: -43px 60%;
+}
+#ca-watch.icon a {
+	background-position: 5px 60%;
+}
+#ca-unwatch.icon a:hover,
+#ca-unwatch.icon a:focus {
+	background-position: -67px 60%;
+}
+#ca-watch.icon a:hover,
+#ca-watch.icon a:focus {
+	background-position: -19px 60%;
+}
+#ca-unwatch.icon a.loading,
+#ca-watch.icon a.loading {
+	/* @embed */
+	background-image: url(images/watch-icon-loading.gif);
+	background-position: 5px 60%;
+}
+#ca-unwatch.icon a span,
+#ca-watch.icon a span {
+	display: none;
+}
+div.vectorTabs ul {
+	/* @embed */
+	background-image:url(images/tab-break.png);
+	background-position:right bottom;
+	background-repeat:no-repeat;
+}
+
+/* Tooltips are outside of the normal body code, so this helps make the size of the text sensible */
+.tipsy {
+	font-size: 0.8em;
+}
+/**
+ * CSS in this file is used by *all* skins (that have any CSS at all). Be
+ * careful what you put in here, since what looks good in one skin may not in
+ * another, but don't ignore the poor pre-Monobook users either.
+ */
+
+/* GENERAL CLASSES FOR DIRECTIONALITY SUPPORT */
+
+/**
+ * These classes should be used for text depending on the content direction.
+ * Content stuff like editsection, ul/ol and TOC depend on this.
+ */
+.mw-content-ltr {
+	/* @noflip */
+	direction: ltr;
+}
+.mw-content-rtl {
+	/* @noflip */
+	direction: rtl;
+}
+
+/* Most input fields should be in site direction */
+.sitedir-ltr textarea,
+.sitedir-ltr input {
+	/* @noflip */
+	direction: ltr;
+}
+.sitedir-rtl textarea,
+.sitedir-rtl input {
+	/* @noflip */
+	direction: rtl;
+}
+
+/* Input types that should follow user direction, like buttons */
+/* TODO: What about buttons in wikipage content ? */
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="file"] {
+	direction: ltr;
+}
+
+/* Override default values */
+textarea[dir="ltr"],
+input[dir="ltr"] {
+	/* @noflip */
+	direction: ltr;
+}
+textarea[dir="rtl"],
+input[dir="rtl"] {
+	/* @noflip */
+	direction: rtl;
+}
+
+/* Default style for semantic tags */
+abbr,
+acronym,
+.explain {
+	border-bottom: 1px dotted;
+	cursor: help;
+}
+
+/* Colored watchlist and recent changes numbers */
+.mw-plusminus-pos {
+	color: #006400; /* dark green */
+}
+.mw-plusminus-neg {
+	color: #8b0000; /* dark red */
+}
+.mw-plusminus-null {
+	color: #aaa; /* gray */
+}
+
+/**
+ * Links to redirects appear italicized on [[Special:AllPages]], [[Special:PrefixIndex]],
+ * [[Special:Watchlist/edit]] and in category listings.
+ */
+.allpagesredirect,
+.redirect-in-category,
+.watchlistredir {
+	font-style: italic;
+}
+
+/* Comment and username portions of RC entries */
+span.comment {
+	font-style: italic;
+}
+
+span.changedby {
+	font-size: 95%;
+}
+
+/* Math */
+.texvc {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+img.tex {
+	vertical-align: middle;
+}
+span.texhtml {
+	font-family: serif;
+}
+
+/**
+ * Add a bit of margin space between the preview and the toolbar.
+ * This replaces the ugly <p><br /></p> we used to insert into the page source
+ */
+#wikiPreview.ontop {
+	margin-bottom: 1em;
+}
+
+/* Stop floats from intruding into edit area in previews */
+#editform,
+#toolbar,
+#wpTextbox1 {
+	clear: both;
+}
+#toolbar img {
+	cursor: pointer;
+}
+div#mw-js-message {
+	margin: 1em 5%;
+	padding: 0.5em 2.5%;
+	border: solid 1px #ddd;
+	background-color: #fcfcfc;
+}
+
+/* Edit section links */
+.editsection {
+	float: right;
+	margin-left: 5px;
+}
+/* Correct directionality when page dir is different from site/user dir */
+.mw-content-ltr .editsection,
+.mw-content-rtl .mw-content-ltr .editsection {
+	/* @noflip */
+	float: right;
+}
+.mw-content-rtl .editsection,
+.mw-content-ltr .mw-content-rtl .editsection {
+	/* @noflip */
+	float: left;
+}
+
+/**
+ * File description page
+ */
+
+div.mw-filepage-resolutioninfo {
+	font-size: smaller;
+}
+
+/**
+ * File histories
+ */
+h2#filehistory {
+	clear: both;
+}
+
+table.filehistory th,
+table.filehistory td {
+	vertical-align: top;
+}
+table.filehistory th {
+	text-align: left;
+}
+table.filehistory td.mw-imagepage-filesize,
+table.filehistory th.mw-imagepage-filesize {
+	white-space: nowrap;
+}
+
+table.filehistory td.filehistory-selected {
+	font-weight: bold;
+}
+
+/**
+ * Add a checkered background image on hover for file
+ * description pages. (bug 26470)
+ */
+.filehistory a img,
+#file img:hover {
+	/* @embed */
+	background: white url(images/Checker-16x16.png) repeat;
+}
+
+/**
+ * rev_deleted stuff
+ */
+li span.deleted,
+span.history-deleted {
+	text-decoration: line-through;
+	color: #888;
+	font-style: italic;
+}
+
+/**
+ * Patrol stuff
+ */
+.not-patrolled {
+	background-color: #ffa;
+}
+
+.unpatrolled {
+	font-weight: bold;
+	color: red;
+}
+
+div.patrollink {
+	font-size: 75%;
+	text-align: right;
+}
+
+/**
+ * Forms
+ */
+td.mw-label {
+	text-align: right;
+}
+td.mw-input {
+	text-align: left;
+}
+td.mw-submit {
+	text-align: left;
+}
+
+td.mw-label {
+	vertical-align: top;
+}
+.prefsection td.mw-label {
+	width: 20%;
+}
+.prefsection table {
+	width: 100%;
+}
+td.mw-submit {
+	white-space: nowrap;
+}
+
+table.mw-htmlform-nolabel td.mw-label {
+	width: 1px;
+}
+
+tr.mw-htmlform-vertical-label td.mw-label {
+	text-align: left !important;
+}
+
+.mw-htmlform-invalid-input td.mw-input input {
+	border-color: red;
+}
+
+.mw-htmlform-flatlist div.mw-htmlform-flatlist-item {
+	display: inline;
+	margin-right: 1em;
+	white-space: nowrap;
+}
+
+input#wpSummary {
+	width: 80%;
+}
+
+/**
+ * Image captions
+ */
+.thumbcaption {
+	text-align: left;
+}
+.magnify {
+	float: right;
+}
+
+/**
+ * Categories
+ */
+#catlinks {
+	/**
+	 * Overrides text justification (user preference)
+	 * See bug 31990
+	 */
+	text-align: left;
+}
+.catlinks ul {
+	display: inline;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	list-style-type: none;
+	list-style-image: none;
+	vertical-align: middle !ie;
+}
+
+.catlinks li {
+	display: inline-block;
+	line-height: 1.25em;
+	border-left: 1px solid #AAA;
+	margin: 0.125em 0;
+	padding: 0 0.5em;
+	zoom: 1;
+	display: inline !ie;
+}
+
+.catlinks li:first-child {
+	padding-left: 0.25em;
+	border-left: none;
+}
+/**
+ * Hidden categories
+ */
+.mw-hidden-cats-hidden {
+	display: none;
+}
+.catlinks-allhidden {
+	display: none;
+}
+
+/* Convenience links to edit block, delete and protect reasons */
+p.mw-ipb-conveniencelinks,
+p.mw-protect-editreasons,
+p.mw-filedelete-editreasons,
+p.mw-delete-editreasons,
+p.mw-revdel-editreasons {
+	font-size: 90%;
+	text-align: right;
+}
+
+/**
+ * OpenSearch ajax suggestions
+ */
+.os-suggest {
+	overflow: auto;
+	overflow-x: hidden;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	background-color: white;
+	border-style: solid;
+	border-color: #AAAAAA;
+	border-width: 1px;
+	z-index:99;
+	font-size:95%;
+}
+
+table.os-suggest-results {
+	font-size: 95%;
+	cursor: pointer;
+	border: 0;
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.os-suggest-result,
+.os-suggest-result-hl {
+	white-space: nowrap;
+	background-color: white;
+	color: black;
+	padding: 2px;
+}
+.os-suggest-result-hl,
+.os-suggest-result-hl-webkit {
+	background-color: #4C59A6;
+	color: white;
+}
+
+.os-suggest-toggle {
+	position: relative;
+	left: 1ex;
+	font-size: 65%;
+}
+.os-suggest-toggle-def {
+	position: absolute;
+	top: 0;
+	left: 0;
+	font-size: 65%;
+	visibility: hidden;
+}
+
+/* Page history styling */
+
+/* The auto-generated edit comments */
+.autocomment {
+	color: gray;
+}
+#pagehistory .history-user {
+	margin-left: 0.4em;
+	margin-right: 0.2em;
+}
+#pagehistory span.minor {
+	font-weight: bold;
+}
+#pagehistory li {
+	border: 1px solid white;
+}
+#pagehistory li.selected {
+	background-color: #f9f9f9;
+	border: 1px dashed #aaa;
+}
+
+.mw-history-revisiondelete-button, #mw-fileduplicatesearch-icon {
+	float: right;
+}
+
+/** Generic minor/bot/newpage styling (recent changes) */
+.newpage,
+.minoredit,
+.botedit {
+	font-weight: bold;
+}
+
+#shared-image-dup,
+#shared-image-conflict {
+	font-style: italic;
+}
+
+/**
+ * Recreating deleted page warning
+ * Reupload file warning
+ * Page protection warning
+ * incl. log entries for these warnings
+ */
+div.mw-warning-with-logexcerpt {
+	padding: 3px;
+	margin-bottom: 3px;
+	border: 2px solid #2F6FAB;
+	clear: both;
+}
+div.mw-warning-with-logexcerpt ul li {
+	font-size: 90%;
+}
+
+/* (show/hide) revision deletion links */
+span.mw-revdelundel-link,
+strong.mw-revdelundel-link {
+	font-size: 90%;
+}
+span.mw-revdelundel-hidden,
+input.mw-revdelundel-hidden {
+	visibility: hidden;
+}
+
+td.mw-revdel-checkbox,
+th.mw-revdel-checkbox {
+	padding-right: 10px;
+	text-align: center;
+}
+
+/* feed links */
+a.feedlink {
+	/* @embed */
+	background: url(images/feed-icon.png) center left no-repeat;
+	padding-left: 16px;
+}
+
+/* Plainlinks - this can be used to switch
+ * off special external link styling */
+.plainlinks a {
+	background: none !important;
+	padding: 0 !important;
+}
+/* External URLs should always be treated as LTR (bug 4330) */
+/* @noflip */ .rtl a.external.free,
+.rtl a.external.autonumber {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+
+/**
+ * wikitable class for skinning normal tables
+ * keep in sync with commonPrint.css
+ */
+table.wikitable {
+	margin: 1em 1em 1em 0;
+	background-color: #f9f9f9;
+	border: 1px #aaa solid;
+	border-collapse: collapse;
+	color: black;
+}
+table.wikitable > tr > th,
+table.wikitable > tr > td,
+table.wikitable > * > tr > th,
+table.wikitable > * > tr > td {
+	border: 1px #aaa solid;
+	padding: 0.2em;
+}
+table.wikitable > tr > th,
+table.wikitable > * > tr > th {
+	background-color: #f2f2f2;
+	text-align: center;
+}
+table.wikitable > caption {
+	font-weight: bold;
+}
+
+/* hide initially collapsed collapsable tables */
+table.collapsed tr.collapsable {
+	display: none;
+}
+
+/* success and error messages */
+.success {
+	color: green;
+	font-size: larger;
+}
+.warning {
+	color: #FFA500; /* orange */
+	font-size: larger;
+}
+.error {
+	color: red;
+	font-size: larger;
+}
+.errorbox,
+.warningbox,
+.successbox {
+	font-size: larger;
+	border: 2px solid;
+	padding: .5em 1em;
+	float: left;
+	margin-bottom: 2em;
+	color: #000;
+}
+.errorbox {
+	border-color: red;
+	background-color: #fff2f2;
+}
+.warningbox {
+	border-color: #FF8C00; /* darkorange */
+	background-color: #FFFFC0;
+}
+.successbox {
+	border-color: green;
+	background-color: #dfd;
+}
+.errorbox h2,
+.warningbox h2,
+.successbox h2 {
+	font-size: 1em;
+	font-weight: bold;
+	display: inline;
+	margin: 0 .5em 0 0;
+	border: none;
+}
+
+/* general info/warning box for SP */
+.mw-infobox {
+	border: 2px solid #ff7f00;
+	margin: 0.5em;
+	clear: left;
+	overflow: hidden;
+}
+
+.mw-infobox-left {
+	margin: 7px;
+	float: left;
+	width: 35px;
+}
+
+.mw-infobox-right {
+	margin: 0.5em 0.5em 0.5em 49px;
+}
+
+/* Note on preview page */
+.previewnote {
+	color: #c00;
+	margin-bottom: 1em;
+}
+
+.previewnote p {
+	text-indent: 3em;
+	margin: 0.8em 0;
+}
+
+.visualClear {
+	clear: both;
+}
+
+#mw_trackbacks {
+	border: solid 1px #bbbbff;
+	background-color: #eeeeff;
+	padding: 0.2em;
+}
+
+/**
+ * Data table style
+ *
+ * Transparent table with suddle borders
+ * and blue row-highlighting.
+ */
+.mw-datatable {
+	border-collapse: collapse;
+}
+.mw-datatable,
+.mw-datatable td,
+.mw-datatable th {
+	border: 1px solid #aaaaaa;
+	padding: 0 0.15em 0 0.15em;
+}
+.mw-datatable th {
+	background-color: #ddddff;
+}
+.mw-datatable td {
+	background-color: #ffffff;
+}
+.mw-datatable tr:hover td {
+	background-color: #eeeeff;
+}
+
+
+/**
+ * TablePager tables generated by the TablePager PHP class
+ * in MediaWiki (e.g. Special:ListFiles).
+ */
+.TablePager {
+	min-width: 80%;
+}
+.TablePager_nav {
+	margin: 0 auto;
+}
+.TablePager_nav td {
+	padding: 3px;
+	text-align: center;
+}
+.TablePager_nav a {
+	text-decoration: none;
+}
+
+.imagelist td,
+.imagelist th {
+	white-space: nowrap;
+}
+.imagelist .TablePager_col_links {
+	background-color: #eeeeff;
+}
+.imagelist .TablePager_col_img_description {
+	white-space: normal;
+}
+.imagelist th.TablePager_sort {
+	background-color: #ccccff;
+}
+
+/* filetoc */
+ul#filetoc {
+	text-align: center;
+	border: 1px solid #aaaaaa;
+	background-color: #f9f9f9;
+	padding: 5px;
+	font-size: 95%;
+	margin-bottom: 0.5em;
+	margin-left: 0;
+	margin-right: 0;
+}
+
+#filetoc li {
+	display: inline;
+	list-style-type: none;
+	padding-right: 2em;
+}
+
+/* Classes for EXIF data display */
+table.mw_metadata {
+	font-size: 0.8em;
+	margin-left: 0.5em;
+	margin-bottom: 0.5em;
+	width: 400px;
+}
+
+table.mw_metadata caption {
+	font-weight: bold;
+}
+
+table.mw_metadata th {
+	font-weight: normal;
+}
+
+table.mw_metadata td {
+	padding: 0.1em;
+}
+
+table.mw_metadata {
+	border: none;
+	border-collapse: collapse;
+}
+
+table.mw_metadata td,
+table.mw_metadata th {
+	text-align: center;
+	border: 1px solid #aaaaaa;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+table.mw_metadata th {
+	background-color: #f9f9f9;
+}
+
+table.mw_metadata td {
+	background-color: #fcfcfc;
+}
+
+table.mw_metadata ul.metadata-langlist {
+	list-style-type: none;
+	list-style-image: none;
+	padding-right: 5px;
+	padding-left: 5px;
+	margin: 0;
+}
+
+/* Correct directionality when page dir is different from site/user dir */
+.mw-content-ltr ul,
+.mw-content-rtl .mw-content-ltr ul {
+	/* @noflip */
+	margin: 0.3em 0 0 1.6em;
+	padding: 0;
+}
+.mw-content-rtl ul,
+.mw-content-ltr .mw-content-rtl ul {
+	/* @noflip */
+	margin: 0.3em 1.6em 0 0;
+	padding: 0;
+}
+.mw-content-ltr ol,
+.mw-content-rtl .mw-content-ltr ol {
+	/* @noflip */
+	margin: 0.3em 0 0 3.2em;
+	padding: 0;
+}
+.mw-content-rtl ol,
+.mw-content-ltr .mw-content-rtl ol {
+	/* @noflip */
+	margin: 0.3em 3.2em 0 0;
+	padding: 0;
+}
+/* @noflip */
+.mw-content-ltr dd,
+.mw-content-rtl .mw-content-ltr dd {
+	margin-left: 1.6em;
+	margin-right: 0;
+}
+/* @noflip */
+.mw-content-rtl dd,
+.mw-content-ltr .mw-content-rtl dd {
+	margin-right: 1.6em;
+	margin-left: 0;
+}
+
+/* Galleries */
+/* These display attributes look nonsensical, but are needed to support IE and FF2 */
+/* Don't forget to update commonPrint.css */
+li.gallerybox {
+	vertical-align: top;
+	border: solid 2px white;
+	display: -moz-inline-box;
+	display: inline-block;
+}
+
+ul.gallery,
+li.gallerybox {
+	zoom: 1;
+	*display: inline;
+}
+
+ul.gallery {
+	margin: 2px;
+	padding: 2px;
+	display: block;
+}
+
+li.gallerycaption {
+	font-weight: bold;
+	text-align: center;
+	display: block;
+	word-wrap: break-word;
+}
+
+li.gallerybox div.thumb {
+	text-align: center;
+	border: 1px solid #ccc;
+	background-color: #f9f9f9;
+	margin: 2px;
+}
+
+li.gallerybox div.thumb img {
+	display: block;
+	margin: 0 auto;
+}
+
+div.gallerytext {
+	overflow: hidden;
+	font-size: 94%;
+	padding: 2px 4px;
+	word-wrap: break-word;
+}
+
+.mw-ajax-loader {
+	/* @embed */
+	background-image: url(images/ajax-loader.gif);
+	background-position: center center;
+	background-repeat: no-repeat;
+	padding: 16px;
+	position: relative;
+	top: -16px;
+}
+
+.mw-small-spinner {
+	padding: 10px !important;
+	margin-right: 0.6em;
+	/* @embed */
+	background-image: url(images/spinner.gif);
+	background-position: center center;
+	background-repeat: no-repeat;
+}
+
+/* Language specific height correction for titles. Ref Bug 29405 and Bug 30809 */
+/* Languages like hi or ml require slightly more vertical space to show diacritics properly */
+h1:lang(as),
+h1:lang(bh), /* Macrolanguage, used on bh.wikipedia.org, should be removed one day */
+h1:lang(bho),
+h1:lang(bn),
+h1:lang(gu),
+h1:lang(hi),
+h1:lang(kn),
+h1:lang(ml),
+h1:lang(mr),
+h1:lang(or),
+h1:lang(pa),
+h1:lang(sa),
+h1:lang(ta),
+h1:lang(te) {
+	line-height: 1.5em !important;
+}
+h2:lang(as), h3:lang(as), h4:lang(as), h5:lang(as), h6:lang(as),
+h2:lang(bho), h3:lang(bho), h4:lang(bho), h5:lang(bho), h6:lang(bho),
+h2:lang(bh), h3:lang(bh), h4:lang(bh), h5:lang(bh), h6:lang(bh),
+h2:lang(bn), h3:lang(bn), h4:lang(bn), h5:lang(bn), h6:lang(bn),
+h2:lang(gu), h3:lang(gu), h4:lang(gu), h5:lang(gu), h6:lang(gu),
+h2:lang(hi), h3:lang(hi), h4:lang(hi), h5:lang(hi), h6:lang(hi),
+h2:lang(kn), h3:lang(kn), h4:lang(kn), h5:lang(kn), h6:lang(kn),
+h2:lang(ml), h3:lang(ml), h4:lang(ml), h5:lang(ml), h6:lang(ml),
+h2:lang(mr), h3:lang(mr), h4:lang(mr), h5:lang(mr), h6:lang(mr),
+h2:lang(or), h3:lang(or), h4:lang(or), h5:lang(or), h6:lang(or),
+h2:lang(pa), h3:lang(pa), h4:lang(pa), h5:lang(pa), h6:lang(pa),
+h2:lang(sa), h3:lang(sa), h4:lang(sa), h5:lang(sa), h6:lang(sa),
+h2:lang(ta), h3:lang(ta), h4:lang(ta), h5:lang(ta), h6:lang(ta),
+h2:lang(te), h3:lang(te), h4:lang(te), h5:lang(te), h6:lang(te) {
+	line-height: 1.2em;
+}
+
+/* Localised ordered list numbering for some languages */
+ol:lang(bcc) li,
+ol:lang(bqi) li,
+ol:lang(fa) li,
+ol:lang(glk) li,
+ol:lang(kk-arab) li,
+ol:lang(mzn) li {
+	list-style-type: -moz-persian;
+	list-style-type: persian;
+}
+
+ol:lang(ckb) li {
+	list-style-type: -moz-arabic-indic;
+	list-style-type: arabic-indic;
+}
+
+ol:lang(hi) li,
+ol:lang(mr) li {
+	list-style-type: -moz-devanagari;
+	list-style-type: devanagari;
+}
+
+ol:lang(as) li,
+ol:lang(bn) li {
+	list-style-type: -moz-bengali;
+	list-style-type: bengali;
+}
+
+ol:lang(or) li {
+	list-style-type: -moz-oriya;
+	list-style-type: oriya;
+}
+
+#toc ul, .toc ul {
+	margin: .3em 0;
+}
+
+/* Correct directionality when page dir is different from site/user dir */
+/* @noflip */ .mw-content-ltr .toc ul,
+.mw-content-ltr #toc ul,
+.mw-content-rtl .mw-content-ltr .toc ul,
+.mw-content-rtl .mw-content-ltr #toc ul {
+	text-align: left;
+}
+/* @noflip */ .mw-content-rtl .toc ul,
+.mw-content-rtl #toc ul,
+.mw-content-ltr .mw-content-rtl .toc ul,
+.mw-content-ltr .mw-content-rtl #toc ul {
+	text-align: right;
+}
+/* @noflip */ .mw-content-ltr .toc ul ul,
+.mw-content-ltr #toc ul ul,
+.mw-content-rtl .mw-content-ltr .toc ul ul,
+.mw-content-rtl .mw-content-ltr #toc ul ul {
+	margin: 0 0 0 2em;
+}
+/* @noflip */ .mw-content-rtl .toc ul ul,
+.mw-content-rtl #toc ul ul,
+.mw-content-ltr .mw-content-rtl .toc ul ul,
+.mw-content-ltr .mw-content-rtl #toc ul ul {
+	margin: 0 2em 0 0;
+}
+
+#toc #toctitle,
+.toc #toctitle,
+#toc .toctitle,
+.toc .toctitle {
+	direction: ltr;
+}
+
+/* tooltip styles */
+.mw-help-field-hint {
+	display: none;
+	margin-left: 2px;
+	margin-bottom: -8px;
+	padding: 0 0 0 15px;
+	/* @embed */
+	background-image: url('images/help-question.gif');
+	background-position: left center;
+	background-repeat: no-repeat;
+	cursor: pointer;
+	font-size: .8em;
+	text-decoration: underline;
+	color: #0645ad;
+}
+.mw-help-field-hint:hover {
+	/* @embed */
+	background-image: url('images/help-question-hover.gif');
+}
+.mw-help-field-data {
+	display: block;
+	background-color: #d6f3ff;
+	padding:5px 8px 4px 8px;
+	border: 1px solid #5dc9f4;
+	margin-left: 20px;
+}
+.tipsy {
+	padding: 5px 5px 10px;
+	font-size: 12px;
+	position: absolute;
+	z-index: 100000;
+	overflow: visible;
+}
+.tipsy-inner {
+	padding: 5px 8px 4px 8px;
+	background-color: #d6f3ff;
+	color: black;
+	border: 1px solid #5dc9f4;
+	max-width: 300px;
+	text-align: left;
+}
+.tipsy-arrow {
+	position: absolute;
+	/* @embed */
+	background: url(images/tipsy-arrow.gif) no-repeat top left;
+	width: 13px;
+	height: 13px;
+}
+.tipsy-se .tipsy-arrow {
+	bottom: -2px;
+	right: 10px;
+	background-position: 0% 100%;
+}
+
+#mw-clearyourcache,
+#mw-sitecsspreview,
+#mw-sitejspreview,
+#mw-usercsspreview,
+#mw-userjspreview {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+
+/* Correct user & content directionality when viewing a diff */
+.diff-currentversion-title,
+.diff {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+/* @noflip */ .diff-contentalign-right td {
+	direction: rtl;
+	unicode-bidi: embed;
+}
+/* @noflip */ .diff-contentalign-left td {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+.diff-otitle,
+.diff-ntitle,
+.diff-lineno {
+	direction: ltr !important;
+	unicode-bidi: embed;
+}
+
+#mw-revision-info,
+#mw-revision-info-current,
+#mw-revision-nav {
+	direction: ltr;
+	display: inline;
+}
+
+/* Images */
+
+/* @noflip */ div.tright,
+div.floatright,
+table.floatright {
+	clear: right;
+	float: right;
+}
+/* @noflip */ div.tleft,
+div.floatleft,
+table.floatleft {
+	float: left;
+	clear: left;
+}
+div.floatright,
+table.floatright,
+div.floatleft,
+table.floatleft {
+	position: relative;
+}
+
+/* bug 12205 */
+#mw-credits a {
+	unicode-bidi: embed;
+}
+
+/* Accessibility */
+.mw-jump,
+#jump-to-nav {
+	overflow: hidden;
+	height: 0;
+	zoom: 1; /* http://webaim.org/techniques/skipnav/#iequirk */
+}
+
+/* Print footer should be hidden by default in screen. */
+.printfooter {
+	display: none;
+}
+
+/* For developpers */
+.xdebug-error {
+	position: absolute;
+	z-index: 99;
+}
+
+.editsection, .toctoggle {
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+/**
+ * MediaWiki Print style sheet for CSS2-capable browsers.
+ * Copyright Gabriel Wicke, http://www.aulinx.de/
+ *
+ * Derived from the plone (http://plone.org/) styles
+ * Copyright Alexander Limi
+ */
+
+/* Thanks to A List Apart (http://alistapart.com/) for useful extras */
+a.stub,
+a.new {
+	color: #ba0000;
+	text-decoration: none;
+}
+
+#toc {
+	border: 1px solid #aaaaaa;
+	background-color: #f9f9f9;
+	padding: 5px;
+}
+
+/* images */
+div.floatright {
+	float: right;
+	clear: right;
+	position: relative;
+	margin: 0.5em 0 0.8em 1.4em;
+}
+div.floatright p {
+	font-style: italic;
+}
+div.floatleft {
+	float: left;
+	clear: left;
+	position: relative;
+	margin: 0.5em 1.4em 0.8em 0;
+}
+div.floatleft p {
+	font-style: italic;
+}
+div.center {
+	text-align: center;
+}
+
+/* thumbnails */
+div.thumb {
+	border: none;
+	width: auto;
+	margin-top: 0.5em;
+	margin-bottom: 0.8em;
+	background-color: transparent;
+}
+div.thumbinner {
+	border:1px solid #cccccc;
+	padding: 3px !important;
+	background-color: White;
+	font-size: 94%;
+	text-align: center;
+	overflow: hidden;
+}
+html .thumbimage {
+	border: 1px solid #cccccc;
+}
+html .thumbcaption {
+	border: none;
+	text-align: left;
+	line-height: 1.4em;
+	padding: 3px !important;
+	font-size: 94%;
+}
+
+div.magnify {
+	display: none;
+}
+/* @noflip */
+div.tright {
+	float: right;
+	clear: right;
+	margin: 0.5em 0 0.8em 1.4em;
+}
+/* @noflip */
+div.tleft {
+	float: left;
+	clear: left;
+	margin: 0.5em 1.4em 0.8em 0;
+}
+img.thumbborder {
+	border: 1px solid #dddddd;
+}
+
+/* table standards */
+table.rimage {
+	float: right;
+	width: 1pt;
+	position: relative;
+	margin-left: 1em;
+	margin-bottom: 1em;
+	text-align: center;
+}
+
+body {
+	background: white;
+	color: black;
+	margin: 0;
+	padding: 0;
+}
+
+.noprint,
+div#jump-to-nav,
+.mw-jump,
+div.top,
+div#column-one,
+#colophon,
+.editsection,
+.toctoggle,
+.tochidden,
+div#f-poweredbyico,
+div#f-copyrightico,
+li#viewcount,
+li#about,
+li#disclaimer,
+li#mobileview,
+li#privacy,
+#footer-places,
+.mw-hidden-catlinks,
+tr.mw-metadata-show-hide-extended,
+span.mw-filepage-other-resolutions,
+#filetoc {
+	/* Hides all the elements irrelevant for printing */
+	display: none;
+}
+
+ul {
+	list-style-type: square;
+}
+
+#content {
+	background: none;
+	border: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	direction: ltr;
+}
+#footer {
+	background : white;
+	color : black;
+	margin-top: 1em;
+	border-top: 1px solid #AAA;
+	direction: ltr;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: bold;
+}
+
+p {
+	margin: 1em 0;
+	line-height: 1.2em;
+}
+
+pre {
+	border: 1pt dashed black;
+	white-space: pre;
+	font-size: 8pt;
+	overflow: auto;
+	padding: 1em 0;
+	background: white;
+	color: black;
+}
+
+table.listing,
+table.listing td {
+	border: 1pt solid black;
+	border-collapse: collapse;
+}
+
+a {
+	color: black !important;
+	background: none !important;
+	padding: 0 !important;
+}
+
+a:link, a:visited {
+	color: #520;
+	background: transparent;
+	text-decoration: underline;
+}
+
+#content a.external.text:after,
+#content a.external.autonumber:after {
+	/* Expand URLs for printing */
+	content: " (" attr(href) ") ";
+}
+
+#globalWrapper {
+	width: 100% !important;
+	min-width: 0 !important;
+}
+
+#content {
+	background: white;
+	color: black;
+}
+
+#column-content {
+	margin: 0 !important;
+}
+
+#column-content #content {
+	padding: 1em;
+	margin: 0 !important;
+}
+
+/* MSIE/Win doesn't understand 'inherit' */
+a,
+a.external,
+a.new,
+a.stub {
+	color: black !important;
+	text-decoration: none !important;
+}
+
+/* Continue ... */
+a,
+a.external,
+a.new,
+a.stub {
+	color: inherit !important;
+	text-decoration: inherit !important;
+}
+
+img {
+	border: none;
+	vertical-align: middle;
+}
+
+/* math */
+span.texhtml {
+	font-family: serif;
+}
+
+#siteNotice {
+	display: none;
+}
+
+/* Galleries (see shared.css for more info) */
+li.gallerybox {
+	vertical-align: top;
+	border: solid 2px white;
+	display: -moz-inline-box;
+	display: inline-block;
+}
+
+ul.gallery, li.gallerybox {
+	zoom: 1;
+	*display: inline;
+}
+
+ul.gallery {
+	margin: 2px;
+	padding: 2px;
+	display: block;
+}
+
+li.gallerycaption {
+	font-weight: bold;
+	text-align: center;
+	display: block;
+	word-wrap: break-word;
+}
+
+li.gallerybox div.thumb {
+	text-align: center;
+	border: 1px solid #ccc;
+	margin: 2px;
+}
+
+div.gallerytext {
+	overflow: hidden;
+	font-size: 94%;
+	padding: 2px 4px;
+	word-wrap: break-word;
+}
+
+/**
+ * Diff rendering
+ */
+table.diff {
+	background: white;
+}
+td.diff-otitle {
+	background: #ffffff;
+}
+td.diff-ntitle {
+	background: #ffffff;
+}
+td.diff-addedline {
+	background: #ccffcc;
+	font-size: smaller;
+	border: solid 2px black;
+}
+td.diff-deletedline {
+	background: #ffffaa;
+	font-size: smaller;
+	border: dotted 2px black;
+}
+td.diff-context {
+	background: #eeeeee;
+	font-size: smaller;
+}
+.diffchange {
+	color: silver;
+	font-weight: bold;
+	text-decoration: underline;
+}
+
+/**
+ * Table rendering
+ * As on shared.css but with white background.
+ */
+table.wikitable,
+table.mw_metadata {
+	margin: 1em 1em 1em 0;
+	border: 1px #aaa solid;
+	background: white;
+	border-collapse: collapse;
+}
+table.wikitable > tr > th, table.wikitable > tr > td,
+table.wikitable > * > tr > th, table.wikitable > * > tr > td,
+.mw_metadata th, .mw_metadata td {
+	border: 1px #aaa solid;
+	padding: 0.2em;
+}
+table.wikitable > tr > th,
+table.wikitable > * > tr > th,
+.mw_metadata th {
+	text-align: center;
+	background: white;
+	font-weight: bold;
+}
+table.wikitable > caption,
+.mw_metadata caption {
+	font-weight: bold;
+}
+
+a.sortheader {
+	margin: 0 0.3em;
+}
+
+/* Some pagination options */
+.wikitable, .thumb, img {
+	page-break-inside: avoid;
+}
+h2, h3, h4, h5, h6, h7 {
+	page-break-after: avoid;
+}
+p {
+	widows: 3;
+	orphans: 3;
+}
+
+/**
+ * Categories
+ */
+.catlinks ul {
+	display: inline;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	list-style-type: none;
+	list-style-image: none;
+	vertical-align: middle !ie;
+}
+
+.catlinks li {
+	display: inline-block;
+	line-height: 1.15em;
+	padding: 0 .4em;
+	border-left: 1px solid #AAA;
+	margin: 0.1em 0;
+	zoom: 1;
+	display: inline !ie;
+}
+
+.catlinks li:first-child {
+	padding-left: .2em;
+	border-left: none;
+}
+/* Default styling for HTML elements */
+dfn {
+    font-style: inherit;  /* Reset default styling for <dfn> */
+}
+sup, sub {
+    line-height: 1em;     /* Reduce line-height for <sup> and <sub> */
+}
+ 
+/* Main page fixes */
+#interwiki-completelist {
+    font-weight: bold;
+}
+body.page-Main_Page #ca-delete {
+    display: none !important;
+}
+body.page-Main_Page #mp-topbanner {
+    clear: both;
+}
+ 
+/* Edit window toolbar */
+#toolbar {
+    height: 22px;
+    margin-bottom: 6px;
+}
+ 
+/* Highlight data points in the info action if specified in the URL */
+body.action-info :target {
+    background: #DEF;
+}
+ 
+/* Make the list of references smaller */
+ol.references,
+div.reflist,
+div.refbegin {
+    font-size: 90%;            /* Default font-size */
+    margin-bottom: 0.5em;
+}
+div.refbegin-100 {
+    font-size: 100%;           /* Option for normal fontsize in {{refbegin}} */
+}
+div.reflist ol.references {
+    font-size: 100%;           /* Reset font-size when nested in div.reflist */
+    list-style-type: inherit;  /* Enable custom list style types */
+}
+ 
+/* Reset top margin for lists embedded in columns */
+div.columns {
+    margin-top: 0.3em;
+}
+div.columns dl,
+div.columns ol,
+div.columns ul {
+    margin-top: 0;
+}
+ 
+/* Avoid list items from breaking between columns */
+div.columns li,
+div.columns dd dd {
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    break-inside: avoid-column;
+}
+ 
+/* Highlight clicked reference in blue to help navigation */
+ol.references li:target,
+sup.reference:target,
+span.citation:target {
+    background-color: #DEF;
+}
+ 
+/* Ensure refs in table headers and the like aren't bold or italic */
+sup.reference {
+    font-weight: normal;
+    font-style: normal;
+}
+ 
+/* Allow hidden ref errors to be shown by user CSS */
+span.brokenref {
+    display: none;
+}
+ 
+/* Styling for citations (CSS3). Breaks long urls, etc., rather than overflowing box */
+.citation {
+    word-wrap: break-word;
+}
+ 
+/* For linked citation numbers and document IDs, where
+   the number need not be shown on a screen or a handheld,
+   but should be included in the printed version */
+@media screen, handheld {
+    .citation *.printonly {
+        display: none;
+    }
+}
+ 
+/* Style for [[Template:Flowlist]] that Lets lists flow around floating objecs */
+.flowlist ul {
+    overflow-x: hidden;
+    margin-left: 0em;
+    padding-left: 1.6em;
+}
+.flowlist ol {
+    overflow-x: hidden;
+    margin-left: 0em;
+    padding-left: 3.2em;
+}
+.flowlist dl {
+    overflow-x: hidden;
+}
+ 
+/* Style for horizontal lists (separator following item).
+   IE8-specific classes are assigned in [[MediaWiki:Common.js/IEFixes.js]].
+   @source mediawiki.org/wiki/Snippets/Horizontal_lists
+   @revision 4.3 (2014-01-06)
+   @author [[User:Edokter]]
+ */
+.hlist dl,
+.hlist ol,
+.hlist ul {
+    margin: 0;
+    padding: 0;
+}
+/* Display list items inline */
+.hlist dd,
+.hlist dt,
+.hlist li {
+    margin: 0;
+    display: inline;
+}
+/* Display nested lists inline */
+.hlist dl dl, .hlist dl ol, .hlist dl ul,
+.hlist ol dl, .hlist ol ol, .hlist ol ul,
+.hlist ul dl, .hlist ul ol, .hlist ul ul {
+    display: inline;
+}
+/* Generate interpuncts */
+.hlist dt:after {
+    content: ": ";
+}
+.hlist dd:after,
+.hlist li:after {
+    content: " · ";
+    font-weight: bold;
+}
+.hlist dd:last-child:after,
+.hlist dt:last-child:after,
+.hlist li:last-child:after {
+    content: none;
+}
+/* For IE8 */
+.hlist dd.hlist-last-child:after,
+.hlist dt.hlist-last-child:after,
+.hlist li.hlist-last-child:after {
+    content: none;
+}
+/* Add parentheses around nested lists */
+.hlist dd dd:first-child:before, .hlist dd dt:first-child:before, .hlist dd li:first-child:before,
+.hlist dt dd:first-child:before, .hlist dt dt:first-child:before, .hlist dt li:first-child:before,
+.hlist li dd:first-child:before, .hlist li dt:first-child:before, .hlist li li:first-child:before {
+    content: " (";
+    font-weight: normal;
+}
+.hlist dd dd:last-child:after, .hlist dd dt:last-child:after, .hlist dd li:last-child:after,
+.hlist dt dd:last-child:after, .hlist dt dt:last-child:after, .hlist dt li:last-child:after,
+.hlist li dd:last-child:after, .hlist li dt:last-child:after, .hlist li li:last-child:after {
+    content: ") ";
+    font-weight: normal;
+}
+/* For IE8 */
+.hlist dd dd.hlist-last-child:after, .hlist dd dt.hlist-last-child:after, .hlist dd li.hlist-last-child:after,
+.hlist dt dd.hlist-last-child:after, .hlist dt dt.hlist-last-child:after, .hlist dt li.hlist-last-child:after,
+.hlist li dd.hlist-last-child:after, .hlist li dt.hlist-last-child:after, .hlist li li.hlist-last-child:after {
+    content: ") ";
+    font-weight: normal;
+}
+/* Put ordinals in front of ordered list items */
+.hlist ol {
+    counter-reset: listitem;
+}
+.hlist ol > li {
+    counter-increment: listitem;
+}
+.hlist ol > li:before {
+    content: " " counter(listitem) " ";
+}
+.hlist dd ol > li:first-child:before,
+.hlist dt ol > li:first-child:before,
+.hlist li ol > li:first-child:before {
+    content: " (" counter(listitem) " ";
+}
+ 
+/* Unbulleted lists */
+.plainlist ul {
+    line-height: inherit;
+    list-style: none none;
+    margin: 0;
+}
+.plainlist ul li {
+    margin-bottom: 0;
+}
+ 
+/* Default style for navigation boxes */
+.navbox {                     /* Navbox container style */
+    border: 1px solid #aaa;
+    width: 100%;
+    margin: auto;
+    clear: both;
+    font-size: 88%;
+    text-align: center;
+    padding: 1px;
+}
+.navbox-inner,
+.navbox-subgroup {
+    width: 100%;
+}
+.navbox-group,
+.navbox-title,
+.navbox-abovebelow {
+    padding: 0.25em 1em;      /* Title, group and above/below styles */
+    line-height: 1.5em;
+    text-align: center;
+}
+th.navbox-group {             /* Group style */
+    white-space: nowrap;
+    /* @noflip */
+    text-align: right;
+}
+.navbox,
+.navbox-subgroup {
+    background: #fdfdfd;      /* Background color */
+}
+.navbox-list {
+    line-height: 1.8em;
+    border-color: #fdfdfd;    /* Must match background color */
+}
+.navbox th,
+.navbox-title {
+    background: #ccccff;      /* Level 1 color */
+}
+.navbox-abovebelow,
+th.navbox-group,
+.navbox-subgroup .navbox-title {
+    background: #ddddff;      /* Level 2 color */
+}
+.navbox-subgroup .navbox-group,
+.navbox-subgroup .navbox-abovebelow {
+    background: #e6e6ff;      /* Level 3 color */
+}
+.navbox-even {
+    background: #f7f7f7;      /* Even row striping */
+}
+.navbox-odd {
+    background: transparent;  /* Odd row striping */
+}
+table.navbox + table.navbox {  /* Single pixel border between adjacent navboxes */
+    margin-top: -1px;          /* (doesn't work for IE6, but that's okay)       */
+}
+.navbox .hlist td dl,
+.navbox .hlist td ol,
+.navbox .hlist td ul,
+.navbox td.hlist dl,
+.navbox td.hlist ol,
+.navbox td.hlist ul {
+    padding: 0.125em 0;       /* Adjust hlist padding in navboxes */
+}
+ol + table.navbox,
+ul + table.navbox {
+    margin-top: 0.5em;        /* Prevent lists from clinging to navboxes */
+}
+ 
+/* Default styling for Navbar template */
+.navbar {
+    display: inline;
+    font-size: 88%;
+    font-weight: normal;
+}
+.navbar ul {
+    display: inline;
+    white-space: nowrap;
+}
+.navbar li {
+    word-spacing: -0.125em;
+}
+.navbar.mini li span {
+  font-variant: small-caps;
+}
+/* Navbar styling when nested in infobox and navbox */
+.infobox .navbar {
+    font-size: 100%;
+}
+.navbox .navbar {
+    display: block;
+    font-size: 100%;
+}
+.navbox-title .navbar {
+    /* @noflip */
+    float: left;
+    /* @noflip */
+    text-align: left;
+    /* @noflip */
+    margin-right: 0.5em;
+    width: 6em;
+}
+ 
+/* 'show'/'hide' buttons created dynamically by the CollapsibleTables javascript
+   in [[MediaWiki:Common.js]] are styled here so they can be customised. */
+.collapseButton {
+    /* @noflip */
+    float: right;
+    font-weight: normal;
+    /* @noflip */
+    margin-left: 0.5em;
+    /* @noflip */
+    text-align: right;
+    width: auto;
+}
+/* In navboxes, the show/hide button balances the v·d·e links
+   from [[Template:Navbar]], so they need to be the same width. */
+.navbox .collapseButton {
+    width: 6em;
+}
+ 
+/* Styling for JQuery makeCollapsible, matching that of collapseButton */
+.mw-collapsible-toggle {
+    font-weight: normal;
+    /* @noflip */
+    text-align: right;
+}
+.navbox .mw-collapsible-toggle {
+    width: 6em;
+}
+ 
+/* Infobox template style */
+.infobox {
+    border: 1px solid #aaa;
+    background-color: #f9f9f9;
+    color: black;
+    /* @noflip */
+    margin: 0.5em 0 0.5em 1em;
+    padding: 0.2em;
+    /* @noflip */
+    float: right;
+    /* @noflip */
+    clear: right;
+    /* @noflip */
+    text-align: left;
+    font-size: 88%;
+    line-height: 1.5em;
+}
+.infobox caption {
+    font-size: 125%;
+    font-weight: bold;
+}
+.infobox td,
+.infobox th {
+    vertical-align: top;
+}
+.infobox.bordered {
+    border-collapse: collapse;
+}
+.infobox.bordered td,
+.infobox.bordered th {
+    border: 1px solid #aaa;
+}
+.infobox.bordered .borderless td,
+.infobox.bordered .borderless th {
+    border: 0;
+}
+ 
+.infobox.sisterproject {
+    width: 20em;
+    font-size: 90%;
+}
+ 
+.infobox.standard-talk {
+    border: 1px solid #c0c090;
+    background-color: #f8eaba;
+}
+.infobox.standard-talk.bordered td,
+.infobox.standard-talk.bordered th {
+    border: 1px solid #c0c090;
+}
+ 
+/* styles for bordered infobox with merged rows */
+.infobox.bordered .mergedtoprow td,
+.infobox.bordered .mergedtoprow th {
+    border: 0;
+    border-top: 1px solid #aaa;
+    /* @noflip */
+    border-right: 1px solid #aaa;
+}
+ 
+.infobox.bordered .mergedrow td,
+.infobox.bordered .mergedrow th {
+    border: 0;
+    /* @noflip */
+    border-right: 1px solid #aaa;
+}
+ 
+/* Styles for geography infoboxes, eg countries,
+   country subdivisions, cities, etc.            */
+.infobox.geography {
+    border-collapse: collapse;
+    line-height: 1.2em;
+    font-size: 90%;
+}
+ 
+.infobox.geography  td,
+.infobox.geography  th {
+    border-top: 1px solid #aaa;
+    padding: 0.4em 0.6em 0.4em 0.6em;
+}
+.infobox.geography .mergedtoprow td,
+.infobox.geography .mergedtoprow th {
+    border-top: 1px solid #aaa;
+    padding: 0.4em 0.6em 0.2em 0.6em;
+}
+ 
+.infobox.geography .mergedrow td,
+.infobox.geography .mergedrow th {
+    border: 0;
+    padding: 0 0.6em 0.2em 0.6em;
+}
+ 
+.infobox.geography .mergedbottomrow td,
+.infobox.geography .mergedbottomrow th {
+    border-top: 0;
+    border-bottom: 1px solid #aaa;
+    padding: 0 0.6em 0.4em 0.6em;
+}
+ 
+.infobox.geography .maptable td,
+.infobox.geography .maptable th {
+    border: 0;
+    padding: 0;
+}
+ 
+/* Normal font styling for table row headers with scope="row" tag */
+.wikitable.plainrowheaders th[scope=row] {
+    font-weight: normal;
+    /* @noflip */
+    text-align: left;
+}
+ 
+/* Lists in data cells are always left-aligned */
+.wikitable td ul,
+.wikitable td ol,
+.wikitable td dl {
+    /* @noflip */
+    text-align: left;
+}
+/* ...unless they also use the hlist class */
+.wikitable.hlist td ul,
+.wikitable.hlist td ol,
+.wikitable.hlist td dl {
+    text-align: inherit;
+}
+ 
+/* Icons for medialist templates [[Template:Listen]],
+   [[Template:Multi-listen_start]], [[Template:Video]],
+   [[Template:Multi-video_start]] */
+div.listenlist {
+    background: url("//upload.wikimedia.org/wikipedia/commons/4/47/Sound-icon.svg") no-repeat scroll 0% 0% transparent;
+    background-size: 30px;
+    padding-left: 40px;
+}
+ 
+/* Fix for hieroglyphs specificality issue in infoboxes ([[Bugzilla:41869]]) */
+table.mw-hiero-table td {
+    vertical-align: middle;
+}
+ 
+/* Style rules for media list templates */
+div.medialist {
+    min-height: 50px;
+    margin: 1em;
+    /* @noflip */
+    background-position: top left;
+    background-repeat: no-repeat;
+}
+div.medialist ul {
+    list-style-type: none;
+    list-style-image: none;
+    margin: 0;
+}
+div.medialist ul li {
+    padding-bottom: 0.5em;
+}
+div.medialist ul li li {
+    font-size: 91%;
+    padding-bottom: 0;
+}
+ 
+/* Change the external link icon to an Adobe icon for all PDF files
+   in browsers that support these CSS selectors, like Mozilla and Opera */
+div#content a[href$=".pdf"].external,
+div#content a[href*=".pdf?"].external,
+div#content a[href*=".pdf#"].external,
+div#content a[href$=".PDF"].external,
+div#content a[href*=".PDF?"].external,
+div#content a[href*=".PDF#"].external,
+div#mw_content a[href$=".pdf"].external,
+div#mw_content a[href*=".pdf?"].external,
+div#mw_content a[href*=".pdf#"].external,
+div#mw_content a[href$=".PDF"].external,
+div#mw_content a[href*=".PDF?"].external,
+div#mw_content a[href*=".PDF#"].external {
+    background: url("//upload.wikimedia.org/wikipedia/commons/2/23/Icons-mini-file_acrobat.gif") no-repeat right;
+    /* @noflip */
+    padding-right: 18px;
+}
+ 
+/* Change the external link icon to an Adobe icon anywhere the PDFlink class
+   is used (notably Template:PDFlink). This works in IE, unlike the above. */
+div#content span.PDFlink a,
+div#mw_content span.PDFlink a {
+    background: url("//upload.wikimedia.org/wikipedia/commons/2/23/Icons-mini-file_acrobat.gif") no-repeat right;
+    /* @noflip */
+    padding-right: 18px;
+}
+ 
+/* Content in columns with CSS instead of tables ([[Template:Columns]]) */
+div.columns-2 div.column {
+    /* @noflip */
+    float: left;
+    width: 50%;
+    min-width: 300px;
+}
+div.columns-3 div.column {
+    /* @noflip */
+    float: left;
+    width: 33.3%;
+    min-width: 200px;
+}
+div.columns-4 div.column {
+    /* @noflip */
+    float: left;
+    width: 25%;
+    min-width: 150px;
+}
+div.columns-5 div.column {
+    /* @noflip */
+    float: left;
+    width: 20%;
+    min-width: 120px;
+}
+ 
+/* Messagebox templates */
+.messagebox {
+    border: 1px solid #aaa;
+    background-color: #f9f9f9;
+    width: 80%;
+    margin: 0 auto 1em auto;
+    padding: .2em;
+}
+.messagebox.merge {
+    border: 1px solid #c0b8cc;
+    background-color: #f0e5ff;
+    text-align: center;
+}
+.messagebox.cleanup {
+    border: 1px solid #9f9fff;
+    background-color: #efefff;
+    text-align: center;
+}
+.messagebox.standard-talk {
+    border: 1px solid #c0c090;
+    background-color: #f8eaba;
+    margin: 4px auto;
+}
+/* For old WikiProject banners inside banner shells. */
+.mbox-inside .standard-talk,
+.messagebox.nested-talk {
+    border: 1px solid #c0c090;
+    background-color: #f8eaba;
+    width: 100%;
+    margin: 2px 0;
+    padding: 2px;
+}
+.messagebox.small {
+    width: 238px;
+    font-size: 85%;
+    /* @noflip */
+    float: right;
+    clear: both;
+    /* @noflip */
+    margin: 0 0 1em 1em;
+    line-height: 1.25em;
+}
+.messagebox.small-talk {
+    width: 238px;
+    font-size: 85%;
+    /* @noflip */
+    float: right;
+    clear: both;
+    /* @noflip */
+    margin: 0 0 1em 1em;
+    line-height: 1.25em;
+    background: #F8EABA;
+}
+ 
+/* Cell sizes for ambox/tmbox/imbox/cmbox/ombox/fmbox/dmbox message boxes */
+th.mbox-text, td.mbox-text {   /* The message body cell(s) */
+    border: none;
+    /* @noflip */
+    padding: 0.25em 0.9em;     /* 0.9em left/right */
+    width: 100%;               /* Make all mboxes the same width regardless of text length */
+}
+td.mbox-image {                /* The left image cell */
+    border: none;
+    /* @noflip */
+    padding: 2px 0 2px 0.9em;  /* 0.9em left, 0px right */
+    text-align: center;
+}
+td.mbox-imageright {           /* The right image cell */
+    border: none;
+    /* @noflip */
+    padding: 2px 0.9em 2px 0;  /* 0px left, 0.9em right */
+    text-align: center;
+}
+td.mbox-empty-cell {           /* An empty narrow cell */
+    border: none;
+    padding: 0px;
+    width: 1px;
+}
+ 
+/* Article message box styles */
+table.ambox {
+    margin: 0px 10%;                  /* 10% = Will not overlap with other elements */
+    border: 1px solid #aaa;
+    /* @noflip */
+    border-left: 10px solid #1e90ff;  /* Default "notice" blue */
+    background: #fbfbfb;
+}
+table.ambox + table.ambox {      /* Single border between stacked boxes. */
+    margin-top: -1px;
+}
+.ambox th.mbox-text,
+.ambox td.mbox-text {            /* The message body cell(s) */
+    padding: 0.25em 0.5em;       /* 0.5em left/right */
+}
+.ambox td.mbox-image {           /* The left image cell */
+    /* @noflip */
+    padding: 2px 0 2px 0.5em;    /* 0.5em left, 0px right */
+}
+.ambox td.mbox-imageright {      /* The right image cell */
+    /* @noflip */
+    padding: 2px 0.5em 2px 0;    /* 0px left, 0.5em right */
+}
+ 
+table.ambox-notice {
+    /* @noflip */
+    border-left: 10px solid #1e90ff;    /* Blue */
+}
+table.ambox-speedy {
+    /* @noflip */
+    border-left: 10px solid #b22222;    /* Red */
+    background: #fee;                   /* Pink */
+}
+table.ambox-delete {
+    /* @noflip */
+    border-left: 10px solid #b22222;    /* Red */
+}
+table.ambox-content {
+    /* @noflip */
+    border-left: 10px solid #f28500;    /* Orange */
+}
+table.ambox-style {
+    /* @noflip */
+    border-left: 10px solid #f4c430;    /* Yellow */
+}
+table.ambox-move {
+    /* @noflip */
+    border-left: 10px solid #9932cc;    /* Purple */
+}
+table.ambox-protection {
+    /* @noflip */
+    border-left: 10px solid #bba;       /* Gray-gold */
+}
+ 
+/* Image message box styles */
+table.imbox {
+    margin: 4px 10%;
+    border-collapse: collapse;
+    border: 3px solid #1e90ff;    /* Default "notice" blue */
+    background: #fbfbfb;
+}
+.imbox .mbox-text .imbox {  /* For imboxes inside imbox-text cells. */
+    margin: 0 -0.5em;       /* 0.9 - 0.5 = 0.4em left/right.        */
+    display: block;         /* Fix for webkit to force 100% width.  */
+}
+.mbox-inside .imbox {       /* For imboxes inside other templates.  */
+    margin: 4px;
+}
+ 
+table.imbox-notice {
+    border: 3px solid #1e90ff;    /* Blue */
+}
+table.imbox-speedy {
+    border: 3px solid #b22222;    /* Red */
+    background: #fee;             /* Pink */
+}
+table.imbox-delete {
+    border: 3px solid #b22222;    /* Red */
+}
+table.imbox-content {
+    border: 3px solid #f28500;    /* Orange */
+}
+table.imbox-style {
+    border: 3px solid #f4c430;    /* Yellow */
+}
+table.imbox-move {
+    border: 3px solid #9932cc;    /* Purple */
+}
+table.imbox-protection {
+    border: 3px solid #bba;       /* Gray-gold */
+}
+table.imbox-license {
+    border: 3px solid #88a;       /* Dark gray */
+    background: #f7f8ff;          /* Light gray */
+}
+table.imbox-featured {
+    border: 3px solid #cba135;    /* Brown-gold */
+}
+ 
+/* Category message box styles */
+table.cmbox {
+    margin: 3px 10%;
+    border-collapse: collapse;
+    border: 1px solid #aaa;
+    background: #DFE8FF;    /* Default "notice" blue */
+}
+ 
+table.cmbox-notice {
+    background: #D8E8FF;    /* Blue */
+}
+table.cmbox-speedy {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    border: 4px solid #b22222;    /* Red */
+    background: #FFDBDB;          /* Pink */
+}
+table.cmbox-delete {
+    background: #FFDBDB;    /* Red */
+}
+table.cmbox-content {
+    background: #FFE7CE;    /* Orange */
+}
+table.cmbox-style {
+    background: #FFF9DB;    /* Yellow */
+}
+table.cmbox-move {
+    background: #E4D8FF;    /* Purple */
+}
+table.cmbox-protection {
+    background: #EFEFE1;    /* Gray-gold */
+}
+ 
+/* Other pages message box styles */
+table.ombox {
+    margin: 4px 10%;
+    border-collapse: collapse;
+    border: 1px solid #aaa;       /* Default "notice" gray */
+    background: #f9f9f9;
+}
+ 
+table.ombox-notice {
+    border: 1px solid #aaa;       /* Gray */
+}
+table.ombox-speedy {
+    border: 2px solid #b22222;    /* Red */
+    background: #fee;             /* Pink */
+}
+table.ombox-delete {
+    border: 2px solid #b22222;    /* Red */
+}
+table.ombox-content {
+    border: 1px solid #f28500;    /* Orange */
+}
+table.ombox-style {
+    border: 1px solid #f4c430;    /* Yellow */
+}
+table.ombox-move {
+    border: 1px solid #9932cc;    /* Purple */
+}
+table.ombox-protection {
+    border: 2px solid #bba;       /* Gray-gold */
+}
+ 
+/* Talk page message box styles */
+table.tmbox {
+    margin: 4px 10%;
+    border-collapse: collapse;
+    border: 1px solid #c0c090;    /* Default "notice" gray-brown */
+    background: #f8eaba;
+}
+.mediawiki .mbox-inside .tmbox { /* For tmboxes inside other templates. The "mediawiki" class ensures that */
+    margin: 2px 0;               /* this declaration overrides other styles (including mbox-small above)   */
+    width: 100%;                 /* For Safari and Opera */
+}
+.mbox-inside .tmbox.mbox-small { /* "small" tmboxes should not be small when  */
+    line-height: 1.5em;          /* also "nested", so reset styles that are   */
+    font-size: 100%;             /* set in "mbox-small" above.                */
+}
+ 
+table.tmbox-speedy {
+    border: 2px solid #b22222;    /* Red */
+    background: #fee;             /* Pink */
+}
+table.tmbox-delete {
+    border: 2px solid #b22222;    /* Red */
+}
+table.tmbox-content {
+    border: 2px solid #f28500;    /* Orange */
+}
+table.tmbox-style {
+    border: 2px solid #f4c430;    /* Yellow */
+}
+table.tmbox-move {
+    border: 2px solid #9932cc;    /* Purple */
+}
+table.tmbox-protection,
+table.tmbox-notice {
+    border: 1px solid #c0c090;    /* Gray-brown */
+}
+ 
+/* Disambig and set index box styles */
+table.dmbox {
+    clear: both;
+    margin: 0.9em 1em;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    background: transparent;
+}
+ 
+/* Footer and header message box styles */
+table.fmbox {
+    clear: both;
+    margin: 0.2em 0;
+    width: 100%;
+    border: 1px solid #aaa;
+    background: #f9f9f9;     /* Default "system" gray */
+}
+table.fmbox-system {
+    background: #f9f9f9;
+}
+table.fmbox-warning {
+    border: 1px solid #bb7070;  /* Dark pink */
+    background: #ffdbdb;        /* Pink */
+}
+table.fmbox-editnotice {
+    background: transparent;
+}
+/* Div based "warning" style fmbox messages. */
+div.mw-warning-with-logexcerpt,
+div.mw-lag-warn-high,
+div.mw-cascadeprotectedwarning,
+div#mw-protect-cascadeon {
+    clear: both;
+    margin: 0.2em 0;
+    border: 1px solid #bb7070;
+    background: #ffdbdb;
+    padding: 0.25em 0.9em;
+}
+/* Div based "system" style fmbox messages.
+   Used in [[MediaWiki:Readonly lag]]. */
+div.mw-lag-warn-normal,
+div.fmbox-system {
+    clear: both;
+    margin: 0.2em 0;
+    border: 1px solid #aaa;
+    background: #f9f9f9;
+    padding: 0.25em 0.9em;
+}
+ 
+/* These mbox-small classes must be placed after all other
+   ambox/tmbox/ombox etc classes. "body.mediawiki" is so
+   they override "table.ambox + table.ambox" above. */
+body.mediawiki table.mbox-small {   /* For the "small=yes" option. */
+    /* @noflip */
+    clear: right;
+    /* @noflip */
+    float: right;
+    /* @noflip */
+    margin: 4px 0 4px 1em;
+    width: 238px;
+    font-size: 88%;
+    line-height: 1.25em;
+}
+body.mediawiki table.mbox-small-left {   /* For the "small=left" option. */
+    /* @noflip */
+    margin: 4px 1em 4px 0;
+    width: 238px;
+    border-collapse: collapse;
+    font-size: 88%;
+    line-height: 1.25em;
+}
+ 
+/* Style for compact ambox */
+/* Hide the images */
+.compact-ambox table .mbox-image,
+.compact-ambox table .mbox-imageright,
+.compact-ambox table .mbox-empty-cell {
+    display: none;
+}
+/* Remove borders, backgrounds, padding, etc. */
+.compact-ambox table.ambox {
+    border: none;
+    border-collapse: collapse;
+    background: transparent;
+    margin: 0 0 0 1.6em !important;
+    padding: 0 !important;
+    width: auto;
+    display: block;
+}
+body.mediawiki .compact-ambox table.mbox-small-left {
+    font-size: 100%;
+    width: auto;
+    margin: 0;
+}
+/* Style the text cell as a list item and remove its padding */
+.compact-ambox table .mbox-text {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.compact-ambox table .mbox-text-span {
+    display: list-item;
+    line-height: 1.5em;
+    list-style-type: square;
+    list-style-image: url(//bits.wikimedia.org/skins/common/images/bullet.gif);
+}
+.skin-vector .compact-ambox table .mbox-text-span {
+    list-style-type: circle;
+    list-style-image: url(//bits.wikimedia.org/skins/vector/images/bullet-icon.png)
+}
+/* Allow for hiding text in compact form */
+.compact-ambox .hide-when-compact {
+    display: none;
+}
+ 
+/* Remove default styles for [[MediaWiki:Noarticletext]]. */
+div.noarticletext {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+ 
+/* Hide (formatting) elements from screen, but not from screenreaders */
+.visualhide {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+ 
+/* Bold save button */
+#wpSave {
+    font-weight: bold;
+}
+ 
+/* class hiddenStructure is defunct. See [[Wikipedia:hiddenStructure]] */
+.hiddenStructure {
+    display: inline !important;
+    color: #f00;
+    background-color: #0f0;
+}
+ 
+/* suppress missing interwiki image links where #ifexist cannot
+   be used due to high number of requests see .hidden-redlink on
+   [[m:MediaWiki:Common.css]] */
+.check-icon a.new {
+    display: none;
+    speak: none;
+}
+ 
+/* Removes underlines from certain links */
+.nounderlines a,
+.IPA a:link, .IPA a:visited {
+    text-decoration: none !important;
+}
+ 
+/* Standard Navigationsleisten, aka box hiding thingy
+   from .de.  Documentation at [[Wikipedia:NavFrame]]. */
+div.NavFrame {
+    margin: 0;
+    padding: 4px;
+    border: 1px solid #aaa;
+    text-align: center;
+    border-collapse: collapse;
+    font-size: 95%;
+}
+div.NavFrame + div.NavFrame {
+    border-top-style: none;
+    border-top-style: hidden;
+}
+div.NavPic {
+    background-color: #fff;
+    margin: 0;
+    padding: 2px;
+    /* @noflip */
+    float: left;
+}
+div.NavFrame div.NavHead {
+    height: 1.6em;
+    font-weight: bold;
+    background-color: #ccf;
+    position: relative;
+}
+div.NavFrame p,
+div.NavFrame div.NavContent,
+div.NavFrame div.NavContent p {
+    font-size: 100%;
+}
+div.NavEnd {
+    margin: 0;
+    padding: 0;
+    line-height: 1px;
+    clear: both;
+}
+a.NavToggle {
+    position: absolute;
+    top: 0;
+    /* @noflip */
+    right: 3px;
+    font-weight: normal;
+    font-size: 90%;
+}
+ 
+/* Hatnotes and disambiguation notices */
+.rellink,
+.dablink {
+    font-style: italic;
+    /* @noflip */
+    padding-left: 1.6em;
+    margin-bottom: 0.5em;
+}
+.rellink i,
+.dablink i {
+    font-style: normal;
+}
+ 
+/* Allow transcluded pages to display in lists rather than a table.
+   Compatible in Firefox; incompatible in IE6. */
+.listify td    { display: list-item; }
+.listify tr    { display: block; }
+.listify table { display: block; }
+ 
+/* Geographical coordinates defaults. See [[Template:Coord/link]]
+   for how these are used. The classes "geo", "longitude", and
+   "latitude" are used by the [[Geo microformat]]. */
+.geo-default, .geo-dms, .geo-dec  { display: inline; }
+.geo-nondefault, .geo-multi-punct { display: none; }
+.longitude, .latitude             { white-space: nowrap; }
+ 
+/* When <div class="nonumtoc"> is used on the table of contents,
+   the ToC will display without numbers */
+.nonumtoc .tocnumber { display: none; }
+.nonumtoc #toc ul,
+.nonumtoc .toc ul {
+    line-height: 1.5em;
+    list-style: none none;
+    margin: .3em 0 0;
+    padding: 0;
+}
+.nonumtoc #toc ul ul,
+.nonumtoc .toc ul ul {
+    /* @noflip */
+    margin: 0 0 0 2em;
+}
+ 
+/* Allow limiting of which header levels are shown in a TOC;
+   <div class="toclimit-3">, for instance, will limit to
+   showing ==headings== and ===headings=== but no further
+   (as long as there are no =headings= on the page, which
+   there shouldn't be according to the MoS). */
+.toclimit-2 .toclevel-1 ul,
+.toclimit-3 .toclevel-2 ul,
+.toclimit-4 .toclevel-3 ul,
+.toclimit-5 .toclevel-4 ul,
+.toclimit-6 .toclevel-5 ul,
+.toclimit-7 .toclevel-6 ul {
+    display: none;
+}
+ 
+/* Styling for Template:Quote */
+blockquote.templatequote {
+     margin-top: 0;
+}
+blockquote.templatequote div.templatequotecite {
+    line-height: 1em;
+    /* @noflip */
+    text-align: left;
+    /* @noflip */
+    padding-left: 2em;
+    margin-top: 0;
+}
+blockquote.templatequote div.templatequotecite cite {
+    font-size: 85%;
+}
+ 
+/* User block messages */
+div.user-block {
+    padding: 5px;
+    margin-bottom: 0.5em;
+    border: 1px solid #A9A9A9;
+    background-color: #FFEFD5;
+}
+ 
+/* Prevent line breaks in silly places:
+   1) Where desired
+   2) Links when we don't want them to
+   3) Bold "links" to the page itself
+   4) Ref tags with group names <ref group="Note"> --> "[Note 1]" */
+.nowrap,
+.nowraplinks a,
+.nowraplinks .selflink,
+sup.reference a {
+    white-space: nowrap;
+}
+/* But allow wrapping where desired: */
+.wrap,
+.wraplinks a {
+    white-space: normal;
+}
+ 
+/* For template documentation */
+.template-documentation {
+    clear: both;
+    margin: 1em 0 0 0;
+    border: 1px solid #aaa;
+    background-color: #ecfcf4;
+    padding: 1em;
+}
+ 
+/* Inline divs in ImageMaps (code borrowed from de.wiki) */
+.imagemap-inline div {
+    display: inline;
+}
+ 
+/* Increase the height of the image upload box */
+#wpUploadDescription {
+    height: 13em;
+}
+ 
+/* Minimum thumb width */
+.thumbinner {
+    min-width: 100px;
+}
+ 
+/* Makes the background of a framed image white instead of gray.
+   Only visible with transparent images. */
+div.thumb .thumbimage {
+    background-color: #fff;
+}
+ 
+/* The backgrounds for galleries. */
+div#content .gallerybox div.thumb {
+    /* Light gray padding */
+    background-color: #F9F9F9;
+}
+/* Put a chequered background behind images, only visible if they have transparency.
+   '.filehistory a img' and '#file img:hover' are handled by MediaWiki core (as of 1.19) */
+.gallerybox .thumb img {
+    background: #fff url(//bits.wikimedia.org/skins/common/images/Checker-16x16.png) repeat;
+}
+/* But not on articles, user pages, portals or with opt-out. */
+.ns-0 .gallerybox .thumb img,
+.ns-2 .gallerybox .thumb img,
+.ns-100 .gallerybox .thumb img,
+.nochecker .gallerybox .thumb img {
+    background: #fff;
+}
+ 
+/* Prevent floating boxes from overlapping any category listings,
+   file histories, edit previews, and edit [Show changes] views. */
+#mw-subcategories, #mw-pages, #mw-category-media,
+#filehistory, #wikiPreview, #wikiDiff {
+    clear: both;
+}
+ 
+body.rtl #mw-articlefeedbackv5, body.rtl #mw-articlefeedback {
+    display: block;   /* Override inline block mode */
+    margin-bottom: 1em;
+    /* @noflip */
+    clear: right;     /* Clear any info boxes that stick out */
+    /* @noflip */
+    float: right;     /* Prevents margin collapsing */
+}
+ 
+/* Selectively hide headers in WikiProject banners */
+.wpb .wpb-header             { display: none; }
+.wpbs-inner .wpb .wpb-header { display: block; }     /* for IE */
+.wpbs-inner .wpb .wpb-header { display: table-row; } /* for real browsers */
+.wpbs-inner .wpb-outside     { display: none; }      /* hide things that should only display outside shells */
+ 
+/* Styling for Abuse Filter tags */
+.mw-tag-markers {
+    font-family:sans-serif;
+    font-style:italic;
+    font-size:90%;
+}
+ 
+/* Hide stuff meant for accounts with special permissions. Made visible again in
+   [[MediaWiki:Group-sysop.css]], [[MediaWiki:Group-accountcreator.css]],
+   [[MediaWiki:Group-templateeditor.css]] and [[Mediawiki:Group-autoconfirmed.css]]. */
+.sysop-show,
+.accountcreator-show,
+.templateeditor-show,
+.autoconfirmed-show {
+    display: none;
+}
+ 
+/**
+ * Hide the redlink generated by {{Editnotice}},
+ * this overrides the ".sysop-show { display: none; }" above that applies
+ * to the same link as well.
+ */
+.ve-init-mw-viewPageTarget-toolbar-editNotices-notice .editnotice-redlink {
+    display: none !important;
+}
+ 
+/* Remove bullets when there are multiple edit page warnings */
+ul.permissions-errors > li {
+    list-style: none none;
+}
+ul.permissions-errors {
+    margin: 0;
+}
+ 
+/* No linewrap on the labels of the login/signup page */
+body.page-Special_UserLogin .mw-label label,
+body.page-Special_UserLogin_signup .mw-label label {
+    white-space: nowrap;
+}
+ 
+/* Pie chart test: Transparent borders */
+.transborder {
+    border: solid transparent;
+}
+* html .transborder {  /* IE6 */
+    border: solid #000001;
+    filter: chroma(color=#000001);
+}
+ 
+/* Styling for updated markers on watchlist, history and recent/related changes.
+   Bullets are handled in skin-specific stylesheets. */
+.updatedmarker {
+    background-color: transparent;
+    color: #006400;
+}
+li.mw-changeslist-line-watched .mw-title,
+table.mw-changeslist-line-watched .mw-title,
+table.mw-enhanced-watch .mw-enhanced-rctime {
+    font-weight: normal;
+}
+ 
+/* Adjust font for inline HTML generated formulae */
+span.texhtml {
+    font-family: "Times New Roman", "Nimbus Roman No9 L", Times, serif;
+    font-size: 118%;
+    white-space: nowrap;
+}
+span.texhtml span.texhtml {
+    font-size: 100%;
+}
+ 
+/* Fix so <syntaxhighlight> tags and .css and .js pages get normal text size.
+   [[Bugzilla:26204]]. See also [[Wikipedia:Typography#The monospace 'bug']] */
+div.mw-geshi div,
+div.mw-geshi div pre,
+span.mw-geshi,
+pre.source-css,
+pre.source-javascript,
+pre.source-lua {
+    font-family: monospace, Courier !important;
+}
+ 
+/* Fix styling of transcluded prefindex tables */
+table#mw-prefixindex-list-table,
+table#mw-prefixindex-nav-table {
+    width: 98%;
+}
+ 
+/* For portals, added 2011-12-07 -bv
+   On wide screens, show these as two columns
+   On narrow and mobile screens, let them collapse into a single column */
+.portal-column-left {
+    float: left;
+    width: 50%;
+}
+.portal-column-right {
+    float: right;
+    width: 49%;
+}
+.portal-column-left-wide {
+    float: left;
+    width: 60%;
+}
+.portal-column-right-narrow {
+    float: right;
+    width: 39%;
+}
+.portal-column-left-extra-wide {
+    float: left;
+    width: 70%;
+}
+.portal-column-right-extra-narrow {
+    float: right;
+    width: 29%;
+}
+@media only screen and (max-width: 800px) {
+    /* Decouple the columns on narrow screens */
+    .portal-column-left,
+    .portal-column-right,
+    .portal-column-left-wide,
+    .portal-column-right-narrow,
+    .portal-column-left-extra-wide,
+    .portal-column-right-extra-narrow {
+        float: inherit;
+        width: inherit;
+    }
+}
+ 
+/* For announcements */
+#bodyContent .letterhead {
+    background-image:url('//upload.wikimedia.org/wikipedia/commons/e/e0/Tan-page-corner.png');
+    background-repeat:no-repeat;
+    padding: 2em;
+    background-color: #faf9f2;
+}
+ 
+/* Tree style lists */
+.treeview ul {
+    padding: 0;
+    margin: 0;
+}
+.treeview li {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+    list-style-image: none;
+    zoom: 1; /* BE KIND TO IE6 */;
+}
+.treeview li li {
+    background: url("//upload.wikimedia.org/wikipedia/commons/f/f2/Treeview-grey-line.png") no-repeat 0 -2981px;
+    /* @noflip */
+    padding-left: 20px;
+    text-indent: 0.3em;
+}
+.treeview li li.lastline {
+    background-position: 0 -5971px
+}
+.treeview li.emptyline > ul {
+    /* @noflip */
+    margin-left: -1px;
+}
+.treeview li.emptyline > ul > li:first-child {
+    background-position: 0 9px
+}
+ 
+/* hidden sortkey for tablesorter */
+td .sortkey,
+th .sortkey {
+    display: none;
+    speak: none;
+}
+ 
+/* Make it possible to hide checkboxes in <inputbox> */
+.inputbox-hidecheckboxes form .inputbox-element {
+    display: none !important;
+}
+ 
+/* Hide charinsert base for those not using the gadget */
+#editpage-specialchars {
+    display: none;
+}
+ 
+/* work-around for [[bugzilla:23965]] (Kaltura advertisement) */
+.k-player .k-attribution {
+    visibility: hidden;
+}
+ 
+/* [[MediaZilla:35337]] */
+@media (-webkit-min-device-pixel-ratio: 1.5), (min--moz-device-pixel-ratio: 1.5), (min-resolution: 1.5dppx), (min-resolution: 144dpi) {
+        #p-logo a {
+                background-image: url("//upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Wikipedia-logo-v2-en.svg/204px-Wikipedia-logo-v2-en.svg.png") !important;
+                background-size: 136px auto;
+        }
+}
+@media (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (min-resolution: 2dppx), (min-resolution: 192dpi) {
+        #p-logo a {
+                background-image: url("//upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Wikipedia-logo-v2-en.svg/270px-Wikipedia-logo-v2-en.svg.png") !important;
+                background-size: 135px auto;
+        }
+}
+/* Do not print:
+   1: When in mainspace: Article message boxes,
+      navboxes, sister project boxes, disambig links,
+      and items marked as metadata.
+   2: section edit links.
+   3: navbar links.
+   4: Show/hide toggles for collapsible items.
+*/
+.ns-0 .ambox, 
+.ns-0 .navbox, 
+.ns-0 .vertical-navbox, 
+.ns-0 .infobox.sisterproject, 
+.ns-0 .dablink, 
+.ns-0 .metadata,
+.editlink,
+.navbar,
+a.NavToggle, span.collapseButton, span.mw-collapsible-toggle,
+th .sortkey, td .sortkey {
+    display: none !important;
+}
+ 
+/* Add formatting to make sure that "external references" from templates
+   like [[Template:Ref]] do not get URL expansion, not even when printed.
+   The anchor itself has class "external autonumber" and the url expansion
+   is inserted when printing (see the common printing style sheet at
+   http://en.wikipedia.org/skins-1.5/common/commonPrint.css) using the
+   ":after" pseudo-element of CSS. Also hide in <cite> elements.
+*/
+#content cite a.external.text:after,
+.nourlexpansion a.external.text:after,
+.nourlexpansion a.external.autonumber:after {
+    display: none !important;
+}
+ 
+/* Uncollapse collapsible tables/divs.
+   The proper way to do this for tables is to use display:table-row,
+   but this is not supported by all browsers, so use display:block as fallback.
+*/
+table.collapsible tr, div.NavPic, div.NavContent {
+    display: block !important;
+}
+table.collapsible tr {
+    display: table-row !important;
+}
+ 
+/* On websites with siteSub visible, the margin on the firstHeading is not needed. */
+#firstHeading {
+    margin: 0px;
+}
+ 
+/* We don't want very long URLs (that are added to the content in print) to widen the canvas */
+#content a.external.text:after,
+#content a.external.autonumber:after {
+	word-wrap: break-word;
+}
+/* Don't display some stuff on the main page */
+body.page-Main_Page #deleteconfirm,
+body.page-Main_Page #t-cite,
+body.page-Main_Page #footer-info-lastmod,
+body.action-view.page-Main_Page #siteSub,
+body.action-view.page-Main_Page #contentSub,
+body.action-view.page-Main_Page h1.firstHeading {
+    display: none !important;
+}
+ 
+/* Position Main Page top banner */
+body.page-Main_Page #mp-topbanner {
+  margin-top: 0 !important;
+}
+ 
+/* Position coordinates */
+#coordinates {
+    position: absolute;
+    top: 0em;
+    right: 0em;
+    float: right;
+    margin: 0em;
+    padding: 0em;
+    line-height: 1.5em;
+    text-align: right;
+    text-indent: 0;
+    font-size: 85%;
+    text-transform: none;
+    white-space: nowrap;
+}
+ 
+/* For positioning icons at top-right, used in Templates
+   "Spoken Article" and "Featured Article" */
+div.topicon {
+    position: absolute;
+    top: -2em;
+    margin-right: -10px;
+    display: block !important;
+}
+ 
+/* FR topicon position */
+div.flaggedrevs_short {
+    position: absolute;
+    top: -3em;
+    right: 80px;
+    z-index: 1;
+    margin-left: 0;
+    /* Because this is not yet a topicon, we emulate it's behavior,
+       this ensure compatibility with edit lead section gadget. */
+    margin-right: -10px;
+}
+ 
+/* On rtl interfaces, we need to override the defaults.
+   It is content included (so ltr), but positioned in part of the rtl interface. */
+body.rtl #protected-icon {
+    /* @noflip */
+    left: 55px;
+}
+body.rtl #spoken-icon,
+body.rtl #commons-icon {
+    /* @noflip */
+    left: 30px;
+}
+body.rtl #featured-star {
+    /* @noflip */
+    left: 10px;
+}
+ 
+/* Menu over FR box */
+div.vectorMenu div {
+    z-index: 2;
+}
+ 
+/* Display "From Wikipedia, the free encyclopedia" */
+#siteSub {
+    display: inline;
+    font-size: 92%;
+}
+ 
+/* Bullets for Good and Featured interwiki links */
+li.GA {
+    list-style-image: url(//upload.wikimedia.org/wikipedia/commons/4/42/Monobook-bullet-ga.png);
+}
+li.FA {
+    list-style-image: url(//upload.wikimedia.org/wikipedia/commons/d/d4/Monobook-bullet-star.png);
+}
+ 
+/* Styling for updated markers on watchlist, history and recent/related changes */
+li.mw-changeslist-line-watched,
+li.mw-history-line-updated {
+    list-style-image: url(//upload.wikimedia.org/wikipedia/commons/c/c2/ChangedBulletVector.png);
+}
+ 
+/* Blue instead of yellow padlock for secure links. */
+#bodyContent a.external[href ^="https://"],
+.link-https {
+    background: url(//upload.wikimedia.org/wikipedia/en/0/00/Lock_icon_blue.gif) center right no-repeat;
+    /* @noflip */
+    padding-right: 16px;
+}
+ 
+/* (Soft) redirect styling (bug:26544) */
+div.redirectMsg img {
+    vertical-align: text-bottom;
+}
+.redirectText {
+    font-size: 150%;
+    margin: 5px;
+}

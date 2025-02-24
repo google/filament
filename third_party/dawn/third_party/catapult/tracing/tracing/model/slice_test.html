@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Slice = tr.model.Slice;
+  const SliceGroup = tr.model.SliceGroup;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newFakeThread = tr.c.TestUtils.newFakeThread;
+
+  test('findDescendentSlice', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.deepEqual(sB, sA.findDescendentSlice('sB'));
+    assert.deepEqual(sC, sA.findDescendentSlice('sC'));
+    assert.isUndefined(sA.findDescendentSlice('sD'));
+  });
+
+  test('findTopmostSlicesRelativeToThisSliceBaseCase', function() {
+    const PREDICATE = slice => slice.title.startsWith('sC');
+
+    const group = new SliceGroup(newFakeThread());
+
+    const sC1 = group.pushSlice(newSliceEx(
+        { title: 'sC1', start: 0.0, duration: 10.0 }));
+    const sC2 = group.pushSlice(newSliceEx(
+        { title: 'sC2', start: 0.0, duration: 4.0 }));
+
+    group.createSubSlices();
+
+    const foundSlices = [];
+    for (const slice of sC1.findTopmostSlicesRelativeToThisSlice(PREDICATE)) {
+      foundSlices.push(slice);
+    }
+
+    assert.deepEqual([sC1], foundSlices);
+  });
+
+  test('findTopmostSlicesRelativeToThisSliceRecursive', function() {
+    const PREDICATE = slice => slice.title.startsWith('sC');
+
+    const group = new SliceGroup(newFakeThread());
+
+    const sD = group.pushSlice(newSliceEx(
+        { title: 'sD', start: 0.0, duration: 10.0 }));
+    const sC1 = group.pushSlice(newSliceEx(
+        { title: 'sC1', start: 0.0, duration: 4.0 }));
+    const sC2 = group.pushSlice(newSliceEx(
+        { title: 'sC2', start: 6.0, duration: 3.0 }));
+
+    group.createSubSlices();
+
+    const foundSlices = [];
+    for (const slice of sD.findTopmostSlicesRelativeToThisSlice(PREDICATE)) {
+      foundSlices.push(slice);
+    }
+    assert.deepEqual([sC1, sC2], foundSlices);
+  });
+
+  test('enumerateAllDescendents', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.deepEqual(sA.descendentSlices, [sB, sC]);
+    assert.deepEqual(sC.descendentSlices, []);
+  });
+
+  test('mostTopLevelSlice', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.strictEqual(sA.mostTopLevelSlice, sA);
+    assert.strictEqual(sB.mostTopLevelSlice, sA);
+    assert.strictEqual(sC.mostTopLevelSlice, sA);
+  });
+
+  test('enumerateAllAncestors', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    // Note that we iterate ancestors from the leaves to the root
+    assert.deepEqual(sC.ancestorSlices, [sB, sA]);
+    assert.deepEqual(sA.ancestorSlices, []);
+  });
+
+  test('iterateAllSubsequentSlices', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // [     A     ]
+    // [ B ][ D ][F]
+    // [C]  [E]
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+    const sD = group.pushSlice(newSliceEx(
+        { title: 'sD', start: 5.0, duration: 2.0 }));
+    const sE = group.pushSlice(newSliceEx(
+        { title: 'sE', start: 5.0, duration: 1.0 }));
+    const sF = group.pushSlice(newSliceEx(
+        { title: 'sF', start: 8.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.deepEqual(sA.subsequentSlices, [sB, sC, sD, sE, sF]);
+    assert.deepEqual(sD.subsequentSlices, [sE, sF]);
+    assert.deepEqual(sF.subsequentSlices, []);
+  });
+
+  test('ancestorAndSubsequentSlices', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // [     A     ]
+    // [ B ][ D ][F]
+    // [C]  [E]
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+    const sD = group.pushSlice(newSliceEx(
+        { title: 'sD', start: 5.0, duration: 2.0 }));
+    const sE = group.pushSlice(newSliceEx(
+        { title: 'sE', start: 5.0, duration: 1.0 }));
+    const sF = group.pushSlice(newSliceEx(
+        { title: 'sF', start: 8.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.deepEqual(sD.ancestorAndSubsequentSlices, [sD, sA, sE, sF]);
+  });
+
+  test('entireHierarchy', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // [     A     ]
+    // [ B ][ D ][F]
+    // [C]  [E]
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 0.0, duration: 4.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 0.0, duration: 2.0 }));
+    const sD = group.pushSlice(newSliceEx(
+        { title: 'sD', start: 5.0, duration: 2.0 }));
+    const sE = group.pushSlice(newSliceEx(
+        { title: 'sE', start: 5.0, duration: 1.0 }));
+    const sF = group.pushSlice(newSliceEx(
+        { title: 'sF', start: 8.0, duration: 2.0 }));
+
+    group.createSubSlices();
+
+    assert.deepEqual(sD.entireHierarchy, [sA, sB, sC, sD, sE, sF]);
+  });
+
+  test('stableId', function() {
+    const thread = newFakeThread();
+    const group = thread.sliceGroup;
+
+    const sA = group.pushSlice(newSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.pushSlice(newSliceEx(
+        { title: 'sB', start: 10.0, duration: 20.0 }));
+    const sC = group.pushSlice(newSliceEx(
+        { title: 'sC', start: 20.0, duration: 30.0 }));
+
+    assert.strictEqual(group.stableId + '.0', sA.stableId);
+    assert.strictEqual(group.stableId + '.1', sB.stableId);
+    assert.strictEqual(group.stableId + '.2', sC.stableId);
+  });
+
+  test('cantInstantiateDirectly', function() {
+    assert.throws(function() {
+      new Slice('', 'Test', 0, 0, { });
+    });
+  });
+
+  test('canInstantiateSubclasses', function() {
+    function TestSlice() {
+      Slice.call(this, '', 'Test', 0, 0, { });
+    }
+    TestSlice.prototype = {
+      __proto__: Slice.prototype
+    };
+    assert.doesNotThrow(function() {
+      new TestSlice();
+    });
+  });
+});
+</script>

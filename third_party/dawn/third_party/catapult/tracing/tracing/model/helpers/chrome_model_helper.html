@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_browser_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_gpu_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_renderer_helper.html">
+<link rel="import" href="/tracing/model/helpers/telemetry_helper.html">
+
+<script>
+'use strict';
+
+const {Range} = tr.b.math;
+
+/**
+ * @fileoverview Utilities for accessing trace data about the Chrome browser.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  function findChromeBrowserProcesses(model) {
+    return model.getAllProcesses(
+        tr.model.helpers.ChromeBrowserHelper.isBrowserProcess);
+  }
+
+  function findChromeRenderProcesses(model) {
+    return model.getAllProcesses(
+        tr.model.helpers.ChromeRendererHelper.isRenderProcess);
+  }
+
+  function findChromeGpuProcess(model) {
+    const gpuProcesses = model.getAllProcesses(
+        tr.model.helpers.ChromeGpuHelper.isGpuProcess);
+    if (gpuProcesses.length !== 1) return undefined;
+    return gpuProcesses[0];
+  }
+
+  function findTelemetrySurfaceFlingerProcess(model) {
+    const surfaceFlingerProcesses = model.getAllProcesses(
+        process => (process.name === 'SurfaceFlinger'));
+    if (surfaceFlingerProcesses.length !== 1) return undefined;
+    return surfaceFlingerProcesses[0];
+  }
+
+  function ChromeModelHelper(model) {
+    this.model_ = model;
+
+    // Find browserHelpers.
+    const browserProcesses = findChromeBrowserProcesses(model);
+    this.browserHelpers_ = browserProcesses.map(
+        p => new tr.model.helpers.ChromeBrowserHelper(this, p));
+
+    // Find gpuHelper.
+    const gpuProcess = findChromeGpuProcess(model);
+    if (gpuProcess) {
+      this.gpuHelper_ = new tr.model.helpers.ChromeGpuHelper(
+          this, gpuProcess);
+    } else {
+      this.gpuHelper_ = undefined;
+    }
+
+    // Find rendererHelpers.
+    const rendererProcesses_ = findChromeRenderProcesses(model);
+
+    this.rendererHelpers_ = {};
+    rendererProcesses_.forEach(function(renderProcess) {
+      const rendererHelper = new tr.model.helpers.ChromeRendererHelper(
+          this, renderProcess);
+      this.rendererHelpers_[rendererHelper.pid] = rendererHelper;
+    }, this);
+
+    this.surfaceFlingerProcess_ = findTelemetrySurfaceFlingerProcess(model);
+
+    this.chromeBounds_ = undefined;
+
+    this.telemetryHelper_ = new tr.model.helpers.TelemetryHelper(this);
+  }
+
+  ChromeModelHelper.guid = tr.b.GUID.allocateSimple();
+
+  ChromeModelHelper.supportsModel = function(model) {
+    if (findChromeBrowserProcesses(model).length) return true;
+    if (findChromeRenderProcesses(model).length) return true;
+    return false;
+  };
+
+  ChromeModelHelper.prototype = {
+    get pid() {
+      throw new Error('woah');
+    },
+
+    get process() {
+      throw new Error('woah');
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    // TODO: Make all users of ChromeModelHelper support multiple browsers and
+    // remove this getter (see #2119).
+    get browserProcess() {
+      if (this.browserHelper === undefined) return undefined;
+      return this.browserHelper.process;
+    },
+
+    // TODO: Make all users of ChromeModelHelper support multiple browsers and
+    // remove this getter (see #2119).
+    get browserHelper() {
+      return this.browserHelpers_[0];
+    },
+
+    get browserHelpers() {
+      return this.browserHelpers_;
+    },
+
+    get gpuHelper() {
+      return this.gpuHelper_;
+    },
+
+    get rendererHelpers() {
+      return this.rendererHelpers_;
+    },
+
+    get surfaceFlingerProcess() {
+      return this.surfaceFlingerProcess_;
+    },
+
+    /**
+     * Returns the minimal bounds that includes all Chrome-related slices, or
+     * undefined if no such minimal bounds could be established. This relies on
+     * the assumption that all Chrome-relevant traces are bounded by the browser
+     * process.
+     */
+    get chromeBounds() {
+      if (!this.chromeBounds_) {
+        this.chromeBounds_ = new tr.b.math.Range();
+        for (const browserHelper of Object.values(this.browserHelpers)) {
+          this.chromeBounds_.addRange(browserHelper.process.bounds);
+        }
+
+        for (const rendererHelper of Object.values(this.rendererHelpers)) {
+          this.chromeBounds_.addRange(rendererHelper.process.bounds);
+        }
+
+        if (this.gpuHelper) {
+          this.chromeBounds_.addRange(this.gpuHelper.process.bounds);
+        }
+      }
+
+      if (this.chromeBounds_.isEmpty) {
+        return undefined;
+      }
+
+      return this.chromeBounds_;
+    },
+
+    get telemetryHelper() {
+      return this.telemetryHelper_;
+    },
+
+    /**
+     * Returns true if slice is contained within telemetry internal ranges.
+     *
+     * Telemetry stories emit events in renderer processes that mark the start
+     * and end of time ranges of periods when some preparatory work is happening
+     * (e.g. warming up the cache).
+     *
+     * Note that internal ranges are global to the trace, i.e. you cannot mark a
+     * portion of only one process as internal. This is because the start and
+     * end marker of an internal range may end up in different processes. It's
+     * also very likely non-trivial amount of the work during these internal
+     * time ranges are happening across different processes (e.g. GPU or Browser
+     * process), so metrics should discard events from all processes.
+     */
+    isTelemetryInternalEvent(slice) {
+      if (this.telemetryInternalRanges_ === undefined) {
+        this.telemetryInternalRanges_ = this.findTelemetryInternalRanges_();
+      }
+
+      for (const range of this.telemetryInternalRanges_) {
+        if (range.containsExplicitRangeInclusive(slice.start, slice.end)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    findTelemetryInternalRanges_() {
+      const internalRanges = [];
+
+      // Since start and end markers may be emitted in different
+      // processes, we first collect all start and end events from all the
+      // renderer processes, and then process them together. These markers are
+      // only emitted as renderer main thread async events, so it's sufficient
+      // to restrict our search to those.
+      const eventNameToMarkers = new Map();
+
+      for (const rendererHelper of Object.values(this.rendererHelpers)) {
+        // In rare cases, a renderer process may not have any events emitted on
+        // the main thread, leading to the mainThread not existing in the model.
+        if (rendererHelper.mainThread === undefined) continue;
+
+        const mainThreadAsyncSlices = rendererHelper.mainThread.asyncSliceGroup;
+        for (const slice of mainThreadAsyncSlices.getDescendantEvents()) {
+          // Internal events are of the form
+          // 'telemetry.internal.{eventName}.end'. `eventName` can be
+          // 'warm_cache.warm', 'ensure_disk_cache' etc. See
+          // telemetry/telemetry/page/cache_temperature.py for usage on
+          // telemetry side.
+          const re = new RegExp('^telemetry\.internal\.' +
+                                '(?<eventName>.*)\.(?<type>start|end)$');
+          const matches = re.exec(slice.title);
+          if (matches === null) continue;
+
+          const {eventName, type} = matches.groups;
+          if (!eventNameToMarkers.has(eventName)) {
+            eventNameToMarkers.set(eventName, []);
+          }
+          eventNameToMarkers.get(eventName).push({type, slice});
+        }
+      }
+
+      for (const [eventName, markers] of eventNameToMarkers.entries()) {
+        if (markers.length === 0) continue;
+
+        // Sort by ascending start time.
+        markers.sort((a, b) => a.slice.start - b.slice.start);
+
+        let lastMarker = undefined;
+
+        for (const marker of markers) {
+          const {type, slice} = marker;
+          if (lastMarker && type == lastMarker.type) {
+            throw Error(
+                `Invalid internal event marker order. Two consecutive ` +
+                `${type} markers with ` + `eventName '${eventName}' ` +
+                `at timestamps ${lastMarker.slice.start} and ${slice.start}.`);
+          }
+
+          switch (type) {
+            case 'end':
+              if (lastMarker === undefined) {
+                // Process end marker without a corresponding start marker. Note
+                // that these marker events are not zero duration, likely due to
+                // a limitation of console mark events work. We consider
+                // slice.start as the end of the marker time range as opposed to
+                // slice.end.
+                internalRanges.push(tr.b.math.Range.fromExplicitRange(
+                    this.chromeBounds.min, slice.start));
+              } else {
+                internalRanges.push(tr.b.math.Range.fromExplicitRange(
+                    lastMarker.slice.start, slice.start));
+              }
+              break;
+            case 'start':
+              // No need to do anything.
+              break;
+            default:
+              throw Error(`Telemetry internal events must end with 'start' ` +
+                          `or 'end'. Found ${type}`);
+          }
+
+          lastMarker = marker;
+        }
+
+        if (lastMarker && lastMarker.type === 'start') {
+          // Process start marker without a corresponding end marker.
+          internalRanges.push(tr.b.math.Range.fromExplicitRange(
+              lastMarker.slice.start, this.chromeBounds.max));
+        }
+      }
+
+      return internalRanges;
+    }
+  };
+
+  return {
+    ChromeModelHelper,
+  };
+});
+</script>

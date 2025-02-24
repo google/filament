@@ -1,0 +1,204 @@
+Name
+    
+    NV_fog_distance
+
+Name Strings
+
+    GL_NV_fog_distance
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.0)
+
+Version
+
+    NVIDIA Date:   January 18, 2001
+    Version:       1.0
+
+Number
+
+    192
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2 specification.
+
+Overview
+
+    Ideally, the fog distance (used to compute the fog factor as
+    described in Section 3.10) should be computed as the per-fragment
+    Euclidean distance to the fragment center from the eye.  In practice,
+    implementations "may choose to approximate the eye-coordinate
+    distance from the eye to each fragment center by abs(ze).  Further,
+    [the fog factor] f need not be computed at each fragment, but may
+    be computed at each vertex and interpolated as other data are."
+
+    This extension provides the application specific control over how
+    OpenGL computes the distance used in computing the fog factor.
+
+    The extension supports three fog distance modes: "eye plane absolute",
+    where the fog distance is the absolute planar distance from the eye
+    plane (i.e., OpenGL's standard implementation allowance as cited above);
+    "eye plane", where the fog distance is the signed planar distance
+    from the eye plane; and "eye radial", where the fog distance is
+    computed as a Euclidean distance.  In the case of the eye radial
+    fog distance mode, the distance may be computed per-vertex and then
+    interpolated per-fragment.
+
+    The intent of this extension is to provide applications with better
+    control over the tradeoff between performance and fog quality.
+    The "eye planar" modes (signed or absolute) are straightforward
+    to implement with good performance, but scenes are consistently
+    under-fogged at the edges of the field of view.  The "eye radial"
+    mode can provide for more accurate fog at the edges of the field of
+    view, but this assumes that either the eye radial fog distance is
+    computed per-fragment, or if the fog distance is computed per-vertex
+    and then interpolated per-fragment, then the scene must be
+    sufficiently tessellated.
+
+Issues
+
+    What should the default state be?
+
+      IMPLEMENTATION DEPENDENT.
+
+      The EYE_PLANE_ABSOLUTE_NV mode is the most consistent with the way
+      most current OpenGL implementations are implemented without this
+      extension, but because this extension provides specific control
+      over a capability that core OpenGL is intentionally lax about,
+      the default fog distance mode is left implementation dependent.
+      We would not want a future OpenGL implementation that supports
+      fast EYE_RADIAL_NV fog distance to be stuck using something less.
+
+      Advice:  If an implementation can provide fast per-pixel EYE_RADIAL_NV
+      support, then EYE_RADIAL_NV is the ideal default, but if not, then
+      EYE_PLANE_ABSOLUTE_NV is the most reasonable default mode.
+
+    How does this extension interact with the EXT_fog_coord extension?
+
+      If FOG_COORDINATE_SOURCE_EXT is set to FOG_COORDINATE_EXT,
+      then the fog distance mode is ignored.  However, the fog
+      distance mode is used when the FOG_COORDINATE_SOURCE_EXT is
+      set to FRAGMENT_DEPTH_EXT.  Essentially, when the EXT_fog_coord
+      functionality is enabled, the fog distance is supplied by the
+      user-supplied fog-coordinate so no automatic fog distance computation
+      is performed.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of Fogf, Fogi, Fogfv, Fogiv,
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        FOG_DISTANCE_MODE_NV               0x855A
+
+    When the <pname> parameter of Fogf, Fogi, Foggv, and Fogiv, is
+    FOG_DISTANCE_MODE_NV, then the value of <param> or the value pointed
+    to by <params> may be:
+
+        EYE_RADIAL_NV                      0x855B
+        EYE_PLANE
+        EYE_PLANE_ABSOLUTE_NV              0x855C
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+     None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ --  Section 3.10 "Fog"
+ 
+    Add to the end of the 3rd paragraph:
+
+    "If pname is FOG_DISTANCE_MODE_NV, then param must be, or params
+    must point to an integer that is one of the symbolic constants
+    EYE_PLANE_ABSOLUTE_NV, EYE_PLANE, or EYE_RADIAL_NV and this symbolic
+    constant determines how the fog distance should be computed."
+
+    Replace the 4th paragraph beginning "An implementation may choose
+    to approximate ..." with:
+
+    "When the fog distance mode is EYE_PLANE_ABSOLUTE_NV, the fog
+    distance z is approximated by abs(ze) [where ze is the Z component
+    of the fragment's eye position].  When the fog distance mode is
+    EYE_PLANE, the fog distance z is approximated by ze.  When the
+    fog distance mode is EYE_RADIAL_NV, the fog distance z is computed
+    as the Euclidean distance from the center of the fragment in eye
+    coordinates to the eye position.  Specifically:
+
+      z  =  sqrt( xe*xe + ye*ye + ze*ze );
+
+    In the EYE_RADIAL_NV fog distance mode, the Euclidean distance
+    is permitted to be computed per-vertex, and then interpolated
+    per-fragment."
+
+    Change the last paragraph to read:
+
+    "The state required for fog consists of a three valued integer to
+    select the fog equation, a three valued integer to select the fog
+    distance mode, three floating-point values d, e, and s, and RGBA fog
+    color and a fog color index, and a single bit to indicate whether
+    or not fog is enabled.  In the initial state, fog is disabled,
+    FOG_MODE is EXP, FOG_DISTANCE_NV is implementation defined, d =
+    1.0, e = 1.0, and s = 0.0; Cf = (0,0,0,0) and if = 0." 
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated when Fog is called with a <pname> of
+    FOG_DISTANCE_MODE_NV and the value of <param> or what is pointed
+    to by <params> is not one of EYE_PLANE_ABSOLUTE_NV, EYE_PLANE,
+    or EYE_RADIAL_NV.
+
+New State
+
+(table 6.8, p198) add the entry:
+
+Get Value              Type    Get Command  Initial Value      Description      Sec     Attribute
+--------------------   ----    -----------  ---------------    -----------      -----   ---------
+FOG_DISTANCE_MODE_NV   Z3      GetIntegerv  implementation     Determines how   3.10    fog
+                                            dependent          fog distance      
+                                                               is computed
+
+New Implementation State
+
+    None
+
+Revision History
+
+    None

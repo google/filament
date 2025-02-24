@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+An element displaying basic information about a display item in a list view.
+-->
+<dom-module id='tr-ui-e-chrome-cc-display-item-list-item'>
+  <template>
+    <style>
+      :host {
+        border-bottom: 1px solid #555;
+        display: block;
+        font-size: 12px;
+        padding: 3px 5px;
+      }
+
+      :host(:hover) {
+        background-color: #f0f0f0;
+        cursor: pointer;
+      }
+
+      .header {
+        font-weight: bold;
+        margin: 2px 0;
+      }
+
+      .header > .extra {
+        background-color: #777;
+        border-radius: 4px;
+        color: white;
+        margin: 0 6px;
+        text-decoration: none;
+        padding: 2px 4px;
+      }
+
+      .raw-details {
+        white-space: pre-wrap;
+      }
+
+      .details > dl {
+        margin: 0;
+      }
+
+      :host(:not([selected])) .details {
+        display: none;
+      }
+    </style>
+    <div class="header">
+      {{name}}
+      <template is="dom-if" if="{{_computeIfSKP(richDetails)}}">
+        <a class="extra" href$="{{_computeHref(richDetails)}}"
+           download="drawing.skp" on-click="{{stopPropagation}}">SKP</a>
+      </template>
+    </div>
+    <div class="details">
+      <template is="dom-if" if="{{rawDetails}}">
+        <div class="raw-details">{{rawDetails}}</div>
+      </template>
+      <template is="dom-if" if="{{richDetails}}">
+        <dl>
+          <template is="dom-if" if="{{richDetails.visualRect}}">
+            <dt>Visual rect</dt>
+            <dd>{{richDetails.visualRect.x}},{{richDetails.visualRect.y}}
+                {{richDetails.visualRect.width}}&times;{{richDetails.visualRect.height}}
+            </dd>
+          </template>
+        </dl>
+      </template>
+    </div>
+  </template>
+<script>
+'use strict';
+(function() {
+  // Extracts the "type" and "details" parts of the unstructured (plaintext)
+  // display item format, even if the details span multiple lines.
+  // For example, given "FooDisplayItem type=hello\nworld", produces
+  // "FooDisplayItem" as the first capture and "type=hello\nworld" as the
+  // second. Either capture could be the empty string, but this regex will
+  // still successfully match.
+  const DETAILS_SPLIT_REGEX = /^(\S*)\s*([\S\s]*)$/;
+
+  Polymer({
+    is: 'tr-ui-e-chrome-cc-display-item-list-item',
+
+    created() {
+      // TODO(charliea): Why is setAttribute necessary here but not below? We
+      // should reach out to the Polymer team to figure out.
+      Polymer.dom(this).setAttribute('name', '');
+      Polymer.dom(this).setAttribute('rawDetails', '');
+      Polymer.dom(this).setAttribute('richDetails', undefined);
+      Polymer.dom(this).setAttribute('data_', undefined);
+    },
+
+    get data() {
+      return this.data_;
+    },
+
+    set data(data) {
+      this.data_ = data;
+
+      if (!data) {
+        this.name = 'DATA MISSING';
+        this.rawDetails = '';
+        this.richDetails = undefined;
+      } else if (typeof data === 'string') {
+        const match = data.match(DETAILS_SPLIT_REGEX);
+        this.name = match[1];
+        this.rawDetails = match[2];
+        this.richDetails = undefined;
+      } else {
+        this.name = data.name;
+        this.rawDetails = '';
+        this.richDetails = data;
+      }
+    },
+
+    stopPropagation(e) {
+      e.stopPropagation();
+    },
+
+    _computeIfSKP(richDetails) {
+      return richDetails && richDetails.skp64;
+    },
+
+    _computeHref(richDetails) {
+      return 'data:application/octet-stream;base64,' + richDetails.skp64;
+    }
+  });
+})();
+</script>

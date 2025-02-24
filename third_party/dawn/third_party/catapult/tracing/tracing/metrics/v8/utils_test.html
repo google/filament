@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/v8/utils.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function addDumpWithAllocator(model, process, allocator, start) {
+    const gmd = tr.model.MemoryDumpTestUtils.addGlobalMemoryDump(
+        model, {ts: start});
+    const pmd = tr.model.MemoryDumpTestUtils.addProcessMemoryDump(gmd, process);
+    pmd.memoryAllocatorDumps =
+        [tr.model.MemoryDumpTestUtils.newAllocatorDump(pmd, allocator)];
+  }
+
+  const unionOfIntervals = tr.metrics.v8.utils.unionOfIntervals;
+
+  function interval(start, end) {
+    return {start, end};
+  }
+
+  /**
+   * Brute force computation of the mutator utilization.
+   * The function steps from the start to the end and for each step
+   * computes the mutator utilization.
+   */
+  function mutatorUtilizationSlow(start, end, timeWindow, intervals) {
+    const STEP = 0.001;
+    function timeToIndex(time) {
+      return Math.floor((time - start) / STEP);
+    }
+    const N = timeToIndex(end) + 1;
+    // bitmap[i] === true means that GC is active at time i.
+    const bitmap = new Array(N);
+    for (let i = 0; i < N; i++) {
+      bitmap[i] = false;
+    }
+    intervals.forEach(function(interval) {
+      const start = timeToIndex(interval.start);
+      const end = timeToIndex(interval.end);
+      for (let i = start; i < end; i++) {
+        bitmap[i] = true;
+      }
+    });
+    const pause = new Array(N);
+    for (let i = 0; i < N; i++) {
+      pause[i] = (i > 0 ? pause[i - 1] : 0) + (bitmap[i] ? 1 : 0);
+    }
+    const windowWidth = timeToIndex(timeWindow);
+    const mu = new Array(Math.max(N - windowWidth, 0));
+    for (let i = 0; i < mu.length; i++) {
+      const value = pause[i + windowWidth] - pause[i];
+      mu[i] = 1.0 - value / windowWidth;
+    }
+    mu.sort((a, b) => a - b);
+    return {
+      average: mu.reduce((acc, x) => (acc + x), 0) / mu.length,
+      min: mu.reduce((acc, x) => Math.min(acc, x), 0),
+      max: mu.reduce((acc, x) => Math.max(acc, x), 0),
+      percentile(percent) {
+        return mu[Math.floor(percent * (mu.length - 1))];
+      }
+    };
+  }
+
+  /**
+   * Constructs PiecewiseLinearFunction from pieces.
+   * @param {!Array<!{x1: number, y1: number, x2: number, y2: number}>} pieces
+   *     The list of pieces ordered by the x coordinate.
+   */
+  function createExpectedFunction(pieces) {
+    const f = new tr.b.math.PiecewiseLinearFunction();
+    pieces.forEach(function(p) {
+      f.push(p.x1, p.y1, p.x2, p.y2);
+    });
+    return f;
+  }
+
+  test('unionOfIntervals', function() {
+    assert.deepEqual(unionOfIntervals([]), []);
+    assert.deepEqual(unionOfIntervals([interval(1, 1)]), [interval(1, 1)]);
+    assert.deepEqual(
+        unionOfIntervals([interval(0, 1), interval(1, 2), interval(2, 3)]),
+        [interval(0, 3)]);
+    assert.deepEqual(
+        unionOfIntervals([interval(0, 1), interval(1, 2), interval(3, 3)]),
+        [interval(0, 2), interval(3, 3)]);
+    assert.deepEqual(
+        unionOfIntervals([interval(0, 10), interval(1, 2), interval(3, 3)]),
+        [interval(0, 10)]);
+    assert.deepEqual(
+        unionOfIntervals([interval(0, 10), interval(1, 2), interval(3, 11)]),
+        [interval(0, 11)]);
+    assert.deepEqual(
+        unionOfIntervals([interval(3, 10), interval(1, 2), interval(11, 11)]),
+        [interval(1, 2), interval(3, 10), interval(11, 11)]);
+  });
+
+  test('basicMutatorUtilization', function() {
+    assert.deepEqual(
+        tr.metrics.v8.utils.mutatorUtilization(0, 40, 10, [interval(10, 20)]),
+        createExpectedFunction([
+          { x1: 0, y1: 1.0, x2: 10, y2: 0.0 },
+          { x1: 10, y1: 0.0, x2: 20, y2: 1.0 },
+          { x1: 20, y1: 1.0, x2: 30, y2: 1.0 }])
+    );
+    assert.deepEqual(
+        tr.metrics.v8.utils.mutatorUtilization(0, 40, 10, [interval(10, 15)]),
+        createExpectedFunction([
+          { x1: 0, y1: 1.0, x2: 5, y2: 0.5 },
+          { x1: 5, y1: 0.5, x2: 10, y2: 0.5 },
+          { x1: 10, y1: 0.5, x2: 15, y2: 1.0 },
+          { x1: 15, y1: 1.0, x2: 30, y2: 1.0 }])
+    );
+    assert.deepEqual(
+        tr.metrics.v8.utils.mutatorUtilization(0, 60, 20,
+            [interval(30, 35), interval(40, 45)]),
+        createExpectedFunction([
+          { x1: 0, y1: 1.0, x2: 10, y2: 1.0 },
+          { x1: 10, y1: 1.0, x2: 15, y2: 0.75 },
+          { x1: 15, y1: 0.75, x2: 20, y2: 0.75 },
+          { x1: 20, y1: 0.75, x2: 25, y2: 0.5 },
+          { x1: 25, y1: 0.5, x2: 30, y2: 0.5 },
+          { x1: 30, y1: 0.5, x2: 35, y2: 0.75 },
+          { x1: 35, y1: 0.75, x2: 40, y2: 0.75 }])
+    );
+  });
+
+  test('mutatorUtilization', function() {
+    const pauses = [
+      interval(10, 20),
+      interval(15, 23),
+      interval(30, 31),
+      interval(33, 34),
+      interval(60, 61),
+      interval(61, 63),
+      interval(80, 88)];
+    const actual = tr.metrics.v8.utils.mutatorUtilization(0, 100, 7, pauses);
+    const expected = mutatorUtilizationSlow(0, 100, 7, pauses);
+    assert.closeTo(expected.average, actual.average, 1e-3);
+    assert.closeTo(expected.max, actual.max, 1e-3);
+    assert.closeTo(expected.min, actual.min, 1e-3);
+    assert.closeTo(expected.percentile(0.5), actual.percentile(0.5), 1e-3);
+    assert.closeTo(expected.percentile(0.9), actual.percentile(0.9), 1e-3);
+  });
+
+  test('mutatorUtilizationMakesProgress', function() {
+    const start = 44173.32375717163;
+    const end = 80378.0457572937;
+    const pauses = [
+      interval(500, 700),
+      interval(900, 990)];
+    const actual = tr.metrics.v8.utils.mutatorUtilization(
+        start, end, 16.67, pauses);
+    assert.closeTo(0.9548, actual.average, 1e-3);
+  });
+
+
+  test('rangeForMemoryDumps', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      addDumpWithAllocator(model, process, 'dummy', 10);
+      addDumpWithAllocator(model, process, 'v8', 20);
+    });
+    const range = tr.metrics.v8.utils.rangeForMemoryDumps(model);
+    assert.isFalse(range.isEmpty);
+    assert.strictEqual(range.min, 20);
+    assert.strictEqual(range.max, Infinity);
+  });
+
+  test('rangeForMemoryDumpsEmpty', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      addDumpWithAllocator(model, process, 'dummy', 10);
+      addDumpWithAllocator(model, process, 'dummy', 20);
+    });
+    const range = tr.metrics.v8.utils.rangeForMemoryDumps(model);
+    assert.isTrue(range.isEmpty);
+  });
+});
+</script>

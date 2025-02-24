@@ -1,0 +1,25 @@
+service: upload
+
+runtime: python38
+entrypoint: gunicorn -b:$PORT dashboard.dispatcher:APP --worker-class gthread --threads 10 --timeout 60
+app_engine_apis: true
+# 2048MB Memory, 2.4GHz CPU limit, support auto scaling.
+instance_class: F4_1G
+
+automatic_scaling:
+  max_concurrent_requests: 5
+  max_instances: 300
+  max_pending_latency: automatic
+  min_instances: 6
+  target_cpu_utilization: 0.8
+
+env_variables:
+  GAE_USE_SOCKETS_HTTPLIB: 'true'
+
+inbound_services:
+- warmup
+
+handlers:
+- url: /.*
+  script: dashboard.dispatcher.APP
+  secure: always

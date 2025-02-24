@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id="chart-title">
+  <template>
+    <style>
+      .title {
+        color: #424242;
+        text-decoration: none;
+      }
+
+      .title:hover {
+        color: #4184f3;
+        text-decoration: underline;
+      }
+
+      .title[disabled] {
+        color: #8d8d8d;
+        text-decoration: none;
+        cursor: default;
+      }
+      paper-button {
+        color: white;
+        font-weight: bold;
+        min-width: initial;
+        padding: 5px;
+        margin: 0;
+        background: #4285f4;
+        font-size: 18px;
+      }
+      #container {
+        white-space: nowrap;
+      }
+      h3 {
+        display: inline-block;
+        white-space: initial;
+      }
+    </style>
+
+    <div id="container">
+      <paper-button raised on-click="populateTestPicker_"
+          title="Populate test picker">
+        &#8632;
+      </paper-button>
+
+      <h3>
+        <template is="dom-repeat" items="{{titleParts}}">
+          <a class="title disabled" href="javascript:void(0);"
+            on-click="onClicked" disabled$="{{computeStrictEqual(index, currentIndex)}}"
+            class="title">
+            {{item}}
+          </a>
+          <span hidden$="{{computeIsLast(index, titleParts)}}">/</span>
+        </template>
+      </h3>
+    </div>
+
+    <div>
+      <template is="dom-repeat" items="{{suiteDescriptions}}" as="info">
+        <div><b>{{info.suite}}</b>: {{info.description}}</div>
+      </template>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'chart-title',
+  properties: {
+    seriesGroupList: {
+      notify: true,
+      type: Array,
+      value: () => []
+    },
+    titleParts: {
+      type: Array,
+      value: () => []
+    },
+    suiteDescriptions: {
+      notify: true,
+      type: Array,
+      value: () => []
+    },
+    testSuites: {
+      type: Object,
+      notify: true,
+      value: () => { return {}; }
+    }
+  },
+
+  computeIsLast: (idx, arr) => idx === arr.length - 1,
+  computeStrictEqual: (a, b) => a === b,
+
+  /**
+    * Sets the title of the chart based on the current state of the chart.
+    */
+  update() {
+    const testPaths = this.getTestPaths();
+    const title = this.makeTitleFromTestPaths(testPaths);
+    const selectedSeries = this.getFirstSelectedSeries();
+
+    const parts = title.split('/');
+    // First part of the title groups together of master, bot and test
+    // suite.
+    const firstPart = parts.slice(0, 3).join('/');
+    this.titleParts = [firstPart].concat(parts.slice(3));
+
+    // Determine the current selected index which will be disabled for
+    // selection.
+    if (selectedSeries) {
+      this.titleParts.push(selectedSeries);
+      this.currentIndex = this.titleParts.length - 2;
+    } else {
+      this.currentIndex = this.titleParts.length - 1;
+    }
+    this.suiteDescriptions = this.getSuitesAndDescriptions();
+  },
+
+  populateTestPicker_(event) {
+    // chart-title's testPaths have a different structure from test-picker's
+    // testPaths.
+    let testPath = [];
+    for (const part of this.titleParts) {
+      testPath.push.apply(testPath, part.split('/'));
+    }
+
+    // chart-title's testPaths are in a different order from test-picker's
+    // testPaths.
+    testPath = [testPath[2], testPath[1]].concat(testPath.slice(3));
+
+    this.fire('populateTestPicker', {testPath});
+  },
+
+  onClicked(event) {
+    const index = event.model.index;
+    if (index == this.currentIndex) {
+      return;
+    }
+    this.fire('titleclicked', {
+      titleParts: this.titleParts,
+      partIndex: index
+    });
+
+    this.currentIndex = index;
+  },
+
+  /**
+    * Makes a string to use as a chart title, based on a set of test paths.
+    * @param {Array.<string>} testPaths An list of test paths.
+    * @return {string} The longest test path that is the prefix
+    */
+  makeTitleFromTestPaths(testPaths) {
+    if (testPaths.length == 1) {
+      return testPaths[0];
+    }
+
+    let prefix = '';
+    if (testPaths.length > 1) {
+      prefix = this.longestCommonTestPathPrefix(testPaths);
+    }
+    if (testPaths.indexOf(prefix) >= 0) {
+      return prefix;
+    }
+    return prefix ? prefix + '/...' : '...';
+  },
+
+  getTestPaths() {
+    const testPaths = [];
+    for (let i = 0; i < this.seriesGroupList.length; i++) {
+      testPaths.push(this.seriesGroupList[i].path);
+    }
+    return testPaths;
+  },
+
+  getFirstSelectedSeries() {
+    for (let i = 0; i < this.seriesGroupList.length; i++) {
+      const testPath = this.seriesGroupList[i].path;
+      const parts = testPath.split('/');
+      const lastPart = parts[parts.length - 1];
+      const tests = this.seriesGroupList[i].tests;
+      for (let j = 0; j < tests.length; j++) {
+        const test = tests[j];
+        if (test.name == lastPart) {
+          return null;
+        } else if (test.selected) {
+          return test.name;
+        }
+      }
+    }
+    return null;
+  },
+
+  getSuitesAndDescriptions() {
+    const suiteDescriptions = {};
+    for (let i = 0; i < this.seriesGroupList.length; i++) {
+      const suite = this.seriesGroupList[i].path.split('/')[2];
+      if (this.testSuites &&
+          this.testSuites[suite] &&
+          this.testSuites[suite].des) {
+        suiteDescriptions[suite] = this.testSuites[suite].des;
+      }
+    }
+    const suiteNames = Object.keys(suiteDescriptions);
+    const returnVal = [];
+    for (let i = 0; i < suiteNames.length; i++) {
+      returnVal.push({
+        'suite': suiteNames[i],
+        'description': suiteDescriptions[suiteNames[i]]
+      });
+    }
+    return returnVal;
+  },
+
+  /**
+    * @param {Array.<string>} testPaths An list of test paths.
+    * @return {string} The longest test path that is the prefix
+    */
+  longestCommonTestPathPrefix(testPaths) {
+    const partArrays = testPaths.map(function(path) {
+      return path.split('/');
+    });
+    return this.longestCommonSubArray(partArrays).join('/');
+  },
+
+  /**
+    * @param {Array.<Array>} arrays An Array of Arrays.
+    * @return {Array} The longest Array such that all Arrays in the input
+    *     contain this Array as a prefix.
+    */
+  longestCommonSubArray(arrays) {
+    if (arrays.length == 0) {
+      return [];
+    }
+    const shortestLength = Math.min.apply(window, arrays.map(function(a) {
+      return a.length;
+    }));
+    for (let prefixLength = 0; prefixLength <= shortestLength;
+      prefixLength++) {
+      const value = arrays[0][prefixLength];
+      for (let i = 1; i < arrays.length; i++) {
+        if (arrays[i][prefixLength] != value) {
+          return arrays[0].slice(0, prefixLength);
+        }
+      }
+    }
+    return arrays[0].slice(0, shortestLength);
+  }
+});
+</script>

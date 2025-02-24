@@ -1,0 +1,67 @@
+git-map(1)
+==========
+
+NAME
+----
+git-map -
+include::_git-map_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git map' [<extra_args>...]
+
+DESCRIPTION
+-----------
+
+Git map formats the output of `git log --graph` from all refs such that:
+
+* Current branch is [aqua]#cyan#.
+* Local branches are [green]#green#.
+* Remote branches are [red]#red#.
+* Tags are [fuchsia]#magenta#.
+* Merge Base markers are [black-background white]#white#.
+* The currently checked out commit is highlighted with a [yellow blue-background]#blue background#.
+
+The output is automatically piped through the `less` pager command, even on
+windows.
+
+OPTIONS
+-------
+<extra_args>...::
+  Extra parameters to pass to the internal linkgit:git-log[1] invocation. This
+  can be used to restrict what refs 'git map' operates on, etc.
++
+If you run git map with a series of fixed arguments frequently, you can use
+the depot-tools.map-extra configuration variable to pre-set arguments (See
+`CONFIGURATION VARIABLES`)
+
+
+CONFIGURATION VARIABLES
+-----------------------
+
+depot-tools.map-extra
+~~~~~~~~~~~~~~~~~~~~~
+
+Each value of the 'depot-tools.map-extra' config variable is applied as an
+additional argument to `git log` during the execution of git map. If you wish to
+configure this, use git `config --add depot-tools.map-extra <value>` to do so.
+
+EXAMPLE
+-------
+
+Running 'git map' would result in an output something like:
+demo:1[]
+
+As you can see, the structure of the commit history is visible, particularly
+what the parents of each commit are.  In order to see the 'upstream'
+relationships of the branches (i.e. which branch is tracking which other
+branch), use the linkgit:git-map-branches[1] command.
+
+SEE ALSO
+--------
+linkgit:git-map-branches[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

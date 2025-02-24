@@ -1,0 +1,53 @@
+#!/bin/bash
+if [ -x /usr/lib/git-core/google_hook ]; then
+  /usr/lib/git-core/google_hook pre-commit "$@"
+else
+  echo 'warning: Cannot run /usr/lib/git-core/google_hook.' \
+    'If this is unexpected, please file a go/git-bug' >&2
+fi
+
+# Do not perform pre-commit on Windows
+if [[ "$OSTYPE" == "win32" || "$OSTYPE" == "msys" ]]; then
+    exit 0
+fi
+
+# Make a temporary directory
+TMPDIR=$(mktemp -d -t gcp-$(date +%Y-%m-%d-%H-%M-%S)-XXXXXXXXXX)
+diffFile=$(mktemp gpc-XXXXXXXXX --tmpdir=$TMPDIR)
+
+# Get every non third-party source file that's been added, changed, or modified
+# in the current index.
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -v third_party | grep '\.cpp$\|\.hpp$\|\.h$\|\.c$')
+
+# Checkout a copy of current index into TMPDIR. This is necessary so that we
+# only read the versions of files that are being committed, and not any changes
+# to those files that haven't been added yet.
+git checkout-index --prefix=$TMPDIR/ -af
+
+# Everything else will now happen in TMPDIR
+cd $TMPDIR
+
+# Go through each file and test if clang-format modifies the file
+pass=1
+for FILE in $FILES
+do
+    tmpfile=$(mktemp gpc-XXXXXXXXX --tmpdir=$TMPDIR)
+    FULLFILE="$TMPDIR/$FILE"
+    clang-format --style=file $FULLFILE > "$tmpfile"
+    diff "$FULLFILE" "$tmpfile" > "$diffFile"
+    if [ -s "$diffFile" ]
+    then
+        echo "$FILE"
+        pass=0
+    fi
+    rm "$tmpfile"
+done
+
+rm "$diffFile"
+rm -rf "$TMPDIR"
+
+if [ "$pass" != 1 ]
+then
+    echo "Please run src/clang-format-all.sh to correct the above files"
+    exit 1
+fi

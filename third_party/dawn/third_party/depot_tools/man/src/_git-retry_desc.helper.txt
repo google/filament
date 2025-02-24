@@ -1,0 +1,2 @@
+Bootstrap function to retry a git command.
+

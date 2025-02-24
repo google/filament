@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/piecewise_linear_function.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('PiecewiseLinearFunctionEmpty', function() {
+    const f = new tr.b.math.PiecewiseLinearFunction();
+    assert.strictEqual(f.max, -Infinity);
+    assert.strictEqual(f.min, Infinity);
+    assert.strictEqual(f.average, 0);
+    assert.strictEqual(f.percentile(0.5), 0);
+  });
+
+  test('PiecewiseLinearFunction', function() {
+    const f = new tr.b.math.PiecewiseLinearFunction();
+    f.push(0, 0.0, 10, 1.0);
+    f.push(10, 1.0, 20, 0.0);
+    f.push(20, 0.0, 30, 0.0);
+    assert.strictEqual(f.max, 1.0);
+    assert.strictEqual(f.min, 0.0);
+    assert.closeTo(f.average, 20 * 1 / 2.0 / 30, 1e-6);
+    assert.closeTo(f.percentile(1.0 / 3.0), 0.0, 1e-6);
+    assert.closeTo(f.percentile(2.0 / 3.0), 0.5, 1e-6);
+  });
+});
+</script>

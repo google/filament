@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('getSnapshotAtWithImplicitCreation', function() {
+    const instance = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'n', 10);
+    let s10 = instance.addSnapshot(10, 'a');
+    instance.addSnapshot(40, 'b');
+    instance.wasDeleted(60);
+
+    const s1 = instance.getSnapshotAt(1);
+    assert.strictEqual(s1, s10);
+
+    s10 = instance.getSnapshotAt(10);
+    assert.strictEqual(s10.args, 'a');
+    assert.strictEqual(instance.getSnapshotAt(15), s10);
+
+    const s40 = instance.getSnapshotAt(40);
+    assert.strictEqual(s40.args, 'b');
+    assert.strictEqual(instance.getSnapshotAt(50), s40);
+    assert.strictEqual(instance.getSnapshotAt(59.9), s40);
+  });
+
+  test('getSnapshotAtWithExplicitCreation', function() {
+    const instance = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'n', 10);
+    instance.creationTsWasExplicit = true;
+    instance.addSnapshot(10, 'a');
+    instance.wasDeleted(60);
+
+    assert.throws(function() {
+      instance.getSnapshotAt(1);
+    });
+
+    const s10 = instance.getSnapshotAt(10);
+    assert.strictEqual(s10.args, 'a');
+    assert.strictEqual(instance.getSnapshotAt(15), s10);
+  });
+
+  test('getSnapshotBeforeFirstSnapshot', function() {
+    const instance = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'n', 10);
+    const s15 = instance.addSnapshot(15, 'a');
+    instance.wasDeleted(40);
+
+    assert.strictEqual(instance.getSnapshotAt(10), s15);
+  });
+
+  test('getSnapshotAfterLastSnapshot', function() {
+    const instance = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'n', 10);
+    const s15 = instance.addSnapshot(15, 'a');
+    instance.wasDeleted(40);
+
+    assert.strictEqual(instance.getSnapshotAt(20), s15);
+  });
+});
+</script>
+

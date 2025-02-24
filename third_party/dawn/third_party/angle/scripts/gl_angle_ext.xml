@@ -1,0 +1,1660 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <comment>
+    Copyright 2018 The ANGLE Project Authors. All rights reserved.
+    Use of this source code is governed by a BSD-style license that can be
+    found in the LICENSE file.
+
+    gl_angle_ext.xml
+        Includes data used to auto-generate ANGLE classes.
+    </comment>
+
+    <!-- SECTION: GL type definitions. -->
+    <types>
+        <type>typedef GLsizeiptr (<apientry/> *<name>GLGETBLOBPROCANGLE</name>)(const void *key, GLsizeiptr keySize, void *value, GLsizeiptr valueSize, const void *userParam);</type>
+        <type>typedef void (<apientry/> *<name>GLSETBLOBPROCANGLE</name>)(const void *key, GLsizeiptr keySize, const void *value, GLsizeiptr valueSize, const void *userParam);</type>
+    </types>
+
+    <!-- SECTION: GL parameter class type definitions. -->
+    <groups>
+        <group name="CreateFlagMask">
+            <enum name="GL_CREATE_SPARSE_BINDING_BIT_ANGLE"/>
+            <enum name="GL_CREATE_SPARSE_RESIDENCY_BIT_ANGLE"/>
+            <enum name="GL_CREATE_SPARSE_ALIASED_BIT_ANGLE"/>
+            <enum name="GL_CREATE_MUTABLE_FORMAT_BIT_ANGLE"/>
+            <enum name="GL_CREATE_CUBE_COMPATIBLE_BIT_ANGLE"/>
+            <enum name="GL_CREATE_ALIAS_BIT_ANGLE"/>
+            <enum name="GL_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_ANGLE"/>
+            <enum name="GL_CREATE_2D_ARRAY_COMPATIBLE_BIT_ANGLE"/>
+            <enum name="GL_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_ANGLE"/>
+            <enum name="GL_CREATE_EXTENDED_USAGE_BIT_ANGLE"/>
+            <enum name="GL_CREATE_PROTECTED_BIT_ANGLE"/>
+            <enum name="GL_CREATE_DISJOINT_BIT_ANGLE"/>
+            <enum name="GL_CREATE_CORNER_SAMPLED_BIT_ANGLE"/>
+            <enum name="GL_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_ANGLE"/>
+            <enum name="GL_CREATE_SUBSAMPLED_BIT_ANGLE"/>
+        </group>
+        <group name="UsageFlagMask">
+            <enum name="GL_USAGE_TRANSFER_SRC_BIT_ANGLE"/>
+            <enum name="GL_USAGE_TRANSFER_DST_BIT_ANGLE"/>
+            <enum name="GL_USAGE_SAMPLED_BIT_ANGLE"/>
+            <enum name="GL_USAGE_STORAGE_BIT_ANGLE"/>
+            <enum name="GL_USAGE_COLOR_ATTACHMENT_BIT_ANGLE"/>
+            <enum name="GL_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT_ANGLE"/>
+            <enum name="GL_USAGE_TRANSIENT_ATTACHMENT_BIT_ANGLE"/>
+            <enum name="GL_USAGE_INPUT_ATTACHMENT_BIT_ANGLE"/>
+            <enum name="GL_USAGE_SHADING_RATE_IMAGE_BIT_ANGLE"/>
+            <enum name="GL_USAGE_FRAGMENT_DENSITY_MAP_BIT_ANGLE"/>
+        </group>
+        <group name="ExternalHandleType">
+            <enum name="GL_HANDLE_TYPE_ZIRCON_VMO_ANGLE"/>
+            <enum name="GL_HANDLE_TYPE_ZIRCON_EVENT_ANGLE"/>
+        </group>
+        <group name="LogicOp">
+            <enum name="GL_CLEAR_ANGLE"/>
+            <enum name="GL_AND_ANGLE"/>
+            <enum name="GL_AND_REVERSE_ANGLE"/>
+            <enum name="GL_COPY_ANGLE"/>
+            <enum name="GL_AND_INVERTED_ANGLE"/>
+            <enum name="GL_NOOP_ANGLE"/>
+            <enum name="GL_XOR_ANGLE"/>
+            <enum name="GL_OR_ANGLE"/>
+            <enum name="GL_NOR_ANGLE"/>
+            <enum name="GL_EQUIV_ANGLE"/>
+            <enum name="GL_INVERT_ANGLE"/>
+            <enum name="GL_OR_REVERSE_ANGLE"/>
+            <enum name="GL_COPY_INVERTED_ANGLE"/>
+            <enum name="GL_OR_INVERTED_ANGLE"/>
+            <enum name="GL_NAND_ANGLE"/>
+            <enum name="GL_SET_ANGLE"/>
+        </group>
+    </groups>
+
+    <!-- SECTION: GL command definitions. -->
+    <commands namespace="GL">
+        <command>
+            <proto>void <name>glBindUniformLocationCHROMIUM</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param>const <ptype>GLchar</ptype> *<name>name</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCoverageModulationCHROMIUM</name></proto>
+            <param><ptype>GLenum</ptype> <name>components</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMatrixLoadfCHROMIUM</name></proto>
+            <param><ptype>GLenum</ptype> <name>matrixMode</name></param>
+            <param>const <ptype>GLfloat</ptype> *<name>matrix</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMatrixLoadIdentityCHROMIUM</name></proto>
+            <param><ptype>GLenum</ptype> <name>matrixMode</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCopyTextureCHROMIUM</name></proto>
+            <param><ptype>GLuint</ptype> <name>sourceId</name></param>
+            <param><ptype>GLint</ptype> <name>sourceLevel</name></param>
+            <param><ptype>GLenum</ptype> <name>destTarget</name></param>
+            <param><ptype>GLuint</ptype> <name>destId</name></param>
+            <param><ptype>GLint</ptype> <name>destLevel</name></param>
+            <param><ptype>GLint</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLenum</ptype> <name>destType</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackFlipY</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackPremultiplyAlpha</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackUnmultiplyAlpha</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCopySubTextureCHROMIUM</name></proto>
+            <param><ptype>GLuint</ptype> <name>sourceId</name></param>
+            <param><ptype>GLint</ptype> <name>sourceLevel</name></param>
+            <param><ptype>GLenum</ptype> <name>destTarget</name></param>
+            <param><ptype>GLuint</ptype> <name>destId</name></param>
+            <param><ptype>GLint</ptype> <name>destLevel</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLint</ptype> <name>width</name></param>
+            <param><ptype>GLint</ptype> <name>height</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackFlipY</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackPremultiplyAlpha</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackUnmultiplyAlpha</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedCopyTextureCHROMIUM</name></proto>
+            <param><ptype>GLuint</ptype> <name>sourceId</name></param>
+            <param><ptype>GLuint</ptype> <name>destId</name></param>
+        </command>
+        <command>
+            <proto>void <name>glRequestExtensionANGLE</name></proto>
+            <param>const <ptype>GLchar</ptype> *<name>name</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDisableExtensionANGLE</name></proto>
+            <param>const <ptype>GLchar</ptype> *<name>name</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetBooleanvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLboolean</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetBufferParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFloatvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferAttachmentParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>attachment</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetIntegervRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetProgramivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetRenderbufferParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetShaderivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>shader</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetUniformfvRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetUniformivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVertexAttribfvRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVertexAttribivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVertexAttribPointervRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param>void **<name>pointer</name></param>
+        </command>
+        <command>
+            <proto>void <name>glReadPixelsRobustANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLsizei</ptype> *<name>columns</name></param>
+            <param><ptype>GLsizei</ptype> *<name>rows</name></param>
+            <param>void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexImage2DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexSubImage2DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexImage3DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexSubImage3DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedTexImage2DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>GLsizei</ptype> <name>dataSize</name></param>
+            <param>const void *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedTexSubImage2DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLsizei</ptype> <name>xoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>yoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>GLsizei</ptype> <name>dataSize</name></param>
+            <param>const void *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedTexImage3DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>GLsizei</ptype> <name>dataSize</name></param>
+            <param>const void *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedTexSubImage3DRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>GLsizei</ptype> <name>dataSize</name></param>
+            <param>const void *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetQueryivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetQueryObjectuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetBufferPointervRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param>void **<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetIntegeri_vRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetInternalformativRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVertexAttribIivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVertexAttribIuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetUniformuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetActiveUniformBlockivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLuint</ptype> <name>uniformBlockIndex</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetInteger64vRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint64</ptype> *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetInteger64i_vRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint64</ptype> *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetBufferParameteri64vRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint64</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glSamplerParameterivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLuint</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLint</ptype> *<name>param</name></param>
+        </command>
+        <command>
+            <proto>void <name>glSamplerParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLfloat</ptype> *<name>param</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetSamplerParameterivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetSamplerParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetProgramInterfaceivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLenum</ptype> <name>programInterface</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetBooleani_vRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLboolean</ptype> *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetMultisamplefvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>val</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexLevelParameterivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexLevelParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetPointervRobustANGLERobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param>void **<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glReadnPixelsRobustANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLsizei</ptype> *<name>columns</name></param>
+            <param><ptype>GLsizei</ptype> *<name>rows</name></param>
+            <param>void *<name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetnUniformfvRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetnUniformivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetnUniformuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>program</name></param>
+            <param><ptype>GLint</ptype> <name>location</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexParameterIivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexParameterIuivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexParameterIivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexParameterIuivRobustANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glSamplerParameterIivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLint</ptype> *<name>param</name></param>
+        </command>
+        <command>
+            <proto>void <name>glSamplerParameterIuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param>const <ptype>GLuint</ptype> *<name>param</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetSamplerParameterIivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetSamplerParameterIuivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sampler</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetQueryObjectivRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetQueryObjecti64vRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint64</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetQueryObjectui64vRobustANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLuint64</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCopyTexture3DANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sourceId</name></param>
+            <param><ptype>GLint</ptype> <name>sourceLevel</name></param>
+            <param><ptype>GLenum</ptype> <name>destTarget</name></param>
+            <param><ptype>GLuint</ptype> <name>destId</name></param>
+            <param><ptype>GLint</ptype> <name>destLevel</name></param>
+            <param><ptype>GLint</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLenum</ptype> <name>destType</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackFlipY</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackPremultiplyAlpha</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackUnmultiplyAlpha</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCopySubTexture3DANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>sourceId</name></param>
+            <param><ptype>GLint</ptype> <name>sourceLevel</name></param>
+            <param><ptype>GLenum</ptype> <name>destTarget</name></param>
+            <param><ptype>GLuint</ptype> <name>destId</name></param>
+            <param><ptype>GLint</ptype> <name>destLevel</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLint</ptype> <name>z</name></param>
+            <param><ptype>GLint</ptype> <name>width</name></param>
+            <param><ptype>GLint</ptype> <name>height</name></param>
+            <param><ptype>GLint</ptype> <name>depth</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackFlipY</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackPremultiplyAlpha</name></param>
+            <param><ptype>GLboolean</ptype> <name>unpackUnmultiplyAlpha</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexStorage2DMultisampleANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizei</ptype> <name>samples</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLboolean</ptype> <name>fixedsamplelocations</name></param>
+            <alias name="glTexStorage2DMultisample"/>
+        </command>
+       <command>
+       <proto>void <name>glGetTexLevelParameterivANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param group="CheckedInt32"><ptype>GLint</ptype> <name>level</name></param>
+            <param group="GetTextureParameter"><ptype>GLenum</ptype> <name>pname</name></param>
+            <param len="COMPSIZE(pname)"><ptype>GLint</ptype> *<name>params</name></param>
+            <alias name="glGetTexLevelParameteriv"/>
+        </command>
+        <command>
+            <proto>void <name>glGetTexLevelParameterfvANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+            <alias name="glGetTexLevelParameterfv"/>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawArraysANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLint</ptype> *<name>firsts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+            <alias name="glMultiDrawArrays"/>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawArraysInstancedANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLint</ptype> *<name>firsts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>instanceCounts</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawElementsANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param group="DrawElementsType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param len="COMPSIZE(primcount)">const void *const*<name>indices</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+            <alias name="glMultiDrawElements"/>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawElementsInstancedANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param group="DrawElementsType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param len="COMPSIZE(primcount)">const void *const*<name>indices</name></param>
+            <param len="COMPSIZE(primcount)">const GLsizei*<name>instanceCounts</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDrawArraysInstancedBaseInstanceANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param><ptype>GLint</ptype> <name>first</name></param>
+            <param><ptype>GLsizei</ptype> <name>count</name></param>
+            <param><ptype>GLsizei</ptype> <name>instanceCount</name></param>
+            <param><ptype>GLuint</ptype> <name>baseInstance</name></param>
+            <alias name="glDrawArraysInstancedBaseInstance"/>
+        </command>
+        <command>
+            <proto>void <name>glDrawElementsInstancedBaseVertexBaseInstanceANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param><ptype>GLsizei</ptype> <name>count</name></param>
+            <param group="DrawElementsType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param>const void *<name>indices</name></param>
+            <param><ptype>GLsizei</ptype> <name>instanceCount</name></param>
+            <param><ptype>GLint</ptype> <name>baseVertex</name></param>
+            <param><ptype>GLuint</ptype> <name>baseInstance</name></param>
+            <alias name="glDrawElementsInstancedBaseVertexBaseInstance"/>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawArraysInstancedBaseInstanceANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLint</ptype> *<name>firsts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>instanceCounts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLuint</ptype> *<name>baseInstances</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE</name></proto>
+            <param group="PrimitiveType"><ptype>GLenum</ptype> <name>mode</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>counts</name></param>
+            <param group="DrawElementsType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param len="COMPSIZE(primcount)">const void *const*<name>indices</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLsizei</ptype> *<name>instanceCounts</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLint</ptype> *<name>baseVertices</name></param>
+            <param len="COMPSIZE(primcount)">const <ptype>GLuint</ptype> *<name>baseInstances</name></param>
+            <param><ptype>GLsizei</ptype> <name>drawcount</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetMultisamplefvANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLfloat</ptype> *<name>val</name></param>
+            <alias name="glGetMultisamplefv"/>
+        </command>
+        <command>
+            <proto>void <name>glSampleMaskiANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>maskNumber</name></param>
+            <param><ptype>GLbitfield</ptype> <name>mask</name></param>
+            <alias name="glSampleMaski"/>
+        </command>
+        <command>
+            <proto>void <name>glPolygonModeANGLE</name></proto>
+            <param group="TriangleFace"><ptype>GLenum</ptype> <name>face</name></param>
+            <param group="PolygonMode"><ptype>GLenum</ptype> <name>mode</name></param>
+        </command>
+        <command>
+            <proto>void <name>glProvokingVertexANGLE</name></proto>
+            <param group="VertexProvokingMode"><ptype>GLenum</ptype> <name>provokeMode</name></param>
+            <alias name="glProvokingVertex"/>
+        </command>
+        <command>
+            <proto>void <name>glLoseContextCHROMIUM</name></proto>
+            <param group="GraphicsResetStatus"><ptype>GLenum</ptype> <name>current</name></param>
+            <param group="GraphicsResetStatus"><ptype>GLenum</ptype> <name>other</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexImage2DExternalANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param group="CheckedInt32"><ptype>GLint</ptype> <name>level</name></param>
+            <param group="InternalFormat"><ptype>GLint</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param group="CheckedInt32"><ptype>GLint</ptype> <name>border</name></param>
+            <param group="PixelFormat"><ptype>GLenum</ptype> <name>format</name></param>
+            <param group="PixelType"><ptype>GLenum</ptype> <name>type</name></param>
+        </command>
+        <command>
+            <proto>void <name>glInvalidateTextureANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexImageANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param group="CheckedInt32"><ptype>GLint</ptype> <name>level</name></param>
+            <param group="PixelFormat"><ptype>GLenum</ptype> <name>format</name></param>
+            <param group="PixelType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param len="COMPSIZE(target,level,format,type)">void *<name>pixels</name></param>
+            <alias name="glGetTexImage"/>
+        </command>
+        <command>
+            <proto>void <name>glGetCompressedTexImageANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param group="CheckedInt32"><ptype>GLint</ptype> <name>level</name></param>
+            <param len="COMPSIZE(target,level)">void *<name>pixels</name></param>
+            <alias name="glGetCompressedTexImage"/>
+        </command>
+        <command>
+            <proto>void <name>glGetRenderbufferImageANGLE</name></proto>
+            <param group="RenderbufferTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param group="PixelFormat"><ptype>GLenum</ptype> <name>format</name></param>
+            <param group="PixelType"><ptype>GLenum</ptype> <name>type</name></param>
+            <param len="COMPSIZE(target,level,format,type)">void *<name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexStorageMemFlags2DANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizei</ptype> <name>levels</name></param>
+            <param><ptype>GLenum</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLuint</ptype> <name>memory</name></param>
+            <param><ptype>GLuint64</ptype> <name>offset</name></param>
+            <param><ptype>GLbitfield</ptype> <name>createFlags</name></param>
+            <param><ptype>GLbitfield</ptype> <name>usageFlags</name></param>
+            <param>const void *<name>imageCreateInfoPNext</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexStorageMemFlags2DMultisampleANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizei</ptype> <name>samples</name></param>
+            <param><ptype>GLenum</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLboolean</ptype> <name>fixedSampleLocations</name></param>
+            <param><ptype>GLuint</ptype> <name>memory</name></param>
+            <param><ptype>GLuint64</ptype> <name>offset</name></param>
+            <param><ptype>GLbitfield</ptype> <name>createFlags</name></param>
+            <param><ptype>GLbitfield</ptype> <name>usageFlags</name></param>
+            <param>const void *<name>imageCreateInfoPNext</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexStorageMemFlags3DANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizei</ptype> <name>levels</name></param>
+            <param><ptype>GLenum</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLuint</ptype> <name>memory</name></param>
+            <param><ptype>GLuint64</ptype> <name>offset</name></param>
+            <param><ptype>GLbitfield</ptype> <name>createFlags</name></param>
+            <param><ptype>GLbitfield</ptype> <name>usageFlags</name></param>
+            <param>const void *<name>imageCreateInfoPNext</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexStorageMemFlags3DMultisampleANGLE</name></proto>
+            <param group="TextureTarget"><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizei</ptype> <name>samples</name></param>
+            <param><ptype>GLenum</ptype> <name>internalFormat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLboolean</ptype> <name>fixedSampleLocations</name></param>
+            <param><ptype>GLuint</ptype> <name>memory</name></param>
+            <param><ptype>GLuint64</ptype> <name>offset</name></param>
+            <param><ptype>GLbitfield</ptype> <name>createFlags</name></param>
+            <param><ptype>GLbitfield</ptype> <name>usageFlags</name></param>
+            <param>const void *<name>imageCreateInfoPNext</name></param>
+        </command>
+        <command>
+            <proto>void <name>glImportMemoryZirconHandleANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>memory</name></param>
+            <param><ptype>GLuint64</ptype> <name>size</name></param>
+            <param group="ExternalHandleType"><ptype>GLenum</ptype> <name>handleType</name></param>
+            <param><ptype>GLuint</ptype> <name>handle</name></param>
+        </command>
+        <command>
+            <proto>void <name>glImportSemaphoreZirconHandleANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>semaphore</name></param>
+            <param group="ExternalHandleType"><ptype>GLenum</ptype> <name>handleType</name></param>
+            <param><ptype>GLuint</ptype> <name>handle</name></param>
+        </command>
+        <command>
+            <proto>void <name>glAcquireTexturesANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>numTextures</name></param>
+            <param len="COMPSIZE(numTextures)">const <ptype>GLuint</ptype> *<name>textures</name></param>
+            <param group="TextureLayout" len="COMPSIZE(numTextures)">const <ptype>GLenum</ptype> *<name>layouts</name></param>
+        </command>
+        <command>
+            <proto>void <name>glReleaseTexturesANGLE</name></proto>
+            <param><ptype>GLuint</ptype> <name>numTextures</name></param>
+            <param len="COMPSIZE(numTextures)">const <ptype>GLuint</ptype> *<name>textures</name></param>
+            <param group="TextureLayout" len="COMPSIZE(numTextures)"><ptype>GLenum</ptype> *<name>layouts</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferMemorylessPixelLocalStorageANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferTexturePixelLocalStorageANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param class="texture"><ptype>GLuint</ptype> <name>backingtexture</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>layer</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferPixelLocalClearValuefvANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param len="4">const <ptype>GLfloat</ptype> *<name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferPixelLocalClearValueivANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param len="4">const <ptype>GLint</ptype> *<name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferPixelLocalClearValueuivANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param len="4">const <ptype>GLuint</ptype> *<name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>glBeginPixelLocalStorageANGLE</name></proto>
+            <param><ptype>GLsizei</ptype> <name>n</name></param>
+            <param len="n">const <ptype>GLenum</ptype> *<name>loadops</name></param>
+        </command>
+        <command>
+            <proto>void <name>glEndPixelLocalStorageANGLE</name></proto>
+            <param><ptype>GLsizei</ptype> <name>n</name></param>
+            <param len="n">const <ptype>GLenum</ptype> *<name>storeops</name></param>
+        </command>
+        <command>
+            <proto>void <name>glPixelLocalStorageBarrierANGLE</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferPixelLocalStorageInterruptANGLE</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferPixelLocalStorageRestoreANGLE</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferPixelLocalStorageParameterfvANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param group="PLSQueryFloat"><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferPixelLocalStorageParameterivANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param group="PLSQueryInt"><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferPixelLocalStorageParameterfvRobustANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param group="PLSQueryFloat"><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLfloat</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetFramebufferPixelLocalStorageParameterivRobustANGLE</name></proto>
+            <param><ptype>GLint</ptype> <name>plane</name></param>
+            <param group="PLSQueryInt"><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei</ptype> *<name>length</name></param>
+            <param><ptype>GLint</ptype> *<name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glLogicOpANGLE</name></proto>
+            <param group="LogicOp"><ptype>GLenum</ptype> <name>opcode</name></param>
+            <alias name="glLogicOp"/>
+        </command>
+        <command>
+            <proto>void <name>glBlobCacheCallbacksANGLE</name></proto>
+            <param><ptype>GLSETBLOBPROCANGLE</ptype> <name>set</name></param>
+            <param><ptype>GLGETBLOBPROCANGLE</ptype> <name>get</name></param>
+            <param>const void *<name>userParam</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetPointervANGLE</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param len="1">void **<name>params</name></param>
+            <alias name="glGetPointerv"/>
+        </command>
+    </commands>
+
+    <!-- SECTION: ANGLE extension interface definitions -->
+    <extensions>
+        <extension name="GL_CHROMIUM_bind_uniform_location" supported='gles2'>
+            <require>
+                <command name="glBindUniformLocationCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="GL_CHROMIUM_framebuffer_mixed_samples" supported='gles2'>
+            <require>
+                <command name="glCoverageModulationCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="GL_CHROMIUM_copy_texture" supported='gles2'>
+            <require>
+                <command name="glCopyTextureCHROMIUM"/>
+                <command name="glCopySubTextureCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="GL_CHROMIUM_copy_compressed_texture" supported='gles2'>
+            <require>
+                <command name="glCompressedCopyTextureCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_request_extension" supported='gles2'>
+            <require>
+                <command name="glRequestExtensionANGLE"/>
+                <command name="glDisableExtensionANGLE"/>
+                <enum name="GL_REQUESTABLE_EXTENSIONS_ANGLE"/>
+                <enum name="GL_NUM_REQUESTABLE_EXTENSIONS_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_vulkan_image" supported='gles2'>
+            <require>
+                <command name="glAcquireTexturesANGLE"/>
+                <command name="glReleaseTexturesANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_robust_client_memory" supported='gles2'>
+            <require>
+                <command name="glGetBooleanvRobustANGLE"/>
+                <command name="glGetBufferParameterivRobustANGLE"/>
+                <command name="glGetBufferParameteri64vRobustANGLE"/>
+                <command name="glGetFloatvRobustANGLE"/>
+                <command name="glGetFramebufferAttachmentParameterivRobustANGLE"/>
+                <command name="glGetIntegervRobustANGLE"/>
+                <command name="glGetProgramivRobustANGLE"/>
+                <command name="glGetRenderbufferParameterivRobustANGLE"/>
+                <command name="glGetShaderivRobustANGLE"/>
+                <command name="glGetTexParameterfvRobustANGLE"/>
+                <command name="glGetTexParameterivRobustANGLE"/>
+                <command name="glGetUniformfvRobustANGLE"/>
+                <command name="glGetUniformivRobustANGLE"/>
+                <command name="glGetVertexAttribfvRobustANGLE"/>
+                <command name="glGetVertexAttribivRobustANGLE"/>
+                <command name="glGetVertexAttribPointervRobustANGLE"/>
+                <command name="glReadPixelsRobustANGLE"/>
+                <command name="glTexImage2DRobustANGLE"/>
+                <command name="glTexParameterfvRobustANGLE"/>
+                <command name="glTexParameterivRobustANGLE"/>
+                <command name="glTexSubImage2DRobustANGLE"/>
+                <command name="glTexImage3DRobustANGLE"/>
+                <command name="glTexSubImage3DRobustANGLE"/>
+                <command name="glCompressedTexImage2DRobustANGLE"/>
+                <command name="glCompressedTexSubImage2DRobustANGLE"/>
+                <command name="glCompressedTexImage3DRobustANGLE"/>
+                <command name="glCompressedTexSubImage3DRobustANGLE"/>
+                <command name="glGetQueryivRobustANGLE"/>
+                <command name="glGetQueryObjectuivRobustANGLE"/>
+                <command name="glGetBufferPointervRobustANGLE"/>
+                <command name="glGetIntegeri_vRobustANGLE"/>
+                <command name="glGetInternalformativRobustANGLE"/>
+                <command name="glGetVertexAttribIivRobustANGLE"/>
+                <command name="glGetVertexAttribIuivRobustANGLE"/>
+                <command name="glGetUniformuivRobustANGLE"/>
+                <command name="glGetActiveUniformBlockivRobustANGLE"/>
+                <command name="glGetInteger64vRobustANGLE"/>
+                <command name="glGetInteger64i_vRobustANGLE"/>
+                <command name="glSamplerParameterivRobustANGLE"/>
+                <command name="glSamplerParameterfvRobustANGLE"/>
+                <command name="glGetSamplerParameterivRobustANGLE"/>
+                <command name="glGetSamplerParameterfvRobustANGLE"/>
+                <command name="glGetFramebufferParameterivRobustANGLE"/>
+                <command name="glGetProgramInterfaceivRobustANGLE"/>
+                <command name="glGetBooleani_vRobustANGLE"/>
+                <command name="glGetMultisamplefvRobustANGLE"/>
+                <command name="glGetTexLevelParameterivRobustANGLE"/>
+                <command name="glGetTexLevelParameterfvRobustANGLE"/>
+                <command name="glGetPointervRobustANGLERobustANGLE"/>
+                <command name="glReadnPixelsRobustANGLE"/>
+                <command name="glGetnUniformfvRobustANGLE"/>
+                <command name="glGetnUniformivRobustANGLE"/>
+                <command name="glGetnUniformuivRobustANGLE"/>
+                <command name="glTexParameterIivRobustANGLE"/>
+                <command name="glTexParameterIuivRobustANGLE"/>
+                <command name="glGetTexParameterIivRobustANGLE"/>
+                <command name="glGetTexParameterIuivRobustANGLE"/>
+                <command name="glSamplerParameterIivRobustANGLE"/>
+                <command name="glSamplerParameterIuivRobustANGLE"/>
+                <command name="glGetSamplerParameterIivRobustANGLE"/>
+                <command name="glGetSamplerParameterIuivRobustANGLE"/>
+                <command name="glGetQueryObjectivRobustANGLE"/>
+                <command name="glGetQueryObjecti64vRobustANGLE"/>
+                <command name="glGetQueryObjectui64vRobustANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_robust_resource_initialization" supported='gles2'>
+            <require>
+                <enum name="GL_ROBUST_RESOURCE_INITIALIZATION_ANGLE"/>
+                <enum name="GL_RESOURCE_INITIALIZED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_copy_texture_3d" supported='gles2'>
+            <require>
+                <command name="glCopyTexture3DANGLE"/>
+                <command name="glCopySubTexture3DANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_texture_multisample" supported='gles2'>
+            <require>
+                <command name="glTexStorage2DMultisampleANGLE"/>
+                <command name="glGetMultisamplefvANGLE"/>
+                <command name="glSampleMaskiANGLE"/>
+                <enum name="GL_TEXTURE_2D_MULTISAMPLE_ANGLE"/>
+                <enum name="GL_SAMPLE_POSITION_ANGLE"/>
+                <enum name="GL_SAMPLE_MASK_ANGLE"/>
+                <enum name="GL_SAMPLE_MASK_VALUE_ANGLE"/>
+                <enum name="GL_MAX_SAMPLE_MASK_WORDS_ANGLE"/>
+                <enum name="GL_MAX_COLOR_TEXTURE_SAMPLES_ANGLE"/>
+                <enum name="GL_MAX_DEPTH_TEXTURE_SAMPLES_ANGLE"/>
+                <enum name="GL_MAX_INTEGER_SAMPLES_ANGLE"/>
+                <enum name="GL_TEXTURE_BINDING_2D_MULTISAMPLE_ANGLE"/>
+                <enum name="GL_TEXTURE_SAMPLES_ANGLE"/>
+                <enum name="GL_TEXTURE_FIXED_SAMPLE_LOCATIONS_ANGLE"/>
+                <enum name="GL_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+                <enum name="GL_INT_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+                <enum name="GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_multi_draw" supported='gles2'>
+            <require>
+                <command name="glMultiDrawArraysANGLE"/>
+                <command name="glMultiDrawArraysInstancedANGLE"/>
+                <command name="glMultiDrawElementsANGLE"/>
+                <command name="glMultiDrawElementsInstancedANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_base_vertex_base_instance" supported='gles2'>
+            <require>
+                <command name="glDrawArraysInstancedBaseInstanceANGLE"/>
+                <command name="glDrawElementsInstancedBaseVertexBaseInstanceANGLE"/>
+                <command name="glMultiDrawArraysInstancedBaseInstanceANGLE"/>
+                <command name="glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_clip_cull_distance" supported='gles2'>
+            <require>
+                <enum name="GL_MAX_CLIP_DISTANCES_ANGLE"/>
+                <enum name="GL_MAX_CULL_DISTANCES_ANGLE"/>
+                <enum name="GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE0_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE1_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE2_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE3_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE4_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE5_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE6_ANGLE"/>
+                <enum name="GL_CLIP_DISTANCE7_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_polygon_mode" supported='gles2'>
+            <require>
+                <enum name="GL_POLYGON_MODE_ANGLE"/>
+                <enum name="GL_LINE_ANGLE"/>
+                <enum name="GL_FILL_ANGLE"/>
+                <enum name="GL_POLYGON_OFFSET_LINE_ANGLE"/>
+                <command name="glPolygonModeANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_provoking_vertex" supported='gles2'>
+            <require>
+                <enum name="GL_FIRST_VERTEX_CONVENTION_ANGLE"/>
+                <enum name="GL_LAST_VERTEX_CONVENTION_ANGLE"/>
+                <enum name="GL_PROVOKING_VERTEX_ANGLE"/>
+                <command name="glProvokingVertexANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_stencil_texturing" supported='gles2'>
+            <require>
+                <enum name="GL_DEPTH_STENCIL_TEXTURE_MODE_ANGLE"/>
+                <enum name="GL_STENCIL_INDEX_ANGLE"/>
+            </require>
+          </extension>
+          <extension name="GL_ANGLE_renderability_validation" supported='gles2'>
+            <require>
+                <enum name="GL_RENDERABILITY_VALIDATION_ANGLE"/>
+            </require>
+          </extension>
+        <extension name="GL_CHROMIUM_lose_context" supported='gles2'>
+            <require>
+                <enum name="GL_GUILTY_CONTEXT_RESET"/>
+                <enum name="GL_INNOCENT_CONTEXT_RESET"/>
+                <enum name="GL_UNKNOWN_CONTEXT_RESET"/>
+                <command name="glLoseContextCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_texture_external_update" supported='gl|gles2'>
+            <require>
+                <command name="glTexImage2DExternalANGLE"/>
+                <command name="glInvalidateTextureANGLE"/>
+            </require>
+        </extension>
+        <extension name ="GL_ANGLE_get_image" supported='gles2'>
+            <require>
+                <command name="glGetTexImageANGLE"/>
+                <command name="glGetCompressedTexImageANGLE"/>
+                <command name="glGetRenderbufferImageANGLE"/>
+            </require>
+        </extension>
+        <extension name ="GL_ANGLE_get_tex_level_parameter" supported='gles2'>
+            <require>
+                <command name="glGetTexLevelParameterfvANGLE"/>
+                <command name="glGetTexLevelParameterivANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_memory_object_flags" supported="gl|gles2">
+            <require>
+                <enum name="GL_CREATE_SPARSE_BINDING_BIT_ANGLE"/>
+                <enum name="GL_CREATE_SPARSE_RESIDENCY_BIT_ANGLE"/>
+                <enum name="GL_CREATE_SPARSE_ALIASED_BIT_ANGLE"/>
+                <enum name="GL_CREATE_MUTABLE_FORMAT_BIT_ANGLE"/>
+                <enum name="GL_CREATE_CUBE_COMPATIBLE_BIT_ANGLE"/>
+                <enum name="GL_CREATE_ALIAS_BIT_ANGLE"/>
+                <enum name="GL_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_ANGLE"/>
+                <enum name="GL_CREATE_2D_ARRAY_COMPATIBLE_BIT_ANGLE"/>
+                <enum name="GL_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_ANGLE"/>
+                <enum name="GL_CREATE_EXTENDED_USAGE_BIT_ANGLE"/>
+                <enum name="GL_CREATE_PROTECTED_BIT_ANGLE"/>
+                <enum name="GL_CREATE_DISJOINT_BIT_ANGLE"/>
+                <enum name="GL_CREATE_CORNER_SAMPLED_BIT_ANGLE"/>
+                <enum name="GL_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_ANGLE"/>
+                <enum name="GL_CREATE_SUBSAMPLED_BIT_ANGLE"/>
+                <enum name="GL_USAGE_TRANSFER_SRC_BIT_ANGLE"/>
+                <enum name="GL_USAGE_TRANSFER_DST_BIT_ANGLE"/>
+                <enum name="GL_USAGE_SAMPLED_BIT_ANGLE"/>
+                <enum name="GL_USAGE_STORAGE_BIT_ANGLE"/>
+                <enum name="GL_USAGE_COLOR_ATTACHMENT_BIT_ANGLE"/>
+                <enum name="GL_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT_ANGLE"/>
+                <enum name="GL_USAGE_TRANSIENT_ATTACHMENT_BIT_ANGLE"/>
+                <enum name="GL_USAGE_INPUT_ATTACHMENT_BIT_ANGLE"/>
+                <enum name="GL_USAGE_SHADING_RATE_IMAGE_BIT_ANGLE"/>
+                <enum name="GL_USAGE_FRAGMENT_DENSITY_MAP_BIT_ANGLE"/>
+                <command name="glTexStorageMemFlags2DANGLE"/>
+                <command name="glTexStorageMemFlags2DMultisampleANGLE"/>
+                <command name="glTexStorageMemFlags3DANGLE"/>
+                <command name="glTexStorageMemFlags3DMultisampleANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_memory_object_fuchsia" supported="gl|gles2">
+            <require>
+                <enum name="GL_HANDLE_TYPE_ZIRCON_VMO_ANGLE" group="ExternalHandleType"/>
+                <command name="glImportMemoryZirconHandleANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_semaphore_fuchsia" supported="gl|gles2">
+            <require>
+                <enum name="GL_HANDLE_TYPE_ZIRCON_EVENT_ANGLE" group="ExternalHandleType"/>
+                <command name="glImportSemaphoreZirconHandleANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_shader_pixel_local_storage" supported="gles2">
+            <require>
+                <enum name="GL_MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE"/>
+                <enum name="GL_MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE"/>
+                <enum name="GL_MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE"/>
+                <enum name="GL_LOAD_OP_ZERO_ANGLE"/>
+                <enum name="GL_LOAD_OP_CLEAR_ANGLE"/>
+                <enum name="GL_LOAD_OP_LOAD_ANGLE"/>
+                <enum name="GL_STORE_OP_STORE_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_FORMAT_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_TEXTURE_NAME_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_TEXTURE_LEVEL_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_TEXTURE_LAYER_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_CLEAR_VALUE_FLOAT_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_CLEAR_VALUE_INT_ANGLE"/>
+                <enum name="GL_PIXEL_LOCAL_CLEAR_VALUE_UNSIGNED_INT_ANGLE"/>
+                <command name="glFramebufferMemorylessPixelLocalStorageANGLE"/>
+                <command name="glFramebufferTexturePixelLocalStorageANGLE"/>
+                <command name="glFramebufferPixelLocalClearValuefvANGLE"/>
+                <command name="glFramebufferPixelLocalClearValueivANGLE"/>
+                <command name="glFramebufferPixelLocalClearValueuivANGLE"/>
+                <command name="glBeginPixelLocalStorageANGLE"/>
+                <command name="glEndPixelLocalStorageANGLE"/>
+                <command name="glPixelLocalStorageBarrierANGLE"/>
+                <command name="glFramebufferPixelLocalStorageInterruptANGLE"/>
+                <command name="glFramebufferPixelLocalStorageRestoreANGLE"/>
+                <command name="glGetFramebufferPixelLocalStorageParameterfvANGLE"/>
+                <command name="glGetFramebufferPixelLocalStorageParameterivANGLE"/>
+                <command name="glGetFramebufferPixelLocalStorageParameterfvRobustANGLE"/>
+                <command name="glGetFramebufferPixelLocalStorageParameterivRobustANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_logic_op" supported="gles2">
+            <require>
+                <enum name="GL_COLOR_LOGIC_OP_ANGLE"/>
+                <enum name="GL_LOGIC_OP_CLEAR_ANGLE"/>
+                <enum name="GL_LOGIC_OP_AND_ANGLE"/>
+                <enum name="GL_LOGIC_OP_AND_REVERSE_ANGLE"/>
+                <enum name="GL_LOGIC_OP_COPY_ANGLE"/>
+                <enum name="GL_LOGIC_OP_AND_INVERTED_ANGLE"/>
+                <enum name="GL_LOGIC_OP_NOOP_ANGLE"/>
+                <enum name="GL_LOGIC_OP_XOR_ANGLE"/>
+                <enum name="GL_LOGIC_OP_OR_ANGLE"/>
+                <enum name="GL_LOGIC_OP_NOR_ANGLE"/>
+                <enum name="GL_LOGIC_OP_EQUIV_ANGLE"/>
+                <enum name="GL_LOGIC_OP_INVERT_ANGLE"/>
+                <enum name="GL_LOGIC_OP_OR_REVERSE_ANGLE"/>
+                <enum name="GL_LOGIC_OP_COPY_INVERTED_ANGLE"/>
+                <enum name="GL_LOGIC_OP_OR_INVERTED_ANGLE"/>
+                <enum name="GL_LOGIC_OP_NAND_ANGLE"/>
+                <enum name="GL_LOGIC_OP_SET_ANGLE"/>
+                <command name="glLogicOpANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_texture_compression_dxt1" supported='gles2'>
+            <require>
+                <enum name="GL_COMPRESSED_RGB_S3TC_DXT1_ANGLE"/>
+                <enum name="GL_COMPRESSED_RGBA_S3TC_DXT1_ANGLE"/>
+            </require>
+        </extension>
+        <!-- NOTE: GL_ANGLE_texture_compression_dxt3 is defined in the upstream Khronos gl.xml and should not be defined here. -->
+        <!-- NOTE: GL_ANGLE_texture_compression_dxt5 is defined in the upstream Khronos gl.xml and should not be defined here. -->
+        <extension name="GL_ANGLE_lossy_etc_decode" supported='gles2'>
+            <require>
+                <enum name="GL_ETC1_RGB8_LOSSY_DECODE_ANGLE"/>
+                <enum name="GL_COMPRESSED_R11_LOSSY_DECODE_EAC_ANGLE"/>
+                <enum name="GL_COMPRESSED_SIGNED_R11_LOSSY_DECODE_EAC_ANGLE"/>
+                <enum name="GL_COMPRESSED_RG11_LOSSY_DECODE_EAC_ANGLE"/>
+                <enum name="GL_COMPRESSED_SIGNED_RG11_LOSSY_DECODE_EAC_ANGLE"/>
+                <enum name="GL_COMPRESSED_RGB8_LOSSY_DECODE_ETC2_ANGLE"/>
+                <enum name="GL_COMPRESSED_SRGB8_LOSSY_DECODE_ETC2_ANGLE"/>
+                <enum name="GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE"/>
+                <enum name="GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE"/>
+                <enum name="GL_COMPRESSED_RGBA8_LOSSY_DECODE_ETC2_EAC_ANGLE"/>
+                <enum name="GL_COMPRESSED_SRGB8_ALPHA8_LOSSY_DECODE_ETC2_EAC_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_yuv_internal_format" supported='gles2'>
+            <require>
+                <enum name="GL_G8_B8R8_2PLANE_420_UNORM_ANGLE"/>
+                <enum name="GL_G8_B8_R8_3PLANE_420_UNORM_ANGLE"/>
+                <enum name="GL_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_ANGLE"/>
+                <enum name="GL_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_ANGLE"/>
+                <enum name="GL_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_ANGLE"/>
+                <enum name="GL_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_ANGLE"/>
+                <enum name="GL_G16_B16R16_2PLANE_420_UNORM_ANGLE"/>
+                <enum name="GL_G16_B16_R16_3PLANE_420_UNORM_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_program_cache_control" supported='gles2'>
+            <require>
+                <enum name="GL_PROGRAM_CACHE_ENABLED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_program_binary_readiness_query" supported='gles2'>
+            <require>
+                <enum name="GL_PROGRAM_BINARY_READY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_memory_size" supported='gles2'>
+            <require>
+                <enum name="GL_MEMORY_SIZE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_client_arrays" supported='gles2'>
+            <require>
+                <enum name="GL_CLIENT_ARRAYS_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_get_serialized_context_string" supported='gles2'>
+            <require>
+                <enum name="GL_SERIALIZED_CONTEXT_STRING_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_rgbx_internal_format" supported='gles2'>
+            <require>
+                <enum name="GL_RGBX8_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_robust_fragment_shader_output" supported='gles2'>
+            <require>
+                <enum name="GL_ROBUST_FRAGMENT_SHADER_OUTPUT_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_shader_binary" supported='gles2'>
+            <require>
+                <enum name="GL_SHADER_BINARY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="GL_ANGLE_blob_cache" supported="gles2">
+            <require>
+                <command name="glBlobCacheCallbacksANGLE"/>
+                <command name="glGetPointervANGLE"/>
+            </require>
+        </extension>
+    </extensions>
+
+    <!-- SECTION: GL enumerant (token) definitions. -->
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x0B40" name="GL_POLYGON_MODE_ANGLE" group="GetPName"/>
+        <enum value="0x1B01" name="GL_LINE_ANGLE" group="PolygonMode"/>
+        <enum value="0x1B02" name="GL_FILL_ANGLE" group="PolygonMode"/>
+        <enum value="0x2A02" name="GL_POLYGON_OFFSET_LINE_ANGLE" group="GetPName,EnableCap"/>
+    </enums>
+
+    <enums namespace="GL" start="0x8E4D" end="0x8E4F" vendor="ANGLE">
+        <enum value="0x8E4D" name="GL_FIRST_VERTEX_CONVENTION_ANGLE" group="VertexProvokingMode"/>
+        <enum value="0x8E4E" name="GL_LAST_VERTEX_CONVENTION_ANGLE" group="VertexProvokingMode"/>
+        <enum value="0x8E4F" name="GL_PROVOKING_VERTEX_ANGLE" group="GetPName"/>
+    </enums>
+
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x0D32" name="GL_MAX_CLIP_DISTANCES_ANGLE" group="GetPName"/>
+        <enum value="0x82F9" name="GL_MAX_CULL_DISTANCES_ANGLE" group="GetPName"/>
+        <enum value="0x82FA" name="GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES_ANGLE" group="GetPName"/>
+        <enum value="0x3000" name="GL_CLIP_DISTANCE0_ANGLE" group="EnableCap"/>
+        <enum value="0x3001" name="GL_CLIP_DISTANCE1_ANGLE" group="EnableCap"/>
+        <enum value="0x3002" name="GL_CLIP_DISTANCE2_ANGLE" group="EnableCap"/>
+        <enum value="0x3003" name="GL_CLIP_DISTANCE3_ANGLE" group="EnableCap"/>
+        <enum value="0x3004" name="GL_CLIP_DISTANCE4_ANGLE" group="EnableCap"/>
+        <enum value="0x3005" name="GL_CLIP_DISTANCE5_ANGLE" group="EnableCap"/>
+        <enum value="0x3006" name="GL_CLIP_DISTANCE6_ANGLE" group="EnableCap"/>
+        <enum value="0x3007" name="GL_CLIP_DISTANCE7_ANGLE" group="EnableCap"/>
+    </enums>
+
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x93A8" name="GL_REQUESTABLE_EXTENSIONS_ANGLE"/>
+        <enum value="0x93A9" name="GL_NUM_REQUESTABLE_EXTENSIONS_ANGLE"/>
+        <enum value="0x93AA" name="GL_CLIENT_ARRAYS_ANGLE"/>
+        <enum value="0x93AC" name="GL_PROGRAM_CACHE_ENABLED_ANGLE"/>
+        <enum value="0x93AD" name="GL_MEMORY_SIZE_ANGLE"/>
+        <enum value="0x96B0" name="GL_SERIALIZED_CONTEXT_STRING_ANGLE"/>
+        <enum value="0x96B9" name="GL_ROBUST_FRAGMENT_SHADER_OUTPUT_ANGLE"/>
+        <enum value="0x96BB" name="GL_SHADER_BINARY_ANGLE"/>
+        <enum value="0x96BE" name="GL_PROGRAM_BINARY_READY_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x83F0" name="GL_COMPRESSED_RGB_S3TC_DXT1_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x83F1" name="GL_COMPRESSED_RGBA_S3TC_DXT1_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9690" name="GL_ETC1_RGB8_LOSSY_DECODE_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9691" name="GL_COMPRESSED_R11_LOSSY_DECODE_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9692" name="GL_COMPRESSED_SIGNED_R11_LOSSY_DECODE_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9693" name="GL_COMPRESSED_RG11_LOSSY_DECODE_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9694" name="GL_COMPRESSED_SIGNED_RG11_LOSSY_DECODE_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9695" name="GL_COMPRESSED_RGB8_LOSSY_DECODE_ETC2_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9696" name="GL_COMPRESSED_SRGB8_LOSSY_DECODE_ETC2_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9697" name="GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9698" name="GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x9699" name="GL_COMPRESSED_RGBA8_LOSSY_DECODE_ETC2_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x969A" name="GL_COMPRESSED_SRGB8_ALPHA8_LOSSY_DECODE_ETC2_EAC_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+        <enum value="0x96B1" name="GL_G8_B8R8_2PLANE_420_UNORM_ANGLE"/>
+        <enum value="0x96B2" name="GL_G8_B8_R8_3PLANE_420_UNORM_ANGLE"/>
+        <enum value="0x96B3" name="GL_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_ANGLE"/>
+        <enum value="0x96B4" name="GL_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_ANGLE"/>
+        <enum value="0x96B5" name="GL_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_ANGLE"/>
+        <enum value="0x96B6" name="GL_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_ANGLE"/>
+        <enum value="0x96B7" name="GL_G16_B16R16_2PLANE_420_UNORM_ANGLE"/>
+        <enum value="0x96B8" name="GL_G16_B16_R16_3PLANE_420_UNORM_ANGLE"/>
+        <enum value="0x96BA" name="GL_RGBX8_ANGLE" group="InternalFormat,SizedInternalFormat"/>
+    </enums>
+
+    <enums>
+        <enum value="0x9100" name="GL_TEXTURE_2D_MULTISAMPLE_ANGLE"/>
+        <enum value="0x8E50" name="GL_SAMPLE_POSITION_ANGLE"/>
+        <enum value="0x8E51" name="GL_SAMPLE_MASK_ANGLE"/>
+        <enum value="0x8E52" name="GL_SAMPLE_MASK_VALUE_ANGLE"/>
+        <enum value="0x8E59" name="GL_MAX_SAMPLE_MASK_WORDS_ANGLE"/>
+        <enum value="0x910E" name="GL_MAX_COLOR_TEXTURE_SAMPLES_ANGLE"/>
+        <enum value="0x910F" name="GL_MAX_DEPTH_TEXTURE_SAMPLES_ANGLE"/>
+        <enum value="0x9110" name="GL_MAX_INTEGER_SAMPLES_ANGLE"/>
+        <enum value="0x9104" name="GL_TEXTURE_BINDING_2D_MULTISAMPLE_ANGLE"/>
+        <enum value="0x9106" name="GL_TEXTURE_SAMPLES_ANGLE"/>
+        <enum value="0x9107" name="GL_TEXTURE_FIXED_SAMPLE_LOCATIONS_ANGLE"/>
+        <enum value="0x9108" name="GL_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+        <enum value="0x9109" name="GL_INT_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+        <enum value="0x910A" name="GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x90EA" name="GL_DEPTH_STENCIL_TEXTURE_MODE_ANGLE" group="TextureParameterName"/>
+        <enum value="0x1901" name="GL_STENCIL_INDEX_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x9EA0" name="GL_RENDERABILITY_VALIDATION_ANGLE" group="TextureParameterName"/>
+      </enums>
+
+    <enums namespace="GL" start="0x93A7" end="0x93A7" vendor="ANGLE">
+        <enum value="0x93A7" name="GL_ROBUST_RESOURCE_INITIALIZATION_ANGLE"/>
+    </enums>
+    <enums namespace="GL" start="0x969F" end="0x969F" vendor="ANGLE">
+        <enum value="0x969F" name="GL_RESOURCE_INITIALIZED_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" start="0x93AE" end="0x93AF" vendor="ANGLE">
+        <enum value="0x93AE" name="GL_HANDLE_TYPE_ZIRCON_VMO_ANGLE"/>
+        <enum value="0x93AF" name="GL_HANDLE_TYPE_ZIRCON_EVENT_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" start="0x1500" end="0x1500" vendor="ANGLE">
+        <enum value="0x1500" name="GL_CLEAR_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" start="0x96E0" end="0x96EF" vendor="ANGLE">
+        <enum value="0x96E0" name="GL_MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE"/>
+        <enum value="0x96E1" name="GL_MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE"/>
+        <enum value="0x96E2" name="GL_MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE"/>
+        <enum value="0x96E3" name="GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE"/>
+        <enum value="0x96E4" name="GL_LOAD_OP_ZERO_ANGLE"/>
+        <enum value="0x96E5" name="GL_LOAD_OP_CLEAR_ANGLE"/>
+        <enum value="0x96E6" name="GL_LOAD_OP_LOAD_ANGLE"/>
+        <enum value="0x96E7" name="GL_STORE_OP_STORE_ANGLE"/>
+        <enum value="0x96E8" name="GL_PIXEL_LOCAL_FORMAT_ANGLE" group="PLSQueryInt"/>
+        <enum value="0x96E9" name="GL_PIXEL_LOCAL_TEXTURE_NAME_ANGLE" group="PLSQueryInt"/>
+        <enum value="0x96EA" name="GL_PIXEL_LOCAL_TEXTURE_LEVEL_ANGLE" group="PLSQueryInt"/>
+        <enum value="0x96EB" name="GL_PIXEL_LOCAL_TEXTURE_LAYER_ANGLE" group="PLSQueryInt"/>
+        <enum value="0x96EC" name="GL_PIXEL_LOCAL_CLEAR_VALUE_FLOAT_ANGLE" group="PLSQueryFloat"/>
+        <enum value="0x96ED" name="GL_PIXEL_LOCAL_CLEAR_VALUE_INT_ANGLE" group="PLSQueryInt"/>
+        <enum value="0x96EE" name="GL_PIXEL_LOCAL_CLEAR_VALUE_UNSIGNED_INT_ANGLE" group="PLSQueryInt"/>
+    </enums>
+
+    <enums namespace="GL" group="CreateFlagMask" type="bitmask" vendor="ANGLE">
+        <enum value="0x00000001" name="GL_CREATE_SPARSE_BINDING_BIT_ANGLE"/>
+        <enum value="0x00000002" name="GL_CREATE_SPARSE_RESIDENCY_BIT_ANGLE"/>
+        <enum value="0x00000004" name="GL_CREATE_SPARSE_ALIASED_BIT_ANGLE"/>
+        <enum value="0x00000008" name="GL_CREATE_MUTABLE_FORMAT_BIT_ANGLE"/>
+        <enum value="0x00000010" name="GL_CREATE_CUBE_COMPATIBLE_BIT_ANGLE"/>
+        <enum value="0x00000400" name="GL_CREATE_ALIAS_BIT_ANGLE"/>
+        <enum value="0x00000040" name="GL_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_ANGLE"/>
+        <enum value="0x00000020" name="GL_CREATE_2D_ARRAY_COMPATIBLE_BIT_ANGLE"/>
+        <enum value="0x00000080" name="GL_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_ANGLE"/>
+        <enum value="0x00000100" name="GL_CREATE_EXTENDED_USAGE_BIT_ANGLE"/>
+        <enum value="0x00000800" name="GL_CREATE_PROTECTED_BIT_ANGLE"/>
+        <enum value="0x00000200" name="GL_CREATE_DISJOINT_BIT_ANGLE"/>
+        <enum value="0x00002000" name="GL_CREATE_CORNER_SAMPLED_BIT_ANGLE"/>
+        <enum value="0x00001000" name="GL_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_ANGLE"/>
+        <enum value="0x00004000" name="GL_CREATE_SUBSAMPLED_BIT_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" group="UsageFlagMask" type="bitmask" vendor="ANGLE">
+        <enum value="0x00000001" name="GL_USAGE_TRANSFER_SRC_BIT_ANGLE"/>
+        <enum value="0x00000002" name="GL_USAGE_TRANSFER_DST_BIT_ANGLE"/>
+        <enum value="0x00000004" name="GL_USAGE_SAMPLED_BIT_ANGLE"/>
+        <enum value="0x00000008" name="GL_USAGE_STORAGE_BIT_ANGLE"/>
+        <enum value="0x00000010" name="GL_USAGE_COLOR_ATTACHMENT_BIT_ANGLE"/>
+        <enum value="0x00000020" name="GL_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT_ANGLE"/>
+        <enum value="0x00000040" name="GL_USAGE_TRANSIENT_ATTACHMENT_BIT_ANGLE"/>
+        <enum value="0x00000080" name="GL_USAGE_INPUT_ATTACHMENT_BIT_ANGLE"/>
+        <enum value="0x00000100" name="GL_USAGE_SHADING_RATE_IMAGE_BIT_ANGLE"/>
+        <enum value="0x00000200" name="GL_USAGE_FRAGMENT_DENSITY_MAP_BIT_ANGLE"/>
+    </enums>
+
+    <enums namespace="GL" group="LogicOp" start="0x1500" end="0x150F" vendor="ANGLE">
+        <enum value="0x1500" name="GL_LOGIC_OP_CLEAR_ANGLE"/>
+        <enum value="0x1501" name="GL_LOGIC_OP_AND_ANGLE"/>
+        <enum value="0x1502" name="GL_LOGIC_OP_AND_REVERSE_ANGLE"/>
+        <enum value="0x1503" name="GL_LOGIC_OP_COPY_ANGLE"/>
+        <enum value="0x1504" name="GL_LOGIC_OP_AND_INVERTED_ANGLE"/>
+        <enum value="0x1505" name="GL_LOGIC_OP_NOOP_ANGLE"/>
+        <enum value="0x1506" name="GL_LOGIC_OP_XOR_ANGLE"/>
+        <enum value="0x1507" name="GL_LOGIC_OP_OR_ANGLE"/>
+        <enum value="0x1508" name="GL_LOGIC_OP_NOR_ANGLE"/>
+        <enum value="0x1509" name="GL_LOGIC_OP_EQUIV_ANGLE"/>
+        <enum value="0x150A" name="GL_LOGIC_OP_INVERT_ANGLE"/>
+        <enum value="0x150B" name="GL_LOGIC_OP_OR_REVERSE_ANGLE"/>
+        <enum value="0x150C" name="GL_LOGIC_OP_COPY_INVERTED_ANGLE"/>
+        <enum value="0x150D" name="GL_LOGIC_OP_OR_INVERTED_ANGLE"/>
+        <enum value="0x150E" name="GL_LOGIC_OP_NAND_ANGLE"/>
+        <enum value="0x150F" name="GL_LOGIC_OP_SET_ANGLE"/>
+    </enums>
+    <enums namespace="GL" start="0x0BF2" end="0x0BF2" vendor="ANGLE">
+        <enum value="0x0BF2" name="GL_COLOR_LOGIC_OP_ANGLE"/>
+    </enums>
+    <enums namespace="GL" vendor="ANGLE">
+        <enum value="0x96BF" name="GL_BLOB_CACHE_GET_FUNCTION_ANGLE"/>
+        <enum value="0x96EF" name="GL_BLOB_CACHE_SET_FUNCTION_ANGLE"/>
+        <enum value="0x972D" name="GL_BLOB_CACHE_USER_PARAM_ANGLE"/>
+    </enums>
+</registry>

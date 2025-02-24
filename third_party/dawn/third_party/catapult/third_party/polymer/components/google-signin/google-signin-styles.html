@@ -1,0 +1,267 @@
+<!--
+Copyright 2014 Google Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<dom-module id="google-signin-styles">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+        position: relative;
+        box-sizing: border-box;
+        margin: 0 0.29em;
+        background: transparent;
+        text-align: center;
+        font: inherit;
+        outline: none;
+        border-radius: 3px;
+        -webkit-user-select: none;
+        user-select: none;
+        cursor: pointer;
+        z-index: 0;
+      }
+
+      :host([disabled]) {
+        cursor: auto;
+        pointer-events: none;
+      }
+
+      :host([disabled]) #button {
+        background: #eaeaea;
+        color: #a8a8a8;
+      }
+
+      #button {
+        position: relative;
+        outline: none;
+        font-size: 14px;
+        font-weight: 400;
+        font-family: 'RobotoDraft','Roboto',arial,sans-serif;
+        white-space: nowrap;
+        border-radius: inherit;
+      }
+
+      iron-icon {
+        width: 22px;
+        height: 22px;
+        margin: 6px;
+      }
+
+      .icon {
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      #shadow {
+        border-radius: inherit;
+      }
+
+      #ripple {
+        pointer-events: none;
+      }
+
+      .button-content {
+        outline: none;
+      }
+
+      .buttonText {
+        display: inline-block;
+        vertical-align: middle;
+        padding-right: .8em;
+      }
+
+      /*
+       * Dark Theme
+       */
+      .theme-dark {
+        background: #da4336;
+        color: #ffffff;
+        border: 1px solid transparent;
+      }
+
+      .theme-dark.signedIn-true.additionalAuth-false {
+        background: #999;
+        border: 1px solid #888;
+      }
+
+      .theme-dark.signedIn-true.additionalAuth-false:hover,
+      .theme-dark.signedIn-true.additionalAuth-false:focus {
+        background: #aaa;
+      }
+
+      :host([noink]) .theme-dark:hover,
+      :host([noink]) .theme-dark:focus {
+        background: #e74b37;
+      }
+
+      :host([noink]) .theme-dark.signedIn-true.additionalAuth-false:hover,
+      :host([noink]) .theme-dark.signedIn-true.additionalAuth-false:focus {
+        background: #aaa;
+      }
+
+      /*
+       * Light Theme
+       */
+      .theme-light {
+        background: #fff;
+        color: #737373;
+        border: 1px solid #d9d9d9;
+      }
+
+      .theme-light.signedIn-true.additionalAuth-false {
+        background: #c0c0c0;
+        color: #fff;
+        border: #888 1px solid;
+      }
+
+      .theme-light.signedIn-true.additionalAuth-false:hover,
+      .theme-light.signedIn-true.additionalAuth-false:focus {
+        background: #aaa;
+      }
+
+      :host([noink]) .theme-light .button-content:hover,
+      :host([noink]) .theme-light:focus {
+        border: 1px solid #c0c0c0;
+      }
+
+      :host([noink]) .theme-light.signedIn-true.additionalAuth-false:hover,
+      :host([noink]) .theme-light.signedIn-true.additionalAuth-false:focus {
+        background: #aaa;
+      }
+
+      /*
+       * Icon Only Width
+       */
+      .width-iconOnly .buttonText {
+        display: none;
+      }
+
+      /*
+       * Tall Height
+       */
+      .height-tall .buttonText {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .height-tall iron-icon {
+        width: 30px;
+        height: 30px;
+        margin: 8px;
+      }
+
+      /*
+       * Short Height
+       */
+      .height-short .buttonText {
+        font-size: 11px;
+      }
+
+      .height-short iron-icon {
+        width: 16px;
+        height: 16px;
+        margin: 3px;
+      }
+
+
+      /*
+       * Branding
+       */
+
+      /* Google Scopes */
+
+      /* Dark Theme */
+      .brand-google.theme-dark {
+        background: #4184F3;
+        color: #fff;
+        border: 1px solid #3266d5;
+      }
+
+      .brand-google.theme-dark .icon {
+        background: #fff;
+        border-top-left-radius: 2px;
+        border-bottom-left-radius: 2px;
+      }
+
+      .brand-google.theme-dark.width-iconOnly .icon {
+        border-radius: 2px;
+      }
+
+      .brand-google.theme-dark .buttonText {
+        padding-left: .8em;
+      }
+
+      .brand-google.theme-dark #ripple {
+        color: #1b39a8;
+      }
+
+      :host([noink]) .brand-google.theme-dark:hover,
+      :host([noink]) .brand-google.theme-dark:focus {
+        background: #e74b37;
+      }
+
+      .brand-google.theme-light .icon {
+        color: #4184F3;
+      }
+
+      .brand-google.theme-light.signedIn-true.additionalAuth-false .icon {
+        color: #fff;
+      }
+
+      .brand-google.theme-light #ripple {
+        color: #444;
+      }
+
+      :host([noink]) .brand-google.theme-light:hover,
+      :host([noink]) .brand-google.theme-light:focus {
+        border: 1px solid #c0c0c0;
+      }
+
+      .brand-google-plus.theme-dark {
+        background: #da4336;
+        color: #fff;
+        border: 1px solid transparent;
+      }
+
+      .brand-google-plus.theme-dark #ripple {
+        color: #c43828;
+      }
+
+      /* Light Theme */
+      .brand-google-plus.theme-light {
+        background: #fff;
+        color: #737373;
+        border: 1px solid #d9d9d9;
+      }
+
+      .brand-google-plus.theme-light .icon {
+        color: #e74b37;
+      }
+
+      .brand-google-plus.theme-light.signedIn-true.additionalAuth-false .icon {
+        color: #fff;
+      }
+
+      .brand-google-plus.theme-light #ripple {
+        color: #400;
+      }
+
+      :host([noink]) .brand-google-plus.theme-light:hover,
+      :host([noink]) .brand-google-plus.theme-light:focus {
+        border: 1px solid #c0c0c0;
+      }
+    </style>
+  </template>
+</dom-module>

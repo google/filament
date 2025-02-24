@@ -1,0 +1,11 @@
+boto v2.42.0
+============
+
+:date: 2016/07/19
+
+Updates the Mechanical Turk API and fixes some bugs.
+
+Changes
+-------
+* Respect is_secure parameter in generate_url_sigv4 (:sha:`59ba28d`)
+* Update MTurk API (:issue:`3563`, :sha:`250d891`)

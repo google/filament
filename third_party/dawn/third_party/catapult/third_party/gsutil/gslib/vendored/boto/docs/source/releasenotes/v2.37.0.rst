@@ -1,0 +1,39 @@
+boto v2.37.0
+============
+
+:date: 2015/04/02
+
+This release updates AWS CloudTrail to the latest API to suppor the
+``LookupEvents`` operation, adds new regional service endpoints and fixes
+bugs in several services.
+
+.. note::
+
+   The CloudTrail ``create_trail`` operation no longer supports the deprecated
+   ``trail`` parameter, which has been marked for removal by the service
+   since early 2014. Instead, you pass each trail parameter as a keyword
+   argument now. Please see the
+   `reference <http://boto.readthedocs.org/en/latest/ref/cloudtrail.html#boto.cloudtrail.layer1.CloudTrailConnection.create_trail>`__
+   to help port over existing code.
+
+
+Changes
+-------
+* Update AWS CloudTrail to the latest API. (:issue:`3074`, :sha:`bccc29a`)
+* Add support for UsePreviousValue to CloudFormation UpdateStack. (:issue:`3029`, :sha:`8a8a22a`)
+* Fix BOTH_PATH to work with Windows drives (:issue:`2823`, :sha:`7ba973e`)
+* Fix division calculation in S3 docs. (:issue:`3018`, :sha:`4ffd9ba`)
+* Add Boto 3 link in README. (:issue:`3013`, :sha:`561716c`)
+* Add more regions for configservice (:issue:`3009`, :sha:`a82244f`)
+* Add ``eu-central-1`` endpoints (Frankfurt region) for IAM and Route53 (:sha:`5ff4add`)
+* Fix unit tests from hanging (:sha:`da9f9b7`)
+* Fixed wording in dynamodb tutorial (:issue:`2993`, :sha:`36cadf4`)
+* Update SWF objects to keep a consistent region name. (:issue:`2985`, :issue:`2980`, :issue:`2606`, :sha:`ce75a19`)
+* Print archive ID in glacier upload script. (:issue:`2951`, :sha:`047c7d3`)
+* Add some minor documentation for Route53 tutorial. (:issue:`2952`, :sha:`b855fb3`)
+* Add Amazon DynamoDB online indexing support on High level API (:issue:`2925`, :sha:`0621c53`)
+* Ensure Content-Length header is a string. (:issue:`2932`, :sha:`34a0f63`)
+* Correct docs around overriding SGs on ELBs (:issue:`2937`, :sha:`84d0ff9`)
+* Fix DynamoDB tests. (:sha:`616ee80`)
+* Fix region bug. (:issue:`2927`, :sha:`b1cb61e`)
+* Fix import for ``boto.cloudhsm.layer1.CloudHSMConnection``. (:issue:`2926`, :sha:`1944d35`)

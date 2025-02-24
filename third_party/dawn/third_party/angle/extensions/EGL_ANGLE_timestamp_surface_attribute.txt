@@ -1,0 +1,95 @@
+Name
+
+    ANGLE_timestamp_surface_attribute
+
+Name Strings
+
+    EGL_ANGLE_timestamp_surface_attribute
+
+Contributors
+
+    Mohan Maiya
+    Ian Elliot
+
+Contacts
+
+    Mohan Maiya, Samsung (m.maiya 'at' samsung 'dot' com)
+
+Notice
+
+    Copyright (c) 2022 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft.
+
+Version
+
+    Version 1, July 12, 2022
+
+Number
+
+    EGL Extension ###
+
+Dependencies
+
+    Requires support for EGL_ANDROID_get_frame_timestamps extension.
+    Refer to EGL_ANDROID_get_frame_timestamps specification for other
+    dependencies.
+
+Overview
+
+    On Android most of the functionality required by EGL_ANDROID_get_frame_timestamps
+    is handled by a wrapper outside of the EGL driver. However it is necessary
+    to be aware of EGL_TIMESTAMPS_ANDROID state on some drivers
+    (like ANGLE, which layers GLES APIs over Vulkan, which needs this information
+    to setup Vulkan swapchains appropriately).
+
+    This extension allows ANGLE's EGL implementation to rely on the Android EGL
+    loader to support and implement the EGL_ANDROID_get_frame_timestamps extension,
+    with the exception that ANGLE's EGL implementation will support caching
+    EGL_TIMESTAMPS_ANDROID state.
+
+    For details about EGL_TIMESTAMPS_ANDROID and other timestamp related terminology
+    please refer to the EGL_ANDROID_get_frame_timestamps specification.
+
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+For clarity, restating the section of EGL_ANDROID_get_frame_timestamps specification
+that will be supported by this extension:
+
+Add to the list of supported tokens for eglSurfaceAttrib in section 3.5.6
+"Surface Attributes", page 43:
+
+    If attribute is EGL_TIMESTAMPS_ANDROID, then values specifies whether to
+    enable/disable timestamp collection for this surface. A value of EGL_TRUE
+    enables timestamp collection, while a value of EGL_FALSE disables it. The
+    initial value is false. If surface is not a window surface this has no
+    effect.
+
+Issues
+
+    None.
+
+Revision History
+
+    #2 - (August 23, 2022) Mohan Maiya
+         Added language to clarify that the extension will require support,
+         from an external module, of the EGL_ANDROID_get_frame_timestamps
+         extension for the most part with the exception of providing support
+         for caching EGL_TIMESTAMPS_ANDROID state.
+
+    #1 - (July 12, 2022) Mohan Maiya
+         Original draft

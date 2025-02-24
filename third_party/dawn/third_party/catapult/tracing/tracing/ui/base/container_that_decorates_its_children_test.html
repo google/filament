@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/container_that_decorates_its_children.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createChild() {
+    const span = document.createElement('span');
+    span.decorated = false;
+    return span;
+  }
+
+  /**
+   * @constructor
+   */
+  const SimpleContainer = tr.ui.b.define(
+      'simple-container', tr.ui.b.ContainerThatDecoratesItsChildren);
+
+  SimpleContainer.prototype = {
+    __proto__: tr.ui.b.ContainerThatDecoratesItsChildren.prototype,
+
+    decorateChild_(child) {
+      assert.isFalse(child.decorated);
+      child.decorated = true;
+    },
+
+    undecorateChild_(child) {
+      assert.isTrue(child.decorated);
+      child.decorated = false;
+    }
+  };
+
+  test('add', function() {
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(createChild());
+    Polymer.dom(container).appendChild(createChild());
+    Polymer.dom(container).appendChild(createChild());
+    assert.isTrue(container.children[0].decorated);
+    assert.isTrue(container.children[1].decorated);
+    assert.isTrue(container.children[2].decorated);
+  });
+
+  // See https://crbug.com/1111537
+  skipTest('clearUsingTextContent', function() {
+    const c0 = createChild();
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(c0);
+    Polymer.dom(container).textContent = '';
+    assert.isFalse(c0.decorated);
+  });
+
+  test('clear', function() {
+    const c0 = createChild();
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(c0);
+    container.clear();
+    assert.isFalse(c0.decorated);
+  });
+
+  // See https://crbug.com/1111537
+  skipTest('insertNewBefore', function() {
+    const c0 = createChild();
+    const c1 = createChild();
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(c1);
+    Polymer.dom(container).insertBefore(c0, c1);
+    assert.isTrue(c0.decorated);
+    assert.isTrue(c1.decorated);
+  });
+
+  test('insertExistingBefore', function() {
+    const c0 = createChild();
+    const c1 = createChild();
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(c1);
+    Polymer.dom(container).appendChild(c0);
+    Polymer.dom(container).insertBefore(c0, c1);
+    assert.isTrue(c0.decorated);
+    assert.isTrue(c1.decorated);
+  });
+
+  // See https://crbug.com/1111537
+  skipTest('testReplace', function() {
+    const c0 = createChild();
+    const c1 = createChild();
+    const container = new SimpleContainer();
+    Polymer.dom(container).appendChild(c0);
+    Polymer.dom(container).replaceChild(c1, c0);
+    assert.isFalse(c0.decorated);
+    assert.isTrue(c1.decorated);
+  });
+});
+</script>

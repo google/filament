@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses drm/msm driver events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux drm/msm trace events.
+   * @constructor
+   */
+  function MSMParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('msm_gpu_freq_change',
+        MSMParser.prototype.gpuFrequency.bind(this));
+
+    importer.registerEventHandler('msm_gpu_submit_flush',
+        MSMParser.prototype.gpuSubmitFlush.bind(this));
+
+    importer.registerEventHandler('msm_gpu_submit_retired',
+        MSMParser.prototype.gpuSubmitRetired.bind(this));
+
+    this.model_ = importer.model_;
+    this.submits = {};
+    this.num_submits = 0;  // # of in-flight submits
+  }
+
+  MSMParser.prototype = {
+    __proto__: Parser.prototype,
+
+    // msm_gpu_freq_change: new_freq=180
+    gpuFrequency(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /new_freq=(\d+)/.exec(eventBase.details);
+      if (!event) return false;
+      const freq = parseInt(event[1]);
+
+      const counter =
+        this.model_.kernel.getOrCreateCounter('GPU', 'GPU Frequency');
+      if (counter.numSeries === 0) {
+        counter.addSeries(new tr.model.CounterSeries('frequency',
+            ColorScheme.getColorIdForGeneralPurposeString(counter.name)));
+      }
+      counter.series.forEach(function(series) {
+        series.addCounterSample(ts, freq);
+      });
+
+      return true;
+    },
+
+    // msm_gpu_submit_flush: id=348500 pid=29590 ring=0:348502 ticks=130364028
+    gpuSubmitFlush(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /id=(\d+) pid=(\d+) ring=(\d+):(\d+) ticks=(\d+)/.
+          exec(eventBase.details);
+      if (!event) return false;
+      const id = parseInt(event[1]);
+
+      const submit = {};
+      submit.flushTS = ts;
+      submit.flushTicks = parseInt(event[5]);
+      submit.pid = parseInt(event[2]);
+      this.submits[id] = submit;
+      this.num_submits++;
+
+      return true;
+    },
+
+    // msm_gpu_submit_retired: id=348500 pid=29590 ring=0:348501 elapsed=3405520 ns mhz=179 start=130055449 end=130120835   // @suppress longLineCheck
+    gpuSubmitRetired(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /id=(\d+) pid=(\d+) ring=(\d+):(\d+) elapsed=(\d+) ns mhz=(\d+) start=(\d+) end=(\d+)/.  // @suppress longLineCheck
+          exec(eventBase.details);
+      if (!event) return false;
+      const id = parseInt(event[1]);
+
+      // If we didn't see the start event (msm_gpu_submit_flush) then just
+      // skip this event:
+      if (!(id in this.submits)) return true;
+
+      const submit = this.submits[id];
+      delete this.submits[id];
+      this.num_submits--;
+
+      const gpuThread = this.importer.getOrCreatePseudoThread('GPU');
+
+      submit.elapsedNs = parseInt(event[5]);
+      submit.mhz = parseInt(event[6]);
+      submit.startTicks = parseInt(event[7]);
+      submit.endTicks = parseInt(event[8]);
+
+      // Ticks are in units of 19.2Mhz alwayson counter, we can derive
+      // the time queued and running from this.  The submit_flush trace
+      // captures both the CPU timestamp and the 19.2Mhz counter as read
+      // from the CPU.  The submit_retired timestamp includes the value
+      // of the 19.2Mhz counter as read from the GPU before and after
+      // executing the submit.
+      //
+      // The trace timestamps (CPU based) are in ms.
+
+      function ticks2ms(ticks) {
+        return ticks / 19200;
+      }
+
+      const queuedDuration = ticks2ms(submit.startTicks - submit.flushTicks);
+      const runningDuration = ticks2ms(submit.endTicks - submit.startTicks);
+
+      // for debug:
+      submit.queuedDuration = queuedDuration;
+      submit.runningDuration = runningDuration;
+
+      // AsyncSlice's to show when the submit is queued, and begins to run:
+      const queued = new tr.model.AsyncSlice('', event[1] + ' queued',
+          tr.b.ColorScheme.getColorIdForReservedName('thread_state_runnable'),
+          submit.flushTS,
+          submit,
+          queuedDuration);
+
+      const running = new tr.model.AsyncSlice('', event[1] + ' running',
+          tr.b.ColorScheme.getColorIdForReservedName('thread_state_running'),
+          submit.flushTS + queuedDuration,
+          submit,
+          runningDuration);
+
+      const async = new tr.model.AsyncSlice('', 'pipeline',
+          ColorScheme.getColorIdForGeneralPurposeString('ongpu:' + submit.pid),
+          submit.flushTS,
+          submit,
+          queuedDuration + runningDuration);
+
+      // We don't want the 'async' container slice visible, it just exists to
+      // group the 'queued' and 'running' subslices:
+      async.hidden = true;
+
+      async.subSlices.push(queued);
+      async.subSlices.push(running);
+      gpuThread.thread.asyncSliceGroup.push(async);
+
+      // And the synchronous ThreadSlice shows the time the submit is running
+      // on the gpu:
+      const onGpu = new tr.model.ThreadSlice('', event[1],
+          ColorScheme.getColorIdForGeneralPurposeString('ongpu:' + submit.pid),
+          submit.flushTS + queuedDuration,
+          submit,
+          runningDuration);
+
+      gpuThread.thread.sliceGroup.pushSlice(onGpu);
+
+      return true;
+    }
+  };
+
+  Parser.register(MSMParser);
+
+  return {
+    MSMParser,
+  };
+});
+</script>
+

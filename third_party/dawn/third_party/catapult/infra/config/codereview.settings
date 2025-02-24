@@ -1,0 +1,5 @@
+# This file is used by gcl to get repository specific information.
+CODE_REVIEW_SERVER: codereview.chromium.org
+CC_LIST: catapult-reviews@chromium.org
+VIEW_VC: https://chromium.googlesource.com/external/github.com/catapult-project/catapult/+/
+PROJECT: catapult

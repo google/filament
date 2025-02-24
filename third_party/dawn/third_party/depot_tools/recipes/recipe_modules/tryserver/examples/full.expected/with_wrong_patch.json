@@ -1,0 +1,48 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]\\gerrit_client.py",
+      "changes",
+      "--verbose",
+      "--host",
+      "https://chromium-review.googlesource.com",
+      "--json_file",
+      "/path/to/tmp/json",
+      "--limit",
+      "1",
+      "-p",
+      "change=1234567",
+      "-o",
+      "ALL_REVISIONS",
+      "-o",
+      "DOWNLOAD_COMMANDS"
+    ],
+    "env": {
+      "PATH": "<PATH>;RECIPE_REPO[depot_tools]"
+    },
+    "infra_step": true,
+    "name": "gerrit fetch current CL info",
+    "timeout": 480,
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@[@@@",
+      "@@@STEP_LOG_LINE@json.output@  {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"branch\": \"main\",@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"owner\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"name\": \"John Doe\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"revisions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"184ebe53805e102605d11f6b143486d15c23a09c\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"_number\": \"1\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"ref\": \"refs/changes/67/1234567/1\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@]@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "name": "$result"
+  }
+]

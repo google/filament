@@ -1,0 +1,11 @@
+boto v2.13.3
+============
+
+:date: 2013/09/16
+
+This release fixes a packaging error with the previous version of boto.
+The version ``v2.13.2`` was provided instead of ``2.13.2``, causing things
+like ``pip`` to incorrectly resolve the latest release.
+
+That release was only available for several minutes & was removed from PyPI
+due to the way it would break installation for users.

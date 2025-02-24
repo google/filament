@@ -1,0 +1,97 @@
+Name
+
+    ANGLE_direct_composition
+
+Name Strings
+
+    EGL_ANGLE_direct_composition
+
+Contributors
+
+    John Bauman
+
+Contacts
+
+    John Bauman (jbauman 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, Dec 14, 2015
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5 Specification.
+
+Overview
+
+    This extension allows specifying that the contents of a window surface be
+    posted to the screen using the DirectComposition API.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <attribute> parameter of eglQuerySurface and by the
+    <attrib_list> parameter of eglCreateWindowSurface and
+    eglCreatePlatformWindowSurface
+
+    EGL_DIRECT_COMPOSITION_ANGLE                         0x33A5
+
+Changes to Chapter 3 of the EGL 1.5 Specification (EGL Functions and Errors)
+
+    Modify the fourth paragraph of Section 3.5.1, page 32
+    (Creating On-Screen rendering Surfaces)
+
+    "<attrib_list> specifies a list of attributes for the window. The list has
+    the same structure as described for eglChooseConfig. Attributes that can
+    be specified in <attrib_list> include EGL_DIRECT_COMPOSITION_ANGLE,
+    EGL_GL_COLORSPACE, EGL_RENDER_BUFFER, EGL_VG_COLORSPACE, and
+    EGL_VG_ALPHA_FORMAT."
+
+    Add the following between paragraphs 6 and 7 of Section 3.5.1, page 32
+    (Creating On-Screen Rendering Surfaces)
+
+    "EGL_DIRECT_COMPOSITION_ANGLE specifies whether the surface will be posted
+    to the window using DirectComposition. The default is EGL_FALSE. If
+    EGL_TRUE is specified, <native_window> must be owned by the current
+    process, and contents drawn by native APIs or EGLSurfaces with
+    EGL_DIRECT_COMPOSITION_ANGLE as EGL_FALSE will appear underneath the
+    contents of this surface."
+
+
+    Add the following entry to Table 3.5, page 44 (Queryable surface
+    attributes and types)
+
+    Attribute                    Type    Description
+    ---------------------------- ------- --------------------------------------
+    EGL_DIRECT_COMPOSITION_ANGLE boolean Surface will be posted to the window
+                                         using DirectComposition
+
+Issues
+    1. Should a surface attrib or config be used to specify that
+    DirectComposition is needed.
+
+    PROPOSED: A surface attrib would work and avoids creating
+    otherwise-duplicate configs.
+
+Revision History
+
+    Version 2, 2015/12/14
+      - Use attrib instead of config.
+
+    Version 1, 2015/12/10
+      - Initial draft.

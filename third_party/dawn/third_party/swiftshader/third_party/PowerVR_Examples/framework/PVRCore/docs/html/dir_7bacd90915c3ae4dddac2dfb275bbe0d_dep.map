@@ -1,0 +1,29 @@
+<map id="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRCore" name="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRCore">
+<area shape="rect" id="node4" href="dir_66a1cfa8ae57dc99f3f0ca58a38174ed.html" title="commandline" alt="" coords="263,159,374,207"/>
+<area shape="rect" id="edge8-headlabel" href="dir_000002_000005.html" title="1" alt="" coords="297,131,306,146"/>
+<area shape="rect" id="node5" href="dir_c3c73084e2670ecd912a8a709e25ff36.html" title="math" alt="" coords="167,159,239,207"/>
+<area shape="rect" id="edge9-headlabel" href="dir_000002_000006.html" title="2" alt="" coords="229,140,239,154"/>
+<area shape="rect" id="node2" href="dir_585c759221ad89190b6111f58919be53.html" title="Android" alt="" coords="303,351,375,399"/>
+<area shape="rect" id="node7" href="dir_a7bd38b94198de746abfb2189f144116.html" title="stream" alt="" coords="175,447,247,495"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000003_000008.html" title="1" alt="" coords="258,435,267,450"/>
+<area shape="rect" id="node3" href="dir_c0bb96be0a5d3521a6fdc5b43e353739.html" title="cameras" alt="" coords="107,63,186,111"/>
+<area shape="rect" id="node11" href="dir_de39db45e7a1186ec0ba176b27c01a3b.html" title="types" alt="" coords="300,255,372,303"/>
+<area shape="rect" id="edge6-headlabel" href="dir_000006_000012.html" title="4" alt="" coords="285,234,294,248"/>
+<area shape="rect" id="node6" href="dir_5b93a470bc2b721272153d1755944db9.html" title="pfx" alt="" coords="71,159,143,207"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000007_000008.html" title="1" alt="" coords="248,430,258,445"/>
+<area shape="rect" id="node8" href="dir_0915e692cfbbbcec09b4fada39107977.html" title="strings" alt="" coords="105,543,177,591"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000007_000009.html" title="1" alt="" coords="116,516,125,530"/>
+<area shape="rect" id="node9" href="dir_e23366fd95d6dda0b3182468dfb9aad1.html" title="texture" alt="" coords="175,255,247,303"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000007_000010.html" title="1" alt="" coords="172,229,182,243"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000007_000012.html" title="1" alt="" coords="282,240,291,255"/>
+<area shape="rect" id="edge10-headlabel" href="dir_000008_000009.html" title="1" alt="" coords="172,525,181,540"/>
+<area shape="rect" id="node10" href="dir_4ef31a94fa79b63723991d871d84ac9d.html" title="textureio" alt="" coords="170,351,251,399"/>
+<area shape="rect" id="edge12-headlabel" href="dir_000010_000011.html" title="6" alt="" coords="205,324,215,339"/>
+<area shape="rect" id="edge13-headlabel" href="dir_000011_000008.html" title="8" alt="" coords="214,421,224,435"/>
+<area shape="rect" id="edge14-headlabel" href="dir_000011_000010.html" title="7" alt="" coords="207,314,216,329"/>
+<area shape="rect" id="edge11-headlabel" href="dir_000012_000006.html" title="1" alt="" coords="244,213,254,228"/>
+<area shape="rect" id="node12" href="dir_0a2bd4633a3fcece44bc7482d874dceb.html" title="Windows" alt="" coords="65,351,146,399"/>
+<area shape="rect" id="edge7-headlabel" href="dir_000013_000008.html" title="1" alt="" coords="172,421,181,435"/>
+<area shape="rect" id="clust2" href="dir_7bacd90915c3ae4dddac2dfb275bbe0d.html" alt="" coords="27,52,385,601"/>
+<area shape="rect" id="clust1" href="dir_1b17efea2d0d450cd18d875f7f2a6e9c.html" title="framework" alt="" coords="16,16,396,612"/>
+</map>

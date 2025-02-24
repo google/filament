@@ -1,0 +1,71 @@
+<dom-module id="import-view">
+  <template>
+    <div id=import-view-tab-content class=content-box>
+      <div>
+        <div style='margin-bottom:20px'><b>TIP</b>: Drag-and-drop a netlog file into this window.</div>
+          <input type=file id=import-view-load-log-file accept=".json,.zip">
+          <pre id=import-view-load-status-text></pre>
+      </div>
+
+      <div id=import-view-loaded-div style="display: none">
+        <h2>Data Loaded</h2>
+        <table class=styled-table>
+        <tr>
+          <th>Export date</th>
+          <td id=import-view-numericDate></td>
+        </tr>
+        <tr>
+          <th>Capture Mode</th>
+          <td id=import-view-capture-mode></td>
+        </tr>
+        <tr>
+          <th>Build</th>
+          <td><span id=import-view-name></span>
+            <span id=import-view-version></span>
+            (<span id=import-view-official></span>
+              <span id=import-view-cl></span>)
+            <span id=import-view-version-mod>
+          </td>
+        </tr>
+        <tr>
+          <th>OS info</th>
+          <td id=import-view-os-type></td>
+        </tr>
+        <tr>
+          <th>Command line</th>
+          <td><pre id=import-view-command-line></pre></td>
+        </tr>
+        <tr>
+          <th>Active Field Trial Groups</th>
+          <td>
+            <span id=import-view-activeFieldTrialGroups></span>
+          </td>
+        </tr>
+        <tr id=import-view-row-addedFieldTrialGroups>
+          <th>Field Trial Groups activated during capture</th>
+          <td>
+            <span id=import-view-addedFieldTrialGroups></span>
+          </td>
+        </tr>
+        <tr id=import-view-row-removedFieldTrialGroups>
+          <th>Field Trial Groups deactivated during capture</th>
+          <td>
+            <span id=import-view-removedFieldTrialGroups></span>
+          </td>
+        </tr>
+        <tr id=import-view-row-user-comments>
+          <th>User comments</th>
+          <td>
+            <pre id=import-view-user-comments></pre>
+          </td>
+        </tr>
+        </table>
+      </div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'import-view',
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const Task = tr.b.Task;
+
+  /**
+   * A generic track that contains other tracks as its children.
+   * @constructor
+   */
+  const ContainerTrack = tr.ui.b.define('container-track', tr.ui.tracks.Track);
+  ContainerTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+    },
+
+    detach() {
+      Polymer.dom(this).textContent = '';
+    },
+
+    get tracks_() {
+      const tracks = [];
+      const children = this.children;
+      for (let i = 0; i < children.length; i++) {
+        if (children[i] instanceof tr.ui.tracks.Track) {
+          tracks.push(children[i]);
+        }
+      }
+      return tracks;
+    },
+
+    drawTrack(type) {
+      this.tracks_.forEach(function(track) {
+        track.drawTrack(type);
+      });
+    },
+
+    /**
+     * Adds items intersecting the given range to a selection.
+     * @param {number} loVX Lower X bound of the interval to search, in
+     *     viewspace.
+     * @param {number} hiVX Upper X bound of the interval to search, in
+     *     viewspace.
+     * @param {number} loY Lower Y bound of the interval to search, in
+     *     viewspace space.
+     * @param {number} hiY Upper Y bound of the interval to search, in
+     *     viewspace space.
+     * @param {Selection} selection Selection to which to add results.
+     */
+    addIntersectingEventsInRangeToSelection(
+        loVX, hiVX, loY, hiY, selection) {
+      const tracks = this.tracks_;
+      for (let i = 0; i < tracks.length; i++) {
+        const trackClientRect = tracks[i].getBoundingClientRect();
+        const a = Math.max(loY, trackClientRect.top);
+        const b = Math.min(hiY, trackClientRect.bottom);
+        if (a <= b) {
+          tracks[i].addIntersectingEventsInRangeToSelection(
+              loVX, hiVX, loY, hiY, selection);
+        }
+      }
+
+      tr.ui.tracks.Track.prototype.addIntersectingEventsInRangeToSelection.
+          apply(this, arguments);
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      for (const track of this.tracks_) {
+        track.addEventsToTrackMap(eventToTrackMap);
+      }
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+      const tracks = this.tracks_;
+      for (let i = 0; i < tracks.length; i++) {
+        tracks[i].addAllEventsMatchingFilterToSelection(
+            filter, selection);
+      }
+    },
+
+    addAllEventsMatchingFilterToSelectionAsTask(filter, selection) {
+      const task = new Task();
+      const tracks = this.tracks_;
+      for (let i = 0; i < tracks.length; i++) {
+        task.subTask(function(i) {
+          return function() {
+            tracks[i].addAllEventsMatchingFilterToSelection(
+                filter, selection);
+          };
+        }(i), this);
+      }
+      return task;
+    },
+
+    addClosestEventToSelection(
+        worldX, worldMaxDist, loY, hiY, selection) {
+      const tracks = this.tracks_;
+      for (let i = 0; i < tracks.length; i++) {
+        const trackClientRect = tracks[i].getBoundingClientRect();
+        const a = Math.max(loY, trackClientRect.top);
+        const b = Math.min(hiY, trackClientRect.bottom);
+        if (a <= b) {
+          tracks[i].addClosestEventToSelection(
+              worldX, worldMaxDist, loY, hiY, selection);
+        }
+      }
+
+      tr.ui.tracks.Track.prototype.addClosestEventToSelection.
+          apply(this, arguments);
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      this.tracks_.forEach(function(track) {
+        track.addContainersToTrackMap(containerToTrackMap);
+      });
+    },
+
+    clearTracks_() {
+      this.tracks_.forEach(function(track) {
+        Polymer.dom(this).removeChild(track);
+      }, this);
+    }
+  };
+
+  return {
+    ContainerTrack,
+  };
+});
+</script>

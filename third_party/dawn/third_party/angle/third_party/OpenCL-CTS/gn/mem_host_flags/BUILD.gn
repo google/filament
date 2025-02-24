@@ -1,0 +1,16 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("mem_host_flags") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/mem_host_flags",
+  ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/mem_host_flags/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/mem_host_flags/mem_host_buffer.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/mem_host_flags/mem_host_image.cpp",
+  ]
+}

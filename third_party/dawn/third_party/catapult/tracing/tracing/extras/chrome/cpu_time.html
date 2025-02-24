@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/multi_dimensional_view.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_processes.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_renderer_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  class CpuTime {
+    /**
+     * Returns two level map of rail stage to initiator type to set of bounds of
+     * associated segments, intersected with |rangeOfInterest|.
+     *
+     * For each rail stage, we additionally have a key 'all_initiators' that
+     * returns all the segment bounds associated with that rail stage across all
+     * initiator types. For completeness, there is an additional rail stage
+     * 'all_stages' that has all the segment bounds across all rail stages.
+     *
+     * If a segment is not contained within |rangeOfInterest| it is not
+     * included.
+     *
+     * There is a unique segment bound for each segment in the map. For example,
+     * assume
+     * - |segmentA| is associated with both Click Response and Scroll Animation
+     * - |bound1| is the interesting bound of |segmentA| in Response -> Click
+     *   set.
+     * - |bound2| is the interesting bound of |segmentA| in Animation -> Scroll
+     *   set.
+     * Then bound1 === bound2. These segment bounds can therefore be used as
+     * keys in a map to represent the segment.
+     *
+     * Example return value (all bounds are intersected with |rangeOfInterest|):
+     *
+     * {
+     *   'Animation': {
+     *     'CSS': {Segment bounds for CSS Animation},
+     *     'Video': {Segment bounds for Video Animation},
+     *     ...
+     *     'all_initiators': {All Animation segment bounds}
+     *   },
+     *   'Response': {
+     *     'Click': {Segment bounds for Click Response},
+     *     'Scroll': {Segment bounds for Scroll Response},
+     *     ...
+     *     'all_initiators': {All Response segment bounds}
+     *   },
+     *   ...
+     *   'all_stages': {
+     *     'all_initiators': {All segment bounds}
+     *   }
+     * }
+     *
+     * @param {!Array.<!tr.model.um.Segment>} segments
+     * @param {!Array.<!tr.b.math.Range>} rangeOfInterest
+     * @returns {!Map.<string, Map.<string, Set.<!tr.b.math.Range>>}
+     */
+    static getStageToInitiatorToSegmentBounds(segments, rangeOfInterest) {
+      const stageToInitiatorToRanges = new Map();
+      stageToInitiatorToRanges.set('all_stages',
+          new Map([['all_initiators', new Set()]]));
+      const allRanges =
+          stageToInitiatorToRanges.get('all_stages').get('all_initiators');
+
+      for (const segment of segments) {
+        if (!rangeOfInterest.intersectsRangeInclusive(segment.range)) continue;
+        const intersectingRange =
+            rangeOfInterest.findIntersection(segment.range);
+        allRanges.add(intersectingRange);
+
+        for (const expectation of segment.expectations) {
+          const stageTitle = expectation.stageTitle;
+          if (!stageToInitiatorToRanges.has(stageTitle)) {
+            stageToInitiatorToRanges.set(stageTitle,
+                new Map([['all_initiators', new Set()]]));
+          }
+
+          const initiatorToRanges = stageToInitiatorToRanges.get(stageTitle);
+          initiatorToRanges.get('all_initiators').add(intersectingRange);
+
+          const initiatorType = expectation.initiatorType;
+          if (initiatorType) {
+            if (!initiatorToRanges.has(initiatorType)) {
+              initiatorToRanges.set(initiatorType, new Set());
+            }
+            initiatorToRanges.get(initiatorType).add(intersectingRange);
+          }
+        }
+      }
+      return stageToInitiatorToRanges;
+    }
+
+    /**
+     * Returns the root node of a MultiDimensionalView in TopDownTreeView for
+     * cpu time.
+     *
+     * The returned tree view is three dimensional (processType, threadType, and
+     * railStage + initiator). Rail stage and initiator are not separate
+     * dimensions because they are not independent - there is no such thing as
+     * CSS Response or Scroll Load.
+     *
+     * Each node in the tree view contains two values - cpuUsage and cpuTotal.
+     *
+     * See cpu_time_multidimensinoal_view.md for more details about the returned
+     * multidimensional view.
+     *
+     * @param {!tr.Model} model
+     * @param {!tr.b.math.Range} rangeOfInterest
+     * @returns {!tr.b.MultiDimensionalViewNode}
+     */
+    static constructMultiDimensionalView(model, rangeOfInterest) {
+      const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+          3 /* dimensions (process, thread and rail stage / initiator) */,
+          2 /* valueCount (cpuUsage and cpuTotal) */);
+
+      const stageToInitiatorToRanges =
+          CpuTime.getStageToInitiatorToSegmentBounds(
+              model.userModel.segments, rangeOfInterest);
+
+      const allSegmentBoundsInRange =
+          stageToInitiatorToRanges.get('all_stages').get('all_initiators');
+
+      for (const [pid, process] of Object.entries(model.processes)) {
+        const processType =
+            tr.e.chrome.chrome_processes.canonicalizeProcessName(process.name);
+        for (const [tid, thread] of Object.entries(process.threads)) {
+          // Cache cpuTime for each segment bound.
+          const rangeToCpuTime = new Map();
+          for (const range of allSegmentBoundsInRange) {
+            rangeToCpuTime.set(range, thread.getCpuTimeForRange(range));
+          }
+
+          for (const [stage, initiatorToRanges] of stageToInitiatorToRanges) {
+            for (const [initiator, ranges] of initiatorToRanges) {
+              const cpuTime = tr.b.math.Statistics.sum(ranges,
+                  range => rangeToCpuTime.get(range));
+              const duration = tr.b.math.Statistics.sum(ranges,
+                  range => range.duration);
+              const cpuTimePerSecond = cpuTime / duration;
+              mdvBuilder.addPath(
+                  [[processType], [thread.type], [stage, initiator]],
+                  [cpuTimePerSecond, cpuTime],
+                  tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+            }
+          }
+        }
+      }
+
+      return mdvBuilder.buildTopDownTreeView();
+    }
+  }
+
+  return {
+    CpuTime,
+  };
+});
+</script>

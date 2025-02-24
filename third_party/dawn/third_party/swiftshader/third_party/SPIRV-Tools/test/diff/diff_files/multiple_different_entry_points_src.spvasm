@@ -1,0 +1,51 @@
+;; Basic test for multiple entry points.  The entry points have different
+;; execution models and so can be trivially matched.
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %mainv "mainv" %vo %a
+               OpEntryPoint Fragment %mainf "mainf" %color %vi
+	       OpExecutionMode %mainf OriginUpperLeft
+               OpSource ESSL 310
+               OpName %mainv "mainv"
+               OpName %mainf "mainf"
+               OpName %a "a"
+               OpName %vo "v"
+               OpName %vi "v"
+               OpName %color "color"
+               OpDecorate %a Location 0
+               OpDecorate %vo Location 0
+               OpDecorate %vi Location 0
+               OpDecorate %color Location 0
+	       OpDecorate %color RelaxedPrecision
+	       OpDecorate %vi RelaxedPrecision
+               OpDecorate %12 RelaxedPrecision
+               OpDecorate %13 RelaxedPrecision
+
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+
+%_ptr_Input_float = OpTypePointer Input %float
+          %a = OpVariable %_ptr_Input_float Input
+%_ptr_Output_float = OpTypePointer Output %float
+         %vo = OpVariable %_ptr_Output_float Output
+         %vi = OpVariable %_ptr_Input_float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+
+      %mainv = OpFunction %void None %3
+          %5 = OpLabel
+         %11 = OpLoad %float %a
+               OpStore %vo %11
+               OpReturn
+               OpFunctionEnd
+
+      %mainf = OpFunction %void None %3
+          %6 = OpLabel
+         %12 = OpLoad %float %vi
+	 %13 = OpCompositeConstruct %v4float %12 %12 %12 %12
+               OpStore %color %13
+               OpReturn
+               OpFunctionEnd

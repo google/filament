@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/selectable_item.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const SelectableItem = tr.model.SelectableItem;
+  const SelectionState = tr.model.SelectionState;
+
+  /**
+   * A ProxySelectableItem is a selectable item which is not a model item itself
+   * but instead acts as a proxy for a model item.
+   *
+   * @constructor
+   * @extends {SelectableItem}
+   */
+  function ProxySelectableItem(modelItem) {
+    SelectableItem.call(this, modelItem);
+  }
+
+  ProxySelectableItem.prototype = {
+    __proto__: SelectableItem.prototype,
+
+    get selectionState() {
+      const modelItem = this.modelItem_;
+      if (modelItem === undefined) {
+        return SelectionState.NONE;
+      }
+      return modelItem.selectionState;
+    }
+  };
+
+  return {
+    ProxySelectableItem,
+  };
+});
+</script>

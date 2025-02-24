@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('diskImport', function() {
+    const lines = [
+      // NB: spliced from different traces; mismatched timestamps don't matter
+      'AsyncTask #2-18830 [000] ...1 154578.668286: ext4_sync_file_enter: ' +
+          'dev 259,1 ino 81993 parent 81906 datasync 1',
+      'Binder_A-3179 [001] ...1  1354.510088: f2fs_sync_file_enter: ' +
+          'dev = (259,14), ino = 4882, pino = 313, i_mode = 0x81b0, i_size = ' +
+          '25136, i_nlink = 1, i_blocks = 8, i_advise = 0x0',
+      'Binder_A-3179 [001] ...1  1354.514013: f2fs_sync_file_exit: ' +
+          'dev = (259,14), ino = 4882, checkpoint is not needed, datasync = 1, ret = 0', // @suppress longLineCheck
+      'mmcqd/0-81    [000] d..2 154578.668390: block_rq_issue: ' +
+          '179,0 WS 0 () 3427120 + 16 [mmcqd/0]',
+      'mmcqd/0-81    [000] d..2 154578.669181: block_rq_complete: ' +
+          '179,0 WS () 3427120 + 16 [0]',
+      'mmcqd/0-81    [001] d..2 154578.670853: block_rq_issue: ' +
+          '179,0 FWS 0 () 18446744073709551615 + 0 [mmcqd/0]',
+      'mmcqd/0-81    [001] d..2 154578.670869: block_rq_complete: ' +
+          '179,0 FWS () 18446744073709551615 + 0 [0]',
+      'AsyncTask #2-18830 [001] ...1 154578.670901: ext4_sync_file_exit: ' +
+          'dev 259,1 ino 81993 ret 0',
+      'mmcqd/0-81    [001] d..2 154578.877038: block_rq_issue: ' +
+          '179,0 R 0 () 3255256 + 8 [mmcqd/0]',
+      'mmcqd/0-81    [001] d..2 154578.877110: block_rq_issue: ' +
+          '179,0 R 0 () 3255288 + 8 [mmcqd/0]',
+      'mmcqd/0-81    [000] d..2 154578.877345: block_rq_complete: ' +
+          '179,0 R () 3255256 + 8 [0]',
+      'mmcqd/0-81    [000] d..2 154578.877466: block_rq_complete: ' +
+          '179,0 R () 3255288 + 8 [0]',
+      'ContactsProvide-1184 [000] ...1 66.613719: f2fs_write_begin: ' +
+          'dev = (253,2), ino = 3342, pos = 0, len = 75, flags = 0',
+      'ContactsProvide-1184 [000] ...1 66.613733: f2fs_write_end: ' +
+          'dev = (253,2), ino = 3342, pos = 0, len = 75, copied = 75'
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    let blockThread = undefined;
+    let ext4Thread = undefined;
+    let f2fsSyncThread = undefined;
+    let f2fsWriteThread = undefined;
+
+    m.getAllThreads().forEach(function(t) {
+      switch (t.name) {
+        case 'block:mmcqd/0':
+          blockThread = t;
+          break;
+        case 'ext4:AsyncTask #2':
+          ext4Thread = t;
+          break;
+        case 'f2fs:Binder_A':
+          f2fsSyncThread = t;
+          break;
+        case 'f2fs:ContactsProvide':
+          f2fsWriteThread = t;
+          break;
+        default:
+          assert.fail(t, undefined, 'Unexpected thread named ' + t.name);
+      }
+    });
+    assert.isDefined(blockThread);
+    assert.isDefined(ext4Thread);
+    assert.isDefined(f2fsSyncThread);
+    assert.isDefined(f2fsWriteThread);
+
+    assert.strictEqual(blockThread.asyncSliceGroup.length, 4);
+
+    let slice = blockThread.asyncSliceGroup.slices[0];
+    assert.strictEqual(slice.category, 'block');
+    assert.strictEqual(slice.title, 'write sync');
+    assert.strictEqual(slice.args.device, '179,0');
+    assert.strictEqual(slice.args.error, 0);
+    assert.strictEqual(slice.args.numSectors, 16);
+    assert.strictEqual(slice.args.sector, 3427120);
+
+    assert.strictEqual(ext4Thread.asyncSliceGroup.length, 1);
+
+    slice = ext4Thread.asyncSliceGroup.slices[0];
+    assert.strictEqual(slice.category, 'ext4');
+    assert.strictEqual(slice.title, 'fdatasync');
+    assert.strictEqual(slice.args.device, '259,1');
+    assert.strictEqual(slice.args.error, 0);
+    assert.strictEqual(slice.args.inode, 81993);
+
+    assert.strictEqual(f2fsSyncThread.asyncSliceGroup.length, 1);
+
+    slice = f2fsSyncThread.asyncSliceGroup.slices[0];
+    assert.strictEqual(slice.category, 'f2fs');
+    assert.strictEqual(slice.title, 'fsync');
+    assert.strictEqual(slice.args.device, '259,14');
+    assert.strictEqual(slice.args.error, 0);
+    assert.strictEqual(slice.args.inode, 4882);
+
+    assert.strictEqual(f2fsWriteThread.asyncSliceGroup.length, 1);
+
+    slice = f2fsWriteThread.asyncSliceGroup.slices[0];
+    assert.strictEqual(slice.category, 'f2fs');
+    assert.strictEqual(slice.title, 'f2fs_write');
+    assert.strictEqual(slice.args.device, '253,2');
+    assert.strictEqual(slice.args.inode, 3342);
+    assert.strictEqual(slice.args.error, false);
+  });
+});
+</script>

@@ -1,0 +1,96 @@
+# This includes the wheels necessary to run the telemetry and to run pytest
+#
+# Read more about `vpython` and how to modify this file here:
+#   https://chromium.googlesource.com/infra/infra/+/main/doc/users/vpython.md
+
+python_version: "3.8"
+
+wheel: <
+  name: "infra/python/wheels/typing-extensions-py3"
+  version: "version:4.0.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/zipp-py3"
+  version: "version:3.17.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/importlib-metadata-py3"
+  version: "version:6.0.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/wrapt-py3"
+  version: "version:1.15.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/deprecated-py3"
+  version: "version:1.2.13"
+>
+
+wheel: <
+  name: "infra/python/wheels/opentelemetry-semantic-conventions-py3"
+  version: "version:0.39b0"
+>
+
+wheel: <
+  name: "infra/python/wheels/opentelemetry-api-py3"
+  version: "version:1.18.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/opentelemetry-sdk-py3"
+  version: "version:1.18.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/protobuf-py3"
+  version: "version:4.25.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/googleapis-common-protos-py2_py3"
+  version: "version:1.61.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/packaging-py3"
+  version: "version:21.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyparsing-py2_py3"
+  version: "version:2.4.7"
+>
+
+wheel: <
+  name: "infra/python/wheels/iniconfig-py3"
+  version: "version:1.1.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/tomli-py3"
+  version: "version:2.0.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/exceptiongroup-py3"
+  version: "version:1.1.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/pluggy-py3"
+  version: "version:0.13.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/pytest-py3"
+  version: "version:7.3.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/pytest-asyncio-py3"
+  version: "version:0.19.0"
+>

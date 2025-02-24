@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/analysis/stacked_pane.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-a-memory-dump-vm-regions-details-pane'>
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #label {
+        flex: 0 0 auto;
+        padding: 8px;
+
+        background-color: #eee;
+        border-bottom: 1px solid #8e8e8e;
+        border-top: 1px solid white;
+
+        font-size:  15px;
+        font-weight: bold;
+      }
+
+      #contents {
+        flex: 1 0 auto;
+        align-self: stretch;
+        font-size: 12px;
+      }
+
+      #info_text {
+        padding: 8px;
+        color: #666;
+        font-style: italic;
+        text-align: center;
+      }
+
+      #table {
+        display: none;  /* Hide until memory dumps are set. */
+        flex: 1 0 auto;
+        align-self: stretch;
+        font-size: 12px;
+      }
+    </style>
+    <div id="label">Memory maps</div>
+    <div id="contents">
+      <div id="info_text">No memory maps selected</div>
+      <tr-ui-b-table id="table"></tr-ui-b-table>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const Scalar = tr.b.Scalar;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+
+  const CONSTANT_COLUMN_RULES = [
+    {
+      condition: 'Start address',
+      importance: 0,
+      columnConstructor: tr.ui.analysis.StringMemoryColumn
+    }
+  ];
+
+  const VARIABLE_COLUMN_RULES = [
+    {
+      condition: 'Virtual size',
+      importance: 7,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Protection flags',
+      importance: 6,
+      columnConstructor: tr.ui.analysis.StringMemoryColumn
+    },
+    {
+      condition: 'PSS',
+      importance: 5,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Private dirty',
+      importance: 4,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Private clean',
+      importance: 3,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Shared dirty',
+      importance: 2,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Shared clean',
+      importance: 1,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: 'Swapped',
+      importance: 0,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    }
+  ];
+
+  const BYTE_STAT_COLUMN_MAP = {
+    'proportionalResident': 'PSS',
+    'privateDirtyResident': 'Private dirty',
+    'privateCleanResident': 'Private clean',
+    'sharedDirtyResident': 'Shared dirty',
+    'sharedCleanResident': 'Shared clean',
+    'swapped': 'Swapped'
+  };
+
+  function hexString(address, is64BitAddress) {
+    if (address === undefined) return undefined;
+    const hexPadding = is64BitAddress ? '0000000000000000' : '00000000';
+    return (hexPadding + address.toString(16)).substr(-hexPadding.length);
+  }
+
+  function pruneEmptyRuleRows(row) {
+    if (row.subRows === undefined || row.subRows.length === 0) return;
+
+    // Either all sub-rows are rule rows, or all sub-rows are VM region rows.
+    if (row.subRows[0].rule === undefined) {
+      // VM region rows: Early out to avoid filtering a large array for
+      // performance reasons (no sub-rows would be removed, but the whole array
+      // would be unnecessarily copied to a new array).
+      return;
+    }
+
+    row.subRows.forEach(pruneEmptyRuleRows);
+    row.subRows = row.subRows.filter(function(subRow) {
+      return subRow.subRows.length > 0;
+    });
+  }
+
+  Polymer({
+    is: 'tr-ui-a-memory-dump-vm-regions-details-pane',
+    behaviors: [tr.ui.analysis.StackedPane],
+
+    created() {
+      this.vmRegions_ = undefined;
+      this.aggregationMode_ = undefined;
+    },
+
+    ready() {
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+    },
+
+    /**
+     * Sets the VM regions and schedules rebuilding the pane.
+     *
+     * The provided value should be a chronological list of lists of VM
+     * regions. All VM regions are assumed to belong to the same process.
+     * Example:
+     *
+     *   [
+     *     [
+     *       // VM regions at timestamp 1.
+     *       tr.model.VMRegion {},
+     *       tr.model.VMRegion {},
+     *       tr.model.VMRegion {}
+     *     ],
+     *     undefined,  // No VM regions provided at timestamp 2.
+     *     [
+     *       // VM regions at timestamp 3.
+     *       tr.model.VMRegion {},
+     *       tr.model.VMRegion {}
+     *     ]
+     *   ]
+     */
+    set vmRegions(vmRegions) {
+      this.vmRegions_ = vmRegions;
+      this.scheduleRebuild_();
+    },
+
+    get vmRegions() {
+      return this.vmRegions_;
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      this.scheduleRebuild_();
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    onRebuild_() {
+      if (this.vmRegions_ === undefined || this.vmRegions_.length === 0) {
+        // Show the info text (hide the table).
+        this.$.info_text.style.display = 'block';
+        this.$.table.style.display = 'none';
+
+        this.$.table.clear();
+        this.$.table.rebuild();
+        return;
+      }
+
+      // Show the table (hide the info text).
+      this.$.info_text.style.display = 'none';
+      this.$.table.style.display = 'block';
+
+      const rows = this.createRows_(this.vmRegions_);
+      const columns = this.createColumns_(rows);
+
+      // Note: There is no need to aggregate fields of the VM regions because
+      // the classification tree already takes care of that.
+
+      this.$.table.tableRows = rows;
+      this.$.table.tableColumns = columns;
+
+      // TODO(petrcermak): This can be quite slow. Consider doing this somehow
+      // asynchronously.
+      this.$.table.rebuild();
+
+      tr.ui.analysis.expandTableRowsRecursively(this.$.table);
+    },
+
+    createRows_(timeToVmRegionTree) {
+      // Determine if any start address is outside the 32-bit range.
+      const is64BitAddress = timeToVmRegionTree.some(function(vmRegionTree) {
+        if (vmRegionTree === undefined) return false;
+        return vmRegionTree.someRegion(function(region) {
+          if (region.startAddress === undefined) return false;
+          return region.startAddress >= 4294967296; /* 2^32 */
+        });
+      });
+
+      return [
+        this.createClassificationNodeRow(timeToVmRegionTree, is64BitAddress)
+      ];
+    },
+
+    createClassificationNodeRow(timeToNode, is64BitAddress) {
+      // Get any defined classification node so that we can extract the
+      // properties which don't change over time.
+      const definedNode = timeToNode.find(x => x);
+
+      // Child node ID (list index) -> Timestamp (list index) ->
+      // VM region classification node.
+      const childNodeIdToTimeToNode = Object.values(
+          tr.b.invertArrayOfDicts(timeToNode, function(node) {
+            const children = node.children;
+            if (children === undefined) return undefined;
+            const childMap = {};
+            children.forEach(function(childNode) {
+              if (!childNode.hasRegions) return;
+              childMap[childNode.title] = childNode;
+            });
+            return childMap;
+          }));
+      const childNodeSubRows = childNodeIdToTimeToNode.map(
+          function(timeToChildNode) {
+            return this.createClassificationNodeRow(
+                timeToChildNode, is64BitAddress);
+          }, this);
+
+      // Region ID (list index) -> Timestamp (list index) -> VM region.
+      const regionIdToTimeToRegion = Object.values(
+          tr.b.invertArrayOfDicts(timeToNode, function(node) {
+            const regions = node.regions;
+            if (regions === undefined) return undefined;
+
+            const results = {};
+            for (const region of regions) {
+              results[region.uniqueIdWithinProcess] = region;
+            }
+            return results;
+          }));
+      const regionSubRows = regionIdToTimeToRegion.map(function(timeToRegion) {
+        return this.createRegionRow_(timeToRegion, is64BitAddress);
+      }, this);
+
+      const subRows = childNodeSubRows.concat(regionSubRows);
+
+      return {
+        title: definedNode.title,
+        contexts: timeToNode,
+        variableCells: this.createVariableCells_(timeToNode),
+        subRows
+      };
+    },
+
+    createRegionRow_(timeToRegion, is64BitAddress) {
+      // Get any defined VM region so that we can extract the properties which
+      // don't change over time.
+      const definedRegion = timeToRegion.find(x => x);
+
+      return {
+        title: definedRegion.mappedFile,
+        contexts: timeToRegion,
+        constantCells: this.createConstantCells_(definedRegion, is64BitAddress),
+        variableCells: this.createVariableCells_(timeToRegion)
+      };
+    },
+
+    /**
+     * Create cells for VM region properties which DON'T change over time.
+     *
+     * Note that there are currently no such properties of classification nodes.
+     */
+    createConstantCells_(definedRegion, is64BitAddress) {
+      return tr.ui.analysis.createCells([definedRegion], function(region) {
+        const startAddress = region.startAddress;
+        if (startAddress === undefined) return undefined;
+        return { 'Start address': hexString(startAddress, is64BitAddress) };
+      });
+    },
+
+    /**
+     * Create cells for VM region (classification node) properties which DO
+     * change over time.
+     */
+    createVariableCells_(timeToRegion) {
+      return tr.ui.analysis.createCells(timeToRegion, function(region) {
+        const fields = {};
+
+        const sizeInBytes = region.sizeInBytes;
+        if (sizeInBytes !== undefined) {
+          fields['Virtual size'] = new Scalar(
+              sizeInBytes_smallerIsBetter, sizeInBytes);
+        }
+        const protectionFlags = region.protectionFlagsToString;
+        if (protectionFlags !== undefined) {
+          fields['Protection flags'] = protectionFlags;
+        }
+
+        for (const [byteStatName, columnName] of
+          Object.entries(BYTE_STAT_COLUMN_MAP)) {
+          const byteStat = region.byteStats[byteStatName];
+          if (byteStat === undefined) continue;
+          fields[columnName] = new Scalar(
+              sizeInBytes_smallerIsBetter, byteStat);
+        }
+
+        return fields;
+      });
+    },
+
+    createColumns_(rows) {
+      const titleColumn = new tr.ui.analysis.TitleColumn('Mapped file');
+      titleColumn.width = '200px';
+
+      const constantColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'constantCells',
+        aggregationMode: undefined,
+        rules: CONSTANT_COLUMN_RULES
+      });
+      const variableColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'variableCells',
+        aggregationMode: this.aggregationMode_,
+        rules: VARIABLE_COLUMN_RULES
+      });
+      const fieldColumns = constantColumns.concat(variableColumns);
+      tr.ui.analysis.MemoryColumn.spaceEqually(fieldColumns);
+
+      const columns = [titleColumn].concat(fieldColumns);
+      return columns;
+    }
+  });
+
+  return {};
+});
+</script>

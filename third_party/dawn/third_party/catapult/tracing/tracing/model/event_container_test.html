@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('getDescendantEventsInSortedRanges', function() {
+    class ContainerTypeX extends tr.model.EventContainer {
+      * childEvents() {
+        const event1 = new tr.model.TimedEvent(4);
+        event1.duration = 2;
+        event1.title = 'X-1';
+        yield event1;
+
+        const event2 = new tr.model.TimedEvent(1);
+        event2.duration = 2;
+        event2.title = 'X-2';
+        yield event2;
+      }
+    }
+
+    class ContainerTypeY extends tr.model.EventContainer {
+      constructor() {
+        super();
+        this.childContainer_ = new ContainerTypeX();
+      }
+
+      * childEvents() {
+        const event1 = new tr.model.TimedEvent(5);
+        event1.duration = 4;
+        event1.title = 'Y-1';
+        yield event1;
+
+        const event2 = new tr.model.TimedEvent(6);
+        event2.duration = 2;
+        event2.title = 'Y-2';
+        yield event2;
+      }
+
+      * childEventContainers() {
+        yield this.childContainer_;
+      }
+    }
+
+    // We have the following timed events:
+    //                 1   2   3   4   5   6   7   8   9
+    // ContainerTypeY                  <----- Y-1 ----->
+    //                                     <- Y2 ->
+    // ContainerTypeX  <- X-2 ->   <- X-1 ->
+    const container = new ContainerTypeY();
+
+    // [2, 5] intersect X-1, X-2, and Y-1.
+    const r1 = new tr.b.math.Range.fromExplicitRange(2, 5);
+    let slices = [...container.getDescendantEventsInSortedRanges([r1])];
+    slices = slices.map(s => s.title).sort();
+    assert.strictEqual(slices.length, 3);
+    assert.strictEqual(slices[0], 'X-1');
+    assert.strictEqual(slices[1], 'X-2');
+    assert.strictEqual(slices[2], 'Y-1');
+
+    // [2, 5], [7, 8] intersect X-1, X-2, Y-1, and Y-2.
+    const r2 = new tr.b.math.Range.fromExplicitRange(7, 8);
+    slices = [...container.getDescendantEventsInSortedRanges([r1, r2])];
+    slices = slices.map(s => s.title).sort();
+    assert.strictEqual(slices.length, 4);
+    assert.strictEqual(slices[0], 'X-1');
+    assert.strictEqual(slices[1], 'X-2');
+    assert.strictEqual(slices[2], 'Y-1');
+    assert.strictEqual(slices[3], 'Y-2');
+
+    // We should see events from ContainerTypeX only.
+    slices = [...container.getDescendantEventsInSortedRanges(
+        [r1], container => container instanceof ContainerTypeX)];
+    slices = slices.map(s => s.title).sort();
+    assert.strictEqual(slices.length, 2);
+    assert.strictEqual(slices[0], 'X-1');
+    assert.strictEqual(slices[1], 'X-2');
+
+    // We should see events from ContainerTypeY only.
+    slices = [...container.getDescendantEventsInSortedRanges(
+        [r1], container => container instanceof ContainerTypeY)];
+    slices = slices.map(s => s.title).sort();
+    assert.strictEqual(slices.length, 1);
+    assert.strictEqual(slices[0], 'Y-1');
+  });
+});

@@ -1,0 +1,28 @@
+/* Copyright (c) 2013 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+.tr-ui-e-system-stats-snapshot-view .subhead {
+  font-size: small;
+  padding-bottom: 10px;
+}
+
+.tr-ui-e-system-stats-snapshot-view ul {
+  background-position: 0 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  font-family: monospace;
+  list-style: none;
+  margin: 0;
+  padding-left: 15px;
+}
+
+.tr-ui-e-system-stats-snapshot-view li {
+  background-position: 0 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  padding-left: 15px;
+}

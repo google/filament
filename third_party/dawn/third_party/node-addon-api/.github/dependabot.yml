@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      all:
+        patterns: '*'
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      all:
+        patterns: '*'
+
+  - package-ecosystem: npm
+    directory: /test/addon_build/tpl
+    schedule:
+      interval: weekly
+    groups:
+      all:
+        patterns: '*'

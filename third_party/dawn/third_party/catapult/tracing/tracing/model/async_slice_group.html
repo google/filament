@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/async_slice.html">
+<link rel="import" href="/tracing/model/event_container.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the AsyncSliceGroup class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * Group of AsyncSlices associated with a thread or an upper-level
+   * AsyncSliceGroup. Thread can have number of AsyncSliceGroups and these
+   * groups can have nested groups too. No further nested levels are allowed.
+   */
+  class AsyncSliceGroup extends tr.model.EventContainer {
+    /**
+     * @param {Thread} parentContainer Thread on which async slices start.
+     * @param {String} opt_name Optional name (no IDs please) for settings key.
+     */
+    constructor(parentContainer, opt_name) {
+      super();
+      this.parentContainer_ = parentContainer;
+      this.name_ = opt_name;
+      this.slices = [];
+      this.viewSubGroups_ = undefined;
+
+      // Default values for the root group.
+      // Nested groups will get these values reassigned.
+      this.nestedLevel_ = 0;
+      this.hasNestedSubGroups_ = true;
+      this.title_ = undefined;
+    }
+
+    get parentContainer() {
+      return this.parentContainer_;
+    }
+
+    get model() {
+      return this.parentContainer_.parent.model;
+    }
+
+    get stableId() {
+      return this.parentContainer_.stableId + '.AsyncSliceGroup';
+    }
+
+    get title() {
+      // Title isn't defined for the root group (nested level 0) because
+      // slices it contains aren't grouped on that level.
+      // All the nested groups have their title which is:
+      // - |slice.viewSubGroupGroupingKey| if defined (level 1 only), or
+      // - |slice.viewSubGroupTitle| otherwise (most cases).
+      if (this.nested_level_ === 0) {
+        return '<root>';
+      }
+      return this.title_;
+    }
+
+    getSettingsKey() {
+      if (this.name_ === undefined) {
+        return undefined;
+      }
+      const parentKey = this.parentContainer_.getSettingsKey();
+      if (parentKey === undefined) {
+        return undefined;
+      }
+      return parentKey + '.' + this.name_;
+    }
+
+    /**
+     * Helper function that pushes the provided slice onto the slices array.
+     */
+    push(slice) {
+      if (this.viewSubGroups_ !== undefined) {
+        throw new Error(
+            'No new slices are allowed when view sub-groups already formed.');
+      }
+      slice.parentContainer = this.parentContainer;
+      this.slices.push(slice);
+      return slice;
+    }
+
+    /**
+     * @return {Number} The number of slices in this group.
+     */
+    get length() {
+      return this.slices.length;
+    }
+
+    /**
+     * Shifts all the timestamps inside this group forward by the amount
+     * specified, including all nested subSlices if there are any.
+     */
+    shiftTimestampsForward(amount) {
+      for (const slice of this.childEvents()) {
+        slice.start += amount;
+      }
+    }
+
+    /**
+     * Updates the bounds for this group based on the slices it contains.
+     */
+    updateBounds() {
+      this.bounds.reset();
+      for (let i = 0; i < this.slices.length; i++) {
+        this.bounds.addValue(this.slices[i].start);
+        this.bounds.addValue(this.slices[i].end);
+      }
+    }
+
+    /**
+     * Closes any open slices.
+     * All open slices assumed as finished at the end of model's time bounds.
+     */
+    autoCloseOpenSlices() {
+      const maxTimestamp = this.parentContainer_.parent.model.bounds.max;
+      for (const slice of this.childEvents()) {
+        if (slice.didNotFinish) {
+          slice.duration = maxTimestamp - slice.start;
+        }
+      }
+    }
+
+    /**
+     * Get AsyncSlice sub-groups arranged by title and grouping key.
+     *
+     * @return {Array} An array of AsyncSliceGroups where each group has
+     * a title and sub-set of the original slices. Returns an empty array
+     * if group can't be sub-divided.
+     */
+    get viewSubGroups() {
+      // Only 2 nested levels are allowed (see class description).
+      // Also it's always known in advance whether group will be sub-divided or
+      // not (most of them). Root group is always divisible.
+      if (!this.hasNestedSubGroups_ || this.nestedLevel_ === 2) {
+        return [];
+      }
+      if (this.viewSubGroups_ !== undefined) {
+        return this.viewSubGroups_;
+      }
+
+      const subGroupsByTitle = new Map();
+
+      for (const slice of this.slices) {
+        // Group by title by default.
+        let subGroupTitle = slice.viewSubGroupTitle;
+        let hasNestedSubGroups = false;
+
+        // Apply custom grouping rules for special slice classes.
+        if (this.nestedLevel_ === 0 &&
+            slice.viewSubGroupGroupingKey !== undefined) {
+          subGroupTitle = slice.viewSubGroupGroupingKey;
+          hasNestedSubGroups = true;
+        }
+
+        let subGroup = subGroupsByTitle.get(subGroupTitle);
+        if (subGroup === undefined) {
+          let name;
+          if (this.name_ !== undefined) {
+            name = this.name_ + '.' + subGroupTitle;
+          } else {
+            name = subGroupTitle;
+          }
+          subGroup = new AsyncSliceGroup(this.parentContainer_, name);
+          subGroup.title_ = subGroupTitle;
+          subGroup.hasNestedSubGroups_ = hasNestedSubGroups;
+          subGroup.nestedLevel_ = this.nestedLevel_ + 1;
+          subGroupsByTitle.set(subGroupTitle, subGroup);
+        }
+        subGroup.push(slice);
+      }
+
+      this.viewSubGroups_ = Array.from(subGroupsByTitle.values());
+      this.viewSubGroups_.sort((a, b) => a.title.localeCompare(b.title));
+      return this.viewSubGroups_;
+    }
+
+    * findTopmostSlicesInThisContainer(eventPredicate, opt_this) {
+      for (const slice of this.slices) {
+        if (slice.isTopLevel) {
+          yield* slice.findTopmostSlicesRelativeToThisSlice(
+              eventPredicate, opt_this);
+        }
+      }
+    }
+
+    * childEvents() {
+      for (const slice of this.slices) {
+        yield slice;
+        yield* slice.enumerateAllDescendents();
+      }
+    }
+
+    * childEventContainers() {
+    }
+  }
+
+  return {
+    AsyncSliceGroup,
+  };
+});
+</script>

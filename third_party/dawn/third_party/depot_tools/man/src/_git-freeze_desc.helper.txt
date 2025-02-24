@@ -1,0 +1,1 @@
+Freeze all changes on a branch (indexed and unindexed).

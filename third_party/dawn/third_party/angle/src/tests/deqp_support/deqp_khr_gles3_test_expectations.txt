@@ -1,0 +1,114 @@
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See README.md for format.
+
+// For now we only log Vulkan test expectations. More back-ends can follow as we need them.
+
+// Depth/stencil related failures due to Vulkan driver bugs.
+42262342 VULKAN PIXEL4ORXL : KHR-GLES3.packed_depth_stencil.clear_buffer.depth32f_stencil8 = FAIL
+
+// Texture related failure on Pixel 4.
+42267050 VULKAN PIXEL4ORXL : KHR-GLES3.texture_lod_basic.lod_selection = FAIL
+
+341780527 VULKAN PIXEL4ORXL : KHR-GLES3.clip_distance.coverage = FAIL
+
+42264508 LINUX VULKAN NVIDIA : KHR-GLES3.shaders.indexing.tmp_array.vertexid = FAIL
+
+341780527 LINUX VULKAN NVIDIA : KHR-GLES3.clip_distance.coverage = FAIL
+341780527 LINUX VULKAN AMD : KHR-GLES3.clip_distance.coverage = FAIL
+341780527 WIN VULKAN NVIDIA : KHR-GLES3.clip_distance.coverage = FAIL
+341780527 WIN VULKAN AMD : KHR-GLES3.clip_distance.coverage = FAIL
+
+// Fails only with SwiftShader:
+
+// These only fail on Android
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_dynamic_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_dynamic_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_dynamic_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_dynamic_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_dynamic_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_dynamic_loop_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_dynamic_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_dynamic_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_static_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat2x4_static_write_static_loop_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_dynamic_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_dynamic_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_dynamic_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_dynamic_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_dynamic_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_dynamic_loop_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_dynamic_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_dynamic_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_static_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat3x4_static_write_static_loop_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_dynamic_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_dynamic_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_dynamic_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_dynamic_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_loop_write_static_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_loop_write_static_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_dynamic_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_dynamic_loop_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_dynamic_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_dynamic_read_vertex = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_static_loop_read_fragment = FAIL
+42262656 SWIFTSHADER : KHR-GLES3.shaders.indexing.matrix_subscript.mat4_static_write_static_loop_read_vertex = FAIL
+341780527 SWIFTSHADER : KHR-GLES3.clip_distance.coverage = FAIL
+341780527 SWIFTSHADER : KHR-GLES3.clip_distance.functional = FAIL
+
+// https://gitlab.khronos.org/opengl/API/-/issues/180
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.pbo_rectangle.r8_snorm = SKIP
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.pbo_rectangle.rg8_snorm = SKIP
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.pbo_rectangle.rgba8_snorm = SKIP
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.rectangle.r8_snorm = SKIP
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.rectangle.rg8_snorm = SKIP
+40096882 VULKAN NVIDIA : KHR-GLES3.packed_pixels.rectangle.rgba8_snorm = SKIP
+
+// New failures with latest dEQP roll (2020-04-28)
+42263198 SWIFTSHADER : KHR-GLES3.core.nearest_edge.offset_left = FAIL
+
+// Test is too slow
+42264814 SWIFTSHADER : KHR-GLES3.framebuffer_blit.scissor_blit = TIMEOUT
+
+42265173 UBSAN : KHR-GLES3.copy_tex_image_conversions.required.* = SKIP
+
+// Samsung Galaxy S22
+341780527 GALAXYS22 VULKAN : KHR-GLES3.clip_distance.coverage = FAIL
+b/267953710 GALAXYS22 VULKAN : KHR-GLES3.framebuffer_blit.scissor_blit = FAIL
+
+// Samsung Galaxy S23
+42266598 GALAXYS23 VULKAN : KHR-GLES3.shaders.function.global_variable_aliasing_fragment = SKIP
+341780527 GALAXYS23 VULKAN : KHR-GLES3.clip_distance.coverage = FAIL
+
+// Snapdragon 8 Gen3 Mobile Reference Device
+b/328156792 PINEAPPLE VULKAN : KHR-GLES3.copy_tex_image_conversions.required.* = SKIP
+b/328156792 PINEAPPLE VULKAN : KHR-GLES3.shaders.function.global_variable_aliasing_fragment = SKIP
+
+// Mali G710
+42266649 MALIG710 VULKAN : KHR-GLES3.number_parsing.* = FAIL
+
+// The newly added cases are failing
+42267072 ANDROID : KHR-GLES3.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit = FAIL
+42267072 LINUX : KHR-GLES3.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit = FAIL
+42267072 WIN : KHR-GLES3.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit = FAIL
+b/332383430 PIXEL6 VULKAN : KHR-GLES3.texture_lod_bias.texture_lod_bias_all = FAIL
+
+// Flaky timeout
+332383430 SWIFTSHADER : KHR-GLES3.texture_lod_bias.texture_lod_bias_all = TIMEOUT
+
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_5_primitive_mode_lines_max_culldist* = FAIL
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_5_primitive_mode_points_max_culldist* = FAIL
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_5_primitive_mode_triangles_max_culldist* = FAIL
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_6_primitive_mode_lines_max_culldist* = FAIL
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_6_primitive_mode_points_max_culldist* = FAIL
+353358652 VULKAN : KHR-GLES3.cull_distance.functional_test_item_6_primitive_mode_triangles_max_culldist* = FAIL
+353358652 SWIFTSHADER : KHR-GLES3.cull_distance.functional_test_item_*_primitive_mode_points_max_culldist_* = FAIL
+
+355292302 : KHR-GLES3.api.coverage* = FAIL

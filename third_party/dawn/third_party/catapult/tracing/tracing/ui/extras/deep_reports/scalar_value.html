@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.deep_reports', function() {
+  function ScalarValue(page, name, units, value,
+      opt_important, opt_description) {
+    this.type = 'scalar';
+    this.page = page;
+    this.name = name;
+    this.units = units;
+    this.value = value;
+    this.important = opt_important !== undefined ? opt_important : false;
+    this.description = opt_description || '';
+  }
+  ScalarValue.fromDict = function(page, dict) {
+    if (dict.type !== 'scalar') {
+      throw new Error('wat');
+    }
+    const v = new ScalarValue(page, dict.name, dict.units, dict.value);
+    v.important = dict.important;
+    v.description = dict.description;
+    v.value = dict.value;
+    return v;
+  };
+
+  ScalarValue.prototype = {
+
+  };
+
+  return {
+    ScalarValue,
+  };
+});
+</script>

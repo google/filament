@@ -1,0 +1,53 @@
+{
+  "config_type": "BaseConfig",
+  "dependencies": {
+    "node": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "27ad092b0ce59d2da32090a00f717f0c31e65240",
+          "download_path": "bin/node/node-linux64.zip",
+          "path_within_archive": "node-v10.14.1-linux-x64/bin/node",
+          "version_in_cs": "10.14.1"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "1bd87abe88492d52b366e97ae9404f082b34fd15",
+          "download_path": "bin/node/node-mac64.zip",
+          "path_within_archive": "node-v10.14.1-darwin-x64/bin/node",
+          "version_in_cs": "10.14.1"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "f1162c6343dc6a3a1acecf76966d4c2acd17fc46",
+          "download_path": "bin/node/node-win64.zip",
+          "path_within_archive": "node-v10.14.1-win-x64/node.exe",
+          "version_in_cs": "10.14.1"
+        }
+      }
+    },
+    "npm": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "830b8f6761bf82a945b57facfb49925b579c471c",
+          "download_path": "bin/node/npm-linux64.zip",
+          "path_within_archive": "node-v10.14.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js",
+          "version_in_cs": "10.14.1"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "1bd87abe88492d52b366e97ae9404f082b34fd15",
+          "download_path": "bin/node/npm-mac64.zip",
+          "path_within_archive": "node-v10.14.1-darwin-x64/lib/node_modules/npm/bin/npm-cli.js",
+          "version_in_cs": "10.14.1"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "f1162c6343dc6a3a1acecf76966d4c2acd17fc46",
+          "download_path": "bin/node/npm-win64.zip",
+          "path_within_archive": "node-v10.14.1-win-x64\\node_modules\\npm\\bin\\npm-cli.js",
+          "version_in_cs": "10.14.1"
+        }
+      }
+    }
+  }
+}

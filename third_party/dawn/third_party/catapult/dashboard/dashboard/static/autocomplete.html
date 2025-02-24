@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+/** Support for fuzzy autocomplete suggestions. */
+const autocomplete = (function() {
+  const Autocomplete = function(sourceList, opt_ignoreCase) {
+    this.sourceList_ = sourceList;
+    this.headItems_ = sourceList.filter(item => item.head);
+    this.items_ = sourceList.filter(item => !item.head);
+    this.ignoreCase_ = opt_ignoreCase || false;
+  };
+
+  Autocomplete.prototype.search = function(target) {
+    if (target == null || target == undefined) {
+      return this.sourceList_;
+    }
+    const selector = new FuzzySelect(
+        target, item => item.name, this.ignoreCase_);
+    const items = selector.filter(this.items_);
+    const groups = new Set(items.map(item => item.group));
+    const headItems = this.headItems_.filter(item => groups.has(item.name));
+    const results = [].concat(headItems).concat(items);
+
+    // We piggyback lexical sorting. We want to sort first by group name then
+    // by is/is not group header then by score and then finally by name.
+    const toKey = function(item) {
+      if (item.head) {
+        // The score doesn't matter for head items.
+        return [item.name, false, 0, item.name];
+      }
+      return [item.group || '', true, selector.score(item), item.name];
+    };
+
+    return results.map(item => [toKey(item), item]).sort().map(pair => pair[1]);
+  };
+
+  /**
+   * FuzzySelect tests items to see if they match a query.
+   *
+   * @param {string} query Space-separated sequence of strings, all of which
+   *     must be in an item for the item to match the query.
+   * @param {function(*):string=} opt_accessor If items are not strings, this
+   *     function must be supplied to access strings from items.
+   * @param {boolean=} opt_ignoreCase If true, case is ignored when matching.
+   */
+  class FuzzySelect {
+    constructor(query, opt_accessor, opt_ignoreCase) {
+      const accessor = opt_accessor || (s => s);
+
+      if (opt_ignoreCase) {
+        query = query.toLowerCase();
+        this.accessor_ = item => accessor(item).toLowerCase();
+      } else {
+        this.accessor_ = accessor;
+      }
+
+      this.queryParts_ = query.replace(new RegExp(' +'), ' ').split(' ');
+    }
+
+    /**
+     * @param {!Array} items
+     * @return {!Array} elements from items that match the query.
+     */
+    filter(items) {
+      return items.filter(item => this.match(item));
+    }
+
+    /**
+     * @param {*} item
+     * @return {boolean} Whether item matches the query.
+     */
+    match(item) {
+      return this.score(item) < Number.POSITIVE_INFINITY;
+    }
+
+    /**
+     * @param {*} item
+     * @return {number} How well item matches the query, smaller is better.
+     * If item does not match the query, return positive Infinity.
+     */
+    score(item) {
+      let score = 0;
+      for (const q of this.queryParts_) {
+        const index = this.accessor_(item).indexOf(q);
+        if (index < 0) return Number.POSITIVE_INFINITY;
+        score += index;
+      }
+      return score;
+    }
+  }
+
+  return {
+    Autocomplete,
+    FuzzySelect,
+  };
+})();
+</script>

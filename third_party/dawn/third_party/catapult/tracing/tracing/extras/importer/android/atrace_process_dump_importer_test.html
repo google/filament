@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/android/atrace_process_dump_importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Importer =
+      tr.e.importer.android.atrace_process_dump.AtraceProcessDumpImporter;
+
+  const TEST_DATA =
+      'ATRACE_PROCESS_DUMP\n' +
+      '{"clock_sync_markers": {"very-unique-id": 1}, "dump":' +
+      '{"start_ts": "21917568", "snapshots": [' +
+      '{"ts": "21917568", "memdump": {' +
+      '  "788": {' +
+      '    "vm": 2629440, "rss": 249348,' +
+      '    "oom_sc": 0, "oom_sc_adj": -900,' +
+      '    "min_flt": 15844983, "maj_flt": 54832,' +
+      '    "utime": 831123, "stime": 1117125,' +
+      '    "mmaps": [{"vm": "a1000-a5000", "file": "foo", "flags": "rw-s",' +
+      '               "pss": 100, "rss": 200, "swp": 10,' +
+      '               "pc": 50, "pd": 60, "sc": 40, "sd": 45}]' +
+      '}}}],' +
+      '"processes": {' +
+      '"37": {"name": "kworker/5:0H"},' +
+      '"788": {"name": "system_server", "exe": "/system/bin/app_process64",' +
+      '  "threads": {' +
+      '    "788": {"name": "system_server"},' +
+      '    "793": {"name": "Signal Catcher"}' +
+      '}}}}}';
+
+  test('canImport', function() {
+    const canImport = Importer.canImport;
+    assert.isTrue(canImport(TEST_DATA));
+    assert.isFalse(canImport('\n'));
+  });
+
+  test('lazyParseData', function() {
+    const importer = new Importer(null, TEST_DATA);
+    importer.lazyParseData();
+    assert.isUndefined(importer.raw_data_);
+    assert.lengthOf(Object.keys(importer.clock_sync_markers_), 1);
+    assert.lengthOf(importer.snapshots_, 1);
+    assert.lengthOf(Object.keys(importer.processes_), 2);
+    assert.lengthOf(Object.keys(importer.processes_['37']), 1);
+    assert.lengthOf(Object.keys(importer.processes_['788']), 3);
+    assert.lengthOf(Object.keys(importer.processes_['788'].threads), 2);
+
+    const snapshot = importer.snapshots_[0];
+    assert.strictEqual(snapshot.ts, '21917568');
+    assert.lengthOf(Object.keys(snapshot.memdump), 1);
+    assert.lengthOf(Object.keys(snapshot.memdump['788']), 9);
+  });
+
+  test('importEvents', function() {
+    const model = new tr.Model();
+    const proc788 = model.getOrCreateProcess(788);
+    const importer = new Importer(model, TEST_DATA);
+    importer.importEvents();
+    assert.strictEqual(proc788.name, 'system_server');
+    assert.lengthOf(model.globalMemoryDumps, 1);
+
+    const gmd = model.globalMemoryDumps[0];
+    assert.lengthOf(Object.keys(gmd.processMemoryDumps), 1);
+    const pmd = gmd.processMemoryDumps['788'];
+    assert.strictEqual(pmd.totals.residentBytes, 249348 * 1024);
+
+    const vmRegions = pmd.vmRegions.allRegionsForTesting;
+    assert.lengthOf(vmRegions, 1);
+    const vmRegion = vmRegions[0];
+    assert.deepEqual(vmRegion.byteStats, pmd.vmRegions.byteStats);
+    assert.strictEqual(vmRegion.byteStats.swapped, 10240);
+    assert.strictEqual(vmRegion.mappedFile, 'foo');
+    assert.strictEqual(vmRegion.protectionFlags, 134);
+    assert.strictEqual(vmRegion.sizeInBytes, 16384);
+  });
+});
+</script>

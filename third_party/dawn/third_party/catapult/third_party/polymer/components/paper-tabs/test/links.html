@@ -1,0 +1,163 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<html>
+  <head>
+
+    <title>paper-tabs-links</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../paper-tabs.html">
+    <link rel="import" href="../../iron-test-helpers/iron-test-helpers.html">
+
+  </head>
+  <body>
+
+    <test-fixture id="links">
+      <template>
+        <paper-tabs>
+          <paper-tab link><a href="#one" tabindex="-1">ONE</a></paper-tab>
+          <paper-tab link><a href="#two" tabindex="-1">TWO</a></paper-tab>
+          <paper-tab link><a href="#three" tabindex="-1">THREE</a></paper-tab>
+        </paper-tabs>
+      </template>
+    </test-fixture>
+
+    <test-fixture id="not-links">
+      <template>
+        <paper-tabs>
+          <paper-tab><a href="#one" tabindex="-1">ONE</a></paper-tab>
+          <paper-tab><a href="#two" tabindex="-1">TWO</a></paper-tab>
+          <paper-tab><a href="#three" tabindex="-1">THREE</a></paper-tab>
+        </paper-tabs>
+      </template>
+    </test-fixture>
+
+    <test-fixture id="not-first-child">
+      <template>
+        <paper-tabs>
+          <paper-tab>
+            <div>
+              <a href="#one" tabindex="-1">ONE</a>
+            </div>
+          </paper-tab>
+          <paper-tab>
+            <div>
+              <a href="#two" tabindex="-1">TWO</a>
+            </div>
+          </paper-tab>
+          <paper-tab>
+            <div>
+              <a href="#three" tabindex="-1">THREE</a>
+            </div>
+          </paper-tab>
+        </paper-tabs>
+      </template>
+    </test-fixture>
+
+    <script>
+
+      suite('links', function() {
+
+        suite('has link attribute', function() {
+
+          var tabs;
+          var tab, anchor;
+
+          setup(function () {
+            tabs = fixture('links');
+            tab = tabs.querySelectorAll('paper-tab')[1];
+            anchor = tab.querySelector('a');
+          });
+
+          test('pressing enter on tab causes anchor click', function(done) {
+            tab.addEventListener('click', function onTabClick(event) {
+              tab.removeEventListener('click', onTabClick);
+
+              expect(event.target).to.be.equal(anchor);
+              done();
+            });
+
+            MockInteractions.pressEnter(tab);
+          });
+
+          test('pressing space on tab causes anchor click', function(done) {
+            tab.addEventListener('click', function onTabClick(event) {
+              tab.removeEventListener('click', onTabClick);
+
+              expect(event.target).to.be.equal(anchor);
+              done();
+            });
+
+            MockInteractions.pressSpace(tab);
+          });
+
+        });
+
+        suite('does not have link attribute', function() {
+
+          var tabs;
+          var tab, anchor;
+
+          setup(function () {
+            tabs = fixture('not-links');
+            tab = tabs.querySelectorAll('paper-tab')[1];
+            anchor = tab.querySelector('a');
+          });
+
+          test('pressing enter on tab does not cause anchor click', function(done) {
+            tab.addEventListener('click', function onTabClick(event) {
+              tab.removeEventListener('click', onTabClick);
+
+              expect(event.target).to.not.equal(anchor);
+              expect(event.target).to.be.equal(tab);
+              done();
+            });
+
+            MockInteractions.pressEnter(tab);
+          });
+
+        });
+
+        suite('not first child', function() {
+
+          var tabs;
+          var tab, anchor;
+
+          setup(function () {
+            tabs = fixture('links');
+            tab = tabs.querySelectorAll('paper-tab')[1];
+            anchor = tab.querySelector('a');
+          });
+
+          test('pressing enter on tab causes anchor click', function(done) {
+            tab.addEventListener('click', function onTabClick(event) {
+              tab.removeEventListener('click', onTabClick);
+
+              expect(event.target).to.be.equal(anchor);
+              done();
+            });
+
+            MockInteractions.pressEnter(tab);
+          });
+
+        });
+
+      });
+
+    </script>
+
+  </body>
+</html>

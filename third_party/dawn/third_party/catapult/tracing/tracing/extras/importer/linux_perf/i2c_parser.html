@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses i2c driver events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux i2c trace events.
+   * @constructor
+   */
+  function I2cParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('i2c_write',
+        I2cParser.prototype.i2cWriteEvent.bind(this));
+    importer.registerEventHandler('i2c_read',
+        I2cParser.prototype.i2cReadEvent.bind(this));
+    importer.registerEventHandler('i2c_reply',
+        I2cParser.prototype.i2cReplyEvent.bind(this));
+    importer.registerEventHandler('i2c_result',
+        I2cParser.prototype.i2cResultEvent.bind(this));
+  }
+
+  // Matches the i2c_write and i2c_reply records
+  const i2cWriteReplyRE = new RegExp(
+      'i2c-(\\d+) #(\\d+) a=([\\da-fA-F]+) f=([\\da-fA-F]+) l=(\\d+) ' +
+      '(\\[[\\da-fA-F\\-]+\\])');
+  // Matches the i2c_read record
+  const i2cReadRE = /i2c-(\d+) #(\d+) a=([\da-fA-F]+) f=([\da-fA-F]+) l=(\d+)/;
+  // Matches the i2c_result record
+  const i2cResultRE = /i2c-(\d+) n=(\d+) ret=(\d+)/;
+
+  I2cParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses i2c events and sets up state in the importer.
+     */
+    i2cWriteEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = i2cWriteReplyRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const adapterNumber = parseInt(event[1]);
+      const messageNumber = event[2];
+      const address = event[3];
+      const flags = event[4];
+      const dataLength = event[5];
+      const data = event[6];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'i2c adapter ' + adapterNumber);
+
+      pushLastSliceIfNeeded(thread, event[1], ts);
+
+      thread.lastEntryTitle = 'i2c write';
+      thread.lastEntryTs = ts;
+      thread.lastEntryArgs = {
+        'Message number': messageNumber,
+        'Address': address,
+        'Flags': flags,
+        'Data Length': dataLength,
+        'Data': data
+      };
+
+      return true;
+    },
+
+    i2cReadEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = i2cReadRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const adapterNumber = parseInt(event[1]);
+      const messageNumber = event[2];
+      const address = event[3];
+      const flags = event[4];
+      const dataLength = event[5];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'i2c adapter ' + adapterNumber);
+
+      pushLastSliceIfNeeded(thread, event[1], ts);
+
+      thread.lastEntryTitle = 'i2c read';
+      thread.lastEntryTs = ts;
+      thread.lastEntryArgs = {
+        'Message number': messageNumber,
+        'Address': address,
+        'Flags': flags,
+        'Data Length': dataLength
+      };
+
+      return true;
+    },
+
+    i2cReplyEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = i2cWriteReplyRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const adapterNumber = parseInt(event[1]);
+      const messageNumber = event[2];
+      const address = event[3];
+      const flags = event[4];
+      const dataLength = event[5];
+      const data = event[6];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'i2c adapter ' + adapterNumber);
+
+      pushLastSliceIfNeeded(thread, event[1], ts);
+
+      thread.lastEntryTitle = 'i2c reply';
+      thread.lastEntryTs = ts;
+      thread.lastEntryArgs = {
+        'Message number': messageNumber,
+        'Address': address,
+        'Flags': flags,
+        'Data Length': dataLength,
+        'Data': data
+      };
+
+      return true;
+    },
+
+    i2cResultEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = i2cResultRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const adapterNumber = parseInt(event[1]);
+      const numMessages = event[2];
+      const ret = event[3];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'i2c adapter ' + adapterNumber);
+
+      const args = thread.lastEntryArgs;
+      if (args !== undefined) {
+        args['Number of messages'] = numMessages;
+        args.Return = ret;
+      }
+
+      pushLastSliceIfNeeded(thread, event[1], ts);
+
+      thread.lastEntryTitle = undefined;
+      thread.lastEntryTs = undefined;
+      thread.lastEntryArgs = undefined;
+
+      return true;
+    },
+  };
+
+  function pushLastSliceIfNeeded(thread, id, currentTs) {
+    if (thread.lastEntryTs !== undefined) {
+      const duration = currentTs - thread.lastEntryTs;
+      const slice = new tr.model.ThreadSlice(
+          '', thread.lastEntryTitle,
+          ColorScheme.getColorIdForGeneralPurposeString(id),
+          thread.lastEntryTs, thread.lastEntryArgs, duration);
+      thread.thread.sliceGroup.pushSlice(slice);
+    }
+  }
+
+  Parser.register(I2cParser);
+
+  return {
+    I2cParser,
+  };
+});
+</script>

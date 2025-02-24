@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/profile_node.html">
+<link rel="import" href="/tracing/model/sample.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+<link rel="import" href="/tracing/ui/tracks/sample_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SampleTrack = tr.ui.tracks.SampleTrack;
+  const Sample = tr.model.Sample;
+  const ProfileNode = tr.model.ProfileNode;
+
+  test('modelMapping', function() {
+    const track = new SampleTrack(new tr.ui.TimelineViewport());
+    const node = new ProfileNode(1, {
+      functionName: 'a'
+    }, undefined);
+    const sample = new Sample(10, 'instructions_retired', node);
+    track.samples = [sample];
+    const me0 = track.rects[0].modelItem;
+    assert.strictEqual(me0, sample);
+  });
+});
+</script>
+

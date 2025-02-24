@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ThreadSlice = tr.model.ThreadSlice;
+  const Process = tr.model.Process;
+  const Thread = tr.model.Thread;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newAsyncSlice = tr.c.TestUtils.newAsyncSlice;
+  const newThreadSlice = tr.c.TestUtils.newThreadSlice;
+  const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+
+  test('threadBounds_Empty', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.updateBounds();
+    assert.isUndefined(t.bounds.min);
+    assert.isUndefined(t.bounds.max);
+  });
+
+  test('threadBounds_SubRow', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 3));
+    t.updateBounds();
+    assert.strictEqual(t.bounds.min, 1);
+    assert.strictEqual(t.bounds.max, 4);
+  });
+
+  test('threadBounds_AsyncSliceGroup', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 3));
+    t.asyncSliceGroup.push(newAsyncSlice(0.1, 5, t, t));
+    t.updateBounds();
+    assert.strictEqual(t.bounds.min, 0.1);
+    assert.strictEqual(t.bounds.max, 5.1);
+  });
+
+  test('threadBounds_Cpu', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.timeSlices = [newSliceEx({title: 'x', start: 0, duration: 1})];
+    t.updateBounds();
+    assert.strictEqual(t.bounds.min, 0);
+    assert.strictEqual(t.bounds.max, 1);
+  });
+
+  test('shiftTimestampsForwardWithCpu', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 0, {}, 3));
+    t.asyncSliceGroup.push(newAsyncSlice(0, 5, t, t));
+    t.timeSlices = [newSliceEx({title: 'x', start: 0, duration: 1})];
+
+    let shiftCount = 0;
+    t.asyncSliceGroup.shiftTimestampsForward = function(ts) {
+      if (ts === 0.32) {
+        shiftCount++;
+      }
+    };
+
+    t.shiftTimestampsForward(0.32);
+
+    assert.strictEqual(shiftCount, 1);
+    assert.strictEqual(t.sliceGroup.slices[0].start, 0.32);
+    assert.strictEqual(t.timeSlices[0].start, 0.32);
+  });
+
+  test('shiftTimestampsForwardWithoutCpu', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 0, {}, 3));
+    t.asyncSliceGroup.push(newAsyncSlice(0, 5, t, t));
+
+    let shiftCount = 0;
+    t.asyncSliceGroup.shiftTimestampsForward = function(ts) {
+      if (ts === 0.32) {
+        shiftCount++;
+      }
+    };
+
+    t.shiftTimestampsForward(0.32);
+
+    assert.strictEqual(shiftCount, 1);
+    assert.strictEqual(t.sliceGroup.slices[0].start, 0.32);
+  });
+
+  test('getSchedulingStatsForRange', function() {
+    let scheduledThread = undefined;
+    let unscheduledThread = undefined;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      unscheduledThread = model.getOrCreateProcess(1).getOrCreateThread(1);
+      unscheduledThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'work', start: 0, duration: 20}));
+
+      scheduledThread = model.getOrCreateProcess(2).getOrCreateThread(2);
+      scheduledThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'work', start: 0, duration: 20}));
+      scheduledThread.timeSlices = [
+        newThreadSlice(scheduledThread, SCHEDULING_STATE.RUNNING, 0, 3),
+        newThreadSlice(scheduledThread, SCHEDULING_STATE.RUNNABLE, 3, 5),
+        newThreadSlice(scheduledThread, SCHEDULING_STATE.RUNNING, 8, 2),
+        newThreadSlice(scheduledThread, SCHEDULING_STATE.SLEEPING, 10, 10)
+      ];
+    });
+
+    // thread without scheduling states
+    let stats = unscheduledThread.getSchedulingStatsForRange(0, 20);
+    assert.deepEqual(stats, {});
+
+    // no scheduling info
+    stats = scheduledThread.getSchedulingStatsForRange(50, 100);
+    assert.deepEqual(stats, {});
+
+    // simple query
+    stats = scheduledThread.getSchedulingStatsForRange(0, 3);
+    let expected = {};
+    expected[SCHEDULING_STATE.RUNNING] = 3;
+    assert.deepEqual(stats, expected);
+
+    // aggregation
+    stats = scheduledThread.getSchedulingStatsForRange(0, 20);
+    expected = {};
+    expected[SCHEDULING_STATE.RUNNING] = 5;
+    expected[SCHEDULING_STATE.RUNNABLE] = 5;
+    expected[SCHEDULING_STATE.SLEEPING] = 10;
+    assert.deepEqual(stats, expected);
+  });
+
+  test('getCpuTimeForRange', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(1);
+      const sliceSpecs = [
+        {wallTimeBounds: [100, 200], cpuStart: 120, cpuDuration: 50},
+        {wallTimeBounds: [300, 600], cpuStart: 350, cpuDuration: 150}
+      ];
+      for (const sliceSpec of sliceSpecs) {
+        thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+          type: tr.model.ThreadSlice,
+          isTopLevel: true,
+          start: sliceSpec.wallTimeBounds[0],
+          duration: sliceSpec.wallTimeBounds[1] - sliceSpec.wallTimeBounds[0],
+          cpuStart: sliceSpec.cpuStart,
+          cpuDuration: sliceSpec.cpuDuration,
+        }));
+      }
+    });
+
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(1);
+    const bounds = new tr.b.math.Range.fromExplicitRange(150, 400);
+    // 1/2 of first slice + 1/3 of second slice
+    const expectedCpuTime = 25 + 50;
+
+    // Should be essentially equal, but choosing a very small epsilon 1e-7
+    // to allow for floating point errors.
+    assert.closeTo(thread.getCpuTimeForRange(bounds), expectedCpuTime, 1e-7);
+  });
+
+  test('typeGetterReturnsCorrectType', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      const thread1 = process.getOrCreateThread(1);
+      const thread2 = process.getOrCreateThread(2);
+      const thread3 = process.getOrCreateThread(3);
+      const thread4 = process.getOrCreateThread(4);
+
+      thread1.name = 'ThreadName12';
+      thread2.name = 'ThreadName/34123';
+      thread3.name = 'ThreadName1/34123';
+      thread4.name = 'ThreadName';
+
+      assert.strictEqual(thread1.type, 'ThreadName');
+      assert.strictEqual(thread2.type, 'ThreadName');
+      assert.strictEqual(thread3.type, 'ThreadName');
+      assert.strictEqual(thread4.type, 'ThreadName');
+    });
+  });
+
+  test('typeGetterThrowsIfThreadNameStartsWithNumberOrSlash', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      const thread1 = process.getOrCreateThread(1);
+      const thread2 = process.getOrCreateThread(2);
+      const thread3 = process.getOrCreateThread(3);
+
+      thread1.name = '123';
+      thread2.name = '42GPU';
+      thread3.name = '/123';
+
+      assert.throws(() => thread1.type);
+      assert.throws(() => thread2.type);
+      assert.throws(() => thread3.type);
+    });
+  });
+});
+</script>
+

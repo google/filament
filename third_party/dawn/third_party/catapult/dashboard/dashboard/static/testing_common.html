@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+// This variable name is supposed to not be camelCased, in order for it
+// to match up with the file name.
+// eslint-disable-next-line
+const testing_common = (function() {
+  const originalXMLHttpRequest = window.XMLHttpRequest;
+  let fixture = null;
+  let xhrMock = null;
+
+  const XMLHttpRequestMock = function() {
+    this.responseMap_ = {};
+    window.XMLHttpRequest = MockXMLHttpRequest;
+  };
+
+  XMLHttpRequestMock.prototype.add = function(param, response) {
+    if (param != '*') {
+      param = sortQueryPart(param);
+    }
+    this.responseMap_[param] = response;
+  };
+
+  function addXhrMock(param, response) {
+    if (!xhrMock) {
+      xhrMock = new XMLHttpRequestMock();
+    }
+    xhrMock.add(param, response);
+  }
+
+  function clearXhrMock() {
+    window.XMLHttpRequest = originalXMLHttpRequest;
+    xhrMock = null;
+  }
+
+  class MockXMLHttpRequest {
+    constructor() {
+      this.status = 200;
+    }
+
+    onerror() {
+      // TODO(chrisphan): Add support for error state.
+    }
+
+    open(method, url, async) {
+      this.url = url;
+    }
+
+    getRegexpResponseMatch(requestStr) {
+      for (const pattern in xhrMock.responseMap_) {
+        if (pattern == '*') {
+          continue;
+        }
+        if (requestStr.match(pattern)) {
+          return xhrMock.responseMap_[pattern];
+        }
+      }
+      return null;
+    }
+
+    abort() {
+    }
+
+    setRequestHeader() {
+    }
+
+    onload() {
+    }
+
+    send(param) {
+      let url = this.url;
+      if (param == null && this.url.indexOf('?') != -1) {
+        const parts = url.split('?');
+        url = parts[0];
+        param = parts[1];
+      }
+      const requestStr = url + '?' + sortQueryPart(param);
+      if (requestStr in xhrMock.responseMap_) {
+        this.responseText = xhrMock.responseMap_[requestStr];
+        this.onload();
+      } else if (this.getRegexpResponseMatch(requestStr)) {
+        this.responseText = this.getRegexpResponseMatch(requestStr);
+        this.onload();
+      } else if ('*' in xhrMock.responseMap_) {
+        this.responseText = xhrMock.responseMap_['*'];
+        this.onload();
+      } else {
+        throw new Error('XMLHttpRequest sent without a handler: ' +
+            requestStr);
+      }
+    }
+  }
+
+  /**
+   * Does a deep copy of the object.
+   * @param {*} obj Object to copy.
+   * @return {*} A copy of the object.
+   */
+  function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function addToFixture(node) {
+    if (!fixture) {
+      fixture = document.createElement('div');
+      Polymer.dom(document.body).appendChild(fixture);
+    }
+    Polymer.dom(fixture).appendChild(node);
+  }
+
+  function clearFixture() {
+    if (fixture) {
+      Polymer.dom(fixture).innerHTML = '';
+    }
+  }
+
+  const paramString = function(params) {
+    const keys = Object.keys(params).sort();
+    return keys.map(function(key) {
+      return key + '=' + encodeURIComponent(params[key]);
+    }).join('&');
+  };
+
+  const sortQueryPart = function(paramStr) {
+    const params = {};
+    const path = paramStr.substring(0, paramStr.indexOf('?') + 1);
+    let query = paramStr.substring(paramStr.indexOf('?') + 1);
+    const queryParts = query.split('&');
+    for (let i = 0; i < queryParts.length; i++) {
+      const pair = queryParts[i].split('=');
+      params[pair[0]] = pair.length == 1 ? '' : pair[1];
+    }
+    const keys = Object.keys(params).sort();
+    query = keys.map(function(key) {
+      return key + '=' + params[key];
+    }).join('&');
+    return path + query;
+  };
+
+  function mockChartJson(mockData, mockSelectedData, sid) {
+    let selectedParams;
+    let unselectedParams;
+    if (sid) {
+      selectedParams = {
+        sid,
+        'test_path_dict': mockData.testPathDict,
+        'is_selected': true
+      };
+      unselectedParams = {
+        sid,
+        'test_path_dict': mockData.testPathDict
+      };
+    } else {
+      selectedParams = {
+        'test_path_dict': mockData.testPathDict,
+        'is_selected': true
+      };
+      unselectedParams = {
+        'test_path_dict': mockData.testPathDict
+      };
+    }
+    const selectedGraphQuery = ('/graph_json?graphs=' +
+        encodeURIComponent(JSON.stringify(selectedParams)));
+    addXhrMock(selectedGraphQuery, JSON.stringify(
+        mockSelectedData || mockData.graphSelectedJson));
+    const unselectedGraphQuery = ('/graph_json?graphs=' +
+        encodeURIComponent(JSON.stringify(unselectedParams)));
+    addXhrMock(
+        unselectedGraphQuery, JSON.stringify(mockData.graphUnselectedJson));
+    const revisionQuery = ('/graph_revisions?test_path=' +
+        encodeURIComponent(mockData.testPath));
+    addXhrMock(
+        revisionQuery, JSON.stringify(mockData.graphRevisionJson));
+  }
+
+  return {
+    addXhrMock,
+    clearXhrMock,
+    deepCopy,
+    addToFixture,
+    clearFixture,
+    mockChartJson,
+    paramString,
+    sortQueryPart
+  };
+})();
+</script>

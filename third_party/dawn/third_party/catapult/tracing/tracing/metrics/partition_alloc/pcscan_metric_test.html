@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_processes.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/partition_alloc/pcscan_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const CHROME_PROCESS_NAMES =
+       tr.e.chrome.chrome_processes.CHROME_PROCESS_NAMES;
+
+  function makeTestModelFor(processName) {
+    return tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const process = (processName === CHROME_PROCESS_NAMES.RENDERER ?
+        model.rendererProcess : model.browserProcess);
+      const thread = process.getOrCreateThread(2);
+      // Create slices.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Scanner',
+        start: 200,
+        duration: 100,
+        cpuStart: 200,
+        cpuDuration: 100
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Mutator',
+        start: 200,
+        duration: 50,
+        cpuStart: 200,
+        cpuDuration: 50
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Scanner.Clear',
+        start: 200,
+        duration: 16,
+        cpuStart: 200,
+        cpuDuration: 16
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Scanner.Scan',
+        start: 216,
+        duration: 32,
+        cpuStart: 216,
+        cpuDuration: 32
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Mutator.Clear',
+        start: 210,
+        duration: 8,
+        cpuStart: 210,
+        cpuDuration: 8
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Mutator.ScanStack',
+        start: 218,
+        duration: 14,
+        cpuStart: 218,
+        cpuDuration: 14
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Mutator.Scan',
+        start: 232,
+        duration: 16,
+        cpuStart: 232,
+        cpuDuration: 16
+      }));
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'partition_alloc',
+        title: 'PCScan.Scanner.Sweep',
+        start: 248,
+        duration: 42,
+        cpuStart: 248,
+        cpuDuration: 42
+      }));
+      // Create counters.
+      const quarantineSizeCounter = process.getOrCreateCounter('partition_alloc', 'PCScan.SurvivedQuarantineSize');
+      const quarantineSizeSeries = new tr.model.CounterSeries('value', 0);
+      quarantineSizeSeries.addCounterSample(1, 200000);
+      quarantineSizeSeries.addCounterSample(3, 300000);
+      quarantineSizeCounter.addSeries(quarantineSizeSeries);
+      const quarantineRateCounter = process.getOrCreateCounter('partition_alloc', 'PCScan.SurvivedQuarantinePercent');
+      const quarantineRateSeries = new tr.model.CounterSeries('value', 0);
+      quarantineRateSeries.addCounterSample(1, 0.14 * 1000);
+      quarantineRateSeries.addCounterSample(3, 0.21 * 1000);
+      quarantineRateCounter.addSeries(quarantineRateSeries);
+    });
+  }
+
+  function testPCScanMetrics(processName) {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.pa.pcscanMetric(histograms, makeTestModelFor(processName));
+    assert.closeTo(100, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':scanner').average, 1e-2);
+    assert.closeTo(50, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':mutator').average, 1e-2);
+    assert.closeTo(16, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':scanner:clear').average, 1e-2);
+    assert.closeTo(32, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':scanner:scan').average, 1e-2);
+    assert.closeTo(8, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':mutator:clear').average, 1e-2);
+    assert.closeTo(14, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':mutator:scan_stack').average, 1e-2);
+    assert.closeTo(16, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':mutator:scan').average, 1e-2);
+    assert.closeTo(42, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':scanner:sweep').average, 1e-2);
+    assert.closeTo(250000, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':survived_quarantine_size').average, 1e-2);
+    assert.closeTo(0.175, histograms.getHistogramNamed(
+        'pa:pcscan:' + processName + ':survived_quarantine_percent').average, 1e-2);
+  }
+
+  test('pcscanMetricForBrowser', function() {
+    testPCScanMetrics(CHROME_PROCESS_NAMES.BROWSER);
+  });
+
+  test('pcscanMetricForRenderer', function() {
+    testPCScanMetrics(CHROME_PROCESS_NAMES.RENDERER);
+  });
+});
+</script>

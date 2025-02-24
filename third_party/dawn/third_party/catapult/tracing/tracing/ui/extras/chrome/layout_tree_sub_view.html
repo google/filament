@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/layout_tree.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+
+<dom-module id='tr-ui-a-layout-tree-sub-view'>
+  <template>
+    <style>
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+    <div id="content"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  Polymer({
+    is: 'tr-ui-a-layout-tree-sub-view',
+    behaviors: ['tr-ui-a-sub-view'],
+
+    set selection(selection) {
+      this.currentSelection_ = selection;
+      this.updateContents_();
+    },
+
+    get selection() {
+      return this.currentSelection_;
+    },
+
+    updateContents_() {
+      this.set('$.content.textContent', '');
+      if (!this.currentSelection_) return;
+
+      const columns = [
+        {
+          title: 'Tag/Name',
+          value(layoutObject) {
+            return layoutObject.tag || ':' + layoutObject.name;
+          }
+        },
+
+        {
+          title: 'htmlId',
+          value(layoutObject) {
+            return layoutObject.htmlId || '';
+          }
+        },
+
+        {
+          title: 'classNames',
+          value(layoutObject) {
+            return layoutObject.classNames || '';
+          }
+        },
+
+        {
+          title: 'reasons',
+          value(layoutObject) {
+            return layoutObject.needsLayoutReasons.join(', ');
+          }
+        },
+
+        {
+          title: 'width',
+          value(layoutObject) {
+            return layoutObject.absoluteRect.width;
+          }
+        },
+
+        {
+          title: 'height',
+          value(layoutObject) {
+            return layoutObject.absoluteRect.height;
+          }
+        },
+
+        {
+          title: 'absX',
+          value(layoutObject) {
+            return layoutObject.absoluteRect.left;
+          }
+        },
+
+        {
+          title: 'absY',
+          value(layoutObject) {
+            return layoutObject.absoluteRect.top;
+          }
+        },
+
+        {
+          title: 'relX',
+          value(layoutObject) {
+            return layoutObject.relativeRect.left;
+          }
+        },
+
+        {
+          title: 'relY',
+          value(layoutObject) {
+            return layoutObject.relativeRect.top;
+          }
+        },
+
+        {
+          title: 'float',
+          value(layoutObject) {
+            return layoutObject.isFloat ? 'float' : '';
+          }
+        },
+
+        {
+          title: 'positioned',
+          value(layoutObject) {
+            return layoutObject.isPositioned ? 'positioned' : '';
+          }
+        },
+
+        {
+          title: 'relative',
+          value(layoutObject) {
+            return layoutObject.isRelativePositioned ? 'relative' : '';
+          }
+        },
+
+        {
+          title: 'sticky',
+          value(layoutObject) {
+            return layoutObject.isStickyPositioned ? 'sticky' : '';
+          }
+        },
+
+        {
+          title: 'anonymous',
+          value(layoutObject) {
+            return layoutObject.isAnonymous ? 'anonymous' : '';
+          }
+        },
+
+        {
+          title: 'row',
+          value(layoutObject) {
+            if (layoutObject.tableRow === undefined) {
+              return '';
+            }
+            return layoutObject.tableRow;
+          }
+        },
+
+        {
+          title: 'col',
+          value(layoutObject) {
+            if (layoutObject.tableCol === undefined) {
+              return '';
+            }
+            return layoutObject.tableCol;
+          }
+        },
+
+        {
+          title: 'rowSpan',
+          value(layoutObject) {
+            if (layoutObject.tableRowSpan === undefined) {
+              return '';
+            }
+            return layoutObject.tableRowSpan;
+          }
+        },
+
+        {
+          title: 'colSpan',
+          value(layoutObject) {
+            if (layoutObject.tableColSpan === undefined) {
+              return '';
+            }
+            return layoutObject.tableColSpan;
+          }
+        },
+
+        {
+          title: 'address',
+          value(layoutObject) {
+            return layoutObject.id.toString(16);
+          }
+        }
+      ];
+
+      const table = this.ownerDocument.createElement('tr-ui-b-table');
+      table.defaultExpansionStateCallback = function(
+          layoutObject, parentLayoutObject) {
+        return true;
+      };
+      table.subRowsPropertyName = 'childLayoutObjects';
+      table.tableColumns = columns;
+      table.tableRows = this.currentSelection_.map(function(snapshot) {
+        return snapshot.rootLayoutObject;
+      });
+      table.rebuild();
+      Polymer.dom(this.$.content).appendChild(table);
+    },
+  });
+
+  return {};
+});
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-layout-tree-sub-view',
+    tr.e.chrome.LayoutTreeSnapshot,
+    {
+      multi: false,
+      title: 'Layout Tree',
+    });
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-layout-tree-sub-view',
+    tr.e.chrome.LayoutTreeSnapshot,
+    {
+      multi: true,
+      title: 'Layout Trees',
+    });
+</script>
+

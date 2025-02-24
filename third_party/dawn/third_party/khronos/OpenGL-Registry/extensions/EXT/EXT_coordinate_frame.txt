@@ -1,0 +1,205 @@
+        INCOMPLETE - DO NOT RELEASE IMPLEMENTATIONS OF THIS EXTENSION
+
+Name
+
+    EXT_coordinate_frame
+
+Name Strings
+
+    GL_EXT_coordinate_frame
+
+Version
+
+    $Date: 1998/09/26 02:48:47 $ $Revision: 1.3 $
+
+Number
+
+    156
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+Overview
+
+    This extension allows specifying a per-vertex tangent and binormal
+    vector in addition to the normal vector, defining a coordinate frame.
+    The coordinate frame is used in additional extensions which also build
+    on fragment lighting to achieve bump mapping.
+
+Patent Note
+
+    To the extent that SGI has patent rights that are unavoidably
+    infringed by all implementations of this extension, SGI will, upon
+    request, grant a license under such patent rights to the requesting
+    party subject to reasonable terms and conditions, and without
+    incremental charge or fee. Such license shall be non-exclusive, and
+    non-transferable, and shall be limited to implementations of the
+    extension in combination with any conformance certified
+    implementation of the OpenGL API. Such license is expressly
+    contingent upon a grant back of a non-exclusive, royalty-free,
+    perpetual, worldwide license to SGI and its OpenGL licensees under
+    the requesting party's patent rights that are unavoidably infringed
+    by all implementations of this extension or OpenGL.
+
+Issues
+
+    * Evaluators.
+
+    We need to address how evaluators can generate these values.
+
+New Procedures and Functions
+
+    void Tangent3{bdfis}EXT(T coords);
+    void Tangent3{bdfis}EXTv(T coords);
+
+    void Binormal3{bdfis}EXT(T coords);
+    void Binormal3{bdfis}vEXT(T coords);
+
+    void TangentPointerEXT(enum type, sizei stride, void *pointer);
+    void BinormalPointerEXT(enum type, sizei stride, void *pointer);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        TANGENT_ARRAY_EXT               0x8439
+        BINORMAL_ARRAY_EXT              0x843A
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        CURRENT_TANGENT_EXT             0x843B
+        CURRENT_BINORMAL_EXT            0x843C
+        TANGENT_ARRAY_TYPE_EXT          0x843E
+        TANGENT_ARRAY_STRIDE_EXT        0x843F
+        BINORMAL_ARRAY_TYPE_EXT         0x8440
+        BINORMAL_ARRAY_STRIDE_EXT       0x8441
+
+    Accepted by the <pname> parameter of GetPointervEXT:
+        TANGENT_ARRAY_POINTER_EXT       0x8442
+        BINORMAL_ARRAY_POINTER_EXT      0x8443
+
+    Accepted by the <target> parameter of Map1,Map2:
+
+        MAP1_TANGENT_EXT                0x8444
+        MAP2_TANGENT_EXT                0x8445
+        MAP1_BINORMAL_EXT               0x8446
+        MAP2_BINORMAL_EXT               0x8447
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    Section 2.6 is amended to read:
+
+    In addition, a current normal, tangent, binormal,
+    current texture coordinates...
+
+    Figure 2.2 is amended to read
+    Current Normal,Tangent,Binormal...
+
+    Figure 2.6.3 is amended to read:
+
+    The only GL commands that are allowed within any Begin/End
+    pairs are the commands for specifying vertex coordinates,
+    normal coordinates, tangent coordinates, binormal coordinates,
+    and texture coordinates (Vertex, Color, Index, Normal,
+    Tangent, Binormal, TexCoord)
+
+    Section 2.7 is amended to read:
+
+    The current normal, tangent and binormal are set using
+
+        void Normal3{bsifd}( T coords ) ;
+        void Normal3{bsifd}v( T coords ) ;
+        void Tangent3{bsifd}EXT( T coords ) ;
+        void Tangent3{bsifd}vEXT( T coords ) ;
+        void Binormal3{bsifd}EXT( T coords ) ;
+        void Binormal3{bsifd}vEXT( T coords ) ;
+
+    The current normal, tangent and binormal are set to the given...
+    Byte, short, or integer values passed to Normal, Tangent or Binormal...
+
+    Section 2.8 is amended to read:
+
+    The client may specify up to 8 arrays: one each to store edge flags,
+    texture coordinates, colors, color indices, normals, tangents, binormals,
+    and vertices.
+
+        void    TangentPointerEXT( enum type, sizei stride, void *pointer);
+        void    BinormalPointerEXT( enum type, sizei stride, void *pointer);
+
+    Because normals, tangents and binormals are always specified...
+    NormalPointer, TangentPointerEXT and BinormalPointerEXT
+
+    etc, etc in 2.7.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Add MAP1_TANGENT_EXT and MAP1_BINORMAL_EXT to table 5.1 right after
+    the MAP1_NORMAL_EXT entry.
+
+    Change the section that starts with "Finally, if either MAP2_VERTEX_3 or
+    MAP2_VERTEX_4 is enabled, then the normal to the surface is computed."
+
+    to include "tangent and binormal" references after each reference to
+    normal.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    tables are extended with state values from New State section
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - not yet complete
+
+Errors
+
+    INVALID_ENUM is generated if TangentPointerEXT parameter <type> is not
+    BYTE, SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if TangentPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_ENUM is generated if BinormalPointerEXT parameter <type> is not
+    BYTE, SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if BinormalPointerEXT parameter <stride> or
+    <count> is negative.
+
+New State
+
+    Get Value                   Get Command     Type    Initial Value   Attribute
+    ---------                   -----------     ----    -------------   ---------
+
+    CURRENT_TANGENT_EXT         GetFloatv       R3      1,0,0           current
+    CURRENT_BINORMAL_EXT        GetFloatv       R3      0,1,0           current
+    TANGENT_ARRAY_EXT           IsEnabled       B       False           vertex-array
+    TANGENT_ARRAY_TYPE_EXT      GetIntegerv     Z5      FLOAT           vertex-array
+    TANGENT_ARRAY_STRIDE_EXT    GetIntegerv     Z+      0               vertex-array
+    TANGENT_ARRAY_COUNT_EXT     GetIntegerv     Z+      0               vertex-array
+    TANGENT_ARRAY_POINTER_EXT   GetPointerv     Z+      0               vertex-array
+    BINORMAL_ARRAY_EXT          IsEnabled       B       False           vertex-array
+    BINORMAL_ARRAY_TYPE_EXT     GetIntegerv     Z5      FLOAT           vertex-array
+    BINORMAL_ARRAY_STRIDE_EXT   GetIntegerv     Z+      0               vertex-array
+    BINORMAL_ARRAY_COUNT_EXT    GetIntegerv     Z+      0               vertex-array
+    BINORMAL_ARRAY_POINTER_EXT  GetPointerv     Z+      0               vertex-array
+
+New Implementation Dependent State
+
+    None
+

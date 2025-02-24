@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::DescriptorPool_" name="pvrvk::impl::DescriptorPool_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkDescriptorPool,\l ObjectType::e_DESCRIPTOR_POOL \&gt;" alt="" coords="241,5,503,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkDescriptorPool,\l PVRVkObjectType \&gt;" alt="" coords="5,5,193,61"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; DescriptorPool_ \&gt;" alt="" coords="259,86,485,127"/>
+</map>

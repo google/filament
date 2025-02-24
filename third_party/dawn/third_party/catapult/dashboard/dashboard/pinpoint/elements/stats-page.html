@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/loading-wrapper.html">
+
+<dom-module id="stats-page">
+  <template>
+    <style include="base-style">
+      td {
+        text-align: center;
+      }
+
+      svg {
+        fill: var(--paper-indigo-500);
+        height: 56px;
+        overflow: visible;
+        width: 505px;
+      }
+    </style>
+
+    <h1>Stats</h1>
+    <loading-wrapper url="/api/stats" response="{{jobs}}">
+      <h2>Reliability and reproducibility</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>
+            <th>Total jobs
+            <th>Repro
+            <th>No repro
+            <th>Failed
+            <th>Cancelled
+        <tbody>
+          <tr>
+            <th>Bisects last 7 days
+            <td>[[completedCount(jobs, 'performance', 7)]]
+            <td>[[reproJobs(jobs, 7)]]
+            <td>[[noReproJobs(jobs, 7)]]
+            <td>[[failedJobs(jobs, 'performance', 7)]]
+            <td>[[cancelledJobs(jobs, 'performance', 7)]]
+          <tr>
+            <th>Bisects last 28 days
+            <td>[[completedCount(jobs, 'performance', 28)]]
+            <td>[[reproJobs(jobs, 28)]]
+            <td>[[noReproJobs(jobs, 28)]]
+            <td>[[failedJobs(jobs, 'performance', 28)]]
+            <td>[[cancelledJobs(jobs, 'performance', 28)]]
+          <tr>
+            <th>Try jobs last 7 days
+            <td>[[completedCount(jobs, 'try', 7)]]
+            <td>
+            <td>
+            <td>[[failedJobs(jobs, 'try', 7)]]
+            <td>[[cancelledJobs(jobs, 'try', 1)]]
+          <tr>
+            <th>Try jobs last 28 days
+            <td>[[completedCount(jobs, 'try', 28)]]
+            <td>
+            <td>
+            <td>[[failedJobs(jobs, 'try', 28)]]
+            <td>[[cancelledJobs(jobs, 'try', 28)]]
+      </table>
+
+      <h2>Latency</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>
+            <th>Total jobs
+            <th>Duration 50%
+            <th>Duration 75%
+            <th>Duration 90%
+            <th>Duration 99%
+            <th>Duration
+        <tbody>
+          <tr>
+            <th>Bisects last 7 days
+            <td>[[completedCount(jobs, 'performance', 7)]]
+            <td>[[completedDuration(jobs, 'performance', 7, 0.50)]]
+            <td>[[completedDuration(jobs, 'performance', 7, 0.75)]]
+            <td>[[completedDuration(jobs, 'performance', 7, 0.90)]]
+            <td>[[completedDuration(jobs, 'performance', 7, 0.99)]]
+            <td><svg id="bisectDurations7"></svg>
+          <tr>
+            <th>Bisects last 28 days
+            <td>[[completedCount(jobs, 'performance', 28)]]
+            <td>[[completedDuration(jobs, 'performance', 28, 0.50)]]
+            <td>[[completedDuration(jobs, 'performance', 28, 0.75)]]
+            <td>[[completedDuration(jobs, 'performance', 28, 0.90)]]
+            <td>[[completedDuration(jobs, 'performance', 28, 0.99)]]
+            <td><svg id="bisectDurations28"></svg>
+          <tr>
+            <th>Try jobs last 7 days
+            <td>[[completedCount(jobs, 'try', 7)]]
+            <td>[[completedDuration(jobs, 'try', 7, 0.50)]]
+            <td>[[completedDuration(jobs, 'try', 7, 0.75)]]
+            <td>[[completedDuration(jobs, 'try', 7, 0.90)]]
+            <td>[[completedDuration(jobs, 'try', 7, 0.99)]]
+            <td><svg id="tryDurations7"></svg>
+          <tr>
+            <th>Try jobs last 28 days
+            <td>[[completedCount(jobs, 'try', 28)]]
+            <td>[[completedDuration(jobs, 'try', 28, 0.50)]]
+            <td>[[completedDuration(jobs, 'try', 28, 0.75)]]
+            <td>[[completedDuration(jobs, 'try', 28, 0.90)]]
+            <td>[[completedDuration(jobs, 'try', 28, 0.99)]]
+            <td><svg id="tryDurations28"></svg>
+      </table>
+    </loading-wrapper>
+  </template>
+
+  <script>
+    'use strict';
+    // This is a list of status messages we'll consider "completed" for a job.
+    const completedStatusList = ['failed', 'cancelled', 'completed'];
+    Polymer({
+      is: 'stats-page',
+
+      properties: {
+        jobs: {
+          type: Object,
+          observer: '_jobsChanged',
+        },
+      },
+
+      _jobsChanged() {
+        this.async(this.drawDurationHistograms, 1);
+      },
+
+      drawDurationHistograms() {
+        const bisectDurations7Days =
+            this.completedDurations(this.jobs, 'performance', 7);
+        const bisectDurations28Days =
+            this.completedDurations(this.jobs, 'performance', 28);
+        const tryDurations7Days =
+            this.completedDurations(this.jobs, 'try', 7);
+        const tryDurations28Days =
+            this.completedDurations(this.jobs, 'try', 28);
+        drawHistogram(
+            d3.select(this.$.bisectDurations7), bisectDurations7Days);
+        drawHistogram(
+            d3.select(this.$.bisectDurations28), bisectDurations28Days);
+        drawHistogram(d3.select(this.$.tryDurations7), tryDurations7Days);
+        drawHistogram(d3.select(this.$.tryDurations28), tryDurations28Days);
+      },
+
+      completedCount(jobs, comparisonMode, days) {
+        return this.completedJobs(jobs, comparisonMode, days).length;
+      },
+
+      failedJobs(jobs, comparisonMode, days) {
+        const completedJobs = this.completedJobs(jobs, comparisonMode, days);
+        const failedJobs = completedJobs.filter(
+            job => job.status.toLowerCase() === 'failed');
+        return formatPercent(failedJobs.length, completedJobs.length);
+      },
+
+      cancelledJobs(jobs, comparisonMode, days) {
+        const completedJobs = this.completedJobs(jobs, comparisonMode, days);
+        const cancelledJobs = completedJobs.filter(
+            job => job.status.toLowerCase() === 'cancelled');
+        return formatPercent(cancelledJobs.length, completedJobs.length);
+      },
+
+      noReproJobs(jobs, days) {
+        const completedJobs = this.completedJobs(jobs, 'performance', days);
+        const passedJobs = completedJobs.filter(
+            job => job.status.toLowerCase() === 'completed');
+        const noReproJobs = passedJobs.filter(job => job.difference_count == 0);
+        return formatPercent(noReproJobs.length, completedJobs.length);
+      },
+
+      reproJobs(jobs, days) {
+        const completedJobs = this.completedJobs(jobs, 'performance', days);
+        const passedJobs = completedJobs.filter(
+            job => job.status.toLowerCase() === 'completed');
+        const reproJobs = passedJobs.filter(job => job.difference_count > 0);
+        return formatPercent(reproJobs.length, completedJobs.length);
+      },
+
+      completedDuration(jobs, comparisonMode, days, p) {
+        const durations = this.completedDurations(jobs, comparisonMode, days);
+        durations.sort((a, b) => a - b);
+        const duration = d3.quantile(durations, p);
+        return formatDuration(duration);
+      },
+
+      completedDurations(jobs, comparisonMode, days) {
+        const completedJobs = this.completedJobs(jobs, comparisonMode, days);
+        // Filter out the cancelled jobs.
+        const finishedJobs = completedJobs.filter(
+            job => job.status.toLowerCase() !== 'cancelled');
+        const durations = finishedJobs.map(function(job) {
+          const durationMs =
+              new Date(job.updated + 'Z') - new Date(job.created + 'Z');
+          return durationMs / 1000 / 60 / 60;
+        });
+        return durations;
+      },
+
+      completedJobs(jobs, comparisonMode, days) {
+        const now = Date.now();
+        const daysInMs = days * 24 * 60 * 60 * 1000;
+        return jobs.filter(job =>
+          (now - new Date(job.created + 'Z')) < daysInMs &&
+          completedStatusList.indexOf(job.status.toLowerCase()) !== -1 &&
+          job.comparison_mode === comparisonMode);
+      },
+
+      selected() {
+        this.$$('loading-wrapper').$.request.generateRequest();
+      },
+    });
+
+    function formatPercent(num, total) {
+      const percent = 100.0 * num / total;
+      return num + ' (' + percent.toFixed(1) + '%)';
+    }
+
+    function formatDuration(durationHr) {
+      return durationHr.toFixed(1) + ' hours';
+    }
+
+    function drawHistogram(svg, values) {
+      const x = d3.scaleLinear()
+          .domain([0, 50])
+          .rangeRound([0, 500]);
+
+      svg.append('g')
+          .attr('transform', 'translate(0, 40)')
+          .call(d3.axisBottom(x).ticks(10));
+
+      const histogram = d3.histogram()
+          .domain([0, d3.max(values)])
+          .thresholds(x.ticks(96));
+      const histogramBins = bins(histogram, values);
+      const maxBucket = d3.max(histogramBins, bucket => bucket.proportion);
+      const y = d3.scaleLinear()
+          .domain([0, maxBucket])
+          .range([40, 0]);
+
+      const rect = svg.selectAll('rect')
+          .data(histogramBins.filter(bin => bin.length));
+      rect.enter().append('rect')
+          .attr('x', d => x(d.x0))
+          .attr('width', d => x(Math.min(d.x1, 50.5)) - x(d.x0))
+          .attr('y', d => y(d.proportion))
+          .attr('height', d => y(0) - y(d.proportion));
+    }
+
+    function bins(histogram, values) {
+      const bins = histogram(values);
+      for (const bin of bins) {
+        bin.proportion = bin.length / values.length;
+      }
+      return bins;
+    }
+  </script>
+</dom-module>

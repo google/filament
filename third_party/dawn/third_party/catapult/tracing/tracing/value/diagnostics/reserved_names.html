@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+  Include all Diagnostic subclasses here so that RESERVED_INFOS always has
+  access to all subclasses.
+-->
+<link rel="import" href="/tracing/value/diagnostics/all_diagnostics.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.d', function() {
+  // Diagnostics that are produced outside of metrics (e.g. by telemetry) use
+  // reserved names.
+  const RESERVED_INFOS = {
+    ALERT_GROUPING: { name: 'alertGrouping', type: tr.v.d.GenericSet },
+    ANGLE_REVISIONS: {name: 'angleRevisions', type: tr.v.d.GenericSet},
+    ARCHITECTURES: {name: 'architectures', type: tr.v.d.GenericSet},
+    BENCHMARKS: {name: 'benchmarks', type: tr.v.d.GenericSet},
+    BENCHMARK_START: {name: 'benchmarkStart', type: tr.v.d.DateRange},
+    BENCHMARK_DESCRIPTIONS: {name: 'benchmarkDescriptions',
+      type: tr.v.d.GenericSet},
+    BOT_ID: {name: 'botId', type: tr.v.d.GenericSet},
+    BOTS: {name: 'bots', type: tr.v.d.GenericSet},
+    BUG_COMPONENTS: {name: 'bugComponents', type: tr.v.d.GenericSet},
+    BUILDS: {name: 'builds', type: tr.v.d.GenericSet},
+    CATAPULT_REVISIONS: {name: 'catapultRevisions', type: tr.v.d.GenericSet},
+    CHROMIUM_COMMIT_POSITIONS: {
+      name: 'chromiumCommitPositions', type: tr.v.d.GenericSet},
+    CHROMIUM_REVISIONS: {name: 'chromiumRevisions', type: tr.v.d.GenericSet},
+    DESCRIPTION: {name: 'description', type: tr.v.d.GenericSet},
+    DEVICE_IDS: {name: 'deviceIds', type: tr.v.d.GenericSet},
+    DOCUMENTATION_URLS: {name: 'documentationLinks', type: tr.v.d.GenericSet},
+    INFO_BLURB: {name: 'infoBlurb', type: tr.v.d.GenericSet},
+    FUCHSIA_GARNET_REVISIONS: {
+      name: 'fuchsiaGarnetRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_INTEGRATION_INTERNAL_REVISIONS: {
+      name: 'fuchsiaIntegrationInternalRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_INTEGRATION_PUBLIC_REVISIONS: {
+      name: 'fuchsiaIntegrationPublicRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_PERIDOT_REVISIONS: {
+      name: 'fuchsiaPeridotRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_SMART_INTEGRATION_REVISIONS: {
+      name: 'fuchsiaSmartIntegrationRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_TOPAZ_REVISIONS: {
+      name: 'fuchsiaTopazRevisions', type: tr.v.d.GenericSet},
+    FUCHSIA_ZIRCON_REVISIONS: {
+      name: 'fuchsiaZirconRevisions', type: tr.v.d.GenericSet},
+    GPUS: {name: 'gpus', type: tr.v.d.GenericSet},
+    IS_REFERENCE_BUILD: {name: 'isReferenceBuild', type: tr.v.d.GenericSet},
+    LABELS: {name: 'labels', type: tr.v.d.GenericSet},
+    LOG_URLS: {name: 'logUrls', type: tr.v.d.GenericSet},
+    MASTERS: {name: 'masters', type: tr.v.d.GenericSet},
+    MEMORY_AMOUNTS: {name: 'memoryAmounts', type: tr.v.d.GenericSet},
+    OS_NAMES: {name: 'osNames', type: tr.v.d.GenericSet},
+    OS_VERSIONS: {name: 'osVersions', type: tr.v.d.GenericSet},
+    OS_DETAILED_VERSIONS: {name: 'osDetailedVersions', type: tr.v.d.GenericSet},
+    OWNERS: {name: 'owners', type: tr.v.d.GenericSet},
+    POINT_ID: {name: 'pointId', type: tr.v.d.GenericSet},
+    PRODUCT_VERSIONS: {name: 'productVersions', type: tr.v.d.GenericSet},
+    REVISION_TIMESTAMPS: {name: 'revisionTimestamps', type: tr.v.d.DateRange},
+    SKIA_REVISIONS: {name: 'skiaRevisions', type: tr.v.d.GenericSet},
+    STATISTICS_NAMES: {name: 'statisticsNames', type: tr.v.d.GenericSet},
+    STORIES: {name: 'stories', type: tr.v.d.GenericSet},
+    STORYSET_REPEATS: {name: 'storysetRepeats', type: tr.v.d.GenericSet},
+    STORY_TAGS: {name: 'storyTags', type: tr.v.d.GenericSet},
+    SUMMARY_KEYS: {name: 'summaryKeys', type: tr.v.d.GenericSet},
+    TEST_PATH: {name: 'testPath', type: tr.v.d.GenericSet},
+    TRACE_START: {name: 'traceStart', type: tr.v.d.DateRange},
+    TRACE_URLS: {name: 'traceUrls', type: tr.v.d.GenericSet},
+    V8_COMMIT_POSITIONS: {name: 'v8CommitPositions', type: tr.v.d.DateRange},
+    V8_REVISIONS: {name: 'v8Revisions', type: tr.v.d.GenericSet},
+    WEBRTC_REVISIONS: {name: 'webrtcRevisions', type: tr.v.d.GenericSet},
+    WEBRTC_INTERNAL_SIRIUS_REVISIONS: {
+      name:'webrtcInternalSiriusRevisions', type: tr.v.d.GenericSet},
+    WEBRTC_INTERNAL_VEGA_REVISIONS: {
+      name:'webrtcInternalVegaRevisions', type: tr.v.d.GenericSet},
+    WEBRTC_INTERNAL_CANOPUS_REVISIONS: {
+      name:'webrtcInternalCanopusRevisions', type: tr.v.d.GenericSet},
+    WEBRTC_INTERNAL_ARCTURUS_REVISIONS: {
+      name:'webrtcInternalArcturusRevisions', type: tr.v.d.GenericSet},
+    WEBRTC_INTERNAL_RIGEL_REVISIONS: {
+      name:'webrtcInternalRigelRevisions', type: tr.v.d.GenericSet},
+  };
+
+  const RESERVED_NAMES = {};
+
+  const RESERVED_NAMES_TO_TYPES = new Map();
+
+  for (const [codename, info] of Object.entries(RESERVED_INFOS)) {
+    RESERVED_NAMES[codename] = info.name;
+    if (RESERVED_NAMES_TO_TYPES.has(info.name)) {
+      throw new Error(`Duplicate reserved name "${info.name}"`);
+    }
+    RESERVED_NAMES_TO_TYPES.set(info.name, info.type);
+  }
+
+  const RESERVED_NAMES_SET = new Set(Object.values(RESERVED_NAMES));
+
+  return {
+    RESERVED_INFOS,
+    RESERVED_NAMES,
+    RESERVED_NAMES_SET,
+    RESERVED_NAMES_TO_TYPES,
+  };
+});
+</script>

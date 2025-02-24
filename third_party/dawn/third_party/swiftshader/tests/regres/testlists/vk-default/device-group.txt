@@ -1,0 +1,12 @@
+dEQP-VK.device_group.afr
+dEQP-VK.device_group.afr_dedicated
+dEQP-VK.device_group.afr_dedicated_peer
+dEQP-VK.device_group.afr_sys
+dEQP-VK.device_group.afr_tessellated
+dEQP-VK.device_group.afr_tessellated_linefill
+dEQP-VK.device_group.sfr
+dEQP-VK.device_group.sfr_dedicated
+dEQP-VK.device_group.sfr_dedicated_peer
+dEQP-VK.device_group.sfr_sys
+dEQP-VK.device_group.sfr_tessellated
+dEQP-VK.device_group.sfr_tessellated_linefill

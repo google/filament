@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglCreatePixmapSurface">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglCreatePixmapSurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreatePixmapSurface</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> pixmap surface
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglCreatePixmapSurface</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>NativePixmapType <parameter>native_pixmap</parameter></paramdef>
+                <paramdef>EGLint const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem><para>
+                    Specifies the EGL frame buffer configuration that defines the
+                    frame buffer resource available to the surface.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>native_pixmap</parameter></term>
+                <listitem><para>Specifies the native pixmap.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies pixmap surface attributes.
+                    May be <constant>NULL</constant> or empty
+                    (first attribute is <constant>EGL_NONE</constant>).
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglCreatePixmapSurface</function> creates an
+            off-screen <acronym>EGL</acronym> pixmap surface and returns
+            its handle. If <function>eglCreatePixmapSurface</function>
+            fails to create a pixmap surface,
+            <constant>EGL_NO_SURFACE</constant> is returned.
+        </para>
+        <para>
+            Surface attributes are specified as a list of
+            attribute-value pairs, terminated with
+            <constant>EGL_NONE</constant>. Accepted attributes
+            are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_VG_ALPHA_FORMAT</constant></term>
+                <listitem>
+                <para>
+                    Specifies how alpha values are interpreted by OpenVG
+                    when rendering to the surface. If its value is
+                    <constant>EGL_VG_ALPHA_FORMAT_NONPRE</constant>,
+                    then alpha values are not premultipled. If its value
+                    is <constant>EGL_VG_ALPHA_FORMAT_PRE</constant>,
+                    then alpha values are premultiplied. The default
+                    value of <constant>EGL_VG_ALPHA_FORMAT</constant> is
+                    <constant>EGL_VG_ALPHA_FORMAT_NONPRE</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VG_COLORSPACE</constant></term>
+                <listitem>
+                <para>
+                    Specifies the color space used by OpenVG when
+                    rendering to the surface. If its value is
+                    <constant>EGL_VG_COLORSPACE_sRGB</constant>, then a
+                    non-linear, perceptually uniform color space is
+                    assumed, with a corresponding
+                    <type>VGImageFormat</type> of form
+                    <constant>VG_s*</constant>. If its value is
+                    <constant>EGL_VG_COLORSPACE_LINEAR</constant>, then
+                    a linear color space is assumed, with a
+                    corresponding <type>VGImageFormat</type> of form
+                    <constant>VG_l*</constant>. The default value of
+                    <constant>EGL_VG_COLORSPACE</constant> is
+                    <constant>EGL_VG_COLORSPACE_sRGB</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            Any EGL rendering context that was created with respect to
+            <parameter>config</parameter> can be used to render into the
+            surface. Use
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+            to attach an EGL rendering context to the surface.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+            to retrieve the ID of <parameter>config</parameter>.
+        </para>
+        <para>
+            Use <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>
+            to destroy the surface.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            The <constant>EGL_MATCH_NATIVE_PIXMAP</constant> attribute
+            of
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>
+            can be used to select a frame buffer configuration matching
+            a specified native pixmap.
+        </para>
+        <para>
+            Attributes
+            <constant>EGL_VG_ALPHA_FORMAT</constant> and
+            <constant>EGL_VG_COLORSPACE</constant>, and the
+            corresponding attribute values, are supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <!-- Might want to mention aliasing of EGL_VG_* -> EGL_* that occurred in EGL 1.3 -->
+        <para>
+            The <constant>EGL_VG_ALPHA_FORMAT</constant> and
+            <constant>EGL_VG_COLORSPACE</constant> attributes are used
+            only by OpenVG. EGL itself, and other client APIs such as
+            OpenGL and OpenGL ES , do not distinguish multiple
+            colorspace models. Refer to section 11.2 of the OpenVG 1.0
+            specification for more information. The native window
+            system's use and interpretation of alpha values is outside
+            the scope of EGL, although the preferred behavior is for the
+            window system to ignore the value of
+            <constant>EGL_VG_ALPHA_FORMAT</constant>.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_NO_SURFACE</constant> is returned if creation of
+            the context fails.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONFIG</constant> is generated if
+            <parameter>config</parameter> is not an EGL config.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_PIXMAP</constant> may be generated if
+            <parameter>native_pixmap</parameter> is not a valid native pixmap.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attrib_list</parameter> contains an invalid pixmap attribute
+            or if an attribute value is not recognized or out of range.
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> is generated if there are not
+            enough resources to allocate the new surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the attributes of
+            <parameter>native_pixmap</parameter> do not correspond to
+            <parameter>config</parameter> or if
+            <parameter>config</parameter> does not support rendering to pixmaps
+            (the <constant>EGL_SURFACE_TYPE</constant> attribute does not contain
+            <constant>EGL_PIXMAP_BIT</constant>).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>config</parameter> does not support the specified
+            OpenVG alpha format attribute (the value of
+            <constant>EGL_VG_ALPHA_FORMAT</constant> is
+            <constant>EGL_VG_ALPHA_FORMAT_PRE</constant> and the
+            <constant>EGL_VG_ALPHA_FORMAT_PRE_BIT</constant> is not set
+            in the <constant>EGL_SURFACE_TYPE</constant> attribute of
+            <parameter>config</parameter>) or colorspace attribute (the
+            value of <constant>EGL_VG_COLORSPACE</constant> is
+            <constant>EGL_VG_COLORSPACE_LINEAR</constant> and the
+            <constant>EGL_VG_COLORSPACE_LINEAR_IT</constant> is not set
+            in the <constant>EGL_SURFACE_TYPE</constant> attribute of
+            <parameter>config</parameter>).
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

@@ -1,0 +1,12 @@
+<map id="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRUtils" name="/usr/buildxl/buildroot/sdk/branch/SDK/framework/PVRUtils">
+<area shape="rect" id="node5" href="dir_46a4a494c1e3a53b671afb3bdb6c331c.html" title="OpenGLES" alt="" coords="121,159,210,207"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000002_000006.html" title="7" alt="" coords="206,145,215,160"/>
+<area shape="rect" id="node6" href="dir_f07b109ccd199f39a4dc7ead82937581.html" title="Vulkan" alt="" coords="235,159,307,207"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000002_000007.html" title="4" alt="" coords="274,133,283,147"/>
+<area shape="rect" id="node2" href="dir_8304efa0b6fdc46b1344a010f4039784.html" title="EAGL" alt="" coords="133,63,205,111"/>
+<area shape="rect" id="node3" href="dir_5e1a30d12dccc97904fec37a36a74472.html" title="EGL" alt="" coords="129,255,201,303"/>
+<area shape="rect" id="node4" href="dir_45fd43864e62ac981d8041ff8292e9e4.html" title="OpenCL" alt="" coords="37,63,109,111"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000006_000004.html" title="1" alt="" coords="169,229,178,243"/>
+<area shape="rect" id="clust2" href="dir_04d546e47904494c8f2a634ed861a0d7.html" alt="" coords="27,52,320,313"/>
+<area shape="rect" id="clust1" href="dir_1b17efea2d0d450cd18d875f7f2a6e9c.html" title="framework" alt="" coords="16,16,331,324"/>
+</map>

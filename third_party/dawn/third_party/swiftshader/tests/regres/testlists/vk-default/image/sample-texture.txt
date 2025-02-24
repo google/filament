@@ -1,0 +1,8 @@
+dEQP-VK.image.sample_texture.128_bit_compressed_format
+dEQP-VK.image.sample_texture.128_bit_compressed_format_cubemap
+dEQP-VK.image.sample_texture.128_bit_compressed_format_two_samplers
+dEQP-VK.image.sample_texture.128_bit_compressed_format_two_samplers_cubemap
+dEQP-VK.image.sample_texture.64_bit_compressed_format
+dEQP-VK.image.sample_texture.64_bit_compressed_format_cubemap
+dEQP-VK.image.sample_texture.64_bit_compressed_format_two_samplers
+dEQP-VK.image.sample_texture.64_bit_compressed_format_two_samplers_cubemap

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/mre/failure.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('failureAsDictTest', function() {
+    const failure = new tr.mre.Failure(undefined, 'foo.html:Foo',
+        'file://foo.html', 'err', 'desc', 'stack');
+
+    assert.deepEqual(failure.asDict(), {
+      function_handle_string: 'foo.html:Foo',
+      trace_canonical_url: 'file://foo.html',
+      type: 'err',
+      description: 'desc',
+      stack: 'stack'
+    });
+  });
+
+  test('failureFromDictTest', function() {
+    const failureDict = {
+      function_handle_string: 'foo.html:Foo',
+      trace_canonical_url: 'file://foo.html',
+      type: 'err',
+      description: 'desc',
+      stack: 'stack'
+    };
+
+    const failure = tr.mre.Failure.fromDict(failureDict);
+
+    assert.strictEqual(failure.functionHandleString, 'foo.html:Foo');
+    assert.strictEqual(failure.traceCanonicalUrl, 'file://foo.html');
+    assert.strictEqual(failure.failureTypeName, 'err');
+    assert.strictEqual(failure.description, 'desc');
+    assert.strictEqual(failure.stack, 'stack');
+  });
+});
+
+</script>

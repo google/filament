@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('syncEventImport', function() {
+    const lines = [
+      's3c-fb-92            (     0) [000] ...1  7206.550061: sync_timeline: name=s3c-fb value=7094', // @suppress longLineCheck
+      'TimedEventQueue-2700 (     0) [001] ...1  7206.569027: sync_wait: begin name=SurfaceView:6 state=1', // @suppress longLineCheck
+      'TimedEventQueue-2700 (     0) [001] ...1  7206.569038: sync_pt: name=malitl_124_0x40b6406c value=7289', // @suppress longLineCheck
+      'TimedEventQueue-2700 (     0) [001] ...1  7206.569056: sync_pt: name=exynos-gsc.0-src value=25', // @suppress longLineCheck
+      'TimedEventQueue-2700 (     0) [001] ...1  7206.569068: sync_wait: end name=SurfaceView:6 state=1', // @suppress longLineCheck
+      'irq/128-s5p-mfc-62   (     0) [000] d..3  7206.572402: sync_timeline: name=vb2 value=37', // @suppress longLineCheck
+      'irq/128-s5p-mfc-62   (     0) [000] d..3  7206.572475: sync_timeline: name=vb2 value=33', // @suppress longLineCheck
+      'SurfaceFlinger-225   (     0) [001] ...1  7206.584769: sync_timeline: name=malitl_124_0x40b6406c value=7290', // @suppress longLineCheck
+      'kworker/u:5-2269     (     0) [000] ...1  7206.586745: sync_wait: begin name=display state=1', // @suppress longLineCheck
+      'kworker/u:5-2269     (     0) [000] ...1  7206.586750: sync_pt: name=s3c-fb value=7093', // @suppress longLineCheck
+      'kworker/u:5-2269     (     0) [000] ...1  7206.586760: sync_wait: end name=display state=1', // @suppress longLineCheck
+      's3c-fb-92            (     0) [000] ...1  7206.587193: sync_wait: begin name=vb2 state=0', // @suppress longLineCheck
+      's3c-fb-92            (     0) [000] ...1  7206.587198: sync_pt: name=exynos-gsc.0-dst value=27', // @suppress longLineCheck
+      '<idle>-0             (     0) [000] d.h4  7206.591133: sync_timeline: name=exynos-gsc.0-src value=27', // @suppress longLineCheck
+      '<idle>-0             (     0) [000] d.h4  7206.591152: sync_timeline: name=exynos-gsc.0-dst value=27', // @suppress longLineCheck
+      's3c-fb-92            (     0) [000] ...1  7206.591244: sync_wait: end name=vb2 state=1' // @suppress longLineCheck
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    let threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 4);
+
+    threads = m.findAllThreadsNamed('s3c-fb');
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].sliceGroup.length, 1);
+
+    threads = m.findAllThreadsNamed('kworker/u:5');
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].sliceGroup.length, 1);
+    assert.strictEqual('fence_wait("display")',
+        threads[0].sliceGroup.slices[0].title);
+  });
+});
+</script>
+

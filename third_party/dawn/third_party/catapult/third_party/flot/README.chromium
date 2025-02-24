@@ -1,0 +1,15 @@
+Name: Flot
+URL: http://www.flotcharts.org/
+Version: 0.8.3
+Revision: 453b017cc5acfd75e252b93e8635f57f4196d45d
+License: MIT
+License File: LICENSE.txt
+Security Critical: No
+Shipped: yes
+
+Description:
+Flot is a JavaScript chart plotting library based on jQuery.
+
+Local Modifications:
+Removed examples/.
+

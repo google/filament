@@ -1,0 +1,177 @@
+// Applies the Android plugin for Gradle to this build and makes the android block available to specify Android-specific build options
+apply plugin: 'com.android.application'
+
+def hasSigningDefined = project.hasProperty('KEYSTORE_FILE') &&  project.hasProperty('KEYSTORE_PASSWORD') &&  project.hasProperty('KEY_ALIAS') && project.hasProperty('KEY_PASSWORD')
+// Get the output directory based on if the gradle command was kicked for the entire SDK or the example only
+def binOutput = gradle.ext.PVR_BINARY_OUTPUT_DIR
+// The set of framework projects on which this application is dependent
+def projectDependencies = ["PVRShell", "PVRUtilsGles"]
+
+// This block configures the repositories and dependencies for Gradle itself. Here we add a dependency for the Android plugin for Gradle as it provides
+// the additional instructions Gradle needs to build Android app modules
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+
+	// Adds the Android plugin for Gradle as a classpath dependency
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+// This block configures the repositories and dependencies used by all modules in the project
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}
+
+android {
+	compileSdkVersion 29
+	defaultConfig {
+		applicationId "com.powervr.OpenGLESBumpmap"
+		minSdkVersion 21
+		targetSdkVersion 29
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static", "-DPVR_PREBUILT_DEPENDENCIES=ON"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	
+	if (!project.hasProperty('NOSIGN') && hasSigningDefined) {
+		signingConfigs {
+			release {
+				storeFile file(project['KEYSTORE_FILE'])
+				storePassword project['KEYSTORE_PASSWORD']
+				keyAlias project['KEY_ALIAS']
+				keyPassword project['KEY_PASSWORD']
+			}
+		}
+	}
+
+	// This block configures our build types
+	buildTypes {
+		release {
+			minifyEnabled false
+			proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+			zipAlignEnabled true
+			if (!project.hasProperty('NOSIGN') && hasSigningDefined) {
+				signingConfig signingConfigs.release
+			}
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+
+	// Ensure that the icons are copied early - we do this by making the preBuild task depends on the copyIcons task
+	task copyIcons(type: Copy) {
+		from file("${project.projectDir}/../../../../res/Android/OpenGLES")
+		into sourceSets.main.res.srcDirs[0]
+		fileMode = 0664
+	}
+	preBuild.dependsOn copyIcons
+
+	// Add to this list files that will need to be read at runtime here: Textures, shaders, text files etc.
+	FileCollection assetFiles = files(
+	"${project.projectDir}/../FragShader_ES3.fsh",
+	"${project.projectDir}/../VertShader_ES3.vsh",
+	"${project.projectDir}/../../../assets/Satyr/Satyr.pod",
+	"${project.projectDir}/../../../assets/Satyr/MarbleNormalMap.pvr",
+	"${project.projectDir}/../../../assets/Satyr/Marble.pvr",
+	)
+	
+	// Add a task for copying our assets from their original location (${project.projectDir}...) to the assets/ folder for packaging
+	task copyAssetsDebug(type: Copy) {
+		from assetFiles
+		into sourceSets.main.assets.srcDirs[0]
+		fileMode = 0664
+	}
+	
+	task copyAssetsRelease(type: Copy) {
+		from assetFiles
+		into sourceSets.main.assets.srcDirs[0]
+		fileMode = 0664
+	}
+}
+
+// This block specifies dependencies required to build only the module itself
+dependencies {
+	// Dependency on local binaries
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+// For release builds ensure that signing has taken place appropriately
+task checkReleaseSigning() {
+	doLast{
+		if (!hasSigningDefined && !project.hasProperty('NOSIGN')) {
+			throw new InvalidUserDataException("*** ERROR *** No signing parameters and no 'NOSIGN' parameter for *Release* build *** ERROR ***\n"+
+	"You must pass the parameters 'KEYSTORE_FILE', 'KEYSTORE_PASSWORD', 'KEY_ALIAS' and 'KEY_PASSWORD', or 'NOSIGN'.\n"+
+	"These parameters can be passed several ways:\n" +
+	" - Via command line ('-PRELEASE_STORE_FILE=myfile.jks....'), \n" +
+	" - Defined locally in the build.gradle or settings.gradle (ext['KEYSTORE_FILE'] ='myfile.jks'. \n"+
+	" - Defined globally in a gradle.properties file (ensure you have the GRADLE_USER_HOME variable set) : (KEYSTORE_FILE=myfile.jks etc.).\n"+
+	'Otherwise, execute a *Debug* build, or pass the parameter NOSIGN. Otherwise, hardcode or disable signing completely by changing/removing the \'signingConfigs\' section and the line \'signingConfig signingConfigs.release\' from the \'buildTypes { release { ... } }\' section.');
+		}
+	}
+}
+
+//Copy outputs to the bin/ folder
+task copyToBinDebug(type: Copy) {
+	from 'build/outputs/apk/debug'
+	into "${binOutput}"
+	include('*.apk')
+}
+// Copy outputs to the bin/ folder and remove the "-release" suffix
+task copyToBinRelease(type: Copy) {
+	from 'build/outputs/apk/release'
+	into "${binOutput}"
+	include('*.apk')
+	rename('(.*)-release.apk', '$1.apk')
+}
+
+tasks.whenTaskAdded { task ->
+	// We add a dependency on all projects dependencies corresponding externalNativeBuild tasks - If these lines are removed, the dependencies are not built as they should be.
+	if (task.name.startsWith('generateJsonModel')) {
+		def flavor = task.name.substring('generateJsonModel'.length())
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuild${flavor}" }
+	}
+
+	// Ensure the assets folder is appropriately copied to the apk
+	if (task.name == 'externalNativeBuildRelease') {
+		copyAssetsRelease.dependsOn task
+	}
+	if (task.name == 'externalNativeBuildDebug') {
+		copyAssetsDebug.dependsOn task
+	}
+	
+	if (task.name == 'mergeReleaseAssets')
+	{
+		task.dependsOn copyAssetsRelease
+	}
+	
+	if (task.name == 'mergeDebugAssets') {
+		task.dependsOn copyAssetsDebug
+	}
+
+	// Copy the binary to the final bin folder.
+	if (task.name == 'packageRelease') {
+		task.dependsOn(checkReleaseSigning)
+		task.finalizedBy copyToBinRelease
+	}
+	if (task.name == 'packageDebug') {
+		task.finalizedBy copyToBinDebug
+	}
+}

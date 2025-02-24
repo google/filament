@@ -1,0 +1,16 @@
+Name: Khronos OpenCL ICD Loader
+Short Name: OpenCL-ICD-Loader
+Version: v2021.04.29
+URL: https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenCL-ICD-Loader
+SOURCE CODE: git clone -b OpenCL-ICD-Loader https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenCL-ICD-Loader
+Date: 2021-04-29
+Revision: 9b5e3849b49a1448996c8b96ba086cd774d987db
+Security Critical: no
+Shipped: yes
+License: Apache 2.0
+License File: LICENSE
+
+Description:
+OpenCL defines an Installable Client Driver (ICD) mechanism to allow developers to build
+applications against an Installable Client Driver loader (ICD loader) rather than linking
+their applications against a specific OpenCL implementation.

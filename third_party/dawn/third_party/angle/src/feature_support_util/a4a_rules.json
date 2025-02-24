@@ -1,0 +1,22 @@
+{
+   "Rules":[
+      {
+         "Rule":"Default Rule (i.e. use native driver)",
+         "UseANGLE":false
+      },
+      {
+         "Rule":"Supported application(s) (e.g. Maps on Google devices)",
+         "UseANGLE":true,
+         "Applications":[
+            {
+               "AppName":"org.chromium.angle"
+            }
+         ],
+         "Devices":[
+            {
+               "Manufacturer":"Google"
+            }
+         ]
+      }
+   ]
+}

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/object_instance_track.css">
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const SelectionState = tr.model.SelectionState;
+  const EventPresenter = tr.ui.b.EventPresenter;
+
+  /**
+   * A track that displays an array of Slice objects.
+   * @constructor
+   * @extends {Track}
+   */
+  const ObjectInstanceTrack = tr.ui.b.define(
+      'object-instance-track', tr.ui.tracks.Track);
+
+  ObjectInstanceTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('object-instance-track');
+      this.objectInstances_ = [];
+      this.objectSnapshots_ = [];
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    set heading(heading) {
+      this.heading_.heading = heading;
+    },
+
+    get heading() {
+      return this.heading_.heading;
+    },
+
+    set tooltip(tooltip) {
+      this.heading_.tooltip = tooltip;
+    },
+
+    get objectInstances() {
+      return this.objectInstances_;
+    },
+
+    set objectInstances(objectInstances) {
+      if (!objectInstances || objectInstances.length === 0) {
+        this.heading = '';
+        this.objectInstances_ = [];
+        this.objectSnapshots_ = [];
+        return;
+      }
+      this.heading = objectInstances[0].baseTypeName;
+      this.objectInstances_ = objectInstances;
+      this.objectSnapshots_ = [];
+      this.objectInstances_.forEach(function(instance) {
+        this.objectSnapshots_.push.apply(
+            this.objectSnapshots_, instance.snapshots);
+      }, this);
+      this.objectSnapshots_.sort(function(a, b) {
+        return a.ts - b.ts;
+      });
+    },
+
+    get height() {
+      return window.getComputedStyle(this).height;
+    },
+
+    set height(height) {
+      this.style.height = height;
+    },
+
+    get snapshotRadiusView() {
+      return 7 * (window.devicePixelRatio || 1);
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.GENERAL_EVENT:
+          this.drawObjectInstances_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawObjectInstances_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const bounds = this.getBoundingClientRect();
+      const height = bounds.height * pixelRatio;
+      const halfHeight = height * 0.5;
+      const twoPi = Math.PI * 2;
+
+      // Culling parameters.
+      const dt = this.viewport.currentDisplayTransform;
+      const snapshotRadiusView = this.snapshotRadiusView;
+      const snapshotRadiusWorld = dt.xViewVectorToWorld(height);
+
+      // Instances
+      const objectInstances = this.objectInstances_;
+      let loI = tr.b.findLowIndexInSortedArray(
+          objectInstances,
+          function(instance) {
+            return instance.deletionTs;
+          },
+          viewLWorld);
+      ctx.save();
+      ctx.strokeStyle = 'rgb(0,0,0)';
+      for (let i = loI; i < objectInstances.length; ++i) {
+        const instance = objectInstances[i];
+        const x = instance.creationTs;
+        if (x > viewRWorld) break;
+
+        const right = instance.deletionTs === Number.MAX_VALUE ?
+          viewRWorld : instance.deletionTs;
+        const xView = dt.xWorldToView(x);
+        const widthView = dt.xWorldVectorToView(right - x);
+        ctx.fillStyle = EventPresenter.getObjectInstanceColor(instance);
+        ctx.fillRect(xView, pixelRatio, widthView, height - 2 * pixelRatio);
+      }
+      ctx.restore();
+
+      // Snapshots. Has to run in worldspace because ctx.arc gets transformed.
+      const objectSnapshots = this.objectSnapshots_;
+      loI = tr.b.findLowIndexInSortedArray(
+          objectSnapshots,
+          function(snapshot) {
+            return snapshot.ts + snapshotRadiusWorld;
+          },
+          viewLWorld);
+      for (let i = loI; i < objectSnapshots.length; ++i) {
+        const snapshot = objectSnapshots[i];
+        const x = snapshot.ts;
+        if (x - snapshotRadiusWorld > viewRWorld) break;
+
+        const xView = dt.xWorldToView(x);
+
+        ctx.fillStyle = EventPresenter.getObjectSnapshotColor(snapshot);
+        ctx.beginPath();
+        ctx.arc(xView, halfHeight, snapshotRadiusView, 0, twoPi);
+        ctx.fill();
+        if (snapshot.selected) {
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = 'rgb(100,100,0)';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(xView, halfHeight, snapshotRadiusView - 1, 0, twoPi);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'rgb(255,255,0)';
+          ctx.stroke();
+        } else {
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = 'rgb(0,0,0)';
+          ctx.stroke();
+        }
+      }
+      ctx.lineWidth = 1;
+
+      // For performance reasons we only check the SelectionState of the first
+      // instance. If it's DIMMED we assume that all are DIMMED.
+      // TODO(egraether): Allow partial highlight.
+      let selectionState = SelectionState.NONE;
+      if (objectInstances.length &&
+          objectInstances[0].selectionState === SelectionState.DIMMED) {
+        selectionState = SelectionState.DIMMED;
+      }
+
+      // Dim the track when there is an active highlight.
+      if (selectionState === SelectionState.DIMMED) {
+        const width = bounds.width * pixelRatio;
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      if (this.objectInstance_ !== undefined) {
+        this.objectInstance_.forEach(function(obj) {
+          eventToTrackMap.addEvent(obj, this);
+        }, this);
+      }
+
+      if (this.objectSnapshots_ !== undefined) {
+        this.objectSnapshots_.forEach(function(obj) {
+          eventToTrackMap.addEvent(obj, this);
+        }, this);
+      }
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      // Pick snapshots first.
+      let foundSnapshot = false;
+      function onSnapshot(snapshot) {
+        selection.push(snapshot);
+        foundSnapshot = true;
+      }
+      const snapshotRadiusView = this.snapshotRadiusView;
+      const snapshotRadiusWorld = viewPixWidthWorld * snapshotRadiusView;
+      tr.b.iterateOverIntersectingIntervals(
+          this.objectSnapshots_,
+          function(x) { return x.ts - snapshotRadiusWorld; },
+          function(x) { return 2 * snapshotRadiusWorld; },
+          loWX, hiWX,
+          onSnapshot);
+      if (foundSnapshot) return;
+
+      // Try picking instances.
+      tr.b.iterateOverIntersectingIntervals(
+          this.objectInstances_,
+          function(x) { return x.creationTs; },
+          function(x) { return x.deletionTs - x.creationTs; },
+          loWX, hiWX,
+          (value) => { selection.push(value); });
+    },
+
+    /**
+     * Add the item to the left or right of the provided event, if any, to the
+     * selection.
+     * @param {event} The current event item.
+     * @param {Number} offset Number of slices away from the event to look.
+     * @param {Selection} selection The selection to add an event to,
+     * if found.
+     * @return {boolean} Whether an event was found.
+     * @private
+     */
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      let events;
+      if (event instanceof tr.model.ObjectSnapshot) {
+        events = this.objectSnapshots_;
+      } else if (event instanceof tr.model.ObjectInstance) {
+        events = this.objectInstances_;
+      } else {
+        throw new Error('Unrecognized event');
+      }
+
+      const index = events.indexOf(event);
+      const newIndex = index + offset;
+      if (newIndex >= 0 && newIndex < events.length) {
+        selection.push(events[newIndex]);
+        return true;
+      }
+      return false;
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      const snapshot = tr.b.findClosestElementInSortedArray(
+          this.objectSnapshots_,
+          function(x) { return x.ts; },
+          worldX,
+          worldMaxDist);
+
+      if (!snapshot) return;
+
+      selection.push(snapshot);
+
+      // TODO(egraether): Search for object instances as well, which was not
+      // implemented because it makes little sense with the current visual and
+      // needs to take care of overlapping intervals.
+    }
+  };
+
+
+  const options = new tr.b.ExtensionRegistryOptions(
+      tr.b.TYPE_BASED_REGISTRY_MODE);
+  tr.b.decorateExtensionRegistry(ObjectInstanceTrack, options);
+
+  return {
+    ObjectInstanceTrack,
+  };
+});
+</script>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the ProfileNode class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * A ProfileNode represents a node in the profile tree,
+   * it is essentially a frame in the stack when the sample gets recorded.
+   */
+  // TODO(lpy) Move V8 specific part out of ProfileNode.
+  function ProfileNode(id, title, parentNode) {
+    this.id_ = id;
+    this.title_ = title;
+    this.parentNode_ = parentNode;
+    this.colorId_ = -1;
+    // Cache the constructed call stack starting from this node to root.
+    this.userFriendlyStack_ = [];
+  }
+
+  ProfileNode.prototype = {
+    __proto__: Object.prototype,
+
+    get title() {
+      return this.title_;
+    },
+
+    get parentNode() {
+      return this.parentNode_;
+    },
+
+    set parentNode(value) {
+      this.parentNode_ = value;
+    },
+
+    get id() {
+      return this.id_;
+    },
+
+    get colorId() {
+      return this.colorId_;
+    },
+
+    set colorId(value) {
+      this.colorId_ = value;
+    },
+
+    get userFriendlyName() {
+      return this.title_;
+    },
+
+    get userFriendlyStack() {
+      if (this.userFriendlyStack_.length === 0) {
+        this.userFriendlyStack_ = [this.userFriendlyName];
+        if (this.parentNode_ !== undefined) {
+          this.userFriendlyStack_ =
+            this.userFriendlyStack_.concat(this.parentNode_.userFriendlyStack);
+        }
+      }
+      return this.userFriendlyStack_;
+    },
+
+    get sampleTitle() {
+      throw new Error('Not implemented.');
+    }
+  };
+
+  tr.model.EventRegistry.register(
+      ProfileNode,
+      {
+        name: 'Node',
+        pluralName: 'Nodes'
+      }
+  );
+
+  return {
+    ProfileNode,
+  };
+});
+</script>

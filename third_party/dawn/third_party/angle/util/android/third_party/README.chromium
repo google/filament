@@ -1,0 +1,11 @@
+Name: android_native_app_glue
+URL: https://android.googlesource.com/platform/ndk/+/5aac75cf5bea628f44bc8e09fe672573aeac0849/sources/android/native_app_glue
+Revision: 5aac75cf5bea628f44bc8e09fe672573aeac0849
+Version: 5aac75cf5bea628f44bc8e09fe672573aeac0849
+License: Apache License, Version 2.0
+License File: http://www.apache.org/licenses/LICENSE-2.0
+Security Critical: no
+Shipped: no
+
+Description:
+Helper glue code for ANativeActivity implementations

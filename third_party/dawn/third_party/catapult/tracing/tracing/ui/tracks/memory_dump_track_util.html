@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/ui/tracks/chart_point.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  const DISPLAYED_SIZE_NUMERIC_NAME =
+      tr.model.MemoryAllocatorDump.DISPLAYED_SIZE_NUMERIC_NAME;
+  const BACKGROUND = tr.model.ContainerMemoryDump.LevelOfDetail.BACKGROUND;
+  const LIGHT = tr.model.ContainerMemoryDump.LevelOfDetail.LIGHT;
+  const DETAILED = tr.model.ContainerMemoryDump.LevelOfDetail.DETAILED;
+
+  const SYSTEM_MEMORY_CHART_RENDERING_CONFIG = {
+    chartType: tr.ui.tracks.ChartSeriesType.AREA,
+    colorId: ColorScheme.getColorIdForGeneralPurposeString('systemMemory'),
+    backgroundOpacity: 0.8
+  };
+  const SYSTEM_MEMORY_SERIES_NAMES = ['Used (KB)', 'Swapped (KB)'];
+
+  /** Extract PSS values of processes in a global memory dump. */
+  function extractGlobalMemoryDumpUsedSizes(globalMemoryDump, addSize) {
+    for (const [pid, pmd] of
+      Object.entries(globalMemoryDump.processMemoryDumps)) {
+      const mostRecentVmRegions = pmd.mostRecentVmRegions;
+      if (mostRecentVmRegions === undefined) continue;
+      addSize(pid, mostRecentVmRegions.byteStats.proportionalResident || 0,
+          pmd.process.userFriendlyName);
+    }
+  }
+
+  /** Extract sizes of root allocators in a process memory dump. */
+  function extractProcessMemoryDumpAllocatorSizes(processMemoryDump, addSize) {
+    const allocatorDumps = processMemoryDump.memoryAllocatorDumps;
+    if (allocatorDumps === undefined) return;
+
+    allocatorDumps.forEach(function(allocatorDump) {
+      // Don't show tracing overhead in the charts.
+      // TODO(petrcermak): Find a less hacky way to do this.
+      if (allocatorDump.fullName === 'tracing') return;
+
+      const allocatorSize = allocatorDump.numerics[DISPLAYED_SIZE_NUMERIC_NAME];
+      if (allocatorSize === undefined) return;
+
+      const allocatorSizeValue = allocatorSize.value;
+      if (allocatorSizeValue === undefined) return;
+
+      addSize(allocatorDump.fullName, allocatorSizeValue);
+    });
+  }
+
+  /** Extract sizes of root allocators in a global memory dump. */
+  function extractGlobalMemoryDumpAllocatorSizes(globalMemoryDump, addSize) {
+    for (const pmd of Object.values(globalMemoryDump.processMemoryDumps)) {
+      extractProcessMemoryDumpAllocatorSizes(pmd, addSize);
+    }
+  }
+
+  /**
+   * A generic function which converts a list of memory dumps to a list of
+   * chart series.
+   *
+   * @param {!Array<!tr.model.ContainerMemoryDump>} memoryDumps List of
+   *     container memory dumps.
+   * @param {!function(
+   *     !tr.model.ContainerMemoryDump,
+   *     !function(string, number, string=))} dumpSizeExtractor Callback for
+   *     extracting sizes from a container memory dump.
+   * @return {(!Array<!tr.ui.tracks.ChartSeries>|undefined)} List of chart
+   *     series (or undefined if no size is extracted from any container memory
+   *     dump).
+   */
+  function buildMemoryChartSeries(memoryDumps, dumpSizeExtractor) {
+    const dumpCount = memoryDumps.length;
+    const idToTimestampToPoint = {};
+    const idToName = {};
+
+    // Extract the sizes of all components from each memory dump.
+    memoryDumps.forEach(function(dump, index) {
+      dumpSizeExtractor(dump, function addSize(id, size, opt_name) {
+        let timestampToPoint = idToTimestampToPoint[id];
+        if (timestampToPoint === undefined) {
+          idToTimestampToPoint[id] = timestampToPoint = new Array(dumpCount);
+          for (let i = 0; i < dumpCount; i++) {
+            const modelItem = memoryDumps[i];
+            timestampToPoint[i] = new tr.ui.tracks.ChartPoint(
+                modelItem, modelItem.start, 0);
+          }
+        }
+        timestampToPoint[index].y += size;
+        if (opt_name !== undefined) idToName[id] = opt_name;
+      });
+    });
+
+    // Do not generate any chart series if no sizes were extracted.
+    const ids = Object.keys(idToTimestampToPoint);
+    if (ids.length === 0) return undefined;
+
+    ids.sort();
+    for (let i = 0; i < dumpCount; i++) {
+      let baseSize = 0;
+      // Traverse |ids| in reverse (alphabetical) order so that the first id is
+      // at the top of the chart.
+      for (let j = ids.length - 1; j >= 0; j--) {
+        const point = idToTimestampToPoint[ids[j]][i];
+        point.yBase = baseSize;
+        point.y += baseSize;
+        baseSize = point.y;
+      }
+    }
+
+    // Create one common axis for all memory chart series.
+    const seriesYAxis = new tr.ui.tracks.ChartSeriesYAxis(0);
+
+    // Build a chart series for each id.
+    const series = ids.map(function(id) {
+      const colorId = ColorScheme.getColorIdForGeneralPurposeString(
+          idToName[id] || id);
+      const renderingConfig = {
+        chartType: tr.ui.tracks.ChartSeriesType.AREA,
+        colorId,
+        backgroundOpacity: 0.8
+      };
+      return new tr.ui.tracks.ChartSeries(idToTimestampToPoint[id],
+          seriesYAxis, renderingConfig);
+    });
+
+    // Ensure that the series at the top of the chart are drawn last.
+    series.reverse();
+
+    return series;
+  }
+
+  /**
+   * Transform a list of memory dumps to a list of letter dots (with letter 'M'
+   * inside).
+   */
+  function buildMemoryLetterDots(memoryDumps) {
+    const backgroundMemoryColorId =
+        ColorScheme.getColorIdForReservedName('background_memory_dump');
+    const lightMemoryColorId =
+        ColorScheme.getColorIdForReservedName('light_memory_dump');
+    const detailedMemoryColorId =
+        ColorScheme.getColorIdForReservedName('detailed_memory_dump');
+    return memoryDumps.map(function(memoryDump) {
+      let memoryColorId;
+      switch (memoryDump.levelOfDetail) {
+        case BACKGROUND:
+          memoryColorId = backgroundMemoryColorId;
+          break;
+        case DETAILED:
+          memoryColorId = detailedMemoryColorId;
+          break;
+        case LIGHT:
+        default:
+          memoryColorId = lightMemoryColorId;
+      }
+      return new tr.ui.tracks.LetterDot(
+          memoryDump, 'M', memoryColorId, memoryDump.start);
+    });
+  }
+
+  /**
+   * Convert a list of global memory dumps to a list of chart series (one per
+   * process). Each series represents the evolution of the memory used by the
+   * process over time.
+   */
+  function buildGlobalUsedMemoryChartSeries(globalMemoryDumps) {
+    return buildMemoryChartSeries(globalMemoryDumps,
+        extractGlobalMemoryDumpUsedSizes);
+  }
+
+  /**
+   * Convert a list of process memory dumps to a list of chart series (one per
+   * root allocator). Each series represents the evolution of the size of a the
+   * corresponding root allocator (e.g. 'v8') over time.
+   */
+  function buildProcessAllocatedMemoryChartSeries(processMemoryDumps) {
+    return buildMemoryChartSeries(processMemoryDumps,
+        extractProcessMemoryDumpAllocatorSizes);
+  }
+
+  /**
+   * Convert a list of global memory dumps to a list of chart series (one per
+   * root allocator). Each series represents the evolution of the size of a the
+   * corresponding root allocator (e.g. 'v8') over time.
+   */
+  function buildGlobalAllocatedMemoryChartSeries(globalMemoryDumps) {
+    return buildMemoryChartSeries(globalMemoryDumps,
+        extractGlobalMemoryDumpAllocatorSizes);
+  }
+
+  /**
+   * Converts system memory counters in the model to a list of
+   * {'name': trackName, 'series': ChartSeries}.
+   */
+  function buildSystemMemoryChartSeries(model) {
+    if (model.kernel.counters === undefined) return;
+    const memoryCounter = model.kernel.counters['global.SystemMemory'];
+    if (memoryCounter === undefined) return;
+
+    const tracks = [];
+    for (const name of SYSTEM_MEMORY_SERIES_NAMES) {
+      const series = memoryCounter.series.find(series => series.name === name);
+      if (series === undefined || series.samples.length === 0) return;
+
+      const chartPoints = [];
+      const valueRange = new tr.b.math.Range();
+      for (const sample of series.samples) {
+        chartPoints.push(new tr.ui.tracks.ChartPoint(
+            sample, sample.timestamp, sample.value, 0));
+        valueRange.addValue(sample.value);
+      }
+      // Stretch min to max range over the top half of a chart for readability.
+      const baseLine = Math.max(0, valueRange.min - valueRange.range);
+      const axisY = new tr.ui.tracks.ChartSeriesYAxis(baseLine, valueRange.max);
+      const chartSeries =
+          [new tr.ui.tracks.ChartSeries(chartPoints, axisY,
+              SYSTEM_MEMORY_CHART_RENDERING_CONFIG)];
+      tracks.push({
+        name: 'System Memory ' + name,
+        series: chartSeries
+      });
+    }
+    return tracks;
+  }
+
+  return {
+    buildMemoryLetterDots,
+    buildGlobalUsedMemoryChartSeries,
+    buildProcessAllocatedMemoryChartSeries,
+    buildGlobalAllocatedMemoryChartSeries,
+    buildSystemMemoryChartSeries,
+  };
+});
+</script>

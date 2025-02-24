@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-selection-summary-table'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    #table {
+      flex: 1 1 auto;
+      align-self: stretch;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table">
+    </tr-ui-b-table>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-selection-summary-table',
+  created() {
+    this.selection_ = new tr.b.math.Range();
+  },
+
+  ready() {
+    this.$.table.showHeader = false;
+    this.$.table.tableColumns = [
+      {
+        title: 'Name',
+        value(row) { return row.title; },
+        width: '350px'
+      },
+      {
+        title: 'Value',
+        width: '100%',
+        value(row) {
+          return row.value;
+        }
+      }
+    ];
+  },
+
+  get selection() {
+    return this.selection_;
+  },
+
+  set selection(selection) {
+    this.selection_ = selection;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    const selection = this.selection_;
+    const rows = [];
+    let hasRange;
+    if (this.selection_ && (!selection.bounds.isEmpty)) {
+      hasRange = true;
+    } else {
+      hasRange = false;
+    }
+
+    rows.push({
+      title: 'Selection start',
+      value: hasRange ? tr.v.ui.createScalarSpan(
+          selection.bounds.min, {
+            unit: tr.b.Unit.byName.timeStampInMs,
+            ownerDocument: this.ownerDocument
+          }) : '<empty>'
+    });
+    rows.push({
+      title: 'Selection extent',
+      value: hasRange ? tr.v.ui.createScalarSpan(
+          selection.bounds.range, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            ownerDocument: this.ownerDocument
+          }) : '<empty>'
+    });
+
+    this.$.table.tableRows = rows;
+    this.$.table.rebuild();
+  }
+});
+</script>

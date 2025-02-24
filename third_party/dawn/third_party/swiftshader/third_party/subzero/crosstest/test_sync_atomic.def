@@ -1,0 +1,52 @@
+//===- subzero/crosstest/test_sync_atomic.def - macros for tests -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for testing atomic intrinsics (via sync builtins).
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_SYNC_ATOMIC_DEF
+#define TEST_SYNC_ATOMIC_DEF
+
+#include "xdefs.h"
+
+#define STR(s) #s
+
+#define RMWOP_TABLE  \
+  /* inst */         \
+  X(add)             \
+  X(sub)             \
+  X(or)              \
+  X(and)             \
+  X(xor)
+//#define X(inst)
+
+#define ATOMIC_TYPE_TABLE \
+  /* type */              \
+  X(uint8_t)              \
+  X(uint16_t)             \
+  X(uint32_t)             \
+  X(uint64)
+//#define X(type)
+
+#define FOR_ALL_RMWTYPES_INST(F, inst) \
+  F(inst, uint8_t)                     \
+  F(inst, uint16_t)                    \
+  F(inst, uint32_t)                    \
+  F(inst, uint64)
+
+#define FOR_ALL_RMWOP_TYPES(X)      \
+  FOR_ALL_RMWTYPES_INST(X, add)     \
+  FOR_ALL_RMWTYPES_INST(X, sub)     \
+  FOR_ALL_RMWTYPES_INST(X, or)      \
+  FOR_ALL_RMWTYPES_INST(X, and)     \
+  FOR_ALL_RMWTYPES_INST(X, xor)
+//#define X(inst, type)
+
+#endif // TEST_SYNC_ATOMIC_DEF

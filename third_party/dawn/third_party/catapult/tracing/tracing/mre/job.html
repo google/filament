@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/mre/function_handle.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.mre', function() {
+  function Job(mapFunctionHandle, opt_guid) {
+    this.mapFunctionHandle_ = mapFunctionHandle;
+    if (opt_guid === undefined) {
+      this.guid_ = tr.b.GUID.allocateSimple();
+    } else {
+      this.guid_ = opt_guid;
+    }
+  }
+
+  Job.prototype = {
+    get mapFunctionHandle() { return this.mapFunctionHandle_; },
+    get guid() { return this.guid_; },
+
+    asDict() {
+      return {
+        map_function_handle: this.mapFunctionHandle_.asDict(),
+        guid: this.guid_.toString()
+      };
+    }
+  };
+
+  Job.fromDict = function(jobDict) {
+    let mapFunctionHandle = null;
+    if (jobDict.map_function_handle !== null) {
+      mapFunctionHandle = tr.mre.FunctionHandle.fromDict(
+          jobDict.map_function_handle);
+    }
+
+    return new Job(mapFunctionHandle, jobDict.guid);
+  };
+
+  return {
+    Job,
+  };
+});
+</script>

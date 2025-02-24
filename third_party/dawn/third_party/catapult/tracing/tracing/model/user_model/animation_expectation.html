@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.um', function() {
+  function AnimationExpectation(
+      parentModel, initiatorTitle, start, duration) {
+    tr.model.um.UserExpectation.call(
+        this, parentModel, initiatorTitle, start, duration);
+    this.frameEvents_ = undefined;
+  }
+
+  AnimationExpectation.prototype = {
+    __proto__: tr.model.um.UserExpectation.prototype,
+    constructor: AnimationExpectation,
+
+    get frameEvents() {
+      if (this.frameEvents_) {
+        return this.frameEvents_;
+      }
+
+      this.frameEvents_ = new tr.model.EventSet();
+
+      this.associatedEvents.forEach(function(event) {
+        if (event.title === tr.model.helpers.IMPL_RENDERING_STATS) {
+          this.frameEvents_.push(event);
+        }
+      }, this);
+
+      return this.frameEvents_;
+    }
+  };
+
+  tr.model.um.UserExpectation.subTypes.register(AnimationExpectation, {
+    stageTitle: 'Animation',
+    colorId: tr.b.ColorScheme.getColorIdForReservedName('rail_animation')
+  });
+
+  return {
+    AnimationExpectation,
+  };
+});
+</script>

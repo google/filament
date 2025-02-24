@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-a-counter-sample-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id='table'></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+(function() {
+  const COUNTER_SAMPLE_TABLE_COLUMNS = [
+    {
+      title: 'Counter',
+      width: '150px',
+      value(row) { return row.counter; }
+    },
+    {
+      title: 'Series',
+      width: '150px',
+      value(row) { return row.series; }
+    },
+    {
+      title: 'Time',
+      width: '150px',
+      value(row) { return row.start; }
+    },
+    {
+      title: 'Value',
+      width: '100%',
+      value(row) { return row.value; }
+    }
+  ];
+
+  Polymer({
+    is: 'tr-ui-a-counter-sample-sub-view',
+    behaviors: [tr.ui.analysis.AnalysisSubView],
+
+    ready() {
+      this.currentSelection_ = undefined;
+      this.$.table.tableColumns = COUNTER_SAMPLE_TABLE_COLUMNS;
+    },
+
+    get selection() {
+      return this.currentSelection_;
+    },
+
+    set selection(selection) {
+      this.currentSelection_ = selection;
+      this.updateContents_();
+    },
+
+    updateContents_() {
+      this.$.table.tableRows =
+          this.selection ? this.getRows_(this.selection.toArray()) : [];
+      this.$.table.rebuild();
+    },
+
+    /**
+     * Returns the table rows for the specified samples.
+     *
+     * We print each counter/series combination the first time that it
+     * appears. For subsequent samples in each series, we omit the counter
+     * and series name. This makes it easy to scan to find the next series.
+     *
+     * Each series can be collapsed. In the expanded state, all samples
+     * are shown. In the collapsed state, only the first sample is displayed.
+     */
+    getRows_(samples) {
+      const samplesByCounter = tr.b.groupIntoMap(
+          samples, sample => sample.series.counter.guid);
+
+      const rows = [];
+      for (const counterSamples of samplesByCounter.values()) {
+        const samplesBySeries = tr.b.groupIntoMap(
+            counterSamples, sample => sample.series.guid);
+
+        for (const seriesSamples of samplesBySeries.values()) {
+          const seriesRows = this.getRowsForSamples_(seriesSamples);
+          seriesRows[0].counter = seriesSamples[0].series.counter.name;
+          seriesRows[0].series = seriesSamples[0].series.name;
+
+          if (seriesRows.length > 1) {
+            seriesRows[0].subRows = seriesRows.slice(1);
+            seriesRows[0].isExpanded = true;
+          }
+
+          rows.push(seriesRows[0]);
+        }
+      }
+
+      return rows;
+    },
+
+    getRowsForSamples_(samples) {
+      return samples.map(function(sample) {
+        return {
+          start: sample.timestamp,
+          value: sample.value
+        };
+      });
+    }
+  });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-counter-sample-sub-view',
+      tr.model.CounterSample,
+      {
+        multi: false,
+        title: 'Counter Sample',
+      });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-counter-sample-sub-view',
+      tr.model.CounterSample,
+      {
+        multi: true,
+        title: 'Counter Samples',
+      });
+})();
+</script>

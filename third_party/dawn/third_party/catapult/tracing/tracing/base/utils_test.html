@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('getUsingPath', function() {
+    const z = tr.b.getUsingPath('x.y.z', {'x': {'y': {'z': 3}}});
+    assert.strictEqual(z, 3);
+
+    const w = tr.b.getUsingPath('x.w', {'x': {'y': {'z': 3}}});
+    assert.isUndefined(w);
+  });
+
+  test('testExceptionNaming', function() {
+    const err = new Error('asdf');
+    err.name = 'MyError';
+
+    const ex = tr.b.normalizeException(err);
+    assert.strictEqual(ex.typeName, 'MyError');
+  });
+
+  test('formatDate', function() {
+    assert.strictEqual(tr.b.formatDate(new Date(0)), '1970-01-01 00:00:00');
+  });
+
+  test('runLengthEncoding', function() {
+    assert.deepEqual(tr.b.runLengthEncoding([]), []);
+
+    let encoded = tr.b.runLengthEncoding([1, 1]);
+    assert.deepEqual(encoded.map(x => x.value), [1]);
+    assert.deepEqual(encoded.map(x => x.count), [2]);
+
+    encoded = tr.b.runLengthEncoding([1, 2]);
+    assert.deepEqual(encoded.map(x => x.value), [1, 2]);
+    assert.deepEqual(encoded.map(x => x.count), [1, 1]);
+
+    encoded = tr.b.runLengthEncoding([1, 1, 2, 2, 2, 3, 1, 1]);
+    assert.deepEqual(encoded.map(x => x.value), [1, 2, 3, 1]);
+    assert.deepEqual(encoded.map(x => x.count), [2, 3, 1, 2]);
+  });
+
+  test('isUrl', function() {
+    assert.isFalse(tr.b.isUrl());
+    assert.isFalse(tr.b.isUrl(null));
+    assert.isFalse(tr.b.isUrl(42));
+    assert.isFalse(tr.b.isUrl([]));
+    assert.isFalse(tr.b.isUrl({}));
+    assert.isFalse(tr.b.isUrl(''));
+    assert.isFalse(tr.b.isUrl('data:,'));
+    assert.isFalse(tr.b.isUrl('ftp://user:password@host:port/path'));
+    assert.isTrue(tr.b.isUrl('http://google.com/'));
+    assert.isTrue(tr.b.isUrl('https://www.google.com/'));
+  });
+
+  test('setsEqual', function() {
+    assert.isTrue(tr.b.setsEqual(new Set(), new Set()));
+    assert.isTrue(tr.b.setsEqual(new Set(['a']), new Set(['a'])));
+    assert.isFalse(tr.b.setsEqual(new Set(), undefined));
+    assert.isFalse(tr.b.setsEqual(new Set(), new Set(['a'])));
+    assert.isFalse(tr.b.setsEqual(new Set(['a']), new Set(['b'])));
+  });
+
+  test('compareArrays', function() {
+    function cmp(x, y) {
+      assert.isDefined(x);
+      assert.isDefined(y);
+      return x - y;
+    }
+
+    assert.isBelow(tr.b.compareArrays([1], [2], cmp), 0);
+    assert.isAbove(tr.b.compareArrays([2], [1], cmp), 0);
+
+    assert.isBelow(tr.b.compareArrays([1], [1, 2], cmp), 0);
+    assert.isAbove(tr.b.compareArrays([1, 2], [1], cmp), 0);
+
+    assert.isBelow(tr.b.compareArrays([], [1], cmp), 0);
+    assert.isAbove(tr.b.compareArrays([1], [], cmp), 0);
+
+    assert.isAbove(tr.b.compareArrays([2], [1], cmp), 0);
+
+    assert.strictEqual(tr.b.compareArrays([], [], cmp), 0);
+    assert.strictEqual(tr.b.compareArrays([1], [1], cmp), 0);
+  });
+
+  test('getOnlyElement_throwsIfEmpty', function() {
+    assert.throws(() => tr.b.getOnlyElement([]),
+        'getOnlyElement was passed an empty iterable.');
+  });
+
+  test('getOnlyElement_oneItem', function() {
+    assert.strictEqual(tr.b.getOnlyElement([1]), 1);
+  });
+
+  test('getOnlyElement_twoItems', function() {
+    assert.throws(() => tr.b.getOnlyElement([1, 2]),
+        'getOnlyElement was passed an iterable with multiple elements.');
+  });
+
+  test('getFirstElement_throwsIfEmpty', function() {
+    assert.throws(() => tr.b.getFirstElement([]),
+        'getFirstElement was passed an empty iterable.');
+  });
+
+  test('getFirstElement_oneItem', function() {
+    assert.strictEqual(tr.b.getFirstElement([1]), 1);
+  });
+
+  test('getFirstElement_twoItems', function() {
+    assert.strictEqual(tr.b.getFirstElement([1, 2]), 1);
+  });
+
+  test('groupIntoMap', function() {
+    // Empty array
+    let srcArray = [];
+    const fn = function(curr) { return (curr % 2); };
+    const dstDict = {};
+
+    assert.deepEqual(tr.b.groupIntoMap(srcArray, fn), dstDict);
+
+    // Non-empty array
+    srcArray = [0, 1, 2, 3, 4, 5, 6];
+    const dstMap = new Map([
+      [0, [0, 2, 4, 6]],
+      [1, [1, 3, 5]]
+    ]);
+
+    assert.deepEqual(tr.b.groupIntoMap(srcArray, fn), dstMap);
+  });
+
+  test('inPlaceFilter_simple', function() {
+    const someThisArg = {};
+    const list = [1, 2, 3, 4];
+    tr.b.inPlaceFilter(list, function(item) {
+      assert.strictEqual(this, someThisArg);
+      return item % 2 === 0;
+    }, someThisArg);
+    assert.deepEqual(list, [2, 4]);
+  });
+
+  test('invertArrayOfDicts_defaultGetter', function() {
+    const array = [
+      {a: 6, b: 5},
+      undefined,
+      {a: 4, b: 3, c: 2},
+      {b: 1, c: 0}
+    ];
+    const dict = tr.b.invertArrayOfDicts(array);
+    assert.sameMembers(Object.keys(dict), ['a', 'b', 'c']);
+    assert.deepEqual(Array.from(dict.a), [6, undefined, 4, undefined]);
+    assert.deepEqual(Array.from(dict.b), [5, undefined, 3, 1]);
+    assert.deepEqual(Array.from(dict.c), [undefined, undefined, 2, 0]);
+  });
+
+  test('invertArrayOfDicts_customGetter', function() {
+    const fakeThis = { itemToDict: JSON.parse };
+    const array = [
+      '{"a": "test", "b": true}',
+      '{}',
+      '{invalid-json}',
+      '{"a": 42, "c": false}'
+    ];
+    const dict = tr.b.invertArrayOfDicts(array, function(item) {
+      try {
+        return this.itemToDict(item);
+      } catch (e) {
+        return undefined;
+      }
+    }, fakeThis);
+    assert.sameMembers(Object.keys(dict), ['a', 'b', 'c']);
+    assert.deepEqual(
+        Array.from(dict.a), ['test', undefined, undefined, 42]);
+    assert.deepEqual(
+        Array.from(dict.b), [true, undefined, undefined, undefined]);
+    assert.deepEqual(
+        Array.from(dict.c), [undefined, undefined, undefined, false]);
+  });
+
+  const ArrayOfIntervals = function(array) {
+    this.array = array;
+  };
+
+  ArrayOfIntervals.prototype = {
+    get(index) {
+      return this.array[index];
+    },
+
+    findLowElementIndex(ts) {
+      return tr.b.findLowIndexInSortedArray(
+          this.array,
+          function(x) { return x.lo; },
+          ts);
+    },
+
+    findIntervalIndex(ts) {
+      return tr.b.findIndexInSortedIntervals(
+          this.array,
+          function(x) { return x.lo; },
+          function(x) { return x.hi - x.lo; },
+          ts);
+    },
+
+    findIndexInClosedIntervals(ts) {
+      return tr.b.findIndexInSortedClosedIntervals(
+          this.array,
+          function(x) { return x.lo; },
+          function(x) { return x.hi; },
+          ts);
+    },
+
+    findIntersectingIntervals(tsA, tsB) {
+      const array = this.array;
+      const result = [];
+      tr.b.iterateOverIntersectingIntervals(
+          this.array,
+          function(x) { return x.lo; },
+          function(x) { return x.hi - x.lo; },
+          tsA,
+          tsB,
+          function(x) { result.push(array.indexOf(x)); });
+      return result;
+    },
+
+    findClosestElement(ts, tsDiff) {
+      return tr.b.findClosestElementInSortedArray(
+          this.array,
+          function(x) { return x.lo; },
+          ts,
+          tsDiff);
+    },
+
+    findClosestInterval(ts, tsDiff) {
+      return tr.b.findClosestIntervalInSortedIntervals(
+          this.array,
+          function(x) { return x.lo; },
+          function(x) { return x.hi; },
+          ts,
+          tsDiff);
+    }
+  };
+
+  test('findLowElementIndex', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 20, hi: 30}
+    ]);
+
+    assert.strictEqual(array.findLowElementIndex(-100), 0);
+    assert.strictEqual(array.findLowElementIndex(0), 0);
+    assert.strictEqual(array.findLowElementIndex(10), 0);
+
+    assert.strictEqual(array.findLowElementIndex(10.1), 1);
+    assert.strictEqual(array.findLowElementIndex(15), 1);
+    assert.strictEqual(array.findLowElementIndex(20), 1);
+
+    assert.strictEqual(array.findLowElementIndex(20.1), 2);
+    assert.strictEqual(array.findLowElementIndex(21), 2);
+    assert.strictEqual(array.findLowElementIndex(100), 2);
+  });
+
+  test('findIntervalIndex', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 20, hi: 30}
+    ]);
+
+    assert.strictEqual(array.findIntervalIndex(0), -1);
+    assert.strictEqual(array.findIntervalIndex(9.9), -1);
+
+    assert.strictEqual(array.findIntervalIndex(10), 0);
+    assert.strictEqual(array.findIntervalIndex(12), 0);
+    assert.strictEqual(array.findIntervalIndex(14.9), 0);
+
+    assert.strictEqual(array.findIntervalIndex(20), 1);
+    assert.strictEqual(array.findIntervalIndex(21), 1);
+    assert.strictEqual(array.findIntervalIndex(29.99), 1);
+
+    assert.strictEqual(array.findIntervalIndex(30), 2);
+    assert.strictEqual(array.findIntervalIndex(40), 2);
+
+
+    // misses, in between the intervals, return array length
+    assert.strictEqual(array.findIntervalIndex(15), 2);
+    assert.strictEqual(array.findIntervalIndex(19.9), 2);
+  });
+
+  test('findClosedIntervalIndex', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 15, hi: 20},
+      {lo: 21, hi: 25}
+    ]);
+
+    assert.strictEqual(array.findIndexInClosedIntervals(0), -1);
+    assert.strictEqual(array.findIndexInClosedIntervals(9.999), -1);
+    assert.strictEqual(array.findIndexInClosedIntervals(10), 0);
+    assert.strictEqual(array.findIndexInClosedIntervals(14), 0);
+    assert.strictEqual(array.findIndexInClosedIntervals(15), 0);
+    assert.strictEqual(array.findIndexInClosedIntervals(15.00001), 1);
+    assert.strictEqual(array.findIndexInClosedIntervals(20.5), 3);
+    assert.strictEqual(array.findIndexInClosedIntervals(22), 2);
+    assert.strictEqual(array.findIndexInClosedIntervals(25), 2);
+    assert.strictEqual(array.findIndexInClosedIntervals(25.00001), 3);
+  });
+
+  test('findClosedInEmptyArray', function() {
+    const array = new ArrayOfIntervals([]);
+    assert.strictEqual(array.findIndexInClosedIntervals(0), 0);
+  });
+
+  test('findIntersectingIntervals', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 20, hi: 30}
+    ]);
+
+    assert.deepEqual(array.findIntersectingIntervals(0, 0), []);
+    assert.deepEqual(array.findIntersectingIntervals(100, 0), []);
+    assert.deepEqual(array.findIntersectingIntervals(0, 10), []);
+
+    assert.deepEqual(array.findIntersectingIntervals(0, 10.1), [0]);
+    assert.deepEqual(array.findIntersectingIntervals(5, 15), [0]);
+    assert.deepEqual(array.findIntersectingIntervals(15, 20), [0]);
+
+    assert.deepEqual(array.findIntersectingIntervals(15.1, 20), []);
+
+    assert.deepEqual(array.findIntersectingIntervals(15.1, 20.1), [1]);
+    assert.deepEqual(array.findIntersectingIntervals(20, 30), [1]);
+    assert.deepEqual(array.findIntersectingIntervals(30, 100), [1]);
+
+    assert.deepEqual(array.findIntersectingIntervals(0, 100), [0, 1]);
+    assert.deepEqual(array.findIntersectingIntervals(15, 20.1), [0, 1]);
+  });
+
+  test('findClosestElement', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 20, hi: 30}
+    ]);
+
+    // Test the helper method first.
+    assert.isUndefined(array.get(-1));
+    assert.strictEqual(array.get(0), array.array[0]);
+    assert.strictEqual(array.get(1), array.array[1]);
+    assert.isUndefined(array.get(2));
+
+    assert.isNull(array.findClosestElement(0, 0));
+    assert.isNull(array.findClosestElement(0, 9.9));
+    assert.isNull(array.findClosestElement(10, -10));
+
+    assert.strictEqual(array.get(0), array.findClosestElement(0, 10));
+    assert.strictEqual(array.get(0), array.findClosestElement(8, 5));
+    assert.strictEqual(array.get(0), array.findClosestElement(10, 0));
+    assert.strictEqual(array.get(0), array.findClosestElement(12, 2));
+
+    assert.isNull(array.findClosestElement(15, 3));
+    assert.isNotNull(array.findClosestElement(15, 5));
+
+    assert.strictEqual(array.get(1), array.findClosestElement(19, 1));
+    assert.strictEqual(array.get(1), array.findClosestElement(20, 0));
+    assert.strictEqual(array.get(1), array.findClosestElement(30, 15));
+
+    assert.isNull(array.findClosestElement(30, 9.9));
+    assert.isNull(array.findClosestElement(100, 50));
+  });
+
+  test('findClosestInterval', function() {
+    const array = new ArrayOfIntervals([
+      {lo: 10, hi: 15},
+      {lo: 20, hi: 30}
+    ]);
+
+    assert.isNull(array.findClosestInterval(0, 0));
+    assert.isNull(array.findClosestInterval(0, 9.9));
+    assert.isNull(array.findClosestInterval(0, -100));
+
+    assert.strictEqual(array.get(0), array.findClosestInterval(0, 10));
+    assert.strictEqual(array.get(0), array.findClosestInterval(10, 0));
+    assert.strictEqual(array.get(0), array.findClosestInterval(12, 3));
+    assert.strictEqual(array.get(0), array.findClosestInterval(12, 100));
+
+    assert.strictEqual(array.get(0), array.findClosestInterval(13, 3));
+    assert.strictEqual(array.get(0), array.findClosestInterval(13, 20));
+    assert.strictEqual(array.get(0), array.findClosestInterval(15, 0));
+
+    assert.isNull(array.findClosestInterval(17.5, 0));
+    assert.isNull(array.findClosestInterval(17.5, 2.4));
+    assert.isNotNull(array.findClosestInterval(17.5, 2.5));
+    assert.isNotNull(array.findClosestInterval(17.5, 10));
+
+    assert.strictEqual(array.get(1), array.findClosestInterval(19, 2));
+    assert.strictEqual(array.get(1), array.findClosestInterval(20, 0));
+    assert.strictEqual(array.get(1), array.findClosestInterval(24, 100));
+    assert.strictEqual(array.get(1), array.findClosestInterval(26, 100));
+
+    assert.strictEqual(array.get(1), array.findClosestInterval(30, 0));
+    assert.strictEqual(array.get(1), array.findClosestInterval(35, 10));
+    assert.strictEqual(array.get(1), array.findClosestInterval(50, 100));
+
+    assert.isNull(array.findClosestInterval(50, 19));
+    assert.isNull(array.findClosestInterval(100, 50));
+    assert.isNull(array.findClosestInterval(50, -100));
+  });
+
+  test('findFirstTrueIndexInSortedArray', function() {
+    const array = [1, 3, 7, 15, 30, 50, 80];
+    const objectArray = array.map(v => {return {value: v};});
+
+    assert.strictEqual(
+        tr.b.findFirstTrueIndexInSortedArray(objectArray, x => (x.value > 90)),
+        objectArray.length);
+    assert.strictEqual(
+        tr.b.findFirstTrueIndexInSortedArray(objectArray, x => (x.value > 15)),
+        4);
+    assert.strictEqual(
+        tr.b.findFirstTrueIndexInSortedArray(objectArray, x => (x.value >= 15)),
+        3);
+    assert.strictEqual(
+        tr.b.findFirstTrueIndexInSortedArray(objectArray, x => (x.value > 0)),
+        0);
+    assert.strictEqual(
+        tr.b.findFirstTrueIndexInSortedArray(objectArray,
+            x => (x.value % 5 === 0)),
+        3);
+  });
+});
+</script>

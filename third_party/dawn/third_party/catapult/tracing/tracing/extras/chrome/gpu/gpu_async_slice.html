@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/async_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.gpu', function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+
+  function GpuAsyncSlice() {
+    AsyncSlice.apply(this, arguments);
+  }
+
+  GpuAsyncSlice.prototype = {
+    __proto__: AsyncSlice.prototype,
+
+    get viewSubGroupTitle() {
+      if (this.args.channel) {
+        if (this.category === 'disabled-by-default-gpu.device') {
+          return 'Device.' + this.args.channel;
+        }
+        return 'Service.' + this.args.channel;
+      }
+      return this.title;
+    }
+  };
+
+  AsyncSlice.subTypes.register(
+      GpuAsyncSlice,
+      {
+        categoryParts: ['disabled-by-default-gpu.device',
+          'disabled-by-default-gpu.service']
+      });
+
+  return {
+    GpuAsyncSlice,
+  };
+});
+</script>

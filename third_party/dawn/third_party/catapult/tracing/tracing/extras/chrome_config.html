@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+The chrome config is heavily used:
+  - chrome://tracing,
+  - trace2html, which in turn implies
+    - adb_profile_chrome
+    - telemetry
+-->
+
+<link rel="import" href="/tracing/extras/android/android_auditor.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/blame_context.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/frame_tree_node.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/render_frame.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/top_level.html">
+<link rel="import" href="/tracing/extras/chrome/blink/blink_scheduler_async_slice.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_auditor.html">
+<link rel="import" href="/tracing/extras/chrome/layout_object.html">
+<link rel="import" href="/tracing/extras/chrome/layout_tree.html">
+<link rel="import" href="/tracing/extras/cpu/cpu_usage_auditor.html">
+<link rel="import" href="/tracing/extras/image_viewing/image.html">
+<link rel="import" href="/tracing/extras/importer/etw/etw_importer.html">
+<link rel="import" href="/tracing/extras/importer/fuchsia_importer.html">
+<link rel="import" href="/tracing/extras/importer/gzip_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace2html_importer.html">
+<link rel="import" href="/tracing/extras/importer/v8/v8_log_importer.html">
+<link rel="import" href="/tracing/extras/importer/zip_importer.html">
+<link rel="import" href="/tracing/extras/lean_config.html">
+<link rel="import" href="/tracing/extras/measure/measure.html">
+<link rel="import" href="/tracing/extras/net/net.html">
+<link rel="import" href="/tracing/extras/systrace_config.html">
+<link rel="import" href="/tracing/extras/v8_config.html">
+<link rel="import" href="/tracing/extras/vsync/vsync_auditor.html">

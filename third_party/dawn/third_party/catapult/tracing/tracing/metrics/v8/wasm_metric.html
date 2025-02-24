@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/v8/utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.v8', function() {
+  function addHistogramOfWasmSamples(histograms, wasmEvents, eventTitle,
+      histogramName, description) {
+    if (!wasmEvents.hasOwnProperty(eventTitle)) return;
+
+    const unitMs = tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+    const histogramCpu = new tr.v.Histogram(
+      `v8:wasm:${histogramName}:cpu_time`, unitMs);
+    histogramCpu.description = `cpu time spent ${description}`;
+    const histogramWallTime = new tr.v.Histogram(
+      `v8:wasm:${histogramName}:wall_time`, unitMs);
+    histogramWallTime.description = `wall time spent ${description}`;
+
+    for (const e of wasmEvents[eventTitle]) {
+      histogramCpu.addSample(e.cpuDuration);
+      histogramWallTime.addSample(e.duration);
+    }
+
+    histograms.addHistogram(histogramCpu);
+    histograms.addHistogram(histogramWallTime);
+  }
+
+  function collectWasmEvents(model) {
+    const wasmEvents = tr.metrics.v8.utils.filterAndOrderEvents(model,
+        event => event.title.startsWith('wasm.'),
+        event => event.title);
+
+    return wasmEvents;
+  }
+
+  function wasmMetric(histograms, model) {
+    const wasmEvents = collectWasmEvents(model);
+
+    for (let [eventTitle, histogramName, description] of
+      [
+        ['wasm.SyncInstantiate', 'sync_instantiate',
+         'instantiating a WebAssembly module'],
+        ['wasm.SyncCompile', 'sync_compile',
+         'compiling a WebAssembly module synchronously'],
+        ['wasm.Deserialize', 'deserialize',
+         'deserializing a WebAssembly module'],
+        ['wasm.CompileLazy', 'lazy_compilation',
+         'compiling a WebAssembly function lazily'],
+        ['wasm.ExecuteCompilationUnits', 'background_compilation',
+         'compiling WebAssembly code in the background'],
+      ]) {
+      addHistogramOfWasmSamples(histograms, wasmEvents, eventTitle,
+        histogramName, description);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(wasmMetric);
+
+  return {
+    wasmMetric,
+  };
+});
+
+</script>

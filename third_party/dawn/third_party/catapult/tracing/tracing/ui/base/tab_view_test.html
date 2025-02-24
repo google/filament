@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_series.html">
+<link rel="import" href="/tracing/ui/analysis/alert_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_power_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/base/tab_view.html">
+
+<dom-module id='tr-ui-b-tab-view-test-non-sub-view'>
+  <template>
+    <div></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+const nonSubViewBehavior = {};
+
+Polymer({
+  is: 'tr-ui-b-tab-view-test-non-sub-view',
+  behaviors: [nonSubViewBehavior]
+});
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  function createPowerSampleSubView() {
+    const model = tr.c.TestUtils.newModel(function(m) {
+      m.device.powerSeries = new tr.model.PowerSeries(m.device);
+
+      m.device.vSyncTimestamps = [0];
+      m.device.powerSeries.addPowerSample(1, 1);
+      m.device.powerSeries.addPowerSample(2, 2);
+      m.device.powerSeries.addPowerSample(3, 3);
+      m.device.powerSeries.addPowerSample(4, 2);
+    });
+
+    const subView = document.createElement(
+        'tr-ui-a-multi-power-sample-sub-view');
+    subView.selection = new tr.model.EventSet(model.device.powerSeries.samples);
+    subView.tabLabel = 'Power samples';
+    return subView;
+  }
+
+  function createAlertSubView() {
+    const slice = tr.c.TestUtils.newSliceEx(
+        {title: 'b', start: 0, duration: 0.002});
+    const alertInfo = new tr.model.EventInfo(
+        'Alert 1', 'Critical alert',
+        [{
+          label: 'Example',
+          textContent: 'Example page',
+          href: 'http://www.example.com'
+        }]);
+
+    const alert = new tr.model.Alert(alertInfo, 5, [slice]);
+    const subView = document.createElement('tr-ui-a-alert-sub-view');
+    subView.selection = new tr.model.EventSet(alert);
+    subView.tabLabel = 'Alerts';
+    subView.tabIcon = { text: '\u26A0', style: 'color: red;' };
+
+    return subView;
+  }
+
+  test('instantiate_noTabs', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.label = 'No items selected.';
+    this.addHTMLOutput(tabView);
+  });
+
+  test('instantiate_oneTab', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.label = '1 item selected.';
+    tabView.addSubView(createPowerSampleSubView());
+    this.addHTMLOutput(tabView);
+  });
+
+  test('instantiate_twoTabs', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.label = '3 items selected.';
+    tabView.addSubView(createPowerSampleSubView());
+    tabView.addSubView(createAlertSubView());
+    this.addHTMLOutput(tabView);
+  });
+
+  test('clearSubViews_selectedSubViewNullAfter', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.label = '3 items selected.';
+    tabView.addSubView(createPowerSampleSubView());
+    tabView.addSubView(createAlertSubView());
+
+    tabView.clearSubViews();
+
+    assert.isUndefined(tabView.selectedSubView);
+  });
+
+  test('changeSelectedSubView', function() {
+    let selectedTabChangeEventCount = 0;
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.addEventListener('selected-tab-change', function() {
+      selectedTabChangeEventCount++;
+    });
+
+    assert.isUndefined(tabView.selectedSubView);
+    assert.strictEqual(selectedTabChangeEventCount, 0);
+
+    const view1 = createPowerSampleSubView();
+    tabView.addSubView(view1);
+    assert.strictEqual(tabView.selectedSubView, view1);
+    assert.strictEqual(selectedTabChangeEventCount, 1);
+
+    const view2 = createAlertSubView();
+    tabView.addSubView(view2);
+    assert.strictEqual(tabView.selectedSubView, view1);
+    assert.strictEqual(selectedTabChangeEventCount, 1);
+
+    tabView.selectedSubView = view2;
+    assert.strictEqual(tabView.selectedSubView, view2);
+    assert.strictEqual(selectedTabChangeEventCount, 2);
+  });
+
+  // Regression test: https://github.com/catapult-project/catapult/issues/2754
+  test('instantiate_twoTabsSwitch', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    tabView.label = '3 items selected.';
+    tabView.addSubView(createPowerSampleSubView());
+    tabView.addSubView(createAlertSubView());
+    this.addHTMLOutput(tabView);
+    Polymer.dom.flush();
+
+    tabView.selectedSubView = tabView.tabs[1];
+    Polymer.dom.flush();
+
+    const selectedLabel = tabView.$.tabs.querySelector(':checked ~ label');
+    assert.isTrue(selectedLabel && selectedLabel.innerText.includes('Alerts'));
+  });
+
+  // Regression test: https://github.com/catapult-project/catapult/issues/2755
+  test('instantiate_twoTabsSwitchAndChange', function() {
+    const tabView = document.createElement('tr-ui-b-tab-view');
+    this.addHTMLOutput(tabView);
+    tabView.addSubView(createPowerSampleSubView());
+    tabView.addSubView(createAlertSubView());
+    Polymer.dom.flush();
+
+    tabView.$.tabs.querySelectorAll('label')[2].click();
+    tabView.$.tabs.querySelectorAll('label')[1].click();
+    tabView.clearSubViews();
+    tabView.addSubView(createPowerSampleSubView());
+    Polymer.dom.flush();
+
+    assert.isTrue(!!tabView.$.tabs.querySelector(':checked'));
+  });
+});
+</script>

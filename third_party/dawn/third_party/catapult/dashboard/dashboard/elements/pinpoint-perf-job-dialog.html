@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/components/paper-input/paper-input.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module is="pinpoint-perf-job-dialog">
+  <template>
+
+    <paper-dialog id="container" autoCloseDisabled="true">
+      <!-- Styling for paper-dialog's children. -->
+      <style>
+        paper-button[dialog-confirm] {
+          background: #4285f4;
+          color: #fff;
+          margin-bottom: 5px;
+        }
+
+        paper-input {
+          width: 400px;
+        }
+      </style>
+
+      <form on-submit="onSendToTrybot">
+        <table>
+          <tr>
+            <td>Record a before/after trace profile.</td>
+          </tr>
+          <tr>
+            <td>Perf try bot:</td>
+            <td>
+              <paper-input type="text" value="[[bot]]" disabled></paper-input>
+            </td>
+            <td>Story:</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <paper-input id="story-filter" label="Story" value="{{story_filter::input}}" disabled$="[[loading]]"></paper-input>
+            </td>
+          </tr>
+          <tr>
+            <td><paper-checkbox checked="{{useTrace::input}}"></paper-checkbox>Chrome trace <a href="https://cs.chromium.org/chromium/src/base/trace_event/trace_config.h?rcl=c8db6c6371ca047c24d41f3972d5819bc83d83ae&l=125" target="_blank">filter string</a>:</td>
+            <td>
+               <paper-input value="{{traceCategories::input}}"></paper-input>
+            </td>
+          </tr>
+          <template is="dom-if" if="[[computeIsAndroidBot(bot)]]">
+          <tr>
+            <td><paper-checkbox checked="{{useAtrace::input}}"></paper-checkbox>Additional atrace categories (comma-separated):</td>
+            <td>
+               <paper-input value="{{atraceCategories::input}}"></paper-input>
+            </td>
+          </tr>
+          </template>
+          <tr>
+            <td>Start Commit:</td>
+            <td><paper-input id="start_commit" type="text" value="{{startCommit::input}}"></paper-input></td>
+          </tr>
+          <tr>
+            <td>End Commit:</td>
+            <td><paper-input id="end_cmmit" type="text" value="{{endCommit::input}}"></paper-input></td>
+          </tr>
+        </table>
+      </form>
+
+      <p class="error">{{error}}</p>
+
+      <paper-button dialog-confirm raised autofocus disabled$="[[computeHasError(error)]]"
+                    on-click="onSendToTrybot">Send to Pinpoint</paper-button>
+      <paper-button dialog-dismiss raised>Close</paper-button>
+
+      <div id="toasts" hidden>
+        <div id="jobsubmitted">
+          <b>Pinpoint Job submitted!</b>
+          <a href="[[lastSubmittedJobUrl]]"
+             target="_blank">View job [[lastSubmittedJobId]].</a>
+        </div>
+      </div>
+    </paper-dialog>
+
+  </template>
+</dom-module>
+<script>
+'use strict';
+(function() {
+  Polymer({
+    is: 'pinpoint-perf-job-dialog',
+    properties: {
+      error: {
+        type: String,
+        value: '',
+      },
+      loading: {
+        type: Boolean,
+        value: false,
+      },
+      story_filter: {
+        type: String,
+        value: '',
+      },
+      startCommit: {
+        type: String,
+        value: '',
+      },
+      endCommit: {
+        type: String,
+        value: '',
+      },
+      startRepository: {
+        type: String,
+        value: '',
+      },
+      endRepository: {
+        type: String,
+        value: '',
+      },
+      useTrace: {
+        type: Boolean,
+      },
+      useAtrace: {
+        type: Boolean,
+      },
+      atraceCategories: {
+        type: String,
+      },
+      traceCategories: {
+        type: String,
+      },
+      testPath: {
+        type: String,
+        value: '',
+      },
+      xsrfToken: {
+      }
+    },
+
+    computeHasError: errorMessage => !!errorMessage,
+    computeIsAndroidBot(bot) {
+      return bot.indexOf('android') != -1;
+    },
+
+    /**
+      * Initializes and shows the trace form.
+      */
+    async show() {
+      this.open();
+
+      this.atraceCategories =
+        'sched,freq,gfx,view,dalvik,webview,input,disk,am,' +
+        'wm,rs,binder_driver';
+      this.useAtrace = false;
+      this.traceCategories =
+        'toplevel,toplevel.flow,disabled-by-default-toplevel.flow';
+      this.useTrace = true;
+      this.bot = this.testPath.split('/')[1];
+
+      this.loading = true;
+      this.story_filter = '';
+      try {
+        const params = {
+          test_path: this.testPath,
+        };
+
+        const results = await simple_xhr.asPromise(
+            '/pinpoint/new/prefill', params);
+        this.story_filter = results.story_filter;
+      } catch (e) {
+        this.error = e;
+      }
+
+      this.loading = false;
+    },
+
+    /**
+      * Makes a request to Pinpoint to perform a perf try job.
+      */
+    async onSendToTrybot(event) {
+      const args = [];
+      if (this.useTrace) {
+        args.push('--extra-chrome-categories', this.traceCategories);
+      }
+      if (this.useAtrace) {
+        args.push('--extra-atrace-categories', this.atraceCategories);
+      }
+
+      const params = {
+        test_path: this.testPath,
+        story_filter: this.story_filter,
+        start_commit: this.startCommit,
+        end_commit: this.endCommit,
+        extra_test_args: JSON.stringify(args)
+      };
+
+      try {
+        this.error = '';
+        this.create_disabled = true;
+        const results = await simple_xhr.asPromise(
+            '/pinpoint/new/perf_try', params);
+        this.lastSubmittedJobId = results.jobId;
+        this.lastSubmittedJobUrl = results.jobUrl;
+        this.fire('display-toast', {'content': this.$.jobsubmitted});
+        this.close();
+      } catch (e) {
+        this.error = e;
+      }
+      this.create_disabled = false;
+    },
+
+    open() {
+      this.$.container.open();
+    },
+
+    close() {
+      this.$.container.close();
+    }
+  });
+})();
+</script>

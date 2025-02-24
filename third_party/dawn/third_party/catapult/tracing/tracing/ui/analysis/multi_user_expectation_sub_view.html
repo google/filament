@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+<link rel="import"
+  href="/tracing/ui/analysis/user_expectation_related_samples_table.html">
+
+<dom-module id='tr-ui-a-multi-user-expectation-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex: 1 1 auto;
+    }
+    #events {
+      margin-left: 8px;
+      flex: 0 1 200px;
+    }
+    </style>
+    <tr-ui-a-multi-event-sub-view id="realView"></tr-ui-a-multi-event-sub-view>
+    <div id="events">
+      <tr-ui-a-user-expectation-related-samples-table id="relatedSamples"></tr-ui-a-user-expectation-related-samples-table>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-interaction-record-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.currentSelection_ = undefined;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.$.realView.setSelectionWithoutErrorChecks(selection);
+
+    this.currentSelection_ = selection;
+
+    this.$.relatedSamples.selection = selection;
+    if (this.$.relatedSamples.hasRelatedSamples()) {
+      this.$.events.style.display = '';
+    } else {
+      this.$.events.style.display = 'none';
+    }
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  get relatedEventsToHighlight() {
+    if (!this.currentSelection_) return undefined;
+
+    const selection = new tr.model.EventSet();
+    this.currentSelection_.forEach(function(ir) {
+      ir.associatedEvents.forEach(function(event) {
+        selection.push(event);
+      });
+    });
+    return selection;
+  }
+});
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-user-expectation-sub-view',
+    tr.model.um.UserExpectation,
+    {
+      multi: true,
+      title: 'User Expectations',
+    });
+</script>

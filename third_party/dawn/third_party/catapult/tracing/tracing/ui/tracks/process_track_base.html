@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/process_track_base.css">
+
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/model_settings.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/counter_track.html">
+<link rel="import" href="/tracing/ui/tracks/frame_track.html">
+<link rel="import" href="/tracing/ui/tracks/object_instance_group_track.html">
+<link rel="import" href="/tracing/ui/tracks/other_threads_track.html">
+<link rel="import" href="/tracing/ui/tracks/process_summary_track.html">
+<link rel="import" href="/tracing/ui/tracks/spacing_track.html">
+<link rel="import" href="/tracing/ui/tracks/thread_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ObjectSnapshotView = tr.ui.analysis.ObjectSnapshotView;
+  const ObjectInstanceView = tr.ui.analysis.ObjectInstanceView;
+  const SpacingTrack = tr.ui.tracks.SpacingTrack;
+
+  /**
+   * Visualizes a Process by building ThreadTracks and CounterTracks.
+   * @constructor
+   */
+  const ProcessTrackBase =
+      tr.ui.b.define('process-track-base', tr.ui.tracks.ContainerTrack);
+
+  ProcessTrackBase.prototype = {
+
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+
+      this.processBase_ = undefined;
+
+      Polymer.dom(this).classList.add('process-track-base');
+      Polymer.dom(this).classList.add('expanded');
+
+      this.processNameEl_ = tr.ui.b.createSpan();
+      Polymer.dom(this.processNameEl_).classList.add('process-track-name');
+
+      this.closeEl_ = tr.ui.b.createSpan();
+      Polymer.dom(this.closeEl_).classList.add('process-track-close');
+      this.closeEl_.textContent = 'X';
+
+      this.headerEl_ = tr.ui.b.createDiv({className: 'process-track-header'});
+      Polymer.dom(this.headerEl_).appendChild(this.processNameEl_);
+      Polymer.dom(this.headerEl_).appendChild(this.closeEl_);
+      this.headerEl_.addEventListener('click', this.onHeaderClick_.bind(this));
+
+      Polymer.dom(this).appendChild(this.headerEl_);
+    },
+
+    get processBase() {
+      return this.processBase_;
+    },
+
+    set processBase(processBase) {
+      this.processBase_ = processBase;
+
+      if (this.processBase_) {
+        const modelSettings = new tr.model.ModelSettings(
+            this.processBase_.model);
+        const defaultValue = this.processBase_.important;
+        this.expanded = modelSettings.getSettingFor(
+            this.processBase_, 'expanded', defaultValue);
+      }
+
+      this.updateContents_();
+    },
+
+    get expanded() {
+      return Polymer.dom(this).classList.contains('expanded');
+    },
+
+    set expanded(expanded) {
+      expanded = !!expanded;
+
+      if (this.expanded === expanded) return;
+
+      Polymer.dom(this).classList.toggle('expanded');
+
+      // Expanding and collapsing tracks is, essentially, growing and shrinking
+      // the viewport. We dispatch a change event to trigger any processing
+      // to happen.
+      this.viewport_.dispatchChangeEvent();
+
+      if (!this.processBase_) return;
+
+      const modelSettings = new tr.model.ModelSettings(this.processBase_.model);
+      modelSettings.setSettingFor(this.processBase_, 'expanded', expanded);
+      this.updateContents_();
+      this.viewport.rebuildEventToTrackMap();
+      this.viewport.rebuildContainerToTrackMap();
+    },
+
+    set visible(visible) {
+      if (visible === this.visible) return;
+      this.hidden = !visible;
+
+      tr.b.dispatchSimpleEvent(this, 'visibility');
+      // Changing the visibility of the tracks can grow and shrink the viewport.
+      // We dispatch a change event to trigger any processing to happen.
+      this.viewport_.dispatchChangeEvent();
+
+      if (!this.processBase_) return;
+
+      this.updateContents_();
+      this.viewport.rebuildEventToTrackMap();
+      this.viewport.rebuildContainerToTrackMap();
+    },
+
+    get visible() {
+      return !this.hidden;
+    },
+
+    get hasVisibleContent() {
+      if (this.expanded) {
+        return this.children.length > 1;
+      }
+      return true;
+    },
+
+    onHeaderClick_(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      if (e.target === this.closeEl_) {
+        this.visible = false;
+      } else {
+        this.expanded = !this.expanded;
+      }
+    },
+
+    updateContents_() {
+      this.clearTracks_();
+
+      if (!this.processBase_) return;
+      if (!this.visible) return;
+
+      Polymer.dom(this.processNameEl_).textContent =
+          this.processBase_.userFriendlyName;
+      this.headerEl_.title = this.processBase_.userFriendlyDetails;
+
+      // Create the object instance tracks for this process.
+      this.willAppendTracks_();
+      if (this.expanded) {
+        this.appendMemoryDumpTrack_();
+        this.appendObjectInstanceTracks_();
+        this.appendCounterTracks_();
+        this.appendFrameTrack_();
+        this.appendThreadTracks_();
+      } else {
+        this.appendSummaryTrack_();
+      }
+      this.didAppendTracks_();
+    },
+
+    willAppendTracks_() {
+    },
+
+    didAppendTracks_() {
+    },
+
+    appendMemoryDumpTrack_() {
+    },
+
+    appendSummaryTrack_() {
+      const track = new tr.ui.tracks.ProcessSummaryTrack(this.viewport);
+      track.process = this.process;
+      if (!track.hasVisibleContent) return;
+      Polymer.dom(this).appendChild(track);
+      // no spacing track, since this track only shown in collapsed state
+    },
+
+    appendFrameTrack_() {
+      const frames = this.process ? this.process.frames : undefined;
+      if (!frames || !frames.length) return;
+
+      const track = new tr.ui.tracks.FrameTrack(this.viewport);
+      track.frames = frames;
+      Polymer.dom(this).appendChild(track);
+    },
+
+    appendObjectInstanceTracks_() {
+      const instancesByTypeName =
+          this.processBase_.objects.getAllInstancesByTypeName();
+      const instanceTypeNames = Object.keys(instancesByTypeName);
+      instanceTypeNames.sort();
+
+      let didAppendAtLeastOneTrack = false;
+      instanceTypeNames.forEach(function(typeName) {
+        const allInstances = instancesByTypeName[typeName];
+
+        // If a object snapshot has a view it will be shown,
+        // unless the view asked for it to not be shown.
+        let instanceViewInfo = ObjectInstanceView.getTypeInfo(
+            undefined, typeName);
+        let snapshotViewInfo = ObjectSnapshotView.getTypeInfo(
+            undefined, typeName);
+        if (instanceViewInfo && !instanceViewInfo.metadata.showInTrackView) {
+          instanceViewInfo = undefined;
+        }
+        if (snapshotViewInfo && !snapshotViewInfo.metadata.showInTrackView) {
+          snapshotViewInfo = undefined;
+        }
+        const hasViewInfo = instanceViewInfo || snapshotViewInfo;
+
+        // There are some instances that don't merit their own track in
+        // the UI. Filter them out.
+        const visibleInstances = [];
+        for (let i = 0; i < allInstances.length; i++) {
+          const instance = allInstances[i];
+
+          // Do not create tracks for instances that have no snapshots.
+          if (instance.snapshots.length === 0) continue;
+
+          // Do not create tracks for instances that have implicit snapshots
+          // and don't have a view.
+          if (instance.hasImplicitSnapshots && !hasViewInfo) continue;
+
+          visibleInstances.push(instance);
+        }
+        if (visibleInstances.length === 0) return;
+
+        // Look up the constructor for this track, or use the default
+        // constructor if none exists.
+        let trackConstructor =
+            tr.ui.tracks.ObjectInstanceTrack.getConstructor(
+                undefined, typeName);
+        if (!trackConstructor) {
+          snapshotViewInfo = ObjectSnapshotView.getTypeInfo(
+              undefined, typeName);
+          if (snapshotViewInfo && snapshotViewInfo.metadata.showInstances) {
+            trackConstructor = tr.ui.tracks.ObjectInstanceGroupTrack;
+          } else {
+            trackConstructor = tr.ui.tracks.ObjectInstanceTrack;
+          }
+        }
+        const track = new trackConstructor(this.viewport);
+        track.objectInstances = visibleInstances;
+        Polymer.dom(this).appendChild(track);
+        didAppendAtLeastOneTrack = true;
+      }, this);
+      if (didAppendAtLeastOneTrack) {
+        Polymer.dom(this).appendChild(new SpacingTrack(this.viewport));
+      }
+    },
+
+    appendCounterTracks_() {
+      // Add counter tracks for this process.
+      const counters = Object.values(this.processBase.counters);
+      counters.sort(tr.model.Counter.compare);
+
+      // Create the counters for this process.
+      counters.forEach(function(counter) {
+        const track = new tr.ui.tracks.CounterTrack(this.viewport);
+        track.counter = counter;
+        Polymer.dom(this).appendChild(track);
+        Polymer.dom(this).appendChild(new SpacingTrack(this.viewport));
+      }.bind(this));
+    },
+
+    appendThreadTracks_() {
+      // Get a sorted list of threads.
+      const threads = Object.values(this.processBase.threads);
+      threads.sort(tr.model.Thread.compare);
+
+      // Create the threads.
+      const otherThreads = [];
+      let hasVisibleThreads = false;
+      threads.forEach(function(thread) {
+        const track = new tr.ui.tracks.ThreadTrack(this.viewport);
+        track.thread = thread;
+        if (!track.hasVisibleContent) return;
+
+        if (track.hasSlices) {
+          hasVisibleThreads = true;
+          Polymer.dom(this).appendChild(track);
+          Polymer.dom(this).appendChild(new SpacingTrack(this.viewport));
+        } else if (track.hasTimeSlices) {
+          otherThreads.push(thread);
+        }
+      }.bind(this));
+
+      if (otherThreads.length > 0) {
+        // If there's only 1 thread with scheduling-only information don't
+        // bother making a group, just display it directly
+        // Similarly if we are a process with only scheduling-only threads
+        // don't bother making a group as the process itself serves
+        // as the collapsable group
+        const track = new tr.ui.tracks.OtherThreadsTrack(this.viewport);
+        track.threads = otherThreads;
+        track.collapsible = otherThreads.length > 1 && hasVisibleThreads;
+        Polymer.dom(this).appendChild(track);
+      }
+    }
+  };
+
+  return {
+    ProcessTrackBase,
+  };
+});
+</script>

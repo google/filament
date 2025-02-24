@@ -1,0 +1,10 @@
+[
+  {"name": "a", "args": {},"pid": 52, "ts": 9524, "cat": "foo", "tid": 53,
+      "ph": "B"},
+  {"name": "a", "args": {},"pid": 52, "ts": 9560, "cat": "foo", "tid": 53,
+      "ph": "E"},
+  {"name": "b", "args": {},"pid": 52, "ts": 9629, "cat": "foo", "tid": 53,
+      "ph": "B"},
+  {"name": "b", "args": {},"pid": 52, "ts": 9631, "cat": "foo", "tid": 53,
+      "ph": "E"}
+]

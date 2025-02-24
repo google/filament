@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/chart_transform.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<style>
+.chart-track {
+  height: 30px;
+  position: relative;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays a chart.
+   *
+   * @constructor
+   * @extends {Track}
+   */
+  const ChartTrack =
+      tr.ui.b.define('chart-track', tr.ui.tracks.Track);
+
+  ChartTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('chart-track');
+      this.series_ = undefined;
+      this.axes_ = undefined;
+
+      // GUID -> {axis: ChartSeriesYAxis, series: [ChartSeries]}.
+      this.axisGuidToAxisData_ = undefined;
+
+      // The maximum top and bottom padding of all series.
+      this.topPadding_ = undefined;
+      this.bottomPadding_ = undefined;
+
+      this.showYAxisLabels_ = undefined;
+      this.showGridLines_ = undefined;
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    set heading(heading) {
+      this.heading_.heading = heading;
+    },
+
+    get heading() {
+      return this.heading_.heading;
+    },
+
+    set tooltip(tooltip) {
+      this.heading_.tooltip = tooltip;
+    },
+
+    get series() {
+      return this.series_;
+    },
+
+    /**
+     * Set the list of chart series to be displayed on this track. The list
+     * is assumed to be sorted in increasing z-order (i.e. the last series in
+     * the list will be drawn at the top).
+     */
+    set series(series) {
+      this.series_ = series;
+      this.calculateAxisDataAndPadding_();
+      this.invalidateDrawingContainer();
+    },
+
+    get height() {
+      return window.getComputedStyle(this).height;
+    },
+
+    set height(height) {
+      this.style.height = height;
+      this.invalidateDrawingContainer();
+    },
+
+    get showYAxisLabels() {
+      return this.showYAxisLabels_;
+    },
+
+    set showYAxisLabels(showYAxisLabels) {
+      this.showYAxisLabels_ = showYAxisLabels;
+      this.invalidateDrawingContainer();
+    },
+
+    get showGridLines() {
+      return this.showGridLines_;
+    },
+
+    set showGridLines(showGridLines) {
+      this.showGridLines_ = showGridLines;
+      this.invalidateDrawingContainer();
+    },
+
+    get hasVisibleContent() {
+      return !!this.series && this.series.length > 0;
+    },
+
+    calculateAxisDataAndPadding_() {
+      if (!this.series_) {
+        this.axes_ = undefined;
+        this.axisGuidToAxisData_ = undefined;
+        this.topPadding_ = undefined;
+        this.bottomPadding_ = undefined;
+        return;
+      }
+
+      const axisGuidToAxisData = {};
+      let topPadding = 0;
+      let bottomPadding = 0;
+
+      this.series_.forEach(function(series) {
+        const seriesYAxis = series.seriesYAxis;
+        const axisGuid = seriesYAxis.guid;
+        if (!(axisGuid in axisGuidToAxisData)) {
+          axisGuidToAxisData[axisGuid] = {
+            axis: seriesYAxis,
+            series: []
+          };
+          if (!this.axes_) this.axes_ = [];
+          this.axes_.push(seriesYAxis);
+        }
+        axisGuidToAxisData[axisGuid].series.push(series);
+        topPadding = Math.max(topPadding, series.topPadding);
+        bottomPadding = Math.max(bottomPadding, series.bottomPadding);
+      }, this);
+
+      this.axisGuidToAxisData_ = axisGuidToAxisData;
+      this.topPadding_ = topPadding;
+      this.bottomPadding_ = bottomPadding;
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.GENERAL_EVENT:
+          this.drawChart_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawChart_(viewLWorld, viewRWorld) {
+      if (!this.series_) return;
+
+      const ctx = this.context();
+
+      // Get track drawing parameters.
+      const displayTransform = this.viewport.currentDisplayTransform;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const bounds = this.getBoundingClientRect();
+      const highDetails = this.viewport.highDetails;
+
+      // Pre-multiply all device-independent pixel parameters with the pixel
+      // ratio to avoid unnecessary recomputation in the performance-critical
+      // drawing code.
+      const width = bounds.width * pixelRatio;
+      const height = bounds.height * pixelRatio;
+      const topPadding = this.topPadding_ * pixelRatio;
+      const bottomPadding = this.bottomPadding_ * pixelRatio;
+
+      // Set up clipping.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, width, height);
+      ctx.clip();
+
+      // TODO(aiolos): Add support for secondary y-axis on right side of chart.
+      // https://github.com/catapult-project/catapult/issues/3008
+      // Draw y-axis grid lines.
+      if (this.axes_) {
+        if ((this.showGridLines_ || this.showYAxisLabels_) &&
+            this.axes_.length > 1) {
+          throw new Error('Only one axis allowed when showing grid lines.');
+        }
+        for (const yAxis of this.axes_) {
+          const chartTransform = new tr.ui.tracks.ChartTransform(
+              displayTransform, yAxis, width, height,
+              topPadding, bottomPadding, pixelRatio);
+          yAxis.draw(
+              ctx, chartTransform, this.showYAxisLabels_, this.showGridLines_);
+        }
+      }
+
+      // Draw all series in the increasing z-order.
+      for (const series of this.series) {
+        const chartTransform = new tr.ui.tracks.ChartTransform(
+            displayTransform, series.seriesYAxis, width, height, topPadding,
+            bottomPadding, pixelRatio);
+        series.draw(ctx, chartTransform, highDetails);
+      }
+
+      // Stop clipping.
+      ctx.restore();
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      // TODO(petrcermak): Consider adding the series to the track map instead
+      // of the track (a potential performance optimization).
+      this.series_.forEach(function(series) {
+        series.points.forEach(function(point) {
+          point.addToTrackMap(eventToTrackMap, this);
+        }, this);
+      }, this);
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      this.series_.forEach(function(series) {
+        series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+            loWX, hiWX, viewPixWidthWorld, selection);
+      }, this);
+    },
+
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      let foundItem = false;
+      this.series_.forEach(function(series) {
+        foundItem = foundItem || series.addEventNearToProvidedEventToSelection(
+            event, offset, selection);
+      }, this);
+      return foundItem;
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+      // Do nothing.
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      this.series_.forEach(function(series) {
+        series.addClosestEventToSelection(
+            worldX, worldMaxDist, loY, hiY, selection);
+      }, this);
+    },
+
+    /**
+     * Automatically set the bounds of all axes on this track from the range of
+     * values of all series (in this track) associated with each of them.
+     *
+     * See the description of ChartSeriesYAxis.autoSetFromRange for the optional
+     * configuration argument flags.
+     */
+    autoSetAllAxes(opt_config) {
+      for (const axisData of Object.values(this.axisGuidToAxisData_)) {
+        const seriesYAxis = axisData.axis;
+        const series = axisData.series;
+        seriesYAxis.autoSetFromSeries(series, opt_config);
+      }
+    },
+
+    /**
+     * Automatically set the bounds of the provided axis from the range of
+     * values of all series (in this track) associated with it.
+     *
+     * See the description of ChartSeriesYAxis.autoSetFromRange for the optional
+     * configuration argument flags.
+     */
+    autoSetAxis(seriesYAxis, opt_config) {
+      const series = this.axisGuidToAxisData_[seriesYAxis.guid].series;
+      seriesYAxis.autoSetFromSeries(series, opt_config);
+    }
+  };
+
+  return {
+    ChartTrack,
+  };
+});
+</script>

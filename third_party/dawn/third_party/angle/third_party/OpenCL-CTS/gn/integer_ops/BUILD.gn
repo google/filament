@@ -1,0 +1,29 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("integer_ops") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_abs.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_absdiff.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_add_sat.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_extended_bit_ops_extract.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_extended_bit_ops_insert.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_extended_bit_ops_reverse.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_int_basic_ops.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_integer_dot_product.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_integers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_intmad24.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_intmul24.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_popcount.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_sub_sat.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_unary_ops.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/test_upsample.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/integer_ops/verification_and_generation_functions.cpp",
+  ]
+}

@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvr_1_1async_1_1_i_framework_cleanup_object.html" title="pvr::async::IFrameworkCleanup\lObject\&lt; TexturePtr \&gt;" alt="" coords="5,5,232,47"/>
+<area shape="rect" id="node2" href="$classpvr_1_1async_1_1_i_framework_async_result.html" title="pvr::async::IFrameworkAsync\lResult\&lt; TexturePtr \&gt;" alt="" coords="280,5,492,47"/>
+<area shape="rect" id="node3" href="$structpvr_1_1async_1_1_texture_load_future__.html" title="A class wrapping the operations necessary to retrieve an asynchronously loaded texture, (e.g. querying if the load is complete, or blocking&#45;wait get the result. It is a shared reference counted resource" alt="" coords="540,42,763,69"/>
+</map>

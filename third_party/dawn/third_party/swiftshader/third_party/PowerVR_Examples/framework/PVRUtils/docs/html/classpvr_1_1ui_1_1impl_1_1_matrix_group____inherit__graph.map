@@ -1,0 +1,4 @@
+<map id="pvr::ui::impl::MatrixGroup_" name="pvr::ui::impl::MatrixGroup_">
+<area shape="rect" id="node2" href="$classpvr_1_1ui_1_1impl_1_1_group__.html" title="Abstract container for sprites. See MatrixGroup or PixelGroup. A group contains references to a numbe..." alt="" coords="25,80,180,107"/>
+<area shape="rect" id="node3" href="$classpvr_1_1ui_1_1impl_1_1_sprite__.html" title="Base sprite class. Use through the Sprite framework object. Represents something that can be rendered..." alt="" coords="26,5,179,32"/>
+</map>

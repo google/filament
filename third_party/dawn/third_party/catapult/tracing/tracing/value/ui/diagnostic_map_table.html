@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<dom-module id="tr-v-ui-diagnostic-map-table">
+  <template>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.ui', function() {
+  function makeColumn(title, histogram) {
+    return {
+      title,
+      value(map) {
+        const diagnostic = map.get(title);
+        if (!diagnostic) return '';
+        return tr.v.ui.createDiagnosticSpan(diagnostic, title, histogram);
+      }
+    };
+  }
+
+  Polymer({
+    is: 'tr-v-ui-diagnostic-map-table',
+
+    created() {
+      this.diagnosticMaps_ = undefined;
+      this.histogram_ = undefined;
+      this.isMetadata_ = false;
+    },
+
+    set histogram(h) {
+      this.histogram_ = h;
+    },
+
+    set isMetadata(m) {
+      this.isMetadata_ = m;
+      this.$.table.showHeader = !this.isMetadata_;
+    },
+
+    /**
+     * The |title| will be used as the heading for the column containing
+     * diagnostic-spans for |diagnosticMap|'s Diagnostics.
+     *
+     * @param {!Array.<!Object>} maps
+     * @param {!string} maps[].title
+     * @param {!tr.v.d.DiagnosticMap} maps[].diagnosticMap
+     */
+    set diagnosticMaps(maps) {
+      this.diagnosticMaps_ = maps;
+      this.updateContents_();
+    },
+
+    get diagnosticMaps() {
+      return this.diagnosticMaps_;
+    },
+
+    updateContents_() {
+      if (this.isMetadata_ && this.diagnosticMaps_.length !== 1) {
+        throw new Error(
+            'Metadata diagnostic-map-tables require exactly 1 DiagnosticMap');
+      }
+      if (this.diagnosticMaps_ === undefined ||
+          this.diagnosticMaps_.length === 0) {
+        this.$.table.tableRows = [];
+        this.$.table.tableColumns = [];
+        return;
+      }
+
+      let names = new Set();
+      for (const map of this.diagnosticMaps_) {
+        for (const [name, diagnostic] of map) {
+          // https://github.com/catapult-project/catapult/issues/2842
+          if (diagnostic instanceof tr.v.d.UnmergeableDiagnosticSet) continue;
+          if (diagnostic instanceof tr.v.d.CollectedRelatedEventSet) continue;
+
+          names.add(name);
+        }
+      }
+      names = Array.from(names).sort();
+
+      const histogram = this.histogram_;
+      if (this.isMetadata_) {
+        const diagnosticMap = this.diagnosticMaps_[0];
+        this.$.table.tableColumns = [
+          {
+            value(name) {
+              return name.name;
+            }
+          },
+          {
+            value(name) {
+              const diagnostic = diagnosticMap.get(name.name);
+              if (!diagnostic) return '';
+              return tr.v.ui.createDiagnosticSpan(
+                  diagnostic, name.name, histogram);
+            }
+          },
+        ];
+        this.$.table.tableRows = names.map(name => {
+          // tr-ui-b-table requires rows to be objects.
+          return {name};
+        });
+      } else {
+        this.$.table.tableColumns = names.map(
+            name => makeColumn(name, histogram));
+        this.$.table.tableRows = this.diagnosticMaps_;
+      }
+
+      this.$.table.rebuild();
+    }
+  });
+
+  return {};
+});
+</script>

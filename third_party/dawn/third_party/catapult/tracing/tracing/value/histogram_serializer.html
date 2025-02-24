@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v', function() {
+  class HistogramSerializer {
+    static serialize(histograms) {
+      const serializer = new HistogramSerializer();
+      histograms = histograms.map(h => h.serialize(serializer));
+      const diagnostics = serializer.diagnosticsByType_;
+      for (const diagnosticsByName of Object.values(diagnostics)) {
+        for (const diagnosticsById of Object.values(diagnosticsByName)) {
+          for (const [id, diag] of Object.entries(diagnosticsById)) {
+            diagnosticsById[id] = diag.serialize(serializer);
+          }
+        }
+      }
+      return [serializer.objects_, diagnostics, ...histograms];
+    }
+
+    constructor() {
+      this.objects_ = [];
+      this.idsByJson_ = new Map();
+      this.diagnosticsByType_ = {};
+      this.diagnosticId_ = -1;
+    }
+
+    getOrAllocateId(obj) {
+      if (obj instanceof Object) {
+        const json = JSON.stringify(obj);
+        let id = this.idsByJson_.get(json);
+        if (!id) {
+          id = this.objects_.push(obj) - 1;
+          this.idsByJson_.set(json, id);
+        }
+        return id;
+      }
+      const id = this.objects_.indexOf(obj);
+      if (id >= 0) return id;
+      return this.objects_.push(obj) - 1;
+    }
+
+    getOrAllocateDiagnosticId(name, diag) {
+      const typeName = diag.constructor.name;
+      let diagnosticsByName = this.diagnosticsByType_[typeName];
+      if (!diagnosticsByName) {
+        diagnosticsByName = {};
+        this.diagnosticsByType_[typeName] = diagnosticsByName;
+      }
+
+      let diagnosticsById = diagnosticsByName[name];
+      if (!diagnosticsById) {
+        diagnosticsById = {};
+        diagnosticsByName[name] = diagnosticsById;
+      }
+
+      for (const [id, other] of Object.entries(diagnosticsById)) {
+        if ((other === diag) || other.equals(diag)) return parseInt(id);
+      }
+
+      ++this.diagnosticId_;
+      diagnosticsById[this.diagnosticId_] = diag;
+      return this.diagnosticId_;
+    }
+  }
+
+  return {HistogramSerializer};
+});
+</script>

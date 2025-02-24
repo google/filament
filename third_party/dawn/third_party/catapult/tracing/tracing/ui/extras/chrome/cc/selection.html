@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  function Selection() {
+    this.selectionToSetIfClicked = undefined;
+  }
+  Selection.prototype = {
+    /**
+     * When two things are picked in the UI, one must occasionally tie-break
+     * between them to decide what was really clicked. Things with higher
+     * specicifity will win.
+     */
+    get specicifity() {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * If a selection is related to a specific layer, then this returns the
+     * layerId of that layer. If the selection is not related to a layer, for
+     * example if the device viewport is selected, then this returns undefined.
+     */
+    get associatedLayerId() {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * If a selection is related to a specific render pass, then this returns
+     * the layerId of that layer. If the selection is not related to a layer,
+     * for example if the device viewport is selected, then this returns
+     * undefined.
+     */
+    get associatedRenderPassId() {
+      throw new Error('Not implemented');
+    },
+
+
+    get highlightsByLayerId() {
+      return {};
+    },
+
+    /**
+     * Called when the selection is made active in the layer view. Must return
+     * an HTMLElement that explains this selection in detail.
+     */
+    createAnalysis() {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * Should try to create the equivalent selection in the provided LTHI,
+     * or undefined if it can't be done.
+     */
+    findEquivalent(lthi) {
+      throw new Error('Not implemented');
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function RenderPassSelection(renderPass, renderPassId) {
+    if (!renderPass || (renderPassId === undefined)) {
+      throw new Error('Render pass (with id) is required');
+    }
+    this.renderPass_ = renderPass;
+    this.renderPassId_ = renderPassId;
+  }
+
+  RenderPassSelection.prototype = {
+    __proto__: Selection.prototype,
+
+    get specicifity() {
+      return 1;
+    },
+
+    get associatedLayerId() {
+      return undefined;
+    },
+
+    get associatedRenderPassId() {
+      return this.renderPassId_;
+    },
+
+    get renderPass() {
+      return this.renderPass_;
+    },
+
+    createAnalysis() {
+      const dataView = document.createElement(
+          'tr-ui-a-generic-object-view-with-label');
+      dataView.label = 'RenderPass ' + this.renderPassId_;
+      dataView.object = this.renderPass_.args;
+      return dataView;
+    },
+
+    get title() {
+      return this.renderPass_.objectInstance.typeName;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function LayerSelection(layer) {
+    if (!layer) {
+      throw new Error('Layer is required');
+    }
+    this.layer_ = layer;
+  }
+
+  LayerSelection.prototype = {
+    __proto__: Selection.prototype,
+
+    get specicifity() {
+      return 1;
+    },
+
+    get associatedLayerId() {
+      return this.layer_.layerId;
+    },
+
+    get associatedRenderPassId() {
+      return undefined;
+    },
+
+    get layer() {
+      return this.layer_;
+    },
+
+    createAnalysis() {
+      const dataView = document.createElement(
+          'tr-ui-a-generic-object-view-with-label');
+      dataView.label = 'Layer ' + this.layer_.layerId;
+      if (this.layer_.usingGpuRasterization) {
+        dataView.label += ' (GPU-rasterized)';
+      }
+      dataView.object = this.layer_.args;
+      return dataView;
+    },
+
+    get title() {
+      return this.layer_.objectInstance.typeName;
+    },
+
+    findEquivalent(lthi) {
+      const layer = lthi.activeTree.findLayerWithId(this.layer_.layerId) ||
+          lthi.pendingTree.findLayerWithId(this.layer_.layerId);
+      if (!layer) return undefined;
+      return new LayerSelection(layer);
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function TileSelection(tile, opt_data) {
+    this.tile_ = tile;
+    this.data_ = opt_data || {};
+  }
+
+  TileSelection.prototype = {
+    __proto__: Selection.prototype,
+
+    get specicifity() {
+      return 2;
+    },
+
+    get associatedLayerId() {
+      return this.tile_.layerId;
+    },
+
+    get highlightsByLayerId() {
+      const highlights = {};
+      highlights[this.tile_.layerId] = [
+        {
+          colorKey: this.tile_.objectInstance.typeName,
+          rect: this.tile_.layerRect
+        }
+      ];
+      return highlights;
+    },
+
+    createAnalysis() {
+      const analysis = document.createElement(
+          'tr-ui-a-generic-object-view-with-label');
+      analysis.label = 'Tile ' + this.tile_.objectInstance.id + ' on layer ' +
+          this.tile_.layerId;
+      if (this.data_) {
+        analysis.object = {
+          moreInfo: this.data_,
+          tileArgs: this.tile_.args
+        };
+      } else {
+        analysis.object = this.tile_.args;
+      }
+      return analysis;
+    },
+
+    findEquivalent(lthi) {
+      const tileInstance = this.tile_.tileInstance;
+      if (lthi.ts < tileInstance.creationTs ||
+          lthi.ts >= tileInstance.deletionTs) {
+        return undefined;
+      }
+      const tileSnapshot = tileInstance.getSnapshotAt(lthi.ts);
+      if (!tileSnapshot) return undefined;
+      return new TileSelection(tileSnapshot);
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function LayerRectSelection(layer, rectType, rect, opt_data) {
+    this.layer_ = layer;
+    this.rectType_ = rectType;
+    this.rect_ = rect;
+    this.data_ = opt_data !== undefined ? opt_data : rect;
+  }
+
+  LayerRectSelection.prototype = {
+    __proto__: Selection.prototype,
+
+    get specicifity() {
+      return 2;
+    },
+
+    get associatedLayerId() {
+      return this.layer_.layerId;
+    },
+
+
+    get highlightsByLayerId() {
+      const highlights = {};
+      highlights[this.layer_.layerId] = [
+        {
+          colorKey: this.rectType_,
+          rect: this.rect_
+        }
+      ];
+      return highlights;
+    },
+
+    createAnalysis() {
+      const analysis = document.createElement(
+          'tr-ui-a-generic-object-view-with-label');
+      analysis.label = this.rectType_ + ' on layer ' + this.layer_.layerId;
+      analysis.object = this.data_;
+      return analysis;
+    },
+
+    findEquivalent(lthi) {
+      return undefined;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function AnimationRectSelection(layer, rect) {
+    this.layer_ = layer;
+    this.rect_ = rect;
+  }
+
+  AnimationRectSelection.prototype = {
+    __proto__: Selection.prototype,
+
+    get specicifity() {
+      return 0;
+    },
+
+    get associatedLayerId() {
+      return this.layer_.layerId;
+    },
+
+    createAnalysis() {
+      const analysis = document.createElement(
+          'tr-ui-a-generic-object-view-with-label');
+      analysis.label = 'Animation Bounds of layer ' + this.layer_.layerId;
+      analysis.object = this.rect_;
+      return analysis;
+    }
+  };
+
+  return {
+    Selection,
+    RenderPassSelection,
+    LayerSelection,
+    TileSelection,
+    LayerRectSelection,
+    AnimationRectSelection,
+  };
+});
+</script>

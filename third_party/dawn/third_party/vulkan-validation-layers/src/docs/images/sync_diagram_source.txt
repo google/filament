@@ -1,0 +1,25 @@
+Copyright 2015-2021 LunarG, Inc.
+
+Diagrams sync_wrr.png and sync_wrw.png were created using 
+
+https://bramp.github.io/js-sequence-diagrams/
+
+Script for wrr diagram:
+
+Title: WRR Sequence
+W->R0: M
+R0 -- > W: Most recent
+R1 -- > W: Most recent
+R1->R2: E
+R2-->R1: Most Recent
+R3-->W: Most Recent
+Note right of R3: R3 not in\nscope of E
+
+Script for wrw diagram:
+
+Title: WRW Sequence
+W0->R: M
+R --> W0: Most recent
+R -> W1: E
+W1 -- > R: Most recent
+

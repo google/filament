@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/extras/importer/v8/codemap.html">
+<link rel="import" href="/tracing/extras/importer/v8/log_reader.html">
+<link rel="import" href="/tracing/extras/v8/v8_cpu_profile_node.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/profile_tree.html">
+<link rel="import" href="/tracing/model/slice.html">
+
+<script>
+
+'use strict';
+
+/**
+ * @fileoverview V8LogImporter imports v8.log files into the provided model.
+ */
+tr.exportTo('tr.e.importer.v8', function() {
+  const CodeEntry = tr.e.importer.v8.CodeMap.CodeEntry;
+  const CodeMap = tr.e.importer.v8.CodeMap;
+  const ColorScheme = tr.b.ColorScheme;
+  const DynamicFuncCodeEntry = tr.e.importer.v8.CodeMap.DynamicFuncCodeEntry;
+  const FunctionEntry = tr.e.importer.v8.CodeMap.FunctionEntry;
+  const ProfileNodeType = tr.model.ProfileNode.subTypes.getConstructor(
+      undefined, 'legacySample');
+
+  function V8LogImporter(model, eventData) {
+    this.importPriority = 3;
+    this.model_ = model;
+
+    this.logData_ = eventData;
+
+    this.code_map_ = new CodeMap();
+    this.v8_timer_thread_ = undefined;
+    this.v8_thread_ = undefined;
+
+    this.profileTree_ = new tr.model.ProfileTree();
+    // We predefine a unknown Profile Node so that when a stack address
+    // can't be symbolized, we make it attach to the unknown Profile Node.
+    this.profileTree_.add(new ProfileNodeType(
+        -1, {
+          url: '',
+          functionName: 'unknown'
+        }
+    ));
+
+    // We reconstruct the stack timeline from ticks.
+    this.v8_stack_timeline_ = [];
+  }
+
+  const kV8BinarySuffixes = ['/d8', '/libv8.so'];
+
+
+  const TimerEventDefaultArgs = {
+    'V8.Execute': { pause: false, no_execution: false},
+    'V8.External': { pause: false, no_execution: true},
+    'V8.CompileFullCode': { pause: true, no_execution: true},
+    'V8.RecompileSynchronous': { pause: true, no_execution: true},
+    'V8.RecompileParallel': { pause: false, no_execution: false},
+    'V8.CompileEval': { pause: true, no_execution: true},
+    'V8.Parse': { pause: true, no_execution: true},
+    'V8.PreParse': { pause: true, no_execution: true},
+    'V8.ParseLazy': { pause: true, no_execution: true},
+    'V8.GCScavenger': { pause: true, no_execution: true},
+    'V8.GCCompactor': { pause: true, no_execution: true},
+    'V8.GCContext': { pause: true, no_execution: true}
+  };
+
+  /**
+   * @return {boolean} Whether obj is a V8 log string.
+   */
+  V8LogImporter.canImport = function(eventData) {
+    if (typeof(eventData) !== 'string' && !(eventData instanceof String)) {
+      return false;
+    }
+
+    return eventData.substring(0, 11) === 'v8-version,' ||
+           eventData.substring(0, 12) === 'timer-event,' ||
+           eventData.substring(0, 5) === 'tick,' ||
+           eventData.substring(0, 15) === 'shared-library,' ||
+           eventData.substring(0, 9) === 'profiler,' ||
+           eventData.substring(0, 14) === 'code-creation,';
+  };
+
+  V8LogImporter.prototype = {
+
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'V8LogImporter';
+    },
+
+    processTimerEvent_(name, startInUs, lengthInUs) {
+      const args = TimerEventDefaultArgs[name];
+      if (args === undefined) return;
+      const startInMs = tr.b.convertUnit(startInUs,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      const lengthInMs = tr.b.convertUnit(lengthInUs,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      const colorId = ColorScheme.getColorIdForGeneralPurposeString(name);
+      const slice = new tr.model.ThreadSlice('v8', name, colorId, startInMs,
+          args, lengthInMs);
+      this.v8_timer_thread_.sliceGroup.pushSlice(slice);
+    },
+
+    processTimerEventStart_(name, startInUs) {
+      const args = TimerEventDefaultArgs[name];
+      if (args === undefined) return;
+      const startInMs = tr.b.convertUnit(startInUs,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      this.v8_timer_thread_.sliceGroup.beginSlice('v8', name, startInMs, args);
+    },
+
+    processTimerEventEnd_(name, endInUs) {
+      const endInMs = tr.b.convertUnit(endInUs,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      this.v8_timer_thread_.sliceGroup.endSlice(endInMs);
+    },
+
+    processCodeCreateEvent_(type, kind, address, size, name,
+        maybeFunc) {
+      function parseState(s) {
+        switch (s) {
+          case '': return CodeMap.CodeState.COMPILED;
+          case '~': return CodeMap.CodeState.OPTIMIZABLE;
+          case '*': return CodeMap.CodeState.OPTIMIZED;
+        }
+        throw new Error('unknown code state: ' + s);
+      }
+
+      if (maybeFunc.length) {
+        const funcAddr = parseInt(maybeFunc[0]);
+        const state = parseState(maybeFunc[1]);
+        let func = this.code_map_.findDynamicEntryByStartAddress(funcAddr);
+        if (!func) {
+          func = new FunctionEntry(name);
+          func.kind = kind;
+          this.code_map_.addCode(funcAddr, func);
+        } else if (func.name !== name) {
+          // Function object has been overwritten with a new one.
+          func.name = name;
+        }
+        let entry = this.code_map_.findDynamicEntryByStartAddress(address);
+        if (entry) {
+          if (entry.size === size && entry.func === func) {
+            // Entry state has changed.
+            entry.state = state;
+          }
+        } else {
+          entry = new DynamicFuncCodeEntry(size, type, func, state);
+          entry.kind = kind;
+          this.code_map_.addCode(address, entry);
+        }
+      } else {
+        const codeEntry = new CodeEntry(size, name);
+        codeEntry.kind = kind;
+        this.code_map_.addCode(address, codeEntry);
+      }
+    },
+
+    processCodeMoveEvent_(from, to) {
+      this.code_map_.moveCode(from, to);
+    },
+
+    processCodeDeleteEvent_(address) {
+      this.code_map_.deleteCode(address);
+    },
+
+    processSharedLibrary_(name, start, end) {
+      const codeEntry = new CodeEntry(end - start, name,
+          CodeEntry.TYPE.SHARED_LIB);
+      codeEntry.kind = -3;  // External code kind.
+      for (let i = 0; i < kV8BinarySuffixes.length; i++) {
+        const suffix = kV8BinarySuffixes[i];
+        if (name.indexOf(suffix, name.length - suffix.length) >= 0) {
+          codeEntry.kind = -1;  // V8 runtime code kind.
+          break;
+        }
+      }
+      this.code_map_.addLibrary(start, codeEntry);
+    },
+
+    processCppSymbol_(address, size, name) {
+      const codeEntry = new CodeEntry(size, name, CodeEntry.TYPE.CPP);
+      codeEntry.kind = -1;
+      this.code_map_.addStaticCode(address, codeEntry);
+    },
+
+    processTickEvent_(pc, startInUs, isExternalCallback,
+        tosOrExternalCallback, vmstate, stack) {
+      const startInMs = tr.b.convertUnit(startInUs,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+
+      function findChildWithEntryID(stackFrame, entryID) {
+        for (let i = 0; i < stackFrame.children.length; i++) {
+          if (stackFrame.children[i].entryID === entryID) {
+            return stackFrame.children[i];
+          }
+        }
+        return undefined;
+      }
+
+      function processStack(pc, func, stack) {
+        const fullStack = func ? [pc, func] : [pc];
+        let prevFrame = pc;
+        for (let i = 0, n = stack.length; i < n; ++i) {
+          const frame = stack[i];
+          const firstChar = frame.charAt(0);
+          if (firstChar === '+' || firstChar === '-') {
+            // An offset from the previous frame.
+            prevFrame += parseInt(frame, 16);
+            fullStack.push(prevFrame);
+            // Filter out possible 'overflow' string.
+          } else if (firstChar !== 'o') {
+            fullStack.push(parseInt(frame, 16));
+          }
+          // Otherwise, they will be skipped.
+        }
+        return fullStack;
+      }
+
+      if (isExternalCallback) {
+        // Don't use PC when in external callback code, as it can point
+        // inside callback's code, and we will erroneously report
+        // that a callback calls itself. Instead use tosOrExternalCallback,
+        // as simply resetting PC will produce unaccounted ticks.
+        pc = tosOrExternalCallback;
+        tosOrExternalCallback = 0;
+      } else if (tosOrExternalCallback) {
+        // Find out, if top of stack was pointing inside a JS function
+        // meaning that we have encountered a frameless invocation.
+        const funcEntry = this.code_map_.findEntry(tosOrExternalCallback);
+        if (!funcEntry ||
+            !funcEntry.isJSFunction ||
+            !funcEntry.isJSFunction()) {
+          tosOrExternalCallback = 0;
+        }
+      }
+
+      let processedStack = processStack(pc, tosOrExternalCallback, stack);
+      let node = undefined;
+      let lastNode = undefined;
+      // v8 log stacks are inverted, leaf first and the root at the end.
+      processedStack = processedStack.reverse();
+      for (let i = 0, n = processedStack.length; i < n; i++) {
+        const frame = processedStack[i];
+        if (!frame) break;
+        const entry = this.code_map_.findEntry(frame);
+
+        if (!entry && i !== 0) {
+          continue;
+        }
+
+        let sourceInfo = undefined;
+        if (entry && entry.type === CodeEntry.TYPE.CPP) {
+          const libEntry = this.code_map_.findEntryInLibraries(frame);
+          if (libEntry) {
+            sourceInfo = {
+              file: libEntry.name
+            };
+          }
+        }
+        const entryId = entry ? entry.id : -1;
+        node = this.profileTree_.getNode(entryId);
+        if (node === undefined) {
+          node = this.profileTree_.add(new ProfileNodeType(
+              entryId, {
+                functionName: entry.name,
+                url: sourceInfo ? sourceInfo.file : '',
+                lineNumber: sourceInfo ? sourceInfo.line : undefined,
+                columnNumber: sourceInfo ? sourceInfo.column : undefined,
+                scriptId: sourceInfo ? sourceInfo.scriptId : undefined
+              }, lastNode));
+        }
+        lastNode = node;
+      }
+      this.model_.samples.push(new tr.model.Sample(
+          startInMs, 'V8 PC', node, this.v8_thread_, undefined, 1));
+    },
+
+    processDistortion_(distortionInPicoseconds) {
+      // Do nothing.
+    },
+
+    processPlotRange_(start, end) {
+      // Do nothing.
+    },
+
+    processV8Version_(major, minor, build, patch, candidate) {
+      // Do nothing.
+    },
+
+    /**
+     * Walks through the events_ list and outputs the structures discovered to
+     * model_.
+     */
+    importEvents() {
+      const logreader = new tr.e.importer.v8.LogReader(
+          { 'timer-event': {
+            parsers: [null, parseInt, parseInt],
+            processor: this.processTimerEvent_.bind(this)
+          },
+          'shared-library': {
+            parsers: [null, parseInt, parseInt],
+            processor: this.processSharedLibrary_.bind(this)
+          },
+          'timer-event-start': {
+            parsers: [null, parseInt],
+            processor: this.processTimerEventStart_.bind(this)
+          },
+          'timer-event-end': {
+            parsers: [null, parseInt],
+            processor: this.processTimerEventEnd_.bind(this)
+          },
+          'code-creation': {
+            parsers: [null, parseInt, parseInt, parseInt, null, 'var-args'],
+            processor: this.processCodeCreateEvent_.bind(this)
+          },
+          'code-move': {
+            parsers: [parseInt, parseInt],
+            processor: this.processCodeMoveEvent_.bind(this)
+          },
+          'code-delete': {
+            parsers: [parseInt],
+            processor: this.processCodeDeleteEvent_.bind(this)
+          },
+          'cpp': {
+            parsers: [parseInt, parseInt, null],
+            processor: this.processCppSymbol_.bind(this)
+          },
+          'tick': {
+            parsers: [parseInt, parseInt, parseInt, parseInt, parseInt,
+              'var-args'],
+            processor: this.processTickEvent_.bind(this)
+          },
+          'distortion': {
+            parsers: [parseInt],
+            processor: this.processDistortion_.bind(this)
+          },
+          'plot-range': {
+            parsers: [parseInt, parseInt],
+            processor: this.processPlotRange_.bind(this)
+          },
+          'v8-version': {
+            parsers: [parseInt, parseInt, parseInt, parseInt, parseInt],
+            processor: this.processV8Version_.bind(this)
+          }
+          });
+
+      this.v8_timer_thread_ =
+          this.model_.getOrCreateProcess(-32).getOrCreateThread(1);
+      this.v8_timer_thread_.name = 'V8 Timers';
+      this.v8_thread_ =
+          this.model_.getOrCreateProcess(-32).getOrCreateThread(2);
+      this.v8_thread_.name = 'V8';
+
+      const lines = this.logData_.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        logreader.processLogLine(lines[i]);
+      }
+
+      function addSlices(slices, thread) {
+        for (let i = 0; i < slices.length; i++) {
+          const duration = slices[i].end - slices[i].start;
+          const slice = new tr.model.ThreadSlice('v8', slices[i].name,
+              ColorScheme.getColorIdForGeneralPurposeString(slices[i].name),
+              slices[i].start, {}, duration);
+          thread.sliceGroup.pushSlice(slice);
+          addSlices(slices[i].children, thread);
+        }
+      }
+      addSlices(this.v8_stack_timeline_, this.v8_thread_);
+    }
+  };
+
+  tr.importer.Importer.register(V8LogImporter);
+
+  return {
+    V8LogImporter,
+  };
+});
+</script>

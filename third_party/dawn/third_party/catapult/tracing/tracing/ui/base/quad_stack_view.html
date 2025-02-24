@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/bbox2.html">
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/base/math/quad.html">
+<link rel="import" href="/tracing/base/math/rect.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/ui/base/camera.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_selector.html">
+<link rel="import" href="/tracing/ui/base/mouse_tracker.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<template id="quad-stack-view-template">
+  <style>
+  #chrome-left {
+    background-image: url('../images/chrome-left.png');
+    display: none;
+  }
+  #chrome-mid {
+    background-image: url('../images/chrome-mid.png');
+    display: none;
+  }
+  #chrome-right {
+    background-image: url('../images/chrome-right.png');
+    display: none;
+  }
+  </style>
+
+  <div id="header"></div>
+  <input id="stacking-distance-slider" type="range" min=1 max=400 step=1>
+  </input>
+  <div id="canvas-scroller">
+    <canvas id="canvas"></canvas>
+  </div>
+  <img id="chrome-left"/>
+  <img id="chrome-mid"/>
+  <img id="chrome-right"/>
+</template>
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview QuadStackView controls the content and viewing angle a
+ * QuadStack.
+ */
+tr.exportTo('tr.ui.b', function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+
+  const constants = {};
+  constants.IMAGE_LOAD_RETRY_TIME_MS = 500;
+  constants.SUBDIVISION_MINIMUM = 1;
+  constants.SUBDIVISION_RECURSION_DEPTH = 3;
+  constants.SUBDIVISION_DEPTH_THRESHOLD = 100;
+  constants.FAR_PLANE_DISTANCE = 10000;
+
+  // Care of bckenney@ via
+  // http://extremelysatisfactorytotalitarianism.com/blog/?p=2120
+  function drawTexturedTriangle(ctx, img, p0, p1, p2, t0, t1, t2) {
+    const tmpP0 = [p0[0], p0[1]];
+    const tmpP1 = [p1[0], p1[1]];
+    const tmpP2 = [p2[0], p2[1]];
+    const tmpT0 = [t0[0], t0[1]];
+    const tmpT1 = [t1[0], t1[1]];
+    const tmpT2 = [t2[0], t2[1]];
+
+    ctx.beginPath();
+    ctx.moveTo(tmpP0[0], tmpP0[1]);
+    ctx.lineTo(tmpP1[0], tmpP1[1]);
+    ctx.lineTo(tmpP2[0], tmpP2[1]);
+    ctx.closePath();
+
+    tmpP1[0] -= tmpP0[0];
+    tmpP1[1] -= tmpP0[1];
+    tmpP2[0] -= tmpP0[0];
+    tmpP2[1] -= tmpP0[1];
+
+    tmpT1[0] -= tmpT0[0];
+    tmpT1[1] -= tmpT0[1];
+    tmpT2[0] -= tmpT0[0];
+    tmpT2[1] -= tmpT0[1];
+
+    const det = 1 / (tmpT1[0] * tmpT2[1] - tmpT2[0] * tmpT1[1]);
+
+    // linear transformation
+    const a = (tmpT2[1] * tmpP1[0] - tmpT1[1] * tmpP2[0]) * det;
+    const b = (tmpT2[1] * tmpP1[1] - tmpT1[1] * tmpP2[1]) * det;
+    const c = (tmpT1[0] * tmpP2[0] - tmpT2[0] * tmpP1[0]) * det;
+    const d = (tmpT1[0] * tmpP2[1] - tmpT2[0] * tmpP1[1]) * det;
+
+    // translation
+    const e = tmpP0[0] - a * tmpT0[0] - c * tmpT0[1];
+    const f = tmpP0[1] - b * tmpT0[0] - d * tmpT0[1];
+
+    ctx.save();
+    ctx.transform(a, b, c, d, e, f);
+    ctx.clip();
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+  }
+
+  function drawTriangleSub(
+      ctx, img, p0, p1, p2, t0, t1, t2, opt_recursionDepth) {
+    const depth = opt_recursionDepth || 0;
+
+    // We may subdivide if we are not at the limit of recursion.
+    let subdivisionIndex = 0;
+    if (depth < constants.SUBDIVISION_MINIMUM) {
+      subdivisionIndex = 7;
+    } else if (depth < constants.SUBDIVISION_RECURSION_DEPTH) {
+      if (Math.abs(p0[2] - p1[2]) > constants.SUBDIVISION_DEPTH_THRESHOLD) {
+        subdivisionIndex += 1;
+      }
+      if (Math.abs(p0[2] - p2[2]) > constants.SUBDIVISION_DEPTH_THRESHOLD) {
+        subdivisionIndex += 2;
+      }
+      if (Math.abs(p1[2] - p2[2]) > constants.SUBDIVISION_DEPTH_THRESHOLD) {
+        subdivisionIndex += 4;
+      }
+    }
+
+    // These need to be created every time, since temporaries
+    // outside of the scope will be rewritten in recursion.
+    const p01 = vec4.create();
+    const p02 = vec4.create();
+    const p12 = vec4.create();
+    const t01 = vec2.create();
+    const t02 = vec2.create();
+    const t12 = vec2.create();
+
+    // Calculate the position before w-divide.
+    for (let i = 0; i < 2; ++i) {
+      p0[i] *= p0[2];
+      p1[i] *= p1[2];
+      p2[i] *= p2[2];
+    }
+
+    // Interpolate the 3d position.
+    for (let i = 0; i < 4; ++i) {
+      p01[i] = (p0[i] + p1[i]) / 2;
+      p02[i] = (p0[i] + p2[i]) / 2;
+      p12[i] = (p1[i] + p2[i]) / 2;
+    }
+
+    // Re-apply w-divide to the original points and the interpolated ones.
+    for (let i = 0; i < 2; ++i) {
+      p0[i] /= p0[2];
+      p1[i] /= p1[2];
+      p2[i] /= p2[2];
+
+      p01[i] /= p01[2];
+      p02[i] /= p02[2];
+      p12[i] /= p12[2];
+    }
+
+    // Interpolate the texture coordinates.
+    for (let i = 0; i < 2; ++i) {
+      t01[i] = (t0[i] + t1[i]) / 2;
+      t02[i] = (t0[i] + t2[i]) / 2;
+      t12[i] = (t1[i] + t2[i]) / 2;
+    }
+
+    // Based on the index, we subdivide the triangle differently.
+    // Assuming the triangle is p0, p1, p2 and points between i j
+    // are represented as pij (that is, a point between p2 and p0
+    // is p02, etc), then the new triangles are defined by
+    // the 3rd 4th and 5th arguments into the function.
+    switch (subdivisionIndex) {
+      case 1:
+        drawTriangleSub(ctx, img, p0, p01, p2, t0, t01, t2, depth + 1);
+        drawTriangleSub(ctx, img, p01, p1, p2, t01, t1, t2, depth + 1);
+        break;
+      case 2:
+        drawTriangleSub(ctx, img, p0, p1, p02, t0, t1, t02, depth + 1);
+        drawTriangleSub(ctx, img, p1, p02, p2, t1, t02, t2, depth + 1);
+        break;
+      case 3:
+        drawTriangleSub(ctx, img, p0, p01, p02, t0, t01, t02, depth + 1);
+        drawTriangleSub(ctx, img, p02, p01, p2, t02, t01, t2, depth + 1);
+        drawTriangleSub(ctx, img, p01, p1, p2, t01, t1, t2, depth + 1);
+        break;
+      case 4:
+        drawTriangleSub(ctx, img, p0, p12, p2, t0, t12, t2, depth + 1);
+        drawTriangleSub(ctx, img, p0, p1, p12, t0, t1, t12, depth + 1);
+        break;
+      case 5:
+        drawTriangleSub(ctx, img, p0, p01, p2, t0, t01, t2, depth + 1);
+        drawTriangleSub(ctx, img, p2, p01, p12, t2, t01, t12, depth + 1);
+        drawTriangleSub(ctx, img, p01, p1, p12, t01, t1, t12, depth + 1);
+        break;
+      case 6:
+        drawTriangleSub(ctx, img, p0, p12, p02, t0, t12, t02, depth + 1);
+        drawTriangleSub(ctx, img, p0, p1, p12, t0, t1, t12, depth + 1);
+        drawTriangleSub(ctx, img, p02, p12, p2, t02, t12, t2, depth + 1);
+        break;
+      case 7:
+        drawTriangleSub(ctx, img, p0, p01, p02, t0, t01, t02, depth + 1);
+        drawTriangleSub(ctx, img, p01, p12, p02, t01, t12, t02, depth + 1);
+        drawTriangleSub(ctx, img, p01, p1, p12, t01, t1, t12, depth + 1);
+        drawTriangleSub(ctx, img, p02, p12, p2, t02, t12, t2, depth + 1);
+        break;
+      default:
+        // In the 0 case and all other cases, we simply draw the triangle.
+        drawTexturedTriangle(ctx, img, p0, p1, p2, t0, t1, t2);
+        break;
+    }
+  }
+
+  // Created to avoid creating garbage when doing bulk transforms.
+  const tmpVec4 = vec4.create();
+  function transform(transformed, point, matrix, viewport) {
+    vec4.set(tmpVec4, point[0], point[1], 0, 1);
+    vec4.transformMat4(tmpVec4, tmpVec4, matrix);
+
+    let w = tmpVec4[3];
+    if (w < 1e-6) w = 1e-6;
+
+    transformed[0] = ((tmpVec4[0] / w) + 1) * viewport.width / 2;
+    transformed[1] = ((tmpVec4[1] / w) + 1) * viewport.height / 2;
+    transformed[2] = w;
+  }
+
+  function drawProjectedQuadBackgroundToContext(
+      quad, p1, p2, p3, p4, ctx, quadCanvas) {
+    if (quad.imageData) {
+      quadCanvas.width = quad.imageData.width;
+      quadCanvas.height = quad.imageData.height;
+      quadCanvas.getContext('2d').putImageData(quad.imageData, 0, 0);
+      const quadBBox = new tr.b.math.BBox2();
+      quadBBox.addQuad(quad);
+      const iw = quadCanvas.width;
+      const ih = quadCanvas.height;
+      drawTriangleSub(
+          ctx, quadCanvas,
+          p1, p2, p4,
+          [0, 0], [iw, 0], [0, ih]);
+      drawTriangleSub(
+          ctx, quadCanvas,
+          p2, p3, p4,
+          [iw, 0], [iw, ih], [0, ih]);
+    }
+
+    if (quad.backgroundColor) {
+      ctx.fillStyle = quad.backgroundColor;
+      ctx.beginPath();
+      ctx.moveTo(p1[0], p1[1]);
+      ctx.lineTo(p2[0], p2[1]);
+      ctx.lineTo(p3[0], p3[1]);
+      ctx.lineTo(p4[0], p4[1]);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawProjectedQuadOutlineToContext(
+      quad, p1, p2, p3, p4, ctx, quadCanvas) {
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]);
+    ctx.lineTo(p2[0], p2[1]);
+    ctx.lineTo(p3[0], p3[1]);
+    ctx.lineTo(p4[0], p4[1]);
+    ctx.closePath();
+    ctx.save();
+    if (quad.borderColor) {
+      ctx.strokeStyle = quad.borderColor;
+    } else {
+      ctx.strokeStyle = 'rgb(128,128,128)';
+    }
+
+    if (quad.shadowOffset) {
+      ctx.shadowColor = 'rgb(0, 0, 0)';
+      ctx.shadowOffsetX = quad.shadowOffset[0];
+      ctx.shadowOffsetY = quad.shadowOffset[1];
+      if (quad.shadowBlur) {
+        ctx.shadowBlur = quad.shadowBlur;
+      }
+    }
+
+    if (quad.borderWidth) {
+      ctx.lineWidth = quad.borderWidth;
+    } else {
+      ctx.lineWidth = 1;
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawProjectedQuadSelectionOutlineToContext(
+      quad, p1, p2, p3, p4, ctx, quadCanvas) {
+    if (!quad.upperBorderColor) return;
+
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = quad.upperBorderColor;
+
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]);
+    ctx.lineTo(p2[0], p2[1]);
+    ctx.lineTo(p3[0], p3[1]);
+    ctx.lineTo(p4[0], p4[1]);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  function drawProjectedQuadToContext(
+      passNumber, quad, p1, p2, p3, p4, ctx, quadCanvas) {
+    if (passNumber === 0) {
+      drawProjectedQuadBackgroundToContext(
+          quad, p1, p2, p3, p4, ctx, quadCanvas);
+    } else if (passNumber === 1) {
+      drawProjectedQuadOutlineToContext(
+          quad, p1, p2, p3, p4, ctx, quadCanvas);
+    } else if (passNumber === 2) {
+      drawProjectedQuadSelectionOutlineToContext(
+          quad, p1, p2, p3, p4, ctx, quadCanvas);
+    } else {
+      throw new Error('Invalid pass number');
+    }
+  }
+
+  const tmpP1 = vec3.create();
+  const tmpP2 = vec3.create();
+  const tmpP3 = vec3.create();
+  const tmpP4 = vec3.create();
+  function transformAndProcessQuads(
+      matrix, viewport, quads, numPasses, handleQuadFunc, opt_arg1, opt_arg2) {
+    for (let passNumber = 0; passNumber < numPasses; passNumber++) {
+      for (let i = 0; i < quads.length; i++) {
+        const quad = quads[i];
+        transform(tmpP1, quad.p1, matrix, viewport);
+        transform(tmpP2, quad.p2, matrix, viewport);
+        transform(tmpP3, quad.p3, matrix, viewport);
+        transform(tmpP4, quad.p4, matrix, viewport);
+        handleQuadFunc(passNumber, quad,
+            tmpP1, tmpP2, tmpP3, tmpP4,
+            opt_arg1, opt_arg2);
+      }
+    }
+  }
+
+  /**
+   * @constructor
+   */
+  const QuadStackView = tr.ui.b.define('quad-stack-view');
+
+  QuadStackView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.className = 'quad-stack-view';
+      this.style.display = 'flex';
+      this.style.position = 'relative';
+
+      const node = tr.ui.b.instantiateTemplate('#quad-stack-view-template',
+          THIS_DOC);
+      Polymer.dom(this).appendChild(node);
+      this.updateHeaderVisibility_();
+      const header = Polymer.dom(this).querySelector('#header');
+      header.style.position = 'absolute';
+      header.style.fontSize = '70%';
+      header.style.top = '10px';
+      header.style.left = '10px';
+      header.style.right = '150px';
+
+      const scroller = Polymer.dom(this).querySelector('#canvas-scroller');
+      scroller.style.flexGrow = 1;
+      scroller.style.flexShrink = 1;
+      scroller.style.flexBasis = 'auto';
+      scroller.style.minWidth = 0;
+      scroller.style.minHeight = 0;
+      scroller.style.overflow = 'auto';
+
+      this.canvas_ = Polymer.dom(this).querySelector('#canvas');
+      this.chromeImages_ = {
+        left: Polymer.dom(this).querySelector('#chrome-left'),
+        mid: Polymer.dom(this).querySelector('#chrome-mid'),
+        right: Polymer.dom(this).querySelector('#chrome-right')
+      };
+
+      const stackingDistanceSlider = Polymer.dom(this).querySelector(
+          '#stacking-distance-slider');
+      stackingDistanceSlider.style.position = 'absolute';
+      stackingDistanceSlider.style.fontSize = '70%';
+      stackingDistanceSlider.style.top = '10px';
+      stackingDistanceSlider.style.right = '10px';
+      stackingDistanceSlider.value = tr.b.Settings.get(
+          'quadStackView.stackingDistance', 45);
+      stackingDistanceSlider.addEventListener(
+          'change', this.onStackingDistanceChange_.bind(this));
+      stackingDistanceSlider.addEventListener(
+          'input', this.onStackingDistanceChange_.bind(this));
+
+      this.trackMouse_();
+
+      this.camera_ = new tr.ui.b.Camera(this.mouseModeSelector_);
+      this.camera_.addEventListener('renderrequired',
+          this.onRenderRequired_.bind(this));
+      this.cameraWasReset_ = false;
+      this.camera_.canvas = this.canvas_;
+
+      this.viewportRect_ = tr.b.math.Rect.fromXYWH(0, 0, 0, 0);
+
+      this.pixelRatio_ = window.devicePixelRatio || 1;
+    },
+
+    updateHeaderVisibility_() {
+      if (this.headerText) {
+        Polymer.dom(this).querySelector('#header').style.display = '';
+      } else {
+        Polymer.dom(this).querySelector('#header').style.display = 'none';
+      }
+    },
+
+    get headerText() {
+      return Polymer.dom(this).querySelector('#header').textContent;
+    },
+
+    set headerText(headerText) {
+      Polymer.dom(this).querySelector('#header').textContent = headerText;
+      this.updateHeaderVisibility_();
+    },
+
+    onStackingDistanceChange_(e) {
+      tr.b.Settings.set('quadStackView.stackingDistance',
+          this.stackingDistance);
+      this.scheduleRender();
+      e.stopPropagation();
+    },
+
+    get stackingDistance() {
+      return Polymer.dom(this).querySelector('#stacking-distance-slider').value;
+    },
+
+    get mouseModeSelector() {
+      return this.mouseModeSelector_;
+    },
+
+    get camera() {
+      return this.camera_;
+    },
+
+    set quads(q) {
+      this.quads_ = q;
+      this.scheduleRender();
+    },
+
+    set deviceRect(rect) {
+      if (!rect || rect.equalTo(this.deviceRect_)) return;
+
+      this.deviceRect_ = rect;
+      this.camera_.deviceRect = rect;
+      this.chromeQuad_ = undefined;
+    },
+
+    resize() {
+      if (!this.offsetParent) return true;
+
+      const width = parseInt(window.getComputedStyle(this.offsetParent).width);
+      const height = parseInt(window.getComputedStyle(
+          this.offsetParent).height);
+      const rect = tr.b.math.Rect.fromXYWH(0, 0, width, height);
+
+      if (rect.equalTo(this.viewportRect_)) return false;
+
+      this.viewportRect_ = rect;
+      this.canvas_.style.width = width + 'px';
+      this.canvas_.style.height = height + 'px';
+      this.canvas_.width = this.pixelRatio_ * width;
+      this.canvas_.height = this.pixelRatio_ * height;
+      if (!this.cameraWasReset_) {
+        this.camera_.resetCamera();
+        this.cameraWasReset_ = true;
+      }
+      return true;
+    },
+
+    readyToDraw() {
+      // If src isn't set yet, set it to ensure we can use
+      // the image to draw onto a canvas.
+      if (!this.chromeImages_.left.src) {
+        let leftContent =
+            window.getComputedStyle(this.chromeImages_.left).backgroundImage;
+        leftContent = tr.ui.b.extractUrlString(leftContent);
+
+        let midContent =
+            window.getComputedStyle(this.chromeImages_.mid).backgroundImage;
+        midContent = tr.ui.b.extractUrlString(midContent);
+
+        let rightContent =
+            window.getComputedStyle(this.chromeImages_.right).backgroundImage;
+        rightContent = tr.ui.b.extractUrlString(rightContent);
+
+        this.chromeImages_.left.src = leftContent;
+        this.chromeImages_.mid.src = midContent;
+        this.chromeImages_.right.src = rightContent;
+      }
+
+      // If all of the images are loaded (height > 0), then
+      // we are ready to draw.
+      return (this.chromeImages_.left.height > 0) &&
+             (this.chromeImages_.mid.height > 0) &&
+             (this.chromeImages_.right.height > 0);
+    },
+
+    get chromeQuad() {
+      if (this.chromeQuad_) return this.chromeQuad_;
+
+      // Draw the chrome border into a separate canvas.
+      const chromeCanvas = document.createElement('canvas');
+      const offsetY = this.chromeImages_.left.height;
+
+      chromeCanvas.width = this.deviceRect_.width;
+      chromeCanvas.height = this.deviceRect_.height + offsetY;
+
+      const leftWidth = this.chromeImages_.left.width;
+      const midWidth = this.chromeImages_.mid.width;
+      const rightWidth = this.chromeImages_.right.width;
+
+      const chromeCtx = chromeCanvas.getContext('2d');
+      chromeCtx.drawImage(this.chromeImages_.left, 0, 0);
+
+      chromeCtx.save();
+      chromeCtx.translate(leftWidth, 0);
+
+      // Calculate the scale of the mid image.
+      const s = (this.deviceRect_.width - leftWidth - rightWidth) / midWidth;
+      chromeCtx.scale(s, 1);
+
+      chromeCtx.drawImage(this.chromeImages_.mid, 0, 0);
+      chromeCtx.restore();
+
+      chromeCtx.drawImage(
+          this.chromeImages_.right, leftWidth + s * midWidth, 0);
+
+      // Construct the quad.
+      const chromeRect = tr.b.math.Rect.fromXYWH(
+          this.deviceRect_.x,
+          this.deviceRect_.y - offsetY,
+          this.deviceRect_.width,
+          this.deviceRect_.height + offsetY);
+      const chromeQuad = tr.b.math.Quad.fromRect(chromeRect);
+      chromeQuad.stackingGroupId = this.maxStackingGroupId_ + 1;
+      chromeQuad.imageData = chromeCtx.getImageData(
+          0, 0, chromeCanvas.width, chromeCanvas.height);
+      chromeQuad.shadowOffset = [0, 0];
+      chromeQuad.shadowBlur = 5;
+      chromeQuad.borderWidth = 3;
+      this.chromeQuad_ = chromeQuad;
+      return this.chromeQuad_;
+    },
+
+    scheduleRender() {
+      if (this.redrawScheduled_) return false;
+      this.redrawScheduled_ = true;
+      tr.b.requestAnimationFrame(this.render, this);
+    },
+
+    onRenderRequired_(e) {
+      this.scheduleRender();
+    },
+
+    stackTransformAndProcessQuads_(
+        numPasses, handleQuadFunc, includeChromeQuad, opt_arg1, opt_arg2) {
+      const mv = this.camera_.modelViewMatrix;
+      const p = this.camera_.projectionMatrix;
+
+      const viewport = tr.b.math.Rect.fromXYWH(
+          0, 0, this.canvas_.width, this.canvas_.height);
+
+      // Calculate the quad stacks.
+      const quadStacks = [];
+      for (let i = 0; i < this.quads_.length; ++i) {
+        const quad = this.quads_[i];
+        const stackingId = quad.stackingGroupId || 0;
+        while (stackingId >= quadStacks.length) {
+          quadStacks.push([]);
+        }
+
+        quadStacks[stackingId].push(quad);
+      }
+
+      const mvp = mat4.create();
+      this.maxStackingGroupId_ = quadStacks.length;
+      const effectiveStackingDistance =
+          this.stackingDistance * this.camera_.stackingDistanceDampening;
+
+      // Draw the quad stacks, raising each subsequent level.
+      mat4.multiply(mvp, p, mv);
+      for (let i = 0; i < quadStacks.length; ++i) {
+        transformAndProcessQuads(mvp, viewport, quadStacks[i],
+            numPasses, handleQuadFunc,
+            opt_arg1, opt_arg2);
+
+        mat4.translate(mv, mv, [0, 0, effectiveStackingDistance]);
+        mat4.multiply(mvp, p, mv);
+      }
+
+      if (includeChromeQuad && this.deviceRect_) {
+        transformAndProcessQuads(mvp, viewport, [this.chromeQuad],
+            numPasses, drawProjectedQuadToContext,
+            opt_arg1, opt_arg2);
+      }
+    },
+
+    render() {
+      this.redrawScheduled_ = false;
+
+      if (!this.readyToDraw()) {
+        setTimeout(this.scheduleRender.bind(this),
+            constants.IMAGE_LOAD_RETRY_TIME_MS);
+        return;
+      }
+
+      if (!this.quads_) return;
+
+      const canvasCtx = this.canvas_.getContext('2d');
+      if (!this.resize()) {
+        canvasCtx.clearRect(0, 0, this.canvas_.width, this.canvas_.height);
+      }
+
+      const quadCanvas = document.createElement('canvas');
+      this.stackTransformAndProcessQuads_(
+          3, drawProjectedQuadToContext, true,
+          canvasCtx, quadCanvas);
+      quadCanvas.width = 0; // Hack: Frees the quadCanvas' resources.
+    },
+
+    trackMouse_() {
+      this.mouseModeSelector_ = document.createElement(
+          'tr-ui-b-mouse-mode-selector');
+      this.mouseModeSelector_.targetElement = this.canvas_;
+      this.mouseModeSelector_.supportedModeMask =
+          tr.ui.b.MOUSE_SELECTOR_MODE.SELECTION |
+          tr.ui.b.MOUSE_SELECTOR_MODE.PANSCAN |
+          tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM |
+          tr.ui.b.MOUSE_SELECTOR_MODE.ROTATE;
+      this.mouseModeSelector_.mode = tr.ui.b.MOUSE_SELECTOR_MODE.PANSCAN;
+      this.mouseModeSelector_.pos = {x: 0, y: 100};
+      Polymer.dom(this).appendChild(this.mouseModeSelector_);
+      this.mouseModeSelector_.settingsKey =
+          'quadStackView.mouseModeSelector';
+
+      this.mouseModeSelector_.setModifierForAlternateMode(
+          tr.ui.b.MOUSE_SELECTOR_MODE.ROTATE, tr.ui.b.MODIFIER.SHIFT);
+      this.mouseModeSelector_.setModifierForAlternateMode(
+          tr.ui.b.MOUSE_SELECTOR_MODE.PANSCAN, tr.ui.b.MODIFIER.SPACE);
+      this.mouseModeSelector_.setModifierForAlternateMode(
+          tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM, tr.ui.b.MODIFIER.CMD_OR_CTRL);
+
+      this.mouseModeSelector_.addEventListener('updateselection',
+          this.onSelectionUpdate_.bind(this));
+      this.mouseModeSelector_.addEventListener('endselection',
+          this.onSelectionUpdate_.bind(this));
+    },
+
+    extractRelativeMousePosition_(e) {
+      const br = this.canvas_.getBoundingClientRect();
+      return [
+        this.pixelRatio_ * (e.clientX - this.canvas_.offsetLeft - br.left),
+        this.pixelRatio_ * (e.clientY - this.canvas_.offsetTop - br.top)
+      ];
+    },
+
+    onSelectionUpdate_(e) {
+      const mousePos = this.extractRelativeMousePosition_(e);
+      const res = [];
+      function handleQuad(passNumber, quad, p1, p2, p3, p4) {
+        if (tr.b.math.pointInImplicitQuad(mousePos, p1, p2, p3, p4)) {
+          res.push(quad);
+        }
+      }
+      this.stackTransformAndProcessQuads_(1, handleQuad, false);
+      e = new tr.b.Event('selectionchange');
+      e.quads = res;
+      this.dispatchEvent(e);
+    }
+  };
+
+  return {
+    QuadStackView,
+  };
+});
+</script>

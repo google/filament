@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ContainerMemoryDump = tr.model.ContainerMemoryDump;
+  const MemoryAllocatorDump = tr.model.MemoryAllocatorDump;
+  const Scalar = tr.b.Scalar;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const newAllocatorDump = tr.model.MemoryDumpTestUtils.newAllocatorDump;
+  const addChildDump = tr.model.MemoryDumpTestUtils.addChildDump;
+
+  test('memoryAllocatorDumps_undefined', function() {
+    const md = new ContainerMemoryDump(42);
+
+    assert.isUndefined(md.memoryAllocatorDumps);
+    assert.isUndefined(md.getMemoryAllocatorDumpByFullName('malloc'));
+  });
+
+  test('memoryAllocatorDumps_zero', function() {
+    const md = new ContainerMemoryDump(42);
+    md.memoryAllocatorDumps = [];
+
+    assert.lengthOf(md.memoryAllocatorDumps, 0);
+    assert.isUndefined(md.getMemoryAllocatorDumpByFullName('malloc'));
+  });
+
+  test('memoryAllocatorDumps_flat', function() {
+    const md = new ContainerMemoryDump(42);
+
+    const oilpanDump = newAllocatorDump(md, 'oilpan', {
+      size: 1024,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 7),
+      inner_size: 768
+    });
+    const v8Dump = newAllocatorDump(md, 'v8', {
+      size: 2048,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 15),
+      inner_size: 1999
+    });
+    md.memoryAllocatorDumps = [oilpanDump, v8Dump];
+
+    assert.lengthOf(md.memoryAllocatorDumps, 2);
+    assert.strictEqual(md.memoryAllocatorDumps[0], oilpanDump);
+    assert.strictEqual(md.memoryAllocatorDumps[1], v8Dump);
+
+    assert.strictEqual(
+        md.getMemoryAllocatorDumpByFullName('oilpan'), oilpanDump);
+    assert.strictEqual(md.getMemoryAllocatorDumpByFullName('v8'), v8Dump);
+    assert.isUndefined(md.getMemoryAllocatorDumpByFullName('malloc'));
+  });
+
+  test('memoryAllocatorDumps_nested', function() {
+    const md = new ContainerMemoryDump(42);
+
+    const oilpanDump = newAllocatorDump(md, 'oilpan', {
+      size: 1024,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 7),
+      inner_size: 768
+    });
+
+    const oilpanBucket1Dump = addChildDump(oilpanDump, 'bucket1', {
+      size: 512,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 3),
+      inner_size: 256
+    });
+
+    const oilpanBucket2Dump = addChildDump(oilpanDump, 'bucket2', {
+      size: 512,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 4),
+      inner_size: 512
+    });
+
+    const oilpanBucket2StringsDump = addChildDump(
+        oilpanBucket2Dump, 'strings', {
+          size: 512,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 4),
+          inner_size: 512
+        });
+
+    const v8Dump = newAllocatorDump(md, 'v8', {
+      size: 2048,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 15),
+      inner_size: 1999
+    });
+
+    md.memoryAllocatorDumps = [oilpanDump, v8Dump];
+
+    assert.lengthOf(md.memoryAllocatorDumps, 2);
+    assert.strictEqual(md.memoryAllocatorDumps[0], oilpanDump);
+    assert.strictEqual(md.memoryAllocatorDumps[1], v8Dump);
+
+    assert.strictEqual(
+        md.getMemoryAllocatorDumpByFullName('oilpan'), oilpanDump);
+    assert.strictEqual(md.getMemoryAllocatorDumpByFullName('oilpan/bucket1'),
+        oilpanBucket1Dump);
+    assert.strictEqual(md.getMemoryAllocatorDumpByFullName('oilpan/bucket2'),
+        oilpanBucket2Dump);
+    assert.strictEqual(
+        md.getMemoryAllocatorDumpByFullName('oilpan/bucket2/strings'),
+        oilpanBucket2StringsDump);
+    assert.strictEqual(md.getMemoryAllocatorDumpByFullName('v8'), v8Dump);
+    assert.isUndefined(md.getMemoryAllocatorDumpByFullName('malloc'));
+  });
+
+  test('iterateRootAllocatorDumps', function() {
+    const containerDump = new ContainerMemoryDump(42);
+
+    const oilpanDump = new MemoryAllocatorDump(containerDump, 'oilpan');
+    const v8Dump = new MemoryAllocatorDump(containerDump, 'v8');
+    addChildDump(v8Dump, 'heaps');
+
+    containerDump.memoryAllocatorDumps = [oilpanDump, v8Dump];
+
+    const visitedAllocatorDumps = [];
+    containerDump.iterateRootAllocatorDumps(
+        function(dump) { this.visitedAllocatorDumps.push(dump); },
+        { visitedAllocatorDumps });
+    assert.sameMembers(visitedAllocatorDumps, [oilpanDump, v8Dump]);
+  });
+
+  test('forceRebuildingMemoryAllocatorDumpByFullNameIndex', function() {
+    const containerDump = new ContainerMemoryDump(42);
+
+    const v8Dump = new MemoryAllocatorDump(containerDump, 'v8');
+    const v8HeapsDump = addChildDump(v8Dump, 'heaps');
+    const v8HeapSmallDump = addChildDump(v8HeapsDump, 'S');
+
+    // Setting the memory allocator dumps should update the index properly.
+    containerDump.memoryAllocatorDumps = [v8Dump];
+    assert.strictEqual(
+        containerDump.getMemoryAllocatorDumpByFullName('v8'), v8Dump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps'), v8HeapsDump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps/S'), v8HeapSmallDump);
+
+    // Add a second grandchild (v8/heaps/L).
+    const v8HeapLargeDump = addChildDump(v8HeapsDump, 'L');
+
+    // Setting the memory allocator dumps again should update the index
+    // properly again.
+    containerDump.memoryAllocatorDumps = [v8Dump];
+    assert.strictEqual(
+        containerDump.getMemoryAllocatorDumpByFullName('v8'), v8Dump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps'), v8HeapsDump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps/S'), v8HeapSmallDump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps/L'), v8HeapLargeDump);
+
+    // Remove the first grandchild (v8/heaps/S).
+    v8HeapsDump.children.splice(0, 1);
+
+    // Force rebuilding the index and check that it was updated properly.
+    containerDump.forceRebuildingMemoryAllocatorDumpByFullNameIndex();
+    assert.strictEqual(
+        containerDump.getMemoryAllocatorDumpByFullName('v8'), v8Dump);
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps'), v8HeapsDump);
+    assert.isUndefined(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps/S'));
+    assert.strictEqual(containerDump.getMemoryAllocatorDumpByFullName(
+        'v8/heaps/L'), v8HeapLargeDump);
+  });
+});
+</script>

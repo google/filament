@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ContainerMemoryDump = tr.model.ContainerMemoryDump;
+  const MemoryAllocatorDump = tr.model.MemoryAllocatorDump;
+  const MemoryAllocatorDumpLink = tr.model.MemoryAllocatorDumpLink;
+  const Scalar = tr.b.Scalar;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const sizeInBytes = tr.b.Unit.byName.sizeInBytes;
+  const powerInWatts = tr.b.Unit.byName.powerInWatts;
+  const newAllocatorDump = tr.model.MemoryDumpTestUtils.newAllocatorDump;
+  const addChildDump = tr.model.MemoryDumpTestUtils.addChildDump;
+  const checkDumpNumericsAndDiagnostics =
+      tr.model.MemoryDumpTestUtils.checkDumpNumericsAndDiagnostics;
+
+  test('memoryAllocatorDump_instantiate', function() {
+    const containerDump = new ContainerMemoryDump(42);
+    containerDump.containerName = 'super dump';
+    const dump = new MemoryAllocatorDump(containerDump, 'v8/objects/object7');
+
+    assert.strictEqual(dump.name, 'object7');
+    assert.strictEqual(dump.fullName, 'v8/objects/object7');
+    assert.strictEqual(dump.containerMemoryDump, containerDump);
+    assert.strictEqual(
+        dump.quantifiedName, '\'v8/objects/object7\' in super dump');
+  });
+
+  test('memoryAllocatorDumps_aggregateNumericsRecursively', function() {
+    const md = new ContainerMemoryDump(42);
+
+    const oilpanDump = newAllocatorDump(md, 'oilpan', {numerics: {
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 7)
+    }});
+
+    addChildDump(oilpanDump, 'bucket1', {numerics: {
+      size: 512,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 3),
+      inner_size: 256,
+      outer_size: 1024
+    }});
+
+    const oilpanBucket2Dump = addChildDump(oilpanDump, 'bucket2');
+
+    const oilpanBucket2StringsDump = addChildDump(
+        oilpanBucket2Dump, 'strings', {numerics: {
+          size: 512,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 4),
+          inner_size: 512,
+          outer_size: 2048
+        }});
+
+    oilpanDump.aggregateNumericsRecursively();
+
+    // oilpan has *some* numerics aggregated.
+    checkDumpNumericsAndDiagnostics(oilpanDump, {
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 7),
+      inner_size: 768,
+      outer_size: 3072
+    }, {});
+
+    // oilpan/bucket2 has *all* numerics aggregated (except for size).
+    checkDumpNumericsAndDiagnostics(oilpanBucket2Dump, {
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 4),
+      inner_size: 512,
+      outer_size: 2048
+    }, {});
+
+    // oilpan/bucket2/strings has *no* numerics aggregated.
+    checkDumpNumericsAndDiagnostics(oilpanBucket2StringsDump, {
+      size: 512,
+      objects_count: new Scalar(unitlessNumber_smallerIsBetter, 4),
+      inner_size: 512,
+      outer_size: 2048
+    }, {});
+  });
+
+  test('memoryAllocatorDump_aggregateNumerics', function() {
+    function checkAggregateNumerics(numerics, expectedValue, expectedUnit,
+        opt_expectedWarningCount) {
+      function checkResult(result) {
+        if (expectedValue === undefined) {
+          assert.isUndefined(result);
+          assert.isUndefined(expectedUnit);  // Test sanity check.
+        } else {
+          assert.instanceOf(result, Scalar);
+          assert.strictEqual(result.value, expectedValue);
+          assert.strictEqual(result.unit, expectedUnit);
+        }
+      }
+
+      // Without model parameter.
+      const result1 = MemoryAllocatorDump.aggregateNumerics(numerics);
+      checkResult(result1);
+
+      // With model parameter.
+      const mockModel = {
+        warnings: [],
+        importWarning(warning) {
+          this.warnings.push(warning);
+        }
+      };
+      const result2 = MemoryAllocatorDump.aggregateNumerics(
+          numerics, mockModel);
+      checkResult(result2);
+      assert.lengthOf(mockModel.warnings, opt_expectedWarningCount || 0);
+    }
+
+    // No defined numerics.
+    checkAggregateNumerics([], undefined);
+    checkAggregateNumerics([undefined], undefined);
+    checkAggregateNumerics([undefined, undefined], undefined);
+
+    // Consistent units.
+    checkAggregateNumerics(
+        [new Scalar(unitlessNumber_smallerIsBetter, 10)],
+        10, unitlessNumber_smallerIsBetter);
+    checkAggregateNumerics(
+        [new Scalar(sizeInBytes, 10),
+          new Scalar(sizeInBytes, 20),
+          new Scalar(sizeInBytes, 40)],
+        70, sizeInBytes);
+    checkAggregateNumerics(
+        [undefined,
+          new Scalar(sizeInBytes, 16),
+          undefined,
+          new Scalar(sizeInBytes, 32),
+          undefined],
+        48, sizeInBytes);
+
+    // Inconsistent units.
+    checkAggregateNumerics(
+        [new Scalar(sizeInBytes, 10),
+          new Scalar(powerInWatts, 20)],
+        30, unitlessNumber_smallerIsBetter, 1 /* opt_expectedWarningCount */);
+    checkAggregateNumerics(
+        [undefined,
+          new Scalar(powerInWatts, 16),
+          undefined,
+          new Scalar(unitlessNumber_smallerIsBetter, 32),
+          undefined,
+          new Scalar(sizeInBytes, 64),
+          undefined],
+        112, unitlessNumber_smallerIsBetter, 1 /* opt_expectedWarningCount */);
+  });
+
+  test('memoryAllocatorDumps_isDescendantOf', function() {
+    const md = new ContainerMemoryDump(42);
+
+    const v8Dump = new MemoryAllocatorDump(md, 'v8');
+    const v8HeapsDump = addChildDump(v8Dump, 'heaps');
+    const v8ObjectsDump = addChildDump(v8Dump, 'objects');
+    const v8Object1Dump = addChildDump(v8ObjectsDump, 'obj1');
+    const v8Object2Dump = addChildDump(v8ObjectsDump, 'obj2');
+
+    const oilpanDump = new MemoryAllocatorDump(md, 'oilpan');
+
+    assert.isTrue(v8Dump.isDescendantOf(v8Dump));
+    assert.isTrue(v8HeapsDump.isDescendantOf(v8Dump));
+    assert.isTrue(v8ObjectsDump.isDescendantOf(v8Dump));
+    assert.isTrue(v8Object1Dump.isDescendantOf(v8Dump));
+    assert.isTrue(v8Object2Dump.isDescendantOf(v8Dump));
+    assert.isTrue(v8ObjectsDump.isDescendantOf(v8ObjectsDump));
+    assert.isTrue(v8Object1Dump.isDescendantOf(v8ObjectsDump));
+    assert.isTrue(v8Object2Dump.isDescendantOf(v8ObjectsDump));
+    assert.isTrue(oilpanDump.isDescendantOf(oilpanDump));
+
+    assert.isFalse(v8Dump.isDescendantOf(oilpanDump));
+    assert.isFalse(v8Dump.isDescendantOf(v8HeapsDump));
+    assert.isFalse(v8Dump.isDescendantOf(v8ObjectsDump));
+    assert.isFalse(v8Dump.isDescendantOf(v8Object1Dump));
+    assert.isFalse(v8Dump.isDescendantOf(v8Object2Dump));
+    assert.isFalse(v8Object1Dump.isDescendantOf(v8Object2Dump));
+    assert.isFalse(v8Object2Dump.isDescendantOf(v8Object1Dump));
+  });
+
+  test('memoryAllocatorDumps_getDescendantDumpByFullName', function() {
+    const containerDump = new ContainerMemoryDump(42);
+
+    const gpuDump = new MemoryAllocatorDump(containerDump, 'gpu');
+    containerDump.memoryAllocatorDumps = [gpuDump];
+
+    const memtrackDump = addChildDump(gpuDump, 'android_memtrack');
+    const glDump = addChildDump(memtrackDump, 'gl');
+    const gfxDump = addChildDump(memtrackDump, 'gfx');
+    const tileDump = addChildDump(gfxDump, 'tile');
+
+    assert.strictEqual(gpuDump.getDescendantDumpByFullName(
+        'android_memtrack'), memtrackDump);
+    assert.strictEqual(gpuDump.getDescendantDumpByFullName(
+        'android_memtrack/gfx/tile'), tileDump);
+    assert.strictEqual(memtrackDump.getDescendantDumpByFullName('gl'), glDump);
+    assert.strictEqual(memtrackDump.getDescendantDumpByFullName(
+        'gfx/tile'), tileDump);
+  });
+
+  test('memoryAllocatorDumpLink_instantiate', function() {
+    const d1 = new MemoryAllocatorDump('v8/isolate1');
+    const d2 = new MemoryAllocatorDump('oilpan/document1');
+    const link = new MemoryAllocatorDumpLink(d1, d2, 3);
+
+    assert.strictEqual(link.source, d1);
+    assert.strictEqual(link.target, d2);
+    assert.strictEqual(link.importance, 3);
+  });
+});
+</script>

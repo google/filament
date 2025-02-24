@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/in_memory_trace_stream.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  let fs;
+  if (tr.isNode) fs = require('fs');
+
+  function guessBinary(url) {
+    return /[.]gz$/.test(url) || /[.]zip$/.test(url);
+  }
+  function xhr(method, url, async, opt_data, forceBinary) {
+    const req = new XMLHttpRequest();
+    req.overrideMimeType('text/plain; charset=x-user-defined');
+    req.open(method, url, async);
+
+    const isBinary = forceBinary;
+
+    if (isBinary === undefined) {
+      guessBinary(url);
+      if (isBinary && async) req.responseType = 'arraybuffer';
+    }
+
+    const data = opt_data !== undefined ? opt_data : null;
+
+    if (!async) {
+      req.send(data);
+      if (req.status === 200) return req.responseText;
+      throw new Error('XHR failed with status ' + req.status +
+          ' for url ' + url);
+    }
+
+    const p = new Promise(function(resolve, reject) {
+      req.onreadystatechange = function(aEvt) {
+        if (req.readyState !== 4) return;
+        tr.b.timeout(0).then(() => {
+          if (req.status !== 200) {
+            reject(new Error('XHR failed with status ' + req.status +
+                ' for url ' + url));
+            return;
+          }
+          if (req.responseType === 'arraybuffer') {
+            resolve(req.response);
+            return;
+          }
+          resolve(req.responseText);
+        });
+      };
+    });
+    req.send(data);
+    return p;
+  }
+
+  function getAsync(url) {
+    // Browser.
+    if (!tr.isHeadless) return xhr('GET', url, true);
+
+    // Node or vinn prep.
+    let filename;
+    if (url.startsWith('file:///')) {
+      filename = url.substring(7);
+    } else {
+      filename = global.HTMLImportsLoader.hrefToAbsolutePath(url);
+    }
+    const isBinary = guessBinary(url);
+
+    // Node.
+    if (tr.isNode) {
+      const encoding = isBinary ? undefined : 'utf8';
+      return new Promise(function(resolve, reject) {
+        fs.readFile(filename, encoding, function(err, data) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(data);
+        });
+      });
+    }
+
+    // Vinn.
+    return Promise.resolve().then(function() {
+      if (isBinary) return readbuffer(filename);
+      return read(filename);
+    });
+  }
+
+  function getSync(url, asTraceStream) {
+    // Browser.
+    if (!tr.isHeadless) return xhr('GET', url, false);
+
+    // Node or vinn prep.
+    let filename;
+    if (url.startsWith('file:///')) {  // posix
+      filename = url.substring(7);
+    } else if (url.startsWith('file://') && url[8] === ':') {  // win
+      filename = url.substring(7);
+    } else {
+      filename = global.HTMLImportsLoader.hrefToAbsolutePath(url);
+    }
+    const isBinary = guessBinary(url);
+
+    // Node.
+    if (tr.isNode) {
+      const encoding = isBinary ? undefined : 'utf8';
+      return fs.readFileSync(filename, encoding);
+    }
+
+    // Vinn.
+    try {
+      if (asTraceStream) {
+        return new tr.b.InMemoryTraceStream(
+            new Uint8Array(readbuffer(filename)), isBinary);
+      } else if (isBinary) {
+        return readbuffer(filename);
+      }
+      return read(filename);
+    } catch (ex) {
+      if (ex.message) {
+        ex.message += ' when reading ' + filename;
+        throw ex;
+      }
+      throw new Error(ex + ' when reading' + filename);
+    }
+  }
+
+  function postAsync(url, data) {
+    if (tr.isHeadless) {
+      throw new Error('Only supported inside a browser');
+    }
+    return xhr('POST', url, true, data);
+  }
+
+  function postTextAsync(url, data) {
+    if (tr.isHeadless) {
+      throw new Error('Only supported inside a browser');
+    }
+    return xhr('POST', url, true, data, false);
+  }
+
+  return {
+    getAsync,
+    getSync,
+    postAsync,
+  };
+});
+</script>

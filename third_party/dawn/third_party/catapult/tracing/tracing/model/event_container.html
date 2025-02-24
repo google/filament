@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * EventContainer is a base class for any class in the trace model that
+   * contains child events or child EventContainers.
+   *
+   * For all EventContainers, updateBounds() must be called after modifying the
+   * container's events if an up-to-date bounds is expected.
+   *
+   * @constructor
+   */
+  function EventContainer() {
+    this.guid_ = tr.b.GUID.allocateSimple();
+    this.important = true;
+    this.bounds_ = new tr.b.math.Range();
+  }
+
+  EventContainer.prototype = {
+    get guid() {
+      return this.guid_;
+    },
+
+    /**
+     * @return {String} A stable and unique identifier that describes this
+     * container's position in the event tree relative to the root. If an event
+     * container 'B' is a child to another event container 'A', then container
+     * B's stable ID would be 'A.B'.
+     */
+    get stableId() {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * Returns the bounds of the event container, which describe the range
+     * of timestamps for all ancestor events.
+     */
+    get bounds() {
+      return this.bounds_;
+    },
+
+    // TODO(charliea): A default implementation of this method could likely be
+    // provided that iterates throuch getDescendantEvents.
+    /**
+     * Updates the bounds of the event container. After updating, this.bounds
+     * will describe the range of timestamps of all ancestor events.
+     */
+    updateBounds() {
+      throw new Error('Not implemented');
+    },
+
+    // TODO(charliea): A default implementation of this method could likely be
+    // provided that iterates through getDescendantEvents.
+    /**
+     * Shifts the timestamps for ancestor events by 'amount' milliseconds.
+     */
+    shiftTimestampsForward(amount) {
+      throw new Error('Not implemented');
+    },
+
+
+    /**
+    * Returns an iterable of all child events.
+    */
+    * childEvents() {
+    },
+
+    /**
+     * Returns an iterable of all events in this and descendant
+     * event containers.
+     */
+    * getDescendantEvents() {
+      yield* this.childEvents();
+      for (const container of this.childEventContainers()) {
+        yield* container.getDescendantEvents();
+      }
+    },
+
+    /**
+     * Returns an iterable of all child event containers.
+     */
+    * childEventContainers() {
+    },
+
+    /**
+     * Returns an iterable containing this and all descendant event containers.
+     */
+    * getDescendantEventContainers() {
+      yield this;
+      for (const container of this.childEventContainers()) {
+        yield* container.getDescendantEventContainers();
+      }
+    },
+
+    /**
+     * Returns an iterable of all events in this and descendant event containers
+     * in a given set of ranges.
+     *
+     * This base class provides a default implementation with no assumptions
+     * about the order of events. A container can override this implementation
+     * with a more efficient one, for example if its events are sorted.
+     */
+    * getDescendantEventsInSortedRanges(ranges, opt_containerPredicate) {
+      if (opt_containerPredicate === undefined ||
+          opt_containerPredicate(this)) {
+        for (const event of this.childEvents()) {
+          const i = tr.b.findFirstTrueIndexInSortedArray(
+              ranges, range => event.start <= range.max);
+          if (i < ranges.length && event.end >= ranges[i].min) yield event;
+        }
+      }
+
+      for (const container of this.childEventContainers()) {
+        yield* container.getDescendantEventsInSortedRanges(
+            ranges, opt_containerPredicate);
+      }
+    },
+
+    /**
+     * Finds topmost slices in this container (see docstring for
+     * findTopmostSlices).
+     */
+    * findTopmostSlicesInThisContainer(eventPredicate, opt_this) {
+    },
+
+    /**
+     * The findTopmostSlices* series of helpers find all topmost slices
+     * satisfying the given predicates.
+     *
+     * As an example, suppose we are trying to find slices named 'C', with the
+     * following thread:
+     *
+     *  -> |---C---| |-----D-----|
+     *       |-C-|      |---C---| <-
+     *
+     * findTopmostSlices would locate the pointed-to Cs, because the bottom C on
+     * the  left is not the topmost C, and the right one is, even though it is
+     * not itself a top-level slice.
+     */
+    * findTopmostSlices(eventPredicate) {
+      for (const ec of this.getDescendantEventContainers()) {
+        yield* ec.findTopmostSlicesInThisContainer(eventPredicate);
+      }
+    },
+
+    * findTopmostSlicesNamed(name) {
+      yield* this.findTopmostSlices(e => e.title === name);
+    }
+  };
+
+  return {
+    EventContainer,
+  };
+});
+</script>

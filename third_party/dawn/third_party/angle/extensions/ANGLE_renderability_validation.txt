@@ -1,0 +1,90 @@
+Name
+
+    ANGLE_renderability_validation
+
+Name Strings
+
+    GL_ANGLE_renderability_validation
+
+Contributors
+
+    Vikas Soni, Google
+
+Contact
+
+    Vikas Soni, Google (vikassoni 'at' chromium.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: April 20, 2023
+    Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows skipping texture format renderability validation if
+    the implementation is capable of rendering to the underlying texture
+    format. This can be useful in situations where textures are created
+    externally and the current context's version and extensions do not allow
+    rendering to the texture but the implementation is capable.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as a value for <pname> for the TexParameter{if} and
+    TexParameter{if}v commands and for the <value> parameter of
+    GetTexParameter{if}v:
+
+        GL_RENDERABILITY_VALIDATION_ANGLE     0x9EA0
+
+Additions to the OpenGL Specification
+
+    None.
+
+New Behavior
+    Additions to Chapter 3 of the OpenGL ES 2.0 Specification (Rasterization)
+
+    Add a new row to Table 3.10 (Texture parameters and their values):
+
+    Name                           | Type | Legal Values
+    ------------------------------------------------------------
+    RENDERABILITY_VALIDATION_ANGLE | bool | TRUE, FALSE
+
+    Add a new section 3.7.x (Texture Usage) before section 3.7.12 and
+    renumber the subsequent sections:
+
+    "3.7.x Texture Usage
+
+    Texture renderability validation can be controled via the
+    RENDERABILITY_VALIDATION_ANGLE value for the <pname> argument to
+    TexParameter{if}[v].
+
+    Possible values for <params> when <pname> is TEXTURE_USAGE_ANGLE are:
+
+    TRUE - the default. Renderability validation is unchanged.
+
+    FALSE - Renderability of the texture becomes implementation dependent.
+        The implementation will allow rendering to the format if it is
+        capable."
+
+Issues
+
+Revision History
+
+    Version 1, 2023-04-20(Vikas Soni)
+      - Initial draft
+

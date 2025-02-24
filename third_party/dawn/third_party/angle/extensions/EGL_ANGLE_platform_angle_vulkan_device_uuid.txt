@@ -1,0 +1,136 @@
+Name
+
+    ANGLE_platform_angle_vulkan_device_uuid
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_vulkan_device_uuid
+
+Contributors
+
+    Steven Noonan
+
+Contacts
+
+    Steven Noonan <steven@uplinklabs.net>
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2024-12-13
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    This extension requires EGL 1.5 and the ANGLE_platform_angle_vulkan
+    extension.
+
+Overview
+
+    This extension enables developers to specify additional selection criteria
+    when creating an ANGLE Vulkan context, ensuring that the context is
+    associated with a particular physical device and driver combination,
+    providing more precise control over device selection.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplay:
+
+        EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID_ANGLE    0x34F0
+        EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID_ANGLE    0x34F1
+        EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID_ANGLE      0x34F2
+
+Additions to the EGL Specification
+
+    None
+
+New Behavior
+
+    The EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID attribute may be passed to
+    eglGetPlatformDisplay to specify the device UUID of the desired Vulkan
+    device for the ANGLE context. The EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID
+    attribute may be passed to select a device by its driver's VkDriverId
+    value.
+
+    Attributes introduced by this extension must be used in conjunction with
+    the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute set to
+    EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE. If it is not, eglGetPlatformDisplay
+    will generate an EGL_BAD_ATTRIBUTE error and return EGL_NO_DISPLAY.
+
+    The value provided for EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID must be
+    a valid pointer to a 16-byte Vulkan device UUID, or a NULL pointer
+    indicating that any device is acceptable. The UUID value should match the
+    deviceUUID field of VkPhysicalDeviceIDProperties for a VkPhysicalDevice in
+    the system.
+
+    The value provided for EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID must be
+    a valid pointer to a 16-byte Vulkan driver UUID, or a NULL pointer
+    indicating that any driver is acceptable. The UUID value should match the
+    driverUUID field of VkPhysicalDeviceIDProperties for a VkPhysicalDevice in
+    the system.
+
+    The value provided for EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID must be
+    a VkDriverId value corresponding to the driverID field of the
+    VkPhysicalDeviceDriverProperties structure for a device in the system.
+
+    If no VkPhysicalDevice is found matching all of the provided search
+    criteria, the implementation may fall back to any other available
+    VkPhysicalDevice.
+
+Usage Example
+
+    // Illustrates using all of the attributes at once
+    uint8_t deviceUUID[16] = { /* UUID value */ };
+    uint8_t driverUUID[16] = { /* UUID value */ };
+    VkDriverId driverId = VK_DRIVER_ID_MESA_HONEYKRISP;
+
+    EGLAttrib attribs[] = {
+        EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE,
+        EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID_ANGLE, (EGLAttrib)deviceUUID,
+        EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID_ANGLE, (EGLAttrib)driverUUID,
+        EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID_ANGLE, (EGLAttrib)driverId,
+        EGL_NONE
+    };
+
+    EGLDisplay display =
+        eglGetPlatformDisplay(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, attribs);
+
+    if (display == EGL_NO_DISPLAY) {
+        // Handle display creation failure
+    }
+
+Issues
+
+    1) Why provide support for specifying all three of device UUID, driver
+       UUID, and driver ID?
+
+       RESOLVED: The goal is to uniquely identify a specific VkPhysicalDevice
+       within the system, and systems may have multiple graphics drivers (or
+       even driver versions) which all support using the same underlying
+       physical device. The combination of device UUID, driver UUID, and driver
+       ID is currently found to be sufficient to uniquely identify any
+       particular driver/device combination found in real-world scenarios.
+
+Revision History
+
+    Version 1, 2024-07-09 (Steven Noonan)
+      - Initial draft

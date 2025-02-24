@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-power-sample-table'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-power-sample-table',
+
+  ready() {
+    this.$.table.tableColumns = [
+      {
+        title: 'Time',
+        width: '100px',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.start, {
+            unit: tr.b.Unit.byName.timeStampInMs
+          });
+        }
+      },
+      {
+        title: 'Power',
+        width: '100%',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.powerInW, {
+            unit: tr.b.Unit.byName.powerInWatts
+          });
+        }
+      }
+    ];
+    this.sample = undefined;
+  },
+
+  get sample() {
+    return this.sample_;
+  },
+
+  set sample(sample) {
+    this.sample_ = sample;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    if (this.sample === undefined) {
+      this.$.table.tableRows = [];
+    } else {
+      this.$.table.tableRows = [this.sample];
+    }
+    this.$.table.rebuild();
+  }
+});
+</script>
+
+<dom-module id='tr-ui-a-single-power-sample-sub-view'>
+  <template>
+    <style>
+    :host { display: block; }
+    </style>
+    <tr-ui-a-power-sample-table id="samplesTable">
+    </tr-ui-a-power-sample-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-power-sample-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  ready() {
+    this.currentSelection_ = undefined;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    if (this.selection.length !== 1) {
+      throw new Error('Cannot pass multiple samples to sample table.');
+    }
+    this.$.samplesTable.sample = tr.b.getOnlyElement(this.selection);
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-power-sample-sub-view',
+    tr.model.PowerSample,
+    {
+      multi: false,
+      title: 'Power Sample',
+    });
+
+</script>

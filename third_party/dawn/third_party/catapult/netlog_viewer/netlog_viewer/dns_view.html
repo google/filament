@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<dom-module id="dns-view">
+  <template>
+    <div id=dns-view-tab-content class=content-box>
+      <ul style='margin-top: 0'>
+        <li><a href='#events&q=type:HOST_RESOLVER_IMPL_JOB%20is:active'>View pending lookups</a></li>
+      </ul>
+
+      <div>
+        <h4>
+          Async DNS Configuration
+          <small>
+            [<a href="https://chromium.googlesource.com/chromium/src/+/main/net/dns/README.md#dns"
+                target="blank">//net/dns/README.md#dns</a>]
+          </small>
+        </h4>
+        <ul>
+          <li>
+            Internal DNS client enabled for insecure queries (Do53):
+            <span id=dns-view-internal-dns-enabled-for-insecure></span>
+          </li>
+          <li>
+            Internal DNS client enabled for secure queries (DoH):
+            <span id=dns-view-internal-dns-enabled-for-secure></span>
+          </li>
+          <li>
+            Disabled DoH providers:
+            <ul id=dns-view-internal-disabled-doh-providers></ul>
+          </li>
+        </ul>
+        <table class="styled-table">
+          <tbody id=dns-view-internal-dns-config-tbody></tbody>
+        </table>
+      </div>
+
+      <h4>
+        Host resolver cache
+      </h4>
+      <ul>
+        <li>Capacity: <span id=dns-view-cache-capacity></span></li>
+      </ul>
+      <h4>Current State</h4>
+      <ul>
+        <li>Active entries: <span id=dns-view-cache-active></span></li>
+        <li>Expired entries: <span id=dns-view-cache-expired></span></li>
+        <li>Network changes: <span id=dns-view-network-changes></span></li>
+      </ul>
+
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Hostname</th>
+            <th>Family</th>
+            <th>Addresses</th>
+            <th>TTL</th>
+            <th>Expires</th>
+            <th>Network Anonymization Key</th>
+            <th>Network changes</th>
+          </tr>
+        </thead>
+        <tbody id=dns-view-cache-tbody>
+        </tbody>
+      </table>
+    </div>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'dns-view',
+    });
+  </script>
+</dom-module>

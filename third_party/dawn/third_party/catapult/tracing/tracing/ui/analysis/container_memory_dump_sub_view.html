@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_header_pane.html">
+<link rel="import" href="/tracing/ui/analysis/stacked_pane_view.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-container-memory-dump-sub-view'>
+  <template>
+    <style>
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+    <div id="content"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  Polymer({
+    is: 'tr-ui-a-container-memory-dump-sub-view',
+    behaviors: [tr.ui.analysis.AnalysisSubView],
+
+    set selection(selection) {
+      if (selection === undefined) {
+        this.currentSelection_ = undefined;
+        this.dumpsByContainerName_ = undefined;
+        this.updateContents_();
+        return;
+      }
+
+      // Check that the selection contains only container memory dumps.
+      selection.forEach(function(event) {
+        if (!(event instanceof tr.model.ContainerMemoryDump)) {
+          throw new Error(
+              'Memory dump sub-view only supports container memory dumps');
+        }
+      });
+      this.currentSelection_ = selection;
+
+      // Group the selected memory dumps by container name and sort them
+      // chronologically.
+      this.dumpsByContainerName_ = tr.b.groupIntoMap(
+          this.currentSelection_.toArray(), dump => dump.containerName);
+      for (const dumps of this.dumpsByContainerName_.values()) {
+        dumps.sort((a, b) => a.start - b.start);
+      }
+
+      this.updateContents_();
+    },
+
+    get selection() {
+      return this.currentSelection_;
+    },
+
+    get requiresTallView() {
+      return true;
+    },
+
+    updateContents_() {
+      Polymer.dom(this.$.content).textContent = '';
+
+      if (this.dumpsByContainerName_ === undefined) return;
+
+      const containerNames = Array.from(this.dumpsByContainerName_.keys());
+      if (containerNames.length === 0) return;
+
+      if (containerNames.length > 1) {
+        this.buildViewForMultipleContainerNames_();
+      } else {
+        this.buildViewForSingleContainerName_();
+      }
+    },
+
+    buildViewForSingleContainerName_() {
+      const containerMemoryDumps = tr.b.getFirstElement(
+          this.dumpsByContainerName_.values());
+      const dumpView = unwrap(this.ownerDocument).createElement(
+          'tr-ui-a-stacked-pane-view');
+      Polymer.dom(this.$.content).appendChild(dumpView);
+      dumpView.setPaneBuilder(function() {
+        const headerPane = document.createElement(
+            'tr-ui-a-memory-dump-header-pane');
+        headerPane.containerMemoryDumps = containerMemoryDumps;
+        return headerPane;
+      });
+    },
+
+    buildViewForMultipleContainerNames_() {
+      // TODO(petrcermak): Provide a more sophisticated view for this case.
+      const ownerDocument = this.ownerDocument;
+
+      const rows = [];
+      for (const [containerName, dumps] of this.dumpsByContainerName_) {
+        rows.push({
+          containerName,
+          subRows: dumps,
+          isExpanded: true,
+        });
+      }
+      rows.sort(function(a, b) {
+        return a.containerName.localeCompare(b.containerName);
+      });
+
+      const columns = [
+        {
+          title: 'Dump',
+
+          value(row) {
+            if (row.subRows === undefined) {
+              return this.singleDumpValue_(row);
+            }
+            return this.groupedDumpValue_(row);
+          },
+
+          singleDumpValue_(row) {
+            const linkEl =
+                unwrap(ownerDocument).createElement('tr-ui-a-analysis-link');
+            linkEl.setSelectionAndContent(new tr.model.EventSet([row]));
+            Polymer.dom(linkEl).appendChild(tr.v.ui.createScalarSpan(
+                row.start, {
+                  unit: tr.b.Unit.byName.timeStampInMs,
+                  ownerDocument
+                }));
+            return linkEl;
+          },
+
+          groupedDumpValue_(row) {
+            const linkEl =
+                unwrap(ownerDocument).createElement('tr-ui-a-analysis-link');
+            linkEl.setSelectionAndContent(new tr.model.EventSet(row.subRows));
+            Polymer.dom(linkEl).appendChild(tr.ui.b.createSpan({
+              ownerDocument,
+              textContent: row.subRows.length + ' memory dump' +
+                  (row.subRows.length === 1 ? '' : 's') + ' in '
+            }));
+            Polymer.dom(linkEl).appendChild(tr.ui.b.createSpan({
+              ownerDocument,
+              textContent: row.containerName,
+              bold: true
+            }));
+            return linkEl;
+          }
+        }
+      ];
+
+      const table = unwrap(this.ownerDocument).createElement('tr-ui-b-table');
+      table.tableColumns = columns;
+      table.tableRows = rows;
+      table.showHeader = false;
+      table.rebuild();
+      Polymer.dom(this.$.content).appendChild(table);
+    }
+  });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-container-memory-dump-sub-view',
+      tr.model.GlobalMemoryDump,
+      {
+        multi: false,
+        title: 'Global Memory Dump',
+      });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-container-memory-dump-sub-view',
+      tr.model.GlobalMemoryDump,
+      {
+        multi: true,
+        title: 'Global Memory Dumps',
+      });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-container-memory-dump-sub-view',
+      tr.model.ProcessMemoryDump,
+      {
+        multi: false,
+        title: 'Process Memory Dump',
+      });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-container-memory-dump-sub-view',
+      tr.model.ProcessMemoryDump,
+      {
+        multi: true,
+        title: 'Process Memory Dumps',
+      });
+
+  return {};
+});
+</script>

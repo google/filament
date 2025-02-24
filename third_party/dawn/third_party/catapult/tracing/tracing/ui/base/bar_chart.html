@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/column_chart.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const BarChart = tr.ui.b.define('bar-chart', tr.ui.b.ColumnChart);
+
+  BarChart.prototype = {
+    __proto__: tr.ui.b.ColumnChart.prototype,
+
+    decorate() {
+      super.decorate();
+      this.verticalScale_ = undefined;
+      this.horizontalScale_ = undefined;
+      this.isWaterfall_ = false;
+    },
+
+    updateScales_() {
+      super.updateScales_();
+      this.yScale_.range([this.graphWidth, 0]);
+      this.xScale_.range([0, this.graphHeight]);
+      this.verticalScale_ = this.isYLogScale_ ? d3.scale.log(10) :
+        d3.scale.linear();
+      this.verticalScale_.domain(this.xScale_.domain());
+      this.verticalScale_.range([this.graphHeight, 0]);
+      this.horizontalScale_ = d3.scale.linear();
+      this.horizontalScale_.domain(this.yScale_.domain());
+      this.horizontalScale_.range([0, this.graphWidth]);
+    },
+
+    set isWaterfall(waterfall) {
+      this.isWaterfall_ = waterfall;
+      if (waterfall) {
+        this.getDataSeries('hide').color = 'transparent';
+      }
+      this.updateContents_();
+    },
+
+    get isWaterfall() {
+      return this.isWaterfall_;
+    },
+
+    get defaultGraphHeight() {
+      return Math.max(20, 10 * this.data_.length);
+    },
+
+    get defaultGraphWidth() {
+      return 100;
+    },
+
+    get barHeight() {
+      return this.graphHeight / this.data.length;
+    },
+
+    drawBrush_(brushRectsSel) {
+      brushRectsSel
+          .attr('x', 0)
+          .attr('width', this.graphWidth)
+          .attr('y', d => this.verticalScale_(d.max))
+          .attr('height', d =>
+            this.verticalScale_(d.min) - this.verticalScale_(d.max))
+          .attr('fill', 'rgb(213, 236, 229)');
+    },
+
+    getDataPointAtChartPoint_(chartPoint) {
+      const flippedPoint = {
+        x: this.graphHeight - chartPoint.y,
+        y: this.graphWidth - chartPoint.x
+      };
+      return super.getDataPointAtChartPoint_(flippedPoint);
+    },
+
+    drawXAxis_(xAxis) {
+      xAxis.attr('transform', 'translate(0,' + this.graphHeight + ')')
+          .call(d3.svg.axis()
+              .scale(this.horizontalScale_)
+              .orient('bottom'));
+    },
+
+    get yAxisWidth() {
+      return this.computeScaleTickWidth_(this.verticalScale_);
+    },
+
+    drawYAxis_(yAxis) {
+      const axisModifier = d3.svg.axis()
+          .scale(this.verticalScale_)
+          .orient('left');
+      yAxis.call(axisModifier);
+    },
+
+    drawHoverValueBox_(rect) {
+      const rectHoverEvent = new tr.b.Event('rect-mouseenter');
+      rectHoverEvent.rect = rect;
+      this.dispatchEvent(rectHoverEvent);
+
+      if (!this.enableHoverBox || (this.isWaterfall_ && rect.key === 'hide')) {
+        return;
+      }
+
+      const seriesKeys = [...this.seriesByKey_.keys()];
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      chartAreaSel.selectAll('.hover').remove();
+      let keyWidthPx = 0;
+      let keyHeightPx = 0;
+      let xWidthPx = 0;
+      let xHeightPx = 0;
+      let groupWidthPx = 0;
+      let groupHeightPx = 0;
+      if (seriesKeys.length > 1 && !this.isGrouped && !this.isWaterfall_) {
+        keyWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, rect.key).width;
+        keyHeightPx = this.textHeightPx_;
+      }
+      if (this.data.length > 1 && !this.isWaterfall_) {
+        xWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, '' + rect.datum.x).width;
+        xHeightPx = this.textHeightPx_;
+      }
+      if (this.isGrouped && rect.datum.group !== undefined) {
+        groupWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, rect.datum.group).width;
+        groupHeightPx = this.textHeightPx_;
+      }
+      const valueWidthPx = tr.ui.b.getSVGTextSize(
+          this.chartAreaElement, rect.value).width;
+      const valueHeightPx = this.textHeightPx_;
+      const maxWidthPx = Math.max(keyWidthPx, xWidthPx,
+          groupWidthPx, valueWidthPx) + 5;
+      const hoverWidthPx = this.isGrouped ? maxWidthPx : Math.min(maxWidthPx,
+          Math.max(50, rect.widthPx));
+      let hoverTopPx = rect.topPx;
+      hoverTopPx = Math.min(
+          hoverTopPx, this.getBoundingClientRect().height -
+          valueHeightPx);
+      let hoverLeftPx = rect.leftPx + (rect.widthPx / 2);
+      hoverLeftPx = Math.max(hoverLeftPx - hoverWidthPx, -this.margin.left);
+
+      chartAreaSel
+          .append('rect')
+          .attr('class', 'hover')
+          .attr('fill', 'white')
+          .attr('x', hoverLeftPx)
+          .attr('y', hoverTopPx)
+          .attr('width', hoverWidthPx)
+          .attr('height', keyHeightPx + xHeightPx +
+              valueHeightPx + groupHeightPx);
+
+      if (seriesKeys.length > 1 && !this.isGrouped && !this.isWaterfall_) {
+        chartAreaSel
+            .append('text')
+            .attr('class', 'hover')
+            .attr('fill', rect.color === 'transparent' ? '#000000' : rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx - 3)
+            .text(rect.key);
+      }
+      if (this.data.length > 1 && !this.isWaterfall_) {
+        chartAreaSel
+            .append('text')
+            .attr('class', 'hover')
+            .attr('fill', rect.color === 'transparent' ? '#000000' : rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx + valueHeightPx - 3)
+            .text('' + rect.datum.x);
+      }
+      if (this.isGrouped && rect.datum.group !== undefined) {
+        chartAreaSel
+            .append('text')
+            .on('mouseleave', () => this.clearHoverValueBox_(rect))
+            .attr('class', 'hover')
+            .attr('fill', rect.color === 'transparent' ? '#000000' : rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx + xHeightPx + groupHeightPx - 3)
+            .text(rect.datum.group);
+      }
+      chartAreaSel
+          .append('text')
+          .attr('class', 'hover')
+          .attr('fill', rect.color === 'transparent' ? '#000000' : rect.color)
+          .attr('x', hoverLeftPx + 2)
+          .attr('y', hoverTopPx + xHeightPx + keyHeightPx +
+              groupHeightPx + valueHeightPx - 3)
+          .text(rect.value);
+    },
+
+    flipRect_(rect) {
+      // Flip |rect| around |y=x|.
+      return {
+        datum: rect.datum,
+        index: rect.index,
+        key: rect.key,
+        value: rect.value,
+        color: rect.color,
+        topPx: this.graphHeight - rect.leftPx - rect.widthPx,
+        leftPx: this.graphWidth - rect.topPx - rect.heightPx,
+        widthPx: rect.heightPx,
+        heightPx: rect.widthPx,
+        underflow: rect.underflow,
+        overflow: rect.overflow,
+      };
+    },
+
+    drawRect_(rect, sel) {
+      super.drawRect_(this.flipRect_(rect), sel);
+    },
+
+    drawUnderflow_(rect, rectsSel) {
+      let sel = rectsSel.data([rect]);
+      sel.enter().append('text')
+          .text('*')
+          .attr('fill', rect.color)
+          .attr('x', 0)
+          .attr('y', this.graphHeight - rect.leftPx +
+            3 + (rect.widthPx / 2));
+      sel.exit().remove();
+
+      sel = rectsSel.data([rect]);
+      sel.enter().append('rect')
+          .attr('fill', 'rgba(0, 0, 0, 0)')
+          .attr('x', 0)
+          .attr('y', this.graphHeight - rect.leftPx - rect.widthPx)
+          .attr('width', 10)
+          .attr('height', rect.widthPx)
+          .on('mouseenter', () => this.drawHoverValueBox_(this.flipRect_(rect)))
+          .on('mouseleave', () => this.clearHoverValueBox_(rect));
+      sel.exit().remove();
+    },
+
+    drawOverflow_(rect, sel) {
+      sel = sel.data([rect]);
+      sel.enter().append('text')
+          .text('*')
+          .attr('fill', rect.color)
+          .attr('x', this.graphWidth)
+          .attr('y', this.graphHeight - rect.leftPx +
+            3 + (rect.widthPx / 2));
+      sel.exit().remove();
+    }
+  };
+
+  return {
+    BarChart,
+  };
+});
+</script>

@@ -1,0 +1,56 @@
+Miscellaneous data about extensions:
+
+  - GLU enumerant reserved values
+  - Information about extension vendors (probably out of date and incomplete)
+
+GLU Enumerants
+==============
+
+Value Range     Definition      Contact
+                Control         (if different)
+
+100208          SGI
+
+
+Definition      Contact             Email
+Control
+==========      =======             =====
+OpenGL ARB      Jon Leech           jon 'at' alumni.caltech.edu
+Khronos         Jon Leech           jon 'at' alumni.caltech.edu (OpenML, OpenGL ES)
+Apple           Bob Beretta         beretta 'at' apple.com
+ARM             Tom Olson           tom.olson 'at' arm.com
+AMD and ATI     Graham Sellers      graham.sellers 'at' amd.com
+ATI/NVIDIA      Graham Sellers      graham.sellers 'at' amd.com
+Broadcom        Gary Sweet          gsweet 'at' broadcom.com
+HP              Andrew Wiltzius     andrew.wiltzius 'at' hp.com
+Imagination     Graham Connor       gconnor 'at' videologic.com
+Intel           Ian Romanick        ian.d.romanick 'at' intel.com
+Mesa            Brian Paul          brianp 'at' mesa3d.org
+Microsoft       Dave Aronson        daronson 'at' microsoft.com
+NEC             Seiji Uchida        uchida 'at' hpc.bs1.fc.nec.co.jp
+NVIDIA          James Jones         jajones 'at' nvidia.com
+S3              Yanjun Zhang        YanjunZhang 'at' s3graphics.com
+Vivante         Frido Garritsen     TBD
+
+Out of business / acquired / unknown:
+
+3Dfx - Acquired by NVIDIA
+3Dlabs - Acquired by Creative, refocused on mobile, renamed ZiiLabs
+ADD - Out of business
+ATI - Acquired by AMD
+Compaq - Acquired by HP
+DEC - Acquired by Compaq, then HP
+E&S - No longer in the graphics business (sells planetarium displays)
+HP - No longer in the graphics business (other than as a system integrator)
+IBM - No longer in the graphics business (other than as a system integrator)
+Intense3D - Acquired by 3Dlabs
+Intergraph - Acquired by 3Dlabs. Spinoff of Intense3D.
+Micron - No longer in the graphics business
+KPC (Kubota) - Out of business
+PGI (Pacific Graphics Inc.) - Acquired by Template Graphics Systems
+Pixelfusion - No longer in the graphics business
+Rendition - Acquired by Micron
+SGI (Silicon Graphics Inc.) - Acquired by Silicon Graphics International, then HP
+SUN - Acquired by Oracle. No longer in the graphics business.
+XGI - Acquired by Silicon Integrated Systems. No longer in the graphics business.
+ZiiLabs - Still has a website but appears to be inactive as of 2017-01-12.

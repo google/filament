@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  let generalModel;
+  function getOrCreateGeneralModel() {
+    if (generalModel !== undefined) {
+      generalModel;
+    }
+    const fileUrl = '/test_data/thread_time_visualisation.json.gz';
+    const events = tr.b.getSync(fileUrl);
+    generalModel = tr.c.TestUtils.newModelWithEvents([events]);
+    return generalModel;
+  }
+
+  function DCPerfTestCase(testName, opt_options) {
+    tr.b.unittest.PerfTestCase.call(this, testName, undefined, opt_options);
+    this.viewportDiv = undefined;
+    this.drawingContainer = undefined;
+    this.viewport = undefined;
+  }
+  DCPerfTestCase.prototype = {
+    __proto__: tr.b.unittest.PerfTestCase.prototype,
+
+    setUp(model) {
+      this.viewportDiv = document.createElement('div');
+
+      this.viewport = new tr.ui.TimelineViewport(this.viewportDiv);
+
+      this.drawingContainer = new tr.ui.tracks.DrawingContainer(this.viewport);
+      this.viewport.modelTrackContainer = this.drawingContainer;
+
+      const modelTrack = new tr.ui.tracks.ModelTrack(this.viewport);
+      Polymer.dom(this.drawingContainer).appendChild(modelTrack);
+
+      modelTrack.model = model;
+
+      Polymer.dom(this.viewportDiv).appendChild(this.drawingContainer);
+
+      this.addHTMLOutput(this.viewportDiv);
+
+      // Size the canvas.
+      this.drawingContainer.updateCanvasSizeIfNeeded_();
+
+      // Size the viewport.
+      const w = this.drawingContainer.canvas.width;
+      const min = model.bounds.min;
+      const range = model.bounds.range;
+
+      const boost = range * 0.15;
+      const dt = new tr.ui.TimelineDisplayTransform();
+      dt.xSetWorldBounds(min - boost, min + range + boost, w);
+      this.viewport.setDisplayTransformImmediately(dt);
+    },
+
+    runOneIteration() {
+      this.drawingContainer.draw_();
+    }
+  };
+
+
+  function GeneralDCPerfTestCase(testName, opt_options) {
+    DCPerfTestCase.call(this, testName, opt_options);
+  }
+
+  GeneralDCPerfTestCase.prototype = {
+    __proto__: DCPerfTestCase.prototype,
+
+    setUp() {
+      const model = getOrCreateGeneralModel();
+      DCPerfTestCase.prototype.setUp.call(this, model);
+    }
+  };
+
+  // Failing on Chrome canary, see
+  // https://github.com/catapult-project/catapult/issues/1826
+  flakyTest(new GeneralDCPerfTestCase('draw_softwareCanvas_One',
+      {iterations: 1}));
+  // Failing on Chrome stable on Windows, see
+  // https://github.com/catapult-project/catapult/issues/1908
+  flakyTest(new GeneralDCPerfTestCase('draw_softwareCanvas_Ten',
+      {iterations: 10}));
+  test(new GeneralDCPerfTestCase('draw_softwareCanvas_AHundred',
+      {iterations: 100}));
+
+  function AsyncDCPerfTestCase(testName, opt_options) {
+    DCPerfTestCase.call(this, testName, opt_options);
+  }
+
+  AsyncDCPerfTestCase.prototype = {
+    __proto__: DCPerfTestCase.prototype,
+
+    setUp() {
+      const model = tr.c.TestUtils.newModel(function(m) {
+        const proc = m.getOrCreateProcess(1);
+        for (let tid = 1; tid <= 5; tid++) {
+          const thread = proc.getOrCreateThread(tid);
+          for (let i = 0; i < 5000; i++) {
+            const mod = Math.floor(i / 100) % 4;
+            const slice = tr.c.TestUtils.newAsyncSliceEx({
+              name: 'Test' + i,
+              colorId: tid + mod,
+              id: tr.b.GUID.allocateSimple(),
+              start: i * 10,
+              duration: 9,
+              isTopLevel: true
+            });
+            thread.asyncSliceGroup.push(slice);
+          }
+        }
+      });
+      DCPerfTestCase.prototype.setUp.call(this, model);
+
+      const w = this.drawingContainer.canvas.width;
+
+      const dt = new tr.ui.TimelineDisplayTransform();
+      dt.xSetWorldBounds(-2000, 54000, w);
+      this.viewport.setDisplayTransformImmediately(dt);
+    }
+  };
+  test(new AsyncDCPerfTestCase('draw_asyncSliceHeavy_Twenty',
+      {iterations: 20}));
+});
+</script>
+

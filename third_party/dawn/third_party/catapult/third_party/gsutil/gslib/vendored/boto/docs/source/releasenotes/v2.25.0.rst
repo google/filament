@@ -1,0 +1,57 @@
+boto v2.25.0
+============
+
+:date: 2014/02/07
+
+This release includes Amazon Route53 service and documentation updates,
+preliminary log file support for Amazon Relational Database Service (RDS), as
+well as various other small fixes. Also included is an opt-in to use signature
+version 4 with Amazon EC2.
+
+**IMPORTANT** - This release also include a **SIGNIFICANT** underlying change
+to the Amazon S3 ``get_bucket`` method, to addresses the blog post by AppNeta_.
+We've altered the default behavior to now perform a ``HEAD`` on the bucket, in
+place of the old ``GET`` behavior (which would fetch a zero-length list of
+keys).
+
+This should reduce all users costs & should also be *mostly*
+backward-compatible. **HOWEVER**, if you were previously parsing the exception
+message from ``S3Connection.get_bucket``, you *will* have to change your code
+(see the S3 tutorial for details). ``HEAD`` does *not* return as detailed of
+error messages & while we've attempted to patch over as much of the differences
+as we can, there may still be edge-cases over the prior behavior.
+
+.. _AppNeta: http://www.appneta.com/blog/s3-list-get-bucket-default/
+
+
+Features
+--------
+
+* Add support for Route53 API version 2013-04-01 (:issue:`2080`, :sha:`600dcd0`)
+* Add option to opt-in for EC2 SigV4 (:issue:`2074`, :sha:`4d780bd`)
+* Add Autoscale feature to get all adjustment types (:issue:`2058`,
+  :issue:`1538`, :sha:`b9c7e15`)
+* Add Route53 unit tests (:issue:`2066`, :sha:`e859576`)
+* Add a basic Route53 tutorial (:issue:`2060`, :sha:`f0ad46b`)
+* Add Autoscale associated public IP to launch configuration (:issue:`2051`,
+  :issue:`2028`, :issue:`2029`, :sha:`c58bda6`)
+* Add option to pass VPC zone identifiers as a Python list (:issue:`2047`,
+  :issue:`1772`, :sha:`07ef9e1`)
+* Add RDS call to get all log files (:issue:`2040`, :issue:`1994`,
+  :sha:`925b8cb`)
+
+
+Bugfixes
+--------
+
+* Changed S3 ``get_bucket`` to use ``HEAD`` in place of ``GET``. (:issue:`2078`,
+  :issue:`2082`, :sha:`016be83`)
+* Fix EMR's describe_cluster_command. (:issue:`2034`, :sha:`1c5621e`)
+* Tutorial small code fix (:issue:`2072`, :sha:`38e7db1`)
+* Fix CloudFront string representation (:issue:`2069`, :sha:`885c397`)
+* Route53 doc cleanup (:issue:`2059`, :sha:`d2fc38e`)
+* Fix MWS parsing of GetProductCategoriesForASIN response. (:issue:`2024`,
+  :sha:`0af08ce`)
+* Fix SQS docs for get_queue_attributes (:issue:`2061`, :sha:`1cdc326`)
+* Don't insert a '?' in URLs unless there is a query string (:issue:`2042`,
+  :issue:`1943`, :sha:`c15ce60`)

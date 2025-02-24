@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  function createSpan(opt_dictionary) {
+    let ownerDocument = document;
+    if (opt_dictionary && opt_dictionary.ownerDocument) {
+      ownerDocument = opt_dictionary.ownerDocument;
+    }
+    const spanEl = ownerDocument.createElement('span');
+    if (opt_dictionary) {
+      if (opt_dictionary.className) {
+        spanEl.className = opt_dictionary.className;
+      }
+      if (opt_dictionary.textContent) {
+        Polymer.dom(spanEl).textContent =
+            opt_dictionary.textContent;
+      }
+      if (opt_dictionary.tooltip) {
+        spanEl.title = opt_dictionary.tooltip;
+      }
+      if (opt_dictionary.parent) {
+        Polymer.dom(opt_dictionary.parent).appendChild(spanEl);
+      }
+      if (opt_dictionary.bold) {
+        spanEl.style.fontWeight = 'bold';
+      }
+      if (opt_dictionary.italic) {
+        spanEl.style.fontStyle = 'italic';
+      }
+      if (opt_dictionary.marginLeft) {
+        spanEl.style.marginLeft = opt_dictionary.marginLeft;
+      }
+      if (opt_dictionary.marginRight) {
+        spanEl.style.marginRight = opt_dictionary.marginRight;
+      }
+      if (opt_dictionary.backgroundColor) {
+        spanEl.style.backgroundColor = opt_dictionary.backgroundColor;
+      }
+      if (opt_dictionary.color) {
+        spanEl.style.color = opt_dictionary.color;
+      }
+    }
+    return spanEl;
+  }
+
+  function createLink(opt_args) {
+    let ownerDocument = document;
+    if (opt_args && opt_args.ownerDocument) {
+      ownerDocument = opt_args.ownerDocument;
+    }
+    const linkEl = ownerDocument.createElement('a');
+    if (opt_args) {
+      if (opt_args.href) {
+        linkEl.href = opt_args.href;
+        // Open link in a new tab so people don't lose their Trace Viewer state.
+        linkEl.target = '_blank';
+      }
+      if (opt_args.tooltip) linkEl.title = opt_args.tooltip;
+      if (opt_args.color) linkEl.style.color = opt_args.color;
+      if (opt_args.bold) linkEl.style.fontWeight = 'bold';
+      if (opt_args.italic) linkEl.style.fontStyle = 'italic';
+      if (opt_args.className) linkEl.className = opt_args.className;
+      if (opt_args.parent) Polymer.dom(opt_args.parent).appendChild(linkEl);
+      if (opt_args.marginLeft) linkEl.style.marginLeft = opt_args.marginLeft;
+      if (opt_args.marginRight) linkEl.style.marginRight = opt_args.marginRight;
+      if (opt_args.display) linkEl.style.display = opt_args.display;
+      if (opt_args.backgroundColor) {
+        linkEl.style.backgroundColor = opt_args.backgroundColor;
+      }
+      if (opt_args.textContent) {
+        Polymer.dom(linkEl).textContent = opt_args.textContent;
+      }
+    }
+    return linkEl;
+  }
+
+  function createDiv(opt_dictionary) {
+    const divEl = document.createElement('div');
+    if (opt_dictionary) {
+      if (opt_dictionary.className) {
+        divEl.className = opt_dictionary.className;
+      }
+      if (opt_dictionary.parent) {
+        Polymer.dom(opt_dictionary.parent).appendChild(divEl);
+      }
+      if (opt_dictionary.textContent) {
+        Polymer.dom(divEl).textContent =
+            opt_dictionary.textContent;
+      }
+      if (opt_dictionary.maxWidth) {
+        divEl.style.maxWidth = opt_dictionary.maxWidth;
+      }
+    }
+    return divEl;
+  }
+
+  function createScopedStyle(styleContent) {
+    const styleEl = document.createElement('style');
+    styleEl.scoped = true;
+    Polymer.dom(styleEl).innerHTML = styleContent;
+    return styleEl;
+  }
+
+  function valuesEqual(a, b) {
+    if (a instanceof Array && b instanceof Array) {
+      return a.length === b.length && JSON.stringify(a) === JSON.stringify(b);
+    }
+    return a === b;
+  }
+
+  function createSelector(
+      targetEl, targetElProperty,
+      settingsKey, defaultValue,
+      items, opt_namespace) {
+    let defaultValueIndex;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (valuesEqual(item.value, defaultValue)) {
+        defaultValueIndex = i;
+        break;
+      }
+    }
+    if (defaultValueIndex === undefined) {
+      throw new Error('defaultValue must be in the items list');
+    }
+
+    const selectorEl = document.createElement('select');
+    selectorEl.addEventListener('change', onChange);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const optionEl = document.createElement('option');
+      Polymer.dom(optionEl).textContent = item.label;
+      optionEl.targetPropertyValue = item.value;
+      optionEl.item = item;
+      Polymer.dom(selectorEl).appendChild(optionEl);
+    }
+    function onChange(e) {
+      const value = selectorEl.selectedValue;
+      tr.b.Settings.set(settingsKey, value, opt_namespace);
+      targetEl[targetElProperty] = value;
+    }
+    const oldSetter = targetEl.__lookupSetter__('selectedIndex');
+    selectorEl.__defineGetter__('selectedValue', function(v) {
+      return selectorEl.children[selectorEl.selectedIndex].targetPropertyValue;
+    });
+    selectorEl.__defineGetter__('selectedItem', function(v) {
+      return selectorEl.children[selectorEl.selectedIndex].item;
+    });
+    selectorEl.__defineSetter__('selectedValue', function(v) {
+      for (let i = 0; i < selectorEl.children.length; i++) {
+        const value = selectorEl.children[i].targetPropertyValue;
+        if (valuesEqual(value, v)) {
+          const changed = selectorEl.selectedIndex !== i;
+          if (changed) {
+            selectorEl.selectedIndex = i;
+            onChange();
+          }
+          return;
+        }
+      }
+      throw new Error('Not a valid value');
+    });
+
+    const initialValue = tr.b.Settings.get(
+        settingsKey, defaultValue, opt_namespace);
+    let didSet = false;
+    for (let i = 0; i < selectorEl.children.length; i++) {
+      if (valuesEqual(selectorEl.children[i].targetPropertyValue,
+          initialValue)) {
+        didSet = true;
+        targetEl[targetElProperty] = initialValue;
+        selectorEl.selectedIndex = i;
+        break;
+      }
+    }
+    if (!didSet) {
+      selectorEl.selectedIndex = defaultValueIndex;
+      targetEl[targetElProperty] = defaultValue;
+    }
+
+    return selectorEl;
+  }
+
+  function createEditCategorySpan(optionGroupEl, targetEl) {
+    const spanEl = createSpan({className: 'edit-categories'});
+    Polymer.dom(spanEl).textContent = 'Edit categories';
+    Polymer.dom(spanEl).classList.add('labeled-option');
+
+    spanEl.addEventListener('click', function() {
+      targetEl.onClickEditCategories();
+    });
+    return spanEl;
+  }
+
+  function createOptionGroup(targetEl, targetElProperty,
+      settingsKey, defaultValue,
+      items) {
+    function onChange() {
+      let value = [];
+      if (this.value.length) {
+        value = this.value.split(',');
+      }
+      tr.b.Settings.set(settingsKey, value);
+      targetEl[targetElProperty] = value;
+    }
+
+    const optionGroupEl = createSpan({className: 'labeled-option-group'});
+    const initialValue = tr.b.Settings.get(settingsKey, defaultValue);
+    for (let i = 0; i < items.length; ++i) {
+      const item = items[i];
+      const id = 'category-preset-' + item.label.replace(/ /g, '-');
+
+      const radioEl = document.createElement('input');
+      radioEl.type = 'radio';
+      Polymer.dom(radioEl).setAttribute('id', id);
+      Polymer.dom(radioEl).setAttribute('name', 'category-presets-group');
+      Polymer.dom(radioEl).setAttribute('value', item.value);
+      radioEl.addEventListener('change', onChange.bind(radioEl, targetEl,
+          targetElProperty,
+          settingsKey));
+      if (valuesEqual(initialValue, item.value)) {
+        radioEl.checked = true;
+      }
+
+      const labelEl = document.createElement('label');
+      Polymer.dom(labelEl).textContent = item.label;
+      Polymer.dom(labelEl).setAttribute('for', id);
+
+      const spanEl = createSpan({className: 'labeled-option'});
+      Polymer.dom(spanEl).appendChild(radioEl);
+      Polymer.dom(spanEl).appendChild(labelEl);
+
+      spanEl.__defineSetter__('checked', function(opt_bool) {
+        const changed = radioEl.checked !== (!!opt_bool);
+        if (!changed) return;
+
+        radioEl.checked = !!opt_bool;
+        onChange();
+      });
+      spanEl.__defineGetter__('checked', function() {
+        return radioEl.checked;
+      });
+
+      Polymer.dom(optionGroupEl).appendChild(spanEl);
+    }
+    Polymer.dom(optionGroupEl).appendChild(
+        createEditCategorySpan(optionGroupEl, targetEl));
+    // Since this option group element is not yet added to the tree,
+    // querySelector will fail during updateEditCategoriesStatus_ call.
+    // Hence, creating the element with the 'expanded' classlist category
+    // added, if last selected value was 'Manual' selection.
+    if (!initialValue.length) {
+      Polymer.dom(optionGroupEl).classList.add('categories-expanded');
+    }
+    targetEl[targetElProperty] = initialValue;
+
+    return optionGroupEl;
+  }
+
+  let nextCheckboxId = 1;
+  function createCheckBox(targetEl, targetElProperty,
+      settingsKey, defaultValue,
+      label, opt_changeCb) {
+    const buttonEl = document.createElement('input');
+    buttonEl.type = 'checkbox';
+
+    let initialValue = defaultValue;
+    if (settingsKey !== undefined) {
+      initialValue = tr.b.Settings.get(settingsKey, defaultValue);
+      buttonEl.checked = !!initialValue;
+    }
+    if (targetEl) {
+      targetEl[targetElProperty] = initialValue;
+    }
+
+    function onChange() {
+      if (settingsKey !== undefined) {
+        tr.b.Settings.set(settingsKey, buttonEl.checked);
+      }
+      if (targetEl) {
+        targetEl[targetElProperty] = buttonEl.checked;
+      }
+      if (opt_changeCb) {
+        opt_changeCb.call();
+      }
+    }
+
+    buttonEl.addEventListener('change', onChange);
+
+    const id = '#checkbox-' + nextCheckboxId++;
+
+    const spanEl = createSpan();
+    spanEl.style.display = 'flex';
+    spanEl.style.whiteSpace = 'nowrap';
+    Polymer.dom(buttonEl).setAttribute('id', id);
+
+    const labelEl = document.createElement('label');
+    Polymer.dom(labelEl).textContent = label;
+    Polymer.dom(labelEl).setAttribute('for', id);
+    Polymer.dom(spanEl).appendChild(buttonEl);
+    Polymer.dom(spanEl).appendChild(labelEl);
+
+    spanEl.__defineSetter__('checked', function(opt_bool) {
+      const changed = buttonEl.checked !== (!!opt_bool);
+      if (!changed) return;
+
+      buttonEl.checked = !!opt_bool;
+      onChange();
+    });
+    spanEl.__defineGetter__('checked', function() {
+      return buttonEl.checked;
+    });
+
+    return spanEl;
+  }
+
+  /**
+   * @param {!string} label
+   * @param {function()=} opt_callback
+   * @param {*=} opt_this
+   */
+  function createButton(label, opt_callback, opt_this) {
+    const buttonEl = document.createElement('input');
+    buttonEl.type = 'button';
+    buttonEl.value = label;
+
+    function onClick() {
+      opt_callback.call(opt_this || buttonEl);
+    }
+
+    if (opt_callback) {
+      buttonEl.addEventListener('click', onClick);
+    }
+
+    return buttonEl;
+  }
+
+  function createTextInput(
+      targetEl, targetElProperty, settingsKey, defaultValue) {
+    const initialValue = tr.b.Settings.get(settingsKey, defaultValue);
+    const el = document.createElement('input');
+    el.type = 'text';
+    function onChange(e) {
+      tr.b.Settings.set(settingsKey, el.value);
+      targetEl[targetElProperty] = el.value;
+    }
+    el.addEventListener('input', onChange);
+    el.value = initialValue;
+    targetEl[targetElProperty] = initialValue;
+
+    return el;
+  }
+
+  function isElementAttachedToDocument(el) {
+    let cur = el;
+    while (Polymer.dom(cur).parentNode) {
+      cur = Polymer.dom(cur).parentNode;
+    }
+    return (cur === el.ownerDocument || cur.nodeName === '#document-fragment');
+  }
+
+  function asHTMLOrTextNode(value, opt_ownerDocument) {
+    if (value instanceof Node) {
+      return value;
+    }
+    const ownerDocument = opt_ownerDocument || document;
+    return ownerDocument.createTextNode(value);
+  }
+
+  return {
+    createSpan,
+    createLink,
+    createDiv,
+    createScopedStyle,
+    createSelector,
+    createOptionGroup,
+    createCheckBox,
+    createButton,
+    createTextInput,
+    isElementAttachedToDocument,
+    asHTMLOrTextNode,
+  };
+});
+</script>

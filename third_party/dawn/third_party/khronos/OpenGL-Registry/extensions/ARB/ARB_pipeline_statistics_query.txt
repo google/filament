@@ -1,0 +1,820 @@
+Name
+
+    ARB_pipeline_statistics_query
+
+Name Strings
+
+    GL_ARB_pipeline_statistics_query
+
+Contact
+
+    Brian Paul, VMware Inc. (brianp 'at' vmware.com)
+
+Contributors
+
+    Brian Paul, VMware
+    Daniel Rakos, AMD
+    Graham Sellers, AMD
+    Pat Brown, NVIDIA
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Date: 2017-07-23
+    Revision: 11
+
+Number
+
+    ARB Extension #171
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    The extension is written against the OpenGL 4.4 Specification, Core
+    Profile, March 19, 2014.
+
+    OpenGL 3.2 and ARB_geometry_shader4 affect the definition of this
+    extension.
+
+    OpenGL 4.0 and ARB_gpu_shader5 affect the definition of this extension.
+
+    OpenGL 4.0 and ARB_tessellation_shader affect the definition of this
+    extension.
+
+    OpenGL 4.3 and ARB_compute_shader affect the definition of this extension.
+
+    This extension interacts with AMD_transform_feedback4.
+
+Overview
+
+    This extension introduces new query types that allow applications to get
+    statistics information about different parts of the pipeline:
+
+      * Number of vertices and primitives issued to the GL;
+
+      * Number of times a vertex shader, tessellation evaluation shader,
+        geometry shader, fragment shader, and compute shader was invoked;
+
+      * Number of patches processed by the tessellation control shader stage;
+
+      * Number of primitives emitted by a geometry shader;
+
+      * Number of primitives that entered the primitive clipping stage;
+
+      * Number of primitives that are output by the primitive clipping stage;
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery, GetQueryiv,
+    BeginQueryIndexed, EndQueryIndexed and GetQueryIndexediv:
+
+        VERTICES_SUBMITTED_ARB                          0x82EE
+        PRIMITIVES_SUBMITTED_ARB                        0x82EF
+        VERTEX_SHADER_INVOCATIONS_ARB                   0x82F0
+        TESS_CONTROL_SHADER_PATCHES_ARB                 0x82F1
+        TESS_EVALUATION_SHADER_INVOCATIONS_ARB          0x82F2
+        GEOMETRY_SHADER_INVOCATIONS                     0x887F
+        GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB          0x82F3
+        FRAGMENT_SHADER_INVOCATIONS_ARB                 0x82F4
+        COMPUTE_SHADER_INVOCATIONS_ARB                  0x82F5
+        CLIPPING_INPUT_PRIMITIVES_ARB                   0x82F6
+        CLIPPING_OUTPUT_PRIMITIVES_ARB                  0x82F7
+
+Additions to Chapter 4 of the OpenGL 4.4 (Core Profile) Specification (Event Model)
+
+    Modify Section 4.2, Query Objects and Asynchronous Queries
+
+    (add to the end of the bullet list on the first paragraph on p. 39)
+
+      * Submission queries with a target of VERTICES_SUBMITTED_ARB and
+        PRIMITIVES_SUBMITTED_ARB return information on the number of vertices
+        and primitives transferred to the GL, respectively (see section 10.11).
+
+      * Vertex shader queries with a target of VERTEX_SHADER_INVOCATIONS_ARB
+        return information on the number of times the vertex shader has been
+        invoked (see section 11.1.4).
+
+      * Tessellation shader queries with a target of TESS_CONTROL_SHADER_-
+        PATCHES_ARB and TESS_EVALUATION_SHADER_INVOCATIONS_ARB return
+        information on the number of patches processed by the tessellation
+        control shader stage and the number of times the tessellation
+        evaluation shader has been invoked, respectively (see section 11.2.4).
+
+      * Geometry shader queries with a target of GEOMETRY_SHADER_INVOCATIONS
+        and GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB return information on the
+        number of times the geometry shader has been invoked and the number of
+        primitives it emitted (see section 11.3.5).
+
+      * Primitive clipping queries with a target of CLIPPING_INPUT_-
+        PRIMITIVES_ARB and CLIPPING_OUTPUT_PRIMITIVES_ARB return information
+        on the number of primitives that were processed in the primitive
+        clipping stage and the number of primitives that were output by the
+        primitive clipping stage and are further processed by the
+        rasterization stage, respectively (see section 13.5.2).
+
+      * Fragment shader queries with a target of FRAGMENT_SHADER_INVOCATIONS_-
+        ARB return information on the number of times the fragment shader has
+        been invoked (see section 15.3).
+
+      * Compute shader queries with a target of COMPUTE_SHADER_INVOCATIONS_ARB
+        return information on the number of times the compute shader has been
+        invoked (see section 19.2).
+
+    (replace the INVALID_ENUM error for the <target> parameter of
+    BeginQueryIndexed on p. 40):
+
+    An INVALID_ENUM error is generated if <target> is TIMESTAMP, or is not
+    one of the query object targets described in section 4.2.
+
+    (replace the INVALID_ENUM error for the <target> parameter of
+    EndQueryIndexed on p. 41):
+
+    An INVALID_ENUM error is generated if <target> is TIMESTAMP, or is not
+    one of the query object targets described in section 4.2.
+
+    (modify the INVALID_VALUE error for <index> on non-indexed <target>s on
+    p. 42):
+
+    An INVALID_OPERATION error is generated if <target> is a valid target
+    other than PRIMITIVES_GENERATED or
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, and <index> is not zero.
+
+
+    Modify Section 4.2.1, Query Object Queries
+
+    (add before the errors section for GetQueryIndexediv on p. 43)
+
+      For pipeline statistics queries (VERTICES_SUBMITTED_ARB, PRIMITIVES_-
+      SUBMITTED_ARB, VERTEX_SHADER_INVOCATIONS_ARB, TESS_CONTROL_SHADER_-
+      PATCHES_ARB, TESS_EVALUATION_SHADER_INVOCATIONS_ARB, GEOMETRY_SHADER_-
+      INVOCATIONS, FRAGMENT_SHADER_INVOCATIONS_ARB, COMPUTE_SHADER_-
+      INVOCATIONS_ARB, GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB, CLIPPING_-
+      INPUT_PRIMITIVES_ARB, CLIPPING_OUTPUT_PRIMITIVES_ARB), if the number
+      of bits is non-zero, the minimum number of bits allowed is 32.
+
+    (replace the INVALID_ENUM error for the <target> parameter of
+    GetQueryIndexediv on p. 43):
+
+    An INVALID_ENUM error is generated if <target> is not one of the query
+    object targets described in section 4.2.
+
+    (modify the INVALID_VALUE error for <index> on non-indexed <target>s on
+    p. 43):
+
+    An INVALID_OPERATION error is generated if <target> is a valid target
+    other than PRIMITIVES_GENERATED or
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, and <index> is not zero.
+
+Additions to Chapter 10 of the OpenGL 4.4 (Core Profile) Specification (Vertex Specification and Drawing Commands)
+
+    Add new Section after 10.10, Conditional Rendering
+
+    10.11 Submission Queries
+
+    Submission queries use query objects to track the number of vertices and
+    primitives that are issued to the GL using draw commands.
+
+    When BeginQuery is called with a target of VERTICES_SUBMITTED_ARB, the
+    submitted vertices count maintained by the GL is set to zero. When a
+    vertices submitted query is active, the submitted vertices count is
+    incremented every time a vertex is transferred to the GL (see sections
+    10.3.4, and 10.5). In case of primitive types with adjacency information
+    (see sections 10.1.11 through 10.1.14) implementations may or may not
+    count vertices not belonging to the main primitive. In case of line loop
+    primitives implementations are allowed to count the first vertex twice
+    for the purposes of VERTICES_SUBMITTED_ARB queries. Additionally,
+    vertices corresponding to incomplete primitives may or may not be counted.
+
+    When BeginQuery is called with a target of PRIMITIVES_SUBMITTED_ARB, the
+    submitted primitives count maintained by the GL is set to zero. When a
+    primitives submitted query is active, the submitted primitives count is
+    incremented every time a point, line, triangle, or patch primitive is
+    transferred to the GL (see sections 10.1, 10.3.5, and 10.5). Restarting
+    a primitive topology using the primitive restart index has no effect on
+    the issued primitives count. Incomplete primitives may or may not be
+    counted.
+
+Additions to Chapter 11 of the OpenGL 4.4 (Core Profile) Specification (Programmable Vertex Processing)
+
+    Modify Section 11.1.3, Shader Execution
+
+    (add after bullet list on p. 352)
+
+    Implementations are allowed to skip the execution of certain shader
+    invocations, and to execute additional shader invocations for any shader
+    type during programmable vertex processing due to implementation dependent
+    reasons, including the execution of shader invocations that don't have an
+    active program object present for the particular shader stage, as long as
+    the results of rendering otherwise remain unchanged.
+
+    Add new Section after 11.1.3, Shader Execution
+
+    11.1.4 Vertex Shader Queries
+
+    Vertex shader queries use query objects to track the number of vertex
+    shader invocations.
+
+    When BeginQuery is called with a target of VERTEX_SHADER_INVOCATIONS_ARB,
+    the vertex shader invocations count maintained by the GL is set to zero.
+    When a vertex shader invocations query is active, the counter is
+    incremented every time the vertex shader is invoked (see section 11.1).
+
+    The result of vertex shader queries may be implementation dependent due
+    to reasons described in section 11.1.3.
+
+    Add new Section after 11.2.3, Tessellation Evaluation Shaders
+
+    11.2.4 Tessellation Shader Queries
+
+    Tessellation shader queries use query objects to track the number of
+    tessellation control shader and tessellation evaluation shader invocations.
+
+    When BeginQuery is called with a target of TESS_CONTROL_SHADER_PATCHES_ARB,
+    the tessellation control shader patches count maintained by the GL is set
+    to zero. When a tessellation control shader patches query is active, the
+    counter is incremented every time a patch is processed by the tessellation
+    control shader stage (see section 11.2.1).
+
+    When BeginQuery is called with a target of TESS_EVALUATION_SHADER_-
+    INVOCATIONS_ARB, the tessellation evaluation shader invocations count
+    maintained by the GL is set to zero. When a tessellation evaluation shader
+    invocations query is active, the counter is incremented every time the
+    tessellation evaluation shader is invoked (see section 11.2.3).
+
+    The result of tessellation shader queries may be implementation dependent
+    due to reasons described in section 11.1.3.
+
+    Add new Section after 11.3.4, Geometry Shader Execution Environment
+
+    11.3.5 Geometry Shader Queries
+
+    Geometry shader queries use query objects to track the number of geometry
+    shader invocations and the number of primitives those emitted.
+
+    When BeginQuery is called with a target of GEOMETRY_SHADER_INVOCATIONS,
+    the geometry shader invocations count maintained by the GL is set to zero.
+    When a geometry shader invocations query is active, the counter is
+    incremented every time the geometry shader is invoked (see section 11.3).
+    In case of instanced geometry shaders (see section 11.3.4.2) the geometry
+    shader invocations count is incremented for each separate instanced
+    invocation.
+
+    When BeginQuery is called with a target of GEOMETRY_SHADER_PRIMITIVES_-
+    EMITTED_ARB, the geometry shader output primitives count maintained by the
+    GL is set to zero. When a geometry shader primitives emitted query is
+    active, the counter is incremented every time the geometry shader emits
+    a primitive to a vertex stream. Implementations may or may not count
+    primitives emitted to a vertex stream that isn't further processed by the
+    GL (see section 11.3.2). Restarting primitive topology using the shading
+    language built-in functions EndPrimitive or EndStreamPrimitive does not
+    increment the geometry shader output primitives count.
+
+    The result of geometry shader queries may be implementation dependent due
+    to reasons described in section 11.1.3.
+
+Additions to Chapter 13 of the OpenGL 4.4 (Core Profile) Specification (Fixed-Function Vertex Post-Processing)
+
+    Modify Section 13.5, Primitive Clipping
+
+    (add new paragraph before the last paragraph of the section on p. 405)
+
+    Implementations are allowed to pass incoming primitives unchanged and to
+    output multiple primitives for an incoming primitive due to implementation
+    dependent reasons as long as the results of rendering otherwise remain
+    unchanged.
+
+    Add new Section after 13.5.1, Clipping Shader Outputs
+
+    13.5.2 Primitive Clipping Queries
+
+    Primitive clipping queries use query objects to track the number of
+    primitives that are processed by the primitive clipping stage and the
+    number of primitives that are output by the primitive clipping stage and
+    are further processed by the rasterization stage.
+
+    When BeginQuery is called with a target of CLIPPING_INPUT_PRIMITIVES_ARB,
+    the clipping input primitives count maintained by the GL is set to zero.
+    When a clipping input primitives query is active, the counter is
+    incremented every time a primitive reaches the primitive clipping stage
+    (see section 13.5).
+
+    When BeginQuery is called with a target of CLIPPING_OUTPUT_PRIMITIVES_ARB,
+    the clipping output primitives count maintained by the GL is set to zero.
+    When a clipping output primitives query is active, the counter is
+    incremented every time a primitive passes the primitive clipping stage.
+    The actual number of primitives output by the primitive clipping stage for
+    a particular input primitive is implementation dependent (see section 13.5)
+    but must satisfy the following conditions:
+
+      * If at least one vertex of the input primitive lies inside the clipping
+        volume, the counter is incremented by one or more.
+
+      * Otherwise, the counter is incremented by zero or more.
+
+    If RASTERIZER_DISCARD is enabled, implementations are allowed to discard
+    primitives right after the optional transform feedback state (see Section
+    14.1). As a result, if RASTERIZER_DISCARD is enabled, the clipping input
+    and output primitives count may not be incremented.
+
+Additions to Chapter 15 of the OpenGL 4.4 (Core Profile) Specification (Programmable Fragment Processing)
+
+    Modify Section 15.2, Shader Execution
+
+    (add after first paragraph on p. 434)
+
+    Implementations are allowed to skip the execution of certain fragment
+    shader invocations, and to execute additional fragment shader invocations
+    during programmable fragment processing due to implementation dependent
+    reasons, including the execution of fragment shader invocations when there
+    isn't an active program object present for the fragment shader stage, as
+    long as the results of rendering otherwise remain unchanged.
+
+    Add new Section after 15.2, Shader Execution
+
+    15.3 Fragment Shader Queries
+
+    Fragment shader queries use query objects to track the number of fragment
+    shader invocations.
+
+    When BeginQuery is called with a target of FRAGMENT_SHADER_INVOCATIONS_ARB,
+    the fragment shader invocations count maintained by the GL is set to zero.
+    When a fragment shader invocations query is active, the counter is
+    incremented every time the fragment shader is invoked (see section 15.2).
+
+    The result of fragment shader queries may be implementation dependent due
+    to reasons described in section 15.2.
+
+Additions to Chapter 19 of the OpenGL 4.4 (Core Profile) Specification (Compute Shaders)
+
+    Add new Section after 19.1, Compute Shader Variables
+
+    19.2 Compute Shader Queries
+
+    Compute shader queries use query objects to track the number of compute
+    shader invocations.
+
+    When BeginQuery is called with a target of COMPUTE_SHADER_INVOCATIONS_ARB,
+    the compute shader invocations count maintained by the GL is set to zero.
+    When a compute shader invocations query is active, the counter is
+    incremented every time the compute shader is invoked (see chapter 19).
+
+    Implementations are allowed to skip the execution of certain compute
+    shader invocations, and to execute additional compute shader invocations
+    due to implementation dependent reasons as long as the results of
+    rendering otherwise remain unchanged.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on OpenGL 3.2 and ARB_geometry_shader4
+
+    If OpenGL 3.2 and ARB_geometry_shader4 are not supported then remove all
+    references to GEOMETRY_SHADER_INVOCATIONS and
+    GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB.
+
+Dependencies on OpenGL 4.0 and ARB_gpu_shader5
+
+    If OpenGL 4.0 and ARB_gpu_shader5 are not supported then rename
+    GEOMETRY_SHADER_INVOCATIONS to GEOMETRY_SHADER_INVOCATIONS_ARB.
+
+Dependencies on OpenGL 4.0 and ARB_tessellation_shader
+
+    If OpenGL 4.0 and ARB_tessellation_shader are not supported then remove
+    all references to TESS_CONTROL_SHADER_PATCHES_ARB and
+    TESS_EVALUATION_SHADER_INVOCATIONS_ARB.
+
+Dependencies on OpenGL 4.3 and ARB_compute_shader
+
+    If OpenGL 4.3 and ARB_compute_shader are not supported then remove all
+    references to COMPUTE_SHADER_INVOCATIONS_ARB.
+
+Dependencies on AMD_transform_feedback4
+
+    If AMD_transform_feedback4 is supported then GEOMETRY_SHADER_PRIMITIVES_-
+    EMITTED_ARB counts primitives emitted to any of the vertex streams for
+    which STREAM_RASTERIZATION_AMD is enabled.
+
+New State
+
+    Modify Table 23.74, Miscellaneous
+
+    (update the state table to cover the new query types on p. 599)
+
+    Get Value      Type   Get Command  Initial Value  Description                Sec.
+    -------------  -----  -----------  -------------  -------------------------  -----
+    CURRENT_QUERY  18xZ+  GetQueryiv         0        Active query object names  4.2.1
+
+New Implementation Dependent State
+
+    Modify Table 23.69, Implementation Dependent Values
+
+    (update the state table to cover the new query types on p. 594)
+
+    Get Value           Type   Get Command  Minimum Value   Description         Sec.
+    ------------------  -----  -----------  --------------  ------------------  -----
+    QUERY_COUNTER_BITS  18xZ+  GetQueryiv   see sec. 4.2.1  Asynchronous query  4.1.1
+                                                            counter bits
+
+Issues
+
+    (1) Why is this extension necessary?
+
+      RESOLVED: A competing graphics API supports this feature. This extension
+      will allow one to easier implement that API's features on top of OpenGL.
+      Also, this feature could be useful for profiling tools and debuggers.
+
+    (2) Should a single query (such as GL_PIPELINE_STATISTICS) return all the
+        statistics in an 11-field record or should there be separate queries?
+
+      DISCUSSION:
+
+      Single query: Returning 11 values in one query may be trouble if we want
+      to extend the set of statistics in the future. It would probably require
+      defining a whole new query. Also, if someone is only interested in one
+      or two queries there may be overhead in querying all the statistics at
+      once. Also, the interaction with GL_ARB_query_buffer_object is not
+      clear. Would all 11 values be written to the buffer or would we define a
+      set of 11 enumerants to specify which value is queried?
+
+      Multiple queries: Defining 11 separate queries is straight-forward.
+      But if the underlying hardware is designed to collect the whole set of
+      statistics, it may be inefficient to support separate queries.
+
+      RESOLVED: Define 11 separate queries to avoid problems with future
+      statistic queries.
+
+    (3) Can the result of pipeline statistic queries be used for conditional
+        rendering?
+
+      DISCUSSION: It doesn't make sense if one query of 11 values is used.
+      It could make sense if there are 11 separate queries.  But is there
+      a legitimate use case for this?  D3D10 doesn't allow this.
+
+      RESOLVED: No.
+
+    (4) Should pipeline statistics use the glBegin/EndQuery() interface or
+        the glQueryCounter() interface?
+
+      DISCUSSION: The glBegin/EndQuery interface matches what D3D10 uses.
+      To count the statistics between points A and B with glQueryCounter()
+      one would query the statistic counter at point A and again at point B
+      and compute the difference. A problem with this approach is that the
+      statistic counters would always have to be running because we wouldn't
+      know when they might be queried. That could be inefficient/inconvenient.
+
+      RESOLVED: Use the glBegin/EndQuery interface.
+
+    (5) How accurate should the statistics be?
+
+      RESOLVED: None of the statistics have to be exact, thus implementations
+      might return slightly different results for any of them.
+
+    (6) What should this extension be called?
+
+      DISCUSSION: This extension provides similar functionality to that of
+      D3D's pipeline statistics queries thus it makes sense to call this
+      extension similarly (even though there is a separate classification of
+      the individual queries in this specification).
+
+      RESOLVED: ARB_pipeline_statistics_query.
+
+    (7) Can multiple pipeline statistics queries be active at the same time?
+
+      RESOLVED: Yes, as long as they have different targets. Otherwise it is
+      an error.
+
+    (8) What stage the VERTICES_SUBMITTED_ARB and PRIMITIVES_SUBMITTED_ARB
+        belong to? What do they count?
+
+      DISCUSSION: There is no separate pipeline stage introduced in the
+      specification that matches D3D's "input assembler" stage. While the
+      latest version of the GL specification mentions a "vertex puller" stage
+      in the pipeline diagram, this stage does not have a corresponding
+      chapter in the specification that introduces it.
+
+      RESOLVED: Introduce VERTICES_SUBMITTED_ARB and PRIMITIVES_SUBMITTED_ARB
+      in chapter 10, Vertex Specification and Drawing Command. They count the
+      total number of vertices and primitives processed by the GL. Including
+      multiple instances.
+
+    (9) What does 'number of primitives' mean in case of PRIMITIVES_SUBMITTED_-
+        ARB, GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB, CLIPPING_INPUT_-
+        PRIMITIVES_ARB, and CLIPPING_OUTPUT_PRIMITIVES_ARB queries?
+
+      DISCUSSION: The specification heavily overloaded the term primitive.
+      E.g. a triangle strip is considered a primitive type and primitive index
+      is meant to restart the 'primitive', however, on the other hand,
+      gl_PrimitiveID is incremented for each individual triangle of a triangle
+      strip and despite a geometry shader operates on primitives, it works
+      also on the indivudal triangles of a triangle strip.
+
+      RESOLVED: The number of individual points, lines, triangles, or patches
+      are counted (or polygons, in case of CLIPPING_OUTPUT_PRIMTIIVES_ARB).
+
+    (10) Why doesn't GEOMETRY_SHADER_INVOCATIONS have an ARB suffix?
+
+      RESOLVED: We reuse the existing token introduced by ARB_gpu_shader5 that
+      was previously only accepted by GetProgramiv and meant to return the
+      invocation count of instanced geometry shaders.
+
+    (11) What does GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB count? How is it
+         different than PRIMITIVES_GENERATED?
+
+      RESOLVED: GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB counts primitives that
+      were output by the geometry shader. All vertex streams are considered,
+      but implementations are allowed to not count primitives that aren't
+      further processed by the GL. If no goemetry shader is present then the
+      counter may or may not be incremented.
+
+    (12) What does CLIPPING_INPUT_PRIMITIVES_ARB count?
+
+      RESOLVED: The number of primitives that reach the primitive clipping
+      stage. However, see issue (13) for more details.
+
+    (13) What is the result of a CLIPPING_INPUT_PRIMITIVES_ARB query in case
+         RASTERIZER_DISCARD is enabled?
+
+      DISCUSSION: Currently RASTERIZER_DISCARD is specified to be happening
+      after primitive clipping, however, some implementations might discard
+      primitives right after the transform feedback stage if RASTERIZER_DISCARD
+      is enabled. This is perfectly legal from a spec point of view, as none
+      of the vertex post-processing operations after transform feedback have
+      any effect if RASTERIZER_DISCARD is enabled.
+
+      RESOLVED: Allow implementations to not count clipping input and output
+      primitives if RASTERIZER_DISCARD is enabled.
+
+    (14) What does CLIPPING_OUTPUT_PRIMITIVES_ARB count?
+
+      DISCUSSION: The specification defines primitive clipping as an operation
+      on points, lines, or polygons. Points and lines are of no interest as
+      they always generate at most one output primitive even if clipped.
+      On the other hand, according to the specification, triangles are handled
+      as polygons and in case clipping happens new vertices are added to the
+      polygon but it still remains a single polygon.
+
+      Actual hardware, on the other hand, is likely to support only triangle
+      rasterization so in these cases each vertex added due to clipping
+      implies the generation of another triangle.
+
+      Also, the specification defines primitive clipping to be water-tight,
+      i.e. in theory hardware should always clip primitives that have one of
+      their vertices fall out of any of the clip planes. In practice, however,
+      this can be fairly sub-optimal as primitive clipping can be way more
+      expensive than if the non-visible parts of the primitives would be
+      discarded at e.g. the pixel ownership test, so hardware often uses
+      guardbands that allow some primitives to pass through the clipper
+      unchanged even though they partially fall outside of the clip volume.
+
+      All of these hardware optimizations are legal from the specification's
+      point of view, but make it difficult to define the meaning of this new
+      counter without introducing severe restrictions to how a GL
+      implementation should handle certain cases.
+
+      RESOLVED: Define CLIPPING_OUTPUT_PRIMITIVES_ARB so that they count
+      the actual number of primitives output by the primitive clipping stage
+      by the implemenation, which might include primitives output for
+      implementation dependent reasons. The only guarantees on the number
+      of output primitives are the following:
+
+      * If at least one vertex of the primitive lies inside the clipping
+        volume, the counter is incremented by one or more.
+      * Otherwise, the counter is incremented by zero or more.
+
+    (15) Do we need to add any language to discuss why certain shader
+         invocation counts might not match the "expected" values in practice?
+
+      DISCUSSION: Implementations might be able to do optimizations that
+      allow avoiding the execution of certain invocations in some
+      circumstances while also might need "helper" invocations in other cases.
+
+      RESOLVED: Add language to describe that such behavior is allowed as long
+      as the results of the rendering otherwise remain unchanged.
+
+    (16) What should be the result of VERTEX_SHADER_INVOCATIONS_ARB,
+         TESS_CONTROL_SHADER_PATCHES_ARB, TESS_EVALUATION_SHADER_-
+         INVOCATIONS_ARB, GEOMETRY_SHADER_INVOCATIONS, FRAGMENT_SHADER_-
+         INVOCATIONS_ARB and COMPUTE_SHADER_INVOCATIONS_ARB if the current
+         program does not contain a shader of the appropriate type?
+
+      DISCUSSION: D3D is vague about the exact specification of this scenario,
+      except that it explicitly allows geometry shader invocations count to
+      increment also if there is no geometry shader.
+
+      In case of OpenGL, however, the programmable fragment processing stage
+      is undefined if there is no fragment shader in the current program. This
+      is because some implementations might require to run a fragment shader
+      even if the application developer does not need one.
+
+      RESOLVED: Add language to describe that implementations are allowed to
+      increment these counters even if there isn't a current program for the
+      particular shader stage.
+
+    (17) Due to the introduction of a lot of new query types the error section
+         of query object related commands like BeginQueryIndexed,
+         EndQueryIndexed and GetQueryIndexediv became pretty bloated.
+         Shouldn't we introduce some new tables for indexed and non-indexed
+         query types and reference those in the error sections instead?
+
+      RESOLVED: Probably, but not as part of this extension.
+
+    (18) What are VERTEX_SHADER_INVOCATIONS_ARB queries useful for?
+
+      DISCUSSION: In most cases VERTEX_SHADER_INVOCATIONS_ARB queries are
+      likely to return the same results as VERTICES_SUBMITTED_ARB queries.
+      However, implementations are allowed to perform optimizations that
+      enable avoiding the re-processing of the same vertex in case of an
+      indexed draw command. This is often referred to as vertex reuse or
+      post-transform vertex cache optimization. In case such optimizations
+      are applied, the number of vertex shader invocations can be smaller
+      than the number of vertices issued.
+
+      RESOLVED: They can be used together with VERTICES_SUBMITTED_ARB queries
+      to analyze how efficiently the index ordering takes advantage of the
+      post-transform vertex cache.
+
+    (19) Does GEOMETRY_SHADER_INVOCATIONS queries account for instanced
+         geometry shaders?
+
+      RESOLVED: Yes, GEOMETRY_SHADER_INVOCATIONS queries count the total
+      number of geometry shader executions, including individual invocations
+      of an instanced geometry shader.
+
+    (20) What are CLIPPING_INPUT_PRIMITIVES_ARB and CLIPPING_OUTPUT_-
+         PRIMITIVES_ARB queries useful for?
+
+      RESOLVED: These two types of queries can be used together to determine a
+      conservative estimate on how efficiently the primitive clipping stage is
+      used. If the rasterizer primitives count is substantially lower than the
+      clipper primitives count, it may indicate that too many primitives were
+      tried to be rendered that ended up outside of the viewport. On the other
+      hand, if the rasterizer primitives count is substantially higher than
+      the clipper primitives count, it may indicate that too many primitives
+      were clipped and primitive clipping might have become the bottleneck of
+      the rendering pipeline.
+
+    (21) What are FRAGMENT_SHADER_INVOCATIONS_ARB queries useful for?
+
+      DISCUSSION: In many cases the hardware can perform early per-fragment
+      tests which might result in the fragment shader not being executed.
+      These and similar optimizations might result in a lower fragment shader
+      invocation count than expected.
+
+      RESOLVED: They can be used to analyze how efficiently the application
+      takes advantage of early per-fragment tests and other fragment shader
+      optimizations.
+
+    (22) What is the behavior of pipeline statistics queries returning
+         information about primitive counts in case of legacy primitive types
+         like quads or polygons?
+
+      DISCUSSION: This extension is intentionally written against the core
+      profile of the specification as defining the behavior of these queries
+      for legacy primitive types would be either non-portable or too relaxed
+      to be useful for any reasonably accurate measurement.
+
+      RESOLVED: Undefined, as this is a core profile extension.
+
+    (23) How do operations like Clear, TexSubImage, etc. affect the results of
+         the newly introduced queries?
+
+      DISCUSSION: Implementations might require "helper" rendering commands be
+      issued to implement certain operations like Clear, TexSubImage, etc.
+
+      RESOLVED: They don't. Only application submitted rendering commands
+      should have an effect on the results of the queries.
+
+    (24) Should partial primitives be counted by submission queries?
+
+      DISCUSSION: Consider the example of calling DrawArrays with <mode>
+      TRIANGLES and <count> of 8.
+      Should VERTICES_SUBMITTED_ARB return 6 or 8?
+      Should PRIMITIVES_SUBMITTED_ARB return 2 or 3?
+
+      RESOLVED: Undefined, incomplete primitives and vertices of incomplete
+      primitives may or may not be counted by PRIMITIVES_SUBMITTED_ARB and
+      VERTICES_SUBMITTED_ARB queries, respectively.
+
+    (25) What should we count in case of tessellation control shaders?
+
+      DISCUSSION: While OpenGL tessellation control shaders are defined to
+      be invoked once per vertex, D3D defines the same shader stage to be
+      executed once per patch.
+
+      RESOLVED: The number of patches processed by the tessellation control
+      shader stage is counted.
+
+    (26) Should VERTICES_SUBMITTED_ARB count adjacent vertices in case of
+         primitives with adjacency?
+
+      DISCUSSION: Implementations have different answers for this.
+
+      RESOLVED: Allow both. It is up to the implementation whether adjacent
+      vertices are counted.
+
+    (27) Should VERTICES_SUBMITTED_ARB count vertices multiple times in case
+         of primitive types that reuse vertices (e.g. LINE_LOOP, LINE_STRIP,
+         TRIANGLE_STRIP)?
+
+      RESOLVED: No for strip primitives, but allow (but not require) counting
+      the first vertex twice for line loop primitives.
+
+Revision History
+
+    Revision 11, 2017/07/23 (Jon Leech)
+      - Replace the long list of valid <target> parameters for
+        BeginQueryIndexed, EndQueryIndexed, and GetQueryIndexediv with a
+        reference to the list of query targets in section 4.2 (gitlab #18).
+      - Add the new query targets to those for which the <index> parameter
+        of BeginQueryIndexed and GetQueryIndexediv must be zero (gitlab
+        #26).
+
+    Revision 10, 2014/10/30 (Daniel Rakos)
+      - Relaxed the behavior of VERTICES_SUBMITTED_ARB queries for primitives
+        with adjacency to allow counting of adjacent vertices.
+      - Relaxed the behavior of GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB queries
+        to also allow counting primitives emitted to all vertex streams.
+
+    Revision 9, 2014/10/08 (Daniel Rakos)
+      - Specified that the vertices submitted count is only incremented for
+        vertices belonging to the main primitive in case of primitives with
+        adjacency.
+      - Relaxed the definition of VERTICES_SUBMITTED_ARB queries to allow
+        implementations to count the first vertex twice for line loop
+        primitives.
+      - Changed the definition of GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB
+        queries to only count primitives emitted to vertex streams that are
+        further processed by the GL.
+      - Added interaction with AMD_transform_feedback4.
+
+    Revision 8, 2014/06/27 (Daniel Rakos)
+      - Renamed tessellation control shader query to TESS_CONTROL_SHADER_-
+        PATCHES_ARB and updated language respectively.
+
+    Revision 7, 2014/05/09 (Daniel Rakos)
+      - Resolved issue (24), updated resolution of issue (5).
+
+    Revision 6, 2014/05/06 (Daniel Rakos)
+      - Added issue (24).
+
+    Revision 5, 2014/04/25 (Daniel Rakos)
+      - Renamed to ARB_pipeline_statistics_query.
+      - Replaced EXT suffixes with ARB ones.
+      - Resolved outstanding issues and added language to the spec to explain
+        these resolutions.
+
+    Revision 4, 2014/04/23 (Daniel Rakos)
+      - Fixed some typos.
+      - Renamed primitive clipping queries to CLIPPING_INPUT_PRIMITIVES_EXT
+        and CLIPPING_OUTPUT_PRIMITIVES_EXT.
+      - Resolved issues (2), (9), (12), (18), and (20).
+      - Updated suggestions for issues (11), (13), (14), (15), and (16).
+      - Added issue (23).
+
+    Revision 3, 2014/04/16 (Daniel Rakos)
+      - Major rewrite of the spec language that clarifies in what pipeline
+        stage the various queries take place and what exactly is counted.
+      - Added issues (6) through (22).
+      - Removed conformance testing section (a separate conformance test spec
+        will be created).
+      - Added state table changes.
+      - Clarified dependencies on other extensions.
+
+    Revision 2, 2014/04/09 (Brian Paul)
+      - Break the original single 11-valued query into 11 individual queries.
+      - Added issues (2), (3), (4), and (5).
+      - Added conformance testing section.
+
+    Revision 1, 2014/02/03 (Brian Paul)
+      - Initial revision.

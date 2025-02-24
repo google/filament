@@ -1,0 +1,4 @@
+<map id="pvrvk::impl::CommandBufferBase_::make_shared_enabler" name="pvrvk::impl::CommandBufferBase_::make_shared_enabler">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_command_buffer___1_1make__shared__enabler.html" title="A class which restricts the creation of a pvrvk::CommandBuffer to children or friends of a pvrvk::imp..." alt="" coords="281,5,491,47"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_secondary_command_buffer___1_1make__shared__enabler.html" title="A class which restricts the creation of a pvrvk::SecondaryCommandBuffer to children or friends of a p..." alt="" coords="267,71,505,112"/>
+</map>

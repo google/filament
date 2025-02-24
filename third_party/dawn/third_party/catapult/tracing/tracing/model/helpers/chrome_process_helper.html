@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Utilities for accessing trace data about the Chrome browser.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  const MAIN_FRAMETIME_TYPE = 'main_frametime_type';
+  const IMPL_FRAMETIME_TYPE = 'impl_frametime_type';
+
+  const MAIN_RENDERING_STATS =
+      'BenchmarkInstrumentation::MainThreadRenderingStats';
+  const IMPL_RENDERING_STATS =
+      'BenchmarkInstrumentation::ImplThreadRenderingStats';
+
+
+  function getSlicesIntersectingRange(rangeOfInterest, slices) {
+    const slicesInFilterRange = [];
+    for (let i = 0; i < slices.length; i++) {
+      const slice = slices[i];
+      if (rangeOfInterest.intersectsExplicitRangeInclusive(
+          slice.start, slice.end)) {
+        slicesInFilterRange.push(slice);
+      }
+    }
+    return slicesInFilterRange;
+  }
+
+
+  function ChromeProcessHelper(modelHelper, process) {
+    this.modelHelper = modelHelper;
+    this.process = process;
+    this.telemetryInternalRanges_ = undefined;
+  }
+
+  ChromeProcessHelper.prototype = {
+    get pid() {
+      return this.process.pid;
+    },
+
+    isTelemetryInternalEvent(slice) {
+      if (this.telemetryInternalRanges_ === undefined) {
+        this.findTelemetryInternalRanges_();
+      }
+      for (const range of this.telemetryInternalRanges_) {
+        if (range.containsExplicitRangeInclusive(slice.start, slice.end)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    findTelemetryInternalRanges_() {
+      this.telemetryInternalRanges_ = [];
+      let start = 0;
+      for (const thread of Object.values(this.process.threads)) {
+        for (const slice of thread.asyncSliceGroup.getDescendantEvents()) {
+          if (/^telemetry\.internal\..*\.start$/.test(slice.title)) {
+            start = slice.start;
+          } else if (/^telemetry\.internal\..*\.end$/.test(slice.title) &&
+              start !== undefined) {
+            this.telemetryInternalRanges_.push(
+                tr.b.math.Range.fromExplicitRange(start, slice.end));
+            start = undefined;
+          }
+        }
+      }
+    },
+
+    getFrameEventsInRange(frametimeType, range) {
+      const titleToGet = (frametimeType === MAIN_FRAMETIME_TYPE ?
+        MAIN_RENDERING_STATS : IMPL_RENDERING_STATS);
+
+      const frameEvents = [];
+      for (const event of this.process.getDescendantEvents()) {
+        if (event.title === titleToGet) {
+          if (range.intersectsExplicitRangeInclusive(event.start, event.end)) {
+            frameEvents.push(event);
+          }
+        }
+      }
+
+      frameEvents.sort(function(a, b) {return a.start - b.start;});
+      return frameEvents;
+    }
+  };
+
+  function getFrametimeDataFromEvents(frameEvents) {
+    const frametimeData = [];
+    for (let i = 1; i < frameEvents.length; i++) {
+      const diff = frameEvents[i].start - frameEvents[i - 1].start;
+      frametimeData.push({
+        'x': frameEvents[i].start,
+        'frametime': diff
+      });
+    }
+    return frametimeData;
+  }
+
+  return {
+    ChromeProcessHelper,
+
+    MAIN_FRAMETIME_TYPE,
+    IMPL_FRAMETIME_TYPE,
+    MAIN_RENDERING_STATS,
+    IMPL_RENDERING_STATS,
+
+    getSlicesIntersectingRange,
+    getFrametimeDataFromEvents,
+  };
+});
+</script>

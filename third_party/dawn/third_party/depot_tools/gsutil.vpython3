@@ -1,0 +1,19 @@
+# vpython VirtualEnv protobuf for "gsutil".
+#
+# See:
+# https://chromium.googlesource.com/infra/luci/luci-go/+/HEAD/vpython/api/vpython/spec.proto
+#
+# This is a "vpython" VirtualEnv specification applied to invocations of "gsutil"
+# by the bootstrap wrapper, "gsutil.py". It ensures that any Python distribution
+# has the expected Python packages installed.
+#
+# This is specifically relevant on Google Compute Engine invocations of
+# "gsutil", where a stock system-deployed file in "/etc/" explicitly specifies
+# that the "google_compute_engine" and "boto" Python packages are available.
+
+python_version: "3.8"
+
+wheel: <
+  name: "infra/python/wheels/crcmod/${vpython_platform}"
+  version: "version:1.7.chromium.3"
+>

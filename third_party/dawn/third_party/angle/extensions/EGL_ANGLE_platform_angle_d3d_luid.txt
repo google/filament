@@ -1,0 +1,88 @@
+Name
+
+    ANGLE_platform_angle_d3d_luid
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_d3d_luid
+
+Contributors
+
+    Patrick To, Microsoft
+
+Contacts
+
+    Patrick To, Microsoft (patrto 'at' microsoft.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2020-04-30
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle_d3d.
+
+Overview
+
+    This extension enables the selection of a graphics adapter to back D3D.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE          0x34A0
+        EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE           0x34A1
+
+Additions to the EGL Specification
+
+    None
+
+New Behavior
+
+    To request a display that is backed by a specific graphics adapter,
+    EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE and/or
+    EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE should be set to the high part and low
+    part of the adapter's LUID. If only one attribute is specified, the other is
+    assumed to be zero.
+
+    If the high part and low part combined is zero, an EGL_BAD_ATTRIBUTE error
+    is generated and EGL_NO_DISPLAY is returned.
+
+    If the LUID specified doesn't match any adapters on the system, the default
+    adapter is used.
+
+    If EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE and/or
+    EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE is included in the <attrib_list>
+    argument of eglGetPlatformDisplayEXT and EGL_PLATFORM_ANGLE_TYPE_ANGLE is
+    not set to EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE, an EGL_BAD_ATTRIBUTE error
+    is generated and EGL_NO_DISPLAY is returned.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2020-04-30 (Patrick To)
+      - Initial draft

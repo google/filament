@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color.html">
+<link rel="import" href="/tracing/base/fixed_color_scheme.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function isColor(color) {
+    return color.toString().startsWith('rgb');
+  }
+
+  test('canSpecifyColors', function() {
+    const scheme = new tr.b.FixedColorScheme(new Map([
+      ['red', new tr.b.Color(255, 0, 0)],
+      ['green', new tr.b.Color(0, 255, 0)],
+      ['blue', new tr.b.Color(0, 0, 255)],
+    ]));
+    assert.strictEqual(scheme.getColor('red').toString(),
+        (new tr.b.Color(255, 0, 0)).toString());
+    assert.strictEqual(scheme.getColor('green').toString(),
+        (new tr.b.Color(0, 255, 0)).toString());
+    assert.strictEqual(scheme.getColor('blue').toString(),
+        (new tr.b.Color(0, 0, 255)).toString());
+  });
+
+  test('namesGetColors', function() {
+    const scheme = tr.b.FixedColorScheme.fromNames(['foo', 'bar', 'baz']);
+    assert.isTrue(isColor(scheme.getColor('foo')));
+    assert.isTrue(isColor(scheme.getColor('bar')));
+    assert.isTrue(isColor(scheme.getColor('baz')));
+  });
+
+  test('namesGetDifferentColors', function() {
+    const scheme = tr.b.FixedColorScheme.fromNames(['foo', 'bar', 'baz']);
+    assert.notEqual(scheme.getColor('foo'), scheme.getColor('bar'));
+    assert.notEqual(scheme.getColor('bar'), scheme.getColor('baz'));
+    assert.notEqual(scheme.getColor('baz'), scheme.getColor('foo'));
+  });
+
+  test('sameNamesGetSameColors', function() {
+    const scheme = tr.b.FixedColorScheme.fromNames(['foo', 'bar', 'baz']);
+    assert.strictEqual(scheme.getColor('foo'), scheme.getColor('foo'));
+    assert.strictEqual(scheme.getColor('bar'), scheme.getColor('bar'));
+    assert.strictEqual(scheme.getColor('baz'), scheme.getColor('baz'));
+  });
+
+  test('differentSchemesGiveTheSameColorsForTheSameNames', function() {
+    const a = tr.b.FixedColorScheme.fromNames(['foo', 'bar', 'baz']);
+    const b = tr.b.FixedColorScheme.fromNames(['foo', 'bar', 'baz']);
+    assert.strictEqual(
+        a.getColor('foo').toString(), b.getColor('foo').toString());
+    assert.strictEqual(
+        a.getColor('bar').toString(), b.getColor('bar').toString());
+    assert.strictEqual(
+        a.getColor('baz').toString(), b.getColor('baz').toString());
+  });
+});
+</script>

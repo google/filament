@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  class Scalar {
+    constructor(unit, value) {
+      if (!(unit instanceof tr.b.Unit)) {
+        throw new Error('Expected Unit');
+      }
+
+      if (!(typeof(value) === 'number')) {
+        throw new Error('Expected value to be number');
+      }
+
+      this.unit = unit;
+      this.value = value;
+    }
+
+    asDict() {
+      return {
+        unit: this.unit.asJSON(),
+        value: tr.b.numberToJson(this.value),
+      };
+    }
+
+    toString() {
+      return this.unit.format(this.value);
+    }
+
+    static fromDict(d) {
+      return new Scalar(tr.b.Unit.fromJSON(d.unit),
+          tr.b.numberFromJson(d.value));
+    }
+  }
+
+  return {
+    Scalar,
+  };
+});
+</script>

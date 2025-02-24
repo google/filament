@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<!--
+Copyright 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<script src="/mannwhitneyu/mannwhitneyu.js"></script>
+
+<script>
+'use strict';
+
+// In node, the script-src for mannwhitneyu above brings in mannwhitneyui
+// into a module, instead of into the global scope. Whereas this file
+// assumes that mannwhitneyu is in the global scope. So, in Node only, we
+// require() it in, and then take all its exports and shove them into the
+// global scope by hand.
+(function(global) {
+  if (tr.isNode) {
+    const mwuAbsPath = HTMLImportsLoader.hrefToAbsolutePath(
+        '/mannwhitneyu.js');
+    const mwuModule = require(mwuAbsPath);
+    for (const exportName in mwuModule) {
+      global[exportName] = mwuModule[exportName];
+    }
+  }
+})(this);
+</script>
+
+<script>
+'use strict';
+
+// TODO(charliea): Remove:
+/* eslint-disable catapult-camelcase */
+
+tr.exportTo('tr.b.math', function() {
+  const Statistics = {};
+
+  /* Returns the quotient, or zero if the denominator is zero.*/
+  Statistics.divideIfPossibleOrZero = function(numerator, denominator) {
+    if (denominator === 0) return 0;
+    return numerator / denominator;
+  };
+
+  Statistics.sum = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    let ret = 0;
+    let i = 0;
+    for (const elt of ary) {
+      ret += func.call(opt_this, elt, i++);
+    }
+    return ret;
+  };
+
+  Statistics.mean = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    let sum = 0;
+    let i = 0;
+
+    for (const elt of ary) {
+      sum += func.call(opt_this, elt, i++);
+    }
+
+    if (i === 0) return undefined;
+
+    return sum / i;
+  };
+
+  Statistics.geometricMean = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    let i = 0;
+    let logsum = 0;
+
+    // The geometric mean is expressed as the arithmetic mean of logarithms
+    // in order to prevent overflow.
+    for (const elt of ary) {
+      const x = func.call(opt_this, elt, i++);
+      if (x <= 0) return 0;
+      logsum += Math.log(Math.abs(x));
+    }
+
+    if (i === 0) return 1;
+
+    return Math.exp(logsum / i);
+  };
+
+  // Returns undefined if the sum of the weights is zero.
+  Statistics.weightedMean = function(
+      ary, weightCallback, opt_valueCallback, opt_this) {
+    const valueCallback = opt_valueCallback || (x => x);
+    let numerator = 0;
+    let denominator = 0;
+    let i = -1;
+
+    for (const elt of ary) {
+      i++;
+      const value = valueCallback.call(opt_this, elt, i);
+      if (value === undefined) continue;
+      const weight = weightCallback.call(opt_this, elt, i, value);
+      numerator += weight * value;
+      denominator += weight;
+    }
+
+    if (denominator === 0) return undefined;
+
+    return numerator / denominator;
+  };
+
+  Statistics.variance = function(ary, opt_func, opt_this) {
+    if (ary.length === 0) return undefined;
+    if (ary.length === 1) return 0;
+    const func = opt_func || (x => x);
+    const mean = Statistics.mean(ary, func, opt_this);
+    const sumOfSquaredDistances = Statistics.sum(
+        ary,
+        function(d, i) {
+          const v = func.call(this, d, i) - mean;
+          return v * v;
+        },
+        opt_this);
+    return sumOfSquaredDistances / (ary.length - 1);
+  };
+
+  Statistics.stddev = function(ary, opt_func, opt_this) {
+    if (ary.length === 0) return undefined;
+    return Math.sqrt(
+        Statistics.variance(ary, opt_func, opt_this));
+  };
+
+  Statistics.max = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    let ret = -Infinity;
+    let i = 0;
+    for (const elt of ary) {
+      ret = Math.max(ret, func.call(opt_this, elt, i++));
+    }
+    return ret;
+  };
+
+  Statistics.min = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    let ret = Infinity;
+    let i = 0;
+    for (const elt of ary) {
+      ret = Math.min(ret, func.call(opt_this, elt, i++));
+    }
+    return ret;
+  };
+
+  Statistics.range = function(ary, opt_func, opt_this) {
+    const func = opt_func || (x => x);
+    const ret = new tr.b.math.Range();
+    let i = 0;
+    for (const elt of ary) {
+      ret.addValue(func.call(opt_this, elt, i++));
+    }
+    return ret;
+  };
+
+  Statistics.percentile = function(ary, percent, opt_func, opt_this) {
+    if (!(percent >= 0 && percent <= 1)) {
+      throw new Error('percent must be [0,1]');
+    }
+
+    const func = opt_func || (x => x);
+    const tmp = new Array(ary.length);
+    let i = 0;
+    for (const elt of ary) {
+      tmp[i] = func.call(opt_this, elt, i++);
+    }
+    tmp.sort((a, b) => a - b);
+    const idx = Math.floor((ary.length - 1) * percent);
+    return tmp[idx];
+  };
+
+  /**
+   * Sorts the samples, and map them linearly to the range [0,1].
+   *
+   * They're mapped such that for the N samples, the first sample is 0.5/N and
+   * the last sample is (N-0.5)/N.
+   *
+   * Background: The discrepancy of the sample set i/(N-1); i=0, ..., N-1 is
+   * 2/N, twice the discrepancy of the sample set (i+1/2)/N; i=0, ..., N-1. In
+   * our case we don't want to distinguish between these two cases, as our
+   * original domain is not bounded (it is for Monte Carlo integration, where
+   * discrepancy was first used).
+   **/
+  Statistics.normalizeSamples = function(samples) {
+    if (samples.length === 0) {
+      return {
+        normalized_samples: samples,
+        scale: 1.0
+      };
+    }
+    // Create a copy to make sure that we don't mutate original |samples| input.
+    samples = samples.slice().sort(
+        function(a, b) {
+          return a - b;
+        }
+    );
+    const low = Math.min.apply(null, samples);
+    const high = Math.max.apply(null, samples);
+    const newLow = 0.5 / samples.length;
+    const newHigh = (samples.length - 0.5) / samples.length;
+    if (high - low === 0.0) {
+      // Samples is an array of 0.5 in this case.
+      samples = Array.apply(null, new Array(samples.length)).map(
+          function() { return 0.5;});
+      return {
+        normalized_samples: samples,
+        scale: 1.0
+      };
+    }
+    const scale = (newHigh - newLow) / (high - low);
+    for (let i = 0; i < samples.length; i++) {
+      samples[i] = (samples[i] - low) * scale + newLow;
+    }
+    return {
+      normalized_samples: samples,
+      scale
+    };
+  };
+
+  /**
+   * Computes the discrepancy of a set of 1D samples from the interval [0,1].
+   *
+   * The samples must be sorted. We define the discrepancy of an empty set
+   * of samples to be zero.
+   *
+   * http://en.wikipedia.org/wiki/Low-discrepancy_sequence
+   * http://mathworld.wolfram.com/Discrepancy.html
+   */
+  Statistics.discrepancy = function(samples, opt_locationCount) {
+    if (samples.length === 0) return 0.0;
+
+    let maxLocalDiscrepancy = 0;
+    const invSampleCount = 1.0 / samples.length;
+    const locations = [];
+    // For each location, stores the number of samples less than that location.
+    const countLess = [];
+    // For each location, stores the number of samples less than or equal to
+    // that location.
+    const countLessEqual = [];
+
+    if (opt_locationCount !== undefined) {
+      // Generate list of equally spaced locations.
+      let sampleIndex = 0;
+      for (let i = 0; i < opt_locationCount; i++) {
+        const location = i / (opt_locationCount - 1);
+        locations.push(location);
+        while (sampleIndex < samples.length &&
+          samples[sampleIndex] < location) {
+          sampleIndex += 1;
+        }
+        countLess.push(sampleIndex);
+        while (sampleIndex < samples.length &&
+            samples[sampleIndex] <= location) {
+          sampleIndex += 1;
+        }
+        countLessEqual.push(sampleIndex);
+      }
+    } else {
+      // Populate locations with sample positions. Append 0 and 1 if necessary.
+      if (samples[0] > 0.0) {
+        locations.push(0.0);
+        countLess.push(0);
+        countLessEqual.push(0);
+      }
+      for (let i = 0; i < samples.length; i++) {
+        locations.push(samples[i]);
+        countLess.push(i);
+        countLessEqual.push(i + 1);
+      }
+      if (samples[-1] < 1.0) {
+        locations.push(1.0);
+        countLess.push(samples.length);
+        countLessEqual.push(samples.length);
+      }
+    }
+
+    // Compute discrepancy as max(overshoot, -undershoot), where
+    // overshoot = max(countClosed(i, j)/N - length(i, j)) for all i < j,
+    // undershoot = min(countOpen(i, j)/N - length(i, j)) for all i < j,
+    // N = len(samples),
+    // countClosed(i, j) is the number of points between i and j
+    // including ends,
+    // countOpen(i, j) is the number of points between i and j excluding ends,
+    // length(i, j) is locations[i] - locations[j].
+
+    // The following algorithm is modification of Kadane's algorithm,
+    // see https://en.wikipedia.org/wiki/Maximum_subarray_problem.
+
+    // The maximum of (countClosed(k, i-1)/N - length(k, i-1)) for any k < i-1.
+    let maxDiff = 0;
+    // The minimum of (countOpen(k, i-1)/N - length(k, i-1)) for any k < i-1.
+    let minDiff = 0;
+    for (let i = 1; i < locations.length; i++) {
+      const length = locations[i] - locations[i - 1];
+      const countClosed = countLessEqual[i] - countLess[i - 1];
+      const countOpen = countLess[i] - countLessEqual[i - 1];
+      // Number of points that are added if we extend a closed range that
+      // ends at location (i-1).
+      const countClosedIncrement =
+          countLessEqual[i] - countLessEqual[i - 1];
+      // Number of points that are added if we extend an open range that
+      // ends at location (i-1).
+      const countOpenIncrement = countLess[i] - countLess[i - 1];
+
+      // Either extend the previous optimal range or start a new one.
+      maxDiff = Math.max(
+          countClosedIncrement * invSampleCount - length + maxDiff,
+          countClosed * invSampleCount - length);
+      minDiff = Math.min(
+          countOpenIncrement * invSampleCount - length + minDiff,
+          countOpen * invSampleCount - length);
+
+      maxLocalDiscrepancy = Math.max(
+          maxDiff, -minDiff, maxLocalDiscrepancy);
+    }
+    return maxLocalDiscrepancy;
+  };
+
+  /**
+   * A discrepancy based metric for measuring timestamp jank.
+   *
+   * timestampsDiscrepancy quantifies the largest area of jank observed in a
+   * series of timestamps.  Note that this is different from metrics based on
+   * the max_time_interval. For example, the time stamp series A = [0,1,2,3,5,6]
+   *  and B = [0,1,2,3,5,7] have the same max_time_interval = 2, but
+   * Discrepancy(B) > Discrepancy(A).
+   *
+   * Two variants of discrepancy can be computed:
+   *
+   * Relative discrepancy is following the original definition of
+   * discrepancy. It characterized the largest area of jank, relative to the
+   * duration of the entire time stamp series.  We normalize the raw results,
+   * because the best case discrepancy for a set of N samples is 1/N (for
+   * equally spaced samples), and we want our metric to report 0.0 in that
+   * case.
+   *
+   * Absolute discrepancy also characterizes the largest area of jank, but its
+   * value wouldn't change (except for imprecisions due to a low
+   * |interval_multiplier|) if additional 'good' intervals were added to an
+   * exisiting list of time stamps.  Its range is [0,inf] and the unit is
+   * milliseconds.
+   *
+   * The time stamp series C = [0,2,3,4] and D = [0,2,3,4,5] have the same
+   * absolute discrepancy, but D has lower relative discrepancy than C.
+   *
+   * |timestamps| may be a list of lists S = [S_1, S_2, ..., S_N], where each
+   * S_i is a time stamp series. In that case, the discrepancy D(S) is:
+   * D(S) = max(D(S_1), D(S_2), ..., D(S_N))
+   **/
+  Statistics.timestampsDiscrepancy = function(timestamps, opt_absolute,
+      opt_locationCount) {
+    if (timestamps.length === 0) return 0.0;
+
+    if (opt_absolute === undefined) opt_absolute = true;
+
+    if (Array.isArray(timestamps[0])) {
+      const rangeDiscrepancies = timestamps.map(function(r) {
+        return Statistics.timestampsDiscrepancy(r);
+      });
+      return Math.max.apply(null, rangeDiscrepancies);
+    }
+
+    const s = Statistics.normalizeSamples(timestamps);
+    const samples = s.normalized_samples;
+    const sampleScale = s.scale;
+    let discrepancy = Statistics.discrepancy(samples, opt_locationCount);
+    const invSampleCount = 1.0 / samples.length;
+    if (opt_absolute === true) {
+      // Compute absolute discrepancy
+      discrepancy /= sampleScale;
+    } else {
+      // Compute relative discrepancy
+      discrepancy = tr.b.math.clamp(
+          (discrepancy - invSampleCount) / (1.0 - invSampleCount), 0.0, 1.0);
+    }
+    return discrepancy;
+  };
+
+  /**
+   * Modifies |samples| in-place to reduce its length down to |count|.
+   *
+   * @param {!Array} samples
+   * @param {number} count
+   * @return {!Array}
+   */
+  Statistics.uniformlySampleArray = function(samples, count) {
+    if (samples.length <= count) {
+      return samples;
+    }
+    while (samples.length > count) {
+      const i = parseInt(Math.random() * samples.length);
+      samples.splice(i, 1);
+    }
+    return samples;
+  };
+
+  /**
+   * A mechanism to uniformly sample elements from an arbitrary long stream.
+   *
+   * Call this method every time a new element is obtained from the stream,
+   * passing always the same |samples| array and the |numSamples| you desire.
+   * Also pass in the current |streamLength|, which is the same as the index of
+   * |newElement| within that stream.
+   *
+   * The |samples| array will possibly be updated, replacing one of its element
+   * with |newElements|. The length of |samples| will not be more than
+   * |numSamples|.
+   *
+   * This method guarantees that after |streamLength| elements have been
+   * processed each one has equal probability of being in |samples|. The order
+   * of samples is not preserved though.
+   *
+   * Args:
+   *  samples: Array of elements that have already been selected. Start with [].
+   *  streamLength: The current length of the stream, up to |newElement|.
+   *  newElement: The element that was just extracted from the stream.
+   *  numSamples: The total number of samples desired.
+   **/
+  Statistics.uniformlySampleStream = function(samples, streamLength, newElement,
+      numSamples) {
+    if (streamLength <= numSamples) {
+      if (samples.length >= streamLength) {
+        samples[streamLength - 1] = newElement;
+      } else {
+        samples.push(newElement);
+      }
+      return;
+    }
+
+    const probToKeep = numSamples / streamLength;
+    if (Math.random() > probToKeep) return;  // New sample was rejected.
+
+    // Keeping it, replace an alement randomly.
+    const index = Math.floor(Math.random() * numSamples);
+    samples[index] = newElement;
+  };
+
+  /**
+   * A mechanism to merge two arrays of uniformly sampled elements in a way that
+   * ensures elements in the final array are still sampled uniformly.
+   *
+   * This works similarly to sampleStreamUniform. The |samplesA| array will be
+   * updated, some of its elements replaced by elements from |samplesB| in a
+   * way that ensure that elements will be sampled uniformly.
+   *
+   * Args:
+   *  samplesA: Array of uniformly sampled elements, will be updated.
+   *  streamLengthA: The length of the stream from which |samplesA| was sampled.
+   *  samplesB: Other array of uniformly sampled elements, will NOT be updated.
+   *  streamLengthB: The length of the stream from which |samplesB| was sampled.
+   *  numSamples: The total number of samples desired, both in |samplesA| and
+   *      |samplesB|.
+   **/
+  Statistics.mergeSampledStreams = function(
+      samplesA, streamLengthA,
+      samplesB, streamLengthB, numSamples) {
+    if (streamLengthB < numSamples) {
+      // samplesB has not reached max capacity so every sample of stream B were
+      // chosen with certainty. Add them one by one into samplesA.
+      const nbElements = Math.min(streamLengthB, samplesB.length);
+      for (let i = 0; i < nbElements; ++i) {
+        Statistics.uniformlySampleStream(samplesA, streamLengthA + i + 1,
+            samplesB[i], numSamples);
+      }
+      return;
+    }
+    if (streamLengthA < numSamples) {
+      // samplesA has not reached max capacity so every sample of stream A were
+      // chosen with certainty. Add them one by one into samplesB.
+      const nbElements = Math.min(streamLengthA, samplesA.length);
+      const tempSamples = samplesB.slice();
+      for (let i = 0; i < nbElements; ++i) {
+        Statistics.uniformlySampleStream(tempSamples, streamLengthB + i + 1,
+            samplesA[i], numSamples);
+      }
+      // Copy that back into the first vector.
+      for (let i = 0; i < tempSamples.length; ++i) {
+        samplesA[i] = tempSamples[i];
+      }
+      return;
+    }
+
+    // Both sample arrays are at max capacity, use the power of maths!
+    // Elements in samplesA have been selected with probability
+    // numSamples / streamLengthA. Same for samplesB. For each index of the
+    // array we keep samplesA[i] with probability
+    //   P = streamLengthA / (streamLengthA + streamLengthB)
+    // and replace it with samplesB[i] with probability 1-P.
+    // The total probability of keeping it is therefore
+    //   numSamples / streamLengthA *
+    //                      streamLengthA / (streamLengthA + streamLengthB)
+    //   = numSamples / (streamLengthA + streamLengthB)
+    // A similar computation shows we have the same probability of keeping any
+    // element in samplesB. Magic!
+    const nbElements = Math.min(numSamples, samplesB.length);
+    const probOfSwapping = streamLengthB / (streamLengthA + streamLengthB);
+    for (let i = 0; i < nbElements; ++i) {
+      if (Math.random() < probOfSwapping) {
+        samplesA[i] = samplesB[i];
+      }
+    }
+  };
+
+  /* Continuous distributions are defined by probability density functions.
+   *
+   * Random variables are referred to by capital letters: X, Y, Z.
+   * Particular values from these distributions are referred to by lowercase
+   * letters like |x|.
+   * The probability that |X| ever exactly equals |x| is P(X==x) = 0.
+   *
+   * For a discrete probability distribution, see tr.v.Histogram.
+   */
+  function Distribution() {
+  }
+
+  Distribution.prototype = {
+    /* The probability density of the random variable at value |x| is the
+     * relative likelihood for this random variable to take on the given value
+     * |x|.
+     *
+     * @param {number} x A value from the random distribution.
+     * @return {number} probability density at x.
+     */
+    computeDensity(x) {
+      throw Error('Not implemented');
+    },
+
+    /* A percentile is the probability that a sample from the distribution is
+     * less than the given value |x|. This function is monotonically increasing.
+     *
+     * @param {number} x A value from the random distribution.
+     * @return {number} P(X<x).
+     */
+    computePercentile(x) {
+      throw Error('Not implemented');
+    },
+
+    /* A complementary percentile is the probability that a sample from the
+     * distribution is greater than the given value |x|. This function is
+     * monotonically decreasing.
+     *
+     * @param {number} x A value from the random distribution.
+     * @return {number} P(X>x).
+     */
+    computeComplementaryPercentile(x) {
+      return 1 - this.computePercentile(x);
+    },
+
+    /* Compute the mean of the probability distribution.
+     *
+     * @return {number} mean.
+     */
+    get mean() {
+      throw Error('Not implemented');
+    },
+
+    /* The mode of a distribution is the most likely value.
+     * The maximum of the computeDensity() function is at this mode.
+     * @return {number} mode.
+     */
+    get mode() {
+      throw Error('Not implemented');
+    },
+
+    /* The median is the center value of the distribution.
+     * computePercentile(median) = computeComplementaryPercentile(median) = 0.5
+     *
+     * @return {number} median.
+     */
+    get median() {
+      throw Error('Not implemented');
+    },
+
+    /* The standard deviation is a measure of how dispersed or spread out the
+     * distribution is (this statistic has the same units as the values).
+     *
+     * @return {number} standard deviation.
+     */
+    get standardDeviation() {
+      throw Error('Not implemented');
+    },
+
+    /* An alternative measure of how spread out the distribution is,
+     * the variance is the square of the standard deviation.
+     * @return {number} variance.
+     */
+    get variance() {
+      throw Error('Not implemented');
+    }
+  };
+
+  Statistics.UniformDistribution = function(opt_range) {
+    if (!opt_range) opt_range = tr.b.math.Range.fromExplicitRange(0, 1);
+    this.range = opt_range;
+  };
+
+  Statistics.UniformDistribution.prototype = {
+    __proto__: Distribution.prototype,
+
+    computeDensity(x) {
+      return 1 / this.range.range;
+    },
+
+    computePercentile(x) {
+      return tr.b.math.normalize(x, this.range.min, this.range.max);
+    },
+
+    get mean() {
+      return this.range.center;
+    },
+
+    get mode() {
+      return undefined;
+    },
+
+    get median() {
+      return this.mean;
+    },
+
+    get standardDeviation() {
+      return Math.sqrt(this.variance);
+    },
+
+    get variance() {
+      return Math.pow(this.range.range, 2) / 12;
+    }
+  };
+
+  /* The Normal or Gaussian distribution, or bell curve, is common in complex
+   * processes such as are found in many of the natural sciences.  If Z is the
+   * standard normal distribution with mean = 0 and variance = 1, then the
+   * general normal distribution is Y = mean + Z*sqrt(variance).
+   * https://www.desmos.com/calculator/tqtbjm4s3z
+   */
+  Statistics.NormalDistribution = function(opt_mean, opt_variance) {
+    this.mean_ = opt_mean || 0;
+    this.variance_ = opt_variance || 1;
+    this.standardDeviation_ = Math.sqrt(this.variance_);
+  };
+
+  Statistics.NormalDistribution.prototype = {
+    __proto__: Distribution.prototype,
+
+    computeDensity(x) {
+      const scale = (1.0 / (this.standardDeviation * Math.sqrt(2.0 * Math.PI)));
+      const exponent = -Math.pow(x - this.mean, 2) / (2.0 * this.variance);
+      return scale * Math.exp(exponent);
+    },
+
+    computePercentile(x) {
+      const standardizedX = ((x - this.mean) /
+                           Math.sqrt(2.0 * this.variance));
+      return (1.0 + tr.b.math.erf(standardizedX)) / 2.0;
+    },
+
+    get mean() {
+      return this.mean_;
+    },
+
+    get median() {
+      return this.mean;
+    },
+
+    get mode() {
+      return this.mean;
+    },
+
+    get standardDeviation() {
+      return this.standardDeviation_;
+    },
+
+    get variance() {
+      return this.variance_;
+    }
+  };
+
+  /* The log-normal distribution is a continuous probability distribution of a
+   * random variable whose logarithm is normally distributed.
+   * If Y is the general normal distribution, then X = exp(Y) is the general
+   * log-normal distribution.
+   * X will have different parameters from Y,
+   * so the mean of Y is called the "location" of X,
+   * and the standard deviation of Y is called the "shape" of X.
+   * The standard lognormal distribution exp(Z) has location = 0 and shape = 1.
+   * https://www.desmos.com/calculator/tqtbjm4s3z
+   */
+  Statistics.LogNormalDistribution = function(opt_location, opt_shape) {
+    this.normalDistribution_ = new Statistics.NormalDistribution(
+        opt_location, Math.pow(opt_shape || 1, 2));
+  };
+
+  Statistics.LogNormalDistribution.prototype = {
+    __proto__: Statistics.NormalDistribution.prototype,
+
+    computeDensity(x) {
+      return this.normalDistribution_.computeDensity(Math.log(x)) / x;
+    },
+
+    computePercentile(x) {
+      return this.normalDistribution_.computePercentile(Math.log(x));
+    },
+
+    get mean() {
+      return Math.exp(this.normalDistribution_.mean +
+          (this.normalDistribution_.variance / 2));
+    },
+
+    get variance() {
+      const nm = this.normalDistribution_.mean;
+      const nv = this.normalDistribution_.variance;
+      return (Math.exp(2 * (nm + nv)) -
+              Math.exp(2 * nm + nv));
+    },
+
+    get standardDeviation() {
+      return Math.sqrt(this.variance);
+    },
+
+    get median() {
+      return Math.exp(this.normalDistribution_.mean);
+    },
+
+    get mode() {
+      return Math.exp(this.normalDistribution_.mean -
+                      this.normalDistribution_.variance);
+    }
+  };
+
+  /**
+   * Instead of describing a LogNormalDistribution in terms of its "location"
+   * and "shape", it can also be described in terms of its median
+   * and the point at which its complementary cumulative distribution
+   * function bends between the linear-ish region in the middle and the
+   * exponential-ish region. When the distribution is used to compute
+   * percentiles for log-normal random processes such as latency, as the latency
+   * improves, it hits a point of diminishing returns, when it becomes
+   * relatively difficult to improve the score further. This point of
+   * diminishing returns is the first x-intercept of the third derivative of the
+   * CDF, which is the second derivative of the PDF.
+   *
+   * https://www.desmos.com/calculator/cg5rnftabn
+   *
+   * @param {number} median The median of the distribution.
+   * @param {number} diminishingReturns The point of diminishing returns.
+   * @return {LogNormalDistribution}
+   */
+  Statistics.LogNormalDistribution.fromMedianAndDiminishingReturns =
+    function(median, diminishingReturns) {
+      diminishingReturns = Math.log(diminishingReturns / median);
+      const shape = Math.sqrt(1 - 3 * diminishingReturns -
+          Math.sqrt(Math.pow(diminishingReturns - 3, 2) - 8)) / 2;
+      const location = Math.log(median);
+      return new Statistics.LogNormalDistribution(location, shape);
+    };
+
+  // p-values less than this indicate statistical significance.
+  Statistics.DEFAULT_ALPHA = 0.01;
+
+  // If a statistical significant difference has not been established with
+  // this many observations per sample, we'll assume none exists.
+  Statistics.MAX_SUGGESTED_SAMPLE_SIZE = 20;
+
+  /** @enum */
+  Statistics.Significance = {
+    SIGNIFICANT: 'REJECT',
+    INSIGNIFICANT: 'FAIL_TO_REJECT',
+    NEED_MORE_DATA: 'NEED_MORE_DATA',
+    DONT_CARE: 'DONT_CARE',
+  };
+
+
+  class HypothesisTestResult {
+    constructor(p, u, needMoreData, opt_alpha) {
+      this.p_ = p;
+      this.u_ = u;
+      this.needMoreData_ = needMoreData;
+      this.compare(opt_alpha);
+    }
+
+    /**
+     * The probability under the null hypothesis (i.e. the two samples are
+     * indistinguishable) of obtaining a result more extreme than observed.
+     * @return number in (0,1)
+     */
+    get p() {
+      return this.p_;
+    }
+
+    /**
+     * The U statistic from MWU.
+     * @return number
+     */
+    get U() {
+      return this.u_;
+    }
+
+    /**
+     * @return {!tr.b.math.Statistics.Significance}
+     */
+    get significance() {
+      return this.significance_;
+    }
+
+    /**
+     * Recompute |significance| with the same p-value but a new alpha threshold.
+     * Faster than recomputing MWU.
+     *
+     * @param {number=}
+     * @return {!tr.b.math.Statistics.Significance}
+     */
+    compare(opt_alpha) {
+      const alpha = opt_alpha || Statistics.DEFAULT_ALPHA;
+      if (this.p < alpha) {
+        this.significance_ = Statistics.Significance.SIGNIFICANT;
+      } else if (this.needMoreData_) {
+        this.significance_ = Statistics.Significance.NEED_MORE_DATA;
+      } else {
+        this.significance_ = Statistics.Significance.INSIGNIFICANT;
+      }
+      return this.significance_;
+    }
+
+    asDict() {
+      return {
+        p: this.p,
+        U: this.U,
+        significance: this.significance,
+      };
+    }
+  }
+
+  /**
+   * @param {!Array.<number>} a
+   * @param {!Array.<number>} b
+   * @param {number=} opt_alpha
+   * @param {number=} opt_reqSampleSize
+   * @return {!HypothesisTestResult}
+   */
+  Statistics.mwu = function(a, b, opt_alpha, opt_reqSampleSize) {
+    const result = mannwhitneyu.test(a, b);
+    const needMoreData = opt_reqSampleSize &&
+      Math.min(a.length, b.length) < opt_reqSampleSize;
+    return new HypothesisTestResult(
+        result.p, result.U, needMoreData, opt_alpha);
+  };
+
+  return {
+    Statistics,
+  };
+});
+</script>

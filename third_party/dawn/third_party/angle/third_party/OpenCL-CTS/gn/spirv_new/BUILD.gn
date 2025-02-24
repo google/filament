@@ -1,0 +1,39 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("spirv_new") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/reference_math.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/utility.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_basic_versions.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_cl_khr_spirv_no_integer_wrap_decoration.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_decorate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_get_program_il.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_linkage.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_atomic.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_branch.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_branch_conditional.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_composite_construct.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_constant.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_copy_object.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_fmath.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_function.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_lifetime.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_loop_merge.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_negate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_opaque.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_phi.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_selection_merge.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_spec_constant.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_undef.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_vector_extract.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_vector_insert.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spirv_new/test_op_vector_times_scalar.cpp",
+  ]
+}

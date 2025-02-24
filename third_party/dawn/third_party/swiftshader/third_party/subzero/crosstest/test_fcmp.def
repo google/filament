@@ -1,0 +1,40 @@
+//===- subzero/crosstest/test_fcmp.def - macros for tests -----*- C++ -*---===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for crosstesting the fcmp instruction.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_FCMP_DEF
+#define TEST_FCMP_DEF
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+
+#define FCMP_TABLE \
+  /* cmp */ \
+  X(False) \
+  X(Oeq) \
+  X(Ogt) \
+  X(Oge) \
+  X(Olt) \
+  X(Ole) \
+  X(One) \
+  X(Ord) \
+  X(Ueq) \
+  X(Ugt) \
+  X(Uge) \
+  X(Ult) \
+  X(Ule) \
+  X(Une) \
+  X(Uno) \
+  X(True) \
+//#define X(cmp)
+
+#endif // TEST_FCMP_DEF

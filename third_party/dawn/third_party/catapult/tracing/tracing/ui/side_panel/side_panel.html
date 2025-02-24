@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.behaviors', function() {
+  const SidePanel = {
+
+    get rangeOfInterest() {
+      throw new Error('Not implemented');
+    },
+
+    set rangeOfInterest(rangeOfInterest) {
+      throw new Error('Not implemented');
+    },
+
+    get selection() {
+      throw new Error('Not implemented');
+    },
+
+    set selection(selection) {
+      throw new Error('Not implemented');
+    },
+
+    get model() {
+      throw new Error('Not implemented');
+    },
+
+    set model(model) {
+      throw new Error('Not implemented');
+    },
+
+    supportsModel(m) {
+      throw new Error('Not implemented');
+    }
+  };
+
+  return {
+    SidePanel,
+  };
+});
+</script>

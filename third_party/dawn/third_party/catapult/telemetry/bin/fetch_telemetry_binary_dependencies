@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+
+import os
+import sys
+TELEMETRY_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+sys.path.insert(1, TELEMETRY_DIR)
+from telemetry.core import platform as platform_module
+from telemetry.internal.util import binary_manager
+
+def main():
+  if len(sys.argv) != 1:
+    print("Usage: {}".format(sys.argv[0]))
+    return
+
+  # telemetry/binary_dependencies.json will be loaded by default
+  client_configs = []
+  platform = platform_module.GetHostPlatform()
+
+  binary_manager.InitDependencyManager(client_configs)
+  binary_manager.FetchBinaryDependencies(platform, client_configs,
+      fetch_reference_chrome_binary=False)
+
+if __name__ == "__main__":
+  main()

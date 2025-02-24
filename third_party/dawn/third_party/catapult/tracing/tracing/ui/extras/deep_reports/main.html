@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/ui/extras/deep_reports/scalar_value.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.deep_reports', function() {
+  /**
+   * Runs deep reports on the provided files, and pushes telemetry-style
+   * values to the results object.
+   */
+  function main(results, filesInDir) {
+    let lastP = new Promise(function(resolve) { resolve(); });
+
+    filesInDir.forEach(function(filename) {
+      // TODO(nduca): Make this like telemetry page.
+      const page = {
+        url: filename
+      };
+      lastP = lastP.then(function() {
+        return loadModelFromFileAsync(filename);
+      });
+      lastP = lastP.then(function(model) {
+        processModel(results, page, model);
+      });
+    });
+    return lastP;
+  }
+
+  function loadModelFromFileAsync(filename) {
+    return tr.b.getAsync(filename).then(function(trace) {
+      const io = new tr.ImportOptions();
+      io.shiftWorldToZero = true;
+      io.pruneEmptyContainers = false;
+
+      const m = new tr.Model();
+      try {
+        m.importTraces([trace], io);
+      } catch (e) {
+        throw new Error('While loading ' + filename + ' got: ' + e.toString());
+      }
+      return m;
+    });
+  }
+
+  function processModel(results, page, model) {
+    results.addValue(
+        new tr.ui.e.deep_reports.ScalarValue(
+            page, 'numRailIRs', 'ms', model.userModel.expectations.length));
+  }
+
+  return {
+    main
+  };
+});
+</script>

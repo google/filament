@@ -1,0 +1,1575 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import absolute_import
+from __future__ import print_function
+import argparse
+import bisect
+import collections
+import gzip
+import itertools
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import six
+from six.moves import zip
+
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    '..', '..', '..', 'tracing', 'tracing', 'extras')))
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    '..', '..', '..', 'tracing', 'third_party', 'symbols')))
+# pylint: disable=import-error
+import symbols.elf_symbolizer as elf_symbolizer
+
+from symbolizer import symbolize_trace_atos_regex
+from symbolizer import symbolize_trace_macho_reader
+
+
+class MemoryMap(object):
+  """Represents 'process_mmaps' trace file entry."""
+
+  class Region(object):
+    def __init__(self, start_address, size, file_path):
+      self._start_address = start_address
+      self._size = size
+      self._file_path = file_path
+
+    @property
+    def start_address(self):
+      return self._start_address
+
+    @property
+    def end_address(self):
+      return self._start_address + self._size
+
+    @property
+    def size(self):
+      return self._size
+
+    @property
+    def file_path(self):
+      return self._file_path
+
+    def __cmp__(self, other):
+      if isinstance(other, type(self)):
+        other_start_address = other._start_address
+      elif isinstance(other, six.integer_types):
+        other_start_address = other
+      else:
+        raise Exception('Cannot compare with %s' % type(other))
+      if self._start_address < other_start_address:
+        return -1
+      elif self._start_address > other_start_address:
+        return 1
+      else:
+        return 0
+
+    def __repr__(self):
+      return 'Region(0x{:X} - 0x{:X}, {})'.format(
+          self.start_address, self.end_address, self.file_path)
+
+  def __init__(self, process_mmaps_json):
+    regions = []
+    for region_json in process_mmaps_json['vm_regions']:
+      regions.append(self.Region(
+          int(region_json['sa'], 16),
+          int(region_json['sz'], 16),
+          region_json['mf']))
+    regions.sort()
+
+    # Copy regions without duplicates and check for overlaps.
+    self._regions = []
+    previous_region = None
+    for region in regions:
+      if previous_region is not None:
+        if region == previous_region:
+          continue
+        assert region.start_address >= previous_region.end_address, \
+            'Regions {} and {} overlap.'.format(previous_region, region)
+      previous_region = region
+      self._regions.append(region)
+
+  @property
+  def regions(self):
+    return self._regions
+
+  def FindRegion(self, address):
+    """Finds region containing |address|. Returns None if none found."""
+
+    region_index = bisect.bisect_right(self._regions, address) - 1
+    if region_index >= 0:
+      region = self._regions[region_index]
+      if address >= region.start_address and address < region.end_address:
+        return region
+    return None
+
+
+class UnsupportedHeapDumpVersionError(Exception):
+  def __init__(self, version):
+    message = 'Unsupported heap dump version: {}'.format(version)
+    super(UnsupportedHeapDumpVersionError, self).__init__(message)
+
+
+class StringMap(object):
+  def __init__(self):
+    self._modified = False
+    self._string_jsons = []
+    self._string_by_id = {}
+    self._id_by_string = {}
+    self._max_string_id = 0
+
+  @property
+  def modified(self):
+    return self._modified
+
+  @property
+  def string_by_id(self):
+    return self._string_by_id
+
+  def ParseMore(self, heap_dump_version, strings_json):
+    if heap_dump_version != Trace.HEAP_DUMP_VERSION_1:
+      raise UnsupportedHeapDumpVersionError(heap_dump_version)
+
+    self._string_jsons.append(strings_json)
+    for string_json in strings_json:
+      self._Insert(string_json['id'], string_json['string'])
+
+  def Clear(self):
+    if self._string_by_id:
+      self._modified = True
+      self._string_by_id = {}
+      self._id_by_string = {}
+      self._Insert(0, '[null]')
+      self._max_string_id = 0
+
+  def AddString(self, string):
+    string_id = self._id_by_string.get(string)
+    if string_id is None:
+      string_id = self._max_string_id + 1
+      self._Insert(string_id, string)
+      self._modified = True
+    return string_id
+
+  def ApplyModifications(self):
+    if not self.modified:
+      return
+
+    assert self._string_jsons, 'no JSON nodes'
+
+    # Serialize into first JSON node, and clear all others.
+
+    for string_json in self._string_jsons:
+      string_json[:] = []
+    string_json = self._string_jsons[0]
+    for string_id, string in six.iteritems(self._string_by_id):
+      string_json.append({'id': string_id, 'string': string})
+
+    self._modified = False
+
+  def _Insert(self, string_id, string):
+    self._id_by_string[string] = string_id
+    self._string_by_id[string_id] = string
+    self._max_string_id = max(self._max_string_id, string_id)
+
+
+class TypeNameMap(object):
+  UNKNOWN_TYPE_ID = 0
+
+  def __init__(self):
+    self._modified = False
+    self._type_name_jsons = []
+    self._name_by_id = {}
+    self._id_by_name = {}
+    self._max_type_id = 0
+
+  @property
+  def modified(self):
+    return self._modified
+
+  @property
+  def name_by_id(self):
+    return self._name_by_id
+
+  def ParseMore(self, heap_dump_version, type_name_json, string_map):
+    if heap_dump_version != Trace.HEAP_DUMP_VERSION_1:
+      raise UnsupportedHeapDumpVersionError(heap_dump_version)
+
+    self._type_name_jsons.append(type_name_json)
+    for type_json in type_name_json:
+      self._Insert(type_json['id'],
+                   string_map.string_by_id[type_json['name_sid']])
+
+  def AddType(self, type_name):
+    type_id = self._id_by_name.get(type_name)
+    if type_id is None:
+      type_id = self._max_type_id + 1
+      self._Insert(type_id, type_name)
+      self._modified = True
+    return type_id
+
+  def ApplyModifications(self, string_map, force=False):
+    if not self.modified and not force:
+      return
+
+    assert self._type_name_jsons, 'no JSON nodes'
+
+    # Serialize into first JSON node, and clear all others.
+
+    for types_json in self._type_name_jsons:
+      types_json[:] = []
+    types_json = self._type_name_jsons[0]
+    for type_id, type_name in six.iteritems(self._name_by_id):
+      types_json.append({
+          'id': type_id,
+          'name_sid': string_map.AddString(type_name)})
+
+    self._modified = False
+
+  def _Insert(self, type_id, type_name):
+    self._id_by_name[type_name] = type_id
+    self._name_by_id[type_id] = type_name
+    self._max_type_id = max(self._max_type_id, type_id)
+
+
+class StackFrameMap(object):
+  class Frame(object):
+    def __init__(self, frame_id, name, parent_frame_id):
+      self._modified = False
+      self._id = frame_id
+      self._name = name
+      self._pc = self._ParsePC(name)
+      self._parent_id = parent_frame_id
+      self._parent = None
+      self._ext = None
+
+    @property
+    def modified(self):
+      return self._modified
+
+    @property
+    def id(self):
+      return self._id
+
+    @property
+    def pc(self):
+      return self._pc
+
+    @property
+    def name(self):
+      return self._name
+
+    @name.setter
+    def name(self, value):
+      self._modified = True
+      self._name = value
+
+    @property
+    def parent_id(self):
+      return self._parent_id
+
+    @property
+    def parent(self):
+      return self._parent
+
+    @property
+    def ext(self):
+      if self._ext is None:
+        self._ext = self._ExtraProperties()
+      return self._ext
+
+    _PC_TAG = 'pc:'
+
+    class _ExtraProperties(object):
+      def __getattr__(self, name):
+        return None
+
+    def _ParsePC(self, name):
+      if not name.startswith(self._PC_TAG):
+        return None
+      return int(name[len(self._PC_TAG):], 16)
+
+    def _ClearModified(self):
+      self._modified = False
+
+    def _ResolveParent(self, parent):
+      assert parent.id == self._parent_id, 'wrong parent'
+      self._parent = parent
+
+    def _ChangeParent(self, parent):
+      self._parent = parent
+      self._parent_id = parent.id
+      self._modified = True
+
+  def __init__(self):
+    self._modified = False
+    self._heap_dump_version = None
+    self._stack_frames_jsons = []
+    self._frame_by_id = {}
+    self._max_frame_id = 0
+
+  @property
+  def modified(self):
+    return (self._modified or
+            any(f.modified for f in six.itervalues(self._frame_by_id)))
+
+  @property
+  def frame_by_id(self):
+    return self._frame_by_id
+
+  def ParseMore(self, heap_dump_version, stack_frames_json, string_map):
+    frame_by_id = {}
+    if heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+      if self._stack_frames_jsons:
+        raise Exception('Legacy stack frames are expected only once.')
+      for frame_id, frame_json in six.iteritems(stack_frames_json):
+        frame = self.Frame(frame_id,
+                           frame_json['name'],
+                           frame_json.get('parent'))
+        frame_by_id[frame.id] = frame
+    else:
+      if heap_dump_version != Trace.HEAP_DUMP_VERSION_1:
+        raise UnsupportedHeapDumpVersionError(heap_dump_version)
+      for frame_json in stack_frames_json:
+        frame = self.Frame(frame_json['id'],
+                           string_map.string_by_id[frame_json['name_sid']],
+                           frame_json.get('parent'))
+        frame_by_id[frame.id] = frame
+
+    self._heap_dump_version = heap_dump_version
+    self._stack_frames_jsons.append(stack_frames_json)
+
+    for frame in six.itervalues(frame_by_id):
+      if frame.parent_id:
+        parent = frame_by_id.get(frame.parent_id)
+        if not parent:
+          # Parent was added by previous ParseMore() call
+          parent = self._frame_by_id[frame.parent_id]
+        frame._ResolveParent(parent)
+      self._frame_by_id[frame.id] = frame
+      self._max_frame_id = max(frame.id, self._max_frame_id)
+
+  def AddFrame(self, name, parent_frame):
+    self._max_frame_id += 1
+    parent_id = None if parent_frame is None else parent_frame.id
+    frame = self.Frame(self._max_frame_id, name, parent_id)
+    if parent_frame is not None:
+      frame._ResolveParent(parent_frame)
+    self._frame_by_id[frame.id] = frame
+    self._modified = True
+    return frame
+
+  def MergeFrames(self, get_frame_key):
+    """ On each level, merges frames with similar keys.
+
+    This method builds a frame tree and then for each node merges children
+    with similar keys, as returned by |get_frame_key|. Keys are arbitrary
+    objects.
+
+    If |get_frame_key| returns None, then the corresponding tree branch
+    removed (i.e. it removes the frame and all child frames, recursively).
+
+    The method returns 'merged_frames_by_frame', which is a dictionary that
+    maps frame to all frames that were merged into it. All removed frames are
+    added under None key.
+    """
+    class _Node(object):
+      def __init__(self, frame):
+        self.marked = False
+        self.frame = frame
+        self.children = []
+
+      def Mark(self, marked_nodes=None):
+        self.marked = True
+        if marked_nodes is not None:
+          marked_nodes.append(self)
+        for child in self.children:
+          child.Mark(marked_nodes)
+
+    # TODO(dskiba): use BuildFrameTree() instead
+    node_by_id = {}
+    def _NodeForFrame(frame):
+      node = node_by_id.get(frame.id)
+      if node is None:
+        node = _Node(frame)
+        node_by_id[frame.id] = node
+      return node
+
+    root_node = _Node(None)
+    for frame in six.itervalues(self._frame_by_id):
+      if frame.parent is None:
+        root_node.children.append(_NodeForFrame(frame))
+      else:
+        parent_node = _NodeForFrame(frame.parent)
+        parent_node.children.append(_NodeForFrame(frame))
+
+    merged_frames_by_frame = collections.defaultdict(list)
+    def _MergeChildren(node):
+      children_by_key = collections.defaultdict(list)
+      for child in node.children:
+        key = get_frame_key(child.frame)
+        if key is None:
+          marked_nodes = []
+          child.Mark(marked_nodes)
+          removed_frames = merged_frames_by_frame[None]
+          removed_frames.extend(n.frame for n in marked_nodes)
+        else:
+          children_by_key[key].append(child)
+      node.children = []
+      for children in six.itervalues(children_by_key):
+        child = children[0]
+        node.children.append(child)
+        if len(children) > 1:
+          merged_frames = merged_frames_by_frame[child.frame]
+          for dupchild in children[1:]:
+            for grandchild in dupchild.children:
+              grandchild.frame._ChangeParent(child.frame)
+              child.children.append(grandchild)
+            dupchild.children = []
+            dupchild.Mark()
+            merged_frames.append(dupchild.frame)
+        _MergeChildren(child)
+
+    _MergeChildren(root_node)
+
+    if merged_frames_by_frame:
+      self._frame_by_id = {i:n.frame for i, n in six.iteritems(node_by_id)
+                           if not n.marked}
+      self._modified = True
+
+    return merged_frames_by_frame
+
+  def ApplyModifications(self, string_map, force=False):
+    if not self.modified and not force:
+      return
+
+    assert self._stack_frames_jsons, 'no JSON nodes'
+    if self._heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+      assert string_map is None, \
+          'string_map should not be used with the legacy format'
+
+    # Serialize frames into first JSON node, and clear all others.
+
+    for frames_json in self._stack_frames_jsons:
+      if self._heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+        frames_json.clear()
+      else:
+        frames_json[:] = []
+
+    frames_json = self._stack_frames_jsons[0]
+    for frame in six.itervalues(self._frame_by_id):
+      if self._heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+        frame_json = {'name': frame.name}
+        frames_json[frame.id] = frame_json
+      else:
+        frame_json = {
+            'id': frame.id,
+            'name_sid': string_map.AddString(frame.name)
+        }
+        frames_json.append(frame_json)
+      if frame.parent_id is not None:
+        frame_json['parent'] = frame.parent_id
+      frame._ClearModified()
+
+    self._modified = False
+
+  def BuildFrameTree(self, node_type):
+    """ Creates a frame tree using provided node type.
+
+    |node_type| is expected to have:
+    1. __init__(self, frame)
+    2. 'children' array
+
+    The function returns tuple (root_node, node_by_frame_id).
+    """
+
+    node_by_id = {}
+    def _NodeForFrame(frame):
+      node = node_by_id.get(frame.id)
+      if node is None:
+        node = node_type(frame)
+        node_by_id[frame.id] = node
+      return node
+
+    root_node = node_type(None)
+    for frame in six.itervalues(self._frame_by_id):
+      if frame.parent is None:
+        root_node.children.append(_NodeForFrame(frame))
+      else:
+        parent_node = _NodeForFrame(frame.parent)
+        parent_node.children.append(_NodeForFrame(frame))
+
+    return (root_node, node_by_id)
+
+
+class HeapProfile(object):
+  EntryKey = collections.namedtuple(
+      'EntryKey',
+      ['stack_frame_id', 'type_name_id'])
+
+  class Entry(object):
+    def __init__(self, key, mapped_value_by_name, numeric_value_by_name):
+      self._key = key
+      self._mapped_value_by_name = mapped_value_by_name
+      self._numeric_value_by_name = numeric_value_by_name
+
+    @property
+    def key(self):
+      return self._key
+
+    @property
+    def stack_frame_id(self):
+      return self._key.stack_frame_id
+
+    @property
+    def type_name_id(self):
+      return self._key.type_name_id
+
+    @property
+    def size(self):
+      return self._numeric_value_by_name.get(
+          HeapProfile._SIZES_JSON_VALUE_NAME)
+
+    def _AddValuesFrom(self, entry):
+      self._mapped_value_by_name.clear()
+      for name, value in six.iteritems(entry._numeric_value_by_name):
+        value += self._numeric_value_by_name.get(name, 0)
+        self._numeric_value_by_name[name] = value
+
+  def __init__(self, allocator_name, entries_json, mapped_entry_names):
+    self._modified = False
+    self._allocator_name = allocator_name
+    self._entries_json = entries_json
+    self._entries = []
+    for values in zip(*six.itervalues(entries_json)):
+      stack_frame_id = None
+      type_name_id = None
+      mapped_value_by_name = {}
+      numeric_value_by_name = {}
+      for index, name in enumerate(six.iterkeys(entries_json)):
+        value = values[index]
+        if name == self._STACK_FRAME_ID_JSON_VALUE_NAME:
+          stack_frame_id = value
+        elif name == self._TYPE_NAME_ID_JSON_VALUE_NAME:
+          type_name_id = value
+        elif name in mapped_entry_names:
+          mapped_value_by_name[name] = value
+        else:
+          numeric_value_by_name[name] = value
+      entry = self.Entry(self.EntryKey(stack_frame_id, type_name_id),
+                         mapped_value_by_name, numeric_value_by_name)
+      self._entries.append(entry)
+
+  @property
+  def modified(self):
+    return self._modified
+
+  @property
+  def allocator_name(self):
+    return self._allocator_name
+
+  @property
+  def entries(self):
+    return self._entries
+
+  def AddEntry(self, entry_key):
+    entry = self.Entry(entry_key, {}, {})
+    self._entries.append(entry)
+    self._modified = True
+    return entry
+
+  def MergeEntries(self, get_entry_key):
+    entry_by_key = {}
+    for entry in self._entries:
+      new_key = get_entry_key(entry)
+      new_entry = entry_by_key.get(new_key)
+      if new_entry is None:
+        entry_by_key[new_key] = entry
+      else:
+        new_entry._AddValuesFrom(entry)
+
+    if len(self._entries) != len(entry_by_key):
+      # This means that we hit _AddValuesFrom() above at least once,
+      # i.e. merged at least one entry.
+      self._entries = []
+      for key, entry in six.iteritems(entry_by_key):
+        entry._key = key
+        self._entries.append(entry)
+      self._modified = True
+
+  def ApplyModifications(self):
+    if not self.modified:
+      return
+
+    mapped_value_names = set()
+    numeric_value_names = set()
+    for entry in self._entries:
+      mapped_value_names.update(six.iterkeys(entry._mapped_value_by_name))
+      numeric_value_names.update(six.iterkeys(entry._numeric_value_by_name))
+
+    def _AddJSONValue(name, value):
+      values = self._entries_json.get(name)
+      if values is None:
+        values = []
+        self._entries_json[name] = values
+      values.append(value)
+
+    self._entries_json.clear()
+    for entry in self._entries:
+      _AddJSONValue(self._STACK_FRAME_ID_JSON_VALUE_NAME, entry.stack_frame_id)
+      _AddJSONValue(self._TYPE_NAME_ID_JSON_VALUE_NAME, entry.type_name_id)
+      for name in mapped_value_names:
+        value = entry._mapped_value_by_name[name]
+        _AddJSONValue(name, value)
+      for name in numeric_value_names:
+        value = entry._numeric_value_by_name[name]
+        _AddJSONValue(name, value)
+
+    self._modified = False
+
+  _STACK_FRAME_ID_JSON_VALUE_NAME = 'nodes'
+  _TYPE_NAME_ID_JSON_VALUE_NAME = 'types'
+  _SIZES_JSON_VALUE_NAME = 'sizes'
+
+
+class MemoryDump(object):
+  def __init__(self, allocators_json, mapped_entry_names):
+    self._profiles = []
+    for allocator_name, entries_json in six.iteritems(allocators_json):
+      profile = HeapProfile(allocator_name, entries_json, mapped_entry_names)
+      self._profiles.append(profile)
+
+  @property
+  def modified(self):
+    return any(p.modified for p in self.profiles)
+
+  @property
+  def profiles(self):
+    return self._profiles
+
+  def ApplyModifications(self):
+    for profile in self._profiles:
+      profile.ApplyModifications()
+
+
+class Trace(object):
+
+  HEAP_DUMP_VERSION_LEGACY = 'Legacy'
+  HEAP_DUMP_VERSION_1 = 1
+
+  class Process(object):
+    def __init__(self, pid):
+      self._pid = pid
+      self._name = None
+      self._memory_map = None
+      self._memory_dumps = []
+      self._stack_frame_map = StackFrameMap()
+      self._type_name_map = TypeNameMap()
+      self._string_map = StringMap()
+      self._heap_dump_version = None
+
+    @property
+    def modified(self):
+      return (self._stack_frame_map.modified or
+              self._type_name_map.modified or
+              any(d.modified for d in self._memory_dumps))
+
+    @property
+    def pid(self):
+      return self._pid
+
+    @property
+    def name(self):
+      return self._name
+
+    @property
+    def unique_name(self):
+      name = self._name if self._name else 'UnnamedProcess'
+      return '{}({})'.format(name, self._pid)
+
+    @property
+    def memory_map(self):
+      return self._memory_map
+
+    @property
+    def memory_dumps(self):
+      return self._memory_dumps
+
+    @property
+    def stack_frame_map(self):
+      return self._stack_frame_map
+
+    @property
+    def type_name_map(self):
+      return self._type_name_map
+
+    def ApplyModifications(self):
+      if self._heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+        self._stack_frame_map.ApplyModifications(None)
+      else:
+        if self._stack_frame_map.modified or self._type_name_map.modified:
+          self._string_map.Clear()
+          self._stack_frame_map.ApplyModifications(self._string_map, force=True)
+          self._type_name_map.ApplyModifications(self._string_map, force=True)
+          self._string_map.ApplyModifications()
+        for dump in self._memory_dumps:
+          dump.ApplyModifications()
+
+  def __init__(self, trace_json):
+    self._trace_json = trace_json
+    self._processes = []
+    self._heap_dump_version = None
+
+    # Misc per-process information needed only during parsing.
+    class ProcessExt(object):
+      def __init__(self, pid):
+        self.process = Trace.Process(pid)
+        self.mapped_entry_names = set()
+        self.process_mmaps_json = None
+        self.seen_strings_json = False
+
+    process_ext_by_pid = {}
+
+    # Android traces produced via 'chrome://inspect/?tracing#devices' are
+    # just list of events.
+    events = trace_json if isinstance(trace_json, list) \
+             else trace_json['traceEvents']
+    for event in events:
+      name = event.get('name')
+      if not name:
+        continue
+
+      pid = event['pid']
+      process_ext = process_ext_by_pid.get(pid)
+      if process_ext is None:
+        process_ext = ProcessExt(pid)
+        process_ext_by_pid[pid] = process_ext
+      process = process_ext.process
+
+      phase = event['ph']
+      if phase == self._EVENT_PHASE_METADATA:
+        if name == 'process_name':
+          process._name = event['args']['name']
+        elif name == 'stackFrames':
+          process._stack_frame_map.ParseMore(
+              self._UseHeapDumpVersion(self.HEAP_DUMP_VERSION_LEGACY),
+              event['args']['stackFrames'],
+              process._string_map)
+      elif phase == self._EVENT_PHASE_MEMORY_DUMP:
+        dumps = event['args']['dumps']
+        process_mmaps = dumps.get('process_mmaps')
+        if process_mmaps:
+          # We want the most recent memory map, so parsing happens later
+          # once we finished reading all events.
+          process_ext.process_mmaps_json = process_mmaps
+        heaps = dumps.get('heaps_v2')
+        if heaps:
+          version = self._UseHeapDumpVersion(heaps['version'])
+          maps = heaps.get('maps')
+          if maps:
+            process_ext.mapped_entry_names.update(six.iterkeys(maps))
+            types = maps.get('types')
+            stack_frames = maps.get('nodes')
+            strings = maps.get('strings')
+            if (strings is None and (types or stack_frames)
+                and not process_ext.seen_strings_json):
+              # ApplyModifications() for TypeNameMap and StackFrameMap puts
+              # everything into the first node and depends on StringMap. So
+              # we need to make sure that 'strings' node is there if any of
+              # other two nodes present.
+              strings = []
+              maps['strings'] = strings
+            if strings is not None:
+              process_ext.seen_strings_json = True
+              process._string_map.ParseMore(version, strings)
+            if types:
+              process._type_name_map.ParseMore(
+                  version, types, process._string_map)
+            if stack_frames:
+              process._stack_frame_map.ParseMore(
+                  version, stack_frames, process._string_map)
+          allocators = heaps.get('allocators')
+          if allocators:
+            dump = MemoryDump(allocators, process_ext.mapped_entry_names)
+            process._memory_dumps.append(dump)
+
+    self._processes = []
+    for pe in six.itervalues(process_ext_by_pid):
+      pe.process._heap_dump_version = self._heap_dump_version
+      if pe.process_mmaps_json:
+        # Now parse the most recent memory map.
+        pe.process._memory_map = MemoryMap(pe.process_mmaps_json)
+      self._processes.append(pe.process)
+
+  @property
+  def modified(self):
+    return any(p.modified for p in self._processes)
+
+  @property
+  def processes(self):
+    return self._processes
+
+  @property
+  def heap_dump_version(self):
+    return self._heap_dump_version
+
+  def ApplyModifications(self):
+    for process in self._processes:
+      process.ApplyModifications()
+    assert not self.modified, 'still modified'
+
+  def Serialize(self):
+    return self._trace_json
+
+  # Relevant trace event phases from Chromium's
+  # src/base/trace_event/common/trace_event_common.h.
+  _EVENT_PHASE_METADATA = 'M'
+  _EVENT_PHASE_MEMORY_DUMP = 'v'
+
+  def _UseHeapDumpVersion(self, version):
+    if self._heap_dump_version is None:
+      self._heap_dump_version = version
+      return version
+    elif self._heap_dump_version != version:
+      raise Exception(
+          ("Inconsistent trace file: first saw '{}' heap dump version, "
+           "then '{}'.").format(self._heap_dump_version, version))
+    else:
+      return version
+
+
+class SymbolizableFile(object):
+  """Holds file path, addresses to symbolize and stack frames to update.
+
+  This class is a link between ELFSymbolizer and a trace file: it specifies
+  what to symbolize (addresses) and what to update with the symbolization
+  result (frames).
+  """
+  def __init__(self, file_path):
+    self.path = file_path
+    self.symbolizable_path = file_path # path to use for symbolization
+    self.frames_by_address = collections.defaultdict(list)
+
+
+def ResolveSymbolizableFiles(processes):
+  """Resolves and groups PCs into list of SymbolizableFiles.
+
+  As part of the grouping process, this function resolves PC from each stack
+  frame to the corresponding mmap region. Stack frames that failed to resolve
+  are symbolized with '<unresolved>'.
+  """
+  symfile_by_path = {}
+  for process in processes:
+    if not process.memory_map:
+      continue
+    for frame in six.itervalues(process.stack_frame_map.frame_by_id):
+      if frame.pc is None:
+        continue
+      region = process.memory_map.FindRegion(frame.pc)
+      if region is None:
+        frame.name = '<unresolved>'
+        continue
+
+      symfile = symfile_by_path.get(region.file_path)
+      if symfile is None:
+        symfile = SymbolizableFile(region.file_path)
+        symfile_by_path[symfile.path] = symfile
+
+      relative_pc = frame.pc - region.start_address
+      symfile.frames_by_address[relative_pc].append(frame)
+  return list(symfile_by_path.values())
+
+
+def FindInSystemPath(binary_name):
+  paths = os.environ['PATH'].split(os.pathsep)
+  for path in paths:
+    binary_path = os.path.join(path, binary_name)
+    if os.path.isfile(binary_path):
+      return binary_path
+  return None
+
+
+class Symbolizer(object):
+  # Encapsulates platform-specific symbolization logic.
+  def __init__(self):
+    self.is_mac = sys.platform == 'darwin'
+    self.is_win = sys.platform == 'win32'
+    if self.is_mac:
+      self.binary = 'atos'
+      self._matcher = symbolize_trace_atos_regex.AtosRegexMatcher()
+    elif self.is_win:
+      self.binary = 'addr2line-pdb.exe'
+    else:
+      self.binary = 'addr2line'
+    self.symbolizer_path = FindInSystemPath(self.binary)
+
+  def _SymbolizeLinuxAndAndroid(self, symfile, unsymbolized_name):
+    def _SymbolizerCallback(sym_info, frames):
+      # Unwind inline chain to the top.
+      while sym_info.inlined_by:
+        sym_info = sym_info.inlined_by
+
+      symbolized_name = sym_info.name if sym_info.name else unsymbolized_name
+      for frame in frames:
+        frame.name = symbolized_name
+        frame.ext.source_path = sym_info.source_path
+
+    symbolizer = elf_symbolizer.ELFSymbolizer(symfile.symbolizable_path,
+                                              self.symbolizer_path,
+                                              _SymbolizerCallback,
+                                              inlines=True)
+
+    for address, frames in six.iteritems(symfile.frames_by_address):
+      # SymbolizeAsync() asserts that the type of address is int. We operate
+      # on longs (since they are raw pointers possibly from 64-bit processes).
+      # It's OK to cast here because we're passing relative PC, which should
+      # always fit into int.
+      symbolizer.SymbolizeAsync(int(address), frames)
+
+    symbolizer.Join()
+
+
+  def _SymbolizeMac(self, symfile):
+    load_address = (symbolize_trace_macho_reader.
+        ReadMachOTextLoadAddress(symfile.symbolizable_path))
+    assert load_address is not None
+
+    address_os_file, address_file_path = tempfile.mkstemp()
+    try:
+      with os.fdopen(address_os_file, 'w') as address_file:
+        for address in six.iterkeys(symfile.frames_by_address):
+          address_file.write('{:x} '.format(address + load_address))
+
+      cmd = [self.symbolizer_path, '-arch', 'x86_64', '-l',
+             '0x%x' % load_address, '-o', symfile.symbolizable_path,
+             '-f', address_file_path]
+      output_array = subprocess.check_output(cmd).split('\n')
+
+      for i, frames in enumerate(six.itervalues(symfile.frames_by_address)):
+        symbolized_name = self._matcher.Match(output_array[i])
+        for frame in frames:
+          frame.name = symbolized_name
+    finally:
+      os.remove(address_file_path)
+
+  def _SymbolizeWin(self, symfile):
+    """Invoke symbolizer binary on windows and write all input in one go.
+
+    Unlike linux, on windows, symbolization talks through a shared system
+    service that handles communication with the NT symbol servers. This
+    creates an explicit serialization (and therefor lock contention) of
+    any process using the symbol API for files do not have a local PDB.
+
+    Thus, even though the windows symbolizer binary can be make command line
+    compatible with the POSIX addr2line interface, paralellizing the
+    symbolization does not yield the same performance effects. Running
+    just one symbolizer seems good enough for now. Can optimize later
+    if this becomes a bottleneck.
+    """
+    cmd = [self.symbolizer_path, '--functions', '--demangle', '--exe',
+                symfile.symbolizable_path]
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            stderr=sys.stderr)
+    addrs = ["%x" % relative_pc for relative_pc in
+             symfile.frames_by_address.keys()]
+    (stdout_data, stderr_data) = proc.communicate('\n'.join(addrs))
+    stdout_data = stdout_data.split('\n')
+
+    # This is known to be in the same order as stderr_data.
+    for i, addr in enumerate(addrs):
+        for frame in  symfile.frames_by_address[int(addr, 16)]:
+            # Output of addr2line with --functions is always 2 outputs per
+            # symbol, function name followed by source line number. Only grab
+            # the function name as line info is not always available.
+            frame.name = stdout_data[i * 2]
+
+  def Symbolize(self, symfile, unsymbolized_name):
+    if self.is_mac:
+      self._SymbolizeMac(symfile)
+    elif self.is_win:
+      self._SymbolizeWin(symfile)
+    else:
+      self._SymbolizeLinuxAndAndroid(symfile, unsymbolized_name)
+
+  def IsSymbolizableFile(self, file_path):
+    if self.is_win:
+      extension = os.path.splitext(file_path)[1].lower()
+      return extension in ['.dll', '.exe']
+    else:
+      result = subprocess.check_output(['file', '-0', file_path])
+      type_string = result[result.find('\0') + 1:]
+      return bool(re.match(r'.*(ELF|Mach-O) (32|64)-bit\b.*',
+                  type_string, re.DOTALL))
+
+
+def SymbolizeFiles(symfiles, symbolizer):
+  """Symbolizes each file in the given list of SymbolizableFiles
+     and updates stack frames with symbolization results."""
+  print('Symbolizing...')
+
+  def _SubPrintf(message, *args):
+    print(('  ' + message).format(*args))
+
+  for symfile in symfiles:
+    unsymbolized_name = '<{}>'.format(
+        symfile.path if symfile.path else 'unnamed')
+
+    problem = None
+    if not os.path.isabs(symfile.symbolizable_path):
+      problem = 'not a file'
+    elif not os.path.isfile(symfile.symbolizable_path):
+      problem = "file doesn't exist"
+    elif not symbolizer.IsSymbolizableFile(symfile.symbolizable_path):
+      problem = 'file is not symbolizable'
+    if problem:
+      _SubPrintf("Won't symbolize {} PCs for '{}': {}.",
+                 len(symfile.frames_by_address),
+                 symfile.symbolizable_path,
+                 problem)
+      for frames in six.itervalues(symfile.frames_by_address):
+        for frame in frames:
+          frame.name = unsymbolized_name
+      continue
+
+    _SubPrintf('Symbolizing {} PCs from {}...',
+               len(symfile.frames_by_address),
+               symfile.path)
+
+    symbolizer.Symbolize(symfile, unsymbolized_name)
+
+
+def CollapseSmallBranches(trace, size_threshold):
+  print('Collapsing stack branches smaller than {}...'.format(size_threshold))
+
+  class _Node(object):
+    def __init__(self, frame):
+      self.frame = frame
+      self.collapsed_child = None
+      self.children = []
+      self.entries = []
+      self.total_entry_size = 0
+      self.total_entry_count = 0
+      self.needed = False
+
+    def ClearEntries(self):
+      self.entries = []
+      for child in self.children:
+        child.ClearEntries()
+
+    def UpdateTotals(self):
+      total_entry_size = sum(e.size for e in self.entries)
+      total_entry_count = len(self.entries)
+      for child in self.children:
+        child.UpdateTotals()
+        total_entry_size += child.total_entry_size
+        total_entry_count += child.total_entry_count
+      self.total_entry_size = total_entry_size
+      self.total_entry_count = total_entry_count
+
+    def CollectEntries(self, entries):
+      entries += self.entries
+      for child in self.children:
+        child.CollectEntries(entries)
+
+  for process in trace.processes:
+    root_node, node_by_id = process.stack_frame_map.BuildFrameTree(_Node)
+
+    for dump in process.memory_dumps:
+      for profile in dump.profiles:
+
+        root_node.ClearEntries()
+        for entry in profile.entries:
+          node_by_id[entry.stack_frame_id].entries.append(entry)
+        root_node.UpdateTotals()
+
+        collapsed_entry_by_entry = {}
+        def _CollapseEntries(node):
+          if node.total_entry_count > 0:
+            node.needed = True
+          if node.frame is not None and node.total_entry_size < size_threshold:
+            if node.children:
+              if node.collapsed_child is None:
+                collapsed_frame = process.stack_frame_map.AddFrame(
+                    '[collapsed]',
+                    node.frame)
+                node.collapsed_child = _Node(collapsed_frame)
+                node.children.append(node.collapsed_child)
+                node_by_id[collapsed_frame.id] = node.collapsed_child
+
+              child_entries = []
+              for child in node.children:
+                child.CollectEntries(child_entries)
+              if child_entries:
+                type_name_id = None
+                if len(node.entries) == 1:
+                  type_name_id = node.entries[0].type_name_id
+                else:
+                  type_name_ids = set(e.type_name_id for e in child_entries)
+                  if len(type_name_ids) == 1:
+                    type_name_id = next(iter(type_name_ids))
+
+                if type_name_id is None:
+                  type_name_id = process.type_name_map.AddType('[collapsed]')
+
+                collapsed_entry = profile.AddEntry(
+                    HeapProfile.EntryKey(node.collapsed_child.frame.id,
+                                         type_name_id))
+                node.collapsed_child.needed = True
+                for entry in child_entries:
+                  collapsed_entry_by_entry[entry] = collapsed_entry
+          else:
+            for child in node.children:
+              _CollapseEntries(child)
+
+        _CollapseEntries(root_node)
+
+        def _MergeToCollapsedEntry(entry):
+          collapsed_entry = collapsed_entry_by_entry.get(entry)
+          if collapsed_entry is not None:
+            return collapsed_entry.key
+          else:
+            return entry.key
+        profile.MergeEntries(_MergeToCollapsedEntry)
+
+    def _RemoveRedunantFrame(frame):
+      node = node_by_id[frame.id]
+      return None if not node.needed else frame
+    frame_count_before = len(process.stack_frame_map.frame_by_id)
+    process.stack_frame_map.MergeFrames(_RemoveRedunantFrame)
+    print('  {}: collapsed {} stack frames (out of {})'.format(
+        process.unique_name,
+        frame_count_before - len(process.stack_frame_map.frame_by_id),
+        frame_count_before))
+
+
+def DeduplicateStackFrames(trace):
+  if trace.heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY:
+    # We're not parsing heap entries for legacy format, so deduplicating
+    # stack frames would result in a corrupted trace.
+    return
+
+  print('Deduplicating stack frames...')
+
+  for process in trace.processes:
+    merged_frames_by_frame = process.stack_frame_map.MergeFrames(
+        get_frame_key=lambda f: f.name)
+
+    if not merged_frames_by_frame:
+      continue
+
+    frame_by_merged_frame_id = {}
+    for frame, merged_frames in six.iteritems(merged_frames_by_frame):
+      for merged_frame in merged_frames:
+        frame_by_merged_frame_id[merged_frame.id] = frame
+
+    for dump in process.memory_dumps:
+      for profile in dump.profiles:
+        def _GetMergeKey(entry):
+          frame = frame_by_merged_frame_id.get(entry.stack_frame_id)
+          if frame is None:
+            return entry.key
+          else:
+            return HeapProfile.EntryKey(frame.id, entry.type_name_id)
+
+        entry_count = len(profile.entries)
+        profile.MergeEntries(_GetMergeKey)
+
+
+# Matches Android library paths, supports both K (/data/app-lib/<>/lib.so)
+# as well as L+ (/data/app/<>/lib/<>/lib.so). Library name is available
+# via 'name' group.
+ANDROID_PATH_MATCHER = re.compile(
+    r'^/data/(?:'
+      r'app/[^/]+/lib/[^/]+/|'
+      r'app-lib/[^/]+/|'
+      r'data/[^/]+/incremental-install-files/lib/'
+    r')(?P<name>.*\.so)')
+
+# Subpath of output path where unstripped libraries are stored.
+ANDROID_UNSTRIPPED_SUBPATH = 'lib.unstripped'
+
+
+def HaveFilesFromAndroid(symfiles):
+  return any(ANDROID_PATH_MATCHER.match(f.path) for f in symfiles)
+
+
+def RemapAndroidFiles(symfiles, output_path):
+  for symfile in symfiles:
+    match = ANDROID_PATH_MATCHER.match(symfile.path)
+    if match:
+      name = match.group('name')
+      symfile.symbolizable_path = os.path.join(
+          output_path, ANDROID_UNSTRIPPED_SUBPATH, name)
+    else:
+      # Clobber file path to trigger "not a file" problem in SymbolizeFiles().
+      # Without this, files won't be symbolized with "file not found" problem,
+      # which is not accurate.
+      symfile.symbolizable_path = 'android://{}'.format(symfile.path)
+
+
+def Symbolize(options, trace, symbolizer):
+  if options.collapse_threshold:
+    CollapseSmallBranches(trace, options.collapse_threshold)
+
+  symfiles = ResolveSymbolizableFiles(trace.processes)
+
+  # Android trace files don't have any indication they are from Android.
+  # So we're checking for Android-specific paths.
+  if HaveFilesFromAndroid(symfiles):
+    if not options.output_directory:
+      sys.exit('The trace file appears to be from Android. Please '
+               'specify output directory to properly symbolize it.')
+    RemapAndroidFiles(symfiles, os.path.abspath(options.output_directory))
+
+  SymbolizeFiles(symfiles, symbolizer)
+
+  DeduplicateStackFrames(trace)
+
+
+TRIVIAL_PATHS = [
+    'base/allocator',
+    'base/memory/aligned_memory.cc',
+    'base/memory/ptr_util.h',
+    'base/memory/scoped_vector.h',
+    'base/process/memory.cc',
+    'base/process/memory_linux.cc',
+    'base/stl_util.h',
+    'base/strings',
+    'base/trace_event/malloc_dump_provider.cc',
+    'skia/ext/SkMemory_new_handler.cpp',
+    'third_party/android_ndk/sources/cxx-stl',
+    'third_party/skia/src/core/SkArenaAlloc.cpp',
+    'third_party/skia/src/core/SkMallocPixelRef.cpp',
+    'third_party/WebKit/Source/platform/heap/BlinkGCMemoryDumpProvider.cpp',
+    'third_party/WebKit/Source/platform/heap/Heap.h',
+    'third_party/WebKit/Source/wtf/allocator/PartitionAllocator.cpp',
+    'third_party/WebKit/Source/wtf/allocator/Partitions.h',
+]
+
+def Categorize(options, trace):
+  print('Categorizing...')
+
+  # TODO(dskiba): move one level up
+  if not options.output_directory:
+    sys.exit('Output directory should be specified for categorization.')
+
+  trivial_paths = options.trivial_paths + options.extra_trivial_paths
+  trivial_paths_regex = re.compile(
+      '|'.join(re.escape(p) for p in trivial_paths))
+
+  category_slice = options.category_slice
+
+  def _NormalizePath(path):
+    return os.path.normcase(os.path.normpath(path))
+
+  output_path = _NormalizePath(os.path.abspath(options.output_directory))
+  src_path = _NormalizePath(os.path.join(output_path, '..', '..'))
+
+  failed_paths = set()
+
+  def _Categorize(file_path):
+    if not file_path:
+      return None
+
+    file_path = _NormalizePath(os.path.abspath(file_path))
+    if file_path.startswith(output_path):
+      file_subpath = os.path.relpath(file_path, output_path)
+    elif file_path.startswith(src_path):
+      file_subpath = os.path.relpath(file_path, src_path)
+    else:
+      if file_path not in failed_paths:
+        failed_paths.add(file_path)
+        print('  Not in source: {}'.format(file_path))
+      return None
+
+    if trivial_paths_regex.search(file_subpath):
+      if file_subpath not in failed_paths:
+        failed_paths.add(file_subpath)
+        print('  Skipped: {}'.format(file_subpath))
+      return None
+
+    category = file_subpath.split(os.sep)
+    if category_slice != 0:
+      category = category[:category_slice]
+
+    return '/'.join(category)
+
+  def _GetCategory(frame):
+    while frame:
+      if not frame.ext.categorized:
+        frame.ext.category = _Categorize(frame.ext.source_path)
+        frame.ext.categorized = True
+      if frame.ext.category:
+        return frame.ext.category
+      frame = frame.parent
+    return None
+
+  for process in trace.processes:
+    for dump in process.memory_dumps:
+      for profile in dump.profiles:
+        def _CategoryKey(entry):
+          category = _GetCategory(
+              process.stack_frame_map.frame_by_id[entry.stack_frame_id])
+          category_id = 0 if category is None \
+                        else process.type_name_map.AddType(category)
+          return HeapProfile.EntryKey(entry.stack_frame_id, category_id)
+
+        profile.MergeEntries(_CategoryKey)
+
+
+def FormatSize(size_bytes, show_sign=False):
+  # Adapted from SO answer: http://goo.gl/Xb0mYx
+  sign = ''
+  if size_bytes < 0:
+    size_bytes = -size_bytes
+    sign = '-'
+  elif show_sign:
+    sign = '+'
+
+  if size_bytes == 1:
+    # because I really hate unnecessary plurals
+    return "%s1 byte" % sign
+
+  suffixes_table = [
+      ('bytes', 0),
+      ('KiB', 0),
+      ('MiB', 1),
+      ('GiB', 2),
+      ('TiB', 2),
+      ('PiB', 2)]
+
+  num = float(size_bytes)
+  for suffix, precision in suffixes_table:
+    if num < 1024.0:
+        break
+    num /= 1024.0
+
+  if precision == 0:
+    formatted_size = "%d" % num
+  else:
+    formatted_size = str(round(num, ndigits=precision))
+
+  if formatted_size == '0':
+    sign = ''
+
+  return "%s%s %s" % (sign, formatted_size, suffix)
+
+
+WEBTREEMAP_HTML_TEMPLATE = (
+    '<!DOCTYPE html>'
+    '<title>$TITLE$</title>'
+    '<link rel=stylesheet href='
+        '"https://cdn.rawgit.com/evmar/webtreemap/gh-pages/webtreemap.css"/>'
+    '<style>'
+    'body {'
+      'font-family: sans-serif;'
+      'font-size: 0.8em;'
+      'margin: 0em;'
+    '}'
+    '#map {'
+      'width: 100%;'
+      'height: 100%;'
+      'position: absolute;'
+      'cursor: pointer;'
+      '-webkit-user-select: none;'
+    '}'
+    '</style>'
+    '<center><p>Click on a box to zoom in. '
+        'Click on the outermost box to zoom out.</p></center>'
+    '<div id="map"></div>'
+    '<script src='
+        '"https://cdn.rawgit.com/evmar/webtreemap/gh-pages/webtreemap.js">'
+    '</script>'
+    '<script>'
+    'var map = document.getElementById("map");'
+    'appendTreemap(map, $TREEMAP$);'
+    '</script>'
+)
+
+def GenerateWebTreeMap(trace, base_path):
+  print('Generating WebTreeMaps...')
+
+  class _TreeNode(object):
+    def __init__(self):
+      self.total_size = 0
+      self.size = 0
+      self.child_by_name = collections.defaultdict(_TreeNode)
+
+    def UpdateTotalSize(self):
+      total_size = self.size
+      for child in six.itervalues(self.child_by_name):
+        child.UpdateTotalSize()
+        total_size += child.total_size
+      self.total_size = total_size
+
+    def GetChildForPath(node, path):
+      for name in path:
+        node = node.child_by_name[name]
+      return node
+
+    def GenerateTreeMap(self, name):
+      child_trees = []
+      for child_name, child in six.iteritems(self.child_by_name):
+        child_trees.append(child.GenerateTreeMap(child_name))
+      return {
+          'data': {'$area': self.total_size},
+          'name': '{} ({})'.format(name, FormatSize(self.total_size)),
+          'children': child_trees
+      }
+
+  for process in trace.processes:
+    for dump_index, dump in enumerate(process.memory_dumps):
+      for profile in dump.profiles:
+        root = _TreeNode()
+        for entry in profile.entries:
+          category = process.type_name_map.name_by_id[entry.type_name_id]
+          if category:
+            node = root.GetChildForPath(category.split('/'))
+            # Add function as leaf node
+            frame = process.stack_frame_map.frame_by_id[entry.stack_frame_id]
+            while frame is not None:
+              if frame.ext.category:
+                node = node.GetChildForPath([frame.name])
+                break
+              frame = frame.parent
+            node.size += entry.size
+
+        root.UpdateTotalSize()
+
+        output_path = '{}-#{}-{}-{}.html'.format(
+            base_path, dump_index, process.unique_name, profile.allocator_name)
+
+        print('  Writing {}'.format(output_path))
+        with open(output_path, 'w') as output_file:
+          title = '{} / {}'.format(process.unique_name, profile.allocator_name)
+          treemap = root.GenerateTreeMap('/')
+          html = WEBTREEMAP_HTML_TEMPLATE.\
+            replace('$TITLE$', title).\
+            replace('$TREEMAP$', json.dumps(treemap))
+          output_file.write(html)
+
+
+def OpenTraceFile(file_path, mode):
+  if file_path.endswith('.gz'):
+    return gzip.open(file_path, mode + 'b')
+  else:
+    return open(file_path, mode + 't')
+
+
+# Suffix used for backup files.
+BACKUP_FILE_TAG = '.BACKUP'
+
+def main():
+  class MultilineHelpFormatter(argparse.HelpFormatter):
+    def _split_lines(self, text, width):
+      extra_lines = []
+      if '\n' in text:
+        lines = text.splitlines()
+        text = lines[0]
+        extra_lines = lines[1:]
+      return super(MultilineHelpFormatter, self)._split_lines(text, width) + \
+             extra_lines
+
+  parser = argparse.ArgumentParser(formatter_class=MultilineHelpFormatter)
+  parser.add_argument(
+      'file',
+      help='Trace file to symbolize (.json or .json.gz)')
+
+  parser.add_argument(
+      '--no-backup', dest='backup', default='true', action='store_false',
+      help="Don't create {} files".format(BACKUP_FILE_TAG))
+
+  parser.add_argument(
+      '--output-directory',
+      help='The path to the build output directory, such as out/Debug.')
+
+  # Arguments below are not applicable to trace files with heap dumps
+  # in legacy format.
+
+  parser.add_argument(
+      '--collapse-threshold', type=int, default=0,
+      help=('Collapse stack branches smaller than then value (in bytes).'
+            'Default is 0.'))
+
+  parser.add_argument(
+      '--categorize', action='store_true',
+      help='Categorize allocations based on backtrace source paths.')
+
+  parser.add_argument(
+      '--trivial-path-list', dest='trivial_paths', nargs='+',
+      default=TRIVIAL_PATHS,
+      help=('List of source paths to skip during categorization. By default '
+            'the following paths are skipped:\n' +
+            '\n'.join('  ' + s for s in TRIVIAL_PATHS)))
+
+  parser.add_argument(
+      '--trivial-path', dest='extra_trivial_paths', default=[], action='append',
+      help=('Extra source path to skip during categorization. Can be '
+            'specified multiple times.'))
+
+  parser.add_argument(
+      '--category-slice', type=int, default=0,
+      help=('Number of path components to use for categorization.'
+            ' Default is 0, which uses all components.'))
+
+  parser.add_argument(
+      '--treemap',
+      action='store_true',
+      help='Generate Treemap HTMLs.')
+
+  symbolizer = Symbolizer()
+  if symbolizer.symbolizer_path is None:
+    sys.exit("Can't symbolize - no %s in PATH." % symbolizer.binary)
+
+  options = parser.parse_args()
+
+  trace_file_path = options.file
+
+  print('Reading trace file...')
+  with OpenTraceFile(trace_file_path, 'r') as trace_file:
+    trace = Trace(json.load(trace_file))
+
+  if (trace.heap_dump_version == Trace.HEAP_DUMP_VERSION_LEGACY and (
+      options.categorize or options.treemap or
+      options.collapse_threshold != 0)):
+    parser.error(
+        "The trace's heap data is in legacy format - categorization, "
+        'Treemap generation, and collapsing of stack branches are not '
+        'supported.')
+
+  Symbolize(options, trace, symbolizer)
+  if options.categorize:
+    Categorize(options, trace)
+  if options.treemap:
+    GenerateWebTreeMap(trace, trace_file_path)
+
+  if trace.modified:
+    trace.ApplyModifications()
+
+    if options.backup:
+      backup_file_path = trace_file_path + BACKUP_FILE_TAG
+      if os.path.exists(backup_file_path):
+        for i in itertools.count(1):
+          unique_file_path = '{}{}'.format(backup_file_path, i)
+          if not os.path.exists(unique_file_path):
+            backup_file_path = unique_file_path
+            break
+      print('Backing up trace file to {}'.format(backup_file_path))
+      os.rename(trace_file_path, backup_file_path)
+
+    print('Updating the trace file...')
+    with OpenTraceFile(trace_file_path, 'w') as trace_file:
+      json.dump(trace.Serialize(), trace_file)
+  else:
+    print('No modifications were made - not updating the trace file.')
+
+
+if __name__ == '__main__':
+  main()

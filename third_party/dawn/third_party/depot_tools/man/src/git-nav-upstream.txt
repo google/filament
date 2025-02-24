@@ -1,0 +1,39 @@
+git-nav-upstream(1)
+=====================
+
+NAME
+----
+git-nav-upstream -
+include::_git-nav-upstream_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git nav-upstream'
+
+DESCRIPTION
+-----------
+
+'git-nav-upstream' takes the current branch, finds it\'s upstream branch, and
+checks that out.
+
+EXAMPLE
+-------
+demo:1[]
+1. Note that being in a 'detached HEAD' state is OK. You'll just want to create
+a linkgit:git-new-branch[1] from here.
+
+include::_aliases.txt[]
+
+----
+[alias]
+  up = nav-upstream
+----
+
+SEE ALSO
+--------
+linkgit:git-map-branches[1], linkgit:git-nav-downstream[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

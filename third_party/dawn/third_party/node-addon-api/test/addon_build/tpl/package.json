@@ -1,0 +1,11 @@
+{
+  "name": "addon",
+  "version": "0.0.0",
+  "description": "Node.js addon",
+  "private": true,
+  "scripts": {},
+  "dependencies": {
+    "node-addon-api": "file:../../../../"
+  },
+  "gypfile": true
+}

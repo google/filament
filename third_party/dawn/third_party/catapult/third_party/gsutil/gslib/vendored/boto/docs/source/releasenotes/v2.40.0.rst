@@ -1,0 +1,15 @@
+boto v2.40.0
+===========
+
+:date: 2016/04/28
+
+Fixes several bugs.
+
+Changes
+-------
+* ryansydnor-s3:   Allow s3 bucket lifecycle policies with multiple transitions (:sha:`c6d5af3`)
+* Fixes upload parts for glacier (:issue:`3524`, :sha:`d1973a4`)
+* pslawski-unicode-parse-qs:   Move utility functions over to compat   Add S3 integ test for non-ascii keys with sigv4   Fix quoting of tilde in S3 canonical_uri for sigv4   Parse unicode query string properly in Python 2 (:issue:`2844`, :sha:`5092c6d`)
+* ninchat-config-fix:   Add __setstate__ to fix pickling test fail   Add unit tests for config parsing   Don't access parser through __dict__   Config: Catch specific exceptions when wrapping ConfigParser methods   Config: Don't inherit from ConfigParser (:issue:`3474`, :sha:`c21aa54`)
+
+

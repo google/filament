@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/related_events.html">
+
+<dom-module id='tr-ui-a-multi-thread-slice-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    #content {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    #content > tr-ui-a-related-events {
+      margin-left: 8px;
+      flex: 0 1 200px;
+    }
+    </style>
+    <div id="content"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-thread-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.selection_ = undefined;
+  },
+
+  get selection() {
+    return this.selection_;
+  },
+
+  set selection(selection) {
+    this.selection_ = selection;
+
+    // TODO(nduca): This is a gross hack for cc Frame Viewer, but its only
+    // the frame viewer that needs this feature, so ~shrug~.
+    // We check for its presence so that we do not have a hard dependency
+    // on frame viewer.
+    if (tr.isExported('tr.ui.e.chrome.cc.RasterTaskSelection')) {
+      if (tr.ui.e.chrome.cc.RasterTaskSelection.supports(selection)) {
+        const ltvSelection = new tr.ui.e.chrome.cc.RasterTaskSelection(
+            selection);
+
+        const ltv = new tr.ui.e.chrome.cc.LayerTreeHostImplSnapshotView();
+        ltv.objectSnapshot = ltvSelection.containingSnapshot;
+        ltv.selection = ltvSelection;
+        ltv.extraHighlightsByLayerId = ltvSelection.extraHighlightsByLayerId;
+
+        Polymer.dom(this.$.content).textContent = '';
+        Polymer.dom(this.$.content).appendChild(ltv);
+
+        this.requiresTallView_ = true;
+        return;
+      }
+    }
+
+    Polymer.dom(this.$.content).textContent = '';
+
+    const mesv = document.createElement('tr-ui-a-multi-event-sub-view');
+    mesv.selection = selection;
+    Polymer.dom(this.$.content).appendChild(mesv);
+
+    const relatedEvents = document.createElement('tr-ui-a-related-events');
+    relatedEvents.setRelatedEvents(selection);
+
+    if (relatedEvents.hasRelatedEvents()) {
+      Polymer.dom(this.$.content).appendChild(relatedEvents);
+    }
+  },
+
+  get requiresTallView() {
+    if (this.$.content.children.length === 0) return false;
+    const childTagName = this.$.content.children[0].tagName;
+    if (childTagName === 'TR-UI-A-MULTI-EVENT-SUB-VIEW') {
+      return false;
+    }
+
+    // Using raster task view.
+    return true;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-multi-thread-slice-sub-view',
+    tr.model.ThreadSlice,
+    {
+      multi: true,
+      title: 'Slices',
+    });
+</script>

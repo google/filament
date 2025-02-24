@@ -1,0 +1,43 @@
+Behold, mortal, the origins of Beautiful Soup...
+================================================
+
+Leonard Richardson is the primary programmer.
+
+Aaron DeVore is awesome.
+
+Mark Pilgrim provided the encoding detection code that forms the base
+of UnicodeDammit.
+
+Thomas Kluyver and Ezio Melotti finished the work of getting Beautiful
+Soup 4 working under Python 3.
+
+Simon Willison wrote soupselect, which was used to make Beautiful Soup
+support CSS selectors.
+
+Sam Ruby helped with a lot of edge cases.
+
+Jonathan Ellis was awarded the prestigous Beau Potage D'Or for his
+work in solving the nestable tags conundrum.
+
+An incomplete list of people have contributed patches to Beautiful
+Soup:
+
+ Istvan Albert, Andrew Lin, Anthony Baxter, Andrew Boyko, Tony Chang,
+ Zephyr Fang, Fuzzy, Roman Gaufman, Yoni Gilad, Richie Hindle, Peteris
+ Krumins, Kent Johnson, Ben Last, Robert Leftwich, Staffan Malmgren,
+ Ksenia Marasanova, JP Moins, Adam Monsen, John Nagle, "Jon", Ed
+ Oskiewicz, Greg Phillips, Giles Radford, Arthur Rudolph, Marko
+ Samastur, Jouni Seppänen, Alexander Schmolck, Andy Theyers, Glyn
+ Webster, Paul Wright, Danny Yoo
+
+An incomplete list of people who made suggestions or found bugs or
+found ways to break Beautiful Soup:
+
+ Hanno Böck, Matteo Bertini, Chris Curvey, Simon Cusack, Bruce Eckel,
+ Matt Ernst, Michael Foord, Tom Harris, Bill de hOra, Donald Howes,
+ Matt Patterson, Scott Roberts, Steve Strassmann, Mike Williams,
+ warchild at redho dot com, Sami Kuisma, Carlos Rocha, Bob Hutchison,
+ Joren Mc, Michal Migurski, John Kleven, Tim Heaney, Tripp Lilley, Ed
+ Summers, Dennis Sutch, Chris Smith, Aaron Sweep^W Swartz, Stuart
+ Turner, Greg Edwards, Kevin J Kalupson, Nikos Kouremenos, Artur de
+ Sousa Rocha, Yichun Wei, Per Vognsen

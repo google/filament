@@ -1,0 +1,466 @@
+Name
+
+    NV_conditional_render
+
+Name Strings
+
+    GL_NV_conditional_render
+
+Contact
+
+    Eric Werness, NVIDIA (ewerness 'at' nvidia.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         05/26/2014
+    NVIDIA Revision:            6
+
+Number
+
+    OpenGL Extension #346
+    OpenGL ES Extension #198
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    ARB_occlusion_query or OpenGL 1.5 is required in an OpenGL
+    implementation.
+
+    This extension interacts with NVX_conditional_render.
+
+    This extension interacts with ARB_occlusion_query2.
+
+    This extension interacts with ARB_ES3_compatibility.
+
+    This extension interacts trivially with the OpenGL compatibility profile.
+
+    This extension interacts with OpenGL 3.0, 3.2, 3.3, and 4.3
+
+    EXT_occlusion_query_boolean or OpenGL ES 3.0 is required in an OpenGL ES
+    implementation.
+
+    This extension interacts with EXT_occlusion_query_boolean.
+
+    This extension interacts with NV_occlusion_query_samples.
+
+    This extension interacts with OpenGL ES 3.0.
+
+Overview
+
+    This extension provides support for conditional rendering based on the
+    results of an occlusion query.  This mechanism allows an application to
+    potentially reduce the latency between the completion of an occlusion
+    query and the rendering commands depending on its result.  It additionally
+    allows the decision of whether to render to be made without application
+    intervention.
+
+    This extension defines two new functions, BeginConditionalRenderNV and
+    EndConditionalRenderNV, between which rendering commands may be discarded
+    based on the results of an occlusion query.  If the specified occlusion
+    query returns a non-zero value, rendering commands between these calls are
+    executed.  If the occlusion query returns a value of zero, all rendering
+    commands between the calls are discarded.
+
+    If the occlusion query results are not available when
+    BeginConditionalRenderNV is executed, the <mode> parameter specifies
+    whether the GL should wait for the query to complete or should simply
+    render the subsequent geometry unconditionally.
+
+    Additionally, the extension provides a set of "by region" modes, allowing
+    for implementations that divide rendering work by screen regions to
+    perform the conditional query test on a region-by-region basis without
+    checking the query results from other regions.  Such a mode is useful for
+    cases like split-frame SLI, where a frame is divided between multiple
+    GPUs, each of which has its own occlusion query hardware.
+
+
+New Procedures and Functions
+
+    void BeginConditionalRenderNV(uint id, enum mode);
+    void EndConditionalRenderNV(void);
+
+
+New Tokens
+
+    Accepted by the <mode> parameter of BeginConditionalRenderNV:
+
+        QUERY_WAIT_NV                                   0x8E13
+        QUERY_NO_WAIT_NV                                0x8E14
+        QUERY_BY_REGION_WAIT_NV                         0x8E15
+        QUERY_BY_REGION_NO_WAIT_NV                      0x8E16
+
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    (Incorporate the spec edits from the EXT_transform_feedback specification
+    that move the "Occlusion Queries" Section 4.1.7 -- to between Section 2.11,
+    Coordinate Transforms and Section 2.12, Clipping, and rename it to
+    "Asynchronous Queries".  Insert a new section immediately after the moved
+    "Asynchronous Queries" section.  If EXT_transform_feedback is incorporated,
+    this section should be inserted prior the the "Transform Feedback"
+    section.)
+
+    (also modify the BeginQuery language to disallow BeginQuery while the
+     query object is being used for conditional rendering)
+    ...
+    BeginQuery sets the active query object name for the query type given by
+    <target> to <id>.  If BeginQuery is called with an <id> of zero, if the
+    active query object name for <target> is non-zero, if <id> is the active
+    query object name for any query type, or if <id> is the active query
+    object for condtional rendering (Section 2.X), the error INVALID OPERATION
+    is generated.
+
+
+    Section 2.X, Conditional Rendering
+
+    Conditional rendering can be used to discard rendering commands based on
+    the result of an occlusion query.  Conditional rendering is started and
+    stopped using the commands
+
+        void BeginConditionalRenderNV(uint id, enum mode);
+        void EndConditionalRenderNV(void);
+
+    <id> specifies the name of an occlusion query object whose results are
+    used to determine if the rendering commands are discarded.  If the result
+    (SAMPLES_PASSED) of the query is zero, or if the result
+    (ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE) is false, all
+    rendering commands between BeginConditionalRenderNV and the corresponding
+    EndConditionalRenderNV are discarded.  In this case, Begin, End, all
+    vertex array commands performing an implicit Begin and End, DrawPixels
+    (section 3.6), Bitmap (section 3.7), Clear (section 4.2.3), Accum
+    (section 4.2.4), CopyPixels (section 4.3.3), EvalMesh1 and EvalMesh2
+    (section 5.1), BlitFramebuffer, ClearBuffer*, and DispatchCompute* have
+    no effect.
+
+    The effect of commands setting current vertex state (e.g., Color or
+    VertexAttrib) is undefined.  If the result (SAMPLES_PASSED) of the
+    query is non-zero, or if the result (ANY_SAMPLES_PASSED or
+    ANY_SAMPLES_PASSED_CONSERVATIVE) is true, such commands are not discarded.
+
+    <mode> specifies how BeginConditionalRenderNV interprets the results of
+    the occlusion query given by <id>.  If <mode> is QUERY_WAIT_NV, the GL
+    waits for the results of the query to be available and then uses the
+    results to determine if subsequent rendering commands are discarded.  If
+    <mode> is QUERY_NO_WAIT_NV, the GL may choose to unconditionally execute
+    the subsequent rendering commands without waiting for the query to
+    complete.
+
+    If <mode> is QUERY_BY_REGION_WAIT_NV, the GL will also wait for occlusion
+    query results and discard rendering commands if the result of the
+    occlusion query is zero.  If the query result is non-zero, subsequent
+    rendering commands are executed, but the GL may discard the results of the
+    commands for any region of the framebuffer that did not contribute to the
+    sample count in the specified occlusion query.  Any such discarding is
+    done in an implementation-dependent manner, but the rendering command
+    results may not be discarded for any samples that contributed to the
+    occlusion query sample count.  If <mode> is QUERY_BY_REGION_NO_WAIT_NV,
+    the GL operates as in QUERY_BY_REGION_WAIT_NV, but may choose to
+    unconditionally execute the subsequent rendering commands without waiting
+    for the query to complete.
+
+    If BeginConditionalRenderNV is called while conditional rendering is in
+    progress, or if EndConditionalRenderNV is called while conditional
+    rendering is not in progress, the error INVALID_OPERATION is generated.
+    The error INVALID_VALUE is generated if <id> is not the name of an
+    existing query object query.  The error INVALID_OPERATION is generated if
+    <id> is the name of a query object with a target other than
+    SAMPLES_PASSED, ANY_SAMPLES_PASSED, or ANY_SAMPLES_PASSED_CONSERVATIVE, or
+    if <id> is the name of a query currently in progress.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of
+    glXRender requests:
+
+        BeginConditionalRenderNV
+            2           12              rendering command length
+            2           348             rendering command opcode
+            4           CARD32          id
+            4           ENUM            mode
+
+        EndConditionalRenderNV
+            2           4               rendering command length
+            2           349             rendering command opcode
+
+Dependencies on NVX_conditional_render
+
+    NVX_conditional_render was an early version of this extension.  This
+    extension provides several conditional rendering modes (QUERY_WAIT_NV,
+    QUERY_NO_WAIT_NV, QUERY_BY_REGION_WAIT_NV, QUERY_BY_REGION_NO_WAIT_NV) not
+    present in the NVX extension.  The NVX extension's commands:
+
+      glBeginConditionalRenderNVX(id);
+      glEndConditionalRenderNVX();
+
+    are equivalent to the following commands from this extension:
+
+      glBeginConditionalRenderNV(id, QUERY_WAIT_NV);
+      glEndConditionalRenderNV();
+
+Dependencies on ARB_occlusion_query2 and OpenGL 3.3
+
+    If ARB_occlusion_query2 or OpenGL 3.3 is not supported in an OpenGL
+    implementation, ignore references to the ANY_SAMPLES_PASSED query type.
+
+Dependencies on ARB_ES3_compatibility and OpenGL 4.3
+
+    If ARB_ES3_compatibility or OpenGL 4.3 is not supported in an OpenGL
+    implementation, ignore references to the ANY_SAMPLES_PASSED_CONSERVATIVE
+    query type.
+
+Dependencies on the OpenGL compatibility profile
+
+    In contexts which support the core profile only (for GL) or OpenGL ES,
+    ignore references to the following commands: Begin, End, DrawPixels,
+    Bitmap, Accum, Color, CopyPixels, EvalMesh1 and EvalMesh2.
+
+Dependencies on OpenGL 3.0 and OpenGL ES 3.0
+
+    If OpenGL 3.0 or OpenGL ES 3.0 is not supported, ignore references to
+    the BlitFramebuffer and ClearBuffer* commands, unless provided by
+    other extensions.
+
+Dependencies on OpenGL 4.3 and OpenGL ES 3.1
+
+    If OpenGL 4.3 or OpenGL ES 3.1 is not supported, ignore references to
+    DispatchCompute* commands.
+
+Dependencies on EXT_occlusion_query_boolean and OpenGL ES 3.0
+
+    In an OpenGL ES implementation, if OpenGL ES 3.0 is not supported
+    replace references to query functionality in OpenGL ES 3.0 with
+    the query functionality provided by EXT_occlusion_query_boolean.
+
+Dependencies on NV_occlusion_query_samples
+
+    If NV_occlusion_query_samples is not supported in an OpenGL ES
+    implementation, ignore all references to SAMPLES_PASSED.
+
+    If NV_occlusion_query_samples is supported, replaces references to
+    SAMPLES_PASSED with SAMPLES_PASSED_NV.
+
+Errors
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNV if a previous
+    BeginConditionalRenderNV command has been executed without a
+    corresponding EndConditionalRenderNV command.
+
+    INVALID_OPERATION is generated by EndConditionalRenderNV if no
+    corresponding BeginConditionalRenderNV command has been executed.
+
+    INVALID_VALUE is generated by BeginConditionalRenderNV if <id> is not the
+    name of an existing occlusion query object.
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNV if <id> is the
+    name of a query object with a <target> other than SAMPLES_PASSED,
+    ANY_SAMPLES_PASSED, or ANY_SAMPLES_PASSED_CONSERVATIVE.
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNV if the query
+    identified by <id> is still in progress.
+
+Issues
+
+    (1) How should rendering commands other than "normal" Begin/End-style
+    geometry be affected by conditional rendering?
+
+      RESOLVED:  All rendering commands (DrawPixels, Bitmap, Clear, Accum,
+      etc...) are performed conditionally.
+
+    (2) What does NO_WAIT do, and why would anyone care?
+
+      RESOLVED:  Hardware OpenGL implementations are heavily pipelined.  After
+      vertices are transformed, they are assembled into primitives and
+      rasterized.  While a GPU is rasterizing a primitive, it may be
+      simultaneously transforming the vertices of the next primitive provided
+      to the GL.  At the same time, the CPU may be preparing hardware commands
+      to process primitives following that one.
+
+      Conditional rendering uses the results of rasterizing one primitive (an
+      occlusion query) to determine whether it will process subsequent ones.
+      In a pipelined implementation, the initial set of primitives may not be
+      finished drawing by the time the GL needs the occlusion query results.
+      Waiting for the query results will leave portions of the GPU temporarily
+      idle.  It may be preferable to avoid the idle time by proceeding with a
+      conservative assumption that the primitives rendered during the
+      occlusion query will hit at least one sample.  The NO_WAIT <mode>
+      parameter tells the driver move ahead in that case.
+
+      For best performance, applications should attempt to insert some amount
+      of non-dependent rendering between an occlusion query and the
+      conditionally-rendered primitives that depend on the query result.
+
+    (3) What does BY_REGION do, and why should anyone care?
+
+      RESOLVED:  Conditional rendering may be used for a variety of effects.
+      Some of these use conditional rendering only for performance.  One
+      common use would be to draw a bounding box for a primitive
+      unconditionally with an occlusion query active, and then conditionally
+      execute a DrawElements call to draw the full (complex) primitive.  If
+      the bounding box is not visible, any work needed to process the full
+      primitive can be skipped in the conditional rendering pass.
+
+      In a split-screen SLI implementation, one GPU might draw the top half of
+      the scene while a second might draw the bottom half.  The results of the
+      occlusion query would normally be obtained by combining individual
+      occlusion query results from each half of the screen.  However, it is
+      not necessary to do this for the bounding box algorithm.  We could skip
+      this synchronization point, and each region could instead use only its
+      local occlusion query results.  If the bounding box hits only the bottom
+      half of the screen, the complex primitive need not be drawn on the top
+      half, because that portion is known not to be visible.  The bottom half
+      would still be drawn, but the GPU used for the top half could skip it
+      and start drawing the next primitive specified.  The
+      QUERY_BY_REGION_*_NV modes would be useful in that case.
+
+      However, some algorithms may require conditional rendering for
+      correctness.  For example, an application may want to render a
+      post-processing effect that should be drawn if and only if a point is
+      visible in the scene.  Drawing only half of such an effect due to
+      BY_REGION tests would not be desirable.
+
+      For QUERY_BY_REGION_NO_WAIT_NV, we expect that GL implementations using
+      region-based rendering will discard rendering commands in any region
+      where query results are available and the region's sample count is zero.
+      Rendering would proceed normally in all other regions.  The spec
+      language doesn't require such behavior, however.
+
+    (4) Should the <mode> parameter passed to BeginConditionalRenderNV be
+    specified as a hint instead?
+
+      RESOLVED:  The "wait" or "don't wait" portion of the <mode> parameter
+      could be a hint.  But it doesn't fit nicely with the FASTEST or NICEST
+      values that are normally passed to Hint.  Providing this functionality
+      via a <mode> parameter to BeginConditionalRenderNV seems to make the
+      most sense.  Note that the <mode> parameter is specified such that
+      QUERY_NO_WAIT_NV can be implemented as though QUERY_WAIT_NV were
+      specified, which makes the "NO_WAIT" part of the mode a hint.
+
+      The "BY_REGION" part is also effectively a hint.  These modes may be
+      implemented as though the equivalent non-BY_REGION mode were provided.
+      Many OpenGL implementations will do all of their processing in a single
+      region.
+
+    (5) What happens if BeginQuery is called while the specified occlusion
+    query is begin used for conditional rendering?
+
+      RESOLVED:  An INVALID_OPERATION error is generated.
+
+    (6) Should conditional rendering work with any type of query other than
+    SAMPLES_PASSED (occlusion)?
+
+      RESOLVED:  Not in this extension.  The spec currently requires that <id>
+      be the name of an occlusion query.  There might be other query types
+      where such an operation would make sense, but there aren't any in the
+      current OpenGL spec.
+
+    (7) What is the effect on current state for immediate mode attribute calls
+    (e.g., Color, VertexAttrib) made during conditional rendering if the
+    corresponding occlusion query failed?
+
+      RESOLVED:  The effect of these calls is undefined.  If subsequent
+      primitives depend on a vertex attribute set inside a conditional
+      rendering block, and application should re-send the values after
+      EndConditionalRenderNV.
+
+    (8) Should we provide any new query object types for conditional
+    rendering?
+
+      RESOLVED:  No.  It may be useful to some GL implementations to provide
+      an occlusion query type that only returns "zero" or "non-zero", or to
+      provide a query type that is used only for conditional rendering but
+      doesn't have to maintain results that can be returned to the
+      application.  However, performing conditional rendering using only the
+      occlusion query mechanisms already in core OpenGL is sufficient for
+      the platforms targeted by this extension.
+
+   (9) What happens if QUERY_BY_REGION_* is used, and the application switches
+   between windows or FBOs between the occlusion query and conditional
+   rendering blocks?  The "regions" used for the two operations may not be
+   identical.
+
+     RESOLVED:  The spec language doesn't specifically address this issue, and
+     implementations may choose to define regions arbitrarily in this case.
+
+     We strongly recommend that applications using QUERY_BY_REGION_* should
+     not change windows or FBO configuration between the occlusion query and
+     the dependent rendering.
+
+
+Usage Example
+
+    GLuint queryID = 0x12345678;
+
+    // Use an occlusion query while rendering the bounding box of the real
+    // object.
+    glBeginQuery(GL_SAMPLES_PASSED, queryID);
+       drawBoundingBox();
+    glEndQuery(GL_SAMPLES_PASSED);
+
+    // Do some unrelated rendering in hope that the query result will be
+    // available by the time we call glBeginConditionalRenderNV.
+
+    // Now conditionally render the real object if any portion of its
+    // bounding box is visible.
+    glBeginConditionalRenderNV(queryID, GL_QUERY_WAIT_NV);
+       drawComplicatedObject();
+    glEndConditionalRenderNV();
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+     6    05/26/14  dkoch     Add interactions with later GL extensions and
+                              core versions.
+                              Add interactions with OpenGL ES extensions
+                              and versions.
+
+     5    08/07/12  pbrown    Fix minor typos; added interaction with the
+                              older NVX_conditional_render extension.
+
+     4    09/22/10  srahman   Added GLX protocol.
+
+     3    02/19/08  pbrown    Document the INVALID_OPERATION error from
+                              calling BeginQuery while the query is used
+                              for conditional rendering in the spec body.
+
+     2    11/29/07  ewerness  First public release
+
+     1                        Internal revisions

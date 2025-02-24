@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="nav-bar">
+  <template>
+    <style>
+      #navbar {
+        width: 100%;
+      }
+
+      #navbar ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        font-size: 100%;
+        font: inherit;
+        vertical-align: baseline;
+        z-index: var(--layer-highlights);
+        margin-left: -10px; /* Ignore body's padding left. */
+        padding-right: 20px; /* Ignore body's padding right. */
+      }
+
+      #navbar > ul {
+        display: flex;
+        width: 100%;
+        background-color: #2D2D2D;
+        border-bottom: black;
+      }
+
+      #navbar li {
+        padding: 6px 10px;
+      }
+
+      #navbar li > a {
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      #demo {
+        display: none;
+        background-color: #0f0;
+      }
+
+      #navbar > ul > li, #navbar > ul > li > a {
+        color: #ddd;
+        font-weight: bold;
+      }
+
+      /* The addition of the icons to the <iron-icon> elements to the submenus
+       * makes the submenu title text lower; the below style rule is intended
+       * to align the other menu items. */
+      #navbar .menu > li a {
+        display: inline-block;
+        padding-top: 3px;
+      }
+
+      #navbar .submenu li, #navbar .submenu a {
+        color: #ddd;
+        font-weight: normal;
+      }
+
+      /* This is a spacer in the navbar list that pushes the items after it
+       * all the way to the right side. */
+      .spacer {
+        flex: 100;
+      }
+
+      #navbar .menu li:hover > ul {
+        margin-top: 6px;
+        background-color: #2D2D2D;
+        border: 1px solid rgba(0, 0, 0, .2);
+      }
+
+      #navbar li:hover, #navbar a:hover {
+        color: white;
+      }
+
+      #navbar .menu-drop-arrow {
+        border-top-color: #aaa;
+        position: relative;
+        top: -1px;
+        border-style: solid dashed dashed;
+        border-color: transparent;
+        border-top-color: #c0c0c0;
+        display: -moz-inline-box;
+        display: inline-block;
+        font-size: 0;
+        height: 0;
+        line-height: 0;
+        width: 0;
+        border-width: 3px 3px 0;
+        padding-top: 1px;
+        left: 4px;
+      }
+
+      /* Basic select menus. */
+      .menu ul {
+        display: none;
+      }
+
+      .menu li:hover > ul {
+        display: block;
+        position: absolute;
+      }
+
+      .report-issue {
+        color: #dd4b39 !important;
+      }
+    </style>
+
+    <nav id="navbar">
+      <ul class="menu">
+        <li id="demo">Demo!</li>
+        <li><a href="/">Home</a></li>
+        <li><a href="/alerts">Alerts</a></li>
+        <li><a href="/report">Browse Graphs</a></li>
+        <li><a href="https://code.google.com/p/chromium/issues/list?q=label%3AType-Bug-Regression+label%3APerformance%20-label%3ADoNotNotify&amp;sort=-id"
+               target="_blank">Perf Bugs</a></li>
+        <li>Other Pages<iron-icon icon="arrow-drop-down"></iron-icon>
+          <ul class="submenu">
+            <li><a href="https://g3doc.corp.google.com/company/teams/chrome/ops/core_infra/speed_tooling/chromeperf-datalab.md?cl=head">Debug Alert</a></li>
+            <li><a href="/migrate_test_names" target="_blank">Migrate Test Names</a></li>
+          </ul>
+        </li>
+        <li>Waterfalls<iron-icon icon="arrow-drop-down"></iron-icon>
+          <ul class="submenu">
+            <li><a href="https://ci.chromium.org/p/chrome/g/chrome.perf/console?show_events=true&failures_only=true&reload=120"
+                   target="_blank">chrome.perf</a></li>
+            <li><a href="https://chrome-swarming.appspot.com/botlist?c=id&c=task&c=os&c=status&d=asc&f=pool%3Achrome.tests.pinpoint&k=pool&s=id"
+                   target="_blank">Bisect bots</a></li>
+          </ul>
+        </li>
+        <li>Help<iron-icon icon="arrow-drop-down"></iron-icon>
+          <ul class="submenu">
+            <li><a href="https://github.com/catapult-project/catapult/blob/master/dashboard/README.md"
+                   target="_blank">Perf Dashboard Public Documentation</a></li>
+            <li><a href="https://github.com/catapult-project/catapult/blob/master/dashboard/docs/pages-and-endpoints.md"
+                   target="_blank">Documented Endpoints</a></li>
+            <li><a href="https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md"
+                   target="_blank">About Chromium Perf Sheriffing</a></li>
+            <li><a href="https://chromium.googlesource.com/chromium/src/+/master/docs/speed/bisects.md"
+                   target="_blank">Bisecting Performance Regressions</a></li>
+            <li><a href="https://docs.google.com/spreadsheets/d/1bOBt4-0JdAomF35jEhuI1gAEVTJK-GPjXhZsIbzetAg"
+                   target="_blank">Benchmark Owners Spreadsheet</a></li>
+          </ul>
+        </li>
+
+        <template is="dom-if" if="{{isAdmin}}">
+          <li>Admin<iron-icon icon="arrow-drop-down"></iron-icon>
+            <ul class="submenu">
+              <li><a href="/edit_site_config" target="_blank">Edit Site Config</a></li>
+            </ul>
+          </li>
+        </template>
+
+        <li class="spacer"></li>
+        <li><a href$="{{loginUrl}}" title="switch user">{{displayUsername}}</a></li>
+      </ul>
+    </nav>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'nav-bar',
+  ready() {
+    simple_xhr.send('/navbar',
+        {'path': location.pathname + location.search},
+        function(response) {
+          this.loginUrl = response.login_url;
+          this.displayUsername = response.display_username;
+          this.isAdmin = response.is_admin;
+          if (window.METRICS) {
+            METRICS.signedIn = this.displayUsername.includes('@');
+          }
+        }.bind(this));
+
+    if (window.location.hostname !== 'chromeperf.appspot.com') {
+      this.$.demo.style.display = 'list-item';
+      this.$.demo.style.color = 'black';
+      window.document.body.style.border = '3px solid #0f0';
+    }
+  }
+});
+</script>

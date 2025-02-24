@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<dom-module id='tr-ui-e-chrome-codesearch'>
+  <template>
+    <style>
+      :host {
+        white-space: nowrap;
+      }
+      #codesearchLink {
+        font-size: x-small;
+        margin-left: 20px;
+        text-decoration: none;
+      }
+    </style>
+    <a id="codesearchLink" target=_blank on-click="onClick">&#x1F50D;</a>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome', function() {
+  Polymer({
+    is: 'tr-ui-e-chrome-codesearch',
+
+    set searchPhrase(phrase) {
+      const link = Polymer.dom(this.$.codesearchLink);
+      const codeSearchURL =
+        'https://cs.chromium.org/search/?sq=package:chromium&type=cs&q=';
+      link.setAttribute('href', codeSearchURL + encodeURIComponent(phrase));
+    },
+
+    onClick(clickEvent) {
+      // Let the event trigger the default action of following the link. Stop
+      // the propagation of the event here, so that subsequent handlers do not
+      // intercept the clicks.
+      clickEvent.stopPropagation();
+    }
+  });
+
+  return {};
+});
+</script>

@@ -1,0 +1,60 @@
+===========
+boto v2.4.0
+===========
+
+The 2.4.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.3.0 release
+and the 2.4.0 release at https://github.com/boto/boto/compare/2.3.0...2.4.0.
+
+This release includes:
+
+* Initial support for Amazon Cloudsearch Service.
+* Support for Amazon's Marketplace Web Service.
+* Latency-based routing for Route53
+* Support for new domain verification features of SES.
+* A full rewrite of the FPS module.
+* Support for BatchWriteItem in DynamoDB.
+* Additional EMR steps for installing and running Pig scripts.
+* Support for additional batch operations in SQS.
+* Better support for VPC group-ids.
+* Many, many bugfixes from the community.  Thanks for the reports and pull
+  requests!
+
+There were 175 commits in this release from 32 different authors.  The authors
+are listed below, in no particular order:
+
+* estebistec
+* tpodowd
+* Max Noel
+* garnaat
+* mfschwartz
+* jtriley
+* akoumjian
+* jreese
+* mulka
+* Nuutti Kotivuori
+* mboersma
+* ryansb
+* dampier
+* crschmidt
+* nithint
+* sievlev
+* eckamm
+* imlucas
+* disruptek
+* trevorsummerssmith
+* tmorgan
+* evanworley
+* iandanforth
+* oozie
+* aedeph
+* alexanderdean
+* abrinsmead
+* dlecocq
+* bsimpson63
+* jamesls
+* cosmin
+* gtaylor

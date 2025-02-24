@@ -1,0 +1,207 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+
+# gn_isolate_map.pyl - A mapping of Ninja build target names to GN labels and
+# test type classifications for the tests that are run on the bots.
+#
+# This mapping is used by MB so that we can uniformly refer to test binaries
+# by their Ninja target names in the recipes and not need to worry about how
+# they are referred to in GN or GYP specifically (the GYP target name is pretty
+# much always the same as the Ninja target name, since GYP target names are not
+# hierarchical).
+
+# TODO(crbug.com/816629): Remove the need for this file altogether :). Also,
+# see the canonical Chromium copy:
+# https://chromium.googlesource.com/chromium/src/+/refs/heads/main/testing/buildbot/gn_isolate_map.pyl
+
+{
+  "angle_apks": {
+    "label": "//:angle_apks",
+    "type": "additional_compile_target",
+  },
+  "angle_capture_tests": {
+    "label": "//src/tests:angle_capture_tests",
+    "script": "//src/tests/capture_tests/capture_tests.py",
+    "type": "script",
+  },
+  "angle_oclcts_api": {
+    "label": "//src/tests:angle_oclcts_api",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_basic": {
+    "label": "//src/tests:angle_oclcts_basic",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_bruteforce": {
+    "label": "//src/tests:angle_oclcts_bruteforce",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_buffers": {
+    "label": "//src/tests:angle_oclcts_buffers",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_cl_copy_images": {
+    "label": "//src/tests:angle_oclcts_cl_copy_images",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_cl_fill_images": {
+    "label": "//src/tests:angle_oclcts_cl_fill_images",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_cl_get_info": {
+    "label": "//src/tests:angle_oclcts_cl_get_info",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_compiler": {
+    "label": "//src/tests:angle_oclcts_compiler",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_events": {
+    "label": "//src/tests:angle_oclcts_events",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_multiples": {
+    "label": "//src/tests:angle_oclcts_multiples",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_profiling": {
+    "label": "//src/tests:angle_oclcts_profiling",
+    "type": "windowed_test_launcher",
+  },
+  "angle_oclcts_non_uniform_work_group": {
+    "label": "//src/tests:angle_oclcts_non_uniform_work_group",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_egl_tests": {
+    "label": "//src/tests:angle_deqp_egl_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles2_tests": {
+    "label": "//src/tests:angle_deqp_gles2_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_tests": {
+    "label": "//src/tests:angle_deqp_gles31_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_multisample_tests": {
+    "label": "//src/tests:angle_deqp_gles31_multisample_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_565_no_depth_no_stencil_tests": {
+    "label": "//src/tests:angle_deqp_gles31_565_no_depth_no_stencil_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_tests": {
+    "label": "//src/tests:angle_deqp_gles3_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_multisample_tests": {
+    "label": "//src/tests:angle_deqp_gles3_multisample_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_565_no_depth_no_stencil_tests": {
+    "label": "//src/tests:angle_deqp_gles3_565_no_depth_no_stencil_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_gles2_tests": {
+    "label": "//src/tests:angle_deqp_khr_gles2_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_gles3_tests": {
+    "label": "//src/tests:angle_deqp_khr_gles3_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_gles31_tests": {
+    "label": "//src/tests:angle_deqp_khr_gles31_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_gles32_tests": {
+    "label": "//src/tests:angle_deqp_khr_gles32_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_noctx_gles2_tests": {
+    "label": "//src/tests:angle_deqp_khr_noctx_gles2_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_noctx_gles32_tests": {
+    "label": "//src/tests:angle_deqp_khr_noctx_gles32_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_khr_single_gles32_tests": {
+    "label": "//src/tests:angle_deqp_khr_single_gles32_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_rotate180_tests": {
+    "label": "//src/tests:angle_deqp_gles3_rotate180_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_rotate270_tests": {
+    "label": "//src/tests:angle_deqp_gles3_rotate270_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles3_rotate90_tests": {
+    "label": "//src/tests:angle_deqp_gles3_rotate90_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_rotate180_tests": {
+    "label": "//src/tests:angle_deqp_gles31_rotate180_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_rotate270_tests": {
+    "label": "//src/tests:angle_deqp_gles31_rotate270_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_deqp_gles31_rotate90_tests": {
+    "label": "//src/tests:angle_deqp_gles31_rotate90_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_end2end_tests": {
+    "label": "//src/tests:angle_end2end_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_gles1_conformance_tests": {
+    "label": "//src/tests:angle_gles1_conformance_tests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_perftests": {
+    "label": "//src/tests:angle_perftests",
+    "script": "//src/tests/run_perf_tests.py",
+    "type": "script",
+  },
+  "angle_restricted_trace_gold_tests": {
+    "label": "//src/tests/restricted_traces:angle_restricted_trace_gold_tests",
+    "script": "//src/tests/restricted_traces/restricted_trace_gold_tests.py",
+    "type": "script",
+  },
+  "angle_trace_interpreter_tests": {
+    "label": "//src/tests:angle_trace_interpreter_tests",
+    "script": "//src/tests/restricted_traces/retrace_restricted_traces.py",
+    "type": "script",
+  },
+  "angle_trace_perf_tests": {
+    "label": "//src/tests:angle_trace_perf_tests",
+    "script": "//src/tests/run_perf_tests.py",
+    "type": "script",
+  },
+  "angle_unittests": {
+    "label": "//src/tests:angle_unittests",
+    "type": "windowed_test_launcher",
+  },
+  "angle_white_box_perftests": {
+    "label": "//src/tests:angle_white_box_tests",
+    "script": "//src/tests/run_perf_tests.py",
+    "type": "script",
+  },
+  "angle_white_box_tests": {
+    "label": "//src/tests:angle_white_box_tests",
+    "type": "windowed_test_launcher",
+  },
+}

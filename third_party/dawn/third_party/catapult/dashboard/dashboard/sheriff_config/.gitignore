@@ -1,0 +1,5 @@
+# Do not track __pycache__ files.
+__pycache__
+
+# Do not track generated protobuf files.
+*_pb2.py

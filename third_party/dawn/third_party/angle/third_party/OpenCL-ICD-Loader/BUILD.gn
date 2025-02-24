@@ -1,0 +1,58 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//gni/angle.gni")
+
+config("opencl_icd_loader_config") {
+  include_dirs = [ "src/loader" ]
+}
+
+source_set("opencl_icd_loader") {
+  sources = [
+    "src/loader/icd.c",
+    "src/loader/icd_dispatch.c",
+    "src/loader/icd_dispatch_generated.c",
+  ]
+  defines = [
+    "CL_TARGET_OPENCL_VERSION=300",
+    "OPENCL_ICD_LOADER_DISABLE_OPENCLON12",
+  ]
+
+  if (is_win) {
+    sources += [
+      "src/loader/windows/icd_windows.c",
+      "src/loader/windows/icd_windows_apppackage.cpp",
+      "src/loader/windows/icd_windows_dxgk.c",
+      "src/loader/windows/icd_windows_envvars.c",
+      "src/loader/windows/icd_windows_hkr.c",
+    ]
+
+    configs -= [ "//build/config/win:lean_and_mean" ]
+    libs = [ "cfgmgr32.lib" ]
+
+    if (is_clang) {
+      cflags = [ "-Wno-incompatible-pointer-types" ]
+    } else {
+      cflags = [ "/wd4133" ]
+    }
+  } else {
+    sources += [
+      "src/loader/linux/icd_linux.c",
+      "src/loader/linux/icd_linux_envvars.c",
+    ]
+    include_dirs = [ "." ]
+
+    if (is_android) {
+      cflags = [ "-Wno-#pragma-messages" ]
+    } else {
+      defines += [ "HAVE_SECURE_GETENV" ]
+    }
+  }
+
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
+
+  public_configs = [ ":opencl_icd_loader_config" ]
+  public_deps = [ "$angle_root:cl_includes" ]
+}

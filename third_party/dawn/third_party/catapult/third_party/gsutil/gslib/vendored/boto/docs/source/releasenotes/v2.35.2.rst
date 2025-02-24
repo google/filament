@@ -1,0 +1,16 @@
+boto v2.35.2
+============
+
+:date: 2015/01/19
+
+This release adds ClassicLink support for Auto Scaling and fixes a few issues.
+
+
+Changes
+-------
+* Add support for new data types in DynamoDB. (:issue:`2667`, :sha:`68ad513`)
+* Expose cloudformation `UsePreviousTemplate` parameter. (:issue:`2843`, :issue:`2628`, :sha:`873e89c`)
+* Fix documentation around using custom connections for DynamoDB tables. (:issue:`2842`, :issue:`1585`, :sha:`71d677f`)
+* Fixed bug that unable call query_2 after call describe method on dynamodb2 module. (:issue:`2829`, :sha:`66addce`)
+
+

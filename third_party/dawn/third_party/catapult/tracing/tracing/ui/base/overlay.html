@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<template id="overlay-template">
+  <style>
+    overlay-mask {
+      left: 0;
+      padding: 8px;
+      position: absolute;
+      top: 0;
+      z-index: 1000;
+      font-family: sans-serif;
+      -webkit-justify-content: center;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      height: 100%;
+      left: 0;
+      position: fixed;
+      top: 0;
+      width: 100%;
+    }
+    overlay-mask:focus {
+      outline: none;
+    }
+    overlay-vertical-centering-container {
+      -webkit-justify-content: center;
+      flex-direction: column;
+      display: flex;
+    }
+    overlay-frame {
+      z-index: 1100;
+      background: rgb(255, 255, 255);
+      border: 1px solid #ccc;
+      margin: 75px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    title-bar {
+      -webkit-align-items: center;
+      flex-direction: row;
+      border-bottom: 1px solid #ccc;
+      background-color: #ddd;
+      display: flex;
+      padding: 5px;
+      flex: 0 0 auto;
+    }
+    title {
+      display: inline;
+      font-weight: bold;
+      flex: 1 1 auto;
+    }
+    close-button {
+      -webkit-align-self: flex-end;
+      border: 1px solid #eee;
+      background-color: #999;
+      font-size: 10pt;
+      font-weight: bold;
+      padding: 2px;
+      text-align: center;
+      width: 16px;
+    }
+    close-button:hover {
+      background-color: #ddd;
+      border-color: black;
+      cursor: pointer;
+    }
+    overlay-content {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 10px;
+      min-width: 300px;
+      min-height: 0;
+    }
+    button-bar {
+      -webkit-align-items: baseline;
+      border-top: 1px solid #ccc;
+      display: flex;
+      flex: 0 0 auto;
+      flex-direction: row-reverse;
+      padding: 4px;
+    }
+  </style>
+
+  <overlay-mask>
+    <overlay-vertical-centering-container>
+      <overlay-frame>
+        <title-bar>
+          <title></title>
+          <close-button>&#x2715</close-button>
+        </title-bar>
+        <overlay-content>
+          <content></content>
+        </overlay-content>
+        <button-bar></button-bar>
+      </overlay-frame>
+    </overlay-vertical-centering-container>
+  </overlay-mask>
+</template>
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Implements an element that is hidden by default, but
+ * when shown, dims and (attempts to) disable the main document.
+ *
+ * You can turn any div into an overlay. Note that while an
+ * overlay element is shown, its parent is changed. Hiding the overlay
+ * restores its original parentage.
+ *
+ */
+tr.exportTo('tr.ui.b', function() {
+  if (tr.isHeadless) return {};
+
+  const THIS_DOC = document._currentScript.ownerDocument;
+
+  /**
+   * Creates a new overlay element. It will not be visible until shown.
+   * @constructor
+   * @extends {HTMLDivElement}
+   */
+  const Overlay = tr.ui.b.define('overlay');
+
+  Overlay.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    /**
+     * Initializes the overlay element.
+     */
+    decorate() {
+      Polymer.dom(this).classList.add('overlay');
+
+      this.parentEl_ = this.ownerDocument.body;
+
+      this.visible_ = false;
+      this.userCanClose_ = true;
+
+      this.onKeyDown_ = this.onKeyDown_.bind(this);
+      this.onClick_ = this.onClick_.bind(this);
+      this.onFocusIn_ = this.onFocusIn_.bind(this);
+      this.onDocumentClick_ = this.onDocumentClick_.bind(this);
+      this.onClose_ = this.onClose_.bind(this);
+
+      this.addEventListener('visible-change',
+          tr.ui.b.Overlay.prototype.onVisibleChange_.bind(this), true);
+
+      // Setup the shadow root
+      const createShadowRoot = this.createShadowRoot ||
+          this.webkitCreateShadowRoot;
+      this.shadow_ = createShadowRoot.call(this);
+      Polymer.dom(this.shadow_).appendChild(
+          tr.ui.b.instantiateTemplate('#overlay-template', THIS_DOC));
+
+      this.closeBtn_ = Polymer.dom(this.shadow_).querySelector('close-button');
+      this.closeBtn_.addEventListener('click', this.onClose_);
+
+      Polymer.dom(this.shadow_)
+          .querySelector('overlay-frame')
+          .addEventListener('click', this.onClick_);
+
+      this.observer_ = new MutationObserver(
+          this.didButtonBarMutate_.bind(this));
+      this.observer_.observe(
+          Polymer.dom(this.shadow_).querySelector('button-bar'),
+          { childList: true });
+
+      // title is a variable on regular HTMLElements. However, we want to
+      // use it for something more useful.
+      Object.defineProperty(
+          this, 'title', {
+            get() {
+              return Polymer.dom(Polymer.dom(this.shadow_)
+                  .querySelector('title')).textContent;
+            },
+            set(title) {
+              Polymer.dom(Polymer.dom(this.shadow_).querySelector('title'))
+                  .textContent = title;
+            }
+          });
+    },
+
+    set userCanClose(userCanClose) {
+      this.userCanClose_ = userCanClose;
+      this.closeBtn_.style.display =
+          userCanClose ? 'block' : 'none';
+    },
+
+    get buttons() {
+      return Polymer.dom(this.shadow_).querySelector('button-bar');
+    },
+
+    get visible() {
+      return this.visible_;
+    },
+
+    set visible(newValue) {
+      if (this.visible_ === newValue) return;
+
+      this.visible_ = newValue;
+      const e = new tr.b.Event('visible-change');
+      this.dispatchEvent(e);
+    },
+
+    onVisibleChange_() {
+      this.visible_ ? this.show_() : this.hide_();
+    },
+
+    show_() {
+      Polymer.dom(this.parentEl_).appendChild(this);
+
+      if (this.userCanClose_) {
+        this.addEventListener('keydown', this.onKeyDown_.bind(this));
+        this.addEventListener('click', this.onDocumentClick_.bind(this));
+        this.closeBtn_.addEventListener('click', this.onClose_);
+      }
+
+      this.parentEl_.addEventListener('focusin', this.onFocusIn_);
+      this.tabIndex = 0;
+
+      // Focus the first thing we find that makes sense. (Skip the close button
+      // as it doesn't make sense as the first thing to focus.)
+      const elList =
+          Polymer.dom(this).querySelectorAll('button, input, list, select, a');
+      if (elList.length > 0) {
+        if (elList[0] === this.closeBtn_) {
+          if (elList.length > 1) return elList[1].focus();
+        } else {
+          return elList[0].focus();
+        }
+      }
+      this.focus();
+    },
+
+    hide_() {
+      Polymer.dom(this.parentEl_).removeChild(this);
+
+      this.parentEl_.removeEventListener('focusin', this.onFocusIn_);
+
+      if (this.closeBtn_) {
+        this.closeBtn_.removeEventListener('click', this.onClose_);
+      }
+
+      document.removeEventListener('keydown', this.onKeyDown_);
+      document.removeEventListener('click', this.onDocumentClick_);
+    },
+
+    onClose_(e) {
+      this.visible = false;
+      if ((e.type !== 'keydown') ||
+          (e.type === 'keydown' && e.keyCode === 27)) {
+        e.stopPropagation();
+      }
+      e.preventDefault();
+      tr.b.dispatchSimpleEvent(this, 'closeclick');
+    },
+
+    onFocusIn_(e) {
+      // Prevent focus from leaving the overlay.
+
+      let node = e.target;
+      while (node) {
+        if (node === this) {
+          // |this| contains |e.target|, so nothing needs to be done. Allow
+          // focus to move from |this| to |e.target|.
+          return;
+        }
+        node = node.parentNode;
+      }
+
+      // |e.target| is outside of |this|, so focus |this|.
+      tr.b.timeout(0).then(() => this.focus());
+      e.preventDefault();
+      e.stopPropagation();
+    },
+
+    didButtonBarMutate_(e) {
+      const hasButtons = this.buttons.children.length > 0;
+      if (hasButtons) {
+        Polymer.dom(this.shadow_).querySelector('button-bar').style.display =
+            undefined;
+      } else {
+        Polymer.dom(this.shadow_).querySelector('button-bar').style.display =
+            'none';
+      }
+    },
+
+    onKeyDown_(e) {
+      // Disallow shift-tab back to another element.
+      if (e.keyCode === 9 &&  // tab
+          e.shiftKey &&
+          e.target === this) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.keyCode !== 27) return;  // escape
+
+      this.onClose_(e);
+    },
+
+    onClick_(e) {
+      e.stopPropagation();
+    },
+
+    onDocumentClick_(e) {
+      if (!this.userCanClose_) return;
+
+      this.onClose_(e);
+    }
+  };
+
+  Overlay.showError = function(msg, opt_err) {
+    const o = new Overlay();
+    o.title = 'Error';
+    Polymer.dom(o).textContent = msg;
+    if (opt_err) {
+      const e = tr.b.normalizeException(opt_err);
+
+      const stackDiv = document.createElement('pre');
+      Polymer.dom(stackDiv).textContent = e.stack;
+      stackDiv.style.paddingLeft = '8px';
+      stackDiv.style.margin = 0;
+      Polymer.dom(o).appendChild(stackDiv);
+    }
+    const b = document.createElement('button');
+    Polymer.dom(b).textContent = 'OK';
+    b.addEventListener('click', function() {
+      o.visible = false;
+    });
+    Polymer.dom(o.buttons).appendChild(b);
+    o.visible = true;
+    return o;
+  };
+
+  return {
+    Overlay,
+  };
+});
+</script>

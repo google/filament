@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+# Copyright (c) 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import sys
+import os
+import json
+
+"""
+Prints the source path of the provided project name.
+
+This utility loads the specified x_project.py from one of our standard
+module folders, constructs its project module, and prints the source paths that
+it uses.
+
+This is used by the node_bootstrap.js to load the tracing code into node.
+"""
+
+def _ToUpperCamelCase(name):
+  in_parts = name.split('_')
+  out_parts = []
+  for part in in_parts:
+    out_part = part[0].upper() + part[1:]
+    out_parts.append(out_part)
+  return ''.join(out_parts)
+
+def _RelPathToUnixPath(p):
+  return p.replace(os.sep, '/')
+
+def Main(args):
+  parser = argparse.ArgumentParser(
+      usage='%(prog)s project_name',
+      epilog='Prints the source paths for the provided catapult project\n')
+  parser.add_argument('--source-paths', action='store_true')
+  parser.add_argument('--headless-test-module-filenames', action='store_true')
+  parser.add_argument('project_name', nargs=1)
+  args = parser.parse_args(args)
+
+  catapult_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                 '..'))
+
+  project_name = args.project_name[0]
+  project_path = os.path.join(catapult_path, project_name)
+  sys.path.append(project_path)
+
+  project_module_name = project_name + '_project'
+  try:
+    project_module = __import__(project_module_name, fromlist=[True])
+  except:
+    sys.stderr.write('Could not import %s from %s' % (project_module_name,
+                                                      project_path))
+    return 1
+
+  project_module.UpdateSysPathIfNeeded()
+
+  class_name = _ToUpperCamelCase(project_name) + 'Project'
+
+  try:
+    project_class = project_module.__dict__[class_name]
+  except:
+    sys.stderr.write('Could not find %s in %s' % (class_name,
+                                                  project_module_name))
+    return 1
+
+  project = project_class()
+
+  if args.source_paths:
+    print json.dumps(project.source_paths)
+
+  if args.headless_test_module_filenames:
+    headless_test_module_filenames = ['/' + _RelPathToUnixPath(x)
+                              for x in project.FindAllD8TestModuleRelPaths()]
+    headless_test_module_filenames.sort()
+    print json.dumps(headless_test_module_filenames)
+
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv[1:]))

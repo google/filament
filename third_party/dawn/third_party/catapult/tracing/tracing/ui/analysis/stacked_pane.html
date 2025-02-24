@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/rebuildable_behavior.html">
+
+<!--
+@fileoverview Analysis view stacked pane. See the stacked pane view element
+(tr-ui-a-stacked-pane-view) documentation for more details.
+-->
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const StackedPaneImpl = {
+    /**
+     * Request changing the child pane of this pane in the associated stacked
+     * pane view. If the assigned builder is undefined, request removing the
+     * current child pane.
+     *
+     * Note that setting this property before appended() is called will have no
+     * effect (as there will be no listener attached to the pane).
+     *
+     * This method is intended to be called by subclasses.
+     */
+    set childPaneBuilder(childPaneBuilder) {
+      this.childPaneBuilder_ = childPaneBuilder;
+      this.dispatchEvent(new tr.b.Event('request-child-pane-change'));
+    },
+
+    get childPaneBuilder() {
+      return this.childPaneBuilder_;
+    },
+
+    /**
+     * Called right after the pane is appended to a pane view.
+     *
+     * This method triggers an immediate rebuild by default. Subclasses are
+     * free to change this behavior (e.g. if a pane has lots of data to display,
+     * it might decide to defer rebuilding in order not to cause jank).
+     */
+    appended() {
+      this.rebuild();
+    }
+  };
+
+  const StackedPane = [tr.ui.analysis.RebuildableBehavior, StackedPaneImpl];
+
+  return {
+    StackedPane,
+  };
+});
+
+Polymer({
+  is: 'tr-ui-a-stacked-pane',
+  behaviors: [tr.ui.analysis.StackedPane]
+});
+</script>

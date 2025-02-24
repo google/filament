@@ -1,0 +1,28 @@
+{
+  "manifest_version": 2,
+  "name": "TraceOnTap",
+  "version": "1.0.11",
+  "author": "Primiano Tucci <primiano@chromium.org>",
+  "description": "Grabs a chrome trace, uploads it and files a bug with one tap.",
+  "background": {
+    "persistent": false,
+    "scripts": [
+      "third_party/pako/pako_deflate.min.js",
+      "tracing_controller.js",
+      "trace_uploader.js",
+      "background.js"
+    ]
+  },
+  "permissions": [
+    "debugger"
+  ],
+  "browser_action": {
+    "default_icon": "images/icon-38.png",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "images/icon-16.png",
+    "48": "images/icon-48.png",
+    "128": "images/icon-128.png"
+  }
+}

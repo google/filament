@@ -1,0 +1,271 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../gni/angle.gni")
+
+declare_args() {
+  # Determines if we build the capture_replay sample. Off by default.
+  angle_build_capture_replay_sample = false
+
+  # Decide which context to replay, starting with desktop default
+  angle_capture_replay_sample_context_id = 1
+}
+
+config("sample_util_config") {
+  include_dirs = [ "sample_util" ]
+}
+
+angle_source_set("sample_util") {
+  testonly = true
+  sources = [
+    "sample_util/SampleApplication.cpp",
+    "sample_util/SampleApplication.h",
+    "sample_util/texture_utils.cpp",
+    "sample_util/texture_utils.h",
+    "sample_util/tga_utils.cpp",
+    "sample_util/tga_utils.h",
+  ]
+  data_deps = [
+    "../:libEGL",
+    "../:libGLESv1_CM",
+    "../:libGLESv2",
+  ]
+
+  public_deps = [
+    "../:angle_common",
+    "../util:angle_test_utils",
+    "../util:angle_util",
+    "../util:angle_util_loader_headers",
+  ]
+  configs += [ "../:library_name_config" ]
+  public_configs = [
+    ":sample_util_config",
+    "../:no_gl_prototypes",
+  ]
+}
+
+template("angle_sample") {
+  if (defined(invoker.data)) {
+    copy(target_name + "_data") {
+      sources = invoker.data
+      outputs = [ "$root_out_dir/{{source_file_part}}" ]
+    }
+  }
+
+  angle_executable(target_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "cflags",
+                             "data",
+                             "defines",
+                             "deps",
+                             "sources",
+                           ])
+    deps += [ ":sample_util" ]
+    if (defined(invoker.data)) {
+      deps += [ ":${target_name}_data" ]
+    }
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    if (defined(invoker.suppressed_configs)) {
+      suppressed_configs += invoker.suppressed_configs
+    }
+
+    if ((is_linux || is_chromeos) && !is_component_build) {
+      # Set rpath to find shared libs in a non-component build.
+      configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
+    }
+  }
+}
+
+set_defaults("angle_sample") {
+  deps = []
+}
+
+angle_sample("hello_triangle") {
+  sources = [ "hello_triangle/HelloTriangle.cpp" ]
+}
+
+angle_sample("mip_map_2d") {
+  sources = [ "mip_map_2d/MipMap2D.cpp" ]
+}
+
+angle_sample("multi_texture") {
+  sources = [ "multi_texture/MultiTexture.cpp" ]
+  data = [
+    "multi_texture/basemap.tga",
+    "multi_texture/lightmap.tga",
+  ]
+}
+
+angle_sample("multi_window") {
+  sources = [ "multi_window/MultiWindow.cpp" ]
+}
+
+angle_sample("multiple_draw_buffers") {
+  sources = [ "multiple_draw_buffers/MultipleDrawBuffers.cpp" ]
+  data = [
+    "multiple_draw_buffers/multiple_draw_buffers_copy_fs.glsl",
+    "multiple_draw_buffers/multiple_draw_buffers_fs.glsl",
+    "multiple_draw_buffers/multiple_draw_buffers_vs.glsl",
+  ]
+}
+
+angle_sample("multiview") {
+  sources = [ "multiview/Multiview.cpp" ]
+}
+
+angle_sample("particle_system") {
+  sources = [ "particle_system/ParticleSystem.cpp" ]
+  data = [ "particle_system/smoke.tga" ]
+}
+
+angle_sample("post_sub_buffer") {
+  sources = [ "post_sub_buffer/PostSubBuffer.cpp" ]
+}
+
+angle_sample("simple_instancing") {
+  sources = [ "simple_instancing/SimpleInstancing.cpp" ]
+}
+
+angle_sample("simple_texture_2d") {
+  sources = [ "simple_texture_2d/SimpleTexture2D.cpp" ]
+}
+
+angle_sample("simple_texture_cubemap") {
+  sources = [ "simple_texture_cubemap/SimpleTextureCubemap.cpp" ]
+}
+
+angle_sample("simple_vertex_shader") {
+  sources = [ "simple_vertex_shader/SimpleVertexShader.cpp" ]
+}
+
+angle_sample("stencil_operations") {
+  sources = [ "stencil_operations/StencilOperations.cpp" ]
+}
+
+angle_sample("tex_redef_microbench") {
+  sources = [ "tex_redef_microbench/TexRedefMicroBench.cpp" ]
+}
+
+angle_sample("texture_wrap") {
+  sources = [ "texture_wrap/TextureWrap.cpp" ]
+}
+
+angle_sample("tri_fan_microbench") {
+  sources = [ "tri_fan_microbench/TriFanMicroBench.cpp" ]
+}
+
+angle_sample("window_test") {
+  sources = [ "WindowTest/WindowTest.cpp" ]
+}
+
+angle_sample("gles1_hello_triangle") {
+  sources = [ "gles1/HelloTriangle.cpp" ]
+}
+
+angle_sample("gles1_simple_texture_2d") {
+  sources = [ "gles1/SimpleTexture2D.cpp" ]
+}
+
+angle_sample("gles1_simple_lighting") {
+  sources = [ "gles1/SimpleLighting.cpp" ]
+}
+
+angle_sample("gles1_flat_shading") {
+  sources = [ "gles1/FlatShading.cpp" ]
+}
+
+angle_sample("gles1_draw_texture") {
+  sources = [ "gles1/DrawTexture.cpp" ]
+}
+
+angle_sample("gles1_torus_lighting") {
+  sources = [
+    "torus_lighting/TorusLightingES1.cpp",
+    "torus_lighting/torus.h",
+  ]
+}
+
+angle_sample("gles2_torus_lighting") {
+  sources = [
+    "torus_lighting/TorusLightingES2.cpp",
+    "torus_lighting/torus.h",
+  ]
+}
+
+angle_sample("gles3_torus_bufferstorage") {
+  sources = [
+    "torus_lighting/TorusBufferStorage.cpp",
+    "torus_lighting/torus.h",
+  ]
+}
+
+angle_sample("multiple_contexts") {
+  sources = [ "multiple_contexts/MultipleContexts.cpp" ]
+}
+
+if (angle_build_capture_replay_sample) {
+  angle_sample("capture_replay_sample") {
+    sources = [ "capture_replay/CaptureReplay.cpp" ]
+
+    deps = [
+      "$angle_root:angle_compression",
+      "$angle_root/util:angle_frame_capture_test_utils",
+      "capture_replay:capture_replay_sample_trace",
+    ]
+
+    _data_path = rebase_path("capture_replay", root_out_dir)
+    defines = [ "ANGLE_CAPTURE_REPLAY_SAMPLE_DATA_DIR=\"${_data_path}\"" ]
+
+    suppressed_configs = [ "$angle_root:constructor_and_destructor_warnings" ]
+    configs = []
+
+    # Disable optimization to avoid optimizing huge files.
+    if (!is_debug) {
+      suppressed_configs += [ "//build/config/compiler:default_optimization" ]
+      configs += [ "//build/config/compiler:no_optimize" ]
+    }
+  }
+}
+
+group("angle_samples") {
+  testonly = true
+  deps = []
+  if (!is_ios) {
+    deps += [
+      ":gles1_draw_texture",
+      ":gles1_flat_shading",
+      ":gles1_hello_triangle",
+      ":gles1_simple_lighting",
+      ":gles1_simple_texture_2d",
+      ":gles1_torus_lighting",
+      ":gles2_torus_lighting",
+      ":gles3_torus_bufferstorage",
+      ":hello_triangle",
+      ":mip_map_2d",
+      ":multi_texture",
+      ":multi_window",
+      ":multiple_contexts",
+      ":multiple_draw_buffers",
+      ":multiview",
+      ":particle_system",
+      ":post_sub_buffer",
+      ":sample_util",
+      ":simple_instancing",
+      ":simple_texture_2d",
+      ":simple_texture_cubemap",
+      ":simple_vertex_shader",
+      ":stencil_operations",
+      ":tex_redef_microbench",
+      ":texture_wrap",
+      ":tri_fan_microbench",
+      ":window_test",
+    ]
+  }
+}

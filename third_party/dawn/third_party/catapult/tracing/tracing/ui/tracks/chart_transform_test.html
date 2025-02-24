@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/timeline_display_transform.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_transform.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TimelineDisplayTransform = tr.ui.TimelineDisplayTransform;
+  const ChartTransform = tr.ui.tracks.ChartTransform;
+  const ChartSeriesYAxis = tr.ui.tracks.ChartSeriesYAxis;
+
+  function buildChartTransform() {
+    const displayTransform = new TimelineDisplayTransform();
+    displayTransform.panX = -20;
+    displayTransform.scaleX = 0.5;
+
+    const seriesYAxis = new ChartSeriesYAxis(-100, 100);
+
+    const chartTransform = new ChartTransform(
+        displayTransform,
+        seriesYAxis,
+        500, /* trackWidth */
+        80, /* trackHeight */
+        15, /* topPadding */
+        5, /* bottomPadding */
+        3 /* pixelRatio */);
+
+    return chartTransform;
+  }
+
+  test('checkFields', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.pixelRatio, 3);
+
+    assert.strictEqual(t.leftViewX, 0);
+    assert.strictEqual(t.rightViewX, 500);
+    assert.strictEqual(t.leftTimestamp, 20);
+    assert.strictEqual(t.rightTimestamp, 1020);
+
+    assert.strictEqual(t.outerTopViewY, 0);
+    assert.strictEqual(t.innerTopViewY, 15);
+    assert.strictEqual(t.innerBottomViewY, 75);
+    assert.strictEqual(t.outerBottomViewY, 80);
+  });
+
+  test('checkWorldXToViewX', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.worldXToViewX(-100), -60);
+    assert.strictEqual(t.worldXToViewX(0), -10);
+    assert.strictEqual(t.worldXToViewX(520), 250);
+    assert.strictEqual(t.worldXToViewX(1020), 500);
+    assert.strictEqual(t.worldXToViewX(1200), 590);
+  });
+
+  test('checkViewXToWorldX', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.viewXToWorldX(-60), -100);
+    assert.strictEqual(t.viewXToWorldX(-10), 0);
+    assert.strictEqual(t.viewXToWorldX(250), 520);
+    assert.strictEqual(t.viewXToWorldX(500), 1020);
+    assert.strictEqual(t.viewXToWorldX(590), 1200);
+  });
+
+  test('checkWorldYToViewY', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.worldYToViewY(-200), 105);
+    assert.strictEqual(t.worldYToViewY(-100), 75);
+    assert.strictEqual(t.worldYToViewY(0), 45);
+    assert.strictEqual(t.worldYToViewY(100), 15);
+    assert.strictEqual(t.worldYToViewY(200), -15);
+  });
+
+  test('checkViewYToWorldY', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.viewYToWorldY(105), -200);
+    assert.strictEqual(t.viewYToWorldY(75), -100);
+    assert.strictEqual(t.viewYToWorldY(45), 0);
+    assert.strictEqual(t.viewYToWorldY(15), 100);
+    assert.strictEqual(t.viewYToWorldY(-15), 200);
+  });
+
+  test('checkVectorToWorldDistance', function() {
+    const t = buildChartTransform();
+
+    assert.strictEqual(t.vectorToWorldDistance(105), 350);
+    assert.strictEqual(t.vectorToWorldDistance(75), 250);
+    assert.strictEqual(t.vectorToWorldDistance(45), 150);
+    assert.strictEqual(t.vectorToWorldDistance(15), 50);
+    assert.strictEqual(t.vectorToWorldDistance(-15), 50);
+  });
+});
+</script>

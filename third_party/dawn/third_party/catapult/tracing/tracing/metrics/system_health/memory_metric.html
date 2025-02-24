@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/multi_dimensional_view.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_processes.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/value/diagnostics/breakdown.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const BACKGROUND = tr.model.ContainerMemoryDump.LevelOfDetail.BACKGROUND;
+  const LIGHT = tr.model.ContainerMemoryDump.LevelOfDetail.LIGHT;
+  const DETAILED = tr.model.ContainerMemoryDump.LevelOfDetail.DETAILED;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+  const count_smallerIsBetter = tr.b.Unit.byName.count_smallerIsBetter;
+  const DISPLAYED_SIZE_NUMERIC_NAME =
+      tr.model.MemoryAllocatorDump.DISPLAYED_SIZE_NUMERIC_NAME;
+
+  const LEVEL_OF_DETAIL_NAMES = new Map();
+  LEVEL_OF_DETAIL_NAMES.set(BACKGROUND, 'background');
+  LEVEL_OF_DETAIL_NAMES.set(LIGHT, 'light');
+  LEVEL_OF_DETAIL_NAMES.set(DETAILED, 'detailed');
+
+  // Some detailed dumps contain heap profiler information.
+  const HEAP_PROFILER_DETAIL_NAME = 'heap_profiler';
+
+  const BOUNDARIES_FOR_UNIT_MAP = new WeakMap();
+  // For unitless numerics (process counts), we use 20 linearly scaled bins
+  // from 0 to 20.
+  BOUNDARIES_FOR_UNIT_MAP.set(count_smallerIsBetter,
+      tr.v.HistogramBinBoundaries.createLinear(0, 20, 20));
+  // For size numerics (subsystem and vm stats), we use 1 bin from 0 B to
+  // 1 KiB and 4*24 exponentially scaled bins from 1 KiB to 16 GiB (=2^24 KiB).
+  BOUNDARIES_FOR_UNIT_MAP.set(sizeInBytes_smallerIsBetter,
+      new tr.v.HistogramBinBoundaries(0)
+          .addBinBoundary(1024 /* 1 KiB */)
+          .addExponentialBins(16 * 1024 * 1024 * 1024 /* 16 GiB */, 4 * 24));
+
+  const CHROME_PROCESS_NAMES =
+      tr.e.chrome.chrome_processes.CHROME_PROCESS_NAMES;
+
+  function memoryMetric(values, model, opt_options) {
+    const rangeOfInterest =
+      opt_options ? opt_options.rangeOfInterest : undefined;
+    const browserNameToGlobalDumps =
+        tr.metrics.sh.splitGlobalDumpsByBrowserName(model, rangeOfInterest);
+    addGeneralMemoryDumpValues(browserNameToGlobalDumps, values);
+    addDetailedMemoryDumpValues(browserNameToGlobalDumps, values);
+    addMemoryDumpCountValues(browserNameToGlobalDumps, values);
+  }
+
+  const USER_FRIENDLY_BROWSER_NAMES = {
+    'chrome': 'Chrome',
+    'webview': 'WebView',
+    'unknown_browser': 'an unknown browser'
+  };
+
+  /**
+   * Convert a canonical browser name used in value names to a user-friendly
+   * name used in value descriptions.
+   *
+   * Examples:
+   *
+   *   CANONICAL BROWSER NAME -> USER-FRIENDLY NAME
+   *   chrome                 -> Chrome
+   *   unknown_browser        -> an unknown browser
+   *   webview2               -> WebView(2)
+   *   unexpected             -> 'unexpected' browser
+   */
+  function convertBrowserNameToUserFriendlyName(browserName) {
+    for (const baseName in USER_FRIENDLY_BROWSER_NAMES) {
+      if (!browserName.startsWith(baseName)) continue;
+
+      const userFriendlyBaseName = USER_FRIENDLY_BROWSER_NAMES[baseName];
+      const suffix = browserName.substring(baseName.length);
+      if (suffix.length === 0) {
+        return userFriendlyBaseName;
+      } else if (/^\d+$/.test(suffix)) {
+        return userFriendlyBaseName + '(' + suffix + ')';
+      }
+    }
+    return '\'' + browserName + '\' browser';
+  }
+
+
+  /**
+   * Convert a canonical process name used in value names to a user-friendly
+   * name used in value descriptions.
+   */
+  function convertProcessNameToUserFriendlyName(processName,
+      opt_requirePlural) {
+    switch (processName) {
+      case CHROME_PROCESS_NAMES.BROWSER:
+        return opt_requirePlural ? 'browser processes' : 'the browser process';
+      case CHROME_PROCESS_NAMES.RENDERER:
+        return 'renderer processes';
+      case CHROME_PROCESS_NAMES.GPU:
+        return opt_requirePlural ? 'GPU processes' : 'the GPU process';
+      case CHROME_PROCESS_NAMES.PPAPI:
+        return opt_requirePlural ? 'PPAPI processes' : 'the PPAPI process';
+      case CHROME_PROCESS_NAMES.ALL:
+        return 'all processes';
+      case CHROME_PROCESS_NAMES.UNKNOWN:
+        return 'unknown processes';
+      default:
+        return '\'' + processName + '\' processes';
+    }
+  }
+
+  /**
+   * Add general memory dump values calculated from all global memory dumps to
+   * |values|. In particular, this function adds the following values:
+   *
+   *   * PROCESS COUNTS
+   *     memory:{chrome, webview}:
+   *         {browser_process, renderer_processes, ..., all_processes}:
+   *         process_count
+   *     type: tr.v.Histogram (over all matching global memory dumps)
+   *     unit: count_smallerIsBetter
+   *
+   *   * MEMORY USAGE REPORTED BY CHROME
+   *     memory:{chrome, webview}:
+   *         {browser_process, renderer_processes, ..., all_processes}:
+   *         reported_by_chrome[:{v8, malloc, ...}]:
+   *         {effective_size, allocated_objects_size, locked_size}
+   *     type: tr.v.Histogram (over all matching global memory dumps)
+   *     unit: sizeInBytes_smallerIsBetter
+   */
+  function addGeneralMemoryDumpValues(browserNameToGlobalDumps, values) {
+    addMemoryDumpValues(browserNameToGlobalDumps,
+        gmd => true /* process all global memory dumps */,
+        function(processDump, addProcessScalar) {
+          // Increment memory:<browser-name>:<process-name>:process_count value.
+          addProcessScalar({
+            source: 'process_count',
+            property: PROCESS_COUNT,
+            value: 1
+          });
+
+          if (processDump.totals !== undefined) {
+            addProcessScalar({
+              source: 'reported_by_os',
+              property: RESIDENT_SIZE,
+              component: ['system_memory'],
+              value: processDump.totals.residentBytes
+            });
+            addProcessScalar({
+              source: 'reported_by_os',
+              property: PEAK_RESIDENT_SIZE,
+              component: ['system_memory'],
+              value: processDump.totals.peakResidentBytes
+            });
+            addProcessScalar({
+              source: 'reported_by_os',
+              property: PRIVATE_FOOTPRINT_SIZE,
+              component: ['system_memory'],
+              value: processDump.totals.privateFootprintBytes,
+            });
+          }
+
+          // Add memory:<browser-name>:<process-name>:reported_by_chrome:...
+          // values.
+          if (processDump.memoryAllocatorDumps === undefined) return;
+
+          processDump.memoryAllocatorDumps.forEach(function(rootAllocatorDump) {
+            CHROME_VALUE_PROPERTIES.forEach(function(property) {
+              addProcessScalar({
+                source: 'reported_by_chrome',
+                component: [rootAllocatorDump.name],
+                property,
+                value: rootAllocatorDump.numerics[property.name]
+              });
+            });
+            // Some dump providers add allocated objects size as
+            // "allocated_objects" child dump.
+            if (rootAllocatorDump.numerics.allocated_objects_size ===
+                    undefined) {
+              const allocatedObjectsDump =
+                  rootAllocatorDump.getDescendantDumpByFullName(
+                      'allocated_objects');
+              if (allocatedObjectsDump !== undefined) {
+                addProcessScalar({
+                  source: 'reported_by_chrome',
+                  component: [rootAllocatorDump.name],
+                  property: ALLOCATED_OBJECTS_SIZE,
+                  value: allocatedObjectsDump.numerics.size
+                });
+              }
+            }
+          });
+
+          // Add memory:<browser-name>:<process-name>:reported_by_chrome:
+          //    {malloc, blinkgc, partitionalloc}:<largestCategory>:...
+          addTopHeapDumpCategoryValue(processDump, addProcessScalar);
+
+          // Add memory:<browser-name>:<process-name>:reported_by_chrome:v8:
+          //     {heap, allocated_by_malloc}:...
+          addV8MemoryDumpValues(processDump, addProcessScalar);
+        },
+        function(componentTree) {
+          // Subtract memory:<browser-name>:<process-name>:reported_by_chrome:
+          // tracing:<size-property> from memory:<browser-name>:<process-name>:
+          // reported_by_chrome:<size-property> if applicable.
+          const tracingNode = componentTree.children[1].get('tracing');
+          if (tracingNode === undefined) return;
+
+          for (let i = 0; i < componentTree.values.length; i++) {
+            componentTree.values[i].total -= tracingNode.values[i].total;
+          }
+        }, values);
+  }
+
+  /**
+   * Add memory dump values for the top category in each allocator heap dump in
+   * the process dump.
+   *
+   * @param {!tr.model.ProcessMemoryDump} processDump The process memory dump.
+   * @param {!function} addProcessScalar The callback for adding a scalar value.
+   */
+  function addTopHeapDumpCategoryValue(processDump, addProcessScalar) {
+    if (!processDump.heapDumps) {
+      return;
+    }
+    for (const allocatorName in processDump.heapDumps) {
+      const heapDump = processDump.heapDumps[allocatorName];
+      if (heapDump.entries === undefined || heapDump.entries.length === 0) {
+        return;
+      }
+      // Create a map of category to total size.
+      const typeToSize = {};
+      for (let i = 0; i < heapDump.entries.length; i += 1) {
+        const entry = heapDump.entries[i];
+        // Count only the entries with empty backtrace which contains totals for
+        // the object type.
+        if (!entry.objectTypeName || entry.leafStackFrame) {
+          continue;
+        }
+        if (!typeToSize[entry.objectTypeName]) {
+          typeToSize[entry.objectTypeName] = 0;
+        }
+        typeToSize[entry.objectTypeName] += entry.size;
+      }
+
+      // Find the largest type in the heap dump.
+      let largestValue = 0;
+      let largestType = '';
+      for (const key in typeToSize) {
+        if (largestValue < typeToSize[key]) {
+          largestValue = typeToSize[key];
+          largestType = key;
+        }
+      }
+      addProcessScalar({
+        source: 'reported_by_chrome',
+        component: [allocatorName, largestType],
+        property: HEAP_CATEGORY_SIZE,
+        value: largestValue
+      });
+    }
+  }
+
+  /**
+   * Add memory dump values calculated from V8 components excluding
+   * 'heap_spaces/other_spaces'.
+   *
+   * @param {!tr.model.ProcessMemoryDump} processDump The process memory dump.
+   * @param {!function} addProcessScalar The callback for adding a scalar value.
+   */
+  function addV8MemoryDumpValues(processDump, addProcessScalar) {
+    const v8Dump = processDump.getMemoryAllocatorDumpByFullName('v8');
+    if (v8Dump === undefined) return;
+
+    const sharedDump = v8Dump.getDescendantDumpByFullName('shared');
+    if (sharedDump !== undefined) {
+      addV8ComponentValues(sharedDump, ['v8', 'shared'],
+          addProcessScalar);
+      sharedDump.children.forEach(function(subDump) {
+        addV8ComponentValues(subDump, ['v8', 'shared', subDump.name],
+            addProcessScalar);
+      });
+    }
+
+    v8Dump.children.forEach(function(isolateDump) {
+      // v8:allocated_by_malloc:...
+      const mallocDump = isolateDump.getDescendantDumpByFullName('malloc');
+      if (mallocDump !== undefined) {
+        addV8ComponentValues(mallocDump, ['v8', 'allocated_by_malloc'],
+            addProcessScalar);
+      }
+      // v8:heap:...
+      let heapDump = isolateDump.getDescendantDumpByFullName('heap');
+      if (heapDump === undefined) {
+        // Old V8 memory dumps call this 'heap_spaces'.
+        heapDump = isolateDump.getDescendantDumpByFullName('heap_spaces');
+      }
+      if (heapDump !== undefined) {
+        addV8ComponentValues(heapDump, ['v8', 'heap'], addProcessScalar);
+        heapDump.children.forEach(function(spaceDump) {
+          if (spaceDump.name === 'other_spaces') return;
+
+          addV8ComponentValues(spaceDump, ['v8', 'heap', spaceDump.name],
+              addProcessScalar);
+        });
+      }
+    });
+
+    // V8 generates bytecode when interpreting and code objects when
+    // compiling the javascript. Total code size includes the size
+    // of code and bytecode objects.
+    addProcessScalar({
+      source: 'reported_by_chrome',
+      component: ['v8'],
+      property: CODE_AND_METADATA_SIZE,
+      value: v8Dump.numerics.code_and_metadata_size
+    });
+    addProcessScalar({
+      source: 'reported_by_chrome',
+      component: ['v8'],
+      property: CODE_AND_METADATA_SIZE,
+      value: v8Dump.numerics.bytecode_and_metadata_size
+    });
+  }
+
+  /**
+   * Add memory dump values calculated from the specified V8 component.
+   *
+   * @param {!tr.model.MemoryAllocatorDump} v8Dump The V8 memory dump.
+   * @param {!Array<string>} componentPath The component path for reporting.
+   * @param {!function} addProcessScalar The callback for adding a scalar value.
+   */
+  function addV8ComponentValues(componentDump, componentPath,
+      addProcessScalar) {
+    CHROME_VALUE_PROPERTIES.forEach(function(property) {
+      addProcessScalar({
+        source: 'reported_by_chrome',
+        component: componentPath,
+        property,
+        value: componentDump.numerics[property.name]
+      });
+    });
+  }
+
+  const PROCESS_COUNT = {
+    unit: count_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      if (componentPath.length > 0) {
+        throw new Error('Unexpected process count non-empty component path: ' +
+            componentPath.join(':'));
+      }
+      return 'total number of ' + convertProcessNameToUserFriendlyName(
+          processName, true /* opt_requirePlural */);
+    }
+  };
+
+  const EFFECTIVE_SIZE = {
+    name: 'effective_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'effective size',
+        componentPreposition: 'of'
+      });
+    }
+  };
+
+  const ALLOCATED_OBJECTS_SIZE = {
+    name: 'allocated_objects_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'size of all objects allocated',
+        totalUserFriendlyPropertyName: 'size of all allocated objects',
+        componentPreposition: 'by'
+      });
+    }
+  };
+
+  const MAX_ALLOCATED_SIZE = {
+    name: 'max_allocated_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'max size of all allocations',
+        componentPreposition: 'of'
+      });
+    }
+  };
+
+  const MAX_COMMITTED_SIZE = {
+    name: 'max_committed_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'max size of all committed memory',
+        componentPreposition: 'of'
+      });
+    }
+  };
+
+  const SHIM_ALLOCATED_OBJECTS_SIZE = {
+    name: 'shim_allocated_objects_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'size of all objects allocated through shim',
+        totalUserFriendlyPropertyName:
+            'size of all allocated objects through shim',
+        componentPreposition: 'by'
+      });
+    }
+  };
+
+  const LOCKED_SIZE = {
+    name: 'locked_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'locked (pinned) size',
+        componentPreposition: 'of'
+      });
+    }
+  };
+
+  const PEAK_SIZE = {
+    name: 'peak_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'peak size',
+        componentPreposition: 'of'
+      });
+    }
+  };
+
+  const HEAP_CATEGORY_SIZE = {
+    name: 'heap_category_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyName: 'heap profiler category size',
+        componentPreposition: 'for'
+      });
+    }
+  };
+
+  const CODE_AND_METADATA_SIZE = {
+    name: 'code_and_metadata_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildChromeValueDescriptionPrefix(componentPath, processName, {
+        userFriendlyPropertyNamePrefix: 'size of',
+        userFriendlyPropertyName: 'code and metadata'
+      });
+    }
+  };
+
+  const CHROME_VALUE_PROPERTIES = [
+    EFFECTIVE_SIZE,
+    ALLOCATED_OBJECTS_SIZE,
+    SHIM_ALLOCATED_OBJECTS_SIZE,
+    MAX_ALLOCATED_SIZE,
+    MAX_COMMITTED_SIZE,
+    LOCKED_SIZE,
+    PEAK_SIZE
+  ];
+
+  /**
+   * Build a description prefix for a memory:<browser-name>:<process-name>:
+   * reported_by_chrome:... value.
+   *
+   * @param {!Array<string>} componentPath The underlying component path (e.g.
+   *     ['malloc']).
+   * @param {string} processName The canonical name of the process.
+   * @param {{
+   *     userFriendlyPropertyName: string,
+   *     userFriendlyPropertyNamePrefix: (string|undefined),
+   *     totalUserFriendlyPropertyName: (string|undefined),
+   *     componentPreposition: (string|undefined) }}
+   *     formatSpec Specification of how the property should be formatted.
+   * @return {string} Prefix for the value's description (e.g.
+   *     'effective size of malloc in the browser process').
+   */
+  function buildChromeValueDescriptionPrefix(
+      componentPath, processName, formatSpec) {
+    const nameParts = [];
+    if (componentPath.length === 0) {
+      nameParts.push('total');
+      if (formatSpec.totalUserFriendlyPropertyName) {
+        nameParts.push(formatSpec.totalUserFriendlyPropertyName);
+      } else {
+        if (formatSpec.userFriendlyPropertyNamePrefix) {
+          nameParts.push(formatSpec.userFriendlyPropertyNamePrefix);
+        }
+        nameParts.push(formatSpec.userFriendlyPropertyName);
+      }
+      nameParts.push('reported by Chrome for');
+    } else {
+      if (formatSpec.componentPreposition === undefined) {
+        // Use component name as an adjective
+        // (e.g. 'size of V8 code and metadata').
+        if (formatSpec.userFriendlyPropertyNamePrefix) {
+          nameParts.push(formatSpec.userFriendlyPropertyNamePrefix);
+        }
+        nameParts.push(componentPath.join(':'));
+        nameParts.push(formatSpec.userFriendlyPropertyName);
+      } else {
+        // Use component name as a noun with a preposition
+        // (e.g. 'size of all objects allocated BY MALLOC').
+        if (formatSpec.userFriendlyPropertyNamePrefix) {
+          nameParts.push(formatSpec.userFriendlyPropertyNamePrefix);
+        }
+        nameParts.push(formatSpec.userFriendlyPropertyName);
+        nameParts.push(formatSpec.componentPreposition);
+        if (componentPath[componentPath.length - 1] === 'allocated_by_malloc') {
+          nameParts.push('objects allocated by malloc for');
+          nameParts.push(
+              componentPath.slice(0, componentPath.length - 1).join(':'));
+        } else {
+          nameParts.push(componentPath.join(':'));
+        }
+      }
+      nameParts.push('in');
+    }
+    nameParts.push(convertProcessNameToUserFriendlyName(processName));
+    return nameParts.join(' ');
+  }
+
+  const RESIDENT_SIZE = {
+    name: 'resident_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'resident set size (RSS)');
+    }
+  };
+
+  const PEAK_RESIDENT_SIZE = {
+    name: 'peak_resident_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'peak resident set size');
+    }
+  };
+
+  const PROPORTIONAL_RESIDENT_SIZE = {
+    name: 'proportional_resident_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'proportional resident size (PSS)');
+    }
+  };
+
+  const PRIVATE_DIRTY_SIZE = {
+    name: 'private_dirty_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'private dirty size');
+    }
+  };
+
+  const PRIVATE_FOOTPRINT_SIZE = {
+    name: 'private_footprint_size',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'private footprint size');
+    }
+  };
+
+  const JAVA_BASE_CLEAN_RESIDENT = {
+    name: 'java_base_clean_resident',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'java base odex and vdex total clean resident size');
+    }
+  };
+
+  const JAVA_BASE_PSS = {
+    name: 'java_base_pss',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'java base odex and vdex proportional resident size');
+    }
+  };
+
+  const NATIVE_LIBRARY_PRIVATE_CLEAN_RESIDENT = {
+    name: 'native_library_private_clean_resident',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'native library private clean resident size');
+    }
+  };
+
+  const NATIVE_LIBRARY_SHARED_CLEAN_RESIDENT = {
+    name: 'native_library_shared_clean_resident',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'native library shared clean resident size');
+    }
+  };
+
+  const NATIVE_LIBRARY_PROPORTIONAL_RESIDENT = {
+    name: 'native_library_proportional_resident',
+    unit: sizeInBytes_smallerIsBetter,
+    buildDescriptionPrefix(componentPath, processName) {
+      return buildOsValueDescriptionPrefix(componentPath, processName,
+          'native library proportional resident size');
+    }
+  };
+
+  /**
+   * Build a description prefix for a memory:<browser-name>:<process-name>:
+   * reported_by_os:... value.
+   *
+   * @param {!Array<string>} componentPath The underlying component path (e.g.
+   *     ['system', 'java_heap']).
+   * @param {string} processName The canonical name of the process.
+   * @param {string} userFriendlyPropertyName User-friendly name of the
+   *     underlying property (e.g. 'private dirty size').
+   * @return {string} Prefix for the value's description (e.g.
+   *     'total private dirty size of the Java heal in the GPU process').
+   */
+  function buildOsValueDescriptionPrefix(
+      componentPath, processName, userFriendlyPropertyName) {
+    if (componentPath.length > 2) {
+      throw new Error('OS value component path for \'' +
+          userFriendlyPropertyName + '\' too long: ' + componentPath.join(':'));
+    }
+
+    const nameParts = [];
+    if (componentPath.length < 2) {
+      nameParts.push('total');
+    }
+
+    nameParts.push(userFriendlyPropertyName);
+
+    if (componentPath.length > 0) {
+      switch (componentPath[0]) {
+        case 'system_memory':
+          if (componentPath.length > 1) {
+            const userFriendlyComponentName =
+                SYSTEM_VALUE_COMPONENTS[componentPath[1]].userFriendlyName;
+            if (userFriendlyComponentName === undefined) {
+              throw new Error('System value sub-component for \'' +
+                  userFriendlyPropertyName + '\' unknown: ' +
+                  componentPath.join(':'));
+            }
+            nameParts.push('of', userFriendlyComponentName, 'in');
+          } else {
+            nameParts.push('of system memory (RAM) used by');
+          }
+          break;
+
+        case 'gpu_memory':
+          if (componentPath.length > 1) {
+            nameParts.push('of the', componentPath[1]);
+            nameParts.push('Android memtrack component in');
+          } else {
+            nameParts.push('of GPU memory (Android memtrack) used by');
+          }
+          break;
+
+        default:
+          throw new Error('OS value component for \'' +
+              userFriendlyPropertyName + '\' unknown: ' +
+              componentPath.join(':'));
+      }
+    } else {
+      nameParts.push('reported by the OS for');
+    }
+
+    nameParts.push(convertProcessNameToUserFriendlyName(processName));
+    return nameParts.join(' ');
+  }
+
+  /**
+   * Add heavy memory dump values calculated from heavy global memory dumps to
+   * |values|. In particular, this function adds the following values:
+   *
+   *   * MEMORY USAGE REPORTED BY THE OS
+   *     memory:{chrome, webview}:
+   *         {browser_process, renderer_processes, ..., all_processes}:
+   *         reported_by_os:system_memory:[{ashmem, native_heap, java_heap}:]
+   *         {proportional_resident_size, private_dirty_size}
+   *     memory:{chrome, webview}:
+   *         {browser_process, renderer_processes, ..., all_processes}:
+   *         reported_by_os:gpu_memory:[{gl, graphics, ...}:]
+   *         proportional_resident_size
+   *     type: tr.v.Histogram (over matching heavy global memory dumps)
+   *     unit: sizeInBytes_smallerIsBetter
+   *
+   *   * MEMORY USAGE REPORTED BY CHROME
+   *     memory:{chrome, webview}:
+   *         {browser_process, renderer_processes, ..., all_processes}:
+   *         reported_by_chrome:v8:code_and_metadata_size
+   *     type: tr.v.Histogram (over matching heavy global memory dumps)
+   *     unit: sizeInBytes_smallerIsBetter
+   */
+  function addDetailedMemoryDumpValues(browserNameToGlobalDumps, values) {
+    addMemoryDumpValues(browserNameToGlobalDumps,
+        g => g.levelOfDetail === DETAILED,
+        function(processDump, addProcessScalar) {
+          // Add memory:<browser-name>:<process-name>:reported_by_os:
+          // system_memory:... values.
+          for (const [componentName, componentSpec] of
+            Object.entries(SYSTEM_VALUE_COMPONENTS)) {
+            const node = getDescendantVmRegionClassificationNode(
+                processDump.vmRegions, componentSpec.classificationPath);
+            const componentPath = ['system_memory'];
+            if (componentName) componentPath.push(componentName);
+            addProcessScalar({
+              source: 'reported_by_os',
+              component: componentPath,
+              property: PROPORTIONAL_RESIDENT_SIZE,
+              value: node === undefined ?
+                0 : (node.byteStats.proportionalResident || 0)
+            });
+            addProcessScalar({
+              source: 'reported_by_os',
+              component: componentPath,
+              property: PRIVATE_DIRTY_SIZE,
+              value: node === undefined ?
+                0 : (node.byteStats.privateDirtyResident || 0)
+            });
+
+            // Only add java base stats when they are nonzero.
+            if (node) {
+              if (node.byteStats.javaBasePss) {
+                addProcessScalar({
+                  source: 'reported_by_os',
+                  component: componentPath,
+                  property: JAVA_BASE_PSS,
+                  value: node.byteStats.javaBasePss
+                });
+              }
+              if (node.byteStats.javaBaseCleanResident) {
+                addProcessScalar({
+                  source: 'reported_by_os',
+                  component: componentPath,
+                  property: JAVA_BASE_CLEAN_RESIDENT,
+                  value: node.byteStats.javaBaseCleanResident
+                });
+              }
+            }
+
+            // Only add native library stats when they are nonzero.
+            if (node) {
+              if (node.byteStats.nativeLibraryPrivateCleanResident) {
+                addProcessScalar({
+                  source: 'reported_by_os',
+                  component: componentPath,
+                  property: NATIVE_LIBRARY_PRIVATE_CLEAN_RESIDENT,
+                  value: node.byteStats.nativeLibraryPrivateCleanResident
+                });
+              }
+              if (node.byteStats.nativeLibrarySharedCleanResident) {
+                addProcessScalar({
+                  source: 'reported_by_os',
+                  component: componentPath,
+                  property: NATIVE_LIBRARY_SHARED_CLEAN_RESIDENT,
+                  value: node.byteStats.nativeLibrarySharedCleanResident
+                });
+              }
+              if (node.byteStats.nativeLibraryProportionalResident) {
+                addProcessScalar({
+                  source: 'reported_by_os',
+                  component: componentPath,
+                  property: NATIVE_LIBRARY_PROPORTIONAL_RESIDENT,
+                  value: node.byteStats.nativeLibraryProportionalResident
+                });
+              }
+            }
+          }
+
+          // Add memory:<browser-name>:<process-name>:reported_by_os:
+          // gpu_memory:... values.
+          const memtrackDump = processDump.getMemoryAllocatorDumpByFullName(
+              'gpu/android_memtrack');
+          if (memtrackDump !== undefined) {
+            memtrackDump.children.forEach(function(memtrackChildDump) {
+              addProcessScalar({
+                source: 'reported_by_os',
+                component: ['gpu_memory', memtrackChildDump.name],
+                property: PROPORTIONAL_RESIDENT_SIZE,
+                value: memtrackChildDump.numerics.memtrack_pss
+              });
+            });
+          }
+        }, function(componentTree) {}, values);
+  }
+
+  // Specifications of components reported by the system.
+  const SYSTEM_VALUE_COMPONENTS = {
+    '': {
+      classificationPath: [],
+    },
+    'java_heap': {
+      classificationPath: ['Android', 'Java runtime', 'Spaces'],
+      userFriendlyName: 'the Java heap'
+    },
+    'ashmem': {
+      classificationPath: ['Android', 'Ashmem'],
+      userFriendlyName: 'ashmem'
+    },
+    'native_heap': {
+      classificationPath: ['Native heap'],
+      userFriendlyName: 'the native heap'
+    },
+    'stack': {
+      classificationPath: ['Stack'],
+      userFriendlyName: 'the thread stacks'
+    }
+  };
+
+  /**
+   * Get the descendant of a VM region classification |node| specified by the
+   * given |path| of child node titles. If |node| is undefined or such a
+   * descendant does not exist, this function returns undefined.
+   */
+  function getDescendantVmRegionClassificationNode(node, path) {
+    for (let i = 0; i < path.length; i++) {
+      if (node === undefined) break;
+
+      node = node.children.find(c => c.title === path[i]);
+    }
+    return node;
+  }
+
+  /**
+   * Add global memory dump counts to |values|. In particular, this function
+   * adds the following values:
+   *
+   *   * DUMP COUNTS
+   *     memory:{chrome, webview}:all_processes:dump_count
+   *         [:{light, detailed, heap_profiler}]
+   *     type: tr.v.Histogram
+   *     unit: count_smallerIsBetter
+   *
+   * Note that unlike all other values generated by the memory metric, the
+   * global memory dump counts are NOT instances of tr.v.Histogram
+   * because it doesn't make sense to aggregate them (they are already counts
+   * over all global dumps associated with the relevant browser).
+   */
+  function addMemoryDumpCountValues(browserNameToGlobalDumps, values) {
+    browserNameToGlobalDumps.forEach(function(globalDumps, browserName) {
+      let totalDumpCount = 0;
+      const levelOfDetailNameToDumpCount = {};
+      LEVEL_OF_DETAIL_NAMES.forEach(function(levelOfDetailName) {
+        levelOfDetailNameToDumpCount[levelOfDetailName] = 0;
+      });
+      levelOfDetailNameToDumpCount[HEAP_PROFILER_DETAIL_NAME] = 0;
+
+      globalDumps.forEach(function(globalDump) {
+        totalDumpCount++;
+
+        // Increment the level-of-detail-specific dump count (if possible).
+        const levelOfDetailName =
+            LEVEL_OF_DETAIL_NAMES.get(globalDump.levelOfDetail);
+        if (levelOfDetailName === undefined) {
+          return;  // Unknown level of detail.
+        }
+        levelOfDetailNameToDumpCount[levelOfDetailName]++;
+        if (globalDump.levelOfDetail === DETAILED) {
+          if (detectHeapProfilerInMemoryDump(globalDump)) {
+            levelOfDetailNameToDumpCount[HEAP_PROFILER_DETAIL_NAME]++;
+          }
+        }
+      });
+
+      // Add memory:<browser-name>:all_processes:dump_count[:<level>] values.
+      reportMemoryDumpCountAsValue(browserName, undefined /* total */,
+          totalDumpCount, values);
+      for (const [levelOfDetailName, levelOfDetailDumpCount] of
+        Object.entries(levelOfDetailNameToDumpCount)) {
+        reportMemoryDumpCountAsValue(browserName, levelOfDetailName,
+            levelOfDetailDumpCount, values);
+      }
+    });
+  }
+
+  /**
+   * Check whether detailed global dump has heap profiler information or not.
+   */
+  function detectHeapProfilerInMemoryDump(globalDump) {
+    for (const processDump of Object.values(globalDump.processMemoryDumps)) {
+      if (processDump.heapDumps && processDump.heapDumps.malloc) {
+        const mallocDump = processDump.heapDumps.malloc;
+        if (mallocDump.entries && mallocDump.entries.length > 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Add a tr.v.Histogram value to |values| reporting that the number of
+   * |levelOfDetailName| memory dumps added by |browserName| was
+   * |levelOfDetailCount|.
+   */
+  function reportMemoryDumpCountAsValue(
+      browserName, levelOfDetailName, levelOfDetailDumpCount, values) {
+    // Construct the name of the memory value.
+    const nameParts = ['memory', browserName, 'all_processes', 'dump_count'];
+    if (levelOfDetailName !== undefined) {
+      nameParts.push(levelOfDetailName);
+    }
+    const name = nameParts.join(':');
+
+    // Build the underlying histogram for the memory value.
+    const histogram = new tr.v.Histogram(name, count_smallerIsBetter,
+        BOUNDARIES_FOR_UNIT_MAP.get(count_smallerIsBetter));
+    histogram.addSample(levelOfDetailDumpCount);
+
+    // If |levelOfDetail| argument is undefined it means a total value.
+    const userFriendlyLevelOfDetail =
+        (levelOfDetailName || 'all').replace('_', ' ');
+
+    // Build the options for the memory value.
+    histogram.description = [
+      'total number of',
+      userFriendlyLevelOfDetail,
+      'memory dumps added by',
+      convertBrowserNameToUserFriendlyName(browserName),
+      'to the trace'
+    ].join(' ');
+
+    // Report the memory value.
+    values.addHistogram(histogram);
+  }
+
+  /**
+   * Add generic values extracted from process memory dumps and aggregated by
+   * process name and component path into |values|.
+   *
+   * For each browser and set of global dumps in |browserNameToGlobalDumps|,
+   * |customProcessDumpValueExtractor| is applied to every process memory dump
+   * associated with the global memory dump. The second argument provided to the
+   * callback is a function for adding extracted values:
+   *
+   *   function sampleProcessDumpCallback(processDump, addProcessValue) {
+   *     ...
+   *     addProcessScalar({
+   *       source: 'reported_by_chrome',
+   *       component: ['system', 'native_heap'],
+   *       property: 'proportional_resident_size',
+   *       value: pssExtractedFromProcessDump2,
+   *       descriptionPrefixBuilder(componentPath) {
+   *         return 'PSS of ' + componentPath.join('/') + ' in';
+   *       }
+   *     });
+   *     ...
+   *   }
+   *
+   * For each global memory dump, the extracted values are summed by process
+   * name (browser_process, renderer_processes, ..., all_processes) and
+   * component path (e.g. gpu is a sum of gpu:gl, gpu:graphics, ...). The sums
+   * are then aggregated over all global memory dumps associated with the given
+   * browser. For example, assuming that |customProcessDumpValueExtractor|
+   * extracts 'proportional_resident_size' values for component paths
+   * ['X', 'A'], ['X', 'B'] and ['Y'] under the same 'source' from each process
+   * memory dump, the following values will be reported (for Chrome):
+   *
+   *    memory:chrome:browser_process:source:X:A:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A in all 'browser' process dumps in global dump 1,
+   *          ...
+   *          sum of X:A in all 'browser' process dumps in global dump N
+   *        ]
+   *
+   *    memory:chrome:browser_process:source:X:B:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:B in all 'browser' process dumps in global dump 1,
+   *          ...
+   *          sum of X:B in all 'browser' process dumps in global dump N
+   *        ]
+   *
+   *    memory:chrome:browser_process:source:X:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A+X:B in all 'browser' process dumps in global dump 1,
+   *          ...
+   *          sum of X:A+X:B in all 'browser' process dumps in global dump N
+   *        ]
+   *
+   *    memory:chrome:browser_process:source:Y:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of Y in all 'browser' process dumps in global dump 1,
+   *          ...
+   *          sum of Y in all 'browser' process dumps in global dump N
+   *        ]
+   *
+   *    memory:chrome:browser_process:source:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A+X:B+Y in all 'browser' process dumps in global dump 1,
+   *          ...
+   *          sum of X:A+X:B+Y in all 'browser' process dumps in global dump N
+   *        ]
+   *
+   *    ...
+   *
+   *    memory:chrome:all_processes:source:X:A:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A in all process dumps in global dump 1,
+   *          ...
+   *          sum of X:A in all process dumps in global dump N,
+   *    ]
+   *
+   *    memory:chrome:all_processes:source:X:B:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:B in all process dumps in global dump 1,
+   *          ...
+   *          sum of X:B in all process dumps in global dump N,
+   *    ]
+   *
+   *    memory:chrome:all_processes:source:X:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A+X:B in all process dumps in global dump 1,
+   *          ...
+   *          sum of X:A+X:B in all process dumps in global dump N,
+   *    ]
+   *
+   *    memory:chrome:all_processes:source:Y:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of Y in all process dumps in global dump 1,
+   *          ...
+   *          sum of Y in all process dumps in global dump N
+   *    ]
+   *
+   *    memory:chrome:all_processes:source:proportional_resident_size :
+   *        Histogram aggregated over [
+   *          sum of X:A+X:B+Y in all process dumps in global dump 1,
+   *          ...
+   *          sum of X:A+X:B+Y in all process dumps in global dump N
+   *        ]
+   *
+   * where global dumps 1 to N are the global dumps associated with the given
+   * browser.
+   *
+   * @param {!Map<string, !Array<!tr.model.GlobalMemoryDump>}
+   *     browserNameToGlobalDumps Map from browser names to arrays of global
+   *     memory dumps. The generic values will be extracted from the associated
+   *     process memory dumps.
+   * @param {!function(!tr.model.GlobalMemoryDump): boolean}
+   *     customGlobalDumpFilter Predicate for filtering global memory dumps.
+   * @param {!function(
+   *     !tr.model.ProcessMemoryDump,
+   *     !function(!{
+   *         source: string,
+   *         componentPath: (!Array<string>|undefined),
+   *         property: !{name: string, unit: !tr.b.Unit, buildDescriptionPrefix:
+   *                     !function(!Array<string>, string): string},
+   *         value: (!tr.v.Histogram|number|undefined)
+   *     }))}
+   *     customProcessDumpValueExtractor Callback for extracting values from a
+   *     process memory dump.
+   * @param {!function(!tr.b.MultiDimensionalViewNode)}
+   *     customComponentTreeModifier Callback applied to every component tree
+   *     wrt each process name.
+   * @param {!tr.v.HistogramSet} values List of values to which the
+   *     resulting aggregated values are added.
+   */
+  function addMemoryDumpValues(browserNameToGlobalDumps, customGlobalDumpFilter,
+      customProcessDumpValueExtractor, customComponentTreeModifier,
+      values) {
+    browserNameToGlobalDumps.forEach(function(globalDumps, browserName) {
+      const filteredGlobalDumps = globalDumps.filter(customGlobalDumpFilter);
+      const sourceToPropertyToBuilder = extractDataFromGlobalDumps(
+          filteredGlobalDumps, customProcessDumpValueExtractor);
+      reportDataAsValues(sourceToPropertyToBuilder, browserName,
+          customComponentTreeModifier, values);
+    });
+  }
+
+  /**
+   * For each global memory dump in |globalDumps|, calculate per-process-name
+   * sums of values extracted by |customProcessDumpValueExtractor| from the
+   * associated process memory dumps.
+   *
+   * This function returns the following nested map structure:
+   *
+   *  Source name (Map key, e.g. 'reported_by_os')
+   *    -> Property (Map key, e.g. PROPORTIONAL_RESIDENT_SIZE)
+   *      -> processAndComponentTreeBuilder
+   *
+   *  where |processAndComponentTreeBuilder| is a
+   *  tr.b.MultiDimensionalViewBuilder:
+   *
+   *  Process name (0th dimension key, e.g. 'browser_process') x
+   *  Component path (1st dimension keys, e.g. ['system', 'native_heap'])
+   *    -> Sum of value over the processes (number).
+   *
+   * See addMemoryDumpValues for more details.
+   */
+  function extractDataFromGlobalDumps(
+      globalDumps, customProcessDumpValueExtractor) {
+    const sourceToPropertyToBuilder = new Map();
+    const dumpCount = globalDumps.length;
+    globalDumps.forEach(function(globalDump, dumpIndex) {
+      for (const processDump of Object.values(globalDump.processMemoryDumps)) {
+        extractDataFromProcessDump(
+            processDump, sourceToPropertyToBuilder, dumpIndex, dumpCount,
+            customProcessDumpValueExtractor);
+      }
+    });
+    return sourceToPropertyToBuilder;
+  }
+
+  function extractDataFromProcessDump(processDump, sourceToPropertyToBuilder,
+      dumpIndex, dumpCount, customProcessDumpValueExtractor) {
+    // Process name is typically 'browser', 'renderer', etc.
+    const rawProcessName = processDump.process.name;
+    const processNamePath =
+        [tr.e.chrome.chrome_processes.canonicalizeProcessName(rawProcessName)];
+
+    customProcessDumpValueExtractor(
+        processDump,
+        function addProcessScalar(spec) {
+          if (spec.value === undefined) return;
+
+          const component = spec.component || [];
+          function createDetailsForErrorMessage() {
+            return ['source=', spec.source, ', property=',
+              spec.property.name || '(undefined)', ', component=',
+              component.length === 0 ? '(empty)' : component.join(':'),
+              ' in ', processDump.process.userFriendlyName].join('');
+          }
+
+          let value;
+          if (spec.value instanceof tr.b.Scalar) {
+            value = spec.value.value;
+            if (spec.value.unit !== spec.property.unit) {
+              throw new Error('Scalar unit for ' +
+                  createDetailsForErrorMessage() + ' (' +
+                  spec.value.unit.unitName +
+                  ') doesn\'t match the unit of the property (' +
+                  spec.property.unit.unitName + ')');
+            }
+          } else {
+            value = spec.value;
+          }
+
+          let propertyToBuilder = sourceToPropertyToBuilder.get(spec.source);
+          if (propertyToBuilder === undefined) {
+            propertyToBuilder = new Map();
+            sourceToPropertyToBuilder.set(spec.source, propertyToBuilder);
+          }
+
+          let builder = propertyToBuilder.get(spec.property);
+          if (builder === undefined) {
+            builder = new tr.b.MultiDimensionalViewBuilder(
+                2 /* dimensions (process name and component path) */,
+                dumpCount /* valueCount */),
+            propertyToBuilder.set(spec.property, builder);
+          }
+
+          const values = new Array(dumpCount);
+          values[dumpIndex] = value;
+
+          builder.addPath(
+              [processNamePath, component] /* path */, values,
+              tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL /* valueKind */);
+        });
+  }
+
+  function reportDataAsValues(sourceToPropertyToBuilder, browserName,
+      customComponentTreeModifier, values) {
+    // For each source name (e.g. 'reported_by_os')...
+    sourceToPropertyToBuilder.forEach(function(propertyToBuilder, sourceName) {
+      // For each property (e.g. EFFECTIVE_SIZE)...
+      propertyToBuilder.forEach(function(builders, property) {
+        const tree = builders.buildTopDownTreeView();
+        reportComponentDataAsValues(browserName, sourceName, property,
+            [] /* processPath */, [] /* componentPath */, tree, values,
+            customComponentTreeModifier);
+      });
+    });
+  }
+
+  /**
+   * For the given |browserName| (e.g. 'chrome'), |property|
+   * (e.g. EFFECTIVE_SIZE), |processPath| (e.g. ['browser_process']),
+   * |componentPath| (e.g. ['v8']), add
+   * a tr.v.Histogram with |unit| aggregating the total
+   * values of the associated |componentNode| across all timestamps
+   * (corresponding to global memory dumps associated with the given browser)
+   * |values| for each process (e.g. 'gpu_process', 'browser_process', etc).
+   * We also report a special 'all_processes' histogram which agregates all
+   * others, this has a RelatedNameMap diagnostic explaining
+   * how it is built from the other histograms.
+   *
+   * See addMemoryDumpValues for more details.
+   */
+  function reportComponentDataAsValues(browserName, sourceName, property,
+      processPath, componentPath, tree, values, customComponentTreeModifier,
+      opt_cachedHistograms) {
+    const cachedHistograms = opt_cachedHistograms || new Map();
+    function recurse(processPath, componentPath, node) {
+      return reportComponentDataAsValues(browserName, sourceName, property,
+          processPath, componentPath, node, values,
+          customComponentTreeModifier, cachedHistograms);
+    }
+
+    function buildHistogram(processPath, componentPath, node) {
+      return buildNamedMemoryNumericFromNode(
+          browserName,
+          sourceName,
+          property,
+          processPath.length === 0 ? 'all_processes' : processPath[0],
+          componentPath,
+          node);
+    }
+
+    customComponentTreeModifier(tree);
+    const histogram = buildHistogram(processPath, componentPath, tree);
+    if (cachedHistograms.has(histogram.name)) {
+      return cachedHistograms.get(histogram.name);
+    }
+    cachedHistograms.set(histogram.name, histogram);
+
+    const processNames = new tr.v.d.RelatedNameMap();
+    for (const [childProcessName, childProcessNode] of tree.children[0]) {
+      processPath.push(childProcessName);
+      const childProcessHistogram =
+        recurse(processPath, componentPath, childProcessNode);
+      processNames.set(childProcessName, childProcessHistogram.name);
+      processPath.pop();
+    }
+
+    const componentNames = new tr.v.d.RelatedNameMap();
+    for (const [childComponentName, childComponentNode] of tree.children[1]) {
+      componentPath.push(childComponentName);
+      const childComponentHistogram =
+        recurse(processPath, componentPath, childComponentNode);
+      componentNames.set(childComponentName, childComponentHistogram.name);
+      componentPath.pop();
+    }
+
+    values.addHistogram(histogram);
+    if (tree.children[0].size > 0) {
+      histogram.diagnostics.set('processes', processNames);
+    }
+    if (tree.children[1].size > 0) {
+      histogram.diagnostics.set('components', componentNames);
+    }
+
+    return histogram;
+  }
+
+  /**
+   * Gets the name for a histogram.
+   * The histograms have the following naming scheme:
+   * memory:chrome:browser_process:reported_by_chrome:v8:heap:effective_size_avg
+   *        ^browser ^process      ^source            ^component  ^property
+   */
+  function getNumericName(
+      browserName, sourceName, propertyName, processName, componentPath) {
+    // Construct the name of the memory value.
+    const nameParts = ['memory', browserName, processName, sourceName].concat(
+        componentPath);
+    if (propertyName !== undefined) nameParts.push(propertyName);
+    return nameParts.join(':');
+  }
+
+  /**
+   * Gets the description of a histogram.
+   */
+  function getNumericDescription(
+      property, browserName, processName, componentPath) {
+    return [
+      property.buildDescriptionPrefix(componentPath, processName),
+      'in',
+      convertBrowserNameToUserFriendlyName(browserName)
+    ].join(' ');
+  }
+
+  /**
+   * Create a memory tr.v.Histogram with |unit| and add all total values in
+   * |node| to it. Names and describes the histogram according to the
+   * |browserName|, |sourceName|, |property|, |processName| and
+   * |componentPath|.
+   */
+  function buildNamedMemoryNumericFromNode(
+      browserName, sourceName, property, processName, componentPath, node) {
+    const name = getNumericName(
+        browserName, sourceName, property.name, processName, componentPath);
+    const description = getNumericDescription(
+        property, browserName, processName, componentPath);
+
+    // Build the underlying numeric for the memory value.
+    const numeric = buildMemoryNumericFromNode(name, node, property.unit);
+    numeric.description = description;
+    return numeric;
+  }
+
+  function buildSampleDiagnostics(value, node) {
+    if (node.children.length < 2) return undefined;
+    const diagnostics = new Map();
+    const i = node.values.indexOf(value);
+
+    const processBreakdown = new tr.v.d.Breakdown();
+    processBreakdown.colorScheme =
+      tr.e.chrome.chrome_processes.PROCESS_COLOR_SCHEME_NAME;
+    for (const [name, subNode] of node.children[0]) {
+      processBreakdown.set(name, subNode.values[i].total);
+    }
+    if (processBreakdown.size > 0) {
+      diagnostics.set('processes', processBreakdown);
+    }
+
+    const componentBreakdown = new tr.v.d.Breakdown();
+    for (const [name, subNode] of node.children[1]) {
+      componentBreakdown.set(name, subNode.values[i].total);
+    }
+    if (componentBreakdown.size > 0) {
+      diagnostics.set('components', componentBreakdown);
+    }
+
+    if (diagnostics.size === 0) return undefined;
+    return diagnostics;
+  }
+
+  /**
+   * Create a memory tr.v.Histogram with |unit| and add all total values in
+   * |node| to it.
+   */
+  function buildMemoryNumericFromNode(name, node, unit) {
+    const histogram = new tr.v.Histogram(
+        name, unit, BOUNDARIES_FOR_UNIT_MAP.get(unit));
+
+    node.values.forEach(v => histogram.addSample(
+        v.total, buildSampleDiagnostics(v, node)));
+
+    return histogram;
+  }
+
+  tr.metrics.MetricRegistry.register(memoryMetric, {
+    supportsRangeOfInterest: true
+  });
+
+  return {
+    memoryMetric,
+  };
+});
+</script>

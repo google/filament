@@ -1,0 +1,38 @@
+name: clang-tidy
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  job:
+    name: run-clang-tidy
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: install clang-tidy
+      run: sudo apt update && sudo apt -y install clang-tidy
+
+    - name: create build environment
+      run: cmake -E make_directory ${{ runner.workspace }}/_build
+
+    - name: configure cmake
+      shell: bash
+      working-directory: ${{ runner.workspace }}/_build
+      run: >
+        cmake $GITHUB_WORKSPACE
+        -DBENCHMARK_ENABLE_ASSEMBLY_TESTS=OFF
+        -DBENCHMARK_ENABLE_LIBPFM=OFF
+        -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+        -DCMAKE_C_COMPILER=clang
+        -DCMAKE_CXX_COMPILER=clang++
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        -DGTEST_COMPILE_COMMANDS=OFF
+
+    - name: run
+      shell: bash
+      working-directory: ${{ runner.workspace }}/_build
+      run: run-clang-tidy

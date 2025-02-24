@@ -1,0 +1,18 @@
+Name: parse5
+Short Name: parse5
+URL: https://github.com/inikulin/parse5
+Version: 0
+Revision: b7f3e3faa56e49e7298576e4a9099a381f0e8670
+Date: June 30, 2015
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+HTML parser in javascript.
+
+Local Modifications:
+Add parse5_lib.js to export parse5's functionality to global environment.
+parse5.js is the bundle file created by running:
+"$ browserify parse5_lib.js -o parse5.js"

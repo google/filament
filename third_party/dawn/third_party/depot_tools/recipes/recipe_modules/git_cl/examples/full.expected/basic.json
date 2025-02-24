@@ -1,0 +1,98 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "upload",
+      "--message-file",
+      "Do the thing foobar\nNow with emoji: \ud83d\ude04"
+    ],
+    "name": "git_cl upload"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "issue"
+    ],
+    "name": "git_cl issue"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "description",
+      "-d",
+      "https://code.review/123"
+    ],
+    "name": "git_cl description (build)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "description",
+      "-n",
+      "-",
+      "https://code.review/123"
+    ],
+    "name": "git_cl set description",
+    "stdin": "bammmm"
+  },
+  {
+    "cmd": [
+      "echo",
+      "hi"
+    ],
+    "name": "echo"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "description",
+      "-d"
+    ],
+    "cwd": "[CLEANUP]/fakerepo_tmp_1",
+    "name": "git_cl description"
+  },
+  {
+    "cmd": [
+      "echo",
+      "hey"
+    ],
+    "name": "echo (2)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "description",
+      "-n",
+      "-"
+    ],
+    "cwd": "[CLEANUP]/fakerepo_tmp_1",
+    "name": "git_cl set description (2)",
+    "stdin": "new description woo"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/git_cl.py",
+      "description",
+      "-d"
+    ],
+    "cwd": "[CLEANUP]/fakerepo_tmp_1",
+    "name": "git_cl description (2)"
+  },
+  {
+    "cmd": [
+      "echo",
+      "new description woo"
+    ],
+    "name": "echo (3)"
+  },
+  {
+    "name": "$result"
+  }
+]

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses drm driver events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux irq trace events.
+   * @constructor
+   */
+  function IrqParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('irq_handler_entry',
+        IrqParser.prototype.irqHandlerEntryEvent.bind(this));
+    importer.registerEventHandler('irq_handler_exit',
+        IrqParser.prototype.irqHandlerExitEvent.bind(this));
+    importer.registerEventHandler('softirq_raise',
+        IrqParser.prototype.softirqRaiseEvent.bind(this));
+    importer.registerEventHandler('softirq_entry',
+        IrqParser.prototype.softirqEntryEvent.bind(this));
+    importer.registerEventHandler('softirq_exit',
+        IrqParser.prototype.softirqExitEvent.bind(this));
+    importer.registerEventHandler('ipi_entry',
+        IrqParser.prototype.ipiEntryEvent.bind(this));
+    importer.registerEventHandler('ipi_exit',
+        IrqParser.prototype.ipiExitEvent.bind(this));
+    importer.registerEventHandler('preempt_disable',
+        IrqParser.prototype.preemptStartEvent.bind(this));
+    importer.registerEventHandler('preempt_enable',
+        IrqParser.prototype.preemptEndEvent.bind(this));
+    importer.registerEventHandler('irq_disable',
+        IrqParser.prototype.irqoffStartEvent.bind(this));
+    importer.registerEventHandler('irq_enable',
+        IrqParser.prototype.irqoffEndEvent.bind(this));
+  }
+
+  // Matches the irq_handler_entry record
+  const irqHandlerEntryRE = /irq=(\d+) name=(.+)/;
+
+  // Matches the irq_handler_exit record
+  const irqHandlerExitRE = /irq=(\d+) ret=(.+)/;
+
+  // Matches the softirq_raise record
+  const softirqRE = /vec=(\d+) \[action=(.+)\]/;
+
+  // Matches the ipi_exit_
+  const ipiHandlerExitRE = /\((.+)\)/;
+
+  // Matches the preempt_disable/enable records
+  const preemptirqRE = /caller=(.+) parent=(.+)/;
+
+  IrqParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses irq events and sets up state in the mporter.
+     */
+    irqHandlerEntryEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = irqHandlerEntryRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const irq = parseInt(event[1]);
+      const name = event[2];
+
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqs cpu ' + cpuNumber);
+      thread.lastEntryTs = ts;
+      thread.irqName = name;
+
+      return true;
+    },
+
+    irqHandlerExitEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = irqHandlerExitRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const irq = parseInt(event[1]);
+      const ret = event[2];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqs cpu ' + cpuNumber);
+
+      if (thread.lastEntryTs !== undefined) {
+        const duration = ts - thread.lastEntryTs;
+        const slice = new tr.model.ThreadSlice(
+            '',
+            'IRQ (' + thread.irqName + ')',
+            ColorScheme.getColorIdForGeneralPurposeString(event[1]),
+            thread.lastEntryTs, { ret },
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastEntryTs = undefined;
+      thread.irqName = undefined;
+      return true;
+    },
+
+    softirqRaiseEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      return true;
+    },
+
+    softirqEntryEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = softirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const action = event[2];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'softirq cpu ' + cpuNumber);
+      thread.lastEntryTs = ts;
+
+      return true;
+    },
+
+    softirqExitEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = softirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const vec = parseInt(event[1]);
+      const action = event[2];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'softirq cpu ' + cpuNumber);
+
+      if (thread.lastEntryTs !== undefined) {
+        const duration = ts - thread.lastEntryTs;
+        const slice = new tr.model.ThreadSlice(
+            '', action,
+            ColorScheme.getColorIdForGeneralPurposeString(event[1]),
+            thread.lastEntryTs, { vec },
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastEntryTs = undefined;
+      return true;
+    },
+    /**
+     * Parses ipi events and sets up state in the mporter.
+     */
+    ipiEntryEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqs cpu ' + cpuNumber);
+      thread.lastEntryTs = ts;
+
+      return true;
+    },
+
+    ipiExitEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = ipiHandlerExitRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const ipiName = event[1];
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqs cpu ' + cpuNumber);
+
+      if (thread.lastEntryTs !== undefined) {
+        const duration = ts - thread.lastEntryTs;
+        const slice = new tr.model.ThreadSlice(
+            '',
+            'IPI (' + ipiName + ')',
+            ColorScheme.getColorIdForGeneralPurposeString(ipiName),
+            thread.lastEntryTs,
+            {},
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastEntryTs = undefined;
+      return true;
+    },
+
+    /**
+     * Parses preempt disable/enable events and sets up state in the importer.
+     */
+    preemptStartEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = preemptirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const thread = this.importer.getOrCreatePseudoThread(
+          'preempt cpu ' + cpuNumber);
+      thread.lastEntryTs = ts;
+
+      thread.preemptStartCaller = event[1];
+      thread.preemptStartParent = event[2];
+      return true;
+    },
+
+    preemptEndEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = preemptirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const thread = this.importer.getOrCreatePseudoThread(
+          'preempt cpu ' + cpuNumber);
+
+      thread.preemptEndCaller = event[1];
+      thread.preemptEndParent = event[2];
+
+      if (thread.lastEntryTs !== undefined) {
+        const duration = ts - thread.lastEntryTs;
+        const slice = new tr.model.ThreadSlice(
+            '',
+            thread.preemptStartParent + ': ' + thread.preemptStartCaller,
+            ColorScheme.getColorIdForGeneralPurposeString(
+                thread.preemptEndCaller),
+            thread.lastEntryTs, {},
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastEntryTs = undefined;
+      return true;
+    },
+
+    /**
+     * Parses irqoff disable/enable events and sets up state in the importer.
+     */
+    irqoffStartEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = preemptirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqoff cpu ' + cpuNumber);
+      thread.lastEntryTs = ts;
+
+      thread.irqoffStartCaller = event[1];
+      thread.irqoffStartParent = event[2];
+      return true;
+    },
+
+    irqoffEndEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = preemptirqRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const thread = this.importer.getOrCreatePseudoThread(
+          'irqoff cpu ' + cpuNumber);
+
+      thread.irqoffEndCaller = event[1];
+      thread.irqoffEndParent = event[2];
+
+      if (thread.lastEntryTs !== undefined) {
+        const duration = ts - thread.lastEntryTs;
+        const slice = new tr.model.ThreadSlice(
+            '',
+            thread.irqoffStartParent + ': ' + thread.irqoffStartCaller,
+            ColorScheme.getColorIdForGeneralPurposeString(
+                thread.irqoffEndCaller),
+            thread.lastEntryTs, {},
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastEntryTs = undefined;
+      return true;
+    }
+  };
+
+  Parser.register(IrqParser);
+
+  return {
+    IrqParser,
+  };
+});
+</script>

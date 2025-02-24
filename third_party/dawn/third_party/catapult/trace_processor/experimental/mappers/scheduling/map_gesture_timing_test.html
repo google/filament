@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mappers/scheduling/map_gesture_timing.html">
+<link rel="import" href="/perf_insights/mre/mre_result.html">
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/user_model/load_expectation.html">
+<link rel="import" href="/tracing/model/user_model/response_expectation.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('mapperTest', function() {
+    var m = tr.c.TestUtils.newModel(function(m) {
+      var loadIr = new tr.model.um.LoadExpectation(
+          m, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 0, 10);
+      m.userModel.expectations.push(loadIr);
+
+      var scrollIr = new tr.model.um.ResponseExpectation(
+          m, 'Scroll', 50, 10);
+      m.userModel.expectations.push(scrollIr);
+
+      var flingIr = new tr.model.um.ResponseExpectation(
+          m, 'Fling', 60, 10);
+      m.userModel.expectations.push(flingIr);
+
+      var scrollIr2 = new tr.model.um.ResponseExpectation(
+          m, 'Scroll', 100, 20);
+      m.userModel.expectations.push(scrollIr2);
+    });
+
+    var result = new pi.mre.MreResult();
+    pie.mapGestureTimingForTest(result, m);
+
+    assert.equal(tr.b.dictionaryLength(result.pairs), 1);
+
+    var gestureTiming = result.pairs.gestureTiming;
+    assert.deepEqual(gestureTiming.firstGestureAfterLoadTime, [40]);
+    assert.deepEqual(gestureTiming.gestureDuration, [10, 20]);
+    assert.deepEqual(gestureTiming.intervalBetweenGestures, [50]);
+  });
+});
+
+</script>
+

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/profile_node.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the V8CpuProfileNode class.
+ */
+tr.exportTo('tr.e.v8', function() {
+  const ProfileNode = tr.model.ProfileNode;
+  /**
+   * A V8CpuProfileNode represents a node in the v8 cpu profile tree,
+   * it is essentially a frame in the stack when the sample gets recorded.
+   */
+  function V8CpuProfileNode(id, callFrame, parentNode) {
+    ProfileNode.call(this, id, callFrame.functionName, parentNode);
+    this.callFrame_ = tr.b.deepCopy(callFrame);
+    this.deoptReason_ = '';
+    this.colorId_ = tr.b.ColorScheme.getColorIdForGeneralPurposeString(
+        callFrame.functionName || '');
+  }
+
+  V8CpuProfileNode.prototype = {
+    __proto__: ProfileNode.prototype,
+
+    get functionName() {
+      return this.callFrame_.functionName;
+    },
+
+    get scriptId() {
+      return this.callFrame_.scriptId;
+    },
+
+    get url() {
+      if (!this.callFrame_.url) {
+        return 'unknown';
+      }
+      let url = this.callFrame_.url;
+      if (this.callFrame_.lineNumber === undefined) {
+        return url;
+      }
+      url = url + ':' + this.callFrame_.lineNumber;
+      if (this.callFrame_.columnNumber === undefined) {
+        return url;
+      }
+      url = url + ':' + this.callFrame_.columnNumber;
+      return url;
+    },
+
+    get deoptReason() {
+      return this.deoptReason_;
+    },
+
+    set deoptReason(value) {
+      this.deoptReason_ = value;
+    },
+
+    get userFriendlyName() {
+      const name = this.functionName + ' url: ' + this.url;
+      return !this.deoptReason_ ?
+        name : name + ' Deoptimized reason: ' + this.deoptReason_;
+    },
+
+    get sampleTitle() {
+      return 'V8 Sample';
+    }
+  };
+
+  V8CpuProfileNode.constructFromObject = function(profileTree, node) {
+    const nodeId = node.id;
+    if (nodeId === 1) {
+      // Ignore fake root.
+      // The node with id 1 is a fake root for the profile tree,
+      // since we are using map, we don't really need it.
+      return undefined;
+    }
+    const parentNode = profileTree.getNode(node.parent);
+    const profileNode = new V8CpuProfileNode(nodeId, node.callFrame,
+        parentNode);
+    if (node.deoptReason !== undefined) {
+      profileNode.deoptReason = node.deoptReason;
+    }
+    return profileNode;
+  };
+
+  ProfileNode.subTypes.register(
+      V8CpuProfileNode,
+      {
+        typeName: 'cpuProfile',
+        name: 'v8 cpu profile node',
+        pluralName: 'v8 cpu profile nodes'
+      }
+  );
+
+  ProfileNode.subTypes.register(
+      V8CpuProfileNode,
+      {
+        typeName: 'legacySample',
+        name: 'v8 cpu profile node',
+        pluralName: 'v8 cpu profile nodes'
+      }
+  );
+
+  return {
+    ProfileNode,
+  };
+});
+</script>

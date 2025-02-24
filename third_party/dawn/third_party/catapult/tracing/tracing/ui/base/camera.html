@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const deg2rad = tr.b.math.deg2rad;
+
+  const constants = {
+    DEFAULT_SCALE: 0.5,
+    DEFAULT_EYE_DISTANCE: 10000,
+    MINIMUM_DISTANCE: 1000,
+    MAXIMUM_DISTANCE: 100000,
+    FOV: 15,
+    RESCALE_TIMEOUT_MS: 200,
+    MAXIMUM_TILT: 80,
+    SETTINGS_NAMESPACE: 'tr.ui_camera'
+  };
+
+  const Camera = tr.ui.b.define('camera');
+
+  Camera.prototype = {
+    __proto__: HTMLUnknownElement.prototype,
+
+    decorate(eventSource) {
+      this.eventSource_ = eventSource;
+
+      this.eventSource_.addEventListener('beginpan',
+          this.onPanBegin_.bind(this));
+      this.eventSource_.addEventListener('updatepan',
+          this.onPanUpdate_.bind(this));
+      this.eventSource_.addEventListener('endpan',
+          this.onPanEnd_.bind(this));
+
+      this.eventSource_.addEventListener('beginzoom',
+          this.onZoomBegin_.bind(this));
+      this.eventSource_.addEventListener('updatezoom',
+          this.onZoomUpdate_.bind(this));
+      this.eventSource_.addEventListener('endzoom',
+          this.onZoomEnd_.bind(this));
+
+      this.eventSource_.addEventListener('beginrotate',
+          this.onRotateBegin_.bind(this));
+      this.eventSource_.addEventListener('updaterotate',
+          this.onRotateUpdate_.bind(this));
+      this.eventSource_.addEventListener('endrotate',
+          this.onRotateEnd_.bind(this));
+
+      this.eye_ = [0, 0, constants.DEFAULT_EYE_DISTANCE];
+      this.gazeTarget_ = [0, 0, 0];
+      this.rotation_ = [0, 0];
+
+      this.pixelRatio_ = window.devicePixelRatio || 1;
+    },
+
+
+    get modelViewMatrix() {
+      const mvMatrix = mat4.create();
+
+      mat4.lookAt(mvMatrix, this.eye_, this.gazeTarget_, [0, 1, 0]);
+      return mvMatrix;
+    },
+
+    get projectionMatrix() {
+      const rect =
+          tr.ui.b.windowRectForElement(this.canvas_).
+              scaleSize(this.pixelRatio_);
+
+      const aspectRatio = rect.width / rect.height;
+      const matrix = mat4.create();
+      mat4.perspective(
+          matrix, deg2rad(constants.FOV), aspectRatio, 1, 100000);
+
+      return matrix;
+    },
+
+    set canvas(c) {
+      this.canvas_ = c;
+    },
+
+    set deviceRect(rect) {
+      this.deviceRect_ = rect;
+    },
+
+    get stackingDistanceDampening() {
+      const gazeVector = [
+        this.gazeTarget_[0] - this.eye_[0],
+        this.gazeTarget_[1] - this.eye_[1],
+        this.gazeTarget_[2] - this.eye_[2]];
+      vec3.normalize(gazeVector, gazeVector);
+      return 1 + gazeVector[2];
+    },
+
+    loadCameraFromSettings(settings) {
+      this.eye_ = settings.get(
+          'eye', this.eye_, constants.SETTINGS_NAMESPACE);
+      this.gazeTarget_ = settings.get(
+          'gaze_target', this.gazeTarget_, constants.SETTINGS_NAMESPACE);
+      this.rotation_ = settings.get(
+          'rotation', this.rotation_, constants.SETTINGS_NAMESPACE);
+
+      this.dispatchRenderEvent_();
+    },
+
+    saveCameraToSettings(settings) {
+      settings.set(
+          'eye', this.eye_, constants.SETTINGS_NAMESPACE);
+      settings.set(
+          'gaze_target', this.gazeTarget_, constants.SETTINGS_NAMESPACE);
+      settings.set(
+          'rotation', this.rotation_, constants.SETTINGS_NAMESPACE);
+    },
+
+    resetCamera() {
+      this.eye_ = [0, 0, constants.DEFAULT_EYE_DISTANCE];
+      this.gazeTarget_ = [0, 0, 0];
+      this.rotation_ = [0, 0];
+
+      const settings = tr.b.SessionSettings();
+      const keys = settings.keys(constants.SETTINGS_NAMESPACE);
+      if (keys.length !== 0) {
+        this.loadCameraFromSettings(settings);
+        return;
+      }
+
+      if (this.deviceRect_) {
+        const rect = tr.ui.b.windowRectForElement(this.canvas_).
+            scaleSize(this.pixelRatio_);
+
+        this.eye_[0] = this.deviceRect_.width / 2;
+        this.eye_[1] = this.deviceRect_.height / 2;
+
+        this.gazeTarget_[0] = this.deviceRect_.width / 2;
+        this.gazeTarget_[1] = this.deviceRect_.height / 2;
+      }
+
+      this.saveCameraToSettings(settings);
+      this.dispatchRenderEvent_();
+    },
+
+    updatePanByDelta(delta) {
+      const rect =
+          tr.ui.b.windowRectForElement(this.canvas_).
+              scaleSize(this.pixelRatio_);
+
+      // Get the eye vector, since we'll be adjusting gazeTarget.
+      const eyeVector = [
+        this.eye_[0] - this.gazeTarget_[0],
+        this.eye_[1] - this.gazeTarget_[1],
+        this.eye_[2] - this.gazeTarget_[2]];
+      const length = vec3.length(eyeVector);
+      vec3.normalize(eyeVector, eyeVector);
+
+      const halfFov = constants.FOV / 2;
+      const multiplier =
+          2.0 * length * Math.tan(deg2rad(halfFov)) / rect.height;
+
+      // Get the up and right vectors.
+      const up = [0, 1, 0];
+      const rotMatrix = mat4.create();
+      mat4.rotate(
+          rotMatrix, rotMatrix, deg2rad(this.rotation_[1]), [0, 1, 0]);
+      mat4.rotate(
+          rotMatrix, rotMatrix, deg2rad(this.rotation_[0]), [1, 0, 0]);
+      vec3.transformMat4(up, up, rotMatrix);
+
+      const right = [0, 0, 0];
+      vec3.cross(right, eyeVector, up);
+      vec3.normalize(right, right);
+
+      // Update the gaze target.
+      for (let i = 0; i < 3; ++i) {
+        this.gazeTarget_[i] +=
+            delta[0] * multiplier * right[i] - delta[1] * multiplier * up[i];
+
+        this.eye_[i] = this.gazeTarget_[i] + length * eyeVector[i];
+      }
+
+      // If we have some z offset, we need to reposition gazeTarget
+      // to be on the plane z = 0 with normal [0, 0, 1].
+      if (Math.abs(this.gazeTarget_[2]) > 1e-6) {
+        const gazeVector = [-eyeVector[0], -eyeVector[1], -eyeVector[2]];
+        const newLength = tr.b.math.clamp(
+            -this.eye_[2] / gazeVector[2],
+            constants.MINIMUM_DISTANCE,
+            constants.MAXIMUM_DISTANCE);
+
+        for (let i = 0; i < 3; ++i) {
+          this.gazeTarget_[i] = this.eye_[i] + newLength * gazeVector[i];
+        }
+      }
+
+      this.saveCameraToSettings(tr.b.SessionSettings());
+      this.dispatchRenderEvent_();
+    },
+
+    updateZoomByDelta(delta) {
+      let deltaY = delta[1];
+      deltaY = tr.b.math.clamp(deltaY, -50, 50);
+      let scale = 1.0 - deltaY / 100.0;
+
+      const eyeVector = [0, 0, 0];
+      vec3.subtract(eyeVector, this.eye_, this.gazeTarget_);
+
+      const length = vec3.length(eyeVector);
+
+      // Clamp the length to allowed values by changing the scale.
+      if (length * scale < constants.MINIMUM_DISTANCE) {
+        scale = constants.MINIMUM_DISTANCE / length;
+      } else if (length * scale > constants.MAXIMUM_DISTANCE) {
+        scale = constants.MAXIMUM_DISTANCE / length;
+      }
+
+      vec3.scale(eyeVector, eyeVector, scale);
+      vec3.add(this.eye_, this.gazeTarget_, eyeVector);
+
+      this.saveCameraToSettings(tr.b.SessionSettings());
+      this.dispatchRenderEvent_();
+    },
+
+    updateRotateByDelta(delta) {
+      delta[0] *= 0.5;
+      delta[1] *= 0.5;
+
+      if (Math.abs(this.rotation_[0] + delta[1]) > constants.MAXIMUM_TILT) {
+        return;
+      }
+      if (Math.abs(this.rotation_[1] - delta[0]) > constants.MAXIMUM_TILT) {
+        return;
+      }
+
+      const eyeVector = [0, 0, 0, 0];
+      vec3.subtract(eyeVector, this.eye_, this.gazeTarget_);
+
+      // Undo the current rotation.
+      const rotMatrix = mat4.create();
+      mat4.rotate(
+          rotMatrix, rotMatrix, -deg2rad(this.rotation_[0]), [1, 0, 0]);
+      mat4.rotate(
+          rotMatrix, rotMatrix, -deg2rad(this.rotation_[1]), [0, 1, 0]);
+      vec4.transformMat4(eyeVector, eyeVector, rotMatrix);
+
+      // Update rotation values.
+      this.rotation_[0] += delta[1];
+      this.rotation_[1] -= delta[0];
+
+      // Redo the new rotation.
+      mat4.identity(rotMatrix);
+      mat4.rotate(
+          rotMatrix, rotMatrix, deg2rad(this.rotation_[1]), [0, 1, 0]);
+      mat4.rotate(
+          rotMatrix, rotMatrix, deg2rad(this.rotation_[0]), [1, 0, 0]);
+      vec4.transformMat4(eyeVector, eyeVector, rotMatrix);
+
+      vec3.add(this.eye_, this.gazeTarget_, eyeVector);
+
+      this.saveCameraToSettings(tr.b.SessionSettings());
+      this.dispatchRenderEvent_();
+    },
+
+
+    // Event callbacks.
+    onPanBegin_(e) {
+      this.panning_ = true;
+      this.lastMousePosition_ = this.getMousePosition_(e);
+    },
+
+    onPanUpdate_(e) {
+      if (!this.panning_) return;
+
+      const delta = this.getMouseDelta_(e, this.lastMousePosition_);
+      this.lastMousePosition_ = this.getMousePosition_(e);
+      this.updatePanByDelta(delta);
+    },
+
+    onPanEnd_(e) {
+      this.panning_ = false;
+    },
+
+    onZoomBegin_(e) {
+      this.zooming_ = true;
+
+      const p = this.getMousePosition_(e);
+
+      this.lastMousePosition_ = p;
+      this.zoomPoint_ = p;
+    },
+
+    onZoomUpdate_(e) {
+      if (!this.zooming_) return;
+
+      const delta = this.getMouseDelta_(e, this.lastMousePosition_);
+      this.lastMousePosition_ = this.getMousePosition_(e);
+      this.updateZoomByDelta(delta);
+    },
+
+    onZoomEnd_(e) {
+      this.zooming_ = false;
+      this.zoomPoint_ = undefined;
+    },
+
+    onRotateBegin_(e) {
+      this.rotating_ = true;
+      this.lastMousePosition_ = this.getMousePosition_(e);
+    },
+
+    onRotateUpdate_(e) {
+      if (!this.rotating_) return;
+
+      const delta = this.getMouseDelta_(e, this.lastMousePosition_);
+      this.lastMousePosition_ = this.getMousePosition_(e);
+      this.updateRotateByDelta(delta);
+    },
+
+    onRotateEnd_(e) {
+      this.rotating_ = false;
+    },
+
+
+    // Misc helper functions.
+    getMousePosition_(e) {
+      const rect = tr.ui.b.windowRectForElement(this.canvas_);
+      return [(e.clientX - rect.x) * this.pixelRatio_,
+        (e.clientY - rect.y) * this.pixelRatio_];
+    },
+
+    getMouseDelta_(e, p) {
+      const newP = this.getMousePosition_(e);
+      return [newP[0] - p[0], newP[1] - p[1]];
+    },
+
+    dispatchRenderEvent_() {
+      tr.b.dispatchSimpleEvent(this, 'renderrequired', false, false);
+    }
+  };
+
+  return {
+    Camera,
+  };
+});
+</script>

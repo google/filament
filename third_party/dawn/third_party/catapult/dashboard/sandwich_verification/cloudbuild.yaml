@@ -1,0 +1,86 @@
+steps:
+
+# Deploy Sandwich Verification Workflow
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: [
+    'gcloud',
+    'workflows',
+    'deploy',
+    'sandwich-verification-workflow-${_VERSION}',
+    '--source=sandwich-verification-workflow.yaml',
+    '--location=${_REGION}',
+    '--service-account=${_SERVICE_ACCOUNT}'
+  ]
+# Deploy Start Pinpoint Job function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: [
+    'gcloud',
+    'functions',
+    'deploy',
+    'start-pinpoint-job-${_VERSION}',
+    '--gen2',
+    '--runtime=${_RUNTIME}',
+    '--region=${_REGION}',
+    '--source=.',
+    '--entry-point=StartPinpointJob',
+    '--trigger-http',
+    '--run-service-account=${_SERVICE_ACCOUNT}'
+  ]
+  waitFor: ['-']
+# Deploy Poll Pinpoint Job Function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: [
+    'gcloud',
+    'functions',
+    'deploy',
+    'poll-pinpoint-job-${_VERSION}',
+    '--gen2',
+    '--runtime=${_RUNTIME}',
+    '--region=${_REGION}',
+    '--source=.',
+    '--entry-point=PollPinpointJob',
+    '--trigger-http',
+    '--run-service-account=${_SERVICE_ACCOUNT}'
+  ]
+  waitFor: ['-']
+
+# Deploy Get CABE Analysis Function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: [
+    'gcloud',
+    'functions',
+    'deploy',
+    'get-cabe-analysis-${_VERSION}',
+    '--gen2',
+    '--runtime=${_RUNTIME}',
+    '--region=${_REGION}',
+    '--source=.',
+    '--entry-point=GetCabeAnalysis',
+    '--trigger-http',
+    '--run-service-account=${_SERVICE_ACCOUNT}'
+  ]
+  # let deployment of functions be done in parallel
+  waitFor: ['-']
+
+# Deploy Regression Detection Function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: [
+    'gcloud',
+    'functions',
+    'deploy',
+    'regression-detection-${_VERSION}',
+    '--gen2',
+    '--runtime=${_RUNTIME}',
+    '--region=${_REGION}',
+    '--source=.',
+    '--entry-point=RegressionDetection',
+    '--trigger-http',
+    '--run-service-account=${_SERVICE_ACCOUNT}'
+  ]
+  waitFor: ['-']
+substitutions:
+  _RUNTIME: 'python311'
+  _REGION: 'us-central1'
+  _VERSION: 'prod'
+  _SERVICE_ACCOUNT: 'chromeperf@appspot.gserviceaccount.com'
+

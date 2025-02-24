@@ -1,0 +1,8 @@
+[
+  {
+    "failure": {
+      "humanReason": "invalid (host, project) pair in buildbucket.build.input.gitiles_commit: (unrecognized, repo) does not match any of configured gclient solutions and not present in gclient_config.repo_path_map"
+    },
+    "name": "$result"
+  }
+]

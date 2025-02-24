@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/model/constants.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  function ScopedId(scope, id, pid) {
+    if (scope === undefined) {
+      throw new Error('Scope should be defined. Use \'' +
+                      tr.model.OBJECT_DEFAULT_SCOPE +
+                      '\' as the default scope.');
+    }
+    this.scope = scope;
+    this.id = id;
+    this.pid = pid;
+  }
+
+  ScopedId.prototype = {
+    toString() {
+      const pidStr = this.pid === undefined ? '' : 'pid: ' + this.pid + ', ';
+      return '{' + pidStr + 'scope: ' + this.scope + ', id: ' + this.id + '}';
+    },
+
+    toStringWithDelimiter(delim) {
+      return (this.pid === undefined ? '' : this.pid) + delim +
+          this.scope + delim + this.id;
+    }
+  };
+
+  return {
+    ScopedId,
+  };
+});
+</script>

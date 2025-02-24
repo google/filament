@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+
+'use strict';
+
+/**
+ * Contains connection code that inspector's embedding framework calls on
+ * tracing, and that tracing can use to talk to inspector.
+ */
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  class InspectorConnection {
+    constructor(windowGlobal) {
+      if (!windowGlobal.DevToolsHost) {
+        throw new Error('Requires window.DevToolsHost');
+      }
+      this.devToolsHost_ = windowGlobal.DevToolsHost;
+      this.installDevToolsAPI_(windowGlobal);
+
+      this.nextRequestId_ = 1;
+      this.pendingRequestResolversId_ = {};
+
+      this.notificationListenersByMethodName_ = {};
+    }
+
+    req(method, params) {
+      const id = this.nextRequestId_++;
+      const msg = JSON.stringify({
+        id,
+        method,
+        params
+      });
+      const devtoolsMessageStr = JSON.stringify(
+          {id, 'method': 'dispatchProtocolMessage', 'params': [msg]});
+      this.devToolsHost_.sendMessageToEmbedder(devtoolsMessageStr);
+
+      return new Promise(function(resolve, reject) {
+        this.pendingRequestResolversId_[id] = {
+          resolve,
+          reject
+        };
+      }.bind(this));
+    }
+
+    setNotificationListener(method, listener) {
+      this.notificationListenersByMethodName_[method] = listener;
+    }
+
+    dispatchMessage_(payload) {
+      const isStringPayload = typeof payload === 'string';
+      // Special handling for Tracing.dataCollected because it is high
+      // bandwidth.
+      const isDataCollectedMessage = isStringPayload ?
+        payload.includes('"method": "Tracing.dataCollected"') :
+        payload.method === 'Tracing.dataCollected';
+      if (isDataCollectedMessage) {
+        const listener = this.notificationListenersByMethodName_[
+            'Tracing.dataCollected'];
+        if (listener) {
+          // FIXME(loislo): trace viewer should be able to process
+          // raw message object because string based version a few times
+          // slower on the browser side.
+          // see https://codereview.chromium.org/784513002.
+          listener(isStringPayload ? payload : JSON.stringify(payload));
+          return;
+        }
+      }
+
+      const message = isStringPayload ? JSON.parse(payload) : payload;
+      if (message.id) {
+        const resolver = this.pendingRequestResolversId_[message.id];
+        if (resolver === undefined) {
+          return;
+        }
+        if (message.error) {
+          resolver.reject(message.error);
+          return;
+        }
+        resolver.resolve(message.result);
+        return;
+      }
+
+      if (message.method) {
+        const listener = this.notificationListenersByMethodName_[
+            message.method];
+        if (listener === undefined) return;
+        listener(message.params);
+        return;
+      }
+    }
+
+    installDevToolsAPI_(windowGlobal) {
+      // Interface used by inspector when it hands data to us from the backend.
+      windowGlobal.DevToolsAPI = {
+        setToolbarColors() { },
+        addExtensions() { },
+        setInspectedPageId() { },
+        dispatchMessage: this.dispatchMessage_.bind(this),
+      };
+
+      // Temporary until inspector backend switches to DevToolsAPI.
+      windowGlobal.InspectorFrontendAPI = windowGlobal.DevToolsAPI;
+    }
+  }
+
+  return {
+    InspectorConnection,
+  };
+});
+</script>

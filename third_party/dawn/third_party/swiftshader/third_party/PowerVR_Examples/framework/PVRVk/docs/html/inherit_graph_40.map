@@ -1,0 +1,18 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; CommandPool_ \&gt;" alt="" coords="344,5,571,47"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_command_pool__.html" title="Vulkan implementation of the Command Pool class. Destroying the commandpool will also destroys the co..." alt="" coords="638,86,845,113"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; DescriptorPool_ \&gt;" alt="" coords="344,152,571,193"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_descriptor_pool__.html" title="A descriptor pool &#45; an object used to allocate (and recycle) Descriptor Sets." alt="" coords="638,233,845,259"/>
+<area shape="rect" id="node5" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkCommandPool, PVRVkObject\lType \&gt;" alt="" coords="5,71,279,127"/>
+<area shape="rect" id="node6" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkCommandPool,\l ObjectType::e_COMMAND_POOL \&gt;" alt="" coords="333,71,581,127"/>
+<area shape="rect" id="node7" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkDescriptorPool,\l PVRVkObjectType \&gt;" alt="" coords="48,218,236,274"/>
+<area shape="rect" id="node8" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkDescriptorPool,\l ObjectType::e_DESCRIPTOR_POOL \&gt;" alt="" coords="327,218,588,274"/>
+<area shape="rect" id="node9" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkDevice, PVRVkObjectType \&gt;" alt="" coords="8,356,276,397"/>
+<area shape="rect" id="node10" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_physical_device_object_base.html" title="pvrvk::impl::PVRVkPhysical\lDeviceObjectBase\&lt; VkDevice,\l ObjectType::e_DEVICE \&gt;" alt="" coords="346,349,569,405"/>
+<area shape="rect" id="node11" href="$classpvrvk_1_1impl_1_1_device__.html" title="GpuDevice implementation that supports Vulkan" alt="" coords="663,331,819,358"/>
+<area shape="rect" id="node12" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkInstance, ObjectType\l::e_INSTANCE \&gt;" alt="" coords="347,429,568,485"/>
+<area shape="rect" id="node13" href="$classpvrvk_1_1impl_1_1_instance__.html" title="The Instance is a system&#45;wide vulkan &quot;implementation&quot;, similar in concept to the &quot;installation&quot; of Vu..." alt="" coords="658,429,825,455"/>
+<area shape="rect" id="node14" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkPhysicalDevice,\l PVRVkObjectType \&gt;" alt="" coords="47,509,237,565"/>
+<area shape="rect" id="node15" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_instance_object_base.html" title="pvrvk::impl::PVRVkInstance\lObjectBase\&lt; VkPhysicalDevice,\l ObjectType::e_PHYSICAL_DEVICE \&gt;" alt="" coords="330,509,585,565"/>
+<area shape="rect" id="node16" href="$classpvrvk_1_1impl_1_1_physical_device__.html" title="The representation of an entire actual, physical GPU device (as opposed to Device, which is a local, logical part of it). A Physical device is &quot;determined&quot;, or &quot;found&quot;, or &quot;enumerated&quot;, (while a logical device is &quot;created&quot;). You can use the physical device to create logical Devices, determine Extensions etc. See Vulkan spec." alt="" coords="636,494,847,521"/>
+</map>

@@ -1,0 +1,362 @@
+Name
+
+    ARB_texture_gather
+
+Name Strings
+
+    GL_ARB_texture_gather
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+    Bill Licea-Kane, AMD ( Bill.Licea-Kane 'at' amd.com )
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Contributors
+
+    Pierre Boudier, AMD
+    Eric Boumaour, AMD
+    Pat Brown, NVIDIA
+    Alex Chalfin, AMD
+    Nick Haemel, AMD
+    Evan Hart, AMD
+    Bill Licea-Kane, AMD
+    Benj Lipchak, AMD
+    Lijun Qu, AMD
+    Greg Roth, NVIDIA
+    Eric Werness, NVIDIA
+
+Notice
+
+    Copyright (c) 2009-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:         02/26/2014
+    Revision:                   8
+
+Number
+
+    ARB Extension #72
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    OpenGL Shading Language version 1.30 is required.
+
+    This extension is written against the OpenGL 3.0 Specification
+    (Compatibility Profile) and Version 1.30 of the OpenGL Shading Language
+    Specification.
+
+    This extension interacts with the EXT_texture_swizzle and
+    ARB_texture_swizzle extensions.
+
+
+Overview
+
+    This extension provides a new set of texture functions
+    (textureGather) to the shading language that determine 2x2 footprint
+    that are used for linear filtering in a texture lookup, and return a
+    vector consisting of the first component from each of the four
+    texels in the footprint.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB            0x8E5E
+        MAX_PROGRAM_TEXTURE_GATHER_OFFSET_ARB            0x8E5F
+        MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB        0x8F9F
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Changes to section 3.8.8
+
+    In subsection Scale Factor and Level of Detail replace the sentence
+    beginning "If any of the offset values are outside the range of..."
+    (P. 204) with
+
+     If the value of any non-ignored component of the offset vector
+     operand is outside implementation-dependent limits, the results of
+     the texture lookup are undefined. For all instructions except
+     textureGather, the limits are MIN_PROGRAM_TEXEL_OFFSET_ARB and
+     MAX_PROGRAM_TEXEL_OFFSET_ARB. For the textureGather instruction,
+     the limits are MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB and
+     MAX_PROGRAM_TEXTURE_GATHER_OFFSET_ARB.
+
+    Add to subsection Coordinate Wrapping and Texel Selection
+    (P. 208, Prior to "And for a one-dimensional texture"):
+
+     The textureGather and textureGatherOffset built-in shader functions
+     return a vector derived from sampling a 2x2 block of texels in the image
+     array of level <level_base>.  The rules for the LINEAR minification
+     filter are applied to identify the four selected texels.  Each texel is
+     then converted to a texture source color (Rs,Gs,Bs,As) according to table
+     3.21 and then swizzled as described in the ARB_texture_swizzle extension.
+     A four-component vector is then assembled by taking the Rs component from
+     the swizzled texture source colors of the four texels, in the order
+     T_i0_j1, T_i1_j1, T_i1_j0, and T_i0_j0.  Incomplete textures (section
+     3.8.10) are considered to return a texture source color of (0,0,0,1) for
+     all four source texels.
+
+     ___________________________________________________________________
+     |                                                                 |
+     |   1.0  +---+---+---+---+---+---+---+---+                        |
+     |       7|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       6|   |   |   |   |   | X | Y |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       5|   |   |   |   |   | W | Z |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       4|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       3|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       2|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       1|   |   |   |   |   |   |   |   |                        |
+     |        +---+---+---+---+---+---+---+---+                        |
+     |       0|   |   |   |   |   |   |   |   |                        |
+     |   0.0  +---+---+---+---+---+---+---+---+                        |
+     |          0   1   2   3   4   5   6   7                          |
+     |       0.0                             1.0                       |
+     |                                                                 |
+     |  Figure 3.10a.  An example of an 8x8 texture image and the      |
+     |  components returned for textureGather.  The vector (X,Y,Z,W)   |
+     |  is returned, where each component is taken from the post-      |
+     |  swizzle R component of the corresponding texel.                |
+     |_________________________________________________________________|
+
+
+    Add to Section 3.12.2, Shader Execution, Texture Access
+
+    (p. 233) Prior to paragraph beginning "If a fragment shader uses a
+    sampler..."
+
+     Texture lookups using textureGather must only be performed on
+     textures with supported formats.
+     MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB determines what formats
+     are supported. If the value is one, only RED, ALPHA, LUMINANCE,
+     INTENSITY, DEPTH, and DEPTH_STENCIL are supported. If the value is
+     four, all internal formats are supported. When textureGather is
+     used to sample a texture with an unsupported format, the results
+     are undefined.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+                                                                     Minimum
+    Get Value                                 Type  Get Command       Value   Description            Sec.   Attrib
+    --------------------------------          ----  ---------------  -------  ---------------------  ------ ------
+    MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB      Z    GetIntegerv        --     Min. texel offset      3.8.8  -
+                                                                              for textureGather
+    MAX_PROGRAM_TEXTURE_GATHER_OFFSET_ARB      Z+   GetIntegerv        --     Max. texel offset      3.8.8  -
+                                                                              for textureGather
+    MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB  Z+   GetIntegerv        --     Max. format components 3.8.8  -
+                                                                              for textureGather
+
+
+Modifications to The OpenGL Shading Language Specification, Version 1.10.59
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_texture_gather
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_texture_gather 1
+
+    Change section 4.3.6 "Varying"
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    Syntax:
+
+      gvec4 textureGather(gsampler2D sampler, vec2 coord)
+      gvec4 textureGather(gsampler2DArray sampler, vec3 coord)
+      gvec4 textureGather(gsamplerCube sampler, vec3 coord)
+      gvec4 textureGather(gsamplerCubeArray sampler, vec4 coord)
+
+    Description:
+
+      The textureGather functions use the texture coordinates given by
+      <coord> to determine a set of four texels to sample from the texture
+      identified by <sampler>.  These functions return a four-component
+      vector consisting of one component from each texel.  As described in
+      the OpenGL Specification, the vector selects the post-swizzle R
+      component from each of the four texels, returning:
+
+        vec4(T_i0_j1(coord, base).r,
+             T_i1_j1(coord, base).r,
+             T_i1_j0(coord, base).r,
+             T_i0_j0(coord, base).r)
+
+    Syntax:
+
+      gvec4 textureGatherOffset(gsampler2D sampler, vec2 coord, ivec2 offset)
+      gvec4 textureGatherOffset(gsampler2DArray sampler, vec3 coord,
+                                ivec2 offset)
+
+    Description:
+
+      Perform a texture gather operation as in textureGather offset by
+      <offset> as described in textureOffset except that the
+      implementation-dependent minimum and maximum offset values are
+      given by MIN_PROGRAM_TEXTURE_GATHER_OFFSET and
+      MAX_PROGRAM_TEXTURE_GATHER_OFFSET respectively.
+
+Dependencies on ARB_texture_swizzle and EXT_texture_swizzle
+
+    If neither ARB_texture_swizzle nor EXT_texture_swizzle is supported,
+    remove the swizzling step from the description of the textureGather
+    functions in the OpenGL specification.
+
+Issues
+
+    (1) What about the use of this extension with fixed function?
+
+       RESOLVED: The built-in functions are added to the shading
+       language only.  There is no ability to fetch four texels in
+       fixed function.
+
+    (2) What naming convention do we use for the new texture built-in
+        functions?
+
+       RESOLVED: Even though this extension is written against OpenGL
+       Shading Language 1.20, we use the new texture function naming
+       convention from OpenGL Shading Language 1.30.
+
+    (3)  Should we add built-in texture functions for:
+      * Fetch4 with Absolute LOD?
+      * Fetch4 with Relative LOD?
+      * Fetch4 with coordinate offsets?
+      * Fetch4 with compare?
+
+       RESOLVED: No.
+
+    (4) If the texture wrap modes are not clamp_to_edge or repeat, is
+        the texture treated as incomplete, or are the values returned by
+        the textureGather built-in undefined?
+
+       RESOLVED: All wrap modes will be supported and textureGather will
+       return correct results.
+
+    (5) Can both texture *AND* textureGather built-in functions
+        sample from the same sampler in a shader?
+
+       RESOLVED: Yes.
+
+    (6) How do the textureGather functions work with sRGB textures?
+
+       RESOLVED. Gamma-correction is applied to the texture source color
+       before "gathering".  For each of the four texels sampled, the R, G,
+       and B components will be gamma-corrected.  With a default texture
+       swizzle, textureGather will always pick the red component from each
+       of the four texels, so will return a vector with four
+       gamma-corrected values.  If the R texture swizzle is set to ALPHA,
+       four alpha values will be selected and those values will have no
+       gamma-correction appplied.
+
+    (7) Should textureGather lookups from multiple component formats be
+        allowed?
+
+       RESOLVED:  This extension was derived from NV_gpu_shader4_1 (which
+       supported selecting the R component of multi-component textures)
+       and AMD_texture_texture4 (which didn't).  To accommodate all
+       implementations, an implementation-dependent query is provided to
+       indicating the allowed number of components in a gathered texture
+       is used.
+
+    (8) How does texture gather interact with incomplete textures?
+
+       RESOLVED:  For regular texture lookups, incomplete textures are
+       considered to return a texel value with RGBA components of (0,0,0,1).
+       For texture gather operations, each texel in the sampled footprint is
+       considered to have RGBA components of (0,0,0,1).  Since this extension
+       selects the R texture component of each texel in a four-texel
+       footprint, a textureGather() function accessing an incomplete texture
+       will return (0,0,0,0).
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  --------------------------------------------
+    8     02/26/14    Jon Leech Change MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB
+                                type from Z+ to Z (Bug 11730).       
+
+    7     01/27/11    pbrown    Add further clarification on the interaction
+                                of texture gather and incomplete textures 
+                                bug 7289).
+
+    6     09/23/10    pbrown    Clarify the interaction of texture gather
+                                with swizzle (bug 5910), fixing conflicts
+                                between API and GLSL spec language.
+                                Consolidate into one copy in the API 
+                                spec.  Fix incorrect resolution on issue
+                                (5).  Minor wording updates to issues.
+
+    5     08/02/09    Jon Leech Reformat to 80 columns and assign ARB
+                                extension number.
+
+    4     07/20/09    Jon Leech Assign missing enumerant value
+
+    3     05/25/09     groth    Remove *offset accesses to cubemap textures
+
+    2     05/29/09     groth    Add query for max gatherable components
+                                remove undefined behavior for wrap modes
+
+    1     05/14/09     groth    Initial revision

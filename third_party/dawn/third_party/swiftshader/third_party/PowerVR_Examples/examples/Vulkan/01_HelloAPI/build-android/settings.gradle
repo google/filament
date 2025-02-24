@@ -1,0 +1,4 @@
+rootProject.name='VulkanHelloAPI'
+
+//Copy all the build output stuff into the SDK/bin folder
+gradle.ext.PVR_BINARY_OUTPUT_DIR='bin'

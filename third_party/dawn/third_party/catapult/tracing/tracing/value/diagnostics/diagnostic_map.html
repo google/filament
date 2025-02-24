@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+  Include all Diagnostic subclasses here so that DiagnosticMap.addDicts() and
+  DiagnosticMap.fromDict() always have access to all subclasses in the
+  Diagnostic registry.
+-->
+<link rel="import" href="/tracing/value/diagnostics/all_diagnostics.html">
+<link rel="import" href="/tracing/value/diagnostics/reserved_names.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class DiagnosticMap extends Map {
+    /**
+     * @param {boolean=} opt_allowReservedNames defaults to true
+     */
+    constructor(opt_allowReservedNames) {
+      super();
+      if (opt_allowReservedNames === undefined) {
+        opt_allowReservedNames = true;
+      }
+      this.allowReservedNames_ = opt_allowReservedNames;
+    }
+
+    /**
+     * Add a new Diagnostic to this map.
+     *
+     * @param {string} name
+     * @param {!tr.v.d.Diagnostic} diagnostic
+     */
+    set(name, diagnostic) {
+      if (typeof(name) !== 'string') {
+        throw new Error(`name must be string, not ${name}`);
+      }
+
+      if (!(diagnostic instanceof tr.v.d.Diagnostic) &&
+          !(diagnostic instanceof tr.v.d.DiagnosticRef)) {
+        throw new Error(`Must be instanceof Diagnostic: ${diagnostic}`);
+      }
+
+      // TODO(#3507): Reserved names should never be UnmergeableDiagnosticSet.
+      if (!this.allowReservedNames_ &&
+          tr.v.d.RESERVED_NAMES_SET.has(name) &&
+          !(diagnostic instanceof tr.v.d.UnmergeableDiagnosticSet) &&
+          !(diagnostic instanceof tr.v.d.DiagnosticRef)) {
+        const type = tr.v.d.RESERVED_NAMES_TO_TYPES.get(name);
+        if (type && !(diagnostic instanceof type)) {
+          throw new Error(
+              `Diagnostics named "${name}" must be ${type.name}, ` +
+              `not ${diagnostic.constructor.name}`);
+        }
+      }
+
+      Map.prototype.set.call(this, name, diagnostic);
+    }
+
+    delete(name) {
+      if (name === undefined) throw new Error('missing name');
+      Map.prototype.delete.call(this, name);
+    }
+
+    deserializeAdd(data, deserializer) {
+      for (const id of data) {
+        const {name, diagnostic} = deserializer.getDiagnostic(id);
+        this.set(name, diagnostic);
+      }
+    }
+
+    /**
+     * Add Diagnostics from a dictionary of dictionaries.
+     *
+     * @param {Object} dict
+     */
+    addDicts(dict) {
+      for (const [name, diagnosticDict] of Object.entries(dict)) {
+        if (name === 'tagmap') continue;
+        if (typeof diagnosticDict === 'string') {
+          this.set(name, new tr.v.d.DiagnosticRef(diagnosticDict));
+        } else if (diagnosticDict.type !== 'RelatedHistogramMap' &&
+                   diagnosticDict.type !== 'RelatedHistogramBreakdown' &&
+                   diagnosticDict.type !== 'TagMap') {
+          // Ignore RelatedHistograms and TagMaps.
+          // TODO(benjhayden): Forget about them in 2019 Q2.
+          this.set(name, tr.v.d.Diagnostic.fromDict(diagnosticDict));
+        }
+      }
+    }
+
+    resolveSharedDiagnostics(histograms, opt_required) {
+      for (const [name, value] of this) {
+        if (!(value instanceof tr.v.d.DiagnosticRef)) {
+          continue;
+        }
+
+        const guid = value.guid;
+        const diagnostic = histograms.lookupDiagnostic(guid);
+        if (diagnostic instanceof tr.v.d.Diagnostic) {
+          this.set(name, diagnostic);
+        } else if (opt_required) {
+          throw new Error('Unable to find shared Diagnostic ' + guid);
+        }
+      }
+    }
+
+    serialize(serializer) {
+      const data = [];
+      for (const [name, diagnostic] of this) {
+        data.push(serializer.getOrAllocateDiagnosticId(name, diagnostic));
+      }
+      return data;
+    }
+
+    asDict() {
+      const dict = {};
+      for (const [name, diagnostic] of this) {
+        dict[name] = diagnostic.asDictOrReference();
+      }
+      return dict;
+    }
+
+    static deserialize(data, deserializer) {
+      const diagnostics = new DiagnosticMap();
+      diagnostics.deserializeAdd(data, deserializer);
+      return diagnostics;
+    }
+
+    static fromDict(d) {
+      const diagnostics = new DiagnosticMap();
+      diagnostics.addDicts(d);
+      return diagnostics;
+    }
+
+    /**
+     * Convert dictionary or ES6 Map to DiagnosticMap.
+     * @param {!Object|!Map.<string, !tr.v.d.Diagnostic>} obj
+     * @return {tr.v.d.DiagnosticMap}
+     */
+    static fromObject(obj) {
+      const diagnostics = new DiagnosticMap();
+      if (!(obj instanceof Map)) obj = Object.entries(obj);
+      for (const [name, diagnostic] of obj) {
+        if (!diagnostic) continue;
+        diagnostics.set(name, diagnostic);
+      }
+      return diagnostics;
+    }
+
+    addDiagnostics(other) {
+      for (const [name, otherDiagnostic] of other) {
+        const myDiagnostic = this.get(name);
+
+        if (myDiagnostic !== undefined &&
+            myDiagnostic.canAddDiagnostic(otherDiagnostic)) {
+          myDiagnostic.addDiagnostic(otherDiagnostic);
+          continue;
+        }
+
+        // We need to avoid storing references to |otherDiagnostic| in both
+        // |this| and |other| because future merge()s may add yet other
+        // Diagnostics to |this|, and they shouldn't accidentally modify
+        // anything in |other|.
+        // Now, either |this| doesn't already have a Diagnostic named |name|
+        // (myDiagnostic is undefined), or
+        // |this| already has a Diagnostic named |name| that can't be merged
+        // with |otherDiagnostic|.
+        // Either way, we need to clone |otherDiagnostic|.
+        // However, clones produced via fromDict/toDict cannot necessarily be
+        // merged with yet other Diagnostics, either because of semantics (as in
+        // the case of TelemtryInfo and the like) or because guids must not be
+        // shared by distinct Diagnostics. Therefore, Diagnostics support
+        // another way of cloning that is specifically targeted at supporting
+        // merging: clone().
+
+        const clone = otherDiagnostic.clone();
+
+        if (myDiagnostic === undefined) {
+          this.set(name, clone);
+          continue;
+        }
+
+        // Now, |myDiagnostic| exists and it is unmergeable with |clone|, which
+        // is safe to store in |this|.
+        this.set(name, new tr.v.d.UnmergeableDiagnosticSet(
+            [myDiagnostic, clone]));
+      }
+    }
+  }
+
+  return {DiagnosticMap};
+});
+</script>

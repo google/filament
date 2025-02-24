@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_heap_details_util.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/analysis/rebuildable_behavior.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/tab_view.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_context_controller.html">
+
+<dom-module id='tr-ui-a-memory-dump-heap-details-breakdown-view'>
+  <template>
+    <tr-ui-b-tab-view id="tabs"></tr-ui-b-tab-view>
+  </template>
+</dom-module>
+
+<dom-module id='tr-ui-a-memory-dump-heap-details-breakdown-view-tab'>
+  <template>
+    <tr-v-ui-scalar-context-controller></tr-v-ui-scalar-context-controller>
+    <tr-ui-b-info-bar id="info" hidden></tr-ui-b-info-bar>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const RESONABLE_NUMBER_OF_ROWS = 200;
+
+  const TabUiState = {
+    NO_LONG_TAIL: 0,
+    HIDING_LONG_TAIL: 1,
+    SHOWING_LONG_TAIL: 2,
+  };
+
+  /** @constructor */
+  function EmptyFillerColumn() {}
+
+  EmptyFillerColumn.prototype = {
+    title: '',
+
+    value() {
+      return '';
+    },
+  };
+
+  Polymer({
+    is: 'tr-ui-a-memory-dump-heap-details-breakdown-view',
+    behaviors: [tr.ui.analysis.RebuildableBehavior],
+
+    created() {
+      this.displayedNode_ = undefined;
+      this.dimensionToTab_ = new Map();
+    },
+
+    ready() {
+      this.scheduleRebuild_();
+      this.root.addEventListener('keydown', this.onKeyDown_.bind(this), true);
+    },
+
+    get displayedNode() {
+      return this.displayedNode_;
+    },
+
+    set displayedNode(node) {
+      this.displayedNode_ = node;
+      this.scheduleRebuild_();
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      for (const tab of this.$.tabs.tabs) {
+        tab.aggregationMode = aggregationMode;
+      }
+    },
+
+    onRebuild_() {
+      const previouslySelectedTab = this.$.tabs.selectedSubView;
+      let previouslySelectedTabFocused = false;
+      let previouslySelectedDimension = undefined;
+      if (previouslySelectedTab) {
+        previouslySelectedTabFocused = previouslySelectedTab.isFocused;
+        previouslySelectedDimension = previouslySelectedTab.dimension;
+      }
+
+      for (const tab of this.$.tabs.tabs) {
+        tab.nodes = undefined;
+      }
+      this.$.tabs.clearSubViews();
+
+      if (this.displayedNode_ === undefined) {
+        this.$.tabs.label = 'No heap node provided.';
+        return;
+      }
+
+      for (const [dimension, children] of this.displayedNode_.childNodes) {
+        if (!this.dimensionToTab_.has(dimension)) {
+          this.dimensionToTab_.set(dimension, document.createElement(
+              'tr-ui-a-memory-dump-heap-details-breakdown-view-tab'));
+        }
+        const tab = this.dimensionToTab_.get(dimension);
+        tab.aggregationMode = this.aggregationMode_;
+        tab.dimension = dimension;
+        tab.nodes = children;
+        this.$.tabs.addSubView(tab);
+        tab.rebuild();
+        if (dimension === previouslySelectedDimension) {
+          this.$.tabs.selectedSubView = tab;
+          if (previouslySelectedTabFocused) {
+            tab.focus();
+          }
+        }
+      }
+
+      if (this.$.tabs.tabs.length > 0) {
+        this.$.tabs.label = 'Break selected node further by:';
+      } else {
+        this.$.tabs.label = 'Selected node cannot be broken down any further.';
+      }
+    },
+
+    onKeyDown_(keyEvent) {
+      if (!this.displayedNode_) return;
+
+      let keyHandled = false;
+      switch (keyEvent.keyCode) {
+        case 8: {
+          // Backspace.
+          if (!this.displayedNode_.parentNode) break;
+
+          // Enter the parent node upon pressing backspace.
+          const viewEvent = new tr.b.Event('enter-node', true /*bubbles*/);
+          viewEvent.node = this.displayedNode_.parentNode;
+          this.dispatchEvent(viewEvent);
+          keyHandled = true;
+          break;
+        }
+
+        case 37:  // Left arrow.
+        case 39:  // Right arrow.
+        {
+          const wasFocused = this.$.tabs.selectedSubView.isFocused;
+          keyHandled = keyEvent.keyCode === 37 ?
+            this.$.tabs.selectPreviousTabIfPossible() :
+            this.$.tabs.selectNextTabIfPossible();
+          if (wasFocused && keyHandled) {
+            this.$.tabs.selectedSubView.focus();  // Restore focus to new tab.
+          }
+        }
+      }
+
+      if (!keyHandled) return;
+      keyEvent.stopPropagation();
+      keyEvent.preventDefault();
+    }
+  });
+
+  Polymer({
+    is: 'tr-ui-a-memory-dump-heap-details-breakdown-view-tab',
+    behaviors: [tr.ui.analysis.RebuildableBehavior],
+
+    created() {
+      this.dimension_ = undefined;
+      this.nodes_ = undefined;
+      this.aggregationMode_ = undefined;
+      this.displayLongTail_ = false;
+    },
+
+    ready() {
+      this.$.table.addEventListener('step-into', function(tableEvent) {
+        const viewEvent = new tr.b.Event('enter-node', true /*bubbles*/);
+        viewEvent.node = tableEvent.tableRow;
+        this.dispatchEvent(viewEvent);
+      }.bind(this));
+    },
+
+    get displayLongTail() {
+      return this.displayLongTail_;
+    },
+
+    set displayLongTail(newValue) {
+      if (this.displayLongTail === newValue) return;
+      this.displayLongTail_ = newValue;
+      this.scheduleRebuild_();
+    },
+
+    get dimension() {
+      return this.dimension_;
+    },
+
+    set dimension(dimension) {
+      this.dimension_ = dimension;
+      this.scheduleRebuild_();
+    },
+
+    get nodes() {
+      return this.nodes_;
+    },
+
+    set nodes(nodes) {
+      this.nodes_ = nodes;
+      this.scheduleRebuild_();
+    },
+
+    get nodes() {
+      return this.nodes_ || [];
+    },
+
+    get dimensionLabel_() {
+      if (this.dimension_ === undefined) return '(undefined)';
+      return this.dimension_.label;
+    },
+
+    get tabLabel() {
+      let nodeCount = 0;
+      if (this.nodes_) {
+        nodeCount = this.nodes_.length;
+      }
+      return this.dimensionLabel_ + ' (' + nodeCount + ')';
+    },
+
+    get tabIcon() {
+      if (this.dimension_ === undefined ||
+          this.dimension_ === tr.ui.analysis.HeapDetailsRowDimension.ROOT) {
+        return undefined;
+      }
+      return {
+        text: this.dimension_.symbol,
+        style: 'color: ' + tr.b.ColorScheme.getColorForReservedNameAsString(
+            this.dimension_.color) + ';'
+      };
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      this.scheduleRebuild_();
+    },
+
+    focus() {
+      this.$.table.focus();
+    },
+
+    blur() {
+      this.$.table.blur();
+    },
+
+    get isFocused() {
+      return this.$.table.isFocused;
+    },
+
+    onRebuild_() {
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+      this.$.table.emptyValue = 'Cannot break down by ' +
+          this.dimensionLabel_.toLowerCase() + ' any further.';
+      const [state, rows] = this.getRows_();
+      const total = this.nodes.length;
+      const displayed = rows.length;
+      const hidden = total - displayed;
+      this.updateInfoBar_(state, [total, displayed, hidden]);
+      this.$.table.tableRows = rows;
+      this.$.table.tableColumns = this.createColumns_(rows);
+      if (this.$.table.sortColumnIndex === undefined) {
+        this.$.table.sortColumnIndex = 0;
+        this.$.table.sortDescending = false;
+      }
+      this.$.table.rebuild();
+    },
+
+    createColumns_(rows) {
+      const titleColumn = new tr.ui.analysis.HeapDetailsTitleColumn(
+          this.dimensionLabel_);
+      titleColumn.width = '400px';
+
+      const numericColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'cells',
+        aggregationMode: this.aggregationMode_,
+        rules: tr.ui.analysis.HEAP_DETAILS_COLUMN_RULES,
+        shouldSetContextGroup: true
+      });
+      if (numericColumns.length === 0) {
+        numericColumns.push(new EmptyFillerColumn());
+      }
+      tr.ui.analysis.MemoryColumn.spaceEqually(numericColumns);
+
+      const columns = [titleColumn].concat(numericColumns);
+      return columns;
+    },
+
+    getRows_() {
+      let rows = this.nodes;
+      if (rows.length <= RESONABLE_NUMBER_OF_ROWS) {
+        return [TabUiState.NO_LONG_TAIL, rows];
+      } else if (this.displayLongTail) {
+        return [TabUiState.SHOWING_LONG_TAIL, rows];
+      }
+      const absSize = row => Math.max(row.cells.Size.fields[0].value);
+      rows.sort((a, b) => absSize(b) - absSize(a));
+      rows = rows.slice(0, RESONABLE_NUMBER_OF_ROWS);
+      return [TabUiState.HIDING_LONG_TAIL, rows];
+    },
+
+    updateInfoBar_(state, rowStats) {
+      if (state === TabUiState.SHOWING_LONG_TAIL) {
+        this.longTailVisibleInfoBar_(rowStats);
+      } else if (state === TabUiState.HIDING_LONG_TAIL) {
+        this.longTailHiddenInfoBar_(rowStats);
+      } else {
+        this.hideInfoBar_();
+      }
+    },
+
+    longTailVisibleInfoBar_(rowStats) {
+      const [total, visible, hidden] = rowStats;
+      const couldHide = total - RESONABLE_NUMBER_OF_ROWS;
+      this.$.info.message = 'Showing ' + total + ' rows. This may be slow.';
+      this.$.info.removeAllButtons();
+      const buttonText = 'Hide ' + couldHide + ' rows.';
+      this.$.info.addButton(buttonText, () => this.displayLongTail = false);
+      this.$.info.visible = true;
+    },
+
+    longTailHiddenInfoBar_(rowStats) {
+      const [total, visible, hidden] = rowStats;
+      this.$.info.message = 'Hiding the smallest ' + hidden + ' rows.';
+      this.$.info.removeAllButtons();
+      this.$.info.addButton('Show all.', () => this.displayLongTail = true);
+      this.$.info.visible = true;
+    },
+
+    hideInfoBar_() {
+      this.$.info.visible = false;
+    },
+
+  });
+
+  return {};
+});
+</script>

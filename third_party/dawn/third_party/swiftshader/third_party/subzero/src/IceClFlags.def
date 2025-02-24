@@ -1,0 +1,341 @@
+//===- subzero/src/IceClFlags.def - Cl Flags for translation ----*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// \brief Declares the command line flags used by Subzero.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICECLFLAGS_DEF
+#define SUBZERO_SRC_ICECLFLAGS_DEF
+
+namespace Ice {
+// cl_detail defines tags (i.e., structs) for specifying the type of a flag
+// (either single-, or multi-value), and whether or not the flag is available in
+// non-LLVM_CL build.
+namespace cl_detail {
+
+// Single-value flag, available in a non-LLVM_CL build.
+struct release_opt_flag {};
+// Single-value flag, not available in a non-LLVM_CL build.
+struct dev_opt_flag {};
+// Multi-value flag, not available in a non-LLVM_CL build.
+struct dev_list_flag {};
+
+} // namespace cl_detail
+
+#define COMMAND_LINE_FLAGS                                                     \
+  /* Name, Type, ClType, <<flag declaration ctor arguments>> */                \
+  X(IRFilename, std::string, release_opt_flag, cl::Positional,                 \
+    cl::desc("IR File"), cl::init("-"))                                        \
+                                                                               \
+  X(NumTranslationThreads, uint32_t, release_opt_flag, "num_threads",          \
+    cl::desc("Number of translation threads (0 for purely sequential)"),       \
+    cl::init(2))                                                               \
+                                                                               \
+  X(OptLevel, Ice::OptLevel, release_opt_flag, cl::desc("Optimization level"), \
+    cl::init(Ice::Opt_m1), cl::value_desc("level"),                            \
+    cl::values(clEnumValN(Ice::Opt_m1, "Om1", "-1"),                           \
+               clEnumValN(Ice::Opt_m1, "O-1", "-1"),                           \
+               clEnumValN(Ice::Opt_0, "O0", "0"),                              \
+               clEnumValN(Ice::Opt_1, "O1", "1"),                              \
+               clEnumValN(Ice::Opt_2, "O2", "2") CLENUMVALEND))                \
+                                                                               \
+  X(OutputFilename, std::string, release_opt_flag, "o",                        \
+    cl::desc("Override output filename"), cl::init("-"),                       \
+    cl::value_desc("filename"))                                                \
+                                                                               \
+  X(TargetArch, Ice::TargetArch, release_opt_flag, "target",                   \
+    cl::desc("Target architecture:"), cl::init(Ice::Target_X8632),             \
+    cl::values(                                                                \
+        clEnumValN(Ice::Target_X8632, "x8632", "x86-32"),                      \
+        clEnumValN(Ice::Target_X8632, "x86-32", "x86-32 (same as x8632)"),     \
+        clEnumValN(Ice::Target_X8632, "x86_32", "x86-32 (same as x8632)"),     \
+        clEnumValN(Ice::Target_X8664, "x8664", "x86-64"),                      \
+        clEnumValN(Ice::Target_X8664, "x86-64", "x86-64 (same as x8664)"),     \
+        clEnumValN(Ice::Target_X8664, "x86_64", "x86-64 (same as x8664)"),     \
+        clEnumValN(Ice::Target_ARM32, "arm", "arm32"),                         \
+        clEnumValN(Ice::Target_ARM32, "arm32", "arm32 (same as arm)"),         \
+        clEnumValN(Ice::Target_ARM64, "arm64", "arm64"),                       \
+        clEnumValN(Ice::Target_MIPS32, "mips", "mips32"),                      \
+        clEnumValN(Ice::Target_MIPS32, "mips32", "mips32 (same as mips)")      \
+            CLENUMVALEND))                                                     \
+                                                                               \
+  /* The following are development flags, and ideally should not appear in a   \
+   * release build. */                                                         \
+                                                                               \
+  X(AllowErrorRecovery, bool, dev_opt_flag,                                    \
+    "allow-pnacl-reader-error-recovery",                                       \
+    cl::desc("Allow error recovery when reading PNaCl bitcode."),              \
+    cl::init(false))                                                           \
+                                                                               \
+  X(AllowExternDefinedSymbols, bool, dev_opt_flag,                             \
+    "allow-externally-defined-symbols",                                        \
+    cl::desc(                                                                  \
+        "Allow global symbols to be externally defined (other than _start "    \
+        "and __pnacl_pso_root)."),                                             \
+    cl::init(false))                                                           \
+                                                                               \
+  X(AllowIacaMarks, bool, dev_opt_flag, "allow-iaca-marks",                    \
+    cl::desc("Allow IACA (Intel Architecture Code Analyzer) marks to be "      \
+             "inserted. These binaries are not executable."),                  \
+    cl::init(false))                                                           \
+                                                                               \
+  X(AllowUninitializedGlobals, bool, dev_opt_flag,                             \
+    "allow-uninitialized-globals",                                             \
+    cl::desc("Allow global variables to be uninitialized"))                    \
+                                                                               \
+  X(AlwaysExitSuccess, bool, dev_opt_flag, "exit-success",                     \
+    cl::desc("Exit with success status, even if errors found"),                \
+    cl::init(false))                                                           \
+                                                                               \
+  X(AggressiveLea, bool, dev_opt_flag, "aggressive-lea",                       \
+    cl::desc("Convert additions to lea when it reduces code size"),            \
+    cl::init(false))                                                           \
+                                                                               \
+  X(BitcodeAsText, bool, dev_opt_flag, "bitcode-as-text",                      \
+    cl::desc("Accept textual form of PNaCl bitcode "                           \
+             "records (i.e. not .ll assembly)"),                               \
+    cl::init(false))                                                           \
+                                                                               \
+  X(BuildOnRead, bool, dev_opt_flag, "build-on-read",                          \
+    cl::desc("Build ICE instructions when reading bitcode"), cl::init(true))   \
+                                                                               \
+  X(DataSections, bool, dev_opt_flag, "fdata-sections",                        \
+    cl::desc("Emit (global) data into separate sections"))                     \
+                                                                               \
+  X(DecorateAsm, bool, dev_opt_flag, "asm-verbose",                            \
+    cl::desc("Decorate textual asm output with register liveness info"))       \
+                                                                               \
+  X(DefaultFunctionPrefix, std::string, dev_opt_flag,                          \
+    "default-function-prefix",                                                 \
+    cl::desc("Define default function prefix for naming unnamed functions"),   \
+    cl::init("Function"))                                                      \
+                                                                               \
+  X(DefaultGlobalPrefix, std::string, dev_opt_flag, "default-global-prefix",   \
+    cl::desc("Define default global prefix for naming unnamed globals"),       \
+    cl::init("Global"))                                                        \
+                                                                               \
+  X(DisableHybridAssembly, bool, dev_opt_flag, "no-hybrid-asm",                \
+    cl::desc("Disable hybrid assembly when -filetype=iasm"), cl::init(false))  \
+                                                                               \
+  X(DisableInternal, bool, dev_opt_flag, "externalize",                        \
+    cl::desc("Externalize all symbols"))                                       \
+                                                                               \
+  X(DisableTranslation, bool, dev_opt_flag, "notranslate",                     \
+    cl::desc("Disable Subzero translation"))                                   \
+                                                                               \
+  X(DumpStats, bool, dev_opt_flag, "szstats",                                  \
+    cl::desc("Print statistics after translating each function"))              \
+                                                                               \
+  X(DumpStrings, bool, dev_opt_flag, "dump-strings",                           \
+    cl::desc("Dump string pools during compilation"), cl::init(false))         \
+                                                                               \
+  X(EnableBlockProfile, bool, dev_opt_flag, "enable-block-profile",            \
+    cl::desc("Instrument basic blocks, and output profiling "                  \
+             "information to stdout at the end of program execution."),        \
+    cl::init(false))                                                           \
+                                                                               \
+  X(LocalCSE, Ice::LCSEOptions, dev_opt_flag, "lcse",                          \
+    cl::desc("Local common subexpression elimination"),                        \
+    cl::init(Ice::LCSE_EnabledSSA),                                            \
+    cl::values(clEnumValN(Ice::LCSE_Disabled, "0", "disabled"),                \
+               clEnumValN(Ice::LCSE_EnabledSSA, "enabled", "assume-ssa"),      \
+               clEnumValN(Ice::LCSE_EnabledNoSSA, "no-ssa", "no-assume-ssa")   \
+                   CLENUMVALEND))                                              \
+                                                                               \
+  X(EmitRevision, bool, dev_opt_flag, "emit-revision",                         \
+    cl::desc("Emit Subzero revision string into the output"), cl::init(true))  \
+                                                                               \
+  X(EnablePhiEdgeSplit, bool, dev_opt_flag, "phi-edge-split",                  \
+    cl::desc("Enable edge splitting for Phi lowering"), cl::init(true))        \
+                                                                               \
+  X(EnableShortCircuit, bool, dev_opt_flag, "enable-sc",                       \
+    cl::desc("Split Nodes for short circuit evaluation"), cl::init(false))     \
+                                                                               \
+  X(ExcludedRegisters, std::string, dev_list_flag, "reg-exclude",              \
+    cl::CommaSeparated, cl::desc("Don't use specified registers"))             \
+                                                                               \
+  X(ForceMemIntrinOpt, bool, dev_opt_flag, "fmem-intrin-opt",                  \
+    cl::desc("Force optimization of memory intrinsics."))                      \
+                                                                               \
+  X(ForceO2String, std::string, dev_opt_flag, "force-O2",                      \
+    cl::desc("Force -O2 for certain functions (assumes -Om1)"), cl::init(""))  \
+                                                                               \
+  X(SplitInstString, std::string, dev_opt_flag, "split-inst",                  \
+    cl::desc("Restrict local var splitting to specific insts"), cl::init(":")) \
+                                                                               \
+  X(FunctionSections, bool, dev_opt_flag, "ffunction-sections",                \
+    cl::desc("Emit functions into separate sections"))                         \
+                                                                               \
+  X(GenerateBuildAtts, bool, release_opt_flag, "build-atts",                   \
+    cl::desc("Generate list of build attributes associated with "              \
+             "this executable."),                                              \
+    cl::init(false))                                                           \
+                                                                               \
+  X(SplitGlobalVars, bool, dev_opt_flag, "split-global-vars",                  \
+    cl::desc("Global live range splitting"), cl::init(false))                  \
+                                                                               \
+  X(InputFileFormat, llvm::NaClFileFormat, dev_opt_flag, "bitcode-format",     \
+    cl::desc("Define format of input file:"),                                  \
+    cl::values(clEnumValN(llvm::LLVMFormat, "llvm", "LLVM file (default)"),    \
+               clEnumValN(llvm::PNaClFormat, "pnacl", "PNaCl bitcode file")    \
+                   CLENUMVALEND),                                              \
+    cl::init(llvm::LLVMFormat))                                                \
+                                                                               \
+  X(KeepDeletedInsts, bool, dev_opt_flag, "keep-deleted-insts",                \
+    cl::desc("Retain deleted instructions in the Cfg"),                        \
+    cl::init(Ice::BuildDefs::dump()))                                          \
+                                                                               \
+  X(LLVMVerboseErrors, bool, dev_opt_flag, "verbose-llvm-parse-errors",        \
+    cl::desc("Print out more descriptive PNaCl bitcode parse errors when "     \
+             "building LLVM IR first"),                                        \
+    cl::init(false))                                                           \
+                                                                               \
+  X(LocalCseMaxIterations, uint32_t, dev_opt_flag, "lcse-max-iters",           \
+    cl::desc("Number of times local-cse is run on a block"), cl::init(1))      \
+                                                                               \
+  X(LoopInvariantCodeMotion, bool, dev_opt_flag, "licm",                       \
+    cl::desc("Hoist loop invariant arithmetic operations"), cl::init(false))   \
+                                                                               \
+  X(LogFilename, std::string, dev_opt_flag, "log",                             \
+    cl::desc("Set log filename"), cl::init("-"), cl::value_desc("filename"))   \
+                                                                               \
+  X(MaxNopsPerInstruction, int, dev_opt_flag, "max-nops-per-instruction",      \
+    cl::desc("Max number of nops to insert per instruction"), cl::init(1))     \
+                                                                               \
+  X(MockBoundsCheck, bool, dev_opt_flag, "mock-bounds-check",                  \
+    cl::desc("Mock bounds checking on loads/stores"))                          \
+                                                                               \
+  X(NopProbabilityAsPercentage, int, dev_opt_flag, "nop-insertion-percentage", \
+    cl::desc("Nop insertion probability as percentage"), cl::init(10))         \
+                                                                               \
+  X(OutFileType, Ice::FileType, dev_opt_flag, "filetype",                      \
+    cl::desc("Output file type"), cl::init(Ice::FT_Iasm),                      \
+    cl::values(                                                                \
+        clEnumValN(Ice::FT_Elf, "obj", "Native ELF object ('.o') file"),       \
+        clEnumValN(Ice::FT_Asm, "asm", "Assembly ('.s') file"),                \
+        clEnumValN(Ice::FT_Iasm, "iasm",                                       \
+                   "Low-level integrated assembly ('.s') file") CLENUMVALEND)) \
+                                                                               \
+  X(ParseParallel, bool, dev_opt_flag, "parse-parallel",                       \
+    cl::desc("Parse function blocks in parallel"), cl::init(true))             \
+                                                                               \
+  X(SplitLocalVars, bool, dev_opt_flag, "split-local-vars", cl::init(true),    \
+    cl::desc("Block-local variable splitting (O2 only)"))                      \
+                                                                               \
+  X(RegAllocReserve, bool, dev_opt_flag, "reg-reserve",                        \
+    cl::desc("Let register allocation use reserve registers"),                 \
+    cl::init(false))                                                           \
+                                                                               \
+  X(RepeatRegAlloc, bool, dev_opt_flag, "regalloc-repeat",                     \
+    cl::desc("Repeat register allocation until convergence"), cl::init(true))  \
+                                                                               \
+  /* TODO(tlively): Generalize this to handle more sanitizers */               \
+  X(SanitizeAddresses, bool, dev_opt_flag, "fsanitize-address",                \
+    cl::desc("Instrument compiled code with Address Sanitizer"),               \
+    cl::init(false))                                                           \
+                                                                               \
+  X(SkipUnimplemented, bool, dev_opt_flag, "skip-unimplemented",               \
+    cl::desc("Skip through unimplemented lowering code instead of aborting."), \
+    cl::init(false))                                                           \
+                                                                               \
+  X(SubzeroTimingEnabled, bool, dev_opt_flag, "timing",                        \
+    cl::desc("Enable breakdown timing of Subzero translation"))                \
+                                                                               \
+  X(TargetInstructionSet, Ice::TargetInstructionSet, dev_opt_flag, "mattr",    \
+    cl::desc("Target architecture attributes"),                                \
+    cl::init(Ice::BaseInstructionSet),                                         \
+    cl::values(                                                                \
+        clEnumValN(Ice::BaseInstructionSet, "base",                            \
+                   "Target chooses baseline instruction set (default)"),       \
+        clEnumValN(Ice::X86InstructionSet_SSE2, "sse2",                        \
+                   "Enable X86 SSE2 instructions"),                            \
+        clEnumValN(Ice::X86InstructionSet_SSE4_1, "sse4.1",                    \
+                   "Enable X86 SSE 4.1 instructions"),                         \
+        clEnumValN(Ice::ARM32InstructionSet_Neon, "neon",                      \
+                   "Enable ARM Neon instructions"),                            \
+        clEnumValN(Ice::ARM32InstructionSet_HWDivArm, "hwdiv-arm",             \
+                   "Enable ARM integer divide instructions in ARM mode")       \
+            CLENUMVALEND))                                                     \
+                                                                               \
+  X(TestPrefix, std::string, dev_opt_flag, "prefix",                           \
+    cl::desc("Prepend a prefix to symbol names for testing"), cl::init(""),    \
+    cl::value_desc("prefix"))                                                  \
+                                                                               \
+  X(TestStackExtra, uint32_t, dev_opt_flag, "test-stack-extra",                \
+    cl::desc("Extra amount of stack to add to the "                            \
+             "frame in bytes (for testing)."),                                 \
+    cl::init(0))                                                               \
+                                                                               \
+  X(TestStatusString, std::string, dev_opt_flag, "test-status",                \
+    cl::desc("Testing flag for -verbose=status"), cl::init(":"))               \
+                                                                               \
+  X(TimeEachFunction, bool, dev_opt_flag, "timing-funcs",                      \
+    cl::desc("Print total translation time for each function"))                \
+                                                                               \
+  X(TimingFocusOnString, std::string, dev_opt_flag, "timing-focus",            \
+    cl::desc("Break down timing for specific functions (use ':' for all)"),    \
+    cl::init(""))                                                              \
+                                                                               \
+  X(TranslateOnlyString, std::string, dev_opt_flag, "translate-only",          \
+    cl::desc("Translate only the given functions"), cl::init(":"))             \
+                                                                               \
+  X(UseRestrictedRegisters, std::string, dev_list_flag, "reg-use",             \
+    cl::CommaSeparated,                                                        \
+    cl::desc("Only use specified registers for corresponding register "        \
+             "classes"))                                                       \
+                                                                               \
+  X(Verbose, Ice::VerboseItem, dev_list_flag, "verbose", cl::CommaSeparated,   \
+    cl::desc("Verbose options (can be comma-separated):"),                     \
+    cl::values(                                                                \
+        clEnumValN(Ice::IceV_Instructions, "inst",                             \
+                   "Print basic instructions"),                                \
+        clEnumValN(Ice::IceV_Deleted, "del", "Include deleted instructions"),  \
+        clEnumValN(Ice::IceV_InstNumbers, "instnum",                           \
+                   "Print instruction numbers"),                               \
+        clEnumValN(Ice::IceV_Preds, "pred", "Show predecessors"),              \
+        clEnumValN(Ice::IceV_Succs, "succ", "Show successors"),                \
+        clEnumValN(Ice::IceV_Liveness, "live", "Liveness information"),        \
+        clEnumValN(Ice::IceV_RegOrigins, "orig", "Physical register origins"), \
+        clEnumValN(Ice::IceV_LinearScan, "regalloc", "Linear scan details"),   \
+        clEnumValN(Ice::IceV_Frame, "frame", "Stack frame layout details"),    \
+        clEnumValN(Ice::IceV_AddrOpt, "addropt", "Address mode optimization"), \
+        clEnumValN(Ice::IceV_Folding, "fold", "Instruction folding details"),  \
+        clEnumValN(Ice::IceV_RMW, "rmw", "ReadModifyWrite optimization"),      \
+        clEnumValN(Ice::IceV_Loop, "loop", "Loop nest depth analysis"),        \
+        clEnumValN(Ice::IceV_Mem, "mem", "Memory usage details"),              \
+        clEnumValN(Ice::IceV_ShufMat, "shufvec",                               \
+                   "Shufflevector rematerialization"),                         \
+        clEnumValN(Ice::IceV_Status, "status",                                 \
+                   "Print the name of the function being translated"),         \
+        clEnumValN(Ice::IceV_AvailableRegs, "registers",                       \
+                   "Show available registers for register allocation"),        \
+        clEnumValN(Ice::IceV_GlobalInit, "global_init",                        \
+                   "Global initializers"),                                     \
+        clEnumValN(Ice::IceV_ConstPoolStats, "cpool",                          \
+                   "Constant pool counters"),                                  \
+        clEnumValN(Ice::IceV_Wasm, "wasm", "WebAssembly builder"),             \
+        clEnumValN(Ice::IceV_All, "all", "Use all verbose options"),           \
+        clEnumValN(Ice::IceV_Most, "most",                                     \
+                   "Use all verbose options except 'regalloc,global_init'"),   \
+        clEnumValN(Ice::IceV_None, "none", "No verbosity") CLENUMVALEND))      \
+                                                                               \
+  X(VerboseFocusOnString, std::string, dev_opt_flag, "verbose-focus",          \
+    cl::desc("Override with -verbose=none except for specified functions"),    \
+    cl::init(":"))                                                             \
+                                                                               \
+  X(WasmBoundsCheck, bool, dev_opt_flag, "wasm-bounds-check",                  \
+    cl::desc("Add bounds checking code in WASM frontend"), cl::init(true))
+
+//#define X(Name, Type, ClType, ...)
+
+} // end of namespace Ice
+
+#endif // SUBZERO_SRC_ICECLFLAGS_DEF

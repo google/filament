@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_series.html">
+
+<script>
+/**
+ * @fileoverview Imports text files in the BattOr format into the
+ * Model. This format is output by the battor_agent executable and library.
+ *
+ * This importer assumes the events arrive as a string. The unit tests provide
+ * examples of the trace format.
+ */
+'use strict';
+
+tr.exportTo('tr.e.importer.battor', function() {
+  /**
+   * Imports a BattOr power trace into a specified model.
+   * @constructor
+   */
+  function BattorImporter(model, events) {
+    this.importPriority = 3; // runs after the linux_perf importer
+    this.model_ = model;
+
+    // The list of power samples contained within the trace.
+    this.samples_ = [];
+    // The clock sync markers contained within the trace.
+    this.syncTimestampsById_ = new Map();
+
+    this.parseTrace_(events);
+  }
+
+  const battorDataLineRE = new RegExp(
+      '^(-?\\d+\\.\\d+)\\s+(-?\\d+\\.\\d+)\\s+(-?\\d+\\.\\d+)' +
+      '(?:\\s+<(\\S+)>)?$'
+  );
+  const battorHeaderLineRE = /^# BattOr/;
+
+  /**
+   * Guesses whether the provided events is a BattOr string.
+   * Looks for the magic string "# BattOr" at the start of the file,
+   *
+   * @return {boolean} True when events is a BattOr array.
+   */
+  BattorImporter.canImport = function(events) {
+    if (!(typeof(events) === 'string' || events instanceof String)) {
+      return false;
+    }
+
+    return battorHeaderLineRE.test(events);
+  };
+
+  BattorImporter.prototype = {
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'BattorImporter';
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    /**
+     * Imports clock sync markers from the trace into into this.model_.
+     */
+    importClockSyncMarkers() {
+      for (const [syncId, ts] of this.syncTimestampsById_) {
+        this.model_.clockSyncManager.addClockSyncMarker(
+            tr.model.ClockDomainId.BATTOR, syncId, ts);
+      }
+    },
+
+    /**
+     * Imports the events from the trace into this.model_.
+     */
+    importEvents() {
+      if (this.model_.device.powerSeries) {
+        this.model_.importWarning({
+          type: 'import_error',
+          message: 'Power counter exists, can not import BattOr power trace.'
+        });
+        return;
+      }
+
+      const modelTimeTransformer =
+          this.model_.clockSyncManager.getModelTimeTransformer(
+              tr.model.ClockDomainId.BATTOR);
+
+      const powerSeries = this.model_.device.powerSeries =
+          new tr.model.PowerSeries(this.model_.device);
+      for (let i = 0; i < this.samples_.length; i++) {
+        const sample = this.samples_[i];
+        powerSeries.addPowerSample(
+            modelTimeTransformer(sample.ts), sample.powerInW);
+      }
+    },
+
+    /**
+     * Given the BattOr trace as a string, parse it and store the results in
+     * this.samples_ and this.syncTimestampsById_.
+     */
+    parseTrace_(trace) {
+      const lines = trace.split('\n');
+
+      for (let line of lines) {
+        line = line.trim();
+
+        if (line.length === 0) continue;
+
+        if (line.startsWith('#')) continue;
+
+        // Parse power sample.
+        const groups = battorDataLineRE.exec(line);
+        if (!groups) {
+          this.model_.importWarning({
+            type: 'parse_error',
+            message: 'Unrecognized line in BattOr trace: ' + line
+          });
+          continue;
+        }
+
+        const ts = parseFloat(groups[1]);
+        const voltageInV = tr.b.convertUnit(parseFloat(groups[2]),
+            tr.b.UnitPrefixScale.METRIC.MILLI,
+            tr.b.UnitPrefixScale.METRIC.NONE);
+        const currentInA = tr.b.convertUnit(parseFloat(groups[3]),
+            tr.b.UnitPrefixScale.METRIC.MILLI,
+            tr.b.UnitPrefixScale.METRIC.NONE);
+        const syncId = groups[4];
+
+        if (syncId) {
+          this.syncTimestampsById_.set(syncId, ts);
+        }
+
+        if (voltageInV < 0 || currentInA < 0) {
+          this.model_.importWarning({
+            type: 'parse_error',
+            message: 'The following line in the BattOr trace has a negative ' +
+                'voltage or current, neither of which are allowed: ' + line +
+                '. A common cause of this is that the device is charging ' +
+                'while the trace is being recorded.'
+          });
+          continue;
+        }
+
+        this.samples_.push(new Sample(ts, voltageInV, currentInA));
+      }
+    }
+  };
+
+  /**
+   * A sample recorded by a BattOr.
+   *
+   * @param {number} ts The timestamp (in milliseconds) of the sample.
+   * @param {number} voltage The voltage (in volts) at the specified time.
+   * @param {number} current The current (in amps) at the specified time.
+   *
+   * @constructor
+   */
+  function Sample(ts, voltageInV, currentInA) {
+    this.ts = ts;
+    this.voltageInV = voltageInV;
+    this.currentInA = currentInA;
+  }
+
+  Sample.prototype = {
+    /** Returns the instantaneous power consumption (in Watts). */
+    get powerInW() { return this.voltageInV * this.currentInA; }
+  };
+
+  tr.importer.Importer.register(BattorImporter);
+
+  return {
+    BattorImporter,
+  };
+});
+
+</script>

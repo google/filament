@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+<link rel="import" href="/tracing/ui/tracks/memory_dump_track_util.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const USED_MEMORY_TRACK_HEIGHT = 50;
+  const ALLOCATED_MEMORY_TRACK_HEIGHT = 50;
+
+  /**
+   * A track that displays an array of GlobalMemoryDump objects.
+   * @constructor
+   * @extends {ContainerTrack}
+   */
+  const GlobalMemoryDumpTrack = tr.ui.b.define(
+      'global-memory-dump-track', tr.ui.tracks.ContainerTrack);
+
+  GlobalMemoryDumpTrack.prototype = {
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      this.memoryDumps_ = undefined;
+    },
+
+    get memoryDumps() {
+      return this.memoryDumps_;
+    },
+
+    set memoryDumps(memoryDumps) {
+      this.memoryDumps_ = memoryDumps;
+      this.updateContents_();
+    },
+
+    updateContents_() {
+      this.clearTracks_();
+
+      // Show no tracks if there are no dumps.
+      if (!this.memoryDumps_ || !this.memoryDumps_.length) return;
+
+      this.appendDumpDotsTrack_();
+      this.appendUsedMemoryTrack_();
+      this.appendAllocatedMemoryTrack_();
+    },
+
+    appendDumpDotsTrack_() {
+      const items = tr.ui.tracks.buildMemoryLetterDots(this.memoryDumps_);
+      if (!items) return;
+
+      const track = new tr.ui.tracks.LetterDotTrack(this.viewport);
+      track.heading = 'Memory Dumps';
+      track.items = items;
+      Polymer.dom(this).appendChild(track);
+    },
+
+    appendUsedMemoryTrack_() {
+      const tracks = [];
+      const perProcessSeries =
+          tr.ui.tracks.buildGlobalUsedMemoryChartSeries(this.memoryDumps_);
+      if (perProcessSeries !== undefined) {
+        tracks.push({name: 'Memory per process', series: perProcessSeries});
+      } else {
+        tracks.push.apply(tracks, tr.ui.tracks.buildSystemMemoryChartSeries(
+            this.memoryDumps_[0].model));
+      }
+
+      for (const {name, series} of tracks) {
+        const track = new tr.ui.tracks.ChartTrack(this.viewport);
+        track.heading = name;
+        track.height = USED_MEMORY_TRACK_HEIGHT + 'px';
+        track.series = series;
+        track.autoSetAllAxes({expandMax: true});
+        Polymer.dom(this).appendChild(track);
+      }
+    },
+
+    appendAllocatedMemoryTrack_() {
+      const series = tr.ui.tracks.buildGlobalAllocatedMemoryChartSeries(
+          this.memoryDumps_);
+      if (!series) return;
+
+      const track = new tr.ui.tracks.ChartTrack(this.viewport);
+      track.heading = 'Memory per component';
+      track.height = ALLOCATED_MEMORY_TRACK_HEIGHT + 'px';
+      track.series = series;
+      track.autoSetAllAxes({expandMax: true});
+      Polymer.dom(this).appendChild(track);
+    }
+  };
+
+  return {
+    GlobalMemoryDumpTrack,
+  };
+});
+</script>

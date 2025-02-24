@@ -1,0 +1,15 @@
+# EditorConfig file: http://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+# 4 space indentation
+[*.py]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.math', function() {
+  /**
+    * Earth Mover's distance (EMD), also known as the Wasserstein distance,
+    * is used to compare distributions.
+    * The Earth Mover's Distance between two distributions is proportional
+    * to the minimum amount of work required to change one distribution into
+    * the other.
+    * One unit of work in this case is equal to the amount of work necessary
+    * to move one unit of 'dirt' by one unit of distance.
+    * For one-dimensional distributions, when the two distributions are
+    * non-negative and are of the same size (contain same amount of dirt),
+    * there exists a closed form formula for the EMD between these two
+    * distributions. The EMD in that case is equal to the area between the
+    * CDFs of the two distributions.
+    *
+    * http://infolab.stanford.edu/pub/cstr/reports/cs/tr/99/1620/CS-TR-99-1620.ch4.pdf
+    *
+    * This function takes in two histograms as input, represented as an array
+    * of numbers where the n-th element is the weight of the n-th bin.
+    * It throws an error if the two input histograms don't have same number
+    * of bins.
+    *
+    * @param {number[]} firstHistogram histogram of the first distribution.
+    * @param {number[]} secondHistogram histogram of the second distribution.
+    * @return {earthMoversDistance}
+    *
+    */
+  function earthMoversDistance(firstHistogram, secondHistogram) {
+    const buckets = firstHistogram.length;
+    if (secondHistogram.length !== buckets) {
+      throw new Error('Histograms have a different number of bins.');
+    }
+
+    const arrSum = arr => arr.reduce((a, b) => a + b, 0);
+    if (arrSum(firstHistogram) !== arrSum(secondHistogram)) {
+      throw new Error('The histograms\' sizes don\'t match.');
+    }
+
+    let total = 0;
+    let remainder = 0;
+    for (let bucket = 0; bucket < buckets; bucket++) {
+      remainder += secondHistogram[bucket] -
+                      firstHistogram[bucket];
+      total += Math.abs(remainder);
+    }
+    return total;
+  }
+  return {
+    earthMoversDistance,
+  };
+});
+</script>

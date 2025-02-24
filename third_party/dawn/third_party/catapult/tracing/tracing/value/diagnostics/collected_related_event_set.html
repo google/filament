@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class CollectedRelatedEventSet extends tr.v.d.Diagnostic {
+    constructor() {
+      super();
+      this.eventSetsByCanonicalUrl_ = new Map();
+    }
+
+    asDictInto_(d) {
+      d.events = {};
+      for (const [canonicalUrl, eventSet] of this) {
+        d.events[canonicalUrl] = [];
+        for (const event of eventSet) {
+          d.events[canonicalUrl].push({
+            stableId: event.stableId,
+            title: event.title,
+            start: event.start,
+            duration: event.duration
+          });
+        }
+      }
+    }
+
+    static deserialize(events, deserializer) {
+      return CollectedRelatedEventSet.fromDict({events});
+    }
+
+    serialize(serializer) {
+      const d = {};
+      this.asDictInto(d);
+      return d.events;
+    }
+
+    static fromDict(d) {
+      const result = new CollectedRelatedEventSet();
+      for (const [canonicalUrl, events] of Object.entries(d.events)) {
+        result.eventSetsByCanonicalUrl_.set(canonicalUrl, events.map(
+            e => new tr.v.d.EventRef(e)));
+      }
+      return result;
+    }
+
+    get size() {
+      return this.eventSetsByCanonicalUrl_.size;
+    }
+
+    get(canonicalUrl) {
+      return this.eventSetsByCanonicalUrl_.get(canonicalUrl);
+    }
+
+    * [Symbol.iterator]() {
+      for (const [canonicalUrl, eventSet] of this.eventSetsByCanonicalUrl_) {
+        yield [canonicalUrl, eventSet];
+      }
+    }
+
+    canAddDiagnostic(otherDiagnostic) {
+      return otherDiagnostic instanceof tr.v.d.RelatedEventSet ||
+        otherDiagnostic instanceof tr.v.d.CollectedRelatedEventSet;
+    }
+
+    addEventSetForCanonicalUrl(canonicalUrl, events) {
+      let myEventSet = this.eventSetsByCanonicalUrl_.get(canonicalUrl);
+      if (myEventSet === undefined) {
+        myEventSet = new Set();
+        this.eventSetsByCanonicalUrl_.set(canonicalUrl, myEventSet);
+      }
+      for (const event of events) {
+        myEventSet.add(event);
+      }
+    }
+
+    addDiagnostic(otherDiagnostic) {
+      if (otherDiagnostic instanceof tr.v.d.CollectedRelatedEventSet) {
+        // Merge Maps of Sets.
+        for (const [canonicalUrl, otherEventSet] of otherDiagnostic) {
+          this.addEventSetForCanonicalUrl(canonicalUrl, otherEventSet);
+        }
+        return;
+      }
+
+      if (!otherDiagnostic.canonicalUrl) return;
+      this.addEventSetForCanonicalUrl(
+          otherDiagnostic.canonicalUrl, otherDiagnostic);
+    }
+  }
+
+  tr.v.d.Diagnostic.register(CollectedRelatedEventSet, {
+    elementName: 'tr-v-ui-collected-related-event-set-span'
+  });
+
+  return {
+    CollectedRelatedEventSet,
+  };
+});
+</script>

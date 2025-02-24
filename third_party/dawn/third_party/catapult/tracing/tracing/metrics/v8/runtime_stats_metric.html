@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/extras/v8/runtime_stats_entry.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/diagnostics/related_name_map.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.v8', function() {
+  const COUNT_CUSTOM_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createExponential(1, 1000000, 50);
+  const DURATION_CUSTOM_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createExponential(0.1, 10000, 50);
+  const SUMMARY_OPTIONS = {
+    std: false,
+    count: false,
+    sum: false,
+    min: false,
+    max: false,
+  };
+
+  function convertMicroToMilli_(time) {
+    return tr.b.convertUnit(time,
+        tr.b.UnitPrefixScale.METRIC.MICRO, tr.b.UnitPrefixScale.METRIC.MILLI);
+  }
+
+  function addDurationHistogram(histogramName, time, histograms) {
+    const value = convertMicroToMilli_(time);
+    histograms.createHistogram(
+        `${histogramName}:duration`,
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        {value},
+        {
+          binBoundaries: DURATION_CUSTOM_BOUNDARIES,
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+  }
+
+  function addCountHistogram(histogramName, value, histograms) {
+    histograms.createHistogram(
+        `${histogramName}:count`,
+        tr.b.Unit.byName.count_smallerIsBetter,
+        {value},
+        {
+          binBoundaries: COUNT_CUSTOM_BOUNDARIES,
+          summaryOptions: SUMMARY_OPTIONS
+        });
+  }
+
+  function runtimeStatsTotalMetric(histograms, model) {
+    const v8Slices = tr.metrics.v8.utils.filterEvents(
+        model,
+        ev => ev instanceof tr.e.v8.V8ThreadSlice);
+
+    const runtimeGroupCollection = new tr.e.v8.RuntimeStatsGroupCollection();
+    runtimeGroupCollection.addSlices(v8Slices);
+
+    let overallV8Time = runtimeGroupCollection.totalTime;
+    let overallV8Count = runtimeGroupCollection.totalCount;
+    let mainThreadTime = runtimeGroupCollection.totalTime;
+    let mainThreadCount = runtimeGroupCollection.totalCount;
+    let mainThreadV8Time = runtimeGroupCollection.totalTime;
+    let mainThreadV8Count = runtimeGroupCollection.totalCount;
+    for (const runtimeGroup of runtimeGroupCollection.runtimeGroups) {
+      addDurationHistogram(runtimeGroup.name, runtimeGroup.time, histograms);
+      if (runtimeGroup.name === 'Blink C++') {
+        overallV8Time -= runtimeGroup.time;
+        mainThreadV8Time -= runtimeGroup.time;
+      } else if (runtimeGroup.name.includes('Background')) {
+        mainThreadTime -= runtimeGroup.time;
+        mainThreadV8Time -= runtimeGroup.time;
+      }
+
+      addCountHistogram(runtimeGroup.name, runtimeGroup.count, histograms);
+      if (runtimeGroup.name === 'Blink C++') {
+        overallV8Count -= runtimeGroup.count;
+        mainThreadV8Count -= runtimeGroup.count;
+      } else if (runtimeGroup.name.includes('Background')) {
+        mainThreadCount -= runtimeGroup.count;
+        mainThreadV8Count -= runtimeGroup.count;
+      }
+    }
+
+    if (runtimeGroupCollection.blinkRCSGroupCollection.totalTime > 0) {
+      const blinkRCSGroupCollection =
+        runtimeGroupCollection.blinkRCSGroupCollection;
+      for (const group of blinkRCSGroupCollection.runtimeGroups) {
+        addDurationHistogram(group.name, group.time, histograms);
+        addCountHistogram(group.name, group.count, histograms);
+      }
+    }
+
+    // Add V8 only time that is Total - Blink C++ duration.
+    addDurationHistogram('V8-Only', overallV8Time, histograms);
+    addCountHistogram('V8-Only', overallV8Count, histograms);
+
+    // Add main thread time that is Total - Background-* duration.
+    addDurationHistogram('Total-Main-Thread', mainThreadTime, histograms);
+    addCountHistogram('Total-Main-Thread', mainThreadCount, histograms);
+
+    // Add V8 only main thread time that is V8-Only - Background-* duration.
+    addDurationHistogram('V8-Only-Main-Thread', mainThreadV8Time, histograms);
+    addCountHistogram('V8-Only-Main-Thread', mainThreadV8Count, histograms);
+  }
+
+  tr.metrics.MetricRegistry.register(runtimeStatsTotalMetric);
+
+  return {
+    runtimeStatsTotalMetric,
+  };
+});
+</script>

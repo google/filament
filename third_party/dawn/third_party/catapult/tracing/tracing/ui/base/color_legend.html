@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/model/compound_event_selection_state.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<!--
+@fileoverview A component used to display a label and a color square.
+
+The colored square is typically filled with the color associated with
+that label, using the getColorId* methods from base/color_scheme.
+-->
+<dom-module id='tr-ui-b-color-legend'>
+  <template>
+    <style>
+    :host {
+      display: inline-block;
+    }
+
+    #square {
+      font-size: 150%;  /* Make the square bigger. */
+      line-height: 0%;  /* Prevent the square from increasing legend height. */
+    }
+    </style>
+    <span id="square"></span>
+    <span id="label"></span>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-color-legend',
+
+  ready() {
+    const blackSquareCharCode = 9632;
+    this.$.square.innerText = String.fromCharCode(blackSquareCharCode);
+    this.label_ = undefined;
+
+    this.compoundEventSelectionState_ =
+        tr.model.CompoundEventSelectionState.NOT_SELECTED;
+  },
+
+  set compoundEventSelectionState(compoundEventSelectionState) {
+    this.compoundEventSelectionState_ = compoundEventSelectionState;
+    // TODO(nduca): Adjust appearance based on associated state.
+  },
+
+  get label() {
+    return this.label_;
+  },
+
+  set label(label) {
+    if (label === undefined) {
+      this.setLabelAndColorId(undefined, undefined);
+      return;
+    }
+
+    const colorId = tr.b.ColorScheme.getColorIdForGeneralPurposeString(
+        label);
+    this.setLabelAndColorId(label, colorId);
+  },
+
+  setLabelAndColorId(label, colorId) {
+    this.label_ = label;
+
+    Polymer.dom(this.$.label).textContent = '';
+    Polymer.dom(this.$.label).appendChild(tr.ui.b.asHTMLOrTextNode(label));
+
+    if (colorId === undefined) {
+      this.$.square.style.color = 'initial';
+    } else {
+      this.$.square.style.color = tr.b.ColorScheme.colorsAsStrings[colorId];
+    }
+  }
+});
+</script>

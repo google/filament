@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const startCompare = function(x, y) { return x.start - y.start; };
+
+  /**
+   * Track enabling quick selection of frame slices/events.
+   * @constructor
+   */
+  const FrameTrack = tr.ui.b.define(
+      'frame-track', tr.ui.tracks.LetterDotTrack);
+
+  FrameTrack.prototype = {
+    __proto__: tr.ui.tracks.LetterDotTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.LetterDotTrack.prototype.decorate.call(this, viewport);
+      this.heading = 'Frames';
+
+      this.frames_ = undefined;
+      this.items = undefined;
+    },
+
+    get frames() {
+      return this.frames_;
+    },
+
+    set frames(frames) {
+      this.frames_ = frames;
+      if (frames === undefined) return;
+
+      this.frames_ = this.frames_.slice();
+      this.frames_.sort(startCompare);
+
+      // letter dots
+      this.items = this.frames_.map(function(frame) {
+        return new FrameDot(frame);
+      });
+    }
+  };
+
+  /**
+   * @constructor
+   * @extends {LetterDot}
+   */
+  function FrameDot(frame) {
+    tr.ui.tracks.LetterDot.call(this, frame, 'F', frame.colorId, frame.start);
+  }
+
+  FrameDot.prototype = {
+    __proto__: tr.ui.tracks.LetterDot.prototype
+  };
+
+  return {
+    FrameTrack,
+  };
+});
+</script>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/resource_usage_sample.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ResourceUsageSample = tr.model.ResourceUsageSample;
+
+  test('usageSample', function() {
+    const series = new tr.model.ResourceUsageSeries(new tr.Model().device);
+
+    const sample1 = new ResourceUsageSample(series, 0.0, 0.11);
+    const sample2 = new ResourceUsageSample(series, 1.0, 0.22);
+
+    assert.strictEqual(sample1.series, series);
+    assert.strictEqual(sample1.start, 0.0);
+    assert.strictEqual(sample1.usage, 0.11);
+
+    assert.strictEqual(sample2.series, series);
+    assert.strictEqual(sample2.start, 1.0);
+    assert.strictEqual(sample2.usage, 0.22);
+  });
+
+  test('addBoundsToRange', function() {
+    const series = new tr.model.ResourceUsageSeries(new tr.Model().device);
+
+    const sample1 = new ResourceUsageSample(series, 0.0, 0.11);
+    const sample2 = new ResourceUsageSample(series, 1.0, 0.22);
+
+    const range = new tr.b.math.Range();
+    sample1.addBoundsToRange(range);
+
+    assert.strictEqual(range.min, 0);
+    assert.strictEqual(range.max, 0);
+
+    sample2.addBoundsToRange(range);
+
+    assert.strictEqual(range.min, 0);
+    assert.strictEqual(range.max, 1);
+  });
+});
+</script>

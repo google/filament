@@ -1,0 +1,158 @@
+Name
+
+    ANGLE_iosurface_client_buffer
+
+Name Strings
+
+    EGL_ANGLE_iosurface_client_buffer
+
+Contributors
+
+    Corentin Wallez
+    Geoff Lang
+    James Darpinian
+    Le Hoang Quyen
+
+Contacts
+
+    Corentin Wallez, Google Inc. (cwallez 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+    Version 6, Aug 25, 2020
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension allows creating EGL surfaces from IOSurface objects.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted in the <buftype> parameter of eglCreatePbufferFromClientBuffer:
+
+        EGL_IOSURFACE_ANGLE            0x3454
+        EGL_IOSURFACE_PLANE_ANGLE      0x345A
+        EGL_TEXTURE_RECTANGLE_ANGLE    0x345B
+        EGL_TEXTURE_TYPE_ANGLE         0x345C
+        EGL_TEXTURE_INTERNAL_FORMAT_ANGLE 0x345D
+        EGL_IOSURFACE_USAGE_HINT_ANGLE 0x348A
+
+    Accepted in the <attribute> parameter of
+    eglGetConfigAttrib:
+
+        EGL_BIND_TO_TEXTURE_TARGET_ANGLE 0x348D
+
+Additions to Chapter 3 of the EGL 1.4 Specification (EGL Functions and Errors)
+
+    Replace the last sentence of paragraph 1 of Section 3.5.3 with the
+    following text.
+    "Currently, the only client API resources which may be bound in this
+    fashion are OpenVG VGImage objects and IOSurface objects."
+
+    Replace the third paragraph of Section 3.5.3 with the following text.
+    "<buftype> specifies the type of buffer to be bound. The only allowed values
+    of <buftype> are EGL_OPENVG_IMAGE and EGL_IOSURFACE_ANGLE".
+
+    Append the following text to the fourth paragraph of Section 3.5.3.
+    "When <buftype> is EGL_IOSURFACE_ANGLE, <buffer> must be a valid IOSurface
+    object case into the type EGLClientBuffer."
+
+    Append to the end of Section 3.5.3.
+    "When <buftype> is EGL_IOSURFACE_ANGLE, <attrib_list> must contain all the
+    following attributes otherwise EGL_BAD_PARAMETER is generated. The
+    attributes must satisfy the following constraints otherwise
+    EGL_BAD_ATTRIBUTE is generated:
+      - EGL_TEXTURE_TYPE_ANGLE, and EGL_TEXTURE_INTERNAL_FORMAT_ANGLE followed
+    by OpenGL enums for texture types, and texture internal format
+    respectively.
+      - EGL_TEXTURE_FORMAT with a value of EGL_TEXTURE_RGBA
+      - EGL_WIDTH with a value between 1 and the width of <buffer>.
+      - EGL_HEIGHT with a value between 1 and the height of <buffer>.
+      - EGL_TEXTURE_TARGET with a value that matches the attribute
+      EGL_BIND_TO_TEXTURE_TARGET_ANGLE as queried from eglGetConfigAttrib.
+      - EGL_IOSURFACE_PLANE_ANGLE with a value between 0 and the number of
+    planes of <buffer> (exclusive).
+
+    In addition the EGL_TEXTURE_TYPE_ANGLE and
+    EGL_TEXTURE_INTERNAL_FORMAT_ANGLE attributes must be one of the
+    combinations listed in table egl.iosurface.formats or an
+    EGL_BAD_PARAMETER is generated. The combination must also be a valid
+    combinations for glTexImage2D or EGL_BAD_PARAMETER is generated.
+
+    The attribute EGL_IOSURFACE_USAGE_HINT_ANGLE may optionally be specified as
+    a combination of the bits EGL_IOSURFACE_READ_HINT_ANGLE and
+    EGL_IOSURFACE_WRITE_HINT_ANGLE. On the iOS Simulator platform, where
+    IOSurface support is incomplete, these hints indicate whether the intent is
+    to read from the IOSurface, write to it, or both. Explicitly passing 0 for
+    this attribute is equivalent to setting both the read and write usage
+    bits. This attribute is ignored on other platforms."
+
+    ---------------------------------------------------------------------------
+    Texture Type               Texture Internal Format
+    ---------------------------------------------------------------------------
+    GL_UNSIGNED_BYTE               GL_RED
+    GL_UNSIGNED_SHORT              GL_RED
+    GL_UNSIGNED_SHORT              GL_R16UI
+    GL_UNSIGNED_BYTE               GL_RG
+    GL_UNSIGNED_SHORT              GL_RG
+    GL_UNSIGNED_BYTE               GL_RGB
+    GL_UNSIGNED_BYTE               GL_RGBA
+    GL_UNSIGNED_BYTE               GL_BGRA_EXT
+    GL_UNSIGNED_INT_2_10_10_10_REV GL_RGB10_A2
+    GL_HALF_FLOAT                  GL_RGBA
+    ---------------------------------------------------------------------------
+    Table egl.iosurface.formats - Valid combinations of format, type and
+    internal format for IOSurface-backed pbuffers.
+    ---------------------------------------------------------------------------
+
+    Append to the end of Section 3.5.3.
+    "When a pbuffer is created with type EGL_IOSURFACE_ANGLE, the contents
+    of the associcated IOSurface object are undefined while the pbuffer is
+    bound to a client texture."
+
+    Append to the end of Table 3.1.
+    ---------------------------------------------------------------------------
+    Attribute                           Type    Notes
+    ---------------------------------------------------------------------------
+    EGL_BIND_TO_TEXTURE_TARGET_ANGLE    enum    Texture target supported by
+    IOSurface-backed pbuffers.
+    ---------------------------------------------------------------------------
+
+
+Issues
+
+    1. Can RGB formats be supported?
+
+    RESOLVED: Support for RGB internal formats is added in version 3. Surfaces
+    with an RGB format will ensure that the alpha channel of the IOSurface is
+    reset to 1.0 when it is used.
+
+Revision History
+
+    Version 1, 2017/12/06 - first draft.
+    Version 2, 2019/04/01 - Allow MakeCurrent.
+    Version 3, 2019/08/13 - Allow RGB internal formats
+    Version 4, 2019/12/28 - Add usage hint; require TEXTURE_RECTANGLE on macOS
+                            and TEXTURE_2D on iOS
+    Version 5, 2020/06/30 - Allow RGB10_A2 internal formats
+    Version 6, 2020/08/25 - Allow R16 and RG16 formats for P010 surfaces
+    Version 7, 2023/09/19 - Allow RGBA/RGBX surfaces

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This contains an implementation of the EventTarget interface
+ * as defined by DOM Level 2 Events.
+ */
+tr.exportTo('tr.b', function() {
+  /**
+   * Creates a new EventTarget. This class implements the DOM level 2
+   * EventTarget interface and can be used wherever those are used.
+   * @constructor
+   */
+  function EventTarget() {
+  }
+  EventTarget.decorate = function(target) {
+    for (const k in EventTarget.prototype) {
+      if (k === 'decorate') continue;
+      const v = EventTarget.prototype[k];
+      if (typeof v !== 'function') continue;
+      target[k] = v;
+    }
+  };
+
+  EventTarget.prototype = {
+
+    /**
+     * Adds an event listener to the target.
+     * @param {string} type The name of the event.
+     * @param {!Function|{handleEvent:Function}} handler The handler for the
+     *     event. This is called when the event is dispatched.
+     */
+    addEventListener(type, handler) {
+      if (!this.listeners_) {
+        this.listeners_ = Object.create(null);
+      }
+      if (!(type in this.listeners_)) {
+        this.listeners_[type] = [handler];
+      } else {
+        const handlers = this.listeners_[type];
+        if (handlers.indexOf(handler) < 0) {
+          handlers.push(handler);
+        }
+      }
+    },
+
+    /**
+     * Removes an event listener from the target.
+     * @param {string} type The name of the event.
+     * @param {!Function|{handleEvent:Function}} handler The handler for the
+     *     event.
+     */
+    removeEventListener(type, handler) {
+      if (!this.listeners_) return;
+      if (type in this.listeners_) {
+        const handlers = this.listeners_[type];
+        const index = handlers.indexOf(handler);
+        if (index >= 0) {
+          // Clean up if this was the last listener.
+          if (handlers.length === 1) {
+            delete this.listeners_[type];
+          } else {
+            handlers.splice(index, 1);
+          }
+        }
+      }
+    },
+
+    /**
+     * Dispatches an event and calls all the listeners that are listening to
+     * the type of the event.
+     * @param {!cr.event.Event} event The event to dispatch.
+     * @return {boolean} Whether the default action was prevented. If someone
+     *     calls preventDefault on the event object then this returns false.
+     */
+    dispatchEvent(event) {
+      if (!this.listeners_) return true;
+
+      // Since we are using DOM Event objects we need to override some of the
+      // properties and methods so that we can emulate this correctly.
+      event.__defineGetter__('target', () => this);
+      const realPreventDefault = event.preventDefault;
+      event.preventDefault = function() {
+        realPreventDefault.call(this);
+        this.rawReturnValue = false;
+      };
+
+      const type = event.type;
+      let prevented = 0;
+      if (type in this.listeners_) {
+        // Clone to prevent removal during dispatch
+        const handlers = this.listeners_[type].concat();
+        for (let i = 0, handler; handler = handlers[i]; i++) {
+          if (handler.handleEvent) {
+            prevented |= handler.handleEvent.call(handler, event) === false;
+          } else {
+            prevented |= handler.call(this, event) === false;
+          }
+        }
+      }
+
+      return !prevented && event.rawReturnValue;
+    },
+
+    async dispatchAsync(event) {
+      if (!this.listeners_) return true;
+
+      const listeners = this.listeners_[event.type];
+      if (listeners === undefined) return;
+
+      // Clone to prevent removal during dispatch
+      await Promise.all(listeners.slice().map(listener => {
+        if (listener.handleEvent) {
+          return listener.handleEvent.call(listener, event);
+        }
+        return listener.call(this, event);
+      }));
+    },
+
+    hasEventListener(type) {
+      return (this.listeners_ !== undefined &&
+              this.listeners_[type] !== undefined);
+    }
+  };
+
+  return {
+    EventTarget,
+  };
+});
+</script>

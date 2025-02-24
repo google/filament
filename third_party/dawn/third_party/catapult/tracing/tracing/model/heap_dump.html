@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * HeapEntry represents a single value describing the state of the heap of an
+   * allocator in a single process.
+   *
+   * An entry specifies how much space (e.g. 19 MiB) was allocated in a
+   * particular context, which consists of a codepath (e.g. drawQuad <- draw <-
+   * MessageLoop::RunTask) and an object type (e.g. HTMLImportLoader).
+   *
+   * If |valuesAreTotals| is true the size and count of this entry are totals
+   * for this and all more specific entries, otherwise they are values just for
+   * this specific entry.
+   *
+   * @{constructor}
+   */
+  function HeapEntry(
+      heapDump, leafStackFrame, objectTypeName, size, count, valuesAreTotals) {
+    this.heapDump = heapDump;
+
+    // The leaf stack frame of the associated backtrace (e.g. drawQuad for the
+    // drawQuad <- draw <- MessageLoop::RunTask backtrace). If undefined, the
+    // backtrace is empty.
+    this.leafStackFrame = leafStackFrame;
+
+    // The name of the allocated object type (e.g. 'HTMLImportLoader'). If
+    // undefined, the entry represents the sum over all object types.
+    this.objectTypeName = objectTypeName;
+
+    this.size = size;
+    this.count = count;
+    this.valuesAreTotals = valuesAreTotals;
+  }
+
+  /**
+   * HeapDump represents a dump of the heap of an allocator in a single process
+   * at a particular timestamp.
+   *
+   * @{constructor}
+   */
+  function HeapDump(processMemoryDump, allocatorName, isComplete) {
+    this.processMemoryDump = processMemoryDump;
+    this.allocatorName = allocatorName;
+    this.isComplete = isComplete;
+    this.entries = [];
+  }
+
+  HeapDump.prototype = {
+    addEntry(
+        leafStackFrame, objectTypeName, size, count, opt_valuesAreTotals) {
+      if (opt_valuesAreTotals === undefined) opt_valuesAreTotals = true;
+      const valuesAreTotals = opt_valuesAreTotals;
+      const entry = new HeapEntry(
+          this, leafStackFrame, objectTypeName, size, count, valuesAreTotals);
+      this.entries.push(entry);
+      return entry;
+    }
+  };
+
+  return {
+    HeapEntry,
+    HeapDump,
+  };
+});
+</script>

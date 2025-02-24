@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides event merging functionality for grouping/analysis.
+ */
+tr.exportTo('tr.b.math', function() {
+  function convertEventsToRanges(events) {
+    return events.map(function(event) {
+      return tr.b.math.Range.fromExplicitRange(event.start, event.end);
+    });
+  }
+
+  function mergeRanges(inRanges, mergeThreshold, mergeFunction) {
+    const remainingEvents = inRanges.slice();
+    remainingEvents.sort(function(x, y) {
+      return x.min - y.min;
+    });
+
+    if (remainingEvents.length <= 1) {
+      const merged = [];
+      if (remainingEvents.length === 1) {
+        merged.push(mergeFunction(remainingEvents));
+      }
+      return merged;
+    }
+
+    const mergedEvents = [];
+
+    let currentMergeBuffer = [];
+    let rightEdge;
+    function beginMerging() {
+      currentMergeBuffer.push(remainingEvents[0]);
+      remainingEvents.splice(0, 1);
+      rightEdge = currentMergeBuffer[0].max;
+    }
+
+    function flushCurrentMergeBuffer() {
+      if (currentMergeBuffer.length === 0) return;
+
+      mergedEvents.push(mergeFunction(currentMergeBuffer));
+      currentMergeBuffer = [];
+
+      // Refill merge buffer if needed.
+      if (remainingEvents.length !== 0) beginMerging();
+    }
+
+    beginMerging();
+
+    while (remainingEvents.length) {
+      const currentEvent = remainingEvents[0];
+
+      const distanceFromRightEdge = currentEvent.min - rightEdge;
+      if (distanceFromRightEdge < mergeThreshold) {
+        rightEdge = Math.max(rightEdge, currentEvent.max);
+        remainingEvents.splice(0, 1);
+        currentMergeBuffer.push(currentEvent);
+        continue;
+      }
+
+      // Too big a gap.
+      flushCurrentMergeBuffer();
+    }
+    flushCurrentMergeBuffer();
+
+    return mergedEvents;
+  }
+
+  // Pass in |opt_totalRange| in order to find empty ranges before the first of
+  // |inRanges| and after the last of |inRanges|.
+  function findEmptyRangesBetweenRanges(inRanges, opt_totalRange) {
+    if (opt_totalRange && opt_totalRange.isEmpty) opt_totalRange = undefined;
+
+    const emptyRanges = [];
+    if (!inRanges.length) {
+      if (opt_totalRange) emptyRanges.push(opt_totalRange);
+      return emptyRanges;
+    }
+
+    inRanges = inRanges.slice();
+    inRanges.sort(function(x, y) {
+      return x.min - y.min;
+    });
+    if (opt_totalRange &&
+        (opt_totalRange.min < inRanges[0].min)) {
+      emptyRanges.push(tr.b.math.Range.fromExplicitRange(
+          opt_totalRange.min, inRanges[0].min));
+    }
+
+    inRanges.forEach(function(range, index) {
+      for (let otherIndex = 0; otherIndex < inRanges.length; ++otherIndex) {
+        if (index === otherIndex) continue;
+        const other = inRanges[otherIndex];
+
+        if (other.min > range.max) {
+          // |inRanges| is sorted, so |other| is the first range after |range|,
+          // and there is an empty range between them.
+          emptyRanges.push(tr.b.math.Range.fromExplicitRange(
+              range.max, other.min));
+          return;
+        }
+        // Otherwise, |other| starts before |range| ends, so |other| might
+        // possibly contain the end of |range|.
+
+        if (other.max > range.max) {
+          // |other| does contain the end of |range|, so no empty range starts
+          // at the end of this |range|.
+          return;
+        }
+      }
+      if (opt_totalRange && (range.max < opt_totalRange.max)) {
+        emptyRanges.push(tr.b.math.Range.fromExplicitRange(
+            range.max, opt_totalRange.max));
+      }
+    });
+    return emptyRanges;
+  }
+
+  return {
+    convertEventsToRanges,
+    findEmptyRangesBetweenRanges,
+    mergeRanges,
+  };
+});
+</script>

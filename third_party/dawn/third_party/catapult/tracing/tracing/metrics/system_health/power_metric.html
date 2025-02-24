@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/importer/find_input_expectations.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  // If the power series doesn't cover the entire Chrome trace, then
+  // the results from Chrome tracing metrics will likely be inaccurate,
+  // so we don't report them. However, we allow the power series bounds
+  // to be up to 1 ms inside the Chrome trace and still count as
+  // covering the Chrome trace. This is to allow for small deviations
+  // due to clock sync latency and the finite sampling rate of the
+  // BattOr.
+  const CHROME_POWER_GRACE_PERIOD_MS = 1;
+
+  /**
+   * Creates an empty histogram to hold data for a given time interval.
+   *
+   * @returns {Object} An object of the form:
+   *
+   *   {
+   *     perSecond {boolean}: Whether the data for this time interval is given
+   *       as per second, If not, it's given as an integral over the
+   *       whole interval.
+   *     energy {tr.v.Histogram}: Histogram giving energy use (i.e. energy in J
+   *       if perSecond = False, power in W if perSecond = True)
+   *   }
+   */
+  function createEmptyHistogram_(interval, histograms) {
+    if (interval.perSecond) {
+      return {
+        perSecond: true,
+        energy: histograms.createHistogram(`${interval.name}:power`,
+            tr.b.Unit.byName.powerInWatts_smallerIsBetter, [], {
+              description:
+                `Energy consumption rate for ${interval.description}`,
+              summaryOptions: {
+                avg: true,
+                count: false,
+                max: true,
+                min: true,
+                std: false,
+                sum: false,
+              },
+            }),
+      };
+    }
+    return {
+      perSecond: false,
+      energy: histograms.createHistogram(`${interval.name}:energy`,
+          tr.b.Unit.byName.energyInJoules_smallerIsBetter, [], {
+            description: `Energy consumed in ${interval.description}`,
+            summaryOptions: {
+              avg: false,
+              count: false,
+              max: true,
+              min: true,
+              std: false,
+              sum: true,
+            },
+          }),
+    };
+  }
+
+  function createHistograms_(data, interval, histograms) {
+    if (data.histograms[interval.name] === undefined) {
+      data.histograms[interval.name] = createEmptyHistogram_(interval,
+          histograms);
+    }
+    if (data.histograms[interval.name].perSecond) {
+      for (const sample of data.model.device.powerSeries.getSamplesWithinRange(
+          interval.bounds.min, interval.bounds.max)) {
+        data.histograms[interval.name].energy.addSample(sample.powerInW);
+      }
+    } else {
+      const energyInJ = data.model.device.powerSeries.getEnergyConsumedInJ(
+          interval.bounds.min, interval.bounds.max);
+      data.histograms[interval.name].energy.addSample(energyInJ);
+    }
+  }
+
+  /**
+   * Returns the intervals of time between navigation event and time to
+   * interactive.
+   */
+  function getNavigationTTIIntervals_(model) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const intervals = [];
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(
+          expectation.url)) {
+        continue;
+      }
+      if (expectation.timeToInteractive !== undefined) {
+        intervals.push(tr.b.math.Range.fromExplicitRange(
+            expectation.navigationStart.start, expectation.timeToInteractive));
+      }
+    }
+    return intervals.sort((x, y) => x.min - y.min);
+  }
+
+  /**
+   * Generates the set of time intervals that metrics should be run over.
+   * Time intervals include each UE (for UE-based metrics), the whole
+   * story (for the full-story metric), etc. Each time interval is given
+   * in the following form:
+   *
+   *   {
+   *     bounds {tr.b.math.Range}: Boundaries of the time interval.
+   *     name {string}: Name of this interval. Used to generate the
+   *       metric names.
+   *     description {string}: Human readable description of the interval.
+   *       Used to generate the metric descriptions.
+   *     perSecond {boolean}: Whether metrics over this interval should be
+   *       reported as per-second values (e.g. power). If not, integrated values
+   *       over the whole interval (e.g. energy) are reported.
+   *   }
+   *
+   */
+  function* computeTimeIntervals_(model) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const powerSeries = model.device.powerSeries;
+    if (powerSeries === undefined ||
+        powerSeries.samples.length === 0) {
+      return;
+    }
+    // Output the full story power metrics, which exists regardless of
+    // the presence of a Chrome trace.
+    yield {
+      bounds: model.bounds,
+      name: 'story',
+      description: 'user story',
+      perSecond: true
+    };
+
+    const chromeBounds = computeChromeBounds_(model);
+    if (chromeBounds.isEmpty) return;
+
+    const powerSeriesBoundsWithGracePeriod = tr.b.math.Range.fromExplicitRange(
+        powerSeries.bounds.min - CHROME_POWER_GRACE_PERIOD_MS,
+        powerSeries.bounds.max + CHROME_POWER_GRACE_PERIOD_MS);
+    if (!powerSeriesBoundsWithGracePeriod.containsRangeExclusive(
+        chromeBounds)) {
+      return;
+    }
+
+    // If Chrome bounds are good and the power trace covers the Chrome bounds,
+    // then output the Chrome specific metrics (loading and RAIL stages). Note
+    // that only the part of the time interval that overlaps the Chrome bounds
+    // should be included.
+    for (const interval of getRailStageIntervals_(model)) {
+      yield {
+        bounds: interval.bounds.findIntersection(chromeBounds),
+        name: interval.name,
+        description: interval.description,
+        perSecond: interval.perSecond
+      };
+    }
+
+    for (const interval of getLoadingIntervals_(model, chromeBounds)) {
+      yield {
+        bounds: interval.bounds.findIntersection(chromeBounds),
+        name: interval.name,
+        description: interval.description,
+        perSecond: interval.perSecond
+      };
+    }
+  }
+
+  /**
+   * Gets a list of time intervals for the RAIL stages. Each RAIL stage
+   * generates a time interval with the name equal to the name of the RAIL
+   * stage except made into lower case and with spaces replaced bu underscores
+   * e.g. "Scroll Animation" --> "scroll_animation". Each time interval is given
+   * in the following form:
+   *
+   *   {
+   *     bounds {tr.b.math.Range}: Boundaries of the time interval.
+   *     name {string}: Name of this interval. Used to generate the
+   *       metric names.
+   *     description {string}: Human readable description of the interval.
+   *       Used to generate the metric descriptions.
+   *     perSecond {boolean}: Whether metrics over this interval should be
+   *       reported as per-second values (e.g. power). If not, integrated values
+   *       over the whole interval (e.g. energy) are reported.
+   *   }
+   *
+   */
+  function* getRailStageIntervals_(model) {
+    for (const exp of model.userModel.expectations) {
+      const histogramName = exp.title.toLowerCase().replace(' ', '_');
+      const energyHist = undefined;
+      if (histogramName.includes('response')) {
+        yield {
+          bounds: tr.b.math.Range.fromExplicitRange(exp.start, exp.end),
+          name: histogramName,
+          description: 'RAIL stage ' + histogramName,
+          perSecond: false
+        };
+      } else if (histogramName.includes('animation') ||
+          histogramName.includes('idle')) {
+        yield {
+          bounds: tr.b.math.Range.fromExplicitRange(exp.start, exp.end),
+          name: histogramName,
+          description: 'RAIL stage ' + histogramName,
+          perSecond: true
+        };
+      }
+    }
+  }
+
+  /**
+   * Gets a list of time intervals for the RAIL stages. Each RAIL stage
+   * generates a time interval with the name equal to the name of the RAIL
+   * stage except made into lower case and with spaces replaced bu underscores
+   * e.g. "Scroll Animation" --> "scroll_animation". Each time interval is given
+   * in the following form:
+   *
+   *   {
+   *     bounds {tr.b.math.Range}: Boundaries of the time interval.
+   *     name {string}: Name of this interval. Used to generate the
+   *       metric names.
+   *     description {string}: Human readable description of the interval.
+   *       Used to generate the metric descriptions.
+   *     perSecond {boolean}: Whether metrics over this interval should be
+   *       reported as per-second values (e.g. power). If not, integrated values
+   *       over the whole interval (e.g. energy) are reported.
+   *   }
+   *
+   */
+  function* getLoadingIntervals_(model, chromeBounds) {
+    const ttiIntervals = getNavigationTTIIntervals_(model);
+    for (const ttiInterval of ttiIntervals) {
+      yield {
+        bounds: ttiInterval,
+        name: 'load',
+        description: 'page loads',
+        perSecond: false
+      };
+    }
+  }
+
+  /**
+   * @returns {tr.b.math.Range} The boundaries of the Chrome portion of the
+   * trace.
+   */
+  function computeChromeBounds_(model) {
+    const chromeBounds = new tr.b.math.Range();
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (chromeHelper === undefined) return chromeBounds;
+    for (const helper of chromeHelper.browserHelpers) {
+      if (helper.mainThread) {
+        chromeBounds.addRange(helper.mainThread.bounds);
+      }
+    }
+    for (const pid in chromeHelper.rendererHelpers) {
+      if (chromeHelper.rendererHelpers[pid].mainThread) {
+        chromeBounds.addRange(
+            chromeHelper.rendererHelpers[pid].mainThread.bounds);
+      }
+    }
+    return chromeBounds;
+  }
+
+  /**
+   * Adds the power histograms to the histogram set.
+   *
+   * Each power histogram is based on a specific time interval, and is named as
+   * follows:
+   *
+   * - [time_interval_name]:power, which contains a sample for each power
+   *    sample data point during any time interval with the given type. Each
+   *    sample represents the power draw during the period covered by that
+   *    power sample.
+   *
+   * - [time_interval_name]:energy, which contains a sample for each time
+   *    interval with the given type present in the trace. Each sample
+   *    represents the total energy used over that time interval.
+   *
+   * The time intervals are as follows:
+   *
+   * - "story": The time interval covering the entire user story. There is
+   *    always exactly one "story" interval.
+   *
+   * - "load" : The time interval covered by a page load, from navigationStart
+   *    to timeToInteractive. There is one "load" interval for each page load
+   *    in the trace.
+   *
+   * - "[user_expectation_type]" : Each Response, Animation, or Idle
+   *    UE in the trace generates a time interval whose name is that of the UE,
+   *    converted to lower case and with underscores in place of spaces.
+   *    For instance, if there are three "Scroll Response" UEs in the trace,
+   *    then there will be three "scroll_response" time intervals, so the
+   *    histogram scroll_response:energy will contain three samples.
+   *
+   * Note that each time interval type only generates ONE of the "power" or
+   * "energy" histograms. Power histograms are generated for time intervals
+   * that represent events that occur over a period of time. This includes
+   * the following intervals
+   *
+   * - "story"
+   * - Any Animation or Idle UE
+   *
+   * For instance, "the energy it takes to play a video"
+   * does not have meaning because it depends on how long the video
+   * is; thus a more meaningful metric is power. In contrast, energy histograms
+   * are generated for time intervals that represent particular tasks
+   * which must be completed. This includes the following intervals:
+   *
+   * - "load"
+   * - Any Response UE
+   *
+   * For instance, if a change causes a response to take longer to process, then
+   * we want to count that as taking the energy over a longer period of time.
+   */
+  function powerMetric(histograms, model) {
+    const data = {
+      model,
+      histograms: {}
+    };
+    for (const interval of computeTimeIntervals_(model)) {
+      createHistograms_(data, interval, histograms);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(powerMetric);
+
+  return {
+    powerMetric
+  };
+});
+</script>

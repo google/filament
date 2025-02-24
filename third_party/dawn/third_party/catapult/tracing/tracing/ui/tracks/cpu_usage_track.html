@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/chart_point.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+
+<style>
+.cpu-usage-track {
+  height: 90px;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const ChartTrack = tr.ui.tracks.ChartTrack;
+
+  /**
+   * A track that displays the cpu usage of a process.
+   *
+   * @constructor
+   * @extends {tr.ui.tracks.ChartTrack}
+   */
+  const CpuUsageTrack = tr.ui.b.define('cpu-usage-track', ChartTrack);
+
+  CpuUsageTrack.prototype = {
+    __proto__: ChartTrack.prototype,
+
+    decorate(viewport) {
+      ChartTrack.prototype.decorate.call(this, viewport);
+      this.classList.add('cpu-usage-track');
+      this.heading = 'CPU usage';
+      this.cpuUsageSeries_ = undefined;
+    },
+
+    // Given a tr.Model, it creates a cpu usage series and a graph.
+    initialize(model) {
+      if (model !== undefined) {
+        this.cpuUsageSeries_ = model.device.cpuUsageSeries;
+      } else {
+        this.cpuUsageSeries_ = undefined;
+      }
+      this.series = this.buildChartSeries_();
+      this.autoSetAllAxes({expandMax: true});
+    },
+
+    get hasVisibleContent() {
+      return !!this.cpuUsageSeries_ &&
+          this.cpuUsageSeries_.samples.length > 0;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      containerToTrackMap.addContainer(this.series_, this);
+    },
+
+    buildChartSeries_(yAxis, color) {
+      if (!this.hasVisibleContent) return [];
+
+      yAxis = new tr.ui.tracks.ChartSeriesYAxis(0, undefined);
+      const usageSamples = this.cpuUsageSeries_.samples;
+      const pts = new Array(usageSamples.length + 1);
+      for (let i = 0; i < usageSamples.length; i++) {
+        pts[i] = new tr.ui.tracks.ChartPoint(undefined,
+            usageSamples[i].start, usageSamples[i].usage);
+      }
+      pts[usageSamples.length] = new tr.ui.tracks.ChartPoint(undefined,
+          usageSamples[usageSamples.length - 1].start, 0);
+      const renderingConfig = {
+        chartType: tr.ui.tracks.ChartSeriesType.AREA,
+        colorId: color
+      };
+
+      return [new tr.ui.tracks.ChartSeries(pts, yAxis, renderingConfig)];
+    },
+  };
+
+  return {
+    CpuUsageTrack,
+  };
+});
+</script>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+<script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+<title>app-route Demo</title>
+<link rel="import" href="../../polymer/polymer.html">
+
+<link rel="import" href="../../iron-demo-helpers/url-bar.html">
+<link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+<link rel="import" href="../../iron-pages/iron-pages.html">
+<link rel="import" href="../../paper-input/paper-input.html">
+<link rel="import" href="../../paper-button/paper-button.html">
+
+<link rel="import" href="../app-location.html">
+<link rel="import" href="../app-route.html">
+</head>
+
+<body>
+<dom-module id="route-display">
+  <template>
+    <div>
+      <div>route<template is="dom-if" if="{{tail}}"> / tail</template>: {</div>
+      <div>&nbsp;&nbsp;prefix: {{route.prefix}}</div>
+      <div>&nbsp;&nbsp;path: {{route.path}}</div>
+      <div>}</div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'route-display',
+
+      properties: {
+        route: Object,
+        tail: Boolean
+      }
+    });
+  </script>
+</dom-module>
+
+<template is="dom-bind">
+  <url-bar></url-bar>
+
+  <app-location route="{{route}}" use-hash-as-path></app-location>
+
+  <app-route
+    route="{{route}}"
+    pattern="/:demoType"
+    data="{{demoSelectionData}}"
+    tail="{{demoSelectionTail}}">
+  </app-route>
+
+  <app-route
+      route="{{route}}"
+      pattern="/pathDemo/:firstPath/:secondPath"
+      data="{{pathData}}"
+      tail="{{pathDataTail}}">
+  </app-route>
+
+  <app-route
+      route="{{route}}"
+      pattern="/queryParamsDemo"
+      query-params="{{queryParams}}"
+      tail="{{qpDemoTail}}">
+  </app-route>
+
+  <div>App location route object
+    <route-display route="{{route}}"></route-display>
+  </div>
+
+  <paper-button raised>
+    <a href="#/pathDemo/firstPath/secondPath/thirdPath">Changes in Path</a>
+  </paper-button>
+
+  <paper-button raised>
+    <a href="?hello=world&foo=bar#/queryParamsDemo">Changes in Query Params</a>
+  </paper-button>
+
+  <iron-pages selected={{demoSelectionData.demoType}} attr-for-selected="demo">
+    <div demo="pathDemo">
+      Change location of first part of the path:
+      <paper-input value="{{pathData.firstPath}}"></paper-input>
+      Change location of second part of the path:
+      <paper-input value="{{pathData.secondPath}}"></paper-input>
+      
+      <app-route
+          route="{{pathDataTail}}"
+          pattern="/:thirdPath"
+          data="{{tailExampleData}}">
+      </app-route>
+      You can pass the tail of an app-route to be the route another app-route. Here is
+      the tail object of the first app-route which is the route object of this new app-route:
+      <route-display route="{{pathDataTail}}" tail></route-display>
+      You can also bind to this new route. Change the location of the third part of
+      the path:
+      <paper-input value="{{tailExampleData.thirdPath}}"></paper-input>
+    </div>
+
+    <div demo="queryParamsDemo">
+      Change the value of the hello query param
+      <paper-input value="{{queryParams.hello}}"></paper-input>
+      Change the value of the foo param
+      <paper-input value="{{queryParams.foo}}"></paper-input>
+    </div>
+  </iron-pages>
+</template>
+</body>
+</html>

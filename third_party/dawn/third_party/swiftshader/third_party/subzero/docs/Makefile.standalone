@@ -1,0 +1,19 @@
+.PHONY: all
+
+all::
+	mkdir -p ../build
+	doxygen Doxyfile
+	@echo See file://`pwd`/../build/docs/html/index.html
+
+DOXYPYPY := $(shell which doxypypy)
+
+ifeq ("$(DOXYPYPY)", "")
+all::
+	$(info Warning: ......................................)
+	$(info To get best Doxygen output for Python code, the)
+	$(info Python doxypypy package should be installed, e.g.)
+	$(info   'sudo pip install doxypypy')
+	$(info  ... or ... )
+	$(info   'easy_install doxypypy')
+	$(info see https://github.com/Feneric/doxypypy)
+endif

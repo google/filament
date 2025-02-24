@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/ui/scalar_map_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const span = document.createElement('tr-v-ui-scalar-map-table');
+
+    const histogram = new tr.v.Histogram('', tr.b.Unit.byName.energyInJoules);
+    for (let i = 0; i < 1e2; ++i) {
+      histogram.addSample(Math.random() * 1000);
+    }
+
+    histogram.addSample('foo');
+    histogram.customizeSummaryOptions({nans: true});
+
+    span.scalarMap = histogram.statisticsScalars;
+    this.addHTMLOutput(span);
+  });
+});
+</script>

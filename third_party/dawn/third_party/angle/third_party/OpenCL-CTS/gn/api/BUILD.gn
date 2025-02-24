@@ -1,0 +1,46 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("api") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/negative_platform.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_api_consistency.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_api_min_max.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_binary.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_bool.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_clone_kernel.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_context_destructor_callback.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_create_context_from_type.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_create_kernels.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_device_min_data_type_align_size_alignment.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernel_arg_changes.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernel_arg_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernel_arg_multi_setup.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernel_attributes.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernel_private_memory_size.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_kernels.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_mem_object_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_mem_object_properties_queries.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_mem_objects.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_min_image_formats.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_native_kernel.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_null_buffer_arg.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_pipe_properties_queries.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_platform.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_queries.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_queue.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_queue_hint.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_queue_properties.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_queue_properties_queries.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_retain.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_retain_program.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_sub_group_dispatch.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/api/test_zero_sized_enqueue.cpp",
+  ]
+}

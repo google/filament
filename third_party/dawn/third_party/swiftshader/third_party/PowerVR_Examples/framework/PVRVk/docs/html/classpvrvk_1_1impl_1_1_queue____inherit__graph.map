@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::Queue_" name="pvrvk::impl::Queue_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkQueue, ObjectType\l::e_DEVICE \&gt;" alt="" coords="319,5,569,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkQueue, PVRVkObjectType \&gt;" alt="" coords="5,13,271,54"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Queue_ \&gt;" alt="" coords="349,86,539,127"/>
+</map>

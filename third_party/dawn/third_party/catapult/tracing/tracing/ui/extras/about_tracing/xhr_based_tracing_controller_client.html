@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/tracing_controller_client.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  const Base64 = tr.b.Base64;
+
+  function beginXhr(method, path, data) {
+    if (data === undefined) data = null;
+
+    return new Promise(function(resolve, reject) {
+      const req = new XMLHttpRequest();
+      if (method !== 'POST' && data !== null) {
+        throw new Error('Non-POST should have data==null');
+      }
+      req.open(method, path, true);
+      req.onreadystatechange = function(e) {
+        if (req.readyState === 4) {
+          window.setTimeout(function() {
+            if (req.status === 200 && req.responseText !== '##ERROR##') {
+              resolve(req.responseText);
+            } else {
+              reject(new Error('Error occured at ' + path));
+            }
+          }, 0);
+        }
+      };
+      req.send(data);
+    });
+  }
+
+  /**
+   * @constructor
+   */
+  function XhrBasedTracingControllerClient() { }
+
+  XhrBasedTracingControllerClient.prototype = {
+    __proto__: tr.ui.e.about_tracing.TracingControllerClient.prototype,
+
+    beginMonitoring(monitoringOptions) {
+      const monitoringOptionsB64 = Base64.btoa(JSON.stringify(
+          monitoringOptions));
+      return beginXhr('GET', '/json/begin_monitoring?' + monitoringOptionsB64);
+    },
+
+    endMonitoring() {
+      return beginXhr('GET', '/json/end_monitoring');
+    },
+
+    captureMonitoring() {
+      return beginXhr('GET', '/json/capture_monitoring_compressed').then(
+          function(data) {
+            const decodedSize = Base64.getDecodedBufferLength(data);
+            const buffer = new ArrayBuffer(decodedSize);
+            Base64.DecodeToTypedArray(data, new DataView(buffer));
+            return buffer;
+          }
+      );
+    },
+
+    getMonitoringStatus() {
+      return beginXhr('GET', '/json/get_monitoring_status').then(
+          function(monitoringOptionsB64) {
+            return JSON.parse(Base64.atob(monitoringOptionsB64));
+          });
+    },
+
+    getCategories() {
+      return beginXhr('GET', '/json/categories').then(
+          function(json) {
+            return JSON.parse(json);
+          });
+    },
+
+    beginRecording(recordingOptions) {
+      const recordingOptionsB64 = Base64.btoa(JSON.stringify(recordingOptions));
+      return beginXhr('GET', '/json/begin_recording?' +
+                      recordingOptionsB64);
+    },
+
+    beginGetBufferPercentFull() {
+      return beginXhr('GET', '/json/get_buffer_percent_full');
+    },
+
+    endRecording() {
+      return beginXhr('GET', '/json/end_recording_compressed').then(
+          function(data) {
+            const decodedSize = Base64.getDecodedBufferLength(data);
+            const buffer = new ArrayBuffer(decodedSize);
+            Base64.DecodeToTypedArray(data, new DataView(buffer));
+            return buffer;
+          }
+      );
+    },
+
+    defaultTraceName() {
+      return 'trace.json.gz';
+    }
+  };
+
+  return {
+    XhrBasedTracingControllerClient,
+  };
+});
+</script>

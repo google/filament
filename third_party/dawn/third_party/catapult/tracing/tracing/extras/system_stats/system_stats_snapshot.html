@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/util.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.system_stats', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function SystemStatsSnapshot(objectInstance, ts, args) {
+    ObjectSnapshot.apply(this, arguments);
+    this.objectInstance = objectInstance;
+    this.ts = ts;
+    this.args = args;
+    this.stats_ = args;
+  }
+
+  SystemStatsSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    initialize() {
+      if (this.args.length === 0) {
+        throw new Error('No system stats snapshot data.');
+      }
+      this.stats_ = this.args;
+    },
+
+    getStats() {
+      return this.stats_;
+    },
+
+    setStats(stats) {
+      this.stats_ = stats;
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      SystemStatsSnapshot,
+      {typeName: 'base::TraceEventSystemStatsMonitor::SystemStats'});
+
+  return {
+    SystemStatsSnapshot,
+  };
+});
+</script>

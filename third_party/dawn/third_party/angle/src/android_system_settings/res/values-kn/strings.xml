@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Copyright 2019 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="angle_preferences" msgid="6277781974712663825">"ANGLE ಆದ್ಯತೆಗಳು"</string>
+    <string name="angle_preferences_summary" msgid="2072062114797067545">"ANGLE ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಮಾರ್ಪಡಿಸಿ"</string>
+    <string name="angle_general_title" msgid="3851397617183360026">"ಸಾಮಾನ್ಯ"</string>
+    <string name="use_angle_for_all_apps" msgid="2562678044041239694">"ಎಲ್ಲಾ ಆ್ಯಪ್‌ಗಳಿಗಾಗಿ ANGLE ಅನ್ನು ಬಳಸಿ"</string>
+    <string name="show_angle_in_use_dialog_box" msgid="3443250434026000754">"ANGLE ಲೋಡ್ ಆಗಿರುವಾಗ ಡೈಲಾಗ್ ಬಾಕ್ಸ್ ಅನ್ನು ತೋರಿಸಿ"</string>
+    <string name="select_opengl_driver_title" msgid="3474220741139386304">"OpenGL ಡ್ರೈವರ್‌ ಅನ್ನು ಆಯ್ಕೆಮಾಡಿ"</string>
+    <string name="keywords" msgid="6388635548060461395">"angle, opengl, ಗ್ರಾಫಿಕ್ಸ್"</string>
+    <string name="angle_in_use_toast_message" msgid="2259434197861979558">"ANGLE ಅನ್ನು ಬಳಸಲಾಗುತ್ತಿದೆ"</string>
+    <string name="no_apps_installed_title" msgid="1651834541419890603">"ಯಾವುದೇ ಆ್ಯಪ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ"</string>
+    <string name="no_apps_installed_summary" msgid="1922829522692497596">"ಯಾವುದೇ ಆ್ಯಪ್‌ಗಳನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗಿಲ್ಲ, ANGLE ಬಳಸಬಹುದಾಗಿದೆ"</string>
+</resources>

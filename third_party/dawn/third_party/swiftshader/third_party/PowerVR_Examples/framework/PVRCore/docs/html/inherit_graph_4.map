@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvr_1_1async_1_1_i_framework_cleanup_object.html" title="A wrapper object with explicit clean up semantics that is intended to be used as the return value in ..." alt="" coords="5,5,232,47"/>
+<area shape="rect" id="node2" href="$classpvr_1_1async_1_1_i_framework_async_result.html" title="An object that is intended to be used as an asynchronous return value. When you wish to perform a tas..." alt="" coords="280,5,492,47"/>
+</map>

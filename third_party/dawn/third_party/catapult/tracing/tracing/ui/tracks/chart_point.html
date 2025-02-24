@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/proxy_selectable_item.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A point in a chart series with x (timestamp) and y (value) coordinates
+   * and an associated model item. The point can optionally also have a base
+   * y coordinate (which for example corresponds to the bottom edge of the
+   * associated bar in a bar chart).
+   *
+   * @constructor
+   * @extends {ProxySelectableItem}
+   */
+  function ChartPoint(modelItem, x, y, opt_yBase) {
+    tr.model.ProxySelectableItem.call(this, modelItem);
+    this.x = x;
+    this.y = y;
+    this.dotLetter = undefined;
+
+    // If the base y-coordinate is undefined, the bottom edge of the associated
+    // bar in a bar chart will start at the outer bottom edge (which is most
+    // likely slightly below zero).
+    this.yBase = opt_yBase;
+  }
+
+  ChartPoint.prototype = {
+    __proto__: tr.model.ProxySelectableItem.prototype,
+  };
+
+  return {
+    ChartPoint,
+  };
+});
+</script>

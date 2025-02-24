@@ -1,0 +1,4 @@
+<map id="pvr::ImageSubresourceRange" name="pvr::ImageSubresourceRange">
+<area shape="rect" id="node2" href="$structpvr_1_1_image_layers_size.html" title="Structure describes the number of array levels and mip levels an image contains" alt="" coords="5,5,168,32"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_image_subresource.html" title="Describes a single &quot;layer&quot; of an image: a single array layer of a single mip level, or the offset of a layer range." alt="" coords="193,5,365,32"/>
+</map>

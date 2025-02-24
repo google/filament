@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Semaphore_ \&gt;" alt="" coords="311,5,517,47"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_semaphore__.html" title="Vulkan implementation of the Semaphore class. Use to &quot;serialize&quot; access between CommandBuffer submiss..." alt="" coords="571,50,756,77"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkSemaphore, PVRVkObject\lType \&gt;" alt="" coords="5,71,257,127"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkSemaphore,\l ObjectType::e_SEMAPHORE \&gt;" alt="" coords="305,71,523,127"/>
+</map>

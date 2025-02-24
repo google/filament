@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/mre/file_handle.html">
+<link rel="import" href="/tracing/mre/job.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+<link rel="import" href="/tracing/mre/reduce_map_results.html">
+<link rel="import" href="/tracing/mre/run_and_convert_errors_to_failures.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+tr.exportTo('tr.mre', function() {
+  function jsonReplacer(key, value) {
+    if (value instanceof tr.v.Histogram) {
+      return value.asDict();
+    }
+    return value;
+  }
+
+  function reduceMapResultsMain(args) {
+    if (args.length !== 3) {
+      throw new Error('Must provide three arguments');
+    }
+
+    const options = {
+      key: args[0],
+      fileHandle: tr.mre.FileHandle.fromDict(JSON.parse(args[1])),
+      job: tr.mre.Job.fromDict(JSON.parse(args[2]))
+    };
+
+    const mapResultsLoaded = options.fileHandle.load();
+    const mapResults = JSON.parse(mapResultsLoaded);
+
+    const jobResults = new tr.mre.MreResult();
+
+    tr.mre.runAndConvertErrorsToFailures(
+        jobResults, options.job, options.job.reduceFunctionHandle,
+        undefined,
+        function() {
+          const reduceFunction = options.job.reduceFunctionHandle.load();
+          tr.mre.reduceMapResults(jobResults, options.key, mapResults.pairs,
+              reduceFunction);
+        });
+
+    if (Object.keys(jobResults.pairs).length !== 0) {
+      console.log('JOB_RESULTS: ' + JSON.stringify(jobResults.pairs,
+          jsonReplacer));
+    }
+    jobResults.failures.forEach(function(failure) {
+      console.log('JOB_FAILURE: ' + JSON.stringify(failure.asDict()));
+    });
+    return 0;
+  }
+
+  return {
+    reduceMapResultsMain
+  };
+});
+
+
+if (tr.isHeadless) {
+  quit(tr.mre.reduceMapResultsMain(sys.argv.slice(1)));
+}
+
+</script>

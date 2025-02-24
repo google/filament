@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script src="/gl-matrix-min.js"></script>
+
+<script>
+'use strict';
+
+// In node, the script-src for gl-matrix-min above brings in glmatrix into
+// a module, instead of into the global scope. Whereas, Tracing code
+// assumes that glMatrix is in the global scope. So, in Node only, we
+// require() it in, and then take all its exports and shove them into the
+// global scope by hand.
+(function(global) {
+  if (tr.isNode) {
+    const glMatrixAbsPath = HTMLImportsLoader.hrefToAbsolutePath(
+        '/gl-matrix-min.js');
+    const glMatrixModule = require(glMatrixAbsPath);
+    for (const exportName in glMatrixModule) {
+      global[exportName] = glMatrixModule[exportName];
+    }
+  }
+})(this);
+</script>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.math', function() {
+  const PREFERRED_NUMBER_SERIES_MULTIPLIERS = [1, 2, 5, 10];
+
+  /* Returns true when x and y are within delta of each other. */
+  function approximately(x, y, delta) {
+    if (delta === undefined) delta = 1e-9;
+    return Math.abs(x - y) < delta;
+  }
+
+  function clamp(x, lo, hi) {
+    return Math.min(Math.max(x, lo), hi);
+  }
+
+  function lerp(percentage, lo, hi) {
+    const range = hi - lo;
+    return lo + percentage * range;
+  }
+
+  function normalize(value, lo, hi) {
+    return (value - lo) / (hi - lo);
+  }
+
+  function deg2rad(deg) {
+    return (Math.PI * deg) / 180.0;
+  }
+
+  /* The Gauss error function gives the probability that a measurement (which is
+   * under the influence of normally distributed errors with standard deviation
+   * sigma = 1) is less than x from the mean value of the standard normal
+   * distribution.
+   * https://www.desmos.com/calculator/t1v4bdpske
+   *
+   * @param {number} x A tolerance for error.
+   * @return {number} The probability that a measurement is less than |x| from
+   * the mean value of the standard normal distribution.
+   */
+  function erf(x) {
+    // save the sign of x
+    // erf(-x) = -erf(x);
+    const sign = (x >= 0) ? 1 : -1;
+    x = Math.abs(x);
+
+    // constants
+    const a1 = 0.254829592;
+    const a2 = -0.284496736;
+    const a3 = 1.421413741;
+    const a4 = -1.453152027;
+    const a5 = 1.061405429;
+    const p = 0.3275911;
+
+    // Abramowitz and Stegun formula 7.1.26
+    // maximum error: 1.5e-7
+    const t = 1.0 / (1.0 + p * x);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t *
+      Math.exp(-x * x);
+    return sign * y;
+  }
+
+  const tmpVec2 = vec2.create();
+  const tmpVec2b = vec2.create();
+  const tmpVec4 = vec4.create();
+  const tmpMat2d = mat2d.create();
+
+  vec2.createFromArray = function(arr) {
+    if (arr.length !== 2) throw new Error('Should be length 2');
+    const v = vec2.create();
+    vec2.set(v, arr[0], arr[1]);
+    return v;
+  };
+
+  vec2.createXY = function(x, y) {
+    const v = vec2.create();
+    vec2.set(v, x, y);
+    return v;
+  };
+
+  vec2.toString = function(a) {
+    return '[' + a[0] + ', ' + a[1] + ']';
+  };
+
+  vec2.addTwoScaledUnitVectors = function(out, u1, scale1, u2, scale2) {
+    // out = u1 * scale1 + u2 * scale2
+    vec2.scale(tmpVec2, u1, scale1);
+    vec2.scale(tmpVec2b, u2, scale2);
+    vec2.add(out, tmpVec2, tmpVec2b);
+  };
+
+  vec2.interpolatePiecewiseFunction = function(points, x) {
+    if (x < points[0][0]) return points[0][1];
+    for (let i = 1; i < points.length; ++i) {
+      if (x < points[i][0]) {
+        const percent = normalize(x, points[i - 1][0], points[i][0]);
+        return lerp(percent, points[i - 1][1], points[i][1]);
+      }
+    }
+    return points[points.length - 1][1];
+  };
+
+  vec3.createXYZ = function(x, y, z) {
+    const v = vec3.create();
+    vec3.set(v, x, y, z);
+    return v;
+  };
+
+  vec3.toString = function(a) {
+    return 'vec3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ')';
+  };
+
+  mat2d.translateXY = function(out, x, y) {
+    vec2.set(tmpVec2, x, y);
+    mat2d.translate(out, out, tmpVec2);
+  };
+
+  mat2d.scaleXY = function(out, x, y) {
+    vec2.set(tmpVec2, x, y);
+    mat2d.scale(out, out, tmpVec2);
+  };
+
+  vec4.unitize = function(out, a) {
+    out[0] = a[0] / a[3];
+    out[1] = a[1] / a[3];
+    out[2] = a[2] / a[3];
+    out[3] = 1;
+    return out;
+  };
+
+  vec2.copyFromVec4 = function(out, a) {
+    vec4.unitize(tmpVec4, a);
+    vec2.copy(out, tmpVec4);
+  };
+
+  /**
+   * @param {number} x
+   * @param {number=} opt_base Defaults to 10
+   * @return {number}
+   */
+  function logOrLog10(x, base) {
+    if (base === 10) return Math.log10(x);
+    return Math.log(x) / Math.log(base);
+  }
+
+  /**
+   * @param {number} x
+   * @param {number=} opt_base Defaults to 10
+   * @return {number}
+   */
+  function lesserPower(x, opt_base) {
+    const base = opt_base || 10;
+    return Math.pow(base, Math.floor(logOrLog10(x, base)));
+  }
+
+  /**
+   * @param {number} x
+   * @param {number=} opt_base Defaults to 10
+   * @return {number}
+   */
+  function greaterPower(x, opt_base) {
+    const base = opt_base || 10;
+    return Math.pow(base, Math.ceil(logOrLog10(x, base)));
+  }
+
+  function lesserWholeNumber(x) {
+    if (x === 0) return 0;
+    const pow10 = (x < 0) ? -lesserPower(-x) : lesserPower(x);
+    return pow10 * Math.floor(x / pow10);
+  }
+
+  function greaterWholeNumber(x) {
+    if (x === 0) return 0;
+    const pow10 = (x < 0) ? -lesserPower(-x) : lesserPower(x);
+    return pow10 * Math.ceil(x / pow10);
+  }
+
+  function truncate(value, digits) {
+    const pow10 = Math.pow(10, digits);
+    return Math.round(value * pow10) / pow10;
+  }
+
+  /**
+   *  Uses the 1-2-5 series to find the closest prefered number to min
+   *  whose absolute value is at least the absolute value of |min|.
+   *  https://en.wikipedia.org/wiki/Preferred_number
+   */
+  function preferredNumberLargerThanMin(min) {
+    const absMin = Math.abs(min);
+    // The conservative guess is the largest power of 10 less than
+    // or equal to |absMin|.
+    const conservativeGuess = tr.b.math.lesserPower(absMin);
+    let minPreferedNumber = undefined;
+    for (const multiplier of PREFERRED_NUMBER_SERIES_MULTIPLIERS) {
+      const tightenedGuess = conservativeGuess * multiplier;
+      if (tightenedGuess >= absMin) {
+        minPreferedNumber = tightenedGuess;
+        break;
+      }
+    }
+    if (minPreferedNumber === undefined) {
+      throw new Error('Could not compute preferred number for ' + min);
+    }
+    if (min < 0) minPreferedNumber *= -1;
+    return minPreferedNumber;
+  }
+
+  return {
+    approximately,
+    clamp,
+    lerp,
+    normalize,
+    deg2rad,
+    erf,
+    lesserPower,
+    greaterPower,
+    lesserWholeNumber,
+    greaterWholeNumber,
+    preferredNumberLargerThanMin,
+    truncate,
+  };
+});
+</script>

@@ -1,0 +1,107 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../../../polymer/polymer.html">
+<link rel="import" href="../../../paper-spinner/paper-spinner.html">
+<link rel="import" href="../../../paper-input/paper-input.html">
+<link rel="import" href="../../app-route.html">
+
+<dom-module id="flickr-search-page">
+  <template>
+    <style>
+      paper-spinner {
+        display: block;
+      }
+      img {
+        max-width: 200px;
+        max-height: 200px;
+      }
+    </style>
+    <app-route pattern="/" route="{{route}}" query-params="{{queryParams}}"
+               active="{{active}}">
+    </app-route>
+    <paper-input autofocus label="Search the public domain on Flickr"
+                 value="{{queryParams.search}}">
+    </paper-input>
+
+    <iron-ajax auto url="https://www.flickr.com/services/rest/"
+               handle-as="json"
+               debounce-duration="300"
+               params="{{params}}"
+               last-response="{{response}}"
+               last-error="{{error}}"
+               loading="{{loading}}">
+    </iron-ajax>
+    <paper-spinner active="{{loading}}"></paper-spinner>
+    <template is="dom-repeat" items="{{response.photos.photo}}" as="photo">
+      <a href="{{_computeLink(photo)}}">
+        <img src="{{_computeSrc(photo)}}">
+      </a>
+    </template>
+    <template is="dom-if" if="{{error}}">
+      <span>{{error.statusCode}}</span> Error:
+      <pre>{{error.response}}</pre>
+    </template>
+  </template>
+  <script>
+    Polymer({
+      is: 'flickr-search-page',
+      properties: {
+        apiKey: {
+          type: String,
+        },
+
+        params: {
+          type: Object,
+          computed: '_computeParams(apiKey, queryParams.search)'
+        },
+      },
+
+      observers: [
+        '_clearOldSearchResults(queryParams.search)',
+        '_setDefaultSearch(active)'
+      ],
+
+      _clearOldSearchResults: function() {
+        this.response = null;
+      },
+
+      _computeParams: function(apiKey, search) {
+        return {
+          method: 'flickr.photos.search',
+          api_key: apiKey,
+          text: search,
+          license: '7,8',
+          format: 'json',
+          nojsoncallback: 1
+        };
+      },
+
+      _computeSrc: function(photo) {
+        if (!photo || !photo.farm) {
+          return '';
+        }
+        return 'https://farm' + photo.farm + '.staticflickr.com/' +
+            photo.server + '/' + photo.id + '_' + photo.secret + '.jpg';
+      },
+
+      _computeLink: function(photo) {
+        return window.location.pathname + '#/image/' + photo.farm + '/' +
+            photo.server + '/' + photo.id + '/' + photo.secret;
+      },
+
+      _setDefaultSearch: function(active) {
+        if (active && !this.queryParams.search) {
+          this.set('queryParams.search', 'spaceship')
+        }
+      }
+    })
+  </script>
+</dom-module>

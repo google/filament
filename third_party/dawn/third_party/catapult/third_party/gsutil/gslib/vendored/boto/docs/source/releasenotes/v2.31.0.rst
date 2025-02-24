@@ -1,0 +1,11 @@
+boto v2.31.0
+============
+
+:date: 2014/07/10
+
+This release adds support for Amazon CloudWatch Logs.
+
+
+Changes
+-------
+* Add support for Amazon CloudWatch Logs. (:sha:`125c94d`)

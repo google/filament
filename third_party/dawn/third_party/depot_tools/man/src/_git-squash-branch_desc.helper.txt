@@ -1,0 +1,1 @@
+Takes all commits in a single branch and replaces them with a single commit.

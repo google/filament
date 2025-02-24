@@ -1,0 +1,157 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script>WCT = { waitFor(cb) { addEventListener('DOMContentLoaded', cb) } };</script>
+<script src="test-flags.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../node_modules/@webcomponents/template/template.js"></script>
+<script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+<script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+<script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+<script src="../scoping-shim.min.js"></script>
+<script src="../apply-shim.min.js"></script>
+<script src="../custom-style-interface.min.js"></script>
+<template id="eager-host">
+  <style>
+    :host {
+      display: block;
+      height: 100px;
+      background-color: blue;
+    }
+
+    :host > late-client {
+      --foo: rgb(255, 0, 0);
+    }
+  </style>
+  <late-client></late-client>
+</template>
+<template id="late-client">
+  <style>
+    :host {
+      display: block;
+      color: var(--foo);
+    }
+
+    div {
+      border: 2px solid rgb(0, 255, 0);
+      border-color: var(--foo);
+    }
+  </style>
+  <div>Hello!</div>
+</template>
+
+<template id="x-parent">
+  <style>
+    :host {
+      --property: 10px solid black;
+    }
+  </style>
+  <x-child></x-child>
+</template>
+<template id="x-child">
+  <style>
+    div {
+      border: var(--property);
+    }
+  </style>
+  <div></div>
+</template>
+
+<script>
+  class LateClient extends HTMLElement {
+    constructor() {
+      super();
+      this.initialized = false;
+      this.attachShadow({mode: 'open'});
+    }
+    init() {
+      if (this.initialized) {
+        return;
+      }
+      this.initialized = true;
+      const template = document.querySelector(`template#${this.localName}`);
+      if (!template.initialized) {
+        template.initialized = true;
+        window.ShadyCSS.prepareTemplate(template, this.localName);
+      }
+      this.shadowRoot.appendChild(template.content.cloneNode(true));
+      window.ShadyCSS.styleElement(this);
+    }
+    connectedCallback() {
+      if (this.initialized) {
+        window.ShadyCSS.styleElement(this);
+      }
+    }
+  }
+
+  class EagerHost extends HTMLElement {
+    constructor() {
+      super();
+      this.template = document.querySelector(`template#${this.localName}`);
+      if (!this.template.initialized) {
+        this.template.initialized = true;
+        window.ShadyCSS.prepareTemplate(this.template, this.localName);
+      }
+    }
+    connectedCallback() {
+      window.ShadyCSS.styleElement(this);
+      if (this.template && !this.shadowRoot) {
+        this.attachShadow({mode: 'open'});
+        this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+      }
+    }
+  }
+
+  class StampBeforeStyle extends HTMLElement {
+    constructor() {
+      super();
+      this.template = document.querySelector(`template#${this.localName}`);
+      if (!this.template.initialized) {
+        this.template.initialized = true;
+        window.ShadyCSS.prepareTemplate(this.template, this.localName);
+      }
+    }
+    connectedCallback() {
+      if (this.template && !this.shadowRoot) {
+        this.attachShadow({ mode: 'open' });
+        this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+      }
+      window.ShadyCSS.styleElement(this);
+    }
+  }
+
+  suite('Lazy Initialization', function() {
+    test('Late child element is eventually correct', function() {
+      customElements.define('late-client', class extends LateClient{});
+      customElements.define('eager-host', class extends EagerHost{});
+      const host = document.createElement('eager-host');
+      document.body.appendChild(host);
+      window.ShadyCSS.styleDocument();
+      const inner = host.shadowRoot.querySelector('late-client');
+      if (inner.init) {
+        inner.init();
+      }
+      const div = inner.shadowRoot.querySelector('div');
+      assert.equal(getComputedStyle(div).getPropertyValue('border-color').trim(), 'rgb(255, 0, 0)');
+    });
+
+    test('Custom Property Shim can force unprepared parent to evaluate', function() {
+      customElements.define('x-child', class extends StampBeforeStyle {});
+      customElements.define('x-parent', class extends StampBeforeStyle {});
+      const host = document.createElement('x-parent');
+      document.body.appendChild(host);
+      const inner = host.shadowRoot.querySelector('x-child');
+      const div = inner.shadowRoot.querySelector('div');
+      assert.equal(getComputedStyle(div).getPropertyValue('border-top-width').trim(), '10px');
+    });
+  });
+</script>

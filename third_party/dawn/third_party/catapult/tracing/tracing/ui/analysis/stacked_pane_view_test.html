@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/stacked_pane.html">
+<link rel="import" href="/tracing/ui/analysis/stacked_pane_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createPaneView() {
+    return document.createElement('tr-ui-a-stacked-pane-view');
+  }
+
+  function createPane(paneId, opt_rebuildPaneCallback, opt_appendedCallback) {
+    const paneEl = document.createElement('tr-ui-a-stacked-pane');
+    paneEl.paneId = paneId;
+
+    const divEl = document.createElement('div');
+    Polymer.dom(divEl).textContent = 'Pane ' + paneId;
+    divEl.style.width = '400px';
+    divEl.style.background = '#ccc';
+    divEl.style.textAlign = 'center';
+    Polymer.dom(paneEl).appendChild(divEl);
+
+    if (opt_rebuildPaneCallback) {
+      paneEl.onRebuild_ = opt_rebuildPaneCallback;
+    }
+
+    if (opt_appendedCallback) {
+      paneEl.appended = opt_appendedCallback;
+    }
+
+    return paneEl;
+  }
+
+  function createPaneBuilder(paneId, opt_rebuildPaneCallback,
+      opt_appendedCallback) {
+    return createPane.bind(
+        undefined, paneId, opt_rebuildPaneCallback, opt_appendedCallback);
+  }
+
+  function assertPanes(paneView, expectedPaneIds) {
+    const actualPaneIds = paneView.panesForTesting.map(function(pane) {
+      return pane.paneId;
+    });
+    assert.deepEqual(actualPaneIds, expectedPaneIds);
+  }
+
+  test('instantiate_empty', function() {
+    const viewEl = createPaneView();
+    viewEl.rebuild();
+    assertPanes(viewEl, []);
+    // Don't add the pane to HTML output because it has zero height.
+  });
+
+  test('instantiate_singlePane', function() {
+    const viewEl = createPaneView();
+
+    viewEl.setPaneBuilder(createPaneBuilder(1));
+    viewEl.rebuild();
+
+    assertPanes(viewEl, [1]);
+    this.addHTMLOutput(viewEl);
+  });
+
+  test('instantiate_multiplePanes', function() {
+    const viewEl = createPaneView();
+
+    viewEl.setPaneBuilder(createPaneBuilder(1));
+    viewEl.setPaneBuilder(createPaneBuilder(2), viewEl.panesForTesting[0]);
+    viewEl.setPaneBuilder(createPaneBuilder(3), viewEl.panesForTesting[1]);
+
+    assertPanes(viewEl, [1, 2, 3]);
+    this.addHTMLOutput(viewEl);
+  });
+
+  test('changePanes', function() {
+    const viewEl = createPaneView();
+
+    viewEl.setPaneBuilder(createPaneBuilder(1));
+    assertPanes(viewEl, [1]);
+
+    viewEl.setPaneBuilder(null);
+    assertPanes(viewEl, []);
+
+    viewEl.setPaneBuilder(createPaneBuilder(2));
+    assertPanes(viewEl, [2]);
+
+    viewEl.setPaneBuilder(createPaneBuilder(3), viewEl.panesForTesting[0]);
+    assertPanes(viewEl, [2, 3]);
+
+    viewEl.setPaneBuilder(createPaneBuilder(4), viewEl.panesForTesting[0]);
+    assertPanes(viewEl, [2, 4]);
+
+    viewEl.setPaneBuilder(createPaneBuilder(5), viewEl.panesForTesting[1]);
+    assertPanes(viewEl, [2, 4, 5]);
+
+    viewEl.setPaneBuilder(createPaneBuilder(6), viewEl.panesForTesting[2]);
+    assertPanes(viewEl, [2, 4, 5, 6]);
+
+    viewEl.setPaneBuilder(createPaneBuilder(7), viewEl.panesForTesting[1]);
+    assertPanes(viewEl, [2, 4, 7]);
+
+    this.addHTMLOutput(viewEl);
+  });
+
+  test('childPanes', function() {
+    const viewEl = createPaneView();
+
+    viewEl.setPaneBuilder(createPaneBuilder(1));
+    assertPanes(viewEl, [1]);
+
+    // Pane 1 requests a child pane 2.
+    const pane1 = viewEl.panesForTesting[0];
+    pane1.childPaneBuilder = createPaneBuilder(2);
+    assertPanes(viewEl, [1, 2]);
+
+    // Pane 2 requests removing its child pane (nothing happens).
+    const pane2 = viewEl.panesForTesting[1];
+    pane2.childPaneBuilder = undefined;
+    assertPanes(viewEl, [1, 2]);
+
+    // Pane 2 requests a child pane 3.
+    pane2.childPaneBuilder = createPaneBuilder(3);
+    assertPanes(viewEl, [1, 2, 3]);
+
+    // Pane 2 requests a child pane 4 (its previous child pane 3 is removed).
+    pane2.childPaneBuilder = createPaneBuilder(4);
+    assertPanes(viewEl, [1, 2, 4]);
+
+    // Pane 1 requests removing its child pane (panes 2 and 4 are removed).
+    pane1.childPaneBuilder = undefined;
+    assertPanes(viewEl, [1]);
+
+    // Check that removed panes cannot affect the pane view.
+    pane2.childPaneBuilder = createPaneBuilder(5);
+    assertPanes(viewEl, [1]);
+
+    // Pane 1 requests a child pane 6 (check that everything still works).
+    pane1.childPaneBuilder = createPaneBuilder(6);
+    assertPanes(viewEl, [1, 6]);
+
+    // Change the top pane to pane 7.
+    viewEl.setPaneBuilder(createPaneBuilder(7));
+    assertPanes(viewEl, [7]);
+
+    // Check that removed panes cannot affect the pane view.
+    pane1.childPaneBuilder = createPaneBuilder(5);
+    assertPanes(viewEl, [7]);
+  });
+
+  test('rebuild', function() {
+    const viewEl = createPaneView();
+
+    const rebuiltPaneIds = [];
+    const rebuildPaneCallback = function() {
+      rebuiltPaneIds.push(this.paneId);
+    };
+
+    viewEl.setPaneBuilder(createPaneBuilder(1, rebuildPaneCallback));
+    viewEl.setPaneBuilder(createPaneBuilder(2, rebuildPaneCallback),
+        viewEl.panesForTesting[0]);
+    viewEl.setPaneBuilder(createPaneBuilder(3, rebuildPaneCallback),
+        viewEl.panesForTesting[1]);
+
+    // Rebuild isn't triggered.
+    assert.deepEqual(rebuiltPaneIds, []);
+
+    // Rebuild is triggered, but it isn't necessary (all panes are clean).
+    viewEl.rebuild();
+    assert.deepEqual(rebuiltPaneIds, []);
+
+    // All panes are now marked as dirty, but rebuild isn't triggered (it was
+    // only scheduled).
+    viewEl.panesForTesting.forEach(function(pane) {
+      pane.scheduleRebuild_();
+    });
+    assert.deepEqual(rebuiltPaneIds, []);
+
+    // Finally, rebuild was triggered and the panes are dirty.
+    viewEl.rebuild();
+    assert.deepEqual(rebuiltPaneIds, [1, 2, 3]);
+
+    // Make sure that panes are clean after the previous rebuild.
+    viewEl.rebuild();
+    assert.deepEqual(rebuiltPaneIds, [1, 2, 3]);
+  });
+
+  test('appended', function() {
+    const viewEl = createPaneView();
+    let didFireAppended;
+
+    didFireAppended = false;
+    viewEl.setPaneBuilder(createPaneBuilder(1, undefined, function() {
+      didFireAppended = true;
+    }));
+    assert.isTrue(didFireAppended);
+  });
+});
+</script>

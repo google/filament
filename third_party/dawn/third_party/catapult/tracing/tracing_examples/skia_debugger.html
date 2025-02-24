@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+<title>Skia Debugger</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/ui/base/base.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/picture_debugger.html">
+
+<script src="string_convert.js"></script>
+<style>
+  picture-ops-list-view {
+    height: 500px;
+    overflow-y: auto;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <select id="skp_file"></select>
+  </div>
+
+  <div class="view"></div>
+  <script>
+  'use strict';
+  /* eslint-disable no-console */
+
+  var debuggerEl;
+
+  function getPicture(skp64) {
+    if (!tr.e.cc.PictureSnapshot.CanGetInfo()) {
+      console.error(tr.e.cc.PictureSnapshot.HowToEnablePictureDebugging());
+
+      var infoBar = document.createElement('tr-ui-b-info-bar');
+      var view = document.querySelector('.view');
+
+      view.removeChild(debuggerEl);
+      debuggerEl = undefined;
+
+      view.appendChild(infoBar);
+
+      infoBar.message = tr.e.cc.PictureSnapshot.HowToEnablePictureDebugging();
+      infoBar.visible = true;
+      return undefined;
+    }
+
+    var size = chrome.skiaBenchmarking.getInfo(skp64);
+    if (size === undefined)
+      throw new Error('Unable to get picture information');
+
+    return new tr.e.cc.Picture(skp64,
+        tr.Rect.fromXYWH(0, 0, size.width, size.height),
+        tr.Rect.fromXYWH(0, 0, size.width, size.height));
+  }
+
+  function utf8ToB64(str) {
+    return tr.b.Base64.btoa(unescape(encodeURIComponent(str)));
+  }
+
+  function loadSkp(filename, onSkpLoaded) {
+    getAsync(filename, function(arr) {
+      var view = new Uint8Array(arr);
+      var data = base64EncArr(view, 1);
+      onSkpLoaded(filename, data);
+    }, 'arraybuffer');
+  }
+  function YloadSkp(filename, onSkpLoaded) {
+    getAsync(filename, function(data) {
+      var data64 = utf8ToB64(data);
+      onSkpLoaded(filename, data64);
+    });
+  }
+
+  function getAsync(url, callback, opt_responseType) {
+    var req = new XMLHttpRequest();
+    if (opt_responseType)
+      req.responseType = opt_responseType;
+    req.open('GET', url, true);
+    req.onreadystatechange = function(aEvt) {
+      if (req.readyState === 4) {
+        window.setTimeout(function() {
+          if (req.status === 200) {
+            if (opt_responseType === undefined)
+              callback(req.responseText);
+            else
+              callback(req.response);
+          } else {
+            console.log('Failed to load ' + url);
+          }
+        }, 0);
+      }
+    };
+    req.send(null);
+  }
+
+  function createViewFromSkp(filename, skp) {
+    var p = getPicture(skp);
+    if (p === undefined)
+      return;
+    debuggerEl.picture = p;
+  }
+
+  function onSelectionChange() {
+    var select = document.querySelector('#skp_file');
+    window.location.hash = '#' + select[select.selectedIndex].value;
+  }
+
+  function onHashChange() {
+    var file = window.location.hash.substr(1);
+    var select = document.querySelector('#skp_file');
+    if (select[select.selectedIndex].value !== file) {
+      for (var i = 0; i < select.children.length; i++) {
+        if (select.children[i].value === file) {
+          select.selectedIndex = i;
+          break;
+        }
+      }
+    }
+    reload();
+  }
+
+  function cleanFilename(file) {
+    function upcase(letter) {
+      return ' ' + letter.toUpperCase();
+    }
+    return file.replace(/_/g, ' ')
+        .replace(/\.[^\.]*$/, '')
+        .replace(/ ([a-z])/g, upcase)
+        .replace(/^[a-z]/, upcase);
+  }
+
+  function reload() {
+    var filename = window.location.hash.substr(1);
+    loadSkp(filename, createViewFromSkp);
+  }
+
+  function onLoad() {
+    debuggerEl = new tr.ui.e.chrome.cc.PictureDebugger();
+    document.querySelector('.view').appendChild(debuggerEl);
+
+    getAsync('/skp_data/__file_list__', function(data) {
+      var select = document.querySelector('#skp_file');
+      var files = JSON.parse(data);
+
+      for (var i = 0; i < files.length; ++i) {
+        var opt = document.createElement('option');
+        opt.value = files[i];
+        opt.textContent = cleanFilename(files[i]);
+        select.appendChild(opt);
+      }
+      select.selectedIndex = 0;
+      select.onchange = onSelectionChange;
+
+      if (!window.location.hash) {
+        // This will trigger an onHashChange so no need to reload directly.
+        window.location.hash = '#' + select[select.selectedIndex].value;
+      } else {
+        onHashChange();
+      }
+    });
+  }
+
+  window.addEventListener('hashchange', onHashChange);
+  window.addEventListener('load', onLoad);
+  </script>
+</body>
+</html>

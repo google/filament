@@ -1,0 +1,56 @@
+===========
+boto v2.9.0
+===========
+
+The 2.9.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.8.0 release
+and the 2.9.0 release at https://github.com/boto/boto/compare/2.8.0...2.9.0.
+
+This release includes:
+
+* Support for Amazon Redshift
+* Support for Amazon DynamoDB's new API
+* Support for AWS Opsworks
+* Add `copy_image` to EC2 (AMI copy)
+* Add `describe_account_attributes` and `describe_vpc_attribute`, and
+  `modify_vpc_attribute` operations to EC2.
+
+There were 240 commits made by 34 different authors:
+
+* g2harris
+* Michael Barrett
+* Pascal Hakim
+* James Saryerwinnie
+* Mitch Garnaat
+* ChangMin Jeon
+* Mike Schwartz
+* Jeremy Katz
+* Alex Schoof
+* reinhillmann
+* Travis Hobrla
+* Zach Wilt
+* Daniel Lindsley
+* ksacry
+* Michael Wirth
+* Eric Smalling
+* pingwin
+* Chris Moyer
+* Olivier Hervieu
+* Iuri de Silvio
+* Joe Sondow
+* Max Noel
+* Nate
+* Chris Moyer
+* Lars Otten
+* Nathan Grigg
+* Rein Hillmann
+* Øyvind Saltvik
+* Rayson HO
+* Martin Matusiak
+* Royce Remer
+* Jeff Terrace
+* Yaniv Ovadia
+* Eduardo S. Klein

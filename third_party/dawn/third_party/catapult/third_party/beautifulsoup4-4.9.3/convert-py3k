@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# The Python 2 source is the definitive source. This script uses 2to3-3.2 to
+# create a new python3/bs4 source tree that works under Python 3.
+#
+# See README.txt to see how to run the test suite after conversion.
+echo "About to destroy and rebuild the py3k/bs4 directory."
+echo "If you've got stuff in there, Ctrl-C out of this script or answer 'n'."
+mkdir -p py3k
+rm -rfI py3k/bs4
+cp -r bs4/ py3k/
+2to3 -w py3k
+echo ""
+echo "OK, conversion is done."
+echo "Now running the unit tests."
+(cd py3k && python3 -m unittest discover -s bs4)

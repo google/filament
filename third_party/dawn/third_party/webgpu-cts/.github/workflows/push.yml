@@ -1,0 +1,32 @@
+name: Push CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v2.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "16.x"
+      - run: npm ci
+      - run: |
+          npm test
+          mkdir deploy-build/
+          cp -r README.md src standalone out out-wpt docs tools deploy-build/
+      - uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          BRANCH: gh-pages
+          FOLDER: deploy-build
+          CLEAN: true

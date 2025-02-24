@@ -1,0 +1,170 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build_overrides/swiftshader.gni")
+import("../../../gni/angle.gni")
+
+if (angle_use_wayland) {
+  import("//build_overrides/wayland.gni")
+}
+
+declare_args() {
+  angle_use_custom_libvulkan = !is_android && !is_fuchsia && !is_ggp
+
+  # On real CrOS devices, we should use the system Vulkan loader. On the
+  # ChromeOS-for-Linux build, we should use the built libvulkan because the
+  # build is used for MSAN tests. Mixing the non-MSAN system libvulkan with the
+  # MSAN ANGLE build can result in false positives.
+  if (is_chromeos && is_chromeos_device) {
+    angle_use_custom_libvulkan = false
+  }
+}
+
+config("angle_libvulkan_config") {
+  if (angle_use_custom_libvulkan) {
+    defines = [ "ANGLE_USE_CUSTOM_LIBVULKAN" ]
+  }
+}
+
+angle_source_set("angle_libvulkan_loader") {
+  public_configs = [ ":angle_libvulkan_config" ]
+  sources = [
+    "libvulkan_loader.cpp",
+    "libvulkan_loader.h",
+  ]
+  deps = [ "$angle_root:angle_common" ]
+}
+
+if (angle_enable_vulkan || angle_build_vulkan_system_info) {
+  config("angle_vulkan_headers_config") {
+    if (angle_shared_libvulkan) {
+      defines = [ "ANGLE_SHARED_LIBVULKAN=1" ]
+    }
+    if (angle_use_wayland) {
+      include_dirs = [ "$wayland_dir/src" ]
+    }
+    configs = [ "$angle_root:angle_vulkan_wayland_config" ]
+  }
+
+  angle_source_set("angle_vulkan_headers") {
+    sources = [ "vk_headers.h" ]
+    if (angle_shared_libvulkan) {
+      public_deps = [ "$angle_root/src/third_party/volk:volk" ]
+    } else {
+      public_deps = [ "$angle_vulkan_headers_dir:vulkan_headers" ]
+    }
+    public_configs = [ ":angle_vulkan_headers_config" ]
+  }
+
+  angle_source_set("angle_vulkan_icd") {
+    sources = [
+      "vulkan_icd.cpp",
+      "vulkan_icd.h",
+    ]
+
+    defines =
+        [ "ANGLE_VK_MOCK_ICD_JSON=\"$angle_data_dir/VkICD_mock_icd.json\"" ]
+
+    # On Fuchsia use validation layer provided by the SDK.
+    if (!is_fuchsia) {
+      defines += [ "ANGLE_VK_LAYERS_DIR=\"$angle_data_dir\"" ]
+    }
+
+    data_deps = []
+
+    if (angle_enable_swiftshader) {
+      import("$swiftshader_dir/src/Vulkan/vulkan.gni")
+      _sws_icd = "./$swiftshader_icd_file_name"
+      if (is_win) {
+        _sws_icd = ".\\\\$swiftshader_icd_file_name"
+      } else if (is_fuchsia) {
+        _sws_icd = "/pkg/$swiftshader_icd_file_name"
+      }
+
+      defines += [ "ANGLE_VK_SWIFTSHADER_ICD_JSON=\"${_sws_icd}\"" ]
+
+      data_deps += [
+        "$swiftshader_dir/src/Vulkan:icd_file",
+        "$swiftshader_dir/src/Vulkan:swiftshader_libvulkan",
+      ]
+    }
+
+    public_deps = [
+      ":angle_vulkan_headers",
+      "$angle_root:angle_common",
+    ]
+
+    configs += [ "$angle_root:angle_no_cfi_icall" ]
+  }
+}
+
+if (angle_enable_vulkan) {
+  group("angle_libvulkan") {
+    public_configs = [ ":angle_libvulkan_config" ]
+    data_deps = []
+    if (angle_use_custom_libvulkan) {
+      if (angle_shared_libvulkan) {
+        data_deps += [ "$angle_vulkan_loader_dir:libvulkan" ]
+      } else {
+        public_deps = [ "$angle_vulkan_loader_dir:libvulkan" ]
+      }
+      data_deps += [ "$angle_vulkan_tools_dir:VkICD_mock_icd" ]
+    }
+  }
+
+  group("angle_vulkan_entry_points") {
+    public_deps = [ ":angle_vulkan_headers" ]
+    if (is_fuchsia) {
+      public_deps += [
+        "$angle_root/src/common/fuchsia_egl",
+        "//third_party/fuchsia-sdk/sdk/pkg/vulkan",
+      ]
+      if (!angle_use_vulkan_null_display) {
+        public_deps += [ "//third_party/fuchsia-sdk/sdk/pkg/vulkan_layers:VkLayer_image_pipe_swapchain" ]
+      }
+    } else if (!is_android && !is_ggp) {
+      if (angle_shared_libvulkan) {
+        data_deps = [ "$angle_vulkan_loader_dir:libvulkan" ]
+      } else {
+        deps = [ "$angle_vulkan_loader_dir:libvulkan" ]
+      }
+    }
+  }
+
+  angle_source_set("vulkan") {
+    public_deps = [
+      ":angle_libvulkan",
+      ":angle_vulkan_entry_points",
+      ":angle_vulkan_icd",
+    ]
+  }
+
+  if (angle_enable_vulkan_validation_layers) {
+    group("vulkan_validation_layers") {
+      data_deps = []
+      if (is_fuchsia) {
+        data_deps += [ "//third_party/fuchsia-sdk/sdk/pkg/vulkan_layers:VkLayer_khronos_validation" ]
+      } else {
+        data_deps +=
+            [ "$angle_vulkan_validation_layers_dir:vulkan_validation_layers" ]
+        if (!is_android) {
+          data_deps +=
+              [ "$angle_vulkan_validation_layers_dir:vulkan_gen_json_files" ]
+        }
+      }
+    }
+  }
+
+  if (angle_enable_vulkan_api_dump_layer) {
+    group("lunarg_vulkantools") {
+      data_deps = []
+      if (!is_fuchsia) {
+        data_deps += [ "$angle_lunarg_vulkantools_dir:lunarg_vulkantools" ]
+        if (!is_android) {
+          data_deps += [ "$angle_lunarg_vulkantools_dir:vulkan_gen_json_files" ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/android/process_data_importer.html">
+
+<script>
+'use strict';
+
+const TEST_DATA =
+    'PROCESS DUMP\n' +
+    'USER           PID  PPID     VSZ    RSS WCHAN  PC S NAME          COMM\n' +
+    'root             1     0   0    0 SyS_epoll_wait ffffff S test1   init\n' +
+    'root             2     0       0      0 kthreadd 0 S test2        2\n' +
+    'root             3     2       0      0 smpboot_thread_fn 0 S test3  3\n' +
+    'USER           PID   TID CMD\n' +
+    'root             1     1 test1\n' +
+    'root             2     2 test2\n' +
+    'root             3     3 test3\n' +
+    'u0_a48        1  4 test1_t1\n' +
+    'u0_a10        2  5 test2_t1\n' +
+    'u0_a10        3  6 test3_t1\n' +
+    'u0_a10        1  7 test1_t2\n' +
+    'u0_a10        2  8 test2_t2\n' +
+    'u0_a10        3  9 test3_t2\n' +
+    'u0_a10        3  10 test3_t3\n';
+
+const LEGACY_TEST_DATA =
+    'PROCESS DUMP\n' +
+    'USER      PID   PPID  VSIZE  RSS   WCHAN            PC  NAME\n' +
+    'root      1     0     1324   856   SyS_epoll_ 00070cd8 S test1\n' +
+    'root      2     0     0      0       kthreadd 00000000 S test2\n' +
+    'root      3     0     0      0     smpboot_th 00000000 S test3\n' +
+    'USER      PID   PPID  VSIZE  RSS   WCHAN            PC  NAME\n' +
+    'root      1     0     1324   856   SyS_epoll_ 00070cd8 S test1\n' +
+    'root      2     0     0      0       kthreadd 00000000 S test2\n' +
+    'root      3     0     0      0     smpboot_th 00000000 S test3\n' +
+    'u0_a35    4  1  726452 34352 SyS_epoll_ ffffffff S test1_t1\n' +
+    'u0_a35    5  2  726452 34352 SyS_epoll_ ffffffff S test2_t1\n' +
+    'u0_a53    6  3   846540 54996 SyS_epoll_ ffffffff S test3_t1\n' +
+    'u0_a53    7  1  846540 54996 futex_wait ffffffff S test1_t2\n' +
+    'u0_a53    8  2  846540 54996 futex_wait ffffffff S test2_t2\n' +
+    'u0_a53    9  3  846540 54996 futex_wait ffffffff S test3_t2\n' +
+    'root      10 3     4692   244   poll_sched ffffffff S test3_t3\n';
+
+tr.b.unittest.testSuite(function() {
+  test('canImport', function() {
+    const canImport =
+        tr.e.importer.android.process_data.ProcessDataImporter.canImport;
+    assert.isTrue(canImport(TEST_DATA));
+    assert.isTrue(canImport(LEGACY_TEST_DATA));
+    assert.isFalse(canImport(''));
+    assert.isFalse(canImport('\n'));
+  });
+
+  test('procinfoImport', function() {
+    const importer = new tr.e.importer.android.process_data.ProcessDataImporter(
+        null, TEST_DATA);
+    const result = importer.parseEventData(importer.processDataLines);
+    verifyParsedDump(result);
+  });
+
+  test('procinfoImportLegacy', function() {
+    const importer = new tr.e.importer.android.process_data.ProcessDataImporter(
+        null, LEGACY_TEST_DATA);
+    const result = importer.parseEventData(importer.processDataLines);
+    verifyParsedDump(result);
+  });
+
+  function verifyParsedDump(result) {
+    assert.isDefined(result);
+
+    // indexable by PID, so invalid PIDs should be undefined.
+    assert.isUndefined(result[0]);
+    assert.isUndefined(result[100]);
+
+    let proc = result[1];
+    assert.isDefined(proc);
+    assert.strictEqual(proc.name, 'test1');
+    assert.strictEqual(proc.pid, 1);
+    assert.isDefined(proc.threads);
+    let thread = proc.threads[1];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test1');
+    assert.strictEqual(thread.tid, 1);
+    thread = proc.threads[4];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test1_t1');
+    assert.strictEqual(thread.tid, 4);
+    thread = proc.threads[7];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test1_t2');
+    assert.strictEqual(thread.tid, 7);
+
+    proc = result[2];
+    assert.isDefined(proc);
+    assert.strictEqual(proc.name, 'test2');
+    assert.strictEqual(proc.pid, 2);
+    assert.isDefined(proc.threads);
+    thread = proc.threads[2];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test2');
+    assert.strictEqual(thread.tid, 2);
+    thread = proc.threads[5];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test2_t1');
+    assert.strictEqual(thread.tid, 5);
+    thread = proc.threads[8];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test2_t2');
+    assert.strictEqual(thread.tid, 8);
+
+    proc = result[3];
+    assert.isDefined(proc);
+    assert.strictEqual(proc.name, 'test3');
+    assert.strictEqual(proc.pid, 3);
+    assert.isDefined(proc.threads);
+    thread = proc.threads[3];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test3');
+    assert.strictEqual(thread.tid, 3);
+    thread = proc.threads[6];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test3_t1');
+    assert.strictEqual(thread.tid, 6);
+    thread = proc.threads[9];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test3_t2');
+    assert.strictEqual(thread.tid, 9);
+    thread = proc.threads[10];
+    assert.isDefined(thread);
+    assert.strictEqual(thread.name, 'test3_t3');
+    assert.strictEqual(thread.tid, 10);
+  }
+});
+</script>

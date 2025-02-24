@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/power_series_track.html">
+<link rel="import" href="/tracing/ui/tracks/spacing_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ContainerTrack = tr.ui.tracks.ContainerTrack;
+
+  // TODO(charliea): Make this track collapsible.
+  /**
+   * Track to visualize the device model.
+   *
+   * @constructor
+   * @extends {ContainerTrack}
+   */
+  const DeviceTrack = tr.ui.b.define('device-track', ContainerTrack);
+
+  DeviceTrack.prototype = {
+
+    __proto__: ContainerTrack.prototype,
+
+    decorate(viewport) {
+      ContainerTrack.prototype.decorate.call(this, viewport);
+
+      Polymer.dom(this).classList.add('device-track');
+      this.device_ = undefined;
+      this.powerSeriesTrack_ = undefined;
+    },
+
+    get device() {
+      return this.device_;
+    },
+
+    set device(device) {
+      this.device_ = device;
+      this.updateContents_();
+    },
+
+    get powerSeriesTrack() {
+      return this.powerSeriesTrack_;
+    },
+
+    get hasVisibleContent() {
+      return (this.powerSeriesTrack_ &&
+          this.powerSeriesTrack_.hasVisibleContent);
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.ContainerTrack.prototype.addContainersToTrackMap.call(
+          this, containerToTrackMap);
+      containerToTrackMap.addContainer(this.device, this);
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      this.tracks_.forEach(function(track) {
+        track.addEventsToTrackMap(eventToTrackMap);
+      });
+    },
+
+    appendPowerSeriesTrack_() {
+      this.powerSeriesTrack_ = new tr.ui.tracks.PowerSeriesTrack(this.viewport);
+      this.powerSeriesTrack_.powerSeries = this.device.powerSeries;
+
+      if (this.powerSeriesTrack_.hasVisibleContent) {
+        Polymer.dom(this).appendChild(this.powerSeriesTrack_);
+        Polymer.dom(this).appendChild(
+            new tr.ui.tracks.SpacingTrack(this.viewport));
+      }
+    },
+
+    updateContents_() {
+      this.clearTracks_();
+      this.appendPowerSeriesTrack_();
+    }
+  };
+
+  return {
+    DeviceTrack,
+  };
+});
+</script>

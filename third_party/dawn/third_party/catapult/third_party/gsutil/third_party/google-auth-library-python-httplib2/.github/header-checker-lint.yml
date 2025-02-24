@@ -1,0 +1,15 @@
+{"allowedCopyrightHolders": ["Google LLC"],
+ "allowedLicenses": ["Apache-2.0", "MIT", "BSD-3"],
+ "ignoreFiles": ["**/requirements.txt", "**/requirements-test.txt", "**/__init__.py", "samples/**/constraints.txt", "samples/**/constraints-test.txt"],
+ "sourceFileExtensions": [
+ 	"ts", 
+ 	"js", 
+ 	"java", 
+ 	"sh", 
+ 	"Dockerfile", 
+ 	"yaml", 
+ 	"py",
+ 	"html",
+ 	"txt"
+ ]
+}

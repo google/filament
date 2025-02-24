@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/extras/chrome/speed_index_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/breakdown_tree_helpers.html">
+<script src="/jpeg-js-decoder.js"></script>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const timeDurationInMs_smallerIsBetter =
+      tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const SpeedIndex = tr.e.chrome.SpeedIndex;
+
+  const LOADING_METRIC_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 1e3, 20)  // 50ms step to 1s
+      .addLinearBins(3e3, 20) // 100ms step to 3s
+      .addExponentialBins(20e3, 20);
+
+
+  const SUMMARY_OPTIONS = {
+    avg: true,
+    count: false,
+    max: true,
+    min: true,
+    std: true,
+    sum: false,
+  };
+
+  /**
+   * Adds a speed index sample.
+   *
+   * @param {tr.model.helpers.ChromeBrowserrHelper} browserHelper
+   * @param {number[]} samples
+   * @param {tr.model.ThreadSlice} navigationStart
+   */
+  function addSpeedIndexScreenshotsBasedSample(samples, navigationStart,
+      loadDuration, browserHelper) {
+    const screenshotObjects = browserHelper.process.objects
+        .getAllInstancesNamed('Screenshot');
+    if (!screenshotObjects) return;
+    for (let i = 0; i < screenshotObjects.length; i++) {
+      const snapshots = screenshotObjects[i].snapshots;
+      const timestampedColorHistograms = [];
+      snapshots.map(snapshot => {
+        if (snapshot.ts >= navigationStart.start &&
+        snapshot.ts < navigationStart.start + loadDuration) {
+          timestampedColorHistograms.push({colorHistogram:
+              SpeedIndex.createColorHistogram(getPixelData(snapshot.args)),
+          ts: snapshot.ts});
+        }
+      });
+      samples.push(
+          {value: SpeedIndex.calculateSpeedIndex(timestampedColorHistograms) -
+          navigationStart.start});
+    }
+  }
+
+  /**
+   * Extract RGBA pixel values from a base64 JPEG.
+   *
+   * @param {string} base64JpegImage - base64 jpeg image
+   * @return {number[]} - a flat array of rgba values for each pixel
+   */
+  function getPixelData(base64JpegImage) {
+    const binaryString = atob(base64JpegImage);
+    const bytes = new DataView(new ArrayBuffer(base64JpegImage.length));
+    tr.b.Base64.DecodeToTypedArray(base64JpegImage, bytes);
+    const rawImageData = jpegDecode(bytes.buffer, {useTArray: true});
+    return rawImageData.data;
+  }
+
+  function collectSpeedIndexSamplesFromLoadExpectations(model, chromeHelper) {
+    const speedIndexScreenshotsBasedSamples = [];
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(expectation.url)) {
+        continue;
+      }
+      const rendererHelper = chromeHelper.rendererHelpers[
+          expectation.renderProcess.pid];
+      addSpeedIndexScreenshotsBasedSample(speedIndexScreenshotsBasedSamples,
+          expectation.navigationStart, expectation.duration,
+          chromeHelper.browserHelper);
+    }
+    return speedIndexScreenshotsBasedSamples;
+  }
+  /** This metric is experminetal and should not be used. **/
+  function screenshotsBasedSpeedIndexMetric(histograms, model) {
+    const speedIndexScreenshotsBasedHistogram = histograms.createHistogram(
+        'speedIndexScreenshotsBased', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'The average time at which visible parts of the' +
+          ' page are displayed.',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    const samples =
+        collectSpeedIndexSamplesFromLoadExpectations(model, chromeHelper);
+    for (const sample of samples) {
+      speedIndexScreenshotsBasedHistogram.addSample(sample.value);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(screenshotsBasedSpeedIndexMetric);
+
+  return {
+    screenshotsBasedSpeedIndexMetric
+  };
+});
+</script>

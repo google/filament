@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/helpers/chrome_process_helper.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Utilities for accessing the Chrome GPU Process.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  // TODO(charliea): This method should probably throw if this isn't a Chrome
+  // GPU process.
+  function ChromeGpuHelper(modelHelper, process) {
+    tr.model.helpers.ChromeProcessHelper.call(this, modelHelper, process);
+    if (!process.name) {
+      process.name = ChromeGpuHelper.PROCESS_NAME;
+    }
+  }
+
+  ChromeGpuHelper.PROCESS_NAME = 'GPU Process';
+
+  ChromeGpuHelper.isGpuProcess = function(process) {
+    // In some Android builds the GPU thread is not in a separate process.
+    if (process.findAtMostOneThreadNamed('CrBrowserMain') ||
+        process.findAtMostOneThreadNamed('CrRendererMain')) {
+      return false;
+    }
+
+    // On Android, there can sometimes be GPU processes with multiple main
+    // threads. We need to recognize those processes as GPU processes.
+    return process.findAllThreadsNamed('CrGpuMain').length > 0;
+  };
+
+  ChromeGpuHelper.prototype = {
+    __proto__: tr.model.helpers.ChromeProcessHelper.prototype
+  };
+
+  return {
+    ChromeGpuHelper,
+  };
+});
+</script>

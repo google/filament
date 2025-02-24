@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/rect_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays an array of Sample objects.
+   * @constructor
+   * @extends {RectTrack}
+   */
+  const SampleTrack = tr.ui.b.define(
+      'sample-track', tr.ui.tracks.RectTrack);
+
+  SampleTrack.prototype = {
+
+    __proto__: tr.ui.tracks.RectTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.RectTrack.prototype.decorate.call(this, viewport);
+    },
+
+    get samples() {
+      return this.rects;
+    },
+
+    set samples(samples) {
+      this.rects = samples;
+    }
+  };
+
+  return {
+    SampleTrack,
+  };
+});
+</script>
+

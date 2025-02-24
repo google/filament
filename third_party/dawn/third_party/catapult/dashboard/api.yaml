@@ -1,0 +1,29 @@
+service: api
+
+runtime: python38
+entrypoint: gunicorn -b:$PORT dashboard.dispatcher:APP --worker-class gthread --threads 10 --timeout 60
+app_engine_apis: true
+# 2048MB Memory, 2.4GHz CPU limit, support auto scaling.
+instance_class: F4_1G
+
+automatic_scaling:
+  # We're setting the max concurrent request to 20, to allow AppEngine to scale
+  # the number of instances to handle API requests better. We're also going to
+  # keep around 10 instances at the ready to handle incoming requests better
+  # from a "cold start".
+  max_concurrent_requests: 20
+  max_instances: 150
+  max_pending_latency: automatic
+  min_instances: 3
+  target_cpu_utilization: 0.8
+
+env_variables:
+  GAE_USE_SOCKETS_HTTPLIB: 'true'
+
+inbound_services:
+- warmup
+
+handlers:
+- url: /.+
+  script: dashboard.dispatcher.APP
+  secure: always

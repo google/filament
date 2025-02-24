@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import json
+import os
+import sys
+
+tracing_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(tracing_path)
+from tracing.value import merge_histograms
+
+def Main(argv):
+  parser = argparse.ArgumentParser(
+      description='Merge Histograms.')
+  parser.add_argument('input', type=str,
+                      help='Path to a HistogramSet JSON file. (input)')
+  parser.add_argument('output', type=str,
+                      help='Path to a HistogramSet JSON file. (output)')
+  parser.add_argument('groupby', nargs='+',
+                      help='One or more grouping keys (name, benchmark, ' +
+                      'time, storyset_repeat, story_repeat, story, label)')
+  args = parser.parse_args(argv[1:])
+
+  merged = merge_histograms.MergeHistograms(args.input, args.groupby)
+  json.dump(merged, open(args.output, 'w'))
+  return 0
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv))

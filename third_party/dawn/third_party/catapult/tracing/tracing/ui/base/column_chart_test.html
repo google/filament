@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/column_chart.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('chartLegendKey', function() {
+    let key = document.createElement('tr-ui-b-chart-legend-key');
+    key.textContent = 'Lorem ipsum dolor sit amet';
+    key.color = 'red';
+    this.addHTMLOutput(key);
+
+    key = document.createElement('tr-ui-b-chart-legend-key');
+    key.textContent = 'ipsum dolor sit amet';
+    key.target = 'orange ipsum';
+    key.color = 'orange';
+    this.addHTMLOutput(key);
+
+    key = document.createElement('tr-ui-b-chart-legend-key');
+    key.target = 'brown dolor';
+    key.color = 'brown';
+    key.textContent = 'dolor sit amet';
+    this.addHTMLOutput(key);
+  });
+
+  test('instantiation_legendTargets', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.getDataSeries('lorem_ipsum').target = 'lorem_ipsumTarget';
+    chart.getDataSeries('lorem_ipsum').title = 'lorem ipsum';
+    chart.getDataSeries('qux').target = 'quxTarget';
+    chart.getDataSeries('lorem_ipsum').optional = true;
+    chart.getDataSeries('bar').optional = true;
+    chart.isStacked = true;
+    chart.hideXAxis = true;
+    this.addHTMLOutput(chart);
+    chart.data = [{x: 0, foo: 3, lorem_ipsum: 5, bar: 1, qux: 2}];
+
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        chart, function(element) {
+          return element.tagName === 'TR-UI-B-CHART-LEGEND-KEY' &&
+             element.textContent === 'lorem_ipsum' &&
+             element.target === 'lorem_ipsumTarget';
+        }));
+  });
+
+  test('instantiation_singleSeries', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.xAxisLabel = 'ms';
+    chart.yAxisLabel = '#';
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, value: 100},
+      {x: 20, value: 110},
+      {x: 30, value: 100},
+      {x: 40, value: 50}
+    ];
+  });
+
+  test('instantiation_singleDatum', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: 100},
+    ];
+  });
+
+  test('instantiation_stacked', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.isStacked = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, foo: 10, bar: 5, qux: 7},
+      {x: 20, foo: 11, bar: 6, qux: 3},
+      {x: 30, foo: 10, bar: 4, qux: 8},
+      {x: 40, foo: 5, bar: 1, qux: 2}
+    ];
+  });
+
+  test('instantiation_singleSeries_yLogScale', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.isYLogScale = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, value: 100},
+      {x: 20, value: 10},
+      {x: 30, value: 1},
+      {x: 40, value: 0.1},
+      {x: 50, value: 0.01},
+      {x: 60, value: 0.001}
+    ];
+  });
+
+  test('undefined', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    assert.throws(function() {
+      chart.data = undefined;
+    });
+  });
+
+  test('instantiation_twoSeries', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 100, beta: 50},
+      {x: 20, alpha: 110, beta: 75},
+      {x: 30, alpha: 100, beta: 125},
+      {x: 40, alpha: 50, beta: 125}
+    ];
+
+    const r = new tr.b.math.Range();
+    r.addValue(20);
+    r.addValue(40);
+    chart.brushedRange = r;
+  });
+
+  test('instantiation_twoSeries_yLogScale', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.isYLogScale = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 100, beta: 50},
+      {x: 20, alpha: 110, beta: 75},
+      {x: 30, alpha: 100, beta: 125},
+      {x: 40, alpha: 50, beta: 125}
+    ];
+
+    const r = new tr.b.math.Range();
+    r.addValue(20);
+    r.addValue(40);
+    chart.brushedRange = r;
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueSparse', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 20, beta: undefined},
+      {x: 20, alpha: undefined, beta: 10},
+      {x: 30, alpha: 10, beta: undefined},
+      {x: 45, alpha: undefined, beta: 20},
+      {x: 50, alpha: 25, beta: 30}
+    ];
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueNotSparse', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 20, beta: 40},
+      {x: 20, alpha: undefined, beta: 10},
+      {x: 30, alpha: 10, beta: undefined},
+      {x: 45, alpha: undefined, beta: 20},
+      {x: 50, alpha: 30, beta: undefined}
+    ];
+  });
+
+  test('brushRangeFromIndices', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    const data = [
+      {x: 10, value: 50},
+      {x: 30, value: 60},
+      {x: 70, value: 70},
+      {x: 80, value: 80},
+      {x: 120, value: 90}
+    ];
+    chart.data = data;
+    let r = new tr.b.math.Range();
+
+    // Range min should be 10.
+    r = chart.computeBrushRangeFromIndices(-2, 1);
+    assert.strictEqual(r.min, 10);
+
+    // Range max should be 120.
+    r = chart.computeBrushRangeFromIndices(3, 10);
+    assert.strictEqual(r.max, 120);
+
+    // Range should be [10, 120]
+    r = chart.computeBrushRangeFromIndices(-2, 10);
+    assert.strictEqual(r.min, 10);
+    assert.strictEqual(r.max, 120);
+
+    // Range should be [20, 100]
+    r = chart.computeBrushRangeFromIndices(1, 3);
+    assert.strictEqual(r.min, 20);
+    assert.strictEqual(r.max, 100);
+  });
+
+  test('instantiation_interactiveBrushing', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, value: 50},
+      {x: 20, value: 60},
+      {x: 30, value: 80},
+      {x: 40, value: 20},
+      {x: 50, value: 30},
+      {x: 60, value: 20},
+      {x: 70, value: 15},
+      {x: 80, value: 20}
+    ];
+
+    let mouseDownX = undefined;
+    let curMouseX = undefined;
+
+    function updateBrushedRange() {
+      if (mouseDownX === undefined || (mouseDownX === curMouseX)) {
+        chart.brushedRange = new tr.b.math.Range();
+        return;
+      }
+      const r = new tr.b.math.Range();
+      r.min = Math.min(mouseDownX, curMouseX);
+      r.max = Math.max(mouseDownX, curMouseX);
+      chart.brushedRange = r;
+    }
+
+    chart.addEventListener('item-mousedown', function(e) {
+      mouseDownX = e.x;
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mousemove', function(e) {
+      if (e.button === undefined) return;
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mouseup', function(e) {
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+  });
+
+  test('overrideDataRange', function() {
+    let chart = new tr.ui.b.ColumnChart();
+    chart.overrideDataRange = tr.b.math.Range.fromExplicitRange(10, 90);
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: 0},
+      {x: 1, value: 100},
+    ];
+
+    chart = new tr.ui.b.ColumnChart();
+    chart.overrideDataRange = tr.b.math.Range.fromExplicitRange(-10, 100);
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: 0},
+      {x: 1, value: 50},
+    ];
+  });
+
+  test('instantiationGrouped', function() {
+    const chart = new tr.ui.b.ColumnChart();
+    chart.graphWidth = 300;
+    chart.graphHeight = 200;
+    chart.isStacked = true;
+    chart.isGrouped = true;
+    chart.displayXInHover = true;
+    chart.enableToolTip = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 100, beta: 50, group: 'group1' },
+      {x: 20, alpha: 110, beta: 75, group: 'group2' },
+      {x: 30 },
+      {x: 40, alpha: 100, beta: 125, group: 'group1' },
+      {x: 50, alpha: 50, beta: 125, group: 'group2' }
+    ];
+  });
+});
+</script>

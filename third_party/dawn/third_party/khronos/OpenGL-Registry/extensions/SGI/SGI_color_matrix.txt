@@ -1,0 +1,170 @@
+Name
+
+    SGI_color_matrix
+
+Name Strings
+
+    GL_SGI_color_matrix
+
+Version
+
+    $Date: 1997/02/26 03:36:27 $ $Revision: 1.8 $
+
+Number
+
+    13
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds a 4x4 matrix stack to the pixel transfer path.  The
+    matrix operates on RGBA pixel groups, using the equation
+
+	C' = MC,
+
+    where
+
+	    |R|
+	C = |G|
+	    |B|
+	    |A|
+
+    and M is the 4x4 matrix on the top of the color matrix stack.  After
+    the matrix multiplication, each resulting color component is scaled
+    and biased by a programmed amount.  Color matrix multiplication follows
+    convolution (and the scale, and bias that are associated with
+    convolution.)
+
+    The color matrix can be used to reassign and duplicate color components.
+    It can also be used to implement simple color space conversions.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	COLOR_MATRIX_SGI		 	0x80B1
+	COLOR_MATRIX_STACK_DEPTH_SGI		0x80B2
+	MAX_COLOR_MATRIX_STACK_DEPTH_SGI	0x80B3
+
+    Accepted by the <pname> parameter of PixelTransfer*, and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+	POST_COLOR_MATRIX_RED_SCALE_SGI		0x80B4
+	POST_COLOR_MATRIX_GREEN_SCALE_SGI	0x80B5
+	POST_COLOR_MATRIX_BLUE_SCALE_SGI	0x80B6
+	POST_COLOR_MATRIX_ALPHA_SCALE_SGI	0x80B7
+	POST_COLOR_MATRIX_RED_BIAS_SGI		0x80B8
+	POST_COLOR_MATRIX_GREEN_BIAS_SGI	0x80B9
+	POST_COLOR_MATRIX_BLUE_BIAS_SGI		0x80BA
+	POST_COLOR_MATRIX_ALPHA_BIAS_SGI	0x80BB
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The manipulation of the color matrix stack is added to the GL
+    Specification in section 3.6.2, "Pixel Transfer Modes."  Setting the
+    matrix mode to COLOR causes the already described matrix operations
+    (see GL Specification Chapter 2, OpenGL Operation) to apply to the top
+    matrix on the color matrix stack.  (PushMatrix and PopMatrix apply to
+    the entire color matrix stack.)  All matrix operations have the same
+    effect on the color matrix as they do on the other matrices.
+
+    The operation of the color matrix is added to the GL Specification in
+    section 3.6.3, "Rasterization of Pixel Rectangles, immediately following
+    the operations described in EXT_convolution.  The color matrix operates
+    only on RGBA pixel groups.  If this extension is implemented, the color
+    matrix is always active, and is applied to all RGBA pixel groups,
+    regardless of the command used to generate them.  (There is no enable or
+    disable of the color matrix.)  Adopting the matrix notation used in
+    section 2.9.2 of the GL Specification (Matrices) the color matrix
+    arithmetic is:
+
+	R' = ((m1 * R) + (m5 * G) +  (m9 * B) + (m13 * A)) * Rscale + Rbias
+	G' = ((m2 * R) + (m6 * G) + (m10 * B) + (m14 * A)) * Gscale + Gbias
+	B' = ((m3 * R) + (m7 * G) + (m11 * B) + (m15 * A)) * Bscale + Bbias
+	A' = ((m4 * R) + (m8 * G) + (m12 * B) + (m16 * A)) * Ascale + Abias
+
+    where R, G, B, and A are the color component values of the incoming
+    pixel group, m1 through m16 are the components of the matrix at the top
+    of the color matrix stack, and R', G', B', and A' are the resulting
+    color components.  Rscale, Gscale, Bscale, and Ascale are specified by
+    calling PixelTransfer with <pname> set to
+    POST_COLOR_MATRIX_RED_SCALE_SGI, POST_COLOR_MATRIX_GREEN_SCALE_SGI,
+    POST_COLOR_MATRIX_BLUE_SCALE_SGI, and POST_COLOR_MATRIX_ALPHA_SCALE_SGI
+    respectively.  Rbias, Gbias, Bbias, and Abias are specified by calling
+    PixelTransfer with <pname> set to POST_COLOR_MATRIX_RED_BIAS_SGI,
+    POST_COLOR_MATRIX_GREEN_BIAS_SGI, POST_COLOR_MATRIX_BLUE_BIAS_SGI, and 
+    POST_COLOR_MATRIX_ALPHA_BIAS_SGI respectively.  There are no
+    constraints on the values of the scale and bias variables.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of the color matrix during pixel copy and query
+    operations is identical to the operation during pixel drawing and
+    texture image definition.  This operation occurs immediately after the
+    operations described by EXT_convolution, which follow section 4.3.2
+    (Reading Pixels) of the GL Specification.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The scale and bias variables are queried using GetFloatv with <pname>
+    set to the appropriate variable name.  The top matrix on the color
+    matrix stack is returned by GetFloatv called with <pname> set to
+    COLOR_MATRIX_SGI.  The depth of the color matrix stack, and the maximum
+    depth of the color matrix stack, are queried with GetIntegerv, setting
+    <pname> to COLOR_MATRIX_STACK_DEPTH_SGI and
+    MAX_COLOR_MATRIX_STACK_DEPTH_SGI respectively.
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_convolution
+
+    None, really, except that the color matrix operation follows the
+    convolution operation (and its scale and bias).  If convolution is not
+    supported, the location of the color matrix operation with respect to
+    all other pixel operations remains the same.
+
+Errors
+
+    None
+
+New State
+
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    COLOR_MATRIX_SGI			GetFloatv	2* x M4	Identity  -
+    COLOR_MATRIX_STACK_DEPTH_SGI	GetIntegerv	Z+	1	  -
+    POST_COLOR_MATRIX_RED_SCALE_SGI	GetFloatv	R	1	pixel
+    POST_COLOR_MATRIX_GREEN_SCALE_SGI	GetFloatv	R	1	pixel
+    POST_COLOR_MATRIX_BLUE_SCALE_SGI	GetFloatv	R	1	pixel
+    POST_COLOR_MATRIX_ALPHA_SCALE_SGI	GetFloatv	R	1	pixel
+    POST_COLOR_MATRIX_RED_BIAS_SGI	GetFloatv	R	0	pixel
+    POST_COLOR_MATRIX_GREEN_BIAS_SGI	GetFloatv	R	0	pixel
+    POST_COLOR_MATRIX_BLUE_BIAS_SGI	GetFloatv	R	0	pixel
+    POST_COLOR_MATRIX_ALPHA_BIAS_SGI	GetFloatv	R	0	pixel
+
+New Implementation Dependent State
+
+								Minimum
+    Get Value				Get Command	Type	Value
+    ---------				-----------	----	-------
+    MAX_COLOR_MATRIX_STACK_DEPTH_SGI	GetIntegerv	Z+	2

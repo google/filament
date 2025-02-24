@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_summary.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-multi-event-summary-table'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    #table {
+      flex: 1 1 auto;
+      align-self: stretch;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table">
+    </tr-ui-b-table>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-event-summary-table',
+
+  ready() {
+    this.showTotals_ = false;
+    this.eventsHaveDuration_ = true;
+    this.eventsHaveSubRows_ = true;
+    this.eventsByTitle_ = undefined;
+  },
+
+  updateTableColumns_(rows, maxValues) {
+    let hasCpuData = false;
+    let hasAlerts = false;
+    rows.forEach(function(row) {
+      if (row.cpuDuration !== undefined) {
+        hasCpuData = true;
+      }
+      if (row.cpuSelfTime !== undefined) {
+        hasCpuData = true;
+      }
+      if (row.numAlerts) {
+        hasAlerts = true;
+      }
+    });
+
+    const ownerDocument = this.ownerDocument;
+
+    const columns = [];
+
+    columns.push({
+      title: 'Name',
+      value(row) {
+        if (row.title === 'Totals') return 'Totals';
+        const container = document.createElement('div');
+        const linkEl = document.createElement('tr-ui-a-analysis-link');
+        linkEl.setSelectionAndContent(function() {
+          return new tr.model.EventSet(row.events);
+        }, row.title);
+        container.appendChild(linkEl);
+
+        if (tr.isExported('tr-ui-e-chrome-codesearch')) {
+          const link = document.createElement('tr-ui-e-chrome-codesearch');
+          link.searchPhrase = row.title;
+          container.appendChild(link);
+        }
+        return container;
+      },
+      width: '350px',
+      cmp(rowA, rowB) {
+        return rowA.title.localeCompare(rowB.title);
+      }
+    });
+    if (this.eventsHaveDuration_) {
+      columns.push({
+        title: 'Wall Duration',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.duration, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            customContextRange: row.totalsRow ? undefined :
+              tr.b.math.Range.fromExplicitRange(0, maxValues.duration),
+            ownerDocument,
+          });
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          return rowA.duration - rowB.duration;
+        }
+      });
+    }
+
+    if (this.eventsHaveDuration_ && hasCpuData) {
+      columns.push({
+        title: 'CPU Duration',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.cpuDuration, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            customContextRange: row.totalsRow ? undefined :
+              tr.b.math.Range.fromExplicitRange(0, maxValues.cpuDuration),
+            ownerDocument,
+          });
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          return rowA.cpuDuration - rowB.cpuDuration;
+        }
+      });
+    }
+
+    if (this.eventsHaveSubRows_ && this.eventsHaveDuration_) {
+      columns.push({
+        title: 'Self time',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.selfTime, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            customContextRange: row.totalsRow ? undefined :
+              tr.b.math.Range.fromExplicitRange(0, maxValues.selfTime),
+            ownerDocument,
+          });
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          return rowA.selfTime - rowB.selfTime;
+        }
+      });
+    }
+
+    if (this.eventsHaveSubRows_ && this.eventsHaveDuration_ && hasCpuData) {
+      columns.push({
+        title: 'CPU Self Time',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.cpuSelfTime, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            customContextRange: row.totalsRow ? undefined :
+              tr.b.math.Range.fromExplicitRange(0, maxValues.cpuSelfTime),
+            ownerDocument,
+          });
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          return rowA.cpuSelfTime - rowB.cpuSelfTime;
+        }
+      });
+    }
+
+    if (this.eventsHaveDuration_) {
+      columns.push({
+        title: 'Average ' + (hasCpuData ? 'CPU' : 'Wall') + ' Duration',
+        value(row) {
+          const totalDuration = hasCpuData ? row.cpuDuration : row.duration;
+          return tr.v.ui.createScalarSpan(totalDuration / row.numEvents, {
+            unit: tr.b.Unit.byName.timeDurationInMs,
+            customContextRange: row.totalsRow ? undefined :
+              tr.b.math.Range.fromExplicitRange(0, maxValues.duration),
+            ownerDocument,
+          });
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          if (hasCpuData) {
+            return rowA.cpuDuration / rowA.numEvents -
+                rowB.cpuDuration / rowB.numEvents;
+          }
+          return rowA.duration / rowA.numEvents -
+              rowB.duration / rowB.numEvents;
+        }
+      });
+    }
+
+    columns.push({
+      title: 'Occurrences',
+      value(row) {
+        return row.numEvents;
+      },
+      width: '<upated further down>',
+      cmp(rowA, rowB) {
+        return rowA.numEvents - rowB.numEvents;
+      }
+    });
+
+    let alertsColumnIndex;
+    if (hasAlerts) {
+      columns.push({
+        title: 'Num Alerts',
+        value(row) {
+          return row.numAlerts;
+        },
+        width: '<upated further down>',
+        cmp(rowA, rowB) {
+          return rowA.numAlerts - rowB.numAlerts;
+        }
+      });
+      alertsColumnIndex = columns.length - 1;
+    }
+    let colWidthPercentage;
+    if (columns.length === 1) {
+      colWidthPercentage = '100%';
+    } else {
+      colWidthPercentage = (100 / (columns.length - 1)).toFixed(3) + '%';
+    }
+
+    for (let i = 1; i < columns.length; i++) {
+      columns[i].width = colWidthPercentage;
+    }
+
+    this.$.table.tableColumns = columns;
+
+    if (hasAlerts) {
+      this.$.table.sortColumnIndex = alertsColumnIndex;
+      this.$.table.sortDescending = true;
+    }
+  },
+
+  configure(config) {
+    if (config.eventsByTitle === undefined) {
+      throw new Error('Required: eventsByTitle');
+    }
+
+    if (config.showTotals !== undefined) {
+      this.showTotals_ = config.showTotals;
+    } else {
+      this.showTotals_ = true;
+    }
+
+    if (config.eventsHaveDuration !== undefined) {
+      this.eventsHaveDuration_ = config.eventsHaveDuration;
+    } else {
+      this.eventsHaveDuration_ = true;
+    }
+
+    if (config.eventsHaveSubRows !== undefined) {
+      this.eventsHaveSubRows_ = config.eventsHaveSubRows;
+    } else {
+      this.eventsHaveSubRows_ = true;
+    }
+
+    this.eventsByTitle_ = config.eventsByTitle;
+    this.updateContents_();
+  },
+
+  get showTotals() {
+    return this.showTotals_;
+  },
+
+  set showTotals(showTotals) {
+    this.showTotals_ = showTotals;
+    this.updateContents_();
+  },
+
+  get eventsHaveDuration() {
+    return this.eventsHaveDuration_;
+  },
+
+  set eventsHaveDuration(eventsHaveDuration) {
+    this.eventsHaveDuration_ = eventsHaveDuration;
+    this.updateContents_();
+  },
+
+  get eventsHaveSubRows() {
+    return this.eventsHaveSubRows_;
+  },
+
+  set eventsHaveSubRows(eventsHaveSubRows) {
+    this.eventsHaveSubRows_ = eventsHaveSubRows;
+    this.updateContents_();
+  },
+
+  get eventsByTitle() {
+    return this.eventsByTitle_;
+  },
+
+  set eventsByTitle(eventsByTitle) {
+    this.eventsByTitle_ = eventsByTitle;
+    this.updateContents_();
+  },
+
+  get selectionBounds() {
+    return this.selectionBounds_;
+  },
+
+  set selectionBounds(selectionBounds) {
+    this.selectionBounds_ = selectionBounds;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    let eventsByTitle;
+    if (this.eventsByTitle_ !== undefined) {
+      eventsByTitle = this.eventsByTitle_;
+    } else {
+      eventsByTitle = [];
+    }
+
+    const allEvents = new tr.model.EventSet();
+    const rows = [];
+    for (const [title, eventsOfSingleTitle] of Object.entries(eventsByTitle)) {
+      for (const event of eventsOfSingleTitle) allEvents.push(event);
+      const row = new tr.ui.analysis.MultiEventSummary(
+          title, eventsOfSingleTitle);
+      rows.push(row);
+    }
+
+    this.updateTableColumns_(rows);
+    this.$.table.tableRows = rows;
+
+    const maxValues = {
+      duration: undefined,
+      selfTime: undefined,
+      cpuSelfTime: undefined,
+      cpuDuration: undefined
+    };
+
+    if (this.eventsHaveDuration) {
+      for (const column in maxValues) {
+        maxValues[column] = tr.b.math.Statistics.max(rows, function(event) {
+          return event[column];
+        });
+      }
+    }
+
+    const footerRows = [];
+
+    if (this.showTotals_) {
+      const multiEventSummary = new tr.ui.analysis.MultiEventSummary(
+          'Totals', allEvents);
+      footerRows.push(multiEventSummary);
+    }
+
+
+    this.updateTableColumns_(rows, maxValues);
+    this.$.table.tableRows = rows;
+
+    // TODO(selection bounds).
+
+    // TODO(sorting)
+
+    this.$.table.footerRows = footerRows;
+    this.$.table.rebuild();
+  }
+});
+</script>

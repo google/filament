@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains implementations of the following metrics.
+ *
+ * queueing_durations
+ * ==================
+ * This quantifies how out of sync the compositor and renderer threads are. It
+ * is the amount of wall time that elapses between a
+ * ScheduledActionSendBeginMainFrame event in the compositor thread and the
+ * corresponding BeginMainFrame event in the main thread.
+ *
+ * For OOPIF they might send a BeginMainFrame with the same ID, in those cases
+ * the earliest slice's time is used.
+ */
+tr.exportTo('tr.metrics.rendering', function() {
+  // Various tracing events.
+  const BEGIN_MAIN_FRAME_EVENT = 'ProxyMain::BeginMainFrame';
+  const SEND_BEGIN_FRAME_EVENT =
+      'ProxyImpl::ScheduledActionSendBeginMainFrame';
+
+  function getEventTimesByBeginFrameId_(thread, title, ranges) {
+    const out = new Map();
+    const slices = thread.sliceGroup;
+    for (const slice of slices.getDescendantEventsInSortedRanges(ranges)) {
+      if (slice.title !== title) continue;
+      const id = slice.args.begin_frame_id;
+      if (id === undefined) throw new Error('Event is missing begin_frame_id');
+      // If we've already seen an even with this name, we only track the first.
+      // Multiple ProxyMain::BeginMainFrames can occur when OOPIF share the
+      // same origin and get routed to the same RendererMain.
+      if (out.has(id) && out[id] <= slice.start) {
+          continue;
+      }
+      out.set(id, slice.start);
+    }
+    return out;
+  }
+
+  function addQueueingDurationHistograms(histograms, model, segments) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!chromeHelper) return;
+
+    let targetRenderers = chromeHelper.telemetryHelper.renderersWithIR;
+    if (targetRenderers.length === 0) {
+      targetRenderers = Object.values(chromeHelper.rendererHelpers);
+    }
+    const queueingDurations = [];
+    const ranges = segments.map(s => s.boundsRange);
+    for (const rendererHelper of targetRenderers) {
+      const mainThread = rendererHelper.mainThread;
+      const compositorThread = rendererHelper.compositorThread;
+      if (mainThread === undefined || compositorThread === undefined) continue;
+
+      const beginMainFrameTimes = getEventTimesByBeginFrameId_(
+          mainThread, BEGIN_MAIN_FRAME_EVENT, ranges);
+      const sendBeginFrameTimes = getEventTimesByBeginFrameId_(
+          compositorThread, SEND_BEGIN_FRAME_EVENT, ranges);
+      for (const [id, time] of sendBeginFrameTimes) {
+        queueingDurations.push(beginMainFrameTimes.get(id) - time);
+      }
+    }
+
+    histograms.createHistogram(
+        'queueing_durations',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, queueingDurations, {
+          binBoundaries:
+            tr.v.HistogramBinBoundaries.createExponential(0.01, 2, 20),
+          summaryOptions: tr.metrics.rendering.SUMMARY_OPTIONS,
+          description: 'Time between ScheduledActionSendBeginMainFrame in ' +
+                       'the compositor thread and the corresponding ' +
+                       'BeginMainFrame in the main thread.'
+        });
+  }
+
+  return {
+    addQueueingDurationHistograms,
+  };
+});
+</script>

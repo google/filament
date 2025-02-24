@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import"
+    href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/loading_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('timeToFirstPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'rail,loading,devtools.timeline',
+        title: 'firstPaint',
+        start: 1001,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(801, hist.running.mean);
+  });
+
+
+  test('timeToFirstContentfulPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 200,
+        duration: 100,
+        cpuStart: 210,
+        cpuDuration: 25,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(800, hist.running.mean);
+  });
+
+  test('timeToLargestImagePaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestImagePaint::Candidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 1 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestImagePaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(800, hist.running.mean);
+  });
+
+  // If the loading candidate is the last candidate, block reporting any value.
+  test('timeToLargestImagePaint_filterLoadingCandidate', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestImagePaint::Candidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 1 }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestImagePaint::NoCandidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 2 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestImagePaint');
+    assert.strictEqual(0, hist.sampleValues.length);
+  });
+
+  // If the loading candidate is the last candidate, block reporting any value.
+  test('timeToLargestTextPaint_filterLoadingCandidate', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 1 }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::NoCandidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 2 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestTextPaint');
+    assert.strictEqual(0, hist.sampleValues.length);
+  });
+
+  test('timeToLargestTextPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 1 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestTextPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(800, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(100, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_NoMultipleReporting', function() {
+    // Test that we do not report the same sample value multiple times if there
+    // is more than one renderer.
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 400,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+                  inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+
+      const rendererProcess1 = model.rendererProcess;
+      const mainThread1 = model.rendererMain;
+      addNavigationStart_(mainThread1, 50,
+          { isOutermostMainFrame: true, isLoadingMainFrame: true,
+            documentLoaderURL: 'http://example.com'});
+
+      const rendererProcess2 = model.getOrCreateProcess(10);
+      const mainThread2 = rendererProcess2.getOrCreateThread(10);
+      mainThread2.name = 'CrRendererMain';
+
+      addNavigationStart_(mainThread2, 100,
+          { isOutermostMainFrame: true, isLoadingMainFrame: true,
+            documentLoaderURL: 'http://example.com'});
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(100, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_LastCandidate', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 200, type: 'image', size: 2000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(200, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_CandidatesOutOfOrder', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 2000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 200, type: 'image', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(100, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_AggregateSubframe', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 200, type: 'image', size: 2000,
+            inMainFrame: false },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(200, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_GroupByNavigation', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 1,
+        }
+      }));
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 200, type: 'image', size: 2000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 2,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(2, hist.running.count);
+    assert.strictEqual(150, hist.running.mean);
+  });
+
+  test('timeToLargestContentfulPaint_Invalidate', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const browerMain = model.browserMain;
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_CANDIDATE_EVENT_TITLE,
+        start: 200,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+      browerMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: tr.e.chrome.LCP_INVALIDATE_EVENT_TITLE,
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: { durationInMilliseconds: 100, type: 'text', size: 1000,
+            inMainFrame: true },
+          main_frame_tree_node_id: 12345,
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestContentfulPaint');
+    assert.strictEqual(0, hist.numValues);
+  });
+
+  test('FCPPlusPlus_lastCandidateIsFinal', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1200,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 1 }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1100,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 3 }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1000,
+        duration: 0.0,
+        args: {
+          frame: '0xdeadbeef',
+          data: { candidateIndex: 2 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestTextPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(900, hist.running.mean);
+  });
+
+  test('FCPPlusPlus_eachCandidatePerNavigation', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: 'firstframeid'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: 'firstframeid'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 1200,
+        duration: 0.0,
+        args: {
+          frame: 'firstframeid',
+          data: { candidateIndex: 1 }}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 2000,
+        duration: 0.0,
+        args: {frame: 'secondframeid'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 2300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: 'secondframeid'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'LargestTextPaint::Candidate',
+        start: 3200,
+        duration: 0.0,
+        args: {
+          frame: 'secondframeid',
+          data: { candidateIndex: 1 }}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('largestTextPaint');
+    assert.strictEqual(2, hist.running.count);
+    // avg([1000, 1200])
+    assert.strictEqual(1100, hist.running.mean);
+  });
+
+  test('aboveTheFoldLoadedToVisibleHistogram', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'pc',
+        start: 1200,
+        duration: 0.0,
+        args: {data: {navigationId: '0xsecondnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'pc',
+        start: 1300,
+        duration: 0.0,
+        args: {data: {navigationId: '0xsecondnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'visible',
+        start: 300,
+        duration: 0.0,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('aboveTheFoldLoadedToVisible');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(1000, hist.running.mean);
+  });
+
+
+  test('timeToFirstViewportReady', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'pc',
+        start: 1300,
+        duration: 0.0,
+        args: {data: {navigationId: '0xsecondnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 300,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef', data: {navigationId: '0xfirstnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 400,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef', data: {navigationId: '0xsecondnav'}}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstViewportReady');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(900, hist.running.mean);
+  });
+
+
+  test('timeToFirstContentfulPaintIgnoringWarmCache', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      // warm cache navigation
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSliceEx({
+        cat: 'blink.console',
+        title: 'telemetry.internal.warm_cache.warm.start',
+        start: 250,
+        duration: 0.0
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSliceEx({
+        cat: 'blink.console',
+        title: 'telemetry.internal.warm_cache.warm.end',
+        start: 1250,
+        duration: 0.0
+      }));
+
+      // measurement navigation
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 2000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 2100,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 2400,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(400, hist.running.mean);
+  });
+
+  test('timeToFirstContentfulPaintInCpuTime', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 200,
+        duration: 100,
+        cpuStart: 210,
+        cpuDuration: 25,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('cpuTimeToFirstContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(25, hist.running.mean);
+    assert.strictEqual(tr.b.getOnlyElement(hist.getBinForValue(
+        25).diagnosticMaps).get('breakdown').get('resource_loading'), 25);
+  });
+
+  test('timeToFirstContentfulPaintWithNavId', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef', data: {navigationId: '0xfirstnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 400,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef', data: {navigationId: '0xsecondnav'}}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef', data: {navigationId: '0xfirstnav'}}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 200,
+        duration: 100,
+        cpuStart: 210,
+        cpuDuration: 25,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstContentfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(800, hist.running.mean);
+  });
+
+  test('timeToFirstMeaningfulPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 600,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('timeToFirstMeaningfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(800, hist.running.mean);
+  });
+
+  //             [-------CPU: 300-----------]
+  //             |  [---CPU: 100---]        |
+  //             |  |              |        |
+  //             v  v              v        v
+  // Ts:        100 200   Start   300      500     600
+  //                |                               |
+  //              Start                            FMP
+  test('cpuTimeToFirstMeaningfulPaint_withEmbeddedSlices', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 1160,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 600,
+        duration: 0.0,
+        cpuStart: 1480,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 100,
+        duration: 400,
+        cpuStart: 1000,
+        cpuDuration: 300,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 200,
+        duration: 100,
+        cpuStart: 1150,
+        cpuDuration: 100,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('cpuTimeToFirstMeaningfulPaint');
+    assert.deepEqual(hist.sampleValues, [225]);
+    const histBin = hist.getBinForValue(225);
+    assert.closeTo(histBin.diagnosticMaps[0]
+        .get('breakdown').get('other'), 400 / 3, 0.1);
+    assert.strictEqual(histBin.diagnosticMaps[0]
+        .get('breakdown').get('resource_loading'), 100);
+  });
+
+  //             [-------------]        [------------------]
+  //             |             |        |                  |
+  //             v             v        v                  v
+  // Ts:        100   Start   300      500        FMP     700
+  //                   |                           |
+  //                  200                         600
+  test('cpuTimeToFirstMeaningfulPaint_withIntersectingBoundary', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 1160,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 600,
+        duration: 0.0,
+        cpuStart: 1280,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 100,
+        duration: 200,
+        cpuStart: 1060,
+        cpuDuration: 180,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 500,
+        duration: 200,
+        cpuStart: 1250,
+        cpuDuration: 100,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('cpuTimeToFirstMeaningfulPaint');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(140, hist.running.mean);
+  });
+
+  // Render 1:
+  //
+  //                       [--------]
+  //                       |        |
+  //                       v        v
+  // CPU Time:     Start  1180      1230        FMP
+  //                |                            |
+  //               1160                         1280
+  //
+  // Render 2:
+  //
+  //                        [-------------]
+  //                        |             |
+  //                        v             v
+  // CPU Time:     Start   1170          1270   FMP
+  //                |                            |
+  //               1160                         1280
+  test('cpuTimeToFirstMeaningfulPaint_multipleRenderers', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess1 = model.rendererProcess;
+      let mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 1160,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess1.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 600,
+        duration: 0.0,
+        cpuStart: 1280,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loader',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 300,
+        duration: 200,
+        cpuStart: 1180,
+        cpuDuration: 50
+      }));
+
+      const rendererProcess2 = model.getOrCreateProcess(10);
+      mainThread = rendererProcess2.getOrCreateThread(20);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 1160,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess2.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 600,
+        duration: 0.0,
+        cpuStart: 1280,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 300,
+        duration: 200,
+        cpuStart: 1170,
+        cpuDuration: 100,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('cpuTimeToFirstMeaningfulPaint');
+    assert.deepEqual(hist.sampleValues, [50, 100]);
+    const histBin1 = hist.getBinForValue(50);
+    assert.strictEqual(histBin1.diagnosticMaps[0]
+        .get('breakdown').get('resource_loading'), 50);
+    const histBin2 = hist.getBinForValue(100);
+    assert.strictEqual(histBin2.diagnosticMaps[0]
+        .get('breakdown').get('other'), 100);
+  });
+
+  function addFrameLoaderObject_(rendererProcess, timestamp) {
+    rendererProcess.objects.addSnapshot(
+        'ptr', 'loading', 'FrameLoader', timestamp, {
+          isOutermostMainFrame: true,
+          isLoadingMainFrame: true, frame: {id_ref: '0xdeadbeef'},
+          documentLoaderURL: 'http://example.com',
+        });
+  }
+
+  function addNavigationStart_(rendererMain, timestamp, opt_data) {
+    rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink.user_timing',
+      title: 'navigationStart',
+      start: timestamp,
+      duration: 0.0,
+      args: {frame: '0xdeadbeef', data: opt_data}
+    }));
+  }
+
+  // Some utility functions to make tests easier to read.
+  function addFirstMeaningfulPaint_(rendererMain, timestamp) {
+    rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'loading',
+      title: 'firstMeaningfulPaintCandidate',
+      start: timestamp,
+      duration: 0.0,
+      args: {frame: '0xdeadbeef'}
+    }));
+  }
+
+  function addFirstContentfulPaint_(rendererMain, timestamp) {
+    rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'loading',
+      title: 'firstContentfulPaint',
+      start: timestamp,
+      duration: 0.0,
+      args: {frame: '0xdeadbeef'}
+    }));
+  }
+
+  function addDomContentLoadedEnd_(rendererMain, timestamp) {
+    rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink.user_timing',
+      title: 'domContentLoadedEventEnd',
+      start: timestamp,
+      duration: 0.0,
+      args: {frame: '0xdeadbeef'}
+    }));
+  }
+
+  function addTopLevelTask_(rendererMain, start, duration) {
+    rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'toplevel',
+      title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+      start,
+      duration,
+    }));
+  }
+
+  function addNetworkRequest_(rendererMain, start, duration) {
+    const networkEvents = [];
+    rendererMain.asyncSliceGroup.push(tr.c.TestUtils.newSliceEx({
+      cat: 'disabled-by-default-network',
+      title: 'ResourceLoad',
+      start,
+      duration,
+    }));
+  }
+
+  test('loadExpectationMetrics_urlDirectlyFromNavStartEvent', function() {
+    // If the navigation start event contains the URL, we should not require a
+    // FrameLoader snapshot before the event. See https://crbug.com/824761.
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200,
+          { isOutermostMainFrame: true, isLoadingMainFrame: true,
+            documentLoaderURL: 'http://example.com'});
+      addNetworkRequest_(mainThread, 200, 250);
+      // FrameLoader creation time after navigation start.
+      rendererProcess.objects.idWasCreated(
+          'ptr', 'loading', 'FrameLoader', 250);
+      rendererProcess.objects.addSnapshot(
+          'ptr', 'loading', 'FrameLoader', 300, {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true, frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com',
+          });
+
+      addFirstContentfulPaint_(mainThread, 500);
+      addFirstMeaningfulPaint_(mainThread, 510);
+      addDomContentLoadedEnd_(mainThread, 600);
+
+      // New navigation to close the search window.
+      addNavigationStart_(mainThread, 7000,
+          { isOutermostMainFrame: true, isLoadingMainFrame: true,
+            documentLoaderURL: 'http://example.com'});
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const fmpHist = histograms.getHistogramNamed('timeToFirstMeaningfulPaint');
+    assert.strictEqual(1, fmpHist.running.count);
+    assert.strictEqual(310, fmpHist.running.mean);
+    // Both TTI and First CPU Idle firing at DCL.
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    assert.strictEqual(400, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    assert.strictEqual(400, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_notAffectedByShortTasks', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 250);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addFirstContentfulPaint_(mainThread, 500);
+      addDomContentLoadedEnd_(mainThread, 600);
+
+      const mainThreadTopLevelTasks = [
+        {start: 800, duration: 100},   // Long task
+        {start: 1500, duration: 200},  // Last long task. TTI at 1700.
+        {start: 2000, duration: 49},   // Short task.
+      ];
+      for (const task of mainThreadTopLevelTasks) {
+        addTopLevelTask_(mainThread, task.start, task.duration);
+      }
+
+      // New navigation to close the search window.
+      addNavigationStart_(mainThread, 7000);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 1700 - 200 (navStart) = 1500.
+    assert.strictEqual(1500, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 1700 - 200 (navStart) = 1500.
+    assert.strictEqual(1500, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_longTaskBeforeFCP', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addTopLevelTask_(mainThread, 600, 200);
+      addFirstContentfulPaint_(mainThread, 1000);  // TTI at FMP.
+      // New navigation to close the search window.
+      addNavigationStart_(mainThread, 7000);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 1000 - 200 (navStart) = 800.
+    assert.strictEqual(800, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 1000 - 200 (navStart) = 800.
+    assert.strictEqual(800, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_interactiveAtDCL', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addDomContentLoadedEnd_(mainThread, 3000);
+      // New navigation to close the search window.
+      addNavigationStart_(mainThread, 7000);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 3000 - 200 (navStart) = 2800.
+    assert.strictEqual(2800, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 3000 - 200 (navStart) = 2800.
+    assert.strictEqual(2800, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_networkBusyBlocksInteractivity', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addDomContentLoadedEnd_(mainThread, 1100);
+      // Network busy requires at least three network requests.
+      addNetworkRequest_(mainThread, 1000, 7000);
+      addNetworkRequest_(mainThread, 1001, 7001);
+      addNetworkRequest_(mainThread, 1002, 7002);
+      // 400ms task makes a "heavy task cluster" for  idle.
+      addTopLevelTask_(mainThread, 1200, 400);
+      // Next long task is more than five seconds away, but TTI is not reached
+      // yet since network is busy. TTI is at the at of this task.
+      addTopLevelTask_(mainThread, 6800, 200);
+      // New navigation to close the search window.
+      addNavigationStart_(mainThread, 13000);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 7000 - 200 (navStart) = 6800.
+    assert.strictEqual(6800, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 1600 - 200 (navStart) = 1400. CPU Idle is not affected by network.
+    assert.strictEqual(1400, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_notReportedIfTracingEndsEarly', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);
+      // Last task in the model. 2501 will be considered end of tracing.
+      addTopLevelTask_(mainThread, 2500, 1);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(0, ttiHist.numValues);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(0, firstCpuIdleHist.numValues);
+  });
+
+  test('interactivityMetrics_notReportedIfNextNavigationIsEarly', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);
+      // New navigation to close the search window. The window is not big enough
+      // to reach TTI.
+      addNavigationStart_(mainThread, 3000);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(0, ttiHist.numValues);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(0, firstCpuIdleHist.numValues);
+  });
+
+  test('interactivityMetrics_reportsValueForLastNavigation', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);
+      // Last task in the model. 8001 will be considered end of tracing, so
+      // there is sufficiently large window to detect TTI.
+      addTopLevelTask_(mainThread, 8000, 1);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 2400 - 200 (navStart) = 2200.
+    assert.strictEqual(2200, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 2400 - 200 (navStart) = 2200.
+    assert.strictEqual(2200, firstCpuIdleHist.running.mean);
+  });
+
+  test('interactivityMetrics_multipleRenderers', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const renderers =
+          [model.getOrCreateProcess(1984), model.getOrCreateProcess(1985)];
+
+      for (const i of [0, 1]) {
+        const rendererProcess = renderers[i];
+        const mainThread = rendererProcess.getOrCreateThread(2);
+        mainThread.name = 'CrRendererMain';
+        addNavigationStart_(mainThread, 200);
+        addNetworkRequest_(mainThread, 200, 50);
+        addFrameLoaderObject_(rendererProcess, 300);
+        addDomContentLoadedEnd_(mainThread, 600);
+        addFirstContentfulPaint_(mainThread, 1000);
+        // Durations are 400 and 800 for i value of 0 an 1.
+        addTopLevelTask_(mainThread, 2000, (i + 1) * 400);
+        // New navigation to close the search window.
+        addNavigationStart_(mainThread, 10000);
+      }
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(2, ttiHist.running.count);
+    // 2800 - 200 (navStart) = 2200, and 2400 - 200 = 2200.
+    assert.strictEqual(2600, ttiHist.running.max);
+    assert.strictEqual(2200, ttiHist.running.min);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(2, firstCpuIdleHist.running.count);
+    // 2800 - 200 (navStart) = 2200, and 2400 - 200 = 2200.
+    assert.strictEqual(2600, firstCpuIdleHist.running.max);
+    assert.strictEqual(2200, firstCpuIdleHist.running.min);
+  });
+
+  test('interactivityMetrics_eventsFromMultipleFrame', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addNetworkRequest_(mainThread, 200, 50);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addFirstContentfulPaint_(mainThread, 1000);
+      // No long task. TTI is reached at 3000.
+      addDomContentLoadedEnd_(mainThread, 3000);
+
+      // DomContentLoadedEnd and NavigationStart for a different frame.
+      rendererProcess.objects.addSnapshot(
+          'ptr', 'loading', 'FrameLoader', 4000, {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true, frame: {id_ref: '0xffffffff'},
+            documentLoaderURL: 'http://example.com'
+          });
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 4000,
+        duration: 0.0,
+        args: {frame: '0xffffffff'},
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'domContentLoadedEventEnd',
+        start: 4500,
+        duration: 0.0,
+        args: {frame: '0xffffffff'}
+      }));
+
+      // Last task in the model. 8001 will be considered end of tracing, so
+      // there is sufficiently large window to detect TTI.
+      addTopLevelTask_(mainThread, 8000, 1);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(1, ttiHist.running.count);
+    // 3000 - 200 (navStart) = 2800.
+    assert.strictEqual(2800, ttiHist.running.mean);
+    const firstCpuIdleHist = histograms.getHistogramNamed('timeToFirstCpuIdle');
+    assert.strictEqual(1, firstCpuIdleHist.running.count);
+    // 3000 - 200 (navStart) = 2800.
+    assert.strictEqual(2800, firstCpuIdleHist.running.mean);
+  });
+
+  test('timeToInteractive_notReportedWithoutResourceLoadEvents', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);
+      // Last task in the model. 8001 will be considered end of tracing, so
+      // there is sufficiently large window to detect TTI.
+      addTopLevelTask_(mainThread, 8000, 1);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const ttiHist = histograms.getHistogramNamed('timeToInteractive');
+    assert.strictEqual(0, ttiHist.numValues);
+  });
+
+
+  test('webView', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const process = model.rendererProcess;
+      const rendererThread = model.rendererMain;
+      rendererThread.name = 'Chrome_InProcRendererThread';
+      rendererThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      process.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      rendererThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading,rail,devtools.timeline',
+        title: 'firstContentfulPaint',
+        start: 600,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstMeaningfulPaintCandidate',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const fcp = histograms.getHistogramNamed('timeToFirstContentfulPaint');
+    assert.strictEqual(1, fcp.running.count);
+    assert.strictEqual(400, fcp.running.mean);
+    const fmp = histograms.getHistogramNamed('timeToFirstMeaningfulPaint');
+    assert.strictEqual(1, fmp.running.count);
+    assert.strictEqual(800, fmp.running.mean);
+  });
+
+  test('testGetNetworkEvents', function() {
+    // Our renderer looks like:
+    //      [  irrelevant syncEvent    ]
+    //      [  irrelevant asyncEvent   ]
+    //      |                          [ d..netlog]
+    //      [ netlog ]  [ d..network]  [    net   ]
+    //      |        |  |           |  |          |
+    //      |        |  |           |  |          |
+    //      |        |  |           |  |          |
+    //      v        v  v           v  v          v
+    // Ts: 100      200 400        450 510       520
+    const rendererPid = 245;
+    const netEvent1 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'netlog',
+      title: 'Generic Network event',
+      start: 100,
+      duration: 100,
+    });
+    const netEvent2 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'disabled-by-default-network',
+      title: 'ResourceLoad',
+      start: 400,
+      duration: 50,
+    });
+    const netEvent3 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'net',
+      title: 'ResourceLoad',
+      start: 510,
+      duration: 10,
+    });
+    const netEvent4 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'disabled-by-default-netlog',
+      title: 'ResourceLoad',
+      start: 510,
+      duration: 10,
+    });
+    const irrelevantAsyncEvent = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'irrelevant',
+      title: 'ResourceLoad',
+      start: 0,
+      duration: 510,
+    });
+    const irrelevantSyncEvent = tr.c.TestUtils.newSliceEx({
+      cat: 'blink.user_timing',
+      title: 'navigationStart',
+      start: 0,
+      duration: 510,
+      args: {frame: '0xdeadbeef'}
+    });
+
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const rendererProcess = model.getOrCreateProcess(rendererPid);
+      const thread1 = rendererProcess.getOrCreateThread(1);
+      thread1.name = 'CrRendererMain';
+      thread1.asyncSliceGroup.push(netEvent1);
+      const thread2 = rendererProcess.getOrCreateThread(2);
+      thread2.name = 'thread2';
+      thread2.asyncSliceGroup.push(netEvent2);
+      const thread3 = rendererProcess.getOrCreateThread(3);
+      thread3.name = 'thread2';
+      thread3.asyncSliceGroup.push(netEvent3);
+      const thread4 = rendererProcess.getOrCreateThread(4);
+      thread4.name = 'thread2';
+      thread4.asyncSliceGroup.push(netEvent4);
+      const thread5 = rendererProcess.getOrCreateThread(5);
+      thread5.name = 'thread5';
+      thread5.asyncSliceGroup.push(irrelevantAsyncEvent);
+      const thread6 = rendererProcess.getOrCreateThread(6);
+      thread6.name = 'thread6';
+      thread6.sliceGroup.pushSlice(irrelevantSyncEvent);
+    });
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelper = chromeHelper.rendererHelpers[rendererPid];
+    const allNetworkEvents =
+        tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+            rendererHelper.process, tr.b.math.Range.fromExplicitRange(0, 550));
+    assert.sameDeepMembers(
+        [netEvent1, netEvent2, netEvent3, netEvent4],
+        allNetworkEvents);
+
+    const partialNetworkEvents =
+        tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+            rendererHelper.process, tr.b.math.Range.fromExplicitRange(0, 460));
+    assert.strictEqual(2, partialNetworkEvents.length);
+    assert.sameDeepMembers(
+        [netEvent1, netEvent2],
+        partialNetworkEvents);
+
+    const networkEventsWithIntersecting =
+        tr.e.chrome.EventFinderUtils.getNetworkEventsInRange(
+            rendererHelper.process, tr.b.math.Range.fromExplicitRange(0, 410));
+    assert.sameDeepMembers(
+        [netEvent1, netEvent2],
+        partialNetworkEvents);
+  });
+
+  test('noLayoutShiftEventMeansZeroCLS', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 10,
+        duration: 510,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const mainHist =
+        histograms.getHistogramNamed('mainFrameCumulativeLayoutShift');
+    assert.strictEqual(1, mainHist.sampleValues.length);
+    assert.strictEqual(1, mainHist.running.count);
+    assert.strictEqual(0, mainHist.running.mean);
+    const overallHist =
+        histograms.getHistogramNamed('overallCumulativeLayoutShift');
+    assert.strictEqual(1, overallHist.sampleValues.length);
+    assert.strictEqual(1, overallHist.running.count);
+    assert.strictEqual(0, overallHist.running.mean);
+  });
+
+  test('mainFrameCumulativeLayoutShift', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      const mainFrame = {id: '0xdeadbeef', is_main: true};
+      const subframe = {id: '0xdeadb33f', is_main: false};
+      const emitEvent = (time, cumulativeScore, frame) => {
+        const data = {
+          is_main_frame: frame.is_main,
+          cumulative_score: cumulativeScore
+        };
+        mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+          cat: 'loading',
+          title: 'LayoutShift',
+          start: time,
+          duration: 0.0,
+          args: {frame: frame.id, data}
+        }));
+      };
+      emitEvent(1000, 1.5, mainFrame);
+      emitEvent(3000, 3.5, mainFrame);
+      emitEvent(2000, 3.0, mainFrame);
+      emitEvent(4000, 4.0, subframe);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('mainFrameCumulativeLayoutShift');
+    assert.strictEqual(1, hist.sampleValues.length);
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(3.5, hist.running.mean);
+  });
+
+  test('overallCumulativeLayoutShift', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      const mainFrame = {id: '0xdeadbeef', is_main: true};
+      const subframe = {id: '0xdeadb33f', is_main: false};
+      const emitEvent = (thread, time, score, weightedScore, frame) => {
+        const data = {
+          is_main_frame: frame.is_main,
+          score,
+          weighted_score_delta: weightedScore
+        };
+        thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+          cat: 'loading',
+          title: 'LayoutShift',
+          start: time,
+          duration: 0.0,
+          args: {frame: frame.id, data}
+        }));
+      };
+      emitEvent(mainThread, 1000, 1.5, 1000, mainFrame);
+      emitEvent(mainThread, 3000, 3.5, 1000, mainFrame);
+      emitEvent(mainThread, 2000, 3.0, 1000, mainFrame);
+      emitEvent(mainThread, 4000, 4000, 4.0, subframe);
+      const rendererProcess2 = model.getOrCreateProcess(10);
+      const mainThread2 = rendererProcess2.getOrCreateThread(20);
+      mainThread2.name = 'CrRendererMain';
+      const subframe2 = { id: '0xdeadb33f', is_main: false };
+      emitEvent(mainThread2, 2500, 1000, 2.0, subframe2);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('overallCumulativeLayoutShift');
+    assert.strictEqual(1, hist.sampleValues.length);
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(14, hist.running.mean);
+  });
+
+  test('speedIndexIsAddedToHistograms', function() {
+    // The speed index code is fully tested in
+    // rects_based_speed_index_metric_test.
+    // Here, just verify a histogram is added in the loading metric.
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addDomContentLoadedEnd_(mainThread, 600);
+      addFirstMeaningfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('rectsBasedSpeedIndex');
+    assert.isNotNull(hist);
+  });
+
+  test('totalBlockingTime_looksAtCorrectInterval', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addNetworkRequest_(mainThread, 200, 100);
+      addDomContentLoadedEnd_(mainThread, 600);
+
+      // Contributes 0 since it's before FCP.
+      addTopLevelTask_(mainThread, 800, 100);
+      addFirstContentfulPaint_(mainThread, 1000);
+      addTopLevelTask_(mainThread, 2000, 400);  // Contributes 350.
+      addTopLevelTask_(mainThread, 2500, 300);  // Contributes 250.
+
+      // Contributes 0 since it's after TTI. TTI at 2800.
+      addTopLevelTask_(mainThread, 10000, 300);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('totalBlockingTime');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(600, hist.running.mean);
+  });
+
+  test('totalBlockingTime_performsProperClipping', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      addNavigationStart_(mainThread, 200);
+      addFrameLoaderObject_(rendererProcess, 300);
+      addNetworkRequest_(mainThread, 200, 100);
+
+      // Contributes 150 since only 250ms is after FCP.
+      addTopLevelTask_(mainThread, 800, 400);
+      addFirstContentfulPaint_(mainThread, 1000);
+      // Task straddles DCL, but contributes 0 since duration < 50ms.
+      addTopLevelTask_(mainThread, 1980, 49);
+      addDomContentLoadedEnd_(mainThread, 2000);  // TTI fires at DCL: 2000ms.
+
+      // Sufficiently far task to trigger TTI.
+      addTopLevelTask_(mainThread, 10000, 0);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.loadingMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('totalBlockingTime');
+    assert.strictEqual(1, hist.running.count);
+    assert.strictEqual(150, hist.running.mean);
+  });
+});
+</script>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+<link rel="import" href="/tracing/value/diagnostics/event_ref.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  /**
+   * @typedef {!(tr.v.d.EventRef|tr.model.Event)} EventLike
+   */
+
+  /**
+   * A RelatedEventSet diagnostic contains references to Events
+   */
+  class RelatedEventSet extends tr.v.d.Diagnostic {
+    /**
+     * @param {!(tr.model.EventSet|Array.<EventLike>|EventLike)=} opt_events
+     */
+    constructor(opt_events) {
+      super();
+      this.eventsByStableId_ = new Map();
+      // TODO(#2431) Plumb canonicalUrl from event.model.
+      this.canonicalUrl_ = undefined;
+
+      if (opt_events) {
+        if (opt_events instanceof tr.model.EventSet ||
+            opt_events instanceof Array) {
+          for (const event of opt_events) {
+            this.add(event);
+          }
+        } else {
+          this.add(opt_events);
+        }
+      }
+    }
+
+    clone() {
+      const clone = new tr.v.d.CollectedRelatedEventSet();
+      clone.addDiagnostic(this);
+      return clone;
+    }
+
+    equals(other) {
+      if (this.length !== other.length) return false;
+      for (const event of this) {
+        if (!other.has(event)) return false;
+      }
+      return true;
+    }
+
+    /**
+     * @param {!(tr.v.d.EventRef|tr.model.Event)} event
+     */
+    add(event) {
+      this.eventsByStableId_.set(event.stableId, event);
+    }
+
+    /**
+     * @param {!(tr.v.d.EventRef|tr.model.Event)} event
+     * @return {boolean}
+     */
+    has(event) {
+      return this.eventsByStableId_.has(event.stableId);
+    }
+
+    get length() {
+      return this.eventsByStableId_.size;
+    }
+
+    * [Symbol.iterator]() {
+      for (const event of this.eventsByStableId_.values()) {
+        yield event;
+      }
+    }
+
+    get canonicalUrl() {
+      return this.canonicalUrl_;
+    }
+
+    /**
+     * Resolve all EventRefs into Events by finding their stableIds in |model|.
+     * If a stableId cannot be found and |opt_required| is true, then throw an
+     * Error.
+     * If a stableId cannot be found and |opt_required| is false, then the
+     * EventRef will remain an EventRef.
+     *
+     * @param {!tr.model.Model} model
+     * @param {boolean=} opt_required
+     */
+    resolve(model, opt_required) {
+      for (const [stableId, value] of this.eventsByStableId_) {
+        if (!(value instanceof tr.v.d.EventRef)) continue;
+
+        const event = model.getEventByStableId(stableId);
+        if (event instanceof tr.model.Event) {
+          this.eventsByStableId_.set(stableId, event);
+        } else if (opt_required) {
+          throw new Error('Unable to find Event ' + stableId);
+        }
+      }
+    }
+
+    serialize(serializer) {
+      return [...this].map(event => [
+        event.stableId,
+        serializer.getOrAllocateId(event.title),
+        event.start,
+        event.duration,
+      ]);
+    }
+
+    asDictInto_(d) {
+      d.events = [];
+      for (const event of this) {
+        d.events.push({
+          stableId: event.stableId,
+          title: event.title,
+          start: tr.b.Unit.byName.timeStampInMs.truncate(event.start),
+          duration: tr.b.Unit.byName.timeDurationInMs.truncate(event.duration),
+        });
+      }
+    }
+
+    static deserialize(data, deserializer) {
+      return new RelatedEventSet(data.map(event => new tr.v.d.EventRef({
+        stableId: event[0],
+        title: deserializer.getObject(event[1]),
+        start: event[2],
+        duration: event[3],
+      })));
+    }
+
+    static fromDict(d) {
+      return new RelatedEventSet(d.events.map(
+          event => new tr.v.d.EventRef(event)));
+    }
+  }
+
+  tr.v.d.Diagnostic.register(RelatedEventSet, {
+    elementName: 'tr-v-ui-related-event-set-span'
+  });
+
+  return {
+    RelatedEventSet,
+  };
+});
+</script>

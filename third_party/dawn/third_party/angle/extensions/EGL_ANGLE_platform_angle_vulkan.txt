@@ -1,0 +1,86 @@
+Name
+
+    ANGLE_platform_angle_vulkan
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_vulkan
+
+Contributors
+
+    Jamie Madill, Google
+
+Contacts
+
+    Jamie Madill, Google (jmadill 'at' google 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, 2017-07-19
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of Vulkan display types.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE               0x3450
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that is backed by a Vulkan driver, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE.
+
+    If EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE and
+    EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE are not specified, the
+    implementation will decide which version of Vulkan to instantiate. If they
+    are specified, it will choose a version that is lower or equal to the
+    specified major and minor versions. The only current values accepted for
+    major and minor version are 1 for major and 0 for minor.
+
+Issues
+
+    1) Should ANGLE always instantiate the highest available version of Vulkan?
+
+       RESOLVED: It's possible that in a future implementation of Vulkan there
+       may be driver issues present only on some version of Vulkan, and there's
+       no explicit guarantee higher versions will be more stable. Hence, we should
+       give ANGLE some flexiblity in this regard and leave this unspecified.
+
+Revision History
+
+    Version 1, 2016-11-17 (Jamie Madill)
+      - Initial draft
+    Version 2, 2017-07-19 (Jamie Madill)
+      - Moved debug layer control to EGL_ANGLE_platform_angle

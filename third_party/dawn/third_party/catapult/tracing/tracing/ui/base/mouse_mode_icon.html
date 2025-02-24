@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/mouse_modes.html">
+
+<dom-module id='tr-ui-b-mouse-mode-icon'>
+  <template>
+    <style>
+    :host {
+      display: block;
+      background-image: url(../images/ui-states.png);
+      width: 27px;
+      height: 30px;
+    }
+    :host.active {
+      cursor: auto;
+    }
+    </style>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-mouse-mode-icon',
+
+  properties: {
+    modeName: {
+      type: String,
+      reflectToAttribute: true,
+      observer: 'modeNameChanged'
+    },
+  },
+
+  created() {
+    this.active_ = false;
+    this.acceleratorKey_ = undefined;
+  },
+
+  ready() {
+    this.updateContents_();
+  },
+
+  get mode() {
+    return tr.ui.b.MOUSE_SELECTOR_MODE[this.modeName];
+  },
+
+  set mode(mode) {
+    const modeInfo = tr.ui.b.MOUSE_SELECTOR_MODE_INFOS[mode];
+    if (modeInfo === undefined) {
+      throw new Error('Unknown mode');
+    }
+    this.modeName = modeInfo.name;
+  },
+
+  modeNameChanged() {
+    this.updateContents_();
+  },
+
+  get active() {
+    return this.active_;
+  },
+
+  set active(active) {
+    this.active_ = !!active;
+    if (this.active_) {
+      Polymer.dom(this).classList.add('active');
+    } else {
+      Polymer.dom(this).classList.remove('active');
+    }
+    this.updateContents_();
+  },
+
+  get acceleratorKey() {
+    return this.acceleratorKey_;
+  },
+
+  set acceleratorKey(acceleratorKey) {
+    this.acceleratorKey_ = acceleratorKey;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    if (this.modeName === undefined) return;
+
+    const mode = this.mode;
+    if (mode === undefined) {
+      throw new Error('Invalid mode');
+    }
+
+    const modeInfo = tr.ui.b.MOUSE_SELECTOR_MODE_INFOS[mode];
+    if (!modeInfo) {
+      throw new Error('Invalid mode');
+    }
+
+    let title = modeInfo.title;
+    if (this.acceleratorKey_) {
+      title = title + ' (' + this.acceleratorKey_ + ')';
+    }
+    this.title = title;
+
+    let bp;
+    if (this.active_) {
+      bp = modeInfo.activeBackgroundPosition;
+    } else {
+      bp = modeInfo.defaultBackgroundPosition;
+    }
+    this.style.backgroundPosition = bp;
+  }
+});
+</script>

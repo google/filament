@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import"
+    href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/metrics/system_health/expected_queueing_time_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('expectedQueueingTime', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 0,
+        duration: 100,
+        cpuStart: 0,
+        cpuDuration: 50,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 3000,
+        duration: 10,
+        cpuStart: 3000,
+        cpuDuration: 5,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9000,
+        duration: 10,
+        cpuStart: 9000,
+        cpuDuration: 5,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.expectedQueueingTimeMetric(histograms, model);
+    const totalEqt = histograms.getHistogramNamed(
+        'total:500ms_window:renderer_eqt');
+    assert.strictEqual(10, totalEqt.average);
+  });
+
+  test('expectedQueueingTime_multipleRenderersAggregates', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 3000,
+        duration: 10,
+        cpuStart: 3000,
+        cpuDuration: 10,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9000,
+        duration: 10,
+        cpuStart: 9000,
+        cpuDuration: 10,
+      }));
+      const rendererProcess2 = model.getOrCreateProcess(1985);
+      const mainThread2 = rendererProcess2.getOrCreateThread(2);
+      mainThread2.name = 'CrRendererMain';
+      mainThread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 3000,
+        duration: 0,
+        cpuStart: 3000,
+        cpuDuration: 0,
+      }));
+      mainThread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9000,
+        duration: 0,
+        cpuStart: 9000,
+        cpuDuration: 0,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.expectedQueueingTimeMetric(histograms, model);
+    const eqt = histograms.getHistogramNamed(
+        'total:500ms_window:renderer_eqt');
+    assert.strictEqual(0.05, eqt.average);
+  });
+
+  test('expectedQueueingTime_relatedV8Histograms', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 3000,
+        duration: 10,
+        cpuStart: 3000,
+        cpuDuration: 10,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'disabled-by-default-v8.compile',
+        title: 'V8.RecompileSynchronous',
+        start: 3000,
+        duration: 5,
+        cpuStart: 3000,
+        cpuDuration: 5,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9000,
+        duration: 10,
+        cpuStart: 9000,
+        cpuDuration: 10,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'v8',
+        title: 'V8.GCFinalizeMC',
+        start: 9000,
+        duration: 5,
+        cpuStart: 9000,
+        cpuDuration: 5,
+      }));
+      mainThread.sliceGroup.createSubSlices();
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.expectedQueueingTimeMetric(histograms, model);
+    const eqt = histograms.getHistogramNamed(
+        'total:500ms_window:renderer_eqt');
+    assert.strictEqual('total:500ms_window:renderer_eqt:v8',
+        eqt.diagnostics.get('v8').get('v8'));
+    assert.strictEqual(0.025,
+        eqt.getBinForValue(0.1).diagnosticMaps[0].get('v8').get('v8'));
+  });
+
+  test('expectedQueueingTimeRCS', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'v8',
+        title: 'V8.newInstance',
+        type: tr.e.v8.V8ThreadSlice,
+        start: 12555,
+        duration: 990,
+        args: {
+          'runtime-call-stats': {
+            JS_Execution: [1, 11],
+            ParseLazy: [5, 3],
+          }
+        }
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 3000,
+        duration: 100,
+        cpuStart: 3000,
+        cpuDuration: 100,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'v8',
+        title: 'V8.Execute',
+        type: tr.e.v8.V8ThreadSlice,
+        start: 3000,
+        duration: 100,
+        cpuStart: 3000,
+        cpuDuration: 100,
+        args: {
+          'runtime-call-stats': {
+            CompileIgnition: [3, 5000],
+            OptimizeCode: [6, 40000],
+            JS_Execution: [1, 11000],
+          }
+        }
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 4000,
+        duration: 100,
+        cpuStart: 4000,
+        cpuDuration: 100,
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'v8',
+        title: 'V8.Execute',
+        type: tr.e.v8.V8ThreadSlice,
+        start: 4000,
+        duration: 100,
+        cpuStart: 4000,
+        cpuDuration: 100,
+        args: {
+          'runtime-call-stats': {
+            CompileIgnition: [20, 20000],
+            ParseLazy: [5, 10000],
+            CompileBackgroundIgnition: [3, 30000]
+          }
+        }
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9000,
+        duration: 10,
+        cpuStart: 9000,
+        cpuDuration: 10,
+      }));
+      mainThread.sliceGroup.createSubSlices();
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.expectedQueueingTimeMetric(histograms, model);
+
+    const eqt = histograms.getHistogramNamed(
+        'total:500ms_window:renderer_eqt');
+    assert.strictEqual(
+        'total:500ms_window:renderer_eqt:v8:compile:optimize_rcs',
+        eqt.diagnostics.get('v8').get('v8:compile:optimize_rcs'));
+    assert.strictEqual(1.6, eqt.getBinForValue(10).diagnosticMaps[0].get(
+        'v8').get('v8:compile:optimize_rcs'));
+  });
+});
+</script>

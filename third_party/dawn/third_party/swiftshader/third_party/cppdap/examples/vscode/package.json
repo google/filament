@@ -1,0 +1,28 @@
+{
+    "name": "cppdap-example-@target@",
+    "displayName": "cppdap example: @target@",
+    "description": "cppdap example: @target@",
+    "version": "1.0.0",
+    "preview": false,
+    "publisher": "Google LLC",
+    "author": {
+        "name": "Google LLC"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "engines": {
+        "vscode": "^1.32.0"
+    },
+    "categories": [
+        "Debuggers"
+    ],
+    "contributes": {
+        "debuggers": [
+            {
+                "type": "@target@",
+                "program": "@target@@CPPDAP_OS_EXE_EXT@",
+                "label": "cppdap example: @target@",
+                "configurationAttributes": {}
+            }
+        ]
+    }
+}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/battor_importer.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const CHROMIUM_EVENTS = [
+    {
+      name: 'a', args: {}, pid: 52, ts: 0,
+      cat: 'foo', tid: 53, ph: 'B'
+    },
+    {
+      pid: 94936, tid: 5643, ts: 15000,
+      ph: 'c', cat: '__metadata', name: 'clock_sync',
+      args: {sync_id: 'ABCDEF-01234-5678-0A1B2C3D', issue_ts: 10000},
+      tts: 16496444
+    }
+  ];
+
+  const BATTOR_LINES = [
+    '# BattOr',
+    '# voltage_range [0.0, 6144.0] mV',
+    '# current_range [0.0, 2275.5] mA',
+    '# sample_rate 2000 Hz, gain 5.0x',
+    '0.000000 0.000000 4000.000000',
+    '0.500000 0.000000 4000.000000',
+    '1.000000 0.000000 4000.000000',
+    '1.500000 0.000000 4000.000000',
+    '2.000000 1.000000 4000.000000'
+  ];
+
+  test('canImport', function() {
+    assert.isFalse(tr.e.importer.battor.BattorImporter.canImport('string'));
+    assert.isFalse(tr.e.importer.battor.BattorImporter.canImport([]));
+    assert.isTrue(tr.e.importer.battor.BattorImporter.canImport(
+        BATTOR_LINES.join('\n')));
+  });
+
+  test('importExplicitClockSync', function() {
+    // Add a BattOr sample with an explicit clock sync.
+    const battorLinesWithExplicitSync = BATTOR_LINES.slice();
+    battorLinesWithExplicitSync.push(
+        '2.500000 1.000000 4000.000000 <ABCDEF-01234-5678-0A1B2C3D>');
+
+    const m = tr.c.TestUtils.newModelWithEvents(
+        [CHROMIUM_EVENTS, battorLinesWithExplicitSync.join('\n')]);
+
+    // Check to see if power samples were imported successfully.
+    assert.isDefined(m.device.powerSeries);
+
+    assert.strictEqual(m.device.powerSeries.samples[0].start, 7.5);
+    assert.strictEqual(m.device.powerSeries.samples[5].start, 10.0);
+  });
+
+  test('importExplicitClockSync_syncOnNegativeVoltageLine', function() {
+    // Add a BattOr sample with an explicit clock sync that occurs on a line
+    // with a negative voltage measurement. The sample should be ignored, but
+    // the clock sync should be counted.
+    const battorLinesWithExplicitSync = BATTOR_LINES.slice();
+    battorLinesWithExplicitSync.push(
+        '2.500000 -1.000000 4000.000000 <ABCDEF-01234-5678-0A1B2C3D>');
+
+    const m = tr.c.TestUtils.newModelWithEvents(
+        [CHROMIUM_EVENTS, battorLinesWithExplicitSync.join('\n')]);
+
+    // Check to see if power samples were imported successfully.
+    assert.isDefined(m.device.powerSeries);
+
+    assert.lengthOf(m.device.powerSeries.samples, 5);
+    assert.strictEqual(m.device.powerSeries.samples[0].start, 7.5);
+  });
+
+  test('explicitClockSyncWithoutSyncMarkers', function() {
+    // Create an empty model.
+    let m = new tr.Model();
+    const io = new tr.importer.ImportOptions();
+    io.showImportWarnings = false;
+    m.importOptions = io;
+
+    // Add a BattOr sample with an explicit clock sync.
+    const battorLinesWithExplicitSync = BATTOR_LINES.slice();
+    battorLinesWithExplicitSync.push(
+        '2.500000 1.000000 4000.000000 <ABCDEF-01234-5678-0A1B2C3D>');
+
+    m = tr.c.TestUtils.newModelWithEvents(
+        [battorLinesWithExplicitSync.join('\n')]);
+
+    assert.lengthOf(m.device.powerSeries.samples, 6);
+    assert.strictEqual(m.device.powerSeries.samples[0].start, 0);
+    assert.strictEqual(m.device.powerSeries.samples[5].start, 2.5);
+  });
+});
+</script>

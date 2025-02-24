@@ -1,0 +1,11 @@
+{
+  "configs": [
+    {
+      "url": "https://example.com/project/sources/+/0123456789abcdef/configs/chromeperf-sheriff.cfg",
+      "content": "c3Vic2NyaXB0aW9uczogewoJbmFtZTogIkNvbmZpZyAxIiwKCWNvbnRhY3RfZW1haWw6ICJjb25maWctMUBleGFtcGxlLmNvbSIsCglidWdfbGFiZWxzOiBbIlNvbWUtTGFiZWwiXSwKCWJ1Z19jb21wb25lbnRzOiBbIlNvbWU+Q29tcG9uZW50Il0sCglydWxlczogewogICAgICAgICAgICAgICAgbWF0Y2g6IFt7Z2xvYjogInByb2plY3QvKioifV0KICAgICAgICB9Cn0Kc3Vic2NyaXB0aW9uczogewoJbmFtZTogIkNvbmZpZyAyIiwKCWNvbnRhY3RfZW1haWw6ICJjb25maWctMkBleGFtcGxlLmNvbSIsCglidWdfbGFiZWxzOiBbIlNvbWUtTGFiZWwiXSwKCWJ1Z19jb21wb25lbnRzOiBbIlNvbWU+Q29tcG9uZW50Il0sCgltb25vcmFpbF9wcm9qZWN0X2lkOiAibm9uLWNocm9taXVtIiwKCXJ1bGVzOiB7CiAgICAgICAgICAgICAgICBtYXRjaDogW3tyZWdleDogIl5wcm9qZWN0L3BsYXRmb3JtLy4qL21lbW9yeV9wZWFrIn1dCiAgICAgICAgfQp9",
+      "content_hash": "v1:somehash",
+      "config_set": "projects/project",
+      "revision": "0123456789abcdef"
+    }
+  ]
+}

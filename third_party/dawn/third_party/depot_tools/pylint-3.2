@@ -1,0 +1,57 @@
+#!/usr/bin/env vpython3
+# Copyright 2025 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: We use tags here instead of refs because refs will always hit the
+# network to see if there are any updates.
+
+# [VPYTHON:BEGIN]
+# # Third party dependencies.  These are only listed because pylint itself needs
+# # them.  Feel free to add/remove anything here.
+# python_version: "3.11"
+#
+# wheel: <
+#   name: "infra/python/wheels/isort-py3"
+#   version: "version:5.10.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/mccabe-py2_py3"
+#   version: "version:0.6.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/colorama-py2_py3"
+#   version: "version:0.4.6"
+# >
+#
+# # Pylint dependencies.
+#
+# wheel: <
+#   name: "infra/python/wheels/astroid-py3"
+#   version: "version:3.2.4"
+# >
+# wheel: <
+#  name: "infra/python/wheels/dill-py3"
+#  version: "version:0.3.7"
+# >
+# wheel: <
+#   name: "infra/python/wheels/platformdirs-py3"
+#   version: "version:3.10.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/pylint-py3"
+#   version: "version:3.2.7"
+# >
+# wheel: <
+#   name: "infra/python/wheels/tomlkit-py3"
+#   version: "version:0.12.3"
+# >
+#
+# [VPYTHON:END]
+
+import sys
+
+import pylint_main
+
+if __name__ == '__main__':
+    sys.exit(pylint_main.main(sys.argv[1:]))

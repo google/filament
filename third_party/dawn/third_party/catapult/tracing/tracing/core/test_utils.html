@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/importer/import.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/profile_node.html">
+<link rel="import" href="/tracing/model/scoped_id.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/model/stack_frame.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+<link rel="import" href="/tracing/model/thread_time_slice.html">
+<link rel="import" href="/tracing/model/user_model/stub_expectation.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper functions for use in tracing tests.
+ */
+tr.exportTo('tr.c', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  function _getStartAndCpuDurationFromDict(
+      options, required, startFieldName, durationFieldName, endFieldName) {
+    if (options[startFieldName] === undefined) {
+      if (required) {
+        throw new Error('Too little information.');
+      } else {
+        return {start: undefined, duration: undefined};
+      }
+    }
+    if (options[durationFieldName] !== undefined &&
+        options[endFieldName] !== undefined) {
+      throw new Error('Too much information.');
+    }
+    if (options[durationFieldName] === undefined &&
+        options[endFieldName] === undefined) {
+      if (required) {
+        throw new Error('Too little information.');
+      } else {
+        return {start: undefined, duration: undefined};
+      }
+    }
+
+    let duration;
+    if (options[durationFieldName] !== undefined) {
+      duration = options[durationFieldName];
+    } else {
+      duration = options[endFieldName] - options[startFieldName];
+    }
+
+    return {
+      start: options[startFieldName],
+      duration
+    };
+  }
+
+  function _maybeGetCpuStartAndCpuDurationFromDict(options) {
+    return _getStartAndCpuDurationFromDict(
+        options, false, 'cpuStart', 'cpuDuration', 'cpuEnd');
+  }
+
+  function TestUtils() {
+  }
+
+  TestUtils.getStartAndDurationFromDict = function(options) {
+    return _getStartAndCpuDurationFromDict(
+        options, true, 'start', 'duration', 'end');
+  };
+
+  TestUtils.newAsyncSlice = function(start, duration, startThread, endThread) {
+    return TestUtils.newAsyncSliceNamed(
+        'a', start, duration, startThread, endThread);
+  };
+
+  TestUtils.newAsyncSliceNamed = function(
+      name, start, duration, startThread, endThread) {
+    const asyncSliceConstructor =
+        tr.model.AsyncSlice.subTypes.getConstructor('', name);
+
+    const s = new asyncSliceConstructor('', name, 0, start);
+    s.duration = duration;
+    s.startThread = startThread;
+    s.endThread = endThread;
+    return s;
+  };
+
+  TestUtils.newAsyncSliceEx = function(options) {
+    const sd = TestUtils.getStartAndDurationFromDict(options);
+
+    const cat = options.cat ? options.cat : 'cat';
+    const title = options.title ? options.title : 'a';
+    const colorId = options.colorId || 0;
+
+    let isTopLevel;
+    if (options.isTopLevel !== undefined) {
+      isTopLevel = options.isTopLevel;
+    } else {
+      isTopLevel = false;
+    }
+
+    const asyncSliceConstructor =
+        tr.model.AsyncSlice.subTypes.getConstructor(cat, title);
+
+    const slice = new asyncSliceConstructor(
+        cat,
+        title,
+        colorId,
+        sd.start,
+        options.args ? options.args : {},
+        sd.duration, isTopLevel);
+
+    if (options.id) {
+      slice.id = options.id;
+    } else {
+      slice.id = tr.b.GUID.allocateSimple();
+    }
+
+    if (options.startStackFrame) {
+      slice.startStackFrame = options.startStackFrame;
+    }
+    if (options.endStackFrame) {
+      slice.endStackFrame = options.endStackFrame;
+    }
+    if (options.important) {
+      slice.important = options.important;
+    }
+    if (options.startThread) {
+      slice.startThread = options.startThread;
+    }
+    if (options.endThread) {
+      slice.endThread = options.endThread;
+    }
+    return slice;
+  };
+
+  TestUtils.newCounter = function(parent) {
+    return TestUtils.newCounterNamed(parent, 'a');
+  };
+
+  TestUtils.newCounterNamed = function(parent, name) {
+    const s = new tr.model.Counter(parent, name, null, name);
+    return s;
+  };
+
+  TestUtils.newCounterCategory = function(parent, category, name) {
+    const s = new tr.model.Counter(parent, name, category, name);
+    return s;
+  };
+
+  TestUtils.newCounterSeries = function() {
+    const s = new tr.model.CounterSeries('a', 0);
+    return s;
+  };
+
+  TestUtils.newFlowEventEx = function(options) {
+    if (options.start === undefined) throw new Error('Too little info');
+
+    const title = options.title ? options.title : 'a';
+
+    const colorId = options.colorId ? options.colorId : 0;
+
+    const sd = TestUtils.getStartAndDurationFromDict(options);
+
+    let id;
+    if (options.id !== undefined) {
+      id = options.id;
+    } else {
+      id = tr.b.GUID.allocateSimple();
+    }
+
+    const event = new tr.model.FlowEvent(
+        options.cat ? options.cat : 'cat',
+        id,
+        title,
+        colorId,
+        sd.start,
+        options.args ? options.args : {},
+        sd.duration);
+
+    if (options.startStackFrame) {
+      event.startStackFrame = options.startStackFrame;
+    }
+    if (options.endStackFrame) {
+      event.endStackFrame = options.endStackFrame;
+    }
+    if (options.important) {
+      event.important = options.important;
+    }
+    if (options.startSlice) {
+      event.startSlice = options.startSlice;
+      event.startSlice.outFlowEvents.push(event);
+    }
+    if (options.endSlice) {
+      event.endSlice = options.endSlice;
+      event.endSlice.inFlowEvents.push(event);
+    }
+    return event;
+  };
+
+  TestUtils.newThreadSlice = function(thread, state, start, duration, opt_cpu) {
+    const s = new tr.model.ThreadTimeSlice(
+        thread, state, 'cat', start, {}, duration);
+    if (opt_cpu) {
+      s.cpuOnWhichThreadWasRunning = opt_cpu;
+    }
+    return s;
+  };
+
+  TestUtils.newSampleNamed = function(
+      thread, sampleName, category, frameNames, start) {
+    let model;
+    if (thread.parent) {
+      model = thread.parent.model;
+    } else {
+      model = undefined;
+    }
+    const node = TestUtils.newProfileNodes(model, frameNames);
+    const s = new tr.model.Sample(
+        start, sampleName, node, thread, undefined, 1);
+    return s;
+  };
+
+  TestUtils.newSliceEx = function(options) {
+    const sd = TestUtils.getStartAndDurationFromDict(options);
+
+    const title = options.title ? options.title : 'a';
+
+    const colorId = options.colorId ? options.colorId : 0;
+
+    const cpuSD = _maybeGetCpuStartAndCpuDurationFromDict(options);
+
+    const cat = options.cat ? options.cat : 'cat';
+
+    const bindId = options.bindId ? options.bindId : 0;
+
+    let type;
+    if (options.type) {
+      type = options.type;
+    } else {
+      type = tr.model.ThreadSlice.subTypes.getConstructor(cat, title);
+    }
+
+    const slice = new type(
+        cat,
+        title,
+        colorId,
+        sd.start,
+        options.args ? options.args : {},
+        sd.duration,
+        cpuSD.start, cpuSD.duration,
+        undefined, bindId);
+
+    if (options.isTopLevel) slice.isTopLevel = true;
+
+    return slice;
+  };
+
+  TestUtils.newStackTrace = function(model, titles) {
+    let frame = undefined;
+    titles.forEach(function(title) {
+      frame = new tr.model.StackFrame(
+          frame, tr.b.GUID.allocateSimple(), title, 7);
+      if (model) model.addStackFrame(frame);
+    });
+    return frame;
+  };
+
+  TestUtils.newProfileNode = function(model, title, parentNode) {
+    return new tr.model.ProfileNode(
+        tr.b.GUID.allocateSimple(), title, parentNode);
+  };
+
+  TestUtils.newProfileNodes = function(model, titles) {
+    let node = undefined;
+    for (const title of titles) {
+      node = TestUtils.newProfileNode(model, title, node);
+    }
+    return node;
+  };
+
+  TestUtils.newSnapshot = function(model, options) {
+    return model.getOrCreateProcess(options.pid || 1).objects.addSnapshot(
+        new tr.model.ScopedId(options.scope || tr.model.OBJECT_DEFAULT_SCOPE,
+            options.id || '0x1'),
+        options.category || 'cat',
+        options.name || 'A',
+        options.ts || 0,
+        options.args || {},
+        options.baseTypeName);
+  };
+
+  TestUtils.findSliceNamed = function(slices, name) {
+    if (slices instanceof tr.model.SliceGroup) {
+      slices = slices.slices;
+    }
+    for (let i = 0; i < slices.length; i++) {
+      if (slices[i].title === name) return slices[i];
+    }
+    return undefined;
+  };
+
+  TestUtils.newInteractionRecord = function(parentModel, start, duration) {
+    return new tr.model.um.StubExpectation({
+      parentModel, start, duration});
+  };
+
+  TestUtils.newModel = function(customizeModelCallback) {
+    return TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneEmptyContainers: false,
+      customizeModelCallback
+    });
+  };
+
+  TestUtils.newModelWithEvents = function(events, opts) {
+    if (!(events instanceof Array)) events = [events];
+
+    opts = opts || {};
+
+    const io = new tr.importer.ImportOptions();
+    io.showImportWarnings = false;
+    io.customizeModelCallback = opts.customizeModelCallback;
+    io.trackDetailedModelStats = opts.trackDetailedModelStats === undefined ?
+      false : opts.trackDetailedModelStats;
+    io.shiftWorldToZero = opts.shiftWorldToZero === undefined ?
+      true : opts.shiftWorldToZero;
+    io.pruneEmptyContainers = opts.pruneEmptyContainers === undefined ?
+      true : opts.pruneEmptyContainers;
+    io.auditorConstructors = opts.auditorConstructors === undefined ?
+      [] : opts.auditorConstructors;
+
+    const m = new tr.Model();
+    const i = new tr.importer.Import(m, io);
+    i.importTraces(events);
+    return m;
+  };
+
+  TestUtils.newModelWithAuditor = function(customizeModelCallback, auditor) {
+    return TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneEmptyContainers: false,
+      customizeModelCallback,
+      auditorConstructors: [auditor]
+    });
+  };
+
+  TestUtils.newFakeThread = function() {
+    const process = {model: {}};
+    return new tr.model.Thread(process);
+  };
+
+  /** @constructor */
+  TestUtils.SourceGenerator = function() {
+    this.sourceList_ = [];
+    this.currentLineCommentList_ = [];
+    this.currentIndent_ = 0;
+    this.currentLineEmpty_ = true;
+  };
+
+  TestUtils.SourceGenerator.prototype = {
+    push(/* arguments */) {
+      if (this.currentLineEmpty_) {
+        this.sourceList_.push(' '.repeat(this.currentIndent_));
+        this.currentLineEmpty_ = false;
+      }
+      this.sourceList_.push.apply(
+          this.sourceList_, Array.prototype.slice.call(arguments));
+    },
+
+    pushComment(/* arguments */) {
+      this.currentLineCommentList_.push.apply(
+          this.currentLineCommentList_, Array.prototype.slice.call(arguments));
+    },
+
+    build() {
+      this.finishLine_();
+      return this.sourceList_.join('');
+    },
+
+    breakLine() {
+      this.finishLine_();
+      this.push('\n');
+      this.currentLineEmpty_ = true;
+    },
+
+    finishLine_() {
+      if (this.currentLineCommentList_.length === 0) return;
+      this.push('  // ');
+      this.push.apply(this, this.currentLineCommentList_);
+      this.push('.');
+      this.currentLineCommentList_ = [];
+    },
+
+    indentBlock(spaces, breakLine, blockCallback, opt_this) {
+      opt_this = opt_this || this;
+      this.currentIndent_ += spaces;
+      if (breakLine) this.breakLine();
+      blockCallback.call(opt_this);
+      this.currentIndent_ -= spaces;
+    },
+
+    formatSingleLineList(list, itemCallback, opt_this) {
+      opt_this = opt_this || this;
+      this.push('[');
+      Array.from(list).forEach(function(item, index) {
+        if (index > 0) this.push(', ');
+        itemCallback.call(opt_this, item, index);
+      }, this);
+      this.push(']');
+    },
+
+    formatMultiLineList(list, itemCallback, opt_this) {
+      opt_this = opt_this || this;
+      this.push('[');
+      this.indentBlock(2, false /* don't break line */, function() {
+        Array.from(list).forEach(function(item, index) {
+          if (index > 0) this.push(',');
+          this.breakLine();
+          itemCallback.call(opt_this, item, index);
+        }, this);
+      }, this);
+      if (list.length > 0) this.breakLine();
+      this.push(']');
+    },
+
+    formatString(string) {
+      if (string === undefined) {
+        this.push('undefined');
+      } else {
+        this.push('\'', string, '\'');
+      }
+    }
+  };
+
+  TestUtils.addSourceListing = function(test, source) {
+    const testSourceEl = document.createElement('pre');
+    testSourceEl.style.fontFamily = 'monospace';
+    Polymer.dom(testSourceEl).textContent = source;
+
+    const copyButtonEl = document.createElement('button');
+    Polymer.dom(copyButtonEl).textContent = 'Copy into to clipboard';
+    copyButtonEl.addEventListener('click', function() {
+      const selection = window.getSelection();
+
+      // Store the original selection.
+      const originalRanges = new Array(selection.rangeCount);
+      for (let i = 0; i < originalRanges.length; i++) {
+        originalRanges[i] = selection.getRangeAt(i);
+      }
+
+      // Copy the generated test source code into clipboard.
+      selection.removeAllRanges();
+      const range = document.createRange();
+      range.selectNode(testSourceEl);
+      selection.addRange(range);
+      document.execCommand('copy');
+
+      // Restore the original selection.
+      selection.removeAllRanges();
+      for (let i = 0; i < originalRanges.length; i++) {
+        selection.addRange(originalRanges[i]);
+      }
+    });
+
+    const outputEl = document.createElement('div');
+    Polymer.dom(outputEl).appendChild(copyButtonEl);
+    Polymer.dom(outputEl).appendChild(testSourceEl);
+    test.addHTMLOutput(outputEl);
+  };
+
+  TestUtils.newInstantEvent = function(options) {
+    const title = options.title;
+    const start = options.start;
+    if ((title === undefined) ||
+        (title === '') ||
+        (start === undefined)) {
+      throw new Error('too little information');
+    }
+
+    const category = options.category || 'category';
+    const colorId = options.colorId || 0;
+    const args = options.args || {};
+    return new tr.model.InstantEvent(
+        category, title, colorId, start, args);
+  };
+
+  return {
+    TestUtils,
+  };
+});
+</script>

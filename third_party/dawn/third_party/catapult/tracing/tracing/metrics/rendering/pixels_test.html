@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/rendering/pixels.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('pixelsApproximated', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      // Metric computation assumes that there is always a browser process.
+      model.getOrCreateProcess(0).getOrCreateThread(0).name = 'CrBrowserMain';
+
+      const compositor = model.getOrCreateProcess(1).getOrCreateThread(1);
+      compositor.name = 'Compositor';
+      compositor.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        title: 'BenchmarkInstrumentation::ImplThreadRenderingStats',
+        start: 1, end: 1,
+        args: {
+          data: {
+            visible_content_area: 50,
+            approximated_visible_content_area: 8,
+            checkerboarded_visible_content_area: 3
+          }
+        }
+      }));
+      compositor.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        title: 'BenchmarkInstrumentation::ImplThreadRenderingStats',
+        start: 2, end: 2,
+        args: {
+          data: {
+            visible_content_area: 25,
+            approximated_visible_content_area: 6,
+            checkerboarded_visible_content_area: 5
+          }
+        }
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.addPixelsHistograms(
+        histograms, model, [new tr.model.um.Segment(0, 10)]);
+
+    // The mean of 8/50 and 6/25 is 0.2.
+    let hist = histograms.getHistogramNamed('mean_pixels_approximated');
+    assert.closeTo(20, hist.min, 1e-6);
+    assert.closeTo(20, hist.max, 1e-6);
+    assert.closeTo(20, hist.average, 1e-6);
+
+    // The mean of 3/50 and 5/25 is 0.13.
+    hist = histograms.getHistogramNamed('mean_pixels_checkerboarded');
+    assert.closeTo(13, hist.min, 1e-6);
+    assert.closeTo(13, hist.max, 1e-6);
+    assert.closeTo(13, hist.average, 1e-6);
+  });
+});
+</script>

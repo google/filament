@@ -1,0 +1,28 @@
+# Copyright 2022 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../gni/angle.gni")
+
+angle_trace_fixture("angle_capture_replay_sample_fixture") {
+  gl_header = "angle_trace_gl.h"
+  public_deps = [
+    "$angle_root:libEGL",
+    "$angle_root/util:angle_util",
+  ]
+}
+
+angle_trace("capture_replay_sample_trace") {
+  _trace = "angle_capture"
+
+  _trace_data = []
+  _trace_data = read_file("$_trace.json", "json")
+
+  sources = _trace_data.TraceFiles
+
+  data = [
+    "$_trace.json",
+    "$_trace.angledata.gz",
+  ]
+  fixture = ":angle_capture_replay_sample_fixture"
+}

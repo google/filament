@@ -1,0 +1,41 @@
+boto v2.16.0
+============
+
+:date: 2013/11/08
+
+This release adds new Amazon Elastic MapReduce functionality, provides updates and fixes for Amazon EC2, Amazon VPC, Amazon DynamoDB, Amazon SQS, Amazon Elastic MapReduce, and documentation updates for several services.
+
+
+Features
+--------
+* Added recipe for parallel execution of activities to SWF tutorial. (:issue:`1800`, :issue:`1800`, :sha:`52c5432`)
+* Added launch_config's parameter associate_ip_address for VPC. (:issue:`1799`, :issue:`1799`, :sha:`6685adb`)
+* Update elbadmin add/remove commands to support multiple instance arguments. (:issue:`1806`, :issue:`1806`, :sha:`4aad26d`)
+* Added documentation for valid auto scaling event types and tags. (:issue:`1807`, :issue:`1807`, :sha:`664f6e8`)
+* Support VPC tenancy restrictions and filters for DHCP options. (:issue:`1801`, :issue:`1801`, :sha:`8c5d8de`)
+* Add VPC network ACL support. (:issue:`1809`, :issue:`1098`, :issue:`1809`, :sha:`9043d09`)
+* Add convenience functions to make DynamoDB2 behave more like DynamoDB (:issue:`1780`, :sha:`2cecaca`)
+* EC2 cancel_spot_instance_requests now returns a list of SpotInstanceRequest objects. (:issue:`1811`, :issue:`1811`, :issue:`1754`, :sha:`f3361b9`)
+* Fix VPC DescribeVpnConnections call argument; Add support for static_routes_only when creating a new VPC. (:issue:`1816`, :issue:`1816`, :issue:`1481`, :sha:`b408637`)
+* Add a section about DynamoDB Local to the DynamoDBv2 high level docs. (:issue:`1821`, :issue:`1821`, :issue:`1818`, :sha:`639505f`)
+* Add support for new Elastic MapReduce APIs (:issue:`1836`, :sha:`5562264`)
+* Modify EMR add_jobflow_steps to return a JobFlowStepList. (:issue:`1838`, :issue:`1838`, :sha:`ef9564f`)
+* Generate docs for route53/zone, remove docs for route53/hostedzone. (:issue:`1837`, :issue:`1837`, :sha:`99e2e67`)
+
+
+BugFixes
+--------
+* Fix for MWS iterator handling (:sha:`7e6f98d`)
+* Clarify documentation for MetricAlarm dimensions. (:issue:`1808`, :issue:`1808`, :issue:`1803`, :sha:`4233fbf`)
+* Fixes for general connection behind proxy. (:issue:`1781`, :issue:`1781`, :sha:`dc8bbea`)
+* Validate S3 method kwarg names to prevent misspelling. (:issue:`1810`, :issue:`1810`, :issue:`1782`, :sha:`947a14a`)
+* Fix dependencies so they show up as optional in CheeseShop (:issue:`1617`, :sha:`54da8b6`)
+* Route53 retry HTTP error 400s (:issue:`1618`, :sha:`6e355b3`)
+* Fix typo in IAMConnection documentation (:issue:`1820`, :sha:`3fc335d`)
+* Fix MWS MemberLists parsing. (:issue:`1815`, :issue:`1815`, :sha:`0f6f089`)
+* Fix typo in SQS documentation (:issue:`1830`, :sha:`20532a6`)
+* Update auto scaling documentation. (:issue:`1824`, :issue:`1824`, :issue:`1823`, :sha:`9a359ec`)
+* Fixing region endpoints for EMR (:issue:`1831`, :sha:`ed669f7`)
+* Raising an exception in SQS message decode() should not abort parsing. (:issue:`1835`, :issue:`1835`, :issue:`1833`, :sha:`2a00c92`)
+* Replace correct VPC ACL association instead of just the first one. (:issue:`1844`, :issue:`1844`, :issue:`1843`, :sha:`c70b8d6`)
+* Prevent swallowing CloudSearch errors (:issue:`1846`, :issue:`1842`, :sha:`c2f955b`)

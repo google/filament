@@ -1,0 +1,41 @@
+)]}'
+{
+  "log": [
+    {
+      "commit": "f1c777e3f97a16cc6a3aa922a23602fa59412989",
+      "tree": "99b77b34eca35570c99966e478d58e5f24fdafe7",
+      "parents": [
+        "ee261f306c3c66e96339aa1026d62a6d953302fe"
+      ],
+      "author": {
+        "name": "mmenke",
+        "email": "mmenke@chromium.org",
+        "time": "Tue Oct 27 21:06:44 2015"
+      },
+      "committer": {
+        "name": "Commit bot",
+        "email": "commit-bot@chromium.org",
+        "time": "Tue Oct 27 21:07:26 2015"
+      },
+      "message": "Make NetErrorHelper more OOPIF-friendly.\n\nNow create one per frame instead of creating them only for main frames,\nand get the WebFrame directly from a WebFrame rather than by going\nthrough the RenderView.\n\nBUG\u003d543226,529976\n\nReview URL: https://codereview.chromium.org/1406303002\n\nCr-Commit-Position: refs/heads/master@{#356395}\n"
+    },
+    {
+      "commit": "ee261f306c3c66e96339aa1026d62a6d953302fe",
+      "tree": "d72d77753789a7832b3422d267fe40e805f886c9",
+      "parents": [
+        "7bd1741893bd4e233b5562a6926d7e395d558343"
+      ],
+      "author": {
+        "name": "asanka",
+        "email": "asanka@chromium.org",
+        "time": "Tue Oct 27 21:04:28 2015"
+      },
+      "committer": {
+        "name": "Commit bot",
+        "email": "commit-bot@chromium.org",
+        "time": "Tue Oct 27 21:06:01 2015"
+      },
+      "message": "[SafeBrowsing] Block dangerous unchecked downloads based on a Finch trial.\n\nBUG\u003d533579\n\nReview URL: https://codereview.chromium.org/1409003002\n\nCr-Commit-Position: refs/heads/master@{#356394}\n"
+    }
+  ]
+}

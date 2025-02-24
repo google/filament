@@ -1,0 +1,91 @@
+Name
+
+    ANGLE_device_metal
+
+Name Strings
+
+    EGL_ANGLE_device_metal
+
+Contributors
+
+    Le Hoang Quyen
+
+Contact
+
+    Jamie Madill, Google (jmadill 'at' google 'dot' com)
+    Le Hoang Quyen (lehoangq 'at' gmail.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Jul 19, 2020
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL device extension
+
+Dependencies
+
+    This extension is written against the language of EGL 1.5 as
+    modified by EGL_EXT_device_query.
+
+    EGL_EXT_device_query is required.
+
+Overview
+
+    ANGLE has the ability to run GPU commands on a metal device.
+    This extension defines a mapping from an EGL device to a metal
+    device, after it's queried from an EGL display.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted as a queried <attribute> in eglQueryDeviceAttribEXT:
+
+        EGL_METAL_DEVICE_ANGLE              0x34A6
+
+Add a new section 2.1.3 (Metal Devices) after 2.1.2 (Devices)
+
+    Somewhat analogous to an EGL device, a Metal device establishes a
+    namespace for Metal operations. In the Metal APIs, such devices are
+    represented by pointers. For more details, see the Metal
+    documentation.
+
+Changes to section 3.2 (Devices)
+
+    Replace the paragraph immediately following the prototype for
+    eglQueryDeviceAttribEXT:
+
+    <attribute> may be EGL_METAL_DEVICE_ANGLE.
+    On success, EGL_TRUE is returned, and a valid MTLDevice pointer
+    corresponding to the EGL device is returned in <value>. This handle
+    is compatible with Metal API functions. If the EGL device is not currently
+    associated with a Metal device and <attribute> is EGL_METAL_DEVICE_ANGLE,
+    EGL_BAD_ATTRIBUTE is returned, and <value> is left unchanged.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, Jul 19, 2020 (Le Hoang Quyen)
+        - Initial Draft

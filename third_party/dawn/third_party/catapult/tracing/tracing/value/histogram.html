@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/math/running_statistics.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/diagnostics/reserved_names.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v', function() {
+  const MAX_DIAGNOSTIC_MAPS = 16;
+
+  const DEFAULT_SAMPLE_VALUES_PER_BIN = 10;
+
+  const DEFAULT_REBINNED_COUNT = 40;
+
+  const DEFAULT_BOUNDARIES_FOR_UNIT = new Map();
+
+  const DEFAULT_ITERATION_FOR_BOOTSTRAP_RESAMPLING = 500;
+
+  const DELTA = String.fromCharCode(916);
+  const Z_SCORE_NAME = 'z-score';
+  const P_VALUE_NAME = 'p-value';
+  const U_STATISTIC_NAME = 'U';
+
+  /**
+   * Converts the given percent to a string in the format specified above.
+   * @param {number} percent The percent must be between 0.0 and 1.0.
+   * @param {boolean=} opt_force3 Whether to force the result to be 3 chars long
+   * @return {string}
+   */
+  function percentToString(percent, opt_force3) {
+    if (percent < 0 || percent > 1) {
+      throw new Error('percent must be in [0,1]');
+    }
+    if (percent === 0) return '000';
+    if (percent === 1) return '100';
+    let str = percent.toString();
+    if (str[1] !== '.') {
+      throw new Error('Unexpected percent');
+    }
+    // Pad short strings with zeros.
+    str = str + '0'.repeat(Math.max(4 - str.length, 0));
+
+    if (str.length > 4) {
+      if (opt_force3) {
+        str = str.slice(0, 4);
+      } else {
+        str = str.slice(0, 4) + '_' + str.slice(4);
+      }
+    }
+    return '0' + str.slice(2);
+  }
+
+  /**
+   * Converts the given string to a percent between 0 and 1.
+   * @param {string}
+   * @return {number}
+   */
+  function percentFromString(s) {
+    return parseFloat(s[0] + '.' + s.substr(1).replace(/_/g, ''));
+  }
+
+  class HistogramBin {
+    /**
+     * @param {!tr.b.math.Range} range
+     */
+    constructor(range) {
+      this.range = range;
+      this.count = 0;
+      this.diagnosticMaps = [];
+    }
+
+    /**
+     * @param {*} value
+     */
+    addSample(value) {
+      this.count += 1;
+    }
+
+    /**
+     * @param {!tr.v.d.DiagnosticMap} diagnostics
+     */
+    addDiagnosticMap(diagnostics) {
+      tr.b.math.Statistics.uniformlySampleStream(
+          this.diagnosticMaps, this.count, diagnostics, MAX_DIAGNOSTIC_MAPS);
+    }
+
+    addBin(other) {
+      if (!this.range.equals(other.range)) {
+        throw new Error('Merging incompatible Histogram bins.');
+      }
+      tr.b.math.Statistics.mergeSampledStreams(this.diagnosticMaps, this.count,
+          other.diagnosticMaps, other.count, MAX_DIAGNOSTIC_MAPS);
+      this.count += other.count;
+    }
+
+    deserialize(data, deserializer) {
+      if (!(data instanceof Array)) {
+        this.count = data;
+        return;
+      }
+      this.count = data[0];
+      for (const sample of data.slice(1)) {
+        // TODO(benjhayden): class Sample
+        if (!(sample instanceof Array)) continue;
+        this.diagnosticMaps.push(tr.v.d.DiagnosticMap.deserialize(
+            sample.slice(1), deserializer));
+      }
+    }
+
+    fromDict(dict) {
+      this.count = dict[0];
+      if (dict.length > 1) {
+        for (const map of dict[1]) {
+          this.diagnosticMaps.push(tr.v.d.DiagnosticMap.fromDict(map));
+        }
+      }
+    }
+
+    serialize(serializer) {
+      if (!this.diagnosticMaps.length) {
+        return this.count;
+      }
+      return [this.count, ...this.diagnosticMaps.map(d => [
+        undefined, ...d.serialize(serializer)])];
+    }
+
+    asDict() {
+      if (!this.diagnosticMaps.length) {
+        return [this.count];
+      }
+      // It's more efficient to serialize these 2 fields in an array. If you
+      // add any other fields, you should re-evaluate whether it would be more
+      // efficient to serialize as a dict.
+      return [this.count, this.diagnosticMaps.map(d => d.asDict())];
+    }
+  }
+
+  const DEFAULT_SUMMARY_OPTIONS = new Map([
+    ['avg', true],
+    ['count', true],
+    ['geometricMean', false],
+    ['max', true],
+    ['min', true],
+    ['nans', false],
+    ['std', true],
+    ['sum', true],
+    // Don't include 'percentile' or 'iprs' here. Their default values are [],
+    // which is mutable. Callers may push to it, so there must be a different
+    // Array instance for each Histogram instance.
+  ]);
+
+  /**
+   * This is basically a histogram, but so much more.
+   * Histogram is serializable using asDict/fromDict.
+   * Histogram computes several statistics of its contents.
+   * Histograms can be merged.
+   * getDifferenceSignificance() test whether one Histogram is statistically
+   * significantly different from another Histogram.
+   * Histogram stores a random sample of the exact number values added to it.
+   * Histogram stores a random sample of optional per-sample DiagnosticMaps.
+   * Histogram is visualized by <tr-v-ui-histogram-span>, which supports
+   * selecting bins, and visualizing the DiagnosticMaps of selected bins.
+   *
+   * @param {!tr.b.Unit} unit
+   * @param {!tr.v.HistogramBinBoundaries=} opt_binBoundaries
+   */
+  class Histogram {
+    constructor(name, unit, opt_binBoundaries) {
+      if (!(unit instanceof tr.b.Unit)) {
+        throw new Error('unit must be a Unit: ' + unit);
+      }
+      let binBoundaries = opt_binBoundaries;
+      if (!binBoundaries) {
+        const baseUnit = unit.baseUnit ? unit.baseUnit : unit;
+        binBoundaries = DEFAULT_BOUNDARIES_FOR_UNIT.get(baseUnit.unitName);
+      }
+
+      // Serialize binBoundaries here instead of holding a reference to it in
+      // case it is modified.
+      this.binBoundariesDict_ = binBoundaries.asDict();
+
+      // HistogramBinBoundaries create empty HistogramBins. Save memory by
+      // sharing those empty HistogramBin instances with other Histograms. Wait
+      // to copy HistogramBins until we need to modify it (copy-on-write).
+      this.allBins = binBoundaries.bins.slice();
+      this.description = '';
+      const allowReservedNames = false;
+      this.diagnostics_ = new tr.v.d.DiagnosticMap(allowReservedNames);
+      this.maxNumSampleValues_ = this.defaultMaxNumSampleValues_;
+      this.name_ = name;
+      this.nanDiagnosticMaps = [];
+      this.numNans = 0;
+      this.running_ = undefined;
+      this.sampleValues_ = [];
+      this.sampleMeans_ = [];
+      this.summaryOptions = new Map(DEFAULT_SUMMARY_OPTIONS);
+      this.summaryOptions.set('percentile', []);
+      this.summaryOptions.set('iprs', []);
+      this.summaryOptions.set('ci', []);
+      this.unit = unit;
+    }
+
+    /**
+     * Create a Histogram, configure it, and add samples to it.
+     *
+     * |samples| can be either
+     *  0. a number, or
+     *  1. a dictionary {value: number, diagnostics: dictionary}, or
+     *  2. an array of
+     *     2a. number, or
+     *     2b. dictionaries {value, diagnostics}.
+     *
+     * @param {string} name
+     * @param {!tr.b.Unit} unit
+     * @param {number|!Object|!Array.<(number|!Object)>} samples
+     * @param {!Object=} opt_options
+     * @param {!tr.v.HistogramBinBoundaries} opt_options.binBoundaries
+     * @param {!Object|!Map} opt_options.summaryOptions
+     * @param {!Object|!Map} opt_options.diagnostics
+     * @param {string} opt_options.description
+     * @return {!tr.v.Histogram}
+     */
+    static create(name, unit, samples, opt_options) {
+      const options = opt_options || {};
+      const hist = new Histogram(name, unit, options.binBoundaries);
+      if (options.alertGrouping !== undefined) {
+        hist.setAlertGrouping(options.alertGrouping);
+      }
+
+      if (options.description) hist.description = options.description;
+
+      if (options.summaryOptions) {
+        let summaryOptions = options.summaryOptions;
+        if (!(summaryOptions instanceof Map)) {
+          summaryOptions = Object.entries(summaryOptions);
+        }
+        for (const [name, value] of summaryOptions) {
+          hist.summaryOptions.set(name, value);
+        }
+      }
+
+      if (options.diagnostics !== undefined) {
+        let diagnostics = options.diagnostics;
+        if (!(diagnostics instanceof Map)) {
+          diagnostics = Object.entries(diagnostics);
+        }
+        for (const [name, diagnostic] of diagnostics) {
+          if (!diagnostic) continue;
+          hist.diagnostics.set(name, diagnostic);
+        }
+      }
+
+      if (!(samples instanceof Array)) samples = [samples];
+
+      for (const sample of samples) {
+        if (typeof sample === 'object') {
+          hist.addSample(sample.value, sample.diagnostics);
+        } else {
+          hist.addSample(sample);
+        }
+      }
+
+      return hist;
+    }
+
+    get diagnostics() {
+      return this.diagnostics_;
+    }
+
+    /* Set alert grouping for a Histogram.
+     * See https://go/chromeperf-alert-grouping-dd
+     * @param {Array.< String >=} opt_alertGrouping
+     */
+    setAlertGrouping(alertGrouping) {
+      if (alertGrouping === undefined ||
+          alertGrouping === null ||
+          alertGrouping.length === undefined) {
+        throw Error('alertGrouping must be an array');
+      }
+      for (const alertGroup of alertGrouping) {
+        if (!Object.values(tr.v.d.ALERT_GROUPS).includes(alertGroup)) {
+          throw Error(`Alert group ${alertGroup} must be added to ` +
+              '/tracing/value/diagnostics/alert_groups.html');
+        }
+      }
+      this.diagnostics.set(tr.v.d.RESERVED_NAMES.ALERT_GROUPING,
+          new tr.v.d.GenericSet(alertGrouping));
+    }
+
+    get running() {
+      return this.running_;
+    }
+
+    get maxNumSampleValues() {
+      return this.maxNumSampleValues_;
+    }
+
+    set maxNumSampleValues(n) {
+      this.maxNumSampleValues_ = n;
+      tr.b.math.Statistics.uniformlySampleArray(
+          this.sampleValues_, this.maxNumSampleValues_);
+    }
+
+    get name() {
+      return this.name_;
+    }
+
+    deserializeStatistics_() {
+      const statisticsNames = this.diagnostics.get(
+          tr.v.d.RESERVED_NAMES.STATISTICS_NAMES);
+      if (!statisticsNames) return;
+      for (const statName of statisticsNames) {
+        if (statName.startsWith('pct_')) {
+          const percent = percentFromString(statName.substr(4));
+          this.summaryOptions.get('percentile').push(percent);
+        } else if (statName.startsWith('ipr_')) {
+          const lower = percentFromString(statName.substr(4, 3));
+          const upper = percentFromString(statName.substr(8));
+          this.summaryOptions.get('iprs').push(
+              tr.b.math.Range.fromExplicitRange(lower, upper));
+        } else if (statName.startsWith('ci_')) {
+          const percent = percentFromString(
+              statName.replace('_lower', '').replace('_upper', '').substr(3));
+          if (!this.summaryOptions.get('ci').includes(percent)) {
+            this.summaryOptions.get('ci').push(percent);
+          }
+        }
+      }
+      for (const statName of this.summaryOptions.keys()) {
+        if (statName === 'percentile' ||
+            statName === 'iprs' ||
+            statName === 'ci') {
+          continue;
+        }
+        this.summaryOptions.set(statName, statisticsNames.has(statName));
+      }
+    }
+
+    deserializeBin_(i, bin, deserializer) {
+      // Copy HistogramBin on write, share the rest with the other
+      // Histograms that use the same HistogramBinBoundaries.
+      this.allBins[i] = new HistogramBin(this.allBins[i].range);
+      this.allBins[i].deserialize(bin, deserializer);
+
+      // TODO(benjhayden): Remove after class Sample.
+      if (!(bin instanceof Array)) return;
+      for (let sample of bin.slice(1)) {
+        if (sample instanceof Array) {
+          sample = sample[0];
+        }
+        this.sampleValues_.push(sample);
+      }
+    }
+
+    deserializeBins_(bins, deserializer) {
+      if (bins instanceof Array) {
+        for (let i = 0; i < bins.length; ++i) {
+          this.deserializeBin_(i, bins[i], deserializer);
+        }
+      } else {
+        for (const [i, binData] of Object.entries(bins)) {
+          this.deserializeBin_(i, binData, deserializer);
+        }
+      }
+    }
+
+    static deserialize(data, deserializer) {
+      const [name, unit, boundaries, diagnostics, running, bins, nanBin] = data;
+      const hist = new Histogram(
+          deserializer.getObject(name),
+          tr.b.Unit.fromJSON(unit),
+          HistogramBinBoundaries.fromDict(deserializer.getObject(boundaries)));
+
+      hist.diagnostics.deserializeAdd(diagnostics, deserializer);
+
+      const description = hist.diagnostics.get(
+          tr.v.d.RESERVED_NAMES.DESCRIPTION);
+      if (description && description.length) {
+        hist.description = [...description][0];
+      }
+
+      hist.deserializeStatistics_();
+
+      if (running) {
+        hist.running_ = tr.b.math.RunningStatistics.fromDict(running);
+      }
+
+      if (bins) {
+        hist.deserializeBins_(bins, deserializer);
+      }
+
+      if (nanBin) {
+        // TODO(benjhayden): hist.nanBin
+        if (!(nanBin instanceof Array)) {
+          hist.numNans = nanBin;
+        } else {
+          hist.numNans = nanBin[0];
+          for (const sample of nanBin.slice(1)) {
+            if (!(sample instanceof Array)) continue;
+            hist.nanDiagnosticMaps.push(tr.v.d.DiagnosticMap.deserialize(
+                sample.slice(1), deserializer));
+          }
+        }
+      }
+
+      return hist;
+    }
+
+    static fromDict(dict) {
+      const hist = new Histogram(dict.name, tr.b.Unit.fromJSON(dict.unit),
+          HistogramBinBoundaries.fromDict(dict.binBoundaries));
+      if (dict.description) {
+        hist.description = dict.description;
+      }
+      if (dict.diagnostics) {
+        hist.diagnostics.addDicts(dict.diagnostics);
+      }
+      if (dict.allBins) {
+        if (dict.allBins.length !== undefined) {
+          for (let i = 0; i < dict.allBins.length; ++i) {
+            // Copy HistogramBin on write, share the rest with the other
+            // Histograms that use the same HistogramBinBoundaries.
+            hist.allBins[i] = new HistogramBin(hist.allBins[i].range);
+            hist.allBins[i].fromDict(dict.allBins[i]);
+          }
+        } else {
+          for (const [i, binDict] of Object.entries(dict.allBins)) {
+            // Check whether i is a valid index before indexing it.
+            if (i >= hist.allBins.length || i < 0) {
+              throw new Error(
+                  'Invalid index "' + i +
+                  '" out of bounds of [0..' + hist.allBins.length + ')');
+            }
+
+            hist.allBins[i] = new HistogramBin(hist.allBins[i].range);
+            hist.allBins[i].fromDict(binDict);
+          }
+        }
+      }
+      if (dict.running) {
+        hist.running_ = tr.b.math.RunningStatistics.fromDict(dict.running);
+      }
+      if (dict.summaryOptions) {
+        if (dict.summaryOptions.iprs) {
+          // Range.fromDict() requires isEmpty, which is unnecessarily verbose
+          // for this use case.
+          dict.summaryOptions.iprs = dict.summaryOptions.iprs.map(
+              r => tr.b.math.Range.fromExplicitRange(r[0], r[1]));
+        }
+        hist.customizeSummaryOptions(dict.summaryOptions);
+      }
+      if (dict.maxNumSampleValues !== undefined) {
+        hist.maxNumSampleValues = dict.maxNumSampleValues;
+      }
+      if (dict.sampleValues) {
+        hist.sampleValues_ = dict.sampleValues;
+      }
+      if (dict.numNans) {
+        hist.numNans = dict.numNans;
+      }
+      if (dict.nanDiagnostics) {
+        for (const map of dict.nanDiagnostics) {
+          hist.nanDiagnosticMaps.push(tr.v.d.DiagnosticMap.fromDict(map));
+        }
+      }
+      return hist;
+    }
+
+    get numValues() {
+      return this.running_ ? this.running_.count : 0;
+    }
+
+    get average() {
+      return this.running_ ? this.running_.mean : undefined;
+    }
+
+    get standardDeviation() {
+      return this.running_ ? this.running_.stddev : undefined;
+    }
+
+    get geometricMean() {
+      return this.running_ ? this.running_.geometricMean : 0;
+    }
+
+    get sum() {
+      return this.running_ ? this.running_.sum : 0;
+    }
+
+    get min() {
+      return this.running_ ? this.running_.min : Infinity;
+    }
+
+    get max() {
+      return this.running_ ? this.running_.max : -Infinity;
+    }
+
+    /**
+     * Requires that units agree.
+     * Returns DONT_CARE if that is the units' improvementDirection.
+     * Returns SIGNIFICANT if the Mann-Whitney U test returns a
+     * p-value less than opt_alpha or DEFAULT_ALPHA. Returns INSIGNIFICANT if
+     * the p-value is greater than alpha.
+     *
+     * @param {!tr.v.Histogram} other
+     * @param {number=} opt_alpha
+     * @return {!tr.b.math.Statistics.Significance}
+     */
+    getDifferenceSignificance(other, opt_alpha) {
+      if (this.unit !== other.unit) {
+        throw new Error('Cannot compare Histograms with different units');
+      }
+
+      if (this.unit.improvementDirection ===
+          tr.b.ImprovementDirection.DONT_CARE) {
+        return tr.b.math.Statistics.Significance.DONT_CARE;
+      }
+
+      if (!(other instanceof Histogram)) {
+        throw new Error('Unable to compute a p-value');
+      }
+
+      const testResult = tr.b.math.Statistics.mwu(
+          this.sampleValues, other.sampleValues, opt_alpha);
+      return testResult.significance;
+    }
+
+    /*
+     * Compute an approximation of percentile based on the counts in the bins.
+     * If the real percentile lies within |this.range| then the result of
+     * the function will deviate from the real percentile by at most
+     * the maximum width of the bin(s) within which the point(s)
+     * from which the real percentile would be calculated lie.
+     * If the real percentile is outside |this.range| then the function
+     * returns the closest range limit: |this.range.min| or |this.range.max|.
+     *
+     * @param {number} percent The percent must be between 0.0 and 1.0.
+     */
+    getApproximatePercentile(percent) {
+      if (percent < 0 || percent > 1) {
+        throw new Error('percent must be in [0,1]');
+      }
+      if (this.numValues === 0) return undefined;
+      if (this.allBins.length === 1) {
+        // Copy sampleValues, don't sort them in place, in order to preserve
+        // insertion order.
+        const sortedSampleValues = this.sampleValues.slice().sort(
+            (x, y) => x - y);
+        return sortedSampleValues[Math.floor((sortedSampleValues.length - 1) *
+            percent)];
+      }
+      let valuesToSkip = Math.floor((this.numValues - 1) * percent);
+      for (const bin of this.allBins) {
+        valuesToSkip -= bin.count;
+        if (valuesToSkip >= 0) continue;
+        if (bin.range.min === -Number.MAX_VALUE) {
+          return bin.range.max;
+        }
+        if (bin.range.max === Number.MAX_VALUE) {
+          return bin.range.min;
+        }
+        return bin.range.center;
+      }
+      return this.allBins[this.allBins.length - 1].range.min;
+    }
+
+    getBinIndexForValue(value) {
+      // Don't use subtraction to avoid arithmetic overflow.
+      const i = tr.b.findFirstTrueIndexInSortedArray(
+          this.allBins, b => value < b.range.max);
+      if (0 <= i && i < this.allBins.length) return i;
+      return this.allBins.length - 1;
+    }
+
+    getBinForValue(value) {
+      return this.allBins[this.getBinIndexForValue(value)];
+    }
+
+    /**
+     * @param {number|*} value
+     * @param {(!Object|!tr.v.d.DiagnosticMap)=} opt_diagnostics
+     */
+    addSample(value, opt_diagnostics) {
+      if (opt_diagnostics) {
+        if (!(opt_diagnostics instanceof tr.v.d.DiagnosticMap)) {
+          opt_diagnostics = tr.v.d.DiagnosticMap.fromObject(opt_diagnostics);
+        }
+        for (const [name, diag] of opt_diagnostics) {
+          if (diag instanceof tr.v.d.Breakdown) {
+            diag.truncate(this.unit);
+          }
+        }
+      }
+
+      if (typeof(value) !== 'number' || isNaN(value)) {
+        this.numNans++;
+        if (opt_diagnostics) {
+          tr.b.math.Statistics.uniformlySampleStream(this.nanDiagnosticMaps,
+              this.numNans, opt_diagnostics, MAX_DIAGNOSTIC_MAPS);
+        }
+      } else {
+        if (this.running_ === undefined) {
+          this.running_ = new tr.b.math.RunningStatistics();
+        }
+        this.sampleMeans_ = [];
+        this.running_.add(value);
+
+        value = this.unit.truncate(value);
+
+        const binIndex = this.getBinIndexForValue(value);
+        let bin = this.allBins[binIndex];
+        if (bin.count === 0) {
+          // Copy HistogramBin on write, share the rest with the other
+          // Histograms that use the same HistogramBinBoundaries.
+          bin = new HistogramBin(bin.range);
+          this.allBins[binIndex] = bin;
+        }
+        bin.addSample(value);
+        if (opt_diagnostics) {
+          bin.addDiagnosticMap(opt_diagnostics);
+        }
+      }
+
+      tr.b.math.Statistics.uniformlySampleStream(this.sampleValues_,
+          this.numValues + this.numNans, value, this.maxNumSampleValues);
+    }
+
+    resampleMean_(percent) {
+      const filteredSamples = this.sampleValues_.
+          filter(value => typeof(value) === 'number' && !isNaN(value));
+      const sampleCount = filteredSamples.length;
+      if (sampleCount === 0 || percent <= 0.0 || percent >= 1.0) {
+        return [undefined, undefined];
+      } else if (sampleCount === 1) {
+        return [filteredSamples[0], filteredSamples[0]];
+      }
+
+      const iterations = DEFAULT_ITERATION_FOR_BOOTSTRAP_RESAMPLING;
+      if (this.sampleMeans_.length !== iterations) {
+        this.sampleMeans_ = [];
+        for (let i = 0; i < iterations; i++) {
+          let tempSum = 0.0;
+          for (let j = 0; j < sampleCount; j++) {
+            tempSum += filteredSamples[Math.floor(
+                Math.random() * sampleCount)];
+          }
+
+          this.sampleMeans_.push(tempSum / sampleCount);
+        }
+        this.sampleMeans_.sort((a, b) => a - b);
+      }
+
+      return [
+        this.sampleMeans_[Math.floor((iterations - 1) * (0.5 - percent / 2))],
+        this.sampleMeans_[Math.ceil((iterations - 1) * (0.5 + percent / 2))],
+      ];
+    }
+
+    sampleValuesInto(samples) {
+      for (const sampleValue of this.sampleValues) {
+        samples.push(sampleValue);
+      }
+    }
+
+    /**
+     * Return true if this Histogram can be added to |other|.
+     *
+     * @param {!tr.v.Histogram} other
+     * @return {boolean}
+     */
+    canAddHistogram(other) {
+      if (this.unit !== other.unit) {
+        return false;
+      }
+      if (this.binBoundariesDict_ === other.binBoundariesDict_) {
+        return true;
+      }
+      if (!this.binBoundariesDict_ || !other.binBoundariesDict_) {
+        return true;
+      }
+      // |binBoundariesDict_| may be equal even if they are not the same object.
+      if (this.binBoundariesDict_.length !== other.binBoundariesDict_.length) {
+        return false;
+      }
+      for (let i = 0; i < this.binBoundariesDict_.length; ++i) {
+        const slice = this.binBoundariesDict_[i];
+        const otherSlice = other.binBoundariesDict_[i];
+        if (slice instanceof Array) {
+          if (!(otherSlice instanceof Array)) {
+            return false;
+          }
+          if (slice[0] !== otherSlice[0] ||
+              !tr.b.math.approximately(slice[1], otherSlice[1]) ||
+              slice[2] !== otherSlice[2]) {
+            return false;
+          }
+        } else {
+          if (otherSlice instanceof Array) {
+            return false;
+          }
+          if (!tr.b.math.approximately(slice, otherSlice)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Add |other| to this Histogram in-place if they can be added.
+     *
+     * @param {!tr.v.Histogram} other
+     */
+    addHistogram(other) {
+      if (!this.canAddHistogram(other)) {
+        throw new Error('Merging incompatible Histograms');
+      }
+
+      if (!!this.binBoundariesDict_ === !!other.binBoundariesDict_) {
+        for (let i = 0; i < this.allBins.length; ++i) {
+          let bin = this.allBins[i];
+          if (bin.count === 0) {
+            bin = new HistogramBin(bin.range);
+            this.allBins[i] = bin;
+          }
+          bin.addBin(other.allBins[i]);
+        }
+      } else {
+        const [multiBin, singleBin] = this.binBoundariesDict_ ?
+          [this, other] : [other, this];
+        // TODO(benjhayden) This can't propagate sample diagnostics until
+        // sampleValues are merged into bins alongside their diagnostics.
+        for (const value of singleBin.sampleValues) {
+          if (typeof(value) !== 'number' || isNaN(value)) {
+            continue;
+          }
+          const binIndex = multiBin.getBinIndexForValue(value);
+          let bin = multiBin.allBins[binIndex];
+          if (bin.count === 0) {
+            // Copy HistogramBin on write, share the rest with the other
+            // Histograms that use the same HistogramBinBoundaries.
+            bin = new HistogramBin(bin.range);
+            multiBin.allBins[binIndex] = bin;
+          }
+          bin.addSample(value);
+        }
+      }
+
+      tr.b.math.Statistics.mergeSampledStreams(this.nanDiagnosticMaps,
+          this.numNans, other.nanDiagnosticMaps, other.numNans,
+          MAX_DIAGNOSTIC_MAPS);
+      tr.b.math.Statistics.mergeSampledStreams(
+          this.sampleValues, this.numValues + this.numNans,
+          other.sampleValues, other.numValues + other.numNans,
+          (this.maxNumSampleValues + other.maxNumSampleValues) / 2);
+      this.numNans += other.numNans;
+
+      if (other.running_ !== undefined) {
+        if (this.running_ === undefined) {
+          this.running_ = new tr.b.math.RunningStatistics();
+        }
+        this.running_ = this.running_.merge(other.running_);
+      }
+
+      this.sampleMeans_ = [];
+      this.diagnostics.addDiagnostics(other.diagnostics);
+
+      for (const [stat, option] of other.summaryOptions) {
+        if (stat === 'percentile') {
+          const percentiles = this.summaryOptions.get(stat);
+          for (const percent of option) {
+            if (!percentiles.includes(percent)) percentiles.push(percent);
+          }
+        } else if (stat === 'iprs') {
+          const thisIprs = this.summaryOptions.get(stat);
+          for (const ipr of option) {
+            let found = false;
+            for (const thisIpr of thisIprs) {
+              found = ipr.equals(thisIpr);
+              if (found) break;
+            }
+            if (!found) thisIprs.push(ipr);
+          }
+        } else if (stat === 'ci') {
+          const CIs = this.summaryOptions.get(stat);
+          for (const CI of option) {
+            if (!CIs.includes(CI)) CIs.push(CI);
+          }
+        } else if (option && !this.summaryOptions.get(stat)) {
+          this.summaryOptions.set(stat, true);
+        }
+      }
+    }
+
+    /**
+     * Controls which statistics are exported to dashboard for this Histogram.
+     * The options not included in the |summaryOptions| will not change.
+     *
+     * @param {!Object} summaryOptions
+     * @param {boolean=} summaryOptions.avg
+     * @param {boolean=} summaryOptions.count
+     * @param {boolean=} summaryOptions.geometricMean
+     * @param {boolean=} summaryOptions.max
+     * @param {boolean=} summaryOptions.min
+     * @param {boolean=} summaryOptions.nans
+     * @param {boolean=} summaryOptions.std
+     * @param {boolean=} summaryOptions.sum
+     * @param {!Array.<number>=} summaryOptions.percentile Numbers in (0,1)
+     * @param {!Array.<!tr.b.Range>=} summaryOptions.iprs Ranges of numbers in
+     *     (0,1).
+     * @param {!Array.<number>=} summaryOptions.ci Numbers in (0,1)
+     */
+    customizeSummaryOptions(summaryOptions) {
+      for (const [key, value] of Object.entries(summaryOptions)) {
+        this.summaryOptions.set(key, value);
+      }
+    }
+
+    /**
+     * @param {string} statName
+     * @param {!tr.v.Histogram=} opt_referenceHistogram
+     * @param {!HypothesisTestResult=} opt_mwu
+     * @return {!tr.b.Scalar}
+     * @throws {Error} When statName is not recognized, such as delta statistics
+     *     when !this.canCompare(opt_referenceHistograms).
+     */
+    getStatisticScalar(statName, opt_referenceHistogram, opt_mwu) {
+      if (statName === 'avg') {
+        if (typeof(this.average) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, this.average);
+      }
+      if (statName === 'std') {
+        if (typeof(this.standardDeviation) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, this.standardDeviation);
+      }
+      if (statName === 'geometricMean') {
+        if (typeof(this.geometricMean) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, this.geometricMean);
+      }
+      if (statName === 'min' || statName === 'max' || statName === 'sum') {
+        if (this.running_ === undefined) {
+          this.running_ = new tr.b.math.RunningStatistics();
+        }
+        if (typeof(this.running_[statName]) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, this.running_[statName]);
+      }
+      if (statName === 'nans') {
+        return new tr.b.Scalar(
+            tr.b.Unit.byName.count_smallerIsBetter, this.numNans);
+      }
+      if (statName === 'count') {
+        return new tr.b.Scalar(
+            tr.b.Unit.byName.count_smallerIsBetter, this.numValues);
+      }
+      if (statName.substr(0, 4) === 'pct_') {
+        if (this.numValues === 0) return undefined;
+        const percent = percentFromString(statName.substr(4));
+        const percentile = this.getApproximatePercentile(percent);
+        if (typeof(percentile) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, percentile);
+      }
+      if (statName.substr(0, 3) === 'ci_') {
+        const percent = percentFromString(statName.substr(3, 3));
+        const [lowCI, highCI] = this.resampleMean_(percent);
+        if (statName.substr(7) === 'lower') {
+          if (typeof(lowCI) !== 'number') return undefined;
+          return new tr.b.Scalar(this.unit, lowCI);
+        } else if (statName.substr(7) === 'upper') {
+          if (typeof(highCI) !== 'number') return undefined;
+          return new tr.b.Scalar(this.unit, highCI);
+        }
+
+        if (typeof(highCI) !== 'number' || typeof(lowCI) !== 'number') {
+          return undefined;
+        }
+        return new tr.b.Scalar(this.unit, highCI - lowCI);
+      }
+      if (statName.substr(0, 4) === 'ipr_') {
+        let lower = percentFromString(statName.substr(4, 3));
+        let upper = percentFromString(statName.substr(8));
+        if (lower >= upper) {
+          throw new Error('Invalid inter-percentile range: ' + statName);
+        }
+        lower = this.getApproximatePercentile(lower);
+        upper = this.getApproximatePercentile(upper);
+        const ipr = upper - lower;
+        if (typeof(ipr) !== 'number') return undefined;
+        return new tr.b.Scalar(this.unit, ipr);
+      }
+
+      if (!this.canCompare(opt_referenceHistogram)) {
+        throw new Error(
+            'Cannot compute ' + statName +
+            ' when histograms are not comparable');
+      }
+
+      const suffix = tr.b.Unit.nameSuffixForImprovementDirection(
+          this.unit.improvementDirection);
+
+      const deltaIndex = statName.indexOf(DELTA);
+      if (deltaIndex >= 0) {
+        const baseStatName = statName.substr(deltaIndex + 1);
+        const thisStat = this.getStatisticScalar(baseStatName);
+        const otherStat = opt_referenceHistogram.getStatisticScalar(
+            baseStatName);
+        const deltaValue = thisStat.value - otherStat.value;
+
+        if (statName[0] === '%') {
+          return new tr.b.Scalar(
+              tr.b.Unit.byName['normalizedPercentageDelta' + suffix],
+              deltaValue / otherStat.value);
+        }
+        return new tr.b.Scalar(
+            thisStat.unit.correspondingDeltaUnit, deltaValue);
+      }
+
+      if (statName === Z_SCORE_NAME) {
+        return new tr.b.Scalar(
+            tr.b.Unit.byName['sigmaDelta' + suffix],
+            (this.average - opt_referenceHistogram.average) /
+            opt_referenceHistogram.standardDeviation);
+      }
+
+      const mwu = opt_mwu || tr.b.math.Statistics.mwu(
+          this.sampleValues, opt_referenceHistogram.sampleValues);
+      if (statName === P_VALUE_NAME) {
+        return new tr.b.Scalar(tr.b.Unit.byName.unitlessNumber, mwu.p);
+      }
+      if (statName === U_STATISTIC_NAME) {
+        return new tr.b.Scalar(tr.b.Unit.byName.unitlessNumber, mwu.U);
+      }
+
+      throw new Error('Unrecognized statistic name: ' + statName);
+    }
+
+    /**
+     * @return {!Array.<string>} names of enabled summary statistics
+     */
+    get statisticsNames() {
+      const statisticsNames = new Set();
+      for (const [statName, option] of this.summaryOptions) {
+        if (statName === 'percentile') {
+          for (const pctile of option) {
+            statisticsNames.add('pct_' + tr.v.percentToString(pctile));
+          }
+        } else if (statName === 'iprs') {
+          for (const range of option) {
+            statisticsNames.add(
+                'ipr_' + tr.v.percentToString(range.min, true) +
+                '_' + tr.v.percentToString(range.max, true));
+          }
+        } else if (statName === 'ci') {
+          for (const CIpctile of option) {
+            const CIpctStr = tr.v.percentToString(CIpctile);
+            statisticsNames.add('ci_' + CIpctStr + '_lower');
+            statisticsNames.add('ci_' + CIpctStr + '_upper');
+            statisticsNames.add('ci_' + CIpctStr);
+          }
+        } else if (option) {
+          statisticsNames.add(statName);
+        }
+      }
+      return statisticsNames;
+    }
+
+    /**
+     * Returns true if delta statistics can be computed between |this| and
+     * |other|.
+     *
+     * @param {!tr.v.Histogram=} other
+     * @return {boolean}
+     */
+    canCompare(other) {
+      return other instanceof Histogram &&
+          this.unit === other.unit &&
+          this.numValues > 0 &&
+          other.numValues > 0;
+    }
+
+    /**
+     * Returns |statName| if it can be computed, or the related non-delta
+     * statistic if |statName| is a delta statistic and
+     * !this.canCompare(opt_referenceHist).
+     *
+     * @param {string} statName
+     * @param {!tr.v.Histogram=} opt_referenceHist
+     * @return {string}
+     */
+    getAvailableStatisticName(statName, opt_referenceHist) {
+      if (this.canCompare(opt_referenceHist)) return statName;
+      if (statName === Z_SCORE_NAME ||
+          statName === P_VALUE_NAME ||
+          statName === U_STATISTIC_NAME) {
+        return 'avg';
+      }
+      const deltaIndex = statName.indexOf(DELTA);
+      if (deltaIndex < 0) return statName;
+      return statName.substr(deltaIndex + 1);
+    }
+
+    /**
+     * Returns names of delta statistics versions of given non-delta statistics
+     * names.
+     *
+     * @param {!Array.<string>} statNames
+     * @return {!Array.<string>}
+     */
+    static getDeltaStatisticsNames(statNames) {
+      const deltaNames = [];
+      for (const statName of statNames) {
+        deltaNames.push(`${DELTA}${statName}`);
+        deltaNames.push(`%${DELTA}${statName}`);
+      }
+      return deltaNames.concat([Z_SCORE_NAME, P_VALUE_NAME, U_STATISTIC_NAME]);
+    }
+
+    /**
+     * Returns a Map {statisticName: Scalar}.
+     *
+     * Each enabled summary option produces the corresponding value:
+     * min, max, count, sum, avg, or std.
+     * Each percentile 0.x produces pct_0x0.
+     * Each percentile 0.xx produces pct_0xx.
+     * Each percentile 0.xxy produces pct_0xx_y.
+     * Percentile 1.0 produces pct_100.
+     *
+     * @return {!Map.<string, Scalar>}
+     */
+    get statisticsScalars() {
+      const results = new Map();
+      for (const statName of this.statisticsNames) {
+        const scalar = this.getStatisticScalar(statName);
+        if (scalar === undefined) continue;
+        results.set(statName, scalar);
+      }
+      return results;
+    }
+
+    get sampleValues() {
+      return this.sampleValues_;
+    }
+
+    /**
+     * Create a new Histogram instance that is just like |this|. This is useful
+     * when merging Histograms.
+     * @return {!tr.v.Histogram}
+     */
+    clone() {
+      const binBoundaries = HistogramBinBoundaries.fromDict(
+          this.binBoundariesDict_);
+      const hist = new Histogram(this.name, this.unit, binBoundaries);
+      for (const [stat, option] of this.summaryOptions) {
+        // Copy arrays, but not ipr Ranges.
+        if (stat === 'percentile' || stat === 'iprs' || stat === 'ci') {
+          hist.summaryOptions.set(stat, Array.from(option));
+        } else {
+          hist.summaryOptions.set(stat, option);
+        }
+      }
+      hist.addHistogram(this);
+      return hist;
+    }
+
+    /**
+     * Produce a Histogram with |this| Histogram's name, unit, description,
+     * statistics, summaryOptions, sampleValues, and diagnostics, but with
+     * |newBoundaries|.
+     * sample diagnostics are not copied. In-bound Relationship
+     * diagnostics are broken.
+     *
+     * @param {!tr.v.HistogramBinBoundaries} newBoundaries
+     * @return {!tr.v.Histogram}
+     */
+    rebin(newBoundaries) {
+      const rebinned = new tr.v.Histogram(this.name, this.unit, newBoundaries);
+      rebinned.description = this.description;
+      for (const sample of this.sampleValues) {
+        rebinned.addSample(sample);
+      }
+      rebinned.running_ = this.running_;
+      for (const [name, diagnostic] of this.diagnostics) {
+        rebinned.diagnostics.set(name, diagnostic);
+      }
+      for (const [stat, option] of this.summaryOptions) {
+        // Copy the array of percentiles.
+        if (stat === 'percentile' || stat === 'ci') {
+          rebinned.summaryOptions.set(stat, Array.from(option));
+        } else {
+          rebinned.summaryOptions.set(stat, option);
+        }
+      }
+      return rebinned;
+    }
+
+    serialize(serializer) {
+      let nanBin = this.numNans;
+      if (this.nanDiagnosticMaps.length) {
+        nanBin = [nanBin, ...this.nanDiagnosticMaps.map(dm => [
+          undefined, ...dm.serialize(serializer)])];
+      }
+      this.diagnostics.set(tr.v.d.RESERVED_NAMES.STATISTICS_NAMES,
+          new tr.v.d.GenericSet([...this.statisticsNames].sort()));
+      this.diagnostics.set(tr.v.d.RESERVED_NAMES.DESCRIPTION,
+          new tr.v.d.GenericSet([this.description].sort()));
+      return [
+        serializer.getOrAllocateId(this.name),
+        this.unit.asJSON2(),
+        serializer.getOrAllocateId(this.binBoundariesDict_),
+        this.diagnostics.serialize(serializer),
+        this.running_ ? this.running_.asDict() : 0,
+        this.serializeBins_(serializer),
+        nanBin,
+      ];
+    }
+
+    asDict() {
+      const dict = {};
+      dict.name = this.name;
+      dict.unit = this.unit.asJSON();
+      if (this.binBoundariesDict_ !== undefined) {
+        dict.binBoundaries = this.binBoundariesDict_;
+      }
+      if (this.description) {
+        dict.description = this.description;
+      }
+      if (this.diagnostics.size) {
+        dict.diagnostics = this.diagnostics.asDict();
+      }
+      if (this.maxNumSampleValues !== this.defaultMaxNumSampleValues_) {
+        dict.maxNumSampleValues = this.maxNumSampleValues;
+      }
+      if (this.numNans) {
+        dict.numNans = this.numNans;
+      }
+      if (this.nanDiagnosticMaps.length) {
+        dict.nanDiagnostics = this.nanDiagnosticMaps.map(
+            dm => dm.asDict());
+      }
+
+      if (this.numValues) {
+        dict.sampleValues = this.sampleValues.slice();
+        this.running.truncate(this.unit);
+        dict.running = this.running_.asDict();
+        dict.allBins = this.allBinsAsDict_();
+      }
+
+      const summaryOptions = {};
+      let anyOverriddenSummaryOptions = false;
+      for (const [name, value] of this.summaryOptions) {
+        let option;
+        if (name === 'percentile') {
+          if (value.length === 0) continue;
+          option = Array.from(value);
+        } else if (name === 'iprs') {
+          // Use a more compact JSON format than Range supports.
+          if (value.length === 0) continue;
+          option = value.map(r => [r.min, r.max]);
+        } else if (name === 'ci') {
+          if (value.length === 0) continue;
+          option = Array.from(value);
+        } else if (value === DEFAULT_SUMMARY_OPTIONS.get(name)) {
+          continue;
+        } else {
+          option = value;
+        }
+        summaryOptions[name] = option;
+        anyOverriddenSummaryOptions = true;
+      }
+      if (anyOverriddenSummaryOptions) {
+        dict.summaryOptions = summaryOptions;
+      }
+
+      return dict;
+    }
+
+    serializeBins_(serializer) {
+      // dict.allBins may be either an array or a dict, whichever is more
+      // efficient.
+      // The overhead of the array form is significant when the histogram is
+      // sparse, and the overhead of the dict form is significant when the
+      // histogram is dense.
+      // The dict form is more efficient when more than half of allBins are
+      // empty. The array form is more efficient when fewer than half of
+      // allBins are empty.
+
+      const numBins = this.allBins.length;
+
+      // If allBins are empty, then don't serialize anything for them.
+      let emptyBins = 0;
+
+      for (let i = 0; i < numBins; ++i) {
+        if (this.allBins[i].count === 0) {
+          ++emptyBins;
+        }
+      }
+
+      if (emptyBins === numBins) {
+        return 0;
+      }
+
+      if (emptyBins > (numBins / 2)) {
+        const allBinsDict = {};
+        for (let i = 0; i < numBins; ++i) {
+          const bin = this.allBins[i];
+          if (bin.count > 0) {
+            allBinsDict[i] = bin.serialize(serializer);
+          }
+        }
+        return allBinsDict;
+      }
+
+      const allBinsArray = [];
+      for (let i = 0; i < numBins; ++i) {
+        allBinsArray.push(this.allBins[i].serialize(serializer));
+      }
+      return allBinsArray;
+    }
+
+    allBinsAsDict_() {
+      // dict.allBins may be either an array or a dict, whichever is more
+      // efficient.
+      // The overhead of the array form is significant when the histogram is
+      // sparse, and the overhead of the dict form is significant when the
+      // histogram is dense.
+      // The dict form is more efficient when more than half of allBins are
+      // empty. The array form is more efficient when fewer than half of
+      // allBins are empty.
+
+      const numBins = this.allBins.length;
+
+      // If allBins are empty, then don't serialize anything for them.
+      let emptyBins = 0;
+
+      for (let i = 0; i < numBins; ++i) {
+        if (this.allBins[i].count === 0) {
+          ++emptyBins;
+        }
+      }
+
+      if (emptyBins === numBins) {
+        return undefined;
+      }
+
+      if (emptyBins > (numBins / 2)) {
+        const allBinsDict = {};
+        for (let i = 0; i < numBins; ++i) {
+          const bin = this.allBins[i];
+          if (bin.count > 0) {
+            allBinsDict[i] = bin.asDict();
+          }
+        }
+        return allBinsDict;
+      }
+
+      const allBinsArray = [];
+      for (let i = 0; i < numBins; ++i) {
+        allBinsArray.push(this.allBins[i].asDict());
+      }
+      return allBinsArray;
+    }
+
+    get defaultMaxNumSampleValues_() {
+      // Single-bin histograms might be rebin()ned, so they should retain enough
+      // samples that the rebinned histogram looks close enough.
+      return DEFAULT_SAMPLE_VALUES_PER_BIN * Math.max(
+          this.allBins.length, DEFAULT_REBINNED_COUNT);
+    }
+  }
+
+  // Some metrics only want to report average. This dictionary is provided to
+  // facilitate disabling all other statistics.
+  Histogram.AVERAGE_ONLY_SUMMARY_OPTIONS = {
+    count: false,
+    max: false,
+    min: false,
+    std: false,
+    sum: false,
+  };
+
+  const HISTOGRAM_BIN_BOUNDARIES_CACHE = new Map();
+
+  /*
+   * Reusable builder for tr.v.Histogram objects.
+   *
+   * The bins of the Histogram are specified by adding the desired boundaries
+   * between bins. Initially, the builder has only a single boundary:
+   *
+   *           range.min=range.max
+   *                    |
+   *                    |
+   *   -MAX_VALUE <-----|-----------> +MAX_VALUE
+   *       :  resulting : resulting       :
+   *       :  underflow :  overflow       :
+   *       :     bin    :    bin          :
+   *
+   * If the single boundary is set to either -Number.MAX_VALUE or
+   * +Number.MAX_VALUE, then the builder will construct only a single bin:
+   *
+   *             range.min=range.max
+   *                      |
+   *                      |
+   *   -MAX_VALUE <-> +MAX_VALUE
+   *       :   resulting  :
+   *       :      bin     :
+   *
+   * More boundaries can be added (in increasing order) using addBinBoundary,
+   * addLinearBins and addExponentialBins:
+   *
+   *                range.min                           range.max
+   *                     |         |         |     |         |
+   *                     |         |         |     |         |
+   *   -MAX_VALUE <------|---------|---------|-----|---------|------> +MAX_VALUE
+   *       :  resulting  : result. : result. :     : result. : resulting  :
+   *       :  underflow  : central : central : ... : central :  overflow  :
+   *       :     bin     :  bin 0  :  bin 1  :     : bin N-1 :    bin     :
+   *
+   * An important feature of the builder is that it's reusable, i.e. it can be
+   * used to build multiple Histograms with the same bin structure.
+   */
+  class HistogramBinBoundaries {
+    /**
+     * Create a linearly scaled tr.v.HistogramBinBoundaries with |numBins| bins
+     * ranging from |min| to |max|.
+     *
+     * @param {number} min
+     * @param {number} max
+     * @param {number} numBins
+     * @return {tr.v.HistogramBinBoundaries}
+     */
+    static createLinear(min, max, numBins) {
+      return new HistogramBinBoundaries(min).addLinearBins(max, numBins);
+    }
+
+    /**
+     * Create an exponentially scaled tr.v.HistogramBinBoundaries with |numBins|
+     * bins ranging from |min| to |max|.
+     *
+     * @param {number} min
+     * @param {number} max
+     * @param {number} numBins
+     * @return {tr.v.HistogramBinBoundaries}
+     */
+    static createExponential(min, max, numBins) {
+      return new HistogramBinBoundaries(min).addExponentialBins(max, numBins);
+    }
+
+    /**
+     * @param {Array.<number>} binBoundaries
+     */
+    static createWithBoundaries(binBoundaries) {
+      const builder = new HistogramBinBoundaries(binBoundaries[0]);
+      for (const boundary of binBoundaries.slice(1)) {
+        builder.addBinBoundary(boundary);
+      }
+      return builder;
+    }
+
+    /**
+     * |minBinBoundary| will be the boundary between the underflow bin and the
+     * first central bin if other bin boundaries are added.
+     * If no other bin boundaries are added, then |minBinBoundary| will be the
+     * boundary between the underflow bin and the overflow bin.
+     * If no other bin boundaries are added and |minBinBoundary| is either
+     * -Number.MAX_VALUE or +Number.MAX_VALUE, then only a single binRange will
+     * be built.
+     *
+     * @param {number} minBinBoundary The minimum boundary between bins.
+     */
+    constructor(minBinBoundary) {
+      this.builder_ = [minBinBoundary];
+      this.range_ = new tr.b.math.Range();
+      this.range_.addValue(minBinBoundary);
+      this.binRanges_ = undefined;
+      this.bins_ = undefined;
+    }
+
+    get range() {
+      return this.range_;
+    }
+
+    asDict() {
+      if (this.builder_.length === 1 && this.builder_[0] === Number.MAX_VALUE) {
+        return undefined;
+      }
+
+      // Don't copy builder_ here so that Histogram.canAddHistogram() can test
+      // for object identity.
+      return this.builder_;
+    }
+
+    pushBuilderSlice_(slice) {
+      this.builder_.push(slice);
+      // Copy builder_ when it's modified so that Histogram.canAddHistogram()
+      // can test for object identity.
+      this.builder_ = this.builder_.slice();
+    }
+
+    static fromDict(dict) {
+      if (dict === undefined) {
+        return HistogramBinBoundaries.SINGULAR;
+      }
+
+      // When loading a results.html with many Histograms with the same bin
+      // boundaries, caching the HistogramBinBoundaries not only speeds up
+      // loading, but also prevents a bug where buildBinRanges_ is occasionally
+      // non-deterministic, which causes similar Histograms to be unmergeable.
+      const cacheKey = JSON.stringify(dict);
+      if (HISTOGRAM_BIN_BOUNDARIES_CACHE.has(cacheKey)) {
+        return HISTOGRAM_BIN_BOUNDARIES_CACHE.get(cacheKey);
+      }
+
+      const binBoundaries = new HistogramBinBoundaries(dict[0]);
+      for (const slice of dict.slice(1)) {
+        if (!(slice instanceof Array)) {
+          binBoundaries.addBinBoundary(slice);
+          continue;
+        }
+        switch (slice[0]) {
+          case HistogramBinBoundaries.SLICE_TYPE.LINEAR:
+            binBoundaries.addLinearBins(slice[1], slice[2]);
+            break;
+
+          case HistogramBinBoundaries.SLICE_TYPE.EXPONENTIAL:
+            binBoundaries.addExponentialBins(slice[1], slice[2]);
+            break;
+
+          default:
+            throw new Error('Unrecognized HistogramBinBoundaries slice type');
+        }
+      }
+      HISTOGRAM_BIN_BOUNDARIES_CACHE.set(cacheKey, binBoundaries);
+      return binBoundaries;
+    }
+
+    get bins() {
+      if (this.bins_ === undefined) {
+        this.buildBins_();
+      }
+      return this.bins_;
+    }
+
+    buildBins_() {
+      this.bins_ = this.binRanges.map(r => new HistogramBin(r));
+      // It would be nice to Object.freeze() the bins in order to catch bugs
+      // when we forget to copy a bin before writing to it, but that would slow
+      // down buildBins_ by 55%: https://jsperf.com/new-vs-new-freeze/1
+    }
+
+    /**
+     * @return {!Array.<!tr.b.math.Range>}
+     */
+    get binRanges() {
+      if (this.binRanges_ === undefined) {
+        this.buildBinRanges_();
+      }
+      return this.binRanges_;
+    }
+
+    buildBinRanges_() {
+      if (typeof this.builder_[0] !== 'number') {
+        throw new Error('Invalid start of builder_');
+      }
+      this.binRanges_ = [];
+      let prevBoundary = this.builder_[0];
+
+      if (prevBoundary > -Number.MAX_VALUE) {
+        // underflow bin
+        this.binRanges_.push(tr.b.math.Range.fromExplicitRange(
+            -Number.MAX_VALUE, prevBoundary));
+      }
+
+      for (const slice of this.builder_.slice(1)) {
+        if (!(slice instanceof Array)) {
+          this.binRanges_.push(
+              tr.b.math.Range.fromExplicitRange(prevBoundary, slice));
+          prevBoundary = slice;
+          continue;
+        }
+        const nextMaxBinBoundary = slice[1];
+        const binCount = slice[2];
+        const sliceMinBinBoundary = prevBoundary;
+
+        switch (slice[0]) {
+          case HistogramBinBoundaries.SLICE_TYPE.LINEAR:
+          {
+            const binWidth = (nextMaxBinBoundary - prevBoundary) / binCount;
+            for (let i = 1; i < binCount; i++) {
+              const boundary = sliceMinBinBoundary + i * binWidth;
+              this.binRanges_.push(tr.b.math.Range.fromExplicitRange(
+                  prevBoundary, boundary));
+              prevBoundary = boundary;
+            }
+            break;
+          }
+
+          case HistogramBinBoundaries.SLICE_TYPE.EXPONENTIAL:
+          {
+            const binExponentWidth =
+                  Math.log(nextMaxBinBoundary / prevBoundary) / binCount;
+            for (let i = 1; i < binCount; i++) {
+              const boundary = sliceMinBinBoundary * Math.exp(
+                  i * binExponentWidth);
+              this.binRanges_.push(tr.b.math.Range.fromExplicitRange(
+                  prevBoundary, boundary));
+              prevBoundary = boundary;
+            }
+            break;
+          }
+
+          default:
+            throw new Error('Unrecognized HistogramBinBoundaries slice type');
+        }
+        this.binRanges_.push(tr.b.math.Range.fromExplicitRange(
+            prevBoundary, nextMaxBinBoundary));
+        prevBoundary = nextMaxBinBoundary;
+      }
+      if (prevBoundary < Number.MAX_VALUE) {
+        // overflow bin
+        this.binRanges_.push(tr.b.math.Range.fromExplicitRange(
+            prevBoundary, Number.MAX_VALUE));
+      }
+    }
+
+    /**
+     * Add a bin boundary |nextMaxBinBoundary| to the builder.
+     *
+     * This operation effectively corresponds to appending a new central bin
+     * with the range [this.range.max, nextMaxBinBoundary].
+     *
+     * @param {number} nextMaxBinBoundary The added bin boundary (must be
+     *     greater than |this.maxMinBoundary|).
+     */
+    addBinBoundary(nextMaxBinBoundary) {
+      if (nextMaxBinBoundary <= this.range.max) {
+        throw new Error('The added max bin boundary must be larger than ' +
+            'the current max boundary');
+      }
+
+      // If binRanges_ had been built, then clear them.
+      this.binRanges_ = undefined;
+      this.bins_ = undefined;
+
+      this.pushBuilderSlice_(nextMaxBinBoundary);
+      this.range.addValue(nextMaxBinBoundary);
+      return this;
+    }
+
+    /**
+     * Add |binCount| linearly scaled bin boundaries up to |nextMaxBinBoundary|
+     * to the builder.
+     *
+     * This operation corresponds to appending |binCount| central bins of
+     * constant range width
+     * W = ((|nextMaxBinBoundary| - |this.range.max|) / |binCount|)
+     * with the following ranges:
+     *
+     *   [|this.maxMinBoundary|, |this.maxMinBoundary| + W]
+     *   [|this.maxMinBoundary| + W, |this.maxMinBoundary| + 2W]
+     *   [|this.maxMinBoundary| + 2W, |this.maxMinBoundary| + 3W]
+     *   ...
+     *   [|this.maxMinBoundary| + (|binCount| - 2) * W,
+     *    |this.maxMinBoundary| + (|binCount| - 2) * W]
+     *   [|this.maxMinBoundary| + (|binCount| - 1) * W,
+     *    |nextMaxBinBoundary|]
+     *
+     * @param {number} nextBinBoundary The last added bin boundary (must be
+     *     greater than |this.maxMinBoundary|).
+     * @param {number} binCount Number of bins to be added (must be positive).
+     */
+    addLinearBins(nextMaxBinBoundary, binCount) {
+      if (binCount <= 0) {
+        throw new Error('Bin count must be positive');
+      }
+
+      if (nextMaxBinBoundary <= this.range.max) {
+        throw new Error('The new max bin boundary must be greater than ' +
+            'the previous max bin boundary');
+      }
+
+      // If binRanges_ had been built, then clear them.
+      this.binRanges_ = undefined;
+      this.bins_ = undefined;
+
+      this.pushBuilderSlice_([
+        HistogramBinBoundaries.SLICE_TYPE.LINEAR,
+        nextMaxBinBoundary, binCount]);
+      this.range.addValue(nextMaxBinBoundary);
+      return this;
+    }
+
+    /**
+     * Add |binCount| exponentially scaled bin boundaries up to
+     * |nextMaxBinBoundary| to the builder.
+     *
+     * This operation corresponds to appending |binCount| central bins with
+     * a constant difference between the logarithms of their range min and max
+     * D = ((ln(|nextMaxBinBoundary|) - ln(|this.range.max|)) / |binCount|)
+     * with the following ranges:
+     *
+     *   [|this.maxMinBoundary|, |this.maxMinBoundary| * exp(D)]
+     *   [|this.maxMinBoundary| * exp(D), |this.maxMinBoundary| * exp(2D)]
+     *   [|this.maxMinBoundary| * exp(2D), |this.maxMinBoundary| * exp(3D)]
+     *   ...
+     *   [|this.maxMinBoundary| * exp((|binCount| - 2) * D),
+     *    |this.maxMinBoundary| * exp((|binCount| - 2) * D)]
+     *   [|this.maxMinBoundary| * exp((|binCount| - 1) * D),
+     *    |nextMaxBinBoundary|]
+     *
+     * This method requires that the current max bin boundary is positive.
+     *
+     * @param {number} nextBinBoundary The last added bin boundary (must be
+     *     greater than |this.maxMinBoundary|).
+     * @param {number} binCount Number of bins to be added (must be positive).
+     */
+    addExponentialBins(nextMaxBinBoundary, binCount) {
+      if (binCount <= 0) {
+        throw new Error('Bin count must be positive');
+      }
+      if (this.range.max <= 0) {
+        throw new Error('Current max bin boundary must be positive');
+      }
+      if (this.range.max >= nextMaxBinBoundary) {
+        throw new Error('The last added max boundary must be greater than ' +
+            'the current max boundary boundary');
+      }
+
+      // If binRanges_ had been built, then clear them.
+      this.binRanges_ = undefined;
+      this.bins_ = undefined;
+
+      this.pushBuilderSlice_([
+        HistogramBinBoundaries.SLICE_TYPE.EXPONENTIAL,
+        nextMaxBinBoundary, binCount]);
+      this.range.addValue(nextMaxBinBoundary);
+      return this;
+    }
+  }
+
+  HistogramBinBoundaries.SLICE_TYPE = {
+    LINEAR: 0,
+    EXPONENTIAL: 1,
+  };
+
+  // This special HistogramBinBoundaries instance produces a singe binRange,
+  // allowing Histograms to have a single bin.
+  // This is the only way for Histograms to have fewer than 2 bins, since
+  // HistogramBinBoundaries.buildBinRanges_() ensures that there is always a bin
+  // whose min is -Number.MAX_VALUE, and a bin whose max is Number.MAX_VALUE.
+  // SINGULAR is the only HistogramBinBoundaries in which those bins are one and
+  // the same.
+  HistogramBinBoundaries.SINGULAR = new HistogramBinBoundaries(
+      Number.MAX_VALUE);
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.timeDurationInMs.unitName,
+      HistogramBinBoundaries.createExponential(1e-3, 1e6, 1e2));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.timeInMsAutoFormat.unitName,
+      new HistogramBinBoundaries(0)
+          .addBinBoundary(1).addExponentialBins(1e3, 3)
+          .addBinBoundary(tr.b.convertUnit(
+              2, tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              5, tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              10, tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              30, tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MINUTE.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(2 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MINUTE.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(5 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MINUTE.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(10 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MINUTE.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(30 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MINUTE.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.HOUR.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(2 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.HOUR.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(6 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.HOUR.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(12 * tr.b.convertUnit(
+              tr.b.UnitScale.TIME.HOUR.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.DAY.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.WEEK.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.MONTH.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC))
+          .addBinBoundary(tr.b.convertUnit(
+              tr.b.UnitScale.TIME.YEAR.value,
+              tr.b.UnitScale.TIME.SEC, tr.b.UnitScale.TIME.MILLI_SEC)));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.timeStampInMs.unitName,
+      HistogramBinBoundaries.createLinear(0, 1e10, 1e3));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.normalizedPercentage.unitName,
+      HistogramBinBoundaries.createLinear(0, 1.0, 20));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.sizeInBytes.unitName,
+      HistogramBinBoundaries.createExponential(1, 1e12, 1e2));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.energyInJoules.unitName,
+      HistogramBinBoundaries.createExponential(1e-3, 1e3, 50));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.powerInWatts.unitName,
+      HistogramBinBoundaries.createExponential(1e-3, 1, 50));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.unitlessNumber.unitName,
+      HistogramBinBoundaries.createExponential(1e-3, 1e3, 50));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.count.unitName,
+      HistogramBinBoundaries.createExponential(1, 1e3, 20));
+
+  DEFAULT_BOUNDARIES_FOR_UNIT.set(
+      tr.b.Unit.byName.sigma.unitName,
+      HistogramBinBoundaries.createLinear(-5, 5, 50));
+
+  return {
+    DEFAULT_REBINNED_COUNT,
+    DELTA,
+    Histogram,
+    HistogramBinBoundaries,
+    P_VALUE_NAME,
+    U_STATISTIC_NAME,
+    Z_SCORE_NAME,
+    percentFromString,
+    percentToString,
+  };
+});
+</script>

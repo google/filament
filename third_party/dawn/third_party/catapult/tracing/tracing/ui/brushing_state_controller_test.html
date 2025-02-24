@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  const EventSet = tr.model.EventSet;
+  const SelectionState = tr.model.SelectionState;
+  const Task = tr.b.Task;
+
+  function newSimpleFakeTimelineView() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.sA = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'a', start: 0, end: 5}));
+      m.sB = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'b', start: 10, end: 15}));
+      m.sC = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'c', start: 20, end: 20}));
+    });
+
+    // Fake timeline view. So fake its ... just wow.
+    const timelineView = {
+      model: m
+    };
+    return timelineView;
+  }
+
+  function doesCauseChangeToFire(brushingStateController, cb, opt_this) {
+    let didFire = false;
+    function didFireCb() {
+      didFire = true;
+    }
+    brushingStateController.addEventListener('change', didFireCb);
+    cb.call(opt_this);
+    brushingStateController.removeEventListener('change', didFireCb);
+    return didFire;
+  }
+
+  test('simpleStateChanges', function() {
+    const timelineView = newSimpleFakeTimelineView();
+    const brushingStateController =
+        new tr.c.BrushingStateController(timelineView);
+    const m = timelineView.model;
+
+    // Setting empty brushing state doesn't cause change event. This behavior
+    // is triggered when the user tries to search for something when no trace
+    // has been loaded yet in chrome://tracing.
+    const bs0 = new tr.ui.b.BrushingState();
+    assert.isFalse(doesCauseChangeToFire(
+        brushingStateController,
+        function() {
+          brushingStateController.currentBrushingState = bs0;
+        }));
+    assert.isFalse(bs0.isAppliedToModel);
+    assert.strictEqual(brushingStateController.currentBrushingState, bs0);
+
+    // Setting causes change.
+    const bs1 = new tr.ui.b.BrushingState();
+    bs1.selection = new EventSet([m.sA]);
+    assert.isTrue(doesCauseChangeToFire(
+        brushingStateController,
+        function() {
+          brushingStateController.currentBrushingState = bs1;
+        }));
+    assert.isTrue(bs1.isAppliedToModel);
+
+    // Setting value equivalent doesn't cause change event.
+    const bs2 = bs1.clone();
+    assert.isFalse(doesCauseChangeToFire(
+        brushingStateController,
+        function() {
+          brushingStateController.currentBrushingState = bs2;
+        }));
+    assert.strictEqual(brushingStateController.currentBrushingState, bs2);
+    assert.isTrue(
+        brushingStateController.currentBrushingState.isAppliedToModel);
+
+    // Setting to something different unapplies the old bs.
+    const bs3 = new tr.ui.b.BrushingState();
+    bs3.findMatches = new EventSet([m.sA, m.sB]);
+    brushingStateController.currentBrushingState = bs3;
+    assert.isTrue(bs3.isAppliedToModel);
+    assert.isFalse(bs2.isAppliedToModel);
+  });
+
+  test('modelCausesStateChange', function() {
+    const timelineView = newSimpleFakeTimelineView();
+    const brushingStateController =
+        new tr.c.BrushingStateController(timelineView);
+
+    const m1 = timelineView.model;
+
+    const bs1 = new tr.ui.b.BrushingState();
+    bs1.selection = new EventSet([m1.sA]);
+
+    // Change the model.
+    const m2 = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.sA = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'a', start: 0, end: 5}));
+    });
+    assert.isTrue(doesCauseChangeToFire(
+        brushingStateController,
+        function() {
+          brushingStateController.modelWillChange();
+          timelineView.model = m2;
+          brushingStateController.modelDidChange();
+        }));
+    assert.strictEqual(
+        brushingStateController.currentBrushingState.selection.length, 0);
+  });
+
+  function addChildDiv(element) {
+    const child = element.ownerDocument.createElement('div');
+    Polymer.dom(element).appendChild(child);
+    return child;
+  }
+
+  function addShadowChildDiv(element) {
+    const shadowRoot = element.createShadowRoot();
+    return addChildDiv(shadowRoot);
+  }
+
+  if (!tr.isHeadless) {
+    test('getControllerForElement_none', function() {
+      const element = document.createElement('div');
+
+      assert.isUndefined(
+          tr.c.BrushingStateController.getControllerForElement(element));
+    });
+
+    test('getControllerForElement_self', function() {
+      const controller = new tr.c.BrushingStateController(undefined);
+      const element = document.createElement('div');
+      element.brushingStateController = controller;
+
+      assert.strictEqual(
+          tr.c.BrushingStateController.getControllerForElement(element),
+          controller);
+    });
+
+    test('getControllerForElement_ancestor', function() {
+      const controller = new tr.c.BrushingStateController(undefined);
+      const ancestor = document.createElement('div');
+      ancestor.brushingStateController = controller;
+
+      const element = addChildDiv(addChildDiv(addChildDiv(ancestor)));
+      assert.strictEqual(
+          tr.c.BrushingStateController.getControllerForElement(element),
+          controller);
+    });
+
+    test('getControllerForElement_host', function() {
+      const controller = new tr.c.BrushingStateController(undefined);
+      const host = document.createElement('div');
+      host.brushingStateController = controller;
+
+      const element = addShadowChildDiv(host);
+      assert.strictEqual(
+          tr.c.BrushingStateController.getControllerForElement(element),
+          controller);
+    });
+
+    test('getControllerForElement_hierarchy', function() {
+      const controller1 = new tr.c.BrushingStateController(undefined);
+      const root = document.createElement('div');
+      root.brushingStateController = controller1;
+
+      const controller2 = new tr.c.BrushingStateController(undefined);
+      const child = addChildDiv(root);
+      child.brushingStateController = controller2;
+
+      const controller3 = new tr.c.BrushingStateController(undefined);
+      const shadowChild = addShadowChildDiv(child);
+      shadowChild.brushingStateController = controller3;
+
+      const element = addChildDiv(addChildDiv(addShadowChildDiv(
+          addChildDiv(addChildDiv(addShadowChildDiv(
+              addChildDiv(shadowChild)))))));
+      assert.strictEqual(
+          tr.c.BrushingStateController.getControllerForElement(element),
+          controller3);
+    });
+  }
+});
+</script>

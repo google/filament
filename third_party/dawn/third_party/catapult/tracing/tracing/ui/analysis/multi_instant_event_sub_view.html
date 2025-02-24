@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+
+<dom-module id='tr-ui-a-multi-instant-event-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    </style>
+    <div id='content'></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-instant-event-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.currentSelection_ = undefined;
+  },
+
+  set selection(selection) {
+    Polymer.dom(this.$.content).textContent = '';
+    const realView = document.createElement('tr-ui-a-multi-event-sub-view');
+    realView.eventsHaveDuration = false;
+    realView.eventsHaveSubRows = false;
+
+    Polymer.dom(this.$.content).appendChild(realView);
+    realView.setSelectionWithoutErrorChecks(selection);
+
+    this.currentSelection_ = selection;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  }
+});
+</script>

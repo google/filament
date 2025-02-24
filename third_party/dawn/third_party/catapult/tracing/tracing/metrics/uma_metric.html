@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_processes.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverfiew This file contains implementation of extracting UMA histograms.
+ *
+ * UMA histograms are logged in trace events titled 'UMAHistogramSamples'. The
+ * event arguments contain the histogram name and the base-64 coded of an
+ * snapshot of histogram samples serialized in a pickle. These are emitted at
+ * the end of tracing, and represent the difference in the UMA histograms from
+ * when the tracing began.
+ *
+ * If there are several processes that have snapshots of the same histogram,
+ * the snapshots will be merged.
+ */
+tr.exportTo('tr.metrics', function() {
+  function parseBuckets_(event, processName) {
+    const len = tr.b.Base64.getDecodedBufferLength(event.args.buckets);
+    const buffer = new ArrayBuffer(len);
+    const dataView = new DataView(buffer);
+    tr.b.Base64.DecodeToTypedArray(event.args.buckets, dataView);
+    // Negative numbers are not supported, for now.
+    const decoded = new Uint32Array(buffer);
+    const sum = decoded[1] + decoded[2] * 0x100000000;
+    const bins = [];
+    let position = 4;
+    while (position <= decoded.length - 4) {
+      const min = decoded[position++];
+      const max = decoded[position++] + decoded[position++] * 0x100000000;
+      const count = decoded[position++];
+      const processes = new tr.v.d.Breakdown();
+      processes.set(processName, count);
+      const events = new tr.v.d.RelatedEventSet([event]);
+      bins.push({min, max, count, processes, events});
+    }
+    return {sum, bins};
+  }
+
+  function mergeBins_(x, y) {
+    x.sum += y.sum;
+    const allBins = [...x.bins, ...y.bins];
+    allBins.sort((a, b) => a.min - b.min);
+    x.bins = [];
+    let last = undefined;
+    for (const bin of allBins) {
+      if (last !== undefined && bin.min === last.min) {
+        if (last.max !== bin.max) throw new Error('Incompatible bins');
+        if (bin.count === 0) continue;
+        last.count += bin.count;
+        for (const event of bin.events) {
+          last.events.add(event);
+        }
+        last.processes.addDiagnostic(bin.processes);
+      } else {
+        if (last !== undefined && bin.min < last.max) {
+          throw new Error('Incompatible bins');
+        }
+        x.bins.push(bin);
+        last = bin;
+      }
+    }
+  }
+
+  function getHistogramUnit_(name) {
+    // Customize histogram units here.
+    return tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  }
+
+  function getIsHistogramBinsLinear_(histogramName) {
+    return histogramName.startsWith('Graphics.Smoothness.Throughput') ||
+           histogramName.startsWith('Memory.Memory.GPU.PeakMemoryUsage');
+  }
+
+  function getHistogramBoundaries_(name) {
+    // Customize histogram boundaries here. Ideally, this would not be
+    // necessary.
+    // crbug.com/987273
+    if (name.startsWith('Event.Latency.Scroll')) {
+      return tr.v.HistogramBinBoundaries.createExponential(1e3, 1e5, 50);
+    }
+
+    if (name.startsWith('Graphics.Smoothness.Throughput')) {
+      return tr.v.HistogramBinBoundaries.createLinear(0, 100, 101);
+    }
+
+    if (name.startsWith('Memory.Memory.GPU.PeakMemoryUsage')) {
+      return tr.v.HistogramBinBoundaries.createLinear(0, 1e6, 100);
+    }
+
+    return tr.v.HistogramBinBoundaries.createExponential(1e-3, 1e3, 50);
+  }
+
+  function umaMetric(histograms, model) {
+    const histogramValues = new Map();
+    const nameCounts = new Map();
+    for (const process of model.getAllProcesses()) {
+      const histogramEvents = new Map();
+      for (const event of process.instantEvents) {
+        if (event.title !== 'UMAHistogramSamples') continue;
+        const name = event.args.name;
+        const events = histogramEvents.get(name) || [];
+        if (!histogramEvents.has(name)) histogramEvents.set(name, events);
+        events.push(event);
+      }
+      let processName =
+          tr.e.chrome.chrome_processes.canonicalizeProcessName(process.name);
+      // Increase the counter even if histogramEvents is empty so that process
+      // names of all UMA metrics match.
+      nameCounts.set(processName, (nameCounts.get(processName) || 0) + 1);
+      processName = `${processName}_${nameCounts.get(processName)}`;
+      for (const [name, events] of histogramEvents) {
+        const values = histogramValues.get(name) || {sum: 0, bins: []};
+        if (!histogramValues.has(name)) histogramValues.set(name, values);
+        const endValues = parseBuckets_(events[events.length - 1], processName);
+        if (events.length === 1) {
+          mergeBins_(values, endValues, name);
+        } else {
+          throw new Error('There should be at most one snapshot of UMA ' +
+                          `histogram for ${name} in each process.`);
+        }
+      }
+    }
+
+    for (const [name, values] of histogramValues) {
+      const histogram = new tr.v.Histogram(
+          name, getHistogramUnit_(name), getHistogramBoundaries_(name));
+      const isLinear = getIsHistogramBinsLinear_(name);
+      // If we just put samples at the middle of the bins, their sum may not
+      // match the sum we read from traces. Compute how much samples should be
+      // shifted so that their sum matches what we expect.
+      let sumOfMiddles = 0;
+      let sumOfBinLengths = 0;
+      for (const bin of values.bins) {
+        sumOfMiddles += bin.count * (bin.min + bin.max) / 2;
+        sumOfBinLengths += bin.count * (bin.max - bin.min);
+      }
+
+      const shift = (values.sum - sumOfMiddles) / sumOfBinLengths;
+      // Note: for linear bins, if shift is less than -0.5, it means that even
+      // if we put all samples at the lowest value of their bins their sum will
+      // be less than the sum we read from traces. So, there is an
+      // inconsistency: either the bins are reported incorrectly, or the sum is
+      // reported incorrectly.
+      //
+      // Similarly, if shift is greater than 0.5, the sum of samples cannot add
+      // up to the sum we read from traces, even if we put all samples at the
+      // highest value of their bins.
+      if (isLinear && Math.abs(shift) > 0.5) {
+        throw new Error(`Samples sum is wrong for ${name}.`);
+      }
+
+      for (const bin of values.bins) {
+        if (bin.count === 0) continue;
+
+        const shiftedValue =
+            (bin.min + bin.max) / 2 + shift * (bin.max - bin.min);
+
+        for (const [processName, count] of bin.processes) {
+          bin.processes.set(processName, shiftedValue * count / bin.count);
+        }
+        for (let i = 0; i < bin.count; i++) {
+          histogram.addSample(
+              shiftedValue, {processes: bin.processes, events: bin.events});
+        }
+      }
+      histograms.addHistogram(histogram);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(umaMetric, {
+    requiredCategories: ['benchmark'],
+  });
+
+  return {
+    umaMetric,
+  };
+});
+</script>

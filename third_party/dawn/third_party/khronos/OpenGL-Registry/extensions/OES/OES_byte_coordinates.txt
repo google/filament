@@ -1,0 +1,154 @@
+Name
+
+    OES_byte_coordinates
+
+Name Strings
+
+    GL_OES_byte_coordinates
+
+Contact
+
+    Kari Pulli, Nokia (kari.pulli 'at' nokia.com)
+
+Notice
+
+    Copyright (c) 2002-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Ratified by the Khronos BOP, July 23, 2003.
+
+Version
+
+    $Date: 2003/07/23 04:23:25 $ $Revision: 1.5 $
+
+Number
+
+    OpenGL ES Extension #4 (formerly OpenGL Extension #291)
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+Overview
+
+    This extension allows specifying, additionally to all existing 
+    values, byte-valued vertex and texture coordinates to be used.
+
+    The main reason for introducing the byte-argument is to allow 
+    storing data more compactly on memory-restricted environments.
+
+IP Status
+
+    There is no intellectual property associated with this extension.
+
+Issues
+
+    None known.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexPointer and TexCoordPointer
+
+    BYTE     0x1400
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    Add signed byte entry points to first paragraph of
+    section 2.7 (Vertex Specification):
+
+            void Vertex{234}bOES( T coords );
+            void Vertex{234}bvOES( T coords );
+
+    and to the second paragraph:
+
+            void TexCoord{1234}bOES( T coords );
+            void TexCoord{1234}bvOES( T coords );
+
+    and to the third paragraph:
+
+            void MultiTexCoord{1234}bOES( enum texture, T coords );
+            void MultiTexCoord{1234}bvOES( enum texture, T coords );
+
+    Add byte to supported types in Table 2.4 (Vertex Array Sizes):
+
+        Command         Sizes   Types
+        VertexPointer   2,3,4   byte,short,int,float,double
+        TexCoordPointer 1,2,3,4 byte,short,int,float,double
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+GLX Protocol
+
+    Byte type commands are mapped on the client-side to the
+    appropriate short or int command protocol.
+
+Errors
+
+    No new errors, giving byte as <type> argument to VertexPointer or
+    TexCoordPointer is not an error any more.
+
+New State
+
+(table 6.6, pp. 214-215)
+
+    Get Value      Type      Get Command  Value  Description  Sec.  Attribute
+    ---------      ----      -----------  -----  -----------  ----  ---------
+   VERTEX_x        Z_5       GetIntegerv  FLOAT  Type of      2.8  vertex-array
+                                                 vertex
+                                                 coordinates
+   TEXTURE_COORD_x 2 * x Z_5 GetIntegerv  FLOAT  Type of      2.8  vertex-array
+                                                 texture
+                                                 coordinates
+  _x = _ARRAY_TYPE
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+Sep 23, 2002    Kari Pulli      Created the document
+Sep 26, 2002    Kari Pulli      Incorporated comments by Jon Leech
+Feb 26, 2003    David Blythe    Changed prefix to OES
+Jul 08, 2003    David Blythe    Deleted Dependencies on section, added
+                                extension number, narrow state table
+Jul 11, 2003    David Blythe    Changed to use OES suffixes
+Jul 12, 2003    David Blythe    Added note about GLX protocol

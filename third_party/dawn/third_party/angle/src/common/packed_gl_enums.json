@@ -1,0 +1,326 @@
+{
+    "AlphaTestFunc":
+    {
+        "AlwaysPass": "GL_ALWAYS",
+        "Equal": "GL_EQUAL",
+        "Gequal": "GL_GEQUAL",
+        "Greater": "GL_GREATER",
+        "Lequal": "GL_LEQUAL",
+        "Less": "GL_LESS",
+        "Never": "GL_NEVER",
+        "NotEqual": "GL_NOTEQUAL"
+    },
+    "BufferBinding":
+    {
+        "Array": "GL_ARRAY_BUFFER",
+        "AtomicCounter": "GL_ATOMIC_COUNTER_BUFFER",
+        "CopyRead": "GL_COPY_READ_BUFFER",
+        "CopyWrite": "GL_COPY_WRITE_BUFFER",
+        "DispatchIndirect": "GL_DISPATCH_INDIRECT_BUFFER",
+        "DrawIndirect": "GL_DRAW_INDIRECT_BUFFER",
+        "ElementArray": "GL_ELEMENT_ARRAY_BUFFER",
+        "PixelPack": "GL_PIXEL_PACK_BUFFER",
+        "PixelUnpack": "GL_PIXEL_UNPACK_BUFFER",
+        "ShaderStorage": "GL_SHADER_STORAGE_BUFFER",
+        "Texture": "GL_TEXTURE_BUFFER",
+        "TransformFeedback": "GL_TRANSFORM_FEEDBACK_BUFFER",
+        "Uniform": "GL_UNIFORM_BUFFER"
+    },
+    "BufferUsage":
+    {
+        "DynamicCopy": "GL_DYNAMIC_COPY",
+        "DynamicDraw": "GL_DYNAMIC_DRAW",
+        "DynamicRead": "GL_DYNAMIC_READ",
+        "StaticCopy": "GL_STATIC_COPY",
+        "StaticDraw": "GL_STATIC_DRAW",
+        "StaticRead": "GL_STATIC_READ",
+        "StreamCopy": "GL_STREAM_COPY",
+        "StreamDraw": "GL_STREAM_DRAW",
+        "StreamRead": "GL_STREAM_READ"
+    },
+    "ClientVertexArrayType":
+    {
+        "Color": "GL_COLOR_ARRAY",
+        "Normal": "GL_NORMAL_ARRAY",
+        "PointSize": "GL_POINT_SIZE_ARRAY_OES",
+        "TextureCoord": "GL_TEXTURE_COORD_ARRAY",
+        "Vertex": "GL_VERTEX_ARRAY"
+    },
+    "ClipOrigin":
+    {
+        "LowerLeft": "GL_LOWER_LEFT_EXT",
+        "UpperLeft": "GL_UPPER_LEFT_EXT"
+    },
+    "ClipDepthMode":
+    {
+        "NegativeOneToOne": "GL_NEGATIVE_ONE_TO_ONE_EXT",
+        "ZeroToOne": "GL_ZERO_TO_ONE_EXT"
+    },
+    "CullFaceMode":
+    {
+        "Back": "GL_BACK",
+        "Front": "GL_FRONT",
+        "FrontAndBack": "GL_FRONT_AND_BACK"
+    },
+    "FogMode":
+    {
+        "Exp": "GL_EXP",
+        "Exp2": "GL_EXP2",
+        "Linear": "GL_LINEAR"
+    },
+    "GraphicsResetStatus":
+    {
+        "NoError": "GL_NO_ERROR",
+        "GuiltyContextReset": "GL_GUILTY_CONTEXT_RESET",
+        "InnocentContextReset": "GL_INNOCENT_CONTEXT_RESET",
+        "UnknownContextReset": "GL_UNKNOWN_CONTEXT_RESET",
+        "PurgedContextResetNV": "GL_PURGED_CONTEXT_RESET_NV"
+    },
+    "HintSetting":
+    {
+        "DontCare": "GL_DONT_CARE",
+        "Fastest": "GL_FASTEST",
+        "Nicest": "GL_NICEST"
+    },
+    "LogicalOperation":
+    {
+        "And": "GL_AND",
+        "AndInverted": "GL_AND_INVERTED",
+        "AndReverse": "GL_AND_REVERSE",
+        "Clear": "GL_CLEAR",
+        "Copy": "GL_COPY",
+        "CopyInverted": "GL_COPY_INVERTED",
+        "Equiv": "GL_EQUIV",
+        "Invert": "GL_INVERT",
+        "Nand": "GL_NAND",
+        "Noop": "GL_NOOP",
+        "Nor": "GL_NOR",
+        "Or": "GL_OR",
+        "OrInverted": "GL_OR_INVERTED",
+        "OrReverse": "GL_OR_REVERSE",
+        "Set": "GL_SET",
+        "Xor": "GL_XOR"
+    },
+    "MatrixType":
+    {
+        "Modelview": "GL_MODELVIEW",
+        "Projection": "GL_PROJECTION",
+        "Texture": "GL_TEXTURE"
+    },
+    "QueryType":
+    {
+        "AnySamples": "GL_ANY_SAMPLES_PASSED",
+        "AnySamplesConservative": "GL_ANY_SAMPLES_PASSED_CONSERVATIVE",
+        "CommandsCompleted": "GL_COMMANDS_COMPLETED_CHROMIUM",
+        "PrimitivesGenerated": "GL_PRIMITIVES_GENERATED_EXT",
+        "TimeElapsed": "GL_TIME_ELAPSED_EXT",
+        "Timestamp": "GL_TIMESTAMP_EXT",
+        "TransformFeedbackPrimitivesWritten": "GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN"
+    },
+    "ShaderType":
+    {
+        "Vertex": "GL_VERTEX_SHADER",
+        "TessControl": "GL_TESS_CONTROL_SHADER_EXT",
+        "TessEvaluation": "GL_TESS_EVALUATION_SHADER_EXT",
+        "Geometry": "GL_GEOMETRY_SHADER_EXT",
+        "Fragment": "GL_FRAGMENT_SHADER",
+        "Compute": "GL_COMPUTE_SHADER"
+    },
+    "ShadingModel":
+    {
+        "Flat": "GL_FLAT",
+        "Smooth": "GL_SMOOTH"
+    },
+    "TextureCombine":
+    {
+        "Add": "GL_ADD",
+        "AddSigned": "GL_ADD_SIGNED",
+        "Dot3Rgb": "GL_DOT3_RGB",
+        "Dot3Rgba": "GL_DOT3_RGBA",
+        "Interpolate": "GL_INTERPOLATE",
+        "Modulate": "GL_MODULATE",
+        "Replace": "GL_REPLACE",
+        "Subtract": "GL_SUBTRACT"
+    },
+    "TextureEnvMode":
+    {
+        "Add": "GL_ADD",
+        "Blend": "GL_BLEND",
+        "Combine": "GL_COMBINE",
+        "Decal": "GL_DECAL",
+        "Modulate": "GL_MODULATE",
+        "Replace": "GL_REPLACE"
+    },
+    "TextureEnvTarget":
+    {
+        "Env": "GL_TEXTURE_ENV",
+        "PointSprite": "GL_POINT_SPRITE_OES"
+    },
+    "TextureEnvParameter":
+    {
+        "Mode": "GL_TEXTURE_ENV_MODE",
+        "Color": "GL_TEXTURE_ENV_COLOR",
+        "CombineRgb": "GL_COMBINE_RGB",
+        "CombineAlpha": "GL_COMBINE_ALPHA",
+        "RgbScale": "GL_RGB_SCALE",
+        "AlphaScale": "GL_ALPHA_SCALE",
+        "Src0Rgb": "GL_SRC0_RGB",
+        "Src1Rgb": "GL_SRC1_RGB",
+        "Src2Rgb": "GL_SRC2_RGB",
+        "Src0Alpha": "GL_SRC0_ALPHA",
+        "Src1Alpha": "GL_SRC1_ALPHA",
+        "Src2Alpha": "GL_SRC2_ALPHA",
+        "Op0Rgb": "GL_OPERAND0_RGB",
+        "Op1Rgb": "GL_OPERAND1_RGB",
+        "Op2Rgb": "GL_OPERAND2_RGB",
+        "Op0Alpha": "GL_OPERAND0_ALPHA",
+        "Op1Alpha": "GL_OPERAND1_ALPHA",
+        "Op2Alpha": "GL_OPERAND2_ALPHA",
+        "PointCoordReplace": "GL_COORD_REPLACE_OES"
+    },
+    "TextureOp":
+    {
+        "OneMinusSrcAlpha": "GL_ONE_MINUS_SRC_ALPHA",
+        "OneMinusSrcColor": "GL_ONE_MINUS_SRC_COLOR",
+        "SrcAlpha": "GL_SRC_ALPHA",
+        "SrcColor": "GL_SRC_COLOR"
+    },
+    "TextureSrc":
+    {
+        "Constant": "GL_CONSTANT",
+        "Previous": "GL_PREVIOUS",
+        "PrimaryColor": "GL_PRIMARY_COLOR",
+        "Texture": "GL_TEXTURE"
+    },
+    "TextureType":
+    {
+        "_2D": "GL_TEXTURE_2D",
+        "_2DArray": "GL_TEXTURE_2D_ARRAY",
+        "_2DMultisample": "GL_TEXTURE_2D_MULTISAMPLE",
+        "_2DMultisampleArray": "GL_TEXTURE_2D_MULTISAMPLE_ARRAY",
+        "_3D": "GL_TEXTURE_3D",
+        "External": "GL_TEXTURE_EXTERNAL_OES",
+        "Rectangle": "GL_TEXTURE_RECTANGLE_ANGLE",
+        "CubeMap": "GL_TEXTURE_CUBE_MAP",
+        "CubeMapArray": "GL_TEXTURE_CUBE_MAP_ARRAY",
+        "VideoImage": "GL_TEXTURE_VIDEO_IMAGE_WEBGL",
+        "Buffer": "GL_TEXTURE_BUFFER"
+    },
+    "TextureTarget":
+    {
+        "_2D": "GL_TEXTURE_2D",
+        "_2DArray": "GL_TEXTURE_2D_ARRAY",
+        "_2DMultisample": "GL_TEXTURE_2D_MULTISAMPLE",
+        "_2DMultisampleArray": "GL_TEXTURE_2D_MULTISAMPLE_ARRAY",
+        "_3D": "GL_TEXTURE_3D",
+        "External": "GL_TEXTURE_EXTERNAL_OES",
+        "Rectangle": "GL_TEXTURE_RECTANGLE_ANGLE",
+        "CubeMapPositiveX": "GL_TEXTURE_CUBE_MAP_POSITIVE_X",
+        "CubeMapNegativeX": "GL_TEXTURE_CUBE_MAP_NEGATIVE_X",
+        "CubeMapPositiveY": "GL_TEXTURE_CUBE_MAP_POSITIVE_Y",
+        "CubeMapNegativeY": "GL_TEXTURE_CUBE_MAP_NEGATIVE_Y",
+        "CubeMapPositiveZ": "GL_TEXTURE_CUBE_MAP_POSITIVE_Z",
+        "CubeMapNegativeZ": "GL_TEXTURE_CUBE_MAP_NEGATIVE_Z",
+        "CubeMapArray": "GL_TEXTURE_CUBE_MAP_ARRAY",
+        "VideoImage": "GL_TEXTURE_VIDEO_IMAGE_WEBGL",
+        "Buffer": "GL_TEXTURE_BUFFER"
+    },
+    "VertexArrayType":
+    {
+        "Color": "GL_COLOR_ARRAY",
+        "Normal": "GL_NORMAL_ARRAY",
+        "PointSize": "GL_POINT_SIZE_ARRAY_OES",
+        "TextureCoord": "GL_TEXTURE_COORD_ARRAY",
+        "Vertex": "GL_VERTEX_ARRAY"
+    },
+    "MaterialParameter":
+    {
+        "Ambient": "GL_AMBIENT",
+        "AmbientAndDiffuse": "GL_AMBIENT_AND_DIFFUSE",
+        "Diffuse": "GL_DIFFUSE",
+        "Emission": "GL_EMISSION",
+        "Shininess": "GL_SHININESS",
+        "Specular": "GL_SPECULAR"
+    },
+    "LightParameter":
+    {
+        "Ambient": "GL_AMBIENT",
+        "AmbientAndDiffuse": "GL_AMBIENT_AND_DIFFUSE",
+        "ConstantAttenuation": "GL_CONSTANT_ATTENUATION",
+        "Diffuse": "GL_DIFFUSE",
+        "LinearAttenuation": "GL_LINEAR_ATTENUATION",
+        "Position": "GL_POSITION",
+        "QuadraticAttenuation": "GL_QUADRATIC_ATTENUATION",
+        "Specular": "GL_SPECULAR",
+        "SpotCutoff": "GL_SPOT_CUTOFF",
+        "SpotDirection": "GL_SPOT_DIRECTION",
+        "SpotExponent": "GL_SPOT_EXPONENT"
+    },
+    "PolygonMode":
+    {
+        "Point" : "GL_POINT_NV",
+        "Line" : "GL_LINE_NV",
+        "Fill" : "GL_FILL_NV"
+    },
+    "PointParameter":
+    {
+        "PointSizeMin" : "GL_POINT_SIZE_MIN",
+        "PointSizeMax" : "GL_POINT_SIZE_MAX",
+        "PointFadeThresholdSize" : "GL_POINT_FADE_THRESHOLD_SIZE",
+        "PointDistanceAttenuation" : "GL_POINT_DISTANCE_ATTENUATION"
+    },
+    "FilterMode":
+    {
+        "Nearest": "GL_NEAREST",
+        "Linear": "GL_LINEAR",
+        "NearestMipmapNearest": "GL_NEAREST_MIPMAP_NEAREST",
+        "NearestMipmapLinear": "GL_NEAREST_MIPMAP_LINEAR",
+        "LinearMipmapLinear": "GL_LINEAR_MIPMAP_LINEAR"
+    },
+    "WrapMode":
+    {
+        "ClampToEdge": "GL_CLAMP_TO_EDGE",
+        "ClampToBorder": "GL_CLAMP_TO_BORDER",
+        "MirroredRepeat": "GL_MIRRORED_REPEAT",
+        "Repeat": "GL_REPEAT"
+    },
+    "ProvokingVertexConvention":
+    {
+        "FirstVertexConvention": "GL_FIRST_VERTEX_CONVENTION_ANGLE",
+        "LastVertexConvention": "GL_LAST_VERTEX_CONVENTION_ANGLE"
+    },
+    "HandleType":
+    {
+        "OpaqueFd": "GL_HANDLE_TYPE_OPAQUE_FD_EXT",
+        "ZirconVmo": "GL_HANDLE_TYPE_ZIRCON_VMO_ANGLE",
+        "ZirconEvent": "GL_HANDLE_TYPE_ZIRCON_EVENT_ANGLE"
+    },
+    "ImageLayout":
+    {
+        "Undefined": "GL_NONE",
+        "General": "GL_LAYOUT_GENERAL_EXT",
+        "ColorAttachment": "GL_LAYOUT_COLOR_ATTACHMENT_EXT",
+        "DepthStencilAttachment": "GL_LAYOUT_DEPTH_STENCIL_ATTACHMENT_EXT",
+        "DepthStencilReadOnlyAttachment": "GL_LAYOUT_DEPTH_STENCIL_READ_ONLY_EXT",
+        "ShaderReadOnly": "GL_LAYOUT_SHADER_READ_ONLY_EXT",
+        "TransferSrc": "GL_LAYOUT_TRANSFER_SRC_EXT",
+        "TransferDst": "GL_LAYOUT_TRANSFER_DST_EXT",
+        "DepthReadOnlyStencilAttachment": "GL_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_EXT",
+        "DepthAttachmentStencilReadOnly": "GL_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_EXT"
+    },
+    "ShadingRate":
+    {
+        "Undefined": "GL_NONE",
+        "_1x1": "GL_SHADING_RATE_1X1_PIXELS_QCOM",
+        "_1x2": "GL_SHADING_RATE_1X2_PIXELS_QCOM",
+        "_2x1": "GL_SHADING_RATE_2X1_PIXELS_QCOM",
+        "_2x2": "GL_SHADING_RATE_2X2_PIXELS_QCOM",
+        "_4x2": "GL_SHADING_RATE_4X2_PIXELS_QCOM",
+        "_4x4": "GL_SHADING_RATE_4X4_PIXELS_QCOM"
+    },
+    "TilingMode":
+    {
+        "Optimal": "GL_OPTIMAL_TILING_EXT",
+        "Linear": "GL_LINEAR_TILING_EXT"
+    }
+}

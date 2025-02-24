@@ -1,0 +1,7 @@
+===========
+boto v2.1.1
+===========
+
+The 2.1.1 release fixes one serious issue with the RDS module.
+
+https://github.com/boto/boto/issues/382

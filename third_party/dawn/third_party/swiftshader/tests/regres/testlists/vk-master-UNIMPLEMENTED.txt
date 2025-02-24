@@ -1,0 +1,5 @@
+dEQP-VK.graphicsfuzz.call-function-with-discard
+dEQP-VK.graphicsfuzz.cov-basic-block-discard-in-function
+dEQP-VK.graphicsfuzz.cov-wrap-op-kill-for-loop
+dEQP-VK.graphicsfuzz.cov-wrap-op-kill-two-branches
+dEQP-VK.graphicsfuzz.two-nested-infinite-loops-discard

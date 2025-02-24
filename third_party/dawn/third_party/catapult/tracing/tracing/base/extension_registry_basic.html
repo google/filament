@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/extension_registry_base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  const RegisteredTypeInfo = tr.b.RegisteredTypeInfo;
+  const ExtensionRegistryOptions = tr.b.ExtensionRegistryOptions;
+
+  function decorateBasicExtensionRegistry(registry, extensionRegistryOptions) {
+    const savedStateStack = [];
+    registry.registeredTypeInfos_ = [];
+
+    registry.register = function(constructor,
+        opt_metadata) {
+      if (registry.findIndexOfRegisteredConstructor(
+          constructor) !== undefined) {
+        throw new Error('Handler already registered for ' + constructor);
+      }
+
+      extensionRegistryOptions.validateConstructor(constructor);
+
+      const metadata = {};
+      for (const k in extensionRegistryOptions.defaultMetadata) {
+        metadata[k] = extensionRegistryOptions.defaultMetadata[k];
+      }
+      if (opt_metadata) {
+        for (const k in opt_metadata) {
+          metadata[k] = opt_metadata[k];
+        }
+      }
+
+      const typeInfo = new RegisteredTypeInfo(
+          constructor,
+          metadata);
+
+      let e = new tr.b.Event('will-register');
+      e.typeInfo = typeInfo;
+      registry.dispatchEvent(e);
+
+      registry.registeredTypeInfos_.push(typeInfo);
+
+      e = new tr.b.Event('registry-changed');
+      registry.dispatchEvent(e);
+    };
+
+    registry.pushCleanStateBeforeTest = function() {
+      savedStateStack.push(registry.registeredTypeInfos_);
+      registry.registeredTypeInfos_ = [];
+
+      const e = new tr.b.Event('registry-changed');
+      registry.dispatchEvent(e);
+    };
+    registry.popCleanStateAfterTest = function() {
+      registry.registeredTypeInfos_ = savedStateStack[0];
+      savedStateStack.splice(0, 1);
+
+      const e = new tr.b.Event('registry-changed');
+      registry.dispatchEvent(e);
+    };
+
+    registry.findIndexOfRegisteredConstructor = function(constructor) {
+      for (let i = 0; i < registry.registeredTypeInfos_.length; i++) {
+        if (registry.registeredTypeInfos_[i].constructor === constructor) {
+          return i;
+        }
+      }
+      return undefined;
+    };
+
+    registry.unregister = function(constructor) {
+      const foundIndex = registry.findIndexOfRegisteredConstructor(constructor);
+      if (foundIndex === undefined) {
+        throw new Error(constructor + ' not registered');
+      }
+      registry.registeredTypeInfos_.splice(foundIndex, 1);
+
+      const e = new tr.b.Event('registry-changed');
+      registry.dispatchEvent(e);
+    };
+
+    registry.getAllRegisteredTypeInfos = function() {
+      return registry.registeredTypeInfos_;
+    };
+
+    registry.findTypeInfo = function(constructor) {
+      const foundIndex = this.findIndexOfRegisteredConstructor(constructor);
+      if (foundIndex !== undefined) {
+        return this.registeredTypeInfos_[foundIndex];
+      }
+      return undefined;
+    };
+
+    registry.findTypeInfoMatching = function(predicate, opt_this) {
+      opt_this = opt_this ? opt_this : undefined;
+      for (let i = 0; i < registry.registeredTypeInfos_.length; ++i) {
+        const typeInfo = registry.registeredTypeInfos_[i];
+        if (predicate.call(opt_this, typeInfo)) {
+          return typeInfo;
+        }
+      }
+      return extensionRegistryOptions.defaultTypeInfo;
+    };
+
+    registry.findTypeInfoWithName = function(name) {
+      if (typeof(name) !== 'string') {
+        throw new Error('Name is not a string.');
+      }
+      const typeInfo = registry.findTypeInfoMatching(function(ti) {
+        return ti.constructor.name === name;
+      });
+      if (typeInfo) return typeInfo;
+      return undefined;
+    };
+  }
+
+  return {
+    _decorateBasicExtensionRegistry: decorateBasicExtensionRegistry
+  };
+});
+</script>

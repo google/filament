@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('rssStatRE', function() {
+    const re = tr.e.importer.linux_perf._RssParserTestExports.rssStatRE;
+    let x = re.exec('rss_stat: member=0 size=536576');
+    assert.isNotNull(x);
+    assert.strictEqual(x[1], '0');
+    assert.strictEqual(x[2], '536576');
+
+    x = re.exec('rss_stat: member=1 size=716800');
+    assert.isNotNull(x);
+    assert.strictEqual(x[1], '1');
+    assert.strictEqual(x[2], '716800');
+  });
+});
+</script>
+

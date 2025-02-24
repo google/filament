@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/sample.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+<link rel="import" href="/tracing/ui/analysis/related_events.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newFlowEventEx = tr.c.TestUtils.newFlowEventEx;
+
+  function createModel() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+
+      m.t2 = m.p1.getOrCreateThread(2);
+      m.t3 = m.p1.getOrCreateThread(3);
+      m.t4 = m.p1.getOrCreateThread(4);
+      const node = tr.c.TestUtils.newProfileNodes(m, ['fake']);
+
+      // Setup samples and slices in this way:
+      //     0    5    10   15   20
+      // _____________________________
+      // t2              *
+      //     [ a  ][ ]aa
+      // -----------------------------
+      // t3         *  * *  *    *
+      //               *    *
+      //               [ b  ]
+      //                [bb]
+      //                 []bbb
+      // -----------------------------
+      // t4                      |c
+      // -----------------------------
+      m.samples.push(
+          new tr.model.Sample(10, 'b10_1', node, m.t3),
+          new tr.model.Sample(7, 'b7', node, m.t3),
+          new tr.model.Sample(12, 'b12', node, m.t3),
+          new tr.model.Sample(20, 'b20', node, m.t3),
+          new tr.model.Sample(10, 'b10_2', node, m.t3),
+          new tr.model.Sample(15, 'b15_1', node, m.t3),
+          new tr.model.Sample(15, 'b15_2', node, m.t3),
+          new tr.model.Sample(12, 'a12', node, m.t2)
+      );
+
+      m.sA = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'a', start: 0, end: 5,
+            type: tr.model.ThreadSlice}));
+      m.sAA = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'aa', start: 6, end: 8,
+            type: tr.model.ThreadSlice}));
+      m.sB = m.t3.sliceGroup.pushSlice(
+          newSliceEx({title: 'b', start: 10, end: 15,
+            type: tr.model.ThreadSlice}));
+      m.sBB = m.t3.sliceGroup.pushSlice(
+          newSliceEx({title: 'bb', start: 11, end: 14,
+            type: tr.model.ThreadSlice}));
+      m.sBBB = m.t3.sliceGroup.pushSlice(
+          newSliceEx({title: 'bbb', start: 12, end: 13,
+            type: tr.model.ThreadSlice}));
+      m.sC = m.t4.sliceGroup.pushSlice(
+          newSliceEx({title: 'c', start: 20, end: 20,
+            type: tr.model.ThreadSlice}));
+
+      m.t2.createSubSlices();
+      m.t3.createSubSlices();
+      m.t4.createSubSlices();
+
+      // Add flow events.
+      m.f0 = newFlowEventEx({
+        title: 'a_aa', start: 5, end: 6,
+        startSlice: m.sA,
+        endSlice: m.sAA
+      });
+      m.f1 = newFlowEventEx({
+        title: 'a_b', start: 0, end: 10,
+        startSlice: m.sA,
+        endSlice: m.sB
+      });
+      m.f2 = newFlowEventEx({
+        title: 'b_bbb', start: 10, end: 12,
+        startSlice: m.sB,
+        endSlice: m.sBBB
+      });
+      m.f3 = newFlowEventEx({
+        title: 'bbb_c', start: 13, end: 20,
+        startSlice: m.sBBB,
+        endSlice: m.sC
+      });
+    });
+    return m;
+  }
+
+  test('instantiate', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-a-related-events');
+    const selection = new tr.model.EventSet(
+        [m.sA, m.f0, m.sAA, m.f1, m.sB, m.f2, m.sBB, m.sBBB, m.f3, m.sC]);
+    viewEl.setRelatedEvents(selection);
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+
+    // Check that the element handles multiple setRelatedEvents calls correctly.
+    assert.lengthOf(viewEl.$.table.tableRows, 5);
+    viewEl.setRelatedEvents(selection);
+    assert.lengthOf(viewEl.$.table.tableRows, 5);
+  });
+
+  test('validateFlows', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-a-related-events');
+    viewEl.setRelatedEvents(new tr.model.EventSet([m.sB, m.sBB, m.sBBB]));
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+
+    let inFlows;
+    let outFlows;
+    let internalFlows;
+    viewEl.$.table.tableRows.forEach(function(row) {
+      if (row.type === 'Incoming flow') {
+        assert.isUndefined(inFlows);
+        inFlows = row.selection;
+      }
+      if (row.type === 'Outgoing flow') {
+        assert.isUndefined(outFlows);
+        outFlows = row.selection;
+      }
+      if (row.type === 'Internal flow') {
+        assert.isUndefined(internalFlows);
+        internalFlows = row.selection;
+      }
+    });
+    assert.strictEqual(inFlows.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(inFlows).title, 'a_b');
+    assert.strictEqual(outFlows.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(outFlows).title, 'bbb_c');
+    assert.strictEqual(internalFlows.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(internalFlows).title, 'b_bbb');
+  });
+
+  test('validateConnectedEvents', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-a-related-events');
+    viewEl.setRelatedEvents(new tr.model.EventSet([m.sBB]));
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+
+    let precedingEvents;
+    let followingEvents;
+    let allEvents;
+    viewEl.$.table.tableRows.forEach(function(row) {
+      if (row.type === 'Preceding events') {
+        assert.isUndefined(precedingEvents);
+        precedingEvents = row.selection;
+      }
+      if (row.type === 'Following events') {
+        assert.isUndefined(followingEvents);
+        followingEvents = row.selection;
+      }
+      if (row.type === 'All connected events') {
+        assert.isUndefined(allEvents);
+        allEvents = row.selection;
+      }
+    });
+
+    const precedingTitles = precedingEvents.map(function(e) {
+      return e.title;
+    });
+    assert.sameMembers(precedingTitles, ['a', 'a_b', 'b', 'bb']);
+
+    const followingTitles = followingEvents.map(function(e) {
+      return e.title;
+    });
+    assert.sameMembers(followingTitles, ['bb', 'bbb', 'bbb_c', 'c']);
+
+    const allTitles = allEvents.map(function(e) {
+      return e.title;
+    });
+    assert.sameMembers(allTitles,
+        ['a', 'a_aa', 'aa', 'a_b', 'b', 'bb', 'bbb', 'b_bbb', 'bbb_c', 'c']);
+  });
+
+  test('validateOverlappingSamples', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-a-related-events');
+    viewEl.setRelatedEvents(new tr.model.EventSet([m.sB]));
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+
+    let overlappingSamples;
+    viewEl.$.table.tableRows.forEach(function(row) {
+      if (row.type === 'Overlapping samples') {
+        assert.isUndefined(overlappingSamples);
+        overlappingSamples = row.selection;
+      }
+    });
+
+    const samplesTitles = overlappingSamples.map(function(e) {
+      return e.title;
+    });
+    assert.sameMembers(samplesTitles,
+        ['b10_1', 'b10_2', 'b12', 'b15_1', 'b15_2']);
+  });
+});
+</script>

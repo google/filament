@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XCGPQHD9XF"></script>
+  <script>
+    'use strict';
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-XCGPQHD9XF');
+  </script>
+  <script src="/components/webcomponentsjs/webcomponents-lite.min.js"></script>
+  <title>Chrome Performance Dashboard</title>
+
+  <link rel="import" href="/components/polymer/polymer.html">
+
+  <link rel="import" href="/dashboard/elements/group-report-page.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <link rel="import" href="/dashboard/elements/toplevel-toast.html">
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/static/deprecation_banner.html">
+
+  <style>
+    body {
+      align-items: center;
+      -webkit-align-items: center;
+    }
+  </style>
+  <script async="" defer="" src="//survey.g.doubleclick.net/async_survey?site=3lz324s7zmcmh6sxbh572ok7ja"></script>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <toplevel-toast></toplevel-toast>
+  <deprecation-banner></deprecation-banner>
+  <group-report-page></group-report-page>
+</body>
+</html>

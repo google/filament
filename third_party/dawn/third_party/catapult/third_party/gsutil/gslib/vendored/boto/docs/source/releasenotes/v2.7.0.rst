@@ -1,0 +1,91 @@
+===========
+boto v2.7.0
+===========
+
+The 2.7.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.6.0 release
+and the 2.7.0 release at https://github.com/boto/boto/compare/2.6.0...2.7.0.
+
+This release includes:
+
+* Added support for AWS Data Pipeline - :sha:`999902`
+* Integrated Slick53 into Route53 module - :issue:`1186`
+* Add ability to use Decimal for DynamoDB numeric types - :issue:`1183`
+* Query/Scan Count/ScannedCount support and TableGenerator improvements -
+  :issue:`1181`
+* Added support for keyring in config files - :issue:`1157`
+* Add concurrent downloader to glacier - :issue:`1106`
+* Add support for tagged RDS DBInstances - :issue:`1050`
+* Updating RDS API Version to 2012-09-17 - :issue:`1033`
+* Added support for provisioned IOPS for RDS - :issue:`1028`
+* Add ability to set SQS Notifications in Mechanical Turk - :issue:`1018`
+
+Commits
+=======
+
+There were 447 commits in this release from 60 different authors.  The authors
+are listed below, in alphabetical order:
+
+* acrefoot
+* Alex Schoof
+* Andy Davidoff
+* anoopj
+* Benoit Dubertret
+* bobveznat
+* dahlia
+* dangra
+* disruptek
+* dmcritchie
+* emtrane
+* focus
+* fsouza
+* g2harris
+* garnaat
+* georgegoh
+* georgesequeira
+* GitsMcGee
+* glance-
+* gtaylor
+* hashbackup
+* hinnerk
+* hoov
+* isaacbowen
+* jamesls
+* JerryKwan
+* jimfulton
+* jimbrowne
+* jorourke
+* jterrace
+* jtriley
+* katzj
+* kennu
+* kevinburke
+* khagler
+* Kodiologist
+* kopertop
+* kotnik
+* Leftium
+* lpetc
+* marknca
+* matthewandrews
+* mfschwartz
+* mikek
+* mkmt
+* mleonhard
+* mraposa
+* oozie
+* phunter
+* potix2
+* Rafael Cunha de Almeida
+* reinhillmann
+* reversefold
+* Robie Basak
+* seandst
+* siroken3
+* staer
+* tpodowd
+* vladimir-sol
+* yovadia12

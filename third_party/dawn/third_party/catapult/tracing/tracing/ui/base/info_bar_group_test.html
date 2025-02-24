@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/info_bar_group.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('group-instantiate', function() {
+    const infoBarGroup = document.createElement('tr-ui-b-info-bar-group');
+    infoBarGroup.addMessage(
+        'Message 1',
+        [{buttonText: 'ok', onClick() {}}]);
+    infoBarGroup.addMessage(
+        'Message 2',
+        [{buttonText: 'button 2', onClick() {}}]);
+    this.addHTMLOutput(infoBarGroup);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('group-populate-then-clear', function() {
+    const infoBarGroup = document.createElement('tr-ui-b-info-bar-group');
+    infoBarGroup.addMessage(
+        'Message 1',
+        [{buttonText: 'ok', onClick() {}}]);
+    infoBarGroup.addMessage(
+        'Message 2',
+        [{buttonText: 'button 2', onClick() {}}]);
+    infoBarGroup.clearMessages();
+    assert.strictEqual(infoBarGroup.children.length, 0);
+  });
+
+  test('group-populate-clear-repopulate', function() {
+    const infoBarGroup = document.createElement('tr-ui-b-info-bar-group');
+    infoBarGroup.addMessage(
+        'Message 1',
+        [{buttonText: 'ok', onClick() {}}]);
+    infoBarGroup.addMessage(
+        'Message 2',
+        [{buttonText: 'button 2', onClick() {}}]);
+    infoBarGroup.clearMessages();
+    infoBarGroup.addMessage(
+        'Message 1',
+        [{buttonText: 'ok', onClick() {}}]);
+    this.addHTMLOutput(infoBarGroup);
+  });
+});
+</script>

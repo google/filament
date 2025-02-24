@@ -1,0 +1,36 @@
+All graphs for this regression group at {{ group.revision.start }}:{{ group.revision.end }}:
+{% if skia_urls_text_internal %}
+  Internal (Googlers-only) Reports:
+  {%- for url_text in skia_urls_text_internal %}
+    - {{ url_text }}
+  {%- endfor -%}
+{% endif %}
+{% if skia_urls_text_public %}
+  Public Reports:
+  {%- for url_text in skia_urls_text_public %}
+    - {{ url_text }}
+  {%- endfor -%}
+{% endif %}
+  (Legacy) Chromeperf Report: https://chromeperf.appspot.com/group_report?group_id={{ group.key.string_id() }}
+
+{% set top_regressions = regressions[:10] -%}
+Top {{ top_regressions|length }} regressions (out of {{ group.anomalies|length }}, with {{ group.anomalies|length - regressions|length }} improvements) in this group:
+{%- for regression in top_regressions %}
+  - {{ regression.test.string_id() }}
+    {%- set before = regression.median_before_anomaly %}
+    {%- set after = regression.median_after_anomaly %}
+    {{ '%8.2f'|format(regression.relative_delta*100.0) }}%: {{ before }} -> {{ after }} {{ parse_unit(regression.units) }}
+
+{%- endfor -%}
+{# Show the benchmark groupings conditionally. #}
+{%- include 'benchmark_grouping.j2' -%}
+{# Group the anomalies by bot. #}
+{%- include 'bot_grouping.j2' -%}
+{# Show owners for the benchmarks. #}
+{%- include 'benchmark_owners.j2' %}
+
+{# TODO(fancl): directly use commit range instead -#}
+Commits in this range:
+{%- for info in revision_infos %}
+  {{ info.name }}: {{ info.url }}
+{%- endfor -%}

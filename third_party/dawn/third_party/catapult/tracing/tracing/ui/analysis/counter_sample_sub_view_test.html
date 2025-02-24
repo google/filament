@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/counter_sample_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Counter = tr.model.Counter;
+  const CounterSeries = tr.model.CounterSeries;
+  const EventSet = tr.model.EventSet;
+
+  test('instantiate_undefinedSelection', function() {
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection = new EventSet(undefined);
+
+    assert.lengthOf(analysisEl.$.table.tableRows, 0);
+  });
+
+  test('instantiate_oneCounterOneSeries', function() {
+    const series = new CounterSeries('series1', 0);
+    series.addCounterSample(0, 0);
+    series.addCounterSample(1, 10);
+
+    const counter = new Counter(null, 0, 'cat', 'ctr1');
+    counter.addSeries(series);
+
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection = new EventSet(series.samples);
+    this.addHTMLOutput(analysisEl);
+
+    // The first sample should be listed as a collapsible header row for the
+    // series.
+    const rows = analysisEl.$.table.tableRows;
+    assert.lengthOf(rows, 1);
+    assert.isTrue(rows[0].isExpanded);
+    assert.strictEqual(rows[0].counter, 'ctr1');
+    assert.strictEqual(rows[0].series, 'series1');
+    assert.strictEqual(rows[0].start, 0);
+    assert.strictEqual(rows[0].value, 0);
+
+    // The second sample should be listed as a subrow of the first.
+    const subRows = rows[0].subRows;
+    assert.lengthOf(subRows, 1);
+    assert.isUndefined(subRows[0].counter);
+    assert.isUndefined(subRows[0].series);
+    assert.strictEqual(subRows[0].start, 1);
+    assert.strictEqual(subRows[0].value, 10);
+  });
+
+  test('instantiate_singleSampleDoesntHaveSubrows', function() {
+    const series = new CounterSeries('series1', 0);
+    series.addCounterSample(0, 0);
+
+    const counter = new Counter(null, 0, 'cat', 'ctr1');
+    counter.addSeries(series);
+
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection = new EventSet(series.samples);
+    this.addHTMLOutput(analysisEl);
+
+    // The first sample should be listed as a collapsible header row for the
+    // series.
+    const rows = analysisEl.$.table.tableRows;
+    assert.lengthOf(rows, 1);
+    assert.strictEqual(rows[0].counter, 'ctr1');
+    assert.strictEqual(rows[0].series, 'series1');
+    assert.strictEqual(rows[0].start, 0);
+    assert.strictEqual(rows[0].value, 0);
+    assert.isUndefined(rows[0].subRows);
+  });
+
+  test('instantiate_oneCounterTwoSeries', function() {
+    const series1 = new CounterSeries('series1', 0);
+    series1.addCounterSample(1, 10);
+    series1.addCounterSample(2, 20);
+
+    const series2 = new CounterSeries('series2', 0);
+    series2.addCounterSample(3, 30);
+
+    const counter = new Counter(null, 0, 'cat', 'ctr1');
+    counter.addSeries(series1);
+    counter.addSeries(series2);
+
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection =
+        new EventSet(series1.samples.concat(series2.samples));
+    this.addHTMLOutput(analysisEl);
+
+    // The first samples should be listed as collapsible header rows for the
+    // series.
+    const rows = analysisEl.$.table.tableRows;
+    assert.lengthOf(rows, 2);
+    assert.strictEqual(rows[0].counter, 'ctr1');
+    assert.strictEqual(rows[0].series, 'series1');
+    assert.strictEqual(rows[0].start, 1);
+    assert.strictEqual(rows[0].value, 10);
+
+    assert.strictEqual(rows[1].counter, 'ctr1');
+    assert.strictEqual(rows[1].series, 'series2');
+    assert.strictEqual(rows[1].start, 3);
+    assert.strictEqual(rows[1].value, 30);
+
+    // The subsequent samples should be listed as subrows of the first.
+    const subRows1 = rows[0].subRows;
+    assert.lengthOf(subRows1, 1);
+    assert.isUndefined(subRows1[0].counter);
+    assert.isUndefined(subRows1[0].series);
+    assert.strictEqual(subRows1[0].start, 2);
+    assert.strictEqual(subRows1[0].value, 20);
+
+    assert.isUndefined(rows[1].subRows);
+  });
+
+  test('instantiate_twoCountersTwoSeries', function() {
+    const series1 = new CounterSeries('series1', 0);
+    series1.addCounterSample(1, 10);
+
+    const series2 = new CounterSeries('series2', 0);
+    series2.addCounterSample(2, 20);
+
+    const counter1 = new Counter(null, 0, 'cat', 'ctr1');
+    const counter2 = new Counter(null, 0, 'cat', 'ctr2');
+    counter1.addSeries(series1);
+    counter2.addSeries(series2);
+
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection =
+        new EventSet(series1.samples.concat(series2.samples));
+    this.addHTMLOutput(analysisEl);
+
+    // Each sample should be a header row with no subrows.
+    const rows = analysisEl.$.table.tableRows;
+    assert.lengthOf(rows, 2);
+    assert.strictEqual(rows[0].counter, 'ctr1');
+    assert.strictEqual(rows[0].series, 'series1');
+    assert.strictEqual(rows[0].start, 1);
+    assert.strictEqual(rows[0].value, 10);
+    assert.isUndefined(rows[0].subRows);
+
+    assert.strictEqual(rows[1].counter, 'ctr2');
+    assert.strictEqual(rows[1].series, 'series2');
+    assert.strictEqual(rows[1].start, 2);
+    assert.strictEqual(rows[1].value, 20);
+    assert.isUndefined(rows[1].subRows);
+  });
+
+  test('instantiate_contentsClearedEachSelection', function() {
+    const series = new CounterSeries('series1', 0);
+    series.addCounterSample(0, 0);
+
+    const counter = new Counter(null, 0, 'cat', 'ctr1');
+    counter.addSeries(series);
+
+    const analysisEl = document.createElement(
+        'tr-ui-a-counter-sample-sub-view');
+    analysisEl.selection = new EventSet(series.samples);
+    analysisEl.selection = new EventSet(series.samples);
+    this.addHTMLOutput(analysisEl);
+
+    assert.lengthOf(analysisEl.$.table.tableRows, 1);
+  });
+});
+</script>

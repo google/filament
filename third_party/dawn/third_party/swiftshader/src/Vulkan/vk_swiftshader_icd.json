@@ -1,0 +1,7 @@
+{
+  "file_format_version": "1.0.0",
+  "ICD": {
+    "library_path": "..\\..\\bin\\vulkan\\x64\\Debug\\libvk_swiftshader.dll",
+    "api_version": "1.0.5"
+  }
+}

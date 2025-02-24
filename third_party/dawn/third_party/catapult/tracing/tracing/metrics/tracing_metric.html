@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  const MEMORY_INFRA_TRACING_CATEGORY = 'disabled-by-default-memory-infra';
+
+  const TIME_BOUNDARIES = tr.v.HistogramBinBoundaries.createExponential(
+      1e-3, 1e5, 30);
+
+  const BYTE_BOUNDARIES = tr.v.HistogramBinBoundaries.createExponential(
+      1, 1e9, 30);
+
+  const COUNT_BOUNDARIES = tr.v.HistogramBinBoundaries.createExponential(
+      1, 1e5, 30);
+
+  // By default, we store a single value, so we only need one of the
+  // statistics to keep track. We choose the average for that.
+  const SUMMARY_OPTIONS = tr.v.Histogram.AVERAGE_ONLY_SUMMARY_OPTIONS;
+
+  // Adds histograms specific to memory-infra dumps.
+  function addMemoryInfraHistograms(
+      histograms, model, categoryNamesToTotalEventSizes) {
+    const memoryDumpCount = model.globalMemoryDumps.length;
+    if (memoryDumpCount === 0) return;
+
+    let totalOverhead = 0;
+    let nonMemoryInfraThreadOverhead = 0;
+    const overheadByProvider = {};
+    for (const process of Object.values(model.processes)) {
+      for (const thread of Object.values(process.threads)) {
+        for (const slice of Object.values(thread.sliceGroup.slices)) {
+          if (slice.category !== MEMORY_INFRA_TRACING_CATEGORY) continue;
+
+          totalOverhead += slice.duration;
+          if (thread.name !== 'MemoryInfra') {
+            nonMemoryInfraThreadOverhead += slice.duration;
+          }
+          if (slice.args && slice.args['dump_provider.name']) {
+            const providerName = slice.args['dump_provider.name'];
+            let durationAndCount = overheadByProvider[providerName];
+            if (durationAndCount === undefined) {
+              overheadByProvider[providerName] = durationAndCount =
+                  {duration: 0, count: 0};
+            }
+            durationAndCount.duration += slice.duration;
+            durationAndCount.count++;
+          }
+        }
+      }
+    }
+
+    histograms.createHistogram('memory_dump_cpu_overhead',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        totalOverhead / memoryDumpCount, {
+          binBoundaries: TIME_BOUNDARIES,
+          description:
+            'Average CPU overhead on all threads per memory-infra dump',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+
+    histograms.createHistogram('nonmemory_thread_memory_dump_cpu_overhead',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        nonMemoryInfraThreadOverhead / memoryDumpCount, {
+          binBoundaries: TIME_BOUNDARIES,
+          description: 'Average CPU overhead on non-memory-infra threads ' +
+            'per memory-infra dump',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+
+    for (const [providerName, overhead] of Object.entries(overheadByProvider)) {
+      histograms.createHistogram(`${providerName}_memory_dump_cpu_overhead`,
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          overhead.duration / overhead.count, {
+            binBoundaries: TIME_BOUNDARIES,
+            description:
+              `Average CPU overhead of ${providerName} per OnMemoryDump call`,
+            summaryOptions: SUMMARY_OPTIONS,
+          });
+    }
+
+    const memoryInfraEventsSize =
+        categoryNamesToTotalEventSizes.get(MEMORY_INFRA_TRACING_CATEGORY);
+    const memoryInfraTraceBytesValue = new tr.v.Histogram(
+        'total_memory_dump_size',
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter, BYTE_BOUNDARIES);
+    memoryInfraTraceBytesValue.description =
+        'Total trace size of memory-infra dumps in bytes';
+    memoryInfraTraceBytesValue.customizeSummaryOptions(SUMMARY_OPTIONS);
+    memoryInfraTraceBytesValue.addSample(memoryInfraEventsSize);
+    histograms.addHistogram(memoryInfraTraceBytesValue);
+
+    const traceBytesPerDumpValue = new tr.v.Histogram(
+        'memory_dump_size',
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter, BYTE_BOUNDARIES);
+    traceBytesPerDumpValue.description =
+        'Average trace size of memory-infra dumps in bytes';
+    traceBytesPerDumpValue.customizeSummaryOptions(SUMMARY_OPTIONS);
+    traceBytesPerDumpValue.addSample(memoryInfraEventsSize / memoryDumpCount);
+    histograms.addHistogram(traceBytesPerDumpValue);
+  }
+
+  // TODO(charliea): The metrics in this file should be renamed to have names
+  // more consistent with those in the rest of the codebase
+  // (e.g. 'trace_size_growth_per_second', not 'Max event size in bytes per
+  // second').
+  // https://github.com/catapult-project/catapult/issues/3233
+  function tracingMetric(histograms, model) {
+    if (!model.stats.hasEventSizesinBytes) return;
+
+    const eventStats = model.stats.allTraceEventStatsInTimeIntervals;
+    eventStats.sort((a, b) => a.timeInterval - b.timeInterval);
+
+    const totalTraceBytes = eventStats.reduce(
+        (a, b) => a + b.totalEventSizeinBytes, 0);
+
+    // We maintain a sliding window of records [start ... end-1] where end
+    // increments each time through the loop, and we move start just far enough
+    // to keep the window less than 1 second wide. Note that we need to compute
+    // the number of time intervals (i.e. units that timeInterval is given in)
+    // in one second to know how wide the sliding window should be.
+    let maxEventCountPerSec = 0;
+    let maxEventBytesPerSec = 0;
+    const INTERVALS_PER_SEC = Math.floor(
+        1000 / model.stats.TIME_INTERVAL_SIZE_IN_MS);
+
+    let runningEventNumPerSec = 0;
+    let runningEventBytesPerSec = 0;
+    let start = 0;
+    let end = 0;
+
+    while (end < eventStats.length) {
+      // Slide the end marker forward. Moving the end marker from N
+      // to N+1 adds eventStats[N] to the sliding window.
+      runningEventNumPerSec += eventStats[end].numEvents;
+      runningEventBytesPerSec += eventStats[end].totalEventSizeinBytes;
+      end++;
+
+      // Slide the start marker forward so that the time interval covered
+      // by the window is less than 1 second wide.
+      while ((eventStats[end - 1].timeInterval -
+              eventStats[start].timeInterval) >= INTERVALS_PER_SEC) {
+        runningEventNumPerSec -= eventStats[start].numEvents;
+        runningEventBytesPerSec -= eventStats[start].totalEventSizeinBytes;
+        start++;
+      }
+
+      // Update maximum values.
+      maxEventCountPerSec = Math.max(maxEventCountPerSec,
+          runningEventNumPerSec);
+      maxEventBytesPerSec = Math.max(maxEventBytesPerSec,
+          runningEventBytesPerSec);
+    }
+
+    const stats = model.stats.allTraceEventStats;
+    const categoryNamesToTotalEventSizes = (
+      stats.reduce((map, stat) => (
+        map.set(stat.category,
+            ((map.get(stat.category) || 0) +
+                    stat.totalEventSizeinBytes))), new Map()));
+
+    // Determine the category with the highest total event size.
+    const maxCatNameAndBytes = Array.from(
+        categoryNamesToTotalEventSizes.entries()).reduce(
+        (a, b) => ((b[1] >= a[1]) ? b : a));
+    const maxEventBytesPerCategory = maxCatNameAndBytes[1];
+    const categoryWithMaxEventBytes = maxCatNameAndBytes[0];
+
+    const maxEventCountPerSecValue = new tr.v.Histogram(
+        'peak_event_rate', tr.b.Unit.byName.count_smallerIsBetter,
+        COUNT_BOUNDARIES);
+    maxEventCountPerSecValue.description = 'Max number of events per second';
+    maxEventCountPerSecValue.customizeSummaryOptions(SUMMARY_OPTIONS);
+    maxEventCountPerSecValue.addSample(maxEventCountPerSec);
+
+    const maxEventBytesPerSecValue = new tr.v.Histogram(
+        'peak_event_size_rate', tr.b.Unit.byName.sizeInBytes_smallerIsBetter,
+        BYTE_BOUNDARIES);
+    maxEventBytesPerSecValue.description = 'Max event size in bytes per second';
+    maxEventBytesPerSecValue.customizeSummaryOptions(SUMMARY_OPTIONS);
+    maxEventBytesPerSecValue.addSample(maxEventBytesPerSec);
+
+    const totalTraceBytesValue = new tr.v.Histogram('trace_size',
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter, BYTE_BOUNDARIES);
+    totalTraceBytesValue.customizeSummaryOptions(SUMMARY_OPTIONS);
+    totalTraceBytesValue.addSample(totalTraceBytes);
+
+    const biggestCategory = {
+      name: categoryWithMaxEventBytes,
+      size_in_bytes: maxEventBytesPerCategory
+    };
+
+    totalTraceBytesValue.diagnostics.set(
+        'category_with_max_event_size',
+        new tr.v.d.GenericSet([biggestCategory]));
+    histograms.addHistogram(totalTraceBytesValue);
+
+    maxEventCountPerSecValue.diagnostics.set(
+        'category_with_max_event_size',
+        new tr.v.d.GenericSet([biggestCategory]));
+    histograms.addHistogram(maxEventCountPerSecValue);
+
+    maxEventBytesPerSecValue.diagnostics.set(
+        'category_with_max_event_size',
+        new tr.v.d.GenericSet([biggestCategory]));
+    histograms.addHistogram(maxEventBytesPerSecValue);
+
+    addMemoryInfraHistograms(histograms, model, categoryNamesToTotalEventSizes);
+  }
+
+  tr.metrics.MetricRegistry.register(tracingMetric);
+
+  return {
+    tracingMetric,
+    // For testing only:
+    MEMORY_INFRA_TRACING_CATEGORY,
+  };
+});
+</script>

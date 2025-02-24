@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses sync events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux sync trace events.
+   * @constructor
+   */
+  function SyncParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler(
+        'sync_timeline',
+        SyncParser.prototype.timelineEvent.bind(this));
+    importer.registerEventHandler(
+        'sync_wait',
+        SyncParser.prototype.syncWaitEvent.bind(this));
+    importer.registerEventHandler(
+        'sync_pt',
+        SyncParser.prototype.syncPtEvent.bind(this));
+    this.model_ = importer.model_;
+  }
+
+  const syncTimelineRE = /name=(\S+) value=(\S*)/;
+  const syncWaitRE = /(\S+) name=(\S+) state=(\d+)/;
+  const syncPtRE = /name=(\S+) value=(\S*)/;
+
+  SyncParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses sync events and sets up state in the importer.
+     */
+    timelineEvent(eventName, cpuNumber, pid,
+        ts, eventBase) {
+      const event = syncTimelineRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const thread = this.importer.getOrCreatePseudoThread(event[1]);
+
+      if (thread.lastActiveTs !== undefined) {
+        const duration = ts - thread.lastActiveTs;
+        let value = thread.lastActiveValue;
+        if (value === undefined) value = ' ';
+        const slice = new tr.model.ThreadSlice(
+            '', value,
+            ColorScheme.getColorIdForGeneralPurposeString(value),
+            thread.lastActiveTs, {},
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      thread.lastActiveTs = ts;
+      thread.lastActiveValue = event[2];
+      return true;
+    },
+
+    syncWaitEvent(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      const event = syncWaitRE.exec(eventBase.details);
+      if (!event) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+
+      const tgid = parseInt(eventBase.tgid);
+      const thread = this.model_.getOrCreateProcess(tgid)
+          .getOrCreateThread(pid);
+      thread.name = eventBase.threadName;
+      const slices = thread.kernelSliceGroup;
+      if (!slices.isTimestampValidForBeginOrEnd(ts)) {
+        this.model_.importWarning({
+          type: 'parse_error',
+          message: 'Timestamps are moving backward.'
+        });
+        return false;
+      }
+
+      const name = 'fence_wait("' + event[2] + '")';
+      if (event[1] === 'begin') {
+        const slice = slices.beginSlice(null, name, ts, {
+          'Start state': event[3]
+        });
+      } else if (event[1] === 'end') {
+        if (slices.openSliceCount > 0) {
+          slices.endSlice(ts);
+        }
+      } else {
+        return false;
+      }
+
+      return true;
+    },
+
+    syncPtEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      return !!syncPtRE.exec(eventBase.details);
+    }
+  };
+
+  Parser.register(SyncParser);
+
+  return {
+    SyncParser,
+  };
+});
+</script>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/alerts-page.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/legacy_unit_info.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const mockResponse = {
+      'anomaly_list': [
+        {
+          'end_revision': 405670,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgyvmVpAoM',
+          'date': '2016-07-15',
+          'median_before_anomaly': 15,
+          'bisect_status': null,
+          'testsuite': 'browser_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgivuIuwoM',
+          'start_revision': 405656,
+          'bot': 'windows-7',
+          'improvement': false,
+          'median_after_anomaly': 16,
+          'master': 'ChromiumBlink',
+          'percent_changed': '6.7%',
+          'absolute_delta': '1234.56789',
+          'units': 'kb',
+          'test': 'video_cpu_usage_VP8\/goog_encode_usage_percent',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICg8piF_goM',
+          'date': '2016-07-15',
+          'median_before_anomaly': 34.665,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoM',
+          'start_revision': 13465,
+          'bot': 'android-nexus5',
+          'improvement': false,
+          'median_after_anomaly': 34.05,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.8%',
+          'absolute_delta': '4321000.01234',
+          'units': 'kb',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgipS9ugkM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.68843434345,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoM',
+          'start_revision': 13465,
+          'bot': 'android-nexus72',
+          'improvement': false,
+          'median_after_anomaly': 34.0202020202,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.9%',
+          'absolute_delta': '12.00034',
+          'units': 'count',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgitrkhgoM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.66,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoM',
+          'start_revision': 13465,
+          'bot': 'mac-large-tests',
+          'improvement': false,
+          'median_after_anomaly': 34,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.9%',
+          'absolute_delta': '1.21578',
+          'units': 'runs/s',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgitKhswoM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.51,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoM',
+          'start_revision': 13465,
+          'bot': 'webrtc-linux-large-tests',
+          'improvement': false,
+          'median_after_anomaly': 34.0396039604,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.4%',
+          'absolute_delta': '1.22448',
+          'units': 'ms',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgitKhswoM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.51,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoN',
+          'start_revision': 13465,
+          'bot': 'hwebrtc-linux-large-tests',
+          'improvement': false,
+          'median_after_anomaly': 34.0396039604,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.6%',
+          'absolute_delta': '16789.11125',
+          'units': 'ms',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgitKhswoM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.51,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoN',
+          'start_revision': 13465,
+          'bot': 'xwebrtc-linux-large-tests',
+          'improvement': false,
+          'median_after_anomaly': 34.0396039604,
+          'master': 'ChromiumPerf',
+          'percent_changed': '3.4%',
+          'absolute_delta': '12345654545789.21548',
+          'units': 'kb',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        },
+        {
+          'end_revision': 13465,
+          'dashboard_link': 'http://do/not/click/me',
+          'bug_id': null,
+          'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgitKhswoM',
+          'date': '2016-07-14',
+          'median_before_anomaly': 34.51,
+          'bisect_status': null,
+          'testsuite': 'webrtc_perf_tests',
+          'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgiovavgoN',
+          'start_revision': 13465,
+          'bot': 'mwebrtc-linux-large-tests',
+          'improvement': false,
+          'median_after_anomaly': 34.0396039604,
+          'master': 'ChromiumPerf',
+          'percent_changed': '1.2%',
+          'absolute_delta': '189.21548',
+          'units': 'mWh',
+          'test': 'bitrate_stats_without_min_transmit_bitrate\/bitrate_kbps',
+          'recovered': false
+        }
+      ],
+      'sheriff_list': ['Chromium Perf Sheriff', 'V8 Sheriff', 'CrOS Sheriff'],
+      'xsrf_token': '12345',
+      'anomaly_count': 8,
+      'show_more_anomalies': false,
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('alerts-page');
+    this.addHTMLOutput(page);
+  }, testOptions);
+});
+</script>

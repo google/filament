@@ -1,0 +1,13 @@
+boto v2.38.0
+============
+
+:date: 2015/04/09
+
+This release adds support for Amazon Machine Learning and fixes a couple of
+issues.
+
+
+Changes
+-------
+* Add support for Amazon Machine Learning (:sha:`ab32d572`)
+* Fix issue with modify reserved instances for modifying instance type (:issue:`3085`, :sha:`b8ea7a04`)

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('netInternalsTourTabs', function() {
+    this.addHTMLOutput(globalNetLogViewerElementForTests);
+
+    // Expected visibility state of each tab.
+    var tabVisibilityState = {
+      import: true,
+      proxy: false,
+      events: false,
+      timeline: false,
+      dns: false,
+      sockets: false,
+      http2: false,
+      quic: false,
+      reporting: false,
+      'alt-svc': false,
+      httpCache: false,
+      modules: false,
+      prerender: false,
+    };
+
+    NetInternalsTest.checkTabLinkVisibility(tabVisibilityState, true);
+  });
+});
+</script>

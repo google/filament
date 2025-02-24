@@ -1,0 +1,16 @@
+Name: FideltyFX Single Pass Downsampler
+Short Name: ffx-spd
+URL: https://github.com/GPUOpen-Effects/FidelityFX-SPD
+Version: 1.0
+Date: 2019-05-31
+Revision: 0e82a6f4f491aa18adde62edc3f5c4ed20d92627
+License: MIT
+License File: LICENSE
+Security Critical: No
+Shipped: yes
+
+Description:
+A single-pass downsampler used to generate texture mipmaps.
+
+Local Modifications:
+None

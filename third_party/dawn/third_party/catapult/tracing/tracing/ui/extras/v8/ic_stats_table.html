@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/v8/ic_stats_entry.html">
+<link rel="import" href="/tracing/extras/v8/v8_ic_stats_thread_slice.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-e-v8-ic-stats-table'>
+  <template>
+    <style>
+    tr-ui-b-table {
+      flex: 0 0 auto;
+      align-self: stretch;
+      margin-top: 1em;
+      font-size: 12px;
+    }
+    #total {
+      margin-top: 1em;
+      margin-left: 0.8em;
+    }
+    #groupOption {
+      display: inline-block;
+      margin-top: 1em;
+      margin-left: 0.8em;
+    }
+    </style>
+    <div style="padding-right: 200px">
+      <div style="float:right;  border-style: solid; border-width: 1px; padding:20px">
+        X no feedback<br>
+        0 uninitialized<br>
+        . premonomorphic<br>
+        1 monomorphic<br>
+        ^ recompute handler<br>
+        P polymorphic<br>
+        N megamorphic<br>
+        G generic
+      </div>
+    </div>
+    <div id="total">
+    </div>
+    <div id="groupOption">
+      Group Key
+    </div>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.v8', function() {
+  const PROPERTIES = tr.e.v8.IC_STATS_PROPERTIES.map(
+      x => {return {label: x, value: x};});
+  const ICStatsEntry = tr.e.v8.ICStatsEntry;
+  const ICStatsEntryGroup = tr.e.v8.ICStatsEntryGroup;
+  const ICStatsCollection = tr.e.v8.ICStatsCollection;
+
+  Polymer({
+    is: 'tr-ui-e-v8-ic-stats-table',
+
+    ready() {
+      this.icStatsCollection_ = new ICStatsCollection();
+      this.groupKey_ = PROPERTIES[0].value;
+      this.selector_ = tr.ui.b.createSelector(this, 'groupKey',
+          'v8ICStatsGroupKey',
+          this.groupKey_, PROPERTIES);
+      Polymer.dom(this.$.groupOption).appendChild(this.selector_);
+    },
+
+    get groupKey() {
+      return this.groupKey_;
+    },
+
+    set groupKey(key) {
+      this.groupKey_ = key;
+      if (this.icStatsCollection_.length === 0) return;
+      this.updateTable_(this.groupKey_);
+    },
+
+    constructTable_(table, groupKey) {
+      table.tableColumns = [
+        {
+          title: '',
+          value: row => {
+            let expanded = false;
+            const buttonEl = tr.ui.b.createButton('details', function() {
+              const previousSibling = Polymer.dom(this).parentNode.parentNode;
+              const parentNode = previousSibling.parentNode;
+              if (expanded) {
+                const trEls = parentNode.getElementsByClassName('subTable');
+                Array.from(trEls).map(x => x.parentNode.removeChild(x));
+                expanded = false;
+                return;
+              }
+              expanded = true;
+              const subGroups = row.createSubGroup();
+              const tr = document.createElement('tr');
+              tr.classList.add('subTable');
+              tr.appendChild(document.createElement('td'));
+              const td = document.createElement('td');
+              td.colSpan = 3;
+              for (const subGroup of subGroups) {
+                const property = subGroup[0];
+                const all = Array.from(subGroup[1].values());
+                const group = all.slice(0, 20);
+                const divEl = document.createElement('div');
+                const spanEl = document.createElement('span');
+                const subTableEl = document.createElement('tr-ui-b-table');
+
+                spanEl.innerText = `Top 20 out of ${all.length}`;
+                spanEl.style.fontWeight = 'bold';
+                spanEl.style.fontSize = '14px';
+                divEl.appendChild(spanEl);
+
+                this.constructTable_(subTableEl, property);
+                subTableEl.tableRows = group;
+                subTableEl.rebuild();
+                divEl.appendChild(subTableEl);
+                td.appendChild(divEl);
+              }
+              tr.appendChild(td);
+              parentNode.insertBefore(tr, previousSibling.nextSibling);
+            });
+            return buttonEl;
+          }
+        },
+        {
+          title: 'Percentage',
+          value(row) {
+            const spanEl = document.createElement('span');
+            spanEl.innerText = (row.percentage * 100).toFixed(3) + '%';
+            return spanEl;
+          },
+          cmp: (a, b) => a.percentage - b.percentage
+        },
+        {
+          title: 'Count',
+          value(row) {
+            const spanEl = document.createElement('span');
+            spanEl.innerText = row.length;
+            return spanEl;
+          },
+          cmp: (a, b) => a.length - b.length
+        },
+        {
+          title: groupKey,
+          value(row) {
+            const spanEl = document.createElement('span');
+            spanEl.innerText = row.key ? row.key : '';
+            return spanEl;
+          }
+        }
+      ];
+
+      table.sortColumnIndex = 1;
+      table.sortDescending = true;
+    },
+
+    updateTable_(groupKey) {
+      this.constructTable_(this.$.table, groupKey);
+      this.$.table.tableRows = this.icStatsCollection_.groupBy(groupKey);
+      this.$.table.rebuild();
+    },
+
+    set selection(slices) {
+      for (const slice of slices) {
+        for (const icStatsObj of slice.icStats) {
+          const entry = new ICStatsEntry(icStatsObj);
+          this.icStatsCollection_.add(entry);
+        }
+      }
+      this.$.total.innerText = 'Total items: ' + this.icStatsCollection_.length;
+      this.updateTable_(this.selector_.selectedValue);
+    }
+  });
+
+  return {};
+});
+</script>

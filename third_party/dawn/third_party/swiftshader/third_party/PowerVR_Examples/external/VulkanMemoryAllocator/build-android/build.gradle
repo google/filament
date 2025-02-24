@@ -1,0 +1,44 @@
+apply plugin: 'com.android.library'
+
+android {
+	compileSdkVersion 28
+	defaultConfig {
+		minSdkVersion 21
+		targetSdkVersion 26
+		versionCode 1
+		versionName "1.0"
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}

@@ -1,0 +1,799 @@
+Name
+
+    EXT_sparse_texture
+
+Name Strings
+
+    GL_EXT_sparse_texture
+
+Contributors
+
+    Dominik Witczak, Mobica
+    Contributors to ARB_sparse_texture
+
+    Xi Chen, NVIDIA
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         27/03/2015
+    Revision:                   3
+
+Number
+
+    OpenGL ES Extension #240
+
+Dependencies
+
+    OpenGL ES 3.1 is required.
+
+    This extension is written against the OpenGL ES 3.1 (June 4, 2014)
+    Specification.
+
+    This extension interacts with OES_texture_border_clamp.
+
+    This extension interacts with EXT_texture_border_clamp.
+
+    This extension interacts with OES_texture_cube_map_array.
+
+    This extension interacts with EXT_texture_cube_map_array.
+
+    This extension interacts with OES_texture_view.
+
+    This extension interacts with EXT_texture_view.
+
+    This extension interacts with EXT_texture_norm16.
+
+    The definition of this extension is affected by the presence of
+    EXT_direct_state_access.
+
+Overview
+
+    Recent advances in application complexity and a desire for higher
+    resolutions have pushed texture sizes up considerably. Often, the amount
+    of physical memory available to a graphics processor is a limiting factor
+    in the performance of texture-heavy applications. Once the available
+    physical memory is exhausted, paging may occur bringing performance down
+    considerably - or worse, the application may fail. Nevertheless, the amount
+    of address space available to the graphics processor has increased to the
+    point where many gigabytes - or even terabytes of address space may be
+    usable even though that amount of physical memory is not present.
+
+    This extension allows the separation of the graphics processor's address
+    space (reservation) from the requirement that all textures must be
+    physically backed (commitment). This exposes a limited form of
+    virtualization for textures. Use cases include sparse (or partially
+    resident) textures, texture paging, on-demand and delayed loading of
+    texture assets and application controlled level of detail.
+
+New Procedures and Functions
+
+        void TexPageCommitmentEXT(enum target,
+                                  int level,
+                                  int xoffset,
+                                  int yoffset,
+                                  int zoffset,
+                                  sizei width,
+                                  sizei height,
+                                  sizei depth,
+                                  boolean commit);
+
+    [[ The following is only added if EXT_direct_state_access is supported. ]]
+
+        void TexturePageCommitmentEXT(uint texture,
+                                      int level,
+                                      int xoffset,
+                                      int yoffset,
+                                      int zoffset,
+                                      sizei width,
+                                      sizei height,
+                                      sizei depth,
+                                      boolean commit);
+
+New Tokens
+
+    Accepted by the <pname> parameter to TexParameter{if}{v},
+    GetTexParameter{if}v, TexParameterI{u}ivOES, GetTexParameterI{u}ivOES
+    TexParameterI{u}ivEXT, and GetTexParameterI{u}ivEXT:
+
+        TEXTURE_SPARSE_EXT                          0x91A6
+        VIRTUAL_PAGE_SIZE_INDEX_EXT                 0x91A7
+
+    Accepted by the <pname> parameter of GetTexParameter{if}v,
+    GetTexParameterIi{u}vOES, and GetTexParameterIi{u}vEXT:
+
+        NUM_SPARSE_LEVELS_EXT                       0x91AA
+
+    Accepted by the <pname> parameter to GetInternalformativ:
+
+        NUM_VIRTUAL_PAGE_SIZES_EXT                  0x91A8
+
+        VIRTUAL_PAGE_SIZE_X_EXT                     0x9195
+        VIRTUAL_PAGE_SIZE_Y_EXT                     0x9196
+        VIRTUAL_PAGE_SIZE_Z_EXT                     0x9197
+
+    Accepted by the <target> parameter to GetInternalformativ:
+
+        TEXTURE_2D                                  0x0DE1
+        TEXTURE_2D_ARRAY                            0x8C1A
+        TEXTURE_CUBE_MAP                            0x8513
+        TEXTURE_CUBE_MAP_ARRAY_OES                  0x9009
+        TEXTURE_3D                                  0x806F
+
+    Accepted by the <pname> parameter to GetIntegerv, GetFloatv,
+    GetInteger64v, and GetBooleanv:
+
+        MAX_SPARSE_TEXTURE_SIZE_EXT                 0x9198
+        MAX_SPARSE_3D_TEXTURE_SIZE_EXT              0x9199
+        MAX_SPARSE_ARRAY_TEXTURE_LAYERS_EXT         0x919A
+        SPARSE_TEXTURE_FULL_ARRAY_CUBE_MIPMAPS_EXT  0x91A9
+
+Additions to Chapter 8 of the OpenGL ES 3.1 Specification (Textures and
+Samplers)
+
+    Add the "Supports Sparse Allocation" column to Table 8.13, "Correspondence
+    of sized internal color formats..."
+
+        +-------------------------------+-------------------------------+
+        | Sized Internal Format         | Supports Sparse Allocation    |
+        +-------------------------------+-------------------------------+
+        | R8                            | Y                             |
+        | R8_SNORM                      | Y                             |
+        | R16_EXT                       | Y                             |
+        | R16_SNORM_EXT                 | Y                             |
+        | RG8                           | Y                             |
+        | RG8_SNORM                     | Y                             |
+        | RG16_EXT                      | Y                             |
+        | RG16_SNORM_EXT                | Y                             |
+        | RGB565                        | Y                             |
+        | RGB8                          |                               |
+        | RGB8_SNORM                    |                               |
+        | RGB16_EXT                     |                               |
+        | RGB16_SNORM_EXT               |                               |
+        | RGBA4                         |                               |
+        | RGB5_A1                       |                               |
+        | RGBA8                         | Y                             |
+        | RGBA8_SNORM                   | Y                             |
+        | RGB10_A2                      | Y                             |
+        | RGB10_A2UI                    | Y                             |
+        | RGBA16_EXT                    | Y                             |
+        | RGBA16_SNORM_EXT              | Y                             |
+        | SRGB8                         |                               |
+        | SRGB8_ALPHA8                  |                               |
+        | R16F                          | Y                             |
+        | RG16F                         | Y                             |
+        | RGB16F                        |                               |
+        | RGBA16F                       | Y                             |
+        | R32F                          | Y                             |
+        | RG32F                         | Y                             |
+        | RGB32F                        |                               |
+        | RGBA32F                       | Y                             |
+        | R11F_G11F_B10F                | Y                             |
+        | RGB9_E5                       | Y                             |
+        | R8I                           | Y                             |
+        | R8UI                          | Y                             |
+        | R16I                          | Y                             |
+        | R16UI                         | Y                             |
+        | R32I                          | Y                             |
+        | R32UI                         | Y                             |
+        | RG8I                          | Y                             |
+        | RG8UI                         | Y                             |
+        | RG16I                         | Y                             |
+        | RG16UI                        | Y                             |
+        | RG32I                         | Y                             |
+        | RG32UI                        | Y                             |
+        | RGB8I                         |                               |
+        | RGB8UI                        |                               |
+        | RGB16I                        |                               |
+        | RGB16UI                       |                               |
+        | RGB32I                        |                               |
+        | RGB32UI                       |                               |
+        | RGBA8I                        | Y                             |
+        | RGBA8UI                       | Y                             |
+        | RGBA16I                       | Y                             |
+        | RGBA16UI                      | Y                             |
+        | RGBA32I                       | Y                             |
+        | RGBA32UI                      | Y                             |
+        +-------------------------------+-------------------------------+
+
+    Insert the following paragraph before Table 8.16:
+
+        If <pname> is TEXTURE_SPARSE_EXT or VIRTUAL_PAGE_SIZE_INDEX_EXT, then
+    the state is stored in the texture, but only takes effect the next time
+    storage is allocated for a texture using TexStorage*. If the value of
+    TEXTURE_IMMUTABLE_FORMAT is TRUE, then TEXTURE_SPARSE_EXT and
+    VIRTUAL_PAGE_SIZE_INDEX_EXT cannot be changed and an error is generated.
+
+    Append to Table 8.20: "Texture parameters and their values."
+
+      +------------------------------+---------+---------------------------+
+      | Name                         | Type    | Legal values              |
+      +------------------------------+---------+---------------------------+
+      | TEXTURE_SPARSE_EXT           | boolean | TRUE, FALSE               |
+      | VIRTUAL_PAGE_SIZE_INDEX_EXT  | int     | any non-negative integer  |
+      +------------------------------+---------+---------------------------+
+
+    Add to the Errors table for TexParameter*
+
+        INVALID_OPERATION is generated if <pname> is TEXTURE_SPARSE_EXT or
+    VIRTUAL_PAGE_SIZE_INDEX_EXT and the value of TEXTURE_IMMUTABLE_FORMAT for
+    the texture identified by <target> is TRUE.
+
+        INVALID_VALUE is generated if <pname> is TEXTURE_SPARSE_EXT, <pname>
+    is TRUE and <target> is not one of TEXTURE_2D, TEXTURE_2D_ARRAY,
+    TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY_OES, or TEXTURE_3D.
+
+    Additions to Section 8.16view (Texture Views), of the OpenGL ES
+    Specification (as added by OES_texture_view or EXT_texture_view):
+
+        Texture views may be created that reference sparse textures (see
+    Section 8.17sparse.1), and in such cases, the view is considered to be sparse.
+    Should a texture view reference part or all of the tail of a sparse
+    texture, then modifications to the commitment of that tail via the view
+    affect the tail of the parent texture and all other views that reference
+    the tail, even for portions of the tail outside the controlling view.
+
+    Additions to Section 8.17 of the OpenGL Specification, "Immutable-Format
+    Texture Images"
+
+    Add the following bullet point to the list of psuedo-operations performed
+    by all variants of TexStorage* (p.188):
+
+        * If TEXTURE_SPARSE_EXT is TRUE, only virtual address space is
+          allocated for the texture but physical backing store is not.
+          Physical store for pages of a virtual texture may be committed and
+          decommitted by calling TexPageCommitmentEXT. The page size chosen
+          for the texture is taken from the texture's value of
+          VIRTUAL_PAGE_SIZE_INDEX_EXT. In this case, <width>, <height> and
+          <depth> must either be integer multiples of the selected virtual
+          page size in the X, Y and Z dimensions, respectively, or be less
+          than those dimensions. Additionally, the dimensions of sparse
+          textures must be compatible with the chosen value of
+          <internalFormat> as described in Section 8.17sparse.1.
+
+    Add to the errors that may be generated by TexStorage*:
+
+        An INVALID_OPERATION error is generated if the texture's
+        TEXTURE_SPARSE_EXT parameter is TRUE and the value of its
+        VIRTUAL_PAGE_SIZE_INDEX_EXT parameter is greater than or equal to
+        NUM_VIRTUAL_PAGE_SIZES_EXT for the specified target and internal
+        format.
+
+        An INVALID_VALUE error is generated if the texture's TEXTURE_SPARSE_EXT
+        parameter is TRUE and any of the following are true:
+
+          * <target> is TEXTURE_3D, and <width>, <height>, or <depth>
+            is greater than MAX_SPARSE_3D_TEXTURE_SIZE_EXT;
+
+          * <target> is not TEXTURE_3D, and <width> or <height> is greater
+            than MAX_SPARSE_TEXTURE_SIZE_EXT; or
+
+          * <target> is TEXTURE_2D_ARRAY or TEXTURE_CUBE_MAP_ARRAY_OES and
+            <depth> is greater than MAX_SPARSE_TEXTURE_ARRAY_LAYERS_EXT.
+
+        An INVALID_VALUE error is generated if the texture's
+        TEXTURE_SPARSE_EXT parameter is TRUE and <width> or <height> is greater
+        than the value of MAX_SPARSE_3D_TEXTURE_SIZE_EXT when <target> is
+        TEXTURE_3D, or if <height> or <depth> is greater than the value of
+        MAX_SPARSE_ARRAY_TEXTURE_LAYERS_EXT if <target> is a 2D array
+        texture target, respectively.
+
+        An INVALID_VALUE error is generated if TEXTURE_SPARSE_EXT is TRUE and
+        <width>, <height> or <depth> is is not an integer multiple of the
+        page size in the corresponding dimension.
+
+        If the value of SPARSE_TEXTURE_FULL_ARRAY_CUBE_MIPMAPS_EXT is FALSE,
+        then TexStorage* will generate an INVALID_OPERATION error if
+
+          * the texture's TEXTURE_SPARSE_EXT parameter is TRUE,
+
+          * <target> is one of TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, or
+            TEXTURE_CUBE_MAP_ARRAY_OES, and
+
+          * for the virtual page size corresponding to the
+            VIRTUAL_PAGE_SIZE_INDEX_EXT parameter, either of the following is
+            true:
+
+              - <width> is not a multiple of VIRTUAL_PAGE_SIZE_X_EXT *
+                 2^(<levels>-1), or
+
+              - <height> is not a multiple of VIRTUAL_PAGE_SIZE_Y_EXT *
+                 2^(<levels>-1).
+
+    Insert Section 8.17sparse, "Sparse Textures and Commitment"
+    following section 8.17 "Immutable-Format Texture Images".
+
+        Textures may be allocated such that their images' physical backing
+    store is only partially allocated. Only immutable format textures may
+    be sparsely allocated. To allocate a sparse texture, set a texture's
+    TEXTURE_SPARSE_EXT parameter to TRUE before allocating storage for it
+    with TexStorage*.
+
+    Insert Subsection 8.17sparse.1, "Allocation of and Access to Sparse Textures"
+
+        Sparse textures are allocated setting a texture's TEXTURE_SPARSE_EXT
+    parameter to TRUE and then issuing one of the TexStorage* commands.
+    The dimensions of a sparse texture must be compatible with the internal
+    format chosen for the texture. Each internal format has zero or more
+    sparse page sizes that may be selected. The number of available page sizes
+    for an internal format and the dimensions of the pages may be determined
+    by calling GetInternalFormat* with the <pname> NUM_VIRTUAL_PAGE_SIZES_EXT
+    (for the number of available page sizes), VIRTUAL_PAGE_SIZE_X_EXT,
+    VIRTUAL_PAGE_SIZE_Y_EXT or VIRTUAL_PAGE_SIZE_Z_EXT (for the virtual
+    page widths, heights and depths, respectively). Not all internal formats
+    support sparse allocation. For those formats, the value of
+    NUM_VIRTUAL_PAGE_SIZES_EXT will be zero. The internal formats which are
+    guaranteed to support sparse allocation is listed in Table 8.13. Formats
+    not listed as supported in Table 8.13 may still be supported by some
+    implementations.
+
+        The VIRTUAL_PAGE_SIZE_INDEX_EXT may be used to select the page layout for
+    a sparse texture. The value of the texture's VIRTUAL_PAGE_SIZE_INDEX_EXT
+    parameter is treated as an index into the array of possible page sizes
+    for the type and requested internal format of the texture, and matches
+    index of the array of values returned for the VIRTUAL_PAGE_SIZE_{XYZ}_EXT
+    internal format query.
+
+        When a sparsely committed texture is accessed by the GL, accesses that
+    require only samples contained in committed regions complete as normal.
+    For operations that access samples from uncommitted regions produce
+    the following behavior:
+
+        * Reads from such regions produce undefined data, but otherwise have
+          no adverse effect. This includes samples required for the
+          implementation of texture filtering, mipmap generation and so on.
+
+        * Writes to such regions are ignored. The GL may attempt to write to
+          uncommitted regions but the effect of doing so will be benign.
+
+        * Atomic operations with return values on uncommitted regions will
+          complete normally, but the returned value will be undefined and the
+          result of the atomic operation will be discarded.
+
+        * Reads and writes through framebuffers shall have no adverse effect,
+          but fragment shaders corresponding to uncommitted regions of the
+          framebuffer still execute to completion. Visible side effects
+          of these shaders such as operations on atomic counters, storage
+          blocks or committed regions of images are still seen, as are
+          the results of operations such as occlusion queries.
+
+        * Access to uncommitted regions by the client (for example through
+          ReadPixels) shall have similar effect as through any
+          other part of the GL --- reads return undefined data and writes are
+          discarded, with no other ill effect.
+
+    Insert Subsection 8.17sparse.2. "Controlling Sparse Texture Commitment"
+
+        If a texture is allocated using sparse storage (that is, its
+    TEXTURE_SPARSE_EXT parameter is TRUE at the time that its storage is
+    allocated), it is initially created with only a virtual data store, and no
+    physical data store. Individual pages of a sparse texture may be made
+    resident or non-resident by calling
+
+        void TexPageCommitmentEXT(enum target,
+                                  int level,
+                                  int xoffset,
+                                  int yoffset,
+                                  int zoffset,
+                                  sizei width,
+                                  sizei height,
+                                  sizei depth,
+                                  boolean commit);
+
+    with <target> and <level> indicating the level of the texture object whose
+    residency is to be modified. <xoffset>, <yoffset>, <zoffset>, <width>,
+    <height> and <depth> are interpreted as they are in TexSubImage3D.  An
+    error will be generated unless <xoffset>, <yoffset> <zoffset>, <width>,
+    <height> and <depth> specify a region of the texture level that is aligned
+    to multiples of the page size or to the edges of the texture.
+
+    If the value of <commit> is TRUE, then the texture pages contained in
+    the region defined by the values of <xoffset>, <yoffset>, <zoffset>,
+    <width>, <height> and <depth> are committed. If they were not committed
+    before the call, then new physical backing store is allocated and associated
+    with the sparse pages and their initial content is undefined. If the pages
+    were already committed, then they remain committed, no error is generated,
+    and the content of those pages remains unmodified. If the value of
+    <committed> is FALSE, then the texture pages contained in the region are
+    made de-committed. Their physical store is de-allocated, and their contents
+    again become undefined.
+
+    For the purposes of commitment, a cube map texture is treated as a 2D
+    array texture with a depth of six and cube map array textures are treated
+    as 2D array textures with a depth equal to six times the number of layers
+    in the cube map array.
+
+    For levels of a sparse texture where each dimension is a multiple of the
+    virtual page size, the residency of individual page-size regions is
+    controlled by TexPageCommitmentEXT and such levels may be partially
+    populated.  When the mipmap chain reaches a level that is not an integer
+    multiple of the virtual page size in any dimension, padding and memory
+    layout considerations may make it impossible to treat that level and
+    subsequent smaller ones as partially populated.  The set of levels that
+    can be partially populated is implementation-dependent.  The total number
+    of levels that may be partially populated may be queried by calling
+    GetTexParameter* with the <pname> NUM_SPARSE_LEVELS_EXT.
+
+    The collection of texture levels that may not be partially populated, if
+    any, consists of levels NUM_SPARSE_LEVELS_EXT and higher, and is referred
+    to as the mipmap 'tail'.  The levels comprising the tail are made resident
+    or non-resident as a unit.  The tail is resident if and only if
+    TexPageCommitmentEXT has been called successfully with <level> greater
+    than or equal to NUM_SPARSE_LEVELS_EXT and the value of <commit> was TRUE
+    for the last such call.
+
+    Views of sparse textures are also considered sparse. Modifications to
+    commitment of a texture via a view of it affect the parent texture and
+    any other views containing the modified pages. If a view of a sparse
+    texture references its tail (or is entirely contained within it),
+    modifications to commitment of the tail via the view will affect the entire
+    tail of the parent, even for parts of the tail that are not referenced
+    by the view. Furthermore, modifications to tail commitment may affect
+    views referencing other parts of the tail.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <xoffset> + <width> or
+      <yoffset> + <height> is greater than the width or height, respectively,
+      of level <level> of the texture bound to <target>.
+
+      An INVALID_OPERATION error is generated if <zoffset> + <depth> is
+      greater than
+
+        * the depth of level <level> of the texture bound to <target>, if
+          <target> is TEXTURE_3D;
+
+        * the number of layers of level <level> of the texture bound to
+          <target>, if <target> is TEXTURE_2D_ARRAY;
+
+        * six times the number of layers of level <level> of the texture bound
+          to <target>, if <target> is TEXTURE_CUBE_MAP_ARRAY_OES; or
+
+        * one, for all other targets.
+
+      An INVALID_VALUE error is generated if <xoffset>, <yoffset>, or
+      <zoffset> is not a multiple of VIRTUAL_PAGE_SIZE_X_EXT,
+      VIRTUAL_PAGE_SIZE_Y_EXT, or VIRTUAL_PAGE_SIZE_Z_EXT, respectively, of
+      the texture bound to <target>.
+
+      An INVALID_OPERATION error is generated if <width> is not an integer
+      multiple of VIRTUAL_PAGE_SIZE_X_EXT and <width> plus <xoffset> is not
+      equal to the width of level <level> of the texture bound to <target>.
+
+      An INVALID_OPERATION error is generated if <height> is not an integer
+      multiple of VIRTUAL_PAGE_SIZE_Y_EXT and <height> plus <yoffset> is not
+      equal to the height of level <level> of the texture bound to <target>.
+
+      An INVALID_OPERATION error is generated if <depth> is not an integer
+      multiple of VIRTUAL_PAGE_SIZE_Z_EXT and <depth> plus <zoffset> is not
+      equal to
+
+        * the depth of level <level> of the texture bound to <target>, if
+          <target> is TEXTURE_3D;
+
+        * the number of layers of level <level> of the texture bound to
+          <target>, if <target> is TEXTURE_2D_ARRAY;
+
+        * six times the number of layers of level <level> of the texture bound
+          to <target>, if <target> is TEXTURE_CUBE_MAP_ARRAY; or
+
+        * one, for all other targets.
+
+      An INVALID_OPERATION error is generated if the value of
+      TEXTURE_IMMUTABLE_FORMAT or TEXTURE_SPARSE_EXT for the texture bound to
+      <target> is FALSE.
+
+    [[ The following is only added if EXT_direct_state_access is supported. ]]
+
+    The command
+
+        void TexturePageCommitmentEXT(uint texture,
+                                      int level,
+                                      int xoffset,
+                                      int yoffset,
+                                      int zoffset,
+                                      sizei width,
+                                      sizei height,
+                                      sizei depth,
+                                      boolean commit);
+
+    may also be used to control the residency of sparse textures.  This
+    command behaves identically to TexPageCommitmentEXT, except that the
+    texture is identified by the name <texture> instead of via <target>.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <texture> is not the name of
+      an existing texture.
+
+      All other errors listed for TexPageCommitmentEXT also apply to
+      TexturePageCommitmentEXT, except that references to "the texture bound
+      to <target>" should be replaced with "the texture <texture>", and all
+      other references to "<target>" should be replaced with "the target of
+      texture <texture>".
+
+Additions to Chapter 19 of the OpenGL ES 3.1 Specification (Context State
+Queries)
+
+    Append to Table 19.1, "Possible targets that internalformat can be used
+    with and the corresponding usage meaning"
+
+    +-------------------------------+-------------------------+
+    | Target                        | Usage                   |
+    +-------------------------------+-------------------------+
+    | TEXTURE_2D                    | 2D texture              |
+    | TEXTURE_2D_ARRAY              | 2D texture array        |
+    | TEXTURE_CUBE_MAP              | Cube map texture        |
+    | TEXTURE_CUBE_MAP_ARRAY_OES    | Cube map texture array  |
+    | TEXTURE_3D                    | 3D texture              |
+    +-------------------------------+-------------------------+
+
+    Modify Section 19.3.1, "Internal Format Query Parameters"
+
+    (In the first item on the supported pnames list for NUM_SAMPLE_COUNTS,
+     modify the first sub-list item "If <target> does not support multiple
+     samples..")
+
+        - If <internalformat> is not color-renderable, depth-renderable, or
+          stencil-renderable (as defined in section 9.4), or if <target> does
+          not support multiple samples (is not TEXTURE_2D_MULTISAMPLE. or
+          RENDERBUFFER), zero is returned.
+
+    (In the second item on the supported pnames list for SAMPLES, append to the
+     sub-list)
+
+        - If <internalformat> is not color-renderable, depth-renderable, or
+          stencil-renderable (as defined in section 9.4), or if <target> does
+          not support multiple samples (is not TEXTURE_2D_MULTISAMPLE. or
+          RENDERBUFFER), <params> is not modified.
+
+    (Add to supported pnames list)
+
+        * NUM_VIRTUAL_PAGE_SIZES_EXT: The number of virtual page sizes
+          supported by internalformat and target is written into params.
+          Unsupported internal formats and targets report 0.
+
+        * VIRTUAL_PAGE_SIZE_X_EXT: The virtual page widths supported for
+          internalformat and target are written into params.
+
+        * VIRTUAL_PAGE_SIZE_Y_EXT: The virtual page heights supported for
+          internalformat and target are written into params.
+
+        * VIRTUAL_PAGE_SIZE_Z_EXT: The virtual page depths supported for
+          internalformat and target are written into params.
+
+    In the error list on p.353, modify the first item:
+
+    * An INVALID_ENUM error is generated if <target> is not one of the targets
+      in table 19.1, or if <pname> is not SAMPLES, NUM_SAMPLES_COUNTS,
+      NUM_VIRTUAL_PAGE_SIZES_EXT, VIRTUAL_PAGE_SIZE_X_EXT,
+      VIRTUAL_PAGE_SIZE_Y_EXT or VIRTUAL_PAGE_SIZE_Z_EXT.
+
+    Remove the second item "An INVALID_ENUM error is generated if
+    internalformat is not color-, depth- or stencil-renderable."
+
+Additions to the AGL/GLX/WGL/EGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+New State
+
+    Append to Table 20.9, "Textures (state per texture object) (cont.)"
+
+    +-----------------------------------+-------+---------------------+-----------------+---------------------------------------+-------------+
+    | Get Value                         | Type  | Get Command         | Initial Value   | Description                           | Sec.        |
+    +-----------------------------------+-------+---------------------+-----------------+---------------------------------------+-------------+
+    | VIRTUAL_PAGE_SIZE_INDEX_EXT       | Z+    | GetTexParameteriv   | 0               | Virtual page size index               | 8.17sparse  |
+    | TEXTURE_SPARSE_EXT                | B     | GetTexParameteriv   | FALSE           | Texture sparseness                    | 8.17sparse  |
+    | NUM_SPARSE_LEVELS_EXT             | Z+    | GetTexParameteriv   | 0               | Number of potentially sparse levels   | 8.17sparse  |
+    +-----------------------------------+-------+---------------------+-----------------+---------------------------------------+-------------+
+
+New Implementation Dependent State
+
+    Append to Table 20.41, "Implementation Dependent Values"
+
+    +--------------------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+    | Get Value                                  | Type  | Get Command | Minimum Value   | Description                           | Sec.  |
+    +--------------------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+    | MAX_SPARSE_TEXTURE_SIZE_EXT                | Z+    | GetIntegerv | 2048            | Maximum 1D/2D/rectangle texture image | 8.19  |
+    |                                            |       |             |                 | dimension for a sparse texture.       |       |
+    | MAX_SPARSE_3D_TEXTURE_SIZE_EXT             | Z+    | GetIntegerv | 256             | Maximum 3D texture image dimension    | 8.19  |
+    |                                            |       |             |                 | for a sparse texture.                 |       |
+    | MAX_SPARSE_ARRAY_TEXTURE_LAYERS_EXT        | Z+    | GetIntegerv | 256             | Maximum number of layers in a sparse  | 8.19  |
+    |                                            |       |             |                 | array texture.                        |       |
+    | SPARSE_TEXTURE_FULL_ARRAY_CUBE_MIPMAPS_EXT | B     | GetBooleanv | -               | TRUE if there are no restrictions on  | 8.19  |
+    |                                            |       |             |                 | the allocation of mipmaps in sparse   |       |
+    |                                            |       |             |                 | textures and FALSE otherwise.         |       |
+    +--------------------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+
+    (Note the values of MAX_SPARSE_TEXTURE_SIZE_EXT, MAX_SPARSE_3D_TEXTURE_SIZE_EXT,
+    MAX_SPARSE_ARRAY_TEXTURE_LAYERS_EXT must be at least as high as the
+    corresponding non-sparse maximums. These values were 16384, 2048, and
+    2048 respectively in ARB_sparse_texture, reflecting the desktop texture
+    size limits. They were reduced in this extension to reflect the ES 3.1
+    limits of 2048, 256, and 256.)
+
+Dependencies on OES_texture_view and EXT_texture_view
+
+    If neither OES_texture_view nor EXT_texture_view is supported,
+    then remove all references to texture views.
+
+Dependencies on OES_texture_border_clamp
+
+    If OES_texture_border_clamp is not supported, ignore all references
+    to TexParameterI{u}ivOES and GetTexParameterI{u}ivOES.
+
+Dependencies on EXT_texture_border_clamp
+
+    If EXT_texture_border_clamp is not supported, ignore all references
+    to TexParameterI{u}ivEXT and GetTexParameterI{u}ivEXT.
+
+Dependencies on OES_texture_cube_map_array and EXT_texture_cube_map_array
+
+    If neither OES_texture_cube_map_array nor EXT_texture_cube_map_array is
+    supported, ignore all references to cube map array textures and
+    TEXTURE_CUBE_MAP_ARRAY_OES.
+
+    If OES_texture_cube_map_array is not supported, but
+    EXT_texture_cube_map_array is, replace all occurrences of
+    TEXTURE_CUBE_MAP_ARRAY_OES with TEXTURE_CUBE_MAP_ARRAY_EXT.
+
+Dependencies on EXT_texture_norm16
+
+    If EXT_texture_norm16 is not supported, remove references to
+    all texture formats added by that extension. These are:
+    R16_EXT, R16_SNORM_EXT, RG16_EXT, RG16_SNORM_EXT, RGB16_EXT,
+    RGB16_SNORM_EXT, RGBA16_EXT, and RGBA16_SNORM_EXT.
+
+Dependencies on GL_EXT_direct_state_access
+
+    If the GL_EXT_direct_state_access extension is not supported, remove all
+    references to TexturePageCommitmentEXT.
+
+Issues
+
+    Note: Issues 1-9 are the same as those in the OpenGL extension
+    ARB_sparse_texture, which can be found in the OpenGL Registry.
+    They were retained here to aid in understanding the functionality.
+
+    0) How does this extension differ from ARB_sparse_texture?
+
+        * It was rebased against OpenGL ES 3.1 and suffices converted from
+          ARB to EXT.  Interactions with ES extensions were added.
+        * References to functions and texture formats not present in
+          OpenGL ES were removed (GetDoublev, GetTexImage).
+
+    1) Do we want to mandate specific page sizes for specific formats?
+
+       RESOLVED. No, this functionality is available in EXT_sparse_texture2.
+
+    2) What happened to MIN_SPARSE_LEVEL_AMD from the AMD spec? Do we need it
+       here?
+
+       RESOLVED. We changed it to NUM_SPARSE_LEVELS_EXT. MIN_SPARSE_LEVEL_AMD
+       could not acceptably describe the case where a texture is technically
+       sparse, but no level of the texture may be sparsely populated. The
+       AMD specification disallowed creation of such a texture. However, this
+       extension does allow creation of a texture that is either wholly
+       resident or non-resident. Furthermore, if a view of a sparse texture
+       is created starting somewhere in the tail, then that whole view
+       is essentially sparse.
+
+    3) Should it be mandatory to support sparse allocation for compressed
+       textures?
+
+       RESOLVED: No, but in all likelihood, implementations will support some
+       or all compressed texture formats.
+
+    4) Are multisample textures supported? What about depth and stencil
+       format textures?
+
+       RESOLVED: No. Depth and stencil format textures are optional to support.
+       Providing support would be a case of reporting non-zero for
+       NUM_VIRTUAL_PAGE_SIZES_EXT for those formats. Multi-sample textures
+       are explicitly not supported by this extension as their targets are
+       excluded from TexStorage* support. Allowing support for these would
+       require a new extension, if only to remove the error generated
+       if one of the multi-sample targets is used with TexStorage* when
+       the sparse flag is set.
+
+    5) Do we need language clarifying completeness and the effects of
+       residency on completeness?
+
+       RESOLVED: Currently, there is no language. Textures allocated by
+       TexStorage* (which include all sparse textures) are always complete.
+       Residency doesn't effect that and sampling from them is well defined
+       (or explicitly undefined).
+
+    6) Can commitment fail? What happens if it does?
+
+       RESOLVED: An OUT_OF_MEMORY error is generated if physical backing cannot
+       be allocated for the previously allocated virtual space. No language
+       is added here as it is implicit that any command can generate
+       OUT_OF_MEMORY at any time for any reason... which includes new commands
+       introduced here.
+
+    7) Please explain, in plain English, what the rules are governing the size
+       of a texture's base level, mipmap levels, and the 'tail'.
+
+       The base level of the texture must be an integer multiple of the page
+       size in each dimension. This need not be a power of two or square or
+       anything of that nature. As we proceed along the mipmap chain, the
+       current level will become smaller and smaller, at each step halving in
+       size. At some point, the level dimensions will no longer be an integer
+       multiple of the page size, where the memory corresponding to that level
+       and smaller sized levels may not be evenly divided into pages.  The
+       memory allocated to such levels may not be naturally aligned on memory
+       page boundaries or may be too small to bother with partial residency.
+       Implementations are permitted to treat such a level and all subsequent
+       levels as either fully resident or fully non-resident.  We refer to
+       this set of levels as the mipmap "tail".  The set of levels belonging
+       to the tail is implementation-dependent.  Some implementations may
+       start the tail at the first level where any dimension is not the
+       multiple of a page size; others might pad out such allocations to page
+       boundaries and start the tail at a much smaller mipmap level.  The tail
+       is made resident or non-resident as a unit; the tail is resident if and
+       only if <resident> was TRUE for the last call to TexPageCommitmentEXT
+       when <level> was any value in the tail.
+
+       Clearly, making the base level a square power of two multiple of the
+       page size will mean that the greatest part of the texture can be sparse
+       and will minimize the size of the tail. However, it's perfectly legal,
+       with a hypothetical 256 x 256 texel page size to create a texture with
+       a base level of 4096 x 256. Such a texture can be sparse in the base
+       level, but level 1 would be 2048 x 128, which is no longer a multiple
+       of the page size, and therefore might be considered as the start of the
+       tail.
+
+    8) What's SPARSE_TEXTURE_FULL_ARRAY_CUBE_MIPMAPS_EXT for?
+
+       Some implementations may store the mipmap chain for array textures
+       and cubemaps such that the presence and size of mipmaps affects the
+       alignment of the start of each layer, even in the base level. Consider
+       an implementation that stores all layers of level 0, then all of
+       level 1, then all of level 2 and so on. The presence of a mipmap chain
+       (or lack thereof) would have no effect on the alignment of layers 1
+       through N of the array (or cubemap faces). Now, consider an
+       implementation that stores all of the levels for layer 0, then all
+       levels of layer 1 and so on. The number and size of the levels of the
+       texture _would_ have an effect on the alignment of layers 1 through N
+       of the texture. If the size of the mipmap chain for a single layer
+       causes the next layer to become misaligned to the page size in linear
+       address space, then the texture cannot be sparsely populated. This flag
+       indicates whether the implementation has any restrictions on the size
+       of the mipmap chain. In particular, these restrictions ensure that,
+       while the texture may have mipmaps, the total size of the mipmap chain
+       for each level still satisfies the alignment restrictions required by
+       that implementation's virtual memory subsystem.
+
+    9) What happens when you create a view of a sparse texture?
+
+       RESOLVED: That view is sparse, as are views of that view and so on.
+       Also, if the view hits the tail, then modifications of tail residency
+       via the view affect the whole tail of the parent texture.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+     3    03/27/2015  dkoch     update status and contributors
+     2    02/25/2015  xiche     Additional interaction with GetInternalformativ
+     1    11/13/2014  dkoch     Initial version based on ARB_sparse_texture v11

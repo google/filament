@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>WebGPU CTS</title>
+    <link
+      id="favicon"
+      rel="shortcut icon"
+      type="image/png"
+      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEUAAAAAAAD///+D3c/SAAAAAXRSTlMAQObYZgAAAEpJREFUCB0FwbERgDAMA0BdSkbJQBSuaPABE0WuaKILmpJ/rNVejPKBUXGhqAC5J0gn9ESg2wvdNua8hUoKJQo8b6HyE6a2QHdbP0CPITh2pewWAAAAAElFTkSuQmCC"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width" />
+    <!-- Chrome "WebGPU Subgroups Features" origin trial token for https://gpuweb.github.io -->
+    <meta http-equiv="origin-trial" content="AiZbfNa6FSBMZg2Ak2xeb7upejmg3jb1Ll47edOTVs7fkZLvrV4jjPh7p4J7quB9Lx6Z7l0IDc97gpPKb4F6OQcAAABheyJvcmlnaW4iOiJodHRwczovL2dwdXdlYi5naXRodWIuaW86NDQzIiwiZmVhdHVyZSI6IldlYkdQVVN1Ymdyb3Vwc0ZlYXR1cmVzIiwiZXhwaXJ5IjoxNzM5OTIzMTk5fQ==">
+    <!-- Chrome "WebGPU Subgroups Features" origin trial token for http://localhost:8080 -->
+    <meta http-equiv="origin-trial" content="AkMLfHisU+Fsbpi9g6tfKSZF4ngpsmjW4Oai360fUvZE2rgSPZDWSWb8ryrliJX5HR/Rw0yig0ir9el2hrnODwcAAABaeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJmZWF0dXJlIjoiV2ViR1BVU3ViZ3JvdXBzRmVhdHVyZXMiLCJleHBpcnkiOjE3Mzk5MjMxOTl9">
+    <link rel="stylesheet" href="third_party/normalize.min.css" />
+    <script src="third_party/jquery/jquery-3.3.1.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+
+        --fg-color: #000;
+        --bg-color: #fff;
+        --border-color: #888;
+        --emphasis-fg-color: #F00;
+
+        --results-fg-color: gray;
+        --node-description-fg-color: #gray;
+        --node-hover-bg-color: rgba(0, 0, 0, 0.1);
+
+        --button-bg-color: #eee;
+        --button-hover-bg-color: #ccc;
+        --button-image-filter: none;
+
+        --subtree-border-color: #ddd;
+        --subtree-hover-left-border-color: #000;
+        --multicase-border-color: #55f;
+        --testcase-border-color: #bbf;
+        --testcase-bg-color: #bbb;
+
+        --testcase-data-status-fail-bg-color: #fdd;
+        --testcase-data-status-warn-bg-color: #ffb;
+        --testcase-data-status-pass-bg-color: #cfc;
+        --testcase-data-status-skip-bg-color: #aaf;
+
+        --testcase-logs-bg-color: #white;
+        --testcase-log-odd-bg-color: #fff;
+        --testcase-log-even-bg-color: #f8f8f8;
+        --testcase-log-text-fg-color: #666;
+        --testcase-log-text-first-line-fg-color: #000;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg-color: #fff;
+          --bg-color: #000;
+          --border-color: #888;
+          --emphasis-fg-color: #F44;
+
+          --results-fg-color: #aaa;
+          --node-description-fg-color: #aaa;
+          --node-hover-bg-color: rgba(255, 255, 255, 0.1);
+
+          --button-image-filter: invert(100%);
+          --button-bg-color: #666;
+          --button-hover-bg-color: #888;
+
+          --subtree-border-color: #444;
+          --subtree-hover-left-border-color: #FFF;
+          --multicase-border-color: #338;
+          --testcase-border-color: #55a;
+          --testcase-bg-color: #888;
+
+          --testcase-data-status-fail-bg-color: #400;
+          --testcase-data-status-warn-bg-color: #660;
+          --testcase-data-status-pass-bg-color: #040;
+          --testcase-data-status-skip-bg-color: #446;
+
+          --testcase-logs-bg-color: #black;
+          --testcase-log-odd-bg-color: #000;
+          --testcase-log-even-bg-color: #080808;
+          --testcase-log-text-fg-color: #aaa;
+          --testcase-log-text-first-line-fg-color: #fff;
+        }
+      }
+      body {
+        font-family: monospace;
+        min-width: 400px;
+        margin: 0.5em;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      h1 {
+        font-size: 1.5em;
+        font-family: 'Poppins', sans-serif;
+        height: 1.2em;
+        vertical-align: middle;
+      }
+      input[type=button],
+      button {
+        cursor: pointer;
+        background-color: var(--button-bg-color);
+      }
+      input[type=button]:hover,
+      button:hover,
+      a.nodelink:hover {
+        background-color: var(--button-hover-bg-color);
+      }
+      .logo {
+        height: 1.2em;
+        float: left;
+      }
+      .important {
+        font-weight: bold;
+        color: var(--emphasis-fg-color);
+      }
+      #options label {
+        display: flex;
+      }
+      table#options {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      #options td {
+        border: 1px solid var(--subtree-border-color);
+        width: 1px; /* to make the columns as small as possible */
+      }
+      #options tr:hover {
+        background: var(--node-hover-bg-color);
+      }
+      #options td:nth-child(1) {
+          text-align: right;
+      }
+      #options td:nth-child(2),
+      #options td:nth-child(3) {
+          padding-left: 0.5em;
+      }
+      #options td:nth-child(3) {
+          width: 100%; /* to make the last column use the space */
+      }
+      #info {
+        font-family: monospace;
+      }
+      #progress {
+        position: fixed;
+        display: flex;
+        width: 100%;
+        left: 0;
+        top: 0;
+        background-color: #068;
+        color: #fff;
+        align-items: center;
+      }
+      #progress .progress-test-name {
+        flex: 1 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        direction: rtl;
+        white-space: nowrap;
+      }
+      #resultsJSON {
+        font-family: monospace;
+        width: 100%;
+        height: 15em;
+      }
+
+      #resultsVis {
+        border-right: 1px solid var(--results-fg-color);
+      }
+
+      /* PS: this does not disable using the keyboard to click */
+      #resultsVis.disable-run button.leafrun,
+      #resultsVis.disable-run button.subtreerun {
+         pointer-events: none;
+         opacity: 25%;
+      }
+
+      /* tree nodes */
+
+      .nodeheader {
+        width: 100%;
+        padding: 0px 2px 0px 1px;
+      }
+      .nodeheader:hover {
+        background: var(--node-hover-bg-color);
+      }
+      .subtreerun,
+      .leafrun,
+      .nodelink,
+      .collapsebtn,
+      .testcaselogbtn,
+      .copybtn {
+        display: inline-flex;
+        flex-shrink: 0;
+        flex-grow: 0;
+        justify-content: center;
+        align-items: center;
+        text-decoration: none;
+        vertical-align: top;
+        color: var(--fg-color);
+        background-color: var(--button-bg-color);
+        background-repeat: no-repeat;
+        background-position: center;
+        border: 1px solid var(--border-color);
+      }
+      .subtreerun::before,
+      .leafrun::before,
+      .nodelink::before,
+      .collapsebtn::before,
+      .testcaselogbtn::before,
+      .copybtn::before {
+        content: "";
+        width: 100%;
+        height: 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+        filter: var(--button-image-filter);
+      }
+      @media (pointer: fine) {
+        .subtreerun,
+        .leafrun,
+        .nodelink,
+        .collapsebtn,
+        .testcaselogbtn,
+        .copybtn {
+          flex-basis: 24px;
+          border-radius: 4px;
+          width: 24px;
+          height: 18px;
+        }
+      }
+      @media (pointer: coarse) {
+        .subtreerun,
+        .leafrun,
+        .nodelink,
+        .collapsebtn,
+        .testcaselogbtn,
+        .copybtn {
+          flex-basis: 36px;
+          border-radius: 6px;
+          width: 36px;
+          height: 36px;
+        }
+      }
+      .subtreerun::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJAQMAAADaX5RTAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAAB5JREFUCNdjOMDAsIGBoYeBoZmBoaEBRPaARQ4wAABTfwX/l/WQvgAAAABJRU5ErkJggg==);
+      }
+      .leafrun::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAANklEQVQoU2NkYGD4zwABjFAagwJJwBTBJDEUY1OEoRifIrhiYhSBHYvuJnSHM5LtJry+wxlOAGPTCQmAB/WwAAAAAElFTkSuQmCC);
+      }
+      .nodelink::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMAQMAAABsu86kAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACRJREFUCNdjYGBg+P+BoUGAYesFhj4BhvsFDPYNDHwMCMTAAACqJwbp3VgbrAAAAABJRU5ErkJggg==);
+      }
+      .copybtn::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMAQMAAABsu86kAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACVJREFUCNdjYGBgqGdgcGRgcGBg8H/A4KEAQhkKDBxgxP8AKA8AVNUEx41Lj8MAAAAASUVORK5CYII=);
+      }
+      .nodetitle {
+        display: inline;
+        flex: 10 0 4em;
+      }
+      .nodecolumns {
+        position: absolute;
+        left: 220px;
+      }
+      .nodequery {
+        font-weight: bold;
+        background: transparent;
+        border: none;
+        padding: 2px;
+        margin: 0 0.5em;
+        width: calc(100vw - 360px);
+      }
+      .nodedescription {
+        margin: 0 0 0 1em;
+        color: var(--node-description-fg-color);
+        white-space: pre-wrap;
+        font-size: 80%;
+      }
+
+      /* tree nodes which are subtrees */
+
+      .subtree {
+        margin: 3px 0 0 0;
+        padding: 3px 0 0 3px;
+        border-width: 1px 0 0;
+        border-style: solid;
+        border-color: var(--subtree-border-color);
+      }
+      .subtree::before {
+        float: right;
+        margin-right: 3px;
+      }
+      .subtree[data-status='fail'], .subtree[data-status='passfail'] {
+        background: linear-gradient(90deg, var(--testcase-data-status-fail-bg-color), var(--testcase-data-status-fail-bg-color) 16px, var(--bg-color) 16px);
+      }
+      .subtree[data-status='fail']::before {
+        content: "⛔"
+      }
+      .subtree[data-status='pass'] {
+        background: linear-gradient(90deg, var(--testcase-data-status-pass-bg-color), var(--testcase-data-status-pass-bg-color) 16px, var(--bg-color) 16px);
+      }
+      .subtree[data-status='skip'] {
+        background: linear-gradient(90deg, var(--testcase-data-status-skip-bg-color), var(--testcase-data-status-skip-bg-color) 16px, var(--bg-color) 16px);
+      }
+      .subtree[data-status='pass']::before {
+        content: "✔"
+      }
+      .subtree[data-status='skip']::before {
+        content: "○"
+      }
+      .subtree[data-status='passfail']::before {
+        content: "✔/⛔"
+      }
+      .subtree:hover {
+        border-left-color: var(--subtree-hover-left-border-color);
+      }
+      .subtree.multifile > .subtreechildren > .subtree.multitest,
+      .subtree.multifile > .subtreechildren > .subtree.multicase {
+        border-width: 2px 0 0 1px;
+        border-color: var(--multicase-border-color);
+      }
+      .subtree.multitest > .subtreechildren > .subtree.multicase,
+      .subtree.multitest > .subtreechildren > .testcase {
+        border-width: 2px 0 0 1px;
+        border-color: var(--testcase-border-color);
+      }
+      .subtreechildren {
+        margin-left: 9px;
+      }
+
+      /* tree nodes which are test cases */
+
+      .testcase {
+        padding: 3px;
+        border-width: 1px 0 0 0;
+        border-style: solid;
+        border-color: var(--border-color);
+        background: var(--testcase-bg-color);
+      }
+      .testcase:first-child {
+        margin-top: 3px;
+      }
+      .testcase::after {
+        float: right;
+        margin-top: -1.1em;
+      }
+      .testcase[data-status='fail'] {
+        background: var(--testcase-data-status-fail-bg-color);
+      }
+      .testcase[data-status='fail']::after {
+        content: "⛔"
+      }
+      .testcase[data-status='warn'] {
+        background: var(--testcase-data-status-warn-bg-color);
+      }
+      .testcase[data-status='warn']::after {
+        content: "⚠"
+      }
+      .testcase[data-status='pass'] {
+        background: var(--testcase-data-status-pass-bg-color);
+      }
+      .testcase[data-status='pass']::after {
+        content: "✔"
+      }
+      .testcase[data-status='skip'] {
+        background: var(--testcase-data-status-skip-bg-color);
+      }
+      .testcase .nodequery {
+        font-weight: normal;
+        width: calc(100vw - 275px);
+      }
+      .testcasetime {
+        white-space: nowrap;
+        text-align: right;
+        flex: 1 0 5.5em;
+      }
+      .testcaselogs {
+        margin-left: 6px;
+        width: calc(100% - 6px);
+        border-width: 0 0px 0 1px;
+        border-style: solid;
+        border-color: var(--border-color);
+        background: var(--testcase-logs-bg-color);
+      }
+      .testcaselog {
+        display: flex;
+      }
+      .testcaselog:nth-child(odd) {
+        background: var(--testcase-log-odd-bg-color);
+      }
+      .testcaselog:nth-child(even) {
+        background: var(--testcase-log-even-bg-color);
+      }
+      .testcaselogbtn::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMAQMAAABsu86kAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACRJREFUCNdjYGBg+H+AwUGBwV+BQUGAQX0CiNQQYFABk8ogLgBsYQUt2gNKPwAAAABJRU5ErkJggg==);
+      }
+      .testcaselogtext {
+        flex: 1 0;
+        font-size: 10pt;
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        color: var(--testcase-log-text-fg-color)
+      }
+      .testcaselogtext::first-line {
+        color: var(--testcase-log-text-first-line-fg-color);
+      }
+
+      @media only screen and (max-width: 600px) {
+        .subtreechildren {
+          margin-left: 2px;
+        }
+        .testcaselogs {
+          margin-left: 2px;
+          width: calc(100% - 2px);
+        }
+        .nodequery {
+          position: relative;
+          left: 0;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1><img class="logo" src="webgpu-logo-notext.svg">WebGPU Conformance Test Suite</h1>
+    <details>
+      <summary>options (requires reload!)</summary>
+      <table id="options">
+        <tbody></tbody>
+      </table>
+      <p class="important">Note: The options above only set the url parameters.
+         You must reload the page for the options to take effect.</p>
+    </details>
+    <p>
+      <input type=button id=expandall value="Expand All (slow!)">
+      <label><input type=checkbox id=autoCloseOnPass> Auto-close each subtree when it passes</label>
+    </p>
+
+    <div id="info"></div>
+    <div id="resultsVis"></div>
+    <div id="progress" style="display: none;"><button type="button">stop</button><div class="progress-test-name"></div></div>
+
+    <p>
+      <input type="button" id="copyResultsJSON" value="Copy results as JSON">
+    </p>
+
+    <script type="module" src="../out/common/runtime/standalone.js"></script>
+  </body>
+</html>

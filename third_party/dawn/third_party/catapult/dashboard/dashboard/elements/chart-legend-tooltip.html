@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+
+<dom-module id="chart-legend-tooltip">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+      .tooltip-content {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .tooltip-content a {
+        color: #9cf;
+      }
+
+      .tooltip-content a:visited {
+        color: #fac;
+      }
+
+      #tooltip {
+        margin: 3px 10px;
+      }
+
+      #info {
+        background-color: #4285f4;
+        color: #eee;
+        border-radius: 30px;
+        height: 18px;
+        width: 18px;
+        margin: 0px 10px;
+      }
+
+      #info:hover {
+        color: #4285f4;
+        background-color: #eee;
+      }
+
+    </style>
+    <iron-icon icon="info" id="info" on-click="openTooltip"></iron-icon>
+    <paper-dialog id="tooltip" no-overlap horizontal-align="right" vertical-align="top">
+      <div tip class="layout vertical tooltip-content">
+        <span>{{direction}} is better</span>
+        <span>Units: {{units}}</span>
+        <span>{{description}}</span>
+        <span><a href="/graph_csv?test_path={{path}}">Download as CSV</a></span>
+        <span><a href="/debug_alert?test_path={{path}}">Debug alert page</a></span>
+      </div>
+    </paper-dialog>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'chart-legend-tooltip',
+  properties: {
+    description: {
+      notify: true,
+      type: String,
+    },
+    direction: {
+      notify: true,
+      type: String,
+    },
+    path: {
+      notify: true,
+      type: String,
+    },
+    units: {
+      notify: true,
+      type: String,
+    },
+  },
+
+  openTooltip(event) {
+    this.$.tooltip.positionTarget = event.target;
+    this.$.tooltip.open();
+  },
+});
+</script>

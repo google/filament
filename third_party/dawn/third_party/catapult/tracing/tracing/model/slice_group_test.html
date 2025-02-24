@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Slice = tr.model.Slice;
+  const SliceGroup = tr.model.SliceGroup;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newThreadSlice = tr.c.TestUtils.newThreadSlice;
+  const newModel = tr.c.TestUtils.newModel;
+  const newFakeThread = tr.c.TestUtils.newFakeThread;
+
+  test('basicBeginEnd', function() {
+    const group = new SliceGroup(newFakeThread());
+    assert.strictEqual(group.openSliceCount, 0);
+    const sliceA = group.beginSlice('', 'a', 1, {a: 1});
+    assert.strictEqual(group.openSliceCount, 1);
+    assert.strictEqual(sliceA.title, 'a');
+    assert.strictEqual(sliceA.start, 1);
+    assert.strictEqual(sliceA.args.a, 1);
+
+    const sliceB = group.endSlice(3);
+    assert.strictEqual(sliceA, sliceB);
+    assert.strictEqual(sliceB.duration, 2);
+  });
+
+  test('subSlicesBuilderBasic', function() {
+    const group = new SliceGroup(newFakeThread());
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 2}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 3, duration: 1}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 2);
+    assert.deepEqual(group.topLevelSlices, [sA, sB]);
+    assert.strictEqual(group.findSliceAtTs(0), undefined);
+    assert.strictEqual(group.findSliceAtTs(1), sA);
+    assert.strictEqual(group.findSliceAtTs(3), sA);
+    assert.strictEqual(group.findSliceAtTs(3.1), sB);
+    assert.strictEqual(group.findSliceAtTs(4), sB);
+    assert.strictEqual(group.findSliceAtTs(5), undefined);
+  });
+
+  test('subSlicesBuilderBasic2', function() {
+    const group = new SliceGroup(newFakeThread());
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 4}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 3, duration: 1}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sA]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA.selfTime, 3);
+
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.isTrue(sA.isTopLevel);
+    assert.isFalse(sB.isTopLevel);
+  });
+
+  test('subSlicesBuilderNestedExactly', function() {
+    const group = new SliceGroup(newFakeThread());
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 1, duration: 4}));
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 4}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sB]);
+
+    assert.strictEqual(sB.subSlices.length, 1);
+    assert.deepEqual(sB.subSlices, [sA]);
+    assert.strictEqual(sB.selfTime, 0);
+
+    assert.strictEqual(sB, sA.parentSlice);
+    assert.isTrue(sB.isTopLevel);
+    assert.isFalse(sA.isTopLevel);
+
+    assert.strictEqual(group.findSliceAtTs(0), undefined);
+    assert.strictEqual(group.findSliceAtTs(1), sA);
+    assert.strictEqual(group.findSliceAtTs(2), sA);
+    assert.strictEqual(group.findSliceAtTs(5), sA);
+    assert.strictEqual(group.findSliceAtTs(6), undefined);
+  });
+
+  test('subSlicesBuilderInstantEvents', function() {
+    const group = new SliceGroup(newFakeThread());
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 0}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 2, duration: 0}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 2);
+    assert.deepEqual(group.topLevelSlices, [sA, sB]);
+    assert.strictEqual(group.findSliceAtTs(1), sA);
+    assert.strictEqual(group.findSliceAtTs(1.5), undefined);
+    assert.strictEqual(group.findSliceAtTs(2), sB);
+  });
+
+  test('subSlicesBuilderTwoInstantEvents', function() {
+    const group = new SliceGroup(newFakeThread());
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 0}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 1, duration: 0}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sA]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA.selfTime, 0);
+
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.isTrue(sA.isTopLevel);
+    assert.isFalse(sB.isTopLevel);
+    assert.strictEqual(group.findSliceAtTs(1), sB);
+    assert.strictEqual(group.findSliceAtTs(1.0001), undefined);
+  });
+
+  test('subSlicesBuilderOutOfOrderAddition', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [    a     ][   b   ]
+    // Where insertion is done backward.
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 3, duration: 1}));
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 2}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 2);
+    assert.deepEqual(group.topLevelSlices, [sA, sB]);
+    assert.isTrue(sA.isTopLevel);
+    assert.isTrue(sB.isTopLevel);
+    assert.strictEqual(group.findSliceAtTs(3), sA);
+  });
+
+  test('subRowBuilderOutOfOrderAddition2', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [    a     ]
+    //   [  b   ]
+    // Where insertion is done backward.
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 3, duration: 1}));
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 5}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sA]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA.selfTime, 4);
+
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.isTrue(sA.isTopLevel);
+    assert.isFalse(sB.isTopLevel);
+    assert.strictEqual(group.findSliceAtTs(1.5), sA);
+    assert.strictEqual(group.findSliceAtTs(3), sB);
+    assert.strictEqual(group.findSliceAtTs(3.5), sB);
+    assert.strictEqual(group.findSliceAtTs(4), sB);
+    assert.strictEqual(group.findSliceAtTs(4.5), sA);
+  });
+
+  test('subSlicesBuilderOnNestedZeroLength', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [    a    ]
+    // [  b1 ]  []<- b2 where b2.duration = 0 and b2.end === a.end.
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 3}));
+    const sB1 = group.pushSlice(newSliceEx(
+        {title: 'b1', start: 1, duration: 2}));
+    const sB2 = group.pushSlice(newSliceEx(
+        {title: 'b2', start: 4, duration: 0}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sA]);
+
+    assert.strictEqual(sA.subSlices.length, 2);
+    assert.deepEqual(sA.subSlices, [sB1, sB2]);
+    assert.strictEqual(sA.selfTime, 1);
+
+    assert.strictEqual(sA, sB1.parentSlice);
+    assert.strictEqual(sA, sB2.parentSlice);
+    assert.strictEqual(group.findSliceAtTs(1), sB1);
+    assert.strictEqual(group.findSliceAtTs(4), sB2);
+  });
+
+  test('subSlicesBuilderOnGroup1', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [    a     ]   [  c   ]
+    //   [  b   ]
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 3}));
+    const sB = group.pushSlice(newSliceEx(
+        {title: 'b', start: 1.5, duration: 1}));
+    const sC = group.pushSlice(newSliceEx({title: 'c', start: 5, duration: 0}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 2);
+    assert.deepEqual(group.topLevelSlices, [sA, sC]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA.selfTime, 2);
+
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.strictEqual(group.findSliceAtTs(1), sA);
+    assert.strictEqual(group.findSliceAtTs(2), sB);
+    assert.strictEqual(group.findSliceAtTs(3), sA);
+    assert.strictEqual(group.findSliceAtTs(4.5), undefined);
+    assert.strictEqual(group.findSliceAtTs(5), sC);
+  });
+
+  test('subSlicesBuilderOnGroup2', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [    a     ]   [  d   ]
+    //   [  b   ]
+    //    [ c ]
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 3}));
+    const sB = group.pushSlice(newSliceEx(
+        {title: 'b', start: 1.5, duration: 1}));
+    const sC = group.pushSlice(newSliceEx(
+        {title: 'c', start: 1.75, duration: 0.5}));
+    const sD = group.pushSlice(newSliceEx(
+        {title: 'd', start: 5, duration: 0.25}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 2);
+    assert.deepEqual(group.topLevelSlices, [sA, sD]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA.selfTime, 2);
+
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.strictEqual(sB.subSlices.length, 1);
+    assert.deepEqual(sB.subSlices, [sC]);
+    assert.strictEqual(sB.selfTime, 0.5);
+
+    assert.strictEqual(sB, sC.parentSlice);
+    assert.strictEqual(group.findSliceAtTs(2), sC);
+  });
+
+  test('findFirstSlice', function() {
+    const group = new SliceGroup(newFakeThread());
+    // Pattern being tested:
+    // [        a         ] [   d    ]
+    // [b]    [   c   ]                 where b is dur=0
+    const sC = group.pushSlice(newSliceEx({title: 'c', start: 2, end: 3}));
+    const sD = group.pushSlice(newSliceEx({title: 'd', start: 5, end: 6}));
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, end: 4}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 1, end: 1}));
+
+    assert.throws(group.findFirstSlice);
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.findFirstSlice(), sA);
+  });
+
+  test('findNextSliceAfterBasic', function() {
+    const group = new SliceGroup(newFakeThread());
+    // Pattern being tested:
+    // [        a         ] [   d    ]
+    // [b]    [   c   ]                 where b is dur=0
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, end: 4}));
+    const sB = group.pushSlice(newSliceEx({title: 'b', start: 1, end: 1}));
+    const sC = group.pushSlice(newSliceEx({title: 'c', start: 2, end: 3}));
+    const sD = group.pushSlice(newSliceEx({title: 'd', start: 5, end: 6}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.findNextSliceAfter(0, 0), sA);
+    assert.strictEqual(group.findNextSliceAfter(1, sA.guid), sB);
+    assert.strictEqual(group.findNextSliceAfter(1, sB.guid), sC);
+    assert.strictEqual(group.findNextSliceAfter(2, sC.guid), sD);
+    assert.strictEqual(group.findNextSliceAfter(6, 0), undefined);
+  });
+
+  test('subSlicesBuilderTolerateFPInaccuracy', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    // Pattern being tested:
+    // [  a  ]
+    // [  b  ] where b.end contains a tiny FP calculation error.
+    const sA = group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 3}));
+    const sB = group.pushSlice(newSliceEx(
+        {title: 'b', start: 1, duration: 3.0000000001}));
+
+    group.createSubSlices();
+
+    assert.strictEqual(group.topLevelSlices.length, 1);
+    assert.deepEqual(group.topLevelSlices, [sA]);
+
+    assert.strictEqual(sA.subSlices.length, 1);
+    assert.deepEqual(sA.subSlices, [sB]);
+    assert.strictEqual(sA, sB.parentSlice);
+    assert.strictEqual(group.findSliceAtTs(1), sB);
+    assert.strictEqual(group.findSliceAtTs(3), sB);
+  });
+
+  test('basicMerge', function() {
+    function TestSlice(
+        cat, title, colorId, start, args, opt_duration,
+        opt_cpuStart, opt_cpuDuration) {
+      Slice.call(this, cat, title, colorId, start, args, opt_duration,
+          opt_cpuStart, opt_cpuDuration);
+    }
+    TestSlice.prototype = {
+      __proto__: Slice.prototype
+    };
+    TestSlice.subTypes = {
+      getConstructor(category, title) {
+        return TestSlice;
+      }
+    };
+
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread, TestSlice);
+    const b = new SliceGroup(thread, TestSlice);
+    a.beginSlice('', 'one', 1);
+    a.endSlice(2);
+    b.beginSlice('', 'two', 3);
+    b.endSlice(5);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 2);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 1);
+
+    assert.strictEqual(m.slices[1].title, 'two');
+    assert.strictEqual(m.slices[1].start, 3);
+    assert.strictEqual(m.slices[1].duration, 2);
+
+    // ensure constructor merged correctly
+    assert.strictEqual(m.sliceConstructor, TestSlice);
+  });
+
+  test('nestedMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 1);
+    a.endSlice(4);
+    b.beginSlice('', 'two', 2);
+    b.endSlice(3);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 2);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 3);
+
+    assert.strictEqual(m.slices[1].title, 'two');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 1);
+  });
+
+  test('startSplitMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 2);
+    a.endSlice(4);
+    b.beginSlice('', 'two', 1);
+    b.endSlice(3);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 3);
+
+    assert.strictEqual(m.slices[0].title, 'two');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 1);
+
+    assert.strictEqual(m.slices[1].title, 'one');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 2);
+
+    assert.strictEqual(m.slices[2].title, 'two (cont.)');
+    assert.strictEqual(m.slices[2].start, 2);
+    assert.strictEqual(m.slices[2].duration, 1);
+  });
+
+  test('startSplitTwoMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 3);
+    a.endSlice(6);
+    b.beginSlice('', 'two', 1);
+    b.beginSlice('', 'three', 2);
+    b.endSlice(4);
+    b.endSlice(5);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 5);
+
+    assert.strictEqual(m.slices[0].title, 'two');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 2);
+
+    assert.strictEqual(m.slices[1].title, 'three');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 1);
+
+    assert.strictEqual(m.slices[2].title, 'one');
+    assert.strictEqual(m.slices[2].start, 3);
+    assert.strictEqual(m.slices[2].duration, 3);
+
+    assert.strictEqual(m.slices[3].title, 'two (cont.)');
+    assert.strictEqual(m.slices[3].start, 3);
+    assert.strictEqual(m.slices[3].duration, 2);
+
+    assert.strictEqual(m.slices[4].title, 'three (cont.)');
+    assert.strictEqual(m.slices[4].start, 3);
+    assert.strictEqual(m.slices[4].duration, 1);
+  });
+
+  test('startSplitTwiceMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 2);
+    a.beginSlice('', 'two', 3);
+    a.endSlice(5);
+    a.endSlice(6);
+    b.beginSlice('', 'three', 1);
+    b.endSlice(4);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 5);
+
+    assert.strictEqual(m.slices[0].title, 'three');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 1);
+
+    assert.strictEqual(m.slices[1].title, 'one');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 4);
+
+    assert.strictEqual(m.slices[2].title, 'three (cont.)');
+    assert.strictEqual(m.slices[2].start, 2);
+    assert.strictEqual(m.slices[2].duration, 1);
+
+    assert.strictEqual(m.slices[3].title, 'two');
+    assert.strictEqual(m.slices[3].start, 3);
+    assert.strictEqual(m.slices[3].duration, 2);
+
+    assert.strictEqual(m.slices[4].title, 'three (cont.)');
+    assert.strictEqual(m.slices[4].start, 3);
+    assert.strictEqual(m.slices[4].duration, 1);
+  });
+
+  test('endSplitMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 1);
+    a.endSlice(3);
+    b.beginSlice('', 'two', 2);
+    b.endSlice(4);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 3);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 2);
+
+    assert.strictEqual(m.slices[1].title, 'two');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 1);
+
+    assert.strictEqual(m.slices[2].title, 'two (cont.)');
+    assert.strictEqual(m.slices[2].start, 3);
+    assert.strictEqual(m.slices[2].duration, 1);
+  });
+
+  test('endSplitTwoMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 1);
+    a.endSlice(4);
+    b.beginSlice('', 'two', 2);
+    b.beginSlice('', 'three', 3);
+    b.endSlice(5);
+    b.endSlice(6);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 5);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 3);
+
+    assert.strictEqual(m.slices[1].title, 'two');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 2);
+
+    assert.strictEqual(m.slices[2].title, 'three');
+    assert.strictEqual(m.slices[2].start, 3);
+    assert.strictEqual(m.slices[2].duration, 1);
+
+    assert.strictEqual(m.slices[3].title, 'two (cont.)');
+    assert.strictEqual(m.slices[3].start, 4);
+    assert.strictEqual(m.slices[3].duration, 2);
+
+    assert.strictEqual(m.slices[4].title, 'three (cont.)');
+    assert.strictEqual(m.slices[4].start, 4);
+    assert.strictEqual(m.slices[4].duration, 1);
+  });
+
+  test('endSplitTwiceMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 1);
+    a.beginSlice('', 'two', 2);
+    a.endSlice(4);
+    a.endSlice(5);
+    b.beginSlice('', 'three', 3);
+    b.endSlice(6);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 5);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 4);
+
+    assert.strictEqual(m.slices[1].title, 'two');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 2);
+
+    assert.strictEqual(m.slices[2].title, 'three');
+    assert.strictEqual(m.slices[2].start, 3);
+    assert.strictEqual(m.slices[2].duration, 1);
+
+    assert.strictEqual(m.slices[3].title, 'three (cont.)');
+    assert.strictEqual(m.slices[3].start, 4);
+    assert.strictEqual(m.slices[3].duration, 1);
+
+    assert.strictEqual(m.slices[4].title, 'three (cont.)');
+    assert.strictEqual(m.slices[4].start, 5);
+    assert.strictEqual(m.slices[4].duration, 1);
+  });
+
+  // Input:
+  // A:  |    one     |       |     two     |
+  //
+  // B:       |         three         |
+  //
+  // Output:
+  //     |    one     | three |     two     |
+  //          | three |       | three |
+  test('splitTwiceMerge', function() {
+    const thread = newFakeThread();
+    const a = new SliceGroup(thread);
+    const b = new SliceGroup(thread);
+    a.beginSlice('', 'one', 1);
+    a.endSlice(3);
+    a.beginSlice('', 'two', 4);
+    a.endSlice(6);
+    b.beginSlice('', 'three', 2);
+    b.endSlice(5);
+
+    const m = SliceGroup.merge(a, b);
+    assert.strictEqual(m.slices.length, 5);
+
+    assert.strictEqual(m.slices[0].title, 'one');
+    assert.strictEqual(m.slices[0].start, 1);
+    assert.strictEqual(m.slices[0].duration, 2);
+
+    assert.strictEqual(m.slices[1].title, 'three');
+    assert.strictEqual(m.slices[1].start, 2);
+    assert.strictEqual(m.slices[1].duration, 1);
+
+    assert.strictEqual(m.slices[2].title, 'three (cont.)');
+    assert.strictEqual(m.slices[2].start, 3);
+    assert.strictEqual(m.slices[2].duration, 1);
+
+    assert.strictEqual(m.slices[3].title, 'two');
+    assert.strictEqual(m.slices[3].start, 4);
+    assert.strictEqual(m.slices[3].duration, 2);
+
+    assert.strictEqual(m.slices[4].title, 'three (cont.)');
+    assert.strictEqual(m.slices[4].start, 4);
+    assert.strictEqual(m.slices[4].duration, 1);
+  });
+
+  test('bounds', function() {
+    const group = new SliceGroup(newFakeThread());
+    group.updateBounds();
+    assert.isUndefined(group.bounds.min);
+    assert.isUndefined(group.bounds.max);
+
+    group.pushSlice(newSliceEx({start: 1, duration: 3}));
+    group.pushSlice(newSliceEx({start: 7, duration: 2}));
+    group.updateBounds();
+    assert.strictEqual(group.bounds.min, 1);
+    assert.strictEqual(group.bounds.max, 9);
+  });
+
+  test('boundsWithPartial', function() {
+    const group = new SliceGroup(newFakeThread());
+    group.beginSlice('', 'a', 7);
+    group.updateBounds();
+    assert.strictEqual(group.bounds.min, 7);
+    assert.strictEqual(group.bounds.max, 7);
+  });
+
+  test('boundsWithTwoPartials', function() {
+    const group = new SliceGroup(newFakeThread());
+    group.beginSlice('', 'a', 0);
+    group.beginSlice('', 'a', 1);
+    group.updateBounds();
+    assert.strictEqual(group.bounds.min, 0);
+    assert.strictEqual(group.bounds.max, 1);
+  });
+
+  test('boundsWithBothPartialAndRegular', function() {
+    const group = new SliceGroup(newFakeThread());
+    group.updateBounds();
+    assert.isUndefined(group.bounds.min);
+    assert.isUndefined(group.bounds.max);
+
+    group.pushSlice(newSliceEx({start: 1, duration: 3}));
+    group.beginSlice('', 'a', 7);
+    group.updateBounds();
+    assert.strictEqual(group.bounds.min, 1);
+    assert.strictEqual(group.bounds.max, 7);
+  });
+
+  test('autocloserBasic', function() {
+    const group = new SliceGroup(newFakeThread());
+    assert.strictEqual(0, group.openSliceCount);
+
+    group.pushSlice(newSliceEx({title: 'a', start: 1, duration: 0.5}));
+
+    group.beginSlice('', 'b', 2);
+    group.beginSlice('', 'c', 2.5);
+    group.endSlice(3);
+
+    group.autoCloseOpenSlices();
+    group.updateBounds();
+
+    assert.strictEqual(group.bounds.min, 1);
+    assert.strictEqual(group.bounds.max, 3);
+    assert.strictEqual(group.slices.length, 3);
+
+    assert.strictEqual(group.slices[0].title, 'a');
+    assert.isFalse(group.slices[0].didNotFinish);
+
+    assert.strictEqual(group.slices[1].title, 'b');
+    assert.isTrue(group.slices[1].didNotFinish);
+    assert.strictEqual(group.slices[1].duration, 1);
+
+    assert.strictEqual(group.slices[2].title, 'c');
+    assert.isFalse(group.slices[2].didNotFinish);
+  });
+
+  test('autocloserWithSubTasks', function() {
+    const group = new SliceGroup(newFakeThread());
+    assert.strictEqual(0, group.openSliceCount);
+
+    group.beginSlice('', 'a', 1);
+    group.beginSlice('', 'b1', 2);
+    group.endSlice(3);
+    group.beginSlice('', 'b2', 3);
+
+    group.autoCloseOpenSlices();
+    assert.strictEqual(group.slices.length, 3);
+
+    assert.strictEqual(group.slices[0].title, 'a');
+    assert.isTrue(group.slices[0].didNotFinish);
+    assert.strictEqual(group.slices[0].duration, 2);
+
+    assert.strictEqual(group.slices[1].title, 'b1');
+    assert.isFalse(group.slices[1].didNotFinish);
+    assert.strictEqual(group.slices[1].duration, 1);
+
+    assert.strictEqual(group.slices[2].title, 'b2');
+    assert.isTrue(group.slices[2].didNotFinish);
+    assert.strictEqual(group.slices[2].duration, 0);
+  });
+
+  test('autocloseCompleteSlice', function() {
+    const group = new SliceGroup(newFakeThread());
+
+    group.pushCompleteSlice('', 'a', 1, undefined);
+    group.pushCompleteSlice('', 'b', 2, 3);
+
+    group.autoCloseOpenSlices();
+    assert.strictEqual(group.slices.length, 2);
+
+    assert.strictEqual(group.slices[0].title, 'a');
+    assert.isTrue(group.slices[0].didNotFinish);
+    assert.strictEqual(group.slices[0].duration, 4);
+
+    assert.strictEqual(group.slices[1].title, 'b');
+    assert.isFalse(group.slices[1].didNotFinish);
+    assert.strictEqual(group.slices[1].duration, 3);
+  });
+
+  test('sliceGroupStableId', function() {
+    const model = new tr.Model();
+    const process = model.getOrCreateProcess(123);
+    const thread = process.getOrCreateThread(456);
+    const group = new SliceGroup(thread);
+
+    assert.strictEqual(process.stableId, 123);
+    assert.strictEqual(thread.stableId, '123.456');
+    assert.strictEqual(group.stableId, '123.456.SliceGroup');
+  });
+
+  test('getSlicesOfName', function() {
+    const group = new SliceGroup(newFakeThread());
+    const expected = [];
+
+    for (let i = 0; i < 10; i++) {
+      const aSlice = newSliceEx({title: 'a', start: i, duration: i + 1});
+      group.pushSlice(aSlice);
+      group.pushSlice(newSliceEx({title: 'b', start: i + 1, duration: i + 2}));
+      expected.push(aSlice);
+    }
+
+    assert.deepEqual(group.getSlicesOfName('a'), expected);
+  });
+
+  test('iterSlicesInTimeRange', function() {
+    const group = new SliceGroup(newFakeThread());
+    const expected = [];
+
+    for (let i = 0; i < 10; i++) {
+      const slice = newSliceEx({title: 'a', start: i, duration: 1});
+      group.pushSlice(slice);
+      if (4 <= i && i <= 7) {
+        expected.push(slice);
+      }
+    }
+    group.createSubSlices();
+
+    const observed = [];
+    group.iterSlicesInTimeRange(function(slice) { observed.push(slice); },
+        4.5, 7.5);
+    assert.deepEqual(observed, expected);
+  });
+
+  test('computeCpuDurationNoOverlap', function() {
+    const model = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const process = model.getOrCreateProcess(123);
+    const t = process.getOrCreateThread(456);
+    t.timeSlices = [newThreadSlice(t, SCHEDULING_STATE.RUNNING, 20, 20),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 40, 10),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 50, 10)];
+    const group = new SliceGroup(t);
+    group.pushSlice(newSliceEx({title: 'draw', start: 0, duration: 20}));
+    group.pushSlice(newSliceEx({title: 'render', start: 60, duration: 20}));
+    group.createSubSlices();
+    assert.strictEqual(group.slices[0].cpuDuration, 0);
+    assert.strictEqual(group.slices[1].cpuDuration, 0);
+  });
+
+  test('computeCpuDurationPartialOverlap', function() {
+    const model = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const process = model.getOrCreateProcess(123);
+    const t = process.getOrCreateThread(456);
+    t.timeSlices = [newThreadSlice(t, SCHEDULING_STATE.RUNNING, 20, 20),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 40, 10),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 50, 10)];
+    const group = new SliceGroup(t);
+    group.pushSlice(newSliceEx({title: 'draw', start: 10, duration: 30}));
+    group.pushSlice(newSliceEx({title: 'render', start: 50, duration: 20}));
+    group.createSubSlices();
+    assert.strictEqual(group.slices[0].cpuDuration, 20);
+    assert.strictEqual(group.slices[1].cpuDuration, 10);
+  });
+
+  test('computeCpuDurationFullOverlap', function() {
+    const model = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const process = model.getOrCreateProcess(123);
+    const t = process.getOrCreateThread(456);
+    t.timeSlices = [newThreadSlice(t, SCHEDULING_STATE.RUNNING, 20, 20),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 40, 10),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 50, 20)];
+    const group = new SliceGroup(t);
+    group.pushSlice(newSliceEx({title: 'draw', start: 20, duration: 30}));
+    group.pushSlice(newSliceEx({title: 'render', start: 50, duration: 20}));
+    group.createSubSlices();
+    assert.strictEqual(group.slices[0].cpuDuration, 20);
+    assert.strictEqual(group.slices[1].cpuDuration, 20);
+  });
+
+  test('computeCpuSelfDurationWithSubslices', function() {
+    const model = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const process = model.getOrCreateProcess(123);
+    const t = process.getOrCreateThread(456);
+    t.timeSlices = [newThreadSlice(t, SCHEDULING_STATE.RUNNING, 20, 20),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 40, 10),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 50, 20)];
+    const group = new SliceGroup(t);
+    group.pushSlice(newSliceEx({title: 'draw', start: 20, duration: 30}));
+    group.pushSlice(newSliceEx({title: 'render', start: 21, duration: 8}));
+    group.pushSlice(newSliceEx({title: 'flush', start: 29, duration: 11}));
+    group.createSubSlices();
+    assert.strictEqual(group.slices[0].cpuDuration, 20);
+    assert.strictEqual(group.slices[0].cpuSelfTime, 1);
+    assert.strictEqual(group.slices[1].cpuDuration, 8);
+    assert.strictEqual(group.slices[1].cpuSelfTime, 8);
+    assert.strictEqual(group.slices[2].cpuDuration, 11);
+    assert.strictEqual(group.slices[2].cpuSelfTime, 11);
+  });
+
+  test('computeCpuDurationSmallTimeslices', function() {
+    const model = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const process = model.getOrCreateProcess(123);
+    const t = process.getOrCreateThread(456);
+    t.timeSlices = [newThreadSlice(t, SCHEDULING_STATE.RUNNING, 20, 1),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 21, 1),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 22, 1),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 23, 1),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 24, 1),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 25, 1),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 26, 1),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 27, 1),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 28, 1),
+      newThreadSlice(t, SCHEDULING_STATE.SLEEPING, 29, 1),
+      newThreadSlice(t, SCHEDULING_STATE.RUNNING, 30, 1)];
+    const group = new SliceGroup(t);
+    group.pushSlice(newSliceEx(
+        {title: 'draw', start: 20, duration: 11})); // 20,[22,24,26,28],30
+    group.pushSlice(newSliceEx(
+        {title: 'render', start: 22, duration: 8})); // 22,[24, 26, 28]
+    group.pushSlice(newSliceEx(
+        {title: 'flush', start: 24, duration: 6})); // 24, 26, 28
+    group.createSubSlices();
+    assert.strictEqual(group.slices[0].cpuDuration, 6);
+    assert.strictEqual(group.slices[0].cpuSelfTime, 2);
+    assert.strictEqual(group.slices[1].cpuDuration, 4);
+    assert.strictEqual(group.slices[1].cpuSelfTime, 1);
+    assert.strictEqual(group.slices[2].cpuDuration, 3);
+    assert.strictEqual(group.slices[2].cpuSelfTime, 3);
+  });
+
+  test('sliceParentContainerSetAtPush', function() {
+    const m = newModel(function(m) {
+      m.process = m.getOrCreateProcess(123);
+      m.thread = m.process.getOrCreateThread(456);
+      m.group = new SliceGroup(m.thread);
+
+      m.sA = m.group.pushSlice(newSliceEx(
+          { title: 'sA', start: 0.0, duration: 10.0 }));
+
+      m.group.createSubSlices();
+    });
+
+    assert.deepEqual(m.sA.parentContainer, m.thread);
+  });
+
+  test('getDescendantEventsInSortedRanges', function() {
+    // Create the following slices:
+    // 0  1  2  3  4  5  6  7  8  9  10
+    // <------------- 0 ------------->
+    //          <- 2 ->  <---- 3 ---->
+    //                      <- 1 ->
+    const group = new SliceGroup(newFakeThread());
+    group.pushSlice(newSliceEx({title: 's0', start: 0, end: 10}));
+    group.pushSlice(newSliceEx({title: 's1', start: 7, end: 9}));
+    group.pushSlice(newSliceEx({title: 's2', start: 3, end: 5}));
+    group.pushSlice(newSliceEx({title: 's3', start: 6, end: 10}));
+    group.createSubSlices();
+
+    // [0, 5] intersects s0 and s2.
+    const r1 = new tr.b.math.Range.fromExplicitRange(0, 5);
+    let slices = [...group.getDescendantEventsInSortedRanges([r1])];
+    assert.strictEqual(slices.length, 2);
+    assert.strictEqual(slices[0].title, 's0');
+    assert.strictEqual(slices[1].title, 's2');
+
+    // [10, 11] intersects s0 and s3.
+    const r2 = new tr.b.math.Range.fromExplicitRange(10, 11);
+    slices = [...group.getDescendantEventsInSortedRanges([r2])];
+    assert.strictEqual(slices.length, 2);
+    assert.strictEqual(slices[0].title, 's0');
+    assert.strictEqual(slices[1].title, 's3');
+
+    // [0, 5], [10, 11] intersects s0, s2, and s3.
+    slices = [...group.getDescendantEventsInSortedRanges([r1, r2])];
+    assert.strictEqual(slices.length, 3);
+    assert.strictEqual(slices[0].title, 's0');
+    assert.strictEqual(slices[1].title, 's2');
+    assert.strictEqual(slices[2].title, 's3');
+
+    // Ranges can be nested, too.
+    const r3 = new tr.b.math.Range.fromExplicitRange(1, 2);
+    slices = [...group.getDescendantEventsInSortedRanges([r1, r3])];
+    assert.strictEqual(slices.length, 2);
+    assert.strictEqual(slices[0].title, 's0');
+    assert.strictEqual(slices[1].title, 's2');
+
+    // Test no ranges at all.
+    assert.isTrue(group.getDescendantEventsInSortedRanges([]).next().done);
+  });
+});
+</script>

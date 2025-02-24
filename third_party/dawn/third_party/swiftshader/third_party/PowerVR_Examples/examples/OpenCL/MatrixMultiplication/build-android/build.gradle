@@ -1,0 +1,100 @@
+// Applies the Android plugin for Gradle to this build and makes the android block available to specify Android-specific build options
+apply plugin: 'com.android.library'
+
+// Get the output directory based on if the gradle command was kicked for the entire SDK or the example only
+def binOutput = gradle.ext.PVR_BINARY_OUTPUT_DIR
+// The set of framework projects on which this application is dependent
+def projectDependencies = ["PVRCore", "PVRUtilsCL"]
+
+// This block configures the repositories and dependencies for Gradle itself. Here we add a dependency for the Android plugin for Gradle as it provides
+// the additional instructions Gradle needs to build Android app modules
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+
+	// Adds the Android plugin for Gradle version 3.5.0 as a classpath dependency
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+// This block configures the repositories and dependencies used by all modules in the project
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}
+
+android {
+	compileSdkVersion 29
+	defaultConfig {
+		minSdkVersion 21
+		targetSdkVersion 26
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static", "-DPVR_PREBUILT_DEPENDENCIES=ON"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+// This block specifies dependencies required to build only the module itself
+dependencies {
+	// Dependency on local binaries
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+tasks.whenTaskAdded { task ->
+	// We add a dependency on all projects dependencies corresponding externalNativeBuild tasks - If these lines are removed, the dependencies are not built as they should be.
+	if (task.name.startsWith('generateJsonModel')) {
+		def flavor = task.name.substring('generateJsonModel'.length())
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuild${flavor}" }
+	}
+	// The following lines reconfigure the assemble, assembleDebug, assembleRelease tasks to just call the native build. All other parts of it are disabled.
+	if (task.name.startsWith('assemble') || task.name.startsWith('verify') || task.name.startsWith('check')) {
+
+		tasks['assemble'].actions.clear()
+		tasks['assemble'].dependsOn.clear()
+		if (task.name.startsWith('assemble') &&! task.name.endsWith('Test')) { // Send to the "else" (disable) everything that is not the "assembleFlavor" tasks
+			task.actions.clear()
+			task.dependsOn.clear()
+
+			def flavor = task.name.substring('assemble'.length())
+			if (flavor)
+			{
+				task.doLast({
+					"$ANDROID_ABI".replace(" ", "").split(",").each ({
+						abi -> 
+						def path = new File("${project.projectDir}/.cxx/cmake/${flavor.toLowerCase()}/${abi}").getCanonicalPath().replace("\\", "/")
+						def inputPath = path + "/bin"
+						def outputPath = "${binOutput}/${flavor.toLowerCase()}/${path.substring(path.lastIndexOf("/")+1)}"
+						copy{
+							from inputPath
+							into outputPath
+							include "**"
+						}
+					})
+				})
+			}
+			tasks["assemble${flavor}"].dependsOn = ["externalNativeBuild${flavor}"]
+			tasks["assemble"].dependsOn.add(task.name)
+		}
+		else {
+			task.enabled = false
+		}
+	}
+}

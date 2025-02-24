@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/thread_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.v8', function() {
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  function V8GCStatsThreadSlice() {
+    ThreadSlice.apply(this, arguments);
+    this.liveObjects_ = JSON.parse(this.args.live);
+    delete this.args.live;
+    this.deadObjects_ = JSON.parse(this.args.dead);
+    delete this.args.dead;
+  }
+
+  V8GCStatsThreadSlice.prototype = {
+    __proto__: ThreadSlice.prototype,
+
+    get liveObjects() {
+      return this.liveObjects_;
+    },
+
+    get deadObjects() {
+      return this.deadObjects_;
+    }
+  };
+
+  ThreadSlice.subTypes.register(
+      V8GCStatsThreadSlice,
+      {
+        categoryParts: ['disabled-by-default-v8.gc_stats'],
+        name: 'v8 gc stats slice',
+        pluralName: 'v8 gc stats slices'
+      }
+  );
+
+  return {
+    V8GCStatsThreadSlice,
+  };
+});
+</script>

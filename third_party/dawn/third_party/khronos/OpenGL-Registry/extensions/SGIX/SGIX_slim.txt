@@ -1,0 +1,277 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_slim
+
+Name Strings
+
+    GL_SGIX_slim
+
+Version
+
+    $Date: 1998/08/03 19:03:02 $ $Revision: 1.11 $
+
+Number
+
+    ???
+
+Dependencies
+
+	This extension depends on the ycrcbformat, and subsample extensions.
+
+Overview
+
+	This extension defines a mechanism to draw and read SLIM (Rice)
+	compressed images. SLIM is a lossless compression technique
+	derived from a scheme developed by Robert F. Rice, Pen-Shu Yeh,
+	and Warner Miller. The scheme works well on data (images)
+	composed of relatively small integers, 8-12 bits. The specifics
+	of the algorithm used in OpenGL are not included in this spec.
+	If the extension were made public we would have to include such
+	a specification. SLIM supports 8, 10, and 12 bit components,
+	one to four components per pixel, and two alternative component
+	samplings beyond uniform (422 and 4224). NOTE: that for
+	compatibility reasons the older Rice format images will also be
+	supported.
+	 The specification of color space and component subsampling is
+	accomplished through the subsample and ycrcbformat extensions.
+	SLIM compression is specified through the <type> parameter to
+	DrawPixels, ReadPixels. Six data types are supported,
+	corresponding to unsigned 8 and 10 bit components, and signed
+	12 bit components (SLIM8U_SGIX, SLIM10U_SGIX, SLIM12S_SGIX, and
+	RICE8U_SGIX, RICE10U_SGIX, RICE12S_SGIX).  PixelStore
+	parameters are used to specify and query compressed image
+	size.
+
+Issues
+
+	- The SLIM/RICE compression/decompression algorithm is not
+	  defined/described in this extension.
+
+	- Rice now shows up explicitly as an input <type> is that a
+	  problem? This is a person (Robert Rice).
+
+	- Do we really need a header to store the image size?  Could
+	  this be passed as a separate parameter?
+
+	  A: We looked into passing the sizes as pixel storage
+	  parameters, but ran into problems with the async extension.
+	  If the size is GL state, it's difficult to come up with an
+	  implementation-friendly spec for when the state is updated.
+	  Also it's difficult to allow more than one asynchronous read
+	  outstanding in this case.  Putting the data in a header has
+	  the advantage that it keeps the length associated with
+	  the image data automatically.
+
+New Procedures and
+Functions
+
+	None.
+
+New Tokens
+
+	Accepted by the <pname> parameter of PixelStoref, PixelStorei,
+	GetBooleanv, GetIntegerv, GetFloatv and GetDoublev:
+	
+	    PACK_MAX_COMPRESSED_SIZE_SGIX	0x831B
+	
+	Accepted by the <type> parameter of all routines which take
+	one or two dimensional color pixel data from client memory or
+	write it to client memory including DrawPixels, ReadPixels,
+	TexImage2D, GetTexImage2D, GetHistogramEXT, GetMinmaxEXT,
+	ConvolutionFilter2DEXT, and ColorTableSGI:
+
+	    SLIM8U_SGIX				0x831D
+	    SLIM10U_SGIX			0x831E
+	    SLIM12S_SGIX			0x831F
+	    RICE8U_SGIX
+	    RICE10U_SGIX
+	    RICE12S_SGIX
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+	None.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+	3.6.3 Rasterization of Pixel Rectangles
+	
+	The SLIM/RICE <type>s are added to Table 3.4:
+	
+	<type> Parameter                Corresponding   Special
+        Token Value                     GL Data Type    Interpretation
+        ----------------                -------------   --------------
+        UNSIGNED_BYTE                   ubyte           No
+        BYTE                            byte            No
+        UNSIGNED_SHORT                  ushort          No
+        SHORT                           short           No
+        UNSIGNED_INT                    uint            No
+        INT                             int             No
+        FLOAT                           float           No
+        BITMAP                          ubyte           Yes
+        UNSIGNED_BYTE_3_3_2_EXT         ubyte           Yes
+        UNSIGNED_SHORT_4_4_4_4_EXT      ushort          Yes
+        UNSIGNED_SHORT_5_5_5_1_EXT      ushort          Yes
+        UNSIGNED_INT_8_8_8_8_EXT        uint            Yes
+        UNSIGNED_INT_10_10_10_2_EXT     uint            Yes
+	SLIM8U_SGIX			float		Yes
+	SLIM10U_SGIX			float		Yes
+	SLIM12S_SGIX			float		Yes
+	RICE8U_SGIX			float		Yes
+	RICE10U_SGIX			float		Yes
+	RICE12S_SGIX			float		Yes
+
+	<Before the Unpacking section>
+
+	Decompression
+
+	This step only applies if the <type> parameter to DrawPixels
+	is set to one of SLIM8U_SGIX, SLIM10U_SGIX, SLIM12S_SGIX,
+	RICE8U_SGIX, RICE10U_SGIX, or RICE12S_SGIX. These types
+	indicate that the image is compressed using SLIM or Rice
+	compression, respectively.  The images are stored as a header
+	containing a GLsizei value giving the length of compressed
+	image in bytes followed by the compressed image data.  For
+	correct operation, the data pointer passed to DrawPixels must
+	obey any alignment restrictions imposed by the host
+	architecture on the GLsizei data type.  If the data is not
+	correctly aligned, the results are undefined.  (This
+	restriction is analogous to the restriction tacitly placed on
+	the image pointer passed to DrawPixels when the type is INT.
+	The GL implementation must be able to dereference the pointer
+	as a GLint value without getting a bus error.)  If the width
+	or height argument is zero, the data pointer is not
+	dereferenced and so a NULL pointer may be passed in.
+
+	The compressed byte stream is passed to the GL and interpreted
+	as defined by the <type>, and <format> parameters to
+	DrawPixels, and the UNPACK_SAMPLING_SGIX parameter to
+	PixelStore. The width of the image represented by the byte
+	stream is determined by UNPACK_ROW_LENGTH, if it is positive,
+	and the <width> parameter to DrawPixels, otherwise.  The
+	height of the image represented by the byte stream is
+	determined by UNPACK_IMAGE_HEIGHT_EXT, if it is positive, and
+	the <height> parameter to DrawPixels, otherwise.
+
+	?? since we don't support subimage should the UNPACK parameters
+	be ignored??
+
+
+	If the PixelStore parameters UNPACK_ROW_LENGTH,
+	UNPACK_SKIP_ROWS, and UNPACK_SKIP_PIXELS, and the DrawPixel
+	parameters <width> and <height> indicate that a sub-image is to
+	be drawn an error INVALID_OPERATION is issued.
+
+	The output of the decompression algorithm is a sequence of
+	unsigned bytes or signed shorts corresponding to an
+	uncompressed image. The downstream GL mechanisms should proceed
+	as if the PixelStore parameters UNPACK_ROW_LENGTH,
+	UNPACK_SKIP_ROWS, and UNPACK_SKIP_PIXELS are all equal to zero.
+	The components of a SLIM/RICE image are mapped to GL <types> that do
+	not have special interpretation, FLOAT.
+
+	The pixel storage parameters UNPACK_SWAP_BYTES,
+	UNPACK_LSB_FIRST, and UNPACK_ALIGNMENT are ignored for
+	compressed images.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+	4.3.2 Reading Pixels
+	
+	The following entries are added to Table 4.5:
+
+	Parameter Name			Type		Initial Value		Valid Range
+	--------------			----		-------------		-----------
+	PACK_MAX_COMPRESSED_SIZE_SGIX	integer		0			[0,inf)
+
+	The following needs to be added to the end of the "Final
+	Conversion" subsection: If the <type> parameter to ReadPixels
+	is one of SLIM8U_SGIX, SLIM10U_SGIX, SLIM12S_SGIX, RICE8U_SGIX,
+	RICE10U_SGIX, or RICE12S_SGIX the components are converted to
+	UNSIGNED_BYTE and SIGNED_SHORT as appropriate.
+
+	???
+
+	<Before the section "Placement in Client Memory">
+
+	Compression
+
+	This step only applies if the <type> parameter to ReadPixels is
+	set to one of SLIM8U_SGIX, SLIM10U_SGIX, SLIM12S_SGIX,
+	RICE8U_SGIX, RICE10U_SGIX, or RICE12S_SGIX. The pixel stream
+	being read is compressed as defined by the <type> and <format>
+	parameters to ReadPixels, and the PACK_SAMPLING_SGIX parameter
+	to PixelStore. The output of this step is a byte stream of
+	compressed image data.
+
+	Placement in Client Memory, Uncompressed Images
+
+	If the <type> parameter to ReadPixels is not one of SLIM/RICE* then
+	the pixels of the image are transferred to host memory as
+	described in this section. etc...
+
+	Placement in Client Memory, Compressed Images
+
+	This step only applies if the <type> parameter to ReadPixels
+	is set to one of SLIM8U_SGIX, SLIM10U_SGIX, SLIM12S_SGIX,
+	RICE8U_SGIX, RICE10U_SGIX, or RICE12S_SGIX. The compressor
+	places a header containing the size in bytes of the compressed
+	image stored as a GLsizei value at the location *data in host
+	memory.  As in the DrawPixels case, the data pointer must obey
+	system requirements for the alignment of GLsizei values.  The
+	byte stream of compressed image data is placed in host memory
+	starting immediately after the header.  Up to
+	PACK_MAX_COMPRESSED_SIZE_SGIX bytes are written.  If the value
+	of PACK_MAX_COMPRESSED_SIZE_SGIX is greater than zero and the
+	compressed size is greater than the value of
+	PACK_MAX_COMPRESSED_SIZE_SGIX, the error INVALID_OPERATION is
+	generated.  If this occurs, the contents of the first
+	PACK_MAX_COMPRESSED_SIZE_SGIX bytes after the <data> pointer
+	are undefined, but bytes outside this range are guaranteed to
+	be left unchanged.
+
+	The pixel pack parameters PACK_SWAP_BYTES, PACK_LSB_FIRST,
+	PACK_ROW_LENGTH, PACK_SKIP_ROWS, PACK_SKIP_PIXELS, and
+	PACK_ALIGNMENT are not considered when reading back compressed
+	images.
+	
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+	None.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+	XXX
+
+Additions to the GLX Specification
+
+
+Errors
+
+	INVALID_VALUE is generated if the pname argument to
+	PixelStorei or PixelStoref is PACK_MAX_COMPRESSED_SIZE_SGIX
+	and the value of pname is less than zero.
+
+	INVALID_OPERATION is generated if the compressed data
+	requested by a ReadPixels or GetTexImage will occupy more than
+	PACK_MAX_COMPRESSED_SIZE_SGIX bytes.
+
+	INVALID_ENUM is generated if the type argument for a pixel
+	command specifies a slim type but the format argument
+	specifies color index, stencil index, or depth values.
+
+	INVALID_ENUM is generated if the type argument for a pixel
+	command which deals with images of greater than two dimensions
+	specifies a slim type.
+
+New State
+
+    Get Value				Get Command	Type	Initial Value	Attribute
+    ---------				-----------	----	-------------	---------
+    PACK_MAX_COMPRESSED_SIZE_SGIX	GetIntegerv	Z+	0		client	
+
+New Implementation Dependent State
+
+	None.

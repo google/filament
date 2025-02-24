@@ -1,0 +1,21 @@
+boto v2.21.1
+============
+
+:date: 2013/12/23
+
+This release is a bugfix release which corrects how the Mechanical Turk objects
+work & a threading issue when using ``datetime.strptime``.
+
+
+Bugfixes
+--------
+
+* Added ``cn-north-1`` to regions. (:sha:`9c89de1`)
+* Fixed threading issues related to ``datetime.strptime``. (:issue:`1898`,
+  :sha:`2ef66c9`)
+* Updated all the old-style inheritance calls. (:issue:`1918`, :issue:`1936`,
+  :issue:`1937`, :sha:`39a997f` & :sha:`607624f`)
+* Documentation:
+
+    * Added missed notes about the cn-north-1 region. (:sha:`738c8cb`)
+    * Added the C3 family of EC2 instances. (:issue:`1938`, :sha:`05b7482`)

@@ -1,0 +1,105 @@
+//===- subzero/crosstest/test_arith.def - macros for tests ----*- C++ -*---===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for crosstesting arithmetic operations.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_ARITH_DEF
+#define TEST_ARITH_DEF
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+
+#define UINTOP_TABLE                                                           \
+  /* inst, operator, div, shift */                                             \
+  X(Add,   +,        0,   0)                                                   \
+  X(Sub,   -,        0,   0)                                                   \
+  X(Mul,   *,        0,   0)                                                   \
+  X(Udiv,  /,        1,   0)                                                   \
+  X(Urem,  %,        1,   0)                                                   \
+  X(Shl,   <<,       0,   1)                                                   \
+  X(Lshr,  >>,       0,   1)                                                   \
+  X(And,   &,        0,   0)                                                   \
+  X(Or,    |,        0,   0)                                                   \
+  X(Xor,   ^,        0,   0)                                                   \
+//#define X(inst, op, isdiv, isshift)
+
+#define SINTOP_TABLE                                                           \
+  /* inst, operator, div, shift */                                             \
+  X(Sdiv,  /,        1,   0)                                                   \
+  X(Srem,  %,        1,   0)                                                   \
+  X(Ashr,  >>,       0,   1)                                                   \
+//#define X(inst, op, isdiv, isshift)
+
+#define COMMA ,
+#define FPOP_TABLE                                                             \
+  /* inst, infix_op, func */                                                   \
+  X(Fadd,  +,              )                                                   \
+  X(Fsub,  -,              )                                                   \
+  X(Fmul,  *,              )                                                   \
+  X(Fdiv,  /,              )                                                   \
+  X(Frem,  COMMA,    myFrem)                                                   \
+//#define X(inst, op, func)
+
+// Note: The above definition of COMMA, plus the "func" argument to
+// the X macro, are because C++ does not allow the % operator on
+// floating-point primitive types.  To work around this, the expansion
+// is "func(a infix_op b)", which becomes "myFrem(a , b)" for the Frem
+// instruction and "(a + b)" for the Fadd instruction.  The two
+// versions of myFrem() are defined in a separate bitcode file.
+
+#define INT_VALUE_ARRAY                                                        \
+{ 0x0,        0x1,        0x7ffffffe, 0x7fffffff,                              \
+  0x80000000, 0x80000001, 0xfffffffe, 0xffffffff,                              \
+  0x1e, 0x1f, 0x20, 0x21, 0x3e, 0x3f, 0x40, 0x41,                              \
+  0x7e,       0x7f,       0x80,       0x81,                                    \
+  0xfe,       0xff,       0x100,      0x101,                                   \
+  0x7ffe,     0x7fff,     0x8000,     0x8001,                                  \
+  0xfffe,     0xffff,     0x10000,    0x10001 }
+
+#define FP_VALUE_ARRAY(NegInf, PosInf, NegNan, NaN)                            \
+{ 0,                    1,                    1.4,                             \
+  1.5,                  1.6,                  -1.4,                            \
+  -1.5,                 -1.6,                 0x7e,                            \
+  0x7f,                 0x80,                 0x81,                            \
+  0xfe,                 0xff,                 0x7ffe,                          \
+  0x7fff,               0x8000,               0x8001,                          \
+  0xfffe,               0xffff,               0x7ffffffe,                      \
+  0x7fffffff,           0x80000000,           0x80000001,                      \
+  0xfffffffe,           0xffffffff,           0x100000000ll,                   \
+  0x100000001ll,        0x7ffffffffffffffell, 0x7fffffffffffffffll,            \
+  0x8000000000000000ll, 0x8000000000000001ll, 0xfffffffffffffffell,            \
+  0xffffffffffffffffll, NegInf,               PosInf,                          \
+  Nan,                  NegNan,               -0.0,                            \
+  10.0,                 FLT_MIN,              FLT_MAX,                         \
+  DBL_MIN,              DBL_MAX }
+
+#define MULIMM_TABLE                                                           \
+   /* mult_by */                                                               \
+  X(         0)                                                                \
+  X(         1)                                                                \
+  X(         2)                                                                \
+  X(         3)                                                                \
+  X(         4)                                                                \
+  X(         5)                                                                \
+  X(         7)                                                                \
+  X(         8)                                                                \
+  X(         9)                                                                \
+  X(        10)                                                                \
+  X(        25)                                                                \
+  X(       100)                                                                \
+  X(       232)                                                                \
+  X(0x00FFF001)                                                                \
+  X(0x01000000)                                                                \
+  X(0x7FFFF07F)                                                                \
+  X(0x80000000)                                                                \
+//#define X(mult_by)
+
+#endif // TEST_ARITH_DEF

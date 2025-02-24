@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<style>
+.div {
+  font-size: 3.1415em;
+}
+</style>
+
+
+<script>
+  'use strict';
+  print('File load_error2.html is loaded');
+
+  // The script src below should raise a loading exception for d8.
+  HTMLImportsLoader.loadScript('/does_not_exist.js');
+</script>
+
+<div>
+</div>

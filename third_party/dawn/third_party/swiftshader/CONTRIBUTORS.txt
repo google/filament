@@ -1,0 +1,43 @@
+# People who have agreed to one of the CLAs and can contribute patches.
+# The AUTHORS file lists the copyright holders; this file
+# lists people.  For example, Google employees are listed here
+# but not in AUTHORS, because Google holds the copyright.
+#
+# https://developers.google.com/open-source/cla/individual
+# https://developers.google.com/open-source/cla/corporate
+#
+# Names should be added to this file as:
+#     Name <email address>
+
+Google Inc.
+ Nicolas Capens <capn@google.com>
+ Alexis Hétu <sugoi@google.com>
+ Shannon Woods <shannonwoods@google.com>
+ Corentin Wallez <cwallez@google.com>
+ Greg Hartman <ghartman@google.com>
+ Ping-Hao Wu <pinghao@google.com>
+ Maxime Grégoire <mgregoire@google.com>
+ Veranika Liaukevich <veranika@google.com>
+ John Bauman <jbauman@google.com>
+ Keun Soo Yim <yim@google.com>
+ Kelsen Liu <kelsenliu21@gmail.com>
+ John Sheu <sheu@google.com>
+ Philippe Hamel <hamelphi@google.com>
+ Daniel Toyama <kenjitoyama@google.com>
+ Meng-Lin Wu <marleymoo@google.com>
+ Krzysztof Kosiński <krzysio@google.com>
+ Chris Forbes <chrisforbes@google.com>
+ Ben Clayton <bclayton@google.com>
+ Hernan Liatis <hliatis@google.com>
+ Logan (Tzu-hsiang) Chien <loganchien@google.com>
+ Stephen White <senorblanco@google.com>
+ Raymond Chiu <chiur@google.com>
+ Shahbaz Youssefi <syoussefi@google.com>
+
+TransGaming Inc.
+ Nicolas Capens
+ Gavriel State
+ Jim MacArthur
+ Daniel Koch
+ Luther Johnson
+ Rob Stepinski

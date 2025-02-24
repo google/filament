@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses Binder events
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  // Matches binder transactions:
+  // transaction=%d dest_node=%d dest_proc=%d dest_thread=%d reply=%d flags=0x%x
+  // code=0x%x
+  const binderTransRE = new RegExp('transaction=(\\d+) dest_node=(\\d+) ' +
+                                 'dest_proc=(\\d+) dest_thread=(\\d+) ' +
+                                 'reply=(\\d+) flags=(0x[0-9a-fA-F]+) ' +
+                                 'code=(0x[0-9a-fA-F]+)');
+  // binder_transaction_alloc_buf: transaction=%d data_size=%d offsets_size=%d
+  const binderAllocRE = new RegExp('transaction=(\\d+) data_size=(\\d+) ' +
+                                   'offsets_size=(\\d+)');
+
+  const binderTransReceivedRE = /transaction=(\d+)/;
+
+  function isBinderThread(name) {
+    return (name.indexOf('Binder') > -1);
+  }
+
+  // Taken from kernel source: include/uapi/linux/android/binder.h.
+  const TF_ONE_WAY = 0x01;
+  const TF_ROOT_OBJECT = 0x04;
+  const TF_STATUS_CODE = 0x08;
+  const TF_ACCEPT_FDS = 0x10;
+  const NO_FLAGS = 0;
+
+  function binderFlagsToHuman(num) {
+    const flag = parseInt(num, 16);
+    let str = '';
+
+    if (flag & TF_ONE_WAY) {
+      str += 'this is a one-way call: async, no return; ';
+    }
+    if (flag & TF_ROOT_OBJECT) {
+      str += 'contents are the components root object; ';
+    }
+    if (flag & TF_STATUS_CODE) {
+      str += 'contents are a 32-bit status code; ';
+    }
+    if (flag & TF_ACCEPT_FDS) {
+      str += 'allow replies with file descriptors; ';
+    }
+    if (flag === NO_FLAGS) {
+      str += 'No Flags Set';
+    }
+
+    return str;
+  }
+
+  function isReplyToOrigin(calling, called) {
+    return (called.dest_proc === calling.calling_pid ||
+            called.dest_thread === calling.calling_pid);
+  }
+
+  function binderCodeToHuman(code) {
+    return 'Java Layer Dependent';
+  }
+
+  function doInternalSlice(trans, slice, ts) {
+    if (slice.subSlices.length !== 0) {
+      /* We want to make sure we keep moving the small slice to the end of
+         the big slice or else the arrows will not point to the end.
+      */
+      slice.subSlices[0].start = ts;
+      return slice.subSlices[0];
+    }
+    const kthread = trans.calling_kthread.thread;
+    const internalSlice = kthread.sliceGroup.pushCompleteSlice('binder',
+        slice.title,
+        ts, .001, 0, 0,
+        slice.args);
+
+    internalSlice.title = slice.title;
+    internalSlice.id = slice.id;
+    internalSlice.colorId = slice.colorId;
+    slice.subSlices.push(internalSlice);
+    return internalSlice;
+  }
+
+  function generateBinderArgsForSlice(trans, cThreadName) {
+    return {
+      'Transaction Id': trans.transaction_key,
+      'Destination Node': trans.dest_node,
+      'Destination Process': trans.dest_proc,
+      'Destination Thread': trans.dest_thread,
+      'Destination Name': cThreadName,
+      'Reply transaction?': trans.is_reply_transaction,
+      'Flags': trans.flags + ' ' +
+           binderFlagsToHuman(trans.flags),
+
+      'Code': trans.code + ' ' +
+           binderCodeToHuman(trans.code),
+
+      'Calling PID': trans.calling_pid,
+      'Calling tgid': trans.calling_kthread.thread.parent.pid
+    };
+  }
+
+  /** @constructor */
+  function BinderTransaction(events, callingPid, callingTs, callingKthread) {
+    this.transaction_key = parseInt(events[1]);
+    this.dest_node = parseInt(events[2]);
+    this.dest_proc = parseInt(events[3]);
+    this.dest_thread = parseInt(events[4]);
+    this.is_reply_transaction = parseInt(events[5]) === 1 ? true : false;
+    this.expect_reply = ((this.is_reply_transaction === false) &&
+        (parseInt(events[6], 16) & TF_ONE_WAY) === 0);
+
+    this.flags = events[6];
+    this.code = events[7];
+    this.calling_pid = callingPid;
+    this.calling_ts = callingTs;
+    this.calling_kthread = callingKthread;
+  }
+
+
+  /** @constructor */
+  function BinderParser(importer) {
+    Parser.call(this, importer);
+    importer.registerEventHandler('binder_locked',
+        BinderParser.prototype.
+            binderLocked.bind(this));
+    importer.registerEventHandler('binder_unlock',
+        BinderParser.prototype.
+            binderUnlock.bind(this));
+    importer.registerEventHandler('binder_lock',
+        BinderParser.prototype.binderLock.bind(this));
+    importer.registerEventHandler('binder_transaction',
+        BinderParser.prototype.
+            binderTransaction.bind(this));
+    importer.registerEventHandler('binder_transaction_received',
+        BinderParser.prototype.
+            binderTransactionReceived.bind(this));
+    importer.registerEventHandler('binder_transaction_alloc_buf',
+        BinderParser.prototype.
+            binderTransactionAllocBuf.bind(this));
+
+    this.model_ = importer.model;
+    this.kthreadlookup = {};
+    this.importer_ = importer;
+    this.transWaitingRecv = {};
+    this.syncTransWaitingCompletion = {};
+    this.recursiveSyncTransWaitingCompletion_ByPID = {};
+    this.receivedTransWaitingConversion = {};
+  }
+
+  BinderParser.prototype = {
+    __proto__: Parser.prototype,
+
+    binderLock(eventName, cpuNumber, pid, ts, eventBase) {
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      this.doNameMappings(pid, tgid, eventName.threadName);
+
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(eventBase.threadName, tgid, pid);
+
+      kthread.binderAttemptLockTS = ts;
+      kthread.binderOpenTsA = ts;
+      return true;
+    },
+
+    binderLocked(eventName, cpuNumber, pid, ts, eventBase) {
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      const binderThread = isBinderThread(eventBase.threadName);
+      const name = eventBase.threadName;
+
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(eventBase.threadName, tgid, pid);
+
+      this.doNameMappings(pid, tgid, name);
+
+      const rthread = kthread.thread;
+      kthread.binderLockAquiredTS = ts;
+
+      if (kthread.binderAttemptLockTS === undefined) return false;
+
+      const args = this.generateArgsForSlice(tgid, pid, name, kthread);
+      rthread.sliceGroup.pushCompleteSlice('binder', 'binder lock waiting',
+          kthread.binderAttemptLockTS,
+          ts - kthread.binderAttemptLockTS,
+          0, 0, args);
+
+      kthread.binderAttemptLockTS = undefined;
+      return true;
+    },
+
+    binderUnlock(eventName, cpuNumber, pid, ts, eventBase) {
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(
+              eventBase.threadName, tgid, pid);
+
+      if (kthread.binderLockAquiredTS === undefined) return false;
+
+      const args = this.generateArgsForSlice(tgid, pid, eventBase.threadName,
+          kthread);
+      kthread.thread.sliceGroup.pushCompleteSlice(
+          'binder',
+          'binder lock held',
+          kthread.binderLockAquiredTS,
+          ts - kthread.binderLockAquiredTS,
+          0, 0, args);
+
+      kthread.binderLockAquiredTS = undefined;
+      return true;
+    },
+
+    /** There are a few transaction status changes that signify
+     *  progress through a binder transaction:
+     *
+     * Case One: Sync transaction.
+     *  Thread A calls a blocking function on Thread B. We receive a
+     *  binder_transaction msg From thread A stating that it is going to Call
+     *  thread B. We create a slice and a binder object for this transaction and
+     *  add it to addTransactionWaitingForRecv(transaction key, binder object)
+     *  This notifies thread B and passes the slice, binder object and time
+     *  stamp.
+     *
+     * Case Two: Async transaction.
+     *  Thread A calls an async function on Thread B. Like above we receive a
+     *  binder_transaction message, but the flags differ from above. The
+     *  TF_ONEWAY flags are set so we know that when Thread B gets the
+     *  binder_transaction_received with the same transaciton key the total
+     *  transaction is complete.
+     *
+     * Case Three: 'Prior_receive'
+     *  Prior_receive occurs when the thread being called (think A calls B),
+     *  receives a binder_transaction_received message, but cannot correlate it
+     *  to any current outstanding recursive transactions. That means the
+     *  message it just received is the start of some communication, not some
+     *  ongoing communication.
+     *  Once the execution flow has been passed to thread B, from A:
+     *  Thread B enters binder_transaction_received() we see that Thread A
+     *  had notified us that it sent us a message by calling
+     *  getTransactionWaitingForRecv(transaction key);
+     *  What can happen now is either this was a simple Call reply,
+     *  or this is a call -> recursion -> reply. We call modelPriorReceive()
+     *  which sets up the slices accordingly.
+     *  If this is a call -> recursion -> reply
+     *  we will go to case 4 by calling addRecursiveSyncTransNeedingCompletion()
+     *  The function takes B's PID, the binder object from A and the current
+     *  binder object from B. This function adds outstanding non-complete
+     *  transactions to a stack on thread B.
+     *
+     * Case Four: 'recursiveTrans'
+     *  This case follows Like above:
+     *  A sent binder_transaction
+     *  B got binder_transaction_received
+     *  B instead of replying to A can Call C or call 'into' A, ie recursion
+     *  Case four also deals with setting up a large slice to 'contain'
+     *  all the recursive transactions that happen until B finally replies to
+     *  A.
+     *
+     *
+     * An example: A-> B-> C-> B-> A
+     *
+     * (1) A starts a synchronous transaction to B.
+     * (2) A enters binderTransaction() event handler, hits the else statement
+     * (3) A calls addTransactionWaitingForRecv(trans key, object) to notify
+     *     Thread B.
+     * (4) B Enters binderTransactionReceived().
+     * (5) B hits the second if after calling
+     *     getTransactionWaitingForRecv(trans key)
+     *     This function returns us the object set up in step (3).
+     * (6) This is not an async transaction, B calls
+     *      setCurrentReceiveOnPID(B's PID, [ts for (4), object from (3)]).
+     *
+     * (7) B enters binderTransaction() event handler, first if triggers after
+     *     calling getPriorReceiveOnPID(B's PID) the tuple from (6) is returned.
+     *
+     * (8) Execution enters modelPriorReceive().
+     * (8a) A slice is setup for this binder transaction in B's timeline.
+     * (9) This is not a reply to thread A, B is going to call Thread C.
+     * (10) else statement is hit.
+     * (11) We set the tile from (8a) to be binder_reply this is the
+     *     'containg slice' for the recursion
+     * (12) We create a new slice 'binder_transaction' this slice is the
+     *      recursive slice that will have arrows to Thread C's slice.
+     * (13) addRecursiveSyncTransNeedingCompletion(B's PID,
+     *                                            [obj from (3), obj from 7])
+     *      this sets up notification that B's pid has outstanding recursive
+     *      transactions that need to be completed.
+     * (14) B notifies C that a transaction is waiting for it by calling
+     *      addTransactionWaitingForRecv like in step (3).
+     * (15) C enters binderTransactionReceived() step 5 6 7 8 8a happen, but in
+     *      the context of Thread C.
+     * (16) C is in modelPriorReceive(), it hits the first if statement,
+     *      this transaction _IS_ a reply, and it is a reply to B.
+     * (17) C calls addSyncTransNeedingCompletion(trans key,
+     *                                       [object from(3), object from 15-5])
+     * (18) B enters binderTransactionReceived() hits the first if after calling
+     *      getSyncTransNeedingCompletion(trans key from (17)) the tuple from
+     *     (17) gets returned.
+     *
+     * (19) B scales up the slice created in (12) and sets up flows from 15-8a
+     *      slice.
+     * (20) B enters BinderTransaction() event handler and the second if is hit
+     *      after calling getRecursiveTransactionNeedingCompletion(B's pid).
+     * (21) modelRecursiveTransactions() gets called, first if executes.
+     * (22) slice durations are fixed up.
+     * (23) B notifies A via
+     *      addSyncTransNeedingCompletion(trans key, binder obj from 8a).
+     * (24) B deletes the outstanding asynctrans via
+     (      removeRecursiveTransaction(B's pid).
+     * (25) A enters binderTransactionReceived() event handler and finishes up
+     *      some flows, and slices.
+     */
+    binderTransaction(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = binderTransRE.exec(eventBase.details);
+      if (event === undefined) return false;
+
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      this.doNameMappings(pid, tgid, eventBase.threadName);
+
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(eventBase.threadName, tgid, pid);
+
+      const trans = new BinderTransaction(event, pid, ts, kthread);
+      const args = generateBinderArgsForSlice(trans, eventBase.threadName);
+      /**
+       * This thread previously ack'd the transaction with a
+       * transaction_received. That means someone sent us a message we processed
+       * it and are now sending a transaction.
+       * The transaction could be a response, or it could be recursive.
+       */
+      const priorReceive = this.getPriorReceiveOnPID(pid);
+
+      if (priorReceive !== false) {
+        return this.modelPriorReceive(priorReceive, ts, pid, tgid, kthread,
+            trans, args, event);
+      }
+      /**
+       * This Thread has an already established recursive slice. We will now
+       * either complete the entire transaction, OR do more recursive calls.
+       */
+      const recursiveTrans = this.getRecursiveTransactionNeedingCompletion(pid);
+
+      if (recursiveTrans !== false) {
+        return this.modelRecursiveTransactions(recursiveTrans, ts, pid,
+            kthread, trans, args);
+      }
+
+      /**
+       * Start of a Transaction. This thread is the initiator of either a call
+       * response, an async call -> ack, or a call -> recursion -> response.
+       * Note, we put a fake duration into this slice and patch it up later.
+       */
+      const slice = kthread.thread.sliceGroup.pushCompleteSlice('binder',
+          '', ts, .03, 0, 0, args);
+
+      slice.colorId = ColorScheme.getColorIdForGeneralPurposeString(
+          ts.toString());
+      trans.slice = slice;
+
+      if (trans.expect_reply) {
+        slice.title = 'binder transaction';
+      } else {
+        slice.title = 'binder transaction async';
+      }
+
+      this.addTransactionWaitingForRecv(trans.transaction_key, trans);
+
+      return true;
+    },
+
+    binderTransactionReceived(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      const event = binderTransReceivedRE.exec(eventBase.details);
+      if (event === undefined) return false;
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      const transactionkey = parseInt(event[1]);
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(eventBase.threadName, tgid, pid);
+
+      const syncComplete = this.getSyncTransNeedsCompletion(transactionkey);
+
+      if (syncComplete !== false) {
+        /* This recv is the completion of a synchronous transaction.
+         * We need to scale the slice up to the current ts and finish
+         * creating some flows.
+         */
+        const syncTrans = syncComplete[0];
+        const syncSlice = syncTrans.slice;
+        const responseTrans = syncComplete[1];
+        const responseSlice = responseTrans.slice;
+
+        syncSlice.duration = ts - syncSlice.start;
+        /** These calls are a little hack that places a very small slice at
+         *  the end of the sync slice and the response slice. This allows us
+         *  to hook flow events (arrows) from the start to the end of the
+         *  slices.
+         */
+        const syncInternal = doInternalSlice(syncTrans, syncSlice, ts);
+        const responseTs = responseSlice.start + responseSlice.duration;
+        const responseInternal = doInternalSlice(responseTrans,
+            responseSlice, responseTs);
+
+        if (responseSlice.outFlowEvents.length === 0 ||
+            syncSlice.inFlowEvents.length === 0) {
+          const flow = this.generateFlow(responseInternal, syncInternal,
+              responseTrans, syncTrans);
+
+          syncSlice.inFlowEvents.push(flow);
+          responseSlice.outFlowEvents.push(flow);
+          this.model_.flowEvents.push(flow);
+        }
+        // Move flow arrows -- but not the first one.
+        for (let i = 1; i < syncSlice.inFlowEvents.length; i++) {
+          syncSlice.inFlowEvents[i].duration =
+              ts - syncSlice.inFlowEvents[i].start;
+        }
+        return true;
+      }
+
+      const trForRecv = this.getTransactionWaitingForRecv(transactionkey);
+
+      if (trForRecv !== false) {
+        if (!trForRecv.expect_reply) {
+          // This is an async call place an Async slice.
+          const args = generateBinderArgsForSlice(trForRecv,
+              eventBase.threadName);
+          const slice = kthread.thread.sliceGroup.
+              pushCompleteSlice('binder',
+                  'binder Async recv',
+                  ts, .03, 0, 0,
+                  args);
+
+          const fakeEvent = [0, 0, 0, 0, 0, 0, 0];
+          const fakeTrans = new BinderTransaction(fakeEvent, pid, ts, kthread);
+          const flow = this.generateFlow(trForRecv.slice, slice,
+              trForRecv, fakeTrans);
+
+          this.model_.flowEvents.push(flow);
+          trForRecv.slice.title = 'binder transaction async';
+          trForRecv.slice.duration = .03;
+          return true;
+        }
+        // Setup prior receive.
+        trForRecv.slice.title = 'binder transaction';
+        this.setCurrentReceiveOnPID(pid, [ts, trForRecv]);
+        return true;
+      }
+      /** This case is when we received an ack for a transaction we have
+       *  never seen before. This usually happens at the start of a trace.
+       *  We will get incomplete transactions that started before started
+       *  tracing. Just discard them.
+       */
+      return false;
+    },
+
+    binderTransactionAllocBuf(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      const event = binderAllocRE.exec(eventBase.details);
+      if (event === null) return false;
+      const tgid = parseInt(eventBase.tgid);
+      if (isNaN(tgid)) return false;
+
+      const transactionkey = parseInt(event[1]);
+      const kthread = this.importer_.
+          getOrCreateBinderKernelThread(eventBase.threadName, tgid, pid);
+
+      const trans = this.peekTransactionWaitingForRecv(transactionkey);
+      if (trans && trans.slice) {
+        trans.slice.args['Data Size'] = parseInt(event[2]);
+        trans.slice.args['Offsets Size'] = parseInt(event[3]);
+        return true;
+      }
+      return false;
+    },
+
+
+    // helper functions
+    modelRecursiveTransactions(recursiveTrans, ts, pid, kthread,
+        trans, args) {
+      const recursiveSlice = recursiveTrans[1].slice;
+      const origSlice = recursiveTrans[0].slice;
+      recursiveSlice.duration = ts - recursiveSlice.start;
+      recursiveSlice.args = args;
+      trans.slice = recursiveSlice;
+
+      if (trans.is_reply_transaction) {
+        /* Case one:
+         * This transaction is finally the reply of the recursion.
+         */
+        origSlice.duration = ts - origSlice.start;
+        this.addSyncTransNeedingCompletion(trans.transaction_key,
+            recursiveTrans);
+
+        if (isReplyToOrigin(recursiveTrans[0], trans)) {
+          this.removeRecursiveTransaction(pid);
+        }
+      } else {
+        /**
+         *  Case two:
+         *  This transaction is more recursive calls.
+         *  This is a nested call within an already started transaction,
+         *  it can either be a async or a normal sync transaction.
+         */
+        const slice = kthread.thread.sliceGroup.pushCompleteSlice('binder',
+            '', ts, .03, 0,
+            0, args);
+
+        trans.slice = slice;
+        this.addTransactionWaitingForRecv(trans.transaction_key, trans);
+      }
+      return true;
+    },
+
+    modelPriorReceive(priorReceive, ts, pid, tgid, kthread, trans,
+        args, event) {
+      const calleeSlice = priorReceive[1].slice;
+      const calleeTrans = priorReceive[1];
+      const recvTs = priorReceive[0];
+      let slice = kthread.thread.sliceGroup.pushCompleteSlice('binder',
+          '', recvTs, ts - recvTs, 0, 0);
+
+      const flow = this.generateFlow(calleeSlice, slice, calleeTrans, trans);
+      this.model_.flowEvents.push(flow);
+      trans.slice = slice;
+
+      if (trans.is_reply_transaction) {
+        /* This is a response to a synchronous or a recursive sync
+         * transaction.
+         */
+        slice.title = 'binder reply';
+        slice.args = args;
+        /* Notify this transaction key that when it recv's it is completing
+         * a sync transaction.
+         */
+        this.addSyncTransNeedingCompletion(trans.transaction_key,
+            [calleeTrans, trans]);
+      } else {
+        /**
+         * Recursive calls and or calls around, either way it's not
+         * going to complete a transaction.
+         */
+        slice.title = 'binder reply';
+        /* Since this is a recursive transaction we want to create the main
+           * large slice which will contain all these recursive transactions.
+           * For that we created the main slice above and this is a recursive
+           * transaction that will be placed right below it. Note, that this
+           * is only for the first recursive transaction. If more come they will
+           * be handled below in the getRecursiveTransactionNeedingCompletion
+           */
+        const trans1 = new BinderTransaction(event, pid, ts, kthread);
+
+        slice = kthread.thread.sliceGroup.
+            pushCompleteSlice('binder',
+                'binder transaction',
+                recvTs,
+                (ts - recvTs), 0,
+                0, args);
+
+        /* could be a async trans if so set the length to be a small one */
+        if (!trans.expect_reply) {
+          slice.title = 'binder transaction async';
+          slice.duration = .03;
+        } else {
+          /* stupid hack to stop merging of AIDL slices and
+             * this slice. This is currently disabled, if AIDL tracing is on we
+             * will see merging of this slice and the AIDL slice. Once upstream
+             * has a solution for flow events to be placed in the middle of
+             * slices this part can be fixed.
+             *
+             * This is commented out because AIDL tracing doesn't exit yet.
+             */
+          // slice.start += .15;
+        }
+        trans1.slice = slice;
+        this.addRecursiveSyncTransNeedingCompletion(pid,
+            [calleeTrans, trans]);
+        this.addTransactionWaitingForRecv(trans.transaction_key, trans1);
+      }
+      return true;
+    },
+
+    getRecursiveTransactionNeedingCompletion(pid) {
+      if (this.recursiveSyncTransWaitingCompletion_ByPID[pid] === undefined) {
+        return false;
+      }
+
+      const len = this.recursiveSyncTransWaitingCompletion_ByPID[pid].length;
+      if (len === 0) return false;
+
+      return this.recursiveSyncTransWaitingCompletion_ByPID[pid][len - 1];
+    },
+
+    addRecursiveSyncTransNeedingCompletion(pid, tuple) {
+      if (this.recursiveSyncTransWaitingCompletion_ByPID[pid] === undefined) {
+        this.recursiveSyncTransWaitingCompletion_ByPID[pid] = [];
+      }
+
+      this.recursiveSyncTransWaitingCompletion_ByPID[pid].push(tuple);
+    },
+
+    removeRecursiveTransaction(pid) {
+      const len = this.recursiveSyncTransWaitingCompletion_ByPID[pid].length;
+      if (len === 0) {
+        delete this.recursiveSyncTransWaitingCompletion_ByPID[pid];
+        return;
+      }
+
+      this.recursiveSyncTransWaitingCompletion_ByPID[pid].splice(len - 1, 1);
+    },
+
+    setCurrentReceiveOnPID(pid, tuple) {
+      if (this.receivedTransWaitingConversion[pid] === undefined) {
+        this.receivedTransWaitingConversion[pid] = [];
+      }
+      this.receivedTransWaitingConversion[pid].push(tuple);
+    },
+
+    getPriorReceiveOnPID(pid) {
+      if (this.receivedTransWaitingConversion[pid] === undefined) {
+        return false;
+      }
+
+      const len = this.receivedTransWaitingConversion[pid].length;
+      if (len === 0) return false;
+
+      return this.receivedTransWaitingConversion[pid].splice(len - 1, 1)[0];
+    },
+
+    addSyncTransNeedingCompletion(transactionkey, tuple) {
+      const dict = this.syncTransWaitingCompletion;
+      dict[transactionkey] = tuple;
+    },
+
+    getSyncTransNeedsCompletion(transactionkey) {
+      const ret = this.syncTransWaitingCompletion[transactionkey];
+      if (ret === undefined) return false;
+
+      delete this.syncTransWaitingCompletion[transactionkey];
+      return ret;
+    },
+
+    getTransactionWaitingForRecv(transactionkey) {
+      const ret = this.transWaitingRecv[transactionkey];
+      if (ret === undefined) return false;
+
+      delete this.transWaitingRecv[transactionkey];
+      return ret;
+    },
+
+    peekTransactionWaitingForRecv(transactionkey) {
+      const ret = this.transWaitingRecv[transactionkey];
+      if (ret === undefined) return false;
+      return ret;
+    },
+
+    addTransactionWaitingForRecv(transactionkey, transaction) {
+      this.transWaitingRecv[transactionkey] = transaction;
+    },
+
+    generateFlow(from, to, fromTrans, toTrans) {
+      const title = 'Transaction from : ' +
+        this.pid2name(fromTrans.calling_pid) +
+        ' From PID: ' + fromTrans.calling_pid + ' to pid: ' +
+        toTrans.calling_pid +
+        ' Thread Name: ' + this.pid2name(toTrans.calling_pid);
+
+      const ts = from.start;
+      const flow = new tr.model.FlowEvent('binder', 'binder',
+          title, 1, ts, []);
+      flow.startSlice = from;
+      flow.endSlice = to;
+      flow.start = from.start;
+      flow.duration = to.start - ts;
+
+      from.outFlowEvents.push(flow);
+      to.inFlowEvents.push(flow);
+
+      return flow;
+    },
+
+    generateArgsForSlice(tgid, pid, name, kthread) {
+      return {
+        'Thread Name': name,
+        pid,
+        'gid': tgid
+      };
+    },
+
+    pid2name(pid) {
+      return this.kthreadlookup[pid];
+    },
+
+    doNameMappings(pid, tgid, name) {
+      this.registerPidName(pid, name);
+      this.registerPidName(tgid, name);
+    },
+
+    registerPidName(pid, name) {
+      if (this.pid2name(pid) === undefined) {
+        this.kthreadlookup[pid] = name;
+      }
+    }
+  };
+
+  Parser.register(BinderParser);
+  return {
+    BinderParser,
+  };
+});
+</script>

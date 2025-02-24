@@ -1,0 +1,25 @@
+# Names should be added to this file with this pattern:
+#
+# For individuals:
+#   Name <email address>
+#
+# For organizations:
+#   Organization <fnmatch pattern>
+#
+# See python fnmatch module documentation for more information.
+
+Anton Zub <azb.0x7dc@gmail.com>
+Jincheol Jo <jincheol.jo@navercorp.com>
+Kris Selden <kris.selden@gmail.com>
+Maciek Weksej <maciek.weksej@gmail.com>
+Magda Zawora <magda.zawora@gmail.com>
+Martijn Croonen <martijn@martijnc.be>
+Mathieu Laprise <mathlaprise@gmail.com>
+Sylvester Willis <sylvester.lee.willis@gmail.com>
+Wang Qing <wangqing-hf@loongson.cn>
+Yuzhao Zhang <yuzhao.zhang@intel.com>
+
+The Chromium Authors <*@chromium.org>
+Google Inc. <*@google.com>
+Microsoft <*@microsoft.com>
+Yandex LLC <*@yandex-team.ru>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/jobs-page.html">
+<link rel="import" href="/static/testing_common.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const mockResponse = {
+      'job_list': [
+        {
+          'job_id': 12345,
+          'configuration': 'configuration',
+          'test_suite': 'test_suite',
+          'test': 'test',
+          'metric': 'metric',
+          'status': 'RUNNING',
+          'created': '2017-01-30',
+          'updated': '2017-01-30'
+        }
+      ],
+      'job_count': 1
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('jobs-page');
+    this.addHTMLOutput(page);
+  }, testOptions);
+});
+</script>

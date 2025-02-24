@@ -1,0 +1,55 @@
+boto v2.35.0
+===========
+
+:date: 2015/01/08
+
+This release adds support for Amazon EC2 Classic Link which allows users
+to link classic instances to Classic Link enabled VPCs,
+adds support for Amazon CloudSearch Domain, adds sigv4 support
+for Elastic Load Balancing, and fixes several other issues including issues
+making anonymous AWS Security Token Service requests.
+
+
+Changes
+-------
+* Add Amazon EC2 Classic Link support (:sha: `5dbd2d7`)
+* Add query string to body for anon STS POST (:issue:`2812`, :sha:`6513789`)
+* Fix bug that prevented initializing a dynamo item from existing item (:issue:`2764`, :sha:`743e814`)
+* * switchover-sigv4:   Add integ tests for sigv4 switchover   Switch elb/ec2 over to signature version 4 (:sha:`0dadce8`)
+* Return SetStackPolicyResponse - (:issue:`2822`, :issue:`2346`, :issue:`2639`, :sha:`c4defb4`)
+* Added ELB Attributes to docs. (:issue:`2821`, :sha:`5dfeba9`)
+* Fix bug by using correct string joining syntax. (:issue:`2817`, :sha:`8426148`)
+* Fix SES get_identity_dkim_attributes when input length > 1. (:issue:`2810`, :sha:`cc4d42d`)
+* DynamoDB table batch_get fails to process all remaining results if single batch result is empty. (:issue:`2809`, :sha:`a193bc0`)
+* Added suppport for additional fields in EMR objects. (:issue:`2807`, :sha:`2936ac0`)
+* Pass version_id in copy if key is versioned. (:issue:`2803`, :sha:`66b3604`)
+* Add support for SQS PurgeQueue operation. (:issue:`2806`, :sha:`90a5d44`)
+* Update documentation for launchconfig. (:issue:`2802`, :sha:`0dc8412`)
+* Remove unimplemented config param. (:issue:`2801`, :issue:`2572`, :sha:`f1a5ebd`)
+* Add support for private hosted zones. (:issue:`2785`, :sha:`2e7829b`)
+* Fix Key.change_storage_class so that it obeys dst_bucket. (:issue:`2752`, :sha:`55ed184`)
+* Fix for s3put host specification. (:issue:`2736`, :issue:`2522`, :sha:`1af31f2`)
+* Improve handling of Glacier HTTP 204 responses. (:issue:`2726`, :sha:`c314298`)
+* Fix raising exception syntax in Python 3. (:issue:`2735`, :issue:`2563`, :sha:`58f76f6`)
+* Privatezone: Adding unit/integration test coverage (:issue:`1`, :sha:`d1ff14e`)
+* Minor documentation/pep8 fixes. (:issue:`2753`, :sha:`6a853be`)
+* Correct argument type in doc string. (:issue:`2728`, :sha:`1ddf6df`)
+* Use exclusive start key to get all items from DynamoDB query. (:issue:`2676`, :issue:`2573`, :sha:`419d8a5`)
+* Updated link to current config documentation. (:issue:`2755`, :sha:`9be3f85`)
+* Fix the SQS certificate error for region cn-north-1. (:issue:`2766`, :sha:`1d5368a`)
+* Adds support for getting health checker IP ranges from Route53. (:issue:`2792`, :sha:`ee14911`)
+* fix: snap.create_volume documentation lists general purpose ssd. Fixes @2774. (:issue:`2774`, :sha:`36fae2b`)
+* Fixed param type in get_contents_to_filename docstring. (:issue:`2783`, :sha:`478f66a`)
+* Update DynamoDB local example to include fake access key id. (:issue:`2791`, :sha:`2c1f8d5`)
+* Added 'end' attribute to ReservedInstance. (:issue:`2793`, :issue:`2757`, :sha:`28814d8`)
+* Parse ClusterStatus’s StateChangeReason. (:issue:`2696`, :sha:`48c5d17`)
+* Adds SupportedProducts field to EMR JobFlow objects. (:issue:`2775`, :sha:`6771d04`)
+* Fix EMR endpoint. (:issue:`2750`, :sha:`8329e02`)
+* Detect old-style S3 URL for auto-sigv4. (:issue:`2773`, :sha:`f5be409`)
+* Throw host warning for cloudsearch domain (:issue:`2765`, :sha:`9af6f41`)
+* Fix CloudSearch2 to work with IAM-based search and upload requests (:issue:`2717`, :sha:`9f4fe8b`)
+* iam: add support for Account Password Policy APIs (:issue:`2574`, :sha:`6c9bd53`)
+* Handle sigv4 non-string header values properly (:issue:`2744`, :sha:`e043e4b`)
+* Url encode query string for pure query (:issue:`2720`, :sha:`bbbf9d2`)
+
+

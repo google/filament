@@ -1,0 +1,114 @@
+#!/usr/bin/env python
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+import argparse
+import json
+import sys
+import os
+import six
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+import tracing_project
+tracing_project.UpdateSysPathIfNeeded()
+from py_utils import camel_case
+from tracing.value.diagnostics import add_reserved_diagnostics
+from tracing.value.diagnostics import generic_set
+from tracing.value.diagnostics import reserved_infos
+
+
+LOG_URLS_CAMELCASE = camel_case.ToUnderscore(reserved_infos.LOG_URLS.name)
+LOG_URLS_K = LOG_URLS_CAMELCASE + '_k'
+LOG_URLS_V = LOG_URLS_CAMELCASE + '_v'
+
+BUILD_URLS_CAMELCASE = camel_case.ToUnderscore(reserved_infos.BUILD_URLS.name)
+BUILD_URLS_K = BUILD_URLS_CAMELCASE + '_k'
+BUILD_URLS_V = BUILD_URLS_CAMELCASE + '_v'
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Adds reserved diagnostics to a HistogramSet, merges '
+      'Histograms across story repetitions and across stories, optionally '
+      'batches results into multiple files.',
+      add_help=False)
+  parser.add_argument('input_path',
+                      help='HistogramSet JSON file path (input).')
+  parser.add_argument(
+      '--stdout',
+      action='store_true',
+      help='If present, will print the new HistogramSet instead of '
+           'clobbering the file referenced by input_path.')
+  parser.add_argument(
+      '--output_path',
+      help='If present, will write new HistogramSet to this file instead of '
+           'clobbering the file referenced by input_path. If max_bytes > 0, '
+           'then multiple files may be produced with consecutive integers '
+           'between the base name and extension of the output_path.')
+  parser.add_argument('--max_bytes', type=int, default=0, help=(
+      'If non-zero, results will be split to multiple files, each smaller than '
+      'MAX_BYTES. If max_bytes is smaller than a single Histogram, then its '
+      'file may be larger than max_bytes, or an exception may be raised.'))
+  parser.add_argument('-h', '--help', action='help',
+                      help='Show this help message and exit.')
+  arg_names_to_infos = {}
+  for info in reserved_infos.AllInfos():
+    if info.type == 'GenericSet':
+      name = camel_case.ToUnderscore(info.name)
+      arg_names_to_infos[name] = info
+      parser.add_argument('--%s' % name)
+
+  # TODO(#3770): Clean this up.
+  parser.add_argument('--%s' % LOG_URLS_K)
+  parser.add_argument('--%s' % LOG_URLS_V)
+
+  parser.add_argument('--%s' % BUILD_URLS_K)
+  parser.add_argument('--%s' % BUILD_URLS_V)
+
+  args = parser.parse_args()
+
+  names_to_values = {}
+  for name, value in six.iteritems(vars(args)):
+    if name == LOG_URLS_K and value is not None:
+      v_value = vars(args)[LOG_URLS_V]
+      names_to_values[reserved_infos.LOG_URLS.name] = [value, v_value]
+      continue
+    if name == BUILD_URLS_K and value is not None:
+      v_value = vars(args)[BUILD_URLS_V]
+      names_to_values[reserved_infos.BUILD_URLS.name] = [value, v_value]
+      continue
+    if name in arg_names_to_infos and value is not None:
+      diagnostic_name = arg_names_to_infos[name].name
+      ctor = arg_names_to_infos[name].entry_type
+      names_to_values[diagnostic_name] = ctor(value)
+
+  with open(args.input_path, 'r') as f:
+    dicts = json.loads(f.read())
+
+  if args.stdout and args.max_bytes:
+    args.max_bytes = 0
+
+  json_batches = add_reserved_diagnostics.AddReservedDiagnostics(
+      dicts, names_to_values, args.max_bytes)
+
+  if args.stdout:
+    assert len(json_batches) == 1, len(json_batches)
+    print(json_batches[0])
+  else:
+    path = args.output_path or args.input_path
+    if len(json_batches) == 1:
+      with open(path, 'wb') as f:
+        f.write(json_batches[0])
+    else:
+      base, ext = os.path.splitext(path)
+      for i, hs in enumerate(json_batches):
+        with open('%s.%04d%s' % (base, i, ext), 'wb') as f:
+          f.write(hs)
+
+  return 0
+
+if __name__ == '__main__':
+  sys.exit(main())

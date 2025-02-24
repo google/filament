@@ -1,0 +1,22 @@
+{
+  "src/common/PackedCLEnums_autogen.cpp":
+    "883883aafe2cc350882ea789f52db67c",
+  "src/common/PackedCLEnums_autogen.h":
+    "c2016e23792b0589789781f9180c1a56",
+  "src/common/PackedEGLEnums_autogen.cpp":
+    "fa1a367e583643570cd058127ae67e33",
+  "src/common/PackedEGLEnums_autogen.h":
+    "7d87e160a0c8ea26cb0c835729f7b586",
+  "src/common/PackedGLEnums_autogen.cpp":
+    "02ed16de01a83b2d9c315d7e7ae387a4",
+  "src/common/PackedGLEnums_autogen.h":
+    "c437f3061e4cef21a16602f67dc46070",
+  "src/common/gen_packed_gl_enums.py":
+    "3334498103ee8b13fe721519dd8e0742",
+  "src/common/packed_cl_enums.json":
+    "82f48aa039cbaf147b5e46be0ea8f153",
+  "src/common/packed_egl_enums.json":
+    "5797db941e95e418d69527eb4e4af900",
+  "src/common/packed_gl_enums.json":
+    "96c6d8a1b084a897f3145cbfdb7e3887"
+}

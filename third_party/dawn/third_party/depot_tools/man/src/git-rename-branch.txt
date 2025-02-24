@@ -1,0 +1,28 @@
+git-rename-branch(1)
+====================
+
+NAME
+----
+git-rename-branch -
+include::_git-rename-branch_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git rename-branch' <new_name>
+'git rename-branch' <old_name> <new_name>
+
+DESCRIPTION
+-----------
+
+Rename the current (or specified) branch, then update all dowstream branches'
+tracking information to preserve inter-branch dependencies.
+
+SEE ALSO
+--------
+linkgit:git-rebase-update[1], linkgit:git-reparent-branch[1],
+linkgit:git-new-branch[1], linkgit:git-upstream-diff[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

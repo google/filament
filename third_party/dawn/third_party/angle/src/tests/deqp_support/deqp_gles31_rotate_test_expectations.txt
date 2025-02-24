@@ -1,0 +1,17 @@
+// Copyright 2020 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See README.md for format.
+
+// Only tested on Vulkan currently
+
+// SwiftShader does not support tessellation and geometry shaders
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box*tessellation* = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box*geometry* = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.full_clear_with_triangles = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.full_clear_with_triangles_per_primitive_bbox = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.scissored_clear_with_triangles = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.scissored_clear_with_triangles_per_primitive_bbox = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.scissored_full_clear_with_triangles = SKIP
+b/224537784 SWIFTSHADER : dEQP-GLES31.functional.primitive_bounding_box.clear.scissored_full_clear_with_triangles_per_primitive_bbox = SKIP

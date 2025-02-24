@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_command_buffer_base___1_1make__shared__enabler.html" title="A class which restricts the creation of a pvrvk::CommandBufferBase to children or friends of a pvrvk:..." alt="" coords="5,39,219,80"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_command_buffer___1_1make__shared__enabler.html" title="A class which restricts the creation of a pvrvk::CommandBuffer to children or friends of a pvrvk::imp..." alt="" coords="281,5,491,47"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_secondary_command_buffer___1_1make__shared__enabler.html" title="A class which restricts the creation of a pvrvk::SecondaryCommandBuffer to children or friends of a p..." alt="" coords="267,71,505,112"/>
+</map>

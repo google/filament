@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/v8/v8_gc_stats_thread_slice.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-e-v8-gc-objects-stats-table'>
+  <template>
+    <style>
+    tr-ui-b-table {
+      flex: 0 0 auto;
+      align-self: stretch;
+      margin-top: 1em;
+      font-size: 12px;
+    }
+    .diff {
+      display: inline-block;
+      margin-top: 1em;
+      margin-left: 0.8em;
+    }
+    </style>
+    <div class="diff" id="diffOption">
+      Diff
+    </div>
+    <tr-ui-b-table id="diffTable"></tr-ui-b-table>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.v8', function() {
+  // Instance types that should not be part of the overview as they are either
+  // double-attributed (e.g. also part of some other instance type) or do not
+  // make any sense in memory profiling.
+  const IGNORED_ENTRIES = {
+    // Ignore code aging entries as they are already accounted in their
+    // respective code instance types.
+    match: full => full.startsWith('*CODE_AGE_')
+  };
+
+  // Groups are matched on a first-matched basis, i.e., once a group matches we
+  // are done with an entry.
+  // Requires properties:
+  // - match(full): Return true iff |full| should be part of the group and
+  //   false otherwise.
+  // - keyToName(key): Returns the human readable name for |key|.
+  // - nameToKey(name): Returns the key for |name|.
+  // Optional properties:
+  // - realEntry: A string representing the actual entry in the trace. If this
+  //   entry is present an additional entry UNKNOWN will be created holding all
+  //   the unaccounted data.
+  const INSTANCE_TYPE_GROUPS = {
+    FIXED_ARRAY_TYPE: {
+      match: full => full.startsWith('*FIXED_ARRAY_'),
+      realEntry: 'FIXED_ARRAY_TYPE',
+      keyToName: key => key.slice('*FIXED_ARRAY_'.length)
+          .slice(0, -('_SUB_TYPE'.length)),
+      nameToKey: name => '*FIXED_ARRAY_' + name + '_SUB_TYPE'
+    },
+    CODE_TYPE: {
+      match: full => full.startsWith('*CODE_'),
+      realEntry: 'CODE_TYPE',
+      keyToName: key => key.slice('*CODE_'.length),
+      nameToKey: name => '*CODE_' + name
+    },
+    JS_OBJECTS: {
+      match: full => full.startsWith('JS_'),
+      keyToName: key => key,
+      nameToKey: name => name
+    },
+    Strings: {
+      match: full => full.endsWith('STRING_TYPE'),
+      keyToName: key => key,
+      nameToKey: name => name
+    },
+    Maps: {
+      match: full => full.startsWith('MAP_') && full.endsWith('_TYPE'),
+      keyToName: key => key,
+      nameToKey: name => name
+    },
+    DescriptorArrays: {
+      match: full => full.endsWith('DESCRIPTOR_ARRAY_TYPE'),
+      keyToName: key => key,
+      nameToKey: name => name
+    }
+  };
+
+  const DIFF_COLOR = {
+    GREEN: '#64DD17',
+    RED: '#D50000'
+  };
+
+  function computePercentage(valueA, valueB) {
+    if (valueA === 0) return 0;
+    return valueA / valueB * 100;
+  }
+
+  class DiffEntry {
+    constructor(originalEntry, diffEntry) {
+      this.originalEntry_ = originalEntry;
+      this.diffEntry_ = diffEntry;
+    }
+    get title() {
+      return this.diffEntry_.title;
+    }
+    get overall() {
+      return this.diffEntry_.overall;
+    }
+    get overAllocated() {
+      return this.diffEntry_.overAllocated;
+    }
+    get count() {
+      return this.diffEntry_.count;
+    }
+    get overallPercent() {
+      return this.diffEntry_.overallPercent;
+    }
+    get overAllocatedPercent() {
+      return this.diffEntry_.overAllocatedPercent;
+    }
+    get origin() {
+      return this.originalEntry_;
+    }
+    get diff() {
+      return this.diffEntry_;
+    }
+    get subRows() {
+      return this.diffEntry_.subRows;
+    }
+  }
+
+  class Entry {
+    constructor(title, count, overall, overAllocated, histogram,
+        overAllocatedHistogram) {
+      this.title_ = title;
+      this.overall_ = overall;
+      this.count_ = count;
+      this.overAllocated_ = overAllocated;
+      this.histogram_ = histogram;
+      this.overAllocatedHistogram_ = overAllocatedHistogram;
+      this.bucketSize_ = this.histogram_.length;
+      this.overallPercent_ = 100;
+      this.overAllocatedPercent_ = 100;
+    }
+
+    get title() {
+      return this.title_;
+    }
+
+    get overall() {
+      return this.overall_;
+    }
+
+    get count() {
+      return this.count_;
+    }
+
+    get overAllocated() {
+      return this.overAllocated_;
+    }
+
+    get histogram() {
+      return this.histogram_;
+    }
+
+    get overAllocatedHistogram() {
+      return this.overAllocatedHistogram_;
+    }
+
+    get bucketSize() {
+      return this.bucketSize_;
+    }
+
+    get overallPercent() {
+      return this.overallPercent_;
+    }
+
+    set overallPercent(value) {
+      this.overallPercent_ = value;
+    }
+
+    get overAllocatedPercent() {
+      return this.overAllocatedPercent_;
+    }
+
+    set overAllocatedPercent(value) {
+      this.overAllocatedPercent_ = value;
+    }
+
+    setFromObject(obj) {
+      this.count_ = obj.count;
+      // Calculate memory in KB.
+      this.overall_ = obj.overall / 1024;
+      this.overAllocated_ = obj.over_allocated / 1024;
+      this.histogram_ = obj.histogram;
+      this.overAllocatedHistogram_ = obj.over_allocated_histogram;
+    }
+
+    diff(other) {
+      const entry = new Entry(this.title_, other.count_ - this.count,
+          other.overall_ - this.overall,
+          other.overAllocated_ - this.overAllocated, [], []);
+      entry.overallPercent = computePercentage(entry.overall, this.overall);
+      entry.overAllocatedPercent = computePercentage(entry.overAllocated,
+          this.overAllocated);
+      return new DiffEntry(this, entry);
+    }
+  }
+
+  class GroupedEntry extends Entry {
+    constructor(title, count, overall, overAllocated, histogram,
+        overAllocatedHistogram) {
+      super(title, count, overall, overAllocated, histogram,
+          overAllocatedHistogram);
+      this.histogram_.fill(0);
+      this.overAllocatedHistogram_.fill(0);
+      this.entries_ = new Map();
+    }
+
+    get title() {
+      return this.title_;
+    }
+
+    set title(value) {
+      this.title_ = value;
+    }
+
+    get subRows() {
+      return Array.from(this.entries_.values());
+    }
+
+    getEntryFromTitle(title) {
+      return this.entries_.get(title);
+    }
+
+    add(entry) {
+      this.count_ += entry.count;
+      this.overall_ += entry.overall;
+      this.overAllocated_ += entry.overAllocated;
+      if (this.bucketSize_ === entry.bucketSize) {
+        for (let i = 0; i < this.bucketSize_; ++i) {
+          this.histogram_[i] += entry.histogram[i];
+          this.overAllocatedHistogram_[i] += entry.overAllocatedHistogram[i];
+        }
+      }
+      this.entries_.set(entry.title, entry);
+    }
+
+    accumulateUnknown(title) {
+      let unknownCount = this.count_;
+      let unknownOverall = this.overall_;
+      let unknownOverAllocated = this.overAllocated_;
+      const unknownHistogram = tr.b.deepCopy(this.histogram_);
+      const unknownOverAllocatedHistogram =
+          tr.b.deepCopy(this.overAllocatedHistogram_);
+      for (const entry of this.entries_.values()) {
+        unknownCount -= entry.count;
+        unknownOverall -= entry.overall;
+        unknownOverAllocated -= entry.overAllocated;
+        for (let i = 0; i < this.bucketSize_; ++i) {
+          unknownHistogram[i] -= entry.histogram[i];
+          unknownOverAllocatedHistogram[i] -= entry.overAllocatedHistogram[i];
+        }
+      }
+      unknownOverAllocated =
+        unknownOverAllocated < 0 ? 0 : unknownOverAllocated;
+      this.entries_.set(title, new Entry(title, unknownCount, unknownOverall,
+          unknownOverAllocated, unknownHistogram,
+          unknownOverAllocatedHistogram));
+    }
+
+    calculatePercentage() {
+      for (const entry of this.entries_.values()) {
+        entry.overallPercent = computePercentage(entry.overall, this.overall_);
+        entry.overAllocatedPercent =
+          computePercentage(entry.overAllocated, this.overAllocated_);
+
+        if (entry instanceof GroupedEntry) entry.calculatePercentage();
+      }
+    }
+
+    diff(other) {
+      let newTitle = '';
+      if (this.title_.startsWith('Isolate')) {
+        newTitle = 'Total';
+      } else {
+        newTitle = this.title_;
+      }
+      const result = new GroupedEntry(newTitle, 0, 0, 0, [], []);
+      for (const entry of this.entries_) {
+        const otherEntry = other.getEntryFromTitle(entry[0]);
+        if (otherEntry === undefined) continue;
+        result.add(entry[1].diff(otherEntry));
+      }
+      result.overallPercent = computePercentage(result.overall, this.overall);
+      result.overAllocatedPercent = computePercentage(result.overAllocated,
+          this.overAllocated);
+      return new DiffEntry(this, result);
+    }
+  }
+
+  function createSelector(targetEl, defaultValue, items, callback) {
+    const selectorEl = document.createElement('select');
+    selectorEl.addEventListener('change', callback.bind(targetEl));
+    const defaultOptionEl = document.createElement('option');
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const optionEl = document.createElement('option');
+      Polymer.dom(optionEl).textContent = item.label;
+      optionEl.targetPropertyValue = item.value;
+      optionEl.item = item;
+      Polymer.dom(selectorEl).appendChild(optionEl);
+    }
+    selectorEl.__defineGetter__('selectedValue', function(v) {
+      if (selectorEl.children[selectorEl.selectedIndex] === undefined) {
+        return undefined;
+      }
+      return selectorEl.children[selectorEl.selectedIndex].targetPropertyValue;
+    });
+    selectorEl.__defineGetter__('selectedItem', function(v) {
+      if (selectorEl.children[selectorEl.selectedIndex] === undefined) {
+        return undefined;
+      }
+      return selectorEl.children[selectorEl.selectedIndex].item;
+    });
+    selectorEl.__defineSetter__('selectedValue', function(v) {
+      for (let i = 0; i < selectorEl.children.length; i++) {
+        const value = selectorEl.children[i].targetPropertyValue;
+        if (value === v) {
+          const changed = selectorEl.selectedIndex !== i;
+          if (changed) {
+            selectorEl.selectedIndex = i;
+            callback();
+          }
+          return;
+        }
+      }
+      throw new Error('Not a valid value');
+    });
+    selectorEl.selectedIndex = -1;
+
+    return selectorEl;
+  }
+
+  function plusMinus(value, toFixed = 3) {
+    return (value > 0 ? '+' : '') + value.toFixed(toFixed);
+  }
+
+  function addArrow(value) {
+    if (value === 0) return value;
+    if (value === Number.NEGATIVE_INFINITY) return '\u2193\u221E';
+    if (value === Number.POSITIVE_INFINITY) return '\u2191\u221E';
+    return (value > 0 ? '\u2191' : '\u2193') + Math.abs(value.toFixed(3));
+  }
+
+  Polymer({
+    is: 'tr-ui-e-v8-gc-objects-stats-table',
+
+    ready() {
+      this.$.diffOption.style.display = 'none';
+      this.isolateEntries_ = [];
+      this.selector1_ = undefined;
+      this.selector2_ = undefined;
+    },
+
+    constructDiffTable_(table) {
+      this.$.diffTable.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+      this.$.diffTable.tableColumns = [
+        {
+          title: 'Component',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.title;
+            return typeEl;
+          },
+          showExpandButtons: true
+        },
+        {
+          title: 'Overall Memory(KB)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = row.origin.overall.toFixed(3);
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.origin.overall - b.origin.overall;
+          }
+        },
+        {
+          title: 'diff(KB)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = plusMinus(row.overall);
+            if (row.overall > 0) {
+              spanEl.style.color = DIFF_COLOR.RED;
+            } else if (row.overall < 0) {
+              spanEl.style.color = DIFF_COLOR.GREEN;
+            }
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.overall - b.overall;
+          }
+        },
+        {
+          title: 'diff(%)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = addArrow(row.overallPercent);
+            if (row.overall > 0) {
+              spanEl.style.color = DIFF_COLOR.RED;
+            } else if (row.overall < 0) {
+              spanEl.style.color = DIFF_COLOR.GREEN;
+            }
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.overall - b.overall;
+          }
+        },
+        {
+          title: 'Over Allocated Memory(KB)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = row.origin.overAllocated.toFixed(3);
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.origin.overAllocated - b.origin.overAllocated;
+          }
+        },
+        {
+          title: 'diff(KB)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = plusMinus(row.overAllocated);
+            if (row.overAllocated > 0) {
+              spanEl.style.color = DIFF_COLOR.RED;
+            } else if (row.overAllocated < 0) {
+              spanEl.style.color = DIFF_COLOR.GREEN;
+            }
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.overAllocated - b.overAllocated;
+          }
+        },
+        {
+          title: 'diff(%)',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = addArrow(row.overAllocatedPercent);
+            if (row.overAllocated > 0) {
+              spanEl.style.color = DIFF_COLOR.RED;
+            } else if (row.overAllocated < 0) {
+              spanEl.style.color = DIFF_COLOR.GREEN;
+            }
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.overAllocated - b.overAllocated;
+          }
+        },
+        {
+          title: 'Count',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = row.origin.count;
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.origin.count - b.origin.count;
+          }
+        },
+        {
+          title: 'diff',
+          value(row) {
+            const spanEl = tr.ui.b.createSpan();
+            spanEl.innerText = plusMinus(row.count, 0);
+            if (row.count > 0) {
+              spanEl.style.color = DIFF_COLOR.RED;
+            } else if (row.count < 0) {
+              spanEl.style.color = DIFF_COLOR.GREEN;
+            }
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.count - b.count;
+          }
+        },
+      ];
+    },
+
+    buildOptions_() {
+      const items = [];
+      for (const isolateEntry of this.isolateEntries_) {
+        items.push({
+          label: isolateEntry.title,
+          value: isolateEntry
+        });
+      }
+      this.$.diffOption.style.display = 'inline-block';
+      this.selector1_ = createSelector(
+          this, '', items, this.diffOptionChanged_);
+      Polymer.dom(this.$.diffOption).appendChild(this.selector1_);
+      const spanEl = tr.ui.b.createSpan();
+      spanEl.innerText = ' VS ';
+      Polymer.dom(this.$.diffOption).appendChild(spanEl);
+      this.selector2_ = createSelector(
+          this, '', items, this.diffOptionChanged_);
+      Polymer.dom(this.$.diffOption).appendChild(this.selector2_);
+    },
+
+    diffOptionChanged_() {
+      const isolateEntry1 = this.selector1_.selectedValue;
+      const isolateEntry2 = this.selector2_.selectedValue;
+      if (isolateEntry1 === undefined || isolateEntry2 === undefined) {
+        return;
+      }
+      if (isolateEntry1 === isolateEntry2) {
+        this.$.diffTable.tableRows = [];
+        this.$.diffTable.rebuild();
+        return;
+      }
+      this.$.diffTable.tableRows = [isolateEntry1.diff(isolateEntry2)];
+      this.$.diffTable.rebuild();
+    },
+
+    constructTable_() {
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+      this.$.table.tableColumns = [
+        {
+          title: 'Component',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.title;
+            return typeEl;
+          },
+          showExpandButtons: true
+        },
+        {
+          title: 'Overall Memory (KB)',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.overall.toFixed(3);
+            return typeEl;
+          },
+          cmp(a, b) {
+            return a.overall - b.overall;
+          }
+        },
+        {
+          title: 'Over Allocated Memory (KB)',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.overAllocated.toFixed(3);
+            return typeEl;
+          },
+          cmp(a, b) {
+            return a.overAllocated - b.overAllocated;
+          }
+        },
+        {
+          title: 'Overall Count',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.count;
+            return typeEl;
+          },
+          cmp(a, b) {
+            return a.count - b.count;
+          }
+        },
+        {
+          title: 'Overall Memory Percent',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.overallPercent.toFixed(3) + '%';
+            return typeEl;
+          },
+          cmp(a, b) {
+            return a.overall - b.overall;
+          }
+        },
+        {
+          title: 'Overall Allocated Memory Percent',
+          value(row) {
+            const typeEl = document.createElement('span');
+            typeEl.innerText = row.overAllocatedPercent.toFixed(3) + '%';
+            return typeEl;
+          },
+          cmp(a, b) {
+            return a.overAllocated - b.overAllocated;
+          }
+        }
+      ];
+
+      this.$.table.sortColumnIndex = 1;
+      this.$.table.sortDescending = true;
+    },
+
+    buildSubEntry_(objects, groupEntry, keyToName) {
+      const typeGroup = INSTANCE_TYPE_GROUPS[groupEntry.title];
+      for (const instanceType of typeGroup) {
+        const e = objects[instanceType];
+        if (e === undefined) continue;
+        delete objects[instanceType];
+        let title = instanceType;
+        if (keyToName !== undefined) title = keyToName(title);
+        // Represent memery in KB unit.
+        groupEntry.add(new Entry(title, e.count, e.overall / 1024,
+            e.over_allocated / 1024, e.histogram,
+            e.over_allocated_histogram));
+      }
+    },
+
+    buildUnGroupedEntries_(objects, objectEntry, bucketSize) {
+      for (const title of Object.getOwnPropertyNames(objects)) {
+        const obj = objects[title];
+        const groupedEntry = new GroupedEntry(title, 0, 0, 0,
+            new Array(bucketSize),
+            new Array(bucketSize));
+        groupedEntry.setFromObject(obj);
+        objectEntry.add(groupedEntry);
+      }
+    },
+
+    createGroupEntries_(groupEntries, objects, bucketSize) {
+      for (const groupName of Object.getOwnPropertyNames(
+          INSTANCE_TYPE_GROUPS)) {
+        const groupEntry = new GroupedEntry(groupName, 0, 0, 0,
+            new Array(bucketSize),
+            new Array(bucketSize));
+        if (INSTANCE_TYPE_GROUPS[groupName].realEntry !== undefined) {
+          groupEntry.savedRealEntry =
+              objects[INSTANCE_TYPE_GROUPS[groupName].realEntry];
+          delete objects[INSTANCE_TYPE_GROUPS[groupName].realEntry];
+        }
+        groupEntries[groupName] = groupEntry;
+      }
+    },
+
+    buildGroupEntries_(groupEntries, objectEntry) {
+      for (const groupName of Object.getOwnPropertyNames(groupEntries)) {
+        const groupEntry = groupEntries[groupName];
+        if (groupEntry.savedRealEntry !== undefined) {
+          groupEntry.setFromObject(groupEntry.savedRealEntry);
+          groupEntry.accumulateUnknown('UNKNOWN');
+          delete groupEntry.savedRealEntry;
+        }
+        objectEntry.add(groupEntry);
+      }
+    },
+
+    buildSubEntriesForGroups_(groupEntries, objects) {
+      for (const instanceType of Object.getOwnPropertyNames(objects)) {
+        if (IGNORED_ENTRIES.match(instanceType)) {
+          delete objects[instanceType];
+          continue;
+        }
+        const e = objects[instanceType];
+        for (const name of Object.getOwnPropertyNames(INSTANCE_TYPE_GROUPS)) {
+          const group = INSTANCE_TYPE_GROUPS[name];
+          if (group.match(instanceType)) {
+            groupEntries[name].add(new Entry(
+                group.keyToName(instanceType), e.count, e.overall / 1024,
+                e.over_allocated / 1024, e.histogram,
+                e.over_allocated_histogram));
+            delete objects[instanceType];
+          }
+        }
+      }
+    },
+
+    build_(objects, objectEntry, bucketSize) {
+      delete objects.END;
+      const groupEntries = {};
+      this.createGroupEntries_(groupEntries, objects, bucketSize);
+      this.buildSubEntriesForGroups_(groupEntries, objects);
+      this.buildGroupEntries_(groupEntries, objectEntry);
+      this.buildUnGroupedEntries_(objects, objectEntry, bucketSize);
+    },
+
+    set selection(slices) {
+      slices.sortEvents(function(a, b) {
+        return b.start - a.start;
+      });
+      const previous = undefined;
+      for (const slice of slices) {
+        if (!slice instanceof tr.e.v8.V8GCStatsThreadSlice) continue;
+        const liveObjects = slice.liveObjects;
+        const deadObjects = slice.deadObjects;
+        const isolate = liveObjects.isolate;
+
+        const isolateEntry =
+            new GroupedEntry(
+                'Isolate_' + isolate + ' at ' + slice.start.toFixed(3) + ' ms',
+                0, 0, 0, [], []);
+        const liveEntry = new GroupedEntry('live objects', 0, 0, 0, [], []);
+        const deadEntry = new GroupedEntry('dead objects', 0, 0, 0, [], []);
+
+        const liveBucketSize = liveObjects.bucket_sizes.length;
+        const deadBucketSize = deadObjects.bucket_sizes.length;
+
+        this.build_(tr.b.deepCopy(liveObjects.type_data), liveEntry,
+            liveBucketSize);
+        isolateEntry.add(liveEntry);
+
+        this.build_(tr.b.deepCopy(deadObjects.type_data), deadEntry,
+            deadBucketSize);
+        isolateEntry.add(deadEntry);
+
+        isolateEntry.calculatePercentage();
+        this.isolateEntries_.push(isolateEntry);
+      }
+      this.updateTable_();
+
+      if (slices.length > 1) {
+        this.buildOptions_();
+        this.constructDiffTable_();
+      }
+    },
+
+    updateTable_() {
+      this.constructTable_();
+      this.$.table.tableRows = this.isolateEntries_;
+      this.$.table.rebuild();
+    },
+  });
+
+  return {};
+});
+</script>

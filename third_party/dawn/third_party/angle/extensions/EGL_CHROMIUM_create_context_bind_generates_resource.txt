@@ -1,0 +1,87 @@
+Name
+
+    CHROMIUM_create_context_bind_generates_resource
+
+Name Strings
+
+    EGL_CHROMIUM_create_context_bind_generates_resource
+
+Contributors
+
+    Geoff Lang
+
+Contacts
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, September 21, 2016
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    Requires EGL 1.4.
+
+    Written against the EGL 1.4 specification.
+
+    This spec interacts with GL_CHROMIUM_bind_generates_resource (or
+    equivalent) extension.
+
+Overview
+
+    This extension allows the creation of an OpenGL or OpenGL ES context that
+    allows or disallows implicit creation of OpenGL resources on bind.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_CONTEXT_BIND_GENERATES_RESOURCE_CHROMIUM 0x33AD
+
+Additions to the EGL 1.4 Specification
+
+    Add the following to section 3.7.1 "Creating Rendering Contexts":
+
+    EGL_CONTEXT_BIND_GENERATES_RESOURCE_CHROMIUM indicates whether the context
+    should be created with the GL_BIND_GENERATES_RESOURCE_CHROMIUM state
+    initialized to GL_TRUE or GL_FALSE. The default value of
+    EGL_CONTEXT_BIND_GENERATES_RESOURCE_CHROMIUM is EGL_TRUE.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Sept 21, 2016  geofflang  Initial version

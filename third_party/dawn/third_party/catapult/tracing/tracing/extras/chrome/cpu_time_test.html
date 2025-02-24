@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/cpu_time.html">
+<link rel="import" href="/tracing/extras/chrome/cpu_time_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const getStageToInitiatorToSegmentBounds =
+      tr.e.chrome.CpuTime.getStageToInitiatorToSegmentBounds;
+
+  const INITIATOR_TYPE = tr.model.um.INITIATOR_TYPE;
+
+  const CHROME_PROCESS_NAMES =
+        tr.e.chrome.chrome_processes.CHROME_PROCESS_NAMES;
+
+  const constructMultiDimensionalView =
+        tr.e.chrome.CpuTime.constructMultiDimensionalView;
+
+  const buildModelFromSpec = tr.e.chrome.cpuTimeTestUtils.buildModelFromSpec;
+
+  test('getStageToInitiatorToSegmentBounds', () => {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(1);
+      // This is needed for a model to have segments.
+      thread.name = 'CrBrowserMain';
+
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, INITIATOR_TYPE.CSS,
+          100, // start time.
+          300 // duration.
+      ));
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, INITIATOR_TYPE.VIDEO, 300, 100));
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, INITIATOR_TYPE.SCROLL, 400, 200));
+    });
+
+    const segments = model.userModel.segments;
+
+    const map = getStageToInitiatorToSegmentBounds(
+        model.userModel.segments, model.bounds);
+
+    // Ignoring Idle Expectations, we have the following segments:
+    // [100, 300]: CSS Animation
+    // [300, 400]: CSS Animation, Video Animation
+    // [400, 600]: Scroll Response
+    const allSegments = [...map.get('all_stages').get('all_initiators')];
+    assert.sameDeepMembers(
+        allSegments.map(s => [s.min, s.max]),
+        [[100, 300], [300, 400], [400, 600]]
+    );
+
+    const videoAnimationSegments =
+        [...map.get('Animation').get(INITIATOR_TYPE.VIDEO)];
+    assert.sameDeepMembers(
+        videoAnimationSegments.map(s => [s.min, s.max]),
+        [[300, 400]]);
+
+    const cssAnimationSegments =
+        [...map.get('Animation').get(INITIATOR_TYPE.CSS)];
+    assert.sameDeepMembers(
+        cssAnimationSegments.map(s => [s.min, s.max]),
+        [[100, 300], [300, 400]]);
+
+    const allAnimationSegments =
+        [...map.get('Animation').get('all_initiators')];
+    assert.sameDeepMembers(
+        allAnimationSegments.map(s => [s.min, s.max]),
+        [[100, 300], [300, 400]]);
+
+    const scrollResponseSegments =
+          [...map.get('Response').get(INITIATOR_TYPE.SCROLL)];
+    assert.sameDeepMembers(
+        scrollResponseSegments.map(s => [s.min, s.max]),
+        [[400, 600]]);
+
+    const allResponseSegments =
+          [...map.get('Response').get('all_initiators')];
+    assert.sameDeepMembers(
+        allResponseSegments.map(s => [s.min, s.max]),
+        [[400, 600]]);
+  });
+
+  test('getStageToInitiatorToSegmentBounds-rangeOfInterest', () => {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(1);
+      // This is needed for a model to have segments.
+      thread.name = 'CrBrowserMain';
+
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, INITIATOR_TYPE.CSS,
+          100, // start time.
+          300 // duration.
+      ));
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, INITIATOR_TYPE.VIDEO, 300, 100));
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, INITIATOR_TYPE.SCROLL, 400, 200));
+    });
+
+    const segments = model.userModel.segments;
+
+    const map = getStageToInitiatorToSegmentBounds(model.userModel.segments,
+        tr.b.math.Range.fromExplicitRange(150, 350));
+
+    // Ignoring Idle Expectations, we have the following segments in range:
+    // [150, 300]: CSS Animation
+    // [300, 350]: CSS Animation, Video Animation
+    const allSegments = [...map.get('all_stages').get('all_initiators')];
+    assert.sameDeepMembers(
+        allSegments.map(s => [s.min, s.max]),
+        [[150, 300], [300, 350]]
+    );
+
+    const videoAnimationSegments =
+        [...map.get('Animation').get(INITIATOR_TYPE.VIDEO)];
+    assert.sameDeepMembers(
+        videoAnimationSegments.map(s => [s.min, s.max]),
+        [[300, 350]]);
+
+    const cssAnimationSegments =
+        [...map.get('Animation').get(INITIATOR_TYPE.CSS)];
+    assert.sameDeepMembers(
+        cssAnimationSegments.map(s => [s.min, s.max]),
+        [[150, 300], [300, 350]]);
+
+    const allAnimationSegments =
+        [...map.get('Animation').get('all_initiators')];
+    assert.sameDeepMembers(
+        allAnimationSegments.map(s => [s.min, s.max]),
+        [[150, 300], [300, 350]]);
+
+    // There should be no Response segments
+    assert.isFalse(map.has('Response'));
+  });
+
+  /**
+   * Given the root node of a top down multidimensional tree view, returns
+   * the node at |path|.
+   */
+  function getNodeValues_(root, path) {
+    let node = root;
+    for (let i = 0; i < path.length; i++) {
+      for (const component of path[i]) {
+        node = node.children[i].get(component);
+      }
+    }
+    return node.values;
+  }
+
+  const getCpuUsage_ = nodeValues => nodeValues[0].total;
+  const getCpuTotal_ = nodeValues => nodeValues[1].total;
+
+  /**
+   * Returns a simple model spec with one process (browser process) and one
+   * thread (CrBrowserMain).
+   *
+   * It does not contain any slices or expectations - those should be added
+   * manually.
+   *
+   * This is a function instead of just a variable because the test functions
+   * are meant to modify this modelSpec and insert suitable expectations.
+   */
+  function getSimpleModelSpec_() {
+    return {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: []
+            },
+          ],
+        },
+      ],
+      expectations: [],
+    };
+  }
+
+  test('constructMultiDimensionalView_' +
+      'slicesDoNotStraddleExpecationBoundaries', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push({
+      stage: 'Animation',
+      initiatorType: INITIATOR_TYPE.CSS,
+      range: [100, 300],
+    });
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'CSS']];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // Total CPU Time is 30 + 20 from the two slices, and the total duration of
+    // CSS Animation expectation is 200 (because the range is [100, 300]). CPU
+    // Usage is therefore (30 + 20) / 200.
+    assert.closeTo(getCpuUsage_(values), (30 + 20) / 200, 1e-7);
+    assert.closeTo(getCpuTotal_(values), (30 + 20), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_' +
+      'slicesStraddleExpectationBoundaries', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [75, 175]}
+    );
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'Video']
+    ];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // Only half of the first slice is in the expectation range, so we get a
+    // total CPU contribution of 30 / 2 = 15. The second slice is not in the
+    // expectation at all, so CPU contribution from that slice is 0. So total
+    // CPU Usage during Video Animation expectation is 15.
+    // The total duration of the expectation is 100, so CPU usage is 15 / 100.
+    assert.closeTo(getCpuUsage_(values), 15 / 100, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 15, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_' +
+      'singleThread-disjointExpectationsOfSameInitiator', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [100, 160]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [205, 225]}
+    );
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Response', 'Scroll']
+    ];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // 1/5 of the first slice and 2/5 of the second slice is in the expectation
+    // ranges, so total CPU is 0.2 * 30 + 0.4 * 20.
+    // Total duration of Scroll Response expectation is 60 + 20, since the two
+    // expectation ranges are disjoint.
+    assert.closeTo(getCpuUsage_(values),
+        (0.2 * 30 + 0.4 * 20) / (60 + 20), 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        0.2 * 30 + 0.4 * 20, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_' +
+      'singleThread-overlappingExpectationsOfSameInitiators', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [100, 190]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [160, 230]}
+    );
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'CSS']
+    ];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // The whole of the first slice is covered by CSS Animation expectation,
+    // even though the expectations are from two different ranges. The second
+    // slice is only half covered. Total CPU usage: 30 + 0.5 * 20.
+    // The total range covered by the expectation is [100, 230], so total
+    // duration is 130.
+    assert.closeTo(getCpuUsage_(values), (30 + 0.5 * 20) / 130, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 30 + 0.5 * 20, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_' +
+      'singleThread-overlappingExpectationsOfDifferentInitiators', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [100, 190]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [160, 230]}
+    );
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        (30 + 0.5 * 20) / 130, 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        30 + 0.5 * 20, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_' +
+      'singleThread-allStages-customRangeOfInterest', () => {
+    const simpleModelSpec = getSimpleModelSpec_();
+    simpleModelSpec.processes[0].threads[0].slices.push(
+        {range: [150, 200], cpu: 30},
+        {range: [205, 255], cpu: 20}
+    );
+    simpleModelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [100, 190]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [160, 230]}
+    );
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['all_stages', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(simpleModelSpec);
+    const rangeOfInterest = new tr.b.math.Range.fromExplicitRange(100, 210);
+    const root = constructMultiDimensionalView(model, rangeOfInterest);
+    const values = getNodeValues_(root, path);
+
+    // Only 1/10 of the second slice is included in the range of interest, so
+    // contribution from that slice is 0.1 * 20.
+    // The total range of expectation within range of interest is [100, 210], so
+    // total duration is 110.
+    assert.closeTo(getCpuUsage_(values), (30 + 0.1 * 20) / 110, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 30 + 0.1 * 20, 1e-7);
+  });
+
+  /**
+   * Returns a model spec where the browser process has two worker threads.
+   *
+   * This is a function instead of just a variable because the test functions
+   * are meant to modify this modelSpec and insert suitable expectations.
+   *
+   * Thread 1 looks like
+   *
+   * |0    |10   |20   |30   |40   |50   |60   |70  .... Time
+   * [     ]     [     ]     [     ]     [     ]    .... Slices
+   *
+   * where each slice has a duration of 10ms and CPU time of 5ms.
+   *
+   * Thread 2 looks like
+   *
+   * |0    |50   |100  |150  |200  |250  |300  |350 .... Time
+   * [        ]  [        ]  [        ]  [        ] .... Slices
+   * where each slice has a duration of 80ms and CPU time of 40ms.
+   */
+  function getMultipleThreadsOfSameTypeModelSpec_() {
+    return {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: [],
+            },
+            {
+              name: 'Worker/1',
+              tid: 42,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 20) {
+                  slices.push({range: [i, i + 10], cpu: 5});
+                }
+                return slices;
+              })(),
+            },
+            {
+              name: 'Worker/2',
+              tid: 52,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 100) {
+                  slices.push({range: [i, i + 80], cpu: 40});
+                }
+                return slices;
+              })(),
+            },
+          ],
+        },
+      ],
+
+      expectations: [],
+    };
+  }
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+      'singleExpectation', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['Animation', 'Video']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // There are five thread-1 slices within [0, 90] and one thread-2 slice.
+    assert.closeTo(getCpuUsage_(values), (5 * 5 + 40) / 90, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 5 * 5 + 40, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+      'disjointExpectationSameInitiator', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['Animation', 'CSS']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    // Both worker threads are of the same type ('Worker'), so their CPU times
+    // will be added together.
+    // There are 3 thread-1 slices and 6/8 of a thread-2 slice within
+    // [500, 560].
+    // There are 1 thread-1 slices and two thread-2 slices within [690, 890].
+    // Total expectation duration is 60 + 200.
+    assert.closeTo(getCpuUsage_(values),
+        ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2)) / (60 + 200), 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        (5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+      'overlappingExpectationsOfSameInitiator', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    // [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['Response', 'Scroll']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        (5 * 4 + 40 * (70 / 80)) / 90, 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        5 * 4 + 40 * (70 / 80), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+       'disjointExpectationsAllInitiators', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['Animation', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        ((5 * 5 + 40) + ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2))) /
+            (90 + 60 + 200), 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        (5 * 5 + 40) + ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2)),
+        1e-7);
+  });
+
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+       'overlappingExpectationsAllInitiators', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    // [Click R]
+    //    [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['Response', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        (5 * 5 + 40) / 100, 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        5 * 5 + 40, 1e-7);
+  });
+
+
+  test('constructMultiDimensionalView_multipleThreadsOfSameType_' +
+       'allStagesAllInitiators', () => {
+    const modelSpec = getMultipleThreadsOfSameTypeModelSpec_();
+    // [Video A]   [Click R]         [CSS A]   [  CSS A  ]
+    //                [Scroll R]
+    //                   [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Worker'], ['all_stages', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values), (250 + 400) / 990, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 250 + 400, 1e-7);
+  });
+
+  /**
+   * Returns a model spec where there are two renderer processes, each with a
+   * renderer main thread.
+   *
+   * This is a function instead of just a variable because the test functions
+   * are meant to modify this modelSpec and insert suitable expectations.
+   *
+   * The main thread on renderer-1 looks like
+   *
+   * |0    |10   |20   |30   |40   |50   |60   |70  .... Time
+   * [     ]     [     ]     [     ]     [     ]    .... Slices
+   *
+   * where each slice has a duration of 10ms and CPU time of 5ms.
+   *
+   * The main thread on renderer-2 looks like
+   *
+   * |0    |50   |100  |150  |200  |250  |300  |350 .... Time
+   * [        ]  [        ]  [        ]  [        ] .... Slices
+   *
+   * where each slice has a duration of 80ms and CPU time of 40ms.
+   */
+  function getMultipleProcessesOfSameTypeModelSpec_() {
+    return {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: [],
+            },
+          ],
+        },
+        {
+          name: 'Renderer',
+          pid: 20001,
+          threads: [
+            {
+              name: 'CrRendererMain',
+              tid: 42,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 20) {
+                  slices.push({range: [i, i + 10], cpu: 5});
+                }
+                return slices;
+              })(),
+            },
+          ],
+        },
+        {
+          name: 'Renderer',
+          pid: 30001,
+          threads: [
+            {
+              name: 'CrRendererMain',
+              tid: 52,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 100) {
+                  slices.push({range: [i, i + 80], cpu: 40});
+                }
+                return slices;
+              })(),
+            },
+          ]
+        },
+      ],
+
+      expectations: [],
+    };
+  }
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+       'singleExpectation', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['Animation', 'Video']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values), (5 * 5 + 40) / 90, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 5 * 5 + 40, 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+      'disjointExpectationSameInitiator', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['Animation', 'CSS']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2)) / (60 + 200), 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        (5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+      'overlappingExpectationsOfSameInitiator', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    // [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['Response', 'Scroll']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        (5 * 4 + 40 * (70 / 80)) / 90, 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        5 * 4 + 40 * (70 / 80), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+       'disjointExpectationsAllInitiators', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['Animation', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        ((5 * 5 + 40) + ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2))) /
+            (90 + 60 + 200), 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        (5 * 5 + 40) + ((5 * 3 + 40 * (60 / 80)) + (5 * 10 + 40 * 2)),
+        1e-7);
+  });
+
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+       'overlappingExpectationsAllInitiators', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    // [Click R]
+    //    [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['Response', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values), (5 * 5 + 40) / 100, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 5 * 5 + 40, 1e-7);
+  });
+
+
+  test('constructMultiDimensionalView_multipleProcessesOfSameType_' +
+       'allStagesAllInitiators', () => {
+    const modelSpec = getMultipleProcessesOfSameTypeModelSpec_();
+    // [Video A]   [Click R]         [CSS A]   [  CSS A  ]
+    //                [Scroll R]
+    //                   [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const path = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['CrRendererMain'], ['all_stages', 'all_initiators']
+    ];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values), (250 + 400) / 990, 1e-7);
+    assert.closeTo(getCpuTotal_(values), 250 + 400, 1e-7);
+  });
+
+  /**
+   * Returns a model spec where the browser process has a main thread and an IO
+   * thread.
+   *
+   * This is a function instead of just a variable because the test functions
+   * are meant to modify this modelSpec and insert suitable expectations.
+   *
+   * The browser main thread looks like
+   *
+   * |0    |10   |20   |30   |40   |50   |60   |70  .... Time
+   * [     ]     [     ]     [     ]     [     ]    .... Slices
+   *
+   * where each slice has a duration of 10ms and CPU time of 5ms.
+   *
+   * The IO Thread looks like
+   *
+   * |0    |50   |100  |150  |200  |250  |300  |350 .... Time
+   * [        ]  [        ]  [        ]  [        ] .... Slices
+   *
+   * where each slice has a duration of 80ms and CPU time of 40ms.
+   */
+  function getAllThreadsOfSameProcessModelSpec_() {
+    return {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 20) {
+                  slices.push({range: [i, i + 10], cpu: 5});
+                }
+                return slices;
+              })(),
+            },
+            {
+              name: 'Chrome_IOThread',
+              tid: 5,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 100) {
+                  slices.push({range: [i, i + 80], cpu: 40});
+                }
+                return slices;
+              })(),
+            }
+          ],
+        },
+      ],
+
+      expectations: [],
+    };
+  }
+
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'singleExpectation', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['Animation', 'Video']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'Video']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['Animation', 'Video']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'disjointExpectationSameInitiator', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['Animation', 'CSS']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'CSS']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['Animation', 'CSS']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'overlappingExpectationsOfSameInitiator', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    // [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['Response', 'Scroll']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Response', 'Scroll']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['Response', 'Scroll']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'disjointExpectationsAllInitiators', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['Animation', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Animation', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['Animation', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'overlappingExpectationsAllInitiators', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    // [Click R]
+    //    [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['Response', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['Response', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['Response', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllThreadsOfSameProcess_' +
+       'allStagesAllInitiators', () => {
+    const modelSpec = getAllThreadsOfSameProcessModelSpec_();
+    // [Video A]   [Click R]         [CSS A]   [  CSS A  ]
+    //                [Scroll R]
+    //                   [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [CHROME_PROCESS_NAMES.BROWSER], [], ['all_stages', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['CrBrowserMain'], ['all_stages', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.BROWSER],
+      ['Chrome_IOThread'], ['all_stages', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  /**
+   * Returns a model spec where a renderer process and a GPU process both have a
+   * Chrome_ChildIOThread.
+   *
+   * This is a function instead of just a variable because the test functions
+   * are meant to modify this modelSpec and insert suitable expectations.
+   *
+   * The modelSpec includes a basic browser process because it not a valid
+   * chrome model otherwise.
+   *
+   * The renderer ChildIOThread looks like
+   *
+   * |0    |10   |20   |30   |40   |50   |60   |70  .... Time
+   * [     ]     [     ]     [     ]     [     ]    .... Slices
+   *
+   * where each slice has a duration of 10ms and CPU time of 5ms.
+   *
+   * The GPU ChildIOThread looks like
+   *
+   * |0    |50   |100  |150  |200  |250  |300  |350 .... Time
+   * [        ]  [        ]  [        ]  [        ] .... Slices
+   *
+   * where each slice has a duration of 80ms and CPU time of 40ms.
+   */
+  function getAllProcessesOfSameThreadModelSpec_() {
+    return {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: [],
+            },
+          ],
+        },
+        {
+          name: 'Renderer',
+          pid: 20001,
+          threads: [
+            {
+              name: 'Chrome_ChildIOThread',
+              tid: 42,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 20) {
+                  slices.push({range: [i, i + 10], cpu: 5});
+                }
+                return slices;
+              })(),
+            },
+          ],
+        },
+        {
+          name: 'GPU Process',
+          pid: 30001,
+          threads: [
+            {
+              name: 'Chrome_ChildIOThread',
+              tid: 52,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 100) {
+                  slices.push({range: [i, i + 80], cpu: 40});
+                }
+                return slices;
+              })(),
+            },
+          ]
+        },
+      ],
+      expectations: [],
+    };
+  }
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'singleExpectation', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['Animation', 'Video']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['Animation', 'Video']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['Animation', 'Video']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'disjointExpectationSameInitiator', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['Animation', 'CSS']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['Animation', 'CSS']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['Animation', 'CSS']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'overlappingExpectationsOfSameInitiator', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    // [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['Response', 'Scroll']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['Response', 'Scroll']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['Response', 'Scroll']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'disjointExpectationsAllInitiators', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['Animation', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['Animation', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['Animation', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'overlappingExpectationsAllInitiators', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    // [Click R]
+    //    [Scroll R]
+    //       [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['Response', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['Response', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['Response', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_AllProcessesOfSameThread_' +
+       'allStagesAllInitiators', () => {
+    const modelSpec = getAllProcessesOfSameThreadModelSpec_();
+    // [Video A]   [Click R]         [CSS A]   [  CSS A  ]
+    //                [Scroll R]
+    //                   [Scroll R]
+    modelSpec.expectations.push(
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+    );
+
+    const pathForAllThreads = [
+      [], ['Chrome_ChildIOThread'], ['all_stages', 'all_initiators']];
+
+    const pathForThread1 = [
+      [CHROME_PROCESS_NAMES.RENDERER],
+      ['Chrome_ChildIOThread'], ['all_stages', 'all_initiators']];
+
+    const pathForThread2 = [
+      [CHROME_PROCESS_NAMES.GPU],
+      ['Chrome_ChildIOThread'], ['all_stages', 'all_initiators']];
+
+    const model = buildModelFromSpec(modelSpec);
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const valueForAllThreads = getNodeValues_(root, pathForAllThreads);
+    const valueForThread1 = getNodeValues_(root, pathForThread1);
+    const valueForThread2 = getNodeValues_(root, pathForThread2);
+
+    assert.closeTo(getCpuUsage_(valueForAllThreads),
+        getCpuUsage_(valueForThread1) + getCpuUsage_(valueForThread2), 1e-7);
+    assert.closeTo(getCpuTotal_(valueForAllThreads),
+        getCpuTotal_(valueForThread1) + getCpuTotal_(valueForThread2), 1e-7);
+  });
+
+  test('constructMultiDimensionalView_completeAggregation', () => {
+    const modelSpec = {
+      processes: [
+        {
+          name: 'Browser',
+          pid: 12345,
+          threads: [
+            {
+              name: 'CrBrowserMain',
+              tid: 1,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 50) {
+                  slices.push({range: [i, i + 50], cpu: 30});
+                }
+                return slices;
+              })(),
+            },
+          ],
+        },
+        {
+          name: 'Renderer',
+          pid: 20001,
+          threads: [
+            {
+              name: 'Chrome_ChildIOThread',
+              tid: 42,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 20) {
+                  slices.push({range: [i, i + 10], cpu: 5});
+                }
+                return slices;
+              })(),
+            },
+          ],
+        },
+        {
+          name: 'GPU Process',
+          pid: 30001,
+          threads: [
+            {
+              name: 'Chrome_ChildIOThread',
+              tid: 52,
+              slices: (() => {
+                const slices = [];
+                for (let i = 0; i < 1000; i += 100) {
+                  slices.push({range: [i, i + 80], cpu: 40});
+                }
+                return slices;
+              })(),
+            },
+          ]
+        },
+      ],
+
+      // [Video A]   [Click R]         [CSS A]   [  CSS A  ]
+      //                [Scroll R]
+      //                   [Scroll R]
+      expectations: [
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.VIDEO,
+          range: [0, 90]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.CLICK,
+          range: [200, 220]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [210, 260]},
+        {stage: 'Response', initiatorType: INITIATOR_TYPE.SCROLL,
+          range: [250, 300]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [500, 560]},
+        {stage: 'Animation', initiatorType: INITIATOR_TYPE.CSS,
+          range: [690, 890]}
+      ],
+    };
+
+    const model = buildModelFromSpec(modelSpec);
+    const path = [[], [], ['all_stages', 'all_initiators']];
+    const root = constructMultiDimensionalView(model, model.bounds);
+    const values = getNodeValues_(root, path);
+
+    assert.closeTo(getCpuUsage_(values),
+        (30 * 20 + 5 * 50 + 40 * 10) / 1000, 1e-7);
+    assert.closeTo(getCpuTotal_(values),
+        (30 * 20 + 5 * 50 + 40 * 10), 1e-7);
+  });
+});
+
+</script>

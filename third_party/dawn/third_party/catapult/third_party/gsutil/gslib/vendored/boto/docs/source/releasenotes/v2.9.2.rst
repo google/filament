@@ -1,0 +1,18 @@
+boto v2.9.2
+===========
+
+:date: 2013/04/30
+
+A hotfix release that adds the ``boto.support`` into ``setup.py``.
+
+
+Features
+--------
+
+* None.
+
+
+Bugfixes
+--------
+
+* Fixed the missing ``boto.support`` in ``setup.py``. (:sha:`9ac196`)

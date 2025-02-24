@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/proxy_selectable_item.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ProxySelectableItem = tr.model.ProxySelectableItem;
+  const SelectionState = tr.model.SelectionState;
+
+  test('checkSelectionState_undefinedModelItem', function() {
+    const proxyItem = new ProxySelectableItem(undefined);
+    assert.isFalse(proxyItem.selected);
+    assert.strictEqual(proxyItem.selectionState, SelectionState.NONE);
+  });
+
+  test('checkSelectionState_definedModelItem', function() {
+    // Start with a selected model event.
+    const modelItem = {selectionState: SelectionState.SELECTED};
+    const proxyItem = new ProxySelectableItem(modelItem);
+    assert.isTrue(proxyItem.selected);
+    assert.strictEqual(proxyItem.selectionState, SelectionState.SELECTED);
+
+    // Change the selection state of the model event to highlighted.
+    modelItem.selectionState = SelectionState.HIGHLIGHTED;
+    assert.isFalse(proxyItem.selected);
+    assert.strictEqual(proxyItem.selectionState, SelectionState.HIGHLIGHTED);
+  });
+});
+</script>
+

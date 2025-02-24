@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>rcssmin</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rcssmin/" target="_top">Visit rcssmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        Module&nbsp;rcssmin
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="rcssmin-module.html">Module rcssmin</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-comment">#!/usr/bin/env python</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"><tt class="py-comment"># -*- coding: ascii -*-</tt> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-docstring">r"""</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-docstring">==============</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"><tt class="py-docstring"> CSS Minifier</tt> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line"><tt class="py-docstring">==============</tt> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line"><tt class="py-docstring">CSS Minifier.</tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt class="py-docstring">The minifier is based on the semantics of the `YUI compressor`_\\, which</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt class="py-docstring">itself is based on `the rule list by Isaac Schlueter`_\\.</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"><tt class="py-docstring">:Copyright:</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"><tt class="py-docstring"> Copyright 2011 - 2014</tt> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line"><tt class="py-docstring"> Andr\xe9 Malo or his licensors, as applicable</tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line"><tt class="py-docstring">:License:</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line"><tt class="py-docstring"> Licensed under the Apache License, Version 2.0 (the "License");</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line"><tt class="py-docstring"> you may not use this file except in compliance with the License.</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line"><tt class="py-docstring"> You may obtain a copy of the License at</tt> </tt>
+<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line"><tt class="py-docstring">     http://www.apache.org/licenses/LICENSE-2.0</tt> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line"><tt class="py-docstring"> Unless required by applicable law or agreed to in writing, software</tt> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line"><tt class="py-docstring"> distributed under the License is distributed on an "AS IS" BASIS,</tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line"><tt class="py-docstring"> WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line"><tt class="py-docstring"> See the License for the specific language governing permissions and</tt> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line"><tt class="py-docstring"> limitations under the License.</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line"><tt class="py-docstring">This module is a re-implementation aiming for speed instead of maximum</tt> </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line"><tt class="py-docstring">compression, so it can be used at runtime (rather than during a preprocessing</tt> </tt>
+<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line"><tt class="py-docstring">step). RCSSmin does syntactical compression only (removing spaces, comments</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line"><tt class="py-docstring">and possibly semicolons). It does not provide semantic compression (like</tt> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line"><tt class="py-docstring">removing empty blocks, collapsing redundant properties etc). It does, however,</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line"><tt class="py-docstring">support various CSS hacks (by keeping them working as intended).</tt> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line"><tt class="py-docstring">Here's a feature list:</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line"><tt class="py-docstring">- Strings are kept, except that escaped newlines are stripped</tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line"><tt class="py-docstring">- Space/Comments before the very end or before various characters are</tt> </tt>
+<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line"><tt class="py-docstring">  stripped: ``:{});=&gt;+],!`` (The colon (``:``) is a special case, a single</tt> </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line"><tt class="py-docstring">  space is kept if it's outside a ruleset.)</tt> </tt>
+<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line"><tt class="py-docstring">- Space/Comments at the very beginning or after various characters are</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line"><tt class="py-docstring">  stripped: ``{}(=:&gt;+[,!``</tt> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line"><tt class="py-docstring">- Optional space after unicode escapes is kept, resp. replaced by a simple</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line"><tt class="py-docstring">  space</tt> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line"><tt class="py-docstring">- whitespaces inside ``url()`` definitions are stripped</tt> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line"><tt class="py-docstring">- Comments starting with an exclamation mark (``!``) can be kept optionally.</tt> </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line"><tt class="py-docstring">- All other comments and/or whitespace characters are replaced by a single</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line"><tt class="py-docstring">  space.</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line"><tt class="py-docstring">- Multiple consecutive semicolons are reduced to one</tt> </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line"><tt class="py-docstring">- The last semicolon within a ruleset is stripped</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line"><tt class="py-docstring">- CSS Hacks supported:</tt> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line"><tt class="py-docstring">  - IE7 hack (``&gt;/**/``)</tt> </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line"><tt class="py-docstring">  - Mac-IE5 hack (``/*\\*/.../**/``)</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line"><tt class="py-docstring">  - The boxmodelhack is supported naturally because it relies on valid CSS2</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line"><tt class="py-docstring">    strings</tt> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line"><tt class="py-docstring">  - Between ``:first-line`` and the following comma or curly brace a space is</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line"><tt class="py-docstring">    inserted. (apparently it's needed for IE6)</tt> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line"><tt class="py-docstring">  - Same for ``:first-letter``</tt> </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line"><tt class="py-docstring">rcssmin.c is a reimplementation of rcssmin.py in C and improves runtime up to</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line"><tt class="py-docstring">factor 100 or so (depending on the input). docs/BENCHMARKS in the source</tt> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line"><tt class="py-docstring">distribution contains the details.</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line"><tt class="py-docstring">Both python 2 (&gt;= 2.4) and python 3 are supported.</tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line"><tt class="py-docstring">.. _YUI compressor: https://github.com/yui/yuicompressor/</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line"><tt class="py-docstring">.. _the rule list by Isaac Schlueter: https://github.com/isaacs/cssmin/</tt> </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line"><tt class="py-docstring">"""</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line"><tt class="py-keyword">if</tt> <tt id="link-0" class="py-name" targets="Variable rcssmin.__doc__=rcssmin-module.html#__doc__"><a title="rcssmin.__doc__" class="py-name" href="#" onclick="return doclink('link-0', '__doc__', 'link-0');">__doc__</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line">    <tt class="py-comment"># pylint: disable = W0622</tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line">    <tt id="link-1" class="py-name"><a title="rcssmin.__doc__" class="py-name" href="#" onclick="return doclink('link-1', '__doc__', 'link-0');">__doc__</a></tt> <tt class="py-op">=</tt> <tt id="link-2" class="py-name"><a title="rcssmin.__doc__" class="py-name" href="#" onclick="return doclink('link-2', '__doc__', 'link-0');">__doc__</a></tt><tt class="py-op">.</tt><tt class="py-name">encode</tt><tt class="py-op">(</tt><tt class="py-string">'ascii'</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">decode</tt><tt class="py-op">(</tt><tt class="py-string">'unicode_escape'</tt><tt class="py-op">)</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line"><tt class="py-name">__author__</tt> <tt class="py-op">=</tt> <tt class="py-string">r"Andr\xe9 Malo"</tt><tt class="py-op">.</tt><tt class="py-name">encode</tt><tt class="py-op">(</tt><tt class="py-string">'ascii'</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">decode</tt><tt class="py-op">(</tt><tt class="py-string">'unicode_escape'</tt><tt class="py-op">)</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line"><tt class="py-name">__docformat__</tt> <tt class="py-op">=</tt> <tt class="py-string">"restructuredtext en"</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line"><tt id="link-3" class="py-name" targets="Variable rcssmin.__license__=rcssmin-module.html#__license__"><a title="rcssmin.__license__" class="py-name" href="#" onclick="return doclink('link-3', '__license__', 'link-3');">__license__</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"Apache License, Version 2.0"</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line"><tt class="py-name">__version__</tt> <tt class="py-op">=</tt> <tt class="py-string">'1.0.5'</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line"><tt class="py-name">__all__</tt> <tt class="py-op">=</tt> <tt class="py-op">[</tt><tt class="py-string">'cssmin'</tt><tt class="py-op">]</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line"> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">re</tt> <tt class="py-keyword">as</tt> <tt class="py-name">_re</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line"> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line"> </tt>
+<a name="_make_cssmin"></a><div id="_make_cssmin-def"><a name="L87"></a><tt class="py-lineno"> 87</tt> <a class="py-toggle" href="#" id="_make_cssmin-toggle" onclick="return toggle('_make_cssmin');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="rcssmin-module.html#_make_cssmin">_make_cssmin</a><tt class="py-op">(</tt><tt class="py-param">python_only</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="_make_cssmin-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="_make_cssmin-expanded"><a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line">    <tt class="py-docstring">"""</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line"><tt class="py-docstring">    Generate CSS minifier.</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line"><tt class="py-docstring">    :Parameters:</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line"><tt class="py-docstring">      `python_only` : ``bool``</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line"><tt class="py-docstring">        Use only the python variant. If true, the c extension is not even</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line"><tt class="py-docstring">        tried to be loaded.</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line"><tt class="py-docstring">    :Return: Minifier</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line"><tt class="py-docstring">    :Rtype: ``callable``</tt> </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line"><tt class="py-docstring">    """</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line">    <tt class="py-comment"># pylint: disable = R0912, R0914, W0612</tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line"> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">python_only</tt><tt class="py-op">:</tt> </tt>
+<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line">        <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line">            <tt class="py-keyword">import</tt> <tt class="py-name">_rcssmin</tt> </tt>
+<a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line">        <tt class="py-keyword">except</tt> <tt class="py-name">ImportError</tt><tt class="py-op">:</tt> </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line">            <tt class="py-keyword">pass</tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">_rcssmin</tt><tt class="py-op">.</tt><tt id="link-4" class="py-name" targets="Function rcssmin.cssmin()=rcssmin-module.html#cssmin"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-4', 'cssmin', 'link-4');">cssmin</a></tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line"> </tt>
+<a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line">    <tt class="py-name">nl</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:[\n\f]|\r\n?)'</tt>  <tt class="py-comment"># pylint: disable = C0103</tt> </tt>
+<a name="L110"></a><tt class="py-lineno">110</tt>  <tt class="py-line">    <tt class="py-name">spacechar</tt> <tt class="py-op">=</tt> <tt class="py-string">r'[\r\n\f\040\t]'</tt> </tt>
+<a name="L111"></a><tt class="py-lineno">111</tt>  <tt class="py-line"> </tt>
+<a name="L112"></a><tt class="py-lineno">112</tt>  <tt class="py-line">    <tt class="py-name">unicoded</tt> <tt class="py-op">=</tt> <tt class="py-string">r'[0-9a-fA-F]{1,6}(?:[\040\n\t\f]|\r\n?)?'</tt> </tt>
+<a name="L113"></a><tt class="py-lineno">113</tt>  <tt class="py-line">    <tt class="py-name">escaped</tt> <tt class="py-op">=</tt> <tt class="py-string">r'[^\n\r\f0-9a-fA-F]'</tt> </tt>
+<a name="L114"></a><tt class="py-lineno">114</tt>  <tt class="py-line">    <tt class="py-name">escape</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:\\(?:%(unicoded)s|%(escaped)s))'</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L115"></a><tt class="py-lineno">115</tt>  <tt class="py-line"> </tt>
+<a name="L116"></a><tt class="py-lineno">116</tt>  <tt class="py-line">    <tt class="py-name">nmchar</tt> <tt class="py-op">=</tt> <tt class="py-string">r'[^\000-\054\056\057\072-\100\133-\136\140\173-\177]'</tt> </tt>
+<a name="L117"></a><tt class="py-lineno">117</tt>  <tt class="py-line">    <tt class="py-comment">#nmstart = r'[^\000-\100\133-\136\140\173-\177]'</tt> </tt>
+<a name="L118"></a><tt class="py-lineno">118</tt>  <tt class="py-line">    <tt class="py-comment">#ident = (r'(?:'</tt> </tt>
+<a name="L119"></a><tt class="py-lineno">119</tt>  <tt class="py-line">    <tt class="py-comment">#    r'-?(?:%(nmstart)s|%(escape)s)%(nmchar)s*(?:%(escape)s%(nmchar)s*)*'</tt> </tt>
+<a name="L120"></a><tt class="py-lineno">120</tt>  <tt class="py-line">    <tt class="py-comment">#r')') % locals()</tt> </tt>
+<a name="L121"></a><tt class="py-lineno">121</tt>  <tt class="py-line"> </tt>
+<a name="L122"></a><tt class="py-lineno">122</tt>  <tt class="py-line">    <tt class="py-name">comment</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)'</tt> </tt>
+<a name="L123"></a><tt class="py-lineno">123</tt>  <tt class="py-line"> </tt>
+<a name="L124"></a><tt class="py-lineno">124</tt>  <tt class="py-line">    <tt class="py-comment"># only for specific purposes. The bang is grouped:</tt> </tt>
+<a name="L125"></a><tt class="py-lineno">125</tt>  <tt class="py-line">    <tt class="py-name">_bang_comment</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:/\*(!?)[^*]*\*+(?:[^/*][^*]*\*+)*/)'</tt> </tt>
+<a name="L126"></a><tt class="py-lineno">126</tt>  <tt class="py-line"> </tt>
+<a name="L127"></a><tt class="py-lineno">127</tt>  <tt class="py-line">    <tt class="py-name">string1</tt> <tt class="py-op">=</tt> \ </tt>
+<a name="L128"></a><tt class="py-lineno">128</tt>  <tt class="py-line">        <tt class="py-string">r'(?:\047[^\047\\\r\n\f]*(?:\\[^\r\n\f][^\047\\\r\n\f]*)*\047)'</tt> </tt>
+<a name="L129"></a><tt class="py-lineno">129</tt>  <tt class="py-line">    <tt class="py-name">string2</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:"[^"\\\r\n\f]*(?:\\[^\r\n\f][^"\\\r\n\f]*)*")'</tt> </tt>
+<a name="L130"></a><tt class="py-lineno">130</tt>  <tt class="py-line">    <tt class="py-name">strings</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:%s|%s)'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">string1</tt><tt class="py-op">,</tt> <tt class="py-name">string2</tt><tt class="py-op">)</tt> </tt>
+<a name="L131"></a><tt class="py-lineno">131</tt>  <tt class="py-line"> </tt>
+<a name="L132"></a><tt class="py-lineno">132</tt>  <tt class="py-line">    <tt class="py-name">nl_string1</tt> <tt class="py-op">=</tt> \ </tt>
+<a name="L133"></a><tt class="py-lineno">133</tt>  <tt class="py-line">        <tt class="py-string">r'(?:\047[^\047\\\r\n\f]*(?:\\(?:[^\r]|\r\n?)[^\047\\\r\n\f]*)*\047)'</tt> </tt>
+<a name="L134"></a><tt class="py-lineno">134</tt>  <tt class="py-line">    <tt class="py-name">nl_string2</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:"[^"\\\r\n\f]*(?:\\(?:[^\r]|\r\n?)[^"\\\r\n\f]*)*")'</tt> </tt>
+<a name="L135"></a><tt class="py-lineno">135</tt>  <tt class="py-line">    <tt class="py-name">nl_strings</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:%s|%s)'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">nl_string1</tt><tt class="py-op">,</tt> <tt class="py-name">nl_string2</tt><tt class="py-op">)</tt> </tt>
+<a name="L136"></a><tt class="py-lineno">136</tt>  <tt class="py-line"> </tt>
+<a name="L137"></a><tt class="py-lineno">137</tt>  <tt class="py-line">    <tt class="py-name">uri_nl_string1</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:\047[^\047\\]*(?:\\(?:[^\r]|\r\n?)[^\047\\]*)*\047)'</tt> </tt>
+<a name="L138"></a><tt class="py-lineno">138</tt>  <tt class="py-line">    <tt class="py-name">uri_nl_string2</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:"[^"\\]*(?:\\(?:[^\r]|\r\n?)[^"\\]*)*")'</tt> </tt>
+<a name="L139"></a><tt class="py-lineno">139</tt>  <tt class="py-line">    <tt class="py-name">uri_nl_strings</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:%s|%s)'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">uri_nl_string1</tt><tt class="py-op">,</tt> <tt class="py-name">uri_nl_string2</tt><tt class="py-op">)</tt> </tt>
+<a name="L140"></a><tt class="py-lineno">140</tt>  <tt class="py-line"> </tt>
+<a name="L141"></a><tt class="py-lineno">141</tt>  <tt class="py-line">    <tt class="py-name">nl_escaped</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:\\%(nl)s)'</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L142"></a><tt class="py-lineno">142</tt>  <tt class="py-line"> </tt>
+<a name="L143"></a><tt class="py-lineno">143</tt>  <tt class="py-line">    <tt class="py-name">space</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:%(spacechar)s|%(comment)s)'</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L144"></a><tt class="py-lineno">144</tt>  <tt class="py-line"> </tt>
+<a name="L145"></a><tt class="py-lineno">145</tt>  <tt class="py-line">    <tt class="py-name">ie7hack</tt> <tt class="py-op">=</tt> <tt class="py-string">r'(?:&gt;/\*\*/)'</tt> </tt>
+<a name="L146"></a><tt class="py-lineno">146</tt>  <tt class="py-line"> </tt>
+<a name="L147"></a><tt class="py-lineno">147</tt>  <tt class="py-line">    <tt class="py-name">uri</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-string">r'(?:'</tt> </tt>
+<a name="L148"></a><tt class="py-lineno">148</tt>  <tt class="py-line">        <tt class="py-comment"># noqa pylint: disable = C0330</tt> </tt>
+<a name="L149"></a><tt class="py-lineno">149</tt>  <tt class="py-line">        <tt class="py-string">r'(?:[^\000-\040"\047()\\\177]*'</tt> </tt>
+<a name="L150"></a><tt class="py-lineno">150</tt>  <tt class="py-line">            <tt class="py-string">r'(?:%(escape)s[^\000-\040"\047()\\\177]*)*)'</tt> </tt>
+<a name="L151"></a><tt class="py-lineno">151</tt>  <tt class="py-line">        <tt class="py-string">r'(?:'</tt> </tt>
+<a name="L152"></a><tt class="py-lineno">152</tt>  <tt class="py-line">            <tt class="py-string">r'(?:%(spacechar)s+|%(nl_escaped)s+)'</tt> </tt>
+<a name="L153"></a><tt class="py-lineno">153</tt>  <tt class="py-line">            <tt class="py-string">r'(?:'</tt> </tt>
+<a name="L154"></a><tt class="py-lineno">154</tt>  <tt class="py-line">                <tt class="py-string">r'(?:[^\000-\040"\047()\\\177]|%(escape)s|%(nl_escaped)s)'</tt> </tt>
+<a name="L155"></a><tt class="py-lineno">155</tt>  <tt class="py-line">                <tt class="py-string">r'[^\000-\040"\047()\\\177]*'</tt> </tt>
+<a name="L156"></a><tt class="py-lineno">156</tt>  <tt class="py-line">                <tt class="py-string">r'(?:%(escape)s[^\000-\040"\047()\\\177]*)*'</tt> </tt>
+<a name="L157"></a><tt class="py-lineno">157</tt>  <tt class="py-line">            <tt class="py-string">r')+'</tt> </tt>
+<a name="L158"></a><tt class="py-lineno">158</tt>  <tt class="py-line">        <tt class="py-string">r')*'</tt> </tt>
+<a name="L159"></a><tt class="py-lineno">159</tt>  <tt class="py-line">    <tt class="py-string">r')'</tt><tt class="py-op">)</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L160"></a><tt class="py-lineno">160</tt>  <tt class="py-line"> </tt>
+<a name="L161"></a><tt class="py-lineno">161</tt>  <tt class="py-line">    <tt class="py-name">nl_unesc_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-name">nl_escaped</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L162"></a><tt class="py-lineno">162</tt>  <tt class="py-line"> </tt>
+<a name="L163"></a><tt class="py-lineno">163</tt>  <tt class="py-line">    <tt class="py-name">uri_space_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-op">(</tt> </tt>
+<a name="L164"></a><tt class="py-lineno">164</tt>  <tt class="py-line">        <tt class="py-string">r'(%(escape)s+)|%(spacechar)s+|%(nl_escaped)s+'</tt> </tt>
+<a name="L165"></a><tt class="py-lineno">165</tt>  <tt class="py-line">    <tt class="py-op">)</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L166"></a><tt class="py-lineno">166</tt>  <tt class="py-line">    <tt class="py-name">uri_space_subber</tt> <tt class="py-op">=</tt> <tt class="py-keyword">lambda</tt> <tt class="py-name">m</tt><tt class="py-op">:</tt> <tt class="py-name">m</tt><tt class="py-op">.</tt><tt class="py-name">groups</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-keyword">or</tt> <tt class="py-string">''</tt> </tt>
+<a name="L167"></a><tt class="py-lineno">167</tt>  <tt class="py-line"> </tt>
+<a name="L168"></a><tt class="py-lineno">168</tt>  <tt class="py-line">    <tt class="py-name">space_sub_simple</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-op">(</tt> </tt>
+<a name="L169"></a><tt class="py-lineno">169</tt>  <tt class="py-line">        <tt class="py-string">r'[\r\n\f\040\t;]+|(%(comment)s+)'</tt> </tt>
+<a name="L170"></a><tt class="py-lineno">170</tt>  <tt class="py-line">    <tt class="py-op">)</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L171"></a><tt class="py-lineno">171</tt>  <tt class="py-line">    <tt class="py-name">space_sub_banged</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-op">(</tt> </tt>
+<a name="L172"></a><tt class="py-lineno">172</tt>  <tt class="py-line">        <tt class="py-string">r'[\r\n\f\040\t;]+|(%(_bang_comment)s+)'</tt> </tt>
+<a name="L173"></a><tt class="py-lineno">173</tt>  <tt class="py-line">    <tt class="py-op">)</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L174"></a><tt class="py-lineno">174</tt>  <tt class="py-line"> </tt>
+<a name="L175"></a><tt class="py-lineno">175</tt>  <tt class="py-line">    <tt class="py-name">post_esc_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-string">r'[\r\n\f\t]+'</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L176"></a><tt class="py-lineno">176</tt>  <tt class="py-line"> </tt>
+<a name="L177"></a><tt class="py-lineno">177</tt>  <tt class="py-line">    <tt class="py-name">main_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">_re</tt><tt class="py-op">.</tt><tt class="py-name">compile</tt><tt class="py-op">(</tt><tt class="py-op">(</tt> </tt>
+<a name="L178"></a><tt class="py-lineno">178</tt>  <tt class="py-line">        <tt class="py-comment"># noqa pylint: disable = C0330</tt> </tt>
+<a name="L179"></a><tt class="py-lineno">179</tt>  <tt class="py-line">        <tt class="py-string">r'([^\\"\047u&gt;@\r\n\f\040\t/;:{}]+)'</tt> </tt>
+<a name="L180"></a><tt class="py-lineno">180</tt>  <tt class="py-line">        <tt class="py-string">r'|(?&lt;=[{}(=:&gt;+[,!])(%(space)s+)'</tt> </tt>
+<a name="L181"></a><tt class="py-lineno">181</tt>  <tt class="py-line">        <tt class="py-string">r'|^(%(space)s+)'</tt> </tt>
+<a name="L182"></a><tt class="py-lineno">182</tt>  <tt class="py-line">        <tt class="py-string">r'|(%(space)s+)(?=(([:{});=&gt;+\],!])|$)?)'</tt> </tt>
+<a name="L183"></a><tt class="py-lineno">183</tt>  <tt class="py-line">        <tt class="py-string">r'|;(%(space)s*(?:;%(space)s*)*)(?=(\})?)'</tt> </tt>
+<a name="L184"></a><tt class="py-lineno">184</tt>  <tt class="py-line">        <tt class="py-string">r'|(\{)'</tt> </tt>
+<a name="L185"></a><tt class="py-lineno">185</tt>  <tt class="py-line">        <tt class="py-string">r'|(\})'</tt> </tt>
+<a name="L186"></a><tt class="py-lineno">186</tt>  <tt class="py-line">        <tt class="py-string">r'|(%(strings)s)'</tt> </tt>
+<a name="L187"></a><tt class="py-lineno">187</tt>  <tt class="py-line">        <tt class="py-string">r'|(?&lt;!%(nmchar)s)url\(%(spacechar)s*('</tt> </tt>
+<a name="L188"></a><tt class="py-lineno">188</tt>  <tt class="py-line">                <tt class="py-string">r'%(uri_nl_strings)s'</tt> </tt>
+<a name="L189"></a><tt class="py-lineno">189</tt>  <tt class="py-line">                <tt class="py-string">r'|%(uri)s'</tt> </tt>
+<a name="L190"></a><tt class="py-lineno">190</tt>  <tt class="py-line">            <tt class="py-string">r')%(spacechar)s*\)'</tt> </tt>
+<a name="L191"></a><tt class="py-lineno">191</tt>  <tt class="py-line">        <tt class="py-string">r'|(@(?:'</tt> </tt>
+<a name="L192"></a><tt class="py-lineno">192</tt>  <tt class="py-line">              <tt class="py-string">r'[mM][eE][dD][iI][aA]'</tt> </tt>
+<a name="L193"></a><tt class="py-lineno">193</tt>  <tt class="py-line">              <tt class="py-string">r'|[sS][uU][pP][pP][oO][rR][tT][sS]'</tt> </tt>
+<a name="L194"></a><tt class="py-lineno">194</tt>  <tt class="py-line">              <tt class="py-string">r'|[dD][oO][cC][uU][mM][eE][nN][tT]'</tt> </tt>
+<a name="L195"></a><tt class="py-lineno">195</tt>  <tt class="py-line">              <tt class="py-string">r'|(?:-(?:'</tt> </tt>
+<a name="L196"></a><tt class="py-lineno">196</tt>  <tt class="py-line">                  <tt class="py-string">r'[wW][eE][bB][kK][iI][tT]|[mM][oO][zZ]|[oO]|[mM][sS]'</tt> </tt>
+<a name="L197"></a><tt class="py-lineno">197</tt>  <tt class="py-line">                <tt class="py-string">r')-)?'</tt> </tt>
+<a name="L198"></a><tt class="py-lineno">198</tt>  <tt class="py-line">                <tt class="py-string">r'[kK][eE][yY][fF][rR][aA][mM][eE][sS]'</tt> </tt>
+<a name="L199"></a><tt class="py-lineno">199</tt>  <tt class="py-line">            <tt class="py-string">r'))(?!%(nmchar)s)'</tt> </tt>
+<a name="L200"></a><tt class="py-lineno">200</tt>  <tt class="py-line">        <tt class="py-string">r'|(%(ie7hack)s)(%(space)s*)'</tt> </tt>
+<a name="L201"></a><tt class="py-lineno">201</tt>  <tt class="py-line">        <tt class="py-string">r'|(:[fF][iI][rR][sS][tT]-[lL]'</tt> </tt>
+<a name="L202"></a><tt class="py-lineno">202</tt>  <tt class="py-line">            <tt class="py-string">r'(?:[iI][nN][eE]|[eE][tT][tT][eE][rR]))'</tt> </tt>
+<a name="L203"></a><tt class="py-lineno">203</tt>  <tt class="py-line">            <tt class="py-string">r'(%(space)s*)(?=[{,])'</tt> </tt>
+<a name="L204"></a><tt class="py-lineno">204</tt>  <tt class="py-line">        <tt class="py-string">r'|(%(nl_strings)s)'</tt> </tt>
+<a name="L205"></a><tt class="py-lineno">205</tt>  <tt class="py-line">        <tt class="py-string">r'|(%(escape)s[^\\"\047u&gt;@\r\n\f\040\t/;:{}]*)'</tt> </tt>
+<a name="L206"></a><tt class="py-lineno">206</tt>  <tt class="py-line">    <tt class="py-op">)</tt> <tt class="py-op">%</tt> <tt class="py-name">locals</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">sub</tt> </tt>
+<a name="L207"></a><tt class="py-lineno">207</tt>  <tt class="py-line"> </tt>
+<a name="L208"></a><tt class="py-lineno">208</tt>  <tt class="py-line">    <tt class="py-comment">#print main_sub.__self__.pattern</tt> </tt>
+<a name="L209"></a><tt class="py-lineno">209</tt>  <tt class="py-line"> </tt>
+<a name="L210"></a><tt class="py-lineno">210</tt>  <tt class="py-line">    <tt class="py-keyword">def</tt> <tt class="py-def-name">main_subber</tt><tt class="py-op">(</tt><tt class="py-param">keep_bang_comments</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L211"></a><tt class="py-lineno">211</tt>  <tt class="py-line">        <tt class="py-docstring">""" Make main subber """</tt> </tt>
+<a name="L212"></a><tt class="py-lineno">212</tt>  <tt class="py-line">        <tt class="py-name">in_macie5</tt><tt class="py-op">,</tt> <tt class="py-name">in_rule</tt><tt class="py-op">,</tt> <tt class="py-name">at_group</tt> <tt class="py-op">=</tt> <tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> </tt>
+<a name="L213"></a><tt class="py-lineno">213</tt>  <tt class="py-line"> </tt>
+<a name="L214"></a><tt class="py-lineno">214</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">keep_bang_comments</tt><tt class="py-op">:</tt> </tt>
+<a name="L215"></a><tt class="py-lineno">215</tt>  <tt class="py-line">            <tt class="py-name">space_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">space_sub_banged</tt> </tt>
+<a name="L216"></a><tt class="py-lineno">216</tt>  <tt class="py-line"> </tt>
+<a name="L217"></a><tt class="py-lineno">217</tt>  <tt class="py-line">            <tt class="py-keyword">def</tt> <tt class="py-def-name">space_subber</tt><tt class="py-op">(</tt><tt class="py-param">match</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L218"></a><tt class="py-lineno">218</tt>  <tt class="py-line">                <tt class="py-docstring">""" Space|Comment subber """</tt> </tt>
+<a name="L219"></a><tt class="py-lineno">219</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">lastindex</tt><tt class="py-op">:</tt> </tt>
+<a name="L220"></a><tt class="py-lineno">220</tt>  <tt class="py-line">                    <tt class="py-name">group1</tt><tt class="py-op">,</tt> <tt class="py-name">group2</tt> <tt class="py-op">=</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">1</tt><tt class="py-op">,</tt> <tt class="py-number">2</tt><tt class="py-op">)</tt> </tt>
+<a name="L221"></a><tt class="py-lineno">221</tt>  <tt class="py-line">                    <tt class="py-keyword">if</tt> <tt class="py-name">group2</tt><tt class="py-op">:</tt> </tt>
+<a name="L222"></a><tt class="py-lineno">222</tt>  <tt class="py-line">                        <tt class="py-keyword">if</tt> <tt class="py-name">group1</tt><tt class="py-op">.</tt><tt class="py-name">endswith</tt><tt class="py-op">(</tt><tt class="py-string">r'\*/'</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L223"></a><tt class="py-lineno">223</tt>  <tt class="py-line">                            <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L224"></a><tt class="py-lineno">224</tt>  <tt class="py-line">                        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L225"></a><tt class="py-lineno">225</tt>  <tt class="py-line">                            <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L226"></a><tt class="py-lineno">226</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-name">group1</tt> </tt>
+<a name="L227"></a><tt class="py-lineno">227</tt>  <tt class="py-line">                    <tt class="py-keyword">elif</tt> <tt class="py-name">group1</tt><tt class="py-op">:</tt> </tt>
+<a name="L228"></a><tt class="py-lineno">228</tt>  <tt class="py-line">                        <tt class="py-keyword">if</tt> <tt class="py-name">group1</tt><tt class="py-op">.</tt><tt class="py-name">endswith</tt><tt class="py-op">(</tt><tt class="py-string">r'\*/'</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L229"></a><tt class="py-lineno">229</tt>  <tt class="py-line">                            <tt class="py-keyword">if</tt> <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L230"></a><tt class="py-lineno">230</tt>  <tt class="py-line">                                <tt class="py-keyword">return</tt> <tt class="py-string">''</tt> </tt>
+<a name="L231"></a><tt class="py-lineno">231</tt>  <tt class="py-line">                            <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L232"></a><tt class="py-lineno">232</tt>  <tt class="py-line">                            <tt class="py-keyword">return</tt> <tt class="py-string">r'/*\*/'</tt> </tt>
+<a name="L233"></a><tt class="py-lineno">233</tt>  <tt class="py-line">                        <tt class="py-keyword">elif</tt> <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L234"></a><tt class="py-lineno">234</tt>  <tt class="py-line">                            <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L235"></a><tt class="py-lineno">235</tt>  <tt class="py-line">                            <tt class="py-keyword">return</tt> <tt class="py-string">'/**/'</tt> </tt>
+<a name="L236"></a><tt class="py-lineno">236</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-string">''</tt> </tt>
+</div><a name="L237"></a><tt class="py-lineno">237</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L238"></a><tt class="py-lineno">238</tt>  <tt class="py-line">            <tt class="py-name">space_sub</tt> <tt class="py-op">=</tt> <tt class="py-name">space_sub_simple</tt> </tt>
+<a name="L239"></a><tt class="py-lineno">239</tt>  <tt class="py-line"> </tt>
+<a name="L240"></a><tt class="py-lineno">240</tt>  <tt class="py-line">            <tt class="py-keyword">def</tt> <tt class="py-def-name">space_subber</tt><tt class="py-op">(</tt><tt class="py-param">match</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L241"></a><tt class="py-lineno">241</tt>  <tt class="py-line">                <tt class="py-docstring">""" Space|Comment subber """</tt> </tt>
+<a name="L242"></a><tt class="py-lineno">242</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">lastindex</tt><tt class="py-op">:</tt> </tt>
+<a name="L243"></a><tt class="py-lineno">243</tt>  <tt class="py-line">                    <tt class="py-keyword">if</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">1</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">endswith</tt><tt class="py-op">(</tt><tt class="py-string">r'\*/'</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L244"></a><tt class="py-lineno">244</tt>  <tt class="py-line">                        <tt class="py-keyword">if</tt> <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L245"></a><tt class="py-lineno">245</tt>  <tt class="py-line">                            <tt class="py-keyword">return</tt> <tt class="py-string">''</tt> </tt>
+<a name="L246"></a><tt class="py-lineno">246</tt>  <tt class="py-line">                        <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L247"></a><tt class="py-lineno">247</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-string">r'/*\*/'</tt> </tt>
+<a name="L248"></a><tt class="py-lineno">248</tt>  <tt class="py-line">                    <tt class="py-keyword">elif</tt> <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L249"></a><tt class="py-lineno">249</tt>  <tt class="py-line">                        <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L250"></a><tt class="py-lineno">250</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-string">'/**/'</tt> </tt>
+<a name="L251"></a><tt class="py-lineno">251</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-string">''</tt> </tt>
+</div><a name="L252"></a><tt class="py-lineno">252</tt>  <tt class="py-line"> </tt>
+<a name="L253"></a><tt class="py-lineno">253</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_space_post</tt><tt class="py-op">(</tt><tt class="py-param">group</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L254"></a><tt class="py-lineno">254</tt>  <tt class="py-line">            <tt class="py-docstring">""" space with token after """</tt> </tt>
+<a name="L255"></a><tt class="py-lineno">255</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">5</tt><tt class="py-op">)</tt> <tt class="py-keyword">is</tt> <tt class="py-name">None</tt> <tt class="py-keyword">or</tt> <tt class="py-op">(</tt> </tt>
+<a name="L256"></a><tt class="py-lineno">256</tt>  <tt class="py-line">                    <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">6</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">':'</tt> <tt class="py-keyword">and</tt> <tt class="py-keyword">not</tt> <tt class="py-name">in_rule</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-keyword">and</tt> <tt class="py-keyword">not</tt> <tt class="py-name">at_group</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L257"></a><tt class="py-lineno">257</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-string">' '</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">4</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L258"></a><tt class="py-lineno">258</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">4</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L259"></a><tt class="py-lineno">259</tt>  <tt class="py-line"> </tt>
+<a name="L260"></a><tt class="py-lineno">260</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_semicolon</tt><tt class="py-op">(</tt><tt class="py-param">group</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L261"></a><tt class="py-lineno">261</tt>  <tt class="py-line">            <tt class="py-docstring">""" ; handler """</tt> </tt>
+<a name="L262"></a><tt class="py-lineno">262</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">';'</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">7</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L263"></a><tt class="py-lineno">263</tt>  <tt class="py-line"> </tt>
+<a name="L264"></a><tt class="py-lineno">264</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_semicolon2</tt><tt class="py-op">(</tt><tt class="py-param">group</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L265"></a><tt class="py-lineno">265</tt>  <tt class="py-line">            <tt class="py-docstring">""" ; handler """</tt> </tt>
+<a name="L266"></a><tt class="py-lineno">266</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">in_rule</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L267"></a><tt class="py-lineno">267</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">7</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L268"></a><tt class="py-lineno">268</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">';'</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">7</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L269"></a><tt class="py-lineno">269</tt>  <tt class="py-line"> </tt>
+<a name="L270"></a><tt class="py-lineno">270</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_open</tt><tt class="py-op">(</tt><tt class="py-param">_</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L271"></a><tt class="py-lineno">271</tt>  <tt class="py-line">            <tt class="py-docstring">""" { handler """</tt> </tt>
+<a name="L272"></a><tt class="py-lineno">272</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">at_group</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L273"></a><tt class="py-lineno">273</tt>  <tt class="py-line">                <tt class="py-name">at_group</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">-=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L274"></a><tt class="py-lineno">274</tt>  <tt class="py-line">            <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L275"></a><tt class="py-lineno">275</tt>  <tt class="py-line">                <tt class="py-name">in_rule</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L276"></a><tt class="py-lineno">276</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">'{'</tt> </tt>
+</div><a name="L277"></a><tt class="py-lineno">277</tt>  <tt class="py-line"> </tt>
+<a name="L278"></a><tt class="py-lineno">278</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_close</tt><tt class="py-op">(</tt><tt class="py-param">_</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L279"></a><tt class="py-lineno">279</tt>  <tt class="py-line">            <tt class="py-docstring">""" } handler """</tt> </tt>
+<a name="L280"></a><tt class="py-lineno">280</tt>  <tt class="py-line">            <tt class="py-name">in_rule</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L281"></a><tt class="py-lineno">281</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">'}'</tt> </tt>
+</div><a name="L282"></a><tt class="py-lineno">282</tt>  <tt class="py-line"> </tt>
+<a name="L283"></a><tt class="py-lineno">283</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_at_group</tt><tt class="py-op">(</tt><tt class="py-param">group</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L284"></a><tt class="py-lineno">284</tt>  <tt class="py-line">            <tt class="py-docstring">""" @xxx group handler """</tt> </tt>
+<a name="L285"></a><tt class="py-lineno">285</tt>  <tt class="py-line">            <tt class="py-name">at_group</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L286"></a><tt class="py-lineno">286</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">13</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L287"></a><tt class="py-lineno">287</tt>  <tt class="py-line"> </tt>
+<a name="L288"></a><tt class="py-lineno">288</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">fn_ie7hack</tt><tt class="py-op">(</tt><tt class="py-param">group</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L289"></a><tt class="py-lineno">289</tt>  <tt class="py-line">            <tt class="py-docstring">""" IE7 Hack handler """</tt> </tt>
+<a name="L290"></a><tt class="py-lineno">290</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">in_rule</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-keyword">and</tt> <tt class="py-keyword">not</tt> <tt class="py-name">at_group</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L291"></a><tt class="py-lineno">291</tt>  <tt class="py-line">                <tt class="py-name">in_macie5</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L292"></a><tt class="py-lineno">292</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">14</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">15</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L293"></a><tt class="py-lineno">293</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">'&gt;'</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">15</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L294"></a><tt class="py-lineno">294</tt>  <tt class="py-line"> </tt>
+<a name="L295"></a><tt class="py-lineno">295</tt>  <tt class="py-line">        <tt class="py-name">table</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt> </tt>
+<a name="L296"></a><tt class="py-lineno">296</tt>  <tt class="py-line">            <tt class="py-comment"># noqa pylint: disable = C0330</tt> </tt>
+<a name="L297"></a><tt class="py-lineno">297</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L298"></a><tt class="py-lineno">298</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L299"></a><tt class="py-lineno">299</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L300"></a><tt class="py-lineno">300</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L301"></a><tt class="py-lineno">301</tt>  <tt class="py-line">            <tt class="py-name">fn_space_post</tt><tt class="py-op">,</tt>                       <tt class="py-comment"># space with token after</tt> </tt>
+<a name="L302"></a><tt class="py-lineno">302</tt>  <tt class="py-line">            <tt class="py-name">fn_space_post</tt><tt class="py-op">,</tt>                       <tt class="py-comment"># space with token after</tt> </tt>
+<a name="L303"></a><tt class="py-lineno">303</tt>  <tt class="py-line">            <tt class="py-name">fn_space_post</tt><tt class="py-op">,</tt>                       <tt class="py-comment"># space with token after</tt> </tt>
+<a name="L304"></a><tt class="py-lineno">304</tt>  <tt class="py-line">            <tt class="py-name">fn_semicolon</tt><tt class="py-op">,</tt>                        <tt class="py-comment"># semicolon</tt> </tt>
+<a name="L305"></a><tt class="py-lineno">305</tt>  <tt class="py-line">            <tt class="py-name">fn_semicolon2</tt><tt class="py-op">,</tt>                       <tt class="py-comment"># semicolon</tt> </tt>
+<a name="L306"></a><tt class="py-lineno">306</tt>  <tt class="py-line">            <tt class="py-name">fn_open</tt><tt class="py-op">,</tt>                             <tt class="py-comment"># {</tt> </tt>
+<a name="L307"></a><tt class="py-lineno">307</tt>  <tt class="py-line">            <tt class="py-name">fn_close</tt><tt class="py-op">,</tt>                            <tt class="py-comment"># }</tt> </tt>
+<a name="L308"></a><tt class="py-lineno">308</tt>  <tt class="py-line">            <tt class="py-keyword">lambda</tt> <tt class="py-name">g</tt><tt class="py-op">:</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">11</tt><tt class="py-op">)</tt><tt class="py-op">,</tt>                     <tt class="py-comment"># string</tt> </tt>
+<a name="L309"></a><tt class="py-lineno">309</tt>  <tt class="py-line">            <tt class="py-keyword">lambda</tt> <tt class="py-name">g</tt><tt class="py-op">:</tt> <tt class="py-string">'url(%s)'</tt> <tt class="py-op">%</tt> <tt class="py-name">uri_space_sub</tt><tt class="py-op">(</tt><tt class="py-name">uri_space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">12</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L310"></a><tt class="py-lineno">310</tt>  <tt class="py-line">                                                 <tt class="py-comment"># url(...)</tt> </tt>
+<a name="L311"></a><tt class="py-lineno">311</tt>  <tt class="py-line">            <tt class="py-name">fn_at_group</tt><tt class="py-op">,</tt>                         <tt class="py-comment"># @xxx expecting {...}</tt> </tt>
+<a name="L312"></a><tt class="py-lineno">312</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L313"></a><tt class="py-lineno">313</tt>  <tt class="py-line">            <tt class="py-name">fn_ie7hack</tt><tt class="py-op">,</tt>                          <tt class="py-comment"># ie7hack</tt> </tt>
+<a name="L314"></a><tt class="py-lineno">314</tt>  <tt class="py-line">            <tt class="py-name">None</tt><tt class="py-op">,</tt> </tt>
+<a name="L315"></a><tt class="py-lineno">315</tt>  <tt class="py-line">            <tt class="py-keyword">lambda</tt> <tt class="py-name">g</tt><tt class="py-op">:</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">16</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">' '</tt> <tt class="py-op">+</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">17</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L316"></a><tt class="py-lineno">316</tt>  <tt class="py-line">                                                 <tt class="py-comment"># :first-line|letter followed</tt> </tt>
+<a name="L317"></a><tt class="py-lineno">317</tt>  <tt class="py-line">                                                 <tt class="py-comment"># by [{,] (apparently space</tt> </tt>
+<a name="L318"></a><tt class="py-lineno">318</tt>  <tt class="py-line">                                                 <tt class="py-comment"># needed for IE6)</tt> </tt>
+<a name="L319"></a><tt class="py-lineno">319</tt>  <tt class="py-line">            <tt class="py-keyword">lambda</tt> <tt class="py-name">g</tt><tt class="py-op">:</tt> <tt class="py-name">nl_unesc_sub</tt><tt class="py-op">(</tt><tt class="py-string">''</tt><tt class="py-op">,</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">18</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">,</tt>   <tt class="py-comment"># nl_string</tt> </tt>
+<a name="L320"></a><tt class="py-lineno">320</tt>  <tt class="py-line">            <tt class="py-keyword">lambda</tt> <tt class="py-name">g</tt><tt class="py-op">:</tt> <tt class="py-name">post_esc_sub</tt><tt class="py-op">(</tt><tt class="py-string">' '</tt><tt class="py-op">,</tt> <tt class="py-name">g</tt><tt class="py-op">(</tt><tt class="py-number">19</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">,</tt>  <tt class="py-comment"># escape</tt> </tt>
+<a name="L321"></a><tt class="py-lineno">321</tt>  <tt class="py-line">        <tt class="py-op">)</tt> </tt>
+<a name="L322"></a><tt class="py-lineno">322</tt>  <tt class="py-line"> </tt>
+<a name="L323"></a><tt class="py-lineno">323</tt>  <tt class="py-line">        <tt class="py-keyword">def</tt> <tt class="py-def-name">func</tt><tt class="py-op">(</tt><tt class="py-param">match</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L324"></a><tt class="py-lineno">324</tt>  <tt class="py-line">            <tt class="py-docstring">""" Main subber """</tt> </tt>
+<a name="L325"></a><tt class="py-lineno">325</tt>  <tt class="py-line">            <tt class="py-name">idx</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt> <tt class="py-op">=</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">lastindex</tt><tt class="py-op">,</tt> <tt class="py-name">match</tt><tt class="py-op">.</tt><tt class="py-name">group</tt> </tt>
+<a name="L326"></a><tt class="py-lineno">326</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">idx</tt> <tt class="py-op">&gt;</tt> <tt class="py-number">3</tt><tt class="py-op">:</tt> </tt>
+<a name="L327"></a><tt class="py-lineno">327</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-name">table</tt><tt class="py-op">[</tt><tt class="py-name">idx</tt><tt class="py-op">]</tt><tt class="py-op">(</tt><tt class="py-name">group</tt><tt class="py-op">)</tt> </tt>
+<a name="L328"></a><tt class="py-lineno">328</tt>  <tt class="py-line"> </tt>
+<a name="L329"></a><tt class="py-lineno">329</tt>  <tt class="py-line">            <tt class="py-comment"># shortcuts for frequent operations below:</tt> </tt>
+<a name="L330"></a><tt class="py-lineno">330</tt>  <tt class="py-line">            <tt class="py-keyword">elif</tt> <tt class="py-name">idx</tt> <tt class="py-op">==</tt> <tt class="py-number">1</tt><tt class="py-op">:</tt>     <tt class="py-comment"># not interesting</tt> </tt>
+<a name="L331"></a><tt class="py-lineno">331</tt>  <tt class="py-line">                <tt class="py-keyword">return</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-number">1</tt><tt class="py-op">)</tt> </tt>
+<a name="L332"></a><tt class="py-lineno">332</tt>  <tt class="py-line">            <tt class="py-comment">#else: # space with token before or at the beginning</tt> </tt>
+<a name="L333"></a><tt class="py-lineno">333</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">space_sub</tt><tt class="py-op">(</tt><tt class="py-name">space_subber</tt><tt class="py-op">,</tt> <tt class="py-name">group</tt><tt class="py-op">(</tt><tt class="py-name">idx</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L334"></a><tt class="py-lineno">334</tt>  <tt class="py-line"> </tt>
+<a name="L335"></a><tt class="py-lineno">335</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">func</tt> </tt>
+</div><a name="L336"></a><tt class="py-lineno">336</tt>  <tt class="py-line"> </tt>
+<a name="L337"></a><tt class="py-lineno">337</tt>  <tt class="py-line">    <tt class="py-keyword">def</tt> <tt class="py-def-name">cssmin</tt><tt class="py-op">(</tt><tt class="py-param">style</tt><tt class="py-op">,</tt> <tt class="py-param">keep_bang_comments</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt><tt class="py-op">:</tt>  <tt class="py-comment"># pylint: disable = W0621</tt> </tt>
+<a name="L338"></a><tt class="py-lineno">338</tt>  <tt class="py-line">        <tt class="py-docstring">"""</tt> </tt>
+<a name="L339"></a><tt class="py-lineno">339</tt>  <tt class="py-line"><tt class="py-docstring">        Minify CSS.</tt> </tt>
+<a name="L340"></a><tt class="py-lineno">340</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L341"></a><tt class="py-lineno">341</tt>  <tt class="py-line"><tt class="py-docstring">        :Parameters:</tt> </tt>
+<a name="L342"></a><tt class="py-lineno">342</tt>  <tt class="py-line"><tt class="py-docstring">          `style` : ``str``</tt> </tt>
+<a name="L343"></a><tt class="py-lineno">343</tt>  <tt class="py-line"><tt class="py-docstring">            CSS to minify</tt> </tt>
+<a name="L344"></a><tt class="py-lineno">344</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L345"></a><tt class="py-lineno">345</tt>  <tt class="py-line"><tt class="py-docstring">          `keep_bang_comments` : ``bool``</tt> </tt>
+<a name="L346"></a><tt class="py-lineno">346</tt>  <tt class="py-line"><tt class="py-docstring">            Keep comments starting with an exclamation mark? (``/*!...*/``)</tt> </tt>
+<a name="L347"></a><tt class="py-lineno">347</tt>  <tt class="py-line"><tt class="py-docstring"></tt> </tt>
+<a name="L348"></a><tt class="py-lineno">348</tt>  <tt class="py-line"><tt class="py-docstring">        :Return: Minified style</tt> </tt>
+<a name="L349"></a><tt class="py-lineno">349</tt>  <tt class="py-line"><tt class="py-docstring">        :Rtype: ``str``</tt> </tt>
+<a name="L350"></a><tt class="py-lineno">350</tt>  <tt class="py-line"><tt class="py-docstring">        """</tt> </tt>
+<a name="L351"></a><tt class="py-lineno">351</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">main_sub</tt><tt class="py-op">(</tt><tt class="py-name">main_subber</tt><tt class="py-op">(</tt><tt class="py-name">keep_bang_comments</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-name">style</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L352"></a><tt class="py-lineno">352</tt>  <tt class="py-line"> </tt>
+<a name="L353"></a><tt class="py-lineno">353</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt id="link-5" class="py-name"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-5', 'cssmin', 'link-4');">cssmin</a></tt> </tt>
+</div><a name="L354"></a><tt class="py-lineno">354</tt>  <tt class="py-line"> </tt>
+<a name="L355"></a><tt class="py-lineno">355</tt>  <tt class="py-line"><tt id="link-6" class="py-name"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-6', 'cssmin', 'link-4');">cssmin</a></tt> <tt class="py-op">=</tt> <tt class="py-name">_make_cssmin</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L356"></a><tt class="py-lineno">356</tt>  <tt class="py-line"> </tt>
+<a name="L357"></a><tt class="py-lineno">357</tt>  <tt class="py-line"> </tt>
+<a name="L358"></a><tt class="py-lineno">358</tt>  <tt class="py-line"><tt class="py-keyword">if</tt> <tt class="py-name">__name__</tt> <tt class="py-op">==</tt> <tt class="py-string">'__main__'</tt><tt class="py-op">:</tt> </tt>
+<a name="main"></a><div id="main-def"><a name="L359"></a><tt class="py-lineno">359</tt> <a class="py-toggle" href="#" id="main-toggle" onclick="return toggle('main');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="rcssmin-module.html#main">main</a><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="main-collapsed" style="display:none;" pad="+++" indent="++++++++"></div><div id="main-expanded"><a name="L360"></a><tt class="py-lineno">360</tt>  <tt class="py-line">        <tt class="py-docstring">""" Main """</tt> </tt>
+<a name="L361"></a><tt class="py-lineno">361</tt>  <tt class="py-line">        <tt class="py-keyword">import</tt> <tt class="py-name">sys</tt> <tt class="py-keyword">as</tt> <tt class="py-name">_sys</tt> </tt>
+<a name="L362"></a><tt class="py-lineno">362</tt>  <tt class="py-line">        <tt class="py-name">keep_bang_comments</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt> </tt>
+<a name="L363"></a><tt class="py-lineno">363</tt>  <tt class="py-line">            <tt class="py-string">'-b'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> </tt>
+<a name="L364"></a><tt class="py-lineno">364</tt>  <tt class="py-line">            <tt class="py-keyword">or</tt> <tt class="py-string">'-bp'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> </tt>
+<a name="L365"></a><tt class="py-lineno">365</tt>  <tt class="py-line">            <tt class="py-keyword">or</tt> <tt class="py-string">'-pb'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> </tt>
+<a name="L366"></a><tt class="py-lineno">366</tt>  <tt class="py-line">        <tt class="py-op">)</tt> </tt>
+<a name="L367"></a><tt class="py-lineno">367</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-string">'-p'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> <tt class="py-keyword">or</tt> <tt class="py-string">'-bp'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> \ </tt>
+<a name="L368"></a><tt class="py-lineno">368</tt>  <tt class="py-line">                <tt class="py-keyword">or</tt> <tt class="py-string">'-pb'</tt> <tt class="py-keyword">in</tt> <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">argv</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L369"></a><tt class="py-lineno">369</tt>  <tt class="py-line">            <tt class="py-keyword">global</tt> <tt id="link-7" class="py-name"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-7', 'cssmin', 'link-4');">cssmin</a></tt>  <tt class="py-comment"># pylint: disable = W0603</tt> </tt>
+<a name="L370"></a><tt class="py-lineno">370</tt>  <tt class="py-line">            <tt id="link-8" class="py-name"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-8', 'cssmin', 'link-4');">cssmin</a></tt> <tt class="py-op">=</tt> <tt class="py-name">_make_cssmin</tt><tt class="py-op">(</tt><tt class="py-name">python_only</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">)</tt> </tt>
+<a name="L371"></a><tt class="py-lineno">371</tt>  <tt class="py-line">        <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">stdout</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt id="link-9" class="py-name"><a title="rcssmin.cssmin" class="py-name" href="#" onclick="return doclink('link-9', 'cssmin', 'link-4');">cssmin</a></tt><tt class="py-op">(</tt> </tt>
+<a name="L372"></a><tt class="py-lineno">372</tt>  <tt class="py-line">            <tt class="py-name">_sys</tt><tt class="py-op">.</tt><tt class="py-name">stdin</tt><tt class="py-op">.</tt><tt class="py-name">read</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-name">keep_bang_comments</tt><tt class="py-op">=</tt><tt class="py-name">keep_bang_comments</tt> </tt>
+<a name="L373"></a><tt class="py-lineno">373</tt>  <tt class="py-line">        <tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L374"></a><tt class="py-lineno">374</tt>  <tt class="py-line">    <tt class="py-name">main</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L375"></a><tt class="py-lineno">375</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rcssmin/" target="_top">Visit rcssmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

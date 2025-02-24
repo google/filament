@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  const LCP_CANDIDATE_EVENT_TITLE =
+      'NavStartToLargestContentfulPaint::Candidate::AllFrames::UKM';
+  const LCP_INVALIDATE_EVENT_TITLE =
+      'NavStartToLargestContentfulPaint::Invalidate::AllFrames::UKM';
+
+  class LcpEvent {
+    constructor(event) {
+      if (!LcpInvalidateEvent.isLcpInvalidateEvent(event) &&
+          !LcpCandidateEvent.isLcpCandidateEvent(event)) {
+        throw new Error('The LCP event should be either a candidate event or' +
+          'an invalidate event.');
+      }
+      if (event.start === undefined ||
+          event.args.main_frame_tree_node_id === undefined) {
+        throw new Error('The LCP event is in unexpected format.');
+      }
+      this.start = event.start;
+      this.mainFrameTreeNodeId = event.args.main_frame_tree_node_id;
+    }
+  }
+
+  /**
+   * This class is a wrapper of the Largest Contentful Paint Candidate event
+   * from Chrome trace. It verifies Telemetry's assumption of the event
+   * format.
+   */
+  class LcpCandidateEvent extends LcpEvent {
+    constructor(event) {
+      super(event);
+      const { durationInMilliseconds, size, type,
+        inMainFrame} = event.args.data;
+      if (durationInMilliseconds === undefined || size === undefined ||
+          type === undefined || inMainFrame === undefined ||
+          event.args.main_frame_tree_node_id === undefined ||
+          !LcpCandidateEvent.isLcpCandidateEvent(event)) {
+        throw new Error('The LCP candidate event is in unexpected format.');
+      }
+      this.durationInMilliseconds = durationInMilliseconds;
+      this.size = size;
+      this.type = type;
+      this.inMainFrame = inMainFrame;
+    }
+
+    static isLcpCandidateEvent(event) {
+      return event.title === LCP_CANDIDATE_EVENT_TITLE;
+    }
+  }
+
+  /**
+   * This class is a wrapper of the Largest Contentful Paint invalidate event
+   * from Chrome trace. It verifies Telemetry's assumption of the event
+   * format.
+   */
+  class LcpInvalidateEvent extends LcpEvent {
+    constructor(event) {
+      super(event);
+      if (!LcpInvalidateEvent.isLcpInvalidateEvent(event)) {
+        throw new Error('The LCP invalidate event is in unexpected format.');
+      }
+    }
+
+    static isLcpInvalidateEvent(event) {
+      return event.title === LCP_INVALIDATE_EVENT_TITLE;
+    }
+  }
+
+  /**
+   * |LargestContentfulPaint| is responsible for finding out the
+   * largest-contentful-paints from the browser events.
+   */
+  class LargestContentfulPaint {
+    constructor(allBrowserEvents) {
+      this.allBrowserEvents = allBrowserEvents;
+    }
+
+    findCandidates() {
+      const finalLcpEvents = this.findFinalLcpEventOfEachNavigation(
+          this.allBrowserEvents);
+      const finalCandidates = finalLcpEvents.filter(finalLcpEvent =>
+          !(finalLcpEvent instanceof LcpInvalidateEvent));
+      return finalCandidates;
+    }
+
+    /**
+     * Returns an array of |LcpEvent|, each |LcpEvent| represents the last
+     * |LcpEvent| of a navigation.
+     *
+     * @param {Array.<!tr.model.TimedEvent>} browser events.
+     * @returns {Array.<!Endpoint>}
+     */
+    findFinalLcpEventOfEachNavigation(allBrowserEvents) {
+      const lcpEvents = [];
+      for (const lcpEvent of allBrowserEvents) {
+        if (LcpCandidateEvent.isLcpCandidateEvent(lcpEvent)) {
+          lcpEvents.push(new LcpCandidateEvent(lcpEvent));
+        } else if (LcpInvalidateEvent.isLcpInvalidateEvent(lcpEvent)) {
+          lcpEvents.push(new LcpInvalidateEvent(lcpEvent));
+        }
+      }
+      const lcpEventsGroupedByNavigation = new Map();
+      for (const e of lcpEvents) {
+        const key = e.mainFrameTreeNodeId;
+        if (!lcpEventsGroupedByNavigation.has(key)) {
+          lcpEventsGroupedByNavigation.set(key, []);
+        }
+        lcpEventsGroupedByNavigation.get(key).push(e);
+      }
+
+      const finalLcpEventOfEachNavigation = [];
+      for (const lcpEventList of lcpEventsGroupedByNavigation.values()) {
+        lcpEventList.sort((a, b) => a.start - b.start);
+        finalLcpEventOfEachNavigation.push(
+            lcpEventList[lcpEventList.length - 1]);
+      }
+
+      return finalLcpEventOfEachNavigation;
+    }
+  }
+
+  return {
+    LCP_CANDIDATE_EVENT_TITLE,
+    LCP_INVALIDATE_EVENT_TITLE,
+    LargestContentfulPaint,
+  };
+});
+</script>

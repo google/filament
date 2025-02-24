@@ -1,0 +1,87 @@
+Name
+
+    ANGLE_create_context_client_arrays
+
+Name Strings
+
+    EGL_ANGLE_create_context_client_arrays
+
+Contributors
+
+    Geoff Lang
+
+Contacts
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, February 13, 2016
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    Requires EGL 1.4.
+
+    Written against the EGL 1.4 specification.
+
+    An OpenGL ES implementation supporting GL_ANGLE_client_arrays or equivalent
+    functionality is required.
+
+Overview
+
+    This extension allows the creation of an OpenGL or OpenGL ES context that
+    allows or disallows drawing with client-side vertex or index data.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_CONTEXT_CLIENT_ARRAYS_ENABLED_ANGLE 0x3452
+
+Additions to the EGL 1.4 Specification
+
+    Add the following to section 3.7.1 "Creating Rendering Contexts":
+
+    EGL_CONTEXT_CLIENT_ARRAYS_ENABLED_ANGLE indicates whether the context
+    should be created with the GL_CLIENT_ARRAYS_ANGLE state initialized to
+    GL_TRUE or GL_FALSE. The default value of
+    EGL_CONTEXT_CLIENT_ARRAYS_ENABLED_ANGLE is EGL_FALSE.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Feb 13, 2016   geofflang  Initial version

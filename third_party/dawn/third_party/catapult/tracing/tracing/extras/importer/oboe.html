@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+if (tr.isHeadless) {
+  // oboe requires window; there is no window object in headless mode.
+  // Temporarily make one.
+  global.window = {};
+}
+</script>
+
+<script id="oboe-script" src="/oboe/dist/oboe-browser.js"></script>
+
+<script>
+'use strict';
+if (tr.isVinn) {
+  global.oboe = global.window.oboe;
+  global.window = undefined;
+} else if (tr.isNode) {
+  // Use the node.js version instead.
+  global.window = undefined;
+  const path = HTMLImportsLoader.hrefToAbsolutePath('/oboe/dist/oboe-node.js');
+  global.oboe = require(path);
+}
+</script>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+  <link rel="stylesheet" type="text/css" href="popup.css">
+  <body style="width: 300px">
+    <div id="error">
+      Error
+      <div id="error_msg"></div>
+    </div>
+
+    <div id="tracing_in_progress">
+      <div id="trace_status"></div>
+      <a href="#" id="stop_btn"><img src="images/stop.png"></a>
+      <div id="settings_row">
+        <input type="checkbox" id="autoupload">
+        <label for="autoupload">
+          Upload &amp; file bug automatically after capture
+        </label>
+      </div>
+    </div>
+
+    <div id="tracing_complete">
+      <div id="download_row">
+        Captured
+        <a href="#" id="trace_download">
+          trace.json.gz
+          (<span id="trace_size">0.0</span> MB)
+          <img src="images/download.png">
+        </a>
+      </div>
+      <div id="upload_row">
+        <a href="#" id="trace_upload">
+          <img src="images/upload.png">
+          Upload &amp; file a bug
+        </a>
+      </div>
+    </div>
+
+    <div id="disclaimer">
+      The titles and URLs of your open tabs and extensions are included in this
+      report and will be visible to Chrome developers after you upload it.
+    </div>
+
+    <script type="text/javascript" src="popup.js"></script>
+  </body>
+</html>

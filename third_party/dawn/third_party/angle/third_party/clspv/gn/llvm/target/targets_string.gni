@@ -1,0 +1,13 @@
+import("//build_overrides/clspv.gni")
+
+# Based on LLVM `/llvm/lib/Target/targets_string.gni`
+import("targets.gni")
+
+# A single string with all built targets, separated by spaces.
+llvm_targets_to_build_string = ""
+foreach(target, llvm_targets_to_build) {
+  if (llvm_targets_to_build_string != "") {
+    llvm_targets_to_build_string += " "
+  }
+  llvm_targets_to_build_string += target
+}

@@ -1,0 +1,153 @@
+'\" t
+.\"     Title: git-upstream-diff
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-UPSTREAM\-DIFF" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-upstream-diff \- Print a diff of the current branch, compared to its upstream\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit upstream\-diff\fR [\-\-wordwise] [\-\-branch branch] [<extra args for git\-diff>*]
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Shows a diff between a branch and its upstream\&. If the \-\-branch option is omitted or "HEAD", the tool shows the diff for the current branch\&. Any additional arguments are passed through to the underlying git\-diff command\&. This is \fIroughly\fR the same as:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+git diff \-\-patience \-C \-C branch@{upstream}  \fB(1)\fR \fB(2)\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+\fB1. \fR\fB\-C \-C\fR
+detects file copies/renames
+.br
+\fB2. \fR\fB\-\-patience\fR
+uses the patience\-diff algorithm, which tends to produce nicer diffs in many cases\&.
+.br
+.sp
+The difference is that \fBbranch@{upstream}\fR is actually the tagged merge base of your branch (See \fBgit-rebase-update\fR(1))\&. This means that if your upstream branch was rebased, but you haven\(cqt yet rebased the current branch on top of it, you\(cqll still see an accurate diff compared to just diffing against \fB@{upstream}\fR\&.
+.sp
+The \fB\-\-wordwise\fR option also allows \fBgit\-diff\fR to do word\-by\-word comparison in a semi\-intelligent way\&. However, sometimes it can produce surprising results, so it is disabled by default\&.
+.sp
+Since any additional options are passed through to git\-diff unchanged, you can use this as a general replacement for \fBgit diff\fR for things like:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+$ # See what changed in a file on the current branch
+$ git upstream\-diff some/file\&.py
+\&.\&.\&.
+
+$ # Omit deleted files from the diff
+$ git upstream\-diff \-\-diff\-filter d
+\&.\&.\&.
+
+$ # etc\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "OPTIONS"
+.PP
+\-\-wordwise
+.RS 4
+Print a colorized word\-wise diff instead of a line\-wise diff\&.
+.RE
+.PP
+\-\-branch branch
+.RS 4
+Show a diff between the specified branch and its upstream, instead of using the current branch\&.
+.RE
+.PP
+<extra args for git\-diff>
+.RS 4
+Extra arguments are included in the invocation of
+\fBgit-diff\fR(1)\&. These can be anything that
+\fBgit\-diff\fR
+normally takes\&.
+.PP
+\fB\-\-stat\fR
+.RS 4
+This is particularly useful to show
+\fIwhich\fR
+files have been changed in comparison to the upstream branch\&.
+.RE
+.PP
+\fB\-\-staged\fR
+.RS 4
+Diff against the staged (cached) changes, instead of against the working directory\&. This is
+\fIsubstantially\fR
+faster on large repos, but doesn\(cqt take into account unstaged changes (i\&.e\&. changes in your working copy which you haven\(cqt staged with
+\fBgit add\fR)\&.
+.RE
+.PP
+\fB\-\- <filename patterns>*\fR
+.RS 4
+Restrict the diff to only show the diff for given files compared to the upstream\&.
+.RE
+.RE
+.SH "CONFIGURATION VARIABLES"
+.SS "depot\-tools\&.upstream\-diff\&.default\-args"
+.sp
+A list\-configuration variable\&. Each instance of this config variable will be prepended to all invocations of \fBgit upstream\-diff\fR, as if you had passed them on the command line\&.
+.SH "SUGGESTED ALIASES"
+.sp
+Some common short\-hand aliases\&. Feel free to add these to your \fI~/\&.gitconfig\fR file\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[alias]
+  udiff = upstream\-diff
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "SEE ALSO"
+.sp
+\fBgit-rebase-update\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

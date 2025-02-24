@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/accessibility_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeTestModel() {
+    return tr.c.TestUtils.newModel(function(model) {
+      const browserProcess = model.getOrCreateProcess(99);
+      browserProcess.name = 'Browser';
+      const browserThread = browserProcess.getOrCreateThread(2);
+      browserThread.name = 'CrBrowserMain';
+      browserThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'accessibility',
+        title: 'BrowserAccessibilityManager::OnAccessibilityEvents',
+        start: 1000,
+        dur: 71,
+        end: 1071,
+      }));
+      browserThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'accessibility',
+        title: 'BrowserAccessibilityManager::OnAccessibilityEvents',
+        start: 1500,
+        dur: 22,
+        end: 1522,
+      }));
+
+      const renderThread = model.getOrCreateProcess(1).getOrCreateThread(2);
+      renderThread.name = 'CrRendererMain';
+      renderThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'accessibility',
+        title: 'RenderAccessibilityImpl::SendPendingAccessibilityEvents',
+        start: 800,
+        dur: 228,
+        end: 1028,
+      }));
+      renderThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'accessibility',
+        title: 'RenderAccessibilityImpl::SendLocationChanges',
+        start: 900,
+        dur: 12,
+        end: 912,
+      }));
+      renderThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'accessibility',
+        title: 'RenderAccessibilityImpl::SendPendingAccessibilityEvents',
+        start: 1400,
+        dur: 188,
+        end: 1588,
+      }));
+    });
+  }
+
+  test('accessibilityMetric', function() {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.accessibilityMetric(histograms, makeTestModel());
+    assert.closeTo(93, histograms.getHistogramNamed(
+        'browser_accessibility_events').sum, 1e-2);
+    assert.closeTo(416, histograms.getHistogramNamed(
+        'render_accessibility_events').sum, 1e-2);
+    assert.closeTo(12, histograms.getHistogramNamed(
+        'render_accessibility_locations').sum, 1e-2);
+  });
+});
+</script>

@@ -1,0 +1,13 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+
+#include <windows.h>
+#include <ntverp.h>
+
+#define VER_FILETYPE                  VFT_DLL
+#define VER_FILESUBTYPE               VFT_UNKNOWN
+#define VER_FILEDESCRIPTION_STR       "DX Rewriter"
+#define VER_INTERNALNAME_STR          "DX Rewriter"
+#define VER_ORIGINALFILENAME_STR      "dxr.exe"
+
+#include <common.ver>

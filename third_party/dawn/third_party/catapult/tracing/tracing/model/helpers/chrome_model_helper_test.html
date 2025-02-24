@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/helpers/chrome_browser_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newAsyncSliceEx = tr.c.TestUtils.newAsyncSliceEx;
+
+  test('getLatencyData', function() {
+    const m = tr.e.chrome.ChromeTestUtils.newChromeModel(function(m) {
+      m.browserMain.asyncSliceGroup.push(newAsyncSliceEx({
+        title: 'InputLatency::GestureScrollUpdate',
+        cat: 'benchmark',
+        start: 0,
+        end: 10,
+        id: '0x100',
+        isTopLevel: true,
+        args: {
+          data: {
+            INPUT_EVENT_LATENCY_ORIGINAL_COMPONENT: {'time': 0},
+            INPUT_EVENT_LATENCY_TERMINATED_FRAME_SWAP_COMPONENT: {time: 10}
+          }
+        }
+      }));
+    });
+
+    const modelHelper = m.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    const latencyEvents = modelHelper.browserHelper.getLatencyEventsInRange(
+        m.bounds);
+    assert.strictEqual(latencyEvents.length, 1);
+  });
+
+  test('getFrametime', function() {
+    let frameTs;
+    const events = [];
+    // Browser process 3507
+    events.push({'cat': '__metadata', 'pid': 3507, 'tid': 3507, 'ts': 0, 'ph': 'M', 'name': 'thread_name', 'args': {'name': 'CrBrowserMain'}}); // @suppress longLineCheck
+
+    // Renderer process 3508
+    events.push({'cat': '__metadata', 'pid': 3508, 'tid': 3508, 'ts': 0, 'ph': 'M', 'name': 'thread_name', 'args': {'name': 'CrRendererMain'}}); // @suppress longLineCheck
+    // Compositor thread 3510
+    events.push({'cat': '__metadata', 'pid': 3508, 'tid': 3510, 'ts': 0, 'ph': 'M', 'name': 'thread_name', 'args': {'name': 'Compositor'}}); // @suppress longLineCheck
+
+    // Renderer process 3509
+    events.push({'cat': '__metadata', 'pid': 3509, 'tid': 3509, 'ts': 0, 'ph': 'M', 'name': 'thread_name', 'args': {'name': 'CrRendererMain'}}); // @suppress longLineCheck
+
+    // Compositor thread 3511
+    events.push({'cat': '__metadata', 'pid': 3509, 'tid': 3511, 'ts': 0, 'ph': 'M', 'name': 'thread_name', 'args': {'name': 'Compositor'}}); // @suppress longLineCheck
+
+    frameTs = 0;
+    // Add impl rendering stats for browser process 3507
+    for (let i = 0; i < 10; i++) {
+      events.push({'cat': 'benchmark', 'pid': 3507, 'tid': 3507, 'ts': frameTs, 'ph': 'i', 'name': 'BenchmarkInstrumentation::ImplThreadRenderingStats', 's': 't'}); // @suppress longLineCheck
+      frameTs += 16000 + 1000 * (i % 2);
+    }
+
+    frameTs = 0;
+    // Add main rendering stats for renderer process 3508
+    for (let i = 0; i < 10; i++) {
+      events.push({'cat': 'benchmark', 'pid': 3508, 'tid': 3508, 'ts': frameTs, 'ph': 'i', 'name': 'BenchmarkInstrumentation::MainThreadRenderingStats', 's': 't'}); // @suppress longLineCheck
+      frameTs += 16000 + 1000 * (i % 2);
+    }
+    events.push({'cat': 'benchmark', 'pid': 3508, 'tid': 3510, 'ts': 1600, 'ph': 'i', 'name': 'KeepAlive', 's': 't'}); // @suppress longLineCheck
+
+    frameTs = 0;
+    // Add impl and main rendering stats for renderer process 3509
+    for (let i = 0; i < 10; i++) {
+      events.push({'cat': 'benchmark', 'pid': 3509, 'tid': 3511, 'ts': frameTs, 'ph': 'i', 'name': 'BenchmarkInstrumentation::ImplThreadRenderingStats', 's': 't'}); // @suppress longLineCheck
+      events.push({'cat': 'benchmark', 'pid': 3509, 'tid': 3509, 'ts': frameTs, 'ph': 'i', 'name': 'BenchmarkInstrumentation::MainThreadRenderingStats', 's': 't'}); // @suppress longLineCheck
+      frameTs += 16000 + 1000 * (i % 2);
+    }
+
+    const m = tr.c.TestUtils.newModelWithEvents([events]);
+    const modelHelper = m.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+
+    // Testing browser impl and main rendering stats.
+    let frameEvents = modelHelper.browserHelper.getFrameEventsInRange(
+        tr.model.helpers.IMPL_FRAMETIME_TYPE, m.bounds);
+    let frametimeData = tr.model.helpers.getFrametimeDataFromEvents(
+        frameEvents);
+    assert.strictEqual(frametimeData.length, 9);
+    for (let i = 0; i < frametimeData.length; i++) {
+      assert.strictEqual(frametimeData[i].frametime, 16 + i % 2);
+    }
+    // No main rendering stats.
+    frameEvents = modelHelper.browserHelper.getFrameEventsInRange(
+        tr.model.helpers.MAIN_FRAMETIME_TYPE, m.bounds);
+    assert.strictEqual(frameEvents.length, 0);
+
+
+    // Testing renderer 3508 impl and main rendering stats.
+    frameEvents = modelHelper.rendererHelpers[3508].getFrameEventsInRange(
+        tr.model.helpers.MAIN_FRAMETIME_TYPE, m.bounds);
+    frametimeData = tr.model.helpers.getFrametimeDataFromEvents(frameEvents);
+    assert.strictEqual(frametimeData.length, 9);
+    for (let i = 0; i < frametimeData.length; i++) {
+      assert.strictEqual(frametimeData[i].frametime, 16 + i % 2);
+    }
+
+    // No impl rendering stats.
+    frameEvents = modelHelper.rendererHelpers[3508].getFrameEventsInRange(
+        tr.model.helpers.IMPL_FRAMETIME_TYPE, m.bounds);
+    assert.strictEqual(frameEvents.length, 0);
+
+
+    // Testing renderer 3509 impl and main rendering stats.
+    frameEvents = modelHelper.rendererHelpers[3509].getFrameEventsInRange(
+        tr.model.helpers.IMPL_FRAMETIME_TYPE, m.bounds);
+    frametimeData = tr.model.helpers.getFrametimeDataFromEvents(frameEvents);
+    assert.strictEqual(frametimeData.length, 9);
+    for (let i = 0; i < frametimeData.length; i++) {
+      assert.strictEqual(frametimeData[i].frametime, 16 + i % 2);
+    }
+
+    frameEvents = modelHelper.rendererHelpers[3509].getFrameEventsInRange(
+        tr.model.helpers.MAIN_FRAMETIME_TYPE, m.bounds);
+    frametimeData = tr.model.helpers.getFrametimeDataFromEvents(frameEvents);
+    assert.strictEqual(frametimeData.length, 9);
+    for (let i = 0; i < frametimeData.length; i++) {
+      assert.strictEqual(frametimeData[i].frametime, 16 + i % 2);
+    }
+  });
+
+  test('multipleBrowsers', function() {
+    const m = tr.c.TestUtils.newModel(function(model) {
+      const browserProcess1 = model.getOrCreateProcess(1);
+      browserProcess1.getOrCreateThread(2).name = 'CrBrowserMain';
+
+      const browserProcess2 = model.getOrCreateProcess(3);
+      browserProcess2.getOrCreateThread(4);
+      browserProcess2.getOrCreateThread(5).name = 'CrBrowserMain';
+
+      const nonBrowserProcess = model.getOrCreateProcess(6);
+      nonBrowserProcess.getOrCreateThread(7);
+
+      const browserProcess3 = model.getOrCreateProcess(8);
+      browserProcess3.getOrCreateThread(9).name = 'CrBrowserMain';
+      browserProcess3.getOrCreateThread(10);
+    });
+
+    const modelHelper = m.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    const browserHelpers = modelHelper.browserHelpers;
+
+    // Check that the correct processes were marked as Chrome browser processes.
+    assert.sameMembers(browserHelpers.map(h => h.process.pid), [1, 3, 8]);
+
+    // Check that the browser helpers have the correct structure.
+    browserHelpers.forEach(function(helper) {
+      assert.instanceOf(helper, tr.model.helpers.ChromeBrowserHelper);
+      assert.strictEqual(helper.modelHelper, modelHelper);
+    });
+  });
+
+  test('chromeBounds_considersAllChromeProcesses', function() {
+    const model1 = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 100,
+      }));
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 200,
+        duration: 100,
+      }));
+    });
+
+    const model2 = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const gpuProcess = model.getOrCreateProcess(42);
+      const gpuMainThread = gpuProcess.getOrCreateThread(1);
+      gpuMainThread.name = 'CrGpuMain';
+      gpuMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 50,
+      }));
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 100,
+        duration: 50,
+      }));
+    });
+
+    const modelHelper1 =
+        model1.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    assert.strictEqual(modelHelper1.chromeBounds.min, 0);
+    assert.strictEqual(modelHelper1.chromeBounds.max, 300);
+
+    const modelHelper2 =
+        model2.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    assert.strictEqual(modelHelper2.chromeBounds.min, 0);
+    assert.strictEqual(modelHelper2.chromeBounds.max, 150);
+  });
+
+  test('chromeBounds_onlyConsidersChromeProcesses', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 100,
+      }));
+
+      // The bounds of this process should not be included in chrome bounds.
+      const nonChromeProcess = model.getOrCreateProcess(1234);
+      nonChromeProcess.name = 'Telemetry';
+      const nonChromeThread = nonChromeProcess.getOrCreateThread(1);
+      nonChromeThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 200,
+        duration: 100,
+      }));
+    });
+
+    const modelHelper =
+        model.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    assert.strictEqual(modelHelper.chromeBounds.min, 0);
+    assert.strictEqual(modelHelper.chromeBounds.max, 100);
+  });
+
+  function findInternalRangesForTestScenario(internalMarkerSpecs, opt_modelBounds) {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      const pidToMainThread = new Map();
+
+      for (const markerSpec of internalMarkerSpecs) {
+        if (!pidToMainThread.has(markerSpec.pid)) {
+          const rendererProcess = model.getOrCreateProcess(markerSpec.pid);
+          const mainThread = rendererProcess.getOrCreateThread(1);
+          mainThread.name = 'CrRendererMain';
+          pidToMainThread.set(markerSpec.pid, mainThread);
+        }
+
+        pidToMainThread.get(markerSpec.pid).asyncSliceGroup.push(
+            tr.c.TestUtils.newAsyncSliceEx({
+              cat: 'blink.console',
+              title: ('telemetry.internal.' + markerSpec.eventName + '.'
+                      + markerSpec.type),
+              start: markerSpec.ts,
+              // These marker events are not instant events. Set an arbitrary
+              // small duration to represent reality.
+              duration: 3.0
+            }));
+      }
+
+      // Force model min and max bounds, if present.
+      if (opt_modelBounds && opt_modelBounds.modelMin) {
+        model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: opt_modelBounds.modelMin, duration: 0}));
+      }
+
+      if (opt_modelBounds && opt_modelBounds.modelMax) {
+        model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: opt_modelBounds.modelMax, duration: 0}));
+      }
+    });
+
+    const modelHelper =
+        model.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+    return modelHelper.findTelemetryInternalRanges_();
+  }
+
+  function assertRangesEqualExpectedBounds(internalRanges, expectedBounds) {
+    assert.strictEqual(expectedBounds.length, internalRanges.length);
+    internalRanges.sort((a, b) => (a.min - b.min));
+    expectedBounds.sort((a, b) => (a.start - b.start));
+    for (let i = 0; i < expectedBounds.length; i++) {
+      assert.strictEqual(expectedBounds[i].start, internalRanges[i].min);
+      assert.strictEqual(expectedBounds[i].end, internalRanges[i].max);
+    }
+  }
+
+  test('findTelemetryInternalRanges_unclosedStartOrEnd', () => {
+    const markerSpecs = [
+      {eventName: 'warm_cache.warm', pid: 123, ts: 250, type: 'end'},
+      {eventName: 'warm_cache.warm', pid: 123, ts: 300, type: 'start'},
+    ];
+    const modelBounds = { modelMin: 10 , modelMax: 999};
+    const expectedBounds = [
+      {start: 10, end: 250},
+      {start: 300, end: 999},
+    ];
+
+    const internalRanges =
+        findInternalRangesForTestScenario(markerSpecs, modelBounds);
+    assertRangesEqualExpectedBounds(internalRanges, expectedBounds);
+  });
+
+  test('findTelemetryInternalRanges_unordered', () => {
+    // Check that we're sorting the marker events before processing them, as
+    // they can end up unsorted when we're plucking them out of different
+    // processes.
+    const markerSpecs = [
+      {eventName: 'ensure_disk_cache', pid: 123, ts: 250, type: 'end'},
+      {eventName: 'ensure_disk_cache', pid: 124, ts: 200, type: 'start'},
+    ];
+    const expectedBounds = [ {start: 200, end: 250} ];
+
+    const internalRanges =
+        findInternalRangesForTestScenario(markerSpecs);
+    assertRangesEqualExpectedBounds(internalRanges, expectedBounds);
+  });
+
+  test('findTelemetryInternalRanges_invalidRanges', () => {
+    const unmatchedEndMarkers = [
+      {eventName: 'warm_cache.warm', pid: 123, ts: 200, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 124, ts: 250, type: 'end'},
+      {eventName: 'warm_cache.warm', pid: 125, ts: 300, type: 'end'},
+    ];
+    assert.throws(
+        () => findInternalRangesForTestScenario(unmatchedEndMarkers, []),
+        /Invalid internal event marker order.*end.*warm/);
+
+    const unmatchedStartMarkers = [
+      {eventName: 'warm_cache.warm', pid: 123, ts: 200, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 124, ts: 250, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 125, ts: 300, type: 'end'},
+    ];
+    assert.throws(
+        () => findInternalRangesForTestScenario(unmatchedStartMarkers, []),
+        /Invalid internal event marker order.*start.*warm/);
+  });
+
+  test('findTelemetryInternalRanges_multipleRangesSameEvent', () => {
+    const markerSpecs = [
+      {eventName: 'warm_cache.warm', pid: 123, ts: 200, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 124, ts: 250, type: 'end'},
+      {eventName: 'warm_cache.warm', pid: 124, ts: 300, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 123, ts: 350, type: 'end'},
+    ];
+    const expectedBounds = [{start: 200, end: 250}, {start: 300, end: 350}];
+
+    const internalRanges =
+        findInternalRangesForTestScenario(markerSpecs);
+    assertRangesEqualExpectedBounds(internalRanges, expectedBounds);
+  });
+
+  test('findTelemetryInternalRanges_multipleEvents', () => {
+    const markerSpecs = [
+      {eventName: 'warm_cache.hot', pid: 123, ts: 200, type: 'start'},
+      {eventName: 'warm_cache.warm', pid: 124, ts: 250, type: 'end'},
+      {eventName: 'warm_cache.hot', pid: 125, ts: 300, type: 'end'},
+      {eventName: 'warm_cache.hot-browser', pid: 126, ts: 350, type: 'start'},
+      {eventName: 'warm_cache.warm-browser', pid: 127, ts: 400, type: 'start'},
+      {eventName: 'warm_cache.hot-browser', pid: 128, ts: 450, type: 'end'},
+    ];
+    const modelBounds = { modelMin: 10, modelMax: 999 };
+    const expectedBounds = [
+      {start: modelBounds.modelMin, end: 250},  // warm load.
+      {start: 200, end: 300},  // hot load.
+      {start: 350, end: 450},  // hot-browser load.
+      {start: 400, end: modelBounds.modelMax},  // warm-browser load.
+    ];
+
+    const internalRanges =
+        findInternalRangesForTestScenario(markerSpecs, modelBounds);
+    assertRangesEqualExpectedBounds(internalRanges, expectedBounds);
+  });
+
+  test('isTelemetryInternalEvent', () => {
+    const internalEvents = [
+      {eventName: 'warm_cache.warm', ts: 300, type: 'end'},
+      {eventName: 'warm_cache.hot', ts: 400, type: 'start'},
+      {eventName: 'warm_cache.hot', ts: 450, type: 'end'},
+    ];
+    const modelMin = 10;
+
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      // Force chromeBounds min.
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+        {start: modelMin, duration: 0}));
+
+      for (const event of internalEvents) {
+        model.rendererMain.asyncSliceGroup.push(
+            tr.c.TestUtils.newAsyncSliceEx({
+              cat: 'blink.console',
+              title: ('telemetry.internal.warm_cache.' +
+                      event.eventName + '.' + event.type),
+              start: event.ts,
+              duration: 3.0,  // Arbitrary small duration.
+            }));
+      }
+    });
+
+    const modelHelper =
+        model.getOrCreateHelper(tr.model.helpers.ChromeModelHelper);
+
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 10, duration: 0})));
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 20, duration: 0})));
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 300, duration: 0})));
+    assert.isFalse(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 310, duration: 0})));
+    assert.isFalse(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 399, duration: 0})));
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 400, duration: 0})));
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 449, duration: 0})));
+    assert.isTrue(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 450, duration: 0})));
+    assert.isFalse(modelHelper.isTelemetryInternalEvent(
+        tr.c.TestUtils.newSliceEx({start: 451, duration: 0})));
+  });
+});
+</script>

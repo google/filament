@@ -1,0 +1,27 @@
+boto v2.36.0
+============
+
+:date: 2015/01/27
+
+This release adds support for AWS Key Management Service (KMS), AWS Lambda, 
+AWS CodeDeploy, AWS Config, AWS CloudHSM, Amazon EC2 Container Service (ECS),
+Amazon DynamoDB online indexing, and fixes a few issues.
+
+
+Changes
+-------
+* Add Amazon DynamoDB online indexing support.
+* Allow for binary to be passed to sqs message (:issue:`2913`, :sha:`8af9b42`)
+* Kinesis update (:issue:`2891`, :sha:`4874e19`)
+* Fixed spelling of boto.awslambda package. (:issue:`2914`, :sha:`de769ac`)
+* Add support for Amazon EC2 Container Service (:issue:`2908`, :sha:`4480fb4`)
+* Add support for CloudHSM (:issue:`2905`, :sha:`6055a35`)
+* Add support for AWS Config (:issue:`2904`, :sha:`51e9221`)
+* Add support for AWS CodeDeploy (:issue:`2899`, :sha:`d935356`)
+* Add support for AWS Lambda (:issue:`2896`, :sha:`6748016`)
+* Update both Cognito's to the latest APIs (:issue:`2909`, :sha:`18c1251`)
+* Add sts for eu-central-1. (:issue:`2906`, :sha:`54714ff`)
+* Update opsworks to latest API (:issue:`2892`, :sha:`aed3302`)
+* Add AWS Key Managment Support (:issue:`2894`, :sha:`ef7d2cd`)
+
+

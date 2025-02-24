@@ -1,0 +1,67 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<html>
+<head>
+  <title>app-route 0bserver Test</title>
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../../polymer/polymer.html">
+  <link rel="import" href="./observer-tester.html">
+
+</head>
+<body>
+
+  <test-fixture id="observer_app">
+    <template>
+      <observer-tester id="testel"></observer-tester>
+    </template>
+  </test-fixture>
+  <script>
+  'use strict';
+    function setLocation(url) {
+      window.history.pushState({}, '', url);
+      Polymer.Base.fire('location-changed', {}, { node: window });
+    }
+
+
+    suite('observe app-route active changes', function(){
+      var originalLocation;
+      var sandbox, el;
+      setup(function(){
+        originalLocation = window.location.href;
+        sandbox = sinon.sandbox.create();
+        el = fixture('observer_app');
+     });
+      teardown(function(){
+        sandbox.restore();
+        window.history.replaceState({}, '', originalLocation);
+      });
+
+      test('observer should fire when route selected', function(){
+        sandbox.spy(el,'checkActive');
+        setLocation('/report/1000');
+        expect(el.checkActive).to.have.been.called.once;
+        expect(el.checkActive).to.have.been.calledWith(true);
+      });
+      test('observer should fire when route deselected',function(){
+        setLocation('/report/1000');
+        sandbox.spy(el,'checkActive');
+        setLocation('/menu');
+        expect(el.checkActive).to.have.been.called.once;
+        expect(el.checkActive).to.have.been.calledWith(false);
+      });
+    });
+  </script>
+</body>
+

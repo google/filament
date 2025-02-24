@@ -1,0 +1,7 @@
+[run]
+# based on .gitignore
+omit =
+    *pb2.py
+
+[expect_tests]
+expected_coverage_min = 0

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  function RegisteredTypeInfo(constructor, metadata) {
+    this.constructor = constructor;
+    this.metadata = metadata;
+  }
+
+  const BASIC_REGISTRY_MODE = 'BASIC_REGISTRY_MODE';
+  const TYPE_BASED_REGISTRY_MODE = 'TYPE_BASED_REGISTRY_MODE';
+  const ALL_MODES = {BASIC_REGISTRY_MODE: true, TYPE_BASED_REGISTRY_MODE: true};
+
+  function ExtensionRegistryOptions(mode) {
+    if (mode === undefined) {
+      throw new Error('Mode is required');
+    }
+    if (!ALL_MODES[mode]) {
+      throw new Error('Not a mode.');
+    }
+
+    this.mode_ = mode;
+    this.defaultMetadata_ = {};
+    this.defaultConstructor_ = undefined;
+    this.defaultTypeInfo_ = undefined;
+    this.frozen_ = false;
+  }
+  ExtensionRegistryOptions.prototype = {
+    freeze() {
+      if (this.frozen_) {
+        throw new Error('Frozen');
+      }
+      this.frozen_ = true;
+    },
+
+    get mode() {
+      return this.mode_;
+    },
+
+    get defaultMetadata() {
+      return this.defaultMetadata_;
+    },
+
+    set defaultMetadata(defaultMetadata) {
+      if (this.frozen_) {
+        throw new Error('Frozen');
+      }
+      this.defaultMetadata_ = defaultMetadata;
+      this.defaultTypeInfo_ = undefined;
+    },
+
+    get defaultConstructor() {
+      return this.defaultConstructor_;
+    },
+
+    set defaultConstructor(defaultConstructor) {
+      if (this.frozen_) {
+        throw new Error('Frozen');
+      }
+      this.defaultConstructor_ = defaultConstructor;
+      this.defaultTypeInfo_ = undefined;
+    },
+
+    get defaultTypeInfo() {
+      if (this.defaultTypeInfo_ === undefined && this.defaultConstructor_) {
+        this.defaultTypeInfo_ = new RegisteredTypeInfo(
+            this.defaultConstructor,
+            this.defaultMetadata);
+      }
+      return this.defaultTypeInfo_;
+    },
+
+    validateConstructor(constructor) {
+      if (!this.mandatoryBaseClass) return;
+      let curProto = constructor.prototype.__proto__;
+      let ok = false;
+      while (curProto) {
+        if (curProto === this.mandatoryBaseClass.prototype) {
+          ok = true;
+          break;
+        }
+        curProto = curProto.__proto__;
+      }
+      if (!ok) {
+        throw new Error(constructor + 'must be subclass of ' + registry);
+      }
+    }
+  };
+
+  return {
+    BASIC_REGISTRY_MODE,
+    TYPE_BASED_REGISTRY_MODE,
+
+    ExtensionRegistryOptions,
+    RegisteredTypeInfo,
+  };
+});
+</script>

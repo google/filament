@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.e.chrome', function() {
+  // TODO(dproy): Because title and category are properties of TimedEvent
+  // subclasses and not TimedEvent itself, we have to write our own "has title
+  // and category" function rather than having it provided by TimedEvent.
+  // This should be fixed.
+  // https://github.com/catapult-project/catapult/issues/2784
+  function hasTitleAndCategory(event, title, category) {
+    return event.title === title && event.category &&
+      tr.b.getCategoryParts(event.category).includes(category);
+  }
+
+  function getNavStartTimestamps(rendererHelper) {
+    const navStartTimestamps = [];
+    for (const e of rendererHelper.mainThread.sliceGroup.childEvents()) {
+      if (hasTitleAndCategory(e, 'navigationStart', 'blink.user_timing')) {
+        navStartTimestamps.push(e.start);
+      }
+    }
+    return navStartTimestamps;
+  }
+
+  /**
+   * Returns a map of renderer PIDs to array of timestamps at which the
+   * renderer became interactive.
+   */
+  function getInteractiveTimestamps(model) {
+    const interactiveTimestampsMap = new Map();
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    for (const rendererHelper of Object.values(chromeHelper.rendererHelpers)) {
+      const timestamps = [];
+      interactiveTimestampsMap.set(rendererHelper.pid, timestamps);
+    }
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(
+          expectation.url)) {
+        continue;
+      }
+      if (expectation.timeToInteractive === undefined) continue;
+      if (interactiveTimestampsMap.get(expectation.renderProcess.pid) ===
+        undefined) {
+        interactiveTimestampsMap.set(expectation.renderProcess.pid, []);
+      }
+      interactiveTimestampsMap.get(expectation.renderProcess.pid).push(
+          expectation.timeToInteractive);
+    }
+    return interactiveTimestampsMap;
+  }
+
+  /**
+   * Returns an Array of task windows that start with the supplied interactive
+   * timestamps.
+   *
+   * A task window is defined as the range of time from the time when the page
+   * became interactive until either
+   *
+   *   1. The beginning of the next navigationStart event or
+   *   2. The end of the trace
+   *
+   * This function only works when timestamps are from the same renderer. If
+   * windows for multiple renderers need to be computed, the timestamps should
+   * be separated for each renderer and this function should be called
+   * separately for each.
+   *
+   * @param {!Array.<number>} interactiveTimestamps
+   * @param {!Array.<number>} navStartTimestamps
+   * @param {!number} traceEndTimestamp
+   * @returns {!Array.<tr.b.math.Range>}
+   */
+  function getPostInteractiveTaskWindows(
+      interactiveTimestamps, navStartTimestamps, traceEndTimestamp) {
+    let navStartTsIndex = 0;
+    let lastTaskWindowEndTs = undefined;
+    const taskWindows = [];
+    for (const currTTI of interactiveTimestamps) {
+      // Find the first navigation start event after the interactive
+      // timestamp.
+      while (navStartTsIndex < navStartTimestamps.length &&
+          navStartTimestamps[navStartTsIndex] < currTTI) {
+        navStartTsIndex++;
+      }
+
+      const taskWindowEndTs = navStartTsIndex < navStartTimestamps.length ?
+        navStartTimestamps[navStartTsIndex] : traceEndTimestamp;
+
+      if (taskWindowEndTs === lastTaskWindowEndTs) {
+        // This is the case where we have two different interactive timestamps
+        // with no navigationStart event between them. This is only possible
+        // when two different pages are sharing the same renderer process (and
+        // therefore the same renderer scheduler). We cannot define a proper
+        // task window in this case to calculate Estimated Input Latency.
+        throw Error('Encountered two consecutive interactive timestamps ' +
+            'with no navigationStart between them. ' +
+            'PostInteractiveTaskWindow is not well defined in this case.');
+      }
+
+      taskWindows.push(tr.b.math.Range.fromExplicitRange(
+          currTTI, taskWindowEndTs));
+      lastTaskWindowEndTs = taskWindowEndTs;
+    }
+    return taskWindows;
+  }
+
+  /**
+   * Returns the contribution of the given task to expected queueing time
+   * in the given time window.
+   *
+   * The result is probabilityOf(task) * expectedQueueTimeDueTo(task),
+   * where
+   * - probabilityOf(task) = probability of input arriving while the given
+   *   task is running.
+   * - expectedQueueingTimeDueTo(task) = expected time until the end of the
+   *   given task for input arriving while the task is running.
+   *
+   * We assume that input arrival time is uniformly distributed in the given
+   * time window.
+   *
+   * @param {!tr.b.math.Range} A time window.
+   * @param {!Array.<!{start: number, end: number, weight: number}>} A list of
+   *        weighted tasks. The weight of a task must be between 0.0 and 1.0.
+   * @returns {number}
+   */
+  function contributionToEQT(window, task) {
+    const startInWindow = Math.max(window.min, task.start);
+    const endInWindow = Math.min(window.max, task.end);
+    const durationInWindow = endInWindow - startInWindow;
+    if (durationInWindow <= 0) return 0;
+    const probabilityOfTask = durationInWindow / (window.max - window.min);
+    const minQueueingTime = task.end - endInWindow;
+    const maxQueueingTime = task.end - startInWindow;
+    const expectedQueueingTimeDueToTask =
+        (maxQueueingTime + minQueueingTime) / 2;
+    return probabilityOfTask * expectedQueueingTimeDueToTask;
+  }
+
+  /**
+   * Returns weighted expected queueing time (EQT) for the given time window and
+   * the given set of weighted tasks. The tasks must not overlap.
+   *
+   * The weighted EQT is computed as
+   *   sum(contributionToEQT(window, task) * task.weight)
+   * for all tasks in weightedTasks, where
+   * - contributionToEQT is the function defined above.
+   * - task.weight is an arbitrary number between 0.0 and 1.0. This is useful
+   *   for computing contribution of chrome subcomponents (e.g. GC) to
+   *   the expected queueing time for EQT diagnostics.
+   *
+   * We assume that input arrival time is uniformly distributed in the given
+   * time window.
+   *
+   * @param {!tr.b.math.Range} A time window.
+   * @param {!Array.<!{start: number, end: number, weight: number}>} A list of
+   *        weighted tasks. The weight of a task must be between 0.0 and 1.0.
+   * @returns {number}
+   */
+  function weightedExpectedQueueingTime(window, weightedTasks) {
+    let result = 0;
+    for (const task of weightedTasks) {
+      result += contributionToEQT(window, task) * task.weight;
+    }
+    return result;
+  }
+
+  /**
+   * Returns expected queueing time for the given time window and
+   * the given set of tasks. The tasks must not overlap.
+   *
+   * @param {!tr.b.math.Range} A time window.
+   * @param {!Array.<!{start: number, end: number}>} A list of tasks.
+   * @returns {number}
+   */
+  function expectedQueueingTime(window, tasks) {
+    return weightedExpectedQueueingTime(window, tasks.map(function(task) {
+      return { start: task.start, end: task.end, weight: 1 };
+    }));
+  }
+
+  /**
+   * Object of this calss represents the sliding window and maintains its
+   * main invariant: windowEQT = firstTaskEQT + innerEQT + lastTaskEQT.
+   * It is intended to be used only in maxExpectedQueueingTimeInSlidingWindow().
+   */
+  class SlidingWindow {
+    /**
+     * @param {number} The starting time of the sliding window.
+     * @param {number} The window size.
+     * @param {!Array.<!{start: number, end: number}>} A list of tasks sorted by
+     *     task start time.
+     */
+    constructor(startTime, windowSize, sortedTasks) {
+      /**
+       * @private @const {number} The window size.
+       */
+      this.windowSize_ = windowSize;
+      /**
+       * @private @const {!Array.<!{start: number, end: number}>} The tasks.
+       */
+      this.sortedTasks_ = sortedTasks;
+      /**
+       * @private {!tr.b.math.Range} The endpoints of the sliding window.
+       */
+      this.range_ = tr.b.math.Range.fromExplicitRange(
+          startTime, startTime + windowSize);
+      /**
+       * @private {number} The index of the first task in the sortedTasks that
+       *     ends after this window starts:
+       *     this.range_.min < this.sortedTasks_[this.firstTaskIndex_].end.
+       */
+      this.firstTaskIndex_ =
+          sortedTasks.findIndex(task => startTime < task.end);
+      if (this.firstTaskIndex_ === -1) {
+        this.firstTaskIndex_ = sortedTasks.length;
+      }
+      /**
+       * @private {number} The index of the last task in the sortedTasks that
+       *     starts before this window ends:
+       *     this.range.max > this.sortedTasks_[lastTaskIndex_].start.
+       */
+      this.lastTaskIndex_ = -1;
+      while (this.lastTaskIndex_ + 1 < sortedTasks.length &&
+          sortedTasks[this.lastTaskIndex_ + 1].start < startTime + windowSize) {
+        this.lastTaskIndex_++;
+      }
+      /**
+       * @private {number} The sum of EQT contributions for all tasks between
+       *     the first task and the last task (excluding the first and the last
+       *     tasks). All such tasks are completely inside the window.
+       */
+      this.innerEQT_ = 0;
+      for (let i = this.firstTaskIndex_ + 1; i < this.lastTaskIndex_; i++) {
+        this.innerEQT_ += contributionToEQT(this.range_, sortedTasks[i]);
+      }
+    }
+
+    /**
+     * @returns the EQT for this window.
+     */
+    get getEQT() {
+      let firstTaskEQT = 0;
+      if (this.firstTaskIndex_ < this.sortedTasks_.length) {
+        firstTaskEQT = contributionToEQT(this.range_,
+            this.sortedTasks_[this.firstTaskIndex_]);
+      }
+      let lastTaskEQT = 0;
+      if (this.firstTaskIndex_ < this.lastTaskIndex_) {
+        lastTaskEQT = contributionToEQT(this.range_,
+            this.sortedTasks_[this.lastTaskIndex_]);
+      }
+      return firstTaskEQT + this.innerEQT_ + lastTaskEQT;
+    }
+
+    /**
+     * Moves the window to the given time t.
+     * @param {number} The time.
+     */
+    slide(t) {
+      this.range_ = tr.b.math.Range.fromExplicitRange(t, t + this.windowSize_);
+      if (this.firstTaskIndex_ < this.sortedTasks_.length &&
+          this.sortedTasks_[this.firstTaskIndex_].end <= t) {
+        // The first task moved out of the window.
+        this.firstTaskIndex_++;
+        if (this.firstTaskIndex_ < this.lastTaskIndex_) {
+          // The new first window was accounted in innerEQT. Undo that.
+          this.innerEQT_ -= contributionToEQT(this.range_,
+              this.sortedTasks_[this.firstTaskIndex_]);
+        }
+      }
+      if (this.lastTaskIndex_ + 1 < this.sortedTasks_.length &&
+          this.sortedTasks_[this.lastTaskIndex_ + 1].start <
+              t + this.windowSize_) {
+        // A new task moved in the window.
+        if (this.firstTaskIndex_ < this.lastTaskIndex_) {
+          // The old last task is completely inside the window.
+          // Account it in innerEQT.
+          this.innerEQT_ += contributionToEQT(this.range_,
+              this.sortedTasks_[this.lastTaskIndex_]);
+        }
+        this.lastTaskIndex_++;
+      }
+    }
+  }
+
+  /**
+   * Returns maximum expected queueing time for time window of the given size
+   * that slides from the startTime to the endTime:
+   *   max { expectedQueueingTime(window(t, t + windowSize), tasks),
+   *         for all startTime <= t && t + w <= endTime }.
+   * See https://goo.gl/jmWpMl for the description of the algorithm.
+   *
+   * @param {number} start time for the sliding window.
+   * @param {number} end time for the sliding window.
+   * @param {number} the size of the sliding window.
+   * @param {!Array.<!{start: number, end: number}>} A list of tasks.
+   *        The tasks must not overlap.
+   * @returns {number}
+   */
+  function maxExpectedQueueingTimeInSlidingWindow(startTime, endTime,
+      windowSize, tasks) {
+    if (windowSize <= 0) {
+      throw Error('The window size must be positive number');
+    }
+    if (startTime + windowSize > endTime) {
+      throw Error('The sliding window must fit in the specified time range');
+    }
+
+    const sortedTasks = tasks.slice().sort((a, b) => a.start - b.start);
+
+    for (let i = 1; i < sortedTasks.length; i++) {
+      // Ensure that the previous task finishes not later than the current task.
+      // This can happen with short trace events late in the timeline, when
+      // floating point errors increasingly come into play.
+      if (sortedTasks[i - 1].end > sortedTasks[i].start) {
+        const midpoint = (sortedTasks[i - 1].end + sortedTasks[i].start) / 2;
+        sortedTasks[i - 1].end = midpoint;
+        sortedTasks[i].start = midpoint;
+      }
+    }
+
+    // Collect all time points that the sliding window needs to stop at.
+    // See https://goo.gl/jmWpMl for justification.
+    let endpoints = [];
+    endpoints.push(startTime);
+    endpoints.push(endTime - windowSize);
+    for (const task of tasks) {
+      endpoints.push(task.start - windowSize);
+      endpoints.push(task.start);
+      endpoints.push(task.end - windowSize);
+      endpoints.push(task.end);
+    }
+    endpoints = endpoints.filter(
+        x => (startTime <= x && x + windowSize <= endTime));
+    endpoints.sort((a, b) => a - b);
+
+    // Slide the window and compute maxEQT.
+    const slidingWindow = new SlidingWindow(
+        endpoints[0], windowSize, sortedTasks);
+    let maxEQT = 0;
+    for (const t of endpoints) {
+      slidingWindow.slide(t);
+      maxEQT = Math.max(maxEQT, slidingWindow.getEQT);
+    }
+    return maxEQT;
+  }
+
+  return {
+    getPostInteractiveTaskWindows,
+    getNavStartTimestamps,
+    getInteractiveTimestamps,
+    expectedQueueingTime,
+    maxExpectedQueueingTimeInSlidingWindow,
+    weightedExpectedQueueingTime
+  };
+});
+</script>

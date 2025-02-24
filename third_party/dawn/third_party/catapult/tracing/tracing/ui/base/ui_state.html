@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/location.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const Location = tr.model.Location;
+
+  /**
+   * UIState is a class that represents the current state of the timeline by
+   * the Location of the point of interest and the current scaleX of the
+   * timeline.
+   *
+   * @constructor
+   */
+  function UIState(location, scaleX) {
+    this.location_ = location;
+    this.scaleX_ = scaleX;
+  }
+
+  /**
+   * Accepts a UIState string in the format of (timestamp)@(stableID)x(scaleX)
+   * Returns undefined if string is not in this format, or throws an Error if
+   * variables in a syntactically-correct stateString does not produce a valid
+   * UIState. Otherwise returns a constructed UIState instance.
+   */
+  UIState.fromUserFriendlyString = function(model, viewport, stateString) {
+    const navByFinderPattern = /^(-?\d+(\.\d+)?)@(.+)x(\d+(\.\d+)?)$/g;
+    const match = navByFinderPattern.exec(stateString);
+    if (!match) return;
+
+    const timestamp = parseFloat(match[1]);
+    const stableId = match[3];
+    const scaleX = parseFloat(match[4]);
+
+    if (scaleX <= 0) {
+      throw new Error('Invalid ScaleX value in UI State string.');
+    }
+
+    if (!viewport.containerToTrackMap.getTrackByStableId(stableId)) {
+      throw new Error('Invalid StableID given in UI State String.');
+    }
+
+    const loc = tr.model.Location.fromStableIdAndTimestamp(
+        viewport, stableId, timestamp);
+    return new UIState(loc, scaleX);
+  };
+
+  UIState.prototype = {
+
+    get location() {
+      return this.location_;
+    },
+
+    get scaleX() {
+      return this.scaleX_;
+    },
+
+    toUserFriendlyString(viewport) {
+      const timestamp = this.location_.xWorld;
+      const stableId =
+          this.location_.getContainingTrack(viewport).eventContainer.stableId;
+      const scaleX = this.scaleX_;
+      return timestamp.toFixed(5) + '@' + stableId + 'x' + scaleX.toFixed(5);
+    },
+
+    toDict() {
+      return {
+        location: this.location_.toDict(),
+        scaleX: this.scaleX_
+      };
+    }
+  };
+
+  return {
+    UIState,
+  };
+});
+</script>

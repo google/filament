@@ -1,0 +1,554 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[recipe_engine::file]/resources/fileutil.py",
+      "--json-output",
+      "/path/to/tmp/json",
+      "copy",
+      "foo",
+      "/path/to/tmp/"
+    ],
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "Read DEPS file",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@foo@@@@",
+      "@@@STEP_LOG_LINE@foo@git_dependencies = 'SYNC'@@@",
+      "@@@STEP_LOG_END@foo@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "setdep",
+      "--deps-file",
+      "foo",
+      "-r",
+      "foo@2222222222222222222222222222222222222222"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient setdep"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[recipe_engine::file]/resources/fileutil.py",
+      "--json-output",
+      "/path/to/tmp/json",
+      "copy",
+      "foo",
+      "/path/to/tmp/"
+    ],
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "Read modified DEPS"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[recipe_engine::file]/resources/fileutil.py",
+      "--json-output",
+      "/path/to/tmp/json",
+      "copy",
+      "\ngit_dependencies = 'SYNC'\n",
+      "/path/to/tmp/"
+    ],
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "Read DEPS file (2)",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@\ngit_dependencies = 'SYNC'\n@@@@",
+      "@@@STEP_LOG_LINE@\ngit_dependencies = 'SYNC'\n@git_dependencies = 'SYNC'@@@",
+      "@@@STEP_LOG_END@\ngit_dependencies = 'SYNC'\n@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "setdep",
+      "--deps-file",
+      "\ngit_dependencies = 'SYNC'\n",
+      "-r",
+      "src/bar@2222222222222222222222222222222222222222"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient setdep (2)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[recipe_engine::file]/resources/fileutil.py",
+      "--json-output",
+      "/path/to/tmp/json",
+      "copy",
+      "\ngit_dependencies = 'SYNC'\n",
+      "/path/to/tmp/"
+    ],
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "Read modified DEPS (2)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "config",
+      "--spec",
+      "cache_dir = '[CACHE]/git'\nsolutions = [{'custom_vars': {'string_var': 'string_val', 'true_var': True}, 'deps_file': '.DEPS.git', 'managed': True, 'name': 'src', 'url': 'https://chromium.googlesource.com/chromium/src.git'}]"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient setup"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "sync",
+      "--verbose",
+      "--nohooks",
+      "-j8",
+      "--reset",
+      "--force",
+      "--upstream",
+      "--no-nag-max",
+      "--with_branch_heads",
+      "--with_tags",
+      "--delete_unversioned_trees",
+      "--revision",
+      "src@abc",
+      "--output-json",
+      "/path/to/tmp/json"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient sync",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"solutions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"src/\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"revision\": \"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "recurse",
+      "git",
+      "config",
+      "user.name",
+      "local_bot"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient recurse (git config user.name)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "recurse",
+      "git",
+      "config",
+      "user.email",
+      "local_bot@example.com"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient recurse (git config user.email)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "config",
+      "--spec",
+      "cache_dir = '[CACHE]/git'\nsolutions = [{'deps_file': '.DEPS.git', 'managed': True, 'name': 'Angle', 'url': 'https://chromium.googlesource.com/angle/angle.git'}]"
+    ],
+    "cwd": "[START_DIR]/src/third_party",
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "[spec: Angle] gclient setup"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "sync",
+      "--verbose",
+      "--nohooks",
+      "-j8",
+      "--reset",
+      "--force",
+      "--upstream",
+      "--no-nag-max",
+      "--with_branch_heads",
+      "--with_tags",
+      "--delete_unversioned_trees",
+      "--revision",
+      "src/third_party/angle@refs/heads/lkgr",
+      "--output-json",
+      "/path/to/tmp/json"
+    ],
+    "cwd": "[START_DIR]/src/third_party",
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "[spec: Angle] gclient sync",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"solutions\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"Angle/\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"revision\": \"1fd70473fb3de634b409d4acaf49ffc1f90aae1f\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"src/blatley/\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"revision\": \"5e800497199d615131a76cd10651e74d7c8a0962\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@",
+      "@@@SET_BUILD_PROPERTY@got_blatley_revision@\"5e800497199d615131a76cd10651e74d7c8a0962\"@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "recurse",
+      "git",
+      "config",
+      "user.name",
+      "local_bot"
+    ],
+    "cwd": "[START_DIR]/src/third_party",
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "[spec: Angle] gclient recurse (git config user.name)"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "recurse",
+      "git",
+      "config",
+      "user.email",
+      "local_bot@example.com"
+    ],
+    "cwd": "[START_DIR]/src/third_party",
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "[spec: Angle] gclient recurse (git config user.email)"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gclient]/resources/cleanup.py",
+      "[START_DIR]"
+    ],
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "cleanup index.lock"
+  },
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gclient.py",
+      "runhooks"
+    ],
+    "cwd": "[START_DIR]/src",
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "project/ci/builder/8945511751514863184"
+    },
+    "env_suffixes": {
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "luci_context": {
+      "realm": {
+        "name": "project:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "gclient runhooks"
+  },
+  {
+    "name": "$result"
+  }
+]

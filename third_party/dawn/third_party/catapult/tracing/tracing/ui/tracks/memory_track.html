@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const LetterDotTrack = tr.ui.tracks.LetterDotTrack;
+
+  /**
+   * A track that displays global memory events.
+   *
+   * @constructor
+   * @extends {tr.ui.tracks.LetterDotTrack}
+   */
+  const MemoryTrack = tr.ui.b.define('memory-track', LetterDotTrack);
+
+  MemoryTrack.prototype = {
+    __proto__: LetterDotTrack.prototype,
+
+    decorate(viewport) {
+      LetterDotTrack.prototype.decorate.call(this, viewport);
+      this.classList.add('memory-track');
+      this.heading = 'Memory Events';
+      this.lowMemoryEvents_ = undefined;
+    },
+
+    initialize(model) {
+      if (model !== undefined) {
+        this.lowMemoryEvents_ = model.device.lowMemoryEvents;
+      } else {
+        this.lowMemoryEvents_ = undefined;
+      }
+
+      if (this.hasVisibleContent) {
+        this.items = this.buildMemoryLetterDots_(this.lowMemoryEvents_);
+      }
+    },
+
+    get hasVisibleContent() {
+      return !!this.lowMemoryEvents_ && this.lowMemoryEvents_.length !== 0;
+    },
+
+    buildMemoryLetterDots_(memoryEvents) {
+      return memoryEvents.map(
+          memoryEvent => new tr.ui.tracks.LetterDot(
+              memoryEvent,
+              'K',
+              ColorScheme.getColorIdForReservedName('background_memory_dump'),
+              memoryEvent.start
+          )
+      );
+    },
+  };
+
+  return {
+    MemoryTrack,
+  };
+});
+</script>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  /**
+   * This class represents a mergeable range of Date objects.
+   * This range can contain 1 or 2 Dates.
+   */
+  class DateRange extends tr.v.d.Diagnostic {
+    /**
+     * @param {number} ms
+     */
+    constructor(ms) {
+      super();
+      this.range_ = new tr.b.math.Range();
+      this.range_.addValue(ms);
+    }
+
+    get minTimestamp() {
+      return this.range_.min;
+    }
+
+    get maxTimestamp() {
+      return this.range_.max;
+    }
+
+    get minDate() {
+      return new Date(this.range_.min);
+    }
+
+    get maxDate() {
+      return new Date(this.range_.max);
+    }
+
+    get durationMs() {
+      return this.range_.duration;
+    }
+
+    clone() {
+      const clone = new tr.v.d.DateRange(this.range_.min);
+      clone.addDiagnostic(this);
+      return clone;
+    }
+
+    equals(other) {
+      if (!(other instanceof DateRange)) return false;
+      return this.range_.equals(other.range_);
+    }
+
+    canAddDiagnostic(otherDiagnostic) {
+      return otherDiagnostic instanceof DateRange;
+    }
+
+    addDiagnostic(other) {
+      this.range_.addRange(other.range_);
+    }
+
+    toString() {
+      const minDate = tr.b.formatDate(this.minDate);
+      if (this.durationMs === 0) return minDate;
+      const maxDate = tr.b.formatDate(this.maxDate);
+      return `${minDate} - ${maxDate}`;
+    }
+
+    serialize(serializer) {
+      if (this.durationMs === 0) return this.range_.min;
+      return [this.range_.min, this.range_.max];
+    }
+
+    asDictInto_(d) {
+      d.min = this.range_.min;
+      if (this.durationMs === 0) return;
+      d.max = this.range_.max;
+    }
+
+    static deserialize(data, deserializer) {
+      if (data instanceof Array) {
+        const dr = new DateRange(data[0]);
+        dr.range_.addValue(data[1]);
+        return dr;
+      }
+      return new DateRange(data);
+    }
+
+    static fromDict(d) {
+      const dateRange = new DateRange(d.min);
+      if (d.max !== undefined) dateRange.range_.addValue(d.max);
+      return dateRange;
+    }
+  }
+
+  tr.v.d.Diagnostic.register(DateRange, {
+    elementName: 'tr-v-ui-date-range-span'
+  });
+
+  return {
+    DateRange,
+  };
+});
+</script>

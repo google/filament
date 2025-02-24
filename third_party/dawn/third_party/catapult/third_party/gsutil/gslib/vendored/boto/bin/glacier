@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (c) 2012 Miguel Olivares http://moliware.com/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+"""
+  glacier
+  ~~~~~~~
+
+    Amazon Glacier tool built on top of boto. Look at the usage method to see
+    how to use it.
+
+    Author: Miguel Olivares <miguel@moliware.com>
+"""
+import sys
+
+from boto.glacier import connect_to_region
+from getopt import getopt, GetoptError
+from os.path import isfile, basename
+
+
+COMMANDS = ('vaults', 'jobs', 'upload')
+
+
+def usage():
+    print("""
+glacier <command> [args]
+
+    Commands
+        vaults    - Operations with vaults
+        jobs      - Operations with jobs
+        upload    - Upload files to a vault. If the vault doesn't exits, it is
+                    created
+
+    Common args:
+        --access_key - Your AWS Access Key ID.  If not supplied, boto will
+                       use the value of the environment variable
+                       AWS_ACCESS_KEY_ID
+        --secret_key - Your AWS Secret Access Key.  If not supplied, boto
+                       will use the value of the environment variable
+                       AWS_SECRET_ACCESS_KEY
+        --region     - AWS region to use. Possible values: us-east-1, us-west-1,
+                       us-west-2, ap-northeast-1, eu-west-1.
+                       Default: us-east-1
+
+    Vaults operations:
+
+        List vaults:
+            glacier vaults 
+
+    Jobs operations:
+
+        List jobs:
+            glacier jobs <vault name>
+
+    Uploading files:
+
+        glacier upload <vault name> <files>
+
+        Examples : 
+            glacier upload pics *.jpg
+            glacier upload pics a.jpg b.jpg
+""")
+    sys.exit()
+
+
+def connect(region, debug_level=0, access_key=None, secret_key=None):
+    """ Connect to a specific region """
+    layer2 = connect_to_region(region,
+                               aws_access_key_id=access_key,
+                               aws_secret_access_key=secret_key,
+                               debug=debug_level)
+    if layer2 is None:
+        print('Invalid region (%s)' % region)
+        sys.exit(1)
+    return layer2
+
+
+def list_vaults(region, access_key=None, secret_key=None):
+    layer2 = connect(region, access_key = access_key, secret_key = secret_key)
+    for vault in layer2.list_vaults():
+        print(vault.arn)
+
+
+def list_jobs(vault_name, region, access_key=None, secret_key=None):
+    layer2 = connect(region, access_key = access_key, secret_key = secret_key)
+    print(layer2.layer1.list_jobs(vault_name))
+
+
+def upload_files(vault_name, filenames, region, access_key=None, secret_key=None):
+    layer2 = connect(region, access_key = access_key, secret_key = secret_key)
+    layer2.create_vault(vault_name)
+    glacier_vault = layer2.get_vault(vault_name)
+    for filename in filenames:
+        if isfile(filename):
+            sys.stdout.write('Uploading %s to %s...' % (filename, vault_name))
+            sys.stdout.flush()
+            archive_id = glacier_vault.upload_archive(
+                filename,
+                description = basename(filename))
+            print(' done. Vault returned ArchiveID %s' % archive_id)
+
+def main():
+    if len(sys.argv) < 2:
+        usage()
+    
+    command = sys.argv[1]
+    if command not in COMMANDS:
+        usage()
+
+    argv = sys.argv[2:]
+    options = 'a:s:r:'
+    long_options = ['access_key=', 'secret_key=', 'region=']
+    try:
+        opts, args = getopt(argv, options, long_options)
+    except GetoptError as e:
+        usage()
+
+    # Parse agument
+    access_key = secret_key = None
+    region = 'us-east-1'
+    for option, value in opts:
+        if option in ('-a', '--access_key'):
+            access_key = value
+        elif option in ('-s', '--secret_key'):
+            secret_key = value
+        elif option in ('-r', '--region'):
+            region = value
+    # handle each command
+    if command == 'vaults':
+        list_vaults(region, access_key, secret_key)
+    elif command == 'jobs':
+        if len(args) != 1:
+            usage()
+        list_jobs(args[0], region, access_key, secret_key)
+    elif command == 'upload':
+        if len(args) < 2:
+            usage()
+        upload_files(args[0], args[1:], region, access_key, secret_key)
+
+
+if __name__ == '__main__':
+    main()

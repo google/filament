@@ -1,0 +1,35 @@
+//===- subzero/crosstest/vectors.def - macros for tests -------*- C++ -*---===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for crosstesting vectors.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef VECTORS_DEF
+#define VECTORS_DEF
+
+#define VECTOR_TYPE_TABLE                 \
+/* typename, element type,  cast type */  \
+X(v16si8,        myint8_t,  int64_t)      \
+X(v16ui8,         uint8_t,  int64_t)      \
+X(v8si16,         int16_t,  int64_t)      \
+X(v8ui16,        uint16_t,  int64_t)      \
+X(v4si32,         int32_t,  int64_t)      \
+X(v4ui32,        uint32_t,  int64_t)      \
+X(v4f32,            float,    float)
+// define X(ty, eltty, castty)
+
+#define I1_VECTOR_TYPE_TABLE              \
+/* typename, expanded type, # elements */ \
+X(v4i1,             v4si32,          4)   \
+X(v8i1,             v8si16,          8)   \
+X(v16i1,            v16si8,         16)
+// define X(ty, eltty, numelements)
+
+#endif // VECTORS_DEF

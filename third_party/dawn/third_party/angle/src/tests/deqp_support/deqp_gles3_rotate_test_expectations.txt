@@ -1,0 +1,10 @@
+// Copyright 2020 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See README.md for format.
+
+// Only tested on Vulkan currently
+
+// Flat shading (still failing March 16, 2022):
+42262093 VULKAN NVIDIA : dEQP-GLES3.functional.rasterization.flatshading.* = FAIL

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses trace_marker events that were inserted in the trace by
+ * userland.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux trace mark events that were inserted in the trace by userland.
+   * @constructor
+   */
+  function ClockParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('clock_set_rate',
+        ClockParser.prototype.traceMarkWriteClockEvent.bind(this));
+    importer.registerEventHandler('clk_set_rate',
+        ClockParser.prototype.traceMarkWriteClkEvent.bind(this));
+    importer.registerEventHandler('clock_enable',
+        ClockParser.prototype.traceMarkWriteClockOnOffEvent.bind(this));
+    importer.registerEventHandler('clock_disable',
+        ClockParser.prototype.traceMarkWriteClockOnOffEvent.bind(this));
+    importer.registerEventHandler('clk_enable',
+        ClockParser.prototype.traceMarkWriteClkOnEvent.bind(this));
+    importer.registerEventHandler('clk_disable',
+        ClockParser.prototype.traceMarkWriteClkOffEvent.bind(this));
+    this.model_ = importer.model_;
+    this.ppids_ = {};
+  }
+
+  ClockParser.prototype = {
+    __proto__: Parser.prototype,
+
+    clockMark(name, subName, value, ts) {
+      const ctr = this.model_.kernel
+          .getOrCreateCounter(null, name + ' ' + subName);
+      // Initialize the counter's series fields if needed.
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, value);
+      });
+    },
+
+    traceMarkWriteClockEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /(\S+) state=(\d+)/.exec(eventBase.details);
+      const name = event[1];
+      const rate = parseInt(event[2]);
+      this.clockMark(name, 'Frequency', rate, ts);
+      return true;
+    },
+
+    traceMarkWriteClkEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /(\S+) (\d+)/.exec(eventBase.details);
+      const name = event[1];
+      const rate = parseInt(event[2]);
+      this.clockMark(name, 'Frequency', rate, ts);
+      return true;
+    },
+
+    traceMarkWriteClockOnOffEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /(\S+) state=(\d+)/.exec(eventBase.details);
+      const name = event[1];
+      const state = parseInt(event[2]);
+      this.clockMark(name, 'State', state, ts);
+      return true;
+    },
+
+    traceMarkWriteClkOnEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /\S+/.exec(eventBase.details);
+      const name = event[0];
+      this.clockMark(name, 'State', 1, ts);
+      return true;
+    },
+
+    traceMarkWriteClkOffEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /\S+/.exec(eventBase.details);
+      const name = event[0];
+      this.clockMark(name, 'State', 0, ts);
+      return true;
+    }
+  };
+
+  Parser.register(ClockParser);
+
+  return {
+    ClockParser,
+  };
+});
+</script>

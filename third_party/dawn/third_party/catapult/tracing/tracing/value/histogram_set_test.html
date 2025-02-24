@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  // TODO(#3812) Test groupHistogramsRecursively.
+
+  test('assertType', function() {
+    const hs = new tr.v.HistogramSet();
+    assert.throws(() => hs.importLegacyDict({type: ''}),
+        Error, 'Unrecognized shared diagnostic type ');
+  });
+
+  test('ignoreTagMap', function() {
+    const hs = new tr.v.HistogramSet();
+    hs.importLegacyDict({type: 'TagMap'});
+  });
+
+  test('importDicts', function() {
+    const n = new tr.v.Histogram('foo', tr.b.Unit.byName.unitlessNumber);
+    const histograms = new tr.v.HistogramSet([n]);
+    const histograms2 = new tr.v.HistogramSet();
+    histograms2.importDicts(histograms.asDicts());
+    assert.isDefined(histograms2.getHistogramNamed('foo'));
+  });
+
+  test('importDictsWithSampleDiagnostic', function() {
+    const n = new tr.v.Histogram('foo', tr.b.Unit.byName.count);
+    n.addSample(10, {bar: new tr.v.d.GenericSet(['baz'])});
+
+    const histograms = new tr.v.HistogramSet([n]);
+    const histograms2 = new tr.v.HistogramSet();
+    histograms2.importDicts(histograms.asDicts());
+    assert.isDefined(histograms2.getHistogramNamed('foo'));
+    const v = histograms2.getHistogramNamed('foo');
+    assert.lengthOf(v.getBinForValue(10).diagnosticMaps, 1);
+    const dm = v.getBinForValue(10).diagnosticMaps[0];
+    assert.strictEqual(dm.size, 1);
+    assert.instanceOf(dm.get('bar'), tr.v.d.GenericSet);
+    assert.strictEqual(tr.b.getOnlyElement(dm.get('bar')), 'baz');
+  });
+
+  test('sourceHistogramsWithSampleDiagnostic', function() {
+    const unit = tr.b.Unit.byName.unitlessNumber;
+    const aHist = new tr.v.Histogram('a', unit);
+    aHist.addSample(1);
+
+    const bHist = new tr.v.Histogram('b', tr.b.Unit.byName.unitlessNumber);
+    const related = new tr.v.d.RelatedNameMap();
+    related.set('0', aHist.name);
+    bHist.diagnostics.set('related', related);
+    bHist.addSample(1);
+
+    const histograms = new tr.v.HistogramSet([aHist, bHist]);
+    assert.strictEqual(tr.b.getOnlyElement(histograms.sourceHistograms), bHist);
+  });
+
+  test('sourceHistogramsWithNameMap', function() {
+    const unit = tr.b.Unit.byName.unitlessNumber;
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('A', unit, []);
+    const bHist = histograms.createHistogram('B', unit, [], {diagnostics: {
+      related: tr.v.d.RelatedNameMap.fromEntries([['a', 'A']]),
+    }});
+    assert.strictEqual(tr.b.getOnlyElement(histograms.sourceHistograms), bHist);
+  });
+
+  test('sharedDiagnostic', function() {
+    // Make a single Histogram, add a shared Diagnostic.
+    const aHist = new tr.v.Histogram('aHist', tr.b.Unit.byName.count);
+    const histograms = new tr.v.HistogramSet([aHist]);
+    const diagnostic = new tr.v.d.GenericSet(['shared']);
+    histograms.addSharedDiagnosticToAllHistograms('generic', diagnostic);
+
+    // Serializing a single Histogram with a single shared diagnostic should
+    // produce 2 dicts.
+    const dicts = histograms.asDicts();
+    assert.lengthOf(dicts, 2);
+    assert.deepEqual(diagnostic.asDict(), dicts[0]);
+
+    // The serialized Histogram should refer to the shared diagnostic by its
+    // guid.
+    assert.strictEqual(dicts[1].diagnostics.generic, diagnostic.guid);
+
+    // Deserialize the dicts.
+    const histograms2 = new tr.v.HistogramSet();
+    histograms2.importDicts(dicts);
+    assert.lengthOf(histograms2, 1);
+    const aHist2 = histograms2.getHistogramNamed(aHist.name);
+
+    assert.instanceOf(aHist2.diagnostics.get('generic'), tr.v.d.GenericSet);
+    assert.strictEqual(tr.b.getOnlyElement(diagnostic),
+        tr.b.getOnlyElement(aHist2.diagnostics.get('generic')));
+  });
+
+  test('getHistogramNamed_noHistogramFound', function() {
+    const aHist = new tr.v.Histogram('aHist', tr.b.Unit.byName.count);
+    const histograms = new tr.v.HistogramSet([aHist]);
+
+    assert.isUndefined(histograms.getHistogramNamed('bHist'));
+  });
+
+  test('getHistogramNamed_oneHistogramFound', function() {
+    const aHist = new tr.v.Histogram('aHist', tr.b.Unit.byName.count);
+    const histograms = new tr.v.HistogramSet([aHist]);
+
+    assert.strictEqual(histograms.getHistogramNamed('aHist'), aHist);
+  });
+
+  test('getHistogramNamed_multipleHistogramsFound', function() {
+    const aHist1 = new tr.v.Histogram('aHist', tr.b.Unit.byName.count);
+    const aHist2 = new tr.v.Histogram('aHist', tr.b.Unit.byName.count);
+    const histograms = new tr.v.HistogramSet([aHist1, aHist2]);
+
+    assert.throws(() => histograms.getHistogramNamed('aHist'),
+        Error, 'Unexpectedly found multiple histograms named "aHist"');
+  });
+
+  test('deduplicateDiagnostics', function() {
+    const genericA = new tr.v.d.GenericSet(['A']);
+    const genericB = new tr.v.d.GenericSet(['B']);
+    const dateA = new tr.v.d.DateRange(42);
+    const dateB = new tr.v.d.DateRange(57);
+
+    const aHist = new tr.v.Histogram('a', tr.b.Unit.byName.count);
+    const generic0 = genericA.clone();
+    generic0.addDiagnostic(genericB);
+    aHist.diagnostics.set('generic', generic0);
+    const date0 = dateA.clone();
+    date0.addDiagnostic(dateB);
+    aHist.diagnostics.set('date', date0);
+
+    const bHist = new tr.v.Histogram('b', tr.b.Unit.byName.count);
+    const generic1 = genericA.clone();
+    generic1.addDiagnostic(genericB);
+    bHist.diagnostics.set('generic', generic1);
+    const date1 = dateA.clone();
+    date1.addDiagnostic(dateB);
+    bHist.diagnostics.set('date', date1);
+
+    const cHist = new tr.v.Histogram('c', tr.b.Unit.byName.count);
+    cHist.diagnostics.set('generic', generic1);
+
+    const histograms = new tr.v.HistogramSet([aHist, bHist, cHist]);
+    assert.notStrictEqual(
+        aHist.diagnostics.get('generic'), bHist.diagnostics.get('generic'));
+    assert.strictEqual(
+        bHist.diagnostics.get('generic'), cHist.diagnostics.get('generic'));
+    assert.isTrue(
+        aHist.diagnostics.get('generic').equals(
+            bHist.diagnostics.get('generic')));
+    assert.notStrictEqual(
+        aHist.diagnostics.get('date'), bHist.diagnostics.get('date'));
+    assert.isTrue(
+        aHist.diagnostics.get('date').equals(bHist.diagnostics.get('date')));
+
+    histograms.deduplicateDiagnostics();
+
+    assert.strictEqual(
+        aHist.diagnostics.get('generic'), bHist.diagnostics.get('generic'));
+    assert.strictEqual(
+        bHist.diagnostics.get('generic'), cHist.diagnostics.get('generic'));
+    assert.strictEqual(
+        aHist.diagnostics.get('date'), bHist.diagnostics.get('date'));
+
+    const histogramDicts = histograms.asDicts();
+
+    // All diagnostics should have been serialized as DiagnosticRefs.
+    for (const dict of histogramDicts) {
+      if (!('type' in dict)) {
+        for (const diagnosticDict of Object.values(dict.diagnostics)) {
+          assert.strictEqual(typeof(diagnosticDict), 'string');
+        }
+      }
+    }
+
+    const histograms2 = new tr.v.HistogramSet();
+    histograms2.importDicts(histogramDicts);
+    const aHist2 = histograms2.getHistogramNamed('a');
+    const bHist2 = histograms2.getHistogramNamed('b');
+
+    assert.strictEqual(
+        aHist2.diagnostics.get('generic'), bHist2.diagnostics.get('generic'));
+    assert.strictEqual(
+        aHist2.diagnostics.get('date'), bHist2.diagnostics.get('date'));
+  });
+
+  test('buildGroupingsFromTags', function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['a'])],
+      ]),
+    });
+    const bHist = histograms.createHistogram('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['b'])],
+      ]),
+    });
+    const groupings = histograms.buildGroupingsFromTags([
+      tr.v.d.RESERVED_NAMES.STORY_TAGS]);
+    assert.lengthOf(groupings, 2);
+    assert.strictEqual(groupings[0].callback(aHist), 'a');
+    assert.strictEqual(groupings[0].callback(bHist), '~a');
+    assert.strictEqual(groupings[1].callback(aHist), '~b');
+    assert.strictEqual(groupings[1].callback(bHist), 'b');
+  });
+});
+</script>

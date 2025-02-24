@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+const dromaeoCharts = (function() {
+  const graphSelectedJson = {
+    'data': {
+      '0': {
+        'color': 0,
+        'data': [
+          [405953, 895.88410464658],
+          [405954, 898.27503730586],
+          [405955, 888.52522242951],
+          [405956, 903.5102955219],
+          [405957, 909.17268631944],
+          [405958, 892.14027007209],
+          [405960, 911.12610536778],
+          [405961, 897.3861456948],
+          [405970, 889.94599056599],
+          [405979, 882.52839331353],
+          [405983, 874.24838235059],
+          [406012, 931.89135645922],
+          [406047, 886.22398997294],
+          [406091, 868.50371095442],
+          [406127, 901.87415303269],
+          [406169, 938.19025316384],
+          [406204, 860.24638309792],
+          [406219, 862.61888730014],
+          [406230, 880.28338912447],
+          [406231, 883.28692879715]
+        ],
+        'id': 'line_0'
+      }
+    },
+    'annotations': {
+      '0': {
+        '0': {
+          'r_commit_pos': '405953',
+          'timestamp': 1468743625000,
+          'r_chromium': '8429df43dbc56a4a18a72965c1c9f902f7b7a343',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405953'
+        },
+        '1': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468752123000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405954'
+        },
+        '2': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468768518000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405955'
+        },
+        '3': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468776355000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405956'
+        },
+        '4': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468784210000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405957'
+        },
+        '5': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468804238000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405958'
+        },
+        '6': {
+          'r_commit_pos': '405960',
+          'timestamp': 1468812102000,
+          'r_chromium': 'f3d6584cfe2a5aa67ce3bfd688fd18217d1d066a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405960'
+        },
+        '7': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468830975000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405961'
+        },
+        '8': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468838778000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405970'
+        },
+        '9': {
+          'r_commit_pos': '405979',
+          'timestamp': 1468846595000,
+          'r_chromium': '23a715e8dc89937b85f320d8e86645919c6164ab',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405979'
+        },
+        '10': {
+          'r_commit_pos': '405983',
+          'timestamp': 1468854450000,
+          'r_chromium': '1ce44d25cbafd74f034c30ddfd4b0f3caed9978d',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405983'
+        },
+        '11': {
+          'r_commit_pos': '406012',
+          'timestamp': 1468862248000,
+          'r_chromium': 'f7f66e7d92f73574bced45ad6bbb10162308d84f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406012'
+        },
+        '12': {
+          'r_commit_pos': '406047',
+          'timestamp': 1468870135000,
+          'r_chromium': 'fb264fe06532efcbe743f2cd593e3410d4f6046a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406047'
+        },
+        '13': {
+          'r_commit_pos': '406091',
+          'timestamp': 1468877975000,
+          'r_chromium': '189a2edbe996f9957aa03f97161d353d1232f31f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406091'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468885827000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468893669000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406204',
+          'timestamp': 1468901487000,
+          'r_chromium': '5490f0a0680730c518f80549310f671d4cf0d7db',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406204'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468909375000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406230',
+          'timestamp': 1468917236000,
+          'r_chromium': '541047a6af9e1a9ac0e4c20dcfc0cf952de45c23',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406230'
+        },
+        '19': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468925246000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406231'
+        }
+      },
+      'series': {
+        '0': {
+          'units': 'runs/s',
+          'path': 'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom',
+          'description': '',
+          'name': 'dom',
+          'better': 'Higher'
+        }
+      }
+    },
+    'error_bars': {
+      '0': [
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 895.88410464658],
+            [405954, 898.27503730586],
+            [405955, 888.52522242951],
+            [405956, 903.5102955219],
+            [405957, 909.17268631944],
+            [405958, 892.14027007209],
+            [405960, 911.12610536778],
+            [405961, 897.3861456948],
+            [405970, 889.94599056599],
+            [405979, 882.52839331353],
+            [405983, 874.24838235059],
+            [406012, 931.89135645922],
+            [406047, 886.22398997294],
+            [406091, 868.50371095442],
+            [406127, 901.87415303269],
+            [406169, 938.19025316384],
+            [406204, 860.24638309792],
+            [406219, 862.61888730014],
+            [406230, 880.28338912447],
+            [406231, 883.28692879715]
+          ],
+          'id': 'bottom_0'
+        },
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 895.88410464658],
+            [405954, 898.27503730586],
+            [405955, 888.52522242951],
+            [405956, 903.5102955219],
+            [405957, 909.17268631944],
+            [405958, 892.14027007209],
+            [405960, 911.12610536778],
+            [405961, 897.3861456948],
+            [405970, 889.94599056599],
+            [405979, 882.52839331353],
+            [405983, 874.24838235059],
+            [406012, 931.89135645922],
+            [406047, 886.22398997294],
+            [406091, 868.50371095442],
+            [406127, 901.87415303269],
+            [406169, 938.19025316384],
+            [406204, 860.24638309792],
+            [406219, 862.61888730014],
+            [406230, 880.28338912447],
+            [406231, 883.28692879715]
+          ],
+          'id': 'top_0'
+        }
+      ]
+    }
+  };
+
+  const graphUnselectedJson = {
+    'data': {
+      '0': {
+        'color': 0,
+        'data': [
+          [405953, 887.48246155538],
+          [405954, 896.92343558171],
+          [405955, 899.80720845279],
+          [405956, 895.87582397019],
+          [405957, 899.27353071677],
+          [405958, 893.39817278055],
+          [405960, 891.19637261527],
+          [405961, 890.73145800596],
+          [405970, 895.20797869804],
+          [405979, 891.99767070756],
+          [405983, 880.33038712315],
+          [406012, 884.34128873314],
+          [406047, 883.83535124038],
+          [406091, 898.84907069618],
+          [406127, 898.29584912926],
+          [406169, 882.34107584869],
+          [406204, 889.65000191754],
+          [406219, 886.3028576092],
+          [406230, 880.1095586532],
+          [406231, 882.28652299814]
+        ],
+        'id': 'line_0'
+      },
+      '1': {
+        'color': 1,
+        'data': [
+          [405953, 895.88410464658],
+          [405954, 898.27503730586],
+          [405955, 888.52522242951],
+          [405956, 903.5102955219],
+          [405957, 909.17268631944],
+          [405958, 892.14027007209],
+          [405960, 911.12610536778],
+          [405961, 897.3861456948],
+          [405970, 889.94599056599],
+          [405979, 882.52839331353],
+          [405983, 874.24838235059],
+          [406012, 931.89135645922],
+          [406047, 886.22398997294],
+          [406091, 868.50371095442],
+          [406127, 901.87415303269],
+          [406169, 938.19025316384],
+          [406204, 860.24638309792],
+          [406219, 862.61888730014],
+          [406230, 880.28338912447],
+          [406231, 883.28692879715]
+        ],
+        'id': 'line_1'
+      },
+      '2': {
+        'color': 2,
+        'data': [
+          [405953, 887.48246155538],
+          [405954, 896.92343558171],
+          [405955, 899.80720845279],
+          [405956, 895.87582397019],
+          [405957, 899.27353071677],
+          [405958, 893.39817278055],
+          [405960, 891.19637261527],
+          [405961, 890.73145800596],
+          [405970, 895.20797869804],
+          [405979, 891.99767070756],
+          [405983, 880.33038712315],
+          [406012, 884.34128873314],
+          [406047, 883.83535124038],
+          [406091, 898.84907069618],
+          [406127, 898.29584912926],
+          [406169, 882.34107584869],
+          [406204, 889.65000191754],
+          [406219, 886.3028576092],
+          [406230, 880.1095586532],
+          [406231, 882.28652299814]
+        ],
+        'id': 'line_2'
+      }
+    },
+    'annotations': {
+      '0': {
+        '0': {
+          'r_commit_pos': '405953',
+          'timestamp': 1468743662000,
+          'r_chromium': '8429df43dbc56a4a18a72965c1c9f902f7b7a343',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405953'
+        },
+        '1': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468752158000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405954'
+        },
+        '2': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468768556000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405955'
+        },
+        '3': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468776394000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405956'
+        },
+        '4': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468784247000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405957'
+        },
+        '5': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468804277000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405958'
+        },
+        '6': {
+          'r_commit_pos': '405960',
+          'timestamp': 1468812138000,
+          'r_chromium': 'f3d6584cfe2a5aa67ce3bfd688fd18217d1d066a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405960'
+        },
+        '7': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468831012000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405961'
+        },
+        '8': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468838814000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405970'
+        },
+        '9': {
+          'r_commit_pos': '405979',
+          'timestamp': 1468846633000,
+          'r_chromium': '23a715e8dc89937b85f320d8e86645919c6164ab',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405979'
+        },
+        '10': {
+          'r_commit_pos': '405983',
+          'timestamp': 1468854488000,
+          'r_chromium': '1ce44d25cbafd74f034c30ddfd4b0f3caed9978d',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405983'
+        },
+        '11': {
+          'r_commit_pos': '406012',
+          'timestamp': 1468862284000,
+          'r_chromium': 'f7f66e7d92f73574bced45ad6bbb10162308d84f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406012'
+        },
+        '12': {
+          'r_commit_pos': '406047',
+          'timestamp': 1468870171000,
+          'r_chromium': 'fb264fe06532efcbe743f2cd593e3410d4f6046a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406047'
+        },
+        '13': {
+          'r_commit_pos': '406091',
+          'timestamp': 1468878010000,
+          'r_chromium': '189a2edbe996f9957aa03f97161d353d1232f31f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406091'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468885864000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468893702000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406204',
+          'timestamp': 1468901523000,
+          'r_chromium': '5490f0a0680730c518f80549310f671d4cf0d7db',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406204'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468909411000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406230',
+          'timestamp': 1468917273000,
+          'r_chromium': '541047a6af9e1a9ac0e4c20dcfc0cf952de45c23',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406230'
+        },
+        '19': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468925283000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406231'
+        }
+      },
+      'series': {
+        '0': {
+          'units': 'runs/s',
+          'path': 'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/' +
+                  'dom/http___dromaeo.com?dom-attr_ref',
+          'description': '',
+          'name': 'http___dromaeo.com?dom-attr_ref',
+          'better': 'Higher'
+        },
+        '1': {
+          'units': 'runs/s',
+          'path': 'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom/' +
+                  'http___dromaeo.com?dom-attr',
+          'description': '',
+          'name': 'http___dromaeo.com?dom-attr',
+          'better': 'Higher'
+        },
+        '2': {
+          'units': 'runs/s',
+          'path': 'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom/ref',
+          'description': '',
+          'name': 'ref',
+          'better': 'Higher'
+        }
+      },
+      '2': {
+        '0': {
+          'r_commit_pos': '405953',
+          'timestamp': 1468743662000,
+          'r_chromium': '8429df43dbc56a4a18a72965c1c9f902f7b7a343',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405953'
+        },
+        '1': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468752159000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405954'
+        },
+        '2': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468768556000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405955'
+        },
+        '3': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468776394000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405956'
+        },
+        '4': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468784247000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405957'
+        },
+        '5': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468804277000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405958'
+        },
+        '6': {
+          'r_commit_pos': '405960',
+          'timestamp': 1468812138000,
+          'r_chromium': 'f3d6584cfe2a5aa67ce3bfd688fd18217d1d066a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405960'
+        },
+        '7': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468831012000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405961'
+        },
+        '8': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468838814000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405970'
+        },
+        '9': {
+          'r_commit_pos': '405979',
+          'timestamp': 1468846633000,
+          'r_chromium': '23a715e8dc89937b85f320d8e86645919c6164ab',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405979'
+        },
+        '10': {
+          'r_commit_pos': '405983',
+          'timestamp': 1468854488000,
+          'r_chromium': '1ce44d25cbafd74f034c30ddfd4b0f3caed9978d',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405983'
+        },
+        '11': {
+          'r_commit_pos': '406012',
+          'timestamp': 1468862284000,
+          'r_chromium': 'f7f66e7d92f73574bced45ad6bbb10162308d84f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406012'
+        },
+        '12': {
+          'r_commit_pos': '406047',
+          'timestamp': 1468870171000,
+          'r_chromium': 'fb264fe06532efcbe743f2cd593e3410d4f6046a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406047'
+        },
+        '13': {
+          'r_commit_pos': '406091',
+          'timestamp': 1468878010000,
+          'r_chromium': '189a2edbe996f9957aa03f97161d353d1232f31f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406091'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468885864000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468893702000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406204',
+          'timestamp': 1468901523000,
+          'r_chromium': '5490f0a0680730c518f80549310f671d4cf0d7db',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406204'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468909411000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406230',
+          'timestamp': 1468917273000,
+          'r_chromium': '541047a6af9e1a9ac0e4c20dcfc0cf952de45c23',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406230'
+        },
+        '19': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468925283000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406231'
+        }
+      },
+      '1': {
+        '0': {
+          'r_commit_pos': '405953',
+          'timestamp': 1468743625000,
+          'r_chromium': '8429df43dbc56a4a18a72965c1c9f902f7b7a343',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405953'
+        },
+        '1': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468752123000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405954'
+        },
+        '2': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468768518000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405955'
+        },
+        '3': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468776355000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405956'
+        },
+        '4': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468784210000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405957'
+        },
+        '5': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468804238000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405958'
+        },
+        '6': {
+          'r_commit_pos': '405960',
+          'timestamp': 1468812102000,
+          'r_chromium': 'f3d6584cfe2a5aa67ce3bfd688fd18217d1d066a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405960'
+        },
+        '7': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468830975000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405961'
+        },
+        '8': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468838778000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405970'
+        },
+        '9': {
+          'r_commit_pos': '405979',
+          'timestamp': 1468846595000,
+          'r_chromium': '23a715e8dc89937b85f320d8e86645919c6164ab',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405979'
+        },
+        '10': {
+          'r_commit_pos': '405983',
+          'timestamp': 1468854450000,
+          'r_chromium': '1ce44d25cbafd74f034c30ddfd4b0f3caed9978d',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '405983'
+        },
+        '11': {
+          'r_commit_pos': '406012',
+          'timestamp': 1468862248000,
+          'r_chromium': 'f7f66e7d92f73574bced45ad6bbb10162308d84f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406012'
+        },
+        '12': {
+          'r_commit_pos': '406047',
+          'timestamp': 1468870135000,
+          'r_chromium': 'fb264fe06532efcbe743f2cd593e3410d4f6046a',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406047'
+        },
+        '13': {
+          'r_commit_pos': '406091',
+          'timestamp': 1468877975000,
+          'r_chromium': '189a2edbe996f9957aa03f97161d353d1232f31f',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406091'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468885827000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468893669000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406204',
+          'timestamp': 1468901487000,
+          'r_chromium': '5490f0a0680730c518f80549310f671d4cf0d7db',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406204'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468909375000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406230',
+          'timestamp': 1468917236000,
+          'r_chromium': '541047a6af9e1a9ac0e4c20dcfc0cf952de45c23',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406230'
+        },
+        '19': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468925246000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio](http://do/not/click)',
+          'error': 0,
+          'r_webkit_rev': '406231'
+        }
+      }
+    },
+    'error_bars': {
+      '0': [
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 887.48246155538],
+            [405954, 896.92343558171],
+            [405955, 899.80720845279],
+            [405956, 895.87582397019],
+            [405957, 899.27353071677],
+            [405958, 893.39817278055],
+            [405960, 891.19637261527],
+            [405961, 890.73145800596],
+            [405970, 895.20797869804],
+            [405979, 891.99767070756],
+            [405983, 880.33038712315],
+            [406012, 884.34128873314],
+            [406047, 883.83535124038],
+            [406091, 898.84907069618],
+            [406127, 898.29584912926],
+            [406169, 882.34107584869],
+            [406204, 889.65000191754],
+            [406219, 886.3028576092],
+            [406230, 880.1095586532],
+            [406231, 882.28652299814]
+          ],
+          'id': 'bottom_0'
+        },
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 887.48246155538],
+            [405954, 896.92343558171],
+            [405955, 899.80720845279],
+            [405956, 895.87582397019],
+            [405957, 899.27353071677],
+            [405958, 893.39817278055],
+            [405960, 891.19637261527],
+            [405961, 890.73145800596],
+            [405970, 895.20797869804],
+            [405979, 891.99767070756],
+            [405983, 880.33038712315],
+            [406012, 884.34128873314],
+            [406047, 883.83535124038],
+            [406091, 898.84907069618],
+            [406127, 898.29584912926],
+            [406169, 882.34107584869],
+            [406204, 889.65000191754],
+            [406219, 886.3028576092],
+            [406230, 880.1095586532],
+            [406231, 882.28652299814]
+          ],
+          'id': 'top_0'
+        }
+      ],
+      '1': [
+        {
+          'color': 1,
+          'fillBetween': 'line_1',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 895.88410464658],
+            [405954, 898.27503730586],
+            [405955, 888.52522242951],
+            [405956, 903.5102955219],
+            [405957, 909.17268631944],
+            [405958, 892.14027007209],
+            [405960, 911.12610536778],
+            [405961, 897.3861456948],
+            [405970, 889.94599056599],
+            [405979, 882.52839331353],
+            [405983, 874.24838235059],
+            [406012, 931.89135645922],
+            [406047, 886.22398997294],
+            [406091, 868.50371095442],
+            [406127, 901.87415303269],
+            [406169, 938.19025316384],
+            [406204, 860.24638309792],
+            [406219, 862.61888730014],
+            [406230, 880.28338912447],
+            [406231, 883.28692879715]
+          ],
+          'id': 'bottom_1'
+        },
+        {
+          'color': 1,
+          'fillBetween': 'line_1',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 895.88410464658],
+            [405954, 898.27503730586],
+            [405955, 888.52522242951],
+            [405956, 903.5102955219],
+            [405957, 909.17268631944],
+            [405958, 892.14027007209],
+            [405960, 911.12610536778],
+            [405961, 897.3861456948],
+            [405970, 889.94599056599],
+            [405979, 882.52839331353],
+            [405983, 874.24838235059],
+            [406012, 931.89135645922],
+            [406047, 886.22398997294],
+            [406091, 868.50371095442],
+            [406127, 901.87415303269],
+            [406169, 938.19025316384],
+            [406204, 860.24638309792],
+            [406219, 862.61888730014],
+            [406230, 880.28338912447],
+            [406231, 883.28692879715]
+          ],
+          'id': 'top_1'
+        }
+      ],
+      '2': [
+        {
+          'color': 2,
+          'fillBetween': 'line_2',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 887.48246155538],
+            [405954, 896.92343558171],
+            [405955, 899.80720845279],
+            [405956, 895.87582397019],
+            [405957, 899.27353071677],
+            [405958, 893.39817278055],
+            [405960, 891.19637261527],
+            [405961, 890.73145800596],
+            [405970, 895.20797869804],
+            [405979, 891.99767070756],
+            [405983, 880.33038712315],
+            [406012, 884.34128873314],
+            [406047, 883.83535124038],
+            [406091, 898.84907069618],
+            [406127, 898.29584912926],
+            [406169, 882.34107584869],
+            [406204, 889.65000191754],
+            [406219, 886.3028576092],
+            [406230, 880.1095586532],
+            [406231, 882.28652299814]
+          ],
+          'id': 'bottom_2'
+        },
+        {
+          'color': 2,
+          'fillBetween': 'line_2',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405953, 887.48246155538],
+            [405954, 896.92343558171],
+            [405955, 899.80720845279],
+            [405956, 895.87582397019],
+            [405957, 899.27353071677],
+            [405958, 893.39817278055],
+            [405960, 891.19637261527],
+            [405961, 890.73145800596],
+            [405970, 895.20797869804],
+            [405979, 891.99767070756],
+            [405983, 880.33038712315],
+            [406012, 884.34128873314],
+            [406047, 883.83535124038],
+            [406091, 898.84907069618],
+            [406127, 898.29584912926],
+            [406169, 882.34107584869],
+            [406204, 889.65000191754],
+            [406219, 886.3028576092],
+            [406230, 880.1095586532],
+            [406231, 882.28652299814]
+          ],
+          'id': 'top_2'
+        }
+      ]
+    }
+  };
+
+  const graphRevisionJson = [
+    [405010, 889.53053883088, 1468400606000],
+    [405051, 909.948948852, 1468408282000],
+    [405095, 911.14674693137, 1468416057000],
+    [405137, 913.34296535024, 1468423872000],
+    [405184, 845.65306838106, 1468432148000],
+    [405220, 911.6606891267, 1468439696000],
+    [405272, 924.41903105125, 1468447517000],
+    [405325, 936.00203892078, 1468455062000],
+    [405378, 922.31698585068, 1468462863000],
+    [405427, 918.53314459066, 1468470889000],
+    [405438, 890.22944567331, 1468478552000],
+    [405450, 901.03035339159, 1468486540000],
+    [405464, 943.35737149762, 1468494500000],
+    [405479, 924.72769243147, 1468502398000],
+    [405494, 910.2888929046, 1468510409000],
+    [405509, 840.61683527467, 1468518305000],
+    [405533, 914.90433305744, 1468526456000],
+    [405571, 906.22821241615, 1468534504000],
+    [405622, 946.36107791142, 1468541850000],
+    [405664, 930.68895009433, 1468549655000],
+    [405691, 914.95294831464, 1468557627000],
+    [405705, 908.80596499212, 1468565443000],
+    [405724, 920.65064057814, 1468573311000],
+    [405740, 894.57830749117, 1468581184000],
+    [405746, 909.47237553355, 1468589009000],
+    [405756, 933.02462453955, 1468596880000],
+    [405758, 919.38889880391, 1468599358000],
+    [405784, 917.33212827748, 1468607213000],
+    [405828, 898.03399170575, 1468615043000],
+    [405875, 906.13422867445, 1468622898000],
+    [405910, 932.48195347253, 1468630766000],
+    [405924, 897.4664085766, 1468638666000],
+    [405934, 871.49365699123, 1468646511000],
+    [405937, 856.65125003432, 1468654366000],
+    [405940, 854.19742118315, 1468662230000],
+    [405942, 887.50486391777, 1468670085000],
+    [405943, 866.69869582854, 1468687269000],
+    [405945, 894.37657038159, 1468695097000],
+    [405949, 843.37990896792, 1468702945000],
+    [405950, 848.23274819109, 1468710805000],
+    [405951, 807.04520095559, 1468727997000],
+    [405952, 881.66704177764, 1468735819000],
+    [405953, 895.88410464658, 1468743625000],
+    [405954, 898.27503730586, 1468752123000],
+    [405955, 888.52522242951, 1468768518000],
+    [405956, 903.5102955219, 1468776355000],
+    [405957, 909.17268631944, 1468784210000],
+    [405958, 892.14027007209, 1468804238000],
+    [405960, 911.12610536778, 1468812102000],
+    [405961, 897.3861456948, 1468830975000],
+    [405970, 889.94599056599, 1468838778000],
+    [405979, 882.52839331353, 1468846595000],
+    [405983, 874.24838235059, 1468854450000],
+    [406012, 931.89135645922, 1468862248000],
+    [406047, 886.22398997294, 1468870135000],
+    [406091, 868.50371095442, 1468877975000],
+    [406127, 901.87415303269, 1468885827000],
+    [406169, 938.19025316384, 1468893669000],
+    [406204, 860.24638309792, 1468901487000],
+    [406219, 862.61888730014, 1468909375000],
+    [406230, 880.28338912447, 1468917236000],
+    [406231, 883.28692879715, 1468925246000]
+  ];
+
+  const graphParams = [
+    [
+      'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom',
+      [
+        'dom'
+      ]
+    ]
+  ];
+
+  const testPath = 'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom';
+
+  const testPathDict = {
+    'ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom': ['dom']
+  };
+
+  return {
+    graphSelectedJson,
+    graphUnselectedJson,
+    graphRevisionJson,
+    graphParams,
+    testPath,
+    testPathDict
+  };
+})();
+</script>

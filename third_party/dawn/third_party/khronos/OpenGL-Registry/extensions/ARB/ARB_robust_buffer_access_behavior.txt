@@ -1,0 +1,228 @@
+Name
+
+    ARB_robust_buffer_access_behavior
+
+Name Strings
+
+    GL_ARB_robust_buffer_access_behavior
+
+Contact
+
+    Piers Daniell, NVIDIA (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Jan-Harald Fredriksen, AMD
+    Jeff Bolz, NVIDIA
+    Kenneth Russell, Google
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:  October 2, 2013
+    Version:             10
+
+Number
+
+    ARB Extension #135
+
+Dependencies
+
+    The ARB_robustness extension is required.
+    
+    This extension is written against The OpenGL 4.2 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension specifies the behavior of out-of-bounds buffer and array
+    accesses. This is an improvement over the existing ARB_robustness
+    extension which stated that the application should not crash, but
+    the behavior is otherwise undefined. This extension specifies the access
+    protection provided by the GL to ensure that out-of-bounds accesses
+    cannot read from or write to data not owned by the application. All
+    accesses are contained within the buffer object and program area they
+    reference. These additional robustness guarantees apply to contexts
+    created with the CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB feature enabled.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile)
+Specification (OpenGL Operation)
+
+    Add to Section 2.8 "Vertex Arrays" before 2.8.1 (Packed Vertex Data
+    Formats):
+
+    "Robust buffer access can be enabled by creating a context with robust
+    access enabled through the window system binding APIs. When enabled,
+    indices within the elements array that reference vertex data that
+    lies outside the enabled attributes vertex buffer objects, result in
+    reading zero. It is not possible to read vertex data from outside the
+    enabled vertex buffer objects or from another GL context, and these
+    accesses do not result in abnormal program termination."
+
+    Add to Section 2.9.4 (Effects of Accessing Outside Buffer Bounds) on
+    page 65 the following:
+    
+    "Robust buffer access can be enabled by creating a context with robust
+    access enabled through the window system binding APIs. When enabled, any
+    command unable to set a GL error as described above, for example buffer
+    object accesses from the active program, will not read or modify memory
+    outside of the buffer object and will not result in GL interruption or
+    termination. Out-of-bounds reads may return values from within the buffer
+    object or zero. Out-of-bounds writes may modify values within the buffer
+    object or be discarded. Accesses made through resources attached to
+    binding points are only protected within the buffer object from which the
+    binding point is declared. For example, for an out-of-bounds access to
+    a member variable of a uniform block, the access protection is provided
+    within the uniform buffer object, and not for the bound buffer range for
+    this uniform block."
+
+    Add a new paragraph to the end of the "Texel Fetches" sub-section on page
+    147 that reads:
+    
+    "In all the above cases, if the context was created with robust buffer
+    access enabled then instead of undefined behavior the result of the
+    texel fetch is zero. For the case of a texel fetch on an incomplete
+    texture the result is a texture source color of (0, 0, 0, 1)."
+
+    Add the following paragraph to the sub-section titled "Undefined Behavior"
+    near the bottom of page 152:
+    
+    "Robust buffer access can be enabled by creating a context with robust
+    access enabled through the window system binding APIs. When enabled,
+    out-of-bounds accesses will be bounded within the working memory of the
+    active program and cannot access memory owned by other GL contexts,
+    and will not result in abnormal program termination. Out-of-bounds
+    access to local and global variables cannot read values from other
+    program invocations. An out-of-bounds read may return another value
+    from the active program's working memory or zero. An out-of-bounds
+    write may overwrite a value from the active program's working memory
+    or be discarded.
+    
+    Out-of-bounds accesses to resources backed by buffer objects cannot
+    read or modify data outside of the buffer object. For resources bound
+    to buffer ranges, access is restricted within the buffer object from
+    which the buffer range was created, and not within the buffer range
+    itself. Out-of-bounds reads may return values from within the buffer
+    object or zero. Out-of-bounds writes may modify values within the buffer
+    object or be discarded.
+    
+    Out-of-bounds accesses to arrays of resources, such as an array of
+    textures, can only access the data of bound resources. Reads from
+    unbound resources return zero and writes are discarded. It is not
+    possible to access data owned by other GL contexts.
+
+    Applications that require defined behavior for out-of-bounds accesses
+    should range check all computed indices before dereferencing the array,
+    vector or matrix."
+
+Additions to The OpenGL Shading Language Specification, Version 4.20.6
+
+    Add a new Section 5.11 (Out-of-Bounds Access and Robust Buffer Access
+    Behavior)
+    
+    "In the sub-sections described above for array, vector, matrix and
+    structure accesses, any out-of-bounds access produced undefined behavior.
+    However, if robust buffer access is enabled via the OpenGL API, such accesses will
+    be bound within the memory extent of the active program. It will not be
+    possible to access memory from other programs, and accesses will not result in
+    abnormal program termination. Out-of-bounds reads return undefined values,
+    which include values from other variables of the active program or zero.
+    Out-of-bounds writes may be discarded or overwrite other variables of the
+    active program, depending on the value of the computed index and how this
+    relates to the extent of the active program's memory. Applications that
+    require defined behavior for out-of-bounds accesses should range check
+    all computed indices before dereferencing an array."
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) Why are out-of-bounds reads of buffer object backed resourced defined
+       to "return zero or a value from the current buffer object" rather than
+       just "return zero"?
+       
+       RESOLVED: This is necessary to allow the implementation to either
+       range check, apply a mask/modulus or apply a clamp to the index.
+       
+    2) Why do out-of-bounds writes to buffer object backed resources have a
+       stronger guarantee than reads? The spec says that writes outside of
+       the bounded range are discarded but reads are only protected within
+       the buffer object.
+       
+       RESOLVED: This stronger guarentee for writes can be made because
+       GPUs made since around 2008 (DX10) already implement this behavior.
+
+Revision History
+
+    Rev.    Date       Author     Changes
+    ----  ------------ ---------  -------------------------------------------
+     10   02 Oct 2013  Jon Leech  Drop bogus clause about reading zero for
+                                  ``disabled attributes'' in section 2.8
+                                  (Bug 10695).
+
+      9   15 May 2012  pdaniell   Specify that texel fetches are defined to
+                                  return zero for the error cases only when
+                                  robust buffer access is enabled.
+
+      8   20 Apr 2012  pdaniell   Mark issues 1 and 2 resolved.
+    
+      7   15 Mar 2012  pdaniell   Edits based on reviews from Kenneth Russel
+                                  and Jan-Harald Fredriksen.
+
+      6   30 Jan 2012  pdaniell   Edits based on internal review.
+    
+      5   24 Jan 2012  pdaniell   Add spec language to define out of bounds
+                                  access behavior of vertex array index,
+                                  buffer objects and shader arrays, vectors
+                                  and matrices.
+
+      4   24 Jan 2012  pdaniell   ARBify. Still need to convert to real spec.
+
+      3   28 Nov 2011  pdaniell   Simplify the spec to better represent what
+                                  today's desktop GPUs already support.
+
+      2   16 Nov 2011  pdaniell   Add some more detail to the overview
+
+      1   27 Oct 2011  kbr        Initial version

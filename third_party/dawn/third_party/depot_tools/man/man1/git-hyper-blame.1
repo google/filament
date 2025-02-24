@@ -1,0 +1,128 @@
+'\" t
+.\"     Title: git-hyper-blame
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-HYPER\-BLAME" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-hyper-blame \- Like git blame, but with the ability to ignore or bypass certain commits\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit hyper\-blame\fR [\-i <rev> [\-i <rev> \&...]] [\-\-ignore\-file=<file>]
+                [\-\-no\-default\-ignores] [<rev>] [\-\-] <file>
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+\fBgit hyper\-blame\fR is like \fBgit blame\fR but it can ignore or "look through" a given set of commits, to find the real culprit\&.
+.sp
+This is useful if you have a commit that makes sweeping changes that are unlikely to be what you are looking for in a blame, such as mass reformatting or renaming\&. By adding these commits to the hyper\-blame ignore list, \fBgit hyper\-blame\fR will look past these commits to find the previous commit that touched a given line\&.
+.sp
+Follows the normal \fBblame\fR syntax: annotates \fB<file>\fR with the revision that last modified each line\&. Optional \fB<rev>\fR specifies the revision of \fB<file>\fR to start from\&.
+.sp
+Automatically looks for a file called \fB\&.git\-blame\-ignore\-revs\fR in the repository root directory\&. This file has the same syntax as the \fB\-\-ignore\-file\fR argument, and any commits mentioned in this file are added to the ignore list\&.
+.SH "OPTIONS"
+.PP
+\-i <rev>
+.RS 4
+A revision to ignore\&. Can be specified as many times as needed\&.
+.RE
+.PP
+\-\-ignore\-file=<file>
+.RS 4
+A file containing a list of revisions to ignore\&. Can have comments beginning with
+\fB#\fR\&.
+.RE
+.PP
+\-\-no\-default\-ignores
+.RS 4
+Do not ignore commits from the
+\fB\&.git\-blame\-ignore\-revs\fR
+file\&.
+.RE
+.SH "EXAMPLE"
+.sp
+Let\(cqs run \fBgit blame\fR on a file:
+.sp
+
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git blame ipsum\&.txt\fR
+c6eb3bfa (lorem           2014\-08\-11 23:15:57 +0000 1) LOREM IPSUM DOLOR SIT AMET, CONSECTETUR
+3ddda43c (auto\-uppercaser 2014\-07\-05 02:05:18 +0000 2) ADIPISCING ELIT, SED DO EIUSMOD TEMPOR
+3ddda43c (auto\-uppercaser 2014\-07\-05 02:05:18 +0000 3) INCIDIDUNT UT LABORE ET DOLORE MAGNA
+3ddda43c (auto\-uppercaser 2014\-07\-05 02:05:18 +0000 4) ALIQUA\&. UT ENIM AD MINIM VENIAM, QUIS
+c6eb3bfa (lorem           2014\-08\-11 23:15:57 +0000 5) NOSTRUD EXERCITATION ULLAMCO LABORIS
+3ddda43c (auto\-uppercaser 2014\-07\-05 02:05:18 +0000 6) NISI UT ALIQUIP EX EA COMMODO CONSEQUAT\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+Notice that almost the entire file has been blamed on a formatting change? You aren\(cqt interested in the uppercasing of the file\&. You want to know who wrote/modified those lines in the first place\&. Just tell \fBhyper\-blame\fR to ignore that commit:
+.sp
+
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git hyper\-blame \-i 3ddda43c ipsum\&.txt\fR
+c6eb3bfa (lorem 2014\-08\-11 23:15:57 +0000  1) LOREM IPSUM DOLOR SIT AMET, CONSECTETUR
+134200d1 (lorem 2014\-04\-10 08:54:46 +0000 2*) ADIPISCING ELIT, SED DO EIUSMOD TEMPOR
+a34a1d0d (ipsum 2014\-04\-11 11:25:04 +0000 3*) INCIDIDUNT UT LABORE ET DOLORE MAGNA
+134200d1 (lorem 2014\-04\-10 08:54:46 +0000 4*) ALIQUA\&. UT ENIM AD MINIM VENIAM, QUIS
+c6eb3bfa (lorem 2014\-08\-11 23:15:57 +0000  5) NOSTRUD EXERCITATION ULLAMCO LABORIS
+0f0d17bd (dolor 2014\-06\-02 11:31:48 +0000 6*) NISI UT ALIQUIP EX EA COMMODO CONSEQUAT\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+\fBhyper\-blame\fR places a \fB*\fR next to any line where it has skipped over an ignored commit, so you know that the line in question has been changed (by an ignored commit) since the given person wrote it\&.
+.SH "CAVEATS"
+.sp
+When a line skips over an ignored commit, a guess is made as to which commit previously modified that line, but it is not always clear where the line came from\&. If the ignored commit makes lots of changes in close proximity, in particular adding/removing/reordering lines, then the wrong authors may be blamed for nearby edits\&.
+.sp
+For this reason, \fBhyper\-blame\fR works best when the ignored commits are be limited to minor changes such as formatting and renaming, not refactoring or other more invasive changes\&.
+.SH "SEE ALSO"
+.sp
+\fBgit-blame\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

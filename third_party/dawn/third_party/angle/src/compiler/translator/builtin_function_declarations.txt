@@ -1,0 +1,865 @@
+// The format of this file:
+//   C++ style single-line comments are supported.
+//   Leading whitespace is only for formatting and doesn't have semantic meaning.
+//
+//   Grouping:
+//   Groups of functions are denoted by "GROUP BEGIN" and "GROUP END". Groups can be nested.
+//   Groups can have metadata related to the group itself. This is given at the end of the GROUP
+//   BEGIN line in JSON object format.
+//   Example:
+//     GROUP BEGIN <group name> {"shader_type": "FRAGMENT"}
+//     GROUP END <group name>
+//
+//   Defaults:
+//   Default metadata for functions can be set with "DEFAULT METADATA" followed by metadata in JSON
+//   object format. The metadata is applied to all following functions regardless of grouping until
+//   another "DEFAULT METADATA" line is encountered, or until the end of a top-level group.
+//   Example:
+//     DEFAULT METADATA {"opSuffix": "ComponentWise"}
+//
+//   Supported function metadata properties are:
+//     "essl_level"
+//         string, one of COMMON_BUILTINS, ESSL1_BUILTINS, ESSL3_BUILTINS, ESSL3_1_BUILTINS,
+//         ESSL3_2_BUILTINS, ESSL_INTERNAL_BACKEND_BUILTINS.
+//     "opSuffix"
+//         (optional) string, suffix to add to EOp code.  The op is derived from the function name,
+//         and this suffix is applied to disambiguate between functions of the same name but in
+//         different groups.
+//     "suffix"
+//         string, suffix that is used to disambiguate C++ variable names created based on the
+//         function name from C++ keywords, or disambiguate two functions with the same name.
+//     "essl_extension"
+//         string, ESSL extension where the function is defined.
+//     "essl_extension_becomes_core_in"
+//         string, ESSL level where functions from this extension have become core.
+//     "hasSideEffects"
+//         boolean, can be used to mark a function as having side effects. Functions with an out or
+//         inout parameter are automatically treated as having side effects.
+//
+//   Function declarations:
+//   Lines that declare functions are in a similar format as in the GLSL spec:
+//     <return type> <function name>(<param type>, ...);
+//   Parameter types can have "out" or "inout" qualifiers.
+
+GROUP BEGIN Math {"queryFunction": true}
+  GROUP BEGIN Trigonometric
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType radians(genType);
+      genType degrees(genType);
+      genType sin(genType);
+      genType cos(genType);
+      genType tan(genType);
+      genType asin(genType);
+      genType acos(genType);
+      genType atan(genType, genType);
+      genType atan(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType sinh(genType);
+      genType cosh(genType);
+      genType tanh(genType);
+      genType asinh(genType);
+      genType acosh(genType);
+      genType atanh(genType);
+  GROUP END Trigonometric
+
+  GROUP BEGIN Exponential
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType pow(genType, genType);
+      genType exp(genType);
+      genType log(genType);
+      genType exp2(genType);
+      genType log2(genType);
+      genType sqrt(genType);
+      genType inversesqrt(genType);
+  GROUP END Exponential
+
+  GROUP BEGIN Common
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType abs(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genIType abs(genIType);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType sign(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genIType sign(genIType);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType floor(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType trunc(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType round(genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType roundEven(genType);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType ceil(genType);
+      genType fract(genType);
+      genType mod(genType, float);
+      genType mod(genType, genType);
+      genType min(genType, float);
+      genType min(genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genIType min(genIType, genIType);
+      genIType min(genIType, int);
+      genUType min(genUType, genUType);
+      genUType min(genUType, uint);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType max(genType, float);
+      genType max(genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genIType max(genIType, genIType);
+      genIType max(genIType, int);
+      genUType max(genUType, genUType);
+      genUType max(genUType, uint);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType clamp(genType, float, float);
+      genType clamp(genType, genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genIType clamp(genIType, int, int);
+      genIType clamp(genIType, genIType, genIType);
+      genUType clamp(genUType, uint, uint);
+      genUType clamp(genUType, genUType, genUType);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType mix(genType, genType, float);
+      genType mix(genType, genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType mix(genType, genType, genBType);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      genIType mix(genIType, genIType, genBType);
+      genUType mix(genUType, genUType, genBType);
+      genBType mix(genBType, genBType, genBType);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      genType step(genType, genType);
+      genType step(float, genType);
+      genType smoothstep(genType, genType, genType);
+      genType smoothstep(float, float, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      genType modf(genType, out genType);
+      genBType isnan(genType);
+      genBType isinf(genType);
+      genIType floatBitsToInt(genType);
+      genUType floatBitsToUint(genType);
+      genType intBitsToFloat(genIType);
+      genType uintBitsToFloat(genUType);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      genType fma(genType, genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_gpu_shader5, OES_gpu_shader5", "suffix": "Ext"}
+      genType fma(genType, genType, genType);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      genType frexp(genType, out genIType);
+      genType ldexp(genType, genIType);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      uint packSnorm2x16(vec2);
+      uint packHalf2x16(vec2);
+      vec2 unpackSnorm2x16(uint);
+      vec2 unpackHalf2x16(uint);
+      uint packUnorm2x16(vec2);
+      vec2 unpackUnorm2x16(uint);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      uint packUnorm4x8(vec4);
+      uint packSnorm4x8(vec4);
+      vec4 unpackUnorm4x8(uint);
+      vec4 unpackSnorm4x8(uint);
+  GROUP END Common
+
+  GROUP BEGIN Geometric
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      float length(genType);
+      float distance(genType, genType);
+      float dot(genType, genType);
+      vec3 cross(vec3, vec3);
+      genType normalize(genType);
+      genType faceforward(genType, genType, genType);
+      genType reflect(genType, genType);
+      genType refract(genType, genType, float);
+  GROUP END Geometric
+
+  GROUP BEGIN Matrix
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      mat2 matrixCompMult(mat2, mat2);
+      mat3 matrixCompMult(mat3, mat3);
+      mat4 matrixCompMult(mat4, mat4);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      mat2x3 matrixCompMult(mat2x3, mat2x3);
+      mat3x2 matrixCompMult(mat3x2, mat3x2);
+      mat2x4 matrixCompMult(mat2x4, mat2x4);
+      mat4x2 matrixCompMult(mat4x2, mat4x2);
+      mat3x4 matrixCompMult(mat3x4, mat3x4);
+      mat4x3 matrixCompMult(mat4x3, mat4x3);
+      mat2 outerProduct(vec2, vec2);
+      mat3 outerProduct(vec3, vec3);
+      mat4 outerProduct(vec4, vec4);
+      mat2x3 outerProduct(vec3, vec2);
+      mat3x2 outerProduct(vec2, vec3);
+      mat2x4 outerProduct(vec4, vec2);
+      mat4x2 outerProduct(vec2, vec4);
+      mat3x4 outerProduct(vec4, vec3);
+      mat4x3 outerProduct(vec3, vec4);
+      mat2 transpose(mat2);
+      mat3 transpose(mat3);
+      mat4 transpose(mat4);
+      mat2x3 transpose(mat3x2);
+      mat3x2 transpose(mat2x3);
+      mat2x4 transpose(mat4x2);
+      mat4x2 transpose(mat2x4);
+      mat3x4 transpose(mat4x3);
+      mat4x3 transpose(mat3x4);
+      float determinant(mat2);
+      float determinant(mat3);
+      float determinant(mat4);
+      mat2 inverse(mat2);
+      mat3 inverse(mat3);
+      mat4 inverse(mat4);
+  GROUP END Matrix
+
+  GROUP BEGIN Vector
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec lessThan(vec, vec);
+      bvec lessThan(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec lessThan(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec lessThanEqual(vec, vec);
+      bvec lessThanEqual(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec lessThanEqual(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec greaterThan(vec, vec);
+      bvec greaterThan(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec greaterThan(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec greaterThanEqual(vec, vec);
+      bvec greaterThanEqual(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec greaterThanEqual(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec equal(vec, vec);
+      bvec equal(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec equal(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec equal(bvec, bvec);
+      bvec notEqual(vec, vec);
+      bvec notEqual(ivec, ivec);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec notEqual(uvec, uvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise"}
+      bvec notEqual(bvec, bvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS"}
+      bool any(bvec);
+      bool all(bvec);
+    DEFAULT METADATA {"essl_level": "COMMON_BUILTINS", "opSuffix": "ComponentWise", "suffix": "Func"}
+      bvec not(bvec);
+  GROUP END Vector
+
+  GROUP BEGIN Integer
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      genIType bitfieldExtract(genIType, int, int);
+      genUType bitfieldExtract(genUType, int, int);
+      genIType bitfieldInsert(genIType, genIType, int, int);
+      genUType bitfieldInsert(genUType, genUType, int, int);
+      genIType bitfieldReverse(genIType);
+      genUType bitfieldReverse(genUType);
+      genIType bitCount(genIType);
+      genIType bitCount(genUType);
+      genIType findLSB(genIType);
+      genIType findLSB(genUType);
+      genIType findMSB(genIType);
+      genIType findMSB(genUType);
+      genUType uaddCarry(genUType, genUType, out genUType);
+      genUType usubBorrow(genUType, genUType, out genUType);
+      void umulExtended(genUType, genUType, out genUType, out genUType);
+      void imulExtended(genIType, genIType, out genIType, out genIType);
+  GROUP END Integer
+GROUP END Math
+
+GROUP BEGIN Texture {"queryFunction": true}
+  GROUP BEGIN FirstVersions
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS"}
+      vec4 texture2D(sampler2D, vec2);
+      vec4 texture2DProj(sampler2D, vec3);
+      vec4 texture2DProj(sampler2D, vec4);
+      vec4 textureCube(samplerCube, vec3);
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "OES_texture_3D"}
+      vec4 texture3D(sampler3D, vec3);
+      vec4 texture3DProj(sampler3D, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "EXT_shadow_samplers"}
+      float shadow2DEXT(sampler2DShadow, vec3);
+      float shadow2DProjEXT(sampler2DShadow, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "OES_EGL_image_external, NV_EGL_stream_consumer_external"}
+      vec4 texture2D(samplerExternalOES, vec2);
+      vec4 texture2DProj(samplerExternalOES, vec3);
+      vec4 texture2DProj(samplerExternalOES, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "ARB_texture_rectangle"}
+      vec4 texture2DRect(sampler2DRect, vec2);
+      vec4 texture2DRectProj(sampler2DRect, vec3);
+      vec4 texture2DRectProj(sampler2DRect, vec4);
+    // The *Grad* variants are new to both vertex and fragment shaders; the fragment
+    // shader specific pieces are added separately below.
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "EXT_shader_texture_lod"}
+      vec4 texture2DGradEXT(sampler2D, vec2, vec2, vec2);
+      vec4 texture2DProjGradEXT(sampler2D, vec3, vec2, vec2);
+      vec4 texture2DProjGradEXT(sampler2D, vec4, vec2, vec2);
+      vec4 textureCubeGradEXT(samplerCube, vec3, vec3, vec3);
+    DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "extension": "WEBGL_video_texture"}
+        vec4 textureVideoWEBGL(samplerVideoWEBGL, vec2);
+
+    // Variants with bias are limited to fragment shaders
+    GROUP BEGIN Bias {"shader_type": "FRAGMENT", "opSuffix": "Bias"}
+      DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS"}
+        vec4 texture2D(sampler2D, vec2, float);
+        vec4 texture2DProj(sampler2D, vec3, float);
+        vec4 texture2DProj(sampler2D, vec4, float);
+        vec4 textureCube(samplerCube, vec3, float);
+      DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "OES_texture_3D"}
+        vec4 texture3D(sampler3D, vec3, float);
+        vec4 texture3DProj(sampler3D, vec4, float);
+    GROUP END Bias
+
+    GROUP BEGIN Lod
+      // The GLES spec mentioning that lod variants are limited to vertex shaders, and the
+      // OES_texture_3D spec doesn't mention otherwise.  However, these functions are used in tests
+      // and seem to be expected to be available in fragment shaders too.
+      DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "OES_texture_3D"}
+        vec4 texture3DLod(sampler3D, vec3, float);
+        vec4 texture3DProjLod(sampler3D, vec4, float);
+    GROUP END Lod
+
+    // Variants with lod are limited to vertex shaders in GLES
+    GROUP BEGIN LodVS {"shader_type": "VERTEX", "opSuffix": "VS"}
+      DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS"}
+        vec4 texture2DLod(sampler2D, vec2, float);
+        vec4 texture2DProjLod(sampler2D, vec3, float);
+        vec4 texture2DProjLod(sampler2D, vec4, float);
+        vec4 textureCubeLod(samplerCube, vec3, float);
+    GROUP END LodVS
+
+    // EXT_shader_texture_lod brings some lod variants to fragment shaders
+    GROUP BEGIN LodFS {"shader_type": "FRAGMENT", "opSuffix": "FS"}
+      DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "EXT_shader_texture_lod"}
+        vec4 texture2DLodEXT(sampler2D, vec2, float);
+        vec4 texture2DProjLodEXT(sampler2D, vec3, float);
+        vec4 texture2DProjLodEXT(sampler2D, vec4, float);
+        vec4 textureCubeLodEXT(samplerCube, vec3, float);
+    GROUP END LodFS
+
+  GROUP END FirstVersions
+
+  GROUP BEGIN NoBias
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 texture(gsampler2D, vec2);
+      gvec4 texture(gsampler3D, vec3);
+      gvec4 texture(gsamplerCube, vec3);
+      gvec4 texture(gsampler2DArray, vec3);
+      float texture(sampler2DShadow, vec3);
+      float texture(samplerCubeShadow, vec4);
+      float texture(sampler2DArrayShadow, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 texture(gsamplerCubeArray, vec4);
+      float texture(samplerCubeArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      gvec4 texture(gsamplerCubeArray, vec4);
+      float texture(samplerCubeArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_EGL_image_external_essl3"}
+      vec4 texture(samplerExternalOES, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+      vec4 texture(samplerExternal2DY2YEXT, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ARB_texture_rectangle"}
+      // We don't have a rectangle texture essl_extension for OpenGL ES however based on the behavior of
+      // rectangle texture in desktop OpenGL, they should be sampled with a "texture" overload in
+      // GLSL version that have such an overload. This is the case for ESSL3 and above.
+      vec4 texture(sampler2DRect, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "extension": "WEBGL_video_texture"}
+      vec4 texture(samplerVideoWEBGL, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProj(gsampler2D, vec3);
+      gvec4 textureProj(gsampler2D, vec4);
+      gvec4 textureProj(gsampler3D, vec4);
+      float textureProj(sampler2DShadow, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_EGL_image_external_essl3"}
+      vec4 textureProj(samplerExternalOES, vec3);
+      vec4 textureProj(samplerExternalOES, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+      vec4 textureProj(samplerExternal2DY2YEXT, vec3);
+      vec4 textureProj(samplerExternal2DY2YEXT, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ARB_texture_rectangle"}
+      vec4 textureProj(sampler2DRect, vec3);
+      vec4 textureProj(sampler2DRect, vec4);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureLod(gsampler2D, vec2, float);
+      gvec4 textureLod(gsampler3D, vec3, float);
+      gvec4 textureLod(gsamplerCube, vec3, float);
+      gvec4 textureLod(gsampler2DArray, vec3, float);
+      float textureLod(sampler2DShadow, vec3, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float textureLod(samplerCubeShadow, vec4, float);
+      float textureLod(sampler2DArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float textureLod(samplerCubeArrayShadow, vec4, float, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 textureLod(gsamplerCubeArray, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      gvec4 textureLod(gsamplerCubeArray, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      ivec2 textureSize(gsampler2D, int);
+      ivec3 textureSize(gsampler3D, int);
+      ivec2 textureSize(gsamplerCube, int);
+      ivec3 textureSize(gsampler2DArray, int);
+      ivec2 textureSize(sampler2DShadow, int);
+      ivec2 textureSize(samplerCubeShadow, int);
+      ivec3 textureSize(sampler2DArrayShadow, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      ivec3 textureSize(gsamplerCubeArray, int);
+      ivec3 textureSize(samplerCubeArrayShadow, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      ivec3 textureSize(gsamplerCubeArray, int);
+      ivec3 textureSize(samplerCubeArrayShadow, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      int textureSize(gsamplerBuffer);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_buffer, EXT_texture_buffer", "suffix": "Ext"}
+      int textureSize(gsamplerBuffer);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      ivec2 textureSize(gsampler2DMS);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ANGLE_texture_multisample", "suffix": "Ext"}
+      ivec2 textureSize(gsampler2DMS);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      ivec3 textureSize(gsampler2DMSArray);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_texture_storage_multisample_2d_array", "suffix": "Ext"}
+      ivec3 textureSize(gsampler2DMSArray);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_EGL_image_external_essl3"}
+      ivec2 textureSize(samplerExternalOES, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+      ivec2 textureSize(samplerExternal2DY2YEXT, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProjLod(gsampler2D, vec3, float);
+      gvec4 textureProjLod(gsampler2D, vec4, float);
+      gvec4 textureProjLod(gsampler3D, vec4, float);
+      float textureProjLod(sampler2DShadow, vec4, float);
+      gvec4 texelFetch(gsampler2D, ivec2, int);
+      gvec4 texelFetch(gsampler3D, ivec3, int);
+      gvec4 texelFetch(gsampler2DArray, ivec3, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 texelFetch(gsamplerBuffer, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_buffer, EXT_texture_buffer", "suffix": "Ext"}
+      gvec4 texelFetch(gsamplerBuffer, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      gvec4 texelFetch(gsampler2DMS, ivec2, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ANGLE_texture_multisample", "suffix": "Ext"}
+      gvec4 texelFetch(gsampler2DMS, ivec2, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 texelFetch(gsampler2DMSArray, ivec3, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_texture_storage_multisample_2d_array", "suffix": "Ext"}
+      gvec4 texelFetch(gsampler2DMSArray, ivec3, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_EGL_image_external_essl3"}
+      vec4 texelFetch(samplerExternalOES, ivec2, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+      vec4 texelFetch(samplerExternal2DY2YEXT, ivec2, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureGrad(gsampler2D, vec2, vec2, vec2);
+      gvec4 textureGrad(gsampler3D, vec3, vec3, vec3);
+      gvec4 textureGrad(gsamplerCube, vec3, vec3, vec3);
+      float textureGrad(sampler2DShadow, vec3, vec2, vec2);
+      float textureGrad(samplerCubeShadow, vec4, vec3, vec3);
+      gvec4 textureGrad(gsampler2DArray, vec3, vec2, vec2);
+      float textureGrad(sampler2DArrayShadow, vec4, vec2, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 textureGrad(gsamplerCubeArray, vec4, vec3, vec3);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      gvec4 textureGrad(gsamplerCubeArray, vec4, vec3, vec3);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProjGrad(gsampler2D, vec3, vec2, vec2);
+      gvec4 textureProjGrad(gsampler2D, vec4, vec2, vec2);
+      gvec4 textureProjGrad(gsampler3D, vec4, vec3, vec3);
+      float textureProjGrad(sampler2DShadow, vec4, vec2, vec2);
+  GROUP END NoBias
+
+  GROUP BEGIN Bias {"shader_type": "FRAGMENT", "opSuffix": "Bias"}
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 texture(gsampler2D, vec2, float);
+      gvec4 texture(gsampler3D, vec3, float);
+      gvec4 texture(gsamplerCube, vec3, float);
+      gvec4 texture(gsampler2DArray, vec3, float);
+      gvec4 textureProj(gsampler2D, vec3, float);
+      gvec4 textureProj(gsampler2D, vec4, float);
+      gvec4 textureProj(gsampler3D, vec4, float);
+      float texture(sampler2DShadow, vec3, float);
+      float texture(samplerCubeShadow, vec4, float);
+      float textureProj(sampler2DShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float texture(sampler2DArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 texture(gsamplerCubeArray, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      gvec4 texture(gsamplerCubeArray, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float texture(samplerCubeArrayShadow, vec4, float, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_EGL_image_external_essl3"}
+      vec4 texture(samplerExternalOES, vec2, float);
+      vec4 textureProj(samplerExternalOES, vec3, float);
+      vec4 textureProj(samplerExternalOES, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+      vec4 texture(samplerExternal2DY2YEXT, vec2, float);
+      vec4 textureProj(samplerExternal2DY2YEXT, vec3, float);
+      vec4 textureProj(samplerExternal2DY2YEXT, vec4, float);
+  GROUP END Bias
+
+  GROUP BEGIN OffsetNoBias {"queryFunction": true}
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureOffset(gsampler2D, vec2, ivec2);
+      gvec4 textureOffset(gsampler3D, vec3, ivec3);
+      float textureOffset(sampler2DShadow, vec3, ivec2);
+      gvec4 textureOffset(gsampler2DArray, vec3, ivec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float textureOffset(sampler2DArrayShadow, vec4, ivec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProjOffset(gsampler2D, vec3, ivec2);
+      gvec4 textureProjOffset(gsampler2D, vec4, ivec2);
+      gvec4 textureProjOffset(gsampler3D, vec4, ivec3);
+      float textureProjOffset(sampler2DShadow, vec4, ivec2);
+      gvec4 textureLodOffset(gsampler2D, vec2, float, ivec2);
+      gvec4 textureLodOffset(gsampler3D, vec3, float, ivec3);
+      float textureLodOffset(sampler2DShadow, vec3, float, ivec2);
+      gvec4 textureLodOffset(gsampler2DArray, vec3, float, ivec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float textureLodOffset(sampler2DArrayShadow, vec4, float, ivec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProjLodOffset(gsampler2D, vec3, float, ivec2);
+      gvec4 textureProjLodOffset(gsampler2D, vec4, float, ivec2);
+      gvec4 textureProjLodOffset(gsampler3D, vec4, float, ivec3);
+      float textureProjLodOffset(sampler2DShadow, vec4, float, ivec2);
+      gvec4 texelFetchOffset(gsampler2D, ivec2, int, ivec2);
+      gvec4 texelFetchOffset(gsampler3D, ivec3, int, ivec3);
+      gvec4 texelFetchOffset(gsampler2DArray, ivec3, int, ivec2);
+      gvec4 textureGradOffset(gsampler2D, vec2, vec2, vec2, ivec2);
+      gvec4 textureGradOffset(gsampler3D, vec3, vec3, vec3, ivec3);
+      float textureGradOffset(sampler2DShadow, vec3, vec2, vec2, ivec2);
+      gvec4 textureGradOffset(gsampler2DArray, vec3, vec2, vec2, ivec2);
+      float textureGradOffset(sampler2DArrayShadow, vec4, vec2, vec2, ivec2);
+      gvec4 textureProjGradOffset(gsampler2D, vec3, vec2, vec2, ivec2);
+      gvec4 textureProjGradOffset(gsampler2D, vec4, vec2, vec2, ivec2);
+      gvec4 textureProjGradOffset(gsampler3D, vec4, vec3, vec3, ivec3);
+      float textureProjGradOffset(sampler2DShadow, vec4, vec2, vec2, ivec2);
+  GROUP END OffsetNoBias
+
+  GROUP BEGIN OffsetBias {"queryFunction": true, "shader_type": "FRAGMENT", "opSuffix": "Bias"}
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureOffset(gsampler2D, vec2, ivec2, float);
+      gvec4 textureOffset(gsampler3D, vec3, ivec3, float);
+      float textureOffset(sampler2DShadow, vec3, ivec2, float);
+      gvec4 textureOffset(gsampler2DArray, vec3, ivec2, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_shadow_lod"}
+      float textureOffset(sampler2DArrayShadow, vec4, ivec2, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+      gvec4 textureProjOffset(gsampler2D, vec3, ivec2, float);
+      gvec4 textureProjOffset(gsampler2D, vec4, ivec2, float);
+      gvec4 textureProjOffset(gsampler3D, vec4, ivec3, float);
+      float textureProjOffset(sampler2DShadow, vec4, ivec2, float);
+  GROUP END OffsetBias
+
+  GROUP BEGIN Gather {"queryFunction": true}
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      gvec4 textureGather(gsampler2D, vec2);
+      gvec4 textureGather(gsampler2D, vec2, int);
+      gvec4 textureGather(gsampler2DArray, vec3);
+      gvec4 textureGather(gsampler2DArray, vec3, int);
+      gvec4 textureGather(gsamplerCube, vec3);
+      gvec4 textureGather(gsamplerCube, vec3, int);
+    DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+      gvec4 textureGather(gsamplerCubeArray, vec4);
+      gvec4 textureGather(gsamplerCubeArray, vec4, int);
+      vec4 textureGather(samplerCubeArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+      gvec4 textureGather(gsamplerCubeArray, vec4);
+      gvec4 textureGather(gsamplerCubeArray, vec4, int);
+      vec4 textureGather(samplerCubeArrayShadow, vec4, float);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+      vec4 textureGather(sampler2DShadow, vec2);
+      vec4 textureGather(sampler2DShadow, vec2, float);
+      vec4 textureGather(sampler2DArrayShadow, vec3);
+      vec4 textureGather(sampler2DArrayShadow, vec3, float);
+      vec4 textureGather(samplerCubeShadow, vec3);
+      vec4 textureGather(samplerCubeShadow, vec3, float);
+
+      GROUP BEGIN Offset {"queryFunction": true}
+        GROUP BEGIN NoComp {"queryFunction": true}
+          DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+            gvec4 textureGatherOffset(gsampler2D, vec2, ivec2);
+            gvec4 textureGatherOffset(gsampler2DArray, vec3, ivec2);
+            vec4 textureGatherOffset(sampler2DShadow, vec2, float, ivec2);
+            vec4 textureGatherOffset(sampler2DArrayShadow, vec3, float, ivec2);
+        GROUP END NoComp
+        GROUP BEGIN Comp {"queryFunction": true, "opSuffix": "Comp"}
+          DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+            gvec4 textureGatherOffset(gsampler2D, vec2, ivec2, int);
+            gvec4 textureGatherOffset(gsampler2DArray, vec3, ivec2, int);
+        GROUP END Comp
+      GROUP END Offset
+      GROUP BEGIN Offsets {"queryFunction": true}
+        GROUP BEGIN NoComp {"queryFunction": true}
+          DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+            gvec4 textureGatherOffsets(gsampler2D, vec2, ivec2[4]);
+            gvec4 textureGatherOffsets(gsampler2DArray, vec3, ivec2[4]);
+            vec4 textureGatherOffsets(sampler2DShadow, vec2, float, ivec2[4]);
+            vec4 textureGatherOffsets(sampler2DArrayShadow, vec3, float, ivec2[4]);
+          DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_gpu_shader5, OES_gpu_shader5", "suffix": "Ext"}
+            gvec4 textureGatherOffsets(gsampler2D, vec2, ivec2[4]);
+            gvec4 textureGatherOffsets(gsampler2DArray, vec3, ivec2[4]);
+            vec4 textureGatherOffsets(sampler2DShadow, vec2, float, ivec2[4]);
+            vec4 textureGatherOffsets(sampler2DArrayShadow, vec3, float, ivec2[4]);
+        GROUP END NoComp
+        GROUP BEGIN Comp {"queryFunction": true, "opSuffix": "Comp"}
+          DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+            gvec4 textureGatherOffsets(gsampler2D, vec2, ivec2[4], int);
+            gvec4 textureGatherOffsets(gsampler2DArray, vec3, ivec2[4], int);
+          DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_gpu_shader5, OES_gpu_shader5", "suffix": "Ext"}
+            gvec4 textureGatherOffsets(gsampler2D, vec2, ivec2[4], int);
+            gvec4 textureGatherOffsets(gsampler2DArray, vec3, ivec2[4], int);
+        GROUP END Comp
+      GROUP END Offsets
+  GROUP END Gather
+
+  GROUP BEGIN QueryLod {"shader_type": "FRAGMENT"}
+    DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_texture_query_lod"}
+      vec2 textureQueryLOD(gsampler2D, vec2);
+      vec2 textureQueryLOD(gsampler3D, vec3);
+      vec2 textureQueryLOD(gsamplerCube, vec3);
+      vec2 textureQueryLOD(gsampler2DArray, vec2);
+      vec2 textureQueryLOD(sampler2DShadow, vec2);
+      vec2 textureQueryLOD(samplerCubeShadow, vec3);
+      vec2 textureQueryLOD(sampler2DArrayShadow, vec2);
+    DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_texture_query_lod"}
+      vec2 textureQueryLOD(gsamplerCubeArray, vec3);
+      vec2 textureQueryLOD(samplerCubeArrayShadow, vec3);
+  GROUP END QueryLod
+GROUP END Texture
+
+GROUP BEGIN EXT_YUV_target
+  DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "EXT_YUV_target"}
+    vec3 rgb_2_yuv(vec3, yuvCscStandardEXT);
+    vec3 yuv_2_rgb(vec3, yuvCscStandardEXT);
+GROUP END EXT_YUV_target
+
+GROUP BEGIN DerivativesFS {"queryFunction": true, "shader_type": "FRAGMENT"}
+  DEFAULT METADATA {"essl_level": "ESSL1_BUILTINS", "essl_extension": "OES_standard_derivatives", "suffix": "Ext"}
+    genType dFdx(genType);
+    genType dFdy(genType);
+    genType fwidth(genType);
+  DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS"}
+    genType dFdx(genType);
+    genType dFdy(genType);
+    genType fwidth(genType);
+GROUP END DerivativesFS
+
+GROUP BEGIN InterpolationFS {"queryFunction": true, "shader_type": "FRAGMENT"}
+  DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+    float interpolateAtCentroid(float);
+    vec2 interpolateAtCentroid(vec2);
+    vec3 interpolateAtCentroid(vec3);
+    vec4 interpolateAtCentroid(vec4);
+    float interpolateAtSample(float, int);
+    vec2 interpolateAtSample(vec2, int);
+    vec3 interpolateAtSample(vec3, int);
+    vec4 interpolateAtSample(vec4, int);
+    float interpolateAtOffset(float, vec2);
+    vec2 interpolateAtOffset(vec2, vec2);
+    vec3 interpolateAtOffset(vec3, vec2);
+    vec4 interpolateAtOffset(vec4, vec2);
+  DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "OES_shader_multisample_interpolation", "suffix": "Ext"}
+    float interpolateAtCentroid(float);
+    vec2 interpolateAtCentroid(vec2);
+    vec3 interpolateAtCentroid(vec3);
+    vec4 interpolateAtCentroid(vec4);
+    float interpolateAtSample(float, int);
+    vec2 interpolateAtSample(vec2, int);
+    vec3 interpolateAtSample(vec3, int);
+    vec4 interpolateAtSample(vec4, int);
+    float interpolateAtOffset(float, vec2);
+    vec2 interpolateAtOffset(vec2, vec2);
+    vec3 interpolateAtOffset(vec3, vec2);
+    vec4 interpolateAtOffset(vec4, vec2);
+GROUP END InterpolationFS
+
+GROUP BEGIN AtomicCounter {"queryFunction": true}
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true}
+    uint atomicCounter(atomic_uint);
+    uint atomicCounterIncrement(atomic_uint);
+    uint atomicCounterDecrement(atomic_uint);
+GROUP END AtomicCounter
+
+GROUP BEGIN AtomicMemory {"queryFunction": true}
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+    uint atomicAdd(inout uint, uint);
+    int atomicAdd(inout int, int);
+    uint atomicMin(inout uint, uint);
+    int atomicMin(inout int, int);
+    uint atomicMax(inout uint, uint);
+    int atomicMax(inout int, int);
+    uint atomicAnd(inout uint, uint);
+    int atomicAnd(inout int, int);
+    uint atomicOr(inout uint, uint);
+    int atomicOr(inout int, int);
+    uint atomicXor(inout uint, uint);
+    int atomicXor(inout int, int);
+    uint atomicExchange(inout uint, uint);
+    int atomicExchange(inout int, int);
+    uint atomicCompSwap(inout uint, uint, uint);
+    int atomicCompSwap(inout int, int, int);
+GROUP END AtomicMemory
+
+GROUP BEGIN Image {"queryFunction": true}
+    GROUP BEGIN Store {"queryFunction": true}
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true}
+        void imageStore(gimage2D, ivec2, gvec4);
+        void imageStore(gimage3D, ivec3, gvec4);
+        void imageStore(gimage2DArray, ivec3, gvec4);
+        void imageStore(gimageCube, ivec3, gvec4);
+
+      DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS", "hasSideEffects": true}
+        void imageStore(gimageCubeArray, ivec3, gvec4);
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true, "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+        void imageStore(gimageCubeArray, ivec3, gvec4);
+
+      DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS", "hasSideEffects": true}
+        void imageStore(gimageBuffer, int, gvec4);
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true, "essl_extension": "OES_texture_buffer, EXT_texture_buffer", "suffix": "Ext"}
+        void imageStore(gimageBuffer, int, gvec4);
+    GROUP END Store
+    GROUP BEGIN Load {"queryFunction": true}
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+        gvec4 imageLoad(gimage2D, ivec2);
+        gvec4 imageLoad(gimage3D, ivec3);
+        gvec4 imageLoad(gimage2DArray, ivec3);
+        gvec4 imageLoad(gimageCube, ivec3);
+
+      DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+        gvec4 imageLoad(gimageCubeArray, ivec3);
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+        gvec4 imageLoad(gimageCubeArray, ivec3);
+
+      DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+        gvec4 imageLoad(gimageBuffer, int);
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_buffer, EXT_texture_buffer", "suffix": "Ext"}
+        gvec4 imageLoad(gimageBuffer, int);
+    GROUP END Load
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS"}
+    ivec2 imageSize(gimage2D);
+    ivec3 imageSize(gimage3D);
+    ivec3 imageSize(gimage2DArray);
+    ivec2 imageSize(gimageCube);
+
+  DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+    ivec3 imageSize(gimageCubeArray);
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_cube_map_array, EXT_texture_cube_map_array", "suffix": "Ext"}
+    ivec3 imageSize(gimageCubeArray);
+
+  DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS"}
+    int imageSize(gimageBuffer);
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "OES_texture_buffer, EXT_texture_buffer", "suffix": "Ext"}
+    int imageSize(gimageBuffer);
+
+  GROUP BEGIN Atomic {"queryFunction": true}
+      DEFAULT METADATA {"essl_level": "ESSL3_2_BUILTINS", "hasSideEffects": true}
+        uint imageAtomicAdd(IMAGE_PARAMS, uint);
+        int imageAtomicAdd(IMAGE_PARAMS, int);
+        uint imageAtomicMin(IMAGE_PARAMS, uint);
+        int imageAtomicMin(IMAGE_PARAMS, int);
+        uint imageAtomicMax(IMAGE_PARAMS, uint);
+        int imageAtomicMax(IMAGE_PARAMS, int);
+        uint imageAtomicAnd(IMAGE_PARAMS, uint);
+        int imageAtomicAnd(IMAGE_PARAMS, int);
+        uint imageAtomicOr(IMAGE_PARAMS, uint);
+        int imageAtomicOr(IMAGE_PARAMS, int);
+        uint imageAtomicXor(IMAGE_PARAMS, uint);
+        int imageAtomicXor(IMAGE_PARAMS, int);
+        uint imageAtomicExchange(IMAGE_PARAMS, uint);
+        int imageAtomicExchange(IMAGE_PARAMS, int);
+        float imageAtomicExchange(IMAGE_PARAMS, float);
+        uint imageAtomicCompSwap(IMAGE_PARAMS, uint, uint);
+        int imageAtomicCompSwap(IMAGE_PARAMS, int, int);
+      DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true, "essl_extension": "OES_shader_image_atomic", "suffix": "Ext"}
+        uint imageAtomicAdd(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicAdd(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicMin(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicMin(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicMax(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicMax(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicAnd(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicAnd(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicOr(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicOr(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicXor(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicXor(readonly writeonly IMAGE_PARAMS, int);
+        uint imageAtomicExchange(readonly writeonly IMAGE_PARAMS, uint);
+        int imageAtomicExchange(readonly writeonly IMAGE_PARAMS, int);
+        float imageAtomicExchange(readonly writeonly IMAGE_PARAMS, float);
+        uint imageAtomicCompSwap(readonly writeonly IMAGE_PARAMS, uint, uint);
+        int imageAtomicCompSwap(readonly writeonly IMAGE_PARAMS, int, int);
+  GROUP END Atomic
+GROUP END Image
+
+GROUP BEGIN PixelLocal {"queryFunction": true}
+    GROUP BEGIN Load {"queryFunction": true}
+      DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ANGLE_shader_pixel_local_storage", "hasSideEffects": false}
+        gvec4 pixelLocalLoadANGLE(gpixelLocalANGLE);
+    GROUP END Load
+    GROUP BEGIN Store {"queryFunction": true}
+      DEFAULT METADATA {"essl_level": "ESSL3_BUILTINS", "essl_extension": "ANGLE_shader_pixel_local_storage", "hasSideEffects": true}
+        void pixelLocalStoreANGLE(gpixelLocalANGLE, gvec4);
+    GROUP END Store
+GROUP END PixelLocal
+
+// Desktop GLSL-only fragment synchronization functions. These are injected internally by the
+// compiler to make pixel local storage coherent.
+GROUP BEGIN FragmentSynchronization
+  DEFAULT METADATA {"essl_level": "ESSL_INTERNAL_BACKEND_BUILTINS", "hasSideEffects": true}
+    void beginInvocationInterlockNV();
+    void endInvocationInterlockNV();
+    void beginFragmentShaderOrderingINTEL();
+    void beginInvocationInterlockARB();
+    void endInvocationInterlockARB();
+GROUP END FragmentSynchronization
+
+GROUP BEGIN Barrier
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true}
+    void memoryBarrier();
+    void memoryBarrierAtomicCounter();
+    void memoryBarrierBuffer();
+    void memoryBarrierImage();
+GROUP END Barrier
+
+GROUP BEGIN ESSL310CS {"shader_type": "COMPUTE"}
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "hasSideEffects": true}
+    void barrier();
+    void memoryBarrierShared();
+    void groupMemoryBarrier();
+GROUP END ESSL310CS
+
+GROUP BEGIN ESSL310TCS {"shader_type": "TESS_CONTROL_EXT"}
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_tessellation_shader, OES_tessellation_shader", "essl_extension_becomes_core_in": "ESSL3_2_BUILTINS", "opSuffix": "TCS", "hasSideEffects": true, "suffix": "TCS"}
+    void barrier();
+GROUP END ESSL310TCS
+
+GROUP BEGIN GS {"shader_type": "GEOMETRY"}
+  DEFAULT METADATA {"essl_level": "ESSL3_1_BUILTINS", "essl_extension": "EXT_geometry_shader, OES_geometry_shader", "essl_extension_becomes_core_in": "ESSL3_2_BUILTINS", "hasSideEffects": true}
+    void EmitVertex();
+    void EndPrimitive();
+GROUP END GS
+
+GROUP BEGIN SubpassInput
+  DEFAULT METADATA {"essl_level": "ESSL_INTERNAL_BACKEND_BUILTINS"}
+    gvec4 subpassLoad(gsubpassInput);
+GROUP END SubpassInput
+
+// MSL fragment functions
+GROUP BEGIN MetalFragmentSample {"shader_type": "FRAGMENT"}
+  DEFAULT METADATA {"essl_level": "ESSL_INTERNAL_BACKEND_BUILTINS"}
+    uint numSamples();
+    vec2 samplePosition(uint);
+    genType interpolateAtCenter(genType);
+GROUP END MetalFragmentSample
+
+// MSL common functions
+GROUP BEGIN MetalCommon
+  DEFAULT METADATA {"essl_level": "ESSL_INTERNAL_BACKEND_BUILTINS"}
+    genType saturate(genType);
+GROUP END MetalCommon

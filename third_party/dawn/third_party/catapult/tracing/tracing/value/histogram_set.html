@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_deserializer.html">
+<link rel="import" href="/tracing/value/histogram_grouping.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v', function() {
+  class HistogramSet {
+    constructor(opt_histograms) {
+      this.histograms_ = new Set();
+      this.sharedDiagnosticsByGuid_ = new Map();
+
+      if (opt_histograms !== undefined) {
+        for (const hist of opt_histograms) {
+          this.addHistogram(hist);
+        }
+      }
+    }
+
+    has(hist) {
+      return this.histograms_.has(hist);
+    }
+
+    /**
+     * Create a Histogram, configure it, add samples to it, and add it to this
+     * HistogramSet.
+     *
+     * |samples| can be either
+     *  0. a number, or
+     *  1. a dictionary {value: number, diagnostics: dictionary}, or
+     *  2. an array of
+     *     2a. number, or
+     *     2b. dictionaries {value, diagnostics}.
+     *
+     * @param {string} name
+     * @param {!tr.b.Unit} unit
+     * @param {number|!Object|!Array.<(number|!Object)>} samples
+     * @param {!Object=} opt_options
+     * @param {!tr.v.HistogramBinBoundaries} opt_options.binBoundaries
+     * @param {!Object|!Map} opt_options.summaryOptions
+     * @param {!Object|!Map} opt_options.diagnostics
+     * @param {string} opt_options.description
+     * @return {!tr.v.Histogram}
+     */
+    createHistogram(name, unit, samples, opt_options) {
+      const hist = tr.v.Histogram.create(name, unit, samples, opt_options);
+      this.addHistogram(hist);
+      return hist;
+    }
+
+    /**
+     * @param {!tr.v.Histogram} hist
+     * @param {(!Object|!tr.v.d.DiagnosticMap)=} opt_diagnostics
+     */
+    addHistogram(hist, opt_diagnostics) {
+      if (this.has(hist)) {
+        throw new Error('Cannot add same Histogram twice');
+      }
+
+      if (opt_diagnostics !== undefined) {
+        if (!(opt_diagnostics instanceof Map)) {
+          opt_diagnostics = Object.entries(opt_diagnostics);
+        }
+        for (const [name, diagnostic] of opt_diagnostics) {
+          hist.diagnostics.set(name, diagnostic);
+        }
+      }
+
+      this.histograms_.add(hist);
+    }
+
+    /**
+     * Add a Diagnostic to all Histograms so that it will only be serialized
+     * once per HistogramSet rather than once per Histogram that contains it.
+     *
+     * @param {string} name
+     * @param {!tr.v.d.Diagnostic} diagnostic
+     */
+    addSharedDiagnosticToAllHistograms(name, diagnostic) {
+      this.addSharedDiagnostic(diagnostic);
+      for (const hist of this) {
+        hist.diagnostics.set(name, diagnostic);
+      }
+    }
+
+    /**
+     * Add a Diagnostic to this HistogramSet so that it will only be serialized
+     * once per HistogramSet rather than once per Histogram that contains it.
+     *
+     * @param {!tr.v.d.Diagnostic} diagnostic
+     */
+    addSharedDiagnostic(diagnostic) {
+      this.sharedDiagnosticsByGuid_.set(diagnostic.guid, diagnostic);
+    }
+
+    get length() {
+      return this.histograms_.size;
+    }
+
+    * [Symbol.iterator]() {
+      for (const hist of this.histograms_) {
+        yield hist;
+      }
+    }
+
+    /**
+     * Filters Histograms by matching their name exactly.
+     *
+     * @param {string} name Histogram name.
+     * @return {!Array.<!tr.v.Histogram>}
+     */
+    getHistogramsNamed(name) {
+      return [...this].filter(h => h.name === name);
+    }
+
+    /**
+     * Filters to find the Histogram that matches the specified name exactly.
+     * If no Histogram with that name exists, undefined is returned. If multiple
+     * Histograms with the name exist, an error is thrown.
+     *
+     * @param {string} name Histogram name.
+     * @return {tr.v.Histogram}
+     */
+    getHistogramNamed(name) {
+      const histograms = this.getHistogramsNamed(name);
+      if (histograms.length === 0) return undefined;
+      if (histograms.length > 1) {
+        throw new Error(
+            `Unexpectedly found multiple histograms named "${name}"`);
+      }
+
+      return histograms[0];
+    }
+
+    /**
+     * Lookup a Diagnostic by its guid.
+     *
+     * @param {string} guid
+     * @return {!tr.v.d.Diagnostic|undefined}
+     */
+    lookupDiagnostic(guid) {
+      return this.sharedDiagnosticsByGuid_.get(guid);
+    }
+
+    deserialize(data) {
+      for (const hist of tr.v.HistogramDeserializer.deserialize(data)) {
+        this.addHistogram(hist);
+      }
+    }
+
+    /**
+     * Convert dicts to either Histograms or shared Diagnostics.
+     *
+     * @param {!Object} dicts
+     */
+    importDicts(dicts) {
+      // The new HistogramSet JSON format is an array of at least 3 arrays.
+      if ((dicts instanceof Array) &&
+          (dicts.length > 2) &&
+          (dicts[0] instanceof Array)) {
+        this.deserialize(dicts);
+        return;
+      }
+
+      // The original HistogramSet JSON format was a flat array of objects.
+      for (const dict of dicts) {
+        this.importLegacyDict(dict);
+      }
+    }
+
+    /**
+     * Convert dict to either a Histogram or a shared Diagnostic.
+     *
+     * @param {!Object} dict
+     */
+    importLegacyDict(dict) {
+      if (dict.type !== undefined) {
+        // TODO(benjhayden): Forget about TagMaps in 2019Q2.
+        if (dict.type === 'TagMap') return;
+
+        if (!tr.v.d.Diagnostic.findTypeInfoWithName(dict.type)) {
+          throw new Error('Unrecognized shared diagnostic type ' + dict.type);
+        }
+        this.sharedDiagnosticsByGuid_.set(dict.guid,
+            tr.v.d.Diagnostic.fromDict(dict));
+      } else {
+        const hist = tr.v.Histogram.fromDict(dict);
+        this.addHistogram(hist);
+        hist.diagnostics.resolveSharedDiagnostics(this, true);
+      }
+    }
+
+    /**
+     * Serialize all of the Histograms and shared Diagnostics to an Array of
+     * dictionaries.
+     *
+     * @return {!Array.<!Object>}
+     */
+    asDicts() {
+      const dicts = [];
+      for (const diagnostic of this.sharedDiagnosticsByGuid_.values()) {
+        dicts.push(diagnostic.asDict());
+      }
+      for (const hist of this) {
+        dicts.push(hist.asDict());
+      }
+      return dicts;
+    }
+
+    /**
+     * Find the Histograms whose names are not contained in any other
+     * Histograms' RelatedNameMap diagnostics.
+     *
+     * @return {!Array.<!tr.v.Histogram>}
+     */
+    get sourceHistograms() {
+      const diagnosticNames = new Set();
+      for (const hist of this) {
+        for (const diagnostic of hist.diagnostics.values()) {
+          if (!(diagnostic instanceof tr.v.d.RelatedNameMap)) continue;
+          for (const name of diagnostic.values()) {
+            diagnosticNames.add(name);
+          }
+        }
+      }
+
+      const sourceHistograms = new HistogramSet;
+      for (const hist of this) {
+        if (!diagnosticNames.has(hist.name)) {
+          sourceHistograms.addHistogram(hist);
+        }
+      }
+      return sourceHistograms;
+    }
+
+    /**
+     * Return a nested Map, whose keys are strings and leaf values are Arrays of
+     * Histograms.
+     * See GROUPINGS for example |groupings|.
+     * Groupings are skipped when |opt_skipGroupingCallback| is specified and
+     * returns true.
+     *
+     * @typedef {!Array.<tr.v.Histogram>} HistogramArray
+     * @typedef {!Map.<string,!(HistogramArray|HistogramArrayMap)>}
+     *   HistogramArrayMap
+     * @typedef {!Map.<string,!HistogramArray>} LeafHistogramArrayMap
+     *
+     * @param {!Array.<!tr.v.HistogramGrouping>} groupings
+     * @param {!function(!Grouping, !LeafHistogramArrayMap):boolean=}
+     *   opt_skipGroupingCallback
+     *
+     * @return {!(HistogramArray|HistogramArrayMap)}
+     */
+    groupHistogramsRecursively(groupings, opt_skipGroupingCallback) {
+      function recurse(histograms, level) {
+        if (level === groupings.length) {
+          return histograms;  // recursion base case
+        }
+
+        const grouping = groupings[level];
+        const groupedHistograms = tr.b.groupIntoMap(
+            histograms, grouping.callback);
+
+        if (opt_skipGroupingCallback && opt_skipGroupingCallback(
+            grouping, groupedHistograms)) {
+          return recurse(histograms, level + 1);
+        }
+
+        for (const [key, group] of groupedHistograms) {
+          groupedHistograms.set(key, recurse(group, level + 1));
+        }
+
+        return groupedHistograms;
+      }
+
+      return recurse([...this], 0);
+    }
+
+    /*
+     * Histograms and Diagnostics are merged two at a time, without considering
+     * any others, so it is possible for two merged Diagnostics to be equivalent
+     * but not identical, which is inefficient. This method replaces equivalent
+     * Diagnostics with shared Diagnostics so that the HistogramSet can be
+     * serialized more efficiently and so that these Diagnostics can be compared
+     * quickly when merging relationship Diagnostics.
+     */
+    deduplicateDiagnostics() {
+      const namesToCandidates = new Map();  // string: Set<Diagnostic>
+      const diagnosticsToHistograms = new Map();  // Diagnostic: [Histogram]
+      const keysToDiagnostics = new Map();  // string: Diagnostic
+
+      for (const hist of this) {
+        for (const [name, candidate] of hist.diagnostics) {
+          // TODO(#3695): Remove this check once equality is smoke-tested.
+          if (candidate.equals === undefined) {
+            this.sharedDiagnosticsByGuid_.set(candidate.guid, candidate);
+            continue;
+          }
+
+          const hashKey = candidate.hashKey;
+          if (candidate.hashKey !== undefined) {
+            // TODO(857283): Fall back to slow path if same name but diff type
+            if (keysToDiagnostics.has(hashKey)) {
+              hist.diagnostics.set(name, keysToDiagnostics.get(hashKey));
+            } else {
+              keysToDiagnostics.set(hashKey, candidate);
+              this.sharedDiagnosticsByGuid_.set(candidate.guid, candidate);
+            }
+
+            continue;
+          }
+
+          if (diagnosticsToHistograms.get(candidate) === undefined) {
+            diagnosticsToHistograms.set(candidate, [hist]);
+          } else {
+            diagnosticsToHistograms.get(candidate).push(hist);
+          }
+
+          if (!namesToCandidates.has(name)) {
+            namesToCandidates.set(name, new Set());
+          }
+          namesToCandidates.get(name).add(candidate);
+        }
+      }
+
+      for (const [name, candidates] of namesToCandidates) {
+        const deduplicatedDiagnostics = new Set();
+
+        for (const candidate of candidates) {
+          let found = false;
+          for (const test of deduplicatedDiagnostics) {
+            if (candidate.equals(test)) {
+              const hists = diagnosticsToHistograms.get(candidate);
+              for (const hist of hists) {
+                hist.diagnostics.set(name, test);
+              }
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            deduplicatedDiagnostics.add(candidate);
+          }
+
+          for (const diagnostic of deduplicatedDiagnostics) {
+            this.sharedDiagnosticsByGuid_.set(diagnostic.guid, diagnostic);
+          }
+        }
+      }
+    }
+
+    /**
+     * @param {!Iterable.<string>} names of GenericSet diagnostics
+     * @return {!Array.<!tr.v.HistogramGrouping>}
+     */
+    buildGroupingsFromTags(names) {
+      const tags = new Map();  // name: Set<string>
+      for (const hist of this) {
+        for (const name of names) {
+          if (!hist.diagnostics.has(name)) continue;
+          if (!tags.has(name)) tags.set(name, new Set());
+          for (const tag of hist.diagnostics.get(name)) {
+            tags.get(name).add(tag);
+          }
+        }
+      }
+
+      const groupings = [];
+      for (const [name, values] of tags) {
+        const built = tr.v.HistogramGrouping.buildFromTags(values, name);
+        for (const grouping of built) {
+          groupings.push(grouping);
+        }
+      }
+      return groupings;
+    }
+  }
+
+  return {HistogramSet};
+});
+</script>

@@ -1,0 +1,182 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+
+  <title>iron-focusables-helper tests</title>
+
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+  <script src="../../web-component-tester/browser.js"></script>
+  <link rel="import" href="../../iron-test-helpers/iron-test-helpers.html">
+  <link rel="import" href="../iron-focusables-helper.html">
+  <link rel="import" href="test-buttons.html">
+  <link rel="import" href="test-buttons-wrapper.html">
+
+  <style is="custom-style">
+    .hidden {
+      visibility: hidden;
+    }
+
+    .no-display {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <test-fixture id="basic">
+    <template>
+      <div>
+        <h2>Focusables (no tabindex)</h2>
+        <div>
+          <input class="focusable1" placeholder="1 (nested)">
+        </div>
+        <a href="#" class="focusable2">2</a>
+        <button disabled> disabled button</button>
+        <input disabled tabindex="0" value="disabled input with tabindex">
+        <div tabindex="-1">not focusable</div>
+        <div contenteditable class="focusable3">3</div>
+      </div>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="tabindex">
+    <template>
+      <div>
+        <h2>Focusables (with tabindex)</h2>
+        <div tabindex="0" class="focusable7">7</div>
+        <div tabindex="0" class="focusable8">8</div>
+        <div tabindex="0" class="focusable9">9</div>
+        <div tabindex="0" class="focusable10">10</div>
+        <div tabindex="0" class="focusable11">11</div>
+        <div tabindex="0" class="focusable12">12</div>
+        <div tabindex="-1">not focusable</div>
+        <div tabindex="3" class="focusable3">3</div>
+        <div tabindex="4" class="focusable4">4</div>
+        <div tabindex="5" class="focusable5">5</div>
+        <div>
+          <div tabindex="1" class="focusable1">1 (nested)</div>
+          <div tabindex="6" class="focusable6">6 (nested)</div>
+        </div>
+        <div tabindex="2" class="focusable2">2</div>
+      </div>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="shadow">
+    <template>
+      <test-buttons>
+        <h2>focusables in ShadowDOM</h2>
+        <input placeholder="type something..">
+      </test-buttons>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="composed">
+    <template>
+      <test-buttons-wrapper>
+        <input placeholder="type something..">
+      </test-buttons-wrapper>
+    </template>
+  </test-fixture>
+
+  <script>
+    suite('getTabbableNodes', function() {
+
+      test('returns tabbable nodes', function() {
+        var node = fixture('basic');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 3, '3 nodes are focusable');
+        assert.equal(focusableNodes[0], Polymer.dom(node).querySelector('.focusable1'));
+        assert.equal(focusableNodes[1], Polymer.dom(node).querySelector('.focusable2'));
+        assert.equal(focusableNodes[2], Polymer.dom(node).querySelector('.focusable3'));
+      });
+
+      test('includes the root if it has a valid tabindex', function() {
+        var node = fixture('basic');
+        node.setAttribute('tabindex', '0');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 4, '4 focusable nodes');
+        assert.notEqual(focusableNodes.indexOf(node), -1, 'root is included');
+      });
+
+      test('excludes visibility: hidden elements', function() {
+        var node = fixture('basic');
+        var focusable = Polymer.dom(node).querySelector('.focusable1');
+        focusable.classList.add('hidden');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 2, '2 focusable nodes');
+        assert.equal(focusableNodes.indexOf(focusable), -1, 'hidden element is not included');
+      });
+
+      test('excludes display: none elements', function() {
+        var node = fixture('basic');
+        var focusable = Polymer.dom(node).querySelector('.focusable1');
+        focusable.classList.add('no-display');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 2, '2 focusable nodes');
+        assert.equal(focusableNodes.indexOf(focusable), -1, 'hidden element is not included');
+      });
+
+      test('respects the tabindex order', function() {
+        var node = fixture('tabindex');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 12, '12 nodes are focusable');
+        for (var i = 0; i < 12; i++) {
+          assert.equal(focusableNodes[i], Polymer.dom(node).querySelector('.focusable' + (i + 1)));
+        }
+      });
+
+      test('includes tabbable elements in the shadow dom', function() {
+        var node = fixture('shadow');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 4, '4 nodes are focusable');
+        assert.equal(focusableNodes[0], node.$.button0);
+        assert.equal(focusableNodes[1], node.$.button1);
+        assert.equal(focusableNodes[2], Polymer.dom(node).querySelector('input'));
+        assert.equal(focusableNodes[3], node.$.button2);
+      });
+
+      test('handles composition', function() {
+        var node = fixture('composed');
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(node);
+        assert.equal(focusableNodes.length, 6, '6 nodes are focusable');
+        assert.equal(focusableNodes[0], node.$.select);
+        assert.equal(focusableNodes[1], node.$.wrapped.$.button0);
+        assert.equal(focusableNodes[2], node.$.wrapped.$.button1);
+        assert.equal(focusableNodes[3], Polymer.dom(node).querySelector('input'));
+        assert.equal(focusableNodes[4], node.$.wrapped.$.button2);
+        assert.equal(focusableNodes[5], node.$.focusableDiv);
+      });
+
+      test('handles distributed nodes', function() {
+        var node = fixture('composed');
+        var wrapped = node.$.wrapped;
+        var focusableNodes = Polymer.IronFocusablesHelper.getTabbableNodes(wrapped);
+        assert.equal(focusableNodes.length, 4, '4 nodes are focusable');
+        assert.equal(focusableNodes[0], wrapped.$.button0);
+        assert.equal(focusableNodes[1], wrapped.$.button1);
+        assert.equal(focusableNodes[2], Polymer.dom(node).querySelector('input'));
+        assert.equal(focusableNodes[3], wrapped.$.button2);
+      });
+    });
+  </script>
+
+</body>
+
+</html>

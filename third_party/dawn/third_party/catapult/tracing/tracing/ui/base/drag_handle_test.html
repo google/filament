@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/drag_handle.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const createDragHandle = function() {
+    const el = document.createElement('div');
+    el.style.border = '1px solid black';
+    el.style.width = '200px';
+    el.style.height = '200px';
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+
+    const upperEl = document.createElement('div');
+    upperEl.style.flex = '1 1 auto';
+    upperEl.style.minHeight = '0';
+
+    const lowerEl = document.createElement('div');
+    lowerEl.style.height = '100px';
+    lowerEl.style.minHeight = '50px';
+
+    const dragHandle = document.createElement('tr-ui-b-drag-handle');
+    dragHandle.target = lowerEl;
+
+    Polymer.dom(el).appendChild(upperEl);
+    Polymer.dom(el).appendChild(dragHandle);
+    Polymer.dom(el).appendChild(lowerEl);
+    el.upperEl = upperEl;
+    el.dragHandle = dragHandle;
+    el.lowerEl = lowerEl;
+
+    el.getLowerElHeight = function() {
+      return parseInt(getComputedStyle(this.lowerEl).height);
+    };
+    return el;
+  };
+
+  test('instantiate', function() {
+    this.addHTMLOutput(createDragHandle());
+  });
+
+  test('dragWithoutConstraint', function() {
+    const el = createDragHandle();
+    this.addHTMLOutput(el);
+
+    const dragHandle = el.dragHandle;
+    assert.strictEqual(el.getLowerElHeight(), 100);
+    dragHandle.onMouseDown_({clientX: 0, clientY: 0, preventDefault() {}});
+    dragHandle.onMouseMove_({clientX: 0, clientY: -10, preventDefault() {}});
+    assert.strictEqual(el.getLowerElHeight(), 110);
+    dragHandle.onMouseUp_({preventDefault() {}});
+  });
+
+  test('dragWithConstraint', function() {
+    const el = createDragHandle();
+    this.addHTMLOutput(el);
+
+    const dragHandle = el.dragHandle;
+    assert.strictEqual(el.getLowerElHeight(), 100);
+    dragHandle.onMouseDown_({clientX: 0, clientY: 0, preventDefault() {}});
+    dragHandle.onMouseMove_({clientX: 0, clientY: 60, preventDefault() {}});
+    // The actual size is constrained by minHeight.
+    assert.strictEqual(el.getLowerElHeight(), 50);
+    dragHandle.onMouseUp_({preventDefault() {}});
+
+    // Drag again. Should based on the actual size.
+    dragHandle.onMouseDown_({clientX: 0, clientY: 0, preventDefault() {}});
+    dragHandle.onMouseMove_({clientX: 0, clientY: -10, preventDefault() {}});
+    assert.strictEqual(el.getLowerElHeight(), 60);
+    dragHandle.onMouseUp_({preventDefault() {}});
+  });
+
+  test('classNameMutation', function() {
+    const el = createDragHandle();
+
+    const styleEl = document.createElement('style');
+    Polymer.dom(styleEl).textContent =
+        '.mode-a { height: 100px; } .mode-b { height: 50px; }';
+    Polymer.dom(document.head).appendChild(styleEl);
+
+    this.addHTMLOutput(el);
+
+    try {
+      const dragHandle = el.dragHandle;
+      const mouseDown = {clientX: 0, clientY: 0, preventDefault() {}};
+      const mouseMove = {clientX: 0, clientY: -10, preventDefault() {}};
+      const mouseUp = {preventDefault() {}};
+
+      el.lowerEl.className = 'mode-a';
+      assert.strictEqual(el.getLowerElHeight(), 100);
+      dragHandle.onMouseDown_(mouseDown);
+      dragHandle.onMouseMove_(mouseMove);
+      assert.strictEqual(el.getLowerElHeight(), 110);
+      dragHandle.onMouseUp_(mouseUp);
+
+      // Change the class, which should restore the layout
+      // to the default sizing for mode-b
+      el.lowerEl.className = 'mode-b';
+      dragHandle.forceMutationObserverFlush_();
+      assert.strictEqual(el.getLowerElHeight(), 50);
+
+      dragHandle.onMouseDown_(mouseDown);
+      dragHandle.onMouseMove_(mouseMove);
+      assert.strictEqual(el.getLowerElHeight(), 60);
+      dragHandle.onMouseUp_(mouseUp);
+
+      // Restore the class-a, which should restore the layout
+      // to sizing when we were changed.
+      el.lowerEl.className = 'mode-a';
+      dragHandle.forceMutationObserverFlush_();
+      assert.strictEqual(el.getLowerElHeight(), 110);
+
+      dragHandle.onMouseDown_(mouseDown);
+      dragHandle.onMouseMove_(mouseMove);
+      assert.strictEqual(el.getLowerElHeight(), 120);
+      dragHandle.onMouseUp_(mouseUp);
+    } finally {
+      Polymer.dom(document.head).removeChild(styleEl);
+    }
+  });
+});
+</script>

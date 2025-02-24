@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel='import' href='/tracing/core/test_utils.html'>
+<link rel='import' href='/tracing/extras/chrome/chrome_test_utils.html'>
+<link rel='import'
+    href='/tracing/extras/chrome/chrome_user_friendly_category_driver.html'>
+<link rel='import' href='/tracing/metrics/system_health/persecond_metric.html'>
+<link rel='import' href='/tracing/value/histogram_set.html'>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('histogramNames', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'rail,loading,devtools.timeline',
+        title: 'title string',
+        start: 500,
+        duration: 1500,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histogramSet = new tr.v.HistogramSet();
+    tr.metrics.sh.persecondMetric(histogramSet, model);
+    const histograms = Array.from(histogramSet.histograms_);
+    const expectedNames = [
+      'wall_0_to_1000',
+      'wall_0_to_1000:composite',
+      'wall_0_to_1000:gc',
+      'wall_0_to_1000:gpu',
+      'wall_0_to_1000:iframe_creation',
+      'wall_0_to_1000:imageDecode',
+      'wall_0_to_1000:input',
+      'wall_0_to_1000:layout',
+      'wall_0_to_1000:net',
+      'wall_0_to_1000:other',
+      'wall_0_to_1000:overhead',
+      'wall_0_to_1000:parseHTML',
+      'wall_0_to_1000:raster',
+      'wall_0_to_1000:record',
+      'wall_0_to_1000:renderer_misc',
+      'wall_0_to_1000:resource_loading',
+      'wall_0_to_1000:script_execute',
+      'wall_0_to_1000:script_parse_and_compile',
+      'wall_0_to_1000:startup',
+      'wall_0_to_1000:style',
+      'wall_0_to_1000:v8_runtime',
+      'wall_0_to_1000:idle',
+      'wall_0_to_1000:blocked_on_network',
+      'cpu_0_to_1000',
+      'cpu_0_to_1000:composite',
+      'cpu_0_to_1000:gc',
+      'cpu_0_to_1000:gpu',
+      'cpu_0_to_1000:iframe_creation',
+      'cpu_0_to_1000:imageDecode',
+      'cpu_0_to_1000:input',
+      'cpu_0_to_1000:layout',
+      'cpu_0_to_1000:net',
+      'cpu_0_to_1000:other',
+      'cpu_0_to_1000:overhead',
+      'cpu_0_to_1000:parseHTML',
+      'cpu_0_to_1000:raster',
+      'cpu_0_to_1000:record',
+      'cpu_0_to_1000:renderer_misc',
+      'cpu_0_to_1000:resource_loading',
+      'cpu_0_to_1000:script_execute',
+      'cpu_0_to_1000:script_parse_and_compile',
+      'cpu_0_to_1000:startup',
+      'cpu_0_to_1000:style',
+      'cpu_0_to_1000:v8_runtime',
+    ];
+    assert.lengthOf(histograms, expectedNames.length);
+    const actualNames = new Set(histograms.map(h => h.name_));
+    expectedNames.forEach(e => {
+      assert.isTrue(actualNames.has(e));
+    });
+  });
+
+  test('oneSecond', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 200,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'rail,loading,devtools.timeline',
+        title: 'slice string',
+        start: 500,
+        duration: 700,
+        cpuStart: 500,
+        cpuDuration: 700,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histogramSet = new tr.v.HistogramSet();
+    tr.metrics.sh.persecondMetric(histogramSet, model);
+    const expectedValues = {
+      'wall_0_to_1000': 1000,
+      'wall_0_to_1000:other': 700,
+      'wall_0_to_1000:idle': 300,
+      'cpu_0_to_1000': 1000,
+      'cpu_0_to_1000:other': 700,
+    };
+    Object.keys(expectedValues).forEach(key => {
+      const actualValue = histogramSet.getHistogramNamed(key).average;
+      assert.strictEqual(actualValue, expectedValues[key]);
+    });
+    const expectedNameSet = new Set(Object.keys(expectedValues));
+    const histograms = Array.from(histogramSet.histograms_);
+    histograms.forEach(h => {
+      const expectedValue =
+          expectedNameSet.has(h.name_) ? expectedValues[h.name_] : 0;
+      assert.strictEqual(h.average, expectedValue,
+          `Expect ${h.name_} to be 0.`);
+    });
+  });
+
+  test('twoNavigations', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 200,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 500,
+        duration: 700,
+        cpuStart: 500,
+        cpuDuration: 700,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1200,
+        duration: 0.0,
+        cpuStart: 1200,
+        cpuDuration: 0,
+        args: {frame: '0xlivebeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr2', 'loading', 'FrameLoader',
+          1200, {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xlivebeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 1400,
+        duration: 800,
+        cpuStart: 1400,
+        cpuDuration: 800,
+        args: {frame: '0xlivebeef'}
+      }));
+    });
+    const histogramSet = new tr.v.HistogramSet();
+    tr.metrics.sh.persecondMetric(histogramSet, model);
+    const expectedValues = {
+      'wall_0_to_1000': 1000,
+      'wall_0_to_1000:resource_loading': 750,
+      'wall_0_to_1000:idle': 250,
+      'cpu_0_to_1000': 1000,
+      'cpu_0_to_1000:resource_loading': 750,
+    };
+    Object.keys(expectedValues).forEach(key => {
+      const actualValue = histogramSet.getHistogramNamed(key).average;
+      assert.strictEqual(actualValue, expectedValues[key]);
+    });
+    const expectedNameSet = new Set(Object.keys(expectedValues));
+    const histograms = Array.from(histogramSet.histograms_);
+    histograms.forEach(h => {
+      const expectedValue =
+          expectedNameSet.has(h.name_) ? expectedValues[h.name_] : 0;
+      assert.strictEqual(h.average, expectedValue,
+          `Expect ${h.name_} to be 0.`);
+    });
+  });
+
+  test('twoSeconds', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        cpuStart: 200,
+        cpuDuration: 0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'rail,loading,devtools.timeline',
+        title: 'slice string',
+        start: 500,
+        duration: 1700,
+        cpuStart: 500,
+        cpuDuration: 1700,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histogramSet = new tr.v.HistogramSet();
+    tr.metrics.sh.persecondMetric(histogramSet, model);
+    const expectedValues = {
+      'wall_0_to_1000': 1000,
+      'wall_0_to_1000:other': 700,
+      'wall_0_to_1000:idle': 300,
+      'wall_1000_to_2000': 1000,
+      'wall_1000_to_2000:other': 1000,
+      'cpu_0_to_1000': 1000,
+      'cpu_0_to_1000:other': 700,
+      'cpu_1000_to_2000': 1000,
+      'cpu_1000_to_2000:other': 1000,
+    };
+    Object.keys(expectedValues).forEach(key => {
+      const actualValue = histogramSet.getHistogramNamed(key).average;
+      assert.strictEqual(actualValue, expectedValues[key],
+          `Expect ${key} to be ${expectedValues[key]}.`);
+    });
+    const expectedNameSet = new Set(Object.keys(expectedValues));
+    const histograms = Array.from(histogramSet.histograms_);
+    histograms.forEach(h => {
+      const expectedValue =
+          expectedNameSet.has(h.name_) ? expectedValues[h.name_] : 0;
+      assert.strictEqual(h.average, expectedValue,
+          `Expect ${h.name_} to be 0.`);
+    });
+  });
+
+  test('SecondResolution', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {
+            isOutermostMainFrame: true,
+            isLoadingMainFrame: true,
+            frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'
+          });
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'ResourceDispatcher::OnRequestComplete',
+        start: 500,
+        duration: 1699,
+      }));
+    });
+    const histogramSet = new tr.v.HistogramSet();
+    tr.metrics.sh.persecondMetric(histogramSet, model);
+    const expectedValues = {
+      'wall_0_to_1000': 1000,
+      'wall_0_to_1000:resource_loading': 700,
+      'wall_0_to_1000:idle': 300,
+      'cpu_0_to_1000': 1000,
+    };
+    Object.keys(expectedValues).forEach(key => {
+      const actualValue = histogramSet.getHistogramNamed(key).average;
+      assert.strictEqual(actualValue, expectedValues[key],
+          `Expect ${key} to be ${expectedValues[key]}.`);
+    });
+    const expectedNameSet = new Set(Object.keys(expectedValues));
+    const histograms = Array.from(histogramSet.histograms_);
+    histograms.forEach(h => {
+      const expectedValue =
+          expectedNameSet.has(h.name_) ? expectedValues[h.name_] : 0;
+      assert.strictEqual(h.average, expectedValue,
+          `Expect ${h.name_} to be 0.`);
+    });
+  });
+});
+</script>

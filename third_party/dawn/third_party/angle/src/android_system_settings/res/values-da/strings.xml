@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Copyright 2019 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="angle_preferences" msgid="6277781974712663825">"Præferencer for ANGLE"</string>
+    <string name="angle_preferences_summary" msgid="2072062114797067545">"Rediger indstillingerne for ANGLE"</string>
+    <string name="angle_general_title" msgid="3851397617183360026">"Generelt"</string>
+    <string name="use_angle_for_all_apps" msgid="2562678044041239694">"Brug ANGLE til alle apps"</string>
+    <string name="show_angle_in_use_dialog_box" msgid="3443250434026000754">"Vis dialogboksen, når ANGLE indlæses"</string>
+    <string name="select_opengl_driver_title" msgid="3474220741139386304">"Vælg OpenGL Driver"</string>
+    <string name="keywords" msgid="6388635548060461395">"angle, opengl, grafik"</string>
+    <string name="angle_in_use_toast_message" msgid="2259434197861979558">"Bruger ANGLE"</string>
+    <string name="no_apps_installed_title" msgid="1651834541419890603">"Der er ingen tilgængelige apps"</string>
+    <string name="no_apps_installed_summary" msgid="1922829522692497596">"Der er ingen installerede apps, som kan bruge ANGLE"</string>
+</resources>

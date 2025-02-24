@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2018 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script>
+    WCT = { waitFor(cb) { window.HTMLImports.whenReady(cb) } }
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script>
+    window.ShadyDOM = {force: true}
+  </script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script>
+    // disable document watcher
+    window.ShadyDOM.handlesDynamicScoping = true;
+  </script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/make-element.js"></script>
+</head>
+<body>
+  <template id="sync-element">
+    <style>
+      div {
+        background: rgb(255, 0, 0);
+        border: 10px solid black;
+      }
+    </style>
+    <div id="inner">Test</div>
+  </template>
+  <div id="arena"></div>
+  <script>
+    function assertComputedStyle(node, expectedValue, property = 'border-top-width') {
+      const actualValue = getComputedStyle(node).getPropertyValue(property).trim();
+      assert.equal(actualValue, expectedValue, `${property} does not have the expected value`);
+    }
+    suite('Synchronous Scoping API', function() {
+      const arena = document.querySelector('#arena');
+      const csfn = (node) => {
+        return window.ShadyCSS.ScopingShim.currentScopeForNode(node);
+      };
+      const sfn = (node) => {
+        return window.ShadyCSS.ScopingShim.scopeForNode(node);
+      };
+      const scopeNode = (node, scope) => {
+        window.ShadyCSS.ScopingShim.scopeNode(node, scope);
+      }
+      const unscopeNode = (node, scope) => {
+        window.ShadyCSS.ScopingShim.unscopeNode(node, scope);
+      }
+      let el;
+
+      suiteSetup(function() {
+        makeElement('sync-element');
+      });
+
+      setup(function() {
+        el = document.createElement('sync-element');
+        arena.appendChild(el);
+      });
+
+      teardown(function() {
+        arena.innerHTML = '';
+      });
+
+      test('mutation observer is disabled', function(done) {
+        const inner = el.shadowRoot.querySelector('#inner');
+        arena.appendChild(inner);
+        setTimeout(() => {
+          assertComputedStyle(inner, 'rgb(255, 0, 0)', 'background-color');
+          done();
+        }, 100);
+      });
+
+      test('currentScopeForNode', function() {
+        assert.equal(csfn(el), '', 'sync-scoping should be document scope');
+        const inner = el.shadowRoot.querySelector('#inner');
+        assert.equal(csfn(inner), 'sync-element', 'inner div should have sync-element scope');
+        const disconnected = document.createElement('sync-element');
+        assert.equal(csfn(disconnected), '', 'disconnected element should have a blank scope')
+        const dynamic = document.createElement('div');
+        el.shadowRoot.appendChild(dynamic);
+        assert.equal(csfn(dynamic), '', 'dynamically appended node will not be scoped yet');
+      });
+
+      test('scopeForNode', function() {
+        assert.equal(sfn(el), '', 'sync-scoping should be document scope');
+        const inner = el.shadowRoot.querySelector('#inner');
+        assert.equal(sfn(inner), 'sync-element', 'inner div should have sync-element scope');
+        const disconnected = document.createElement('sync-element');
+        assert.equal(sfn(disconnected), '', 'disconnected element should have a blank scope');
+        const dynamic = document.createElement('div');
+        el.shadowRoot.appendChild(dynamic);
+        assert.equal(sfn(dynamic), 'sync-element', 'dynamically created node should have sync-element scope');
+      });
+
+      test('scopeNode', function() {
+        const div = document.createElement('div');
+        el.shadowRoot.appendChild(div);
+        scopeNode(div, sfn(div));
+        assertComputedStyle(div, '10px');
+        assertComputedStyle(div, 'rgb(255, 0, 0)', 'background-color');
+      });
+
+      test('unscopeNode', function() {
+        const inner = el.shadowRoot.querySelector('#inner');
+        arena.appendChild(inner);
+        unscopeNode(inner, csfn(inner));
+        assertComputedStyle(inner, '0px');
+      });
+    });
+  </script>
+</body>
+</html>

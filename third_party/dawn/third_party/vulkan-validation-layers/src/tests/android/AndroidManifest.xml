@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.VulkanLayerValidationTests" android:versionCode="1" android:versionName="1.0">
+
+    <!-- We needed to start targeting Android 13 (SDK 33) because in Android 14 it started prompting warnings our app was old -->
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33"/>
+
+    <!-- This .apk has no Java code itself, so set hasCode to false. -->
+    <application android:label="VulkanLayerValidationTests" android:hasCode="false" android:debuggable='false'>
+
+        <!-- This allows writing log files to sdcard -->
+        <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+        <!-- Our activity is the built-in NativeActivity framework class.
+             This will take care of integrating with our NDK code. -->
+        <activity android:name="android.app.NativeActivity" android:label="VulkanLayerValidationTests" android:exported="true">
+            <!-- Tell NativeActivity the name of or .so -->
+            <meta-data android:name="android.app.lib_name" android:value="VulkanLayerValidationTests"/>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

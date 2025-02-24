@@ -1,0 +1,11 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE Metal back-end's file hooking library.
+
+import("../../../../../gni/angle.gni")
+
+angle_shared_library("metal_shader_cache_file_hooking") {
+  sources = [ "shader_cache_file_hooking.cpp" ]
+}

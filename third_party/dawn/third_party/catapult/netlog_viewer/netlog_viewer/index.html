@@ -1,0 +1,33 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+  <head>
+    <link rel="icon" href="data:;base64,=">
+    <meta charset="utf-8">
+    <!-- Don't use automatic scaling on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,
+                                   maximum-scale=1.0, user-scalable=no">
+    <script src="/components/webcomponentsjs/webcomponents.js"></script>
+    <link rel="import" href="/components/polymer/polymer.html">
+
+    <!-- TODO(rayraymond): Styles specific to a module should go
+    in the module's style and styles shared across many modules
+    should be separated out into style modules. -->
+    <link type="text/css" rel="stylesheet" href="main.css">
+    <link type="text/css" rel="stylesheet" href="status_view.css">
+    <link type="text/css" rel="stylesheet" href="events_view.css">
+    <link type="text/css" rel="stylesheet" href="timeline_view.css">
+    <link type="text/css" rel="stylesheet" href="tab_views.css">
+    <link type="text/css" rel="stylesheet" href="import_view.css">
+
+    <link rel="import" href="netlog_viewer.html">
+  </head>
+  <body>
+    <netlog-viewer></netlog-viewer>
+  </body>
+</html>
+

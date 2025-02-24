@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+  Copyright 2017 The Chromium Authors. All rights reserved.
+  Use of this source code is governed by a BSD-style license that can be
+  found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/memory/lowmemory_auditor.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/memory_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  // Input : slices is an array-of-array-of slices. Each top level array
+  // represents a process. So, each slice in one of the top level array
+  // will be placed in the same process.
+  function buildModel(slices) {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      for (let i = 0; i < slices.length; i++) {
+        const thread = process.getOrCreateThread(i);
+        slices[i].forEach(s => thread.sliceGroup.pushSlice(s));
+      }
+    });
+
+    const auditor = new tr.e.audits.LowMemoryAuditor(model);
+    auditor.runAnnotate();
+    return model;
+  }
+
+  function createMemoryTrack(model, interval) {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    div.appendChild(drawingContainer);
+    const track = new tr.ui.tracks.MemoryTrack(drawingContainer.viewport);
+    if (model !== undefined) {
+      setDisplayTransformFromBounds(viewport, model.bounds);
+    }
+    track.initialize(model, interval);
+    drawingContainer.appendChild(track);
+    this.addHTMLOutput(drawingContainer);
+    return track;
+  }
+
+  /**
+   * Sets the mapping between the input range of timestamps and the output range
+   * of horizontal pixels.
+   */
+  function setDisplayTransformFromBounds(viewport, bounds) {
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    const chartPixelWidth =
+        (window.innerWidth - tr.ui.b.constants.HEADING_WIDTH) * pixelRatio;
+    dt.xSetWorldBounds(bounds.min, bounds.max, chartPixelWidth);
+    viewport.setDisplayTransformImmediately(dt);
+  }
+
+  test('instantiate', function() {
+    const sliceA = new tr.model.ThreadSlice('lowmemory', title, 0, 5.5111, {});
+    const sliceB = new tr.model.ThreadSlice('lowmemory', title, 0, 11.2384, {});
+
+    const model = buildModel([[sliceA, sliceB]]);
+    createMemoryTrack.call(this, model);
+  });
+
+  test('hasVisibleContent_trueWithThreadSlicePresent', function() {
+    const sliceA = new tr.model.ThreadSlice('lowmemory', title, 0, 5.5111, {});
+    const sliceB = new tr.model.ThreadSlice('lowmemory', title, 0, 11.2384, {});
+    const model = buildModel([[sliceA, sliceB]]);
+    const track = createMemoryTrack.call(this, model);
+
+    assert.isTrue(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithUndefinedProcessModel', function() {
+    const track = createMemoryTrack.call(this, undefined);
+
+    assert.isFalse(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithNoThreadSlice', function() {
+    const sliceA = new tr.model.ThreadSlice('', title, 0, 7.6211, {});
+    const model = buildModel([[sliceA]]);
+    const track = createMemoryTrack.call(this, model);
+
+    assert.isFalse(track.hasVisibleContent);
+  });
+});
+</script>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglReleaseThread - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglReleaseThread">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglReleaseThread — Release EGL per-thread state</p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglReleaseThread</strong>(</code>
+              </td>
+              <td><code>void)</code>;</td>
+              <td> </td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglReleaseThread</code> returns the EGL to its
+            state at thread initialization, releasing all per-thread
+            state including the error status returned by
+            <span class="command"><strong>eglGetError</strong></span>, the currently bound
+            rendering API defined by <span class="command"><strong>eglBindAPI</strong></span>, and
+            the current contexts for each supported client API. The
+            overhead of maintaining this state may be objectionable in
+            applications which create and destroy many threads, but only
+            call EGL or client APIs in a few of those threads at any
+            given time.
+        </p>
+        <p>
+            <code class="constant">EGL_TRUE</code> is returned on success, and the
+            following actions are taken:
+        </p>
+        <div class="itemizedlist">
+          <ul class="itemizedlist" style="list-style-type: disc; ">
+            <li class="listitem">
+              <p>
+                    For each client API supported by EGL, if there is a
+                    currently bound context, that context is released.
+                    This is equivalent to calling
+                    <code class="function">eglMakeCurrent</code> with ctx set to
+                    <code class="constant">EGL_NO_CONTEXT</code> and both draw
+                    and read set to <code class="constant">EGL_NO_SURFACE</code>
+                    (see section 3.7.3).
+                </p>
+            </li>
+            <li class="listitem">
+              <p>
+                    The current rendering API is reset to its value at
+                    thread initialization (see
+                    <span class="command"><strong>eglBindAPI</strong></span>).
+                </p>
+            </li>
+            <li class="listitem">
+              <p>
+                    Any additional implementation-dependent per-thread
+                    state maintained by EGL is marked for deletion as
+                    soon as possible.
+                </p>
+            </li>
+          </ul>
+        </div>
+        <p>
+            <code class="function">eglReleaseThread</code> may be called in any
+            thread at any time, and may be called more than once in a
+            single thread. The initialization status of EGL (see section
+            3.2) is not affected by releasing the thread; only
+            per-thread state is affected.
+        </p>
+        <p>
+            Resources explicitly allocated by calls to EGL, such as
+            contexts, surfaces, and configuration lists, are not
+            affected by <code class="function">eglReleaseThread</code>. Such
+            resources belong not to the thread, but to the EGL
+            implementation as a whole.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglReleaseThread</code> is supported only if the
+            EGL version is 1.2 or greater.
+        </p>
+        <p>
+            Applications may call other EGL routines from a thread
+            following <code class="function">eglReleaseThread</code>, but any
+            such call may reallocate the EGL state previously released.
+            In particular, calling <code class="function">eglGetError</code>
+            immediately following a successful call to
+            <code class="function">eglReleaseThread</code> will return
+            <code class="constant">EGL_SUCCESS</code>, but will also result in
+            reallocating per-thread state.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure,
+            <code class="constant">EGL_TRUE</code> otherwise. There are no
+            defined conditions under which failure will occur. Even if
+            EGL is not initialized on any EGLDisplay,
+            <code class="function">eglReleaseThread</code> should succeed.
+        </p>
+        <p>
+            However, platform-dependent failures may be signaled through
+            the value returned from <code class="function">eglGetError</code>.
+            Unless the platform-dependent behavior is known, a failed
+            call to <code class="function">eglReleaseThread</code> should be
+            assumed to leave the current rendering API, and the
+            currently bound contexts for each supported client API, in
+            an unknown state.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>,
+            <a class="citerefentry" href="eglGetError.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetError</span></span></a>,
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

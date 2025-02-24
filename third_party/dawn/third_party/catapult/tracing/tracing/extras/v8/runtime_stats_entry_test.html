@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/v8/runtime_stats_entry.html">
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('RuntimeStatsEntry', function() {
+    const entry = new tr.e.v8.RuntimeStatsEntry('IC_Entry', 5, 1234);
+    assert.strictEqual(entry.name, 'IC_Entry');
+    assert.strictEqual(entry.count, 5);
+    assert.strictEqual(entry.time, 1234);
+
+    entry.addSample(37, 8766);
+    assert.strictEqual(entry.name, 'IC_Entry');
+    assert.strictEqual(entry.count, 42);
+    assert.strictEqual(entry.time, 10000);
+
+    entry.addSample(58, 1);
+    assert.strictEqual(entry.name, 'IC_Entry');
+    assert.strictEqual(entry.count, 100);
+    assert.strictEqual(entry.time, 10001);
+  });
+
+  test('RuntimeStatsGroup', function() {
+    const group = new tr.e.v8.RuntimeStatsGroup('IC', /.*IC_.*/);
+    assert.notEqual(group.match('IC_Entry'), undefined);
+    assert.notEqual(group.match('CallbackIC_Entry'), undefined);
+    assert.strictEqual(group.match('Callback_Entry'), null);
+
+    const entry1a = new tr.e.v8.RuntimeStatsEntry('IC_Entry', 5, 1234);
+    group.add(entry1a);
+    assert.deepEqual(group.values, [entry1a]);
+    const entry2 = new tr.e.v8.RuntimeStatsEntry('IC_Entry2', 2, 2048);
+    group.add(entry2);
+    assert.deepEqual(group.values, [entry1a, entry2]);
+    const entry1b = new tr.e.v8.RuntimeStatsEntry('IC_Entry', 37, 8766);
+    group.add(entry1b);
+    const entry1sum = new tr.e.v8.RuntimeStatsEntry('IC_Entry', 42, 10000);
+    assert.deepEqual(group.values, [entry1sum, entry2]);
+  });
+
+  function checkRuntimeGroup_(group, name, count, time) {
+    assert.strictEqual(group.name, name);
+    assert.strictEqual(group.count, count);
+    assert.strictEqual(group.time, time);
+  }
+
+  test('RuntimeStatsGroupCollection', function() {
+    const slices = [];
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.Execute',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          JS_Execution: [1, 11],
+          HandleApiCall: [2, 22],
+          CompileFullCode: [3, 33],
+          LoadIC_Miss: [4, 44],
+          ParseLazy: [5, 55],
+          OptimizeCode: [6, 66],
+          FunctionCallback: [7, 77],
+          AllocateInTargetSpace: [8, 88],
+          API_Object_Get: [9, 99],
+          RecompileConcurrent: [10, 100],
+        }
+      }
+    }));
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.newInstance',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          JS_Execution: [2, 22],
+          HandleApiCall: [3, 33],
+          CompileFullCode: [4, 44],
+          LoadIC_Miss: [5, 55],
+          ParseLazy: [6, 66],
+          OptimizeCode: [7, 77],
+          FunctionCallback: [8, 88],
+          AllocateInTargetSpace: [9, 99],
+          API_Object_Get: [1, 11],
+          ParseBackgroundFunctionLiteral: [2, 22],
+          CompileBackgroundIgnition: [3, 33],
+          RecompileConcurrent: [5, 50],
+        }
+      }
+    }));
+
+    const groupCollection = new tr.e.v8.RuntimeStatsGroupCollection();
+    groupCollection.addSlices(slices);
+    assert.strictEqual(groupCollection.totalTime, 1195);
+
+    const groups = groupCollection.runtimeGroups;
+    assert.deepEqual(groups.length, 19);
+    checkRuntimeGroup_(groups[0], 'Total', 110, 1195);
+    checkRuntimeGroup_(groups[1], 'IC', 9, 99);
+    checkRuntimeGroup_(groups[2], 'Optimize-Background', 15, 150);
+    checkRuntimeGroup_(groups[3], 'Optimize', 13, 143);
+    checkRuntimeGroup_(groups[4], 'Compile-Background', 3, 33);
+    checkRuntimeGroup_(groups[5], 'Compile', 7, 77);
+    checkRuntimeGroup_(groups[6], 'Parse-Background', 2, 22);
+    checkRuntimeGroup_(groups[7], 'Parse', 11, 121);
+    checkRuntimeGroup_(groups[8], 'Blink C++', 15, 165);
+    checkRuntimeGroup_(groups[9], 'API', 10, 110);
+    checkRuntimeGroup_(groups[10], 'GC-Background-Marking', 0, 0);
+    checkRuntimeGroup_(groups[11], 'GC-Background-Sweeping', 0, 0);
+    checkRuntimeGroup_(groups[12], 'GC-Background-Scavenger', 0, 0);
+    checkRuntimeGroup_(groups[13], 'GC-Background-MinorMC', 0, 0);
+    checkRuntimeGroup_(groups[14], 'GC-Background-MajorMC', 0, 0);
+    checkRuntimeGroup_(groups[15], 'GC-Background-Other', 0, 0);
+    checkRuntimeGroup_(groups[16], 'GC', 17, 187);
+    checkRuntimeGroup_(groups[17], 'JavaScript', 3, 33);
+    checkRuntimeGroup_(groups[18], 'V8 C++', 5, 55);
+  });
+
+  test('BlinkRuntimeStatsGroupCollection', function() {
+    const slices = [];
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.Execute',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          JS_Execution: [1, 11],
+          HandleApiCall: [2, 22],
+          CompileFullCode: [3, 33],
+          LoadIC_Miss: [4, 44],
+          ParseLazy: [5, 55],
+          OptimizeCode: [6, 66],
+          FunctionCallback: [7, 77],
+          AllocateInTargetSpace: [8, 88],
+          API_Object_Get: [9, 99],
+          RecompileConcurrent: [10, 100],
+        }
+      }
+    }));
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.newInstance',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          JS_Execution: [2, 22],
+          HandleApiCall: [3, 33],
+          CompileFullCode: [4, 44],
+          LoadIC_Miss: [5, 55],
+          ParseLazy: [6, 66],
+          OptimizeCode: [7, 77],
+          FunctionCallback: [8, 88],
+          AllocateInTargetSpace: [9, 99],
+          API_Object_Get: [1, 11],
+          ParseBackgroundFunctionLiteral: [2, 22],
+          CompileBackgroundIgnition: [3, 33],
+          RecompileConcurrent: [5, 50],
+        }
+      }
+    }));
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'BlinkRuntimeCallStats',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'disabled-by-default-v8.runtime_stats',
+      args: {
+        'runtime-call-stats': {
+          Blink_Layout_UpdateLayout: [10, 25],
+          Blink_GC_CollectGarbage: [10, 20],
+          Blink_Style_UpdateStyle: [15, 30],
+          Blink_Parsing_ParseHTML: [5, 60],
+          Blink_WindowSetTimeout: [10, 15],
+          Blink_V8: [5, 100],
+        }
+      }
+    }));
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'BlinkRuntimeCallStats',
+      start: 0,
+      end: 10,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'disabled-by-default-v8.runtime_stats',
+      args: {
+        'runtime-call-stats': {
+          Blink_Layout_UpdateLayout: [5, 10],
+          Blink_GC_CollectGarbage: [20, 50],
+          Blink_Parsing_ParseHTML: [10, 60],
+          Blink_Bindings_CreateWrapper: [100, 5],
+          Blink_NodeAppendChild: [20, 20],
+          Blink_V8: [2, 50],
+        }
+      }
+    }));
+
+    const groupCollection = new tr.e.v8.RuntimeStatsGroupCollection();
+    groupCollection.addSlices(slices);
+    assert.strictEqual(groupCollection.totalTime, 1195);
+
+    const groups = groupCollection.runtimeGroups;
+    assert.deepEqual(groups.length, 19);
+    checkRuntimeGroup_(groups[0], 'Total', 110, 1195);
+    checkRuntimeGroup_(groups[1], 'IC', 9, 99);
+    checkRuntimeGroup_(groups[2], 'Optimize-Background', 15, 150);
+    checkRuntimeGroup_(groups[3], 'Optimize', 13, 143);
+    checkRuntimeGroup_(groups[4], 'Compile-Background', 3, 33);
+    checkRuntimeGroup_(groups[5], 'Compile', 7, 77);
+    checkRuntimeGroup_(groups[6], 'Parse-Background', 2, 22);
+    checkRuntimeGroup_(groups[7], 'Parse', 11, 121);
+    checkRuntimeGroup_(groups[8], 'Blink C++', 15, 165);
+    checkRuntimeGroup_(groups[9], 'API', 10, 110);
+    checkRuntimeGroup_(groups[10], 'GC-Background-Marking', 0, 0);
+    checkRuntimeGroup_(groups[11], 'GC-Background-Sweeping', 0, 0);
+    checkRuntimeGroup_(groups[12], 'GC-Background-Scavenger', 0, 0);
+    checkRuntimeGroup_(groups[13], 'GC-Background-MinorMC', 0, 0);
+    checkRuntimeGroup_(groups[14], 'GC-Background-MajorMC', 0, 0);
+    checkRuntimeGroup_(groups[15], 'GC-Background-Other', 0, 0);
+    checkRuntimeGroup_(groups[16], 'GC', 17, 187);
+    checkRuntimeGroup_(groups[17], 'JavaScript', 3, 33);
+    checkRuntimeGroup_(groups[18], 'V8 C++', 5, 55);
+
+    const blinkGroupCollection = groupCollection.blinkRCSGroupCollection;
+    const blinkGroups = blinkGroupCollection.runtimeGroups;
+    checkRuntimeGroup_(blinkGroups[0], 'Blink_Bindings', 100, 5);
+    checkRuntimeGroup_(blinkGroups[1], 'Blink_GC', 30, 70);
+    checkRuntimeGroup_(blinkGroups[2], 'Blink_Layout', 15, 35);
+    checkRuntimeGroup_(blinkGroups[3], 'Blink_Parsing', 15, 120);
+    checkRuntimeGroup_(blinkGroups[4], 'Blink_Style', 15, 30);
+    checkRuntimeGroup_(blinkGroups[5], 'Blink_Callbacks', 30, 35);
+
+    assert.strictEqual(205, blinkGroupCollection.totalCount);
+    assert.strictEqual(295, blinkGroupCollection.totalTime);
+
+    assert.strictEqual('Blink_UpdateLayout', blinkGroups[2].values[0].name);
+    assert.strictEqual('Blink_CollectGarbage', blinkGroups[1].values[0].name);
+  });
+
+  test('RuntimeStatsBackgroundGC', function() {
+    const slices = [];
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.Execute',
+      start: 0,
+      end: 700,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          GC_BACKGROUND_UNMAPPER: [1, 10],
+          GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL: [10, 100],
+          GC_MINOR_MC_BACKGROUND_MARKING: [20, 200],
+          GC_MINOR_MC_BACKGROUND_EVACUATE_COPY: [30, 300],
+          GC_MC_BACKGROUND_MARKING: [40, 400],
+          GC_MC_BACKGROUND_SWEEPING: [50, 500],
+          GC_MC_BACKGROUND_EVACUATE_COPY: [60, 600],
+          GC_MC_BACKGROUND_EVACUATE_UPDATE_POINTERS: [70, 700]
+        }
+      }
+    }));
+    slices.push(tr.c.TestUtils.newSliceEx({
+      title: 'V8.newInstance',
+      start: 1000,
+      end: 8000,
+      type: tr.e.v8.V8ThreadSlice,
+      cat: 'v8',
+      args: {
+        'runtime-call-stats': {
+          GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL: [100, 1000],
+          GC_MINOR_MC_BACKGROUND_MARKING: [200, 2000],
+          GC_MINOR_MC_BACKGROUND_EVACUATE_COPY: [300, 3000],
+          GC_MC_BACKGROUND_MARKING: [400, 4000],
+          GC_MC_BACKGROUND_SWEEPING: [500, 5000],
+          GC_MC_BACKGROUND_EVACUATE_COPY: [600, 6000],
+          GC_MC_BACKGROUND_EVACUATE_UPDATE_POINTERS: [700, 7000]
+        }
+      }
+    }));
+    const groupCollection = new tr.e.v8.RuntimeStatsGroupCollection();
+    groupCollection.addSlices(slices);
+    assert.strictEqual(groupCollection.totalTime, 28000 + 2800 + 10);
+
+    const groups = groupCollection.runtimeGroups;
+    assert.deepEqual(groups.length, 19);
+    checkRuntimeGroup_(groups[0], 'Total', 2800 + 280 + 1, 28000 + 2800 + 10);
+    checkRuntimeGroup_(groups[1], 'IC', 0, 0);
+    checkRuntimeGroup_(groups[2], 'Optimize-Background', 0, 0);
+    checkRuntimeGroup_(groups[3], 'Optimize', 0, 0);
+    checkRuntimeGroup_(groups[4], 'Compile-Background', 0, 0);
+    checkRuntimeGroup_(groups[5], 'Compile', 0, 0);
+    checkRuntimeGroup_(groups[6], 'Parse-Background', 0, 0);
+    checkRuntimeGroup_(groups[7], 'Parse', 0, 0);
+    checkRuntimeGroup_(groups[8], 'Blink C++', 0, 0);
+    checkRuntimeGroup_(groups[9], 'API', 0, 0);
+    checkRuntimeGroup_(groups[10], 'GC-Background-Marking', 440, 4400);
+    checkRuntimeGroup_(groups[11], 'GC-Background-Sweeping', 550, 5500);
+    checkRuntimeGroup_(groups[12], 'GC-Background-Scavenger', 110, 1100);
+    checkRuntimeGroup_(groups[13], 'GC-Background-MinorMC',
+        300 + 200 + 30 + 20, 3000 + 2000 + 300 + 200);
+    checkRuntimeGroup_(groups[14], 'GC-Background-MajorMC',
+        700 + 600 + 70 + 60, 7000 + 6000 + 700 + 600);
+    checkRuntimeGroup_(groups[15], 'GC-Background-Other', 1, 10);
+    checkRuntimeGroup_(groups[16], 'GC', 0, 0);
+    checkRuntimeGroup_(groups[17], 'JavaScript', 0, 0);
+    checkRuntimeGroup_(groups[18], 'V8 C++', 0, 0);
+  });
+});
+</script>

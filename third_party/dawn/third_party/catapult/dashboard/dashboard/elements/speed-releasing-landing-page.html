@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-listbox/paper-listbox.html">
+<link rel="import" href="/components/polymer/polymer.html">
+
+<link rel="import" href="/dashboard/static/base.html">
+
+<dom-module id="speed-releasing-landing-page">
+  <template>
+    <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    .center {
+      margin: auto;
+      padding: 10px;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    </style>
+
+    Please specify a table to view. Here are some options: <br><br>
+    <template is="dom-repeat" items="{{list}}">
+      <a href="/speed_releasing/{{item}}">{{item}}</a> <br><br>
+    </template>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'speed-releasing-landing-page',
+  properties: {
+    list: {
+      type: Object,
+      notify: true,
+    }
+  },
+});
+</script>

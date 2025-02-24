@@ -1,0 +1,67 @@
+# Copyright (C) 2022 The Fuchsia Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This scope makes it easy to incorporate the Vulkan validation layers into a
+# package that is part of the Fuchsia system build.
+#
+# To use it, import this gni file and add the entries of the
+# 'vulkan_validation_layers' scope to the package's 'loadable_modules',
+# 'resources', and 'public_deps' parameters.
+#
+# Example BUILD.gn file:
+#
+# import("//src/graphics/lib/vulkan/layers.gni")
+#
+# package("my_funky_vulkan_using_program") {
+#   loadable_modules = [
+#     ...
+#     ] + vulkan_validation_layers.loadable_modules
+#
+#   resources = [
+#     ...
+#     ] + vulkan_validation_layers.resources
+#
+#   public_deps = [
+#     ...
+#     ] + vulkan_validation_layers.public_deps
+# }
+#
+# This will end up placing the validation libraries within the package's "lib/"
+# directory, where they can be loaded like normal libraries, and place the layer
+# configuration data in the package's "data/vulkan/explicit_layer.d" directory which
+# is mapped to "/config/vulkan/explicit_layer.d"
+
+import("//build_overrides/vulkan_validation_layers.gni")
+
+vulkan_data_dir = "$root_out_dir/$vulkan_data_subdir"
+
+vulkan_validation_layers = {
+  loadable_modules = [
+    {
+      name = "VkLayer_khronos_validation.so"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("$vulkan_data_dir/VkLayer_khronos_validation.json")
+      dest = "vulkan/explicit_layer.d/VkLayer_khronos_validation.json"
+    },
+  ]
+
+  public_deps = [
+    "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files",
+    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
+  ]
+}

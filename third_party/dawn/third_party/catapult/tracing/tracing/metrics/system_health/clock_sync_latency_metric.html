@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  // Bin boundaries for clock sync latency. 0-20 ms with 0.2 ms bins.
+  // 20 ms is a good upper limit because the highest latencies we've seen are
+  // around 10-15 ms, and we expect average latency to go down as we improve
+  // the clock sync mechanism.
+  const LATENCY_BOUNDS = tr.v.HistogramBinBoundaries.createLinear(0, 20, 100);
+
+  function clockSyncLatencyMetric(values, model) {
+    const domains = Array.from(model.clockSyncManager.domainsSeen).sort();
+    for (let i = 0; i < domains.length; i++) {
+      for (let j = i + 1; j < domains.length; j++) {
+        const latency = model.clockSyncManager.getTimeTransformerError(
+            domains[i], domains[j]);
+        const hist = new tr.v.Histogram('clock_sync_latency_' +
+            domains[i].toLowerCase() + '_to_' + domains[j].toLowerCase(),
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, LATENCY_BOUNDS);
+        hist.customizeSummaryOptions({
+          avg: true,
+          count: false,
+          max: false,
+          min: false,
+          std: false,
+          sum: false,
+        });
+        hist.description = 'Clock sync latency for domain ' + domains[i] +
+            ' to domain ' + domains[j];
+        hist.addSample(latency);
+        values.addHistogram(hist);
+      }
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(clockSyncLatencyMetric);
+
+  return {
+    clockSyncLatencyMetric,
+  };
+});
+</script>

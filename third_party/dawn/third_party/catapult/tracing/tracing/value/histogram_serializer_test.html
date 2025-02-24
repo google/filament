@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_serializer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('objects', function() {
+    const serializer = new tr.v.HistogramSerializer();
+    assert.strictEqual(0, serializer.getOrAllocateId('a'));
+    assert.strictEqual(1, serializer.getOrAllocateId(['b']));
+    assert.strictEqual(0, serializer.getOrAllocateId('a'));
+    assert.strictEqual(1, serializer.getOrAllocateId(['b']));
+  });
+
+  test('diagnostics', function() {
+    const serializer = new tr.v.HistogramSerializer();
+    assert.strictEqual(0, serializer.getOrAllocateDiagnosticId(
+        'a', new tr.v.d.GenericSet(['b'])));
+    assert.strictEqual(1, serializer.getOrAllocateDiagnosticId(
+        'a', new tr.v.d.GenericSet(['c'])));
+    assert.strictEqual(0, serializer.getOrAllocateDiagnosticId(
+        'a', new tr.v.d.GenericSet(['b'])));
+    assert.strictEqual(1, serializer.getOrAllocateDiagnosticId(
+        'a', new tr.v.d.GenericSet(['c'])));
+  });
+
+  test('serialize', function() {
+    const hist = new tr.v.Histogram(
+        'aaa', tr.b.Unit.byName.count_biggerIsBetter);
+    hist.description = 'lorem ipsum';
+    hist.diagnostics.set('bbb', new tr.v.d.RelatedNameMap({
+      ccc: 'a:c',
+      ddd: 'a:d',
+    }));
+    hist.diagnostics.set('hhh', new tr.v.d.GenericSet(['ggg']));
+    hist.addSample(0, {
+      bbb: tr.v.d.Breakdown.fromEntries([
+        ['ccc', 11],
+        ['ddd', 31],
+      ]),
+      eee: new tr.v.d.RelatedEventSet([
+        new tr.v.d.EventRef({
+          stableId: 'fff',
+          title: 'ggg',
+          start: 3,
+          duration: 4,
+        }),
+      ]),
+    });
+
+    assert.deepEqual(tr.v.HistogramSerializer.serialize([hist]), [
+      [
+        'aaa',
+        [1, [1, 1000, 20]],
+        'a:c',
+        'a:d',
+        'ccc',
+        'ddd',
+        [4, 5],
+        'ggg',
+        'avg',
+        'count',
+        'max',
+        'min',
+        'std',
+        'sum',
+        'lorem ipsum',
+        '',
+      ],
+      {
+        Breakdown: {bbb: {4: [15, 6, 11, 31]}},
+        GenericSet: {
+          hhh: {1: 7},
+          statisticsNames: {2: [8, 9, 10, 11, 12, 13]},
+          description: {3: 14},
+        },
+        RelatedEventSet: {eee: {5: [['fff', 7, 3, 4]]}},
+        RelatedNameMap: {bbb: {0: [6, 2, 3]}},
+      },
+      [
+        0,
+        'count+',
+        1,
+        [0, 1, 2, 3],
+        [1, 0, undefined, 0, 0, 0, 0],
+        {0: [1, [undefined, 4, 5]]},
+        0,
+      ]
+    ]);
+  });
+});
+</script>

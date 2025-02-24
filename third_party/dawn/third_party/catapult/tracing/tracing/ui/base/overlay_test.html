@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function addShowButtonForDialog(dlg) {
+    const btn = document.createElement('button');
+    Polymer.dom(btn).textContent = 'Launch Overlay';
+    btn.addEventListener('click', function(e) {
+      dlg.visible = true;
+      e.stopPropagation();
+    });
+
+    this.addHTMLOutput(btn);
+  }
+
+  function makeButton(title) {
+    const btn = document.createElement('button');
+    Polymer.dom(btn).textContent = title;
+    return btn;
+  }
+
+  function makeCloseButton(dlg) {
+    const btn = makeButton('close');
+    btn.addEventListener('click', function(e) {
+      dlg.onClose_(e);
+    });
+    return btn;
+  }
+
+  test('instantiate', function() {
+    const dlg = new tr.ui.b.Overlay();
+    Polymer.dom(dlg).classList.add('example-overlay');
+    dlg.title = 'ExampleOverlay';
+    Polymer.dom(dlg).innerHTML = 'hello';
+    Polymer.dom(dlg.buttons).appendChild(makeButton('i am a button'));
+    Polymer.dom(dlg.buttons).appendChild(makeCloseButton(dlg));
+    Polymer.dom(dlg.buttons).appendChild(tr.ui.b.createSpan(
+        {textContent: 'i am a span'}));
+    addShowButtonForDialog.call(this, dlg);
+  });
+
+  test('instantiate_noButtons', function() {
+    const dlg = new tr.ui.b.Overlay();
+    Polymer.dom(dlg).classList.add('example-overlay');
+    dlg.title = 'ExampleOverlay';
+    Polymer.dom(dlg).innerHTML = 'hello';
+    addShowButtonForDialog.call(this, dlg);
+  });
+
+  test('instantiate_disableUserClose', function() {
+    const dlg = new tr.ui.b.Overlay();
+    Polymer.dom(dlg).classList.add('example-overlay');
+    dlg.userCanClose = false;
+    dlg.title = 'Unclosable';
+    Polymer.dom(dlg).innerHTML = 'This has no close X button.';
+    Polymer.dom(dlg.buttons).appendChild(makeCloseButton(dlg));
+    addShowButtonForDialog.call(this, dlg);
+  });
+
+  test('instantiateTall', function() {
+    const dlg = new tr.ui.b.Overlay();
+    dlg.title = 'TallContent';
+    const contentEl = document.createElement('div');
+    contentEl.style.overflowY = 'auto';
+    Polymer.dom(dlg).appendChild(contentEl);
+
+    for (let i = 0; i < 1000; i++) {
+      const el = document.createElement('div');
+      Polymer.dom(el).textContent = 'line ' + i;
+      Polymer.dom(contentEl).appendChild(el);
+    }
+
+
+    Polymer.dom(dlg.buttons).appendChild(makeButton('i am a button'));
+    addShowButtonForDialog.call(this, dlg);
+  });
+
+  test('instantiateTallWithManyDirectChildren', function() {
+    const dlg = new tr.ui.b.Overlay();
+    dlg.title = 'TallContent';
+    for (let i = 0; i < 100; i++) {
+      const el = document.createElement('div');
+      el.style.webkitFlex = '1 0 auto';
+      Polymer.dom(el).textContent = 'line ' + i;
+      Polymer.dom(dlg).appendChild(el);
+    }
+
+    Polymer.dom(dlg.buttons).appendChild(makeButton('i am a button'));
+    addShowButtonForDialog.call(this, dlg);
+  });
+
+  test('closeclickEvent', function() {
+    const dlg = new tr.ui.b.Overlay();
+    dlg.title = 'Test closeclick event';
+    const closeBtn = makeCloseButton(dlg);
+    Polymer.dom(dlg.buttons).appendChild(closeBtn);
+
+    let closeClicked = false;
+    dlg.addEventListener('closeclick', function() {
+      closeClicked = true;
+    });
+
+    dlg.visible = true;
+    return tr.b.timeout(60).then(() => {
+      closeBtn.click();
+      assert.isTrue(closeClicked);
+    });
+  });
+});
+</script>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v', function() {
+  // This information is used to convert results from chart-json format to
+  // Histograms.
+  // Default improvement directions are given here, but can be overridden by
+  // specifying an 'improvement_direction' in chart-json.
+  const LEGACY_UNIT_INFO = new Map();
+  LEGACY_UNIT_INFO.set('%', {
+    name: 'normalizedPercentage',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.DONT_CARE,
+  });
+  LEGACY_UNIT_INFO.set('Celsius', {
+    name: 'unitlessNumber',
+    // Colder machines are faster.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('Hz', {
+    name: 'frequencyInHertz',
+    // Higher frequencies are faster.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('KB', {
+    name: 'sizeInBytes',
+    conversionFactor: 1024,
+    // Less memory usage is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('MB', {
+    name: 'sizeInBytes',
+    conversionFactor: 1024 * 1024,
+    // Less memory usage is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('ObjectsAt30FPS', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('available_kB', {
+    name: 'sizeInBytes',
+    conversionFactor: 1024,
+    // More memory available is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('bit/s', {
+    name: 'unitlessNumber',
+    // TODO(#3815) Reconcile with char/s.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('bytes', {
+    name: 'sizeInBytes',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('chars/s', {
+    name: 'unitlessNumber',
+    // TODO(#3815) Reconcile with bit/s.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('commit_count', {
+    name: 'count',
+    // layer_tree_host_perftest
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('count', {
+    name: 'count',
+    // Processes
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('coverage%', {
+    name: 'normalizedPercentage',
+    // Used in alloy-perf-test/cts%/passed.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('dB', {
+    name: 'unitlessNumber',
+    // Decibels peak signal-to-noise ratio. Used by WebRTC quality tests.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('files', {
+    name: 'count',
+    // Static initializers
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('fps', {
+    name: 'unitlessNumber',
+    // Used by scirra benchmark.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('frame_count', {
+    name: 'count',
+    // layer_tree_host_perftest
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('frame_time', {
+    name: 'timeDurationInMs',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('frames', {
+    name: 'count',
+    // Dropped frames.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('frames-per-second', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('garbage_collections', {
+    name: 'count',
+    // Number of GCs needed to collect an object. Less is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('idle%', {
+    name: 'normalizedPercentage',
+    // Percentage of work done in idle time.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('janks', {
+    name: 'count',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('kb', {
+    name: 'sizeInBytes',
+    conversionFactor: 1024,
+    // Less memory usage is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('lines', {
+    name: 'count',
+    // More test coverage is better.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('mWh', {
+    name: 'energyInJoules',
+    conversionFactor: 3.6,
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('milliseconds', {
+    name: 'timeDurationInMs',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('milliseconds-per-frame', {
+    name: 'timeDurationInMs',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('minutes', {
+    name: 'timeInMsAutoFormat',
+    conversionFactor: 60e3,
+    // Used for NaCl build time.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('mips', {
+    name: 'unitlessNumber',
+    // More instructions processed per time unit.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('mpixels_sec', {
+    name: 'unitlessNumber',
+    // More pixels processed per time unit.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('ms', {
+    name: 'timeDurationInMs',
+    // Used in many Telemetry measurements. Fewer ms of time means faster.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('mtri_sec', {
+    name: 'unitlessNumber',
+    // More triangles processed per time unit.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('mvtx_sec', {
+    name: 'unitlessNumber',
+    // More vertices processed per time unit.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('objects (bigger is better)', {
+    name: 'count',
+    // Used in spaceport benchmark.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('packets', {
+    name: 'count',
+    // Monitors how many packets we use to accomplish something.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('percent', {
+    name: 'normalizedPercentage',
+    // Synonym for %, used in memory metric for percent fragmentation.
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('points', {
+    name: 'unitlessNumber',
+    // Synonym for score, used in ChromeOS touchpad tests.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('ports', {
+    name: 'count',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('reduction%', {
+    name: 'normalizedPercentage',
+    // Used in draw_property measurement to indicate relative improvement.
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('relocs', {
+    name: 'count',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('runs/s', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('runs_per_s', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('runs_per_second', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('score (bigger is better)', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('score', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('score_(bigger_is_better)', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('seconds', {
+    name: 'timeDurationInMs',
+    conversionFactor: 1e3,
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('tokens/s', {
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.BIGGER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('tasks', {
+    // Used by thread_times but actually indicates tasks/s, so not count.
+    name: 'unitlessNumber',
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('us', {
+    name: 'timeInMsAutoFormat',
+    conversionFactor: 1e-3,
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+  LEGACY_UNIT_INFO.set('ns', {
+    name: 'timeInMsAutoFormat',
+    conversionFactor: 1e-6,
+    defaultImprovementDirection: tr.b.ImprovementDirection.SMALLER_IS_BETTER,
+  });
+
+  return {
+    LEGACY_UNIT_INFO,
+  };
+});
+</script>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b.unittest', function() {
+  const TestStatus = {
+    PENDING: 'pending-status',
+    RUNNING: 'running-status',
+    DONE_RUNNING: 'done-running-status'
+  };
+
+  const TestTypes = {
+    UNITTEST: 'unittest-type',
+    PERFTEST: 'perftest-type'
+  };
+
+  return {
+    TestStatus,
+    TestTypes,
+  };
+});
+</script>

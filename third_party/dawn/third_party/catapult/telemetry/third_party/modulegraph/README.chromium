@@ -1,0 +1,13 @@
+Name: modulegraph
+Short Name: modulegraph
+URL: https://pypi.python.org/pypi/modulegraph/
+Version: 0.19.2
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: no
+Description: modulegraph determines a dependency graph between Python modules
+primarily by bytecode analysis for import statements. It's used by telemetry's
+find_dependencies script.
+Local modification: Remove all files and directories except for modulegraph/,
+which contains the relevant source files, LICENSE, and README.rst.

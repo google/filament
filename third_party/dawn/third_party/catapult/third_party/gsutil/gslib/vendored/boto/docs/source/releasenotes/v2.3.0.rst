@@ -1,0 +1,47 @@
+===========
+boto v2.3.0
+===========
+
+The 2.3.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can view a list of issues that have been closed in this release at
+https://github.com/boto/boto/issues?milestone=6&state=closed.
+
+You can get a comprehensive list of all commits made between the 2.2.2 release
+and the 2.3.0 release at https://github.com/boto/boto/compare/2.2.2...2.3.0.
+
+This release includes initial support for Amazon Simple Workflow Service.
+
+The API version of the FPS module was updated to 2010-08-28.
+
+This release also includes many bug fixes and improvements in the Amazon
+DynamoDB module.  One change of particular note is the behavior of the
+``new_item`` method of the ``Table`` object. See http://readthedocs.org/docs/boto/en/2.3.0/ref/dynamodb.html#module-boto.dynamodb.table
+for more details.
+
+There were 109 commits in this release from 21 different authors.
+The authors are listed below, in no particular order:
+
+* theju
+* garnaat
+* rdodev
+* mfschwartz
+* kopertop
+* tpodowd
+* gtaylor
+* kachok
+* croach
+* tmorgan
+* Erick Fejta
+* dherbst
+* marccohen
+* Arif Amirani
+* yuzeh
+* Roguelazer
+* awblocker
+* blinsay
+* Peter Broadwell
+* tierney
+* georgekola

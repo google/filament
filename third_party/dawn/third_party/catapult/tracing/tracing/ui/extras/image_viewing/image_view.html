@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/image_viewing/image.html">
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+
+<template id="tr-ui-e-img-image-snapshot-view-template">
+  <style>
+    .image-info {
+      margin-bottom: 5px;
+    }
+
+    .image-info .title {
+      font-weight: bold;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+
+    .image-info .size {
+      margin-right: 5px;
+    }
+
+    .image-container {
+      min-height: 100px;
+      min-width: 200px;
+      overflow: auto;
+    }
+  </style>
+
+  <div class="image-info">
+    <span class="title">Image</span>
+    <span class="size">(unknown)</span>
+    <span class="instructions">
+      [ Drag with mouse to zoom in and out ]
+    </span>
+  </div>
+  <div class="image-container">
+    <img alt="Image snapshot"/>
+  </div>
+</template>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.img', function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+
+  /*
+   * Displays an image snapshot.
+   * @constructor
+   */
+  const ImageSnapshotView = tr.ui.b.define(
+      'tr-ui-e-img-image-snapshot-view',
+      tr.ui.analysis.ObjectSnapshotView);
+
+  ImageSnapshotView.prototype = {
+    __proto__: tr.ui.analysis.ObjectSnapshotView.prototype,
+
+    decorate() {
+      const node = tr.ui.b.instantiateTemplate(
+          '#tr-ui-e-img-image-snapshot-view-template', THIS_DOC);
+      Polymer.dom(this).appendChild(node);
+
+      const info = Polymer.dom(this).querySelector('.image-info');
+      this.sizeInfo_ = Polymer.dom(info).querySelector('.size');
+
+      this.imageContainer_ =
+          Polymer.dom(this).querySelector('.image-container');
+      this.image_ = Polymer.dom(this.imageContainer_).querySelector('img');
+
+      this.zoomScaleValue_ = 1;
+      this.trackMouse_();
+    },
+
+    updateContents() {
+      if (this.objectSnapshot_ &&
+          this.objectSnapshot_.data &&
+          this.objectSnapshot_.type) {
+        this.image_.onload = this.drawPicture_.bind(this);
+        this.image_.src = `data:image/${this.objectSnapshot_.type};` +
+            `base64,${this.objectSnapshot_.data}`;
+      }
+
+      this.drawPicture_();
+    },
+
+    drawPicture_() {
+      if (!this.image_.complete) return;
+
+      const naturalWidth = this.image_.naturalWidth;
+      const naturalHeight = this.image_.naturalHeight;
+      this.sizeInfo_.textContent = `(${naturalWidth} x ${naturalHeight})`;
+
+      this.image_.width = naturalWidth * this.zoomScaleValue_;
+      this.image_.height = naturalHeight * this.zoomScaleValue_;
+    },
+
+    trackMouse_() {
+      this.mouseModeSelector_ = document.createElement(
+          'tr-ui-b-mouse-mode-selector');
+      this.mouseModeSelector_.targetElement = this.imageContainer_;
+      Polymer.dom(this.imageContainer_).appendChild(this.mouseModeSelector_);
+
+      this.mouseModeSelector_.supportedModeMask =
+          tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.mode = tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.defaultMode = tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.settingsKey = 'pictureDebugger.mouseModeSelector';
+
+      this.mouseModeSelector_.addEventListener('beginzoom',
+          this.onBeginZoom_.bind(this));
+      this.mouseModeSelector_.addEventListener('updatezoom',
+          this.onUpdateZoom_.bind(this));
+      this.mouseModeSelector_.addEventListener('endzoom',
+          this.onEndZoom_.bind(this));
+    },
+
+    onBeginZoom_(e) {
+      this.isZooming_ = true;
+      this.lastMouseViewPos_ = this.extractRelativeMousePosition_(e);
+      e.preventDefault();
+    },
+
+    onUpdateZoom_(e) {
+      if (!this.isZooming_) return;
+
+      const currentMouseViewPos = this.extractRelativeMousePosition_(e);
+
+      // Take the distance the mouse has moved and we want to zoom at about
+      // 1/1000th of that speed. 0.01 feels jumpy. This could possibly be tuned
+      // more if people feel it's too slow.
+      this.zoomScaleValue_ +=
+          ((this.lastMouseViewPos_.y - currentMouseViewPos.y) * 0.001);
+      this.zoomScaleValue_ = Math.max(this.zoomScaleValue_, 0.1);
+
+      this.drawPicture_();
+
+      this.lastMouseViewPos_ = currentMouseViewPos;
+    },
+
+    onEndZoom_(e) {
+      this.lastMouseViewPos_ = undefined;
+      this.isZooming_ = false;
+      e.preventDefault();
+    },
+
+    extractRelativeMousePosition_(e) {
+      return {
+        x: e.clientX - this.imageContainer_.offsetLeft,
+        y: e.clientY - this.imageContainer_.offsetTop
+      };
+    },
+  };
+  tr.ui.analysis.ObjectSnapshotView.register(
+      ImageSnapshotView,
+      {typeName: 'gfx::Image'});
+
+  return {
+    ImageSnapshotView,
+  };
+});
+</script>

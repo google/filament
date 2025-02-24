@@ -1,0 +1,46 @@
+git-mark-merge-base(1)
+======================
+
+NAME
+----
+git-mark-merge-base -
+include::_git-mark-merge-base_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git mark-merge-base'
+'git mark-merge-base' <commit hash>
+'git mark-merge-base' [-d | --delete]
+
+DESCRIPTION
+-----------
+
+Inspect, set or delete the current merge-base marker for the current branch.
+This should not be needed, but is useful if things get into a snarled state.
+Pass no arguments to view the current value. If you provide <commit hash>, then
+`git mark-merge-base` will attempt to set that as the merge-base value.
+
+It is invalid to pick a commit which is not an ancestor of the current branch.
+
+See linkgit:git-rebase-update[1]'s description of the `branch.<name>.base`
+configuration variable for more info on what the merge base markers are for.
+
+OPTIONS
+-------
+
+-d::
+--delete::
+  Delete the merge-base marker for the current branch.
+
+<commit hash>::
+  The new value to set for the current branch's merge-base marker.
+
+SEE ALSO
+--------
+linkgit:git-rebase-update[1], linkgit:git-reparent-branch[1],
+linkgit:git-rename-branch[1], linkgit:git-upstream-diff[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

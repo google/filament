@@ -1,0 +1,186 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "extends": ["./node_modules/gts"],
+  "overrides": [
+    {
+      "files": ["**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": { "project": "./tsconfig.json" },
+      "extends": [
+        "plugin:import/errors",
+        "plugin:import/warnings",
+        "plugin:import/typescript",
+        "plugin:n/recommended"
+      ],
+      "plugins": ["node", "ban", "import", "deprecation", "gpuweb-cts", "n"],
+      "rules": {
+        // Core rules
+        "linebreak-style": ["warn", "unix"],
+        "no-console": "warn",
+        "no-throw-literal": "warn",
+        "no-undef": "off",
+        "no-useless-rename": "warn",
+        "object-shorthand": "warn",
+        "prefer-promise-reject-errors": "warn",
+        "quotes": ["warn", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
+
+        // All test TODOs must be tracked inside file/test descriptions or READMEs.
+        // Comments relating to TODOs in descriptions can be marked with references like "[1]".
+        // TODOs not relating to test coverage can be marked MAINTENANCE_TODO or similar.
+        "no-warning-comments": [
+          "warn",
+          { "terms": ["todo", "fixme", "xxx"], "location": "anywhere" }
+        ],
+
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "message": "createQuerySet must be immediately tracked using trackForCleanup (or use createQuerySetTracked).",
+            // This selector disallows any call to any method called "createQuerySet"
+            // that is not directly inside a call to some method called "trackForCleanup".
+            "selector": ":not(CallExpression[callee.property.name=\"trackForCleanup\"]) > CallExpression > MemberExpression > Identifier[name=\"createQuerySet\"]"
+          },
+          {
+            "message": "createBuffer must be immediately tracked using trackForCleanup (or use createBufferTracked).",
+            // Similar to above.
+            "selector": ":not(CallExpression[callee.property.name=\"trackForCleanup\"]) > CallExpression > MemberExpression > Identifier[name=\"createBuffer\"]"
+          },
+          {
+            "message": "createTexture must be immediately tracked using trackForCleanup (or use createTextureTracked).",
+            // Similar to above.
+            "selector": ":not(CallExpression[callee.property.name=\"trackForCleanup\"]) > CallExpression > MemberExpression > Identifier[name=\"createTexture\"]"
+          },
+          {
+            "message": "Use requestDeviceTracked() instead of requestDevice().",
+            // We don't seem to need direct calls to requestDevice() at all so we can just disallow all of them.
+            "selector": "CallExpression > MemberExpression > Identifier[name=\"requestDevice\"]"
+          }
+        ],
+
+        // Plugin: gpuweb-cts
+        "gpuweb-cts/string-trailing-space": "warn",
+        "gpuweb-cts/string-tabs": "warn",
+
+        // Plugin: @typescript-eslint
+        "@typescript-eslint/no-inferrable-types": "off",
+        "@typescript-eslint/consistent-type-assertions": "warn",
+        // Recommended lints
+        // https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/README.md
+        "@typescript-eslint/adjacent-overload-signatures": "warn",
+        "@typescript-eslint/await-thenable": "warn",
+        "@typescript-eslint/ban-ts-comment": "warn",
+        "@typescript-eslint/no-empty-interface": "warn",
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-extra-non-null-assertion": "warn",
+        "@typescript-eslint/no-floating-promises": "warn",
+        "@typescript-eslint/no-for-in-array": "warn",
+        "@typescript-eslint/no-misused-new": "warn",
+        "@typescript-eslint/no-namespace": "warn",
+        "@typescript-eslint/no-non-null-asserted-optional-chain": "warn",
+        "@typescript-eslint/no-this-alias": "warn",
+        "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+        "@typescript-eslint/no-unnecessary-type-constraint": "warn",
+        "@typescript-eslint/no-unused-vars": [
+          "warn",
+          // MAINTENANCE_TODO: Enable warnings for args
+          { "vars": "all", "args": "none", "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }
+        ],
+        "@typescript-eslint/prefer-as-const": "warn",
+        "@typescript-eslint/prefer-for-of": "warn",
+        "@typescript-eslint/prefer-namespace-keyword": "warn",
+        "@typescript-eslint/require-await": "warn",
+        "@typescript-eslint/restrict-plus-operands": "warn",
+        "@typescript-eslint/triple-slash-reference": "warn",
+        "@typescript-eslint/unbound-method": "warn",
+        // MAINTENANCE_TODO: Try to clean up and enable these recommended lints?
+        //"@typescript-eslint/no-unsafe-argument": "warn",
+        //"@typescript-eslint/no-unsafe-assignment": "warn",
+        //"@typescript-eslint/no-unsafe-call": "warn",
+        //"@typescript-eslint/no-unsafe-member-access": "warn",
+        //"@typescript-eslint/no-unsafe-return": "warn",
+        // Note: These recommended lints are probably not practical to enable.
+        //"@typescript-eslint/no-misused-promises": "warn",
+        //"@typescript-eslint/no-non-null-assertion": "warn",
+        //"@typescript-eslint/no-var-requires": "warn",
+        //"@typescript-eslint/restrict-template-expressions": "warn",
+
+        // Plugin: ban
+        "ban/ban": [
+          "warn",
+          {
+            "name": "setTimeout",
+            "message": "WPT disallows setTimeout; use `common/util/timeout.js`."
+          }
+        ],
+
+        // Plugin: deprecation
+        //"deprecation/deprecation": "warn",
+
+        // Plugin: n (for Node)
+        "n/no-unsupported-features/es-syntax": "off",
+        "n/no-unsupported-features/node-builtins": "off",
+        "n/no-restricted-require": ["warn", ["*"]],
+        "n/no-restricted-import": [
+          "warn",
+          [
+            {
+              "name": ["*", "!./**/*.js", "!../**/*.js"],
+              "message": "All imports must end in .js and be relative for Web. If this a Node-only file, use an eslint-disable directive or subdirectory .eslintrc.json to disable this lint."
+            }
+          ]
+        ],
+
+        // Plugin: import
+        "import/order": [
+          "warn",
+          {
+            "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+            "newlines-between": "always",
+            "alphabetize": { "order": "asc", "caseInsensitive": false }
+          }
+        ],
+        "import/newline-after-import": ["warn", { "count": 1 }],
+        "import/no-duplicates": "warn",
+        "import/no-restricted-paths": [
+          "warn",
+          {
+            "zones": [
+              {
+                "target": "./src/webgpu",
+                "from": "./src/common",
+                "except": ["./framework", "./util"],
+                "message": "Non-framework common/ code imported from webgpu/ suite"
+              },
+              {
+                "target": "./src/unittests",
+                "from": "./src/common",
+                "except": ["./framework", "./util", "./internal"],
+                "message": "Non-framework common/ code imported from unittests/ suite"
+              },
+              {
+                "target": "./src/webgpu",
+                "from": "./src/unittests",
+                "message": "unittests/ suite imported from webgpu/ suite"
+              },
+              {
+                "target": "./src/common",
+                "from": "./src",
+                "except": ["./common", "./external"],
+                "message": "Non common/ code imported from common/"
+              }
+            ]
+          }
+        ]
+      },
+      "settings": {
+        "import/resolver": {
+          "./.eslint-resolver": {}
+        }
+      }
+    }
+  ]
+}

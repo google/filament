@@ -1,0 +1,27 @@
+boto v2.39.0
+============
+
+:date: 2016/01/18
+
+Add support for ap-northeast-2, update documentation, and fix several bugs.
+
+
+Changes
+-------
+* Autodetect sigv4 for ap-northeast-2 (:issue:`3461`, :sha:`c2a17ce`)
+* Added support for ap-northeast-2 (:issue:`3454`, :sha:`c3c1ddd`)
+* Remove VeriSign Class 3 CA from trusted certs (:issue:`3450`, :sha:`8a025df`)
+* Add note about boto3 on all pages of boto docs (:sha:`9bd904c`)
+* Fix for listing EMR steps based on cluster_states filter (:issue:`3399`, :sha:`0f92f35`)
+* Fixed param name in set_contents_from_string docstring (:issue:`3420`, :sha:`e30297b`)
+* Closes #3441 Remove py3 test whitelist   Update rds to pass on py3   Update mturk to pass tests on py3   Update cloudsearchdomain tests to work with py3 (:issue:`3441`, :sha:`5b2f552`)
+* Run tests against py35 (:sha:`7d039d0`)
+* Fix Glacier test failure in python 3.5 due to MagicMock (:issue:`3412`, :sha:`d042f07`)
+* Undo log message change   BF(PY3): use except ... as   syntax instead of except ..., (:sha:`607cad7`)
+* Fix travis CI builds for PY3 (:issue:`3439`, :sha:`22ab610`)
+* Spelling fixes (:issue:`3425`, :sha:`f43bbbd`)
+* Fixed docs (:issue:`3401`, :sha:`4f66311`)
+* Add deprecation notice to emr methods (:issue:`3422`, :sha:`cee6159`)
+* Add some GovCloud endpoints (:issue:`3421`, :sha:`5afc068`)
+
+

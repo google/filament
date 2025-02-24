@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_series.html">
+<link rel="import" href="/tracing/ui/analysis/power_sample_summary_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const EventSet = tr.model.EventSet;
+  const Model = tr.Model;
+  const PowerSeries = tr.model.PowerSeries;
+
+  test('instantiate', function() {
+    const series = new PowerSeries(new Model().device);
+
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1000, 2);
+    series.addPowerSample(2000, 3);
+    series.addPowerSample(3000, 4);
+
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet(series.samples);
+
+    this.addHTMLOutput(table);
+  });
+
+  test('setSamples_undefinedPowerSamples', function() {
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = undefined;
+
+    assert.lengthOf(table.$.table.tableRows, 0);
+  });
+
+  test('setSamples_noPowerSamples', function() {
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet([]);
+
+    assert.lengthOf(table.$.table.tableRows, 0);
+  });
+
+  test('setSamples_onePowerSample', function() {
+    const series = new PowerSeries(new Model().device);
+
+    series.addPowerSample(0, 1);
+
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet(series.samples);
+
+    assert.lengthOf(table.$.table.tableRows, 1);
+    assert.strictEqual(table.$.table.tableRows[0].min, 1);
+    assert.strictEqual(table.$.table.tableRows[0].max, 1);
+    assert.strictEqual(
+        table.$.table.tableRows[0].timeWeightedAverageInW, 'N/A');
+    assert.strictEqual(table.$.table.tableRows[0].energyConsumedInJ, 'N/A');
+    assert.strictEqual(table.$.table.tableRows[0].sampleCount, 1);
+  });
+
+  test('setSamples_twoPowerSamples', function() {
+    const series = new PowerSeries(new Model().device);
+
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1000, 2);
+
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet(series.samples);
+
+    assert.lengthOf(table.$.table.tableRows, 1);
+    assert.strictEqual(table.$.table.tableRows[0].min, 1);
+    assert.strictEqual(table.$.table.tableRows[0].max, 2);
+    assert.strictEqual(table.$.table.tableRows[0].timeWeightedAverageInW, 1);
+    assert.strictEqual(table.$.table.tableRows[0].energyConsumedInJ, 1);
+    assert.strictEqual(table.$.table.tableRows[0].sampleCount, 2);
+  });
+
+  test('setSamples_threePowerSamples', function() {
+    const series = new PowerSeries(new Model().device);
+
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1000, 2);
+    series.addPowerSample(2000, 3);
+
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet(series.samples);
+
+    assert.lengthOf(table.$.table.tableRows, 1);
+    assert.strictEqual(table.$.table.tableRows[0].min, 1);
+    assert.strictEqual(table.$.table.tableRows[0].max, 3);
+    assert.strictEqual(table.$.table.tableRows[0].timeWeightedAverageInW, 1.5);
+    assert.strictEqual(table.$.table.tableRows[0].energyConsumedInJ, 3);
+    assert.strictEqual(table.$.table.tableRows[0].sampleCount, 3);
+  });
+
+  test('setSamples_columnsInitialized', function() {
+    const series = new PowerSeries(new Model().device);
+
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1000, 2);
+    series.addPowerSample(2000, 3);
+
+    const table = document.createElement('tr-ui-a-power-sample-summary-table');
+    table.samples = new EventSet(series.samples);
+
+    const row = table.$.table.tableRows[0];
+    const columns = table.$.table.tableColumns;
+
+    assert.lengthOf(columns, 5);
+
+    assert.strictEqual(columns[0].title, 'Min power');
+    assert.strictEqual(columns[0].width, '100px');
+    assert.strictEqual(columns[0].value(row), '1.000 W');
+
+    assert.strictEqual(columns[1].title, 'Max power');
+    assert.strictEqual(columns[1].width, '100px');
+    assert.strictEqual(columns[1].value(row), '3.000 W');
+
+    assert.strictEqual(columns[2].title, 'Time-weighted average');
+    assert.strictEqual(columns[2].width, '100px');
+    assert.strictEqual(columns[2].value(row), '1.500 W');
+
+    assert.strictEqual(columns[3].title, 'Energy consumed');
+    assert.strictEqual(columns[3].width, '100px');
+    assert.strictEqual(columns[3].value(row), '3.000 J');
+
+    assert.strictEqual(columns[4].title, 'Sample count');
+    assert.strictEqual(columns[4].width, '100%');
+    assert.strictEqual(columns[4].value(row), 3);
+  });
+});
+</script>

@@ -1,0 +1,61 @@
+git-reparent-branch(1)
+=====================
+
+NAME
+----
+git-reparent-branch -
+include::_git-reparent-branch_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git reparent-branch' <new_parent>
+'git reparent-branch' --lkgr
+'git reparent-branch' --root
+
+DESCRIPTION
+-----------
+
+Change the 'upstream' of the current branch, and then run
+linkgit:git-rebase-update[1] to move the commits in the current branch, as well
+as the commits in all descendant branches, onto the new parent.
+
+`<new_parent>` may be either a local branch, remote branch, OR a tag (such as
+`lkgr`).
+
+This is particularly useful to reparent an independent CL to become dependent on
+another CL, or vice versa. This could happen if you started both on the
+assumption that they were independent, but later realized that this was not the
+case.
+
+
+OPTIONS
+-------
+
+<new_parent>::
+  The new parent to set as the upstream for this branch. May be a branch ref or
+  a tag.
+
+--lkgr::
+  Reparent to track lkgr.
+
+--root::
+  Reparent to track the 'root' branch. Defaults to 'origin/main'. See
+  linkgit:git-new-branch[1]'s CONFIGURATION VARIABLES section..
+
+
+include::_aliases.txt[]
+
+----
+[alias]
+  rp = reparent-branch
+----
+
+SEE ALSO
+--------
+linkgit:git-rebase-update[1], linkgit:git-rename-branch[1],
+linkgit:git-new-branch[1], linkgit:git-upstream-diff[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

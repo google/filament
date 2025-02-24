@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_summary_table.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const EventSet = tr.model.EventSet;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('basicNoCpu', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, duration: 0.5}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 1, duration: 0.5}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 2, duration: 0.5}));
+    tsg.createSubSlices();
+
+    const threadTrack = {};
+    threadTrack.thread = thread;
+
+    const selection = new EventSet(tsg.slices);
+
+    const viewEl = document.createElement('tr-ui-a-multi-event-summary-table');
+    viewEl.configure({
+      showTotals: true,
+      eventsHaveDuration: true,
+      eventsByTitle: selection.getEventsOrganizedByTitle()
+    });
+    this.addHTMLOutput(viewEl);
+  });
+
+  test('basicWithCpu', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, end: 3,
+      cpuStart: 0, cpuEnd: 3}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 1, end: 2,
+      cpuStart: 1, cpuEnd: 1.75}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 4, end: 5,
+      cpuStart: 3, cpuEnd: 3.75}));
+    tsg.createSubSlices();
+
+    const threadTrack = {};
+    threadTrack.thread = thread;
+
+    const selection = new EventSet(tsg.slices);
+
+    const viewEl = document.createElement('tr-ui-a-multi-event-summary-table');
+    viewEl.configure({
+      showTotals: true,
+      eventsHaveDuration: true,
+      eventsByTitle: selection.getEventsOrganizedByTitle()
+    });
+    this.addHTMLOutput(viewEl);
+
+    const totals = tr.ui.b.findDeepElementMatchingPredicate(
+        viewEl, e => e.tagName === 'TFOOT');
+    const scalars = tr.ui.b.findDeepElementsMatchingPredicate(
+        totals, e => e.tagName === 'TR-V-UI-SCALAR-SPAN');
+    assert.strictEqual(scalars[0].value, 5);
+    assert.closeTo(scalars[1].value, 4.5, 1e-6);
+    assert.strictEqual(scalars[2].value, 4);
+    assert.closeTo(scalars[3].value, 3.75, 1e-6);
+    assert.closeTo(scalars[4].value, 1.5, 1e-6);
+    assert.strictEqual('3', totals.children[0].children[6].textContent);
+  });
+
+  test('noSelfTimeNoSubRows', function() {
+    const model = new Model();
+
+    const fe1 = new tr.model.FlowEvent('cat', 1234, 'title', 7, 10, {});
+    const fe2 = new tr.model.FlowEvent('cat', 1234, 'title', 8, 20, {});
+
+    // Make reading some properties an explosion, as a way to ensure that they
+    // aren't read. Note that 'duration' is read since it is used by the
+    // EventSet to get the range.
+    const failProp = {
+      get() {
+        throw new Error('Should not be called');
+      }
+    };
+    Object.defineProperty(fe1, 'subRows', failProp);
+    Object.defineProperty(fe2, 'subRows', failProp);
+
+    Object.defineProperty(fe1, 'selfTime', failProp);
+    Object.defineProperty(fe2, 'selfTime', failProp);
+
+    model.flowEvents.push(fe1);
+    model.flowEvents.push(fe2);
+
+    const selection = new EventSet([fe1, fe2]);
+
+    const viewEl = document.createElement('tr-ui-a-multi-event-summary-table');
+    viewEl.configure({
+      showTotals: true,
+      eventsHaveDuration: false,
+      eventsHaveSubRows: false,
+      eventsByTitle: selection.getEventsOrganizedByTitle()
+    });
+    this.addHTMLOutput(viewEl);
+  });
+
+  // TODO(nduca): Tooltippish stuff.
+});
+</script>

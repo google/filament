@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id="bug-info">
+  <template>
+    <style>
+      #container {
+        display: flex;
+        flex-direction: column;
+        margin-left: 1px;
+        margin-top: 3px;
+      }
+
+      #container p {
+        margin-top: 7px;
+        margin-bottom: 7px;
+      }
+
+      .warning {
+        font-weight: bold;
+        color: red;
+      }
+
+      li {
+        display: inline;
+        /* Width of a space is 0.25em. */
+        padding: 0 0.15em 0 0.4em;
+      }
+
+      li + li {
+        border-left: solid 1px;
+      }
+    </style>
+    <div id="container" style="display:none">
+      <div class="info-bar">
+        <p><a href="http://crbug.com/{{projectId}}/{{bugId}}">crbug.com/{{projectId}}/{{bugId}}</a></p>
+        <p>
+          <span id="revision_range"></span>
+          <span id="warning" class="warning"></span>
+        </p>
+        <p>
+          See <a
+            target="_blank"
+            href="https://docs.google.com/spreadsheets/d/1xaAo0_SU3iDfGdqDJZX_jRV0QtkufwHUKH3kQKF3YQs"
+          >spreadsheet</a> for info about test owners</p>
+      </div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'bug-info',
+  properties: {
+    alertsTable: { value: null},
+    bugId: { value: null},
+    projectId: {value: null},
+  },
+
+  /**
+    * Initializes this element.
+    * @param {Number} bugId A bug ID number.
+    * @param {String} projectId A project ID in Monorail.
+    * @param {HTMLElement} alertsTable HTML element of alerts-table.
+    */
+  initialize(bugId, projectId, alertsTable) {
+    this.$.container.style.display = '';
+    this.bugId = bugId;
+    this.projectId = projectId;
+    this.alertsTable = alertsTable;
+    this.alertsTable.addEventListener('changeselection',
+        this.updateBugInfo.bind(this), false);
+    this.updateBugInfo();
+  },
+
+  /**
+    * Displays bug info; this will be either a revision range or a warning.
+    */
+  updateBugInfo() {
+    const alerts = this.getCheckedOrAllAlerts();
+    if (alerts.length == 0) {
+      this.$.warning.textContent =
+          'WARNING: There appear to be no alerts associated with this bug.';
+      return;
+    }
+
+    const minRevRange = this.alertsTable.getCommonRevisionRange(alerts);
+    if (minRevRange) {
+      let info = 'Minimum revision range for ' + alerts.length;
+      info += (alerts.length == 1) ? ' alert: ' : ' alerts: ';
+      info += minRevRange.start + ':' + minRevRange.end;
+      this.$.revision_range.innerText = info;
+      return;
+    }
+    this.$.warning.textContent =
+        'WARNING: Non-overlapping alerts are grouped together.';
+  },
+
+  /**
+    * Gets checked alerts, or all displayed alerts if none are checked.
+    *
+    * @param {Array.<Object>} alerts List of alerts.
+    * @param {Object} minRevRange Minimum revision range.
+    *
+    * @return {Array.<Object>} List of alerts.
+    */
+  getCheckedOrAllAlerts() {
+    let alerts = this.alertsTable.checkedAlerts;
+    if (!alerts || alerts.length == 0) {
+      alerts = this.alertsTable.alertList.filter(
+          function(alertRow) {
+            return !alertRow.hideRow;
+          });
+    }
+    return alerts;
+  },
+
+  /**
+    * Gets test path from the alert with the matching start revision number.
+    *
+    * @param {Number} start_revision A start revision number.
+    *
+    * @return {?string} The test path.
+    */
+  getTestPathFromStartRev(alerts, startRevision) {
+    for (let i = 0; i < alerts.length; i++) {
+      if (alerts[i].start_revision == startRevision) {
+        return alerts[i].master + '/' +
+                alerts[i].bot + '/' +
+                alerts[i].testsuite + '/' +
+                alerts[i].test;
+      }
+    }
+    return null;
+  }
+});
+</script>

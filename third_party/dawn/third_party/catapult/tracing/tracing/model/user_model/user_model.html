@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.um', function() {
+  class UserModel extends tr.model.EventContainer {
+    constructor(parentModel) {
+      super();
+      this.parentModel_ = parentModel;
+      this.expectations_ = new tr.model.EventSet();
+      this.segments_ = [];
+    }
+
+    get stableId() {
+      return 'UserModel';
+    }
+
+    get parentModel() {
+      return this.parentModel_;
+    }
+
+    sortExpectations() {
+      this.expectations_.sortEvents((x, y) => (x.start - y.start));
+    }
+
+    get expectations() {
+      return this.expectations_;
+    }
+
+    shiftTimestampsForward(amount) {
+    }
+
+    addCategoriesToDict(categoriesDict) {
+    }
+
+    get segments() {
+      return this.segments_;
+    }
+
+    * childEvents() {
+      yield* this.expectations;
+    }
+
+    * childEventContainers() {
+    }
+
+    updateBounds() {
+      this.bounds.reset();
+      for (const expectation of this.expectations) {
+        expectation.addBoundsToRange(this.bounds);
+      }
+    }
+
+    /**
+     * Return a new array of new Segments by merging adjacent segments when
+     * |getKeyForSegment| returns identical keys.
+     * |getKeyForSegment| is called with each Segment and the index of that
+     * Segment.
+     *
+     * @param {!function(!tr.model.um.Segment, number):*} getKeyForSegment
+     * @return {!Array.<!tr.model.um.Segment>}
+     */
+    resegment(getKeyForSegment) {
+      const newSegments = [];
+      let prevKey = undefined;
+      let prevSegment = undefined;
+      for (let i = 0; i < this.segments.length; ++i) {
+        const segment = this.segments[i];
+        const key = getKeyForSegment(segment, i);
+        if (prevSegment !== undefined && key === prevKey) {
+          prevSegment.addSegment(segment);
+        } else {
+          prevSegment = segment.clone();
+          newSegments.push(prevSegment);
+        }
+        prevKey = key;
+      }
+      return newSegments;
+    }
+  }
+
+  return {
+    UserModel,
+  };
+});
+</script>

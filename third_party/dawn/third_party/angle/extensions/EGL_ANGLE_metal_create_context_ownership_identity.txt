@@ -1,0 +1,69 @@
+Name
+
+    ANGLE_metal_create_context_ownership_identity
+
+Name Strings
+
+    EGL_ANGLE_metal_create_context_ownership_identity
+
+Contributors
+
+    John Cunningham, Apple
+
+Contacts
+
+    John Cunningham, Apple (johncunningham 'at' apple.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, December 13, 2021
+
+Number
+
+    EGL Extension TBD
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5 specification.
+
+Overview
+
+    This extension allows for the creation of OpenGL ES contexts that have an
+    associated task id. The task id will be used to attribute GPU memory back
+    to the ownership task.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE    0x34D2
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request that a context attribute GPU memory to a particular task id,
+    use the attribute EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2021/12/13 - first draft.

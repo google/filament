@@ -1,0 +1,100 @@
+Name
+
+    ANGLE_webgl_compatibility
+
+Name Strings
+
+    GL_ANGLE_webgl_compatibility
+
+Contributors
+
+    Geoff Lang
+    James Darpinian
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 4, October 5, 2021
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 2.0 specification.
+
+    Interacts with EGL_ANGLE_create_context_webgl_compatibility (or equivalent)
+    extension.
+
+    Interacts with the ARB_texture_rectangle/ANGLE_texture_rectangle extension.
+
+Overview
+
+    With this extension enabled, the OpenGL ES context will have additional
+    features and validation to be compatible with the WebGL specification.
+
+New Procedures and Functions
+
+    None
+
+
+New Tokens
+
+    None
+
+Additions to the OpenGL ES Specification
+
+    Additional validation will be performed according to the the sections of
+    the WebGL specification entitled "Differences Between WebGL and OpenGL ES
+    2.0" and "Differences Between WebGL and OpenGL ES 3.0".
+
+    GLSL ES shaders targeting version 100 will be treated as though they were
+    targeting the WebGL 1 shader specification, and GLSL ES shaders targeting
+    version 300 as though they were targeting the WebGL 2 shader specification.
+
+    When the ANGLE_texture_rectangle extension is supported then Enable,
+    Disable, and IsEnabled accept the symbolic constant
+    TEXTURE_RECTANGLE_ANGLE, which controls whether ARB_texture_rectangle is
+    allowed to be used by shaders at compilation time. This is initially
+    enabled. WebGL implementations may want to use ARB_texture_rectangle when
+    compiling their own shaders but not expose the extension to WebGL user
+    shaders. This only affects shader compilation and not any other part of
+    the ANGLE_texture_rectangle extension, nor the behavior of already
+    compiled shaders.
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Sept 16, 2016  geofflang  Initial version
+      2    Nov 28, 2016  geofflang  Break the extension requests into a
+                                    separate extension.
+      3     Oct 3, 2019  jdarpinian Allow disabling ARB_texture_rectangle
+      4     Oct 5, 2021  jmadill    Add wording for shader specs.

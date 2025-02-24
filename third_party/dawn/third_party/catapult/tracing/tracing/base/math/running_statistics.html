@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.math', function() {
+  /**
+   * An object of this class computes basic statistics online in O(1).
+   * Usage:
+   * 1. Create an instance.
+   * 2. Add numbers using the |add| method.
+   * 3. Query statistics.
+   * 4. Repeat from step 2.
+   */
+  class RunningStatistics {
+    constructor() {
+      this.mean_ = 0;
+      this.count_ = 0;
+      this.max_ = -Infinity;
+      this.min_ = Infinity;
+      this.sum_ = 0;
+      this.variance_ = 0;
+
+      // Mean of logarithms of absolute values of samples, or undefined if any
+      // samples were <= 0.
+      this.meanlogs_ = 0;
+    }
+
+    get count() {
+      return this.count_;
+    }
+
+    get geometricMean() {
+      if (this.meanlogs_ === undefined) return 0;
+      return Math.exp(this.meanlogs_);
+    }
+
+    get mean() {
+      if (this.count_ === 0) return undefined;
+      return this.mean_;
+    }
+
+    get max() {
+      return this.max_;
+    }
+
+    get min() {
+      return this.min_;
+    }
+
+    get sum() {
+      return this.sum_;
+    }
+
+    get variance() {
+      if (this.count_ === 0) return undefined;
+      if (this.count_ === 1) return 0;
+      return this.variance_ / (this.count_ - 1);
+    }
+
+    get stddev() {
+      if (this.count_ === 0) return undefined;
+      return Math.sqrt(this.variance);
+    }
+
+    add(x) {
+      this.count_++;
+      this.max_ = Math.max(this.max_, x);
+      this.min_ = Math.min(this.min_, x);
+      this.sum_ += x;
+
+      // The geometric mean is computed using the arithmetic mean of logarithms.
+      if (x <= 0) {
+        this.meanlogs_ = undefined;
+      } else if (this.meanlogs_ !== undefined) {
+        this.meanlogs_ += (Math.log(Math.abs(x)) - this.meanlogs_) / this.count;
+      }
+
+      // The following uses Welford's algorithm for computing running mean
+      // and variance. See http://www.johndcook.com/blog/standard_deviation.
+      if (this.count_ === 1) {
+        this.mean_ = x;
+        this.variance_ = 0;
+      } else {
+        const oldMean = this.mean_;
+        const oldVariance = this.variance_;
+        // Using the 2nd formula for updating the mean yields better precision
+        // but it doesn't work for the case oldMean is Infinity. Hence we handle
+        // that case separately.
+        if (oldMean === Infinity || oldMean === -Infinity) {
+          this.mean_ = this.sum_ / this.count_;
+        } else {
+          this.mean_ = oldMean + (x - oldMean) / this.count_;
+        }
+        this.variance_ = oldVariance + (x - oldMean) * (x - this.mean_);
+      }
+    }
+
+    merge(other) {
+      const result = new RunningStatistics();
+      result.count_ = this.count_ + other.count_;
+      result.sum_ = this.sum_ + other.sum_;
+      result.min_ = Math.min(this.min_, other.min_);
+      result.max_ = Math.max(this.max_, other.max_);
+      if (result.count === 0) {
+        result.mean_ = 0;
+        result.variance_ = 0;
+        result.meanlogs_ = 0;
+      } else {
+        // Combine the mean and the variance using the formulas from
+        // https://goo.gl/ddcAep.
+        result.mean_ = result.sum / result.count;
+        const deltaMean = (this.mean || 0) - (other.mean || 0);
+        result.variance_ = this.variance_ + other.variance_ +
+          (this.count * other.count * deltaMean * deltaMean / result.count);
+
+        // Merge the arithmetic means of logarithms of absolute values of
+        // samples, weighted by counts.
+        if (this.meanlogs_ === undefined || other.meanlogs_ === undefined) {
+          result.meanlogs_ = undefined;
+        } else {
+          result.meanlogs_ = (this.count * this.meanlogs_ +
+              other.count * other.meanlogs_) / result.count;
+        }
+      }
+      return result;
+    }
+
+    truncate(unit) {
+      this.max_ = unit.truncate(this.max_);
+      if (this.meanlogs_ !== undefined) {
+        // geomean = exp(meanlogs)
+        // meanlogs is serialized, but geomean is displayed.
+        // truncate meanlogs such that geomean is unaffected.
+        const formatted = unit.format(this.geometricMean);
+        let lo = 1;
+        let hi = 16;
+        while (lo < hi - 1) {
+          const digits = parseInt((lo + hi) / 2);
+          const test = tr.b.math.truncate(this.meanlogs_, digits);
+          if (formatted === unit.format(Math.exp(test))) {
+            hi = digits;
+          } else {
+            lo = digits;
+          }
+        }
+        const test = tr.b.math.truncate(this.meanlogs_, lo);
+        if (formatted === unit.format(Math.exp(test))) {
+          this.meanlogs_ = test;
+        } else {
+          this.meanlogs_ = tr.b.math.truncate(this.meanlogs_, hi);
+        }
+      }
+      this.mean_ = unit.truncate(this.mean_);
+      this.min_ = unit.truncate(this.min_);
+      this.sum_ = unit.truncate(this.sum_);
+      this.variance_ = unit.truncate(this.variance_);
+    }
+
+    asDict() {
+      if (!this.count) {
+        return [];
+      }
+      // It's more efficient to serialize these fields in an array. If you
+      // add any other fields, you should re-evaluate whether it would be more
+      // efficient to serialize as a dict.
+      return [
+        this.count_,
+        this.max_,
+        this.meanlogs_,
+        this.mean_,
+        this.min_,
+        this.sum_,
+        this.variance_,
+      ];
+    }
+
+    static fromDict(dict) {
+      const result = new RunningStatistics();
+      if (dict.length !== 7) {
+        return result;
+      }
+      [
+        result.count_,
+        result.max_,
+        result.meanlogs_,
+        result.mean_,
+        result.min_,
+        result.sum_,
+        result.variance_,
+      ] = dict;
+      return result;
+    }
+  }
+
+  return {
+    RunningStatistics,
+  };
+});
+</script>

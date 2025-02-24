@@ -1,0 +1,4 @@
+[
+    "src/common/third_party/xxhash",
+    "src/libANGLE/renderer/vulkan/shaders/src/third_party/ffx_spd"
+]

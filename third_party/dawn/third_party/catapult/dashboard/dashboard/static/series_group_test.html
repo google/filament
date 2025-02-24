@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/series_group.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(() => {
+  test('requestParamsBasic', () => {
+    const element = ['foo', []];
+    const params = d.listTestsRequestParams(element, true);
+    const testPathDict = JSON.parse(params.test_path_dict);
+    const testPathDictKeys = Object.keys(testPathDict);
+    assert.lengthOf(Object.keys(params), 3);
+    assert.strictEqual(params.type, 'test_path_dict');
+    assert.lengthOf(testPathDictKeys, 1);
+    assert.strictEqual(testPathDictKeys[0], 'foo');
+  });
+
+  test('requestParamsSelected', () => {
+    const element = ['foo', []];
+    const params = d.listTestsRequestParams(element, true);
+    assert.strictEqual(params.return_selected, '1');
+  });
+
+  test('requestParamsUnselected', () => {
+    const element = ['foo', []];
+    const params = d.listTestsRequestParams(element, false);
+    assert.strictEqual(params.return_selected, '0');
+  });
+
+  test('requestParamsAll', () => {
+    const element = ['foo', ['all']];
+    const params = d.listTestsRequestParams(element, true);
+    const testPathDict = JSON.parse(params.test_path_dict);
+    assert.strictEqual(testPathDict.foo, 'all');
+  });
+
+  test('requestParamsImportant', () => {
+    const element = ['foo', ['important']];
+    const params = d.listTestsRequestParams(element, true);
+    const testPathDict = JSON.parse(params.test_path_dict);
+    assert.strictEqual(testPathDict.foo, 'core');
+  });
+
+  test('requestParamsNone', () => {
+    const element = ['foo', ['none']];
+    const params = d.listTestsRequestParams(element, true);
+    const testPathDict = JSON.parse(params.test_path_dict);
+    assert.deepEqual(testPathDict.foo, []);
+  });
+
+  test('requestParamsExact', () => {
+    const element = ['foo', ['abc', 'xyz']];
+    const params = d.listTestsRequestParams(element, true);
+    const testPathDict = JSON.parse(params.test_path_dict);
+    assert.deepEqual(testPathDict.foo, ['abc', 'xyz']);
+  });
+});
+</script>

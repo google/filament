@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright 2019 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+ -->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          android:versionCode="100"
+          android:versionName="100"
+          package="com.android.angle">
+
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <application android:allowBackup="false"
+                 android:label="Android System Angle"
+                 android:icon="@drawable/icon"
+                 android:extractNativeLibs="false"
+                 android:forceQueryable="true"
+                 android:multiArch="true">
+
+        <activity android:name="com.android.angle.MainActivity"
+                  android:label="@string/angle_preferences"
+                  android:description="@string/angle_preferences_summary"
+                  android:theme="@style/Theme.Settings"
+                  android:visibleToInstantApps="true"
+                  android:launchMode="singleTask"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.INFO"/>
+            </intent-filter>
+
+            <!-- Indicate that this PKG is ANGLE. -->
+            <intent-filter android:priority="1">
+                <action android:name="android.app.action.ANGLE_FOR_ANDROID" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+
+            <!-- Mark this fragment as a dynamic setting in the development category. -->
+            <intent-filter>
+                <action android:name="com.android.settings.action.IA_SETTINGS" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.category"
+                       android:value="com.android.settings.category.ia.development" />
+            <meta-data android:name="com.android.settings.summary" android:resource="@string/angle_preferences_summary" />
+            <meta-data android:name="com.android.settings.order" android:value="20" />
+            <meta-data android:name="com.android.settings.profile" android:value="primary_profile_only" />
+            <meta-data android:name="instantapps.clients.allowed" android:value="true" />
+        </activity>
+
+        <receiver android:name="com.android.angle.common.Receiver"
+                  android:directBootAware="true"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.ANGLE_FOR_ANDROID_TOAST_MESSAGE" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:name="com.android.angle.common.SearchProvider"
+            android:authorities="com.android.angle"
+            android:multiprocess="false"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.READ_SEARCH_INDEXABLES"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.action.SEARCH_INDEXABLES_PROVIDER" />
+            </intent-filter>
+        </provider>
+    </application>
+</manifest>

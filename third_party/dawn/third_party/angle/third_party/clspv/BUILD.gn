@@ -1,0 +1,377 @@
+import("//build_overrides/clspv.gni")
+import("//build_overrides/spirv_tools.gni")
+
+declare_args() {
+  # spirv namespace
+  spirv_namespace_strings = "spv"
+  spirv_namespace_glsl = "glsl"
+  spirv_namespace_reflection = "reflection"
+
+  # bake file variable names
+  clspv_bake_file_data_variable_name = "clspv_builtins_header_data"
+  clspv_bake_file_size_variable_name = "clspv_builtins_header_size"
+  clspv_bake_file_data_base_variable_name = "opencl_base_builtins_header_data"
+  clspv_bake_file_size_base_variable_name = "opencl_base_builtins_header_size"
+
+  # clspv builtin library variable names
+  clspv_library_data_var_name = "clspv_builtin_library_data"
+  clspv_library_size_var_name = "clspv_builtin_library_size"
+  clspv64_library_data_var_name = "clspv64_builtin_library_data"
+  clspv64_library_size_var_name = "clspv64_builtin_library_size"
+}
+
+# Action scripts to generate headers
+action("clspv_c_strings") {
+  script = "src/cmake/spirv_c_strings.py"
+
+  inputs =
+      [ "${spirv_tools_spirv_headers_dir}/include/spirv/unified1/spirv.hpp" ]
+
+  outputs = [ "$target_gen_dir/clspv/spirv_c_strings.hpp" ]
+
+  args = [
+    "--input-file=" + rebase_path(inputs[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--namespace=" + spirv_namespace_strings,
+  ]
+}
+
+action("clspv_glsl") {
+  script = "src/cmake/spirv_ext_inst.py"
+
+  inputs = [ "${spirv_tools_spirv_headers_dir}/include/spirv/unified1/extinst.glsl.std.450.grammar.json" ]
+
+  outputs = [ "$target_gen_dir/clspv/spirv_glsl.hpp" ]
+
+  args = [
+    "--input-file=" + rebase_path(inputs[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--namespace=" + spirv_namespace_glsl,
+  ]
+}
+
+action("clspv_reflection") {
+  script = "src/cmake/spirv_ext_inst.py"
+
+  inputs = [ "${spirv_tools_spirv_headers_dir}/include/spirv/unified1/extinst.nonsemantic.clspvreflection.grammar.json" ]
+
+  outputs = [ "$target_gen_dir/clspv/spirv_reflection.hpp" ]
+
+  args = [
+    "--input-file=" + rebase_path(inputs[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--namespace=" + spirv_namespace_reflection,
+  ]
+}
+
+action("clspv-builtins") {
+  script = "src/cmake/define_clspv_builtins.py"
+
+  outputs = [ "$target_gen_dir/clspv-builtins.h" ]
+
+  args = [ "--output-file=" + rebase_path(outputs[0], root_build_dir) ]
+}
+
+# The *.bc files are prebuilt binaries in the clspv. If these need to be regenerated, please refer
+# to the clspv README.md file for instructions.
+action("clspv_builtin_library") {
+  script = "src/cmake/bake_file.py"
+  inputs = [ "src/cmake/clspv--.bc" ]
+  outputs = [ "$target_gen_dir/clspv/clspv_builtin_library.h" ]
+
+  args = [
+    "--input-header-file=" + rebase_path(inputs[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--header-var=" + clspv_library_data_var_name,
+    "--header-size=" + clspv_library_size_var_name,
+  ]
+}
+
+action("clspv64_builtin_library") {
+  script = "src/cmake/bake_file.py"
+  inputs = [ "src/cmake/clspv64--.bc" ]
+  outputs = [ "$target_gen_dir/clspv/clspv64_builtin_library.h" ]
+
+  args = [
+    "--input-header-file=" + rebase_path(inputs[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--header-var=" + clspv64_library_data_var_name,
+    "--header-size=" + clspv64_library_size_var_name,
+  ]
+}
+
+action("clspv_baked_opencl_header") {
+  script =
+      "src/cmake/bake_file.py"  # cannot use data_deps as that's a rutime dep
+  deps = [ ":clspv-builtins" ]
+
+  inputs = [
+    "$target_gen_dir/clspv-builtins.h",
+    "//$clspv_llvm_dir/clang/lib/Headers/opencl-c-base.h",
+  ]
+
+  outputs = [ "$target_gen_dir/clspv/opencl_builtins_header.h" ]
+
+  args = [
+    "--input-header-file=" + rebase_path(inputs[0], root_build_dir),
+    "--input-base-file=" + rebase_path(inputs[1], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+    "--header-var=" + clspv_bake_file_data_variable_name,
+    "--header-size-var=" + clspv_bake_file_size_variable_name,
+    "--base-var=" + clspv_bake_file_data_base_variable_name,
+    "--base-size-var=" + clspv_bake_file_size_base_variable_name,
+  ]
+}
+
+# CLSPV Lib Targets
+# a common config that will be used by all the clspv targets
+config("clspv_common_config") {
+  include_dirs = [
+    "src/include",
+    "${spirv_tools_spirv_headers_dir}/include",
+    "$root_gen_dir",
+    "$target_gen_dir/../",
+  ]
+  if (current_os != "win") {
+    cflags = [ "-Wno-deprecated-declarations" ]
+  }
+}
+
+source_set("clspv_passes") {
+  sources = [
+    "src/lib/AddFunctionAttributesPass.cpp",
+    "src/lib/AllocateDescriptorsPass.cpp",
+    "src/lib/AnnotationToMetadataPass.cpp",
+    "src/lib/ArgKind.cpp",
+    "src/lib/AutoPodArgsPass.cpp",
+    "src/lib/BitcastUtils.cpp",
+    "src/lib/Builtins.cpp",
+    "src/lib/CallGraphOrderedFunctions.cpp",
+    "src/lib/ClusterConstants.cpp",
+    "src/lib/ClusterPodKernelArgumentsPass.cpp",
+    "src/lib/ComputeStructuredOrder.cpp",
+    "src/lib/ConstantEmitter.cpp",
+    "src/lib/Constants.cpp",
+    "src/lib/DeclarePushConstantsPass.cpp",
+    "src/lib/DefineOpenCLWorkItemBuiltinsPass.cpp",
+    "src/lib/DescriptorCounter.cpp",
+    "src/lib/DirectResourceAccessPass.cpp",
+    "src/lib/FeatureMacro.cpp",
+    "src/lib/FixupBuiltinsPass.cpp",
+    "src/lib/FixupStructuredCFGPass.cpp",
+    "src/lib/FunctionInternalizerPass.cpp",
+    "src/lib/HideConstantLoadsPass.cpp",
+    "src/lib/InlineEntryPointsPass.cpp",
+    "src/lib/InlineFuncWithImageMetadataGetterPass.cpp",
+    "src/lib/InlineFuncWithPointerBitCastArgPass.cpp",
+    "src/lib/InlineFuncWithPointerToFunctionArgPass.cpp",
+    "src/lib/InlineFuncWithReadImage3DNonLiteralSampler.cpp",
+    "src/lib/InlineFuncWithSingleCallSitePass.cpp",
+    "src/lib/KernelArgNamesToMetadataPass.cpp",
+    "src/lib/Layout.cpp",
+    "src/lib/LogicalPointerToIntPass.cpp",
+    "src/lib/LongVectorLoweringPass.cpp",
+    "src/lib/LowerAddrSpaceCastPass.cpp",
+    "src/lib/LowerPrivatePointerPHIPass.cpp",
+    "src/lib/MultiVersionUBOFunctionsPass.cpp",
+    "src/lib/NativeMathPass.cpp",
+    "src/lib/NormalizeGlobalVariable.cpp",
+    "src/lib/OpenCLInlinerPass.cpp",
+    "src/lib/Option.cpp",
+    "src/lib/Passes.cpp",
+    "src/lib/PhysicalPointerArgsPass.cpp",
+    "src/lib/PrintfPass.cpp",
+    "src/lib/PushConstant.cpp",
+    "src/lib/RemoveUnusedArguments.cpp",
+    "src/lib/ReorderBasicBlocksPass.cpp",
+    "src/lib/ReplaceLLVMIntrinsicsPass.cpp",
+    "src/lib/ReplaceOpenCLBuiltinPass.cpp",
+    "src/lib/ReplacePointerBitcastPass.cpp",
+    "src/lib/RewriteInsertsPass.cpp",
+    "src/lib/RewritePackedStructs.cpp",
+    "src/lib/SPIRVOp.cpp",
+    "src/lib/SPIRVProducerPass.cpp",
+    "src/lib/SamplerUtils.cpp",
+    "src/lib/ScalarizePass.cpp",
+    "src/lib/SetImageMetadataPass.cpp",
+    "src/lib/ShareModuleScopeVariables.cpp",
+    "src/lib/SignedCompareFixupPass.cpp",
+    "src/lib/SimplifyPointerBitcastPass.cpp",
+    "src/lib/SpecConstant.cpp",
+    "src/lib/SpecializeImageTypes.cpp",
+    "src/lib/SplatArgPass.cpp",
+    "src/lib/SplatSelectCondition.cpp",
+    "src/lib/StripFreezePass.cpp",
+    "src/lib/ThreeElementVectorLoweringPass.cpp",
+    "src/lib/Types.cpp",
+    "src/lib/UBOTypeTransformPass.cpp",
+    "src/lib/UndoBoolPass.cpp",
+    "src/lib/UndoByvalPass.cpp",
+    "src/lib/UndoGetElementPtrConstantExprPass.cpp",
+    "src/lib/UndoInstCombinePass.cpp",
+    "src/lib/UndoSRetPass.cpp",
+    "src/lib/UndoTranslateSamplerFoldPass.cpp",
+    "src/lib/UndoTruncateToOddIntegerPass.cpp",
+    "src/lib/WrapKernelPass.cpp",
+    "src/lib/ZeroInitializeAllocasPass.cpp",
+  ]
+
+  deps = [
+    ":clspv_c_strings",
+    ":clspv_glsl",
+    ":clspv_reflection",
+    "gn/llvm/config:llvm-config",
+    "gn/llvm/sources:clspv_llvm_components",
+    "//third_party/spirv-headers/src:spv_headers",
+  ]
+
+  configs += [
+    ":clspv_common_config",
+    "gn/llvm/sources:clspv_llvm_private_config",
+  ]
+
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  include_dirs = [ "$root_gen_dir/$clspv_llvm_dir" ]
+}
+
+static_library("clspv_core") {
+  configs += [ ":clspv_common_config" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+  deps = [
+    "gn/llvm/sources:clspv_clang_lib_ast",
+    "gn/llvm/sources:clspv_clang_lib_basic",
+    "gn/llvm/sources:clspv_clang_lib_codegen",
+    "gn/llvm/sources:clspv_clang_lib_frontend",
+    "gn/llvm/sources:clspv_clang_lib_serialization",
+
+    # llvm/clang
+    ":clspv64_builtin_library",
+    ":clspv_baked_opencl_header",
+    ":clspv_builtin_library",
+    ":clspv_passes",
+    "gn/llvm/sources:clspv_llvm_components",
+    "gn/llvm/sources:clspv_llvm_lib_irreader",
+    "gn/llvm/sources:clspv_llvm_lib_linker",
+  ]
+  sources = [
+    "src/lib/Compiler.cpp",
+    "src/lib/FrontendPlugin.cpp",
+    "src/lib/Sampler.cpp",
+  ]
+  include_dirs = [
+    "//$clspv_llvm_dir/clang/include",
+    "//$clspv_llvm_dir/llvm/include",
+    "$root_gen_dir/$clspv_llvm_dir/",
+    "$target_gen_dir",
+    "$root_gen_dir/$clspv_llvm_dir/clang/include",
+  ]
+}
+
+shared_library("clspv_core_shared") {
+  configs += [ ":clspv_common_config" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  if (is_android) {
+    # Removing this config, otherwise clspv API will not be visable
+    configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
+  }
+
+  deps = [
+    "gn/llvm/sources:clspv_clang_lib_ast",
+    "gn/llvm/sources:clspv_clang_lib_basic",
+    "gn/llvm/sources:clspv_clang_lib_codegen",
+    "gn/llvm/sources:clspv_clang_lib_frontend",
+    "gn/llvm/sources:clspv_clang_lib_serialization",
+
+    # llvm/clang
+    ":clspv64_builtin_library",
+    ":clspv_baked_opencl_header",
+    ":clspv_builtin_library",
+    ":clspv_passes",
+    "gn/llvm/sources:clspv_llvm_components",
+    "gn/llvm/sources:clspv_llvm_lib_irreader",
+    "gn/llvm/sources:clspv_llvm_lib_linker",
+  ]
+  sources = [
+    "src/lib/Compiler.cpp",
+    "src/lib/FrontendPlugin.cpp",
+    "src/lib/Sampler.cpp",
+  ]
+  include_dirs = [
+    "//$clspv_llvm_dir/clang/include",
+    "//$clspv_llvm_dir/llvm/include",
+    "$root_gen_dir/$clspv_llvm_dir/",
+    "$target_gen_dir",
+    "$root_gen_dir/$clspv_llvm_dir/clang/include",
+  ]
+}
+
+# CLSPV Tools Targets
+config("clspv_opt_config") {
+  include_dirs = [
+    "src/include",
+    "$clspv_llvm_dir/llvm/tools/opt",
+    "$root_gen_dir/$clspv_llvm_dir",
+  ]
+  configs = [ "gn/build:llvm_code" ]
+}
+
+executable("clspv-opt") {
+  sources = [ "src/tools/clspv-opt/main.cpp" ]
+
+  configs += [ ":clspv_opt_config" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  deps = [ ":clspv_passes" ]
+}
+
+executable("clspv") {
+  sources = [ "src/tools/driver/main.cpp" ]
+
+  configs += [ ":clspv_common_config" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  include_dirs = [
+    "$target_gen_dir",
+    "$root_gen_dir/$clspv_llvm_dir",
+  ]
+
+  deps = [ ":clspv_core" ]
+}
+
+executable("clspv-reflection") {
+  sources = [
+    "src/tools/reflection/ReflectionParser.cpp",
+    "src/tools/reflection/main.cpp",
+  ]
+
+  configs += [ ":clspv_common_config" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  deps = [
+    ":clspv_core",
+    ":clspv_reflection",
+    "${spirv_tools_dir}:spvtools_link",
+    "//third_party/spirv-headers/src:spv_headers",
+  ]
+
+  include_dirs = [
+    "$spirv_tools_spirv_headers_dir/include",
+    "$target_gen_dir",
+  ]
+}
+
+group("default") {
+  deps = [
+    ":clspv",
+    ":clspv-opt",
+    ":clspv-reflection",
+  ]
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/extras/chrome/cc/raster_task.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/selection.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-e-chrome-cc-raster-task-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #heading {
+      flex: 0 0 auto;
+    }
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+
+    <div id="heading">
+      Rasterization costs in
+      <tr-ui-a-analysis-link id="link"></tr-ui-a-analysis-link>
+    </div>
+    <tr-ui-b-table id="content"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'tr-ui-e-chrome-cc-raster-task-view',
+
+  created() {
+    this.selection_ = undefined;
+  },
+
+  set selection(selection) {
+    this.selection_ = selection;
+
+    this.updateContents_();
+  },
+
+  updateColumns_(hadCpuDurations) {
+    const timeSpanConfig = {
+      unit: tr.b.Unit.byName.timeDurationInMs,
+      ownerDocument: this.ownerDocument
+    };
+
+    const columns = [
+      {
+        title: 'Layer',
+        value(row) {
+          if (row.isTotals) return 'Totals';
+          if (row.layer) {
+            const linkEl = document.createElement('tr-ui-a-analysis-link');
+            linkEl.setSelectionAndContent(
+                function() {
+                  return new tr.ui.e.chrome.cc.LayerSelection(row.layer);
+                },
+                'Layer ' + row.layerId);
+            return linkEl;
+          }
+          return 'Layer ' + row.layerId;
+        },
+        width: '250px'
+      },
+      {
+        title: 'Num Tiles',
+        value(row) { return row.numTiles; },
+        cmp(a, b) { return a.numTiles - b.numTiles; }
+      },
+      {
+        title: 'Num Analysis Tasks',
+        value(row) { return row.numAnalysisTasks; },
+        cmp(a, b) {
+          return a.numAnalysisTasks - b.numAnalysisTasks;
+        }
+      },
+      {
+        title: 'Num Raster Tasks',
+        value(row) { return row.numRasterTasks; },
+        cmp(a, b) { return a.numRasterTasks - b.numRasterTasks; }
+      },
+      {
+        title: 'Wall Duration (ms)',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.duration, timeSpanConfig);
+        },
+        cmp(a, b) { return a.duration - b.duration; }
+      }
+    ];
+
+    if (hadCpuDurations) {
+      columns.push({
+        title: 'CPU Duration (ms)',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.cpuDuration, timeSpanConfig);
+        },
+        cmp(a, b) { return a.cpuDuration - b.cpuDuration; }
+      });
+    }
+
+    let colWidthPercentage;
+    if (columns.length === 1) {
+      colWidthPercentage = '100%';
+    } else {
+      colWidthPercentage = (100 / (columns.length - 1)).toFixed(3) + '%';
+    }
+
+    for (let i = 1; i < columns.length; i++) {
+      columns[i].width = colWidthPercentage;
+    }
+
+    this.$.content.tableColumns = columns;
+    this.$.content.sortColumnIndex = columns.length - 1;
+  },
+
+  updateContents_() {
+    const table = this.$.content;
+
+    if (this.selection_.length === 0) {
+      this.$.link.setSelectionAndContent(undefined, '');
+      table.tableRows = [];
+      table.footerRows = [];
+      table.rebuild();
+      return;
+    }
+    // LTHI link.
+    const lthi = tr.e.cc.getTileFromRasterTaskSlice(
+        tr.b.getFirstElement(this.selection_)).containingSnapshot;
+    this.$.link.setSelectionAndContent(function() {
+      return new tr.model.EventSet(lthi);
+    }, lthi.userFriendlyName);
+
+    // Get costs by layer.
+    const costsByLayerId = {};
+    function getCurrentCostsForLayerId(tile) {
+      const layerId = tile.layerId;
+      const lthi = tile.containingSnapshot;
+      let layer;
+      if (lthi.activeTree) {
+        layer = lthi.activeTree.findLayerWithId(layerId);
+      }
+      if (layer === undefined && lthi.pendingTree) {
+        layer = lthi.pendingTree.findLayerWithId(layerId);
+      }
+      if (costsByLayerId[layerId] === undefined) {
+        costsByLayerId[layerId] = {
+          layerId,
+          layer,
+          numTiles: 0,
+          numAnalysisTasks: 0,
+          numRasterTasks: 0,
+          duration: 0,
+          cpuDuration: 0
+        };
+      }
+      return costsByLayerId[layerId];
+    }
+
+    let totalDuration = 0;
+    let totalCpuDuration = 0;
+    let totalNumAnalyzeTasks = 0;
+    let totalNumRasterizeTasks = 0;
+    let hadCpuDurations = false;
+
+    const tilesThatWeHaveSeen = {};
+
+    this.selection_.forEach(function(slice) {
+      const tile = tr.e.cc.getTileFromRasterTaskSlice(slice);
+      const curCosts = getCurrentCostsForLayerId(tile);
+
+      if (!tilesThatWeHaveSeen[tile.objectInstance.id]) {
+        tilesThatWeHaveSeen[tile.objectInstance.id] = true;
+        curCosts.numTiles += 1;
+      }
+
+      if (tr.e.cc.isSliceDoingAnalysis(slice)) {
+        curCosts.numAnalysisTasks += 1;
+        totalNumAnalyzeTasks += 1;
+      } else {
+        curCosts.numRasterTasks += 1;
+        totalNumRasterizeTasks += 1;
+      }
+      curCosts.duration += slice.duration;
+      totalDuration += slice.duration;
+      if (slice.cpuDuration !== undefined) {
+        curCosts.cpuDuration += slice.cpuDuration;
+        totalCpuDuration += slice.cpuDuration;
+        hadCpuDurations = true;
+      }
+    });
+
+    // Apply to the table.
+    this.updateColumns_(hadCpuDurations);
+    table.tableRows = Object.values(costsByLayerId);
+    table.rebuild();
+
+    // Footer.
+    table.footerRows = [
+      {
+        isTotals: true,
+        numTiles: Object.keys(tilesThatWeHaveSeen).length,
+        numAnalysisTasks: totalNumAnalyzeTasks,
+        numRasterTasks: totalNumRasterizeTasks,
+        duration: totalDuration,
+        cpuDuration: totalCpuDuration
+      }
+    ];
+  }
+});
+</script>

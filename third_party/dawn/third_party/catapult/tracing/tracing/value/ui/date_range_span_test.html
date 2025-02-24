@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/date_range.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate_one', function() {
+    const diagnostic = new tr.v.d.DateRange(1496693745398);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-DATE-RANGE-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+
+  test('instantiate_merged', function() {
+    const diagnostic = new tr.v.d.DateRange(1496693745398);
+    diagnostic.addDiagnostic(new tr.v.d.DateRange(1496693745399));
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-DATE-RANGE-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+});
+</script>

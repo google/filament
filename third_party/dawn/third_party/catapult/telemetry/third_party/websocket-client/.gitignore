@@ -1,0 +1,8 @@
+*.pyc
+*~
+*\#
+.\#*
+
+build
+dist
+websocket_client.egg-info

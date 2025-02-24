@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvr_1_1ui_1_1impl_1_1_i2d_component.html" title="A component that can be positioned in 2D using 2d position, scale, rotation and anchored using its ce..." alt="" coords="5,22,208,48"/>
+<area shape="rect" id="node2" href="$classpvr_1_1ui_1_1impl_1_1_image__.html" title="Use this class through the reference counted Framework Object pvr::ui::Image. Represents a 2D Image (..." alt="" coords="256,22,412,48"/>
+<area shape="rect" id="node3" href="$classpvr_1_1ui_1_1impl_1_1_pixel_group__.html" title="This class is wrapped into the pvr::ui::Group reference counted Framework Object. Use to apply a tran..." alt="" coords="464,22,651,48"/>
+<area shape="rect" id="node4" href="$classpvr_1_1ui_1_1impl_1_1_text__.html" title="Use this class through the reference counted Framework Object pvr::ui::Text. Represents some text tha..." alt="" coords="263,72,405,99"/>
+<area shape="rect" id="node5" href="$classpvr_1_1ui_1_1impl_1_1_sprite__.html" title="Base sprite class. Use through the Sprite framework object. Represents something that can be rendered..." alt="" coords="30,72,183,99"/>
+<area shape="rect" id="node6" href="$classpvr_1_1ui_1_1impl_1_1_group__.html" title="Abstract container for sprites. See MatrixGroup or PixelGroup. A group contains references to a numbe..." alt="" coords="257,123,411,150"/>
+<area shape="rect" id="node7" href="$classpvr_1_1ui_1_1impl_1_1_matrix_group__.html" title="This class is wrapped into the pvr::ui::Group reference counted Framework Object. Use to apply a tran..." alt="" coords="460,123,655,150"/>
+</map>

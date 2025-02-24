@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  function isValidColorId(colorId) {
+    return typeof(colorId) === 'number' &&
+        colorId >= 0 &&
+        colorId <= 200;
+  }
+
+  test('getColorIdForReservedName', function() {
+    assert.isTrue(isValidColorId(
+        ColorScheme.getColorIdForReservedName('black')));
+    assert.throws(ColorScheme.getColorIdForReservedName.bind(
+        undefined, 'NOT_A_RESERVED_NAME'));
+    assert.throws(ColorScheme.getColorIdForReservedName.bind(
+        undefined, 'constructor'));
+  });
+
+  test('getColorForReservedNameAsString', function() {
+    assert.strictEqual('rgb(0,0,0)',
+        ColorScheme.getColorForReservedNameAsString('black'));
+    assert.throws(ColorScheme.getColorForReservedNameAsString.bind(
+        undefined, 'NOT_A_RESERVED_NAME'));
+    assert.throws(ColorScheme.getColorForReservedNameAsString.bind(
+        undefined, 'constructor'));
+  });
+
+  test('getColorIdForGeneralPurposeString', function() {
+    assert.isTrue(isValidColorId(
+        ColorScheme.getColorIdForGeneralPurposeString('black')));
+    assert.isTrue(isValidColorId(
+        ColorScheme.getColorIdForGeneralPurposeString('NOT_A_RESERVED_NAME')));
+    assert.isTrue(isValidColorId(
+        ColorScheme.getColorIdForGeneralPurposeString('constructor')));
+  });
+
+  test('getAnotherColorId', function() {
+    const colorId = ColorScheme.getColorIdForGeneralPurposeString('black');
+    assert.isTrue(isValidColorId(
+        ColorScheme.getAnotherColorId(colorId, 300)));
+  });
+
+  test('getVariantColorId', function() {
+    const colorId = ColorScheme.getColorIdForGeneralPurposeString('black');
+    const offset = ColorScheme.properties.brightenedOffsets[0];
+    assert.isTrue(isValidColorId(
+        ColorScheme.getVariantColorId(colorId, offset)));
+  });
+});
+</script>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/ui/base/hot_key.html">
+
+<dom-module id='tv-ui-b-hotkey-controller'>
+  <template>
+    <div></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'tv-ui-b-hotkey-controller',
+
+  created() {
+    this.isAttached_ = false;
+    this.globalMode_ = false;
+    this.slavedToParentController_ = undefined;
+    this.curHost_ = undefined;
+    this.childControllers_ = [];
+
+    this.bubblingKeyDownHotKeys_ = {};
+    this.capturingKeyDownHotKeys_ = {};
+    this.bubblingKeyPressHotKeys_ = {};
+    this.capturingKeyPressHotKeys_ = {};
+
+    this.onBubblingKeyDown_ = this.onKey_.bind(this, false);
+    this.onCapturingKeyDown_ = this.onKey_.bind(this, true);
+    this.onBubblingKeyPress_ = this.onKey_.bind(this, false);
+    this.onCapturingKeyPress_ = this.onKey_.bind(this, true);
+  },
+
+  attached() {
+    this.isAttached_ = true;
+
+    const host = this.findHost_();
+    if (host.__hotkeyController) {
+      throw new Error('Multiple hotkey controllers attached to this host');
+    }
+
+    host.__hotkeyController = this;
+    this.curHost_ = host;
+
+    let parentElement;
+    if (host.parentElement) {
+      parentElement = host.parentElement;
+    } else {
+      parentElement = Polymer.dom(host).parentNode.host;
+    }
+    const parentController = tr.b.getHotkeyControllerForElement(
+        parentElement);
+
+    if (parentController) {
+      this.slavedToParentController_ = parentController;
+      parentController.addChildController_(this);
+      return;
+    }
+
+    host.addEventListener('keydown', this.onBubblingKeyDown_, false);
+    host.addEventListener('keydown', this.onCapturingKeyDown_, true);
+    host.addEventListener('keypress', this.onBubblingKeyPress_, false);
+    host.addEventListener('keypress', this.onCapturingKeyPress_, true);
+  },
+
+  detached() {
+    this.isAttached_ = false;
+
+    const host = this.curHost_;
+    if (!host) return;
+
+    delete host.__hotkeyController;
+    this.curHost_ = undefined;
+
+    if (this.slavedToParentController_) {
+      this.slavedToParentController_.removeChildController_(this);
+      this.slavedToParentController_ = undefined;
+      return;
+    }
+
+    host.removeEventListener('keydown', this.onBubblingKeyDown_, false);
+    host.removeEventListener('keydown', this.onCapturingKeyDown_, true);
+    host.removeEventListener('keypress', this.onBubblingKeyPress_, false);
+    host.removeEventListener('keypress', this.onCapturingKeyPress_, true);
+  },
+
+  addChildController_(controller) {
+    const i = this.childControllers_.indexOf(controller);
+    if (i !== -1) {
+      throw new Error('Controller already registered');
+    }
+    this.childControllers_.push(controller);
+  },
+
+  removeChildController_(controller) {
+    const i = this.childControllers_.indexOf(controller);
+    if (i === -1) {
+      throw new Error('Controller not registered');
+    }
+    this.childControllers_.splice(i, 1);
+    return controller;
+  },
+
+  getKeyMapForEventType_(eventType, useCapture) {
+    if (eventType === 'keydown') {
+      if (!useCapture) {
+        return this.bubblingKeyDownHotKeys_;
+      }
+      return this.capturingKeyDownHotKeys_;
+    }
+    if (eventType === 'keypress') {
+      if (!useCapture) {
+        return this.bubblingKeyPressHotKeys_;
+      }
+      return this.capturingKeyPressHotKeys_;
+    }
+
+    throw new Error('Unsupported key event');
+  },
+
+  addHotKey(hotKey) {
+    if (!(hotKey instanceof tr.ui.b.HotKey)) {
+      throw new Error('hotKey must be a tr.ui.b.HotKey');
+    }
+
+    const keyMap = this.getKeyMapForEventType_(
+        hotKey.eventType, hotKey.useCapture);
+
+    for (let i = 0; i < hotKey.keyCodes.length; i++) {
+      const keyCode = hotKey.keyCodes[i];
+      if (keyMap[keyCode]) {
+        throw new Error('Key is already bound for keyCode=' + keyCode);
+      }
+    }
+
+    for (let i = 0; i < hotKey.keyCodes.length; i++) {
+      const keyCode = hotKey.keyCodes[i];
+      keyMap[keyCode] = hotKey;
+    }
+    return hotKey;
+  },
+
+  removeHotKey(hotKey) {
+    if (!(hotKey instanceof tr.ui.b.HotKey)) {
+      throw new Error('hotKey must be a tr.ui.b.HotKey');
+    }
+
+    const keyMap = this.getKeyMapForEventType_(
+        hotKey.eventType, hotKey.useCapture);
+
+    for (let i = 0; i < hotKey.keyCodes.length; i++) {
+      const keyCode = hotKey.keyCodes[i];
+      if (!keyMap[keyCode]) {
+        throw new Error('Key is not bound for keyCode=' + keyCode);
+      }
+      keyMap[keyCode] = hotKey;
+    }
+    for (let i = 0; i < hotKey.keyCodes.length; i++) {
+      const keyCode = hotKey.keyCodes[i];
+      delete keyMap[keyCode];
+    }
+    return hotKey;
+  },
+
+  get globalMode() {
+    return this.globalMode_;
+  },
+
+  set globalMode(globalMode) {
+    const wasAttached = this.isAttached_;
+    if (wasAttached) {
+      this.detached();
+    }
+    this.globalMode_ = !!globalMode;
+    if (wasAttached) {
+      this.attached();
+    }
+  },
+
+  get topmostConroller_() {
+    if (this.slavedToParentController_) {
+      return this.slavedToParentController_.topmostConroller_;
+    }
+    return this;
+  },
+
+  childRequestsGeneralFocus(child) {
+    const topmost = this.topmostConroller_;
+    if (topmost.curHost_) {
+      if (topmost.curHost_.hasAttribute('tabIndex')) {
+        topmost.curHost_.focus();
+      } else {
+        if (document.activeElement) {
+          document.activeElement.blur();
+        }
+      }
+    } else {
+      if (document.activeElement) {
+        document.activeElement.blur();
+      }
+    }
+  },
+
+  childRequestsBlur(child) {
+    child.blur();
+
+    const topmost = this.topmostConroller_;
+    if (topmost.curHost_) {
+      topmost.curHost_.focus();
+    }
+  },
+
+  findHost_() {
+    if (this.globalMode_) return wrap(document.body);
+    if (this.parentElement) return this.parentElement;
+    if (!Polymer.dom(this).parentNode) return this.host;
+
+    let node = this.parentNode;
+    while (Polymer.dom(node).parentNode) node = Polymer.dom(node).parentNode;
+    return node.host;
+  },
+
+  appendMatchingHotKeysTo_(matchedHotKeys,
+      useCapture, e) {
+    const localKeyMap = this.getKeyMapForEventType_(e.type, useCapture);
+    const localHotKey = localKeyMap[e.keyCode];
+    if (localHotKey) {
+      matchedHotKeys.push(localHotKey);
+    }
+
+    for (let i = 0; i < this.childControllers_.length; i++) {
+      const controller = this.childControllers_[i];
+      controller.appendMatchingHotKeysTo_(matchedHotKeys,
+          useCapture, e);
+    }
+  },
+
+  onKey_(useCapture, e) {
+    // Keys dispatched to INPUT elements still bubble, even when they're
+    // handled. So, skip any events that targeted the input element.
+    if (!useCapture && e.path[0].tagName === 'INPUT') return;
+
+    let sortedControllers;
+
+    const matchedHotKeys = [];
+    this.appendMatchingHotKeysTo_(matchedHotKeys, useCapture, e);
+
+    if (matchedHotKeys.length === 0) return false;
+
+    if (matchedHotKeys.length > 1) {
+      // TODO(nduca): To do support for coddling hotKeys, we need to
+      // sort the listeners by their capturing/bubbling order and then pick
+      // the one that would topologically win the tie, per DOM dispatch rules.
+      throw new Error('More than one hotKey is currently unsupported');
+    }
+
+    const hotKey = matchedHotKeys[0];
+
+    let prevented = 0;
+    prevented |= hotKey.call(e);
+
+    // We want to return false if preventDefaulted, or one of the handlers
+    // return false. But otherwise, we want to return undefiend.
+    return !prevented && e.defaultPrevented;
+  }
+});
+</script>
+<script>
+'use strict';
+tr.exportTo('tr.b', function() {
+  function getHotkeyControllerForElement(refElement) {
+    let curElement = refElement;
+    while (curElement) {
+      if (curElement.tagName === 'tv-ui-b-hotkey-controller') {
+        return curElement;
+      }
+
+      if (curElement.__hotkeyController) {
+        return curElement.__hotkeyController;
+      }
+
+      if (curElement.parentElement) {
+        curElement = curElement.parentElement;
+        continue;
+      }
+
+      // Probably inside a shadow
+      curElement = findHost(curElement);
+    }
+    return undefined;
+  }
+
+  function findHost(initialNode) {
+    let node = initialNode;
+    while (Polymer.dom(node).parentNode) {
+      node = Polymer.dom(node).parentNode;
+    }
+    return node.host;
+  }
+
+  return {
+    getHotkeyControllerForElement,
+  };
+});
+</script>

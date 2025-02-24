@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import json
+import sys
+import os
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+from tracing_build import render_histograms_viewer
+
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Extract HistogramSet JSON from results.html.',
+      add_help=False)
+  parser.add_argument('html_path', metavar='HTML_PATH',
+                      help='HTML file path (input).')
+  parser.add_argument('json_path', metavar='JSON_PATH',
+                      help='JSON file path (input/output).')
+  parser.add_argument('-h', '--help', action='help',
+                      help='Show this help message and exit.')
+  args = parser.parse_args()
+
+  histograms = render_histograms_viewer.ReadExistingResults(
+      open(args.html_path, 'r').read())
+  if os.path.exists(args.json_path):
+    histograms.extend(json.load(open(args.json_path, 'r')))
+  json.dump(histograms, open(args.json_path, 'w'))
+
+if __name__ == '__main__':
+  sys.exit(main())

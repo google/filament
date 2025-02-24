@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains implementations of the following metrics.
+ *
+ * The addCpuSegmentCostHistograms method can generate the following sets of
+ * metrics, dependeing on the input values for segments, and segmentCostFunc.
+ *
+ * thread_{thread group}_cpu_time_per_frame
+ * ========================================
+ * segments: display compositor's frames
+ * segmentCostFunc: thread.getCpuTimeForRange
+ *
+ * This set of metrics show the distribution of CPU usage of a thread
+ * group in each display compositor's frame.
+ *
+ * tasks_per_frame_{thread group}
+ * ==============================
+ * segments: display compositor's frames
+ * segmentCostFunc: thread.getNumToplevelSlicesForRange
+ *
+ * This set of metrics show the distribution of the number of task in each
+ * display compositor's frame of a thread group.
+ *
+ * The addCpuWallTimeHistogram method generates the metric:
+ * cpu_wall_time_ratio
+ * ==================
+ * segments: display compositor's frames
+ *
+ * This metric shows the ratio of cpu usage to wall time.
+ *
+ * Note: the CPU usage in all above-mentioned metrics, is approximated from
+ * top-level trace events in each thread; it does not come from the OS. So, the
+ * metric may be noisy and not be very meaningful for threads that do not have a
+ * message loop.
+ */
+tr.exportTo('tr.metrics.rendering', function() {
+  const UNKNOWN_THREAD_NAME = 'Unknown';
+
+  const CATEGORY_THREAD_MAP = new Map();
+  CATEGORY_THREAD_MAP.set('total_all', [/.*/]);
+  CATEGORY_THREAD_MAP.set(
+      'browser', [/^Browser Compositor$/, /^CrBrowserMain$/]);
+  CATEGORY_THREAD_MAP.set('display_compositor', [/^VizCompositorThread$/]);
+  CATEGORY_THREAD_MAP.set(
+      'GPU', [
+        /^Chrome_InProcGpuThread$/, /^CrGpuMain$/, /^CompositorGpuThread$/]);
+  CATEGORY_THREAD_MAP.set('IO', [/IOThread/]);
+  CATEGORY_THREAD_MAP.set(
+      'raster', [
+        /CompositorTileWorker/, /^ThreadPoolForegroundWorker$/]);
+  CATEGORY_THREAD_MAP.set('renderer_compositor', [/^Compositor$/]);
+  CATEGORY_THREAD_MAP.set('renderer_main', [/^CrRendererMain$/]);
+  CATEGORY_THREAD_MAP.set(
+      'total_rendering', [
+        /^Browser Compositor$/, /^Chrome_InProcGpuThread$/, /^Compositor$/,
+        /CompositorTileWorker/, /^ThreadPoolForegroundWorker$/,
+        /^CrBrowserMain$/, /^CrGpuMain$/, /^CompositorGpuThread$/,
+        /^CrRendererMain$/, /IOThread/, /^VizCompositorThread$/]);
+
+
+  const ALL_CATEGORIES = [...CATEGORY_THREAD_MAP.keys(), 'other'];
+
+  function addValueToMap_(map, key, value) {
+    const oldValue = map.get(key) || 0;
+    map.set(key, oldValue + value);
+  }
+
+  function addToArrayInMap_(map, key, value) {
+    const arr = map.get(key) || [];
+    arr.push(value);
+    map.set(key, arr);
+  }
+
+  function* getCategories_(threadName) {
+    let isOther = true;
+    for (const [category, regexps] of CATEGORY_THREAD_MAP) {
+      for (const regexp of regexps) {
+        if (regexp.test(threadName)) {
+          if (category !== 'total_all') isOther = false;
+          yield category;
+          break;
+        }
+      }
+    }
+    if (isOther) yield 'other';
+  }
+
+  function addCpuSegmentCostHistograms(
+      histograms, model, segments, segmentCostFunc, histogramNameFunc,
+      description) {
+    const categoryValues = new Map();
+    for (const segment of segments) {
+      const threadValues = new Map();
+      // Compute and store CPU times per categories and thread name.
+      for (const thread of model.getAllThreads()) {
+        addValueToMap_(
+            threadValues,
+            thread.name || UNKNOWN_THREAD_NAME,
+            segmentCostFunc(thread, segment));
+      }
+
+      for (const [threadName, coresPerSec] of threadValues) {
+        for (const category of getCategories_(threadName)) {
+          addToArrayInMap_(categoryValues, category, coresPerSec);
+        }
+      }
+    }
+
+    const unit = tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+    for (const category of ALL_CATEGORIES) {
+      const values = categoryValues.get(category) || 0;
+      if (!values) continue;
+      const avg = values.reduce((sum, e) => sum + e, 0) / segments.length;
+      histograms.createHistogram(
+          histogramNameFunc(category), unit, avg, {
+            description,
+            summaryOptions: {},
+          });
+    }
+  }
+
+  function addCpuWallTimeHistogram(histograms, model, segments) {
+    let totalWallTime = 0;
+    let totalCpuTime = 0;
+    for (const segment of segments) {
+      for (const thread of model.getAllThreads()) {
+        totalCpuTime += thread.getCpuTimeForRange(segment.boundsRange);
+        totalWallTime += thread.getWallTimeForRange(segment.boundsRange);
+      }
+    }
+    histograms.createHistogram('cpu_wall_time_ratio',
+        tr.b.Unit.byName.unitlessNumber_biggerIsBetter,
+        totalWallTime ? totalCpuTime / totalWallTime : NaN,
+        { description: 'Ratio of total cpu-time vs. wall-time.',
+          summaryOptions: {},
+        });
+  }
+
+  return {
+    addCpuSegmentCostHistograms,
+    addCpuWallTimeHistogram,
+  };
+});
+</script>

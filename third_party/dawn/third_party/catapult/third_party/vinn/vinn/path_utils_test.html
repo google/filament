@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+This file does not use the standard test runner because it exists
+outside the tracing codebase.
+-->
+<html>
+  <head>
+    <script src="path_utils.js"></script>
+    <script src="path_utils_test.js"></script>
+    <style>
+      #result {
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="result">
+    </div>
+    <script>
+    'use strict';
+    window.addEventListener('load', function() {
+      var div = document.querySelector('#result');
+      try {
+        runTests();
+        div.textContent = 'ok';
+      } catch (e) {
+        div.textContent = e.message + '\n' + e.stack;
+        return;
+      }
+    });
+    </script>
+  </body>
+</html>

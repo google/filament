@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper code for memory dump sub-views.
+ */
+tr.exportTo('tr.ui.analysis', function() {
+  const NO_BREAK_SPACE = String.fromCharCode(160);
+  const RIGHTWARDS_ARROW = String.fromCharCode(8594);
+
+  const COLLATOR = new Intl.Collator(undefined, {numeric: true});
+
+  /**
+   * A table column for displaying memory dump row titles.
+   *
+   * @constructor
+   */
+  function TitleColumn(title) {
+    this.title = title;
+  }
+
+  TitleColumn.prototype = {
+    supportsCellSelection: false,
+
+    /**
+     * Get the title associated with a given row.
+     *
+     * This method will decorate the title with color and '+++'/'---' prefix if
+     * appropriate (as determined by the optional row.contexts field).
+     * Examples:
+     *
+     *   +----------------------+-----------------+--------+--------+
+     *   | Contexts provided at | Interpretation  | Prefix | Color  |
+     *   +----------------------+-----------------+--------+--------+
+     *   | 1111111111           | always present  |        |        |
+     *   | 0000111111           | added           | +++    | red    |
+     *   | 1111111000           | deleted         | ---    | green  |
+     *   | 1100111111*          | flaky           |        | purple |
+     *   | 0001001111           | added + flaky   | +++    | purple |
+     *   | 1111100010           | deleted + flaky | ---    | purple |
+     *   +----------------------+-----------------+--------+--------+
+     *
+     *   *) This means that, given a selection of 10 memory dumps, a particular
+     *      row (e.g. a process) was present in the first 2 and last 6 of them
+     *      (but not in the third and fourth dump).
+     *
+     * This method should therefore NOT be overriden by subclasses. The
+     * formatTitle method should be overriden instead when necessary.
+     */
+    value(row) {
+      const formattedTitle = this.formatTitle(row);
+
+      const contexts = row.contexts;
+      if (contexts === undefined || contexts.length === 0) {
+        return formattedTitle;
+      }
+
+      // Determine if the row was provided in the first and last row and how
+      // many times it changed between being provided and not provided.
+      const firstContext = contexts[0];
+      const lastContext = contexts[contexts.length - 1];
+      let changeDefinedContextCount = 0;
+      for (let i = 1; i < contexts.length; i++) {
+        if ((contexts[i] === undefined) !== (contexts[i - 1] === undefined)) {
+          changeDefinedContextCount++;
+        }
+      }
+
+      // Determine the color and prefix of the title.
+      let color = undefined;
+      let prefix = undefined;
+      if (!firstContext && lastContext) {
+        // The row was added.
+        color = 'red';
+        prefix = '+++';
+      } else if (firstContext && !lastContext) {
+        // The row was removed.
+        color = 'green';
+        prefix = '---';
+      }
+      if (changeDefinedContextCount > 1) {
+        // The row was flaky (added/removed more than once).
+        color = 'purple';
+      }
+
+      if (color === undefined && prefix === undefined) {
+        return formattedTitle;
+      }
+
+      const titleEl = document.createElement('span');
+      if (prefix !== undefined) {
+        const prefixEl = tr.ui.b.createSpan({textContent: prefix});
+        // Enforce same width of '+++' and '---'.
+        prefixEl.style.fontFamily = 'monospace';
+        Polymer.dom(titleEl).appendChild(prefixEl);
+        Polymer.dom(titleEl).appendChild(
+            tr.ui.b.asHTMLOrTextNode(NO_BREAK_SPACE));
+      }
+      if (color !== undefined) {
+        titleEl.style.color = color;
+      }
+      Polymer.dom(titleEl).appendChild(
+          tr.ui.b.asHTMLOrTextNode(formattedTitle));
+      return titleEl;
+    },
+
+    /**
+     * Format the title associated with a given row. This method is intended to
+     * be overriden by subclasses.
+     */
+    formatTitle(row) {
+      return row.title;
+    },
+
+    cmp(rowA, rowB) {
+      return COLLATOR.compare(rowA.title, rowB.title);
+    }
+  };
+
+  /**
+   * Abstract table column for displaying memory dump data.
+   *
+   * @constructor
+   */
+  function MemoryColumn(name, cellPath, aggregationMode) {
+    this.name = name;
+    this.cellPath = cellPath;
+    this.shouldSetContextGroup = false;
+
+    // See MemoryColumn.AggregationMode enum in this file.
+    this.aggregationMode = aggregationMode;
+  }
+
+  /**
+   * Construct columns from cells in a hierarchy of rows and a list of rules.
+   *
+   * The list of rules contains objects with three fields:
+   *
+   *   condition: Optional string or regular expression matched against the
+   *       name of a cell. If omitted, the rule will match any cell.
+   *   importance: Mandatory number which determines the final order of the
+   *       columns. The column with the highest importance will be first in the
+   *       returned array.
+   *   columnConstructor: Mandatory memory column constructor.
+   *
+   * Example:
+   *
+   *   const importanceRules = [
+   *     {
+   *       condition: 'page_size',
+   *       columnConstructor: NumericMemoryColumn,
+   *       importance: 8
+   *     },
+   *     {
+   *       condition: /size/,
+   *       columnConstructor: CustomNumericMemoryColumn,
+   *       importance: 10
+   *     },
+   *     {
+   *       // No condition: matches all columns.
+   *       columnConstructor: NumericMemoryColumn,
+   *       importance: 9
+   *     }
+   *   ];
+   *
+   * Given a name of a cell, the corresponding column constructor and
+   * importance are determined by the first rule whose condition matches the
+   * column's name. For example, given a cell with name 'inner_size', the
+   * corresponding column will be constructed using CustomNumericMemoryColumn
+   * and its importance (for sorting purposes) will be 10 (second rule).
+   *
+   * After columns are constructed for all cell names, they are sorted in
+   * descending order of importance and the resulting list is returned. In the
+   * example above, the constructed columns will be sorted into three groups as
+   * follows:
+   *
+   *      [most important, left in the resulting table]
+   *   1. columns whose name contains 'size' excluding 'page_size' because it
+   *      would have already matched the first rule (Note that string matches
+   *      must be exact so a column named 'page_size2' would not match the
+   *      first rule and would therefore belong to this group).
+   *   2. columns whose name does not contain 'size'.
+   *   3. columns whose name is 'page_size'.
+   *      [least important, right in the resulting table]
+   *
+   * where columns will be sorted alphabetically within each group.
+   *
+   * @param {!Array.<!Object>} rows
+   * @param {!Object} config
+   * @param {string} config.cellKey
+   * @param {!MemoryColumn.AggregationMode=} config.aggregationMode
+   * @param {!Array.<!{
+   *            condition: (string|!RegExp)=,
+   *            importance: number,
+   *            columnConstructor: !function(new: MemoryColumn, ...)=,
+   *            shouldSetContextGroup: boolean=
+   *        }>} config.rules
+   */
+  MemoryColumn.fromRows = function(rows, config) {
+    // Recursively find the names of all cells of the rows (and their sub-rows).
+    const cellNames = new Set();
+    function gatherCellNames(rows) {
+      rows.forEach(function(row) {
+        if (row === undefined) return;
+        const fieldCells = row[config.cellKey];
+        if (fieldCells !== undefined) {
+          for (const [fieldName, fieldCell] of Object.entries(fieldCells)) {
+            if (fieldCell === undefined || fieldCell.fields === undefined) {
+              continue;
+            }
+            cellNames.add(fieldName);
+          }
+        }
+        const subRows = row.subRows;
+        if (subRows !== undefined) {
+          gatherCellNames(subRows);
+        }
+      });
+    }
+    gatherCellNames(rows);
+
+    // Based on the provided list of rules, construct the columns and calculate
+    // their importance.
+    const positions = [];
+    cellNames.forEach(function(cellName) {
+      const cellPath = [config.cellKey, cellName];
+      const matchingRule = MemoryColumn.findMatchingRule(
+          cellName, config.rules);
+      const constructor = matchingRule.columnConstructor;
+      const column = new constructor(
+          cellName, cellPath, config.aggregationMode);
+      column.shouldSetContextGroup = !!config.shouldSetContextGroup;
+      positions.push({
+        importance: matchingRule.importance,
+        column
+      });
+    });
+
+    positions.sort(function(a, b) {
+      // Sort columns with the same importance alphabetically.
+      if (a.importance === b.importance) {
+        return COLLATOR.compare(a.column.name, b.column.name);
+      }
+
+      // Sort columns in descending order of importance.
+      return b.importance - a.importance;
+    });
+
+    return positions.map(function(position) { return position.column; });
+  };
+
+  MemoryColumn.spaceEqually = function(columns) {
+    const columnWidth = (100 / columns.length).toFixed(3) + '%';
+    columns.forEach(function(column) {
+      column.width = columnWidth;
+    });
+  };
+
+  MemoryColumn.findMatchingRule = function(name, rules) {
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      if (MemoryColumn.nameMatchesCondition(name, rule.condition)) {
+        return rule;
+      }
+    }
+    return undefined;
+  };
+
+  MemoryColumn.nameMatchesCondition = function(name, condition) {
+    // Rules without conditions match all columns.
+    if (condition === undefined) return true;
+
+    // String conditions must match the column name exactly.
+    if (typeof(condition) === 'string') return name === condition;
+
+    // If the condition is not a string, assume it is a RegExp.
+    return condition.test(name);
+  };
+
+  /** @enum */
+  MemoryColumn.AggregationMode = {
+    DIFF: 0,
+    MAX: 1
+  };
+
+  MemoryColumn.SOME_TIMESTAMPS_INFO_QUANTIFIER = 'at some selected timestamps';
+
+  MemoryColumn.prototype = {
+    get title() {
+      return this.name;
+    },
+
+    cell(row) {
+      let cell = row;
+      const cellPath = this.cellPath;
+      for (let i = 0; i < cellPath.length; i++) {
+        if (cell === undefined) return undefined;
+        cell = cell[cellPath[i]];
+      }
+      return cell;
+    },
+
+    aggregateCells(row, subRows) {
+      // No generic aggregation.
+    },
+
+    fields(row) {
+      const cell = this.cell(row);
+      if (cell === undefined) return undefined;
+      return cell.fields;
+    },
+
+    /**
+     * Format a cell associated with this column from the given row. This
+     * method is not intended to be overriden.
+     */
+    value(row) {
+      const fields = this.fields(row);
+      if (this.hasAllRelevantFieldsUndefined(fields)) return '';
+
+      // Determine the color and infos of the resulting element.
+      const contexts = row.contexts;
+      const color = this.color(fields, contexts);
+      const infos = [];
+      this.addInfos(fields, contexts, infos);
+
+      // Format the actual fields.
+      const formattedFields = this.formatFields(fields);
+
+      // If no color is specified and there are no infos, there is no need to
+      // wrap the value in a span element.#
+      if ((color === undefined || formattedFields === '') &&
+          infos.length === 0) {
+        return formattedFields;
+      }
+
+      const fieldEl = document.createElement('span');
+      fieldEl.style.display = 'flex';
+      fieldEl.style.alignItems = 'center';
+      fieldEl.style.justifyContent = 'flex-end';
+      Polymer.dom(fieldEl).appendChild(
+          tr.ui.b.asHTMLOrTextNode(formattedFields));
+
+      // Add info icons with tooltips.
+      infos.forEach(function(info) {
+        const infoEl = document.createElement('span');
+        infoEl.style.paddingLeft = '4px';
+        infoEl.style.cursor = 'help';
+        infoEl.style.fontWeight = 'bold';
+        Polymer.dom(infoEl).textContent = info.icon;
+        if (info.color !== undefined) {
+          infoEl.style.color = info.color;
+        }
+        infoEl.title = info.message;
+        Polymer.dom(fieldEl).appendChild(infoEl);
+      }, this);
+
+      // Set the color of the element.
+      if (color !== undefined) {
+        fieldEl.style.color = color;
+      }
+
+      return fieldEl;
+    },
+
+    /**
+     * Returns true iff all fields of a row which are relevant for the current
+     * aggregation mode (e.g. first and last field for diff mode) are undefined.
+     */
+    hasAllRelevantFieldsUndefined(fields) {
+      if (fields === undefined) return true;
+
+      switch (this.aggregationMode) {
+        case MemoryColumn.AggregationMode.DIFF:
+          // Only the first and last field are relevant.
+          return fields[0] === undefined &&
+              fields[fields.length - 1] === undefined;
+
+        case MemoryColumn.AggregationMode.MAX:
+        default:
+          // All fields are relevant.
+          return fields.every(function(field) { return field === undefined; });
+      }
+    },
+
+    /**
+     * Get the color of the given fields formatted by this column. At least one
+     * field relevant for the current aggregation mode is guaranteed to be
+     * defined.
+     */
+    color(fields, contexts) {
+      return undefined;
+    },
+
+    /**
+     * Format an arbitrary number of fields. At least one field relevant for
+     * the current aggregation mode is guaranteed to be defined.
+     */
+    formatFields(fields) {
+      if (fields.length === 1) {
+        return this.formatSingleField(fields[0]);
+      }
+      return this.formatMultipleFields(fields);
+    },
+
+    /**
+     * Format a single defined field.
+     *
+     * This method is intended to be overriden by field type specific columns
+     * (e.g. show '1.0 KiB' instead of '1024' for Scalar(s) representing
+     * bytes).
+     */
+    formatSingleField(field) {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * Format multiple fields. At least one field relevant for the current
+     * aggregation mode is guaranteed to be defined.
+     *
+     * The aggregation mode specializations of this method (e.g.
+     * formatMultipleFieldsDiff) are intended to be overriden by field type
+     * specific columns.
+     */
+    formatMultipleFields(fields) {
+      switch (this.aggregationMode) {
+        case MemoryColumn.AggregationMode.DIFF:
+          return this.formatMultipleFieldsDiff(
+              fields[0], fields[fields.length - 1]);
+
+        case MemoryColumn.AggregationMode.MAX:
+          return this.formatMultipleFieldsMax(fields);
+
+        default:
+          return tr.ui.b.createSpan({
+            textContent: '(unsupported aggregation mode)',
+            italic: true
+          });
+      }
+    },
+
+    formatMultipleFieldsDiff(firstField, lastField) {
+      throw new Error('Not implemented');
+    },
+
+    formatMultipleFieldsMax(fields) {
+      return this.formatSingleField(this.getMaxField(fields));
+    },
+
+    cmp(rowA, rowB) {
+      const fieldsA = this.fields(rowA);
+      const fieldsB = this.fields(rowB);
+
+      // Sanity check.
+      if (fieldsA !== undefined && fieldsB !== undefined &&
+          fieldsA.length !== fieldsB.length) {
+        throw new Error('Different number of fields');
+      }
+
+      // Handle empty fields.
+      const undefinedA = this.hasAllRelevantFieldsUndefined(fieldsA);
+      const undefinedB = this.hasAllRelevantFieldsUndefined(fieldsB);
+      if (undefinedA && undefinedB) return 0;
+      if (undefinedA) return -1;
+      if (undefinedB) return 1;
+
+      return this.compareFields(fieldsA, fieldsB);
+    },
+
+    /**
+     * Compare a pair of single or multiple fields. At least one field relevant
+     * for the current aggregation mode is guaranteed to be defined in each of
+     * the two lists.
+     */
+    compareFields(fieldsA, fieldsB) {
+      if (fieldsA.length === 1) {
+        return this.compareSingleFields(fieldsA[0], fieldsB[0]);
+      }
+      return this.compareMultipleFields(fieldsA, fieldsB);
+    },
+
+    /**
+     * Compare a pair of single defined fields.
+     *
+     * This method is intended to be overriden by field type specific columns.
+     */
+    compareSingleFields(fieldA, fieldB) {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * Compare a pair of multiple fields. At least one field relevant for the
+     * current aggregation mode is guaranteed to be defined in each of the two
+     * lists.
+     *
+     * The aggregation mode specializations of this method (e.g.
+     * compareMultipleFieldsDiff) are intended to be overriden by field type
+     * specific columns.
+     */
+    compareMultipleFields(fieldsA, fieldsB) {
+      switch (this.aggregationMode) {
+        case MemoryColumn.AggregationMode.DIFF:
+          return this.compareMultipleFieldsDiff(
+              fieldsA[0], fieldsA[fieldsA.length - 1],
+              fieldsB[0], fieldsB[fieldsB.length - 1]);
+
+        case MemoryColumn.AggregationMode.MAX:
+          return this.compareMultipleFieldsMax(fieldsA, fieldsB);
+
+        default:
+          return 0;
+      }
+    },
+
+    compareMultipleFieldsDiff(firstFieldA, lastFieldA, firstFieldB,
+        lastFieldB) {
+      throw new Error('Not implemented');
+    },
+
+    compareMultipleFieldsMax(fieldsA, fieldsB) {
+      return this.compareSingleFields(
+          this.getMaxField(fieldsA), this.getMaxField(fieldsB));
+    },
+
+    getMaxField(fields) {
+      return fields.reduce(function(accumulator, field) {
+        if (field === undefined) {
+          return accumulator;
+        }
+        if (accumulator === undefined ||
+            this.compareSingleFields(field, accumulator) > 0) {
+          return field;
+        }
+        return accumulator;
+      }.bind(this), undefined);
+    },
+
+    addInfos(fields, contexts, infos) {
+      // No generic infos.
+    },
+
+    getImportance(importanceRules) {
+      if (importanceRules.length === 0) return 0;
+
+      // Find the first matching rule.
+      const matchingRule =
+          MemoryColumn.findMatchingRule(this.name, importanceRules);
+      if (matchingRule !== undefined) {
+        return matchingRule.importance;
+      }
+
+      // No matching rule. Return lower importance than all rules.
+      let minImportance = importanceRules[0].importance;
+      for (let i = 1; i < importanceRules.length; i++) {
+        minImportance = Math.min(minImportance, importanceRules[i].importance);
+      }
+      return minImportance - 1;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function StringMemoryColumn(name, cellPath, aggregationMode) {
+    MemoryColumn.call(this, name, cellPath, aggregationMode);
+  }
+
+  StringMemoryColumn.prototype = {
+    __proto__: MemoryColumn.prototype,
+
+    formatSingleField(string) {
+      return string;
+    },
+
+    formatMultipleFieldsDiff(firstString, lastString) {
+      if (firstString === undefined) {
+        // String was added ("+NEW_VALUE" in red).
+        const spanEl = tr.ui.b.createSpan({color: 'red'});
+        Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode('+'));
+        Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode(
+            this.formatSingleField(lastString)));
+        return spanEl;
+      } else if (lastString === undefined) {
+        // String was removed ("-OLD_VALUE" in green).
+        const spanEl = tr.ui.b.createSpan({color: 'green'});
+        Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode('-'));
+        Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode(
+            this.formatSingleField(firstString)));
+        return spanEl;
+      } else if (firstString === lastString) {
+        // String didn't change ("VALUE" with unchanged color).
+        return this.formatSingleField(firstString);
+      }
+      // String changed ("OLD_VALUE -> NEW_VALUE" in orange).
+      const spanEl = tr.ui.b.createSpan({color: 'DarkOrange'});
+      Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode(
+          this.formatSingleField(firstString)));
+      Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode(
+          ' ' + RIGHTWARDS_ARROW + ' '));
+      Polymer.dom(spanEl).appendChild(tr.ui.b.asHTMLOrTextNode(
+          this.formatSingleField(lastString)));
+      return spanEl;
+    },
+
+    compareSingleFields(stringA, stringB) {
+      return COLLATOR.compare(stringA, stringB);
+    },
+
+    compareMultipleFieldsDiff(firstStringA, lastStringA, firstStringB,
+        lastStringB) {
+      // If one of the strings was added (and the other one wasn't), mark the
+      // corresponding diff as greater.
+      if (firstStringA === undefined && firstStringB !== undefined) {
+        return 1;
+      }
+      if (firstStringA !== undefined && firstStringB === undefined) {
+        return -1;
+      }
+
+      // If both strings were added, compare the last values (greater last
+      // value implies greater diff).
+      if (firstStringA === undefined && firstStringB === undefined) {
+        return this.compareSingleFields(lastStringA, lastStringB);
+      }
+
+      // If one of the strings was removed (and the other one wasn't), mark the
+      // corresponding diff as lower.
+      if (lastStringA === undefined && lastStringB !== undefined) {
+        return -1;
+      }
+      if (lastStringA !== undefined && lastStringB === undefined) {
+        return 1;
+      }
+
+      // If both strings were removed, compare the first values (greater first
+      // value implies smaller (!) diff).
+      if (lastStringA === undefined && lastStringB === undefined) {
+        return this.compareSingleFields(firstStringB, firstStringA);
+      }
+
+      const areStringsAEqual = firstStringA === lastStringA;
+      const areStringsBEqual = firstStringB === lastStringB;
+
+      // Consider diffs of strings that did not change to be smaller than diffs
+      // of strings that did change.
+      if (areStringsAEqual && areStringsBEqual) return 0;
+      if (areStringsAEqual) return -1;
+      if (areStringsBEqual) return 1;
+
+      // Both strings changed. We are unable to determine the ordering of the
+      // diffs.
+      return 0;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function NumericMemoryColumn(name, cellPath, aggregationMode) {
+    MemoryColumn.call(this, name, cellPath, aggregationMode);
+  }
+
+  // Avoid tiny positive/negative diffs (displayed in the UI as '+0.0 B' and
+  // '-0.0 B') due to imprecise floating-point arithmetic by treating all diffs
+  // within the (-DIFF_EPSILON, DIFF_EPSILON) range as zeros.
+  NumericMemoryColumn.DIFF_EPSILON = 0.0001;
+
+  NumericMemoryColumn.prototype = {
+    __proto__: MemoryColumn.prototype,
+
+    align: tr.ui.b.TableFormat.ColumnAlignment.RIGHT,
+
+    aggregateCells(row, subRows) {
+      const subRowCells = subRows.map(this.cell, this);
+
+      // Determine if there is at least one defined numeric in the sub-row
+      // cells and the timestamp count.
+      let hasDefinedSubRowNumeric = false;
+      let timestampCount = undefined;
+      subRowCells.forEach(function(subRowCell) {
+        if (subRowCell === undefined) return;
+
+        const subRowNumerics = subRowCell.fields;
+        if (subRowNumerics === undefined) return;
+
+        if (timestampCount === undefined) {
+          timestampCount = subRowNumerics.length;
+        } else if (timestampCount !== subRowNumerics.length) {
+          throw new Error('Sub-rows have different numbers of timestamps');
+        }
+
+        if (hasDefinedSubRowNumeric) {
+          return;  // Avoid unnecessary traversals of the numerics.
+        }
+        hasDefinedSubRowNumeric = subRowNumerics.some(function(numeric) {
+          return numeric !== undefined;
+        });
+      });
+      if (!hasDefinedSubRowNumeric) {
+        return;  // No numeric to aggregate.
+      }
+
+      // Get or create the row cell.
+      const cellPath = this.cellPath;
+      let rowCell = row;
+      for (let i = 0; i < cellPath.length; i++) {
+        const nextStepName = cellPath[i];
+        let nextStep = rowCell[nextStepName];
+        if (nextStep === undefined) {
+          if (i < cellPath.length - 1) {
+            nextStep = {};
+          } else {
+            nextStep = new MemoryCell(undefined);
+          }
+          rowCell[nextStepName] = nextStep;
+        }
+        rowCell = nextStep;
+      }
+      if (rowCell.fields === undefined) {
+        rowCell.fields = new Array(timestampCount);
+      } else if (rowCell.fields.length !== timestampCount) {
+        throw new Error(
+            'Row has a different number of timestamps than sub-rows');
+      }
+
+      for (let i = 0; i < timestampCount; i++) {
+        if (rowCell.fields[i] !== undefined) continue;
+        rowCell.fields[i] = tr.model.MemoryAllocatorDump.aggregateNumerics(
+            subRowCells.map(function(subRowCell) {
+              if (subRowCell === undefined || subRowCell.fields === undefined) {
+                return undefined;
+              }
+              return subRowCell.fields[i];
+            }));
+      }
+    },
+
+    formatSingleField(numeric) {
+      return tr.v.ui.createScalarSpan(numeric, {
+        context: this.getFormattingContext(numeric.unit),
+        contextGroup: this.shouldSetContextGroup ? this.name : undefined,
+        inline: true,
+      });
+    },
+
+    getFormattingContext(unit) {
+      return undefined;
+    },
+
+    formatMultipleFieldsDiff(firstNumeric, lastNumeric) {
+      return this.formatSingleField(
+          this.getDiffField_(firstNumeric, lastNumeric));
+    },
+
+    compareSingleFields(numericA, numericB) {
+      return numericA.value - numericB.value;
+    },
+
+    compareMultipleFieldsDiff(firstNumericA, lastNumericA,
+        firstNumericB, lastNumericB) {
+      return this.getDiffFieldValue_(firstNumericA, lastNumericA) -
+          this.getDiffFieldValue_(firstNumericB, lastNumericB);
+    },
+
+    getDiffField_(firstNumeric, lastNumeric) {
+      const definedNumeric = firstNumeric || lastNumeric;
+      return new tr.b.Scalar(definedNumeric.unit.correspondingDeltaUnit,
+          this.getDiffFieldValue_(firstNumeric, lastNumeric));
+    },
+
+    getDiffFieldValue_(firstNumeric, lastNumeric) {
+      const firstValue = firstNumeric === undefined ? 0 : firstNumeric.value;
+      const lastValue = lastNumeric === undefined ? 0 : lastNumeric.value;
+      const diff = lastValue - firstValue;
+      return Math.abs(diff) < NumericMemoryColumn.DIFF_EPSILON ? 0 : diff;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function MemoryCell(fields) {
+    this.fields = fields;
+  }
+
+  MemoryCell.extractFields = function(cell) {
+    if (cell === undefined) return undefined;
+    return cell.fields;
+  };
+
+  /** Limit for the number of sub-rows for recursive table row expansion. */
+  const RECURSIVE_EXPANSION_MAX_VISIBLE_ROW_COUNT = 10;
+
+  function expandTableRowsRecursively(table) {
+    let currentLevelRows = table.tableRows;
+    let totalVisibleRowCount = currentLevelRows.length;
+
+    while (currentLevelRows.length > 0) {
+      // Calculate the total number of sub-rows on the current level.
+      let nextLevelRowCount = 0;
+      currentLevelRows.forEach(function(currentLevelRow) {
+        const subRows = currentLevelRow.subRows;
+        if (subRows === undefined || subRows.length === 0) return;
+        nextLevelRowCount += subRows.length;
+      });
+
+      // Determine whether expanding all rows on the current level would cause
+      // the total number of visible rows go over the limit.
+      if (totalVisibleRowCount + nextLevelRowCount >
+          RECURSIVE_EXPANSION_MAX_VISIBLE_ROW_COUNT) {
+        break;
+      }
+
+      // Expand all rows on the current level and gather their sub-rows.
+      const nextLevelRows = new Array(nextLevelRowCount);
+      let nextLevelRowIndex = 0;
+      currentLevelRows.forEach(function(currentLevelRow) {
+        const subRows = currentLevelRow.subRows;
+        if (subRows === undefined || subRows.length === 0) return;
+        table.setExpandedForTableRow(currentLevelRow, true);
+        subRows.forEach(function(subRow) {
+          nextLevelRows[nextLevelRowIndex++] = subRow;
+        });
+      });
+
+      // Update the total number of visible rows and progress to the next level.
+      totalVisibleRowCount += nextLevelRowCount;
+      currentLevelRows = nextLevelRows;
+    }
+  }
+
+  function aggregateTableRowCellsRecursively(row, columns, opt_predicate) {
+    const subRows = row.subRows;
+    if (subRows === undefined || subRows.length === 0) return;
+
+    subRows.forEach(function(subRow) {
+      aggregateTableRowCellsRecursively(subRow, columns, opt_predicate);
+    });
+
+    if (opt_predicate === undefined || opt_predicate(row.contexts)) {
+      aggregateTableRowCells(row, subRows, columns);
+    }
+  }
+
+  function aggregateTableRowCells(row, subRows, columns) {
+    columns.forEach(function(column) {
+      if (!(column instanceof MemoryColumn)) return;
+      column.aggregateCells(row, subRows);
+    });
+  }
+
+  function createCells(timeToValues, valueFieldsGetter, opt_this) {
+    opt_this = opt_this || this;
+    const fieldNameToFields = tr.b.invertArrayOfDicts(
+        timeToValues, valueFieldsGetter, opt_this);
+    const result = {};
+    for (const [fieldName, fields] of Object.entries(fieldNameToFields)) {
+      result[fieldName] = new tr.ui.analysis.MemoryCell(fields);
+    }
+    return result;
+  }
+
+  function createWarningInfo(message) {
+    return {
+      message,
+      icon: String.fromCharCode(9888),
+      color: 'red'
+    };
+  }
+
+  // TODO(petrcermak): Use a context manager instead
+  // (https://github.com/catapult-project/catapult/issues/2420).
+  function DetailsNumericMemoryColumn(name, cellPath, aggregationMode) {
+    NumericMemoryColumn.call(this, name, cellPath, aggregationMode);
+  }
+
+  DetailsNumericMemoryColumn.prototype = {
+    __proto__: NumericMemoryColumn.prototype,
+
+    getFormattingContext(unit) {
+      if (unit.baseUnit === tr.b.Unit.byName.sizeInBytes) {
+        return { unitPrefix: tr.b.UnitPrefixScale.BINARY.KIBI };
+      }
+      return undefined;
+    }
+  };
+
+  return {
+    TitleColumn,
+    MemoryColumn,
+    StringMemoryColumn,
+    NumericMemoryColumn,
+    MemoryCell,
+    expandTableRowsRecursively,
+    aggregateTableRowCellsRecursively,
+    aggregateTableRowCells,
+    createCells,
+    createWarningInfo,
+    DetailsNumericMemoryColumn,
+  };
+});
+</script>

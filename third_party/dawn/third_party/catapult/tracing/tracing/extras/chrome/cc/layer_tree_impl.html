@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/constants.html">
+<link rel="import" href="/tracing/extras/chrome/cc/layer_impl.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const constants = tr.e.cc.constants;
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function LayerTreeImplSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  LayerTreeImplSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    preInitialize() {
+      tr.e.cc.preInitializeObject(this);
+      this.layerTreeHostImpl = undefined;
+      this.whichTree = undefined;
+      this.sourceFrameNumber = undefined;
+    },
+
+    initialize() {
+      tr.e.cc.moveRequiredFieldsFromArgsToToplevel(
+          this, ['renderSurfaceLayerList']);
+      tr.e.cc.moveOptionalFieldsFromArgsToToplevel(
+          this, ['rootLayer', 'layers']);
+      if (this.args.sourceFrameNumber) {
+        this.sourceFrameNumber = this.args.sourceFrameNumber;
+      }
+
+      // Slimming Paint v2 removes the tree hierarchy and replace
+      // it with a layer list. The tracing data should have either
+      // rootLayer or layers available.
+      if (this.rootLayer) {
+        // The version before SPv2
+        this.rootLayer.layerTreeImpl = this;
+      } else {
+        // The SPv2 version, where the layer list contains all
+        // non-mask, non-replica layers.
+        for (let i = 0; i < this.layers.length; i++) {
+          this.layers[i].layerTreeImpl = this;
+        }
+      }
+
+      if (this.args.swapPromiseTraceIds &&
+          this.args.swapPromiseTraceIds.length) {
+        this.tracedInputLatencies = [];
+
+        const ownProcess = this.objectInstance.parent;
+        const modelHelper = ownProcess.model.getOrCreateHelper(
+            tr.model.helpers.ChromeModelHelper);
+        if (modelHelper) {
+          this._initializeTracedInputLatencies(modelHelper);
+        }
+      }
+    },
+
+    _initializeTracedInputLatencies(modelHelper) {
+      const latencyEvents = modelHelper.browserHelper.getLatencyEventsInRange(
+          modelHelper.model.bounds);
+
+      // Convert all ids to InputLatency Async objects.
+      latencyEvents.forEach(function(event) {
+        for (let i = 0; i < this.args.swapPromiseTraceIds.length; i++) {
+          if (!event.args.data || !event.args.data.trace_id) {
+            continue;
+          }
+          if (parseInt(event.args.data.trace_id) ===
+              this.args.swapPromiseTraceIds[i]) {
+            this.tracedInputLatencies.push(event);
+          }
+        }
+      }, this);
+    },
+
+    get hasSourceFrameBeenDrawnBefore() {
+      if (this.whichTree === tr.e.cc.constants.PENDING_TREE) {
+        return false;
+      }
+
+      // Old chrome's don't produce sourceFrameNumber.
+      if (this.sourceFrameNumber === undefined) return;
+
+      const thisLTHI = this.layerTreeHostImpl;
+      const thisLTHIIndex = thisLTHI.objectInstance.snapshots.indexOf(
+          thisLTHI);
+      const prevLTHIIndex = thisLTHIIndex - 1;
+      if (prevLTHIIndex < 0 ||
+          prevLTHIIndex >= thisLTHI.objectInstance.snapshots.length) {
+        return false;
+      }
+      const prevLTHI = thisLTHI.objectInstance.snapshots[prevLTHIIndex];
+      if (!prevLTHI.activeTree) return false;
+
+      // Old chrome's don't produce sourceFrameNumber.
+      if (prevLTHI.activeTree.sourceFrameNumber === undefined) return;
+      return prevLTHI.activeTree.sourceFrameNumber === this.sourceFrameNumber;
+    },
+
+    get otherTree() {
+      const other = this.whichTree === constants.ACTIVE_TREE ?
+        constants.PENDING_TREE : constants.ACTIVE_TREE;
+      return this.layerTreeHostImpl.getTree(other);
+    },
+
+    get gpuMemoryUsageInBytes() {
+      let totalBytes = 0;
+      this.iterLayers(function(layer) {
+        if (layer.gpuMemoryUsageInBytes !== undefined) {
+          totalBytes += layer.gpuMemoryUsageInBytes;
+        }
+      });
+      return totalBytes;
+    },
+
+    iterLayers(func, thisArg) {
+      const visitedLayers = {};
+      function visitLayer(layer, depth, isMask, isReplica) {
+        if (visitedLayers[layer.layerId]) return;
+
+        visitedLayers[layer.layerId] = true;
+        func.call(thisArg, layer, depth, isMask, isReplica);
+        if (layer.children) {
+          for (let i = 0; i < layer.children.length; i++) {
+            visitLayer(layer.children[i], depth + 1);
+          }
+        }
+        if (layer.maskLayer) {
+          visitLayer(layer.maskLayer, depth + 1, true, false);
+        }
+        if (layer.replicaLayer) {
+          visitLayer(layer.replicaLayer, depth + 1, false, true);
+        }
+      }
+      if (this.rootLayer) {
+        visitLayer(this.rootLayer, 0, false, false);
+      } else {
+        for (let i = 0; i < this.layers.length; i++) {
+          visitLayer(this.layers[i], 0, false, false);
+        }
+      }
+    },
+    findLayerWithId(id) {
+      let foundLayer = undefined;
+      function visitLayer(layer) {
+        if (layer.layerId === id) {
+          foundLayer = layer;
+        }
+      }
+      this.iterLayers(visitLayer);
+      return foundLayer;
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      LayerTreeImplSnapshot,
+      {typeName: 'cc::LayerTreeImpl'});
+
+  return {
+    LayerTreeImplSnapshot,
+  };
+});
+</script>

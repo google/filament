@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+tr.exportTo('d', function() {
+  // TODO(#3651): The Histogram Pipeline should provide this information
+  // automatically.
+
+  const BROWSERS = ['chrome', 'webview', 'unknown_browser'];
+  const PROCESSES = [
+    'all_processes',
+    'browser_process',
+    'renderer_processes',
+    'gpu_process',
+    'ppapi_process',
+    'unknown_processes',
+  ];
+  const SYSTEMS = ['ashmem', 'java_heap', 'native_heap', 'stack'];
+  const GPUS = ['gl', 'graphics', 'other'];
+  const COMPONENTS = [
+    'blink_gc',
+    'cc',
+    'discardable',
+    'dom_storage',
+    'font_caches',
+    'gpu',
+    'gpumemorybuffer',
+    'java_heap',
+    'leveldb',
+    'malloc',
+    'media',
+    'net',
+    'partition_alloc',
+    'sharedbitmap',
+    'shared_memory',
+    'skia',
+    'sqlite',
+    'tracing',
+    'ui',
+    'web_cache',
+  ];
+  const VALUES = [
+    'peak_size',
+    'locked_size',
+    'effective_size',
+    'allocated_objects_size',
+  ];
+  const SYSTEM_VALUES = [
+    'peak_resident_size',
+    'proportional_resident_size',
+    'private_dirty_size',
+    'resident_size',
+  ];
+  const V8_COMPONENTS = ['heap', 'allocated_by_metric'];
+  const V8_SUBCOMPONENTS = [
+    'code_space',
+    'large_object_space',
+    'map_space',
+    'new_space',
+    'old_space',
+  ];
+
+  const MEMORY_NAMES = new Set();
+
+  const MEMORY_PROCESS_RELATED_NAMES = new Map();
+  const MEMORY_COMPONENT_RELATED_NAMES = new Map();
+
+  const ALL_PROCESSES = 'all_processes';
+  const REPORTED_BY_CHROME = 'reported_by_chrome';
+
+  function initializeRelatedNames() {
+    /* eslint-disable max-len */
+    for (const browser of BROWSERS) {
+      for (const process of PROCESSES) {
+        MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_os:gpu_memory:proportional_resident_size_avg`);
+        MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:v8:code_and_metadata_size_avg`);
+        MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:shim_allocated_objects_size_avg`);
+        for (const gpu of GPUS) {
+          MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_os:gpu_memory:${gpu}:proportional_resident_size_avg`);
+        }
+        for (const systemValue of SYSTEM_VALUES) {
+          MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_os:${systemValue}_avg`);
+          MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_os:system_memory:${systemValue}_avg`);
+          for (const system of SYSTEMS) {
+            MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_os:system_memory:${system}:${systemValue}_avg`);
+          }
+        }
+        for (const value of VALUES) {
+          MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:${value}_avg`);
+          for (const component of COMPONENTS) {
+            MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:${component}:${value}_avg`);
+          }
+          MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:v8:${value}_avg`);
+          for (const v8Component of V8_COMPONENTS) {
+            MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:v8:${v8Component}:${value}_avg`);
+            for (const sub of V8_SUBCOMPONENTS) {
+              MEMORY_NAMES.add(`memory:${browser}:${process}:reported_by_chrome:v8:${v8Component}:${sub}:${value}_avg`);
+            }
+          }
+        }
+      }
+    }
+    /* eslint-enable max-len */
+
+    for (const name of MEMORY_NAMES) {
+      let processRelatedNames = MEMORY_PROCESS_RELATED_NAMES.get(name);
+      if (processRelatedNames === undefined) {
+        processRelatedNames = new Set();
+        MEMORY_PROCESS_RELATED_NAMES.set(name, processRelatedNames);
+      }
+
+      // Each 'all_processes' name is related to all ${process} variants of that
+      // name.
+
+      const index = name.indexOf(ALL_PROCESSES);
+      if (index !== -1) {
+        const suffix = name.slice(index + ALL_PROCESSES.length);
+        for (const other of MEMORY_NAMES) {
+          if (other.includes(suffix)) {
+            processRelatedNames.add(other);
+          }
+        }
+      }
+
+      // Each component=[] name is related to all component!=[] variants of that
+      // name.
+      const parts = name.split(':');
+      for (let end = 4; end < parts.length - 1; ++end) {
+        const prefix = parts.slice(0, end).join(':');
+        const suffix = parts[parts.length - 1];
+        const sansComponent = `${prefix}:${suffix}`;
+        if (!MEMORY_COMPONENT_RELATED_NAMES.has(sansComponent)) {
+          MEMORY_COMPONENT_RELATED_NAMES.set(sansComponent, new Set());
+        }
+        MEMORY_COMPONENT_RELATED_NAMES.get(sansComponent).add(name);
+      }
+    }
+  }
+
+  function getMemoryRelatedNames() {
+    if (MEMORY_PROCESS_RELATED_NAMES.size === 0) {
+      initializeRelatedNames();
+    }
+    return {
+      process: MEMORY_PROCESS_RELATED_NAMES,
+      component: MEMORY_COMPONENT_RELATED_NAMES,
+    };
+  }
+
+  return {
+    getMemoryRelatedNames,
+  };
+});
+</script>

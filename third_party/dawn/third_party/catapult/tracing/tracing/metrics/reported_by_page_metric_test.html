@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/reported_by_page_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function addEvent(mainThread, event) {
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink.user_timing',
+      title: event.title,
+      start: event.start,
+      duration: 0.0,
+      args: {data: {navigationId: event.navigationId}}
+    }));
+  }
+
+  test('time_to_viewable', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 200,
+        navigationId: '0xA'
+      });
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 400,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 600,
+        navigationId: '0xC'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:viewable',
+        start: 500,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:viewable',
+        start: 1000,
+        navigationId: '0xA'
+      });
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.reportedByPageMetric(histograms, model);
+    const hist = histograms.getHistogramNamed(
+        'reported_by_page:time_to_viewable');
+    assert.strictEqual(2, hist.running.count);
+    assert.strictEqual(((1000 - 200) + (500 - 400)) * 0.5, hist.running.mean);
+  });
+
+  test('time_to_interactive', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 200,
+        navigationId: '0xA'
+      });
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 400,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'navigationStart',
+        start: 600,
+        navigationId: '0xC'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:interactive',
+        start: 500,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:interactive',
+        start: 1000,
+        navigationId: '0xA'
+      });
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.reportedByPageMetric(histograms, model);
+    const hist = histograms.getHistogramNamed(
+        'reported_by_page:time_to_interactive');
+    assert.strictEqual(2, hist.running.count);
+    assert.strictEqual(((1000 - 200) + (500 - 400)) * 0.5, hist.running.mean);
+  });
+
+  test('benchmark_time', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:benchmark_begin',
+        start: 200,
+        navigationId: '0xA'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:benchmark_begin',
+        start: 400,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:benchmark_begin',
+        start: 600,
+        navigationId: '0xC'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:benchmark_end',
+        start: 500,
+        navigationId: '0xB'
+      });
+      addEvent(mainThread, {
+        title: 'telemetry:reported_by_page:benchmark_end',
+        start: 1000,
+        navigationId: '0xA'
+      });
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.reportedByPageMetric(histograms, model);
+    const hist = histograms.getHistogramNamed(
+        'reported_by_page:benchmark_time');
+    assert.strictEqual(2, hist.running.count);
+    assert.strictEqual(((1000 - 200) + (500 - 400)) * 0.5, hist.running.mean);
+  });
+});
+</script>

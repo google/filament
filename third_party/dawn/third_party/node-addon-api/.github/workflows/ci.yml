@@ -1,0 +1,60 @@
+name: Node.js CI Unix Platform
+
+on: [push, pull_request]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        node-version: [ 18.x, 20.x, 21.x ]
+        os:
+          - macos-latest
+          - ubuntu-latest
+        compiler:
+          - clang
+          - gcc
+        exclude:
+          - os: macos-latest
+            compiler: gcc # GCC is an alias for clang on the MacOS image.
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Check Node.js installation
+      run: |
+        node --version
+        npm --version
+    - name: Install dependencies
+      run: |
+        npm install
+    - name: npm test
+      run: |
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          export CC="gcc" CXX="g++"
+        fi
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          export CC="clang" CXX="clang++"
+        fi
+        echo "CC=\"$CC\" CXX=\"$CXX\""
+        echo "$CC --version"
+        $CC --version
+        echo "$CXX --version"
+        $CXX --version
+        export CFLAGS="$CFLAGS -O3 --coverage" LDFLAGS="$LDFLAGS --coverage"
+        echo "CFLAGS=\"$CFLAGS\" LDFLAGS=\"$LDFLAGS\""
+        npm run pretest -- --verbose
+        node test

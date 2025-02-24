@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses rss stat events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses Rss stat trace events.
+   * @constructor
+   */
+  function RssParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('rss_stat',
+        RssParser.prototype.rssStat.bind(this));
+  }
+
+  const TestExports = {};
+
+  // Matches the rss_stat record
+  const rssStatRE = new RegExp('member=(\\d+) size=(\\d+)');
+
+  TestExports.rssStatRE = rssStatRE;
+
+  const unknownThreadName = '<...>';
+
+  RssParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses rss stat events and sets up state in the importer.
+     */
+    rssStat(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = rssStatRE.exec(eventBase.details);
+      if (!event) return false;
+      const member = parseInt(event[1]);
+      const size = parseInt(event[2]);
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+
+      const tgid = parseInt(eventBase.tgid);
+      const process = this.importer.model_.getOrCreateProcess(tgid);
+      let subTitle = '';
+
+      if (member === 0) {
+        subTitle = ' (file pages)';
+      } else if (member === 1) {
+        subTitle = ' (anon)';
+      }
+
+      const rssCounter =
+          process.getOrCreateCounter('RSS', 'RSS ' + member + subTitle);
+      if (rssCounter.numSeries === 0) {
+        rssCounter.addSeries(new tr.model.CounterSeries('RSS',
+            tr.b.ColorScheme.getColorIdForGeneralPurposeString(
+                rssCounter.name)));
+      }
+      rssCounter.series.forEach(function(series) {
+        series.addCounterSample(ts, size);
+      });
+      return true;
+    },
+  };
+
+  Parser.register(RssParser);
+
+  return {
+    RssParser,
+    _RssParserTestExports: TestExports
+  };
+});
+</script>

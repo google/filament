@@ -1,0 +1,15 @@
+Name: Mann-Whitney U Test
+Short Name: mannwhitneyu
+URL: https://gist.github.com/gungorbudak/1c3989cc26b9567c6e50
+Version: 0
+Revision: f8f2918a366798793f5fb7e92de0df9142feb737
+Date: Jan 16 2016
+License: MIT
+Security Critical: no
+Shipped: no
+
+Description:
+Mann Whitney U Test implemented in javascript
+
+Local Modifications:
+None.

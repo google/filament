@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome.cpuTimeTestUtils', function() {
+  /**
+   * Takes a model spec, and returns a fully constructed model.
+   *
+   * A model spec is a minimal representation of a model containing only the
+   * information needed to set up scenarios for testing cpu time metrics - it
+   * specifies
+   * - All the processes with name, pid, and threads
+   * - All the threads with name, tid, and top level slices
+   * - All the top level slices with range and cpu duration
+   * - All the User Expectations (except Idle Expectations) with range, stage,
+   *   and initiator.
+   *
+   * Example model spec:
+   * {
+   *   processes: [
+   *     {
+   *       name: 'Browser',
+   *       pid: 12345,
+   *       threads: [
+   *         {
+   *           name: 'CrBrowserMain',
+   *           tid: 1,
+   *           slices: [
+   *             {range: [150, 200], cpu: 30},
+   *             {range: [205, 255], cpu: 20}
+   *           ]
+   *         },
+   *       ],
+   *     },
+   *   ],
+   *   expectations: [
+   *     {stage: 'Animation', initiatorType: 'Video', range: [0, 90]},
+   *     {stage: 'Response', initiatorType: 'Click', range: [200, 220]},
+   *   ]
+   * }
+   */
+  function buildModelFromSpec(modelSpec) {
+    return tr.c.TestUtils.newModel(model => {
+      // Create processes, threads, and slices
+      for (const processSpec of modelSpec.processes) {
+        const process = model.getOrCreateProcess(processSpec.pid);
+        process.name = processSpec.name;
+
+        for (const threadSpec of processSpec.threads) {
+          const thread = process.getOrCreateThread(threadSpec.tid);
+          thread.name = threadSpec.name;
+
+          for (const sliceSpec of threadSpec.slices) {
+            // Sanity checks on sliceSpec
+            const sliceStart = sliceSpec.range[0];
+            const sliceEnd = sliceSpec.range[1];
+            const duration = sliceEnd - sliceStart;
+            const cpuDuration = sliceSpec.cpu;
+            assert(sliceEnd >= sliceStart,
+                'Slice end time is earlier than slice start time: ' +
+                `sliceStart: ${sliceStart}, sliceEnd: ${sliceEnd}`);
+            assert(duration >= cpuDuration,
+                `Cpu duration (${cpuDuration}) is larger than ` +
+                `slice duration (${duration})`);
+
+            thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+              type: tr.model.ThreadSlice,
+              isTopLevel: true,
+              start: sliceSpec.range[0],
+              duration: sliceSpec.range[1] - sliceSpec.range[0],
+              // We currently do not have all the data about exactly when a
+              // thread was scheduled or descheduled - for example, if a slice
+              // got descheduled twice over its duration, the trace will not
+              // contain information to indicate that. Without loss of
+              // generality, we therefore make the assumption that the cpuStart
+              // is at the beginning of the slice, and total cpu time of a slice
+              // is uniformly spread over its duration.
+              cpuStart: sliceSpec.range[0],
+              cpuDuration: sliceSpec.cpu
+            }));
+          }
+        }
+      }
+
+      const expectations = model.userModel.expectations;
+      for (const expSpec of modelSpec.expectations) {
+        // This switch statement is not exhaustive. You may have to add more
+        // cases here when you add new scenarios.
+        switch (expSpec.stage) {
+          case 'Animation':
+            expectations.push(new tr.model.um.AnimationExpectation(
+                model, expSpec.initiatorType,
+                expSpec.range[0], expSpec.range[1] - expSpec.range[0]
+            ));
+            break;
+          case 'Idle':
+            expectations.push(new tr.model.um.IdleExpectation(
+                model, expSpec.range[0], expSpec.range[1] - expSpec.range[0]
+            ));
+            break;
+          case 'Response':
+            expectations.push(new tr.model.um.ResponseExpectation(
+                model, expSpec.initiatorType,
+                expSpec.range[0], expSpec.range[1] - expSpec.range[0]
+            ));
+            break;
+          default:
+            throw new Error('Internal Error: Stage ' + expSpec.stage +
+                'not handled yet. You should add another case here.');
+        }
+      }
+    });
+  }
+
+  return {
+    buildModelFromSpec,
+  };
+});
+</script>

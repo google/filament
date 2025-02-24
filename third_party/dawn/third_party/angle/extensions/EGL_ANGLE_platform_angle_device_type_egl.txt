@@ -1,0 +1,86 @@
+Name
+
+    ANGLE_platform_angle_device_type_egl_angle
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_device_type_egl_angle
+
+Contributors
+
+    Julien Isorce, Oblong
+
+Contacts
+
+    Julien Isorce, Oblong (jisorce 'at' oblong 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2020-03-03
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_ANGLE_platform_angle_opengl.
+
+Overview
+
+    This extension enables choosing the driver's EGL implementation when it is
+    available.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE
+    attribute:
+
+        EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE     0x348E
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    When calling eglGetPlatformDisplay:
+
+    To request a driver egl-backed implementation with ANGLE, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE or
+    EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE
+    and the value of EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE.
+
+    If EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE is
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE and
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE is not
+    EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE or is not
+    EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE then an EGL_BAD_ATTRIBUTE error is
+    is generated and EGL_NO_DISPLAY is returned.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2020-03-03 (Julien Isorce)
+      - Initial draft

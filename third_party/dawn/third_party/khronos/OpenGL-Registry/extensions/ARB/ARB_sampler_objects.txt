@@ -1,0 +1,595 @@
+Name
+
+    ARB_sampler_objects
+
+Name Strings
+
+    GL_ARB_sampler_objects
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Jaakko Konttinen, AMD
+    Jeff Bolz, NVIDIA
+    Daniel Koch, TransGaming
+    Bruce Merry, ARM
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Version 13, November 12, 2014
+
+Number
+
+    ARB Extension #81
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 (Compatibility
+    Profile) specification.
+
+    This extension interacts with EXT_texture_filter_anisotropic.
+
+    OpenGL 1.0 is required.
+
+Overview
+
+    In unextended OpenGL textures are considered to be sets of image
+    data (mip-chains, arrays, cube-map face sets, etc.) and sampling
+    state (sampling mode, mip-mapping state, coordinate wrapping and
+    clamping rules, etc.) combined into a single object. It is typical
+    for an application to use many textures with a limited set of
+    sampling states that are the same between them. In order to use
+    textures in this way, an application must generate and configure
+    many texture names, adding overhead both to applications and to
+    implementations. Furthermore, should an application wish to sample
+    from a texture in more than one way (with and without mip-mapping,
+    for example) it must either modify the state of the texture or
+    create two textures, each with a copy of the same image data. This
+    can introduce runtime and memory costs to the application.
+
+    This extension separates sampler state from texture image data. A
+    new object type is introduced, the sampler (representing generic
+    sampling parameters). The new sampler objects are represented by a
+    new named type encapsulating the sampling parameters of a
+    traditional texture object. Sampler objects may be bound to texture
+    units to supplant the bound texture's sampling state. A single
+    sampler may be bound to more than one texture unit simultaneously,
+    allowing different textures to be accessed with a single set of
+    shared sampling parameters. Also, by binding different sampler
+    objects to texture units to which the same texture has been bound,
+    the same texture image data may be sampled with different sampling
+    parameters.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GenSamplers(sizei count, uint *samplers);
+    void DeleteSamplers(sizei count, const uint * samplers);
+    boolean IsSampler(uint sampler);
+    void BindSampler(uint unit, uint sampler);
+    void SamplerParameteri(uint sampler, enum pname, int param);
+    void SamplerParameterf(uint sampler, enum pname, float param);
+    void SamplerParameteriv(uint sampler, enum pname, const int *params);
+    void SamplerParameterfv(uint sampler, enum pname, const float *params);
+    void SamplerParameterIiv(uint sampler, enum pname, const int *params);
+    void SamplerParameterIuiv(uint sampler, enum pname, const uint *params);
+    void GetSamplerParameteriv(uint sampler, enum pname, int *params);
+    void GetSamplerParameterfv(uint sampler, enum pname, float *params);
+    void GetSamplerParameterIiv(uint sampler, enum pname, int *params);
+    void GetSamplerParameterIuiv(uint sampler, enum pname, uint *params);
+
+New Tokens
+
+    Accepted by the <value> parameter of the GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv and GetDoublev functions:
+
+        SAMPLER_BINDING                                 0x8919
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (Compatibility Profile) (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Compatibility Profile) (Rasterization)
+
+    Additions to Section 3.8.12 Texture Completeness
+
+    Add subheading "Effects of Sampler Objects on Texture Completeness"
+
+    If a sampler object and a texture object are simultaneously bound to
+    the same texture unit, then the sampling state for that unit is
+    taken from the sampler object (see section 3.9.2, "Sampler
+    Objects"). This can have an effect on the effective completeness of
+    the texture. In particular, if the texture is not mipmap complete
+    and the sampler object specifies a MIN_FILTER requiring mipmaps, the
+    texture will be considered incomplete for the purposes of that
+    texture unit. However, if the sampler object does not require
+    mipmaps, the texture object will be considered complete. This means
+    that a texture can be considered both complete and incomplete
+    simultaneously if it is bound to two or more texture units along
+    with sampler objects with different states.
+
+    Additions to Section 3.9 Texturing
+
+    Modify the prologue to Section 3.9 as follows:
+
+    Renumber Section 3.9.14 "Texture Objects" to Section 3.9.1. renumber
+    subsequent sections
+
+    Replace Section 3.9.1 "Texture Objects"
+
+    3.9.1 Texture Objects
+    ---------------------
+
+    Textures in GL are represented by named objects. The name space for
+    texture objects is the unsigned integers, with zero reserved by the
+    GL to represent the default texture object. The default texture
+    object is bound to each of the TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE,
+    TEXTURE_BUFFER, TEXTURE_CUBE_MAP, TEXTURE_2D_MULTISAMPLE, and
+    TEXTURE_2D_MULTISAMPLE_ARRAY targets during context initialization.
+
+    A new texture object is created by binding an unused name to one of
+    these texture targets. The command
+
+        void GenTextures( sizei n, uint *textures );
+
+    returns <n> previously unused texture names in <textures>. These
+    names are marked as used, for the purposes of GenTextures only, but
+    they acquire texture state and a dimensionality only when they are
+    first bound, just as if they were unused. The binding is effected by
+    calling
+
+        void BindTexture( enum target, uint texture );
+
+    with <target> set to the desired texture target and <texture> set to
+    the unused name. The resulting texture object is a new state vector,
+    comprising all the state and with the same initial values listed in
+    section 3.9.13. The new texture object bound to <target> is, and
+    remains a texture of the dimensionality and type specified by
+    <target> until it is deleted.
+
+    BindTexture may also be used to bind an existing texture object to
+    any of these targets. The error INVALID_OPERATION is generated if an
+    attempt is made to bind a texture object of different dimensionality
+    than the specified <target>. If the bind is successful no change is
+    made to the state of the bound texture object, and any previous
+    binding to <target> is broken.
+
+** This error applies only to 3.2 core profile / 3.1 w/o ARB_compatibility /
+** 3.0 deprecated contexts.
+    BindTexture fails and an INVALID_OPERATION error is generated if
+    <texture> is not zero or a name returned from a previous call to
+    GenTextures, or if such a name has since been deleted. While a
+    texture object is bound, GL operations on the target to which it is
+    bound affect the bound object, and queries of the target to which it
+    is bound return state from the bound object. If texture mapping of
+    the dimensionality of the target to which a texture object is bound
+    is enabled, the state of the bound texture object directs the
+    texturing operation.
+
+    Texture objects are deleted by calling
+
+        void DeleteTextures( sizei n, uint *textures );
+
+    <textures> contains <n> names of texture objects to be deleted.
+    After a texture object is deleted, it has no contents or
+    dimensionality, and its name is again unused. If a texture that is
+    currently bound to any of the target bindings of BindTexture is
+    deleted, it is as though BindTexture had been executed with the same
+    target and texture zero. Additionally, special care must be taken
+    when deleting a texture if any of the images of the texture are
+    attached to a framebuffer object. See section 4.4.2 for details.
+
+    Unused names in <textures> are silently ignored, as is the name zero.
+
+    The texture object name space, including the initial one-, two-, and
+    three- dimensional, one- and two-dimensional array, rectangular,
+    buffer, cube map, two-dimensional multisample, and two-dimensional
+    multisample array texture objects, is shared among all texture
+    units. A texture object may be bound to more than one texture unit
+    simultaneously. After a texture object is bound, any GL operations
+    on that target object affect any other texture units to which the
+    same texture object is bound.
+
+    Texture binding is affected by the setting of the state
+    ACTIVE_TEXTURE. If a texture object is deleted, it as if all texture
+    units which are bound to that texture object are rebound to texture
+    object zero.
+
+    Insert new Section 3.9.2 "Sampler Objects", renumber subsequent
+    sections.
+
+    3.9.2 Sampler Objects
+    ---------------------
+
+    The state necessary for texturing can be divided into two categories
+    as described in Section 3.9.13. An OpenGL texture object represents
+    both sets. The first set represents dimensionality and other image
+    parameters, and the second set represents sampling state.
+    Additionally, a sampler object may be created to encapsulate only
+    the second set, or the sampling state, of a texture object.
+
+    A new sampler object is created by binding an unused name to a
+    texture unit. The command
+
+        void GenSamplers( sizei count, uint *samplers );
+
+    returns <count> previously unused sampler object names in
+    <samplers>. The name zero is reserved by the GL to represent no
+    sampler being bound to a sampler unit. The names are marked as used,
+    for the purposes of GenSamplers only, but they acquire state only
+    when they are first used as a parameter to BindSampler,
+    SamplerParameter*, GetSamplerParameter*, or IsSampler. When a
+    sampler object is first used in one of these functions, the
+    resulting sampler object is initialized with a new state vector,
+    comprising all the state and with the same initial values listed in
+    table 6.23.
+
+    When a sampler object is bound to a texture unit, its state
+    supersedes that of the texture object bound to that texture unit. If
+    the sampler name zero is bound to a texture unit, the currently
+    bound texture's sampler state becomes active. A single sampler
+    object may be bound to multiple texture units simultaneously.
+
+    A sampler binding is effected by calling
+
+        void BindSampler( uint unit, uint sampler );
+
+    with <unit> set to the texture unit to which to bind the sampler and
+    <sampler> set to the name of a sampler object returned from a
+    previous call to GenSampler.
+
+    <unit> must be between zero and the value of
+    MAX_TEXTURE_IMAGE_UNITS-1. <sampler> is the name of a sampler object
+    that has previously been reserved by a call to GenSamplers.
+
+    If the bind is successful no change is made to the state of the
+    bound sampler object, and any previous binding to <unit> is broken.
+
+    BindSampler fails and an INVALID_OPERATION error is generated if
+    <sampler> is not zero or a name returned from a previous call to
+    GenSamplers, or if such a name has since been deleted with
+    DeleteSamplers. An INVALID_VALUE error is generated if <unit> is
+    greater than or equal to the value of
+    MAX_COMBINED_TEXTURE_IMAGE_UNITS.
+
+    If state is present in a sampler object bound to a texture unit that
+    would have been rejected by a call to TexParameter for the texture
+    bound to that unit, the behavior of the implementation is as if the
+    texture were incomplete. For example, if TEXTURE_WRAP_S,
+    TEXTURE_WRAP_T or TEXTURE_WRAP_R is set to REPEAT or MIRRORED_REPEAT
+    on the sampler object bound to a texture unit and the texture bound
+    to that unit is a TEXTURE_RECTANGLE, the texture will be considered
+    incomplete.
+
+    The currently bound sampler may be queried by calling GetIntegerv
+    with <pname> set to SAMPLER_BINDING. When a sampler object is
+    unbound from the texture unit (by binding another sampler object, or
+    the sampler object named zero, to that texture unit) the modified
+    state is again replaced with the sampler state associated with the
+    texture object bound to that texture unit.
+
+    The parameters represented by a sampler object are a subset of those
+    described in Section 3.9.6 "Texture Parameters". Each parameter of a
+    sampler object is set by calling
+
+        void SamplerParameter{if}{v}( uint sampler, enum pname, T param );
+        void SamplerParameterI{u ui}v( uint sampler, enum pname, T *params );
+
+    <sampler> is the name of a sampler object previously reserved by a
+    call to GenSamplers. <pname> is the name of a parameter to modify
+    and <param> is the new value of that parameter. An INVALID_OPERATION
+    error is generated if <sampler> is not the name of a sampler object
+    previously returned from a call to GenSamplers. The values accepted
+    in the <pname> parameter are TEXTURE_WRAP_S, TEXTURE_WRAP_T,
+    TEXTURE_WRAP_R, TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER,
+    TEXTURE_BORDER_COLOR, TEXTURE_MIN_LOD, TEXTURE_MAX_LOD,
+    TEXTURE_LOD_BIAS, TEXTURE_COMPARE_MODE, TEXTURE_COMPARE_FUNC and
+    TEXTURE_MAX_ANISOTROPY_EXT. Texture state listed in table 6.22 but
+    not listed here and in the sampler state in table 6.23 is not part
+    of the sampler state, and remains in the texture object.
+
+    If the values for TEXTURE_BORDER_COLOR are specified with a call to
+    SamplerParameterIiv or SamplerParameterIuiv, the values are
+    unmodified and stored with an internal data type of integer. If
+    specified with SamplerParameteriv, they are converted to
+    floating-point using equation 2.2. Otherwise, the values are
+    unmodified and stored as floating-point.
+
+    An INVALID_ENUM error is generated if <pname> is not the name of a
+    parameter accepted by SamplerParameter*. If the value of <param> is
+    not an acceptable value for the parameter specified in <pname>, an
+    error is generated as specified in the description of TexParameter*.
+
+    Modifying a parameter of a sampler object affects all texture units
+    to which that sampler object is bound. Calling TexParameter has no
+    effect on the sampler object bound to the active texture unit. It
+    will modify the parameters of the texture object bound to that unit.
+
+    Sampler objects are deleted by calling
+
+        void DeleteSamplers( sizei count, const uint *samplers );
+
+    <samplers> contains <count> names of sampler objects to be deleted.
+    After a sampler object is deleted, its name is again unused. If a
+    sampler object that is currently bound to a sampler unit is deleted,
+    it is as though BindSampler is called with <unit> set to the unit
+    the sampler is bound to and <sampler> zero. Unused names in
+    <samplers> are silently ignored, as is the reserved name zero.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Compatibility Profile) (Per-Fragment Operations and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Compatibility Profile) (Special Functions)
+
+    Add a new category of commands not usable in display lists
+    to section 5.4.1:
+
+   "Sampler objects: GenSamplers and DeleteSamplers."
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (Compatibility Profile) (State and State Requests)
+
+    Insert new section 6.1.5 "Sampler Queries" following existing
+    section 6.1.4 and renumber following sections:
+
+    6.1.5 Sampler Queries
+
+    The command
+
+        boolean IsSampler( uint sampler );
+
+    may be called to determine whether <sampler> is the name of a
+    sampler object IsSampler will return TRUE if <sampler> is the name
+    of a sampler object previously returned from a call to GenSamplers
+    and FALSE otherwise. Zero is not the name of a sampler object. The
+    current values of the parameters of a sampler object may be queried
+    by calling
+
+        void GetSamplerParameter{if}v( uint sampler, enum pname, T *params );
+        void GetSamplerParameterI{i ui}v( uint sampler, enum pname, T *params );
+
+    <sampler> is the name of the sampler object from which to retrieve
+    parameters. <pname> is the name of the parameter whose value to
+    retrieve and <params> is the address of an array into which the
+    current value of the desired parameter will be placed.
+    GetSamplerParameter* accepts the same values for <pname> as
+    SamplerParameter*. An INVALID_OPERATION error is generated if
+    <sampler> is not the name of a sampler object previously returned
+    from a call to GenSamplers. An INVALID_ENUM error is generated if
+    <pname> is not the name of a parameter accepted by
+    GetSamplerParameter*.
+
+    Querying value TEXTURE_BORDER_COLOR with GetSamplerParameterIiv or
+    GetSamplerParameterIuiv returns the border color values as signed
+    integers or unsigned integers, respectively; otherwise the values
+    are returned as described in section 6.1.2. If the border color is
+    queried with a type that does not match the original type with which
+    it was specified, the result is undefined.
+
+
+    In section 6.1.19, append to the paragraph starting "When PushAttrib
+    is called with TEXTURE_BIT set...":
+
+   "... are restored to their pushed values. The bindings and state for
+    sampler objects are not pushed or popped."
+
+Additions to Appendix A of the OpenGL 3.2 Specification (Compatibility Profile) (Invariance)
+
+    None.
+
+Interactions with EXT_texture_filter_anisotropic
+
+    If EXT_texture_filter_anisotropic is not supported, remove all
+    references to TEXTURE_MAX_ANISOTROPY_EXT.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated by BindSampler if <sampler> is not
+    zero or a name returned from a previous call to GenSamplers.
+
+    INVALID_VALUE is generated by BindSampler if <unit> is greater than
+    MAX_TEXTURE_IMAGE_UNITS-1.
+
+    INVALID_OPERATION is generated by SamplerParameter* and
+    GetSamplerParameter* if <sampler> is not a name returned from a
+    previous call to GenSamplers.
+
+New State
+
+    Append to Table 6.20, "Textures (state per texture unit and binding point)"
+
+    +-----------------------+-----------+-------------------+-----------------+-------------------------+--------+------------+
+    | Get Value             | Type      | Get Command       | Initial Value   | Description             | Sec    | Attribute  |
+    +-----------------------+-----------+-------------------+-----------------+-------------------------+--------+------------+
+    | SAMPLER_BINDING       | 48* x Z+  | GetIntegerv       | 0               | Sampler object bound    | 3.9.2  | -          |
+    |                       |           |                   |                 | to active texture unit  |        |            |
+    +-----------------------+-----------+-------------------+-----------------+-------------------------+--------+------------+
+
+    Add new Table 6.23, "Textures (state per sampler object)", renumber subsequent tables.
+
+    +---------------------------+-----------+----------------------+------------------------+------------------------------+--------+------------+
+    | Get Value                 | Type      | Get Command          | Initial Value          | Description                  | Sec    | Attribute  |
+    +---------------------------+-----------+----------------------+------------------------+------------------------------+--------+------------+
+    | TEXTURE_BORDER_COLOR      | n x C     | GetSamplerParameter  | 0,0,0,0                | Border color                 | 3.9    | -          |
+    | TEXTURE_MIN_FILTER        | n x Z6    | GetSamplerParameter  | NEAREST_MIPMAP_LINEAR  | Minification function        | 3.9.9  | -          |
+    | TEXTURE_MAG_FILTER        | n x Z2    | GetSamplerParameter  | LINEAR                 | Magnification function       | 3.9.10 | -          |
+    | TEXTURE_WRAP_S            | n x Z5    | GetSamplerParameter  | REPEAT                 | Texcoord s wrap mode         | 3.9.9  | -          |
+    | TEXTURE_WRAP_T            | n x Z5    | GetSamplerParameter  | REPEAT                 | Texcoord t wrap mode         | 3.9.9  | -          |
+    | TEXTURE_WRAP_R            | n x Z5    | GetSamplerParameter  | REPEAT                 | Texcoord r wrap mode         | 3.9.9  | -          |
+    | TEXTURE_MIN_LOD           | n x R     | GetSamplerParameter  | -1000                  | Minimum level of detail      | 3.9    | -          |
+    | TEXTURE_MAX_LOD           | n x R     | GetSamplerParameter  | 1000                   | Maximum level of detail      | 3.9    | -          |
+    | TEXTURE_LOD_BIAS          | n x R     | GetSamplerParameter  | 0.0                    | Texture level of detail      | 3.9.9  | -          |
+    |                           |           |                      |                        | bias (biastexobj)            |        |            |
+    | TEXTURE_COMPARE_MODE      | n x Z2    | GetSamplerParameter  | NONE                   | Comparison mode              | 3.9.16 | -          |
+    | TEXTURE_COMPARE_FUNC      | n x Z8    | GetSamplerParameter  | LEQUAL                 | Comparison function          | 3.9.16 | -          |
+    | TEXTURE_MAX_ANISOTROPY_EXT| n x R     | GetSamplerParameter  | 1.0                    | Maximum degree of anisotropy | 3.9    | -          |
+    +---------------------------+-----------+----------------------+------------------------+------------------------------+--------+------------+
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) Should BindSampler take a <target> parameter?
+
+    DISCUSSION: Currently it does not. Binding a sampler to a texture
+    unit binds it to all targets. Binding a texture to a target of a
+    texture unit continues to determine the target precedence.
+
+    2) What is the set of state associated with a sampler object?
+       Specifically, should TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL be
+       part of the sampler or the texture?
+
+    DISCUSSION: TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL are presently
+    part of the image state (texture) and are thus not included in the
+    sampler object. TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE_WRAP_R,
+    TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER, TEXTURE_BORDER_COLOR,
+    TEXTURE_MIN_LOD, TEXTURE_MAX_LOD, TEXTURE_LOD_BIAS,
+    TEXTURE_COMPARE_MODE, TEXTURE_COMPARE_FUNC are the states included
+    in the sampler object.
+
+    3) How would one use the same sampler state to access multiple
+       textures?
+
+    DISCUSSION: Generate a sampler object, set its state. Then, bind the
+    same sampler object to multiple texture units (perhaps with
+    different textures bound to them) and use those units as usual.
+
+    4) How would one access the same texture with different samplers?
+
+    DISCUSSION: Generate a sampler object for each intended set of
+    sampling parameters and bind them to different texture units. Bind
+    the same texture to each of those units. That same texture will be
+    sampled according to the parameters contained in the sampler object
+    bound to the respective unit.
+
+    5) Does it matter what order samplers and textures are bound to
+       texture units?
+
+    No. As long as a sampler is bound to a texture unit, it acts as the
+    source of the sampler state for that unit. Textures may be switched
+    in and out without affecting the sampler state. This includes the
+    default texture object.
+
+    6) If a sampler object is bound to multiple texture units and its
+    state is modified, is that state visible to all of those units?
+
+    Yes.
+
+    7) Should sampler objects be made visible to the shading language.
+
+    This is left for a future extension. Separating samplers and texture
+    images in the shader allows for a run-time combinatorial explosion
+    of sampler- texture pairs that would be difficult to count. It is
+    also very clumsy to specify in a way that interacts cleanly with
+    prior versions of OpenGL. This may become more feasible to apply
+    against a future version of OpenGL, but this extension is applicable
+    to any version of OpenGL.
+
+    8) Can sampler objects be shared between contexts?
+
+    Yes. The semantics of sharing a sampler object between contexts is
+    the same as that of sharing texture objects.
+
+    9) What happens when a sampler object bound to a texture unit has a
+       parameter that is incompatible with the texture that is bound to
+       that unit?
+
+    The behavior is as if the texture is incomplete.
+
+    10) When are sampler objects created? When do they start to exist?
+
+    Sampler objects are created when they are first used by any function
+    taking the name of a sampler object as a parameter. Their names must
+    be reserved by a call to GenSamplers. For all intents and purposes,
+    it is as if they start existing when GenSamplers creates their
+    names.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------- -----------------------------------------
+    13    11/12/2014  Jon Leech Fix spelling of TEXTURE_MAX_ANISOTROPY
+                                (public Bug 1263).
+    12    07/22/2011  Jon Leech Fix valid <unit> values to be based
+                                on MAX_COMBINED_TEXTURE_IMAGE_UNITS
+                                instead of MAX_TEXTURE_IMAGE_UNITS (bug
+                                6406).
+    11    07/07/2010  Jon Leech Do not allow sampler bindings and sampler
+                                object state to be pushed and popped, by
+                                modifying all new state table entries to
+                                have no attribute group and adding a
+                                clarifying statement in section 6.1.20.
+                                Do not allow GenSamplers and
+                                DeleteSamplers in display lists (bug
+                                6056).
+    10    03/29/2010  pbrown    Further fixes in the listed prototypes;
+                                use separate lines for external parsing.
+     9    03/27/2010  pbrown    Fix an incorrect prototype for BindSampler
+                                in the new functions section (bug 6146).
+     8    03/22/2010  Jon Leech Change error for invalid <sampler> names
+                                passed to *SamplerParameter* from
+                                INVALID_VALUE to INVALID_OPERATION for
+                                consistency (bug 6026). Expand Errors
+                                section. Reformat to 80 columns.
+     7    02/10/2010  Jon Leech Add const to SamplerParameter*v 'params'.
+     6    01/26/2010  pbrown    Assign enum for SAMPLER_BINDING.
+     5    01/05/2010  gsellers  Add SamplerParameterI*, GetSamplerParameterI*
+                                (bug 5806).
+                                Fix ambiguity about when sampler objects
+                                are created. Samplers names are reserved
+                                by GenSamplers but actually created
+                                (default state initialized) on first
+                                use. There is no bind-to-create for
+                                sampler objects. (bug 5813).
+                                Add language about effect of sampler
+                                objects on effective texture
+                                completeness (bug 5838). Specify that
+                                illegal sampler states for particular
+                                texture types result in incomplete
+                                textures, rather than undefined
+                                behavior.
+     4    12/11/2009  Jon Leech Reorganization and consistency edits
+                                resulting from 3.3 spec integration.
+                                Remove ARB suffixes.
+     3    11/19/2009  gsellers  Feedback from bmerry.
+     2    11/11/2009  gsellers  Incorporate feedback.
+     1    11/09/2009  gsellers  Initial version based on draft
+                                EXT_separate_sampler_objects.

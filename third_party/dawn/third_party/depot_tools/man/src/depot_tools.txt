@@ -1,0 +1,28 @@
+depot_tools(7)
+==============
+
+NAME
+----
+depot_tools - A collection of tools for dealing with Chromium development.
+
+DESCRIPTION
+-----------
+
+The Chromium depot_tools suite contains many tools to assist/augment the
+Chromium development environment. The tools may be downloaded by checking
+out the link:{sys3:git config remote.origin.url}[git repository].
+
+There are two primary categories of tools. Some of these tools are 'essential'
+to the development flow, in the sense that you cannot successfully develop
+Chromium without them.
+
+Other tools are merely 'helper' tools. Not required, but they can substantially
+ease the development workflow.
+
+A listing of both categories of tools follows.
+
+include::__essential.txt[maxdepth=1]
+
+include::__helper.txt[maxdepth=1]
+
+// vim: ft=asciidoc:

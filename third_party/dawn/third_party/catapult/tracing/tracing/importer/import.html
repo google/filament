@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/importer/empty_importer.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/importer/user_model_builder.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.importer', function() {
+  const Timing = tr.b.Timing;
+
+  function ImportOptions() {
+    this.shiftWorldToZero = true;
+    this.pruneEmptyContainers = true;
+    this.showImportWarnings = true;
+    this.trackDetailedModelStats = false;
+
+    // Callback called after
+    // importers run in which more data can be added to the model, before it is
+    // finalized.
+    this.customizeModelCallback = undefined;
+
+    const auditorTypes = tr.c.Auditor.getAllRegisteredTypeInfos();
+    this.auditorConstructors = auditorTypes.map(function(typeInfo) {
+      return typeInfo.constructor;
+    });
+  }
+
+  function Import(model, opt_options) {
+    if (model === undefined) {
+      throw new Error('Must provide model to import into.');
+    }
+
+    // TODO(dsinclair): Check the model is empty.
+
+    this.importing_ = false;
+    this.importOptions_ = opt_options || new ImportOptions();
+
+    this.model_ = model;
+    this.model_.importOptions = this.importOptions_;
+  }
+
+  Import.prototype = {
+    __proto__: Object.prototype,
+
+    /**
+     * Imports the provided traces into the model. The eventData type
+     * is undefined and will be passed to all the importers registered
+     * via Importer.register. The first importer that returns true
+     * for canImport(events) will be used to import the events.
+     *
+     * The primary trace is provided via the eventData variable. If multiple
+     * traces are to be imported, specify the first one as events, and the
+     * remainder in the opt_additionalEventData array.
+     *
+     * @param {Array} traces An array of eventData to be imported. Each
+     * eventData should correspond to a single trace file and will be handled by
+     * a separate importer.
+     */
+    importTraces(traces) {
+      const progressMeter = {
+        update(msg) {}
+      };
+
+      tr.b.Task.RunSynchronously(
+          this.createImportTracesTask(progressMeter, traces));
+    },
+
+    /**
+     * Imports a trace with the usual options from importTraces, but
+     * does so using idle callbacks, putting up an import dialog
+     * during the import process.
+     */
+    importTracesWithProgressDialog(traces) {
+      if (tr.isHeadless) {
+        throw new Error('Cannot use this method in headless mode.');
+      }
+
+      const overlay = tr.ui.b.Overlay();
+      overlay.title = 'Importing...';
+      overlay.userCanClose = false;
+      overlay.msgEl = document.createElement('div');
+      Polymer.dom(overlay).appendChild(overlay.msgEl);
+      overlay.msgEl.style.margin = '20px';
+      overlay.update = function(msg) {
+        Polymer.dom(this.msgEl).textContent = msg;
+      };
+      overlay.visible = true;
+
+      const promise =
+          tr.b.Task.RunWhenIdle(this.createImportTracesTask(overlay, traces));
+      promise.then(
+          function() { overlay.visible = false; },
+          function(err) { overlay.visible = false; }
+      );
+      return promise;
+    },
+
+    /**
+     * Creates a task that will import the provided traces into the model,
+     * updating the progressMeter as it goes. Parameters are as defined in
+     * importTraces.
+     */
+    createImportTracesTask(progressMeter, traces) {
+      const importStartTimeMs = tr.b.Timing.getCurrentTimeMs();
+
+      if (this.importing_) {
+        throw new Error('Already importing.');
+      }
+      this.importing_ = true;
+
+      // Just some simple setup. It is useful to have a no-op first
+      // task so that we can set up the lastTask = lastTask.after()
+      // pattern that follows.
+      const importTask = new tr.b.Task(function prepareImport() {
+        progressMeter.update('I will now import your traces for you...');
+      }, this);
+      let lastTask = importTask;
+
+      const importers = [];
+
+      function addImportStage(title, callback) {
+        lastTask = lastTask.after(() => progressMeter.update(title));
+        lastTask.updatesUi = true;
+        lastTask = lastTask.after(callback);
+      }
+
+      function addStageForEachImporter(title, callback) {
+        lastTask = lastTask.after((task) => {
+          importers.forEach((importer, index) => {
+            const uiSubTask = task.subTask(() => {
+              progressMeter.update(
+                  `${title} ${index + 1} of ${importers.length}`);
+            });
+            uiSubTask.updatesUi = true;
+            task.subTask(() => callback(importer));
+          });
+        });
+      }
+
+      addImportStage('Creating importers...', () => {
+        // Copy the traces array, we may mutate it.
+        traces = traces.slice(0);
+        progressMeter.update('Creating importers...');
+        // Figure out which importers to use.
+        for (let i = 0; i < traces.length; ++i) {
+          importers.push(this.createImporter_(traces[i]));
+        }
+
+        // Some traces have other traces inside them. Before doing the full
+        // import, ask the importer if it has any subtraces, and if so, create
+        // importers for them, also.
+        for (let i = 0; i < importers.length; i++) {
+          const subtraces = importers[i].extractSubtraces();
+          for (let j = 0; j < subtraces.length; j++) {
+            try {
+              traces.push(subtraces[j]);
+              importers.push(this.createImporter_(subtraces[j]));
+            } catch (error) {
+              this.model_.importWarning({
+                type: error.name,
+                message: error.message,
+                showToUser: true,
+              });
+              continue;
+            }
+          }
+        }
+
+        if (traces.length && !this.hasEventDataDecoder_(importers)) {
+          throw new Error(
+              'Could not find an importer for the provided eventData.');
+        }
+
+        // Sort them on priority. This ensures importing happens in a
+        // predictable order, e.g. ftrace_importer before
+        // trace_event_importer.
+        importers.sort(function(x, y) {
+          return x.importPriority - y.importPriority;
+        });
+      });
+
+      // We import clock sync markers before all other events. This is necessary
+      // because we need the clock sync markers in order to know by how much we
+      // need to shift the timestamps of other events.
+      addStageForEachImporter('Importing clock sync markers',
+          importer => importer.importClockSyncMarkers());
+
+      addStageForEachImporter('Importing', importer => importer.importEvents());
+
+      // Run the cusomizeModelCallback if needed.
+      if (this.importOptions_.customizeModelCallback) {
+        addImportStage('Customizing', () => {
+          this.importOptions_.customizeModelCallback(this.model_);
+        });
+      }
+
+      // Import sample data.
+      addStageForEachImporter('Importing sample data',
+          importer => importer.importSampleData());
+
+      // Autoclose open slices and create subSlices.
+      addImportStage('Autoclosing open slices...', () => {
+        this.model_.autoCloseOpenSlices();
+        this.model_.createSubSlices();
+      });
+
+      // Finalize import.
+      addStageForEachImporter('Finalizing import',
+          importer => importer.finalizeImport());
+
+      // Run preinit.
+      addImportStage('Initializing objects (step 1/2)...',
+          () => this.model_.preInitializeObjects());
+
+      // Prune empty containers.
+      if (this.importOptions_.pruneEmptyContainers) {
+        addImportStage('Pruning empty containers...',
+            () => this.model_.pruneEmptyContainers());
+      }
+
+      // Merge kernel and userland slices on each thread.
+      addImportStage('Merging kernel with userland...',
+          () => this.model_.mergeKernelWithUserland());
+
+      // Create auditors
+      let auditors = [];
+      addImportStage('Adding arbitrary data to model...', () => {
+        for (const auditorConstructor of
+               this.importOptions_.auditorConstructors) {
+          try {
+            auditors.push(new auditorConstructor(this.model_));
+          } catch (e) {
+            console.error('Failed to construct an auditor:');
+            console.error(e);
+          }
+        }
+        auditors.forEach((auditor) => {
+          try {
+            auditor.runAnnotate();
+            auditor.installUserFriendlyCategoryDriverIfNeeded();
+          } catch (e) {
+            console.error('Failed to run an auditor:');
+            console.error(e);
+          }
+        });
+      });
+
+      addImportStage('Computing final world bounds...', () => {
+        this.model_.computeWorldBounds(this.importOptions_.shiftWorldToZero);
+      });
+
+      addImportStage('Building flow event map...',
+          () => this.model_.buildFlowEventIntervalTree());
+
+      // Join refs.
+      addImportStage('Joining object refs...', () => this.model_.joinRefs());
+
+      // Delete any undeleted objects.
+      addImportStage('Cleaning up undeleted objects...',
+          () => this.model_.cleanupUndeletedObjects());
+
+      // Sort global and process memory dumps.
+      addImportStage('Sorting memory dumps...',
+          () => this.model_.sortMemoryDumps());
+
+      // Finalize memory dump graphs.
+      addImportStage('Finalizing memory dump graphs...',
+          () => this.model_.finalizeMemoryGraphs());
+
+      // Run initializers.
+      addImportStage('Initializing objects (step 2/2)...',
+          () => this.model_.initializeObjects());
+
+      // Build event indices mapping from an event id to all flow events.
+      addImportStage('Building event indices...',
+          () => this.model_.buildEventIndices());
+
+      // Build the UserModel.
+      addImportStage('Building UserModel...', () => {
+        try {
+          const userModelBuilder = new tr.importer.UserModelBuilder(this.model_);
+          userModelBuilder.buildUserModel();
+        } catch (e) {
+          console.error('Failed to build user model');
+          console.error(e);
+        }
+      });
+
+      // Sort Expectations.
+      addImportStage('Sorting user expectations...',
+          () => this.model_.userModel.sortExpectations());
+
+      // Run audits.
+      addImportStage('Running auditors...', () => {
+        auditors.forEach(auditor => auditor.runAudit());
+      });
+
+      addImportStage('Updating alerts...', () => this.model_.sortAlerts());
+
+      addImportStage('Update bounds...', () => this.model_.updateBounds());
+
+      addImportStage('Looking for warnings...', () => {
+        // Log an import warning if the clock is low resolution.
+        if (!this.model_.isTimeHighResolution) {
+          this.model_.importWarning({
+            type: 'low_resolution_timer',
+            message: 'Trace time is low resolution, trace may be unusable.',
+            showToUser: true
+          });
+        }
+      });
+
+      // Cleanup.
+      lastTask.after(() => {
+        this.importing_ = false;
+        this.model_.stats.traceImportDurationMs =
+            tr.b.Timing.getCurrentTimeMs() - importStartTimeMs;
+      });
+      return importTask;
+    },
+
+    createImporter_(eventData) {
+      const importerConstructor = tr.importer.Importer.findImporterFor(
+          eventData);
+      if (!importerConstructor) {
+        throw new Error('Couldn\'t create an importer for the provided ' +
+                        'eventData.');
+      }
+      return new importerConstructor(this.model_, eventData);
+    },
+
+    hasEventDataDecoder_(importers) {
+      for (let i = 0; i < importers.length; ++i) {
+        if (!importers[i].isTraceDataContainer()) return true;
+      }
+
+      return false;
+    }
+  };
+
+  return {
+    ImportOptions,
+    Import,
+  };
+});
+</script>

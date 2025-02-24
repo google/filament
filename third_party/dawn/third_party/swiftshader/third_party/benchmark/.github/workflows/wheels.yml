@@ -1,0 +1,79 @@
+name: Build and upload Python wheels
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+jobs:
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Install Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Build and check sdist
+        run: |
+          python setup.py sdist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/*.tar.gz
+
+  build_wheels:
+    name: Build Google Benchmark wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2019]
+
+    steps:
+      - name: Check out Google Benchmark
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Build wheels on ${{ matrix.os }} using cibuildwheel
+        uses: pypa/cibuildwheel@v2.14.1
+        env:
+          CIBW_BUILD: 'cp38-* cp39-* cp310-* cp311-*'
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_TEST_SKIP: "*-macosx_arm64"
+          CIBW_ARCHS_LINUX: x86_64 aarch64
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BEFORE_ALL_LINUX: bash .github/install_bazel.sh
+          CIBW_TEST_COMMAND: python {project}/bindings/python/google_benchmark/example.py
+
+      - name: Upload Google Benchmark ${{ matrix.os }} wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: ./wheelhouse/*.whl
+
+  pypi_upload:
+    name: Publish google-benchmark wheels to PyPI
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: dist
+
+    - uses: pypa/gh-action-pypi-publish@v1.6.4
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_PASSWORD }}

@@ -1,0 +1,105 @@
+# This setups the actions for generated header file headers used by the clang
+# libs. The below are heavily influenced by LLVM.
+
+import("//build_overrides/clspv.gni")
+
+# Based on below files
+#   `clang/include/clang/Config/BUILD.gn`
+#   `clang/include/clang/Basic/BUILD.gn`
+#   `clang/lib/Basic/BUILD.gn`
+import(
+    "//$clspv_llvm_dir/llvm/utils/gn/secondary/clang/lib/ARCMigrate/enable.gni")
+import(
+    "//$clspv_llvm_dir/llvm/utils/gn/secondary/clang/lib/StaticAnalyzer/Frontend/enable.gni")
+import("//$clspv_llvm_dir/llvm/utils/gn/secondary/llvm/version.gni")
+import("../../write_cmake_config.gni")
+import("../../write_vcsrevision.gni")
+
+# from include/clang/Basic
+write_cmake_config("version") {
+  input = "//$clspv_llvm_dir/clang/include/clang/Basic/Version.inc.in"
+  output = "$root_gen_dir/$clspv_llvm_dir/clang/Basic/Version.inc"
+  values = [
+    "CLANG_VERSION=$llvm_version",
+    "CLANG_VERSION_MAJOR=$llvm_version_major",
+    "CLANG_VERSION_MINOR=$llvm_version_minor",
+    "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+  ]
+}
+
+# from clang/lib/Basic
+config("write_vcsrevision_config") {
+  # To pick up the generated inc file.
+  include_dirs = [ "$root_gen_dir/$clspv_llvm_dir/clang/lib/Basic" ]
+  visibility = [ ":write_vcsversion" ]
+}
+
+write_vcsrevision("write_vcsversion") {
+  header = "$root_gen_dir/$clspv_llvm_dir/clang/lib/Basic/VCSVersion.inc"
+  names = [
+    "LLVM",
+    "CLANG",
+  ]
+  public_configs = [ ":write_vcsrevision_config" ]
+}
+
+write_cmake_config("Config") {
+  input = "//$clspv_llvm_dir/clang/include/clang/Config/config.h.cmake"
+  output = "$root_gen_dir/$clspv_llvm_dir/clang/Config/config.h"
+  values = [
+    "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
+    "CLANG_DEFAULT_PIE_ON_LINUX=1",
+    "CLANG_DEFAULT_LINKER=",
+    "CLANG_DEFAULT_CXX_STDLIB=",
+    "CLANG_DEFAULT_RTLIB=",
+    "CLANG_DEFAULT_OBJCOPY=objcopy",
+    "CLANG_DEFAULT_OPENMP_RUNTIME=libomp",
+    "CLANG_DEFAULT_UNWINDLIB=",
+    "CLANG_INSTALL_LIBDIR_BASENAME=lib",
+    "CLANG_RESOURCE_DIR=",
+    "C_INCLUDE_DIRS=",
+    "CLANG_CONFIG_FILE_SYSTEM_DIR=",
+    "CLANG_CONFIG_FILE_USER_DIR=",
+    "CLANG_SPAWN_CC1=",
+    "DEFAULT_SYSROOT=",
+    "GCC_INSTALL_PREFIX=",
+    "ENABLE_LINKER_BUILD_ID=",
+    "ENABLE_X86_RELAX_RELOCATIONS=1",
+    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
+    "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
+  ]
+
+  if (clang_enable_arcmt) {
+    values += [ "CLANG_ENABLE_ARCMT=1" ]
+  } else {
+    values += [ "CLANG_ENABLE_ARCMT=" ]
+  }
+
+  if (clang_enable_static_analyzer) {
+    values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
+  } else {
+    values += [ "CLANG_ENABLE_STATIC_ANALYZER=" ]
+  }
+
+  if (host_os != "win") {
+    values += [ "CLANG_HAVE_RLIMITS=1" ]
+  } else {
+    values += [ "CLANG_HAVE_RLIMITS=" ]
+  }
+
+  if (llvm_enable_libxml2) {
+    values += [ "CLANG_HAVE_LIBXML=1" ]
+  } else {
+    values += [ "CLANG_HAVE_LIBXML=" ]
+  }
+
+  if (host_os == "mac") {
+    # FIXME: Hardcoding this isn't great, but assuming that the host ld version
+    # has anything to do with the ld version where the built clang will run
+    # isn't either. Probably want to make this a declare_args.
+    values += [ "HOST_LINK_VERSION=305" ]
+  } else {
+    values += [ "HOST_LINK_VERSION=" ]
+  }
+}

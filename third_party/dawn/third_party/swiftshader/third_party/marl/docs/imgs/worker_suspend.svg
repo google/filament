@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" viewBox="829 1174.5 811.5 463.5" width="811.5" height="463.5">
+  <defs>
+    <font-face font-family="Courier New" font-size="16" panose-1="2 7 3 9 2 2 5 2 4 4" units-per-em="1000" underline-position="-232.91016" underline-thickness="41.015625" slope="0" x-height="422.85156" cap-height="571.28906" ascent="832.5195" descent="-300.29297" font-weight="400">
+      <font-face-src>
+        <font-face-name name="CourierNewPSMT"/>
+      </font-face-src>
+    </font-face>
+    <filter id="Shadow" filterUnits="userSpaceOnUse" x="829" y="1174.5">
+      <feOffset in="SourceAlpha" result="offset" dx="0" dy="2"/>
+      <feFlood flood-color="#919191" flood-opacity=".25" result="flood"/>
+      <feComposite in="flood" in2="offset" operator="in" result="color"/>
+      <feMerge>
+        <feMergeNode in="color"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <font-face font-family="Roboto" font-size="12" panose-1="2 0 0 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-73.24219" underline-thickness="48.828125" slope="0" x-height="528.3203" cap-height="710.9375" ascent="927.7344" descent="-244.14062" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Roboto-Regular"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Roboto" font-size="11" panose-1="2 0 0 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-73.24219" underline-thickness="48.828125" slope="0" x-height="528.3203" cap-height="710.9375" ascent="927.7344" descent="-244.14062" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Roboto-Regular"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 5 6" markerWidth="5" markerHeight="6" color="#00aeef">
+      <g>
+        <path d="M 2.88 0 L 0 -1.08 L 0 1.08 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="Roboto" font-size="13" panose-1="2 0 0 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-73.24219" underline-thickness="48.828125" slope="0" x-height="528.3203" cap-height="710.9375" ascent="927.7344" descent="-244.14062" font-weight="700">
+      <font-face-src>
+        <font-face-name name="Roboto-Bold"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Courier New" font-size="13" panose-1="2 7 6 9 2 2 5 2 4 4" units-per-em="1000" underline-position="-232.91016" underline-thickness="100.09766" slope="0" x-height="443.3594" cap-height="591.7969" ascent="832.5195" descent="-300.29297" font-weight="700">
+      <font-face-src>
+        <font-face-name name="CourierNewPS-BoldMT"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Roboto" font-size="13" panose-1="2 0 0 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-73.24219" underline-thickness="48.828125" slope="0" x-height="528.3203" cap-height="710.9375" ascent="927.7344" descent="-244.14062" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Roboto-Regular"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.12.1 
+    <dc:date>2020-02-12 20:51:35 +0000</dc:date>
+  </metadata>
+  <g id="Canvas_1" stroke="none" stroke-opacity="1" fill="none" fill-opacity="1" stroke-dasharray="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1: Layer 1">
+      <title>Layer 1</title>
+      <g id="Graphic_135">
+        <rect x="850" y="1175" width="790" height="440" fill="#4751d4" fill-opacity=".04274277"/>
+        <path d="M 850 1175 L 1640 1175 L 1640 1615 L 850 1615 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.0,4.0" stroke-width="1"/>
+        <clipPath id="clip_path">
+          <rect x="0" y="0" width="790" height="440" fill="#4751d4" fill-opacity=".04274277"/>
+        </clipPath>
+        <text clip-path="url(#clip_path)" transform="translate(855 1180)" fill="black">
+          <tspan font-family="Courier New" font-size="16" font-weight="400" fill="black" x="308.38672" y="13">Worker::suspend()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_136" filter="url(#Shadow)">
+        <path d="M 1140 1305 L 1205 1335 L 1140 1365 L 1075 1335 Z" fill="white"/>
+        <path d="M 1140 1305 L 1205 1335 L 1140 1365 L 1075 1335 Z" stroke="#fcc04d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1081 1321)" fill="#515556">
+          <tspan font-family="Roboto" font-size="12" font-weight="400" fill="#515556" x="27.529297" y="11">Have Fibers</tspan>
+          <tspan font-family="Roboto" font-size="12" font-weight="400" fill="#515556" x="39.807617" y="25">Ready?</tspan>
+        </text>
+      </g>
+      <g id="Graphic_137" filter="url(#Shadow)">
+        <circle cx="1245" cy="1335" r="15.0000239685284" fill="white"/>
+        <circle cx="1245" cy="1335" r="15.0000239685284" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1236 1328.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x=".12158203" y="10">Yes</tspan>
+        </text>
+      </g>
+      <g id="Graphic_138" filter="url(#Shadow)">
+        <circle cx="1140" cy="1400" r="15.0000239685285" fill="white"/>
+        <circle cx="1140" cy="1400" r="15.0000239685285" stroke="#b1001c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1131 1393.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x="1.9423828" y="10">No</tspan>
+        </text>
+      </g>
+      <g id="Line_139">
+        <line x1="1140" y1="1366.1014" x2="1140" y2="1374.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_140">
+        <line x1="1207.3863" y1="1335" x2="1219.94" y2="1335" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_144" filter="url(#Shadow)">
+        <path d="M 1140 1435 L 1205 1465 L 1140 1495 L 1075 1465 Z" fill="white"/>
+        <path d="M 1140 1435 L 1205 1465 L 1140 1495 L 1075 1465 Z" stroke="#fcc04d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1081 1458)" fill="#515556">
+          <tspan font-family="Roboto" font-size="12" font-weight="400" fill="#515556" x="16.654297" y="11">Have Idle Fiber?</tspan>
+        </text>
+      </g>
+      <g id="Line_145">
+        <line x1="1140" y1="1416" x2="1140" y2="1424.8386" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_148" filter="url(#Shadow)">
+        <circle cx="1245" cy="1465" r="15.0000239685284" fill="white"/>
+        <circle cx="1245" cy="1465" r="15.0000239685284" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1236 1458.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x=".12158203" y="10">Yes</tspan>
+        </text>
+      </g>
+      <g id="Graphic_160" filter="url(#Shadow)">
+        <path d="M 1510 1595 L 1580 1595 C 1588.28 1595 1595 1603.96 1595 1615 C 1595 1626.04 1588.28 1635 1580 1635 L 1510 1635 C 1501.72 1635 1495 1626.04 1495 1615 C 1495 1603.96 1501.72 1595 1510 1595 Z" fill="#ffc7b1"/>
+        <path d="M 1510 1595 L 1580 1595 C 1588.28 1595 1595 1603.96 1595 1615 C 1595 1626.04 1588.28 1635 1580 1635 L 1510 1635 C 1501.72 1635 1495 1626.04 1495 1615 C 1495 1603.96 1501.72 1595 1510 1595 Z" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1501 1607.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="700" fill="#515556" x="28.946533" y="12">Done</tspan>
+        </text>
+      </g>
+      <g id="Graphic_162" filter="url(#Shadow)">
+        <path d="M 870 1366.75 L 870 1433.25 C 870 1441.116 861.04 1447.5 850 1447.5 C 838.96 1447.5 830 1441.116 830 1433.25 L 830 1366.75 C 830 1358.884 838.96 1352.5 850 1352.5 C 861.04 1352.5 870 1358.884 870 1366.75 Z" fill="#a7fee5"/>
+        <path d="M 870 1366.75 L 870 1433.25 C 870 1441.116 861.04 1447.5 850 1447.5 C 838.96 1447.5 830 1441.116 830 1433.25 L 830 1366.75 C 830 1358.884 838.96 1352.5 850 1352.5 C 861.04 1352.5 870 1358.884 870 1366.75 Z" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(857.5 1358.5) rotate(90)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="700" fill="#515556" x="27.097168" y="12">Start</tspan>
+        </text>
+      </g>
+      <g id="Graphic_164" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1075" y="1240" width="130" height="40" fill="#c0c0ff"/>
+        <rect x="1075" y="1240" width="130" height="40" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1081 1252.5)" fill="#515556">
+          <tspan font-family="Courier New" font-size="13" font-weight="700" fill="#515556" x="8.291748" y="11">waitForWork()</tspan>
+        </text>
+      </g>
+      <g id="Graphic_166" filter="url(#Shadow)">
+        <path d="M 965 1370 L 1030 1400 L 965 1430 L 900 1400 Z" fill="white"/>
+        <path d="M 965 1370 L 1030 1400 L 965 1430 L 900 1400 Z" stroke="#fcc04d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(906 1386)" fill="#515556">
+          <tspan font-family="Roboto" font-size="12" font-weight="400" fill="#515556" x="22.270508" y="11">Suspend With</tspan>
+          <tspan font-family="Roboto" font-size="12" font-weight="400" fill="#515556" x="34.003906" y="25">Timeout?</tspan>
+        </text>
+      </g>
+      <g id="Graphic_167" filter="url(#Shadow)">
+        <circle cx="965" cy="1470" r="15.0000239685285" fill="white"/>
+        <circle cx="965" cy="1470" r="15.0000239685285" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(956 1463.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x=".12158203" y="10">Yes</tspan>
+        </text>
+      </g>
+      <g id="Graphic_168" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="900" y="1515" width="130" height="40" fill="white"/>
+        <rect x="900" y="1515" width="130" height="40" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(906 1520)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="24.01172" y="12">Add Fiber to</tspan>
+          <tspan font-family="Courier New" font-size="13" font-weight="700" fill="#515556" x="12.192383" y="26">work.waiting</tspan>
+        </text>
+      </g>
+      <g id="Graphic_170" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1277.5" y="1315" width="130" height="40" fill="white"/>
+        <rect x="1277.5" y="1315" width="130" height="40" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1283.5 1320)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="15.569336" y="12">Take fiber from</tspan>
+          <tspan font-family="Courier New" font-size="13" font-weight="700" fill="#515556" x="16.093018" y="26">work.fibers</tspan>
+        </text>
+      </g>
+      <g id="Graphic_171" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1275" y="1445" width="130" height="40" fill="white"/>
+        <rect x="1275" y="1445" width="130" height="40" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1281 1450)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="15.569336" y="12">Take fiber from</tspan>
+          <tspan font-family="Courier New" font-size="13" font-weight="700" fill="#515556" x="19.993652" y="26">idleFibers</tspan>
+        </text>
+      </g>
+      <g id="Line_172">
+        <line x1="1207.3863" y1="1465" x2="1219.94" y2="1465" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_173">
+        <line x1="1261" y1="1465" x2="1264.94" y2="1465" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_174">
+        <line x1="1261" y1="1335" x2="1267.44" y2="1335" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_175" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1480" y="1470" width="130" height="30" fill="#c0ffc0"/>
+        <rect x="1480" y="1470" width="130" height="30" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1486 1477.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="15.121826" y="12">Switch To Fiber</tspan>
+        </text>
+      </g>
+      <g id="Graphic_176" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1480" y="1500" width="130" height="30" fill="#ffc0c0"/>
+        <rect x="1480" y="1500" width="130" height="30" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1486 1507.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="35.47876" y="12">Resume</tspan>
+        </text>
+      </g>
+      <g id="Graphic_178" filter="url(#Shadow)">
+        <circle cx="965" cy="1330" r="15.0000239685285" fill="white"/>
+        <circle cx="965" cy="1330" r="15.0000239685285" stroke="#b1001c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(956 1323.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x="1.9423828" y="10">No</tspan>
+        </text>
+      </g>
+      <g id="Graphic_182" filter="url(#Shadow)">
+        <title>join</title>
+        <rect x="1275" y="1545" width="130" height="40" fill="white"/>
+        <rect x="1275" y="1545" width="130" height="40" stroke="#00aeef" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1281 1549.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="9.443848" y="12">Create New Fiber</tspan>
+          <tspan font-family="Roboto" font-size="13" font-weight="400" fill="#515556" x="18.397217" y="27">To Call </tspan>
+          <tspan font-family="Courier New" font-size="13" font-weight="700" fill="#515556" y="27">run()</tspan>
+        </text>
+      </g>
+      <g id="Line_187">
+        <path d="M 1140 1545 L 1140 1565 L 1264.94 1565" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_188" filter="url(#Shadow)">
+        <circle cx="1140" cy="1530" r="15.0000239685285" fill="white"/>
+        <circle cx="1140" cy="1530" r="15.0000239685285" stroke="#b1001c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <text transform="translate(1131 1523.5)" fill="#515556">
+          <tspan font-family="Roboto" font-size="11" font-weight="400" fill="#515556" x="1.9423828" y="10">No</tspan>
+        </text>
+      </g>
+      <g id="Line_189">
+        <line x1="1140" y1="1496.1014" x2="1140" y2="1504.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_190">
+        <path d="M 1407.5 1335 L 1430 1335 L 1430 1400 L 1545 1400 L 1545 1460.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_191">
+        <path d="M 1405 1465 L 1430 1465 L 1430 1400 L 1545 1400 L 1545 1460.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_192">
+        <path d="M 1405 1565 L 1430 1565 L 1430 1400 L 1545 1400 L 1545 1460.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_195">
+        <line x1="1545" y1="1530" x2="1545" y2="1584.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_196">
+        <line x1="965" y1="1368.8986" x2="965" y2="1355.06" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_197">
+        <line x1="965" y1="1431.1014" x2="965" y2="1444.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_198">
+        <line x1="965" y1="1485" x2="965" y2="1504.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_199">
+        <path d="M 1030 1535 L 1052.5 1535 L 1052.5 1260 L 1065.94 1260" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_200">
+        <path d="M 965 1315 L 965 1260 L 1065.94 1260" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_201">
+        <line x1="1140" y1="1280" x2="1140" y2="1295.94" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_202">
+        <line x1="870" y1="1400" x2="888.5537" y2="1400" marker-end="url(#FilledArrow_Marker)" stroke="#00aeef" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

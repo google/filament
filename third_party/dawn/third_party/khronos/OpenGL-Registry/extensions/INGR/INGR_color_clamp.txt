@@ -1,0 +1,139 @@
+Name
+
+    INGR_color_clamp
+
+Name Strings
+
+    GL_INGR_color_clamp
+
+Version
+
+    Date: 9/28/1998  Version 1.1
+
+Number
+
+    174
+
+Dependencies
+
+    None
+
+Overview
+
+    Various RGBA color space conversions require clamping to values
+    in a more constrained range than [0, 1].  This extension allows
+    the definition of independent color clamp values for each of the
+    four color components as part of the Final Conversion in the pixel
+    transfer path for draws, reads, and copies.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelTransferf and
+    PixelTransferi:
+
+        RED_MIN_CLAMP_INGR                  0x8560
+        GREEN_MIN_CLAMP_INGR                0x8561
+        BLUE_MIN_CLAMP_INGR                 0x8562
+        ALPHA_MIN_CLAMP_INGR                0x8563
+        RED_MAX_CLAMP_INGR                  0x8564
+        GREEN_MAX_CLAMP_INGR                0x8565
+        BLUE_MAX_CLAMP_INGR                 0x8566
+        ALPHA_MAX_CLAMP_INGR                0x8567
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        RED_MIN_CLAMP_INGR                  0x8560
+        GREEN_MIN_CLAMP_INGR                0x8561
+        BLUE_MIN_CLAMP_INGR                 0x8562
+        ALPHA_MIN_CLAMP_INGR                0x8563
+        RED_MAX_CLAMP_INGR                  0x8564
+        GREEN_MAX_CLAMP_INGR                0x8565
+        BLUE_MAX_CLAMP_INGR                 0x8566
+        ALPHA_MAX_CLAMP_INGR                0x8567
+
+Additions to Chapter 2 of the 1.2 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 GL Specification (Rasterization)
+
+    Pixel Transfer Modes   [Add to Table 3.2]
+
+        Parameter Name         Type   Initial Value   Valid Range
+     -------------------------------------------------------------
+      RED_MIN_CLAMP_INGR       float       0.0          0.0, 1.0
+      GREEN_MIN_CLAMP_INGR     float       0.0          0.0, 1.0
+      BLUE_MIN_CLAMP_INGR      float       0.0          0.0, 1.0
+      ALPHA_MIN_CLAMP_INGR     float       0.0          0.0, 1.0
+      RED_MAX_CLAMP_INGR       float       1.0          0.0, 1.0
+      GREEN_MAX_CLAMP_INGR     float       1.0          0.0, 1.0
+      BLUE_MAX_CLAMP_INGR      float       1.0          0.0, 1.0
+      ALPHA_MAX_CLAMP_INGR     float       1.0          0.0, 1.0
+
+
+    Final Conversion
+
+    For RGBA components, each element is clamped to the range
+    specified by [*_MIN_CLAMP_INGR, *_MAX_CLAMP_INGR].  The results
+    are converted to fixed-point according to the rules given in
+    section 2.13.9 (Final Color Processing).  If *_MIN_CLAMP_INGR
+    is greater than *_MAX_CLAMP_INGR, then the behavior is
+    implementation dependent.
+
+Additions to Chapter 4 of the 1.2 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Final Conversion
+
+    For RGBA components, each element is clamped to the range
+    specified by [*_MIN_CLAMP_INGR, *_MAX_CLAMP_INGR].  Then the
+    appropriate conversion formula from table 4.7 is applied to
+    the component.  If *_MIN_CLAMP_INGR is greater than
+    *_MAX_CLAMP_INGR, then the behavior is implementation dependent.
+
+
+Additions to Chapter 5 of the 1.2 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 GL Specification (State and State Requests)
+
+    The state required is eight floating-point numbers that are the
+    red, green, blue, and alpha minimum and maximum clamp values.
+    The initial value for the minimum clamp values is 0.0.  The
+    initial state for the maximum clamp values is 1.0.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+                                                      Initial
+    Get Value                  Get Command    Type     Value   Attribute
+    ------------------------   -----------   -------  -------  ----------
+    RED_MIN_CLAMP_INGR          GetFloatv     R[0,1]     0.0      pixel
+    GREEN_MIN_CLAMP_INGR        GetFloatv     R[0,1]     0.0      pixel
+    BLUE_MIN_CLAMP_INGR         GetFloatv     R[0,1]     0.0      pixel
+    ALPHA_MIN_CLAMP_INGR        GetFloatv     R[0,1]     0.0      pixel
+    RED_MAX_CLAMP_INGR          GetFloatv     R[0,1]     1.0      pixel
+    GREEN_MAX_CLAMP_INGR        GetFloatv     R[0,1]     1.0      pixel
+    BLUE_MAX_CLAMP_INGR         GetFloatv     R[0,1]     1.0      pixel
+    ALPHA_MAX_CLAMP_INGR        GetFloatv     R[0,1]     1.0      pixel
+
+New Implementation Dependent State
+
+    None

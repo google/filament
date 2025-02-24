@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/clock_sync_latency_metric.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('clockSyncLatencyMetric', function() {
+    const model = new tr.Model();
+    model.clockSyncManager.addClockSyncMarker(
+        tr.model.ClockDomainId.TELEMETRY, 'ID01', 1.0, 4.0);
+    model.clockSyncManager.addClockSyncMarker(
+        tr.model.ClockDomainId.TELEMETRY, 'ID02', 2.0, 8.0);
+    model.clockSyncManager.addClockSyncMarker(
+        tr.model.ClockDomainId.BATTOR, 'ID01', 2.5);
+    model.clockSyncManager.addClockSyncMarker(
+        tr.model.ClockDomainId.WIN_QPC, 'ID02', 5.0);
+
+    const battorToWinQpcName = 'clock_sync_latency_' +
+        tr.model.ClockDomainId.BATTOR.toLowerCase() + '_to_' +
+        tr.model.ClockDomainId.WIN_QPC.toLowerCase();
+    const winQpcToTelemetryName = 'clock_sync_latency_' +
+        tr.model.ClockDomainId.TELEMETRY.toLowerCase() + '_to_' +
+        tr.model.ClockDomainId.WIN_QPC.toLowerCase();
+    const battorToTelemetryName = 'clock_sync_latency_' +
+        tr.model.ClockDomainId.BATTOR.toLowerCase() + '_to_' +
+        tr.model.ClockDomainId.TELEMETRY.toLowerCase();
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.clockSyncLatencyMetric(histograms, model);
+
+    let battorToWinQpcValue = undefined;
+    let winQpcToTelemetryValue = undefined;
+    let battorToTelemetryValue = undefined;
+    for (const value of histograms) {
+      if (value.name === battorToWinQpcName) {
+        battorToWinQpcValue = value;
+      } else if (value.name === winQpcToTelemetryName) {
+        winQpcToTelemetryValue = value;
+      } else if (value.name === battorToTelemetryName) {
+        battorToTelemetryValue = value;
+      }
+    }
+
+    // Clock sync graph is:
+    // [WIN_QPC] --6ms-> [TELEMETRY] --3ms-> [BATTOR]
+
+    assert.isDefined(battorToWinQpcValue);
+    assert.isDefined(winQpcToTelemetryValue);
+    assert.isDefined(battorToTelemetryValue);
+    assert.closeTo(battorToWinQpcValue.average, 9.0, 1e-5);
+    assert.closeTo(winQpcToTelemetryValue.average, 6.0, 1e-5);
+    assert.closeTo(battorToTelemetryValue.average, 3.0, 1e-5);
+  });
+});
+</script>

@@ -1,0 +1,292 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e -o pipefail
+
+# Run custom-built cipd client. This is useful when cipd is not available upstream
+# (i.e. unsupported platform).
+if [ ! -z "${CUSTOM_CIPD_CLIENT}" ]; then
+  exec "${CUSTOM_CIPD_CLIENT}" "${@}"
+fi
+
+# Export for other depot_tools scripts to re-use.
+export DEPOT_TOOLS_DIR="${DEPOT_TOOLS_DIR:-$(dirname "${BASH_SOURCE[0]}")}"
+export DEPOT_TOOLS_UNAME_S="${DEPOT_TOOLS_UNAME_S:-$(uname -s | tr '[:upper:]' '[:lower:]')}"
+
+CYGWIN=false
+
+# Make sure this starts empty
+ARCH=
+
+UNAME="${DEPOT_TOOLS_UNAME_S}"
+case "${UNAME}" in
+  aix)
+    OS="${UNAME}"
+    ARCH="ppc64"  # apparently 'uname -m' returns something very different
+    ;;
+  linux)
+    OS="${UNAME}"
+    ;;
+  cygwin*)
+    OS=windows
+    CYGWIN=true
+    ;;
+  msys*|mingw*)
+    OS=windows
+    ;;
+  darwin)
+    OS=mac
+    # Allow mac users to override easily override arch detection
+    if [ ! -z "${ARCH_MAC_OVERRIDE}" ]; then
+      ARCH="${ARCH_MAC_OVERRIDE}"
+    fi
+    ;;
+  *)
+    >&2 echo "CIPD not supported on ${UNAME}"
+    exit 1
+esac
+
+if [ -z $ARCH ]; then
+  UNAME=`uname -m | tr '[:upper:]' '[:lower:]'`
+  case "${UNAME}" in
+    x86_64|amd64)
+      ARCH=amd64
+      ;;
+    s390x|ppc64|ppc64le)  # best-effort support
+      ARCH="${UNAME}"
+      ;;
+    aarch64)
+      ARCH=arm64
+      ;;
+    armv7l)
+      ARCH=armv6l
+      ;;
+    arm*)
+      ARCH="${UNAME}"
+      ;;
+    *86)
+      ARCH=386
+      ;;
+    mips*)
+      # detect mips64le vs mips64.
+      ARCH="${UNAME}"
+      if lscpu | grep -q "Little Endian"; then
+        ARCH+=le
+      fi
+      ;;
+    riscv64)
+      ARCH=riscv64
+      ;;
+    *)
+      >&2 echo "UNKNOWN Machine architecture: ${UNAME}"
+      exit 1
+  esac
+fi
+
+# CIPD_BACKEND can be changed to ...-dev for manual testing.
+CIPD_BACKEND="https://chrome-infra-packages.appspot.com"
+VERSION_FILE="${DEPOT_TOOLS_DIR}/cipd_client_version"
+
+CIPD_ROOT="${DEPOT_TOOLS_DIR}"
+# value in .cipd_client_root file overrides the default root.
+CIPD_ROOT_OVERRIDE_FILE="${DEPOT_TOOLS_DIR}/.cipd_client_root"
+if [ -f "${CIPD_ROOT_OVERRIDE_FILE}" ]; then
+  CIPD_ROOT=$(<"${CIPD_ROOT_OVERRIDE_FILE}")
+  mkdir -p "${CIPD_ROOT}"
+fi
+CLIENT="${CIPD_ROOT}/.cipd_client"
+PLATFORM="${OS}-${ARCH}"
+
+# A value in .cipd_client_platform overrides the "guessed" platform.
+PLATFORM_OVERRIDE_FILE="${DEPOT_TOOLS_DIR}/.cipd_client_platform"
+if [ -f "${PLATFORM_OVERRIDE_FILE}" ]; then
+  PLATFORM=$(<"${PLATFORM_OVERRIDE_FILE}")
+fi
+
+USER_AGENT="depot_tools/$(git -C ${DEPOT_TOOLS_DIR} rev-parse HEAD 2>/dev/null || echo "???")"
+
+
+# calc_sha256 is "portable" variant of sha256sum. It uses sha256sum when
+# available (most Linuxes and cygwin) and 'shasum -a 256' otherwise (for OSX).
+#
+# Args:
+#   Path to a file.
+# Stdout:
+#   Lowercase SHA256 hex digest of the file.
+function calc_sha256() {
+  if hash sha256sum 2> /dev/null ; then
+    sha256sum "$1" | cut -d' ' -f1
+  elif hash shasum 2> /dev/null ; then
+    shasum -a 256 "$1" | cut -d' ' -f1
+  else
+    >&2 echo -n "[31;1m"
+    >&2 echo -n "Don't know how to calculate SHA256 on your platform. "
+    >&2 echo -n "Please use your package manager to install one before continuing:"
+    >&2 echo
+    >&2 echo "  sha256sum"
+    >&2 echo -n "  shasum"
+    >&2 echo "[0m"
+    return 1
+  fi
+}
+
+
+# expected_sha256 reads the expected SHA256 hex digest from *.digests file.
+#
+# Args:
+#   Name of the platform to get client's digest for.
+# Stdout:
+#   Lowercase SHA256 hex digest.
+function expected_sha256() {
+  local line
+  while read -r line; do
+    if [[ "${line}" =~ ^([0-9a-z\-]+)[[:blank:]]+sha256[[:blank:]]+([0-9a-f]+)$ ]] ; then
+      local plat="${BASH_REMATCH[1]}"
+      local hash="${BASH_REMATCH[2]}"
+      if [ "${plat}" ==  "$1" ]; then
+        echo "${hash}"
+        return 0
+      fi
+    fi
+  done < "${VERSION_FILE}.digests"
+
+  >&2 echo -n "[31;1m"
+  >&2 echo -n "Platform $1 is not supported by the CIPD client bootstrap: "
+  >&2 echo -n "there's no pinned SHA256 hash for it in the *.digests file."
+  >&2 echo "[0m"
+
+  return 1
+}
+
+
+# clean_bootstrap bootstraps the client from scratch using 'curl' or 'wget'.
+#
+# It checks that the SHA256 of the downloaded file is known. Exits the script
+# if the client can't be downloaded or its hash doesn't match the expected one.
+function clean_bootstrap() {
+  local expected_hash=$(expected_sha256 "${PLATFORM}")
+  if [ -z "${expected_hash}" ] ; then
+    exit 1
+  fi
+
+  local VERSION=$(<"${VERSION_FILE}")
+  local URL="${CIPD_BACKEND}/client?platform=${PLATFORM}&version=${VERSION}"
+
+  # Download the client into a temporary file, check its hash, then move it into
+  # the final location.
+  #
+  # This wonky tempdir method works on Linux and Mac.
+  local CIPD_CLIENT_TMP=$(\
+    mktemp -p "${CIPD_ROOT}" 2>/dev/null || \
+    mktemp "${CIPD_ROOT}/.cipd_client.XXXXXXX")
+
+  if hash curl 2> /dev/null ; then
+    curl "${URL}" -s --show-error -f --retry 3 --retry-delay 5 -A "${USER_AGENT}" -L -o "${CIPD_CLIENT_TMP}"
+  elif hash wget 2> /dev/null ; then
+    wget "${URL}" -q -t 3 -w 5 --retry-connrefused -U "${USER_AGENT}" -O "${CIPD_CLIENT_TMP}"
+  else
+    >&2 echo -n "[31;1m"
+    >&2 echo -n "Your platform is missing a supported fetch command. "
+    >&2 echo "Please use your package manager to install one before continuing:"
+    >&2 echo
+    >&2 echo "  curl"
+    >&2 echo "  wget"
+    >&2 echo
+    >&2 echo "Alternately, manually download:"
+    >&2 echo "  ${URL}"
+    >&2 echo -n "To ${CLIENT}, and then re-run this command."
+    >&2 echo "[0m"
+    rm "${CIPD_CLIENT_TMP}"
+    exit 1
+  fi
+
+  local actual_hash=$(calc_sha256 "${CIPD_CLIENT_TMP}")
+  if [ -z "${actual_hash}" ] ; then
+    rm "${CIPD_CLIENT_TMP}"
+    exit 1
+  fi
+
+  if [ "${actual_hash}" != "${expected_hash}" ]; then
+    >&2 echo -n "[31;1m"
+    >&2 echo "SHA256 digest of the downloaded CIPD client is incorrect:"
+    >&2 echo "  Expecting ${expected_hash}"
+    >&2 echo "  Got       ${actual_hash}"
+    >&2 echo -n "Refusing to run it. Check that *.digests file is up-to-date."
+    >&2 echo "[0m"
+    rm "${CIPD_CLIENT_TMP}"
+    exit 1
+  fi
+
+  set +e
+  chmod +x "${CIPD_CLIENT_TMP}"
+  mv "${CIPD_CLIENT_TMP}" "${CLIENT}"
+  set -e
+}
+
+
+# self_update launches CIPD client's built-in selfupdate mechanism.
+#
+# It is more efficient that redownloading the binary all the time.
+function self_update() {
+  "${CLIENT}" selfupdate -version-file "${VERSION_FILE}" -service-url "${CIPD_BACKEND}"
+}
+
+
+# Nuke the existing client if its platform doesn't match what we want now. We
+# crudely search for a CIPD client package name in the .cipd_version JSON file.
+# It has only "instance_id" as the other field (looking like a base64 string),
+# so mismatches are very unlikely.
+INSTALLED_VERSION_FILE="${CIPD_ROOT}/.versions/.cipd_client.cipd_version"
+if [ -f "${INSTALLED_VERSION_FILE}" ]; then
+  JSON_BODY=$(<"${INSTALLED_VERSION_FILE}")
+  if [[ "$JSON_BODY" != *"infra/tools/cipd/${PLATFORM}"* ]]; then
+    >&2 echo "Detected CIPD client platform change to ${PLATFORM}."
+    >&2 echo "Deleting the existing client to trigger the bootstrap..."
+    rm -f "${CLIENT}" "${INSTALLED_VERSION_FILE}"
+  fi
+fi
+
+# If the client binary doesn't exist, do the bootstrap from scratch.
+if [ ! -x "${CLIENT}" ]; then
+  clean_bootstrap
+fi
+
+# If the client binary exists, ask it to self-update.
+export CIPD_HTTP_USER_AGENT_PREFIX="${USER_AGENT}"
+if ! self_update 2> /dev/null ; then
+  >&2 echo -n "[31;1m"
+  >&2 echo -n "CIPD selfupdate failed. "
+  >&2 echo -n "Trying to bootstrap the CIPD client from scratch..."
+  >&2 echo "[0m"
+  clean_bootstrap
+  if ! self_update ; then  # need to run it again to setup .cipd_version file
+    >&2 echo -n "[31;1m"
+    >&2 echo -n "Bootstrap from scratch for ${PLATFORM} failed! "
+    >&2 echo "Run the following commands to diagnose if this is repeating:"
+    >&2 echo "  export CIPD_HTTP_USER_AGENT_PREFIX=${USER_AGENT}/manual"
+    >&2 echo -n "  ${CLIENT} selfupdate -version-file ${VERSION_FILE}"
+    >&2 echo "[0m"
+    exit 1
+  fi
+fi
+
+# CygWin requires changing absolute paths to Windows form. Relative paths
+# are typically okay as Windows generally accepts both forward and back
+# slashes. This could possibly be constrained to only /tmp/ and /cygdrive/.
+if ${CYGWIN}; then
+  args=("$@")
+  for i in `seq 2 $#`; do
+    arg="${@:$i:1}"
+    if [ "${arg:0:1}" == "/" ]; then
+      last=$((i-1))
+      next=$((i+1))
+      set -- "${@:1:$last}" `cygpath -w "$arg"` "${@:$next}"
+    fi
+  done
+  echo "${CLIENT}" "${@}"
+fi
+
+exec "${CLIENT}" "${@}"

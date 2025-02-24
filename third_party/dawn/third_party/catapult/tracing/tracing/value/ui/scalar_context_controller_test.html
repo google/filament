@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/value/ui/scalar_context_controller.html">
+
+<dom-module id="tr-v-ui-scalar-context-controller-mock-host">
+  <template>
+    <tr-v-ui-scalar-context-controller id="controller">
+    </tr-v-ui-scalar-context-controller>
+    <content></content>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const getScalarContextControllerForElement =
+      tr.v.ui.getScalarContextControllerForElement;
+
+  Polymer({
+    is: 'tr-v-ui-scalar-context-controller-mock-host'
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('getScalarContextControllerForElement', function() {
+    const root = document.createElement('div');
+    Polymer.dom(document.body).appendChild(root);
+    try {
+      assert.isUndefined(getScalarContextControllerForElement(root));
+
+      // <div> root
+      //   |__<div> host1
+      //        |__<tr-v-ui-scalar-context-controller> c1
+      const host1 = document.createElement('div');
+      Polymer.dom(root).appendChild(host1);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1));
+      const c1 = document.createElement('tr-v-ui-scalar-context-controller');
+      Polymer.dom(host1).appendChild(c1);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |__<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //           :..<tr-v-ui-scalar-context-controller> c2
+      const host2 = document.createElement(
+          'tr-v-ui-scalar-context-controller-mock-host');
+      const c2 = host2.$.controller;
+      Polymer.dom(root).appendChild(host2);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.strictEqual(getScalarContextControllerForElement(host2), c2);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |__<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |  :..<tr-v-ui-scalar-context-controller> c2
+      //        |__<div> divA
+      //             |__<div> divB
+      const divA = document.createElement('div');
+      Polymer.dom(host2).appendChild(divA);
+      assert.strictEqual(getScalarContextControllerForElement(divA), c2);
+      const divB = document.createElement('div');
+      Polymer.dom(divA).appendChild(divB);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c2);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |_<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |  :.-<tr-v-ui-scalar-context-controller> c2
+      //        |__<div> divA
+      //             |__<div> divB
+      //                  |__<tr-v-ui-scalar-context-controller-mock-host> host3
+      //                       :..<tr-v-ui-scalar-context-controller> c3
+      const host3 = document.createElement(
+          'tr-v-ui-scalar-context-controller-mock-host');
+      Polymer.dom(divB).appendChild(host3);
+      const c3 = host3.$.controller;
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.strictEqual(getScalarContextControllerForElement(host2), c2);
+      assert.strictEqual(getScalarContextControllerForElement(divA), c2);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c2);
+      assert.strictEqual(getScalarContextControllerForElement(host3), c3);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |_<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |  :.-<tr-v-ui-scalar-context-controller> c2
+      //        |__<div> divA
+      //             |  :.<tr-v-ui-scalar-context-controller> c4
+      //             |__<div> divB
+      //                  |__<tr-v-ui-scalar-context-controller-mock-host> host3
+      //                       :..<tr-v-ui-scalar-context-controller> c3
+      const c4 = document.createElement('tr-v-ui-scalar-context-controller');
+      Polymer.dom(divA).appendChild(c4);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.strictEqual(getScalarContextControllerForElement(host2), c2);
+      assert.strictEqual(getScalarContextControllerForElement(divA), c4);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c4);
+      assert.strictEqual(getScalarContextControllerForElement(host3), c3);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |_<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |  :.-<tr-v-ui-scalar-context-controller> c2
+      //        |__<div> divA
+      //             |  :.<tr-v-ui-scalar-context-controller> c4
+      //             |__<div> divB
+      //                  |__<tr-v-ui-scalar-context-controller-mock-host> host3
+      Polymer.dom(host3.root).removeChild(c3);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.strictEqual(getScalarContextControllerForElement(host2), c2);
+      assert.strictEqual(getScalarContextControllerForElement(divA), c4);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c4);
+      assert.strictEqual(getScalarContextControllerForElement(host3), c4);
+
+      // <div> root
+      //   |__<div> host1
+      //   |    |_<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |__<div> divA
+      //             |  :.<tr-v-ui-scalar-context-controller> c4
+      //             |__<div> divB
+      //                  |__<tr-v-ui-scalar-context-controller-mock-host> host3
+      Polymer.dom(host2.root).removeChild(c2);
+      assert.isUndefined(getScalarContextControllerForElement(root));
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.isUndefined(getScalarContextControllerForElement(host2));
+      assert.strictEqual(getScalarContextControllerForElement(divA), c4);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c4);
+      assert.strictEqual(getScalarContextControllerForElement(host3), c4);
+
+      // <div> root
+      //   |  :.<tr-v-ui-scalar-context-controller> c3
+      //   |__<div> host1
+      //   |    |_<tr-v-ui-scalar-context-controller> c1
+      //   |__<tr-v-ui-scalar-context-controller-mock-host> host2
+      //        |__<div> divA
+      //             |  :.<tr-v-ui-scalar-context-controller> c4
+      //             |__<div> divB
+      //                  |__<tr-v-ui-scalar-context-controller-mock-host> host3
+      Polymer.dom(root).appendChild(c3);
+      assert.strictEqual(getScalarContextControllerForElement(root), c3);
+      assert.strictEqual(getScalarContextControllerForElement(host1), c1);
+      assert.strictEqual(getScalarContextControllerForElement(host2), c3);
+      assert.strictEqual(getScalarContextControllerForElement(divA), c4);
+      assert.strictEqual(getScalarContextControllerForElement(divB), c4);
+      assert.strictEqual(getScalarContextControllerForElement(host3), c4);
+    } finally {
+      Polymer.dom(document.body).removeChild(root);
+    }
+  });
+
+  function contextTest(name, testCallback) {
+    test('context_' + name, function() {
+      const root = document.createElement('div');
+      Polymer.dom(document.body).appendChild(root);
+      try {
+        const c = document.createElement('tr-v-ui-scalar-context-controller');
+        Polymer.dom(root).appendChild(c);
+
+        let updatedGroups = [];  // Fail if event fires unexpectedly.
+        c.addEventListener('context-updated', function(e) {
+          if (updatedGroups) {
+            assert.fail('Unexpected context-updated event fired.');
+          }
+          updatedGroups = Array.from(e.groups);
+        });
+
+        c.expectContextUpdatedEventForTesting =
+            function(expectedUpdatedGroups) {
+              updatedGroups = undefined;
+              tr.b.forceAllPendingTasksToRunForTest();
+              assert.sameMembers(updatedGroups, expectedUpdatedGroups);
+            };
+
+        testCallback.call(this, c);
+      } finally {
+        Polymer.dom(document.body).removeChild(root);
+      }
+    });
+  }
+
+  contextTest('singleGroup', function(c) {
+    assert.isUndefined(c.getContext('G'));
+
+    const s1 = {value: 10};
+    c.onScalarSpanAdded('G', s1);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(10, 10)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s1]);
+
+    const s2 = {value: 15};
+    c.onScalarSpanAdded('G', s2);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(10, 15)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s1, s2]);
+
+    s1.value = 5;
+    c.onScalarSpanUpdated('G', s1);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(5, 15)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s1, s2]);
+
+    c.onScalarSpanRemoved('G', s2);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(5, 5)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s1]);
+
+    const s3 = {value: 0};
+    c.onScalarSpanAdded('G', s3);
+    s2.value = 14;
+    c.onScalarSpanAdded('G', s2);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(0, 14)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s1, s2, s3]);
+
+    c.onScalarSpanRemoved('G', s1);
+    c.onScalarSpanRemoved('G', s2);
+    c.onScalarSpanRemoved('G', s3);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isUndefined(c.getContext('G'));
+
+    c.onScalarSpanAdded('G', s2);
+    c.expectContextUpdatedEventForTesting(['G']);
+    assert.isTrue(c.getContext('G').range.equals(
+        tr.b.math.Range.fromExplicitRange(14, 14)));
+    assert.sameMembers(Array.from(c.getContext('G').spans), [s2]);
+  });
+
+  contextTest('multipleGroups', function(c) {
+    assert.isUndefined(c.getContext('G1'));
+    assert.isUndefined(c.getContext('G2'));
+
+    const s1 = {value: 0};
+    c.onScalarSpanAdded('G1', s1);
+    c.expectContextUpdatedEventForTesting(['G1']);
+    assert.isTrue(c.getContext('G1').range.equals(
+        tr.b.math.Range.fromExplicitRange(0, 0)));
+    assert.sameMembers(Array.from(c.getContext('G1').spans), [s1]);
+
+    const s2 = {value: 1};
+    c.onScalarSpanAdded('G2', s2);
+    c.expectContextUpdatedEventForTesting(['G2']);
+    assert.isTrue(c.getContext('G2').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 1)));
+    assert.sameMembers(Array.from(c.getContext('G2').spans), [s2]);
+
+    const s3 = {value: 2};
+    const s4 = {value: -1};
+    c.onScalarSpanAdded('G2', s3);
+    c.onScalarSpanAdded('G1', s4);
+    c.expectContextUpdatedEventForTesting(['G1', 'G2']);
+    assert.isTrue(c.getContext('G1').range.equals(
+        tr.b.math.Range.fromExplicitRange(-1, 0)));
+    assert.sameMembers(Array.from(c.getContext('G1').spans), [s1, s4]);
+    assert.isTrue(c.getContext('G2').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 2)));
+    assert.sameMembers(Array.from(c.getContext('G2').spans), [s2, s3]);
+
+    c.onScalarSpanRemoved('G2', s3);
+    c.onScalarSpanAdded('G1', s3);
+    c.expectContextUpdatedEventForTesting(['G1', 'G2']);
+    assert.isTrue(c.getContext('G1').range.equals(
+        tr.b.math.Range.fromExplicitRange(-1, 2)));
+    assert.sameMembers(Array.from(c.getContext('G1').spans), [s1, s3, s4]);
+    assert.isTrue(c.getContext('G2').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 1)));
+    assert.sameMembers(Array.from(c.getContext('G2').spans), [s2]);
+
+    s4.value = 3;
+    c.onScalarSpanUpdated('G1', s4);
+    s1.value = 1;
+    c.onScalarSpanUpdated('G1', s1);
+    c.expectContextUpdatedEventForTesting(['G1']);
+    assert.isTrue(c.getContext('G1').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 3)));
+    assert.sameMembers(Array.from(c.getContext('G1').spans), [s1, s3, s4]);
+    assert.isTrue(c.getContext('G2').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 1)));
+    assert.sameMembers(Array.from(c.getContext('G2').spans), [s2]);
+
+    c.onScalarSpanRemoved('G2', s2);
+    c.expectContextUpdatedEventForTesting(['G2']);
+    assert.isTrue(c.getContext('G1').range.equals(
+        tr.b.math.Range.fromExplicitRange(1, 3)));
+    assert.sameMembers(Array.from(c.getContext('G1').spans), [s1, s3, s4]);
+    assert.isUndefined(c.getContext('G2'));
+  });
+});
+</script>

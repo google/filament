@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<head>
+<title>Subzero size breakdown</title>
+<script src='../build/pnacl-sz.bloat.json'></script>
+<link rel='stylesheet' href='webtreemap.css'>
+<style>
+body {
+  font-family: sans-serif;
+  font-size: 0.8em;
+  margin: 2ex 4ex;
+}
+
+h1 {
+  font-weight: normal;
+}
+
+#map {
+  height: 70vh;
+
+  position: relative;
+  cursor: pointer;
+  -webkit-user-select: none;
+}
+
+#legend {
+  width: 200px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Subzero size breakdown</h1>
+
+<p>Click on a box to zoom in.  Click on the outermost box to zoom out.</p>
+
+<div id='map'></div>
+
+<script src='webtreemap.js'></script>
+
+<script>
+var map = document.getElementById('map');
+appendTreemap(map, kTree);
+</script>
+
+<div id='legend'>
+<div class='webtreemap-symbol-bss'>bss</div>
+<div class='webtreemap-symbol-bss webtreemap-aggregate'>bss aggregate</div>
+<div class='webtreemap-symbol-data'>data</div>
+<div class='webtreemap-symbol-data webtreemap-aggregate'>data aggregate</div>
+<div class='webtreemap-symbol-read-only_data'>read-only data</div>
+<div class='webtreemap-symbol-read-only_data webtreemap-aggregate'>read-only
+data aggregate</div>
+<div class='webtreemap-symbol-code'>code</div>
+<div class='webtreemap-symbol-code webtreemap-aggregate'>code aggregate</div>
+<div class='webtreemap-symbol-weak_symbol'>weak symbol</div>
+<div class='webtreemap-symbol-weak_symbol webtreemap-aggregate'>weak symbol
+aggregate</div>
+</div>
+
+</body>

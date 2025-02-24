@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-listbox/paper-listbox.html">
+<link rel="import" href="/components/polymer/polymer.html">
+<link rel="import" href="/dashboard/elements/alerts-table.html">
+<link rel="import" href="/dashboard/static/base.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<link rel="import" href="/tracing/base/unit.html">
+
+<dom-module id="alerts-page">
+  <template>
+    <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    .center {
+      margin: auto;
+      padding: 10px;
+    }
+
+    /* The action bar contains the graph button and triage button. */
+    #action-bar {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    /* The content container contains everything below the sheriff select menu.
+     */
+    #content {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    /* This class indicates a button toggled on (e.g. show improvements). */
+    .alert-togglebutton {
+      float: right;
+      margin-left: 4px;
+      margin-right: 4px;
+    }
+
+    .alert-togglebutton[active] {
+      background-color: #EEE;
+    }
+
+    #auto-triage-log {
+      padding: 15px 0 15px 0;
+    }
+
+    #anomaly-table {
+      width: 100%;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .show-more-button {
+      margin-top: 10px;
+    }
+
+    .button-spinner {
+      position: relative;
+      width: 77px;
+      height: 16px;
+    }
+
+    .show-more-text {
+      position: absolute;
+      margin: 0;
+    }
+
+    paper-spinner {
+      display: inline-block;
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      margin: 0 33%;
+      margin-top: -3px;
+    }
+
+    #sheriff-select {
+      /* This needs to be wide enough to contain the longest sheriff name
+         rendered with font-size: 16px.
+       */
+      min-width: 350px;
+    }
+
+    .sheriff-item {
+      white-space: nowrap;
+    }
+
+    .anomaly-statistic {
+      margin-left: 2em;
+    }
+    </style>
+
+    <template is="dom-if" if="{{loading}}">
+      <div id="loading-spinner"><img src="//www.google.com/images/loading.gif"></div>
+    </template>
+    <template is="dom-if" if="{{!loading}}">
+      <template is="dom-if" if="{{error}}">
+        <div class="error">{{error}}</div>
+      </template>
+      <template is="dom-if" if="{{!error}}">
+        <div id="content">
+          <div id="action-bar">
+            <paper-dropdown-menu id="sheriff-select"
+                                 label="Sheriff"
+                                 on-iron-select="onSheriffChange">
+              <paper-listbox class="dropdown-content" selected="{{selectedSheriffIndex}}">
+                <template is="dom-repeat" items="{{sheriffList}}">
+                  <paper-item label="{{item}}" class="sheriff-item">{{item}}</paper-item>
+                </template>
+              </paper-listbox>
+            </paper-dropdown-menu>
+            <paper-button raised noink id="improvements-toggle"
+                          class="alert-togglebutton"
+                          active$="{{showingImprovements}}"
+                          on-click="onToggleImprovements">
+              {{getLabel(showingImprovements)}} improvements
+            </paper-button>
+            <paper-button raised noink id="triaged-toggle"
+                          class="alert-togglebutton"
+                          active$="{{showingTriaged}}"
+                          on-click="onToggleTriaged">
+              {{getLabel(showingTriaged)}} triaged
+            </paper-button>
+          </div>
+          <template is="dom-if" if="{{anomalies.length}}">
+            <p>
+              [[getAlertCount(anomalies.length)]]
+              alert<span hidden$="[[computeIsSingular(totalAnomalyCount)]]">s</span>
+              in [[anomalyGroupCount]]
+              group<span hidden$="[[computeIsSingular(anomalyGroupCount)]]">s</span>
+
+              <template is="dom-if" if="[[anomalyBugsPerGroup]]">
+                <span class="anomaly-statistic">
+                  [[anomalyBugsPerGroup]]
+                  bug<span hidden$="[[computeIsSingular(anomalyBugsPerGroup)]]">s</span>
+                  per group
+                </span>
+              </template>
+
+              <template is="dom-if" if="[[anomalyGroupsPerBug]]">
+                <span class="anomaly-statistic">
+                  [[anomalyGroupsPerBug]]
+                  group<span hidden$="[[computeIsSingular(anomalyGroupsPerBug)]]">s</span>
+                  per bug
+                </span>
+              </template>
+            </p>
+
+            <alerts-table id="anomaly-table"
+                          xsrf-token="{{xsrfToken}}"
+                          alert-list="{{anomalies}}"
+                          on-sortby="onPushHistoryState"
+                          on-sortdirection="onPushHistoryState"
+                          sort-by="{{sortBy}}"
+                          sort-direction="{{sortDirection}}">
+            </alerts-table>
+            <paper-button hidden$="{{!moreAnomaliesExist}}"
+                          raised class="show-more-button" 
+                          on-click="onShowMoreAnomalies">
+              <div class="button-spinner">
+                <p class="show-more-text">Show More</p>
+                <paper-spinner active$="{{anomaliesLoading}}"></paper-spinner>
+              </div>
+            </paper-button>
+          </template>
+          <template is="dom-if" if="{{!anomalies.length}}">
+            <h2 class="center">All alerts triaged!</h2>
+            <iframe src="https://loremflickr.com/800/600/cats/" width="800" height="600"></iframe>
+          </template>
+        </div>
+      </template>
+    </template>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+
+  is: 'alerts-page',
+  properties: {
+    anomalies: {
+      type: Array,
+      value: () => []
+    },
+    totalAnomalyCount: {
+      // The total count may be different from the array length if there
+      // were too many anomalies to pull from the datastore.
+      type: Number,
+      value: 0
+    },
+    anomalyGroupCount: {
+      type: Number,
+      value: 0,
+    },
+    anomalyGroupsPerBug: {
+      type: Number,
+      value: 0,
+    },
+    anomalyBugsPerGroup: {
+      type: Number,
+      value: 0,
+    },
+    loading: {
+      type: Boolean,
+      value: true,
+      notify: true
+    },
+    error: {
+      type: String,
+      value: '',
+      notify: true
+    },
+    selectedSheriffIndex: {
+      type: Number,
+      value: -1
+    },
+    showingImprovements: {
+      type: Boolean,
+      value: false
+    },
+    showingTriaged: {
+      type: Boolean,
+      value: false
+    },
+    sortBy: {
+      type: String,
+      value: 'end_revision'
+    },
+    sortDirection: {
+      type: String,
+      value: 'down'
+    },
+    xsrfToken: {
+      type: String,
+      value: ''
+    },
+    anomalyCursor: {
+      type: String
+    },
+    anomaliesLoading: {
+      type: Boolean,
+      value: false
+    },
+  },
+
+  listeners: {
+    groupingStatistics: 'onGroupingStatistics_',
+  },
+
+  computeIsSingular: count => count === 1,
+
+  getLabel: toggleState => (toggleState ? 'hide' : 'show'),
+
+  onSheriffChange(e) {
+    const sheriff = e.detail.item.label;
+    if (!sheriff) {
+      return;
+    }
+    const params = uri.getAllParameters();
+    const oldSheriff = params.sheriff || '';
+    if (oldSheriff === sheriff) {
+      return;
+    }
+    params.sheriff = sheriff;
+    // TODO(sullivan): changing the param should automatically update
+    // everything without needing to reload.
+    window.location.href = uri.getCurrentPathWithParams(params);
+  },
+
+  onToggleTriaged(e) {
+    const params = uri.getAllParameters();
+    if (params.triaged) {
+      delete params.triaged;
+    } else {
+      params.triaged = 'true';
+    }
+    // TODO(sullivan): changing the param should automatically update
+    // everything without needing to reload.
+    window.location.href = uri.getCurrentPathWithParams(params);
+  },
+
+  onToggleImprovements(e) {
+    const params = uri.getAllParameters();
+    if (params.improvements) {
+      delete params.improvements;
+    } else {
+      params.improvements = 'true';
+    }
+    // TODO(sullivan): changing the param should automatically update
+    // everything without needing to reload.
+    window.location.href = uri.getCurrentPathWithParams(params);
+  },
+
+  /*
+    * When a user clicks 'Show More' under an alerts-table, call /alerts
+    * again with the anomalyCursor that was returned on the previous call to
+    * /alerts. This will perform a paged query, starting at the cursor and
+    * returning up to 500 more anomalies.
+    */
+  onShowMoreAnomalies() {
+    const params = uri.getAllParameters();
+    if (this.anomalyCursor != null) {
+      params.anomaly_cursor = this.anomalyCursor;
+    }
+    this.anomaliesLoading = true;
+    simple_xhr.send('/alerts', params,
+        function(response) {
+          const allAnomalies =
+              this.anomalies.concat(response.anomaly_list);
+          this.set('anomalies', allAnomalies);
+          this.totalAnomalyCount = response.anomaly_count;
+          this.anomalyCursor = response.anomaly_cursor;
+          this.moreAnomaliesExist = response.show_more_anomalies;
+          this.sheriffList = response.sheriff_list;
+          this.xsrfToken = response.xsrf_token;
+          this.anomaliesLoading = false;
+          this.updateFromURIParameters();
+          if (window.METRICS) METRICS.endLoadAlerts();
+        }.bind(this),
+        function(msg) {
+          this.error = msg;
+          this.anomaliesLoading = false;
+        }.bind(this));
+  },
+
+  onPopState(e) {
+    // Pop State event will have a non-null state if this came from an
+    // actual pop instead of the load event.
+    if (e.state) {
+      this.updateFromURIParameters();
+    }
+  },
+
+  onPushHistoryState(event, detail) {
+    const sender = event.currentTarget;
+    if (!sender) {
+      return;
+    }
+    const params = uri.getAllParameters();
+    params.sortby = sender.sortBy;
+    params.sortdirection = sender.sortDirection;
+    const newUri = uri.getCurrentPathWithParams(params);
+    history.pushState(params, '', newUri);
+  },
+
+  updateFromURIParameters() {
+    this.sortBy = uri.getParameter('sortby', 'end_revision');
+    this.sortDirection = uri.getParameter('sortdirection', 'down');
+    this.selectedSheriffIndex = this.sheriffList.indexOf(
+        uri.getParameter('sheriff', ''));
+    this.showingImprovements = uri.getParameter('improvements', false);
+    this.showingTriaged = uri.getParameter('triaged', false);
+  },
+
+  getAlertCount(anomalyListLength) {
+    if (anomalyListLength < this.totalAnomalyCount) {
+      return anomalyListLength + ' of ' + this.totalAnomalyCount;
+    }
+    return anomalyListLength;
+  },
+
+  onGroupingStatistics_(event) {
+    if (event.target.id === 'anomaly-table') {
+      this.set('anomalyGroupCount', event.detail.groupCount);
+      if (event.detail.bugsPerGroup) {
+        this.set('anomalyBugsPerGroup', event.detail.bugsPerGroup);
+      }
+      if (event.detail.groupsPerBug) {
+        this.set('anomalyGroupsPerBug', event.detail.groupsPerBug);
+      }
+    }
+  },
+
+  ready() {
+    this.sheriff = uri.getParameter('sheriff', null);
+    this.showImprovements = uri.getParameter('improvements', false);
+    this.showTriaged = uri.getParameter('triaged', false);
+    const params = {}
+    if (this.sheriff != null) {
+      params.sheriff = this.sheriff
+    }
+    if (this.showImprovements) {
+      params.improvements = true;
+    }
+    if (this.showTriaged) {
+      params.triaged = true;
+    }
+    if (window.METRICS) METRICS.startLoadAlerts();
+    simple_xhr.send('/alerts', params,
+        function(response) {
+          this.anomalies = response.anomaly_list;
+          this.totalAnomalyCount = response.anomaly_count;
+          this.sheriffList = response.sheriff_list;
+          this.xsrfToken = response.xsrf_token;
+          this.moreAnomaliesExist = response.show_more_anomalies;
+          this.anomalyCursor = response.anomaly_cursor;
+          this.loading = false;
+          this.updateFromURIParameters();
+        }.bind(this),
+        function(msg) {
+          this.error = msg;
+          this.loading = false;
+        }.bind(this));
+  }
+});
+</script>

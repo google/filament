@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/drawing_container.css">
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/ui/base/constants.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const DrawType = {
+    GENERAL_EVENT: 1,
+    INSTANT_EVENT: 2,
+    BACKGROUND: 3,
+    GRID: 4,
+    FLOW_ARROWS: 5,
+    MARKERS: 6,
+    HIGHLIGHTS: 7,
+    ANNOTATIONS: 8
+  };
+
+  // Must be > 1.0. This is the maximum multiple by which the size
+  // of the canvas can exceed the window dimensions. For example
+  // if window.innerHeight is 1000 and this is 1.4, then the
+  // largest the canvas height can be set to is 1400px assuming a
+  // window.devicePixelRatio of 1.
+  // Currently this value is set rather large to mostly match
+  // previous behavior & performance. This should be reduced to
+  // be as small as possible once raw drawing performance is improved
+  // such that a repaint doesn't incur a large jank
+  const MAX_OVERSIZE_MULTIPLE = 3.0;
+  const REDRAW_SLOP = (MAX_OVERSIZE_MULTIPLE - 1) / 2;
+
+  const DrawingContainer = tr.ui.b.define('drawing-container',
+      tr.ui.tracks.Track);
+
+  DrawingContainer.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('drawing-container');
+
+      this.canvas_ = document.createElement('canvas');
+      this.canvas_.className = 'drawing-container-canvas';
+      this.canvas_.style.left = tr.ui.b.constants.HEADING_WIDTH + 'px';
+      Polymer.dom(this).appendChild(this.canvas_);
+
+      this.ctx_ = this.canvas_.getContext('2d');
+      this.offsetY_ = 0;
+
+      this.viewportChange_ = this.viewportChange_.bind(this);
+      this.viewport.addEventListener('change', this.viewportChange_);
+
+      window.addEventListener('resize', this.windowResized_.bind(this));
+      this.addEventListener('scroll', this.scrollChanged_.bind(this));
+    },
+
+    // Needed to support the calls in TimelineTrackView.
+    get canvas() {
+      return this.canvas_;
+    },
+
+    context() {
+      return this.ctx_;
+    },
+
+    viewportChange_() {
+      this.invalidate();
+    },
+
+    windowResized_() {
+      this.invalidate();
+    },
+
+    scrollChanged_() {
+      if (this.updateOffsetY_()) {
+        this.invalidate();
+      }
+    },
+
+    invalidate() {
+      if (this.rafPending_) return;
+
+      this.rafPending_ = true;
+
+      tr.b.requestPreAnimationFrame(this.preDraw_, this);
+    },
+
+    preDraw_() {
+      this.rafPending_ = false;
+      this.updateCanvasSizeIfNeeded_();
+
+      tr.b.requestAnimationFrameInThisFrameIfPossible(this.draw_, this);
+    },
+
+    draw_() {
+      this.ctx_.clearRect(0, 0, this.canvas_.width, this.canvas_.height);
+
+      const typesToDraw = [
+        DrawType.BACKGROUND,
+        DrawType.HIGHLIGHTS,
+        DrawType.GRID,
+        DrawType.INSTANT_EVENT,
+        DrawType.GENERAL_EVENT,
+        DrawType.MARKERS,
+        DrawType.ANNOTATIONS,
+        DrawType.FLOW_ARROWS
+      ];
+
+      const children = this.children;
+      for (const idx in typesToDraw) {
+        for (let i = 0; i < children.length; ++i) {
+          if (!(children[i] instanceof tr.ui.tracks.Track)) {
+            continue;
+          }
+          children[i].drawTrack(typesToDraw[idx]);
+        }
+      }
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const bounds = this.canvas_.getBoundingClientRect();
+      const dt = this.viewport.currentDisplayTransform;
+      const viewLWorld = dt.xViewToWorld(0);
+      const viewRWorld = dt.xViewToWorld(
+          bounds.width * pixelRatio);
+      const viewHeight = bounds.height * pixelRatio;
+
+      this.viewport.drawGridLines(
+          this.ctx_, viewLWorld, viewRWorld, viewHeight);
+    },
+
+    // Update's this.offsetY_, returning true if the value has changed
+    // and thus a redraw is needed, or false if it did not change.
+    updateOffsetY_() {
+      const maxYDelta = window.innerHeight * REDRAW_SLOP;
+      let newOffset = this.scrollTop - maxYDelta;
+      if (Math.abs(newOffset - this.offsetY_) <= maxYDelta) return false;
+      // Now clamp to the valid range.
+      const maxOffset = this.scrollHeight -
+          this.canvas_.getBoundingClientRect().height;
+      newOffset = Math.max(0, Math.min(newOffset, maxOffset));
+      if (newOffset !== this.offsetY_) {
+        this.offsetY_ = newOffset;
+        return true;
+      }
+      return false;
+    },
+
+    updateCanvasSizeIfNeeded_() {
+      const visibleChildTracks =
+          Array.from(this.children).filter(this.visibleFilter_);
+
+      if (visibleChildTracks.length === 0) {
+        return;
+      }
+
+      const thisBounds = this.getBoundingClientRect();
+
+      const firstChildTrackBounds =
+        visibleChildTracks[0].getBoundingClientRect();
+      const lastChildTrackBounds =
+          visibleChildTracks[visibleChildTracks.length - 1].
+              getBoundingClientRect();
+
+      const innerWidth = firstChildTrackBounds.width -
+          tr.ui.b.constants.HEADING_WIDTH;
+      const innerHeight = Math.min(
+          lastChildTrackBounds.bottom - firstChildTrackBounds.top,
+          Math.floor(window.innerHeight * MAX_OVERSIZE_MULTIPLE));
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      if (this.canvas_.width !== innerWidth * pixelRatio) {
+        this.canvas_.width = innerWidth * pixelRatio;
+        this.canvas_.style.width = innerWidth + 'px';
+      }
+
+      if (this.canvas_.height !== innerHeight * pixelRatio) {
+        this.canvas_.height = innerHeight * pixelRatio;
+        this.canvas_.style.height = innerHeight + 'px';
+      }
+
+      if (this.canvas_.top !== this.offsetY_) {
+        this.canvas_.top = this.offsetY_;
+        this.canvas_.style.top = this.offsetY_ + 'px';
+      }
+    },
+
+    visibleFilter_(element) {
+      if (!(element instanceof tr.ui.tracks.Track)) return false;
+
+      return window.getComputedStyle(element).display !== 'none';
+    },
+
+    addClosestEventToSelection(
+        worldX, worldMaxDist, loY, hiY, selection) {
+      const children = this.children;
+      for (let i = 0; i < children.length; ++i) {
+        if (!(children[i] instanceof tr.ui.tracks.Track)) {
+          continue;
+        }
+        const trackClientRect = children[i].getBoundingClientRect();
+        const a = Math.max(loY, trackClientRect.top);
+        const b = Math.min(hiY, trackClientRect.bottom);
+        if (a <= b) {
+          children[i].addClosestEventToSelection(
+              worldX, worldMaxDist, loY, hiY, selection);
+        }
+      }
+
+      tr.ui.tracks.Track.prototype.addClosestEventToSelection.
+          apply(this, arguments);
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      const children = this.children;
+      for (let i = 0; i < children.length; ++i) {
+        if (!(children[i] instanceof tr.ui.tracks.Track)) {
+          continue;
+        }
+        children[i].addEventsToTrackMap(eventToTrackMap);
+      }
+    }
+  };
+
+  return {
+    DrawingContainer,
+    DrawType,
+  };
+});
+</script>

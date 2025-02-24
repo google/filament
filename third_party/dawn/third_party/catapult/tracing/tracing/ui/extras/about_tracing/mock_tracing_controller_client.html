@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/tracing_controller_client.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  function MockTracingControllerClient() {
+    this.requests = [];
+    this.nextRequestIndex = 0;
+    this.allowLooping = false;
+  }
+
+  MockTracingControllerClient.prototype = {
+    __proto__: tr.ui.e.about_tracing.TracingControllerClient.prototype,
+
+    expectRequest(method, generateResponse) {
+      let generateResponseCb;
+      if (typeof generateResponse === 'function') {
+        generateResponseCb = generateResponse;
+      } else {
+        generateResponseCb = function() {
+          return generateResponse;
+        };
+      }
+
+      this.requests.push({
+        method,
+        generateResponseCb});
+    },
+
+    _request(method, args) {
+      return new Promise(function(resolve) {
+        const requestIndex = this.nextRequestIndex;
+        if (requestIndex >= this.requests.length) {
+          throw new Error('Unhandled request');
+        }
+        if (!this.allowLooping) {
+          this.nextRequestIndex++;
+        } else {
+          this.nextRequestIndex = (this.nextRequestIndex + 1) %
+              this.requests.length;
+        }
+
+        const req = this.requests[requestIndex];
+        assert.strictEqual(method, req.method);
+        const resp = req.generateResponseCb(args);
+        resolve(resp);
+      }.bind(this));
+    },
+
+    assertAllRequestsHandled() {
+      if (this.allowLooping) {
+        throw new Error('Incompatible with allowLooping');
+      }
+      assert.strictEqual(this.requests.length, this.nextRequestIndex);
+    },
+
+    getCategories() {
+      return this._request('getCategories');
+    },
+
+    beginRecording(recordingOptions) {
+      return this._request('beginRecording', recordingOptions);
+    },
+
+    beginGetBufferPercentFull() {
+      return this._request('beginGetBufferPercentFull');
+    },
+
+    endRecording() {
+      return this._request('endRecording');
+    }
+  };
+
+  return {
+    MockTracingControllerClient,
+  };
+});
+</script>
+

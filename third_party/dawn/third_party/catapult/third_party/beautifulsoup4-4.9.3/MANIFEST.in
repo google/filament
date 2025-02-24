@@ -1,0 +1,10 @@
+include test-all-versions
+include convert-py3k
+include LICENSE
+include *.txt
+include doc*/Makefile
+include doc*/source/*.py
+include doc*/source/*.rst
+include doc*/source/*.jpg
+include scripts/*.py
+include scripts/*.txt

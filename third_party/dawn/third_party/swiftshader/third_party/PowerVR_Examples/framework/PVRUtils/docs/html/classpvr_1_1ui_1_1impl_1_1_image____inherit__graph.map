@@ -1,0 +1,4 @@
+<map id="pvr::ui::impl::Image_" name="pvr::ui::impl::Image_">
+<area shape="rect" id="node2" href="$classpvr_1_1ui_1_1impl_1_1_sprite__.html" title="Base sprite class. Use through the Sprite framework object. Represents something that can be rendered..." alt="" coords="5,5,159,32"/>
+<area shape="rect" id="node3" href="$classpvr_1_1ui_1_1impl_1_1_i2d_component.html" title="A component that can be positioned in 2D using 2d position, scale, rotation and anchored using its ce..." alt="" coords="183,5,386,32"/>
+</map>

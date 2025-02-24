@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/cpu/cpu_usage_auditor.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+<link rel='import' href='/tracing/ui/base/constants.html'>
+<link rel='import' href='/tracing/ui/timeline_viewport.html'>
+<link rel="import" href="/tracing/ui/tracks/cpu_usage_track.html">
+<link rel='import' href='/tracing/ui/tracks/drawing_container.html'>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const ThreadSlice = tr.model.ThreadSlice;
+  const DIFF_EPSILON = 0.0001;
+
+  // Input : slices is an array-of-array-of slices. Each top level array
+  // represents a process. So, each slice in one of the top level array
+  // will be placed in the same process.
+  function buildModel(slices) {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      for (let i = 0; i < slices.length; i++) {
+        const thread = process.getOrCreateThread(i);
+        slices[i].forEach(s => thread.sliceGroup.pushSlice(s));
+      }
+    });
+    const auditor = new tr.e.audits.CpuUsageAuditor(model);
+    auditor.runAnnotate();
+    return model;
+  }
+
+  // Compare float arrays based on an epsilon since floating point arithmetic
+  // is not always 100% accurate.
+  function assertArrayValuesCloseTo(actualValue, expectedValue) {
+    assert.lengthOf(actualValue, expectedValue.length);
+    for (let i = 0; i < expectedValue.length; i++) {
+      assert.closeTo(actualValue[i], expectedValue[i], DIFF_EPSILON);
+    }
+  }
+
+  function createCpuUsageTrack(model, interval) {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    div.appendChild(drawingContainer);
+    const track = new tr.ui.tracks.CpuUsageTrack(drawingContainer.viewport);
+    if (model !== undefined) {
+      setDisplayTransformFromBounds(viewport, model.bounds);
+    }
+    track.initialize(model, interval);
+    drawingContainer.appendChild(track);
+    this.addHTMLOutput(drawingContainer);
+    return track;
+  }
+
+  /**
+   * Sets the mapping between the input range of timestamps and the output range
+   * of horizontal pixels.
+   */
+  function setDisplayTransformFromBounds(viewport, bounds) {
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    const chartPixelWidth =
+        (window.innerWidth - tr.ui.b.constants.HEADING_WIDTH) * pixelRatio;
+    dt.xSetWorldBounds(bounds.min, bounds.max, chartPixelWidth);
+    viewport.setDisplayTransformImmediately(dt);
+  }
+
+  test('computeCpuUsage_simple', function() {
+    // Set the boundaries, from 0-15 ms. This slice will not
+    // contain any CPU usage data, it's just to make the boundaries
+    // of the bins go as 0-1, 1-2, 2-3, etc. This also tests whether
+    // this function works properly in the presence of slices that
+    // don't include CPU usage data.
+    const bigSlice = new tr.model.ThreadSlice('', title, 0, 0, {}, 15);
+    // First thread.
+    // 0         5         10        15
+    //  [ sliceA ]
+    //      [    sliceB     ]   [C  ]
+    const sliceA = new tr.model.ThreadSlice('', title, 0, 0.5, {}, 5);
+    sliceA.cpuDuration = 5;
+    const sliceB = new tr.model.ThreadSlice('', title, 0, 2.5, {}, 8);
+    sliceB.cpuDuration = 6;
+    // The slice completely fits into an interval and is the last.
+    const sliceC = new tr.model.ThreadSlice('', title, 0, 12.5, {}, 2);
+    sliceC.cpuDuration = 1;
+
+    // Second thread.
+    // 0         5         10        15
+    //      [ sliceD ][  sliceE  ]
+    const sliceD = new tr.model.ThreadSlice('', title, 0, 3.5, {}, 3);
+    sliceD.cpuDuration = 3;
+    const sliceE = new tr.model.ThreadSlice('', title, 0, 6.5, {}, 6);
+    sliceE.cpuDuration = 3;
+
+    const model = buildModel([
+      [bigSlice, sliceA, sliceB, sliceC],
+      [sliceD, sliceE]
+    ]);
+
+    // Compute average CPU usage over A (but not over B and C).
+    const avgCpuUsageA = sliceA.cpuSelfTime / sliceA.selfTime;
+    // Compute average CPU usage over B, C, D, E. They don't have subslices.
+    const avgCpuUsageB = sliceB.cpuDuration / sliceB.duration;
+    const avgCpuUsageC = sliceC.cpuDuration / sliceC.duration;
+    const avgCpuUsageD = sliceD.cpuDuration / sliceD.duration;
+    const avgCpuUsageE = sliceE.cpuDuration / sliceE.duration;
+
+    const expectedValue = [
+      0,
+      avgCpuUsageA,
+      avgCpuUsageA,
+      avgCpuUsageA + avgCpuUsageB,
+      avgCpuUsageA + avgCpuUsageB + avgCpuUsageD,
+      avgCpuUsageA + avgCpuUsageB + avgCpuUsageD,
+      avgCpuUsageB + avgCpuUsageD,
+      avgCpuUsageB + avgCpuUsageE,
+      avgCpuUsageB + avgCpuUsageE,
+      avgCpuUsageB + avgCpuUsageE,
+      avgCpuUsageB + avgCpuUsageE,
+      avgCpuUsageE,
+      avgCpuUsageE,
+      avgCpuUsageC,
+      avgCpuUsageC,
+      0
+    ];
+    const track = createCpuUsageTrack.call(this, model);
+    const actualValue = track.series[0].points.map(point => point.y);
+    assertArrayValuesCloseTo(actualValue, expectedValue);
+  });
+
+  test('computeCpuUsage_longDurationThreadSlice', function() {
+    // Create a slice covering 24 hours.
+    const sliceA = new tr.model.ThreadSlice(
+        '', title, 0, 0, {}, 24 * 60 * 60 * 1000);
+    sliceA.cpuDuration = sliceA.duration * 0.25;
+
+    const model = buildModel([[sliceA]]);
+
+    const track = createCpuUsageTrack.call(this, model);
+    const cpuSamples = track.series[0].points.map(point => point.y);
+
+    // All except the last sample is 0.25, since sliceA.cpuDuration was set to
+    // 0.25 of the total.
+    for (const cpuSample of cpuSamples.slice(0, cpuSamples.length - 1)) {
+      assert.closeTo(cpuSample, 0.25, DIFF_EPSILON);
+    }
+    // The last sample is 0.
+    assert.closeTo(cpuSamples[cpuSamples.length - 1], 0, DIFF_EPSILON);
+  });
+
+  test('instantiate', function() {
+    const sliceA = new tr.model.ThreadSlice('', title, 0, 5.5111, {}, 47.1023);
+    sliceA.cpuDuration = 25;
+    const sliceB = new tr.model.ThreadSlice('', title, 0, 11.2384, {}, 1.8769);
+    sliceB.cpuDuration = 1.5;
+    const sliceC = new tr.model.ThreadSlice('', title, 0, 11.239, {}, 5.8769);
+    sliceC.cpuDuration = 5;
+    const sliceD = new tr.model.ThreadSlice('', title, 0, 48.012, {}, 5.01);
+    sliceD.cpuDuration = 4;
+
+    const model = buildModel([[sliceA, sliceB, sliceC, sliceD]]);
+    createCpuUsageTrack.call(this, model);
+  });
+
+  test('hasVisibleContent_trueWithThreadSlicePresent', function() {
+    const sliceA = new tr.model.ThreadSlice('', title, 0, 48.012, {}, 5.01);
+    sliceA.cpuDuration = 4;
+    const model = buildModel([[sliceA]]);
+    const track = createCpuUsageTrack.call(this, model);
+
+    assert.isTrue(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithUndefinedProcessModel', function() {
+    const track = createCpuUsageTrack.call(this, undefined);
+
+    assert.isFalse(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithNoThreadSlice', function() {
+    // model with a CPU and a thread but no ThreadSlice.
+    const model = buildModel([]);
+    const track = createCpuUsageTrack.call(this, model);
+
+    assert.isFalse(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_trueWithSubSlices', function() {
+    const sliceA = new tr.model.ThreadSlice('', title, 0, 5.5111, {}, 47.1023);
+    sliceA.cpuDuration = 25;
+    const sliceB = new tr.model.ThreadSlice('', title, 0, 11.2384, {}, 1.8769);
+    sliceB.cpuDuration = 1.5;
+
+    const model = buildModel([[sliceA, sliceB]]);
+    const process = model.getProcess(1);
+    // B will become lowest level slices of A.
+    process.getThread(0).sliceGroup.createSubSlices();
+    assert.strictEqual(
+        sliceA.cpuSelfTime, (sliceA.cpuDuration - sliceB.cpuDuration));
+    const track = createCpuUsageTrack.call(this, model);
+
+    assert.isTrue(track.hasVisibleContent);
+  });
+});
+</script>

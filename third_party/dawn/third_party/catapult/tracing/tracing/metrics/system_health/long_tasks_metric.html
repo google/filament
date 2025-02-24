@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const LONG_TASK_MS = 50;
+
+  // Anything longer than this should be so rare that its length beyond this is
+  // uninteresting.
+  const LONGEST_TASK_MS = 1000;
+
+  /**
+   * This helper function calls |cb| for each of the top-level tasks on the
+   * given thread in the given range whose duration is longer than LONG_TASK_MS.
+   *
+   * @param {tr.model.Thread} thread
+   * @param {tr.b.math.Range=} opt_range
+   * @param {function()} cb
+   * @param {Object=} opt_this
+   */
+  function iterateLongTopLevelTasksOnThreadInRange(
+      thread, opt_range, cb, opt_this) {
+    thread.sliceGroup.topLevelSlices.forEach(function(slice) {
+      if (opt_range &&
+          !opt_range.intersectsExplicitRangeInclusive(slice.start, slice.end)) {
+        return;
+      }
+
+      if (slice.duration < LONG_TASK_MS) return;
+
+      cb.call(opt_this, slice);
+    });
+  }
+
+  /**
+   * This helper function calls |cb| for each of the main renderer threads in
+   * the model.
+   *
+   * @param {tr.model.Model} model The model.
+   * @param {function()} cb Callback.
+   * @param {Object=} opt_this Context object.
+   */
+  function iterateRendererMainThreads(model, cb, opt_this) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (modelHelper !== undefined) {
+      Object.values(modelHelper.rendererHelpers).forEach(
+          function(rendererHelper) {
+            if (!rendererHelper.mainThread) return;
+
+            cb.call(opt_this, rendererHelper.mainThread);
+          });
+    }
+  }
+
+  const BIN_BOUNDARIES = tr.v.HistogramBinBoundaries.createLinear(
+      LONG_TASK_MS, LONGEST_TASK_MS, 40);
+
+  /**
+   * This metric directly measures long tasks on renderer main threads.
+   * This metric requires only the 'toplevel' tracing category.
+   *
+   * @param {!tr.v.HistogramSet} histograms
+   * @param {!tr.model.Model} model
+   * @param {!Object=} opt_options
+   */
+  function longTasksMetric(histograms, model, opt_options) {
+    const rangeOfInterest = opt_options ? opt_options.rangeOfInterest :
+      undefined;
+    const longTaskHist = histograms.createHistogram(
+        'longTasks', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: BIN_BOUNDARIES,
+          description: 'durations of long tasks',
+        });
+
+    const relatedNames = new tr.v.d.RelatedNameMap();
+    longTaskHist.diagnostics.set('categories', relatedNames);
+
+    iterateRendererMainThreads(model, function(thread) {
+      iterateLongTopLevelTasksOnThreadInRange(
+          thread, rangeOfInterest, function(task) {
+            const breakdown = new tr.v.d.Breakdown();
+            breakdown.colorScheme =
+              tr.v.d.COLOR_SCHEME_CHROME_USER_FRIENDLY_CATEGORY_DRIVER;
+            for (const slice of task.descendentSlices) {
+              const sample = slice.cpuSelfTime;
+              if (sample === undefined) continue;
+
+              const category = model.getUserFriendlyCategoryFromEvent(slice);
+              const histName = 'longTasks:' + category;
+              let hist = histograms.getHistogramNamed(histName);
+              if (hist === undefined) {
+                hist = histograms.createHistogram(histName,
+                    tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+                      binBoundaries: BIN_BOUNDARIES,
+                    });
+                relatedNames.set(category, hist.name);
+              }
+              hist.addSample(sample, {
+                events: new tr.v.d.RelatedEventSet([slice]),
+              });
+              breakdown.set(category, sample + breakdown.get(category));
+            }
+
+            longTaskHist.addSample(task.duration, {
+              events: new tr.v.d.RelatedEventSet([task]),
+              categories: breakdown,
+            });
+          });
+    });
+  }
+
+  tr.metrics.MetricRegistry.register(longTasksMetric, {
+    supportsRangeOfInterest: true,
+    requiredCategories: ['toplevel'],
+  });
+
+  return {
+    longTasksMetric,
+    iterateLongTopLevelTasksOnThreadInRange,
+    iterateRendererMainThreads,
+    LONG_TASK_MS,
+    LONGEST_TASK_MS,
+  };
+});
+</script>

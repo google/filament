@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/tracks/memory_dump_track_test_utils.html">
+<link rel="import" href="/tracing/ui/tracks/memory_dump_track_util.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SelectionState = tr.model.SelectionState;
+  const createTestGlobalMemoryDumps = tr.ui.tracks.createTestGlobalMemoryDumps;
+  const createTestProcessMemoryDumps =
+    tr.ui.tracks.createTestProcessMemoryDumps;
+
+  test('buildMemoryLetterDots_withoutVMRegions', function() {
+    const dumps = createTestGlobalMemoryDumps(false, false);
+    const items = tr.ui.tracks.buildMemoryLetterDots(dumps);
+
+    assert.lengthOf(items, 5);
+    assert.strictEqual(items[0].start, 0);
+    assert.strictEqual(items[1].start, 5);
+    assert.strictEqual(items[2].start, 15);
+    assert.strictEqual(items[3].start, 18);
+    assert.strictEqual(items[4].start, 20);
+
+    // Check model mapping.
+    assert.strictEqual(items[1].selectionState, SelectionState.HIGHLIGHTED);
+    assert.isTrue(items[2].selected);
+    assert.strictEqual(items[3].modelItem, dumps[3]);
+  });
+
+  test('buildMemoryLetterDots_withVMRegions', function() {
+    const dumps = createTestGlobalMemoryDumps(false, false);
+    const items = tr.ui.tracks.buildMemoryLetterDots(dumps);
+
+    assert.lengthOf(items, 5);
+    assert.strictEqual(items[0].start, 0);
+    assert.strictEqual(items[1].start, 5);
+    assert.strictEqual(items[2].start, 15);
+    assert.strictEqual(items[3].start, 18);
+    assert.strictEqual(items[4].start, 20);
+
+    // Check model mapping.
+    assert.strictEqual(items[1].selectionState, SelectionState.HIGHLIGHTED);
+    assert.isTrue(items[2].selected);
+    assert.strictEqual(items[3].modelItem, dumps[3]);
+  });
+
+  test('buildGlobalUsedMemoryChartSeries_withoutVMRegions', function() {
+    const dumps = createTestGlobalMemoryDumps(false, false);
+    const series = tr.ui.tracks.buildGlobalUsedMemoryChartSeries(dumps);
+
+    assert.isUndefined(series);
+  });
+
+  test('buildGlobalUsedMemoryChartSeries_withVMRegions', function() {
+    const dumps = createTestGlobalMemoryDumps(true, false);
+    const series = tr.ui.tracks.buildGlobalUsedMemoryChartSeries(dumps);
+
+    assert.lengthOf(series, 3);
+
+    const sa = series[2];
+    const sb = series[1];
+    const sc = series[0];
+
+    assert.lengthOf(sa.points, 5);
+    assert.lengthOf(sb.points, 5);
+    assert.lengthOf(sc.points, 5);
+
+    // Process A: VM regions defined -> sum their PSS values (111).
+    // Process B: VM regions undefined and no previous value -> assume zero.
+    // Process C: Memory dump not present -> assume process not alive (0).
+    assert.strictEqual(sa.points[0].x, 0);
+    assert.strictEqual(sb.points[0].x, 0);
+    assert.strictEqual(sc.points[0].x, 0);
+    assert.strictEqual(sa.points[0].y, 111);
+    assert.strictEqual(sb.points[0].y, 0);
+    assert.strictEqual(sc.points[0].y, 0);
+    assert.strictEqual(sa.points[0].yBase, 0);
+    assert.strictEqual(sb.points[0].yBase, 0);
+    assert.strictEqual(sc.points[0].yBase, 0);
+
+    // Process A: VM regions undefined -> assume previous value (111).
+    // Process B: VM regions defined -> sum their PSS values (100 + 50).
+    // Process C: VM regions undefined -> assume previous value (0).
+    assert.strictEqual(sa.points[1].x, 5);
+    assert.strictEqual(sb.points[1].x, 5);
+    assert.strictEqual(sc.points[1].x, 5);
+    assert.strictEqual(sa.points[1].y, 150 + 111);
+    assert.strictEqual(sb.points[1].y, 150);
+    assert.strictEqual(sc.points[1].y, 0);
+    assert.strictEqual(sa.points[1].yBase, 150);
+    assert.strictEqual(sb.points[1].yBase, 0);
+    assert.strictEqual(sc.points[1].yBase, 0);
+
+    // Process A: VM regions defined -> sum their PSS values (0).
+    // Process B: Memory dump not present -> assume process not alive (0).
+    // Process C: VM regions defined -> sum their PSS values (70 + 70 + 70).
+    assert.strictEqual(sa.points[2].x, 15);
+    assert.strictEqual(sb.points[2].x, 15);
+    assert.strictEqual(sc.points[2].x, 15);
+    assert.strictEqual(sa.points[2].y, 210);
+    assert.strictEqual(sb.points[2].y, 210);
+    assert.strictEqual(sc.points[2].y, 210);
+    assert.strictEqual(sa.points[2].yBase, 210);
+    assert.strictEqual(sb.points[2].yBase, 210);
+    assert.strictEqual(sc.points[2].yBase, 0);
+
+    // All processes: Memory dump not present -> assume process not alive (0).
+    assert.strictEqual(sa.points[3].x, 18);
+    assert.strictEqual(sb.points[3].x, 18);
+    assert.strictEqual(sc.points[3].x, 18);
+    assert.strictEqual(sa.points[3].y, 0);
+    assert.strictEqual(sb.points[3].y, 0);
+    assert.strictEqual(sc.points[3].y, 0);
+    assert.strictEqual(sa.points[3].yBase, 0);
+    assert.strictEqual(sb.points[3].yBase, 0);
+    assert.strictEqual(sc.points[3].yBase, 0);
+
+    // Process A: VM regions defined -> sum their PSS values (105).
+    // Process B: VM regions undefined and no previous value -> assume zero.
+    // Process C: Memory dump not present -> assume process not alive (0).
+    assert.strictEqual(sa.points[4].x, 20);
+    assert.strictEqual(sb.points[4].x, 20);
+    assert.strictEqual(sc.points[4].x, 20);
+    assert.strictEqual(sa.points[4].y, 105);
+    assert.strictEqual(sb.points[4].y, 0);
+    assert.strictEqual(sc.points[4].y, 0);
+    assert.strictEqual(sa.points[4].yBase, 0);
+    assert.strictEqual(sb.points[4].yBase, 0);
+    assert.strictEqual(sc.points[4].yBase, 0);
+
+    // Check model mapping.
+    assert.strictEqual(sa.points[1].selectionState, SelectionState.HIGHLIGHTED);
+    assert.isTrue(sb.points[2].selected);
+    assert.strictEqual(sc.points[3].modelItem, dumps[3]);
+  });
+
+  test('buildGlobalAllocatedMemoryChartSeries_withoutMemoryAllocatorDumps',
+      function() {
+        const dumps = createTestGlobalMemoryDumps(false, false);
+        const series = tr.ui.tracks.buildGlobalAllocatedMemoryChartSeries(
+            dumps);
+
+        assert.isUndefined(series);
+      });
+
+  test('buildGlobalAllocatedMemoryChartSeries_withMemoryAllocatorDumps',
+      function() {
+        const dumps = createTestGlobalMemoryDumps(false, true);
+        const series = tr.ui.tracks.buildGlobalAllocatedMemoryChartSeries(
+            dumps);
+
+        assert.lengthOf(series, 2);
+
+        const so = series[1];
+        const sv = series[0];
+
+        assert.lengthOf(so.points, 5);
+        assert.lengthOf(sv.points, 5);
+
+        // Oilpan: Only process B dumps allocated objects size (1024).
+        // V8: No process dumps allocated objects size (0).
+        assert.strictEqual(so.points[0].x, 0);
+        assert.strictEqual(sv.points[0].x, 0);
+        assert.strictEqual(so.points[0].y, 1024);
+        assert.strictEqual(sv.points[0].y, 0);
+        assert.strictEqual(so.points[0].yBase, 0);
+        assert.strictEqual(sv.points[0].yBase, 0);
+
+        // Oilpan: Process B did not provide a value and process C dumps (128).
+        // V8: Processes B and C dump (512 + 256).
+        assert.strictEqual(so.points[1].x, 5);
+        assert.strictEqual(sv.points[1].x, 5);
+        assert.strictEqual(so.points[1].y, 768 + 128);
+        assert.strictEqual(sv.points[1].y, 768);
+        assert.strictEqual(so.points[1].yBase, 768);
+        assert.strictEqual(sv.points[1].yBase, 0);
+
+        // Oilpan: Process B assumed not alive and process C dumps (512)
+        // V8: Process A dumps now, process B assumed not alive, process C did
+        // not provide a value (768).
+        assert.strictEqual(so.points[2].x, 15);
+        assert.strictEqual(sv.points[2].x, 15);
+        assert.strictEqual(so.points[2].y, 768 + 512);
+        assert.strictEqual(sv.points[2].y, 768);
+        assert.strictEqual(so.points[2].yBase, 768);
+        assert.strictEqual(sv.points[2].yBase, 0);
+
+        // All processes: Memory dump not present -> assume process not alive
+        // (0).
+        assert.strictEqual(so.points[3].x, 18);
+        assert.strictEqual(sv.points[3].x, 18);
+        assert.strictEqual(so.points[3].y, 0);
+        assert.strictEqual(sv.points[3].y, 0);
+        assert.strictEqual(so.points[3].yBase, 0);
+        assert.strictEqual(sv.points[3].yBase, 0);
+
+        // Oilpan: Only process B dumps allocated objects size (100).
+        // V8: No process dumps allocated objects size (0).
+        assert.strictEqual(so.points[4].x, 20);
+        assert.strictEqual(sv.points[4].x, 20);
+        assert.strictEqual(so.points[4].y, 100);
+        assert.strictEqual(sv.points[4].y, 0);
+
+        // Check model mapping.
+        assert.strictEqual(
+            so.points[1].selectionState, SelectionState.HIGHLIGHTED);
+        assert.isTrue(sv.points[2].selected);
+        assert.strictEqual(so.points[3].modelItem, dumps[3]);
+      });
+
+  test('buildProcessAllocatedMemoryChartSeries_withoutMemoryAllocatorDumps',
+      function() {
+        const dumps = createTestProcessMemoryDumps(false, false);
+        const series = tr.ui.tracks.buildProcessAllocatedMemoryChartSeries(
+            dumps);
+
+        assert.isUndefined(series);
+      });
+
+  test('buildProcessAllocatedMemoryChartSeries_withMemoryAllocatorDumps',
+      function() {
+        const dumps = createTestProcessMemoryDumps(false, true);
+        const series = tr.ui.tracks.buildProcessAllocatedMemoryChartSeries(
+            dumps);
+
+        // There should be only 2 series (because 'tracing' is not shown in the
+        // charts).
+        assert.lengthOf(series, 2);
+
+        const so = series[1];
+        const sv = series[0];
+
+        assert.lengthOf(so.points, 2);
+        assert.lengthOf(sv.points, 2);
+
+        // Oilpan: Process dumps (128).
+        // V8: Process dumps (256).
+        assert.strictEqual(so.points[0].x, 5.12);
+        assert.strictEqual(sv.points[0].x, 5.12);
+        assert.strictEqual(so.points[0].y, 256 + 128);
+        assert.strictEqual(sv.points[0].y, 256);
+        assert.strictEqual(so.points[0].yBase, 256);
+        assert.strictEqual(sv.points[0].yBase, 0);
+
+        // Oilpan: Process dumps (512).
+        // V8: Process did not provide a value (0).
+        assert.strictEqual(so.points[1].x, 14.5);
+        assert.strictEqual(sv.points[1].x, 14.5);
+        assert.strictEqual(so.points[1].y, 512);
+        assert.strictEqual(sv.points[1].y, 0);
+        assert.strictEqual(so.points[1].yBase, 0);
+        assert.strictEqual(sv.points[1].yBase, 0);
+
+        // Check model mapping.
+        assert.strictEqual(
+            so.points[1].selectionState, SelectionState.HIGHLIGHTED);
+        assert.isTrue(sv.points[0].selected);
+        assert.strictEqual(so.points[1].modelItem, dumps[1]);
+      });
+});
+</script>

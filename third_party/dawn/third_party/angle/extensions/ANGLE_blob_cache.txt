@@ -1,0 +1,174 @@
+Name
+
+    ANGLE_blob_cache
+
+Name Strings
+
+    GL_ANGLE_blob_cache
+
+Contributors
+
+    Geoff Lang
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2024 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, October 4, 2024
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 3.2 specification.
+
+Overview
+
+    This extension provides a mechanism for an OpenGL context to cache binary
+    blobs. The application must implement the cache and is in control of caching
+    behavior.
+
+    This extension adds caching callbacks per-context which is useful for
+    isolating cached data and providing extra security.
+
+
+New Procedures and Functions
+
+    void SetBlobCacheFuncsANGLE(SETBLOBPROCANGLE set,
+                                GETBLOBPROCANGLE get,
+                                const void* userParam);
+
+    void GetPointervANGLE(enum pname, void **params);
+
+New Types
+
+    The callback functions that applications can define, and
+    are accepted by SetBlobCacheFuncsANGLE, are defined as:
+
+        typedef GLsizeiptr (GL_APIENTRY *GLGETBLOBPROCANGLE)(const void *key,
+                                                             GLsizeiptr keySize,
+                                                             void *value,
+                                                             GLsizeiptr valueSize,
+                                                             const void *userParam);
+
+        typedef void (GL_APIENTRY *GLSETBLOBPROCANGLE)(const void *key,
+                                                       GLsizeiptr keySize,
+                                                       const void *value,
+                                                       GLsizeiptr valueSize,
+                                                       const void *userParam);
+
+    Note that these function pointers are defined as having the same calling
+    convention as the GL functions.
+
+New Tokens
+
+    Tokens accepted by the <pname> parameter of GetPointerv:
+
+        BLOB_CACHE_GET_FUNCTION_ANGLE                0x96BF
+        BLOB_CACHE_SET_FUNCTION_ANGLE                0x96EF
+        BLOB_CACHE_USER_PARAM_ANGLE                  0x972D
+
+Additions to the OpenGL ES Specification
+
+    Add a new section after 18 Debug Output:
+
+    "Chapter 19
+    Persistent Caching
+
+    Application developers can set callback functions which GL may use for
+    getting and setting persistently cached data blobs. The command
+
+        void SetBlobCacheFuncsANGLE(SETBLOBPROCANGLE set,
+                                    GETBLOBPROCANGLE get,
+                                    const void* userParam);
+
+    stores the get and set callbacks and user parameter. Only one blob cache
+    get and set function can be installed on the current context. Specifying NULL
+    for the callbacks will clear the current callbacks and disable blob caching.
+    Applications can provide user-specified data through the pointer <userParam>.
+    The context  will store this pointer and will include it as one of the parameters
+    in each call to the callback function.
+
+    Applications can query the current callback functions and the current
+    user-specified parameter by obtaining the values of
+    BLOB_CACHE_GET_FUNCTION_ANGLE, BLOB_CACHE_SET_FUNCTION_ANGLE and
+    BLOB_CACHE_USER_PARAM_ANGLE.
+
+    To insert a new binary value into the cache and associate it with a given
+    key, a GL context can call the application-provided callback function
+
+        sizeiptr get(const void *key, sizeiptr keySize, void *value, sizeiptr valueSize,
+                     const void *userParam);
+
+    <key> and <value> are pointers to the beginning of the key and value,
+    respectively, that are to be inserted. <keySize> and <valueSize> specify
+    the size in bytes of the data pointed to by <key> and <value> respectively.
+
+    To retrieve the binary value associated with a given key from the cache, a
+    GL context can call the application-provided callback function
+
+        set(const void *key, sizeiptr keySize, const void *value, sizeiptr valueSize,
+            const void *userParam);
+
+
+    <key> is a pointer to the beginning of the key. <keySize> specifies the
+    size in bytes of the binary key pointed to by <key>. If the cache contains
+    a value associated with the given key then the size of that binary value in
+    bytes is returned. Otherwise 0 is returned.
+
+    If the cache contains a value for the given key and its size in bytes is
+    less than or equal to <valueSize> then the value is written to the memory
+    pointed to by <value>. Otherwise nothing is written to the memory pointed
+    to by <value>.
+
+    Additionally, these callbacks must be declared with the same platform-dependent
+    calling convention used in the definition of the type GLGETBLOBPROCANGLE and
+    GLSETBLOBPROCANGLE. Anything else will result in undefined behavior.
+
+Errors
+
+    An INVALID_OPERATION error is generated by SetBlobCacheFuncsANGLE if one of
+    <get> or <set> are NULL and the other is non-NULL.
+
+New State
+
+    Modify Table 21.57: Miscellaneous
+
+    Add:
+
+                                                       Initial
+    Get Value                         Type Get Command Value   Description
+    --------------------------------- ---- ----------- ------- ---------------------
+    GL_BLOB_CACHE_GET_FUNCTION_ANGLE  Y    GetPointerv NULL    Blob cache getter function
+    GL_BLOB_CACHE_SET_FUNCTION_ANGLE  Y    GetPointerv NULL    Blob cache setter function
+    GL_BLOB_CACHE_USER_PARAM_ANGLE    Y    GetPointerv NULL    Blob cache callback user
+                                                               data parameter
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      1   Oct 4, 2024    geofflang              Initial version

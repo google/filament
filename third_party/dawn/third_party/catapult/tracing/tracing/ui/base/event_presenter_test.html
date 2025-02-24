@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const EventPresenter = tr.ui.b.EventPresenter;
+
+  function mockEvent(colorId, selectionState) {
+    return { colorId, selectionState };
+  }
+
+  function mockSnapshot(colorId, selectionState) {
+    return { objectInstance: { colorId }, selectionState };
+  }
+
+  function isColor(color) {
+    return color.toString().startsWith('rgb');
+  }
+
+  test('instantSliceColor', function() {
+    const color = EventPresenter.getInstantSliceColor(mockEvent(1, 0));
+    const variant = EventPresenter.getInstantSliceColor(mockEvent(1, 1));
+    assert.isTrue(isColor(color));
+    assert.notStrictEqual(color, variant);
+  });
+
+  test('objectInstanceColor', function() {
+    const color = EventPresenter.getObjectInstanceColor(mockEvent(2, 0));
+    const variant = EventPresenter.getInstantSliceColor(mockEvent(2, 2));
+    assert.isTrue(isColor(color));
+    assert.notStrictEqual(color, variant);
+  });
+
+  test('objectSnapshotColor', function() {
+    const color = EventPresenter.getObjectSnapshotColor(mockSnapshot(3, 0));
+    const variant = EventPresenter.getObjectSnapshotColor(mockSnapshot(3, 3));
+    assert.isTrue(isColor(color));
+    assert.notStrictEqual(color, variant);
+  });
+
+  test('counterSeriesColor', function() {
+    const color = EventPresenter.getCounterSeriesColor(1, 0);
+    const variant = EventPresenter.getCounterSeriesColor(1, 1);
+    const transparent = EventPresenter.getCounterSeriesColor(1, 0, 0.0);
+    assert.isTrue(isColor(color));
+    assert.isTrue(isColor(transparent));
+    assert.notStrictEqual(color, variant);
+    assert.notStrictEqual(variant, transparent);
+    assert.notStrictEqual(transparent, color);
+  });
+
+  test('barSnapshotColor', function() {
+    const color = EventPresenter.getBarSnapshotColor(mockSnapshot(1, 2), 1000);
+    assert.isTrue(isColor(color));
+  });
+});
+</script>

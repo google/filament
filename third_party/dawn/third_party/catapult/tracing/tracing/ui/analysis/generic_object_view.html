@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/rect.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+<link rel="import" href="/tracing/model/object_snapshot.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-generic-object-view'>
+  <template>
+    <style>
+    :host {
+      display: block;
+      font-family: monospace;
+    }
+    </style>
+    <div id="content">
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+function isTable(object) {
+  if (!(object instanceof Array) ||
+      (object.length < 2)) return false;
+  for (const colName in object[0]) {
+    if (typeof colName !== 'string') return false;
+  }
+  for (let i = 0; i < object.length; ++i) {
+    if (!(object[i] instanceof Object)) return false;
+    for (const colName in object[i]) {
+      if (i && (object[0][colName] === undefined)) return false;
+      const cellType = typeof object[i][colName];
+      if (cellType !== 'string' && cellType !== 'number') return false;
+    }
+    if (i) {
+      for (const colName in object[0]) {
+        if (object[i][colName] === undefined) return false;
+      }
+    }
+  }
+  return true;
+}
+
+Polymer({
+  is: 'tr-ui-a-generic-object-view',
+
+  ready() {
+    this.object_ = undefined;
+  },
+
+  get object() {
+    return this.object_;
+  },
+
+  set object(object) {
+    this.object_ = object;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    Polymer.dom(this.$.content).textContent = '';
+    this.appendElementsForType_('', this.object_, 0, 0, 5, '');
+  },
+
+  appendElementsForType_(
+      label, object, indent, depth, maxDepth, suffix) {
+    if (depth > maxDepth) {
+      this.appendSimpleText_(
+          label, indent, '<recursion limit reached>', suffix);
+      return;
+    }
+
+    if (object === undefined) {
+      this.appendSimpleText_(label, indent, 'undefined', suffix);
+      return;
+    }
+
+    if (object === null) {
+      this.appendSimpleText_(label, indent, 'null', suffix);
+      return;
+    }
+
+    if (!(object instanceof Object)) {
+      const type = typeof object;
+      if (type !== 'string') {
+        return this.appendSimpleText_(label, indent, String(object), suffix);
+      }
+      let objectReplaced = false;
+      if ((object[0] === '{' && object[object.length - 1] === '}') ||
+          (object[0] === '[' && object[object.length - 1] === ']')) {
+        try {
+          object = JSON.parse(object);
+          objectReplaced = true;
+        } catch (e) {
+        }
+      }
+      if (!objectReplaced) {
+        if (object.includes('\n')) {
+          const lines = object.split('\n');
+          lines.forEach(function(line, i) {
+            let text;
+            let ioff;
+            let ll;
+            let ss;
+            if (i === 0) {
+              text = '"' + line;
+              ioff = 0;
+              ll = label;
+              ss = '';
+            } else if (i < lines.length - 1) {
+              text = line;
+              ioff = 1;
+              ll = '';
+              ss = '';
+            } else {
+              text = line + '"';
+              ioff = 1;
+              ll = '';
+              ss = suffix;
+            }
+
+            const el = this.appendSimpleText_(
+                ll, indent + ioff * label.length + ioff, text, ss);
+            el.style.whiteSpace = 'pre';
+            return el;
+          }, this);
+          return;
+        }
+        if (tr.b.isUrl(object)) {
+          const link = document.createElement('a');
+          link.href = object;
+          link.textContent = object;
+          this.appendElementWithLabel_(label, indent, link, suffix);
+          return;
+        }
+        this.appendSimpleText_(
+            label, indent, '"' + object + '"', suffix);
+        return;
+      }
+    }
+
+    if (object instanceof tr.model.ObjectSnapshot) {
+      const link = document.createElement('tr-ui-a-analysis-link');
+      link.selection = new tr.model.EventSet(object);
+      this.appendElementWithLabel_(label, indent, link, suffix);
+      return;
+    }
+
+    if (object instanceof tr.model.ObjectInstance) {
+      const link = document.createElement('tr-ui-a-analysis-link');
+      link.selection = new tr.model.EventSet(object);
+      this.appendElementWithLabel_(label, indent, link, suffix);
+      return;
+    }
+
+    if (object instanceof tr.b.math.Rect) {
+      this.appendSimpleText_(label, indent, object.toString(), suffix);
+      return;
+    }
+
+    if (object instanceof tr.b.Scalar) {
+      const el = this.ownerDocument.createElement('tr-v-ui-scalar-span');
+      el.value = object;
+      el.inline = true;
+      this.appendElementWithLabel_(label, indent, el, suffix);
+      return;
+    }
+
+    if (object instanceof Array) {
+      this.appendElementsForArray_(
+          label, object, indent, depth, maxDepth, suffix);
+      return;
+    }
+
+    this.appendElementsForObject_(
+        label, object, indent, depth, maxDepth, suffix);
+  },
+
+  appendElementsForArray_(
+      label, object, indent, depth, maxDepth, suffix) {
+    if (object.length === 0) {
+      this.appendSimpleText_(label, indent, '[]', suffix);
+      return;
+    }
+
+    if (isTable(object)) {
+      const table = document.createElement('tr-ui-b-table');
+      const columns = [];
+      for (const colName of Object.keys(object[0])) {
+        let allStrings = true;
+        let allNumbers = true;
+        for (let i = 0; i < object.length; ++i) {
+          if (typeof(object[i][colName]) !== 'string') {
+            allStrings = false;
+          }
+
+          if (typeof(object[i][colName]) !== 'number') {
+            allNumbers = false;
+          }
+
+          if (!allStrings && !allNumbers) break;
+        }
+
+        const column = {title: colName};
+        column.value = function(row) {
+          return row[colName];
+        };
+
+        if (allStrings) {
+          column.cmp = function(x, y) {
+            return x[colName].localeCompare(y[colName]);
+          };
+        } else if (allNumbers) {
+          column.cmp = function(x, y) {
+            return x[colName] - y[colName];
+          };
+        }
+        columns.push(column);
+      }
+      table.tableColumns = columns;
+      table.tableRows = object;
+      this.appendElementWithLabel_(label, indent, table, suffix);
+      table.rebuild();
+      return;
+    }
+
+    this.appendElementsForType_(
+        label + '[',
+        object[0],
+        indent, depth + 1, maxDepth,
+        object.length > 1 ? ',' : ']' + suffix);
+    for (let i = 1; i < object.length; i++) {
+      this.appendElementsForType_(
+          '',
+          object[i],
+          indent + label.length + 1, depth + 1, maxDepth,
+          i < object.length - 1 ? ',' : ']' + suffix);
+    }
+    return;
+  },
+
+  appendElementsForObject_(
+      label, object, indent, depth, maxDepth, suffix) {
+    const keys = Object.keys(object);
+    if (keys.length === 0) {
+      this.appendSimpleText_(label, indent, '{}', suffix);
+      return;
+    }
+
+    this.appendElementsForType_(
+        label + '{' + keys[0] + ': ',
+        object[keys[0]],
+        indent, depth, maxDepth,
+        keys.length > 1 ? ',' : '}' + suffix);
+    for (let i = 1; i < keys.length; i++) {
+      this.appendElementsForType_(
+          keys[i] + ': ',
+          object[keys[i]],
+          indent + label.length + 1, depth + 1, maxDepth,
+          i < keys.length - 1 ? ',' : '}' + suffix);
+    }
+  },
+
+  appendElementWithLabel_(label, indent, dataElement, suffix) {
+    const row = document.createElement('div');
+
+    const indentSpan = document.createElement('span');
+    indentSpan.style.whiteSpace = 'pre';
+    for (let i = 0; i < indent; i++) {
+      Polymer.dom(indentSpan).textContent += ' ';
+    }
+    Polymer.dom(row).appendChild(indentSpan);
+
+    const labelSpan = document.createElement('span');
+    Polymer.dom(labelSpan).textContent = label;
+    Polymer.dom(row).appendChild(labelSpan);
+
+    Polymer.dom(row).appendChild(dataElement);
+    const suffixSpan = document.createElement('span');
+    Polymer.dom(suffixSpan).textContent = suffix;
+    Polymer.dom(row).appendChild(suffixSpan);
+
+    row.dataElement = dataElement;
+    Polymer.dom(this.$.content).appendChild(row);
+  },
+
+  appendSimpleText_(label, indent, text, suffix) {
+    const el = this.ownerDocument.createElement('span');
+    Polymer.dom(el).textContent = text;
+    this.appendElementWithLabel_(label, indent, el, suffix);
+    return el;
+  }
+});
+</script>
+
+<dom-module id='tr-ui-a-generic-object-view-with-label'>
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    </style>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-generic-object-view-with-label',
+
+  ready() {
+    this.labelEl_ = document.createElement('div');
+    this.genericObjectView_ =
+        document.createElement('tr-ui-a-generic-object-view');
+    Polymer.dom(this.root).appendChild(this.labelEl_);
+    Polymer.dom(this.root).appendChild(this.genericObjectView_);
+  },
+
+  get label() {
+    return Polymer.dom(this.labelEl_).textContent;
+  },
+
+  set label(label) {
+    Polymer.dom(this.labelEl_).textContent = label;
+  },
+
+  get object() {
+    return this.genericObjectView_.object;
+  },
+
+  set object(object) {
+    this.genericObjectView_.object = object;
+  }
+});
+</script>

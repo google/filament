@@ -1,0 +1,45 @@
+XXX - Not complete!
+
+Name
+
+    SGIX_icc_compress
+
+Name Strings
+
+    GLU_SGIX_icc_compress
+
+Version
+
+    $Date: 1999/06/09 17:57:48 $ $Revision: 1.3 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGIX_icc_texture is required.
+
+Overview
+
+    This extension provides a way to convert images to ICC formats
+    since the GL does not have this capability.
+
+Issues
+
+    - What storage formats should we use?
+
+    - Should we provide a decompression utility?
+
+    - Would we be better off providing a general host-to-host copy
+      mechanism?
+
+New Procedures and Functions
+
+    void CompressICCSGIX(enum targetformat,
+    void DecompressICCSGIX(enum sourceformat,
+
+New Tokens
+
+    None
+

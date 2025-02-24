@@ -1,0 +1,98 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::bot_update]/resources/bot_update.py",
+      "--spec-path",
+      "cache_dir = '[CACHE]/git'\nsolutions = [{'deps_file': '.DEPS.git', 'managed': True, 'name': 'src', 'url': 'https://chromium.googlesource.com/chromium/src.git'}]",
+      "--revision_mapping_file",
+      "{\"got_angle_revision\": \"src/third_party/angle\", \"got_cr_revision\": \"src\", \"got_revision\": \"src\", \"got_v8_revision\": \"src/v8\"}",
+      "--git-cache-dir",
+      "[CACHE]/git",
+      "--cleanup-dir",
+      "[CLEANUP]/bot_update",
+      "--output_json",
+      "/path/to/tmp/json",
+      "--revision",
+      "infra@HEAD",
+      "--refs",
+      "refs/heads/main"
+    ],
+    "env": {
+      "DEPOT_TOOLS_REPORT_BUILD": "chromium/src/ci/linux/8945511751514863184",
+      "GIT_BACKENDINFO": "1",
+      "GIT_DAPPER_TRACE": "1",
+      "GIT_HTTP_LOW_SPEED_LIMIT": "102400",
+      "GIT_HTTP_LOW_SPEED_TIME": "1800",
+      "GIT_SSH_COMMAND": "ssh -o SendEnv=GIT_DAPPER_TRACE -o SendEnv=GIT_BACKENDINFO",
+      "GIT_TRACE2_EVENT": "[CLEANUP]/trace2-event",
+      "GIT_TRACE_CURL": "[CLEANUP]/trace-curl",
+      "GIT_TRACE_CURL_NO_DATA": "1",
+      "GIT_TRACE_PACKET": "[CLEANUP]/trace-packet"
+    },
+    "env_suffixes": {
+      "DEPOT_TOOLS_UPDATE": [
+        "0"
+      ],
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "infra_step": true,
+    "luci_context": {
+      "realm": {
+        "name": "chromium/src:ci"
+      },
+      "resultdb": {
+        "current_invocation": {
+          "name": "invocations/build:8945511751514863184",
+          "update_token": "token"
+        },
+        "hostname": "rdbhost"
+      }
+    },
+    "name": "bot_update (without patch)",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@Some step text@@@",
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"did_run\": true,@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"manifest\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"src\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"repository\": \"https://fake.org/src.git\",@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"revision\": \"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\"@@@",
+      "@@@STEP_LOG_LINE@json.output@    }@@@",
+      "@@@STEP_LOG_LINE@json.output@  },@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"patch_root\": \"src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"properties\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"got_revision\": \"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\"@@@",
+      "@@@STEP_LOG_LINE@json.output@  },@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"root\": \"src\",@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"source_manifest\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"directories\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@      \"src\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"git_checkout\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"repo_url\": \"https://fake.org/src.git\",@@@",
+      "@@@STEP_LOG_LINE@json.output@          \"revision\": \"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\"@@@",
+      "@@@STEP_LOG_LINE@json.output@        }@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    },@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"version\": 0@@@",
+      "@@@STEP_LOG_LINE@json.output@  },@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"step_text\": \"Some step text\"@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@",
+      "@@@SET_BUILD_PROPERTY@got_revision@\"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\"@@@"
+    ]
+  },
+  {
+    "cmd": [],
+    "name": "set_output_gitiles_commit",
+    "~followup_annotations": [
+      "@@@SET_BUILD_PROPERTY@$recipe_engine/buildbucket/output_gitiles_commit@{\"host\": \"fake.org\", \"id\": \"f27fede2220bcd326aee3e86ddfd4ebd0fe58cb9\", \"project\": \"src\", \"ref\": \"refs/heads/main\"}@@@"
+    ]
+  },
+  {
+    "name": "$result"
+  }
+]

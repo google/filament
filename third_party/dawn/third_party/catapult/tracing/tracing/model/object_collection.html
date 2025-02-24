@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+<link rel="import" href="/tracing/model/time_to_object_instance_map.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the ObjectCollection class.
+ */
+tr.exportTo('tr.model', function() {
+  const ObjectInstance = tr.model.ObjectInstance;
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * A collection of object instances and their snapshots, accessible by id and
+   * time, or by object name.
+   *
+   * @constructor
+   */
+  function ObjectCollection(parent) {
+    tr.model.EventContainer.call(this);
+    this.parent = parent;
+    // scope -> {id -> TimeToObjectInstanceMap}
+    this.instanceMapsByScopedId_ = {};
+    this.instancesByTypeName_ = {};
+    this.createObjectInstance_ = this.createObjectInstance_.bind(this);
+  }
+
+  ObjectCollection.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    * childEvents() {
+      for (const instance of this.getAllObjectInstances()) {
+        yield instance;
+        yield* instance.snapshots;
+      }
+    },
+
+    createObjectInstance_(
+        parent, scopedId, category, name, creationTs, opt_baseTypeName) {
+      const constructor = tr.model.ObjectInstance.subTypes.getConstructor(
+          category, name);
+      const instance = new constructor(
+          parent, scopedId, category, name, creationTs, opt_baseTypeName);
+      const typeName = instance.typeName;
+      let instancesOfTypeName = this.instancesByTypeName_[typeName];
+      if (!instancesOfTypeName) {
+        instancesOfTypeName = [];
+        this.instancesByTypeName_[typeName] = instancesOfTypeName;
+      }
+      instancesOfTypeName.push(instance);
+      return instance;
+    },
+
+    getOrCreateInstanceMap_(scopedId) {
+      let dict;
+      if (scopedId.scope in this.instanceMapsByScopedId_) {
+        dict = this.instanceMapsByScopedId_[scopedId.scope];
+      } else {
+        dict = {};
+        this.instanceMapsByScopedId_[scopedId.scope] = dict;
+      }
+      let instanceMap = dict[scopedId.id];
+      if (instanceMap) return instanceMap;
+      instanceMap = new tr.model.TimeToObjectInstanceMap(
+          this.createObjectInstance_, this.parent, scopedId);
+      dict[scopedId.id] = instanceMap;
+      return instanceMap;
+    },
+
+    idWasCreated(scopedId, category, name, ts) {
+      const instanceMap = this.getOrCreateInstanceMap_(scopedId);
+      return instanceMap.idWasCreated(category, name, ts);
+    },
+
+    addSnapshot(
+        scopedId, category, name, ts, args, opt_baseTypeName) {
+      const instanceMap = this.getOrCreateInstanceMap_(scopedId);
+      const snapshot = instanceMap.addSnapshot(
+          category, name, ts, args, opt_baseTypeName);
+      if (snapshot.objectInstance.category !== category) {
+        const msg = 'Added snapshot name=' + name + ' with cat=' + category +
+            ' impossible. It instance was created/snapshotted with cat=' +
+            snapshot.objectInstance.category + ' name=' +
+            snapshot.objectInstance.name;
+        throw new Error(msg);
+      }
+      if (opt_baseTypeName &&
+          snapshot.objectInstance.baseTypeName !== opt_baseTypeName) {
+        throw new Error('Could not add snapshot with baseTypeName=' +
+                        opt_baseTypeName + '. It ' +
+                        'was previously created with name=' +
+                        snapshot.objectInstance.baseTypeName);
+      }
+      if (snapshot.objectInstance.name !== name) {
+        throw new Error('Could not add snapshot with name=' + name + '. It ' +
+                        'was previously created with name=' +
+                        snapshot.objectInstance.name);
+      }
+      return snapshot;
+    },
+
+    idWasDeleted(scopedId, category, name, ts) {
+      const instanceMap = this.getOrCreateInstanceMap_(scopedId);
+      const deletedInstance = instanceMap.idWasDeleted(category, name, ts);
+      if (!deletedInstance) return;
+
+      if (deletedInstance.category !== category) {
+        const msg = 'Deleting object ' + deletedInstance.name +
+            ' with a different category ' +
+            'than when it was created. It previous had cat=' +
+            deletedInstance.category + ' but the delete command ' +
+            'had cat=' + category;
+        throw new Error(msg);
+      }
+      if (deletedInstance.baseTypeName !== name) {
+        throw new Error('Deletion requested for name=' +
+                        name + ' could not proceed: ' +
+                        'An existing object with baseTypeName=' +
+                        deletedInstance.baseTypeName + ' existed.');
+      }
+    },
+
+    autoDeleteObjects(maxTimestamp) {
+      for (const imapById of Object.values(this.instanceMapsByScopedId_)) {
+        for (const i2imap of Object.values(imapById)) {
+          const lastInstance = i2imap.lastInstance;
+          if (lastInstance.deletionTs !== Number.MAX_VALUE) continue;
+          i2imap.idWasDeleted(
+              lastInstance.category, lastInstance.name, maxTimestamp);
+          // idWasDeleted will cause lastInstance.deletionTsWasExplicit to be
+          // set to true. Unset it here.
+          lastInstance.deletionTsWasExplicit = false;
+        }
+      }
+    },
+
+    getObjectInstanceAt(scopedId, ts) {
+      let instanceMap;
+      if (scopedId.scope in this.instanceMapsByScopedId_) {
+        instanceMap = this.instanceMapsByScopedId_[scopedId.scope][scopedId.id];
+      }
+      if (!instanceMap) return undefined;
+      return instanceMap.getInstanceAt(ts);
+    },
+
+    getSnapshotAt(scopedId, ts) {
+      const instance = this.getObjectInstanceAt(scopedId, ts);
+      if (!instance) return undefined;
+      return instance.getSnapshotAt(ts);
+    },
+
+    iterObjectInstances(iter, opt_this) {
+      opt_this = opt_this || this;
+      for (const imapById of Object.values(this.instanceMapsByScopedId_)) {
+        for (const i2imap of Object.values(imapById)) {
+          i2imap.instances.forEach(iter, opt_this);
+        }
+      }
+    },
+
+    getAllObjectInstances() {
+      const instances = [];
+      this.iterObjectInstances(function(i) { instances.push(i); });
+      return instances;
+    },
+
+    getAllInstancesNamed(name) {
+      return this.instancesByTypeName_[name];
+    },
+
+    getAllInstancesByTypeName() {
+      return this.instancesByTypeName_;
+    },
+
+    preInitializeAllObjects() {
+      this.iterObjectInstances(function(instance) {
+        instance.preInitialize();
+      });
+    },
+
+    initializeAllObjects() {
+      this.iterObjectInstances(function(instance) {
+        instance.initialize();
+      });
+    },
+
+    initializeInstances() {
+      this.iterObjectInstances(function(instance) {
+        instance.initialize();
+      });
+    },
+
+    updateBounds() {
+      this.bounds.reset();
+      this.iterObjectInstances(function(instance) {
+        instance.updateBounds();
+        this.bounds.addRange(instance.bounds);
+      }, this);
+    },
+
+    shiftTimestampsForward(amount) {
+      this.iterObjectInstances(function(instance) {
+        instance.shiftTimestampsForward(amount);
+      });
+    },
+
+    addCategoriesToDict(categoriesDict) {
+      this.iterObjectInstances(function(instance) {
+        categoriesDict[instance.category] = true;
+      });
+    }
+  };
+
+  return {
+    ObjectCollection,
+  };
+});
+</script>

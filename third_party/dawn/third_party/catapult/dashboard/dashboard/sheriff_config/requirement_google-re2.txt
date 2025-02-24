@@ -1,0 +1,7 @@
+google-re2==0.0.4 \
+    --hash=sha256:6e8d7bf8272603170a823d6b85ca317f4616ee41cd2b22a4c1c9c1bcac7d9651
+six==1.16.0 \
+    --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
+    --hash=sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
+    # via google-re2
+

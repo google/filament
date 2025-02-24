@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script src="/jquery/jquery-2.1.4.min.js"></script>
+<script src="/flot/jquery.flot.min.js"></script>
+<script src="/flot/jquery.flot.crosshair.min.js"></script>
+<script src="/flot/jquery.flot.fillbetween.min.js"></script>
+<script src="/flot/jquery.flot.selection.min.js"></script>
+
+<link rel="import" href="/dashboard/elements/chart-container.html">
+<link rel="import" href="/dashboard/static/testdata/dromaeo-charts.html">
+<link rel="import" href="/dashboard/static/testdata/sunspider-charts.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+      testing_common.clearFixture();
+    }
+  };
+
+  const REVISION_INFO = {
+    r_commit_pos: {
+      name: 'Chromium Commit Position',
+      url: 'http://test-results.appspot.com/revision_range?start={{R1}}&end={{R2}}' // @supress longLineCheck
+    }
+  };
+
+  function createChart() {
+    const chart = document.createElement('chart-container');
+    chart.set('revisionInfo', REVISION_INFO);
+    return chart;
+  }
+
+  test('instantiate_basic', function() {
+    testing_common.mockChartJson(dromaeoCharts);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+  }, testOptions);
+
+  test('data_is_loaded_when_a_series_group_is_added', async function() {
+    testing_common.mockChartJson(dromaeoCharts);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+    await tr.b.timeout(100);
+    assert.strictEqual(chart.getDataForFlot().length, 3);
+  }, testOptions);
+
+  test('warning_added_for_stale_series', function() {
+    const graphJson = testing_common.deepCopy(dromaeoCharts.graphSelectedJson);
+    for (const annotation in graphJson.annotations['0']) {
+      graphJson.annotations['0'][annotation].timestamp -= 8 * 86400000;
+    }
+    testing_common.mockChartJson(dromaeoCharts, graphJson);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+
+    return new Promise(function(resolve) {
+      function check() {
+        assert.lengthOf(chart.warnings, 1);
+        assert.notEqual(-1, chart.warnings[0].value.indexOf(
+            'Graph out of date!'));
+        resolve();
+      }
+      requestAnimationFrame(check);
+    });
+  }, testOptions);
+
+  test('seriesGroupList displays prefixed name', function() {
+    testing_common.mockChartJson(
+        dromaeoCharts, dromaeoCharts.graphSelectedJson);
+    testing_common.mockChartJson(
+        sunspiderCharts, sunspiderCharts.graphSelectedJson);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+    chart.addSeriesGroup(sunspiderCharts.graphParams);
+    assert.strictEqual(chart.seriesGroupList[0].tests[0].displayName,
+        'chromium-rel-mac11/dromaeo.domcoreattr/dom');
+    assert.strictEqual(chart.seriesGroupList[1].tests[0].displayName,
+        'android-nexus6/sunspider/Total');
+  }, testOptions);
+
+  test('unselected_has_displayName', async function() {
+    testing_common.mockChartJson(dromaeoCharts);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+    await tr.b.timeout(100);
+    assert.strictEqual(chart.seriesGroupList[0].tests[0].displayName, 'dom');
+    assert.strictEqual(chart.seriesGroupList[0].tests[1].displayName,
+        'http___dromaeo.com?dom-attr');
+  }, testOptions);
+
+  let originalUriGetQueryString;
+  const testOptionsUri = {
+    setUp() {
+      originalUriGetQueryString = uri.getQueryString;
+    },
+    tearDown() {
+      testing_common.clearXhrMock();
+      testing_common.clearFixture();
+      uri.getQueryString = originalUriGetQueryString;
+    }
+  };
+
+  test('showTooltip_uses_uri_bug_id', async function() {
+    uri.getQueryString = function() { return '?bug_id=123'; };
+
+    testing_common.mockChartJson(
+        dromaeoCharts, dromaeoCharts.graphSelectedJson);
+    testing_common.mockChartJson(
+        sunspiderCharts, sunspiderCharts.graphSelectedJson);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+    chart.addSeriesGroup(sunspiderCharts.graphParams);
+    await tr.b.timeout(100);
+    chart.showTooltip(0, 0);
+    assert.strictEqual(chart.$.tooltip.bugId, '123');
+  }, testOptionsUri);
+
+  test('populateTestPicker', function() {
+    testing_common.mockChartJson(dromaeoCharts);
+    const chart = createChart();
+    this.addHTMLOutput(chart);
+    chart.addSeriesGroup(dromaeoCharts.graphParams);
+    let ptpEventCount = 0;
+    chart.addEventListener('populateTestPicker', function() {
+      ++ptpEventCount;
+    });
+    let orpEventCount = 0;
+    chart.addEventListener('openReportPage', function() {
+      ++orpEventCount;
+    });
+    const ptpButton = tr.ui.b.findDeepElementMatching(chart,
+        'paper-button[title="Populate test picker"]');
+    ptpButton.click();
+    assert.strictEqual(ptpEventCount, 1);
+    assert.strictEqual(orpEventCount, 1);
+  }, testOptions);
+});
+</script>

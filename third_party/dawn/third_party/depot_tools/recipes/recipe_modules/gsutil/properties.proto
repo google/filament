@@ -1,0 +1,12 @@
+// Copyright 2022 The LUCI Authors. All rights reserved.
+// Use of this source code is governed under the Apache License, Version 2.0
+// that can be found in the LICENSE file.
+syntax = "proto3";
+
+package recipe_modules.depot_tools.gsutil;
+
+message EnvProperties {
+    // Env vars that gsutil uses for both authentication and configuration.
+    string BOTO_CONFIG = 1;
+    string BOTO_PATH = 2;
+}

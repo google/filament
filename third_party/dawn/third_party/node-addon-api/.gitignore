@@ -1,0 +1,21 @@
+/node_modules
+/build
+/benchmark/build
+/benchmark/src
+/test/addon_build/addons
+/.vscode
+
+# ignore node-gyp generated files outside its build directory
+/test/*.Makefile
+/test/*.mk
+
+# ignore node-gyp generated Visual Studio files
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.vsidx
+*.sln
+*.suo
+/test/.vs/
+/test/Release/
+/test/Debug/

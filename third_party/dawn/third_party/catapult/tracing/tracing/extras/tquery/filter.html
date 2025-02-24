@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/scripting_object.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.tquery', function() {
+  function Filter() {
+    tr.c.ScriptingObject.call(this);
+  }
+
+  Filter.normalizeFilterExpression = function(filterExpression) {
+    // Shortcut: naked strings and regexps can be used to match against slice
+    // titles.
+    if (filterExpression instanceof String ||
+        typeof(filterExpression) === 'string' ||
+        filterExpression instanceof RegExp) {
+      const filter = new tr.e.tquery.FilterHasTitle(filterExpression);
+      return filter;
+    }
+    return filterExpression;
+  };
+
+  Filter.prototype = {
+    __proto__: tr.c.ScriptingObject.prototype,
+
+    evaluate(context) {
+      throw new Error('Not implemented');
+    },
+
+    matchValue_(value, expected) {
+      if (expected instanceof RegExp) {
+        return expected.test(value);
+      } else if (expected instanceof Function) {
+        return expected(value);
+      }
+      return value === expected;
+    }
+  };
+
+  return {
+    Filter,
+  };
+});
+</script>

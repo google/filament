@@ -1,0 +1,12 @@
+Name: BeautifulSoup
+Short Name: bs4
+URL: http://www.crummy.com/software/BeautifulSoup/
+Version: 4.3.2
+License: MIT
+Shipped: yes
+
+Description:
+Beautiful Soup is a library for HTML parsing.
+It's included in catapult because webtest depends on it.
+
+Local Modifications: None

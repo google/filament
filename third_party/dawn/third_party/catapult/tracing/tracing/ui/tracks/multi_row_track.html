@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/model_settings.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays a group of objects in multiple rows.
+   * @constructor
+   * @extends {ContainerTrack}
+   */
+  const MultiRowTrack = tr.ui.b.define(
+      'multi-row-track', tr.ui.tracks.ContainerTrack);
+
+  MultiRowTrack.prototype = {
+
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      this.tooltip_ = '';
+      this.heading_ = '';
+
+      this.groupingSource_ = undefined;
+      this.itemsToGroup_ = undefined;
+
+      this.defaultToCollapsedWhenSubRowCountMoreThan = 1;
+
+      this.currentSubRowsWithHeadings_ = undefined;
+      this.expanded_ = true;
+    },
+
+    get itemsToGroup() {
+      return this.itemsToGroup_;
+    },
+
+    setItemsToGroup(itemsToGroup, opt_groupingSource) {
+      this.itemsToGroup_ = itemsToGroup;
+      this.groupingSource_ = opt_groupingSource;
+      this.currentSubRowsWithHeadings_ = undefined;
+      this.updateContents_();
+      this.updateExpandedStateFromGroupingSource_();
+    },
+
+    /**
+     * Opt-out from using buildSubRows_() and provide prebuilt rows.
+     * Array of {row: [rowItems...], heading} dicts is expected as an argument.
+     */
+    setPrebuiltSubRows(groupingSource, subRowsWithHeadings) {
+      this.itemsToGroup_ = undefined;
+      this.groupingSource_ = groupingSource;
+      this.currentSubRowsWithHeadings_ = subRowsWithHeadings;
+      this.updateContents_();
+      this.updateExpandedStateFromGroupingSource_();
+    },
+
+    get heading() {
+      return this.heading_;
+    },
+
+    set heading(h) {
+      this.heading_ = h;
+      this.updateHeadingAndTooltip_();
+    },
+
+    get tooltip() {
+      return this.tooltip_;
+    },
+
+    set tooltip(t) {
+      this.tooltip_ = t;
+      this.updateHeadingAndTooltip_();
+    },
+
+    get subRows() {
+      return this.currentSubRowsWithHeadings_.map(elem => elem.row);
+    },
+
+    get hasVisibleContent() {
+      return this.children.length > 0;
+    },
+
+    get expanded() {
+      return this.expanded_;
+    },
+
+    set expanded(expanded) {
+      if (this.expanded_ === expanded) return;
+
+      this.expanded_ = expanded;
+      this.expandedStateChanged_();
+    },
+
+    onHeadingClicked_(e) {
+      if (this.subRows.length <= 1) return;
+
+      this.expanded = !this.expanded;
+
+      if (this.groupingSource_) {
+        const modelSettings = new tr.model.ModelSettings(
+            this.groupingSource_.model);
+        modelSettings.setSettingFor(this.groupingSource_, 'expanded',
+            this.expanded);
+      }
+
+      e.stopPropagation();
+    },
+
+    updateExpandedStateFromGroupingSource_() {
+      if (this.groupingSource_) {
+        const numSubRows = this.subRows.length;
+        const modelSettings = new tr.model.ModelSettings(
+            this.groupingSource_.model);
+        if (numSubRows > 1) {
+          let defaultExpanded;
+          if (numSubRows > this.defaultToCollapsedWhenSubRowCountMoreThan) {
+            defaultExpanded = false;
+          } else {
+            defaultExpanded = true;
+          }
+          this.expanded = modelSettings.getSettingFor(
+              this.groupingSource_, 'expanded', defaultExpanded);
+        } else {
+          this.expanded = undefined;
+        }
+      }
+    },
+
+    expandedStateChanged_() {
+      const children = this.children;
+      const minH = Math.max(2, Math.ceil(18 / children.length));
+      const h = (this.expanded_ ? 18 : minH) + 'px';
+
+      for (let i = 0; i < children.length; i++) {
+        children[i].height = h;
+        if (i === 0) {
+          children[i].arrowVisible = true;
+        }
+        children[i].expanded = this.expanded;
+      }
+
+      if (children.length === 1) {
+        children[0].expanded = true;
+        children[0].arrowVisible = false;
+      }
+    },
+
+    updateContents_() {
+      tr.ui.tracks.ContainerTrack.prototype.updateContents_.call(this);
+      this.detach();  // Clear sub-tracks.
+
+      if (this.currentSubRowsWithHeadings_ === undefined) {
+        // No prebuilt rows, build it.
+        if (this.itemsToGroup_ === undefined) {
+          return;
+        }
+        const subRows = this.buildSubRows_(this.itemsToGroup_);
+        this.currentSubRowsWithHeadings_ = subRows.map(row => {
+          return {row, heading: undefined};
+        });
+      }
+      if (this.currentSubRowsWithHeadings_ === undefined ||
+          this.currentSubRowsWithHeadings_.length === 0) {
+        return;
+      }
+
+      const addSubTrackEx = (items, opt_heading) => {
+        const track = this.addSubTrack_(items);
+        if (opt_heading !== undefined) {
+          track.heading = opt_heading;
+        }
+        track.addEventListener(
+            'heading-clicked', this.onHeadingClicked_.bind(this));
+      };
+
+      if (this.currentSubRowsWithHeadings_[0].heading !== undefined &&
+          this.currentSubRowsWithHeadings_[0].heading !== this.heading_) {
+        // Create an empty row to render the group's title there.
+        addSubTrackEx([]);
+      }
+
+      for (const subRowWithHeading of this.currentSubRowsWithHeadings_) {
+        const subRow = subRowWithHeading.row;
+        if (subRow.length === 0) {
+          continue;
+        }
+        addSubTrackEx(subRow, subRowWithHeading.heading);
+      }
+
+      this.updateHeadingAndTooltip_();
+      this.expandedStateChanged_();
+    },
+
+    updateHeadingAndTooltip_() {
+      if (!Polymer.dom(this).firstChild) return;
+
+      Polymer.dom(this).firstChild.heading = this.heading_;
+      Polymer.dom(this).firstChild.tooltip = this.tooltip_;
+    },
+
+    /**
+     * Breaks up the list of slices into N rows, each of which is a list of
+     * slices that are non overlapping.
+     */
+    buildSubRows_(itemsToGroup) {
+      throw new Error('Not implemented');
+    },
+
+    addSubTrack_(subRowItems) {
+      throw new Error('Not implemented');
+    },
+
+    areArrayContentsSame_(a, b) {
+      if (!a || !b) return false;
+
+      if (!a.length || !b.length) return false;
+
+      if (a.length !== b.length) return false;
+
+      for (let i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
+    }
+  };
+
+  return {
+    MultiRowTrack,
+  };
+});
+</script>

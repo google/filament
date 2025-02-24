@@ -1,0 +1,26 @@
+//===- subzero/crosstest/test_calling_conv.def - testing macros -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for testing the calling convention.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_CALLING_CONV_DEF
+#define TEST_CALLING_CONV_DEF
+
+#define STR(x) (#x)
+
+#define TEST_FUNC_TABLE                            \
+/* caller,             callee,           argc */   \
+X(caller_i,            callee_i,              1)   \
+X(caller_vvvvv,        callee_vvvvv,          5)   \
+X(caller_vlvilvfvdviv, callee_vlvilvfvdviv,  12)   \
+// #define X(caller, callee, argc)
+
+#endif // TEST_CALLING_CONV_DEF

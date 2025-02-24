@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/stack_frame.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const model = new tr.Model();
+    const fA = tr.c.TestUtils.newStackTrace(model, ['a1', 'a2', 'a3']);
+
+    const stackFrameView = document.createElement('tr-ui-a-stack-frame');
+    stackFrameView.stackFrame = fA;
+    this.addHTMLOutput(stackFrameView);
+  });
+
+  test('clearingStackFrame', function() {
+    const model = new tr.Model();
+    const fA = tr.c.TestUtils.newStackTrace(model, ['a1', 'a2', 'a3']);
+
+    const stackFrameView = document.createElement('tr-ui-a-stack-frame');
+    stackFrameView.stackFrame = fA;
+    stackFrameView.stackFrame = undefined;
+
+    assert.isUndefined(stackFrameView.stackFrame);
+    assert.lengthOf(stackFrameView.$.table.$.body.children, 0);
+  });
+});
+</script>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+<link rel="import" href="/tracing/base/math/range.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pie', function() {
+  // Conservative estimate: if we hadn't been doing anything for 1ms, we
+  // probably needed to wake up the CPU for this.
+  // TODO(skyostil): Augment this with CPU power management states.
+  var IDLE_THRESHOLD_MILLISECONDS = 1;
+
+  function sanitizeReason(reason) {
+    // Remove any path name components (e.g., '/foo/bar/baz' or 'c:\foo\bar\baz'
+    // are both reduced to 'baz').
+    return reason.replace(/^.*[\/\\]/, '');
+  }
+
+  function findWakeUpReason(event) {
+    var tqmRunTask = event.findDescendentSlice('TaskQueueManager::RunTask');
+    if (tqmRunTask && tqmRunTask.subSlices.length > 0)
+      return tqmRunTask.subSlices[0].title;
+    var processTask =
+        event.findDescendentSlice('TaskQueueManager::ProcessTaskFromWorkQueue');
+    if (processTask &&
+        processTask.args.src_file &&
+        processTask.args.src_func) {
+      return processTask.args.src_file + ':' + processTask.args.src_func;
+    }
+    if (event.title === 'MessageLoop::RunTask' &&
+        event.args.src_file &&
+        event.args.src_func) {
+      return event.args.src_file + ':' + event.args.src_func;
+    }
+    return event.title;
+  }
+
+  // Estimate number of times the CPU was woken up from idle to execute
+  // different types of work (e.g., timer work) and the time the CPU had been
+  // idle before that.
+  // See https://goo.gl/l7V5xg.
+  function findWakeUpsOnThread(thread) {
+    var wakeUps = {};
+    var foundWakeUps = false;
+    var lastTaskEnd = undefined;
+    for (var event of thread.getDescendantEvents()) {
+      if (!event.isTopLevel)
+        continue;
+      var taskEnd = event.start + event.duration;
+      if (lastTaskEnd === undefined) {
+        lastTaskEnd = taskEnd;
+        continue;
+      }
+      var sleepTime = event.start - lastTaskEnd;
+      var isWakeUp = sleepTime >= IDLE_THRESHOLD_MILLISECONDS;
+      lastTaskEnd = taskEnd;
+      if (!isWakeUp)
+        continue;
+      var reason = sanitizeReason(findWakeUpReason(event));
+      if (wakeUps[reason] === undefined)
+        wakeUps[reason] = {frequency: 0, sleepTimes: []};
+      wakeUps[reason].frequency++;
+      wakeUps[reason].sleepTimes.push(sleepTime);
+      foundWakeUps = true;
+    }
+    return foundWakeUps ? wakeUps : undefined;
+  }
+
+  function updateThreadWakeUps(existingWakeUps, newWakeUps) {
+    for (var reason in newWakeUps) {
+      if (!(reason in existingWakeUps)) {
+        existingWakeUps[reason] = newWakeUps[reason];
+        continue;
+      }
+      existingWakeUps[reason].frequency += newWakeUps[reason].frequency;
+      existingWakeUps[reason].sleepTimes =
+          existingWakeUps[reason].sleepTimes.concat(
+              newWakeUps[reason].sleepTimes);
+    }
+  }
+
+  function mapWakeUps(result, model) {
+    var allWakeUps = {};
+    for (var pid in model.processes) {
+      var process = model.processes[pid];
+      for (var tid in process.threads) {
+        var thread = process.threads[tid];
+        var wakeUps = findWakeUpsOnThread(thread);
+        if (!wakeUps === undefined)
+          continue;
+        if (!(thread.name in allWakeUps))
+          allWakeUps[thread.name] = {};
+        updateThreadWakeUps(allWakeUps[thread.name], wakeUps);
+      }
+    }
+
+    // Normalize frequency to wake-ups/second.
+    // Note: if we found any wake-ups, the total duration of the trace is
+    // guaranteed to be positive.
+    var totalDurationSeconds = model.bounds.duration / 1000;
+    var foundAnyWakeUps = false;
+    for (var thread in allWakeUps) {
+      var threadWakeUps = allWakeUps[thread];
+      for (var reason in threadWakeUps) {
+        threadWakeUps[reason].frequency /= totalDurationSeconds;
+        foundAnyWakeUps = true;
+      }
+    }
+
+    if (!foundAnyWakeUps) {
+      result.addPair('wakeUps', null);
+      return;
+    }
+
+    result.addPair('wakeUps', allWakeUps);
+  }
+
+  pi.FunctionRegistry.register(mapWakeUps);
+
+  return {
+    mapWakeUpsForTest: mapWakeUps
+  };
+});
+</script>

@@ -1,0 +1,240 @@
+Name
+
+    WGL_EXT_create_context_es_profile
+    WGL_EXT_create_context_es2_profile
+
+Name Strings
+
+    WGL_EXT_create_context_es_profile
+    WGL_EXT_create_context_es2_profile
+
+    NOTE: implementations of this extension must export BOTH extension
+    strings, for backwards compatibility with applications written
+    against version 1 of this extension.
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+    Piers Daniell (pdaniell 'at' nvidia.com)
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Complete.
+
+Version
+
+    Version 5, April 6, 2012
+
+Number
+
+    400
+
+Dependencies
+
+    WGL_ARB_extensions_string is required.
+
+    WGL_ARB_create_context is required.
+
+    WGL_ARB_create_context_profile is required.
+
+    An OpenGL ES implementation is required.
+
+Overview
+
+    This extension allows creating an OpenGL ES context.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as a bit in the attribute value for
+    WGL_CONTEXT_PROFILE_MASK_ARB in <*attribList>:
+
+	WGL_CONTEXT_ES_PROFILE_BIT_EXT		0x00000004
+	WGL_CONTEXT_ES2_PROFILE_BIT_EXT		0x00000004
+
+Additions to the OpenGL / GLX / GLX Protocol Specificaitons
+
+    None. This specification is written for WGL.
+
+Additions to the WGL specification
+
+    This extension modifies language specified in the
+    WGL_ARB_create_context and WGL_ARB_create_context_profile
+    extensions.
+
+    In the description of wglCreateContextAttribsARB, replace the
+    sentence
+
+   "... If a version less than or equal to 3.0 is requested, the context
+    returned may implement any of the following versions:"
+
+    with
+
+   "... If the version requested is a valid and supported OpenGL-ES version,
+    and the WGL_CONTEXT_ES_PROFILE_BIT_EXT bit is set in the
+    WGL_CONTEXT_PROFILE_MASK_ARB attribute (see below), then the context
+    returned will implement the OpenGL ES version requested.
+
+    Otherwise, if a version less than or equal to 3.0 is requested, the
+    context returned may implement any of the following versions:"
+
+
+    Replace the sentence
+
+   "... If the requested OpenGL version is less than 3.2,
+    WGL_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality of the
+    context is determined solely by the requested version."
+
+    with
+
+   "... If the WGL_CONTEXT_ES_PROFILE_BIT_EXT bit is set, and the
+    requested version is a valid and supported OpenGL-ES implementation,
+    then a context implementing that OpenGL ES version is returned;
+    otherwise, if the requested OpenGL version is less than
+    3.2, WGL_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality
+    of the context is determined solely by the requested version."
+
+    Add prior to the sentence
+
+   "The attribute name WGL_CONTEXT_FLAGS_ARB specifies a set of flag
+    bits affecting the rendering context.":
+
+   "If an OpenGL ES profile is requested, then the context returned
+    cannot implement additional functionality, including functionality
+    defined only by the core or compatibility profiles, unless such
+    functionality is defined by extensions that are themselves specified
+    relative to that specific OpenGL ES version[*].
+	[*] Such functionality should have a corresponding extension
+	specification in the OpenGL ES Registry. In some
+	implementations, vendor extensions defined relative to the OpenGL ES
+	version, but not yet added to the OpenGL ES Registry, may also be
+	supported."
+
+    Replace the bullet point starting "* If attribute
+    WGL_CONTEXT_PROFILE_MASK_ARB has no bits set;..." with
+
+ "* If attribute WGL_CONTEXT_PROFILE_MASK_ARB has no bits set; has any
+    bits set other than WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+    WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB, or
+    WGL_CONTEXT_ES_PROFILE_BIT_EXT; has more than one of these bits
+    set; or if the implementation does not supported the requested
+    profile, then ERROR_INVALID_PROFILE_ARB is generated."
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because there is no way to extend WGL, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress. Because this extension is a WGL extension, it is
+    not included in the GL_EXTENSIONS string. Its existence can be
+    determined with the WGL_ARB_extensions_string extension.
+
+Errors
+
+    ERROR_INVALID_PROFILE_ARB is generated if the value of
+    WGL_CONTEXT_PROFILE_MASK_ARB contains more than a single valid
+    profile bit.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+   None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+ 1) How is an OpenGL ES 2.0 "profile" defined in a desktop OpenGL
+    implementation?
+
+    OpenGL ES 2.0 is essentially a stripped-down version of OpenGL 2.0
+    with a few added features, so it is natural to consider it a profile
+    of OpenGL 2.0. This is potentially confusing, in that the API
+    profile mechanism was not introduced until OpenGL 3.2. However, the
+    extended context creation mechanism operates outside the scope of a
+    GL context, and we can define the meaning of "version 2.0, profile
+    ES2" to be an OpenGL ES 2.0 context.
+
+ 2) May an OpenGL ES 2.0 "profile" include OpenGL functionality
+    introduced by OpenGL 2.1 and later versions?
+
+    PROPOSED: NO, except in the form of extensions that are themselves
+    defined relative to OpenGL ES 2.0. This restriction is intended to
+    make it difficult to create ill-defined conglomerations of OpenGL ES
+    and OpenGL features and to eliminate subjective interpretations of
+    what it means to subset a GL extension for implementation against
+    OpenGL ES.
+
+    If features specific to OpenGL ES 2.0 are required together with
+    features from recent versions of OpenGL, a different mechanism, such
+    as an OpenGL extension defining those OpenGL ES 2.0 features, may be
+    appropriate.
+
+ 3) Is implementation of an OpenGL ES 2.0 profile mandatory for a
+    desktop OpenGL implementation?
+
+    RESOLVED: NO. The ARB considered making support for an ES 2.0
+    profile mandatory for an OpenGL 4.1 implementation, but decided
+    against it. Most ARB members would prefer that people use EGL to
+    access OpenGL ES 2.0, whether on the desktop or on mobile devices.
+
+ 4) Do we need a GL_CONTEXT_ES2_PROFILE_BIT_EXT token?
+
+    RESOLVED: NO. The GL_CONTEXT_PROFILE_MASK query only exists in
+    desktop GL, while creating an ES2 "profile" results in an OpenGL ES
+    2.0 context, which does not have the query. Therefore at present,
+    it's not possible to ever return this bit from the query and it is
+    not needed.
+
+    If, in the future, ES and GL are unified under the profile mechanism
+    such that there is an actual "embedded" profile of GL, then this
+    resolution may need to change.
+
+5) Do we need a new extension and new profile bit for every different
+   version of OpenGL-ES the desktop OpenGL implementation wants to
+   support?
+
+   RESOLVED: No. This extension has been modified since version #3 to
+   support and requested version of OpenGL-ES that is supported by
+   the desktop OpenGL implementation. This can include more than just
+   OpenGL-ES 2.0 that was originally specified.
+
+   The name string has been generalized from "es2_profile" to
+   "es_profile" for future use, but for backwards compatibility with
+   applications expecting the initial name string, implementations are
+   required to export both name strings.
+
+Revision History
+
+    Version 5, 2012/04/06 - Specify that both name strings must be
+	exported for backwards compatibility and expand issue 5
+	accordingly.
+
+    Version 4, 2012/03/28 - Add support for any OpenGL-ES version, not just
+	version 2.0. Alias WGL_CONTEXT_ES2_PROFILE_BIT_EXT with
+	WGL_CONTEXT_ES_PROFILE_BIT_EXT and the extension name
+	WGL_EXT_create_context_es2_profile with
+	WGL_EXT_create_context_es_profile. Added issue 5.
+
+    Version 3, 2010/08/09 - Added issue 4 resolution.
+
+    Version 2, 2010/08/04 - Fix typos and assign extension number.
+
+    Version 1, 2010/05/18 - Recast the OpenGL ES 2.0 "profile" mechanism
+    into a separate EXT layered on the ARB profiled context creation
+    mechanism.

@@ -1,0 +1,83 @@
+# Copyright 2019 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../swiftshader.gni")
+
+swiftshader_source_set("Pipeline_headers") {
+  sources = [
+    "ComputeProgram.hpp",
+    "Constants.hpp",
+    "PixelProgram.hpp",
+    "PixelRoutine.hpp",
+    "SamplerCore.hpp",
+    "SetupRoutine.hpp",
+    "ShaderCore.hpp",
+    "SpirvBinary.hpp",
+    "SpirvProfiler.hpp",
+    "SpirvShader.hpp",
+    "SpirvShaderDebug.hpp",
+    "VertexProgram.hpp",
+    "VertexRoutine.hpp",
+  ]
+}
+
+swiftshader_source_set("Pipeline") {
+  sources = [
+    "ComputeProgram.cpp",
+    "Constants.cpp",
+    "PixelProgram.cpp",
+    "PixelRoutine.cpp",
+    "SamplerCore.cpp",
+    "SetupRoutine.cpp",
+    "ShaderCore.cpp",
+    "SpirvBinary.cpp",
+    "SpirvProfiler.cpp",
+    "SpirvShader.cpp",
+    "SpirvShaderArithmetic.cpp",
+    "SpirvShaderControlFlow.cpp",
+    "SpirvShaderDebugger.cpp",
+    "SpirvShaderGLSLstd450.cpp",
+    "SpirvShaderGroup.cpp",
+    "SpirvShaderImage.cpp",
+    "SpirvShaderInstructions.cpp",
+    "SpirvShaderMemory.cpp",
+    "SpirvShaderSampling.cpp",
+    "SpirvShaderSpec.cpp",
+    "VertexProgram.cpp",
+    "VertexRoutine.cpp",
+  ]
+
+  include_dirs = [
+    "..",
+    "../../include",
+    "../../third_party/SPIRV-Headers/include",
+    "../../third_party/SPIRV-Tools/include",
+  ]
+
+  defines = [
+     "SWIFTSHADER_LEGACY_PRECISION=true",  # TODO(chromium:1299047)
+  ]
+
+  deps = [
+    "../../third_party/SPIRV-Tools:spvtools_headers",
+    "../../third_party/marl:Marl_headers",
+    "../Device:Device_headers",
+    "../System:System_headers",
+    "../Vulkan:swiftshader_libvulkan_headers",
+  ]
+
+  public_deps = [
+    ":Pipeline_headers",
+  ]
+}

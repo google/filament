@@ -1,0 +1,235 @@
+Name
+
+    ANGLE_multi_draw
+
+Name Strings
+
+    GL_ANGLE_multi_draw
+
+Contributors
+
+    Austin Eng, Google Inc.
+    Kai Ninomiya, Google Inc.
+    Kenneth Russell, Google Inc.
+    Contributors to the EXT_multi_draw_arrays specification
+    Contributors to the ARB_shader_draw_parameters specification
+
+Contact
+
+    Austin Eng (enga 'at' google.com)
+
+Status
+
+    Incomplete
+
+Version
+
+    Last Modified Date: October 24, 2018
+    Author Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+    This extension is written against the OpenGL ES 2.0 specification,
+    the OpenGL ES 3.0 specification, and the OpenGL ES Shading Language 3.0
+    specification.
+
+    The presence of the GL_ANGLE_instanced_arrays or GL_EXT_instanced_arrays 
+    extensions affects the definition of this extension.
+
+Overview
+
+    This extension exposes the Multi* draw call variants in
+    EXT_multi_draw_arrays functionality in addition to the vertex shader builtin
+    gl_DrawID exposed by ARB_shader_draw_parameters for OpenGL.
+
+    These functions behave identically to the standard functions
+    DrawArrays() and DrawElements() except they handle multiple lists of
+    vertices in one call. Their main purpose is to allow one function call
+    to render more than one primitive such as triangle strip, triangle fan,
+    etc.
+
+    Additionally, this extension adds a further built-in variable, gl_DrawID
+    to the shading language. This variable contains the index of the draw
+    currently being processed by a Multi* variant of a drawing command.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void MultiDrawArraysANGLE(enum mode,
+                              const int *firsts,
+                              const sizei *counts,
+                              sizei drawcount);
+
+    void MultiDrawElementsANGLE(enum mode,
+                                const sizei *counts,
+                                enum type,
+                                const void *const *indices,
+                                sizei drawcount);
+
+    void MultiDrawArraysInstancedANGLE(enum mode,
+                                       const int *firsts,
+                                       const sizei *counts,
+                                       const sizei *instanceCounts,
+                                       sizei drawcount);
+
+    void MultiDrawElementsInstancedANGLE(enum mode,
+                                         const sizei *counts,
+                                         enum type,
+                                         const void *const *indices,
+                                         const sizei *instanceCounts,
+                                         sizei drawcount);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL ES 2.0 Specification
+
+    Section 2.8 Vertex Arrays:
+
+    The command
+
+    void MultiDrawArraysANGLE(
+        enum mode,
+        const int *firsts,
+        const sizei *counts,
+        sizei drawcount)
+
+    Behaves identically to DrawArrays except that a list of arrays is
+    specified instead. The number of lists is specified in the drawcount
+    parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+        if (*(counts+i)>0) DrawArrays(mode, *(firsts+i), *(counts+i));
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID>.
+
+    The command
+
+    void MultiDrawElementsANGLE(
+        enum mode,
+        const sizei *counts,
+        enum type,
+        const void *const *indices,
+        sizei drawcount)
+
+    Behaves identically to DrawElements except that a list of arrays is
+    specified instead. The number of lists is specified in the drawcount
+    parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+          if (*(counts+i)>0) {
+              DrawElements(mode, *(counts+i), type, *(indices+i));
+          }
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID>.
+
+Additions to Chapter 2 of the OpenGL ES 3.0 Specification
+
+    Section 2.9.3 Drawing Commands:
+
+    The command
+
+    void MultiDrawArraysInstancedANGLE(
+        enum mode,
+        const int *firsts,
+        const sizei *counts,
+        const sizei *instanceCounts,
+        sizei drawcount)
+
+    Behaves identically to DrawArraysInstanced except that a list of arrays is
+    specified instead. The number of lists is specified in the drawcount
+    parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+        if (*(counts+i)>0) DrawArraysInstanced(mode, *(firsts+i), *(counts+i),
+              *(instanceCounts+1));
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID>.
+
+    The command
+
+    void MultiDrawElementsInstancedANGLE(
+        enum mode,
+        sizei *counts,
+        enum type,
+        const void *const *indices,
+        const sizei *instanceCounts,
+        sizei drawcount)
+
+    Behaves identically to DrawElementsInstanced except that a list of arrays is
+    specified instead. The number of lists is specified in the drawcount
+    parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+          if (*(counts+i)>0) {
+              DrawElementsInstanced(mode, *(counts+i), type,
+                                    *(indices+i), *(instanceCounts+1));
+          }
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID>.
+
+Errors
+
+    The error INVALID_VALUE is generated by the new functions if <drawcount>
+    is less than 0.
+
+    MultiDrawArraysANGLE, MultiDrawElementsANGLE,
+    MultiDrawArraysInstancedANGLE, and MultiDrawElementsInstancedANGLE generate
+    the same errors as DrawArrays, DrawElements, DrawArraysInstanced,
+    and DrawElementsInstanced, respectively, for any draw <i> where an error
+    is generated. If any call would produce an error, no drawing is performed.
+
+Modifications to the OpenGL ES Shading Language Specification, Version 3.00
+
+    Including the following line in a shader can be used to control the
+    language featured described in this extension:
+
+      #extension GL_ANGLE_multi_draw : <behavior>
+
+    where <behavior> is as specified in section 3.5.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_ANGLE_multi_draw 1
+
+Dependencies on GL_ANGLE_instanced_arrays
+
+    If GL_ANGLE_instanced_arrays or GL_EXT_instanced_arrays is enabled, 
+    append the lanuage in "Additions to Chapter 2 of the OpenGL ES 3.0
+    Specification, Section 2.9.3 Drawing Commands" to the language in 
+    "Additions to Chapter 2 of the OpenGL ES 2.0 Specification, Section 
+    2.8 Vertex Arrays".
+
+    If GL_ANGLE_instanced_arrays or GL_EXT_instanced_arrays is not enabled
+    and the context is less than a OpenGL ES 3.0 context, the error 
+    INVALID_OPERATION is generated by any call to the functions 
+    MultiDrawArraysInstancedANGLE and MultiDrawElementsInstancedANGLE.
+
+Issues
+    None
+
+Revision History
+
+    Rev.    Date    Author            Changes
+    ----  --------  ----------------  --------------------------------------------
+    1     10/24/18   Austin Eng       First revision.
+    2     10/25/18   Austin Eng       Add instanced variants.
+    3     06/21/22   Alexey Knyazev   Fixed typos and type usage.

@@ -1,0 +1,653 @@
+Name
+
+    EXT_stencil_clear_tag
+
+Name Strings
+
+    GL_EXT_stencil_clear_tag
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2004.
+
+Status
+
+    Implemented, September 2004
+
+    Advertised and hardware-supported on NVIDIA GeForce 6 TurboCache
+    GPUs.
+
+Version
+
+    Last Modified:      10/15/2004
+    NVIDIA Revision:    4
+
+Number
+
+    314
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.5 specification.
+
+Overview
+
+    Stencil-only framebuffer clears are increasingly common as 3D
+    applications are now using rendering algorithms such as stenciled
+    shadow volume rendering for multiple light sources in a single frame,
+    recent "soft" stenciled shadow volume techniques, and stencil-based
+    constructive solid geometry techniques.  In such algorithms there
+    are multiple stencil buffer clears for each depth buffer clear.
+    Additionally in most cases, these algorithms do not require all
+    of the 8 typical stencil bitplanes for their stencil requirements.
+    In such cases, there is the potential for unused stencil bitplanes
+    to encode a "stencil clear tag" in such a way to reduce the number
+    of actual stencil clears.  The idea is that switching to an unused
+    stencil clear tag logically corresponds to when an application would
+    otherwise perform a framebuffer-wide stencil clear.
+
+    This extension exposes an inexpensive hardware mechanism for
+    amortizing the cost of multiple stencil-only clears by using a
+    client-specified number of upper bits of the stencil buffer to
+    maintain a per-pixel stencil tag.
+
+    The upper bits of each stencil value is treated as a tag that
+    indicates the state of the upper bits of the "stencil clear tag" state
+    when the stencil value was last written.  If a stencil value is read
+    and its upper bits containing its tag do NOT match the current upper
+    bits of the stencil clear tag state, the stencil value is substituted
+    with the lower bits of the stencil clear tag (the reset value).
+    Either way, the upper tag bits of the stencil value are ignored by
+    subsequent stencil function and operation processing of the stencil
+    value.
+
+    When a stencil value is written to the stencil buffer, its upper bits
+    are overridden with the upper bits of the current stencil clear tag
+    state so subsequent reads, prior to any subsequent stencil clear
+    tag state change, properly return the updated lower bits.
+
+    In this way, the stencil clear tag functionality provides a way to
+    replace multiple bandwidth-intensive stencil clears with very
+    inexpensive update of the stencil clear tag state.
+
+    If used as expected with the client specifying 3 bits for the stencil
+    tag, every 7 of 8 stencil-only clears of the entire stencil buffer can
+    be substituted for an update of the current stencil clear tag rather
+    than an actual update of all the framebuffer's stencil values.  Still,
+    every 8th clear must be an actual stencil clear.  The net effect is
+    that the aggregate cost of stencil clears is reduced by a factor of
+    1/(2^n) where n is the number of bits devoted to the stencil tag.
+
+    The application specifies two new pieces of state: 1) the number of
+    upper stencil bits, n,  assigned to maintain the tag bits for each
+    stencil value within the stencil buffer, and 2) a stencil clear tag
+    value that packs the current tag and a reset value into a single
+    integer values.  The upper n bits of the stencil clear tag value
+    specify the current tag while the lower s-min(n,s) bits specify
+    the current reset value, where s is the number of bitplanes in the
+    stencil buffer and n is the current number of stencil tag bits.
+
+    If zero stencil clear tag bits are assigned to the stencil tag
+    encoding, then the stencil buffer operates in the conventional
+    manner.
+
+Issues
+
+    1)  Can the stencil clear tag state be switched at anytime?
+
+        RESOLUTION:  Yes.  The state controls the interpretation of
+        the stencil values without actually change the values within
+        the stencil buffer.  So, for example, it is possible to render
+        to the stencil buffer with 3 tag bits and then switch to 4 tag
+        bits and a different reset value.
+
+        The effect of changing stencil clear tag state is well-defined
+        though perhaps not useful.
+
+        The motivation for this decision is to make the underlying
+        hardware implementation simple and not encumber operations such
+        as stencil readback with extra expense to re-interpret stencil
+        values.
+
+    2)  Can two distinct OpenGL rendering contexts render to the same
+        framebuffer but with different stencil clear tag state?
+
+        RESOLUTION:  Yes.  The stencil buffer contains raw stencil values
+        whose interpretation and update may be different for the two
+        contexts, but the values themselves are the same.
+
+        The motivation for this is that it avoids trying to coordinate
+        two different contexts into maintaining the same interpretation
+        of the stencil buffer.  Different contexts can each view the
+        stencil buffer values differently based on their own stencil
+        clear tag state.
+
+    3)  For the purposes of the stencil comparison and stencil operations,
+        how are upper bits of the read stencil value treated?
+
+        RESOLUTION:  The upper n bits where n is the current value of
+        stencil tag bits (GL_STENCIL_TAG_BITS_EXT) are masked to zero
+        when n is greater than zero.
+
+        For example, if a raw stencil value is 0xFA and the current
+        stencil tag bits state is 3 with a stencil clear tag value of
+        0x82, the effective read stencil value is 0x02 because the upper
+        3 bits of 0xFA do not match the upper 3 bits of 0x82 and so the
+        effective read stencil value is replaced with the lower 5 bits
+        of 0x82 which is 0x02 while masking to zero the upper 3 bits.
+        If instead, the stencil clear tag value was 0xEB, then the
+        effective read stencil value is 0x1A because the upper 3 bits
+        of 0xEB match the upper 3 bits of 0xFF so the effective read
+        stencil value is 0xFA with the upper 3 bits masked to zero.
+
+    4)  How does the GL_INCR operation work when the stencil tag bits
+        value is greater than zero?
+
+        RESOLUTION:  GL_INCR saturates to the value 2^(s-min(n,s))-1
+        where s is the number of stencil bits in the stencil buffer and n
+        is the current value of stencil tag bits, rather than saturating
+        to 2^s-1 or wrapping.
+
+        The motivation for this is to ensure that the stencil clear tag
+        mechanism can fully emulate stencil buffers with fewer than s
+        bits.
+
+    5)  What is the initial number of stencil tag bits?
+
+        RESOLUTION:  Zero.  This is consistent with the conventional
+        operation of the stencil buffer.  The stencil clear tag value
+        state is ignored when the stencil tag bits value is zero.
+
+    6)  Should glClear involving GL_STENCIL_BUFFER_BIT be subject to the
+        stencil clear tag or tag bits state?
+
+        RESOLUTION:  No.  An actual clear to the stencil buffer needs to
+        reset the bitplanes allocated to the upper stencil tag bits as
+        well as the lower bitplanes.  So the stencil mask applies, but
+        the stencil clear tag and tag bits state is ignored by glClear.
+
+    7)  Should glDrawPixels operations be subject to the stencil
+        clear tag functionality?
+
+        RESOLUTION:  Yes.  glDrawPixels to stencil already abides by
+        the stencil write mask.  Conceptually, think of glDrawPixels to
+        stencil as being the GL_REPLACE operation where the value to be
+        written comes from the glDrawPixels image rectangle rather than
+        the stencil reference value.
+
+        The motivation is to allow the stencil clear tag mechanism to
+        fully simulate a stencil buffer with fewer stencil bits.
+
+        If you want to write the entire stencil value, including upper
+        bits that are allocated to encode the stencil tag, simply set
+        the stencil tag bits state to zero for the duration of the
+        glDrawPixels command.
+
+    8)  Should glReadPixels operations of type GL_STENCIL_INDEX be
+        subject to the stencil clear tag state?
+
+        RESOLUTION:  Yes.  So if you read stencil values from the
+        stencil buffer, the n upper bits of each stencil value is
+        compared to the n upper bits of the stencil clear tag value
+        and if they mismatch, the lower s-min(n,s) bits of the stencil
+        clear tag value (the reset value) are returned instead, where s
+        is the number of stencil bitplanes and n is the current stencil
+        tag bits value.  In any case, the upper n bits of the stencil
+        value are zeroed.
+
+        The motivation is to allow the stencil clear tag mechanism to
+        fully simulate a stencil buffer with fewer stencil bits.
+
+        If you want to read the entire stencil value, including upper
+        bits that are allocated to encode the stencil tag, then set
+        the stencil tag bits state to zero for the duration of the
+        glReadPixels command.
+
+    9)  Should glCopyPixels operations of type GL_STENCIL_INDEX be
+        subject to the stencil clear tag state?
+
+        RESOLUTION:  Yes, because glReadPixels and glDrawPixels are both
+        affected and glCopyPixels is defined in terms of glReadPixels
+        and glDrawPixels.
+
+   10)  Should the current tag and reset value in the current stencil
+        clear tag be packed into a single value where the stencil tag
+        bits value divides the upper tag value bits from the lower reset
+        value bits?
+
+        RESOLUTION:  Yes.  This makes a lot of sense because there are
+        always s bits required where n bits are for the current tag value
+        and s-min(n,s) bits are for the reset value, where s is the number
+        of stencil bitplanes and n is the number of stencil tag bits.
+
+        This packing also makes the explanation of how bit comparisons
+        and the required masking operations operate in the specification
+        language.  It also naturally corresponds to how a hardware
+        implementation would maintain the state.
+
+   11)  Clears can be scissored to only update a subrectangle of the
+        entire framebuffer.  Can the stencil clear tag facility accelerate
+        scissored clears that do not clear the entire framebuffer?
+
+        RESOLUTION:  No.  The stencil clear tag state is a single
+        per-context state value that applies to the entire framebuffer.
+
+        For scissored clears to sufficiently small enough subrectangles
+        of the screen, it may be more advantageous to perform an actual
+        scissored clear if changing the current stencil clear tag value
+        would be better used to save an subsequent actual stencil clear
+        of the entire (or nearly the entire) framebuffer.
+
+        Doom 3 uses scissored clears when performing per-light stencil
+        clears for its stenciled shadow volumes where the scissor is a
+        2D bound for the light's illumination.
+
+   12)  How does this extension interact with EXT_stencil_two_side or
+        other two-sided stencil testing functionality such as that
+        provided by OpenGL 2.0?
+
+        RESOLUTION:  The stencil clear tag state is not two-sided because
+        it reflects the manner that stencil values in the stencil buffer
+        are read to and written from the buffer rather than anything to
+        do with the facingness of primitives.
+
+   13)  How does the GL_KEEP operation operate when the value of
+        GL_STENCIL_TAG_BITS_EXT is greater than zero?
+
+        RESOLUTION:  GL_KEEP means no stencil write is performed so the
+        pixel's stencil value is completely unchanged.  This means the
+        pixel's stencil value will still have the old stencil tag.
+
+        The rationale for this is that GL_KEEP will always avoid memory
+        writes to the stencil buffer, even when the current stencil tag
+        state does not match the tag of pixel's stencil value.
+
+        All other stencil operations must actually write the stencil
+        tag bits into the upper bits of the pixel's stencil value
+        if the old value's tag does not match the current stencil tag
+        state.  For example, if the value of GL_STENCIL_TAG_BITS_EXT is 3,
+        the value of GL_STENCIL_CLEAR_TAG_EXT is 0x80, the stencil write
+        mask is 0xFF, and a pixel's stencil value is 0x00, the result
+        of a GL_ZERO stencil operation for this pixel is to write 0x80.
+        into the stencil buffer.
+
+   14)  How does a stencil write mask of zero operate when the value of
+        GL_STENCIL_GENERATION_BITS_EXT is greater than zero?
+
+        RESOLUTION:  A stencil write mask of zero means no stencil write
+        is performed so the pixel's stencil value is completely unchanged.
+        This means the pixel's stencil value will still have the old
+        stencil tag bits.
+
+        The rationale for this is essentially the same for GL_KEEP's
+        behavior in the previous issue.
+
+   15)  Conceptually, how does the stencil clear tag functionality
+        augment the existing stencil processing pipeline?
+
+        RESOLUTION:  Unextended OpenGL stencil processing (ignoring the
+        depth test interactions) says:
+
+          read stencil value
+            |
+            v
+          evaluate stencil function
+            |
+            v
+          apply appropriate stencil operation
+            |
+            v
+          if operation is non-GL_KEEP, write stencil value
+
+        The EXT_stencil_clear_tag functionality augments this pipeline
+        with two new stages:
+
+          read stencil value
+            |
+            v
+          perform stencil clear tag "read merge"
+            |
+            v
+          evaluate stencil function
+            |
+            v
+          apply appropriate stencil operation
+            |
+            v
+          perform stencil clear tag "write merge"
+            |
+            v
+          if a non-KEEP operation, write stencil value
+
+        The new stencil clear tag merge stages are pass-through operations
+        if the value of GL_STENCIL_TAG_BITS_EXT is zero (the initial
+        state).
+
+   16)  Can you provide an example of how this stencil clear tag mechanism
+        could be used to eliminate stencil clears for a stenciled shadow
+        volume application with multiple light sources per frame.
+
+        First assume the application's shadow complexity is such that
+        scenes never exceed a shadow complexity of 31 (or 63 or 127)
+        at any pixel, meaning a 5 (or 6 or 7) bit stencil buffer is
+        sufficient to avoid artifacts.
+
+        The code assumes "Z fail" shadow volume rendering with two-sided
+        stencil testing and an 8-bit stencil buffer.
+
+        So initialize the stencil-related state as follows:
+
+          const GLint stencilTagBits = 3;  // or 2 or 1
+          const int hasStencilClearTagExtension =
+              queryExtension("GL_EXT_stencil_clear_tag");
+
+          GLint stencilBits;
+          GLuint maxStencilValue;
+          GLint tagInit;
+          GLint tagDecrement;
+          GLint stencilClearTag;
+
+          if (hasStencilClearTagExtension) {
+              glGetIntegerv(GL_STENCIL_BITS, &stencilBits);
+              maxStencilValue = (1U<<stencilBits)-1;
+              assert(stencilBits > stencilTagBits);
+              tagDecrement = 1<<(stencilBits - stencilTagBits);
+              tagInit = ~(tagDecrement-1) & maxStencilValue;
+
+              glStencilClearTagEXT(stencilTagBits, tagInit);
+              glStencilClear(tagInit);
+          } else {
+              glStencilClear(0);
+          }
+
+          glEnable(GL_STENCIL_TWO_SIDE_EXT);
+          glActiveStencilFaceEXT(GL_BACK);
+          glStencilMask(~0);
+          glActiveStencilFaceEXT(GL_FRONT);
+          glStencilMask(~0);
+
+        Then rendering one frame of a shadowed scene looks like:
+          
+          int i;
+
+          glDepthMask(1);
+          glColorMask(1,1,1,1);
+
+          if (hasStencilClearTagExtension) {
+              stencilClearTag = tagInit;
+              glStencilClearTagEXT(stencilTagBits, stencilClearTag);
+          }
+          glClear(GL_STENCIL_BUFFER_BIT |
+                  GL_DEPTH_BUFFER_BIT |
+                  GL_COLOR_BUFFER_BIT);
+
+          glDisable(GL_BLEND);
+          glDisable(GL_STENCIL_TEST);
+          glDepthFunc(GL_LESS);
+          glEnable(GL_DEPTH_TEST);
+
+          renderDepthAndAmbient();
+
+          glEnable(GL_BLEND);
+          glBlendFunc(GL_ONE, GL_ONE);
+          glEnable(GL_STENCIL_TEST);
+          glDepthMask(0);
+          glDepthFunc(GL_EQUAL);
+
+          for (i=0; i<numberOfLights; i++) {
+              if (i == 0) {
+                  // First light can hitches ride on frame's initial gang clear
+              } else {
+                  // Subsequent lights must effect a clear
+                  if (hasStencilClearTagExtension) {
+                      // Did start on a new set of tags?
+                      if (stencilClearTag == tagInit) {
+                          // If so, do real stencil clear and reset stencilClearTag.
+                          glClear(GL_STENCIL_BUFFER_BIT);
+                          // Decrement to next tag.
+                          stencilClearTag -= tagDecrement;
+                      }
+                      // Are we out of tags?
+                      else if (stencilClearTag == 0) {
+                          // Reset to the initial tag.
+                          stencilClearTag = tagInit;
+                      } else {
+                         // Decrement to next tag.
+                         stencilClearTag -= tagDecrement;
+                      }
+                      glStencilClearTagEXT(stencilTagBits, stencilClearTag);
+                  } else {
+                      // Actual per-light clear needed
+                      glClear(GL_STENCIL_BUFFER_BIT);
+                  }
+              }
+              glActiveStencilFaceEXT(GL_BACK);
+                  glStencilFunc(GL_ALWAYS, 0, ~0);
+                  glStencilOp(GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+              glActiveStencilFaceEXT(GL_FRONT);
+                  glStencilFunc(GL_ALWAYS, 0, ~0);
+                  glStencilOp(GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+              glColorMask(0,0,0,0);
+
+              renderShadowVolumesForLight(i);
+
+              glActiveStencilFaceEXT(GL_BACK);
+                  glStencilFunc(GL_EQUAL, 0, ~0);
+                  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+              glActiveStencilFaceEXT(GL_FRONT);
+                  glStencilFunc(GL_EQUAL, 0, ~0);
+                  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+              glColorMask(1,1,1,1);
+
+              renderLightingContributionForLight(i);
+          }
+
+        A smarter implementation could include computation of the scissor
+        (and depth bounds) for each light source.  If the number of
+        lights exceeds the number of available stencil tags, the lights
+        with the smallest scissor area could be performed as actual
+        scissored clears so the clears to the largest regions could be
+        done as stencil clear tag state updates.
+
+        stencilTagBits can be adjusted based on the number of active
+        lights.  For example, if there are only 4 lights active,
+        stencilTagBits could be 2 instead of 3 and thereby recover a
+        bit of stencil precision for the shadow volume count.
+
+   17)  Why "s-min(n,s)" instead of simply "s-n" where s is the number
+        of stencil bits and n is the number of stencil tag bits?
+
+        RESOLVED:  This makes sure if a context migrates to a
+        drawable with fewer stencil bits than a drawable had when
+        glStencilClearTagEXT was last called, the effect should be
+        well-defined.
+
+        For example, if glStencilClearTagEXT(3,0) is called with an
+        8-bit stencil buffer and then that context is bound to a drawable
+        with no stencil buffer (effectively, 0 bits), s-min(n,s) is zero
+        rather than s-n being -3.
+
+   18)  Should the stencil reference value be ANDed with
+        2^(s-min(n,s))-1?
+
+        RESOLOVED:  Yes. this way the reference value and the compared
+        stencil value compare a matching number of bits.
+
+New Procedures and Functions
+
+    StencilClearTagEXT(sizei stencilTagBits, 
+                       uint stencilClearTag)
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        STENCIL_TAG_BITS_EXT                0x88F2
+        STENCIL_CLEAR_TAG_VALUE_EXT         0x88F3
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Section 4.1.5 "Stencil Test" (page 174), add after the 1st paragraph:
+
+    "The command
+
+       void StencilClearTagEXT(sizei stencilTagBits,
+                               uint stencilClearTag);
+
+    controls the stencil clear tag state.  stencilTagBits is a count of
+    the number of most-significant stencil buffer bits involved in the
+    stencil clear tag update.  The error INVALID_VALUE is generated if
+    stencilTagBits is negative or greater or equal to s."
+
+    Add after the 2nd sentence in the 2nd paragraph:
+
+    "The effective reference value used for the stencil comparison is
+    ref ANDed with 2^(s-min(n,s))-1, where n is equal to stencilTagBits."
+
+    Addd after the 2nd paragraph:
+
+    "The stored stencil value used for the stencil comparison and
+    subsequent stencil operations is obtained by reading the pixel's
+    corresponding stencil value from the stencil buffer and possibly
+    modifying that value based on the stencil clear tag state.
+
+    The stored stencil value is modified prior to the stencil comparison
+    if n (again where n is equal to stencilTagBits) is greater than zero;
+    otherwise if zero, the stored stencil value remains unmodified.
+    If n is greater than zero and the n most-significant bits of
+    the stored stencil value all match the corresponding bits of
+    the stencilClearTag, then the stored stencil value is ANDed with
+    2^(s-min(n,s))-1. If n is greater than zero and the n most-significant
+    bits of the stored stencil value do NOT match all the corresponding
+    bits of the stencilClearTag, then the stored stencil value becomes
+    stencilClearTag ANDed with 2^(s-min(n,s))-1. "
+
+    Change the KEEP operation description in the 4th sentence to indicate
+    that KEEP does not perform the stencil clear tag write merge:
+
+    "keeping the current value without writing the stencil buffer,"
+
+    Change the second sentence of the fourth paragraph to read:
+
+    "Incrementing or decrementing with saturation clamps the stencil
+    value at 0 and 2^(s-min(n,s))-1 so when stencilTagBits is zero the
+    maximum saturation value is the maximum representable stencil value."
+
+    Section 4.2.5 "Fine Control of Buffer Updates" (page 185), prior to
+    the paragraph describing the StencilMask command, add:
+
+    "Writes to the stencil buffer are controlled through a combination
+    of stencil mask and stencil clear tag state."
+
+    Then add after the paragraph describing the StencilMask command:
+
+    "If the stencil mask ANDed with s^2(s-min(n,s))-1 is zero, no write
+    occurs.  Otherwise, the pixel's stencil value is written with the
+    value determined by the following C-style bit-wise expression:
+
+       ( stencilClearTag & ~tagMask         ) |
+       ( newValue        &  mask &  tagMask ) |
+       ( storedValue     & ~mask &  tagMask )
+
+    where tagMask is 2^(s-min(n,s))-1, n is the value of the
+    stencil tag bits state, newValue is the stencil value to
+    be written (after the stored value's potential modification due to
+    stencil clear tag state AND after the effect of applying a stencil
+    operation to the value), and storedValue is the pixel's stored
+    stencil value after to its potential modification due to stencil
+    clear tag state BUT BEFORE to any stencil operation that may have
+    been performed (as discussed in section 4.1.5).  When n is zero,
+    this is equivalent to
+
+       ( newValue    &  mask ) |
+       ( storedValue & ~mask )
+
+    "
+
+    Section 4.2.3 "Clearing the Buffers", change the ClearStencil sentence
+    to read:
+
+    "Similarly,
+
+        void ClearStencil(int s);
+
+    takes a single integer argument that is the value to which to clear
+    the stencil buffer.  s is masked to the number of bitplanes in the
+    stencil buffer.  Clearing stencil ignores the stencil clear tag
+    state."
+
+    Section 4.3.1 "Writing to the Stencil Buffer", change the last
+    sentence to say:
+
+    "Finally, each stencil index is written to its indicated location
+    in the framebuffer, subject to the current setting of StencilMask
+    and StencilClearTagEXT (see section 4.2.5).  This means the
+    most-significant n stencil bitplanes cannot be written by DrawPixels
+    where n is the current number of stencil tag bits."
+
+    Section 4.3.2 "Reading Pixels - Obtaining Pixels from the
+    Framebuffer", change third paragraph to read:
+
+    "If the format is STENCIL_INDEX, then values are taken from the
+    stencil buffer; again, if there is no stencil buffer, the error
+    INVALID_OPERATION occurs.  If the current stencil tag bits state is
+    zero (see section 4.2.5), the read stencil value is unmodified when
+    read.  If the current stencil tag bits state is greater than zero,
+    then the upper most-significant n bits of the read stencil value are
+    compared to the corresponding n bits of the stencil clear tag value,
+    where n is the current number of stencil tag bits.  If these upper
+    bits mismatch, the read stencil value is replaced with the lower
+    s-min(n,s) bits of the stencil clear tag state (zeroing the upper
+    n bits), where s is the number of stencil bitplanes.  If the upper
+    bits match, the upper n bits of the read stencil value are zeroed."
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent
+    to the server as part of a glXRender request:
+
+        StencilClearTagEXT
+            2           12              rendering command length
+            2           4223            rendering command opcode
+            4           INT32           stencilTagBits
+            4           CARD32          stencilClearTag
+
+Errors
+
+    INVALID_VALUE is generated by StencilClearTagEXT if stencilTagBits
+    is negative or greater or equal to s where s is the number of bits
+    in the stencil buffer.
+
+New State
+
+(table 6.19, page 245)
+    Get Value                 Type  Get Command   Initial Value   Sec    Attribute
+    ------------------------  ----  ------------  -------------   -----  ---------
+    STENCIL_TAG_BITS_EXT      Z+   GetIntegerv     0              4.1.5  stencil-buffer
+    STENCIL_CLEAR_TAG_EXT     Z+   GetIntegerv     0              4.1.5  stencil-buffer
+
+New Implementation Dependent State
+
+    None

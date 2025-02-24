@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The triage-dialog element is the dialog box that is shown when a user clicks
+on an alert, or clicks on a "triage" button on the alerts page. It allows the
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-card/paper-card.html">
+
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="triage-dialog">
+  <template>
+    <style>
+      #container {
+        position: relative;
+        margin: 10px;
+        max-height: 400px;
+        width: 360px;
+      }
+
+      #container .card-content {
+        overflow-y: auto;
+      }
+    </style>
+
+    <paper-card id="container" alwaysOnTop elevation=4>
+      <style>
+        #loading {
+          background-color: white;
+          height: 100%;
+          width: 100%;
+          position: absolute;
+          left: 0;
+          top: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+
+        paper-button[dialog-confirm] {
+          background: #4285f4;
+          color: #fff;
+        }
+
+        fieldset {
+          border: 1px solid #ebebeb;
+        }
+
+        .submit-button {
+          background-color: #4285f4;
+          color: white;
+        }
+
+        form {
+          margin-bottom: 0;
+        }
+
+        #invalidAlert {
+          float: right;
+          text-align: center;
+          width: 50px;
+        }
+
+        #nudgeSelect {
+          height: 145px;
+          overflow: hidden;
+        }
+      </style>
+
+      <div class="card-content">
+        <form>
+          <fieldset name="Triage">
+            <legend>Triage</legend>
+            <paper-button class="submit-button" raised dialog-confirm
+                          on-click="fileNewBug">New bug</paper-button>
+            <paper-button class="submit-button" raised dialog-confirm
+                          on-click="associateWithBug">Existing bug</paper-button>
+            <paper-button class="submit-button" raised dialog-confirm
+                          on-click="markIgnored">Ignore</paper-button>
+          </fieldset>
+          <fieldset name="Fix-up alert">
+            <legend>Fix-up</legend>
+            <select class="kennedy-button" id="nudgeSelect" size="2"
+                    hidden$="{{computeIsEmpty(nudgeList)}}" 
+                    on-change="nudgeAlert">
+              <template is="dom-repeat" items="{{nudgeList}}">
+                <option value$="{{item.endRevision}}" selected$="{{item.selected}}">
+                  Nudge {{item.amount}} {{item.displayEndRevision}} ({{item.value}})
+                </option>
+              </template>
+            </select>
+            <paper-button id="invalidAlert" raised on-click="markInvalid">
+              Report Invalid Alert
+            </paper-button>
+          </fieldset>
+        </form>
+      </div>
+
+      <div class="card-actions">
+        <paper-button raised dismissive on-click="close">Close</paper-button>
+
+        <template is="dom-if" if="{{loading}}">
+          <div id="loading">
+            <paper-spinner active></paper-spinner>
+          </div>
+        </template>
+      </div>
+    </paper-card>
+
+    <div id="toasts" hidden>
+      <div id="jobsubmitted">
+        Bug <a href="http://crbug.com/{{lastSubmittedProjectId}}/{{lastSubmittedBugId}}"
+               target="_blank">
+               {{lastSubmittedProjectId}}:{{lastSubmittedBugId}}
+            </a> created/updated.
+        <template is="dom-if" if="{{lastSubmittedTryJobId}}">
+          Bisect job <a href="{{lastSubmittedTryJobUrl}}"
+                        target="_blank">{{lastSubmittedTryJobId}}</a> started.
+        </template>
+        <template is="dom-if" if="{{lastSubmittedTryJobError}}">
+          <span class="error">No bisect automatically started.
+                              {{lastSubmittedTryJobError}}</span>
+        </template>
+      </div>
+    </div>
+
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+
+  is: 'triage-dialog',
+  properties: {
+    // A string describing the magnitude of change from zero to non-zero.
+    FREAKIN_HUGE: {
+      type: String,
+      value: 'zero-to-nonzero',
+    },
+    alerts: {
+      notify: true,
+      observer: 'alertsChanged'
+    },
+    lastSubmittedBugId: {
+      type: Number,
+      value: 0
+    },
+    lastSubmittedProjectId: {
+      type: String,
+      value: ''
+    },
+    lastSubmittedTryJobId: {
+      type: String,
+      value: ''
+    },
+    lastSubmittedTryJobUrl: {
+      type: String,
+      value: ''
+    },
+    lastSubmittedTryJobError: {
+      type: String,
+      value: ''
+    },
+    nudgeList: {
+      type: Array,
+      value: () => []
+    },
+    xsrfToken: { notify: true }
+  },
+
+  computeIsEmpty: (l) => l.length == 0,
+
+  /**
+    * Custom element lifecycle callback.
+    * Called when the triage-dialog element is ready.
+    */
+  ready() {
+    this.bugWindow = null;
+    this.close();
+    // Event listener for the message event.
+    // The message event can be fired when another window, such as the
+    // create bug dialog window, uses window.postMessage().
+    // This is used so that the triage dialog is hidden when the popup
+    // window is shown.
+    window.addEventListener('message', function(e) {
+      if (!e || !e.data) {
+        return;
+      }
+      const data = JSON.parse(e.data);
+      if (data.action == 'bug_create_result') {
+        if (this.bugWindow) {
+          this.bugWindow.close();
+        }
+        this.showCreatedBugResult(data);
+        this.close();
+        this.fire('triaged', {
+          'alerts': this.alerts,
+          'bugid': data.bug_id,
+          'projectid': data.project_id
+        });
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }.bind(this), true);
+  },
+
+  /**
+    * Shows a pop-up message for filed bug result.
+    *
+    * @param {object} dataObject with info about filed bug set from
+    *     bug_result.html.
+    */
+  showCreatedBugResult(data) {
+    this.lastSubmittedBugId = data.bug_id;
+    this.lastSubmittedProjectId = data.project_id;
+    this.lastSubmittedTryJobId = data.issue_id;
+    this.lastSubmittedTryJobUrl = data.issue_url;
+    this.lastSubmittedTryJobError = data.bisect_error;
+    this.fire('display-toast', {'content': this.$.jobsubmitted});
+  },
+
+  /**
+    * Initializes and displays the triage dialog.
+    */
+  show() {
+    if (this.alerts && this.alerts.length && this.alerts[0].nudgeList) {
+      this.set('nudgeList', this.alerts[0].nudgeList);
+    } else {
+      this.set('nudgeList', []);
+    }
+    this.open();
+    this.bugid = null;
+  },
+
+  /**
+    * Updates the this.alertKeys based on this.alerts.
+    */
+  alertsChanged() {
+    this.alertKeys = [];
+    if (this.alerts && this.alerts.length) {
+      this.alertKeys = this.alerts.map(function(a) { return a.key; });
+    }
+  },
+
+  /**
+    * Opens a window with the /file_bug page, and fills in the form.
+    */
+  fileNewBug() {
+    const bugTitle = this.getBugTitle();
+    const data = [
+      {name: 'keys', value: this.alertKeys.join(',')},
+      {name: 'summary', value: bugTitle}
+    ];
+    this.bugWindow = this.openAndPost('/file_bug', data, 'edit_bugs');
+  },
+
+  /**
+    * Opens a window with the /associate_alerts page, which allows the user
+    * to associate an alert with an existing issue.
+    */
+  associateWithBug() {
+    this.bugWindow = this.openAndPost('/associate_alerts',
+        [{name: 'keys', value: this.alertKeys.join(',')}], 'edit_bugs');
+  },
+
+  /**
+    * Marks an alert as invalid.
+    */
+  markInvalid() {
+    this.changeBugId(-1, 'Alert(s) marked invalid.');
+  },
+
+  /**
+    * Marks an alert as invalid.
+    */
+  markIgnored() {
+    this.changeBugId(-2, 'Alert(s) marked ignored.');
+  },
+
+  /**
+    * Changes the bug ID of the selected alerts.
+    */
+  changeBugId(bugId, successMessage) {
+    const params = {
+      keys: this.alertKeys,
+      xsrf_token: this.xsrfToken
+    };
+    this.bugid = bugId;
+    params.bug_id = this.bugid;
+
+    this.loading = true;
+    simple_xhr.send('/edit_anomalies', params,
+        function() {
+          this.fire('triaged', {
+            'alerts': this.alerts,
+            'bugid': this.bugid,
+            'projectid': null
+          });
+          this.loading = false;
+          if (successMessage) {
+            this.fire('display-toast', {'text': successMessage});
+          }
+        }.bind(this),
+        function(msg) {
+          this.fire('display-toast', {
+            'text': 'There was a problem triaging the bug: ' + msg,
+            'error': true
+          });
+          this.loading = false;
+        }.bind(this));
+  },
+
+  /**
+    * Move an alert's position.
+    */
+  nudgeAlert() {
+    const info = this.getNudgedInfo();
+    const params = {
+      'keys': this.alertKeys,
+      'new_start_revision': info.startRevision,
+      'new_end_revision': info.endRevision,
+      'xsrf_token': this.xsrfToken
+    };
+    this.loading = true;
+    simple_xhr.send('/edit_anomalies', params,
+        function() {
+          this.fire('alertChangedRevisions', {
+            'startRev': info.startRevision,
+            'endRev': info.endRevision,
+            'newDataIndex': info.dataIndex,
+            'alerts': this.alerts
+          });
+          this.fire('display-toast', {'text': 'Alert moved.'});
+          this.loading = false;
+        }.bind(this),
+        function(msg) {
+          this.fire('display-toast', {
+            'text': 'There was a problem triaging the bug: ' + msg,
+            'error': true
+          });
+          this.loading = false;
+        }.bind(this));
+  },
+
+  /**
+    * Gets the item in the nudge list that was selected.
+    * Note that this.nudgeList is populated in chart-container.
+    */
+  getNudgedInfo() {
+    const index = this.$.nudgeSelect.selectedIndex;
+    return this.nudgeList[index];
+  },
+
+  /**
+    * Returns a default bug title to use when filing a new bug.
+    * @return {string} The bug title.
+    */
+  getBugTitle() {
+    return this.getBugTitleForAnomaly();
+  },
+
+  getSuiteNameForAlert(alert) {
+    // TODO(eakuefner): Ideally the TestMetadata can specify it's own
+    // template, but that functionality is blocked on a working histogram
+    // pipeline. So for now we just hard code a list of suites that specify
+    // an additional subtest entry to make life easier for sheriffs.
+    // https://github.com/catapult-project/catapult/issues/3150
+    const SUITES_WITH_SUBTEST_ENTRY =
+        ['rendering.desktop', 'rendering.mobile', 'v8'];
+    if (SUITES_WITH_SUBTEST_ENTRY.indexOf(alert.testsuite) == -1) {
+      return alert.testsuite;
+    }
+    return alert.testsuite + '/' + alert.test.split('/')[0];
+  },
+
+  getBugTitleForAnomaly() {
+    let type = 'improvement';
+    let percentMin = Infinity;
+    let percentMax = -Infinity;
+    let maxRegressionFound = false;
+    let startRev = Infinity;
+    let endRev = -Infinity;
+    for (let i = 0; i < this.alerts.length; i++) {
+      const alert = this.alerts[i];
+      if (!alert.improvement) {
+        type = 'regression';
+      }
+      let percent = Infinity;
+      if (alert.percent_changed == this.FREAKIN_HUGE &&
+          !maxRegressionFound) {
+        maxRegressionFound = true;
+      } else {
+        percent = Math.abs(parseFloat(alert.percent_changed));
+      }
+      if (percent < percentMin) {
+        percentMin = percent;
+      }
+      if (percent > percentMax) {
+        percentMax = percent;
+      }
+      if (alert.start_revision < startRev) {
+        startRev = alert.start_revision;
+      }
+      if (alert.end_revision > endRev) {
+        endRev = alert.end_revision;
+      }
+    }
+
+    // Round the percentages to 1 decimal place.
+    percentMin = Math.round(percentMin * 10) / 10;
+    percentMax = Math.round(percentMax * 10) / 10;
+    let minMax = percentMin + '%-' + percentMax + '%';
+    if (maxRegressionFound) {
+      if (percentMin == Infinity) {
+        // Both percentMin and percentMax were at Infinity.
+        // Record a "freakin' huge" (TM) regression.
+        minMax = 'A ' + this.FREAKIN_HUGE;
+      } else {
+        // Regressions ranged from Infinity to some other lower percentage.
+        minMax = 'A ' + this.FREAKIN_HUGE + ' to ' + percentMin + '%';
+      }
+    } else if (percentMin == percentMax) {
+      minMax = percentMin + '%';
+    }
+
+    const suiteTitle = this.getSuiteNameForAlert(this.alerts[0]);
+    const summary = '{{range}} {{type}} in {{suite}} at {{start}}:{{end}}'.
+        replace('{{range}}', minMax).
+        replace('{{type}}', type).
+        replace('{{suite}}', suiteTitle).
+        replace('{{start}}', startRev).
+        replace('{{end}}', endRev);
+    return summary;
+  },
+
+  /**
+    * Opens a new window and post data.
+    *
+    * GET request has limited URL length. This method allows us to send a
+    * POST request and receive the response on a new window.
+    *
+    * @param {string} url URL endpoint to post to.
+    * @param {Array.<Object>} data Array of objects with have name and
+    *     value properties. This is the data to post.
+    * @param {string} target Window name.
+    * @return {Object} The window that was opened.
+    */
+  openAndPost(url, data, target) {
+    if (window.METRICS) METRICS.endTriage();
+    if (window.METRICS) METRICS.startTriage();
+    const popup = window.open('about:blank', target, 'width=600,height=480');
+    const form = document.createElement('form');
+    form.action = url;
+    form.method = 'POST';
+    form.target = target;
+    if (data) {
+      for (let i = 0; i < data.length; i++) {
+        const input = document.createElement('textarea');
+        input.name = data[i].name;
+        input.value = (typeof data[i].value === 'object' ?
+          JSON.stringify(data[i].value) : data[i].value);
+        Polymer.dom(form).appendChild(input);
+      }
+    }
+    form.style.display = 'none';
+    Polymer.dom(document.body).appendChild(form);
+    form.submit();
+    return popup;
+  },
+
+  open() {
+    this.$.container.hidden = false;
+  },
+
+  close() {
+    this.$.container.hidden = true;
+  }
+});
+</script>

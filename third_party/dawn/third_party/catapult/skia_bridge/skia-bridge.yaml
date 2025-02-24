@@ -1,0 +1,35 @@
+service: skia-bridge
+
+runtime: python
+env: flex
+
+runtime_config:
+  operating_system: "ubuntu22"
+  runtime_version: "3.11"
+
+entrypoint: gunicorn -b:$PORT main:APP
+
+automatic_scaling:
+  min_num_instances: 5
+  max_num_instances: 20
+  cool_down_period_sec: 180
+  cpu_utilization:
+    target_utilization: 0.7
+  target_concurrent_requests: 10
+
+resources:
+  cpu: 8
+  memory_gb: 16
+
+handlers:
+- url: /.*
+  script: main.APP
+  secure: always
+
+readiness_check:
+  path: "/"
+  check_interval_sec: 60
+  timeout_sec: 1
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300

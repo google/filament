@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/core/scripting_object.html">
+<link rel="import" href="/tracing/extras/tquery/context.html">
+<link rel="import" href="/tracing/extras/tquery/filter_all_of.html">
+<link rel="import" href="/tracing/extras/tquery/filter_any_of.html">
+<link rel="import" href="/tracing/extras/tquery/filter_has_ancestor.html">
+<link rel="import" href="/tracing/extras/tquery/filter_has_duration.html">
+<link rel="import" href="/tracing/extras/tquery/filter_has_title.html">
+<link rel="import" href="/tracing/extras/tquery/filter_is_top_level.html">
+<link rel="import" href="/tracing/extras/tquery/filter_not.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.tquery', function() {
+  function addEventTreeToSelection(selection, event) {
+    selection.push(event);
+    if (!event.subSlices) return;
+    event.subSlices.forEach(
+        addEventTreeToSelection.bind(undefined, selection));
+  }
+
+  function TQuery(model) {
+    tr.c.ScriptingObject.call(this);
+
+    this.model_ = model;
+    this.parent_ = undefined;
+    this.filterExpression_ = undefined;
+    // Memoized filtering result.
+    this.selection_ = undefined;
+  }
+
+  TQuery.prototype = {
+    __proto__: tr.c.ScriptingObject.prototype,
+
+    onModelChanged(model) {
+      this.model_ = model;
+      this.selection_ = undefined;
+    },
+
+    get brushingStateController() {
+      return this.brushingStateController_;
+    },
+
+    // Append a new filter expression to this query and return a query node
+    // that represents the result.
+    filter(filterExpression) {
+      const result = new TQuery(this.model_);
+      result.parent_ = this;
+      result.filterExpression_ =
+          tr.e.tquery.Filter.normalizeFilterExpression(filterExpression);
+      return result;
+    },
+
+    // Creates a graph of {Task} objects which will compute the selections for
+    // this filter object and all of its parents. The return value is an object
+    // with the following fields:
+    //  - rootTask: {Task} which should be executed to kick off processing for
+    //              the entire task graph.
+    //  - lastTask: The final {Task} of the graph. Can be used by the caller to
+    //              enqueue additional processing at the end.
+    //  - lastNode: The last filter object in the task. It's selection property
+    //              will contain the filtering result once |finalTask|
+    //              completes.
+    createFilterTaskGraph_() {
+      // List of nodes in order from the current one to the root.
+      const nodes = [this];
+      while (nodes[nodes.length - 1].parent_) {
+        nodes.push(nodes[nodes.length - 1].parent_);
+      }
+
+      const rootTask = new tr.b.Task();
+      let lastTask = rootTask;
+      let node;
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        node = nodes[i];
+        // Reuse any memoized result.
+        if (node.selection_ !== undefined) continue;
+        node.selection_ = new tr.model.EventSet();
+        if (node.parent_ === undefined) {
+          // If this is the root, start by collecting all objects from the
+          // model.
+          lastTask = lastTask.after(
+              this.selectEverythingAsTask_(node.selection_));
+        } else {
+          // Otherwise execute the filter expression for this node and fill
+          // in its selection.
+          const prevNode = nodes[i + 1];
+          lastTask = this.createFilterTaskForNode_(lastTask, node, prevNode);
+        }
+      }
+      return {rootTask, lastTask, lastNode: node};
+    },
+
+    createFilterTaskForNode_(lastTask, node, prevNode) {
+      return lastTask.after(function() {
+        // TODO(skyostil): Break into subtasks.
+        node.evaluateFilterExpression_(
+            prevNode.selection_, node.selection_);
+      }, this);
+    },
+
+    // Applies the result of a filter expression for a given event and all
+    // of its subslices and adds the matching events to an output selection.
+    evaluateFilterExpression_(inputSelection, outputSelection) {
+      const seenEvents = {};
+      inputSelection.forEach(function(event) {
+        const context = new tr.e.tquery.Context();
+        context.event = event;
+        this.evaluateFilterExpressionForEvent_(
+            context, inputSelection, outputSelection, seenEvents);
+      }.bind(this));
+    },
+
+    evaluateFilterExpressionForEvent_(
+        context, inputSelection, outputSelection, seenEvents) {
+      const event = context.event;
+      if (inputSelection.contains(event) && !seenEvents[event.guid]) {
+        seenEvents[event.guid] = true;
+        if (!this.filterExpression_ ||
+            this.filterExpression_.evaluate(context)) {
+          outputSelection.push(event);
+        }
+      }
+      if (!event.subSlices) return;
+      context = context.push(event);
+      for (let i = 0; i < event.subSlices.length; i++) {
+        context.event = event.subSlices[i];
+        this.evaluateFilterExpressionForEvent_(
+            context, inputSelection, outputSelection, seenEvents);
+      }
+    },
+
+    // Returns a task that fills the given selection with everything in the
+    // model.
+    selectEverythingAsTask_(selection) {
+      const filterTask = new tr.b.Task();
+      for (const container of this.model_.getDescendantEventContainers()) {
+        filterTask.subTask(() => {
+          for (const event of container.childEvents()) {
+            addEventTreeToSelection(selection, event);
+          }
+        }, this);
+      }
+      return filterTask;
+    },
+
+    // Returns a promise which will resolve into a {EventSet} representing the
+    // result of this query.
+    ready() {
+      return new Promise(function(resolve, reject) {
+        const graph = this.createFilterTaskGraph_();
+        graph.lastTask = graph.lastTask.after(function() {
+          resolve(this.selection_);
+        }, this);
+        tr.b.Task.RunWhenIdle(graph.rootTask);
+      }.bind(this));
+    },
+
+    get selection() {
+      if (this.selection_ === undefined) {
+        const graph = this.createFilterTaskGraph_();
+        tr.b.Task.RunSynchronously(graph.rootTask);
+      }
+      return this.selection_;
+    }
+  };
+  tr.c.ScriptingObjectRegistry.register(
+      new TQuery(),
+      {
+        name: '$t'
+      }
+  );
+
+  return {
+    TQuery,
+  };
+});
+</script>

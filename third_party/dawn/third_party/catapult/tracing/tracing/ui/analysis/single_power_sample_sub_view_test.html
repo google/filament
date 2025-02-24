@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_series.html">
+<link rel="import" href="/tracing/ui/analysis/single_power_sample_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const model = new tr.Model();
+    const series = new tr.model.PowerSeries(model.device);
+    series.addPowerSample(1, 1);
+
+    const view = document.createElement('tr-ui-a-single-power-sample-sub-view');
+    view.selection = new tr.model.EventSet(series.samples);
+
+    this.addHTMLOutput(view);
+  });
+
+  test('setSelection', function() {
+    const model = new tr.Model();
+    const series = new tr.model.PowerSeries(model.device);
+    series.addPowerSample(1, 1);
+
+    const view = document.createElement('tr-ui-a-single-power-sample-sub-view');
+    const eventSet = new tr.model.EventSet(series.samples);
+    view.selection = eventSet;
+
+    assert.deepEqual(view.$.samplesTable.sample,
+        tr.b.getOnlyElement(series.samples));
+  });
+});
+</script>

@@ -1,0 +1,16 @@
+Name: webtest
+URL: https://github.com/Pylons/webtest
+Version: 2.0.19
+Revision: be97d7b5e774bbd89b19bb5aed9478bbac79e313
+License: MIT
+Shipped: yes
+
+Description:
+This wraps any WSGI application and makes it easy to send test requests
+to that application, without starting up an HTTP server. It is used in
+perf dashboard unit tests.
+
+It depends on the library "six".
+
+Local Modifications:
+Removed everything except for webtest/.

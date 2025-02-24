@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/slice_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * Visualizes a Cpu using a series of SliceTracks.
+   * @constructor
+   */
+  const CpuTrack =
+      tr.ui.b.define('cpu-track', tr.ui.tracks.ContainerTrack);
+  CpuTrack.prototype = {
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('cpu-track');
+      this.detailedMode_ = true;
+    },
+
+    get cpu() {
+      return this.cpu_;
+    },
+
+    set cpu(cpu) {
+      this.cpu_ = cpu;
+      this.updateContents_();
+    },
+
+    get detailedMode() {
+      return this.detailedMode_;
+    },
+
+    set detailedMode(detailedMode) {
+      this.detailedMode_ = detailedMode;
+      this.updateContents_();
+    },
+
+    get tooltip() {
+      return this.tooltip_;
+    },
+
+    set tooltip(value) {
+      this.tooltip_ = value;
+      this.updateContents_();
+    },
+
+    get hasVisibleContent() {
+      if (this.cpu_ === undefined) return false;
+
+      const cpu = this.cpu_;
+      if (cpu.slices.length) return true;
+
+      if (cpu.samples && cpu.samples.length) return true;
+
+      if (Object.keys(cpu.counters).length > 0) return true;
+
+      return false;
+    },
+
+    updateContents_() {
+      this.detach();
+      if (!this.cpu_) return;
+
+      const slices = this.cpu_.slices;
+      if (slices.length) {
+        const track = new tr.ui.tracks.SliceTrack(this.viewport);
+        track.slices = slices;
+        track.heading = this.cpu_.userFriendlyName + ':';
+        Polymer.dom(this).appendChild(track);
+      }
+
+      if (this.detailedMode_) {
+        this.appendSamplesTracks_();
+
+        for (const counterName in this.cpu_.counters) {
+          const counter = this.cpu_.counters[counterName];
+          const track = new tr.ui.tracks.CounterTrack(this.viewport);
+          track.heading = this.cpu_.userFriendlyName + ' ' +
+              counter.name + ':';
+          track.counter = counter;
+          Polymer.dom(this).appendChild(track);
+        }
+      }
+    },
+
+    appendSamplesTracks_() {
+      const samples = this.cpu_.samples;
+      if (samples === undefined || samples.length === 0) {
+        return;
+      }
+      const samplesByTitle = {};
+      samples.forEach(function(sample) {
+        if (samplesByTitle[sample.title] === undefined) {
+          samplesByTitle[sample.title] = [];
+        }
+        samplesByTitle[sample.title].push(sample);
+      });
+
+      const sampleTitles = Object.keys(samplesByTitle);
+      sampleTitles.sort();
+
+      sampleTitles.forEach(function(sampleTitle) {
+        const samples = samplesByTitle[sampleTitle];
+        const samplesTrack = new tr.ui.tracks.SliceTrack(this.viewport);
+        samplesTrack.group = this.cpu_;
+        samplesTrack.slices = samples;
+        samplesTrack.heading = this.cpu_.userFriendlyName + ': ' +
+            sampleTitle;
+        samplesTrack.tooltip = this.cpu_.userFriendlyDetails;
+        samplesTrack.selectionGenerator = function() {
+          const selection = new tr.model.EventSet();
+          for (let i = 0; i < samplesTrack.slices.length; i++) {
+            selection.push(samplesTrack.slices[i]);
+          }
+          return selection;
+        };
+        Polymer.dom(this).appendChild(samplesTrack);
+      }, this);
+    }
+  };
+
+  return {
+    CpuTrack,
+  };
+});
+</script>

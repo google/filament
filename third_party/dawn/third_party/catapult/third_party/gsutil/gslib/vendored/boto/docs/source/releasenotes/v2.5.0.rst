@@ -1,0 +1,39 @@
+===========
+boto v2.5.0
+===========
+
+The 2.5.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.4.1 release
+and the 2.5.0 release at https://github.com/boto/boto/compare/2.4.1...2.5.0.
+
+This release includes:
+
+* Support for IAM Roles for EC2 Instances
+* Added support for Capabilities in CloudFormation
+* Spot instances in autoscaling groups
+* Internal ELB's
+* Added tenancy option to run_instances
+
+There were 77 commits in this release from 18 different authors.  The authors
+are listed below, in no particular order:
+
+* jimbrowne
+* cosmin
+* gtaylor
+* garnaat
+* brianjaystanley
+* jamesls
+* trevorsummerssmith
+* Bryan Donlan
+* davidmarble
+* jtriley
+* rdodev
+* toby
+* tpodowd
+* srs81
+* mfschwartz
+* rdegges
+* gholms

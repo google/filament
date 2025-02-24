@@ -1,0 +1,13 @@
+boto v2.45.0
+============
+
+:date: 2016/12/14
+
+Add support for eu-west-2 region.
+
+
+Changes
+-------
+* Add support for eu-west-2 (:issue:`3654`, :sha:`40c68db`)
+
+

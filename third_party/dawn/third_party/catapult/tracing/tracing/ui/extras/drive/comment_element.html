@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id='tr-ui-e-drive-comment-element'>
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    #comment-area {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid #e8e8e8;
+      background-color: white;
+      padding: 6px;
+      margin-bottom: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      border-radius: 2px;
+      font-size: small;
+    }
+    #comment-header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    #comment-header-text {
+      display: flex;
+      flex-direction: column;
+      padding-left: 10px;
+    }
+    #comment-img {
+      width: 32px;
+      height: 32px;
+    }
+    #comment-text-author {
+      padding-bottom: 2px;
+    }
+    #comment-date {
+      color: #777;
+      font-size: 11px;
+    }
+    #comment-content {
+      word-wrap: break-word;
+    }
+    </style>
+    <div id="comment-area">
+      <div id="comment-header">
+        <img id="comment-img" src="{{ comment.author.picture.url }}" />
+        <div id="comment-header-text">
+          <div id="comment-text-author">{{ comment.author.displayName }}</div>
+          <div id="comment-date">{{ createdDate }}</div>
+        </div>
+      </div>
+      <div id="comment-content">{{_computeCommentContentPrefix( comment)}}
+          {{ comment.content }}</div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'tr-ui-e-drive-comment-element',
+
+  properties: {
+    comment: {
+      type: String,
+      observer: '_commentChanged'
+    }
+  },
+
+  _commentChanged() {
+    this.createdDate = new Date(this.comment.createdDate).toLocaleString();
+  },
+
+  _computeCommentContentPrefix(comment) {
+    return comment.anchor ? '&#9875;&nbsp;' : '';
+  }
+});
+</script>

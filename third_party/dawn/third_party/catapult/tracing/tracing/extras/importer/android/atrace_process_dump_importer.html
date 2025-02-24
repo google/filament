@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/vm_region.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.importer.android.atrace_process_dump', function() {
+  const IMPORT_PRIORITY = tr.e.importer.linux_perf.IMPORT_PRIORITY + 1;
+  const HEADER = 'ATRACE_PROCESS_DUMP';
+
+  const PROTECTION_FLAG_LETTERS = {
+    '-': 0,
+    'r': tr.model.VMRegion.PROTECTION_FLAG_READ,
+    'w': tr.model.VMRegion.PROTECTION_FLAG_WRITE,
+    'x': tr.model.VMRegion.PROTECTION_FLAG_EXECUTE,
+    's': tr.model.VMRegion.PROTECTION_FLAG_MAYSHARE,
+  };
+
+  class AtraceProcessDumpImporter extends tr.importer.Importer {
+    constructor(model, data) {
+      super(model, data);
+      this.importPriority = IMPORT_PRIORITY;
+      this.model_ = model;
+      this.raw_data_ = data;
+      this.clock_sync_markers_ = {};
+      this.snapshots_ = [];
+      this.processes_ = {};
+    }
+
+    static canImport(events) {
+      if (!(typeof(events) === 'string' || events instanceof String)) {
+        return false;
+      }
+      return events.startsWith(HEADER);
+    }
+
+    get importerName() {
+      return 'AtraceProcessDumpImporter';
+    }
+
+    get model() {
+      return this.model_;
+    }
+
+    lazyParseData() {
+      if (this.raw_data_ === undefined) {
+        return;
+      }
+      const dump = JSON.parse(this.raw_data_.slice(HEADER.length + 1));
+      this.clock_sync_markers_ = dump.clock_sync_markers;
+      this.snapshots_ = dump.dump.snapshots;
+      this.processes_ = dump.dump.processes;
+      this.raw_data_ = undefined;
+    }
+
+    importClockSyncMarkers() {
+      this.lazyParseData();
+      for (const syncId in this.clock_sync_markers_) {
+        const ts = parseInt(this.clock_sync_markers_[syncId]);
+        this.model_.clockSyncManager.addClockSyncMarker(
+            tr.model.ClockDomainId.LINUX_CLOCK_MONOTONIC, syncId, ts);
+      }
+    }
+
+    setProcessMemoryDumpTotals_(pmd, processInfo) {
+      pmd.totals = {
+        'residentBytes': processInfo.rss * 1024,
+        'platformSpecific': {
+          'vm': processInfo.vm * 1024
+        }
+        // TODO(kraynov): Add OOM scores and make UI able to show it.
+      };
+      const totals = pmd.totals.platformSpecific;
+
+      function importGpuMetric(name) {
+        if (processInfo[name] !== undefined && processInfo[name] > 0) {
+          totals[name] = processInfo[name] * 1024;
+          totals[name + '_pss'] = processInfo[name + '_pss'] * 1024;
+        }
+      }
+      importGpuMetric('gpu_egl');
+      importGpuMetric('gpu_gl');
+      importGpuMetric('gpu_etc');
+
+      if (processInfo.pss !== undefined) {
+        // Full stats.
+        totals.pss = processInfo.pss * 1024;
+        totals.swp = processInfo.swp * 1024;
+        totals.pc = processInfo.pc * 1024;
+        totals.pd = processInfo.pd * 1024;
+        totals.sc = processInfo.sc * 1024;
+        totals.sd = processInfo.sd * 1024;
+      }
+    }
+
+    setProcessMemoryDumpVmRegions_(pmd, processInfo) {
+      if (processInfo.mmaps === undefined) {
+        return;
+      }
+      const vmRegions = [];
+      for (const memoryMap of processInfo.mmaps) {
+        const addr = memoryMap.vm.split('-').map(x => parseInt(x, 16));
+        let flags = 0;
+        for (const letter of memoryMap.flags) {
+          flags |= PROTECTION_FLAG_LETTERS[letter];
+        }
+        const totals = {
+          'proportionalResident': memoryMap.pss * 1024,
+          'privateCleanResident': memoryMap.pc * 1024,
+          'privateDirtyResident': memoryMap.pd * 1024,
+          'sharedCleanResident': memoryMap.sc * 1024,
+          'sharedDirtyResident': memoryMap.sd * 1024,
+          'swapped': memoryMap.swp * 1024,
+        };
+        vmRegions.push(new tr.model.VMRegion(
+            addr[0], addr[1] - addr[0], flags, memoryMap.file, totals));
+      }
+      pmd.vmRegions =
+          tr.model.VMRegionClassificationNode.fromRegions(vmRegions);
+    }
+
+    importEvents() {
+      this.lazyParseData();
+      // Assign process and thread names.
+      for (const [pid, process] of Object.entries(this.processes_)) {
+        const modelProcess = this.model_.getProcess(pid);
+        if (modelProcess === undefined) {
+          continue;
+        }
+        modelProcess.name = process.name;
+
+        const threads = process.threads;
+        if (threads === undefined) {
+          continue;
+        }
+        for (const [tid, thread] of Object.entries(threads)) {
+          const modelThread = modelProcess.threads[tid];
+          if (modelThread === undefined) {
+            continue;
+          }
+          modelThread.name = thread.name;
+        }
+      }
+
+      // Memory dumps.
+      const memCounter =
+          this.model_.kernel.getOrCreateCounter('global', 'SystemMemory');
+      const memUsedSeries = new tr.model.CounterSeries('Used (KB)', 0);
+      const memSwappedSeries = new tr.model.CounterSeries('Swapped (KB)', 0);
+      memCounter.addSeries(memUsedSeries);
+      memCounter.addSeries(memSwappedSeries);
+
+      for (const snapshot of this.snapshots_) {
+        const ts = parseInt(snapshot.ts);
+        const memoryDump = snapshot.memdump;
+
+        if (memoryDump === undefined) {
+          const memInfo = snapshot.meminfo;
+          if (memInfo === undefined) {
+            continue;
+          }
+
+          // See Android com.android.server.am.ActivityManagerService class
+          // for calculation formula in 'dumpsys meminfo'.
+          //
+          // The formula below excludes Cached PSS because it's too expensive
+          // to calculate and it's not volatile during short systrace run.
+          // Cached PSS is a total PSS of apps being primary targets for
+          // OOM killer and treated by 'dumpsys meminfo' as a free memory.
+          const memCaches = memInfo.Buffers + memInfo.Cached - memInfo.Mapped;
+          const memUsed = memInfo.MemTotal - memInfo.MemFree - memCaches;
+          const memSwapped = memInfo.SwapTotal - memInfo.SwapFree;
+
+          memUsedSeries.addCounterSample(ts, memUsed);
+          memSwappedSeries.addCounterSample(ts, memSwapped);
+          continue;
+        }
+
+        const gmd = new tr.model.GlobalMemoryDump(this.model_, ts);
+        this.model_.globalMemoryDumps.push(gmd);
+
+        for (const [pid, processInfo] of Object.entries(memoryDump)) {
+          if (processInfo.rss === undefined) {
+            // Memory stats aren't available.
+            continue;
+          }
+          const modelProcess = this.model_.getProcess(pid);
+          if (modelProcess === undefined) {
+            continue;
+          }
+          const pmd = new tr.model.ProcessMemoryDump(gmd, modelProcess, ts);
+          gmd.processMemoryDumps[pid] = pmd;
+          modelProcess.memoryDumps.push(pmd);
+          this.setProcessMemoryDumpTotals_(pmd, processInfo);
+          this.setProcessMemoryDumpVmRegions_(pmd, processInfo);
+        }
+      }
+    }
+  }
+
+  tr.importer.Importer.register(AtraceProcessDumpImporter);
+
+  return {
+    AtraceProcessDumpImporter,
+  };
+});
+</script>

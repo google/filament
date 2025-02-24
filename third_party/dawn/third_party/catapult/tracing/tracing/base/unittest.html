@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+
+<script src="/chai/chai.js"></script>
+<script>
+  'use strict';
+  /**
+   * Alias chai assert to the global assert.
+   */
+  if (tr.isNode) {
+    // In node, chai.js knows to act as a node module, whereas our HTML
+    // imports code expects chai to end up in the global scope. So, in Node,
+    // copy the chai exports into global.
+    const chaiAbsPath = HTMLImportsLoader.hrefToAbsolutePath(
+        '/chai/chai.js');
+    const chaiModule = require(chaiAbsPath);
+    for (const exportName in chaiModule) {
+      global[exportName] = chaiModule[exportName];
+    }
+  } else {
+    // https://github.com/catapult-project/catapult/issues/3097
+    chai.config.includeStack = true;
+
+    /**
+     * Catapult presubmit wanted me to put a jsdoc here. So nduca did.
+     */
+    global.assert = chai.assert;
+  }
+  global.assert.equal = () => {
+    // See https://github.com/catapult-project/catapult/issues/3235
+    throw new Error('Use assert.strictEqual instead of assert.equal since ' +
+        'assert.equal will coerce its arguments.');
+  };
+</script>
+
+<link rel="import" href="/tracing/base/unittest/suite_loader.html">
+<link rel="import" href="/tracing/base/unittest/test_case.html">
+<link rel="import" href="/tracing/base/unittest/test_runner.html">
+<link rel="import" href="/tracing/base/unittest/test_suite.html">

@@ -1,0 +1,82 @@
+// Copyright (c) 2024 The Khronos Group Inc.
+// Copyright (c) 2024 Valve Corporation
+// Copyright (c) 2024 LunarG, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// NOTE: This file doesn't contain any entrypoints and should be compiled with the--no-link option for glslang
+
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+#if defined(GL_ARB_gpu_shader_int64)
+#extension GL_ARB_gpu_shader_int64 : require
+#else
+#error No extension available for 64-bit integers.
+#endif
+
+#include "gpuav_error_header.h"
+#include "gpuav_shaders_constants.h"
+#include "common_descriptor_sets.h"
+
+// Unlike the bindless version, we don't need to check for Uninitialized and Destroyed descriptors.
+// At draw time on the CPU we can verify that information.
+bool inst_descriptor_indexing_oob_non_bindless(const uint inst_num, const uvec4 stage_info, const uint desc_set,
+                              const uint binding, const uint desc_index, const uint binding_layout_size, const uint binding_layout_offset) {
+    uint error = 0u;
+    uint param_0 = binding_layout_size;
+    do {
+        // For non-array this should hopefully optimized out as "if (0 > 1)"
+        // Have seen with Mesa, that the final NIR will optimize out all of inst_descriptor_indexing_oob_non_bindless if this is false.
+        if (desc_index >= binding_layout_size) {
+            error = kErrorSubCodeDescriptorIndexingBounds;
+            break;
+        }
+    } while (false);
+
+    if (0u != error) {
+
+        const uint cmd_id = inst_cmd_resource_index_buffer.index[0];
+        const uint cmd_errors_count = atomicAdd(inst_cmd_errors_count_buffer.errors_count[cmd_id], 1);
+        const bool max_cmd_errors_count_reached = cmd_errors_count >= kMaxErrorsPerCmd;
+
+        if (max_cmd_errors_count_reached) return false;
+
+        uint write_pos = atomicAdd(inst_errors_buffer.written_count, kErrorRecordSize);
+        const bool errors_buffer_not_filled = (write_pos + kErrorRecordSize) <= uint(inst_errors_buffer.data.length());
+
+        if (errors_buffer_not_filled) {
+            inst_errors_buffer.data[write_pos + kHeaderErrorRecordSizeOffset] = kErrorRecordSize;
+            inst_errors_buffer.data[write_pos + kHeaderShaderIdOffset] = kLinkShaderId;
+            inst_errors_buffer.data[write_pos + kHeaderInstructionIdOffset] = inst_num;
+            inst_errors_buffer.data[write_pos + kHeaderStageIdOffset] = stage_info.x;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_0] = stage_info.y;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_1] = stage_info.z;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_2] = stage_info.w;
+
+            inst_errors_buffer.data[write_pos + kHeaderErrorGroupOffset] = kErrorGroupInstDescriptorIndexingOOB;
+            inst_errors_buffer.data[write_pos + kHeaderErrorSubCodeOffset] = error;
+
+            inst_errors_buffer.data[write_pos + kHeaderActionIdOffset] = inst_action_index_buffer.index[0];
+            inst_errors_buffer.data[write_pos + kHeaderCommandResourceIdOffset] = inst_cmd_resource_index_buffer.index[0];
+
+            inst_errors_buffer.data[write_pos + kInstDescriptorIndexingDescSetOffset] = desc_set;
+            inst_errors_buffer.data[write_pos + kInstDescriptorIndexingDescBindingOffset] = binding;
+            inst_errors_buffer.data[write_pos + kInstDescriptorIndexingDescIndexOffset] = desc_index;
+            inst_errors_buffer.data[write_pos + kInstDescriptorIndexingParamOffset_0] = param_0;
+        }
+        return false;
+    }
+    return true;
+}

@@ -1,0 +1,71 @@
+{
+  "name": "@webcomponents/shadycss",
+  "version": "1.7.1",
+  "description": "Styling helpers for ShadyDOM",
+  "main": "shadycss.min.js",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webcomponents/shadycss.git"
+  },
+  "author": "The Polymer Project Authors (https://polymer.github.io/AUTHORS.txt)",
+  "license": "BSD-3-Clause",
+  "keywords": [
+    "shady-css",
+    "shadycss",
+    "shadow-css",
+    "shadowcss",
+    "web-components",
+    "webcomponents",
+    "polyfill",
+    "shim"
+  ],
+  "bugs": {
+    "url": "https://github.com/webcomponents/shadycss/issues"
+  },
+  "scripts": {
+    "build": "gulp",
+    "debug": "gulp debug",
+    "lint": "eslint src tests entrypoints",
+    "test": "npm run lint && gulp && wct",
+    "prepack": "gulp closure"
+  },
+  "files": [
+    "apply-shim.html",
+    "apply-shim.min.js*",
+    "custom-style-interface.html",
+    "custom-style-interface.min.js*",
+    "scoping-shim.min.js*",
+    "entrypoints/**/*.js",
+    "src/**/*.js",
+    "externs/**/*.js"
+  ],
+  "homepage": "https://webcomponents.org/polyfills",
+  "devDependencies": {
+    "@webcomponents/custom-elements": "^1.2.1",
+    "@webcomponents/html-imports": "^1.2.0",
+    "@webcomponents/shadydom": "1.1.2",
+    "@webcomponents/template": "^1.4.0",
+    "@webcomponents/webcomponents-platform": "^1.0.0",
+    "del": "^3.0.0",
+    "es6-promise": "^4.2.5",
+    "eslint": "^5.7.0",
+    "eslint-plugin-html": "^4.0.6",
+    "google-closure-compiler": "^20180805.0.0",
+    "gulp": "^4.0.0",
+    "gulp-rename": "^1.4.0",
+    "gulp-size": "^3.0.0",
+    "gulp-sourcemaps": "^2.6.4",
+    "rollup-stream": "=1.23.1",
+    "run-sequence": "^2.2.1",
+    "vinyl-buffer": "^1.0.1",
+    "vinyl-source-stream": "^2.0.0",
+    "wct-browser-legacy": "^1.0.2",
+    "web-component-tester": "^6.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

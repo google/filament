@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+function findGrouping(key) {
+  const grouping = tr.v.HistogramGrouping.BY_KEY.get(key);
+  if (grouping === undefined) {
+    throw new Error(`Could not find grouping "${key}"`);
+  }
+  return grouping;
+}
+
+function findMergeable(hist, candidates) {
+  for (const candidate of candidates) {
+    if (candidate.canAddHistogram(hist)) return candidate;
+  }
+  return undefined;
+}
+
+function mergeLeafHistograms(groupedHistograms, mergedHistograms) {
+  for (const [name, histograms] of groupedHistograms) {
+    if (histograms instanceof Map) {
+      mergeLeafHistograms(histograms, mergedHistograms);
+      continue;
+    }
+
+    if (histograms.length === 1) {
+      mergedHistograms.addHistogram(histograms[0].clone());
+      continue;
+    }
+
+    // Merge Histograms in this leaf array and return the merged Histograms to
+    // mergedHistograms.
+    // If it isn't possible to merge all Histograms in |histograms| together,
+    // then merge them into as few merged Histograms as possible.
+    const merged = [histograms.shift().clone()];
+    for (const hist of histograms) {
+      const candidate = findMergeable(hist, merged);
+      if (candidate !== undefined) {
+        candidate.addHistogram(hist);
+        continue;
+      }
+      merged.push(hist.clone());
+    }
+    for (const hist of merged) {
+      mergedHistograms.addHistogram(hist);
+    }
+  }
+}
+
+function stripInternalDiagnostics(mergedHistograms) {
+  for (const hist of mergedHistograms) {
+    hist.diagnostics.delete(tr.v.d.RESERVED_NAMES.TEST_PATH);
+  }
+}
+
+function mergeHistograms(histogramsPath, groupingKeys) {
+  const histograms = new tr.v.HistogramSet();
+  histograms.importDicts(JSON.parse(tr.b.getSync('file://' + histogramsPath)));
+  histograms.buildGroupingsFromTags([tr.v.d.RESERVED_NAMES.STORY_TAGS]);
+  const groupings = groupingKeys.map(findGrouping);
+  const groupedHistograms = histograms.groupHistogramsRecursively(groupings);
+  const mergedHistograms = new tr.v.HistogramSet();
+  mergeLeafHistograms(groupedHistograms, mergedHistograms);
+  mergedHistograms.deduplicateDiagnostics();
+  stripInternalDiagnostics(mergedHistograms);
+  return mergedHistograms;
+}
+
+if (tr.isHeadless) {
+  const mergedHistograms = mergeHistograms(sys.argv[1], sys.argv.slice(2));
+  console.log(JSON.stringify(mergedHistograms.asDicts()));
+}
+</script>

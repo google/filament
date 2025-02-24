@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>rcssmin</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rcssmin/" target="_top">Visit rcssmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        Module&nbsp;rcssmin
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== MODULE DESCRIPTION ==================== -->
+<h1 class="epydoc">Module rcssmin</h1><p class="nomargin-top"><span class="codelink"><a href="rcssmin-pysrc.html">source&nbsp;code</a></span></p>
+<p>CSS Minifier.</p>
+<p>The minifier is based on the semantics of the <a class="rst-reference external" href="https://github.com/yui/yuicompressor/" target="_top">YUI compressor</a>, which
+itself is based on <a class="rst-reference external" href="https://github.com/isaacs/cssmin/" target="_top">the rule list by Isaac Schlueter</a>.</p>
+<p>This module is a re-implementation aiming for speed instead of maximum
+compression, so it can be used at runtime (rather than during a preprocessing
+step). RCSSmin does syntactical compression only (removing spaces, comments
+and possibly semicolons). It does not provide semantic compression (like
+removing empty blocks, collapsing redundant properties etc). It does, however,
+support various CSS hacks (by keeping them working as intended).</p>
+<p>Here's a feature list:</p>
+<ul class="rst-simple">
+<li>Strings are kept, except that escaped newlines are stripped</li>
+<li>Space/Comments before the very end or before various characters are
+stripped: <tt class="rst-docutils literal"><span class="pre">:{});=&gt;+],!</span></tt> (The colon (<tt class="rst-docutils literal">:</tt>) is a special case, a single
+space is kept if it's outside a ruleset.)</li>
+<li>Space/Comments at the very beginning or after various characters are
+stripped: <tt class="rst-docutils literal"><span class="pre">{}(=:&gt;+[,!</span></tt></li>
+<li>Optional space after unicode escapes is kept, resp. replaced by a simple
+space</li>
+<li>whitespaces inside <tt class="rst-docutils literal">url()</tt> definitions are stripped</li>
+<li>Comments starting with an exclamation mark (<tt class="rst-docutils literal">!</tt>) can be kept optionally.</li>
+<li>All other comments and/or whitespace characters are replaced by a single
+space.</li>
+<li>Multiple consecutive semicolons are reduced to one</li>
+<li>The last semicolon within a ruleset is stripped</li>
+<li>CSS Hacks supported:<ul>
+<li>IE7 hack (<tt class="rst-docutils literal"><span class="pre">&gt;/**/</span></tt>)</li>
+<li>Mac-IE5 hack (<tt class="rst-docutils literal"><span class="pre">/*\*/.../**/</span></tt>)</li>
+<li>The boxmodelhack is supported naturally because it relies on valid CSS2
+strings</li>
+<li>Between <tt class="rst-docutils literal"><span class="pre">:first-line</span></tt> and the following comma or curly brace a space is
+inserted. (apparently it's needed for IE6)</li>
+<li>Same for <tt class="rst-docutils literal"><span class="pre">:first-letter</span></tt></li>
+</ul>
+</li>
+</ul>
+<p>rcssmin.c is a reimplementation of rcssmin.py in C and improves runtime up to
+factor 100 or so (depending on the input). docs/BENCHMARKS in the source
+distribution contains the details.</p>
+<p>Both python 2 (&gt;= 2.4) and python 3 are supported.</p>
+
+<hr />
+<div class="fields">      <p><strong>Copyright:</strong>
+        Copyright 2011 - 2014
+Andr&#233; Malo or his licensors, as applicable
+      </p>
+      <p><strong>License:</strong>
+        <p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at</p>
+<blockquote>
+<a class="rst-reference external" href="http://www.apache.org/licenses/LICENSE-2.0" target="_top">http://www.apache.org/licenses/LICENSE-2.0</a></blockquote>
+<p>Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</p>
+      </p>
+      <p><strong>Version:</strong>
+        1.0.5
+      </p>
+      <p><strong>Author:</strong>
+        Andr&#233; Malo
+      </p>
+</div><!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td align="left" colspan="2" class="table-header">
+    <span class="table-header">Functions</span></td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type"><tt class="rst-docutils literal">str</tt></span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="rcssmin-module.html#cssmin" class="summary-sig-name">cssmin</a>(<span class="summary-sig-arg">style</span>,
+        <span class="summary-sig-arg">keep_bang_comments</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Minify CSS.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="rcssmin-pysrc.html#cssmin">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td align="left" colspan="2" class="table-header">
+    <span class="table-header">Function Details</span></td>
+</tr>
+</table>
+<a name="cssmin"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">cssmin</span>(<span class="sig-arg">style</span>,
+        <span class="sig-arg">keep_bang_comments</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="rcssmin-pysrc.html#cssmin">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  Minify CSS.
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>style</code></strong> (<tt class="rst-docutils literal">str</tt>) - CSS to minify</li>
+        <li><strong class="pname"><code>keep_bang_comments</code></strong> (<tt class="rst-docutils literal">bool</tt>) - Keep comments starting with an exclamation mark? (<tt class="rst-docutils literal"><span class="pre">/*!...*/</span></tt>)</li>
+    </ul></dd>
+    <dt>Returns: <tt class="rst-docutils literal">str</tt></dt>
+        <dd>Minified style</dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rcssmin/" target="_top">Visit rcssmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

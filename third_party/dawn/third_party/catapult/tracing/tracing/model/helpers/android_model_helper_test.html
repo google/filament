@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/android/android_auditor.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AndroidModelHelper = tr.model.helpers.AndroidModelHelper;
+  const newAsyncSliceNamed = tr.c.TestUtils.newAsyncSliceNamed;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newCounterNamed = tr.c.TestUtils.newCounterNamed;
+  const newCounterSeries = tr.c.TestUtils.newCounterSeries;
+
+  function createSurfaceFlinger(model, vsyncCallback) {
+    if (model.getProcess(2)) {
+      throw new Error('process already exists');
+    }
+
+    const sfProcess = model.getOrCreateProcess(2);
+    const sfThread = sfProcess.getOrCreateThread(2); // main thread, tid = pid
+    sfThread.name = '/system/bin/surfaceflinger';
+
+    // ensure slicegroup has data
+    sfThread.sliceGroup.pushSlice(newSliceEx({
+      title: 'doComposition',
+      start: 8,
+      duration: 2
+    }));
+
+    vsyncCallback(sfProcess);
+  }
+
+  function createSurfaceFlingerWithVsync(model) {
+    createSurfaceFlinger(model, function(sfProcess) {
+      const counter = sfProcess.getOrCreateCounter('android', 'VSYNC');
+      const series = newCounterSeries();
+      for (let i = 0; i <= 10; i++) {
+        series.addCounterSample(i * 10, i % 2);
+      }
+      counter.addSeries(series);
+    });
+  }
+
+  /*
+   * List of customizeModelCallbacks which produce different 80ms frames,
+   * each starting at 10ms, and with a single important slice
+   */
+  const SINGLE_FRAME_CUSTOM_MODELS = [
+    function(model) {
+      // UI thread only
+      const uiThread = model.getOrCreateProcess(120).getOrCreateThread(120);
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 10, duration: 80}));
+
+      model.uiThread = uiThread;
+    },
+
+    function(model) {
+      // RenderThread only
+      const renderThread = model.getOrCreateProcess(120).getOrCreateThread(200);
+      renderThread.name = 'RenderThread';
+      renderThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'doFrame', start: 10, duration: 80}));
+
+      model.renderThread = renderThread;
+    },
+
+    function(model) {
+      const uiThread = model.getOrCreateProcess(120).getOrCreateThread(120);
+
+      // UI thread time - 19 (from 10 to 29, ignored after)
+      uiThread.asyncSliceGroup.push(
+          newAsyncSliceNamed('deliverInputEvent', 10, 9, uiThread, uiThread));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 20, duration: 110}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'draw', start: 20, duration: 108}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'Record View#draw()', start: 20, duration: 8}));
+
+      // RenderThread time - 61 (from 29 to 90, ignored after)
+      const renderThread = model.getOrCreateProcess(120).getOrCreateThread(200);
+      renderThread.name = 'RenderThread';
+      renderThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'DrawFrame', start: 29, duration: 70}));
+      renderThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'syncFrameState', start: 29, duration: 1}));
+      renderThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'queueBuffer', start: 89, duration: 1}));
+
+      model.uiThread = uiThread;
+      model.renderThread = renderThread;
+    }
+  ];
+
+  test('getThreads', function() {
+    SINGLE_FRAME_CUSTOM_MODELS.forEach(function(customizeModelCallback) {
+      const model = tr.c.TestUtils.newModel(customizeModelCallback);
+      const helper = model.getOrCreateHelper(AndroidModelHelper);
+      assert.strictEqual(helper.apps[0].uiThread, model.uiThread);
+      assert.strictEqual(helper.apps[0].renderThread, model.renderThread);
+    });
+  });
+
+  test('iterateImportantSlices', function() {
+    SINGLE_FRAME_CUSTOM_MODELS.forEach(function(customizeModelCallback) {
+      const model = tr.c.TestUtils.newModel(customizeModelCallback);
+      const helper = model.getOrCreateHelper(AndroidModelHelper);
+
+      let seen = 0;
+      helper.iterateImportantSlices(function(importantSlice) {
+        assert.isTrue(importantSlice instanceof tr.model.Slice);
+        seen++;
+      });
+      assert.strictEqual(seen, 1);
+    });
+  });
+
+  test('getFrames', function() {
+    SINGLE_FRAME_CUSTOM_MODELS.forEach(function(customizeModelCallback) {
+      const model = tr.c.TestUtils.newModel(customizeModelCallback);
+      const helper = model.getOrCreateHelper(AndroidModelHelper);
+      assert.strictEqual(helper.apps.length, 1);
+
+      const frames = helper.apps[0].getFrames();
+      assert.strictEqual(frames.length, 1);
+      assert.closeTo(frames[0].totalDuration, 80, 1e-5);
+
+      assert.closeTo(frames[0].start, 10, 1e-5);
+      assert.closeTo(frames[0].end, 90, 1e-5);
+    });
+  });
+
+  test('surfaceFlingerVsyncs', function() {
+    const model = tr.c.TestUtils.newModel(createSurfaceFlingerWithVsync);
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+    assert.isTrue(helper.surfaceFlinger.hasVsyncs);
+
+    // test querying the vsyncs
+    assert.closeTo(helper.surfaceFlinger.getFrameKickoff(5), 0, 1e-5);
+    assert.closeTo(helper.surfaceFlinger.getFrameDeadline(95), 100, 1e-5);
+
+    assert.closeTo(helper.surfaceFlinger.getFrameKickoff(10), 10, 1e-5);
+    assert.closeTo(helper.surfaceFlinger.getFrameDeadline(90), 100, 1e-5);
+
+    // test undefined behavior outside of vsyncs.
+    assert.isUndefined(helper.surfaceFlinger.getFrameKickoff(-5));
+    assert.isUndefined(helper.surfaceFlinger.getFrameDeadline(105));
+  });
+
+  test('surfaceFlingerShiftedVsyncs', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      createSurfaceFlinger(model, function(sfProcess) {
+        const appSeries = newCounterSeries();
+        const sfSeries = newCounterSeries();
+        for (let i = 0; i <= 10; i++) {
+          // SF vsync is 4ms after app
+          appSeries.addCounterSample(i * 16, i % 2);
+          sfSeries.addCounterSample(i * 16 + 4, i % 2);
+        }
+        sfProcess.getOrCreateCounter('android', 'VSYNC-sf')
+            .addSeries(sfSeries);
+        sfProcess.getOrCreateCounter('android', 'VSYNC-app')
+            .addSeries(appSeries);
+      });
+    });
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+    assert.isTrue(helper.surfaceFlinger.hasVsyncs);
+
+    // test querying the vsyncs - Frames should have 20ms window
+    assert.closeTo(helper.surfaceFlinger.getFrameKickoff(0), 0, 1e-5);
+    assert.closeTo(helper.surfaceFlinger.getFrameDeadline(0), 20, 1e-5);
+
+    assert.closeTo(helper.surfaceFlinger.getFrameKickoff(16), 16, 1e-5);
+    assert.closeTo(helper.surfaceFlinger.getFrameDeadline(16), 36, 1e-5);
+
+    // test undefined behavior outside of vsyncs.
+    assert.isUndefined(helper.surfaceFlinger.getFrameKickoff(-5));
+    assert.isUndefined(helper.surfaceFlinger.getFrameDeadline(165));
+  });
+
+  test('frameVsyncInterop', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      // app - 3 good, 3 bad frames
+      const uiThread = model.getOrCreateProcess(1).getOrCreateThread(1);
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 1, duration: 8}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 10, duration: 8}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 20, duration: 8}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 31, duration: 11}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 45, duration: 6}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 60, duration: 20}));
+
+      // surface flinger - vsync every 10ms
+      createSurfaceFlingerWithVsync(model);
+    });
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+
+    const frames = helper.apps[0].getFrames();
+    assert.strictEqual(frames.length, 6);
+    for (let i = 0; i < 6; i++) {
+      const shouldMissDeadline = i >= 3;
+      const missedDeadline = frames[i].args.deadline < frames[i].end;
+      assert.strictEqual(shouldMissDeadline, missedDeadline);
+    }
+  });
+
+  test('appInputs', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(120);
+      const uiThread = process.getOrCreateThread(120);
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 20, duration: 4}));
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 40, duration: 4}));
+
+      const counter = process.getOrCreateCounter('android', 'aq:pending:foo');
+      const series = newCounterSeries();
+      series.addCounterSample(10, 1);
+      series.addCounterSample(20, 0);
+      series.addCounterSample(30, 1);
+      series.addCounterSample(40, 2);
+      series.addCounterSample(50, 0);
+      counter.addSeries(series);
+    });
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+    assert.strictEqual(helper.apps.length, 1);
+
+    const inputSamples = helper.apps[0].getInputSamples();
+    assert.strictEqual(inputSamples.length, 3);
+    assert.strictEqual(inputSamples[0].timestamp, 10);
+    assert.strictEqual(inputSamples[1].timestamp, 30);
+    assert.strictEqual(inputSamples[2].timestamp, 40);
+  });
+
+  test('appAnimations', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(120);
+      const uiThread = process.getOrCreateThread(120);
+      uiThread.sliceGroup.pushSlice(newSliceEx(
+          {title: 'performTraversals', start: 10, duration: 10}));
+      uiThread.asyncSliceGroup.push(newAsyncSliceNamed('animator:foo', 0, 10,
+          uiThread, uiThread));
+    });
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+    assert.strictEqual(helper.apps.length, 1);
+
+    const animations = helper.apps[0].getAnimationAsyncSlices();
+    assert.strictEqual(animations.length, 1);
+    assert.strictEqual(animations[0].start, 0);
+    assert.strictEqual(animations[0].end, 10);
+  });
+});
+</script>

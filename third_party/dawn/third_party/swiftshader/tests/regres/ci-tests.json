@@ -1,0 +1,15 @@
+[
+    { "name": "vulkan-wsi", "api": "vulkan", "tests": "testlists/vk-wsi-PASS.txt" },
+
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-ABORT.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-ASSERT.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-COMPATIBILITY_WARNING.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-CRASH.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-FAIL.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-PASS.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-QUALITY_WARNING.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-TIMEOUT.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-UNIMPLEMENTED.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-UNREACHABLE.txt" },
+    { "name": "vulkan-master", "api": "vulkan", "tests": "testlists/vk-master-UNSUPPORTED.txt" }
+]

@@ -1,0 +1,18 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("workgroups") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/test_wg_all.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/test_wg_any.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/test_wg_broadcast.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/test_wg_scan_reduce.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/workgroups/test_wg_suggested_local_work_size.cpp",
+  ]
+}

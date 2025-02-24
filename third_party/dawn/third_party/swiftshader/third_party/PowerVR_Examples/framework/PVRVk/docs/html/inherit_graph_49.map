@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Buffer_ \&gt;" alt="" coords="316,5,507,47"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_buffer__.html" title="Vulkan implementation of the Buffer." alt="" coords="555,50,705,77"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkBuffer, PVRVkObjectType \&gt;" alt="" coords="5,79,268,120"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkBuffer,\l ObjectType::e_BUFFER \&gt;" alt="" coords="316,71,507,127"/>
+</map>

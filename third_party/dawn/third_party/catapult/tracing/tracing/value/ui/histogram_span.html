@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/ui/base/box_chart.html">
+<link rel="import" href="/tracing/ui/base/drag_handle.html">
+<link rel="import" href="/tracing/ui/base/name_bar_chart.html">
+<link rel="import" href="/tracing/ui/base/tab_view.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_map_table.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view_state.html">
+<link rel="import" href="/tracing/value/ui/scalar_map_table.html">
+
+<dom-module id="tr-v-ui-histogram-span">
+  <template>
+    <style>
+    #container {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+    #chart {
+      flex-grow: 1;
+      display: none;
+    }
+    #drag_handle, #diagnostics_tab_templates {
+      display: none;
+    }
+    #chart svg {
+      display: block;
+    }
+    #stats_container {
+      overflow-y: auto;
+    }
+    </style>
+
+    <div id="container">
+      <div id="chart"></div>
+      <div id="stats_container">
+        <tr-v-ui-scalar-map-table id="stats"></tr-v-ui-scalar-map-table>
+      </div>
+    </div>
+    <tr-ui-b-drag-handle id="drag_handle"></tr-ui-b-drag-handle>
+
+    <tr-ui-b-tab-view id="diagnostics"></tr-ui-b-tab-view>
+
+    <div id="diagnostics_tab_templates">
+      <tr-v-ui-diagnostic-map-table id="metric_diagnostics"></tr-v-ui-diagnostic-map-table>
+
+      <tr-v-ui-diagnostic-map-table id="metadata_diagnostics"></tr-v-ui-diagnostic-map-table>
+
+      <div id="sample_diagnostics_container">
+        <div id="merge_sample_diagnostics_container">
+          <input type="checkbox" id="merge_sample_diagnostics" checked on-change="updateDiagnostics_">
+          <label for="merge_sample_diagnostics">Merge Sample Diagnostics</label>
+        </div>
+        <tr-v-ui-diagnostic-map-table id="sample_diagnostics"></tr-v-ui-diagnostic-map-table>
+      </div>
+    </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  const DEFAULT_BAR_HEIGHT_PX = 5;
+  const TRUNCATE_BIN_MARGIN = 0.15;
+  const IGNORE_DELTA_STATISTICS_NAMES = [
+    `${tr.v.DELTA}min`,
+    `%${tr.v.DELTA}min`,
+    `${tr.v.DELTA}max`,
+    `%${tr.v.DELTA}max`,
+    `${tr.v.DELTA}sum`,
+    `%${tr.v.DELTA}sum`,
+    `${tr.v.DELTA}count`,
+    `%${tr.v.DELTA}count`,
+  ];
+
+  Polymer({
+    is: 'tr-v-ui-histogram-span',
+
+    created() {
+      this.viewStateListener_ = this.onViewStateUpdate_.bind(this);
+      this.viewState = new tr.v.ui.HistogramSetTableCellState();
+      this.rowStateListener_ = this.onRowStateUpdate_.bind(this);
+      this.rowState = new tr.v.ui.HistogramSetTableRowState();
+      this.rootStateListener_ = this.onRootStateUpdate_.bind(this);
+      this.rootState = new tr.v.ui.HistogramSetViewState();
+
+      this.histogram_ = undefined;
+      this.referenceHistogram_ = undefined;
+      this.graphWidth_ = undefined;
+      this.graphHeight_ = undefined;
+      this.mouseDownBin_ = undefined;
+      this.prevBrushedBinRange_ = new tr.b.math.Range();
+      this.anySampleDiagnostics_ = false;
+      this.canMergeSampleDiagnostics_ = true;
+      this.mwuResult_ = undefined;
+    },
+
+    get rowState() {
+      return this.rowState_;
+    },
+
+    set rowState(rs) {
+      if (this.rowState) {
+        this.rowState.removeUpdateListener(this.rowStateListener_);
+      }
+      this.rowState_ = rs;
+      this.rowState.addUpdateListener(this.rowStateListener_);
+      if (this.isAttached) this.updateContents_();
+    },
+
+    get viewState() {
+      return this.viewState_;
+    },
+
+    set viewState(vs) {
+      if (this.viewState) {
+        this.viewState.removeUpdateListener(this.viewStateListener_);
+      }
+      this.viewState_ = vs;
+      this.viewState.addUpdateListener(this.viewStateListener_);
+      if (this.isAttached) this.updateContents_();
+    },
+
+    get rootState() {
+      return this.rootState_;
+    },
+
+    set rootState(vs) {
+      if (this.rootState) {
+        this.rootState.removeUpdateListener(this.rootStateListener_);
+      }
+      this.rootState_ = vs;
+      this.rootState.addUpdateListener(this.rootStateListener_);
+      if (this.isAttached) this.updateContents_();
+    },
+
+    build(histogram, opt_referenceHistogram) {
+      this.histogram_ = histogram;
+      this.$.metric_diagnostics.histogram = histogram;
+      this.$.sample_diagnostics.histogram = histogram;
+      this.referenceHistogram_ = opt_referenceHistogram;
+
+      if (this.histogram.canCompare(this.referenceHistogram)) {
+        this.mwuResult_ = tr.b.math.Statistics.mwu(
+            this.histogram.sampleValues,
+            this.referenceHistogram.sampleValues,
+            this.rootState.alpha);
+      }
+
+      this.anySampleDiagnostics_ = false;
+      for (const bin of this.histogram.allBins) {
+        if (bin.diagnosticMaps.length > 0) {
+          this.anySampleDiagnostics_ = true;
+          break;
+        }
+      }
+
+      if (this.isAttached) this.updateContents_();
+    },
+
+    onViewStateUpdate_(event) {
+      if (event.delta.brushedBinRange) {
+        if (this.chart_ !== undefined) {
+          this.chart_.brushedRange = this.viewState.brushedBinRange;
+        }
+        this.updateDiagnostics_();
+      }
+
+      if (event.delta.mergeSampleDiagnostics &&
+          (this.viewState.mergeSampleDiagnostics !==
+           this.$.merge_sample_diagnostics.checked)) {
+        this.$.merge_sample_diagnostics.checked =
+          this.canMergeSampleDiagnostics &&
+          this.viewState.mergeSampleDiagnostics;
+        this.updateDiagnostics_();
+      }
+    },
+
+    updateSignificance_() {
+      if (!this.mwuResult_) return;
+      this.$.stats.setSignificanceForKey(
+          `${tr.v.DELTA}avg`, this.mwuResult_.significance);
+    },
+
+    onRootStateUpdate_(event) {
+      if (event.delta.alpha && this.mwuResult_) {
+        this.mwuResult_.compare(this.rootState.alpha);
+        this.updateSignificance_();
+      }
+    },
+
+    onRowStateUpdate_(event) {
+      if (event.delta.diagnosticsTab) {
+        if (this.rowState.diagnosticsTab ===
+            this.$.sample_diagnostics_container.tabLabel) {
+          this.updateDiagnostics_();
+        } else {
+          for (const tab of this.$.diagnostics.subViews) {
+            if (this.rowState.diagnosticsTab === tab.tabLabel) {
+              this.$.diagnostics.selectedSubView = tab;
+              break;
+            }
+          }
+        }
+      }
+    },
+
+    ready() {
+      this.$.metric_diagnostics.tabLabel = 'histogram diagnostics';
+      this.$.sample_diagnostics_container.tabLabel = 'sample diagnostics';
+      this.$.metadata_diagnostics.tabLabel = 'metadata';
+      this.$.metadata_diagnostics.isMetadata = true;
+      this.$.diagnostics.addEventListener(
+          'selected-tab-change', this.onSelectedDiagnosticsChanged_.bind(this));
+      this.$.drag_handle.target = this.$.container;
+      this.$.drag_handle.addEventListener(
+          'drag-handle-resize', this.onResize_.bind(this));
+    },
+
+    attached() {
+      if (this.histogram_ !== undefined) this.updateContents_();
+    },
+
+    get canMergeSampleDiagnostics() {
+      return this.canMergeSampleDiagnostics_;
+    },
+
+    set canMergeSampleDiagnostics(merge) {
+      this.canMergeSampleDiagnostics_ = merge;
+      if (!merge) this.viewState.mergeSampleDiagnostics = false;
+      this.$.merge_sample_diagnostics_container.style.display = (
+        merge ? '' : 'none');
+    },
+
+    onResize_(event) {
+      event.stopPropagation();
+      let heightPx = parseInt(this.$.container.style.height);
+      if (heightPx < this.defaultGraphHeight) {
+        heightPx = this.defaultGraphHeight;
+        this.$.container.style.height = this.defaultGraphHeight + 'px';
+      }
+      this.chart_.graphHeight = heightPx - (this.chart_.margin.top +
+          this.chart_.margin.bottom);
+      this.$.stats_container.style.maxHeight =
+        this.chart_.getBoundingClientRect().height + 'px';
+    },
+
+    /**
+    * Get the width in pixels of the widest bar in the bar chart, not the total
+    * bar chart svg tag, which includes margins containing axes and legend.
+    *
+    * @return {number}
+    */
+    get graphWidth() {
+      return this.graphWidth_ || this.defaultGraphWidth;
+    },
+
+    /**
+    * Set the width in pixels of the widest bar in the bar chart, not the total
+    * bar chart svg tag, which includes margins containing axes and legend.
+    *
+    * @param {number} width
+    */
+    set graphWidth(width) {
+      this.graphWidth_ = width;
+    },
+
+    /**
+    * Get the height in pixels of the bars in the bar chart, not the total
+    * bar chart svg tag, which includes margins containing axes and legend.
+    *
+    * @return {number}
+    */
+    get graphHeight() {
+      return this.graphHeight_ || this.defaultGraphHeight;
+    },
+
+    /**
+    * Set the height in pixels of the bars in the bar chart, not the total
+    * bar chart svg tag, which includes margins containing axes and legend.
+    *
+    * @param {number} height
+    */
+    set graphHeight(height) {
+      this.graphHeight_ = height;
+    },
+
+    /**
+    * Get the height in pixels of one bar in the bar chart.
+    *
+    * @return {number}
+    */
+    get barHeight() {
+      return this.chart_.barHeight;
+    },
+
+    /**
+    * Set the height in pixels of one bar in the bar chart.
+    *
+    * @param {number} px
+    */
+    set barHeight(px) {
+      this.graphHeight = this.computeChartHeight_(px);
+    },
+
+    computeChartHeight_(barHeightPx) {
+      return (this.chart_.margin.top +
+          this.chart_.margin.bottom +
+          (barHeightPx * this.histogram.allBins.length));
+    },
+
+    get defaultGraphHeight() {
+      if (this.histogram && this.histogram.allBins.length === 1) {
+        return 150;
+      }
+      return this.computeChartHeight_(DEFAULT_BAR_HEIGHT_PX);
+    },
+
+    get defaultGraphWidth() {
+      if (this.histogram.allBins.length === 1) {
+        return 100;
+      }
+      return 300;
+    },
+
+    get brushedBins() {
+      const bins = [];
+      if (this.histogram && !this.viewState.brushedBinRange.isEmpty) {
+        for (let i = this.viewState.brushedBinRange.min;
+          i < this.viewState.brushedBinRange.max; ++i) {
+          bins.push(this.histogram.allBins[i]);
+        }
+      }
+      return bins;
+    },
+
+    async updateBrushedRange_(binIndex) {
+      const brushedBinRange = new tr.b.math.Range();
+      brushedBinRange.addValue(tr.b.math.clamp(
+          this.mouseDownBinIndex_, 0, this.histogram.allBins.length - 1));
+      brushedBinRange.addValue(tr.b.math.clamp(
+          binIndex, 0, this.histogram.allBins.length - 1));
+      brushedBinRange.max += 1;
+      await this.viewState.update({brushedBinRange});
+    },
+
+    onMouseDown_(chartEvent) {
+      chartEvent.stopPropagation();
+      if (!this.histogram) return;
+      this.prevBrushedBinRange_ = this.viewState.brushedBinRange;
+      this.mouseDownBinIndex_ = chartEvent.y;
+      this.updateBrushedRange_(chartEvent.y);
+    },
+
+    onMouseMove_(chartEvent) {
+      chartEvent.stopPropagation();
+      if (!this.histogram) return;
+      this.updateBrushedRange_(chartEvent.y);
+    },
+
+    onMouseUp_(chartEvent) {
+      chartEvent.stopPropagation();
+      if (!this.histogram) return;
+      this.updateBrushedRange_(chartEvent.y);
+      if (this.prevBrushedBinRange_.range === 1 &&
+          this.viewState.brushedBinRange.range === 1 &&
+          (this.prevBrushedBinRange_.min ===
+           this.viewState.brushedBinRange.min)) {
+        tr.b.Timing.instant('histogram-span', 'clearBrushedBins');
+        this.viewState.update({brushedBinRange: new tr.b.math.Range()});
+      } else {
+        tr.b.Timing.instant('histogram-span', 'brushBins');
+      }
+      this.mouseDownBinIndex_ = undefined;
+    },
+
+    async onSelectedDiagnosticsChanged_() {
+      await this.rowState.update({
+        diagnosticsTab: this.$.diagnostics.selectedSubView.tabLabel,
+      });
+      if ((this.$.diagnostics.selectedSubView ===
+           this.$.sample_diagnostics_container) &&
+          this.histogram &&
+          this.viewState.brushedBinRange.isEmpty) {
+        // When the user selects the sample diagnostics tab, if they haven't
+        // already brushed any bins, then automatically brush all bins.
+        const brushedBinRange = tr.b.math.Range.fromExplicitRange(
+            0, this.histogram.allBins.length);
+        await this.viewState.update({brushedBinRange});
+        this.updateDiagnostics_();
+      }
+    },
+
+    updateDiagnostics_() {
+      let maps = [];
+      for (const bin of this.brushedBins) {
+        for (const map of bin.diagnosticMaps) {
+          maps.push(map);
+        }
+      }
+
+      if (this.$.merge_sample_diagnostics.checked !==
+          this.viewState.mergeSampleDiagnostics) {
+        this.viewState.update({
+          mergeSampleDiagnostics: this.$.merge_sample_diagnostics.checked});
+      }
+
+      if (this.viewState.mergeSampleDiagnostics) {
+        const merged = new tr.v.d.DiagnosticMap();
+        for (const map of maps) {
+          merged.addDiagnostics(map);
+        }
+        maps = [merged];
+      }
+
+      const mark = tr.b.Timing.mark('histogram-span',
+          (this.viewState.mergeSampleDiagnostics ? 'merge' : 'split') +
+           'SampleDiagnostics');
+      this.$.sample_diagnostics.diagnosticMaps = maps;
+      mark.end();
+
+      if (this.anySampleDiagnostics_) {
+        this.$.diagnostics.selectedSubView =
+          this.$.sample_diagnostics_container;
+      }
+    },
+
+    get histogram() {
+      return this.histogram_;
+    },
+
+    get referenceHistogram() {
+      return this.referenceHistogram_;
+    },
+
+    getDeltaScalars_(statNames, scalarMap) {
+      if (!this.histogram.canCompare(this.referenceHistogram)) return;
+
+      for (const deltaStatName of tr.v.Histogram.getDeltaStatisticsNames(
+          statNames)) {
+        if (IGNORE_DELTA_STATISTICS_NAMES.includes(deltaStatName)) continue;
+        const scalar = this.histogram.getStatisticScalar(
+            deltaStatName, this.referenceHistogram, this.mwuResult_);
+        if (scalar === undefined) continue;
+        scalarMap.set(deltaStatName, scalar);
+      }
+    },
+
+    set isYLogScale(logScale) {
+      this.chart_.isYLogScale = logScale;
+    },
+
+    async updateContents_() {
+      this.$.chart.style.display = 'none';
+      this.$.drag_handle.style.display = 'none';
+      this.$.container.style.justifyContent = '';
+
+      while (Polymer.dom(this.$.chart).lastChild) {
+        Polymer.dom(this.$.chart).removeChild(
+            Polymer.dom(this.$.chart).lastChild);
+      }
+
+      if (!this.histogram) return;
+      this.$.container.style.display = '';
+
+      const scalarMap = new Map();
+      this.getDeltaScalars_(this.histogram.statisticsNames, scalarMap);
+      for (const [name, scalar] of this.histogram.statisticsScalars) {
+        scalarMap.set(name, scalar);
+      }
+      this.$.stats.scalarMap = scalarMap;
+      this.updateSignificance_();
+
+      const metricDiagnosticMap = new tr.v.d.DiagnosticMap();
+      const metadataDiagnosticMap = new tr.v.d.DiagnosticMap();
+      for (const [key, diagnostic] of this.histogram.diagnostics) {
+        // Hide implementation details.
+        if (diagnostic instanceof tr.v.d.RelatedNameMap) continue;
+
+        if (tr.v.d.RESERVED_NAMES_SET.has(key)) {
+          metadataDiagnosticMap.set(key, diagnostic);
+        } else {
+          metricDiagnosticMap.set(key, diagnostic);
+        }
+      }
+
+      const diagnosticTabs = [];
+      if (metricDiagnosticMap.size) {
+        this.$.metric_diagnostics.diagnosticMaps = [metricDiagnosticMap];
+        diagnosticTabs.push(this.$.metric_diagnostics);
+      }
+      if (this.anySampleDiagnostics_) {
+        diagnosticTabs.push(this.$.sample_diagnostics_container);
+      }
+      if (metadataDiagnosticMap.size) {
+        this.$.metadata_diagnostics.diagnosticMaps = [metadataDiagnosticMap];
+        diagnosticTabs.push(this.$.metadata_diagnostics);
+      }
+      this.$.diagnostics.resetSubViews(diagnosticTabs);
+      this.$.diagnostics.set('tabsHidden', diagnosticTabs.length < 2);
+
+      if (this.histogram.numValues <= 1) {
+        await this.viewState.update({
+          brushedBinRange: tr.b.math.Range.fromExplicitRange(
+              0, this.histogram.allBins.length)});
+        this.$.container.style.justifyContent = 'flex-end';
+        return;
+      }
+
+      this.$.chart.style.display = 'block';
+      this.$.drag_handle.style.display = 'block';
+
+      if (this.histogram.allBins.length === 1) {
+        if (this.histogram.min !== this.histogram.max) {
+          this.chart_ = new tr.ui.b.BoxChart();
+          Polymer.dom(this.$.chart).appendChild(this.chart_);
+          this.chart_.graphWidth = this.graphWidth;
+          this.chart_.graphHeight = this.graphHeight;
+          this.chart_.hideXAxis = true;
+          this.chart_.data = [
+            {
+              x: '',
+              color: 'blue',
+              percentile_0: this.histogram.running.min,
+              percentile_25: this.histogram.getApproximatePercentile(0.25),
+              percentile_50: this.histogram.getApproximatePercentile(0.5),
+              percentile_75: this.histogram.getApproximatePercentile(0.75),
+              percentile_100: this.histogram.running.max,
+            }
+          ];
+        }
+        this.$.stats_container.style.maxHeight =
+          this.chart_.getBoundingClientRect().height + 'px';
+        await this.viewState.update({
+          brushedBinRange: tr.b.math.Range.fromExplicitRange(
+              0, this.histogram.allBins.length)});
+        return;
+      }
+
+      this.chart_ = new tr.ui.b.NameBarChart();
+      Polymer.dom(this.$.chart).appendChild(this.chart_);
+      this.chart_.graphWidth = this.graphWidth;
+      this.chart_.graphHeight = this.graphHeight;
+      this.chart_.addEventListener('item-mousedown',
+          this.onMouseDown_.bind(this));
+      this.chart_.addEventListener('item-mousemove',
+          this.onMouseMove_.bind(this));
+      this.chart_.addEventListener('item-mouseup',
+          this.onMouseUp_.bind(this));
+      this.chart_.hideLegend = true;
+      this.chart_.getDataSeries('y').color = 'blue';
+      this.chart_.xAxisLabel = '#';
+      this.chart_.brushedRange = this.viewState.brushedBinRange;
+      if (!this.viewState.brushedBinRange.isEmpty) {
+        this.updateDiagnostics_();
+      }
+
+      const chartData = [];
+      const binCounts = [];
+      for (const bin of this.histogram.allBins) {
+        let x = bin.range.min;
+        if (x === -Number.MAX_VALUE) {
+          x = '<' + new tr.b.Scalar(
+              this.histogram.unit, bin.range.max).toString();
+        } else {
+          x = new tr.b.Scalar(this.histogram.unit, x).toString();
+        }
+        chartData.push({x, y: bin.count});
+        binCounts.push(bin.count);
+      }
+
+      // If the largest 1 or 2 bins are more than twice as large as the next
+      // largest bin, then set the dataRange max to TRUNCATE_BIN_MARGIN% more
+      // than that next largest bin.
+      binCounts.sort((x, y) => y - x);
+      const dataRange = tr.b.math.Range.fromExplicitRange(0, binCounts[0]);
+      if (binCounts[1] > 0 && binCounts[0] > (binCounts[1] * 2)) {
+        dataRange.max = binCounts[1] * (1 + TRUNCATE_BIN_MARGIN);
+      }
+      if (binCounts[2] > 0 && binCounts[1] > (binCounts[2] * 2)) {
+        dataRange.max = binCounts[2] * (1 + TRUNCATE_BIN_MARGIN);
+      }
+      this.chart_.overrideDataRange = dataRange;
+
+      this.chart_.data = chartData;
+      this.$.stats_container.style.maxHeight =
+        this.chart_.getBoundingClientRect().height + 'px';
+    }
+  });
+});
+</script>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides color scheme related functions.
+ */
+tr.exportTo('tr.ui.b', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  const colors = ColorScheme.colors;
+  const colorsAsStrings = ColorScheme.colorsAsStrings;
+
+  const SelectionState = tr.model.SelectionState;
+
+  /**
+   * Provides methods to get view values for events.
+   */
+  const EventPresenter = {
+    getSelectableItemColorAsString(item) {
+      const offset = this.getColorIdOffset_(item);
+      const colorId = ColorScheme.getVariantColorId(item.colorId, offset);
+      return colorsAsStrings[colorId];
+    },
+
+    getColorIdOffset_(event) {
+      return event.selectionState;
+    },
+
+    getTextColor(event) {
+      if (event.selectionState === SelectionState.DIMMED) {
+        return 'rgb(60,60,60)';
+      }
+      return 'rgb(0,0,0)';
+    },
+
+    getSliceColorId(slice) {
+      const offset = this.getColorIdOffset_(slice);
+      return ColorScheme.getVariantColorId(slice.colorId, offset);
+    },
+
+    getSliceAlpha(slice, async) {
+      let alpha = 1;
+      if (async) {
+        alpha *= 0.3;
+      }
+      return alpha;
+    },
+
+    getInstantSliceColor(instant) {
+      const offset = this.getColorIdOffset_(instant);
+      const colorId = ColorScheme.getVariantColorId(instant.colorId, offset);
+      return colors[colorId].toStringWithAlphaOverride(1.0);
+    },
+
+    getObjectInstanceColor(instance) {
+      const offset = this.getColorIdOffset_(instance);
+      const colorId = ColorScheme.getVariantColorId(instance.colorId, offset);
+      return colors[colorId].toStringWithAlphaOverride(0.25);
+    },
+
+    getObjectSnapshotColor(snapshot) {
+      const offset = this.getColorIdOffset_(snapshot);
+      let colorId = snapshot.objectInstance.colorId;
+      colorId = ColorScheme.getVariantColorId(colorId, offset);
+      return colors[colorId];
+    },
+
+    getCounterSeriesColor(colorId, selectionState,
+        opt_alphaMultiplier) {
+      const event = {selectionState};
+      const offset = this.getColorIdOffset_(event);
+      const c = colors[ColorScheme.getVariantColorId(colorId, offset)];
+      return c.toStringWithAlphaOverride(
+          opt_alphaMultiplier !== undefined ? opt_alphaMultiplier : 1.0);
+    },
+
+    getBarSnapshotColor(snapshot, offset) {
+      const snapshotOffset = this.getColorIdOffset_(snapshot);
+      let colorId = snapshot.objectInstance.colorId;
+      colorId = ColorScheme.getAnotherColorId(colorId, offset);
+      colorId = ColorScheme.getVariantColorId(colorId, snapshotOffset);
+      return colors[colorId].toStringWithAlphaOverride(1.0);
+    }
+  };
+
+  return {
+    EventPresenter,
+  };
+});
+</script>

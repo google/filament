@@ -1,0 +1,123 @@
+Name
+
+    ANGLE_metal_texture_client_buffer
+
+Name Strings
+
+    EGL_ANGLE_metal_texture_client_buffer
+
+Contributors
+
+    Le Hoang Quyen
+    Dan Glastonbury
+
+Contacts
+
+    Jamie Madill, Google (jmadill 'at' google 'dot' com)
+    Le Hoang Quyen (lehoangq 'at' gmail.com)
+    Dan Glastonbury, Apple (djg 'at' apple 'dot' com)
+
+Status
+
+    Draft
+
+Version
+    Version 3, Feb 20, 2024
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+    References the EGL_ANGLE_iosurface_client_buffer extension.
+
+Overview
+
+    This extension allows creating EGL images from external metal texture objects.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted in the <target> parameter of eglCreateImageKHR:
+
+        EGL_METAL_TEXTURE_ANGLE               0x34A7
+
+    Accepted as an attribute in the <attrib_list> parameter of
+    eglCreateImageKHR:
+
+        EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE   0x34DD
+
+Additions to Chapter 2 of the EGL 1.2 Specification (EGL Operation)
+
+    Add to section 2.5.1 "EGLImage Specification" (as defined by the
+    EGL_KHR_image_base specification), in the description of
+    eglCreateImageKHR:
+
+   "Values accepted for <target> are listed in Table aaa, below.
+
+      +--------------------------------------+-----------------------------------------+
+      |  <target>                            |  Notes                                  |
+      +--------------------------------------+-----------------------------------------+
+      |  EGL_METAL_TEXTURE_ANGLE             |  Used for Metal texture objects         |
+      +--------------------------------------+-----------------------------------------+
+       Table aaa.  Legal values for eglCreateImageKHR <target> parameter
+
+    ...
+
+    Attribute names accepted in <attrib_list> are shown in Table bbb,
+    together with the <target> for which each attribute name is valid, and
+    the default value used for each attribute if it is not included in
+    <attrib_list>.
+
+      +-------------------------------------+-------------------------+-------------------------+---------------+
+      | Attribute                           | Description             | Valid                   | Default Value |
+      |                                     |                         | <target>s               |               |
+      +-------------------------------------+-------------------------+-------------------------+---------------+
+      | EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE | Select which 2d texture | EGL_METAL_TEXTURE_ANGLE | 0             |
+      |                                     | array slice to use      |                         |               |
+      +-------------------------------------+-------------------------+-------------------------+---------------+
+      | EGL_TEXTURE_INTERNAL_FORMAT_ANGLE   | Override the intended   | EGL_METAL_TEXTURE_ANGLE | GL_NONE       |
+      |                                     | internal format         |                         |               |
+      +-------------------------------------+-------------------------+-------------------------+---------------+
+       Table bbb.  Legal attributes for eglCreateImageKHR <attrib_list> parameter
+
+    If <target> is EGL_METAL_TEXTURE_ANGLE, <dpy> must be a valid display, <ctx>
+    must be EGL_NO_CONTEXT, <buffer> must be a pointer to a valid MTLTexture
+    object (cast into the type EGLClientBuffer), and attributes are ignored.
+    The width and height of the pbuffer are determined by the width and height
+    of <buffer>."
+
+    If EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE is specified, it is used to access
+    the specified array slice of the texture array <buffer>. In case the <target>
+    MTLTexture textureType property is MTLTextureType2DArray and arrayLength
+    property is smaller or equal to the value, EGL_BAD_ATTRIBUTE error
+    is generated. In case the target MTLTexture textureType property is not
+    MTLTextureType2DArray, value other than 0 generates EGL_BAD_ATTRIBUTE.
+
+    If EGL_TEXTURE_INTERNAL_FORMAT_ANGLE is specified, it is used to interpret
+    <buffer> according to the provided internal format. If the MTLPixelFormat for
+    the internal format is incompatible with that of the texture <buffer>, an
+    EGL_BAD_PARAMETER error is generated.
+
+    If the EGL_ANGLE_device_metal extension is present, the provided Metal texture
+    object must have been created by the same Metal device queried from the
+    display. If these requirements are not met, an EGL_BAD_PARAMETER error is
+    generated."
+
+Revision History
+
+    Version 1, 2020-07-19 - First draft
+    Version 2, 2024-02-12 - Add EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE
+    Version 3, 2024-02-20 - Add EGL_TEXTURE_INTERNAL_FORMAT_ANGLE
+

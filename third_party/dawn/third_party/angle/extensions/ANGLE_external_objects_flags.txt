@@ -1,0 +1,333 @@
+Name
+
+    ANGLE_external_objects_flags
+
+Name Strings
+
+    GL_ANGLE_memory_object_flags
+
+Contributors
+
+    Shahbaz Youssefi, Google
+
+Contact
+
+    Shahbaz Youssefi, Google (syoussefi 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: Nov 10, 2021
+    Revision: 2
+
+Number
+
+    TBD
+
+Dependencies
+
+    Written against the OpenGL 4.5 and OpenGL ES 3.2 specifications
+
+    GL_ANGLE_memory_object_flags requires GL_EXT_memory_object.
+
+Overview
+
+    Building upon the OpenGL memory object framework defined in
+    EXT_external_objects, this extension introduces new Texture entry points
+    for specifying create and usage flags parameters.  These parameters match
+    an external Texture's corresponding Vulkan create and usage flags.  This
+    allows applications to drop usage flags that are detrimental to
+    performance, or add create flags as necessary.
+
+    Additionally, these entry points take the pointer to the chain of extension
+    structures appended to VkImageCreateInfo, so that the OpenGL implementation
+    can recreate the image identically.
+
+New Procedures and Functions
+
+    The following commands are added:
+
+        void TexStorageMemFlags2DANGLE(enum target,
+                                       sizei levels,
+                                       enum internalFormat,
+                                       sizei width,
+                                       sizei height,
+                                       uint memory,
+                                       uint64 offset,
+                                       bitfield createFlags,
+                                       bitfield usageFlags,
+                                       const void *imageCreateInfoPNext);
+
+        void TexStorageMemFlags2DMultisampleANGLE(enum target,
+                                                  sizei samples,
+                                                  enum internalFormat,
+                                                  sizei width,
+                                                  sizei height,
+                                                  boolean fixedSampleLocations,
+                                                  uint memory,
+                                                  uint64 offset,
+                                                  bitfield createFlags,
+                                                  bitfield usageFlags,
+                                                  const void *imageCreateInfoPNext);
+
+        void TexStorageMemFlags3DANGLE(enum target,
+                                       sizei levels,
+                                       enum internalFormat,
+                                       sizei width,
+                                       sizei height,
+                                       sizei depth,
+                                       uint memory,
+                                       uint64 offset,
+                                       bitfield createFlags,
+                                       bitfield usageFlags,
+                                       const void *imageCreateInfoPNext);
+
+        void TexStorageMemFlags3DMultisampleANGLE(enum target,
+                                                  sizei samples,
+                                                  enum internalFormat,
+                                                  sizei width,
+                                                  sizei height,
+                                                  sizei depth,
+                                                  boolean fixedSampleLocations,
+                                                  uint memory,
+                                                  uint64 offset,
+                                                  bitfield createFlags,
+                                                  bitfield usageFlags,
+                                                  const void *imageCreateInfoPNext);
+
+        [[ The following are added if direct state access is supported ]]
+
+        void TextureStorageMemFlags2DANGLE(uint texture,
+                                           sizei levels,
+                                           enum internalFormat,
+                                           sizei width,
+                                           sizei height,
+                                           uint memory,
+                                           uint64 offset,
+                                           bitfield createFlags,
+                                           bitfield usageFlags,
+                                           const void *imageCreateInfoPNext);
+
+        void TextureStorageMemFlags2DMultisampleANGLE(uint texture,
+                                                      sizei samples,
+                                                      enum internalFormat,
+                                                      sizei width,
+                                                      sizei height,
+                                                      boolean fixedSampleLocations,
+                                                      uint memory,
+                                                      uint64 offset,
+                                                      bitfield createFlags,
+                                                      bitfield usageFlags,
+                                                      const void *imageCreateInfoPNext);
+
+        void TextureStorageMemFlags3DANGLE(uint texture,
+                                           sizei levels,
+                                           enum internalFormat,
+                                           sizei width,
+                                           sizei height,
+                                           sizei depth,
+                                           uint memory,
+                                           uint64 offset,
+                                           bitfield createFlags,
+                                           bitfield usageFlags,
+                                           const void *imageCreateInfoPNext);
+
+        void TextureStorageMemFlags3DMultisampleANGLE(uint texture,
+                                                      sizei samples,
+                                                      enum internalFormat,
+                                                      sizei width,
+                                                      sizei height,
+                                                      sizei depth,
+                                                      boolean fixedSampleLocations,
+                                                      uint memory,
+                                                      uint64 offset,
+                                                      bitfield createFlags,
+                                                      bitfield usageFlags,
+                                                      const void *imageCreateInfoPNext);
+
+        [[ The following are available in OpenGL only ]]
+
+        void TexStorageMemFlags1DANGLE(enum target,
+                                       sizei levels,
+                                       enum internalFormat,
+                                       sizei width,
+                                       uint memory,
+                                       uint64 offset,
+                                       bitfield createFlags,
+                                       bitfield usageFlags,
+                                       const void *imageCreateInfoPNext);
+
+        [[ The following are availble in OpenGL only, and only when
+           direct state access is available ]]
+
+        void TextureStorageMemFlags1DANGLE(uint texture,
+                                           sizei levels,
+                                           enum internalFormat,
+                                           sizei width,
+                                           uint memory,
+                                           uint64 offset,
+                                           bitfield createFlags,
+                                           bitfield usageFlags,
+                                           const void *imageCreateInfoPNext);
+
+New Tokens
+
+    The following tokens are added:
+
+    Accepted by the <createFlags> parameter of TexStorageMemFlags*ANGLE() and
+    TextureStorageMemFlags*ANGLE().
+
+        CREATE_SPARSE_BINDING_BIT_ANGLE                    0x00000001
+        CREATE_SPARSE_RESIDENCY_BIT_ANGLE                  0x00000002
+        CREATE_SPARSE_ALIASED_BIT_ANGLE                    0x00000004
+        CREATE_MUTABLE_FORMAT_BIT_ANGLE                    0x00000008
+        CREATE_CUBE_COMPATIBLE_BIT_ANGLE                   0x00000010
+        CREATE_ALIAS_BIT_ANGLE                             0x00000400
+        CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_ANGLE       0x00000040
+        CREATE_2D_ARRAY_COMPATIBLE_BIT_ANGLE               0x00000020
+        CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_ANGLE       0x00000080
+        CREATE_EXTENDED_USAGE_BIT_ANGLE                    0x00000100
+        CREATE_PROTECTED_BIT_ANGLE                         0x00000800
+        CREATE_DISJOINT_BIT_ANGLE                          0x00000200
+        CREATE_CORNER_SAMPLED_BIT_ANGLE                    0x00002000
+        CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_ANGLE 0x00001000
+        CREATE_SUBSAMPLED_BIT_ANGLE                        0x00004000
+
+    Accepted by the <usageFlags> parameter of TexStorageMemFlags*ANGLE() and
+    TextureStorageMemFlags*ANGLE().
+
+        USAGE_TRANSFER_SRC_BIT_ANGLE                       0x00000001
+        USAGE_TRANSFER_DST_BIT_ANGLE                       0x00000002
+        USAGE_SAMPLED_BIT_ANGLE                            0x00000004
+        USAGE_STORAGE_BIT_ANGLE                            0x00000008
+        USAGE_COLOR_ATTACHMENT_BIT_ANGLE                   0x00000010
+        USAGE_DEPTH_STENCIL_ATTACHMENT_BIT_ANGLE           0x00000020
+        USAGE_TRANSIENT_ATTACHMENT_BIT_ANGLE               0x00000040
+        USAGE_INPUT_ATTACHMENT_BIT_ANGLE                   0x00000080
+        USAGE_SHADING_RATE_IMAGE_BIT_ANGLE                 0x00000100
+        USAGE_FRAGMENT_DENSITY_MAP_BIT_ANGLE               0x00000200
+
+Additions to Chapter 8 of the OpenGL 4.5 Specification (Textures and
+Samplers)
+
+    For each list of TexStorage* commands in the 1D, 2D, 3D,
+    2DMultisample, and 3DMultisample families, add the following
+    variants:
+
+        void TexStorageMemFlags*ANGLE(<existing parameters>,
+                                      uint memory,
+                                      uint64 offset,
+                                      bitfield createFlags,
+                                      bitfield usageFlags,
+                                      const void *imageCreateInfoPNext);
+
+        void TextureStorageMemFlags*ANGLE(<existing parameters>,
+                                          uint memory,
+                                          uint64 offset,
+                                          bitfield createFlags,
+                                          bitfield usageFlags,
+                                          const void *imageCreateInfoPNext);
+
+    For each of the TexStorageMemFlags*ANGLE commands, move the description from
+    the corresponding TexStorageMem*EXT from EXT_external_objects under that
+    command and add the following language:
+
+        "The implementation should apply the same semantics to the internal
+        storage of the texture based on <createFlags>, <usageFlags> and
+        <imageCreateInfoPNext> as the corresonding VkImageCreateFlags,
+        VkImageUsageFlags and chained structs to VkImageCreateInfo would have
+        on a Vulkan image respectively.  See tables 8.17 and 8.18 for the
+        mapping between the GL and Vulkan flags.  It is undefined behavior if
+        the application provides create flags, usage flags or chained structs
+        that are not identical to those used to create the Vulkan image."
+
+        Table 8.17: Create flags and corresponding Vulkan Image Create Flags
+
+        | Create Flag                                        | Equivalent Vulkan Create Flag                             |
+        +----------------------------------------------------+-----------------------------------------------------------+
+        | CREATE_SPARSE_BINDING_BIT_ANGLE                    | VK_IMAGE_CREATE_SPARSE_BINDING_BIT                        |
+        | CREATE_SPARSE_RESIDENCY_BIT_ANGLE                  | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT                      |
+        | CREATE_SPARSE_ALIASED_BIT_ANGLE                    | VK_IMAGE_CREATE_SPARSE_ALIASED_BIT                        |
+        | CREATE_MUTABLE_FORMAT_BIT_ANGLE                    | VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                        |
+        | CREATE_CUBE_COMPATIBLE_BIT_ANGLE                   | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                       |
+        | CREATE_ALIAS_BIT_ANGLE                             | VK_IMAGE_CREATE_ALIAS_BIT                                 |
+        | CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_ANGLE       | VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT           |
+        | CREATE_2D_ARRAY_COMPATIBLE_BIT_ANGLE               | VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT                   |
+        | CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_ANGLE       | VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT           |
+        | CREATE_EXTENDED_USAGE_BIT_ANGLE                    | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT                        |
+        | CREATE_PROTECTED_BIT_ANGLE                         | VK_IMAGE_CREATE_PROTECTED_BIT                             |
+        | CREATE_DISJOINT_BIT_ANGLE                          | VK_IMAGE_CREATE_DISJOINT_BIT                              |
+        | CREATE_CORNER_SAMPLED_BIT_ANGLE                    | VK_IMAGE_CREATE_CORNER_SAMPLED_BIT_NV                     |
+        | CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_ANGLE | VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT |
+        | CREATE_SUBSAMPLED_BIT_ANGLE                        | VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT                        |
+        +----------------------------------------------------------------------------------------------------------------+
+
+        Table 8.18: Usage flags and corresponding Vulkan Image Usage Flags
+
+        | Usage Flag                               | Equivalent Vulkan Usage Flag                |
+        +------------------------------------------+---------------------------------------------+
+        | USAGE_TRANSFER_SRC_BIT_ANGLE             | VK_IMAGE_USAGE_TRANSFER_SRC_BIT             |
+        | USAGE_TRANSFER_DST_BIT_ANGLE             | VK_IMAGE_USAGE_TRANSFER_DST_BIT             |
+        | USAGE_SAMPLED_BIT_ANGLE                  | VK_IMAGE_USAGE_SAMPLED_BIT                  |
+        | USAGE_STORAGE_BIT_ANGLE                  | VK_IMAGE_USAGE_STORAGE_BIT                  |
+        | USAGE_COLOR_ATTACHMENT_BIT_ANGLE         | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT         |
+        | USAGE_DEPTH_STENCIL_ATTACHMENT_BIT_ANGLE | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+        | USAGE_TRANSIENT_ATTACHMENT_BIT_ANGLE     | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT     |
+        | USAGE_INPUT_ATTACHMENT_BIT_ANGLE         | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT         |
+        | USAGE_SHADING_RATE_IMAGE_BIT_ANGLE       | VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV    |
+        | USAGE_FRAGMENT_DENSITY_MAP_BIT_ANGLE     | VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT |
+        +----------------------------------------------------------------------------------------+
+
+    Add the following errors for each of the TexStorageMemFlags*ANGLE commands:
+
+        "An INVALID_VALUE error is generated if <createFlags> has a bit set
+        other than those specified in table 8.17."
+
+        "An INVALID_VALUE error is generated if <usageFlags> has a bit set
+        other than those specified in table 8.18."
+
+    For each of the TexStorageMem*EXT commands, change the description of
+    TexStorageMem*EXT and TextureStorageMem*EXT as such:
+
+        "Calling TexStorageMem*EXT is equivalent to calling
+        TexStorageMemFlags*ANGLE with 0 as <createFlags>, all
+        Vulkan-supported usage flags as <usageFlags>, even if there are no
+        corresponding GL flags specified in this extension, and NULL as
+        <imageCreateInfoPNext>."
+
+Issues
+
+    1)  Can the GL and Vulkan create and usage flag values diverge?
+
+        RESOLVED: No.  It is expected for the application to provide the flags
+        used to create the Vulkan image verbatim.
+
+    2)  What if Vulkan adds new create and usage flags?
+
+        RESOLVED: If the implementation is too old to be aware of those flags,
+        the functions from GL_EXT_memory_object must be used instead.  New flags
+        can be added through new extensions that build on this extension.
+
+    3)  Should the GL implementation apply the same validation as Vulkan based
+        on the create and usage flags?
+
+        RESOLVED: No.  The application has already created an image with these
+        flags in Vulkan, so the GL implementation can assume they are valid.
+        Validating this is expensive and unnecessary in almost all applications.
+
+    4)  How can extension structs applied to VkImageCreateInfo be communicated
+        to the GL implementation?
+
+        RESOLVED: The chain of structs itself is directly passed to the
+        implementation.
+
+Revision History
+
+    Revision 2, 2021-11-10 (Shahbaz Youssefi)
+        - Added the imageCreateInfoPNext parameter.
+
+    Revision 1, 2020-08-03 (Shahbaz Youssefi)
+        - Initial draft based on EXT_external_objects.

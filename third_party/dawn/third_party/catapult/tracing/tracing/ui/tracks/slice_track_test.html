@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/slice.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+<link rel="import" href="/tracing/ui/tracks/slice_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SliceTrack = tr.ui.tracks.SliceTrack;
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  test('modelMapping', function() {
+    const track = new SliceTrack(new tr.ui.TimelineViewport());
+    const slice = new ThreadSlice('', 'a', 0, 1, {}, 1);
+    track.slices = [slice];
+    const me0 = track.rects[0].modelItem;
+    assert.strictEqual(slice, me0);
+  });
+});
+</script>
+

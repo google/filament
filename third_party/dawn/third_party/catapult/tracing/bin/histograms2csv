@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import sys
+import os
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+import tracing_project
+tracing_project.UpdateSysPathIfNeeded()
+
+from tracing.value import histograms_to_csv
+
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Convert HistogramSet JSON to CSV.',
+      add_help=False)
+  parser.add_argument('json_path',
+                      help='HistogramSet JSON file path (input).')
+  parser.add_argument('csv_path',
+                      help='CSV file path (output).')
+  parser.add_argument('-h', '--help', action='help',
+                      help='Show this help message and exit.')
+  args = parser.parse_args()
+  result = histograms_to_csv.HistogramsToCsv(args.json_path)
+  if result.returncode != 0:
+    sys.stderr.write(result.stdout)
+  else:
+    open(args.csv_path, 'w').write(result.stdout.decode('utf-8'))
+  return result.returncode
+
+if __name__ == '__main__':
+  sys.exit(main())

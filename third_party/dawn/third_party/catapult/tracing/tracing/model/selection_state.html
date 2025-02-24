@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/color_scheme.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the SelectionState class.
+ */
+tr.exportTo('tr.model', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  /**
+   * Describes the level of visual highlighting to apply to an event when shown.
+   *
+   * color_scheme.html defines N variations off of a base color palette,
+   * one for each selection state, all concatenated into one flat array. To
+   * pick the final colorId for a given variations, the SelectionState is
+   * multiplied by the number of base colors.
+   *
+   * Thus, the values here must be kept in sync with color_scheme's palette
+   * layout.
+   */
+  const SelectionState = {
+    NONE: 0,
+
+    // Legacy names.
+    SELECTED: ColorScheme.properties.brightenedOffsets[0],
+    HIGHLIGHTED: ColorScheme.properties.brightenedOffsets[1],
+    DIMMED: ColorScheme.properties.dimmedOffsets[0],
+
+    // Modern names.
+    BRIGHTENED0: ColorScheme.properties.brightenedOffsets[0],
+    BRIGHTENED1: ColorScheme.properties.brightenedOffsets[1],
+    BRIGHTENED2: ColorScheme.properties.brightenedOffsets[2],
+
+    DIMMED0: ColorScheme.properties.dimmedOffsets[0],
+    DIMMED1: ColorScheme.properties.dimmedOffsets[1],
+    DIMMED2: ColorScheme.properties.dimmedOffsets[2]
+  };
+
+  const brighteningLevels = [
+    SelectionState.NONE,
+    SelectionState.BRIGHTENED0,
+    SelectionState.BRIGHTENED1,
+    SelectionState.BRIGHTENED2
+  ];
+  SelectionState.getFromBrighteningLevel = function(level) {
+    return brighteningLevels[level];
+  };
+
+  const dimmingLevels = [
+    SelectionState.DIMMED0,
+    SelectionState.DIMMED1,
+    SelectionState.DIMMED2
+  ];
+  SelectionState.getFromDimmingLevel = function(level) {
+    return dimmingLevels[level];
+  };
+
+  return {
+    SelectionState,
+  };
+});
+</script>

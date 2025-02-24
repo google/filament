@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_overview_pane.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/analysis/stacked_pane.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<dom-module id='tr-ui-a-memory-dump-header-pane'>
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+
+        background-color: #d0d0d0;
+        border-bottom: 1px solid #8e8e8e;
+        border-top: 1px solid white;
+      }
+
+      #label {
+        flex: 1 1 auto;
+        padding: 6px;
+        font-size: 15px;
+      }
+
+      #aggregation_mode_container {
+        display: none;
+        flex: 0 0 auto;
+        padding: 5px;
+        font-size: 15px;
+      }
+    </style>
+    </tr-ui-b-view-specific-brushing-state>
+    <div id="label"></div>
+    <div id="aggregation_mode_container">
+      <span>Metric aggregation:</span>
+      <!-- Aggregation mode selector (added in Polymer.ready()) -->
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  Polymer({
+    is: 'tr-ui-a-memory-dump-header-pane',
+    behaviors: [tr.ui.analysis.StackedPane],
+
+    created() {
+      this.containerMemoryDumps_ = undefined;
+    },
+
+    ready() {
+      Polymer.dom(this.$.aggregation_mode_container).appendChild(
+          tr.ui.b.createSelector(this, 'aggregationMode',
+              'memoryDumpHeaderPane.aggregationMode',
+              tr.ui.analysis.MemoryColumn.AggregationMode.DIFF, [
+                {
+                  label: 'Diff',
+                  value: tr.ui.analysis.MemoryColumn.AggregationMode.DIFF
+                },
+                {
+                  label: 'Max',
+                  value: tr.ui.analysis.MemoryColumn.AggregationMode.MAX
+                }
+              ]));
+    },
+
+    /**
+     * Sets the container memory dumps and schedules rebuilding the pane.
+     *
+     * The provided value should be a chronologically sorted list of
+     * ContainerMemoryDump objects. All of the dumps must be associated with
+     * the same container (i.e. containerMemoryDumps must be either a list of
+     * ProcessMemoryDump(s) belonging to the same process, or a list of
+     * GlobalMemoryDump(s)). Example:
+     *
+     *   [
+     *     tr.model.ProcessMemoryDump {},  // PMD at timestamp 1.
+     *     tr.model.ProcessMemoryDump {},  // PMD at timestamp 2.
+     *     tr.model.ProcessMemoryDump {}   // PMD at timestamp 3.
+     *   ]
+     */
+    set containerMemoryDumps(containerMemoryDumps) {
+      this.containerMemoryDumps_ = containerMemoryDumps;
+      this.scheduleRebuild_();
+    },
+
+    get containerMemoryDumps() {
+      return this.containerMemoryDumps_;
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      this.scheduleRebuild_();
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    onRebuild_() {
+      this.updateLabel_();
+      this.updateAggregationModeSelector_();
+      this.changeChildPane_();
+    },
+
+    updateLabel_() {
+      Polymer.dom(this.$.label).textContent = '';
+
+      if (this.containerMemoryDumps_ === undefined ||
+          this.containerMemoryDumps_.length <= 0) {
+        Polymer.dom(this.$.label).textContent = 'No memory dumps selected';
+        return;
+      }
+
+      const containerDumpCount = this.containerMemoryDumps_.length;
+      const isMultiSelection = containerDumpCount > 1;
+
+      Polymer.dom(this.$.label).appendChild(document.createTextNode(
+          'Selected ' + containerDumpCount + ' memory dump' +
+          (isMultiSelection ? 's' : '') +
+          ' in ' + this.containerMemoryDumps_[0].containerName + ' at '));
+      // TODO(petrcermak): Use <tr-v-ui-scalar-span> once it can be displayed
+      // inline. See https://github.com/catapult-project/catapult/issues/1371.
+      Polymer.dom(this.$.label).appendChild(document.createTextNode(
+          tr.b.Unit.byName.timeStampInMs.format(
+              this.containerMemoryDumps_[0].start)));
+      if (isMultiSelection) {
+        const ELLIPSIS = String.fromCharCode(8230);
+        Polymer.dom(this.$.label).appendChild(
+            document.createTextNode(ELLIPSIS));
+        Polymer.dom(this.$.label).appendChild(document.createTextNode(
+            tr.b.Unit.byName.timeStampInMs.format(
+                this.containerMemoryDumps_[containerDumpCount - 1].start)));
+      }
+    },
+
+    updateAggregationModeSelector_() {
+      let displayStyle;
+      if (this.containerMemoryDumps_ === undefined ||
+          this.containerMemoryDumps_.length <= 1) {
+        displayStyle = 'none';
+      } else {
+        displayStyle = 'initial';
+      }
+      this.$.aggregation_mode_container.style.display = displayStyle;
+    },
+
+    changeChildPane_() {
+      this.childPaneBuilder = function() {
+        if (this.containerMemoryDumps_ === undefined ||
+            this.containerMemoryDumps_.length <= 0) {
+          return undefined;
+        }
+
+        const overviewPane = document.createElement(
+            'tr-ui-a-memory-dump-overview-pane');
+        overviewPane.processMemoryDumps = this.containerMemoryDumps_.map(
+            function(containerDump) {
+              return containerDump.processMemoryDumps;
+            });
+        overviewPane.aggregationMode = this.aggregationMode;
+        return overviewPane;
+      }.bind(this);
+    }
+  });
+
+  return {};
+});
+</script>

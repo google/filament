@@ -1,0 +1,25 @@
+boto v2.29.0
+============
+
+:date: 2014/05/29
+
+This release adds support for the AWS shared credentials file, adds support for Amazon Elastic Block Store (EBS) encryption, and contains a handful of fixes for Amazon EC2, AWS CloudFormation, AWS CloudWatch, AWS CloudTrail, Amazon DynamoDB and Amazon Relational Database Service (RDS). It also includes fixes for Python wheel support.
+
+A bug has been fixed such that a new exception is thrown when a profile name is explicitly passed either via code (``profile="foo"``) or an environment variable (``AWS_PROFILE=foo``) and that profile does not exist in any configuration file. Previously this was silently ignored, and the default credentials would be used without informing the user.
+
+Changes
+-------
+* Added support for shared credentials file. (:issue:`2292`, :sha:`d5ed49f`)
+* Added support for EBS encryption. (:issue:`2282`, :sha:`d85a449`)
+* Added GovCloud CloudFormation endpoint. (:issue:`2297`, :sha:`0f75fb9`)
+* Added new CloudTrail endpoints to endpoints.json. (:issue:`2269`, :sha:`1168580`)
+* Added 'name' param to documentation of ELB LoadBalancer. (:issue:`2291`, :sha:`86e1174`)
+* Fix typo in ELB docs. (:issue:`2294`, :sha:`37aaa0f`)
+* Fix typo in ELB tutorial. (:issue:`2290`, :sha:`40a758a`)
+* Fix OpsWorks ``connect_to_region`` exception. (:issue:`2288`, :sha:`26729c7`)
+* Fix timezones in CloudWatch date range example. (:issue:`2285`, :sha:`138a6d0`)
+* Fix description of param tags into ``rds2.create_db_subnet_group``. (:issue:`2279`, :sha:`dc1037f`)
+* Fix the incorrect name of a test case. (:issue:`2273`, :sha:`ee195a1`)
+* Fix "consistent" argument to ``boto.dynamodb2.table.Table.batch_get``. (:issue:`2272`, :sha:`c432b09`)
+* Update the wheel to be python 2 compatible only. (:issue:`2286`, :sha:`6ad0b75`)
+* Crate.io is no longer a package index. (:issue:`2289`, :sha:`7f23de0`)

@@ -1,0 +1,4 @@
+<map id="pvr::ImageSubresource" name="pvr::ImageSubresource">
+<area shape="rect" id="node2" href="$structpvr_1_1_image_subresource_layers.html" title="Represents a specific subresource layer: A specified Array Layer and Mipmap level of specific aspect ..." alt="" coords="5,80,220,107"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_image_subresource_range.html" title="Represents a subresource range: A specified range of Array Layers and Mipmap levels of specific aspec..." alt="" coords="245,80,458,107"/>
+</map>

@@ -1,0 +1,11 @@
+Name: pyasn1
+URL: https://github.com/etingof/pyasn1
+Version: 0.4.5
+License: BSD-2
+License File: LICENSE
+Shipped: yes
+
+Description:
+The Universal Character Encoding Detector.
+
+This was installed as a dependency of requests via pip.

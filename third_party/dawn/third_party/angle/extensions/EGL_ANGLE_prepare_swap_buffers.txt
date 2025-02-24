@@ -1,0 +1,86 @@
+Name
+
+    ANGLE_prepare_swap_buffers
+
+Name Strings
+
+    EGL_ANGLE_prepare_swap_buffers
+
+Contributors
+
+    Jamie Madill
+    Shahbaz Youssefi
+    Lingfeng Yang
+
+Contacts
+
+    Jamie Madill, Google Inc. (jmadill 'at' google.com)
+    Shahbaz Youssefi, Google Inc. (syoussefi 'at' google.com)
+    Lingfeng Yang, Google Inc. (lfy 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, January 10, 2022
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    The EGL implementation often relies on a swapchain to present backbuffer
+    rendering results. Images are dequeued from the swapchain, then written in
+    the course of rendering, and then queued back to the swapchain for
+    presentation.  It can be advantageous to provide a hint API that performs
+    the dequeue operation and other operations necessary to prepare the
+    swapchain image for rendering, without also queueing it for present,
+    especially if there is going to be a long or variable wait associated with
+    the dequeue.  This extension provides that api, eglPrepareSwapBuffers.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    EGLBoolean eglPrepareSwapBuffersANGLE(
+        EGLDisplay dpy,
+        EGLSurface surface);
+
+New Tokens
+
+    None
+
+Additions to the EGL 1.5 Specification
+
+    Add the following to section 3.10.1 "Posting to a Window":
+
+    An application can encourage the EGL implementation to dequeue and
+    otherwise prepare a swapchain image earlier before presenting via calling
+
+        EGLBoolean eglPrepareSwapBuffersANGLE(
+            EGLDisplay dpy,
+            EGLSurface surface);
+
+    The behaviour of eglPrepareSwapBuffers can be a no-op. It is not necessary
+    to call eglSwapBuffers after calling. Conversely, it's also not necessary
+    to call eglPrepareSwapBuffersANGLE for eglSwapBuffers to work.
+
+Issues
+
+    None yet.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Jan 10, 2022   lfy        Initial version

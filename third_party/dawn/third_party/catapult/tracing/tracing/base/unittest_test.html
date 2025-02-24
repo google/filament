@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/unittest.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('promise', function() {
+    return new Promise(function(resolve, reject) {
+      resolve();
+    });
+  });
+
+  test('async', function() {
+    return new Promise(function(resolve) {
+      tr.b.requestAnimationFrame(function() {
+        resolve();
+      });
+    });
+  });
+
+  test('assert_equal_is_forbidden', function() {
+    assert.throws(() => assert.equal(0, '0'));
+  });
+
+  /* To test failures remove comments
+  test('fail', function() {
+    assert.strictEqual(true, false);
+  });
+
+  test('rejected-promise', function() {
+    return new Promise(function(resolve, reject){
+      reject("Failure by rejection");
+    });
+  });
+
+   test('promise-that-throws-after-resolver', function() {
+    return new Promise(function(resolve, rejet){
+      throw new Error('blah');
+    });
+  });
+
+  */
+});
+</script>

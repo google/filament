@@ -1,0 +1,14 @@
+boto v2.35.1
+============
+
+:date: 2015/01/09
+
+This release fixes a regression which results in an infinite while loop of
+requests if you query an empty Amazon DynamoDB table.
+
+
+Changes
+-------
+* Check for results left after computing self._keys_left (:issue:`2871`, :sha:`d3c2595`)
+
+

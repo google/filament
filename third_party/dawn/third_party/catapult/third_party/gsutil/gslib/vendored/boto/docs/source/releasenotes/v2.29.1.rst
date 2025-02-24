@@ -1,0 +1,11 @@
+boto v2.29.1
+============
+
+:date: 2014/05/30
+
+This release fixes a critical bug when the provider is not set to ``aws``, e.g. for Google Storage. It also fixes a problem with connection pooling in Amazon CloudSearch.
+
+Changes
+-------
+* Fix crash when provider is google. (:issue:`2302`, :sha:`33329d5888`)
+* Fix connection pooling issue with CloudSearch (:sha:`82e83be12a`)

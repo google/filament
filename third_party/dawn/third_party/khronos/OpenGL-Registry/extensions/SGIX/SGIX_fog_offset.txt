@@ -1,0 +1,142 @@
+Name
+
+    SGIX_fog_offset
+
+Name Strings
+
+    GL_SGIX_fog_offset
+
+Version
+
+    $Date: 1999/06/19 00:39:08 $ $Revision: 1.12 $
+
+Number
+
+    65
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    The extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension allows fragments to look brighter in a foggy
+    environment, by biasing the fragment eye-coordinate distance prior
+    to fog computation. A reference point in eye space (rx ry rz) and an offset
+    amount toward the viewpoint (f_o) are specified. When fog offset is
+    enabled, the offset amount will be subtracted from the fragment
+    distance, making objects appear less foggy.
+
+    If fog computation is done in screen-space coordinates under
+    perspective projection, the reference point is used in adjusting the
+    fog offset to be correct for fragments whose depth is close to that
+    point. The reference point should be redefined when it becomes too
+    far away from the primitives being drawn. Under orthographic
+    projection, or if fog computation is done in eye-space coordinates,
+    the reference point is ignored.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled
+
+	GL_FOG_OFFSET_SGIX		0x8198
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev, and by the <pname> parameter of Fogiv and
+    Fogfv:
+
+	GL_FOG_OFFSET_VALUE_SGIX	0x8199
+
+Additions to Chapter 2 of the 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+  - (3.10, p. 139) Change the second paragraph to:
+
+	"This factor f is computed according to one of three equations:
+
+	    f = exp(-d * f_z),		    (3.24)
+
+	    f = exp(-(d * f_z)^2), or	    (3.25)
+
+		e - f_z
+	    f = -------			    (3.26)
+		e - s
+
+	f_z is a function of the eye-coordinate distance z from the eye,
+	(0,0,0,1) in eye coordinates, to the fragment center. If
+	FOG_OFFSET_SGIX is enabled, then f_z = z - f_o; otherwise, f_z =
+	z. If f_z < 0, then it is clamped to zero prior to fog
+	computation.
+
+	"If fog offset is performed in screen space under perspective
+	projection, the reference point (rx ry rz) is used to adjust f_o
+	appropriately prior to computing f_z. Otherwise, the reference
+	point is unused.
+
+	"The equation, along with the parameters d, e, s, (rx ry rz, and
+	f_o, is specified with..."
+
+
+    Change the end of the third paragraph to:
+
+	"...If <pname> is FOG_DENSITY, FOG_START, or FOG_END, then
+	<param> is or <params> points to a value that is d, s, or e,
+	respectively. If <pname> if FOG_OFFSET_SGIX, then <params>
+	points to four values comprising a 3-valued reference point,
+	(rx ry rz) followed by f_o. If d is specified as less than zero,
+	the error INVALID_VALUE is generated."
+
+    Change the final paragraph on page 140 to:
+
+	"The state required for fog consists of a three valued integer
+	to select the fog equation, three floating-point values d, e,
+	and s, four floating-point values (rx ry rz f_o), an RGBA fog
+	color and a fog color index, a single bit to indicate whether or
+	not fog is enabled, and a single bit to indicate whether or not
+	fog offset is enabled. In the initial state, fog is disabled,
+	fog offset is disabled, FOG_MODE is EXP, d = 1.0, e = 1.0, s =
+	0.0, and (rx ry rz f_o) = (0,0,0,0); C_f = (0,0,0,0) and i_f =
+	0."
+
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    (table 6.8, p. 198)
+
+    Get Value		    Type    Get Command     Initial Value   Description			    Sec.    Attribute
+    ---------		    ----    -----------     -------------   -----------			    ----    ---------
+    FOG_OFFSET_SGIX	    B	    IsEnabled	    False	    True if fog offset is enabled   3.10    fog
+    FOG_OFFSET_VALUE_SGIX   4 * R   GetFloatv	    (0, 0, 0, 0)    Fog reference point and offset  3.10    fog
+
+New Implementation Dependent State
+
+    None

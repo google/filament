@@ -1,0 +1,6 @@
+<map id="pvr::texture_bmp::InfoHeader4" name="pvr::texture_bmp::InfoHeader4">
+<area shape="rect" id="node5" href="$structpvr_1_1texture__bmp_1_1_info_header5.html" title="Structure of a info header5 for a BMP file" alt="" coords="5,304,228,331"/>
+<area shape="rect" id="node2" href="$structpvr_1_1texture__bmp_1_1_info_header3.html" title="Structure of a info header3 for a BMP file" alt="" coords="5,155,228,181"/>
+<area shape="rect" id="node3" href="$structpvr_1_1texture__bmp_1_1_info_header2.html" title="Structure of a info header2 for a BMP file" alt="" coords="5,80,228,107"/>
+<area shape="rect" id="node4" href="$structpvr_1_1texture__bmp_1_1_info_header1.html" title="Structure of a info header1 for a BMP file" alt="" coords="5,5,228,32"/>
+</map>

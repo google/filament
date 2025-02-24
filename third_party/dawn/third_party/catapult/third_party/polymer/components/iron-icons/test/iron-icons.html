@@ -1,0 +1,81 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<html>
+<head>
+
+  <title>iron-icons</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../av-icons.html">
+  <link rel="import" href="../communication-icons.html">
+  <link rel="import" href="../device-icons.html">
+  <link rel="import" href="../editor-icons.html">
+  <link rel="import" href="../hardware-icons.html">
+  <link rel="import" href="../image-icons.html">
+  <link rel="import" href="../iron-icons.html">
+  <link rel="import" href="../maps-icons.html">
+  <link rel="import" href="../notification-icons.html">
+  <link rel="import" href="../places-icons.html">
+  <link rel="import" href="../social-icons.html">
+
+</head>
+<body>
+
+  <script>
+
+suite('<iron-icons>', function() {
+  suite('basic behavior', function() {
+    var meta;
+    var iconsetNames = [
+      'av', 'communication', 'device', 'editor', 'hardware', 'icons', 'image',
+      'maps', 'notification', 'places', 'social'
+    ];
+
+    setup(function() {
+      meta = Polymer.Base.create('iron-meta', {type: 'iconset'});
+    });
+
+    test('all uniquely named', function() {
+      var allIcons = {};
+      for (var i = 0; i < iconsetNames.length; i++) {
+        var iconset = meta.byKey(iconsetNames[i]);
+        expect(iconset).to.be.ok;
+
+        var iconNames = iconset.getIconNames();
+        expect(iconNames).to.not.be.empty;
+
+        for (var j = 0; j < iconNames.length; j++) {
+          var parts = iconNames[j].split(':');
+          expect(parts).to.have.length(2);
+          expect(parts[0]).to.equal(iconsetNames[i]);
+          expect(parts[1]).to.have.length.at.least(1);
+          expect(allIcons.hasOwnProperty(parts[1])).to.be.false;
+
+          allIcons[parts[1]] = true;
+        }
+      }
+
+      // Sanity check.
+      expect(Object.getOwnPropertyNames(allIcons))
+          .to.have.length.of.at.least(iconsetNames.length);
+    });
+  });
+});
+
+  </script>
+
+</body>
+</html>

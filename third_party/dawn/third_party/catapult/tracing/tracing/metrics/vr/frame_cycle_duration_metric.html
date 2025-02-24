@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/importer/find_input_expectations.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.vr', function() {
+  const VR_GL_THREAD_NAME = 'VrShellGL';
+
+  function createHistograms(histograms, name, options, hasCpuTime) {
+    const createdHistograms = {
+      wall: histograms.createHistogram(
+          name + '_wall', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [],
+          options)
+    };
+    if (hasCpuTime) {
+      createdHistograms.cpu = histograms.createHistogram(name + '_cpu',
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], options);
+    }
+    return createdHistograms;
+  }
+
+  function frameCycleDurationMetric(histograms, model, opt_options) {
+    const histogramsByEventTitle = new Map();
+    const expectationEvents = tr.importer.VR_EXPECTATION_EVENTS;
+    // Map the events that we use to generate the input expectations.
+    for (const eventName in expectationEvents) {
+      const extraInfo = expectationEvents[eventName];
+      histogramsByEventTitle.set(eventName, createHistograms(
+          histograms, extraInfo.histogramName,
+          {description: extraInfo.description}, extraInfo.hasCpuTime));
+    }
+
+    // Scene update metrics.
+    histogramsByEventTitle.set(
+        'UiScene::OnBeginFrame.UpdateAnimationsAndOpacity',
+        createHistograms(
+            histograms, 'update_animations_and_opacity',
+            {description: 'Duration to apply animation and opacity changes'},
+            true));
+    histogramsByEventTitle.set(
+        'UiScene::OnBeginFrame.UpdateBindings',
+        createHistograms(
+            histograms, 'update_bindings',
+            {description: 'Duration to push binding values'}, true));
+    histogramsByEventTitle.set(
+        'UiScene::OnBeginFrame.UpdateLayout',
+        createHistograms(histograms, 'update_layout', {
+          description: 'Duration to compute element sizes, layout and textures'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiScene::OnBeginFrame.UpdateWorldSpaceTransform',
+        createHistograms(histograms, 'update_world_space_transforms', {
+          description: 'Duration to calculate element transforms in world space'
+        }, true));
+    // Draw metrics.
+    histogramsByEventTitle.set(
+        'UiRenderer::DrawUiView',
+        createHistograms(histograms, 'draw_ui', {
+          description: 'Duration to draw the UI'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawTexturedQuad',
+        createHistograms(histograms, 'draw_textured_quad', {
+          description: 'Duration to draw a textured element'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawGradientQuad',
+        createHistograms(histograms, 'draw_gradient_quad', {
+          description: 'Duration to draw a gradient element'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawGradientGridQuad',
+        createHistograms(histograms, 'draw_gradient_grid_quad', {
+          description: 'Duration to draw a gradient grid element'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawController',
+        createHistograms(histograms, 'draw_controller', {
+          description: 'Duration to draw the controller'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawLaser',
+        createHistograms(histograms, 'draw_laser', {
+          description: 'Duration to draw the laser'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawReticle',
+        createHistograms(histograms, 'draw_reticle', {
+          description: 'Duration to draw the reticle'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawShadow',
+        createHistograms(histograms, 'draw_shadow', {
+          description: 'Duration to draw a shadow element'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawStars',
+        createHistograms(histograms, 'draw_stars', {
+          description: 'Duration to draw the stars'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawBackground',
+        createHistograms(histograms, 'draw_background', {
+          description: 'Duration to draw the textured background'
+        }, true));
+    histogramsByEventTitle.set(
+        'UiElementRenderer::DrawKeyboard',
+        createHistograms(histograms, 'draw_keyboard', {
+          description: 'Duration to draw the keyboard'
+        }, true));
+
+    // Maps from the GUID of a UiRenderer::DrawUiView slice to each of its
+    // children slices.
+    const drawUiSubSlicesMap = new Map();
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    let rangeOfInterest = model.bounds;
+    const userExpectationsOfInterest = [tr.model.um.AnimationExpectation];
+
+    if (opt_options && opt_options.rangeOfInterest) {
+      rangeOfInterest = opt_options.rangeOfInterest;
+      userExpectationsOfInterest.push(tr.model.um.ResponseExpectation);
+    }
+
+    for (const ue of model.userModel.expectations) {
+      // Skip user expecations not of the right type or not inside the range of
+      // interest.
+      if (ue.initiatorType !== tr.model.um.INITIATOR_TYPE.VR) {
+        continue;
+      }
+      if (!userExpectationsOfInterest.some(function(ueOfInterest) {
+        return ue instanceof ueOfInterest;
+      })) {
+        continue;
+      }
+      if (!rangeOfInterest.intersectsExplicitRangeInclusive(
+          ue.start, ue.end)) {
+        continue;
+      }
+
+      for (const helper of chromeHelper.browserHelpers) {
+        const glThreads = helper.process.findAllThreadsNamed(VR_GL_THREAD_NAME);
+
+        for (const glThread of glThreads) {
+          for (const event of glThread.getDescendantEvents()) {
+            // Skip events that are neither in the user expecation, range of
+            // interest nor part of the frame cycle durations.
+            if (!(histogramsByEventTitle.has(event.title))) {
+              continue;
+            }
+            if (event.start < ue.start || event.end > ue.end) {
+              continue;
+            }
+            if (event.start < rangeOfInterest.min ||
+                event.end > rangeOfInterest.max) {
+              continue;
+            }
+
+            // There can be multiple UiElementRenderer::Draw... events per frame
+            // but this metric should calculate the across frame average of
+            // durations. Thus, collect UiElementRenderer::Draw... slices here
+            // in order to process them below.
+            if (event.parentSlice &&
+                event.parentSlice.title === 'UiRenderer::DrawUiView') {
+              const guid = event.parentSlice.guid;
+              if (!drawUiSubSlicesMap.has(guid)) {
+                drawUiSubSlicesMap.set(guid, []);
+              }
+              drawUiSubSlicesMap.get(guid).push(event);
+              continue;
+            }
+
+            const {wall: wallHist, cpu: cpuHist} =
+              histogramsByEventTitle.get(event.title);
+            wallHist.addSample(event.duration);
+            if (cpuHist !== undefined) {
+              cpuHist.addSample(event.cpuDuration);
+            }
+          }
+        }
+      }
+    }
+
+    // Calculate the average of the per frame sums of UiElementRenderer::Draw...
+    // events.
+    for (const subSlices of drawUiSubSlicesMap.values()) {
+      const eventMap = new Map();
+      for (const event of subSlices) {
+        if (!eventMap.has(event.title)) {
+          eventMap.set(event.title, {
+            wall: 0,
+            cpu: 0
+          });
+        }
+        eventMap.get(event.title).wall += event.duration;
+        eventMap.get(event.title).cpu += event.cpuDuration;
+      }
+      for (const [title, values] of eventMap.entries()) {
+        const {wall: wallHist, cpu: cpuHist} =
+              histogramsByEventTitle.get(title);
+        wallHist.addSample(values.wall);
+        if (cpuHist !== undefined) {
+          cpuHist.addSample(values.cpu);
+        }
+      }
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(frameCycleDurationMetric, {
+    supportsRangeOfInterest: true,
+  });
+
+  return {
+    frameCycleDurationMetric,
+  };
+});
+</script>

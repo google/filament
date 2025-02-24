@@ -1,0 +1,46 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://bitbucket.org/ned/coveragepy/src/default/NOTICE.txt
+
+# MANIFEST.in file for coverage.py
+
+include AUTHORS.txt
+include CHANGES.rst
+include LICENSE.txt
+include MANIFEST.in
+include Makefile
+include NOTICE.txt
+include README.rst
+include TODO.txt
+include __main__.py
+include .travis.yml
+include appveyor.yml
+include circle.yml
+include howto.txt
+include igor.py
+include metacov.ini
+include pylintrc
+include setup.py
+include tox.ini
+include tox_wheels.ini
+
+recursive-include ci *.*
+exclude ci/appveyor.token
+
+recursive-include coverage/fullcoverage *.py
+recursive-include coverage/ctracer *.c *.h
+
+recursive-include doc conf.py *.pip *.rst *.txt
+recursive-include doc/_static *.*
+prune doc/_build
+
+recursive-include requirements *.pip
+
+recursive-include tests *.py *.tok
+recursive-include tests/farm */gold*/*.* */gold*/*/*.*
+recursive-include tests/farm/*/src * *.*
+recursive-include tests js/*.* qunit/*.*
+prune tests/eggsrc/build
+prune tests/eggsrc/dist
+prune tests/eggsrc/*.egg-info
+
+global-exclude *.py[co]

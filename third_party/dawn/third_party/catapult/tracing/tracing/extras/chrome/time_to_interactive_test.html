@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/time_to_interactive.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const findInteractiveTime = tr.e.chrome.findInteractiveTime;
+  const findFirstCpuIdleTime = tr.e.chrome.findFirstCpuIdleTime;
+  const requiredFCIWindowSizeMs = tr.e.chrome.requiredFCIWindowSizeMs;
+  const findFCITaskClusters = tr.e.chrome.findFCITaskClusters;
+
+  test('findInteractiveTime_' +
+       'doesNotWaitForTasksFarAwayWithoutNetworkRequests', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 300, end: 400},
+      // More than 5000ms gap here.
+      {start: 7000, end: 7200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(
+        findInteractiveTime(0, 10000, 50, longTasks, []),
+        400, 1e-7);
+  });
+
+  test('findInteractiveTime_' +
+       'waitsForTasksFarAwayWhenNetworkIsBusy', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 300, end: 400},
+      // More than 5000ms gap here.
+      {start: 7000, end: 7200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    const networkRequests = [
+      {start: 300, end: 3000},
+      {start: 500, end: 2900},
+      {start: 600, end: 3100},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    // Last network 2-quiet region starts at 2900, while the next long task
+    // starts at 7000. We don't have 5 seconds of quiet window before that long
+    // task.
+    assert.closeTo(findInteractiveTime(
+        0, 20000, 50, longTasks, networkRequests), 7200, 1e-7);
+  });
+
+  test('findInteractiveTime_' +
+       'noQuietWindowBecauseOfLongTask', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 300, end: 400},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    // windowEnd is 2400, so we don't get 5 seconds on quiet window after 400.
+    assert.isUndefined(findInteractiveTime(
+        0, 2400, 50, longTasks, []));
+  });
+
+  test('findInteractiveTime_' +
+       'noQuietWindowBecauseOfNetwork', () => {
+    const networkRequests = [
+      {start: 50, end: 200},
+      {start: 51, end: 300},
+      {start: 52, end: 400},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    // windowEnd is 2200, and beginning of last network 2-quiet region is 200.
+    // We don't have a 5 second quiet window.
+    assert.isUndefined(findInteractiveTime(
+        0, 2200, 50, [], networkRequests));
+  });
+
+  test('findInteractiveTime_' +
+       'network2QuietHappensAfterLastLongTask', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 300, end: 400},
+      // More than 5000ms gap here.
+      {start: 7000, end: 7200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    const networkRequests = [
+      {start: 300, end: 8000},
+      {start: 500, end: 8100},
+      {start: 600, end: 8300},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findInteractiveTime(
+        0, 20000, 50, longTasks, networkRequests), 7200, 1e-7);
+  });
+
+
+  test('findInteractiveTime_' +
+       'longEnoughNetwork2QuietBeforeLastLongTask', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 300, end: 400},
+      // More than 5000ms gap here.
+      {start: 7000, end: 7200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    const networkRequests = [
+      {start: 300, end: 1000},
+      {start: 500, end: 1100},
+      {start: 600, end: 1200},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+
+    // 1000ms is the beginning of last network 2-quiet region, and we have a 5s
+    // window between that and the start of next long task.
+    assert.closeTo(findInteractiveTime(
+        0, 20000, 50, longTasks, networkRequests), 400, 1e-7);
+  });
+
+  test('findInteractiveTime_' +
+       'isLowerBoundedAtDCL', () => {
+    const longTasks = [
+      {start: 50, end: 200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    // End of last long task is 200, but FCI is still 5000 because of
+    // DOMContentLoadedEnd being at 5000.
+    assert.closeTo(findInteractiveTime(
+        0, 20000, 5000, longTasks, []), 5000, 1e-7);
+  });
+
+
+  test('findInteractiveTime_' +
+       'returnsWindowStartWhenNoLongTasks', () => {
+    // Note that it is possible for DOMContentLoadedEnd to happen before
+    // windowStart, since windowStart is usually First Meaningful Paint. If
+    // there are no long tasks, and DCL is before windowStart, FCI should be
+    // windowStart.
+    assert.closeTo(findInteractiveTime(
+        1000, 20000, 500, [], []), 1000, 1e-7);
+  });
+
+  test('findInteractiveTime' +
+       'networkRequestStartsBeforeWindowStart', () => {
+    const longTasks = [
+      {start: 7000, end: 7200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    const networkRequests = [
+      {start: 0, end: 6000},
+      {start: 10, end: 6100},
+      {start: 20, end: 6200}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    // windowStart is now 1000. All three network requests start before
+    // windowStart, but should still manage to block netowrk 2-quiet.
+    assert.closeTo(findInteractiveTime(
+        1000, 20000, 1050, longTasks, networkRequests), 7200, 1e-7);
+  });
+
+  test('requiredFCIWindowSizeMs', () => {
+    // The required window size function is an exponential decay, and is
+    // uniquely determined by values at three points.
+    assert.closeTo(requiredFCIWindowSizeMs(0), 5000, 1e-7);
+    assert.closeTo(requiredFCIWindowSizeMs(15000), 3000, 1e-7);
+    assert.closeTo(requiredFCIWindowSizeMs(Infinity), 1000, 1e-7);
+  });
+
+  test('findFCITaskClusters_MultipleLongTasks', () => {
+    const longTasks = [
+      {start: 50, end: 200},
+      {start: 500, end: 700},
+      {start: 1710, end: 1800},
+      {start: 1900, end: 2000},
+      {start: 2200, end: 2300},
+      {start: 5000, end: 5100},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    const clusters = findFCITaskClusters(longTasks);
+    assert.strictEqual(clusters.length, 3);
+    assert.strictEqual(clusters[0].start, 50);
+    assert.strictEqual(clusters[0].end, 700);
+    assert.strictEqual(clusters[1].start, 1710);
+    assert.strictEqual(clusters[1].end, 2300);
+    assert.strictEqual(clusters[2].start, 5000);
+    assert.strictEqual(clusters[2].end, 5100);
+  });
+
+  test('findFCITaskClusters_NoLongTasks', () => {
+    const clusters = findFCITaskClusters([]);
+    assert.strictEqual(clusters.length, 0);
+  });
+
+  test('findFirstInteractiveTimestamp_noLongTasks', () => {
+    const searchBegin = 0;
+    const searchEnd = 20000;
+    const dclEnd = 0;
+    const longTasks = [];
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 0, 1e-7);
+  });
+
+  test('findFirstCpuIdleTime_' +
+       'firstInteractiveReachedInBetweenTaskClusters', () => {
+    const searchBegin = 0;
+    const searchEnd = 20000;
+    const dclEnd = 0;
+    const longTasks = [
+      // Cluster 1.
+      {start: 50, end: 150},
+      {start: 200, end: 300},
+      {start: 500, end: 700},
+      // Cluster 2.
+      {start: 2000, end: 2100},
+      {start: 2900, end: 3000},
+      // Cluster 3.
+      {start: 8000, end: 8100},
+      {start: 8200, end: 8500},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 3000, 1e-7);
+  });
+
+  test('findFirstCpuIdleTime_' +
+       'FirstInteractiveReachedAfterLastHeavyCluster', () => {
+    const searchBegin = 0;
+    const searchEnd = 20000;
+    const dclEnd = 0;
+    const longTasks = [
+      // Cluster 1.
+      {start: 1000, end: 1100},
+      {start: 1150, end: 1350},
+      // Cluster 2.
+      {start: 4000, end: 4400},
+      // Cluster 3.
+      {start: 7000, end: 7400}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 7400, 1e-7);
+  });
+
+
+  test('findFirstInteractiveTimestamp_noFirstInteractiveReached', () => {
+    const searchBegin = 0;
+    const searchEnd = 10000;
+    const dclEnd = 0;
+    const longTasks = [
+      // Four spaced out heavy task clusters.
+      {start: 2000, end: 2300},
+      {start: 4000, end: 4300},
+      {start: 6000, end: 6300},
+      {start: 8000, end: 8300}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.isUndefined(findFirstCpuIdleTime(searchBegin, searchEnd,
+        dclEnd, longTasks));
+  });
+
+  test('findFirstInteractiveTimestamp_lowerBoundedAtDCL', () => {
+    const searchBegin = 0;
+    const searchEnd = 10000;
+    const dclEnd = 8500;
+    const longTasks = [
+      {start: 2000, end: 2100},
+      {start: 4000, end: 4100}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), dclEnd, 1e-7);
+  });
+
+  test('findFirstInteractiveTimestamp_doesNotAssumeLongTasksAreSorted', () => {
+    const searchBegin = 0;
+    const searchEnd = 20000;
+    const dclEnd = 0;
+    const longTasks = [
+      {start: 2000, end: 2400},
+      {start: 1000, end: 1400}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 2400, 1e-7);
+  });
+
+  test('findFirstCpuIdleTime_' +
+      'lightTaskClustersDoesNotBlockFirstInteractive', () => {
+    const searchBegin = 0;
+    const searchEnd = 20000;
+    const dclEnd = 0;
+    const longTasks = [
+      // Cluster 1 - heavy (duration 350ms).
+      {start: 1000, end: 1100},
+      {start: 1150, end: 1350},
+      // Cluster 2 - light (duration 200ms).
+      {start: 4000, end: 4200},
+      // Cluster 3 - heavy (duration 400ms).
+      {start: 7000, end: 7400}
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 1350, 1e-7);
+  });
+
+  test('findFirstCpuIdleTime_' +
+       'requiredWindowSizeIsAtLeast5sAtTheBeginning', () => {
+    // Search begin intentionally not 0 to catch errors in calculating
+    // timeSinceSearchBegin.
+    const searchBegin = 10000;
+    const searchEnd = 30000;
+    const dclEnd = 5000;
+    const longTasks = [
+      // Heavy Task Cluster (duration 501ms). Starts 4999 ms after
+      // |searchBegin|.
+      {start: 14999, end: 15100},
+      {start: 15200, end: 15500},
+    ].map(options => tr.c.TestUtils.newSliceEx(options));
+
+    assert.closeTo(findFirstCpuIdleTime(searchBegin, searchEnd, dclEnd,
+        longTasks), 15500, 1e-7);
+  });
+});
+</script>

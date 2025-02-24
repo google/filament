@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/time_display_modes.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/importer/import.html">
+<link rel="import" href="/tracing/model/annotation.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ThreadSlice = tr.model.ThreadSlice;
+  const TitleOrCategoryFilter = tr.c.TitleOrCategoryFilter;
+  const Frame = tr.model.Frame;
+
+  const createModelWithOneOfEverything = function() {
+    const m = new tr.Model();
+    const cpu = m.kernel.getOrCreateCpu(1);
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+
+    const p = m.getOrCreateProcess(1);
+    const t = p.getOrCreateThread(1);
+    const slice = new ThreadSlice('', 'a', 0, 1, {}, 4);
+    t.sliceGroup.pushSlice(slice);
+    t.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSlice(0, 1, t, t));
+
+    const c = p.getOrCreateCounter('', 'ProcessCounter');
+    let aSeries = new tr.model.CounterSeries('a', 0);
+    let bSeries = new tr.model.CounterSeries('b', 0);
+    c.addSeries(aSeries);
+    c.addSeries(bSeries);
+
+    aSeries.addCounterSample(0, 5);
+    aSeries.addCounterSample(1, 6);
+    aSeries.addCounterSample(2, 5);
+    aSeries.addCounterSample(3, 7);
+
+    bSeries.addCounterSample(0, 10);
+    bSeries.addCounterSample(1, 15);
+    bSeries.addCounterSample(2, 12);
+    bSeries.addCounterSample(3, 16);
+
+    const c1 = cpu.getOrCreateCounter('', 'CpuCounter');
+    aSeries = new tr.model.CounterSeries('a', 0);
+    bSeries = new tr.model.CounterSeries('b', 0);
+    c1.addSeries(aSeries);
+    c1.addSeries(bSeries);
+
+    aSeries.addCounterSample(0, 5);
+    aSeries.addCounterSample(1, 6);
+    aSeries.addCounterSample(2, 5);
+    aSeries.addCounterSample(3, 7);
+
+    bSeries.addCounterSample(0, 10);
+    bSeries.addCounterSample(1, 15);
+    bSeries.addCounterSample(2, 12);
+    bSeries.addCounterSample(3, 16);
+
+    const frame1 = new Frame([slice], [{thread: t, start: 1, end: 5}]);
+    p.frames.push.apply(p.frames, frame1);
+
+    const gd = new tr.model.GlobalMemoryDump(m, 2);
+    const pd = new tr.model.ProcessMemoryDump(gd, p, 2);
+    gd.processMemoryDumps[1] = pd;
+    m.globalMemoryDumps.push(gd);
+    p.memoryDumps.push(pd);
+
+    m.updateBounds();
+
+    return m;
+  };
+
+  test('helper', function() {
+    function Helper(model) {
+      this.model = model;
+    }
+    Helper.guid = tr.b.GUID.allocateSimple();
+    Helper.supportsModel = function(model) {
+      return true;
+    };
+
+    const m = new tr.Model();
+    const h = m.getOrCreateHelper(Helper);
+    assert.isTrue(h instanceof Helper);
+    assert.isTrue(h === m.getOrCreateHelper(Helper));
+
+    function UnsupportedHelper(model) {
+      this.model = model;
+    }
+    UnsupportedHelper.guid = tr.b.GUID.allocateSimple();
+    UnsupportedHelper.supportsModel = function(model) {
+      return false;
+    };
+
+    assert.isUndefined(m.getOrCreateHelper(UnsupportedHelper));
+    // Try again to test doesHelperGUIDSupportThisModel_ .
+    assert.isUndefined(m.getOrCreateHelper(UnsupportedHelper));
+  });
+
+  test('modelBounds_EmptyModel', function() {
+    const m = new tr.Model();
+    m.updateBounds();
+    assert.isUndefined(m.bounds.min);
+    assert.isUndefined(m.bounds.max);
+  });
+
+  test('modelBounds_OneEmptyThread', function() {
+    const m = new tr.Model();
+    const t = m.getOrCreateProcess(1).getOrCreateThread(1);
+    m.updateBounds();
+    assert.isUndefined(m.bounds.min);
+    assert.isUndefined(m.bounds.max);
+  });
+
+  test('modelBounds_OneThread', function() {
+    const m = new tr.Model();
+    const t = m.getOrCreateProcess(1).getOrCreateThread(1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 3));
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 4);
+  });
+
+  test('modelBounds_OneThreadAndOneEmptyThread', function() {
+    const m = new tr.Model();
+    const t1 = m.getOrCreateProcess(1).getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 3));
+    const t2 = m.getOrCreateProcess(1).getOrCreateThread(1);
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 4);
+  });
+
+  test('modelBounds_OneCpu', function() {
+    const m = new tr.Model();
+    const cpu = m.kernel.getOrCreateCpu(1);
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 4);
+  });
+
+  test('modelBounds_OneCpuOneThread', function() {
+    const m = new tr.Model();
+    const cpu = m.kernel.getOrCreateCpu(1);
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+
+    const t = m.getOrCreateProcess(1).getOrCreateThread(1);
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 4));
+
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 5);
+  });
+
+  test('modelBounds_GlobalMemoryDumps', function() {
+    const m = new tr.Model();
+    m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 1));
+    m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 3));
+    m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 5));
+
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 5);
+  });
+
+  test('modelBounds_ProcessMemoryDumps', function() {
+    const m = new tr.Model();
+    const p = m.getOrCreateProcess(1);
+    const gd = new tr.model.GlobalMemoryDump(m, -1);
+    p.memoryDumps.push(new tr.model.ProcessMemoryDump(gd, m, 1));
+    p.memoryDumps.push(new tr.model.ProcessMemoryDump(gd, m, 3));
+    p.memoryDumps.push(new tr.model.ProcessMemoryDump(gd, m, 5));
+
+    m.updateBounds();
+    assert.strictEqual(m.bounds.min, 1);
+    assert.strictEqual(m.bounds.max, 5);
+  });
+
+
+  test('modelConvertsTimestampToModelTime', function() {
+    const m = new tr.Model();
+    const traceEvents = [
+      {ts: 1000, pid: 1, tid: 1, ph: 'B', cat: 'a', name: 'taskA', args: {}},
+      {ts: 2000, pid: 1, tid: 1, ph: 'E', cat: 'a', name: 'taskA', args: {}}
+    ];
+    const i = new tr.importer.Import(m);
+    i.importTraces([traceEvents]);
+    assert.strictEqual(
+        m.convertTimestampToModelTime('traceEventClock', 1000), 0);
+    assert.strictEqual(
+        m.convertTimestampToModelTime('traceEventClock', 2000), 1);
+  });
+
+  test('TitleOrCategoryFilter', function() {
+    const s0 = tr.c.TestUtils.newSliceEx({start: 1, duration: 3});
+    assert.isTrue(new TitleOrCategoryFilter('a').matchSlice(s0));
+    assert.isFalse(new TitleOrCategoryFilter('x').matchSlice(s0));
+
+    const s1 = tr.c.TestUtils.newSliceEx({title: 'ba', start: 1, duration: 3});
+    assert.isTrue(new TitleOrCategoryFilter('a').matchSlice(s1));
+    assert.isTrue(new TitleOrCategoryFilter('ba').matchSlice(s1));
+    assert.isFalse(new TitleOrCategoryFilter('x').matchSlice(s1));
+  });
+
+  test('model_findAllThreadsNamed', function() {
+    const m = new tr.Model();
+    const t = m.getOrCreateProcess(1).getOrCreateThread(1);
+    t.name = 'CrBrowserMain';
+
+    m.updateBounds();
+    let f = m.findAllThreadsNamed('CrBrowserMain');
+    assert.deepEqual([t], f);
+    f = m.findAllThreadsNamed('NoSuchThread');
+    assert.strictEqual(f.length, 0);
+  });
+
+  test('model_updateCategories', function() {
+    const m = new tr.Model();
+    const t = m.getOrCreateProcess(1).getOrCreateThread(1);
+    t.sliceGroup.pushSlice(new ThreadSlice('categoryA', 'a', 0, 1, {}, 3));
+    t.sliceGroup.pushSlice(new ThreadSlice('categoryA', 'a', 0, 1, {}, 3));
+    t.sliceGroup.pushSlice(new ThreadSlice('categoryB', 'a', 0, 1, {}, 3));
+    t.sliceGroup.pushSlice(new ThreadSlice('categoryA', 'a', 0, 1, {}, 3));
+    t.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 3));
+    m.updateCategories_();
+    assert.deepEqual(['categoryA', 'categoryB'], m.categories);
+  });
+
+  test('getEventByStableId', function() {
+    const m = new tr.Model();
+    const p = m.getOrCreateProcess(0);
+    const t = p.getOrCreateThread(1);
+    const slice = tr.c.TestUtils.newSliceEx({start: 0, duration: 10});
+    t.sliceGroup.pushSlice(slice);
+    const ue = tr.c.TestUtils.newInteractionRecord(m, 0, 10);
+    m.userModel.expectations.push(ue);
+    const gie = tr.c.TestUtils.newInstantEvent({
+      title: 'gie',
+      start: 0,
+      colorId: 0
+    });
+    m.instantEvents.push(gie);
+
+    assert.strictEqual(slice, m.getEventByStableId(slice.stableId));
+    assert.strictEqual(ue, m.getEventByStableId(ue.stableId));
+    assert.strictEqual(gie, m.getEventByStableId(gie.stableId));
+  });
+
+  test('model_annotationAddRemove', function() {
+    const m = new tr.Model();
+    const a1 = new tr.model.Annotation();
+    const a2 = new tr.model.Annotation();
+
+    assert.strictEqual(m.getAllAnnotations().length, 0);
+    m.addAnnotation(a1);
+    assert.strictEqual(m.getAllAnnotations().length, 1);
+    m.addAnnotation(a2);
+    assert.strictEqual(m.getAllAnnotations().length, 2);
+
+    assert.strictEqual(m.getAnnotationByGUID(a1.guid), a1);
+    assert.strictEqual(m.getAnnotationByGUID(a2.guid), a2);
+
+    m.removeAnnotation(a1);
+    assert.isUndefined(m.getAnnotationByGUID(a1.guid));
+    assert.strictEqual(m.getAnnotationByGUID(a2.guid), a2);
+    assert.strictEqual(m.getAllAnnotations().length, 1);
+  });
+
+  test('model_intrinsicTimeUnit', function() {
+    const unit = tr.b.TimeDisplayModes;
+    const m = new tr.Model();
+
+    // by default it should be milliseconds
+    assert.strictEqual(m.intrinsicTimeUnit, unit.ms);
+
+    m.intrinsicTimeUnit = unit.ns;
+    assert.strictEqual(m.intrinsicTimeUnit, unit.ns);
+    // should be able to set to the same
+    m.intrinsicTimeUnit = unit.ns;
+    assert.strictEqual(m.intrinsicTimeUnit, unit.ns);
+    // should not be able to change it after fixing it
+    assert.throw(function() { m.intrinsicTimeUnit = unit.ms; });
+    assert.strictEqual(m.intrinsicTimeUnit, unit.ns);
+  });
+
+  test('model_getAllProcesses', function() {
+    const m = new tr.Model();
+    const p1 = m.getOrCreateProcess(1);
+    const p2 = m.getOrCreateProcess(2);
+    const p3 = m.getOrCreateProcess(3);
+    const p4 = m.getOrCreateProcess(4);
+    const p5 = m.getOrCreateProcess(5);
+
+    assert.sameMembers(m.getAllProcesses(), [p1, p2, p3, p4, p5]);
+    assert.sameMembers(m.getAllProcesses(p => true), [p1, p2, p3, p4, p5]);
+    assert.sameMembers(m.getAllProcesses(p => false), []);
+    assert.sameMembers(m.getAllProcesses(p => p.pid % 2 === 0), [p2, p4]);
+  });
+
+  test('model_joinRefs', function() {
+    function RefCountingSnapshot() {
+      tr.model.ObjectSnapshot.apply(this, arguments);
+      this.refCount = 0;
+    }
+
+    RefCountingSnapshot.prototype = {
+      __proto__: tr.model.ObjectSnapshot.prototype,
+
+      referencedAt() {
+        ++this.refCount;
+      }
+    };
+
+    const typeName = 'RefCountingSnapshot';
+    tr.model.ObjectSnapshot.subTypes.register(
+        RefCountingSnapshot,
+        {typeName});
+
+    const m = new tr.Model();
+    const p = m.getOrCreateProcess(1);
+    const s1 = p.objects.addSnapshot(new tr.model.ScopedId(typeName, '0x1'),
+        'cat', typeName, 1000, {});
+    const s2 = p.objects.addSnapshot(new tr.model.ScopedId(typeName, '0x2'),
+        'cat', typeName, 2000, {
+          myRef: {
+            scope: typeName,
+            id_ref: '0x1'
+          }
+        });
+    m.joinRefs();
+    assert.strictEqual(s1.refCount, 1);
+    assert.strictEqual(s2.refCount, 0);
+  });
+});
+</script>

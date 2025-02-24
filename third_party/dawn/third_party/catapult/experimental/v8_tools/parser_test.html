@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src='https://cdn.jsdelivr.net/npm/vue/dist/vue.js'></script>
+    <script src='https://unpkg.com/vue-select'></script>
+    <script src='http://underscorejs.org/underscore-min.js'></script>
+    <script src='metrics_parser.js'></script>
+    <link rel='stylesheet' href='filter.css'>
+</head>
+
+<body>
+    <style>
+        body {
+          font-family: Helvetica, sans-serif;
+        }
+      </style>
+
+<div class='menuLeft' id='menu'>
+  
+  <div id='filterItem'>
+    <sup>Memory metrics</sup>
+  <v-select placeholder='browser'
+      :options='browserOptions'
+      v-model='browser'
+      id='filterBox'
+      ></v-select>
+  <v-select placeholder='subprocess'
+      :options='subprocessOptions'
+      v-model='subprocess'
+      id='filterBox'
+      ></v-select>
+  <v-select placeholder='probe'
+      :options='probeOptions'
+      v-model='probe'
+      id='filterBox'
+      ></v-select>
+  <v-select placeholder='component'
+      :options='componentOptions'
+      v-model='component'
+      id='filterBox'
+      ></v-select>
+  
+  
+  <v-select placeholder='subcomponent'
+      id='subcomponentBox'
+      v-model='subcomponent'
+      :options='firstSubcompOptions'
+      v-if='seen'
+      ></v-select>
+  <v-select placeholder='subcomponent'
+      id='subcomponentBox_'
+      v-model='subcomponent_'
+      :options='secondSubcompOptions'
+      v-if='seen_'
+      ></v-select>
+  
+  
+  <v-select placeholder='size'
+      :options='sizeOptions'
+      v-model='size'
+      id='filterBox'
+      ></v-select>
+  <button v-on:click='apply'
+          id='apply_button'>
+          Apply</button>
+  <textarea v-model='text'
+          id='teaxtarea'
+          rows='6'
+          cols='80'
+          ></textarea>
+  </div>
+  </div>
+  
+
+
+<script>
+  'use strict';
+const MiB = 1024 * 1024;
+Vue.component('v-select', VueSelect.VueSelect);
+
+const menu = new Vue({
+    el: '#menu',
+    data: {
+      sampleArr: null,
+      guidValueInfo: null,
+
+      browser: null,
+      subprocess: null,
+      probe: null,
+      component: null,
+      size: null,
+      metricNames: null,
+
+      browserOptions: [],
+      subprocessOptions: [],
+      probeOptions: [],
+
+      componentObject: null,
+      sizeObject: null,
+
+      subcomponent: null,
+      subcomponent_: null,
+
+      text: null
+    },
+
+    computed: {
+      //  Compute size options depending on the type of probe.
+      sizeOptions() {
+        if (this.sizeObject !== null) {
+          if (this.probe === 'reported_by_chrome') {
+            return this.sizeObject.sizeChrome;
+          }
+          return this.sizeObject.sizeOs;
+        }
+        return undefined;
+      },
+      //  The components are different depending on the type of probe.
+      componentOptions() {
+        if (this.componentObject !== null) {
+          if (this.probe === 'reported_by_chrome') {
+            const component = [];
+            for (const [key, value] of this.componentObject
+                .componentByChrome.entries()) {
+              component.push(key);
+            }
+            return component;
+          }
+          const component = [];
+          for (const [key, value] of this.componentObject
+              .componentByOs.entries()) {
+            component.push(key);
+          }
+          return component;
+        }
+        return undefined;
+      },
+
+      //  Compute the options for the first subcomponent depending on the probes.
+      //  When the user chooses a component, it might be a hierarchical one.
+      firstSubcompOptions() {
+        if (this.component !== null) {
+          if (this.probe === 'reported_by_chrome') {
+            if (this.componentObject.componentByChrome
+                .get(this.component) !== undefined) {
+              const map = this.componentObject
+                  .componentByChrome.get(this.component);
+              const array = [];
+              for (const [key, value] of map.entries()) {
+                array.push(key);
+              }
+              return array;
+            }
+            return undefined;
+          }
+          return this.componentObject.componentByOs.get(this.component);
+        }
+        return undefined;
+      },
+
+      //  In case when the component is from Chrome, the hierarchy might have more
+      //  levels.
+      secondSubcompOptions() {
+        if (this.probe === 'reported_by_chrome' && this.subcomponent !== null) {
+          const map = this.componentObject.componentByChrome.get(this.component);
+          return map.get(this.subcomponent);
+        }
+        return undefined;
+      },
+      seen() {
+        return this.component !== null;
+      },
+      seen_() {
+        return this.subcomponent !== null;
+      }
+    },
+    watch: {
+      probe() {
+        this.component = null;
+        this.subcomponent = null;
+        this.subcomponent_ = null;
+        this.size = null;
+      },
+
+      component() {
+        this.subcomponent = null;
+        this.subcomponent_ = null;
+      },
+
+      subcomponent() {
+        this.subcomponent_ = null;
+      },
+
+    },
+    methods: {
+      //  Build the available metrics upon the chosen items.
+      //  The method applies an intersection for all of them and
+      //  return the result as a collection of metrics that matched.
+      apply() {
+        const metrics = [];
+        for (const name of this.metricNames) {
+          if (this.browser !== null && name.includes(this.browser) &&
+            this.subprocess !== null && name.includes(this.subprocess) &&
+            this.component !== null && name.includes(this.component) &&
+            this.size !== null && name.includes(this.size) &&
+            this.probe !== null && name.includes(this.probe)) {
+            if (this.subcomponent === null) {
+              metrics.push(name);
+            } else {
+              if (name.includes(this.subcomponent)) {
+                if (this.subcomponent_ === null) {
+                  metrics.push(name);
+                } else {
+                  if (name.includes(this.subcomponent_)) {
+                    metrics.push(name);
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (_.uniq(metrics).length === 0) {
+          alert('No metrics found');
+        } else {
+          this.text = _.uniq(metrics);
+        }
+      }
+    }
+  });
+
+  const metricNames =
+      ['memory:chrome:renderer_processes:' +
+      'reported_by_chrome:discardable:effective_size',
+      'memory:chrome:renderer_processes:reported_by_chrome:' +
+      'partition_alloc:allocated_objects_size',
+      'memory:chrome:browser_process:reported_by_chrome:omnibox:' +
+      'effective_size',
+      'memory:chrome:all_processes:reported_by_chrome:v8:' +
+      'heap:old_space:effective_size',
+      'memory:chrome:browser_process:reported_by_os:' +
+      'system_memory:ashmem:proportional_resident_size',
+      'memory:chrome:all_processes:' +
+      'reported_by_chrome:tracing:effective_size',
+      'memory:chrome:renderer_processes:reported_by_chrome:' +
+      'v8:allocated_by_malloc:peak_size',
+      'memory:chrome:all_processes:' +
+      'reported_by_chrome:discardable:effective_size',
+      'memory:chrome:renderer_processes:reported_by_chrome:' +
+      'v8:heap:map_space:allocated_objects_size',
+      'memory:chrome:all_processes:reported_by_os:' +
+      'system_memory:native_heap:private_dirty_size',
+      'memory:chrome:renderer_processes:reported_by_chrome:' +
+      'v8:allocated_by_malloc:effective_size',
+      'memory:chrome:gpu_process:reported_by_os' +
+      ':system_memory:private_footprint_size',
+      'memory:chrome:all_processes:reported_by_chrome:' +
+      'net:effective_size',
+      'memory:chrome:renderer_processes:' +
+      'reported_by_chrome:v8:heap:effective_size',
+      'memory:chrome:gpu_process:reported_by_chrome:' +
+      'allocated_objects_size',
+      'memory:chrome:renderer_processes:' +
+      'reported_by_os:system_memory:stack:proportional_resident_size',
+      'memory:chrome:renderer_processes:' +
+      'reported_by_chrome:shared_memory:effective_size',
+      'memory:chrome:all_processes:reported_by_os' +
+      ':system_memory:stack:proportional_resident_size',
+      'memory:chrome:all_processes:reported_by_os:' +
+      'private_dirty_size',
+      'memory:chrome:all_processes:reported_by_chrome:sqli' +
+      'te:effective_size',
+      'memory:chrome:browser_process:reported_by_os' +
+      ':system_memory:java_heap:proportional_resident_size',
+      'memory:chrome:browser_process:reported_b' +
+      'y_chrome:effective_size',
+      'memory:chrome:all_processes:reported_by_chrome:' +
+      'discardable:locked_size',
+      'memory:chrome:browser_process:reported_by_os:' +
+      'system_memory:private_dirty_size',
+      'memory:chrome:renderer_processes:reported_by_os:s' +
+      'ystem_memory:native_heap:private_dirty_size',
+      'memory:chrome:all_processes:reported_by_os:sy' +
+      'stem_memory:stack:private_dirty_size',
+      'memory:chrome:all_processes:reported_by_chrome:v8:he' +
+      'ap:code_space:allocated_objects_size',
+      'memory:chrome:gpu_process:reported_by_os:system' +
+      'memory:native_heap:proportional_resident_size',
+      'memory:chrome:all_processes:reported_by_chrome:' +
+      'partition_alloc:allocated_objects_size',
+      'memory:chrome:renderer_processes:reported_by' +
+      '_chrome:allocated_objects_size',
+      'memory:chrome:renderer_processes:reported_by_ch' +
+      'rome:cc:effective_size',
+      'memory:chrome:all_processes:reported_by' +
+      '_chrome:locked_size',
+      'memory:chrome:browser_process:reported_by_ch' +
+      'rome:shared_memory:effective_size',
+      'memory:chrome:browser_process:reporte' +
+      'd_by_chrome:tracing:effective_size',
+      'memory:chrome:browser_process:reported_by' +
+      '_chrome:sharedbitmap:effective_size'];
+
+
+  const result = parseAllMetrics(metricNames);
+  menu.browserOptions = result.browsers;
+  menu.subprocessOptions = result.subprocesses;
+  menu.probeOptions = result.probes;
+
+  menu.componentObject = result.components;
+  menu.sizeObject = result.sizes;
+
+  menu.metricNames = result.names;
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const MAX_INPUT_EVENT_TO_STARTUP_DELAY_IN_MS = 2000;
+  // Post-startup activity draw delay.
+  const MIN_DRAW_DELAY_IN_MS = 80;
+  const MAX_DRAW_DELAY_IN_MS = 2000;
+
+  function findProcess(processName, model) {
+    for (const pid in model.processes) {
+      const process = model.processes[pid];
+      if (process.name === processName) {
+        return process;
+      }
+    }
+    return undefined;
+  }
+
+  function findThreads(process, threadPrefix) {
+    if (process === undefined) return undefined;
+    const threads = [];
+    for (const tid in process.threads) {
+      const thread = process.threads[tid];
+      if (thread.name.startsWith(threadPrefix)) {
+        threads.push(thread);
+      }
+    }
+    return threads;
+  }
+
+  function findUIThread(process) {
+    if (process === undefined) return undefined;
+    const threads = findThreads(process, 'UI Thread');
+    if (threads !== undefined && threads.length === 1) {
+      return threads[0];
+    }
+    return process.threads[process.pid];
+  }
+
+  // Returns slices with actual app's process startup, excluding other delays.
+  function findLaunchSlices(model) {
+    const launches = [];
+    const binders = findThreads(findProcess('system_server', model), 'Binder');
+    for (const binderId in binders) {
+      const binder = binders[binderId];
+      for (const sliceId in binder.asyncSliceGroup.slices) {
+        const slice = binder.asyncSliceGroup.slices[sliceId];
+        if (slice.title.startsWith('launching:')) {
+          launches.push(slice);
+        }
+      }
+    }
+    return launches;
+  }
+
+  // Try to find draw event when activity just shown.
+  function findDrawSlice(appName, startNotBefore, model) {
+    let drawSlice = undefined;
+    const thread = findUIThread(findProcess(appName, model));
+    if (thread === undefined) return undefined;
+
+    for (const sliceId in thread.sliceGroup.slices) {
+      const slice = thread.sliceGroup.slices[sliceId];
+      if (slice.start < startNotBefore + MIN_DRAW_DELAY_IN_MS ||
+          slice.start > startNotBefore + MAX_DRAW_DELAY_IN_MS) continue;
+      if (slice.title !== 'draw') continue;
+      // TODO(kraynov): Add reportFullyDrawn() support.
+      if (drawSlice === undefined || slice.start < drawSlice.start) {
+        drawSlice = slice;
+      }
+    }
+    return drawSlice;
+  }
+
+  // Try to find input event before a process starts.
+  function findInputEventSlice(endNotAfter, model) {
+    const endNotBefore = endNotAfter - MAX_INPUT_EVENT_TO_STARTUP_DELAY_IN_MS;
+    let inputSlice = undefined;
+    const systemUi = findUIThread(findProcess('com.android.systemui', model));
+    if (systemUi === undefined) return undefined;
+
+    for (const sliceId in systemUi.asyncSliceGroup.slices) {
+      const slice = systemUi.asyncSliceGroup.slices[sliceId];
+      if (slice.end > endNotAfter || slice.end < endNotBefore) continue;
+      if (slice.title !== 'deliverInputEvent') continue;
+      if (inputSlice === undefined || slice.end > inputSlice.end) {
+        inputSlice = slice;
+      }
+    }
+    return inputSlice;
+  }
+
+  function computeStartupTimeInMs(appName, launchSlice, model) {
+    let startupStart = launchSlice.start;
+    let startupEnd = launchSlice.end;
+    const drawSlice = findDrawSlice(appName, launchSlice.end, model);
+    if (drawSlice !== undefined) {
+      startupEnd = drawSlice.end;
+    }
+    const inputSlice = findInputEventSlice(launchSlice.start, model);
+    if (inputSlice !== undefined) {
+      startupStart = inputSlice.start;
+    }
+    return startupEnd - startupStart;
+  }
+
+  // App startup time metric.
+  function measureStartup(histograms, model) {
+    const launches = findLaunchSlices(model);
+    for (const sliceId in launches) {
+      const launchSlice = launches[sliceId];
+      const appName = launchSlice.title.split(': ')[1];
+      const startupMs = computeStartupTimeInMs(appName, launchSlice, model);
+      histograms.createHistogram(`android:systrace:startup:${appName}`,
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, startupMs);
+    }
+  }
+
+  // Metric which measures time spent by process threads in each thread state.
+  // The value of metric is a time percentage relative to the length of selected
+  // range of interest.
+  function measureThreadStates(histograms, model, rangeOfInterest) {
+    for (const pid in model.processes) {
+      const process = model.processes[pid];
+      if (process.name === undefined) continue;
+
+      let hasSlices = false;
+      let timeRunning = 0;
+      let timeRunnable = 0;
+      let timeSleeping = 0;
+      let timeUninterruptible = 0;
+      let timeBlockIO = 0;
+      let timeUnknown = 0;
+
+      for (const tid in process.threads) {
+        const thread = process.threads[tid];
+        if (thread.timeSlices === undefined) continue;
+
+        for (const sliceId in thread.timeSlices) {
+          const slice = thread.timeSlices[sliceId];
+          const sliceRange =
+              tr.b.math.Range.fromExplicitRange(slice.start, slice.end);
+          const intersection = rangeOfInterest.findIntersection(sliceRange);
+          const duration = intersection.duration;
+          if (duration === 0) continue;
+          hasSlices = true;
+
+          if (slice.title === 'Running') {
+            timeRunning += duration;
+          } else if (slice.title === 'Runnable') {
+            timeRunnable += duration;
+          } else if (slice.title === 'Sleeping') {
+            timeSleeping += duration;
+          } else if (slice.title.startsWith('Uninterruptible')) {
+            timeUninterruptible += duration;
+            if (slice.title.includes('Block I/O')) timeBlockIO += duration;
+          } else {
+            timeUnknown += duration;
+          }
+        }
+      }
+
+      if (hasSlices) {
+        // For sake of simplicity we don't count wall time for each
+        // thread/process and just calculate relative values against selected
+        // range of interest.
+        const wall = rangeOfInterest.max - rangeOfInterest.min;
+        histograms.createHistogram(
+            `android:systrace:threadtime:${process.name}:running`,
+            tr.b.Unit.byName.normalizedPercentage, timeRunning / wall);
+        histograms.createHistogram(
+            `android:systrace:threadtime:${process.name}:runnable`,
+            tr.b.Unit.byName.normalizedPercentage, timeRunnable / wall);
+        histograms.createHistogram(
+            `android:systrace:threadtime:${process.name}:sleeping`,
+            tr.b.Unit.byName.normalizedPercentage, timeSleeping / wall);
+        histograms.createHistogram(
+            `android:systrace:threadtime:${process.name}:blockio`,
+            tr.b.Unit.byName.normalizedPercentage, timeBlockIO / wall);
+        histograms.createHistogram(
+            `android:systrace:threadtime:${process.name}:uninterruptible`,
+            tr.b.Unit.byName.normalizedPercentage, timeUninterruptible / wall);
+
+        // In case of changing names in systrace and importer.
+        if (timeUnknown > 0) {
+          histograms.createHistogram(
+              `android:systrace:threadtime:${process.name}:unknown`,
+              tr.b.Unit.byName.normalizedPercentage, timeUnknown / wall);
+        }
+      }
+    }
+  }
+
+  function androidSystraceMetric(histograms, model, options) {
+    let rangeOfInterest = model.bounds;
+    if (options !== undefined && options.rangeOfInterest !== undefined) {
+      rangeOfInterest = options.rangeOfInterest;
+    }
+
+    measureStartup(histograms, model);
+    measureThreadStates(histograms, model, rangeOfInterest);
+  }
+
+  tr.metrics.MetricRegistry.register(androidSystraceMetric, {
+    supportsRangeOfInterest: true
+  });
+
+  return {
+    androidSystraceMetric,
+  };
+});
+</script>

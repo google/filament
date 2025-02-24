@@ -1,0 +1,15 @@
+boto v2.43.0
+============
+
+:date: 2016/10/17
+
+Adds support for ``us-east-2`` endpoint.
+
+
+Changes
+-------
+* Add support for ``us-east-2`` endpoint (:sha:`262ed00`)
+* Account for metadata update propagation delay (:issue:`3615`, :sha:`592dae3`)
+* boto.dynamodb2.table.Table#batch_get() fails to paginate results if provisioned throughput is exceeded (:issue:`3574`, :sha:`abb3847`)
+
+

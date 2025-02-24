@@ -1,0 +1,16 @@
+Name: apiclient
+URL: https://github.com/google/google-api-python-client/
+Version: 1.4.0
+Revision: 31c47b8b13195a04f1f8783e3cec74729d34bc5b
+License: Apache
+License File: LICENSE
+Shipped: yes
+
+Description:
+The Google API Client for Python is a client library for accessing Google APIs.
+This is used in the perf dashboard for communicating with the issue tracker,
+buildbucket, etc. It has several dependencies, including uritemplate and six.
+
+Local Modifications:
+Removed everything except for the contents of googleapiclient/ and apiclient/
+and LICENSE.

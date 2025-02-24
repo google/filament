@@ -1,0 +1,155 @@
+//
+// Copyright (C) 2018 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// SPIRV Tools
+
+// genrules were obtained from the CMake build:
+// $ cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+// $ ninja -v -j 1 >log.log
+// Find Python invocations.
+// Use regex replacements to get "cmd:" lines below.
+
+package {
+    default_applicable_licenses: [
+        "external_swiftshader_third_party_SPIRV-Tools_license",
+    ],
+}
+
+// Added automatically by a large-scale-change that took the approach of
+// 'apply every license found to every target'. While this makes sure we respect
+// every license restriction, it may not be entirely correct.
+//
+// e.g. GPL in an MIT project might only apply to the contrib/ directory.
+//
+// Please consider splitting the single license below into multiple licenses,
+// taking care not to lose any license_kind information, and overriding the
+// default license using the 'licenses: [...]' property on targets as needed.
+//
+// For unused files, consider creating a 'filegroup' with "//visibility:private"
+// to attach the license to, and including a comment whether the files may be
+// used in the current project.
+// http://go/android-license-faq
+license {
+    name: "external_swiftshader_third_party_SPIRV-Tools_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+        "SPDX-license-identifier-BSD",
+        "SPDX-license-identifier-MIT",
+    ],
+    license_text: [
+        "LICENSE",
+    ],
+}
+
+genrule {
+    name: "swiftshader_spvtools_generate_grammar_tables",
+    out: [
+        "core.insts-unified1.inc",
+        "debuginfo.insts.inc",
+        "enum_string_mapping.inc",
+        "extension_enum.inc",
+        "glsl.std.450.insts.inc",
+        "opencl.debuginfo.100.insts.inc",
+        "opencl.std.insts.inc",
+        "operand.kinds-unified1.inc",
+        "spv-amd-gcn-shader.insts.inc",
+        "spv-amd-shader-ballot.insts.inc",
+        "spv-amd-shader-explicit-vertex-parameter.insts.inc",
+        "spv-amd-shader-trinary-minmax.insts.inc",
+        "nonsemantic.clspvreflection.insts.inc",
+        "nonsemantic.shader.debuginfo.100.insts.inc",
+    ],
+    srcs: [
+        ":swiftshader_spirv_headers_unified1_extinst.glsl.std.450.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.opencl.std.100.grammar.json",
+        ":swiftshader_spirv_headers_unified1_spirv.core.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.debuginfo.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.opencl.debuginfo.100.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.spv-amd-gcn-shader.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-ballot.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-trinary-minmax.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.nonsemantic.clspvreflection.grammar.json",
+        ":swiftshader_spirv_headers_unified1_extinst.nonsemantic.shader.debuginfo.100.grammar.json",
+    ],
+    tool_files: ["utils/generate_grammar_tables.py"],
+    cmd:
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.spv-amd-gcn-shader.grammar.json) --vendor-insts-output=$(location spv-amd-gcn-shader.insts.inc) --vendor-operand-kind-prefix=; "+
+        "$(location) --spirv-core-grammar=$(location :swiftshader_spirv_headers_unified1_spirv.core.grammar.json) --extinst-debuginfo-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.debuginfo.grammar.json) --extinst-cldebuginfo100-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.opencl.debuginfo.100.grammar.json) --core-insts-output=$(location core.insts-unified1.inc) --operand-kinds-output=$(location operand.kinds-unified1.inc) --output-language=c++; "+
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.debuginfo.grammar.json) --vendor-insts-output=$(location debuginfo.insts.inc) --vendor-operand-kind-prefix=; "+
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-ballot.grammar.json) --vendor-insts-output=$(location spv-amd-shader-ballot.insts.inc) --vendor-operand-kind-prefix=; "+
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json) --vendor-insts-output=$(location spv-amd-shader-explicit-vertex-parameter.insts.inc) --vendor-operand-kind-prefix=; "+
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.spv-amd-shader-trinary-minmax.grammar.json) --vendor-insts-output=$(location spv-amd-shader-trinary-minmax.insts.inc) --vendor-operand-kind-prefix=; "+
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.opencl.debuginfo.100.grammar.json) --vendor-insts-output=$(location opencl.debuginfo.100.insts.inc) --vendor-operand-kind-prefix=CLDEBUG100_; "+
+        "$(location) --spirv-core-grammar=$(location :swiftshader_spirv_headers_unified1_spirv.core.grammar.json) --extinst-debuginfo-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.debuginfo.grammar.json) --extinst-cldebuginfo100-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.opencl.debuginfo.100.grammar.json) --extension-enum-output=$(location extension_enum.inc) --enum-string-mapping-output=$(location enum_string_mapping.inc) --output-language=c++; "+
+        "$(location) --extinst-opencl-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.opencl.std.100.grammar.json) --opencl-insts-output=$(location opencl.std.insts.inc) --output-language=c++; "+
+        "$(location) --extinst-glsl-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.glsl.std.450.grammar.json) --glsl-insts-output=$(location glsl.std.450.insts.inc) --output-language=c++; " +
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.nonsemantic.clspvreflection.grammar.json) --vendor-insts-output=$(location nonsemantic.clspvreflection.insts.inc) --vendor-operand-kind-prefix=; " +
+        "$(location) --extinst-vendor-grammar=$(location :swiftshader_spirv_headers_unified1_extinst.nonsemantic.shader.debuginfo.100.grammar.json) --vendor-insts-output=$(location nonsemantic.shader.debuginfo.100.insts.inc) --vendor-operand-kind-prefix=SHDEBUG100_; "
+}
+
+genrule {
+    name: "swiftshader_spvtools_generate_registry_tables",
+    out: [
+        "generators.inc"
+    ],
+    srcs: [
+        ":swiftshader_spirv_headers_spir-v.xml"
+    ],
+    tool_files: ["utils/generate_registry_tables.py"],
+    cmd: "$(location) --xml=$(location :swiftshader_spirv_headers_spir-v.xml) --generator-output=$(location generators.inc)",
+}
+
+genrule { // FIXME this relies on `git` which is no good on build machines
+    name: "swiftshader_spvtools_update_build_version",
+    out: ["build-version.inc"],
+    srcs: ["CHANGES"],
+    tool_files: ["utils/update_build_version.py"],
+    cmd: "$(location) $(location CHANGES) " +
+         "$(location build-version.inc)",
+}
+
+cc_library_static {
+    name: "swiftshader_spirv-tools",
+    host_supported: true,
+    vendor_available: true,
+    srcs: [
+        "source/*.cpp",
+        "source/util/*.cpp",
+        "source/val/*.cpp",
+        "source/opt/*.cpp",
+    ],
+    local_include_dirs: [
+        "source",
+    ],
+    export_include_dirs: [
+        "include",
+    ],
+    include_dirs: [
+        "external/swiftshader/third_party/SPIRV-Headers/include/",
+        "external/swiftshader/third_party/SPIRV-Headers/include/spirv/unified1/",
+    ],
+    generated_headers: [
+        "swiftshader_spvtools_generate_grammar_tables",
+        "swiftshader_spvtools_update_build_version",
+        "swiftshader_spvtools_generate_registry_tables",
+    ],
+    stl: "libc++_static",
+    cppflags: [
+        "-Wno-implicit-fallthrough"
+    ],
+}

@@ -1,0 +1,15 @@
+diff --git a/ceval.h b/ceval.h
+index e8825ae84..dd2bca9ed 100644
+--- a/ceval.h
++++ b/ceval.h
+@@ -969,8 +969,8 @@ void ceval_print_node(const ceval_node * node, int indent) {
+     ceval_print_node(node -> right, indent + 4);
+     if (node -> id == CEVAL_NUMBER) {
+         if ((long) node -> number == node -> number) //for integers, skip the trailing zeroes
+-            sprintf(number, "%.0f", node -> number);
+-        else sprintf(number, "%.2f", node -> number);
++            snprintf(number, sizeof(number), "%.0f", node -> number);
++        else snprintf(number, sizeof(number), "%.2f", node -> number);
+         str = number;
+     } else {
+         str = ceval_token_symbol(node -> id);

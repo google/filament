@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel='import' href='/tracing/ui/base/constants.html'>
+
+<dom-module id='tr-ui-b-heading'>
+  <template>
+    <style>
+    :host {
+      background-color: rgb(243, 245, 247);
+      border-right: 1px solid #8e8e8e;
+      display: block;
+      height: 100%;
+      margin: 0;
+      padding: 0 5px 0 0;
+    }
+
+    heading {
+      display: block;
+      overflow-x: hidden;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    #arrow {
+      flex: 0 0 auto;
+      font-family: sans-serif;
+      margin-left: 5px;
+      margin-right: 5px;
+      width: 8px;
+    }
+
+    #link, #heading_content {
+      display: none;
+    }
+    </style>
+    <heading id='heading' on-click='onHeadingDivClicked_'>
+      <span id='arrow'></span>
+      <span id='heading_content'></span>
+      <tr-ui-a-analysis-link id='link'></tr-ui-a-analysis-link>
+    </heading>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'tr-ui-b-heading',
+
+  DOWN_ARROW: String.fromCharCode(0x25BE),
+  RIGHT_ARROW: String.fromCharCode(0x25B8),
+
+  ready(viewport) {
+    // Minus 6 === 1px border + 5px padding right.
+    this.style.width = (tr.ui.b.constants.HEADING_WIDTH - 6) + 'px';
+
+    this.heading_ = '';
+    this.expanded_ = true;
+    this.arrowVisible_ = false;
+    this.selectionGenerator_ = undefined;
+
+    this.updateContents_();
+  },
+
+  get heading() {
+    return this.heading_;
+  },
+
+  set heading(text) {
+    if (this.heading_ === text) return;
+
+    this.heading_ = text;
+    this.updateContents_();
+  },
+
+  set arrowVisible(val) {
+    if (this.arrowVisible_ === val) return;
+
+    this.arrowVisible_ = !!val;
+    this.updateContents_();
+  },
+
+  set tooltip(text) {
+    this.$.heading.title = text;
+  },
+
+  set selectionGenerator(generator) {
+    if (this.selectionGenerator_ === generator) return;
+
+    this.selectionGenerator_ = generator;
+    this.updateContents_();
+  },
+
+  get expanded() {
+    return this.expanded_;
+  },
+
+  set expanded(expanded) {
+    if (this.expanded_ === expanded) return;
+
+    this.expanded_ = !!expanded;
+    this.updateContents_();
+  },
+
+  onHeadingDivClicked_() {
+    this.dispatchEvent(new tr.b.Event('heading-clicked', true));
+  },
+
+  updateContents_() {
+    if (this.arrowVisible_) {
+      this.$.arrow.style.display = '';
+    } else {
+      this.$.arrow.style.display = 'none';
+      this.$.heading.style.display = this.expanded_ ? '' : 'none';
+    }
+
+    if (this.arrowVisible_) {
+      Polymer.dom(this.$.arrow).textContent =
+          this.expanded_ ? this.DOWN_ARROW : this.RIGHT_ARROW;
+    }
+
+    this.$.link.style.display = 'none';
+    this.$.heading_content.style.display = 'none';
+
+    if (this.selectionGenerator_) {
+      this.$.link.style.display = 'inline-block';
+      this.$.link.selection = this.selectionGenerator_;
+      Polymer.dom(this.$.link).textContent = this.heading_;
+    } else {
+      this.$.heading_content.style.display = 'inline-block';
+      Polymer.dom(this.$.heading_content).textContent = this.heading_;
+    }
+  }
+});
+</script>

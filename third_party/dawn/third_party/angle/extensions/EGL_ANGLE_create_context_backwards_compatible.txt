@@ -1,0 +1,93 @@
+Name
+
+    ANGLE_create_context_backwards_compatible
+
+Name Strings
+
+    EGL_ANGLE_create_context_backwards_compatible
+
+Contributors
+
+    Geoff Lang
+
+Contacts
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, May 8, 2019
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    Requires EGL 1.4.
+
+    Written against the EGL 1.5 specification.
+
+Overview
+
+    This extension allows the user to create a context with exact major and
+    minor versions.  By default, a context may be created of any version that
+    is backwards-compatible with the requested verion but it is often useful to
+    users to request and target a specific version.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE 0x3483
+
+Additions to the EGL 1.5 Specification
+
+    Modify section 3.7.1.1 "OpenGL and OpenGL ES Context Versions":
+
+    - The context returned must be the specified version, or a later version
+    - which is backwards compatible with that version.
+
+    + The context returned must be the specified version, or a later version
+    + which is backwards compatible with that version if
+    + EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE is EGL_TRUE.
+
+    Append to section 3.7.1.1 "OpenGL and OpenGL ES Context Versions":
+
+    The default value of EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE is
+    EGL_TRUE.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   May 8, 2019    geofflang  Initial version

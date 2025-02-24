@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/timeline_display_transform.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TimelineDisplayTransform = tr.ui.TimelineDisplayTransform;
+
+  test('basics', function() {
+    const a = new TimelineDisplayTransform();
+    a.panX = 0;
+    a.panY = 0;
+    a.scaleX = 1;
+
+    const b = new TimelineDisplayTransform();
+    b.panX = 10;
+    b.panY = 0;
+    b.scaleX = 1;
+
+    assert.isFalse(a.equals(b));
+    assert.isFalse(a.almostEquals(b));
+
+    const c = b.clone();
+    assert.isTrue(b.equals(c));
+    assert.isTrue(b.almostEquals(c));
+
+    c.set(a);
+    assert.isTrue(a.equals(c));
+    assert.isTrue(a.almostEquals(c));
+  });
+});
+</script>
+

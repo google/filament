@@ -1,0 +1,64 @@
+# Copyright 2017 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  build_with_chromium = false
+  ignore_elf32_limitations = true
+
+  use_system_xcode = ""
+
+  # If true, it assumes that //third_party/abseil-cpp is an available
+  # dependency for googletest.
+  gtest_enable_absl_printers = false
+
+  # Set to default here so that it can be set via gn args
+  use_cxx17 = false
+}
+
+if (host_os == "mac" && use_system_xcode == "") {
+  _result = exec_script("//build/mac/should_use_hermetic_xcode.py",
+                        [ target_os ],
+                        "value")
+
+  assert(_result != 2,
+         "Do not allow building targets with the default" +
+             "hermetic toolchain if the minimum OS version is not met.")
+  assert(_result != 3,
+         "iOS does not support building with a hermetic toolchain. " +
+             "Please install Xcode.")
+
+  use_system_xcode = _result != 1
+}
+
+enable_java_templates = true
+
+# Build with fewer Android dependencies
+limit_android_deps = true
+
+# Standalone ANGLE is used in places that are extremely performance sensitive,
+# such as the system graphics driver on Android. ANGLE validates arguments at
+# the API boundary and assumes that all bounds, et cetera are valid elsewhere
+# in internal code.
+#
+# Unfortunately, this means the compiler cannot optimize out the vast majority
+# of hardening checks. To ensure performance remains competitive, drop the
+# libc++ hardening checks, since ANGLE already makes no security guarantees in
+# these situations.
+if (is_win) {
+  # TODO(https://crbug.com/1418717): ANGLE uses Chromium's abseil-cpp directory.
+  # Since Abseil does not mark symbols as exported, Chromium uses an alternate
+  # approach to scrape the symbols that need to be exported and generates .def
+  # files that the ANGLE build reuses.
+  #
+  # However, these symbol names include libc++ types, and libc++ hardening
+  # affects ABI, so ANGLE and Chromium's libc++ hardening modes need to remain
+  # in sync on Windows. This is a bit of a hack but "OK" since the performance
+  # concerns for standalone ANGLE builds are not relevant on Windows.
+  enable_safe_libcxx = true
+} else if (is_linux) {
+  # https://anglebug.com/40096878: turning off safe_libcxx breaks TSAN
+  enable_safe_libcxx = true
+} else {
+  enable_safe_libcxx = false
+}

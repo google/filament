@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('testBasic', function() {
+    const link = document.createElement('tr-ui-a-analysis-link');
+
+    const i10 = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'name', 10);
+    const s10 = i10.addSnapshot(10, {foo: 1});
+
+    link.selection = new tr.model.EventSet(s10);
+    this.addHTMLOutput(link);
+
+    let didRSC = false;
+    link.addEventListener('requestSelectionChange', function(e) {
+      didRSC = true;
+      assert.isTrue(e.selection.equals(new tr.model.EventSet(s10)));
+    });
+    link.click();
+    assert.isTrue(didRSC);
+  });
+
+  test('testGeneratorVersion', function() {
+    const link = document.createElement('tr-ui-a-analysis-link');
+
+    const i10 = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'name', 10);
+    const s10 = i10.addSnapshot(10, {foo: 1});
+
+    function selectionGenerator() {
+      return new tr.model.EventSet(s10);
+    }
+    selectionGenerator.userFriendlyName = 'hello world';
+    link.selection = selectionGenerator;
+    this.addHTMLOutput(link);
+
+    let didRSC = false;
+    link.addEventListener('requestSelectionChange', function(e) {
+      assert.isTrue(e.selection.equals(new tr.model.EventSet(s10)));
+      didRSC = true;
+    });
+    link.click();
+    assert.isTrue(didRSC);
+  });
+});
+</script>

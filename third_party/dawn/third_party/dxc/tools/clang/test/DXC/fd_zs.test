@@ -1,0 +1,8 @@
+// /Fd plus /Zs
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Zs /Fd %t.pdb /Fo %t.dxo_fd
+
+// RUN:FileCheck --input-file=%t.pdb %s --check-prefix=PDB
+// Make sure PDB not empty.
+// PDB:{{.+}}
+// RUN:FileCheck --input-file=%t.dxo_fd %s --check-prefix=FD_FO
+// FD_FO:{{.+}}

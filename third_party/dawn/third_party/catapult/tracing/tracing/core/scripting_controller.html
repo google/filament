@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/core/scripting_object.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.c', function() {
+  function ScriptingController(brushingStateController) {
+    this.brushingStateController_ = brushingStateController;
+    this.scriptObjectNames_ = [];
+    this.scriptObjectValues_ = [];
+    this.brushingStateController.addEventListener(
+        'model-changed', this.onModelChanged_.bind(this));
+
+    // Register all scripting objects.
+    const typeInfos = ScriptingObjectRegistry.getAllRegisteredTypeInfos();
+    typeInfos.forEach(function(typeInfo) {
+      this.addScriptObject(typeInfo.metadata.name, typeInfo.constructor);
+      // Also make the object available to the DevTools inspector.
+      global[typeInfo.metadata.name] = typeInfo.constructor;
+    }, this);
+  }
+
+  function ScriptingObjectRegistry() {
+  }
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  tr.b.decorateExtensionRegistry(ScriptingObjectRegistry, options);
+
+  ScriptingController.prototype = {
+    get brushingStateController() {
+      return this.brushingStateController_;
+    },
+
+    onModelChanged_() {
+      this.scriptObjectValues_.forEach(function(v) {
+        if (v.onModelChanged) {
+          v.onModelChanged(this.brushingStateController.model);
+        }
+      }, this);
+    },
+
+    addScriptObject(name, value) {
+      this.scriptObjectNames_.push(name);
+      this.scriptObjectValues_.push(value);
+    },
+
+    executeCommand(command) {
+      const f = new Function(
+          this.scriptObjectNames_, 'return eval(' + command + ')');
+      return f.apply(null, this.scriptObjectValues_);
+    }
+  };
+
+  return {
+    ScriptingController,
+    ScriptingObjectRegistry,
+  };
+});
+</script>

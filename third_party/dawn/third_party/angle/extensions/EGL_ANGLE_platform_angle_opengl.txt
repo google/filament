@@ -1,0 +1,100 @@
+Name
+
+    ANGLE_platform_angle_opengl
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_opengl
+
+Contributors
+
+    Shannon Woods, Google
+    Geoff Lang, Google
+    Courtney Goeltzenleuchter, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 4, 2018-05-17
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of OpenGL display types and,
+    for OpenGL ES display types, allows the application to pass
+    in a handle to the EGL library to use.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE               0x320D
+        EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE             0x320E
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+        EGL_PLATFORM_ANGLE_EGL_HANDLE_ANGLE                0x3480
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that translates to OpenGL or OpenGL ES, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be:
+      - EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE for an OpenGL display,
+      - EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE for a native OpenGL ES display.
+
+    To request a specific maximum context version to use for the underlying
+    API, EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE and
+    EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE can be used.
+
+    To pass in a handle to the system EGL library, use the attribute
+    EGL_PLATFORM_ANGLE_EGL_HANDLE_ANGLE. If EGL_PLATFORM_ANGLE_TYPE_ANGLE
+    is not equal to EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE, an
+    EGL_BAD_ATTRIBUTE is generated. If the handle provided with
+    EGL_PLATFORM_ANGLE_EGL_HANDLE_ANGLE is not a valid EGL handle,
+    behaviour is undefined.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2014-06-05 (Geoff Lang)
+      - Initial draft
+    Version 2, 2014-10-27 (Geoff Lang)
+      - Moved descriptions of platforms and major/minor versions from
+        EGL_ANGLE_platform_angle spec to EGL_ANGLE_platform_angle_opengl.
+    Version 3, 2014-11-26 (Geoff Lang)
+      - Updated enum values.
+    Version 4, 2018-05-17 (Courtney Goeltzenleuchter)
+      - Add attribute for specifying underlying EGL library.

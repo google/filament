@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/importer/user_model_builder.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.importer', function() {
+  function compareEvents(x, y) {
+    if (x.start !== y.start) return x.start - y.start;
+    return x.guid - y.guid;
+  }
+
+  class UserExpectationVerifier {
+    constructor() {
+      this.customizeModelCallback_ = undefined;
+      this.expectedUEs_ = undefined;
+      this.expectedSegments_ = undefined;
+    }
+
+    set customizeModelCallback(cmc) {
+      this.customizeModelCallback_ = cmc;
+    }
+
+    /**
+     * @param {!Array.<!Object>} ues must be sorted by start time.
+     */
+    set expectedUEs(ues) {
+      this.expectedUEs_ = ues;
+    }
+
+    get expectedUEs() {
+      return this.expectedUEs_;
+    }
+
+    /**
+     * @param {!Array.<!Object>} segments must be sorted by start time.
+     */
+    set expectedSegments(segments) {
+      this.expectedSegments_ = segments;
+    }
+
+    verify() {
+      const model = tr.e.chrome.ChromeTestUtils.newChromeModel(
+          this.customizeModelCallback_);
+
+      let failure = undefined;
+      try {
+        this.verifyExpectations_([...model.userModel.expectations]);
+        this.verifySegments_(model.userModel.segments);
+      } catch (e) {
+        failure = e;
+      }
+
+      if (failure) throw failure;
+    }
+
+    verifyExpectations_(expectations) {
+      assert.lengthOf(expectations, this.expectedUEs.length);
+      for (let i = 0; i < this.expectedUEs.length; ++i) {
+        this.verifyExpectation_(
+            this.expectedUEs[i], expectations[i], `UEs[${i}]`);
+      }
+    }
+
+    verifySegments_(segments) {
+      assert.lengthOf(segments, this.expectedSegments_.length);
+      for (let i = 0; i < this.expectedSegments_.length; ++i) {
+        this.verifySegment_(
+            this.expectedSegments_[i], segments[i], `segments[${i}].`);
+      }
+    }
+
+    verifyExpectation_(expected, actual, at) {
+      assert.strictEqual(expected.title, actual.title, at + 'title');
+      if (expected.name !== undefined) {
+        assert.strictEqual(expected.name, actual.name, at + 'name');
+      }
+      assert.strictEqual(expected.start, actual.start, at + 'start');
+      assert.strictEqual(expected.end, actual.end, at + 'end');
+      assert.strictEqual(expected.eventCount,
+          actual.associatedEvents.length, at + 'eventCount');
+      if (actual instanceof tr.model.um.ResponseExpectation) {
+        assert.strictEqual(expected.isAnimationBegin || false,
+            actual.isAnimationBegin, at + 'isAnimationBegin');
+      }
+    }
+
+    verifySegment_(expected, actual, at) {
+      assert.strictEqual(expected.start, actual.start, at + 'start');
+      assert.strictEqual(expected.end, actual.end, at + 'end');
+      assert.lengthOf(actual.expectations, expected.expectations.length,
+          at + 'expectations.length');
+      for (let i = 0; i < expected.expectations.length; ++i) {
+        this.verifyExpectation_(
+            expected.expectations[i], actual.expectations[i],
+            at + `expectations[${i}].`);
+      }
+    }
+  }
+
+  return {
+    UserExpectationVerifier,
+  };
+});
+</script>

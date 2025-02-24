@@ -1,0 +1,9 @@
+LIBRARY test_layer_wrap_objects_1
+EXPORTS
+    vkGetInstanceProcAddr
+    vkGetDeviceProcAddr
+    vkEnumerateInstanceLayerProperties
+    vkEnumerateInstanceExtensionProperties
+    vkEnumerateDeviceExtensionProperties
+    vk_layerGetPhysicalDeviceProcAddr
+    vkNegotiateLoaderLayerInterfaceVersion

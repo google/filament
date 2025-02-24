@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/scatter_chart.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiation_singleSeries', function() {
+    const chart = new tr.ui.b.ScatterChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, y: 100, radius: 2, color: 'red'},
+      {x: 20, y: 110, radius: 20, color: 'blue'},
+      {x: 30, y: 100, radius: 10, color: 'red'},
+      {x: 40, y: 50, radius: 10, color: 'red'}
+    ];
+  });
+
+  test('instantiation_interactiveBrushing', function() {
+    const chart = new tr.ui.b.ScatterChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, y: 50, radius: 2, color: 'blue'},
+      {x: 20, y: 60, radius: 3, color: 'red'},
+      {x: 30, y: 80, radius: 4, color: 'orange'},
+      {x: 40, y: 20, radius: 5, color: 'purple'},
+      {x: 50, y: 30, radius: 6, color: 'yellow'},
+      {x: 60, y: 20, radius: 7, color: 'green'},
+      {x: 70, y: 15, radius: 8, color: 'blue'},
+      {x: 80, y: 20, radius: 9, color: 'red'}
+    ];
+
+    let mouseDown = undefined;
+
+    function updateBrushedRange(e) {
+      const xRange = new tr.b.math.Range();
+      if (e.x !== mouseDown.x) {
+        xRange.addValue(mouseDown.x);
+        xRange.addValue(e.x);
+      }
+      const yRange = new tr.b.math.Range();
+      if (e.y !== mouseDown.y) {
+        yRange.addValue(mouseDown.y);
+        yRange.addValue(e.y);
+      }
+      chart.setBrushedRanges(xRange, yRange);
+    }
+
+    chart.addEventListener('item-mousedown', function(e) {
+      mouseDown = e;
+    });
+    chart.addEventListener('item-mousemove', function(e) {
+      updateBrushedRange(e);
+    });
+    chart.addEventListener('item-mouseup', function(e) {
+      updateBrushedRange(e);
+      mouseDown = undefined;
+    });
+  });
+});
+</script>

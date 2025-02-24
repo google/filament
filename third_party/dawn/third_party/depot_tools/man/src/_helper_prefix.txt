@@ -1,0 +1,1 @@
+A tutorial for these tools can be found at linkgit:depot_tools_tutorial[7].

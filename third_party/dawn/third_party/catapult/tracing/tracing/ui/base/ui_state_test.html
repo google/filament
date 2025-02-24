@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/base/ui_state.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const UIState = tr.ui.b.UIState;
+
+  function FakeModel() {
+    this.processes = { 1: { threads: { 2: { stableId: '1.2' } } } };
+  }
+
+  // FakeTrack needs to be an instance of tr.ui.tracks.Track because a
+  // location is constructed in terms of Track instances.
+  function FakeTrack() { }
+  FakeTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    get eventContainer() {
+      return { stableId: '1.2' };
+    },
+
+    getBoundingClientRect() {
+      return { top: 5, height: 2 };
+    },
+
+    get parentElement() {
+      return null;
+    }
+  };
+
+  function FakeViewPort() {
+    this.containerToTrackMap = {
+      // "1.2" is the only valid stableId this test function accepts.
+      getTrackByStableId(stableId) {
+        if (stableId === '1.2') {
+          return new FakeTrack;
+        }
+        return undefined;
+      }
+    };
+  }
+
+  test('invalidStableId', function() {
+    const model = new FakeModel;
+    const vp = new FakeViewPort;
+    assert.throws(function() {
+      UIState.fromUserFriendlyString(model, vp, '15@1.3x6');
+    });
+    assert.throws(function() {
+      UIState.fromUserFriendlyString(model, vp, '15@2.2x6');
+    });
+    assert.throws(function() {
+      UIState.fromUserFriendlyString(model, vp, '505@1.x5');
+    });
+  });
+
+  test('invalidScaleX', function() {
+    const model = new FakeModel;
+    const vp = new FakeViewPort;
+    assert.isUndefined(UIState.fromUserFriendlyString(model, vp, '1@1.2x-1'));
+    assert.throws(function() {
+      UIState.fromUserFriendlyString(model, vp, '1@1.2x0');
+    });
+  });
+
+  test('invalidSyntax', function() {
+    const model = new FakeModel;
+    const vp = new FakeViewPort;
+    assert.isUndefined(UIState.fromUserFriendlyString(model, vp, '5'));
+    assert.isUndefined(UIState.fromUserFriendlyString(model, vp, '5@x5'));
+    assert.isUndefined(UIState.fromUserFriendlyString(model, vp, 'ab@1.2x5'));
+  });
+
+  test('validString', function() {
+    const model = new FakeModel;
+    const vp = new FakeViewPort;
+    const str = '-50125.51231@1.2x1.12345';
+    const uiState = UIState.fromUserFriendlyString(model, vp, str);
+
+    assert.isDefined(uiState);
+    assert.strictEqual(uiState.location.xWorld, -50125.51231);
+    assert.strictEqual(
+        uiState.location.getContainingTrack(vp).eventContainer.stableId,
+        '1.2');
+    assert.strictEqual(uiState.scaleX, 1.12345);
+
+    assert.strictEqual(uiState.toUserFriendlyString(vp), str);
+  });
+});
+</script>

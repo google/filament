@@ -1,0 +1,134 @@
+'\" t
+.\"     Title: depot_tools
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "DEPOT_TOOLS" "7" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+depot_tools \- A collection of tools for dealing with Chromium development\&.
+.SH "DESCRIPTION"
+.sp
+The Chromium depot_tools suite contains many tools to assist/augment the Chromium development environment\&. The tools may be downloaded by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.sp
+There are two primary categories of tools\&. Some of these tools are \fIessential\fR to the development flow, in the sense that you cannot successfully develop Chromium without them\&.
+.sp
+Other tools are merely \fIhelper\fR tools\&. Not required, but they can substantially ease the development workflow\&.
+.sp
+A listing of both categories of tools follows\&.
+.SH "HELPER TOOLS"
+.sp
+A tutorial for these tools can be found at \fBdepot_tools_tutorial\fR(7)\&.
+.PP
+\fBgit-cl\fR(1)
+.RS 4
+Interact with code reviews on Gerrit and Rietveld
+.RE
+.PP
+\fBgit-footers\fR(1)
+.RS 4
+Extract meta\-information expressed as footers in a commit message\&.
+.RE
+.PP
+\fBgit-freeze\fR(1)
+.RS 4
+Freeze all changes on a branch (indexed and unindexed)\&.
+.RE
+.PP
+\fBgit-hyper-blame\fR(1)
+.RS 4
+Like git blame, but with the ability to ignore or bypass certain commits\&.
+.RE
+.PP
+\fBgit-map-branches\fR(1)
+.RS 4
+Helper script to display all local git branches with \(oqupstream\(cq hierarchy in colorized terminal format\&.
+.RE
+.PP
+\fBgit-map\fR(1)
+.RS 4
+Display history of all branches in a colorized terminal format\&.
+.RE
+.PP
+\fBgit-mark-merge-base\fR(1)
+.RS 4
+Manually interact with depot_tools\*(Aq merge\-base markers\&.
+.RE
+.PP
+\fBgit-nav-downstream\fR(1)
+.RS 4
+Checkout a downstream branch of the currently checked out branch\&.
+.RE
+.PP
+\fBgit-nav-upstream\fR(1)
+.RS 4
+Checkout the upstream branch of the currently checked out branch\&.
+.RE
+.PP
+\fBgit-new-branch\fR(1)
+.RS 4
+Create and switch to a new branch with correct tracking information.\&.
+.RE
+.PP
+\fBgit-rebase-update\fR(1)
+.RS 4
+Updates all branches to have the latest changes from their upstreams\&.
+.RE
+.PP
+\fBgit-rename-branch\fR(1)
+.RS 4
+Rename a branch and correctly preserve all downstream relationships\&.
+.RE
+.PP
+\fBgit-reparent-branch\fR(1)
+.RS 4
+Alter the parentage (upstream) for the current branch\&.
+.RE
+.PP
+\fBgit-retry\fR(1)
+.RS 4
+Bootstrap function to retry a git command\&.
+.RE
+.PP
+\fBgit-squash-branch\fR(1)
+.RS 4
+Takes all commits in a single branch and replaces them with a single commit\&.
+.RE
+.PP
+\fBgit-thaw\fR(1)
+.RS 4
+Un\-freeze all changes on a frozen branch\&.
+.RE
+.PP
+\fBgit-upstream-diff\fR(1)
+.RS 4
+Print a diff of the current branch, compared to its upstream\&.
+.RE
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

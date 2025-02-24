@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structpvr_1_1utils_1_1_vertex_attribute_info.html" title="Contains a full description of a Vertex Attribute: Index, format, number of elements, offset in the buffer, optionally name. All values (except attributeName) must be set explicitly." alt="" coords="5,13,216,39"/>
+<area shape="rect" id="node2" href="$structpvr_1_1utils_1_1_vertex_attribute_info_with_binding.html" title="A container struct carrying Vertex Attribute information (vertex layout, plus binding point)..." alt="" coords="264,5,451,47"/>
+</map>

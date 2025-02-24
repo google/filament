@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/line_chart.html">
+
+<!--
+@fileoverview A line chart showing milliseconds since the start of the frame on
+the x-axis and power consumption on the y-axis. Each frame is shown as a
+separate line in the chart. Vertical sync events are used as the start of each
+frame.
+
+This chart aims to help users understand the shape of the power consumption
+curve over the course of a frame or set of frames.
+-->
+<dom-module id='tr-ui-a-frame-power-usage-chart'>
+  <template>
+    <div id="content"></div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+const EventSet = tr.model.EventSet;
+
+const CHART_TITLE = 'Power (W) by ms since vertical sync';
+
+Polymer({
+  is: 'tr-ui-a-frame-power-usage-chart',
+
+  ready() {
+    this.chart_ = undefined;
+    this.samples_ = new EventSet();
+    this.vSyncTimestamps_ = [];
+  },
+
+  attached() {
+    if (this.samples_) this.updateContents_();
+  },
+
+  get chart() {
+    return this.chart_;
+  },
+
+  get samples() {
+    return this.samples_;
+  },
+
+  get vSyncTimestamps() {
+    return this.vSyncTimestamps_;
+  },
+
+  /**
+   * Sets the data that powers the chart. Vsync timestamps must be in
+   * chronological order.
+   */
+  setData(samples, vSyncTimestamps) {
+    this.samples_ = (samples === undefined) ? new EventSet() : samples;
+    this.vSyncTimestamps_ =
+        (vSyncTimestamps === undefined) ? [] : vSyncTimestamps;
+    if (this.isAttached) this.updateContents_();
+  },
+
+  updateContents_() {
+    this.clearChart_();
+
+    const data = this.getDataForLineChart_();
+
+    if (data.length === 0) return;
+
+    this.chart_ = new tr.ui.b.LineChart();
+    Polymer.dom(this.$.content).appendChild(this.chart_);
+    this.chart_.chartTitle = CHART_TITLE;
+    this.chart_.data = data;
+  },
+
+  clearChart_() {
+    const content = this.$.content;
+    while (Polymer.dom(content).firstChild) {
+      Polymer.dom(content).removeChild(Polymer.dom(content).firstChild);
+    }
+
+    this.chart_ = undefined;
+  },
+
+  // TODO(charliea): Limit the ms since vsync to the median frame length. The
+  // vertical syncs are not 100% regular and highlighting any sample that's
+  // in one of these 'vertical sync lulls' makes the x-axis have a much larger
+  // scale than it should, effectively squishing the other samples into the
+  // left side of the chart.
+  /**
+   * Returns an array of data points for the chart. Each element in the array
+   * is of the form { x: <ms since vsync>, f<frame#>: <power in mW> }.
+   */
+  getDataForLineChart_() {
+    const sortedSamples = this.sortSamplesByTimestampAscending_(this.samples);
+    const vSyncTimestamps = this.vSyncTimestamps.slice();
+
+    let lastVSyncTimestamp = undefined;
+    const points = [];
+
+    // For each power sample, find and record the frame number that it belongs
+    // to as well as the amount of time elapsed since that frame began.
+    let frameNumber = 0;
+    sortedSamples.forEach(function(sample) {
+      while (vSyncTimestamps.length > 0 && vSyncTimestamps[0] <= sample.start) {
+        lastVSyncTimestamp = vSyncTimestamps.shift();
+        frameNumber++;
+      }
+
+      // If no vertical sync occurred before the power sample, don't use the
+      // power sample.
+      if (lastVSyncTimestamp === undefined) return;
+
+      const point = { x: sample.start - lastVSyncTimestamp };
+      point['f' + frameNumber] = sample.powerInW;
+      points.push(point);
+    });
+
+    return points;
+  },
+
+  sortSamplesByTimestampAscending_(samples) {
+    return samples.toArray().sort(function(smpl1, smpl2) {
+      return smpl1.start - smpl2.start;
+    });
+  }
+});
+</script>

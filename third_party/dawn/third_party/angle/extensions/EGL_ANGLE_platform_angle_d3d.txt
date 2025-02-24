@@ -1,0 +1,141 @@
+Name
+
+    ANGLE_platform_angle_d3d
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_d3d
+
+Contributors
+
+    Shannon Woods, Google
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 3, 2014-11-26
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of D3D display types.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE                 0x3207
+        EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE                0x3208
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE               0x3209
+        EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE     0x320F
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE      0x320B
+        EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_REFERENCE_ANGLE 0x320C
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that is backed by Direct3D resources, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be:
+      - EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE for a D3D9 display,
+      - EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE for a D3D11 display.
+
+    To request a specific maximum feature level to be used by the D3D11
+    display, EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE and
+    EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE can be used.  Only feature
+    levels that are capable of supporting all available client APIs will be
+    used unless explicitly requested.
+    EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE and
+    EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE have no effect when requesting
+    a D3D9 display.
+
+    If no <attrib_list> is specified to eglGetPlatformDisplayEXT, the value of
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE is implicitly set to
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE. Otherwise, the value of
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE should be:
+      - EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE to request a hardware
+        accelerated device.
+      - EGL_PLATFORM_ANGLE_DEVICE_TYPE_NULL_ANGLE to request a no-op driver
+        for testing.
+      - EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE to request an
+        optimized software rasterizer.
+      - EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_REFERENCE_ANGLE to request a
+        reference rasterizer.
+
+    If EGL_PLATFORM_ANGLE_TYPE_ANGLE is set to
+    EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE, the display can automatically respond
+    to trim events from the operating system.  If the attribute
+    EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is unspecified, it is
+    implicitly set to EGL_FALSE.  Otherwise, the value of
+    EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE should be EGL_TRUE or
+    EGL_FALSE.
+
+    If EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE is set to
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_WARP_ANGLE and EGL_PLATFORM_ANGLE_TYPE_ANGLE
+    is not set to EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE, an EGL_BAD_ATTRIBUTE
+    error is generated and EGL_NO_DISPLAY is returned.
+
+    If EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is specified when
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE is not EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE
+    or a value other than EGL_TRUE or EGL_FALSE is used, an EGL_BAD_ATTRIBUTE
+    error is generated and EGL_NO_DISPLAY is returned.
+
+Issues
+
+    1) Some multithreaded applications can crash if the display automatically
+       responds to trim events while the application is rendering from another
+       thread.
+
+       RESOLVED: Added an EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE
+       enum to specify if the display should respond to trim events.
+       Applications that do multithreaded rendering should disable automatic
+       trim and handle the trim events on their own.
+
+Revision History
+
+    Version 1, 2014-06-05 (Geoff Lang)
+      - Initial draft
+    Version 2, 2014-10-27 (Geoff Lang)
+      - Separate WARP devices into a new attribute instead of a platform type.
+      - Moved descriptions of platforms and major/minor versions from
+        EGL_ANGLE_platform_angle spec to EGL_ANGLE_platform_angle_d3d.
+    Version 3, 2014-11-26 (Geoff Lang)
+      - Remove the USE_WARP bool and replace it with a DEVICE_TYPE enum.
+    Version 4, 2015-03-11 (Geoff Lang)
+      - Add the ENABLE_AUTOMATIC_TRIM enum.

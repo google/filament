@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview BlameContext is the Trace Viewer side correspondence of
+ * Chrome's class base::trace_event::BlameContext. More specifically,
+ *
+ * BlameContextSnapshot, which inherits from ObjectSnapshot, is the base class
+ * of all snapshots of blame contexts traced in Chrome.
+ *
+ * BlameContextInstance, which inherits from ObjectInstance, gathers snapshots
+ * of the same blame context traced in Chrome.
+ *
+ * BlameContextSnapshot and BlameContextInstance should never be instantiated
+ * directly. Subclasses corresponding to different BlameContexts in Chrome
+ * should define their own BlameContextSnapshot and BlameContextInstance
+ * specializations for instantiation.
+ *
+ */
+tr.exportTo('tr.e.chrome', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+  const ObjectInstance = tr.model.ObjectInstance;
+
+  function BlameContextSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  BlameContextSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    /**
+     * Returns the parent in the context tree.
+     */
+    get parentContext() {
+      if (this.args.parent instanceof BlameContextSnapshot) {
+        return this.args.parent;
+      }
+      return undefined;
+    },
+
+    get userFriendlyName() {
+      return 'BlameContext';
+    }
+  };
+
+  function BlameContextInstance() {
+    ObjectInstance.apply(this, arguments);
+  }
+
+  BlameContextInstance.prototype = {
+    __proto__: ObjectInstance.prototype,
+
+    /**
+     * Returns the type of the blame context, to be overriden by subclasses.
+     */
+    get blameContextType() {
+      throw new Error('Not implemented');
+    }
+  };
+
+  return {
+    BlameContextSnapshot,
+    BlameContextInstance,
+  };
+});
+</script>

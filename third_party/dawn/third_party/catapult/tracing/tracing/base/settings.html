@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Settings object.
+ */
+tr.exportTo('tr.b', function() {
+  /**
+   * Settings is a simple wrapper around local storage, to make it easier
+   * to test classes that have settings.
+   *
+   * May be called as new tr.b.Settings() or simply tr.b.Settings()
+   * @constructor
+   */
+  function Settings() {
+    return Settings;
+  }
+
+  if (tr.b.unittest && tr.b.unittest.TestRunner) {
+    tr.b.unittest.TestRunner.addEventListener(
+        'tr-unittest-will-run',
+        function() {
+          if (tr.isHeadless) {
+            Settings.setAlternativeStorageInstance(new HeadlessStorage());
+          } else {
+            Settings.setAlternativeStorageInstance(global.sessionStorage);
+            global.sessionStorage.clear();
+          }
+        });
+  }
+
+  function SessionSettings() {
+    return SessionSettings;
+  }
+
+  function AddStaticStorageFunctionsToClass_(inputClass, storage) {
+    inputClass.storage_ = storage;
+
+    /**
+     * Get the setting with the given name.
+     *
+     * @param {string} key The name of the setting.
+     * @param {string=} opt_default The default value to return if not set.
+     * @param {string=} opt_namespace If set, the setting name will be prefixed
+     * with this namespace, e.g. "categories.settingName". This is useful for
+     * a set of related settings.
+     */
+    inputClass.get = function(key, opt_default, opt_namespace) {
+      key = inputClass.namespace_(key, opt_namespace);
+      const rawVal = inputClass.storage_.getItem(key);
+      if (rawVal === null || rawVal === undefined) {
+        return opt_default;
+      }
+
+      // Old settings versions used to stringify objects instead of putting them
+      // into JSON. If those are encountered, parse will fail. In that case,
+      // "upgrade" the setting to the default value.
+      try {
+        return JSON.parse(rawVal).value;
+      } catch (e) {
+        inputClass.storage_.removeItem(key);
+        return opt_default;
+      }
+    };
+
+    /**
+     * Set the setting with the given name to the given value.
+     *
+     * @param {string} key The name of the setting.
+     * @param {string} value The value of the setting.
+     * @param {string=} opt_namespace If set, the setting name will be prefixed
+     * with this namespace, e.g. "categories.settingName". This is useful for
+     * a set of related settings.
+     */
+    inputClass.set = function(key, value, opt_namespace) {
+      if (value === undefined) {
+        throw new Error('Settings.set: value must not be undefined');
+      }
+      const v = JSON.stringify({value});
+      inputClass.storage_.setItem(
+          inputClass.namespace_(key, opt_namespace), v);
+    };
+
+    /**
+     * Return a list of all the keys, or all the keys in the given namespace
+     * if one is provided.
+     *
+     * @param {string=} opt_namespace If set, only return settings which
+     * begin with this prefix.
+     */
+    inputClass.keys = function(opt_namespace) {
+      const result = [];
+      opt_namespace = opt_namespace || '';
+      for (let i = 0; i < inputClass.storage_.length; i++) {
+        const key = inputClass.storage_.key(i);
+        if (inputClass.isnamespaced_(key, opt_namespace)) {
+          result.push(inputClass.unnamespace_(key, opt_namespace));
+        }
+      }
+      return result;
+    };
+
+    inputClass.isnamespaced_ = function(key, opt_namespace) {
+      return key.indexOf(inputClass.normalize_(opt_namespace)) === 0;
+    };
+
+    inputClass.namespace_ = function(key, opt_namespace) {
+      return inputClass.normalize_(opt_namespace) + key;
+    };
+
+    inputClass.unnamespace_ = function(key, opt_namespace) {
+      return key.replace(inputClass.normalize_(opt_namespace), '');
+    };
+
+    /**
+     * All settings are prefixed with a global namespace to avoid collisions.
+     * inputClass may also be namespaced with an additional prefix passed into
+     * the get, set, and keys methods in order to group related settings.
+     * This method makes sure the two namespaces are always set properly.
+     */
+    inputClass.normalize_ = function(opt_namespace) {
+      return inputClass.NAMESPACE + (opt_namespace ? opt_namespace + '.' : '');
+    };
+
+    inputClass.setAlternativeStorageInstance = function(instance) {
+      inputClass.storage_ = instance;
+    };
+
+    inputClass.getAlternativeStorageInstance = function() {
+      if (!tr.isHeadless && inputClass.storage_ === localStorage) {
+        return undefined;
+      }
+      return inputClass.storage_;
+    };
+
+    inputClass.NAMESPACE = 'trace-viewer';
+  }
+
+  function HeadlessStorage() {
+    this.length = 0;
+    this.hasItem_ = {};
+    this.items_ = {};
+    this.itemsAsArray_ = undefined;
+  }
+  HeadlessStorage.prototype = {
+    key(index) {
+      return this.itemsAsArray[index];
+    },
+
+    get itemsAsArray() {
+      if (this.itemsAsArray_ !== undefined) {
+        return this.itemsAsArray_;
+      }
+      const itemsAsArray = [];
+      for (const k in this.items_) {
+        itemsAsArray.push(k);
+      }
+      this.itemsAsArray_ = itemsAsArray;
+      return this.itemsAsArray_;
+    },
+
+    getItem(key) {
+      if (!this.hasItem_[key]) {
+        return null;
+      }
+      return this.items_[key];
+    },
+
+    removeItem(key) {
+      if (!this.hasItem_[key]) {
+        return;
+      }
+      const value = this.items_[key];
+      delete this.hasItem_[key];
+      delete this.items_[key];
+      this.length--;
+      this.itemsAsArray_ = undefined;
+      return value;
+    },
+
+    setItem(key, value) {
+      if (this.hasItem_[key]) {
+        this.items_[key] = value;
+        return;
+      }
+      this.items_[key] = value;
+      this.hasItem_[key] = true;
+      this.length++;
+      this.itemsAsArray_ = undefined;
+      return value;
+    }
+  };
+
+  if (tr.isHeadless) {
+    AddStaticStorageFunctionsToClass_(Settings, new HeadlessStorage());
+    AddStaticStorageFunctionsToClass_(SessionSettings, new HeadlessStorage());
+  } else {
+    AddStaticStorageFunctionsToClass_(Settings, localStorage);
+    AddStaticStorageFunctionsToClass_(SessionSettings, sessionStorage);
+  }
+
+  return {
+    Settings,
+    SessionSettings,
+  };
+});
+</script>

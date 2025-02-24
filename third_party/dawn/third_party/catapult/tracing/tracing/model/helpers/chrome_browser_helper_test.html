@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/cc/input_latency_async_slice.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/helpers/chrome_browser_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const INPUT_TYPE = tr.e.cc.INPUT_EVENT_TYPE_NAMES;
+
+  function getRange(min, max) {
+    const range = new tr.b.math.Range();
+    range.min = min;
+    range.max = max;
+    return range;
+  }
+
+  test('LoadingEvent', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function() { });
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    tr.e.chrome.ChromeTestUtils.addLoadingEvent(model, {start: 1, end: 10});
+    assert.strictEqual(1, modelHelper.browserHelper.getLoadingEventsInRange(
+        getRange(0, 100)).length);
+  });
+
+  test('ProvisionalLoadEvent', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function() { });
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    tr.e.chrome.ChromeTestUtils.addCommitLoadEvent(model, {start: 1, end: 10});
+    assert.strictEqual(1,
+        modelHelper.browserHelper.getCommitProvisionalLoadEventsInRange(
+            getRange(0, 100)).length);
+  });
+
+  test('LatencyEvent', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function() { });
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    tr.e.chrome.ChromeTestUtils.addInputEvent(
+        model, INPUT_TYPE.UNKNOWN, {start: 1, end: 10});
+    assert.strictEqual(1, modelHelper.browserHelper.getLatencyEventsInRange(
+        getRange(0, 100)).length);
+  });
+
+  test('browserName_chrome', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function() { });
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    assert.strictEqual(modelHelper.browserHelper.browserName, 'chrome');
+  });
+
+  test('browserName_webview', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function() { });
+    model.browserProcess.getOrCreateThread(42).name =
+        'Chrome_InProcRendererThread';
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    assert.strictEqual(modelHelper.browserHelper.browserName, 'webview');
+  });
+});
+</script>

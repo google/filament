@@ -1,0 +1,5 @@
+[style]
+based_on_style = yapf
+spaces_before_comment = 2
+split_before_logical_operator = true
+

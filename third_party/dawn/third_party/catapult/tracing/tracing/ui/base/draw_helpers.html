@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/elided_cache.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides various helper methods for drawing to a provided
+ * canvas.
+ */
+tr.exportTo('tr.ui.b', function() {
+  const elidedTitleCache = new tr.ui.b.ElidedTitleCache();
+  const ColorScheme = tr.b.ColorScheme;
+  const colorsAsStrings = ColorScheme.colorsAsStrings;
+
+  const EventPresenter = tr.ui.b.EventPresenter;
+  const blackColorId = ColorScheme.getColorIdForReservedName('black');
+
+  /**
+   * This value is used to allow for consistent style UI elements.
+   * Thread time visualisation uses a smaller rectangle that has this height.
+   * @const
+   */
+  const THIN_SLICE_HEIGHT = 4;
+
+  /**
+   * This value is used to for performance considerations when drawing large
+   * zoomed out traces that feature cpu time in the slices. If the waiting
+   * width is less than the threshold, we only draw the rectangle as a solid.
+   * @const
+   */
+  const SLICE_WAITING_WIDTH_DRAW_THRESHOLD = 3;
+
+  /**
+   * If the slice has mostly been waiting to be scheduled on the cpu, the
+   * wall clock will be far greater than the cpu clock. Draw the slice
+   * only as an idle slice, if the active width is not thicker than the
+   * threshold.
+   * @const
+   */
+  const SLICE_ACTIVE_WIDTH_DRAW_THRESHOLD = 1;
+
+  /**
+   * Should we elide text on trace labels?
+   * Without eliding, text that is too wide isn't drawn at all.
+   * Disable if you feel this causes a performance problem.
+   * This is a default value that can be overridden in tracks for testing.
+   * @const
+   */
+  const SHOULD_ELIDE_TEXT = true;
+
+  /**
+   * Draw the define line into |ctx|.
+   *
+   * @param {Context} ctx The context to draw into.
+   * @param {float} x1 The start x position of the line.
+   * @param {float} y1 The start y position of the line.
+   * @param {float} x2 The end x position of the line.
+   * @param {float} y2 The end y position of the line.
+   */
+  function drawLine(ctx, x1, y1, x2, y2) {
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+  }
+
+  /**
+   * Draw the defined triangle into |ctx|.
+   *
+   * @param {Context} ctx The context to draw into.
+   * @param {float} x1 The first corner x.
+   * @param {float} y1 The first corner y.
+   * @param {float} x2 The second corner x.
+   * @param {float} y2 The second corner y.
+   * @param {float} x3 The third corner x.
+   * @param {float} y3 The third corner y.
+   */
+  function drawTriangle(ctx, x1, y1, x2, y2, x3, y3) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x3, y3);
+    ctx.closePath();
+  }
+
+  /**
+   * Draw an arrow into |ctx|.
+   *
+   * @param {Context} ctx The context to draw into.
+   * @param {float} x1 The shaft x.
+   * @param {float} y1 The shaft y.
+   * @param {float} x2 The head x.
+   * @param {float} y2 The head y.
+   * @param {float} arrowLength The length of the head.
+   * @param {float} arrowWidth The width of the head.
+   */
+  function drawArrow(ctx, x1, y1, x2, y2, arrowLength, arrowWidth) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const perc = (len - arrowLength) / len;
+    const bx = x1 + perc * dx;
+    const by = y1 + perc * dy;
+    const ux = dx / len;
+    const uy = dy / len;
+    const ax = uy * arrowWidth;
+    const ay = -ux * arrowWidth;
+
+    ctx.beginPath();
+    drawLine(ctx, x1, y1, x2, y2);
+    ctx.stroke();
+
+    drawTriangle(ctx,
+        bx + ax, by + ay,
+        x2, y2,
+        bx - ax, by - ay);
+    ctx.fill();
+  }
+
+  /**
+   * Draw the provided slices to the screen.
+   *
+   * Each of the elements in |slices| must provide the follow methods:
+   *   * start
+   *   * duration
+   *   * colorId
+   *   * selected
+   *
+   * @param {Context} ctx The canvas context.
+   * @param {TimelineDrawTransform} dt The draw transform.
+   * @param {float} viewLWorld The left most point of the world viewport.
+   * @param {float} viewRWorld The right most point of the world viewport.
+   * @param {float} viewHeight The height of the viewport.
+   * @param {Array} slices The slices to draw.
+   * @param {bool} async Whether the slices are drawn with async style.
+   */
+  function drawSlices(ctx, dt, viewLWorld, viewRWorld, viewHeight, slices,
+      async) {
+    const pixelRatio = window.devicePixelRatio || 1;
+    const height = viewHeight * pixelRatio;
+    const viewL = dt.xWorldToView(viewLWorld);
+    const viewR = dt.xWorldToView(viewRWorld);
+
+    let darkRectHeight = THIN_SLICE_HEIGHT * pixelRatio;
+
+    // Not enough space for both colors, use light color only.
+    if (height < darkRectHeight) {
+      darkRectHeight = 0;
+    }
+
+    const lightRectHeight = height - darkRectHeight;
+
+    ctx.save();
+    const rect = new tr.ui.b.FastRectRenderer(
+        ctx, viewL, viewR, 2, 2, colorsAsStrings);
+    rect.setYandH(0, height);
+
+    const lowSlice = tr.b.findLowIndexInSortedArray(
+        slices,
+        function(slice) { return slice.start + slice.duration; },
+        viewLWorld);
+
+    let hadTopLevel = false;
+
+    for (let i = lowSlice; i < slices.length; ++i) {
+      const slice = slices[i];
+      const x = slice.start;
+      if (x > viewRWorld) break;
+
+      const xView = dt.xWorldToView(x);
+      let wView = 1;
+      if (slice.duration > 0) {
+        const w = Math.max(slice.duration, 0.000001);
+        wView = Math.max(dt.xWorldVectorToView(w), 1);
+      }
+
+      const colorId = EventPresenter.getSliceColorId(slice);
+      const alpha = EventPresenter.getSliceAlpha(slice, async);
+      const lightAlpha = alpha * 0.70;
+
+      if (async && slice.isTopLevel) {
+        rect.setYandH(3, height - 3);
+        hadTopLevel = true;
+      } else {
+        rect.setYandH(0, height);
+      }
+
+      // If cpuDuration is available, draw rectangles proportional to the
+      // amount of cpu time taken.
+      if (!slice.cpuDuration) {
+        // No cpuDuration available, draw using only one alpha.
+        rect.fillRect(xView, wView, colorId, alpha);
+        continue;
+      }
+
+      let activeWidth = wView * (slice.cpuDuration / slice.duration);
+      let waitingWidth = wView - activeWidth;
+
+      // Check if we have enough screen space to draw the whole slice, with
+      // both color tones.
+      //
+      // Truncate the activeWidth to 0 if it is less than 'threshold' pixels.
+      if (activeWidth < SLICE_ACTIVE_WIDTH_DRAW_THRESHOLD) {
+        activeWidth = 0;
+        waitingWidth = wView;
+      }
+
+      // Truncate the waitingWidth to 0 if it is less than 'threshold' pixels.
+      if (waitingWidth < SLICE_WAITING_WIDTH_DRAW_THRESHOLD) {
+        activeWidth = wView;
+        waitingWidth = 0;
+      }
+
+      // We now draw the two rectangles making up the event slice.
+      // NOTE: The if statements are necessary for performance considerations.
+      // We do not want to force draws, if the width of the rectangle is 0.
+      //
+      // First draw the solid color, representing the 'active' part.
+      if (activeWidth > 0) {
+        rect.fillRect(xView, activeWidth, colorId, alpha);
+      }
+
+      // Next draw the two toned 'idle' part.
+      // NOTE: We subtract 1 from the left-hand edge and draw one extra pixel to
+      // prevent drawing artifacts. Without this, the two parts of the slice
+      // ('active' and 'idle') may appear split apart.
+      if (waitingWidth > 0) {
+        // First draw the light toned top part.
+        rect.setYandH(0, lightRectHeight);
+        rect.fillRect(xView + activeWidth - 1,
+            waitingWidth + 1, colorId, lightAlpha);
+        // Then the solid bottom half.
+        rect.setYandH(lightRectHeight, darkRectHeight);
+        rect.fillRect(xView + activeWidth - 1,
+            waitingWidth + 1, colorId, alpha);
+        // Reset for the next slice.
+        rect.setYandH(0, height);
+      }
+    }
+    rect.flush();
+
+    if (async && hadTopLevel) {
+      // Draw a top border over async slices in order to visually separate
+      // them from events above it.
+      // See https://github.com/google/trace-viewer/issues/725.
+      rect.setYandH(2, 1);
+      for (let i = lowSlice; i < slices.length; ++i) {
+        const slice = slices[i];
+        const x = slice.start;
+        if (x > viewRWorld) break;
+
+        if (!slice.isTopLevel) continue;
+
+        const xView = dt.xWorldToView(x);
+        let wView = 1;
+        if (slice.duration > 0) {
+          const w = Math.max(slice.duration, 0.000001);
+          wView = Math.max(dt.xWorldVectorToView(w), 1);
+        }
+
+        rect.fillRect(xView, wView, blackColorId, 0.7);
+      }
+      rect.flush();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw the provided instant slices as lines to the screen.
+   *
+   * Each of the elements in |slices| must provide the follow methods:
+   *   * start
+   *   * duration with value of 0.
+   *   * colorId
+   *   * selected
+   *
+   * @param {Context} ctx The canvas context.
+   * @param {TimelineDrawTransform} dt The draw transform.
+   * @param {float} viewLWorld The left most point of the world viewport.
+   * @param {float} viewRWorld The right most point of the world viewport.
+   * @param {float} viewHeight The height of the viewport.
+   * @param {Array} slices The slices to draw.
+   * @param {Numer} lineWidthInPixels The width of the lines.
+   */
+  function drawInstantSlicesAsLines(
+      ctx, dt, viewLWorld, viewRWorld, viewHeight, slices, lineWidthInPixels) {
+    const pixelRatio = window.devicePixelRatio || 1;
+    const height = viewHeight * pixelRatio;
+
+    ctx.save();
+    ctx.lineWidth = lineWidthInPixels * pixelRatio;
+
+    const lowSlice = tr.b.findLowIndexInSortedArray(
+        slices,
+        function(slice) { return slice.start; },
+        viewLWorld);
+
+    for (let i = lowSlice; i < slices.length; ++i) {
+      const slice = slices[i];
+      const x = slice.start;
+      if (x > viewRWorld) break;
+
+      ctx.strokeStyle = EventPresenter.getInstantSliceColor(slice);
+
+      const xView = dt.xWorldToView(x);
+
+      ctx.beginPath();
+      ctx.moveTo(xView, 0);
+      ctx.lineTo(xView, height);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draws the labels for the given slices.
+   *
+   * The |slices| array must contain objects with the following API:
+   *   * start
+   *   * duration
+   *   * title
+   *   * didNotFinish (optional)
+   *
+   * @param {Context} ctx The graphics context.
+   * @param {TimelineDrawTransform} dt The draw transform.
+   * @param {float} viewLWorld The left most point of the world viewport.
+   * @param {float} viewRWorld The right most point of the world viewport.
+   * @param {Array} slices The slices to label.
+   * @param {bool} async Whether the slice labels are drawn with async style.
+   * @param {float} fontSize The font size.
+   * @param {float} yOffset The font offset.
+   */
+  function drawLabels(ctx, dt, viewLWorld, viewRWorld, slices, async,
+      fontSize, yOffset) {
+    const pixelRatio = window.devicePixelRatio || 1;
+    const pixWidth = dt.xViewVectorToWorld(1);
+
+    ctx.save();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = (fontSize * pixelRatio) + 'px sans-serif';
+
+    if (async) {
+      ctx.font = 'italic ' + ctx.font;
+    }
+
+    const cY = yOffset * pixelRatio;
+
+    const lowSlice = tr.b.findLowIndexInSortedArray(
+        slices,
+        function(slice) { return slice.start + slice.duration; },
+        viewLWorld);
+
+    // Don't render text until it is 20px wide
+    const quickDiscardThreshold = pixWidth * 20;
+    for (let i = lowSlice; i < slices.length; ++i) {
+      const slice = slices[i];
+      if (slice.start > viewRWorld) break;
+
+      if (slice.duration <= quickDiscardThreshold) continue;
+
+      // Clip slice boundaries to viewport.
+      const xLeftClipped = Math.max(slice.start, viewLWorld);
+      const xRightClipped = Math.min(slice.start + slice.duration, viewRWorld);
+      const visibleWidth = xRightClipped - xLeftClipped;
+
+      const title = slice.title +
+          (slice.didNotFinish ? ' (Did Not Finish)' : '');
+
+      let drawnTitle = title;
+      let drawnWidth = elidedTitleCache.labelWidth(ctx, drawnTitle);
+      const fullLabelWidth = elidedTitleCache.labelWidthWorld(
+          ctx, drawnTitle, pixWidth);
+      if (SHOULD_ELIDE_TEXT && fullLabelWidth > visibleWidth) {
+        const elidedValues = elidedTitleCache.get(
+            ctx, pixWidth,
+            drawnTitle, drawnWidth,
+            visibleWidth);
+        drawnTitle = elidedValues.string;
+        drawnWidth = elidedValues.width;
+      }
+
+      if (drawnWidth * pixWidth < visibleWidth) {
+        ctx.fillStyle = EventPresenter.getTextColor(slice);
+        const cX = dt.xWorldToView((xLeftClipped + xRightClipped) / 2);
+        ctx.fillText(drawnTitle, cX, cY, drawnWidth);
+      }
+    }
+    ctx.restore();
+  }
+
+  return {
+    drawSlices,
+    drawInstantSlicesAsLines,
+    drawLabels,
+
+    drawLine,
+    drawTriangle,
+    drawArrow,
+
+    elidedTitleCache_: elidedTitleCache,
+
+    THIN_SLICE_HEIGHT,
+  };
+});
+</script>

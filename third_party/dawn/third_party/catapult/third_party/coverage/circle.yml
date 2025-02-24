@@ -1,0 +1,18 @@
+# Circle CI configuration for coverage.py.
+# https://circleci.com/gh/nedbat/coveragepy
+
+machine:
+  python:
+    version: 2.7.6
+  post:
+    - pyenv global pypy-2.4.0 2.6.8 2.7.9 3.3.3 3.4.2
+
+dependencies:
+  pre:
+    - pip install -U pip
+  override:
+    - pip install -r requirements/tox.pip
+
+test:
+  override:
+    - tox

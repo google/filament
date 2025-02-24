@@ -1,0 +1,360 @@
+//
+// Copyright 2018 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// ConvertVertex.comp: vertex buffer conversion.  Implements functionality in copyvertex.inc.
+//
+// Each thread of the dispatch call fills in one 4-byte element, no matter how many components
+// fit in it.  The src data is laid out in the most general form as follows.  Note that component
+// size is assumed to divide buffer stride.
+//
+//    Ns components, each Bs bytes
+//         ____^_____
+//        /          |
+//       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//       |C1|C2|..|CN|..|..|..|..|C1|C2|..|CN|..|..|..|..|C1|C2|..|CN| ... Repeated V times
+//       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        \__________ __________/
+//                   V
+//           Ss bytes of stride
+//
+// The output is the array of components converted to the destination format (each Bd bytes) with
+// stride Sd = Nd*Bd (i.e. packed).  The output size is therefore V*Nd*Bd bytes.  The dispatch size
+// is accordingly ciel(V*Nd*Bd / 4).
+//
+// The input is received in 4-byte elements, therefore each element has Es=4/Bs components.
+//
+// To output exactly one 4-byte element, each thread is responsible for Ed=4/Bd components.
+// Therefore, thread t is responsible for component indices [Ed*t, Ed*(t + 1)).
+//
+// We don't use Bs and Es for A2B10G10R10 and R10G10B10A2 formats since they take 10 or 2 bits per
+// component. Variables that are computed using Bs or Es are hardcoded instead.
+//
+// Component index c is at source offset:
+//
+//     floor(c / Ns) * Ss + mod(c, Ns) * Bs
+//
+//   - Flags:
+//     * IsBigEndian
+//   - Conversion:
+//     * SintToSint: covers byte, short and int types (distinguished by Bs and Bd).
+//     * UintToUint: covers ubyte, ushort, uint and half float types (distinguished by Bs and Bd).
+//     * SintToFloat: Same types as SintToSint for source (including scaled).  Converts to float.
+//     * UintToFloat: Same types as UintToUint for source (including uscaled).  Converst to float.
+//     * SnormToFloat: Similar to IntToFloat, but normalized.
+//     * UnormToFloat: Similar to UintToFloat, but normalized.
+//     * FixedToFloat: 16.16 signed fixed-point to floating point.
+//     * FloatToFloat: float.
+//
+// The *ToFloat conversions can convert to a half-precision float based on a parameter.  When not
+// converting to half:
+//
+// - SintToSint, UintToUint and FloatToFloat correspond to CopyNativeVertexData() and
+//   Copy8SintTo16SintVertexData() in renderer/copyvertex.inc.
+//
+// - FixedToFloat corresponds to Copy32FixedTo32FVertexData.
+//
+// - SintToFloat and UintToFloat correspond to CopyToFloatVertexData with normalized=false.
+//
+// - SnormToFloat and UnormToFloat correspond to CopyToFloatVertexData with normalized=true.
+//
+// - If isSrcHDR, SintToSint, UintToUint, SintToFloat, UintToFloat and SnormToFloat correspond to
+//   CopyXYZ10W2ToXYZWFloatVertexData (if isSrcA2BGR10) or CopyW2XYZ10ToXYZWFloatVertexData (if
+//   !isSrcA2BGR10) with the proper options.
+
+#version 450 core
+
+// Source type
+#if SintToSint || SintToFloat
+#define SrcType int
+#elif UintToUint || UintToFloat
+#define SrcType uint
+#elif SnormToFloat || UnormToFloat || FixedToFloat || FloatToFloat
+#define SrcType float
+#else
+#error "Not all conversions are accounted for"
+#endif
+
+// Destination type
+#if SintToSint
+#define DestType int
+#elif UintToUint
+#define DestType uint
+#elif SintToFloat || UintToFloat || SnormToFloat || UnormToFloat || FixedToFloat || FloatToFloat
+#define DestType float
+#else
+#error "Not all conversions are accounted for"
+#endif
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout (set = 0, binding = 0) buffer dst
+{
+    uint destData[];
+};
+
+layout (set = 0, binding = 1) buffer src
+{
+    uint srcData[];
+};
+
+layout (push_constant) uniform PushConstants
+{
+    // outputs to write (= total number of components / Ed): used for range checking
+    uint outputCount;
+    // total number of output components: used for range checking
+    uint componentCount;
+    // source and destination offsets are handled in the shader (instead of binding the buffer with
+    // these offsets), as the binding offset requires alignment with
+    // minStorageBufferOffsetAlignment, which is impossible to enforce on source, and therefore
+    // would limit the usability of the shader.  Note that source is a storage buffer, instead of a
+    // uniform buffer, so it wouldn't be affected by the possibly smaller max size of uniform
+    // buffers.
+    uint srcOffset;
+    uint dstOffset;
+
+    // Parameters from the above explanation
+    uint Ns;       // Number of source components in one vertex attribute
+    uint Bs;       // Source component byte size
+    uint Ss;       // Source vertex attribyte byte stride
+    uint Es;       // Precalculated 4/Bs
+
+    uint Nd;       // Number of destination components in one vertex attribute
+    uint Bd;       // Destination component byte size
+    uint Sd;       // Precalculated Nd*Bd
+    uint Ed;       // Precalculated 4/Bd
+
+    // uint representation of src emulated alpha.  If destination has alpha and source doesn't,
+    // this value is used as src alpha, which is then converted to destination format the same way
+    // other data from source is.
+    uint srcEmulatedAlpha;
+
+    bool isSrcHDR;     // Whether source is either of A2BGR10 or RGB10A2
+    bool isSrcA2BGR10; // Whether source is A2BGR10
+} params;
+
+// Define shorthands for more readable formulas:
+#define Ns params.Ns
+#define Ss params.Ss
+#define Nd params.Nd
+#define Sd params.Sd
+
+// With fixed-point and float types, Bs can only be 4, so it is hardcoded for more efficiency.  The
+// same is not true for Bd because it can be a half-float type.
+#if FixedToFloat || FloatToFloat
+#define Bs 4
+#define Es 1
+#else
+#define Bs params.Bs
+#define Es params.Es
+#endif
+
+#define Bd params.Bd
+#define Ed params.Ed
+
+uint getSourceComponentOffset(uint vertex, uint component)
+{
+    return vertex * Ss + component * Bs + params.srcOffset;
+}
+
+uint getDestinationComponentOffset(uint vertex, uint component)
+{
+    return vertex * Sd + component * Bd + params.dstOffset;
+}
+
+uint getShiftBits(uint offset, uint B)
+{
+    // Given a byte offset, calculates the bit shift required to extract/store a component.
+    //
+    // On little endian, it implements the following function:
+    //
+    // Bs == 1: 0->0, 1->8, 2->16, 3->24
+    // Bs == 2: 0->0, 2->16   (1 and 3 are impossible values as Bx is assumed to divide Sx)
+    // Bs == 4: 0->0          (similarly, 1, 2, and 3 are impossible values)
+    //
+    // This is simply given by (offset % 4) * 8.
+    //
+    // On big endian, it implements the following function:
+    //
+    // Bs == 1: 0->24, 1->16, 2->8, 3->0
+    // Bs == 2: 0->16, 2->0
+    // Bs == 4: 0->0
+    //
+    // This is given by (4 - Bx - offset % 4) * 8
+
+    uint shift = (offset % 4) * 8;
+
+    // If big-endian, the most-significant bits contain the first components, so we reverse the
+    // shift count.
+#if IsBigEndian
+    shift = (4 - B) * 8 - shift;
+#endif
+
+    return shift;
+}
+
+SrcType loadSourceComponent(uint cd)
+{
+    // cd is component index in the destination buffer
+    uint vertex = cd / Nd;
+    uint component = cd % Nd;
+
+    // Fill the alpha channel with 1.0f in case of the source format doesn't have an alpha channel
+    // For all other components fill in 0.
+    if (component >= Ns && component < 3)
+    {
+        return 0;
+    }
+
+    // Load the source component
+    uint offset = getSourceComponentOffset(vertex, component);
+    uint block = srcData[offset / 4];
+
+    uint shiftBits;
+    uint valueBits;
+    uint valueMask;
+
+    // A2B10G10R10's components are not byte-aligned, so they are especially handled.
+    if (params.isSrcHDR)
+    {
+        valueBits = component == 3 ? 2 : 10;
+        valueMask = component == 3 ? 0x03 : 0x3FF;
+        if (params.isSrcA2BGR10)
+        {
+            shiftBits = 10 * component;
+        }
+        else
+        {
+            // channel order is reversed
+            shiftBits = component == 3 ? 0 : (valueBits * (2 - component) + 2);
+        }
+    }
+    else
+    {
+        shiftBits = getShiftBits(offset, Bs);
+        valueBits = Bs * 8;
+        valueMask = valueBits == 32 ? -1 : (1 << valueBits) - 1;
+    }
+
+    uint valueAsUint;
+
+    if (component >= Ns && component == 3)
+    {
+        valueAsUint = params.srcEmulatedAlpha;
+    }
+    else
+    {
+        valueAsUint = (block >> shiftBits) & valueMask;
+    }
+
+    // Convert to SrcType
+#if SintToSint || SintToFloat
+    if (valueBits < 32)
+    {
+        bool isNegative = (valueAsUint & (1 << (valueBits - 1))) != 0;
+        // Sign extend
+        // Note: if valueBits == 32, then 0xFFFFFFFF << valueBits is undefined,
+        // causing sign extension of value below to produce incorrect values.
+        uint signExtension = isNegative ? 0xFFFFFFFF << valueBits : 0;
+        valueAsUint |= signExtension;
+    }
+    SrcType value = SrcType(valueAsUint);
+#elif UintToUint || UintToFloat
+    SrcType value = valueAsUint;
+#elif SnormToFloat
+    if (valueBits < 32)
+    {
+        bool isNegative = (valueAsUint & (1 << (valueBits - 1))) != 0;
+        uint signExtension = isNegative ? 0xFFFFFFFF << valueBits : 0;
+        valueAsUint |= signExtension;
+    }
+    int valueAsInt = int(valueAsUint);
+    SrcType value = float(valueAsInt) / (valueMask >> 1);
+    value = max(value, float(-1));
+#elif UnormToFloat
+    float positiveMax = valueMask;
+    // Scale [0, P] to [0, 1]
+    SrcType value = valueAsUint / positiveMax;
+#elif FixedToFloat
+    float divisor = 1.0f / 65536.0f;
+    SrcType value = int(valueAsUint) * divisor;
+#elif FloatToFloat
+    SrcType value = uintBitsToFloat(valueAsUint);
+#else
+#error "Not all conversions are accounted for"
+#endif
+
+    return value;
+}
+
+DestType convertComponent(SrcType srcValue)
+{
+    // In all cases, SrcValue already contains the final value, except it may need a cast, which
+    // happens implicitly here.
+    return srcValue;
+}
+
+uint makeDestinationComponent(uint cd, DestType value)
+{
+    // Return valueAsUint, shifted to the right spot.  Multiple calls to this function should be |ed
+    // and eventually written to the destination.
+
+#if SintToSint || UintToUint
+    uint vertex = cd / Nd;
+    uint component = cd % Nd;
+
+    uint offset = getDestinationComponentOffset(vertex, component);
+    uint shiftBits = getShiftBits(offset, Bd);
+
+    uint valueBits = Bd * 8;
+    uint valueMask = valueBits == 32 ? -1 : (1 << valueBits) - 1;
+    uint valueAsUint = (uint(value) & valueMask) << shiftBits;
+
+#elif SintToFloat || UintToFloat || SnormToFloat || UnormToFloat || FixedToFloat || FloatToFloat
+    uint valueAsUint;
+
+    if (Bd == 2)
+    {
+        // It's a half-precision float.
+        uint shift = ((cd & 1) == 0) ? 0 : 16;
+        valueAsUint = packHalf2x16(vec2(value, 0.0)) << shift;
+    }
+    else
+    {
+        valueAsUint = floatBitsToInt(value);
+    }
+#else
+#error "Not all conversions are accounted for"
+#endif
+
+    return valueAsUint;
+}
+
+void storeDestinationComponents(uint valueAsUint)
+{
+    // Note that the destination allocations are always aligned to kMaxVertexFormatAlignment.
+    destData[gl_GlobalInvocationID.x + params.dstOffset / 4] = valueAsUint;
+}
+
+void main()
+{
+    if (gl_GlobalInvocationID.x >= params.outputCount)
+        return;
+
+    uint valueOut = 0;
+    for (uint i = 0; i < Ed; ++i)
+    {
+        uint cd = gl_GlobalInvocationID.x * Ed + i;
+        if (cd >= params.componentCount)
+        {
+            break;
+        }
+
+        SrcType srcValue = loadSourceComponent(cd);
+        DestType destValue = convertComponent(srcValue);
+        valueOut |= makeDestinationComponent(cd, destValue);
+    }
+
+    storeDestinationComponents(valueOut);
+}

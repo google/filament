@@ -1,0 +1,39 @@
+# Copyright 2023-2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import("//build_overrides/vulkan_utility_libraries.gni")
+
+config("vulkan_utility_libraries_config") {
+  include_dirs = [ "include" ]
+  defines = [ "VK_ENABLE_BETA_EXTENSIONS" ]
+}
+
+static_library("vulkan_layer_settings") {
+  public_deps = [ "$vulkan_headers_dir:vulkan_headers" ]
+  public_configs = [ ":vulkan_utility_libraries_config" ]
+  sources = [
+    "include/vulkan/layer/vk_layer_settings.h",
+    "include/vulkan/layer/vk_layer_settings.hpp",
+    "include/vulkan/utility/vk_concurrent_unordered_map.hpp",
+    "include/vulkan/utility/vk_dispatch_table.h",
+    "include/vulkan/utility/vk_format_utils.h",
+    "include/vulkan/utility/vk_safe_struct.hpp",
+    "include/vulkan/utility/vk_safe_struct_utils.hpp",
+    "include/vulkan/utility/vk_struct_helper.hpp",
+    "include/vulkan/vk_enum_string_helper.h",
+    "scripts/gn/stub.cpp",
+    "src/layer/layer_settings_manager.cpp",
+    "src/layer/layer_settings_manager.hpp",
+    "src/layer/layer_settings_util.cpp",
+    "src/layer/layer_settings_util.hpp",
+    "src/layer/vk_layer_settings.cpp",
+    "src/layer/vk_layer_settings_helper.cpp",
+    "src/vulkan/vk_safe_struct_core.cpp",
+    "src/vulkan/vk_safe_struct_ext.cpp",
+    "src/vulkan/vk_safe_struct_khr.cpp",
+    "src/vulkan/vk_safe_struct_utils.cpp",
+    "src/vulkan/vk_safe_struct_vendor.cpp",
+    "src/vulkan/vk_safe_struct_manual.cpp",
+  ]
+}

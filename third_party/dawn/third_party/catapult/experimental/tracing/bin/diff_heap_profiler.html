@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<meta charset="utf-8">
+<style>
+
+svg {
+  padding: 10px;
+}
+svg rect {
+  stroke: #fff;
+}
+
+#index th {
+  background: #333;
+  color: white;
+  cursor: s-resize;
+}
+#index td, th {
+  padding: 1px 4px;
+  border: 1px solid #ccc;
+  text-align: left;
+  font-family: 'Trebuchet MS', Trebuchet, Verdana, sans-serif;
+  font-size: 10px;
+}
+#index td:hover {
+  background: yellow;
+}
+
+#stackframe {
+  height: 800px;
+  width: 400px;
+  overflow: hidden;
+}
+#stackframe div {
+  padding: 2px 20px;
+  font: 10px sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 10px;
+  width: 400px;
+}
+
+</style>
+<body>
+
+<script src="d3.min.js"></script>
+
+<table id="index"></table>
+<h2 id="objects_name">Stackframe</h2>
+<svg id="objects"></svg>
+<div id="info"></div>
+<div id="stackframe"></div>
+
+<script>
+'use strict';
+
+// Display the stackframe graph.
+const width = 640;
+const height = 480;
+
+const x = d3.scale.linear()
+    .range([0, width]);
+
+const y = d3.scale.linear()
+    .range([0, height]);
+
+const color = d3.scale.category20c();
+
+const partition = d3.layout.partition()
+    .value(function(d) { return d.size; });
+
+const svg = d3.select('#objects')
+    .attr('width', width)
+    .attr('height', height);
+
+let rect = svg.selectAll('rect');
+
+function updateTitle(title) {
+  d3.select('#objects_name').text(title);
+}
+
+function updateInfo(info) {
+  d3.select('#info').text(info);
+}
+
+function updateStackframe(stackframes) {
+  d3.select('#stackframe')
+      .selectAll('div')
+      .remove();
+
+  d3.select('#stackframe')
+      .selectAll('div')
+      .data(stackframes)
+      .enter()
+      .append('div')
+      .text(function(d, i) {
+        return d;
+      });
+}
+
+function updateTable() {
+  // Display the memory dump index
+  d3.json('index.json', function(error, data) {
+    const columns =
+        ['pid', 'heap', 'name', 'labels', 'potential leaks', 'objects leaked'];
+
+    const table = d3.select('#index');
+    const thead = table.append('thead');
+    const tbody = table.append('tbody');
+
+    // Append the header row.
+    thead.append('tr')
+        .selectAll('th')
+        .data(columns).enter()
+        .append('th')
+        .text(function(column) { return column; });
+
+    // Create a row for each object in the data.
+    const rows = tbody.selectAll('tr')
+        .data(data)
+        .enter()
+        .append('tr');
+
+    rows.on('click', function(row) {
+      updateTitle(row.pid + '/' + row.heap);
+      updateDataGraph(row.objects);
+      highlightTableRow(this);
+    });
+
+    // Create a cell in each row for each column.
+    const cells = rows.selectAll('td')
+        .data(function(row) {
+          return columns.map(function(column) {
+            return row[column];
+          });
+        })
+      .enter()
+      .append('td')
+      .text(function(d) { return d; });
+
+    tbody.select('tr').each(function(row) {
+      updateTitle(row.pid + '/' + row.heap);
+      updateDataGraph(row.objects);
+      highlightTableRow(this);
+    });
+  });
+}
+
+function highlightTableRow(obj) {
+  d3.select('#index').selectAll('tr').style('background-color',
+      function(d, i) {
+        if (i % 2 === 0) {
+          return '#eeeeee';
+        }
+        return '#ffffff';
+      });
+  d3.select(obj).style('background-color', 'red');
+}
+
+function updateDataGraph(source) {
+  d3.json(source, function(error, root) {
+    if (error) throw error;
+
+    svg.selectAll('*').remove();
+    rect = svg.selectAll('rect');
+
+    rect = rect
+        .data(partition.nodes(root))
+        .enter()
+        .append('rect')
+        .attr('x', function(d) { return x(d.x); })
+        .attr('y', function(d) { return y(d.y); })
+        .attr('width', function(d) { return x(d.dx); })
+        .attr('height', function(d) { return y(d.dy); })
+        .attr('fill', function(d) {
+          while (d.children && d.children.length === 1) {
+            d = d.children[0];
+          }
+          return color(d.name);
+        })
+        .on('mouseover', onDataMouseOver)
+        .append('title')
+        .text(function(d) { return d.name; });
+  });
+}
+
+function onDataMouseOver(d) {
+  updateInfo('' + d.value + ' bytes');
+
+  let stackframes = [];
+  let current = d;
+  while (current.parent) {
+    stackframes.push(current.name);
+    current = current.parent;
+  }
+  stackframes = stackframes.reverse();
+  updateStackframe(stackframes);
+}
+
+updateTitle('');
+updateInfo('');
+updateTable();
+
+</script>
+</body>

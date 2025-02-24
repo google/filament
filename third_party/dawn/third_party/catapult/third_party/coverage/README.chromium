@@ -1,0 +1,17 @@
+Name: coverage.py
+Short Name: coverage
+URL: https://pypi.python.org/pypi/coverage
+Version: 4.0.3
+Date: 2015-11-24
+License: Apache 2.0
+License File: LICENSE.txt
+Security Critical: no
+Shipped: yes
+
+Description:
+Coverage.py measures code coverage, typically during test execution. It uses the
+code analysis tools and tracing hooks provided in the Python standard library to
+determine which lines are executable, and which have been executed.
+
+Local Modifications:
+Removed 'doc' and 'test' directories to reduce total file size.

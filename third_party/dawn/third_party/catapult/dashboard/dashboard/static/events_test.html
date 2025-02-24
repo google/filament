@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<link rel="import" href="events.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeHandler() {
+    const handler = function() {
+      handler.wasCalled = true;
+    };
+    handler.wasCalled = false;
+    return handler;
+  }
+
+  test('we can add event listeners as normal', function() {
+    const handler = makeHandler();
+    events.addEventListener(window, 'my-event-name', handler);
+    window.dispatchEvent(new CustomEvent('my-event-name'));
+    assert.isTrue(handler.wasCalled);
+  });
+
+  test('we can remove event listeners as normal', function() {
+    const handler = makeHandler();
+    events.addEventListener(window, 'my-event-name2', handler);
+    events.removeEventListener(window, 'my-event-name2', handler);
+    window.dispatchEvent(new CustomEvent('my-event-name2'));
+    assert.isFalse(handler.wasCalled);
+  });
+
+  test('siloed listeners can hear events sent from the silo', function() {
+    const handler = makeHandler();
+    events.startSiloingListeners();
+    events.addEventListener(window, 'my-event-name3', handler);
+    window.dispatchEvent(new CustomEvent('my-event-name3'));
+    events.stopSiloingListeners();
+    assert.isTrue(handler.wasCalled);
+  });
+
+  test('siloed listeners can\t hear events sent after the silo', function() {
+    const handler = makeHandler();
+    events.startSiloingListeners();
+    events.addEventListener(window, 'my-event-name4', handler);
+    events.stopSiloingListeners();
+    window.dispatchEvent(new CustomEvent('my-event-name4'));
+    assert.isFalse(handler.wasCalled);
+  });
+
+  test('unsiloed listeners are hear events sent from the silo', function() {
+    const handler = makeHandler();
+    events.addEventListener(window, 'my-event-name5', handler);
+    events.startSiloingListeners();
+    window.dispatchEvent(new CustomEvent('my-event-name5'));
+    events.stopSiloingListeners();
+    assert.isTrue(handler.wasCalled);
+  });
+
+  test('unsiloed listeners hear events sent after the silo', function() {
+    const handler = makeHandler();
+    events.addEventListener(window, 'my-event-name6', handler);
+    events.startSiloingListeners();
+    events.stopSiloingListeners();
+    window.dispatchEvent(new CustomEvent('my-event-name6'));
+    assert.isTrue(handler.wasCalled);
+  });
+});
+</script>

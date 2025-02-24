@@ -1,0 +1,66 @@
+TODO
+====
+webapp2 is considered feature complete and well tested, but if you think
+something is missing or is not working well, please describe it in our issue
+tracker:
+
+    http://code.google.com/p/webapp-improved/issues/list
+
+We'd love to know if you found a bug or if something can be improved. We are
+also interested in ideas for new webapp2_extras modules and more tests and
+documentation.
+
+Thanks!
+
+The real TODO
+-------------
+- Add WSGI middleware:
+  - sessions
+  - auth
+
+
+The webapp TODO
+---------------
+Here is a list of updates for webapp that could be gradually implemented in
+future SDK releases, to make webapp more close to webapp2:
+
+- Include a updated version of webob in the SDK, available through
+  use_library(). As of June 15, 2011 the latest version is 1.0.7.
+  Issues: #2788, #170 and #719 (no access to parsed body parameters with PUT
+  request in webapp)
+
+- Use webob.Response
+  Issues: #200, #5030
+
+- Use webob.exc for status code exceptions.
+  Issues:
+
+- Make RequestHandler dispatch the requested method, using a class method.
+  Issues: #468
+
+- Better URI Routing.
+  Issues: #444 (routing based on hostnames), #843 (limitations to build URIs),
+  #2398 (routing based on the URL scheme), #2636 and #5128 (unquote URL paths
+  before matching them)
+
+Other issues:
+
+- Webob module bundled in App Engine SDK ignores charset and transfer
+  encoding setting specified in a header part of each multipart field.
+  Issues: #2749
+
+- Sending cookies using webapp.
+  Issues: #5030
+
+- When the content-type is 'application/x-www-form-urlencoded' and POST data
+  is empty the content-type is dropped by Google appengine.
+  Issues: #3426; **works in webapp/webapp2**
+
+- Unable to read POST variables ONCE self.request.body is read
+  Issues: #5118 **can't reproduce in webapp, works in webapp2**
+
+
+More issues
+-----------
+http://code.google.com/p/googleappengine/issues/list?can=2&q=webob
+http://code.google.com/p/googleappengine/issues/list?can=2&q=component%3DFrameworks

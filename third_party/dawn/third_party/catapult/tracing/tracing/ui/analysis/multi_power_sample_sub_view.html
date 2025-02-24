@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/frame_power_usage_chart.html">
+<link rel="import" href="/tracing/ui/analysis/power_sample_summary_table.html">
+
+<dom-module id='tr-ui-a-multi-power-sample-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: row;
+    }
+    #tables {
+      display: flex;
+      flex-direction: column;
+      width: 50%;
+    }
+    #chart {
+      width: 50%;
+    }
+    </style>
+    <div id="tables">
+      <tr-ui-a-power-sample-summary-table id="summaryTable">
+      </tr-ui-a-power-sample-summary-table>
+    </div>
+    <tr-ui-a-frame-power-usage-chart id="chart">
+    </tr-ui-a-frame-power-usage-chart>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+// TODO(charliea): Add a dropdown that allows the user to select which type of
+// power sample analysis view they want (e.g. table of samples, graph).
+Polymer({
+  is: 'tr-ui-a-multi-power-sample-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  ready() {
+    this.currentSelection_ = undefined;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    const samples = this.selection;
+    const vSyncTimestamps = (!samples ? [] :
+      tr.b.getFirstElement(samples).series.device.vSyncTimestamps);
+
+    this.$.summaryTable.samples = samples;
+    this.$.chart.setData(this.selection, vSyncTimestamps);
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-multi-power-sample-sub-view',
+    tr.model.PowerSample,
+    {
+      multi: true,
+      title: 'Power Samples',
+    });
+</script>

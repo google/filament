@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/base/trace_stream.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/importer/simple_line_reader.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.importer', function() {
+  function Trace2HTMLImporter(model, events) {
+    this.importPriority = 0;
+  }
+
+  Trace2HTMLImporter.subtraces_ = [];
+
+  function _extractEventsFromHTML(text) {
+    // Clear the array before pushing data to it.
+    Trace2HTMLImporter.subtraces_ = [];
+
+    const r = new tr.importer.SimpleLineReader(text);
+
+    // Try to find viewer-data...
+    while (true) {
+      if (!r.advanceToLineMatching(
+          new RegExp('^<\s*script id="viewer-data" ' +
+                     'type="(application\/json|text\/plain)">\r?$'))) {
+        break;
+      }
+
+      r.beginSavingLines();
+      if (!r.advanceToLineMatching(/^<\/\s*script>\r?$/)) return;
+
+      let rawEvents = r.endSavingLinesAndGetResult();
+
+      // Drop off first and last event as it contains the end script tag.
+      rawEvents = rawEvents.slice(1, rawEvents.length - 1);
+      const data64 = rawEvents.join('\n');
+      const buffer = new ArrayBuffer(
+          tr.b.Base64.getDecodedBufferLength(data64));
+      const len = tr.b.Base64.DecodeToTypedArray(data64, new DataView(buffer));
+      Trace2HTMLImporter.subtraces_.push(buffer.slice(0, len));
+    }
+  }
+
+  function _canImportFromHTML(text) {
+    if (!/^<!DOCTYPE html>/.test(text)) return false;
+
+    // Try to find viewer-data...
+    _extractEventsFromHTML(text);
+    if (Trace2HTMLImporter.subtraces_.length === 0) return false;
+    return true;
+  }
+
+  Trace2HTMLImporter.canImport = function(events) {
+    if (events instanceof tr.b.TraceStream) return false;
+    return _canImportFromHTML(events);
+  };
+
+  Trace2HTMLImporter.prototype = {
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'Trace2HTMLImporter';
+    },
+
+    isTraceDataContainer() {
+      return true;
+    },
+
+    extractSubtraces() {
+      return Trace2HTMLImporter.subtraces_;
+    },
+
+    importEvents() {
+    }
+  };
+
+
+  tr.importer.Importer.register(Trace2HTMLImporter);
+
+
+  return {
+    Trace2HTMLImporter,
+  };
+});
+</script>

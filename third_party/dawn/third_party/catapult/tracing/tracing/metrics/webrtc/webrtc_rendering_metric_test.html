@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/webrtc/webrtc_rendering_metric.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const DISPLAY_HERTZ = 60.0;
+  const VSYNC_DURATION_US = 1e6 / DISPLAY_HERTZ;
+
+  /**
+   * @param {Array.<Number>} pair - An array of length 2, from which a valid
+   * WebMediaPlayerMS event will be generated.
+   * @returns {event} A valid WebMediaPlayerMS event where the Ideal Render
+   * Instant is the first element and the Actual Render Begin is the second
+   * element.
+   */
+  function eventFromPair(pair) {
+    return {
+      title: 'UpdateCurrentFrame',
+      start: pair[1],
+      duration: 1,
+      args: {
+        'Ideal Render Instant': pair[0],
+        'Actual Render Begin': pair[1],
+        'Actual Render End': 0,
+        'Serial': 0,
+      }
+    };
+  }
+
+  /**
+   * @param {Array.<Number>} driftTimes - An array with the desired driftTimes.
+   * @return {Array.<event>} An array of events such that the drift times
+   * computed by webrtcRenderingMetric is the same as driftTimes.
+   */
+  function eventsFromDriftTimes(driftTimes) {
+    const pairs = [];
+    for (let i = 1; i <= driftTimes.length; ++i) {
+      pairs.push([i, i + driftTimes[i - 1]]);
+    }
+    return pairs.map(eventFromPair);
+  }
+
+  /**
+   * @param {Array.<Number>} normDriftTimes - To decide if a frame is out of
+   * sync or badly out of sync, we use the normalized drift times, that we get
+   * by subtracting the mean from each entry of the drift times array. The sum
+   * of the normDriftTimes must equal 0.
+   * @return {Array.<event>) An array of events such that when we normalize the
+   * drift times computed by webrtcRenderingMetric, we get the normDriftTimes
+   * array.
+   */
+  function eventsFromNormDriftTimes(normDriftTimes) {
+    /* Let
+     *   B[i] = normDriftTimes[i]
+     *   A[i] = driftTimes[i]  be the array we want to find.
+     *
+     * We require that:
+     *   sum(B[i]) = 0
+     *
+     * Then
+     *    B[i] = A[i] - mean(A)
+     *      => B[i] - B[0] = A[i] - mean(A) - A[0] + mean(A)
+     *      => B[i] - B[0] = A[i] - A[0]
+     *      => A[i] = B[i] - B[0] + A[0]
+     *
+     * We can fix A[0] to any number we want.
+     *
+     * Let's make sure that the array A we found generates the array B when
+     * normalized:
+     * A[i] - mean(A)
+     *   = A[i] - sum(A[j]) / n
+     *   = B[i] - B[0] + A[0] - sum(B[j] - B[0] + A[0]) / n
+     *   = B[i] - B[0] + A[0] - (sum(B[j]) - n B[0] / n + n A[0] / n)
+     *   = B[i] - B[0] + A[0] - sum(B[j]) + B[0] - A[0]
+     *   = B[i] - sum(B[j])
+     *   = B[i]  since we require sum(B[j]) = 0
+     */
+    const driftTimes = [10000];
+    for (let i = 1; i < normDriftTimes.length; ++i) {
+      driftTimes.push(normDriftTimes[i] - normDriftTimes[0] + driftTimes[0]);
+    }
+    return eventsFromDriftTimes(driftTimes);
+  }
+
+  /**
+   * @param {Array.<Array.<Number>>} frameDistribution - An array of pairs
+   * encoding the source to output distribution. That is an array where each
+   * [ticks, count] entry says that there are 'count' frames that are displayed
+   * 'ticks' times.
+   * @returns {Array.<events>} The events that give rise to the given
+   * frameDistribution.
+   */
+  function eventsFromFrameDistribution(frameDistribution) {
+    let frameId = 0;
+    const pairs = [];
+    for (const [ticks, count] of frameDistribution) {
+      // We need 'count' runs, each run consisting of 'ticks' repeated elements.
+      for (let i = 0; i < count; ++i) {
+        frameId += 1;
+        for (let j = 0; j < ticks; ++j) {
+          // Frames are decided by the Ideal Render Instant.
+          pairs.push([frameId, 0]);
+        }
+      }
+    }
+    return pairs.map(eventFromPair);
+  }
+
+  function newModel(fakeEvents) {
+    function customizeModelCallback(model) {
+      const rendererProcess = model.getOrCreateProcess(1);
+      const mainThread = rendererProcess.getOrCreateThread(2);
+      mainThread.name = 'Compositor';
+      for (const event of fakeEvents) {
+        mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(event));
+      }
+    }
+    return tr.c.TestUtils.newModelWithEvents([], {customizeModelCallback});
+  }
+
+  function runWebrtcRenderingMetric(fakeEvents) {
+    const histograms = new tr.v.HistogramSet();
+    const model = newModel(fakeEvents);
+    tr.metrics.webrtc.webrtcRenderingMetric(histograms, model);
+    return histograms;
+  }
+
+  test('frameDistribution', function() {
+    // These numbers don't mean anything, we just want to make sure we can
+    // recover them after running webrtcRenderingMetric.
+    const frameDistribution = [[10, 3], [5, 15], [3, 146], [1, 546], [2, 10]];
+    const frameHist = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber);
+    for (const [ticks, count] of frameDistribution) {
+      for (let i = 0; i < count; ++i) {
+        frameHist.addSample(ticks);
+      }
+    }
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    // We don't have access to the values stored in the histogram, so we check
+    // for equality in the summary statistics.
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frame_distribution');
+    assert.strictEqual(hist.sum, frameHist.sum);
+    assert.strictEqual(hist.numValues, frameHist.numValues);
+    assert.strictEqual(hist.running.min, frameHist.running.min);
+    assert.strictEqual(hist.running.max, frameHist.running.max);
+    assert.closeTo(hist.standardDeviation, frameHist.standardDeviation, 1e-2);
+  });
+
+  test('driftTime', function() {
+    // These numbers don't mean anything. We just want to make sure we can
+    // recover them after running the metric.
+    const fakeDriftTimes = [16700, 17640, 15000, 24470, 16700, 14399, 17675];
+    const fakeEvents = eventsFromDriftTimes(fakeDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    // We don't have access to the values stored in the histogram, so we check
+    // for equality in the summary statistics.
+    const hist = histograms.getHistogramNamed('WebRTCRendering_drift_time');
+    assert.strictEqual(hist.sum, tr.b.math.Statistics.sum(fakeDriftTimes));
+    assert.strictEqual(hist.numValues, fakeDriftTimes.length);
+    assert.strictEqual(hist.running.min,
+        tr.b.math.Statistics.min(fakeDriftTimes));
+    assert.strictEqual(hist.running.max,
+        tr.b.math.Statistics.max(fakeDriftTimes));
+    assert.closeTo(hist.standardDeviation,
+        tr.b.math.Statistics.stddev(fakeDriftTimes), 1e-2);
+  });
+
+  test('framesBadlyOutOfSyncPerfect', function() {
+    // None of these will exceed the threshold for badly out of sync events,
+    // which is about 33 333.
+    const normDriftTimes = [-16700, 17640, 15000, -17640, -15000, 16700];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frames_badly_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('framesBadylOutOfSync', function() {
+    // Only 34 000 will exceed the threshold for badly out of sync events,
+    // which is about 33 333.
+    const normDriftTimes = [-34000, 10000, 10000, 10000, 4000];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frames_badly_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 1);
+  });
+
+  test('framesOutOfSyncPerfect', function() {
+    // None of these will exceed the threshold for badly out of sync, which is
+    // about 16 667.
+    const normDriftTimes = [-16600, 15640, 15000, -15640, -15000, 16600];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frames_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('framesOutOfSync', function() {
+    // Only 17000 will exceed the threshold for badly out of sync, which is
+    // about 16 667.
+    const normDriftTimes = [-17000, 5000, 5000, 5000, 2000];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frames_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 1);
+  });
+
+  test('percentBadlyOutOfSyncPerfect', function() {
+    // None of these will exceed the threshold for badly out of sync events,
+    // which is about 33 333.
+    const normDriftTimes = [-16700, 17640, 15000, -17640, -15000, 16700];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_percent_badly_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('percentBadylOutOfSync', function() {
+    // Only 34 000 will exceed the threshold for badly out of sync events,
+    // which is about 33 333.
+    const normDriftTimes = [-34000, 10000, 10000, 10000, 4000];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_percent_badly_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, .2);
+  });
+
+  test('percentOutOfSyncPerfect', function() {
+    // None of these will exceed the threshold for badly out of sync, which is
+    // about 16 667.
+    const normDriftTimes = [-16600, 15640, 15000, -15640, -15000, 16600];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_percent_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('percentOutOfSync', function() {
+    // Only 17000 will exceed the threshold for badly out of sync, which is
+    // about 16 667.
+    const normDriftTimes = [-17000, 5000, 5000, 5000, 2000];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_percent_out_of_sync');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, .2);
+  });
+
+  test('smoothnessScorePerfect', function() {
+    // None of these will exceed the threshold for badly out of sync, which is
+    // about 16 667, so the smoothnessScore wil be perfect.
+    const normDriftTimes = [-16600, 15640, 15000, -15640, -15000, 16600];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_smoothness_score');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 1);
+  });
+
+  test('smoothnessScore', function() {
+    // One will exceed the threshold for frames badly out of sync (33 333) and
+    // another two the threshold for frames out of sync (16 667). So the
+    // smoothness score is
+    // 1 - (frames out of sync + 3 * frames badly out of sync) / n
+    //   = 1 - (2 + 3) / 5 = 0
+    const normDriftTimes = [-17000, 34000, -17000, -10000, 10000];
+    assert.strictEqual(tr.b.math.Statistics.sum(normDriftTimes), 0);
+    const fakeEvents = eventsFromNormDriftTimes(normDriftTimes);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_smoothness_score');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('fpsPerfect', function() {
+    // Every frame is displayed once. This is a perfect FPS of 60.
+    const frameDistribution = [[1, 10]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist = histograms.getHistogramNamed('WebRTCRendering_fps');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 60);
+  });
+
+  test('fps', function() {
+    // Every frame is displayed 15 times. This means an FPS of 4.
+    const frameDistribution = [[15, 10]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist = histograms.getHistogramNamed('WebRTCRendering_fps');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 4);
+  });
+
+  test('frozenFramesCountPerfect', function() {
+    // 10 frames are displayed one time, and 10 frames are displayed twice.
+    // This means no frames exceed the threshold of 6, and so no frames are
+    // considered frozen.
+    const frameDistribution = [[1, 10], [2, 10]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frozen_frames_count');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 0);
+  });
+
+  test('frozenFramesCount', function() {
+    // 82 frames are displayed 1 time, 5 frames are displayed 2 times,
+    // and 1 frame is displayed 6 times.
+    // Only the drame displayed 6 times satisfies the threshold of 6. Since the
+    // first appearance is not considered frozen, there are 5 frozen frames.
+    const frameDistribution = [[1, 82], [2, 5], [6, 1]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_frozen_frames_count');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 5);
+  });
+
+  test('freezingScorePerfect', function() {
+    // Every frame is displayed 1 times. This means a perfect freezing score of
+    // 100.
+    const frameDistribution = [[1, 10]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist = histograms.getHistogramNamed('WebRTCRendering_freezing_score');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, 1);
+  });
+
+  test('freezingScore', function() {
+    // 82 frames are displayed 1 time, 5 frames are displayed 2 times,
+    // and 1 frame is displayed 8 times.
+    // This means that the total number of frames displayed is
+    // 82 * 1 + 5 * 2 + 1 * 8 = 100
+    // And the freezing score is
+    //   1 - 82 / 100 * weight[0]
+    //     - 5 / 100 * weight[1]
+    //     - 1 / 100 * weight[7]
+    // = 1 - .82 * 0  since weight[0] = 0
+    //     - .05 * 0   since weight[1] = 0 too
+    //     - .01 * 15  since weight[7] = 15
+    // = 1 - .15 = .85
+    // See frozenPenaltyWeight for information on the weights and
+    // addFreezingScore for the definition of the freezingScore.
+    const frameDistribution = [[1, 82], [2, 5], [8, 1]];
+    const fakeEvents = eventsFromFrameDistribution(frameDistribution);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist = histograms.getHistogramNamed('WebRTCRendering_freezing_score');
+    assert.strictEqual(hist.numValues, 1);
+    assert.strictEqual(hist.running.mean, .85);
+  });
+
+  test('renderingLengthErrorPerfect', function() {
+    const fakePairs = [];
+    for (let i = 1; i < 10; ++i) {
+      // Each frame's Ideal Render Instant is exactly VSYNC_DURATION_US after
+      // the previous one, so that the rendering length error is 0.
+      fakePairs.push([VSYNC_DURATION_US * i, 0]);
+    }
+    const fakeEvents = fakePairs.map(eventFromPair);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_rendering_length_error');
+    assert.strictEqual(hist.numValues, 1);
+    assert.closeTo(hist.running.mean, 0, 1e-3);
+  });
+
+  test('renderingLengthError', function() {
+    const errors = [1000, 3000, 0, 5000, 0, 2000];
+    const fakePairs = [[1, 0]];
+    for (let i = 0; i < errors.length; ++i) {
+      // Each frame's Ideal Render Instant is close to VSYNC_DURATION_US after
+      // the previous one, but with a known delay.
+      fakePairs.push([fakePairs[i][0] + VSYNC_DURATION_US + errors[i], 0]);
+    }
+
+    // The rendering length error is then the sum of the errors, normalized by
+    // the span between the first and the last Ideal Render Instants.
+    const idealRenderSpan = fakePairs[fakePairs.length - 1][0] -
+      fakePairs[0][0];
+    const expectedRenderingLengthError = tr.b.math.Statistics.sum(errors) /
+      idealRenderSpan;
+
+    const fakeEvents = fakePairs.map(eventFromPair);
+    const histograms = runWebrtcRenderingMetric(fakeEvents);
+
+    const hist =
+      histograms.getHistogramNamed('WebRTCRendering_rendering_length_error');
+    assert.strictEqual(hist.numValues, 1);
+    assert.closeTo(hist.running.mean, expectedRenderingLengthError, 1e-3);
+  });
+});
+</script>

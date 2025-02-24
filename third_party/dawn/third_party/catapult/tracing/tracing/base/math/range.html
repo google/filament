@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Quick range computations.
+ */
+tr.exportTo('tr.b.math', function() {
+  function Range() {
+    this.isEmpty_ = true;
+    this.min_ = undefined;
+    this.max_ = undefined;
+  }
+
+  Range.prototype = {
+    __proto__: Object.prototype,
+
+    clone() {
+      if (this.isEmpty) return new Range();
+      return Range.fromExplicitRange(this.min_, this.max_);
+    },
+
+    reset() {
+      this.isEmpty_ = true;
+      this.min_ = undefined;
+      this.max_ = undefined;
+    },
+
+    get isEmpty() {
+      return this.isEmpty_;
+    },
+
+    addRange(range) {
+      if (range.isEmpty) return;
+      this.addValue(range.min);
+      this.addValue(range.max);
+    },
+
+    addValue(value) {
+      if (this.isEmpty_) {
+        this.max_ = value;
+        this.min_ = value;
+        this.isEmpty_ = false;
+        return;
+      }
+      this.max_ = Math.max(this.max_, value);
+      this.min_ = Math.min(this.min_, value);
+    },
+
+    set min(min) {
+      this.isEmpty_ = false;
+      this.min_ = min;
+    },
+
+    get min() {
+      if (this.isEmpty_) return undefined;
+      return this.min_;
+    },
+
+    get max() {
+      if (this.isEmpty_) return undefined;
+      return this.max_;
+    },
+
+    set max(max) {
+      this.isEmpty_ = false;
+      this.max_ = max;
+    },
+
+    get range() {
+      if (this.isEmpty_) return undefined;
+      return this.max_ - this.min_;
+    },
+
+    get center() {
+      return (this.min_ + this.max_) * 0.5;
+    },
+
+    get duration() {
+      if (this.isEmpty_) return 0;
+      return this.max_ - this.min_;
+    },
+
+    /**
+     * Get a new Range spanning the powers (of opt_base || 10) that enclose
+     * |this| Range.
+     * If |this| is empty, returns a new empty Range.
+     *
+     * @param {number=} opt_base Defaults to 10.
+     * @return {!Range}
+     */
+    enclosingPowers(opt_base) {
+      if (this.isEmpty) return new Range();
+      return Range.fromExplicitRange(
+          tr.b.math.lesserPower(this.min_, opt_base),
+          tr.b.math.greaterPower(this.max_, opt_base));
+    },
+
+    normalize(x) {
+      return tr.b.math.normalize(x, this.min, this.max);
+    },
+
+    lerp(x) {
+      return tr.b.math.lerp(x, this.min, this.max);
+    },
+
+    clamp(x) {
+      return tr.b.math.clamp(x, this.min, this.max);
+    },
+
+    equals(that) {
+      if (this.isEmpty && that.isEmpty) return true;
+      if (this.isEmpty !== that.isEmpty) return false;
+      return (tr.b.math.approximately(this.min, that.min) &&
+          tr.b.math.approximately(this.max, that.max));
+    },
+
+    containsExplicitRangeInclusive(min, max) {
+      if (this.isEmpty) return false;
+      return this.min_ <= min && max <= this.max_;
+    },
+
+    containsExplicitRangeExclusive(min, max) {
+      if (this.isEmpty) return false;
+      return this.min_ < min && max < this.max_;
+    },
+
+    intersectsExplicitRangeInclusive(min, max) {
+      if (this.isEmpty) return false;
+      return this.min_ <= max && min <= this.max_;
+    },
+
+    intersectsExplicitRangeExclusive(min, max) {
+      if (this.isEmpty) return false;
+      return this.min_ < max && min < this.max_;
+    },
+
+    containsRangeInclusive(range) {
+      if (range.isEmpty) return false;
+      return this.containsExplicitRangeInclusive(range.min_, range.max_);
+    },
+
+    containsRangeExclusive(range) {
+      if (range.isEmpty) return false;
+      return this.containsExplicitRangeExclusive(range.min_, range.max_);
+    },
+
+    intersectsRangeInclusive(range) {
+      if (range.isEmpty) return false;
+      return this.intersectsExplicitRangeInclusive(range.min_, range.max_);
+    },
+
+    intersectsRangeExclusive(range) {
+      if (range.isEmpty) return false;
+      return this.intersectsExplicitRangeExclusive(range.min_, range.max_);
+    },
+
+    findExplicitIntersectionDuration(min, max) {
+      min = Math.max(this.min, min);
+      max = Math.min(this.max, max);
+      if (max < min) return 0;
+      return max - min;
+    },
+
+    findIntersection(range) {
+      if (this.isEmpty || range.isEmpty) return new Range();
+
+      const min = Math.max(this.min, range.min);
+      const max = Math.min(this.max, range.max);
+
+      if (max < min) return new Range();
+
+      return Range.fromExplicitRange(min, max);
+    },
+
+    toJSON() {
+      if (this.isEmpty_) return {isEmpty: true};
+      return {
+        isEmpty: false,
+        max: this.max,
+        min: this.min
+      };
+    },
+
+    /**
+     * Returns a slice of |sortedArray| that intersects with this range
+     * inclusively.
+     * If the range does not have a min, it is treated as unbounded from below.
+     * Similarly, if max is undefined, the range is unbounded from above.
+     *
+     * @param {Array} sortedArray The sorted array of elements to be filtered.
+     * @param {Funcation=} opt_keyFunc A function that extracts a numeric value,
+     *        to be used in comparisons, from an element of the array. If not
+     *        specified, array elements themselves will be used.
+     * @param {Object=} opt_this An optional this argument to be passed to
+     *        opt_keyFunc.
+     */
+    filterArray(sortedArray, opt_keyFunc, opt_this) {
+      if (this.isEmpty_) return [];
+
+      const keyFunc = opt_keyFunc || (x => x);
+      function getValue(obj) {
+        return keyFunc.call(opt_this, obj);
+      }
+
+      const first = tr.b.findFirstTrueIndexInSortedArray(sortedArray,
+          obj => this.min_ === undefined || this.min_ <= getValue(obj));
+      const last = tr.b.findFirstTrueIndexInSortedArray(sortedArray,
+          obj => this.max_ !== undefined && this.max_ < getValue(obj));
+      return sortedArray.slice(first, last);
+    }
+  };
+
+  Range.fromDict = function(d) {
+    if (d.isEmpty === true) return new Range();
+    if (d.isEmpty === false) {
+      const range = new Range();
+      range.min = d.min;
+      range.max = d.max;
+      return range;
+    }
+    throw new Error('Not a range');
+  };
+
+  Range.fromExplicitRange = function(min, max) {
+    const range = new Range();
+    range.min = min;
+    range.max = max;
+    return range;
+  };
+
+  Range.compareByMinTimes = function(a, b) {
+    if (!a.isEmpty && !b.isEmpty) return a.min_ - b.min_;
+
+    if (a.isEmpty && !b.isEmpty) return -1;
+
+    if (!a.isEmpty && b.isEmpty) return 1;
+
+    return 0;
+  };
+
+  /**
+  * Subtracts the intersection of |rangeA| and |rangeB| from |rangeA| and
+  * returns the remaining ranges as return. |rangeA| and |rangeB| are
+  * not changed during the subtraction.
+  *
+  * rangeA:       |==========|
+  * rangeB:          |===|
+  * result:       |==|   |===|
+  *
+  * @param {tr.b.math.Range} rangeA
+  * @param {tr.b.math.Range} rangeB
+  * @return {Array.<tr.b.math.Range>} An array of ranges which is the result of
+  * the subtraction.
+  */
+  Range.findDifference = function(rangeA, rangeB) {
+    if (!rangeA || rangeA.duration < 0 || !rangeB || rangeB.duration < 0) {
+      throw new Error(`Couldn't subtract ranges`);
+    }
+    const resultRanges = [];
+
+    if (rangeA.isEmpty) return resultRanges;
+    if (rangeB.isEmpty) return [rangeA.clone()];
+
+    const intersection = rangeA.findIntersection(rangeB);
+    if (intersection.isEmpty) {
+      return [rangeA.clone()];
+    }
+    if (rangeA.duration === 0 && rangeB.duration === 0) {
+      if (intersection.empty) return [rangeA.clone()];
+      else if (intersection.duration === 0) return resultRanges;
+      throw new Error(`Two points' intersection can only be a point or empty`);
+    }
+
+    //  rangeA:       |==========|
+    //  rangeB:          |===|
+    //  result:       |==|   |===|
+    const leftRange = tr.b.math.Range.fromExplicitRange(
+        rangeA.min, intersection.min);
+    if (leftRange.duration > 0) {
+      resultRanges.push(leftRange);
+    }
+    const rightRange = tr.b.math.Range.fromExplicitRange(
+        intersection.max, rangeA.max);
+    if (rightRange.duration > 0) {
+      resultRanges.push(rightRange);
+    }
+    return resultRanges;
+  };
+
+  Range.PERCENT_RANGE = Range.fromExplicitRange(0, 1);
+  Object.freeze(Range.PERCENT_RANGE);
+
+  return {
+    Range,
+  };
+});
+</script>

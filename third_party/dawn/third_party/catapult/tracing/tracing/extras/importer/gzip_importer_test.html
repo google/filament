@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/base/trace_stream.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/gzip_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Base64 = tr.b.Base64;
+  const findSliceNamed = tr.c.TestUtils.findSliceNamed;
+  const ORIGINAL_DATA =
+      '[{"name":"a","args":{},"pid":52,"ts":520,"cat":"foo","tid":53,' +
+      '"ph":"B"},{"name":"a","args":{},"pid":52,"ts":520,"cat":"foo",' +
+      '"tid":53,"ph":"E"}]\n';
+  const GZIP_DATA_BASE_64 =
+      'H4sICHr4HVIAA3RyYWNlAIuuVspLzE1VslJKVNJRSixKL1ayqq7VUSrITFGy' +
+      'MjXSUSopBtEGOkrJiSVAVWn5+UB1JWBZY6CyDKCYk1KtDhWMcVWqjeUCALak' +
+      'EH+QAAAA';
+
+  test('failImportEmpty', function() {
+    assert.isFalse(tr.e.importer.GzipImporter.canImport([]));
+    assert.isFalse(tr.e.importer.GzipImporter.canImport(''));
+  });
+
+  test('inflateString', function() {
+    // Test inflating the data from a string.
+    const gzipData = Base64.atob(GZIP_DATA_BASE_64);
+    const importer = new tr.e.importer.GzipImporter(null, gzipData);
+    assert.isTrue(tr.e.importer.GzipImporter.canImport(gzipData));
+    assert.strictEqual(
+        importer.extractSubtraces()[0].toString(), ORIGINAL_DATA);
+  });
+
+  test('inflateArrayBuffer', function() {
+    // Test inflating the data from an ArrayBuffer.
+    const gzipData = Base64.atob(GZIP_DATA_BASE_64);
+    const buffer = new ArrayBuffer(gzipData.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < gzipData.length; i++) {
+      view[i] = gzipData.charCodeAt(i);
+    }
+    const importer = new tr.e.importer.GzipImporter(null, buffer);
+    assert.isTrue(tr.e.importer.GzipImporter.canImport(buffer));
+    assert.strictEqual(
+        importer.extractSubtraces()[0].toString(), ORIGINAL_DATA);
+  });
+
+  test('import', function() {
+    const gzipData = Base64.atob(GZIP_DATA_BASE_64);
+    assert.isTrue(tr.e.importer.GzipImporter.canImport(gzipData));
+
+    const model = tr.c.TestUtils.newModelWithEvents(gzipData);
+    const threads = model.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const slice = findSliceNamed(threads[0].sliceGroup, 'a');
+    assert.strictEqual(slice.category, 'foo');
+  });
+
+  test('transformToString', function() {
+    function checkTransform(data, expectedString) {
+      assert.strictEqual(tr.e.importer.GzipImporter.transformToString(data),
+          expectedString);
+    }
+
+    function createArrayBuffer(values) {
+      const buffer = new ArrayBuffer(values.length);
+      const view = new Uint8Array(buffer);
+      view.set(values);
+      return buffer;
+    }
+
+    // If the browser supports TextDecoder, this will test our custom
+    // implementation. Otherwise, the jszip fallback will be tested.
+    checkTransform('abc012', 'abc012');
+    checkTransform([100, 101, 102, 51, 52, 53], 'def345');
+    checkTransform(createArrayBuffer([103, 104, 105, 54, 55, 56]), 'ghi678');
+    checkTransform(new Uint8Array([106, 107, 108, 57, 58, 59]), 'jkl9:;');
+
+    if (typeof TextDecoder === 'undefined') {
+      // The browser doesn't support TextDecoder, so we have already checked
+      // the jszip fallback.
+      return;
+    }
+
+    // The browser supports TextDecoder, so we now check the jszip fallback.
+    const oldTextDecoder = TextDecoder;
+    TextDecoder = undefined;
+    try {
+      checkTransform('abc012', 'abc012');
+      checkTransform([100, 101, 102, 51, 52, 53], 'def345');
+      checkTransform(createArrayBuffer([103, 104, 105, 54, 55, 56]), 'ghi678');
+      checkTransform(new Uint8Array([106, 107, 108, 57, 58, 59]), 'jkl9:;');
+    } finally {
+      TextDecoder = oldTextDecoder;
+    }
+  });
+});
+</script>

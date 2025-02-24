@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/etw/etw_importer.html">
+<link rel="import" href="/tracing/extras/importer/etw/eventtrace_parser.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  // Constants for EventTrace events.
+  const guid = '68FDD900-4A3E-11D1-84F4-0000F80464E3';
+  const kEventTraceHeaderOpcode = 0;
+
+  const kEventTraceHeaderPayload32bitV2 =
+      'AAABAAYBAQWwHQAAEAAAABEs1WHICMwBYWECAGQAAAABAAAAAwAAAAEAAAAEAAAAAAAAA' +
+      'FoJAAAFAAAABgAAACwBAABAAHQAegByAGUAcwAuAGQAbABsACwALQAxADEAMgAAAAAAAA' +
+      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALAAAAAQACAAAAAAAAAAAAAABAAHQ' +
+      'AegByAGUAcwAuAGQAbABsACwALQAxADEAMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+      'AAAAAAAAAAAAAAADAAAAAgACAAAAAAAAAMT///8AAAAAf0Ob368FzAGdrCMAAAAAACw0o' +
+      '2DICMwBAQAAAAAAAABNAGEAawBlACAAVABlAHMAdAAgAEQAYQB0AGEAIABTAGUAcwBzAG' +
+      'kAbwBuAAAAYwA6AFwAcwByAGMAXABzAGEAdwBiAHUAYwBrAFwAdAByAHUAbgBrAFwAcwB' +
+      'yAGMAXABzAGEAdwBiAHUAYwBrAFwAbABvAGcAXwBsAGkAYgBcAHQAZQBzAHQAXwBkAGEA' +
+      'dABhAFwAaQBtAGEAZwBlAF8AZABhAHQAYQBfADMAMgBfAHYAMAAuAGUAdABsAAAA';
+
+  const kEventTraceHeaderPayload64bitV2 =
+      'AAABAAYBAQWxHQAABAAAADsuzRRYLM8BYWECAAAAAAABAAEAtgEAAAEAAAAIAAAAHwAAA' +
+      'KAGAAAAAAAAAAAAAAAAAAAAAAAALAEAAEAAdAB6AHIAZQBzAC4AZABsAGwALAAtADEAMQ' +
+      'AyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAsAAAABAAIAAAAAAAA' +
+      'AAAAAAEAAdAB6AHIAZQBzAC4AZABsAGwALAAtADEAMQAxAAAAAAAAAAAAAAAAAAAAAAAA' +
+      'AAAAAAAAAAAAAAAAAAAAAAAAAAMAAAACAAIAAAAAAAAAxP///wAAAABZQyWiwCvPAX1GG' +
+      'QAAAAAALWSZBFgszwEBAAAAAAAAAFIAZQBsAG8AZwBnAGUAcgAAAEMAOgBcAGsAZQByAG' +
+      '4AZQBsAC4AZQB0AGwAAAA=';
+
+  test('DecodeFields', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+    const parser = new tr.e.importer.etw.EventTraceParser(importer);
+    let header;
+    let fields;
+
+    // Validate a version 2 32-bit payload.
+    header = {
+      guid, opcode: kEventTraceHeaderOpcode, version: 2, is64: 0
+    };
+    decoder.reset(kEventTraceHeaderPayload32bitV2);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.bufferSize, 65536);
+    assert.strictEqual(fields.version, 83951878);
+    assert.strictEqual(fields.providerVersion, 7600);
+    assert.strictEqual(fields.numberOfProcessors, 16);
+    assert.strictEqual(fields.endTime, '01cc08c861d52c11');
+    assert.strictEqual(fields.timerResolution, 156001);
+    assert.strictEqual(fields.maxFileSize, 100);
+    assert.strictEqual(fields.logFileMode, 1);
+    assert.strictEqual(fields.buffersWritten, 3);
+    assert.strictEqual(fields.startBuffers, 1);
+    assert.strictEqual(fields.pointerSize, 4);
+    assert.strictEqual(fields.eventsLost, 0);
+    assert.strictEqual(fields.cpuSpeed, 2394);
+    assert.strictEqual(fields.loggerName, 5);
+    assert.strictEqual(fields.logFileName, 6);
+    assert.strictEqual(fields.timeZoneInformation.standardName,
+        '@tzres.dll,-112');
+    assert.strictEqual(fields.timeZoneInformation.daylightName,
+        '@tzres.dll,-111');
+    assert.strictEqual(fields.bootTime, '01cc05afdf9b437f');
+    assert.strictEqual(fields.perfFreq, '000000000023ac9d');
+    assert.strictEqual(fields.startTime, '01cc08c860a3342c');
+    assert.strictEqual(fields.reservedFlags, 1);
+    assert.strictEqual(fields.buffersLost, 0);
+    assert.strictEqual(fields.sessionNameString, 'Make Test Data Session');
+    assert.strictEqual(fields.logFileNameString,
+        'c:\\src\\sawbuck\\trunk\\src\\sawbuck\\log_lib\\' +
+                       'test_data\\image_data_32_v0.etl');
+
+    // Validate a version 2 64-bit payload.
+    header = {
+      guid, opcode: kEventTraceHeaderOpcode, version: 2, is64: 1
+    };
+    decoder.reset(kEventTraceHeaderPayload64bitV2);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.bufferSize, 65536);
+    assert.strictEqual(fields.version, 83951878);
+    assert.strictEqual(fields.providerVersion, 7601);
+    assert.strictEqual(fields.numberOfProcessors, 4);
+    assert.strictEqual(fields.endTime, '01cf2c5814cd2e3b');
+    assert.strictEqual(fields.timerResolution, 156001);
+    assert.strictEqual(fields.maxFileSize, 0);
+    assert.strictEqual(fields.logFileMode, 0x10001);
+    assert.strictEqual(fields.buffersWritten, 438);
+    assert.strictEqual(fields.startBuffers, 1);
+    assert.strictEqual(fields.pointerSize, 8);
+    assert.strictEqual(fields.eventsLost, 31);
+    assert.strictEqual(fields.cpuSpeed, 1696);
+    assert.strictEqual(fields.loggerName, '0000000000000000');
+    assert.strictEqual(fields.logFileName, '0000000000000000');
+    assert.strictEqual(fields.timeZoneInformation.standardName,
+        '@tzres.dll,-112');
+    assert.strictEqual(fields.timeZoneInformation.daylightName,
+        '@tzres.dll,-111');
+    assert.strictEqual(fields.bootTime, '01cf2bc0a2254359');
+    assert.strictEqual(fields.perfFreq, '000000000019467d');
+    assert.strictEqual(fields.startTime, '01cf2c580499642d');
+    assert.strictEqual(fields.reservedFlags, 1);
+    assert.strictEqual(fields.buffersLost, 0);
+    assert.strictEqual(fields.sessionNameString, 'Relogger');
+    assert.strictEqual(fields.logFileNameString, 'C:\\kernel.etl');
+  });
+});
+</script>
+

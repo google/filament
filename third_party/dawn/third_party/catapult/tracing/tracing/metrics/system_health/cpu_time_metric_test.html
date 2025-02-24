@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/cpu_time_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function computeCpuTime(customizeModelCallback, opt_options) {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      customizeModelCallback(model);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.cpuTimeMetric(histograms, model, opt_options);
+    return tr.b.getOnlyElement(histograms).average;
+  }
+
+  // There are two slices, each of length 50. The total bounds is 3000.
+  // This yields total CPU time of 100ms, averaged over 3 seconds is 33ms.
+  test('cpuTimeMetric_oneProcess', function() {
+    const sliceDuration = 50;
+    const totalDuration = 3000;
+    const value = computeCpuTime(function(model) {
+      model.rendererProcess = model.getOrCreateProcess(2);
+      model.rendererMain = model.rendererProcess.getOrCreateThread(3);
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: sliceDuration,
+        cpuStart: 0,
+        cpuDuration: sliceDuration,
+      }));
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: totalDuration - sliceDuration,
+        duration: sliceDuration,
+        cpuStart: totalDuration - sliceDuration,
+        cpuDuration: sliceDuration,
+      }));
+    });
+    assert.closeTo(value, 0.033, 0.001);
+  });
+
+  // Normalize against chrome processes, whose slices (both with and without
+  // CPU data) go from 2900 to 3000.
+  test('cpuTimeMetric_browserProcess', function() {
+    const sliceDuration = 50;
+    const totalDuration = 3000;
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: totalDuration - 2 * sliceDuration,
+        duration: 2 * sliceDuration,
+      }));
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: totalDuration - sliceDuration,
+        duration: sliceDuration,
+        cpuStart: totalDuration - sliceDuration,
+        cpuDuration: sliceDuration,
+      }));
+
+      const nonChromeProcess = model.getOrCreateProcess(1234);
+      nonChromeProcess.name = 'Telemetry';
+      const nonChromeThread = nonChromeProcess.getOrCreateThread(1);
+      nonChromeThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: sliceDuration,
+        cpuStart: 0,
+        cpuDuration: sliceDuration,
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.cpuTimeMetric(histograms, model);
+    const value = tr.b.getOnlyElement(histograms).average;
+    assert.closeTo(value, 0.5, 0.001);
+  });
+
+  // Makes sure that rangeOfInterest works correctly.
+  test('cpuTimeMetric_oneProcess_rangeOfInterest', function() {
+    const sliceDuration = 50;
+    const totalDuration = 3000;
+    const rangeOfInterest = new tr.b.math.Range.fromExplicitRange(-10, 30);
+    const options = {};
+    options.rangeOfInterest = rangeOfInterest;
+    const value = computeCpuTime(function(model) {
+      model.rendererProcess = model.getOrCreateProcess(2);
+      model.rendererMain = model.rendererProcess.getOrCreateThread(3);
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: sliceDuration,
+        cpuStart: 0,
+        cpuDuration: sliceDuration,
+      }));
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: totalDuration - sliceDuration,
+        duration: sliceDuration,
+        cpuStart: totalDuration - sliceDuration,
+        cpuDuration: sliceDuration,
+      }));
+    }, options);
+    assert.closeTo(value, 0.75, 0.001);
+  });
+
+  // Process 1: There are two slices, each of length 50. The total bounds is
+  // 3000. Process 2: There is one slice of length 50.
+  // This yields total CPU time of 150ms, averaged over 3 seconds is 50ms.
+  test('cpuTimeMetric_twoProcesses', function() {
+    const sliceDuration = 50;
+    const totalDuration = 3000;
+    const value = computeCpuTime(function(model) {
+      model.rendererProcess = model.getOrCreateProcess(2);
+      model.rendererMain = model.rendererProcess.getOrCreateThread(3);
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: sliceDuration,
+        cpuStart: 0,
+        cpuDuration: sliceDuration,
+      }));
+      model.rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: totalDuration - sliceDuration,
+        duration: sliceDuration,
+        cpuStart: totalDuration - sliceDuration,
+        cpuDuration: sliceDuration,
+      }));
+
+      const otherProcess = model.getOrCreateProcess(3);
+      const otherThread = otherProcess.getOrCreateThread(4);
+      otherThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: sliceDuration,
+        cpuStart: 0,
+        cpuDuration: sliceDuration,
+      }));
+    });
+    assert.closeTo(value, 0.05, 0.001);
+  });
+});
+</script>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/compound_event_selection_state.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.um', function() {
+  const CompoundEventSelectionState = tr.model.CompoundEventSelectionState;
+
+  function UserExpectation(parentModel, initiatorType, start, duration) {
+    tr.model.TimedEvent.call(this, start);
+    this.associatedEvents = new tr.model.EventSet();
+    this.duration = duration;
+    this.initiatorType_ = initiatorType;
+    this.parentModel = parentModel;
+    this.typeInfo_ = undefined;
+
+    // sourceEvents are the ones that caused the UserModelBuilder to create this
+    // UserExpectation.
+    this.sourceEvents = new tr.model.EventSet();
+  }
+
+  // Strings used to name UEs.
+  const INITIATOR_TYPE = {
+    KEYBOARD: 'Keyboard',
+    MOUSE: 'Mouse',
+    MOUSE_WHEEL: 'MouseWheel',
+    TAP: 'Tap',
+    PINCH: 'Pinch',
+    FLING: 'Fling',
+    TOUCH: 'Touch',
+    SCROLL: 'Scroll',
+    CSS: 'CSS',
+    WEBGL: 'WebGL',
+    VIDEO: 'Video',
+    VR: 'VR',
+  };
+
+  UserExpectation.prototype = {
+    __proto__: tr.model.TimedEvent.prototype,
+
+    computeCompoundEvenSelectionState(selection) {
+      let cess = CompoundEventSelectionState.NOT_SELECTED;
+      if (selection.contains(this)) {
+        cess |= CompoundEventSelectionState.EVENT_SELECTED;
+      }
+
+      if (this.associatedEvents.intersectionIsEmpty(selection)) {
+        return cess;
+      }
+
+      const allContained = this.associatedEvents.every(function(event) {
+        return selection.contains(event);
+      });
+
+      if (allContained) {
+        cess |= CompoundEventSelectionState.ALL_ASSOCIATED_EVENTS_SELECTED;
+      } else {
+        cess |= CompoundEventSelectionState.SOME_ASSOCIATED_EVENTS_SELECTED;
+      }
+      return cess;
+    },
+
+    // Returns samples which are overlapping with V8.Execute
+    get associatedSamples() {
+      const samples = new tr.model.EventSet();
+      this.associatedEvents.forEach(function(event) {
+        if (event instanceof tr.model.ThreadSlice) {
+          samples.addEventSet(event.overlappingSamples);
+        }
+      });
+      return samples;
+    },
+
+    get userFriendlyName() {
+      return this.title + ' User Expectation at ' +
+          tr.b.Unit.byName.timeStampInMs.format(this.start);
+    },
+
+    get stableId() {
+      return ('UserExpectation.' + this.guid);
+    },
+
+    get typeInfo() {
+      if (!this.typeInfo_) {
+        this.typeInfo_ = UserExpectation.subTypes.findTypeInfo(
+            this.constructor);
+      }
+
+      // If you set Subclass.prototype = {}, then you must explicitly specify
+      // constructor in that prototype object!
+      // http://javascript.info/tutorial/constructor
+
+      if (!this.typeInfo_) {
+        throw new Error('Unregistered UserExpectation');
+      }
+
+      return this.typeInfo_;
+    },
+
+    get colorId() {
+      return this.typeInfo.metadata.colorId;
+    },
+
+    get stageTitle() {
+      return this.typeInfo.metadata.stageTitle;
+    },
+
+    get initiatorType() {
+      return this.initiatorType_;
+    },
+
+    get title() {
+      if (!this.initiatorType) {
+        return this.stageTitle;
+      }
+
+      return this.initiatorType + ' ' + this.stageTitle;
+    },
+
+    /**
+     * Returns the sum of the number of CPU ms spent by this UserExpectation.
+     */
+    get totalCpuMs() {
+      let cpuMs = 0;
+      this.associatedEvents.forEach(function(event) {
+        if (event.cpuSelfTime) {
+          cpuMs += event.cpuSelfTime;
+        }
+      });
+      return cpuMs;
+    }
+  };
+
+  const subTypes = {};
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  tr.b.decorateExtensionRegistry(subTypes, options);
+
+  subTypes.addEventListener('will-register', function(e) {
+    const metadata = e.typeInfo.metadata;
+
+    if (metadata.stageTitle === undefined) {
+      throw new Error('Registered UserExpectations must provide ' +
+          'stageTitle');
+    }
+
+    if (metadata.colorId === undefined) {
+      throw new Error('Registered UserExpectations must provide ' +
+          'colorId');
+    }
+  });
+
+  tr.model.EventRegistry.register(
+      UserExpectation,
+      {
+        name: 'userExpectation',
+        pluralName: 'userExpectations',
+        subTypes
+      });
+
+  return {
+    UserExpectation,
+    INITIATOR_TYPE,
+  };
+});
+</script>

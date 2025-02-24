@@ -1,0 +1,34 @@
+<b>📍 Missing Values</b>
+
+Pinpoint detected only transitions from "no values" to "some values" measured
+while bisecting. This could be because the benchmark in the range:
+
+- Did not produce any values given the parameters provided to Pinpoint.
+
+- Failed to build at a revision due to underlying infrastructure failures.
+
+Here's a list of {{missing_values[:5]|length}}:
+
+{% for diff in missing_values[:5] -%}
+<b>{{ diff.commit_info['subject'] }}</b> by {{ diff.commit_info['author'] }}
+{{ diff.commit_info['url'] }}
+{% if metric %}{{ metric }}: {% endif -%}
+{{ diff.Formatted() }}
+{%- if not loop.last %}
+{% endif %}
+{% endfor -%}
+
+You can try the following when retrying the bisection:
+
+- If it's due to broken builds, consider providing a patch (a Gerrit change)
+  to un-break the build for the range.
+
+- You can reduce the range to a smaller range.
+
+View the final results and re-run the job at:
+
+{{url}}
+
+If you need futher help in diagnosing the issue, please add the issue to
+`Chromeperf-CulpritDetection-NeedsAttention` (hotlist:5670048) so that a
+sheriff can help.

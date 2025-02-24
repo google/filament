@@ -1,0 +1,16 @@
+[style]
+based_on_style = google
+indent_width = 2
+
+# Please terminate collections with a comma, per PR #769 convo with houglum
+#
+# def foo(listA, listB):
+#   listA += [
+#     'foo',
+#     'bar',   # <-- Terminating comma please!
+#   ]
+#
+#   return (listA, listB)
+#
+split_arguments_when_comma_terminated = true
+

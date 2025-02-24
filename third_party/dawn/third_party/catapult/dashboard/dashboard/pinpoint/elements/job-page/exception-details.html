@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-icon/iron-icon.html">
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/elements/base-style.html">
+
+<dom-module id="exception-details">
+  <template>
+    <style include="base-style">
+      #button {
+        background-color: var(--paper-red-100);
+        width: 150px;
+      }
+
+      #exception {
+        font-size: 1.0em;
+        margin: 1em;
+        white-space: pre-wrap;
+        overflow: auto;
+      }
+
+      #expanded {
+        border-style: solid;
+        border-width: 0.25px;
+        font: 0.75rem 'Roboto Monospace', monospace;
+        background-color: var(--paper-grey-100);
+        margin-top: 1em;
+      }
+    </style>
+
+    <template is="dom-if" if="[[exception]]">
+      <p id="exception">[[exceptionMessage(exception)]]</p>
+      <template is="dom-if" if="[[!expanded]]">
+        <paper-button raised id="button" on-tap="onExpand">Show More<iron-icon icon="expand-more"></iron-icon></paper-button>
+      </template>
+      <template is="dom-if" if="[[expanded]]">
+        <paper-button raised id="button" on-tap="onExpand">Hide<iron-icon icon="expand-less"></iron-icon></paper-button>
+        <div id="expanded">
+          <p id="exception">For more help, please read <a target="_blank" href="https://chromium.googlesource.com/catapult/+/refs/heads/master/dashboard/dashboard/pinpoint/docs/errors.md">Pinpoint Errors</a>.</p>
+          <p id="exception">[[exceptionTraceback(exception)]]</p>
+        </div>
+      </template>
+    </template>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'exception-details',
+
+      properties: {
+        exception: {
+          type: Array,
+        },
+        expanded: {
+          type: Boolean,
+          value: false,
+        }
+      },
+
+      // Even the dom-if has checked the exception is not null, it only
+      // prevents the rendering at first time. When switching to a job with
+      // exception and back, it just change the dom to hide, which triggers
+      // the binded function and throw exception. So null check is still needed
+      // in these functions.
+      exceptionMessage(exception) {
+        if (!exception) {
+          return '';
+        }
+        return exception.message;
+      },
+
+      exceptionTraceback(exception) {
+        if (!exception) {
+          return '';
+        }
+        return exception.traceback;
+      },
+
+      onExpand() {
+        this.expanded = !this.expanded;
+      },
+    });
+  </script>
+</dom-module>

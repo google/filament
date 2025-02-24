@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/source_info/source_info.html">
+<link rel="import" href="/tracing/model/stack_frame.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('domain', function() {
+    const stackFrame1 = new tr.model.StackFrame(undefined, 1, '1', 1);
+    assert.strictEqual('unknown', stackFrame1.domain);
+
+    const sourceInfo = new tr.model.source_info.SourceInfo(
+        'http://www.google.com:1234');
+    const stackFrame2 = new tr.model.StackFrame(
+        stackFrame1, 2, '2', 2, sourceInfo);
+    assert.strictEqual('http://www.google.com', stackFrame2.domain);
+
+    const stackFrame3 = new tr.model.StackFrame(stackFrame2, 3, '3', 3);
+    assert.strictEqual('http://www.google.com', stackFrame3.domain);
+  });
+});
+</script>

@@ -1,0 +1,87 @@
+// Copyright 2021 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+syntax = "proto3";
+
+package dashboard;
+
+import "google/protobuf/timestamp.proto";
+
+message Device {
+  // Pinpoint cfg (e.g. linux-perf)
+  enum Cfg {
+    UNSPECIFIED_CFG = 0;
+    // To be populated
+  }
+
+  enum Cpu {
+    UNSPECIFIED_CPU = 0;
+    INTEL_X86_64 = 1;
+    AMD_X86_64 = 2;
+    ARM = 3;
+  }
+
+  enum Os {
+    UNSPECIFIED_OS = 0;
+    ANDROID = 1;
+    WINDOWS = 2;
+    MACOS = 3;
+  }
+
+  // Mapping to requested dimensions can be found in
+  // chromium/src/tools/perf/core/perf_data_generator.py
+  Cfg cfg = 1;
+
+  // Returned Dimensions
+  Os os_type = 2;
+  repeated string os = 3;
+  Cpu cpu_type = 4;
+  repeated string cpu = 5;
+  // E.g. build62-h7--device6
+  string swarming_bot_id = 6;
+  // E.g. FA81H1A03209, if available
+  string device_serial = 7;
+}
+
+message TestInfo {
+  string benchmark = 1;
+  string story = 2;
+  repeated string flags = 3;
+}
+
+// Pinpoint supports specifying a base commit + an optional patch from Gerrit.
+message Checkout {
+  // Base Commit
+  string gitiles_host = 1;
+  string repo = 2;  // chromium/src, v8/v8, etc.
+  string git_hash = 3;
+  int64 commit_position = 4;  // If available
+
+  // Optional Patch
+  int64 patch_gerrit_change = 5;    // If available
+  int32 patch_gerrit_revision = 6;  // If available
+  string branch = 7;
+
+  google.protobuf.Timestamp commit_created = 8;
+}
+
+// Describes which invocations ran together, and in what order
+message Pairing {
+  // https://screenshot.googleplex.com/7bdwTLgrwy9fZaA.png
+  int32 replica = 1;
+  // 1 if this checkout ran first in the set, 2 if it ran 2nd, …
+  int32 order = 2;
+  // 0=base, 1..N=armN
+  int32 variant = 3;
+}
+
+message Dims {
+  // Swarming Task Timing Information -> Started
+  google.protobuf.Timestamp start_time = 1;
+  string swarming_task_id = 3;
+  Device device = 4;
+  TestInfo test_info = 5;
+  Checkout checkout = 6;
+  Pairing pairing = 7;
+  bool pass = 8;
+}

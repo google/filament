@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/alert_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/kernel_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays an array of interaction records.
+   * @constructor
+   * @extends {MultiRowTrack}
+   */
+  const InteractionTrack = tr.ui.b.define(
+      'interaction-track', tr.ui.tracks.MultiRowTrack);
+
+  InteractionTrack.prototype = {
+    __proto__: tr.ui.tracks.MultiRowTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.MultiRowTrack.prototype.decorate.call(this, viewport);
+      this.heading = 'Interactions';
+      this.subRows_ = [];
+    },
+
+    set model(model) {
+      this.setItemsToGroup(model.userModel.expectations, {
+        guid: tr.b.GUID.allocateSimple(),
+        model,
+        getSettingsKey() {
+          return undefined;
+        }
+      });
+    },
+
+    buildSubRows_(slices) {
+      if (this.subRows_.length) {
+        return this.subRows_;
+      }
+      this.subRows_.push(
+          ...tr.ui.tracks.groupAsyncSlicesIntoSubRows(slices, true));
+      return this.subRows_;
+    },
+
+    addSubTrack_(slices) {
+      const track = new tr.ui.tracks.SliceTrack(this.viewport);
+      track.slices = slices;
+      Polymer.dom(this).appendChild(track);
+      return track;
+    }
+  };
+
+  return {
+    InteractionTrack,
+  };
+});
+</script>

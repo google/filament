@@ -1,0 +1,87 @@
+//
+// Copyright 2024 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// GenerateFragmentShadingRate.comp: Generate fragment shading rate attachment data.
+
+#version 450 core
+
+struct FocalPoint {
+    float focalX;
+    float focalY;
+    float gainX;
+    float gainY;
+    float foveaArea;
+};
+
+layout (push_constant) uniform PushConstants
+{
+    uint textureWidth;
+    uint textureHeight;
+    uint attachmentWidth;
+    uint attachmentHeight;
+    uint attachmentBlockWidth;
+    uint attachmentBlockHeight;
+    uint numOfFocalPoints;
+    FocalPoint focalPoints[2];
+} params;
+
+layout(binding = 0, r8ui) uniform writeonly uimage2D fragmentShadingRateImage;
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+uint computeValue(ivec2 pos)
+{
+    float minPixelDensity   = 0.0f;
+    float focalPointDensity = 0.0f;
+    float px          = ((float(pos.x) * params.attachmentBlockWidth) / params.textureWidth - 0.5f) * 2.0f;
+    float py          = ((float(pos.y) * params.attachmentBlockHeight) / params.textureHeight - 0.5f) * 2.0f;
+
+    for (uint point = 0; point < params.numOfFocalPoints; point++)
+    {
+        float density = 1.0f / max(pow(params.focalPoints[point].focalX - px, 2) *
+                                   pow(params.focalPoints[point].gainX, 2) +
+                                   pow(params.focalPoints[point].focalY - py, 2) *
+                                   pow(params.focalPoints[point].gainY, 2) -
+                                   params.focalPoints[point].foveaArea,
+                                   1.0f);
+        // When focal points are overlapping choose the highest quality of all
+        if (density > focalPointDensity)
+        {
+            focalPointDensity = density;
+        }
+    }
+    minPixelDensity = max(minPixelDensity, focalPointDensity);
+
+    uint val = 0;
+    if (minPixelDensity > 0.75f)
+    {
+        // Use shading rate 1x1
+        val = 0;
+    }
+    else if (minPixelDensity > 0.5f)
+    {
+        // Use shading rate 2x1
+        val = (1 << 2);
+    }
+    else
+    {
+        // Use shading rate 2x2
+        val = (1 << 2) | 1;
+    }
+    return val;
+}
+
+void main()
+{
+    uint i  = gl_GlobalInvocationID.x;
+    uint j  = gl_GlobalInvocationID.y;
+
+    if(i >= params.attachmentWidth || j >= params.attachmentHeight)
+    {
+        return; // if beyond image dimensions early return
+    }
+
+    ivec2 pos = ivec2(i,j);
+    imageStore(fragmentShadingRateImage, pos, ivec4(computeValue(pos), 0, 0, 0));
+}

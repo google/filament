@@ -1,0 +1,42 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script src="./test-flags.js"></script>
+<script src="https://unpkg.com/@webcomponents/webcomponentsjs@1/webcomponents-lite.js"></script>
+<script src="../custom-style-interface.min.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="module/generated/make-element.js"></script>
+<script src="module/generated/custom-style-element.js"></script>
+<template id="my-element">
+  <style>
+    :host {
+      display: block;
+      --foo: rgb(255, 0, 0);
+    }
+    div {
+      color: var(--foo);
+    }
+  </style>
+  <div>Hi!</div>
+</template>
+<script>
+  suite('WC v1 compat', function() {
+    suiteSetup(function() {
+      makeElement('my-element');
+    });
+    test('element renders correctly', function() {
+      const el = document.createElement('my-element');
+      document.body.appendChild(el);
+      const color = getComputedStyle(el.shadowRoot.querySelector('div')).getPropertyValue('color').trim();
+      assert.equal(color, 'rgb(255, 0, 0)');
+      document.body.removeChild(el);
+    });
+  });
+</script>

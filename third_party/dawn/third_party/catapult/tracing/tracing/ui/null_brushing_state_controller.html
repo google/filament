@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/base/ui_state.html">
+<link rel="import" href="/tracing/ui/brushing_state.html">
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui', function() {
+  /*
+   * Some elements such as analysis-links require at least one of their
+   * ancestors to have a BrushingStateController.
+   * Some clients of such elements, such as histogram-set-view, do not have a
+   * timeline-view, which is required by the BrushingStateController.
+   * This class provides the API of BrushingStateController but not the
+   * implementation, unless there is a real BrushingStateController in the
+   * owning element's ancestor chain, in which case the implementation is
+   * delegated to the real BrushingStateController.
+   */
+  class NullBrushingStateController extends tr.c.BrushingStateController {
+    constructor() {
+      super(undefined);
+      this.parentController = undefined;
+    }
+
+    dispatchChangeEvent_() {
+      if (this.parentController) this.parentController.dispatchChangeEvent_();
+    }
+
+    get model() {
+      if (!this.parentController) return undefined;
+      return this.parentController.model;
+    }
+
+    get trackView() {
+      if (!this.parentController) return undefined;
+      return this.parentController.trackView;
+    }
+
+    get viewport() {
+      if (!this.parentController) return undefined;
+      return this.parentController.viewport;
+    }
+
+    get historyEnabled() {
+      if (!this.parentController) return undefined;
+      return this.parentController.historyEnabled;
+    }
+
+    set historyEnabled(historyEnabled) {
+      if (this.parentController) {
+        this.parentController.historyEnabled = historyEnabled;
+      }
+    }
+
+    modelWillChange() {
+      if (this.parentController) this.parentController.modelWillChange();
+    }
+
+    modelDidChange() {
+      if (this.parentController) this.parentController.modelDidChange();
+    }
+
+    onUserInitiatedSelectionChange_() {
+      if (this.parentController) {
+        this.parentController.onUserInitiatedSelectionChange_();
+      }
+    }
+
+    onPopState_(e) {
+      if (this.parentController) this.parentController.onPopState_(e);
+    }
+
+    get selection() {
+      if (!this.parentController) return undefined;
+      return this.parentController.selection;
+    }
+
+    get findMatches() {
+      if (!this.parentController) return undefined;
+      return this.parentController.findMatches;
+    }
+
+    get selectionOfInterest() {
+      if (!this.parentController) return undefined;
+      return this.parentController.selectionOfInterest;
+    }
+
+    get currentBrushingState() {
+      if (!this.parentController) return undefined;
+      return this.parentController.currentBrushingState;
+    }
+
+    set currentBrushingState(newBrushingState) {
+      if (this.parentController) {
+        this.parentController.currentBrushingState = newBrushingState;
+      }
+    }
+
+    addAllEventsMatchingFilterToSelectionAsTask(filter, selection) {
+      if (this.parentController) {
+        this.parentController.addAllEventsMatchingFilterToSelectionAsTask(
+            filter, selection);
+      }
+    }
+
+    findTextChangedTo(allPossibleMatches) {
+      if (this.parentController) {
+        this.parentController.findTextChangedTo(allPossibleMatches);
+      }
+    }
+
+    findFocusChangedTo(currentFocus) {
+      if (this.parentController) {
+        this.parentController.findFocusChangedTo(currentFocus);
+      }
+    }
+
+    findTextCleared() {
+      if (this.parentController) {
+        this.parentController.findTextCleared();
+      }
+    }
+
+    uiStateFromString(string) {
+      if (this.parentController) {
+        this.parentController.uiStateFromString(string);
+      }
+    }
+
+    navToPosition(uiState, showNavLine) {
+      if (this.parentController) {
+        this.parentController.navToPosition(uiState, showNavLine);
+      }
+    }
+
+    changeSelectionFromTimeline(selection) {
+      if (this.parentController) {
+        this.parentController.changeSelectionFromTimeline(selection);
+      }
+    }
+
+    showScriptControlSelection(selection) {
+      if (this.parentController) {
+        this.parentController.showScriptControlSelection(selection);
+      }
+    }
+
+    changeSelectionFromRequestSelectionChangeEvent(selection) {
+      if (this.parentController) {
+        this.parentController.changeSelectionFromRequestSelectionChangeEvent(
+            selection);
+      }
+    }
+
+    changeAnalysisViewRelatedEvents(eventSet) {
+      if (this.parentController && (eventSet instanceof tr.model.EventSet)) {
+        this.parentController.changeAnalysisViewRelatedEvents(eventSet);
+      }
+    }
+
+    changeAnalysisLinkHoveredEvents(eventSet) {
+      if (this.parentController && (eventSet instanceof tr.model.EventSet)) {
+        this.parentController.changeAnalysisLinkHoveredEvents(eventSet);
+      }
+    }
+
+    getViewSpecificBrushingState(viewId) {
+      if (this.parentController) {
+        this.parentController.getViewSpecificBrushingState(viewId);
+      }
+    }
+
+    changeViewSpecificBrushingState(viewId, newState) {
+      if (this.parentController) {
+        this.parentController.changeViewSpecificBrushingState(viewId, newState);
+      }
+    }
+  }
+
+  return {
+    NullBrushingStateController,
+  };
+});
+</script>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/memory_dump_track_util.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ALLOCATED_MEMORY_TRACK_HEIGHT = 50;
+
+  /**
+   * A track that displays an array of ProcessMemoryDump objects.
+   * @constructor
+   * @extends {ContainerTrack}
+   */
+  const ProcessMemoryDumpTrack = tr.ui.b.define(
+      'process-memory-dump-track', tr.ui.tracks.ContainerTrack);
+
+  ProcessMemoryDumpTrack.prototype = {
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      this.memoryDumps_ = undefined;
+    },
+
+    get memoryDumps() {
+      return this.memoryDumps_;
+    },
+
+    set memoryDumps(memoryDumps) {
+      this.memoryDumps_ = memoryDumps;
+      this.updateContents_();
+    },
+
+    updateContents_() {
+      this.clearTracks_();
+
+      // Show no tracks if there are no dumps.
+      if (!this.memoryDumps_ || !this.memoryDumps_.length) return;
+
+      this.appendAllocatedMemoryTrack_();
+    },
+
+    appendAllocatedMemoryTrack_() {
+      const series = tr.ui.tracks.buildProcessAllocatedMemoryChartSeries(
+          this.memoryDumps_);
+      if (!series) return;
+
+      const track = new tr.ui.tracks.ChartTrack(this.viewport);
+      track.heading = 'Memory per component';
+      track.height = ALLOCATED_MEMORY_TRACK_HEIGHT + 'px';
+      track.series = series;
+      track.autoSetAllAxes({expandMax: true});
+      Polymer.dom(this).appendChild(track);
+    }
+  };
+
+  return {
+    ProcessMemoryDumpTrack,
+  };
+});
+</script>

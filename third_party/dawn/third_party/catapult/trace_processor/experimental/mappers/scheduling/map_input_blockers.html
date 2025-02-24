@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pie', function() {
+  // Collects the set of tasks that are preventing user input from being
+  // processed on the main thread.
+  // See https://goo.gl/l7V5xg.
+  function mapInputBlockers(result, model) {
+    var modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    var rendererHelpers = modelHelper.rendererHelpers;
+
+    if (!rendererHelpers) {
+      // If we didn't detect any renderer processes, bail out.
+      result.addPair('inputBlockers', null);
+      return;
+    }
+
+    // Look for main thread input handling in each renderer process.
+    var inputBlockers = {};
+    var foundInputBlockers = false;
+    for (var pid in rendererHelpers) {
+      var rendererHelper = rendererHelpers[pid];
+      var mainThread = rendererHelper.mainThread;
+      // Look for events that represent main thread input handling that also
+      // have one associated flow event showing where the input came from.
+      for (var event of mainThread.getDescendantEvents()) {
+        if (event.title !== 'LatencyInfo.Flow' ||
+            event.args['step'] !== 'HandleInputEventMain' ||
+            event.inFlowEvents.length !== 1) {
+          continue;
+        }
+
+        // Now we can derive the queueing interval from the flow event.
+        var flowEvent = event.inFlowEvents[0];
+        var queueRange =
+            tr.b.math.Range.fromExplicitRange(flowEvent.start, event.start);
+
+        // Find all events that intersect the queueing interval and compute how
+        // much they contributed to it.
+        for (var intersectingEvent of mainThread.getDescendantEvents()) {
+          var eventRange =
+              tr.b.math.Range.fromExplicitRange(intersectingEvent.start,
+                  intersectingEvent.start + intersectingEvent.duration);
+          var intersection = queueRange.findIntersection(eventRange);
+          if (intersection.isEmpty || intersection.duration === 0)
+            continue;
+          if (inputBlockers[intersectingEvent.title] === undefined)
+            inputBlockers[intersectingEvent.title] = [];
+          inputBlockers[intersectingEvent.title].push(intersection.duration);
+          foundInputBlockers = true;
+        }
+      }
+    }
+
+    if (!foundInputBlockers) {
+      result.addPair('inputBlockers', null);
+      return;
+    }
+
+    result.addPair('inputBlockers', inputBlockers);
+  }
+
+  pi.FunctionRegistry.register(mapInputBlockers);
+
+  return {
+    mapInputBlockersForTest: mapInputBlockers
+  };
+});
+</script>

@@ -1,0 +1,45 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("bruteforce") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force",
+  ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_i_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_i_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_operator_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_operator_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_two_results_i_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/binary_two_results_i_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/common.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/function_list.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/i_unary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/i_unary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/macro_binary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/macro_binary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/macro_unary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/macro_unary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/mad_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/mad_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/reference_math.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/sleep.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/ternary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/ternary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_two_results_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_two_results_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_two_results_i_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_two_results_i_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_u_double.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/unary_u_float.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/math_brute_force/utility.cpp",
+  ]
+}

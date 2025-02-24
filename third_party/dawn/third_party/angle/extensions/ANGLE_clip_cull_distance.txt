@@ -1,0 +1,114 @@
+Name
+
+    ANGLE_clip_cull_distance
+
+Name Strings
+
+    GL_ANGLE_clip_cull_distance
+
+Contributors
+
+    Contributors to EXT_clip_cull_distance
+    Members of the WebGL working group
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: December 1, 2022
+    Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    This specification is written against the OpenGL ES 3.2 Specification
+    (May 5, 2022), and the OpenGL ES 3.20 Shading Language Specification
+    (July 10, 2019) but can apply to prior specifications.
+
+    OpenGL ES 3.0 and OpenGL ES Shading Language 3.00 are required.
+
+Overview
+
+    This extension has the same semantics as EXT_clip_cull_distance but
+    the number of supported cull distances may be zero.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetInteger64v, and GetFloatv:
+
+        MAX_CLIP_DISTANCES_ANGLE                          0x0D32
+        MAX_CULL_DISTANCES_ANGLE                          0x82F9
+        MAX_COMBINED_CLIP_AND_CULL_DISTANCES_ANGLE        0x82FA
+
+    Accepted by the <pname> parameters of Enable, Disable and IsEnabled:
+
+        CLIP_DISTANCE0_ANGLE           0x3000
+        CLIP_DISTANCE1_ANGLE           0x3001
+        CLIP_DISTANCE2_ANGLE           0x3002
+        CLIP_DISTANCE3_ANGLE           0x3003
+        CLIP_DISTANCE4_ANGLE           0x3004
+        CLIP_DISTANCE5_ANGLE           0x3005
+        CLIP_DISTANCE6_ANGLE           0x3006
+        CLIP_DISTANCE7_ANGLE           0x3007
+
+Additions to OpenGL ES Shading Language 3.20 Specification
+
+    Including the following line in a shader can be used to control
+    the language features described in this extension:
+
+        #extension GL_ANGLE_clip_cull_distance : <behavior>
+
+    where <behavior> is as described in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+        #define GL_ANGLE_clip_cull_distance 1
+
+    Other additions follow the EXT_clip_cull_distance specification.
+
+Dependencies on cull distance support
+
+    If cull distances are not supported, querying MAX_CULL_DISTANCES_ANGLE
+    and MAX_COMBINED_CLIP_AND_CULL_DISTANCES_ANGLE must return zero, the
+    built-in constants gl_MaxCullDistances and gl_MaxCombinedClipAndCullDistances
+    are defined as zero, and gl_CullDistance must not be used in shaders.
+
+New State
+
+    Add the following to Table 21.6 (Transformation State):
+
+                                            Initial
+    Get Value            Type   Get Command Value    Description       Sec.
+    -------------------- ------ ----------- -------- ----------------- ----
+    CLIP_DISTANCEi_ANGLE 8* x B IsEnabled   FALSE    ith user clip     12.5
+                                                     distance enabled
+
+
+New Implementation Dependent State
+
+    Add the following to Table 21.40 (Implementation Dependent Values):
+
+                                              Minimum
+    Get Value                Type Get Command Value    Description       Sec.
+    ------------------------ ---- ----------- -------- ----------------- ----
+    MAX_CLIP_DISTANCES_ANGLE Z+   GetIntegerv 8        Max. no. of user  12.5
+                                                       clip distances
+    MAX_CULL_DISTANCES_ANGLE Z+   GetIntegerv 0        Max. no. of user  12.5
+                                                       cull distances
+    MAX_COMBINED_CLIP_AND-   Z+   GetIntegerv 0        Max. combined no. 12.5
+    _CULL_DISTANCES_ANGLE                              of user clip and
+                                                       cull distances
+
+Revision History
+
+    12/1/2022   First revision

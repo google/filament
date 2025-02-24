@@ -1,0 +1,631 @@
+Version 2.5.1 - February 07, 2012
+---------------------------------
+- Bug fix release related to request charset in old versions of
+	WebOb.
+
+Version 2.5 - February 01, 2012
+-------------------------------
+
+Version 2.4 - January 23, 2012
+------------------------------
+- Maintenance release. Fixed outstanding bugs related to App Engine.
+- Removed webapp2_extras/protorpc, broken since webapp2 was added
+	to App Engine.
+
+
+Version 2.3 - August 24, 2011
+-----------------------------
+- webapp2.Response.out creates a reference loop that impedes garbage
+	collection. Changing it to a property fixed this (Issue #15).
+- webapp2_extras.i18n:
+	- When in debug mode, translations are not cached, so compiling new
+		translations make them readily available (Issue #13).
+- webapp2_extras.auth:
+	- ATTENTION: auth_id is no longer converted to lower case to retrieve
+		a key or save a new user in webapp2_extras.appengine.auth.models.User.
+		This is a more general approach, as not all systems use case-insensitive
+		user ids. If you want case-insensitive auth ids, convert them to lower
+		case before passing auth ids to the auth module (Issue #14).
+	- If user data is missing attributes, don't raise AssertionError.
+		Simply don't save or return a valid session, instead.
+	- call user_model.get_id() instead of the ndb-specific user.key.id().
+	- removed set_password_validator() and set_token_validator().
+		They add complexity to the API without a use case to justify.
+		Extend AuthStore to achieve the same thing.
+
+
+Version 2.2.3 - August 6, 2011
+------------------------------
+- Version 2.2.2 missed the webapp2_extras.appengine package.
+
+- get_app() and get_request() now test that app and request are set, to avoid
+	hard to debug stack traces when they are not and the local proxy is used.
+
+
+Version 2.2.2 - August 5, 2011 (more 2's than ever!)
+----------------------------------------------------
+- A default charset is always set in the Request object: if it is not defined
+	in the constructor, environ['CONTENT_TYPE'] is checked; and if it is still
+	not defined 'utf-8' is used.
+
+- Added token_model as an attribute of the User model; it is used instead of
+	the hardcoded class.
+
+
+Version 2.2.1 - August 1st, 2011
+--------------------------------
+- Fixed a bug in WSGIApplication.run() when running outside of App Engine:
+	CGIHandler().run(app) -> CGIHandler().run(self). (issue 9)
+
+
+Version 2.2 - July 30, 2011
+===========================
+- Revised webapp2_extras.auth and simplified User model, by Kyle Finley.
+	Thanks!
+
+
+Version 2.1 - July 29, 2011
+===========================
+- Added webapp2_extras.auth: high-level utilities for authentication and
+	authorization.
+
+- Added webapp2_extras.appengine.auth.models: default model implementations
+	for webapp2_extras.auth (can be overridden).
+
+- Added webapp2_extras.appengine.ndb.unique_model: a model to store unique
+	values. This was added mainly so that the default user model can have
+	multiple unique properties.
+
+- import_string() now displays useful debug information when it fails.
+
+- To make things clearly separated specially for those using webapp2
+	outside of App Engine, from now on all App Engine-specific modules will
+	be placed in webapp2_extras.appengine. Also three modules were moved to
+	the new package:
+
+	- webapp2_extras.sessions_memcache
+	- webapp2_extras.sessions_ndb
+	- webapp2_extras.users
+
+	The original modules were not removed, though: they will be kept in the same
+	place for compatibility purposes, just importing their stuff from the new
+	locations.
+
+- Config.load_config() now makes a copy of the configuration when user_values
+	are passed. That keyword is meant to override app configuration, so the
+	previous behavior was actually wrong. This is a side feature not used inside
+	webapp2 or even well documented so the change should not affect existing
+	apps.
+
+
+Version 2.0.2 - July 18, 2011
+=============================
+- cached_property now uses threading.RLock for thread-safety.
+
+
+Version 2.0.1 - July 17, 2011
+=============================
+- Little fix: use google.appengine.ext.webapp.util if available, like before.
+
+
+Version 2.0 - July 17, 2011
+===========================
+- Added support for the (not yet released) App Engine Python 2.7 SDK.
+
+- Deprecated webapp2_extras.local_app. WSGIApplication is now thread-safe
+	by default when webapp2_extras.local is available.
+	webapp2_extras.local_app.WSGIApplication can still be imported, but it is
+	just an alias to webapp2.WSGIApplication (and a deprecation warning is
+	emitted when it is imported).
+
+- Like DomainRoute, PathPrefixRoute now only tests the nested routes if the
+	prefix matches. So now it is not only convenient but matches smartly and
+	faster. ;)
+
+- Added webapp2_extras.security, with security related helpers such as secure
+	password hashing tools.
+
+- webapp2_extras.sessions:
+	- Now uses webapp2_extras.security.create_token() to generate session IDs
+		instead of uuid.
+	- Added 'backends' configuration: get_session() can now be called passing
+		a more convenient 'backend' key. Default ones are 'securecookie',
+		'datastore' and 'memcache'.
+
+- get_build_routes() now yields (name, route) instead of simply route. This
+	will allow routes with nested routes to act as a proxy to build URIs.
+
+- webapp2.urlunsplit() was removed from the public API.
+
+- Variables names in routes must now look like python identifiers -
+	this means that they can no longer start with a number, like before.
+
+- Removed support for _anchor in uri_for() -- the documented keyword is
+	_fragment.
+
+- Removed support for handler functions receiving (request, response). The
+	correct arguments for function handlers are (request, *args, **kwargs).
+
+- webapp2_extras.json:
+	- Fixed an issue with importing json on non-GAE environments (missing
+		absolute import).
+	- Now imports simplejson directly instead of using the one from Django,
+		since it is now included in the App Engine SDK (since version 1.4.2).
+
+- Added WSGIApplication.clear_globals(). Instead of
+	app.set_globals(app=None, request=None), use app.clear_globals().
+
+
+Version 1.8.1 - June 29, 2011
+=============================
+- Implemented an adapter mechanism to dispatch different kind of handlers:
+	webapp.RequestHandler, webapp2.RequestHandler and "view functions".
+	Instead of monkeypatching handlers (adding a 'factory' attribute),
+	handlers are wrapped by adapters that do the appropriate dispatch.
+	How handlers are adapted can be overridden using the convenience method
+	``set_adapter()`` from the Router class, but the common cases are covered.
+
+- Function views now conveniently receive (request, *args, **kwargs), like
+	in Django. The previous arguments will work, but they are now deprecated
+	and will not be supported in the future. This is a major incompatibility
+	with previous versions but it feels a lot better than the previous
+	(request, response) behavior, as adapters make it easy to have custom
+	dispatch arguments using a unified API.
+	The webapp2.RequestHandler class remain unchanged and is instantiated with
+	(request, response).
+
+
+Version 1.8 - June 26, 2011
+===========================
+- webap2_extras.i18n: the functions passed to I18nStore.set_locale_selector()
+	and I18nStore.set_timezone_selector() now receive (store, request) instead of
+	(request, store), for consistency with the router custom callables.
+
+- webap2_extras.json:
+	- json is imported first trying direct simplejson, then built-in json
+		(for Python >= 2.6), then the one from django.utils (for App Engine).
+	- All convenience functions now receive *args, **kwargs to be passed to
+		encode()/decode().
+
+- Added webapp2_extras.mako.
+
+- Added webapp2.redirect_to.
+
+- Added Request.blank() parameters compatible with WebOb >= 1.0: POST and
+	**kwargs.
+
+- Increased compatibility with wsgiref.headers.Headers, used by
+	webapp.Response.
+
+
+Version 1.7.5 - June 20, 2011
+=============================
+- Implemented methods from ``wsgiref.headers.Headers``, used by
+	webapp.Response.headers.
+
+
+Version 1.7.4 - June 19, 2011
+=============================
+- Fixed bug in response.status_message.
+
+
+Version 1.7.3 - June 17, 2011
+=============================
+- Routes can now only match specific schemes, e.g., 'http' or 'https'.
+
+- Added a tutorial to use webapp2 outside of App Engine.
+
+
+Version 1.7.2 - June 16, 2011
+=============================
+- Response is now compatible with latest WebOb.
+
+- Increased Response compatibility with webapp, implementing wsgi_write() and
+	has_error().
+
+- Changed some status messages to be the same as webapp:
+	- 203: 'Non-Authoritative Information'
+	- 302: 'Moved Temporarily'
+	- 306: 'Unused'
+	- 408: 'Request Time-out'
+	- 414: 'Request-URI Too Large'
+	- 504: 'Gateway Time-out'
+	- 505: 'HTTP Version not supported'
+
+- Copied Request from webapp, so that when using webapp2 outside of the SDK
+	they are the same.
+
+- Routes now match the Request path unquoted. See App Engine issue #2636
+	for an explanation.
+
+
+Version 1.7.1 - June 14, 2011
+=============================
+- Added standalone redirect() function.
+
+- RequestHandler.redirect and redirect_to now return a response object.
+
+- Fixed: multiple routes that define methods are tried before MethodNotAllowed
+	is raised.
+
+- Updated webapp2_extras.protorpc to work with latest ProtoRPC.
+
+
+Version 1.7 - June 4, 2011
+==========================
+- Added a simple configuration object for WSGIapplication, available in the
+	config attribute. Extras modules that use configuration (i18n, jinja2,
+	sessions) don't require app.config to be set manually anymore. Still, the
+	`secret_key` key config for sessions, if not defined, will result in an
+	exception.
+
+- Deprecated webapp2_extras.config, replaced by the simpler app dict.
+
+- Router no longer receives app on construction, for consistency with the
+	config object. App is set as global before router is initialized.
+
+- Fixed a bug in webapp2_extras.sessions that made it not save the session
+	when it was empty (like when flashes are popped).
+
+- Added standalone uri_for function, to be used in templates.
+
+
+Version 1.6.3 - June 3, 2011
+============================
+- Added webap2_extras.local_app, with the WSGIApplication previously in
+	webap2_extras.local. This allows using LocalProxy on App Engine, without
+	actually monkeypatching the WSGI app for threaded environments.
+
+- Route now raises exc.HTTPMethodNotAllowed if methods are set and the request
+	method doesn't match.
+
+- Router.default_matcher() now raises exc.HTTPNotFound if no route matches.
+
+
+Version 1.6.2 - May 30, 2011
+============================
+- WSGIApplication.__call__ checks if the dispatcher didn't return None to
+	accept the returned value as a response. Previously it checked if it was an
+	instance of Response.
+
+- To support returned response, RequestHandler.dispatch() returns the result of
+	the dispatched method.
+
+Version 1.6.1 - May 30, 2011
+============================
+- Fixed an indentation bug in webapp2_extras.users.
+
+- Added back _to_utf8() to convert values for import_string() and urlunsplit().
+
+- Added WSGIApplication.get_response(), a convenience for unit tests.
+
+
+Version 1.6 - May 29, 2011
+==========================
+- Handlers registered in WSGIApplication.error_handlers can now also be a
+	string to be lazily imported.
+
+- The request object now has the active response available as an attribute:
+	request.response.
+
+- Added a factory method to RequestHandler, to better deal with libraries that
+	use a custom webapp.RequestHandler constructors (like ProtoRPC).
+
+- Added set_dispatcher() to Router, to set extended dispatching.
+
+- Handlers and error handlers can now return a response object, which will be
+	used instead of the default response created by the WSGI app. This allows
+	webapp2 to be used following the common pattern of handlers that return a
+	response, instead of the webapp way of a handler that writes to an existing
+	response.
+
+- Request.Handler.redirect() now can receive a `code` parameter, to set the
+	status code. This is preferable than the `permanent` parameter, kept for
+	compatibility with webapp.
+
+- webapp2 is now a file webapp2.py, instead of a package with a __init__.py
+	file.
+
+- API cleanup:
+	- Removed WSGIApplication.url_for(), to_unicode(), to_utf8().
+	- RequestHandler.url_for was renamed to uri_for, with url_for kept
+		as an alias.
+	- Renamed webapp2_extras.routes.ImprovedRoute to RedirectRoute, as it
+		basically adds redirect conveniences.
+	- For consistency with uri building parameters, RedirectHandler parameters
+		are now prefixed with a underscore: `url` becomes `_uri` and `permanent`
+		becomes `_permanent`. A parameter `_code` was added to set status code.
+	- Router.do_match and do_build renamed to default_matcher and
+		default_dispatcher.
+	- URI building accepts a _fragment argument, with _anchor as fallback.
+
+
+Version 1.5 - May 16, 2011
+==========================
+- Added webapp2_extras.local, with an extended WSGIApplication that uses
+	thread-local for globals and so can be used outside of App Engine.
+
+- Added webapp2_extras.protorpc, with support for Google ProtoRPC.
+
+- Added set_matcher() and set_builder() to Router, to set extended matcher and
+	builder.
+
+- Routes now return the route on match() or routes with nested routes cannot
+	work. So instead of returning (args, kwargs) they return
+	(route, args, kwargs).
+
+- Now handlers only receive **args if no named variables are set. Otherwise,
+	they only receive **kwargs. This allows users to use regexes that are not
+	intended to be captured, mixing named and unnamed variables.
+
+- DomainRoute now uses the same syntax used by webapp2.Route, instead of a
+	regex. The resulting keywords are added to the mathed route **kwargs.
+	This gives control of what is passed to the handler if a domain/subdomain
+	matches, and allows to not pass anything if no regex groups are defined.
+
+- Several small bugs fixed and increased test coverage in webapp2_extras.
+
+
+Version 1.3 - May 9, 2011
+=========================
+- Added webapp2_extras modules:
+	- webapp2_extras.i18n: internationalization support.
+	- webapp2_extras.sessions_memcache: memcache based sessions.
+	- webapp2_extras.sessions_ndb: datastore based sessions.
+- Several api improvements in webapp2_extras.
+
+
+Version 1.2 - May 6, 2011
+=========================
+- Removed Config from webapp2 core. It is now part of the new "webapp2_extras"
+	package.
+- Added the package webapp2_extras. These are all optional modules that
+	complement webapp2 with common functionalities. Currently they include:
+	- webapp2_extras.config: Configuration object.
+	- webapp2_extras.jinja2: Support for Jinja2 templating.
+	- webapp2_extras.json: JSON utilities.
+	- webapp2_extras.routes: Extended route classes.
+	- webapp2_extras.securecookie: Signed cookie serializer.
+	- webapp2_extras.sessions: Sessions support.
+
+
+Version 1.1 - May 5, 2011
+=========================
+- Simplified routing with an unified dispatch method for classes and functions.
+
+
+Version 1.0 - May 1st, 2011
+===========================
+This is a major refactoring with some incompatible changes, mostly internal
+stuff that won't be noticed in common usage.
+
+- Changed signature of RequestHandler's constructor: it now receives only
+	(request, response) instead of (app, request, response).
+
+- Added RequestContext class, which should help testing.
+
+- Added .app attribute to Request, a reference to the active app.
+
+- Refactored routing scheme:
+	- Now also supports function views besides classes.
+	- Now also supports normal functions as exception handlers, and exception
+		handlers don't need to be a subclass RequestHandler (but still can).
+	- Now also supports custom handler methods besides using the request method.
+
+- Removed Request.context: was redundant with Request.registry.
+
+- Renamed WSGIApplication.wsgi_app to WSGIApplication.dispatch.
+
+- Moved ALLOWED_METHODS to WSGIApplication.allowed_methods.
+
+- Moved get_valid_methods() to RequestHandler.get_valid_methods().
+
+
+Version 0.7 - September 26, 2010
+================================
+- Added WSGIApplication.app and WSGIApplication.request, class attributes set
+	on each request to reference currently active app and request.
+	WSGIApplication.app is an alias to WSGIApplication.active_instance.
+
+- Fixed double escaping of + in urlunsplit(). Thanks, alkis.
+
+- IMPROVED: configuration now behaves exactly like a dictionary, still
+	auto-loading configuration values when needed and honoring required configs.
+	For example, we always used this::
+
+			bar = self.app.get_config('foo', 'bar')
+
+	Now it is also possible to use direct access and dict methods::
+
+			bar = self.app.config['foo']['bar']
+			# or...
+			bar = self.app.config['foo'].get('bar')
+			# or...
+			bar = self.app.config.get('foo').get('bar')
+
+	The previous get_config() method works as always.
+
+
+Version 0.6 - August 31, 2010
+=============================
+- Fix: Anchors in generated URLs are quoted using urlib.quote, instead of
+	urlib.quote_plus.
+
+- In Router.dispatch(), if an exception occurs while handling an exception,
+	raise it instead of trying to handle it again.
+
+- Fixed bug when writing a unicode string to Response and charset is not set.
+	Thanks to martinc for the patch.
+
+- Changed: the app won't fallback anymore to the exception handler set for
+	status 500 if handlers for other status are not set.
+
+- Changed: exceptions are only logged when unhandled. It is up to exception
+	handlers to log them when appropriate.
+
+
+Version 0.5.1 - August 17, 2010
+===============================
+- When a URL matches, some attributes are set in the request object:
+	- request.route: the matched route
+	- request.route_args: the matched positional arguments, a tuple
+	- request.route_kwargs: the matched keyword arguments, a dict
+
+- WSGIApplication.handle_exception() doesn't automatically raises the exception
+	when in debug mode: it is up to the error handler to raise it if in dev; it
+	will be raised if no error handler is defined to handle it anyway.
+
+- Added attributes, WSGIApplication.registry, Request.registry and
+	Request.context, dictionaries for objects in use during the app or request
+	lifetimes.
+
+- Before passing the request method to the RequestHandler, '-' is replaced
+	by '_', so that a method like WebDav's 'VERSION-CONTROL' can be supported.
+
+- Config.get() now only returns the passed default value when key is defined.
+	This is the intended, more predictable behavior: default is a default for
+	the key, not the module. For example::
+
+			# If config['foo']['bar'] is not set, return 'baz'.
+			config.get('foo', 'bar', default='baz')
+
+			# If config['foo'] is not set, return None. Default is ignored here.
+			config.get('foo', default='baz')
+
+- Router initialization now receives the app as parameter, so that extended
+	routes can access app's config.
+
+
+Version 0.5 - August 13, 2010
+=============================
+- Better compatibility with webapp:
+	- webapp2.WSGIapplication can be used with webapp.RequestHandler.
+	- webapp.WSGIapplication can be used with webapp2.RequestHandler.
+
+	Although the functionality becomes limited in both cases, this should help
+	migration.
+
+- Review of Response based on observations from
+	http://pythonpaste.org/webob/differences.html#webapp-response:
+
+	- Response.out is now a reference to self, to use webob.Response's neat
+		.write() method which can handle both string and unicode.
+	- Response.clear() now sets .body = '' instead of .app_iter = [].
+
+- Added Response.write(), for compatibility with StringIO behavior in webapp
+	when calling write() passing non-basestring values (issue 2).
+
+- Removed url_escape() and url_unescape(). Unused or almost unused.
+
+- ErrorHandlers can now be defined as strings to be lazily loaded, as they
+	now use the same dispatch mechanism of other handlers.
+
+Backwards compatibility warning
+-------------------------------
+- The method handle_exception() is called from app-wide error handlers.
+	Previously, get() was called.
+
+
+Version 0.4.1 - August 08, 2010
+===============================
+- Removed router parameter from get_routes(), get_match_routes(),
+	get_build_routes(). This simplifies multi-routes quite a bit.
+
+
+Version 0.4 - August 07, 2010
+=============================
+- redirect() and redirect_to() now accept a keyword argument 'abort' to raise
+	an exception to do the redirect.
+
+- '_netloc' can be passed to url_for() build URLs for a given domain or
+	subdomain.
+
+- Added BaseRoute, an interface for custom routes. Several improvements make
+	the routing system more extensible, while the default Route class sticks to
+	the basics.
+
+- Nested routes are now possible. As an example, `extras/routes.py` has several
+	classes that accept nested routes or extend routing in other ways:
+
+	- PathPrefixRoute: the idea of this route is to set a base path for other
+		routes::
+
+				app = WSGIApplication([
+						PathPrefixRoute('/users/<user:\w+>', [
+								Route('/', UserOverviewHandler, 'user-overview'),
+								Route('/profile', UserProfileHandler, 'user-profile'),
+								Route('/projects', UserProjectsHandler, 'user-projects'),
+						]),
+				])
+
+		The example above is the same as setting the following routes, just more
+		convenient as you can reuse the path prefix::
+
+				app = WSGIApplication([
+						Route('/users/<user:\w+>/', UserOverviewHandler, 'user-overview'),
+						Route('/users/<user:\w+>/profile', UserProfileHandler, 'user-profile'),
+						Route('/users/<user:\w+>/projects', UserProjectsHandler, 'user-projects'),
+				])
+
+	- NamePrefixRoute: Same as PathPrefixRoute, but prefixes the names of routes.
+
+	- HandlerPrefixRoute: Same as PathPrefixRoute, but prefixes the handlers of
+		routes.
+
+	- DomainRoute: a route used to restrict route matches to a given domain or
+		subdomain.
+
+		For example, to restrict routes to a subdomain of the appspot domain::
+
+				SUBDOMAIN_RE = '^([^.]+)\.app-id\.appspot\.com$'
+
+				app = WSGIApplication([
+						DomainRoute(SUBDOMAIN_RE, [
+								Route('/foo', 'FooHandler', 'subdomain-thing'),
+						]),
+						Route('/bar', 'BarHandler', 'normal-thing'),
+				])
+
+	- ImprovedRoute: a route with redirect_to and strict_slash.
+
+		- `redirect_to`: if set, the route is used to redirect to a URL. The value
+			 can be a URL string or a callable that returns a URL. These two are
+			 equivalent::
+
+					route = Route('/foo', RedirectHandler, defaults={'url': '/bar'})
+					route = Route('/foo', redirect_to='/bar')
+
+		- `strict_slash`: if True, redirects access to the same URL with different
+			trailing slash to the strict path defined in the rule. For example, take
+			these rules::
+
+					route = Route('/foo', FooHandler, strict_slash=True)
+					route = Route('/bar/', BarHandler, strict_slash=True)
+
+			Because **strict_slash** is True, this is what will happen:
+
+			- Access to ``/foo`` will execute ``FooHandler`` normally.
+			- Access to ``/bar/`` will execute ``BarHandler`` normally.
+			- Access to ``/foo/`` will redirect to ``/foo``.
+			- Access to ``/bar`` will redirect to ``/bar/``.
+
+
+Version 0.3 - August 05, 2010
+=============================
+- Routes store the handler, as we had in 0.1. This allows custom routes to
+	have nested routes.
+- Much improved URL building, now delegated to routes.
+- added urlunsplit() helper.
+
+
+Version 0.2 - August 04, 2010
+=============================
+- Fixed a bug in Route.match() that would make it return positional arguments
+	with wrong order. Dictionary is correctly sorted now.
+- Added build_only option for routes: routes that are only used for url_for()
+	and never match.
+
+
+Version 0.1 - August 03, 2010
+=============================
+- Initial release.

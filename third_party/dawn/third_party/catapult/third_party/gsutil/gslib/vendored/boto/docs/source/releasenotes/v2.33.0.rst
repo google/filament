@@ -1,0 +1,61 @@
+boto v2.33.0
+=============
+
+:date: 2014/10/08
+
+This release adds support for Amazon Route 53 Domains, Amazon Cognito Identity,
+Amazon Cognito Sync, the DynamoDB document model feature, and fixes several
+issues.
+
+
+Changes
+-------
+* Added TaggedEC2Object.remove_tags. (:issue:`2610`, :issue:`2269`, :issue:`2414`, :sha:`bce8fcf`)
+* Fixed 403 error from url encoded User-Agent header (:issue:`2621`, :sha:`2043a89`)
+* Inserted break when iterating Route53 records. (:issue:`2631`, :sha:`2de8716`)
+* Fix typo in ELB ConnectionSettings attribute (:issue:`2602`, :sha:`63bd53b`)
+* PEP8 fixes to various common modules. (:issue:`2611`, :sha:`44d873d`)
+* Route Tables: Update describe_route_tables to support additional route types (VPC peering connection, NIC). (:issue:`2598`, :issue:`2597`, :sha:`bbe8ce7`)
+* Fix an error in Python 3 when creating launch configs. Enables AutoScaling unit tests to run by default. (:issue:`2591`, :sha:`fb4aeec`)
+* Use svg instead of png to get better image quality. (:issue:`2588`, :sha:`1de6b41`)
+* STS now signs using sigv4. (:issue:`2627`, :sha:`36b247f`)
+* Added support for Amazon Cognito. (:issue:`2608`, :sha:`fa3a39e`)
+* Fix bug where sigv4 custom metadata headers were presigned incorrectly. (:issue:`2604`, :sha:`8853e8e`)
+* Add some regions to cloudsearch (:issue:`2593`, :sha:`8c6ea21`)
+* fix typo in s3 tutorial (:issue:`2612`, :sha:`92dd581`)
+* fix ELB ConnectionSettings values in documentation (:issue:`2620`, :sha:`d2231a2`)
+* Few typo in docstring (:issue:`2590`, :sha:`0238747`)
+* Add support for  Amazon Route 53 Domains. (:issue:`2601`, :sha:`d149a87`)
+* Support EBS encryption in BlockDeviceType. (:issue:`2587`, :issue:`2480`, :sha:`7a39741`)
+* Fix a typo in auth.py: Bejing -> Beijing. (:issue:`2585`, :sha:`8525616`)
+* Update boto/cacerts/cacerts.txt. (:issue:`2567`, :sha:`02b836c`)
+* route53 module: tidy up to meet PEP8 better. (:issue:`2571`, :sha:`3a3e960`)
+* Update count_slow documentation. (:issue:`2569`, :sha:`e926d2d`)
+* iam module: tidy up to meet PEP8 better. (:issue:`2566`, :sha:`3c83da9`)
+* Assigning ACL ID to network_acl_id  instead of route_table_id. (:issue:`2548`, :sha:`c017b02`)
+* Avoid infinite loop with bucket listing and encoding_type='url'. (:issue:`2562`, :issue:`2561`, :sha:`39cbcb5`)
+* Use urllib timeout param instead of hacking socket global timeout. (:issue:`2560`, :issue:`1935`, :sha:`c1dd1fb`)
+* Support non-ascii unicode strings in _get_all_query_args. Fixes: #2558, #2559. (:issue:`2559`, :issue:`2558`, :sha:`069d04b`)
+* Truncated Response Handling in Route53 ListResourceRecordSets. (:issue:`2542`, :sha:`3ba380f`)
+* Update to latest OpsWorks API. (:issue:`2547`, :sha:`ac2b311`)
+* Better S3 key repr support for unicode. (:issue:`2525`, :issue:`2516`, :sha:`8198884`)
+* Skip test when locale is missing. (:issue:`2554`, :issue:`2540`, :sha:`2b87583`)
+* Add profile_name support to SQS. (:issue:`2459`, :sha:`3837951`)
+* Include test_endpoints.json in source distribution. (:issue:`2550`, :sha:`7f907b7`)
+* Pass along params in make_request for elastic transcoder api. (:issue:`2537`, :sha:`964999e`)
+* Documents not found behavior of get_item(). (:issue:`2544`, :sha:`9b9c1c4`)
+* Support auth when headers contains bytes. (:issue:`2521`, :issue:`2520`, :sha:`885348d`)
+* PEP8 style fixes for ElastiCache. (:issue:`2539`, :sha:`bd0d6db`)
+* PEP8 style fixes for SES. (:issue:`2538`, :sha:`c620c43`)
+* Doc updates for CloudSearch. (:issue:`2546`, :sha:`9efebc2`)
+* Update to latest Redshift API. (:issue:`2545`, :sha:`9151092`)
+* Update to latest support API. (:issue:`2541`, :issue:`2426`, :sha:`8cf1b52`)
+* Uses file name as archive description when uploading to glacier. (:issue:`2535`, :issue:`2528`, :sha:`38478c1`)
+* Fix the ec2.elb.listener.Listener class's __getitem__ method. (:issue:`2533`, :sha:`7b67f98`)
+* Add recognized HTTP headers for S3 metadata. (:issue:`2477`, :issue:`2050`, :sha:`c8c625a`)
+* Fix class name for document. (:issue:`2530`, :sha:`2f0e689`)
+* Copy CloudSearch proxy settings to endpoint services. (:issue:`2513`, :sha:`3cbbc21`)
+* Merge branch 'develop' into cloudsearch2-proxy (:sha:`5b424db`)
+* Add IAMer as an application built on boto. (:issue:`2515`, :sha:`1f35224`)
+
+

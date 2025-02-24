@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_selector.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const MOUSE_SELECTOR_MODE = tr.ui.b.MOUSE_SELECTOR_MODE;
+  test('instantiate', function() {
+    const sel = document.createElement('tr-ui-b-mouse-mode-selector');
+    sel.supportedModeMask =
+        MOUSE_SELECTOR_MODE.SELECTION |
+        MOUSE_SELECTOR_MODE.PANSCAN;
+    this.addHTMLOutput(sel);
+  });
+
+  test('changeMaskWithUnsupportedMode', function() {
+    const sel = document.createElement('tr-ui-b-mouse-mode-selector');
+    sel.mode = MOUSE_SELECTOR_MODE.SELECTION;
+    assert.throw(function() {
+      sel.supportedModeMask = MOUSE_SELECTOR_MODE.ZOOM;
+    });
+  });
+
+  test('modePersists', function() {
+    const sel1 = document.createElement('tr-ui-b-mouse-mode-selector');
+    sel1.defaultMode_ = MOUSE_SELECTOR_MODE.ZOOM;
+    sel1.settingsKey = 'foo';
+    assert.strictEqual(sel1.mode, MOUSE_SELECTOR_MODE.ZOOM);
+
+    sel1.mode = MOUSE_SELECTOR_MODE.PANSCAN;
+
+    const sel2 = document.createElement('tr-ui-b-mouse-mode-selector');
+    sel2.settingsKey = 'foo';
+    assert.strictEqual(sel2.mode, MOUSE_SELECTOR_MODE.PANSCAN);
+  });
+});
+</script>

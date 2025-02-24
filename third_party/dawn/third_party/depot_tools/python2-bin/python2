@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+DEPOT_TOOLS=$(dirname "$0")/..
+
+if [ "$OSTYPE" = "msys" ]
+then
+  # msys is `git bash` on windows, so python_bin_reldir contains backslashes;
+  # this converts them to the forward slashes a unix environment expects.
+  PYTHON_BIN_DIR="$DEPOT_TOOLS/$(sed -e 's-\\-/-g' $DEPOT_TOOLS/python_bin_reldir.txt)"
+else
+  PYTHON_BIN_DIR="$DEPOT_TOOLS/$(<"$DEPOT_TOOLS/python_bin_reldir.txt")"
+fi
+PATH="$PYTHON_BIN_DIR":"$PATH"
+"$PYTHON_BIN_DIR/python" "$@"

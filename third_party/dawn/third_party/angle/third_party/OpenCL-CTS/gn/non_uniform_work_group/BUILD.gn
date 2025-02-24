@@ -1,0 +1,18 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("non_uniform_work_group") {
+  include_dirs = [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/TestNonUniformWorkGroup.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/test_advanced_2d.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/test_advanced_3d.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/test_advanced_other.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/test_basic.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/non_uniform_work_group/tools.cpp",
+  ]
+}

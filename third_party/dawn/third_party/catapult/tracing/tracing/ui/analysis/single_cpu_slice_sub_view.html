@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-single-cpu-slice-sub-view'>
+  <template>
+    <style>
+    table {
+      border-collapse: collapse;
+      border-width: 0;
+      margin-bottom: 25px;
+      width: 100%;
+    }
+
+    table tr > td:first-child {
+      padding-left: 2px;
+    }
+
+    table tr > td {
+      padding: 2px 4px 2px 4px;
+      vertical-align: text-top;
+      width: 150px;
+    }
+
+    table td td {
+      padding: 0 0 0 0;
+      width: auto;
+    }
+    tr {
+      vertical-align: top;
+    }
+
+    tr:nth-child(2n+0) {
+      background-color: #e2e2e2;
+    }
+    </style>
+    <table>
+      <tr>
+        <td>Running process:</td><td id="process-name"></td>
+      </tr>
+      <tr>
+        <td>Running thread:</td><td id="thread-name"></td>
+      </tr>
+      <tr>
+        <td>Start:</td>
+        <td>
+          <tr-v-ui-scalar-span id="start">
+          </tr-v-ui-scalar-span>
+        </td>
+      </tr>
+      <tr>
+        <td>Duration:</td>
+        <td>
+          <tr-v-ui-scalar-span id="duration">
+          </tr-v-ui-scalar-span>
+        </td>
+      </tr>
+      <tr>
+        <td>Active slices:</td><td id="running-thread"></td>
+      </tr>
+      <tr>
+        <td>Args:</td>
+        <td>
+          <tr-ui-a-generic-object-view id="args">
+          </tr-ui-a-generic-object-view>
+        </td>
+      </tr>
+    </table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-cpu-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.currentSelection_ = undefined;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    const cpuSlice = tr.b.getOnlyElement(selection);
+    if (!(cpuSlice instanceof tr.model.CpuSlice)) {
+      throw new Error('Only supports thread time slices');
+    }
+
+    this.currentSelection_ = selection;
+
+    const thread = cpuSlice.threadThatWasRunning;
+
+    const root = Polymer.dom(this.root);
+    if (thread) {
+      Polymer.dom(root.querySelector('#process-name')).textContent =
+          thread.parent.userFriendlyName;
+      Polymer.dom(root.querySelector('#thread-name')).textContent =
+          thread.userFriendlyName;
+    } else {
+      root.querySelector('#process-name').parentElement.style.display =
+          'none';
+      Polymer.dom(root.querySelector('#thread-name')).textContent =
+          cpuSlice.title;
+    }
+
+    root.querySelector('#start').setValueAndUnit(
+        cpuSlice.start, tr.b.Unit.byName.timeStampInMs);
+    root.querySelector('#duration').setValueAndUnit(
+        cpuSlice.duration, tr.b.Unit.byName.timeDurationInMs);
+
+    const runningThreadEl = root.querySelector('#running-thread');
+
+    const timeSlice = cpuSlice.getAssociatedTimeslice();
+    if (!timeSlice) {
+      runningThreadEl.parentElement.style.display = 'none';
+    } else {
+      const threadLink = document.createElement('tr-ui-a-analysis-link');
+      threadLink.selection = new tr.model.EventSet(timeSlice);
+      Polymer.dom(threadLink).textContent = 'Click to select';
+      runningThreadEl.parentElement.style.display = '';
+      Polymer.dom(runningThreadEl).textContent = '';
+      Polymer.dom(runningThreadEl).appendChild(threadLink);
+    }
+
+    root.querySelector('#args').object = cpuSlice.args;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-cpu-slice-sub-view',
+    tr.model.CpuSlice,
+    {
+      multi: false,
+      title: 'CPU Slice',
+    });
+</script>

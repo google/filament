@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+# Copyright (c) 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import absolute_import
+from __future__ import print_function
+import os
+import sys
+
+TELEMETRY_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+sys.path.append(TELEMETRY_DIR)
+
+PYUTILS_PATH = os.path.abspath(os.path.join(
+  os.path.dirname(__file__), '..', '..', 'common', 'py_utils'))
+sys.path.append(PYUTILS_PATH)
+
+from py_utils import xvfb
+
+from telemetry.core import util
+from telemetry.internal.browser import browser_finder
+from telemetry.internal.browser import browser_options
+from telemetry.internal.util import binary_manager
+from telemetry.util import wpr_modes
+
+
+_SNAP_IT_TEST_URL = 'file:///%s' % (os.path.join(
+    util.GetCatapultThirdPartyDir(), 'snap-it', 'tests', 'tests.html'))
+
+
+def RunSnapItUnittest(finder_options):
+  possible_browser = browser_finder.FindBrowser(finder_options)
+  with possible_browser.BrowserSession(
+      finder_options.browser_options) as browser:
+    tab = browser.tabs[0]
+    tab.Navigate(_SNAP_IT_TEST_URL)
+    tab.WaitForJavaScriptCondition('window.allTestDone')
+    num_tests = tab.EvaluateJavaScript('window.total')
+    failed_tests = tab.EvaluateJavaScript('window.failedTests')
+
+    for test in failed_tests:
+      print("Test '%s' failed" % test)
+    if failed_tests:
+      print('Failed %s tests (out of %s tests)' % (len(failed_tests), num_tests))
+      return 1
+    else:
+      print('All %s tests passed' % num_tests)
+      return 0
+
+
+def main(args):
+  binary_manager.InitDependencyManager([])
+  options = browser_options.BrowserFinderOptions()
+  options.browser_options.extra_browser_args.add('--headless')
+  parser = options.CreateParser(usage="Run snap-it's unittests")
+  parser.parse_args(args)
+
+  xvfb_process = None
+  try:
+    if xvfb.ShouldStartXvfb():
+      print('Starting xvfb...')
+      xvfb_process = xvfb.StartXvfb()
+
+    return RunSnapItUnittest(options)
+  finally:
+    if xvfb_process:
+      xvfb_process.kill()
+
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv[1:]))

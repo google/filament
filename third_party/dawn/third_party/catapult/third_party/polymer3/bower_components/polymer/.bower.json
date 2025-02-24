@@ -1,0 +1,14 @@
+{
+  "name": "polymer",
+  "homepage": "https://github.com/Polymer/polymer",
+  "version": "3.0.2",
+  "_release": "3.0.2",
+  "_resolution": {
+    "type": "version",
+    "tag": "v3.0.2",
+    "commit": "1476ce71c3edae89274f7d2db72a0f0551b28cdd"
+  },
+  "_source": "https://github.com/Polymer/polymer.git",
+  "_target": "^3.0.0",
+  "_originalSource": "Polymer/polymer"
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Container that decorates its children.
+ */
+tr.exportTo('tr.ui.b', function() {
+  /**
+   * @constructor
+   */
+  const ContainerThatDecoratesItsChildren = tr.ui.b.define('div');
+
+  ContainerThatDecoratesItsChildren.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.observer_ = new MutationObserver(this.didMutate_.bind(this));
+      this.observer_.observe(this, { childList: true });
+
+      // textContent is a variable on regular HTMLElements. However, we want to
+      // hook and prevent writes to it.
+      Object.defineProperty(
+          this, 'textContent',
+          { get: undefined, set: this.onSetTextContent_});
+    },
+
+    appendChild(x) {
+      HTMLDivElement.prototype.appendChild.call(this, x);
+      this.didMutate_(this.observer_.takeRecords());
+    },
+
+    insertBefore(x, y) {
+      HTMLDivElement.prototype.insertBefore.call(this, x, y);
+      this.didMutate_(this.observer_.takeRecords());
+    },
+
+    removeChild(x) {
+      HTMLDivElement.prototype.removeChild.call(this, x);
+      this.didMutate_(this.observer_.takeRecords());
+    },
+
+    replaceChild(x, y) {
+      HTMLDivElement.prototype.replaceChild.call(this, x, y);
+      this.didMutate_(this.observer_.takeRecords());
+    },
+
+    onSetTextContent_(textContent) {
+      if (textContent !== '') {
+        throw new Error('textContent can only be set to \'\'.');
+      }
+      this.clear();
+    },
+
+    clear() {
+      while (Polymer.dom(this).lastChild) {
+        HTMLDivElement.prototype.removeChild.call(
+            this, Polymer.dom(this).lastChild);
+      }
+      this.didMutate_(this.observer_.takeRecords());
+    },
+
+    didMutate_(records) {
+      this.beginDecorating_();
+      for (let i = 0; i < records.length; i++) {
+        const addedNodes = records[i].addedNodes;
+        if (addedNodes) {
+          for (let j = 0; j < addedNodes.length; j++) {
+            this.decorateChild_(addedNodes[j]);
+          }
+        }
+        const removedNodes = records[i].removedNodes;
+        if (removedNodes) {
+          for (let j = 0; j < removedNodes.length; j++) {
+            this.undecorateChild_(removedNodes[j]);
+          }
+        }
+      }
+      this.doneDecoratingForNow_();
+    },
+
+    decorateChild_(child) {
+      throw new Error('Not implemented');
+    },
+
+    undecorateChild_(child) {
+      throw new Error('Not implemented');
+    },
+
+    beginDecorating_() {
+    },
+
+    doneDecoratingForNow_() {
+    }
+  };
+
+  return {
+    ContainerThatDecoratesItsChildren,
+  };
+});
+</script>

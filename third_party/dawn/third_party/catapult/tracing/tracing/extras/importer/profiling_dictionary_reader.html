@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.importer', function() {
+  const STRING_ID_SUFFIX = '_sid';
+  const PLURAL_STRING_ID_SUFFIX = '_sids';
+
+  function isStringReference(s) {
+    return s.endsWith(STRING_ID_SUFFIX) || s.endsWith(PLURAL_STRING_ID_SUFFIX);
+  }
+
+  function getStringReferenceName(name) {
+    if (name.endsWith(PLURAL_STRING_ID_SUFFIX)) {
+      return name.slice(0, -PLURAL_STRING_ID_SUFFIX.length);
+    }
+    return name.slice(0, -STRING_ID_SUFFIX.length);
+  }
+
+  function deferenceStrings(idToString, o) {
+    const clone = Object.assign({}, o);
+    for (const [key, value] of Object.entries(clone)) {
+      if (isStringReference(key)) {
+        const name = getStringReferenceName(key);
+        clone[name] = idToString(value);
+      }
+    }
+    return clone;
+  }
+
+  function singularize(word) {
+    if (word.endsWith('s')) {
+      return word.slice(0, -1);
+    }
+    return word;
+  }
+
+  function getMetadataPairs(dataJson) {
+    const isMetadata = v => typeof v !== 'object' || Array.isArray(v);
+    const pairs = Object.entries(dataJson);
+    const metadataPairs = pairs.filter(([_, v]) => isMetadata(v));
+    return metadataPairs;
+  }
+
+  function getGroupPairs(dataJson) {
+    const pairs = Object.entries(dataJson);
+    const nonMapPairs = pairs.filter(([k, _]) => k !== 'maps');
+    const groupPairs = nonMapPairs.filter(([_, v]) => typeof v === 'object');
+    return groupPairs;
+  }
+
+  function createMap(mapJson) {
+    const map = new Map();
+    for (const entry of mapJson) {
+      if (entry.id === undefined) {
+        throw new Error('Missing required key "id" in streaming event.');
+      }
+      map.set(entry.id, entry);
+    }
+    return map;
+  }
+
+  function createMaps(mapsJson) {
+    const maps = new Map();
+    for (const [name, mapJson] of Object.entries(mapsJson)) {
+      maps.set(name, createMap(mapJson));
+    }
+    return maps;
+  }
+
+  function createGroup(groupJson, opt_startTime) {
+    const entries = [];
+    const n = Object.values(groupJson)[0].length;
+
+    for (let i = 0; i < n; i++) {
+      const entry = {};
+      for (const name in groupJson) {
+        entry[name] = groupJson[name][i];
+      }
+      entries.push(entry);
+    }
+
+    const timeDelta = groupJson.timeDelta;
+    if (opt_startTime === undefined && timeDelta !== undefined) {
+      throw new Error('Missing required key "startTime" in streaming event.');
+    }
+
+    if (opt_startTime) {
+      let delta = 0;
+      for (const entry of entries) {
+        delta += entry.timeDelta ? entry.timeDelta : 0;
+        entry.time = opt_startTime + delta;
+      }
+    }
+
+    return entries;
+  }
+
+  function createGroups(groupsJson, opt_startTime) {
+    const groups = new Map();
+    for (const [name, groupJson] of Object.entries(groupsJson)) {
+      groups.set(name, createGroup(groupJson, opt_startTime));
+    }
+
+    return groups;
+  }
+
+  function createMetadata(metadataPairs) {
+    const metadata = new Map();
+    for (const [name, value] of metadataPairs) {
+      metadata.set(name, value);
+    }
+    if (metadata.get('version') === undefined) {
+      throw new Error('Missing required key "version" in streaming event.');
+    }
+    return metadata;
+  }
+
+  /**
+   * Extracts data from a profiling dictionary. See goo.gl/R0Ae4f.
+   *
+   * A profiling dictionary is a compressed format that is good for recording
+   * sampling data. ProfilingDictionaryReader unpacks that data. To use the
+   * ProfilingDictionaryReader first create an 'empty' reader using .empty()
+   * then call #expandData(data) on your dictionary or the helper:
+   * #expandEvent(event) on a tracing event containing the profiling dictionary.
+   * ProfilingDictionaryReader is an immutable data structure so these methods
+   * don't modify the ProfilingDictionaryReader instead they return new
+   * ProfilingDictionaryReaders which wrap the data you passed. To access the
+   * unpacked data use the #inflated property and the #getMapValue() method.
+   *
+   * Usage example, given input like:
+   * $ let input = {
+   *   version: 1,
+   *   allocators: {
+   *     books: {
+   *       authors: [1, 1, 2],
+   *       title_sid: [10, 11, 12],
+   *     },
+   *   },
+   *   maps: {
+   *     authors: [
+   *       { id: 1, name_sid: 1 },
+   *       { id: 2, name_sid: 2 },
+   *     ],
+   *     strings: [
+   *       { id: 1, string: 'DFW' },
+   *       { id: 2, string: 'C. Stross' },
+   *       { id: 10, string: 'Book A' },
+   *       { id: 11, string: 'Book B' },
+   *       { id: 12, string: 'Book C' },
+   *     ],
+   *   }
+   * };
+   * We can create an empty reader:
+   * $ let reader = ProfilingDictionaryReader.empty();
+   * Then read in the input:
+   * $ reader = reader.expandData(input);
+   * Then view the expanded data:
+   * $ console.log(reader.inflated);
+   * {
+   *   books: [
+   *     { author: { id: 1, name: 'DFW' }, title: "Book A", },
+   *     { author: { id: 2, name: 'C. Stross' }, title: "Book B", },
+   *     { author: { id: 2, name: 'C. Stross' }, title: "Book C", },
+   *   ],
+   * }
+   *
+   */
+  class ProfilingDictionaryReader {
+    constructor(opt_metadata, opt_maps, opt_groups, opt_parent) {
+      this.metadata = opt_metadata || new Map();
+      this.maps = opt_maps || new Map();
+      this.groups = opt_groups || new Map();
+      this.parent_ = opt_parent || undefined;
+      this.inflated_ = undefined;
+      this.raw_ = undefined;
+      this.boundGetString_ = this.getString.bind(this);
+      this.deferenceStrings_ = o => deferenceStrings(this.boundGetString_, o);
+    }
+
+    /**
+     * Creates an empty ProfilingDictionaryReader.
+     */
+    static empty() {
+      return new ProfilingDictionaryReader();
+    }
+
+    /**
+     * Returns the parent or null if this is the root ProfilingDictionaryReader.
+     */
+    get parent() {
+      return this.parent_;
+    }
+
+    get raw() {
+      if (this.raw_) return this.raw_;
+      this.raw_ = {};
+      for (const [name, group] of this.groups.entries()) {
+        this.raw_[name] = group;
+      }
+      return this.raw_;
+    }
+
+    get inflated() {
+      if (this.inflated_) return this.inflated_;
+      this.inflated_ = {};
+      for (const [name, group] of this.groups.entries()) {
+        this.inflated_[name] = this.inflateGroup(group);
+      }
+      return this.inflated_;
+    }
+
+    /**
+     * Get a map from the newest event by name.
+     * If no map with that name was present returns an empty Map.
+     */
+    getNewMap(name) {
+      return this.maps.get(name) || new Map();
+    }
+
+    /**
+     * Get a record with the id |id| from the map with name |mapName|.
+     * This method searches through the expanded events in reverse order of
+     * expansion until it finds a matching value. If no value matches returns
+     * undefined.
+     */
+    getMapValue(mapName, id) {
+      let value = this.getNewMap(mapName).get(id);
+      if (value === undefined && this.parent) {
+        value = this.parent.getMapValue(mapName, id);
+      }
+      return value;
+    }
+
+    /**
+     * Get the string with the id |id|.
+     * This method searches through the expanded events in reverse order of
+     * expansion until it finds a string with the matching id. If there is no
+     * matching string with returns undefined.
+     */
+    getString(id) {
+      const value = this.getMapValue('strings', id);
+      if (value === undefined) return undefined;
+      return value.string;
+    }
+
+    /**
+     * True iff this or any parent has a map with name |name|.
+     */
+    hasMap(name) {
+      if (this.maps.has(name)) return true;
+      if (this.parent === undefined) return false;
+      return this.parent.hasMap(name);
+    }
+
+    inflateGroup(group) {
+      return group.map(this.inflateEntry.bind(this));
+    }
+
+    inflateEntry(entry) {
+      const inflatedEntry = {};
+      for (const [name, value] of Object.entries(entry)) {
+        let inflatedValue;
+        if (this.hasMap(name)) {
+          const id = value;
+          inflatedValue = this.deferenceStrings_(this.getMapValue(name, id));
+        } else {
+          inflatedValue = value;
+        }
+        inflatedEntry[singularize(name)] = inflatedValue;
+      }
+      return this.deferenceStrings_(inflatedEntry);
+    }
+
+    /**
+     * Returns a new ProfilingDictionaryReader with this
+     * ProfilingDictionaryReader as its parent and the fields 'maps', 'groups'
+     * and 'metadata' filled in based on |data|.
+     */
+    expandData(data) {
+      const mapsJson = data.maps || {};
+      const groupsJson = data.allocators || {};
+      const metadataPairs = getMetadataPairs(data);
+      const metadata = createMetadata(metadataPairs);
+      const opt_startTime = metadata.get('startTime');
+      const maps = createMaps(mapsJson);
+      const groups = createGroups(groupsJson, opt_startTime);
+      return new ProfilingDictionaryReader(metadata, maps, groups, this);
+    }
+
+    /**
+     * Convenience method for this.expandData(event.args.data).
+     */
+    expandEvent(event) {
+      return this.expandData(event.args.data);
+    }
+  }
+
+  return {
+    ProfilingDictionaryReader,
+    singularize,
+    deferenceStringsForTest: deferenceStrings,
+  };
+});
+</script>
+

@@ -1,0 +1,500 @@
+# This is a vpython "spec" file.
+#
+# It describes patterns for python wheel dependencies of the python scripts in
+# the chromium repo, particularly for dependencies that have compiled components
+# (since pure-python dependencies can be easily vendored into third_party).
+#
+# When vpython is invoked, it finds this file and builds a python VirtualEnv,
+# containing all of the dependencies described in this file, fetching them from
+# CIPD (the "Chrome Infrastructure Package Deployer" service). Unlike `pip`,
+# this never requires the end-user machine to have a working python extension
+# compilation environment. All of these packages are built using:
+#   https://chromium.googlesource.com/infra/infra/+/master/infra/tools/dockerbuild/
+#
+# All python scripts in the repo share this same spec, to avoid dependency
+# fragmentation.
+#
+# If you have depot_tools installed in your $PATH, you can invoke python scripts
+# in this repo by running them as you normally would run them, except
+# substituting `vpython` instead of `python` on the command line, e.g.:
+#   vpython path/to/script.py some --arguments
+#
+# Read more about `vpython` and how to modify this file here:
+#   https://chromium.googlesource.com/infra/infra/+/master/doc/users/vpython.md
+
+python_version: "3.11"
+
+# Used by:
+#   telemetry/
+#
+# This version must be compatible with the version range specified by
+# //telemetry/telemetry/internal/util/external_modules.py
+wheel: <
+  name: "infra/python/wheels/numpy/${vpython_platform}"
+  version: "version:1.23.5.chromium.4"
+>
+wheel: <
+  name: "infra/python/wheels/opencv_python/${vpython_platform}"
+  version: "version:4.8.1.78.chromium.1"
+  # There is currently no Linux arm/arm64 version in CIPD.
+  not_match_tag <
+    platform: "linux_aarch64"
+  >
+>
+
+# Used by:
+#   vpython3 bin/run_py_test
+# This is used in pre-submit try jobs, which used to rely on gae-sdk from cipd,
+# and in post-submit cloud biulds, which used to rely on google/cloud-sdk
+# docker image. Both sources are out of date and do not support python 3.
+wheel: <
+  name: "infra/python/wheels/appengine-python-standard-py3"
+  version: "version:0.3.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/frozendict-py3"
+  version: "version:2.0.6"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-auth-py2_py3"
+  version: "version:1.35.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/pytz-py2_py3"
+  version: "version:2021.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/mock-py3"
+  version: "version:4.0.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/ruamel_yaml-py3"
+  version: "version:0.17.16"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyasn1_modules-py2_py3"
+  version: "version:0.2.8"
+>
+
+wheel: <
+  name: "infra/python/wheels/rsa-py3"
+  version: "version:4.7.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/cachetools-py3"
+  version: "version:4.2.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyasn1-py2_py3"
+  version: "version:0.4.8"
+>
+
+wheel: <
+  name: "infra/python/wheels/charset_normalizer-py3"
+  version: "version:2.0.4"
+>
+
+wheel: <
+  name: "infra/python/wheels/ruamel_yaml_clib/${vpython_platform}"
+  version: "version:0.2.8"
+>
+
+wheel: <
+  name: "infra/python/wheels/httplib2-py3"
+  version: "version:0.19.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyparsing-py2_py3"
+  version: "version:2.4.7"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-api-python-client-py3"
+  version: "version:2.2.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-auth-httplib2-py2_py3"
+  version: "version:0.1.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-api-core-py3"
+  version: "version:1.31.5"
+>
+
+wheel: <
+  name: "infra/python/wheels/googleapis-common-protos-py2_py3"
+  version: "version:1.52.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/uritemplate-py2_py3"
+  version: "version:3.0.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/webtest-py2_py3"
+  version: "version:2.0.35"
+>
+
+wheel: <
+  name: "infra/python/wheels/webob-py2_py3"
+  version: "version:1.8.6"
+>
+
+wheel: <
+  name: "infra/python/wheels/waitress-py2_py3"
+  version: "version:1.4.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/beautifulsoup4-py3"
+  version: "version:4.9.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/soupsieve-py2_py3"
+  version: "version:1.9.5"
+>
+
+wheel: <
+  name: "infra/python/wheels/jinja2-py2_py3"
+  version: "version:2.10.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/markupsafe/${vpython_platform}"
+  version: "version:1.1.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/infra_libs-py2_py3"
+  version: "version:2.3.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/oauth2client-py2_py3"
+  version: "version:3.0.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-logging-py3"
+  version: "version:3.0.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-core-py3"
+  version: "version:2.2.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-audit-log-py2_py3"
+  version: "version:0.2.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/ijson/${vpython_platform}"
+  version: "version:3.2.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-datastore-py3"
+  version: "version:2.1.6"
+>
+
+wheel: <
+  name: "infra/python/wheels/typing-extensions-py3"
+  version: "version:3.7.4.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/typing-inspect-py3"
+  version: "version:0.7.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/libcst-py3"
+  version: "version:0.3.19"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyyaml-py3"
+  version: "version:5.3.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/mypy-extensions-py3"
+  version: "version:0.4.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/flask-talisman-py2_py3"
+  version: "version:0.7.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/grpc-google-iam-v1-py3"
+  version: "version:0.12.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/proto-plus-py3"
+  version: "version:1.20.3"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-appengine-logging-py2_py3"
+  version: "version:1.1.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/grpcio/${vpython_platform}"
+  version: "version:1.54.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/flask-py2_py3"
+  version: "version:1.0.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/werkzeug-py2_py3"
+  version: "version:1.0.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/itsdangerous-py2_py3"
+  version: "version:1.1.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/click-py2_py3"
+  version: "version:7.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/paste-py3"
+  version: "version:3.7.1"
+>
+
+# Used by:
+#  telemetry/bin/fetch_telemetry_binary_dependencies
+wheel: <
+  name: "infra/python/wheels/pywin32/${vpython_platform}"
+  version: "version:306"
+  match_tag: <
+    platform: "win32"
+  >
+  match_tag: <
+    platform: "win_amd64"
+  >
+>
+
+# Used by:
+#   build/android/pylib/local/emulator/avd.py
+#   tracing/
+wheel: <
+  name: "infra/python/wheels/protobuf-py3"
+  version: "version:4.21.9"
+>
+
+# Used by:
+# //third_party/catapult/telemetry/telemetry/internal/backends/chrome/remote_cast_browser_backend.py
+wheel: <
+  name: "infra/python/wheels/pexpect/${vpython_platform}"
+  version: "version:4.8.0.chromium.1"
+>
+
+# TODO(https://crbug.com/898348): Add in necessary wheels as Python3 versions
+# become available.
+wheel: <
+  name: "infra/python/wheels/six-py2_py3"
+  version: "version:1.15.0"
+>
+
+# Used by code coverage reporting tools in:
+# //third_party/catapult/third_party/coverage/coverage/
+wheel: <
+  name: "infra/python/wheels/coverage/${vpython_platform}"
+  version: "version:7.3.1"
+>
+
+# Common utilities.
+# For Python 2, this version needed to be compatible with the version range
+# specified by
+# //third_party/catapult/telemetry/telemetry/internal/util/external_modules.py
+# However, the hope is that Telemetry's Python 3 migration will fix this, so
+# use the newer version that's currently available in CIPD for now.
+wheel: <
+  name: "infra/python/wheels/psutil/${vpython_platform}"
+  version: "version:5.8.0.chromium.3"
+>
+wheel: <
+  name: "infra/python/wheels/requests-py3"
+  version: "version:2.31.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/parameterized-py2_py3"
+  version: "version:0.7.1"
+>
+wheel: <
+  name: "infra/python/wheels/pbr-py2_py3"
+  version: "version:3.0.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/pyfakefs-py2_py3"
+  version: "version:3.7.2"
+>
+
+# Used by:
+#   build/chromeos/test_runner.py
+wheel: <
+  name: "infra/python/wheels/jsonlines-py2_py3"
+  version: "version:1.2.0"
+>
+wheel: <
+  name: "infra/python/wheels/python-dateutil-py2_py3"
+  version: "version:2.7.3"
+>
+
+# Used by Web Platform Tests (WPT) codebase in
+# //third_party/blink/web_tests/external/wpt/tools/
+wheel: <
+  name: "infra/python/wheels/html5lib-py2_py3"
+  version: "version:1.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/mozdebug-py2_py3"
+  version: "version:0.2"
+>
+wheel: <
+  name: "infra/python/wheels/mozinfo-py2_py3"
+  version: "version:1.2.2"
+>
+wheel: <
+  name: "infra/python/wheels/mozlog-py2_py3"
+  version: "version:7.1.0"
+>
+wheel: <
+  name: "infra/python/wheels/mozprocess-py2_py3"
+  version: "version:1.2.1"
+>
+wheel: <
+  name: "infra/python/wheels/urllib3-py2_py3"
+  version: "version:1.26.6"
+>
+wheel: <
+  name: "infra/python/wheels/blessings-py2_py3"
+  version: "version:1.7"
+>
+wheel: <
+  name: "infra/python/wheels/mozfile-py2_py3"
+  version: "version:2.0.0"
+>
+wheel: <
+  name: "infra/python/wheels/mozterm-py2_py3"
+  version: "version:1.0.0"
+>
+wheel: <
+  name: "infra/python/wheels/webencodings-py2_py3"
+  version: "version:0.5.1"
+>
+wheel: <
+  name: "infra/python/wheels/certifi-py3"
+  version: "version:2023.11.17"
+>
+wheel: <
+  name: "infra/python/wheels/chardet-py2_py3"
+  version: "version:3.0.4"
+>
+wheel: <
+  name: "infra/python/wheels/idna-py2_py3"
+  version: "version:2.8"
+>
+wheel: <
+  name: "infra/python/wheels/distro-py2_py3"
+  version: "version:1.4.0"
+>
+wheel: <
+  name: "infra/python/wheels/pillow/${vpython_platform}"
+  version: "version:9.5.0"
+>
+
+# Used by:
+#   chrome/test/chromedriver/test/run_webdriver_tests.py
+wheel: <
+  name: "infra/python/wheels/iniconfig-py3"
+  version: "version:1.1.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/packaging-py2_py3"
+  version: "version:16.8"
+>
+
+wheel: <
+  name: "infra/python/wheels/toml-py3"
+  version: "version:0.10.1"
+>
+
+wheel <
+  name: "infra/python/wheels/pytest-py3"
+  version: "version:6.2.2"
+>
+
+wheel <
+  name: "infra/python/wheels/pytest-asyncio-py3"
+  version: "version:0.14.0"
+>
+
+wheel <
+  name: "infra/python/wheels/attrs-py2_py3"
+  version: "version:21.4.0"
+>
+
+wheel <
+  name: "infra/python/wheels/more-itertools-py2_py3"
+  version: "version:4.1.0"
+>
+
+wheel <
+  name: "infra/python/wheels/pluggy-py3"
+  version: "version:0.13.1"
+>
+
+wheel <
+  name: "infra/python/wheels/py-py2_py3"
+  version: "version:1.10.0"
+>
+
+wheel <
+  name: "infra/python/wheels/funcsigs-py2_py3"
+  version: "version:1.0.2"
+>
+
+wheel: <
+  name: "infra/python/wheels/atomicwrites-py2_py3"
+  version: "version:1.3.0"
+>
+
+wheel: <
+  name: "infra/python/wheels/colorama-py2_py3"
+  version: "version:0.4.1"
+>
+
+wheel: <
+  name: "infra/python/wheels/google-cloud-monitoring-py2_py3"
+  version: "version:2.9.1"
+>

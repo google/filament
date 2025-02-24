@@ -1,0 +1,1101 @@
+'\" t
+.\"     Title: depot_tools_tutorial
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "DEPOT_TOOLS_TUTORIAL" "7" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+depot_tools_tutorial \- A tutorial introduction to the Chromium depot_tools git extensions\&.
+.SH "DESCRIPTION"
+.sp
+The Chromium \fBdepot_tools\fR(7) suite contains many git workflow\-enhancing tools which are designed to work together to enable anyone to wrangle the Chromium codebase expertly\&. This tutorial explains how to do development on Chromium using these tools\&. This will cover:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Setting up
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Getting the code
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+TL;DR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Creating / Uploading a CL
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Updating the code
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Managing multiple CLs
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Managing dependent CLs
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Example Walkthrough
+.RE
+.sp
+Please refer to the manpages (or \fB\-\-help\fR output) for details about any of the commands mentioned in this tutorial\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+If your platform does not support manpages (or you prefer something a bit more expressive than plain text) you can find all documentation in \fIhtml\fR form in the \fB[DEPOT_TOOLS]/man/html\fR folder\&.
+.sp .5v
+.RE
+.SS "PREREQUISITES"
+.sp
+This tutorial assumes basic familiarity with git terminology and concepts\&. If you need to brush up on these, the following are very good resources:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\m[blue]\fBThink like (a) Git\fR\m[]\&\s-2\u[1]\d\s+2
+\- A lighthearted overview of git\&. If you\(cqre sorta\-familiar with git, but not
+\fIcomfortable\fR
+with it, then give this a look\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\m[blue]\fBGit Immersion Tutorial\fR\m[]\&\s-2\u[2]\d\s+2
+\- An in\-depth git tutorial\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\m[blue]\fBpcottle\(cqs Visual Git Branching\fR\m[]\&\s-2\u[3]\d\s+2
+\- An excellent interactive/graphical demo on how git handles commits, branches, and shows the operations git performs on them\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\m[blue]\fBPro Git book\fR\m[]\&\s-2\u[4]\d\s+2
+\- \(lqThe\(rq book for learning git from basics to advanced concepts\&. A bit dry, but very through\&.
+.RE
+.sp
+If you\(cqve tried these out and are still having some trouble getting started, there are \fImany\fR other resources online which should help\&. If you\(cqre \fIreally\fR \fB\fIreally\fR\fR stuck, then chat up one of the Chromium infrastructure team members for some pointers\&.
+.PP
+Litmus Test
+.RS 4
+If you know what
+\fBgit add\fR,
+\fBgit status\fR,
+\fBgit commit\fR
+do and you know
+\fIessentially\fR
+what
+\fBgit rebase\fR
+does, then you should know enough to follow along\&.
+.RE
+.SH "SETTING UP"
+.SS "GET DEPOT TOOLS"
+.sp
+Clone the \fIdepot_tools\fR repository:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git clone https://chromium\&.googlesource\&.com/chromium/tools/depot_tools\&.git\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+Add \fIdepot_tools\fR to the \fIfront\fR of your PATH (you will probably want to put this in your \fB~/\&.bashrc\fR or \fB~/\&.zshrc\fR)\&. Assuming you cloned \fIdepot_tools\fR to \fB/path/to/depot_tools\fR:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ export PATH=/path/to/depot_tools:$PATH\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SS "BOOTSTRAPPING CONFIGURATION"
+.sp
+If you have never used git before, you\(cqll need to set some global git configurations; substitute your name and email address in the following commands:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git config \-\-global user\&.name "John Doe"\fR
+\fB$ git config \-\-global user\&.email "jdoe@email\&.com"\fR
+\fB$ git config \-\-global core\&.autocrlf false\fR
+\fB$ git config \-\-global core\&.filemode false\fR
+\fB$\fR # and for fun!
+\fB$ git config \-\-global color\&.ui true\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "TL;DR"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$\fR # get the code
+\fB$\fR # In an empty directory:
+\fB$ fetch {chromium,\&.\&.\&.}\fR
+
+\fB$\fR # Update third_party repos and run pre\-compile hooks
+\fB$ gclient sync\fR
+
+\fB$\fR # Make a new change and upload it for review
+\fB$ git new\-branch <branch_name>\fR
+\fB$\fR # repeat: [edit, git add, git commit]
+\fB$ git cl upload\fR
+
+\fB$\fR # After change is reviewed, commit with the CQ
+\fB$ git cl set_commit\fR
+\fB$\fR # Note that the committed hash which lands will /not/ match the
+\fB$\fR # commit hashes of your local branch\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "GETTING THE CODE"
+.sp
+Pick an empty directory and run one of the following:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ fetch chromium\fR  # Basic checkout for desktop Chromium
+\fB$ fetch android\fR   # Chromium checkout for Android platform
+\fB$ fetch ios\fR       # Chromium checkout for iOS platform
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+When the \fBfetch\fR tool completes you should have the following in your working directory:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB\&.gclient\fR   # A configuration file for you source checkout
+\fBsrc/\fR       # Top\-level Chromium source checkout\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+If you are on linux and fetching the code for the first time, then you\(cqll need to run:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ cd src && \&./build/install\-build\-deps\&.sh\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+And finally:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ gclient sync\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+This will pull all dependencies of the Chromium src checkout\&. You will need to run this any time you update the main src checkout, including when you switch branches\&.
+.SH "CREATING / UPLOADING A CL"
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+The remainder of the tutorial assumes that your current working directory is the \fBsrc/\fR folder mentioned in Getting the code\&.
+.sp .5v
+.RE
+.sp
+Each CL corresponds exactly with a single branch in git\&. Any time you want to begin a new CL:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git new\-branch <branch_name>\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+This will create and checkout a new branch named \fBbranch_name\fR which will track the default upstream branch (\fBorigin/main\fR)\&. See \fBgit-new-branch\fR(1) for more features\&.
+.sp
+Commit as many changes as you like to this branch\&. When you want to upload it for review, run:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git cl upload\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+This will take the diff of your branch against its upstream branch (in that case origin/main), and will post it to the \m[blue]\fBChromium code review site\fR\m[]\&\s-2\u[5]\d\s+2\&.
+.SH "UPDATING THE CODE"
+.sp
+Inevitably, you\(cqll want to pull in changes from the main Chromium repo\&. This is pretty easy with \fIdepot_tools\fR:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git rebase\-update\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+This command will update all of your CLs to contain the latest code from their upstreams\&. It will also automatically clean up CLs which have been committed and a couple other nice things\&. See \fBgit-rebase-update\fR(1) for the full scoop\&.
+.sp
+One thing to look out for are \fImerge conflicts\fR\&. These happen for exactly the same as they do with SVN, but the experience is a little more controllable with git\&. \fBgit rebase\-update\fR will try to rebase all your branches for you, but if it encounters a merge conflict in one, it will halt and leave you in a rebase conflict state (see \fBgit-rebase\fR(1))\&. Resolving \fBgit rebase\fR merge conflicts is beyond the scope of this tutorial, but there are many good sources online (see the Prerequisites for some)\&.
+.sp
+Sometimes you\(cqre pretty certain that you\(cqve committed a certain branch, but \fBgit rebase\-update\fR isn\(cqt able to tell that for sure\&. This is usually because your branch doesn\(cqt rebase cleanly\&. You could just delete the branch with \fBgit branch \-D <branch>\fR, but you\(cqd like to double check the diff of your branch against its upstream before deleting it\&. If this is the case you can abort the rebase started by \fBgit rebase\-update\fR, and then run \fBgit-squash-branch\fR(1) to flatten your branch into a single commit\&. When you run \fBgit rebase\-update\fR again, you\(cqll get a (hopefully) much smaller / saner diff\&. If it turns out you were wrong about your branch being fully committed, you can use \fBgit-reflog\fR(1) to reset your branch back to where it was before\&. If the diff looks inconsequential, you can use \fBgit rebase \-\-skip\fR to ignore it, and then \fBgit rebase\-update\fR will clean it up for you\&.
+.sp
+Once you\(cqre done resolving all of the merge conflict, just run \fBgit rebase\-update\fR, and it will pick up where it left off\&. Once the command has finished updating all of your branches, it will return you back to the branch you started on\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+Running \fBgit rebase\-update\fR will update all your branches, but it will not automatically run \fBgclient sync\fR to update your dependencies\&. Use caution when running \fBgit reset\fR on branches managed by \fIdepot_tools\fR\&. These tools track the set of "commits contained in the branch" from a branch\(cqs "merge point" to the current branch value\&. See \fBgit help mark\-merge\-base\fR for more discussion of the merge base\&.
+.sp .5v
+.RE
+.SH "MANAGING MULTIPLE CLS"
+.sp
+Sometimes you want to work on more than one CL at once (say, you have a CL posted for review and want to work on something else)\&. For each CL that you want to work on, just use \fBgit new\-branch <branch_name>\fR\&.
+.sp
+Once you start to have more than one CL at a time, it can be easy to lose your bearings\&. Fortunately, \fIdepot_tools\fR has two tools to help you out:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git map\fR
+*\:\fB 7dcfe47       \fR (\:\fBfrozen_changes\fR\:) 2014\-03\-12 ~ FREEZE\&.unindexed
+* \fB4b0c180\fR        2014\-03\-12 ~ modfile
+* \fB59a7cca\fR        2014\-03\-12 ~ a deleted file
+* \fB6bec695\fR        (\:origin/main\:) 2014\-03\-11 ~ Add neat feature    \fB<(frozen_changes)\fR
+* \fBd15a38a\fR        2014\-03\-11 ~ Epic README update
+* \fBd559894\fR        (\:\fBmain\fR\:) 2014\-03\-11 ~ Important upstream change
+| * \fB9c311fd\fR      (\:\fBcool_feature\fR\:) 2014\-03\-11 ~ Respond to CL comments
+| | * \fB2a1eeb2\fR    (\:\fBsubfeature\fR\:) 2014\-03\-11 ~ integrate with CoolService
+| | * \fBd777af6\fR    2014\-03\-11 ~ slick commenting action
+| |/
+| * \fB265803a\fR      2014\-03\-11 ~ another improvement    \fB<(subfeature)\fR
+| * \fB6d831ac\fR      (\:\fBspleen_tag\fR\:) 2014\-03\-11 ~ Refactor spleen
+| * \fB82e74ab\fR      2014\-03\-11 ~ Add widget
+|/
+* \fBd08c5b3\fR        (\:\fBbogus_noparent\fR\:) 2014\-03\-11 ~ Wonderful beginnings    \fB<(cool_feature)\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+Note that this example repo is in dire need of a \fBgit-rebase-update\fR(1)!
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git map\-branches\fR
+origin/main
+  cool_feature
+    subfeature
+  frozen_changes *
+  main
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+
+.PP
+\fBgit-map\fR(1)
+.RS 4
+This tool shows you the history of all of your branches in a pseudo\-graphical format\&. In particular, it will show you which commits all of your branches are on, which commit you currently have checked out, and more\&. Check out the doc for the full details\&.
+.RE
+.PP
+\fBgit-map-branches\fR(1)
+.RS 4
+This tool just shows you which branches you have in your repo, and their upstream relationship to each other (as well as which branch you have checked out at the moment)\&.
+.RE
+.sp
+Additionally, sometimes you need to switch between branches, but you\(cqve got work in progress\&. You could use \fBgit-stash\fR(1), but that can be tricky to manage because you need to remember which branches you stashed what changes on\&. Helpfully \fIdepot_tools\fR includes two tools which can greatly assist in case:
+.sp
+\fBgit-freeze\fR(1) allows you to put the current branch in \*(Aqsuspended animation\*(Aq by committing your changes to a specially\-named commit on the top of your current branch\&. When you come back to your branch later, you can just run \fBgit-thaw\fR(1) to get your work\-in\-progress changes back to what they were\&.
+.sp
+Another useful tool is \fBgit-rename-branch\fR(1)\&. Unlike \fBgit branch \-m <old> <new>\fR, this tool will correctly preserve the upstream relationships of your branch compared to its downstreams\&.
+.sp
+Finally, take a look at \fBgit-upstream-diff\fR(1)\&. This will show you the combined diff for all the commits on your branch against the upstream tracking branch\&. This is \fIexactly\fR what \fBgit cl upload\fR will push up to code review\&. Additionally, consider trying the \fB\-\-wordwise\fR argument to get a colorized per\-word diff (instead of a per\-line diff)\&.
+.SH "MANAGING DEPENDENT CLS"
+.sp
+Now that you know how to manage \fIindependent\fR CLs, we\(cqll see how to manage \fIdependent\fR CLs\&. Dependent CLs are useful when your second (or third or fourth or \&...) CL depends on the changes in one of your other CLs (such as: CL 2 won\(cqt compile without CL 1, but you want to submit them as two separate reviews)\&.
+.sp
+Like all of the other CLs we\(cqve created, we use \fBgit-new-branch\fR(1), but this time with an extra argument\&. First, \fBgit checkout\fR the branch you want to base the new one on (i\&.e\&. CL 1), and then run:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git new\-branch \-\-upstream_current <branch_name>\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+This will make a new branch which tracks the \fIcurrent\fR branch as its upstream (as opposed to \fIorigin/main\fR)\&. All changes you commit to this branch will be in addition to the previous branch, but when you \fBgit cl upload\fR, you will only upload the diff for the dependent (child) branch\&. You may have as many branches nested in this fashion as you like\&.
+.sp
+\fBgit-map\fR(1) and \fBgit-map-branches\fR(1) are particularly helpful when you have dependent branches\&. In addition, there are two helper commands which let you traverse your working copy up and down this tree of branches: \fBgit-nav-upstream\fR(1) and \fBgit-nav-downstream\fR(1)\&.
+.sp
+Sometimes when dealing with dependent CLs, it turns out that you accidentally based a branch on the wrong upstream, but since then you\(cqve committed changes to it, or even based \fIanother\fR branch off of that one\&. Or you discover that you have two independent CLs that would actually be much better off as dependent CLs\&. In instances like these, you can check out the offending branch and use \fBgit-reparent-branch\fR(1) to move it to track a different parent\&. Note that this can also be used to move a branch from tracking \fBorigin/main\fR to \fBlkgr\fR or vice versa\&.
+.SH "EXAMPLE WALKTHROUGH"
+.sp
+This section will demo what a typical workflow looks like when writing, updating, and committing multiple CLs\&.
+.sp
+
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ fetch chromium\fR
+\&.\&.\&. truncated output \&.\&.\&.
+\fB$ cd src\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+(only on linux)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ \&./build/install\-build\-deps\&.sh\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Pull in all dependencies for HEAD
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ gclient sync\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Let\*(Aqs fix something!
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git new\-branch fix_typo\fR
+
+\fB$ echo \-e \*(Aq/Banana\ens/Banana/Kuun\enwq\*(Aq | ed build/whitespace_file\&.txt\fR
+1503
+It was a Domo\-Banana\&.
+It was a Domo\-Kuun\&.
+1501
+\fB$ git commit \-am \*(AqFix terrible typo\&.\*(Aq\fR
+[fix_typo 615ffa7] Fix terrible typo\&.
+ 1 file changed, 1 insertion(+), 1 deletion(\-)
+
+\fB$ git map\fR
+* \fB615ffa720f\fR	\fB(HEAD \-> fix_typo\fR\fB) \fR2014\-04\-10 ~ Fix terrible typo\&.
+* \fBbeec6f4746\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Make ReflectorImpl use mailboxes
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+\fB$ git status\fR
+On branch fix_typo
+Your branch is ahead of \*(Aqorigin/main\*(Aq by 1 commit\&.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+
+\fB$ git cl upload \-r domo@chromium\&.org \-\-send\-mail\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+While we wait for feedback, let\*(Aqs do something else\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git new\-branch chap2\fR
+
+\fB$ git map\-branches\fR
+\fBorigin/main
+  chap2 *
+\fR  fix_typo
+
+\fB$ cat >> build/whitespace_file\&.txt <<EOF\fR
+
+"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly
+overhead, barely disturbing the thick cigarette smoke\&. No doubt was left about
+when the fan was last cleaned\&.
+EOF
+\fB$ git status\fR
+On branch chap2
+Your branch is up to date with \*(Aqorigin/main\*(Aq\&.
+
+Changes not staged for commit:
+  (use "git add <file>\&.\&.\&." to update what will be committed)
+  (use "git restore <file>\&.\&.\&." to discard changes in working directory)
+	modified:   build/whitespace_file\&.txt
+
+no changes added to commit (use "git add" and/or "git commit \-a")
+
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Someone on the code review pointed out that our typo\-fix has a typo :( We\*(Aqre still working on \*(Aqchap2\*(Aq but we really want to land \*(Aqfix_typo\*(Aq, so let\*(Aqs switch over and fix it\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git freeze\fR
+
+\fB$ git checkout fix_typo\fR
+Switched to branch \*(Aqfix_typo\*(Aq
+Your branch is ahead of \*(Aqorigin/main\*(Aq by 1 commit\&.
+  (use "git push" to publish your local commits)
+
+\fB$ echo \-e \*(Aq/Kuun\ens/Kuun/Kun\enwq\*(Aq | ed build/whitespace_file\&.txt\fR
+1501
+It was a Domo\-Kuun\&.
+It was a Domo\-Kun\&.
+1500
+\fB$ git upstream\-diff \-\-wordwise\fR
+\fBdiff \-\-git a/build/whitespace_file\&.txt b/build/whitespace_file\&.txt
+index 3eba355\&.\&.57cdcee 100644
+\-\-\- a/build/whitespace_file\&.txt
++++ b/build/whitespace_file\&.txt
+@@ \-17,7 +17,7 @@ swept up the streets (for it is in London that our scene lies), rattling along
+the housetops, and fiercely agitating the scanty flame of the lamps that
+struggled against the elements\&. A hooded figure emerged\&.
+
+It was a Domo\-BananaKun\&.
+
+"What took you so long?", inquired his wife\&.
+
+\fR
+\fB$ git commit \-am \*(AqFix typo for good!\*(Aq\fR
+[fix_typo 2c0ad9c] Fix typo for good!
+ 1 file changed, 1 insertion(+), 1 deletion(\-)
+
+\fB$ git cl upload\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Since we got lgtm, let the CQ land it\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git cl set_commit\fR
+\fB$ git map\fR
+* \fB0e2e52e72e\fR	\fB(chap2\fR\fB) \fR2014\-04\-10 ~ FREEZE\&.unindexed
+| * \fB2c0ad9c59b\fR	\fB(HEAD \-> fix_typo\fR\fB) \fR2014\-04\-10 ~ Fix typo for good!
+| * \fB615ffa720f\fR	2014\-04\-10 ~ Fix terrible typo\&.
+|/
+* \fBbeec6f4746\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Make ReflectorImpl use mailboxes    <(\fBchap2\fR)
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Switch back to where we were using the nav* commands (for fun\&.\&.\&. git checkout would work here too)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git map\-branches\fR
+origin/main
+  chap2
+\fB  fix_typo *
+\fR
+\fB$ git nav\-upstream\fR
+Note: switching to \*(Aqorigin/main\*(Aq\&.
+
+You are in \*(Aqdetached HEAD\*(Aq state\&. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch\&.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using \-c with the switch command\&. Example:
+
+  git switch \-c <new\-branch\-name>
+
+Or undo this operation with:
+
+  git switch \-
+
+Turn off this advice by setting config variable advice\&.detachedHead to false
+
+HEAD is now at beec6f4 Make ReflectorImpl use mailboxes
+
+\fB$ git nav\-downstream\fR
+Previous HEAD position was beec6f4 Make ReflectorImpl use mailboxes
+Switched to branch \*(Aqchap2\*(Aq
+Your branch is ahead of \*(Aqorigin/main\*(Aq by 1 commit\&.
+  (use "git push" to publish your local commits)
+Please select a downstream branch
+  0\&. chap2
+  1\&. fix_typo
+Selection (0\-1)[0]: 0
+\fB$ git map\-branches\fR
+origin/main
+\fB  chap2 *
+\fR  fix_typo
+
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Now we can pick up on chapter2 where we left off\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git thaw\fR
+
+\fB$ git diff\fR
+\fBdiff \-\-git a/build/whitespace_file\&.txt b/build/whitespace_file\&.txt
+index 3eba355\&.\&.9d08d9d 100644
+\-\-\- a/build/whitespace_file\&.txt
++++ b/build/whitespace_file\&.txt
+@@ \-34,3 +34,7 @@ with his fork, watching the runny jelly spread and pool across his plate,
+ like the blood of a dying fawn\&. \e"It reminds me of that time \-\-\e" he started, as
+ his wife cut in quickly: \e"\-\- please\&. I can\*(Aqt bear to hear it\&.\e"\&. A flury of
+ images coming from the past flowed through his mind\&.
++
++"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly
++overhead, barely disturbing the thick cigarette smoke\&. No doubt was left about
++when the fan was last cleaned\&.
+\fR
+\fB$ cat >> build/whitespace_file\&.txt <<EOF\fR
+
+There was an poignant pause\&.
+EOF
+\fB$ git diff\fR
+\fBdiff \-\-git a/build/whitespace_file\&.txt b/build/whitespace_file\&.txt
+index 3eba355\&.\&.e3a55de 100644
+\-\-\- a/build/whitespace_file\&.txt
++++ b/build/whitespace_file\&.txt
+@@ \-34,3 +34,9 @@ with his fork, watching the runny jelly spread and pool across his plate,
+ like the blood of a dying fawn\&. \e"It reminds me of that time \-\-\e" he started, as
+ his wife cut in quickly: \e"\-\- please\&. I can\*(Aqt bear to hear it\&.\e"\&. A flury of
+ images coming from the past flowed through his mind\&.
++
++"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly
++overhead, barely disturbing the thick cigarette smoke\&. No doubt was left about
++when the fan was last cleaned\&.
++
++There was an poignant pause\&.
+\fR
+\fB$ git commit \-am \*(AqFinish chapter 2\*(Aq\fR
+[chap2 ceef712] Finish chapter 2
+ 1 file changed, 6 insertions(+)
+
+\fB$ git map\fR
+* \fBceef712d7f\fR	\fB(HEAD \-> chap2\fR\fB) \fR2014\-04\-10 ~ Finish chapter 2
+| * \fB2c0ad9c59b\fR	\fB(fix_typo\fR\fB) \fR2014\-04\-10 ~ Fix typo for good!
+| * \fB615ffa720f\fR	2014\-04\-10 ~ Fix terrible typo\&.
+|/
+* \fBbeec6f4746\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Make ReflectorImpl use mailboxes    <(\fBfix_typo\fR)
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+\fB$ git cl upload \-r domo@chromium\&.org \-\-send\-mail\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+We poke a committer until they lgtm :)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git cl set_commit\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+While that runs through the CQ, let\*(Aqs get started on chapter 3\&. Since we know that chapter 3 depends on chapter 2, we\*(Aqll track the current chapter2 branch\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git new\-branch \-\-upstream_current chap3\fR
+
+\fB$ cat >> build/whitespace_file\&.txt <<EOF\fR
+
+CHAPTER 3:
+Mr\&. Usagi felt that something wasn\*(Aqt right\&. Shortly after the Domo\-Kun left he
+began feeling sick\&.
+EOF
+\fB$ git commit \-am \*(Aqbeginning of chapter 3\*(Aq\fR
+[chap3 7d4238a] beginning of chapter 3
+ 1 file changed, 4 insertions(+)
+
+\fB$ git map\fR
+* \fB7d4238a1e2\fR	\fB(HEAD \-> chap3\fR\fB) \fR2014\-04\-10 ~ beginning of chapter 3
+* \fBceef712d7f\fR	\fB(chap2\fR\fB) \fR2014\-04\-10 ~ Finish chapter 2
+| * \fB2c0ad9c59b\fR	\fB(fix_typo\fR\fB) \fR2014\-04\-10 ~ Fix typo for good!
+| * \fB615ffa720f\fR	2014\-04\-10 ~ Fix terrible typo\&.
+|/
+* \fBbeec6f4746\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Make ReflectorImpl use mailboxes    <(\fBchap2, fix_typo\fR)
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+We haven\*(Aqt updated the code in a while, so let\*(Aqs do that now\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git rebase\-update\fR
+Fetching origin
+From https://upstream
+   beec6f4\&.\&.59cdb73  main       \-> origin/main
+Rebasing: chap2
+Rebasing: fix_typo
+Failed! Attempting to squash fix_typo \&.\&.\&. Success!
+Rebasing: chap3
+Reparented chap3 to track origin/main (was tracking chap2)
+Deleted branch fix_typo (was 5d26fec)\&.
+Deleted branch chap2 (was 5d26fec)\&.
+
+Running `git gc \-\-auto` \- Ctrl\-C to abort is OK\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Well look at that\&. The CQ landed our typo and chapter2 branches already and git rebase\-update cleaned them up for us\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ gclient sync\fR
+\&.\&.\&. truncated output \&.\&.\&.
+\fB$ git map\fR
+* \fB93fe917ad1\fR	\fB(HEAD \-> chap3\fR\fB) \fR2014\-04\-10 ~ beginning of chapter 3
+* \fB5d26fec369\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Finish chapter 2
+* \fBdf7fefbf06\fR	2014\-04\-10 ~ Revert 255617, due to it not tracking use of the link doctor page properly\&.
+* \fB4b39cda0ac\fR	2014\-04\-10 ~ Fix terrible typo\&.
+* \fB248c5b6fe3\fR	2014\-04\-10 ~ Temporarily CHECK(trial) in ChromeRenderProcessObserver::OnSetFieldTrialGroup\&.
+* \fB8171df8af9\fR	2014\-04\-10 ~ Remove AMD family check for the flapper crypto accelerator\&.
+* \fBd6a30d2e56\fR	2014\-04\-10 ~ Change the Pica load benchmark to listen for the polymer\-ready event
+* \fBbeec6f4746\fR	2014\-04\-10 ~ Make ReflectorImpl use mailboxes
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Someone on IRC mentions that they actually landed a chapter 3 already! We should pull their changes before continuing\&. Brace for a code conflict!
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git rebase\-update\fR
+Fetching origin
+From https://upstream
+   5d26fec\&.\&.59cdb73  main       \-> origin/main
+Rebasing: chap2
+\&.\&.\&. lots of output, it\*(Aqs a conflict alright :(\&.\&.\&.
+\fB$ git diff\fR
+\fBdiff \-\-cc build/whitespace_file\&.txt
+index 1293282,f903ea2\&.\&.0000000
+\-\-\- a/build/whitespace_file\&.txt
++++ b/build/whitespace_file\&.txt
+@@@ \-42,4 \-42,5 +42,9 @@@ when the fan was last cleaned
+  There was an poignant pause\&.
+
+  CHAPTER 3:
+++<<<<<<< HEAD
+ +Hilariousness! This chapter is awesome!
+++=======
++ Mr\&. Usagi felt that something wasn\*(Aqt right\&. Shortly after the Domo\-Kun left he
++ began feeling sick\&.
+++>>>>>>> 93fe917 (beginning of chapter 3)
+\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Oh, well, that\*(Aqs not too bad\&. In fact\&.\&.\&. that\*(Aqs a terrible chapter 3!
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ $EDITOR build/whitespace_file\&.txt\fR
+\&.\&.\&. /me deletes bad chapter 3 \&.\&.\&.
+\fB$ git add build/whitespace_file\&.txt\fR
+
+\fB$ git diff \-\-cached\fR
+\fBdiff \-\-git a/build/whitespace_file\&.txt b/build/whitespace_file\&.txt
+index 1293282\&.\&.f903ea2 100644
+\-\-\- a/build/whitespace_file\&.txt
++++ b/build/whitespace_file\&.txt
+@@ \-42,4 +42,5 @@ when the fan was last cleaned\&.
+ There was an poignant pause\&.
+
+ CHAPTER 3:
+\-Hilariousness! This chapter is awesome!
++Mr\&. Usagi felt that something wasn\*(Aqt right\&. Shortly after the Domo\-Kun left he
++began feeling sick\&.
+\fR
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Much better
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git rebase \-\-continue\fR
+[detached HEAD 1cb4f5b] beginning of chapter 3
+ 1 file changed, 2 insertions(+), 1 deletion(\-)
+
+\fB$ git rebase\-update\fR
+Fetching origin
+chap3 up\-to\-date
+
+Running `git gc \-\-auto` \- Ctrl\-C to abort is OK\&.
+
+\fB$ gclient sync\fR
+\&.\&.\&. truncated output \&.\&.\&.
+\fB$ git map\fR
+* \fB1cb4f5b622\fR	\fB(HEAD \-> chap3\fR\fB) \fR2014\-04\-10 ~ beginning of chapter 3
+* \fB59cdb7335b\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Refactor data interchange format\&.
+* \fB34676a3583\fR	2014\-04\-10 ~ Ensure FS is exited for all not\-in\-same\-page navigations\&.
+* \fB7d4784e867\fR	2014\-04\-10 ~ Add best chapter2 ever!
+* \fB5d26fec369\fR	2014\-04\-10 ~ Finish chapter 2
+* \fBdf7fefbf06\fR	2014\-04\-10 ~ Revert 255617, due to it not tracking use of the link doctor page properly\&.
+* \fB4b39cda0ac\fR	2014\-04\-10 ~ Fix terrible typo\&.
+* \fB248c5b6fe3\fR	2014\-04\-10 ~ Temporarily CHECK(trial) in ChromeRenderProcessObserver::OnSetFieldTrialGroup\&.
+* \fB8171df8af9\fR	2014\-04\-10 ~ Remove AMD family check for the flapper crypto accelerator\&.
+* \fBd6a30d2e56\fR	2014\-04\-10 ~ Change the Pica load benchmark to listen for the polymer\-ready event
+* \fBbeec6f4746\fR	2014\-04\-10 ~ Make ReflectorImpl use mailboxes
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+
+
+\fB$ git cl upload\fR
+\&.\&.\&. truncated output \&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+So there you have the basic flow\&. Note that you don\(cqt \fIhave\fR to do chromium development using these tools\&. Any git workflow is compatible, as long as \fBgit cl upload\fR is able to upload good patches\&.
+.SH "CONCLUSION"
+.sp
+Hopefully that gives you a good starting overview on Chromium development using \fIdepot_tools\fR\&. If you have questions which weren\(cqt answered by this tutorial or the man pages for the tools (see the index of all tools here: \fBdepot_tools\fR(7)), please feel free to ask\&.
+.SH "GLOSSARY"
+.PP
+CL
+.RS 4
+A
+\fIchange\-list\fR\&. This is a diff which you would like to commit to the codebase\&.
+.RE
+.PP
+DEPS
+.RS 4
+A file in the chromium checkout which
+\fBgclient sync\fR
+uses to determine what dependencies to pull in\&. This file also contains
+\fIhooks\fR\&.
+.RE
+.PP
+LKGR
+.RS 4
+Last Known Good Revision\&. This is a
+\fBgit-tag\fR(1)
+which tracks the last version of
+\fBorigin/main\fR
+which has passed the full set of testing on the
+\m[blue]\fBmain Chromium waterfall\fR\m[]\&\s-2\u[6]\d\s+2\&.
+.RE
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[7]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+Think like (a) Git
+.RS 4
+\%http://think-like-a-git.net/
+.RE
+.IP " 2." 4
+Git Immersion Tutorial
+.RS 4
+\%http://gitimmersion.com/
+.RE
+.IP " 3." 4
+pcottle\(cqs Visual Git Branching
+.RS 4
+\%http://pcottle.github.io/learnGitBranching
+.RE
+.IP " 4." 4
+Pro Git book
+.RS 4
+\%http://git-scm.com/book
+.RE
+.IP " 5." 4
+Chromium code review site
+.RS 4
+\%https://chromium-review.googlesource.com
+.RE
+.IP " 6." 4
+main Chromium waterfall
+.RS 4
+\%http://build.chromium.org
+.RE
+.IP " 7." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

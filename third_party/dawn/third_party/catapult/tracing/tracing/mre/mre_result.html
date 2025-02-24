@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/mre/failure.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.mre', function() {
+  class MreResult {
+    constructor(failures, pairs) {
+      if (failures === undefined) {
+        failures = [];
+      }
+      if (pairs === undefined) {
+        pairs = {};
+      }
+      this.failures = failures;
+      this.pairs = pairs;
+    }
+
+    addFailure(failure) {
+      this.failures.push(failure);
+    }
+
+    addPair(key, value) {
+      if (key in this.pairs) {
+        throw new Error('Key ' + key + ' already exists in result.');
+      }
+      this.pairs[key] = value;
+    }
+
+    asDict() {
+      const d = {
+        pairs: this.pairs
+      };
+
+      if (this.failures) {
+        d.failures = this.failures.map(function(f) {return f.asDict();});
+      }
+
+      return d;
+    }
+
+    hadFailures() {
+      return this.failures.length > 0;
+    }
+
+    static fromDict(resultDict) {
+      const failures = (resultDict.failures !== undefined) ?
+        resultDict.failures.map(tr.mre.Failure.fromDict) : undefined;
+      const pairs = resultDict.pairs;
+      return new MreResult(failures, pairs);
+    }
+  }
+
+  return {
+    MreResult,
+  };
+});
+
+</script>

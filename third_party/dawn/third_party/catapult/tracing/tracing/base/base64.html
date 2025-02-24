@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  function Base64() {
+  }
+
+  function b64ToUint6(nChr) {
+    if (nChr > 64 && nChr < 91) return nChr - 65;
+    if (nChr > 96 && nChr < 123) return nChr - 71;
+    if (nChr > 47 && nChr < 58) return nChr + 4;
+    if (nChr === 43) return 62;
+    if (nChr === 47) return 63;
+    return 0;
+  }
+
+  Base64.getDecodedBufferLength = function(input) {
+    let pad = 0;
+    if (input.substr(-2) === '==') {
+      pad = 2;
+    } else if (input.substr(-1) === '=') {
+      pad = 1;
+    }
+    return ((input.length * 3 + 1) >> 2) - pad;
+  };
+
+  Base64.EncodeArrayBufferToString = function(input) {
+    // http://stackoverflow.com/questions/9267899/
+    let binary = '';
+    const bytes = new Uint8Array(input);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
+  Base64.DecodeToTypedArray = function(input, output) {
+    const nInLen = input.length;
+    const nOutLen = Base64.getDecodedBufferLength(input);
+    let nMod3 = 0;
+    let nMod4 = 0;
+    let nUint24 = 0;
+    let nOutIdx = 0;
+
+    if (nOutLen > output.byteLength) {
+      throw new Error('Output buffer too small to decode.');
+    }
+
+    for (let nInIdx = 0; nInIdx < nInLen; nInIdx++) {
+      nMod4 = nInIdx & 3;
+      nUint24 |= b64ToUint6(input.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
+      if (nMod4 === 3 || nInLen - nInIdx === 1) {
+        for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
+          output.setUint8(nOutIdx, nUint24 >>> (16 >>> nMod3 & 24) & 255);
+        }
+        nUint24 = 0;
+      }
+    }
+    return nOutLen;
+  };
+
+  /*
+   * Wrapper of btoa
+   * The reason is that window object has a builtin btoa,
+   * but we also want to use btoa when it is headless.
+   * For example we want to use it in a mapper
+   */
+  Base64.btoa = function(input) {
+    return btoa(input);
+  };
+
+  /*
+   * Wrapper of atob
+   * The reason is that window object has a builtin atob,
+   * but we also want to use atob when it is headless.
+   * For example we want to use it in a mapper
+   */
+  Base64.atob = function(input) {
+    return atob(input);
+  };
+
+  return {
+    Base64,
+  };
+});
+</script>

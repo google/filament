@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/math.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('truncate', function() {
+    assert.strictEqual(3, tr.b.math.truncate(10 / 3, 0));
+    assert.strictEqual(3.3, tr.b.math.truncate(10 / 3, 1));
+    assert.strictEqual(3.33, tr.b.math.truncate(10 / 3, 2));
+    assert.strictEqual(3.333, tr.b.math.truncate(10 / 3, 3));
+    assert.strictEqual(3.3333, tr.b.math.truncate(10 / 3, 4));
+  });
+
+  test('erf', function() {
+    assert.closeTo(-1, tr.b.math.erf(-1e10), 1e-6);
+    assert.closeTo(-0.8427, tr.b.math.erf(-1), 1e-6);
+    assert.closeTo(-0.5205, tr.b.math.erf(-0.5), 1e-6);
+    assert.closeTo(0, tr.b.math.erf(0), 1e-6);
+    assert.closeTo(0.5205, tr.b.math.erf(0.5), 1e-6);
+    assert.closeTo(0.8427, tr.b.math.erf(1), 1e-6);
+    assert.closeTo(1, tr.b.math.erf(1e10), 1e-6);
+  });
+
+  test('clamping', function() {
+    assert.strictEqual(tr.b.math.clamp(2, 1, 3), 2);
+    assert.strictEqual(tr.b.math.clamp(1, 1, 3), 1);
+    assert.strictEqual(tr.b.math.clamp(0, 1, 3), 1);
+    assert.strictEqual(tr.b.math.clamp(3, 1, 3), 3);
+    assert.strictEqual(tr.b.math.clamp(4, 1, 3), 3);
+  });
+
+  test('interpolatePiecewiseFunction', function() {
+    const points = [[0, 0], [0.1, 0.5], [1, 1]];
+    assert.strictEqual(0, vec2.interpolatePiecewiseFunction(points, -1));
+    assert.strictEqual(0, vec2.interpolatePiecewiseFunction(points, 0));
+    assert.strictEqual(0.25, vec2.interpolatePiecewiseFunction(points, 0.05));
+    assert.strictEqual(0.5, vec2.interpolatePiecewiseFunction(points, 0.1));
+    assert.strictEqual(0.75, vec2.interpolatePiecewiseFunction(points, 0.55));
+    assert.strictEqual(1, vec2.interpolatePiecewiseFunction(points, 1));
+    assert.strictEqual(1, vec2.interpolatePiecewiseFunction(points, 2));
+  });
+
+  test('powers', function() {
+    assert.strictEqual(0.01, tr.b.math.lesserPower(0.05));
+    assert.strictEqual(0.1, tr.b.math.greaterPower(0.05));
+    assert.strictEqual(0.1, tr.b.math.lesserPower(0.5));
+    assert.strictEqual(1, tr.b.math.greaterPower(0.5));
+    assert.strictEqual(1, tr.b.math.lesserPower(5));
+    assert.strictEqual(10, tr.b.math.greaterPower(5));
+    assert.strictEqual(10, tr.b.math.lesserPower(50));
+    assert.strictEqual(100, tr.b.math.greaterPower(50));
+
+    assert.strictEqual(0, tr.b.math.lesserPower(0));
+    assert.strictEqual(0, tr.b.math.greaterPower(0));
+    assert.isTrue(isNaN(tr.b.math.lesserPower(-1)));
+    assert.isTrue(isNaN(tr.b.math.greaterPower(-1)));
+
+    assert.strictEqual(0.25, tr.b.math.lesserPower(0.3, 2));
+    assert.strictEqual(0.5, tr.b.math.greaterPower(0.3, 2));
+    assert.strictEqual(0.5, tr.b.math.lesserPower(0.8, 2));
+    assert.strictEqual(1, tr.b.math.greaterPower(0.8, 2));
+    assert.strictEqual(1, tr.b.math.lesserPower(1.5, 2));
+    assert.strictEqual(2, tr.b.math.greaterPower(1.5, 2));
+    assert.strictEqual(2, tr.b.math.lesserPower(3, 2));
+    assert.strictEqual(4, tr.b.math.greaterPower(3, 2));
+    assert.strictEqual(4, tr.b.math.lesserPower(5, 2));
+    assert.strictEqual(8, tr.b.math.greaterPower(5, 2));
+
+    assert.strictEqual(0, tr.b.math.lesserPower(0, 2));
+    assert.strictEqual(0, tr.b.math.greaterPower(0, 2));
+    assert.isTrue(isNaN(tr.b.math.lesserPower(-1, 2)));
+    assert.isTrue(isNaN(tr.b.math.greaterPower(-1, 2)));
+  });
+
+  test('lesserWholeNumber', function() {
+    // Use powers of 2 less than 10 to prevent float rounding errors from
+    // breaking Math.floor().
+    for (const i of [1, 2, 4, 8]) {
+      assert.strictEqual(-i, tr.b.math.lesserWholeNumber(-i));
+      assert.strictEqual(-i * 10, tr.b.math.lesserWholeNumber(-i * 10));
+      assert.strictEqual(-i / 10, tr.b.math.lesserWholeNumber(-i / 10));
+      assert.strictEqual(-i * 100, tr.b.math.lesserWholeNumber(-i * 100));
+      assert.strictEqual(-i / 100, tr.b.math.lesserWholeNumber(-i / 100));
+
+      assert.strictEqual(i, tr.b.math.lesserWholeNumber(i));
+      assert.strictEqual(i * 10, tr.b.math.lesserWholeNumber(i * 10));
+      assert.strictEqual(i / 10, tr.b.math.lesserWholeNumber(i / 10));
+      assert.strictEqual(i * 100, tr.b.math.lesserWholeNumber(i * 100));
+      assert.strictEqual(i / 100, tr.b.math.lesserWholeNumber(i / 100));
+
+      const x = i * 1.01;
+      assert.strictEqual(-i, tr.b.math.lesserWholeNumber(-x));
+      assert.strictEqual(-i * 10, tr.b.math.lesserWholeNumber(-x * 10));
+      assert.strictEqual(-i / 10, tr.b.math.lesserWholeNumber(-x / 10));
+      assert.strictEqual(-i * 100, tr.b.math.lesserWholeNumber(-x * 100));
+      assert.strictEqual(-i / 100, tr.b.math.lesserWholeNumber(-x / 100));
+
+      assert.strictEqual(i, tr.b.math.lesserWholeNumber(x));
+      assert.strictEqual(i * 10, tr.b.math.lesserWholeNumber(x * 10));
+      assert.strictEqual(i / 10, tr.b.math.lesserWholeNumber(x / 10));
+      assert.strictEqual(i * 100, tr.b.math.lesserWholeNumber(x * 100));
+      assert.strictEqual(i / 100, tr.b.math.lesserWholeNumber(x / 100));
+    }
+  });
+
+  test('greaterWholeNumber', function() {
+    // Use powers of 2 great than 10 to prevent float rounding errors from
+    // breaking Math.floor().
+    for (const i of [1, 2, 4, 8]) {
+      assert.strictEqual(-i, tr.b.math.greaterWholeNumber(-i));
+      assert.strictEqual(-i * 10, tr.b.math.greaterWholeNumber(-i * 10));
+      assert.strictEqual(-i / 10, tr.b.math.greaterWholeNumber(-i / 10));
+      assert.strictEqual(-i * 100, tr.b.math.greaterWholeNumber(-i * 100));
+      assert.strictEqual(-i / 100, tr.b.math.greaterWholeNumber(-i / 100));
+
+      assert.strictEqual(i, tr.b.math.greaterWholeNumber(i));
+      assert.strictEqual(i * 10, tr.b.math.greaterWholeNumber(i * 10));
+      assert.strictEqual(i / 10, tr.b.math.greaterWholeNumber(i / 10));
+      assert.strictEqual(i * 100, tr.b.math.greaterWholeNumber(i * 100));
+      assert.strictEqual(i / 100, tr.b.math.greaterWholeNumber(i / 100));
+
+      const x = i * 0.99;
+      assert.strictEqual(-i, tr.b.math.greaterWholeNumber(-x));
+      assert.strictEqual(-i * 10, tr.b.math.greaterWholeNumber(-x * 10));
+      assert.strictEqual(-i / 10, tr.b.math.greaterWholeNumber(-x / 10));
+      assert.strictEqual(-i * 100, tr.b.math.greaterWholeNumber(-x * 100));
+      assert.strictEqual(-i / 100, tr.b.math.greaterWholeNumber(-x / 100));
+
+      assert.strictEqual(i, tr.b.math.greaterWholeNumber(x));
+      assert.strictEqual(i * 10, tr.b.math.greaterWholeNumber(x * 10));
+      assert.strictEqual(i / 10, tr.b.math.greaterWholeNumber(x / 10));
+      assert.strictEqual(i * 100, tr.b.math.greaterWholeNumber(x * 100));
+      assert.strictEqual(i / 100, tr.b.math.greaterWholeNumber(x / 100));
+    }
+  });
+
+  test('preferedNumberLargerThanMin', function() {
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(0), 0);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(1), 1);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(2), 2);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(3), 5);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(7), 10);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(0.03), 0.05);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(-1), -1);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(237538), 500000);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(46.13246), 50);
+    assert.strictEqual(tr.b.math.preferredNumberLargerThanMin(-823.34561),
+        -1000);
+  });
+});
+</script>

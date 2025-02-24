@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/scripting_controller.html">
+<link rel="import" href="/tracing/extras/tquery/filter.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.tquery', function() {
+  function FilterHasDuration(minValueOrExpected, opt_maxValue) {
+    if (minValueOrExpected !== undefined && opt_maxValue !== undefined) {
+      this.minValue = minValueOrExpected;
+      this.maxValue = opt_maxValue;
+    } else {
+      this.expected = minValueOrExpected;
+    }
+  }
+
+  FilterHasDuration.prototype = {
+    __proto__: tr.e.tquery.Filter.prototype,
+
+    evaluate(context) {
+      if (context.event.duration === undefined) return false;
+      if (this.minValue !== undefined && this.maxValue !== undefined) {
+        return context.event.duration >= this.minValue &&
+               context.event.duration <= this.maxValue;
+      }
+      return this.matchValue_(context.event.duration, this.expected);
+    }
+  };
+  tr.c.ScriptingObjectRegistry.register(
+      function(minValueOrExpected, opt_maxValue) {
+        return new FilterHasDuration(minValueOrExpected, opt_maxValue);
+      },
+      {
+        name: 'hasDuration'
+      }
+  );
+  return {
+    FilterHasDuration,
+  };
+});
+</script>

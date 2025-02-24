@@ -1,0 +1,27 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//gni/angle.gni")
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("cl_copy_images") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/",
+  ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_1D.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_1D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_2D.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_2D_2D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_2D_3D.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_2D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_3D.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_3D_2D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_copy_generic.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/clCopyImage/test_loops.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/common.cpp",
+  ]
+}

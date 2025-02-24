@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('exynosBusfreqImport', function() {
+    const lines = [
+      '     kworker/1:0-4177  [001] ....  2803.129806: ' +
+          'exynos_busfreq_target_int: frequency=200000',
+      '     kworker/1:0-4177  [001] ....  2803.229207: ' +
+          'exynos_busfreq_target_int: frequency=267000',
+      '     kworker/1:0-4177  [001] ....  2803.329031: ' +
+          'exynos_busfreq_target_int: frequency=160000',
+      '     kworker/1:0-4177  [001] ....  2805.729039: ' +
+          'exynos_busfreq_target_mif: frequency=200000'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const c0 = m.kernel.cpus[0];
+    assert.strictEqual(c0.slices.length, 0);
+    assert.strictEqual(
+        c0.counters['.INT Frequency'].series[0].samples.length, 3);
+    assert.strictEqual(
+        c0.counters['.MIF Frequency'].series[0].samples.length, 1);
+  });
+
+  test('exynosPageFlipSlowRequestImport', function() {
+    const lines = [
+      '          <idle>-0     [000] d.h. 1000.000000: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_kds',
+      ' Chrome_IOThread-21603 [000] d.h. 1000.000001: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_apply',
+      '     kworker/0:1-25931 [000] .... 1000.000002: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_flip',
+      '     kworker/0:1-25931 [000] .... 1000.000003: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=flipped',
+      '          <idle>-0     [000] d.h. 1000.000004: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_kds',
+      ' Chrome_IOThread-21603 [000] d.h. 1000.000005: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_apply',
+      '     kworker/0:1-25931 [000] .... 1000.000006: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_flip',
+      '     kworker/0:1-25931 [000] .... 1000.000007: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=flipped'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    // there are 2 threads:
+    //   (1) "exynos_flip_state (pipe:0, fb:25)"
+    //   (2) "exynos_flip_state (pipe:0, fb:26)"
+    assert.strictEqual(threads.length, 2);
+
+    // in the test data, event of fb=26 occurs first, so it's thread[0]
+    const gfxFbId26Thread = threads[0]; // thread where fb === 26
+    const gfxFbId25Thread = threads[1]; // thread where fb === 25
+    assert.strictEqual(
+        gfxFbId25Thread.name, 'exynos_flip_state (pipe:0, fb:25)');
+    assert.strictEqual(
+        gfxFbId26Thread.name, 'exynos_flip_state (pipe:0, fb:26)');
+    // Every state (except for 'flipped') will start a new slice.
+    // The last event will not be closed, so it's not a slice
+    assert.strictEqual(gfxFbId25Thread.sliceGroup.length, 3);
+    assert.strictEqual(gfxFbId26Thread.sliceGroup.length, 3);
+  });
+
+  test('exynosPageFlipFastRequestImport', function() {
+    const lines = [
+      '          <idle>-0     [000] d.h. 1000.000000: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_kds',
+      ' Chrome_IOThread-21603 [000] d.h. 1000.000001: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_kds',
+      '               X-21385 [000] .... 1000.000002: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_apply',
+      '     kworker/0:1-25931 [000] .... 1000.000003: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_flip',
+      '               X-21385 [001] .... 1000.000004: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_apply',
+      '     kworker/0:1-25931 [000] .... 1000.000005: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=flipped',
+      '          <idle>-0     [000] d.h. 1000.000006: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_kds',
+      '               X-21385 [000] .... 1000.000007: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_flip',
+      '     kworker/0:1-25931 [000] .... 1000.000008: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=flipped',
+      '     kworker/0:1-25931 [000] .... 1000.000009: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_kds',
+      ' Chrome_IOThread-21603 [000] d.h. 1000.000010: ' +
+          'exynos_page_flip_state: pipe=0, fb=25, state=wait_apply',
+      '          <idle>-0     [000] d.h. 1000.000011: ' +
+          'exynos_page_flip_state: pipe=0, fb=26, state=wait_apply'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    // there are 2 threads:
+    //   (1) "exynos_flip_state (pipe:0, fb:25)"
+    //   (2) "exynos_flip_state (pipe:0, fb:26)"
+    assert.strictEqual(threads.length, 2);
+
+    // in the test data, event of fb=26 occurs first, so it's thread[0]
+    const gfxFbId26Thread = threads[0]; // thread where fb === 26
+    const gfxFbId25Thread = threads[1]; // thread where fb === 25
+    assert.strictEqual(
+        gfxFbId25Thread.name, 'exynos_flip_state (pipe:0, fb:25)');
+    assert.strictEqual(
+        gfxFbId26Thread.name, 'exynos_flip_state (pipe:0, fb:26)');
+    // Every state (except for 'flipped') will start a new slice.
+    // The last event will not be closed, so it's not a slice
+    assert.strictEqual(gfxFbId25Thread.sliceGroup.length, 4);
+    assert.strictEqual(gfxFbId26Thread.sliceGroup.length, 4);
+  });
+});
+</script>
+

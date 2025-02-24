@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/ui/base/animation.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  /**
+   * Manages execution, queueing and blending of tr.ui.b.Animations against
+   * a single target.
+   *
+   * Targets must have a cloneAnimationState() method that returns all the
+   * animatable states of that target.
+   *
+   * @constructor
+   * @extends {tr.b.EventTarget}
+   */
+  function AnimationController() {
+    tr.b.EventTarget.call(this);
+
+    this.target_ = undefined;
+
+    this.activeAnimation_ = undefined;
+
+    this.tickScheduled_ = false;
+  }
+
+  AnimationController.prototype = {
+    __proto__: tr.b.EventTarget.prototype,
+
+    get target() {
+      return this.target_;
+    },
+
+    set target(target) {
+      if (this.activeAnimation_) {
+        throw new Error('Cannot change target while animation is running.');
+      }
+      if (target.cloneAnimationState === undefined ||
+          typeof target.cloneAnimationState !== 'function') {
+        throw new Error('target must have a cloneAnimationState function');
+      }
+
+      this.target_ = target;
+    },
+
+    get activeAnimation() {
+      return this.activeAnimation_;
+    },
+
+    get hasActiveAnimation() {
+      return !!this.activeAnimation_;
+    },
+
+    queueAnimation(animation, opt_now) {
+      if (this.target_ === undefined) {
+        throw new Error('Cannot queue animations without a target');
+      }
+
+      let now;
+      if (opt_now !== undefined) {
+        now = opt_now;
+      } else {
+        now = window.performance.now();
+      }
+
+      if (this.activeAnimation_) {
+        // Must tick the animation before stopping it case its about to stop,
+        // and to update the target with its final sets of edits up to this
+        // point.
+        const done = this.activeAnimation_.tick(now, this.target_);
+        if (done) {
+          this.activeAnimation_ = undefined;
+        }
+      }
+
+      if (this.activeAnimation_) {
+        if (animation.canTakeOverFor(this.activeAnimation_)) {
+          this.activeAnimation_.didStopEarly(now, this.target_, true);
+          animation.takeOverFor(this.activeAnimation_, now, this.target_);
+        } else {
+          this.activeAnimation_.didStopEarly(now, this.target_, false);
+        }
+      }
+      this.activeAnimation_ = animation;
+      this.activeAnimation_.start(now, this.target_);
+
+      if (this.tickScheduled_) return;
+      this.tickScheduled_ = true;
+      tr.b.requestAnimationFrame(this.tickActiveAnimation_, this);
+    },
+
+    cancelActiveAnimation(opt_now) {
+      if (!this.activeAnimation_) return;
+      let now;
+      if (opt_now !== undefined) {
+        now = opt_now;
+      } else {
+        now = window.performance.now();
+      }
+      this.activeAnimation_.didStopEarly(now, this.target_, false);
+      this.activeAnimation_ = undefined;
+    },
+
+    tickActiveAnimation_(frameBeginTime) {
+      this.tickScheduled_ = false;
+      if (!this.activeAnimation_) return;
+
+      if (this.target_ === undefined) {
+        this.activeAnimation_.didStopEarly(frameBeginTime, this.target_, false);
+        return;
+      }
+
+      const oldTargetState = this.target_.cloneAnimationState();
+
+      const done = this.activeAnimation_.tick(frameBeginTime, this.target_);
+      if (done) {
+        this.activeAnimation_ = undefined;
+      }
+
+      if (this.activeAnimation_) {
+        this.tickScheduled_ = true;
+        tr.b.requestAnimationFrame(this.tickActiveAnimation_, this);
+      }
+
+      if (oldTargetState) {
+        const e = new tr.b.Event('didtick');
+        e.oldTargetState = oldTargetState;
+        this.dispatchEvent(e, false, false);
+      }
+    }
+  };
+
+  return {
+    AnimationController,
+  };
+});
+</script>

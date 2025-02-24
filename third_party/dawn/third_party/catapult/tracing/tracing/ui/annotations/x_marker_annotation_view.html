@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/annotations/annotation_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.annotations', function() {
+  /**
+   * A view that draws a vertical line on the timeline at a specific timestamp.
+   * @extends {AnnotationView}
+   * @constructor
+   */
+  function XMarkerAnnotationView(viewport, annotation) {
+    this.viewport_ = viewport;
+    this.annotation_ = annotation;
+  }
+
+  XMarkerAnnotationView.prototype = {
+    __proto__: tr.ui.annotations.AnnotationView.prototype,
+
+    draw(ctx) {
+      const dt = this.viewport_.currentDisplayTransform;
+      const viewX = dt.xWorldToView(this.annotation_.timestamp);
+
+      ctx.beginPath();
+      tr.ui.b.drawLine(ctx, viewX, 0, viewX, ctx.canvas.height);
+      ctx.strokeStyle = this.annotation_.strokeStyle;
+      ctx.stroke();
+    }
+  };
+
+  return {
+    XMarkerAnnotationView,
+  };
+});
+</script>

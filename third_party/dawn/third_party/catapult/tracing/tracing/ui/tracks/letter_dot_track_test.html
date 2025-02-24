@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const LetterDotTrack = tr.ui.tracks.LetterDotTrack;
+  const LetterDot = tr.ui.tracks.LetterDot;
+  const SelectionState = tr.model.SelectionState;
+  const Viewport = tr.ui.TimelineViewport;
+
+  const createItems = function() {
+    const items = [
+      new LetterDot({selectionState: SelectionState.SELECTED}, 'a', 7, 5),
+      new LetterDot({selectionState: SelectionState.SELECTED}, 'b', 2, 20),
+      new LetterDot({selectionState: SelectionState.NONE}, 'c', 4, 35),
+      new LetterDot({selectionState: SelectionState.NONE}, 'd', 4, 50)
+    ];
+    return items;
+  };
+
+  test('instantiate', function() {
+    const items = createItems();
+
+    const div = document.createElement('div');
+
+    const viewport = new Viewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = LetterDotTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    track.items = items;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 60, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+  test('selectionHitTesting', function() {
+    const items = createItems();
+
+    const track = new LetterDotTrack(new Viewport());
+    track.items = items;
+
+    // Fake a view pixel size.
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const viewPixWidthWorld = 0.1 / devicePixelRatio;
+
+    // Hit outside range
+    let selection = [];
+    track.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        3, 4, viewPixWidthWorld, selection);
+    assert.strictEqual(selection.length, 0);
+
+    // Hit the first item, via pixel-nearness.
+    selection = [];
+    track.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        19.98, 19.99, viewPixWidthWorld, selection);
+    assert.strictEqual(selection.length, 1);
+    assert.strictEqual(selection[0], items[1].modelItem);
+
+    // Hit the instance, between the 1st and 2nd snapshots
+    selection = [];
+    track.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        30, 50, viewPixWidthWorld, selection);
+    assert.strictEqual(selection.length, 2);
+    assert.strictEqual(selection[0], items[2].modelItem);
+    assert.strictEqual(selection[1], items[3].modelItem);
+  });
+
+  test('addEventNearToProvidedEventToSelection', function() {
+    const items = createItems();
+
+    const track = new LetterDotTrack(new Viewport());
+    track.items = items;
+
+    // Right from the middle of items.
+    const selection1 = [];
+    assert.isTrue(track.addEventNearToProvidedEventToSelection(
+        items[2].modelItem, 1, selection1));
+    assert.strictEqual(selection1.length, 1);
+    assert.strictEqual(selection1[0], items[3].modelItem);
+
+    // Left from the middle of items.
+    const selection2 = [];
+    assert.isTrue(track.addEventNearToProvidedEventToSelection(
+        items[2].modelItem, -1, selection2));
+    assert.strictEqual(selection2.length, 1);
+    assert.strictEqual(selection2[0], items[1].modelItem);
+
+    // Right from the right edge of items.
+    const selection3 = [];
+    assert.isFalse(track.addEventNearToProvidedEventToSelection(
+        items[3].modelItem, 1, selection3));
+    assert.strictEqual(selection3.length, 0);
+
+    // Left from the left edge of items.
+    const selection4 = [];
+    assert.isFalse(track.addEventNearToProvidedEventToSelection(
+        items[0].modelItem, -1, selection4));
+    assert.strictEqual(selection4.length, 0);
+  });
+});
+</script>
+

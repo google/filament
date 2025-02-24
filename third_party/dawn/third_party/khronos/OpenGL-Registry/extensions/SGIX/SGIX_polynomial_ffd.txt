@@ -1,0 +1,282 @@
+Name
+
+    SGIX_polynomial_ffd
+
+Name Strings
+
+    GL_SGIX_polynomial_ffd
+
+Version
+
+    $Date: 1996/03/01 22:13:06 $ $Revision: 1.15 $
+
+Number
+
+    59
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds the capability to alter vertex coordinates,  the
+    corresponding normal coordinates, and texture coordinates based on a
+    client-specified trivariate polynomial functions.  These functions may be
+    thought of as a warping of object/texture space (or, alternatively, as a
+    warping of the object embedded in object/texture space).
+
+    Deformations of space are used for a variety of modeling effects, including
+    character animation.  The deformation specified in this extension is one of
+    a variety of mappings that have been proposed.
+
+    Only 3D to 3D deformation are considered.   We shall not consider
+    homogeneous deformations.
+
+Issues
+    * Mark: Should there also be a 'target' parameter to allow for multiple
+      (cumulative) deformations in the future?  (If yes, we need a new
+      'get'.)
+
+      Ziv: I think we can get away by 'naming' additional deformations as
+      {GEOMETRY/TEXTURE}_DEFORMATION_XXX_SGIX and still use GetMap.
+
+    * Mark: Limited memory may make it problematic to use both high-order
+      evaluators and deformations at the same time.  The available memory could
+      be traded off between deformations and evaluators (uh-oh --- do I smell an
+      'evaluator object' extension coming?).
+
+      Ziv: The RESOURCE_UNAVAILABLE error mechanism could solves this problem.
+      Too bad it was reject from 1.1.  I am not clear about how we introduce it
+      into an extension without having another extension.
+
+    * Mark: Should deformations of texture, normal, and color coordinates be
+      included as well.
+
+      Ziv: As we already define normal deformations to be derived from the
+      geometry deformation, independent normal deformations should not be
+      included.  We do need Texture deformation however (e.g., for 3D
+      textures), as texture and object space are different and are
+      included. Color, being a non geometric entity does not seem to belong
+      here.
+
+    * Ziv: spec order issue.  The natural specification of deformations is in
+      the Coordinate Transformations section - 2.9.  However, deformation use
+      the description of Bernstein polynomials in evaluator section - 5.1 -
+      creating an awkward forward reference.   In a formal spec the description
+      of the polynomial would have to move from evaluators to the deformations
+      sub-section.
+      
+New Procedures and Functions
+
+    void DeformationMap3{fd}SGIX( enum target,
+				  T u1, T u2, int ustride, int uorder,
+				  T v1, T v2, int vstride, int vorder,
+				  T w1, T w2, int wstride, int worder,
+				  T* points);
+
+    void LoadIdentityDeformationMapSGIX( bitfield mask );
+
+    void DeformSGIX( bitfield mask );
+
+New Tokens
+
+    Accepted by the <target> parameter of DeformationMap3[fd]SGIX, and by the
+    <target> parameter of GetMap:
+    
+        GEOMETRY_DEFORMATION_SGIX
+        TEXTURE_DEFORMATION_SGIX
+
+    Accepted by the <mask> parameter of DeformSGIX, and
+    LoadIdentityDeformationMapSGIX:
+
+        TEXTURE_DEFORMATION_BIT_SGIX		0x1
+    	GEOMETRY_DEFORMATION_BIT_SGIX 		0x2
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+    	DEFORMATIONS_MASK_SGIX
+    	MAX_DEFORMATION_ORDER_SGIX
+	
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    Section 2.6.3, "GL Commands within Begin/End", is changed to include
+    DeformSGIX in the list of commands allowed within Begin/End.
+    
+    The second paragraph of 2.9, "Coordinate Transformations," is replaced by
+    (where Figure 2.6 is modified accordingly):
+
+    Figure 2.6 diagrams the sequence of transformations that are applied to
+    vertices.  The vertex coordinates that are presented to the GL are termed
+    object coordinates.  The enabled geometry deformations (deformations are
+    described in sub-section XXX, "Deformations") are applied to these
+    coordinates to yield deformed object coordinates.  When no deformations are
+    enabled it is as if an identity deformation is applied to the object
+    coordinates.  Unless explicitly stated otherwise, in the rest of this
+    document we will refer to deformed object coordinates as just object
+    coordinates.  The model-view matrix is then applied to the object
+    coordinates to yield eye coordinates.  Then another matrix, called the
+    projection matrix, is applied to eye coordinates to yield clip coordinates.
+    A perspective division is carried out on clip coordinates to yield
+    normalized device coordinates.  A final viewport transformation is applied
+    to convert these coordinates into window coordinates.
+
+    A new sub-section entitled 'Deformations' is added after section 2.9.1:
+    
+    Deformations provide a means to use a polynomial mapping to transform
+    vertex, normal, and texture coordinates.  When a deformation is applied to a
+    4-tuple (c_0,c_1,c_2,c_3) the 3-tuple (c_0,c_1,c2) is transformed by a
+    trivariate deformation map to another 3-tuple, while the c_3 remains
+    unchanged.  The mapping of normals is not independent of the vertex mapping
+    but is rather derived from the vertex deformation map.
+
+    Let sum_{i=0}^l represent the sum over i from 0 to l.
+
+    Consider the R^3-valued function:
+
+    p(u,v,w)
+      = sum_{i=0}^l sum_{j=0}^m sum_{k=0}^n B_i^l(u) B_j^m(v) B_k^n(w) R_ijk
+
+    where B_i^j is a Bernstein polynomial as defined in equation 5.1.  The R_ijk
+    are control points (as in equation 5.1); they correspond to the <points>
+    specified with the DeformationMap3[fd]SGIX command.  <target> is one of the
+    symbolic constants GEOMETRY_DEFORMATION_SGIX or TEXTURE_DEFORMATION_SGIX.
+    <points> is a pointer to (l+1)(m+1)(n+1) blocks of storage (<uorder> = l+1,
+    <vorder> = m+1, and <worder> = n+1).  The error INVALID_VALUE is generated
+    if any of <uorder>, <vorder>, or <worder> is less than one, or if their
+    product is greater than MAX_DEFORMATION_ORDER.  The three values comprising
+    R_ijk are located at
+
+	 <ustride>i + <vstride>j + <wstride>k
+
+    values (either single- or double-precision floating-point, as appropriate)
+    past the first value pointed to by <points>.
+
+    <u1>, <u2>, <v1>, <v2>, <w1>, and <w2> define the pre-image of the
+    the map; a domain point (u', v', w') is evaluated as
+
+			  u' - <u1>    v' - <v1>    w' - <w1>
+	p'(u',v',w') = p( -----------, -----------, -----------)
+			  <u2> - <u1>  <v2> - <v1>  <w2> - <w1>
+
+    The error INVALID_VALUE is generated if any of <ustride>, <vstride>, or
+    <wstride> is less than 3, or if <u1> is equal to <u2>, <v1> is equal to
+    <v2>, or if <w1> is equal to <w2>.
+
+    Deformations are enabled and disabled using Deform.  The <mask> parameter is
+    a bitwise OR of symbolic constants indicating which deformations are to be
+    enabled.  The symbolic constants GEOMETRY_DEFORMATION_BIT_SGIX and
+    TEXTURE_DEFORMATION_BIT_SGIX correspond to the geometry and texture
+    deformations, respectively.  When a bit corresponding to a given deformation
+    is 0, that deformation will be disabled.  The error INVALID_VALUE
+    is generated if the <mask> contains bits other than
+    GEOMETRY_DEFORMATION_BIT_SGIX and TEXTURE_DEFORMATION_BIT_SGIX.
+
+    When enabled, geometry deformation maps (currently only one geometry
+    deformation - GEOMETRY_DEFORMATION_SGIX - is defined) are applied to vertex
+    coordinates immediately before the application of the model-view matrix.
+    When a map is applied to a vertex the normal that is associated with that
+    vertex is transformed as described below.  Enabled texture deformation maps
+    (current only one texture deformation - TEXTURE_DEFORMATION_SGIX is defined)
+    are applied to texture coordinates immediately prior to the application of
+    the texture matrix.
+
+    Normal coordinates are transformed by each enabled geometry deformation.
+    The transformation proceeds by first computing the partial Jacobian matrix
+    J of p' at the point (u', v', w'):
+
+	J = ( dp'/du' dp'/dv' dp'/dw' )
+
+    (p' is a column of 3 values, so dp'/ds is also).
+    The transformed normal, n', is found from the untransformed normal,
+    n = ( nx ny nz ), as
+
+	n' = n J^{-1}.
+
+    Note, that as deformations are defined to be applied immediately before the
+    application model-view and texture matrices, they are therefore also applied
+    to the vertices, normals, and textures resulting from EvalCoord and EvalMesh
+    commands.
+
+    LoadIdentityDeformation provides a quick method for setting
+    deformations to the identity deformation.  The map for the
+    deformations indicated by the <mask> parameter (with the same
+    interpretation as in Deform) are set to the identity map.  The
+    identity deformation maps are order 2 in each of u, v, and w, with
+    <u1>=<v1>=<w1>=0 and <u2>=<v2>=<w2>=1, and the control point being
+    (0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0), (1, 0, 1),
+    (1, 1, 0), and (1, 1, 1).
+    Note,  that unlike Deform, it is not an error for the mask to contain
+    bits other than than GEOMETRY_DEFORMATION_BIT_SGIX and
+    TEXTURE_DEFORMATION_BIT_SGIX.
+
+    The state required for deformations is 2 3-dimensional map specification (as
+    described by the call to DeformMap[fd]SGIX) and a bit mask indicating
+    currently enabled deformations.  The maximum possible value for
+    the product of <uorder>, <vorder>, and <worder> for each deformation type is
+    implementation dependent but must be at least 1.  Initially, all the
+    deformation maps are the identity map.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+GLX Protocol
+	
+    XXX - Not figured out yet.
+
+Dependencies on other extensions
+
+    None
+
+Errors
+
+    The error INVALID_ENUM is generated if the DeformationMap3[fd]SGIX <target>
+    parameter is not GEOMETRY_DEFORMATION_SGIX or TEXTURE_DEFORMATION_SGIX.
+
+    The error INVALID_VALUE is generated by DeformationMap3[fd]SGIX if:
+	- any of <uorder>, <vorder>, or <worder> is less than one, or if their
+	  product is greater than MAX_DEFORMATION_ORDER;
+	- any of <ustride>, <vstride>, or <wstride> is less than 3;
+	- <u1> is equal to <u2>, <v1> is equal to <v2>, or <w1> is equal
+	  to <w2>. 
+    
+    The error INVALID_VALUE is generated by DeformSGIX if the <mask>
+    contains bits other than GEOMETRY_DEFORMATION_BIT_SGIX and
+    TEXTURE_DEFORMATION_BIT_SGIX.
+
+    The error INVALID_OPERATION is generated if DeformationMap3[fd]SGIX is
+    executed between execution of Begin and the corresponding execution of End.
+
+New State
+
+    Initial			Initial
+    Get Value			Get Command	Type	  		Value 		Attrib
+    ---------			-----------	----	  		-------		------
+    ORDER			GetMap		2 x 3 x Z_1*		1,1,1		  -
+    COEFF			GetMap		2 x 1* x 1* x 1* x R3	Sec X(2.9.1+)	  -
+    DOMAIN			GetMap		2 x 6 x R		Sec X(2.9.1+)	  -
+    DEFORMATION_MASK		GetIntegerv	F			0		transform
+
+    - F is a new state variable type: a bitfield mask of flags.
+    
+New Implementation Dependent State
+									Minimum
+    Get Value				Get Command	Type		Value
+    ---------				-----------	----		-------
+    MAX_DEFORMATION_ORDER		GetInteger       Z                2
+

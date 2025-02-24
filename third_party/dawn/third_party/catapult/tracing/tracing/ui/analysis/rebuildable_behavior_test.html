@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/rebuildable_behavior.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  Polymer({
+    is: 'tr-ui-analysis-rebuildable-test-element',
+    behaviors: [tr.ui.analysis.RebuildableBehavior]
+  });
+
+  test('rebuild', function() {
+    const el = document.createElement(
+        'tr-ui-analysis-rebuildable-test-element');
+    let didFireOnRebuild;
+    el.onRebuild_ = function() {
+      assert.strictEqual(this, el);
+      didFireOnRebuild = true;
+    };
+
+    function checkManualRebuild(expectedDidFireOnRebuild) {
+      didFireOnRebuild = false;
+      el.rebuild();
+      assert.strictEqual(didFireOnRebuild, expectedDidFireOnRebuild);
+    }
+
+    function checkRAFRebuild(expectedDidFireOnRebuild) {
+      didFireOnRebuild = false;
+      tr.b.forcePendingRAFTasksToRun();
+      assert.strictEqual(didFireOnRebuild, expectedDidFireOnRebuild);
+    }
+
+    // No rebuilds should occur when not scheduled.
+    checkManualRebuild(false);
+    checkRAFRebuild(false);
+
+    // Single rebuild should occur when scheduled once.
+    el.scheduleRebuild_();
+    checkManualRebuild(true);
+    checkManualRebuild(false);
+
+    el.scheduleRebuild_();
+    checkRAFRebuild(true);
+    checkRAFRebuild(false);
+
+    // Only a single rebuild should occur even when scheduled multiple times.
+    el.scheduleRebuild_();
+    el.scheduleRebuild_();
+    checkManualRebuild(true);
+    checkRAFRebuild(false);
+    checkManualRebuild(false);
+
+    el.scheduleRebuild_();
+    el.scheduleRebuild_();
+    checkRAFRebuild(true);
+    checkRAFRebuild(false);
+    checkManualRebuild(false);
+  });
+});
+</script>

@@ -1,0 +1,7 @@
+{
+  "name": "catapult",
+  "private": true,
+  "dependencies": {
+    "polymer": "Polymer/polymer#^3.0.0"
+  }
+}

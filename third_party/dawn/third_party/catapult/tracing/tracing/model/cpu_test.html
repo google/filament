@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Cpu = tr.model.Cpu;
+  const newThreadSlice = tr.c.TestUtils.newThreadSlice;
+
+  test('cpuBounds_Empty', function() {
+    const cpu = new Cpu({}, 1);
+    cpu.updateBounds();
+    assert.isUndefined(cpu.bounds.min);
+    assert.isUndefined(cpu.bounds.max);
+  });
+
+  test('cpuBounds_OneSlice', function() {
+    const cpu = new Cpu({}, 1);
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+    cpu.updateBounds();
+    assert.strictEqual(cpu.bounds.min, 1);
+    assert.strictEqual(cpu.bounds.max, 4);
+  });
+
+  test('getOrCreateCounter', function() {
+    const cpu = new Cpu({}, 1);
+    const ctrBar = cpu.getOrCreateCounter('foo', 'bar');
+    const ctrBar2 = cpu.getOrCreateCounter('foo', 'bar');
+    assert.strictEqual(ctrBar, ctrBar2);
+  });
+
+  test('shiftTimestampsForward', function() {
+    const cpu = new Cpu({}, 1);
+    const ctr = cpu.getOrCreateCounter('foo', 'bar');
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+    let shiftCount = 0;
+    ctr.shiftTimestampsForward = function(ts) {
+      if (ts === 0.32) {
+        shiftCount++;
+      }
+    };
+    cpu.slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 3}));
+    cpu.shiftTimestampsForward(0.32);
+    assert.strictEqual(1, shiftCount);
+    assert.strictEqual(cpu.slices[0].start, 1.32);
+  });
+
+
+  function newCpuSliceNamed(cpu, name, start, duration, opt_thread) {
+    const s = new tr.model.CpuSlice(
+        'cat', name, 0, start, {}, duration);
+    s.cpu = cpu;
+    if (opt_thread) {
+      s.threadThatWasRunning = opt_thread;
+    }
+    return s;
+  }
+
+  test('getTimesliceForCpuSlice', function() {
+    const m = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const cpu = m.kernel.getOrCreateCpu(1);
+    const t2 = m.getOrCreateProcess(1).getOrCreateThread(2);
+    t2.timeSlices = [newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 0, 10, cpu),
+      newThreadSlice(t2, SCHEDULING_STATE.SLEEPING, 10, 10),
+      newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 20, 10, cpu)];
+    cpu.slices = [newCpuSliceNamed(cpu, 'x', 0, 10, t2),
+      newCpuSliceNamed(cpu, 'x', 20, 10, t2)];
+    assert.strictEqual(
+        cpu.slices[0].getAssociatedTimeslice(), t2.timeSlices[0]);
+    assert.strictEqual(
+        cpu.slices[1].getAssociatedTimeslice(), t2.timeSlices[2]);
+
+    assert.strictEqual(t2.timeSlices[0].getAssociatedCpuSlice(), cpu.slices[0]);
+    assert.isUndefined(t2.timeSlices[1].getAssociatedCpuSlice());
+    assert.strictEqual(t2.timeSlices[2].getAssociatedCpuSlice(), cpu.slices[1]);
+
+    assert.strictEqual(cpu.indexOf(cpu.slices[0]), 0);
+    assert.strictEqual(cpu.indexOf(cpu.slices[1]), 1);
+
+    assert.strictEqual(t2.indexOfTimeSlice(t2.timeSlices[0]), 0);
+    assert.strictEqual(t2.indexOfTimeSlice(t2.timeSlices[1]), 1);
+    assert.strictEqual(t2.indexOfTimeSlice(t2.timeSlices[2]), 2);
+  });
+
+  test('putToSleepFor', function() {
+    const m = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const cpu = m.kernel.getOrCreateCpu(1);
+
+    const t2 = m.getOrCreateProcess(1).getOrCreateThread(2);
+    const t3 = m.getOrCreateProcess(1).getOrCreateThread(3);
+    t2.timeSlices = [newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 0, 10, cpu),
+      newThreadSlice(t2, SCHEDULING_STATE.SLEEPING, 10, 10),
+      newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 20, 10, cpu)];
+    t3.timeSlices = [newThreadSlice(t3, SCHEDULING_STATE.RUNNING, 10, 5, cpu)];
+    cpu.slices = [newCpuSliceNamed(cpu, 'x', 0, 10, t2),
+      newCpuSliceNamed(cpu, 'x', 10, 5, t3),
+      newCpuSliceNamed(cpu, 'x', 20, 10, t2)];
+
+    // At timeslice 0, the thread is running.
+    assert.isUndefined(t2.timeSlices[0].getCpuSliceThatTookCpu());
+
+    // t2 lost the cpu to t3 at t=10
+    assert.strictEqual(
+        cpu.slices[1],
+        t2.timeSlices[1].getCpuSliceThatTookCpu());
+  });
+
+  test('putToSleepForNothing', function() {
+    const m = new tr.Model();
+    const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+    const cpu = m.kernel.getOrCreateCpu(1);
+
+    const t2 = m.getOrCreateProcess(1).getOrCreateThread(2);
+    const t3 = m.getOrCreateProcess(1).getOrCreateThread(3);
+    t2.timeSlices = [newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 0, 10, cpu),
+      newThreadSlice(t2, SCHEDULING_STATE.SLEEPING, 10, 10),
+      newThreadSlice(t2, SCHEDULING_STATE.RUNNING, 20, 10, cpu)];
+    t3.timeSlices = [newThreadSlice(t3, SCHEDULING_STATE.RUNNING, 15, 5, cpu)];
+    cpu.slices = [newCpuSliceNamed(cpu, 'x', 0, 10, t2),
+      newCpuSliceNamed(cpu, 'x', 15, 5, t3),
+      newCpuSliceNamed(cpu, 'x', 20, 10, t2)];
+    assert.isUndefined(t2.timeSlices[1].getCpuSliceThatTookCpu());
+  });
+
+  test('switchActiveThread', function() {
+    const m = new tr.Model();
+    const cpu = m.kernel.getOrCreateCpu(1);
+
+    cpu.switchActiveThread(5, {}, 0, 'idle thread', {});
+    cpu.switchActiveThread(10, {}, 1, 'thread one', {a: 1});
+    cpu.switchActiveThread(15, {b: 2}, 2, 'thread two', {c: 3});
+    cpu.switchActiveThread(30, {c: 4, d: 5}, 3, 'thread three', {e: 6});
+    cpu.closeActiveThread(40, {f: 7});
+    cpu.switchActiveThread(50, {}, 4, 'thread four', {g: 8});
+    cpu.switchActiveThread(60, {}, 1, 'thread one', {});
+    cpu.closeActiveThread(70, {});
+
+    assert.strictEqual(cpu.slices.length, 5);
+
+    assert.strictEqual(cpu.slices[0].title, 'thread one');
+    assert.strictEqual(cpu.slices[0].start, 10);
+    assert.strictEqual(cpu.slices[0].duration, 5);
+    assert.strictEqual(Object.keys(cpu.slices[0].args).length, 2);
+    assert.strictEqual(cpu.slices[0].args.a, 1);
+    assert.strictEqual(cpu.slices[0].args.b, 2);
+
+    assert.strictEqual(cpu.slices[1].title, 'thread two');
+    assert.strictEqual(cpu.slices[1].start, 15);
+    assert.strictEqual(cpu.slices[1].duration, 15);
+    assert.strictEqual(Object.keys(cpu.slices[1].args).length, 2);
+    assert.strictEqual(cpu.slices[1].args.c, 4);
+    assert.strictEqual(cpu.slices[1].args.d, 5);
+
+    assert.strictEqual(cpu.slices[2].title, 'thread three');
+    assert.strictEqual(cpu.slices[2].start, 30);
+    assert.strictEqual(cpu.slices[2].duration, 10);
+    assert.strictEqual(Object.keys(cpu.slices[2].args).length, 2);
+    assert.strictEqual(cpu.slices[2].args.e, 6);
+    assert.strictEqual(cpu.slices[2].args.f, 7);
+
+    assert.strictEqual(cpu.slices[3].title, 'thread four');
+    assert.strictEqual(cpu.slices[3].start, 50);
+    assert.strictEqual(cpu.slices[3].duration, 10);
+    assert.strictEqual(Object.keys(cpu.slices[3].args).length, 1);
+    assert.strictEqual(cpu.slices[3].args.g, 8);
+
+    assert.strictEqual(cpu.slices[4].title, 'thread one');
+    assert.strictEqual(cpu.slices[4].start, 60);
+    assert.strictEqual(cpu.slices[4].duration, 10);
+    assert.strictEqual(Object.keys(cpu.slices[4].args).length, 0);
+  });
+
+  test('getFrequencyStats', function() {
+    const m = new tr.Model();
+    const cpu = m.kernel.getOrCreateCpu(1);
+    const powerCounter = cpu.getOrCreateCounter('', 'Clock Frequency');
+    const series = powerCounter.addSeries(new tr.model.CounterSeries('state',
+        ColorScheme.getColorIdForGeneralPurposeString('test')));
+
+    series.addCounterSample(0, 100000);
+    series.addCounterSample(20, 300000);
+    series.addCounterSample(30, 100000);
+    series.addCounterSample(80, 500000);
+    series.addCounterSample(100, 300000);
+
+    const range = tr.b.math.Range.fromExplicitRange(10, 90);
+    const stats = cpu.getFreqStatsForRange(range);
+    assert.strictEqual(stats[100000], 60);
+    assert.strictEqual(stats[300000], 10);
+    assert.strictEqual(stats[500000], 10);
+  });
+});
+</script>
+

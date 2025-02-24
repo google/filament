@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the EventRegistry class.
+ */
+tr.exportTo('tr.model', function() {
+  // Create the type registry.
+  function EventRegistry() {
+  }
+
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  tr.b.decorateExtensionRegistry(EventRegistry, options);
+
+  // Enforce all options objects have the right fields.
+  EventRegistry.addEventListener('will-register', function(e) {
+    const metadata = e.typeInfo.metadata;
+    if (metadata.name === undefined) {
+      throw new Error('Registered events must provide name metadata');
+    }
+    if (metadata.pluralName === undefined) {
+      throw new Error('Registered events must provide pluralName metadata');
+    }
+
+    // Add a subtype registry to every event so that all events can be
+    // extended
+    if (metadata.subTypes === undefined) {
+      metadata.subTypes = {};
+      const options = new tr.b.ExtensionRegistryOptions(
+          tr.b.TYPE_BASED_REGISTRY_MODE);
+      options.mandatoryBaseClass = e.typeInfo.constructor;
+      options.defaultConstructor = e.typeInfo.constructor;
+      tr.b.decorateExtensionRegistry(metadata.subTypes, options);
+    } else {
+      if (!metadata.subTypes.register) {
+        throw new Error('metadata.subTypes must be an extension registry.');
+      }
+    }
+
+    e.typeInfo.constructor.subTypes = metadata.subTypes;
+  });
+
+  // Helper: lookup Events indexed by type name.
+  let eventsByTypeName = undefined;
+  EventRegistry.getEventTypeInfoByTypeName = function(typeName) {
+    if (eventsByTypeName === undefined) {
+      eventsByTypeName = {};
+      EventRegistry.getAllRegisteredTypeInfos().forEach(function(typeInfo) {
+        eventsByTypeName[typeInfo.metadata.name] = typeInfo;
+      });
+    }
+    return eventsByTypeName[typeName];
+  };
+
+  // Ensure eventsByTypeName stays current.
+  EventRegistry.addEventListener('registry-changed', function() {
+    eventsByTypeName = undefined;
+  });
+
+  function convertCamelCaseToTitleCase(name) {
+    let result = name.replace(/[A-Z]/g, ' $&');
+    result = result.charAt(0).toUpperCase() + result.slice(1);
+    return result;
+  }
+
+  EventRegistry.getUserFriendlySingularName = function(typeName) {
+    const typeInfo = EventRegistry.getEventTypeInfoByTypeName(typeName);
+    const str = typeInfo.metadata.name;
+    return convertCamelCaseToTitleCase(str);
+  };
+
+  EventRegistry.getUserFriendlyPluralName = function(typeName) {
+    const typeInfo = EventRegistry.getEventTypeInfoByTypeName(typeName);
+    const str = typeInfo.metadata.pluralName;
+    return convertCamelCaseToTitleCase(str);
+  };
+
+  return {
+    EventRegistry,
+  };
+});
+</script>

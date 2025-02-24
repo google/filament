@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  const GREEK_SMALL_LETTER_MU = String.fromCharCode(956);
+
+  const SECONDS_IN_A_MINUTE = 60;
+  const SECONDS_IN_AN_HOUR = SECONDS_IN_A_MINUTE * 60;
+  const SECONDS_IN_A_DAY = SECONDS_IN_AN_HOUR * 24;
+  const SECONDS_IN_A_WEEK = SECONDS_IN_A_DAY * 7;
+  const SECONDS_IN_A_YEAR = SECONDS_IN_A_DAY * 365.2422;
+  const SECONDS_IN_A_MONTH = SECONDS_IN_A_YEAR / 12;
+
+  const UnitPrefixScale = {};
+  const UnitScale = {};
+
+  function defineUnitPrefixScale(name, prefixes) {
+    if (UnitPrefixScale[name] !== undefined) {
+      throw new Error('Unit prefix scale \'' + name + '\' already exists');
+    }
+    if (prefixes.AUTO !== undefined) {
+      throw new Error('The \'AUTO\' unit prefix is not supported for unit' +
+          'prefix scales and cannot be added to scale \'' + name + '\'');
+    }
+
+    UnitPrefixScale[name] = prefixes;
+  }
+
+  UnitScale.defineUnitScale = function(name, unitScale) {
+    if (UnitScale[name] !== undefined) {
+      throw new Error('Unit scale \'' + name + '\' already exists');
+    }
+    if (unitScale.AUTO !== undefined) {
+      throw new Error('\'AUTO\' unit scale will be added automatically ' +
+          'for unit scale \'' + name + '\'');
+    }
+
+    // The 'AUTO' unit scale is used in auto formatting Units. In units using
+    // the 'BINARY' UnitScale the absolute formatted value closest to the
+    // [1, 1024) interval as possible is used. So 1023 and 1024 bytes are
+    // displayed as "1,023.0 B" and "1.0 KiB", respectively.
+    unitScale.AUTO = Object.values(unitScale);
+    unitScale.AUTO.sort((a, b) => a.value - b.value);
+
+    if (name) UnitScale[name] = unitScale;
+    return unitScale;
+  };
+
+  function definePrefixScaleFromUnitScale(prefixName, unitScale) {
+    if (!unitScale) {
+      throw new Error('Cannot create PrefixScale without a unit scale.');
+    }
+    const prefixScale = {};
+    for (const [curPrefix, curScale] of Object.entries(unitScale)) {
+      if (curPrefix === 'AUTO') {
+        continue;
+      }
+      if (curScale.symbol === undefined || !curScale.value) {
+        throw new Error(
+            `Cannot create PrefixScale from malformed unit ${curScale}.`);
+      }
+      prefixScale[curPrefix] = {
+        value: curScale.value,
+        symbol: curScale.symbol
+      };
+    }
+    return defineUnitPrefixScale(prefixName, prefixScale);
+  }
+
+  UnitScale.defineUnitScaleFromPrefixScale = function(
+      baseSymbol, baseName, prefixScale, opt_scaleName) {
+    if (baseSymbol === undefined) {
+      throw new Error('Cannot create UnitScale with undefined baseSymbol.');
+    }
+    if (!baseName) {
+      throw new Error('Cannot create UnitScale without a baseName.');
+    }
+    if (!prefixScale) {
+      throw new Error('Cannot create UnitScale without a prefix scale.');
+    }
+    const unitScale = {};
+    for (const curPrefix of Object.keys(prefixScale)) {
+      const curScale = prefixScale[curPrefix];
+      if (curScale.symbol === undefined || !curScale.value) {
+        throw new Error(
+            `Cannot convert PrefixScale with malformed prefix ${curScale}.`);
+      }
+      const name = curPrefix === 'NONE' ? baseName : `${curPrefix}_${baseName}`;
+      unitScale[name] = {
+        value: curScale.value,
+        symbol: curScale.symbol + baseSymbol,
+        baseSymbol
+      };
+    }
+    return UnitScale.defineUnitScale(opt_scaleName, unitScale);
+  };
+
+  /**
+  * Converts |value| from |fromScale| (e.g. kilo) to |toScale| (e.g. mega).
+  *
+  * Returns undefined if |value| is undefined.
+  * |fromScale| and |toScale| need not come from the same UnitScale or
+  * UnitPrefixScale. But if they are both UnitScales they must have matching
+  * or undefined baseSymbol's.
+  *
+  * @param {(undefined|number)} value
+  * @param {!object} fromScale
+  * @param {!object} toScale
+  * @return {(undefined|number)}
+  */
+  function convertUnit(value, fromScale, toScale) {
+    if (value === undefined) return undefined;
+    const fromScaleBase = fromScale.baseSymbol;
+    const toScaleBase = toScale.baseSymbol;
+    if (fromScaleBase !== undefined && toScaleBase !== undefined &&
+        fromScaleBase !== toScaleBase) {
+      throw new Error(
+          'Cannot convert between units with different base symbols.');
+    }
+    return value * (fromScale.value / toScale.value);
+  }
+
+  // See https://en.wikipedia.org/wiki/Binary_prefix.
+  defineUnitPrefixScale('BINARY', {
+    NONE: { value: Math.pow(1024, 0), symbol: '' },
+    KIBI: { value: Math.pow(1024, 1), symbol: 'Ki' },
+    MEBI: { value: Math.pow(1024, 2), symbol: 'Mi' },
+    GIBI: { value: Math.pow(1024, 3), symbol: 'Gi' },
+    TEBI: { value: Math.pow(1024, 4), symbol: 'Ti' }
+  });
+
+  // See https://en.wikipedia.org/wiki/Metric_prefix.
+  defineUnitPrefixScale('METRIC', {
+    NANO: { value: 1e-9, symbol: 'n' },
+    MICRO: { value: 1e-6, symbol: GREEK_SMALL_LETTER_MU },
+    MILLI: { value: 1e-3, symbol: 'm' },
+    NONE: { value: 1, symbol: ''},
+    KILO: { value: 1e3, symbol: 'k'},
+    MEGA: { value: 1e6, symbol: 'M'},
+    GIGA: { value: 1e9, symbol: 'G'}
+  });
+
+  UnitScale.defineUnitScale('TIME', {
+    NANO_SEC: { value: 1e-9, symbol: 'ns', baseSymbol: 's'},
+    MICRO_SEC: { value: 1e-6, symbol: GREEK_SMALL_LETTER_MU + 's',
+      baseSymbol: 's'},
+    MILLI_SEC: { value: 1e-3, symbol: 'ms', baseSymbol: 's'},
+    SEC: { value: 1, symbol: 's', baseSymbol: 's'},
+    MINUTE: { value: SECONDS_IN_A_MINUTE, symbol: 'min', baseSymbol: 's'},
+    HOUR: { value: SECONDS_IN_AN_HOUR, symbol: 'hr', baseSymbol: 's'},
+    DAY: { value: SECONDS_IN_A_DAY, symbol: 'days', baseSymbol: 's'},
+    WEEK: { value: SECONDS_IN_A_WEEK, symbol: 'weeks', baseSymbol: 's'},
+    MONTH: { value: SECONDS_IN_A_MONTH, symbol: 'months', baseSymbol: 's'},
+    YEAR: { value: SECONDS_IN_A_YEAR, symbol: 'years', baseSymbol: 's'}
+  });
+
+  UnitScale.defineUnitScaleFromPrefixScale(
+      'B', 'BYTE', UnitPrefixScale.BINARY, 'MEMORY');
+
+  definePrefixScaleFromUnitScale('DATA_SIZE', UnitScale.MEMORY);
+
+  UnitScale.defineUnitScaleFromPrefixScale(
+      '/s', 'SECONDS', UnitPrefixScale.DATA_SIZE, 'BANDWIDTH_BYTES');
+
+  return {
+    UnitPrefixScale,
+    UnitScale,
+    convertUnit,
+    GREEK_SMALL_LETTER_MU,
+  };
+});
+</script>

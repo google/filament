@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  test('mark', function() {
+    if (tr.isHeadless) return;
+
+    const markedTime = tr.b.Timing.mark('timing_test', 'mark');
+    markedTime.end();
+    const result = window.performance.getEntriesByName('timing_test mark');
+    const duration = parseFloat(result[0].duration);
+    assert.isTrue(duration >= 0.0);
+  });
+});
+</script>

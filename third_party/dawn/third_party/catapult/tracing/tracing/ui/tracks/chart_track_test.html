@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+<link rel="import" href="/tracing/ui/tracks/chart_point.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+<link rel="import" href="/tracing/ui/tracks/event_to_track_map.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ChartSeriesYAxis = tr.ui.tracks.ChartSeriesYAxis;
+  const ChartPoint = tr.ui.tracks.ChartPoint;
+  const ChartSeries = tr.ui.tracks.ChartSeries;
+  const ChartSeriesType = tr.ui.tracks.ChartSeriesType;
+  const ChartTrack = tr.ui.tracks.ChartTrack;
+  const Event = tr.model.Event;
+  const EventSet = tr.model.EventSet;
+  const EventToTrackMap = tr.ui.tracks.EventToTrackMap;
+  const SelectionState = tr.model.SelectionState;
+  const Viewport = tr.ui.TimelineViewport;
+
+  function buildPoint(x, y) {
+    const event = new Event();
+    return new ChartPoint(event, x, y);
+  }
+
+  function buildTrack(opt_args) {
+    const viewport = (opt_args && opt_args.viewport) ?
+      opt_args.viewport : new Viewport(document.createElement('div'));
+
+    const seriesYAxis1 = new ChartSeriesYAxis(0, 2.5);
+
+    const points1 = [
+      buildPoint(-2.5, 2),
+      buildPoint(-1.5, 1),
+      buildPoint(-0.5, 0),
+      buildPoint(0.5, 1),
+      buildPoint(1.5, 2),
+      buildPoint(2.5, 0)
+    ];
+    const renderingConfig1 = {
+      chartType: ChartSeriesType.AREA,
+      colorId: 6,
+      selectedPointSize: 7
+    };
+    if (opt_args && opt_args.stepGraph !== undefined) {
+      renderingConfig1.stepGraph = opt_args.stepGraph;
+    }
+    const series1 = new ChartSeries(points1, seriesYAxis1, renderingConfig1);
+
+    const points2 = [
+      buildPoint(-2.3, 0.2),
+      buildPoint(-1.3, 1.2),
+      buildPoint(-0.3, 2.2),
+      buildPoint(0.3, 1.2),
+      buildPoint(1.3, 0.2),
+      buildPoint(2.3, 0)
+    ];
+    const renderingConfig2 = {
+      chartType: ChartSeriesType.AREA,
+      colorId: 4,
+      selectedPointSize: 10
+    };
+    if (opt_args && opt_args.stepGraph !== undefined) {
+      renderingConfig2.stepGraph = opt_args.stepGraph;
+    }
+    const series2 = new ChartSeries(points2, seriesYAxis1, renderingConfig2);
+
+    const seriesList = [series1, series2];
+
+    if (!opt_args || !opt_args.singleAxis) {
+      const seriesYAxis2 = new ChartSeriesYAxis(-100, 100);
+      const points3 = [
+        buildPoint(-3, -50),
+        buildPoint(-2.4, -40),
+        buildPoint(-1.8, -30),
+        buildPoint(-1.2, -20),
+        buildPoint(-0.6, -10),
+        buildPoint(0, 0),
+        buildPoint(0.6, 10),
+        buildPoint(1.2, 20),
+        buildPoint(1.8, 30),
+        buildPoint(2.4, 40),
+        buildPoint(3, 50)
+      ];
+      const renderingConfig3 = {
+        chartType: ChartSeriesType.LINE,
+        lineWidth: 2
+      };
+      if (opt_args && opt_args.stepGraph !== undefined) {
+        renderingConfig3.stepGraph = opt_args.stepGraph;
+      }
+      const series3 = new ChartSeries(points3, seriesYAxis2, renderingConfig3);
+      seriesList.push(series3);
+    }
+
+    const track = new ChartTrack(viewport);
+    track.series = seriesList;
+
+    return track;
+  }
+
+  function buildDashboardTrack(opt_viewport) {
+    const viewport = opt_viewport || new Viewport(
+        document.createElement('div'));
+
+    const seriesYAxis = new ChartSeriesYAxis(0, 1.1);
+    const fileUrl = '/test_data/dashboard_test_points.json';
+    const pointsArray = JSON.parse(tr.b.getSync(fileUrl));
+    const points = [];
+    for (let i = 0; i < pointsArray.length; i++) {
+      points.push(buildPoint(pointsArray[i][0], pointsArray[i][1]));
+    }
+    const renderingConfig = {
+      chartType: ChartSeriesType.LINE,
+      lineWidth: 1,
+      stepGraph: false,
+      selectedPointSize: 10,
+      solidSelectedDots: true,
+      highDetail: false,
+      skipDistance: 0.4
+    };
+    const series = new ChartSeries(points, seriesYAxis, renderingConfig);
+
+    const track = new ChartTrack(viewport);
+    track.series = [series];
+
+    return track;
+  }
+
+  test('instantiate_lowDetailsWithoutSelection', function() {
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = buildTrack({viewport});
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    track.height = '100px';
+  });
+
+  test('instantiate_highDetailsWithSelection', function() {
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    viewport.highDetails = true;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = buildTrack({viewport});
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    track.series[0].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+    track.series[1].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+    track.series[2].points[3].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    track.height = '100px';
+  });
+
+  test('instantiate_lowDetailsNoStepGraphWithoutSelection', function() {
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = buildTrack({viewport, stepGraph: false});
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    track.height = '100px';
+  });
+
+  test('instantiate_highDetailsNoStepGraphWithSelection', function() {
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    viewport.highDetails = true;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = buildTrack({viewport, stepGraph: false});
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    track.series[0].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+    track.series[1].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+    track.series[2].points[3].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    track.height = '100px';
+  });
+
+  test('instantiate_highDetailsNoStepGraphWithSelectionAndYAxisLabels',
+      function() {
+        const div = document.createElement('div');
+        const viewport = new Viewport(div);
+        viewport.highDetails = true;
+        const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+        Polymer.dom(div).appendChild(drawingContainer);
+
+        const track = buildTrack({
+          viewport,
+          stepGraph: false,
+          singleAxis: true,
+        });
+        track.showYAxisLabels = true;
+        Polymer.dom(drawingContainer).appendChild(track);
+
+        track.series[0].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+        track.series[1].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+        this.addHTMLOutput(div);
+        drawingContainer.invalidate();
+
+        const dt = new tr.ui.TimelineDisplayTransform();
+        const pixelRatio = window.devicePixelRatio || 1;
+        dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+        track.viewport.setDisplayTransformImmediately(dt);
+
+        track.height = '200px';
+      });
+
+  test('instantiate_highDetailsNoStepGraphWithSelectionAndGridLines',
+      function() {
+        const div = document.createElement('div');
+        const viewport = new Viewport(div);
+        viewport.highDetails = true;
+        const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+        Polymer.dom(div).appendChild(drawingContainer);
+
+        const track = buildTrack({
+          viewport,
+          stepGraph: false,
+          singleAxis: true,
+        });
+        track.showGridLines = true;
+        Polymer.dom(drawingContainer).appendChild(track);
+
+        track.series[0].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+        track.series[1].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+        this.addHTMLOutput(div);
+        drawingContainer.invalidate();
+
+        const dt = new tr.ui.TimelineDisplayTransform();
+        const pixelRatio = window.devicePixelRatio || 1;
+        dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+        track.viewport.setDisplayTransformImmediately(dt);
+
+        track.height = '200px';
+      });
+
+  test('instantiate_highDetailsNoStepGraphWithSelectionYAxisLabelsAndGridLines',
+      function() {
+        const div = document.createElement('div');
+        const viewport = new Viewport(div);
+        viewport.highDetails = true;
+        const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+        Polymer.dom(div).appendChild(drawingContainer);
+
+        const track = buildTrack({
+          viewport,
+          stepGraph: false,
+          singleAxis: true,
+        });
+        track.showYAxisLabels = true;
+        track.showGridLines = true;
+        Polymer.dom(drawingContainer).appendChild(track);
+
+        track.series[0].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+        track.series[1].points[1].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+        this.addHTMLOutput(div);
+        drawingContainer.invalidate();
+
+        const dt = new tr.ui.TimelineDisplayTransform();
+        const pixelRatio = window.devicePixelRatio || 1;
+        dt.xSetWorldBounds(-3, 3, track.clientWidth * pixelRatio);
+        track.viewport.setDisplayTransformImmediately(dt);
+
+        track.height = '200px';
+      });
+
+  test('instantiate_dashboardChartStyleWithSelection', function() {
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    viewport.highDetails = true;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = buildDashboardTrack(viewport);
+    track.showYAxisLabels = true;
+    track.showGridLines = true;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    track.series[0].points[40].modelItem.selectionState =
+        SelectionState.SELECTED;
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    dt.xSetWorldBounds(
+        26610390797802200, 28950000891700000, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    track.height = '100px';
+  });
+
+  test('checkPadding', function() {
+    const track = buildTrack();
+
+    // Padding should be equal to half maximum point size.
+    assert.strictEqual(track.topPadding_, 5);
+    assert.strictEqual(track.bottomPadding_, 5);
+  });
+
+  test('checkAddEventsToTrackMap', function() {
+    const track = buildTrack();
+    const eventToTrackMap = new EventToTrackMap();
+    track.addEventsToTrackMap(eventToTrackMap);
+    assert.lengthOf(Object.keys(eventToTrackMap), 23);
+  });
+
+  test('checkaddIntersectingEventsInRangeToSelectionInWorldSpace', function() {
+    const track = buildTrack();
+
+    const sel = new EventSet();
+    track.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -1.1, -0.7, 0.01, sel);
+    assert.lengthOf(sel, 3);
+    const iter = sel[Symbol.iterator]();
+    assert.strictEqual(iter.next().value, track.series[0].points[1].modelItem);
+    assert.strictEqual(iter.next().value, track.series[1].points[1].modelItem);
+    assert.strictEqual(iter.next().value, track.series[2].points[3].modelItem);
+  });
+
+  test('checkaddEventNearToProvidedEventToSelection', function() {
+    const track = buildTrack();
+
+    // Fail to find a near item to the left in any series.
+    let sel = new EventSet();
+    assert.isFalse(track.addEventNearToProvidedEventToSelection(
+        track.series[0].points[0].modelItem, -1, sel));
+    assert.lengthOf(sel, 0);
+
+    // Succeed at finding a near item to the right of one series.
+    sel = new EventSet();
+    assert.isTrue(track.addEventNearToProvidedEventToSelection(
+        track.series[1].points[1].modelItem, 1, sel));
+    assert.strictEqual(
+        tr.b.getOnlyElement(sel), track.series[1].points[2].modelItem);
+  });
+
+  test('checkAddClosestEventToSelection', function() {
+    const track = buildTrack();
+
+    const sel = new EventSet();
+    track.addClosestEventToSelection(-0.8, 0.4, 0.5, 1.5, sel);
+    assert.lengthOf(sel, 2);
+    const iter = sel[Symbol.iterator]();
+    assert.strictEqual(iter.next().value, track.series[0].points[2].modelItem);
+    assert.strictEqual(iter.next().value, track.series[2].points[4].modelItem);
+  });
+
+  test('checkAutoSetAllAxes', function() {
+    const track = buildTrack();
+    const seriesYAxis1 = track.series[0].seriesYAxis;
+    const seriesYAxis2 = track.series[2].seriesYAxis;
+
+    track.autoSetAllAxes({expandMax: true, shrinkMax: true});
+
+    // Min bounds of both axes should not have been modified.
+    assert.strictEqual(seriesYAxis1.bounds.min, 0);
+    assert.strictEqual(seriesYAxis2.bounds.min, -100);
+
+    // Max bounds of both axes should have been modified.
+    assert.strictEqual(seriesYAxis1.bounds.max, 2.2);
+    assert.strictEqual(seriesYAxis2.bounds.max, 50);
+  });
+
+  test('checkAutoSetAxis', function() {
+    const track = buildTrack();
+    const seriesYAxis1 = track.series[0].seriesYAxis;
+    const seriesYAxis2 = track.series[2].seriesYAxis;
+
+    track.autoSetAxis(seriesYAxis2,
+        {expandMin: true, shrinkMin: true, expandMax: true, shrinkMax: true});
+
+    // First axis should not have been modified.
+    assert.strictEqual(seriesYAxis1.bounds.min, 0);
+    assert.strictEqual(seriesYAxis1.bounds.max, 2.5);
+
+    // Second axis should have been modified.
+    assert.strictEqual(seriesYAxis2.bounds.min, -50);
+    assert.strictEqual(seriesYAxis2.bounds.max, 50);
+  });
+});
+</script>
+

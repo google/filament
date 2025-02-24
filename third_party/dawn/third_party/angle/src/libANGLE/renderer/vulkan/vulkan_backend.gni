@@ -1,0 +1,244 @@
+# Copyright 2022 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("../../../../gni/angle.gni")
+
+vulkan_backend_sources = [
+  "AllocatorHelperPool.cpp",
+  "AllocatorHelperPool.h",
+  "AllocatorHelperRing.cpp",
+  "AllocatorHelperRing.h",
+  "BufferVk.cpp",
+  "BufferVk.h",
+  "CommandQueue.cpp",
+  "CommandQueue.h",
+  "CompilerVk.cpp",
+  "CompilerVk.h",
+  "ContextVk.cpp",
+  "ContextVk.h",
+  "DebugAnnotatorVk.cpp",
+  "DebugAnnotatorVk.h",
+  "DeviceVk.cpp",
+  "DeviceVk.h",
+  "DisplayVk.cpp",
+  "DisplayVk.h",
+  "DisplayVk_api.h",
+  "FenceNVVk.cpp",
+  "FenceNVVk.h",
+  "FramebufferVk.cpp",
+  "FramebufferVk.h",
+  "ImageVk.cpp",
+  "ImageVk.h",
+  "MemoryObjectVk.cpp",
+  "MemoryObjectVk.h",
+  "MemoryTracking.cpp",
+  "MemoryTracking.h",
+  "OverlayVk.cpp",
+  "OverlayVk.h",
+  "PersistentCommandPool.cpp",
+  "PersistentCommandPool.h",
+  "ProgramExecutableVk.cpp",
+  "ProgramExecutableVk.h",
+  "ProgramPipelineVk.cpp",
+  "ProgramPipelineVk.h",
+  "ProgramVk.cpp",
+  "ProgramVk.h",
+  "QueryVk.cpp",
+  "QueryVk.h",
+  "RenderTargetVk.cpp",
+  "RenderTargetVk.h",
+  "RenderbufferVk.cpp",
+  "RenderbufferVk.h",
+  "SamplerVk.cpp",
+  "SamplerVk.h",
+  "SecondaryCommandBuffer.cpp",
+  "SecondaryCommandBuffer.h",
+  "SecondaryCommandPool.cpp",
+  "SecondaryCommandPool.h",
+  "SemaphoreVk.cpp",
+  "SemaphoreVk.h",
+  "ShaderInterfaceVariableInfoMap.cpp",
+  "ShaderInterfaceVariableInfoMap.h",
+  "ShaderVk.cpp",
+  "ShaderVk.h",
+  "ShareGroupVk.cpp",
+  "ShareGroupVk.h",
+  "Suballocation.cpp",
+  "Suballocation.h",
+  "SurfaceVk.cpp",
+  "SurfaceVk.h",
+  "SyncVk.cpp",
+  "SyncVk.h",
+  "TextureVk.cpp",
+  "TextureVk.h",
+  "TransformFeedbackVk.cpp",
+  "TransformFeedbackVk.h",
+  "UtilsVk.cpp",
+  "UtilsVk.h",
+  "VertexArrayVk.cpp",
+  "VertexArrayVk.h",
+  "VkImageImageSiblingVk.cpp",
+  "VkImageImageSiblingVk.h",
+  "VulkanSecondaryCommandBuffer.cpp",
+  "VulkanSecondaryCommandBuffer.h",
+  "android/vk_android_utils.cpp",
+  "android/vk_android_utils.h",
+  "spv_utils.cpp",
+  "spv_utils.h",
+  "vk_cache_utils.cpp",
+  "vk_cache_utils.h",
+  "vk_caps_utils.cpp",
+  "vk_caps_utils.h",
+  "vk_command_buffer_utils.h",
+  "vk_format_table_autogen.cpp",
+  "vk_format_utils.cpp",
+  "vk_format_utils.h",
+  "vk_helpers.cpp",
+  "vk_helpers.h",
+  "vk_internal_shaders_autogen.cpp",
+  "vk_internal_shaders_autogen.h",
+  "vk_mandatory_format_support_table_autogen.cpp",
+  "vk_ref_counted_event.cpp",
+  "vk_ref_counted_event.h",
+  "vk_renderer.cpp",
+  "vk_renderer.h",
+  "vk_resource.cpp",
+  "vk_resource.h",
+  "vk_utils.cpp",
+  "vk_utils.h",
+  "vk_wrapper.h",
+]
+
+if (angle_enable_cl) {
+  vulkan_backend_sources += [
+    "CLCommandQueueVk.cpp",
+    "CLCommandQueueVk.h",
+    "CLContextVk.cpp",
+    "CLContextVk.h",
+    "CLDeviceVk.cpp",
+    "CLDeviceVk.h",
+    "CLEventVk.cpp",
+    "CLEventVk.h",
+    "CLKernelVk.cpp",
+    "CLKernelVk.h",
+    "CLMemoryVk.cpp",
+    "CLMemoryVk.h",
+    "CLPlatformVk.cpp",
+    "CLPlatformVk.h",
+    "CLProgramVk.cpp",
+    "CLProgramVk.h",
+    "CLSamplerVk.cpp",
+    "CLSamplerVk.h",
+    "cl_types.h",
+    "clspv_utils.cpp",
+    "clspv_utils.h",
+    "vk_cl_utils.cpp",
+    "vk_cl_utils.h",
+  ]
+}
+
+if (angle_use_vulkan_null_display) {
+  vulkan_backend_sources += [
+    "null/DisplayVkNull.cpp",
+    "null/DisplayVkNull.h",
+  ]
+}
+
+vulkan_backend_dma_buf_sources = [
+  "linux/DeviceVkLinux.cpp",
+  "linux/DeviceVkLinux.h",
+  "linux/DisplayVkLinux.cpp",
+  "linux/DisplayVkLinux.h",
+  "linux/DisplayVkOffscreen.cpp",
+  "linux/DisplayVkOffscreen.h",
+  "linux/DmaBufImageSiblingVkLinux.cpp",
+  "linux/DmaBufImageSiblingVkLinux.h",
+  "linux/display/DisplayVkSimple.cpp",
+  "linux/display/DisplayVkSimple.h",
+  "linux/display/WindowSurfaceVkSimple.cpp",
+  "linux/display/WindowSurfaceVkSimple.h",
+  "linux/headless/DisplayVkHeadless.cpp",
+  "linux/headless/DisplayVkHeadless.h",
+  "linux/headless/WindowSurfaceVkHeadless.cpp",
+  "linux/headless/WindowSurfaceVkHeadless.h",
+]
+
+if (is_linux || is_chromeos) {
+  vulkan_backend_sources += vulkan_backend_dma_buf_sources
+}
+
+if (is_android) {
+  vulkan_backend_sources += [
+    "android/AHBFunctions.cpp",
+    "android/AHBFunctions.h",
+    "android/DisplayVkAndroid.cpp",
+    "android/DisplayVkAndroid.h",
+    "android/HardwareBufferImageSiblingVkAndroid.cpp",
+    "android/HardwareBufferImageSiblingVkAndroid.h",
+    "android/WindowSurfaceVkAndroid.cpp",
+    "android/WindowSurfaceVkAndroid.h",
+  ]
+}
+
+if (is_win) {
+  vulkan_backend_sources += [
+    "win32/DisplayVkWin32.cpp",
+    "win32/DisplayVkWin32.h",
+    "win32/WindowSurfaceVkWin32.cpp",
+    "win32/WindowSurfaceVkWin32.h",
+  ]
+}
+
+if (angle_use_x11) {
+  vulkan_backend_sources += [
+    "linux/xcb/DisplayVkXcb.cpp",
+    "linux/xcb/DisplayVkXcb.h",
+    "linux/xcb/WindowSurfaceVkXcb.cpp",
+    "linux/xcb/WindowSurfaceVkXcb.h",
+  ]
+}
+
+if (angle_use_wayland) {
+  vulkan_backend_sources += [
+    "linux/wayland/DisplayVkWayland.cpp",
+    "linux/wayland/DisplayVkWayland.h",
+    "linux/wayland/WindowSurfaceVkWayland.cpp",
+    "linux/wayland/WindowSurfaceVkWayland.h",
+  ]
+}
+
+if (angle_has_build && angle_use_gbm) {
+  vulkan_backend_sources += [
+    "linux/gbm/DisplayVkGbm.cpp",
+    "linux/gbm/DisplayVkGbm.h",
+  ]
+}
+
+if (is_fuchsia) {
+  vulkan_backend_sources += [
+    "fuchsia/DisplayVkFuchsia.cpp",
+    "fuchsia/DisplayVkFuchsia.h",
+    "fuchsia/WindowSurfaceVkFuchsia.cpp",
+    "fuchsia/WindowSurfaceVkFuchsia.h",
+  ]
+}
+
+if (is_ggp) {
+  vulkan_backend_sources += [
+    "ggp/DisplayVkGGP.cpp",
+    "ggp/DisplayVkGGP.h",
+    "ggp/WindowSurfaceVkGGP.cpp",
+    "ggp/WindowSurfaceVkGGP.h",
+  ]
+}
+
+if (is_mac) {
+  vulkan_backend_sources += [
+    "mac/DisplayVkMac.h",
+    "mac/DisplayVkMac.mm",
+    "mac/IOSurfaceSurfaceVkMac.h",
+    "mac/IOSurfaceSurfaceVkMac.mm",
+    "mac/WindowSurfaceVkMac.h",
+    "mac/WindowSurfaceVkMac.mm",
+  ]
+}

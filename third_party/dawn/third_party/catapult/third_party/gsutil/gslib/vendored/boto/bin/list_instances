@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import sys
+from operator import attrgetter
+from optparse import OptionParser
+
+import boto
+from boto.ec2 import regions
+
+
+HEADERS = {
+    'ID': {'get': attrgetter('id'), 'length':15},
+    'Zone': {'get': attrgetter('placement'), 'length':15},
+    'Groups': {'get': attrgetter('groups'), 'length':30},
+    'Hostname': {'get': attrgetter('public_dns_name'), 'length':50},
+    'PrivateHostname': {'get': attrgetter('private_dns_name'), 'length':50},
+    'State': {'get': attrgetter('state'), 'length':15},
+    'Image': {'get': attrgetter('image_id'), 'length':15},
+    'Type': {'get': attrgetter('instance_type'), 'length':15},
+    'IP': {'get': attrgetter('ip_address'), 'length':16},
+    'PrivateIP': {'get': attrgetter('private_ip_address'), 'length':16},
+    'Key': {'get': attrgetter('key_name'), 'length':25},
+    'T:': {'length': 30},
+}
+
+def get_column(name, instance=None):
+    if name.startswith('T:'):
+        _, tag = name.split(':', 1)
+        return instance.tags.get(tag, '')
+    return HEADERS[name]['get'](instance)
+
+
+def main():
+    parser = OptionParser()
+    parser.add_option("-r", "--region", help="Region (default us-east-1)", dest="region", default="us-east-1")
+    parser.add_option("-H", "--headers", help="Set headers (use 'T:tagname' for including tags)", default=None, action="store", dest="headers", metavar="ID,Zone,Groups,Hostname,State,T:Name")
+    parser.add_option("-t", "--tab", help="Tab delimited, skip header - useful in shell scripts", action="store_true", default=False)
+    parser.add_option("-f", "--filter", help="Filter option sent to DescribeInstances API call, format is key1=value1,key2=value2,...", default=None)
+    (options, args) = parser.parse_args()
+
+
+    # Connect the region
+    for r in regions():
+        if r.name == options.region:
+            region = r
+            break
+    else:
+        print("Region %s not found." % options.region)
+        sys.exit(1)
+    ec2 = boto.connect_ec2(region=region)
+
+    # Read headers
+    if options.headers:
+        headers = tuple(options.headers.split(','))
+    else:
+        headers = ("ID", 'Zone', "Groups", "Hostname")
+
+    # Create format string
+    format_string = ""
+    for h in headers:
+        if h.startswith('T:'):
+            format_string += "%%-%ds" % HEADERS['T:']['length']
+        else:
+            format_string += "%%-%ds" % HEADERS[h]['length']
+
+
+    # Parse filters (if any)
+    if options.filter:
+        filters = dict([entry.split('=') for entry in options.filter.split(',')])
+    else:
+        filters = {}
+
+    # List and print
+
+    if not options.tab:
+        print(format_string % headers)
+        print("-" * len(format_string % headers))
+
+    for r in ec2.get_all_reservations(filters=filters):
+        groups = [g.name for g in r.groups]
+        for i in r.instances:
+            i.groups = ','.join(groups)
+            if options.tab: 
+                print("\t".join(tuple(get_column(h, i) for h in headers)))
+            else:
+                print(format_string % tuple(get_column(h, i) for h in headers))
+ 
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.importer', function() {
+  class SimpleLineReader {
+    constructor(text) {
+      this.data_ = text instanceof tr.b.TraceStream ?
+        text : text.split(new RegExp('\r?\n'));
+      this.curLine_ = 0;
+      this.readLastLine_ = false;
+      this.savedLines_ = undefined;
+    }
+
+    * [Symbol.iterator]() {
+      let lastLine = undefined;
+      while (this.hasData_) {
+        if (this.readLastLine_) {
+          this.curLine_++;
+          this.readLastLine_ = false;
+        } else if (this.data_ instanceof tr.b.TraceStream) {
+          this.curLine_++;
+          const line = this.data_.readUntilDelimiter('\n');
+          if (line.endsWith('\r\n')) {
+            lastLine = line.slice(0, -2);
+          } else if (line.endsWith('\n')) {
+            lastLine = line.slice(0, -1);
+          } else {
+            lastLine = line;
+          }
+        } else {
+          this.curLine_++;
+          lastLine = this.data_[this.curLine_ - 1];
+        }
+        yield lastLine;
+      }
+    }
+
+    get curLineNumber() {
+      return this.curLine_;
+    }
+
+    get hasData_() {
+      if (this.data_ instanceof tr.b.TraceStream) return this.data_.hasData;
+      return this.curLine_ < this.data_.length;
+    }
+
+    advanceToLineMatching(regex) {
+      for (const line of this) {
+        if (this.savedLines_ !== undefined) this.savedLines_.push(line);
+        if (regex.test(line)) {
+          this.goBack_();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    goBack_() {
+      if (this.readLastLine_) {
+        throw new Error('There should be at least one nextLine call between ' +
+                        'any two goBack calls.');
+      }
+      if (this.curLine_ === 0) {
+        throw new Error('There should be at least one nextLine call before ' +
+                        'the first goBack call.');
+      }
+      this.readLastLine_ = true;
+      this.curLine_--;
+    }
+
+    beginSavingLines() {
+      this.savedLines_ = [];
+    }
+
+    endSavingLinesAndGetResult() {
+      const tmp = this.savedLines_;
+      this.savedLines_ = undefined;
+      return tmp;
+    }
+  }
+
+  return {
+    SimpleLineReader,
+  };
+});
+</script>

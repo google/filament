@@ -1,0 +1,20 @@
+<dom-module id="sockets-view">
+  <template>
+    <div id=sockets-view-tab-content class=content-box>
+      <a href='#events&q=type:SOCKET%20is:active'>View live sockets</a>
+      <p>
+        <div id=sockets-view-pool-div>
+        </div>
+      </p>
+      <p>
+        <div id=sockets-view-pool-groups-div>
+        </div>
+      </p>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'sockets-view',
+    });
+  </script>
+</dom-module>

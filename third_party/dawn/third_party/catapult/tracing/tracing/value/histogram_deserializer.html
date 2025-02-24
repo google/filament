@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v', function() {
+  class HistogramDeserializer {
+    static deserialize(data) {
+      const deserializer = new HistogramDeserializer(data[0], data[1]);
+      return data.slice(2).map(datum =>
+        tr.v.Histogram.deserialize(datum, deserializer));
+    }
+
+    constructor(objects, diagnostics) {
+      this.objects_ = objects;
+      this.diagnostics_ = [];
+      for (const [type, diagnosticsByName] of Object.entries(
+          diagnostics || {})) {
+        for (const [name, diagnosticsById] of Object.entries(
+            diagnosticsByName)) {
+          for (const [id, data] of Object.entries(diagnosticsById)) {
+            const diagnostic = tr.v.d.Diagnostic.deserialize(
+                type, data, this);
+            this.diagnostics_[parseInt(id)] = {name, diagnostic};
+          }
+        }
+      }
+    }
+
+    getObject(id) {
+      return this.objects_[id];
+    }
+
+    getDiagnostic(id) {
+      return this.diagnostics_[parseInt(id)];
+    }
+  }
+
+  return {HistogramDeserializer};
+});
+</script>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/helpers/chrome_process_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_thread_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.helpers', function() {
+  const ChromeThreadHelper = tr.model.helpers.ChromeThreadHelper;
+
+  function ChromeRendererHelper(modelHelper, process) {
+    tr.model.helpers.ChromeProcessHelper.call(this, modelHelper, process);
+    this.mainThread_ = process.findAtMostOneThreadNamed('CrRendererMain') ||
+        process.findAtMostOneThreadNamed('Chrome_InProcRendererThread');
+    this.compositorThread_ = process.findAtMostOneThreadNamed('Compositor');
+    this.rasterWorkerThreads_ = process.findAllThreadsMatching(function(t) {
+      if (t.name === undefined) return false;
+      if (t.name.startsWith('CompositorTileWorker')) return true;
+      if (t.name.startsWith('CompositorRasterWorker')) return true;
+      return false;
+    });
+    this.dedicatedWorkerThreads_ = process.findAllThreadsMatching(function(t) {
+      return t.name && t.name.startsWith('DedicatedWorker');
+    });
+    this.serviceWorkerThreads_ = process.findAllThreadsMatching(function(t) {
+      return t.name && t.name.startsWith('ServiceWorker');
+    });
+    this.foregroundWorkerThreads_ = process.findAllThreadsMatching(function(t) {
+      return t.name && t.name.startsWith('ThreadPoolForegroundWorker');
+    });
+    this.utilityWorkerThreads_ = process.findAllThreadsMatching(function(t) {
+      return t.name && t.name.startsWith('ThreadPoolUtilityWorker');
+    });
+
+    if (!process.name) {
+      process.name = ChromeRendererHelper.PROCESS_NAME;
+    }
+  }
+
+  ChromeRendererHelper.PROCESS_NAME = 'Renderer';
+
+  // Returns true if there is either a main thread or a compositor thread.
+  ChromeRendererHelper.isRenderProcess = function(process) {
+    if (process.findAtMostOneThreadNamed('CrRendererMain')) return true;
+    if (process.findAtMostOneThreadNamed('Compositor')) return true;
+    return false;
+  };
+
+  ChromeRendererHelper.isTracingProcess = function(process) {
+    return process.labels !== undefined &&
+        process.labels.length === 1 &&
+        process.labels[0] === 'chrome://tracing';
+  };
+
+  ChromeRendererHelper.prototype = {
+    __proto__: tr.model.helpers.ChromeProcessHelper.prototype,
+
+    // May be undefined.
+    get mainThread() {
+      return this.mainThread_;
+    },
+
+    // May be undefined.
+    get compositorThread() {
+      return this.compositorThread_;
+    },
+
+    // May be empty.
+    get rasterWorkerThreads() {
+      return this.rasterWorkerThreads_;
+    },
+
+    get dedicatedWorkerThreads() {
+      return this.dedicatedWorkerThreads_;
+    },
+
+    get serviceWorkerThreads() {
+      return this.serviceWorkerThreads_;
+    },
+
+    get foregroundWorkerThreads() {
+      return this.foregroundWorkerThreads_;
+    },
+
+    get utilityWorkerThreads() {
+      return this.utilityWorkerThreads_;
+    },
+
+    get isChromeTracingUI() {
+      return ChromeRendererHelper.isTracingProcess(this.process);
+    },
+  };
+
+  return {
+    ChromeRendererHelper,
+  };
+});
+</script>

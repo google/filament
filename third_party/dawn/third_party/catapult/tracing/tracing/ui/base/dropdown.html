@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<dom-module id='tr-ui-b-dropdown'>
+  <template>
+    <style>
+    button {
+      @apply --dropdown-button;
+    }
+    button.open {
+      @apply --dropdown-button-open;
+    }
+    dialog {
+      position: absolute;
+      margin: 0;
+      padding: 1em;
+      border: 1px solid darkgrey;
+      @apply --dropdown-dialog;
+    }
+    </style>
+
+    <button id="button" on-tap="open">[[label]]</button>
+
+    <dialog id="dialog" on-tap="onDialogTap_" on-cancel="close">
+      <slot></slot>
+    </dialog>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.ui.b', function() {
+  Polymer({
+    is: 'tr-ui-b-dropdown',
+
+    properties: {
+      label: {
+        type: String,
+        value: '',
+      },
+    },
+
+    open() {
+      if (this.isOpen) return;
+
+      Polymer.dom(this.$.button).classList.add('open');
+      const buttonRect = this.$.button.getBoundingClientRect();
+      this.$.dialog.style.top = buttonRect.bottom - 1 + 'px';
+      this.$.dialog.style.left = buttonRect.left + 'px';
+      this.$.dialog.showModal();
+
+      const dialogRect = this.$.dialog.getBoundingClientRect();
+      if (dialogRect.right > window.innerWidth) {
+        // If the dialog's right edge falls past the right edge of the window,
+        // then move the dialog to the left so that its right edge lines up with
+        // the button's right edge, but not so far left that its left edge falls
+        // past the left edge of the window.
+        this.$.dialog.style.left = Math.max(0, buttonRect.right -
+            dialogRect.width) + 'px';
+      }
+    },
+
+    onDialogTap_(event) {
+      // Clicking on elements inside the dialog should never close it.
+      if (event.detail.sourceEvent.srcElement !== unwrap(this.$.dialog)) return;
+
+      // Close the dialog when the user clicks on the backdrop outside the
+      // dialog, which sends click events to the dialog even though the
+      // coordinates are outside the dialog.
+      const dialogRect = this.$.dialog.getBoundingClientRect();
+      let inside = true;
+      inside &= event.detail.x >= dialogRect.left;
+      inside &= event.detail.x < dialogRect.right;
+      inside &= event.detail.y >= dialogRect.top;
+      inside &= event.detail.y < dialogRect.bottom;
+      if (inside) return;
+
+      event.preventDefault();
+      this.close();
+    },
+
+    close() {
+      if (!this.isOpen) return;
+      this.$.dialog.close();
+      Polymer.dom(this.$.button).classList.remove('open');
+      this.$.button.focus();
+    },
+
+    get isOpen() {
+      return this.$.button.classList.contains('open');
+    }
+  });
+
+  return {
+  };
+});
+</script>

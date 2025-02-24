@@ -1,0 +1,14 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": { "project": "./tsconfig.json" },
+  "rules": {
+    "no-console": "off",
+    "no-process-exit": "off",
+    "node/no-unpublished-import": "off",
+    "node/no-unpublished-require": "off",
+    "@typescript-eslint/no-var-requires": "off",
+    "n/no-restricted-requires": "off",
+    "n/no-restricted-import": "off",
+    "n/no-process-exit": "off"
+  }
+}

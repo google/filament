@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class Scalar extends tr.v.d.Diagnostic {
+    /**
+     * @param {!tr.b.Scalar} value
+     */
+    constructor(value) {
+      super();
+      if (!(value instanceof tr.b.Scalar)) {
+        throw new Error('expected Scalar');
+      }
+      this.value = value;
+    }
+
+    clone() {
+      return new Scalar(this.value);
+    }
+
+    serialize(serializer) {
+      return this.value.asDict();
+    }
+
+    asDictInto_(d) {
+      d.value = this.value.asDict();
+    }
+
+    static deserialize(value, deserializer) {
+      return Scalar.fromDict({value});
+    }
+
+    static fromDict(d) {
+      return new Scalar(tr.b.Scalar.fromDict(d.value));
+    }
+  }
+
+  tr.v.d.Diagnostic.register(Scalar, {
+    elementName: 'tr-v-ui-scalar-diagnostic-span'
+  });
+
+  return {
+    Scalar,
+  };
+});
+</script>

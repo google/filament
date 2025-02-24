@@ -1,0 +1,350 @@
+XXX - Not complete yet!!!
+Name
+
+    SGIX_vertex_array_object
+
+Name Strings
+
+    GL_SGIX_vertex_array_object
+
+Version
+
+    $Date: 1997/02/21 17:33:22 $ $Revision: 1.3 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    Requires either OpenGL 1.1 or EXT_vertex_array to be present.
+    EXT_compiled_vertex_array affects the definition of this extension.
+
+Overview
+
+    This extension introduces named vertex array objects.  This extension is 
+    primarily useful when coupled with the EXT_compiled_vertex_array extension,
+    although that extension is not strictly required.  
+
+    A significant problem with compiled vertex arrays is that they allow only
+    one set of arrays to be locked at one time.  This means that
+    implementations of compiled vertex array cannot cache copies of vertex
+    array data effectively when more than one vertex array is used to compose
+    each rendered frame.  After the first vertex array data is locked, and
+    perhaps cached by the implementation, the locking of subsequent vertex
+    arrays forces the cached copy of the first vertex array to be lost.  It
+    cannot be reused next time the original vertex array is re-locked.  The
+    only way around this situation is for the application program to put all
+    vertex array data into one humungous array and lock it all at once, but
+    this is an unreasonable application burden.
+
+    The vertex array object extension addresses this issue by allowing
+    multiple sets of vertex arrays to be locked, and thus cached in the
+    graphics hardware, at one time.
+
+Issues
+
+    * It's not clear how useful this is without EXT_compiled_vertex_array.
+
+    A: It could allow the implementation to leave DMA-able arrays locked in
+    host memory, even while they are not bound.  This can speed subsequent
+    downloads.  Does this really matter?
+
+    * Why can't you just use display lists for this?
+
+    Matt: On some low-end systems, GL hardware state cannot be read back from
+    the hardware, so the state is stored either on the CPU or early in the gfx
+    pipeline.  If the storage location from which display lists are injected
+    into the gfx pipe is downstream from this GL state shadow unit, then
+    executing display lists cannot modify GL state.  In summary, low-end
+    graphics hardware cannot accelerate display lists since they can modify GL
+    state.  Note that even "easy" display lists with only vertex and color
+    data modify state.  Vertex array objects are vastly superior to display
+    lists in that they are not required to update the GL state that they
+    modify.
+
+    Phil: Vertex arrays, unlike display lists, leave behind no "side-effect"
+    state, so they don't need to influence the shadow state. In general,
+    vertex array objects are much more "hardware-friendly" than display lists.
+
+    * Rather than add an entirely new mechanism, which applies to only one
+    case of the many that display lists cover, could you add an extension that
+    relaxes the state-modification behavior of dlists?
+
+    Matt: Perhaps it could be done, but i don't think anyone would like that.
+    It pretty much breaks the display list model.  In order for display lists
+    to really be acceleratable on Odyssey, all glEnd commands would have to
+    lose current state.
+
+    Dave Gorgen: A context switch could happen even in the midst of a DL, so
+    the idea of relaxing the state-modifying behavior of display lists seems
+    quite messy to specify.  State could be lost at essentially any glEnd
+    function.
+
+    * What about just accelerating vertex arrays in display lists?  The idea
+    is to build a display list which contains only DrawElements commands.
+    Such a display list would have the desired property of not modifying any
+    GL state.
+
+    Matt: We want to cache the vertex array data.  And we want to be able to
+    have multiple arrays of data cached at the same time.  Caching drawarrays
+    in display lists doesn't really buy you anything.  What we're looking for
+    is a way to cache the data in a persistent way, even while other vertex
+    arrays are in use.  Also, multiple uses of the same vertex array data in
+    different display lists could not be shared by such a mechanism.
+
+    * Should we add a general object mechanism?
+    
+    Yes
+
+Reasoning
+
+    * Note that PrioritizeVertexArraysSGIX and AreVertexArraysResidentSGIX do
+    take zero as a valid argument, which differs with the EXT_texture_object.
+
+    * Regarding display lists on Odyssey:  
+
+New Procedures and Functions
+
+    void GenVertexArraysSGIX(sizei n,
+			     uint* arrays);
+
+    void DeleteVertexArraysSGIX(sizei n,
+			        const uint* arrays);
+
+    void BindVertexArraySGIX(uint array);
+
+    void PrioritizeVertexArraysSGIX(sizei n,
+			       	    const uint* arrays,
+			       	    const clampf* priorities);
+
+    boolean AreVertexArraysResidentSGIX(sizei n,
+				 	const uint* arrays,
+					boolean* residences);
+
+    boolean IsVertexArraySGIX(uint array);
+
+New Tokens
+
+    Accepted by the <value> parameters of GetBooleanv, GetDoublev, GetFloatv,
+    GetIntegerv: 
+
+	VERTEX_ARRAY_PRIORITY_SGIX	0x????
+
+    Accepted by the <value> parameters of GetBooleanv, GetDoublev, GetFloatv,
+    GetIntegerv:
+
+	VERTEX_ARRAY_RESIDENT_SGIX	0x????
+
+    Accepted by the <value> parameters of GetBooleanv, GetDoublev, GetFloatv,
+    GetIntegerv:
+
+	VERTEX_ARRAY_BINDING_SGIX	0x????
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+  Add a new section, 2.8.1: Vertex Array Objects.
+
+    It is possible to create named vertex array objects.  The name space for
+    vertex array objects is the unsigned integers, with zero reserved by the
+    GL.
+
+    A vertex array object is created by binding an unused name.  This binding
+    is accomplished by calling BindVertexArraySGIX with <array> set to the
+    name of the new vertex array object.  When a vertex array object is bound,
+    the association with the previously bound vertex array is automatically
+    broken.  When a new vertex array object is first created, it is a clean
+    copy of the default GL state for all vertex array state fields, as
+    described in the additions to Section 6.
+
+    While a vertex array object is bound, GL operations affect the bound
+    vertex array object, and queries return state from the bound vertex array
+    object.  If DrawElements, ArrayElement, or DrawArrays are invoked, the
+    bound vertex array object is used.
+
+    In order that access to the default vertex array not be lost, this
+    extension treats them as though their names were all zero.  Thus the
+    default vertex array is operated on, queried, and applied while zero is
+    bound.
+
+    Vertex Array objects are deleted by calling DeleteVertexArraysSGIX with
+    <arrays> pointing to a list of <n> names of vertex array object to be
+    deleted.  After a vertex array object is deleted, it has no contents and
+    its name is freed.  If a vertex array object that is currently bound is
+    deleted, the binding reverts to zero.  DeleteVertexArraysSGIX ignores
+    names that do not correspond to vertex arrays objects, including zero.
+
+    GenVertexArraysSGIX returns <n> vertex array object names in <arrays>.
+    These names are chosen in an unspecified manner, the only condition being
+    that only names that were not in use immediately prior to the call to
+    GenVertexArraysSGIX are considered.  Names returned by GenVertexArraysSGIX
+    are marked as used (so that they are not returned by subsequent calls to
+    GenVertexArraysSGIX), but they are associated with a vertex array object
+    only after they are first bound (just as if the name were unused).
+
+    An implementation may choose to establish a working set of vertex array
+    objects on which binding operations are performed with higher performance.
+    A vertex array object that is currently being treated as a part of the
+    working set is said to be resident.  AreVertexArraysResidentSGIX returns
+    TRUE if all of the <n> vertex array objects (or default vertex arrays)
+    named in <arrays> are resident, FALSE otherwise.  Note that the default
+    vertex array may be listed in the <arrays> parameter.  If FALSE is
+    returned, the residence of each vertex array object (and possibly that of
+    the default vertex array) is returned in <residences>.  Otherwise the
+    contents of the <residences> array are not changed.  If any of the names
+    in <arrays> is not the name of a vertex array object or zero, FALSE is
+    returned, the error INVALID_VALUE is generated, and the contents of
+    <residences> are indeterminate.  The resident status of a single bound
+    vertex array object can also be queried by calling GetIntegerv,
+    GetBooleanv, GetDoublev, or GetFloatv with <value> set to
+    VERTEX_ARRAY_RESIDENT_SGIX.  Note that the residence status of vertex
+    array zero may be determined by calling any of
+    AreVertexArraysResidentSGIX, GetFloatv, GetDoublev, GetIntegerv, or
+    GetBooleanv.
+
+    Applications guide the OpenGL implementation in determining which vertex
+    array objects should be resident by specifying a priority for each vertex
+    array object.  PrioritizeVertexArraysSGIX sets the priorities of the <n>
+    vertex array objects in <arrays> to the values in <priorities>.  Each
+    priority value is clamped to the range [0.0, 1.0] before it is assigned.
+    Zero indicates the lowest priority, and hence the least likelihood of
+    being resident.  One indicates the highest priority, and hence the
+    greatest likelihood of being resident.  PrioritizeVertexArraysSGIX does
+    accept priorities for and vertex array zero, the default vertex array
+    object.
+
+  Add a new section, 2.8.2: Compiled Vertex Array Objects.
+
+    LockArraysEXT and UnlockArraysEXT cause vertex array objects (or the
+    default vertex array) which is currently bound to be considered locked.
+    Locking allows pre-compilation or copying of the array contents.  The
+    implementation is free to copy array elements when they become locked, and
+    use those cached copies until such time as the vertex array becomes
+    unlocked.
+
+    When a vertex array object (or the default vertex array) which was bound
+    becomes unbound (due to a rebinding to another object or default texture),
+    the current lock state is retained in the vertex array object.  When a new
+    vertex array object is bound, the lock state of the new current array
+    object is restored from the last time it was bound.
+
+    If vertex array data is locked when an object becomes unbound, the memory
+    in the client-side array should not be modified until after that vertex
+    array object is both rebound and unlocked.  In other words, locking
+    persists even when the vertex object is currently unbound.  The client
+    array is still considered locked, and its contents should not be changed
+    or undefined results may occur.
+
+    This behavior allows applications using multiple vertex array objects to
+    retain cached copies of those vertex arrays in the graphics hardware,
+    whenever possible.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None of these commands are included in display lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    IsVertexArraySGIX returns TRUE if <array> is the name of a valid vertex
+    array object.  If <array> is zero, or is a non-zero value that is not
+    the name of a vertex array object, or if an error condition occurs,
+    IsVertexArraySGIX returns FALSE.
+
+    The name of the vertex array object currently bound is returned in
+    <params> when GetIntegerv is called with <value> set to
+    VERTEX_ARRAY_BINDING_SGIX.  If no vertex array object is currently bound,
+    zero is returned.  
+
+    A vertex array object comprises the vertex array priority, element size,
+    type, stride, and client array pointters that are associated with that
+    object.  More explicitly, the state list
+
+	VERTEX_ARRAY_PRIORITY_SGIX,
+	VERTEX_ARRAY_SIZE,
+	VERTEX_ARRAY_TYPE,
+	VERTEX_ARRAY_STRIDE,
+	VERTEX_ARRAY_POINTER,
+	NORMAL_ARRAY_TYPE,
+	NORMAL_ARRAY_STRIDE,
+	NORMAL_ARRAY_POINTER,
+	COLOR_ARRAY_SIZE,
+	COLOR_ARRAY_TYPE,
+	COLOR_ARRAY_STRIDE,
+	COLOR_ARRAY_POINTER,
+	INDEX_ARRAY_TYPE,
+	INDEX_ARRAY_STRIDE,
+	INDEX_ARRAY_POINTER,
+	TEXTURE_COORD_ARRAY_SIZE,
+	TEXTURE_COORD_ARRAY_TYPE,
+	TEXTURE_COORD_ARRAY_STRIDE,
+	TEXTURE_COORD_ARRAY_POINTER,
+	EDGE_FLAG_ARRAY_STRIDE,
+	EDGE_FLAG_ARRAY_POINTER,
+	ARRAY_ELEMENT_LOCK_FIRST_EXT,
+	ARRAY_ELEMENT_LOCK_COUNT_EXT
+
+    composes a single vertex array object.
+
+Additions to the GLX Specification
+
+    Vertex array objects are shared between GLX rendering contexts if and only
+    if the rendering contexts share display lists.  No change is made to
+    the GLX API.
+
+GLX Protocol
+
+    XXX - Not figured out yet.
+
+Dependencies on OpenGL 1.1
+Dependencies on EXT_vertex_array
+
+    Requires either OpenGL 1.1 or EXT_vertex_array to be present.
+
+Dependencies on EXT_compiled_vertex_array
+
+    If EXT_compiled_vertex_array is not supported, section 2.8.2 should
+    be omited, and the ARRAY_ELEMENT_XXX constants in the Chapter 6 addition
+    should be omitted. 
+
+Errors
+
+    INVALID_VALUE is generated if GenVertexArraysSGIX parameter <n> is
+    negative.
+
+    INVALID_VALUE is generated if DeleteVertexArraysSGIX parameter <n> is
+    negative.
+
+    INVALID_VALUE is generated if PrioritizeVertexArraysSGIX parameter <n>
+    negative.
+
+    INVALID_VALUE is generated if AreVertexArraysResidentSGIX parameter <n> is
+    negative.
+
+    INVALID_VALUE is generated by AreVertexArraysResidentSGIX if any of the
+    names in <arrays> is not the name of a vertex array object or zero.
+
+    INVALID_OPERATION is generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+  Append to table 6.6: Vertex Array Data:
+
+    Get Value				Get Command		Type			Initial Value		Attribute
+    ---------				-----------		----			-------------		---------
+    VERTEX_ARRAY_BINDING_SGIX		GetIntegerv		Z+			0			client
+    VERTEX_ARRAY_PRIORITY_SGIX		GetFloatv		R[0,1]			1			client
+
+New Implementation Dependent State
+
+    None

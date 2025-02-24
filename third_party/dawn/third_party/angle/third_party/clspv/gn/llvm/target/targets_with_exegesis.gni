@@ -1,0 +1,11 @@
+import("//build_overrides/clspv.gni")
+
+# Based on LLVM `/llvm/lib/Target/targets_with_exegesis.gni`
+import("targets.gni")
+targets_with_exegesis = []
+foreach(target, llvm_targets_to_build) {
+  if (target == "AArch64" || target == "Mips" || target == "PowerPC" ||
+      target == "X86") {
+    targets_with_exegesis += [ target ]
+  }
+}

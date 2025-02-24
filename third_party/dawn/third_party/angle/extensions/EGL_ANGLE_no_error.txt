@@ -1,0 +1,76 @@
+Name
+
+    EGL_ANGLE_no_error
+
+Name Strings
+
+    EGL_ANGLE_no_error
+
+Contributors
+
+    Geoff Lang  (geofflang 'at' google.com)
+
+Contact
+
+    Geoff Lang  (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, April 25, 2024
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension adds a method to disable EGL validation. When validation is
+    disabled, any EGL function that would generate an error results in
+    undefined behaviour.  This could include application termination.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    void eglSetValidationEnabledANGLE(EGLBoolean validationState)
+
+New Tokens
+
+    None.
+
+New Behavior
+
+        void eglSetValidationEnabledANGLE(EGLBoolean validationState)
+
+    EGL validation is globally enabled or disabled based on the validateState
+    parameter.  When validation is disabled, any EGL function that would
+    generate an error has undefined behaviour and undefined return values.
+    The default state of validation is EGL_TRUE.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, April 25, 2024 (Geoff Lang)
+        - Initial Draft

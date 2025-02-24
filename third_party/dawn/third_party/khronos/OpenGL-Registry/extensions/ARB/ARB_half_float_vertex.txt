@@ -1,0 +1,242 @@
+Name
+
+    ARB_half_float_vertex
+
+Name Strings
+
+    GL_ARB_half_float_vertex
+
+Contact
+
+    Daniel Koch, TransGaming, Inc (daniel 'at' transgaming.com)
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB on July 11, 2008
+
+Version
+
+    Last Modified Date:   August 7, 2008
+    Version               5
+
+Number
+
+    ARB Extension #48
+
+Dependencies
+
+    This extension is written against the OpenGL 2.1 Specification
+
+    Based on the NV_half_float and OES_vertex_half_float extensions.
+
+Overview
+
+    This extension extends the usage of the half-precision (16-bit) floating-
+    point quantities introduced in ARB_half_float_pixel for usage in specifying
+    vertex array data.
+
+    This extension allows applications to use half-precision floating point data
+    when specifying vertices.  This can allow applications to reduce their
+    memory footprint, as well as the memory bandwidth required for vertex data.
+
+    This extension extends the existing vertex array commands to accept the new
+    data type.
+
+
+Issues
+
+    1. How is this extension different from NV_half_float or
+       ARB_half_float_pixel?
+
+    This extension adds the commands for specifying half-precision
+    vertex data that were initially introduced in the NV_half_float
+    extension but were specifically excluded from the
+    ARB_half_float_pixel extension. The functionality added in this
+    extension is a proper subset of the vertex functionality defined in
+    the NV_half_float extension.
+
+    2. Should we provide immediate-mode entry points for half-precision
+    vertex data?
+
+    No. We expect the immediate-mode API to be deprecated in the near
+    future and thus do not wish to encumber implementors with adding a
+    significant number of additional entry points that would have
+    limited usefulness. Additionaly, the half-precision floating point
+    vertex data is only interesting when it is specified in array format
+    (i.e., for saving storage space). If an application is using
+    immediate mode APIs to load the vertex data, it does not seem overly
+    onerous to require them to convert to one of the more standard data
+    types.
+
+    3. What is the half-precision floating point format?
+
+    This is the same 16-bit floating point format that is defined in
+    Section 2.1.2 of the ARB_texture_float and ARB_half_float_pixel
+    extensions.
+
+    4. How does this extension differ from OES_vertex_half_float?
+
+    It is intended to have the same functionality, however there are a
+    few minor changes spec-wise:
+
+     a) this extension defines the additional GLX protocol, as was done
+        in the NV_half_float extension.
+     b) this extension uses the value of the HALF_FLOAT_ARB (0x140B)
+        token that is already defined in the desktop version of the
+        ARB_half_float_pixel extension (which is the same as the value
+        of the HALF_FLOAT_NV token from the NV_half_float extension).
+        The OES_vertex_half_float and OES_texture_half_float extensions
+        use the HALF_FLOAT_OES (0x8D61) token.
+
+    The logical progression is to define this as an ARB extension which
+    is intended to supersede both the OES extension and the
+    functionality from NV_half_float.
+
+    5. Why don't the new tokens and entry points in this extension have
+       "ARB" suffixes like other ARB extensions?
+
+    RESOLVED: Unlike a normal ARB extension, this is a strict subset of
+    functionality already approved in OpenGL 3.0. This extension exists
+    only to support that functionality on older hardware that cannot
+    implement a full OpenGL 3.0 driver. Since there are no possible
+    behavior changes between the ARB extension and core features, source
+    code compatibility is improved by not using suffixes on the
+    extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> argument of VertexPointer, NormalPointer,
+    ColorPointer, SecondaryColorPointer, FogCoordPointer, TexCoordPointer,
+    and VertexAttribPointer:
+
+    HALF_FLOAT                                       0x140B
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    Modify Section 2.8, Vertex Arrays, p. 23
+
+    (Modify 1st paragraph on p. 24) ... For <type>, the values BYTE, SHORT,
+    INT, FLOAT, HALF_FLOAT, and DOUBLE indicate types byte, short, int,
+    float, half, and double, respectively. ...
+
+    (Modify Table 2.4, p. 25)
+
+        Command                   Sizes      Types
+        ------------------        -------    ---------------------------------
+        VertexPointer             2,3,4      short, int, float, half, double
+        NormalPointer             3          byte, short, int, float, half,
+                                             double
+        ColorPointer              3,4        byte, ubyte, short, ushort, int,
+                                             uint, float, half, double
+        SecondaryColorPointer     3          byte, ubyte, short, ushort, int,
+                                             uint, float, half, double
+        IndexPointer              1          ubyte, short, int, float, double
+        FogCoordPointer           1          float, half, double
+        TexCoordPointer           1,2,3,4    short, int, float, half, double
+        EdgeFlagPointer           1          boolean
+        VertexAttribPointer       1          byte, ubyte, short, ushort, int,
+                                             uint, float, half, double
+
+        Table 2.4: Vertex array sizes (values per vertex) and data types.
+
+    Modify Section 2.13, Colors and Coloring, p.44
+
+    (Modify Table 2.6, p. 59)  Add new row to the table:
+
+         GL Type    Conversion
+         -------    ----------
+         half          c
+
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None.
+
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None.
+
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol (Modification to the GLX 1.3 Protocol Encoding Specification)
+
+    Add to Section 1.4 (p.2), Common Types
+
+        FLOAT16     A 16-bit floating-point value in the format specified
+                    in the ARB_half_float_pixel extension specification.
+
+    Modify Section 2.3.4, GL Rendering Commands That May Be Large (p. 127)
+
+     (Modify the ARRAY_INFO portion of the DrawArrays encoding (p.129) to
+      reflect the new data type supported by vertex arrays.)
+
+         ARRAY_INFO
+
+            4       enum                    data type
+                    0x1400   i=1            BYTE
+                    0x1401   i=1            UNSIGNED_BYTE
+                    0x1402   i=2            SHORT
+                    ...
+                    0x140B   i=2            HALF_FLOAT
+            4       INT32                   j
+            4       ENUM                    array type
+                ...
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  -------- ---------  --------------------------------------------
+      1   1/22/08  dgkoch     Initial version based on the NV_half_float
+                              and ARB_half_float_pixel specification. Updated
+                              to reference OpenGL 2.1 spec.
+      2   1/22/08  dgkoch     Made some grammatical clarifications.
+      3   2/01/08  dgkoch     Clarify dependencies and interactions with other
+                              extensions.
+      4   2/25/08  dgkoch     Add issue #4.
+      5   8/07/08  jleech     Remove _ARB suffix.
+

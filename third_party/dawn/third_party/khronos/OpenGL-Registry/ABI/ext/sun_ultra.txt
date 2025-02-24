@@ -1,0 +1,39 @@
+From: Ron Bielaski  <Ron.Bielaski 'at' Eng.Sun.COM>
+Date: Mon, 13 Sep 1999 07:56:04 -0700 (PDT)
+
+Sun Ultra extension support:
+
+GL_ARB_imaging
+GL_EXT_abgr
+GL_EXT_blend_color
+GL_EXT_blend_logic_op
+GL_EXT_blend_minmax
+GL_EXT_blend_subtract
+GL_EXT_convolution
+GL_EXT_histogram
+GL_EXT_multi_draw_arrays
+GL_EXT_pixel_transform
+GL_EXT_polygon_offset
+GL_EXT_rescale_normal
+GL_EXT_texture3D
+GL_HP_convolution_border_modes
+GL_HP_occlusion_test
+GL_SGI_color_table
+GL_SGI_texture_color_table
+GL_SUNX_constant_data
+GL_SUNX_geometry_compression
+GL_SUNX_surface_hint
+GL_SUN_convolution_border_modes
+GL_SUN_global_alpha
+GL_SUN_multi_draw_arrays
+GL_SUN_triangle_list
+GL_SUN_vertex
+
+GLX_SGIX_fbconfig
+GLX_SGIX_pbuffer
+GLX_SGI_make_current_read
+GLX_SUN_get_transparent_index
+GLX_SUN_init_threads
+
+GLU_EXT_nurbs_tessellator
+GLU_EXT_object_space_tess

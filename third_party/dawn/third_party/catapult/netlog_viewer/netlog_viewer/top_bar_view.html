@@ -1,0 +1,26 @@
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!-- Status bar at top of screen -->
+<dom-module id="top-bar-view">
+  <template>
+    <div id=top-bar-view-content>
+      <div style="-webkit-flex-grow: 1">
+        <!-- Status bar at top of screen -->
+        <div id=loaded-status-view>
+          <span id=loaded-status-view-dump-file-name></span>
+        </div>
+      </div>
+      <a href="https://chromium.googlesource.com/catapult/+/master/netlog_viewer/"
+         title="NetLog viewer project page">Code</a>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'top-bar-view'
+    });
+  </script>
+</dom-module>

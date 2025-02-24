@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2018 The ANGLE Project Authors. All rights reserved.  Use of this
+  source code is governed by a BSD-style license that can be found in the
+  LICENSE file.
+-->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <style name="PreferenceFragmentListSinglePane" parent="@*android:style/PreferenceFragmentList">
+        <item name="android:paddingStart">@dimen/settings_side_margin</item>
+        <item name="android:paddingEnd">@dimen/settings_side_margin</item>
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:layout_marginEnd">0dp</item>
+        <item name="android:scrollbarStyle">outsideOverlay</item>
+    </style>
+
+    <style name="MultiSelectDialogStyle" parent="@style/Preference.Material">
+        <item name="negativeButtonText">@android:string/cancel</item>
+        <item name="positiveButtonText">@android:string/ok</item>
+    </style>
+
+    <style name="SettingsPreferenceFragmentStyle" parent="@style/PreferenceFragment.Material">
+        <item name="android:layout">@layout/preference_list_fragment</item>
+    </style>
+
+    <style name="PreferenceTheme" parent="@style/PreferenceThemeOverlay.v14.Material">
+      <item name="preferenceFragmentStyle">@style/SettingsPreferenceFragmentStyle</item>
+      <item name="dialogPreferenceStyle">@style/MultiSelectDialogStyle</item>
+    </style>
+
+    <style name="Theme.Settings" parent="@android:style/Theme.DeviceDefault.Settings" >
+      <item name="preferenceTheme">@style/PreferenceTheme</item>
+    </style>
+</resources>

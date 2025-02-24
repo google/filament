@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses graph_ent and graph_ret events that were inserted by
+ * the Linux kernel's function graph trace.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const LinuxPerfParser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses graph_ent and graph_ret events that were inserted by the Linux
+   * kernel's function graph trace.
+   * @constructor
+   */
+  function KernelFuncParser(importer) {
+    LinuxPerfParser.call(this, importer);
+
+    importer.registerEventHandler('graph_ent',
+        KernelFuncParser.prototype.traceKernelFuncEnterEvent.
+            bind(this));
+    importer.registerEventHandler('graph_ret',
+        KernelFuncParser.prototype.traceKernelFuncReturnEvent.
+            bind(this));
+
+    this.model_ = importer.model_;
+    this.ppids_ = {};
+  }
+
+  const TestExports = {};
+
+  const funcEnterRE = new RegExp('func=(.+)');
+  TestExports.funcEnterRE = funcEnterRE;
+
+  KernelFuncParser.prototype = {
+    __proto__: LinuxPerfParser.prototype,
+
+    traceKernelFuncEnterEvent(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      const eventData = funcEnterRE.exec(eventBase.details);
+      if (!eventData) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+
+      const tgid = parseInt(eventBase.tgid);
+      const name = eventData[1];
+      const thread = this.model_.getOrCreateProcess(tgid)
+          .getOrCreateThread(pid);
+      thread.name = eventBase.threadName;
+
+      const slices = thread.kernelSliceGroup;
+      if (!slices.isTimestampValidForBeginOrEnd(ts)) {
+        this.model_.importWarning({
+          type: 'parse_error',
+          message: 'Timestamps are moving backward.'
+        });
+        return false;
+      }
+
+      const slice = slices.beginSlice(null, name, ts, {});
+
+      return true;
+    },
+
+    traceKernelFuncReturnEvent(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+
+      const tgid = parseInt(eventBase.tgid);
+      const thread = this.model_.getOrCreateProcess(tgid)
+          .getOrCreateThread(pid);
+      thread.name = eventBase.threadName;
+
+      const slices = thread.kernelSliceGroup;
+      if (!slices.isTimestampValidForBeginOrEnd(ts)) {
+        this.model_.importWarning({
+          type: 'parse_error',
+          message: 'Timestamps are moving backward.'
+        });
+        return false;
+      }
+
+      if (slices.openSliceCount > 0) {
+        slices.endSlice(ts);
+      }
+
+      return true;
+    }
+  };
+
+  LinuxPerfParser.register(KernelFuncParser);
+
+  return {
+    KernelFuncParser,
+  };
+});
+</script>
+

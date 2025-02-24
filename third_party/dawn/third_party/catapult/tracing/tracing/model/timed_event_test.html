@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('bounds_startPrecision', function() {
+    const unit = tr.b.TimeDisplayModes;
+
+    const outer = new tr.model.TimedEvent(10.0001);
+    outer.duration = 0.9999;
+    const inner = new tr.model.TimedEvent(10.0000);
+    inner.duration = 1.0000;
+
+    assert.isTrue(outer.bounds(inner));
+    assert.isTrue(outer.bounds(inner, unit.ms));
+
+    assert.isFalse(outer.bounds(inner, unit.ns));
+  });
+
+  test('bounds_endPrecision', function() {
+    const unit = tr.b.TimeDisplayModes;
+
+    const outer = new tr.model.TimedEvent(10.0000);
+    outer.duration = 0.9999;
+    const inner = new tr.model.TimedEvent(10.0000);
+    inner.duration = 1.0000;
+
+    assert.isTrue(outer.bounds(inner));
+    assert.isTrue(outer.bounds(inner, unit.ms));
+
+    assert.isFalse(outer.bounds(inner, unit.ns));
+  });
+});
+</script>

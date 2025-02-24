@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/etw/etw_importer.html">
+<link rel="import" href="/tracing/extras/importer/etw/process_parser.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  // Constants for Process events.
+  const guid = '3D6FA8D0-FE05-11D0-9DDA-00C04FD7BA7C';
+  const kProcessStartOpcode = 1;
+  const kProcessDefunctOpcode = 39;
+
+  const kProcessStartPayload32bitV1 =
+      'AAAAAPAGAADcAwAAAQAAAAMBAAAAAAAAAAAAAAEFAAAAAAAFFQAAAJYs7Cxo/TEG8dyk0' +
+      '+gDAABub3RlcGFkLmV4ZQA=';
+
+  const kProcessStartPayload32bitV2 =
+      'AAAAAPAGAADcAwAAAQAAAAMBAAAAAAAAAAAAAAEFAAAAAAAFFQAAAJYs7Cxo/TEG8dyk0' +
+      '+gDAABub3RlcGFkLmV4ZQAiAEMAOgBcAFcAaQBuAGQAbwB3AHMAXABzAHkAcwB0AGUAbQ' +
+      'AzADIAXABuAG8AdABlAHAAYQBkAC4AZQB4AGUAIgAgAAAA';
+
+  const kProcessStartPayload32bitV3 =
+      'AAAAAPAGAADcAwAAAQAAAAMBAAAAAAAAAAAAAAAAAAABBQAAAAAABRUAAACWLOwsaP0xB' +
+      'vHcpNPoAwAAbm90ZXBhZC5leGUAIgBDADoAXABXAGkAbgBkAG8AdwBzAFwAcwB5AHMAdA' +
+      'BlAG0AMwAyAFwAbgBvAHQAZQBwAGEAZAAuAGUAeABlACIAIAAAAA==';
+
+  const kProcessStartPayload64bitV3 =
+      'YIBiD4D6//8AGgAAoBwAAAEAAAADAQAAAPBDHQEAAAAwVlMVoPj//wAAAACg+P//AQUAA' +
+      'AAAAAUVAAAAAgMBAgMEBQYHCAkKCwwAAHhwZXJmLmV4ZQB4AHAAZQByAGYAIAAgAC0AZA' +
+      'AgAG8AdQB0AC4AZQB0AGwAAAA=';
+
+  const kProcessStartPayload64bitV4 =
+      'gED8GgDg//+MCgAACBcAAAUAAAADAQAAALCiowAAAAAAAAAAkPBXBADA//8AAAAAAAAAA' +
+      'AEFAAAAAAAFFQAAAAECAwQFBgcICQoLBukDAAB4cGVyZi5leGUAeABwAGUAcgBmACAAIA' +
+      'AtAHMAdABvAHAAAAAAAAAA';
+
+  const kProcessDefunctPayload64bitV5 =
+      'wMXyBgDg//9IGQAAEAgAAAEAAAAAAAAAAGDLTwAAAAAAAAAA8OU7AwDA//8AAAAAAAAMA' +
+      'AEFAAAAAAAFFQAAAMDBwsPExcbH0NHS09QDAABjaHJvbWUuZXhlAAAAAAAAAI1Jovns+s' +
+      '4B';
+
+  test('DecodeFields', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+    const parser = new tr.e.importer.etw.ProcessParser(importer);
+    let header;
+    let fields;
+
+    // Validate a version 1 32-bit payload.
+    header = { guid, opcode: kProcessStartOpcode, version: 1, is64: 0 };
+    decoder.reset(kProcessStartPayload32bitV1);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.pageDirectoryBase, 0);
+    assert.strictEqual(fields.processId, 1776);
+    assert.strictEqual(fields.parentId, 988);
+    assert.strictEqual(fields.sessionId, 1);
+    assert.strictEqual(fields.exitStatus, 259);
+    assert.strictEqual(fields.imageFileName, 'notepad.exe');
+
+    // Validate a version 2 32-bit payload.
+    header = { guid, opcode: kProcessStartOpcode, version: 2, is64: 0 };
+    decoder.reset(kProcessStartPayload32bitV2);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.uniqueProcessKey, 0);
+    assert.strictEqual(fields.processId, 1776);
+    assert.strictEqual(fields.parentId, 988);
+    assert.strictEqual(fields.sessionId, 1);
+    assert.strictEqual(fields.exitStatus, 259);
+    assert.strictEqual(fields.imageFileName, 'notepad.exe');
+    assert.strictEqual(fields.commandLine,
+        '\"C:\\Windows\\system32\\notepad.exe\" ');
+
+    // Validate a version 3 32-bit payload.
+    header = { guid, opcode: kProcessStartOpcode, version: 3, is64: 0 };
+    decoder.reset(kProcessStartPayload32bitV3);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.uniqueProcessKey, 0);
+    assert.strictEqual(fields.processId, 1776);
+    assert.strictEqual(fields.parentId, 988);
+    assert.strictEqual(fields.sessionId, 1);
+    assert.strictEqual(fields.exitStatus, 259);
+    assert.strictEqual(fields.directoryTableBase, 0);
+    assert.strictEqual(fields.imageFileName, 'notepad.exe');
+    assert.strictEqual(fields.commandLine,
+        '\"C:\\Windows\\system32\\notepad.exe\" ');
+
+    // Validate a version 3 64-bit payload.
+    header = { guid, opcode: kProcessStartOpcode, version: 3, is64: 1 };
+    decoder.reset(kProcessStartPayload64bitV3);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.uniqueProcessKey, 'fffffa800f628060');
+    assert.strictEqual(fields.processId, 6656);
+    assert.strictEqual(fields.parentId, 7328);
+    assert.strictEqual(fields.sessionId, 1);
+    assert.strictEqual(fields.exitStatus, 259);
+    assert.strictEqual(fields.directoryTableBase, '000000011d43f000');
+    assert.strictEqual(fields.imageFileName, 'xperf.exe');
+    assert.strictEqual(fields.commandLine, 'xperf  -d out.etl');
+
+    // Validate a version 4 64-bit payload.
+    header = { guid, opcode: kProcessStartOpcode, version: 4, is64: 1 };
+    decoder.reset(kProcessStartPayload64bitV4);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.uniqueProcessKey, 'ffffe0001afc4080');
+    assert.strictEqual(fields.processId, 2700);
+    assert.strictEqual(fields.parentId, 5896);
+    assert.strictEqual(fields.sessionId, 5);
+    assert.strictEqual(fields.exitStatus, 259);
+    assert.strictEqual(fields.directoryTableBase, '00000000a3a2b000');
+    assert.strictEqual(fields.flags, 0);
+    assert.strictEqual(fields.imageFileName, 'xperf.exe');
+    assert.strictEqual(fields.commandLine, 'xperf  -stop');
+    assert.strictEqual(fields.packageFullName, '');
+    assert.strictEqual(fields.applicationId, '');
+
+    // Validate a version 5 64-bit payload.
+    header = { guid, opcode: kProcessDefunctOpcode, version: 5, is64: 1 };
+    decoder.reset(kProcessDefunctPayload64bitV5);
+    fields = parser.decodeFields(header, decoder);
+
+    assert.strictEqual(fields.uniqueProcessKey, 'ffffe00006f2c5c0');
+    assert.strictEqual(fields.processId, 6472);
+    assert.strictEqual(fields.parentId, 2064);
+    assert.strictEqual(fields.sessionId, 1);
+    assert.strictEqual(fields.exitStatus, 0);
+    assert.strictEqual(fields.directoryTableBase, '000000004fcb6000');
+    assert.strictEqual(fields.flags, 0);
+    assert.strictEqual(fields.imageFileName, 'chrome.exe');
+    assert.strictEqual(fields.commandLine, '');
+    assert.strictEqual(fields.packageFullName, '');
+    assert.strictEqual(fields.applicationId, '');
+    assert.strictEqual(fields.exitTime, '01cefaecf9a2498d');
+  });
+});
+</script>
+

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/base/sinebow_color_generator.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  class FixedColorScheme {
+    /**
+     * @param {!Map} namesToColors
+     * @constructor
+     */
+    constructor(namesToColors) {
+      this.namesToColors_ = namesToColors;
+    }
+
+    /**
+     * Create a color scheme where each name in names gets assigned a fixed
+     * color. This color is arbitrary but unique within the color scheme.
+     * @param {!Array<string>} names
+     * @return {tr.b.FixedColorScheme}
+     */
+    static fromNames(names) {
+      const namesToColors = new Map();
+      const generator = new tr.b.SinebowColorGenerator();
+      for (const name of names) {
+        namesToColors.set(name, generator.colorForKey(name));
+      }
+      return new FixedColorScheme(namesToColors);
+    }
+
+    /**
+     * Return color associated with |name|.
+     * @param {!string} name
+     * @return {tr.b.Color}
+     */
+    getColor(name) {
+      const color = this.namesToColors_.get(name);
+      if (color === undefined) throw new Error('Unknown color: ' + name);
+      return color;
+    }
+  }
+
+  const MemoryColumnColorScheme = new FixedColorScheme(new Map([
+    ['used_memory_column', new tr.b.Color(0, 0, 255)],
+    ['older_used_memory_column', new tr.b.Color(153, 204, 255)],
+    ['tracing_memory_column', new tr.b.Color(153, 153, 153)]
+  ]));
+
+  function FixedColorSchemeRegistry() {}
+  FixedColorSchemeRegistry.lookUp = function(name) {
+    const info = this.findTypeInfoMatching(info => info.metadata.name === name);
+    if (!info) return undefined;
+    return info.constructor();
+  };
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  tr.b.decorateExtensionRegistry(FixedColorSchemeRegistry, options);
+
+  return {
+    MemoryColumnColorScheme,
+    FixedColorScheme,
+    FixedColorSchemeRegistry,
+  };
+});
+</script>

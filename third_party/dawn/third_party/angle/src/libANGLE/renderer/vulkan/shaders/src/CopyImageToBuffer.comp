@@ -1,0 +1,118 @@
+//
+// Copyright 2023 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// CopyImageToBuffer.comp: Supports glReadPixels copying from an image to a PBO.
+//
+// In practice, glReadPixels is normally called with the same format for the PBO as the attachment
+// being read, in which case vkCmdCopyImageToBuffer is used.  For simplicity, this shader only
+// supports copying to RGBA8 and BGRA8 formats, but support for more formats can be added if ever
+// required.  This restriction makes it convenient because each shader invocation would output a
+// separate uint value.
+
+#version 450 core
+
+#extension GL_EXT_samplerless_texture_functions : require
+
+#define MAKE_SRC_RESOURCE(prefix, type) prefix ## type
+
+#if SrcIsFloat
+#define SRC_RESOURCE(type) type
+#define SrcType vec4
+#else
+#error "Not all source formats are accounted for"
+#endif
+
+#if SrcIs2D
+#define SRC_RESOURCE_NAME texture2D
+#elif SrcIs3D
+#define SRC_RESOURCE_NAME texture3D
+#else
+#error "Not all source types are accounted for"
+#endif
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform SRC_RESOURCE(SRC_RESOURCE_NAME) src;
+
+layout (set = 0, binding = 1) buffer dst
+{
+    uint destData[];
+};
+
+layout (push_constant) uniform PushConstants
+{
+    // Source image to read from
+    uvec2 srcOffset;
+    int srcDepth;
+    // Whether readback should be done in inverse row order
+    bool reverseRowOrder;
+
+    // Width and height of the copy
+    uvec2 size;
+    // Offset into destData to write to in uints
+    uint outputOffset;
+    // Output pitch in uints (number of uints per row)
+    uint outputPitch;
+    // Whether the output is snorm or unorm
+    bool isDstSnorm;
+} params;
+
+SrcType getSourceValue()
+{
+    uvec2 coord = gl_GlobalInvocationID.xy;
+    if (params.reverseRowOrder)
+    {
+        coord.y = params.size.y - coord.y - 1;
+    }
+    coord += params.srcOffset;
+
+#if SrcIs2D
+    SrcType srcValue = texelFetch(src, ivec2(coord), 0);
+#elif SrcIs3D
+    SrcType srcValue = texelFetch(src, ivec3(coord, params.srcDepth), 0);
+#else
+#error "Not all source types are accounted for"
+#endif
+
+    return srcValue;
+}
+
+uint convertToDestValue(SrcType srcValue)
+{
+#if SrcIsFloat
+    uvec4 normalized;
+    if (params.isDstSnorm)
+    {
+        ivec4 scaled = ivec4(srcValue * 127.0);
+        normalized = uvec4(scaled);
+    }
+    else
+    {
+        normalized = uvec4(clamp(srcValue, 0.0, 1.0) * 255.0);
+    }
+
+    normalized &= 0xFF;
+
+    return normalized.r | normalized.g << 8 | normalized.b << 16 | normalized.a << 24;
+#else
+#error "Not all source formats are accounted for"
+#endif
+}
+
+void outputDestValue(uint destValue)
+{
+    uint offset = params.outputOffset + params.outputPitch * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
+    destData[offset] = destValue;
+}
+
+void main()
+{
+    if (any(greaterThanEqual(gl_GlobalInvocationID.xy, params.size)))
+        return;
+
+    SrcType srcValue = getSourceValue();
+    uint destValue = convertToDestValue(srcValue);
+    outputDestValue(destValue);
+}

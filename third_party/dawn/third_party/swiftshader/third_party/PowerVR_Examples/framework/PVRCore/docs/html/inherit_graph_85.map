@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structpvr_1_1_texture_header.html" title="A class mirroring the PVR Texture container format header, and which can in general represent any Tex..." alt="" coords="5,5,152,32"/>
+<area shape="rect" id="node2" href="$classpvr_1_1_texture.html" title="A 2D Texture asset, together with Information, Metadata and actual Pixel data. Only represents the ac..." alt="" coords="200,5,299,32"/>
+</map>

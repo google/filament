@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ThreadSlice = tr.model.ThreadSlice;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const newFakeThread = tr.c.TestUtils.newFakeThread;
+
+  test('getOverlappingSamples', function() {
+    const model = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+      const node = tr.c.TestUtils.newProfileNodes(m, ['fake']);
+      m.samples.push(
+          new tr.model.Sample(1, 'a_1', node, m.t2),
+          new tr.model.Sample(2, 'a_2', node, m.t2),
+          new tr.model.Sample(3, 'a_3', node, m.t2),
+          new tr.model.Sample(5, 'b', node, m.t2)
+      );
+    });
+    const threadSlice = newSliceEx({title: 'a', start: 0, end: 4,
+      type: tr.model.ThreadSlice});
+    threadSlice.parentContainer = model;
+    const samplesIter = threadSlice.overlappingSamples[Symbol.iterator]();
+    assert.strictEqual(samplesIter.next().value.title, 'a_1');
+    assert.strictEqual(samplesIter.next().value.title, 'a_2');
+    assert.strictEqual(samplesIter.next().value.title, 'a_3');
+    assert.strictEqual(samplesIter.next().done, true);
+  });
+});
+</script>

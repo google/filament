@@ -1,0 +1,284 @@
+//===- subzero/src/IceInstX8664.def - X-macros for x86-64 insts -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of lowered x86-64 instructions in the
+// form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICEINSTX8664_DEF
+#define SUBZERO_SRC_ICEINSTX8664_DEF
+
+#include "IceRegList.h"
+
+// System V AMD64 ABI:
+//   Scratch GPRs: rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11
+//   Callee-save GPRs: rbx, rbp, r12, r13, r14, r15
+//   Scratch XMMs: xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
+//                 xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+// Microsoft x86-64 ABI:
+//   Scratch GPRs: rax, rcx, rdx, r8, r9, r10, r11
+//   Callee-save GPRs: rbx, rbp, rsi, rdi, r12, r13, r14, r15
+//   Scratch XMMs: xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+//   Callee-save XMMs: xmm6-xmm15
+//   Scratch registers are listed first, followed by preserved registers, so
+//   that the register allocator will favor scratch registers.
+// Key to table columns:
+//   val: Enum value, when a specific register is needed during lowering.
+//   encode: Encoding in the integrated assembler.
+//   name: Name used for the external assembler.
+//   scratch: Scratch (caller-save) register.
+//   preserved: Preserved (callee-save) register.
+//   stackptr: This register is used as the stack pointer.
+//   frameptr: This register is used as the frame pointer if needed.
+//   sboxres: This register is reserved in sandboxing.
+//   isGPR: This is a GPR (integer-type).
+//   is64: This is a 64-bit GPR.
+//   is32: This is a 32-bit GPR.
+//   is16: This is a 16-bit GPR.
+//   is8: This is an 8-bit GPR.
+//   isXmm: This is an XMM register for FP and vector ops.
+//   is64To8: A 64-bit GPR truncable to 8-bit.
+//   is32To8: A 32-bit GPR truncable to 8-bit.
+//   is16To8: A 16-bit GPR truncable to 8-bit.
+//   isTrunc8Rcvr: An 8-bit GPR that a wider GPR trivially truncates to.
+//   isAhRcvr: An 8-bit GPR that register "ah" can be assigned to.
+//   aliases: List of register aliases, which need not include this register.
+#define REGX8664_BYTEREG_TABLE2(U, W)                                          \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,sboxres,     \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* 8-bit registers */                                                        \
+  X(Reg_al,    0, "al",   Reg_rax, 1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,         \
+    REGLIST3(RegX8664, rax, eax, ax))                                          \
+  X(Reg_cl,    1, "cl",   Reg_rcx, 1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,         \
+    REGLIST3(RegX8664, rcx, ecx, cx))                                          \
+  X(Reg_dl,    2, "dl",   Reg_rdx, 1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,         \
+    REGLIST3(RegX8664, rdx, edx, dx))                                          \
+  X(Reg_r8l,   8, "r8b",  Reg_r8,  1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r8, r8d, r8w))                                          \
+  X(Reg_r9l,   9, "r9b",  Reg_r9,  1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r9, r9d, r9w))                                          \
+  X(Reg_r10l, 10, "r10b", Reg_r10, 1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r10, r10d, r10w))                                       \
+  X(Reg_r11l, 11, "r11b", Reg_r11, 1,0,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r11, r11d, r11w))                                       \
+  X(Reg_sil,   6, "sil",  Reg_rsi, U,W,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, rsi, esi, si))                                          \
+  X(Reg_dil,   7, "dil",  Reg_rdi, U,W,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, rdi, edi, di))                                          \
+  X(Reg_bl,    3, "bl",   Reg_rbx, 0,1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,         \
+    REGLIST3(RegX8664, rbx, ebx, bx))                                          \
+  X(Reg_spl,   4, "spl",  Reg_rsp, 0,0,1,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,         \
+    REGLIST3(RegX8664, rsp, esp, sp))                                          \
+  X(Reg_bpl,   5, "bpl",  Reg_rbp, 0,1,0,1,1, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, rbp, ebp, bp))                                          \
+  X(Reg_r12l, 12, "r12b", Reg_r12, 0,1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r12, r12d, r12w))                                       \
+  X(Reg_r13l, 13, "r13b", Reg_r13, 0,1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r13, r13d, r13w))                                       \
+  X(Reg_r14l, 14, "r14b", Reg_r14, 0,1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r14, r14d, r14w))                                       \
+  X(Reg_r15l, 15, "r15b", Reg_r15, 0,1,0,0,1, 1,0,0,0,1, 0, 0,0,0,1,0,         \
+    REGLIST3(RegX8664, r15, r15d, r15w))                                       \
+  /* High 8-bit registers.  None are allowed for register allocation. */       \
+  X(Reg_ah, 4, "ah", Reg_rax, 1,0,0,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,              \
+    REGLIST3(RegX8664, rax, eax, ax))                                          \
+  X(Reg_ch, 5, "ch", Reg_rcx, 1,0,0,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,              \
+    REGLIST3(RegX8664, rcx, ecx, cx))                                          \
+  X(Reg_dh, 6, "dh", Reg_rdx, 1,0,0,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,              \
+    REGLIST3(RegX8664, rdx, edx, dx))                                          \
+  X(Reg_bh, 7, "bh", Reg_rbx, 0,1,0,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,              \
+    REGLIST3(RegX8664, rbx, ebx, bx))                                          \
+  /* End of 8-bit register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          sboxres, isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8,
+//          is16To8, isTrunc8Rcvr, isAhRcvr, aliases)
+
+#define REGX8664_GPR_TABLE2(U, W)                                              \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,             \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* 64-bit registers */                                                       \
+  X(Reg_rax, 0,  "rax", Reg_rax, 1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST4(RegX8664, eax, ax, al, ah))                                       \
+  X(Reg_rcx, 1,  "rcx", Reg_rcx, 1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST4(RegX8664, ecx, cx, cl, ch))                                       \
+  X(Reg_rdx, 2,  "rdx", Reg_rdx, 1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST4(RegX8664, edx, dx, dl, dh))                                       \
+  X(Reg_r8,  8,  "r8",  Reg_r8,  1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r8d, r8w, r8l))                                         \
+  X(Reg_r9,  9,  "r9",  Reg_r9,  1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r9d, r9w, r9l))                                         \
+  X(Reg_r10, 10, "r10", Reg_r10, 1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r10d, r10w, r10l))                                      \
+  X(Reg_r11, 11, "r11", Reg_r11, 1,0,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r11d, r11w, r11l))                                      \
+  X(Reg_rsi, 6,  "rsi", Reg_rsi, U,W,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, esi, si, sil))                                          \
+  X(Reg_rdi, 7,  "rdi", Reg_rdi, U,W,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, edi, di, dil))                                          \
+  X(Reg_rbx, 3,  "rbx", Reg_rbx, 0,1,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST4(RegX8664, ebx, bx, bl, bh))                                       \
+  X(Reg_rsp, 4,  "rsp", Reg_rsp, 0,0,1,0,0, 1,0,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, esp, sp, spl))                                          \
+  X(Reg_rbp, 5,  "rbp", Reg_rbp, 0,1,0,1,1, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, ebp, bp, bpl))                                          \
+  X(Reg_r12, 12, "r12", Reg_r12, 0,1,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r12d, r12w, r12l))                                      \
+  X(Reg_r13, 13, "r13", Reg_r13, 0,1,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r13d, r13w, r13l))                                      \
+  X(Reg_r14, 14, "r14", Reg_r14, 0,1,0,0,0, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r14d, r14w, r14l))                                      \
+  X(Reg_r15, 15, "r15", Reg_r15, 0,1,0,0,1, 1,1,0,0,0, 0, 1,0,0,0,0,           \
+    REGLIST3(RegX8664, r15d, r15w, r15l))                                      \
+  /* 32-bit registers */                                                       \
+  X(Reg_eax,   0, "eax",  Reg_rax, 1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST4(RegX8664, rax, ax, al, ah))                                       \
+  X(Reg_ecx,   1, "ecx",  Reg_rcx, 1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST4(RegX8664, rcx, cx, cl, ch))                                       \
+  X(Reg_edx,   2, "edx",  Reg_rdx, 1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST4(RegX8664, rdx, dx, dl, dh))                                       \
+  X(Reg_r8d,   8, "r8d",  Reg_r8,  1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r8, r8w, r8l))                                          \
+  X(Reg_r9d,   9, "r9d",  Reg_r9,  1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r9, r9w, r9l))                                          \
+  X(Reg_r10d, 10, "r10d", Reg_r10, 1,0,0,1,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r10, r10w, r10l))                                       \
+  X(Reg_r11d, 11, "r11d", Reg_r11, 1,0,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r11, r11w, r11l))                                       \
+  X(Reg_esi,   6, "esi",  Reg_rsi, U,W,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, rsi, si, sil))                                          \
+  X(Reg_edi,   7, "edi",  Reg_rdi, U,W,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, rdi, di, dil))                                          \
+  X(Reg_ebx,   3, "ebx",  Reg_rbx, 0,1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST4(RegX8664, rbx, bx, bl, bh))                                       \
+  X(Reg_esp,   4, "esp",  Reg_rsp, 0,0,1,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,         \
+    REGLIST3(RegX8664, rsp, sp, spl))                                          \
+  X(Reg_ebp,   5, "ebp",  Reg_rbp, 0,1,0,1,1, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, rbp, bp, bpl))                                          \
+  X(Reg_r12d, 12, "r12d", Reg_r12, 0,1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r12, r12w, r12l))                                       \
+  X(Reg_r13d, 13, "r13d", Reg_r13, 0,1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r13, r13w, r13l))                                       \
+  X(Reg_r14d, 14, "r14d", Reg_r14, 0,1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r14, r14w, r14l))                                       \
+  X(Reg_r15d, 15, "r15d", Reg_r15, 0,1,0,0,1, 1,0,1,0,0, 0, 0,1,0,0,0,         \
+    REGLIST3(RegX8664, r15, r15w, r15l))                                       \
+  /* 16-bit registers */                                                       \
+  X(Reg_ax,    0, "ax",   Reg_rax, 1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST4(RegX8664, rax, eax, al, ah))                                      \
+  X(Reg_cx,    1, "cx",   Reg_rcx, 1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST4(RegX8664, rcx, ecx, cl, ch))                                      \
+  X(Reg_dx,    2, "dx",   Reg_rdx, 1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST4(RegX8664, rdx, edx, dl, dh))                                      \
+  X(Reg_r8w,   8, "r8w",  Reg_r8,  1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r8, r8d, r8l))                                          \
+  X(Reg_r9w,   9, "r9w",  Reg_r9,  1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r9, r9d, r9l))                                          \
+  X(Reg_r10w, 10, "r10w", Reg_r10, 1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r10, r10d, r10l))                                       \
+  X(Reg_r11w, 11, "r11w", Reg_r11, 1,0,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r11, r11d, r11l))                                       \
+  X(Reg_si,    6, "si",   Reg_rsi, U,W,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, rsi, esi, sil))                                         \
+  X(Reg_di,    7, "di",   Reg_rdi, U,W,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, rdi, edi, dil))                                         \
+  X(Reg_bx,    3, "bx",   Reg_rbx, 0,1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST4(RegX8664, rbx, ebx, bl, bh))                                      \
+  X(Reg_sp,    4, "sp",   Reg_rsp, 0,0,1,0,0, 1,0,0,0,0, 0, 0,0,0,0,0,         \
+    REGLIST3(RegX8664, rsp, esp, spl))                                         \
+  X(Reg_bp,    5, "bp",   Reg_rbp, 0,1,0,1,1, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, rbp, ebp, bpl))                                         \
+  X(Reg_r12w, 12, "r12w", Reg_r12, 0,1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r12, r12d, r12l))                                       \
+  X(Reg_r13w, 13, "r13w", Reg_r13, 0,1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r13, r13d, r13l))                                       \
+  X(Reg_r14w, 14, "r14w", Reg_r14, 0,1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r14, r14d, r14l))                                       \
+  X(Reg_r15w, 15, "r15w", Reg_r15, 0,1,0,0,1, 1,0,0,1,0, 0, 0,0,1,0,0,         \
+    REGLIST3(RegX8664, r15, r15d, r15l))                                       \
+  /* 8-bit registers */                                                        \
+  REGX8664_BYTEREG_TABLE                                                       \
+  /* End of GPR register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          sboxres, isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8,
+//          is16To8, isTrunc8Rcvr, isAhRcvr, aliases)
+
+#if defined(_WIN64)  // Microsoft x86-64 ABI
+#define REGX8664_BYTEREG_TABLE REGX8664_BYTEREG_TABLE2(0, 1)
+#define REGX8664_GPR_TABLE REGX8664_GPR_TABLE2(0, 1)
+#else  // System V AMD64 ABI
+#define REGX8664_BYTEREG_TABLE REGX8664_BYTEREG_TABLE2(1, 0)
+#define REGX8664_GPR_TABLE REGX8664_GPR_TABLE2(1, 0)
+#endif
+
+// Note: It would be more appropriate to list the xmm register aliases as
+// REGLIST0(), but the corresponding empty initializer gives a syntax error, so
+// we use REGLIST1() to redundantly assign the register itself as an alias.
+#define REGX8664_XMM_TABLE2(U, W)                                              \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,sboxres,     \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* xmm registers */                                                          \
+  X(Reg_xmm0,   0, "xmm0",  Reg_xmm0,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm1,   1, "xmm1",  Reg_xmm1,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm2,   2, "xmm2",  Reg_xmm2,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm3,   3, "xmm3",  Reg_xmm3,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm4,   4, "xmm4",  Reg_xmm4,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm5,   5, "xmm5",  Reg_xmm5,  1,0,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm6,   6, "xmm6",  Reg_xmm6,  U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm7,   7, "xmm7",  Reg_xmm7,  U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm8,   8, "xmm8",  Reg_xmm8,  U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm9,   9, "xmm9",  Reg_xmm9,  U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm10, 10, "xmm10", Reg_xmm10, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm11, 11, "xmm11", Reg_xmm11, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm12, 12, "xmm12", Reg_xmm12, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm13, 13, "xmm13", Reg_xmm13, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm14, 14, "xmm14", Reg_xmm14, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm15, 15, "xmm15", Reg_xmm15, U,W,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,     \
+    NO_ALIASES())                                                              \
+  /* End of xmm register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          sboxres, isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8,
+//          is16To8, isTrunc8Rcvr, isAhRcvr, aliases)
+
+#if defined(_WIN64)  // Microsoft x86-64 ABI
+#define REGX8664_XMM_TABLE REGX8664_XMM_TABLE2(0, 1)
+#else  // System V AMD64 ABI
+#define REGX8664_XMM_TABLE REGX8664_XMM_TABLE2(1, 0)
+#endif
+
+// We also provide a combined table, so that there is a namespace where
+// all of the registers are considered and have distinct numberings.
+// This is in contrast to the above, where the "encode" is based on how
+// the register numbers will be encoded in binaries and values can overlap.
+#define REGX8664_TABLE                                                         \
+  REGX8664_GPR_TABLE                                                           \
+  REGX8664_XMM_TABLE
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          sboxres, isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8,
+//          is16To8, isTrunc8Rcvr, isAhRcvr, aliases)
+
+#endif // SUBZERO_SRC_ICEINSTX8664_DEF

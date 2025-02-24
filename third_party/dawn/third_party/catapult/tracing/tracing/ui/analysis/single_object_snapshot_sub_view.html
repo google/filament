@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+<link rel="import" href="/tracing/ui/analysis/object_instance_view.html">
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_event_sub_view.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-single-object-snapshot-sub-view'>
+  <template>
+    <style>
+    #args {
+      white-space: pre;
+    }
+
+    :host {
+      overflow: auto;
+      display: flex;
+    }
+
+    ::content * {
+      -webkit-user-select: text;
+    }
+
+    ::content .title {
+      border-bottom: 1px solid rgb(128, 128, 128);
+      font-size: 110%;
+      font-weight: bold;
+    }
+
+    ::content td, th {
+      font-family: monospace;
+      vertical-align: top;
+    }
+    </style>
+    <slot></slot>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-object-snapshot-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.currentSelection_ = undefined;
+  },
+
+  get requiresTallView() {
+    if (this.children.length === 0) {
+      return false;
+    }
+    if (this.children[0] instanceof tr.ui.analysis.ObjectSnapshotView) {
+      return this.children[0].requiresTallView;
+    }
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    const snapshot = tr.b.getOnlyElement(selection);
+    if (!(snapshot instanceof tr.model.ObjectSnapshot)) {
+      throw new Error('Only supports object instances');
+    }
+
+    Polymer.dom(this).textContent = '';
+    this.currentSelection_ = selection;
+
+    const typeInfo = tr.ui.analysis.ObjectSnapshotView.getTypeInfo(
+        snapshot.objectInstance.category, snapshot.objectInstance.typeName);
+    if (typeInfo) {
+      const customView = new typeInfo.constructor();
+      Polymer.dom(this).appendChild(customView);
+      customView.modelEvent = snapshot;
+    } else {
+      this.appendGenericAnalysis_(snapshot);
+    }
+  },
+
+  appendGenericAnalysis_(snapshot) {
+    const instance = snapshot.objectInstance;
+
+    Polymer.dom(this).textContent = '';
+
+    const titleEl = document.createElement('div');
+    Polymer.dom(titleEl).classList.add('title');
+    Polymer.dom(titleEl).appendChild(document.createTextNode('Snapshot of '));
+    Polymer.dom(this).appendChild(titleEl);
+
+    const instanceLinkEl = document.createElement('tr-ui-a-analysis-link');
+    instanceLinkEl.selection = new tr.model.EventSet(instance);
+    Polymer.dom(titleEl).appendChild(instanceLinkEl);
+
+    Polymer.dom(titleEl).appendChild(document.createTextNode(' @ '));
+
+    Polymer.dom(titleEl).appendChild(tr.v.ui.createScalarSpan(snapshot.ts, {
+      unit: tr.b.Unit.byName.timeStampInMs,
+      ownerDocument: this.ownerDocument,
+      inline: true,
+    }));
+
+    const tableEl = document.createElement('table');
+    Polymer.dom(this).appendChild(tableEl);
+
+    const rowEl = document.createElement('tr');
+    Polymer.dom(tableEl).appendChild(rowEl);
+
+    const labelEl = document.createElement('td');
+    Polymer.dom(labelEl).textContent = 'args:';
+    Polymer.dom(rowEl).appendChild(labelEl);
+
+    const argsEl = document.createElement('td');
+    argsEl.id = 'args';
+    Polymer.dom(rowEl).appendChild(argsEl);
+
+    const objectViewEl = document.createElement('tr-ui-a-generic-object-view');
+    objectViewEl.object = snapshot.args;
+    Polymer.dom(argsEl).appendChild(objectViewEl);
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-object-snapshot-sub-view',
+    tr.model.ObjectSnapshot,
+    {
+      multi: false,
+      title: 'Object Snapshot',
+    });
+</script>

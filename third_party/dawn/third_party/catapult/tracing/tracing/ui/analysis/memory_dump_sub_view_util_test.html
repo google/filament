@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TitleColumn = tr.ui.analysis.TitleColumn;
+  const MemoryColumn = tr.ui.analysis.MemoryColumn;
+  const AggregationMode = MemoryColumn.AggregationMode;
+  const StringMemoryColumn = tr.ui.analysis.StringMemoryColumn;
+  const NumericMemoryColumn = tr.ui.analysis.NumericMemoryColumn;
+  const MemoryCell = tr.ui.analysis.MemoryCell;
+  const expandTableRowsRecursively = tr.ui.analysis.expandTableRowsRecursively;
+  const aggregateTableRowCells = tr.ui.analysis.aggregateTableRowCells;
+  const aggregateTableRowCellsRecursively =
+      tr.ui.analysis.aggregateTableRowCellsRecursively;
+  const Scalar = tr.b.Scalar;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+  const checkSizeNumericFields = tr.ui.analysis.checkSizeNumericFields;
+  const checkNumericFields = tr.ui.analysis.checkNumericFields;
+  const checkStringFields = tr.ui.analysis.checkStringFields;
+  const createCells = tr.ui.analysis.createCells;
+  const createWarningInfo = tr.ui.analysis.createWarningInfo;
+
+  function checkPercent(string, expectedPercent) {
+    assert.strictEqual(Number(string.slice(0, -1)), expectedPercent);
+    assert.strictEqual(string.slice(-1), '%');
+  }
+
+  function checkMemoryColumnFieldFormat(test, column, fields,
+      expectedTextContent, opt_expectedColor) {
+    const value = column.formatMultipleFields(fields);
+    if (expectedTextContent === undefined) {
+      assert.strictEqual(value, '');
+      assert.isUndefined(opt_expectedColor);  // Test sanity check.
+      return;
+    }
+
+    const node = tr.ui.b.asHTMLOrTextNode(value);
+    const spanEl = document.createElement('span');
+    Polymer.dom(spanEl).appendChild(node);
+    test.addHTMLOutput(spanEl);
+
+    assert.strictEqual(Polymer.dom(node).textContent, expectedTextContent);
+    if (opt_expectedColor === undefined) {
+      assert.notInstanceOf(node, HTMLElement);
+    } else {
+      assert.strictEqual(node.style.color, opt_expectedColor);
+    }
+  }
+
+  function checkCompareFieldsEqual(column, fieldValuesA, fieldValuesB) {
+    assert.strictEqual(column.compareFields(fieldValuesA, fieldValuesB), 0);
+  }
+
+  function checkCompareFieldsLess(column, fieldValuesA, fieldValuesB) {
+    assert.isBelow(column.compareFields(fieldValuesA, fieldValuesB), 0);
+    assert.isAbove(column.compareFields(fieldValuesB, fieldValuesA), 0);
+  }
+
+  function checkNumericMemoryColumnFieldFormat(test, column, fieldValues, unit,
+      expectedValue) {
+    const value = column.formatMultipleFields(
+        buildScalarCell(unit, fieldValues).fields);
+    if (expectedValue === undefined) {
+      assert.strictEqual(value, '');
+      assert.isUndefined(expectedUnits);  // Test sanity check.
+      return;
+    }
+
+    test.addHTMLOutput(value);
+    assert.strictEqual(value.tagName, 'TR-V-UI-SCALAR-SPAN');
+    assert.strictEqual(value.value, expectedValue);
+    assert.strictEqual(value.unit, unit);
+  }
+
+  function buildScalarCell(unit, values) {
+    return new MemoryCell(values.map(function(value) {
+      if (value === undefined) return undefined;
+      return new Scalar(unit, value);
+    }));
+  }
+
+  function buildTestRows() {
+    return [
+      {
+        title: 'Row 1',
+        fields: {
+          'cpu_temperature': new MemoryCell(['below zero', 'absolute zero'])
+        },
+        subRows: [
+          {
+            title: 'Row 1A',
+            fields: {
+              'page_size': buildScalarCell(sizeInBytes_smallerIsBetter,
+                  [1024, 1025])
+            }
+          },
+          {
+            title: 'Row 1B',
+            fields: {
+              'page_size': buildScalarCell(sizeInBytes_smallerIsBetter,
+                  [512, 513]),
+              'mixed': new MemoryCell(['0.01', '0.10']),
+              'mixed2': new MemoryCell([
+                new Scalar(tr.b.Unit.byName.powerInWatts, 2.43e18),
+                new Scalar(tr.b.Unit.byName.powerInWatts, 0.5433)
+              ])
+            }
+          }
+        ]
+      },
+      {
+        title: 'Row 2',
+        fields: {
+          'cpu_temperature': undefined,
+          'mixed': buildScalarCell(tr.b.Unit.byName.timeDurationInMs,
+              [0.99, 0.999])
+        }
+      }
+    ];
+  }
+
+  function checkCellValue(
+      test, value, expectedText, expectedColor, opt_expectedInfos) {
+    const expectedInfos = opt_expectedInfos || [];
+    assert.lengthOf(Polymer.dom(value).childNodes, 1 + expectedInfos.length);
+    assert.strictEqual(value.style.color, expectedColor);
+    if (typeof expectedText === 'string') {
+      assert.strictEqual(
+          Polymer.dom(Polymer.dom(value).childNodes[0]).textContent,
+          expectedText);
+    } else {
+      expectedText(Polymer.dom(value).childNodes[0]);
+    }
+    for (let i = 0; i < expectedInfos.length; i++) {
+      const expectedInfo = expectedInfos[i];
+      const infoEl = Polymer.dom(value).childNodes[i + 1];
+      assert.strictEqual(Polymer.dom(infoEl).textContent, expectedInfo.icon);
+      assert.strictEqual(infoEl.title, expectedInfo.message);
+      assert.strictEqual(infoEl.style.color, expectedInfo.color || '');
+    }
+    test.addHTMLOutput(value);
+  }
+
+  function sizeSpanMatcher(
+      expectedValue, opt_expectedIsDelta, opt_expectedContext) {
+    return function(element) {
+      assert.strictEqual(element.tagName, 'TR-V-UI-SCALAR-SPAN');
+      assert.strictEqual(element.value, expectedValue);
+      assert.strictEqual(element.unit, opt_expectedIsDelta ?
+        tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter :
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter);
+      assert.deepEqual(element.context, opt_expectedContext);
+    };
+  }
+
+  test('checkTitleColumn_value', function() {
+    const column = new TitleColumn('column_title');
+    assert.strictEqual(column.title, 'column_title');
+    assert.isFalse(column.supportsCellSelection);
+
+    let row = {title: 'undefined', contexts: undefined};
+    assert.strictEqual(column.formatTitle(row), 'undefined');
+    assert.strictEqual(column.value(row), 'undefined');
+
+    row = {title: 'constant', contexts: [{}, {}, {}, {}]};
+    assert.strictEqual(column.formatTitle(row), 'constant');
+    assert.strictEqual(column.value(row), 'constant');
+
+    row = {title: 'added', contexts: [undefined, undefined, undefined, {}]};
+    assert.strictEqual(column.formatTitle(row), 'added');
+    let value = column.value(row);
+    assert.strictEqual(Polymer.dom(value).textContent, '+++\u00A0added');
+    assert.strictEqual(value.style.color, 'red');
+
+    row = {title: 'removed', contexts: [true, true, undefined, undefined]};
+    assert.strictEqual(column.formatTitle(row), 'removed');
+    value = column.value(row);
+    assert.strictEqual(Polymer.dom(value).textContent, '---\u00A0removed');
+    assert.strictEqual(value.style.color, 'green');
+
+    row = {title: 'flaky', contexts: [true, undefined, true, true]};
+    assert.strictEqual(column.formatTitle(row), 'flaky');
+    value = column.value(row);
+    assert.strictEqual(Polymer.dom(value).textContent, 'flaky');
+    assert.strictEqual(value.style.color, 'purple');
+
+    row = {title: 'added-flaky', contexts: [undefined, {}, undefined, true]};
+    assert.strictEqual(column.formatTitle(row), 'added-flaky');
+    value = column.value(row);
+    assert.strictEqual(Polymer.dom(value).textContent, '+++\u00A0added-flaky');
+    assert.strictEqual(value.style.color, 'purple');
+
+    row = {title: 'removed-flaky', contexts: [true, undefined, {}, undefined]};
+    assert.strictEqual(column.formatTitle(row), 'removed-flaky');
+    value = column.value(row);
+    assert.strictEqual(
+        Polymer.dom(value).textContent, '---\u00A0removed-flaky');
+    assert.strictEqual(value.style.color, 'purple');
+  });
+
+  test('checkTitleColumn_cmp', function() {
+    const column = new TitleColumn('column_title');
+
+    assert.isBelow(column.cmp({title: 'a'}, {title: 'b'}), 0);
+    assert.strictEqual(column.cmp({title: 'cc'}, {title: 'cc'}), 0);
+    assert.isAbove(column.cmp({title: '10'}, {title: '2'}), 0);
+  });
+
+  test('checkMemoryColumn_fromRows', function() {
+    function MockColumn0() {
+      MemoryColumn.apply(this, arguments);
+    }
+    MockColumn0.prototype = {
+      __proto__: MemoryColumn.prototype,
+      get title() { return 'MockColumn0'; }
+    };
+
+    function MockColumn1() {
+      MemoryColumn.apply(this, arguments);
+    }
+    MockColumn1.prototype = {
+      __proto__: MemoryColumn.prototype,
+      get title() { return 'MockColumn1'; }
+    };
+
+    function MockColumn2() {
+      MemoryColumn.apply(this, arguments);
+    }
+    MockColumn2.prototype = {
+      __proto__: MemoryColumn.prototype,
+      get title() { return 'MockColumn2'; }
+    };
+
+    const rules = [
+      {
+        condition: /size/,
+        importance: 10,
+        columnConstructor: MockColumn0
+      },
+      {
+        condition: 'cpu_temperature',
+        importance: 0,
+        columnConstructor: MockColumn1
+      },
+      {
+        condition: 'unmatched',
+        importance: -1,
+        get columnConstructor() {
+          throw new Error('The constructor should never be retrieved');
+        }
+      },
+      {
+        importance: 1,
+        columnConstructor: MockColumn2
+      }
+    ];
+
+    const rows = buildTestRows();
+    const columns = MemoryColumn.fromRows(rows, {
+      cellKey: 'fields',
+      aggregationMode: AggregationMode.MAX,
+      rules,
+      shouldSetContextGroup: true
+    });
+    assert.lengthOf(columns, 4);
+
+    const pageSizeColumn = columns[0];
+    assert.strictEqual(pageSizeColumn.name, 'page_size');
+    assert.strictEqual(pageSizeColumn.title, 'MockColumn0');
+    assert.strictEqual(pageSizeColumn.aggregationMode, AggregationMode.MAX);
+    assert.strictEqual(pageSizeColumn.cell({fields: {page_size: 'large'}}),
+        'large');
+    assert.isTrue(pageSizeColumn.shouldSetContextGroup);
+    assert.instanceOf(pageSizeColumn, MockColumn0);
+
+    const mixedColumn = columns[1];
+    assert.strictEqual(mixedColumn.name, 'mixed');
+    assert.strictEqual(mixedColumn.title, 'MockColumn2');
+    assert.strictEqual(mixedColumn.aggregationMode, AggregationMode.MAX);
+    assert.strictEqual(mixedColumn.cell({fields: {mixed: 89}}), 89);
+    assert.isTrue(mixedColumn.shouldSetContextGroup);
+    assert.instanceOf(mixedColumn, MockColumn2);
+
+    const mixed2Column = columns[2];
+    assert.strictEqual(mixed2Column.name, 'mixed2');
+    assert.strictEqual(mixed2Column.title, 'MockColumn2');
+    assert.strictEqual(mixed2Column.aggregationMode, AggregationMode.MAX);
+    assert.strictEqual(mixed2Column.cell({fields: {mixed2: 'invalid'}}),
+        'invalid');
+    assert.isTrue(mixed2Column.shouldSetContextGroup);
+    assert.instanceOf(mixed2Column, MockColumn2);
+
+    const cpuTemperatureColumn = columns[3];
+    assert.strictEqual(cpuTemperatureColumn.name, 'cpu_temperature');
+    assert.strictEqual(cpuTemperatureColumn.title, 'MockColumn1');
+    assert.strictEqual(cpuTemperatureColumn.aggregationMode,
+        AggregationMode.MAX);
+    assert.strictEqual(
+        cpuTemperatureColumn.cell({fields: {cpu_temperature: 42}}), 42);
+    assert.isTrue(cpuTemperatureColumn.shouldSetContextGroup);
+    assert.instanceOf(cpuTemperatureColumn, MockColumn1);
+  });
+
+  test('checkMemoryColumn_spaceEqually', function() {
+    // Zero columns.
+    let columns = [];
+    MemoryColumn.spaceEqually(columns);
+
+    // One column.
+    columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; }
+      }
+    ];
+    MemoryColumn.spaceEqually(columns);
+    checkPercent(columns[0].width, 100);
+
+    // Two columns.
+    columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; }
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.firstData; }
+      }
+    ];
+    MemoryColumn.spaceEqually(columns);
+    checkPercent(columns[0].width, 50);
+    checkPercent(columns[1].width, 50);
+  });
+
+  test('checkMemoryColumn_instantiate', function() {
+    const c = new MemoryColumn('test_column', ['x'], AggregationMode.MAX);
+    assert.strictEqual(c.name, 'test_column');
+    assert.strictEqual(c.title, 'test_column');
+    assert.strictEqual(c.cell({x: 95}), 95);
+    assert.isUndefined(c.width);
+    assert.isUndefined(c.color());
+  });
+
+  test('checkMemoryColumn_cell', function() {
+    const c = new MemoryColumn('test_column', ['a', 'b'], AggregationMode.MAX);
+    const cell = new MemoryCell(undefined);
+
+    assert.isUndefined(c.cell(undefined));
+    assert.isUndefined(c.cell({b: cell}));
+    assert.isUndefined(c.cell({a: {c: cell}}));
+    assert.strictEqual(c.cell({a: {b: cell, c: 42}}), cell);
+  });
+
+  test('checkMemoryColumn_fields', function() {
+    const c = new MemoryColumn('test_column', ['x'],
+        AggregationMode.MAX);
+
+    // Undefined cell or field inside cell.
+    assert.isUndefined(c.fields({}));
+    assert.isUndefined(c.fields({x: new MemoryCell(undefined)}));
+
+    // Defined field(s) inside cell.
+    const field1 = new Scalar(tr.b.Unit.byName.powerInWatts, 1013.25);
+    const field2 = new Scalar(tr.b.Unit.byName.powerInWatts, 1065);
+    const row1 = {x: new MemoryCell([field1])};
+    const row2 = {x: new MemoryCell([field1, field2])};
+    assert.deepEqual(c.fields(row1), [field1]);
+    assert.deepEqual(c.fields(row2), [field1, field2]);
+  });
+
+  test('checkMemoryColumn_hasAllRelevantFieldsUndefined', function() {
+    // Single field.
+    const c1 = new MemoryColumn('single_column', ['x'],
+        undefined /* aggregation mode */);
+    assert.isTrue(c1.hasAllRelevantFieldsUndefined([undefined]));
+    assert.isFalse(c1.hasAllRelevantFieldsUndefined(
+        [new Scalar(sizeInBytes_smallerIsBetter, 16)]));
+
+    // Multiple fields, diff aggregation mode.
+    const c2 = new MemoryColumn('diff_column', ['x'],
+        AggregationMode.DIFF);
+    assert.isTrue(c2.hasAllRelevantFieldsUndefined([undefined, undefined]));
+    assert.isTrue(c2.hasAllRelevantFieldsUndefined(
+        [undefined, undefined, undefined]));
+    assert.isTrue(c2.hasAllRelevantFieldsUndefined(
+        [undefined, new Scalar(sizeInBytes_smallerIsBetter, 16), undefined]));
+    assert.isFalse(c2.hasAllRelevantFieldsUndefined(
+        [undefined, new Scalar(sizeInBytes_smallerIsBetter, 32)]));
+    assert.isFalse(c2.hasAllRelevantFieldsUndefined(
+        [new Scalar(sizeInBytes_smallerIsBetter, 32), undefined, undefined]));
+    assert.isFalse(c2.hasAllRelevantFieldsUndefined([
+      new Scalar(sizeInBytes_smallerIsBetter, 16),
+      undefined,
+      new Scalar(sizeInBytes_smallerIsBetter, 32)
+    ]));
+
+    // Multiple fields, max aggregation mode.
+    const c3 = new MemoryColumn('max_column', ['x'],
+        AggregationMode.MAX);
+    assert.isTrue(c3.hasAllRelevantFieldsUndefined([undefined, undefined]));
+    assert.isTrue(c3.hasAllRelevantFieldsUndefined(
+        [undefined, undefined, undefined]));
+    assert.isFalse(c3.hasAllRelevantFieldsUndefined(
+        [undefined, new Scalar(sizeInBytes_smallerIsBetter, 16), undefined]));
+    assert.isFalse(c3.hasAllRelevantFieldsUndefined(
+        [undefined, new Scalar(sizeInBytes_smallerIsBetter, 32)]));
+    assert.isFalse(c3.hasAllRelevantFieldsUndefined([
+      new Scalar(sizeInBytes_smallerIsBetter, 32),
+      undefined,
+      new Scalar(sizeInBytes_smallerIsBetter, 16)
+    ]));
+  });
+
+  test('checkMemoryColumn_value_allFieldsUndefined', function() {
+    const c1 = new MemoryColumn('no_color', ['x'],
+        AggregationMode.MAX);
+    const c2 = new MemoryColumn('color', ['x'],
+        AggregationMode.DIFF);
+    Object.defineProperty(c2, 'color', {
+      get() {
+        throw new Error('The color should never be retrieved');
+      }
+    });
+
+    // Infos should be completely ignored.
+    c1.addInfos = c2.addInfos = function() {
+      throw new Error('This method should never be called');
+    };
+
+    [c1, c2].forEach(function(c) {
+      assert.strictEqual(c.value({}), '');
+      assert.strictEqual(c.value({x: new MemoryCell(undefined)}), '');
+      assert.strictEqual(c.value({x: new MemoryCell([undefined])}), '');
+      assert.strictEqual(
+          c.value({x: new MemoryCell([undefined, undefined])}), '');
+    });
+
+    // Diff should only take into account the first and last field value.
+    assert.strictEqual(c2.value({
+      x: new MemoryCell([
+        undefined,
+        new Scalar(sizeInBytes_smallerIsBetter, 16),
+        undefined
+      ])
+    }), '');
+  });
+
+  test('checkMemoryColumn_getImportance', function() {
+    const c = new NumericMemoryColumn('test_column', ['x']);
+
+    const rules1 = [];
+    assert.strictEqual(c.getImportance(rules1), 0);
+
+    const rules2 = [
+      {
+        condition: 'test',
+        importance: 4
+      },
+      {
+        condition: /test$/,
+        importance: 2
+      }
+    ];
+    assert.strictEqual(c.getImportance(rules2), 1);
+
+    const rules3 = [
+      {
+        condition: 'test_column',
+        importance: 10
+      },
+      {
+        importance: 5
+      }
+    ];
+    assert.strictEqual(c.getImportance(rules3), 10);
+
+    const rules4 = [
+      {
+        condition: 'test_column2',
+        importance: 8
+      },
+      {
+        condition: /column/,
+        importance: 12
+      }
+    ];
+    assert.strictEqual(c.getImportance(rules4), 12);
+  });
+
+  test('checkMemoryColumn_nameMatchesCondition', function() {
+    const c = new NumericMemoryColumn('test_column', ['x']);
+
+    assert.isTrue(MemoryColumn.nameMatchesCondition('test_column', undefined));
+
+    assert.isFalse(MemoryColumn.nameMatchesCondition('test_column', 'test'));
+    assert.isTrue(
+        MemoryColumn.nameMatchesCondition('test_column', 'test_column'));
+    assert.isFalse(
+        MemoryColumn.nameMatchesCondition('test_column', 'test_column2'));
+
+    assert.isTrue(MemoryColumn.nameMatchesCondition('test_column', /test/));
+    assert.isTrue(
+        MemoryColumn.nameMatchesCondition('test_column', /^[^_]*_[^_]*$/));
+    assert.isFalse(MemoryColumn.nameMatchesCondition('test_column', /test$/));
+  });
+
+  test('checkStringMemoryColumn_value_singleField', function() {
+    const c = new StringMemoryColumn('', ['x'], AggregationMode.MAX);
+    c.color = function(fields, contexts) {
+      if (fields[0] < '0') return 'green';
+      if (contexts && contexts[0] % 2 === 0) return 'red';
+      return undefined;
+    };
+
+    const infos1 = [{ icon: '\u{1F648}', message: 'Some info', color: 'blue' }];
+    const infos2 = [
+      { icon: '\u{1F649}', message: 'Start', color: 'cyan' },
+      { icon: '\u{1F64A}', message: 'Stop' }
+    ];
+    c.addInfos = function(fields, contexts, infos) {
+      if (fields[0] < '0') {
+        infos.push.apply(infos, infos1);
+      } else if (contexts && contexts[0] % 2 === 0) {
+        infos.push.apply(infos, infos2);
+      }
+    };
+
+    let row = {x: new MemoryCell(['123'])};
+    assert.strictEqual(c.value(row), '123');
+
+    row = {x: new MemoryCell(['-123']), contexts: [undefined]};
+    checkCellValue(this, c.value(row), '-123', 'green', infos1);
+
+    row = {x: new MemoryCell(['123']), contexts: [42]};
+    checkCellValue(this, c.value(row), '123', 'red', infos2);
+  });
+
+  test('checkStringMemoryColumn_value_multipleFields', function() {
+    const c1 = new StringMemoryColumn('test_column1', ['x'],
+        undefined /* aggregation mode */);
+    const c2 = new StringMemoryColumn('test_column2', ['x'],
+        AggregationMode.DIFF);
+    c2.color = function(fields, contexts) {
+      return '#009999';
+    };
+    const c3 = new StringMemoryColumn('test_column3', ['x'],
+        AggregationMode.MAX);
+    c3.color = function(fields, contexts) {
+      if (fields[0] < '0') {
+        return 'green';
+      } else if (contexts && contexts[contexts.length - 1] % 2 === 0) {
+        return 'red';
+      }
+      return undefined;
+    };
+
+    const infos1 = [{ icon: '\u{1F648}', message: 'Some info', color: 'blue' }];
+    const infos2 = [
+      { icon: '\u{1F649}', message: 'Start', color: 'cyan' },
+      { icon: '\u{1F64A}', message: 'Stop' }
+    ];
+    c1.addInfos = c2.addInfos = c3.addInfos =
+        function(fields, contexts, infos) {
+          if (fields[0] < '0') {
+            infos.push.apply(infos, infos1);
+          } else if (contexts && contexts[contexts.length - 1] % 2 === 0) {
+            infos.push.apply(infos, infos2);
+          }
+        };
+
+    let row = {x: new MemoryCell(['123', '456'])};
+    checkCellValue(this, c1.value(row), '(unsupported aggregation mode)', '');
+    checkCellValue(this, c2.value(row), '123 \u2192 456', 'rgb(0, 153, 153)');
+    assert.strictEqual(c3.value(row), '456');
+
+    row = {
+      x: new MemoryCell(['-123', undefined, '+123']),
+      contexts: [12, 14, undefined]
+    };
+    checkCellValue(this, c1.value(row), '(unsupported aggregation mode)', '',
+        infos1);
+    checkCellValue(this, c2.value(row), '-123 \u2192 +123', 'rgb(0, 153, 153)',
+        infos1);
+    checkCellValue(this, c3.value(row), '+123', 'green', infos1);
+
+    row = {
+      x: new MemoryCell(['123', undefined, '456']),
+      contexts: [31, 7, -2]
+    };
+    checkCellValue(this, c1.value(row), '(unsupported aggregation mode)', '',
+        infos2);
+    checkCellValue(this, c2.value(row), '123 \u2192 456', 'rgb(0, 153, 153)',
+        infos2);
+    checkCellValue(this, c3.value(row), '456', 'red', infos2);
+  });
+
+  test('checkStringMemoryColumn_formatSingleField', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        undefined /* aggregation mode */);
+
+    assert.strictEqual(c.formatSingleField('1024'), '1024');
+    assert.strictEqual(c.formatSingleField('~10'), '~10');
+  });
+
+  test('checkStringMemoryColumn_formatMultipleFields_diff', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        AggregationMode.DIFF);
+
+    // Added value.
+    checkMemoryColumnFieldFormat(this, c, [undefined, 'few'], '+few', 'red');
+    checkMemoryColumnFieldFormat(this, c, [undefined, 64, 32], '+32', 'red');
+
+    // Removed value.
+    checkMemoryColumnFieldFormat(this, c, ['00', undefined], '-00', 'green');
+    checkMemoryColumnFieldFormat(this, c, [1, undefined, 2, undefined], '-1',
+        'green');
+
+    // Identical values.
+    checkMemoryColumnFieldFormat(this, c, ['Unchanged', 'Unchanged'],
+        'Unchanged', undefined /* unchanged color (not an HTML element) */);
+    checkMemoryColumnFieldFormat(this, c, [16, 32, undefined, 64, 16], '16',
+        undefined /* unchanged color (not an HTML element) */);
+
+    // Different values.
+    checkMemoryColumnFieldFormat(this, c, ['A', 'C', undefined, 'C', 'B'],
+        'A \u2192 B', 'darkorange');
+    checkMemoryColumnFieldFormat(this, c, [16, undefined, 64], '16 \u2192 64',
+        'darkorange');
+  });
+
+  test('checkStringMemoryColumn_formatMultipleFields_max', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        AggregationMode.MAX);
+
+    // Different values.
+    checkMemoryColumnFieldFormat(this, c, ['A', 'B', 'A'], 'B',
+        undefined /* unchanged color (not an HTML element) */);
+    checkMemoryColumnFieldFormat(this, c, [16, 16, undefined, 17], '17',
+        undefined /* unchanged color (not an HTML element) */);
+
+    // Identical values.
+    checkMemoryColumnFieldFormat(this, c, ['X', 'X'], 'X',
+        undefined /* unchanged color (not an HTML element) */);
+    checkMemoryColumnFieldFormat(this, c, [7, undefined, 7, undefined, 7], '7',
+        undefined /* unchanged color (not an HTML element) */);
+  });
+
+  test('checkStringMemoryColumn_compareSingleFields', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        undefined /* aggregation mode */);
+
+    assert.isBelow(c.compareSingleFields(
+        new Scalar(sizeInBytes_smallerIsBetter, 2),
+        new Scalar(sizeInBytes_smallerIsBetter, 10)), 0);
+    assert.strictEqual(c.compareSingleFields('equal', 'equal'), 0);
+    assert.isAbove(c.compareSingleFields('100', '99'), 0);
+  });
+
+  test('checkStringMemoryColumn_compareMultipleFields_diff', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        AggregationMode.DIFF);
+
+    // One field was added.
+    checkCompareFieldsLess(c, [-10, 10], [undefined, 5]);
+    checkCompareFieldsLess(c,
+        [-100, undefined, undefined], [undefined, 4, 5]);
+    checkCompareFieldsLess(c,
+        [1, 2, 3, 4], [undefined, 'x', undefined, 'y']);
+
+    // Both fields were added.
+    checkCompareFieldsEqual(c,
+        [undefined, 'C', undefined, 'A'], [undefined, 'B', 'D', 'A']);
+    checkCompareFieldsLess(c, [undefined, 1], [undefined, 2]);
+    checkCompareFieldsLess(c, [undefined, 6, 3], [undefined, 5, 4]);
+
+    // One field was removed (neither was added).
+    checkCompareFieldsLess(c, ['B', undefined], ['A', 'A']);
+    checkCompareFieldsLess(c,
+        [5, undefined, undefined], [undefined, -5, -10]);
+
+    // Both fields were removed (neither was added)
+    checkCompareFieldsEqual(c, ['T', 'A', undefined, undefined],
+        ['T', 'B', 'C', undefined]);
+    checkCompareFieldsLess(c, [5, undefined], [4, undefined]);
+
+    // Neither field was added or removed.
+    checkCompareFieldsLess(c, ['BB', 'BB'], ['AA', 'CC']);
+    checkCompareFieldsEqual(c, [7, 8, 9], [6, 9, 10]);
+    checkCompareFieldsEqual(c, [5, undefined, 5], [4, 3, 4]);
+  });
+
+  test('checkStringMemoryColumn_compareMultipleFields_max', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        AggregationMode.MAX);
+
+    // At least one field has multiple values.
+    checkCompareFieldsEqual(c, [0, 1, 3], [1, 3, 2]);
+    checkCompareFieldsLess(c, ['4', undefined, '4'], ['3', '4', '5']);
+    checkCompareFieldsLess(c, [3, 3, 3], [9, undefined, 10]);
+
+    // Both fields have single values.
+    checkCompareFieldsEqual(c,
+        [undefined, 'ttt', undefined], ['ttt', 'ttt', undefined]);
+    checkCompareFieldsLess(c, [undefined, -1, undefined], [-2, -2, -2]);
+    checkCompareFieldsLess(c, ['Q', 'Q', undefined], ['X', undefined, 'X']);
+  });
+
+  test('checkStringMemoryColumn_cmp', function() {
+    const c = new StringMemoryColumn('test_column', ['x'],
+        AggregationMode.DIFF);
+
+    // Cell (or the associated field) undefined in one or both rows.
+    assert.strictEqual(c.cmp({}, {y: new MemoryCell([undefined])}), 0);
+    assert.strictEqual(c.cmp({x: new MemoryCell(undefined)}, {}), 0);
+    assert.strictEqual(
+        c.cmp({x: new MemoryCell([undefined, undefined])}, {}), 0);
+    assert.isAbove(c.cmp({x: new MemoryCell(['negative'])}, {}), 0);
+    assert.isAbove(c.cmp({x: new MemoryCell(['negative'])},
+        {x: new MemoryCell([undefined])}), 0);
+    assert.isBelow(c.cmp({}, {x: new MemoryCell(['positive'])}), 0);
+    assert.isBelow(c.cmp({x: new MemoryCell(undefined)},
+        {x: new MemoryCell(['positive'])}), 0);
+
+    // Single field.
+    assert.strictEqual(c.cmp({x: new MemoryCell(['equal'])},
+        {x: new MemoryCell(['equal'])}), 0);
+    assert.isAbove(c.cmp({x: new MemoryCell(['bigger'])},
+        {x: new MemoryCell(['BIG'])}), 0);
+    assert.isBelow(c.cmp({x: new MemoryCell(['small'])},
+        {x: new MemoryCell(['smaLL'])}), 0);
+
+    // Multiple fields.
+    assert.isBelow(c.cmp(
+        {x: new MemoryCell(['MemoryColumn', 'supports*', undefined])},
+        {x: new MemoryCell(['comparing', 'multiple', 'values :-)'])}), 0);
+  });
+
+  test('checkNumericMemoryColumn_value', function() {
+    const c = new NumericMemoryColumn('test_column', ['x'],
+        AggregationMode.DIFF);
+    c.color = function(fields, contexts) {
+      return '#009999';
+    };
+    const infos1 = [createWarningInfo('Attention!')];
+    c.addInfos = function(fields, contexts, infos) {
+      infos.push.apply(infos, infos1);
+    };
+
+    // Undefined field values.
+    let row = {x: buildScalarCell(sizeInBytes_smallerIsBetter,
+        [undefined, 1, undefined])};
+    assert.strictEqual(c.value(row), '');
+
+    // Single field value.
+    row = {x: buildScalarCell(sizeInBytes_smallerIsBetter,
+        [5.4975581e13/* 50 TiB */])};
+    checkCellValue(this, c.value(row), sizeSpanMatcher(5.4975581e13),
+        'rgb(0, 153, 153)', infos1);
+
+    // Multiple field values.
+    row = {
+      x: buildScalarCell(sizeInBytes_smallerIsBetter,
+          [5.4975581e13/* 50 TiB */, undefined, 2.1990233e13/* 20 TiB */])
+    };
+    checkCellValue(this, c.value(row),
+        sizeSpanMatcher(-3.2985348e13, true /* opt_expectedIsDelta */),
+        'rgb(0, 153, 153)', infos1);
+
+    // With custom formatting context.
+    c.getFormattingContext = function(unit) {
+      assert.strictEqual(unit,
+          tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter);
+      return { minimumFractionDigits: 2 };
+    };
+    checkCellValue(this, c.value(row),
+        sizeSpanMatcher(-3.2985348e13, true /* opt_expectedIsDelta */,
+            { minimumFractionDigits: 2 }),
+        'rgb(0, 153, 153)', infos1);
+  });
+
+  test('checkNumericMemoryColumn_formatSingleField', function() {
+    let c = new NumericMemoryColumn('non_bytes_column', ['x'],
+        undefined /* aggregation mode */);
+    let value = c.formatSingleField(new Scalar(
+        tr.b.Unit.byName.unitlessNumber_smallerIsBetter, 123));
+    assert.strictEqual(value.tagName, 'TR-V-UI-SCALAR-SPAN');
+    assert.strictEqual(value.value, 123);
+    assert.strictEqual(value.unit,
+        tr.b.Unit.byName.unitlessNumber_smallerIsBetter);
+    assert.isUndefined(value.contextGroup);
+    this.addHTMLOutput(value);
+
+    c = new NumericMemoryColumn('bytes_column', ['x'],
+        undefined /* aggregation mode */);
+    c.shouldSetContextGroup = true;
+    value = c.formatSingleField(new Scalar(
+        sizeInBytes_smallerIsBetter, 456));
+    assert.strictEqual(value.tagName, 'TR-V-UI-SCALAR-SPAN');
+    assert.strictEqual(value.value, 456);
+    assert.strictEqual(value.unit,
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter);
+    assert.strictEqual(value.contextGroup, 'bytes_column');
+    this.addHTMLOutput(value);
+  });
+
+  test('checkNumericMemoryColumn_formatMultipleFields_diff',
+      function() {
+        let c = new NumericMemoryColumn(
+            'non_bytes_column', ['x'], AggregationMode.DIFF);
+        checkNumericMemoryColumnFieldFormat(this, c, [1, 2, 3],
+            tr.b.Unit.byName.unitlessNumberDelta_smallerIsBetter, 2);
+        checkNumericMemoryColumnFieldFormat(this, c, [10, undefined],
+            tr.b.Unit.byName.unitlessNumberDelta_smallerIsBetter, -10);
+        checkNumericMemoryColumnFieldFormat(this, c, [undefined, 60, 0],
+            tr.b.Unit.byName.unitlessNumberDelta_smallerIsBetter, 0);
+        checkNumericMemoryColumnFieldFormat(
+            this, c, [2.71828, 2.71829] /* diff within epsilon */,
+            tr.b.Unit.byName.unitlessNumberDelta_smallerIsBetter, 0);
+
+        c = new NumericMemoryColumn(
+            'bytes_column', ['x'], AggregationMode.DIFF);
+        checkNumericMemoryColumnFieldFormat(this, c, [1, 2, 3],
+            tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter, 2);
+        checkNumericMemoryColumnFieldFormat(this, c, [10, undefined],
+            tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter, -10);
+        checkNumericMemoryColumnFieldFormat(this, c, [undefined, 60, 0],
+            tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter, 0);
+        checkNumericMemoryColumnFieldFormat(
+            this, c, [1.41421, 1.41422] /* diff within epsilon */,
+            tr.b.Unit.byName.sizeInBytesDelta_smallerIsBetter, 0);
+      });
+
+  test('checkNumericMemoryColumn_formatMultipleFields_max',
+      function() {
+        let c = new NumericMemoryColumn(
+            'non_bytes_column', ['x'], AggregationMode.MAX);
+        checkNumericMemoryColumnFieldFormat(this, c, [1, 2, 3],
+            tr.b.Unit.byName.unitlessNumber_smallerIsBetter, 3);
+        checkNumericMemoryColumnFieldFormat(this, c, [10, undefined],
+            tr.b.Unit.byName.unitlessNumber_smallerIsBetter, 10);
+        checkNumericMemoryColumnFieldFormat(this, c, [undefined, 60, 0],
+            tr.b.Unit.byName.unitlessNumber_smallerIsBetter, 60);
+        checkNumericMemoryColumnFieldFormat(
+            this, c, [undefined, 10, 20, undefined],
+            tr.b.Unit.byName.unitlessNumber_smallerIsBetter, 20);
+
+        c = new NumericMemoryColumn(
+            'bytes_column', ['x'], AggregationMode.MAX);
+        checkNumericMemoryColumnFieldFormat(this, c, [1, 2, 3],
+            tr.b.Unit.byName.sizeInBytes_smallerIsBetter, 3);
+        checkNumericMemoryColumnFieldFormat(this, c, [10, undefined],
+            tr.b.Unit.byName.sizeInBytes_smallerIsBetter, 10);
+        checkNumericMemoryColumnFieldFormat(this, c, [undefined, 60, 0],
+            tr.b.Unit.byName.sizeInBytes_smallerIsBetter, 60);
+        checkNumericMemoryColumnFieldFormat(
+            this, c, [undefined, 10, 20, undefined],
+            tr.b.Unit.byName.sizeInBytes_smallerIsBetter, 20);
+      });
+
+  test('checkNumericMemoryColumn_cmp', function() {
+    const c = new NumericMemoryColumn(
+        'test_column', ['x'], AggregationMode.DIFF);
+
+    // Undefined field values.
+    assert.isAbove(c.cmp({x: buildScalarCell(sizeInBytes_smallerIsBetter,
+        [-9999999999])},
+    {x: undefined}), 0);
+    assert.isBelow(c.cmp({x: new MemoryCell(undefined)},
+        {x: buildScalarCell(sizeInBytes_smallerIsBetter, [748, 749])}), 0);
+    assert.strictEqual(
+        c.cmp({}, {
+          x: buildScalarCell(
+              sizeInBytes_smallerIsBetter, [undefined, undefined])
+        }), 0);
+
+    // Single field value.
+    assert.isBelow(c.cmp(
+        {x: buildScalarCell(sizeInBytes_smallerIsBetter, [16384])},
+        {x: buildScalarCell(sizeInBytes_smallerIsBetter, [32768])}), 0);
+
+    // Multiple field values.
+    assert.strictEqual(c.cmp(
+        {x: buildScalarCell(
+            sizeInBytes_smallerIsBetter, [999, undefined, 1001])},
+        {x: buildScalarCell(
+            sizeInBytes_smallerIsBetter, [undefined, 5, 2])}), 0);
+  });
+
+  test('checkNumericMemoryColumn_compareSingleFields', function() {
+    const c = new NumericMemoryColumn('test_column', ['x'],
+        undefined /* aggregation mode */);
+
+    assert.isBelow(c.compareSingleFields(
+        new Scalar(
+            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, 99),
+        new Scalar(
+            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, 100)), 0);
+    assert.strictEqual(c.compareSingleFields(
+        new Scalar(tr.b.Unit.byName.unitlessNumber, 0xEEE),
+        new Scalar(tr.b.Unit.byName.unitlessNumber, 0xEEE)), 0);
+    assert.isAbove(c.compareSingleFields(
+        new Scalar(sizeInBytes_smallerIsBetter, 10),
+        new Scalar(sizeInBytes_smallerIsBetter, 2)), 0);
+  });
+
+  test('checkNumericMemoryColumn_compareMultipleFields_diff', function() {
+    const c = new NumericMemoryColumn('test_column', ['x'],
+        AggregationMode.DIFF);
+
+    assert.isBelow(c.compareMultipleFields(
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [10000, 10001, 10002] /* diff +2 */).fields,
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [5, 7, 8] /* diff +3 */).fields), 0);
+    assert.strictEqual(c.compareMultipleFields(
+        buildScalarCell(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            [4, undefined] /* diff -4 */).fields,
+        buildScalarCell(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            [999, 995] /* diff -4 */).fields), 0);
+    assert.isAbove(c.compareMultipleFields(
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [10, undefined, 12] /* diff +2 */).fields,
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [11, 50, 12] /* diff +1 */).fields), 0);
+    assert.strictEqual(c.compareMultipleFields(
+        buildScalarCell(tr.b.Unit.byName.powerInWatts_smallerIsBetter,
+            [17, undefined, 17] /* diff 0 */).fields,
+        buildScalarCell(tr.b.Unit.byName.powerInWatts_smallerIsBetter,
+            [undefined, 100, undefined] /* diff 0 */).fields), 0);
+    assert.strictEqual(c.compareMultipleFields(
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [3.14159, undefined, 3.14160] /* diff within epsilon */).fields,
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [100, 100, 100] /* diff 0 */).fields), 0);
+  });
+
+  test('checkNumericMemoryColumn_compareMultipleFields_max', function() {
+    const c = new NumericMemoryColumn('test_column', ['x'],
+        AggregationMode.MAX);
+
+    assert.isBelow(c.compareMultipleFields(
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [10, undefined, 12]).fields,
+        buildScalarCell(sizeInBytes_smallerIsBetter, [11, 50, 12]).fields), 0);
+    assert.strictEqual(c.compareMultipleFields(
+        buildScalarCell(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            [999, undefined, -8888]).fields,
+        buildScalarCell(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            [undefined, 999, undefined]).fields), 0);
+    assert.isAbove(c.compareMultipleFields(
+        buildScalarCell(sizeInBytes_smallerIsBetter,
+            [10000, 10001, 10002]).fields,
+        buildScalarCell(sizeInBytes_smallerIsBetter, [5, 7, 8]).fields), 0);
+    assert.isBelow(c.compareMultipleFields(
+        buildScalarCell(tr.b.Unit.byName.powerInWatts_smallerIsBetter,
+            [17, undefined, 17]).fields,
+        buildScalarCell(tr.b.Unit.byName.powerInWatts_smallerIsBetter,
+            [undefined, 100, undefined]).fields), 0);
+  });
+
+  test('checkNumericMemoryColumn_getDiffFieldValue', function() {
+    const c = new NumericMemoryColumn('test_column', ['x'],
+        AggregationMode.MAX);
+    function checkDiffValue(first, last, expectedDiffValue) {
+      const actualDiffValue = c.getDiffFieldValue_(
+          first === undefined ? undefined :
+            new Scalar(sizeInBytes_smallerIsBetter, first),
+          last === undefined ? undefined :
+            new Scalar(sizeInBytes_smallerIsBetter, last));
+      assert.closeTo(actualDiffValue, expectedDiffValue, 1e-8);
+    }
+
+    // Diff outside epsilon range.
+    checkDiffValue(0, 0.0002, 0.0002);
+    checkDiffValue(undefined, 0.0003, 0.0003);
+    checkDiffValue(0.3334, 0.3332, -0.0002);
+    checkDiffValue(0.0005, undefined, -0.0005);
+
+    // Diff inside epsilon range.
+    checkDiffValue(5, 5.00009, 0);
+    checkDiffValue(undefined, 0.0000888, 0);
+    checkDiffValue(0.29999, 0.3, 0);
+    checkDiffValue(0.00009, undefined, 0);
+    checkDiffValue(0.777777, 0.777777, 0);
+    checkDiffValue(undefined, undefined, 0);
+  });
+
+  test('checkExpandTableRowsRecursively', function() {
+    const columns = [
+      {
+        title: 'Single column',
+        value(row) { return row.data; },
+        width: '100px'
+      }
+    ];
+
+    const rows = [
+      {
+        data: 'allocated',
+        subRows: [
+          {
+            data: 'v8',
+            subRows: []
+          },
+          {
+            data: 'oilpan',
+            subRows: [
+              {
+                data: 'still_visible',
+                subRows: [
+                  {
+                    data: 'not_visible_any_more'
+                  }
+                ]
+              },
+              {
+                data: 'also_visible'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        data: 'no_sub_rows'
+      },
+      {
+        data: 'fragmentation',
+        subRows: [
+          {
+            data: 'internal'
+          },
+          {
+            data: 'external',
+            subRows: [
+              {
+                data: 'unexpanded'
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    expandTableRowsRecursively(table);
+
+    function isExpanded(row) { return table.getExpandedForTableRow(row); }
+
+    // Level 0 (3 rows) should be expanded (except for nodes which have no
+    // sub-rows).
+    assert.isTrue(isExpanded(rows[0] /* allocated */));
+    assert.isFalse(isExpanded(rows[1] /* no_sub_rows */));
+    assert.isTrue(isExpanded(rows[2] /* overhead */));
+
+    // Level 1 (4 rows) should be expanded (except for nodes which have no
+    // sub-rows).
+    assert.isFalse(isExpanded(rows[0].subRows[0] /* allocated/v8 */));
+    assert.isTrue(isExpanded(rows[0].subRows[1] /* allocated/oilpan */));
+    assert.isFalse(isExpanded(rows[2].subRows[0] /* fragmentation/internal */));
+    assert.isTrue(isExpanded(rows[2].subRows[1] /* fragmentation/external */));
+
+    // Level 2 (3 rows) should not be expanded any more.
+    assert.isFalse(isExpanded(
+        rows[0].subRows[1].subRows[0] /* allocated/oilpan/still_visible */));
+    assert.isFalse(isExpanded(
+        rows[0].subRows[1].subRows[1] /* allocated/oilpan/also_visible */));
+    assert.isFalse(isExpanded(
+        rows[2].subRows[1].subRows[0] /* fragmentation/external/unexpanded */));
+  });
+
+  test('checkMemoryCell_extractFields', function() {
+    assert.isUndefined(MemoryCell.extractFields(undefined));
+
+    assert.isUndefined(MemoryCell.extractFields(new MemoryCell(undefined)));
+
+    const fields = [new Scalar(sizeInBytes_smallerIsBetter, 1024)];
+    assert.strictEqual(
+        MemoryCell.extractFields(new MemoryCell(fields)), fields);
+  });
+
+  test('checkAggregateTableRowCellsRecursively', function() {
+    const row = {
+      testCells: {
+        a: buildScalarCell(sizeInBytes_smallerIsBetter, [17])
+      },
+      subRows: [
+        {
+          // Intentionally no testCells.
+          subRows: [
+            {
+              testCells: {
+                b: buildScalarCell(sizeInBytes_smallerIsBetter, [103]),
+                c: new MemoryCell(['should-not-propagate-upwards']),
+                d: buildScalarCell(sizeInBytes_smallerIsBetter, [-200])
+              }
+              // Intentionally no subRows.
+            },
+            {
+              testCells: {},
+              subRows: []
+            }
+          ],
+          contexts: ['skip-row-when-using-predicate']
+        },
+        {
+          testCells: {
+            b: buildScalarCell(sizeInBytes_smallerIsBetter, [20]),
+            a: buildScalarCell(sizeInBytes_smallerIsBetter, [13]),
+            e: buildScalarCell(sizeInBytes_smallerIsBetter, [-300])
+          },
+          contexts: ['don\'t-skip']
+        }
+      ]
+    };
+
+    // Without a predicate.
+    const ca = new NumericMemoryColumn('column_a', ['testCells', 'a']);
+    const cb = new NumericMemoryColumn('column_b', ['testCells', 'b']);
+    const cc = new StringMemoryColumn('column_c', ['testCells', 'c']);
+    aggregateTableRowCellsRecursively(row, [ca, cb, cc]);
+    checkSizeNumericFields(row, ca, [17]);
+    checkSizeNumericFields(row, cb, [123]);
+    checkStringFields(row, cc, undefined);
+
+    // With a predicate.
+    const cd = new NumericMemoryColumn('column_d', ['testCells', 'd']);
+    const ce = new NumericMemoryColumn('column_e', ['testCells', 'e']);
+    aggregateTableRowCellsRecursively(row, [cd, ce], function(contexts) {
+      return contexts === undefined || !contexts[0].startsWith('skip');
+    });
+    checkSizeNumericFields(row, cd, undefined);
+    checkSizeNumericFields(row, ce, [-300]);
+  });
+
+  test('checkAggregateTableRowCells', function() {
+    const row = {
+      // Intentionally no testCells.
+      otherCells: {
+        a: buildScalarCell(tr.b.Unit.byName.unitlessNumber,
+            [5, undefined, undefined])
+      }
+    };
+    const subRows = [
+      {
+        testCells: {
+          a: buildScalarCell(sizeInBytes_smallerIsBetter, [1, 9])
+        },
+        subRows: [
+          {
+            testCells: {
+              c: buildScalarCell(sizeInBytes_smallerIsBetter, [13])
+            }
+          }
+        ]
+      },
+      {
+        testCells: {
+          a: buildScalarCell(sizeInBytes_smallerIsBetter, [2, 17]),
+          b: buildScalarCell(sizeInBytes_smallerIsBetter, [5])
+        },
+        otherCells: {
+          a: buildScalarCell(tr.b.Unit.byName.unitlessNumber,
+              [153, undefined, 257]),
+          b: new MemoryCell(['field-should-not-propagate-upwards', ''])
+        }
+      }
+    ];
+
+    const cta = new NumericMemoryColumn('column_test_a', ['testCells', 'a']);
+    const ctb = new NumericMemoryColumn('column_test_b', ['testCells', 'b']);
+    const ctc = new NumericMemoryColumn('column_test_c', ['testCells', 'c']);
+    const coa = new NumericMemoryColumn('column_other_a', ['otherCells', 'a']);
+    const cob = new StringMemoryColumn('column_other_b', ['otherCells', 'b']);
+
+    aggregateTableRowCells(row, subRows, [cta, ctb, ctc, coa, cob]);
+
+    checkSizeNumericFields(row, cta, [3, 26]);
+    checkSizeNumericFields(row, ctb, [5]);
+    checkSizeNumericFields(row, ctc, undefined);
+
+    checkNumericFields(row, coa, [5, undefined, 257],
+        tr.b.Unit.byName.unitlessNumber);
+    checkStringFields(row, cob, undefined);
+  });
+
+  test('checkCreateCells', function() {
+    const values = [
+      {
+        a: 9,
+        b: 314
+      },
+      {
+        b: 159,
+        c: undefined
+      },
+      undefined,
+      {
+        b: 265,
+        d: 0
+      }
+    ];
+
+    const mockColumn = new MemoryColumn('', [], undefined);
+
+    const cells = createCells(values, function(dict) {
+      const fields = {};
+      for (const [key, value] of Object.entries(dict)) {
+        if (value === undefined) continue;
+        fields[key] = new Scalar(sizeInBytes_smallerIsBetter, value);
+      }
+      return fields;
+    });
+    assert.deepEqual(Object.keys(cells), ['a', 'b', 'd']);
+    checkSizeNumericFields(
+        cells.a, mockColumn, [9, undefined, undefined, undefined]);
+    checkSizeNumericFields(cells.b, mockColumn, [314, 159, undefined, 265]);
+    checkSizeNumericFields(
+        cells.d, mockColumn, [undefined, undefined, undefined, 0]);
+  });
+});
+</script>

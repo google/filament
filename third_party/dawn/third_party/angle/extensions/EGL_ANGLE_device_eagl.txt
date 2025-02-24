@@ -1,0 +1,89 @@
+Name
+
+    ANGLE_device_eagl
+
+Name Strings
+
+    EGL_ANGLE_device_eagl
+
+Contributors
+
+    Dean Jackson  (dino 'at' apple.com)
+    Ken Russell   (kbr 'at' google.com)
+
+Contact
+
+    Ken Russell   (kbr 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, January 3, 2020
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL device extension
+
+Dependencies
+
+    This extension is written against the language of EGL 1.5 as
+    modified by EGL_EXT_device_query.
+
+    EGL_EXT_device_query is required.
+
+Overview
+
+    ANGLE on iOS internally uses an OpenGL ES context allocated via EAGL.
+    This extension defines a mapping from an EGL device to the underlying
+    EAGLContext, after it's been queried from an EGL display.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted as a queried <attribute> in eglQueryDeviceAttribEXT:
+
+        EGL_EAGL_CONTEXT_ANGLE          0x348C
+
+Add a new section 2.1.3 (EAGL Devices) after 2.1.2 (Devices)
+
+    On iOS the underlying EAGLContext can be queried from the EGL device. The
+    intented purpose is to allow applications to create new EAGLContexts which
+    share resources with this one.
+
+Changes to section 3.2 (Devices)
+
+    Replace the paragraph immediately following the prototype for
+    eglQueryDeviceAttribEXT:
+
+    <attribute> must be EGL_EAGL_CONTEXT_ANGLE.  On success, EGL_TRUE is
+    returned, and a valid EAGLContext corresponding to the EGL device is
+    returned in <value>. This object is compatible with OpenGL ES and EAGL API
+    functions. If the EGL device is not currently associated with an
+    EAGLContext, EGL_BAD_ATTRIBUTE is returned, and <value> is left unchanged.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, January 3, 2020 (Ken Russell)
+        - Initial Draft

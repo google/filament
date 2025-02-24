@@ -1,0 +1,78 @@
+{
+  "name": "iron-form",
+  "version": "2.0.1",
+  "description": "Wrapper around native form that submits native and custom elements",
+  "keywords": [
+    "web-components",
+    "polymer",
+    "form"
+  ],
+  "authors": [
+    "The Polymer Authors"
+  ],
+  "main": "iron-form.html",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/PolymerElements/iron-form.git"
+  },
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/PolymerElements/iron-form",
+  "ignore": [],
+  "dependencies": {
+    "polymer": "Polymer/polymer#1.9 - 2",
+    "iron-ajax": "PolymerElements/iron-ajax#1 - 2"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#1 - 2",
+    "iron-demo-helpers": "PolymerElements/iron-demo-helpers#1 - 2",
+    "paper-button": "PolymerElements/paper-button#1 - 2",
+    "paper-checkbox": "PolymerElements/paper-checkbox#1 - 2",
+    "paper-dropdown-menu": "PolymerElements/paper-dropdown-menu#1 - 2",
+    "paper-input": "PolymerElements/paper-input#1 - 2",
+    "paper-item": "PolymerElements/paper-item#1 - 2",
+    "paper-listbox": "PolymerElements/paper-listbox#1 - 2",
+    "paper-spinner": "PolymerElements/paper-spinner#1 - 2",
+    "paper-styles": "PolymerElements/paper-styles#1 - 2",
+    "web-component-tester": "Polymer/web-component-tester#^6.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^1.0.0"
+  },
+  "variants": {
+    "1.x": {
+      "dependencies": {
+        "polymer": "Polymer/polymer#^1.9",
+        "iron-ajax": "PolymerElements/iron-ajax#^1.0.0"
+      },
+      "devDependencies": {
+        "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+        "iron-demo-helpers": "PolymerElements/iron-demo-helpers#^1.0.0",
+        "paper-button": "PolymerElements/paper-button#^1.0.0",
+        "paper-checkbox": "PolymerElements/paper-checkbox#^1.0.0",
+        "paper-dropdown-menu": "PolymerElements/paper-dropdown-menu#^1.0.0",
+        "paper-input": "PolymerElements/paper-input#^1.0.0",
+        "paper-item": "PolymerElements/paper-item#^1.0.0",
+        "paper-menu": "PolymerElements/paper-menu#^1.0.0",
+        "paper-spinner": "PolymerElements/paper-spinner#^1.0.0",
+        "paper-styles": "PolymerElements/paper-styles#^1.0.0",
+        "test-fixture": "PolymerElements/test-fixture#^1.0.0",
+        "web-component-tester": "Polymer/web-component-tester#^4.0.0",
+        "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0"
+      },
+      "resolutions": {
+        "webcomponentsjs": "^0.7"
+      }
+    }
+  },
+  "resolutions": {
+    "webcomponentsjs": "^1.0.0"
+  },
+  "_release": "2.0.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.0.1",
+    "commit": "430bb2c9f82d08595dbe9479feb7ca1724582631"
+  },
+  "_source": "https://github.com/PolymerElements/iron-form.git",
+  "_target": "^2.0.0",
+  "_originalSource": "PolymerElements/iron-form"
+}

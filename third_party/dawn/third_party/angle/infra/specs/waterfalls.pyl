@@ -1,0 +1,374 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+#
+# For more info see Chromium's waterfalls.pyl in testing/buildbot.
+
+[
+  {
+    'name': 'angle',
+    'forbid_script_tests': True,
+    'mixins': [
+      'chromium-tester-service-account',
+      'swarming_containment_auto',
+    ],
+    'machines': {
+      'android-arm64-exp-pixel6': {  # android-arm64-pixel6 below for android-arm64-test
+        'os_type': 'android',
+        'mixins': [
+          'gpu_pixel_6_experimental',
+          'limited_capacity_bot',
+        ],
+        'test_suites': {
+          'gtest_tests': 'android_vulkan_gtests',
+          'isolated_scripts': 'isolated_scripts_group_pixel6',
+        },
+      },
+      'android-arm64-exp-s22': {
+        'os_type': 'android',
+        'mixins': [
+          'gpu-swarming-pool',
+          'samsung_s22',
+        ],
+        'test_suites': {
+          'gtest_tests': 'android_vulkan_gtests',
+          'isolated_scripts': 'isolated_scripts_group_s22',
+        },
+      },
+      'android-arm64-pixel4': {
+        'os_type': 'android',
+        'mixins': [
+          'gpu_pixel_4_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'android_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'android-arm64-pixel4-perf': {
+        'os_type': 'android',
+        'mixins': [
+          'gpu_pixel_4_stable',
+          'temp_band_below_30C',
+          'timeout_120m',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'android-arm64-pixel6': {
+        'os_type': 'android',
+        'mixins': [
+          'gpu_pixel_6_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'android_vulkan_gtests',
+          'isolated_scripts': 'isolated_scripts_group_pixel6',
+        },
+      },
+      'android-arm64-pixel6-perf': {
+        'os_type': 'android',
+        'mixins': [
+          'gpu_pixel_6_stable',
+          'temp_band_below_30C',
+          'timeout_120m',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'linux-amd': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_amd_rx_5500_xt',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-exp-intel': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_intel_uhd_630_experimental',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-exp-nvidia': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_nvidia_gtx_1660_experimental',
+        ],
+        'test_suites': {
+          'gtest_tests': 'linux_nvidia_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'linux-exp-swiftshader': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-exp-swiftshader-asan': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-exp-swiftshader-tsan': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-intel': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_intel_uhd_630_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'linux_intel_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'linux-intel-perf': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_intel_uhd_630_stable',
+          'timeout_120m',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'linux-nvidia': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_nvidia_gtx_1660_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'linux_nvidia_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'linux-nvidia-perf': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_nvidia_gtx_1660_stable',
+          'timeout_120m',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'linux-swiftshader': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swangle_gtests',
+          'isolated_scripts': 'swangle_restricted_trace_gold_isolated_scripts',
+        },
+      },
+      'linux-swiftshader-asan': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swangle_slow_gtests',
+        },
+      },
+      'linux-swiftshader-tsan': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'timeout_15m',
+          'x86-64',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swangle_slow_flaky_gtests',
+        },
+      },
+      'mac-amd': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_retina_amd_gpu_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'mac_amd_and_intel_gtests',
+        },
+      },
+      'mac-exp-amd': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_retina_amd_gpu_experimental',
+        ],
+        'test_suites': {
+          'gtest_tests': 'mac_amd_and_intel_gtests',
+        },
+      },
+      'mac-exp-intel': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_mini_intel_gpu_experimental',
+        ],
+        'test_suites': {
+          'gtest_tests': 'mac_amd_and_intel_gtests',
+        },
+      },
+      'mac-exp-nvidia': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_retina_nvidia_gpu_experimental',
+        ],
+        'test_suites': {
+        },
+      },
+      'mac-intel': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_mini_intel_gpu_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'mac_amd_and_intel_gtests',
+        },
+      },
+      'mac-nvidia': {
+        'os_type': 'mac',
+        'mixins': [
+          'mac_retina_nvidia_gpu_stable',
+        ],
+        'test_suites': {
+          # Fewer tests enabled on this config because of limited capacity.
+          'gtest_tests': 'mac_nvidia_gtests',
+        },
+      },
+      'win10-x64-exp-intel': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_intel_uhd_770_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'win10_intel_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'win10-x64-exp-nvidia': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_nvidia_gtx_1660_experimental',
+        ],
+        'test_suites': {
+        },
+      },
+      'win10-x64-intel': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_intel_uhd_630_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'win10_intel_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'win10-x64-intel-perf': {
+        'os_type': 'win',
+        'mixins': [
+          'timeout_120m',
+          'win10_intel_uhd_630_stable',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'win10-x64-nvidia': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_nvidia_gtx_1660_stable',
+        ],
+        'test_suites': {
+          'gtest_tests': 'win10_nvidia_gtests',
+          'isolated_scripts': 'isolated_scripts_group_common',
+        },
+      },
+      'win10-x64-nvidia-perf': {
+        'os_type': 'win',
+        'mixins': [
+          'timeout_120m',
+          'win10_nvidia_gtx_1660_stable',
+        ],
+        'test_suites': {
+          'isolated_scripts': 'isolated_scripts_group_perf',
+        },
+      },
+      'win10-x64-swiftshader': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_gce_gpu_pool',
+          'timeout_15m',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swangle_gtests',
+          'isolated_scripts': 'swangle_restricted_trace_gold_isolated_scripts',
+        },
+      },
+      'win10-x64-swiftshader-asan': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_gce_gpu_pool',
+          'timeout_15m',
+        ],
+        'test_suites': {
+          # Clang-Win/ASAN has issues with dEQP's exceptions. http://crbug.com/1268912
+          'gtest_tests': 'swangle_non_deqp_slow_flaky_gtests',
+        },
+      },
+      'win10-x86-swiftshader': {
+        'os_type': 'win',
+        'mixins': [
+          'win10_gce_gpu_pool',
+          'timeout_15m',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swangle_gtests',
+        },
+      },
+    },
+  },
+]

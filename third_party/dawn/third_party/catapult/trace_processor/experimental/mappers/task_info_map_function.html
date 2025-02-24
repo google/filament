@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mappers/thread_grouping.html">
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/flow_event.html">
+<link rel="import" href="/tracing/model/slice.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pi.m', function() {
+  var DURATION_BOUNDARIES = tr.v.HistogramBinBoundaries.createLinear(
+      0, 250, 50);
+
+  function taskInfoMapFunction(result, model) {
+    var canonicalUrl = model.canonicalUrl;
+    var threadGrouping = new pi.m.ThreadGrouping();
+    threadGrouping.autoInitUsingHelpers(model);
+    addTimeInQueue(result, canonicalUrl, model, threadGrouping);
+    addTopLevelTasksDuration(result, canonicalUrl, model, threadGrouping);
+  }
+
+  function eatTrailingDigits(str) {
+    return str && str.replace(/[\d/]*$/, '');
+  }
+
+  function histogramsToDict(dict) {
+    for (var process in dict) {
+      for (var thread in dict[process]) {
+        dict[process][thread] = dict[process][thread].asDict();
+      }
+    }
+  }
+
+  function addTimeInQueue(result, canonicalUrl, model, threadGrouping) {
+    var timeInQueue = {};
+    model.flowEvents.forEach(function(flowEvent) {
+      if (!flowEvent.endSlice instanceof tr.model.Slice)
+        return;
+      var thread = flowEvent.endSlice && flowEvent.endSlice.parentContainer;
+      if (!thread)
+        return;
+      var process = thread.getProcess();
+      if (!process)
+        return;
+      var threadName = eatTrailingDigits(thread.name) || 'Unknown';
+      var processName = threadGrouping.getGroupNameForThread(thread);
+      addToHistogram(timeInQueue, processName, threadName, flowEvent.duration,
+          canonicalUrl);
+    });
+    histogramsToDict(timeInQueue);
+    result.addPair('time_spent_in_queue', timeInQueue);
+  }
+
+  function addTopLevelTasksDuration(result, canonicalUrl, model,
+                                    threadGrouping) {
+    var timeInTask = {};
+    var cpuTimeInTask = {};
+    model.getAllThreads().forEach(function(thread) {
+      var process = thread.getProcess();
+      if (!process)
+        return;
+      var threadName = eatTrailingDigits(thread.name) || thread.tid;
+      var processName = threadGrouping.getGroupNameForThread(thread);
+      if (!thread.sliceGroup.length)
+        return;
+      thread.sliceGroup.slices.forEach(function(slice) {
+        if (!isTopLevelTask(slice))
+          return;
+        addToHistogram(timeInTask, processName, threadName, slice.duration,
+            canonicalUrl);
+        addToHistogram(cpuTimeInTask, processName, threadName,
+            slice.cpuDuration, canonicalUrl);
+      });
+    });
+    histogramsToDict(timeInTask);
+    result.addPair('time_spent_in_top_level_task', timeInTask);
+    histogramsToDict(cpuTimeInTask);
+    result.addPair('cpu_time_spent_in_top_level_task', cpuTimeInTask);
+  }
+
+  // A slice is top level if it's on the receiving end of a post task and no
+  // slice above it is.
+  function isTopLevelTask(slice) {
+    if (!slice.inFlowEvents.length)
+      return false;
+    return !slice.parentSlice || !isTopLevelTask(slice.parentSlice);
+  }
+
+  function addToHistogram(dict, processName, threadName, value, url) {
+    dict[processName] = dict[processName] || {};
+    dict[processName][threadName] = dict[processName][threadName] ||
+        new tr.v.Histogram(tr.b.Unit.byName.timeDurationInMs,
+            DURATION_BOUNDARIES);
+    dict[processName][threadName].add(value, url);
+  }
+
+  pi.FunctionRegistry.register(taskInfoMapFunction);
+
+  // Exporting for tests.
+  return {
+    taskInfoMapFunctionForTest: taskInfoMapFunction
+  };
+});
+</script>

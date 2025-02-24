@@ -1,0 +1,13 @@
+boto v2.44.0
+============
+
+:date: 2016/12/08
+
+Adds support for ``ca-central-1`` region and gs object-level storage class.
+
+Changes
+-------
+* Update endpoints (:issue:`3649`, :sha:`a1eae11`)
+* Add gs support for object-level storage class features. (:issue:`3635`, :sha:`dc4bf34`)
+
+

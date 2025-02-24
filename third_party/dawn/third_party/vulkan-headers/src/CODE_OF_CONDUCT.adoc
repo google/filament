@@ -1,0 +1,10 @@
+// Copyright 2018-2023 The Khronos Group Inc.
+// SPDX-License-Identifier: MIT
+
+= Code of Conduct
+
+A reminder that this repository is managed by the Khronos Group.
+Interactions here should follow the
+https://www.khronos.org/about/code-of-conduct[Khronos Code of Conduct],
+which prohibits aggressive or derogatory language. Please keep the
+discussion friendly and civil.

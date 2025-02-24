@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/find_control.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const ctl = document.createElement('tr-ui-find-control');
+    ctl.controller = {
+      findNext() { },
+      findPrevious() { },
+      reset() {},
+
+      filterHits: ['a', 'b'],
+
+      currentHitIndex: 0
+    };
+
+    this.addHTMLOutput(ctl);
+  });
+
+  test('updateHitCountEl_twoResults', function() {
+    const ctl = document.createElement('tr-ui-find-control');
+    ctl.controller = {
+      findNext() { },
+      findPrevious() { },
+      reset() {},
+
+      filterHits: ['a', 'b'],
+
+      currentHitIndex: 0
+    };
+
+    this.addHTMLOutput(ctl);
+    ctl.$.filter.value = 'test';
+    ctl.updateHitCountEl();
+    assert.strictEqual(ctl.$.hitCount.textContent, '1 of 2');
+  });
+
+  test('updateHitCountEl_emptyFilter', function() {
+    const ctl = document.createElement('tr-ui-find-control');
+    ctl.controller = {
+      findNext() { },
+      findPrevious() { },
+      reset() {},
+
+      filterHits: ['a', 'b'],
+
+      currentHitIndex: 0
+    };
+
+    this.addHTMLOutput(ctl);
+    ctl.$.filter.value = '';
+    ctl.updateHitCountEl();
+    assert.strictEqual(ctl.$.hitCount.textContent, '');
+  });
+});
+</script>

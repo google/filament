@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script src="/jquery/jquery-2.1.4.min.js"></script>
+<script src="/flot/jquery.flot.min.js"></script>
+<script src="/flot/jquery.flot.crosshair.min.js"></script>
+<script src="/flot/jquery.flot.fillbetween.min.js"></script>
+<script src="/flot/jquery.flot.selection.min.js"></script>
+
+<link rel="import" href="/dashboard/elements/report-page.html">
+<link rel="import" href="/dashboard/static/events.html">
+<link rel="import" href="/dashboard/static/testdata/dromaeo-charts.html">
+<link rel="import" href="/dashboard/static/testdata/sunspider-charts.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+const REPORT_JSON = {
+  'login_url': 'https:do/not/click',
+  'revision_info': {
+    'r_commit_pos': {
+      'url': 'http://test-results/revision_range?start={{R1}}&end={{R2}}',
+      'name': 'Chromium Commit Position'
+    },
+    'r_chromium': {
+      'url': 'http://test-results/revision_range?start={{R1}}&end={{R2}}',
+      'name': 'Chromium git hash'
+    },
+    'r_webkit_rev': {
+      'url': 'http://test-results/revision_range?start={{R1}}&end={{R2}}',
+      'name': 'WebKit Commit Position'
+    },
+  },
+  'is_internal_user': false,
+  'test_suites': {
+    'sunspider': {
+      'mas': {
+        'ChromiumPerf': {
+          'android-nexus6': false,
+        }
+      },
+      'des': 'JavaScript performance test.',
+    },
+    'dromaeo.domcoreattr': {
+      'mas': {
+        'ChromiumPerf': {
+          'chromium-rel-mac11': false
+        }
+      }
+    }
+  },
+  'xsrf_token': 'aaaaa'
+};
+
+const SHORT_URI_JSON = {
+  'charts': [[
+    ['ChromiumPerf/chromium-rel-mac11/dromaeo.domcoreattr/dom', ['dom']]
+  ]]
+};
+
+const SUNSPIDER_MENU_JSON = {
+  'Total': {
+    'has_rows': true,
+    'sub_tests': {
+      'http___www.webkit.org_perf_sunspider-1.0.2_sunspider-1.0.2_driver.html':
+      {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'http___www.webkit.org_perf_sunspider-1.0.2_sunspider-1.0.2.html_ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      }
+    }
+  }
+};
+
+const DROMAEO_MENU_JSON = {
+  'dom': {
+    'has_rows': true,
+    'sub_tests': {
+      'http___dromaeo.com?dom-attr_ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'http___dromaeo.com?dom-attr': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      }
+    }
+  }
+};
+
+tr.b.unittest.testSuite(function() {
+  let originalGetQueryString;
+
+  const testOptions = {
+    setUp() {
+      events.startSiloingListeners();
+      originalGetQueryString = uri.getQueryString;
+    },
+    tearDown() {
+      uri.getQueryString = originalGetQueryString;
+      // Comment this out to interact with the page! Otherwise the mock gets
+      // torn down before you can interact with the UI.
+      testing_common.clearXhrMock();
+      events.stopSiloingListeners();
+    }
+  };
+
+  test('instantiate', function() {
+    // Use a query string with an sid param to load a chart based automatically.
+    uri.getQueryString = function() { return '?sid=12345'; };
+
+    // Mock out the basic data neede by the /report page.
+    testing_common.addXhrMock('/report?sid=12345', JSON.stringify(REPORT_JSON));
+
+    // Mock out the request to /short_uri to get which charts to load from sid.
+    testing_common.addXhrMock(
+        '/short_uri?sid=12345', JSON.stringify(SHORT_URI_JSON));
+
+    // Fill in teh submenus for dromaeo.
+    testing_common.addXhrMock(
+        '/list_tests?bots=ChromiumPerf%2Fchromium-rel-mac11&suite=dromaeo.' +
+        'domcoreattr&type=sub_tests&xsrf_token=aaaaa',
+        JSON.stringify(DROMAEO_MENU_JSON));
+
+    // Fill in the submenus for sunspider
+    testing_common.addXhrMock(
+        '/list_tests?bots=ChromiumPerf%2Fandroid-nexus6&suite=sunspider&' +
+        'type=sub_tests&xsrf_token=aaaaa',
+        JSON.stringify(SUNSPIDER_MENU_JSON));
+
+    // Make the charts load when requested.
+    testing_common.mockChartJson(dromaeoCharts, null, '12345');
+    testing_common.mockChartJson(sunspiderCharts, null, '12345');
+
+    // The report-page uses all these elements.
+    const page = document.createElement('report-page');
+    this.addHTMLOutput(page);
+  }, testOptions);
+});
+</script>

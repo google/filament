@@ -1,0 +1,7 @@
+monorail {
+  component: "Internals>GPU>ANGLE"
+}
+team_email: "angleproject@googlegroups.com"
+buganizer_public: {
+  component_id: 1456215
+}

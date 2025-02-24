@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pi.m', function() {
+  function StreamingReducer(reducingTargetConstructor) {
+    this.reducingTargetConstructor = reducingTargetConstructor;
+    this.reducingTargetsByKey_ = {};
+  }
+
+  StreamingReducer.prototype = {
+    push: function(key, value) {
+      var reducingTarget = this.reducingTargetsByKey_[key];
+      if (reducingTarget === undefined) {
+        reducingTarget = new this.reducingTargetConstructor(key, value);
+        this.reducingTargetsByKey_[key] = reducingTarget;
+      }
+      reducingTarget.push(key, value);
+    },
+
+    finalizeAndIterResults: function(outputFunc, opt_this) {
+      for (var key in this.reducingTargetsByKey_) {
+        var reducingTarget = this.reducingTargetsByKey_[key];
+        var resultValue = reducingTarget.finalizeAndGetResult(key);
+        outputFunc.call(opt_this, key, resultValue);
+      }
+    },
+
+    finalizeAndGetResults: function() {
+      var res = [];
+      this.finalizeAndIterResults(function(key, value) {
+        res.push({key: key, value: value});
+      });
+      return res;
+    }
+  };
+
+  return {
+    StreamingReducer: StreamingReducer
+  };
+});
+</script>
+

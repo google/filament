@@ -1,0 +1,135 @@
+==========================
+Release Notes for boto 2.0
+==========================
+
+Highlights
+==========
+
+There have been many, many changes since the 2.0b4 release. This overview highlights some of those changes.
+
+* Fix connection pooling bug: don't close before reading.
+* Added AddInstanceGroup and ModifyInstanceGroup to boto.emr
+* Merge pull request #246 from chetan/multipart_s3put
+* AddInstanceGroupsResponse class to boto.emr.emrobject.
+* Removed extra print statement
+* Merge pull request #244 from ryansb/master
+* Added add_instance_groups function to boto.emr.connection. Built some helper methods for it, and added AddInstanceGroupsResponse class to boto.emr.emrobject.
+* Added a new class, InstanceGroup, with just a __init__ and __repr__.
+* Adding support for GetLoginProfile request to IAM.  Removing commented lines in connection.py.  Fixes GoogleCode issue 532.
+* Fixed issue #195
+* Added correct sax reader for boto.emr.emrobject.BootstrapAction
+* Fixed a typo bug in ConsoleOutput sax parsing and some PEP8 cleanup in connection.py.
+* Added initial support for generating a registration url for the aws marketplace
+* Fix add_record and del_record to support multiple values, like change_record does
+* Add support to accept SecurityGroupId as a parameter for ec2 run instances. This is required to create EC2 instances under VPC security groups
+* Added support for aliases to the add_change method of ResourceRecordSets.
+* Resign each request in a retry situation.  Some services are starting to incorporate replay detection algorithms and the boto approach of simply re-trying the original request triggers them.  Also a small bug fix to roboto and added a delay in the ec2 test to wait for consistency.
+* Fixed a problem with InstanceMonitoring parameter of LaunchConfigurations for autoscale module.
+* Route 53 Alias Resource Record Sets
+* Fixed App Engine support
+* Fixed incorrect host on App Engine
+* Fixed issue 199 on github.
+* First pass at put_metric_data
+* Changed boto.s3.Bucket.set_acl_xml() to ISO-8859-1 encode the Unicode ACL text before sending over HTTP connection.
+* Added GetQualificationScore for mturk.
+* Added UpdateQualificationScore for mturk
+* import_key_pair base64 fix
+* Fixes for ses send_email method better handling of exceptions
+* Add optional support for SSL server certificate validation.
+* Specify a reasonable socket timeout for httplib
+* Support for ap-northeast-1 region
+* Close issue #153
+* Close issue #154
+* we must POST autoscale user-data, not GET. otherwise a HTTP 505 error is returned from AWS. see: http://groups.google.com/group/boto-dev/browse_thread/thread/d5eb79c97ea8eecf?pli=1
+* autoscale userdata needs to be base64 encoded.
+* Use the unversioned streaming jar symlink provided by EMR
+* Updated lss3 to allow for prefix based listing (more like actual ls)
+* Deal with the groupSet element that appears in the instanceSet element in the DescribeInstances response.
+* Add a change_record command to bin/route53
+* Incorporating a patch from AWS to allow security groups to be tagged.
+* Fixed an issue with extra headers in generated URLs.  Fixes http://code.google.com/p/boto/issues/detail?id=499
+* Incorporating a patch to handle obscure bug in apache/fastcgi.  See http://goo.gl/0Tdax.
+* Reorganizing the existing test code.  Part of a long-term project to completely revamp and improve boto tests.
+* Fixed an invalid parameter bug (ECS) #102
+* Adding initial cut at s3 website support.
+
+Stats
+=====
+
+* 465 commits since boto 2.0b4
+* 70 authors
+* 111 Pull requests from 64 different authors
+
+Contributors (in order of last commits)
+=======================================
+
+* Mitch Garnaat
+* Chris Moyer
+* Garrett Holmstrom
+* Justin Riley
+* Steve Johnson
+* Sean Talts
+* Brian Beach
+* Ryan Brown
+* Chetan Sarva
+* spenczar
+* Jonathan Drosdeck
+* garnaat
+* Nathaniel Moseley
+* Bradley Ayers
+* jibs
+* Kenneth Falck
+* chirag
+* Sean O'Connor
+* Scott Moser
+* Vineeth Pillai
+* Greg Taylor
+* root
+* darktable
+* flipkin
+* brimcfadden
+* Samuel Lucidi
+* Terence Honles
+* Mike Schwartz
+* Waldemar Kornewald
+* Lucas Hrabovsky
+* thaDude
+* Vinicius Ruan Cainelli
+* David Marin
+* Stanislav Ievlev
+* Victor Trac
+* Dan Fairs
+* David Pisoni
+* Matt Robenolt
+* Matt Billenstein
+* rgrp
+* vikalp
+* Christoph Kern
+* Gabriel Monroy
+* Ben Burry
+* Hinnerk
+* Jann Kleen
+* Louis R. Marascio
+* Matt Singleton
+* David Park
+* Nick Tarleton
+* Cory Mintz
+* Robert Mela
+* rlotun
+* John Walsh
+* Keith Fitzgerald
+* Pierre Riteau
+* ryancustommade
+* Fabian Topfstedt
+* Michael Thompson
+* sanbornm
+* Seth Golub
+* Jon Colverson
+* Steve Howard
+* Roberto Gaiser
+* James Downs
+* Gleicon Moraes
+* Blake Maltby
+* Mac Morgan
+* Rytis Sileika
+* winhamwr

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+<link rel="import" href="/tracing/model/helpers/chrome_browser_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pie', function() {
+  function eventCost(event) {
+    if (event.cpuDuration !== undefined)
+      return event.cpuDuration;
+    return event.duration;
+  }
+
+  // Computes the thread time spent in BeginMainFrame during the loading phase
+  // as a ratio of the overall main thread utilization during that time.
+  // See https://goo.gl/l7V5xg.
+  function mapRenderingCost(result, model) {
+    var modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    var browserHelper = modelHelper.browserHelper;
+    var rendererHelpers = modelHelper.rendererHelpers;
+
+    if (!browserHelper || !rendererHelpers) {
+      // If we couldn't find both a browser and a renderer process, bail out.
+      result.addPair('renderingCost', null);
+      return;
+    }
+
+    var loadingEvents = browserHelper.getLoadingEventsInRange(model.bounds);
+    var loadingDurations = new Array(loadingEvents.length);
+    var loadingTotalCost = new Array(loadingEvents.length);
+    var loadingBeginMainFrameCost = new Array(loadingEvents.length);
+    var loadingBeginMainFrameRelativeCost = new Array(loadingEvents.length);
+    var beginMainFrameCount = 0;
+    loadingEvents.forEach(function(loadingEvent, index) {
+      loadingDurations[index] = loadingEvent.duration;
+
+      var totalCost = 0;
+      var beginMainFrameCost = 0;
+      for (var pid in rendererHelpers) {
+        var rendererHelper = rendererHelpers[pid];
+        var mainThread = rendererHelper.mainThread;
+        for (var event of mainThread.getDescendantEvents()) {
+          // Look for tasks executed by the scheduler. Note that this only
+          // includes slices that are *completely* inside the loading phase.
+          if (event.title !== 'TaskQueueManager::RunTask' ||
+              event.start < loadingEvent.start ||
+              event.start + event.duration >
+                  loadingEvent.start + loadingEvent.duration) {
+            continue;
+          }
+          totalCost += eventCost(event);
+
+          var beginMainFrame =
+              event.findDescendentSlice('ProxyMain::BeginMainFrame');
+          if (beginMainFrame) {
+            beginMainFrameCount++;
+            beginMainFrameCost += eventCost(beginMainFrame);
+          }
+        }
+      }
+
+      loadingTotalCost[index] = totalCost;
+      loadingBeginMainFrameCost[index] = beginMainFrameCost;
+      loadingBeginMainFrameRelativeCost[index] = beginMainFrameCost / totalCost;
+    });
+
+    if (loadingDurations.length === 0) {
+      result.addValue('renderingCost', null);
+      return;
+    }
+
+    result.addPair('renderingCost', {
+          loadingDuration: loadingDurations,
+          loadingTotalCost: loadingTotalCost,
+          loadingBeginMainFrameCost: loadingBeginMainFrameCost,
+          loadingBeginMainFrameRelativeCost: loadingBeginMainFrameRelativeCost,
+          beginMainFramesPerLoad: beginMainFrameCount / loadingDurations.length
+        });
+  }
+
+  pi.FunctionRegistry.register(mapRenderingCost);
+
+  return {
+    mapRenderingCostForTest: mapRenderingCost
+  };
+});
+</script>

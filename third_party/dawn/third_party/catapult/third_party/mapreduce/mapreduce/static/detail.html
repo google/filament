@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Loading Job Status...</title>
+  <link rel="stylesheet" href="base.css" type="text/css">
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="jquery-json.js"></script>
+  <script type="text/javascript" src="jquery-url.js"></script>
+  <script type="text/javascript" src="status.js"></script>
+  <script type="text/javascript">
+    google.load('visualization', '1.0', {'packages': ['corechart']});
+    google.setOnLoadCallback(initDetail);
+  </script>
+</head>
+<body>
+
+<div id="butter" style="display: none"></div>
+
+<div id="control">
+  <span id="overview-link">
+  <a href="status">&laquo; Back to Overview</a>
+  |
+  </span>
+  <span id="job-control"></span>
+  <!--
+  Add refresh control.
+  -->
+</div>
+
+<h1 id="detail-page-title">Loading Job Status...</h1>
+<h3 id="detail-page-undertext"></h3>
+
+<div id="detail">
+
+  <div id="detail-graph"></div>
+
+  <div id="detail-params-container">
+    <h2>Overview</h2>
+    <ul id="detail-params"></ul>
+  </div>
+
+  <div id="aggregated-counters-container">
+    <h2>Counters</h2>
+    <ul id="aggregated-counters"></ul>
+  </div>
+
+  <div style="clear: both"></div>
+
+  <div>
+    <h2>Shard status</h2>
+    <table class="status-table">
+      <thead>
+        <tr>
+          <th>Shard</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th>Last work item</th>
+          <th>Time elapsed</th>
+        </tr>
+      </thead>
+
+      <tbody id="mapper-shard-status"></tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

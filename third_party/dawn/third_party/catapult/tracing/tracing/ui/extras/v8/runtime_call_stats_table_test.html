@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+<link rel="import" href="/tracing/ui/extras/v8/runtime_call_stats_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+  const apiObjectGet = [1, 123];
+  const functionCallback = [2, 234];
+  const compileFullCode = [3, 345];
+  const allocateInTargetSpace = [4, 456];
+  const loadIcMiss = [5, 567];
+  const jsExecution = [6, 678];
+  const optimizeCode = [7, 789];
+  const parseLazy = [8, 890];
+  const handleApiCall = [9, 901];
+  const compileBackground = [1, 101];
+  const parseBackground = [2, 202];
+  const optimizeCodeBackground = [3, 303];
+
+  function createModel() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.s1 = m.t2.sliceGroup.pushSlice(
+          newSliceEx(
+              {title: 'V8.Execute',
+                start: 0,
+                end: 10,
+                type: tr.e.v8.V8ThreadSlice,
+                cat: 'v8',
+                args: {'runtime-call-stats':
+                {
+                  JS_Execution: jsExecution,
+                  HandleApiCall: handleApiCall,
+                  CompileFullCode: compileFullCode,
+                  LoadIC_Miss: loadIcMiss,
+                  ParseLazy: parseLazy,
+                  RecompileConcurrent: optimizeCode,
+                  OptimizeCode: optimizeCode,
+                  FunctionCallback: functionCallback,
+                  AllocateInTargetSpace: allocateInTargetSpace,
+                  API_Object_Get: apiObjectGet,
+                  CompileBackgroundIgnition: compileBackground,
+                  ParseBackgroundFunctionLiteral: parseBackground,
+                  RecompileConcurrent: optimizeCodeBackground
+                }}}));
+      m.s2 = m.t2.sliceGroup.pushSlice(
+          newSliceEx(
+              {title: 'V8.Execute',
+                start: 11,
+                end: 15,
+                type: tr.e.v8.V8ThreadSlice,
+                cat: 'v8',
+                args: {'runtime-call-stats':
+                {
+                  JS_Execution: jsExecution,
+                  HandleApiCall: handleApiCall,
+                  CompileFullCode: compileFullCode,
+                  LoadIC_Miss: loadIcMiss,
+                  ParseLazy: parseLazy,
+                  OptimizeCode: optimizeCode,
+                  FunctionCallback: functionCallback,
+                  AllocateInTargetSpace: allocateInTargetSpace,
+                  API_Object_Get: apiObjectGet
+                }}}));
+      m.s3 = m.t2.sliceGroup.pushSlice(
+          newSliceEx(
+              {title: 'V8.Execute',
+                start: 11,
+                end: 15,
+                type: tr.e.v8.V8ThreadSlice,
+                cat: 'v8',
+                args: {'runtime-call-stats':
+                {
+                  LoadIC_LoadCallback: [1, 111],
+                  StoreIC_StoreCallback: [2, 222],
+                }}}));
+    });
+    return m;
+  }
+
+  test('SingleSliceSelection', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement(
+        'tr-ui-e-v8-runtime-call-stats-table');
+    viewEl.slices = [m.s1];
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 19);
+    assert.deepEqual(rows.map(r => r.time), [
+      5589,
+      loadIcMiss[1],
+      optimizeCodeBackground[1],
+      optimizeCode[1],
+      compileBackground[1],
+      compileFullCode[1],
+      parseBackground[1],
+      parseLazy[1],
+      functionCallback[1],
+      apiObjectGet[1],
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      allocateInTargetSpace[1],
+      jsExecution[1],
+      handleApiCall[1]
+    ]);
+  });
+
+  test('MultiSliceSelection', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement(
+        'tr-ui-e-v8-runtime-call-stats-table');
+    viewEl.slices = [m.s1, m.s2];
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 19);
+    assert.deepEqual(rows.map(r => r.time), [
+      10572,
+      loadIcMiss[1] * 2,
+      optimizeCodeBackground[1],
+      optimizeCode[1] * 2,
+      compileBackground[1],
+      compileFullCode[1] * 2,
+      parseBackground[1],
+      parseLazy[1] * 2,
+      functionCallback[1] * 2,
+      apiObjectGet[1] * 2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      allocateInTargetSpace[1] * 2,
+      jsExecution[1] * 2,
+      handleApiCall[1] * 2
+    ]);
+
+    assert.deepEqual(rows.map(r => r.entries_.size), [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+    ]);
+  });
+
+  test('groupCorrectly', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement(
+        'tr-ui-e-v8-runtime-call-stats-table');
+    viewEl.slices = [m.s3];
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 19);
+    assert.deepEqual(rows.map(r => r.time), [
+      333,
+      333,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]);
+
+    assert.deepEqual(rows.map(r => r.entries_.size), [
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]);
+  });
+});
+</script>

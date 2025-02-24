@@ -1,0 +1,112 @@
+%$%generated_file_comment
+
+package {
+    // http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // the below license kinds from "external_swiftshader_license":
+    //   SPDX-license-identifier-Apache-2.0
+    //   SPDX-license-identifier-BSD
+    //   SPDX-license-identifier-MIT
+    //   SPDX-license-identifier-NCSA
+    //   legacy_unencumbered
+    default_applicable_licenses: ["external_swiftshader_license"],
+}
+
+cc_defaults {
+    name: "libLLVM16_swiftshader_defaults",
+
+    device_supported: true,
+    host_supported: true,
+    vendor: true,
+
+    srcs: [
+%$%files_llvm
+    ],
+
+    arch: {
+        arm: {
+            srcs: [
+%$%files_ARM
+            ],
+        },
+        arm64: {
+            srcs: [
+%$%files_AArch64
+            ],
+        },
+        riscv64: {
+            srcs: [
+%$%files_RISCV
+            ],
+        },
+        x86: {
+            srcs: [
+%$%files_x86
+            ],
+        },
+        x86_64: {
+            srcs: [
+%$%files_x86
+            ],
+        },
+    },
+
+    local_include_dirs: [
+        ".",
+        "llvm/lib/Target/X86",
+        "llvm/lib/Target/AArch64",
+        "llvm/lib/Target/ARM",
+        "llvm/lib/Target/RISCV",
+        "configs/common/lib/Target/AArch64",
+        "configs/common/lib/Target/ARM",
+        "configs/common/lib/Target/X86",
+        "configs/common/lib/Target/RISCV",
+        "configs/common/lib/ExecutionEngine/JITLink",
+    ],
+
+    export_include_dirs: [
+        "llvm/include",
+        "configs/common/include",
+        "configs/android/include",
+    ],
+
+    cflags: [
+        "-Wno-implicit-fallthrough",
+        "-Wno-unreachable-code-loop-increment",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-DBLAKE3_NO_AVX512",
+        "-DBLAKE3_NO_AVX2",
+        "-DBLAKE3_NO_SSE41",
+        "-DBLAKE3_NO_SSE2",
+        "-DBLAKE3_USE_NEON=0",
+        // Avoid collision with LLVM's "llvm::jitlink::i386" namespace.
+        "-Ui386",
+    ],
+
+    sanitize: {
+        // HWASan slows down LLVM JIT compilation more than usual.
+        // b/193198227
+        hwaddress: false,
+    },
+}
+
+cc_library_static {
+    name: "libLLVM16_swiftshader",
+
+    defaults: [ "libLLVM16_swiftshader_defaults" ],
+}
+
+cc_library_static {
+    name: "libLLVM16_swiftshader_debug",
+
+    defaults: [ "libLLVM16_swiftshader_defaults" ],
+
+    cflags: [
+        "-UNDEBUG",
+    ],
+
+    srcs: [
+%$%files_llvm_debug
+    ],
+}

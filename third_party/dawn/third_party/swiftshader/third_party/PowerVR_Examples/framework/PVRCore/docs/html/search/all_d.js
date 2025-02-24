@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['name',['name',['../structpvr_1_1effect_1_1_subpass_group.html#a7b29c59752058733807925eca27d6dcb',1,'pvr::effect::SubpassGroup::name()'],['../structpvr_1_1effect_1_1_pass.html#a27e4dee55edf0fbb6bc3de122d5c0d09',1,'pvr::effect::Pass::name()'],['../structpvr_1_1effect_1_1_effect.html#ad1a0325a946c1c3c126da799a1431c67',1,'pvr::effect::Effect::name()']]],
+  ['ndctopixel',['ndcToPixel',['../namespacepvr_1_1math.html#a00842f73cec1ae62bae0d93c79f5ffbb',1,'pvr::math']]],
+  ['nearest',['Nearest',['../namespacepvr.html#a84d320093e1561f82e57776aafd947d7a60494f02d440f316319dd0fad40ad007',1,'pvr::Nearest()'],['../namespacepvr.html#ac7a59f03f943f1c79a5339331fc15abea60494f02d440f316319dd0fad40ad007',1,'pvr::Nearest()']]],
+  ['negativex',['NegativeX',['../namespacepvr.html#a87b409df225dee78541eb74988f4e20ca963a8a64a09d54efc81b136ca6be21b2',1,'pvr']]],
+  ['negativey',['NegativeY',['../namespacepvr.html#a87b409df225dee78541eb74988f4e20cae4d5f02ceecd15caf66e9f0b2393c86b',1,'pvr']]],
+  ['negativez',['NegativeZ',['../namespacepvr.html#a87b409df225dee78541eb74988f4e20cada76df034cd139bd515761c8bb8e3090',1,'pvr']]],
+  ['never',['Never',['../namespacepvr.html#a24a87498f839b45b6e1bc3c8b2ca20fca6e7b34fa59e1bd229b207892956dc41c',1,'pvr']]],
+  ['node',['Node',['../namespacepvr.html#a7449705e04c8fe948e390ea793106107a6c3a6944a808a7c0bbb6788dbec54a9f',1,'pvr']]],
+  ['none',['None',['../namespacepvr.html#a7924324f96dc973225ad3c532cc72309a6adf97f83acf6453d4a6a4b1070f3754',1,'pvr::None()'],['../namespacepvr.html#a675b14a2f2079f7f72e7f2ad35d13de7a6adf97f83acf6453d4a6a4b1070f3754',1,'pvr::None()'],['../namespacepvr.html#a1ca56afd652113209f2535e7688a4189a6adf97f83acf6453d4a6a4b1070f3754',1,'pvr::None()'],['../namespacepvr.html#a84d320093e1561f82e57776aafd947d7a6adf97f83acf6453d4a6a4b1070f3754',1,'pvr::None()']]],
+  ['notequal',['NotEqual',['../namespacepvr.html#a24a87498f839b45b6e1bc3c8b2ca20fca19bb0af2c3c530538cb41aff7f235b96',1,'pvr']]],
+  ['numarrayelements',['numArrayElements',['../structpvr_1_1texture__ktx_1_1_file_header.html#a167e3fbc45a403a68319c0e34e8b93bf',1,'pvr::texture_ktx::FileHeader']]],
+  ['numarraylayers',['numArrayLayers',['../structpvr_1_1_image_subresource_layers.html#aefe564105d90d1915cd711e3f17c96b7',1,'pvr::ImageSubresourceLayers']]],
+  ['numarraylevels',['numArrayLevels',['../structpvr_1_1_image_layers_size.html#a4075bd40cb742d99f291b92cf6e04aaa',1,'pvr::ImageLayersSize']]],
+  ['numcolorsintable',['numColorsInTable',['../structpvr_1_1texture__bmp_1_1_info_header1.html#a78302408f3f64a0defa89db7bdb8f9c7',1,'pvr::texture_bmp::InfoHeader1']]],
+  ['numdatatypecomponents',['numDataTypeComponents',['../namespacepvr.html#a33df3732a0a48b5274ac3938a7e570b0',1,'pvr']]],
+  ['numfaces',['numFaces',['../structpvr_1_1_texture_header.html#ae73034dd746eae6a6b97964196bb35f6',1,'pvr::TextureHeader::numFaces()'],['../structpvr_1_1texture__ktx_1_1_file_header.html#ab962b4f95078c6c6f3030c1306455d7d',1,'pvr::texture_ktx::FileHeader::numFaces()']]],
+  ['numimportantcolors',['numImportantColors',['../structpvr_1_1texture__bmp_1_1_info_header1.html#adb02bd5bc4874de9cc596115d6c88f4a',1,'pvr::texture_bmp::InfoHeader1']]],
+  ['nummiplevels',['numMipLevels',['../structpvr_1_1_image_layers_size.html#aa77ce4b506e25ed7842b46f19d99c030',1,'pvr::ImageLayersSize']]],
+  ['nummipmaplevels',['numMipmapLevels',['../structpvr_1_1texture__ktx_1_1_file_header.html#a9e0d52ac2ec68dfc15d2e2d91f8abe96',1,'pvr::texture_ktx::FileHeader::numMipmapLevels()'],['../structpvr_1_1_image_storage_format.html#aec8af41052d60f9335c2913e917ca8eb',1,'pvr::ImageStorageFormat::numMipMapLevels()'],['../structpvr_1_1_image_storage_format_compressed.html#a4c32ae574397e5feea38654fefcda116',1,'pvr::ImageStorageFormatCompressed::numMipMapLevels()']]],
+  ['nummipmaps',['numMipMaps',['../structpvr_1_1_texture_header.html#aa9708c183c5836408d74d5b341846594',1,'pvr::TextureHeader::numMipMaps()'],['../structpvr_1_1texture__dds_1_1_file_header.html#a7f4a102fd22c58b5cda1835f2d88c8a0',1,'pvr::texture_dds::FileHeader::numMipMaps()'],['../structpvr_1_1texture__legacy_1_1_header_v1.html#a9e18e528a8db72527a9e0bf941ed4950',1,'pvr::texture_legacy::HeaderV1::numMipMaps()'],['../structpvr_1_1texture__xnb_1_1_texture2_d_header.html#af30738985d68236a563f1e7938739a38',1,'pvr::texture_xnb::Texture2DHeader::numMipMaps()'],['../structpvr_1_1texture__xnb_1_1_texture3_d_header.html#a8f28fe86e6ec95e61d80ebb5bad48cfc',1,'pvr::texture_xnb::Texture3DHeader::numMipMaps()'],['../structpvr_1_1texture__xnb_1_1_texture_cube_header.html#afd486984a7dc39eaf655931524ae26a4',1,'pvr::texture_xnb::TextureCubeHeader::numMipMaps()']]],
+  ['numplanes',['numPlanes',['../structpvr_1_1texture__bmp_1_1_core_header.html#a4b3cb09108064cb48a4c3356475af194',1,'pvr::texture_bmp::CoreHeader::numPlanes()'],['../structpvr_1_1texture__bmp_1_1_info_header1.html#af7ac47928fdb34616f2eb0430833a898',1,'pvr::texture_bmp::InfoHeader1::numPlanes()']]],
+  ['numsamples',['numSamples',['../structpvr_1_1_image_storage_format.html#aef923efffa1016bf85cc1b6b836a0932',1,'pvr::ImageStorageFormat']]],
+  ['numsurfaces',['numSurfaces',['../structpvr_1_1_texture_header.html#a04e90b5846cddef394f1f0e313d8a8a8',1,'pvr::TextureHeader::numSurfaces()'],['../structpvr_1_1texture__legacy_1_1_header_v2.html#a65504576be6b537e4465ee4ec9dd5ddc',1,'pvr::texture_legacy::HeaderV2::numSurfaces()']]]
+];

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/webcomponentsjs_polyfill.html" data-suppress-import-order>
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/ui/base/base.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">
+<script>
+'use strict';
+
+let g_timelineViewEl;
+
+(function() {
+  const styleEl = document.createElement('style');
+  const lines = [
+    'html, body {',
+    '  box-sizing: border-box;',
+    '  overflow: hidden;',
+    '  margin: 0px;',
+    '  padding: 0;',
+    '  width: 100%;',
+    '  height: 100%;',
+    '}',
+    'tr-ui-timeline-view {',
+    '  width: 100%;',
+    '  height: 100%;',
+    '}',
+    'tr-ui-timeline-view:focus {',
+    '  outline: none;',
+    '}'
+  ];
+  Polymer.dom(styleEl).textContent = lines.join('\n');
+  Polymer.dom(document.head).appendChild(styleEl);
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.createElement('track-view-container');
+  container.id = 'track_view_container';
+
+  g_timelineViewEl = document.createElement('tr-ui-timeline-view');
+  Polymer.dom(g_timelineViewEl).appendChild(container);
+
+  Polymer.dom(document.body).appendChild(g_timelineViewEl);
+
+  const traces = [];
+  const viewerDataScripts = Polymer.dom(document).querySelectorAll(
+      '#viewer-data');
+  for (let i = 0; i < viewerDataScripts.length; i++) {
+    let text = Polymer.dom(viewerDataScripts[i]).textContent;
+    // Trim leading newlines off the text. They happen during writing.
+    while (text[0] === '\n') {
+      text = text.substring(1);
+    }
+    traces.push(tr.b.Base64.atob(text));
+  }
+
+  const m = new tr.Model();
+  const i = new tr.importer.Import(m);
+  const p = i.importTracesWithProgressDialog(traces);
+  p.then(
+      function() {
+        g_timelineViewEl.model = m;
+        g_timelineViewEl.updateDocumentFavicon();
+        g_timelineViewEl.globalMode = true;
+        g_timelineViewEl.viewTitle = document.title;
+      },
+      function(err) {
+        const overlay = new tr.ui.b.Overlay();
+        Polymer.dom(overlay).textContent = tr.b.normalizeException(err).message;
+        overlay.title = 'Import error';
+        overlay.visible = true;
+      });
+});
+</script>

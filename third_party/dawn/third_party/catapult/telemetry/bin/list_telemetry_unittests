@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import sys
+
+
+def _ExtractQueuedTestName(line):
+  _, test_name, _ = line.split(' ')
+  return test_name
+
+
+def _ExtractPassedTestNameAndTime(line):
+  _, test_name, _, test_time_string = line.split(' ')
+  if test_time_string.endswith(':'):
+    test_time = float(test_time_string[:-2])
+  else:
+    test_time = float(test_time_string[:-1])
+  return test_name, test_time
+
+
+def _ExtractSkippedTestName(line):
+  return line.split(' ')[1]
+
+def _IsQueued(line):
+  return line.endswith(' queued')
+
+
+def _IsPassed(line):
+  return 'passed' in line.split(' ')
+
+
+def _IsSkipped(line):
+  return ' was skipped ' in line.strip()
+
+
+def _ProcessLogFile(file_path):
+  passed_unittests = []
+  queued_unittests = []
+  skipped_unittests = []
+  with open(file_path, 'r') as f:
+    for line in f:
+      line = line.strip()
+      if not line.startswith('['):
+        continue
+      if _IsQueued(line):
+        queued_unittests.append(_ExtractQueuedTestName(line))
+      elif _IsPassed(line):
+        passed_unittests.append(_ExtractPassedTestNameAndTime(line))
+      elif _IsSkipped(line):
+        skipped_unittests.append(_ExtractSkippedTestName(line))
+  queued_unittests.sort()
+  passed_unittests.sort(key=lambda v: -v[1])
+  skipped_unittests.sort()
+  return queued_unittests, passed_unittests, skipped_unittests
+
+
+def main(args):
+  parser = argparse.ArgumentParser(
+      description=('Process telemetry unittests log to print out passed '
+                   'or queued tests.'))
+  parser.add_argument(
+      'filepath', help='path to log file of telemetry unittest')
+  options = parser.parse_args(args)
+  queued_unittests, passed_unittests, skipped_unittests = (
+      _ProcessLogFile(options.filepath))
+  print '********** All passed telemetry unittests:\n'
+  for test, time in passed_unittests:
+      print test, time
+  print
+  print '******** All skipped telemetry unittests:\n'
+  print '\n'.join(skipped_unittests)
+
+  unfinished_tests = []
+  passed_unittests_names = [t[0] for t in passed_unittests]
+  for t in queued_unittests:
+    if t not in skipped_unittests and t not in passed_unittests_names:
+      unfinished_tests.append(t)
+
+  print
+  print '******* Unfinished telemetry unittests:\n'
+  print '\n'.join(unfinished_tests)
+  return 0
+
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv[1:]))

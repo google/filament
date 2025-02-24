@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/animation.html">
+<link rel="import" href="/tracing/ui/base/animation_controller.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/timeline_display_transform.html">
+<link rel="import" href="/tracing/ui/timeline_interest_range.html">
+<link rel="import" href="/tracing/ui/tracks/container_to_track_map.html">
+<link rel="import" href="/tracing/ui/tracks/event_to_track_map.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Code for the viewport.
+ */
+tr.exportTo('tr.ui', function() {
+  const TimelineDisplayTransform = tr.ui.TimelineDisplayTransform;
+  const TimelineInterestRange = tr.ui.TimelineInterestRange;
+
+  const IDEAL_MAJOR_MARK_DISTANCE_PX = 150;
+  // Keep 5 digits of precision when rounding the major mark distances.
+  const MAJOR_MARK_ROUNDING_FACTOR = 100000;
+
+  class AnimationControllerProxy {
+    constructor(target) {
+      this.target_ = target;
+    }
+
+    get panX() {
+      return this.target_.currentDisplayTransform_.panX;
+    }
+
+    set panX(panX) {
+      this.target_.currentDisplayTransform_.panX = panX;
+    }
+
+    get panY() {
+      return this.target_.currentDisplayTransform_.panY;
+    }
+
+    set panY(panY) {
+      this.target_.currentDisplayTransform_.panY = panY;
+    }
+
+    get scaleX() {
+      return this.target_.currentDisplayTransform_.scaleX;
+    }
+
+    set scaleX(scaleX) {
+      this.target_.currentDisplayTransform_.scaleX = scaleX;
+    }
+
+    cloneAnimationState() {
+      return this.target_.currentDisplayTransform_.clone();
+    }
+
+    xPanWorldPosToViewPos(xWorld, xView) {
+      this.target_.currentDisplayTransform_.xPanWorldPosToViewPos(
+          xWorld, xView, this.target_.modelTrackContainer_.canvas.clientWidth);
+    }
+  }
+
+  /**
+   * The TimelineViewport manages the transform used for navigating
+   * within the timeline. It is a simple transform:
+   *   x' = (x+pan) * scale
+   *
+   * The timeline code tries to avoid directly accessing this transform,
+   * instead using this class to do conversion between world and viewspace,
+   * as well as the math for centering the viewport in various interesting
+   * ways.
+   *
+   * @constructor
+   * @extends {tr.b.EventTarget}
+   */
+  function TimelineViewport(parentEl) {
+    this.parentEl_ = parentEl;
+    this.modelTrackContainer_ = undefined;
+    this.currentDisplayTransform_ = new TimelineDisplayTransform();
+    this.initAnimationController_();
+
+    // Flow events
+    this.selectedFlowEvents_ = new Set();
+
+    // Highlights.
+    this.highlightVSync_ = false;
+
+    // High details.
+    this.highDetails_ = false;
+
+    // Grid system.
+    this.gridTimebase_ = 0;
+    this.gridStep_ = 1000 / 60;
+    this.gridEnabled_ = false;
+
+    // Init logic.
+    this.hasCalledSetupFunction_ = false;
+
+    this.onResize_ = this.onResize_.bind(this);
+    this.onModelTrackControllerScroll_ =
+        this.onModelTrackControllerScroll_.bind(this);
+
+    this.timeMode_ = TimelineViewport.TimeMode.TIME_IN_MS;
+    // Major mark positions are where the gridlines/ruler marks are placed along
+    // the x-axis.
+    this.majorMarkWorldPositions_ = [];
+    this.majorMarkUnit_ = undefined;
+    this.interestRange_ = new TimelineInterestRange(this);
+
+    this.eventToTrackMap_ = new tr.ui.tracks.EventToTrackMap();
+    this.containerToTrackMap = new tr.ui.tracks.ContainerToTrackMap();
+
+    this.dispatchChangeEvent = this.dispatchChangeEvent.bind(this);
+  }
+
+  TimelineViewport.TimeMode = {
+    TIME_IN_MS: 0,
+    REVISIONS: 1
+  };
+
+  TimelineViewport.prototype = {
+    __proto__: tr.b.EventTarget.prototype,
+
+    /**
+     * @return {boolean} Whether the current timeline is attached to the
+     * document.
+     */
+    get isAttachedToDocumentOrInTestMode() {
+      // Allow not providing a parent element, used by tests.
+      if (this.parentEl_ === undefined) return;
+      return tr.ui.b.isElementAttachedToDocument(this.parentEl_);
+    },
+
+    onResize_() {
+      this.dispatchChangeEvent();
+    },
+
+    /**
+     * Fires the change event on this viewport. Used to notify listeners
+     * to redraw when the underlying model has been mutated.
+     */
+    dispatchChangeEvent() {
+      tr.b.dispatchSimpleEvent(this, 'change');
+    },
+
+    detach() {
+      window.removeEventListener('resize', this.dispatchChangeEvent);
+    },
+
+    initAnimationController_() {
+      this.dtAnimationController_ = new tr.ui.b.AnimationController();
+      this.dtAnimationController_.addEventListener(
+          'didtick', function(e) {
+            this.onCurentDisplayTransformChange_(e.oldTargetState);
+          }.bind(this));
+
+      this.dtAnimationController_.target = new AnimationControllerProxy(this);
+    },
+
+    get currentDisplayTransform() {
+      return this.currentDisplayTransform_;
+    },
+
+    setDisplayTransformImmediately(displayTransform) {
+      this.dtAnimationController_.cancelActiveAnimation();
+
+      const oldDisplayTransform =
+          this.dtAnimationController_.target.cloneAnimationState();
+      this.currentDisplayTransform_.set(displayTransform);
+      this.onCurentDisplayTransformChange_(oldDisplayTransform);
+    },
+
+    queueDisplayTransformAnimation(animation) {
+      if (!(animation instanceof tr.ui.b.Animation)) {
+        throw new Error('animation must be instanceof tr.ui.b.Animation');
+      }
+      this.dtAnimationController_.queueAnimation(animation);
+    },
+
+    onCurentDisplayTransformChange_(oldDisplayTransform) {
+      // Ensure panY stays clamped in the track container's scroll range.
+      if (this.modelTrackContainer_) {
+        this.currentDisplayTransform.panY = tr.b.math.clamp(
+            this.currentDisplayTransform.panY,
+            0,
+            this.modelTrackContainer_.scrollHeight -
+                this.modelTrackContainer_.clientHeight);
+      }
+
+      const changed = !this.currentDisplayTransform.equals(oldDisplayTransform);
+      const yChanged = this.currentDisplayTransform.panY !==
+          oldDisplayTransform.panY;
+      if (yChanged) {
+        this.modelTrackContainer_.scrollTop = this.currentDisplayTransform.panY;
+      }
+      if (changed) {
+        this.dispatchChangeEvent();
+      }
+    },
+
+    onModelTrackControllerScroll_(e) {
+      if (this.dtAnimationController_.activeAnimation &&
+          this.dtAnimationController_.activeAnimation.affectsPanY) {
+        this.dtAnimationController_.cancelActiveAnimation();
+      }
+      const panY = this.modelTrackContainer_.scrollTop;
+      this.currentDisplayTransform_.panY = panY;
+    },
+
+    get modelTrackContainer() {
+      return this.modelTrackContainer_;
+    },
+
+    set modelTrackContainer(m) {
+      if (this.modelTrackContainer_) {
+        this.modelTrackContainer_.removeEventListener('scroll',
+            this.onModelTrackControllerScroll_);
+      }
+
+      this.modelTrackContainer_ = m;
+      this.modelTrackContainer_.addEventListener('scroll',
+          this.onModelTrackControllerScroll_);
+    },
+
+    get selectedFlowEvents() {
+      return this.selectedFlowEvents_;
+    },
+
+    set selectedFlowEvents(selectedFlowEvents) {
+      this.selectedFlowEvents_ = selectedFlowEvents;
+      this.dispatchChangeEvent();
+    },
+
+    get highlightVSync() {
+      return this.highlightVSync_;
+    },
+
+    set highlightVSync(highlightVSync) {
+      this.highlightVSync_ = highlightVSync;
+      this.dispatchChangeEvent();
+    },
+
+    get highDetails() {
+      return this.highDetails_;
+    },
+
+    set highDetails(highDetails) {
+      this.highDetails_ = highDetails;
+      this.dispatchChangeEvent();
+    },
+
+    get gridEnabled() {
+      return this.gridEnabled_;
+    },
+
+    set gridEnabled(enabled) {
+      if (this.gridEnabled_ === enabled) return;
+
+      this.gridEnabled_ = enabled && true;
+      this.dispatchChangeEvent();
+    },
+
+    get gridTimebase() {
+      return this.gridTimebase_;
+    },
+
+    set gridTimebase(timebase) {
+      if (this.gridTimebase_ === timebase) return;
+
+      this.gridTimebase_ = timebase;
+      this.dispatchChangeEvent();
+    },
+
+    get gridStep() {
+      return this.gridStep_;
+    },
+
+    get interestRange() {
+      return this.interestRange_;
+    },
+
+    get majorMarkWorldPositions() {
+      return this.majorMarkWorldPositions_;
+    },
+
+    get majorMarkUnit() {
+      switch (this.timeMode_) {
+        case TimelineViewport.TimeMode.TIME_IN_MS:
+          return tr.b.Unit.byName.timeInMsAutoFormat;
+        case TimelineViewport.TimeMode.REVISIONS:
+          return tr.b.Unit.byName.count;
+        default:
+          throw new Error(
+              'Cannot get Unit for unsupported time mode ' + this.timeMode_);
+      }
+    },
+
+    get timeMode() {
+      return this.timeMode_;
+    },
+
+    set timeMode(mode) {
+      this.timeMode_ = mode;
+      this.dispatchChangeEvent();
+    },
+
+    updateMajorMarkData(viewLWorld, viewRWorld) {
+      const pixelRatio = window.devicePixelRatio || 1;
+      const dt = this.currentDisplayTransform;
+
+      const idealMajorMarkDistancePix =
+          IDEAL_MAJOR_MARK_DISTANCE_PX * pixelRatio;
+      const idealMajorMarkDistanceWorld =
+          dt.xViewVectorToWorld(idealMajorMarkDistancePix);
+
+      const majorMarkDistanceWorld = tr.b.math.preferredNumberLargerThanMin(
+          idealMajorMarkDistanceWorld);
+
+      const firstMajorMark = Math.floor(
+          viewLWorld / majorMarkDistanceWorld) * majorMarkDistanceWorld;
+
+      this.majorMarkWorldPositions_ = [];
+      // JavaScript numbers are doubles which have 53 bits of precision. If the
+      // ratio between curX and majorMarkDistanceWorld is greater than about
+      // 2^53 then "curX += majorMarkDistanceWorld;" is a NOP, the loop will run
+      // endlessly, and chrome://tracing will fail with an OOM error.
+      // 2^53 is 9e15 but we might as well give up earlier, before the
+      // precision degrades to misleading levels.
+      if (firstMajorMark / majorMarkDistanceWorld > 1e15) return;
+      for (let curX = firstMajorMark;
+        curX < viewRWorld;
+        curX += majorMarkDistanceWorld) {
+        this.majorMarkWorldPositions_.push(
+            Math.floor(MAJOR_MARK_ROUNDING_FACTOR * curX) /
+            MAJOR_MARK_ROUNDING_FACTOR);
+      }
+    },
+
+    drawMajorMarkLines(ctx, viewHeight) {
+      // Apply subpixel translate to get crisp lines.
+      // http://www.mobtowers.com/html5-canvas-crisp-lines-every-time/
+      ctx.save();
+      ctx.translate((Math.round(ctx.lineWidth) % 2) / 2, 0);
+
+      ctx.beginPath();
+      for (const majorMark of this.majorMarkWorldPositions_) {
+        const x = this.currentDisplayTransform.xWorldToView(majorMark);
+        tr.ui.b.drawLine(ctx, x, 0, x, viewHeight);
+      }
+      ctx.strokeStyle = '#ddd';
+      ctx.stroke();
+
+      ctx.restore();
+    },
+
+    drawGridLines(ctx, viewLWorld, viewRWorld, viewHeight) {
+      if (!this.gridEnabled) return;
+
+      const dt = this.currentDisplayTransform;
+      let x = this.gridTimebase;
+
+      // Apply subpixel translate to get crisp lines.
+      // http://www.mobtowers.com/html5-canvas-crisp-lines-every-time/
+      ctx.save();
+      ctx.translate((Math.round(ctx.lineWidth) % 2) / 2, 0);
+
+      ctx.beginPath();
+      while (x < viewRWorld) {
+        if (x >= viewLWorld) {
+          // Do conversion to viewspace here rather than on
+          // x to avoid precision issues.
+          const vx = Math.floor(dt.xWorldToView(x));
+          tr.ui.b.drawLine(ctx, vx, 0, vx, viewHeight);
+        }
+
+        x += this.gridStep;
+      }
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.25)';
+      ctx.stroke();
+
+      ctx.restore();
+    },
+
+    /**
+     * Helper for selection previous or next.
+     * @param {boolean} offset If positive, select one forward (next).
+     *   Else, select previous.
+     *
+     * @return {boolean} true if current selection changed.
+     */
+    getShiftedSelection(selection, offset) {
+      const newSelection = new tr.model.EventSet();
+      for (const event of selection) {
+        // If this is a flow event, then move to its slice based on the
+        // offset direction.
+        if (event instanceof tr.model.FlowEvent) {
+          if (offset > 0) {
+            newSelection.push(event.endSlice);
+          } else if (offset < 0) {
+            newSelection.push(event.startSlice);
+          } else {
+            /* Do nothing. Zero offsets don't do anything. */
+          }
+          continue;
+        }
+
+        const track = this.trackForEvent(event);
+        track.addEventNearToProvidedEventToSelection(
+            event, offset, newSelection);
+      }
+
+      if (newSelection.length === 0) return undefined;
+
+      return newSelection;
+    },
+
+    rebuildEventToTrackMap() {
+      // TODO(charliea): Make the event to track map have a similar interface
+      // to the container to track map so that we can just clear() here.
+      this.eventToTrackMap_ = new tr.ui.tracks.EventToTrackMap();
+      this.modelTrackContainer_.addEventsToTrackMap(this.eventToTrackMap_);
+    },
+
+    rebuildContainerToTrackMap() {
+      this.containerToTrackMap.clear();
+      this.modelTrackContainer_.addContainersToTrackMap(
+          this.containerToTrackMap);
+    },
+
+    trackForEvent(event) {
+      return this.eventToTrackMap_[event.guid];
+    }
+  };
+
+  return {
+    TimelineViewport,
+  };
+});
+</script>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  const Model = tr.Model;
+  const Thread = tr.model.Thread;
+  const EventSet = tr.model.EventSet;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('differentTitles', function() {
+    const model = new Model();
+    const t53 = model.getOrCreateProcess(52).getOrCreateThread(53);
+    t53.sliceGroup.pushSlice(newSliceEx(
+        {title: 'a', start: 0.0, duration: 0.04}));
+    t53.sliceGroup.pushSlice(newSliceEx(
+        {title: 'a', start: 0.12, duration: 0.06}));
+    t53.sliceGroup.pushSlice(newSliceEx(
+        {title: 'aa', start: 0.5, duration: 0.5}));
+    t53.sliceGroup.createSubSlices();
+
+    const t53track = {};
+    t53track.thread = t53;
+
+    const selection = new EventSet();
+    selection.push(t53.sliceGroup.slices[0]);
+    selection.push(t53.sliceGroup.slices[1]);
+    selection.push(t53.sliceGroup.slices[2]);
+
+    const viewEl = document.createElement('tr-ui-a-multi-event-sub-view');
+    viewEl.selection = selection;
+    this.addHTMLOutput(viewEl);
+
+    const summaryTableEl = tr.ui.b.findDeepElementMatching(
+        viewEl, 'tr-ui-a-multi-event-summary-table');
+    assert.isTrue(summaryTableEl.showTotals);
+    assert.lengthOf(Object.keys(summaryTableEl.eventsByTitle), 2);
+
+    const selectionSummaryTableEl = tr.ui.b.findDeepElementMatching(
+        viewEl, 'tr-ui-a-selection-summary-table');
+    assert.strictEqual(selectionSummaryTableEl.selection, selection);
+
+    const radioPickerEl =
+        tr.ui.b.findDeepElementMatching(viewEl, 'tr-ui-b-radio-picker');
+    assert.strictEqual(radioPickerEl.style.display, 'none');
+  });
+
+  test('sameTitles', function() {
+    const model = new Model();
+    const t53 = model.getOrCreateProcess(52).getOrCreateThread(53);
+    t53.sliceGroup.pushSlice(newSliceEx(
+        {title: 'c', start: 0.0, duration: 0.04}));
+    t53.sliceGroup.pushSlice(newSliceEx(
+        {title: 'c', start: 0.12, duration: 0.06}));
+    t53.sliceGroup.createSubSlices();
+
+    const t53track = {};
+    t53track.thread = t53;
+
+    const selection = new EventSet();
+    selection.push(t53.sliceGroup.slices[0]);
+    selection.push(t53.sliceGroup.slices[1]);
+
+    const viewEl = document.createElement('tr-ui-a-multi-event-sub-view');
+    viewEl.selection = selection;
+    this.addHTMLOutput(viewEl);
+
+    const summaryTableEl = tr.ui.b.findDeepElementMatching(
+        viewEl, 'tr-ui-a-multi-event-summary-table');
+    assert.isFalse(summaryTableEl.showTotals);
+    assert.lengthOf(Object.keys(summaryTableEl.eventsByTitle), 1);
+
+    const selectionSummaryTableEl = tr.ui.b.findDeepElementMatching(
+        viewEl, 'tr-ui-a-selection-summary-table');
+    assert.strictEqual(selectionSummaryTableEl.selection, selection);
+
+    const radioPickerEl =
+        tr.ui.b.findDeepElementMatching(viewEl, 'tr-ui-b-radio-picker');
+    assert.strictEqual(radioPickerEl.style.display, 'block');
+  });
+});
+</script>

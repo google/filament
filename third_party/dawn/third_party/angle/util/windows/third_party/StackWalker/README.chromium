@@ -1,0 +1,15 @@
+Name: StackWalker
+URL: https://github.com/JochenKalmbach/StackWalker
+Version: N/A
+Revision: 42e7a6e056a9e7aca911a7e9e54e2e4f90bc2652
+License: BSD-3-Clause
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+Walking the callstack in windows applications
+
+See github page for more info. StackWalker is only used on Windows for
+walking crash stacks in tests for better logging. It can also be used
+for local debugging.

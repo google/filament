@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/resource_usage_sample.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const ResourceUsageSample = tr.model.ResourceUsageSample;
+
+  /**
+   * A container holding a time series of samples giving the
+   * fraction of usage of a resource (e.g. CPU or GPU) at each
+   * sample time.
+   */
+
+  class ResourceUsageSeries extends tr.model.EventContainer {
+    constructor(device) {
+      super();
+
+      this.device_ = device;
+      this.samples_ = [];
+    }
+
+    get device() {
+      return this.device_;
+    }
+
+    get samples() {
+      return this.samples_;
+    }
+
+    get stableId() {
+      return this.device_.stableId + '.ResourceUsageSeries';
+    }
+
+    /**
+     * Adds a usage sample to the series and returns it.
+     *
+     * Note: Samples must be added in chronological order.
+     */
+    addUsageSample(ts, val) {
+      const sample = new ResourceUsageSample(this, ts, val);
+      this.samples_.push(sample);
+      return sample;
+    }
+
+    /**
+     * Returns the total time consumed by a resource (e.g. CPU or GPU) between
+     * the specified start and end timestamps (in milliseconds).
+     */
+    computeResourceTimeConsumedInMs(start, end) {
+      const measurementRange = tr.b.math.Range.fromExplicitRange(start, end);
+
+      let resourceTimeInMs = 0;
+      let startIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, start) - 1;
+      const endIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, end);
+
+      if (startIndex < 0) startIndex = 0;
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const sample = this.samples[i];
+        const nextSample = this.samples[i + 1];
+
+        const sampleRange = new tr.b.math.Range();
+        sampleRange.addValue(sample.start);
+        sampleRange.addValue(nextSample ? nextSample.start : sample.start);
+
+        const intersectionRangeInMs = measurementRange.findIntersection(
+            sampleRange);
+
+        resourceTimeInMs += intersectionRangeInMs.duration * sample.usage;
+      }
+
+      return resourceTimeInMs;
+    }
+
+    getSamplesWithinRange(start, end) {
+      const startIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, start);
+      const endIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, end);
+      return this.samples.slice(startIndex, endIndex);
+    }
+
+    shiftTimestampsForward(amount) {
+      for (let i = 0; i < this.samples_.length; ++i) {
+        this.samples_[i].start += amount;
+      }
+    }
+
+    updateBounds() {
+      this.bounds.reset();
+
+      if (this.samples_.length === 0) return;
+
+      this.bounds.addValue(this.samples_[0].start);
+      this.bounds.addValue(this.samples_[this.samples_.length - 1].start);
+    }
+
+    * childEvents() {
+      yield* this.samples_;
+    }
+  }
+
+  return {
+    ResourceUsageSeries,
+  };
+});
+</script>

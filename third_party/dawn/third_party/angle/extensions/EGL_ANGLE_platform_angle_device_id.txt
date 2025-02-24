@@ -1,0 +1,102 @@
+Name
+
+    ANGLE_platform_angle_device_id
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_device_id
+
+Contributors
+
+    Jonah Ryan-Davis, Google
+    Kimmo Kinnunen, Apple
+
+Contacts
+
+    Jonah Ryan-Davis, Google (jonahr 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, 2022-04-09
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+    EGL_ANGLE_display_power_preference interacts with this extension.
+
+Overview
+
+    This extension enables the selection of a graphics device to back
+    an ANGLE EGLDisplay.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE          0x34D6
+        EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE           0x34D7
+        EGL_PLATFORM_ANGLE_DISPLAY_KEY_ANGLE             0x34DC
+
+Additions to the EGL Specification
+
+    None
+
+New Behavior
+
+    To request a display that is backed by a specific graphics device,
+    EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE and/or
+    EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE should be set to the high part and
+    low part of the device's ID. If only one attribute is specified, the other
+    is assumed to be zero. The device's ID is specific to the platform that
+    ANGLE is running on, but should fit into one 64-bit value.
+
+    If the high part and low part combined is zero, an EGL_BAD_ATTRIBUTE error
+    is generated and EGL_NO_DISPLAY is returned.
+
+    If the ID specified doesn't match any devices on the system, the device
+    is selected as described in the EGL_ANGLE_display_power_preference extension.
+
+    To select a distinct display on a graphics device that may already have
+    an existing display in ANGLE's cache, use EGL_PLATFORM_ANGLE_DISPLAY_KEY_ANGLE
+    to add a key to the cache entry for this display. The same cached display can
+    be re-requested by specifying the same cache value. If this parameter is not
+    included, the default value used will be 0.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 3, 2023-02-15
+      - Add EGL_PLATFORM_ANGLE_DISPLAY_KEY_ANGLE to allow selection of
+        multiple EGLDisplays from the same graphics device.
+
+    Version 2, 2022-04-09 (Kimmo Kinnunen)
+      - Describe interaction with EGL_ANGLE_display_power_preference,
+        EGL_ANGLE_platform_angle_device_id takes precedence.
+
+    Version 1, 2021-12-14 (Jonah Ryan-Davis)
+      - Initial draft, based on EGL_ANGLE_platform_angle_d3d_luid

@@ -1,0 +1,62 @@
+apply plugin: 'com.android.library'
+
+def projectDependencies = ["PVRCore"]
+
+android {
+	compileSdkVersion 28
+	defaultConfig {
+		minSdkVersion 16
+		targetSdkVersion 26
+		versionCode 1
+		versionName "1.0"
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static", "-DPVR_PREBUILT_DEPENDENCIES=ON"
+				targets "PVRCamera"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+Set taskDeleted = []
+
+tasks.whenTaskAdded { task ->
+	// We add a dependency on all projects dependencies corresponding externalNativeBuild tasks
+	if (task.name.startsWith('generateJsonModel')) {
+		def flavor = task.name.substring('generateJsonModel'.length()) // generateJsonModelDebug -> Debug
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuild${flavor}" }
+	}
+}
+
+// This block specifies dependencies required to build only the module itself
+dependencies {
+	// Dependency on a remote binary
+	implementation 'com.android.support:support-v4:28.0.0'
+}
+
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}

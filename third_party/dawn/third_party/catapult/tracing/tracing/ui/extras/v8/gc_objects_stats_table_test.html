@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/v8/v8_gc_stats_thread_slice.html">
+<link rel="import" href="/tracing/ui/extras/v8/gc_objects_stats_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  function createModel() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.s1 = m.t2.sliceGroup.pushSlice(
+          newSliceEx({
+            title: 'V8.GC_Objects_Stats',
+            start: 1,
+            end: 1,
+            type: tr.e.v8.V8GCStatsThreadSlice,
+            cat: 'disabled-by-default-v8.gc_stats',
+            args: {
+            // eslint-disable-next-line
+            live:'{"isolate":"0x00000000001","id":1,"time":111,"bucket_sizes":[32,64,128,256],"type_data":{"STRING_TYPE":{"type":1,"overall":2,"count":3,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"FIXED_ARRAY_TYPE":{"type":2,"overall":5,"count":6,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*FIXED_ARRAY_CONTEXT_SUB_TYPE":{"type":3,"overall":1,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"JS_OBJECT_TYPE":{"type":4,"overall":5,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"JS_TYPED_ARRAY_TYPE":{"type":5,"overall":5,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"CODE_TYPE":{"type":4,"overall":6,"count":6,"over_allocated":0,"histogram":[6,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*CODE_BYTECODE_HANDLER":{"type":7,"overall":5,"count":6,"over_allocated":0,"histogram":[6,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*CODE_AGE_Quadragenarian":{"type":8,"overall":1,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}}}',
+              // eslint-disable-next-line
+            dead:'{"isolate":"0x00000000001","id":2,"time":112,"bucket_sizes":[32,64,128,256],"type_data":{"STRING_TYPE":{"type":1,"overall":1,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"FIXED_ARRAY_TYPE":{"type":2,"overall":3,"count":3,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*FIXED_ARRAY_CONTEXT_SUB_TYPE":{"type":3,"overall":1,"count":1,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}}}'
+            }
+          })
+      );
+      m.s2 = m.t2.sliceGroup.pushSlice(
+          newSliceEx({
+            title: 'V8.GC_Objects_Stats',
+            start: 2,
+            end: 2,
+            type: tr.e.v8.V8GCStatsThreadSlice,
+            cat: 'disabled-by-default-v8.gc_stats',
+            args: {
+            // eslint-disable-next-line
+            live:'{"isolate":"0x00000000001","id":1,"time":113,"bucket_sizes":[32,64,128,256],"type_data":{"STRING_TYPE":{"type":1,"overall":3,"count":4,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"FIXED_ARRAY_TYPE":{"type":2,"overall":6,"count":7,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*FIXED_ARRAY_CONTEXT_SUB_TYPE":{"type":3,"overall":2,"count":2,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}}}',
+              // eslint-disable-next-line
+            dead:'{"isolate":"0x00000000001","id":2,"time":114,"bucket_sizes":[32,64,128,256],"type_data":{"STRING_TYPE":{"type":1,"overall":2,"count":2,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"FIXED_ARRAY_TYPE":{"type":2,"overall":4,"count":4,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]},"*FIXED_ARRAY_CONTEXT_SUB_TYPE":{"type":3,"overall":2,"count":2,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}}}'
+            }
+          })
+      );
+      m.s3 = m.t2.sliceGroup.pushSlice(
+          newSliceEx({
+            title: 'V8.GC_Objects_Stats',
+            start: 3,
+            end: 3,
+            type: tr.e.v8.V8GCStatsThreadSlice,
+            cat: 'disabled-by-default-v8.gc_stats',
+            args: {
+            // eslint-disable-next-line
+            live:'{"isolate":"0x00000000001","id":1,"time":115,"bucket_sizes":[32,64,128,256],"type_data":{"FIXED_ARRAY_TYPE":{"type":2,"overall":5,"count":6,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}, "TYPE_DONT_HAVE_GROUP1":{"type":1,"overall":2,"count":3,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}, "TYPE_DONT_HAVE_GROUP2":{"type":1,"overall":2,"count":3,"over_allocated":0,"histogram":[0,1,0,0],"over_allocated_histogram":[0,0,0,0]}}}',
+              // eslint-disable-next-line
+            dead:'{"isolate":"0x00000000001","id":2,"time":116,"bucket_sizes":[32,64,128,256],"type_data":{"FIXED_ARRAY_TYPE":{"type":2,"overall":5,"count":6,"over_allocated":0,"histogram":[1,0,0,0],"over_allocated_histogram":[0,0,0,0]}}}'
+            }
+          })
+      );
+    });
+    return m;
+  }
+
+  test('GCObjectTableSingleSelection', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-e-v8-gc-objects-stats-table');
+    const eventSet = new tr.model.EventSet();
+    eventSet.push(m.s1);
+    viewEl.selection = eventSet;
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 1);
+    const row = rows[0];
+    assert.strictEqual(row.overall, 0.0263671875);
+    assert.strictEqual(row.count, 21);
+    assert.strictEqual(row.overAllocated, 0);
+    const subRows = row.subRows;
+    const live = subRows[0];
+    assert.strictEqual(live.overall, 0.0224609375);
+    assert.strictEqual(live.count, 17);
+    assert.strictEqual(live.overAllocated, 0);
+    const dead = subRows[1];
+    assert.strictEqual(dead.overall, 0.00390625);
+    assert.strictEqual(dead.count, 4);
+    assert.strictEqual(dead.overAllocated, 0);
+  });
+
+  test('GCObjectTableMultiSelection', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-e-v8-gc-objects-stats-table');
+    const eventSet = new tr.model.EventSet();
+    eventSet.push(m.s1);
+    eventSet.push(m.s2);
+    viewEl.selection = eventSet;
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 2);
+
+    let row = rows[0];
+    assert.strictEqual(row.overall, 0.0146484375);
+    assert.strictEqual(row.count, 17);
+    assert.strictEqual(row.overAllocated, 0);
+    let subRows = row.subRows;
+    let live = subRows[0];
+    assert.strictEqual(live.overall, 0.0087890625);
+    assert.strictEqual(live.count, 11);
+    assert.strictEqual(live.overAllocated, 0);
+    let dead = subRows[1];
+    assert.strictEqual(dead.overall, 0.005859375);
+    assert.strictEqual(dead.count, 6);
+    assert.strictEqual(dead.overAllocated, 0);
+
+    row = rows[1];
+    assert.strictEqual(row.overall, 0.0263671875);
+    assert.strictEqual(row.count, 21);
+    assert.strictEqual(row.overAllocated, 0);
+    subRows = row.subRows;
+    live = subRows[0];
+    assert.strictEqual(live.overall, 0.0224609375);
+    assert.strictEqual(live.count, 17);
+    assert.strictEqual(live.overAllocated, 0);
+    dead = subRows[1];
+    assert.strictEqual(dead.overall, 0.00390625);
+    assert.strictEqual(dead.count, 4);
+    assert.strictEqual(dead.overAllocated, 0);
+  });
+
+  test('GCObjectTableDiff', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-e-v8-gc-objects-stats-table');
+    const eventSet = new tr.model.EventSet();
+    eventSet.push(m.s1);
+    eventSet.push(m.s2);
+    viewEl.selection = eventSet;
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 2);
+    const diffEntry = rows[0].diff(rows[1]);
+
+    assert.strictEqual(diffEntry.origin.overall.toFixed(3), '0.015');
+    assert.strictEqual(diffEntry.origin.overAllocated, 0);
+    assert.strictEqual(diffEntry.overall.toFixed(3), '-0.004');
+    assert.strictEqual(diffEntry.overAllocated, 0);
+    assert.strictEqual(diffEntry.overallPercent.toFixed(3), '-26.667');
+    assert.strictEqual(diffEntry.overAllocatedPercent, 0);
+  });
+
+  test('GCObjectTableGroupEntryWithoutGroupDefined', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement('tr-ui-e-v8-gc-objects-stats-table');
+    const eventSet = new tr.model.EventSet();
+    eventSet.push(m.s3);
+    viewEl.selection = eventSet;
+    this.addHTMLOutput(viewEl);
+    tr.b.forceAllPendingTasksToRunForTest();
+    const rows = viewEl.$.table.tableRows;
+    assert.lengthOf(rows, 1);
+    const row = rows[0];
+    assert.strictEqual(row.overall, 0.013671875);
+    assert.strictEqual(row.count, 18);
+    assert.strictEqual(row.overAllocated, 0);
+    const subRows = row.subRows;
+
+    const live = subRows[0];
+    assert.strictEqual(live.overall, 0.0087890625);
+    assert.strictEqual(live.count, 12);
+    assert.strictEqual(live.overAllocated, 0);
+
+    // ungrouped entry should be top level entry.
+    const unGrouped1 = live.getEntryFromTitle('TYPE_DONT_HAVE_GROUP1');
+    assert.isDefined(unGrouped1);
+    assert.strictEqual(unGrouped1.overall, 0.001953125);
+    assert.strictEqual(unGrouped1.count, 3);
+    assert.strictEqual(unGrouped1.overAllocated, 0);
+
+    const unGrouped2 = live.getEntryFromTitle('TYPE_DONT_HAVE_GROUP2');
+    assert.isDefined(unGrouped2);
+    assert.strictEqual(unGrouped2.overall, 0.001953125);
+    assert.strictEqual(unGrouped2.count, 3);
+    assert.strictEqual(unGrouped2.overAllocated, 0);
+  });
+});
+</script>

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+Runs a COOE/COEP local webserver for testing emscripten deployment.
+Note:
+    Browsers that have implemented and enabled SharedArrayBuffer are gating it behind Cross Origin Opener Policy (COOP)
+    and Cross Origin Embedder Policy (COEP) headers.
+    Pthreads code will not work in deployed environment unless these headers are correctly set.
+    see: https://emscripten.org/docs/porting/pthreads.html
+"""
+
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+
+class RequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        super().end_headers()
+
+
+def main():
+
+    addr = "127.0.0.1"
+    port = 8080
+    httpd = HTTPServer((addr, port), RequestHandler)
+    print("Serving http at http://{}:{}".format(addr, port))
+
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nBye.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,67 @@
+git-retry(1)
+=============
+
+NAME
+----
+git-retry -
+include::_git-retry_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git retry' [-v] [-c COUNT] [-d DELAY] [-D DELAY_FACTOR] -- _<git_subcommand>_
+
+DESCRIPTION
+-----------
+
+`git retry` is a bootstrap that wraps a standard `git` command execution in
+a fault-tolerant retry wrapper.
+
+If a retry succeeds, the return code of the successful attempt is returned.
+Otherwise, the return code of the last failed attempt is returned.
+
+The wrapper is aware of `git`-specific failure conditions and will only consider
+retrying if a given failure can be linked to such a condition.
+
+
+OPTIONS
+-------
+
+<git_subcommand>::
+  The `git` command to retry. This should omit the actual `git` command (e.g.,
+  to retry `git clone`, use `git retry clone`).
+
+-v, --verbose::
+  Increases logging verbosity. By default, no additional logging is generated
+  by the `git retry` command. This can be specified multiple times.
+
+-c, --retry-count _count_::
+  Specify the number of retries that should be performed before giving up. The
+  default retry count is *5*.
+
+-d, --delay _seconds_::
+  Floating-point value that specifies the amount of time (in seconds) to wait
+  after a failure. This can be zero to specify no delay. The default delay is
+  *3 seconds*.
+
+-D, --delay-factor::
+  The exponential factor to apply to the delay. By default this is *2*.
+  For a given retry round *n*, the delay for that round will be
+  *(<delay-factor>^(n-1) * delay)*. If no delay is specified, this will have
+  no effect.
+  If the delay factor is *0*, the delay will increase linearly (for a given
+  retry round *n*, the delay will be *(n * delay)*).
+
+    (Note that a delay factor of *1* will result in a constant delay.)
+
+
+EXIT STATUS
+-----------
+
+Upon success, `git retry` will exit with the successful exit code of *0*. On
+failure, it will exit with the exit code of the last failed attempt.
+
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

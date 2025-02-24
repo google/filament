@@ -1,0 +1,198 @@
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+package catapult.tracing.tracing.proto;
+option optimize_for = LITE_RUNTIME;
+
+enum ImprovementDirection {
+  NOT_SPECIFIED = 0;
+  BIGGER_IS_BETTER = 1;
+  SMALLER_IS_BETTER = 2;
+}
+
+enum Unit {
+    MS = 0;
+    MS_BEST_FIT_FORMAT = 1;
+    TS_MS = 2;
+    N_PERCENT = 3;
+    SIZE_IN_BYTES = 4;
+    BYTES_PER_SECOND = 5;
+    J = 6;
+    W = 7;
+    A = 8;
+    V = 9;
+    HERTZ = 10;  // Can't name this one HZ, clashes with a macro.
+    UNITLESS = 11;
+    COUNT = 12;
+    SIGMA = 13;
+    AH = 14; // Ampere-hours.
+}
+
+message UnitAndDirection {
+  Unit unit = 1;
+  ImprovementDirection improvement_direction = 2;
+}
+
+message BinBoundaryDetailedSpec {
+  enum Type {
+    LINEAR = 0;
+    EXPONENTIAL = 1;
+  }
+
+  Type boundary_type = 1;
+
+  // The maximum bin boundary of the sequence.
+  double maximum_bin_boundary = 2;
+
+  // The number of bin boundaries in the sequence.
+  int32 num_bin_boundaries = 3;
+}
+
+message BinBoundarySpec {
+  oneof boundary_oneof {
+    // A number denoting the boundary.
+    double bin_boundary = 1;
+
+    // A more detailed spec of the boundary.
+    BinBoundaryDetailedSpec bin_spec = 2;
+  }
+}
+
+message BinBoundaries {
+  // Boundary between the underflow bin and the first central bin.
+  double first_bin_boundary = 1;
+
+  // An array that specifies how to build bin boundaries.
+  repeated BinBoundarySpec bin_specs = 2;
+}
+
+message Breakdown {
+  // Not implemented yet
+}
+
+message DateRange {
+  // Not implemented yet
+}
+
+// This allows metrics to store arbitrary untyped data in Histograms.
+message GenericSet {
+  // Array of any JSON data. Values should be JSON encoded.
+  repeated string values = 1;
+}
+
+message RelatedEventSet {
+  // Not implemented yet
+}
+message RelatedNameMap {
+  // Not implemented yet
+}
+message Scalar {
+  // Not implemented yet
+}
+
+message Diagnostic {
+  oneof diagnostic_oneof {
+    Breakdown breakdown = 1;
+    DateRange date_range = 2;
+    GenericSet generic_set = 3;
+    RelatedEventSet related_event_set = 4;
+    RelatedNameMap related_name_map = 5;
+    Scalar scalar = 6;
+
+    // GUID that references a shared diagnostic in the histogram set.
+    string shared_diagnostic_guid = 7;
+  }
+}
+
+message DiagnosticMap {
+  // Map from diagnostic name to a diagnostic.
+  map<string, Diagnostic> diagnostic_map = 1;
+}
+
+message RunningStatistics {
+  int32 count = 1;
+  double max = 2;
+  double meanlogs = 3;
+  double mean = 4;
+  double min = 5;
+  double sum = 6;
+  double variance = 7;
+}
+
+message Bin {
+  int32 bin_count = 1;
+  repeated DiagnosticMap diagnostic_maps = 2;
+}
+
+message SummaryOptions {
+  bool avg = 1;
+  bool geometric_mean = 2;
+  bool std = 3;
+  bool count = 4;
+  bool sum = 5;
+  bool min = 6;
+  bool max = 7;
+  bool nans = 8;
+
+  // Percentile is an array of numbers between 0 and 1.
+  repeated float percentile = 9;
+}
+
+message Histogram {
+  // The name of the histogram. Can be any string.
+  string name = 1;
+
+  // The unit of the measurement and the improvement direction.
+  UnitAndDirection unit = 2;
+
+  // Histogram bin boundaries.
+  // If binBoundaries is undefined, then the Histogram contains single bin whose
+  // range spans -Number.MAX_VALUE to Number.MAX_VALUE (these constants are
+  // defined by ECMAScript/Javascript).
+  BinBoundaries bin_boundaries = 3;
+
+  // Any string, allows metrics to explain results in more depth
+  string description = 4;
+
+  // A DiagnosticMap that pertains to the entire Histogram, allows metrics to
+  // help users diagnose regressions and other problems. This can reference
+  // shared Diagnostics by guid.
+  DiagnosticMap diagnostics = 5;
+
+  // Array of sample values to support Mann-Whitney U hypothesis testing to
+  // determine the significance of the difference between two Histograms.
+  // TODO(http://crbug.com/1029452): These are not necessarily numbers; they
+  // can be any JSON object. Make JSON objects instead.
+  repeated double sample_values = 6;
+
+  // Maximum number of sample values If undefined, defaults to
+  // allBins.length * 10.
+  int32 max_num_sample_values = 7;
+
+  // Number of non-numeric samples added to the Histogram.
+  int32 num_nans = 8;
+
+  // An array of DiagnosticMaps for non-numeric samples.
+  repeated DiagnosticMap nan_diagnostics = 9;
+
+  // Running statistics.
+  RunningStatistics running = 10;
+
+  // Map from bin index to bin.
+  map<int32, Bin> all_bins = 11;
+
+  // This allows metrics to specify which summary statistics are interesting and
+  // should be displayed. If not set, this will fall back to some suitable
+  // default (see histogram.py). You can either override all values or none.
+  SummaryOptions summary_options = 12;
+}
+
+message HistogramSet {
+  // The histograms in this set.
+  repeated Histogram histograms = 1;
+
+  // Map from GUID to a shared diagnostic.
+  map<string, Diagnostic> shared_diagnostics = 2;
+}

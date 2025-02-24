@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/spa_navigation_helper.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const RENDERER_PROCESS_ID = 1234;
+  const RENDERER_PROCESS_MAIN_THREAD_ID = 1;
+  const BROWSER_PROCESS_ID = 1;
+  const BROWSER_PROCESS_MAIN_THREAD_ID = 12;
+  const PAINT_UPDATE_TITLE =
+      'PaintLayerCompositor::updateIfNeededRecursive';
+  const SPA_NAVIGATION_EVENT_TITLE =
+      'FrameLoader::updateForSameDocumentNavigation';
+
+  function createChromeProcessesOnModel(model) {
+    const rendererProcess = model.getOrCreateProcess(RENDERER_PROCESS_ID);
+    const mainThread = rendererProcess.getOrCreateThread(
+        RENDERER_PROCESS_MAIN_THREAD_ID);
+    mainThread.name = 'CrRendererMain';
+    const browserProcess = model.getOrCreateProcess(BROWSER_PROCESS_ID);
+    const browserMainThread = browserProcess.getOrCreateThread(
+        BROWSER_PROCESS_MAIN_THREAD_ID);
+    browserMainThread.name = 'CrBrowserMain';
+  }
+
+  function addThreadSlice(model, title, timestamp, args) {
+    const rendererProcess = model.getOrCreateProcess(RENDERER_PROCESS_ID);
+    const mainThread = rendererProcess.getOrCreateThread(
+        RENDERER_PROCESS_MAIN_THREAD_ID);
+
+    mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'blink',
+      title,
+      start: timestamp,
+      duration: 0.1,
+      args
+    }));
+  }
+
+  function addLatencyInfoFlowEvent(model, timestamp, bindId) {
+    const latencyInfoFlowSlice = tr.c.TestUtils.newSliceEx({
+      cat: 'input,benchmark',
+      title: 'LatencyInfo.Flow',
+      start: timestamp,
+      duration: 0.1,
+      bindId,
+      args: {step: 'handleInputEventMain'}
+    });
+    const handleInputEventSlice = tr.c.TestUtils.newSliceEx({
+      cat: 'blink,rail',
+      title: 'WebViewImpl::handleInputEvent',
+      start: timestamp + 1, // Assume handleInputEvent always delays 1ms.
+      duration: 0.1,
+      args: {type: 'MouseUp'}
+    });
+
+    const rendererProcess = model.getOrCreateProcess(RENDERER_PROCESS_ID);
+    const mainThread = rendererProcess.getOrCreateThread(
+        RENDERER_PROCESS_MAIN_THREAD_ID);
+
+    handleInputEventSlice.parentSlice = latencyInfoFlowSlice;
+    mainThread.sliceGroup.pushSlice(latencyInfoFlowSlice);
+    mainThread.sliceGroup.pushSlice(handleInputEventSlice);
+  }
+
+  function addInputLatencySlice(model, start, traceId) {
+    const browserProcess = model.getOrCreateProcess(BROWSER_PROCESS_ID);
+    const browserMainThread = browserProcess.getOrCreateThread(
+        BROWSER_PROCESS_MAIN_THREAD_ID);
+
+    browserMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'benchmark,latencyInfo,rail',
+      title: 'InputLatency::MouseUp',
+      start,
+      duration: 0.1,
+      args: {
+        data: {
+          trace_id: traceId
+        }
+      }
+    }));
+  }
+
+  function addGoToIndexSlice(model, timestamp) {
+    const browserProcess = model.getOrCreateProcess(BROWSER_PROCESS_ID);
+    const browserMainThread = browserProcess.getOrCreateThread(
+        BROWSER_PROCESS_MAIN_THREAD_ID);
+
+    browserMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'browser,navigation,benchmark',
+      title: 'NavigationControllerImpl::GoToIndex',
+      start: timestamp,
+      duration: 0.1
+    }));
+  }
+
+  function getSpaNavigations(model) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelpers = modelHelper.rendererHelpers;
+    const browserHelper = modelHelper.browserHelper;
+    let spaNavigations = [];
+    for (const rendererHelper of Object.values(rendererHelpers)) {
+      spaNavigations = spaNavigations.concat(
+          tr.metrics.findSpaNavigationsOnRenderer(
+              rendererHelper, browserHelper));
+    }
+    return spaNavigations;
+  }
+
+  test('findSpaNavigations_noSpaNavEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addLatencyInfoFlowEvent(model, 75, '0x600000057');
+      addInputLatencySlice(model, 55, 25769803863);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 0);
+  });
+
+  test('findSpaNavigations_noLatencyInfoFlowEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100);
+      addInputLatencySlice(model, 55, 25769803863);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 0);
+  });
+
+  test('findSpaNavigations_noNavStartEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100);
+      addLatencyInfoFlowEvent(model, 75, '0x600000057');
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 0);
+  });
+
+  test('findSpaNavigations_noFirstPaintEvent', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100);
+      addLatencyInfoFlowEvent(model, 75, '0x600000057');
+      addInputLatencySlice(model, 55, 25769803863);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 0);
+  });
+
+  test('findSpaNavigations_inputLatencyAsNavStart', function() {
+    const URL = 'https://11111';
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100,
+          {url: URL});
+      addLatencyInfoFlowEvent(model, 75, '0x600000057');
+      addInputLatencySlice(model, 55, 25769803863);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 1);
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.inputLatencyAsyncSlice.start, 55);
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.goToIndexSlice, undefined);
+    assert.strictEqual(spaNavigations[0].firstPaintEvent.start, 101);
+    assert.strictEqual(spaNavigations[0].url, URL);
+  });
+
+  test('findSpaNavigations_goToIndexAsNavStart', function() {
+    const URL = 'https://11111';
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100,
+          {url: URL});
+      addGoToIndexSlice(model, 55);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 1);
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.goToIndexSlice.start, 55);
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.inputLatencyAsyncSlice, undefined);
+    assert.strictEqual(spaNavigations[0].firstPaintEvent.start, 101);
+    assert.strictEqual(spaNavigations[0].url, URL);
+  });
+
+  test('findSpaNavigations_multipleSpaNavs', function() {
+    const URL1 = 'https://11111';
+    const URL2 = 'https://22222';
+    const URL3 = 'https://33333';
+    const model = tr.c.TestUtils.newModel(model => {
+      createChromeProcessesOnModel(model);
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 100,
+          {url: URL1});
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 200,
+          {url: URL2});
+      addThreadSlice(model, SPA_NAVIGATION_EVENT_TITLE, 300,
+          {url: URL3});
+
+      addLatencyInfoFlowEvent(model, 75, '0x600000057');
+      addLatencyInfoFlowEvent(model, 175, '0x6000000c2');
+      addLatencyInfoFlowEvent(model, 275, '0x60000010d');
+
+      addInputLatencySlice(model, 55, 25769803863);
+      addGoToIndexSlice(model, 65);
+      addInputLatencySlice(model, 155, 25769803970);
+      addInputLatencySlice(model, 255, 25769804045);
+
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 101);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 102);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 201);
+      addThreadSlice(model, PAINT_UPDATE_TITLE, 301);
+    });
+    const spaNavigations = getSpaNavigations(model);
+    assert.lengthOf(spaNavigations, 3);
+    spaNavigations.sort((spa1, spa2) =>
+      spa1.navStartCandidates.inputLatencyAsyncSlice.start -
+            spa2.navStartCandidates.inputLatencyAsyncSlice.start);
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.inputLatencyAsyncSlice.start, 55);
+    assert.strictEqual(
+        spaNavigations[1].navStartCandidates.inputLatencyAsyncSlice.start, 155);
+    assert.strictEqual(
+        spaNavigations[2].navStartCandidates.inputLatencyAsyncSlice.start, 255);
+
+    assert.strictEqual(
+        spaNavigations[0].navStartCandidates.goToIndexSlice, undefined);
+    assert.strictEqual(
+        spaNavigations[1].navStartCandidates.goToIndexSlice, undefined);
+    assert.strictEqual(
+        spaNavigations[2].navStartCandidates.goToIndexSlice, undefined);
+
+    assert.strictEqual(spaNavigations[0].firstPaintEvent.start, 101);
+    assert.strictEqual(spaNavigations[1].firstPaintEvent.start, 201);
+    assert.strictEqual(spaNavigations[2].firstPaintEvent.start, 301);
+
+    assert.strictEqual(spaNavigations[0].url, URL1);
+    assert.strictEqual(spaNavigations[1].url, URL2);
+    assert.strictEqual(spaNavigations[2].url, URL3);
+  });
+});
+</script>

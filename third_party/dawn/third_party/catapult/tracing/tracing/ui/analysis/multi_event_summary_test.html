@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_summary.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('summaryRowNoCpu', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, end: 3}));
+    tsg.pushSlice(newSliceEx({title: 'bb', start: 1, end: 2}));
+    tsg.pushSlice(newSliceEx({title: 'bb', start: 4, end: 5}));
+    tsg.createSubSlices();
+
+    const row = new tr.ui.analysis.MultiEventSummary('x', tsg.slices.slice(0));
+    assert.strictEqual(row.duration, 5);
+    assert.strictEqual(row.selfTime, 4);
+    assert.isUndefined(row.cpuDuration);
+    assert.isUndefined(row.cpuSelfTime);
+  });
+
+  test('summaryRowWithCpu', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, end: 3,
+      cpuStart: 0, cpuEnd: 3}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 1, end: 2,
+      cpuStart: 1, cpuEnd: 1.75}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 4, end: 5,
+      cpuStart: 3, cpuEnd: 3.75}));
+    tsg.createSubSlices();
+
+    const row = new tr.ui.analysis.MultiEventSummary('x', tsg.slices.slice(0));
+    assert.strictEqual(row.duration, 5);
+    assert.strictEqual(row.selfTime, 4);
+    assert.strictEqual(row.cpuDuration, 4.5);
+    assert.strictEqual(row.cpuSelfTime, 3.75);
+    assert.strictEqual(row.maxDuration, 3);
+    assert.strictEqual(row.maxSelfTime, 2);
+    assert.strictEqual(row.maxCpuDuration, 3);
+    assert.strictEqual(row.maxCpuSelfTime, 2.25);
+  });
+
+  test('summaryRowNonSlice', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+
+    const fe1 = new tr.model.FlowEvent('cat', 1234, 'title', 7, 10, {});
+    const fe2 = new tr.model.FlowEvent('cat', 1234, 'title', 8, 20, {});
+    model.flowEvents.push(fe1);
+    model.flowEvents.push(fe2);
+
+    const row = new tr.ui.analysis.MultiEventSummary('a', [fe1, fe2]);
+    assert.strictEqual(row.duration, 0);
+    assert.strictEqual(row.selfTime, 0);
+    assert.isUndefined(row.cpuDuration);
+    assert.isUndefined(row.cpuSelfTime);
+    assert.strictEqual(row.maxDuration, 0);
+  });
+
+  test('summaryNumAlerts', function() {
+    const slice = newSliceEx({title: 'b', start: 0, duration: 0.002});
+
+    const ALERT_INFO_1 = new tr.model.EventInfo(
+        'Alert 1', 'Critical alert');
+
+    const alert = new tr.model.Alert(ALERT_INFO_1, 5, [slice]);
+
+    const row = new tr.ui.analysis.MultiEventSummary('a', [slice]);
+    assert.strictEqual(row.numAlerts, 1);
+  });
+
+  test('argSummary', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, end: 3,
+      args: {value1: 3, value2: 'x', value3: 1}}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 1, end: 2,
+      args: {value1: 3, value2: 'y', value3: 2}}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 4, end: 5,
+      args: {value1: 3, value2: 'z', value3: 'x'}}));
+    tsg.createSubSlices();
+
+    const row = new tr.ui.analysis.MultiEventSummary('x', tsg.slices.slice(0));
+    assert.deepEqual(row.totalledArgs, {value1: 9});
+    assert.deepEqual(row.untotallableArgs, ['value2', 'value3']);
+    assert.strictEqual(row.maxDuration, 3);
+    assert.strictEqual(row.maxSelfTime, 2);
+  });
+});
+</script>

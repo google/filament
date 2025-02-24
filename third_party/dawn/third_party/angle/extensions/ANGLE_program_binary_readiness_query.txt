@@ -1,0 +1,95 @@
+Name
+
+    ANGLE_program_binary_readiness_query
+
+Name Strings
+
+    GL_ANGLE_program_binary_readiness_query
+
+Contributors
+
+    Shahbaz Youssefi, Google
+
+Contact
+
+    Shahbaz Youssefi (syoussefi 'at' google.com)
+
+Notice
+
+    Copyright (c) 2024 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, April 9, 2024
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 2.0 specification.
+
+Overview
+
+    After a program is linked, its binary can be queried by a call to
+    GetProgramBinary.  In ANGLE, binary data may not necessarily be readily
+    available after link, for example because post-link tasks are filling in
+    caches that make the binary more useful.  Calling GetProgramBinary in
+    such cases can lead to a CPU wait.
+
+    Ideally, applications should query the program binary after having used the
+    program with all graphics states it may be used in during the lifetime of
+    the application (often, that is after one frame).  In that case, any binary
+    that may be generated and cached due to the state combinations is
+    associated with program's binary, making the next run of the application
+    fully hit the caches.
+
+    Nevertheless, this extension provides a query for the application to know
+    when ANGLE's best-guess binaries are cached and the program binary is ready
+    for retrieval.  As long as this query returns FALSE, the application should
+    defer calling GetProgramBinary, or GetProgramiv with PROGRAM_BINARY_LENGTH
+    to avoid getting blocked on the CPU.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetProgramiv:
+
+    PROGRAM_BINARY_READY_ANGLE            0x96BE
+
+Additions to the OpenGL ES Specification
+
+    Append to paragraph 8 of section 6.1.8 "Shader and Program Queries"
+    (description of GetProgramiv):
+
+    If pname is PROGRAM_BINARY_READY_ANGLE, TRUE is returned if a call to
+    GetProgramBinary will not block, and FALSE is returned otherwise.
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      1   Apr 09, 2024   syoussefi              Initial version

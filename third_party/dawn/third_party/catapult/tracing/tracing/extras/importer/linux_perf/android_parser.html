@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses trace_marker events that were inserted in the trace by
+ * userland.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux trace mark events that were inserted in the trace by userland.
+   * @constructor
+   */
+  function AndroidParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('tracing_mark_write:android',
+        AndroidParser.prototype.traceMarkWriteAndroidEvent.bind(this));
+    importer.registerEventHandler('0:android',
+        AndroidParser.prototype.traceMarkWriteAndroidEvent.bind(this));
+
+    this.model_ = importer.model_;
+    this.ppids_ = {};
+  }
+
+  function parseArgs(argsString) {
+    const args = {};
+    if (argsString) {
+      const argsArray = argsString.split(';');
+      for (let i = 0; i < argsArray.length; ++i) {
+        const parts = argsArray[i].split('=');
+        if (parts[0]) {
+          args[parts.shift()] = parts.join('=');
+        }
+      }
+    }
+    return args;
+  }
+
+  AndroidParser.prototype = {
+    __proto__: Parser.prototype,
+
+    openAsyncSlice(thread, category, name, cookie, ts, args) {
+      const asyncSliceConstructor =
+         tr.model.AsyncSlice.subTypes.getConstructor(
+             category, name);
+      const slice = new asyncSliceConstructor(
+          category, name,
+          ColorScheme.getColorIdForGeneralPurposeString(name), ts, args);
+      const key = category + ':' + name + ':' + cookie;
+      slice.id = cookie;
+      slice.startThread = thread;
+
+      if (!this.openAsyncSlices) {
+        this.openAsyncSlices = { };
+      }
+      this.openAsyncSlices[key] = slice;
+    },
+
+    closeAsyncSlice(thread, category, name, cookie, ts, args) {
+      if (!this.openAsyncSlices) {
+        // No async slices have been started.
+        return;
+      }
+
+      const key = category + ':' + name + ':' + cookie;
+      const slice = this.openAsyncSlices[key];
+      if (!slice) {
+        // No async slices w/ this key have been started.
+        return;
+      }
+
+      for (const arg in args) {
+        if (slice.args[arg] !== undefined) {
+          this.model_.importWarning({
+            type: 'parse_error',
+            message: 'Both the S and F events of ' + slice.title +
+                ' provided values for argument ' + arg + '.' +
+                ' The value of the F event will be used.'
+          });
+        }
+        slice.args[arg] = args[arg];
+      }
+
+      slice.endThread = thread;
+      slice.duration = ts - slice.start;
+      slice.startThread.asyncSliceGroup.push(slice);
+      delete this.openAsyncSlices[key];
+    },
+
+    traceMarkWriteAndroidEvent(eventName, cpuNumber, pid, ts,
+        eventBase) {
+      const eventData = eventBase.details.split('|');
+      switch (eventData[0]) {
+        case 'B': {
+          const ppid = parseInt(eventData[1]);
+          const title = eventData[2];
+          const args = parseArgs(eventData[3]);
+          let category = eventData[4];
+          if (category === undefined) category = 'android';
+
+          const thread = this.model_.getOrCreateProcess(ppid)
+              .getOrCreateThread(pid);
+          thread.name = eventBase.threadName;
+          if (!thread.sliceGroup.isTimestampValidForBeginOrEnd(ts)) {
+            this.model_.importWarning({
+              type: 'parse_error',
+              message: 'Timestamps are moving backward.'
+            });
+            return false;
+          }
+
+          this.ppids_[pid] = ppid;
+          thread.sliceGroup.beginSlice(category, title, ts, args);
+
+          break;
+        }
+
+        case 'E': {
+          const ppid = this.ppids_[pid];
+          if (ppid === undefined) {
+            // Silently ignore unmatched E events.
+            break;
+          }
+
+          const thread = this.model_.getOrCreateProcess(ppid)
+              .getOrCreateThread(pid);
+          if (!thread.sliceGroup.openSliceCount) {
+            // Silently ignore unmatched E events.
+            break;
+          }
+
+          const slice = thread.sliceGroup.endSlice(ts);
+
+          const args = parseArgs(eventData[3]);
+          for (const arg in args) {
+            if (slice.args[arg] !== undefined) {
+              this.model_.importWarning({
+                type: 'parse_error',
+                message: 'Both the B and E events of ' + slice.title +
+                    ' provided values for argument ' + arg + '.' +
+                    ' The value of the E event will be used.'
+              });
+            }
+            slice.args[arg] = args[arg];
+          }
+
+          break;
+        }
+
+        case 'C': {
+          const ppid = parseInt(eventData[1]);
+          const name = eventData[2];
+          const value = parseInt(eventData[3]);
+          let category = eventData[4];
+          if (category === undefined) category = 'android';
+
+          const ctr = this.model_.getOrCreateProcess(ppid)
+              .getOrCreateCounter(category, name);
+          // Initialize the counter's series fields if needed.
+          if (ctr.numSeries === 0) {
+            ctr.addSeries(new tr.model.CounterSeries(value,
+                ColorScheme.getColorIdForGeneralPurposeString(
+                    ctr.name + '.' + 'value')));
+          }
+
+          ctr.series.forEach(function(series) {
+            series.addCounterSample(ts, value);
+          });
+
+          break;
+        }
+
+        case 'S': {
+          const ppid = parseInt(eventData[1]);
+          const name = eventData[2];
+          const cookie = parseInt(eventData[3]);
+          const args = parseArgs(eventData[4]);
+          let category = eventData[5];
+          if (category === undefined) category = 'android';
+
+          const thread = this.model_.getOrCreateProcess(ppid)
+              .getOrCreateThread(pid);
+          thread.name = eventBase.threadName;
+
+          this.ppids_[pid] = ppid;
+          this.openAsyncSlice(thread, category, name, cookie, ts, args);
+
+          break;
+        }
+
+        case 'F': {
+          // Note: An async slice may end on a different thread from the one
+          // that started it so this thread may not have been seen yet.
+          const ppid = parseInt(eventData[1]);
+
+          const name = eventData[2];
+          const cookie = parseInt(eventData[3]);
+          const args = parseArgs(eventData[4]);
+          let category = eventData[5];
+          if (category === undefined) category = 'android';
+
+          const thread = this.model_.getOrCreateProcess(ppid)
+              .getOrCreateThread(pid);
+          thread.name = eventBase.threadName;
+
+          this.ppids_[pid] = ppid;
+          this.closeAsyncSlice(thread, category, name, cookie, ts, args);
+
+          break;
+        }
+
+        default:
+          return false;
+      }
+
+      return true;
+    }
+  };
+
+  Parser.register(AndroidParser);
+
+  return {
+    AndroidParser,
+  };
+});
+</script>

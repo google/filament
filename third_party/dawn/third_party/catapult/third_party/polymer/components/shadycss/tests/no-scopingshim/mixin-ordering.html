@@ -1,0 +1,141 @@
+<!doctype html>
+<head>
+  <script>
+  WCT = {waitFor: function (cb) {HTMLImports.whenReady(cb)}}
+  </script>
+  <script src="../../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../../apply-shim.min.js"></script>
+  <script src="../../custom-style-interface.min.js"></script>
+  <script src="../module/generated/make-element.js"></script>
+</head>
+<body>
+    <div>
+      <x-item-a>item A</x-item-a>
+      <x-item-b>item B</x-item-b>
+    </div>
+  <x-menu>
+  </x-menu>
+  <x-menu-group>
+  </x-menu-group>
+
+    <template id="x-item-a">
+      <style>
+      :host {
+        display:block;
+        background: rgb(255, 255, 255);
+        @apply --item-mixin;
+      }
+      </style>
+      <slot></slot>
+    </template>
+
+    <template id="x-menu">
+      <style>
+        :host {
+          display:block;
+          border:1px solid black;
+          margin:2px;
+          --item-mixin:{background:rgb(0, 0, 255);};
+        }
+      </style>
+      <x-item-a>menu item A</x-item-a>
+      <x-item-b>menu item B</x-item-b>
+    </template>
+
+    <template id="x-group">
+      <style>
+      :host{
+        display:block;
+        --item-mixin:{background:rgb(255, 0, 0);};
+        }
+      </style>
+      <x-item-a>group item A</x-item-a>
+      <x-item-b>group item B</x-item-b>
+    </template>
+
+    <template id="x-menu-group">
+      <style>
+        :host {
+          display:block;
+          border:1px solid black;
+          margin:2px;
+          --item-mixin:{background:rgb(0, 0, 255);};
+        }
+      </style>
+      <x-group></x-group>
+    </template>
+
+    <template id="x-item-b">
+      <style>
+      :host {
+        display:block;
+        background: rgb(255, 255, 255);
+        @apply --item-mixin;
+      }
+      </style>
+      <slot></slot>
+    </template>
+
+    <template id="x-dynamic">
+      <style>
+        :host {
+          display: block;
+          background: rgb(255, 255, 255);
+          @apply --mixin;
+        }
+      </style>
+      <span>dynamic item</span>
+    </template>
+
+    <template id="x-dynamic-container">
+      <style>
+        :host {
+          --mixin: {
+            background-color: rgb(123, 123, 123);
+          };
+        }
+      </style>
+      <x-dynamic></x-dynamic>
+    </template>
+
+    <script>
+    suite('Mixin Ordering', function() {
+      suiteSetup(function() {
+        makeElement('x-item-a');
+        makeElement('x-menu');
+        makeElement('x-group');
+        makeElement('x-menu-group');
+        makeElement('x-item-b');
+      });
+      test('mixins are re-evaluated with element upgrade', function() {
+        function checkBg(node) {
+          var itemA = node.querySelector('x-item-a');
+          var itemB = node.querySelector('x-item-b');
+          var itemA_BG = getComputedStyle(itemA)['background-color'].trim();
+          var itemB_BG = getComputedStyle(itemB)['background-color'].trim();
+          assert.equal(itemA_BG, itemB_BG, 'x-item-a and x-item-b should have the same background color');
+        }
+        checkBg(document.querySelector('div'));
+        checkBg(document.querySelector('x-menu').shadowRoot);
+        checkBg(document.querySelector('x-menu-group').shadowRoot.querySelector('x-group').shadowRoot);
+      });
+      test('dynamically updates', function() {
+        makeElement('x-dynamic');
+        makeElement('x-dynamic-container');
+        var container = document.createElement('x-dynamic-container');
+        document.body.appendChild(container);
+        if (window.ShadyDOM) {
+          ShadyDOM.flush();
+        }
+        assert.equal(getComputedStyle(container.shadowRoot.querySelector('x-dynamic'))['background-color'].trim(), 'rgb(123, 123, 123)');
+      });
+    });
+    </script>
+</body>
+

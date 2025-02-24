@@ -1,0 +1,115 @@
+// Copyright (c) 2022-2024 The Khronos Group Inc.
+// Copyright (c) 2022-2024 Valve Corporation
+// Copyright (c) 2022-2024 LunarG, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+
+#include "common.h"
+
+// GPU equivalent of VkBufferImageCopy
+struct BufferImageCopy {
+    uint src_buffer_byte_offset;
+    uint start_layer;
+    uint layer_count;
+    uint row_extent;
+    uint slice_extent;
+    uint layer_extent;
+    uint pad_[2];
+    ivec4 region_offset;
+    uvec4 region_extent;
+};
+
+layout(set = kDiagPerCmdDescriptorSet, binding = 0) buffer SrcBuffer {
+    uint8_t src_buffer[];
+};
+
+layout(set = kDiagPerCmdDescriptorSet, binding = 1, std430) buffer CopySrcRegions {
+    uvec4 image_extent;
+    uint block_size;
+    uint copy_regions_count;
+    uint pad_[2];
+    BufferImageCopy copy_regions[];
+};
+
+uint GetTexelByteOffset(uint tid, uint region_i, uint layer_i) {
+    ivec3 region_offset = copy_regions[region_i].region_offset.xyz;
+    uvec3 region_extent = copy_regions[region_i].region_extent.xyz;
+    ivec3 pos;
+    pos.x = int(tid % region_extent.x) + region_offset.x;
+    pos.y = int((tid / region_extent.x) % (region_extent.x * region_extent.y)) + region_offset.y;
+    pos.z = int(tid / (region_extent.x * region_extent.y)) + region_offset.z;
+
+    // See Vulkan spec for details: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#copies-buffers-images-addressing
+    uint texel_byte_offset = copy_regions[region_i].src_buffer_byte_offset +
+        pos.x * block_size +
+        pos.y * copy_regions[region_i].row_extent +
+        pos.z * copy_regions[region_i].slice_extent +
+        layer_i * copy_regions[region_i].layer_extent;
+
+    return texel_byte_offset;
+}
+
+struct Texel {
+    uint byte_offset;
+    float value;
+};
+
+Texel SearchOobDepthValue(uint tid, uint region_i) {
+    for (uint layer_i = copy_regions[region_i].start_layer; layer_i < copy_regions[region_i].layer_count; ++layer_i) {
+        uint texel_byte_offset = GetTexelByteOffset(tid, region_i, layer_i);
+
+        // Read depth value, always assuming it is stored as a 32 bits values in the first bytes of the texel.
+        // Safe assumption as the only depth formats that need to be checked are VK_FORMAT_D32_SFLOAT and VK_FORMAT_D32_SFLOAT_S8_UINT
+        uint b0 = src_buffer[texel_byte_offset];
+        uint b1 = src_buffer[texel_byte_offset + 1];
+        uint b2 = src_buffer[texel_byte_offset + 2];
+        uint b3 = src_buffer[texel_byte_offset + 3];
+        uint float_bits = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+
+        float depth = uintBitsToFloat(float_bits);
+
+        if (depth < 0 || depth > 1) {
+            return Texel(texel_byte_offset, depth);
+        }
+    }
+
+    return Texel(0, 0);
+}
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    // tid is interpreted as the buffer texel index (it is not a byte offset).
+    // Each unique thread scans its own buffer texel, and only its own.
+    uint tid = gl_GlobalInvocationID.x;
+
+    for (uint region_i = 0; region_i < copy_regions_count; ++region_i) {
+        uint texels_count = copy_regions[region_i].region_extent.x *
+            copy_regions[region_i].region_extent.y *
+            copy_regions[region_i].region_extent.z;
+
+        if (tid >= texels_count) {
+            continue;
+        }
+
+        Texel texel = SearchOobDepthValue(tid, region_i);
+        if (texel.value < 0 || texel.value > 1) {
+            GpuavLogError2(kErrorGroupGpuCopyBufferToImage, kErrorSubCodePreCopyBufferToImageBufferTexel, texel.byte_offset, 0);
+        }
+    }
+}

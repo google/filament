@@ -1,0 +1,29 @@
+boto v2.22.0
+============
+
+:date: 2014/01/02
+
+This release updates the Auto Scaling to support the latest API, the ability
+to control the response sizes in Amazon DynamoDB queries/scans & a number of
+bugfixes as well.
+
+
+Features
+--------
+
+* Updated Auto Scaling to support the latest API. (:sha:`9984c4f`)
+* Added the ability to alter response sizes in DynamoDB queries/scans.
+  (:issue:`1949`, :sha:`6761b01`)
+
+
+Bugfixes
+--------
+
+* Fix string instance tests. (:issue:`1959`, :sha:`ee203bf`)
+* Add missing parameters to ``get_spot_price_history method``. (:issue:`1958`,
+  :sha:`f635474`)
+* Fix unicode string parameter handling in S3Connection. (:issue:`1954`,
+  :issue:`1952`, :sha:`12e6b0c`)
+* Fix typo in docstring for SSHClient.run. (:issue:`1953`, :sha:`5263b20`)
+* Properly handle getopt long options in s3put. (:issue:`1950`, :issue:`1946`,
+  :sha:`cf693ff`)

@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# Copyright (c) 2012 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script will try to sync the bootstrap directories and then defer control.
+
+if [ "$USER" == "root" ];
+then
+  echo Running depot tools as root is sad.
+  exit
+fi
+
+# Export for other depot_tools scripts to re-use.
+export DEPOT_TOOLS_DIR="${DEPOT_TOOLS_DIR:-$(dirname "$0")}"
+
+# Test if this script is running under a MSYS install. This is likely an error
+# if it is, so we warn the user accordingly.
+OUTPUT="$(uname | grep 'MSYS')"
+MSYS=$?
+if [ $MSYS = 0 ]; then
+  echo 'WARNING: It looks like you are running these tools from an MSYS shell'
+  echo '(as opposed to a MinGW shell). This shell is not supported and may'
+  echo 'fail in mysterious ways.'
+  echo
+  echo 'To run the supported MinGW shell, use `git bash`, or use `bin/bash.exe`'
+  echo 'in your MinGW installation, as opposed to `usr/bin/bash.exe`.'
+  echo
+fi
+
+base_dir="${DEPOT_TOOLS_DIR}"
+if [ -e "$base_dir/.disable_auto_update" ]; then
+  exit
+fi
+
+# Test if this script is running under a MinGW install.  If it is, we will
+# hardcode the paths to Git where possible.
+OUTPUT="$(uname | grep 'MINGW')"
+MINGW=$?
+
+# We want to update the bundled tools even under MinGW.
+if [ $MINGW = 0 ]; then
+  $COMSPEC //c `cygpath -w "$base_dir/bootstrap/win_tools.bat"`
+  case $? in
+    123)
+      # msys environment was upgraded, need to quit.
+      exit 123
+      ;;
+    0)
+      ;;
+    *)
+      exit $?
+  esac
+fi
+
+CANONICAL_GIT_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
+
+GIT="git"
+if [ -e "$base_dir/git.bat" -a $MINGW = 0 ]; then
+  GIT="cmd.exe //c \"$base_dir\\git.bat\""
+fi
+
+# Test git and git --version.
+function test_git {
+  local GITV
+  GITV="$(eval "$GIT" --version)" || {
+    echo "git isn't installed, please install it"
+    exit 1
+  }
+
+  GITV="${GITV##* }"          # Only examine last word (i.e. version number)
+  local GITD=( ${GITV//./ } ) # Split version number into decimals
+  if ((GITD[0] < 1 || (GITD[0] == 2 && GITD[1] < 8) )); then
+    echo "git version is ${GITV}, please update to a version later than 2.8"
+    exit 1
+  fi
+}
+
+function update_git_repo {
+  remote_url=$(eval "$GIT" config --get remote.origin.url)
+  if [ -n "$remote_url" -a "$remote_url" != "$CANONICAL_GIT_URL" ]; then
+    echo "Your copy of depot_tools is configured to fetch from an obsolete URL:"
+    echo
+    echo "  $remote_url"
+    echo
+    read -t 60 -p "OK to update it to $CANONICAL_GIT_URL ? [Y/n] " -n 1
+    STATUS=$?
+    echo
+    if [[ $STATUS -ne 0 ]]; then
+      echo "Timeout; not updating remote URL."
+    elif [ -z "$REPLY" -o "$REPLY" = "Y" -o "$REPLY" = "y" ]; then
+      eval "$GIT" config remote.origin.url "$CANONICAL_GIT_URL"
+      echo "Remote URL updated."
+    fi
+  fi
+
+  local GIT_CMD_TXT STATUS
+  GIT_CMD_TXT=$(git fetch -q origin main 2>&1)
+  STATUS=$?
+  if [[ $STATUS -ne 0 ]]; then
+    echo "depot_tools update failed. Couldn't fetch main branch."
+    echo "Retry later or reclone depot_tools" >&2
+    echo "$GIT_CMD_TXT" >&2
+  else
+    GIT_CMD_TXT=$(git checkout -q origin/main 2>&1)
+    STATUS=$?
+    if [[ $STATUS -ne 0 ]]; then
+      echo "depot_tools update failed. Conflict in $base_dir" >&2
+      echo "$GIT_CMD_TXT" >&2
+    fi
+  fi
+  # Having python3 on depot_tools causes problems if users put depot_tools in
+  # PATH before system's python3, so remove it if present.
+  # See crbug.com/1017812.
+  if [[ -e python3 ]]; then
+    rm python3
+  fi
+  return $STATUS
+}
+
+# Update git checkouts.
+if [ "X$DEPOT_TOOLS_UPDATE" = "X0" ]; then
+  echo "DEPOT_TOOLS_UPDATE environment variable is 0, skipping update. Set DEPOT_TOOLS_UPDATE to 1 to force update." >&2
+else
+  if [ -e "$base_dir/.git" ]; then
+    cd "$base_dir"
+    update_git_repo
+    UPDATE_RESULT=$?
+    cd - > /dev/null
+    if [[ $UPDATE_RESULT -ne 0 ]]; then
+      exit $UPDATE_RESULT
+    fi
+  else
+    echo "Warning: Your depot_tools directory does not appear to be a git repository, and cannot be updated." 1>&2
+    echo "Consider deleting your depot_tools directory and following the instructions at https://www.chromium.org/developers/how-tos/install-depot-tools/ to reinstall it." 1>&2
+  fi
+
+  # Sync CIPD-boostrapped packages.
+  source "$base_dir/cipd_bin_setup.sh"
+  cipd_bin_setup &> /dev/null
+
+  # Don't bootstrap Python 3 on windows, since it is already done by
+  # bootstrap/win_tools.bat.
+  if [ "X$MINGW" != "X0" -a "X$DEPOT_TOOLS_BOOTSTRAP_PYTHON3" != "X0" ]; then
+    source "$base_dir/bootstrap_python3"
+    bootstrap_python3
+  fi
+
+fi

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <script src="/components/webcomponentsjs/webcomponents-lite.min.js"></script>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Migrate Test Names</title>
+  <script>
+    'use strict';
+    const XSRF_TOKEN = '{{xsrf_token}}';
+
+    /**
+     * Loads and displays tests that match the "old pattern".
+     * @return {boolean} false (to prevent default click handler behavior).
+     */
+    function listTests() {
+      function showPatternMatch() {
+        const arr = JSON.parse(xhr.responseText);
+        document.getElementById('test-list').innerHTML = arr.join('<br>');
+        if (arr.length > 0) {
+          document.getElementById('form-submit').disabled = false;
+        }
+      }
+
+      const pattern = document.getElementById('old-pattern').value;
+      const xhr = new XMLHttpRequest();
+      xhr.onload = showPatternMatch;
+      xhr.open('POST', '/list_tests');
+      xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+      xhr.send('type=pattern&has_rows=0&p=' + encodeURIComponent(pattern) +
+               '&xsrf_token=' + encodeURIComponent(window.XSRF_TOKEN));
+      document.getElementById('test-list').innerHTML =
+          '<img src="//www.google.com/images/loading.gif">';
+      return false;
+    }
+  </script>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <h1>Migrate Test Names</h1>
+
+  <h2 style="color:red">If a test name has changed,
+  make sure to update all alerting!</h2>
+
+  <p>This page is a tool for migrating old data to a new test name.</p>
+
+  <p>The two input fields below should be filled in with two
+  "test path patterns". A test path is a slash-separated list of names of the
+  form "MasterName/bot-name/test_name/sub_test_name/...". A test path pattern
+  is a test path where any of the names can be replaced by the wildcard
+  character "*" After you fill in two test path patterns, you can list the tests
+  that match the old pattern to confirm. When you submit, test migration tasks
+  will be added to a task queue, and you'll be sent an email with the results
+  of the migration.</p>
+
+  <p>A rename consists of listing all Test entities which match the old test
+  path pattern. For each Test entity:</p>
+    <ul>
+      <li>A Test entity with the new name is created.
+      <li>Child test-entities from the old Test are re-parented to the new Test.
+      <li>Child Row entities (points) from the old Test are re-parented.
+      <li>All Anomaly entities are updated to reference the new Test.
+      <li>Finally, the old Test is deleted.</li>
+    </ul>
+
+  <p><b>Example usage:</b> To rename all traces like
+  <code>Total/t</code> and <code>Total/t_ref</code> to
+  Score/t</code> and <code>Score/t_ref</code> respectively for all
+  <code>sunspider/Total</code> tests on all masters and bots:</p>
+
+  <pre>  old_pattern: */*/SunSpider/Total
+  new_pattern: */*/SunSpider/Score </pre>
+
+  <p>Parts of test names can also be deleted by enclosing a substring of a
+  name in brackets. For example, to re-parent all rows of
+  <code>blink_perf/Animation_&lt;x&gt;</code> to
+  <code>blink_perf.animation/&lt;x&gt;</code> and remove the "Animation_"
+  from trace names, you could input:
+
+  <pre>  old_pattern: */*/blink_perf/Animation_*
+  new_pattern: */*/blink_perf.animation/[Animation_]</pre>
+
+  <p>
+    <b>Troubleshooting:</b>
+    <ul>
+      <li><b>Old test still shows up in perf dashboard:</b> Please re-run the migration and all unmigrated data will be moved.</li>
+    </ul>
+  </p>
+  <form method="POST">
+    <table>
+      <tr>
+        <td>Old pattern:</td>
+        <td>
+          <input type="text" size="125"
+                 name="old_pattern" id="old-pattern"
+                 style="font-family: monospace;" required>
+        </td>
+      </tr>
+      <tr>
+        <td>New pattern:</td>
+        <td>
+          <input type="text" size="125"
+                 name="new_pattern" id="new-pattern"
+                 style="font-family: monospace;" required>
+        </td>
+      </tr>
+    </table>
+    <input type="button" onclick="listTests();" value="List tests">
+    <input type="submit" disabled value="Run Migration" id="form-submit">
+    <div id="test-list"></div>
+  </form>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/extras/about_tracing/record_selection_dialog.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  test('instantitate', function() {
+    const showButton = document.createElement('button');
+    Polymer.dom(showButton).textContent = 'Show record selection dialog';
+    this.addHTMLOutput(showButton);
+
+    showButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+
+      const categories = [];
+      for (let i = 0; i < 30; i++) {
+        categories.push('cat-' + i);
+      }
+      for (let i = 0; i < 20; i++) {
+        categories.push('disabled-by-default-cat-' + i);
+      }
+      categories.push(
+          'really-really-really-really-really-really-very-loong-cat');
+      categories.push('first,second,third');
+      categories.push('cc,disabled-by-default-cc.debug');
+
+      const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+      dlg.categories = categories;
+      dlg.settings_key = 'key';
+      dlg.visible = true;
+    });
+  });
+
+  test('recordSelectionDialog_splitCategories', function() {
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories =
+        ['cc,disabled-by-default-one,cc.debug', 'two,three', 'three'];
+    dlg.settings_key = 'key';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    const expected =
+        ['"cc"', '"cc.debug"', '"disabled-by-default-one"', '"three"', '"two"'];
+
+    const labels = Polymer.dom(dlg).querySelectorAll('.categories input');
+    let results = [];
+    for (let i = 0; i < labels.length; i++) {
+      results.push('"' + labels[i].value + '"');
+    }
+    results = results.sort();
+
+    assert.deepEqual(results, expected);
+  });
+
+  test('recordSelectionDialog_UpdateForm_NoSettings', function() {
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one', 'two', 'three'];
+    dlg.settings_key = 'key';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    const checkboxes = Polymer.dom(dlg).querySelectorAll('.categories input');
+    assert.strictEqual(checkboxes.length, 3);
+    assert.strictEqual(checkboxes[0].id, 'three');
+    assert.strictEqual(checkboxes[0].value, 'three');
+    assert.isTrue(checkboxes[0].checked);
+    assert.strictEqual(checkboxes[1].id, 'two');
+    assert.strictEqual(checkboxes[1].value, 'two');
+    assert.isTrue(checkboxes[1].checked);
+    assert.strictEqual(checkboxes[2].id, 'disabled-by-default-one');
+    assert.strictEqual(checkboxes[2].value, 'disabled-by-default-one');
+    assert.isFalse(checkboxes[2].checked);
+
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+
+    const labels = Polymer.dom(dlg).querySelectorAll('.categories label');
+    assert.strictEqual(labels.length, 3);
+    assert.strictEqual(Polymer.dom(labels[0]).textContent, 'three');
+    assert.strictEqual(Polymer.dom(labels[1]).textContent, 'two');
+    assert.strictEqual(Polymer.dom(labels[2]).textContent, 'one');
+  });
+
+  test('recordSelectionDialog_UpdateForm_Settings', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    const checkboxes = Polymer.dom(dlg).querySelectorAll('.categories input');
+    assert.strictEqual(checkboxes.length, 3);
+    assert.strictEqual(checkboxes[0].id, 'three');
+    assert.strictEqual(checkboxes[0].value, 'three');
+    assert.isFalse(checkboxes[0].checked);
+    assert.strictEqual(checkboxes[1].id, 'two');
+    assert.strictEqual(checkboxes[1].value, 'two');
+    assert.isTrue(checkboxes[1].checked);
+    assert.strictEqual(checkboxes[2].id, 'disabled-by-default-one');
+    assert.strictEqual(checkboxes[2].value, 'disabled-by-default-one');
+    assert.isFalse(checkboxes[2].checked);
+
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, ['three']);
+
+    const labels = Polymer.dom(dlg).querySelectorAll('.categories label');
+    assert.strictEqual(labels.length, 3);
+    assert.strictEqual(Polymer.dom(labels[0]).textContent, 'three');
+    assert.strictEqual(Polymer.dom(labels[1]).textContent, 'two');
+    assert.strictEqual(Polymer.dom(labels[2]).textContent, 'one');
+  });
+
+  test('recordSelectionDialog_UpdateForm_DisabledByDefault', function() {
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-bar', 'baz'];
+    dlg.settings_key = 'categories';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+
+    const inputs =
+        Polymer.dom(dlg).querySelector('input#disabled-by-default-bar').click();
+
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-bar']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+
+    assert.isFalse(
+        tr.b.Settings.get('disabled-by-default-foo', false, 'categories'));
+  });
+
+  test('selectAll', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+  });
+
+  test('selectNone', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    // Enables the three option, two already enabled.
+    Polymer.dom(dlg).querySelector('.default-enabled-categories .all-btn')
+        .click();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+    assert.isTrue(tr.b.Settings.get('three', false, 'categories'));
+
+    // Disables three and two.
+    Polymer.dom(dlg).querySelector('.default-enabled-categories .none-btn')
+        .click();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['three', 'two']);
+    assert.isFalse(tr.b.Settings.get('two', false, 'categories'));
+    assert.isFalse(tr.b.Settings.get('three', false, 'categories'));
+
+    // Turn categories back on so they can be ignored.
+    Polymer.dom(dlg).querySelector('.default-enabled-categories .all-btn')
+        .click();
+
+    // Enables disabled category.
+    Polymer.dom(dlg).querySelector('.default-disabled-categories .all-btn')
+        .click();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-one']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+    assert.isTrue(
+        tr.b.Settings.get('disabled-by-default-one', false, 'categories'));
+
+    // Turn disabled by default back off.
+    Polymer.dom(dlg).querySelector('.default-disabled-categories .none-btn')
+        .click();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+    assert.isFalse(
+        tr.b.Settings.get('disabled-by-default-one', false, 'categories'));
+  });
+
+  test('recordSelectionDialog_noPreset', function() {
+    tr.b.Settings.set('about_tracing.record_selection_dialog_preset', []);
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    assert.isFalse(dlg.usingPreset_());
+  });
+
+  test('recordSelectionDialog_defaultPreset', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    // Note: currentlyChosenPreset is not set here, so the default is used.
+    dlg.updateForm_();
+
+    // Make sure the default filter is returned.
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['three', 'two']);
+
+    // Make sure the default tracing types are returned.
+    assert.strictEqual(dlg.tracingRecordMode, 'record-until-full');
+    assert.isTrue(dlg.useSystemTracing);
+    assert.isFalse(dlg.useSampling);
+
+    // Make sure the manual settings are not visible.
+    const classList = Polymer.dom(dlg.categoriesView_).classList;
+    assert.isTrue(classList.contains('categories-column-view-hidden'));
+
+    // Verify manual settings do not modify the checkboxes.
+    const checkboxes = Polymer.dom(dlg).querySelectorAll('.categories input');
+    assert.strictEqual(checkboxes.length, 3);
+    assert.strictEqual(checkboxes[0].id, 'three');
+    assert.strictEqual(checkboxes[0].value, 'three');
+    assert.isFalse(checkboxes[0].checked);
+    assert.strictEqual(checkboxes[1].id, 'two');
+    assert.strictEqual(checkboxes[1].value, 'two');
+    assert.isTrue(checkboxes[1].checked);
+    assert.strictEqual(checkboxes[2].id, 'disabled-by-default-one');
+    assert.strictEqual(checkboxes[2].value, 'disabled-by-default-one');
+    assert.isFalse(checkboxes[2].checked);
+  });
+
+  test('recordSelectionDialog_editPreset', function() {
+    function createDialog() {
+      const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+      dlg.categories = ['one', 'two', 'disabled-by-default-three'];
+      dlg.settings_key = 'categories';
+      // Note: currentlyChosenPreset is not set here, so the default is used.
+      dlg.updateForm_();
+      return dlg;
+    }
+
+    // After the dialog is created, it should be using the default preset.
+    let dlg = createDialog();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['one', 'two']);
+    assert.isTrue(dlg.usingPreset_());
+    assert.isFalse(
+        dlg.querySelector('#category-preset-Manually-select-settings').checked);
+
+    // After clicking on "Edit Categories", the default preset should still be
+    // used.
+    dlg.onClickEditCategories();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['one', 'two']);
+    assert.isTrue(dlg.usingPreset_());
+    assert.isFalse(
+        dlg.querySelector('#category-preset-Manually-select-settings').checked);
+
+    // After clicking on category checkbox(es), the mode should be changed to
+    // "Manually select settings".
+    Array.prototype.forEach.call(dlg.querySelectorAll('.categories input'),
+        checkbox => checkbox.click());
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-three']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, []);
+    assert.isFalse(dlg.usingPreset_());
+    assert.isTrue(
+        dlg.querySelector('#category-preset-Manually-select-settings').checked);
+
+    // After the dialog is opened again, it should be using the default preset.
+    // More importantly, the default preset should NOT be modified.
+    dlg = createDialog();
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['one', 'two']);
+    assert.isTrue(dlg.usingPreset_());
+    assert.isFalse(
+        dlg.querySelector('#category-preset-Manually-select-settings').checked);
+  });
+
+  test('recordSelectionDialog_changePresets', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+    tr.b.Settings.set('disabled-by-default-cc.debug', true, 'categories');
+    tr.b.Settings.set('recordSelectionDialog.tracingRecordMode',
+        'record-as-much-as-possible');
+    tr.b.Settings.set('recordSelectionDialog.useSystemTracing', true);
+    tr.b.Settings.set('recordSelectionDialog.useSampling', false);
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    // Note: currentlyChosenPreset is not set here, so the default is used.
+    dlg.updateForm_();
+
+    // Preset mode is on.
+    assert.isTrue(dlg.usingPreset_());
+
+    // Make sure the default filter is returned.
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['three', 'two']);
+
+    // Make sure the default tracing types are returned.
+    assert.strictEqual(dlg.tracingRecordMode, 'record-as-much-as-possible');
+    assert.isTrue(dlg.useSystemTracing);
+    assert.isFalse(dlg.useSampling);
+
+    // Make sure the manual settings are not visible.
+    const classList = Polymer.dom(dlg.categoriesView_).classList;
+    assert.isTrue(classList.contains('categories-column-view-hidden'));
+
+    // Switch to manual settings and verify the default values are not returned.
+    dlg.currentlyChosenPreset = [];
+
+    // Preset mode is off.
+    assert.isFalse(dlg.usingPreset_());
+
+    // Make sure the default filter is returned.
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-cc.debug']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, ['three']);
+
+    // Make sure the tracing types set by catalog are returned.
+    assert.strictEqual(dlg.tracingRecordMode, 'record-as-much-as-possible');
+    assert.isTrue(dlg.useSystemTracing);
+    assert.isFalse(dlg.useSampling);
+    assert.isFalse(classList.contains('categories-column-view-hidden'));
+
+    // Switch to the graphics, rendering, and rasterization preset.
+    dlg.currentlyChosenPreset = ['blink', 'cc', 'renderer',
+      'disabled-by-default-cc.debug'];
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-cc.debug']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['three', 'two']);
+  });
+
+  test('recordSelectionDialog_savedPreset', function() {
+    tr.b.Settings.set('two', true, 'categories');
+    tr.b.Settings.set('three', false, 'categories');
+    tr.b.Settings.set('recordSelectionDialog.tracingRecordMode',
+        'record-continuously');
+    tr.b.Settings.set('recordSelectionDialog.useSystemTracing', true);
+    tr.b.Settings.set('recordSelectionDialog.useSampling', true);
+    tr.b.Settings.set('tr.ui.e.about_tracing.record_selection_dialog_preset',
+        ['blink', 'cc', 'renderer', 'cc.debug']);
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.categories = ['disabled-by-default-one'];
+    dlg.settings_key = 'categories';
+    dlg.updateForm_();
+
+    // Make sure the correct filter is returned.
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['three', 'two']);
+
+    // Make sure the correct tracing types are returned.
+    assert.strictEqual(dlg.tracingRecordMode, 'record-continuously');
+    assert.isTrue(dlg.useSystemTracing);
+    assert.isTrue(dlg.useSampling);
+
+    // Make sure the manual settings are not visible.
+    const classList = Polymer.dom(dlg.categoriesView_).classList;
+    assert.isTrue(classList.contains('categories-column-view-hidden'));
+
+    // Switch to manual settings and verify the default values are not returned.
+    dlg.currentlyChosenPreset = [];
+    assert.deepEqual(dlg.includedAndExcludedCategories().included, []);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded, ['three']);
+    assert.strictEqual(dlg.tracingRecordMode, 'record-continuously');
+    assert.isTrue(dlg.useSystemTracing);
+    assert.isTrue(dlg.useSampling);
+    assert.isFalse(classList.contains('categories-column-view-hidden'));
+  });
+
+  test('recordSelectionDialog_categoryFilters', function() {
+    tr.b.Settings.set('default1', true, 'categories');
+    tr.b.Settings.set('disabled1', false, 'categories');
+    tr.b.Settings.set('disabled-by-default-cc.disabled2', false, 'categories');
+    tr.b.Settings.set('input', true, 'categories');
+    tr.b.Settings.set('blink', true, 'categories');
+    tr.b.Settings.set('cc', false, 'categories');
+    tr.b.Settings.set('disabled-by-default-cc.debug', true, 'categories');
+
+    const dlg = new tr.ui.e.about_tracing.RecordSelectionDialog();
+    dlg.settings_key = 'categories';
+    dlg.categories = [];
+    dlg.currentlyChosenPreset = [];
+    dlg.updateForm_();
+
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-cc.debug']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['cc', 'disabled1']);
+
+    // Switch to the graphics, rendering, and rasterization preset.
+    dlg.currentlyChosenPreset = ['blink', 'cc', 'renderer',
+      'disabled-by-default-cc.debug'];
+    assert.deepEqual(dlg.includedAndExcludedCategories().included,
+        ['disabled-by-default-cc.debug']);
+    assert.deepEqual(dlg.includedAndExcludedCategories().excluded,
+        ['default1', 'disabled1', 'input']);
+  });
+});
+</script>

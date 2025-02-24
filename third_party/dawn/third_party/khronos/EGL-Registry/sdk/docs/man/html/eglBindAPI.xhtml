@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglBindAPI - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglBindAPI">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglBindAPI — Set the current rendering API</p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglBindAPI</strong>(</code>
+              </td>
+              <td>EGLenum <var class="pdparam">api</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>api</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the client API to bind, one of
+                    <code class="constant">EGL_OPENGL_API</code>,
+                    <code class="constant">EGL_OPENGL_ES_API</code>, or
+                    <code class="constant">EGL_OPENVG_API</code>.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglBindAPI</code> defines the current
+            rendering API for EGL in the thread it is called from. The
+            current rendering API is one of the client rendering APIs
+            supported by the EGL implementation, and affects the
+            behavior of other EGL commands including
+            <code class="function">eglCreateContext</code>,
+            <code class="function">eglGetCurrentContext</code>,
+            <code class="function">eglGetCurrentDisplay</code>,
+            <code class="function">eglGetCurrentSurface</code>,
+            <code class="function">eglMakeCurrent</code>,
+            <code class="function">eglSwapInterval</code>,
+            <code class="function">eglWaitClient</code>, and
+            <code class="function">eglWaitNative</code>.
+        </p>
+        <p>
+            If <em class="parameter"><code>api</code></em> is
+            <code class="constant">EGL_OPENGL_API</code>, the current rendering
+            API is set to the OpenGL API.
+        </p>
+        <p>
+            If <em class="parameter"><code>api</code></em> is
+            <code class="constant">EGL_OPENGL_ES_API</code>, the current
+            rendering API is set to the OpenGL ES API.
+        </p>
+        <p>
+            If <em class="parameter"><code>api</code></em> is
+            <code class="constant">EGL_OPENVG_API</code>, the current rendering
+            API is set to the OpenVG API.
+        </p>
+        <p>
+            If an error occurs, the current rendering API is unchanged.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglBindAPI</code> and the corresponding
+            <code class="constant">EGL_OPENGL_ES_API</code> and
+            <code class="constant">EGL_OPENVG_API</code>
+            <em class="parameter"><code>api</code></em> parameters are supported only if
+            the EGL version is 1.2 or greater. The
+            <code class="constant">EGL_OPENGL_API</code> parameter is supported
+            only if the EGL version is 1.4 or greater.
+        </p>
+        <p>
+            The initial value of the current rendering API is
+            <code class="constant">EGL_OPENGL_ES_API</code> unless OpenGL ES is
+            not supported by an implementation, in which case the
+            initial value is <code class="constant">EGL_NONE</code> (however,
+            <code class="constant">EGL_NONE</code> is not a valid
+            <em class="parameter"><code>api</code></em> parameter to
+            <code class="function">eglBindAPI</code>).
+        </p>
+        <p>
+            The current rendering API can be queried by calling
+            <code class="function">eglQueryAPI</code>.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_PARAMETER</code> is generated if
+            <em class="parameter"><code>api</code></em> is not one of the accepted
+            tokens, or if the specified client API is not supported by
+            the EGL implementation.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreateContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateContext</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentContext</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentDisplay</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentSurface</span></span></a>,
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>,
+            <a class="citerefentry" href="eglQueryAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryAPI</span></span></a>,
+            <a class="citerefentry" href="eglSwapInterval.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapInterval</span></span></a>,
+            <a class="citerefentry" href="eglWaitClient.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitClient</span></span></a>,
+            <a class="citerefentry" href="eglWaitNative.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitNative</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

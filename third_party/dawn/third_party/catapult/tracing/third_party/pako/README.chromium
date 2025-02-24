@@ -1,0 +1,16 @@
+Name: pako
+Short Name: pako
+URL: https://github.com/nodeca/pako
+Version: 1.0.6
+Revision: 893381abcafa10fa2081ce60dae7d4d8e873a658
+Date: Thu Sep 14 14:38:19 2017 +0300
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: yes
+
+Description:
+high speed zlib port to javascript, works in browser & node.js http://nodeca.github.io/pako/
+
+Local Modifications:
+Took only the minified JS file and associated license.

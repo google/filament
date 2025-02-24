@@ -1,0 +1,10 @@
+dEQP-VK.memory_model.message_passing.ext.u32.coherent.atomic_atomic.atomicrmw.device.payload_nonlocal.workgroup.guard_local.physbuffer.comp
+dEQP-VK.memory_model.message_passing.ext.u32.coherent.fence_atomic.atomicwrite.queuefamily.payload_nonlocal.workgroup.guard_nonlocal.workgroup.comp
+dEQP-VK.memory_model.message_passing.ext.u32.noncoherent.atomic_atomic.atomicwrite.queuefamily.payload_local.physbuffer.guard_nonlocal.workgroup.comp
+dEQP-VK.memory_model.message_passing.ext.u32.noncoherent.atomic_fence.atomicwrite.queuefamily.payload_nonlocal.workgroup.guard_local.buffer.comp
+dEQP-VK.memory_model.write_after_read.ext.u32.coherent.atomic_atomic.atomicwrite.device.payload_nonlocal.workgroup.guard_local.image.comp
+dEQP-VK.memory_model.write_after_read.ext.u32.coherent.fence_atomic.atomicwrite.device.payload_local.buffer.guard_nonlocal.workgroup.comp
+dEQP-VK.memory_model.write_after_read.ext.u32.noncoherent.atomic_atomic.atomicwrite.device.payload_nonlocal.workgroup.guard_local.buffer.comp
+dEQP-VK.memory_model.write_after_read.ext.u32.noncoherent.fence_atomic.atomicwrite.queuefamily.payload_nonlocal.workgroup.guard_local.physbuffer.comp
+dEQP-VK.wsi.xcb.maintenance1.present_fence.fifo.null_handles
+dEQP-VK.wsi.xcb.maintenance1.present_fence.mailbox.null_handles

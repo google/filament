@@ -1,0 +1,26 @@
+timeout: 600s  # Wait for 10 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+steps:
+# Start the version so that it is ready to receive traffic
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: [
+    app, versions, 'start', '-s', 'sheriff-config', '${_SERVICE_VERSION}'
+  ]
+# Set the traffic to the new version
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Set traffic for sheriff-config service'
+  args: [
+    'app', 'services', 'set-traffic', 'sheriff-config',
+    '--splits=${_SERVICE_VERSION}=1'
+  ]
+# Stop older versions to release instances
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args: [
+    '-x', '-e', 'dashboard/dev_dockerfiles/stop_old_versions.sh',
+    'sheriff-config'
+  ]
+substitutions:
+    _SERVICE_VERSION: 'cloud-build-4ca9d09'

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/unittest/constants.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<style>
+  x-tr-b-unittest-test-results {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+  }
+
+  x-tr-b-unittest-test-results > x-html-test-case-result.dark > #summary {
+    background-color: #eee;
+  }
+
+  x-html-test-case-result {
+    display: block;
+  }
+  x-html-test-case-result > #summary > #title,
+  x-html-test-case-result > #summary > #status,
+  x-html-test-case-result > #details > x-html-test-case-error > #message,
+  x-html-test-case-result > #details > x-html-test-case-error > #stack,
+  x-html-test-case-result > #details > x-html-test-case-error > #return-value,
+  x-html-test-case-result > #details > x-html-test-case-flaky > #message {
+    -webkit-user-select: auto;
+  }
+
+  x-html-test-case-result > #details > x-html-test-case-error,
+  x-html-test-case-result > #details > x-html-test-case-flaky {
+    display: block;
+    border: 1px solid grey;
+    border-radius: 5px;
+    font-family: monospace;
+    margin-bottom: 14px;
+  }
+
+  x-html-test-case-result > #details > x-html-test-case-error > #message,
+  x-html-test-case-result > #details > x-html-test-case-error > #stack,
+  x-html-test-case-result > #details > x-html-test-case-flaky > #message {
+    white-space: pre;
+  }
+
+  x-html-test-case-result > #details > x-html-test-case-html-result {
+    display: block;
+  }
+
+  .unittest-pending {
+    color: orange;
+  }
+  .unittest-running {
+    color: orange;
+    font-weight: bold;
+  }
+
+  .unittest-passed {
+    color: darkgreen;
+  }
+
+  .unittest-failed {
+    color: darkred;
+    font-weight: bold;
+  }
+
+  .unittest-flaky {
+    color: darkorange;
+  }
+
+  .unittest-skipped {
+    color: blue;
+  }
+
+  .unittest-exception {
+    color: red;
+    font-weight: bold;
+  }
+
+  .unittest-failure {
+    border: 1px solid grey;
+    border-radius: 5px;
+    padding: 5px;
+  }
+</style>
+<template id="x-html-test-case-result-template">
+  <div id="summary">
+    <span id="title"></span>&nbsp;
+    <span id="status"></span>&nbsp;
+    <span id="return-value"></span>
+  </div>
+  <div id="details"></div>
+</template>
+
+<template id="x-html-test-case-error-template">
+  <div id="stack"></div>
+</template>
+
+<template id="x-html-test-case-flaky-template">
+  <div id="message"></div>
+</template>
+
+<template id="x-html-test-case-skipped-template">
+  <div id="message"></div>
+</template>
+
+<script>
+'use strict';
+tr.exportTo('tr.b.unittest', function() {
+  const THIS_DOC = document._currentScript.ownerDocument;
+
+  const TestStatus = tr.b.unittest.TestStatus;
+  const TestTypes = tr.b.unittest.TestTypes;
+
+  /**
+   * @constructor
+   */
+  const HTMLTestCaseResult = tr.ui.b.define('x-html-test-case-result');
+
+  HTMLTestCaseResult.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      Polymer.dom(this).appendChild(tr.ui.b.instantiateTemplate(
+          '#x-html-test-case-result-template', THIS_DOC));
+      this.testCase_ = undefined;
+      this.testCaseHRef_ = undefined;
+      this.duration_ = undefined;
+      this.testStatus_ = TestStatus.PENDING;
+      this.testReturnValue_ = undefined;
+      this.showHTMLOutput_ = false;
+      this.updateColorAndStatus_();
+    },
+
+    get showHTMLOutput() {
+      return this.showHTMLOutput_;
+    },
+
+    set showHTMLOutput(showHTMLOutput) {
+      this.showHTMLOutput_ = showHTMLOutput;
+      this.updateHTMLOutputDisplayState_();
+    },
+
+    get testCase() {
+      return this.testCase_;
+    },
+
+    set testCase(testCase) {
+      this.testCase_ = testCase;
+      this.updateTitle_();
+    },
+
+    get testCaseHRef() {
+      return this.testCaseHRef_;
+    },
+
+    set testCaseHRef(href) {
+      this.testCaseHRef_ = href;
+      this.updateTitle_();
+    },
+    updateTitle_() {
+      const titleEl = Polymer.dom(this).querySelector('#title');
+      if (this.testCase_ === undefined) {
+        Polymer.dom(titleEl).textContent = '';
+        return;
+      }
+
+      if (this.testCaseHRef_) {
+        Polymer.dom(titleEl).innerHTML =
+            '<a href="' + this.testCaseHRef_ + '">' +
+            this.testCase_.fullyQualifiedName + '</a>';
+      } else {
+        Polymer.dom(titleEl).textContent = this.testCase_.fullyQualifiedName;
+      }
+    },
+
+    addError(normalizedException) {
+      const errorEl = document.createElement('x-html-test-case-error');
+      Polymer.dom(errorEl).appendChild(tr.ui.b.instantiateTemplate(
+          '#x-html-test-case-error-template', THIS_DOC));
+      Polymer.dom(Polymer.dom(errorEl).querySelector('#stack')).
+          textContent = normalizedException.stack;
+      Polymer.dom(Polymer.dom(this).querySelector('#details')).appendChild(
+          errorEl);
+      this.updateColorAndStatus_();
+    },
+
+    addFlaky() {
+      const flakyEl = document.createElement('x-html-test-case-flaky');
+      Polymer.dom(flakyEl).appendChild(tr.ui.b.instantiateTemplate(
+          '#x-html-test-case-flaky-template', THIS_DOC));
+      Polymer.dom(Polymer.dom(flakyEl).querySelector('#message'))
+          .textContent = 'FLAKY';
+      Polymer.dom(Polymer.dom(this).querySelector('#details')).appendChild(
+          flakyEl);
+      this.updateColorAndStatus_();
+    },
+
+    addSkipped() {
+      const skippedEl = document.createElement('x-html-test-case-skipped');
+      Polymer.dom(skippedEl).appendChild(tr.ui.b.instantiateTemplate(
+          '#x-html-test-case-skipped-template', THIS_DOC));
+      Polymer.dom(Polymer.dom(skippedEl).querySelector('#message'))
+          .textContent = 'SKIPPED';
+      Polymer.dom(Polymer.dom(this).querySelector('#details')).appendChild(
+          skippedEl);
+      this.updateColorAndStatus_();
+    },
+
+    addHTMLOutput(element) {
+      const htmlResultEl = document.createElement(
+          'x-html-test-case-html-result');
+      Polymer.dom(htmlResultEl).appendChild(element);
+      Polymer.dom(Polymer.dom(this).querySelector('#details'))
+          .appendChild(htmlResultEl);
+    },
+
+    updateHTMLOutputDisplayState_() {
+      const htmlResults =
+          Polymer.dom(this).querySelectorAll('x-html-test-case-html-result');
+      let display;
+      if (this.showHTMLOutput) {
+        display = '';
+      } else {
+        display = (this.testStatus_ === TestStatus.RUNNING) ? '' : 'none';
+      }
+      for (let i = 0; i < htmlResults.length; i++) {
+        htmlResults[i].style.display = display;
+      }
+    },
+
+    get hadErrors() {
+      return !!Polymer.dom(this).querySelector('x-html-test-case-error');
+    },
+
+    get isFlaky() {
+      return !!Polymer.dom(this).querySelector('x-html-test-case-flaky');
+    },
+
+    get isSkipped() {
+      return !!Polymer.dom(this).querySelector('x-html-test-case-skipped');
+    },
+
+    get duration() {
+      return this.duration_;
+    },
+
+    set duration(duration) {
+      this.duration_ = duration;
+      this.updateColorAndStatus_();
+    },
+
+    get testStatus() {
+      return this.testStatus_;
+    },
+
+    set testStatus(testStatus) {
+      this.testStatus_ = testStatus;
+      this.updateColorAndStatus_();
+      this.updateHTMLOutputDisplayState_();
+    },
+
+    updateColorAndStatus_() {
+      let colorCls;
+      let status;
+      if (this.hadErrors) {
+        colorCls = 'unittest-failed';
+        status = 'failed';
+      } else if (this.isFlaky) {
+        colorCls = 'unittest-flaky';
+        status = 'flaky';
+      } else if (this.isSkipped) {
+        colorCls = 'unittest-skipped';
+        status = 'skipped';
+      } else if (this.testStatus_ === TestStatus.PENDING) {
+        colorCls = 'unittest-pending';
+        status = 'pending';
+      } else if (this.testStatus_ === TestStatus.RUNNING) {
+        colorCls = 'unittest-running';
+        status = 'running';
+      } else { // DONE_RUNNING and no errors
+        colorCls = 'unittest-passed';
+        status = 'passed';
+      }
+
+      const statusEl = Polymer.dom(this).querySelector('#status');
+      if (this.duration_) {
+        Polymer.dom(statusEl).textContent = status + ' (' +
+            this.duration_.toFixed(2) + 'ms)';
+      } else {
+        Polymer.dom(statusEl).textContent = status;
+      }
+      statusEl.className = colorCls;
+    },
+
+    get testReturnValue() {
+      return this.testReturnValue_;
+    },
+
+    set testReturnValue(testReturnValue) {
+      this.testReturnValue_ = testReturnValue;
+      Polymer.dom(Polymer.dom(this).querySelector('#return-value'))
+          .textContent = testReturnValue;
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  const HTMLTestResults = tr.ui.b.define('x-tr-b-unittest-test-results');
+
+  HTMLTestResults.prototype = {
+    __proto__: HTMLUnknownElement.prototype,
+
+    decorate() {
+      this.testCaseResultsByCaseGUID_ = {};
+      this.currentTestCaseStartTime_ = undefined;
+      this.totalRunTime_ = 0;
+      this.numTestsThatPassed_ = 0;
+      this.numTestsThatFailed_ = 0;
+      this.numFlakyTests_ = 0;
+      this.numSkippedTests_ = 0;
+      this.showHTMLOutput_ = false;
+      this.showPendingAndPassedTests_ = false;
+      this.linkifyCallback_ = undefined;
+      this.headless_ = false;
+    },
+
+    get headless() {
+      return this.headless_;
+    },
+
+    set headless(headless) {
+      this.headless_ = headless;
+    },
+
+    getHRefForTestCase(testCase) {
+      /* Override this to create custom links */
+      return undefined;
+    },
+
+    get showHTMLOutput() {
+      return this.showHTMLOutput_;
+    },
+
+    set showHTMLOutput(showHTMLOutput) {
+      this.showHTMLOutput_ = showHTMLOutput;
+      const testCaseResults =
+          Polymer.dom(this).querySelectorAll('x-html-test-case-result');
+      for (let i = 0; i < testCaseResults.length; i++) {
+        testCaseResults[i].showHTMLOutput = showHTMLOutput;
+      }
+    },
+
+    get showPendingAndPassedTests() {
+      return this.showPendingAndPassedTests_;
+    },
+
+    set showPendingAndPassedTests(showPendingAndPassedTests) {
+      this.showPendingAndPassedTests_ = showPendingAndPassedTests;
+
+      const testCaseResults =
+          Polymer.dom(this).querySelectorAll('x-html-test-case-result');
+      for (let i = testCaseResults.length - 1; i >= 0; i--) {
+        this.updateDisplayStateForResult_(testCaseResults[i]);
+      }
+    },
+
+    updateDisplayStateForResult_(res) {
+      let display;
+      if (this.showPendingAndPassedTests_) {
+        if (res.testStatus === TestStatus.RUNNING ||
+            res.hadErrors) {
+          display = '';
+        } else {
+          display = 'none';
+        }
+      } else {
+        display = '';
+      }
+      res.style.display = display;
+    },
+
+    willRunTests(testCases) {
+      this.timeAtBeginningOfTest_ = window.performance.now();
+      testCases.forEach(function(testCase, i) {
+        const testCaseResult = new HTMLTestCaseResult();
+        testCaseResult.showHTMLOutput = this.showHTMLOutput_;
+        testCaseResult.testCase = testCase;
+        if ((i % 2) === 0) {
+          Polymer.dom(testCaseResult).classList.add('dark');
+        }
+
+        const href = this.getHRefForTestCase(testCase);
+        if (href) {
+          testCaseResult.testCaseHRef = href;
+        }
+        testCaseResult.testStatus = TestStatus.PENDING;
+        this.testCaseResultsByCaseGUID_[testCase.guid] = testCaseResult;
+        Polymer.dom(this).appendChild(testCaseResult);
+        this.updateDisplayStateForResult_(testCaseResult);
+      }, this);
+    },
+
+    willRunTest(testCase) {
+      this.currentTestCaseResult_ = this.testCaseResultsByCaseGUID_[
+          testCase.guid];
+      this.currentTestCaseStartTime_ = window.performance.now();
+      this.currentTestCaseResult_.testStatus = TestStatus.RUNNING;
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+      this.log_(testCase.fullyQualifiedName + ': ');
+    },
+
+    addErrorForCurrentTest(error) {
+      this.log_('\n');
+
+      const normalizedException = tr.b.normalizeException(error);
+      this.log_('Exception: ' + normalizedException.message + '\n' +
+          normalizedException.stack);
+
+      this.currentTestCaseResult_.addError(normalizedException);
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+      if (this.headless_) {
+        this.notifyTestResultToDevServer_('EXCEPT', normalizedException.stack);
+      }
+    },
+
+    addHTMLOutputForCurrentTest(element) {
+      this.currentTestCaseResult_.addHTMLOutput(element);
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+    },
+
+    setCurrentTestFlaky() {
+      this.currentTestCaseResult_.addFlaky();
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+    },
+
+    setCurrentTestSkipped() {
+      this.currentTestCaseResult_.addSkipped();
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+    },
+
+    setReturnValueFromCurrentTest(returnValue) {
+      this.currentTestCaseResult_.testReturnValue = returnValue;
+    },
+
+    didCurrentTestEnd() {
+      const now = window.performance.now();
+      const testCaseResult = this.currentTestCaseResult_;
+      const testCaseDuration = now - this.currentTestCaseStartTime_;
+      this.currentTestCaseResult_.testStatus = TestStatus.DONE_RUNNING;
+      testCaseResult.duration = testCaseDuration;
+      this.totalRunTime_ = now - this.timeAtBeginningOfTest_;
+      let resultString;
+      if (testCaseResult.hadErrors) {
+        resultString = 'FAILED';
+        this.numTestsThatFailed_ += 1;
+        tr.b.dispatchSimpleEvent(this, 'testfailed');
+      } else if (testCaseResult.isFlaky) {
+        resultString = 'FLAKY';
+        this.numFlakyTests_ += 1;
+        tr.b.dispatchSimpleEvent(this, 'testflaky');
+      } else if (testCaseResult.isSkipped) {
+        resultString = 'SKIPPED';
+        this.numSkippedTests_ += 1;
+        tr.b.dispatchSimpleEvent(this, 'testskipped');
+      } else {
+        resultString = 'PASSED';
+        this.numTestsThatPassed_ += 1;
+        tr.b.dispatchSimpleEvent(this, 'testpassed');
+      }
+      this.log_('[' + resultString + ']\n');
+
+      if (this.headless_) {
+        this.notifyTestResultToDevServer_(resultString);
+      }
+
+      this.updateDisplayStateForResult_(this.currentTestCaseResult_);
+      this.currentTestCaseResult_ = undefined;
+    },
+
+    didRunTests() {
+      this.log_('[DONE]\n');
+      if (this.headless_) {
+        this.notifyTestCompletionToDevServer_();
+      }
+    },
+
+    getStats() {
+      return {
+        numTestsThatPassed: this.numTestsThatPassed_,
+        numTestsThatFailed: this.numTestsThatFailed_,
+        numFlakyTests: this.numFlakyTests_,
+        numSkippedTests: this.numSkippedTests_,
+        totalRunTime: this.totalRunTime_
+      };
+    },
+
+    didAllTestsPass() {
+      return this.numTestsThatFailed_ === 0;
+    },
+
+    notifyTestResultToDevServer_(result, extraMsg) {
+      const req = new XMLHttpRequest();
+      const testName = this.currentTestCaseResult_.testCase.fullyQualifiedName;
+      const data = result + '  ' + testName + ' ' + (extraMsg || '');
+      tr.b.postAsync('/tracing/notify_test_result', data);
+    },
+
+    notifyTestCompletionToDevServer_() {
+      if (this.numTestsThatPassed_ + this.numTestsThatFailed_ +
+          this.numFlakyTests_ + this.numSkippedTests_ === 0) {
+        return;
+      }
+      let data = this.didAllTestsPass() ? 'ALL_PASSED' : 'HAD_FAILURES';
+      data += '\nPassed tests: ' + this.numTestsThatPassed_ +
+              '  Failed tests: ' + this.numTestsThatFailed_ +
+              '  Skipped tests: ' + this.numSkippedTests_ +
+              '  Flaky tests: ' + this.numFlakyTests_;
+
+      tr.b.postAsync('/tracing/notify_tests_completed', data);
+    },
+
+    log_(msg) {
+      tr.b.dispatchSimpleEvent(this, 'statschange');
+    }
+  };
+
+  return {
+    HTMLTestResults,
+  };
+});
+</script>

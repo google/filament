@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_heap_details_pane.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/analysis/stacked_pane.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+
+<dom-module id='tr-ui-a-memory-dump-allocator-details-pane'>
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #label {
+        flex: 0 0 auto;
+        padding: 8px;
+
+        background-color: #eee;
+        border-bottom: 1px solid #8e8e8e;
+        border-top: 1px solid white;
+
+        font-size:  15px;
+        font-weight: bold;
+      }
+
+      #contents {
+        flex: 1 0 auto;
+        align-self: stretch;
+        font-size: 12px;
+      }
+
+      #info_text {
+        padding: 8px;
+        color: #666;
+        font-style: italic;
+        text-align: center;
+      }
+
+      #table {
+        display: none;  /* Hide until memory allocator dumps are set. */
+        flex: 1 0 auto;
+        align-self: stretch;
+        font-size: 12px;
+      }
+    </style>
+    <div id="label">Component details</div>
+    <div id="contents">
+      <div id="info_text">No memory allocator dump selected</div>
+      <tr-ui-b-table id="table"></tr-ui-b-table>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  // Link to docs.
+  const URL_TO_SIZE_VS_EFFECTIVE_SIZE = 'https://chromium.googlesource.com/chromium/src/+/master/docs/memory-infra/README.md#effective_size-vs_size';
+
+  // Constant representing the context in suballocation rows.
+  const SUBALLOCATION_CONTEXT = true;
+
+  // Size numeric info types.
+  const MemoryAllocatorDumpInfoType = tr.model.MemoryAllocatorDumpInfoType;
+  const PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN;
+  const PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER;
+
+  // Unicode symbols used for memory cell info icons and messages.
+  const LEFTWARDS_OPEN_HEADED_ARROW = String.fromCharCode(0x21FD);
+  const RIGHTWARDS_OPEN_HEADED_ARROW = String.fromCharCode(0x21FE);
+  const EN_DASH = String.fromCharCode(0x2013);
+  const CIRCLED_LATIN_SMALL_LETTER_I = String.fromCharCode(0x24D8);
+
+  /** @constructor */
+  function AllocatorDumpNameColumn() {
+    tr.ui.analysis.TitleColumn.call(this, 'Component');
+  }
+
+  AllocatorDumpNameColumn.prototype = {
+    __proto__: tr.ui.analysis.TitleColumn.prototype,
+
+    formatTitle(row) {
+      if (!row.suballocation) {
+        return row.title;
+      }
+      return tr.ui.b.createSpan({
+        textContent: row.title,
+        italic: true,
+        tooltip: row.fullNames === undefined ?
+          undefined : row.fullNames.join(', ')
+      });
+    }
+  };
+
+  /**
+   * Retrieve the entry associated with a given name from a map and increment
+   * its count.
+   *
+   * If there is no entry associated with the name, a new entry is created, the
+   * creation callback is called, the entry's count is incremented (from 0 to
+   * 1) and the newly created entry is returned.
+   */
+  function getAndUpdateEntry(map, name, createdCallback) {
+    let entry = map.get(name);
+    if (entry === undefined) {
+      entry = {count: 0};
+      createdCallback(entry);
+      map.set(name, entry);
+    }
+    entry.count++;
+    return entry;
+  }
+
+  /**
+   * Helper class for building size and effective size column info messages.
+   *
+   * @constructor
+   */
+  function SizeInfoMessageBuilder() {
+    this.parts_ = [];
+    this.indent_ = 0;
+  }
+
+  SizeInfoMessageBuilder.prototype = {
+    append(/* arguments */) {
+      this.parts_.push.apply(
+          this.parts_, Array.prototype.slice.apply(arguments));
+    },
+
+    /**
+     * Append the entries of a map to the message according to the following
+     * rules:
+     *
+     *   1. If the map is empty, append emptyText to the message (if provided).
+     *      Examples:
+     *
+     *                       emptyText=undefined
+     *        Hello, World! ====================> Hello, World!
+     *
+     *                        emptyText='empty'
+     *        The bottle is ====================> The bottle is empty
+     *
+     *   2. If the map contains a single entry, append a space and call
+     *      itemCallback on the entry (which is in turn expected to append a
+     *      message for the entry). Example:
+     *
+     *        Please do not ====================> Please do not [item-message]
+     *
+     *   3. If the map contains multiple entries, append them as a list
+     *      with itemCallback called on each entry. If hasPluralSuffix is true,
+     *      's' will be appended to the message before the list. Examples:
+     *
+     *                      hasPluralSuffix=false
+     *        I need to buy ====================> I need to buy:
+     *                                             - [item1-message]
+     *                                             - [item2-message]
+     *                                             [...]
+     *                                             - [itemN-message]
+     *
+     *                      hasPluralSuffix=true
+     *        Suspected CL  ====================> Suspected CLs:
+     *                                             - [item1-message]
+     *                                             - [item2-message]
+     *                                             [...]
+     *                                             - [itemN-message]
+     */
+    appendMap(
+        map, hasPluralSuffix, emptyText, itemCallback, opt_this) {
+      opt_this = opt_this || this;
+      if (map.size === 0) {
+        if (emptyText) {
+          this.append(emptyText);
+        }
+      } else if (map.size === 1) {
+        this.parts_.push(' ');
+        const key = map.keys().next().value;
+        itemCallback.call(opt_this, key, map.get(key));
+      } else {
+        if (hasPluralSuffix) {
+          this.parts_.push('s');
+        }
+        this.parts_.push(':');
+        this.indent_++;
+        for (const key of map.keys()) {
+          this.parts_.push('\n', ' '.repeat(3 * (this.indent_ - 1)), ' - ');
+          itemCallback.call(opt_this, key, map.get(key));
+        }
+        this.indent_--;
+      }
+    },
+
+    appendImportanceRange(range) {
+      this.append(' (importance: ');
+      if (range.min === range.max) {
+        this.append(range.min);
+      } else {
+        this.append(range.min, EN_DASH, range.max);
+      }
+      this.append(')');
+    },
+
+    appendSizeIfDefined(size) {
+      if (size !== undefined) {
+        this.append(' (', tr.b.Unit.byName.sizeInBytes.format(size), ')');
+      }
+    },
+
+    appendSomeTimestampsQuantifier() {
+      this.append(
+          ' ', tr.ui.analysis.MemoryColumn.SOME_TIMESTAMPS_INFO_QUANTIFIER);
+    },
+
+    build() {
+      return this.parts_.join('');
+    }
+  };
+
+  /** @constructor */
+  function EffectiveSizeColumn(name, cellPath, aggregationMode) {
+    tr.ui.analysis.DetailsNumericMemoryColumn.call(
+        this, name, cellPath, aggregationMode);
+  }
+
+  EffectiveSizeColumn.prototype = {
+    __proto__: tr.ui.analysis.DetailsNumericMemoryColumn.prototype,
+
+    get title() {
+      return tr.ui.b.createLink({
+        textContent: this.name,
+        tooltip: 'Memory used by this component',
+        href: URL_TO_SIZE_VS_EFFECTIVE_SIZE
+      });
+    },
+
+    addInfos(numerics, memoryAllocatorDumps, infos) {
+      if (memoryAllocatorDumps === undefined) return;
+
+      // Quantified name of an owner dump (of the given dump) -> {count,
+      // importanceRange}.
+      const ownerNameToEntry = new Map();
+
+      // Quantified name of an owned dump (by the given dump) -> {count,
+      // importanceRange, sharerNameToEntry}, where sharerNameToEntry is a map
+      // from quantified names of other owners of the owned dump to {count,
+      // importanceRange}.
+      const ownedNameToEntry = new Map();
+
+      for (let i = 0; i < numerics.length; i++) {
+        if (numerics[i] === undefined) continue;
+
+        const dump = memoryAllocatorDumps[i];
+        if (dump === SUBALLOCATION_CONTEXT) {
+          return;  // No ownership of suballocation internal rows.
+        }
+
+        // Gather owners of this dump.
+        dump.ownedBy.forEach(function(ownerLink) {
+          const ownerDump = ownerLink.source;
+          this.getAndUpdateOwnershipEntry_(
+              ownerNameToEntry, ownerDump, ownerLink);
+        }, this);
+
+        // Gather dumps owned by this dump and other owner dumps sharing them
+        // (with this dump).
+        const ownedLink = dump.owns;
+        if (ownedLink !== undefined) {
+          const ownedDump = ownedLink.target;
+          const ownedEntry = this.getAndUpdateOwnershipEntry_(ownedNameToEntry,
+              ownedDump, ownedLink, true /* opt_withSharerNameToEntry */);
+          const sharerNameToEntry = ownedEntry.sharerNameToEntry;
+          ownedDump.ownedBy.forEach(function(sharerLink) {
+            const sharerDump = sharerLink.source;
+            if (sharerDump === dump) return;
+            this.getAndUpdateOwnershipEntry_(
+                sharerNameToEntry, sharerDump, sharerLink);
+          }, this);
+        }
+      }
+
+      // Emit a single info listing all owners of this dump.
+      if (ownerNameToEntry.size > 0) {
+        const messageBuilder = new SizeInfoMessageBuilder();
+        messageBuilder.append('shared by');
+        messageBuilder.appendMap(
+            ownerNameToEntry,
+            false /* hasPluralSuffix */,
+            undefined /* emptyText */,
+            function(ownerName, ownerEntry) {
+              messageBuilder.append(ownerName);
+              if (ownerEntry.count < numerics.length) {
+                messageBuilder.appendSomeTimestampsQuantifier();
+              }
+              messageBuilder.appendImportanceRange(ownerEntry.importanceRange);
+            }, this);
+        infos.push({
+          message: messageBuilder.build(),
+          icon: LEFTWARDS_OPEN_HEADED_ARROW,
+          color: 'green'
+        });
+      }
+
+      // Emit a single info listing all dumps owned by this dump together
+      // with list(s) of other owner dumps sharing them with this dump.
+      if (ownedNameToEntry.size > 0) {
+        const messageBuilder = new SizeInfoMessageBuilder();
+        messageBuilder.append('shares');
+        messageBuilder.appendMap(
+            ownedNameToEntry,
+            false /* hasPluralSuffix */,
+            undefined /* emptyText */,
+            function(ownedName, ownedEntry) {
+              messageBuilder.append(ownedName);
+              const ownedCount = ownedEntry.count;
+              if (ownedCount < numerics.length) {
+                messageBuilder.appendSomeTimestampsQuantifier();
+              }
+              messageBuilder.appendImportanceRange(ownedEntry.importanceRange);
+              messageBuilder.append(' with');
+              messageBuilder.appendMap(
+                  ownedEntry.sharerNameToEntry,
+                  false /* hasPluralSuffix */,
+                  ' no other dumps',
+                  function(sharerName, sharerEntry) {
+                    messageBuilder.append(sharerName);
+                    if (sharerEntry.count < ownedCount) {
+                      messageBuilder.appendSomeTimestampsQuantifier();
+                    }
+                    messageBuilder.appendImportanceRange(
+                        sharerEntry.importanceRange);
+                  }, this);
+            }, this);
+        infos.push({
+          message: messageBuilder.build(),
+          icon: RIGHTWARDS_OPEN_HEADED_ARROW,
+          color: 'green'
+        });
+      }
+    },
+
+    getAndUpdateOwnershipEntry_(
+        map, dump, link, opt_withSharerNameToEntry) {
+      const entry = getAndUpdateEntry(map, dump.quantifiedName,
+          function(newEntry) {
+            newEntry.importanceRange = new tr.b.math.Range();
+            if (opt_withSharerNameToEntry) {
+              newEntry.sharerNameToEntry = new Map();
+            }
+          });
+      entry.importanceRange.addValue(link.importance || 0);
+      return entry;
+    }
+  };
+
+  /** @constructor */
+  function SizeColumn(name, cellPath, aggregationMode) {
+    tr.ui.analysis.DetailsNumericMemoryColumn.call(
+        this, name, cellPath, aggregationMode);
+  }
+
+  SizeColumn.prototype = {
+    __proto__: tr.ui.analysis.DetailsNumericMemoryColumn.prototype,
+
+    get title() {
+      return tr.ui.b.createLink({
+        textContent: this.name,
+        tooltip: 'Memory requested by this component',
+        href: URL_TO_SIZE_VS_EFFECTIVE_SIZE
+      });
+    },
+
+    addInfos(numerics, memoryAllocatorDumps, infos) {
+      if (memoryAllocatorDumps === undefined) return;
+      this.addOverlapInfo_(numerics, memoryAllocatorDumps, infos);
+      this.addProvidedSizeWarningInfos_(numerics, memoryAllocatorDumps, infos);
+    },
+
+    addOverlapInfo_(numerics, memoryAllocatorDumps, infos) {
+      // Sibling allocator dump name -> {count, size}. The latter field (size)
+      // is omitted in multi-selection mode.
+      const siblingNameToEntry = new Map();
+      for (let i = 0; i < numerics.length; i++) {
+        if (numerics[i] === undefined) continue;
+        const dump = memoryAllocatorDumps[i];
+        if (dump === SUBALLOCATION_CONTEXT) {
+          return;  // No ownership of suballocation internal rows.
+        }
+        const ownedBySiblingSizes = dump.ownedBySiblingSizes;
+        for (const siblingDump of ownedBySiblingSizes.keys()) {
+          const siblingName = siblingDump.name;
+          getAndUpdateEntry(siblingNameToEntry, siblingName,
+              function(newEntry) {
+                if (numerics.length === 1 /* single-selection mode */) {
+                  newEntry.size = ownedBySiblingSizes.get(siblingDump);
+                }
+              });
+        }
+      }
+
+      // Emit a single info describing all overlaps with siblings (if
+      // applicable).
+      if (siblingNameToEntry.size > 0) {
+        const messageBuilder = new SizeInfoMessageBuilder();
+        messageBuilder.append('overlaps with its sibling');
+        messageBuilder.appendMap(
+            siblingNameToEntry,
+            true /* hasPluralSuffix */,
+            undefined /* emptyText */,
+            function(siblingName, siblingEntry) {
+              messageBuilder.append('\'', siblingName, '\'');
+              messageBuilder.appendSizeIfDefined(siblingEntry.size);
+              if (siblingEntry.count < numerics.length) {
+                messageBuilder.appendSomeTimestampsQuantifier();
+              }
+            }, this);
+        infos.push({
+          message: messageBuilder.build(),
+          icon: CIRCLED_LATIN_SMALL_LETTER_I,
+          color: 'blue'
+        });
+      }
+    },
+
+    addProvidedSizeWarningInfos_(numerics, memoryAllocatorDumps,
+        infos) {
+      // Info type (see MemoryAllocatorDumpInfoType) -> {count, providedSize,
+      // dependencySize}. The latter two fields (providedSize and
+      // dependencySize) are omitted in multi-selection mode.
+      const infoTypeToEntry = new Map();
+      for (let i = 0; i < numerics.length; i++) {
+        if (numerics[i] === undefined) continue;
+        const dump = memoryAllocatorDumps[i];
+        if (dump === SUBALLOCATION_CONTEXT) {
+          return;  // Suballocation internal rows have no provided size.
+        }
+        dump.infos.forEach(function(dumpInfo) {
+          getAndUpdateEntry(infoTypeToEntry, dumpInfo.type, function(newEntry) {
+            if (numerics.length === 1 /* single-selection mode */) {
+              newEntry.providedSize = dumpInfo.providedSize;
+              newEntry.dependencySize = dumpInfo.dependencySize;
+            }
+          });
+        });
+      }
+
+      // Emit a warning info for every info type.
+      for (const infoType of infoTypeToEntry.keys()) {
+        const entry = infoTypeToEntry.get(infoType);
+        const messageBuilder = new SizeInfoMessageBuilder();
+        messageBuilder.append('provided size');
+        messageBuilder.appendSizeIfDefined(entry.providedSize);
+        let dependencyName;
+        switch (infoType) {
+          case PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN:
+            dependencyName = 'the aggregated size of the children';
+            break;
+          case PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER:
+            dependencyName = 'the size of the largest owner';
+            break;
+          default:
+            dependencyName = 'an unknown dependency';
+            break;
+        }
+        messageBuilder.append(' was less than ', dependencyName);
+        messageBuilder.appendSizeIfDefined(entry.dependencySize);
+        if (entry.count < numerics.length) {
+          messageBuilder.appendSomeTimestampsQuantifier();
+        }
+        infos.push(tr.ui.analysis.createWarningInfo(messageBuilder.build()));
+      }
+    }
+  };
+
+  const NUMERIC_COLUMN_RULES = [
+    {
+      condition: tr.model.MemoryAllocatorDump.EFFECTIVE_SIZE_NUMERIC_NAME,
+      importance: 10,
+      columnConstructor: EffectiveSizeColumn
+    },
+    {
+      condition: tr.model.MemoryAllocatorDump.SIZE_NUMERIC_NAME,
+      importance: 9,
+      columnConstructor: SizeColumn
+    },
+    {
+      condition: 'page_size',
+      importance: 0,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      condition: /size/,
+      importance: 5,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    },
+    {
+      // All other columns.
+      importance: 0,
+      columnConstructor: tr.ui.analysis.DetailsNumericMemoryColumn
+    }
+  ];
+
+  const DIAGNOSTIC_COLUMN_RULES = [
+    {
+      importance: 0,
+      columnConstructor: tr.ui.analysis.StringMemoryColumn
+    }
+  ];
+
+  Polymer({
+    is: 'tr-ui-a-memory-dump-allocator-details-pane',
+    behaviors: [tr.ui.analysis.StackedPane],
+
+    created() {
+      this.memoryAllocatorDumps_ = undefined;
+      this.heapDumps_ = undefined;
+      this.aggregationMode_ = undefined;
+    },
+
+    ready() {
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+    },
+
+    /**
+     * Sets the memory allocator dumps and schedules rebuilding the pane.
+     *
+     * The provided value should be a chronological list of memory allocator
+     * dumps. All dumps are assumed to belong to the same process and have
+     * the same full name. Example:
+     *
+     *   [
+     *     tr.model.MemoryAllocatorDump {},  // MAD at timestamp 1.
+     *     undefined,  // MAD not provided at timestamp 2.
+     *     tr.model.MemoryAllocatorDump {},  // MAD at timestamp 3.
+     *   ]
+     */
+    set memoryAllocatorDumps(memoryAllocatorDumps) {
+      this.memoryAllocatorDumps_ = memoryAllocatorDumps;
+      this.scheduleRebuild_();
+    },
+
+    get memoryAllocatorDumps() {
+      return this.memoryAllocatorDumps_;
+    },
+
+    // TODO(petrcermak): Don't plumb the heap dumps through the allocator
+    // details pane. Maybe add support for multiple child panes to stacked pane
+    // (view) instead.
+    set heapDumps(heapDumps) {
+      this.heapDumps_ = heapDumps;
+      this.scheduleRebuild_();
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      this.scheduleRebuild_();
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    onRebuild_() {
+      if (this.memoryAllocatorDumps_ === undefined ||
+          this.memoryAllocatorDumps_.length === 0) {
+        // Show the info text (hide the table).
+        this.$.info_text.style.display = 'block';
+        this.$.table.style.display = 'none';
+
+        this.$.table.clear();
+        this.$.table.rebuild();
+
+        // Hide the heap details pane (if applicable).
+        this.childPaneBuilder = undefined;
+        return;
+      }
+
+      // Show the table (hide the info text).
+      this.$.info_text.style.display = 'none';
+      this.$.table.style.display = 'block';
+
+      const rows = this.createRows_();
+      const columns = this.createColumns_(rows);
+      rows.forEach(function(rootRow) {
+        tr.ui.analysis.aggregateTableRowCellsRecursively(rootRow, columns,
+            function(contexts) {
+              // Only aggregate suballocation rows (numerics of regular rows
+              // corresponding to MADs have already been aggregated by the
+              // model in MemoryAllocatorDump.aggregateNumericsRecursively).
+              return contexts !== undefined && contexts.some(function(context) {
+                return context === SUBALLOCATION_CONTEXT;
+              });
+            });
+      });
+
+      this.$.table.tableRows = rows;
+      this.$.table.tableColumns = columns;
+      this.$.table.rebuild();
+      tr.ui.analysis.expandTableRowsRecursively(this.$.table);
+
+      // Show/hide the heap details pane.
+      if (this.heapDumps_ === undefined) {
+        this.childPaneBuilder = undefined;
+      } else {
+        this.childPaneBuilder = function() {
+          const pane =
+              document.createElement('tr-ui-a-memory-dump-heap-details-pane');
+          pane.heapDumps = this.heapDumps_;
+          pane.aggregationMode = this.aggregationMode_;
+          return pane;
+        }.bind(this);
+      }
+    },
+
+    createRows_() {
+      return [
+        this.createAllocatorRowRecursively_(this.memoryAllocatorDumps_)
+      ];
+    },
+
+    createAllocatorRowRecursively_(dumps) {
+      // Get the name of the memory allocator dumps. We can use any defined
+      // dump in dumps since they all have the same name.
+      const definedDump = dumps.find(x => x);
+      const title = definedDump.name;
+      const fullName = definedDump.fullName;
+
+      // Transform a chronological list of memory allocator dumps into two
+      // dictionaries of cells (where each cell contains a chronological list
+      // of the values of one of its numerics or diagnostics).
+      const numericCells = tr.ui.analysis.createCells(dumps, function(dump) {
+        return dump.numerics;
+      });
+      const diagnosticCells = tr.ui.analysis.createCells(dumps, function(dump) {
+        return dump.diagnostics;
+      });
+
+      // Determine whether the memory allocator dump is a suballocation. A
+      // dump is assumed to be a suballocation if (1) its name starts with
+      // two underscores, (2) it has an owner from within the same process at
+      // some timestamp, and (3) it is undefined, has no owners, or has the
+      // same owner (and no other owners) at all other timestamps.
+      let suballocatedBy = undefined;
+      if (title.startsWith('__')) {
+        for (let i = 0; i < dumps.length; i++) {
+          const dump = dumps[i];
+          if (dump === undefined || dump.ownedBy.length === 0) {
+            // Ignore timestamps where the dump is undefined or doesn't
+            // have any owner.
+            continue;
+          }
+          const ownerDump = dump.ownedBy[0].source;
+          if (dump.ownedBy.length > 1 ||
+              dump.children.length > 0 ||
+              ownerDump.containerMemoryDump !== dump.containerMemoryDump) {
+            // If the dump has (1) any children, (2) multiple owners, or
+            // (3) its owner is in a different process (otherwise, the
+            // modified title would be ambiguous), then it's not considered
+            // to be a suballocation.
+            suballocatedBy = undefined;
+            break;
+          }
+          if (suballocatedBy === undefined) {
+            suballocatedBy = ownerDump.fullName;
+          } else if (suballocatedBy !== ownerDump.fullName) {
+            // The full name of the owner dump changed over time, so this
+            // dump is not a suballocation.
+            suballocatedBy = undefined;
+            break;
+          }
+        }
+      }
+
+      const row = {
+        title,
+        fullNames: [fullName],
+        contexts: dumps,
+        numericCells,
+        diagnosticCells,
+        suballocatedBy
+      };
+
+      // Child memory dump name (dict key) -> Timestamp (list index) ->
+      // Child dump.
+      const childDumpNameToDumps = tr.b.invertArrayOfDicts(dumps,
+          function(dump) {
+            const results = {};
+            for (const child of dump.children) {
+              results[child.name] = child;
+            }
+            return results;
+          });
+
+      // Recursively create sub-rows for children (if applicable).
+      const subRows = [];
+      let suballocationClassificationRootNode = undefined;
+      for (const childDumps of Object.values(childDumpNameToDumps)) {
+        const childRow = this.createAllocatorRowRecursively_(childDumps);
+        if (childRow.suballocatedBy === undefined) {
+          // Not a suballocation row: just append it.
+          subRows.push(childRow);
+        } else {
+          // Suballocation row: classify it in a tree of suballocations.
+          suballocationClassificationRootNode =
+              this.classifySuballocationRow_(
+                  childRow, suballocationClassificationRootNode);
+        }
+      }
+
+      // Build the tree of suballocations (if applicable).
+      if (suballocationClassificationRootNode !== undefined) {
+        const suballocationRow = this.createSuballocationRowRecursively_(
+            'suballocations', suballocationClassificationRootNode);
+        subRows.push(suballocationRow);
+      }
+
+      if (subRows.length > 0) {
+        row.subRows = subRows;
+      }
+
+      return row;
+    },
+
+    classifySuballocationRow_(suballocationRow, rootNode) {
+      if (rootNode === undefined) {
+        rootNode = {
+          children: {},
+          row: undefined
+        };
+      }
+
+      const suballocationLevels = suballocationRow.suballocatedBy.split('/');
+      let currentNode = rootNode;
+      for (let i = 0; i < suballocationLevels.length; i++) {
+        const suballocationLevel = suballocationLevels[i];
+        let nextNode = currentNode.children[suballocationLevel];
+        if (nextNode === undefined) {
+          currentNode.children[suballocationLevel] = nextNode = {
+            children: {},
+            row: undefined
+          };
+        }
+        currentNode = nextNode;
+      }
+
+      const existingRow = currentNode.row;
+      if (existingRow !== undefined) {
+        // On rare occasions it can happen that one dump (e.g. sqlite) owns
+        // different suballocations at different timestamps (e.g.
+        // malloc/allocated_objects/_7d35 and malloc/allocated_objects/_511e).
+        // When this happens, we merge the two suballocations into a single row
+        // (malloc/allocated_objects/suballocations/sqlite).
+        for (let i = 0; i < suballocationRow.contexts.length; i++) {
+          const newContext = suballocationRow.contexts[i];
+          if (newContext === undefined) continue;
+
+          if (existingRow.contexts[i] !== undefined) {
+            throw new Error('Multiple suballocations with the same owner name');
+          }
+
+          existingRow.contexts[i] = newContext;
+          ['numericCells', 'diagnosticCells'].forEach(function(cellKey) {
+            const suballocationCells = suballocationRow[cellKey];
+            if (suballocationCells === undefined) return;
+            for (const [cellName, cell] of Object.entries(suballocationCells)) {
+              if (cell === undefined) continue;
+              const fields = cell.fields;
+              if (fields === undefined) continue;
+              const field = fields[i];
+              if (field === undefined) continue;
+              let existingCells = existingRow[cellKey];
+              if (existingCells === undefined) {
+                existingCells = {};
+                existingRow[cellKey] = existingCells;
+              }
+              let existingCell = existingCells[cellName];
+              if (existingCell === undefined) {
+                existingCell = new tr.ui.analysis.MemoryCell(
+                    new Array(fields.length));
+                existingCells[cellName] = existingCell;
+              }
+              existingCell.fields[i] = field;
+            }
+          });
+        }
+        existingRow.fullNames.push.apply(
+            existingRow.fullNames, suballocationRow.fullNames);
+      } else {
+        currentNode.row = suballocationRow;
+      }
+
+      return rootNode;
+    },
+
+    createSuballocationRowRecursively_(name, node) {
+      const childCount = Object.keys(node.children).length;
+      if (childCount === 0) {
+        if (node.row === undefined) {
+          throw new Error('Suballocation node must have a row or children');
+        }
+        // Leaf row of the suballocation tree: Change the row's title from
+        // '__MEANINGLESSHASH' to the name of the suballocation owner.
+        const row = node.row;
+        row.title = name;
+        row.suballocation = true;
+        return row;
+      }
+
+      // Internal row of the suballocation tree: Recursively create its
+      // sub-rows.
+      const subRows = [];
+      for (const [subName, subNode] of Object.entries(node.children)) {
+        subRows.push(this.createSuballocationRowRecursively_(subName, subNode));
+      }
+
+      if (node.row !== undefined) {
+        // Very unlikely case: Both an ancestor (e.g. 'skia') and one of its
+        // descendants (e.g. 'skia/sk_glyph_cache') both suballocate from the
+        // same MemoryAllocatorDump (e.g. 'malloc/allocated_objects'). In
+        // this case, the suballocation from the ancestor must be mapped to
+        // 'malloc/allocated_objects/suballocations/skia/<unspecified>' so
+        // that 'malloc/allocated_objects/suballocations/skia' could
+        // aggregate the numerics of the two suballocations properly.
+        const row = node.row;
+        row.title = '<unspecified>';
+        row.suballocation = true;
+        subRows.unshift(row);
+      }
+
+      // An internal row of the suballocation tree is assumed to be defined
+      // at a given timestamp if at least one of its sub-rows is defined at
+      // the timestamp.
+      const contexts = new Array(subRows[0].contexts.length);
+      for (let i = 0; i < subRows.length; i++) {
+        subRows[i].contexts.forEach(function(subContext, index) {
+          if (subContext !== undefined) {
+            contexts[index] = SUBALLOCATION_CONTEXT;
+          }
+        });
+      }
+
+      return {
+        title: name,
+        suballocation: true,
+        contexts,
+        subRows
+      };
+    },
+
+    createColumns_(rows) {
+      const titleColumn = new AllocatorDumpNameColumn();
+      titleColumn.width = '200px';
+
+      const numericColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'numericCells',
+        aggregationMode: this.aggregationMode_,
+        rules: NUMERIC_COLUMN_RULES
+      });
+      const diagnosticColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'diagnosticCells',
+        aggregationMode: this.aggregationMode_,
+        rules: DIAGNOSTIC_COLUMN_RULES
+      });
+      const fieldColumns = numericColumns.concat(diagnosticColumns);
+      tr.ui.analysis.MemoryColumn.spaceEqually(fieldColumns);
+
+      const columns = [titleColumn].concat(fieldColumns);
+      return columns;
+    }
+  });
+
+  return {
+    // All exports are for testing only.
+    SUBALLOCATION_CONTEXT,
+    AllocatorDumpNameColumn,
+    EffectiveSizeColumn,
+    SizeColumn,
+  };
+});
+</script>

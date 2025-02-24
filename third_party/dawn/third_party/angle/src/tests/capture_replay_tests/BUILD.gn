@@ -1,0 +1,72 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gni/angle.gni")
+import("../angle_traces.gni")
+
+declare_args() {
+  # Determines if we build the capture_replay_tests. Off by default.
+  angle_build_capture_replay_tests = false
+
+  # Set the trace directory. Default is traces
+  angle_capture_replay_test_trace_dir = "traces"
+
+  angle_capture_replay_composite_file_id = 1
+}
+
+if (angle_build_capture_replay_tests) {
+  assert(angle_with_capture_by_default, "Must build with capture by default.")
+
+  _test_names_file = "test_names_${angle_capture_replay_composite_file_id}.json"
+
+  angle_trace_libs("angle_capture_replay_libs") {
+    _tracedir = angle_capture_replay_test_trace_dir
+    trace_dir = _tracedir
+    json_path = "$_tracedir/$_test_names_file"
+    _trace_json = read_file(json_path, "json")
+    trace_list = _trace_json.traces
+    short_names = true
+  }
+}
+
+angle_executable("capture_replay_tests") {
+  testonly = true
+  sources = [ "CaptureReplayTests.cpp" ]
+  deps = [
+    "$angle_root:angle_compression",
+    "$angle_root/util:angle_frame_capture_test_utils",
+    "$angle_root/util:angle_test_utils",
+    "$angle_root/util:angle_trace_loader",
+    "$angle_root/util:angle_util",
+  ]
+
+  data_deps = [
+    "$angle_root:libEGL",
+    "$angle_root:libGLESv2",
+  ]
+
+  configs += [
+    "$angle_root:library_name_config",
+    "${angle_root}:libANGLE_config",
+  ]
+  defines = []
+
+  if ((is_linux || is_chromeos) && !is_component_build) {
+    # Set rpath to find shared libs in a non-component build.
+    configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
+  }
+
+  # Disable optimization to avoid optimizing huge files.
+  _trace_folder_relative_path = "./" + angle_capture_replay_test_trace_dir
+  _data_path = rebase_path(_trace_folder_relative_path, root_out_dir)
+  defines = [
+    "ANGLE_CAPTURE_REPLAY_TEST_DATA_DIR=\"${_data_path}\"",
+    "ANGLE_REPLAY_EXPORT=",
+  ]
+  include_dirs = [ "." ]
+
+  if (angle_build_capture_replay_tests) {
+    deps += [ ":angle_capture_replay_libs" ]
+  }
+}

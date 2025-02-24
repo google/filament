@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/multi_row_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays a SliceGroup.
+   * @constructor
+   * @extends {MultiRowTrack}
+   */
+  const SliceGroupTrack = tr.ui.b.define(
+      'slice-group-track', tr.ui.tracks.MultiRowTrack);
+
+  SliceGroupTrack.prototype = {
+
+    __proto__: tr.ui.tracks.MultiRowTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.MultiRowTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('slice-group-track');
+      this.group_ = undefined;
+      // Set the collapse threshold so we don't collapse by default, but the
+      // user can explicitly collapse if they want it.
+      this.defaultToCollapsedWhenSubRowCountMoreThan = 100;
+    },
+
+    addSubTrack_(slices) {
+      const track = new tr.ui.tracks.SliceTrack(this.viewport);
+      track.slices = slices;
+      Polymer.dom(this).appendChild(track);
+      return track;
+    },
+
+    get group() {
+      return this.group_;
+    },
+
+    set group(group) {
+      this.group_ = group;
+      this.setItemsToGroup(this.group_.slices, this.group_);
+    },
+
+    get eventContainer() {
+      return this.group;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.MultiRowTrack.prototype.addContainersToTrackMap.apply(
+          this, arguments);
+      containerToTrackMap.addContainer(this.group, this);
+    },
+
+    /**
+     * Breaks up the list of slices into N rows, each of which is a list of
+     * slices that are non overlapping.
+     */
+    buildSubRows_(slices) {
+      const precisionUnit = this.group.model.intrinsicTimeUnit;
+
+      // This function works by walking through slices by start time.
+      //
+      // The basic idea here is to insert each slice as deep into the subrow
+      // list as it can go such that every subSlice is fully contained by its
+      // parent slice.
+      //
+      // Visually, if we start with this:
+      //  0:  [    a       ]
+      //  1:    [  b  ]
+      //  2:    [c][d]
+      //
+      // To place this slice:
+      //               [e]
+      // We first check row 2's last item, [d]. [e] wont fit into [d] (they dont
+      // even intersect). So we go to row 1. That gives us [b], and [d] wont fit
+      // into that either. So, we go to row 0 and its last slice, [a]. That can
+      // completely contain [e], so that means we should add [e] as a subchild
+      // of [a]. That puts it on row 1, yielding:
+      //  0:  [    a       ]
+      //  1:    [  b  ][e]
+      //  2:    [c][d]
+      //
+      // If we then get this slice:
+      //                      [f]
+      // We do the same deepest-to-shallowest walk of the subrows trying to fit
+      // it. This time, it doesn't fit in any open slice. So, we simply append
+      // it to row 0:
+      //  0:  [    a       ]  [f]
+      //  1:    [  b  ][e]
+      //  2:    [c][d]
+      if (!slices.length) return [];
+
+      const ops = [];
+      for (let i = 0; i < slices.length; i++) {
+        if (slices[i].subSlices) {
+          slices[i].subSlices.splice(0,
+              slices[i].subSlices.length);
+        }
+        ops.push(i);
+      }
+
+      ops.sort(function(ix, iy) {
+        const x = slices[ix];
+        const y = slices[iy];
+        if (x.start !== y.start) return x.start - y.start;
+
+        // Elements get inserted into the slices array in order of when the
+        // slices start. Because slices must be properly nested, we break
+        // start-time ties by assuming that the elements appearing earlier in
+        // the slices array (and thus ending earlier) start earlier.
+        return ix - iy;
+      });
+
+      const subRows = [[]];
+      this.badSlices_ = [];  // TODO(simonjam): Connect this again.
+
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i];
+        const slice = slices[op];
+
+        // Try to fit the slice into the existing subrows.
+        let inserted = false;
+        for (let j = subRows.length - 1; j >= 0; j--) {
+          if (subRows[j].length === 0) continue;
+
+          const insertedSlice = subRows[j][subRows[j].length - 1];
+          if (slice.start < insertedSlice.start) {
+            this.badSlices_.push(slice);
+            inserted = true;
+          }
+          if (insertedSlice.bounds(slice, precisionUnit)) {
+            // Insert it into subRow j + 1.
+            while (subRows.length <= j + 1) {
+              subRows.push([]);
+            }
+            subRows[j + 1].push(slice);
+            if (insertedSlice.subSlices) {
+              insertedSlice.subSlices.push(slice);
+            }
+            inserted = true;
+            break;
+          }
+        }
+        if (inserted) continue;
+
+        // Append it to subRow[0] as a root.
+        subRows[0].push(slice);
+      }
+
+      return subRows;
+    }
+  };
+
+  return {
+    SliceGroupTrack,
+  };
+});
+</script>

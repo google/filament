@@ -1,0 +1,379 @@
+Name
+
+    ARB_fragment_program_shadow
+
+Name Strings
+
+    GL_ARB_fragment_program_shadow
+
+Contributors
+
+    Pat Brown
+    Benj Lipchak
+    Eric Werness
+
+    and contributors to the ARB_vertex_program and
+    ARB_fragment_program working groups, the products
+    of which provided the basis for this spec.
+
+Contact
+
+    Bill Licea-Kane, AMD (bill.licea-kane 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    Unknown, but Microsoft claims to own intellectual property
+    related to ARB_fragment_program.  This extension is
+    an extension to ARB_fragment_program.
+
+Status
+
+    Complete.  Approved by ARB on December 16, 2003
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Revision: 6
+
+Number
+
+    ARB Extension #36
+
+Dependencies
+
+    The extension is written against the OpenGL 1.3 Specification.
+
+    ARB_fragment_program is required.
+
+    ARB_shadow is required.
+
+    EXT_texture_rectange affects the definition of this extension.
+
+Overview
+
+    This extension extends ARB_fragment_program to remove
+    the interaction with ARB_shadow.
+
+    This extension defines the program option
+    "ARB_fragment_program_shadow".
+
+    If a fragment program specifies the option "ARB_fragment_program_shadow"
+
+        SHADOW1D, SHADOW2D, SHADOWRECT
+
+    are added as texture targets.  When shadow map comparisons are
+    desired, specify the SHADOW1D, SHADOW2D, or SHADOWRECT texture
+    targets in texture instructions.
+
+    Programs must assure that the comparison mode for each depth
+    texture (TEXTURE_COMPARE_MODE) and/or the internal texture
+    format (DEPTH_COMPONENT) and the targets of the texture lookup
+    instructions match.  Otherwise, if the comparison mode
+    and/or the internal texture format are inconsistent with the
+    texture target, the results of the texture lookup are undefined.
+
+Issues
+
+    (1) What should this extension be called?
+
+      RESOLVED:  ARB_fragment_program_shadow.  Shadow support
+      is the only new feature.  The name ARB_fragment_program2
+      should be used for a far more major revision to
+      ARB_fragment_program.  ARB_fragment_program1_1 is
+      less descriptive.
+
+    (2) Should this extension use the header string "!!ARBfp1.1" or
+    a program option "ARB_fragment_program_shadow"?
+
+      RESOLVED: Program option "ARB_fragment_program_shadow".
+
+    (3) What form should the ARB_fragment_program_shadow option take?
+
+        a.  New sampler instructions.
+            SHX result.color.a, fragment.texcoord[1], texture[0], 2D;
+
+        b.  New texture modifiers.
+            TEX result.color.a, fragment.texcoord[1], texture[0], 2D,SHADOW;
+
+        c.  New texture targets.
+            TEX result.color.a, fragment.texcoord[1], texture[0], SHADOW2D;
+
+        d.  New sampler instructions AND new texture modifiers.
+            SHX result.color.a, fragment.texcoord[1], texture[0], 2D,SHADOW;
+
+        e.  New sampler instructions AND new texture targets.
+            SHX result.color.a, fragment.texcoord[1], texture[0], SHADOW2D;
+
+    RESOLVED:  Choose the simplest option c, add new texture targets.
+
+    All of the above forms are functionally equivalent.
+
+    An earlier draft proposed option a, adding six new shadow
+    instructions.  The required shadow instructions are
+    three variants of shadow instruction (non-projective, projective,
+    and biased), and the same instructions with the modifier _SAT.
+
+    Option b adds texture modifiers but requires additional semantic
+    restrictions.
+
+    Option c adds texture targets only.  It is a sufficient
+    and simple change to one grammar rule.
+
+    Option d and e are listed for completeness.  They require
+    additional instructions and additional semantic restrictions.
+
+    Note that option e is most similar to the resolution of
+    this issue by ARB_fragment_shader and the OpenGL Shading Language.
+    The OpenGL Shading Language has both built-in texture and
+    shadow functions and sampler types, analogous to texture
+    instructions and texture targets.  The resolution here
+    drops the added reduntancy and potential error checking
+    in favor of simplicity, but is otherwise consistent.
+    This resolution is also consistent with the precident
+    already established in ARB_fragment_program, since
+    we have a TEX instruction, not a TEX1D, TEX2D, TEXCUBE,
+    TEX3D, TEXRECT instructions.
+
+    (4) How should ARB_fragment_program_shadow function?
+
+        a. Simply remove the interaction with ARB_shadow so that
+           TEXTURE_COMPARE_MODE behaves exactly as specified in the
+           OpenGL 1.4 specification.
+
+        b. Add "SHADOW" targets to texture lookup instructions.
+           TEXTURE_COMPARE_MODE is ignored.  For samples from a SHADOW target
+           TEXTURE_COMPARE_MODE is treated as COMPARE_R_TO_TEXTURE;
+           otherwise, it is treated as NONE.
+
+        c. Like (b), but with undefined results if TEXTURE_COMPARE_MODE and/or
+           the internal format of the texture does not match the target.
+
+        d. A hybrid of (a) and (b), where the SHADOW target means to use the
+           TEXTURE_COMPARE_MODE state.
+
+      RESOLVED - Option c, undefined behavior when the target and
+      mode do not match.
+
+      Program text is not simply loaded, it is compiled, optimized and
+      then loaded.  Options a and d would remove information from the optimizer.
+      Which components of the texture coordinate are required for the sample?
+      Specifically, is the r component of the texture coordinate required?
+      Options b and c are both sufficient and retain the information
+      required by optimizers.  Option c is consistent with the resolution
+      chosen by ARB_fragment_shader.
+
+    (5) What if additional texture compare modes are added by
+    future extensions to ARB_SHADOW?
+
+    We do not anticipate future extensions adding additional
+    texture compare modes.  Only the additional mode COMPARE_T_TO_TEXTURE
+    has even marginal utility, and then only for SHADOW1D targets.
+    However, a future extension adding additional texture compare
+    modes is not precluded.  The language in this specification
+    is carefully, if somewhat awkwardly, written to say the
+    TEXTURE_COMPARE_MODE either "is NONE" or "is not NONE.
+
+    (6) Does EXT_shadow_funcs interact with this extension?
+
+       RESOLVED:  It doesn't.  ARB_shadow supports LEQUAL or GEQUAL
+       comparison functions.  EXT_shadow_funcs simply adds
+       the additional functions LESS, GREATER, EQUAL, NOTEQUAL,
+       ALWAYS, and NEVER.  Whichever function is specified will
+       be used for the comparison function.
+
+    (7) Does ARB_shadow_ambient interact with this extension?
+
+       RESOLVED:  It doesn't.  ARB_shadow returns a result
+       in the range [0,1].  ARB_shadow_ambient simply
+       maps this range to [TEXTURE_COMPARE_FAIL_ARB, 1].
+       The result will be returned in the specified range.
+
+    (8) How would an existing fragment program be ported to use the
+    program option ARB_fragment_program_shadow?
+
+       RESOLVED:  Fairly simply, but with a caveat on undefined behavior.
+
+       !!ARBfp1.0
+       # A simple example of shadow map (R <= Dt)
+       #
+       # SHOULD make sure that the 2D texture bound to texture unit 0:
+       #    texture format of DEPTH_COMPONENT (for highest quality comparison)
+       #    TEXTURE_MAG_FILTER is NEAREST
+       #    TEXTURE_MIN_FILTER is NEAREST or NEAREST_MIPMAP_NEAREST
+       # Assumes DEPTH_TEXTURE_MODE is LUMINANCE or INTENSITY
+       #
+       TEMP Result;
+       ALIAS Dt = Result;
+       TEX Dt, fragment.texcoord[0], texture[0], 2D;
+       SGE Result, Dt.x, fragment.texcoord[0].z;      # R <= Dt
+
+       !!ARBfp1.0
+       OPTION ARB_fragment_program_shadow;
+       # A simple example of shadow map (R<= Dt)
+       #
+       # MUST make sure that the 2D texture bound to texture unit 0:
+       #    texture format of DEPTH_COMPONENT and a
+       #    TEXTURE_COMPARE_MODE of COMPARE_R_TO_TEXTURE
+       # Otherwise, the Result is undefined.
+       #
+       # Remember also that to get R <= Dt to set:
+       #    TEXTURE_COMPARE_FUNC of LEQUAL
+       #
+       # A single compare equivalent to the above example will result if:
+       #    TEXTURE_MAG_FILTER is NEAREST
+       #    TEXTURE_MIN_FILTER is NEAREST or NEAREST_MIPMAP_NEAREST
+       # Otherwise, percent closer filtering may be applied.
+       #
+       TEMP Result;
+       TEX Result, fragment.texcoord[0], texture[0], SHADOW2D;
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Modify Section 3.11.2  Fragment Program Grammar and Semantic Restrictions
+
+    Replace <texTarget> grammar rule with
+
+    <texTarget>            ::= "1D"
+                             | "2D"
+                             | "3D"
+                             | "CUBE"
+                             | "RECT"
+                             | <shadowTarget> (if program option is present)
+
+    <shadowTarget>         ::= "SHADOW1D"
+                             | "SHADOW2D"
+                             | "SHADOWRECT"
+
+    Add Section 3.11.4.5.3  Fragment Program Shadow Option
+
+    If a fragment program specifies the "ARB_fragment_program_shadow"
+    program option, the <texTarget> rule is modified to add the
+    texture targets SHADOW1D, SHADOW2D and SHADOWRECT (See Section 3.11.2).
+
+    Modify Section 3.11.6  Fragment Program Texture Instruction Set
+
+    (replace 1st through 4th paragraphs with the following paragraphs)
+
+    The first three texture instructions described below specify the
+    mapping of 4-tuple input vectors to 4-tuple output vectors.
+    The sampling of the texture works as described in section 3.8,
+    except that texture environments and texture functions are not
+    applicable, and the texture enables hierarchy is replaced by explicit
+    references to the desired texture target (i.e., 1D, 2D, 3D, cube map,
+    rectangle).  These texture instructions specify how the 4-tuple is
+    mapped into the coordinates used for sampling.  The following function
+    is used to describe the texture sampling in the descriptions below:
+
+      vec4 TextureSample(float s, float t, float r, float lodBias,
+                         int texImageUnit, enum texTarget);
+
+    Note that not all three texture coordinates, s, t, and r, are
+    used by all texture targets.  In particular, 1D texture targets only
+    use the s component.  2D and RECT (non-power-of-two) texture
+    targets only use the s and t components.  SHADOW1D texture
+    targets only use the s and r components.  The descriptions of the
+    texture instructions below supply all three components, as would
+    be the case with CUBE, 3D, SHADOW2D, and SHADOWRECT targets.
+
+    If a fragment program samples from a texture target on a texture
+    image unit where the bound texture object is not complete, as
+    defined in section 3.8.9, the result will be the vector
+    (R, G, B, A) = (0, 0, 0, 1).
+
+    If a fragment program does not specify the "ARB_fragment_program_shadow"
+    program option, and if a fragment program samples from a texture
+    target of 1D, 2D, or RECT, it is as if TEXTURE_COMPARE_MODE_ARB is NONE.
+
+    If a fragment program specifies the "ARB_fragment_program_shadow"
+    program option, the result returned of a sample from a texture target on
+    a texture image unit is undefined if:
+
+      the texture target is 1D, 2D, or RECT, and
+      the texture object's internal format is DEPTH_COMPONENT_ARB, and
+      the TEXTURE_COMPARE_MODE_ARB is not NONE;
+
+    or
+
+      the texture target is SHADOW1D, SHADOW2D, SHADOWRECT, and
+        the texture object's internal format is DEPTH_COMPONENT_ARB, and
+      the TEXTURE_COMPARE_MODE_ARB is NONE;
+
+    or
+
+      the texture target is SHADOW1D, SHADOW2D, SHADOWRECT, and
+        the texture object's internal format is not DEPTH_COMPONENT_ARB.
+
+    A fragment program will fail to load if it attempts to sample from
+    multiple texture targets on the same texture image unit.  For
+    example, the following programs would fail to load:
+
+      !!ARBfp1.0
+      TEX result.color.rgb, fragment.texcoord[0], texture[0], 2D;
+      TEX result.color.a,   fragment.texcoord[1], texture[0], 3D;
+      END
+
+      !!ARBfp1.0
+      OPTION ARB_fragment_program_shadow;
+      TEX result.color.rgb, fragment.texcoord[0], texture[0], 2D;
+      TEX result.color.a,   fragment.texcoord[1], texture[0], SHADOW2D;
+      END
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on EXT_texture_rectangle
+
+    If EXT_texture_rectangle is not supported:
+
+    Section 3.11.2 should be modified by removing the line:
+
+      | "SHADOWRECT"
+
+    from the <shadowTarget> grammar rule;
+
+    and Section 3.11.6 should be modified by removing the discussion
+    of the rectangle shadow texture target.

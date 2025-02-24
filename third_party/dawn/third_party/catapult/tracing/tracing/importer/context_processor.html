@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.importer', function() {
+  /**
+   * The context processor consumes context events and maintains a set of
+   * active contexts for a single thread.
+   *
+   * @constructor
+   */
+  function ContextProcessor(model) {
+    this.model_ = model;
+    this.activeContexts_ = [];
+    this.stackPerType_ = {};
+    // Cache of unique context objects.
+    this.contextCache_ = {};
+    // Cache of unique context object sets.
+    this.contextSetCache_ = {};
+    this.cachedEntryForActiveContexts_ = undefined;
+    // All seen context object snapshots.
+    this.seenSnapshots_ = {};
+  }
+
+  ContextProcessor.prototype = {
+    enterContext(contextType, scopedId) {
+      const newActiveContexts = [
+        this.getOrCreateContext_(contextType, scopedId),
+      ];
+      for (const oldContext of this.activeContexts_) {
+        if (oldContext.type === contextType) {
+          // If a previous context of the same type is active, it is removed
+          // and pushed onto the stack for this type.
+          this.pushContext_(oldContext);
+        } else {
+          // Otherwise the old context is it is still active.
+          newActiveContexts.push(oldContext);
+        }
+      }
+      this.activeContexts_ = newActiveContexts;
+      this.cachedEntryForActiveContexts_ = undefined;
+    },
+
+    leaveContext(contextType, scopedId) {
+      this.leaveContextImpl_(context =>
+        context.type === contextType &&
+          context.snapshot.scope === scopedId.scope &&
+          context.snapshot.idRef === scopedId.id);
+    },
+
+    destroyContext(scopedId) {
+      // Remove all matching contexts from stacks.
+      for (const stack of Object.values(this.stackPerType_)) {
+        // Perform in-place filtering instead of Array.prototype.filter to
+        // prevent creating a new array.
+        let newLength = 0;
+        for (let i = 0; i < stack.length; ++i) {
+          if (stack[i].snapshot.scope !== scopedId.scope ||
+              stack[i].snapshot.idRef !== scopedId.id) {
+            stack[newLength++] = stack[i];
+          }
+        }
+        stack.length = newLength;
+      }
+
+      // Remove all matching contexts from active context set.
+      this.leaveContextImpl_(context =>
+        context.snapshot.scope === scopedId.scope &&
+          context.snapshot.idRef === scopedId.id);
+    },
+
+    leaveContextImpl_(predicate) {
+      const newActiveContexts = [];
+      for (const oldContext of this.activeContexts_) {
+        if (predicate(oldContext)) {
+          // If we left this context, remove it from the active set and
+          // restore any previous context of the same type.
+          const previousContext = this.popContext_(oldContext.type);
+          if (previousContext) {
+            newActiveContexts.push(previousContext);
+          }
+        } else {
+          newActiveContexts.push(oldContext);
+        }
+      }
+      this.activeContexts_ = newActiveContexts;
+      this.cachedEntryForActiveContexts_ = undefined;
+    },
+
+    getOrCreateContext_(contextType, scopedId) {
+      const context = {
+        type: contextType,
+        snapshot: {
+          scope: scopedId.scope,
+          idRef: scopedId.id
+        }
+      };
+      const key = this.getContextKey_(context);
+      if (key in this.contextCache_) {
+        return this.contextCache_[key];
+      }
+      this.contextCache_[key] = context;
+      const snapshotKey = this.getSnapshotKey_(scopedId);
+      this.seenSnapshots_[snapshotKey] = true;
+      return context;
+    },
+
+    pushContext_(context) {
+      if (!(context.type in this.stackPerType_)) {
+        this.stackPerType_[context.type] = [];
+      }
+      this.stackPerType_[context.type].push(context);
+    },
+
+    popContext_(contextType) {
+      if (!(contextType in this.stackPerType_)) {
+        return undefined;
+      }
+      return this.stackPerType_[contextType].pop();
+    },
+
+    getContextKey_(context) {
+      return [
+        context.type,
+        context.snapshot.scope,
+        context.snapshot.idRef
+      ].join('\x00');
+    },
+
+    getSnapshotKey_(scopedId) {
+      return [
+        scopedId.scope,
+        scopedId.idRef
+      ].join('\x00');
+    },
+
+    get activeContexts() {
+      // Keep a single instance for each unique set of active contexts to
+      // reduce memory usage.
+      if (this.cachedEntryForActiveContexts_ === undefined) {
+        let key = [];
+        for (const context of this.activeContexts_) {
+          key.push(this.getContextKey_(context));
+        }
+        key.sort();
+        key = key.join('\x00');
+        if (key in this.contextSetCache_) {
+          this.cachedEntryForActiveContexts_ = this.contextSetCache_[key];
+        } else {
+          this.activeContexts_.sort(function(a, b) {
+            const keyA = this.getContextKey_(a);
+            const keyB = this.getContextKey_(b);
+            if (keyA < keyB) {
+              return -1;
+            }
+            if (keyA > keyB) {
+              return 1;
+            }
+            return 0;
+          }.bind(this));
+          this.contextSetCache_[key] = Object.freeze(this.activeContexts_);
+          this.cachedEntryForActiveContexts_ = this.contextSetCache_[key];
+        }
+      }
+      return this.cachedEntryForActiveContexts_;
+    },
+
+    invalidateContextCacheForSnapshot(scopedId) {
+      const snapshotKey = this.getSnapshotKey_(scopedId);
+      if (!(snapshotKey in this.seenSnapshots_)) return;
+
+      this.contextCache_ = {};
+      this.contextSetCache_ = {};
+      this.cachedEntryForActiveContexts_ = undefined;
+      this.activeContexts_ = this.activeContexts_.map(function(context) {
+        // Do not alter unrelated contexts.
+        if (context.snapshot.scope !== scopedId.scope ||
+            context.snapshot.idRef !== scopedId.id) {
+          return context;
+        }
+        // Replace the invalidated context by a deep copy.
+        return {
+          type: context.type,
+          snapshot: {
+            scope: context.snapshot.scope,
+            idRef: context.snapshot.idRef
+          }
+        };
+      });
+      this.seenSnapshots_ = {};
+    },
+  };
+
+  return {
+    ContextProcessor,
+  };
+});
+</script>

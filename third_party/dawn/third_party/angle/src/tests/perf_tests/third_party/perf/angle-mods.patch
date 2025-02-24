@@ -1,0 +1,651 @@
+diff --git a/src/tests/perf_tests/third_party/perf/angle-mods.patch b/src/tests/perf_tests/third_party/perf/angle-mods.patch
+index a758818c0..e69de29bb 100644
+--- a/src/tests/perf_tests/third_party/perf/angle-mods.patch
++++ b/src/tests/perf_tests/third_party/perf/angle-mods.patch
+@@ -1,176 +0,0 @@
+-diff --git a/src/tests/perf_tests/third_party/perf/angle-mods.patch b/src/tests/perf_tests/third_party/perf/angle-mods.patch
+-index d0b640289..e69de29bb 100644
+---- a/src/tests/perf_tests/third_party/perf/angle-mods.patch
+-+++ b/src/tests/perf_tests/third_party/perf/angle-mods.patch
+-@@ -1,61 +0,0 @@
+--diff --git a/tests/perf_tests/third_party/perf/perf_test.cc b/tests/perf_tests/third_party/perf/perf_test.cc
+--index 0d5abc0..7364330 100644
+----- a/tests/perf_tests/third_party/perf/perf_test.cc
+--+++ b/tests/perf_tests/third_party/perf/perf_test.cc
+--@@ -2,16 +2,51 @@
+-- // Use of this source code is governed by a BSD-style license that can be
+-- // found in the LICENSE file.
+-- 
+---#include "testing/perf/perf_test.h"
+--+#include "perf_test.h"
+-- 
+-- #include <stdio.h>
+---
+---#include "base/logging.h"
+---#include "base/strings/string_number_conversions.h"
+---#include "base/strings/stringprintf.h"
+--+#include <stdarg.h>
+--+#include <vector>
+-- 
+-- namespace {
+-- 
+--+namespace base {
+--+
+--+std::string FormatString(const char *fmt, va_list vararg) {
+--+  static std::vector<char> buffer(512);
+--+
+--+  // Attempt to just print to the current buffer
+--+  int len = vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
+--+  if (len < 0 || static_cast<size_t>(len) >= buffer.size()) {
+--+    // Buffer was not large enough, calculate the required size and resize the buffer
+--+    len = vsnprintf(NULL, 0, fmt, vararg);
+--+    buffer.resize(len + 1);
+--+
+--+    // Print again
+--+    vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
+--+  }
+--+
+--+  return std::string(buffer.data(), len);
+--+}
+--+
+--+std::string StringPrintf(const char *fmt, ...) {
+--+  va_list vararg;
+--+  va_start(vararg, fmt);
+--+  std::string result = FormatString(fmt, vararg);
+--+  va_end(vararg);
+--+  return result;
+--+}
+--+
+--+std::string UintToString(unsigned int value) {
+--+  return StringPrintf("%u", value);
+--+}
+--+
+--+std::string DoubleToString(double value) {
+--+  return StringPrintf("%.10lf", value);
+--+}
+--+
+--+}
+--+
+-- std::string ResultsToString(const std::string& measurement,
+--                             const std::string& modifier,
+--                             const std::string& trace,
+-diff --git a/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc b/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
+-index 272e6ca17..3a6a41f01 100644
+---- a/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
+-+++ b/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
+-@@ -2,9 +2,9 @@
+- // Use of this source code is governed by a BSD-style license that can be
+- // found in the LICENSE file.
+- 
+--#include "testing/perf/perf_result_reporter.h"
+--#include "base/logging.h"
+--#include "testing/perf/perf_test.h"
+-+#include "perf_result_reporter.h"
+-+#include "anglebase/logging.h"
+-+#include "perf_test.h"
+- 
+- namespace perf_test {
+- 
+-diff --git a/src/tests/perf_tests/third_party/perf/perf_test.cc b/src/tests/perf_tests/third_party/perf/perf_test.cc
+-index 0b0b666db..bc3a6bb8d 100644
+---- a/src/tests/perf_tests/third_party/perf/perf_test.cc
+-+++ b/src/tests/perf_tests/third_party/perf/perf_test.cc
+-@@ -2,16 +2,47 @@
+- // Use of this source code is governed by a BSD-style license that can be
+- // found in the LICENSE file.
+- 
+--#include "testing/perf/perf_test.h"
+-+#include "perf_test.h"
+- 
+-+#include <stdarg.h>
+- #include <stdio.h>
+--
+--#include "base/logging.h"
+--#include "base/strings/string_number_conversions.h"
+--#include "base/strings/stringprintf.h"
+-+#include <vector>
+- 
+- namespace {
+- 
+-+std::string FormatString(const char *fmt, va_list vararg) {
+-+  static std::vector<char> buffer(512);
+-+
+-+  // Attempt to just print to the current buffer
+-+  int len = vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
+-+  if (len < 0 || static_cast<size_t>(len) >= buffer.size()) {
+-+    // Buffer was not large enough, calculate the required size and resize the buffer
+-+    len = vsnprintf(NULL, 0, fmt, vararg);
+-+    buffer.resize(len + 1);
+-+
+-+    // Print again
+-+    vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
+-+  }
+-+
+-+  return std::string(buffer.data(), len);
+-+}
+-+
+-+std::string StringPrintf(const char *fmt, ...) {
+-+  va_list vararg;
+-+  va_start(vararg, fmt);
+-+  std::string result = FormatString(fmt, vararg);
+-+  va_end(vararg);
+-+  return result;
+-+}
+-+
+-+std::string NumberToString(size_t value) {
+-+  return StringPrintf("%u", value);
+-+}
+-+
+-+std::string NumberToString(double value) {
+-+  return StringPrintf("%.10lf", value);
+-+}
+-+
+- std::string ResultsToString(const std::string& measurement,
+-                             const std::string& modifier,
+-                             const std::string& trace,
+-@@ -23,7 +54,7 @@ std::string ResultsToString(const std::string& measurement,
+-   // <*>RESULT <graph_name>: <trace_name>= <value> <units>
+-   // <*>RESULT <graph_name>: <trace_name>= {<mean>, <std deviation>} <units>
+-   // <*>RESULT <graph_name>: <trace_name>= [<value>,value,value,...,] <units>
+--  return base::StringPrintf("%sRESULT %s%s: %s= %s%s%s %s\n",
+-+  return StringPrintf("%sRESULT %s%s: %s= %s%s%s %s\n",
+-          important ? "*" : "", measurement.c_str(), modifier.c_str(),
+-          trace.c_str(), prefix.c_str(), values.c_str(), suffix.c_str(),
+-          units.c_str());
+-@@ -53,7 +84,7 @@ void PrintResult(const std::string& measurement,
+-                  size_t value,
+-                  const std::string& units,
+-                  bool important) {
+--  PrintResultsImpl(measurement, modifier, trace, base::NumberToString(value),
+-+  PrintResultsImpl(measurement, modifier, trace, NumberToString(value),
+-                    std::string(), std::string(), units, important);
+- }
+- 
+-@@ -63,7 +94,7 @@ void PrintResult(const std::string& measurement,
+-                  double value,
+-                  const std::string& units,
+-                  bool important) {
+--  PrintResultsImpl(measurement, modifier, trace, base::NumberToString(value),
+-+  PrintResultsImpl(measurement, modifier, trace, NumberToString(value),
+-                    std::string(), std::string(), units, important);
+- }
+- 
+-@@ -75,7 +106,7 @@ void AppendResult(std::string& output,
+-                   const std::string& units,
+-                   bool important) {
+-   output +=
+--      ResultsToString(measurement, modifier, trace, base::NumberToString(value),
+-+      ResultsToString(measurement, modifier, trace, NumberToString(value),
+-                       std::string(), std::string(), units, important);
+- }
+- 
+diff --git a/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc b/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
+index 272e6ca17..fcbfa78b3 100644
+--- a/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
++++ b/src/tests/perf_tests/third_party/perf/perf_result_reporter.cc
+@@ -2,72 +2,77 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+-#include "testing/perf/perf_result_reporter.h"
+-#include "base/logging.h"
+-#include "testing/perf/perf_test.h"
++#include "perf_result_reporter.h"
++#include "anglebase/logging.h"
++#include "perf_test.h"
+ 
+-namespace perf_test {
++namespace perf_test
++{
+ 
+-PerfResultReporter::PerfResultReporter(const std::string& metric_basename,
+-                                       const std::string& story_name)
+-    : metric_basename_(metric_basename), story_name_(story_name) {}
++PerfResultReporter::PerfResultReporter(const std::string &metric_basename,
++                                       const std::string &story_name)
++    : metric_basename_(metric_basename), story_name_(story_name)
++{}
+ 
+ PerfResultReporter::~PerfResultReporter() = default;
+ 
+-void PerfResultReporter::RegisterFyiMetric(const std::string& metric_suffix,
+-                                           const std::string& units) {
+-  RegisterMetric(metric_suffix, units, false);
++void PerfResultReporter::RegisterFyiMetric(const std::string &metric_suffix,
++                                           const std::string &units)
++{
++    RegisterMetric(metric_suffix, units, false);
+ }
+ 
+-void PerfResultReporter::RegisterImportantMetric(
+-    const std::string& metric_suffix,
+-    const std::string& units) {
+-  RegisterMetric(metric_suffix, units, true);
++void PerfResultReporter::RegisterImportantMetric(const std::string &metric_suffix,
++                                                 const std::string &units)
++{
++    RegisterMetric(metric_suffix, units, true);
+ }
+ 
+-void PerfResultReporter::AddResult(const std::string& metric_suffix,
+-                                   size_t value) {
+-  auto iter = metric_map_.find(metric_suffix);
+-  CHECK(iter != metric_map_.end());
++void PerfResultReporter::AddResult(const std::string &metric_suffix, size_t value)
++{
++    auto iter = metric_map_.find(metric_suffix);
++    CHECK(iter != metric_map_.end());
+ 
+-  PrintResult(metric_basename_, metric_suffix, story_name_, value,
+-              iter->second.units, iter->second.important);
++    PrintResult(metric_basename_, metric_suffix, story_name_, value, iter->second.units,
++                iter->second.important);
+ }
+ 
+-void PerfResultReporter::AddResult(const std::string& metric_suffix,
+-                                   double value) {
+-  auto iter = metric_map_.find(metric_suffix);
+-  CHECK(iter != metric_map_.end());
++void PerfResultReporter::AddResult(const std::string &metric_suffix, double value)
++{
++    auto iter = metric_map_.find(metric_suffix);
++    CHECK(iter != metric_map_.end());
+ 
+-  PrintResult(metric_basename_, metric_suffix, story_name_, value,
+-              iter->second.units, iter->second.important);
++    PrintResult(metric_basename_, metric_suffix, story_name_, value, iter->second.units,
++                iter->second.important);
+ }
+ 
+-void PerfResultReporter::AddResult(const std::string& metric_suffix,
+-                                   const std::string& value) {
+-  auto iter = metric_map_.find(metric_suffix);
+-  CHECK(iter != metric_map_.end());
++void PerfResultReporter::AddResult(const std::string &metric_suffix, const std::string &value)
++{
++    auto iter = metric_map_.find(metric_suffix);
++    CHECK(iter != metric_map_.end());
+ 
+-  PrintResult(metric_basename_, metric_suffix, story_name_, value,
+-              iter->second.units, iter->second.important);
++    PrintResult(metric_basename_, metric_suffix, story_name_, value, iter->second.units,
++                iter->second.important);
+ }
+ 
+-bool PerfResultReporter::GetMetricInfo(const std::string& metric_suffix,
+-                                       MetricInfo* out) {
+-  auto iter = metric_map_.find(metric_suffix);
+-  if (iter == metric_map_.end()) {
+-    return false;
+-  }
++bool PerfResultReporter::GetMetricInfo(const std::string &metric_suffix, MetricInfo *out)
++{
++    auto iter = metric_map_.find(metric_suffix);
++    if (iter == metric_map_.end())
++    {
++        return false;
++    }
+ 
+-  *out = iter->second;
+-  return true;
++    *out = iter->second;
++    return true;
+ }
+ 
+-void PerfResultReporter::RegisterMetric(const std::string& metric_suffix,
+-                                        const std::string& units,
+-                                        bool important) {
+-  CHECK(metric_map_.count(metric_suffix) == 0);
+-  metric_map_.insert({metric_suffix, {units, important}});
++void PerfResultReporter::RegisterMetric(const std::string &metric_suffix,
++                                        const std::string &units,
++                                        bool important)
++{
++    CHECK(metric_map_.count(metric_suffix) == 0);
++    metric_map_.insert({metric_suffix, {units, important}});
+ }
+ 
+ }  // namespace perf_test
+diff --git a/src/tests/perf_tests/third_party/perf/perf_result_reporter.h b/src/tests/perf_tests/third_party/perf/perf_result_reporter.h
+index 3188d90c9..2620eab3d 100644
+--- a/src/tests/perf_tests/third_party/perf/perf_result_reporter.h
++++ b/src/tests/perf_tests/third_party/perf/perf_result_reporter.h
+@@ -8,11 +8,13 @@
+ #include <string>
+ #include <unordered_map>
+ 
+-namespace perf_test {
++namespace perf_test
++{
+ 
+-struct MetricInfo {
+-  std::string units;
+-  bool important;
++struct MetricInfo
++{
++    std::string units;
++    bool important;
+ };
+ 
+ // A helper class for using the perf test printing functions safely, as
+@@ -32,32 +34,28 @@ struct MetricInfo {
+ // a single "100_chars" story. If an additional story run is added, e.g.
+ // "200_chars", then the metrics will be averaged over both runs with the
+ // ability to drill down into results for specific stories.
+-class PerfResultReporter {
+- public:
+-  PerfResultReporter(const std::string& metric_basename,
+-                     const std::string& story_name);
+-  ~PerfResultReporter();
+-
+-  void RegisterFyiMetric(const std::string& metric_suffix,
+-                         const std::string& units);
+-  void RegisterImportantMetric(const std::string& metric_suffix,
+-                               const std::string& units);
+-  void AddResult(const std::string& metric_suffix, size_t value);
+-  void AddResult(const std::string& metric_suffix, double value);
+-  void AddResult(const std::string& metric_suffix, const std::string& value);
+-
+-  // Returns true and fills the pointer if the metric is registered, otherwise
+-  // returns false.
+-  bool GetMetricInfo(const std::string& metric_suffix, MetricInfo* out);
+-
+- private:
+-  void RegisterMetric(const std::string& metric_suffix,
+-                      const std::string& units,
+-                      bool important);
+-
+-  std::string metric_basename_;
+-  std::string story_name_;
+-  std::unordered_map<std::string, MetricInfo> metric_map_;
++class PerfResultReporter
++{
++  public:
++    PerfResultReporter(const std::string &metric_basename, const std::string &story_name);
++    ~PerfResultReporter();
++
++    void RegisterFyiMetric(const std::string &metric_suffix, const std::string &units);
++    void RegisterImportantMetric(const std::string &metric_suffix, const std::string &units);
++    void AddResult(const std::string &metric_suffix, size_t value);
++    void AddResult(const std::string &metric_suffix, double value);
++    void AddResult(const std::string &metric_suffix, const std::string &value);
++
++    // Returns true and fills the pointer if the metric is registered, otherwise
++    // returns false.
++    bool GetMetricInfo(const std::string &metric_suffix, MetricInfo *out);
++
++  private:
++    void RegisterMetric(const std::string &metric_suffix, const std::string &units, bool important);
++
++    std::string metric_basename_;
++    std::string story_name_;
++    std::unordered_map<std::string, MetricInfo> metric_map_;
+ };
+ 
+ }  // namespace perf_test
+diff --git a/src/tests/perf_tests/third_party/perf/perf_test.cc b/src/tests/perf_tests/third_party/perf/perf_test.cc
+index 0b0b666db..1131faf27 100644
+--- a/src/tests/perf_tests/third_party/perf/perf_test.cc
++++ b/src/tests/perf_tests/third_party/perf/perf_test.cc
+@@ -2,16 +2,49 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+-#include "testing/perf/perf_test.h"
++#include "perf_test.h"
+ 
++#include <stdarg.h>
+ #include <stdio.h>
+-
+-#include "base/logging.h"
+-#include "base/strings/string_number_conversions.h"
+-#include "base/strings/stringprintf.h"
++#include <vector>
+ 
+ namespace {
+ 
++std::string FormatString(const char *fmt, va_list vararg) {
++  static std::vector<char> buffer(512);
++
++  // Attempt to just print to the current buffer
++  int len = vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
++  if (len < 0 || static_cast<size_t>(len) >= buffer.size()) {
++    // Buffer was not large enough, calculate the required size and resize the buffer
++    len = vsnprintf(NULL, 0, fmt, vararg);
++    buffer.resize(len + 1);
++
++    // Print again
++    vsnprintf(&buffer[0], buffer.size(), fmt, vararg);
++  }
++
++  return std::string(buffer.data(), len);
++}
++
++std::string StringPrintf(const char *fmt, ...) {
++  va_list vararg;
++  va_start(vararg, fmt);
++  std::string result = FormatString(fmt, vararg);
++  va_end(vararg);
++  return result;
++}
++
++std::string NumberToString(size_t value)
++{
++    return StringPrintf("%u", value);
++}
++
++std::string NumberToString(double value)
++{
++    return StringPrintf("%.10lf", value);
++}
++
+ std::string ResultsToString(const std::string& measurement,
+                             const std::string& modifier,
+                             const std::string& trace,
+@@ -23,10 +56,9 @@ std::string ResultsToString(const std::string& measurement,
+   // <*>RESULT <graph_name>: <trace_name>= <value> <units>
+   // <*>RESULT <graph_name>: <trace_name>= {<mean>, <std deviation>} <units>
+   // <*>RESULT <graph_name>: <trace_name>= [<value>,value,value,...,] <units>
+-  return base::StringPrintf("%sRESULT %s%s: %s= %s%s%s %s\n",
+-         important ? "*" : "", measurement.c_str(), modifier.c_str(),
+-         trace.c_str(), prefix.c_str(), values.c_str(), suffix.c_str(),
+-         units.c_str());
++  return StringPrintf("%sRESULT %s%s: %s= %s%s%s %s\n", important ? "*" : "", measurement.c_str(),
++                      modifier.c_str(), trace.c_str(), prefix.c_str(), values.c_str(),
++                      suffix.c_str(), units.c_str());
+ }
+ 
+ void PrintResultsImpl(const std::string& measurement,
+@@ -53,8 +85,8 @@ void PrintResult(const std::string& measurement,
+                  size_t value,
+                  const std::string& units,
+                  bool important) {
+-  PrintResultsImpl(measurement, modifier, trace, base::NumberToString(value),
+-                   std::string(), std::string(), units, important);
++    PrintResultsImpl(measurement, modifier, trace, NumberToString(value), std::string(),
++                     std::string(), units, important);
+ }
+ 
+ void PrintResult(const std::string& measurement,
+@@ -63,8 +95,8 @@ void PrintResult(const std::string& measurement,
+                  double value,
+                  const std::string& units,
+                  bool important) {
+-  PrintResultsImpl(measurement, modifier, trace, base::NumberToString(value),
+-                   std::string(), std::string(), units, important);
++    PrintResultsImpl(measurement, modifier, trace, NumberToString(value), std::string(),
++                     std::string(), units, important);
+ }
+ 
+ void AppendResult(std::string& output,
+@@ -74,9 +106,8 @@ void AppendResult(std::string& output,
+                   size_t value,
+                   const std::string& units,
+                   bool important) {
+-  output +=
+-      ResultsToString(measurement, modifier, trace, base::NumberToString(value),
+-                      std::string(), std::string(), units, important);
++    output += ResultsToString(measurement, modifier, trace, NumberToString(value), std::string(),
++                              std::string(), units, important);
+ }
+ 
+ void PrintResult(const std::string& measurement,
+diff --git a/src/tests/perf_tests/third_party/perf/perf_test.h b/src/tests/perf_tests/third_party/perf/perf_test.h
+index 36e2916c5..d269a34cf 100644
+--- a/src/tests/perf_tests/third_party/perf/perf_test.h
++++ b/src/tests/perf_tests/third_party/perf/perf_test.h
+@@ -7,7 +7,8 @@
+ 
+ #include <string>
+ 
+-namespace perf_test {
++namespace perf_test
++{
+ 
+ // Prints numerical information to stdout in a controlled format, for
+ // post-processing. |measurement| is a description of the quantity being
+@@ -22,94 +23,90 @@ namespace perf_test {
+ // produced for various builds, using the combined |measurement| + |modifier|
+ // string to specify a particular graph and the |trace| to identify a trace
+ // (i.e., data series) on that graph.
+-void PrintResult(const std::string& measurement,
+-                 const std::string& modifier,
+-                 const std::string& trace,
++void PrintResult(const std::string &measurement,
++                 const std::string &modifier,
++                 const std::string &trace,
+                  size_t value,
+-                 const std::string& units,
++                 const std::string &units,
+                  bool important);
+-void PrintResult(const std::string& measurement,
+-                 const std::string& modifier,
+-                 const std::string& trace,
++void PrintResult(const std::string &measurement,
++                 const std::string &modifier,
++                 const std::string &trace,
+                  double value,
+-                 const std::string& units,
++                 const std::string &units,
+                  bool important);
+ 
+-void AppendResult(std::string& output,
+-                  const std::string& measurement,
+-                  const std::string& modifier,
+-                  const std::string& trace,
++void AppendResult(std::string &output,
++                  const std::string &measurement,
++                  const std::string &modifier,
++                  const std::string &trace,
+                   size_t value,
+-                  const std::string& units,
++                  const std::string &units,
+                   bool important);
+ 
+ // Like the above version of PrintResult(), but takes a std::string value
+ // instead of a size_t.
+-void PrintResult(const std::string& measurement,
+-                 const std::string& modifier,
+-                 const std::string& trace,
+-                 const std::string& value,
+-                 const std::string& units,
++void PrintResult(const std::string &measurement,
++                 const std::string &modifier,
++                 const std::string &trace,
++                 const std::string &value,
++                 const std::string &units,
+                  bool important);
+ 
+-void AppendResult(std::string& output,
+-                  const std::string& measurement,
+-                  const std::string& modifier,
+-                  const std::string& trace,
+-                  const std::string& value,
+-                  const std::string& units,
++void AppendResult(std::string &output,
++                  const std::string &measurement,
++                  const std::string &modifier,
++                  const std::string &trace,
++                  const std::string &value,
++                  const std::string &units,
+                   bool important);
+ 
+ // Like PrintResult(), but prints a (mean, standard deviation) result pair.
+ // The |<values>| should be two comma-separated numbers, the mean and
+ // standard deviation (or other error metric) of the measurement.
+-void PrintResultMeanAndError(const std::string& measurement,
+-                             const std::string& modifier,
+-                             const std::string& trace,
+-                             const std::string& mean_and_error,
+-                             const std::string& units,
++void PrintResultMeanAndError(const std::string &measurement,
++                             const std::string &modifier,
++                             const std::string &trace,
++                             const std::string &mean_and_error,
++                             const std::string &units,
+                              bool important);
+ 
+-void AppendResultMeanAndError(std::string& output,
+-                              const std::string& measurement,
+-                              const std::string& modifier,
+-                              const std::string& trace,
+-                              const std::string& mean_and_error,
+-                              const std::string& units,
++void AppendResultMeanAndError(std::string &output,
++                              const std::string &measurement,
++                              const std::string &modifier,
++                              const std::string &trace,
++                              const std::string &mean_and_error,
++                              const std::string &units,
+                               bool important);
+ 
+ // Like PrintResult(), but prints an entire list of results. The |values|
+ // will generally be a list of comma-separated numbers. A typical
+ // post-processing step might produce plots of their mean and standard
+ // deviation.
+-void PrintResultList(const std::string& measurement,
+-                     const std::string& modifier,
+-                     const std::string& trace,
+-                     const std::string& values,
+-                     const std::string& units,
++void PrintResultList(const std::string &measurement,
++                     const std::string &modifier,
++                     const std::string &trace,
++                     const std::string &values,
++                     const std::string &units,
+                      bool important);
+ 
+-void AppendResultList(std::string& output,
+-                      const std::string& measurement,
+-                      const std::string& modifier,
+-                      const std::string& trace,
+-                      const std::string& values,
+-                      const std::string& units,
++void AppendResultList(std::string &output,
++                      const std::string &measurement,
++                      const std::string &modifier,
++                      const std::string &trace,
++                      const std::string &values,
++                      const std::string &units,
+                       bool important);
+ 
+ // Prints memory commit charge stats for use by perf graphs.
+-void PrintSystemCommitCharge(const std::string& test_name,
+-                             size_t charge,
+-                             bool important);
++void PrintSystemCommitCharge(const std::string &test_name, size_t charge, bool important);
+ 
+-void PrintSystemCommitCharge(FILE* target,
+-                             const std::string& test_name,
++void PrintSystemCommitCharge(FILE *target,
++                             const std::string &test_name,
+                              size_t charge,
+                              bool important);
+ 
+-std::string SystemCommitChargeToString(const std::string& test_name,
+-                                       size_t charge,
+-                                       bool important);
++std::string SystemCommitChargeToString(const std::string &test_name, size_t charge, bool important);
+ 
+ }  // namespace perf_test
+ 

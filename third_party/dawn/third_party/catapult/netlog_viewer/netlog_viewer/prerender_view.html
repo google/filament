@@ -1,0 +1,43 @@
+<dom-module id="prerender-view">
+  <template>
+    <div id=prerender-view-tab-content class=content-box>
+      <ul style='margin-top:0'>
+        <li>Prerender Enabled:
+          <span id=prerender-view-enabled></span>
+          <span id=prerender-view-enabled-note></span></li>
+        <li>Prerender Omnibox Enabled:
+          <span id=prerender-view-omnibox-enabled></span></li>
+      </ul>
+      <h4>Active Prerender Pages</h4>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Duration</th>
+            <th>Loaded</th>
+          </tr>
+        </thead>
+        <tbody id=prerender-view-active-table>
+        </tbody>
+      </table>
+      <h4>Prerender History</h4>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Origin</th>
+            <th>URL</th>
+            <th>Final Status</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id=prerender-view-history-table>
+        </tbody>
+      </table>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'prerender-view',
+    });
+  </script>
+</dom-module>

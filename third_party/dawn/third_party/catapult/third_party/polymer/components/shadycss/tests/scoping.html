@@ -1,0 +1,1058 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <script>
+  WCT = {waitFor: function (cb) {HTMLImports.whenReady(cb)}}
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/make-element.js"></script>
+
+  <custom-style>
+    <style>
+      div#priority {
+        border: 1px solid black;
+      }
+    </style>
+  </custom-style>
+</head>
+<body>
+
+<template id="x-gchild">
+  <style>
+  </style>
+  <div id="target">x-gchild</div>
+</template>
+
+<template id="x-child">
+  <div id="simple">simple</div>
+  <div id="complex1" class="scoped">complex1</div>
+  <div id="complex2" selected>complex2</div>
+  <div id="media">media</div>
+  <div id="shadow" class="shadowTarget">shadowTarget</div>
+  <div id="deep" class="deepTarget">deepTarget</div>
+  <x-gchild id="gchild1"></x-gchild>
+  <x-gchild id="gchild2" class="wide"></x-gchild>
+</template>
+
+<template id="x-child2">
+  <style>
+    :host(.wide) #target{
+      border: none;
+    }
+  </style>
+  <div id="target">x-child2</div>
+</template>
+
+<template id="x-scope-class">
+  <div id="scope">Trivial</div>
+</template>
+
+<template id="x-scoped">
+  <style>
+    :host {
+      display: block;
+      border: 1px solid orange;
+      --keyframes100: 100px;
+    }
+
+    :host(.wide) {
+      border-width: 2px;
+    }
+
+    :host(.wide)::after {
+      content: '-content-';
+    };
+
+    #keyframes2.special {
+      --keyframes100: 200px;
+    }
+
+    #simple {
+      border: 3px solid orange;
+    }
+
+    .scoped, [selected] {
+      border: 4px solid pink;
+    }
+
+    @media(max-width: 10000px) {
+      .media {
+        border: 5px solid brown;
+      }
+    }
+
+    .container ::slotted(*) {
+      border: 6px solid navy;
+    }
+
+    #priority {
+      border: 9px solid orange;
+    }
+
+    .container1 > ::slotted([slot=content1]) {
+      border: 13px solid navy;
+    }
+
+    .container2 > ::slotted([slot=content2]) {
+      border: 14px solid navy;
+    }
+
+    .computed {
+      border: 15px solid orange;
+    }
+
+    .computeda {
+      border: 20px solid orange;
+    }
+
+    #child {
+      border: 16px solid tomato;
+      display: block;
+    }
+
+    svg {
+      margin-top: 20px;
+    }
+
+    #circle {
+      fill: seagreen;
+      stroke-width: 1px;
+      stroke: tomato;
+    }
+  </style>
+  <slot name="blank"></slot>
+  <div id="simple">simple</div>
+  <div id="complex1" class="scoped">complex1</div>
+  <div id="complex2" selected>complex2</div>
+  <div id="media" class="media">media</div>
+  <div class="container1">
+    <slot name="content1"></slot>
+  </div>
+  <div class="container2">
+    <slot name="content2"></slot>
+  </div>
+  <div class="container">
+    <slot></slot>
+  </div>
+  <x-child id="child"></x-child>
+  <div id="priority">priority</div>
+  <x-child2 class="wide" id="child2"></x-child2>
+  <div id="computed">Computed</div>
+  <svg height="25" width="25">
+    <circle id="circle" cx="12" cy="12" r="10"></circle>
+  </svg>
+  <x-scope-class id="scopeClass"></x-scope-class>
+  <x-keyframes id="keyframes"></x-keyframes>
+  <x-keyframes id="keyframes2"></x-keyframes>
+</template>
+
+<template id="x-slotted">
+  <style>
+  ::slotted(.auto-content) {
+    border: 2px solid orange;
+  }
+  .bar, ::slotted(.complex-child) {
+    border: 6px solid navy;
+  }
+  #container ::slotted(*) {
+    border: 8px solid green;
+  }
+  </style>
+  <slot></slot>
+  <div id="container">
+    <slot name="container"></slot>
+  </div>
+</template>
+
+<template id="dynamic">
+  <div class="added">
+    Added
+    <div class="sub-added">
+      Sub-added
+    </div>
+    </div>
+  </div>
+</template>
+
+<template id="x-dynamic-scope">
+  <style>
+    .added {
+      border: 17px solid beige;
+    }
+    .sub-added {
+      border: 18px solid #fafafa;
+    }
+  </style>
+  <div id="container"></div>
+</template>
+
+<template id="x-keyframes">
+  <style>
+    :host {
+      display: block;
+      position: relative;
+      border: 10px solid blue;
+      left: 0px;
+      /* Prefix required by Safari <= 8 */
+      -webkit-animation-duration: 0.3s;
+      animation-duration: 0.3s;
+      -webkit-animation-fill-mode: forwards;
+      animation-fill-mode: forwards;
+    }
+
+    :host([animated]) {
+      /* Prefix required by Safari <= 8 */
+      -webkit-animation-name: x-keyframes-animation;
+      animation-name: x-keyframes-animation;
+    }
+
+    /* Prefix required by Safari <= 8 */
+    @-webkit-keyframes x-keyframes-animation {
+      0% {
+        left: var(--keyframes0, 0px);
+      }
+
+      100% {
+        left: var(--keyframes100, 10px);
+      }
+    }
+    @keyframes x-keyframes-animation {
+      0% {
+        left: var(--keyframes0, 0px);
+      }
+
+      100% {
+        left: var(--keyframes100, 10px);
+      }
+    }
+  </style>
+  x-keyframes
+</template>
+
+<template id="x-attr-selector">
+  <style>
+    #foo1 ~ #bar1 {
+      border: 2px solid red;
+    }
+
+    #foo1 ~ #bar1 ~ #foo2[attr~=foo2] ~ #bar2[attr~=bar2]  {
+      border: 4px solid red;
+    }
+
+    #foo1 ~ #bar1 ~ #foo2[attr~=foo2] ~ #bar2[attr~=bar2] ~ #foo3[attr~=foo3][a~=a] ~ #bar3[attr~=bar3][a~=a] {
+      border: 6px solid red;
+    }
+  </style>
+  <div id="foo1"></div>
+  <div id="bar1">bar1</div>
+  <div id="foo2" attr="foo2"></div>
+  <div id="bar2" attr="bar2">bar2</div>
+  <div id="foo3" attr="foo3" a="a"></div>
+  <div id="bar3" attr="bar3" a="a">bar3</div>
+</template>
+
+<template id="x-adjacent-sibling">
+  <style>
+    div {
+      border: 20px solid black;
+    }
+    #foo2 + #foo1 {
+      border: 2px solid black;
+    }
+    #foo1 + #foo2 {
+      border: 4px solid black;
+    }
+    #foo2 + #foo3 {
+      border: 6px solid black;
+    }
+  </style>
+  <div id="foo1"></div>
+  <div id="foo2"></div>
+  <div id="foo3"></div>
+</template>
+
+<template id="svg">
+  <svg class="svg" viewBox="0 0 24 24">
+    <circle id="circle" r="12" cx="12" cy="12" />
+  </svg>
+</template>
+
+<template id="x-dynamic-svg">
+  <style>
+    .svg {
+      height: 24px;
+      width: 24px;
+    }
+    #circle {
+      fill: red;
+      fill-opacity: 0.5;
+    }
+  </style>
+  <div id="container"></div>
+</template>
+
+<template id="x-specificity">
+  <style>
+    :host {
+      border-top: 1px solid red;
+    }
+    :host(.bar) {
+      border-top: 2px solid red;
+    }
+  </style>
+  <slot></slot>
+</template>
+
+<template id="self-test">
+  <style>
+    :host {
+      --border: 10px solid rgb(123, 123, 123);
+    }
+
+    a {
+      border: var(--border);
+    }
+  </style>
+  <a>I should be red.</a>
+</template>
+
+<template id="nth-plus-one">
+  <style>
+    .foo.bar {
+      color: rgb(255, 0, 0);
+    }
+    div:nth-child(n+1) {
+      color: rgb(0, 255, 0);
+    }
+  </style>
+  <div>1</div>
+  <div class="foo bar">2</div>
+</template>
+
+<template id="shady-unscoped">
+  <style shady-unscoped>
+    .unscoped {
+      color: rgb(255, 0, 0);
+    }
+  </style>
+  <div class="unscoped"></div>
+</template>
+
+<template id="shady-unscoped-2">
+  <style shady-unscoped>
+    .unscoped {
+      color: rgb(255, 0, 0);
+    }
+  </style>
+  <span class="unscoped"></span>
+</template>
+
+<template id="unscoped-apply-user">
+  <style>
+    div {
+      @apply --unscoped-foo;
+    }
+  </style>
+  <div></div>
+</template>
+
+<template id="unscoped-apply">
+  <style shady-unscoped>
+    html, :host > * {
+      --unscoped-foo: {border: 10px solid black};
+    }
+  </style>
+  <unscoped-apply-user></unscoped-apply-user>
+</template>
+
+<template id="any-selector">
+  <style>
+    :-webkit-any(div, span) {
+      color: rgb(123, 123, 123);
+    }
+    :-moz-any(div, span) {
+      color: rgb(123, 123, 123);
+    }
+  </style>
+  <div>a</div>
+  <span>b</span>
+</template>
+
+<template id="scoped-keyframes">
+  <style>
+    :host {
+      --time: 0.1s;
+    }
+
+    div {
+      /* prefix for older chrome and safari */
+      -webkit-animation-duration: var(--time);
+      animation-duration: var(--time);
+      -webkit-animation-fill-mode: forwards;
+      animation-fill-mode: forwards;
+      border: 0px solid black;
+    }
+
+    :host([animate]) div {
+      /* prefix for older chrome and safari */
+      -webkit-animation-name: border-grow;
+      animation-name: border-grow;
+    }
+
+    /* prefix for older chrome and safari */
+    @-webkit-keyframes border {}
+    @-webkit-keyframes border-grow {
+      to {
+        border-top-width: 10px;
+      }
+    }
+    @keyframes border {}
+    @keyframes border-grow {
+      to {
+        border-top-width: 10px;
+      }
+    }
+  </style>
+
+  <div id="target">Hello world</div>
+</template>
+
+<template id="nested-templates">
+  <style>
+    * {
+      opacity: 0.5;
+    }
+  </style>
+  <div id="a"></div>
+  <template id="t1">
+    <div id="b">
+      <div id="c">
+        <template id="t2">
+          <div id="d"></div>
+        </template>
+      </div>
+    </div>
+  </template>
+  <svg>
+    <template id="t3">
+      <g id="g">
+        <circle id="circle"></circle>
+      </g>
+    </template>
+  </svg>
+</template>
+
+<template id="bad-mixin">
+  <style>
+    :host(.nomatch) {
+      --div-border: {
+        border: 2px solid black;
+      }
+    }
+    div {
+      @apply --div-border;
+    }
+  </style>
+  <div></div>
+</template>
+
+<template id="x-parent-skip">
+  <style>
+    :host {
+      --foo: 10px solid black;
+    }
+  </style>
+  <x-skip></x-skip>
+</template>
+
+<template id="x-skip">
+  <x-child-skip></x-child-skip>
+</template>
+
+<template id="x-child-skip">
+  <style>
+    div {
+      border: var(--foo);
+    }
+  </style>
+  <div></div>
+</template>
+
+<script>
+(function() {
+  function assertComputed(element, value, property, pseudo) {
+    var computed = getComputedStyle(element, pseudo);
+    property = property || 'border-top-width';
+    if (Array.isArray(value)) {
+      assert.oneOf(computed[property], value, 'computed style incorrect for ' + property);
+    } else {
+      assert.equal(computed[property], value, 'computed style incorrect for ' + property);
+    }
+  }
+
+  function findNode(desc) {
+    var parts = desc.split('.');
+    var root = document;
+    var node;
+    for (var i=0, p; i < parts.length; i++) {
+      p = parts[i];
+      if (p == '$') {
+        root = node.shadowRoot;
+      } else {
+        node = root.querySelector('#' + p);
+      }
+    }
+    return node;
+  }
+
+  function flush() {
+    if (window.ShadyDOM) {
+      window.ShadyDOM.flush();
+    }
+    window.ShadyCSS.ScopingShim.flush();
+  }
+
+  suite('scoped-styling', function() {
+
+    suiteSetup(function() {
+      makeElement('x-gchild');
+      makeElement('x-child', function() {
+        this.classList.add('nug');
+      });
+      makeElement('x-child2');
+      makeElement('x-scope-class');
+      makeElement('x-scoped');
+      makeElement('x-slotted');
+      (function() {
+        var dynamic = document.querySelector('template#dynamic');
+
+        makeElement('x-dynamic-scope',
+          function() {
+          // simulate 3rd party action by using normal dom to add to element.
+          var dom = document.importNode(dynamic.content, true);
+          this.shadowRoot.querySelector('#container').appendChild(dom);
+        });
+      })();
+      makeElement('x-keyframes');
+      makeElement('x-attr-selector');
+      (function() {
+        var template = document.querySelector('template#svg');
+
+        makeElement('x-dynamic-svg', function() {
+          var dom = document.importNode(template.content, true);
+          this.shadowRoot.querySelector('#container').appendChild(dom);
+        });
+      })();
+      makeElement('x-specificity');
+      makeElement('nested-templates');
+    });
+
+    var el;
+    setup(function() {
+      el = document.createElement('x-scoped');
+      el.id = 'el';
+      document.body.appendChild(el);
+      flush();
+    });
+
+    teardown(function() {
+      document.body.removeChild(el);
+    });
+
+    test(':host', function() {
+      assertComputed(el, '1px');
+      assertComputed(el, ['', 'none'], 'content', '::after');
+    });
+
+    test(':host(...)', function() {
+      var el2 = document.createElement('x-scoped');
+      el2.classList.add('wide');
+      document.body.appendChild(el2);
+      flush();
+      assertComputed(el2, '2px');
+      assertComputed(el2, ['"-content-"', '-content-'], 'content', '::after');
+      document.body.removeChild(el2);
+    });
+
+    test('scoped selectors, simple and complex', function() {
+      assertComputed(findNode('el.$.simple'), '3px');
+      assertComputed(findNode('el.$.complex1'), '4px');
+      assertComputed(findNode('el.$.complex2'), '4px');
+    });
+
+    test('media query scoped selectors', function() {
+      assertComputed(findNode('el.$.media'), '5px');
+    });
+
+    test('upper bound encapsulation', function() {
+      var d = document.createElement('div');
+      d.classList.add('scoped');
+      document.body.appendChild(d);
+      assertComputed(d, '0px');
+      document.body.removeChild(d);
+    });
+
+    test('lower bound encapsulation', function() {
+      assertComputed(findNode('el.$.child.$.simple'), '0px');
+      assertComputed(findNode('el.$.child.$.complex1'), '0px');
+      assertComputed(findNode('el.$.child.$.complex2'), '0px');
+      assertComputed(findNode('el.$.child.$.media'), '0px');
+    });
+
+    test('nested templates', function() {
+      var el = document.createElement('nested-templates');
+      document.body.appendChild(el);
+      // Append nested template content. Note the <template> in <svg> is not
+      // an HTML template with .content at this point; it is just an unknown
+      // SVGElement so we don't have to stamp it
+      var t1 = el.shadowRoot.querySelector('#t1');
+      el.shadowRoot.appendChild(t1.content.cloneNode(true));
+      var t2 = el.shadowRoot.querySelector('#t2');
+      el.shadowRoot.appendChild(t2.content.cloneNode(true));
+      // Everything should now have 'opacity: 0.5'
+      var els = Array.from(el.shadowRoot.querySelectorAll('[id]'));
+      assert.deepEqual(els.map(e => e.getAttribute('id')), ['a', 't1', 't3', 'g', 'circle', 'b', 'c', 't2', 'd']);
+      els.forEach(e => {
+        assert.equal(getComputedStyle(e).opacity, '0.5', `Element with id "${e.id}" does not have the correct opacity`);
+      });
+      document.body.removeChild(el);
+    });
+
+  });
+
+  suite('slotted', function() {
+
+    test('::slotted selectors', function() {
+      var el = document.createElement('x-scoped');
+      document.body.appendChild(el);
+      var content1 = document.createElement('div');
+      content1.slot = 'content1';
+      var content2 = document.createElement('div');
+      content2.slot = 'content2';
+      var content = document.createElement('div');
+      content.className = 'content';
+      el.appendChild(content1);
+      el.appendChild(content2);
+      el.appendChild(content);
+      flush();
+
+      assertComputed(content, '6px');
+      assertComputed(content1, '13px');
+      assertComputed(content2, '14px');
+      document.body.removeChild(el);
+    });
+
+    test('auto ::slotted selector', function() {
+      var x = document.createElement('x-slotted');
+      var d1 = document.createElement('div');
+      d1.classList.add('auto-content');
+      d1.textContent = 'auto-content';
+      document.body.appendChild(x);
+      x.appendChild(d1);
+      flush();
+      assertComputed(d1, '2px');
+      document.body.removeChild(x);
+    });
+
+    test('::slotted + child in complex selector', function() {
+      var x = document.createElement('x-slotted');
+      var d1 = document.createElement('div');
+      d1.classList.add('complex-child');
+      d1.textContent = 'complex-child';
+      document.body.appendChild(x);
+      x.appendChild(d1);
+      flush();
+      assertComputed(d1, '6px');
+      document.body.removeChild(x);
+    });
+
+    test('::slotted + named slot', function() {
+      var x = document.createElement('x-slotted');
+      var d1 = document.createElement('div');
+      d1.setAttribute('slot', 'container')
+      d1.textContent = 'named slot child';
+      document.body.appendChild(x);
+      x.appendChild(d1);
+      flush();
+      assertComputed(d1, '8px');
+      document.body.removeChild(x);
+    });
+
+  });
+
+  suite('dynamic changes', function() {
+
+    test('elements dynamically added/removed from root', function() {
+      var el = document.createElement('x-scoped');
+      document.body.appendChild(el);
+      flush();
+      var d = document.createElement('div');
+      d.classList.add('scoped');
+      d.textContent = 'Dynamically... Scoped!';
+      el.shadowRoot.appendChild(d);
+      flush();
+      assertComputed(d, '4px');
+      document.body.appendChild(d);
+      flush();
+      assert.notInclude(d.getAttribute('style-scoped') || '', el.is, 'scoping attribute not removed when added to other root');
+      assert.notInclude(d.className, el.is, 'scoping class not removed when added to other root');
+      el.shadowRoot.appendChild(d);
+      flush();
+      assertComputed(d, '4px');
+      el.shadowRoot.removeChild(d);
+      flush();
+      assert.notInclude(d.getAttribute('style-scoped') || '', el.is, 'scoping attribute not removed when removed from root');
+      assert.notInclude(d.className, el.is, 'scoping class not removed when removed from root');
+      el.shadowRoot.appendChild(d);
+      flush();
+      assertComputed(d, '4px');
+      document.body.removeChild(el);
+    });
+
+    test('elements dynamically added/removed from host', function() {
+      var el = document.createElement('x-scoped');
+      document.body.appendChild(el);
+      var d = document.createElement('div');
+      d.classList.add('scoped');
+      d.slot = 'blank';
+      d.textContent = 'Dynamically... unScoped!';
+      el.appendChild(d);
+      flush();
+      assertComputed(d, '0px');
+      el.removeChild(d);
+      flush();
+      assert.notInclude(d.getAttribute('style-scoped') || '', el.is, 'scoping attribute not removed when added to other root');
+      assert.notInclude(d.className, el.is, 'scoping class not removed when added to other root');
+      el.appendChild(d);
+      flush();
+      assertComputed(d, '0px');
+      el.removeChild(d);
+      flush();
+      assert.notInclude(d.getAttribute('style-scoped') || '', el.is, 'scoping attribute not removed when removed from root');
+      assert.notInclude(d.className, el.is, 'scoping class not removed when removed from root');
+      el.appendChild(d);
+      flush();
+      assertComputed(d, '0px');
+      document.body.removeChild(el);
+    });
+
+    test('element subtree added via dom api', function() {
+      var el = document.createElement('x-dynamic-scope');
+      document.body.appendChild(el);
+      flush();
+      var container = el.shadowRoot.querySelector('#container');
+      var a = container.querySelector('.added');
+      assertComputed(a, '17px');
+      var b = container.querySelector('.sub-added');
+      assertComputed(b, '18px');
+      document.body.removeChild(el);
+    });
+
+    test('changes to class attribute', function() {
+      var el = document.createElement('x-scoped');
+      el.id = 'el'
+      document.body.appendChild(el);
+      flush();
+      var d = findNode('el.$.computed');
+      assertComputed(d, '0px');
+      d.setAttribute('class', 'computed');
+      assertComputed(d, '15px');
+      d.setAttribute('class', '', 'empty class attr does not remove class');
+      assertComputed(d, '0px');
+      d.setAttribute('class', 'computed ', 'class attr with space does not apply');
+      assertComputed(d, '15px');
+      document.body.removeChild(el);
+    });
+
+  });
+
+  suite('misc', function() {
+
+    var el;
+    setup(function() {
+      el = document.createElement('x-scoped');
+      el.id = 'el';
+      document.body.appendChild(el);
+      flush();
+    });
+
+    teardown(function() {
+      document.body.removeChild(el);
+    });
+
+    test('keyframes change scope', function(done) {
+      var xKeyframes = findNode('el.$.keyframes');
+      // Edge 16 does not support CSS Custom Properties in keyframes
+      if (window.ShadyCSS.nativeCss && navigator.userAgent.match(/Edge/)) {
+        this.skip();
+      }
+      var onAnimationEnd = function() {
+        xKeyframes.removeEventListener('animationend', onAnimationEnd);
+        xKeyframes.removeEventListener('webkitAnimationEnd', onAnimationEnd);
+        assertComputed(xKeyframes, '100px', 'left');
+
+        xKeyframes = findNode('el.$.keyframes2');
+
+        onAnimationEnd = function() {
+          xKeyframes.removeEventListener('animationend', onAnimationEnd);
+          xKeyframes.removeEventListener('webkitAnimationEnd', onAnimationEnd);
+          assertComputed(xKeyframes, '200px', 'left');
+          done();
+        };
+
+        xKeyframes.addEventListener('animationend', onAnimationEnd);
+        xKeyframes.addEventListener('webkitAnimationEnd', onAnimationEnd);
+
+        xKeyframes.classList.add('special');
+        xKeyframes.setAttribute('animated', '');
+        window.ShadyCSS.ScopingShim.styleElement(xKeyframes);
+      };
+      xKeyframes.addEventListener('animationend', onAnimationEnd);
+      xKeyframes.addEventListener('webkitAnimationEnd', onAnimationEnd);
+      xKeyframes.setAttribute('animated', '');
+      assertComputed(xKeyframes, '0px', 'left');
+    });
+
+    test('keyframe names are transformed correctly', function(done) {
+      makeElement('scoped-keyframes');
+      var e = document.createElement('scoped-keyframes');
+      document.body.appendChild(e);
+      flush();
+      var target = e.shadowRoot.querySelector('#target');
+      var onAnimationEnd = function() {
+        assertComputed(target, '10px');
+        target.removeEventListener('animationend', onAnimationEnd);
+        target.removeEventListener('webkitAnimationEnd', onAnimationEnd);
+        document.body.removeChild(e);
+        done();
+      };
+      target.addEventListener('animationend', onAnimationEnd);
+      target.addEventListener('webkitAnimationEnd', onAnimationEnd);
+      e.setAttribute('animate', '');
+      assertComputed(target, '0px');
+    });
+
+    test('attribute inclusive selector and general sibling selectors', function() {
+      var x = document.createElement('x-attr-selector');
+      x.id = 'x';
+      document.body.appendChild(x);
+      flush();
+      assertComputed(findNode('x.$.bar1'), '2px');
+      assertComputed(findNode('x.$.bar2'), '4px');
+      assertComputed(findNode('x.$.bar3'), '6px');
+      document.body.removeChild(x);
+    });
+
+    test('adjacent sibling selectors', function() {
+      makeElement('x-adjacent-sibling');
+      var x = document.createElement('x-adjacent-sibling');
+      x.id = 'x';
+      document.body.appendChild(x);
+      flush();
+      assertComputed(findNode('x.$.foo1'), '20px');
+      assertComputed(findNode('x.$.foo2'), '4px');
+      assertComputed(findNode('x.$.foo3'), '6px');
+      document.body.removeChild(x);
+    })
+
+    test('svg classes are dynamically scoped correctly', function() {
+      var x = document.createElement('x-dynamic-svg');
+      x.id = 'x';
+      document.body.appendChild(x);
+      flush();
+      var container = findNode('x.$.container');
+      var svg = container.querySelector('.svg');
+      var computed = getComputedStyle(svg);
+      assert.equal(computed.height, '24px');
+      assert.equal(computed.width, '24px');
+      var circle = container.querySelector('#circle');
+      computed = getComputedStyle(circle);
+      assert.equal(computed['fill-opacity'], '0.5');
+      document.body.removeChild(x);
+    });
+
+    test(':host selectors always lowest priority', function() {
+      var priority = findNode('el.$.priority');
+      assertComputed(priority, '9px');
+      el.setAttribute('class', 'wide');
+      assertComputed(priority, '9px');
+    });
+
+    test('svg elements properly scoped', function() {
+      if (window.ShadyCSS.nativeShadow) {
+        this.skip();
+      }
+      var circle = findNode('el.$.circle');
+      var classes = (circle.getAttribute('class') || '').split(/\s+/);
+      assert.include(classes, 'x-scoped');
+      assert.include(classes, 'style-scope');
+      assert.notInclude(classes, 'null');
+      assertComputed(circle, '1px', 'strokeWidth');
+    });
+
+    test('set attribute class has style scoping selectors', function() {
+      if (window.ShadyCSS.nativeShadow) {
+        this.skip();
+      }
+      var s = findNode('el.$.scopeClass');
+      var scope = findNode('el.$.scopeClass.$.scope');
+      assert.isTrue(s.classList.contains('style-scope'));
+      assert.isTrue(s.classList.contains('x-scoped'));
+      s.setAttribute('class', 'foo');
+      assert.isTrue(s.classList.contains('foo'));
+      assert.isTrue(s.classList.contains('style-scope'));
+      assert.isTrue(s.classList.contains('x-scoped'));
+      //
+      assert.isTrue(scope.classList.contains('style-scope'));
+      assert.isTrue(scope.classList.contains('x-scope-class'));
+      scope.setAttribute('class', 'foo');
+      assert.isTrue(scope.classList.contains('foo'));
+      assert.isTrue(scope.classList.contains('style-scope'));
+      assert.isTrue(scope.classList.contains('x-scope-class'));
+    });
+
+    test('specificity of :host selector with class', function() {
+      var e1 = document.createElement('x-specificity');
+      document.body.appendChild(e1);
+      flush();
+      assertComputed(e1, '1px');
+      document.body.removeChild(e1);
+      var e2 = document.createElement('x-specificity');
+      e2.setAttribute('class', 'bar');
+      document.body.appendChild(e2);
+      flush();
+      assertComputed(e2, '2px');
+      document.body.removeChild(e2);
+    });
+
+    test('self-use is supported', function() {
+      makeElement('self-test');
+      var e = document.createElement('self-test');
+      document.body.appendChild(e);
+      flush();
+      assertComputed(e.shadowRoot.querySelector('a'), '10px');
+      document.body.removeChild(e);
+    });
+
+    test('nth-child selectors work correctly with plusses', function() {
+      makeElement('nth-plus-one');
+      var e = document.createElement('nth-plus-one');
+      document.body.appendChild(e);
+      flush();
+      assertComputed(e.shadowRoot.querySelector('.foo'), 'rgb(255, 0, 0)', 'color');
+      document.body.removeChild(e);
+    });
+
+    test(':-webkit-any and :-moz-any selectors are supported', function() {
+      if (navigator.userAgent.match(/Trident|Edge/)) {
+        this.skip();
+      }
+      makeElement('any-selector');
+      var e = document.createElement('any-selector');
+      document.body.appendChild(e);
+      flush();
+      assertComputed(e.shadowRoot.querySelector('div'), 'rgb(123, 123, 123)', 'color');
+      assertComputed(e.shadowRoot.querySelector('span'), 'rgb(123, 123, 123)', 'color');
+      document.body.removeChild(e);
+    });
+
+    test(':host() sets mixin definitions correctly', function() {
+      makeElement('bad-mixin');
+      var e = document.createElement('bad-mixin');
+      document.body.appendChild(e);
+      flush();
+      assertComputed(e.shadowRoot.querySelector('div'), '0px');
+      document.body.removeChild(e);
+    });
+
+    test('trees with elements missing styles render correctly', function() {
+      makeElement('x-parent-skip');
+      makeElement('x-skip');
+      makeElement('x-child-skip');
+      const p = document.createElement('x-parent-skip');
+      document.body.appendChild(p);
+      flush();
+      const inner = p.shadowRoot.querySelector('x-skip').shadowRoot.querySelector('x-child-skip').shadowRoot.querySelector('div');
+      assertComputed(inner, '10px');
+      document.body.removeChild(p);
+    });
+
+    test('trees with elements missing templates render correctly', function() {
+      makeElement('no-shadow');
+      const p = document.createElement('x-parent-skip');
+      const n = document.createElement('no-shadow');
+      const c = document.createElement('x-child-skip');
+      document.body.appendChild(p);
+      p.shadowRoot.appendChild(n);
+      n.shadowRoot.appendChild(c);
+      flush();
+      const inner = c.shadowRoot.querySelector('div');
+      assertComputed(inner, '10px');
+      document.body.removeChild(p);
+    })
+
+  });
+
+  suite('unscoping', function() {
+    suiteSetup(function() {
+      makeElement('shady-unscoped');
+    });
+    test('styles with "shady-unscoped" attr work in Shady and Shadow', function() {
+      var el = document.createElement('shady-unscoped');
+      document.body.appendChild(el);
+      flush();
+      var div = el.shadowRoot.querySelector('div');
+      assertComputed(div, 'rgb(255, 0, 0)', 'color');
+      document.body.removeChild(el);
+    });
+    test('styles with "shady-unscoped" attr deduplicate', function(){
+      if (window.ShadyCSS.nativeShadow) {
+        this.skip();
+      }
+      makeElement('shady-unscoped-2');
+      var el1 = document.createElement('shady-unscoped');
+      var el2 = document.createElement('shady-unscoped-2');
+      document.body.appendChild(el1);
+      document.body.appendChild(el2);
+      flush();
+      assert.equal(document.querySelectorAll('style[shady-unscoped]').length, 1);
+      document.body.removeChild(el1);
+      document.body.removeChild(el2);
+    });
+    test('@apply does not work in shady-unscoped', function() {
+      makeElement('unscoped-apply-user');
+      makeElement('unscoped-apply');
+      var el = document.createElement('unscoped-apply');
+      document.body.appendChild(el);
+      flush();
+      var inner = el.shadowRoot.querySelector('unscoped-apply-user');
+      var target = inner.shadowRoot.querySelector('div');
+      assertComputed(target, '0px');
+      document.body.removeChild(el);
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

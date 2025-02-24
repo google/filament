@@ -1,0 +1,106 @@
+Name
+
+    ANGLE_external_context_and_surface
+
+Name Strings
+
+    EGL_ANGLE_external_context_and_surface
+
+Contributors
+
+    Peng Huang
+    Shahbaz Youssefi
+
+Contacts
+
+    Shahbaz Youssefi, Google (syoussefi 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, July 24, 2023
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension allows plugging an external OpenGL context and surface to
+    the OpenGL backend of ANGLE.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    void eglAcquireExternalContextANGLE(
+        EGLDisplay dpy);
+    void eglReleaseExternalContextANGLE(
+        EGLDisplay dpy);
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_EXTERNAL_CONTEXT_ANGLE 0x348E
+
+    Accepted in the <buftype> parameter of eglCreatePbufferFromClientBuffer:
+
+        EGL_EXTERNAL_SURFACE_ANGLE 0x348F
+
+Additions to the EGL 1.4 Specification
+
+    Add the following to section 3.7.1 "Creating Rendering Contexts":
+
+    EGL_EXTERNAL_CONTEXT_ANGLE indicates whether the context is externally
+    managed, and that no internal context is created.
+    In this case, the context must be made current by the application before
+    calling other EGL or GL functions that may access the context.
+
+    Add the following to section 3.5.3 "Binding Off-Screen Rendering Surfaces
+    To Client Buffers":
+
+    EGL_EXTERNAL_SURFACE_ANGLE indicates whether the surface is externally
+    managed, and that no internal surface is created.
+    In this case, the surface must be made current by the application before
+    calling other EGL or GL functions that may access the surface.
+
+    Add the following to section 3.7.3 "Binding Contexts and Drawables":
+
+    Before making a call that uses a context created with
+    EGL_EXTERNAL_CONTEXT_ANGLE, the context must be synchronized from external.
+    eglAcquireExternalContextANGLE can be called to perform this
+    synchronization, ensuring that the implementation is up-to-date with
+    respect to changes that external has made to the context.
+
+    Before the application (external) can continue using the context after the
+    implementation has modified it, the context must be synchronized to
+    external, restoring the state from when the external context was
+    "acquired".
+    eglReleaseExternalContextANGLE can be called to perform this
+    synchronization, ensuring that the context is restored to its original
+    state from before the eglAcquireExternalContextANGLE call.
+
+Issues
+
+    None yet.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Jan 7, 2021    penghuang  Initial version
+      2   July 24, 2023  syoussefi  Add eglAcquireExternalContextANGLE, and
+                                      eglReleaseExternalContextANGLE
+      3   July 27, 2023  syoussefi  Remove EGL_EXTERNAL_CONTEXT_SAVE_STATE_ANGLE

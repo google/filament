@@ -1,0 +1,92 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+
+  <title>paper-dialog tests</title>
+
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+  <link rel="import" href="../paper-dialog.html">
+</head>
+
+<body>
+
+  <test-fixture id="basic">
+    <template>
+      <paper-dialog>
+        <p>Dialog</p>
+      </paper-dialog>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="modal">
+    <template>
+      <paper-dialog modal>
+        <p>Dialog</p>
+      </paper-dialog>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="opened-modals">
+    <template>
+      <paper-dialog modal opened>
+        <p>Dialog 1</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+      </paper-dialog>
+      <paper-dialog modal opened>
+        <p>Dialog 2</p>
+      </paper-dialog>
+    </template>
+  </test-fixture>
+
+  <script>
+    suite('modal', function() {
+
+      test('backdrop element remains opened when closing top modal, closes when all modals are closed', function(done) {
+        var modals = fixture('opened-modals');
+        modals[1].addEventListener('iron-overlay-opened', function() {
+          assert.isTrue(modals[1].backdropElement.opened, 'backdrop is open');
+          modals[1].close();
+        });
+        modals[1].addEventListener('iron-overlay-closed', function() {
+          assert.isTrue(modals[1].backdropElement.opened, 'backdrop is still open');
+          modals[0].close();
+        });
+        modals[0].addEventListener('iron-overlay-closed', function() {
+          assert.isFalse(modals[0].backdropElement.opened, 'backdrop is closed');
+          done();
+        });
+      });
+
+    });
+
+    suite('a11y', function() {
+      a11ySuite('basic', []);
+
+      a11ySuite('modal', []);
+
+      test('dialog has role="dialog"', function() {
+        var dialog = fixture('basic');
+        assert.equal(dialog.getAttribute('role'), 'dialog', 'has role="dialog"');
+      });
+
+    });
+  </script>
+
+</body>
+
+</html>

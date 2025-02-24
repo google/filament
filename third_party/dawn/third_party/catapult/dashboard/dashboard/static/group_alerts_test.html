@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="group_alerts.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  test('group_overlapping', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'bar',
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'baz',
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 1);
+    assert.lengthOf(grouped[0], 2);
+  });
+
+  test('group_barely_overlapping', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'bar',
+        start_revision: 0,
+        end_revision: 1,
+      },
+      {
+        testsuite: 'foo',
+        test: 'baz',
+        start_revision: 1,
+        end_revision: 2,
+      },
+    ]);
+    assert.lengthOf(grouped, 1);
+    assert.lengthOf(grouped[0], 2);
+  });
+
+  test('some_overlapping', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'bar',
+        start_revision: 0,
+        end_revision: 1,
+      },
+      {
+        testsuite: 'foo',
+        test: 'baz',
+        start_revision: 1,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'qux',
+        start_revision: 2,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 2);
+    assert.lengthOf(grouped[1], 1);
+  });
+
+  test('non_overlapping', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'bar',
+        start_revision: 0,
+        end_revision: 1,
+      },
+      {
+        testsuite: 'foo',
+        test: 'baz',
+        start_revision: 2,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 1);
+    assert.lengthOf(grouped[1], 1);
+  });
+
+  test('different_testsuite', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'baz',
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'bar',
+        test: 'qux',
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 1);
+    assert.lengthOf(grouped[1], 1);
+  });
+
+  test('same_measurement_name', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 1);
+    assert.lengthOf(grouped[0], 2);
+  });
+
+  test('related', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:browser_process:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 1);
+    assert.lengthOf(grouped[0], 2);
+  });
+
+  test('relatedAcrossTestSuites', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'bar',
+        test: 'memory:chrome:browser_process:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 1);
+    assert.lengthOf(grouped[0], 2);
+  });
+
+  test('unrelated', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_chrome:shim_allocated_objects_size_avg',  // eslint-disable-line max-len
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 1);
+    assert.lengthOf(grouped[1], 1);
+  });
+
+  test('some_related', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 1,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:browser_process:reported_by_os:gpu_memory:proportional_resident_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 1,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_chrome:shim_allocated_objects_size_avg',  // eslint-disable-line max-len
+        start_revision: 0,
+        end_revision: 1,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 2);
+    assert.lengthOf(grouped[1], 1);
+  });
+
+  test('some_relatable', function() {
+    const grouped = d.groupAlerts([
+      {
+        testsuite: 'foo',
+        test: 'power',
+        start_revision: 0,
+        end_revision: 2,
+      },
+      {
+        testsuite: 'foo',
+        test: 'memory:chrome:all_processes:reported_by_chrome:shim_allocated_objects_size_avg',  // eslint-disable-line max-len
+        start_revision: 1,
+        end_revision: 3,
+      },
+    ]);
+    assert.lengthOf(grouped, 2);
+    assert.lengthOf(grouped[0], 1);
+    assert.lengthOf(grouped[1], 1);
+  });
+});
+</script>

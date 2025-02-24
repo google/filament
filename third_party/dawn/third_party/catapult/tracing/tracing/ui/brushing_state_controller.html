@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/base/ui_state.html">
+<link rel="import" href="/tracing/ui/brushing_state.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.c', function() {
+  const BrushingState = tr.ui.b.BrushingState;
+  const EventSet = tr.model.EventSet;
+  const SelectionState = tr.model.SelectionState;
+  const Viewport = tr.ui.TimelineViewport;
+
+  function BrushingStateController(timelineView) {
+    tr.b.EventTarget.call(this);
+
+    this.timelineView_ = timelineView;
+    this.currentBrushingState_ = new BrushingState();
+
+    this.onPopState_ = this.onPopState_.bind(this);
+    this.historyEnabled_ = false;
+    this.selections_ = {};
+  }
+
+  BrushingStateController.prototype = {
+    __proto__: tr.b.EventTarget.prototype,
+
+    dispatchChangeEvent_() {
+      const e = new tr.b.Event('change', false, false);
+      this.dispatchEvent(e);
+    },
+
+    get model() {
+      if (!this.timelineView_) {
+        return undefined;
+      }
+      return this.timelineView_.model;
+    },
+
+    get trackView() {
+      if (!this.timelineView_) {
+        return undefined;
+      }
+      return this.timelineView_.trackView;
+    },
+
+    get viewport() {
+      if (!this.timelineView_) {
+        return undefined;
+      }
+      if (!this.timelineView_.trackView) {
+        return undefined;
+      }
+      return this.timelineView_.trackView.viewport;
+    },
+
+    /* History system */
+    get historyEnabled() {
+      return this.historyEnabled_;
+    },
+
+    set historyEnabled(historyEnabled) {
+      this.historyEnabled_ = !!historyEnabled;
+      if (historyEnabled) {
+        window.addEventListener('popstate', this.onPopState_);
+      } else {
+        window.removeEventListener('popstate', this.onPopState_);
+      }
+    },
+
+    modelWillChange() {
+      if (this.currentBrushingState_.isAppliedToModel) {
+        this.currentBrushingState_.unapplyFromEventSelectionStates();
+      }
+    },
+
+    modelDidChange() {
+      this.selections_ = {};
+
+      this.currentBrushingState_ = new BrushingState();
+      this.currentBrushingState_.applyToEventSelectionStates(this.model);
+
+      const e = new tr.b.Event('model-changed', false, false);
+      this.dispatchEvent(e);
+
+      this.dispatchChangeEvent_();
+    },
+
+    onUserInitiatedSelectionChange_() {
+      const selection = this.selection;
+      if (this.historyEnabled) {
+        // Save the selection so that when back button is pressed,
+        // it could be retrieved.
+        this.selections_[selection.guid] = selection;
+        const state = {
+          selection_guid: selection.guid
+        };
+
+        window.history.pushState(state, document.title);
+      }
+    },
+
+    onPopState_(e) {
+      if (e.state === null) return;
+
+      const selection = this.selections_[e.state.selection_guid];
+      if (selection) {
+        const newState = this.currentBrushingState_.clone();
+        newState.selection = selection;
+        this.currentBrushingState = newState;
+      }
+      e.stopPropagation();
+    },
+
+    get selection() {
+      return this.currentBrushingState_.selection;
+    },
+    get findMatches() {
+      return this.currentBrushingState_.findMatches;
+    },
+
+    get selectionOfInterest() {
+      return this.currentBrushingState_.selectionOfInterest;
+    },
+
+    get currentBrushingState() {
+      return this.currentBrushingState_;
+    },
+
+    set currentBrushingState(newBrushingState) {
+      if (newBrushingState.isAppliedToModel) {
+        throw new Error('Cannot apply this state, it is applied');
+      }
+
+      // This function uses value-equality on the states so that state can
+      // changed to a clone of itself without causing a change event, while
+      // still having the actual state object change to the new clone.
+      const hasValueChanged = !this.currentBrushingState_.equals(
+          newBrushingState);
+
+      if (newBrushingState !== this.currentBrushingState_ && !hasValueChanged) {
+        if (this.currentBrushingState_.isAppliedToModel) {
+          this.currentBrushingState_.transferModelOwnershipToClone(
+              newBrushingState);
+        }
+        this.currentBrushingState_ = newBrushingState;
+        return;
+      }
+
+      if (this.currentBrushingState_.isAppliedToModel) {
+        this.currentBrushingState_.unapplyFromEventSelectionStates();
+      }
+
+      this.currentBrushingState_ = newBrushingState;
+
+      this.currentBrushingState_.applyToEventSelectionStates(this.model);
+
+      this.dispatchChangeEvent_();
+    },
+
+    /**
+     * @param {Filter} filter The filter to use for finding matches.
+     * @param {Selection} selection The selection to add matches to.
+     * @return {Task} which performs the filtering.
+     */
+    addAllEventsMatchingFilterToSelectionAsTask(filter, selection) {
+      const timelineView = this.timelineView_.trackView;
+      if (!timelineView) {
+        return new tr.b.Task();
+      }
+      return timelineView.addAllEventsMatchingFilterToSelectionAsTask(
+          filter, selection);
+    },
+
+    findTextChangedTo(allPossibleMatches) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.findMatches = allPossibleMatches;
+      this.currentBrushingState = newBrushingState;
+    },
+
+    findFocusChangedTo(currentFocus) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.selection = currentFocus;
+      this.currentBrushingState = newBrushingState;
+
+      this.onUserInitiatedSelectionChange_();
+    },
+
+    findTextCleared() {
+      if (this.xNavStringMarker_ !== undefined) {
+        this.model.removeAnnotation(this.xNavStringMarker_);
+        this.xNavStringMarker_ = undefined;
+      }
+
+      if (this.guideLineAnnotation_ !== undefined) {
+        this.model.removeAnnotation(this.guideLineAnnotation_);
+        this.guideLineAnnotation_ = undefined;
+      }
+
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.selection = new EventSet();
+      newBrushingState.findMatches = new EventSet();
+      this.currentBrushingState = newBrushingState;
+
+      this.onUserInitiatedSelectionChange_();
+    },
+
+    uiStateFromString(string) {
+      return tr.ui.b.UIState.fromUserFriendlyString(
+          this.model, this.viewport, string);
+    },
+
+    navToPosition(uiState, showNavLine) {
+      this.trackView.navToPosition(uiState, showNavLine);
+    },
+
+    changeSelectionFromTimeline(selection) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.selection = selection;
+      newBrushingState.findMatches = new EventSet();
+      this.currentBrushingState = newBrushingState;
+
+      this.onUserInitiatedSelectionChange_();
+    },
+
+    showScriptControlSelection(selection) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.selection = selection;
+      newBrushingState.findMatches = new EventSet();
+      this.currentBrushingState = newBrushingState;
+    },
+
+    changeSelectionFromRequestSelectionChangeEvent(selection) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.selection = selection;
+      newBrushingState.findMatches = new EventSet();
+      this.currentBrushingState = newBrushingState;
+
+      this.onUserInitiatedSelectionChange_();
+    },
+
+    changeAnalysisViewRelatedEvents(eventSet) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.analysisViewRelatedEvents = eventSet;
+      this.currentBrushingState = newBrushingState;
+    },
+
+    changeAnalysisLinkHoveredEvents(eventSet) {
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.analysisLinkHoveredEvents = eventSet;
+      this.currentBrushingState = newBrushingState;
+    },
+
+    getViewSpecificBrushingState(viewId) {
+      return this.currentBrushingState.viewSpecificBrushingStates[viewId];
+    },
+
+    changeViewSpecificBrushingState(viewId, newState) {
+      const oldStates = this.currentBrushingState_.viewSpecificBrushingStates;
+      const newStates = {};
+      for (const id in oldStates) {
+        newStates[id] = oldStates[id];
+      }
+      if (newState === undefined) {
+        delete newStates[viewId];
+      } else {
+        newStates[viewId] = newState;
+      }
+
+      const newBrushingState = this.currentBrushingState_.clone();
+      newBrushingState.viewSpecificBrushingStates = newStates;
+      this.currentBrushingState = newBrushingState;
+    }
+  };
+
+  BrushingStateController.getControllerForElement = function(element) {
+    if (tr.isHeadless) {
+      throw new Error('Unsupported');
+    }
+    let currentElement = element;
+    while (currentElement) {
+      if (currentElement.brushingStateController) {
+        return currentElement.brushingStateController;
+      }
+
+      // Walk up the DOM.
+      if (currentElement.parentElement) {
+        currentElement = currentElement.parentElement;
+        continue;
+      }
+
+      // Possibly inside a shadow DOM.
+      let currentNode = currentElement;
+      while (Polymer.dom(currentNode).parentNode) {
+        currentNode = Polymer.dom(currentNode).parentNode;
+      }
+      currentElement = currentNode.host;
+    }
+    return undefined;
+  };
+
+  return {
+    BrushingStateController,
+  };
+});
+</script>

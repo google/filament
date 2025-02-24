@@ -1,0 +1,47 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the OpenCL pass-through back-end.
+
+import("../../../../gni/angle.gni")
+
+assert(angle_enable_cl_passthrough)
+
+_cl_backend_sources = [
+  "CLCommandQueueCL.cpp",
+  "CLCommandQueueCL.h",
+  "CLContextCL.cpp",
+  "CLContextCL.h",
+  "CLDeviceCL.cpp",
+  "CLDeviceCL.h",
+  "CLEventCL.cpp",
+  "CLEventCL.h",
+  "CLKernelCL.cpp",
+  "CLKernelCL.h",
+  "CLMemoryCL.cpp",
+  "CLMemoryCL.h",
+  "CLPlatformCL.cpp",
+  "CLPlatformCL.h",
+  "CLProgramCL.cpp",
+  "CLProgramCL.h",
+  "CLSamplerCL.cpp",
+  "CLSamplerCL.h",
+  "cl_types.h",
+  "cl_util.cpp",
+  "cl_util.h",
+]
+
+config("angle_cl_backend_config") {
+  defines = [ "ANGLE_ENABLE_CL_PASSTHROUGH" ]
+}
+
+angle_source_set("angle_cl_backend") {
+  sources = _cl_backend_sources
+
+  public_deps = [
+    "$angle_root:angle_version_info",
+    "$angle_root:libANGLE_headers",
+    "$angle_root/third_party/OpenCL-ICD-Loader:opencl_icd_loader",
+  ]
+}

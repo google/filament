@@ -1,0 +1,16 @@
+Name: d3
+Short Name: d3
+URL: https://d3js.org/d3.v5.min.js
+Version: 5.14.2
+Date: 2019-11-26 00:37:36+00:00
+Revision: ef9dc7ce9efa3eb107b558f4644faa5d9adcc038
+License: BSD
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+JavaScript library for manipulating documents based on data.
+
+Local Modifications:
+Includes only the minified JavaScript and license files.

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/rect_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  /**
+   * Visualizes a Process's state using a series of rects to represent activity.
+   * @constructor
+   */
+  const ProcessSummaryTrack = tr.ui.b.define('process-summary-track',
+      tr.ui.tracks.RectTrack);
+
+  ProcessSummaryTrack.buildRectsFromProcess = function(process) {
+    if (!process) return [];
+
+    const ops = [];
+    // build list of start/end ops for each top level or important slice
+    const pushOp = function(isStart, time, slice) {
+      ops.push({
+        isStart,
+        time,
+        slice
+      });
+    };
+    for (const tid in process.threads) {
+      const sliceGroup = process.threads[tid].sliceGroup;
+
+      sliceGroup.topLevelSlices.forEach(function(slice) {
+        pushOp(true, slice.start, undefined);
+        pushOp(false, slice.end, undefined);
+      });
+      sliceGroup.slices.forEach(function(slice) {
+        if (slice.important) {
+          pushOp(true, slice.start, slice);
+          pushOp(false, slice.end, slice);
+        }
+      });
+    }
+    ops.sort(function(a, b) { return a.time - b.time; });
+
+    const rects = [];
+    /**
+     * Build a row of rects which display one way for unimportant activity,
+     * and during important slices, show up as those important slices.
+     *
+     * If an important slice starts in the middle of another,
+     * just drop it on the floor.
+     */
+    const genericColorId = ColorScheme.getColorIdForReservedName(
+        'generic_work');
+    const pushRect = function(start, end, slice) {
+      rects.push(new tr.ui.tracks.Rect(
+          slice, /* modelItem: show selection state of slice if present */
+          slice ? slice.title : '', /* title */
+          slice ? slice.colorId : genericColorId, /* colorId */
+          start, /* start */
+          end - start /* duration */));
+    };
+    let depth = 0;
+    let currentSlice = undefined;
+    let lastStart = undefined;
+    ops.forEach(function(op) {
+      depth += op.isStart ? 1 : -1;
+
+      if (currentSlice) {
+        // simply find end of current important slice
+        if (!op.isStart && op.slice === currentSlice) {
+          // important slice has ended
+          pushRect(lastStart, op.time, currentSlice);
+          lastStart = depth >= 1 ? op.time : undefined;
+          currentSlice = undefined;
+        }
+      } else {
+        if (op.isStart) {
+          if (depth === 1) {
+            lastStart = op.time;
+            currentSlice = op.slice;
+          } else if (op.slice) {
+            // switch to slice
+            if (op.time !== lastStart) {
+              pushRect(lastStart, op.time, undefined);
+              lastStart = op.time;
+            }
+            currentSlice = op.slice;
+          }
+        } else {
+          if (depth === 0) {
+            pushRect(lastStart, op.time, undefined);
+            lastStart = undefined;
+          }
+        }
+      }
+    });
+    return rects;
+  };
+
+  ProcessSummaryTrack.prototype = {
+    __proto__: tr.ui.tracks.RectTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.RectTrack.prototype.decorate.call(this, viewport);
+    },
+
+    get process() {
+      return this.process_;
+    },
+
+    set process(process) {
+      this.process_ = process;
+      this.rects = ProcessSummaryTrack.buildRectsFromProcess(process);
+    }
+  };
+
+  return {
+    ProcessSummaryTrack,
+  };
+});
+</script>

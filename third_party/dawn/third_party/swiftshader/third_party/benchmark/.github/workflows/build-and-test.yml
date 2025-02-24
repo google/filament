@@ -1,0 +1,114 @@
+name: build-and-test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # TODO: add 32-bit builds (g++ and clang++) for ubuntu
+  #   (requires g++-multilib and libc6:i386)
+  # TODO: add coverage build (requires lcov)
+  # TODO: add clang + libc++ builds for ubuntu
+  job:
+    name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-20.04, macos-latest]
+        build_type: ['Release', 'Debug']
+        compiler: ['g++', 'clang++']
+        lib: ['shared', 'static']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: lukka/get-cmake@latest
+
+      - name: create build environment
+        run: cmake -E make_directory ${{ runner.workspace }}/_build
+
+      - name: setup cmake initial cache
+        run: touch compiler-cache.cmake
+
+      - name: configure cmake
+        env:
+          CXX: ${{ matrix.compiler }}
+        shell: bash
+        working-directory: ${{ runner.workspace }}/_build
+        run: >
+          cmake -C ${{ github.workspace }}/compiler-cache.cmake
+          $GITHUB_WORKSPACE
+          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+          -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_CXX_COMPILER=${{ env.CXX }}
+          -DCMAKE_CXX_VISIBILITY_PRESET=hidden
+          -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON
+
+      - name: build
+        shell: bash
+        working-directory: ${{ runner.workspace }}/_build
+        run: cmake --build . --config ${{ matrix.build_type }}
+
+      - name: test
+        shell: bash
+        working-directory: ${{ runner.workspace }}/_build
+        run: ctest -C ${{ matrix.build_type }} -VV
+
+  msvc:
+    name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msvc }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+        run:
+            shell: powershell
+    strategy:
+      fail-fast: false
+      matrix:
+        msvc:
+          - VS-16-2019
+          - VS-17-2022
+        arch:
+          - x64
+        build_type:
+          - Debug
+          - Release
+        lib:
+          - shared
+          - static
+        include:
+          - msvc: VS-16-2019
+            os: windows-2019
+            generator: 'Visual Studio 16 2019'
+          - msvc: VS-17-2022
+            os: windows-2022
+            generator: 'Visual Studio 17 2022'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: lukka/get-cmake@latest
+
+      - name: configure cmake
+        run: >
+          cmake -S . -B _build/
+          -A ${{ matrix.arch }}
+          -G "${{ matrix.generator }}"
+          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+          -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
+
+      - name: build
+        run: cmake --build _build/ --config ${{ matrix.build_type }}
+
+      - name: setup test environment
+        # Make sure gmock and benchmark DLLs can be found
+        run: >
+            echo "$((Get-Item .).FullName)/_build/bin/${{ matrix.build_type }}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append;
+            echo "$((Get-Item .).FullName)/_build/src/${{ matrix.build_type }}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append;
+
+      - name: test
+        run: ctest --test-dir _build/ -C ${{ matrix.build_type }} -VV
+
+

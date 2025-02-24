@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglClientWaitSync - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglClientWaitSync">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglClientWaitSync — 
+            Wait in the client for a sync object to be signalled
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLint <strong class="fsfunc">eglClientWaitSync</strong>(</code>
+              </td>
+              <td>(EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSync <var class="pdparam">sync</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">flags</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLTime <var class="pdparam">timeout</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the <abbr class="acronym">EGL</abbr> display connection.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>sync</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the sync object to wait on.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>flags</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies flags controlling wait behavior.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>timeout</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies wait timeout interval.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglClientWaitSync</code> blocks the calling thread
+            until the specified sync object <em class="parameter"><code>sync</code></em> is
+            signaled, or until <em class="parameter"><code>timeout</code></em> nanoseconds
+            have passed.
+        </p>
+        <p>
+            More than one <code class="function">eglClientWaitSync</code> may be
+            outstanding on the same <em class="parameter"><code>sync</code></em> at any given
+            time. When there are multiple threads blocked on the same
+            <em class="parameter"><code>sync</code></em> and the sync object is signaled, all
+            such threads are released, but the order in which they are
+            released is not defined.
+        </p>
+        <p>
+            If the value of <em class="parameter"><code>timeout</code></em> is zero, then
+            <code class="function">eglClientWaitSync</code> simply tests the current
+            status of <em class="parameter"><code>sync</code></em>. If the value of
+            <em class="parameter"><code>timeout</code></em> is the special value
+            <code class="constant">EGL_FOREVER</code>, then
+            <code class="function">eglClientWaitSync</code> does not time out. For
+            all other values, <em class="parameter"><code>timeout</code></em> is adjusted to
+            the closest value allowed by the implementation-dependent
+            timeout accuracy, which may be substantially longer than one
+            nanosecond.
+        </p>
+        <p>
+            <code class="function">eglClientWaitSync</code> returns one of three
+            status values describing the reason for returning. A return
+            value of <code class="constant">EGL_TIMEOUT_EXPIRED</code> indicates that
+            the specified timeout period expired before
+            <em class="parameter"><code>sync</code></em> was signaled, or if
+            <em class="parameter"><code>timeout</code></em> is zero, indicates that
+            <em class="parameter"><code>sync</code></em> is not signaled. A return value of
+            <code class="constant">EGL_CONDITION_SATISFIED</code> indicates that
+            <em class="parameter"><code>sync</code></em> was signaled before the timeout
+            expired, which includes the case when
+            <em class="parameter"><code>sync</code></em> was already signaled when
+            <code class="function">eglClientWaitSync</code> was called. If an error
+            occurs then an error is generated and
+            <code class="constant">EGL_FALSE</code> is returned.
+        </p>
+        <p>
+            If the sync object being blocked upon will not be signaled in
+            finite time (for example, by an associated fence command issued
+            previously, but not yet flushed to the graphics pipeline), then
+            <code class="function">eglClientWaitSync</code> may wait forever. To help
+            prevent this behavior, if the
+            <code class="constant">EGL_SYNC_FLUSH_COMMANDS_BIT</code> bit is set in
+            <em class="parameter"><code>flags</code></em>, and <em class="parameter"><code>sync</code></em> is
+            unsignaled when <code class="function">eglClientWaitSync</code> is
+            called, then the equivalent of Flush() will be performed for the
+            current API context (i.e., the context returned by
+            <code class="function">eglGetCurrentContext</code>) before blocking on
+            <em class="parameter"><code>sync</code></em>. If no context is current for the
+            bound API, the <code class="constant">EGL_SYNC_FLUSH_COMMANDS_BIT</code>
+            bit is ignored.
+        </p>
+        <p>
+            Note: the simple Flush behavior defined by
+            <code class="constant">EGL_SYNC_FLUSH_COMMANDS_BIT</code> will not help
+            when waiting for a fence command issued in a different context's
+            command stream. Applications which block on a fence sync object
+            must take additional steps to ensure that the context from which
+            the associated fence command was issued has flushed that command
+            to the graphics pipeline.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="function">eglClientWaitSync</code> returns
+            <code class="constant">EGL_FALSE</code> on failure.
+        </p>
+        <p>
+            If <em class="parameter"><code>sync</code></em> is not a valid sync object for
+            <em class="parameter"><code>display</code></em>, an
+            <code class="constant">EGL_BAD_PARAMETER</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>display</code></em> does not match the
+            <span class="type">EGLDisplay</span> passed to
+            <code class="function">eglCreateSync</code> when
+            <em class="parameter"><code>sync</code></em> was created, the behaviour is
+            undefined.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglClientWaitSync</code> is available only if the
+            EGL version is 1.5 or greater.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreateSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateSync</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentContext</span></span></a>,
+            <a class="citerefentry" href="eglWaitSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitSync</span></span></a>,
+            <code class="function">glFinish</code>,
+            <code class="function">vgFinish</code>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

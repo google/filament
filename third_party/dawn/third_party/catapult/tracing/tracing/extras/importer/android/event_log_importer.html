@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/importer/simple_line_reader.html">
+<link rel="import" href="/tracing/model/activity.html">
+<link rel="import" href="/tracing/model/model.html">
+
+
+<script>
+/**
+ * @fileoverview Imports android event log data into the trace model.
+ * Android event log data contains information about activities that
+ * are launched/paused, processes that are started, memory usage, etc.
+ *
+ * The current implementation only parses activity events, with the goal of
+ * determining which Activity is running in the foreground for a process.
+ *
+ * This importer assumes the events arrive as a string. The unit tests provide
+ * examples of the trace format.
+ */
+'use strict';
+
+tr.exportTo('tr.e.importer.android', function() {
+  const Importer = tr.importer.Importer;
+
+  const ACTIVITY_STATE = {
+    NONE: 'none',
+    CREATED: 'created',
+    STARTED: 'started',
+    RESUMED: 'resumed',
+    PAUSED: 'paused',
+    STOPPED: 'stopped',
+    DESTROYED: 'destroyed'
+  };
+
+  const activityMap = {};
+
+  /**
+   * Imports android event log data (adb logcat -b events)
+   * @constructor
+   */
+  function EventLogImporter(model, events) {
+    this.model_ = model;
+    this.events_ = events;
+    this.importPriority = 3;
+  }
+
+  // Generic format of event log entries.
+  // Sample event log entry that this matches (split over 2 lines):
+  // 08-11 13:12:31.405   880  2645 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL] // @suppress longLineCheck
+  const eventLogActivityRE = new RegExp(
+      '(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d+)' +
+      '\\s+(\\d+)\\s+(\\d+)\\s+([A-Z])\\s*' +
+      '(am_\\w+)\\s*:(.*)');
+
+  // 08-28 03:58:21.834   888  3177 I am_create_activity: [0,5972200,30,com.nxp.taginfolite/.activities.MainView,android.intent.action.MAIN,NULL,NULL,270532608] // @suppress longLineCheck
+  // Store the name of the created activity only
+  const amCreateRE = new RegExp('\s*\\[.*,.*,.*,(.*),.*,.*,.*,.*\\]');
+
+  // 07-22 12:22:19.504   920  2504 I am_focused_activity: [0,com.android.systemui/.recents.RecentsActivity] // @suppress longLineCheck
+  // Store the name of the focused activity only
+  const amFocusedRE = new RegExp('\s*\\[\\d+,(.*)\\]');
+
+  // 07-21 19:56:12.315   920  2261 I am_proc_start: [0,19942,10062,com.google.android.talk,broadcast,com.google.android.talk/com.google.android.apps.hangouts.realtimechat.RealTimeChatService$AlarmReceiver] // @suppress longLineCheck
+  // We care about proc starts on behalf of activities, and store the activity
+  const amProcStartRE = new RegExp('\s*\\[\\d+,\\d+,\\d+,.*,activity,(.*)\\]');
+
+  // 07-22 12:21:43.490  2893  2893 I am_on_resume_called: [0,com.google.android.launcher.GEL] // @suppress longLineCheck
+  // Store the activity name only
+  const amOnResumeRE = new RegExp('\s*\\[\\d+,(.*)\\]');
+
+  // 07-22 12:22:19.545  2893  2893 I am_on_paused_called: [0,com.google.android.launcher.GEL] // @suppress longLineCheck
+  // Store the activity name only
+  const amOnPauseRE = new RegExp('\s*\\[\\d+,(.*)\\]');
+
+  // 08-28 03:51:54.456   888   907 I am_activity_launch_time: [0,185307115,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL,1174,1174] // @suppress longLineCheck
+  // Store the activity name and launch times
+  const amLaunchTimeRE = new RegExp('\s*\\[\\d+,\\d+,(.*),(\\d+),(\\d+)');
+
+  // 08-28 03:58:15.854   888   902 I am_destroy_activity: [0,203516597,29,com.android.chrome/com.google.android.apps.chrome.Main,finish-idle] // @suppress longLineCheck
+  // Store the activity name only
+  const amDestroyRE = new RegExp('\s*\\[\\d+,\\d+,\\d+,(.*)\\]');
+
+  /**
+   * @return {boolean} True when events is an android event log array.
+   */
+  EventLogImporter.canImport = function(events) {
+    if (!(typeof(events) === 'string' || events instanceof String)) {
+      return false;
+    }
+
+    // Prevent the importer from matching this file in vulcanized traces.
+    if (/^<!DOCTYPE html>/.test(events)) return false;
+
+    return eventLogActivityRE.test(events);
+  };
+
+  EventLogImporter.prototype = {
+    __proto__: Importer.prototype,
+
+    get importerName() {
+      return 'EventLogImporter';
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    /**
+     * @return {string} the full activity name (including package) from
+     * a component
+     */
+    getFullActivityName(component) {
+      const componentSplit = component.split('/');
+      if (componentSplit[1].startsWith('.')) {
+        return componentSplit[0] + componentSplit[1];
+      }
+
+      return componentSplit[1];
+    },
+
+    /**
+     * @return {string} the process name of a component
+     */
+    getProcName(component) {
+      const componentSplit = component.split('/');
+      return componentSplit[0];
+    },
+
+    findOrCreateActivity(activityName) {
+      if (activityName in activityMap) {
+        return activityMap[activityName];
+      }
+      const activity = {
+        state: ACTIVITY_STATE.NONE,
+        name: activityName
+      };
+      activityMap[activityName] = activity;
+      return activity;
+    },
+
+    deleteActivity(activityName) {
+      delete activityMap[activityName];
+    },
+
+    handleCreateActivity(ts, activityName) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.state = ACTIVITY_STATE.CREATED;
+      activity.createdTs = ts;
+    },
+
+    handleFocusActivity(ts, procName, activityName) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.lastFocusedTs = ts;
+    },
+
+    handleProcStartForActivity(ts, activityName) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.procStartTs = ts;
+    },
+
+    handleOnResumeCalled(ts, pid, activityName) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.state = ACTIVITY_STATE.RESUMED;
+      activity.lastResumeTs = ts;
+      // on_resume_called shows the actual PID; use this
+      // to link the activity up with a process later
+      activity.pid = pid;
+    },
+
+    handleOnPauseCalled(ts, activityName) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.state = ACTIVITY_STATE.PAUSED;
+      activity.lastPauseTs = ts;
+      // Create a new AndroidActivity representing the foreground state,
+      // but only if the pause happened within the model bounds
+      if (ts > this.model_.bounds.min && ts < this.model_.bounds.max) {
+        this.addActivityToProcess(activity);
+      }
+    },
+
+    handleLaunchTime(ts, activityName, launchTime) {
+      const activity = this.findOrCreateActivity(activityName);
+      activity.launchTime = launchTime;
+    },
+
+    handleDestroyActivity(ts, activityName) {
+      this.deleteActivity(activityName);
+    },
+
+    addActivityToProcess(activity) {
+      if (activity.pid === undefined) return;
+      const process = this.model_.getOrCreateProcess(activity.pid);
+      // The range of the activity is the time from resume to time
+      // of pause; limit the start time to the beginning of the model
+      const range = tr.b.math.Range.fromExplicitRange(
+          Math.max(this.model_.bounds.min, activity.lastResumeTs),
+          activity.lastPauseTs);
+      const newActivity = new tr.model.Activity(activity.name,
+          'Android Activity', range,
+          {created: activity.createdTs,
+            procstart: activity.procStartTs,
+            lastfocus: activity.lastFocusedTs});
+      process.activities.push(newActivity);
+    },
+
+    parseAmLine_(line) {
+      let match = eventLogActivityRE.exec(line);
+      if (!match) return;
+
+      // Possible activity life-cycles:
+      // 1) Launch from scratch:
+      //   - am_create_activity
+      //   - am_focused_activity
+      //   - am_proc_start
+      //   - am_proc_bound
+      //   - am_restart_activity
+      //   - am_on_resume_called
+      // 2) Re-open existing activity
+      //   - am_focused_activity
+      //   - am_on_resume_called
+
+      // HACK: event log date format is "MM-DD" and doesn't contain the year;
+      // to figure out the year, take the min bound of the model, convert
+      // to real-time and use that as the year.
+      // The Android event log will eventually contain the year once this
+      // CL is in a release:
+      // https://android-review.googlesource.com/#/c/168900
+      const firstRealtimeTs = this.model_.bounds.min -
+          this.model_.realtime_to_monotonic_offset_ms;
+      const year = new Date(firstRealtimeTs).getFullYear();
+      const ts = match[1].substring(0, 5) + '-' + year + ' ' +
+          match[1].substring(5, match[1].length);
+
+      const monotonicTs = Date.parse(ts) +
+          this.model_.realtime_to_monotonic_offset_ms;
+
+      const pid = match[2];
+      const action = match[5];
+      const data = match[6];
+
+      if (action === 'am_create_activity') {
+        match = amCreateRE.exec(data);
+        if (match && match.length >= 2) {
+          this.handleCreateActivity(monotonicTs,
+              this.getFullActivityName(match[1]));
+        }
+      } else if (action === 'am_focused_activity') {
+        match = amFocusedRE.exec(data);
+        if (match && match.length >= 2) {
+          this.handleFocusActivity(monotonicTs,
+              this.getProcName(match[1]), this.getFullActivityName(match[1]));
+        }
+      } else if (action === 'am_proc_start') {
+        match = amProcStartRE.exec(data);
+        if (match && match.length >= 2) {
+          this.handleProcStartForActivity(monotonicTs,
+              this.getFullActivityName(match[1]));
+        }
+      } else if (action === 'am_on_resume_called') {
+        match = amOnResumeRE.exec(data);
+        if (match && match.length >= 2) {
+          this.handleOnResumeCalled(monotonicTs, pid, match[1]);
+        }
+      } else if (action === 'am_on_paused_called') {
+        match = amOnPauseRE.exec(data);
+        if (match && match.length >= 2) {
+          this.handleOnPauseCalled(monotonicTs, match[1]);
+        }
+      } else if (action === 'am_activity_launch_time') {
+        match = amLaunchTimeRE.exec(data);
+        this.handleLaunchTime(monotonicTs,
+            this.getFullActivityName(match[1]), match[2]);
+      } else if (action === 'am_destroy_activity') {
+        match = amDestroyRE.exec(data);
+        if (match && match.length === 2) {
+          this.handleDestroyActivity(monotonicTs,
+              this.getFullActivityName(match[1]));
+        }
+      }
+    },
+
+    importEvents() {
+      // Check if we have a mapping from real-time to CLOCK_MONOTONIC
+      if (isNaN(this.model_.realtime_to_monotonic_offset_ms)) {
+        this.model_.importWarning({
+          type: 'eveng_log_clock_sync',
+          message: 'Need a trace_event_clock_sync to map realtime to import.'
+        });
+        return;
+      }
+      // Since the event log typically spans a much larger timeframe
+      // than the ftrace data, we want to calculate the bounds of the existing
+      // model, and dump all event log data outside of those bounds
+      this.model_.updateBounds();
+
+      const lines = this.events_.split('\n');
+      lines.forEach(this.parseAmLine_, this);
+
+      // Iterate over all created activities that are not destroyed yet
+      for (const activityName in activityMap) {
+        const activity = activityMap[activityName];
+        // If we're still in the foreground, store the activity anyway
+        if (activity.state === ACTIVITY_STATE.RESUMED) {
+          // Set the pause timestamp to the end of the model bounds
+          activity.lastPauseTs = this.model_.bounds.max;
+          this.addActivityToProcess(activity);
+        }
+      }
+    }
+  };
+
+  Importer.register(EventLogImporter);
+
+  return {
+    EventLogImporter,
+  };
+});
+</script>

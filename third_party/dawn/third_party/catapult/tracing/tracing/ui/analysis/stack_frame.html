@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-a-stack-frame'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-stack-frame',
+
+  ready() {
+    this.stackFrame_ = undefined;
+    this.$.table.tableColumns = [];
+    this.$.table.showHeader = true;
+  },
+
+  get stackFrame() {
+    return this.stackFrame_;
+  },
+
+  set stackFrame(stackFrame) {
+    const table = this.$.table;
+
+    this.stackFrame_ = stackFrame;
+    if (stackFrame === undefined) {
+      table.tableColumns = [];
+      table.tableRows = [];
+      table.rebuild();
+      return;
+    }
+
+    let hasName = false;
+    let hasTitle = false;
+
+    table.tableRows = stackFrame.stackTrace;
+    table.tableRows.forEach(function(row) {
+      hasName |= row.name !== undefined;
+      hasTitle |= row.title !== undefined;
+    });
+
+    const cols = [];
+    if (hasName) {
+      cols.push({
+        title: 'Name',
+        value(row) { return row.name; }
+      });
+    }
+
+    if (hasTitle) {
+      cols.push({
+        title: 'Title',
+        value(row) { return row.title; }
+      });
+    }
+
+    table.tableColumns = cols;
+    table.rebuild();
+  },
+
+  tableForTesting() {
+    return this.$.table;
+  }
+});
+</script>

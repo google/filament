@@ -1,0 +1,15 @@
+Name: Google App Engine Pipeline
+Short Name: pipeline
+URL: https://github.com/GoogleCloudPlatform/appengine-pipelines
+Version: 1.9.21.1
+License: Apache
+Security Critical: no
+Shipped: yes
+
+Description:
+The Google App Engine Pipeline API connects together workflows.
+A primary use-case of the API is connecting together various
+App Engine MapReduces into a computational pipeline.
+
+Local Modifications:
+Stripped everything except pipeline/.

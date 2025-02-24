@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Counter = tr.model.Counter;
+  const Viewport = tr.ui.TimelineViewport;
+  const CounterTrack = tr.ui.tracks.CounterTrack;
+
+  const runTest = function(timestamps, samples, testFn) {
+    const testEl = document.createElement('div');
+
+    const ctr = new Counter(undefined, 'foo', '', 'foo');
+    const n = samples.length;
+
+    for (let i = 0; i < n; ++i) {
+      ctr.addSeries(new tr.model.CounterSeries('value' + i,
+          ColorScheme.getColorIdForGeneralPurposeString('value' + i)));
+    }
+
+    for (let i = 0; i < samples.length; ++i) {
+      for (let k = 0; k < timestamps.length; ++k) {
+        ctr.series[i].addCounterSample(timestamps[k], samples[i][k]);
+      }
+    }
+
+    ctr.updateBounds();
+
+    const viewport = new Viewport(testEl);
+
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(testEl).appendChild(drawingContainer);
+
+    const track = new CounterTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    this.addHTMLOutput(testEl);
+
+    // Force the container to update sizes so the test can use coordinates that
+    // make sense. This has to be after the adding of the track as we need to
+    // use the track header to figure out our positioning.
+    drawingContainer.updateCanvasSizeIfNeeded_();
+
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    track.heading = ctr.name;
+    track.counter = ctr;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 10, track.clientWidth * pixelRatio);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    testFn(ctr, drawingContainer, track);
+  };
+
+  test('instantiate', function() {
+    const ctr = new Counter(undefined, 'testBasicCounter', '',
+        'testBasicCounter');
+    ctr.addSeries(new tr.model.CounterSeries('value1',
+        ColorScheme.getColorIdForGeneralPurposeString(
+            'testBasicCounter.value1')));
+    ctr.addSeries(new tr.model.CounterSeries('value2',
+        ColorScheme.getColorIdForGeneralPurposeString(
+            'testBasicCounter.value2')));
+
+    const timestamps = [0, 1, 2, 3, 4, 5, 6, 7];
+    const samples = [[0, 3, 1, 2, 3, 1, 3, 3.1],
+      [5, 3, 1, 1.1, 0, 7, 0, 0.5]];
+    for (let i = 0; i < samples.length; ++i) {
+      for (let k = 0; k < timestamps.length; ++k) {
+        ctr.series[i].addCounterSample(timestamps[k], samples[i][k]);
+      }
+    }
+
+    ctr.updateBounds();
+
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = new CounterTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    track.heading = ctr.name;
+    track.counter = ctr;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 7.7, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+  test('basicCounterXPointPicking', function() {
+    const timestamps = [0, 1, 2, 3, 4, 5, 6, 7];
+    const samples = [[0, 3, 1, 2, 3, 1, 3, 3.1],
+      [5, 3, 1, 1.1, 0, 7, 0, 0.5]];
+
+    runTest.call(this, timestamps, samples, function(ctr, container, track) {
+      const clientRect = track.getBoundingClientRect();
+      const y75 = clientRect.top + (0.75 * clientRect.height);
+
+      // In bounds.
+      let sel = new tr.model.EventSet();
+      let x = 0.15 * clientRect.width;
+      track.addIntersectingEventsInRangeToSelection(
+          x, x + 1, y75, y75 + 1, sel);
+
+      let nextSeriesIndex = 1;
+      assert.strictEqual(sel.length, 2);
+      for (const event of sel) {
+        assert.strictEqual(event.series.counter, ctr);
+        assert.strictEqual(event.getSampleIndex(), 1);
+        assert.strictEqual(event.series.seriesIndex, nextSeriesIndex--);
+      }
+
+      // Outside bounds.
+      sel = new tr.model.EventSet();
+      x = -0.5 * clientRect.width;
+      track.addIntersectingEventsInRangeToSelection(
+          x, x + 1, y75, y75 + 1, sel);
+      assert.strictEqual(sel.length, 0);
+
+      sel = new tr.model.EventSet();
+      x = 0.8 * clientRect.width;
+      track.addIntersectingEventsInRangeToSelection(
+          x, x + 1, y75, y75 + 1, sel);
+      assert.strictEqual(sel.length, 0);
+    });
+  });
+
+  test('counterTrackAddClosestEventToSelection', function() {
+    const timestamps = [0, 1, 2, 3, 4, 5, 6, 7];
+    const samples = [[0, 4, 1, 2, 3, 1, 3, 3.1],
+      [5, 3, 1, 1.1, 0, 7, 0, 0.5]];
+
+    runTest.call(this, timestamps, samples, function(ctr, container, track) {
+      // Before with not range.
+      let sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(-1, 0, 0, 0, sel);
+      assert.strictEqual(sel.length, 0);
+
+      // Before with negative range.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(-1, -10, 0, 0, sel);
+      assert.strictEqual(sel.length, 0);
+
+      // Before first sample.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(-1, 1, 0, 0, sel);
+      assert.strictEqual(sel.length, 2);
+      for (const event of sel) {
+        assert.strictEqual(event.getSampleIndex(), 0);
+      }
+
+      // Between and closer to sample before.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(1.3, 1, 0, 0, sel);
+      assert.strictEqual(sel.length, 2);
+      for (const event of sel) {
+        assert.strictEqual(event.getSampleIndex(), 1);
+      }
+
+      // Between samples with bad range.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(1.45, 0.25, 0, 0, sel);
+      assert.strictEqual(sel.length, 0);
+
+      // Between and closer to next sample.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(4.7, 6, 0, 0, sel);
+      assert.strictEqual(sel.length, 2);
+      for (const event of sel) {
+        assert.strictEqual(event.getSampleIndex(), 5);
+      }
+
+      // After last sample with good range.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(8.5, 2, 0, 0, sel);
+      assert.strictEqual(sel.length, 2);
+      for (const event of sel) {
+        assert.strictEqual(event.getSampleIndex(), 7);
+      }
+
+      // After last sample with bad range.
+      sel = new tr.model.EventSet();
+      track.addClosestEventToSelection(10, 1, 0, 0, sel);
+      assert.strictEqual(sel.length, 0);
+    });
+  });
+});
+</script>
+

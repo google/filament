@@ -1,0 +1,207 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>paper-radio-button basic tests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+  <script src="../../test-fixture/test-fixture-mocha.js"></script>
+  <script src="../../iron-test-helpers/mock-interactions.js"></script>
+
+  <link rel="import" href="../../test-fixture/test-fixture.html">
+  <link rel="import" href="../paper-radio-button.html">
+
+  <style is="custom-style">
+    paper-radio-button.tiny {
+      --paper-radio-button-size: 5px;
+    }
+    paper-radio-button.medium {
+      --paper-radio-button-size: 37px;
+    }
+    paper-radio-button.giant {
+      --paper-radio-button-size: 50px;
+    }
+    paper-radio-button.enormous {
+      --paper-radio-button-size: 71px;
+    }
+
+    paper-radio-button.custom-ink-size {
+      --paper-radio-button-size: 25px;
+      --paper-radio-button-ink-size: 30px;
+    }
+  </style>
+</head>
+<body>
+  <test-fixture id="NoLabel">
+    <template>
+      <paper-radio-button id="radio1"></paper-radio-button>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="WithLabel">
+    <template>
+      <paper-radio-button id="radio2">Batman</paper-radio-button>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="AriaLabel">
+    <template>
+      <paper-radio-button aria-label="Batman">Robin</paper-radio-button>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="WithDifferentSizes">
+    <template>
+      <paper-radio-button class="tiny"></paper-radio-button>
+      <paper-radio-button></paper-radio-button>
+      <paper-radio-button class="medium"></paper-radio-button>
+      <paper-radio-button class="giant"></paper-radio-button>
+      <paper-radio-button class="enormous"></paper-radio-button>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="CustomInkSize">
+    <template>
+      <paper-radio-button class="custom-ink-size"></paper-radio-button>
+    </template>
+  </test-fixture>
+
+  <script>
+    suite('defaults', function() {
+      var r1;
+
+      setup(function() {
+        r1 = fixture('NoLabel');
+      });
+
+      test('check button via click', function(done) {
+        r1.addEventListener('click', function() {
+          assert.isTrue(r1.getAttribute('aria-checked') == 'true');
+          assert.isTrue(r1.checked);
+          done();
+        });
+        MockInteractions.tap(r1);
+      });
+
+      test('toggle button via click', function(done) {
+        r1.checked = true;
+        r1.addEventListener('click', function() {
+          assert.isFalse(r1.getAttribute('aria-checked') == 'true');
+          assert.isFalse(r1.checked);
+          done();
+        });
+        MockInteractions.tap(r1);
+      });
+
+      test('disabled button cannot be clicked', function(done) {
+        r1.disabled = true;
+        r1.checked = true;
+        MockInteractions.tap(r1);
+
+        setTimeout(function() {
+          assert.isTrue(r1.getAttribute('aria-checked') == 'true');
+          assert.isTrue(r1.checked);
+          done();
+        }, 1);
+      });
+
+      test('can be styled with different sizes', function() {
+        var r2 = fixture('WithDifferentSizes');
+        var small = r2[0].getBoundingClientRect();
+        var medium = r2[1].getBoundingClientRect();
+        var large = r2[2].getBoundingClientRect();
+
+        console.log(small.width, medium.width, large.width);
+
+        assert.isTrue(4 < small.height);
+        assert.isTrue(small.height < medium.height);
+        assert.isTrue(medium.height < large.height);
+        assert.isTrue(large.height < 72);
+
+        assert.isTrue(4 < small.width);
+        assert.isTrue(small.width < medium.width);
+        assert.isTrue(medium.width < large.width);
+        assert.isTrue(large.width < 72);
+      });
+    });
+
+    suite('ink size', function() {
+      var radioButtons;
+
+      setup(function() {
+        radioButtons = fixture('WithDifferentSizes');
+      });
+
+      test('`--paper-radio-button-ink-size` sets the ink size', function() {
+        var radioButton = fixture('CustomInkSize');
+        assert.equal(radioButton.getComputedStyleValue('--calculated-paper-radio-button-size').trim(), '25px');
+        assert.equal(radioButton.getComputedStyleValue('--calculated-paper-radio-button-ink-size').trim(), '30px');
+      });
+
+      test('ink sizes are near (3 * radio button size) by default', function() {
+        radioButtons.forEach(function(radioButton) {
+          var size = parseFloat(radioButton.getComputedStyleValue('--calculated-paper-radio-button-size'), 10);
+          var inkSize = parseFloat(radioButton.getComputedStyleValue('--calculated-paper-radio-button-ink-size'), 10);
+          assert.approximately(inkSize / size, 3, 0.1);
+        });
+      });
+
+      test('ink sizes are integers', function() {
+        radioButtons.forEach(function(radioButton) {
+          var unparsedInkSize = radioButton.getComputedStyleValue('--calculated-paper-radio-button-ink-size');
+          var floatInkSize = parseFloat(unparsedInkSize, 10);
+          var intInkSize = parseInt(unparsedInkSize, 10);
+          assert.equal(floatInkSize, intInkSize);
+        });
+      });
+
+      test('ink size parity matches radio button size parity (centers are aligned)', function() {
+        radioButtons.forEach(function(radioButton) {
+          var size = parseInt(radioButton.getComputedStyleValue('--calculated-paper-radio-button-size'), 10);
+          var inkSize = parseInt(radioButton.getComputedStyleValue('--calculated-paper-radio-button-ink-size'), 10);
+          assert.equal(size % 2, inkSize % 2);
+        });
+      });
+    });
+
+    suite('a11y', function() {
+      var r1;
+      var r2;
+
+      setup(function() {
+        r1 = fixture('NoLabel');
+        r2 = fixture('WithLabel');
+      });
+
+      test('has aria role "radio"', function() {
+        assert.isTrue(r1.getAttribute('role') == 'radio');
+        assert.isTrue(r2.getAttribute('role') == 'radio');
+      });
+
+      test('button with no label has no aria label', function() {
+        assert.isTrue(!r1.getAttribute('aria-label'));
+      });
+
+      test('button respects the user set aria-label', function() {
+        var c = fixture('AriaLabel');
+        assert.isTrue(c.getAttribute('aria-label') == "Batman");
+      });
+
+      a11ySuite('NoLabel');
+      a11ySuite('WithLabel');
+      a11ySuite('AriaLabel');
+    });
+  </script>
+</body>
+</html>

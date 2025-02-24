@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/ui/tracks/process_summary_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ProcessSummaryTrack = tr.ui.tracks.ProcessSummaryTrack;
+
+  test('buildRectSimple', function() {
+    let process;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      process = model.getOrCreateProcess(1);
+      // XXXX
+      //    XXXX
+      const thread1 = process.getOrCreateThread(1);
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 1, duration: 4}));
+      const thread2 = process.getOrCreateThread(2);
+      thread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 4, duration: 4}));
+    });
+
+    const rects = ProcessSummaryTrack.buildRectsFromProcess(process);
+
+    assert.strictEqual(rects.length, 1);
+    const rect = rects[0];
+    assert.closeTo(rect.start, 1, 1e-5);
+    assert.closeTo(rect.end, 8, 1e-5);
+  });
+
+  test('buildRectComplex', function() {
+    let process;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      process = model.getOrCreateProcess(1);
+      // XXXX    X X XX
+      //    XXXX XXX    X
+      const thread1 = process.getOrCreateThread(1);
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 1, duration: 4}));
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 9, duration: 1}));
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 11, duration: 1}));
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 13, duration: 2}));
+      const thread2 = process.getOrCreateThread(2);
+      thread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 4, duration: 4}));
+      thread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 9, duration: 3}));
+      thread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          {start: 16, duration: 1}));
+    });
+
+    const rects = ProcessSummaryTrack.buildRectsFromProcess(process);
+
+    assert.strictEqual(4, rects.length);
+    assert.closeTo(rects[0].start, 1, 1e-5);
+    assert.closeTo(rects[0].end, 8, 1e-5);
+    assert.closeTo(rects[1].start, 9, 1e-5);
+    assert.closeTo(rects[1].end, 12, 1e-5);
+    assert.closeTo(rects[2].start, 13, 1e-5);
+    assert.closeTo(rects[2].end, 15, 1e-5);
+    assert.closeTo(rects[3].start, 16, 1e-5);
+    assert.closeTo(rects[3].end, 17, 1e-5);
+  });
+
+  test('buildRectImportantSlice', function() {
+    let process;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      //    [    unimportant    ]
+      //         [important]
+      const a = tr.c.TestUtils.newSliceEx(
+          {title: 'unimportant', start: 4, duration: 21});
+      const b = tr.c.TestUtils.newSliceEx(
+          {title: 'important', start: 9, duration: 11});
+      b.important = true;
+      process = model.getOrCreateProcess(1);
+      process.getOrCreateThread(1).sliceGroup.pushSlices([a, b]);
+
+      model.importantSlice = b;
+    });
+
+    const rects = ProcessSummaryTrack.buildRectsFromProcess(process);
+
+    assert.strictEqual(3, rects.length);
+    assert.closeTo(rects[0].start, 4, 1e-5);
+    assert.closeTo(rects[0].end, 9, 1e-5);
+    assert.closeTo(rects[1].start, 9, 1e-5);
+    assert.closeTo(rects[1].end, 20, 1e-5);
+    assert.closeTo(rects[2].start, 20, 1e-5);
+    assert.closeTo(rects[2].end, 25, 1e-5);
+
+    // middle rect represents important slice, so colorId & title are preserved
+    assert.strictEqual(rects[1].title, model.importantSlice.title);
+    assert.strictEqual(rects[1].colorId, model.importantSlice.colorId);
+  });
+});
+</script>
+

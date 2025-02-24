@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const constants = {};
+  constants.ACTIVE_TREE = 0;
+  constants.PENDING_TREE = 1;
+
+  constants.HIGH_PRIORITY_BIN = 0;
+  constants.LOW_PRIORITY_BIN = 1;
+
+  constants.SEND_BEGIN_FRAME_EVENT =
+    'ProxyImpl::ScheduledActionSendBeginMainFrame';
+  constants.BEGIN_MAIN_FRAME_EVENT = 'ProxyMain::BeginMainFrame';
+
+  return {
+    constants
+  };
+});
+</script>

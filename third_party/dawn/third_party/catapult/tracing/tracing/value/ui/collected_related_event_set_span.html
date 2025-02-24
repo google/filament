@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/ui/diagnostic_span_behavior.html">
+
+<dom-module id="tr-v-ui-collected-related-event-set-span">
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-collected-related-event-set-span',
+    behaviors: [tr.v.ui.DIAGNOSTIC_SPAN_BEHAVIOR],
+
+    updateContents_() {
+      Polymer.dom(this).textContent = '';
+      for (const [canonicalUrl, events] of this.diagnostic) {
+        const link = document.createElement('a');
+        if (events.length === 1) {
+          const event = tr.b.getOnlyElement(events);
+          link.textContent = event.title + ' ' +
+            tr.b.Unit.byName.timeDurationInMs.format(event.duration);
+        } else {
+          link.textContent = events.length + ' events';
+        }
+        link.href = canonicalUrl;
+        Polymer.dom(this).appendChild(link);
+        Polymer.dom(this).appendChild(document.createElement('br'));
+      }
+    }
+  });
+
+  return {};
+});
+</script>

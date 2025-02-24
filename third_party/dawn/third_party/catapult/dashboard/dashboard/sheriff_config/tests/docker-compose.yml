@@ -1,0 +1,26 @@
+version: '2'
+services:
+  sheriff-config-test:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile
+      args:
+        emulator_host: datastore
+        emulator_port: 8888
+    depends_on:
+      - datastore-emulator
+    networks:
+      - local
+  datastore-emulator:
+    build:
+      context: datastore-emulator
+      args:
+        emulator_host: datastore
+        emulator_port: 8888
+        emulator_project: chromeperf
+    networks:
+      local:
+        aliases:
+          - datastore
+networks:
+  local:

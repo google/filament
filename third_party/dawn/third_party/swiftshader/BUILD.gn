@@ -1,0 +1,91 @@
+# Copyright 2016 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("src/Reactor/reactor.gni")
+
+config("swiftshader_config") {
+  cflags = []
+  defines = []
+  asmflags = []
+
+  if (is_clang) {
+    cflags += [ "-Wno-shadow" ]
+  }
+
+  if (is_debug) {
+    if (swiftshader_startup_dialog) {
+      defines += [ "DEBUGGER_WAIT_DIALOG" ]
+    }
+  }
+  if (is_win) {
+    # Disable MSVC warnings about std::aligned_storage being broken before
+    # VS 2017 15.8
+    defines += [ "_ENABLE_EXTENDED_ALIGNED_STORAGE" ]
+
+    # Diable some MSVC warnings.
+    if (!is_clang) {
+      cflags += [
+        "/wd4065",  # switch statement contains 'default' but no 'case' labels
+        "/wd4309",  # Truncation of constant value. See PixelRoutine.cpp casts
+                    # of signed shorts.
+      ]
+    }
+  } else if (!is_debug) {
+    cflags += [ "-Os" ]
+  }
+
+  if (build_with_chromium) {
+    if (is_clang) {
+      if (current_cpu == "arm64") {
+        import("//build/config/arm.gni")
+
+        if (arm_control_flow_integrity == "standard") {
+          cflags += [ "-mbranch-protection=standard" ]
+          asmflags += [ "-mbranch-protection=standard" ]
+        } else if (arm_control_flow_integrity == "pac") {
+          cflags += [ "-mbranch-protection=pac-ret" ]
+          asmflags += [ "-mbranch-protection=pac-ret" ]
+        } else {
+          assert(arm_control_flow_integrity == "none",
+                 "Invalid branch protection option!")
+        }
+      }
+    }
+  }
+}
+
+group("swiftshader") {
+  data_deps = [
+    "src/Vulkan:icd_file",
+    "src/Vulkan:swiftshader_libvulkan",
+  ]
+}
+
+if (build_with_chromium) {
+  group("swiftshader_tests") {
+    testonly = true
+
+    data_deps = [ "tests/SystemUnitTests:swiftshader_system_unittests" ]
+
+    if (supports_llvm) {
+      data_deps +=
+          [ "tests/ReactorUnitTests:swiftshader_reactor_llvm_unittests" ]
+    }
+
+    if (supports_subzero) {
+      data_deps +=
+          [ "tests/ReactorUnitTests:swiftshader_reactor_subzero_unittests" ]
+    }
+  }
+}

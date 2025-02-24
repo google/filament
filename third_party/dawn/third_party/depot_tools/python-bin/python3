@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+DEPOT_TOOLS=$(dirname "$0")/..
+
+if [ "$OSTYPE" = "msys" ]
+then
+  PYTHON3_BIN_DIR="$DEPOT_TOOLS/$(sed -e 's-\\-/-g' $DEPOT_TOOLS/python3_bin_reldir.txt)"
+else
+  PYTHON3_BIN_DIR="$DEPOT_TOOLS/$(<"$DEPOT_TOOLS/python3_bin_reldir.txt")"
+fi
+PATH="$PYTHON3_BIN_DIR":"$PYTHON3_BIN_DIR/Scripts":"$PATH"
+"$PYTHON3_BIN_DIR/python3" "$@"

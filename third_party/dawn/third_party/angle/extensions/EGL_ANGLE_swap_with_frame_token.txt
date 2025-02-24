@@ -1,0 +1,83 @@
+Name
+
+    ANGLE_swap_with_frame_token
+
+Name Strings
+
+    EGL_ANGLE_swap_with_frame_token
+
+Contributors
+
+    Jamie Madill
+
+Contacts
+
+    Jamie Madill, Google Inc. (jmadill 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, November 3, 2019
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension allows an application that uses a Google Games
+    Platform surface to associate a Google Games Platform frame token
+    with an eglSwapBuffers operation.
+
+    It is based on the Vulkan extension VK_GGP_frame_token.
+
+New Types
+
+    This is a 64-bit unsigned type that represents a GGP frame token.
+
+    typedef khronos_uint64_t EGLFrameTokenANGLE;
+
+New Procedures and Functions
+
+    EGLBoolean eglSwapBuffersWithFrameTokenANGLE(
+        EGLDisplay dpy,
+        EGLSurface surface,
+        EGLFrameTokenANGLE frametoken);
+
+New Tokens
+
+    None
+
+Additions to the EGL 1.5 Specification
+
+    Add the following to section 3.10.1 "Posting to a Window":
+
+    A Google Games Platform frame token can be specified when posting a color
+    buffer to a window by calling
+
+        EGLBoolean eglSwapBuffersWithFrameTokenANGLE(
+            EGLDisplay dpy,
+            EGLSurface surface,
+            EGLFrameTokenANGLE frametoken);
+
+    The behaviour of eglSwapBuffersWithFrameTokenANGLE is identical to that
+    of eglSwapBuffers except that the behaviour is undefined when <frametoken>
+    is not a valid GgpFrameToken.
+
+Issues
+
+    None yet.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Nov 3, 2019    jmadill    Initial version

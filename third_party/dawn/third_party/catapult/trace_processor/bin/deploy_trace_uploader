@@ -1,0 +1,49 @@
+#!/usr/bin/python
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import os
+import subprocess
+import sys
+
+
+def _AddToPathIfNeeded(path):
+  if path not in sys.path:
+    sys.path.insert(0, path)
+
+
+def Main():
+  catapult_path = os.path.abspath(os.path.join(
+      os.path.dirname(__file__), os.path.pardir, os.path.pardir))
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--appid', default='performance-insights')
+  parser.add_argument('--version', default='pi-test')
+  args = parser.parse_args()
+
+  _AddToPathIfNeeded(
+      os.path.join(catapult_path, 'trace_processor'))
+  from trace_uploader.endpoints import cloud_mapper
+  paths = cloud_mapper.PathsForDeployment()
+
+  _AddToPathIfNeeded(catapult_path)
+  from catapult_build import temp_deployment_dir
+
+  file_sets = [
+      ['app.yaml', 'cron.yaml', 'dispatch.yaml', 'index.yaml']
+  ]
+  for cur_set in file_sets:
+    with temp_deployment_dir.TempDeploymentDir(
+        paths, use_symlinks=False) as temp_dir:
+      cmd = ['gcloud', 'preview', 'app', 'deploy']
+      cmd += cur_set
+      cmd += [
+          '--project=%s' % args.appid,
+          '--version=%s' % args.version,
+          '--force', '--quiet', '--no-promote', '--docker-build', 'local']
+      subprocess.call(cmd, cwd=temp_dir)
+
+if __name__ == '__main__':
+  Main()
+

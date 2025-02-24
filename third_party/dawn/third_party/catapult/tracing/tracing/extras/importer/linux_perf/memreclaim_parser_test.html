@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('memreclaimImport', function() {
+    const lines = [
+      ' surfaceflinger-1155  ( 1155) [001] ...1 12839.528756: mm_vmscan_direct_reclaim_begin: order=0 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|GFP_ZERO|0x2', // @suppress longLineCheck
+      ' surfaceflinger-1155  ( 1155) [001] ...1 12839.531950: mm_vmscan_direct_reclaim_end: nr_reclaimed=66', // @suppress longLineCheck
+      ' kswapd0-33    (   33) [001] ...1 12838.491407: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      ' kswapd0-33    (   33) [001] ...1 12838.529770: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      ' kswapd0-33    (   33) [001] ...1 12840.545737: mm_vmscan_kswapd_sleep: nid=0'// @suppress longLineCheck
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    assert.strictEqual(
+        m.processes['1155'].threads['1155'].sliceGroup.length, 1);
+    assert.strictEqual(m.processes['33'].threads['33'].sliceGroup.length, 1);
+  });
+
+  test('memreclaimDirectReclaim', function() {
+    const lines = [
+      'RenderThread-9844 ( 9786) [001] ...1  1734.106078: mm_vmscan_direct_reclaim_begin: order=5 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107619: mm_vmscan_direct_reclaim_end: nr_reclaimed=72', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107738: mm_vmscan_direct_reclaim_begin: order=4 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107844: mm_vmscan_direct_reclaim_end: nr_reclaimed=35', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107891: mm_vmscan_direct_reclaim_begin: order=4 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107945: mm_vmscan_direct_reclaim_end: nr_reclaimed=35', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.107990: mm_vmscan_direct_reclaim_begin: order=4 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'RenderThread-9844 ( 9786) [001] ...1  1734.108062: mm_vmscan_direct_reclaim_end: nr_reclaimed=34', // @suppress longLineCheck
+      'Binder_8-1735  ( 1022) [001] ...1  1735.472240: mm_vmscan_direct_reclaim_begin: order=3 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'Binder_8-1735  ( 1022) [001] ...1  1735.472849: mm_vmscan_direct_reclaim_end: nr_reclaimed=47', // @suppress longLineCheck
+      'Binder_8-1735  ( 1022) [001] ...1  1735.473002: mm_vmscan_direct_reclaim_begin: order=3 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|0x2', // @suppress longLineCheck
+      'Binder_8-1735  ( 1022) [001] ...1  1735.474859: mm_vmscan_direct_reclaim_end: nr_reclaimed=48', // @suppress longLineCheck
+      'touchFusion-88    (   88) [000] ...1  1736.510656: mm_vmscan_direct_reclaim_begin: order=2 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|GFP_COMP|GFP_NOMEMALLOC|GFP_KMEMCG', // @suppress longLineCheck
+      'touchFusion-88    (   88) [000] ...1  1736.517616: mm_vmscan_direct_reclaim_end: nr_reclaimed=34', // @suppress longLineCheck
+      'touchFusion-88    (   88) [000] ...1  1736.527061: mm_vmscan_direct_reclaim_begin: order=2 may_writepage=1 gfp_flags=GFP_KERNEL|GFP_NOWARN|GFP_COMP|GFP_NOMEMALLOC|GFP_KMEMCG', // @suppress longLineCheck
+      'touchFusion-88    (   88) [000] ...1  1736.530857: mm_vmscan_direct_reclaim_end: nr_reclaimed=39'// @suppress longLineCheck
+    ];
+
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+
+    assert.strictEqual(threads.length, 3);
+
+    const Binder8 = threads[0];
+    const touchFusion = threads[1];
+    const RenderThread = threads[2];
+
+    /* make sure there are the expected amount of slices per thread */
+    assert.strictEqual(Binder8.sliceGroup.length, 2);
+    assert.strictEqual(touchFusion.sliceGroup.length, 2);
+    assert.strictEqual(RenderThread.sliceGroup.length, 4);
+
+    /* make sure the slices have information to display to the
+     * user when selected
+     */
+
+    const iterateMe = [Binder8, touchFusion, RenderThread];
+    iterateMe.forEach(function(thread) {
+      for (let i = 0; i < thread.sliceGroup.length; i++) {
+        assert.isDefined(thread.sliceGroup.slices[i].args);
+      }
+    });
+  });
+
+  test('memreclaimKswapd', function() {
+    const lines = [
+      'kswapd0-48    (   48) [001] ...1  1734.210437: mm_vmscan_kswapd_wake: nid=0 order=5', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.227291: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.237585: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.258698: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.269642: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.319484: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.344839: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.428425: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.429593: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.599419: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1734.696606: mm_vmscan_kswapd_sleep: nid=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1735.465745: mm_vmscan_kswapd_wake: nid=0 order=3', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1735.563917: mm_vmscan_kswapd_wake: nid=0 order=5', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1735.570555: mm_vmscan_kswapd_wake: nid=0 order=4', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1735.666658: mm_vmscan_kswapd_sleep: nid=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1736.508069: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1736.529293: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1736.696725: mm_vmscan_kswapd_sleep: nid=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1737.945426: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1737.988642: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.057237: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.144630: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.207546: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.221963: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.316889: mm_vmscan_kswapd_sleep: nid=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.712804: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.751103: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.773175: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.785068: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.789545: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1738.873675: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1738.899117: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1738.939214: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1738.990366: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1739.028269: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1739.036765: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1739.077631: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.094731: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.096757: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.160536: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.256638: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.264972: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1739.360137: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.368759: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.387082: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.455657: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.489058: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.507561: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.570247: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [001] ...1  1739.582975: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.678148: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.762025: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.799245: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.821950: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.894130: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1739.919775: lowmemory_kill: d.process.media (10517), page cache 311740kB (limit 322560kB), free -1456Kb', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.026933: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.126608: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.150819: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.156101: mm_vmscan_kswapd_wake: nid=0 order=1', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.246626: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.357055: mm_vmscan_kswapd_sleep: nid=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.762705: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.772367: mm_vmscan_kswapd_wake: nid=0 order=2', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.783509: mm_vmscan_kswapd_wake: nid=0 order=0', // @suppress longLineCheck
+      'kswapd0-48    (   48) [000] ...1  1740.876601: mm_vmscan_kswapd_sleep: nid=0'// @suppress longLineCheck
+    ];
+
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+
+    assert.strictEqual(thread.sliceGroup.length, 7);
+
+    thread.sliceGroup.slices.forEach(function(slice) {
+      assert.strictEqual(slice.args !== undefined, true);
+    });
+  });
+});
+</script>

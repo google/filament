@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SVG</title>
+  <script>
+    window.ShadyDOM = {force: true};
+    window.ShadyCSS = {shimshadow: true};
+  </script>
+  <script>
+  WCT = {waitFor: function (cb) {HTMLImports.whenReady(cb)}}
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/svg-in-shadow.js"></script>
+</head>
+<body>
+  <template id="svg-in-shadow">
+    <style>
+      :host {
+        display: inline-block;
+        background-color: #ccc;
+      }
+
+      .test-class {
+        border: 3px solid blue;
+      }
+
+      circle {
+        fill: blue;
+      }
+    </style>
+    <svg
+      xmlns="http://www.w3.org/2000/svg" version="1.1"
+      width="100px" height="100px" viewBox="0 0 100 100"
+      class="test-class"
+    ></svg>
+  </template>
+
+  <script>
+    suite('SVG', function() {
+      var STYLE_SCOPE_CLASS = 'style-scope';
+
+      suiteSetup(function() {
+        window.registerSVGElement();
+      });
+
+      function flush() {
+        if (window.ShadyDOM) {
+          window.ShadyDOM.flush();
+        }
+        window.ShadyCSS.ScopingShim.flush();
+      }
+
+      test('SVG elements within a style scope should have style scoping classes.', function() {
+        var elementWithSVG = document.createElement('svg-in-shadow');
+        // Force upgrade.
+        document.body.appendChild(elementWithSVG);
+        flush();
+        var svg = elementWithSVG.svg;
+        // The svg element should have a style scope.
+        assert(svg.getAttribute('class').indexOf(STYLE_SCOPE_CLASS) > -1);
+        var circle = elementWithSVG.addCircle();
+        flush();
+        // The circle should also have a style scope.
+        assert(circle.getAttribute('class').indexOf(STYLE_SCOPE_CLASS) > -1);
+        // Clean up.
+        document.body.removeChild(elementWithSVG);
+      });
+
+      test('SVG elements removed from style scopes should have scoping classes removed.', function() {
+        var elementWithSVG = document.createElement('svg-in-shadow');
+        // Force upgrade.
+        document.body.appendChild(elementWithSVG);
+        flush();
+        // Get references to test elements.
+        var svg = elementWithSVG.svg;
+        var circle = elementWithSVG.addCircle();
+        flush();
+        // Move the SVG element out of the shadow root.
+        svg.parentNode.removeChild(svg);
+        document.body.appendChild(svg);
+        flush();
+        // The svg element should keep the class that was not involved in style scoping.
+        assert.equal(svg.getAttribute('class').trim(), 'test-class');
+        // The svg element and circle should not have style scope classes.
+        if (svg.hasAttribute('class')) {
+          assert(svg.getAttribute('class').indexOf(STYLE_SCOPE_CLASS) === -1);
+        }
+        if (circle.hasAttribute('class')) {
+          assert(circle.getAttribute('class').indexOf(STYLE_SCOPE_CLASS) === -1);
+        }
+        // Clean up.
+        document.body.removeChild(elementWithSVG);
+        document.body.removeChild(svg);
+      });
+    });
+  </script>
+</body>
+</html>

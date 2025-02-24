@@ -1,0 +1,5 @@
+# Software Supply Chain Integrity/SBOM.
+
+file:SECURITY_TEAM_OWNERS
+
+per-file fields/custom/license_allowlist.py=file:LICENSE_OWNERS

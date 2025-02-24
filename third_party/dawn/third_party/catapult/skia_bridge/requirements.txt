@@ -1,0 +1,25 @@
+Flask==2.2.2
+
+google-api-python-client==2.51.0
+
+google-auth==2.12.0
+
+google-auth-httplib2==0.1.0
+
+google-cloud-logging==3.1.2
+google-cloud-datastore==2.15.2
+google-cloud-tasks==2.13.1
+google-cloud-storage==2.9.0
+google-cloud-monitoring==2.9.1
+
+
+gunicorn==20.1.0
+python-dateutil>=2.8.2
+
+# urllib3 2.0.2 is the default since May the Force 2023 and it requires
+# ssl to support OPENSSL v1.1.1+. The current ssl in Python 3.7 runtime
+# only support 1.0.2. Using an older version of urllib3 before the ssl is
+# updated.
+urllib3==1.26.1
+
+Werkzeug==2.2.2

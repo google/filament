@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import sys
+import subprocess
+
+"""Detect forced pushes (on the client) and prompt the user before going on."""
+
+
+def read_from_tty():
+  try:
+    import posix  # No way to do this on Windows, just give up there.
+    with open('/dev/tty') as tty_fd:
+      return tty_fd.readline().strip()
+  except:
+    return None
+
+
+def Main():
+  # Allow force pushes in repos forked elsewhere (e.g. googlesource).
+  remote_url = sys.argv[2] if len(sys.argv) >= 2 else ''
+  if 'github.com' not in remote_url:
+    return 0
+
+  parts = sys.stdin.readline().split()
+  if len(parts) < 4:
+    return 0
+  local_ref, local_sha, remote_ref, remote_sha = parts
+  cmd = ['git', 'rev-list', '--count', remote_sha, '--not', local_sha,
+         '--max-count=1']
+
+  is_force_push = '0'
+  try:
+    is_force_push = subprocess.check_output(cmd).strip()
+  except(subprocess.CalledProcessError):
+    return 0
+
+  if is_force_push != '0':
+    sys.stderr.write('\033[31mWARNING: Force pushing will break the ' +
+                     'github.com -> googlesource.com mirroring.\033[0m\n' +
+                     'This is almost certainly a bad idea.\n')
+
+    sys.stderr.write('Type y to continue: ')
+    if read_from_tty() != 'y':
+      return 1
+
+  return 0
+
+
+if __name__ == '__main__':
+  sys.exit(Main())

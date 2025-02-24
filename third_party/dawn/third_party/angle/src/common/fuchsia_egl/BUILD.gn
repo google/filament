@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gni/angle.gni")
+
+assert(is_fuchsia)
+
+config("config") {
+  include_dirs = [ "." ]
+}
+
+angle_shared_library("fuchsia_egl") {
+  sources = [ "fuchsia_egl.c" ]
+  public = [ "fuchsia_egl.h" ]
+  public_configs = [ ":config" ]
+  deps = [ ":backend" ]
+}
+
+angle_source_set("backend") {
+  public = [ "fuchsia_egl_backend.h" ]
+}

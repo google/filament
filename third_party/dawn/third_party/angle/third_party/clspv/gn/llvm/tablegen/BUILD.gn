@@ -1,0 +1,623 @@
+# This setups the tablegen build targets that the LLVM and Clang libs depend on.
+
+import("//build_overrides/clspv.gni")
+
+import("tablegen.gni")
+
+# For llvm/lib/CodeGen
+tablegen("GenVT") {
+  args = [ "-gen-vt" ]
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/CodeGen/ValueTypes.td"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  output_name = "$clspv_llvm_dir/llvm/CodeGen/GenVT.inc"
+}
+
+# from llvm/include/llvm/TargetParser
+tablegen("RISCVTargetParserDef") {
+  args = [ "-gen-riscv-target-def" ]
+  td_file = "//$clspv_llvm_dir/llvm/lib/Target/RISCV/RISCV.td"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  output_name = "$clspv_llvm_dir/llvm/TargetParser/RISCVTargetParserDef.inc"
+}
+
+# from llvm/include/llvm/Frontend/OpenMP
+tablegen("OMPh") {
+  #visibility = [ ":public_tablegen" ]
+  args = [ "-gen-directive-decl" ]
+  output_name = "$clspv_llvm_dir/llvm/Frontend/OpenMP/OMP.h.inc"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/Frontend/OpenMP/OMP.td"
+}
+
+tablegen("OMP") {
+  #visibility = [ ":public_tablegen" ]
+  args = [ "-gen-directive-impl" ]
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/Frontend/OpenMP/OMP.td"
+  output_name = "$clspv_llvm_dir/llvm/Frontend/OpenMP/OMP.inc"
+}
+
+# from llvm/include/llvm/IR
+tablegen("Attributes") {
+  #visibility = [ ":public_tablegen" ]
+  args = [ "-gen-attrs" ]
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/IR/Attributes.td"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  output_name = "$clspv_llvm_dir/llvm/IR/Attributes.inc"
+}
+
+tablegen("IntrinsicImpl") {
+  args = [ "-gen-intrinsic-impl" ]
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/IR/Intrinsics.td"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  output_name = "$clspv_llvm_dir/llvm/IR/IntrinsicImpl.inc"
+}
+
+tablegen("IntrinsicEnums") {
+  #visibility = [ ":public_tablegen" ]
+  args = [ "-gen-intrinsic-enums" ]
+  td_file = "//$clspv_llvm_dir/llvm/include/llvm/IR/Intrinsics.td"
+  tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+  output_name = "$clspv_llvm_dir/llvm/IR/IntrinsicEnums.inc"
+}
+
+template("gen_arch_intrinsics") {
+  tablegen(target_name) {
+    #visibility = [ ":public_tablegen" ]
+    args = [
+      "-gen-intrinsic-enums",
+      "-intrinsic-prefix=${invoker.intrinsic_prefix}",
+    ]
+    td_file = "//$clspv_llvm_dir/llvm/include/llvm/IR/Intrinsics.td"
+    tblgen_target = "../tools:clspv-tool-llvm-min-tblgen"
+    output_name = "$clspv_llvm_dir/llvm/IR/$target_name.h"
+  }
+}
+
+gen_arch_intrinsics("IntrinsicsAArch64") {
+  intrinsic_prefix = "aarch64"
+}
+
+gen_arch_intrinsics("IntrinsicsAMDGPU") {
+  intrinsic_prefix = "amdgcn"
+}
+
+gen_arch_intrinsics("IntrinsicsARM") {
+  intrinsic_prefix = "arm"
+}
+
+gen_arch_intrinsics("IntrinsicsBPF") {
+  intrinsic_prefix = "bpf"
+}
+
+gen_arch_intrinsics("IntrinsicsDirectX") {
+  intrinsic_prefix = "dx"
+}
+
+gen_arch_intrinsics("IntrinsicsHexagon") {
+  intrinsic_prefix = "hexagon"
+}
+
+gen_arch_intrinsics("IntrinsicsLoongArch") {
+  intrinsic_prefix = "loongarch"
+}
+
+gen_arch_intrinsics("IntrinsicsMips") {
+  intrinsic_prefix = "mips"
+}
+
+gen_arch_intrinsics("IntrinsicsNVPTX") {
+  intrinsic_prefix = "nvvm"
+}
+
+gen_arch_intrinsics("IntrinsicsPowerPC") {
+  intrinsic_prefix = "ppc"
+}
+
+gen_arch_intrinsics("IntrinsicsR600") {
+  intrinsic_prefix = "r600"
+}
+
+gen_arch_intrinsics("IntrinsicsRISCV") {
+  intrinsic_prefix = "riscv"
+}
+
+gen_arch_intrinsics("IntrinsicsS390") {
+  intrinsic_prefix = "s390"
+}
+
+gen_arch_intrinsics("IntrinsicsVE") {
+  intrinsic_prefix = "ve"
+}
+
+gen_arch_intrinsics("IntrinsicsWebAssembly") {
+  intrinsic_prefix = "wasm"
+}
+
+gen_arch_intrinsics("IntrinsicsX86") {
+  intrinsic_prefix = "x86"
+}
+
+gen_arch_intrinsics("IntrinsicsXCore") {
+  intrinsic_prefix = "xcore"
+}
+
+# Groups all tablegen() calls that create .inc files that are included in
+# IR's public headers.  //llvm/lib/IR has this as a public_dep, so targets
+# depending on //llvm/lib/IR don't need to depend on this.  This exists
+# solely for targets that use IR's public headers but don't link against IR.
+group("public_tablegen") {
+  public_deps = [
+    # IR's public headers include Attributes.inc.
+    ":Attributes",
+
+    # IR's public headers include IntrinsicEnums.inc.
+    ":IntrinsicEnums",
+    ":IntrinsicImpl",
+
+    # FIXME: These are only included from .cpp files at first glance.
+    # Try removing them from the public_tablegen target.
+    ":IntrinsicsAArch64",
+    ":IntrinsicsAMDGPU",
+    ":IntrinsicsARM",
+    ":IntrinsicsBPF",
+    ":IntrinsicsDirectX",
+    ":IntrinsicsHexagon",
+    ":IntrinsicsLoongArch",
+    ":IntrinsicsMips",
+    ":IntrinsicsNVPTX",
+    ":IntrinsicsPowerPC",
+    ":IntrinsicsR600",
+    ":IntrinsicsRISCV",
+    ":IntrinsicsS390",
+    ":IntrinsicsVE",
+    ":IntrinsicsWebAssembly",
+    ":IntrinsicsX86",
+    ":IntrinsicsXCore",
+
+    # Frontend/OpenMP
+    ":OMP",
+    ":OMPh",
+  ]
+}
+
+# Clang Tablegen
+import("clang_tablegen.gni")
+
+# from clang/include/clang/AST
+clang_tablegen("Attrs") {
+  args = [ "-gen-clang-attr-classes" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/Attrs.inc"
+}
+
+clang_tablegen("AttrImpl") {
+  args = [ "-gen-clang-attr-impl" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AttrImpl.inc"
+}
+
+clang_tablegen("AttrTextNodeDump") {
+  args = [ "-gen-clang-attr-text-node-dump" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AttrTextNodeDump.inc"
+}
+
+clang_tablegen("AttrNodeTraverse") {
+  args = [ "-gen-clang-attr-node-traverse" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AttrNodeTraverse.inc"
+}
+
+clang_tablegen("AttrVisitor") {
+  args = [ "-gen-clang-attr-ast-visitor" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AttrVisitor.inc"
+}
+
+clang_tablegen("StmtNodes") {
+  args = [ "-gen-clang-stmt-nodes" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/StmtNodes.td"
+  output_name = "$clspv_llvm_dir/clang/AST/StmtNodes.inc"
+}
+
+clang_tablegen("DeclNodes") {
+  args = [ "-gen-clang-decl-nodes" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/DeclNodes.td"
+  output_name = "$clspv_llvm_dir/clang/AST/DeclNodes.inc"
+}
+
+clang_tablegen("TypeNodes") {
+  args = [ "-gen-clang-type-nodes" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/../Basic/TypeNodes.td"
+  output_name = "$clspv_llvm_dir/clang/AST/TypeNodes.inc"
+}
+
+clang_tablegen("AbstractBasicReader") {
+  args = [ "-gen-clang-basic-reader" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/PropertiesBase.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AbstractBasicReader.inc"
+}
+
+clang_tablegen("AbstractBasicWriter") {
+  args = [ "-gen-clang-basic-writer" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/PropertiesBase.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AbstractBasicWriter.inc"
+}
+
+clang_tablegen("AbstractTypeReader") {
+  args = [ "-gen-clang-type-reader" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/TypeProperties.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AbstractTypeReader.inc"
+}
+
+clang_tablegen("AbstractTypeWriter") {
+  args = [ "-gen-clang-type-writer" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/TypeProperties.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AbstractTypeWriter.inc"
+}
+
+clang_tablegen("CommentNodes") {
+  args = [ "-gen-clang-comment-nodes" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/CommentNodes.td"
+  output_name = "$clspv_llvm_dir/clang/AST/CommentNodes.inc"
+}
+
+clang_tablegen("CommentHTMLTags") {
+  args = [ "-gen-clang-comment-html-tags" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/CommentHTMLTags.td"
+  output_name = "$clspv_llvm_dir/clang/AST/CommentHTMLTags.inc"
+}
+
+clang_tablegen("CommentHTMLTagsProperties") {
+  args = [ "-gen-clang-comment-html-tags-properties" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/CommentHTMLTags.td"
+  output_name = "$clspv_llvm_dir/clang/AST/CommentHTMLTagsProperties.inc"
+}
+
+clang_tablegen("CommentHTMLNamedCharacterReferences") {
+  args = [ "-gen-clang-comment-html-named-character-references" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/CommentHTMLNamedCharacterReferences.td"
+  output_name =
+      "$clspv_llvm_dir/clang/AST/CommentHTMLNamedCharacterReferences.inc"
+}
+
+clang_tablegen("CommentCommandInfo") {
+  args = [ "-gen-clang-comment-command-info" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/CommentCommands.td"
+  output_name = "$clspv_llvm_dir/clang/AST/CommentCommandInfo.inc"
+}
+
+clang_tablegen("CommentCommandList") {
+  args = [ "-gen-clang-comment-command-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/CommentCommands.td"
+  output_name = "$clspv_llvm_dir/clang/AST/CommentCommandList.inc"
+}
+
+clang_tablegen("StmtDataCollectors") {
+  args = [ "-gen-clang-data-collectors" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/AST/StmtDataCollectors.td"
+  output_name = "$clspv_llvm_dir/clang/AST/StmtDataCollectors.inc"
+}
+
+# from clang/lib/AST
+clang_tablegen("Opcodes") {
+  args = [ "-gen-clang-opcodes" ]
+  td_file = "//$clspv_llvm_dir/clang/lib/AST/Interp/Opcodes.td"
+  output_name = "$clspv_llvm_dir/clang/AST/Opcodes.inc"
+}
+
+clang_tablegen("AttrDocTable") {
+  args = [ "-gen-clang-attr-doc-table" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_name = "$clspv_llvm_dir/clang/AST/AttrDocTable.inc"
+}
+
+# from include/clang/Basic
+# Diagnostics.
+
+diag_groups = [
+  "Analysis",
+  "AST",
+  "Comment",
+  "Common",
+  "CrossTU",
+  "Driver",
+  "Frontend",
+  "Lex",
+  "Parse",
+  "Refactoring",
+  "Sema",
+  "Serialization",
+]
+foreach(diag_group, diag_groups) {
+  clang_tablegen("Diagnostic${diag_group}Kinds") {
+    args = [
+      "-gen-clang-diags-defs",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Diagnostic.td"
+    output_name = "$clspv_llvm_dir/clang/Basic/Diagnostic${diag_group}Kinds.inc"
+  }
+}
+group("diags_tablegen") {
+  # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
+  # group.  Much of clang depends on the DiagKinds.inc files transitively,
+  # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
+  public_deps = []
+  foreach(diag_group, diag_groups) {
+    public_deps += [ ":Diagnostic${diag_group}Kinds" ]
+  }
+}
+
+clang_tablegen("DiagnosticGroups") {
+  args = [ "-gen-clang-diag-groups" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Diagnostic.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("DiagnosticIndexName") {
+  args = [ "-gen-clang-diags-index-name" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Diagnostic.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+# Attributes
+
+clang_tablegen("AttrList") {
+  args = [ "-gen-clang-attr-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("AttrLeftSideCanPrintList") {
+  args = [ "-gen-clang-attr-can-print-left-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("AttrLeftSideMustPrintList") {
+  args = [ "-gen-clang-attr-must-print-left-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("AttrSubMatchRulesList") {
+  args = [ "-gen-clang-attr-subject-match-rule-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("AttrTokenKinds") {
+  args = [ "-gen-clang-attr-token-kinds" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("AttrHasAttributeImpl") {
+  args = [ "-gen-clang-attr-has-attribute-impl" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+# ARM CDE, MVE, and NEON.
+
+clang_tablegen("arm_neon") {
+  args = [ "-gen-arm-neon-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_neon.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_fp16") {
+  args = [ "-gen-arm-neon-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_fp16.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_mve_builtins") {
+  args = [ "-gen-arm-mve-builtin-def" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_mve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_mve_builtin_cg") {
+  args = [ "-gen-arm-mve-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_mve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_mve_builtin_sema") {
+  args = [ "-gen-arm-mve-builtin-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_mve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_mve_builtin_aliases") {
+  args = [ "-gen-arm-mve-builtin-aliases" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_mve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sve_builtins") {
+  args = [ "-gen-arm-sve-builtins" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sve_builtin_cg") {
+  args = [ "-gen-arm-sve-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sve_typeflags") {
+  args = [ "-gen-arm-sve-typeflags" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sve_sema_rangechecks") {
+  args = [ "-gen-arm-sve-sema-rangechecks" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sve.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sme_builtins") {
+  args = [ "-gen-arm-sme-builtins" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sme.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sme_builtin_cg") {
+  args = [ "-gen-arm-sme-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sme.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_sme_sema_rangechecks") {
+  args = [ "-gen-arm-sme-sema-rangechecks" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_sme.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_cde_builtins") {
+  args = [ "-gen-arm-cde-builtin-def" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_cde.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_cde_builtin_cg") {
+  args = [ "-gen-arm-cde-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_cde.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_cde_builtin_sema") {
+  args = [ "-gen-arm-cde-builtin-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_cde.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("arm_cde_builtin_aliases") {
+  args = [ "-gen-arm-cde-builtin-aliases" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/arm_cde.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+# RISC-V
+
+clang_tablegen("riscv_vector_builtins") {
+  args = [ "-gen-riscv-vector-builtins" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("riscv_vector_builtin_cg") {
+  args = [ "-gen-riscv-vector-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("riscv_vector_builtin_sema") {
+  args = [ "-gen-riscv-vector-builtin-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("riscv_sifive_vector_builtins") {
+  args = [ "-gen-riscv-sifive-vector-builtins" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_sifive_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_cg") {
+  args = [ "-gen-riscv-sifive-vector-builtin-codegen" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_sifive_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_sema") {
+  args = [ "-gen-riscv-sifive-vector-builtin-sema" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/riscv_sifive_vector.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Basic"
+}
+
+# from clang/include/clang/Driver
+tablegen("Options") {
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Driver/Options.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Driver"
+}
+
+# from clang/include/clang/Sema
+clang_tablegen("AttrTemplateInstantiate") {
+  args = [ "-gen-clang-attr-template-instantiate" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Sema"
+}
+
+clang_tablegen("AttrParsedAttrList") {
+  args = [ "-gen-clang-attr-parsed-attr-list" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Sema"
+}
+
+clang_tablegen("AttrParsedAttrKinds") {
+  args = [ "-gen-clang-attr-parsed-attr-kinds" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Sema"
+}
+
+clang_tablegen("AttrSpellingListIndex") {
+  args = [ "-gen-clang-attr-spelling-index" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Sema"
+}
+
+clang_tablegen("AttrParsedAttrImpl") {
+  args = [ "-gen-clang-attr-parsed-attr-impl" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Sema"
+}
+
+# from clang/include/clang/Parse
+clang_tablegen("AttrParserStringSwitches") {
+  args = [ "-gen-clang-attr-parser-string-switches" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Parse"
+}
+
+clang_tablegen("AttrSubMatchRulesParserStringSwitches") {
+  args = [ "-gen-clang-attr-subject-match-rules-parser-string-switches" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Parse"
+}
+
+# from clang/lib/Sema
+clang_tablegen("OpenCLBuiltins") {
+  args = [ "-gen-clang-opencl-builtins" ]
+  td_file = "//$clspv_llvm_dir/clang/lib/Sema/OpenCLBuiltins.td"
+  output_path = "$clspv_llvm_dir/clang/lib/Sema"
+}
+
+# from clang/include/clang/Serialization
+clang_tablegen("AttrPCHRead") {
+  args = [ "-gen-clang-attr-pch-read" ]
+  td_file =
+      "//$clspv_llvm_dir/clang/include/clang/Serialization/../Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Serialization"
+}
+
+clang_tablegen("AttrPCHWrite") {
+  args = [ "-gen-clang-attr-pch-write" ]
+  td_file =
+      "//$clspv_llvm_dir/clang/include/clang/Serialization/../Basic/Attr.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/Serialization"
+}
+
+# from clang/include/clang/StaticAnalyzer
+clang_tablegen("Checkers") {
+  args = [ "-gen-clang-sa-checkers" ]
+  td_file = "//$clspv_llvm_dir/clang/include/clang/StaticAnalyzer/Checkers/Checkers.td"
+  output_path = "$clspv_llvm_dir/clang/include/clang/StaticAnalyzer/Checkers"
+}

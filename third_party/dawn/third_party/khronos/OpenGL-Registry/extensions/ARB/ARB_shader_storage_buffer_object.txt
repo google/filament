@@ -1,0 +1,1722 @@
+Name
+
+    ARB_shader_storage_buffer_object
+
+Name Strings
+
+    GL_ARB_shader_storage_buffer_object
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Piers Daniell, NVIDIA
+    Christophe Riccio, AMD
+    Graham Sellers, AMD
+    Bruce Merry
+    John Kessenich
+
+Notice
+
+    Copyright (c) 2012-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         April 28, 2014
+    Revision:                   16
+
+Number
+
+    ARB Extension #137
+
+Dependencies
+
+    OpenGL 4.0 (either core or compatibility profile) is required.
+
+    OpenGL 4.3 or ARB_program_interface_query is required.
+
+    This extension is written against the OpenGL 4.2 (Compatibility Profile)
+    Specification.
+
+    This extension interacts with OpenGL 4.3 and ARB_compute_shader.
+
+    This extension interacts with OpenGL 4.3 and ARB_program_interface_query.
+
+    This extension interacts with NV_bindless_texture.
+
+Overview
+
+    This extension provides the ability for OpenGL shaders to perform random
+    access reads, writes, and atomic memory operations on variables stored in
+    a buffer object.  Application shader code can declare sets of variables
+    (referred to as "buffer variables") arranged into interface blocks in a
+    manner similar to that done with uniform blocks in OpenGL 3.1.  In both
+    cases, the values of the variables declared in a given interface block are
+    taken from a buffer object bound to a binding point associated with the
+    block.  Buffer objects used in this extension are referred to as "shader
+    storage buffers".  
+
+    While the capability provided by this extension is similar to that
+    provided by OpenGL 3.1 and ARB_uniform_buffer_object, there are several
+    significant differences.  Most importantly, shader code is allowed to
+    write to shader storage buffers, while uniform buffers are always
+    read-only.  Shader storage buffers have a separate set of binding points,
+    with different counts and size limits.  The maximum usable size for shader
+    storage buffers is implementation-dependent, but its minimum value is
+    substantially larger than the minimum for uniform buffers.  
+
+    The ability to write to buffer objects creates the potential for multiple
+    independent shader invocations to read and write the same underlying
+    memory.  The same issue exists with the ARB_shader_image_load_store
+    extension provided in OpenGL 4.2, which can write to texture objects and
+    buffers.  In both cases, the specification makes few guarantees related to
+    the relative order of memory reads and writes performed by the shader
+    invocations.  For ARB_shader_image_load_store, the OpenGL API and shading
+    language do provide some control over memory transactions; those
+    mechanisms also affect reads and writes of shader storage buffers.  In the
+    OpenGL API, the glMemoryBarrier() call can be used to ensure that certain
+    memory operations related to commands issued prior the barrier complete
+    before other operations related to commands issued after the barrier.
+    Additionally, the shading language provides the memoryBarrier() function
+    to control the relative order of memory accesses within individual shader
+    invocations and provides various memory qualifiers controlling how the
+    memory corresponding to individual variables is accessed.
+
+
+New Procedures and Functions
+
+    void ShaderStorageBlockBinding(uint program, uint storageBlockIndex, 
+                                   uint storageBlockBinding);
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData, and
+    GetBufferPointerv:
+
+        SHADER_STORAGE_BUFFER                           0x90D2
+
+    Accepted by the <pname> parameter of GetIntegerv, GetIntegeri_v,
+    GetBooleanv, GetInteger64v, GetFloatv, GetDoublev, GetBooleani_v,
+    GetIntegeri_v, GetFloati_v, GetDoublei_v, and GetInteger64i_v:
+
+        SHADER_STORAGE_BUFFER_BINDING                   0x90D3
+
+    Accepted by the <pname> parameter of GetIntegeri_v, GetBooleani_v,
+    GetIntegeri_v, GetFloati_v, GetDoublei_v, and GetInteger64i_v:
+
+        SHADER_STORAGE_BUFFER_START                     0x90D4
+        SHADER_STORAGE_BUFFER_SIZE                      0x90D5
+
+    Accepted by the <pname> parameter of GetIntegerv, GetBooleanv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        MAX_VERTEX_SHADER_STORAGE_BLOCKS                0x90D6
+        MAX_GEOMETRY_SHADER_STORAGE_BLOCKS              0x90D7
+        MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS          0x90D8
+        MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS       0x90D9
+        MAX_FRAGMENT_SHADER_STORAGE_BLOCKS              0x90DA
+        MAX_COMPUTE_SHADER_STORAGE_BLOCKS               0x90DB
+        MAX_COMBINED_SHADER_STORAGE_BLOCKS              0x90DC
+        MAX_SHADER_STORAGE_BUFFER_BINDINGS              0x90DD
+        MAX_SHADER_STORAGE_BLOCK_SIZE                   0x90DE
+        SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT          0x90DF
+
+    Accepted in the <barriers> bitfield in glMemoryBarrier:
+
+        SHADER_STORAGE_BARRIER_BIT                      0x2000        
+
+    Also, add a new alias for the existing token
+    MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS:
+
+        MAX_COMBINED_SHADER_OUTPUT_RESOURCES            0x8F39 (alias)
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.9, Buffer Objects, p. 56
+
+    (Add to Table 2.9, p. 57)
+
+        Target Name             Purpose                 Described in section(s)
+        ---------------------   --------------------    ----------------------
+        SHADER_STORAGE_BUFFER   read-write storage      2.14.X
+                                for shaders
+
+    (modify next-to-last paragraph, p. 58) target must be one of
+    ATOMIC_COUNTER_BUFFER, SHADER_STORAGE_BUFFER, TRANSFORM_FEEDBACK_BUFFER,
+    UNIFORM_BUFFER. ...
+
+
+    Modify Section 2.14.7, Uniform Variables, p. 113
+
+    (modify Table 2.16, pp. 122-125)
+
+    Add a new column labeled "Buffer".  Include dots for all the types on
+    p. 122 (including BOOL types not supported for "Attrib" and "Xfb").  Add
+    dots for the "DOUBLE_MAT*" rows on p. 123.  Add no dots for any image or
+    sampler types.  
+
+    In the description of the table (p. 125), add a new sentence:  Types whose
+    "Buffer" column are marked may be declared as buffer variables (see
+    section 2.14.X).
+
+
+    Modify unnumbered "Standard Uniform Block Layout" section, p. 132
+
+    (insert a new paragraph at the end of the section, at the bottom of
+    p. 133) Shader storage blocks (section 2.14.X) also support the "std140"
+    layout qualifier, as well as a "std430" layout qualifier not supported for
+    uniform blocks.  When using the "std430" storage layout, shader storage
+    blocks will be laid out in buffer storage identically to uniform and
+    shader storage blocks using the "std140" layout, except that the base
+    alignment of arrays of scalars and vectors in rule (4) and of structures
+    in rule (9) are not rounded up a multiple of the base alignment of a vec4.
+
+
+    Add new section immediately before Section 2.14.8, Subroutine Uniform
+    Variables (p. 135)
+
+    2.14.X, Shader Buffer Variables
+
+    Shaders can declare named /buffer variables/, as described in the OpenGL
+    Shading Language Specification.  Sets of buffer variables are grouped into
+    interface blocks called /shader storage blocks/.  The values of each
+    buffer variable in a shader storage block are read from or written to the
+    data store of a buffer object bound to the binding point associated with
+    the block.  The values of active buffer variables may be changed by
+    executing shaders that assign values to them or perform atomic memory
+    operations on them, by modifying the contents of the bound buffer object's
+    data store with commands such as BufferSubData, by binding a new buffer
+    object to the binding point associated with the block, or by changing the
+    binding point associated with the block.
+
+    Buffer variables in shader storage blocks are represented in memory in the
+    same way as uniforms stored in uniform blocks, as described in the
+    "Uniform Buffer Object Storage" subsection of Section 2.14.7.  When a
+    program is linked successfully, each active buffer variable is assigned an
+    offset relative to the base of the buffer object binding associated with
+    its shader storage block.  For buffer variables declared as arrays and
+    matrices, strides between array elements or matrix columns or rows will
+    also be assigned.  Offsets and strides of buffer variables will be
+    assigned in an implementation-dependent manner unless the shader storage
+    block is declared using the "std140" or "std430" storage layout
+    qualifiers.  For "std140" and "std430" shader storage blocks, offsets will
+    be assigned using the method described in the "Standard Uniform Block
+    Layout" subsection of Section 2.14.7.  If a program is re-linked, existing
+    buffer variable offsets and strides are invalidated, and a new set of
+    active variables, offsets, and strides will be generated.
+
+    The total amount of buffer object storage that can be accessed in any
+    shader storage block is subject to an implementation-dependent limit. The
+    maximum amount of available space, in basic machine units, can be queried
+    by calling GetIntegerv with the constant MAX_SHADER_STORAGE_BLOCK_SIZE.
+    If the amount of storage required for any shader storage block exceeds
+    this limit, a program will fail to link.
+
+    If the number of active shader storage blocks referenced by the shaders in
+    a program exceeds implementation-dependent limits, the program will fail
+    to link.  The limits for vertex, tessellation control, tessellation
+    evaluation, geometry, fragment, and compute shaders can be obtained by
+    calling GetIntegerv with pname values of MAX_VERTEX_SHADER_STORAGE_BLOCKS,
+    MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS,
+    MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS,
+    MAX_GEOMETRY_SHADER_STORAGE_BLOCKS, MAX_FRAGMENT_SHADER_STORAGE_BLOCKS,
+    and MAX_COMPUTE_SHADER_STORAGE_BLOCKS, respectively.  Additionally, a
+    program will fail to link if the sum of the number of active shader
+    storage blocks referenced by each shader stage in a program exceeds the
+    value of the implementation-dependent limit
+    MAX_COMBINED_SHADER_STORAGE_BLOCKS.  If a shader storage block in a
+    program is referenced by multiple shaders, each such reference counts
+    separately against this combined limit.
+
+    When a named shader storage block is declared by multiple shaders in a
+    program, it must be declared identically in each shader. The buffer
+    variables within the block must be declared with the same names, types,
+    qualification, and declaration order.  If a program contains multiple
+    shaders with different declarations for the same named shader storage
+    block, the program will fail to link.
+
+    Regions of buffer objects are bound as storage for shader storage blocks
+    by calling one of the commands BindBufferRange or BindBufferBase (see
+    section 2.9.1) with target set to SHADER_STORAGE_BUFFER.  In addition to
+    the general errors described in section 2.9.1, BindBufferRange will
+    generate an INVALID_VALUE error if index is greater than or equal to the
+    value of MAX_SHADER_STORAGE_BUFFER_BINDINGS, or if <offset> is not a
+    multiple of the implementation-dependent alignment requirement (the value
+    of SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT).
+
+    Each of a program's active shader storage blocks has a corresponding
+    shader storage buffer object binding point.  When a program object is
+    linked, the shader storage buffer object binding point assigned to each of
+    its active shader storage blocks is reset to the value specified by the
+    corresponding "binding" layout qualifier, if present, or zero otherwise.
+    After a program is linked, the command 
+
+      void ShaderStorageBlockBinding(uint program, uint storageBlockIndex, 
+                                     uint storageBlockBinding);
+
+    changes the active shader storage block with an assigned index of
+    <storageBlockIndex> in program object <program>.  The error INVALID_VALUE
+    is generated if <storageBlockIndex> is not an active shader storage block
+    index in <program>, or if <storageBlockBinding> is greater than or equal
+    to the value of MAX_SHADER_STORAGE_BUFFER_BINDINGS. If successful,
+    ShaderStorageBlockBinding specifies that <program> will use the data
+    store of the buffer object bound to the binding point
+    <storageBlockBinding> to read and write the values of the buffer
+    variables in the shader storage block identified by <storageBlockIndex>.
+
+    When executing shaders that access shader storage blocks, the binding
+    point corresponding to each active shader storage block must be populated
+    with a buffer object with a size no smaller than the minimum required size
+    of the shader storage block (the value of BUFFER_SIZE for the appropriate
+    SHADER_STORAGE_BUFFER resource).  For binding points populated by
+    BindBufferRange, the size in question is the value of the <size> parameter
+    or the size of the buffer minus the value of the <offset> parameter,
+    whichever is smaller.  If any active shader storage block is not backed by
+    a sufficiently large buffer object, the results of shader execution are
+    undefined, and may result in GL interruption or termination. Shaders may
+    be executed to process the primitives and vertices specified between Begin
+    and End, or by vertex array commands (see section 2.8). Shaders may also
+    be executed as a result of DrawPixels, Bitmap, or RasterPos* commands.
+
+
+    Modify Section 2.14.12, Shader Execution (p. 145)
+
+    (add new sub-section before "Shader Inputs", p. 151)
+
+    Shader Storage Buffer Access
+
+    Shaders have the ability to read and write to buffer memory via buffer
+    variables in shader storage blocks. The maximum number of shader storage
+    blocks available to shaders are the values of the implementation dependent
+    constants
+
+    * MAX_VERTEX_SHADER_STORAGE_BLOCKS (for vertex shaders),
+
+    * MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS (for tessellation control
+      shaders),
+
+    * MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS (for tessellation evaluation
+      shaders),
+
+    * MAX_GEOMETRY_SHADER_STORAGE_BLOCKS (for geometry shaders),
+
+    * MAX_FRAGMENT_SHADER_STORAGE_BLOCKS (for fragment shaders), and 
+
+    * MAX_COMPUTE_SHADER_STORAGE_BLOCKS (for compute shaders).
+    
+    All active shaders combined cannot use more than the value of
+    MAX_COMBINED_SHADER_STORAGE_BLOCKS shader storage blocks. If more than one
+    pipeline stage accesses the same shader storage block, each such access
+    counts separately against this combined limit.
+
+
+    (add to the list of bullets in the "Validation" section on p. 153)
+
+    * The sum of the number of active shader storage blocks used by the
+      current program objects exceeds the combined limit on the number of
+      active shader storage blocks (MAX_COMBINED_SHADER_STORAGE_BLOCKS).
+    
+
+    Modify Section 2.14.13, Shader Memory Access (p. 153)
+
+    (modify last paragraph, p. 153) Shaders may perform random-access reads
+    and writes to texture or buffer object memory by using built-in image
+    load, store, and atomic functions operating on shader image variables, or
+    by reading from, assigning to, or performing atomic memory operation on
+    shader buffer variables, as described in the OpenGL Shading Language
+    Specification. The ability to perform such random-access reads and writes
+    in systems that may be highly pipelined results in ordering and
+    synchronization issues discussed in the sections below.
+
+    (add to list of MemoryBarrier <barriers> bullets, p. 158)
+
+      * SHADER_STORAGE_BARRIER_BIT:  Memory accesses using shader buffer
+        variables issued after the barrier will reflect data written by
+        shaders prior to the barrier.  Additionally, assignments to and atomic
+        operations performed on shader buffer variables after the barrier will
+        not execute until all memory accesses (e.g., loads, stores, texture
+        fetches, vertex fetches) initiated prior to the barrier complete.
+
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    Modify Section 3.10.22, Texture Image Loads and Stores (p. 358)
+
+    (modify first paragraph, p. 367) Implementations may support a limited
+    combined number of image units, shader storage blocks, and active fragment
+    shader outputs (see section 4.2.1).  A link error will be generated if the
+    sum of the number of active image uniforms used in all shaders, the number
+    of active shader storage blocks, and the number of active fragment shader
+    outputs exceeds the implementation-dependent value of
+    MAX_COMBINED_SHADER_OUTPUT_RESOURCES.
+
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Secction 6.1.15, Buffer Object Queries (p. 490)
+
+    (add to end of section)
+
+    To query which buffer objects are bound to the array of shader storage
+    buffer binding points and will be used as the storage for active shader
+    storage blocks, call GetIntegeri_v with <param> set to
+    SHADER_STORAGE_BUFFER_BINDING.  <index> must be in the range zero to the
+    value of MAX_SHADER_STORAGE_BUFFER_BINDINGS-1.  The name of the buffer
+    object bound to index is returned in <values>. If no buffer object is
+    bound for <index>, zero is returned in <values>.
+
+    To query the starting offset or size of the range of each buffer object
+    binding used for shader storage buffers, call GetInteger64i_v with <param>
+    set to SHADER_STORAGE_BUFFER_START or SHADER_STORAGE_BUFFER_SIZE
+    respectively.  <index> must be in the range zero to the value of
+    MAX_SHADER_STORAGE_BUFFER_BINDINGS-1.  If the parameter (starting offset
+    or size) was not specified when the buffer object was bound (e.g.  if
+    bound with BindBufferBase), or if no buffer object is bound to index, zero
+    is returned.
+
+
+Additions to Appendix A of the OpenGL 4.2 (Compatibility Profile) Specification
+(Invariance)
+
+    Modify Section A.1, Repeatability (p. 583)
+
+    (modify last sentence of the first paragraph, p. 583) ...  This
+    repeatability requirement doesn't apply when using shaders containing side
+    effects (image stores, image atomic operations, atomic counter operations,
+    buffer variable stores, buffer variable atomic operations), because these
+    memory operations are not guaranteed to be processed in a defined order.
+
+    Modify Section A.3, Invariance (p. 584)
+
+    (modify first sentence of the paragraph after Rule 5, p. 586) If a
+    sequence of GL commands specifies primitives to be rendered with shaders
+    containing side effects (image stores, image atomic operations, atomic
+    counter operations, buffer variable stores, buffer variable atomic
+    operations), invariance rules are relaxed.  ...
+
+    (modify first paragraph, p. 587) When any sequence of GL commands triggers
+    shader invocations that perform image stores, image atomic operations,
+    atomic counter operations, buffer variable stores, or buffer variable
+    atomic operations and subsequent GL commands read the memory written by
+    those shader invocations, these operations must be explicitly
+    synchronized.  For more details, see Section 2.14.X, Shader Memory Access.
+
+
+Additions to Appendix D of the OpenGL 4.2 (Compatibility Profile) Specification
+(Shared Objects and Multiple Contexts)
+
+    Modify Section D.3, Propagating State Changes, p. 611
+
+    (modify second bullet, p. 612)
+
+    * Rendering commands that trigger shader invocations, where the shader
+      performs image stores, image atomic operations, atomic counter
+      operations, buffer variable stores, or buffer variable atomic
+      operations.
+
+Additions to the OpenGL Shading Language 4.20 Specification
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_storage_buffer_object : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_storage_buffer_object       1
+
+
+    Modify Section 3.6, Keywords (p. 15)
+
+    (add to list of keywords)
+
+    buffer
+
+
+    Modify Section 4.1.9, Arrays (p. 29)
+
+    (modify first paragraph of the section, p. 29, adding an exception
+     allowing general indexing of the last array of a shader storage block)
+     ... Except for the last declared member of a shader storage block
+     (section 4.3.X), the size of an array must be declared before it is
+     indexed with anything other than an integral constant expression.  The
+     size of an array must be declared before passing it as an argument to a
+     function. ...
+
+    (modify last paragraph, p. 30) ...  This returns a type int.  If an array
+    has been explicitly sized, the value returned by the length method is
+    a constant expression.  If an array has not been explicitly
+    sized and is not the last declared member of a shader storage block, the
+    value returned by the length method is not a constant
+    expression and will be determined when a program is linked.  If an array
+    has not been explicitly sized and is the last declared member of a shader
+    storage block, the value returned will not be constant expression and
+    will be determined at run time based on
+    the size of the buffer object providing storage for the block.  For such
+    arrays, the value returned by the length method will be undefined if the
+    array is contained in an array of shader storage blocks that is indexed
+    with a non-constant expression less than zero or greater than or equal 
+    to the number of blocks in the array.
+
+    (add a new paragraph to end of the section, at the bottom of p. 30) In a
+    shader storage block, the last member may be declared without an explicit
+    size.  In this case, the effective array size is inferred at run-time from
+    the size of the data store backing the interface block.  Such unsized
+    arrays may be indexed with general integer expressions, but may not be
+    passed as an argument to a function or indexed with a negative constant
+    expression.
+
+
+    Modify Section 4.3, Storage Qualifiers (p. 36)
+
+      Storage
+      Qualifier   Meaning
+      ----------  ---------------------------------------------------
+      buffer      value is stored in a buffer object, and can be read
+                  or written by shader invocations and the OpenGL API
+
+
+    Modify Section 4.3.3, Constant Expressions (p. 38)
+
+    (modify first bullet, p. 39, clarifying that the length() method only
+     produces constant expressions on explicitly sized objects, since we now
+     allow it on implicitly sized or unsized arrays)
+
+    * valid use of the length() method on an explicitly sized object, whether
+      or not the object itself is constant (implicitly sized or unsized arrays
+      do not return a constant expression)
+
+
+    Insert after Section 4.3.5, Uniform (p. 40)
+
+    4.3.X, Buffer Variables
+
+    The <buffer> qualifier is used to declare global variables whose values
+    are stored in the data store of a buffer object bound through the OpenGL
+    API.  Buffer variables can be read and written, with the underlying
+    storage shared among all active shader invocations.  Buffer variable
+    memory reads and writes within a single shader invocation are processed in
+    order.  However, the order of reads and writes performed in one invocation
+    relative to those performed by another invocation is largely undefined.
+    Buffer variables may be qualified with memory qualifiers affecting how the
+    underlying memory is accessed, as described in Section 4.10.
+
+    The "buffer" qualifier can be used with any of the basic data types, or
+    when declaring a variable whose type is a structure, or an array of any of
+    these.
+
+    Buffer variables may only be declared inside interface blocks (Section
+    4.3.7), which are referred to as shader storage blocks.  It is illegal to
+    declare buffer variables at global scope (outside a block).  Buffer 
+    variables cannot have initializers.
+
+    There are implementation-dependent limits on the number of the shader
+    storage blocks used for each type of shader, the combined number of shader
+    storage blocks used for a program, and the amount of storage required by
+    each individual shader storage block.  If any of these limits are
+    exceeded, it will cause a compile-time or link-time error.
+
+    If multiple shaders are linked together, then they will share a single
+    global buffer variable name space, including within a language as well as
+    across languages.  Hence, the types of buffer variables with the same name
+    must match across all shaders that are linked into a single program.
+  
+
+    Modify Section 4.3.7, Interface Blocks (p. 43)
+
+    (modify first paragraph) Input, output, uniform, and buffer variable
+    declarations can be grouped into named interface blocks ...  A uniform
+    block is backed by the application with a buffer object.  A block of
+    buffer variables, called a shader storage block, is also backed by the
+    application with a buffer object. ...
+
+    (modify second paragraph) An interface block is started by an in, out,
+    uniform, or buffer keyword, followed by ...
+
+    (add "buffer" to the grammar rules)
+
+      interface-qualifier:
+        in
+        out
+        uniform
+        buffer
+
+    (modify first paragraph, p. 44) Types and declarators are the same as for
+    other input, output, uniform, and buffer variable declarations...
+
+    (modify third paragraph, p. 44) If no optional qualifier is used in a
+    member-declaration, the qualification of the variable is just in, out,
+    uniform, or buffer as determined by <interface-qualifier>.  ...  Input
+    variables, output variables, uniform variables, and buffer variables can
+    only be in in blocks, out blocks, uniform blocks, and shader storage
+    blocks, respectively.  Repeating the "in", "out", "uniform", or "buffer"
+    interface qualifier for a member's storage qualifier is optional. ...
+
+    (modify fourth paragraph, p. 44) For this section, define an interface to
+    be one of these:
+
+      * All the uniforms of a program. This spans all compilation units linked
+        together within one program.
+
+      * All the buffer variables of a program.
+
+      * The boundary between adjacent programmable pipeline stages: ...
+
+    (modify next-to-last paragraph, p. 45) For uniform or shader storage
+    blocks declared as an array, each individual array element corresponds to
+    a separate buffer object bind range, backing one instance of the block. As
+    the array size indicates the number of buffer objects needed, uniform and
+    shader storage block array declarations must specify an array size.  A
+    uniform or shader storage block array can only be indexed with a
+    dynamically uniform integral expression, otherwise results are undefined.
+
+    (modify last paragraph of the section, p. 46) There are
+    implementation-dependent limits on the number of uniform blocks and the
+    number of shader storage blocks that can be used per stage.  If either
+    limit is exceeded, it will cause a link error.
+
+
+    Modify Section 4.4.1.2, Geometry Shader Inputs (p. 49)
+
+    (modify example at the top of p. 51, since it's now legal to take the
+     length of implicitly sized arrays)
+
+      // code sequence within one shader...
+      in vec4 Color1[];  // legal, size still unknown
+      in vec4 Color2[2]; // legal, size is 2
+      in vec4 Color3[3]; // illegal, input sizes are inconsistent
+      layout(lines) in;  // legal for Color2, input size is 2, matching Color2
+      in vec4 Color4[3]; // illegal, contradicts layout of lines
+      layout(lines) in;  // legal, matches other layout() declaration
+      layout(triangles) in; // illegal, does not match earlier layout() 
+                            // declaration  
+
+
+    Modify Section 4.4.3, Uniform Block Layout Qualifiers (p. 57).  Rename
+    section title to "Uniform and Shader Storage Block Layout Qualifiers".
+
+    (modify first paragraph) Layout qualifiers can be used for uniform and
+    shader storage blocks, but not for non-block uniform declarations. The
+    layout qualifier identifiers for uniform and shader storage blocks are
+
+      layout-qualifier-id
+        shared
+        packed
+        std140
+        std430
+        row_major
+        column_major
+        binding = integer-constant
+
+    (modify last paragraph, p. 57) Uniform and shader storage block layout
+    qualifiers can be declared for global scope, on a single uniform or shader
+    storage block, or on a single block member declaration.
+
+    (modify first paragraph, p. 58) Default layouts are established (except
+    for binding) at global scope for uniform blocks as
+
+      layout(layout-qualifier-id-list) uniform;
+
+    and for shader storage blocks as
+
+      layout(layout-qualifier-id-list) buffer;
+
+    ... The result becomes the new default qualification scoped to subsequent 
+    uniform or shader storage block definitions.
+
+    (modify third paragraph, p. 58) The initial state of compilation is as if
+    the following were declared:  
+
+      layout(shared, column_major) uniform;
+      layout(shared, column_major) buffer;
+
+    (modify fourth paragraph, p. 58) Uniform and shader storage blocks can be
+    declared with optional layout qualifiers, and so can their individual
+    member declarations. Such block layout qualification is scoped only to the
+    content of the block. As with global layout declarations, block layout
+    qualification first inherits from the current default qualification and
+    then overrides it. Similarly, individual member layout qualification is
+    scoped just to the member declaration, and inherits from and overrides the
+    block's qualification.
+
+    (modify the fifth paragraph, p. 58) The shared qualifier overrides only
+    the std140, std430, and packed qualifiers; other qualifiers are
+    inherited. The compiler/linker will ensure that multiple programs and
+    programmable stages containing this definition will share the same memory
+    layout for this block, as long as all arrays are declared with explicit
+    sizes and all matrices have matching row_major and/or column_major
+    qualifications (which may come from a declaration outside the block
+    definition). ...
+
+    (modify sixth paragraph, p. 58) The packed qualfier overrides only std140,
+    std430, and shared; other qualifiers are inherited.  ... Attempts to share
+    a packed uniform or shader storage block across programs or stages will
+    generally fail. ...
+
+    (modify seventh paragraph, p. 58) The std140 and std430 qualifiers
+    override only the packed, shared, std140, and std430 qualifiers; other
+    qualifiers are inherited.  The std430 qualifier is supported only for
+    shader storage blocks; a shader using the std430 qualifier on a uniform
+    block will fail to compile.  ...
+
+    (modify eight paragraph, p. 58)  Layout qualifiers on member declarations
+    cannot use the shared, packed, std140, or std430 qualifiers. ...
+
+    (modify last paragraph, p. 58) The <binding> identifier specifies the
+    buffer binding point corresponding to the uniform or shader storage block,
+    which will be used to obtain the values of the member variables of the
+    block. It is an error to specify the binding identifier for the global
+    scope or for block member declarations. Any uniform or shader storage
+    block declared without a binding identifier is initially assigned to block
+    binding point zero.  After a program is linked, the binding points used
+    for uniform and shader storage blocks declared with or without a binding
+    identifier can be updated by the OpenGL API.
+
+    (modify second paragraph, p. 59) If the <binding> identifier is used with
+    a uniform or shader storage block instanced as an array then the first
+    element of the array takes the specified block binding and each subsequent
+    element takes the next consecutive block binding point.
+
+    (modify third paragraph, p. 59) If the binding point for any uniform or
+    shader storage block instance is less than zero or greater than or equal
+    to the implementation-dependent maximum number of bindings for the block
+    type (uniform or shader storage), a compilation error will occur.  When
+    the binding identifier is used with a uniform or shader storage block
+    instanced as an array of size <N>, all elements of the array from
+    <binding> through <binding>+<N>-1 must be within this range.
+
+
+    Modify Section 4.10, Memory Qualifiers (p. 71)
+
+    (modify first paragraph of section, p. 71, removing the "Only" from "Only
+    variables") Variables declared as image types (the basic opaque types with
+    "image" in their keyword) can be qualified with a memory qualifier.
+
+    (add to the end of the third paragraph, p. 73) ...  It is an error to
+    qualify an image variable with both "readonly" and "writeonly".
+
+    (insert after third paragraph, p. 73) The memory qualifiers "coherent",
+    "volatile", "restrict", "readonly", and "writeonly" may be used in the
+    declaration of buffer variables (i.e., members of shader storage blocks).
+    When a buffer variable is declared with a memory qualifier, the behavior
+    specified for memory accesses involving image variables described above
+    applies identically to memory accesses involving that buffer variable.  It
+    is an error to assign to a buffer variable qualified with "readonly" or to
+    read from a buffer variable qualified with "writeonly".
+
+    Additionally, memory qualifiers may also be used in the declaration of
+    shader storage blocks.  When a block declaration is qualified with a
+    memory qualifier, it is as if all of its members were declared with the
+    same memory qualifier.  For example, the block declaration
+
+      coherent buffer Block {
+        readonly vec4 member1;
+        vec4 member2;
+      };
+
+    is equivalent to
+
+      buffer Block {
+        coherent readonly vec4 member1;
+        coherent vec4 member2;
+      };
+
+    Memory qualifiers are only supported in the declarations of image
+    variables, buffer variables, and shader storage blocks; it is an error to
+    use such qualifiers in any other declaration.
+
+
+    Modify Section 5.5, Vector and Scalar Components and Length, p. 79
+
+    (modify last paragraph of section, p. 81)  ... The type returned by
+    .length() on a vector is int, and the value returned is considered a
+    constant expression.
+
+
+    Modify Section 5.6, Matrix Components, p. 81
+
+    (modify last paragraph of section, p. 81) ... The type returned by
+    .length() on a matrix is int, and the value returned is considered a
+    constant expression.
+
+
+    Modify Section 5.9, Expressions, p. 83
+
+    (insert after 4th bullet of section, p. 83, correcting the oversight that
+     .length() can also be used on vectors and matrices)
+
+      * an expression of vector or matrix type with the length method applied
+
+
+    Insert new section after Section 8.10, Atomic Counter Functions (p. 149)
+
+    8.X  Atomic Memory Functions
+
+    Atomic memory functions perform atomic operations on an individual signed
+    or unsigned integer found in buffer object or shared variable storage.
+    All of the atomic memory operations read a value from memory, compute a
+    new value using one of the operations described below, write the new value
+    to memory, and return the original value read.  The contents of the memory
+    being updated by the atomic operation are guaranteed not to be modified by
+    any other assignment or atomic memory function in any shader invocation
+    between the time the original value is read and the time the new value is
+    written.
+
+    Atomic memory functions are supported only for a limited set of variables.
+    A shader will fail to compile if the value passed to the <mem> argument of
+    an atomic memory function does not correspond to a buffer or shared
+    variable.  It is acceptable to pass an element of an array or a single
+    component of a vector to the <mem> argument of an atomic memory function,
+    as long as the underlying array or vector is a buffer or shared variable.
+
+    Functions:
+
+        uint atomicAdd(inout uint mem, uint data);
+        int atomicAdd(inout int mem, int data);
+
+          Computes a new value by adding the value of <data> to the contents
+          of <mem>.
+
+        uint atomicMin(inout uint mem, uint data);
+        int atomicMin(inout int mem, int data);
+
+          Computes a new value by taking the minimum of the value of <data>
+          and the contents of <mem>.
+
+        uint atomicMax(inout uint mem, uint data);
+        int atomicMax(inout int mem, int data);
+
+          Computes a new value by taking the maximum of the value of <data>
+          and the contents of <mem>.
+
+        uint atomicAnd(inout uint mem, uint data);
+        int atomicAnd(inout int mem, int data);
+
+          Computes a new value by performing a bit-wise and of the value of
+          <data> and the contents of <mem>.
+
+        uint atomicOr(inout uint mem, uint data);
+        int atomicOr(inout int mem, int data);
+
+          Computes a new value by performing a bit-wise or of the value of
+          <data> and the contents of <mem>.
+
+        uint atomicXor(inout uint mem, uint data);
+        int atomicXor(inout int mem, int data);
+
+          Computes a new value by performing a bit-wise exclusive or of the
+          value of <data> and the contents of <mem>.
+
+        uint atomicExchange(inout uint mem, uint data);
+        int atomicExchange(inout int mem, int data);
+
+          Computes a new value by simply copying the value of <data>.
+
+        uint atomicCompSwap(inout uint mem, uint compare, uint data);
+        int atomicCompSwap(inout int mem, int compare, int data);
+
+          Compares the value of <compare> and the contents of <mem>.  If the
+          values are equal, the new value is given by <data>; otherwise, it is
+          taken from the original contents of <mem>.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on OpenGL 4.3 and ARB_compute_shader:
+
+    If OpenGL 4.3 and ARB_compute_shader are not supported, any references to
+    uses of shader storage blocks in compute shaders, as well as the enumerant
+    MAX_COMPUTE_SHADER_STORAGE_BLOCKS, should be removed.  Additionally, this
+    extension provides GLSL atomic memory functions that can be used with
+    buffer variables (from this extension) and shared variables (from
+    ARB_compute_shader).  If ARB_compute_shader is not supported, references
+    to shared variables should be removed from the language describing these
+    functions.
+
+    Note that no "#extension" directive is necessary to use atomic memory
+    functions on shared variables in compute shaders.
+
+Dependencies on OpenGL 4.3 and ARB_program_interface_query
+
+    If OpenGL 4.3 and ARB_program_interface_query are not supported, it
+    wouldn't be possible to use GLSL query APIs to enumerate active buffer
+    variables and shader storage blocks used by a program.  We require that
+    OpenGL 4.3 or ARB_program_interface_query be supported; this shouldn't be
+    a problem for any implementations of this extension.
+
+Dependencies on NV_bindless_texture
+
+    If NV_bindless_texture is supported (and enabled via the #extension
+    directive), the restriction that image and sampler variables must be
+    uniform variables not in blocks is lifted.  In this case, image and
+    sampler variables may be members in shader storage blocks.
+
+    If an image variable is declared as a member of a shader storage block,
+    the memory qualifiers on such variable declarations apply to the memory
+    holding the block member and *not* the memory referenced by the image.  If
+    it is necessary to apply a memory qualifier to the memory referenced by an
+    image variable found inside a shader storage block, it's possible to embed
+    the image variable declaration in a sturcture and then embed the structure
+    in a block.  In the following example:
+
+      struct S {
+        readonly image2D x;
+      };
+      buffer Block {
+        S m;
+      };
+
+    "readonly" is considered to apply to the memory pointed to by the image
+    variable <x>.  In this example:
+
+      buffer Block {
+        readonly image2D m;
+      }
+
+     "readonly" is considered to apply to the memory holding the image handle.
+     It would be illegal to write to <m>, but it would be legal to write to
+     the texture memory pointed to by <m> (i.e., you can pass <m> to
+     imageStore).
+
+Errors
+
+    INVALID_VALUE is generated by BindBufferRange if <target> is
+    SHADER_STORAGE_BUFFER and <index> is greater than or equal to the value of
+    MAX_SHADER_STORAGE_BUFFER_BINDINGS.
+
+    INVALID_VALUE is generated by BindBufferRange if <target> is
+    SHADER_STORAGE_BUFFER and <offset> is not a multiple of the value of
+    SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT.
+
+    INVALID_VALUE is generated by ShaderStorageBlockBinding if
+    <storageBlockIndex> is not an active shader storage block index of
+    <program>.
+
+    INVALID_VALUE is generated by ShaderStorageBlockBinding if
+    <storageBlockBinding> is is greater than or equal to the value of
+    MAX_SHADER_STORAGE_BUFFER_BINDINGS.
+
+New State
+
+    Add new table, labeled "Shader Storage Buffer State", after Table 6.58
+    (Atomic Counter State), p. 562:
+
+                                                             Initial
+    Get Value                         Type  Get Command      Value    Description                Sec.
+    -----------------------           ----  -----------      -------  ------------------------   -----
+    SHADER_STORAGE_BUFFER_BINDING     Z+    GetIntegerv      0        Current value of generic   2.14.X
+                                                                      shader storage buffer
+                                                                      binding
+    SHADER_STORAGE_BUFFER_BINDING     n*Z+  GetIntegeri_v    0        Buffer object bound        2.14.X
+                                                                      to each shader storage
+                                                                      buffer binding point
+    SHADER_STORAGE_BUFFER_START       n*Z+  GetInteger64i_v  0        Start offset of            2.14.X
+                                                                      binding range for each
+                                                                      shader storage buffer
+    SHADER_STORAGE_BUFFER_SIZE        n*Z+  GetInteger64i_v  0        Size of binding range for  2.14.X
+                                                                      each shader storage buffer
+
+New Implementation Dependent State
+
+    Add to Table 6.66, Implementation Dependent Vertex Shader Limits, p. 570
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_VERTEX_SHADER_STORAGE_BLOCKS  Z+    GetIntegerv    0              Number of shader storage   2.14.X
+                                                                          blocks accessed by a
+                                                                          vertex shader
+
+    Add to Table 6.67, Implementation Dependent Tessellation Shader Limits, p. 571
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_TESS_CONTROL_SHADER_          Z+    GetIntegerv    0              Number of shader storage   2.14.X
+      STORAGE_BLOCKS                                                      blocks accessed by a
+                                                                          tess. control shader
+    MAX_TESS_EVALUATION_SHADER_       Z+    GetIntegerv    0              Number of shader storage   2.14.X
+      STORAGE_BLOCKS                                                      blocks accessed by a
+                                                                          tess. evaluation shader
+
+    Add to Table 6.68, Implementation Dependent Geometry Shader Limits, p. 572
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_GEOMETRY_SHADER_STORAGE_      Z+    GetIntegerv    0              Number of shader storage   2.14.X
+      BLOCKS                                                              blocks accessed by a
+                                                                          geometry shader
+
+    Add to Table 6.69, Implementation Dependent Fragment Shader Limits, p. 573
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_FRAGMENT_SHADER_STORAGE_      Z+    GetIntegerv    8              Number of shader storage   2.14.X
+      BLOCKS                                                              blocks accessed by a
+                                                                          fragment shader
+
+    Add to new table in ARB_compute_shader, Implementation Dependent Compute Shader Limits
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_COMPUTE_SHADER_STORAGE_       Z+    GetIntegerv    8              Number of shader storage   2.14.X
+      BLOCKS                                                              blocks accessed by a
+                                                                          compute shader
+
+    Add to Table 6.70, Implementation Dependent Aggregate Shader Limits, p. 574
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_COMBINED_SHADER_STORAGE_      Z+    GetIntegerv    8              Number of shader storage   2.14.X
+      BLOCKS                                                              blocks accessed by a
+                                                                          program
+    MAX_SHADER_STORAGE_BLOCK_SIZE     Z+    GetInteger-    2^24           Maximum size in basic      2.14.X
+                                              64v                         machine units of a shader
+                                                                          storage block
+    SHADER_STORAGE_BUFFER_OFFSET_     Z+    GetIntegerv    256            Minimum required alignment 2.14.X
+      ALIGNMENT                                                           for shader storage buffer
+                                                                          binding offsets
+    MAX_SHADER_STORAGE_BUFFER_        Z+    GetIntegerv    8              Maximum number of shader   2.14.X
+      BINDINGS                                                            storage buffer bindings
+                                                                          in the context
+
+    Modify Table 6.71, Implementation Dependent Aggregate Shader Limits (cont.), p. 575
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_COMBINED_SHADER_OUTPUT_       Z+    GetIntegerv    8              limit on active image      3.10.22
+      RESOURCES                                                           units, shader storage
+                                                                          blocks, and fragment outputs
+
+    (The only change here is a rename of the token formerly called
+     MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS.)
+
+Sample Code
+
+    The following example code records a list of fragment (x,y) coordinates
+    and colors in rasterized primitives into a buffer object.  Fragment shader
+    code would incude:
+
+      #extension GL_ARB_shader_storage_buffer_object : require
+
+      // Use an atomic counter to keep a running count of the number of
+      // fragments recorded in the shader storage buffer.
+      layout(binding=0, offset=0) uniform atomic_uint fragmentCounter;
+
+      // Keep a uniform with the number of fragments that can be recorded in
+      // the buffer.
+      uniform uint maxFragmentCount;
+
+      // Structure with the per-fragment information to record.
+      struct FragmentData {
+        ivec2 position;
+        vec4 color;
+      };
+
+      // Shader storage block holding an array <fragments> declared without
+      // a fixed size.  Application code should determine how many fragments
+      // it wants to record and allocate a buffer appropriately.  With the 
+      // "std140" layout, each FragmentData record will take 32B.  With other
+      // layouts, the stride of the array is implementation-dependent.  The
+      // "binding=2" layout qualifier says that the block <Fragments> should
+      // be associated with shader storage buffer binding point #2.
+      layout(std140, binding=2) buffer Fragments {
+        FragmentData fragments[];
+      };
+
+      in vec4 color;
+
+      void main()
+      {
+        uint fragmentNumber = atomicCounterIncrement(fragmentCounter);
+        if (fragmentNumber < maxFragmentCount) {
+          fragments[fragmentNumber].position = ivec2(gl_FragCoord.xy);
+          fragments[fragmentNumber].color    = color;
+        }
+      }
+
+    In application code
+
+      #define NFRAGMENTS        100000
+      #define FRAGMENT_SIZE     32  // known due to "std140" usage
+
+      GLuint fragmentBuffer, counterBuffer;
+
+      // Generate, bind, and specify the data store to hold fragments.  The
+      // NULL pointer in BufferData says that the intial buffer contents are
+      // undefined.  They will be filled in by the fragment shader code.
+      glGenBuffers(1, &fragmentBuffer);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, fragmentBuffer);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, NFRAGMENTS*FRAGMENT_SIZE,
+                   NULL, GL_DYNAMIC_DRAW);
+
+      // Generate, bind, and specify the data store for the atomic counter.
+      glGenBuffers(1, &counterBuffer);
+      glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counterBuffer);
+      glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), NULL, 
+                   GL_DYNAMIC_DRAW);
+
+      // Reset the atomic counter to zero, then draw stuff.  This will record
+      // values into the shader storage buffer as fragments are generated.
+      GLuint zero = 0;
+      glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
+      glUseProgram(program);
+      glDrawElements(GL_TRIANGLES, ...);
+
+      // You could inspect the contents with a call such as:
+      void *ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+      ...
+      glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+      // You could also use the storage buffer contents for vertex pulling.
+      // The glMemoryBarrier() command ensures that the data writes to the
+      // storage buffer complete prior to vertex pulling.
+      glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+      glBindBuffer(GL_ARRAY_BUFFER, fragmentBuffer);
+      glVertexAttribIPointer(0, 2, GL_INT, GL_FALSE, FRAGMENT_SIZE, 
+                             (void*)0);
+      glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, FRAGMENT_SIZE,
+                            (void*)16);
+      glEnableVertexAttribArray(0);
+      glEnableVertexAttribArray(1);
+      glDrawArrays(GL_POINTS, ...);
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    (1) The main goal of this extension is to allow C-style GLSL shader code
+        to write to buffer objects without using roundabout hacks like
+        creating buffer textures and using shader image loads and stores.
+        What other approaches could we take to achieving the same thing?
+
+      RESOLVED:  We are using "shader storage blocks" as an abstraction
+      similar to uniform blocks, except that we allow shaders to write to
+      "shader storage blocks".  Other options considered include:
+
+      - Use uniform blocks, but with a special layout qualifier (e.g.,
+        "writeonly" or "readwrite") that implies different semantics and
+        implementation-dependent limits.  This would avoid the need for a new
+        storage qualifier in the shading language, and could also avoid adding
+        new GL APIs to enumerate active buffer variables and shader storage
+        blocks.  However, it would have the disadvantage of shoehorning two
+        features, which might be implemented very differently in hardware,
+        into a single abstraction.
+
+      - Use C-style pointer syntax as in NV_shader_buffer_store, but treat the
+        pointers as referring to a buffer binding rather than a specific GPU
+        address.  In this approach, pointers might be required to be uniform.
+        (In NV_shader_buffer_store, pointers are just data.  They can be
+        passed as uniforms, uniform block members, shader inputs/outputs,
+        reconstructed from texture data, or however the application wants to
+        pass them.)
+
+    (2) When using shader storage blocks to append records to a buffer, the
+        storage is provided by a buffer object.  There doesn't seem to be any
+        reason why the shader really needs to know the "length" of the buffer.
+        It might therefore want to declare global storage blocks containing
+        unsized arrays.  Should we allow this?  If so, how does that interact
+        with bounds checking?  What does it mean for the ".length()" method in
+        GLSL?  What would happen if you tried to pass such an array as a
+        function parameter?  What does it mean for a possible introspection
+        API allowing applications to query how big the block needs to be?
+
+      RESOLVED:  We will support shader storage blocks whose last member is an
+      unsized array.  For this unsized array, the effective size will be
+      determined at run-time from the size of the data store.  Such unsized
+      arrays can be indexed with general integer expressions (other than
+      negative constant expressions, which are generally forbidden for array
+      indexing in GLSL).  The ".length()" method is not supported, nor is
+      passing the array as a function argument.
+
+      When using the ARB_program_interface_query extension to enumerate the
+      set of active buffer variables, only the first element of arrays (sized
+      or unsized) will be enumerated; the array size and offsets for array
+      elements other than the first can be determined by querying the
+      TOP_LEVEL_ARRAY_SIZE and TOP_LEVEL_ARRAY_STRIDE properties of the buffer
+      variable.
+
+      The bounds checking rules for unsized arrays at the end of shader
+      storage blocks are the same as for uniform blocks.  If the array is
+      accessed using an index pointing at memory beyond the end of the buffer
+      object associated with the shader storage blocks, the results are
+      undefined and can lead to program termination; see also issue (7).
+
+      Other options considered here included having the shader declare an
+      array with a dummy size that's either unrealistically small (1 or 2) or
+      unrealistically large, and providing guarantees like:
+
+        - (small) if the last element of the storage block is an array, we
+          have defined behavior for indexed accesses off the end of the array,
+          as long as the effective offset is contained within the buffer; or
+
+        - (large) if the buffer is too small for the large declared array,
+          we have defined behavior for accesses to array elements as long as
+          the effective offset is contained within the buffer.
+
+      Note that it wouldn't be possible for the application to determine the
+      stride of an array of structures if it were declared with a size of 1.
+      For a size of 2 or larger, you could use
+
+            offset(array[1].member) - offset(array[0].member)
+
+      for "shared" layouts at least, but that's not possible if there is no
+      "array[1].member".
+
+    (3) Do we allow arrays of shader storage blocks?
+
+      RESOLVED:  Yes; we already allow arrays of uniform blocks, where each
+      block instance has an identical layout but is backed by a separate
+      buffer object.  It seems like we should do this here for consistency.
+
+      If we had overloaded the existing uniform block APIs (e.g., by applying
+      a "readwrite" layout qualifier to uniform blocks), it would be really
+      weird if we disallowed arrays of writeable uniform blocks since we
+      already allow it for regular (read-only) uniform blocks.
+
+    (4) We have typically provided some sort of "introspection" API where
+        application code written with no explicit knowledge of the shaders
+        used can discover properties of active variables.  Should we provide
+        some here?  If so, any pitfalls?
+
+      RESOLVED:  Yes, we will provide an introspection API, but not as part of
+      this extension.  Instead, we require support for the
+      ARB_program_interface_query extension, which provides a generic
+      mechanism for enumerating the set of active resources for a number of
+      "interfaces".  This API includes interfaces for all active shader
+      storage blocks as well as all active buffer variables.  Supporting
+      enumeration of these new resources was one of the primary motivations
+      for the generic ARB_program_interface_query extension; however, that
+      extension also added enumeration support for other resources that
+      previously had no enumeration API.
+
+      The enumeration of buffer variables follows slightly different rules
+      than other variables; in particular, only the first element of members
+      declared as arrays are enumerated.  The previous enumeration rules would
+      have awful consequences when applied to large arrays of structures in
+      shader storage blocks.  For example, the following declaration would
+      report 80K active uniforms, starting with "records[0].position" and
+      ending with "records[39999].texcoord".  Ouch!
+
+        struct FragmentData {
+          vec4 position;
+          vec2 texcoord;
+        };
+        buffer FragmentInfo {
+          FragmentData records[40000];
+        };
+
+      Regular uniforms and UBOs also have exactly the same problem; the
+      primary difference is that current implementation limits on uniform
+      storage provide a bounds on how bad this could get.  Even those limits
+      might not actually bound the GetActiveUniform* badness, as the spec
+      doesn't require a program to link successfully for GetActiveUniform* to
+      enumerate uniforms.
+
+    (5) Uniform blocks already have a well-established usage model, for which
+        implementations may have dedicated support as well as limits that
+        reflect this usage model.  If we were to overload uniform blocks, some
+        new uses might not meet this limit and usage model.  Is that a
+        problem?
+
+      RESOLVED:  Yes, it could have been a problem if we had overloaded
+      uniform blocks.  Implementations may be able to distinguish between
+      different types of uniform blocks, which might be implemented
+      differently.  One might be able to distinguish based on the size of the
+      block as well as the layout qualifier (i.e., "readwrite" might be
+      "different" than "readonly").
+
+      Note that if an implementation wants to use the size of the block as a
+      factor for determining how the block is accessed, this would introduce a
+      new wrinkle into the unsized array use case above.  That might not be a
+      huge deal; implementations could make a worst-case assumption and treat
+      the effective size of an unsized array as resulting in a maximum-size
+      buffer object.
+
+      Note that this consideration applies equally to purely read-only uniform
+      storage.  For example, implementations might have a limit on the size of
+      uniform blocks that can be accessed by shaders with accelerated hardware
+      support.  However, applications might well want to store large data sets
+      in buffer objects and access them using random-access reads in shader
+      code.  OpenGL 4.2's mechanisms allow data to be pulled from buffer
+      objects for vertex shaders using vertex buffers (but only using the
+      vertex/instance number as an index).  Data can also be read from a
+      texture buffer object via texelFetch(), but that doesn't allow for more
+      complex data structures (as noted above in the "write" example above).
+      It would be desirable to have a mechanism to allow random access reads
+      to "large" buffer objects, even if the implementation and performance
+      characterstics are different from regular UBO usage.
+
+      NVIDIA's NV_shader_buffer_load extension fills this need by allowing the
+      use of read-only pointers.  That extension has been supported for a
+      longer time and is supported on more platforms than the
+      NV_shader_buffer_store mentioned above.
+
+    (6) The size of uniform blocks on typical OpenGL 3/4 implementations is
+        64KB.  Is this good enough for shader storage buffers, or do we need a
+        higher limit?
+
+      RESOLVED:  64K is not good enough; a higher limit is required.  The
+      current specification requires implementations to support shader storage
+      blocks of at least 2^24 bytes (16MB).  Implementations may support
+      larger sizes; the maximum size can be determined by querying
+      MAX_SHADER_STORAGE_BLOCK_SIZE.  Because implementations may choose to
+      support block sizes >= 2^31 bytes, applications should query the maximum
+      size with GetInteger64v().
+
+    (7) How are write accesses to shader storage blocks bounds-checked?
+
+      RESOLVED:  For shader storage blocks, we use the same language found in
+      the current OpenGL 4.2 specification for uniform blocks, which
+      guarantees no bounds-checking:
+
+        | If any active uniform block is not backed by a sufficiently 
+        | large buffer object, the results of shader execution are
+        | undefined, and may result in GL interruption or termination.
+
+      It would be desirable for to have a "robustness" feature that provides
+      more solid guarantees when accessing outside the bounds of a buffer
+      object range.  However, such a feature is not present in the existing
+      ARB_robustness specification and is considered orthogonal to the
+      functionality being added here.
+
+      If we were to add bounds-checking here or in the future, there may still
+      be issues of how bounds-checking would be performed, with multiple use
+      cases.  For example, some existing UBO hardware might include hardware
+      bounds checking (e.g., return zeroes if accessing off the end of a
+      buffer object), but that support might not be extended to cover writes
+      or even some other read-only use cases.
+
+      If shader-based bounds checking is required, using code inserted by the
+      compiler, we'd have to figure out how to specify it.  In particular,
+      we'd have to figure out what granularity the check be done at.  At the
+      byte/word level?  Using the first index of the array?
+
+        struct FragmentData {
+          vec4 position;
+          vec2 texcoord;
+        };
+        layout(writeonly,binding=2) uniform FragmentInfo {
+          FragmentData records[40000];
+        };
+
+      In the example above, let's assume that the structure was tightly
+      packed, where each element of <records> requires exactly 24 bytes -- 16
+      for <position> and 8 for <texcoord>.  If we bound a 32-byte buffer, what
+      would happen to reads/writes of records[1].position?  Are reads/writes
+      of the x/y components guaranteed to work, with "out-of-bounds" behavior
+      on z/w?  What about a 31-byte buffer -- do you read/write partial data
+      for records[1].position.y?  What about a 40-byte buffer, which contains
+      sufficient storage for all of records[1].position?  Is it guaranteed to
+      work, or should we allow implementations to treat accesses to array
+      elements out of bounds unless the buffer storage for the entire element
+      (including records[1].texcoord in this case).
+
+    (8) Should we provide new "packing" layout qualifiers to augment the
+        existing vec4-centric "std140" rule for uniform blocks?
+
+      RESOLVED:  Yes, add a new "std430" layout that provided for tighter
+      packing of arrays and structures.  With "std140", the base alignment of
+      arrays of scalars and vectors and of structures is always a multiple of
+      the base alignment of a vec4 (16B), which means that the stride of an
+      array of type "float", "int", or "uint" is 16B instead of 4B.  With
+      "std430", such arrays will now be tightly packed.
+
+      Note that in the "std430" packing, arrays of vec3s are still not tightly
+      packed; vec3 types still require a 16B alignment as in "std140".
+
+      Note that the "std430" layout is supported only for shader storage
+      blocks, and not for uniform blocks.
+
+    (9) Should we allow memory qualifiers ("coherent", "volatile", "restrict",
+        "readonly", and "writeonly") to apply to entire shader storage blocks?
+        To individual shader storage block members.
+
+      RESOLVED:  We allow memory qualifiers to apply to both shader storage
+      blocks and block members (buffer variables).  When a memory qualifier is
+      applied to a block declaration, it is considered to apply to all block
+      members.
+
+      Note that the extension NV_bindless_texture allows image variables
+      (which accept memory qualifiers) to be declared as members of shader
+      storage blocks (which also accept memory qualifiers).  This spec adds an
+      interaction that says that if this case occurs, the qualifier is
+      considered to apply to the image handle, stored in the block, and not
+      the memory referenced by the image.
+
+    (10) Should we allow mutable assignments of storage blocks to binding
+         points?
+
+      RESOLVED:  Yes, allow them in a manner similar to uniform blocks, since
+      OpenGL 4.2's atomic counter buffer feature requires the "binding=N"
+      layout in atomic counter declarations and doesn't let you change the
+      binding used post-link.  However, we decided to use the same behavior as
+      uniform blocks, since the functionality seems so similar.
+
+    (11) Is this extension/feature really needed?  Isn't it possible to do
+         something similar in unextended OpenGL 4.2?
+
+      RESOLVED:  Yes, it's possible to achieve similar functionality in
+      unextended OpenGL 4.2, but something cleaner is clearly desirable.
+
+      One of the intended uses of OpenGL 4.2's atomic counter feature
+      (ARB_shader_atomic_counters) is to allow shader invocations to write
+      values generated by shaders into a buffer object, using the atomic
+      counters to reserve a unique slot number in an array of outputs.  The
+      array itself is accessed by associating the buffer object with a buffer
+      texture (ARB_texture_buffer_object) and writing to that texture using
+      shader image stores (ARB_shader_image_load_store).  There are a number
+      of unfortunate limitations of this approach:
+
+        * Buffers written to using image stores must have a 1- to 4-component
+          texture format associated with them.  It's not possible to write out
+          an array of structures, though one can use multiple buffers with
+          each buffer holding a separate member.
+
+        * The image store function takes a canonical vec4/ivec4/uvec4 value to
+          write, regardless of the value stored.  If you're only storing a
+          float or a vec2, you need to use a constructor (or a swizzle hack)
+          to generate a vec4 in which the extra components are ignored.
+
+        * The image store function takes signed integer coordinates (like the
+          texelFetch built-ins).  However, the atomic counter returns an
+          unsigned value, and GLSL doesn't support implicit conversions from
+          unsigned to signed.
+
+        * Image stores to buffers require the use of a buffer texture, even
+          though we don't ever use it as a texture.
+
+      The solution offered here is far more direct -- shader code simply
+      declares the format of the buffer object as an interface block and can
+      read and write the buffer using normal shader code.
+
+    (12) Are there other extensions providing similar functionality?
+
+      RESOLVED:  Yes.  The NVIDIA extension NV_shader_buffer_store also
+      provides a mechanism where buffer objects can be written to with regular
+      shader code.  Using that extension, an application is able to query a
+      GPU address of a buffer, make that buffer resident, and then access the
+      buffer in GLSL code using the queried GPU address as a pointer.
+      Applications using NV_shader_buffer_store are required to ensure that
+      pointers are valid and no automatic bounds checking is provided.
+
+      This proposed extension is intended to provide GLSL functionality
+      similar to what you can get with NV_shader_buffer_store, but without
+      general pointers.  Instead, this extension uses bindings, with shader
+      code effectively extracting a pointer from the bound buffer.
+
+    (13) Do we need some sort of limit on the combined sum of actively used
+         shader storage blocks and other resources, similar to what we had for
+         image units in OpenGL 4.2 (MAX_COMBINED_IMAGE_UNITS_
+         AND_FRAGMENT_OUTPUTS)?
+
+      RESOLVED:  Yes.  For this extension, we just add shader storage blocks
+      to the set of resources that have a combined limit and also create a new
+      general token name (MAX_COMBINED_SHADER_OUTPUT_RESOURCES) that is a new
+      alias of the old combined limit token.
+
+      Some OpenGL 4.2 and 4.3 implementations need to share a single set of
+      internal hardware resources to handle fragment shader outputs, image
+      loads and stores (from OpenGL 4.3 and ARB_shader_image_load_store), as
+      well as shader storage buffers.  We specify that a link error will occur
+      if a program requires more of these internal resources than are
+      available.  It is expected that implementations without a need for a
+      combined limit will expose a limit greater than or equal to the sum of
+      the individual limits for each shader stage and resource type.
+
+      This link error have interaction problems with the
+      ARB_separate_shader_objects extension and OpenGL 4.1.  When linking a
+      separable program, the linker will not know anything about the usage of
+      fragment shader outputs, image units, and shader storage blocks from
+      other programs that could be in use at the same time as the program
+      being linked.  This makes it seemingly impossible to enforce a combined
+      limit.  In practice, this is unlikely to be a problem because the
+      implementations needing to enforce this combined limit will support the
+      use of image uniforms and shader storage blocks only in fragment and
+      compute shaders, and those two stages can't run concurrently.
+
+    (14) Are accesses to shader storage buffers coherent with other accesses
+         to the same underlying resource (e.g., image loads/stores, texture
+         fetches)?  In the same shader invocation?  In different shader
+         invocations?
+
+      RESOLVED:  No; we don't guarantee coherent accesses between shader
+      resources of different types.  Spec language corresponding to this issue
+      will be proposed outside this extension.
+
+    (15) Do we really need to have a combined limit on the sum of the number
+         of active shader storage blocks for each program stage
+         (MAX_COMBINED_SHADER_STORAGE_BLOCKS)?
+
+      RESOLVED:  We include such a limit, following the precedent of providing
+      a combined limit for each new resource with per-stage limits.  It's not
+      clear that this combined limit is needed by any current implementation,
+      though we envision an implementation that could have a set of physical
+      resources shared between shader stages without providing a full set of
+      resources for every stage.
+
+      Some implementations do need a combined limit on the number of fragment
+      shader outputs, image uniforms, and shader storage blocks, which is
+      handled by the separate MAX_COMBINED_SHADER_OUTPUT_RESOURCES limit
+      discussed in issue (13).
+
+    (16) How does an application determine the required buffer object size for
+         a shader storage block whose last member is an unsized array?
+
+      RESOLVED:  The ARB_program_interface_query extension includes a property
+      BUFFER_SIZE that can be queried for active shader storage blocks.  For
+      blocks where all members have known storage requirements, the value of
+      this property gives the minimum buffer size required to back the shader
+      storage block.
+
+      For shader storage blocks ending in an unsized array, the BUFFER_SIZE
+      property returns the minimum buffer size needed to store a single
+      element in the unsized array.  The actual storage requirements are a
+      function of the number of elements the application wants to store in the
+      buffer object.  If an application needs to store N elements in the
+      unsized array, the required size can be derived by 
+
+        minimum_size = buffer_size + (N-1) * top_level_stride
+
+      where <buffer_size> is the value of the BUFFER_SIZE property of the
+      shader storage block, and <top_level_stride> is the value of the
+      TOP_LEVEL_STRIDE property for the unsized array.
+
+      Note that when using the "std140" layout qualifier, applications can
+      determine the layout of shader storage blocks without any queries by
+      following the layout rules documented in the API specification.
+
+    (17) Should we provide GLSL constants for the implementation-dependent
+         limits in this specification (e.g., gl_MaxVertexShaderStorageBlocks)?
+
+      RESOLVED:  No.  It's not clear that these constants are of any real
+      value, and they've been specified inconsistently.  In particular, we
+      have a bunch of constants for atomic counters, atomic counter buffers,
+      and image units/uniforms, but we don't have any limits for uniform
+      blocks (ARB_uniform_buffer_object).
+
+    (18) Other than the last member of a shader storage block, should we allow
+         block members declared without an explicit size?
+
+      RESOLVED:  Yes, for consistency with the rest of GLSL.  GLSL in general
+      allows for arrays declared without a size.  Such arrays are implicitly
+      sized by the compiler based on usage.  For example, if a shader includes
+      code such as:
+
+         uniform int array[];  // no explicit size
+         ...
+         expression = array[2] * array[9];  // only references to <array>
+
+      the array is likely to be implicitly sized to 10 elements, since it
+      needs to provide storage for array[9].  These implicitly sized arrays
+      are also permitted in interface blocks, such as uniform blocks.
+
+      When an array is declared in shader code, there are limitations on how
+      the array can be used.  Such arrays may not be passed to functions in
+      their entirety or used by the ".length()" method.  Additionally, the
+      array may only be indexed with integer constant expressions.
+
+      If the last member of a shader storage block is declared as an array
+      without an explicit size, it will be considered to be an explicitly
+      unsized array whose size will be inferred at run-time based on the
+      provided buffer object.  Such arrays can be indexed with arbitrary
+      expressions, but can not be passed as function arguments or be used by
+      the ".length()" method.
+
+      Note that when using uniform or shader storage blocks using the "shared"
+      or "std140" layout qualifier, shaders should avoid using implicitly
+      sized arrays.  In this case, the size will be inferred by the compiler
+      based on shader code and might not be computed identically for multiple
+      programs using the same block.
+
+    (19) Should the ".length()" method be supported for unsized arrays at the
+         end of a shader storage block?  If not, how can shader code determine
+         the effective size of an unsized array?
+
+      RESOLVED:  In previous versions of GLSL, the ".length()" method is not
+      supported for arrays without a declared size, which means that its value
+      is known at compile time.  As a result, the value returned by
+      ".length()" is considered a constant expression.
+
+      In this expression, we allow unsized arrays at the end of shader storage
+      blocks, and allow the ".length()" method to be used to determine the
+      size of such arrays based on the size of the provided buffer object.
+      The derived array size can be derived by reversing the process described
+      in issue (16):
+
+        array.length() =
+          max((buffer_object_size - offset_of_array) / stride_of_array, 0)
+
+      Given that we will support the ".length()" method on unsized arrays, we
+      will also support on implicitly sized arrays for consistency.  For such
+      arrays, the array size will be determined at link time but will not be
+      considered a constant expression.
+
+
+Revision History
+
+    Revision 16, April 28, 2014 (pbrown)
+      - Fix typo in description of MAX_COMBINED_SHADER_STORAGE_BLOCKS.
+
+    Revision 15, September 23, 2013 (Jon Leech)
+      - Fix typo ShaderStorageBinding -> ShaderStorageBlockBinding in the
+        description of that command (Bug 10715).
+
+    Revision 14, September 6, 2013 (Jon Leech)
+      - Fix typo SHADER_STORAGE_BLOCK -> SHADER_STORAGE_BUFFER in the
+        description of ShaderStorageBlockBinding (Bug 10795).
+
+    Revision 13, June 1, 2012 (pbrown)
+      - Mark issues (8) and (9) as resolved.
+
+    Revision 12, May 31, 2012 (pbrown)
+      - Modify spec to allow the "std430" layout qualifier only on shader
+        storage blocks, not uniform blocks (bug 8992).
+
+    Revision 11, May 14, 2012 (pbrown)
+      - Further clarify the interaction with ARB_compute_shader on atomic
+        memory functions; add a clarification that no #extension directive is
+        needed to use these functions on shared memory variables in compute
+        shaders.
+
+    Revision 10, May 8, 2012 (pbrown)
+      - Add explicit language specifying that the value returned by the
+       .length() method for unsized arrays is undefined when the array is in
+       an array of blocks dereferenced with an out-of-bounds index.
+
+    Revision 9, May 7, 2012 (pbrown)
+      - Allow the use of the .length() method on unsized and implicitly sized 
+        arrays.  For unsized arrays in shader storage blocks, .length() will
+        be computed from the size of the associated buffer object.  For
+        implicitly sized arrays, .length() will be determined at link time.
+
+    Revision 8, May 3, 2012 (pbrown)
+      - Add a "std430" layout qualifier supporting more tightly packed arrays
+        and structures relative to "std140" for issue (8).
+      - Add support for memory qualifiers on shader storage block declarations
+        for issue (9), also add more explicit language on how these qualifiers
+        work on buffer variables.
+      - Add spec language making it illegal to use "readonly" and "writeonly"
+        memory qualifiers on the same declaration.
+      - Remove built-in constants for shader storage block implementation
+        limits, as described in issue (17).
+      - Mark various spec issues as resolved per the Khronos F2F.
+      - Add interaction with NV_bindless_texture, describing the behavior of
+        memory qualifiers on image variables inside shader storage blocks.
+
+    Revision 7, April 25, 2012 (pbrown)
+      - Remove the GLSL spec language generally disallowing unsized arrays in
+        interface blocks (bug 8837).  We have supported implicitly sized
+        arrays in blocks in previous versions of GLSL and decided to retain
+        backward compatibility.
+      - Added a warning in the descript the "shared" layout qualifier
+        indicating that such blocks might not be shareable between programs if
+        they contain implicitly-sized array members.
+      - Minor typo/wording fixes.
+      - Fixed token table to describe all the general query functions 
+        (e.g., GetIntegerv, GetInteger64) where certain tokens can be used.
+      - Update the spec to require dynamically uniform indexing on arrays of
+        shader storage blocks.
+      - Added issues (18) and (19).
+
+    Revision 6, April 16, 2012 (pbrown)
+      - Tentatively add built-in constants for implementation limits on shader
+        storage blocks, as well as new issue (17) on the topic.
+
+    Revision 5, April 13, 2012 (pbrown)
+      - Add missing #extension and #define built-in documentation for the GLSL
+        part of the extension.
+      - Add GLSL spec language documenting support for unsized arrays at the
+        end of shader storage blocks.
+      - Add GLSL spec language generally disallowing unsized arrays in
+        interface blocks, including input/output blocks, uniform blocks, and
+        shader storage buffers (bug 8837).  This borrows from similar language
+        where unsized arrays are not permitted in structures.
+      - Extend the tables describing API tokens enumerating GLSL types to
+        indicate the set of types that can be used for buffer variables.
+      - Add sample code.
+      - Update language for several issues, and mark them as resolved.
+      - Add an issue indicating how an application can determine the required
+        size of a shader storage buffer when using unsized arrays.
+
+    Revision 4, April 12, 2012 (pbrown)
+      - Remove the enumeration APIs for buffer variables and shader storage
+        blocks; these resources can only be enumerated using the new APIs
+        provided by the ARB_program_interface_query extension.
+      - Add an interaction with ARB_program_interface_query, and have this
+        spec require that extension to ensure that the queries are available.
+      - Add a new interaction with ARB_compute_shader; the atomic memory
+        functions provided in this extension for buffer variables can also be
+        used for shared variables in compute shaders.  Also add new compute 
+        shader limit for active storage blocks.
+      - Add values for new enumerants in this extension.
+      - Fix up the "New Procedures and Functions" and "New Tokens" sections.
+      - Assign enumerant values for all tokens.
+      - Add a new token MAX_COMBINED_SHADER_OUTPUT_RESOURCES that's an alias
+        for MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS.  That combined
+        limit now needs to apply to fragment outputs, image units, and shader
+        storage blocks.
+      - General cleanup of API specification language for shader storage
+        blocks.
+      - Add documentation of per-stage and combined limits in "Shader Execution"
+        spec langauge, and a validation error for exceeding combined limits with
+        separate program objects.
+      - Add new edits to Appendix A and Appendix D.
+      - Add appropriate text to the Dependencies, New Errors, New State, and
+        New Implementation-Dependent State sections.
+      - Add some new issues; update issue (13).
+
+    Revision 3, January 23, 2012 (pbrown)
+      - Add actual spec language in place of the previous "here's our options"
+        overview.  Clean up the overview and issues section to reflect the
+        general approach chosen in the initial feature discussion.
+      - Note:  Lists of new enumerants, functions, state, and errors have not
+        been built yet.
+
+    Revision 2, January 3, 2012 (pbrown)
+      - Move issues from overview to separate section in preparation for
+        further edits; no other changes.
+
+    Revision 1, October 26, 2011 (pbrown)
+      - Initial sketch/proposal, containing only an introduction and issues
+        list.

@@ -1,0 +1,30 @@
+boto v2.9.4
+===========
+
+:date: 2013/05/20
+
+This release adds updated Elastic Transcoder support & fixes several bugs
+from recent releases & API updates.
+
+
+Features
+--------
+
+* Updated Elastic Transcoder support - It now supports HLS, WebM, MPEG2-TS & a
+  host of `other features`_. (:sha:`89196a`)
+
+  .. _`other features`: http://aws.typepad.com/aws/2013/05/new-features-for-the-amazon-elastic-transcoder.html
+
+
+Bugfixes
+--------
+
+* Fixed a bug in the canonicalization of URLs on Windows. (:sha:`09ef8c`)
+* Fixed glacier part size bug (:issue:`1478`, :sha:`9e04171`)
+* Fixed a bug in the bucket regex for S3 involving capital letters.
+  (:sha:`950031`)
+* Fixed a bug where timestamps from Cloudformation would fail to be parsed.
+  (:sha:`b40542`)
+* Several documentation improvements/fixes:
+
+    * Added autodocs for many of the EC2 apis. (:sha:`79f939`)

@@ -1,0 +1,79 @@
+Name
+
+    ANGLE_context_virtualization
+
+Name Strings
+
+    EGL_ANGLE_context_virtualization
+
+Contributors
+
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, 2021-09-17
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows the client to create contexts that are internally
+    virtualized on a single native context for performance or stability.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglCreateContext:
+
+        EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE    0x3481
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request that a context should be part of a virtualization group,
+    use the attribute EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE. EGL_DONT_CARE
+    can be used to allow the implementation to decide what virtualization
+    group is used. The default value of EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE
+    is EGL_DONT_CARE. It is undefined behaviour to have multiple contexts from
+    the same virtualization group current different threads simultaneously.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2018-06-11 (Geoff Lang)
+      - Initial draft
+    Version 2, 2021-09-17 (Geoff Lang)
+      - Change to context creation attribute

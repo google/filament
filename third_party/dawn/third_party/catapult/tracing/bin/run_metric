@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+import argparse
+import codecs
+import json
+import os
+import sys
+import six
+
+sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
+from tracing_build import vulcanize_histograms_viewer
+from tracing.metrics import metric_runner
+from tracing.metrics import discover
+from tracing.value.diagnostics import generic_set
+from tracing.value.diagnostics import reserved_infos
+from tracing.value import histogram_set
+
+
+def Main(argv):
+  all_metrics = discover.DiscoverMetrics(
+      ['/tracing/metrics/all_metrics.html'])
+
+  parser = argparse.ArgumentParser(
+      description='Runs metrics on local traces')
+  parser.add_argument('trace_file_or_dir',
+                      help='A trace file, or a dir containing trace files')
+  parser.add_argument('metrics', nargs='+',
+                      help=('Function names of registered metrics '
+                            '(not filenames). '
+                            'Available metrics are: %s' %
+                            ', '.join(all_metrics)),
+                      choices=all_metrics, metavar='metricName')
+  parser.add_argument('--filename', default='results', type=str,
+                      help='Output file name (no extension)')
+  parser.add_argument('--reset', action='store_true',
+                      help=('Whether to ignore existing results in HTML file '
+                            '(if it exists)'))
+  parser.add_argument('--results-label', type=str,
+                      help=('A custom label for a column in HTML file'))
+  parser.add_argument('--also-output-json', action='store_true',
+                      help=('Also output json file containing values. Note that'
+                            ' this only contains the results of current run'))
+
+  args = parser.parse_args(argv[1:])
+  trace_file_or_dir = os.path.abspath(args.trace_file_or_dir)
+
+  if os.path.isdir(trace_file_or_dir):
+    trace_dir = trace_file_or_dir
+    traces = [os.path.join(trace_dir, trace) for trace in os.listdir(trace_dir)]
+  else:
+    traces = [trace_file_or_dir]
+
+  failures = []
+  histograms = []
+  for trace_url, mre_result in six.iteritems(metric_runner.RunMetricOnTraces(
+      traces, args.metrics)):
+    failures.extend(mre_result.failures)
+    histograms.extend(mre_result.pairs.get('histograms', []))
+
+  if args.results_label:
+    hset = histogram_set.HistogramSet()
+    hset.ImportDicts(histograms)
+    hset.AddSharedDiagnosticToAllHistograms(
+        reserved_infos.LABELS.name,
+        generic_set.GenericSet([args.results_label]))
+    histograms = hset.AsDicts()
+
+  if failures:
+    print('Running metric failed:')
+    for failure in failures:
+      print(failure.stack)
+
+  output_file = args.filename + '.html'
+  open(output_file, 'a').close() # Create file if it doesn't exist.
+  with codecs.open(output_file, mode='r+', encoding='utf-8') as output_stream:
+    vulcanize_histograms_viewer.VulcanizeAndRenderHistogramsViewer(
+        histograms, output_stream, args.reset)
+    print('HTML result created in file://' + os.path.abspath(output_file))
+
+  if args.also_output_json:
+    output_file = args.filename + '.json'
+    with open(output_file, 'w') as f:
+      json.dump(histograms, f, indent=2, sort_keys=True, separators=(',', ': '))
+    print('JSON result created in file://' + os.path.abspath(output_file))
+
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv))

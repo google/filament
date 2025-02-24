@@ -1,0 +1,26 @@
+Name: Google App Engine MapReduce
+Short Name: mapreduce
+URL: https://github.com/GoogleCloudPlatform/appengine-mapreduce
+Revision: 9f0d9a15cc3fc559a6296bbb3bf1676be942c7de
+Version: 1.9.22.0
+License: Apache
+Security Critical: no
+Shipped: yes
+
+Description:
+MapReduce is a programming model for processing large amounts of data in a
+parallel and distributed fashion.  The App Engine MapReduce library makes
+it convenient to perform an operation on all datastore entities of a kind.
+
+Note that this library has several dependencies, including:
+ - GoogleAppEngineCloudStorageClient
+ - GoogleAppEnginePipeline
+ - Graphy
+ - simplejson
+ - mock
+ - mox
+ - pg8000
+
+Local Modifications:
+Stripped everything except mapreduce/.
+

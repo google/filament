@@ -1,0 +1,33 @@
+<!doctype html>
+<style type="text/css">
+  canvas {
+    width: 1000px;
+    height: 250px;
+    border: solid 1px #ccc;
+  }
+  input {
+    width: 500px;
+  }
+</style>
+<script src="jquery.min.js"></script>
+
+<script src="smoothness.js"></script>
+<script src="power.js"></script>
+
+<script src="math.js"></script>
+<script src="color.js"></script>
+
+<script src="heatmap.js"></script>
+<script src="calculate.js"></script>
+<script src="draw.js"></script>
+<script src="input.js"></script>
+<script>
+  window.addEventListener('load', function() {
+    new Heatmap($('#canvas1'), $('#resolution1'), smoothnessData);
+    new Heatmap($('#canvas2'), $('#resolution2'), powerData);
+  });
+</script>
+<p><canvas id="canvas1"></canvas></p>
+<p><label for="resolution1">Resolution (actual graph should figure this out automatically)</label><input id="resolution1" type="range" min="1" max="10"></p>
+<p><canvas id="canvas2"></canvas></p>
+<p><label for="resolution2">Resolution (actual graph should figure this out automatically)</label><input id="resolution2" type="range" min="1" max="10"></p>

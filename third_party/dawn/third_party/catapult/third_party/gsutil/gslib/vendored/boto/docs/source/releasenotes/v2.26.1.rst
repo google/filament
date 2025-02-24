@@ -1,0 +1,14 @@
+boto v2.26.1
+============
+
+:date: 2014/03/03
+
+This release fixes an issue with the newly-added ``boto.rds2`` module when
+trying to use ``boto.connect_rds2``. Parameters were not being passed correctly,
+which would cause an immediate error.
+
+
+Changes
+-------
+
+* Fixed ``boto.connect_rds2`` to use kwargs. (:sha:`3828ece`)

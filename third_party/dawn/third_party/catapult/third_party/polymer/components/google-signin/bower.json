@@ -1,0 +1,54 @@
+{
+  "name": "google-signin",
+  "version": "2.0.0",
+  "description": "Web components to authenticate with Google services",
+  "homepage": "https://googlewebcomponents.github.io/google-signin",
+  "main": "google-signin.html",
+  "authors": [
+    "Addy Osmani",
+    "Randy Merrill"
+  ],
+  "license": "Apache-2.0",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "keywords": [
+    "web-component",
+    "web-components",
+    "polymer",
+    "sign-in",
+    "google",
+    "authentication"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#1.9 - 2",
+    "font-roboto": "PolymerElements/font-roboto#^1.0.0",
+    "iron-icon": "PolymerElements/iron-icon#1 - 2",
+    "iron-iconset-svg": "PolymerElements/iron-iconset-svg#1 - 2",
+    "iron-flex-layout": "PolymerElements/iron-flex-layout#1 - 2",
+    "paper-ripple": "PolymerElements/paper-ripple#1 - 2",
+    "paper-material": "PolymerElements/paper-material#1 - 2",
+    "google-apis": "GoogleWebComponents/google-apis#1 - 2"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#1 - 2"
+  },
+  "variants": {
+    "1.x": {
+      "dependencies": {
+        "polymer": "Polymer/polymer#^1.0.0",
+        "font-roboto": "PolymerElements/font-roboto#^1.0.0",
+        "iron-icon": "PolymerElements/iron-icon#^1.0.0",
+        "iron-iconset-svg": "PolymerElements/iron-iconset-svg#^1.0.0",
+        "iron-flex-layout": "PolymerElements/iron-flex-layout#^1.3.0",
+        "paper-ripple": "PolymerElements/paper-ripple#^1.0.0",
+        "paper-material": "PolymerElements/paper-material#^1.0.0",
+        "google-apis": "GoogleWebComponents/google-apis#^1.0.0"
+      },
+      "devDependencies": {
+        "iron-component-page": "PolymerElements/iron-component-page#^1.0.0"
+      }
+    }
+  }
+}

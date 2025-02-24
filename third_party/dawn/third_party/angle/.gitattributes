@@ -1,0 +1,21 @@
+*                                          text=auto
+*.sln                                      eol=crlf
+*.vcxproj                                  eol=crlf
+*.vcxproj.filters                          eol=crlf
+*.bat                                      eol=crlf
+*.rc                                       eol=crlf
+**/compiled/*.h                            eol=crlf
+**/shaders/gen/*.inc                       eol=lf
+*.sh                                       eol=lf
+*.gn                                       eol=lf
+*.gni                                      eol=lf
+*.star                                     eol=lf
+infra/config/generated/*.cfg               eol=lf
+infra/config/generated/*.pyl               eol=lf
+src/compiler/preprocessor/preprocessor_*.* eol=lf
+src/compiler/translator/glslang_*.*        eol=lf
+src/tests/capture_tests/expected/*.*       eol=lf
+
+# Git conflict markers in the json file break the code generator.
+# Using a binary merge strategy forces conflicts without changing file contents.
+scripts/code_generation_hashes/*.json merge=binary

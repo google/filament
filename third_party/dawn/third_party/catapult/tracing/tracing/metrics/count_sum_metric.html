@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+Copyright 2021 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+
+<script>
+'use strict';
+
+/**
+ * This metric is used for custom benchmarks which need to record counts
+ * or sums of events ocurring in the renderer threads of traces. This is useful
+ * for one-off cluster telemetry analysis.
+ * For trace events with category "benchmark", and name "count_sum" and a
+ * "counter" field with the name of the counter, it records one or two metrics:
+ * - [counter]_count: the count of trace events with the same counter field.
+ * - [counter]_sum: the sum of values of trace events with that field, if any
+ *   have a value field.
+ */
+tr.exportTo('tr.metrics', function() {
+  function countSumMetric(histograms, model, opt_options) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!chromeHelper) {
+      // Chrome isn't present.
+      return;
+    }
+
+    const CATEGORY = 'benchmark';
+    const NAME = 'count_sum';
+    const counts = new Map();
+    const sums = new Map();
+    // Collect trace events.
+    for (const pid in chromeHelper.rendererHelpers) {
+      const helper = chromeHelper.rendererHelpers[pid];
+      if (helper.isChromeTracingUI) continue;
+
+      const events = tr.e.chrome.EventFinderUtils.getMainThreadEvents(
+          helper, NAME, CATEGORY);
+      for (const event of events) {
+        const c = event.args.counter;
+        if (!c) {
+          continue;
+        }
+        if (!counts.get(c)) {
+          counts.set(c, 0);
+        }
+        counts.set(c, counts.get(c) + 1);
+        if (event.args.value) {
+          if (!sums.get(c)) {
+            sums.set(c, 0);
+          }
+          sums.set(c, sums.get(c) + event.args.value);
+        }
+      }
+    }
+
+    // Generate histograms.
+    counts.forEach((value, key) => {
+      histograms.createHistogram(
+          'count_' + key, tr.b.Unit.byName.count, value);
+    });
+    sums.forEach((value, key) => {
+      histograms.createHistogram(
+          'sum_' + key, tr.b.Unit.byName.unitlessNumber, value);
+    });
+  }
+
+  tr.metrics.MetricRegistry.register(countSumMetric, {
+    supportsRangeOfInterest: false,
+  });
+
+  return {
+    countSumMetric,
+  };
+});
+</script>

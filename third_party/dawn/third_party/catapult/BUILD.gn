@@ -1,0 +1,78 @@
+# Copyright 2018 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is auto-generated from
+#    //third_party/catapult/generated_telemetry_build.py
+# DO NOT EDIT!
+
+import("//build/config/compiler/compiler.gni")
+
+group("telemetry_chrome_test_support") {
+  testonly = true
+  data = []
+  data_deps = []
+
+  data += [
+    "AUTHORS",
+    "CONTRIBUTING.md",
+    "DIR_METADATA",
+    "LICENSE",
+    "OWNERS",
+    "PRESUBMIT.py",
+    "README.md",
+    "WATCHLISTS",
+    "codereview.settings",
+    "navbar.md",
+    "pylintrc",
+    "bin/",
+    "catapult_build/",
+    "dashboard/",
+    "dependency_manager/",
+    "hooks/",
+    "infra/",
+    "netlog_viewer/",
+    "perf_issue_service/",
+    "skia_bridge/",
+    "systrace/",
+    "third_party/",
+    "trace_processor/",
+    "web_page_replay_go/",
+  ]
+
+  data_deps += [
+    "devil",
+    "telemetry",
+  ]
+
+  data += [
+    "common/bin/",
+    "common/lab/",
+    "common/py_trace_event/",
+    "common/py_utils/",
+    "common/py_vulcanize/",
+  ]
+
+  data += [
+    "tracing/BUILD.gn",
+    "tracing/DIR_METADATA",
+    "tracing/LICENSE",
+    "tracing/OWNERS",
+    "tracing/PRESUBMIT.py",
+    "tracing/README.md",
+    "tracing/app.yaml",
+    "tracing/bower.json",
+    "tracing/package.json",
+    "tracing/trace_viewer.gni",
+    "tracing/tracing_project.py",
+    "tracing/bin/",
+    "tracing/docs/",
+    "tracing/images/",
+    "tracing/skp_data/",
+    "tracing/third_party/",
+    "tracing/tracing/",
+    "tracing/tracing_build/",
+    "tracing/tracing_examples/",
+  ]
+
+}

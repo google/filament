@@ -1,0 +1,58 @@
+# Copyright 2022 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../gni/angle.gni")
+import("mesa_autogen.gni")
+
+angle_mesa_build_dir = "$root_build_dir/mesa"
+angle_libdrm_build_dir = "$root_build_dir/libdrm"
+
+action("libdrm_setup") {
+  script = "mesa_build.py"
+  args = [
+    "setup",
+    "libdrm",
+    rebase_path(root_build_dir, root_build_dir),
+  ]
+  sources = [ "libdrm.stamp" ]
+  outputs = [ "$angle_libdrm_build_dir/libdrm.stamp" ]
+}
+
+action("libdrm") {
+  script = "mesa_build.py"
+  args = [
+    "compile",
+    rebase_path(angle_libdrm_build_dir, root_build_dir),
+  ]
+  sources = rebase_path(angle_libdrm_sources, ".", "../libdrm")
+  outputs = get_path_info(
+          rebase_path(angle_libdrm_outputs, ".", angle_libdrm_build_dir),
+          "abspath")
+  deps = [ ":libdrm_setup" ]
+}
+
+action("mesa_setup") {
+  script = "mesa_build.py"
+  args = [
+    "setup",
+    "mesa",
+    rebase_path(root_build_dir, root_build_dir),
+  ]
+  sources = [ "mesa.stamp" ]
+  outputs = [ "$angle_mesa_build_dir/mesa.stamp" ]
+  deps = [ ":libdrm" ]
+}
+
+action("mesa") {
+  script = "mesa_build.py"
+  args = [
+    "compile",
+    rebase_path(angle_mesa_build_dir, root_build_dir),
+  ]
+  sources = rebase_path(angle_mesa_sources, ".", "src")
+  outputs =
+      get_path_info(rebase_path(angle_mesa_outputs, ".", angle_mesa_build_dir),
+                    "abspath")
+  deps = [ ":mesa_setup" ]
+}

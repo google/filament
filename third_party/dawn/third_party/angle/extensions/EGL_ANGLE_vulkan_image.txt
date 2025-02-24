@@ -1,0 +1,126 @@
+Name
+
+    ANGLE_vulkan_image
+
+Name Strings
+
+    EGL_ANGLE_vulkan_image
+
+Contributors
+
+    Peng Huang
+
+Contacts
+
+    Peng Huang, Google Inc. (penghuang 'at' chromium.org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 3, Feb 4, 2022
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+    References the EGL_ANGLE_device_vulkan and EGL_KHR_image_base extensions.
+
+Overview
+
+    This extension allows exporting VkImage from EGL images.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    EGLBoolean eglExportVkImageANGLE(
+        EGLDisplay dpy,
+        EGLImageKHR image,
+        void* vk_image,
+        void* vk_image_create_info);
+
+New Tokens
+
+    EGL_VULKAN_IMAGE_ANGLE 0x34D3
+    EGL_VULKAN_IMAGE_CREATE_INFO_HI_ANGLE 0x34D4
+    EGL_VULKAN_IMAGE_CREATE_INFO_LO_ANGLE 0x34D5
+
+Additions to Chapter 2 of the EGL 1.4 Specification (EGL Operation)
+
+    Add to section 2.5.1 "EGLImage Specification" (as defined by the
+    EGL_KHR_image_base specification), in the description of
+    eglCreateImageKHR:
+
+   "Values accepted for <target> are listed in Table aaa, below.
+
+      +----------------------------+-----------------------------------------+
+      |  <target>                  |  Notes                                  |
+      +----------------------------+-----------------------------------------+
+      |  EGL_VULKAN_IMAGE_ANGLE    |  Used for VkImage objects               |
+      +----------------------------+-----------------------------------------+
+       Table aaa.  Legal values for eglCreateImageKHR <target> parameter
+
+    ...
+
+    If <target> is EGL_VULKAN_IMAGE_ANGLE, <dpy> must be a valid display, <ctx>
+    must be EGL_NO_CONTEXT, <buffer> must be a pointer to a valid VkImage
+    (cast into the type EGLClientBuffer), the VkImage must be created with the
+    same VkDevice used by GL implementation and attributes other than
+    EGL_TEXTURE_INTERNAL_FORMAT_ANGLE, EGL_VULKAN_IMAGE_CREATE_INFO_HI_ANGLE or
+    EGL_VULKAN_IMAGE_CREATE_INFO_LO_ANGLE are ignored.
+
+    EGL_VULKAN_IMAGE_CREATE_INFO_HI_ANGLE and
+    EGL_VULKAN_IMAGE_CREATE_INFO_LO_ANGLE must be specified. They contain
+    hi 32bits and lo 32bits of a pointer to the memory stores a valid
+    VkImageCreateInfo structure. The GL implementation will get all necessary
+    info of the VkImage from it. All supported structures in the pNext structure
+    chain will be parsed, not supported structures will be ignored.
+
+    If EGL_TEXTURE_INTERNAL_FORMAT_ANGLE is specified, it is used to interpret
+    <buffer> according to the provided internal format. If it is specified, it
+    must be GL_RGBA (supported for all RGBA and BGRA formats),
+    GL_RGB (supported for all RGBA and BGRA formats except
+    VK_FORMAT_R10G10B10A2_UNORM), GL_BGRA_EXT (supported only for
+    VK_FORMAT_B8G8R8A8_UNORM and VK_FORMAT_B8G8R8A8_SRGB),
+    GL_RGB10_A2_EXT (supported for VK_FORMAT_A2R10G10B10_UNORM_PACK32),
+    GL_RED_EXT (supported for VK_FORMAT_R8_UNORM and VK_FORMAT_R16_UNORM),
+    GL_RG_EXT (supported for VK_FORMAT_R8G8_UNORM and VK_FORMAT_R16G16_UNORM),
+    GL_R16_EXT (supported for VK_FORMAT_R16_UNORM),
+    GL_RG16_EXT (supported for VK_FORMAT_R16G16_UNORM), or GL_NONE.
+
+Additions to the EGL 1.4 Specification:
+
+    To export VkImage from an EGLImage, a new API is required.
+
+    The new entrypoint
+        EGLBoolean eglExportVkImageANGLE(
+            EGLDisplay dpy,
+            EGLImageKHR image,
+            void* vk_image,
+            void* vk_image_create_info);
+
+    is used to retrieve the VkImage and VkImageCreateInfo of the EGLImage.
+    The VkImage is stored into <vk_image> pointed memory, and VkImageCreateInfo
+    is filled into <vk_image_create_info> pointed memory.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2021/11/17 - first draft.
+
+    Version 2, 2021/12/10 - add support for creating EGLImageKHR from VkImage.
+
+    Version 3, 2022/02/04 - add support for EGL_TEXTURE_INTERNAL_FORMAT_ANGLE.

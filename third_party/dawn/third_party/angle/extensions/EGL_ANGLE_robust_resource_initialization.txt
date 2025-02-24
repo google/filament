@@ -1,0 +1,128 @@
+Name
+
+    ANGLE_robust_resource_initialization
+
+Name Strings
+
+    EGL_ANGLE_robust_resource_initialization
+
+Contributors
+
+    Geoff Lang, Google
+    Ken Russell, Google
+
+Contacts
+
+    Shannon Woods, Google (shannonwoods 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 4, September 19, 2017
+
+Number
+
+    EGL Extension TBD
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    specification.
+
+    An OpenGL ES implementation supporting ANGLE_robust_resource_initialization
+    or an implementation supporting equivalent functionality is required.
+
+Overview
+
+    This extension allows creating an OpenGL ES context or EGL surface
+    supporting robust resource initialization.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name by eglCreateContext, eglQueryContext,
+    eglCreateWindowSurface, eglCreatePbufferSurface, eglCreatePixmapSurface,
+    and eglQuerySurface:
+
+        EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE    0x3453
+
+Additions to the EGL 1.5 Specification
+
+    Add a new section entitled "OpenGL ES Robust Resource Initialization"
+    to section 3.7.1:
+
+    "If the attribute EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE
+    is set to EGL_TRUE, a context supporting <robust resource initialization>
+    will be created. OpenGL ES contexts must support the
+    ANGLE_robust_resource_initialization extension, or equivalent core API
+    functionality. This attribute is supported only for OpenGL ES contexts.
+    The default value of EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE
+    is EGL_FALSE."
+
+    Add a new paragraph to section 3.7.4 "Context Queries" under
+    eglQueryContext:
+
+    "Querying EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE returns if
+    the context was created using robust initialization."
+
+    Add a new paragrah to section 3.5.1 "Creating On-Screen Rendering
+    Surfaces" and section 3.5.2 "Creating Off-Screen Rendering Surfaces":
+
+    "EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE specifies if the pixel values of
+    the surface are initialized.  If its value is EGL_TRUE then all pixel and
+    stencil values in the surface are initialized to zero, depth values are
+    initialized to 1.0. Otherwise the contents are undefined. The default value
+    of EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE is EGL_FALSE."
+
+    Add a new paragrah to section 3.5.6 "Surface Attributes" under
+    eglQuerySurface:
+
+    "Querying EGL_CONTEXT_ROBUST_RESOURCE_INITIALIZATION_ANGLE returns if
+    the surface was created using robust initialization."
+
+    Modify the 2nd paragraph of section 3.10.1 "Posting to a Window":
+
+    "... If EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE is EGL_TRUE, following
+    conditions apply. If EGL_SWAP_BEHAVIOR attribute is not
+    EGL_BUFFER_PRESERVED, color and stencil buffer values are set to zero, depth
+    buffer values are set to 1.0. Otherwise, color and ancillary buffer values
+    preserved.
+
+    If EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE is EGL_FALSE, the contents of
+    ancillary buffers are always undefined after calling eglSwapBuffers. ...
+    "
+
+Issues
+
+    (1) Should this be a Display or Context creation extension?
+
+    RESOLVED (3): Making this a Context creation extension has complications in
+    the implementation - what happens to resources shared between Contexts
+    with and without the extension enabled? Also for display-created resources,
+    such as those used in the D3D11 SwapChain, there's no way to specify if
+    we want them robustly initialized. Hence it is clearer to specify this
+    extension as a Display extension.
+
+    RESOLVED (4): This extension has been moved back to a context/surface
+    creation attribute. This makes the extension much easier to detect before
+    the GL context is created.
+
+Revision History
+
+    Version 1, 2015/01/07 - first draft.
+    Version 2, 2017/03/01 - renamed extension and enum.
+    Version 3, 2017/05/31 - renamed extension and made into display extension.
+    Version 4, 2017/09/19 - renamed extension and changed into a
+                            context/surface creation attribute.
+    Version 5, 2024/09/21 - specified that depth values are initialized to 1.0
+                            specified that stencil values are initialized to 0.0

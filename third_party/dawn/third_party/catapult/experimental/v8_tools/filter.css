@@ -1,0 +1,337 @@
+#app {
+  margin-top: +10px;
+  text-overflow: ellipsis;
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: row;
+}
+
+.menuLeft {
+  margin-top: +10px;
+}
+
+.appRight {
+  margin-left: 2em;
+}
+
+.regression {
+  color: red;
+}
+
+.improvement {
+  color: green;
+}
+
+.link {
+  text-decoration: underline;
+}
+
+.link:hover {
+  cursor: pointer;
+}
+
+
+#radioBoxes {
+  margin-top: +10px;
+  margin-left: +10px;
+  padding: 10px;
+  padding: 3px;
+}
+
+text {
+  font-size: 14px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+#select_run {
+  width: 30em;
+  align-content: center;
+  background-color: rgb(245, 252, 245);
+  border: 1px solid #bdd3c9;
+  border-radius: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#apply_button{
+  margin-left:300px;
+  margin-top:7px;
+}
+
+#reset_button{
+  margin-left:740px;
+  margin-top: 7px;
+}
+
+button {
+  background-color: rgb(245, 250, 245);
+  border: 2px solid #ade0c8;
+  border-radius: 13px;
+  padding: 5px;
+}
+#subcomponentBox {
+  background-color: rgb(229, 245, 229);
+  border: 2px solid #c6ddc6;
+  border-radius: 10px;
+  margin-left: 20px;
+  margin-bottom: 1px;
+}
+
+#subcomponentBox_ {
+  background-color: rgb(229, 245, 229);
+  border: 1px solid #c6ddd2;
+  border-radius: 10px;
+  margin-left: 45px;
+  margin-bottom: 1 px;
+}
+
+.label-wrapper {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+    font-family: "Open Sans", sans-serif;
+    font-size: 15px;
+    font-weight: 270;
+    line-height: 1em;
+}
+
+.has-children {
+  cursor: pointer;
+}
+
+
+#filterItem {
+  max-width: 25em;
+  background-color: rgb(255, 255, 255);
+  margin-top: 10px
+}
+
+#filterBox {
+  background-color: rgb(245, 252, 245);
+  border: 1px solid #42b983;
+  border-radius: 10px;
+  margin-bottom: 1px;
+}
+
+
+#select_item {
+  width: 60em;
+  align-content: center;
+  background-color: rgb(245, 252, 245);
+  border: 1px solid #bdd3c9;
+  border-radius: 8px;
+}
+
+#teaxtarea {
+  margin-top: 30px;
+  border-radius: 10px;
+}
+
+#story-story{
+  border-left-width: 10px;
+  border: 1px solid  #bdd3c9;
+  border-radius: 3px;
+  background-color: #f1f5f2;
+}
+
+#file-input {
+  border: 2px solid #bdd3c9;
+  border-radius: 12px;
+  background-color: #f1f5f2;
+  padding: 4px;
+  text-align: center;
+  margin: 1px;
+}
+
+
+#story-sample {
+  border-left-width: 10px;
+  border: 1px solid #a0d1bb;
+  border-radius: 3px;
+  background-color: #f1f5f2;
+}
+
+#diagnostic-row {
+  border-radius: 2px;
+  border: 1px solid #87ceae;
+  border-radius: 3px;
+  background-color: #e2eee5; 
+}
+
+#entry {
+  border: 2px solid #42b983;
+  border-radius: 2px;
+}
+
+.openedMetric {
+  background-color: rgb(138, 216, 168);
+  border-radius: 7px;
+}
+
+.openedStory {
+  background-color: rgb(184, 235, 184);
+  border-radius: 7px;
+}
+
+.openedDiagnostic {
+  background-color: darkseagreen;
+}
+
+#canvas {
+  max-width: 100em;
+  max-height: 60em;
+  margin-top: +10px;
+  margin-bottom: 15px;
+}
+
+#search {
+  width: 60em;
+}
+
+#inputBox {
+  width: 30em;
+  background-color: rgba(255, 255, 255, 0.76);
+  border-radius: 8px;
+  padding: 8px;
+  float: left;
+  margin-bottom: 10px;
+}
+
+#globalTypeOfPlot {
+  float: right;
+  width: 20em;
+  background-color: rgb(245, 250, 245);
+  border: 2px solid #42b983;
+  border-radius: 13px;
+  margin-bottom: 10px;
+}
+
+#reset_table {
+  margin-left: 15px;
+  padding: 5px;
+  background-color: rgb(245, 250, 245);
+  border: 1.5px solid  #42b983;
+  border-radius: 10px;
+  margin-top: 3px;
+}
+
+body {
+  font-family: Helvetica Neue, Arial, sans-serif;
+  font-size: 14px;
+  color: #444;
+}
+
+table {
+  border: 2px solid #42b983;
+  border-radius: 10px;
+  background-color: #fff;
+  margin-top: +20px; 
+}
+
+th {
+  background-color: #42b983;
+  color: rgba(255,255,255,10);
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  border-radius: 10px;
+}
+
+td {
+  background-color: #f9f9f9;
+}
+
+th, td {
+  min-width: 120px;
+  padding: 10px 20px;
+}
+
+th.active {
+  color: #fff;
+}
+
+th.active .arrow {
+  opacity: 1;
+}
+
+.arrow {
+  display: inline-block;
+  vertical-align: middle;
+  width: 0.1em;
+  height: 0.1em;
+  margin-left: 5px;
+}
+
+.arrow.asc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #fff;
+}
+
+.arrow.dsc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #fff;
+}
+
+.checkbox-metric {
+  width: 1.3em;
+  height: 1.3em;
+  background-color: white;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 1px solid #ddd;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.checkbox-metric:checked {
+  background-color: #66bb6a;
+  border: 3px solid  #b7ecba;
+  opacity: 1;
+}
+
+.checkbox-story {
+  width: 1.3em;
+  height: 1.3em;
+  border-radius: 50%;
+  vertical-align: middle;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  background-color: #ffffff;
+  border: 2px solid #66bb6a;
+}
+
+.checkbox-story:checked {
+  background-color: #92d195;
+  opacity: 4;
+}
+
+.checkbox-head {
+  width: 1em;
+  height: 1em;
+  background-color: white;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 1px solid #ddd;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.checkbox-head:checked {
+  background-color: #08290a;
+  border: 3px solid  #ffffffff;
+  opacity: 1;
+}

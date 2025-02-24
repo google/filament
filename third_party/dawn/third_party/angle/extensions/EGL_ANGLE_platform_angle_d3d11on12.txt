@@ -1,0 +1,81 @@
+Name
+
+    ANGLE_platform_angle_d3d11on12
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_d3d11on12
+
+Contributors
+
+    Nathan Zabriskie, Microsoft
+
+Contacts
+
+    Nathan Zabriskie, Microsoft (nazabris 'at' microsoft 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2019-10-07
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle_d3d.
+
+Overview
+
+    This extension enables the creation of a D3D11on12 display.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE          0x3488
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a D3D11on12 display the value of
+    EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE should be set to EGL_TRUE.
+
+    If EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE is included in the
+    <attrib_list> argument of eglGetPlatformDisplayEXT and
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE is not set to
+    EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE, an EGL_BAD_ATTRIBUTE error is
+    generated and EGL_NO_DISPLAY is returned.
+
+    EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE can be combined with
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE if it is set to
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE or
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE. Other device types
+    will generate an EGL_BAD_ATTRIBUTE error and return
+    EGL_NO_DISPLAY.
+
+Revision History
+
+    Version 1, 2019-10-07 (Nathan Zabriskie)
+      - Initial draft

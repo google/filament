@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/layer_tree_host_impl.html">
+<link rel="import" href="/tracing/extras/chrome/cc/tile.html">
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+<link rel="import" href="/tracing/ui/base/drag_handle.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/layer_picker.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/layer_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  /*
+   * Displays a LayerTreeHostImpl snapshot in a human readable form.
+   * @constructor
+   */
+  const LayerTreeHostImplSnapshotView = tr.ui.b.define(
+      'tr-ui-e-chrome-cc-layer-tree-host-impl-snapshot-view',
+      tr.ui.analysis.ObjectSnapshotView);
+
+  LayerTreeHostImplSnapshotView.prototype = {
+    __proto__: tr.ui.analysis.ObjectSnapshotView.prototype,
+
+    decorate() {
+      Polymer.dom(this).classList.add('tr-ui-e-chrome-cc-lthi-s-view');
+      this.style.display = 'flex';
+      this.style.flexDirection = 'row';
+      this.style.flexGrow = 1;
+      this.style.flexShrink = 1;
+      this.style.flexBasis = 'auto';
+      this.style.minWidth = 0;
+
+      this.selection_ = undefined;
+
+      this.layerPicker_ = new tr.ui.e.chrome.cc.LayerPicker();
+      this.layerPicker_.style.flexGrow = 0;
+      this.layerPicker_.style.flexShrink = 0;
+      this.layerPicker_.style.flexBasis = 'auto';
+      this.layerPicker_.style.minWidth = '200px';
+      this.layerPicker_.addEventListener(
+          'selection-change',
+          this.onLayerPickerSelectionChanged_.bind(this));
+
+      this.layerView_ = new tr.ui.e.chrome.cc.LayerView();
+      this.layerView_.addEventListener(
+          'selection-change',
+          this.onLayerViewSelectionChanged_.bind(this));
+      this.layerView_.style.flexGrow = 1;
+      this.layerView_.style.flexShrink = 1;
+      this.layerView_.style.flexBasis = 'auto';
+      this.layerView_.style.minWidth = 0;
+
+      this.dragHandle_ = document.createElement('tr-ui-b-drag-handle');
+      this.dragHandle_.style.flexGrow = 0;
+      this.dragHandle_.style.flexShrink = 0;
+      this.dragHandle_.style.flexBasis = 'auto';
+      this.dragHandle_.horizontal = false;
+      this.dragHandle_.target = this.layerPicker_;
+
+      Polymer.dom(this).appendChild(this.layerPicker_);
+      Polymer.dom(this).appendChild(this.dragHandle_);
+      Polymer.dom(this).appendChild(this.layerView_);
+
+      // Make sure we have the current values from layerView_ and layerPicker_,
+      // since those might have been created before we added the listener.
+      this.onLayerViewSelectionChanged_();
+      this.onLayerPickerSelectionChanged_();
+    },
+
+    get objectSnapshot() {
+      return this.objectSnapshot_;
+    },
+
+    set objectSnapshot(objectSnapshot) {
+      this.objectSnapshot_ = objectSnapshot;
+
+      const lthi = this.objectSnapshot;
+      let layerTreeImpl;
+      if (lthi) {
+        layerTreeImpl = lthi.getTree(this.layerPicker_.whichTree);
+      }
+
+      this.layerPicker_.lthiSnapshot = lthi;
+      this.layerView_.layerTreeImpl = layerTreeImpl;
+      this.layerView_.regenerateContent();
+
+      if (!this.selection_) return;
+
+      this.selection = this.selection_.findEquivalent(lthi);
+    },
+
+    get selection() {
+      return this.selection_;
+    },
+
+    set selection(selection) {
+      if (this.selection_ === selection) return;
+
+      this.selection_ = selection;
+      this.layerPicker_.selection = selection;
+      this.layerView_.selection = selection;
+      tr.b.dispatchSimpleEvent(this, 'cc-selection-change');
+    },
+
+    onLayerPickerSelectionChanged_() {
+      this.selection_ = this.layerPicker_.selection;
+      this.layerView_.selection = this.selection;
+      this.layerView_.layerTreeImpl = this.layerPicker_.layerTreeImpl;
+      this.layerView_.isRenderPassQuads = this.layerPicker_.isRenderPassQuads;
+      this.layerView_.regenerateContent();
+      tr.b.dispatchSimpleEvent(this, 'cc-selection-change');
+    },
+
+    onLayerViewSelectionChanged_() {
+      this.selection_ = this.layerView_.selection;
+      this.layerPicker_.selection = this.selection;
+      tr.b.dispatchSimpleEvent(this, 'cc-selection-change');
+    },
+
+    get extraHighlightsByLayerId() {
+      return this.layerView_.extraHighlightsByLayerId;
+    },
+
+    set extraHighlightsByLayerId(extraHighlightsByLayerId) {
+      this.layerView_.extraHighlightsByLayerId = extraHighlightsByLayerId;
+    }
+  };
+
+  tr.ui.analysis.ObjectSnapshotView.register(
+      LayerTreeHostImplSnapshotView, {typeName: 'cc::LayerTreeHostImpl'});
+
+  return {
+    LayerTreeHostImplSnapshotView,
+  };
+});
+</script>

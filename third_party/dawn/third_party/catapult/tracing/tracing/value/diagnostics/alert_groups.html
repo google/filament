@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  // All alert groups used in TBMv2 metrics. If you add a new group, add it
+  // here first to make sure you're not accidentally reusing a name.
+  // The keys and values are same here by convention.
+  const ALERT_GROUPS = {
+    // For metrics measuring cpu usage in general, like cpu time percentage
+    // metric.
+    CPU_USAGE: 'cpu_usage',
+    // For paint related loading metrics like First Contentful Paint and Largest
+    // Contentful Paint
+    LOADING_PAINT: 'loading_paint',
+    // For interactivity related loading metrics like Time to Interactive and
+    // Total Blocking Time.
+    LOADING_INTERACTIVITY: 'loading_interactivity',
+    // For layour related metrics like Cumulative Layout Shift.
+    LOADING_LAYOUT: 'loading_layout',
+  };
+
+  return {
+    ALERT_GROUPS,
+  };
+});
+</script>

@@ -1,0 +1,67 @@
+//
+// Copyright 2012 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+
+sampler2D tex : s0;
+
+uniform float4 mult : c0;
+uniform float4 add  : c1;
+
+// Passthrough Pixel Shader
+// Outputs texture 0 sampled at texcoord 0.
+float4 passthroughps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    return tex2D(tex, texcoord.xy);
+};
+
+// Luminance Conversion Pixel Shader
+// Performs a mad operation using the LA data from the texture with mult.xw and add.xw.
+// Returns data in the form of llla
+float4 luminanceps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    return (tex2D(tex, texcoord.xy).xw * mult.xw + add.xw).xxxy;
+};
+
+float4 luminancepremultps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    float4 luma = tex2D(tex, texcoord.xy).xxxw;
+    luma.rgb *= luma.a;
+    return luma * mult + add;
+};
+
+float4 luminanceunmultps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    float4 luma = tex2D(tex, texcoord.xy).xxxw;
+    if (luma.a > 0.0f)
+    {
+        luma.rgb /= luma.a;
+    }
+    return luma * mult + add;
+};
+
+// RGB/A Component Mask Pixel Shader
+// Performs a mad operation using the texture's RGBA data with mult.xyzw and add.xyzw.
+// Returns data in the form of rgba
+float4 componentmaskps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    return tex2D(tex, texcoord.xy) * mult + add;
+};
+
+float4 componentmaskpremultps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    float4 color = tex2D(tex, texcoord.xy);
+    color.rgb *= color.a;
+    return color * mult + add;
+};
+
+float4 componentmaskunmultps(float4 texcoord : TEXCOORD0) : COLOR
+{
+    float4 color =  tex2D(tex, texcoord.xy);
+    if (color.a > 0.0f)
+    {
+        color.rgb /= color.a;
+    }
+    return color * mult + add;
+};

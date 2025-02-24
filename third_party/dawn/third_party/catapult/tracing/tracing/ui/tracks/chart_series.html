@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/proxy_selectable_item.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const EventPresenter = tr.ui.b.EventPresenter;
+  const SelectionState = tr.model.SelectionState;
+
+  /**
+   * The type of a chart series.
+   * @enum
+   */
+  const ChartSeriesType = {
+    LINE: 0,
+    AREA: 1
+  };
+
+  // The default rendering configuration for ChartSeries.
+  const DEFAULT_RENDERING_CONFIG = {
+    // The type of the chart series.
+    chartType: ChartSeriesType.LINE,
+
+    // The size of a selected point dot in device-independent pixels (circle
+    // diameter).
+    selectedPointSize: 4,
+
+    // The size of an unselected point dot in device-independent pixels (square
+    // width/height).
+    unselectedPointSize: 3,
+
+    // Whether the selected dots should be solid circles of the line color, or
+    // filled with the background's selection color.
+    solidSelectedDots: false,
+
+    // The color of the chart.
+    colorId: 0,
+
+    // The width of the top line in device-independent pixels.
+    lineWidth: 1,
+
+    // Minimum distance between points in physical pixels. Points which are
+    // closer than this distance will be skipped.
+    skipDistance: 1,
+
+    // Density in points per physical pixel at which unselected point dots
+    // become transparent.
+    unselectedPointDensityTransparent: 0.10,
+
+    // Density in points per physical pixel at which unselected point dots
+    // become fully opaque.
+    unselectedPointDensityOpaque: 0.05,
+
+    // Opacity of area chart background.
+    backgroundOpacity: 0.5,
+
+    // Whether to graph steps between points. Set to false for lines instead.
+    stepGraph: true
+  };
+
+  // The virtual width of the last point in a series (whose rectangle has zero
+  // width) in world timestamps difference for the purposes of selection.
+  const LAST_POINT_WIDTH = 16;
+
+  // Constants for sizing and font of points with dot letters.
+  const DOT_LETTER_RADIUS_PX = 7;
+  const DOT_LETTER_RADIUS_PADDING_PX = 0.5;
+  const DOT_LETTER_SELECTED_OUTLINE_WIDTH_PX = 3;
+  const DOT_LETTER_SELECTED_OUTLINE_DETAIL_WIDTH_PX = 1.5;
+  const DOT_LETTER_UNSELECTED_OUTLINE_WIDTH_PX = 1;
+  const DOT_LETTER_FONT_WEIGHT = 400;
+  const DOT_LETTER_FONT_SIZE_PX = 9;
+  const DOT_LETTER_FONT = 'Arial';
+
+  /**
+   * Visual components of a ChartSeries.
+   * @enum
+   */
+  const ChartSeriesComponent = {
+    BACKGROUND: 0,
+    LINE: 1,
+    DOTS: 2
+  };
+
+  /**
+   * A series of points corresponding to a single chart on a chart track.
+   * This class is responsible for drawing the actual chart onto canvas.
+   *
+   * @constructor
+   */
+  function ChartSeries(points, seriesYAxis, opt_renderingConfig) {
+    this.points = points;
+    this.seriesYAxis = seriesYAxis;
+
+    this.useRenderingConfig_(opt_renderingConfig);
+  }
+
+  ChartSeries.prototype = {
+    useRenderingConfig_(opt_renderingConfig) {
+      const config = opt_renderingConfig || {};
+
+      // Store all configuration flags as private properties.
+      for (const [key, defaultValue] of
+        Object.entries(DEFAULT_RENDERING_CONFIG)) {
+        let value = config[key];
+        if (value === undefined) {
+          value = defaultValue;
+        }
+        this[key + '_'] = value;
+      }
+
+      // Avoid unnecessary recomputation in getters.
+      this.topPadding = this.bottomPadding = Math.max(
+          this.selectedPointSize_, this.unselectedPointSize_) / 2;
+    },
+
+    get range() {
+      const range = new tr.b.math.Range();
+      this.points.forEach(function(point) {
+        range.addValue(point.y);
+      }, this);
+      return range;
+    },
+
+    draw(ctx, transform, highDetails) {
+      if (this.points === undefined || this.points.length === 0) {
+        return;
+      }
+
+      // Draw the background.
+      if (this.chartType_ === ChartSeriesType.AREA) {
+        this.drawComponent_(ctx, transform, ChartSeriesComponent.BACKGROUND,
+            highDetails);
+      }
+
+      // Draw the line at the top.
+      if (this.chartType_ === ChartSeriesType.LINE || highDetails) {
+        this.drawComponent_(ctx, transform, ChartSeriesComponent.LINE,
+            highDetails);
+      }
+
+      // Draw the points.
+      this.drawComponent_(ctx, transform, ChartSeriesComponent.DOTS,
+          highDetails);
+    },
+
+    drawComponent_(ctx, transform, component, highDetails) {
+      // We need to consider extra pixels outside the visible area to avoid
+      // visual glitches due to non-zero width of dots.
+      let extraPixels = 0;
+      if (component === ChartSeriesComponent.DOTS) {
+        extraPixels = Math.max(
+            this.selectedPointSize_, this.unselectedPointSize_);
+      }
+      const pixelRatio = transform.pixelRatio;
+      const leftViewX = transform.leftViewX - extraPixels * pixelRatio;
+      const rightViewX = transform.rightViewX + extraPixels * pixelRatio;
+      const leftTimestamp = transform.leftTimestamp - extraPixels;
+      const rightTimestamp = transform.rightTimestamp + extraPixels;
+
+      // Find the index of the first and last (partially) visible points.
+      const firstVisibleIndex = tr.b.findLowIndexInSortedArray(
+          this.points,
+          function(point) { return point.x; },
+          leftTimestamp);
+      let lastVisibleIndex = tr.b.findLowIndexInSortedArray(
+          this.points,
+          function(point) { return point.x; },
+          rightTimestamp);
+      if (lastVisibleIndex >= this.points.length ||
+          this.points[lastVisibleIndex].x > rightTimestamp) {
+        lastVisibleIndex--;
+      }
+
+      // Pre-calculate component style which does not depend on individual
+      // points:
+      //   * Skip distance between points,
+      //   * Selected (circle) and unselected (square) dot size,
+      //   * Unselected dot opacity,
+      //   * Selected dot edge color and width, and
+      //   * Line component color and width.
+      const viewSkipDistance = this.skipDistance_ * pixelRatio;
+      let selectedCircleRadius;
+      let letterDotRadius;
+      let squareSize;
+      let squareHalfSize;
+      let squareOpacity;
+      let unselectedSeriesColor;
+      let currentStateSeriesColor;
+
+      ctx.save();
+      ctx.font =
+          DOT_LETTER_FONT_WEIGHT + ' ' +
+          Math.floor(DOT_LETTER_FONT_SIZE_PX * pixelRatio) + 'px ' +
+          DOT_LETTER_FONT;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+
+      switch (component) {
+        case ChartSeriesComponent.DOTS: {
+          // Selected (circle) and unselected (square) dot size.
+          selectedCircleRadius =
+              (this.selectedPointSize_ / 2) * pixelRatio;
+          letterDotRadius =
+              Math.max(selectedCircleRadius, DOT_LETTER_RADIUS_PX * pixelRatio);
+          squareSize = this.unselectedPointSize_ * pixelRatio;
+          squareHalfSize = squareSize / 2;
+          unselectedSeriesColor = EventPresenter.getCounterSeriesColor(
+              this.colorId_, SelectionState.NONE);
+
+          // Unselected dot opacity.
+          if (!highDetails) {
+            // Unselected dots are not displayed in 'low details' mode.
+            squareOpacity = 0;
+            break;
+          }
+          const visibleIndexRange = lastVisibleIndex - firstVisibleIndex;
+          if (visibleIndexRange <= 0) {
+            // There is at most one visible point.
+            squareOpacity = 1;
+            break;
+          }
+          const visibleViewXRange =
+              transform.worldXToViewX(this.points[lastVisibleIndex].x) -
+              transform.worldXToViewX(this.points[firstVisibleIndex].x);
+          if (visibleViewXRange === 0) {
+            // Multiple visible points which all have the same timestamp.
+            squareOpacity = 1;
+            break;
+          }
+          const density = visibleIndexRange / visibleViewXRange;
+          const clampedDensity = tr.b.math.clamp(density,
+              this.unselectedPointDensityOpaque_,
+              this.unselectedPointDensityTransparent_);
+          const densityRange = this.unselectedPointDensityTransparent_ -
+              this.unselectedPointDensityOpaque_;
+          squareOpacity =
+              (this.unselectedPointDensityTransparent_ - clampedDensity) /
+              densityRange;
+          break;
+        }
+
+        case ChartSeriesComponent.LINE:
+          // Line component color and width.
+          ctx.strokeStyle = EventPresenter.getCounterSeriesColor(
+              this.colorId_, SelectionState.NONE);
+          ctx.lineWidth = this.lineWidth_ * pixelRatio;
+          break;
+
+        case ChartSeriesComponent.BACKGROUND:
+          // Style depends on the selection state of individual points.
+          break;
+
+        default:
+          throw new Error('Invalid component: ' + component);
+      }
+
+      // The main loop which draws the given component of visible points from
+      // left to right. Given the potentially large number of points to draw,
+      // it should be considered performance-critical and function calls should
+      // be avoided when possible.
+      //
+      // Note that the background and line components are drawn in a delayed
+      // fashion: the rectangle/line that we draw in an iteration corresponds
+      // to the *previous* point. This does not apply to the dots, whose
+      // position is independent of the surrounding dots.
+      let previousViewX = undefined;
+      let previousViewY = undefined;
+      let previousViewYBase = undefined;
+      let lastSelectionState = undefined;
+      let baseSteps = undefined;
+      const startIndex = Math.max(firstVisibleIndex - 1, 0);
+      let currentViewX;
+
+      for (let i = startIndex; i < this.points.length; i++) {
+        const currentPoint = this.points[i];
+        currentViewX = transform.worldXToViewX(currentPoint.x);
+
+        // Stop drawing the points once we are to the right of the visible area.
+        if (currentViewX > rightViewX) {
+          if (previousViewX !== undefined) {
+            previousViewX = currentViewX = rightViewX;
+            if (component === ChartSeriesComponent.BACKGROUND ||
+                component === ChartSeriesComponent.LINE) {
+              ctx.lineTo(currentViewX, previousViewY);
+            }
+          }
+          break;
+        }
+
+        if (i + 1 < this.points.length) {
+          const nextPoint = this.points[i + 1];
+          const nextViewX = transform.worldXToViewX(nextPoint.x);
+
+          // Skip points that are too close to each other.
+          if (previousViewX !== undefined &&
+              nextViewX - previousViewX <= viewSkipDistance &&
+              nextViewX < rightViewX) {
+            continue;
+          }
+
+          // Start drawing right at the left side of the visible are (instead
+          // of potentially very far to the left).
+          if (currentViewX < leftViewX) {
+            currentViewX = leftViewX;
+          }
+        }
+
+        if (previousViewX !== undefined &&
+            currentViewX - previousViewX < viewSkipDistance) {
+          // We know that nextViewX > previousViewX + viewSkipDistance, so we
+          // can safely move this points's x over that much without passing
+          // nextViewX. This ensures that the previous point is visible when
+          // zoomed out very far.
+          currentViewX = previousViewX + viewSkipDistance;
+        }
+
+        const currentViewY = Math.round(transform.worldYToViewY(
+            currentPoint.y));
+        let currentViewYBase;
+        if (currentPoint.yBase === undefined) {
+          currentViewYBase = transform.outerBottomViewY;
+        } else {
+          currentViewYBase = Math.round(
+              transform.worldYToViewY(currentPoint.yBase));
+        }
+        const currentSelectionState = currentPoint.selectionState;
+        if (currentSelectionState !== lastSelectionState) {
+          const opacity = currentSelectionState === SelectionState.SELECTED ?
+            1 : squareOpacity;
+          currentStateSeriesColor = EventPresenter.getCounterSeriesColor(
+              this.colorId_, currentSelectionState, opacity);
+        }
+
+        // Actually draw the given component of the point.
+        switch (component) {
+          case ChartSeriesComponent.DOTS:
+            // Draw the dot for the current point.
+            if (currentPoint.dotLetter) {
+              ctx.fillStyle = unselectedSeriesColor;
+              ctx.strokeStyle =
+                  ColorScheme.getColorForReservedNameAsString('black');
+              ctx.beginPath();
+              ctx.arc(currentViewX, currentViewY,
+                  letterDotRadius + DOT_LETTER_RADIUS_PADDING_PX, 0,
+                  2 * Math.PI);
+              ctx.fill();
+              if (currentSelectionState === SelectionState.SELECTED) {
+                ctx.lineWidth = DOT_LETTER_SELECTED_OUTLINE_WIDTH_PX;
+                ctx.strokeStyle =
+                    ColorScheme.getColorForReservedNameAsString('olive');
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(currentViewX, currentViewY, letterDotRadius, 0,
+                    2 * Math.PI);
+                ctx.lineWidth = DOT_LETTER_SELECTED_OUTLINE_DETAIL_WIDTH_PX;
+                ctx.strokeStyle =
+                    ColorScheme.getColorForReservedNameAsString('yellow');
+                ctx.stroke();
+              } else {
+                ctx.lineWidth = DOT_LETTER_UNSELECTED_OUTLINE_WIDTH_PX;
+                ctx.strokeStyle =
+                    ColorScheme.getColorForReservedNameAsString('black');
+                ctx.stroke();
+              }
+              ctx.fillStyle =
+                  ColorScheme.getColorForReservedNameAsString('white');
+              ctx.fillText(currentPoint.dotLetter, currentViewX, currentViewY);
+            } else {
+              ctx.strokeStyle = unselectedSeriesColor;
+              ctx.lineWidth = pixelRatio;
+              if (currentSelectionState === SelectionState.SELECTED) {
+                if (this.solidSelectedDots_) {
+                  ctx.fillStyle = ctx.strokeStyle;
+                } else {
+                  ctx.fillStyle = currentStateSeriesColor;
+                }
+
+                ctx.beginPath();
+                ctx.arc(currentViewX, currentViewY, selectedCircleRadius, 0,
+                    2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+              } else if (squareOpacity > 0) {
+                ctx.fillStyle = currentStateSeriesColor;
+                ctx.fillRect(currentViewX - squareHalfSize,
+                    currentViewY - squareHalfSize, squareSize, squareSize);
+              }
+            }
+            break;
+
+          case ChartSeriesComponent.LINE:
+            // Draw the top line for the previous point (if applicable), or
+            // prepare for drawing the top line of the current point in the next
+            // iteration.
+            if (previousViewX === undefined) {
+              ctx.beginPath();
+              ctx.moveTo(currentViewX, currentViewY);
+            } else if (this.stepGraph_) {
+              ctx.lineTo(currentViewX, previousViewY);
+            }
+
+            // Move to the current point coordinate.
+            ctx.lineTo(currentViewX, currentViewY);
+            break;
+
+          case ChartSeriesComponent.BACKGROUND:
+            // Draw the background for the previous point (if applicable).
+            if (previousViewX !== undefined && this.stepGraph_) {
+              ctx.lineTo(currentViewX, previousViewY);
+            } else {
+              ctx.lineTo(currentViewX, currentViewY);
+            }
+
+            // Finish the bottom part of the backgound polygon, change
+            // background color and start a new polygon when the selection state
+            // changes (and at the beginning).
+            if (currentSelectionState !== lastSelectionState) {
+              if (previousViewX !== undefined) {
+                let previousBaseStepViewX = currentViewX;
+                for (let j = baseSteps.length - 1; j >= 0; j--) {
+                  const baseStep = baseSteps[j];
+                  const baseStepViewX = baseStep.viewX;
+                  const baseStepViewY = baseStep.viewY;
+                  ctx.lineTo(previousBaseStepViewX, baseStepViewY);
+                  ctx.lineTo(baseStepViewX, baseStepViewY);
+                  previousBaseStepViewX = baseStepViewX;
+                }
+                ctx.closePath();
+                ctx.fill();
+              }
+              ctx.beginPath();
+              ctx.fillStyle = EventPresenter.getCounterSeriesColor(
+                  this.colorId_, currentSelectionState,
+                  this.backgroundOpacity_);
+              ctx.moveTo(currentViewX, currentViewYBase);
+              baseSteps = [];
+            }
+
+            if (currentViewYBase !== previousViewYBase ||
+                currentSelectionState !== lastSelectionState) {
+              baseSteps.push({viewX: currentViewX, viewY: currentViewYBase});
+            }
+
+            // Move to the current point coordinate.
+            ctx.lineTo(currentViewX, currentViewY);
+            break;
+
+          default:
+            throw new Error('Not reachable');
+        }
+
+        previousViewX = currentViewX;
+        previousViewY = currentViewY;
+        previousViewYBase = currentViewYBase;
+        lastSelectionState = currentSelectionState;
+      }
+
+      // If we still have an open background or top line polygon (which is
+      // always the case once we have started drawing due to the delayed fashion
+      // of drawing), we must close it.
+      if (previousViewX !== undefined) {
+        switch (component) {
+          case ChartSeriesComponent.DOTS:
+            // All dots were drawn in the main loop.
+            break;
+
+          case ChartSeriesComponent.LINE:
+            ctx.stroke();
+            break;
+
+          case ChartSeriesComponent.BACKGROUND: {
+            let previousBaseStepViewX = currentViewX;
+            for (let j = baseSteps.length - 1; j >= 0; j--) {
+              const baseStep = baseSteps[j];
+              const baseStepViewX = baseStep.viewX;
+              const baseStepViewY = baseStep.viewY;
+              ctx.lineTo(previousBaseStepViewX, baseStepViewY);
+              ctx.lineTo(baseStepViewX, baseStepViewY);
+              previousBaseStepViewX = baseStepViewX;
+            }
+            ctx.closePath();
+            ctx.fill();
+            break;
+          }
+
+          default:
+            throw new Error('Not reachable');
+        }
+      }
+      ctx.restore();
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      const points = this.points;
+
+      function getPointWidth(point, i) {
+        if (i === points.length - 1) {
+          return LAST_POINT_WIDTH * viewPixWidthWorld;
+        }
+        const nextPoint = points[i + 1];
+        return nextPoint.x - point.x;
+      }
+
+      function selectPoint(point) {
+        point.addToSelection(selection);
+      }
+
+      tr.b.iterateOverIntersectingIntervals(
+          this.points,
+          function(point) { return point.x; },
+          getPointWidth,
+          loWX,
+          hiWX,
+          selectPoint);
+    },
+
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      if (this.points === undefined) return false;
+
+      const index = this.points.findIndex(point => point.modelItem === event);
+      if (index === -1) return false;
+
+      const newIndex = index + offset;
+      if (newIndex < 0 || newIndex >= this.points.length) return false;
+
+      this.points[newIndex].addToSelection(selection);
+      return true;
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      if (this.points === undefined) return;
+
+      const item = tr.b.findClosestElementInSortedArray(
+          this.points,
+          function(point) { return point.x; },
+          worldX,
+          worldMaxDist);
+
+      if (!item) return;
+
+      item.addToSelection(selection);
+    }
+  };
+
+  return {
+    ChartSeries,
+    ChartSeriesType,
+  };
+});
+</script>

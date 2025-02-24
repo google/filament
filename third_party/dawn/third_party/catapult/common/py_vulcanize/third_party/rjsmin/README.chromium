@@ -1,0 +1,20 @@
+Short Name: rJSmin
+URL: https://github.com/ndparker/rjsmin
+Version: 1.0.12
+Revision: b8c17c6720e4b40de41cc3a4271ec42c1e46b14f
+License: Apache 2.0
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+rJSmin is a javascript minifier written in python.
+The minifier is based on the semantics of jsmin.c by Douglas Crockford.
+The module is a re-implementation aiming for speed, so it can be used at runtime (rather than during a preprocessing step). Usually it produces the same results as the original jsmin.c.
+
+Modifications made:
+ - Removed the bench.sh since the file doesn't have the licensing info and
+   caused license checker to fail.
+ - Added a small hack to not clobber template strings. (Not a complete solution
+   since it won't handle nesting. E.g. `${'`'} foo` would probably cause
+   problems).

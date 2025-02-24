@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script src="/jquery/jquery-2.1.4.min.js"></script>
+<script src="/flot/jquery.flot.min.js"></script>
+<script src="/flot/jquery.flot.crosshair.min.js"></script>
+<script src="/flot/jquery.flot.fillbetween.min.js"></script>
+<script src="/flot/jquery.flot.selection.min.js"></script>
+
+<link rel="import" href="/dashboard/elements/chart-sparkline.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  test('instantiate', async function() {
+    const sparkline = document.createElement('chart-sparkline');
+
+    sparkline.graphJsonCache.populateForTest(new Map([
+      ['{"test_path_list":["master/benchmark/bot/metric/story"],"start_rev":100,"end_rev":110,"is_selected":true}', {  // eslint-disable-line max-len
+        data: {
+          0: {
+            testpath: 'master/benchmark/bot/metric/story',
+            color: 0,
+            data: [
+              [100, 5],
+              [102, 1],
+              [103, 3],
+              [105, 2],
+              [106, 7],
+              [108, 4],
+            ],
+          },
+        },
+        annotations: {},
+      }],
+    ]));
+
+    sparkline.startRev = 100;
+    sparkline.endRev = 110;
+    sparkline.revisionMap = {
+      0: ['100', 0, 0],
+      1: ['102', 1, 1],
+      2: ['103', 2, 2],
+      3: ['105', 3, 3],
+      4: ['106', 4, 4],
+      5: ['108', 5, 5],
+    };
+    sparkline.chartOptions = {
+      crosshair: {
+        color: 'rgba(34, 34, 34, 0.3)',
+        lineWidth: 0.3,
+      },
+      grid: {
+        borderWidth: 0,
+      },
+      xaxis: {
+        ticks: [],
+      },
+      yaxis: {
+        labelWidth: 50,
+        max: -Number.MAX_VALUE,
+        min: Number.MAX_VALUE,
+      },
+      selection: {
+      },
+    };
+    sparkline.name = 'NAME';
+    sparkline.testpaths = [
+      {color: 'blue', testpath: 'master/benchmark/bot/metric/story'},
+    ];
+
+    this.addHTMLOutput(sparkline);
+
+    await sparkline.updatePlot_();
+
+    const nameDiv = tr.ui.b.findDeepElementMatching(sparkline, '#name');
+    assert.strictEqual(nameDiv.textContent, sparkline.name);
+
+    // Flot removes the loading-div from div#plot when it draws its canvas.
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(sparkline,
+        '#loading-div'));
+  });
+});
+</script>

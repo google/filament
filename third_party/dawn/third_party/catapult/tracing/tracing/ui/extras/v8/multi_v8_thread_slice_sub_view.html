@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/extras/v8/runtime_call_stats_table.html">
+
+<dom-module id='tr-ui-e-multi-v8-thread-slice-sub-view'>
+  <template>
+    <tr-ui-a-multi-thread-slice-sub-view id="content"></tr-ui-a-multi-thread-slice-sub-view>
+    <tr-ui-e-v8-runtime-call-stats-table id="runtimeCallStats"></tr-ui-e-v8-runtime-call-stats-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-e-multi-v8-thread-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  get selection() {
+    return this.$.content.selection;
+  },
+
+  set selection(selection) {
+    this.$.runtimeCallStats.slices = selection;
+    this.$.content.selection = selection;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-e-multi-v8-thread-slice-sub-view',
+    tr.e.v8.V8ThreadSlice,
+    {
+      multi: true,
+      title: 'V8 slices'
+    }
+);
+
+</script>

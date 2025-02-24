@@ -1,0 +1,14 @@
+Name: httplib2
+URL: https://github.com/httplib2/httplib2
+Version: 0.19.1
+Revision: 58e6f66804665884393ebbe83968c0c2c16c9f70
+CPEPrefix: cpe:/a:httplib2_project:httplib2:0.19.1
+License: MIT
+License File: LICENSE
+Shipped: yes
+
+Description:
+httplib2 is a HTTP library used by oauth2client and apiclient.
+
+Modifications:
+Removed docs and tests, added this file.

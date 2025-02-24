@@ -1,0 +1,246 @@
+Name
+
+    SGIS_texture_select
+
+Name Strings
+
+    GL_SGIS_texture_select
+
+Version
+
+    $Date: 1996/02/13 19:11:06 $ $Revision: 1.11 $
+
+Number
+
+    51
+
+Dependencies
+
+    EXT_texture
+    EXT_texture3D
+    EXT_texture_object
+    SGIS_detail_texture
+
+Overview
+
+    This extension introduces several new texture internal formats.  The
+    purpose of these new formats is to reorganize the components of a
+    texture into groups of components.  The currently selected group
+    effectively becomes the internal format.
+
+    Also, two new texture parameters are introduced that control the
+    selection of these groups of components.
+
+    For example, assume a texture internal format of DUAL_LUMINANCE4_SGIS is
+    specified.  Now there are two groups of components, where each group has
+    a format of LUMINANCE4.  One of the two LUMINANCE groups is always
+    selected.  components can be selected and then interpreted as a LUMINANCE
+    texture.
+
+    The purpose of this extension is allow better utilization of texture
+    memory by subdividing the internal representation of a texel into 1, 2,
+    or 4 smaller texels.  Additionally, this may improve performance of
+    texture downloads.
+
+Issues
+
+    *	This spec still needs values for the enumerants.  Also, the GLX
+	section is empty.
+
+    *	This extension was formerly named SGIS_component_select.  The
+	reference to "component" was confusing so we changed it.
+
+    *	We have removed the ability to "alias" or reinterpret groups of
+	components.  Specifically, once a texture is defined with a DUAL*
+	or QUAD* internal format, the fact that it is ALPHA, LUMINANCE,
+	INTENSITY, or LUMINANCE_ALPHA is not changeable.  a previous version
+	of this spec allowed this.  IrisGL on RealityEngine allowed it as
+	well.  Since this function might be useful, it should be revisited
+	in a separate spec that allows this for all internal formats, not
+	just the ones defined here.  Additionally, any porting document
+	should mention this subtle point.  
+
+    *	Should we include versions of these new internal formats that don't 
+	specify bit resolution?  (e.g. DUAL_ALPHA_SGIS)  It would add the
+	ability to be vague about the actual resolution and would make it
+	appear consistent with internal formats from EXT_texture.  Can
+	someone make a good argument for adding these?
+
+    *	Do we need a new query to determine component bit resolution?
+	A. No.  The existing queries defined by EXT_texture are sufficient.
+	The query applies to the selected group of components.
+
+    *	Need to review dependencies on detail_texture, sharpen, etc.  Can
+	one create a detail texture using these new formats?  A. The
+	dependency on SGIS_detail_texture is mentioned below.
+
+    *	Is there an easy way to know whether this extension is actually
+	"enabled"?  A. This extension is enabled when the current texture
+	format is one of the new internal formats defined here.  An
+	additional query is required to determine which group of components 
+	is selected. 
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <components> parameter of TexImage1D and TexImage2D, and
+    the <internalformat> parameter of TexImage3DEXT:
+
+	DUAL_ALPHA4_SGIS
+	DUAL_ALPHA8_SGIS
+	DUAL_ALPHA12_SGIS
+	DUAL_ALPHA16_SGIS
+	DUAL_LUMINANCE4_SGIS
+	DUAL_LUMINANCE8_SGIS
+	DUAL_LUMINANCE12_SGIS
+	DUAL_LUMINANCE16_SGIS
+	DUAL_INTENSITY4_SGIS
+	DUAL_INTENSITY8_SGIS
+	DUAL_INTENSITY12_SGIS
+	DUAL_INTENSITY16_SGIS
+	DUAL_LUMINANCE_ALPHA4_SGIS
+	DUAL_LUMINANCE_ALPHA8_SGIS
+	QUAD_ALPHA4_SGIS
+	QUAD_ALPHA8_SGIS
+	QUAD_LUMINANCE4_SGIS
+	QUAD_LUMINANCE8_SGIS
+	QUAD_INTENSITY4_SGIS
+	QUAD_INTENSITY8_SGIS
+
+    Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, TexParameteriv, GetTexParameterfv, and 
+    GetTexParameteriv:
+
+	DUAL_TEXTURE_SELECT_SGIS
+	QUAD_TEXTURE_SELECT_SGIS
+
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The selection of a group of components is specified by using 
+    TexParameterf, TexParameteri, TexParameterfv, or TexParameteriv with 
+    a <pname> parameter of DUAL_TEXTURE_SELECT_SGIS or QUAD_TEXTURE_SELECT_SGIS.
+
+    The value of DUAL_TEXTURE_SELECT_SGIS selects one of two groups of
+    components (hence the term DUAL).  The <param> parameter must be 0 or 1.
+    Otherwise, an INVALID_VALUE error is set.  When the texture internal
+    format is one of the DUAL* formats, this selection becomes active. A
+    value of 0 specifies that the first group of components is used, a value
+    of 1 specifies the second group, and so on.
+
+    Similarly, the value of QUAD_TEXTURE_SELECT_SGIS selects one of four
+    groups of components in the case that the texture internal format is one
+    of the QUAD* formats.  The <param> value must be 0, 1, 2 or 3.
+    Otherwise, an INVALID_VALUE error is set.
+    
+    There is always a selection defined for both DUAL_TEXTURE_SELECT_SGIS
+    and QUAD_TEXTURE_SELECT_SGIS formats.  It becomes active when the
+    current texture format becomes one of the DUAL* or QUAD* formats,
+    respectively.  If the current texture format is not one of DUAL* or
+    QUAD* formats, this extension has no effect.
+
+    The mapping of components from the canonical RGBA to these new internal
+    formats needs to be clarified.  There are three cases.  The first case
+    is for the DUAL* formats that are groups of ALPHA, LUMINANCE, and
+    INTENSITY.  The RED component goes to the first group while ALPHA goes
+    to the second group.  The second case is for the DUAL* formats that are
+    groups of LUMINANCE_ALPHA.  The RED and GREEN components go to the first
+    group while BLUE and ALPHA go to the second group.  The third case is
+    for the QUAD* formats.  The RED component goes to the first group, the
+    GREEN component to the second group, the BLUE component to the third
+    group, and the ALPHA component to the fourth group.
+
+    The interpretation of the bit resolutions of the new internal formats 
+    is implementation dependent.  (Similar to EXT_texture.)  The actual
+    resolution granted can be queried using Get*.  The bit resolution of
+    similar type components in a group, such as multiple LUMINANCE
+    components, is always the same.
+
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    XXX
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension defines new texture internal
+    formats that build on concepts (such as the INTENSITY format and
+    component numeric resolutions) introduced in the EXT_texture extension.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, references to it should be ignored.
+    (see New State)
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is not supported, references to it should be
+    ignored.  (See New State.)
+
+Dependencies on SGIS_detail_texture
+
+    The condition for using the detail texture (see detail_texture.spec,
+    section 3.8.2.1 Texture magnification with detail) is modified to read:
+
+    "The conditions are:
+
+	1.  The active texture must be TEXTURE_2D.
+
+	2.  The internal formats of TEXTURE_2D and DETAIL_TEXTURE_2D_SGIS
+	    must have been specified identically.
+
+	3.  If SGIS_texture_select is supported and if the internal formats
+	    of TEXTURE_2D and DETAIL_TEXTURE_2D_SGIS are one of those
+	    defined by SGIS_texture_select (e.g. DUAL_LUMINANCE4_SGIS),
+	    then the corresponding group selections (e.g. the value of
+	    DUAL_TEXTURE_SELECT_SGIS) must have been specified identically.
+
+    If these conditions are not met, it is as though the magnification
+    texture filter was LINEAR."
+
+Errors
+
+    See above.
+
+New State
+
+											Initial
+    Get Value				Get Command		Type			Value		Attrib
+    ---------				-----------		----			-------		------
+
+    DUAL_TEXTURE_SELECT_SGIS		GetTexParameter		n x 3 x Z2		0		texture
+
+    QUAD_TEXTURE_SELECT_SGIS		GetTexParameter		n x 3 x Z4		0		texture
+
+
+    Note:  The "Type" column shows "n x ..." since this state will appear 
+    in each of "n" objects defined by EXT_texture_object.
+
+New Implementation Dependent State
+
+    None.

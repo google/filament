@@ -1,0 +1,67 @@
+# Scheduled Tasks with Cron
+# https://developers.google.com/appengine/docs/python/config/cron
+
+cron:
+- description: Mark alerts as recovered.
+  url: /mark_recovered_alerts
+  schedule: every 3 hours
+
+- description: Update dashboard stats.
+  url: /update_dashboard_stats
+  schedule: every 24 hours
+
+- description: Delete expired layered_cache.CachedPickledString entities.
+  url: /delete_expired_entities
+  schedule: every 24 hours
+
+- description: Restart pinpoint jobs that encounter failures
+  url: /cron/refresh-jobs
+  schedule: every 15 minutes
+  target: pinpoint
+
+- description: Purge Pinpoint's expired isolates from datastore.
+  url: /cron/isolate-cleanup
+  schedule: every 24 hours
+  target: pinpoint
+
+- description: Update sandwich verification results for Pinpoint's bisection culprits.
+  url: /cron/update-culprit-verification-results
+  schedule: every 10 minutes
+  target: pinpoint
+
+- description: Poll luci-config for sheriff configurations.
+  url: /configs/update
+  schedule: every 1 minutes
+
+- description: Poll the Pinpoint FIFO scheduler.
+  url: /cron/fifo-scheduler
+  schedule: every 1 minutes
+  target: pinpoint
+
+# The backup cron job is disabled temporarily in order to check whether
+# it is responsible for increased cost on the weekends.
+# See: https://github.com/catapult-project/catapult/issues/1944
+#
+# Scheduled backup.
+# If you add new datastore kinds and want them to be backed up,
+# you must add kind=argument to the URL below. Backups are available at:
+# https://console.developers.google.com/datastore/settings?project=chromeperf
+# See: https://cloud.google.com/appengine/articles/scheduled_backups
+#- description: Back up all entities in the datastore.
+#  url: "/_ah/datastore_admin/backup.create?name=ScheduledBackup\
+#&kind=Master\
+#&kind=Bot\
+#&kind=Test\
+#&kind=Row\
+#&kind=Sheriff\
+#&kind=AnomalyConfig\
+#&kind=Anomaly\
+#&kind=IpWhitelist\
+#&kind=BotWhitelist\
+#&kind=BugLabelPatterns\
+#&kind=MultipartEntity\
+#&kind=PartEntity\
+#&filesystem=gs\
+#&gs_bucket_name=chromeperf.appspot.com"
+#  schedule: every saturday 05:00
+#  target: ah-builtin-python-bundle

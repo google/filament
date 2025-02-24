@@ -1,0 +1,3 @@
+<map id="pvr::utils::VertexAttributeInfoWithBinding" name="pvr::utils::VertexAttributeInfoWithBinding">
+<area shape="rect" id="node2" href="$structpvr_1_1utils_1_1_vertex_attribute_info.html" title="Contains a full description of a Vertex Attribute: Index, format, number of elements, offset in the buffer, optionally name. All values (except attributeName) must be set explicitly." alt="" coords="5,5,216,32"/>
+</map>

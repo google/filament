@@ -1,0 +1,18 @@
+Name: Khronos EGL API and Extension Registry
+Short Name: EGL-Registry
+Version: N/A
+URL: https://github.com/KhronosGroup/EGL-Registry
+SOURCE CODE: git clone -b EGL-Registry https://github.com/KhronosGroup/EGL-Registry
+Revision: DEPS
+Security Critical: no
+Shipped: yes
+License: Apache 2.0
+License File: Not Included
+
+Description:
+
+The EGL-Registry repository contains the EGL API and Extension Registry,
+including specifications, reference pages and reference cards, and the
+enumerant registry. It is also used as a backing store for the web view of
+the registry at https://www.khronos.org/registry/egl/ ; commits to the master
+branch of this repository will be reflected there.

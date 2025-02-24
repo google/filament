@@ -1,0 +1,187 @@
+IMPORTANT DEBUGGING NOTE: batches of tests are run inside their
+own process. For debugging a test inside a debugger, use the
+--gtest_filter=<your_test_name> flag along with
+--single-process-tests.
+Using sharding settings from environment. This is shard 0/1
+Using 1 parallel jobs.
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D31.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_13273\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D31.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_13273\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D31.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_13273\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D31.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_13273\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D31.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_13273\test_results.xml" --test-launcher-print-test-stdio=always
+[ RUN      ] IndexDataManagerPerfTest.Run
+*RESULT IndexDataManger_run: score= 281471 score
+[       OK ] IndexDataManagerPerfTest.Run (5008 ms)
+[1/37] IndexDataManagerPerfTest.Run (5008 ms)
+[ RUN      ] BufferSubDataBenchmark.Run/d3d11_float4_every1
+*RESULT BufferSubData_d3d11_float4_every1: score= 232 score
+[       OK ] BufferSubDataBenchmark.Run/d3d11_float4_every1 (5117 ms)
+[2/37] BufferSubDataBenchmark.Run/d3d11_float4_every1 (5117 ms)
+[ RUN      ] BufferSubDataBenchmark.Run/d3d9_float4_every1
+*RESULT BufferSubData_d3d9_float4_every1: score= 237 score
+[       OK ] BufferSubDataBenchmark.Run/d3d9_float4_every1 (5386 ms)
+[3/37] BufferSubDataBenchmark.Run/d3d9_float4_every1 (5386 ms)
+[ RUN      ] BufferSubDataBenchmark.Run/gl_float4_every1
+*RESULT BufferSubData_gl_float4_every1: score= 245 score
+[       OK ] BufferSubDataBenchmark.Run/gl_float4_every1 (5195 ms)
+[4/37] BufferSubDataBenchmark.Run/gl_float4_every1 (5195 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/d3d9
+*RESULT DrawCallPerf_d3d9: score= 2993 score
+[       OK ] DrawCallPerfBenchmark.Run/d3d9 (10062 ms)
+[5/37] DrawCallPerfBenchmark.Run/d3d9 (10062 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/d3d9_null
+*RESULT DrawCallPerf_d3d9_null: score= 25046 score
+[       OK ] DrawCallPerfBenchmark.Run/d3d9_null (10047 ms)
+[6/37] DrawCallPerfBenchmark.Run/d3d9_null (10047 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/d3d11
+*RESULT DrawCallPerf_d3d11: score= 2741 score
+[       OK ] DrawCallPerfBenchmark.Run/d3d11 (10015 ms)
+[7/37] DrawCallPerfBenchmark.Run/d3d11 (10015 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/d3d11_null
+*RESULT DrawCallPerf_d3d11_null: score= 28607 score
+[       OK ] DrawCallPerfBenchmark.Run/d3d11_null (9999 ms)
+[8/37] DrawCallPerfBenchmark.Run/d3d11_null (9999 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/d3d11_render_to_texture_null
+*RESULT DrawCallPerf_d3d11_render_to_texture_null: score= 25868 score
+[       OK ] DrawCallPerfBenchmark.Run/d3d11_render_to_texture_null (10015 ms)
+[9/37] DrawCallPerfBenchmark.Run/d3d11_render_to_texture_null (10015 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/gl
+*RESULT DrawCallPerf_gl: score= 4123 score
+[       OK ] DrawCallPerfBenchmark.Run/gl (10031 ms)
+[10/37] DrawCallPerfBenchmark.Run/gl (10031 ms)
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D32.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_8457\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D32.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_8457\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D32.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_8457\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D32.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_8457\test_results.xml" --test-launcher-print-test-stdio=always
+[ RUN      ] DrawCallPerfBenchmark.Run/gl_null
+*RESULT DrawCallPerf_gl_null: score= 189804 score
+[       OK ] DrawCallPerfBenchmark.Run/gl_null (10015 ms)
+[11/37] DrawCallPerfBenchmark.Run/gl_null (10015 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/gl_render_to_texture_null
+*RESULT DrawCallPerf_gl_render_to_texture_null: score= 189155 score
+[       OK ] DrawCallPerfBenchmark.Run/gl_render_to_texture_null (10031 ms)
+[12/37] DrawCallPerfBenchmark.Run/gl_render_to_texture_null (10031 ms)
+[ RUN      ] DrawCallPerfBenchmark.Run/default_validation_only
+*RESULT DrawCallPerf_default_validation_only: score= 2690 score
+[       OK ] DrawCallPerfBenchmark.Run/default_validation_only (5023 ms)
+[13/37] DrawCallPerfBenchmark.Run/default_validation_only (5023 ms)
+[ RUN      ] DynamicPromotionPerfTest.Run/d3d11
+*RESULT DynamicPromotion_d3d11: score= 39354 score
+[       OK ] DynamicPromotionPerfTest.Run/d3d11 (6552 ms)
+[14/37] DynamicPromotionPerfTest.Run/d3d11 (6552 ms)
+[ RUN      ] DynamicPromotionPerfTest.Run/d3d9
+*RESULT DynamicPromotion_d3d9: score= 21060 score
+[       OK ] DynamicPromotionPerfTest.Run/d3d9 (5522 ms)
+[15/37] DynamicPromotionPerfTest.Run/d3d9 (5522 ms)
+[ RUN      ] EGLInitializePerfTest.Run/ES2_D3D11
+*RESULT EGLInitialize_run: score= 155 score
+*RESULT EGLInitialize_run: LoadDLLs= 0.0000000000 ms
+*RESULT EGLInitialize_run: D3D11CreateDevice= 4.0051480051 ms
+*RESULT EGLInitialize_run: InitResources= 0.0000000000 ms
+[       OK ] EGLInitializePerfTest.Run/ES2_D3D11 (5008 ms)
+[16/37] EGLInitializePerfTest.Run/ES2_D3D11 (5008 ms)
+[ RUN      ] IndexConversionPerfTest.Run/d3d11
+*RESULT IndexConversionPerfTest_d3d11: score= 5135 score
+[       OK ] IndexConversionPerfTest.Run/d3d11 (3166 ms)
+[17/37] IndexConversionPerfTest.Run/d3d11 (3166 ms)
+[ RUN      ] IndexConversionPerfTest.Run/index_range_d3d11
+*RESULT IndexConversionPerfTest_index_range_d3d11: score= 68785 score
+[       OK ] IndexConversionPerfTest.Run/index_range_d3d11 (3011 ms)
+[18/37] IndexConversionPerfTest.Run/index_range_d3d11 (3011 ms)
+[ RUN      ] InstancingPerfBenchmark.Run/d3d11
+*RESULT InstancingPerf_d3d11: score= 479 score
+[       OK ] InstancingPerfBenchmark.Run/d3d11 (10046 ms)
+[19/37] InstancingPerfBenchmark.Run/d3d11 (10046 ms)
+[ RUN      ] InstancingPerfBenchmark.Run/d3d9
+*RESULT InstancingPerf_d3d9: score= 464 score
+[       OK ] InstancingPerfBenchmark.Run/d3d9 (10057 ms)
+[20/37] InstancingPerfBenchmark.Run/d3d9 (10057 ms)
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D44.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_12336\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D44.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_12336\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D44.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_12336\test_results.xml" --test-launcher-print-test-stdio=always
+[ RUN      ] InstancingPerfBenchmark.Run/gl
+*RESULT InstancingPerf_gl: score= 427 score
+[       OK ] InstancingPerfBenchmark.Run/gl (10124 ms)
+[21/37] InstancingPerfBenchmark.Run/gl (10124 ms)
+[ RUN      ] InterleavedAttributeDataBenchmark.Run/d3d11
+*RESULT InterleavedAttributeData_d3d11: score= 19 score
+[       OK ] InterleavedAttributeDataBenchmark.Run/d3d11 (5117 ms)
+[22/37] InterleavedAttributeDataBenchmark.Run/d3d11 (5117 ms)
+[ RUN      ] InterleavedAttributeDataBenchmark.Run/d3d11_9_3
+*RESULT InterleavedAttributeData_d3d11: score= 25 score
+[       OK ] InterleavedAttributeDataBenchmark.Run/d3d11_9_3 (5225 ms)
+[23/37] InterleavedAttributeDataBenchmark.Run/d3d11_9_3 (5225 ms)
+[ RUN      ] InterleavedAttributeDataBenchmark.Run/d3d9
+*RESULT InterleavedAttributeData_d3d9: score= 25 score
+[       OK ] InterleavedAttributeDataBenchmark.Run/d3d9 (5211 ms)
+[24/37] InterleavedAttributeDataBenchmark.Run/d3d9 (5211 ms)
+[ RUN      ] InterleavedAttributeDataBenchmark.Run/gl
+*RESULT InterleavedAttributeData_gl: score= 25 score
+[       OK ] InterleavedAttributeDataBenchmark.Run/gl (5101 ms)
+[25/37] InterleavedAttributeDataBenchmark.Run/gl (5101 ms)
+[ RUN      ] PointSpritesBenchmark.Run/d3d11_10_3px_3vars
+*RESULT PointSprites_d3d11_10_3px_3vars: score= 644 score
+[       OK ] PointSpritesBenchmark.Run/d3d11_10_3px_3vars (5023 ms)
+[26/37] PointSpritesBenchmark.Run/d3d11_10_3px_3vars (5023 ms)
+[ RUN      ] PointSpritesBenchmark.Run/d3d9_10_3px_3vars
+*RESULT PointSprites_d3d9_10_3px_3vars: score= 730 score
+[       OK ] PointSpritesBenchmark.Run/d3d9_10_3px_3vars (5141 ms)
+[27/37] PointSpritesBenchmark.Run/d3d9_10_3px_3vars (5141 ms)
+[ RUN      ] PointSpritesBenchmark.Run/gl_10_3px_3vars
+*RESULT PointSprites_gl_10_3px_3vars: score= 2159 score
+[       OK ] PointSpritesBenchmark.Run/gl_10_3px_3vars (5086 ms)
+[28/37] PointSpritesBenchmark.Run/gl_10_3px_3vars (5086 ms)
+[ RUN      ] TexSubImageBenchmark.Run/d3d11
+*RESULT TexSubImage_d3d11: score= 294 score
+[       OK ] TexSubImageBenchmark.Run/d3d11 (5023 ms)
+[29/37] TexSubImageBenchmark.Run/d3d11 (5023 ms)
+[ RUN      ] TexSubImageBenchmark.Run/d3d9
+*RESULT TexSubImage_d3d9: score= 298 score
+[       OK ] TexSubImageBenchmark.Run/d3d9 (5305 ms)
+[30/37] TexSubImageBenchmark.Run/d3d9 (5305 ms)
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D45.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_4706\test_results.xml" --test-launcher-print-test-stdio=always
+Still waiting for the following processes to finish:
+	"C:\b\c\b\Win_7_ATI_GPU_Perf__2_\src\out\Release_x64\angle_perftests.exe" --gtest_flagfile="C:\Users\chrome-bot\AppData\Local\Temp\scoped_dir3192_23891\8D45.tmp" --single-process-tests --test-launcher-jobs=1 --test-launcher-output="C:\Users\CHROME~1\AppData\Local\Temp\3192_4706\test_results.xml" --test-launcher-print-test-stdio=always
+[ RUN      ] TexSubImageBenchmark.Run/gl
+*RESULT TexSubImage_gl: score= 323 score
+[       OK ] TexSubImageBenchmark.Run/gl (5070 ms)
+[31/37] TexSubImageBenchmark.Run/gl (5070 ms)
+[ RUN      ] TextureSamplingBenchmark.Run/d3d11_2samplers
+*RESULT TextureSampling_d3d11_2samplers: score= 128 score
+[       OK ] TextureSamplingBenchmark.Run/d3d11_2samplers (5070 ms)
+[32/37] TextureSamplingBenchmark.Run/d3d11_2samplers (5070 ms)
+[ RUN      ] TextureSamplingBenchmark.Run/d3d9_2samplers
+*RESULT TextureSampling_d3d9_2samplers: score= 128 score
+[       OK ] TextureSamplingBenchmark.Run/d3d9_2samplers (5668 ms)
+[33/37] TextureSamplingBenchmark.Run/d3d9_2samplers (5668 ms)
+[ RUN      ] TextureSamplingBenchmark.Run/gl_2samplers
+*RESULT TextureSampling_gl_2samplers: score= 136 score
+[       OK ] TextureSamplingBenchmark.Run/gl_2samplers (5054 ms)
+[34/37] TextureSamplingBenchmark.Run/gl_2samplers (5054 ms)
+[ RUN      ] UniformsBenchmark.Run/d3d11_200_vertex_uniforms_200_fragment_uniforms
+*RESULT Uniforms_d3d11_200_vertex_uniforms_200_fragment_uniforms: score= 1797 score
+[       OK ] UniformsBenchmark.Run/d3d11_200_vertex_uniforms_200_fragment_uniforms (5195 ms)
+[35/37] UniformsBenchmark.Run/d3d11_200_vertex_uniforms_200_fragment_uniforms (5195 ms)
+[ RUN      ] UniformsBenchmark.Run/d3d9_200_vertex_uniforms_200_fragment_uniforms
+*RESULT Uniforms_d3d9_200_vertex_uniforms_200_fragment_uniforms: score= 1912 score
+[       OK ] UniformsBenchmark.Run/d3d9_200_vertex_uniforms_200_fragment_uniforms (5223 ms)
+[36/37] UniformsBenchmark.Run/d3d9_200_vertex_uniforms_200_fragment_uniforms (5223 ms)
+[ RUN      ] UniformsBenchmark.Run/gl_200_vertex_uniforms_200_fragment_uniforms
+*RESULT Uniforms_gl_200_vertex_uniforms_200_fragment_uniforms: score= 5509 score
+[       OK ] UniformsBenchmark.Run/gl_200_vertex_uniforms_200_fragment_uniforms (5070 ms)
+[37/37] UniformsBenchmark.Run/gl_200_vertex_uniforms_200_fragment_uniforms (5070 ms)
+SUCCESS: all tests passed.
+Tests took 243 seconds.

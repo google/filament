@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+<link rel="import" href="/tracing/ui/view_specific_brushing_state.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const BrushingStateController = tr.c.BrushingStateController;
+
+  function setStateElement(containerEl, viewId) {
+    const stateElement = document.createElement(
+        'tr-ui-b-view-specific-brushing-state');
+    stateElement.viewId = viewId;
+    Polymer.dom(containerEl).appendChild(stateElement);
+    return stateElement;
+  }
+
+  function addChildDiv(element) {
+    const child = element.ownerDocument.createElement('div');
+    Polymer.dom(element).appendChild(child);
+    return child;
+  }
+
+  function addShadowChildDiv(element) {
+    const shadowRoot = element.createShadowRoot();
+    return addChildDiv(shadowRoot);
+  }
+
+  test('instantiate_withoutBrushingStateController', function() {
+    const containerEl = document.createElement('div');
+
+    const stateElement1 = setStateElement(containerEl, 'test-view');
+    assert.isUndefined(stateElement1.get());
+    stateElement1.set({e: 2.71828});
+    assert.isUndefined(stateElement1.get());
+  });
+
+  test('instantiate_withBrushingStateController', function() {
+    const rootEl = document.createElement('div');
+    const containerEl = addChildDiv(addShadowChildDiv(addChildDiv(rootEl)));
+    rootEl.brushingStateController = new BrushingStateController(undefined);
+
+    const stateElement1 = setStateElement(containerEl, 'test-view');
+    assert.isUndefined(stateElement1.get());
+    stateElement1.set({e: 2.71828});
+    assert.deepEqual(stateElement1.get(), {e: 2.71828});
+
+    const stateElement2 = setStateElement(containerEl, 'test-view-2');
+    assert.isUndefined(stateElement2.get());
+    stateElement2.set({pi: 3.14159});
+    assert.deepEqual(stateElement2.get(), {pi: 3.14159});
+
+    const stateElement3 = setStateElement(containerEl, 'test-view');
+    assert.deepEqual(stateElement3.get(), {e: 2.71828});
+
+    const stateElement4 = setStateElement(containerEl, 'test-view-2');
+    assert.deepEqual(stateElement4.get(), {pi: 3.14159});
+  });
+});
+</script>

@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+// Generate a top-level cts.https.html file for WPT.
+//
+// In the default invocation (used by grunt), just generates a cts.https.html with one "variant"
+// per test spec file (.spec.ts).
+//
+// In the advanced invocation, generate a list of variants, which are broken down as much as needed
+// to accommodate a provided list of suppressions, and no further. This reduces the total runtime of
+// the test suite by not generating an entire page load for every single test case.
+// The resulting cts.https.html can be checked in and used to run tests within browser harnesses.
+//
+// For example, for the following 9 cases:
+//
+//   webgpu:a/foo:foo1={"x":1}
+//   webgpu:a/foo:foo1={"x":2}
+//   webgpu:a/foo:foo2={"x":1}
+//   webgpu:a/foo:foo2={"x":2}
+//   webgpu:a/bar:bar1={"x":1}
+//   webgpu:a/bar:bar1={"x":2}
+//   webgpu:a/bar:bar1={"x":3}
+//   webgpu:a/bar:bar2={"x":1}
+//   webgpu:a/bar:bar2={"x":2}
+//
+// and the following suppressions:
+//
+//   [ Win ] ?q=webgpu:a/bar:bar1={"x":1} [ Failure ]
+//   [ Mac ] ?q=webgpu:a/bar:bar1={"x":3} [ Failure ]
+//
+// the following list of 5 variants gives enough granularity to suppress only the failing cases:
+//
+//   ?q=webgpu:a/foo:
+//   ?q=webgpu:a/bar:bar1={"x":1} <- [ Win ]
+//   ?q=webgpu:a/bar:bar1={"x":2}
+//   ?q=webgpu:a/bar:bar1={"x":3} <- [ Mac ]
+//   ?q=webgpu:a/bar:bar2~
+
+require('../src/common/tools/setup-ts-in-node.js');
+require('../src/common/tools/gen_wpt_cts_html.ts');

@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+'use strict';
+/*
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+
+This script wraps common HTML transformations including stripping whitespace and
+comments from HTML, CSS, and Javascript.
+*/
+const dom5 = require('dom5');
+const escodegen = require('escodegen');
+const espree = require('espree');
+const fs = require('fs');
+const nopt = require('nopt');
+
+const args = nopt();
+const filename = args.argv.remain[0];
+
+let html = fs.readFileSync(filename).toString('utf8');
+let parsedHtml = dom5.parse(html);
+// First, collapse text nodes around comments (by removing comment nodes,
+// re-serializing, and re-parsing) in order to prevent multiple extraneous
+// newlines.
+for (const node of dom5.nodeWalkAll(parsedHtml, () => true)) {
+  if (dom5.isCommentNode(node)) {
+    dom5.remove(node);
+  }
+}
+html = dom5.serialize(parsedHtml);
+parsedHtml = dom5.parse(html);
+// Some of these transformations are based on polyclean:
+// https://github.com/googlearchive/polyclean
+for (const node of dom5.nodeWalkAll(parsedHtml, () => true)) {
+  if (dom5.isTextNode(node)) {
+    dom5.setTextContent(node, dom5.getTextContent(node)
+      .replace(/ *\n+ */g, '\n')
+      .replace(/\n+/g, '\n'));
+  } else if (dom5.predicates.hasTagName('script')(node) &&
+             !dom5.predicates.hasAttr('src')(node)) {
+    let text = dom5.getTextContent(node);
+    const ast = espree.parse(text, {ecmaVersion: 2018});
+    text = escodegen.generate(ast, {format: {indent: {style: ''}}});
+    dom5.setTextContent(node, text);
+  } else if (dom5.predicates.hasTagName('style')(node)) {
+    dom5.setTextContent(node, dom5.getTextContent(node)
+      .replace(/[\r\n]/g, '')
+      .replace(/ {2,}/g, ' ')
+      .replace(/(^|[;,\:\{\}]) /g, '$1')
+      .replace(/ ($|[;,\{\}])/g, '$1'));
+  }
+}
+fs.writeFileSync(filename, dom5.serialize(parsedHtml));

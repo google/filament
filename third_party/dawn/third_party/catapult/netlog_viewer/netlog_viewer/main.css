@@ -1,0 +1,157 @@
+/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+/* Only common styles should be declared here. */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  direction: ltr;
+}
+
+body {
+  font-family: DejaVu Sans, Arial, sans-serif;
+  font-size: 95%;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  font-family: DejaVu Sans, Arial, sans-serif;
+}
+
+ul {
+  padding-left: 2em;
+}
+
+.log-source-entry {
+  margin: 5px;
+}
+
+pre {
+  font-size: 133%;
+}
+
+/* This gives consistent padding to the main tab content. */
+.content-box {
+  padding: 20px 10px 10px 20px;
+}
+
+.content-box h1,
+.content-box h2,
+.content-box h3,
+.content-box h4,
+.content-box h5,
+.content-box h6 {
+  /* The parent element has 20px of left padding, so subtracting 10px doesn't
+   * cause it to spill out. */
+  margin-left: -10px;
+}
+
+/* Styles for TABLE that uses a thin collapsed border. */
+table.styled-table {
+  border-collapse: collapse;
+}
+
+table.styled-table,
+.styled-table th,
+.styled-table td {
+  border: 1px solid #777;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#tab-list {
+  min-width: 0;
+  border-right: 1px solid rgb(170,170,170);
+  padding: 0;
+}
+
+#tab-list a {
+  display: inline-block;
+  font-size: 16px;
+  margin: 0;
+  padding: 2px 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+#tab-list a,
+#tab-list a:visited {
+  color: rgb(140,140,140);
+}
+
+#tab-list .selected,
+#tab-list a:hover {
+  color: black;
+}
+
+.styled-table th {
+  background: rgb(224,236,255);
+}
+
+.styled-table th.title {
+  background: rgb(255,217,217);
+}
+
+/* Styling for event logs. */
+.event-log p {
+  white-space: nowrap;
+}
+
+.event-log h4 {
+  margin: 0;
+}
+
+.event-log a {
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* Styling for text indicating a potential problem or error state. */
+.warning-text {
+  color: rgb(238, 0, 0);
+}
+
+/* Styling for help windows that appear when mousing over an element. */
+.mouse-over-help {
+  background: #EEE;
+  border: 1px solid black;
+  padding: 5px;
+  z-index: 1;
+}
+
+/* Styling for elements that show a help window on mouse over. */
+.mouse-over-help-hover {
+  color: blue;
+  cursor: help;
+}
+
+/* Styles for a flex child, which should occupy the remaining space left */
+.flexfill {
+  flex: 1;
+  /* min-width/min-height are needed in cases where the content is larger
+   * than the parent, so the child does not expand its parent */
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Styles for a flex container laided out left to right */
+.flexrow {
+  display: flex;
+  flex-direction: row;
+}
+
+/* Styles for a flex container laided out top to bottom */
+.flexcol {
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollable {
+  overflow: auto;
+}

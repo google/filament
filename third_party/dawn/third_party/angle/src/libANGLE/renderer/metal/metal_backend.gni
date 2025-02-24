@@ -1,0 +1,102 @@
+# Copyright 2022 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../../gni/angle.gni")
+
+metal_backend_sources = [
+  "BufferMtl.h",
+  "BufferMtl.mm",
+  "CompilerMtl.h",
+  "CompilerMtl.mm",
+  "ContextMtl.h",
+  "ContextMtl.mm",
+  "DeviceMtl.h",
+  "DeviceMtl.mm",
+  "DisplayMtl.h",
+  "DisplayMtl.mm",
+  "DisplayMtl_api.h",
+  "FrameBufferMtl.h",
+  "FrameBufferMtl.mm",
+  "IOSurfaceSurfaceMtl.h",
+  "IOSurfaceSurfaceMtl.mm",
+  "ImageMtl.h",
+  "ImageMtl.mm",
+  "ProgramExecutableMtl.h",
+  "ProgramExecutableMtl.mm",
+  "ProgramMtl.h",
+  "ProgramMtl.mm",
+  "ProvokingVertexHelper.h",
+  "ProvokingVertexHelper.mm",
+  "QueryMtl.h",
+  "QueryMtl.mm",
+  "RenderBufferMtl.h",
+  "RenderBufferMtl.mm",
+  "RenderTargetMtl.h",
+  "RenderTargetMtl.mm",
+  "SamplerMtl.h",
+  "SamplerMtl.mm",
+  "ShaderMtl.h",
+  "ShaderMtl.mm",
+  "SurfaceMtl.h",
+  "SurfaceMtl.mm",
+  "SyncMtl.h",
+  "SyncMtl.mm",
+  "TextureMtl.h",
+  "TextureMtl.mm",
+  "TransformFeedbackMtl.h",
+  "TransformFeedbackMtl.mm",
+  "VertexArrayMtl.h",
+  "VertexArrayMtl.mm",
+  "blocklayoutMetal.cpp",
+  "blocklayoutMetal.h",
+  "mtl_buffer_manager.h",
+  "mtl_buffer_manager.mm",
+  "mtl_buffer_pool.h",
+  "mtl_buffer_pool.mm",
+  "mtl_command_buffer.h",
+  "mtl_command_buffer.mm",
+  "mtl_common.h",
+  "mtl_common.mm",
+  "mtl_context_device.h",
+  "mtl_context_device.mm",
+  "mtl_format_table_autogen.mm",
+  "mtl_format_utils.h",
+  "mtl_format_utils.mm",
+  "mtl_library_cache.h",
+  "mtl_library_cache.mm",
+  "mtl_msl_utils.h",
+  "mtl_msl_utils.mm",
+  "mtl_occlusion_query_pool.h",
+  "mtl_occlusion_query_pool.mm",
+  "mtl_pipeline_cache.h",
+  "mtl_pipeline_cache.mm",
+  "mtl_render_utils.h",
+  "mtl_render_utils.mm",
+  "mtl_resource_spi.h",
+  "mtl_resources.h",
+  "mtl_resources.mm",
+  "mtl_state_cache.h",
+  "mtl_state_cache.mm",
+  "mtl_utils.h",
+  "mtl_utils.mm",
+  "process.cpp",
+  "process.h",
+  "renderermtl_utils.cpp",
+  "renderermtl_utils.h",
+  "shaders/constants.h",
+  "shaders/mtl_internal_shaders_src_autogen.h",
+  "shaders/rewrite_indices_shared.h",
+]
+
+# We can build the ANGLE internal shaders at build-time if we have access to the Mac SDK in the "build" dir.
+# Building internal shaders for iOS is not supported. The Chromium Mac SDK does not have all the required files.
+# This is also an issue when cross-compiling for mac.
+metal_internal_shader_compilation_supported =
+    angle_has_build && !is_ios && target_os == host_os
+
+metal_internal_shaders_header =
+    "$root_gen_dir/angle/mtl_internal_shaders_metallib.h"
+if (metal_internal_shader_compilation_supported) {
+  metal_backend_sources += [ metal_internal_shaders_header ]
+}

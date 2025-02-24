@@ -1,0 +1,13 @@
+{
+    "name": "google-auth-httplib2",
+    "name_pretty": "Google Auth httplib2",
+    "client_documentation": "",
+    "issue_tracker": "https://github.com/googleapis/google-auth-library-python-httplib2/issues",
+    "release_level": "preview",
+    "language": "python",
+    "library_type": "AUTH",
+    "repo": "googleapis/google-auth-library-python-httplib2",
+    "distribution_name": "google-auth-httplib2",
+    "default_version": "",
+    "codeowner_team": "@googleapis/googleapis-auth"
+}

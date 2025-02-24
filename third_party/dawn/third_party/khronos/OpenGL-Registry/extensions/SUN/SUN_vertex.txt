@@ -1,0 +1,337 @@
+Name
+
+    SUN_vertex
+
+Name Strings
+
+    GL_SUN_vertex
+
+Contact
+
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+  
+    Shipping
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.5 $
+    SUN Date: 99/07/01 10:29:03  Revision: 1.7
+
+Number
+
+    166
+
+Dependencies
+
+    SUN_triangle_list affects part of the definition of this extension
+
+Overview
+
+    This extension provides new GL commands to specify vertex data such as 
+    color and normal along with the vertex in one single GL command in order to
+    minimize the overhead in making GL commands for each set of vertex data.
+
+New Procedures and Functions
+
+    void Color4ubVertex2fSUN(ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y);
+    void Color4ubVertex2fvSUN(const ubyte *c, const float *v);
+
+    void Color4ubVertex3fSUN(ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void Color4ubVertex3fvSUN(const ubyte *c, const float *v);
+
+    void Color3fVertex3fSUN(float r, float g, float b,
+				float x, float y, float z);
+    void Color3fVertex3fvSUN(const float *c, const float *v);
+
+    void Normal3fVertex3fSUN(float nx, float ny, float nz,
+				float x, float y, float z);
+    void Normal3fVertex3fvSUN(const float *n, const float *v);
+
+    void Color4fNormal3fVertex3fSUN(float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void Color4fNormal3fVertex3fvSUN(const float *c, const float *n, const float 
+*v);
+
+    void TexCoord2fVertex3fSUN(float s, float t, float x, float y, float z);
+    void TexCoord2fVertex3fvSUN(const float *tc, const float *v);
+
+    void TexCoord4fVertex4fSUN(float s, float t, float p, float q,
+				float x, float y, float z, float w);
+    void TexCoord4fVertex4fvSUN(const float *tc, const float *v);
+
+    void TexCoord2fColor4ubVertex3fSUN(float s, float t, 
+				ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void TexCoord2fColor4ubVertex3fvSUN(const float *tc, const ubyte *c, const 
+float *v);
+
+    void TexCoord2fColor3fVertex3fSUN(float s, float t, 
+				float r, float g, float b,
+				float x, float y, float z);
+    void TexCoord2fColor3fVertex3fvSUN(const float *tc, const float *c, const 
+float *v);
+
+    void TexCoord2fNormal3fVertex3fSUN(float s, float t, 
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void TexCoord2fNormal3fVertex3fvSUN(const float *tc, const float *n, const 
+float *v);
+
+    void TexCoord2fColor4fNormal3fVertex3fSUN(float s, float t, 
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void TexCoord2fColor4fNormal3fVertex3fvSUN(const float *tc, const float *c, 
+						const float *n, const float *v);
+
+    void TexCoord4fColor4fNormal3fVertex4fSUN(float s, float t, float p, float 
+q,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z, float w);
+    void TexCoord4fColor4fNormal3fVertex4fvSUN(const float *tc, const float *c, 
+						const float *n, const float *v);
+
+    void ReplacementCodeuiVertex3fSUN(uint rc, float x, float y, float z);
+    void ReplacementCodeuiVertex3fvSUN(const uint *rc, const float *v);
+
+    void ReplacementCodeuiColor4ubVertex3fSUN(uint rc,
+				ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void ReplacementCodeuiColor4ubVertex3fvSUN(const uint *rc, const ubyte *c, 
+const float *v);
+
+    void ReplacementCodeuiColor3fVertex3fSUN(uint rc,
+				float r, float g, float b,
+				float x, float y, float z);
+    void ReplacementCodeuiColor3fVertex3fvSUN(const uint *rc, const float *c, 
+const float *v);
+
+    void ReplacementCodeuiNormal3fVertex3fSUN(uint rc,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiNormal3fVertex3fvSUN(const uint *rc, const float *n, 
+const float *v);
+
+    void ReplacementCodeuiColor4fNormal3fVertex3fSUN(uint rc,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiColor4fNormal3fVertex3fvSUN(const uint *rc, const 
+float *c, 
+							const float *n, const 
+float *v);
+
+    void ReplacementCodeuiTexCoord2fVertex3fSUN(uint rc,
+				float s, float t,
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fVertex3fvSUN(const uint *rc, const float 
+*tc, const float *v);
+
+    void ReplacementCodeuiTexCoord2fNormal3fVertex3fSUN(uint rc,
+				float s, float t,
+				float nx, float ny, float nz, 
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN(const uint *rc, const 
+float *tc, 
+							const float *n, const 
+float *v);
+
+    void ReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN(uint rc,
+				float s, float t,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN(
+					const uint *rc, const float *tc, const 
+float *c, 
+					const float *n, const float *v);
+
+
+New Tokens
+
+    None
+
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    The following paragraph will be added to the end of section 2.7
+    Vertex Specification.
+
+    Multiple vertex data can also be specified in one single GL command
+    along with the vertex using the following GL commands. The order
+    of processing is always first texture coordinates, then colors, then 
+normals, 
+    and vertex coordinates last.
+
+    void Color4ubVertex2fSUN(ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y);
+    void Color4ubVertex2fvSUN(const ubyte *c, const float *v);
+
+    void Color4ubVertex3fSUN(ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void Color4ubVertex3fvSUN(const ubyte *c, const float *v);
+
+    void Color3fVertex3fSUN(float r, float g, float b,
+				float x, float y, float z);
+    void Color3fVertex3fvSUN(const float *c, const float *v);
+
+    void Normal3fVertex3fSUN(float nx, float ny, float nz,
+				float x, float y, float z);
+    void Normal3fVertex3fvSUN(const float *n, const float *v);
+
+    void Color4fNormal3fVertex3fSUN(float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void Color4fNormal3fVertex3fvSUN(const float *n, const float *v);
+
+    void TexCoord2fVertex3fSUN(float s, float t, float x, float y, float z);
+    void TexCoord2fVertex3fvSUN(const float *tc, const float *v);
+
+    void TexCoord4fVertex4fSUN(float s, float t, float p, float q,
+				float x, float y, float z, float w);
+    void TexCoord4fVertex4fvSUN(const float *tc, const float *v);
+
+    void TexCoord2fColor4ubVertex3fSUN(float s, float t, 
+				ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void TexCoord2fColor4ubVertex3fvSUN(const float *tc, const ubyte *c, const 
+float *v);
+
+    void TexCoord2fColor3fVertex3fSUN(float s, float t, 
+				float r, float g, float b,
+				float x, float y, float z);
+    void TexCoord2fColor3fVertex3fvSUN(const float *tc, const float *c, const 
+float *v);
+
+    void TexCoord2fNormal3fVertex3fSUN(float s, float t, 
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void TexCoord2fNormal3fVertex3fvSUN(const float *tc, const float *n, const 
+float *v);
+
+    void TexCoord2fColor4fNormal3fVertex3fSUN(float s, float t, 
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void TexCoord2fColor4fNormal3fVertex3fvSUN(const float *tc, const float *c, 
+const float *n, 
+						const float *v);
+
+    void TexCoord4fColor4fNormal3fVertex4fSUN(float s, float t, float p, float 
+q,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z, float w);
+    void TexCoord4fColor4fNormal3fVertex4fvSUN(const float *tc, const float *c, 
+const float *n, 
+						const float *v);
+
+    void ReplacementCodeuiVertex3fSUN(uint rc, float x, float y, float z);
+    void ReplacementCodeuiVertex3fvSUN(const uint *rc, const float *v);
+
+    void ReplacementCodeuiColor4ubVertex3fSUN(uint rc,
+				ubyte r, ubyte g, ubyte b, ubyte a,
+				float x, float y, float z);
+    void ReplacementCodeuiColor4ubVertex3fvSUN(const uint *rc, const ubyte *c, 
+const float *v);
+
+    void ReplacementCodeuiColor3fVertex3fSUN(uint rc,
+				float r, float g, float b,
+				float x, float y, float z);
+    void ReplacementCodeuiColor3fVertex3fvSUN(const uint *rc, const float *c, 
+const float *v);
+
+    void ReplacementCodeuiNormal3fVertex3fSUN(uint rc,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiNormal3fVertex3fvSUN(const uint *rc, const float *n, 
+const float *v);
+
+    void ReplacementCodeuiColor4fNormal3fVertex3fSUN(uint rc,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiColor4fNormal3fVertex3fvSUN(const uint *rc, const 
+float *c, 
+							const float *n, const 
+float *v);
+
+    void ReplacementCodeuiTexCoord2fVertex3fSUN(uint rc,
+				float s, float t,
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fVertex3fvSUN(const uint *rc, const float 
+*tc, const float *v);
+
+    void ReplacementCodeuiTexCoord2fNormal3fVertex3fSUN(uint rc,
+				float s, float t,
+				float nx, float ny, float nz, 
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN(const uint *rc, const 
+float *tc, 
+							const float *n, const 
+float *v);
+
+    void ReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN(uint rc,
+				float s, float t,
+				float r, float g, float b, float a,
+				float nx, float ny, float nz,
+				float x, float y, float z);
+    void ReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN(
+					const uint *rc, const float *tc, const 
+float *c, 
+					const float *n, const float *v);
+
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+
+GLX Protocol
+
+    No new GLX protocol is added. The vertex components in the new GL commands 
+    will be sent to remote servers using the regular GL protocols as if
+    the vertex components are passed in using the regular GL commands.
+
+
+Dependencies on SUN_triangle_list
+
+    If SUN_triangle_list is supported, those GL commands which include
+    a replacement code will be supported as well. Otherwise commands which
+    include replacement codes are not supported.
+
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

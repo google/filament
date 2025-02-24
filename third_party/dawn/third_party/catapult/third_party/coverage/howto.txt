@@ -1,0 +1,99 @@
+* Release checklist
+
+- Version number in coverage/version.py
+        version_info = (4, 0, 2, 'alpha', 1)
+        version_info = (4, 0, 2, 'beta', 1)
+        version_info = (4, 0, 2, 'candidate', 1)
+        version_info = (4, 0, 2, 'final', 0)
+- Python version number in classifiers in setup.py
+- Copyright date in NOTICE.txt
+- Update CHANGES.rst, including release date.
+- Update README.rst, including "New in x.y:"
+- Update docs
+    - Version, date, and changes in doc/changes.rst
+    - Version and date in doc/index.rst
+    - Version and copyright date in doc/conf.py
+    - Don't forget the man page: doc/python-coverage.1.txt
+    - Done with changes to source files, check them in.
+    - Generate new sample_html to get the latest, incl footer version number:
+        pip install -e .
+        cd ~/cog/trunk
+        rm -rf htmlcov
+        coverage run --branch --source=cogapp -m nose cogapp/test_cogapp.py:CogTestsInMemory
+        coverage combine
+        coverage html
+        - IF BETA:
+            rm -f ~/coverage/trunk/doc/sample_html_beta/*.*
+            cp -r htmlcov/ ~/coverage/trunk/doc/sample_html_beta/
+        - ELSE:
+            rm -f ~/coverage/trunk/doc/sample_html/*.*
+            cp -r htmlcov/ ~/coverage/trunk/doc/sample_html/
+        cd ~/coverage/trunk
+        check in the new sample html
+    - IF BETA:
+        - Build and publish docs:
+            $ make publishbeta
+    - ELSE:
+        - Build and publish docs:
+            $ make publish
+- Kits:
+    - Source kit:
+        - $ make clean kit
+    - Wheels
+        - $ make wheel
+    - Windows kits
+        - $ hg push
+        - wait about an hour for Appveyor to build kits.
+        - $ make download_appveyor
+    - examine the dist directory, and remove anything that looks malformed.
+- Update PyPi:
+    - $ make pypi
+    - upload kits:
+        - $ make kit_upload
+    - Visit http://pypi.python.org/pypi?%3Aaction=pkg_edit&name=coverage :
+        - show/hide the proper versions.
+- Tag the tree
+    - hg tag -m "Coverage 3.0.1" coverage-3.0.1
+- Update nedbatchelder.com
+    - Blog post?
+- Update readthedocs
+    - visit https://readthedocs.org/projects/coverage/versions/
+        - find the latest tag in the inactive list, edit it, make it active.
+    - IF NOT BETA:
+        - visit https://readthedocs.org/dashboard/coverage/advanced/
+        - change the default version to the new version
+- Update bitbucket:
+    - Issue tracker should get new version number in picker.
+    # Note: don't delete old version numbers: it marks changes on the tickets
+    # with that number.
+- Announce on coveragepy-announce@googlegroups.com .
+- Announce on TIP.
+
+
+* Building
+
+- Create PythonXX\Lib\distutils\distutils.cfg::
+    [build]
+    compiler = mingw32
+
+* Testing
+
+- Testing of Python code is handled by tox.
+    - Create and activate a virtualenv
+    - pip install -r requirements/dev.pip
+    - $ tox
+
+- For complete coverage testing:
+
+    $ make metacov
+
+    This will run coverage.py under its own measurement.  You can do this in
+    different environments (Linux vs. Windows, for example), then copy the data
+    files (.metacov.*) to one machine for combination and reporting.  To
+    combine and report:
+
+    $ make metahtml
+
+- To run the Javascript tests:
+
+    open tests/js/index.html in variety of browsers.

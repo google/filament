@@ -1,0 +1,85 @@
+#!/usr/bin/env vpython3
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: We use tags here instead of refs because refs will always hit the
+# network to see if there are any updates.
+
+# [VPYTHON:BEGIN]
+# # Third party dependencies.  These are only listed because pylint itself needs
+# # them.  Feel free to add/remove anything here.
+# python_version: "3.11"
+#
+# wheel: <
+#   name: "infra/python/wheels/futures-py2_py3"
+#   version: "version:3.1.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/isort-py3"
+#   version: "version:5.10.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/mccabe-py2_py3"
+#   version: "version:0.6.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/six-py2_py3"
+#   version: "version:1.15.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/toml-py3"
+#   version: "version:0.10.1"
+# >
+# wheel: <
+#   name: "infra/python/wheels/wrapt-py3"
+#   version: "version:1.15.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/lazy-object-proxy/${vpython_platform}"
+#   version: "version:1.4.3"
+# >
+# wheel: <
+#   name: "infra/python/wheels/colorama-py2_py3"
+#   version: "version:0.4.6"
+# >
+#
+# # Pylint extensions.
+#
+# wheel: <
+#   name: "infra/python/wheels/pylint-quotes-py3"
+#   version: "version:0.2.1"
+# >
+#
+# # Pylint dependencies.
+#
+# wheel: <
+#   name: "infra/python/wheels/astroid-py3"
+#   version: "version:2.15.8"
+# >
+# wheel: <
+#  name: "infra/python/wheels/dill-py3"
+#  version: "version:0.3.7"
+# >
+# wheel: <
+#   name: "infra/python/wheels/platformdirs-py3"
+#   version: "version:3.10.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/pylint-py3"
+#   version: "version:2.17.7"
+# >
+# wheel: <
+#   name: "infra/python/wheels/tomlkit-py3"
+#   version: "version:0.12.3"
+# >
+#
+# [VPYTHON:END]
+
+import sys
+
+import pylint_main
+
+if __name__ == '__main__':
+    sys.exit(pylint_main.main(sys.argv[1:]))
+

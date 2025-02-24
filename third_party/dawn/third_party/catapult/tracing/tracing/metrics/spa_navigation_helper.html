@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains helper functions to identify
+ * FrameLoader::updateForSameDocumentNavigation events on all renderer
+ * processes and find their preceding navigation start events.
+ *_______________________________________________________________
+ * browser:     InputLatency/NavigationControllerImpl::GoToIndex |
+ *----------------------------------------
+ * renderer:       LatencyInfo.Flow
+ *                  WebViewImpl::handleInputEvent
+ *                          FrameLoader::updateForSameDocumentNavigation
+ *----------------------------------------------------
+ * FrameLoader::updateForSameDocumentNavigation is called when SPA
+ * in-app navigation occurs.
+ * For details about how SPA in-app navigation is defined and
+ * how it is found based on FrameLoader::updateForSameDocumentNavigation,
+ * read the doc: https://goo.gl/1I3tqd.
+ */
+tr.exportTo('tr.metrics', function() {
+  const HANDLE_INPUT_EVENT_TITLE = 'WebViewImpl::handleInputEvent';
+
+  /**
+   * @returns {Map.<tr.model.Slice, tr.model.Slice>} A map of the
+   * elements in eventsB which immediately precede events in eventsA.
+   * For instance:
+   * eventsA:     A1   A2   A3   A4
+   * eventsB: B1 B2  B3   B4   B5
+   *  output: {A1: B2, A2: B3, A3: B4, A4: B5}
+   * or
+   * eventsA:     A1   A2   A3   A4
+   * eventsB: B1
+   *  output: {A1: B1, A2: B1, A3: B1, A4: B1}
+   */
+  function findPrecedingEvents_(eventsA, eventsB) {
+    const events = new Map();
+    let eventsBIndex = 0;
+    for (const eventA of eventsA) {
+      for (; eventsBIndex < eventsB.length; eventsBIndex++) {
+        if (eventsB[eventsBIndex].start > eventA.start) break;
+      }
+      // If statement prevents the situation when eventsB is empty.
+      if (eventsBIndex > 0) {
+        events.set(eventA, eventsB[eventsBIndex - 1]);
+      }
+    }
+    return events;
+  }
+
+  /**
+   * @returns {Map.<tr.model.Slice, tr.model.Slice>} A map of
+   * the elements in eventsB which immediately follow events
+   * in eventsA.
+   * For instance:
+   * eventsA:  A1   A2   A3   A4
+   * eventsB: B1  B2   B3  B4   B5
+   *  output: {A1:B2, A2:B3, A3:B4, A4:B5}
+   * or
+   * eventsA:  A1   A2   A3   A4
+   * eventsB:                B1
+   *  output: {A1:B1, A2:B1, A3:B1}
+   */
+  function findFollowingEvents_(eventsA, eventsB) {
+    const events = new Map();
+    let eventsBIndex = 0;
+    for (const eventA of eventsA) {
+      for (; eventsBIndex < eventsB.length; eventsBIndex++) {
+        if (eventsB[eventsBIndex].start >= eventA.start) break;
+      }
+      // If statement prevents the situation when eventsB is empty
+      // and when it reaches the end of loop.
+      if (eventsBIndex >= 0 && eventsBIndex < eventsB.length) {
+        events.set(eventA, eventsB[eventsBIndex]);
+      }
+    }
+    return events;
+  }
+
+  /**
+   * @return {Array.<tr.model.Slice>} An array of events that may
+   * be qualified as a SPA navigation start candidate such as
+   * WebViewImpl::handleInputEvent and NavigationControllerImpl::GoToIndex.
+   */
+  function getSpaNavigationStartCandidates_(rendererHelper, browserHelper) {
+    const isNavStartEvent = e => {
+      if (e.title === HANDLE_INPUT_EVENT_TITLE && e.args.type === 'MouseUp') {
+        return true;
+      }
+      return e.title === 'NavigationControllerImpl::GoToIndex';
+    };
+
+    return [
+      ...rendererHelper.mainThread.sliceGroup.getDescendantEvents(),
+      ...browserHelper.mainThread.sliceGroup.getDescendantEvents()
+    ].filter(isNavStartEvent);
+  }
+
+  /**
+   * @return {Array.<tr.model.Slice>} An array of SPA navigation events.
+   * A SPA navigation event indicates the happening of a SPA navigation.
+   */
+  function getSpaNavigationEvents_(rendererHelper) {
+    const isNavEvent = e => e.category === 'blink' &&
+        e.title === 'FrameLoader::updateForSameDocumentNavigation';
+
+    return [...rendererHelper.mainThread.sliceGroup.getDescendantEvents()]
+        .filter(isNavEvent);
+  }
+
+  /**
+   * @return {Array.<tr.model.AsyncSlice>} An array of InputLatency events from
+   * the browser main thread.
+   */
+  function getInputLatencyEvents_(browserHelper) {
+    const isInputLatencyEvent = e => e.title === 'InputLatency::MouseUp';
+
+    return browserHelper.getAllAsyncSlicesMatching(isInputLatencyEvent);
+  }
+
+  /**
+   * @return {Map.<number, tr.model.Slice>} A mapping of trace_id value
+   * in each InputLatency event to the respective InputLatency event itself.
+   */
+  function getInputLatencyEventByBindIdMap_(browserHelper) {
+    const inputLatencyEventByBindIdMap = new Map();
+    for (const event of getInputLatencyEvents_(browserHelper)) {
+      inputLatencyEventByBindIdMap.set(event.args.data.trace_id, event);
+    }
+    return inputLatencyEventByBindIdMap;
+  }
+
+  /**
+   * @returns {Map.<tr.model.Slice, tr.model.AsyncSlice>} A mapping
+   * from a FrameLoader update navigation slice to its respective
+   * navigation start event, which can be an InputLatency async
+   * slice or a NavigationControllerImpl::GoToIndex slice.
+   */
+  function getSpaNavigationEventToNavigationStartMap_(
+      rendererHelper, browserHelper) {
+    const mainThread = rendererHelper.mainThread;
+    const spaNavEvents = getSpaNavigationEvents_(rendererHelper);
+    const navStartCandidates = getSpaNavigationStartCandidates_(
+        rendererHelper, browserHelper).sort(tr.importer.compareEvents);
+    const spaNavEventToNavStartCandidateMap =
+        findPrecedingEvents_(spaNavEvents, navStartCandidates);
+
+    const inputLatencyEventByBindIdMap =
+        getInputLatencyEventByBindIdMap_(browserHelper);
+    const spaNavEventToNavStartEventMap = new Map();
+    for (const [spaNavEvent, navStartCandidate] of
+      spaNavEventToNavStartCandidateMap) {
+      if (navStartCandidate.title === HANDLE_INPUT_EVENT_TITLE) {
+        const inputLatencySlice = inputLatencyEventByBindIdMap.get(
+            Number(navStartCandidate.parentSlice.bindId));
+        if (inputLatencySlice) {
+          spaNavEventToNavStartEventMap.set(spaNavEvent, inputLatencySlice);
+        }
+      } else {
+        spaNavEventToNavStartEventMap.set(spaNavEvent, navStartCandidate);
+      }
+    }
+    return spaNavEventToNavStartEventMap;
+  }
+
+  /**
+   * @return {Array.<tr.model.Slice>} An array of first paint events.
+   */
+  function getFirstPaintEvents_(rendererHelper) {
+    const isFirstPaintEvent = e => e.category === 'blink' &&
+        e.title === 'PaintLayerCompositor::updateIfNeededRecursive';
+
+    return [...rendererHelper.mainThread.sliceGroup.getDescendantEvents()]
+        .filter(isFirstPaintEvent);
+  }
+
+  /**
+   * @returns {Map.<tr.model.Slice, tr.model.Slice>} A mapping
+   * from a FrameLoader update navigation slice to its respective
+   * first paint slice.
+   */
+  function getSpaNavigationEventToFirstPaintEventMap_(rendererHelper) {
+    const spaNavEvents = getSpaNavigationEvents_(
+        rendererHelper).sort(tr.importer.compareEvents);
+    const firstPaintEvents = getFirstPaintEvents_(
+        rendererHelper).sort(tr.importer.compareEvents);
+
+    return findFollowingEvents_(spaNavEvents, firstPaintEvents);
+  }
+
+  /**
+   * @typedef {NavStartCandidates}
+   * @property {tr.model.AsyncSlice} inputLatencyAsyncSlice
+   * @property {tr.model.Slice} goToIndexSlice
+   */
+
+  /**
+   * @typedef {SpaNavObject}
+   * @property {NavStartCandidates} navStartCandidates
+   * @property {tr.model.Slice} firstPaintEvent
+   * @property {string} url
+   */
+
+  /**
+   * @returns {Array.<SpaNavObject>}
+   */
+  function findSpaNavigationsOnRenderer(rendererHelper, browserHelper) {
+    const spaNavEventToNavStartMap =
+        getSpaNavigationEventToNavigationStartMap_(
+            rendererHelper, browserHelper);
+    const spaNavEventToFirstPaintEventMap =
+        getSpaNavigationEventToFirstPaintEventMap_(rendererHelper);
+    const spaNavigations = [];
+    for (const [spaNavEvent, navStartEvent] of
+      spaNavEventToNavStartMap) {
+      if (spaNavEventToFirstPaintEventMap.has(spaNavEvent)) {
+        const firstPaintEvent =
+            spaNavEventToFirstPaintEventMap.get(spaNavEvent);
+        const isNavStartAsyncSlice =
+          navStartEvent instanceof tr.model.AsyncSlice;
+        spaNavigations.push({
+          navStartCandidates: {
+            inputLatencyAsyncSlice:
+                isNavStartAsyncSlice ? navStartEvent : undefined,
+            goToIndexSlice: isNavStartAsyncSlice ? undefined : navStartEvent
+          },
+          firstPaintEvent,
+          url: spaNavEvent.args.url
+        });
+      }
+    }
+    return spaNavigations;
+  }
+
+  return {
+    findSpaNavigationsOnRenderer,
+  };
+});
+</script>

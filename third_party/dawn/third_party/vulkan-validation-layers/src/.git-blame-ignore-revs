@@ -1,0 +1,182 @@
+# Remove macro constants for numeric limits
+c5d638465eeed82ef384b8580b0b7793af8b2233
+
+# Rename namespace layer_data to namespace vvl
+4fab6d257112c08736c758a244344c0ae577d532
+
+# Remove core_validation.cpp
+e7b63ce7ba3187a65da8c757676c71330be29346
+
+# Move CoreCheck Image Layout validation to own file
+99b147ad63937e78a08ebd4f6fc86e04155e583b
+
+# Move CoreCheck Image validation to own file
+a3ce1e7992116b07a45e8af8cdbb66ba6c01219f
+
+# Move CoreCheck Sampler validation to Descriptor file
+633c7d107c6677a14fed4ef1b150306b57d46e69
+
+# Move CoreCheck PipelineLayout validation to Descriptor file
+15f3d3e5e892f066849a7beaf56cbb4fedb8ec96
+
+# Move CoreCheck Copy Blit Resolve validation to own file
+4d5ee2fa98fbd6235c9c07983e7d6ae7fcc0f7c6
+
+# Move Android Image checks to Android file
+f72bfb29cce167793c3e604a4638a9f4bd91b087
+
+# Move CoreCheck synchronization validation to own file
+d23f63c0b2c1905c9bd82e357829e46a1dee3dc9
+
+# Move CoreCheck CommandBuffer validation to own file
+8c0ecb3ef7be46b59bd4e18fed3dddabe3fab423
+
+# Move CoreCheck Queue validation to own file
+224dad99dba625b7452c020441e40466dd466f99
+
+# Move ValidateCmdQueueFlags to query file
+3d4a9ca39b55407a3237b4194e6efd88c756481c
+
+# Move CoreChecks Framebuffer to RenderPass file
+fbe247875b8b55923ad11011a0d6420f2524eb1a
+
+# Move ValidateGetImageSubresourceLayout2EXT
+409dbcee87295d39057e75ec57b9e5ed07fc5c19
+
+# Move files into dedicated folders
+ff547e3154ccb038206bf3f89ce497305128e9ca
+
+# Move Device CoreCheck into own file
+4d196a6c74b7ec9a6f805b7b2959c827a0628cd8
+
+# Move ReleaseProfilingLock in query_validation.cpp
+61314fb36166f07e4f903969721135cbb606a670
+
+# Move External object CoreCheck into own file
+5683b43bc6d73ea9d842bc948d656179d1689090
+
+# Move RenderPass function to RP file
+39e84c7de0d2e44f35f677eab21315e393dedd9b
+
+# Move subpass CoreChecks to RP file
+cb1f0ebd4894ae8665f52722a8bdae27fe172ac1
+
+# Move ValidateImageSampleCount to buffer val
+0e8c94c837447f69f98cb221419eae43495941e9
+
+# Move descriptor CoreChecks to descriptor file
+556b35ee743cc3aa1343f9ed0001bd7096748186
+
+# Move DynamicState CoreCheck to own file
+c0aa4c2ead19dabfaff33ebeffb2a970c6c0b853
+
+# Move RenderPass CoreCheck to own file
+1debf6c59704b9bb1451db5a2b743988a1890e03
+
+# Move device memory CoreCheck to own file
+e2ef1302d50dc02e86630f331643fa30db023178
+
+# Move Query CoreChecks to own file
+8a2cc88d6422d09d0e11a02a5e2b37114edc07cc
+
+# Move Android CoreChecks to own file
+13064d6e68ef6b7f0ec550d82431944a2b45d86c
+
+# Move Video CoreCheck to own file
+c2f132441ea794b50d52c0a4fc94f26d65b8c251
+
+# Move CoreChecks to Ray Tracing file
+d5426ea20669a4d8de34dd3b89685fba73a21c4f
+
+# New pipeline_validation for CoreCheck
+47d0952f89039b20249945fb914d07c140a5ec5f
+
+# New wsi_validation for CoreChecks
+e4a3c3c66bec31f81f485c248d594751c1d96ad1
+
+# Move CreateRenderPassGeneric to source file
+b96a1646e1a5492d1e35b066938b704679b9111b
+
+# Add new test files for ray tracing
+d75d1d3a09191bd92bbaf61aa6ce7d5aa5875580
+
+# Move all Dynamic Rendering test together
+bfdcfe72460c0f0e1b41e76985f8fffa9021268d
+
+# Move ErrorMonitor into it's own files
+5ca4b0389ae2273017f375a33de10aecec757069
+
+# Move AHB tests to own file
+781c919ddf59701ccdb5b2532a7108d38fc21758
+
+# Fix test group and whitespace
+bc6d10d2b4347210cde345b72638b1c0e709a07c
+
+# Refactor positive tests
+26116e41f4aaf70166d3fe25f933a189c665959f
+
+# Fix whitespace error in layer settings file
+c97acd1d3e07757d0269e59f7610670169728c5f
+
+# Remove validationstats script whitespace
+02e231711b24573762ee16d1275ce5d8811d9aaf
+
+# Clean up whitespace in cap info structs
+f7019588d18a7ef57e6b2bbc18d532b79b730587
+
+# clang-format whitespace (sigh)
+e19e20dacd199de47c9f29a05a992e560b5bf5e4
+
+# Clang formatting
+828a3c5745733523eba9018c2b1d23ae5aaff827
+
+# Run clang-format on known-good.json files
+7418c9be681a1a7cd6dbc1542db335c2b744b0bc
+
+# Forgot to run clang-format, fixing
+3a6e61acdd520fce795aa99b0dcc232dff0b67bb
+
+# Fix clang-formatting issues
+525c12999e5612ee9b9ccf58c063068ac226163e
+
+# Fix clang-format errors in descriptor_sets.cpp
+85ebd4089ac347c10ef2819385b2b1b58bda8777
+
+# Fix clang-format errors in core_validation.cpp
+7256b55653e99b31feb465e5d00566249ec57bc3
+
+# Refactor validation layer tests
+20c80f8d76e17ea705f5e258322979a24427bbeb
+
+# Refactor validation layer tests
+11b2e80ae1ca5eec3c60fd199a79eb28d687bf34
+
+# Refactor validation layer tests
+088160a6f470598c62f9c708d4f85215dab7c481
+
+# Refactor validation layer tests
+ef74b1167d16187042028893328f87ee6f884e1d
+
+# Refactor validation layer tests
+aae202333dda8a6ca1422a773d02c4d7853f71b7
+
+# Move tests to Unit folder and rename
+7fd356061a073389d5b25a063e512214400f0d14
+
+# Move ExternalMemorySync helpers to test file
+9b0f5bfa14f5a9837214e147c08644e5a7391c68
+
+# Improve nesting by returning back sooner
+4f847fc3374fb9c4b7a2f67cff5b4fd819210226
+
+# Run Clang-Format on generated files
+6b021099c39224d4d97573a5d3b879ca03889b50
+
+# Outdent all clang-formatted strings in scripts
+f661d4b3eb04e0dce562ef2da08aca257e3afa69
+
+# Change vk_testing to vkt
+11ffac277d4069a973717507b39af4b8614cf80a
+
+# Use vkt alias over Vk*Obj
+0b4eb25ae1a0f15186f72e2686a35a4c2ae91a9e

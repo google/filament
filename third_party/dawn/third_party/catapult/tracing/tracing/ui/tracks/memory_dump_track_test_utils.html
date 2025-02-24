@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/model/vm_region.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper functions for memory dump track tests.
+ */
+tr.exportTo('tr.ui.tracks', function() {
+  const ProcessMemoryDump = tr.model.ProcessMemoryDump;
+  const GlobalMemoryDump = tr.model.GlobalMemoryDump;
+  const VMRegion = tr.model.VMRegion;
+  const VMRegionClassificationNode = tr.model.VMRegionClassificationNode;
+  const SelectionState = tr.model.SelectionState;
+  const addGlobalMemoryDump = tr.model.MemoryDumpTestUtils.addGlobalMemoryDump;
+  const addProcessMemoryDump =
+    tr.model.MemoryDumpTestUtils.addProcessMemoryDump;
+  const newAllocatorDump = tr.model.MemoryDumpTestUtils.newAllocatorDump;
+  const addOwnershipLink = tr.model.MemoryDumpTestUtils.addOwnershipLink;
+  const BACKGROUND = tr.model.ContainerMemoryDump.LevelOfDetail.BACKGROUND;
+  const LIGHT = tr.model.ContainerMemoryDump.LevelOfDetail.LIGHT;
+  const DETAILED = tr.model.ContainerMemoryDump.LevelOfDetail.DETAILED;
+
+  function createVMRegions(pssValues) {
+    return VMRegionClassificationNode.fromRegions(
+        pssValues.map(function(pssValue, i) {
+          return VMRegion.fromDict({
+            startAddress: 1000 * i,
+            sizeInBytes: 1000,
+            protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+            mappedFile: '[stack' + i + ']',
+            byteStats: {
+              privateDirtyResident: pssValue / 3,
+              swapped: pssValue * 3,
+              proportionalResident: pssValue
+            }
+          });
+        }));
+  }
+
+  function createAllocatorDumps(memoryDump, dumpData) {
+    // Create the individual allocator dumps.
+    const allocatorDumps = {};
+    for (const [allocatorName, data] of Object.entries(dumpData)) {
+      const size = data.size;
+      assert.typeOf(size, 'number');  // Sanity check.
+      allocatorDumps[allocatorName] = newAllocatorDump(
+          memoryDump, allocatorName, {numerics: {size}});
+    }
+
+    // Add ownership links between them.
+    for (const [allocatorName, data] of Object.entries(dumpData)) {
+      const owns = data.owns;
+      if (owns === undefined) continue;
+
+      const ownerDump = allocatorDumps[allocatorName];
+      assert.isDefined(ownerDump);  // Sanity check.
+      const ownedDump = allocatorDumps[owns];
+      assert.isDefined(ownedDump);  // Sanity check.
+
+      addOwnershipLink(ownerDump, ownedDump);
+    }
+
+    return Object.values(allocatorDumps);
+  }
+
+  function addProcessMemoryDumpWithFields(globalMemoryDump, process, start,
+      opt_pssValues, opt_dumpData) {
+    const pmd = addProcessMemoryDump(globalMemoryDump, process, {ts: start});
+    if (opt_pssValues !== undefined) {
+      pmd.vmRegions = createVMRegions(opt_pssValues);
+    }
+    if (opt_dumpData !== undefined) {
+      pmd.memoryAllocatorDumps = createAllocatorDumps(pmd, opt_dumpData);
+    }
+  }
+
+  function createModelWithDumps(withVMRegions, withAllocatorDumps) {
+    const maybePssValues = function(pssValues) {
+      return withVMRegions ? pssValues : undefined;
+    };
+    const maybeDumpData = function(dumpData) {
+      return withAllocatorDumps ? dumpData : undefined;
+    };
+    return tr.c.TestUtils.newModel(function(model) {
+      // Construct a model with three processes.
+      const pa = model.getOrCreateProcess(3);
+      const pb = model.getOrCreateProcess(6);
+      const pc = model.getOrCreateProcess(9);
+
+      const gmd1 = addGlobalMemoryDump(model, {ts: 0, levelOfDetail: LIGHT});
+      addProcessMemoryDumpWithFields(gmd1, pa, 0, maybePssValues([111]));
+      addProcessMemoryDumpWithFields(gmd1, pb, 0.2, undefined,
+          maybeDumpData({oilpan: {size: 1024}}));
+
+      const gmd2 = addGlobalMemoryDump(model, {ts: 5, levelOfDetail: DETAILED});
+      addProcessMemoryDumpWithFields(gmd2, pa, 0);
+      addProcessMemoryDumpWithFields(gmd2, pb, 4.99, maybePssValues([100, 50]),
+          maybeDumpData({v8: {size: 512}}));
+      addProcessMemoryDumpWithFields(gmd2, pc, 5.12, undefined,
+          maybeDumpData({oilpan: {size: 128, owns: 'v8'},
+            v8: {size: 384, owns: 'tracing'}, tracing: {size: 65920}}));
+
+      const gmd3 = addGlobalMemoryDump(
+          model, {ts: 15, levelOfDetail: DETAILED});
+      addProcessMemoryDumpWithFields(gmd3, pa, 15.5, maybePssValues([]),
+          maybeDumpData({v8: {size: 768}}));
+      addProcessMemoryDumpWithFields(gmd3, pc, 14.5,
+          maybePssValues([70, 70, 70]), maybeDumpData({oilpan: {size: 512}}));
+
+      const gmd4 = addGlobalMemoryDump(model, {ts: 18, levelOfDetail: LIGHT});
+
+      const gmd5 = addGlobalMemoryDump(model,
+          {ts: 20, levelOfDetail: BACKGROUND});
+      addProcessMemoryDumpWithFields(gmd5, pa, 0, maybePssValues([105]));
+      addProcessMemoryDumpWithFields(gmd5, pb, 0.2, undefined,
+          maybeDumpData({oilpan: {size: 100}}));
+    });
+  }
+
+  function createTestGlobalMemoryDumps(withVMRegions, withAllocatorDumps) {
+    const model = createModelWithDumps(withVMRegions, withAllocatorDumps);
+    const dumps = model.globalMemoryDumps;
+    dumps[1].selectionState = SelectionState.HIGHLIGHTED;
+    dumps[2].selectionState = SelectionState.SELECTED;
+    return dumps;
+  }
+
+  function createTestProcessMemoryDumps(withVMRegions, withAllocatorDumps) {
+    const model = createModelWithDumps(withVMRegions, withAllocatorDumps);
+    const dumps = model.getProcess(9).memoryDumps;
+    dumps[0].selectionState = SelectionState.SELECTED;
+    dumps[1].selectionState = SelectionState.HIGHLIGHTED;
+    return dumps;
+  }
+
+  return {
+    createTestGlobalMemoryDumps,
+    createTestProcessMemoryDumps,
+  };
+});
+</script>

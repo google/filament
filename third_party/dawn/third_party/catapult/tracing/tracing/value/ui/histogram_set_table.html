@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+<link rel="import" href="/tracing/value/histogram_set_hierarchy.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_table_row.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view_state.html">
+
+<dom-module id="tr-v-ui-histogram-set-table">
+  <template>
+    <style>
+    :host {
+      min-height: 0px;
+      overflow: auto;
+    }
+    #table {
+      margin-top: 5px;
+    }
+    </style>
+
+    <tr-ui-b-table id="table"/>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  const MIDLINE_HORIZONTAL_ELLIPSIS = String.fromCharCode(0x22ef);
+
+  // http://stackoverflow.com/questions/3446170
+  function escapeRegExp(str) {
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
+  }
+
+  Polymer({
+    is: 'tr-v-ui-histogram-set-table',
+
+    created() {
+      this.viewState_ = undefined;
+      this.progress_ = () => Promise.resolve();
+      this.nameColumnTitle_ = undefined;
+      this.displayLabels_ = [];
+      this.histograms_ = undefined;
+      this.sourceHistograms_ = undefined;
+      this.filteredHistograms_ = undefined;
+      this.groupedHistograms_ = undefined;
+      this.hierarchies_ = undefined;
+      this.tableRows_ = undefined;
+
+      // Store this listener so it can be removed while updateContents_ modifies
+      // sortColumnIndex and sortDescending, then re-added.
+      this.sortColumnChangedListener_ = e => this.onSortColumnChanged_(e);
+    },
+
+    ready() {
+      this.$.table.zebra = true;
+      this.addEventListener('sort-column-changed',
+          this.sortColumnChangedListener_);
+      this.addEventListener('requestSelectionChange',
+          this.onRequestSelectionChange_.bind(this));
+      this.addEventListener('row-expanded-changed',
+          this.onRowExpandedChanged_.bind(this));
+    },
+
+    get viewState() {
+      return this.viewState_;
+    },
+
+    set viewState(vs) {
+      if (this.viewState_) {
+        throw new Error('viewState must be set exactly once.');
+      }
+      this.viewState_ = vs;
+      this.viewState.addUpdateListener(this.onViewStateUpdate_.bind(this));
+      // It would be arduous to construct a delta and call onViewStateUpdate_
+      // here in case vs contains non-default values, so callers must set
+      // viewState first and then update it.
+    },
+
+    get histograms() {
+      return this.histograms_;
+    },
+
+    /**
+     * @param {!tr.v.HistogramSet} histograms
+     * @param {!tr.v.HistogramSet} sourceHistograms
+     * @param {!Array.<string>} displayLabels
+     * @param {function(string, function())=} opt_progress
+     */
+    async build(histograms, sourceHistograms, displayLabels, opt_progress) {
+      this.histograms_ = histograms;
+      this.sourceHistograms_ = sourceHistograms;
+      this.filteredHistograms_ = undefined;
+      this.groupedHistograms_ = undefined;
+      this.displayLabels_ = displayLabels;
+
+      if (opt_progress !== undefined) this.progress_ = opt_progress;
+
+      if (histograms.length === 0) {
+        throw new Error('histogram-set-table requires non-empty HistogramSet.');
+      }
+
+      await this.progress_('Building columns...');
+      this.$.table.tableColumns = [
+        {
+          title: this.buildNameColumnTitle_(),
+          value: row => row.nameCell,
+          cmp: (a, b) => a.compareNames(b),
+        }
+      ].concat(displayLabels.map(l => this.buildColumn_(l)));
+
+      tr.b.Timing.instant('histogram-set-table', 'columnCount',
+          this.$.table.tableColumns.length);
+
+      // updateContents_() displays its own progress.
+      await this.updateContents_();
+
+      // Building some elements requires being able to measure them, which is
+      // impossible until they are displayed. If clients hide this table while
+      // it is being built, then they must display it when this event fires.
+      this.fire('display-ready');
+
+      this.progress_ = () => Promise.resolve();
+
+      this.checkNameColumnOverflow_(
+          tr.v.ui.HistogramSetTableRow.walkAll(this.$.table.tableRows));
+    },
+
+    buildNameColumnTitle_() {
+      this.nameColumnTitle_ = document.createElement('span');
+      this.nameColumnTitle_.style.display = 'inline-flex';
+
+      // Wrap the string in a span instead of using createTextNode() so that the
+      // span can be styled later.
+      const nameEl = document.createElement('span');
+      nameEl.textContent = 'Name';
+      this.nameColumnTitle_.appendChild(nameEl);
+
+      const toggleWidthEl = document.createElement('span');
+      toggleWidthEl.style.fontWeight = 'bold';
+      toggleWidthEl.style.background = '#bbb';
+      toggleWidthEl.style.color = '#333';
+      toggleWidthEl.style.padding = '0px 3px';
+      toggleWidthEl.style.marginRight = '8px';
+      toggleWidthEl.style.display = 'none';
+      toggleWidthEl.textContent = MIDLINE_HORIZONTAL_ELLIPSIS;
+      toggleWidthEl.addEventListener('click',
+          this.toggleNameColumnWidth_.bind(this));
+      this.nameColumnTitle_.appendChild(toggleWidthEl);
+      return this.nameColumnTitle_;
+    },
+
+    toggleNameColumnWidth_(opt_event) {
+      this.viewState.update({
+        constrainNameColumn: !this.viewState.constrainNameColumn,
+      });
+
+      if (opt_event !== undefined) {
+        opt_event.stopPropagation();
+        opt_event.preventDefault();
+        tr.b.Timing.instant('histogram-set-table', 'nameColumn' +
+            (this.viewState.constrainNameColumn ? 'Constrained' :
+              'Unconstrained'));
+      }
+    },
+
+    buildColumn_(displayLabel) {
+      const title = document.createElement('span');
+      title.textContent = displayLabel;
+      title.style.whiteSpace = 'pre';
+
+      return {
+        displayLabel,
+        title,
+        value: row => row.getCell(displayLabel),
+        cmp: (rowA, rowB) => rowA.compareCells(rowB, displayLabel),
+      };
+    },
+
+    async updateContents_() {
+      const previousRowStates = this.viewState.tableRowStates;
+
+      if (!this.filteredHistograms_) {
+        await this.progress_('Filtering rows...');
+        this.filteredHistograms_ = this.viewState.showAll ?
+          this.histograms : this.sourceHistograms_;
+
+        if (this.viewState.searchQuery) {
+          let query;
+          try {
+            query = new RegExp(this.viewState.searchQuery);
+          } catch (e) {
+          }
+          if (query !== undefined) {
+            this.filteredHistograms_ = new tr.v.HistogramSet(
+                [...this.filteredHistograms_].filter(
+                    hist => hist.name.match(query)));
+            if (this.filteredHistograms_.length === 0 &&
+                !this.viewState.showAll) {
+              await this.viewState.update({showAll: true});
+              return;
+            }
+          }
+        }
+        this.groupedHistograms_ = undefined;
+      }
+
+      if (!this.groupedHistograms_) {
+        await this.progress_('Grouping Histograms...');
+        this.groupHistograms_();
+      }
+
+      if (!this.hierarchies_) {
+        await this.progress_('Merging Histograms...');
+        this.hierarchies_ = tr.v.HistogramSetHierarchy.build(
+            this.groupedHistograms_);
+        this.tableRows_ = undefined;
+      }
+
+      const tableRowsDirty = this.tableRows_ === undefined;
+      if (tableRowsDirty) {
+        // Wait to set this.$.table.tableRows until we're ready for it to build
+        // DOM. When tableRows are set on it, tr-ui-b-table calls
+        // setTimeout(..., 0) to schedule rebuild for the next interpreter tick,
+        // but that can happen in between the next await, which is too early.
+        this.tableRows_ = this.hierarchies_.map(hierarchy =>
+          new tr.v.ui.HistogramSetTableRow(
+              hierarchy, this.$.table, this.viewState));
+
+        tr.b.Timing.instant('histogram-set-table', 'rootRowCount',
+            this.tableRows_.length);
+
+        const namesToRowStates = new Map();
+        for (const row of this.tableRows_) {
+          namesToRowStates.set(row.name, row.viewState);
+        }
+        await this.viewState.update({tableRowStates: namesToRowStates});
+      }
+
+      await this.progress_('Configuring table...');
+      this.nameColumnTitle_.children[1].style.filter =
+        this.viewState.constrainNameColumn ? 'invert(100%)' : '';
+
+      const referenceDisplayLabelIndex = this.displayLabels_.indexOf(
+          this.viewState.referenceDisplayLabel);
+      this.$.table.selectedTableColumnIndex = (referenceDisplayLabelIndex < 0) ?
+        undefined : (1 + referenceDisplayLabelIndex);
+
+      // Temporarily stop listening for this event in order to prevent the
+      // listener from updating viewState unnecessarily.
+      this.removeEventListener('sort-column-changed',
+          this.sortColumnChangedListener_);
+      this.$.table.sortColumnIndex = this.viewState.sortColumnIndex;
+      this.$.table.sortDescending = this.viewState.sortDescending;
+      this.addEventListener('sort-column-changed',
+          this.sortColumnChangedListener_);
+
+      // Each name-cell listens to this.viewState for updates to
+      // constrainNameColumn.
+      // Each table-cell listens to this.viewState for updates to
+      // displayStatisticName and referenceDisplayLabel.
+
+      if (tableRowsDirty) {
+        await this.progress_('Building DOM...');
+        this.$.table.tableRows = this.tableRows_;
+
+        // Try to restore previous row state.
+        // Wait to do this until after the base table has the new rows so that
+        // setExpandedForTableRow doesn't get confused.
+        for (const row of this.tableRows_) {
+          const previousState = previousRowStates.get(row.name);
+          if (!previousState) continue;
+          await row.restoreState(previousState);
+        }
+      }
+
+      // It's always safe to call this, it will only recompute what is dirty.
+      // We want to make sure that the table is up to date when this async
+      // function resolves.
+      this.$.table.rebuild();
+    },
+
+    async onRowExpandedChanged_(event) {
+      event.row.viewState.isExpanded =
+        this.$.table.getExpandedForTableRow(event.row);
+      tr.b.Timing.instant('histogram-set-table',
+          'row' + (event.row.viewState.isExpanded ? 'Expanded' : 'Collapsed'));
+
+      // When the user expands a row, the table builds subRows' name-cells.
+      // If a subRow's name isOverflowing even though none of the top-level rows
+      // are constrained, show the dots to allow the user to unconstrain the
+      // name column.
+      // Each name-cell.isOverflowing would force layout if we don't await
+      // animationFrame here, which would be inefficient.
+      if (this.nameColumnTitle_.children[1].style.display === 'block') return;
+      await tr.b.animationFrame();
+      this.checkNameColumnOverflow_(event.row.subRows);
+    },
+
+    checkNameColumnOverflow_(rows) {
+      for (const row of rows) {
+        if (!row.nameCell.isOverflowing) continue;
+
+        const [nameSpan, dots] = Array.from(this.nameColumnTitle_.children);
+        dots.style.display = 'block';
+
+        // Size the span containing 'Name' so that the dots align with the
+        // ellipses in the name-cells.
+        const labelWidthPx = tr.v.ui.NAME_COLUMN_WIDTH_PX -
+          dots.getBoundingClientRect().width;
+        nameSpan.style.width = labelWidthPx + 'px';
+
+        return;
+      }
+    },
+
+    groupHistograms_() {
+      const groupings = this.viewState.groupings.slice();
+      groupings.push(tr.v.HistogramGrouping.DISPLAY_LABEL);
+
+      function canSkipGrouping(grouping, groupedHistograms) {
+        // Never skip meaningful groupings.
+        if (groupedHistograms.size > 1) return false;
+
+        // Never skip the zero-th grouping.
+        if (grouping.key === groupings[0].key) return false;
+
+        // Never skip the grouping that defines the table columns.
+        if (grouping.key === tr.v.HistogramGrouping.DISPLAY_LABEL.key) {
+          return false;
+        }
+
+        // Skip meaningless groupings.
+        return true;
+      }
+
+      this.groupedHistograms_ =
+        this.filteredHistograms_.groupHistogramsRecursively(
+            groupings, canSkipGrouping);
+
+      this.hierarchies_ = undefined;
+    },
+
+    /**
+     * @param {!tr.b.Event} event
+     * @param {!Object} event.delta
+     * @param {!Object} event.delta.searchQuery
+     * @param {!Object} event.delta.referenceDisplayLabel
+     * @param {!Object} event.delta.displayStatisticName
+     * @param {!Object} event.delta.showAll
+     * @param {!Object} event.delta.groupings
+     * @param {!Object} event.delta.sortColumnIndex
+     * @param {!Object} event.delta.sortDescending
+     * @param {!Object} event.delta.constrainNameColumn
+     * @param {!Object} event.delta.tableRowStates
+     */
+    async onViewStateUpdate_(event) {
+      if (this.histograms_ === undefined) return;
+
+      if (event.delta.searchQuery !== undefined ||
+          event.delta.showAll !== undefined) {
+        this.filteredHistograms_ = undefined;
+      }
+
+      if (event.delta.groupings !== undefined) {
+        this.groupedHistograms_ = undefined;
+      }
+
+      if (event.delta.displayStatistic !== undefined &&
+          this.$.table.sortColumnIndex > 0) {
+        // Force re-sort.
+        this.$.table.sortColumnIndex = undefined;
+      }
+
+      if (event.delta.referenceDisplayLabel !== undefined ||
+          event.delta.displayStatisticName !== undefined) {
+        // Force this.$.table.bodyDirty_ = true;
+        this.$.table.tableRows = this.$.table.tableRows;
+      }
+
+      // updateContents_() always copies sortColumnIndex and sortDescending
+      // from the viewState to the table. The table will only re-sort if
+      // they change.
+
+      // Name-cells listen to this.viewState to handle updates to
+      // constrainNameColumn.
+
+      if (event.delta.tableRowStates) {
+        if (this.tableRows_.length !==
+            this.viewState.tableRowStates.size) {
+          throw new Error(
+              'Only histogram-set-table may update tableRowStates');
+        }
+        for (const row of this.tableRows_) {
+          if (this.viewState.tableRowStates.get(row.name) !== row.viewState) {
+            throw new Error(
+                'Only histogram-set-table may update tableRowStates');
+          }
+        }
+        return; // No need to re-enter updateContents_().
+      }
+
+      await this.updateContents_();
+    },
+
+    onSortColumnChanged_(event) {
+      tr.b.Timing.instant('histogram-set-table', 'sortColumn');
+      this.viewState.update({
+        sortColumnIndex: event.sortColumnIndex,
+        sortDescending: event.sortDescending,
+      });
+    },
+
+    onRequestSelectionChange_(event) {
+      // This event may reference an EventSet or an array of Histogram names.
+      // If EventSet, let the BrushingStateController handle it.
+      if (event.selection instanceof tr.model.EventSet) return;
+
+      event.stopPropagation();
+      tr.b.Timing.instant('histogram-set-table', 'selectHistogramNames');
+
+      let histogramNames = event.selection;
+      histogramNames.sort();
+      histogramNames = histogramNames.map(escapeRegExp).join('|');
+      this.viewState.update({
+        showAll: true,
+        searchQuery: `^(${histogramNames})$`,
+      });
+    },
+
+    /**
+     * @return {!tr.v.HistogramSet}
+     */
+    get leafHistograms() {
+      const histograms = new tr.v.HistogramSet();
+      for (const row of
+        tr.v.ui.HistogramSetTableRow.walkAll(this.$.table.tableRows)) {
+        if (row.subRows.length) continue;
+        for (const hist of row.columns.values()) {
+          if (!(hist instanceof tr.v.Histogram)) continue;
+
+          histograms.addHistogram(hist);
+        }
+      }
+      return histograms;
+    }
+  });
+
+  return {
+    MIDLINE_HORIZONTAL_ELLIPSIS,
+  };
+});
+</script>

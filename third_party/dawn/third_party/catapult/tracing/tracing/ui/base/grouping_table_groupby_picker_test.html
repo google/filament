@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/grouping_table_groupby_picker.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('groupby-picker', function() {
+    const settingsKey = 'tr-ui-b-grouping-table-groupby-picker-test';
+    const picker = document.createElement(
+        'tr-ui-b-grouping-table-groupby-picker');
+    tr.b.Settings.set(settingsKey, []);
+    picker.settingsKey = settingsKey;
+    picker.possibleGroups = [
+      {key: 'a', label: 'A'},
+      {key: 'b', label: 'B'},
+      {key: 'c', label: 'C'},
+      {key: 'd', label: 'D'},
+      {key: 'e', label: 'E'}
+    ];
+    assert.deepEqual([], picker.currentGroupKeys);
+    this.addHTMLOutput(picker);
+
+    let keys = ['a', 'b', 'c', 'd', 'e'];
+    picker.currentGroupKeys = keys;
+    assert.deepEqual(keys, picker.currentGroupKeys);
+
+    keys = ['e', 'd', 'c', 'b', 'a'];
+    picker.currentGroupKeys = keys;
+    assert.deepEqual(keys, picker.currentGroupKeys);
+
+    keys = [];
+    picker.currentGroupKeys = keys;
+    assert.deepEqual(keys, picker.currentGroupKeys);
+
+    keys = ['a', 'b', 'd'];
+    picker.currentGroupKeys = keys;
+    assert.deepEqual(keys, picker.currentGroupKeys);
+
+    tr.b.Settings.set(settingsKey, ['foo']);
+    picker.settingsKey = settingsKey;
+    assert.deepEqual([], picker.currentGroupKeys);
+
+    tr.b.Settings.set(settingsKey, ['e']);
+    picker.settingsKey = settingsKey;
+    assert.deepEqual(['e'], picker.currentGroupKeys);
+  });
+});
+</script>

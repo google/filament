@@ -1,0 +1,6 @@
+# This file is used by git-cl to get repository specific information.
+GERRIT_HOST: True
+CODE_REVIEW_SERVER: codereview.chromium.org
+CC_LIST: native-client-reviews@googlegroups.com
+VIEW_VC: https://chromium.googlesource.com/native_client/pnacl-subzero/+/
+STATUS: http://nativeclient-status.appspot.com/status

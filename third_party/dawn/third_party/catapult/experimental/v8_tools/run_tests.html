@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Tests</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="../../tracing/third_party/mannwhitneyu/mannwhitneyu.js"></script>  
+
+    <link href="https://unpkg.com/mocha@4.0.1/mocha.css" rel="stylesheet" />
+  </head>
+    <body>
+      <div id="mocha"></div>
+      <script src="https://unpkg.com/chai@4.1.2/chai.js"></script>
+      <script src="https://unpkg.com/mocha@4.0.1/mocha.js"></script>
+      <script src="https://unpkg.com/chai-spies@1.0.0/chai-spies.js"></script>
+      <script>
+        'use strict';
+        mocha.setup('bdd');
+      </script>
+      <script src="graph_utils.js"></script>
+      <script src="graph_utils_test.js"></script>
+      <script src="graph_plotter.js"></script>
+      <script src="graph_plotter_test.js"></script>
+      <script src="dot_plotter.js"></script>
+      <script src="graph_data.js"></script>
+      <script src="graph_data_test.js"></script>
+      <script src="dot_plotter_test.js"></script>
+      <script src="stacked_bar_plotter.js"></script>
+      <script src="stacked_bar_plotter_test.js"></script>
+      <script src="metric_significance.js"></script>
+      <script src="metric_significance_test.js"></script>
+      <script src="bar_plotter.js"></script>
+      <script src="bar_plotter_tests.js"></script>
+      <script src="state_manager.js"></script>
+      <script src="state_manager_test.js"></script>
+      <script>
+        'use strict';
+        mocha.checkLeaks();
+        mocha.run();
+      </script>
+      <div id='canvas' style="display: none;"></div>
+    </body>
+  </html>

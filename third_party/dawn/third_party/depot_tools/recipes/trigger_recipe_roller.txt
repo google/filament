@@ -1,0 +1,13 @@
+No-op file. Edit this to kick recipes.
+
+This is a beginning of a story in this silly file.
+Once upon a time, a budding web browser dev team needed a CI system.
+All they had was one poor machine under a desk, and its name was Batty,
+the Build and Test Yeti.
+
+As the CI needs of the browser grew, Batty, the Build and Test Yeti, got
+a new friend, but this information was marked RVG, so it was months before
+any details were revealed.
+
+The End!
+

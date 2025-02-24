@@ -1,0 +1,38 @@
+//===- subzero/crosstest/test_strengthreduce.def - macros -----*- C++ -*---===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for crosstesting strength reduction.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_STRENGTHREDUCE_DEF
+#define TEST_STRENGTHREDUCE_DEF
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+
+#define CONST_TABLE \
+  X(   -10,    _10) \
+  X(    -7,     _7) \
+  X(    -2,     _2) \
+  X(    -1,     _1) \
+  X(     0,      0) \
+  X(     1,      1) \
+  X(     2,      2) \
+  X(     3,      3) \
+  X(     4,      4) \
+  X(     5,      5) \
+  X(     7,      7) \
+  X(     9,      9) \
+  X(    10,     10) \
+  X(   100,    100) \
+  X(100000, 100000) \
+//#define X(constant, suffix)
+
+#endif // !TEST_STRENGTHREDUCE_DEF

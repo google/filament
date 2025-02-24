@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/proxy_selectable_item.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<style>
+.letter-dot-track {
+  height: 18px;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const EventPresenter = tr.ui.b.EventPresenter;
+  const SelectionState = tr.model.SelectionState;
+
+  /**
+   * A track that displays an array of dots with filled letters inside them.
+   * @constructor
+   * @extends {Track}
+   */
+  const LetterDotTrack = tr.ui.b.define(
+      'letter-dot-track', tr.ui.tracks.Track);
+
+  LetterDotTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('letter-dot-track');
+      this.items_ = undefined;
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    set heading(heading) {
+      this.heading_.heading = heading;
+    },
+
+    get heading() {
+      return this.heading_.heading;
+    },
+
+    set tooltip(tooltip) {
+      this.heading_.tooltip = tooltip;
+    },
+
+    get items() {
+      return this.items_;
+    },
+
+    set items(items) {
+      this.items_ = items;
+      this.invalidateDrawingContainer();
+    },
+
+    get height() {
+      return window.getComputedStyle(this).height;
+    },
+
+    set height(height) {
+      this.style.height = height;
+    },
+
+    get dumpRadiusView() {
+      return 7 * (window.devicePixelRatio || 1);
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      if (this.items_ === undefined) return;
+
+      switch (type) {
+        case tr.ui.tracks.DrawType.GENERAL_EVENT:
+          this.drawLetterDots_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawLetterDots_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const bounds = this.getBoundingClientRect();
+      const height = bounds.height * pixelRatio;
+      const halfHeight = height * 0.5;
+      const twoPi = Math.PI * 2;
+
+      // Culling parameters.
+      const dt = this.viewport.currentDisplayTransform;
+      const dumpRadiusView = this.dumpRadiusView;
+      const itemRadiusWorld = dt.xViewVectorToWorld(height);
+
+      // Draw the memory dumps.
+      const items = this.items_;
+      const loI = tr.b.findLowIndexInSortedArray(
+          items,
+          function(item) { return item.start; },
+          viewLWorld);
+
+      const oldFont = ctx.font;
+      ctx.font = '400 ' + Math.floor(9 * pixelRatio) + 'px Arial';
+      ctx.strokeStyle = 'rgb(0,0,0)';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+
+      const drawItems = function(selected) {
+        for (let i = loI; i < items.length; ++i) {
+          const item = items[i];
+          const x = item.start;
+          if (x - itemRadiusWorld > viewRWorld) break;
+
+          if (item.selected !== selected) continue;
+
+          const xView = dt.xWorldToView(x);
+
+          ctx.fillStyle = EventPresenter.getSelectableItemColorAsString(item);
+          ctx.beginPath();
+          ctx.arc(xView, halfHeight, dumpRadiusView + 0.5, 0, twoPi);
+          ctx.fill();
+          if (item.selected) {
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgb(100,100,0)';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(xView, halfHeight, dumpRadiusView, 0, twoPi);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgb(255,255,0)';
+            ctx.stroke();
+          } else {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgb(0,0,0)';
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = 'rgb(255, 255, 255)';
+          ctx.fillText(item.dotLetter, xView, halfHeight);
+        }
+      };
+
+      // Draw unselected items first to make sure they don't occlude selected
+      // items.
+      drawItems(false);
+      drawItems(true);
+
+      ctx.lineWidth = 1;
+      ctx.font = oldFont;
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      if (this.items_ === undefined) return;
+
+      this.items_.forEach(function(item) {
+        item.addToTrackMap(eventToTrackMap, this);
+      }, this);
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      if (this.items_ === undefined) return;
+
+      const itemRadiusWorld = viewPixWidthWorld * this.dumpRadiusView;
+      tr.b.iterateOverIntersectingIntervals(
+          this.items_,
+          function(x) { return x.start - itemRadiusWorld; },
+          function(x) { return 2 * itemRadiusWorld; },
+          loWX, hiWX,
+          function(item) {
+            item.addToSelection(selection);
+          }.bind(this));
+    },
+
+    /**
+     * Add the item to the left or right of the provided event, if any, to the
+     * selection.
+     * @param {event} The current event item.
+     * @param {Number} offset Number of slices away from the event to look.
+     * @param {Selection} selection The selection to add an event to,
+     * if found.
+     * @return {boolean} Whether an event was found.
+     * @private
+     */
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      if (this.items_ === undefined) return;
+
+      const index = this.items_.findIndex(item => item.modelItem === event);
+      if (index === -1) return false;
+
+      const newIndex = index + offset;
+      if (newIndex >= 0 && newIndex < this.items_.length) {
+        this.items_[newIndex].addToSelection(selection);
+        return true;
+      }
+      return false;
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      if (this.items_ === undefined) return;
+
+      const item = tr.b.findClosestElementInSortedArray(
+          this.items_,
+          function(x) { return x.start; },
+          worldX,
+          worldMaxDist);
+
+      if (!item) return;
+
+      item.addToSelection(selection);
+    }
+  };
+
+  /**
+   * A filled dot with a letter inside it.
+   *
+   * @constructor
+   * @extends {ProxySelectableItem}
+   */
+  function LetterDot(modelItem, dotLetter, colorId, start) {
+    tr.model.ProxySelectableItem.call(this, modelItem);
+    this.dotLetter = dotLetter;
+    this.colorId = colorId;
+    this.start = start;
+  }
+
+  LetterDot.prototype = {
+    __proto__: tr.model.ProxySelectableItem.prototype
+  };
+
+  return {
+    LetterDotTrack,
+    LetterDot,
+  };
+});
+</script>

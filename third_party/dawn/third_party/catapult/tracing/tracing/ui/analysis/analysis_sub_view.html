@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!--
+Copyright 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<!--
+@fileoverview Polymer element for various analysis sub-views.
+-->
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const AnalysisSubView = {
+    set tabLabel(label) {
+      Polymer.dom(this).setAttribute('tab-label', label);
+    },
+
+    get tabLabel() {
+      return this.getAttribute('tab-label');
+    },
+
+    get requiresTallView() {
+      return false;
+    },
+
+    get relatedEventsToHighlight() {
+      return undefined;
+    },
+
+    /**
+     * Each element extending this one must implement
+     * a 'selection' property.
+     */
+    set selection(selection) {
+      throw new Error('Not implemented!');
+    },
+
+    get selection() {
+      throw new Error('Not implemented!');
+    }
+  };
+
+  // Basic registry.
+  const allTypeInfosByEventProto = new Map();
+  let onlyRootTypeInfosByEventProto = undefined;
+  let eventProtoToRootTypeInfoMap = undefined;
+
+  function AnalysisSubViewTypeInfo(eventConstructor, options) {
+    if (options.multi === undefined) {
+      throw new Error('missing field: multi');
+    }
+    if (options.title === undefined) {
+      throw new Error('missing field: title');
+    }
+    this.eventConstructor = eventConstructor;
+
+    this.singleTagName = undefined;
+    this.singleTitle = undefined;
+
+    this.multiTagName = undefined;
+    this.multiTitle = undefined;
+
+    // This is computed by rebuildRootSubViewTypeInfos, so don't muck with it!
+    this.childrenTypeInfos_ = undefined;
+  }
+
+  AnalysisSubViewTypeInfo.prototype = {
+    get childrenTypeInfos() {
+      return this.childrenTypeInfos_;
+    },
+
+    resetchildrenTypeInfos() {
+      this.childrenTypeInfos_ = [];
+    }
+  };
+
+  AnalysisSubView.register = function(tagName, eventConstructor, options) {
+    let typeInfo = allTypeInfosByEventProto.get(eventConstructor.prototype);
+    if (typeInfo === undefined) {
+      typeInfo = new AnalysisSubViewTypeInfo(eventConstructor, options);
+      allTypeInfosByEventProto.set(typeInfo.eventConstructor.prototype,
+          typeInfo);
+
+      onlyRootTypeInfosByEventProto = undefined;
+    }
+
+    if (!options.multi) {
+      if (typeInfo.singleTagName !== undefined) {
+        throw new Error('SingleTagName already set');
+      }
+      typeInfo.singleTagName = tagName;
+      typeInfo.singleTitle = options.title;
+    } else {
+      if (typeInfo.multiTagName !== undefined) {
+        throw new Error('MultiTagName already set');
+      }
+      typeInfo.multiTagName = tagName;
+      typeInfo.multiTitle = options.title;
+    }
+    return typeInfo;
+  };
+
+  function rebuildRootSubViewTypeInfos() {
+    onlyRootTypeInfosByEventProto = new Map();
+    allTypeInfosByEventProto.forEach(function(typeInfo) {
+      typeInfo.resetchildrenTypeInfos();
+    });
+
+    // Find all root typeInfos.
+    allTypeInfosByEventProto.forEach(function(typeInfo, eventProto) {
+      const eventPrototype = typeInfo.eventConstructor.prototype;
+
+      let lastEventProto = eventPrototype;
+      let curEventProto = eventPrototype.__proto__;
+      while (true) {
+        if (!allTypeInfosByEventProto.has(curEventProto)) {
+          const rootTypeInfo = allTypeInfosByEventProto.get(lastEventProto);
+          const rootEventProto = lastEventProto;
+
+          const isNew = onlyRootTypeInfosByEventProto.has(rootEventProto);
+          onlyRootTypeInfosByEventProto.set(rootEventProto,
+              rootTypeInfo);
+          break;
+        }
+
+        lastEventProto = curEventProto;
+        curEventProto = curEventProto.__proto__;
+      }
+    });
+
+    // Build the childrenTypeInfos array.
+    allTypeInfosByEventProto.forEach(function(typeInfo, eventProto) {
+      const eventPrototype = typeInfo.eventConstructor.prototype;
+      const parentEventProto = eventPrototype.__proto__;
+      const parentTypeInfo = allTypeInfosByEventProto.get(parentEventProto);
+      if (!parentTypeInfo) return;
+      parentTypeInfo.childrenTypeInfos.push(typeInfo);
+    });
+
+    // Build the eventProto to rootTypeInfo map.
+    eventProtoToRootTypeInfoMap = new Map();
+    allTypeInfosByEventProto.forEach(function(typeInfo, eventProto) {
+      const eventPrototype = typeInfo.eventConstructor.prototype;
+
+      let curEventProto = eventPrototype;
+      while (true) {
+        if (onlyRootTypeInfosByEventProto.has(curEventProto)) {
+          const rootTypeInfo = onlyRootTypeInfosByEventProto.get(
+              curEventProto);
+          eventProtoToRootTypeInfoMap.set(eventPrototype,
+              rootTypeInfo);
+          break;
+        }
+        curEventProto = curEventProto.__proto__;
+      }
+    });
+  }
+
+  function findLowestTypeInfoForEvents(thisTypeInfo, events) {
+    if (events.length === 0) return thisTypeInfo;
+    const event0 = tr.b.getFirstElement(events);
+
+    let candidateSubTypeInfo;
+    for (let i = 0; i < thisTypeInfo.childrenTypeInfos.length; i++) {
+      const childTypeInfo = thisTypeInfo.childrenTypeInfos[i];
+      if (event0 instanceof childTypeInfo.eventConstructor) {
+        candidateSubTypeInfo = childTypeInfo;
+        break;
+      }
+    }
+    if (!candidateSubTypeInfo) return thisTypeInfo;
+
+    // Validate that all the other events are instances of the candidate type.
+    let allMatch = true;
+    for (const event of events) {
+      if (event instanceof candidateSubTypeInfo.eventConstructor) continue;
+      allMatch = false;
+      break;
+    }
+
+    if (!allMatch) {
+      return thisTypeInfo;
+    }
+
+    return findLowestTypeInfoForEvents(candidateSubTypeInfo, events);
+  }
+
+  const primaryEventProtoToTypeInfoMap = new Map();
+  function getRootTypeInfoForEvent(event) {
+    const curProto = event.__proto__;
+    const typeInfo = primaryEventProtoToTypeInfoMap.get(curProto);
+    if (typeInfo) return typeInfo;
+    return getRootTypeInfoForEventSlow(event);
+  }
+
+  function getRootTypeInfoForEventSlow(event) {
+    let typeInfo;
+    let curProto = event.__proto__;
+    while (true) {
+      if (curProto === Object.prototype) {
+        throw new Error('No view registered for ' + event.toString());
+      }
+      typeInfo = onlyRootTypeInfosByEventProto.get(curProto);
+      if (typeInfo) {
+        primaryEventProtoToTypeInfoMap.set(event.__proto__, typeInfo);
+        return typeInfo;
+      }
+      curProto = curProto.__proto__;
+    }
+  }
+
+  AnalysisSubView.getEventsOrganizedByTypeInfo = function(selection) {
+    if (onlyRootTypeInfosByEventProto === undefined) {
+      rebuildRootSubViewTypeInfos();
+    }
+
+    // Base grouping.
+    const eventsByRootTypeInfo = tr.b.groupIntoMap(
+        selection,
+        function(event) {
+          return getRootTypeInfoForEvent(event);
+        },
+        this, tr.model.EventSet);
+
+    // Now, try to lower the typeinfo to the most specific type that still
+    // encompasses the event group.
+    //
+    // For instance,  if we have 3 ThreadSlices, and all three are V8 slices,
+    // then we can convert this to use the V8Slices's typeinfos. But, if one
+    // of those slices was not a V8Slice, then we must still use
+    // ThreadSlice.
+    //
+    // The reason for this is for the confusion that might arise from the
+    // alternative. Suppose you click on a set of mixed slices, we want to show
+    // you the most correct information, and let you navigate to . If we instead
+    // showed you a V8 slices tab, and a Slices tab, we present the user with an
+    // ambiguity: is the V8 slice also in the Slices tab? Or is it not? Better,
+    // we think, to just only ever show an event in one place at a time, and
+    // avoid the possible confusion.
+    const eventsByLowestTypeInfo = new Map();
+    eventsByRootTypeInfo.forEach(function(events, typeInfo) {
+      const lowestTypeInfo = findLowestTypeInfoForEvents(typeInfo, events);
+      eventsByLowestTypeInfo.set(lowestTypeInfo, events);
+    });
+
+    return eventsByLowestTypeInfo;
+  };
+
+  return {
+    AnalysisSubView,
+    AnalysisSubViewTypeInfo,
+  };
+});
+
+// Dummy element for testing
+Polymer({
+  is: 'tr-ui-a-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView]
+});
+</script>

@@ -1,0 +1,35 @@
+name: bazel
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  build_and_test_default:
+    name: bazel.${{ matrix.os }}.${{ matrix.bzlmod && 'bzlmod' || 'no_bzlmod' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        bzlmod: [false, true]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: mount bazel cache
+      uses: actions/cache@v3
+      env:
+        cache-name: bazel-cache
+      with:
+        path: "~/.cache/bazel"
+        key: ${{ env.cache-name }}-${{ matrix.os }}-${{ github.ref }}
+        restore-keys: |
+          ${{ env.cache-name }}-${{ matrix.os }}-main
+
+    - name: build
+      run: |
+        bazel build ${{ matrix.bzlmod && '--enable_bzlmod' || '--noenable_bzlmod' }} //:benchmark //:benchmark_main //test/...
+
+    - name: test
+      run: |
+        bazel test ${{ matrix.bzlmod && '--enable_bzlmod' || '--noenable_bzlmod' }} --test_output=all //test/...

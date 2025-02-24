@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses drm driver events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux drm trace events.
+   * @constructor
+   */
+  function DrmParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('drm_vblank_event',
+        DrmParser.prototype.vblankEvent.bind(this));
+  }
+
+  DrmParser.prototype = {
+    __proto__: Parser.prototype,
+
+    drmVblankSlice(ts, eventName, args) {
+      const kthread = this.importer.getOrCreatePseudoThread('drm_vblank');
+      kthread.openSlice = eventName;
+      const slice = new tr.model.ThreadSlice('', kthread.openSlice,
+          ColorScheme.getColorIdForGeneralPurposeString(kthread.openSlice),
+          ts, args, 0);
+
+      kthread.thread.sliceGroup.pushSlice(slice);
+    },
+
+    /**
+     * Parses drm driver events and sets up state in the importer.
+     */
+    vblankEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /crtc=(\d+), seq=(\d+)/.exec(eventBase.details);
+      if (!event) return false;
+
+      const crtc = parseInt(event[1]);
+      const seq = parseInt(event[2]);
+      this.drmVblankSlice(ts, 'vblank:' + crtc,
+          {
+            crtc,
+            seq
+          });
+      return true;
+    }
+  };
+
+  Parser.register(DrmParser);
+
+  return {
+    DrmParser,
+  };
+});
+</script>
+

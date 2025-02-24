@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/guid.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  function HotKey(dict) {
+    if (dict.eventType === undefined) {
+      throw new Error('eventType must be given');
+    }
+    if (dict.keyCode === undefined && dict.keyCodes === undefined) {
+      throw new Error('keyCode or keyCodes must be given');
+    }
+    if (dict.keyCode !== undefined && dict.keyCodes !== undefined) {
+      throw new Error('Only keyCode or keyCodes can be given');
+    }
+    if (dict.callback === undefined) {
+      throw new Error('callback must be given');
+    }
+
+    this.eventType_ = dict.eventType;
+    this.keyCodes_ = [];
+
+    if (dict.keyCode) {
+      this.pushKeyCode_(dict.keyCode);
+    } else if (dict.keyCodes) {
+      dict.keyCodes.forEach(this.pushKeyCode_, this);
+    }
+
+    this.useCapture_ = !!dict.useCapture;
+    this.callback_ = dict.callback;
+    this.thisArg_ = dict.thisArg !== undefined ? dict.thisArg : undefined;
+
+    this.helpText_ = dict.helpText !== undefined ? dict.helpText : undefined;
+  }
+
+  HotKey.prototype = {
+    get eventType() {
+      return this.eventType_;
+    },
+
+    get keyCodes() {
+      return this.keyCodes_;
+    },
+
+    get helpText() {
+      return this.helpText_;
+    },
+
+    call(e) {
+      this.callback_.call(this.thisArg_, e);
+    },
+
+    pushKeyCode_(keyCode) {
+      this.keyCodes_.push(keyCode);
+    }
+  };
+
+  return {
+    HotKey,
+  };
+});
+</script>

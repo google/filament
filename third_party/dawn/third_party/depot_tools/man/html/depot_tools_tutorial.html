@@ -1,0 +1,1639 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 10.2.0" />
+<title>depot_tools_tutorial(7)</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overridden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+div.listingblock > div.content {
+  background: rgb(28, 28, 28);
+}
+
+div.listingblock > div > pre > code {
+  color: rgb(187, 187, 187);
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install();
+/*]]>*/
+</script>
+</head>
+<body class="manpage">
+<div id="header">
+<h1>
+depot_tools_tutorial(7) Manual Page
+</h1>
+<h2>NAME</h2>
+<div class="sectionbody">
+<p>depot_tools_tutorial -
+   A tutorial introduction to the Chromium depot_tools git extensions.
+</p>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The Chromium <a href="depot_tools.html">depot_tools(7)</a> suite contains many git workflow-enhancing
+tools which are designed to work together to enable anyone to wrangle the
+Chromium codebase expertly. This tutorial explains how to do development on
+Chromium using these tools. This will cover:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<a href="#_setting_up">Setting up</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_getting_the_code">Getting the code</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_tl_dr">TL;DR</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_creating_uploading_a_cl">Creating / Uploading a CL</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_updating_the_code">Updating the code</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_managing_multiple_cls">Managing multiple CLs</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_managing_dependent_cls">Managing dependent CLs</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#_example_walkthrough">Example Walkthrough</a>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Please refer to the manpages (or <code>--help</code> output) for details about any of the
+commands mentioned in this tutorial.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">If your platform does not support manpages (or you prefer something a bit more
+expressive than plain text) you can find all documentation in <em>html</em> form in the
+<code>[DEPOT_TOOLS]/man/html</code> folder.</td>
+</tr></table>
+</div>
+<div class="sect2">
+<h3 id="_prerequisites">PREREQUISITES</h3>
+<div class="paragraph"><p>This tutorial assumes basic familiarity with git terminology and concepts. If you
+need to brush up on these, the following are very good resources:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<a href="http://think-like-a-git.net/">Think like (a) Git</a> - A lighthearted
+  overview of git. If you&#8217;re sorta-familiar with git, but not <em>comfortable</em> with
+  it, then give this a look.
+</p>
+</li>
+<li>
+<p>
+<a href="http://gitimmersion.com/">Git Immersion Tutorial</a> - An in-depth git
+  tutorial.
+</p>
+</li>
+<li>
+<p>
+<a href="http://pcottle.github.io/learnGitBranching">pcottle&#8217;s Visual Git
+  Branching</a> - An excellent interactive/graphical demo on how git handles
+  commits, branches, and shows the operations git performs on them.
+</p>
+</li>
+<li>
+<p>
+<a href="http://git-scm.com/book">Pro Git book</a> - &#8220;The&#8221; book for learning git
+  from basics to advanced concepts. A bit dry, but very through.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>If you&#8217;ve tried these out and are still having some trouble getting started,
+there are <em>many</em> other resources online which should help. If you&#8217;re <em>really</em>
+<strong><em>really</em></strong> stuck, then chat up one of the Chromium infrastructure team
+members for some pointers.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Litmus Test
+</dt>
+<dd>
+<p>
+  If you know what <code>git add</code>, <code>git status</code>, <code>git commit</code> do and you know
+  <em>essentially</em> what <code>git rebase</code> does, then you should know enough to follow
+  along.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setting_up">SETTING UP</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_get_depot_tools">GET DEPOT TOOLS</h3>
+<div class="sect3">
+<h4 id="_linux_mac">LINUX / MAC</h4>
+<div class="paragraph"><p>Clone the <em>depot_tools</em> repository:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>Add <em>depot_tools</em> to the <em>front</em> of your PATH (you will probably want to put this
+in your <code>~/.bashrc</code> or <code>~/.zshrc</code>). Assuming you cloned <em>depot_tools</em> to
+<code>/path/to/depot_tools</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ export PATH=/path/to/depot_tools:$PATH</span></strong></code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_windows">WINDOWS</h4>
+<div class="paragraph"><p>Download the <em>depot_tools</em>
+<a href="https://storage.googleapis.com/chrome-infra/depot_tools.zip">bundle</a> and
+extract it somewhere.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content"><strong>DO NOT</strong> use drag-n-drop or copy-n-paste extract from Explorer, this will not
+extract the hidden &#8220;.git&#8221; folder which is necessary for <em>depot_tools</em> to
+autoupdate itself. You can use &#8220;Extract all&#8230;&#8221; from the context menu though.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>Add <em>depot_tools</em> to the <em>front</em> of your PATH (must be ahead of any installs of
+Python). Assuming you unzipped the bundle to <code>C:\workspace\depot_tools</code>:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+With Administrator access: 
+</dt>
+<dd>
+<p>
+  <strong>Control Panel &#8594; System and Security &#8594; System &#8594; Advanced system settings</strong>
+</p>
+<div class="paragraph"><p>Modify the PATH system variable to include <code>C:\workspace\depot_tools</code>.</p></div>
+</dd>
+<dt class="hdlist1">
+Without Administrator access: 
+</dt>
+<dd>
+<p>
+  <strong>Control Panel &#8594; User Accounts &#8594; User Accounts &#8594; Change my environment variables</strong>
+</p>
+<div class="paragraph"><p>Add a PATH user variable: <code>C:\workspace\depot_tools;%PATH%</code>.</p></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>From a <code>cmd.exe</code> shell, run the command <code>gclient</code> (without arguments). On first
+run, gclient will install all the Windows-specific bits needed to work with the
+code, including msysgit and python.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="ulist"><ul>
+<li>
+<p>
+If you run gclient from a non-cmd shell (e.g., cygwin, PowerShell), it
+  may appear to run properly, but msysgit, python, and other tools may not get
+  installed correctly.
+</p>
+</li>
+<li>
+<p>
+If you see strange errors with the file system on the first run of gclient,
+  you may want to <a href="http://tortoisesvn.tigris.org/faq.html#cantmove2">disable
+  Windows Indexing</a>.
+</p>
+</li>
+<li>
+<p>
+After running gclient open a command prompt and type <code>where python</code> and confirm that
+  the depot_tools python.bat comes ahead of any copies of python.exe. Failing to ensure
+  this can lead to overbuilding when using gn - see
+  <a href="https://issues.chromium.org/issues/41253477">crbug.com/41253477</a>.
+</p>
+</li>
+</ul></div>
+</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_bootstrapping_configuration">BOOTSTRAPPING CONFIGURATION</h3>
+<div class="paragraph"><p>If you have never used git before, you’ll need to set some global git
+configurations; substitute your name and email address in the following
+commands:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git config --global user.name "John Doe"</span></strong>
+<strong><span class="white">$ git config --global user.email "jdoe@email.com"</span></strong>
+<strong><span class="white">$ git config --global core.autocrlf false</span></strong>
+<strong><span class="white">$ git config --global core.filemode false</span></strong>
+<strong><span class="white">$</span></strong> # and for fun!
+<strong><span class="white">$ git config --global color.ui true</span></strong></code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tl_dr">TL;DR</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$</span></strong> # get the code
+<strong><span class="white">$</span></strong> # In an empty directory:
+<strong><span class="white">$ fetch {chromium,...}</span></strong>
+
+<strong><span class="white">$</span></strong> # Update third_party repos and run pre-compile hooks
+<strong><span class="white">$ gclient sync</span></strong>
+
+<strong><span class="white">$</span></strong> # Make a new change and upload it for review
+<strong><span class="white">$ git new-branch &lt;branch_name&gt;</span></strong>
+<strong><span class="white">$</span></strong> # repeat: [edit, git add, git commit]
+<strong><span class="white">$ git cl upload</span></strong>
+
+<strong><span class="white">$</span></strong> # After change is reviewed, commit with the CQ
+<strong><span class="white">$ git cl set_commit</span></strong>
+<strong><span class="white">$</span></strong> # Note that the committed hash which lands will /not/ match the
+<strong><span class="white">$</span></strong> # commit hashes of your local branch.</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_getting_the_code">GETTING THE CODE</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Pick an empty directory and run one of the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ fetch chromium</span></strong>  # Basic checkout for desktop Chromium
+<strong><span class="white">$ fetch android</span></strong>   # Chromium checkout for Android platform
+<strong><span class="white">$ fetch ios</span></strong>       # Chromium checkout for iOS platform</code></pre>
+</div></div>
+<div class="paragraph"><p>When the <code>fetch</code> tool completes you should have the following in your working
+directory:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">.gclient</span></strong>   # A configuration file for you source checkout
+<strong><span class="white">src/</span></strong>       # Top-level Chromium source checkout.</code></pre>
+</div></div>
+<div class="paragraph"><p>If you are on linux and fetching the code for the first time, then you&#8217;ll need
+to run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ cd src &amp;&amp; ./build/install-build-deps.sh</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>And finally:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ gclient sync</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>This will pull all dependencies of the Chromium src checkout. You will need
+to run this any time you update the main src checkout, including when you
+switch branches.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_creating_uploading_a_cl">CREATING / UPLOADING A CL</h2>
+<div class="sectionbody">
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The remainder of the tutorial assumes that your current working directory
+is the <code>src/</code> folder mentioned in <a href="#_getting_the_code">Getting the code</a>.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>Each CL corresponds exactly with a single branch in git. Any time you want to
+begin a new CL:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git new-branch &lt;branch_name&gt;</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>This will create and checkout a new branch named <code>branch_name</code> which will track
+the default upstream branch (<code>origin/main</code>). See
+<a href="git-new-branch.html">git-new-branch(1)</a> for more features.</p></div>
+<div class="paragraph"><p>Commit as many changes as you like to this branch. When you want to upload it
+for review, run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git cl upload</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>This will take the diff of your branch against its upstream branch (in that
+case origin/main), and will post it to the
+<a href="https://chromium-review.googlesource.com">Chromium code review site</a>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_updating_the_code">UPDATING THE CODE</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Inevitably, you&#8217;ll want to pull in changes from the main Chromium repo. This is
+pretty easy with <em>depot_tools</em>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git rebase-update</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>This command will update all of your CLs to contain the latest code from their
+upstreams. It will also automatically clean up CLs which have been committed and
+a couple other nice things. See <a href="git-rebase-update.html">git-rebase-update(1)</a> for the full
+scoop.</p></div>
+<div class="paragraph"><p>One thing to look out for are <em>merge conflicts</em>. These happen for exactly the
+same as they do with SVN, but the experience is a little more controllable with
+git. <code>git rebase-update</code> will try to rebase all your branches for you, but if it
+encounters a merge conflict in one, it will halt and leave you in a rebase
+conflict state (see <a href="git-rebase.html">git-rebase(1)</a>). Resolving <code>git rebase</code> merge
+conflicts is beyond the scope of this tutorial, but there are many good sources
+online (see the <a href="#_prerequisites">Prerequisites</a> for some).</p></div>
+<div class="paragraph"><p>Sometimes you&#8217;re pretty certain that you&#8217;ve committed a certain branch, but <code>git
+rebase-update</code> isn&#8217;t able to tell that for sure. This is usually because your
+branch doesn&#8217;t rebase cleanly. You could just delete the branch with <code>git branch
+-D &lt;branch&gt;</code>, but you&#8217;d like to double check the diff of your branch against its
+upstream before deleting it. If this is the case you can abort the rebase
+started by <code>git rebase-update</code>, and then run <a href="git-squash-branch.html">git-squash-branch(1)</a> to
+flatten your branch into a single commit. When you run <code>git rebase-update</code>
+again, you&#8217;ll get a (hopefully) much smaller / saner diff. If it turns out you
+were wrong about your branch being fully committed, you can use
+<a href="git-reflog.html">git-reflog(1)</a> to reset your branch back to where it was before. If the
+diff looks inconsequential, you can use <code>git rebase --skip</code> to ignore it, and
+then <code>git rebase-update</code> will clean it up for you.</p></div>
+<div class="paragraph"><p>Once you&#8217;re done resolving all of the merge conflict, just run <code>git
+rebase-update</code>, and it will pick up where it left off. Once the command has
+finished updating all of your branches, it will return you back to the branch
+you started on.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Running <code>git rebase-update</code> will update all your branches, but it will not
+automatically run <code>gclient sync</code> to update your dependencies. Use caution when
+running <code>git reset</code> on branches managed by <em>depot_tools</em>. These tools track the
+set of "commits contained in the branch" from a branch&#8217;s "merge point" to the
+current branch value. See <code>git help mark-merge-base</code> for more discussion of the
+merge base.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_managing_multiple_cls">MANAGING MULTIPLE CLS</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sometimes you want to work on more than one CL at once (say, you have a CL
+posted for review and want to work on something else). For each CL that you
+want to work on, just use <code>git new-branch &lt;branch_name&gt;</code>.</p></div>
+<div class="paragraph"><p>Once you start to have more than one CL at a time, it can be easy to lose your
+bearings. Fortunately, <em>depot_tools</em> has two tools to help you out:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git map</span></strong>
+<span class="white blue-background">*</span>&#8203;<strong><span class="blue-background red"> 7dcfe47       </span></strong> <span class="green">(</span>&#8203;<strong><span class="aqua">frozen_changes</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-12</span> ~ FREEZE.unindexed
+* <strong><span class="red">4b0c180</span></strong>        <span class="yellow">2014-03-12</span> ~ modfile
+* <strong><span class="red">59a7cca</span></strong>        <span class="yellow">2014-03-12</span> ~ a deleted file
+* <strong><span class="red">6bec695</span></strong>        <span class="green">(</span>&#8203;<span class="red">origin/main</span>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ Add neat feature    <strong><span class="white">&lt;(frozen_changes)</span></strong>
+* <strong><span class="red">d15a38a</span></strong>        <span class="yellow">2014-03-11</span> ~ Epic README update
+* <strong><span class="red">d559894</span></strong>        <span class="green">(</span>&#8203;<strong><span class="lime">main</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ Important upstream change
+<span class="red">|</span> * <strong><span class="red">9c311fd</span></strong>      <span class="green">(</span>&#8203;<strong><span class="lime">cool_feature</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ Respond to CL comments
+<span class="red">|</span> <span class="green">|</span> * <strong><span class="red">2a1eeb2</span></strong>    <span class="green">(</span>&#8203;<strong><span class="lime">subfeature</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ integrate with CoolService
+<span class="red">|</span> <span class="green">|</span> * <strong><span class="red">d777af6</span></strong>    <span class="yellow">2014-03-11</span> ~ slick commenting action
+<span class="red">|</span> <span class="green">|/</span>
+<span class="red">|</span> * <strong><span class="red">265803a</span></strong>      <span class="yellow">2014-03-11</span> ~ another improvement    <strong><span class="white">&lt;(subfeature)</span></strong>
+<span class="red">|</span> * <strong><span class="red">6d831ac</span></strong>      <span class="green">(</span>&#8203;<strong><span class="fuchsia">spleen_tag</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ Refactor spleen
+<span class="red">|</span> * <strong><span class="red">82e74ab</span></strong>      <span class="yellow">2014-03-11</span> ~ Add widget
+<span class="red">|/</span>
+* <strong><span class="red">d08c5b3</span></strong>        <span class="green">(</span>&#8203;<strong><span class="lime">bogus_noparent</span></strong>&#8203;<span class="green">)</span> <span class="yellow">2014-03-11</span> ~ Wonderful beginnings    <strong><span class="white">&lt;(cool_feature)</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>Note that this example repo is in dire need of a <a href="git-rebase-update.html">git-rebase-update(1)</a>!</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git map-branches</span></strong>
+<span class="red">origin/main</span>
+  <span class="green">cool_feature</span>
+    <span class="green">subfeature</span>
+  <span class="aqua">frozen_changes *</span>
+  <span class="green">main</span></code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<a href="git-map.html">git-map(1)</a>
+</dt>
+<dd>
+<p>
+  This tool shows you the history of all of your branches in a pseudo-graphical
+  format. In particular, it will show you which commits all of your branches
+  are on, which commit you currently have checked out, and more. Check out the
+  doc for the full details.
+</p>
+</dd>
+<dt class="hdlist1">
+<a href="git-map-branches.html">git-map-branches(1)</a>
+</dt>
+<dd>
+<p>
+  This tool just shows you which branches you have in your repo, and their
+  upstream relationship to each other (as well as which branch you have checked
+  out at the moment).
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Additionally, sometimes you need to switch between branches, but you&#8217;ve got work
+in progress. You could use <a href="git-stash.html">git-stash(1)</a>, but that can be tricky to
+manage because you need to remember which branches you stashed what changes on.
+Helpfully <em>depot_tools</em> includes two tools which can greatly assist in case:</p></div>
+<div class="paragraph"><p><a href="git-freeze.html">git-freeze(1)</a> allows you to put the current branch in 'suspended
+animation' by committing your changes to a specially-named commit on the top of
+your current branch. When you come back to your branch later, you can just run
+<a href="git-thaw.html">git-thaw(1)</a> to get your work-in-progress changes back to what they were.</p></div>
+<div class="paragraph"><p>Another useful tool is <a href="git-rename-branch.html">git-rename-branch(1)</a>. Unlike <code>git branch -m &lt;old&gt;
+&lt;new&gt;</code>, this tool will correctly preserve the upstream relationships of your
+branch compared to its downstreams.</p></div>
+<div class="paragraph"><p>Finally, take a look at <a href="git-upstream-diff.html">git-upstream-diff(1)</a>. This will show you the
+combined diff for all the commits on your branch against the upstream tracking
+branch. This is <em>exactly</em> what <code>git cl upload</code> will push up to code review.
+Additionally, consider trying the <code>--wordwise</code> argument to get a colorized
+per-word diff (instead of a per-line diff).</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_managing_dependent_cls">MANAGING DEPENDENT CLS</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Now that you know how to manage <em>independent</em> CLs, we&#8217;ll see how to manage
+<em>dependent</em> CLs. Dependent CLs are useful when your second (or third or fourth
+or &#8230;) CL depends on the changes in one of your other CLs (such as: CL 2 won&#8217;t
+compile without CL 1, but you want to submit them as two separate reviews).</p></div>
+<div class="paragraph"><p>Like all of the other CLs we&#8217;ve created, we use <a href="git-new-branch.html">git-new-branch(1)</a>, but
+this time with an extra argument. First, <code>git checkout</code> the branch
+you want to base the new one on (i.e. CL 1), and then run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code><strong><span class="white">$ git new-branch --upstream_current &lt;branch_name&gt;</span></strong></code></pre>
+</div></div>
+<div class="paragraph"><p>This will make a new branch which tracks the <em>current</em> branch as its upstream
+(as opposed to <em>origin/main</em>). All changes you commit to this branch will be
+in addition to the previous branch, but when you <code>git cl upload</code>, you will only
+upload the diff for the dependent (child) branch. You may have as many branches
+nested in this fashion as you like.</p></div>
+<div class="paragraph"><p><a href="git-map.html">git-map(1)</a> and <a href="git-map-branches.html">git-map-branches(1)</a> are particularly helpful when
+you have dependent branches. In addition, there are two helper commands which
+let you traverse your working copy up and down this tree of branches:
+<a href="git-nav-upstream.html">git-nav-upstream(1)</a> and <a href="git-nav-downstream.html">git-nav-downstream(1)</a>.</p></div>
+<div class="paragraph"><p>Sometimes when dealing with dependent CLs, it turns out that you accidentally
+based a branch on the wrong upstream, but since then you&#8217;ve committed changes to
+it, or even based <em>another</em> branch off of that one. Or you discover that you
+have two independent CLs that would actually be much better off as dependent
+CLs. In instances like these, you can check out the offending branch and use
+<a href="git-reparent-branch.html">git-reparent-branch(1)</a> to move it to track a different parent. Note that
+this can also be used to move a branch from tracking <code>origin/main</code> to <code>lkgr</code>
+or vice versa.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example_walkthrough">EXAMPLE WALKTHROUGH</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This section will demo what a typical workflow looks like when writing,
+updating, and committing multiple CLs.</p></div>
+<div class="paragraph"><p></p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ fetch chromium</span>
+... truncated output ...
+<span style="font-weight: bold; color: #BFBFBF">$ cd src</span>
+</code></pre></div></div><p><div class="paragraph"> (only on linux)</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ ./build/install-build-deps.sh</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"> Pull in all dependencies for HEAD</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ gclient sync</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"> Let's fix something!</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git new-branch fix_typo</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ echo -e '/Banana\ns/Banana/Kuun\nwq' | ed build/whitespace_file.txt</span>
+1503
+It was a Domo-Banana.
+It was a Domo-Kuun.
+1501
+<span style="font-weight: bold; color: #BFBFBF">$ git commit -am 'Fix terrible typo.'</span>
+[fix_typo 615ffa7] Fix terrible typo.
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">615ffa720f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+<span style="font-weight: bold; color: #BFBFBF">$ git status</span>
+On branch fix_typo
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+
+<span style="font-weight: bold; color: #BFBFBF">$ git cl upload -r domo@chromium.org --send-mail</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"> While we wait for feedback, let's do something else.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git new-branch chap2</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ git map-branches</span>
+<span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">origin/main
+</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">  chap2 *
+</span><span style="font-weight: bold; color: #50FA7B"></span><span style="color: #50FA7B">  fix_typo
+</span>
+<span style="font-weight: bold; color: #BFBFBF">$ cat &gt;&gt; build/whitespace_file.txt &lt;&lt;EOF</span>
+
+"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly
+overhead, barely disturbing the thick cigarette smoke. No doubt was left about
+when the fan was last cleaned.
+EOF
+<span style="font-weight: bold; color: #BFBFBF">$ git status</span>
+On branch chap2
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  (use "git restore &lt;file&gt;..." to discard changes in working directory)
+	<span style="color: #FF5555">modified:   build/whitespace_file.txt</span>
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+</code></pre></div></div><p><div class="paragraph"> Someone on the code review pointed out that our typo-fix has a typo :( We're still working on 'chap2' but we really want to land 'fix_typo', so let's switch over and fix it.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git freeze</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ git checkout fix_typo</span>
+Switched to branch 'fix_typo'
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+<span style="font-weight: bold; color: #BFBFBF">$ echo -e '/Kuun\ns/Kuun/Kun\nwq' | ed build/whitespace_file.txt</span>
+1501
+It was a Domo-Kuun.
+It was a Domo-Kun.
+1500
+<span style="font-weight: bold; color: #BFBFBF">$ git upstream-diff --wordwise</span>
+<span style="font-weight: bold">diff --git a/build/whitespace_file.txt b/build/whitespace_file.txt</span>
+<span style="font-weight: bold">index 3eba355..57cdcee 100644</span>
+<span style="font-weight: bold">--- a/build/whitespace_file.txt</span>
+<span style="font-weight: bold">+++ b/build/whitespace_file.txt</span>
+<span style="color: #8BE9FD">@@ -17,7 +17,7 @@</span> swept up the streets (for it is in London that our scene lies), rattling along
+the housetops, and fiercely agitating the scanty flame of the lamps that
+struggled against the elements. A hooded figure emerged.
+
+It was a Domo-<span style="color: #FF5555">Banana</span><span style="color: #50FA7B">Kun</span>.
+
+"What took you so long?", inquired his wife.
+
+
+<span style="font-weight: bold; color: #BFBFBF">$ git commit -am 'Fix typo for good!'</span>
+[fix_typo 2c0ad9c] Fix typo for good!
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+<span style="font-weight: bold; color: #BFBFBF">$ git cl upload</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"> Since we got lgtm, let the CQ land it.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git cl set_commit</span>
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">0e2e52e72e</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">chap2</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ FREEZE.unindexed
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2c0ad9c59b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Fix typo for good!
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">615ffa720f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+<span style="color: #FF5555">|</span><span style="color: #FF5555">/</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes    &lt;(<span style="color: #BFBFBF"></span><span style="font-weight: bold; color: #BFBFBF">chap2</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>)
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+</code></pre></div></div><p><div class="paragraph"> Switch back to where we were using the nav* commands (for fun... git checkout would work here too)</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git map-branches</span>
+<span style="color: #FF5555"></span><span style="color: #FF5555">origin/main
+</span><span style="color: #50FA7B"></span><span style="color: #50FA7B">  chap2
+</span><span style="color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">  fix_typo *
+</span>
+<span style="font-weight: bold; color: #BFBFBF">$ git nav-upstream</span>
+Note: switching to 'origin/main'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c &lt;new-branch-name&gt;
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at beec6f4 Make ReflectorImpl use mailboxes
+
+<span style="font-weight: bold; color: #BFBFBF">$ git nav-downstream</span>
+Previous HEAD position was beec6f4 Make ReflectorImpl use mailboxes
+Switched to branch 'chap2'
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+Please select a downstream branch
+  0. chap2
+  1. fix_typo
+Selection (0-1)[0]: 0
+<span style="font-weight: bold; color: #BFBFBF">$ git map-branches</span>
+<span style="color: #FF5555"></span><span style="color: #FF5555">origin/main
+</span><span style="color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">  chap2 *
+</span><span style="font-weight: bold; color: #50FA7B"></span><span style="color: #50FA7B">  fix_typo
+</span>
+</code></pre></div></div><p><div class="paragraph"> Now we can pick up on chapter2 where we left off.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git thaw</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ git diff</span>
+<span style="font-weight: bold">diff --git a/build/whitespace_file.txt b/build/whitespace_file.txt</span>
+<span style="font-weight: bold">index 3eba355..9d08d9d 100644</span>
+<span style="font-weight: bold">--- a/build/whitespace_file.txt</span>
+<span style="font-weight: bold">+++ b/build/whitespace_file.txt</span>
+<span style="color: #8BE9FD">@@ -34,3 +34,7 @@</span> with his fork, watching the runny jelly spread and pool across his plate,
+ like the blood of a dying fawn. \"It reminds me of that time --\" he started, as
+ his wife cut in quickly: \"-- please. I can't bear to hear it.\". A flury of
+ images coming from the past flowed through his mind.
+<span style="color: #50FA7B">+</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">overhead, barely disturbing the thick cigarette smoke. No doubt was left about</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">when the fan was last cleaned.</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ cat &gt;&gt; build/whitespace_file.txt &lt;&lt;EOF</span>
+
+There was an poignant pause.
+EOF
+<span style="font-weight: bold; color: #BFBFBF">$ git diff</span>
+<span style="font-weight: bold">diff --git a/build/whitespace_file.txt b/build/whitespace_file.txt</span>
+<span style="font-weight: bold">index 3eba355..e3a55de 100644</span>
+<span style="font-weight: bold">--- a/build/whitespace_file.txt</span>
+<span style="font-weight: bold">+++ b/build/whitespace_file.txt</span>
+<span style="color: #8BE9FD">@@ -34,3 +34,9 @@</span> with his fork, watching the runny jelly spread and pool across his plate,
+ like the blood of a dying fawn. \"It reminds me of that time --\" he started, as
+ his wife cut in quickly: \"-- please. I can't bear to hear it.\". A flury of
+ images coming from the past flowed through his mind.
+<span style="color: #50FA7B">+</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">"You recall what happened on Mulholland drive?" The ceiling fan rotated slowly</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">overhead, barely disturbing the thick cigarette smoke. No doubt was left about</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">when the fan was last cleaned.</span>
+<span style="color: #50FA7B">+</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">There was an poignant pause.</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ git commit -am 'Finish chapter 2'</span>
+[chap2 ceef712] Finish chapter 2
+ 1 file changed, 6 insertions(+)
+
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">ceef712d7f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; chap2</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Finish chapter 2
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2c0ad9c59b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Fix typo for good!
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">615ffa720f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+<span style="color: #FF5555">|</span><span style="color: #FF5555">/</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes    &lt;(<span style="color: #BFBFBF"></span><span style="font-weight: bold; color: #BFBFBF">fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>)
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+<span style="font-weight: bold; color: #BFBFBF">$ git cl upload -r domo@chromium.org --send-mail</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"> We poke a committer until they lgtm :)</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git cl set_commit</span>
+</code></pre></div></div><p><div class="paragraph"> While that runs through the CQ, let's get started on chapter 3. Since we know that chapter 3 depends on chapter 2, we'll track the current chapter2 branch.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git new-branch --upstream_current chap3</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ cat &gt;&gt; build/whitespace_file.txt &lt;&lt;EOF</span>
+
+CHAPTER 3:
+Mr. Usagi felt that something wasn't right. Shortly after the Domo-Kun left he
+began feeling sick.
+EOF
+<span style="font-weight: bold; color: #BFBFBF">$ git commit -am 'beginning of chapter 3'</span>
+[chap3 7d4238a] beginning of chapter 3
+ 1 file changed, 4 insertions(+)
+
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">7d4238a1e2</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; chap3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ beginning of chapter 3
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">ceef712d7f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">chap2</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Finish chapter 2
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2c0ad9c59b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Fix typo for good!
+<span style="color: #FF5555">|</span> * <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">615ffa720f</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+<span style="color: #FF5555">|</span><span style="color: #FF5555">/</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes    &lt;(<span style="color: #BFBFBF"></span><span style="font-weight: bold; color: #BFBFBF">chap2, fix_typo</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>)
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+</code></pre></div></div><p><div class="paragraph"> We haven't updated the code in a while, so let's do that now.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git rebase-update</span>
+Fetching origin
+From https://upstream
+   beec6f4..59cdb73  main       -&gt; origin/main
+Rebasing: chap2
+Rebasing: fix_typo
+Failed! Attempting to squash fix_typo ... Success!
+Rebasing: chap3
+Reparented chap3 to track origin/main (was tracking chap2)
+Deleted branch fix_typo (was 5d26fec).
+Deleted branch chap2 (was 5d26fec).
+
+Running `git gc --auto` - Ctrl-C to abort is OK.
+</code></pre></div></div><p><div class="paragraph"> Well look at that. The CQ landed our typo and chapter2 branches  already and git rebase-update cleaned them up for us.</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ gclient sync</span>
+... truncated output ...
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">93fe917ad1</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; chap3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ beginning of chapter 3
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">5d26fec369</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Finish chapter 2
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">df7fefbf06</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Revert 255617, due to it not tracking use of the link doctor page properly.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">4b39cda0ac</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">248c5b6fe3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Temporarily CHECK(trial) in ChromeRenderProcessObserver::OnSetFieldTrialGroup.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">8171df8af9</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Remove AMD family check for the flapper crypto accelerator.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">d6a30d2e56</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Change the Pica load benchmark to listen for the polymer-ready event
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+</code></pre></div></div><p><div class="paragraph"> Someone on IRC mentions that they actually landed a chapter 3 already! We should pull their changes before continuing. Brace for a code conflict!</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git rebase-update</span>
+Fetching origin
+From https://upstream
+   5d26fec..59cdb73  main       -&gt; origin/main
+Rebasing: chap2
+... lots of output, it's a conflict alright :(...
+<span style="font-weight: bold; color: #BFBFBF">$ git diff</span>
+<span style="font-weight: bold">diff --cc build/whitespace_file.txt</span>
+<span style="font-weight: bold">index 1293282,f903ea2..0000000</span>
+<span style="font-weight: bold">--- a/build/whitespace_file.txt</span>
+<span style="font-weight: bold">+++ b/build/whitespace_file.txt</span>
+<span style="color: #8BE9FD">@@@ -42,4 -42,5 +42,9 @@@</span> when the fan was last cleaned
+  There was an poignant pause.
+
+  CHAPTER 3:
+<span style="color: #50FA7B">++&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+<span style="color: #50FA7B"> +Hilariousness! This chapter is awesome!</span>
+<span style="color: #50FA7B">++=======</span>
+<span style="color: #50FA7B">+ Mr. Usagi felt that something wasn't right. Shortly after the Domo-Kun left he</span>
+<span style="color: #50FA7B">+ began feeling sick.</span>
+<span style="color: #50FA7B">++&gt;&gt;&gt;&gt;&gt;&gt;&gt; 93fe917 (beginning of chapter 3)</span>
+
+</code></pre></div></div><p><div class="paragraph"> Oh, well, that's not too bad. In fact... that's a terrible chapter 3!</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ $EDITOR build/whitespace_file.txt</span>
+... /me deletes bad chapter 3 ...
+<span style="font-weight: bold; color: #BFBFBF">$ git add build/whitespace_file.txt</span>
+
+<span style="font-weight: bold; color: #BFBFBF">$ git diff --cached</span>
+<span style="font-weight: bold">diff --git a/build/whitespace_file.txt b/build/whitespace_file.txt</span>
+<span style="font-weight: bold">index 1293282..f903ea2 100644</span>
+<span style="font-weight: bold">--- a/build/whitespace_file.txt</span>
+<span style="font-weight: bold">+++ b/build/whitespace_file.txt</span>
+<span style="color: #8BE9FD">@@ -42,4 +42,5 @@</span> when the fan was last cleaned.
+ There was an poignant pause.
+
+ CHAPTER 3:
+<span style="color: #FF5555">-Hilariousness! This chapter is awesome!</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">Mr. Usagi felt that something wasn't right. Shortly after the Domo-Kun left he</span>
+<span style="color: #50FA7B">+</span><span style="color: #50FA7B">began feeling sick.</span>
+
+</code></pre></div></div><p><div class="paragraph"> Much better</p></div><div class="listingblock"><div class="content"><pre><code><span style="font-weight: bold; color: #BFBFBF">$ git rebase --continue</span>
+[detached HEAD 1cb4f5b] beginning of chapter 3
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+<span style="font-weight: bold; color: #BFBFBF">$ git rebase-update</span>
+Fetching origin
+chap3 up-to-date
+
+Running `git gc --auto` - Ctrl-C to abort is OK.
+
+<span style="font-weight: bold; color: #BFBFBF">$ gclient sync</span>
+... truncated output ...
+<span style="font-weight: bold; color: #BFBFBF">$ git map</span>
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">1cb4f5b622</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #8BE9FD"></span><span style="font-weight: bold; color: #8BE9FD">HEAD -&gt; chap3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ beginning of chapter 3
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">59cdb7335b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">(</span><span style="font-weight: bold; color: #FF5555">origin/main</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">, </span><span style="font-weight: bold; color: #FF5555">origin/HEAD</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #50FA7B"></span><span style="font-weight: bold; color: #50FA7B">) </span><span style="font-weight: bold"></span><span style="font-weight: bold"></span><span style="color: #F1FA8C">2014-04-10</span> ~ Refactor data interchange format.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">34676a3583</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Ensure FS is exited for all not-in-same-page navigations.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">7d4784e867</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Add best chapter2 ever!
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">5d26fec369</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Finish chapter 2
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">df7fefbf06</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Revert 255617, due to it not tracking use of the link doctor page properly.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">4b39cda0ac</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Fix terrible typo.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">248c5b6fe3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Temporarily CHECK(trial) in ChromeRenderProcessObserver::OnSetFieldTrialGroup.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">8171df8af9</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Remove AMD family check for the flapper crypto accelerator.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">d6a30d2e56</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Change the Pica load benchmark to listen for the polymer-ready event
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">beec6f4746</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Make ReflectorImpl use mailboxes
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">41290e02b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ don't use glibc-specific execinfo.h on uclibc builds
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">a76fde7b7b</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ [fsp] Add requestUnmount() method together with the request manager.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">9de7a713b3</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ linux_aura: Use system configuration for middle clicking the titlebar.
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">073b0c203a</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ContentView-&gt;ContentViewCore in ContentViewRenderView
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">2250f532d7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ ozone: evdev: Filter devices by path
+* <span style="color: #FF5555"></span><span style="font-weight: bold; color: #FF5555">33a7a742b7</span><span style="font-weight: bold"></span><span style="font-weight: bold"></span>	<span style="color: #F1FA8C">2014-04-10</span> ~ Always output seccomp error messages to stderr
+
+
+<span style="font-weight: bold; color: #BFBFBF">$ git cl upload</span>
+... truncated output ...
+</code></pre></div></div><p><div class="paragraph"></p></div>
+<div class="paragraph"><p>So there you have the basic flow. Note that you don&#8217;t <em>have</em> to do chromium
+development using these tools. Any git workflow is compatible, as long as
+<code>git cl upload</code> is able to upload good patches.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_conclusion">CONCLUSION</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Hopefully that gives you a good starting overview on Chromium development using
+<em>depot_tools</em>. If you have questions which weren&#8217;t answered by this tutorial or
+the man pages for the tools (see the index of all tools here:
+<a href="depot_tools.html">depot_tools(7)</a>), please feel free to ask.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_glossary">GLOSSARY</h2>
+<div class="sectionbody">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+CL
+</dt>
+<dd>
+<p>
+  A <em>change-list</em>. This is a diff which you would like to commit to the
+  codebase.
+</p>
+</dd>
+<dt class="hdlist1">
+DEPS
+</dt>
+<dd>
+<p>
+  A file in the chromium checkout which <code>gclient sync</code> uses to determine what
+  dependencies to pull in. This file also contains <em>hooks</em>.
+</p>
+</dd>
+<dt class="hdlist1">
+LKGR
+</dt>
+<dd>
+<p>
+  Last Known Good Revision. This is a <a href="git-tag.html">git-tag(1)</a> which tracks the last
+  version of <code>origin/main</code> which has passed the full set of testing on the
+  <a href="http://build.chromium.org">main Chromium waterfall</a>.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_chromium_depot_tools">CHROMIUM DEPOT_TOOLS</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Part of the chromium <a href="depot_tools.html">depot_tools(7)</a> suite. These tools are meant to
+assist with the development of chromium and related projects. Download the tools
+by checking out the <a href="https://chromium.googlesource.com/chromium/tools/depot_tools.git">git repository</a>.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated
+ 2022-08-26 21:13:38 PDT
+</div>
+</div>
+</body>
+</html>

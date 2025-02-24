@@ -1,0 +1,27 @@
+timeout: 1800s  # Wait for 30 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+
+steps:
+# Start the version so that it is ready to receive traffic
+- name: 'gcr.io/cloud-builders/gcloud'
+  dir: 'skia_bridge'
+  args: [
+    app, versions, 'start', '-s', 'skia-bridge', '${_SERVICE_VERSION}'
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Set traffic for skia-bridge service'
+  dir: 'skia_bridge'
+  args: [
+    'app', 'services', 'set-traffic', 'skia-bridge',
+    '--splits=${_SERVICE_VERSION}=1'
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args: [
+    '-x', '-e', 'dashboard/dev_dockerfiles/stop_old_versions.sh',
+    'skia-bridge'
+  ]
+substitutions:
+    _SERVICE_VERSION: 'cloud-build-c9bdcfe'

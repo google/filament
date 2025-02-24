@@ -1,0 +1,53 @@
+<dom-module id="spdy-view">
+  <template>
+    <div id=spdy-view-tab-content class=content-box>
+      <h4>HTTP/2 status</h4>
+      <ul id=spdy-view-status style='margin-top:0'>
+        <li>HTTP/2 Enabled: <span id=spdy-view-http2-enabled></span></li>
+        <li>ALPN Protocols: <span id=spdy-view-alpn-protocols></span></li>
+      </ul>
+      <h4>HTTP/2 sessions</h4>
+      <div id=spdy-view-session-info>
+        <!-- Only one of these two are shown -->
+        <div id=spdy-view-session-info-no-content>None</div>
+        <div id=spdy-view-session-info-content>
+          <a href="#events&q=type:HTTP2_SESSION%20is:active">View live HTTP/2 sessions</a>
+          <p>
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Host</th>
+                  <th>Proxy</th>
+                  <th>ID</th>
+                  <th>Negotiated Protocol</th>
+                  <th>Active streams</th>
+                  <th>Unclaimed pushed</th>
+                  <th>Max</th>
+                  <th>Initiated</th>
+                  <th>Pushed</th>
+                  <th>Pushed and claimed</th>
+                  <th>Abandoned</th>
+                  <th>Received frames</th>
+                  <th>Secure</th>
+                  <th>Sent settings</th>
+                  <th>Received settings</th>
+                  <th>Send window</th>
+                  <th>Receive window</th>
+                  <th>Unacked received data</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody id=spdy-view-session-info-tbody>
+              </tbody>
+            </table>
+          </p>
+        </div>
+      </div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'spdy-view',
+    });
+  </script>
+</dom-module>

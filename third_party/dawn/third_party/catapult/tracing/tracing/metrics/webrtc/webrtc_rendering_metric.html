@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/v8/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.webrtc', function() {
+  const DISPLAY_HERTZ = 60.0;
+  const VSYNC_DURATION_US = 1e6 / DISPLAY_HERTZ;
+  // How much more severe is a 'Badly out of sync' render event compared to an
+  // 'Out of sync' one when calculating the smoothness score.
+  const SEVERITY = 3;
+  // How many vsyncs a frame should be displayed to be considered frozen.
+  const FROZEN_FRAME_VSYNC_COUNT_THRESHOLD = 6;
+
+  const WEB_MEDIA_PLAYER_UPDATE_TITLE = 'UpdateCurrentFrame';
+  // These four are args for WebMediaPlayerMS update events.
+  const IDEAL_RENDER_INSTANT_NAME = 'Ideal Render Instant';
+  const ACTUAL_RENDER_BEGIN_NAME = 'Actual Render Begin';
+  const ACTUAL_RENDER_END_NAME = 'Actual Render End';
+  // The events of interest have a 'Serial' argument which represents the
+  // stream ID.
+  const STREAM_ID_NAME = 'Serial';
+
+  const REQUIRED_EVENT_ARGS_NAMES = [
+    IDEAL_RENDER_INSTANT_NAME, ACTUAL_RENDER_BEGIN_NAME, ACTUAL_RENDER_END_NAME,
+    STREAM_ID_NAME
+  ];
+
+  // By default, we store a single value, so we only need one of the
+  // statistics to keep track. We choose the average for that.
+  const SUMMARY_OPTIONS = tr.v.Histogram.AVERAGE_ONLY_SUMMARY_OPTIONS;
+
+  const count_smallerIsBetter =
+        tr.b.Unit.byName.count_smallerIsBetter;
+  const percentage_biggerIsBetter =
+        tr.b.Unit.byName.normalizedPercentage_biggerIsBetter;
+  const percentage_smallerIsBetter =
+        tr.b.Unit.byName.normalizedPercentage_smallerIsBetter;
+  const timeDurationInMs_smallerIsBetter =
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const unitlessNumber_biggerIsBetter =
+        tr.b.Unit.byName.unitlessNumber_biggerIsBetter;
+
+  /*
+   * Verify that the event is a valid event.
+   *
+   * An event is valid if it is a UpdateCurrentFrame event,
+   * and has all of the mandatory arguments. See MANDATORY above.
+   */
+  function isValidEvent(event) {
+    if (event.title !== WEB_MEDIA_PLAYER_UPDATE_TITLE || !event.args) {
+      return false;
+    }
+    for (const parameter of REQUIRED_EVENT_ARGS_NAMES) {
+      if (!(parameter in event.args)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function webrtcRenderingMetric(histograms, model) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    let webMediaPlayerMSEvents = [];
+    for (const rendererPid in modelHelper.rendererHelpers) {
+      const rendererHelper = modelHelper.rendererHelpers[rendererPid];
+      const compositorThread = rendererHelper.compositorThread;
+      if (compositorThread !== undefined) {
+        webMediaPlayerMSEvents = webMediaPlayerMSEvents.concat(
+            compositorThread.sliceGroup.slices.filter(isValidEvent));
+      }
+    }
+    const eventsByStreamName = tr.b.groupIntoMap(
+        webMediaPlayerMSEvents,
+        event => event.args[STREAM_ID_NAME]
+    );
+    for (const [streamName, events] of eventsByStreamName) {
+      getTimeStats(histograms, streamName, events);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(webrtcRenderingMetric);
+
+  function getTimeStats(histograms, streamName, events) {
+    const frameHist = getFrameDistribution(histograms, events);
+    addFpsFromFrameDistribution(histograms, frameHist);
+    addFreezingScore(histograms, frameHist);
+
+    const driftTimeStats = getDriftStats(events);
+    histograms.createHistogram('WebRTCRendering_drift_time',
+        timeDurationInMs_smallerIsBetter, driftTimeStats.driftTime, {
+          summaryOptions: {
+            count: false,
+            min: false,
+            percentile: [0.75, 0.9],
+          },
+        });
+    histograms.createHistogram('WebRTCRendering_rendering_length_error',
+        percentage_smallerIsBetter,
+        driftTimeStats.renderingLengthError, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+
+    const smoothnessStats = getSmoothnessStats(driftTimeStats.driftTime);
+    histograms.createHistogram('WebRTCRendering_percent_badly_out_of_sync',
+        percentage_smallerIsBetter, smoothnessStats.percentBadlyOutOfSync, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    histograms.createHistogram('WebRTCRendering_percent_out_of_sync',
+        percentage_smallerIsBetter, smoothnessStats.percentOutOfSync, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    histograms.createHistogram('WebRTCRendering_smoothness_score',
+        percentage_biggerIsBetter, smoothnessStats.smoothnessScore, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    histograms.createHistogram('WebRTCRendering_frames_out_of_sync',
+        count_smallerIsBetter, smoothnessStats.framesOutOfSync, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    histograms.createHistogram('WebRTCRendering_frames_badly_out_of_sync',
+        count_smallerIsBetter, smoothnessStats.framesSeverelyOutOfSync, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+  }
+
+  const FRAME_DISTRIBUTION_BIN_BOUNDARIES =
+    tr.v.HistogramBinBoundaries.createLinear(1, 50, 49);
+
+  /**
+   * Create the frame distribution.
+   *
+   * If the overall display distribution is A1:A2:..:An, this will tell how
+   * many times a frame stays displayed during Ak*VSYNC_DURATION_US, also known
+   * as 'source to output' distribution.
+   *
+   * In other terms, a distribution B where
+   * B[k] = number of frames that are displayed k times.
+   *
+   * @param {tr.v.HistogramSet} histograms
+   * @param {Array.<event>} events - An array of events.
+   * @returns {tr.v.Histogram} frameHist - The frame distribution.
+   */
+  function getFrameDistribution(histograms, events) {
+    const cadence = tr.b.runLengthEncoding(
+        events.map(e => e.args[IDEAL_RENDER_INSTANT_NAME]));
+    return histograms.createHistogram('WebRTCRendering_frame_distribution',
+        count_smallerIsBetter, cadence.map(ticks => ticks.count), {
+          binBoundaries: FRAME_DISTRIBUTION_BIN_BOUNDARIES,
+          summaryOptions: {
+            percentile: [0.75, 0.9],
+          },
+        });
+  }
+
+  /**
+   * Calculate the apparent FPS from frame distribution.
+   *
+   * Knowing the display frequency and the frame distribution, it is possible to
+   * calculate the video apparent frame rate as played by WebMediaPlayerMs
+   * module.
+   *
+   * @param {tr.v.HistogramSet} histograms
+   * @param {tr.v.Histogram} frameHist - The frame distribution. See
+   * getFrameDistribution.
+   */
+  function addFpsFromFrameDistribution(histograms, frameHist) {
+    let numberFrames = 0;
+    let numberVsyncs = 0;
+    for (let ticks = 1; ticks < frameHist.allBins.length; ++ticks) {
+      const count = frameHist.allBins[ticks].count;
+      numberFrames += count;
+      numberVsyncs += ticks * count;
+    }
+    const meanRatio = numberVsyncs / numberFrames;
+    histograms.createHistogram('WebRTCRendering_fps',
+        unitlessNumber_biggerIsBetter, DISPLAY_HERTZ / meanRatio, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+  }
+
+  /**
+   * Returns the weighted penalty for a number of frozen frames.
+   *
+   * In a series of repeated frames of length > 5, all frames after the first
+   * are considered frozen. Conversely, no frames in a series of repeated frames
+   * of length <= 5 will be considered frozen.
+   *
+   * This means the weight for 0 to 4 frozen frames is 0.
+   *
+   * @param {Number} numberFrozenFrames - The number of frozen frames.
+   * @returns {Number} - The weight penalty for the number of frozen frames.
+   */
+  function frozenPenaltyWeight(numberFrozenFrames) {
+    const penalty = {
+      5: 1,
+      6: 5,
+      7: 15,
+      8: 25
+    };
+    return penalty[numberFrozenFrames] || (8 * (numberFrozenFrames - 4));
+  }
+
+  /**
+   * Adds the freezing score.
+   *
+   * @param {tr.v.HistogramSet} histograms
+   * @param {tr.v.Histogram} frameHist - The frame distribution.
+   * See getFrameDistribution.
+   */
+  function addFreezingScore(histograms, frameHist) {
+    let numberVsyncs = 0;
+    let freezingScore = 0;
+    let frozenFramesCount = 0;
+    for (let ticks = 1; ticks < frameHist.allBins.length; ++ticks) {
+      const count = frameHist.allBins[ticks].count;
+      numberVsyncs += ticks * count;
+      if (ticks >= FROZEN_FRAME_VSYNC_COUNT_THRESHOLD) {
+        // The first frame of the series is not considered frozen.
+        frozenFramesCount += count * (ticks - 1);
+        freezingScore += count * frozenPenaltyWeight(ticks - 1);
+      }
+    }
+    freezingScore = 1 - freezingScore / numberVsyncs;
+    if (freezingScore < 0) {
+      freezingScore = 0;
+    }
+    histograms.createHistogram('WebRTCRendering_frozen_frames_count',
+        count_smallerIsBetter, frozenFramesCount, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    histograms.createHistogram('WebRTCRendering_freezing_score',
+        percentage_biggerIsBetter, freezingScore, {
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+  }
+
+  /**
+   * Get the drift time statistics.
+   *
+   * This method will calculate:
+   * - Drift Time: The difference between the Actual Render Begin and the Ideal
+   *     Render Instant for each event.
+   * - Rendering Length Error: The alignment error of the Ideal Render
+   *     Instants. The Ideal Render Instants should be equally spaced by
+   *     intervals of length VSYNC_DURATION_US. The Rendering Length error
+   *     measures how much they are misaligned.
+   *
+   * @param {Array.<event>} events - An array of events.
+   * @returns {Object.<Array.<Number>, Number>} - The drift time and rendering
+   * length error.
+   */
+  function getDriftStats(events) {
+    const driftTime = [];
+    const discrepancy = [];
+    let oldIdealRender = 0;
+    let expectedIdealRender = 0;
+
+    for (const event of events) {
+      const currentIdealRender = event.args[IDEAL_RENDER_INSTANT_NAME];
+      // The expected time of the next 'Ideal Render' event begins as the
+      // current 'Ideal Render' time and increases by VSYNC_DURATION_US on every
+      // frame.
+      expectedIdealRender += VSYNC_DURATION_US;
+      if (currentIdealRender === oldIdealRender) {
+        continue;
+      }
+      const actualRenderBegin = event.args[ACTUAL_RENDER_BEGIN_NAME];
+      // When was the frame rendered vs. when it would've been ideal.
+      driftTime.push(actualRenderBegin - currentIdealRender);
+      // The discrepancy is the absolute difference between the current Ideal
+      // Render and the expected Ideal Render.
+      discrepancy.push(Math.abs(currentIdealRender - expectedIdealRender));
+      expectedIdealRender = currentIdealRender;
+      oldIdealRender = currentIdealRender;
+    }
+
+    const discrepancySum = tr.b.math.Statistics.sum(discrepancy) -
+      discrepancy[0];
+    const lastIdealRender =
+        events[events.length - 1].args[IDEAL_RENDER_INSTANT_NAME];
+    const firstIdealRender = events[0].args[IDEAL_RENDER_INSTANT_NAME];
+    const idealRenderSpan = lastIdealRender - firstIdealRender;
+
+    const renderingLengthError = discrepancySum / idealRenderSpan;
+
+    return {driftTime, renderingLengthError};
+  }
+
+  /**
+   * Get the smoothness stats from the normalized drift time.
+   *
+   * This method will calculate the smoothness score, along with the percentage
+   * of frames badly out of sync and the percentage of frames out of sync.
+   * To be considered badly out of sync, a frame has to have missed rendering by
+   * at least 2 * VSYNC_DURATION_US.
+   * To be considered out of sync, a frame has to have missed rendering by at
+   * least one VSYNC_DURATION_US.
+   * The smoothness score is a measure of how out of sync the frames are.
+   *
+   * @param {Array.<Number>} driftTimes - See getDriftStats.
+   * @returns {Object.<Number, Number, Number>} - The percentBadlyOutOfSync,
+   * percentOutOfSync and smoothnesScore calculated from the driftTimes array.
+   */
+  function getSmoothnessStats(driftTimes) {
+    const meanDriftTime = tr.b.math.Statistics.mean(driftTimes);
+    const normDriftTimes = driftTimes.map(driftTime =>
+      Math.abs(driftTime - meanDriftTime));
+
+    // How many times is a frame later/earlier than T=2*VSYNC_DURATION_US. Time
+    // is in microseconds
+    const framesSeverelyOutOfSync = normDriftTimes
+        .filter(driftTime => driftTime > 2 * VSYNC_DURATION_US)
+        .length;
+    // How many times is a frame later/earlier than VSYNC_DURATION_US.
+    const framesOutOfSync = normDriftTimes
+        .filter(driftTime => driftTime > VSYNC_DURATION_US)
+        .length;
+
+    const percentBadlyOutOfSync = framesSeverelyOutOfSync /
+      driftTimes.length;
+    const percentOutOfSync = framesOutOfSync / driftTimes.length;
+
+    const framesOutOfSyncOnlyOnce = framesOutOfSync - framesSeverelyOutOfSync;
+
+    // Calculate smoothness metric. From the formula, we can see that smoothness
+    // score can be negative.
+    let smoothnessScore = 1 - (framesOutOfSyncOnlyOnce +
+        SEVERITY * framesSeverelyOutOfSync) / driftTimes.length;
+
+    // Minimum smoothness_score value allowed is zero.
+    if (smoothnessScore < 0) {
+      smoothnessScore = 0;
+    }
+
+    return {
+      framesOutOfSync,
+      framesSeverelyOutOfSync,
+      percentBadlyOutOfSync,
+      percentOutOfSync,
+      smoothnessScore
+    };
+  }
+
+  return {
+    webrtcRenderingMetric,
+  };
+});
+</script>

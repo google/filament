@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+
+<dom-module id="results2-frame">
+  <template>
+    <style>
+      iframe {
+        border: 0;
+        height: 50em;
+        width: 100%;
+      }
+    </style>
+
+    <iron-ajax auto id="ajax" url="/api/results2/[[jobId]]" last-response="{{status}}"></iron-ajax>
+    <template is="dom-if" if="[[getJobIncomplete(status)]]">
+      <p>Waiting for job to complete...</p>
+    </template>
+
+    <template is="dom-if" if="[[getStarted(status)]]">
+      <p>Generating Results2....</p>
+      <paper-spinner></paper-spinner>
+    </template>
+
+    <template is="dom-if" if="[[getFailed(status)]]">
+      <p>Generating the Results2 file failed.</p>
+    </template>
+
+    <template is="dom-if" if="[[getComplete(status)]]">
+      <template is="dom-if" if="[[getTooOldForM80(status)]]">
+        <p><b>WARNING:</b>
+        Results generated before Nov 14, 2019 do not render in Chrome M80 or
+        newer.  See
+        <a href="https://bugs.chromium.org/p/chromium/issues/detail?id=1021137"
+          >crbug.com/1021137</a>.</p>
+      </template>
+      <iframe src="[[getStatusURL(status)]]"></iframe>
+    </template>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'results2-frame',
+
+      properties: {
+        jobId: {
+          type: Object,
+        },
+
+        status: {
+          type: Object,
+          observer: '_statusChanged',
+        },
+      },
+
+      getStatusURL(status) {
+        if (!status || !status.url) {
+          return 'about:blank';
+        }
+        return status.url;
+      },
+
+      getStarted(status) {
+        return this.status.status == 'pending';
+      },
+
+      getFailed(status) {
+        return this.status.status == 'failed';
+      },
+
+      getJobIncomplete(status) {
+        return this.status.status == 'job-incomplete';
+      },
+
+      getComplete(status) {
+        return this.status.status == 'complete';
+      },
+
+      getTooOldForM80(status) {
+        // Results2 pages generated before this date depend on features removed
+        // in M80.
+        return new Date(this.status.updated + 'Z') <
+            new Date('2019-11-14T00:00:00Z');
+      },
+
+      _statusChanged() {
+        const visible = !!(this.offsetWidth ||
+                          this.offsetHeight ||
+                          this.getClientRects().length);
+        if (!this.getComplete(this.status) && visible) {
+          this.async(() => this.$.ajax.generateRequest(), 5000);
+        }
+      },
+    });
+  </script>
+</dom-module>

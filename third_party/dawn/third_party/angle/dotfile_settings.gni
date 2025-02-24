@@ -1,0 +1,14 @@
+# Copyright 2018 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains variables that can be imported into a repo's dotfile (.gn)
+# to make it easier to roll new versions of ANGLE in.
+
+angle_dotfile_settings = {
+  exec_script_allowlist = [ get_path_info("BUILD.gn", "abspath") ]
+
+  # TODO(crbug.com/389986807) - move other clients to `exec_script_allowlist`
+  # so that we don't need to keep supporting `exec_script_whitelist`.
+  exec_script_whitelist = exec_script_allowlist
+}

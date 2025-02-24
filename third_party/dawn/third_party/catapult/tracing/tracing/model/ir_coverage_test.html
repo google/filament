@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/ir_coverage.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  function createModel() {
+    return tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      const thread = process.getOrCreateThread(2);
+      const s0 = thread.sliceGroup.pushSlice(newSliceEx(
+          {title: 's0', start: 0.0, duration: 1.0}));
+      s0.isTopLevel = true;
+      const unassociatedEvent = thread.sliceGroup.pushSlice(newSliceEx(
+          {title: 's1', start: 6.0, duration: 1.0}));
+      unassociatedEvent.isTopLevel = true;
+      const s2 = thread.sliceGroup.pushSlice(newSliceEx(
+          {title: 's2', start: 2.0, duration: 1.0}));
+      s2.isTopLevel = true;
+      const f0 = tr.c.TestUtils.newFlowEventEx({
+        title: 'test1',
+        start: 0,
+        end: 10,
+        startSlice: s0,
+        endSlice: s2,
+        id: '0x100'
+      });
+      model.flowEvents.push(f0);
+      const as1 = tr.c.TestUtils.newAsyncSliceEx({
+        title: 'InputLatency::GestureTap',
+        cat: 'benchmark,latencyInfo',
+        start: 2,
+        end: 10,
+        id: '0x100',
+        isTopLevel: true,
+        startThread: thread
+      });
+      thread.asyncSliceGroup.push(as1);
+      const ir = new tr.model.um.StubExpectation(
+          {parentModel: model, start: 0, duration: 7});
+      ir.associatedEvents.push(as1);
+      ir.associatedEvents.push(s0);
+      ir.associatedEvents.push(s2);
+      ir.associatedEvents.push(f0);
+      model.userModel.expectations.push(ir);
+    });
+  }
+
+  test('computeCoverage', function() {
+    const model = createModel();
+    for (const event of model.getDescendantEvents()) {
+      if (event.title === 's0' || event.title === 's2') {
+        event.cpuSelfTime = 0.4;
+      } else if (event.title === 's1') {
+        event.cpuSelfTime = 0.8;
+      }
+    }
+
+    const coverage = tr.model.getIRCoverageFromModel(model);
+    assert.strictEqual(3, coverage.associatedEventsCount);
+    assert.strictEqual(1, coverage.unassociatedEventsCount);
+    assert.closeTo(0.75, coverage.coveredEventsCountRatio, 1e-3);
+    assert.closeTo(0.8, coverage.associatedEventsCpuTimeMs, 1e-3);
+    assert.closeTo(0.8, coverage.unassociatedEventsCpuTimeMs, 1e-3);
+    assert.closeTo(0.5, coverage.coveredEventsCpuTimeRatio, 1e-3);
+  });
+
+  test('zeroCPU', function() {
+    const model = createModel();
+    const coverage = tr.model.getIRCoverageFromModel(model);
+    assert.strictEqual(3, coverage.associatedEventsCount);
+    assert.strictEqual(1, coverage.unassociatedEventsCount);
+    assert.closeTo(0.75, coverage.coveredEventsCountRatio, 1e-3);
+    assert.closeTo(0.0, coverage.associatedEventsCpuTimeMs, 1e-3);
+    assert.closeTo(0.0, coverage.unassociatedEventsCpuTimeMs, 1e-3);
+    assert.strictEqual(undefined, coverage.coveredEventsCpuTimeRatio, 1e-3);
+  });
+});
+</script>
+

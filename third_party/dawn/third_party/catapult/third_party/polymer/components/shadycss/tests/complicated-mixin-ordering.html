@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <script>
+    WCT = { waitFor: function (cb) { HTMLImports.whenReady(cb) } }
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script>
+    if (customElements.polyfillWrapFlushCallback) {
+      // delay definition of custom-style until after template polyfill loads
+      customElements.polyfillWrapFlushCallback(function (cb) {
+        HTMLImports.whenReady(cb);
+      });
+    }
+  </script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/custom-style-element.js"></script>
+  <script src="module/generated/make-element.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <title>Complicated Order</title>
+
+</head>
+
+<body>
+  <template id="child-element">
+    <style>
+      p {
+        @apply --my-mixin;
+      }
+    </style>
+    <p>I'm a DOM element. This is my local DOM!</p>
+  </template>
+
+  <template id="container-element">
+    <style>
+      child-element {
+        --my-mixin: {
+          background-color: rgb(255, 0, 0);
+        }
+      }
+    </style>
+    <child-element></child-element>
+  </template>
+
+  <template id="other-container-element">
+    <style>
+      child-element {
+        --my-mixin: {
+          font-size: 40px;
+          background-color: rgb(0, 255, 0);
+        }
+      }
+    </style>
+    <child-element></child-element>
+  </template>
+
+  <container-element></container-element>
+  <other-container-element></other-container-element>
+
+  <script>
+    suite('Complicated Order', () => {
+      function assertComputed(node, property, expectedValue, msg) {
+        assert.equal(getComputedStyle(node).getPropertyValue(property).trim(), expectedValue, msg);
+      }
+      suiteSetup(() => {
+        makeElement('child-element');
+        makeElement('container-element');
+        makeElement('other-container-element');
+      });
+      test('complicated ordering works as expected', () => {
+        let initialFontSize = getComputedStyle(document.head).getPropertyValue('font-size').trim();
+        let con = document.querySelector('container-element');
+        let oth = document.querySelector('other-container-element');
+        assertComputed(con.shadowRoot.querySelector('child-element').shadowRoot.querySelector('p'), 'background-color', 'rgb(255, 0, 0)');
+        assertComputed(con.shadowRoot.querySelector('child-element').shadowRoot.querySelector('p'), 'font-size', initialFontSize);
+        assertComputed(oth.shadowRoot.querySelector('child-element').shadowRoot.querySelector('p'), 'background-color', 'rgb(0, 255, 0)');
+        assertComputed(oth.shadowRoot.querySelector('child-element').shadowRoot.querySelector('p'), 'font-size', '40px');
+        con.parentNode.removeChild(con);
+        oth.parentNode.removeChild(oth);
+      })
+    })
+  </script>
+</body>
+</html>

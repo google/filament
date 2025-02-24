@@ -1,0 +1,115 @@
+===========
+boto v2.1.0
+===========
+
+The 2.1.0 release of boto is now available on `PyPI`_ and `Google Code`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+.. _`Google Code`: http://code.google.com/p/boto/downloads/
+
+You can view a list of issues that have been closed in this release at
+https://github.com/boto/boto/issues?milestone=4&state=closed)
+
+You can get a comprehensive list of all commits made between the 2.0 release
+and the 2.1.0 release at https://github.com/boto/boto/compare/033457f30d...a0a1fd54ef.
+
+Some highlights of this release:
+
+* Server-side encryption now supported in S3.
+* Better support for VPC in EC2.
+* Support for combiner in StreamingStep for EMR.
+* Support for CloudFormations.
+* Support for streaming uploads to Google Storage.
+* Support for generating signed URL's in CloudFront.
+* MTurk connection now uses HTTPS by default, like all other Connection objects.
+* You can now PUT multiple data points to CloudWatch in one call.
+* CloudWatch Dimension object now correctly supports multiple values for same
+  dimension name.
+* Lots of documentation fixes/additions
+
+There were 235 commits in this release from 35 different authors.  The authors
+are listed below, in no particular order:
+
+* Erick Fejta
+* Joel Barciauskas
+* Matthew Tai
+* Hyunjung Park
+* Mitch Garnaat
+* Victor Trac
+* Andy Grimm
+* ZerothAngel
+* Dan Lecocq
+* jmallen
+* Greg Taylor
+* Brian Grossman
+* Marc Brinkmann
+* Hunter Blanks
+* Steve Johnson
+* Keith Fitzgerald
+* Kamil Klimkiewicz
+* Eddie Hebert
+* garnaat
+* Samuel Lucidi
+* Kazuhiro Ogura
+* David Arthur
+* Michael Budde
+* Vineeth Pillai
+* Trevor Pounds
+* Mike Schwartz
+* Ryan Brown
+* Mark
+* Chetan Sarva
+* Dan Callahan
+* INADA Naoki
+* Mitchell Hashimoto
+* Chris Moyer
+* Riobard
+* Ted Romer
+* Justin Riley
+* Brian Beach
+* Simon Ratner
+
+We processed 60 pull requests for this release from 40 different contributors.  Here are the github user id's for all of the pull request authors:
+
+* jtriley
+* mbr
+* jbarciauskas
+* hyunjung
+* bugi
+* ryansb
+* gtaylor
+* ehazlett
+* secretmike
+* riobard
+* simonratner
+* irskep
+* sanbornm
+* methane
+* jumping
+* mansam
+* miGlanz
+* dlecocq
+* fdr
+* mitchellh
+* ehebert
+* memory
+* hblanks
+* mbudde
+* ZerothAngel
+* goura
+* natedub
+* tpounds
+* bwbeach
+* mumrah
+* chetan
+* jmallen
+* a13m
+* mtai
+* fejta
+* jibs
+* callahad
+* vineethrp
+* JDrosdeck
+* gholms
+
+If you are trying to reconcile that data (i.e. 35 different authors and 40 users with pull requests), well so am I.  I'm just reporting on the data that I get from the Github api 8^)

@@ -1,0 +1,17 @@
+Bumped to 2.48.0
+
+boto v2.48.0
+============
+
+:date: 2017/06/29
+
+This release addresses a few S3 related bugs as well as a bug with the recent
+endpoint heuristics feature.
+
+Changes
+-------
+* Fix generate_url() AttributeError when using anonymous connections (:issue:`3734`, :sha:`83481807`)
+* Use RegionInfo by default with heuristics (:issue:`3737`, :sha:`0a9b1140`)
+* Allow specifying s3 host from boto config file. (:issue:`3738`, :sha:`dcfc7512`)
+
+

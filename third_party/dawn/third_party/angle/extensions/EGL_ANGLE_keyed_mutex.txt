@@ -1,0 +1,75 @@
+Name
+
+    ANGLE_keyed_mutex
+
+Name Strings
+
+    EGL_ANGLE_keyed_mutex
+
+Contributors
+
+    Jeff Muizelaar
+
+Contacts
+
+    Jeff Muizelaar, Mozilla (jmuizelaar 'at' mozilla.org)
+
+Status
+
+    Implemented in ANGLE.
+
+Version
+
+    Version 1, Oct 29, 2014
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    Requires the EGL_ANGLE_query_surface_pointer extension.
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    Some EGL implementations generate EGLSurface handles that are
+    backed by Direct3D 11 2D textures.  This extension allows
+    obtaining the IDXGIKeyedMutex for such EGL surfaces.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted in the <attribute> parameter of eglQuerySurfacePointerANGLE:
+
+        EGL_DXGI_KEYED_MUTEX_ANGLE                       0x33A2
+
+    Add to table 3.5, "Queryable surface attributes and types":
+
+        Attribute                              Type      Description
+        ---------                              ----      -----------
+        EGL_DXGI_KEYED_MUTEX_ANGLE             pointer   IDXGIKeyedMutex
+
+    Add before the last paragraph in section 3.5, "Surface attributes":
+
+        "Querying EGL_DXGI_KEYED_MUTEX_ANGLE returns a IDXGIKeyedMutex, or NULL
+        if a keyed mutex for the surface is not available.  The keyed mutex
+        must be queried using eglQuerySurfaceAttribPointerANGLE.  Keyed Mutexes
+        are only available from EGL surfaces backed by Direct3D 11 surfaces.
+        Before using the keyed mutex, ensure that all rendering to the EGLSurface
+        with EGL client APIs has completed."
+
+Issues
+
+Revision History
+
+    Version 1, 2014/10/29 - first draft.

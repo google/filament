@@ -1,0 +1,39 @@
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("vinn") {
+  data = [
+    "bin/",
+    "vinn/",
+  ]
+
+  data += [
+    "third_party/parse5/",
+    "third_party/v8/LICENSE",
+    "third_party/v8/LICENSE.strongtalk",
+    "third_party/v8/LICENSE.v8",
+    "third_party/v8/LICENSE.valgrind",
+    "third_party/v8/README.chromium",
+  ]
+
+  if (is_mac) {
+    data += [ "third_party/v8/mac/" ]
+  }
+
+  if (is_win) {
+    data += [ "third_party/v8/win/" ]
+  }
+
+  if (is_chromeos) {
+    data += [
+        "third_party/v8/linux/arm/",
+        "third_party/v8/linux/mips/",
+        "third_party/v8/linux/mips64/",
+    ]
+  }
+
+  if (is_linux || is_chromeos || is_android || is_fuchsia) {
+    data += [ "third_party/v8/linux/x86_64/" ]
+  }
+}

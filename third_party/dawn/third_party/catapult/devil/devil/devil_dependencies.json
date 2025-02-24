@@ -1,0 +1,163 @@
+{
+  "config_type": "BaseConfig",
+  "dependencies": {
+    "aapt": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "87bd288daab30624e41faa62aa2c1d5bac3e60aa",
+          "download_path": "../bin/deps/linux2/x86_64/bin/aapt"
+        }
+      }
+    },
+    "adb": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "528d0e88a0d876b0549840f0797beffca4a6a796",
+          "download_path": "../bin/deps/linux2/x86_64/bin/adb"
+        }
+      }
+    },
+    "android_build_tools_libc++": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "9b986774ad27288a6777ebfa9a08fd8a52003008",
+          "download_path": "../bin/deps/linux2/x86_64/lib64/libc++.so"
+        }
+      }
+    },
+    "bundletool": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "default": {
+          "cloud_storage_hash": "721525531f3c3ec66b39afd74c2a05e6d3973eef",
+          "download_path": "../bin/deps/default/lib.java/bundletool-all-0.10.3.jar"
+        }
+      }
+    },
+    "chromium_commands": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "6efb1501c7c49e6ae84cc467648930eaf9f6a9e5",
+          "download_path": "../bin/deps/linux2/x86_64/lib.java/chromium_commands.dex.jar"
+        }
+      }
+    },
+    "dexdump": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "c3fdf75afe8eb4062d66703cb556ee1e2064b8ae",
+          "download_path": "../bin/deps/linux2/x86_64/bin/dexdump"
+        }
+      }
+    },
+    "empty_system_webview": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "34e583c631a495afbba82ce8a1d4f9b5118a4411",
+          "download_path": "../bin/deps/android/arm64-v8a/apks/EmptySystemWebView.apk"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "220ff3ba1a6c3c81877997e32784ffd008f293a5",
+          "download_path": "../bin/deps/android/armeabi-v7a/apks/EmptySystemWebView.apk"
+        }
+      }
+    },
+    "fastboot": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "f149e7b09d3e442f2d2e9848df86a6df79e9f4e9",
+          "download_path": "../bin/deps/linux2/x86_64/bin/fastboot"
+        }
+      }
+    },
+    "forwarder_device": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "b30e8bfb234d02899b05a7957c6a84dc6e16ec4b",
+          "download_path": "../bin/deps/android/arm64-v8a/bin/forwarder_device"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "efc7f092f5394a7b88d77a2544adfe33c5c4fd3c",
+          "download_path": "../bin/deps/android/armeabi-v7a/bin/forwarder_device"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "ec841e99335f8c9bbcf2e3da40dd8a7ebefe2b6e",
+          "download_path": "../bin/deps/android/x86/bin/forwarder_device"
+        },
+        "android_x86_64": {
+          "cloud_storage_hash": "b9921146385bb7c3fc7246084c37a175e7bb97bd",
+          "download_path": "../bin/deps/android/x86_64/bin/forwarder_device"
+        }
+      }
+    },
+    "forwarder_host": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "334c172dd90bae568cbff9465130f1245a35cade",
+          "download_path": "../bin/deps/linux2/x86_64/forwarder_host"
+        }
+      }
+    },
+    "md5sum_device": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "e9e1a4e2f1c24180a5cac496c3c50213384b51eb",
+          "download_path": "../bin/deps/android/arm64-v8a/bin/md5sum_device"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "f0cf40aec71df24d50a2644bed199ffd7588082d",
+          "download_path": "../bin/deps/android/armeabi-v7a/bin/md5sum_device"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "7530812af4b3cd2f20d9ce27e3615828cb4e4fc2",
+          "download_path": "../bin/deps/android/x86/bin/md5sum_device"
+        },
+        "android_x86_64": {
+          "cloud_storage_hash": "4cd36953c44119578568a723854d43b8ed124d7e",
+          "download_path": "../bin/deps/android/x86_64/bin/md5sum_device"
+        }
+      }
+    },
+    "md5sum_host": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "f2428a52730c6593267678c75f95cdc7dffb58df",
+          "download_path": "../bin/deps/linux2/x86_64/bin/md5sum_host"
+        }
+      }
+    },
+    "split-select": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux2_x86_64": {
+          "cloud_storage_hash": "c116fd0d7ff089561971c078317b75b90f053207",
+          "download_path": "../bin/deps/linux2/x86_64/bin/split-select"
+        }
+      }
+    }
+  }
+}

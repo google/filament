@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/heap_dump.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Logic for importing a Heap Dump.
+ */
+tr.exportTo('tr.e.importer', function() {
+  /**
+   * @constructor
+   */
+  function HeapDumpTraceEventImporter(
+      heapProfileExpander,
+      stackFrames,
+      processMemoryDump,
+      idPrefix,
+      model) {
+    this.expander = heapProfileExpander;
+    this.stackFrames = stackFrames;
+    this.processMemoryDump = processMemoryDump;
+    this.idPrefix = idPrefix;
+    this.model = model;
+  }
+
+  HeapDumpTraceEventImporter.prototype = {
+
+    getLeafStackFrame(stackFrameId) {
+      // Root.
+      if (stackFrameId === '') return undefined;
+      const parentId = this.idPrefix + stackFrameId;
+      const id = parentId + ':self';
+
+      // In the new format all values are 'self' values,
+      // we distingiush these from the totals in the UI via
+      // artificial '<self>' stack frames.
+      if (!this.stackFrames[id]) {
+        const parentStackFrame = this.stackFrames[parentId];
+        const stackFrame = new tr.model.StackFrame(
+            parentStackFrame, id, '<self>',
+            undefined /* colorId */);
+        this.model.addStackFrame(stackFrame);
+      }
+      return this.stackFrames[id];
+    },
+
+    parseEntry(entry, heapDump) {
+      const size = entry.size;
+      const count = entry.count;
+      const leafStackFrame = this.getLeafStackFrame(entry.node.id);
+      const objectTypeName = entry.type.name;
+      const valuesAreTotals = false;
+      if (objectTypeName === undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Missing object type name (ID ' + typeId + ')',
+        });
+      }
+      heapDump.addEntry(
+          leafStackFrame, objectTypeName, size, count, valuesAreTotals);
+    },
+
+    parse() {
+      const heapDumps = {};
+      const inflated = this.expander.inflated;
+      for (const [allocatorName, entries] of Object.entries(inflated)) {
+        const heapDump =
+            new tr.model.HeapDump(this.processMemoryDump, allocatorName);
+        for (const entry of entries) {
+          this.parseEntry(entry, heapDump);
+        }
+        heapDump.isComplete = true;
+        heapDumps[allocatorName] = heapDump;
+      }
+      return heapDumps;
+    },
+
+  };
+
+  return {
+    HeapDumpTraceEventImporter,
+  };
+});
+</script>

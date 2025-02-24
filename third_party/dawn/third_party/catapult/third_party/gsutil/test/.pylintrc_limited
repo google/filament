@@ -1,0 +1,473 @@
+[MASTER]
+
+# Specify a configuration file.
+#rcfile=
+
+# Python code to execute, usually for sys.path manipulation such as
+# pygtk.require().
+#init-hook=
+
+# Profiled execution.
+profile=no
+
+# Add <file or directory> to the deny list. It should be a base name, not a
+# path. You may set this option multiple times.
+# NOTE: To ignore specific directories, use the helper script to run pylint.
+#       It uses the `find` command's `-prune` action, and it's much easier to
+#       specify an exact directory via `find` than relying on pylint's basename
+#       matching.
+ignore=__pycache__,
+       CVS,
+       .git
+
+# Pickle collected data for later comparisons.
+persistent=yes
+
+# List of plugins (as comma separated values of python modules names) to load,
+# usually to register additional checkers.
+load-plugins=
+
+
+[MESSAGES CONTROL]
+
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time.
+#enable=
+
+# Disable the message, report, category or checker with the given id(s). You
+# can give multiple identifiers separated by comma.
+#
+##################################
+# TODO: Come back to this approach. We should probably enable error messages
+#       one at a time, determining which ones are feasible to enable, and
+#       eventually switch to a denylist strategy, running all of them except
+#       the ones we've determined aren't helpful.
+# disable=bad-option-value,
+#         fixme,
+#         global-statement,
+#         import-error,
+#         locally-disabled
+#
+##################################
+# Allowlist strategy:
+disable=all
+enable=abstract-class-instantiated,
+       anomalous-backslash-in-string,
+       assert-on-tuple,
+       bad-format-character,
+       bad-format-string,
+       bad-format-string-key,
+       bad-indentation,
+       bad-open-mode,
+       bad-str-strip-call,
+       # Need to keep this disabled to remove warnings about error codes from
+       # add'l plugins used by the gsutil team. Until we convert all
+       # internal-named errors to their external names (e.g. "g-bad-foo" -->
+       # "bad-foo") and rely on only on pylint (not gpylint), we should keep
+       # this disabled.
+       ### bad-option-value,
+       bare-except,
+       boolean-datetime,
+       # TODO: Fix occurrences of this, then uncomment it:
+       ### broad-except,
+       # TODO: Fix these instances, then uncomment this.
+       ### cell-var-from-loop,
+       confusing-with-statement,
+       continue-in-finally,
+       # TODO: Uncomment this once we convert all assertEquals -> assertEqual.
+       ### deprecated-method,
+       deprecated-module,
+       eval-used,
+       exec-used,
+       # Don't warn on TODOs.
+       ### fixme,
+       format-combined-specification,
+       format-needs-mapping,
+       # Don't warn about using the "global" keyword.
+       ### global-statement,
+       global-variable-not-assigned,
+       global-variable-undefined
+       # We fudge the sys.path at runtime. Rather than try to keep the path
+       # logic in sync here and in the code, we just disable this warning.
+       ### import-error,
+       import-self,
+       invalid-all-object,
+       invalid-format-index,
+       # Keep this disabled to prevent warnings about inline "pylint: disable"
+       # comments.
+       ### locally-disabled,
+       logging-format-truncated,
+       logging-too-few-args,
+       logging-too-many-args,
+       logging-unsupported-format,
+       # TODO: Fix occurrences of this, then uncomment it:
+       ### logging-format-interpolation,
+       lost-exception,
+       misplaced-future,
+       missing-format-string-key,
+       missing-format-attribute,
+       missing-format-argument-key,
+       missing-kwoa,
+       mixed-format-string,
+       mixed-indentation,
+       # TODO: Fix occurrences of this, then uncomment it:
+       # logging-format-interpolation,
+       ### old-division,
+       old-raise-syntax,
+       raising-bad-type,
+       raising-non-exception,
+       redefine-in-handler,
+       # TODO: Fix occurrences of this, then uncomment:
+       ### redundant-unittest-assert,
+       # We use some interesting monkeypatching and sometimes perform imports
+       # within methods, which can trigger this warning. Thus, we keep this
+       # disabled:
+       ### reimported,
+       too-few-format-args,
+       too-many-format-args,
+       truncated-format-string,
+       undefined-all-variable,
+       undefined-loop-variable,
+       undefined-variable,
+       unnecessary-semicolon,
+       unpacking-non-sequence,
+       unused-format-string-argument
+       unused-format-string-key,
+       # TODO: There might be a couple places where we get unused-import due to
+       # odd monkeypatching, but this is useful in most cases, so we should
+       # uncomment it once we've fixed its meaningful occurrences and left
+       # "pylint: disable" comments on the others.
+       ### unused-import,
+       unused-wildcard-import,
+       used-before-assignment,
+       wildcard-import,
+       # TODO: Go through the rest of these and determine which can be enabled,
+       #       which have fixes needed before they can be enabled, and which
+       #       ones should stay disabled (leave an explanation as to why).
+       # global-at-module-level,
+       # anomalous-unicode-escape-in-string,
+       # not-in-loop,
+       # star-needs-assignment-target,
+       # duplicate-argument-name,
+       # return-in-init,
+       # too-many-star-expressions,
+       # nonlocal-and-global,
+       # return-outside-function,
+       # return-arg-in-generator,
+       # invalid-star-assignment-target,
+       # bad-reversed-sequence,
+       # nonexistent-operator,
+       # yield-outside-function,
+       # init-is-generator,
+       # nonlocal-without-binding,
+       # dangerous-default-value,
+       # duplicate-key,
+       # useless-else-on-loop
+       # expression-not-assigned,
+       # unnecessary-lambda,
+       # pointless-statement,
+       # pointless-string-statement,
+       # unnecessary-pass,
+       # unreachable,
+       # using-constant-test,
+       # bad-super-call,
+       # missing-super-argument,
+       # slots-on-old-class,
+       # super-on-old-class,
+       # property-on-old-class,
+       # not-an-iterable,
+       # not-a-mapping,
+       # lowercase-l-suffix,
+       # invalid-encoded-data,
+       # unpacking-in-except,
+       # import-star-module-level,
+       # long-suffix,
+       # old-octal-literal,
+       # old-ne-operator,
+       # backtick,
+       # metaclass-assignment,
+       # next-method-called,
+       # dict-iter-method,
+       # dict-view-method,
+       # indexing-exception,
+       # raising-string,
+       # using-cmp-argument,
+       # cmp-method,
+       # coerce-method,
+       # delslice-method,
+       # getslice-method,
+       # hex-method,
+       # nonzero-method,
+       # t-method,
+       # setslice-method,
+       # invalid-unary-operand-type,
+       # unsupported-binary-operation,
+       # not-callable,
+       # redundant-keyword-arg,
+       # assignment-from-no-return,
+       # assignment-from-none,
+       # not-context-manager,
+       # repeated-keyword,
+       # no-value-for-parameter,
+       # invalid-sequence-index,
+       # invalid-slice-index,
+       # unexpected-keyword-arg,
+       # unsupported-membership-test,
+       # unsubscriptable-object,
+       # access-member-before-definition,
+       # method-hidden,
+       # assigning-non-slot,
+       # duplicate-bases,
+       # inconsistent-mro,
+       # inherit-non-class,
+       # invalid-slots,
+       # invalid-slots-object,
+       # no-method-argument,
+       # no-self-argument,
+       # unexpected-special-method-signature,
+       # non-iterator-returned,
+       # arguments-differ,
+       # signature-differs,
+       # bad-staticmethod-argument,
+       # non-parent-init-called,
+       # bad-except-order,
+       # catching-non-exception,
+       # bad-exception-context,
+       # notimplemented-raised,
+       # misplaced-bare-raise,
+       # duplicate-except,
+       # nonstandard-exception,
+       # binary-op-exception,
+       # not-async-context-manager,
+       # yield-inside-async-function
+##############
+
+
+[REPORTS]
+
+# Set the output format. Available formats are text, parseable, colorized, msvs
+# (visual studio) and html
+output-format=text
+
+# Include message's id in output
+include-ids=no
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
+
+# Tells whether to display a full report or only the messages
+reports=no
+
+# Python expression which should return a note less than 10 (10 is the highest
+# note). You have access to the variables errors warning, statement which
+# respectively contain the number of errors / warnings messages and the total
+# number of statements analyzed. This is used by the global evaluation report
+# (R0004).
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+
+# Add a comment according to your evaluation note. This is used by the global
+# evaluation report (R0004).
+comment=no
+
+
+[VARIABLES]
+
+# Tells whether we should check for unused import in __init__ files.
+init-import=no
+
+# A regular expression matching names used for dummy variables (i.e. not used).
+dummy-variables-rgx=_|dummy
+
+# List of additional names supposed to be defined in builtins. Remember that
+# you should avoid to define new builtins when possible.
+additional-builtins=
+
+
+[BASIC]
+
+# Required attributes for module, separated by a comma
+required-attributes=
+
+# List of builtins function names that should not be used, separated by a comma
+bad-functions=map,filter,apply,input
+
+# Regular expression which should only match correct module names
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Regular expression which should only match correct module level names
+const-rgx=(([A-Z_][A-Z0-9_]*)|([a-z_][a-z0-9_]*)|(__.*__))$
+
+# Regular expression which should only match correct class names
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+
+# Regular expression which should only match correct function names
+#function-rgx=[a-z_][a-z0-9_]{2,50}$
+# Supports methods like "NamesLikeThis1", "_OrLikeThis1", "main".
+# TODO: Also supports names_like_this, but we should work to add pylint-disable
+#       comments around the necessary exceptions, then remove this style.
+function-rgx = (_?([A-Z]+[a-z0-9]+([A-Z]+[a-z0-9]*)*)|main|([a-z_][a-z0-9_]*))$
+# Same as above, but also allows for methods starting with the prefix "test_".
+method-rgx = ((_|test)?([A-Z]+[a-z0-9]+([A-Z]+[a-z0-9]*)*)|main|([a-z_][a-z0-9_]*))$
+
+# Regular expression which should only match correct instance attribute names
+attr-rgx=[a-z_][a-z0-9_]{1,50}$
+
+# Regular expression which should only match correct argument names
+argument-rgx=[a-z_][a-z0-9_]{1,50}$
+
+# Regular expression which should only match correct variable names
+variable-rgx=[a-z_][a-z0-9_]{1,50}$
+
+# Regular expression which should only match correct list comprehension /
+# generator expression variable names
+inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
+
+# Short/common variable names that should always be accepted, separated by comma
+good-names=e,f,i,j,k,Run,x,_
+
+# Bad variable names which should always be refused, separated by a comma
+# TODO: Uncomment these.
+#bad-names=foo,bar,baz,qux,toto,tutu,tata
+
+# Regular expression which should only match functions or classes name which do
+# not require a docstring
+no-docstring-rgx=__.*__
+
+# Minimum number of statements (not actual lines) for functions/classes that
+# require docstrings. Shorter ones are exempt.
+#docstring-min-length=-1
+docstring-min-length=25
+
+
+[MISCELLANEOUS]
+
+# List of note tags to take in consideration, separated by a comma.
+notes=FIXME,XXX,TODO
+
+
+[FORMAT]
+
+# Ignore long lines only if they're allowed to be longer, e.g. import
+# statements.
+ignore-long-lines=(?x)
+  (^\s*(import|from)\s
+   |^\s*(\#\ )?<?https?:\/\/[^\s\/$.?#].[^\s]*>?$
+   )
+
+indent-after-paren=4
+
+# String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
+# tab). In gsutil, we prefer to use 2-space indentation.
+indent-string='  '
+
+# Maximum number of characters on a single line.
+max-line-length=80
+
+# Maximum number of lines in a module.
+max-module-lines=10000
+
+# Allow lines of the style `if some_condition: return`.
+single-line-if-stmt=yes
+
+
+[SIMILARITIES]
+
+# Minimum lines number of a similarity.
+min-similarity-lines=4
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+
+[TYPECHECK]
+
+# Tells whether missing members accessed in mixin class should be ignored. A
+# mixin class is detected if its name ends with "mixin" (case insensitive).
+ignore-mixin-members=yes
+
+# List of classes names for which member attributes should not be checked
+# (useful for classes with attributes dynamically set).
+ignored-classes=SQLObject
+
+# When zope mode is activated, add a predefined set of Zope acquired attributes
+# to generated-members.
+zope=no
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E0201 when accessed.
+generated-members=REQUEST,acl_users,aq_parent
+
+
+[DESIGN]
+
+# Maximum number of arguments for function / method
+#max-args=5
+max-args=15
+
+# Argument names that match this expression will be ignored. Default to name
+# with leading underscore
+ignored-argument-names=_.*
+
+# Maximum number of locals for function / method body
+#max-locals=15
+max-locals=50
+
+# Maximum number of return / yield for function / method body
+#max-returns=6
+max-returns=10
+
+# Maximum number of branch for function / method body
+#max-branches=12
+max-branches=80
+
+# Maximum number of statements in function / method body
+#max-statements=50
+max-statements=200
+
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=7
+
+# Minimum number of public methods for a class (see R0903).
+#min-public-methods=2
+min-public-methods=0
+
+# Maximum number of public methods for a class (see R0904).
+#max-public-methods=20
+max-public-methods=50
+
+
+[IMPORTS]
+
+# Deprecated modules which should not be used, separated by a comma
+### deprecated-modules=regsub,TERMIOS,Bastion,rexec
+
+# Create a graph of every (i.e. internal and external) dependencies in the
+# given file (report RP0402 must not be disabled)
+import-graph=
+
+# Create a graph of external dependencies in the given file (report RP0402 must
+# not be disabled)
+ext-import-graph=
+
+# Create a graph of internal dependencies in the given file (report RP0402 must
+# not be disabled)
+int-import-graph=
+
+
+[CLASSES]
+
+# List of interface methods to ignore, separated by a comma. This is used for
+# instance to not check methods defines in Zope's Interface base class.
+ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+
+# List of method names used to declare (i.e. assign) instance attributes.
+defining-attr-methods=__init__,__new__,setUp

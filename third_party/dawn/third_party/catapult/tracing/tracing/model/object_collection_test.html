@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/object_collection.html">
+<link rel="import" href="/tracing/model/scoped_id.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TestObjectInstance = function(
+      parent, scopedId, category, name, creationTs) {
+    tr.model.ObjectInstance.call(
+        this, parent, scopedId, category, name, creationTs);
+  };
+
+  TestObjectInstance.prototype = {
+    __proto__: tr.model.ObjectInstance.prototype
+  };
+
+  test('objectInstanceSubtype', function() {
+    // Register that TestObjects are bound to TestObjectInstance.
+    tr.model.ObjectInstance.subTypes.register(
+        TestObjectInstance,
+        {typeName: 'TestObject'});
+
+    try {
+      const collection = new tr.model.ObjectCollection({ });
+      const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+      collection.idWasCreated(
+          scopedId, 'tr.e.cc', 'Frame', 10);
+      collection.idWasDeleted(
+          scopedId, 'tr.e.cc', 'Frame', 15);
+      collection.idWasCreated(
+          scopedId, 'skia', 'TestObject', 20);
+      collection.idWasDeleted(
+          scopedId, 'skia', 'TestObject', 25);
+
+      const testFrame = collection.getObjectInstanceAt(scopedId, 10);
+      assert.instanceOf(testFrame, tr.model.ObjectInstance);
+      assert.notInstanceOf(testFrame, TestObjectInstance);
+
+      const testObject = collection.getObjectInstanceAt(scopedId, 20);
+      assert.instanceOf(testObject, tr.model.ObjectInstance);
+      assert.instanceOf(testObject, TestObjectInstance);
+    } finally {
+      tr.model.ObjectInstance.subTypes.unregister(TestObjectInstance);
+    }
+  });
+
+  test('twoSnapshots', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasCreated(
+        scopedId, 'cat', 'Frame', 10);
+    collection.addSnapshot(
+        scopedId, 'cat', 'Frame', 10, {foo: 1});
+    collection.addSnapshot(
+        scopedId, 'cat', 'Frame', 20, {foo: 2});
+
+    collection.updateBounds();
+    assert.strictEqual(collection.bounds.min, 10);
+    assert.strictEqual(collection.bounds.max, 20);
+
+    const s0 = collection.getSnapshotAt(scopedId, 1);
+    assert.isUndefined(s0);
+
+    const s1 = collection.getSnapshotAt(scopedId, 10);
+    assert.strictEqual(s1.args.foo, 1);
+
+    const s2 = collection.getSnapshotAt(scopedId, 15);
+    assert.strictEqual(s2.args.foo, 1);
+    assert.strictEqual(s1, s2);
+
+    const s3 = collection.getSnapshotAt(scopedId, 20);
+    assert.strictEqual(s3.args.foo, 2);
+    assert.strictEqual(s1.object, s3.object);
+
+    const s4 = collection.getSnapshotAt(scopedId, 25);
+    assert.strictEqual(s4, s3);
+  });
+
+  test('twoObjectsSharingOneID', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasCreated(
+        scopedId, 'tr.e.cc', 'Frame', 10);
+    collection.idWasDeleted(
+        scopedId, 'tr.e.cc', 'Frame', 15);
+    collection.idWasCreated(
+        scopedId, 'skia', 'Picture', 20);
+    collection.idWasDeleted(
+        scopedId, 'skia', 'Picture', 25);
+
+    const frame = collection.getObjectInstanceAt(scopedId, 10);
+    assert.strictEqual(frame.category, 'tr.e.cc');
+    assert.strictEqual(frame.name, 'Frame');
+
+    const picture = collection.getObjectInstanceAt(scopedId, 20);
+    assert.strictEqual(picture.category, 'skia');
+    assert.strictEqual(picture.name, 'Picture');
+
+    const typeNames = Object.keys(collection.getAllInstancesByTypeName());
+    typeNames.sort();
+    assert.deepEqual(
+        ['Frame', 'Picture'],
+        typeNames);
+    assert.deepEqual(
+        [frame],
+        collection.getAllInstancesByTypeName().Frame);
+    assert.deepEqual(
+        [picture],
+        collection.getAllInstancesByTypeName().Picture);
+  });
+
+  test('createSnapDelete', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasCreated(
+        scopedId, 'cat', 'Frame', 10);
+    collection.addSnapshot(
+        scopedId, 'cat', 'Frame', 10, {foo: 1});
+    collection.idWasDeleted(
+        scopedId, 'cat', 'Frame', 15);
+
+    collection.updateBounds();
+    assert.strictEqual(collection.bounds.min, 10);
+    assert.strictEqual(collection.bounds.max, 15);
+
+    const s10 = collection.getSnapshotAt(scopedId, 10);
+    const i10 = s10.objectInstance;
+    assert.strictEqual(i10.creationTs, 10);
+    assert.strictEqual(i10.deletionTs, 15);
+  });
+
+  test('boundsOnUndeletedObject', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasCreated(
+        scopedId, 'cat', 'Frame', 10);
+    collection.addSnapshot(
+        scopedId, 'cat', 'Frame', 15, {foo: 1});
+
+    collection.updateBounds();
+    assert.strictEqual(10, collection.bounds.min);
+    assert.strictEqual(15, collection.bounds.max);
+  });
+
+  test('snapshotWithCustomBaseTypeThenDelete', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    const s10 = collection.addSnapshot(
+        scopedId, 'cat', 'cc::PictureLayerImpl', 10, {}, 'cc::LayerImpl');
+    collection.idWasDeleted(
+        scopedId, 'cat', 'cc::LayerImpl', 15);
+    collection.updateBounds();
+    assert.strictEqual(10, collection.bounds.min);
+    assert.strictEqual(15, collection.bounds.max);
+    assert.strictEqual(s10.objectInstance.name, 'cc::PictureLayerImpl');
+    assert.strictEqual(s10.objectInstance.baseTypeName, 'cc::LayerImpl');
+  });
+
+  test('newWithSnapshotThatChangesBaseType', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    const i10 = collection.idWasCreated(
+        scopedId, 'cat', 'cc::LayerImpl', 10);
+    const s15 = collection.addSnapshot(
+        scopedId, 'cat', 'cc::PictureLayerImpl', 15, {}, 'cc::LayerImpl');
+    collection.updateBounds();
+    assert.strictEqual(10, collection.bounds.min);
+    assert.strictEqual(15, collection.bounds.max);
+    assert.strictEqual(s15.objectInstance, i10);
+    assert.strictEqual(i10.name, 'cc::PictureLayerImpl');
+    assert.strictEqual(i10.baseTypeName, 'cc::LayerImpl');
+  });
+
+  test('deleteThenSnapshotWithCustomBase', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasDeleted(
+        scopedId, 'cat', 'cc::LayerImpl', 10);
+    const s15 = collection.addSnapshot(
+        scopedId, 'cat', 'cc::PictureLayerImpl', 15, {}, 'cc::LayerImpl');
+    collection.updateBounds();
+    assert.strictEqual(10, collection.bounds.min);
+    assert.strictEqual(15, collection.bounds.max);
+    assert.strictEqual(s15.objectInstance.name, 'cc::PictureLayerImpl');
+  });
+
+  test('autoDelete', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId = new tr.model.ScopedId('ptr', '0x1000');
+    collection.idWasCreated(
+        scopedId, 'cat', 'Frame', 10);
+    collection.addSnapshot(
+        scopedId, 'cat', 'Frame', 10, {foo: 1});
+    collection.autoDeleteObjects(15);
+
+    const s10 = collection.getSnapshotAt(scopedId, 10);
+    const i10 = s10.objectInstance;
+    assert.strictEqual(15, i10.deletionTs);
+  });
+
+  test('differentScopes', function() {
+    const collection = new tr.model.ObjectCollection({});
+    const scopedId1 = new tr.model.ScopedId('ptr', '0x1000');
+    const scopedId2 = new tr.model.ScopedId('cc', '0x1000');
+    collection.idWasCreated(
+        scopedId1, 'cat', 'ptr::object', 10);
+    collection.idWasDeleted(
+        scopedId1, 'cat', 'ptr::object', 15);
+    collection.idWasCreated(
+        scopedId2, 'cat', 'cc::object', 10);
+    collection.idWasDeleted(
+        scopedId2, 'cat', 'cc::object', 15);
+
+    let instance = collection.getObjectInstanceAt(scopedId1, 10);
+    assert.strictEqual(instance.name, 'ptr::object');
+
+    instance = collection.getObjectInstanceAt(scopedId2, 10);
+    assert.strictEqual(instance.name, 'cc::object');
+  });
+});
+</script>

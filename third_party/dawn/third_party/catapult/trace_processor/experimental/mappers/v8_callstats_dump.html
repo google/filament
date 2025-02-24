@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/metrics/v8/runtime_stats_metric.html">
+<link rel="import" href="/tracing/mre/function_handle.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+
+tr.exportTo('tr.mre', function() {
+  function v8CallStatsDump(result, model) {
+    var values = new tr.v.HistogramSet();
+
+    tr.metrics.v8.runtimeStatsMetric(values, model);
+    var runtimeStatsMap = new Map();
+    var sourceValues = values.sourceValues;
+    for (var value of values) {
+      // Exclude top level ones except for 'Total' as they are
+      // recalculated by the consumer.
+      if (sourceValues.lookup(value.guid) &&
+          !value.name.startsWith('Total:')) {
+        continue;
+      }
+      var arr = value.name.split(':');
+      if (runtimeStatsMap[arr[0]] === undefined) {
+        runtimeStatsMap[arr[0]] = {time: null, count: null};
+      }
+      if (arr[1] === 'count') {
+        runtimeStatsMap[arr[0]].count = value.sum;
+      } else {
+        runtimeStatsMap[arr[0]].time = Number(value.sum).toFixed(2);
+      }
+    }
+    for (var entry in runtimeStatsMap) {
+      result.addPair(entry, runtimeStatsMap[entry]);
+    }
+  }
+
+  tr.mre.FunctionRegistry.register(v8CallStatsDump);
+
+  // Exporting for tests.
+  return {
+    v8CallStatsDump: v8CallStatsDump
+  };
+});
+
+</script>

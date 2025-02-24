@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses trace_marker events that were inserted in the trace by
+ * userland.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux trace mark events that were inserted in the trace by userland.
+   * @constructor
+   */
+  function BusParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('memory_bus_usage',
+        BusParser.prototype.traceMarkWriteBusEvent.bind(this));
+
+    this.model_ = importer.model_;
+    this.ppids_ = {};
+  }
+
+  BusParser.prototype = {
+    __proto__: Parser.prototype,
+
+    traceMarkWriteBusEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const re = new RegExp('bus=(\\S+) rw_bytes=(\\d+) r_bytes=(\\d+) ' +
+                            'w_bytes=(\\d+) cycles=(\\d+) ns=(\\d+)');
+      const event = re.exec(eventBase.details);
+
+      const name = event[1];
+      const rwBytes = parseInt(event[2]);
+      const rBytes = parseInt(event[3]);
+      const wBytes = parseInt(event[4]);
+      const cycles = parseInt(event[5]);
+      const ns = parseInt(event[6]);
+
+      // BW in MiB/s.
+      const sec = tr.b.convertUnit(ns, tr.b.UnitPrefixScale.METRIC.NANO,
+          tr.b.UnitPrefixScale.METRIC.NONE);
+      const readBandwidthInBps = rBytes / sec;
+      const readBandwidthInMiBps = tr.b.convertUnit(readBandwidthInBps,
+          tr.b.UnitPrefixScale.BINARY.NONE,
+          tr.b.UnitPrefixScale.BINARY.MEBI);
+      const writeBandwidthInBps = wBytes / sec;
+      const writeBandwidthInMiBps = tr.b.convertUnit(writeBandwidthInBps,
+          tr.b.UnitPrefixScale.BINARY.NONE,
+          tr.b.UnitPrefixScale.BINARY.MEBI);
+
+      let ctr = this.model_.kernel
+          .getOrCreateCounter(null, 'bus ' + name + ' read');
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, readBandwidthInMiBps);
+      });
+
+      ctr = this.model_.kernel
+          .getOrCreateCounter(null, 'bus ' + name + ' write');
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, writeBandwidthInMiBps);
+      });
+
+      return true;
+    }
+  };
+
+  Parser.register(BusParser);
+
+  return {
+    BusParser,
+  };
+});
+</script>

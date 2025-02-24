@@ -1,0 +1,11 @@
+Name: Bison skeletons
+URL: https://git.savannah.gnu.org/r/bison.git/
+Version: 3.3.2
+License: GPL-3.0
+License File: LICENSE
+Shipped: no
+Security critical: no
+
+Description:
+Bison is a parser generator. It uses skeleton files as templates for building
+similar languages.

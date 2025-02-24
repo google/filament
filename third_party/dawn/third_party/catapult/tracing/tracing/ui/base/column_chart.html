@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/chart_base_2d_brushable_x.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const ColumnChart = tr.ui.b.define('column-chart', tr.ui.b.ChartBase2DBrushX);
+
+  ColumnChart.prototype = {
+    __proto__: tr.ui.b.ChartBase2DBrushX.prototype,
+
+    decorate() {
+      super.decorate();
+
+      // ColumnChart allows bars to have arbitrary, non-uniform widths. Bars
+      // need not all be the same width. The width of each bar is automatically
+      // computed from the bar's x-coordinate and that of the next bar, which
+      // can not define the width of the last bar. This is the width (in the
+      // xScale's domain (as opposed to the xScale's range (which is measured in
+      // pixels))) of the last bar. When there are at least 2 bars, this is
+      // computed as the average width of the bars. When there is a single bar,
+      // this must default to a non-zero number so that the width of the only
+      // bar will not be zero.
+      this.xCushion_ = 1;
+
+      this.isStacked_ = false;
+      this.isGrouped_ = false;
+
+      this.enableHoverBox = true;
+      this.displayXInHover = false;
+      this.enableToolTip = false;
+
+      this.toolTipCallBack_ = () => {};
+    },
+
+    set toolTipCallBack(callback) {
+      this.toolTipCallBack_ = callback;
+    },
+
+    get toolTipCallBack() {
+      return this.toolTipCallBack_;
+    },
+
+    set isGrouped(grouped) {
+      this.isGrouped_ = grouped;
+      if (grouped) {
+        this.getDataSeries('group').color = 'transparent';
+      }
+      this.updateContents_();
+    },
+
+    get isGrouped() {
+      return this.isGrouped_;
+    },
+
+    set isStacked(stacked) {
+      this.isStacked_ = true;
+      this.updateContents_();
+    },
+
+    get isStacked() {
+      return this.isStacked_;
+    },
+
+    get defaultGraphHeight() {
+      return 100;
+    },
+
+    get defaultGraphWidth() {
+      return 10 * this.data_.length;
+    },
+
+    updateScales_() {
+      if (this.data_.length === 0) return;
+
+      let xDifferences = 0;
+      let currentX = undefined;
+      let previousX = undefined;
+      this.data_.forEach(function(datum, index) {
+        previousX = currentX;
+        currentX = this.getXForDatum_(datum, index);
+        if (previousX !== undefined) {
+          xDifferences += currentX - previousX;
+        }
+      }, this);
+
+      // X.
+      // Leave a cushion on the right so that the last rect doesn't
+      // exceed the chart boundaries. The last rect's width is set to the
+      // average width of the rects, which is chart.width / data.length.
+      this.xScale_.range([0, this.graphWidth]);
+      const domain = d3.extent(this.data_, this.getXForDatum_.bind(this));
+      if (this.data_.length > 1) {
+        this.xCushion_ = xDifferences / (this.data_.length - 1);
+      }
+      this.xScale_.domain([domain[0], domain[1] + this.xCushion_]);
+
+      // Y.
+      this.yScale_.range([this.graphHeight, 0]);
+      this.yScale_.domain(this.getYScaleDomain_(
+          this.dataRange.min, this.dataRange.max));
+    },
+
+    updateDataRange_() {
+      if (!this.isStacked) {
+        super.updateDataRange_();
+        return;
+      }
+
+      this.autoDataRange_.reset();
+      this.autoDataRange_.addValue(0);
+      for (const datum of this.data_) {
+        let sum = 0;
+        for (const [key, series] of this.seriesByKey_) {
+          if (datum[key] === undefined) {
+            continue;
+          } else if (this.isGrouped && key === 'group') {
+            continue;
+          }
+          sum += datum[key];
+        }
+        this.autoDataRange_.addValue(sum);
+      }
+    },
+
+    getStackedRectsForDatum_(datum, index) {
+      const stacks = [];
+      let bottom = this.yScale_.range()[0];
+      let sum = 0;
+      for (const [key, series] of this.seriesByKey_) {
+        if (datum[key] === undefined || !this.isSeriesEnabled(key)) {
+          continue;
+        } else if (this.isGrouped && key === 'group') {
+          continue;
+        }
+
+        sum += this.dataRange.clamp(datum[key]);
+        const heightPx = bottom - this.yScale_(sum);
+        bottom -= heightPx;
+        stacks.push({
+          key,
+          value: datum[key],
+          color: this.getDataSeries(key).color,
+          heightPx,
+          topPx: bottom,
+          underflow: sum < this.dataRange.min,
+          overflow: sum > this.dataRange.max,
+        });
+      }
+      return stacks;
+    },
+
+    getRectsForDatum_(datum, index) {
+      if (this.isStacked) {
+        return this.getStackedRectsForDatum_(datum, index);
+      }
+
+      const stacks = [];
+      for (const [key, series] of this.seriesByKey_) {
+        if (datum[key] === undefined || !this.isSeriesEnabled(key)) {
+          continue;
+        }
+
+        const clampedValue = this.dataRange.clamp(datum[key]);
+        const topPx = this.yScale_(Math.max(
+            clampedValue, this.getYScaleMin_()));
+        stacks.push({
+          key,
+          value: datum[key],
+          topPx,
+          heightPx: this.yScale_.range()[0] - topPx,
+          color: this.getDataSeries(key).color,
+          underflow: datum[key] < this.dataRange.min,
+          overflow: datum[key] > this.dataRange.max,
+        });
+      }
+      stacks.sort(function(a, b) {
+        return b.topPx - a.topPx;
+      });
+      return stacks;
+    },
+
+    drawToolTip_(rect) {
+      if (!this.enableToolTip) return;
+
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      chartAreaSel.selectAll('.tooltip').remove();
+
+      const labelText = 'View Breakdown';
+      const labelWidth = tr.ui.b.getSVGTextSize(
+          this.chartAreaElement, labelText).width + 5;
+      const labelHeight = this.textHeightPx_;
+
+      const toolTipLeftPx = rect.leftPx + (rect.widthPx / 2);
+      const toolTipTopPx = rect.topPx;
+
+      chartAreaSel
+          .append('rect')
+          .attr('class', 'tooltip')
+          .attr('fill', 'white')
+          .attr('opacity', 0.8)
+          .attr('stroke', 'black')
+          .attr('x', toolTipLeftPx)
+          .attr('y', toolTipTopPx)
+          .attr('width', labelWidth + 5)
+          .attr('height', labelHeight + 10);
+
+      chartAreaSel
+          .append('text')
+          .style('cursor', 'pointer')
+          .attr('class', 'tooltip')
+          .on('mousedown', () => this.toolTipCallBack_(rect))
+          .attr('fill', 'blue')
+          .attr('x', toolTipLeftPx + 4)
+          .attr('y', toolTipTopPx + labelHeight)
+          .attr('text-decoration', 'underline')
+          .text(labelText);
+    },
+
+    drawHoverValueBox_(rect) {
+      const rectHoverEvent = new tr.b.Event('rect-mouseenter');
+      rectHoverEvent.rect = rect;
+      this.dispatchEvent(rectHoverEvent);
+
+      if (!this.enableHoverBox) return;
+
+      const seriesKeys = [...this.seriesByKey_.keys()];
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      chartAreaSel.selectAll('.hover').remove();
+      let keyWidthPx = 0;
+      let keyHeightPx = 0;
+      if (seriesKeys.length > 1 && !this.isGrouped) {
+        keyWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, rect.key).width + 5;
+        keyHeightPx = this.textHeightPx_;
+      }
+
+      let xLabelWidthPx = 0;
+      let xLabelHeightPx = 0;
+      if (this.displayXInHover) {
+        xLabelWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, rect.datum.x).width + 5;
+        xLabelHeightPx = this.textHeightPx_;
+      }
+
+      let groupWidthPx = 0;
+      let groupHeightPx = 0;
+      if (this.isGrouped && rect.datum.group !== undefined) {
+        groupWidthPx = tr.ui.b.getSVGTextSize(
+            this.chartAreaElement, rect.datum.group).width + 5;
+        groupHeightPx = this.textHeightPx_;
+      }
+
+      let value = rect.value;
+      if (this.unit) value = this.unit.format(value);
+      const valueWidthPx = tr.ui.b.getSVGTextSize(
+          this.chartAreaElement, value).width + 5;
+      const valueHeightPx = this.textHeightPx_;
+
+      const hoverWidthPx = Math.max(keyWidthPx, valueWidthPx,
+          xLabelWidthPx, groupWidthPx);
+
+      let hoverLeftPx = rect.leftPx + (rect.widthPx / 2);
+      hoverLeftPx = Math.max(hoverLeftPx - hoverWidthPx, -this.margin.left);
+
+      const hoverHeightPx = keyHeightPx + valueHeightPx +
+          xLabelHeightPx + groupHeightPx + 2;
+
+      const topOffSetPx = this.isGrouped ? 36 : 12;
+      let hoverTopPx = rect.topPx;
+      hoverTopPx = Math.min(
+          hoverTopPx, this.getBoundingClientRect().height -
+          hoverHeightPx - topOffSetPx);
+
+      chartAreaSel
+          .append('rect')
+          .attr('class', 'hover')
+          .on('mouseleave', () => this.clearHoverValueBox_(rect))
+          .on('mousedown', this.drawToolTip_.bind(this, rect))
+          .attr('fill', 'white')
+          .attr('stroke', 'black')
+          .attr('x', hoverLeftPx)
+          .attr('y', hoverTopPx)
+          .attr('width', hoverWidthPx)
+          .attr('height', hoverHeightPx);
+
+      if (seriesKeys.length > 1 && !this.isGrouped) {
+        chartAreaSel
+            .append('text')
+            .attr('class', 'hover')
+            .on('mouseleave', () => this.clearHoverValueBox_(rect))
+            .on('mousedown', this.drawToolTip_.bind(this, rect))
+            .attr('fill', rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx - 2)
+            .text(rect.key);
+      }
+
+      if (this.displayXInHover) {
+        chartAreaSel.append('text')
+            .attr('class', 'hover')
+            .on('mouseleave', () => this.clearHoverValueBox_(rect))
+            .on('mousedown', this.drawToolTip_.bind(this, rect))
+            .attr('fill', rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx + xLabelHeightPx - 2)
+            .text(rect.datum.x);
+      }
+
+      if (this.isGrouped && rect.datum.group !== undefined) {
+        chartAreaSel.append('text')
+            .attr('class', 'hover')
+            .on('mouseleave', () => this.clearHoverValueBox_(rect))
+            .on('mousedown', this.drawToolTip_.bind(this, rect))
+            .attr('fill', rect.color)
+            .attr('x', hoverLeftPx + 2)
+            .attr('y', hoverTopPx + keyHeightPx +
+                xLabelHeightPx + groupHeightPx - 2)
+            .text(rect.datum.group);
+      }
+
+      chartAreaSel
+          .append('text')
+          .attr('class', 'hover')
+          .on('mouseleave', () => this.clearHoverValueBox_(rect))
+          .on('mousedown', this.drawToolTip_.bind(this, rect))
+          .attr('fill', rect.color)
+          .attr('x', hoverLeftPx + 2)
+          .attr('y', hoverTopPx + hoverHeightPx - 2)
+          .text(value);
+    },
+
+    clearHoverValueBox_(rect) {
+      const event = window.event;
+      if (event.relatedTarget &&
+          Array.from(event.relatedTarget.classList).includes('hover')) {
+        return;
+      }
+
+      const rectHoverEvent = new tr.b.Event('rect-mouseleave');
+      rectHoverEvent.rect = rect;
+      this.dispatchEvent(rectHoverEvent);
+
+      d3.select(this.chartAreaElement).selectAll('.hover').remove();
+    },
+
+    drawRect_(rect, sel) {
+      sel = sel.data([rect]);
+      sel.enter().append('rect')
+          .attr('fill', rect.color)
+          .attr('x', rect.leftPx)
+          .attr('y', rect.topPx)
+          .attr('width', rect.widthPx)
+          .attr('height', rect.heightPx)
+          .on('mousedown', this.drawToolTip_.bind(this, rect))
+          .on('mouseenter', this.drawHoverValueBox_.bind(this, rect))
+          .on('mouseleave', this.clearHoverValueBox_.bind(this, rect));
+      sel.exit().remove();
+    },
+
+    drawUnderflow_(rect, sel) {
+      sel = sel.data([rect]);
+      sel.enter().append('text')
+          .text('*')
+          .attr('fill', rect.color)
+          .attr('x', rect.leftPx + (rect.widthPx / 2))
+          .attr('y', this.graphHeight)
+          .on('mousedown', this.drawToolTip_.bind(this, rect))
+          .on('mouseenter', this.drawHoverValueBox_.bind(this, rect))
+          .on('mouseleave', this.clearHoverValueBox_.bind(this, rect));
+      sel.exit().remove();
+    },
+
+    drawOverflow_(rect, sel) {
+      sel = sel.data([rect]);
+      sel.enter().append('text')
+          .text('*')
+          .attr('fill', rect.color)
+          .attr('x', rect.leftPx + (rect.widthPx / 2))
+          .attr('y', 0);
+      sel.exit().remove();
+    },
+
+    updateDataContents_(dataSel) {
+      dataSel.selectAll('*').remove();
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      const seriesKeys = [...this.seriesByKey_.keys()];
+      const rectsSel = dataSel.selectAll('path');
+      this.data_.forEach(function(datum, index) {
+        const currentX = this.getXForDatum_(datum, index);
+        let width = undefined;
+        if (index < (this.data_.length - 1)) {
+          const nextX = this.getXForDatum_(this.data_[index + 1], index + 1);
+          width = nextX - currentX;
+        } else {
+          width = this.xCushion_;
+        }
+        for (const rect of this.getRectsForDatum_(datum, index)) {
+          rect.datum = datum;
+          rect.index = index;
+          rect.leftPx = this.xScale_(currentX);
+          rect.rightPx = this.xScale_(currentX + width);
+          rect.widthPx = rect.rightPx - rect.leftPx;
+          this.drawRect_(rect, rectsSel);
+          if (rect.underflow) {
+            this.drawUnderflow_(rect, rectsSel);
+          }
+          if (rect.overflow) {
+            this.drawOverflow_(rect, rectsSel);
+          }
+        }
+      }, this);
+    }
+  };
+
+  return {
+    ColumnChart,
+  };
+});
+</script>

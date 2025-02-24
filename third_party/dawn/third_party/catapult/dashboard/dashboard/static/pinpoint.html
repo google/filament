@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+tr.exportTo('d', function() {
+  // TODO(simonhatch): Just making a single spot to check for which Pinpoint
+  // bots are active. Remove this whole file once Pinpoint is fully rolled out.
+  const PINPOINT_BOTS = [
+    'android-go-perf',
+    'android-go_webview-perf',
+    'android-nexus5x-perf',
+    'android-pixel2-perf',
+    'android-pixel2_webview-perf',
+    'linux-perf',
+    'linux-perf-fyi',
+    'mojo-linux-perf',
+    'Mojo Linux Perf',
+    'mac-laptop_low_end-perf',
+    'mac-laptop_high_end-perf',
+    'win-10-perf',
+
+    'android-nexus5',
+    'android-nexus5X',
+    'android-webview-nexus5X',
+    'android-webview-nexus6',
+    'chromium-rel-win10',
+    'chromium-rel-win7-dual',
+    'chromium-rel-win7-gpu-nvidia',
+
+    'Android Go',
+    'Android Nexus5 Perf',
+    'Android Nexus5X Perf',
+    'Android Nexus5X WebView Perf',
+    'Android Nexus6 WebView Perf',
+    'Win 7 Perf',
+    'Win 7 Nvidia GPU Perf',
+    'Win 10 Perf',
+
+    'VR Perf Tester Pixel XL',
+    'VR Perf Tester Pixel 2 XL',
+
+    // V8 performance bots.
+    'Atom_x64',
+    'ChromeOS',
+    'Nexus5',
+    'Nexus7',
+    'Pixel2',
+    'ia32',
+    'x64',
+  ];
+
+  return {
+    PINPOINT_BOTS,
+  };
+});
+</script>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Buildbucket PUT Test</title>
+  <style>
+    table {
+      border-spacing: 0px;
+      padding-top: 20px;
+    }
+
+    td {
+      border: 1px solid #eee;
+      border-bottom: 2px solid #ccc;
+      padding-right: 7px;
+      padding-left: 7px;
+    }
+
+    tr:first-child td {
+      border-top: 0px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0px;
+    }
+  </style>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <h1>Buildbucket PUT Test</h1>
+  <form method="POST">
+    <label>Test type
+      <input type="text" name="test_type" value="perf">
+    </label><br>
+    <label>Recipe tester bot name
+      <input type="text" name="recipe_tester_name" value="linux_perf_tester">
+    </label><br>
+    <label>Command
+      <input type="text" name="command" value="xvfb-run -a src/tools/perf/run_benchmark -v --browser=release blink_perf.parser">
+    </label><br>
+    <label>Metric
+      <input type="text" name="metric" value="query-selector-first/query-selector-first">
+    </label><br>
+    <label>Good revision (commit position OR git hash)
+      <input type="text" name="good_revision" value="">
+    </label><br>
+    <label>Bad revision
+      <input type="text" name="bad_revision" value="">
+    </label><br>
+    <label>Repeat count
+      <input type="text" name="repeat_count" value="20">
+    </label><br>
+    <label>Timeout in minutes for each test run
+      <input type="text" name="max_time_minutes" value="5">
+    </label><br>
+    <label>Built images GS bucket
+      <input type="text" name="gs_bucket" value="chrome-perf">
+    </label><br>
+    <label>Bug ID
+      <input type="text" name="bug_id" value="">
+    </label><br>
+    <input type="submit">
+  </form>
+  </table>
+</body>
+</html>

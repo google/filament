@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * @constructor
+   */
+  function ModelStats() {
+    this.traceEventCountsByKey_ = new Map();
+    this.allTraceEventStats_ = [];
+
+    this.traceEventStatsInTimeIntervals_ = new Map();
+    this.allTraceEventStatsInTimeIntervals_ = [];
+
+    this.hasEventSizesinBytes_ = false;
+
+    this.traceImportDurationMs_ = undefined;
+  }
+
+  ModelStats.prototype = {
+    TIME_INTERVAL_SIZE_IN_MS: 100,
+
+    willProcessBasicTraceEvent(phase, category, title, ts,
+        opt_eventSizeinBytes) {
+      const key = phase + '/' + category + '/' + title;
+      let eventStats = this.traceEventCountsByKey_.get(key);
+      if (eventStats === undefined) {
+        eventStats = {
+          phase,
+          category,
+          title,
+          numEvents: 0,
+          totalEventSizeinBytes: 0
+        };
+        this.traceEventCountsByKey_.set(key, eventStats);
+        this.allTraceEventStats_.push(eventStats);
+      }
+      eventStats.numEvents++;
+
+      const timeIntervalKey = Math.floor(
+          tr.b.Unit.timestampFromUs(ts) / this.TIME_INTERVAL_SIZE_IN_MS);
+      let eventStatsByTimeInverval =
+          this.traceEventStatsInTimeIntervals_.get(timeIntervalKey);
+      if (eventStatsByTimeInverval === undefined) {
+        eventStatsByTimeInverval = {
+          timeInterval: timeIntervalKey,
+          numEvents: 0,
+          totalEventSizeinBytes: 0
+        };
+        this.traceEventStatsInTimeIntervals_.set(timeIntervalKey,
+            eventStatsByTimeInverval);
+        this.allTraceEventStatsInTimeIntervals_.push(eventStatsByTimeInverval);
+      }
+      eventStatsByTimeInverval.numEvents++;
+
+      if (opt_eventSizeinBytes !== undefined) {
+        this.hasEventSizesinBytes_ = true;
+        eventStats.totalEventSizeinBytes += opt_eventSizeinBytes;
+        eventStatsByTimeInverval.totalEventSizeinBytes += opt_eventSizeinBytes;
+      }
+    },
+
+    get allTraceEventStats() {
+      return this.allTraceEventStats_;
+    },
+
+    get allTraceEventStatsInTimeIntervals() {
+      return this.allTraceEventStatsInTimeIntervals_;
+    },
+
+    get hasEventSizesinBytes() {
+      return this.hasEventSizesinBytes_;
+    },
+
+    get traceImportDurationMs() {
+      return this.traceImportDurationMs_;
+    },
+
+    set traceImportDurationMs(traceImportDurationMs) {
+      this.traceImportDurationMs_ = traceImportDurationMs;
+    }
+  };
+
+  return {
+    ModelStats,
+  };
+});
+</script>

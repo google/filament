@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="top_bar_view.html">
+<link rel="import" href="proxy_view.html">
+<link rel="import" href="dns_view.html">
+<link rel="import" href="sockets_view.html">
+<link rel="import" href="alt_svc_view.html">
+<link rel="import" href="spdy_view.html">
+<link rel="import" href="quic_view.html">
+<link rel="import" href="reporting_view.html">
+<link rel="import" href="http_cache_view.html">
+<link rel="import" href="prerender_view.html">
+<link rel="import" href="modules_view.html">
+<link rel="import" href="import_view.html">
+<link rel="import" href="events_view.html">
+<link rel="import" href="timeline_view.html">
+
+<script src="cr.js"></script>
+<script src="assert.js"></script>
+<script src="ui_webui_resources_js_util.js"></script>
+<script src="util.js"></script>
+<script src="table_printer.js"></script>
+<script src="view.js"></script>
+<script src="mouse_over_help.js"></script>
+<script src="tab_switcher_view.js"></script>
+<script src="import_view.js"></script>
+<script src="http_cache_view.js"></script>
+<script src="browser_bridge.js"></script>
+<script src="events_tracker.js"></script>
+<script src="source_tracker.js"></script>
+<script src="resizable_vertical_split_view.js"></script>
+<script src="main.js"></script>
+<script src="time_util.js"></script>
+<script src="log_util.js"></script>
+<script src="loaded_status_view.js"></script>
+<script src="top_bar_view.js"></script>
+<script src="dns_view.js"></script>
+<script src="source_filter_parser.js"></script>
+<script src="source_row.js"></script>
+<script src="events_view.js"></script>
+<script src="details_view.js"></script>
+<script src="source_entry.js"></script>
+<script src="horizontal_scrollbar_view.js"></script>
+<script src="timeline_data_series.js"></script>
+<script src="timeline_graph_view.js"></script>
+<script src="timeline_view.js"></script>
+<script src="log_view_painter.js"></script>
+<script src="log_grouper.js"></script>
+<script src="proxy_view.js"></script>
+<script src="quic_view.js"></script>
+<script src="reporting_view.js"></script>
+<script src="socket_pool_wrapper.js"></script>
+<script src="sockets_view.js"></script>
+<script src="alt_svc_view.js"></script>
+<script src="spdy_view.js"></script>
+<script src="modules_view.js"></script>
+<script src="prerender_view.js"></script>
+<script src="/third_party/jszip/jszip.min.js"></script>
+<dom-module id="netlog-viewer">
+  <template>
+    <style>
+      :host {
+        /* Fill the entire viewport */
+        width: 100vw;
+        height: 100vh;
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+    </style>
+
+      <!-- The bar at the very top of NetLog viewer that identifies the loaded
+           log file. -->
+      <top-bar-view></top-bar-view>
+
+    <!-- The box below the top bar that fills the remaining space and contains
+         everything else -->
+    <div class="flexfill flexrow">
+
+      <!-- The navigation bar on the left to cycle between the different main
+           "tabs" (dns, proxy, import, etc) -->
+      <div id="tab-list" class="scrollable">
+      </div>
+
+      <!-- The box to the right of the tab list that fills the remaining space
+           and contains the active tab (only one of the children below are
+           visible at a time) -->
+      <div class="flexfill flexrow">
+        <proxy-view class="flexfill scrollable"></proxy-view>
+        <dns-view class="flexfill scrollable"></dns-view>
+        <sockets-view class="flexfill scrollable"></sockets-view>
+        <alt-svc-view class="flexfill scrollable"></alt-svc-view>
+        <spdy-view class="flexfill scrollable"></spdy-view>
+        <quic-view class="flexfill scrollable"></quic-view>
+        <reporting-view class="flexfill scrollable"></reporting-view>
+        <http-cache-view class="flexfill scrollable"></http-cache-view>
+        <prerender-view class="flexfill scrollable"></prerender-view>
+        <modules-view class="flexfill scrollable"></modules-view>
+        <import-view class="flexfill scrollable"></import-view>
+        <events-view class="flexfill"></events-view>
+        <timeline-view class="flexfill"></timeline-view>
+      </div>
+  </template>
+  <script>
+    'use strict';
+
+    Polymer({
+      is: 'netlog-viewer',
+      attached: function() {
+        MainView.getInstance();  // entry point, from main.js
+      }
+    });
+  </script>
+</dom-module>

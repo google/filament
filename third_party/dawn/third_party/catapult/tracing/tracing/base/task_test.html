@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/task.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Task = tr.b.Task;
+
+  test('basicAllStepsPass', function() {
+    const results = [];
+
+    const startingTask = new Task(function(task) {
+      results.push('a');
+      task.subTask(function() {
+        results.push('a/1');
+      }, this);
+      task.subTask(function() {
+        results.push('a/2');
+      }, this);
+    }, this);
+    startingTask.after(function() {
+      results.push('b');
+    }, this).after(function() {
+      results.push('c');
+    }, this);
+
+    Task.RunSynchronously(startingTask);
+    assert.deepEqual(results, ['a', 'a/1', 'a/2', 'b', 'c']);
+  });
+
+  test('basicAllStepsPassAsync', function() {
+    const results = [];
+
+    const startingTask = new Task(function(task) {
+      results.push('a');
+      task.subTask(function() {
+        results.push('a/1');
+      }, this);
+      task.subTask(function() {
+        results.push('a/2');
+      }, this);
+    }, this);
+    startingTask.after(function() {
+      results.push('b');
+    }, this).after(function() {
+      results.push('c');
+    }, this);
+
+    const promise = Task.RunWhenIdle(startingTask);
+    promise.then(function() {
+      assert.deepEqual(results, ['a', 'a/1', 'a/2', 'b', 'c']);
+    });
+    return promise;
+  });
+
+  test('taskThatThrowsShouldRejectItsPromise', function() {
+    const startingTask = new Task(function(task) {
+      throw new Error(
+          'IGNORE. This is an expected error to test error handling.');
+    }, this);
+
+    const taskPromise = Task.RunWhenIdle(startingTask);
+
+    return new Promise(function(resolve, reject) {
+      taskPromise.then(function() {
+        reject(new Error('Should have thrown'));
+      }, function(err) {
+        resolve();
+      });
+    });
+  });
+});
+</script>

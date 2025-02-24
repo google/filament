@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Result</title>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  {% if errors %}
+    {% for error in errors %}
+      <h1 class="error">{{error}}</h1>
+    {% endfor %}
+  {% else %}
+    <h1>{{headline}}</h1>
+    <dl class="results">
+      {% for item in results %}
+      <dt>{{item.name}}</dt>
+        <dd {% if item.class %}class="{{item.class}}"{% endif %}>{{item.value}}</dd>
+      {% endfor %}
+    </dl>
+  {% endif %}
+  {% if close_window %}
+    <a href="" onclick="window.close();opener.location.reload();">Close</a>
+  {% else %}
+    <a href="">&laquo; Back</a>
+  {% endif %}
+</body>
+</html>

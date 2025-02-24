@@ -1,0 +1,230 @@
+{
+    "description": [
+        "Copyright 2022 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "frontend_features.json: Features/workarounds for driver bugs and other behaviors seen",
+        "on all platforms."
+    ],
+    "features": [
+        {
+            "name": "lose_context_on_out_of_memory",
+            "category": "Workarounds",
+            "description": [
+                "Some users rely on a lost context notification if a GL_OUT_OF_MEMORY error occurs"
+            ]
+        },
+        {
+            "name": "disable_program_caching_for_transform_feedback",
+            "category": "Workarounds",
+            "description": [
+                "On some GPUs, program binaries don't contain transform feedback varyings"
+            ]
+        },
+        {
+            "name": "disable_program_binary",
+            "category": "Features",
+            "description": [
+                "Disable support for GL_OES_get_program_binary"
+            ],
+            "issue": "http://anglebug.com/42263580"
+        },
+        {
+            "name": "disable_draw_buffers_indexed",
+            "category": "Features",
+            "description": [
+                "Disable support for OES_draw_buffers_indexed and EXT_draw_buffers_indexed"
+            ],
+            "issue": "http://anglebug.com/42266194"
+        },
+        {
+            "name": "disable_anisotropic_filtering",
+            "category": "Workarounds",
+            "description": [
+                "Disable support for anisotropic filtering"
+            ]
+        },
+        {
+            "name": "allow_compressed_formats",
+            "category": "Workarounds",
+            "description": [
+                "Allow compressed formats"
+            ]
+        },
+        {
+            "name": "single_threaded_texture_decompression",
+            "category": "Workarounds",
+            "description": [
+                "Disables multi-threaded decompression of compressed texture formats"
+            ]
+        },
+        {
+            "name": "force_depth_attachment_init_on_clear",
+            "category": "Workarounds",
+            "description": [
+                "Force depth attachment initialization on clear ops"
+            ],
+            "issue": "https://anglebug.com/42265720"
+        },
+        {
+            "name": "enable_capture_limits",
+            "category": "Features",
+            "description": [
+                "Set the context limits like frame capturing was enabled"
+            ],
+            "issue": "http://anglebug.com/42264287"
+        },
+        {
+            "name": "force_robust_resource_init",
+            "category": "Features",
+            "description": [
+                "Force-enable robust resource init"
+            ],
+            "issue": "http://anglebug.com/42264571"
+        },
+        {
+            "name": "force_init_shader_variables",
+            "category": "Features",
+            "description": [
+                "Force-enable shader variable initialization"
+            ]
+        },
+        {
+            "name": "enable_program_binary_for_capture",
+            "category": "Features",
+            "description": [
+                "Even if FrameCapture is enabled, enable GL_OES_get_program_binary"
+            ],
+            "issue": "http://anglebug.com/42264193"
+        },
+        {
+            "name": "force_gl_error_checking",
+            "category": "Features",
+            "description": [
+                "Force GL error checking (i.e. prevent applications from disabling error checking"
+            ],
+            "issue": "https://issuetracker.google.com/220069903"
+        },
+        {
+            "name": "emulate_pixel_local_storage",
+            "category": "Features",
+            "description": [
+                "Emulate ANGLE_shader_pixel_local_storage using shader images"
+            ],
+            "issue": "http://anglebug.com/40096838"
+        },
+        {
+            "name": "cache_compiled_shader",
+            "category": "Features",
+            "description": [
+                "Enable to cache compiled shaders"
+            ],
+            "issue": "http://anglebug.com/42265509"
+        },
+        {
+            "name": "dump_shader_source",
+            "category": "Features",
+            "description": [
+                "Write shader source to temp directory"
+            ],
+            "issue": "http://anglebug.com/42266231"
+        },
+        {
+            "name": "enable_shader_substitution",
+            "category": "Workarounds",
+            "description": [
+                "Check the filesystem for shaders to use instead of those provided through glShaderSource"
+            ],
+            "issue": "http://anglebug.com/42266232"
+        },
+        {
+            "name": "disable_program_caching",
+            "category": "Features",
+            "description": [
+                "Disables saving programs to the cache"
+            ],
+            "issue": "http://anglebug.com/1423136"
+        },
+        {
+            "name": "dump_translated_shaders",
+            "category": "Features",
+            "description": [
+                "Write translated shaders to temp directory"
+            ],
+            "issue": "http://anglebug.com/40644912"
+        },
+        {
+            "name": "enable_translated_shader_substitution",
+            "category": "Workarounds",
+            "description": [
+                "Check the filesystem for translated shaders to use instead of the shader translator's"
+            ],
+            "issue": "http://anglebug.com/40644912"
+        },
+        {
+            "name": "compile_job_is_thread_safe",
+            "category": "Features",
+            "description": [
+                "If false, parts of the compile job cannot be parallelized"
+            ],
+            "issue": "http://anglebug.com/41488637"
+        },
+        {
+            "name": "link_job_is_thread_safe",
+            "category": "Features",
+            "description": [
+                "If false, parts of the link job cannot be parallelized"
+            ],
+            "issue": "http://anglebug.com/41488637"
+        },
+        {
+            "name": "always_run_link_sub_jobs_threaded",
+            "category": "Features",
+            "description": [
+                "If true, sub tasks of the link job are always threaded, regardless of GL_KHR_parallel_shader_compile"
+            ],
+            "issue": "http://anglebug.com/42266842"
+        },
+        {
+            "name": "uncurrent_egl_surface_upon_surface_destroy",
+            "category": "Workarounds",
+            "description": [
+                "Make egl surface uncurrent when calling eglDestroySurface(), if the surface is still bound by the context of current render thread"
+            ],
+            "issue": "https://issuetracker.google.com/292285899"
+        },
+        {
+            "name": "force_minimum_max_vertex_attributes",
+            "category": "Features",
+            "description": [
+                "Force the minimum GL_MAX_VERTEX_ATTRIBS that the context's client version allows."
+            ],
+            "issue": ""
+        },
+        {
+            "name": "force_flush_after_drawcall_using_shadowmap",
+            "category": "Workarounds",
+            "description": [
+                "Force flush after drawcall use shadow map for intel device."
+            ],
+            "issue": "https://issuetracker.google.com/349489248"
+        },
+        {
+            "name": "reject_webgl_shaders_with_undefined_behavior",
+            "category": "Workarounds",
+            "description": [
+                "Attempts to detect undefined behavior when in WebGL mode and reject shaders if any detected."
+            ],
+            "issue": "http://crbug.com/350528343"
+        },
+        {
+            "name": "always_enable_emulated_multidraw_extensions",
+            "category": "Workarounds",
+            "description": [
+                "Enable multi-draw and base vertex base instance extensions for non-WebGL contexts if they are emulated."
+            ],
+            "issue": "http://anglebug.com/355645824"
+        }
+    ]
+}

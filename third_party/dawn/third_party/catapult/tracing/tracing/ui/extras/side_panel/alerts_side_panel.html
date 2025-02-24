@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/line_chart.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel_registry.html">
+
+<dom-module id='tr-ui-e-s-alerts-side-panel'>
+  <template>
+    <style>
+    :host {
+      display: block;
+      width: 250px;
+    }
+    #content {
+      flex-direction: column;
+      display: flex;
+    }
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+
+    <div id='content'>
+      <toolbar id='toolbar'></toolbar>
+      <result-area id='result_area'></result-area>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-e-s-alerts-side-panel',
+  behaviors: [tr.ui.behaviors.SidePanel],
+
+
+  ready() {
+    this.rangeOfInterest_ = new tr.b.math.Range();
+    this.selection_ = undefined;
+  },
+
+  get model() {
+    return this.model_;
+  },
+
+  set model(model) {
+    this.model_ = model;
+    this.updateContents_();
+  },
+
+  set selection(selection) {
+  },
+
+  set rangeOfInterest(rangeOfInterest) {
+  },
+
+  /**
+   * Fires a selection event selecting all alerts of the specified
+   * type.
+   */
+  selectAlertsOfType(alertTypeString) {
+    const alertsOfType = this.model_.alerts.filter(function(alert) {
+      return alert.title === alertTypeString;
+    });
+
+    const event = new tr.model.RequestSelectionChangeEvent();
+    event.selection = new tr.model.EventSet(alertsOfType);
+    this.dispatchEvent(event);
+  },
+
+  /**
+   * Returns a map for the specified alerts where each key is the
+   * alert type string and each value is a list of alerts with that
+   * type.
+   */
+  alertsByType_(alerts) {
+    const alertsByType = {};
+    alerts.forEach(function(alert) {
+      if (!alertsByType[alert.title]) {
+        alertsByType[alert.title] = [];
+      }
+
+      alertsByType[alert.title].push(alert);
+    });
+    return alertsByType;
+  },
+
+  alertsTableRows_(alertsByType) {
+    return Object.keys(alertsByType).map(function(key) {
+      return {
+        alertType: key,
+        count: alertsByType[key].length
+      };
+    });
+  },
+
+  alertsTableColumns_() {
+    return [
+      {
+        title: 'Alert type',
+        value(row) { return row.alertType; },
+        width: '180px'
+      },
+      {
+        title: 'Count',
+        width: '100%',
+        value(row) { return row.count; }
+      }
+    ];
+  },
+
+  createAlertsTable_(alerts) {
+    const alertsByType = this.alertsByType_(alerts);
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = this.alertsTableColumns_();
+    table.tableRows = this.alertsTableRows_(alertsByType);
+    table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+    table.addEventListener('selection-changed', function(e) {
+      const row = table.selectedTableRow;
+      if (row) {
+        this.selectAlertsOfType(row.alertType);
+      }
+    }.bind(this));
+
+    return table;
+  },
+
+  updateContents_() {
+    Polymer.dom(this.$.result_area).textContent = '';
+    if (this.model_ === undefined) return;
+
+    const panel = this.createAlertsTable_(this.model_.alerts);
+    Polymer.dom(this.$.result_area).appendChild(panel);
+  },
+
+  supportsModel(m) {
+    if (m === undefined) {
+      return {
+        supported: false,
+        reason: 'Unknown tracing model'
+      };
+    } else if (m.alerts.length === 0) {
+      return {
+        supported: false,
+        reason: 'No alerts in tracing model'
+      };
+    }
+
+    return {
+      supported: true
+    };
+  },
+
+  get textLabel() {
+    return 'Alerts';
+  }
+});
+
+tr.ui.side_panel.SidePanelRegistry.register(function() {
+  return document.createElement('tr-ui-e-s-alerts-side-panel');
+});
+</script>

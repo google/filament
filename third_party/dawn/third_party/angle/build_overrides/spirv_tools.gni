@@ -1,0 +1,10 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# We are building inside ANGLE
+spirv_tools_standalone = false
+
+# Paths to SPIRV-Tools dependencies in ANGLE
+spirv_tools_googletest_dir = "//third_party/googletest/src"
+spirv_tools_spirv_headers_dir = "//third_party/spirv-headers/src"

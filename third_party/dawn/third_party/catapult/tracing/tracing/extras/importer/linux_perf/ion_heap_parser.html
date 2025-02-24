@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses ion heap events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses ion heap trace events.
+   * @constructor
+   */
+  function IonHeapParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('ion_heap_shrink',
+        IonHeapParser.prototype.traceIonHeapShrink.bind(this));
+
+    importer.registerEventHandler('ion_heap_grow',
+        IonHeapParser.prototype.traceIonHeapGrow.bind(this));
+
+    this.model_ = importer.model_;
+  }
+
+  const TestExports = {};
+
+  // Matches the ion_heap_shrink and ion_heap_grow records
+  const ionHeapRE = new RegExp(
+      'heap_name=(\\S+), len=(\\d+), total_allocated=(\\d+)');
+
+  TestExports.ionHeapRE = ionHeapRE;
+
+
+  IonHeapParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses ion_heap_shrink events and sets up state in the importer.
+     */
+    traceIonHeapShrink(eventName, cpuNumber, pid, ts, eventBase, threadName) {
+      const event = ionHeapRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const name = event[1];
+      const len = parseInt(event[2]);
+      const totalAllocated = parseInt(event[3]);
+      const ionHeap = totalAllocated + len;
+
+      const ctr = this.model_.kernel.getOrCreateCounter(
+          null, name + ' ion heap');
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, ionHeap);
+      });
+
+      return true;
+    },
+
+    /**
+     * Parses ion_heap_grow events and sets up state in the importer.
+     */
+    traceIonHeapGrow(eventName, cpuNumber, pid, ts, eventBase, threadName) {
+      const event = ionHeapRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const name = event[1];
+      const len = parseInt(event[2]);
+      const totalAllocated = parseInt(event[3]);
+      const ionHeap = totalAllocated + len;
+
+      const ctr = this.model_.kernel.getOrCreateCounter(
+          null, name + ' ion heap');
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, ionHeap);
+      });
+
+      return true;
+    }
+  };
+
+  Parser.register(IonHeapParser);
+
+  return {
+    IonHeapParser,
+    _IonHeapParserTestExports: TestExports
+  };
+});
+</script>

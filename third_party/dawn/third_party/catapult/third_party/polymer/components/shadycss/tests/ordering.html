@@ -1,0 +1,173 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script>WCT = {waitFor(cb){addEventListener('DOMContentLoaded', cb)}};</script>
+<script src="test-flags.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../node_modules/@webcomponents/template/template.js"></script>
+<script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+<script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+<script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+<script src="module/generated/make-element.js"></script>
+
+<custom-style>
+  <style>
+    html {
+      --coloring: {
+        color: rgb(0, 0, 255);
+        background-color: rgb(255, 0, 0);
+      }
+    }
+  </style>
+</custom-style>
+
+<custom-style>
+  <style>
+    html {
+      --border: 2px solid black;
+    }
+  </style>
+</custom-style>
+
+<template id="x-inner">
+  <style>
+    :host {
+      @apply --inner;
+      @apply --coloring;
+    }
+  </style>
+<slot></slot>
+</template>
+
+<template id="x-element">
+  <style>
+    :host {
+      display: block;
+      border: var(--border);
+      @apply --coloring;
+    }
+    x-inner {
+      --inner: {
+        border: 10px solid black;
+      }
+    }
+  </style>
+  <div>What color?</div>
+  <x-inner>Inner</x-inner>
+</template>
+
+<template id="x-early">
+  <style>
+    :host {
+      display: block;
+      background: rgb(123, 123, 123);
+      color: rgb(255, 165, 0);
+      border: var(--border, 10px dotted blue);
+      @apply --coloring;
+    }
+  </style>
+  <div>Early!</div>
+</template>
+
+<x-early></x-early>
+
+<script>
+  function loadScript(src) {
+    console.log(`loading ${src}`);
+    let script = document.createElement('script')
+    script.src = src;
+    let p = new Promise((resolve, reject) => {
+      script.onload = () => {console.log(`loaded ${src}`); resolve()};
+      script.onerror = () => {console.error(`error ${src}`); reject()};
+    });
+    document.head.appendChild(script);
+    return p;
+  }
+
+  function registerEarly() {
+    makeElement('x-early');
+  }
+
+  function loadScopingShim() {
+    return loadScript('../scoping-shim.min.js');
+  }
+
+  function loadCustomStyle() {
+    return loadScript('../custom-style-interface.min.js').then(() => {
+      return loadScript('module/generated/custom-style-element.js')
+    });
+  }
+
+  function loadApplyShim() {
+    return loadScript('../apply-shim.min.js');
+  }
+
+  function register() {
+    makeElement('x-inner');
+    makeElement('x-element');
+  }
+
+  function assertComputed(element, property, expected) {
+    let value = (getComputedStyle(element).getPropertyValue(property) || '').trim();
+    assert.equal(expected, value, `${property} on ${element.localName} incorrect`);
+  }
+
+  function chain(arr) {
+    let out = Promise.resolve();
+    for (let i = 0; i < arr.length; i++) {
+      out = out.then(arr[i]);
+    }
+    return out;
+  }
+
+  let orderSteps = {
+    scoping: loadScopingShim,
+    early: registerEarly,
+    apply: loadApplyShim,
+    custom: loadCustomStyle,
+  };
+
+  /**
+   * Support the following permutations of loading via url query params:
+   *
+   * Apply Shim, CustomStyle
+   * Scoping Shim, Apply Shim, Custom Style
+   * Apply Shim, Element, CustomStyle
+   * Scoping Shim, Element, Apply Shim, Custom Style
+   * Scoping Shim, Apply Shim, Element, Custom Style
+   */
+
+  suite('Dynamic ordering of components', () => {
+    let flags = window.WebComponents.flags;
+    let order = decodeURIComponent(flags.order || 'scoping,apply,custom').split(',');
+    let steps = chain(order.map(o => orderSteps[o]));
+    let otherFlags = `${flags.ce ? 'ce' : ''} ${flags.shadydom ? 'shadydom' : ''} ${flags.shimcssproperties ? 'shimcssproperties' : ''}`;
+    let needsScopingShim = window.ShadyDOM && window.ShadyDOM.inUse || flags.shimcssproperties;
+
+    test(`${order.join(', ')} with ${otherFlags}`, function() {
+      console.log(order, flags);
+      if (order.indexOf('scoping') === -1 && needsScopingShim) {
+        this.skip();
+      }
+      return steps.then(
+        register
+      ).then(() => {
+        let el = document.createElement('x-element');
+        document.body.appendChild(el);
+        assertComputed(el, 'background-color', 'rgb(255, 0, 0)');
+        assertComputed(el, 'border-top-width', '2px');
+        assertComputed(el.shadowRoot.querySelector('div'), 'color', 'rgb(0, 0, 255)');
+        assertComputed(el.shadowRoot.querySelector('x-inner'), 'border-top-width', '10px');
+      });
+    })
+  })
+</script>

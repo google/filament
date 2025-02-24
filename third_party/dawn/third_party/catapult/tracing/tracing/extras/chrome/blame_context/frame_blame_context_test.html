@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/frame_tree_node.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/render_frame.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/top_level.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TestUtils = tr.c.TestUtils;
+
+  test('crossProcessCounterpart', function() {
+    let frameTreeNode;
+    let renderFrame;
+    TestUtils.newModel(function(model) {
+      // Add a toplevel to make the context tree consistent with the spec,
+      // though its functionality is not tested here.
+      TestUtils.newSnapshot(model, {
+        pid: 1, name: 'TopLevel', id: '0x1',
+        scope: 'PlatformThread', category: 'blink'});
+      renderFrame = TestUtils.newSnapshot(
+          model, {
+            pid: 1, name: 'RenderFrame', id: '0x2', scope: 'RenderFrame',
+            category: 'blink', args: {
+              parent: {scope: 'PlatformThread', id_ref: '0x1'}}});
+      frameTreeNode = TestUtils.newSnapshot(
+          model, {
+            pid: 2, name: 'FrameTreeNode', id: '0x3', scope: 'FrameTreeNode',
+            category: 'navigation', args: {
+              renderFrame: {scope: 'RenderFrame', id_ref: '0x2', pid_ref: 1}}});
+    });
+
+    assert.isTrue(frameTreeNode.renderFrame === renderFrame);
+    assert.isTrue(renderFrame.frameTreeNode === frameTreeNode);
+  });
+});
+</script>

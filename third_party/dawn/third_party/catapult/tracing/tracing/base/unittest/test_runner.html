@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/timing.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b.unittest', function() {
+  let realTvOnAnimationFrameError;
+  let realGlobalOnError;
+  let realGlobalHistoryPushState;
+
+  const NUM_TESTS_PER_RIC = 16;
+
+  function installGlobalTestHooks(runner) {
+    realTvOnAnimationFrameError = tr.b.onAnimationFrameError;
+    tr.b.onAnimationFrameError = function(error) {
+      runner.results.addErrorForCurrentTest(error);
+    };
+
+    if (tr.isExported('global.onerror')) {
+      realGlobalOnError = global.onerror;
+      global.onerror = function(errorMsg, url, lineNumber) {
+        runner.results.addErrorForCurrentTest(
+            errorMsg + ' at ' + url + ':' + lineNumber);
+        if (realGlobalOnError) {
+          return realGlobalOnError(errorMsg, url, lineNumber);
+        }
+        return false;
+      };
+    }
+
+    if (tr.isExported('global.history')) {
+      realGlobalHistoryPushState = global.history.pushState;
+      global.history.pushState = function() {
+      };
+    }
+
+    tr.b.unittest.addHTMLOutputForCurrentTest = function(element) {
+      runner.results.addHTMLOutputForCurrentTest(element);
+    };
+
+    if (tr.isExported('global.sessionStorage')) {
+      global.sessionStorage.clear();
+    }
+
+    const e = new tr.b.Event('tr-unittest-will-run');
+    TestRunner.dispatchEvent(e);
+  }
+
+  function uninstallGlobalTestHooks() {
+    if (tr.isExported('global.onerror')) {
+      global.onerror = realGlobalOnError;
+      realGlobalOnError = undefined;
+    }
+
+    tr.b.onAnimationFrameError = realTvOnAnimationFrameError;
+    realTvOnAnimationFrameError = undefined;
+
+    if (tr.isExported('global.history')) {
+      global.history.pushState = realGlobalHistoryPushState;
+      realGlobalHistoryPushState = undefined;
+    }
+
+    tr.b.unittest.addHTMLOutputForCurrentTest = undefined;
+  }
+
+
+  function TestRunner(results, testCases) {
+    this.results_ = results;
+    this.testCases_ = testCases;
+    this.pendingTestCases_ = [];
+
+    this.runOneTestCaseScheduled_ = false;
+    this.numRunsSinceLastRIC_ = 0;
+
+    this.runCompletedPromise = undefined;
+    this.runCompletedResolver_ = undefined;
+
+    this.currentTestCase_ = undefined;
+  }
+
+  TestRunner.prototype = {
+    __proto__: Object.prototype,
+
+    beginRunning() {
+      if (this.pendingTestCases_.length) {
+        throw new Error('Tests still running!');
+      }
+
+      this.runCompletedPromise = new Promise(function(resolve, reject) {
+        this.runCompletedResolver_ = {
+          resolve,
+          reject
+        };
+      }.bind(this));
+
+      this.pendingTestCases_ = this.testCases_.slice(0);
+
+      this.results_.willRunTests(this.pendingTestCases_);
+
+      this.scheduleRunOneTestCase_();
+
+      return this.runCompletedPromise;
+    },
+
+    beginToStopRunning() {
+      if (!this.runCompletedResolver_) {
+        throw new Error('Still running');
+      }
+      this.pendingTestCases_ = [];
+      return this.runCompletedPromise;
+    },
+
+    get testCases() {
+      return this.testCases_;
+    },
+
+    get results() {
+      return this.results_;
+    },
+
+    scheduleRunOneTestCase_() {
+      if (this.runOneTestCaseScheduled_) return;
+      this.runOneTestCaseScheduled_ = true;
+
+      this.numRunsSinceLastRIC_++;
+      if (this.numRunsSinceLastRIC_ === NUM_TESTS_PER_RIC) {
+        this.numRunsSinceLastRIC_ = 0;
+        tr.b.idle().then(() => this.runOneTestCase_());
+      } else {
+        Promise.resolve().then(() => this.runOneTestCase_());
+      }
+    },
+
+    runOneTestCase_() {
+      this.runOneTestCaseScheduled_ = false;
+
+      if (this.pendingTestCases_.length === 0) {
+        this.didFinishRunningAllTests_();
+        return;
+      }
+
+      this.currentTestCase_ = this.pendingTestCases_.splice(0, 1)[0];
+      this.currentMark_ = tr.b.Timing.mark(
+          'TestRunner', this.currentTestCase_.name);
+      this.results_.willRunTest(this.currentTestCase_);
+
+      if (this.isCurrentTestSkipped_()) {
+        this.results_.setCurrentTestSkipped();
+        this.results_.didCurrentTestEnd();
+        this.currentMark_.end();
+        this.currentTestCase_ = undefined;
+        this.scheduleRunOneTestCase_();
+        return;
+      }
+
+      if (this.isCurrentTestFlaky_()) {
+        this.results_.setCurrentTestFlaky();
+        this.results_.didCurrentTestEnd();
+        this.currentMark_.end();
+        this.currentTestCase_ = undefined;
+        this.scheduleRunOneTestCase_();
+        return;
+      }
+
+      if (!this.setUpCurrentTestCase_()) {
+        this.results_.didCurrentTestEnd();
+        this.currentMark_.end();
+        this.currentTestCase_ = undefined;
+        this.scheduleRunOneTestCase_();
+        return;
+      }
+
+      this.runCurrentTestCase_().then(
+          function pass(result) {
+            try {
+              this.tearDownCurrentTestCase_(true);
+              if (result) {
+                this.results_.setReturnValueFromCurrentTest(result);
+              }
+              this.results_.didCurrentTestEnd();
+              this.currentMark_.end();
+              this.currentTestCase_ = undefined;
+              this.scheduleRunOneTestCase_();
+            } catch (e) {
+              this.hadInternalError_(e);
+              throw e;
+            }
+          }.bind(this),
+          function fail(error) {
+            try {
+              this.results_.addErrorForCurrentTest(error);
+              this.tearDownCurrentTestCase_(false);
+              this.results_.didCurrentTestEnd();
+              this.currentMark_.end();
+              this.currentTestCase_ = undefined;
+              this.scheduleRunOneTestCase_();
+            } catch (e) {
+              this.hadInternalError_(e);
+              throw e;
+            }
+          }.bind(this));
+    },
+
+    isCurrentTestFlaky_() {
+      return !!this.currentTestCase_.options.flaky;
+    },
+
+    isCurrentTestSkipped_() {
+      return !!this.currentTestCase_.options.skipped;
+    },
+
+    setUpCurrentTestCase_() {
+      // Try setting it up. Return true if succeeded.
+      installGlobalTestHooks(this);
+      try {
+        this.currentTestCase_.setUp();
+      } catch (error) {
+        this.results_.addErrorForCurrentTest(error);
+        return false;
+      }
+      return true;
+    },
+
+    runCurrentTestCase_() {
+      return new Promise(function(resolve, reject) {
+        let maybePromise;
+        try {
+          maybePromise = this.currentTestCase_.run();
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (maybePromise !== undefined && maybePromise.then) {
+          maybePromise.then(
+              function(result) {
+                resolve(result);
+              },
+              function(error) {
+                reject(error);
+              });
+        } else {
+          resolve(maybePromise);
+        }
+      }.bind(this));
+    },
+
+    hadInternalError_(outerE) {
+      this.results.didRunTests();
+
+      this.runCompletedResolver_.reject(outerE);
+      this.runCompletedResolver_ = undefined;
+    },
+
+    tearDownCurrentTestCase_() {
+      try {
+        this.currentTestCase_.tearDown();
+      } catch (error) {
+        this.results_.addErrorForCurrentTest(error);
+      }
+
+      uninstallGlobalTestHooks();
+    },
+
+    didFinishRunningAllTests_() {
+      this.results.didRunTests();
+      this.runCompletedResolver_.resolve();
+      this.runCompletedResolver_ = undefined;
+    }
+  };
+
+  tr.b.EventTarget.decorate(TestRunner);
+
+  return {
+    TestRunner,
+  };
+});
+</script>

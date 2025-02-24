@@ -1,0 +1,39 @@
+name: Gsutil CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: [pypy3, 3.5.x, 3.6.x, 3.7.x, 3.8.x, 3.9.x, 3.10.x, 3.11.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        set -x
+        git submodule update --init --recursive
+    - name: Lint
+      if: ${{ matrix.python-version  == 3.6 }}
+      run: |
+        set -x
+        pip install pylint
+        pip install yapf
+        test/run_pylint.sh
+        yapf -dr .
+    - name: Test
+      run: |
+        set -x
+        python gsutil version -l
+        python gsutil test -u

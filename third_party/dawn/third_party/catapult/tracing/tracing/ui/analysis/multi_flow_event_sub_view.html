@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+
+<dom-module id='tr-ui-a-multi-flow-event-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    </style>
+    <tr-ui-a-multi-event-sub-view id="content"></tr-ui-a-multi-event-sub-view>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-flow-event-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  ready() {
+    this.$.content.eventsHaveDuration = false;
+    this.$.content.eventsHaveSubRows = false;
+  },
+
+  set selection(selection) {
+    this.$.content.selection = selection;
+  },
+
+  get selection() {
+    return this.$.content.selection;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-multi-flow-event-sub-view',
+    tr.model.FlowEvent,
+    {
+      multi: true,
+      title: 'Flow Events',
+    });
+</script>

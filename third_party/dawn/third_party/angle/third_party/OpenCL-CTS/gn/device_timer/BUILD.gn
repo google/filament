@@ -1,0 +1,14 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("device_timer") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_timer" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_timer/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_timer/test_device_timer.cpp",
+  ]
+}

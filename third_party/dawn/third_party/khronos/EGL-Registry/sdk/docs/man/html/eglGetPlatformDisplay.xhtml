@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetPlatformDisplay - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetPlatformDisplay">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetPlatformDisplay — 
+            return an <abbr class="acronym">EGL</abbr> display connection
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLDisplay <strong class="fsfunc">eglGetPlatformDisplay</strong>(</code>
+              </td>
+              <td>EGLenum <var class="pdparam">platform</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>void * <var class="pdparam">native_display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>const EGLAttrib * <var class="pdparam">attrib_list</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>platform</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the native platform to obtain a display for.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>native_display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the native display to connect to.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attrib_list</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies attributes of the display being obtained.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetPlatformDisplay</code> obtains an
+            <abbr class="acronym">EGL</abbr> display connection for the specified
+            <em class="parameter"><code>platform</code></em> and
+            <em class="parameter"><code>native_display</code></em>.
+        </p>
+        <p>
+            Valid values for <em class="parameter"><code>platform</code></em> are defined by
+            EGL extensions, as are requirements for
+            <em class="parameter"><code>native_display</code></em>.
+            For example, an extension specification that defines support for
+            the X11 platform may require that
+            <em class="parameter"><code>native_display</code></em> be a pointer to an X11
+            Display, and an extension specification that defines support for
+            the Microsoft Windows platform may require that
+            <em class="parameter"><code>native_display</code></em> be a pointer to a Windows
+            Device Context.
+        </p>
+        <p>
+            Valid attributes are defined by EGL extensions.
+            All attributes in <em class="parameter"><code>attrib_list</code></em>,
+            including boolean attributes, are immediately followed by
+            the corresponding desired value.
+            The list is terminated with <code class="constant">EGL_NONE</code>.
+            If an attribute is not specified in
+            <em class="parameter"><code>attrib_list</code></em> but is required for the
+            specified <em class="parameter"><code>platform</code></em>, then a default value
+            is used (and the attribute is said to be specified implicitly).
+        </p>
+        <p>
+            Multiple calls made to
+            <code class="function">eglGetPlatformDisplay</code> with the same
+            parameters will return the same <span class="type">EGLDisplay</span> handle.
+        </p>
+        <p>
+            If <em class="parameter"><code>platform</code></em> is valid but no display
+            matching <em class="parameter"><code>native_display</code></em> is available,
+            then <code class="constant">EGL_NO_DISPLAY</code> is returned; no error
+            condition is raised in this case.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglGetPlatformDisplay</code> is supported only if
+            the EGL version is 1.5 or greater.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="function">eglGetPlatformDisplay</code> returns
+            <code class="constant">EGL_NO_DISPLAY</code> on failure.
+        </p>
+        <p>
+            An <code class="constant">EGL_BAD_PARAMETER</code> error is generated if
+            <em class="parameter"><code>platform</code></em> has an invalid value.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>,
+            <a class="citerefentry" href="eglGetDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetDisplay</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_icon.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+
+<dom-module id='tr-ui-timeline-view-help-overlay'>
+  <template>
+    <style>
+    :host {
+      flex: 1 1 auto;
+      flex-direction: row;
+      display: flex;
+      width: 700px;
+    }
+    .column {
+      width: 50%;
+    }
+    h2 {
+      font-size: 1.2em;
+      margin: 0;
+      margin-top: 5px;
+      text-align: center;
+    }
+    h3 {
+      margin: 0;
+      margin-left: 126px;
+      margin-top: 10px;
+    }
+    .pair {
+      flex: 1 1 auto;
+      flex-direction: row;
+      display: flex;
+    }
+    .command {
+      font-family: monospace;
+      margin-right: 5px;
+      text-align: right;
+      width: 150px;
+    }
+    .action {
+      font-size: 0.9em;
+      text-align: left;
+      width: 200px;
+    }
+    tr-ui-b-mouse-mode-icon {
+      border: 1px solid #888;
+      border-radius: 3px;
+      box-shadow: inset 0 0 2px rgba(0,0,0,0.3);
+      display: inline-block;
+      margin-right: 1px;
+      position: relative;
+      top: 4px;
+    }
+    .mouse-mode-icon.pan-mode {
+      background-position: -1px -11px;
+    }
+    .mouse-mode-icon.select-mode {
+      background-position: -1px -41px;
+    }
+    .mouse-mode-icon.zoom-mode {
+      background-position: -1px -71px;
+    }
+    .mouse-mode-icon.timing-mode {
+      background-position: -1px -101px;
+    }
+    </style>
+    <div class="column left">
+      <h2>Navigation</h2>
+      <div class='pair'>
+        <div class='command'>w/s</div>
+        <div class='action'>Zoom in/out (+shift: faster)</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>a/d</div>
+        <div class='action'>Pan left/right (+shift: faster)</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>&rarr;/shift-TAB</div>
+        <div class='action'>Select previous event</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>&larr;/TAB</div>
+        <div class='action'>Select next event</div>
+      </div>
+
+      <h2>Mouse Controls</h2>
+      <div class='pair'>
+        <div class='command'>click</div>
+        <div class='action'>Select event</div>
+      </div>
+      <div class='pair'>
+        <div class='command'>alt-mousewheel</div>
+        <div class='action'>Zoom in/out</div>
+      </div>
+
+      <h3>
+        <tr-ui-b-mouse-mode-icon mode-name="SELECTION"></tr-ui-b-mouse-mode-icon>
+        Select mode
+      </h3>
+      <div class='pair'>
+        <div class='command'>drag</div>
+        <div class='action'>Box select</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'><span class='mod'></span>-click/drag</div>
+        <div class='action'>Add events to the current selection</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>double click</div>
+        <div class='action'>Select all events with same title</div>
+      </div>
+
+      <h3>
+        <tr-ui-b-mouse-mode-icon mode-name="PANSCAN"></tr-ui-b-mouse-mode-icon>
+        Pan mode
+      </h3>
+      <div class='pair'>
+        <div class='command'>drag</div>
+        <div class='action'>Pan the view</div>
+      </div>
+
+      <h3>
+        <tr-ui-b-mouse-mode-icon mode-name="ZOOM"></tr-ui-b-mouse-mode-icon>
+        Zoom mode
+      </h3>
+      <div class='pair'>
+        <div class='command'>drag</div>
+        <div class='action'>Zoom in/out by dragging up/down</div>
+      </div>
+
+      <h3>
+        <tr-ui-b-mouse-mode-icon mode-name="TIMING"></tr-ui-b-mouse-mode-icon>
+        Timing mode
+      </h3>
+      <div class='pair'>
+        <div class='command'>drag</div>
+        <div class='action'>Create or move markers</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>double click</div>
+        <div class='action'>Set marker range to slice</div>
+      </div>
+    </div>
+
+    <div class="column right">
+      <h2>General</h2>
+      <div class='pair'>
+        <div class='command'>1-4</div>
+        <div class='action'>Switch mouse mode</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>shift</div>
+        <div class='action'>Hold for temporary select</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>space</div>
+        <div class='action'>Hold for temporary pan</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>/</div>
+        <div class='action'>Search</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>enter</div>
+        <div class='action'>Step through search results</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>f</div>
+        <div class='action'>Zoom into selection</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>z/0</div>
+        <div class='action'>Reset zoom and pan</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>g/G</div>
+        <div class='action'>Toggle 60hz grid</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>v</div>
+        <div class='action'>Highlight VSync</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>h</div>
+        <div class='action'>Toggle low/high details</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>m</div>
+        <div class='action'>Mark current selection</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>p</div>
+        <div class='action'>Select power samples over current selection interval</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>`</div>
+        <div class='action'>Show or hide the scripting console</div>
+      </div>
+
+      <div class='pair'>
+        <div class='command'>?</div>
+        <div class='action'>Show help</div>
+      </div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-timeline-view-help-overlay',
+
+  ready() {
+    const mod = tr.isMac ? 'cmd ' : 'ctrl';
+    const spans = Polymer.dom(this.root).querySelectorAll(
+        'span.mod');
+    for (let i = 0; i < spans.length; i++) {
+      Polymer.dom(spans[i]).textContent = mod;
+    }
+  }
+});
+</script>

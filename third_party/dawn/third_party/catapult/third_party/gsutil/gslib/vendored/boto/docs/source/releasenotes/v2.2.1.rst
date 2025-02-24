@@ -1,0 +1,6 @@
+===========
+boto v2.2.1
+===========
+
+The 2.2.1 release fixes a packaging problem that was causing problems when
+installing via pip.

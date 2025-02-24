@@ -1,0 +1,6 @@
+Various utilities for zsh.
+
+_gclient:
+  completion for gclient command.
+  To install add a path to zsh-goodies into your fpath variable, e.g.:
+    fpath=(<path to depot_tools>/zsh-goodies $fpath)

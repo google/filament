@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+// TODO(charliea): Investigate whether we could make this a Chai plugin.
+/**
+ * @fileoverview Provides assert functions that are not available on the Chai
+ * assert module.
+ */
+tr.exportTo('tr.b', function() {
+  /**
+   * Throws if the range |actual| is not equal to the range |expected| (using
+   * tr.b.math.Range.equals).
+   */
+  function assertRangeEquals(actual, expected) {
+    assert(actual.equals(expected),
+        'Expected Range(' + actual.min + ', ' + actual.max + ') to be ' +
+             'Range(' + expected.min + ', ' + expected.max + ')');
+  }
+
+  return {
+    assertRangeEquals,
+  };
+});
+</script>

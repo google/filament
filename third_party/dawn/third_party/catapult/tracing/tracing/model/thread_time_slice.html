@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const Slice = tr.model.Slice;
+
+
+  const SCHEDULING_STATE = {
+    DEBUG: 'Debug',
+    EXIT_DEAD: 'Exit Dead',
+    RUNNABLE: 'Runnable',
+    RUNNING: 'Running',
+    SLEEPING: 'Sleeping',
+    STOPPED: 'Stopped',
+    TASK_DEAD: 'Task Dead',
+    UNINTR_SLEEP: 'Uninterruptible Sleep',
+    UNINTR_SLEEP_WAKE_KILL: 'Uninterruptible Sleep | WakeKill',
+    UNINTR_SLEEP_WAKING: 'Uninterruptible Sleep | Waking',
+    UNINTR_SLEEP_IO: 'Uninterruptible Sleep - Block I/O',
+    UNINTR_SLEEP_WAKE_KILL_IO: 'Uninterruptible Sleep | WakeKill - Block I/O',
+    UNINTR_SLEEP_WAKING_IO: 'Uninterruptible Sleep | Waking - Block I/O',
+    UNKNOWN: 'UNKNOWN',
+    WAKE_KILL: 'Wakekill',
+    WAKING: 'Waking',
+    ZOMBIE: 'Zombie'
+  };
+
+  /**
+   * A ThreadTimeSlice is a slice of time on a specific thread where that thread
+   * was running on a specific CPU, or in a specific sleep state.
+   *
+   * As a thread switches moves through its life, it sometimes goes to sleep and
+   * can't run. Other times, its runnable but isn't actually assigned to a CPU.
+   * Finally, sometimes it gets put on a CPU to actually execute. Each of these
+   * states is represented by a ThreadTimeSlice:
+   *
+   *   Sleeping or runnable: cpuOnWhichThreadWasRunning is undefined
+   *   Running:  cpuOnWhichThreadWasRunning is set.
+   *
+   * @constructor
+   */
+  function ThreadTimeSlice(thread, schedulingState, cat,
+      start, args, opt_duration) {
+    Slice.call(this, cat, schedulingState,
+        this.getColorForState_(schedulingState),
+        start, args, opt_duration);
+    this.thread = thread;
+    this.schedulingState = schedulingState;
+    this.cpuOnWhichThreadWasRunning = undefined;
+  }
+
+  ThreadTimeSlice.prototype = {
+    __proto__: Slice.prototype,
+
+    getColorForState_(state) {
+      const getColorIdForReservedName =
+          tr.b.ColorScheme.getColorIdForReservedName;
+
+      switch (state) {
+        case SCHEDULING_STATE.RUNNABLE:
+          return getColorIdForReservedName('thread_state_runnable');
+        case SCHEDULING_STATE.RUNNING:
+          return getColorIdForReservedName('thread_state_running');
+        case SCHEDULING_STATE.SLEEPING:
+          return getColorIdForReservedName('thread_state_sleeping');
+        case SCHEDULING_STATE.DEBUG:
+        case SCHEDULING_STATE.EXIT_DEAD:
+        case SCHEDULING_STATE.STOPPED:
+        case SCHEDULING_STATE.TASK_DEAD:
+        case SCHEDULING_STATE.UNINTR_SLEEP:
+        case SCHEDULING_STATE.UNINTR_SLEEP_WAKE_KILL:
+        case SCHEDULING_STATE.UNINTR_SLEEP_WAKING:
+        case SCHEDULING_STATE.UNKNOWN:
+        case SCHEDULING_STATE.WAKE_KILL:
+        case SCHEDULING_STATE.WAKING:
+        case SCHEDULING_STATE.ZOMBIE:
+          return getColorIdForReservedName('thread_state_uninterruptible');
+        case SCHEDULING_STATE.UNINTR_SLEEP_IO:
+        case SCHEDULING_STATE.UNINTR_SLEEP_WAKE_KILL_IO:
+        case SCHEDULING_STATE.UNINTR_SLEEP_WAKING_IO:
+          return getColorIdForReservedName('thread_state_iowait');
+        default:
+          return getColorIdForReservedName('thread_state_unknown');
+      }
+    },
+
+    get analysisTypeName() {
+      return 'tr.ui.analysis.ThreadTimeSlice';
+    },
+
+    getAssociatedCpuSlice() {
+      if (!this.cpuOnWhichThreadWasRunning) return undefined;
+      const cpuSlices = this.cpuOnWhichThreadWasRunning.slices;
+      for (let i = 0; i < cpuSlices.length; i++) {
+        const cpuSlice = cpuSlices[i];
+        if (cpuSlice.start !== this.start) continue;
+        if (cpuSlice.duration !== this.duration) continue;
+        return cpuSlice;
+      }
+      return undefined;
+    },
+
+    getCpuSliceThatTookCpu() {
+      if (this.cpuOnWhichThreadWasRunning) return undefined;
+      let curIndex = this.thread.indexOfTimeSlice(this);
+      let cpuSliceWhenLastRunning;
+      while (curIndex >= 0) {
+        const curSlice = this.thread.timeSlices[curIndex];
+        if (!curSlice.cpuOnWhichThreadWasRunning) {
+          curIndex--;
+          continue;
+        }
+        cpuSliceWhenLastRunning = curSlice.getAssociatedCpuSlice();
+        break;
+      }
+      if (!cpuSliceWhenLastRunning) return undefined;
+
+      const cpu = cpuSliceWhenLastRunning.cpu;
+      const indexOfSliceOnCpuWhenLastRunning =
+          cpu.indexOf(cpuSliceWhenLastRunning);
+      const nextRunningSlice = cpu.slices[indexOfSliceOnCpuWhenLastRunning + 1];
+      if (!nextRunningSlice) return undefined;
+      if (Math.abs(nextRunningSlice.start - cpuSliceWhenLastRunning.end) <
+          0.00001) {
+        return nextRunningSlice;
+      }
+      return undefined;
+    }
+  };
+
+  tr.model.EventRegistry.register(
+      ThreadTimeSlice,
+      {
+        name: 'threadTimeSlice',
+        pluralName: 'threadTimeSlices'
+      });
+
+
+  return {
+    ThreadTimeSlice,
+    SCHEDULING_STATE,
+  };
+});
+</script>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/location.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/base/constants.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/slice_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Location = tr.model.Location;
+  const Model = tr.Model;
+
+  test('memoization', function() {
+    const vp = new tr.ui.TimelineViewport(document.createElement('div'));
+
+    const slice = { guid: 1 };
+
+    vp.modelTrackContainer = {
+      addEventsToTrackMap(eventToTrackMap) {
+        eventToTrackMap.addEvent(slice, 'track');
+      },
+      addEventListener() {}
+    };
+
+    assert.isUndefined(vp.trackForEvent(slice));
+    vp.rebuildEventToTrackMap();
+
+    assert.strictEqual(vp.trackForEvent(slice), 'track');
+  });
+
+  test('shiftedSelection', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 5, {}, 1));
+
+    const viewport = new tr.ui.TimelineViewport();
+    const track = new tr.ui.tracks.SliceTrack(viewport);
+    viewport.modelTrackContainer = track;
+    track.slices = t1.sliceGroup.slices;
+
+    viewport.rebuildEventToTrackMap();
+
+    const sel = new tr.model.EventSet();
+    sel.push(t1.sliceGroup.slices[0]);
+
+    const shifted = track.viewport.getShiftedSelection(sel, 1);
+    assert.isTrue(shifted.equals(
+        new tr.model.EventSet(t1.sliceGroup.slices[1])));
+  });
+});
+</script>
+

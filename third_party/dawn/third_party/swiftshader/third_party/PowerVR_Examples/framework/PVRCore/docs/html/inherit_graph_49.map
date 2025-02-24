@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structpvr_1_1_image_data_format.html" title="Represents an image format, including pixel format(channels/bits per channel), datatype and colorspac..." alt="" coords="5,5,175,32"/>
+<area shape="rect" id="node2" href="$structpvr_1_1_image_storage_format.html" title="Extends the ImageDataFormat with mipmaps and number of Samples." alt="" coords="223,5,411,32"/>
+</map>

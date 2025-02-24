@@ -1,0 +1,978 @@
+Name
+
+    ARB_shader_subroutine
+
+Name Strings
+
+    GL_ARB_shader_subroutine
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Bruce Merry, ARM
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Nick Haemel, AMD
+    Pat Brown, NVIDIA
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date:         02/28/2014
+    Revision:                   19
+
+Number
+
+    ARB Extension #90
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 core specification and
+    version 1.50 of the GLSL specification.
+
+    ARB_gpu_shader5 is required.
+
+    This extension interacts with NV_gpu_program5.
+
+    This extension interacts trivially with EXT_separate_shader_objects.
+
+Overview
+
+    This extension adds support to shaders for "indirect subroutine calls", 
+    where a single shader can include many subroutines and dynamically select
+    through the API which subroutine is called from each call site. 
+    Switching subroutines dynamically in this fashion can avoid the cost of 
+    recompiling and managing multiple shaders, while still retaining most of
+    the performance of specialized shaders.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    int GetSubroutineUniformLocation(uint program, enum shadertype, 
+                                     const char *name);
+    uint GetSubroutineIndex(uint program, enum shadertype,
+                            const char *name);
+    void GetActiveSubroutineUniformiv(uint program, enum shadertype,
+                                      uint index, enum pname, int *values);
+    void GetActiveSubroutineUniformName(uint program, enum shadertype,
+                                        uint index, sizei bufsize,
+                                        sizei *length, char *name);
+    void GetActiveSubroutineName(uint program, enum shadertype, uint index, 
+                                 sizei bufsize, sizei *length, char *name);
+    void UniformSubroutinesuiv(enum shadertype, sizei count,
+                               const uint *indices);
+    void GetUniformSubroutineuiv(enum shadertype, int location,
+                                 uint *params);
+    void GetProgramStageiv(uint program, enum shadertype, 
+                           enum pname, int *values);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetProgramStageiv: 
+
+        ACTIVE_SUBROUTINES                              0x8DE5
+        ACTIVE_SUBROUTINE_UNIFORMS                      0x8DE6
+        ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS             0x8E47
+        ACTIVE_SUBROUTINE_MAX_LENGTH                    0x8E48
+        ACTIVE_SUBROUTINE_UNIFORM_MAX_LENGTH            0x8E49
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, GetDoublev, and GetInteger64v: 
+
+        MAX_SUBROUTINES                                 0x8DE7
+        MAX_SUBROUTINE_UNIFORM_LOCATIONS                0x8DE8
+
+    Accepted by the <pname> parameter of GetActiveSubroutineUniformiv:
+
+        NUM_COMPATIBLE_SUBROUTINES                      0x8E4A
+        COMPATIBLE_SUBROUTINES                          0x8E4B
+        UNIFORM_SIZE
+        UNIFORM_NAME_LENGTH
+        
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    Add a section "Subroutine Uniform Variables" after Section 2.11.4,
+    "Uniform Variables"
+
+    Subroutine uniform variables are similar to uniform variables, except they
+    are context state rather than program state. Having subroutine uniforms be
+    context state allows them to have different values if the program is used
+    in multiple contexts simultaneously.  There is a set of subroutine
+    uniforms for each shader stage.
+
+    The command
+
+        int GetSubroutineUniformLocation(uint program, enum shadertype, 
+                                         const char *name);
+        
+    will return the location of the subroutine uniform variable <name> in the
+    shader stage of type <shadertype> attached to <program>, with behavior otherwise
+    identical to GetUniformLocation.  The value -1 will be returned if <name>
+    is not the name of an active subroutine uniform.  Active subroutine
+    locations are assigned using consecutive integers in the range from zero
+    to the value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS minus one for the shader
+    stage.  There is an implementation-dependent limit on the number of active
+    subroutine uniform locations in each shader stage; a program will fail to
+    link if the number of subroutine uniform locations required is greater
+    than the value of MAX_SUBROUTINE_UNIFORM_LOCATIONS.  If <program> has not
+    been successfully linked, the error INVALID_OPERATION will be generated.
+    For active subroutine uniforms declared as arrays, the declared array
+    elements are assigned consecutive locations.
+
+    Each function in a shader associated with a subroutine type is considered
+    an active subroutine, unless the compiler conclusively determines that the
+    function could never be assigned to an active subroutine uniform.  Each
+    active subroutine will be assigned an unsigned integer subroutine index
+    that is unique to the shader stage.  This index can be queried with the
+    command
+
+        uint GetSubroutineIndex(uint program, enum shadertype,
+                                const char *name);
+
+    where <name> is the null-terminated name of a function in the shader stage
+    of type <shadertype> attached to <program>.  Subroutine indices are assigned using
+    consecutive integers in the range from zero to the value of
+    ACTIVE_SUBROUTINES minus one for the shader stage.  The value INVALID_INDEX will
+    be returned if <name> is not the name of an active subroutine in the
+    shader stage.  After the program has been linked, the subroutine index
+    will not change unless the program is re-linked.
+
+    There is an implementation-dependent limit on the number of active
+    subroutines in each shader stage; a program will fail to link if the
+    number of subroutines is greater than the maximum subroutine count
+    (the value of MAX_SUBROUTINES).
+
+    Information about active subroutine uniforms can be obtained by calling
+
+        void GetActiveSubroutineUniformiv(uint program, enum shadertype,
+                                          uint index, enum pname, int *values);
+        void GetActiveSubroutineUniformName(uint program, enum shadertype,
+                                            uint index, sizei bufsize,
+                                            sizei *length, char *name);
+
+    <program> and <shadertype> specify the program and shader stage.  <index>
+    must be an active subroutine uniform index in the range from zero to the
+    value of ACTIVE_SUBROUTINE_UNIFORMS minus one for the shader stage.  If <index>
+    is greater than or equal to the value of ACTIVE_SUBROUTINE_UNIFORMS, the
+    error INVALID_VALUE is generated.
+
+    For GetActiveSubroutineUniformiv, <pname> identifies a property of the
+    active subroutine uniform being queried.  If <pname> is
+    NUM_COMPATIBLE_SUBROUTINES, a single integer indicating the number of
+    subroutines that can be assigned to the uniform is returned in <values>.
+    If <pname> is COMPATIBLE_SUBROUTINES, an array of integers is returned in
+    <values>, with each integer specifying the index of an active subroutine
+    that can be assigned to the selected subroutine uniform.  The number of
+    integers returned is the same as the value returned for
+    NUM_COMPATIBLE_SUBROUTINES.  If <pname> is UNIFORM_SIZE, a single integer
+    is returned in <values>.  If the selected subroutine uniform is an array,
+    the declared size of the array is returned; otherwise, one is returned.
+    If <pname> is UNIFORM_NAME_LENGTH, a single integer specifying the length
+    of the subroutine uniform name (including the terminating null character)
+    is returned in <values>.
+
+    For GetActiveSubroutineUniformName, the uniform name is returned as a
+    null-terminated string in <name>.  The actual number of characters written
+    into <name>, excluding the null terminator is returned in <length>.  If
+    <length> is NULL, no length is returned.  The maximum number of characters
+    that may be written into <name>, including the null terminator, is
+    specified by <bufsize>.  The length of the longest subroutine uniform name
+    in <program> and <shadertype> is given by the value of
+    ACTIVE_SUBROUTINE_UNIFORM_MAX_LENGTH, which can be queried with
+    GetProgramStageiv.
+
+    The name of an active subroutine can be queried given its subroutine
+    index with the command:
+
+        void GetActiveSubroutineName(uint program, enum shadertype,
+                                     uint index, sizei bufsize,
+                                     sizei *length, char *name);
+
+    <program> and <shadertype> specify the program and shader stage.  <index>
+    must be an active subroutine index in the range from zero to the value of
+    ACTIVE_SUBROUTINES minus one for the shader stage.  If <index> is greater than
+    or equal to the value of ACTIVE_SUBROUTINES, the error INVALID_VALUE is
+    generated.  The name of the selected subroutine is returned as a
+    null-terminated string in <name>. The actual number of characters written
+    into <name>, excluding the null terminator, is returned in <length>. If
+    <length> is NULL, no length is returned. The maximum number of characters
+    that may be written into <name>, including the null terminator, is
+    specified by <bufsize>.  The length of the longest subroutine name in
+    <program> and <shadertype> is given by the value of
+    ACTIVE_SUBROUTINE_MAX_LENGTH, which can be queried with GetProgramStageiv.
+
+    The command
+
+        void UniformSubroutinesuiv(enum shadertype, sizei count,
+                                   const uint *indices);
+
+    will load all active subroutine uniforms for shader stage <shadertype>
+    with subroutine indices from <indices>, storing <indices>[i] into the
+    uniform at location i.  If <count> is not equal to the value of
+    ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS for the program currently in use at
+    shader stage <shadertype>, or if any value in <indices> is greater than or
+    equal to the value of ACTIVE_SUBROUTINES for the shader stage, the error
+    INVALID_VALUE is generated.  If, for any subroutine index being loaded to
+    a particular uniform location, the function corresponding to the
+    subroutine index was not associated (as defined in Section 6.1.2 of the
+    GLSL spec) with the type of the subroutine variable at that location, then
+    the error INVALID_OPERATION is generated. If no program is active for
+    the shader stage identified by <shadertype>, the error INVALID_OPERATION
+    is generated.
+
+    Each subroutine uniform must have at least one subroutine to assign to the
+    uniform.  A program will fail to link if any stage has one or more
+    subroutine uniforms that has no subroutine associated with the subroutine
+    type of the uniform.
+
+    When UseProgram is called, the subroutine uniforms for all shader stages
+    are reset to arbitrarily chosen default functions with compatible
+    subroutine types.  When UseShaderProgramEXT is called, the subroutine
+    uniforms for the shader stage specified by <type> are reset to arbitrarily
+    chosen default functions with compatible subroutine types.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and
+State Requests)
+
+    Add to Section 6.1.15 (Shader and Program Queries)
+
+    The command
+    
+        void GetUniformSubroutineuiv(enum shadertype, int location, 
+                                     uint *params);
+
+    returns the value of the subroutine uniform at location <location> for
+    shader stage <shadertype> of the current program.  If <location> is
+    greater than or equal to the value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS
+    for the shader currently in use at shader stage <shadertype>, the error
+    INVALID_VALUE is generated.  If no program is active, the error
+    INVALID_OPERATION is generated.
+
+    The command
+
+        void GetProgramStageiv(uint program, enum shadertype, 
+                               enum pname, int *values);
+
+    returns properties of the program object <program> specific to the
+    programmable stage corresponding to <shadertype> in <values>. The
+    parameter value to return is specified by <pname>.  If <pname> is
+    ACTIVE_SUBROUTINE_UNIFORMS, the number of active subroutine variables in
+    the stage is returned.  If <pname> is ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+    the number of active subroutine variable locations in the stage is
+    returned.  If <pname> is ACTIVE_SUBROUTINES, the number of active
+    subroutines in the stage is returned.  If <pname> is
+    ACTIVE_SUBROUTINE_UNIFORM_MAX_LENGTH or ACTIVE_SUBROUTINE_MAX_LENGTH, the
+    length of the longest subroutine uniform or subroutine name, respectively,
+    for the stage is returned.  The returned name length includes space for a
+    null terminator.  If there is no shader of type <shadertype> in <program>,
+    the values returned will be consistent with a shader with no subroutines
+    or subroutine uniforms.
+
+
+Modifications to The OpenGL Shading Language Specification, Version 1.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_subroutine : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    In section 3.6, p.14 (Keywords)
+
+    Add subroutine to the list of reserved keywords.
+
+    Modify Section 6.1.1 (Function Calling Conventions)
+
+    (modify the last paragraph of the section, p. 66, to forbid potential
+    recursion via subroutines) Recursion is not allowed, not even statically.
+    Static recursion is present if the static function-call graph of a program
+    contains cycles.  This includes all potential function calls through
+    variables declared as subroutine uniform (described below).  It is an
+    error if a single compilation unit (shader) contains either static
+    recursion or the potential for recursion through subroutine variables.
+
+    Add a new Section 6.1.2 (Subroutines)
+
+    Subroutines provide a mechanism allowing shaders to be compiled in a
+    manner where the target of one or more function calls can be changed at
+    run-time without requiring any shader recompilation.  For example, a
+    single shader may be compiled with support for multiple illumination
+    algorithms to handle different kinds of lights or surface materials.  An
+    application using such a shader may switch illumination algorithms by
+    changing the value of its subroutine uniforms.  To use subroutines, a
+    subroutine type is declared, one or more functions are associated with
+    that subroutine type, and a subroutine variable of that type is declared.
+    The function currently assigned to the variable function is then called by
+    using function calling syntax replacing a function name with the name of
+    the subroutine variable.  Subroutine variables are assigned to specific
+    functions only through commands (UniformSubroutinesuiv) in the OpenGL API.
+
+    Subroutine types can be declared using a statement similar to a function 
+    declaration, as follows:
+
+        subroutine returnType subroutineTypeName(type0 arg0, type1 arg1,
+                                                 ..., typen argn);
+
+    Functions may be associated to subroutine types that have a matching 
+    prototype by prepending the subroutine types to the function definition:
+
+        subroutine(subroutineTypeName0, ..., subroutineTypeNameN)
+        returnType functionName (type0 arg0, type1 arg1, ..., typen argn)
+        ... // function body
+    
+    Subroutine declarations cannot be prototyped. It is an error to prepend
+    subroutine(...) to a function declaration. It is an error to declare
+    two distinct functions with the same function name within the same shader
+    (i.e. overloaded function names) that are both associated to subroutine
+    types.
+
+    Subroutine types share a namespace with standard function names.
+    Overloading (section 6.1) is not supported for functions that may be
+    associated with subroutine types.  A program will fail to link if any
+    shader includes two or more functions with the same name, at least one of
+    which is associated with a subroutine type.
+
+    Subroutine variables are required to be "subroutine uniforms", and 
+    are declared with a specific subroutine type in a subroutine uniform 
+    variable declaration:
+
+        subroutine uniform subroutineTypeName subroutineVarName;
+
+    and are called the same way simple functions are called. Subroutine
+    variables may be declared as explicitly-sized arrays, which can be 
+    dynamically indexed at use.
+
+    Subroutine variables are associated to functions declared with the
+    same subroutine type with the UniformSubroutinesuiv command in the OpenGL
+    API. When a subroutine variable (or an element of a subroutine variable
+    array) is associated to a particular function, all function calls through
+    that variable will call that particular function.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    The error INVALID_OPERATION is generated by GetSubroutineUniformLocation
+    if the program object identified by <program> has not been successfully
+    linked.
+
+    The error INVALID_VALUE is generated by GetActiveSubroutineUniformiv or
+    GetActiveSubroutineUniformName if <index> is greater than or equal to the
+    value of ACTIVE_SUBROUTINE_UNIFORMS for the shader stage.
+
+    The error INVALID_VALUE is generated by GetActiveSubroutineName if <index>
+    is greater than or equal to the value of ACTIVE_SUBROUTINES for the shader
+    stage.
+
+    The error INVALID_VALUE is generated by UniformSubroutinesuiv if <count>
+    is not equal to the value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS for the
+    shader stage <shadertype>.
+
+    The error INVALID_VALUE is generated by UniformSubroutinesuiv if any value
+    in <indices> is greater than or equal to the value of ACTIVE_SUBROUTINES
+    for the shader stage.
+
+    The error INVALID_OPERATION is generated by UniformSubroutinesuiv if any
+    subroutine index in <indices> identifies a subroutine not associated with
+    the type of the subroutine uniform variable assigned to the corresponding
+    location.
+
+    The error INVALID_OPERATION is generated by UniformSubroutinesuiv if no
+    program is active.
+
+    The error INVALID_VALUE is generated by GetUniformSubroutineuiv if
+    <location> is greater than or equal to the value of
+    ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS for the shader stage.
+
+    The error INVALID_OPERATION is generated by GetUniformSubroutineuiv if no
+    program is active for the shader stage identified by <shadertype>.
+
+
+New State
+
+    (add to table 6.28, Program Object State, p. 293)
+
+                                                               Initial
+    Get Value                     Type        Get Command       Value  Description                  Sec.  
+    ---------------------------   ----------  -----------      ------- ---------------------------  ------
+    ACTIVE_SUBROUTINE_UNIFORM_    5xZ+        GetProgram-         0    Number of subroutine unif.   2.11.4
+      LOCATIONS                               Stageiv                  locations in the shader
+    ACTIVE_SUBROUTINE_UNIFORMS    5xZ+        GetProgram-         0    Number of subroutine unif.   2.11.4
+                                              Stageiv                  variables in the shader
+    ACTIVE_SUBROUTINES            5xZ+        GetProgram-         0    Number of subroutine         2.11.4
+                                              Stageiv                  functions in the shader
+    ACTIVE_SUBROUTINE_UNIFORM_    5xZ+        GetProgram-         0    Maximum subroutine uniform   2.11.4
+      MAX_LENGTH                              Stageiv                  name length
+    ACTIVE_SUBROUTINE_MAX_LENGTH  5xZ+        GetProgram-         0    Maximum subroutine name      2.11.4
+                                              Stageiv                  length
+    NUM_COMPATIBLE_SUBROUTINES    5x0*xZ+     GetActiveSub-       -    Number of subroutines comp-  2.11.4
+                                              routineUniformiv         atible with a sub. uniform
+    COMPATIBLE_SUBROUTINES        5x0*x0*xZ+  GetActiveSub-       -    List of subroutines comp-    2.11.4
+                                              routineUniformiv         atible with a sub. uniform
+    UNIFORM_SIZE                  5x0*xZ+     GetActiveSub-       -    Number of elements in sub.   2.11.4
+                                              routineUniformiv         uniform array
+    UNIFORM_NAME_LENGTH           5x0*xZ+     GetActiveSub-       -    Length of sub. uniform name  2.11.4
+                                              routineUniformiv
+    -                             5x0*xS      GetActiveSub-       -    Sub. uniform name string     2.11.4
+                                              routineUniformName
+    -                             5x0*xS      GetActiveSub-       -    Length of subroutine name    2.11.4
+                                              routineName
+    -                             5x0*xS      GetActiveSub-       -     Subroutine name string      2.11.4
+                                              routineName
+
+    (For the above, the "5" is indicates separate state for each of the five
+    shader stages in the program.)
+
+
+New Implementation Dependent State
+
+                                                          Minimum
+    Get Value                      Type  Get Command       Value   Description           Sec.   Attrib
+    -----------------------------  ----  ---------------  -------  --------------------- ------ ------
+    MAX_SUBROUTINES                 Z+   GetIntegerv        256    Maximum number of     2.14.1   -   
+                                                                   subroutines per
+                                                                   shader stage
+    MAX_SUBROUTINE_UNIFORM_         Z+   GetIntegerv       1024    Maximum number of     2.X.5    -
+     LOCATIONS                                                     subroutine uniform
+                                                                   locations per stage
+
+
+Dependencies on NV_gpu_program5:
+
+    If NV_gpu_program5 is supported, the following edits are made to extend
+    the assembly programming model documented in the NV_gpu_program4 extension
+    and extended by NV_gpu_program5.  No "OPTION" line is required; the
+    following capability is implied by NV_gpu_program5 program headers such as
+    "!!NVfp5.0".
+
+    New Procedures and Functions
+
+    void ProgramSubroutineParametersuivNV(enum target, sizei count, 
+                                          const uint *params);
+    void GetProgramSubroutineParameteruivNV(enum target, uint index,
+                                            uint *param);
+
+    New Tokens
+
+    Accepted by the <pname> parameter of GetProgramivARB: 
+
+        MAX_PROGRAM_SUBROUTINE_PARAMETERS_NV            0x8F44
+        MAX_PROGRAM_SUBROUTINE_NUM_NV                   0x8F45
+
+    (Modify "Section 2.14.1" of the ARB_vertex_program specification,
+    describing program parameters.)
+
+    Each program target has an associated array of program subroutine
+    parameters. Unlike program local parameters, program subroutine parameters
+    are context state rather than program state. Program subroutine parameters
+    are scalar unsigned integer values that correspond to "SUBROUTINENUM"
+    declarations in a program. The number of scalars is given by the
+    implementation-dependent value MAX_PROGRAM_SUBROUTINE_PARAMETERS_NV.
+    The command
+
+        void ProgramSubroutineParametersuivNV(enum target, sizei count, 
+                                              const uint *params);
+
+    updates the values of all program subroutine parameters used by the 
+    currently bound program for the given program target <target>. <params> 
+    points to an array of <count> values, where the first value is used to 
+    update the program subroutine parameter numbered zero and the last value 
+    is used to update the program subroutine parameter numbered <count> - 1. 
+    The error INVALID_VALUE is generated if <count> is not equal to one plus 
+    the maximum program subroutine parameter index used in the currently bound 
+    program.
+
+    Program subroutine parameters for a given target are reset to arbitrary 
+    defaults when the program string is respecified, and when BindProgram is 
+    called to bind a program to that target, even if the specified program is
+    already bound. 
+
+    The error INVALID_OPERATION is generated by
+    ProgramSubroutineParametersuivNV if, for any number <i> in [0, <count>),
+    program.subroutine[<i>] is a live parameter of a certain SUBROUTINETYPE,
+    and <params>[<i>] is not a SUBROUTINENUM that was associated to that
+    SUBROUTINETYPE as described in Section 2.X.5.
+
+    Modify Section 2.X.2 of NV_gpu_program4, Program Grammar
+
+    If a program begins with a header string defined by GL_NV_gpu_program5, 
+    the following modifications apply to the program grammar:
+
+    <FlowInstruction>       ::= <BRAop_instruction>
+                              | <FLOWCCop_instruction>
+                              | <IFop_instruction>
+                              | <REPop_instruction>
+                              | <ENDFLOWop_instruction>
+                              | <CALI_instruction>
+
+    <namingStatement>       ::= <varMods> <ATTRIB_statement>
+                              | <varMods> <PARAM_statement>
+                              | <varMods> <TEMP_statement>
+                              | <varMods> <OUTPUT_statement>
+                              | <varMods> <BUFFER_statement>
+                              | <ALIAS_statement>
+                              | <SUBROUTINETYPE_statement>
+                              | <SUBROUTINE_statement>
+
+    <labelList>             ::= <identifier>
+                              | <identifier> "," <labelList>
+
+    <labelInitList>         ::= /* empty */
+                              | <labelList>
+
+    <SUBROUTINETYPE_statement> ::= "SUBROUTINETYPE" <establishName> "{" 
+                                <labelInitList> "}"
+
+    <progSubroutineParam>   ::= "program" "." "subroutine" <arrayMemAbs>
+
+    <progSubroutineParams>  ::= <progSubroutineParam>
+                              | "program" "." "subroutine" <arrayRange>
+
+    <progSubroutineInitList>::= <progSubroutineParams>
+                              | <progSubroutineParams> "," 
+                                <progSubroutineInitList>
+
+    <SUBROUTINE_statement>  ::= "SUBROUTINE" <establishedName> <establishName> 
+                                "=" <progSubroutineParam>
+                              | "SUBROUTINE" <establishedName> <establishName> 
+                                <optArraySize> "=" "{" <progSubroutineInitList> 
+                                "}"
+
+    <CALIop>                ::= "CALI"
+
+    <CALI_instruction>      ::= <CALIop> <opModifiers> <subroutineVarName> 
+                                <optArrayMem> <optBranchCond>
+
+    <instLabel>             ::= <identifier>
+                              | <identifier> "SUBROUTINENUM" "(" <int> ")"
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (Update the instruction set table to add CALI)
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------
+      CALI    50 - - - - - -  -   c         indirect subroutine call
+
+    Modify Section 2.X.5 (Program Flow Control) of the NV_gpu_program4
+    specification
+
+    (Add after the description of subroutines)
+
+    Subroutines may be called indirectly using the CALI instruction. An 
+    "indirect" call will transfer control to one of a set of labels, where
+    the specific label that is used in a particular program invocation is
+    set through a "subroutine" parameter (see Section 2.14.1).
+
+    Functions that will be used for indirect subroutine calls must all be
+    assigned a unique unsigned integer SUBROUTINENUM using the modified
+    <instLabel> grammar rule. 
+
+    A <SUBROUTINETYPE_statement> associates one or more subroutine labels with
+    a "type". For example:
+
+      SUBROUTINETYPE Hero { batman, robin };
+
+    creates a SUBROUTINETYPE named "Hero" (if it does not already exist) and
+    adds the subroutines whose labels are "batman" and "robin" to the
+    SUBROUTINETYPE. 
+
+    A "subroutine" parameter is a special type of program parameter whose value
+    refers to one of a set of subroutines, selected by the API. A subroutine is
+    given a SUBROUTINETYPE when it is declared, and it may refer to any label
+    of that type. Continuing this example:
+
+      SUBROUTINETYPE Hero { superman, wolverine };
+      SUBROUTINETYPE Hero { batman, robin };
+      SUBROUTINETYPE GothamHero { batman, robin };
+
+      # anyHero may "point to" any Hero
+      SUBROUTINE Hero anyHero = program.subroutine[0];
+      # gothamHero may "point to" any GothamHero
+      SUBROUTINE GothamHero gothamHero = program.subroutine[1];
+
+      batman SUBROUTINENUM(0):
+        ...
+      robin SUBROUTINENUM(1):
+        ...
+      superman SUBROUTINENUM(2):
+        ...
+      wolverine SUBROUTINENUM(3):
+        ...
+      
+      main:
+      # could call any of the four heros
+      CALI anyHero;
+      # could call either batman or robin
+      CALI gothamHero;
+
+    Program subroutine parameters are assigned to labels by setting the 
+    corresponding SUBROUTINENUMs via ProgramSubroutineParametersuivNV. For
+    example, 
+    
+      uint params[2] = {2, 0};
+      ProgramSubroutineParametersuivNV(target, 2, params);
+
+    would assign program.subroutine[0] (and therefore "anyHero") to "superman",
+    and program.subroutine[1] (and therefore "gothamHero") to "batman".
+
+    All SUBROUTINENUMs must be greater than or equal to zero, and less than the 
+    value of MAX_PROGRAM_SUBROUTINE_NUM_NV. A label may be assigned to multiple 
+    SUBROUTINETYPEs. A program subroutine parameter may only be assigned to 
+    subroutine variables of a single SUBROUTINETYPE.
+
+    Programs that may potentially cause infinite recursion through indirect
+    calls will fail to compile.
+
+
+    Section 2.X.8.Z, CALI:  Indirect Subroutine Call
+
+    The CALI instruction conditionally transfers control to the instruction
+    following some label, as described in CAL. The determination of which
+    label is used is described in Section 2.X.5 (Program Flow Control).
+
+    Add to Chapter 6 (State and State Requests)
+
+    The command
+
+      void GetProgramSubroutineParameteruivNV(enum target, uint index,
+                                              uint *params);
+
+    obtains the current value for the program subroutine parameter numbered
+    <index> for the given program target <target>, and places the single 
+    unsigned integer value in the array <params>.  The error INVALID_ENUM is 
+    generated if <target> specifies a nonexistent program target or a program 
+    target that does not support program environment parameters.  The error 
+    INVALID_VALUE is generated if <index> is greater than or equal to the
+    implementation-dependent number of supported program subroutine parameters
+    for the program target.
+
+    Add various new conditions by which a program string would fail to load.
+
+    The error INVALID_ENUM is generated by GetProgramSubroutineParameteruivNV 
+    and ProgramSubroutineParametersuivNV if <target> specifies a nonexistent 
+    program target.
+
+    The error INVALID_VALUE is generated by GetProgramSubroutineParameteruivNV
+    if <index> is greater than or equal to the max number of program subroutine 
+    parameters, and by ProgramSubroutineParametersuivNV if <count> is <count>
+    is not equal to one plus the maximum program subroutine parameter index used
+    in the currently bound program.
+
+    The error INVALID_OPERATION is generated by
+    ProgramSubroutineParametersuivNV if, for any number <i> in [0, <count>),
+    program.subroutine[<i>] is a live parameter of a certain SUBROUTINETYPE,
+    and <params>[<i>] is not a SUBROUTINENUM that was associated to that
+    SUBROUTINETYPE as described in Section 2.X.5.
+
+    Add new implementation dependent state
+                                                             Minimum
+    Get Value                         Type  Get Command       Value   Description           Sec.   Attrib
+    --------------------------------  ----  ---------------  -------  --------------------- ------ ------
+    MAX_PROGRAM_SUBROUTINE_            Z+   GetProgramivARB   1024    Maximum number of     2.14.1   -   
+      PARAMETERS_NV                                                   program subroutine
+                                                                      parameters
+    MAX_PROGRAM_SUBROUTINENUM_NV       Z+   GetProgramivARB    256    Maximum SUBROUTINENUM 2.X.5    -
+                                                                      value
+
+
+Dependencies on EXT_separate_shader_objects
+
+    If EXT_separate_shader_objects is not supported, remove references to
+    UseShaderProgramEXT.
+
+Issues
+
+    (1) What terms should we use to describe the various data types and
+    concepts in this specification?
+
+    RESOLVED:  This extension uses mechanisms similar to function pointers in
+    C.  We aren't directly exposing function pointers, but are instead using a
+    function pointer-like data type.  We are using the term "subroutine" to
+    qualify various concepts in this extension.  The function pointer type is
+    referred to as a "subroutine type".  Integer indices used to identify
+    functions that can be assigned to a function pointer type are referred to
+    as "subroutine indices".  Uniforms that can hold function pointer values
+    are referred to as "subroutine uniforms".
+
+    We considered using the term "interfaces", but were concerns about
+    confusion with object-oriented programming models -- the model we are
+    using is not object-oriented.  Referring instead to these limited function
+    pointers as "subroutines" avoids this confusion and matches its use in
+    similar circumstances. The term is not currently used in any GLSL nor
+    OpenGL specification.
+
+    (2) What happens if you try to link a program that has active subroutines
+    that have no subroutines that can be assigned ot them?
+    
+    RESOLVED: Attempting to link a program that calls a function pointer
+    with no potential associations produces a link error.
+
+    (3) What happens if the app specifies a bad subroutine index?
+
+    RESOLVED: There are two different forms of invalid subroutine indices --
+    ones that correspond to no subroutine, and ones that correspond to a
+    subroutine of the wrong type. If the app specifies a number that
+    corresponds to no subroutine, an INVALID_VALUE error is generated. If the
+    number corresponds to a subroutine of the wrong type, an INVALID_OPERATION
+    error is generated.
+
+    (4) What happens if the shaders change without reassigning subroutine
+    associations?
+
+    RESOLVED: The subroutine uniforms will revert to a default function of
+    of those associated with it in the shader. The default function chosen
+    may be implementation dependent.
+
+    (5) How should subroutine parameters be updated?
+
+    RESOLVED: UniformSubroutinesuivARB requires sending all subroutine
+    parameters at once so they can be validated in a single burst. This is
+    similar to D3D which goes as far as to require setting all of them in the
+    same operation that binds the shader.
+
+    (6) Why is the new "subroutine" state owned by the context rather than
+    by the assembly program or GLSL program/shader? 
+
+    RESOLVED: We expect that a common usage of this extension 
+    would be to create a so-called "uber-shader" -- a program that can 
+    support many different state configurations.  If an application uses
+    such a program in multiple contexts, it likely it would not want changes
+    to linkage for one context to affect the other context.
+
+    (7) Does that mean other types of uniforms also need to be context state?
+
+    RESOLVED: Apps can choose to share or not share numeric uniform types at
+    their discretion using UBO, however for more "opaque" uniform types like 
+    samplers it may be desirable to have context state. Such a change is
+    beyond the scope of this extension. No effort was made to make subroutine
+    uniforms generic enough to support other potential usages. Should such
+    emerge, they will define their own unique uniform types.
+
+    (8) GLSL allows function name overloading, how can you query a 
+    subroutine location in that case?
+
+    RESOLVED:  Disallow overloading of function names used for subroutine
+    functions.
+
+    (9) What sort of implementation-dependent limits apply to subroutines?
+
+    RESOLVED:  There is an limit on the number of subroutines per shader stage
+    (MAX_SUBROUTINES) and also a limit on the number of subroutine uniform
+    locations (MAX_SUBROUTINE_UNIFORM_LOCATIONS).
+
+    (10) How many subroutine variables be used? Should they be allowed as
+    function parameters, structure members, and arrays?
+
+    RESOLVED:  Arrays of subroutine uniforms are allowed.  The spec does not
+    currently permit them as function parameters or structure members, as it
+    requires subroutine variables be declared as uniforms.  Subroutine
+    function parameters can be emulated by declaring a uniform array holding
+    all possible subroutines that a shader might want to pass as a parameter
+    and then passing an integer index to select a subroutine to call.
+
+    (11) Is the "subroutine" keyword necessary when declaring a subroutine
+    uniform?
+
+    RESOLVED:  Yes, "subroutine uniform" in the declaration is required.
+
+    (12) Why don't the new tokens and entry points in this extension have
+     "ARB" suffixes like other ARB extensions?
+
+     RESOLVED:  Unlike most ARB extensions, this is a strict subset of
+     functionality already approved for the OpenGL core.  This extension
+     exists only to support that functionality on older hardware that cannot
+     implement all the functionality in that OpenGL version.  Since there are
+     no possible behavior changes between the ARB extension and core features,
+     source code compatibility is improved by not using suffixes on the
+     extension.
+
+    (13) Are compilers permitted to eliminate unreferenced elements at the end
+    of an array for subroutine uniforms like they can for regular uniforms?
+
+      RESOLVED:  No, because of differences in the uniform loading APIs.
+      Consider the following example:
+
+        uniform float array[10];
+        // shader only references array[0..5]
+
+      The GL implementation is permitted to treat "array" as having a size of
+      6, but may also use the declared size of 10.  An application may have
+      built-in knowledge that "array" has a declared length of 10, and might
+      call Uniform1f() with a <count> of 10.  The specified behavior for
+      Uniform*() APIs is that any values specified that extend beyond the last
+      active element of the array are ignored.  As a result, passing "extra"
+      elements to Uniform*() causes no problems; applications don't need to
+      query the active size of a uniform array to get correct behavior.
+
+      The subroutine uniform loading API is different, as it accepts a single
+      array containing the values for every active uniform.  This allows
+      applications to specify the values for all subroutine uniforms in a
+      single call, instead of multiple calls for regular uniforms.  However,
+      this approach doesn't provide a mechanism for discarding unused array
+      elements.  If "array" above was a subroutine uniform and the application
+      wrote 10 values into the array it would pass to UniformSubroutinesuiv,
+      it might overwrite the values of other subroutines or write off the end
+      of the array if the compiler only assigned 6 locations for "array".  If
+      unused elements could be eliminated, implementations would have to query
+      the active size for each subroutine uniform array, even if they knew the
+      declared size up-front.  To avoid the need to always query lengths, we
+      instead specify that all elements of an active subroutine array are
+      active.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  ----------------------------------------------
+    19    02/28/2014  Jon Leech Restrict error for UniformSubroutinesuiv to  
+                                the case where no program stage is active for
+                                the shader stage identified by <shadertype>
+                                (Bug 11306).
+
+    18    02/10/2011  pbrown    Add a clarification to the GLSL spec language
+                                prohibiting potential recursion via subroutine
+                                uniforms; a program will fail to link if there
+                                is any possible combination of subroutine 
+                                uniform values that would result in recursion
+                                (bug 7327).
+
+    17    03/29/2010  pbrown    Update issues (1) and (10).
+
+    16    03/21/2010  pbrown    Minor clarification in the NV_gpu_program5
+                                interaction that no OPTION is required to
+                                use subroutines in assembly programs.
+
+    15    02/08/2010  Jon Leech Minor wording changes for consistency with
+                                4.0 specification.
+
+    14    01/30/2010  pbrown    Specify that implementations are not permitted
+                                to chop unreferenced elements off the end of
+                                a subroutine uniform array like they are with
+                                regular uniforms (bug 5978).  Minor 
+                                clarification on the meaning of "active
+                                subroutines".
+
+    13    01/26/2010  pbrown    Assigned enum values for enums added by most
+                                recent edits.
+
+    12    01/20/2010  pbrown    Update state tables to classify per-subroutine
+                                and per-subroutine uniform state as "5x" to
+                                indicate a separate set of values for each
+                                shader stage.
+
+    11    01/18/2010  pbrown    Rename GetActiveSubroutineUniformiv.  Add
+                                enums to query the longest subroutine uniform
+                                and subroutine names in a stage.  Rename enum
+                                NUM_COMPATIBLE_SUBROUTINES.  Change error
+                                behavior to allow most queries on unlinked
+                                programs and ones without the specified stage
+                                (except GetSubroutineUniformLocation).  Added
+                                errors in UniformSubroutines and
+                                GetUniformSubroutineuiv if no program is
+                                active.  Minor spec language cleanups.  All
+                                based on review comments in bug 5861.
+
+    10    01/15/2010  pbrown    Significant changes to allow for full
+                                discoverability of subroutine uniforms,
+                                subroutines, and their locations (bug 5861).
+                                Rename the term "subroutine number" to "active
+                                subroutine index".  Rename GetSubroutineIndex
+                                (was GetSubroutineNumber) and the <indices>
+                                parameter of UniformSubroutinesuiv.  Fix
+                                prototype of GetSubroutineIndex and other APIs
+                                to consistently use "uint".  Add APIs to query
+                                properties of active subroutine uniforms
+                                (name, associated subroutines).  Separate the
+                                notion of subroutine uniform indices and
+                                locations just like regular uniforms.  Arrays
+                                may have one index but multiple locations.
+                                Specify that locations are packed in
+                                consecutive locations.  Rename
+                                GetSubroutineName to GetActiveSubroutineName
+                                to match other enumeration APIs.  Add a query
+                                for the number of active subroutine uniform
+                                locations, and change the implementation limit
+                                to be on active locations instead of indices.
+                                Clarify that subroutines in a shader need not
+                                be active if there is no active uniform that
+                                can call them (bug 5859).  Update state tables
+                                and some issues.
+
+     9    01/14/2010  pbrown    Add some more text to the introduction to 
+                                subroutines in the GLSL spec section.
+
+     8    12/10/2009  groth     ARBify.
+
+     7    12/10/2009  groth     Correct prototypes and clarify/correct errors.
+                                Fix a few state retrieval typos.
+
+     6    10/29/2009  groth     Clarify a number of areas in response to
+                                feedback from bmerry.
+
+     5    09/24/2009  groth     Fix typo in GLSL example. Assign enums.
+
+     4    09/17/2009  pbrown    Add implementation-dependent limits on
+                                subroutines.  Document some of these limits
+                                and restrictions on function overloading and
+                                subroutine uniforms with no matching function.
+
+     3    09/16/2009  groth     Resolve issues. A few clarifications.
+                                rename interface to subroutine.
+
+     2    09/14/2009  groth     EXTify. move asm changes to dependencies.
+
+     1                jbolz     Internal revisions.

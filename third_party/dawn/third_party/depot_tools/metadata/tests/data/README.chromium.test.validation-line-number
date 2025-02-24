@@ -1,0 +1,13 @@
+Short Name: foo
+URL: https://www.example.com/metadata,
+     https://example.com/duplicate_url,
+     i_am_not_a_url
+NAME: Repeated Name
+
+Version: N/A
+
+License: BAD_LICENSE_VALUE
+License File: DOES_NOT_EXIST
+
+Security Critical: yes
+Shipped in Chromium: DONT_KNOW

@@ -1,0 +1,17 @@
+	--------- beginning of crash
+	02-04 21:48:27.070 16629 16629 F libc    : Fatal signal 11 (SIGSEGV), code 1, fault addr 0x0 in tid 16629 (oid.apps.chrome), pid 16629 (oid.apps.chrome)
+	02-04 21:48:27.196 16727 16727 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+	02-04 21:48:27.197 16727 16727 F DEBUG   : Build fingerprint: 'google/gobo/gobo:8.1.0/OMB1.180119.001/4554347:userdebug/dev-keys'
+	02-04 21:48:27.197 16727 16727 F DEBUG   : Revision: '0'
+	02-04 21:48:27.197 16727 16727 F DEBUG   : ABI: 'arm'
+	02-04 21:48:27.197 16727 16727 F DEBUG   : pid: 16629, tid: 16629, name: oid.apps.chrome  >>> com.google.android.apps.chrome <<<
+	02-04 21:48:27.198 16727 16727 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+	02-04 21:48:27.198 16727 16727 F DEBUG   : Cause: null pointer dereference
+	02-04 21:48:27.198 16727 16727 F DEBUG   :     r0 00000000  r1 0569fb73  r2 00000001  r3 00000596
+	02-04 21:48:27.198 16727 16727 F DEBUG   :     r4 00000000  r5 bed3ab28  r6 bed3ab34  r7 99bc047c
+	02-04 21:48:27.198 16727 16727 F DEBUG   :     r8 99bc0484  r9 99bc048c  sl bed3ade0  fp bed3adff
+	02-04 21:48:27.198 16727 16727 F DEBUG   :     ip adaa063c  sp bed3ab20  lr 98bf9785  pc 98ba7d2c  cpsr 000f0030
+	02-04 21:48:27.202 16727 16727 F DEBUG   : 
+	02-04 21:48:27.202 16727 16727 F DEBUG   : backtrace:
+	02-04 21:48:27.202 16727 16727 F DEBUG   :     #00 pc 01c8ed2c  /data/app/com.google.android.apps.chrome-JWf8zE9sO6p-XF91OD5eTA==/base.apk (offset 0xea5000)
+	02-04 21:48:27.202 16727 16727 F DEBUG   :     #01 pc 01ce0781  /data/app/com.google.android.apps.chrome-JWf8zE9sO6p-XF91OD5eTA==/base.apk (offset 0xea5000)

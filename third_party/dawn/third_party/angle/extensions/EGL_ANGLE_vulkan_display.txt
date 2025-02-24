@@ -1,0 +1,95 @@
+Name
+
+    ANGLE_vulkan_display
+
+Name Strings
+
+    EGL_ANGLE_vulkan_display
+
+Contributors
+
+    Xiaoxuan Liu, Arm Ltd.
+    Sunny Sun, Arm Ltd.
+
+Contacts
+
+    Xiaoxuan Liu, Arm Ltd. (xiaoxuan 'dot' liu 'at' arm 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2020-10-29
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_EXT_platform_angle_vulkan.
+
+Overview
+
+    This extension allows ANGLE to use simple display mode through
+    VK_KHR_display without native platform support (e.g. X11, GBM).
+    The EGLSurfaces to be created from native types only contain the
+    basic width and height info.
+
+New Types
+
+    The basic structure to represent a display window, used by vulkan
+    backend to create valid display with VK_KHR_display.
+
+        typedef struct displayWindow
+        {
+            khronos_uint16_t width;
+            khronos_uint16_t height;
+        } DisplayWindow;
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE
+    attribute:
+
+        EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE 0x34A4
+        EGL_PLATFORM_VULKAN_DISPLAY_MODE_HEADLESS_ANGLE 0x34A5
+
+Additions to the EGL Specification
+
+    None
+
+New Behavior
+
+    To obtain an simple EGLDisplay backed by a ANGLE vulkan with
+    VK_KHR_display, request a display that is backed by a Vulkan driver
+    through EGL_ANGLE_platform_angle_vulkan. And the value of attribute
+    EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE should be
+    EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE or
+    EGL_PLATFORM_VULKAN_DISPLAY_MODE_HEADLESS_ANGLE.
+
+    If an EGLDisplay is backed by  ANGLE vulkan VK_KHR_display and the
+    value of attribute EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE is
+    set but neither EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE or
+    EGL_PLATFORM_VULKAN_DISPLAY_MODE_HEADLESS_ANGLE, then EGL_NO_DISPLAY
+    should be returned.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2020-10-29 (Xiaoxuan Liu)
+      - Initial draft
+

@@ -1,0 +1,4 @@
+<map id="pvr::assets::Model::Material::PBRSemantics" name="pvr::assets::Model::Material::PBRSemantics">
+<area shape="rect" id="node2" href="$classpvr_1_1assets_1_1_model_1_1_material_1_1_g_l_t_f_metallic_roughness_semantics.html" title="This class provides accessor for gltf metallic roughness semantics" alt="" coords="239,5,481,61"/>
+<area shape="rect" id="node3" href="$classpvr_1_1assets_1_1_model_1_1_material_1_1_p_o_d_metallic_roughness_semantics.html" title="POD Metallic roughness semantics" alt="" coords="240,85,480,141"/>
+</map>

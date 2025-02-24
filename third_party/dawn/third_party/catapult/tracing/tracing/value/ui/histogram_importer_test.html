@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram_importer.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(() => {
+  const kHtmlString = '<script>throw new Error("oops");<' + '/script>';
+
+  function createHistogram(id) {
+    const histogram =
+        new tr.v.Histogram('name<' + id + '>', tr.b.Unit.byName.count);
+    histogram.addSample(id);
+    histogram.customizeSummaryOptions({
+      count: false,
+      max: false,
+      min: false,
+      std: false,
+      sum: false,
+    });
+    histogram.diagnostics.set('html', new tr.v.d.GenericSet([kHtmlString]));
+    return histogram;
+  }
+
+  test('importZeroHistogramsEmptyArray', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms([], view);
+
+    assert.strictEqual('block', view.style.display);
+    assert.strictEqual(undefined, view.histograms);
+  });
+
+  test('importZeroHistogramsEmptyString', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+    const histogramData = '';
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms([histogramData], view);
+
+    assert.strictEqual('block', view.style.display);
+    assert.strictEqual(undefined, view.histograms);
+  });
+
+  test('importZeroHistograms', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+    const histogramData = '\n';
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms([histogramData], view);
+
+    assert.strictEqual('block', view.style.display);
+    assert.strictEqual(undefined, view.histograms);
+  });
+
+  test('importOneHistogram', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+
+    const hist = createHistogram(42);
+    const histogramData = '\n' + JSON.stringify(hist.asDict()) + '\n';
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms([histogramData], view);
+
+    assert.strictEqual('none', loadingEl.style.display);
+    assert.strictEqual('block', view.style.display);
+    assert.lengthOf(view.histograms, 1);
+    const histogram = view.histograms.getHistogramNamed('name<42>');
+    assert.strictEqual(kHtmlString, tr.b.getOnlyElement(
+        histogram.diagnostics.get('html')));
+    assert.deepEqual([42], histogram.sampleValues);
+  });
+
+  test('importOneHistogramAndEmptyStrings', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+
+    const hist = createHistogram(42);
+    const histogramDataArray = [
+        '', '\n' + JSON.stringify(hist.asDict()) + '\n', '\n', ''];
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms(histogramDataArray, view);
+
+    assert.strictEqual('none', loadingEl.style.display);
+    assert.strictEqual('block', view.style.display);
+    assert.lengthOf(view.histograms, 1);
+    const histogram = view.histograms.getHistogramNamed('name<42>');
+    assert.strictEqual(kHtmlString, tr.b.getOnlyElement(
+        histogram.diagnostics.get('html')));
+    assert.deepEqual([42], histogram.sampleValues);
+  });
+
+  test('importNHistogramsSingleString', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+
+    const kNofHistograms = 1000;
+    let histogramData = '\n';
+    for (let i = 0; i < kNofHistograms; i++) {
+      const id = kNofHistograms * 100 + i;
+      const histogram = createHistogram(id);
+      histogramData += JSON.stringify(histogram.asDict()) + '\n';
+    }
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms([histogramData], view);
+
+    assert.strictEqual('none', loadingEl.style.display);
+    assert.strictEqual('block', view.style.display);
+    assert.lengthOf(view.histograms, kNofHistograms);
+    for (let i = 0; i < kNofHistograms; i++) {
+      const id = kNofHistograms * 100 + i;
+      const histogram = view.histograms.getHistogramNamed('name<' + id + '>');
+      assert.strictEqual(kHtmlString, tr.b.getOnlyElement(
+          histogram.diagnostics.get('html')));
+      assert.deepEqual([id], histogram.sampleValues);
+    }
+  });
+
+  test('importNHistogramsSeparateStrings', async function() {
+    const loadingEl = document.createElement('div');
+    this.addHTMLOutput(loadingEl);
+    const importer = new tr.v.HistogramImporter(loadingEl);
+
+    const kNofHistograms = 1000;
+    let histogramDataArray = ['', '\n' ];
+    for (let i = 0; i < kNofHistograms; i++) {
+      const id = kNofHistograms * 100 + i;
+      const histogram = createHistogram(id);
+      histogramDataArray.push(
+          '\n' + JSON.stringify(histogram.asDict()) + '\n');
+    }
+
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    view.style.display = 'none';
+    this.addHTMLOutput(view);
+
+    await importer.importHistograms(histogramDataArray, view);
+
+    assert.strictEqual('none', loadingEl.style.display);
+    assert.strictEqual('block', view.style.display);
+    assert.lengthOf(view.histograms, kNofHistograms);
+    for (let i = 0; i < kNofHistograms; i++) {
+      const id = kNofHistograms * 100 + i;
+      const histogram = view.histograms.getHistogramNamed('name<' + id + '>');
+      assert.strictEqual(kHtmlString, tr.b.getOnlyElement(
+          histogram.diagnostics.get('html')));
+      assert.deepEqual([id], histogram.sampleValues);
+    }
+  });
+});
+</script>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.math', function() {
+  const PERCENTILE_PRECISION = 1e-7;
+  /**
+   * A function that consists of linear pieces.
+   * See https://en.wikipedia.org/wiki/Piecewise_linear_function.
+   * @constructor
+   */
+  function PiecewiseLinearFunction() {
+    this.pieces = [];
+  }
+
+  PiecewiseLinearFunction.prototype = {
+    /**
+     * Push a linear piece defined by linear interpolation between.
+     * (x1, y1) and (x2, y2).
+     * Pieces must be pushed in the order of increasing x coordinate.
+     */
+    push(x1, y1, x2, y2) {
+      if (x1 >= x2) {
+        throw new Error('Invalid segment');
+      }
+      if (this.pieces.length > 0 &&
+          this.pieces[this.pieces.length - 1].x2 > x1) {
+        throw new Error('Potentially overlapping segments');
+      }
+      if (x1 < x2) {
+        this.pieces.push(new Piece(x1, y1, x2, y2));
+      }
+    },
+
+    /**
+     *  Returns the size of the set A such that for all x in A: f(x) < y.
+     */
+    partBelow(y) {
+      return this.pieces.reduce((acc, p) => (acc + p.partBelow(y)), 0);
+    },
+
+    get min() {
+      return this.pieces.reduce((acc, p) => Math.min(acc, p.min), Infinity);
+    },
+
+    get max() {
+      return this.pieces.reduce((acc, p) => Math.max(acc, p.max), -Infinity);
+    },
+
+    get average() {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      this.pieces.forEach(function(piece) {
+        weightedSum += piece.width * piece.average;
+        totalWeight += piece.width;
+      });
+      if (totalWeight === 0) return 0;
+      return weightedSum / totalWeight;
+    },
+
+    /**
+    * Returns the minimum possible value y such that the percentage of x points
+    * that have f(x) <= y is approximately equal to the given |percent|.
+    */
+    percentile(percent) {
+      if (!(percent >= 0 && percent <= 1)) {
+        throw new Error('percent must be [0,1]');
+      }
+      let lower = this.min;
+      let upper = this.max;
+      const total = this.partBelow(upper);
+      if (total === 0) return 0;
+      while (upper - lower > PERCENTILE_PRECISION) {
+        const middle = (lower + upper) / 2;
+        const below = this.partBelow(middle);
+        if (below / total < percent) {
+          lower = middle;
+        } else {
+          upper = middle;
+        }
+      }
+      return (lower + upper) / 2;
+    }
+  };
+
+  /**
+  * A linear segment from (x1, y1) to (x2, y2).
+  * @constructor
+  */
+  function Piece(x1, y1, x2, y2) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+  }
+
+  Piece.prototype = {
+    /**
+    * The total length of all x points such that f(x) < y.
+    * More formally:
+    * max(x2 - x1) such that for all x in [x1 .. x2]: f(x) < y.
+    */
+    partBelow(y) {
+      const width = this.width;
+      if (width === 0) return 0;
+      const minY = this.min;
+      const maxY = this.max;
+      if (y >= maxY) return width;
+      if (y < minY) return 0;
+      return (y - minY) / (maxY - minY) * width;
+    },
+
+    get min() {
+      return Math.min(this.y1, this.y2);
+    },
+
+    get max() {
+      return Math.max(this.y1, this.y2);
+    },
+
+    get average() {
+      return (this.y1 + this.y2) / 2;
+    },
+
+    get width() {
+      return this.x2 - this.x1;
+    }
+  };
+
+  return {
+    PiecewiseLinearFunction,
+  };
+});
+</script>

@@ -1,0 +1,16 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("relationals") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/relationals" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/relationals/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/relationals/test_comparisons_fp.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/relationals/test_relationals.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/relationals/test_shuffles.cpp",
+  ]
+}

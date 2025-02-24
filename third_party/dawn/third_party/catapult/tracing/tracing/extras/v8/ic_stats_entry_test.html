@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/v8/ic_stats_entry.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const obj1 = {
+    type: 'StoreIC',
+    functionName: 'f',
+    offset: 10,
+    scriptName: 'a.js',
+    lineNum: 1,
+    state: '(0->.)',
+    map: '0x000000000A',
+    dict: 0,
+    own: 3
+  };
+  const obj2 = {
+    type: 'LoadIC',
+    functionName: 'saveBuiltin',
+    offset: 11,
+    scriptName: 'extensions::SafeBuiltins',
+    lineNum: 2,
+    state: '(0->.)',
+    map: '0x00000000AA',
+    dict: 1,
+    own: 0
+  };
+  const obj3 = {
+    type: 'CompareIC',
+    functionName: 'InnerArrayForEach',
+    offset: 12,
+    scriptName: 'native array.js',
+    lineNum: 3,
+    state: '((UNINITIALIZED+UNINITIALIZED=UNINITIALIZED)->(SMI+SMI=SMI))#LT',
+    map: '0x0000000AAA'
+  };
+  const obj4 = {
+    type: 'StoreIC',
+    functionName: 'bar',
+    offset: 13,
+    scriptName: 'a.js',
+    lineNum: 4,
+    state: '(0->.)',
+    map: '0x000000AAAA',
+    dict: 1,
+    own: 7
+  };
+
+  test('ICStatsEntry', function() {
+    const entry1 = new tr.e.v8.ICStatsEntry(obj1);
+    assert.strictEqual(entry1.type, 'StoreIC');
+    assert.strictEqual(entry1.category, 'Store');
+    assert.strictEqual(entry1.state, '(0->.)');
+    assert.strictEqual(entry1.filePosition, 'a.js:1 ~f+10');
+    assert.strictEqual(entry1.isNative, false);
+    assert.strictEqual(entry1.propertiesMode, 'fast');
+    assert.strictEqual(entry1.numberOfOwnProperties, 3);
+
+    const entry2 = new tr.e.v8.ICStatsEntry(obj4);
+    assert.strictEqual(entry2.type, 'StoreIC');
+    assert.strictEqual(entry2.category, 'Store');
+    assert.strictEqual(entry2.state, '(0->.)');
+    assert.strictEqual(entry2.filePosition, 'a.js:4 ~bar+13');
+    assert.strictEqual(entry2.isNative, false);
+    assert.strictEqual(entry2.propertiesMode, 'slow');
+    assert.strictEqual(entry2.numberOfOwnProperties, 7);
+
+    const entry3 = new tr.e.v8.ICStatsEntry(obj3);
+    assert.strictEqual(entry3.isNative, true);
+  });
+
+  test('ICStatsEntryCollection', function() {
+    const entryCollection = new tr.e.v8.ICStatsCollection();
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj1));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj2));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj3));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj4));
+
+    assert.strictEqual(entryCollection.length, 4);
+  });
+
+  test('ICStatsEntryGroup', function() {
+    const entryCollection = new tr.e.v8.ICStatsCollection();
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj1));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj2));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj3));
+    entryCollection.add(new tr.e.v8.ICStatsEntry(obj4));
+
+    const entryGroups = entryCollection.groupBy('type');
+    assert.strictEqual(entryGroups[0].length, 2);
+    assert.strictEqual(entryGroups[0].key, 'StoreIC');
+    assert.strictEqual(entryGroups[1].key, 'LoadIC');
+    assert.strictEqual(entryGroups[2].key, 'CompareIC');
+
+    const subGroups = entryGroups[0].createSubGroup();
+    assert.strictEqual(subGroups.size, 9);
+    const filePositionGroup = subGroups.get('filePosition');
+    assert.deepEqual(Array.from(filePositionGroup.keys()), [
+      'a.js:1 ~f+10', 'a.js:4 ~bar+13'
+    ]);
+  });
+});
+</script>

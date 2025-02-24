@@ -1,0 +1,340 @@
+# Datastore Composite Index Configuration.
+# https://developers.google.com/appengine/docs/python/config/indexconfig
+#
+# Below, most indexes come in pairs; one with the internal_only property,
+# one without. This is because all queries when the user is not logged in
+# have the filter internal_only == False.
+#
+# Composite index properties must be listed differently depending on how the
+# properties are used. There are three main ways to use properties in a query:
+#   (1) In an equality filter.
+#   (2) In an inequality filter.
+#   (3) In a sort order.
+# The properties below must be listed in this order. The "direction" only needs
+# to be specified for properties used for sort order.
+#
+# To update the indexes in production after editing them here, you need to run
+# the following commands:
+# Deploy the index configuration file:
+#   gcloud app deploy index.yaml
+# Delete unused indexes:
+#   gcloud datastore indexes cleanup index.yaml
+# More details:
+# https://cloud.google.com/appengine/docs/standard/python/config/indexref#deploying_the_index_configuration_file
+
+indexes:
+
+# Use the zigzag merge join algorithm:
+# https://cloud.google.com/appengine/articles/indexselection
+# The datastore joins these indexes to support any query that orders by
+# -timestamp. These indexes cannot be used for queries that order by a different
+# property.
+- kind: Anomaly
+  properties:
+  - name: internal_only
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: bug_id
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: project_id
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: subscription_names
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: is_improvement
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: recovered
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: test
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: master_name
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: bot_name
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: benchmark_name
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: start_revision
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: start_revision
+    direction: desc
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: end_revision
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: end_revision
+    direction: desc
+  - name: timestamp
+    direction: desc
+- kind: Anomaly
+  properties:
+  - name: statistic
+  - name: test
+  - name: end_revision
+    direction: desc
+
+# This composite index supports the most important type of query in alerts.py
+# when improvements and triaged alerts are not required. Without this index,
+# that query would need to merge 4 of the indexes above, which significantly
+# impacts performance. When either improvements or triaged alerts are required,
+# the datastore only needs to merge 2 or 3 indexes, which is fast enough.
+- kind: Anomaly
+  properties:
+  - name: subscription_names
+  - name: is_improvement
+  - name: bug_id
+  - name: project_id
+  - name: recovered
+  - name: timestamp
+    direction: desc
+
+# This composite index supports QueryAsync(subscription_names=..., min_start_revision=...),
+# which spa uses to load triaged alerts after loading untriaged alerts.
+- kind: Anomaly
+  properties:
+  - name: subscription_names
+  - name: start_revision
+  - name: timestamp
+    direction: desc
+
+# GetAlertsAroundRevision orders by end_revision instead of timestamp, so it
+# can't use the above indexes.
+- kind: Anomaly
+  properties:
+  - name: internal_only
+  - name: end_revision
+
+# Used to query for "My Jobs".
+- kind: Job
+  properties:
+  - name: user
+  - name: created
+    direction: desc
+
+# Used for pagination.
+- kind: Job
+  properties:
+  - name: user
+  - name: created
+    direction: asc
+
+# Used to query for jobs with filters on configuration and user.
+- kind: Job
+  properties:
+  - name: configuration
+  - name: user
+  - name: created
+    direction: desc
+
+# Used to query for jobs with filters on just configuration.
+- kind: Job
+  properties:
+  - name: configuration
+  - name: created
+    direction: desc
+
+# Used to query for jobs with filters on comparison_mode.
+- kind: Job
+  properties:
+  - name: comparison_mode
+  - name: created
+    direction: desc
+
+- kind: Job
+  properties:
+  - name: comparison_mode
+  - name: user
+  - name: created
+    direction: desc
+
+- kind: Job
+  properties:
+  - name: comparison_mode
+  - name: configuration
+  - name: created
+    direction: desc
+
+- kind: Job
+  properties:
+  - name: comparison_mode
+  - name: user
+  - name: configuration
+  - name: created
+    direction: desc
+
+# Index jobs by batch id.
+- kind: Job
+  properties:
+  - name: batch_id
+  - name: created
+    direction: desc
+
+# Used in find_anomalies.GetRowsToAnalyze when getting latest points,
+# with projection query for properties revision, value, and timestamp.
+# This is a new version of the index introduced for filtering out
+# anomalies that span swarming_bot_id changes.
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: revision
+    direction: desc
+  - name: swarming_bot_id
+  - name: timestamp
+  - name: value
+
+# Used in find_anomalies.GetRowsToAnalyze when getting latest points,
+# with projection query for properties revision, value, and timestamp.
+# This is the old version of the same index from line 217, and preserving
+# it here should allow us to deploy and rollback more safely so we don't
+# repeat the production errors we saw in b/303566284
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: revision
+    direction: desc
+  - name: value
+  - name: timestamp
+
+# Used in graph_revisions.py to do a projection query for timestamp, revision
+# and value for points from a particular test.
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: revision
+  - name: timestamp
+  - name: value
+
+# Used in several modules (graph_json.py and graph_csv.py) to fetch the latest
+# points for a test.
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: revision
+    direction: desc
+
+# This composite index enables querying for points for a particular test,
+# filtering or sorting by revision. This may be unused, but it may be useful
+# for queries on the interactive console.
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: revision
+
+# May be unused!
+# Likely used in new_points.py to query newest points for a particular test.
+# However listing the latest points for a test also works when not logged in
+# currently, although there appears to be no index in this file for that.
+- kind: Row
+  properties:
+  - name: parent_test
+  - name: timestamp
+    direction: desc
+
+# Used for returning timeseries of histogram commit records.
+- kind: HistogramRevisionRecord
+  properties:
+  - name: test
+  - name: revision
+
+- kind: HistogramRevisionRecord
+  properties:
+  - name: test
+  - name: revision
+    direction: desc
+
+# Used for returning timeseries of diagnostics.
+- kind: SparseDiagnostic
+  properties:
+  - name: start_revision
+    direction: desc
+  - name: end_revision
+    direction: desc
+
+- kind: SparseDiagnostic
+  properties:
+  - name: start_revision
+    direction: desc
+  - name: end_revision
+    direction: desc
+  - name: internal_only
+
+- kind: SparseDiagnostic
+  properties:
+  - name: test
+  - name: start_revision
+    direction: desc
+
+- kind: SparseDiagnostic
+  properties:
+  - name: test
+  - name: end_revision
+    direction: desc
+
+- kind: SparseDiagnostic
+  properties:
+  - name: internal_only
+  - name: start_revision
+    direction: desc
+
+# Used in update_test_suites to query keys of test suites (parent_test == None)
+# with deprecated and description projection. Two separate lists of
+# test suites are kept, one for external and one for internal.
+- kind: TestMetadata
+  properties:
+  - name: parent_test
+  - name: deprecated
+  - name: description
+- kind: TestMetadata
+  properties:
+  - name: internal_only
+  - name: parent_test
+  - name: deprecated
+  - name: description
+
+# Used in Pinpoint to pick ConfigurationQueue instances.
+- kind: ConfigurationQueue
+  ancestor: yes
+  properties:
+    - name: configuration
+
+# Used in Pinpoint to query for timing stats.
+- kind: TimingRecord
+  properties:
+  - name: tags
+  - name: completed
+    direction: desc

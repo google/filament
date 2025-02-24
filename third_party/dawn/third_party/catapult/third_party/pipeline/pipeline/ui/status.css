@@ -1,0 +1,209 @@
+/*
+ * Copyright 2010 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Major page sections. */
+html, body {
+  overflow: hidden;
+}
+#sidebar {
+  top: 0;
+  left: 0;
+  position: absolute;
+  width: 30%;
+  height: 100%;
+  overflow: auto;
+  padding: 0;
+  border-right: 1px solid grey;
+  margin: 0;
+  background-color: #f8f8f8;
+}
+#content {
+  border: 0;
+  margin: 0 0 0 30%;
+  padding: 0 0 0 1px; /* must match border+padding on #sidebar */
+}
+#detail {
+  padding: 10px;
+  overflow-y: auto;
+}
+#control {
+  padding: 0;
+  margin: 0;
+  height: 25px;
+  width: 100%;
+  border-bottom: 1px solid #808080;
+}
+#control-table {
+  height: 100%;
+  float: right;
+}
+.control-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 4px;
+}
+#status-console {
+  border-top: 1px solid grey;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* shared styling of pipeline info divs */
+.status-message {
+}
+.status-message-text {
+  font-family: monospace;
+}
+abbr {
+  cursor: help;
+  border: 0;
+}
+.status-links > a {
+  margin-right: 5px;
+}
+.status-title {
+  text-transform: capitalize;
+}
+
+/* detail-specific styling */
+.status-param,
+.retry-param {
+  padding-left: 1em;
+  font-size: 0.85em;
+}
+.slot-detail,
+.status-param-value {
+  padding-left: 1em;
+  word-wrap: break-word;
+}
+.value-disclosure-more {
+  display: none;
+}
+.run-after-pipeline-id,
+.child-pipeline-id,
+.child-link,
+.run-after-link {
+  display: block;
+  padding-left: 1em;
+  font-size: 0.85em;
+}
+#detail .status-box {
+  font-size: 1em;
+}
+#detail .outputs-container,
+#detail .param-container,
+#detail .child-container,
+#detail .run-after-container,
+#detail .status-retry-params {
+  margin-top: 1em;
+}
+#detail .status-param-value,
+#detail .slot-value {
+  font-family: monospace;
+}
+
+/* sidebar */
+#sidebar .status-title {
+}
+#sidebar .status-message {
+  word-wrap: break-word;
+}
+#sidebar .status-time {
+}
+#sidebar .status-runtime {
+}
+#sidebar .status-links {
+}
+#sidebar .status-box {
+  font-size: 0.85em;
+  padding: 3px 3px;
+  min-width: 200px;
+  border-left: 1px solid #BFBFBF;
+  border-right: 0;
+  border-top: 0;
+  border-bottom: 1px solid #BFBFBF;
+}
+#sidebar .status-waiting {
+  background-color: #EDEDED;
+}
+#sidebar .status-run,
+#sidebar .status-finalizing {
+  background-color: #fff;
+}
+#sidebar .status-done {
+  background-color: #BEEDBE;
+}
+#sidebar .status-aborted,
+#sidebar .status-canceled {
+  background-color: #EDBEC6;
+}
+#sidebar .status-retry {
+  background-color: #EDE7B2;
+}
+.treeview li {
+  padding: 0 0 0 16px;
+}
+.disclosure {
+  text-decoration: underline;
+  color: blue;
+  padding-top: 0.5em;
+  padding-left: 3px;
+  display: block;
+}
+.selected-indicator {
+  display: none;
+}
+.selected-link .selected-indicator {
+  display: block;
+  float: right;
+  margin: 0;
+  padding: 0;
+  font-size: 30px;
+  color: #000;
+  font-weight: bold;
+  line-height: 15px;
+}
+.status-links .selected-link {
+  font-weight: bold !important;
+}
+.status-links a:active,
+.status-links a:link,
+.status-links a:visited {
+  text-decoration: underline;
+  color: blue;
+  font-weight: normal;
+}
+.disclosure:hover,
+.status-links a:hover,
+.detail-link a:hover {
+  text-decoration: underline;
+}
+#sidebar .detail-link {
+  word-wrap: break-word;
+}
+.detail-link a {
+  font-size: 1.2em;
+  font-weight: bold;
+  text-decoration: none;
+}
+.detail-link a:active,
+.detail-link a:link,
+.detail-link a:visited {
+  color: black;
+}

@@ -1,0 +1,3 @@
+// ast-dump
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /ast-dump | FileCheck %s --check-prefix=AST
+// AST:TranslationUnitDecl

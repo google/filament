@@ -1,0 +1,8 @@
+# devil/bin/deps isn't handled by the main .gitignore file,
+# because this directory must exist in a fresh checkout,
+# in order for GN to be able to find this dependency.
+#
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

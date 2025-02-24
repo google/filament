@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<dom-module id='instantiate-template-polymer-element-test'>
+  <template></template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'instantiate-template-polymer-element-test',
+  testProperty: 'Test'
+});
+</script>
+<template id="instantiate-template-polymer-test">
+  <instantiate-template-polymer-element-test>
+  </instantiate-template-polymer-element-test>
+</template>
+
+<template id="multiple-template-test">
+  <template>
+    <instantiate-template-polymer-element-test>
+    </instantiate-template-polymer-element-test>
+    <span test-attribute='TestAttribute'>Foo</span>
+  </template>
+  <instantiate-template-polymer-element-test>
+  </instantiate-template-polymer-element-test>
+</template>
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiateTemplatePolymer', function() {
+    const e = tr.ui.b.instantiateTemplate(
+        '#instantiate-template-polymer-test',
+        THIS_DOC);
+    assert.strictEqual(e.children.length, 1);
+    assert.strictEqual(e.children[0].testProperty, 'Test');
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiateTemplateMultipleTemplates', function() {
+    const outerElement = tr.ui.b.instantiateTemplate(
+        '#multiple-template-test',
+        THIS_DOC);
+    assert.strictEqual(outerElement.children.length, 2);
+    assert.strictEqual(outerElement.children[1].testProperty, 'Test');
+
+    // Make sure we can still instantiate inner templates, if we need them.
+    const innerElement = THIS_DOC.importNode(
+        outerElement.children[0].content, true);
+    assert.strictEqual(innerElement.children.length, 2);
+    assert.strictEqual(innerElement.children[0].testProperty, 'Test');
+    assert.strictEqual(
+        innerElement.children[1].getAttribute('test-attribute'),
+        'TestAttribute');
+    assert.strictEqual(
+        Polymer.dom(innerElement.children[1]).textContent, 'Foo');
+  });
+
+  test('extractUrlStringAcceptsBothVersions', function() {
+    const oldStyleUrl = 'url(content)';
+    const newStyleUrl = 'url("content")';
+    const expectedResult = 'content';
+
+    assert.strictEqual(tr.ui.b.extractUrlString(oldStyleUrl), expectedResult);
+    assert.strictEqual(tr.ui.b.extractUrlString(newStyleUrl), expectedResult);
+  });
+});
+</script>
+

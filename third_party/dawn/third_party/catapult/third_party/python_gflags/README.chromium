@@ -1,0 +1,26 @@
+Name: python-gflags
+URL: http://code.google.com/p/python-gflags/
+Version: 2.0
+Date: 15 Feb 2012
+Revision: 41
+License: BSD 3-Clause License
+License File: COPYING
+Security Critical: no
+Shipped: yes
+
+Description:
+  This project is the python equivalent of google-gflags, a Google commandline
+  flag implementation for C++. It is intended to be used in situations where a
+  project wants to mimic the command-line flag handling of a C++ app that uses
+  google-gflags, or for a Python app that, via swig or some other means, is
+  linked with a C++ app that uses google-gflags.
+
+  The gflags package contains a library that implements commandline flags
+  processing. As such it's a replacement for getopt(). It has increased
+  flexibility, including built-in support for Python types, and the ability to
+  define flags in the source file in which they're used. (This last is its
+  major difference from OptParse.)
+
+Local modifications:
+  Removed tests/
+  Removed debian/

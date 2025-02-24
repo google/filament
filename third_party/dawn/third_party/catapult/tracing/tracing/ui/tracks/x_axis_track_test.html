@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/x_axis_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const div = document.createElement('div');
+
+    const viewport = new tr.ui.TimelineViewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = tr.ui.tracks.XAxisTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    this.addHTMLOutput(div);
+
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.setPanAndScale(0, track.clientWidth / 1000);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+  test('instantiate_interestRange', function() {
+    const div = document.createElement('div');
+
+    const viewport = new tr.ui.TimelineViewport(div);
+    viewport.interestRange.min = 300;
+    viewport.interestRange.max = 300;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = tr.ui.tracks.XAxisTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    this.addHTMLOutput(div);
+
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.setPanAndScale(0, track.clientWidth / 1000);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+  test('instantiate_singlePointInterestRange', function() {
+    const div = document.createElement('div');
+
+    const viewport = new tr.ui.TimelineViewport(div);
+    viewport.interestRange.min = 300;
+    viewport.interestRange.max = 400;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = tr.ui.tracks.XAxisTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    this.addHTMLOutput(div);
+
+    drawingContainer.invalidate();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.setPanAndScale(0, track.clientWidth / 1000);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+  function testTimeMode(mode, testInstance, numDigits, opt_unit) {
+    const div = document.createElement('div');
+
+    const viewport = new tr.ui.TimelineViewport(div);
+    viewport.timeMode = mode;
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const trackContext = drawingContainer.ctx_;
+    const oldFillText = trackContext.fillText;
+    const fillTextText = [];
+    const fillTextThis = [];
+    trackContext.fillText = function(text, xPos, yPos) {
+      fillTextText.push(text);
+      fillTextThis.push(this);
+      return oldFillText.call(this, text, xPos, yPos);
+    };
+
+    const track = tr.ui.tracks.XAxisTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    testInstance.addHTMLOutput(div);
+
+    drawingContainer.invalidate();
+    tr.b.forceAllPendingTasksToRunForTest();
+
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.setPanAndScale(0, track.clientWidth / 1000);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    const formatter =
+        new Intl.NumberFormat(undefined, { numDigits, numDigits });
+    const formatFunction = function(value) {
+      let valueString = value.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: numDigits
+      });
+      if (opt_unit) valueString += opt_unit;
+      return valueString;
+    };
+    const expectedText = viewport.majorMarkWorldPositions.map(
+        formatFunction);
+    assert.strictEqual(fillTextText.length, fillTextThis.length);
+    for (let i = 0; i < fillTextText.length; i++) {
+      assert.deepEqual(fillTextText[i], expectedText[i]);
+      assert.strictEqual(fillTextThis[i], trackContext);
+    }
+  }
+
+  test('instantiate_timeModeMs', function() {
+    testTimeMode(tr.ui.TimelineViewport.TimeMode.TIME_IN_MS,
+        this, 3, ' ms');
+  });
+
+  test('instantiate_timeModeRevisions', function() {
+    testTimeMode(tr.ui.TimelineViewport.TimeMode.REVISIONS, this, 0);
+  });
+});
+</script>
+

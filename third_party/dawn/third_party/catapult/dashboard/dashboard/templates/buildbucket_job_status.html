@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+</head>
+<body>
+  <nav-bar></nav-bar>
+{% if error %}
+  <pre>
+  Status of the bisect job {{job_id}}: ERROR, {{error}}
+  </pre>
+{% else %}
+  <pre>
+  {% if build %}
+  Status of the bisect job {{job_id}}: {{build.status}}, {{build.result}}
+
+  Master: {{build.bucket}}
+  Builder: {{build.parameters.builder_name}}
+  Test: {{build.parameters.properties.bisect_config.command}}
+  Metric: {{build.parameters.properties.bisect_config.metric}}
+  Good revision: {{build.parameters.properties.bisect_config.good_revision}}
+  Bad revision: {{build.parameters.properties.bisect_config.bad_revision}}
+  Job created on (UTC): {{build.created_utc}}
+  Job completed on(UTC): {{build.completed_utc}}
+  Buildbot link: <a href="{{build.url}}">{{build.url}}</a>
+  {% endif %}
+  </pre>
+
+  <p><a href="/cancel_buildbot_job/{{job_id}}">Click here to cancel this job.
+  (Not Yet Implemented)</a></p>
+{% endif %}
+  <pre> {{status_text}} </pre>
+</body>
+</html>

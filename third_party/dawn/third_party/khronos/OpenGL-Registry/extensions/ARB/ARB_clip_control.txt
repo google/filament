@@ -1,0 +1,1041 @@
+Name
+
+    ARB_clip_control
+
+Name Strings
+
+    GL_ARB_clip_control
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Contributors
+
+    Timo Suoranta, Broadcom
+    Piers Daniell, NVIDIA
+    Stefan Dösinger, CodeWeavers
+    Jeff Bolz, NVIDIA
+    John McDonald, NVIDIA
+    Brian Paul, VMware, Mesa3D
+    Jason Mitchell, Valve
+    Alex Corscadden, VMware
+    Simon Bennett, VMware
+    Mark Callow, HI Corporation
+    Patrick Doane, Blizzard
+    Pat Brown, NVIDIA
+    Brano Kemen
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date:  2018/04/06
+    NVIDIA Revision:     19
+
+Number
+
+    ARB Extension #160
+
+Dependencies
+
+    Written based on the wording of the OpenGL 4.4 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension provides additional clip control modes to configure how
+    clip space is mapped to window space.  This extension's goal is to 1)
+    allow OpenGL to effectively match Direct3D's coordinate system
+    conventions, and 2) potentially improve the numerical precision of the Z
+    coordinate mapping.
+
+    Developers interested in this functionality may be porting content
+    from Direct3D to OpenGL and/or interested in improving the numerical
+    accuracy of depth testing, particularly with floating-point depth
+    buffers.
+
+    OpenGL's initial and conventional clip control state is configured by:
+
+        glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+
+    where geometry with (x,y) normalized device coordinates of (-1,-1)
+    correspond to the lower-left corner of the viewport and the near and far
+    planes correspond to z normalized device coordinates of -1 and +1,
+    respectively.
+
+    This extension can be used to render content used in a Direct3D
+    application in OpenGL in a straightforward way without modifying vertex or
+    matrix data.  When rendering into a window, the command
+
+        glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+    configures the near clip plane to correspond to a z normalized device
+    coordinate of 0 as in Direct3D.  Geometry with (x,y) normalized device
+    coordinates of (-1,-1) correspond to the lower-left corner of the viewport
+    in Direct3D, so no change relative to OpenGL conventions is needed there.
+    Other state related to screen-space coordinates may need to be modified
+    for the application to map from Direct3D to OpenGL window coordinate
+    conventions.  For example, the viewport rectangle in Direct3D needs to be
+    inverted within the window to work properly in OpenGL windowed rendering:
+
+       glViewport(d3d_viewport_x,
+                  window_height - (d3d_viewport_y + d3d_viewport_height),
+                  d3d_viewport_width, d3d_viewport_height);
+
+    When rendering Direct3D content into a framebuffer object in OpenGL, there
+    is one complication -- how to get a correct image *out* of the related
+    textures.  Direct3D applications would expect a texture coordinate of
+    (0,0) to correspond to the upper-left corner of a rendered image, while
+    OpenGL FBO conventions would map (0,0) to the lower-left corner of the
+    rendered image.  For applications wishing to use Direct3D content with
+    unmodified texture coordinates, the command
+
+        glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+
+    configures the OpenGL to invert geometry vertically inside the viewport.
+    Content at the top of the viewport for Direct3D will be rendered to the
+    bottom of the viewport from the point of view of OpenGL, but will have a
+    <t> texture coordinate of zero in both cases.  When operating in this
+    mode, applications need not invert the programmed viewport rectangle as
+    recommended for windowed rendering above.
+
+    Applications happy with OpenGL's origin conventions but seeking
+    potentially improved depth precision can configure clip controls using:
+
+        glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+    to avoid the loss of precision from the DepthRange transformation
+    (which by default is z_window = z_ndc * 0.5 + 0.5).
+
+New Procedures and Functions
+
+    void ClipControl(enum origin, enum depth);
+
+New Tokens
+
+    Accepted by the <origin> parameter of ClipControl:
+
+        LOWER_LEFT                                  0x8CA1
+        UPPER_LEFT                                  0x8CA2
+
+    Accepted by the <depth> parameter of ClipControl:
+
+        NEGATIVE_ONE_TO_ONE                         0x935E
+        ZERO_TO_ONE                                 0x935F
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        CLIP_ORIGIN                                 0x935C
+        CLIP_DEPTH_MODE                             0x935D
+
+Additions to Chapter 13 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Fixed-Function Vertex Post-Processing)
+
+ -- Modify section 13.5 "Primitive Clipping"
+
+    Insert before the 1st paragraph...
+
+    "The command
+
+        ClipControl(enum origin, enum depth);
+
+    controls the clipping volume behavior.  /origin/ must be either
+    LOWER_LEFT or UPPER_LEFT, otherwise the error INVALID_ENUM is
+    generated.  /depth/ must be either NEGATIVE_ONE_TO_ONE or
+    ZERO_TO_ONE, otherwise the error INVALID_ENUM is generated.
+
+      These parameters update the clip control origin and
+    depth mode respectively.  The state required for clip control is one
+    bit for clip control origin and one bit for clip control depth mode.
+    The initial value of the clip control origin is LOWER_LEFT and the
+    initial value of the depth mode is NEGATIVE_ONE_TO_ONE.
+
+      The error INVALID_OPERATION is generated if ClipControl is
+    executed between the execution of Begin and the corresponding
+    execution of End."
+
+    Replace the first paragraph with...
+
+    "Primitives are clipped to the clip volume. In clip coordinates,
+    the view volume is defined by
+
+        -w_c <= x_c <= w_c
+        -w_c <= y_c <= w_c
+          zm <= z_c <= w_c
+
+     where zm is -w_c when the clip control depth mode is
+     NEGATIVE_ONE_TO_ONE or zero when the mode is ZERO_TO_ONE."
+
+     Change the last sentence of the 7th paragraph to read...
+
+     "If depth clamping is enabled, the
+
+        zm <= z_c <= w_c
+
+      plane equation (see the clip volume definition) is ignored by
+      view volume clipping (effectively, there is no near or far plane
+      clipping)."
+
+ -- Modify section 13.6 "Coordinate Transformations"
+
+    Replace the 3rd paragraph with (where ^T means transpose):
+
+    "If a vertex in clip coordinates is given by (x_c y_c z_c w_c)^T
+    then the vertex's normalized device coordinates are (x_d y_d z_d)^T =
+    (x_c/w_c f*y_c/w_c z_c/w_c)^T where /f/ is +1 when the clip control
+    origin is LOWER_LEFT and -1 when the origin is UPPER_LEFT."
+
+ -- Modify section 13.6.1 "Controlling the Viewport"
+
+    Replace the 2nd sentence of the 1st paragraph with (where ^T means
+    transpose):
+
+    "The vertex's window coordinates, (x_w y_w z_w)^T are given by:
+
+        ( x_w )     ( p_x/2 x_d + o_x )
+        ( y_w )  =  ( p_y/2 y_d + o_y )
+        ( z_w )     (     s z_d + b   )
+
+    where s is (f-n)/2 and b is (n+f)/2 when the clip control depth mode
+    is NEGATIVE_ONE_TO_ONE; or s is (f-n) and b is n when the mode
+    is ZERO_TO_ONE."
+
+Additions to Chapter 14 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Fixed-Function Primitive Assembly and Rasterization)
+
+ -- Modify section 14.6.1 "Basic Polygon Rasterization"
+
+    Replace the 3rd sentence of the 1st paragraph with:
+
+    "One way to compute this area is
+
+               n-1
+               ___
+               \
+      a = 1/2 f \  x^i_w * y^i(+)1_w - x^i(+)1_w * y^i_w
+                /
+               /__
+
+    where f is +1 when the clip control origin is LOWER_LEFT and -1 when
+    the origin is UPPER_LEFT, x^i_w and y^i_w are the x and y window
+    coordinates of the ith vertex of the n-vertex polygon (vertices
+    are numbered starting at zero for purposes of this computation),
+    and i(+)1 is (i+1) mod n."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent to the
+    server as part of a glXRender request:
+
+        ClipControl
+            2           12              rendering command length
+            2           1340            rendering command opcode
+            4           ENUM            origin
+            4           ENUM            depth
+
+Errors
+
+    The error INVALID_ENUM is generated by ClipControl if origin is not
+    LOWER_LEFT or UPPER_LEFT.
+
+    The error INVALID_ENUM is generated by ClipControl if depth is not
+    NEGATIVE_ONE_TO_ONE or ZERO_TO_ONE.
+
+    The error INVALID_OPERATION is generated if ClipControl is executed
+    between the execution of Begin and the corresponding execution of
+    End.
+
+New State
+
+    Get Value         Type  Get Command  Initial Value        Description      Sec   Attribute
+    ----------------  ----  -----------  -------------------  ---------------  ----  ---------
+    CLIP_ORIGIN       Z2    GetIntegerv  LOWER_LEFT           Clip origin      13.5  xform
+    CLIP_DEPTH_MODE   Z2    GetIntegerv  NEGATIVE_ONE_TO_ONE  Clip depth mode  13.5  xform
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1)  What should this extension be called?
+
+        RESOLVED:  ARB_clip_control
+
+        We frame this extension in terms of how the fixed-function
+        transformation from clip coordinates to window coordinates
+        is specified.  The crucial modifications to OpenGL's existing
+        behavior involve controlling how clip space is interpreted.
+
+        An upper-left origin is really simply negating (flipping) the
+        clip space Y coordinate.  Subsequently the sense of counter-clockwise
+        and clockwise for face culling must be adjusted (flipped).
+
+        A zero-to-one Z mode involves adjusting the clipping equation
+        for the clip space Z coordinate.  Subsequently the depth range
+        transform equation must be adjusted (scaled and biased).
+
+        Hence clip control is a sensible name.
+
+    2)  Should this functionality be exposed with glEnable/glDisable or
+        with a new command.
+
+        RESOLVED:  With a new command, glClipControl.
+
+        We note that this extension does not actually enable or disable
+        functionality, but rather modifies an existing transformation.
+
+        We note that Direct3D is different in two ways: clip Y inversion
+        and zero-to-one clip Z.
+
+        We note the difficulty of a clear enable name.
+        GL_NEGATIVE_ONE_TO_ONE and GL_ZERO_TO_ONE
+        are very explicit about how the Z clip coordinate is treated by
+        the clip equations.  Likewise, GL_LOWER_LEFT and GL_UPPER_LEFT
+        are explicit (and match the token names and meaning for the
+        point sprite functionality).
+
+        We also note the possibility for other possible conventions.
+        For example, an origin at the center of the window.  Hence an
+        enumeration of clip modes is a better choice.  Likewise, a future
+        Z mode could expose W-buffering.
+
+    3)  Why does unextended OpenGL have symmetric clip equations?
+
+        RESOLVED:  This is a legacy of implementation worthy of some
+        explanation...
+
+        Handling the X, Y, and Z directions the same way better
+        facilitates vector operation for hardware efficiency.
+
+        When transformations are done with 32-bit IEEE-754 floating-point
+        values, after transformation to clip space for clipping, the
+        Z values are typically converted to fixed-point for use by a
+        conventional 24-bit fixed-point depth buffer.
+
+        The process of scaling by 0.5 and adding 0.5 to a 32-bit
+        floating-point number in the range [-1,+1] has the effect of
+        appropriately rounding the value so it can be efficiently
+        bit-shifted into a 24-bit fixed-point value in the [0,1]
+        range suitable for depth buffering via linear fixed-point
+        interpolation.
+
+    4)  Should the face culling behavior be modified in GL_UPPER_LEFT
+        clip origin mode?
+
+        RESOLVED:  Yes.
+
+        See how the modifications to section 14.6.1 "Basic Polygon
+        Rasterization" negate the sign of the polygon area when the clip
+        control origin is GL_UPPER_LEFT.
+
+        Since culling behavior is specified as CW (clockwise) or CCW
+        (counter-clockwise) different triangle faces would be culled
+        when the clip origin is changed, which would be an unacceptable
+        side effect.
+
+    5)  Are the projective matrices generated by glFrustum and glOrtho
+        appropriate when the clip Z mode is GL_ZERO_TO_ONE?
+
+        RESOLVED:  No.
+
+    6)  Should the behavior of glFrustum and glOrtho change?
+
+        RESOLVED:  No.
+
+        It's not worth encumbering these routines with adjustments,
+        plus it is easy to make the proper adjustments...
+
+        Taking advantage of how matrix changes concatenate...
+
+        If your clip control origin is GL_UPPER_LEFT, prior to your
+        glFrustum or glOrtho command by:
+
+            glScalef(1,-1,1);
+
+        If your clip control depth mode is GL_ZERO_TO_ONE, precede
+        your glFrustum or glOrtho command by:
+
+            glTranslatef(0,0,0.5);
+            glScalef(1,1,0.5);
+
+        For example, if your code to configure the projection matrix
+        reads:
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glFrustum(-0.5, 0.5, -0.5, 0.5, 1, 3);
+
+        And you wanted to call:
+
+            glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+
+        Then configure your projection matrix as
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            // adjust for GL_UPPER_LEFT
+            glScalef(1,-1,1);
+            // adjust for GL_ZERO_TO_ONE
+            glTranslatef(0,0,0.5);
+            glScalef(1,1,0.5);
+            glFrustum(-0.5, 0.5, -0.5, 0.5, 1, 3);
+
+        Technically, the two glScalef could be combined as
+        glScalef(1,-1,0.5);
+
+    7)  Has this topic been discussed elsewhere?
+
+        RESOLVED:  Yes, see:
+
+        "Maximizing Depth Buffer Range and Precision"
+        Brano Kemen
+        http://outerra.blogspot.co.uk/2012/11/maximizing-depth-buffer-range-and.html
+        November 28, 2012
+
+        "Minimum Triangle Separation for Correct Z-Buffer"
+        Kurt Akeley and Jonathan Su
+        http://research.microsoft.com/apps/pubs/default.aspx?id=79213
+        August 2006
+
+        "Tightening the Precision of Perspective Rendering"
+        Paul Upchurch and Mathieu Desbrun
+        http://www.geometry.caltech.edu/pubs/UD12.pdf
+        Journal of Graphics Tools, Volume 16, Issue 1, 2012.
+
+    8)  How does this extension interact with the unclamped depth range
+        parameters of NV_depth_buffer_float's glDepthRangedNV and OpenGL
+        4.3?
+
+        RESOLVED:  Simply apply the equations as specified.
+
+        The implications of this are explored...
+
+        An unclamped depth range applies to floating-point depth buffers.
+
+        (For a conventional [0,1] fixed-point depth buffer, the depth
+        range is clamped to "the range appropriate to the depth buffer's
+        representation."  In practice, this means that unclamped depth
+        values are clamped to the [0,1] range when used with a
+        conventional depth buffer so are effectively still clamped.)
+
+        If an application were to mix the two like this:
+
+          glDepthRangedNV(-1,1);
+          glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+        this would lead to generating interpolated depth values in a
+        [-1,+1] range.  Because floating-point has more precision in the
+        neighborhood of zero, the depth buffer precision is concentrated
+        at zero in window-space Z.  This corresponds to 0.5 in normalized
+        device coordinates.
+
+        Consider if our projection matrix mapped eye-space 2 to
+        clip-space 0.0 and eye-space 1000 to 1.0 with the Z matrix row:
+
+           [  0   0   (n+f)/(n-f)   f*n/(n-f)  ]
+
+        so that
+
+            Zc = -0.5 = 0*x_e + 0*y_e + ((2+1000)/(2-1000))*z_e + (2*1000/(2-1000))*w_e
+
+        solving for z_e when w_e is one, means z_e equals -1.498
+
+        OpenGL 4.3 made a slightly incompatible change in the parameter
+        types for glDepthRange (and related commands) from clamped
+        floating-point types (GLclampd) to unclamped floating-point
+        types (GLdouble).  Hence the functionality of glDepthRangedNV
+        also applies to OpenGL 4.3 in the case of floating-point depth
+        buffers.
+
+    9)  Can an application be guaranteed the exact same pixels being
+        rasterized when the clip control origin is GL_UPPER_LEFT versus
+        GL_LOWER_LEFT, except having the scanlines reversed?
+
+        RESOLVED:  No such rasterization invariance is reasonable to
+        guarantee.  Slight pixel variances are possible.
+
+        The polygon rasterization rules for OpenGL (section 14.6.1,
+        "Polygon Rasterization") states: In such a case [fragment's center
+        lies on a polygon boundary edge] we require that if two polygons
+        lie on either side of a common edge (with identical endpoints)
+        on which a fragment center lies, then exactly one of the polygons
+        results in the production of the fragment during rasterization."
+
+        The specification leaves it to implementations to define the
+        exact edge rule in this case.  If the sense of Y in clip space
+        is flipped, this rule may be decided differently.
+
+        This is further complicated by multisampling where the sample pattern
+        is unlikely to be mirrored in the Y direction.
+
+        These issues are razor's edge cases and should not be an issue
+        for real applications.
+
+    10) Are all the possible combinations of glClipControl useful?
+
+        RESOLVED: Yes, the initial state (GL_LOWER_LEFT/
+        GL_NEGATIVE_ONE_TO_ONE) corresponds to OpenGL's traditional
+        behavior.
+
+        The state GL_LOWER_LEFT/GL_ZERO_TO_ONE corresponds to OpenGL's
+        traditional origin and Direct3D's depth mode.
+
+        The state GL_UPPER_LEFT/GL_ZERO_TO_ONE corresponds to Direct3D's
+        clip volume definition.
+
+        The state GL_UPPER_LEFT/GL_NEGATIVE_ONE_TO_ONE is consistent with
+        the upper-left origin of the window coordinate system of Microsoft
+        Windows and the X Window System.
+
+    11) Should all the possible combinations of glClipControl
+        parameters supported be supported?
+
+        RESOLVED:  Yes, all the combinations should be supported.  The cost
+        is low and this provides orthogonality.
+
+        So it is legal to call:
+
+            glClipControl(GL_UPPER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+
+    12) Does setting the clip control origin to GL_UPPER_LEFT change the
+        origin of the window coordinate system use for commands such as
+        glViewport, glScissor, glWindowPos2i, and glReadPixels?
+
+        RESOLVED:  No.
+
+        The (x,y) window space location passed to these commands have the
+        (0,0) origin at the lower left corner of the window, independent
+        of the state of the clip control origin.
+
+        So, for example, an application wanting a Direct3D upper-left orign
+        specifying the scissor with upper-left (x,y) coordinates would call:
+
+            glScissor(upper_left_x,
+                      window_height - upper_left_y,
+                      window_width, window_height);
+
+        The rationale for this choice is to avoid confusion for how
+        window space coordinates are passed to commands.  When rendering
+        to resizable windows, the window width and height can change
+        asychronously.  This would mean the scissor command would need
+        to specify a "gravity" for the window origin.  There would also
+        need to be a way to "query" this state relative to difference
+        origin conventions and subject asynchronous window resizes.
+
+        Moreover, this extension is not changing how window space is
+        specified but rather how clip space is specified.
+
+    13) Does the polygon stipple orientation change when the clip control
+        origin is set to GL_UPPER_LEFT?
+
+        RESOLVED:  No.
+
+    14) Will using the GL_ZERO_TO_ONE clip control depth mode improve
+        my depth precision?
+
+        RESOLVED:  Yes, if you use a floating-point depth buffer and
+        place the near and far values at 1.0 and 0.0 (reversed from the
+        normal convention).
+
+        But not much if you use a conventional fixed-point depth buffer.
+
+        This really depends on whether the particular hardware
+        implementation can numerically improve its depth interpolation
+        result.  This depends on a lot of things including the quality
+        of the depth plane equation setup, the number of bits of
+        sub-pixel precision available, and how the depth interpolation
+        is performed.
+
+        With a conventional 24-bit fixed-point depth buffer, applications
+        may be able to achieve half a least significant bit (LSB) of
+        improved depth buffer precision.
+
+        There are typically far better strategies for improving depth
+        precision such as W-buffering, avoiding concatenation of the
+        modelview and projection matrices, and (probably the easiest)
+        better managing your scene's near and far planes.
+
+        With a floating-point depth buffer, it is more likely the
+        GL_ZERO_TO_ONE depth mode will improve depth precision.
+        Unfortunately in the conventional depth range [0,1], the
+        improvement is primarily close to the near plane where there
+        is already excessive precision.  Reversing the depth range with
+        the command
+
+            glDepthRange(1.0, 0.0);
+
+        effectively reverses the near and far values in the depth
+        buffer.  Also remember to reverse the depth function; so
+        glDepthFunc(GL_LESS) should become glDepthFunc(GL_GREATER).
+        However, this involves computing 1-Z which effectively truncates
+        far values (for much the same reason adding +0.5 does).
+
+        Alternatively, the reversal of near and far can happen as part
+        of the projection transformation so the depth range specified
+        with glDepthRange can be the conventional range [0,1].  Arguably
+        folding the near and far reversal into the projection matrix is
+        slightly better than reversing the depth range.  However the
+        problem remains that a very large value is added with a small
+        value close to the far plane so effective depth precision is
+        not substantially improved with a fixed-point depth buffer but
+        has a substantial advantage for a floating-point depth buffer.
+
+    15) How does this extension interact with geometry shaders?
+
+        RESOLVED:  If there is a geometry shader active, it is the
+        geometry shader which is actually writing the clip space position
+        (not the vertex shader).
+
+        One way to implement this extension (ignoring geometry shaders
+        for now) would be to add an epilogue to the application's vertex
+        shader to invert the clip space Y output when the clip control
+        origin is GL_UPPER_LEFT and perform a scale by 2 and bias by negative
+        clip space W to the clip space Z (biasing by negative clip space
+        W is like subtracting 1 in normalized device coordinates).
+
+        However, this epilogue would need to be moved to the geometry
+        shader if a geometry shader was active.
+
+    16) How does this extension interact with tessellation evaluation
+        shaders (without a geometry shader)?
+
+        RESOLVED:  Then the epilogue discussed in issue #15 would need to
+        be added to the tessellation evaluation shader (and not the vertex
+        shader since it is really transforming patch control points).
+
+        If there was a geometry shader active, the geometry shader is
+        where the epilogue would be done.
+
+    17) Does the discussion of the use an epilogue in the last two issues
+        mean using the GL_UPPER_LEFT or GL_ZERO_TO_ONE modes is
+        necessarily slower?
+
+        RESOLVED:  Generally no.
+
+        GPUs that support Direct3D are expected to have a mode to support
+        GL_UPPER_LEFT and GL_ZERO_TO_ONE at full speed and OpenGL
+        implementations for such GPUs should operate at full speed.
+
+    18) Should the clip control state be changed frequently?
+
+        RESOLVED:  Most applications are expected to set the clip control
+        conventions once; for example, to match the Direct3D conventions.
+
+        Some implementations may introduce a flush when changing the
+        clip control state.  Hence frequent clip control changes are
+        not recommended.
+
+        No flush is explicitly required when the clip control changes
+        and some implementations (NVIDIA) will have no significant
+        performance penalty for changing the clip control state.
+
+    19) Issue #6 addresses fixed-function vertex processing adjustments
+        under different clip control modes.  How would a GLSL vertex
+        shader be adjusted, assuming how the shader computes its
+        clip-space position does not change, for different clip control
+        conventions?
+
+        RESOLVED:  The following GLSL epilogues could be added...
+
+        If the clip control origin is GL_UPPER_LEFT, you could add a final
+        operation to negate the clip-space Y component.  So:
+
+           gl_Position.y *= -1;
+
+        If the clip control depth mode is GL_ZERO_TO_ONE, you
+        could scale and bias the conventional [-1,+1] range of
+        normalized-device-coordinate-space Z to the [0,1] range like
+        this:
+
+           gl_Position.z = 0.5*gl_Positon.z + 0.5*gl_Position.w;
+
+        Because
+
+           z_ndc = z_c / w_c
+
+        so the epilogue above computes an adjusted z_ndc':
+
+           z_ndc' = (0.5*z_c + 0.5+w_c)/w_c
+
+        which is the same as:
+
+           z_ndc' = 0.5*z_c/w_c + 0.5
+                  = 0.5*z_ndc + 0.5
+
+        and scaling a [-1,+1] range by 0.5 and biasing by 0.5 computes
+        a linear mapping to the range [0,1].
+
+        Alternatively, rather than adding an epilogue as described,
+        the adjustments above could be folded into the transform matrix
+        typically used to transform object-space to clip-space.  This is
+        a faster approach since it avoids extra math operations in the
+        vertex shaders.
+
+    20) Explain the numerical advantage for potential increased depth
+        precision for the GL_ZERO_TO_ONE clip control depth mode.
+
+        RESOLVED:  If the normal depth range sets near to 0.0 and far
+        to 1.0, this means the effective viewport transform for Z (see
+        section 13.6.1 "Controlling the Viewport") becomes an identity
+        mapping.  So the mapping in GL_ZERO_TO_ONE depth mode is:
+
+            z_w = (f-n)  * z_d + n
+
+        and when near (n) is 0.0 and far (f) is 1.0, this becomes simply:
+
+           z_w = z_d;
+
+        This identity mapping results in no lose or change in the
+        per-vertex window space position.
+
+        Contrast this with the same situation with the
+        GL_NEGATIVE_ONE_TO_ONE depth mode with the mapping:
+
+           z_w =  (f-n)/2 * z_d + (n+f)/2
+
+        and when near (n) is 0.0 and far (f) is 1.0, this becomes simply:
+
+           z_w = 0.5 * z_d + 0.5
+
+        While multiplying z_d by 0.5 has no precision loss (ignoring
+        denorms, this scale simply decrements the exponent by 1 without
+        disturbing the mantissa).  However a bias by 0.5 does distrurb
+        the floating-point precision (also see Issue #3), losing one
+        least-significant-bit (LSB) of precision.
+
+    21) What should the state to control the GL_NEGATIVE_ONE_TO_ONE
+        and GL_ZERO_TO_ONE convention be called?
+
+        RESOLVED:  GL_CLIP_DEPTH_MODE.
+
+        An alternative would be GL_CLIP_Z_MODE but the convention
+        is well-established in the OpenGL API that Z values that are
+        interpreted as depth values are described as DEPTH.
+
+    22) Direct3D 8 and 9 have a window-space coordinate system where
+        pixel centers are centered on integer coordinates.  OpenGL
+        (and Direct3D 10 and 11) position pixel centers at half-pixel
+        locations.  Should ARB_clip_control account for the older Direct3D
+        integer pixel center convention?
+
+        RESOLVED:  No, because existing functionality covers this...
+
+        The EXT_viewport_array extension (made a core part of OpenGL
+        with version 4.1) extends the viewport state to be specified as
+        floating-point (technically fixed-point) values.  Prior to this
+        extension, the viewport parameters were integral.
+
+        With the EXT_viewport_array functionality, you can add a bias of
+        (0.5,0.5) to the viewport (x,y) to shift integer Direct3D 8/9
+        style window space locations to OpenGL's half-pixel convention.
+
+        If you had a Direct3D upper-left viewport (x,y), you'd match
+        the Direct3D clip-space AND window-space conventions like this:
+
+            glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+            const GLuint viewport_index = 0;  // Prior to DirectX 10, there's only a single viewport
+            glViewportIndexedf(viewport_index,
+                x + 0.5f, window_height - (y + view_height) + 0.5f,
+                view_width, view_height);
+
+        where window_height is the height of the window/surface in pixels.
+
+        Also note the EXT_fragment_coord_conventions (made a core part
+        of OpenGL with version 3.2) allows the window position varying
+        input to fragment shaders to reflect the Direct3D 9 window-space
+        convention.  See that extension for details.
+
+    23) Does this extension's state affect user clip planes?
+
+        RESOLVED:  No, user clip planes operate on eye-space coordinates
+        which are not affected by this extension's state.
+
+    24) Does this extension's state affect fixed-function fog?
+
+        RESOLVED:  No, fixed-function fog operates on eye-space distance
+        which is not affected by this extension's state.
+
+    25) Does this extension's state affect the point sprite origin?
+
+        RESOLVED:  No.
+
+        When the EXT_point_sprite functionality was promoted to a core
+        feature in OpenGL 2.0, the GL_POINT_SPRITE_ORIGIN state was added
+        to specify whether the 2D texture coordinate has a lower-left
+        (OpenGL's convention in EXT_point_sprite and NV_point_sprite)
+        or upper-left (Direct3D convention).
+
+        An application wanting to emulate Direct3D's upper-left point
+        sprite texture coordinate origin should change the origin state
+        with an explicit point parameter command.  Specifically:
+
+            glPointParameteri(GL_POINT_SPRITE_ORIGIN, GL_UPPER_LEFT);
+
+        This command is in addition to calling glClipControl and
+        specifying a GL_UPPER_LEFT origin.
+
+    26) Issue #12 says the origin for glWindowPos2i and other glWindowPos*
+        commands is lower-left independent of the clip control state.
+        What about glRasterPos2i and other glRasterPos* commands?
+
+        RESOLVED:  Yes, the raster position specified by glRasterPos2i,
+        etc.  is affected by the clip control state because the
+        object-space position is transformed and clipped just as a point
+        vertex position would be to arrive at the clip-space raster
+        position that is further transformed to window space.
+
+    27) Is the depth value specified for glClearDepth affected by this
+        extension's clip control state?
+
+        RESOLVED:  No, glClearDepth takes a window-space depth value.
+
+        This extension only affects how clip space clipping and the
+        transformation from clip space to window space operates.
+
+        Likewise depth values read (glReadPixels), drawn (glDrawPixels),
+        or copied (glCopyPixels, glBlitFramebuffer) are unaffected by
+        this extension's clip control state.
+
+    28) Does this extension's state affect the operation of polygon
+        offset?
+
+        RESOLVED:  No, polygon offset operates on window-space depth
+        values.  This extension's clip control state operates prior
+        to polygon offset.
+
+    29) Can glClipControl be display listed?
+
+        RESOLVED:  Yes.
+
+    30) Should the command be glClipParameteri to anticipate more
+        control of clipping state?
+
+        RESOLVED:  No.  Given over 20 years with basically zero extensions
+        in the area of clipping state, we realistically don't anticipate
+        more clipping parameters.  Even in the case of this extension, the
+        rationale for this extension is quite limited and not about adding
+        any "features" to clipping.  Instead the purpose is simply to
+        match the conventions of Direct3D (not a functional change).
+        While Direct3D's convention is different from OpenGL, there
+        simply aren't any futher 3D APIs or standards which clip
+        differently.
+
+        Also glClipControl maintains consistency with the existing
+        glClipPlane command pattern for the clipping API.
+
+        Historically "Parameter" has been used for commands that affect
+        managed "object" state and/or have a speciailized "Get" query
+        command (glGetColorTableParameter*) rather than fixed-function
+        pipeline state.  This isn't completely uniform (exceptions:
+        point parameters, patch parameters) but the vast majority of
+        fixed-function rendering state isn't set with gl*Parameter
+        style commands.  When "Parameter" commands are used there
+        is typically a plurality of state settings with different
+        integer/float/double/boolean types.  None of the situations
+        that justify gl*Parameter style commands are present in this
+        extension.
+
+    31) This extension is only useful if it is widely available.  So how
+        easy would this extension be to implement?
+
+        RESOLVED:  No special hardware is required due to the careful
+        way this extension is specified.  The clip control functionality
+        could all be done by inexpensive epilogue math appended to the
+        last shader in the graphics pipeline.  The Y inversion could be
+        performed as part of the viewport transform.
+
+        Given the prevalance of Direct3D-capable hardware, we expect
+        some hardware vendors will implement this extension with
+        special existing modes in their hardware to handle the Direct3D
+        conventions.  However we emphasize no special hardware is required
+        and the performance benefit attributable to such hardware is
+        likely to be extremely meager.
+
+        With respect to Mesa3D and Gallium, Brian Paul observes:  "This
+        extension should be pretty easy to implement in Mesa/gallium.
+        In Gallium we already have a state variable for Z 0/1 vs. -1/+1
+        clipping.  And I think we could implement the Y origin via our
+        viewport state (which is specified in floats)."
+
+    32) Is support for the GL_UPPER_LEFT convention just to match
+        Direct3D/Windows?
+
+        RESOLVED:  No.  Along with Windows/Direct3D/Direct2D, X11 and
+        Java also have upper-left graphics device coordinate systems.
+
+        OpenGL, PostScript, PHIGS, GKS, and Apple's Core Graphics
+        (Quartz 2D) have lower-left graphics device coordinate systems.
+
+    33) When rendering to off-screen framebuffer objects (FBOs) that
+        will subsequently be textured from, how do I make sure the texture
+        coordinate origin and the window space origin are consistent?
+
+        RESOLVED:  Use GL_LOWER_LEFT for the origin parameter of
+        glClipControl in this case.  Use the GL_UPPER_LEFT for the
+        origin parameter when matching Direct3D's origin *and* drawing
+        into a window framebuffer to be directly presented.
+
+    34) Can you provide an example illustrating how applications using the
+        coordinate system conventions of Direct3D map onto this extension?
+
+        RESOLVED:  Consider a Direct3D application rendering a triangle ABC
+        (with counter-clockwise orientation) to a viewport in the upper-left
+        quadrant of the destination surface.  The surface (with Direct3D
+        window coordinates) is illustrated here.
+
+            (0,0)         (960,0)          (1920,0)
+            +------(A)-------+----------------+
+            |^ Y_c == +W_c ^ |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            |v Y_c == -W_c v |                |
+            +-(B)--------(C)-+----------------+
+            |                |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            +----------------+----------------+
+            (0,1080)                      (1920,1080)
+
+        In this example, assume vertices A, B, and C have clip coordinates of:
+
+          A = (+0.0, +1.0, +0.5, +1.0)
+          B = (-0.8, -1.0, +0.5, +1.0)
+          C = (+0.8, -1.0, +0.5, +1.0)
+
+        Direct3D's coordinate transformations are functionally similar to
+        OpenGL's, except that (a) the Y coordinate is inverted as part of the
+        viewport transformation mapping normalized device coordinates (NDCs)
+        to window coordinates and (b) the depth range transformation maps Z==0
+        to the near value instead of halfway between near and far as in
+        OpenGL:
+
+          http://msdn.microsoft.com/en-us/library/windows/desktop/
+          bb206341%28v=vs.85%29.aspx
+
+        Because of the Y inversion from (a), vertices in Direct3D with a Y NDC
+        of -1.0 map to the bottom of the viewport (larger Y window coordinates
+        in the Direct3D coordinate system).  This is exactly like OpenGL
+        windowed rendering, where a Y NDC of -1 maps to smaller Y window
+        coordinates (bottom) in the OpenGL coordinate system.  Thanks to this
+        inversion in the Direct3D viewport transformation, rendering a
+        Direct3D scene with the same coordinates and matrices in OpenGL will
+        produce an image with identical vertical orientation and winding
+        (CW/CCW).  However, since the viewport rectangle itself is programmed
+        in window coordinates, a Direct3D-centric viewport of (0,0,960,540)
+        needs to be flipped to (0,540,960,540) to work in OpenGL.
+        Additionally, to get identical near/far clipping and Z values, it's
+        necessary to use the ZERO_TO_ONE mode in this extension to have OpenGL
+        process Z coordinates identically to Direct3D.
+
+        When rendering to off-screen surfaces later used as textures, the
+        issue is a little bit more complex.  A Direct3D application will use
+        the texture coordinates (0,0) to refer to the upper left corner of the
+        upper leftmost pixel of the image.  However, in OpenGL, texture
+        coordinates of (0,0) refer to the lower-left corner of the
+        lower-leftmost pixel of the image.  One way to compensate for this is
+        to remap the <t> texture coordinate with:
+
+          t_OpenGL = 1.0 - t_Direct3D
+
+        Unfortunately, that requires a modification to shaders or other input
+        data in the application.  Instead of doing this, the UPPER_LEFT mode
+        in this extension provides a simple way to use Direct3D texture
+        coordinate conventions -- by rendering the entire scene *upside-down*
+        from the point of view of OpenGL.  The image we want to produce using
+        this technique (below) is a vertically inverted version of the
+        previous image, where OpenGL lower-left window coordinates are
+        depicted in the figure.
+
+            (0,1080)                      (1920,1080)
+            +----------------+----------------+
+            |                |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            +-(B)--------(C)-+----------------+
+            |v Y_c == -W_c v |                |
+            |                |                |
+            |                |                |
+            |                |                |
+            |^ Y_c == +W_c ^ |                |
+            +------(A)-------+----------------+
+            (0,0)         (960,0)          (1920,0)
+
+        In this example, the UPPER_LEFT mode in this extension inverts the
+        geometry as part of the transformation from clip coordinates to NDCs,
+        so that vertex A has a Y NDC of -1.0 instead of +1.0.  This puts A at
+        the bottom of the viewport, while B and C remain at the top.  One
+        thing to note is that the inversion changes the orientation of
+        triangle ABC, which is now clockwise instead of counter-clockwise.  To
+        compensate, this extension also inverts the value computed to compute
+        face direction when in UPPER_LEFT mode.  The one other thing to note
+        here is that when rendering this way, the Direct3D viewport should be
+        used as-is in OpenGL.
+
+        Note that a similar inversion technique can be used to implement
+        OpenGL FBO rendering on graphics hardware supporting only Direct3D
+        coordinate systems.  If this technique is used on an implementation
+        doing something like this, the two inversions cancel each other out.
+
+    35) Does this extension affect the primitive's winding order in tessellation
+        evaluation shader when origin is changed to GL_UPPER_LEFT?
+
+        RESOLVED:  No, the winding order is not affected. If a change in winding
+        order of the primitive is needed, it must be done from the tessellation
+        shader explicitly.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------------
+    3     04/26/13 mjk        Add issues 15 to 21
+                              Change CLIP_Z_MODE to CLIP_DEPTH_MODE
+    4     04/30/13 mjk        Add issue 22
+    5     05/01/13 mjk        Add issues 22 to 28, fix typos
+    6     05/09/13 mjk        Add issue 29 to 31
+    7     05/13/13 pdaniell   Internal revisions
+    8     05/13/13 mjk        Valve feedback; change to KHR in issues
+    9     05/13/13 mjk        Change to KHR in issues
+    10    05/28/13 pdaniell   Fold in feedback from Mark Callow in bug 10245
+    11    05/30/13 pdaniell   Internal revisions
+    12    06/06/13 pdaniell   Internal revisions
+    13    06/17/13 pdaniell   Fix the enum token values
+    14    07/03/13 mjk        D3D off-screen discussion; issue 32 and 33
+    15    04/16/14 pdaniell   Prepare spec for OpenGL 4.5
+    16    04/17/14 pdaniell   Fixes "UPPER_RIGHT" typos to UPPER_LEFT
+    17    07/30/14 pbrown     Fix incorrect language in the overview
+                              describing when to use UPPER_LEFT and LOWER_LEFT
+                              modes; add detailed examples in issue 34.
+    18    09/17/15 Jon Leech  Correct typo in issue 7 and add contributor
+                              Brano Kemen from that issue.
+    19    04/06/18 Vikram     Add issue 35

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.b', function() {
+  class Serializable {
+    constructor() {
+      Object.defineProperty(this, 'properties_', {
+        configurable: false,
+        enumerable: false,
+        value: new Map(),
+      });
+    }
+
+    /**
+     * @param {string} name
+     * @param {!Object} initialValue
+     */
+    define(name, initialValue) {
+      if (this[name] !== undefined) {
+        throw new Error(`"${name}" is already defined.`);
+      }
+      if (name[name.length - 1] === '_') {
+        throw new Error(`"${name}" cannot end with an underscore.`);
+      }
+
+      this.properties_.set(name, initialValue);
+
+      Object.defineProperty(this, name, {
+        configurable: false,
+        enumerable: true,
+        get: () => this.properties_.get(name),
+        set: value => this.setProperty_(name, value),
+      });
+    }
+
+    setProperty_(name, value) {
+      this.properties_.set(name, value);
+    }
+
+    clone() {
+      return Serializable.fromDict(this.asDict());
+    }
+
+    asDict() {
+      function visit(obj) {
+        if (obj instanceof Serializable) return obj.asDict();
+        if (obj instanceof Set) return Array.from(obj);
+        if (obj instanceof Array) return obj.map(visit);
+        if (!(obj instanceof Map)) return obj;
+
+        const result = {};
+        for (const [name, value] of obj) {
+          result[name] = visit(value);
+        }
+        return result;
+      }
+
+      const dict = {type: this.constructor.name};
+      for (const [name, value] of this.properties_) {
+        dict[name.replace(/_$/, '')] = visit(value);
+      }
+      return dict;
+    }
+
+    static fromDict(dict) {
+      function visit(d) {
+        if (d instanceof Array) return d.map(visit);
+        if (!(d instanceof Object)) return d;
+        if (typeof d.type === 'string') return Serializable.fromDict(d);
+
+        const result = new Map();
+        for (const [name, value] of Object.entries(d)) {
+          result.set(name, visit(value));
+        }
+        return result;
+      }
+
+      const typeInfo = Serializable.findTypeInfoWithName(dict.type);
+      const result = new typeInfo.constructor();
+      for (const [name, value] of Object.entries(dict)) {
+        result[name] = visit(value);
+      }
+      return result;
+    }
+  }
+
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  options.defaultMetadata = {};
+  options.mandatoryBaseClass = Serializable;
+  tr.b.decorateExtensionRegistry(Serializable, options);
+
+  return {
+    Serializable,
+  };
+});
+</script>

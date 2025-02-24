@@ -1,0 +1,27 @@
+{
+    "Description": [
+        "Copyright 2019 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "ImageClear.frag.json: Build parameters for ImageClear.frag."
+    ],
+    "Flags": [
+        "ClearDepth"
+    ],
+    "AttachmentIndex": [
+        "Attachment0",
+        "Attachment1",
+        "Attachment2",
+        "Attachment3",
+        "Attachment4",
+        "Attachment5",
+        "Attachment6",
+        "Attachment7"
+    ],
+    "Format": [
+        "IsFloat",
+        "IsSint",
+        "IsUint"
+    ]
+}

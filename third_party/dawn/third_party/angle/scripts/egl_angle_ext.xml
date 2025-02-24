@@ -1,0 +1,694 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <comment>
+    Copyright 2018 The ANGLE Project Authors. All rights reserved.
+    Use of this source code is governed by a BSD-style license that can be
+    found in the LICENSE file.
+
+    egl_angle_ext.xml
+        Includes data used to auto-generate ANGLE classes.
+    </comment>
+
+    <!-- SECTION: EGL type definitions. -->
+    <types>
+        <type requires="khrplatform">typedef khronos_uint64_t <name>EGLFrameTokenANGLE</name>;</type>
+    </types>
+
+    <!-- SECTION: EGL command definitions. -->
+    <commands namespace="EGL">
+        <command>
+            <proto><ptype>EGLDeviceEXT</ptype> <name>eglCreateDeviceANGLE</name></proto>
+            <param><ptype>EGLint</ptype> <name>device_type</name></param>
+            <param>void *<name>native_device</name></param>
+            <param>const <ptype>EGLAttrib</ptype> *<name>attrib_list</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglReleaseDeviceANGLE</name></proto>
+            <param><ptype>EGLDeviceEXT</ptype> <name>device</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglCreateStreamProducerD3DTextureANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+            <param>const <ptype>EGLAttrib</ptype> *<name>attrib_list</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglStreamPostD3DTextureANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+            <param>void *<name>texture</name></param>
+            <param>const <ptype>EGLAttrib</ptype> *<name>attrib_list</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglGetSyncValuesCHROMIUM</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSurface</ptype> <name>surface</name></param>
+            <param><ptype>EGLuint64KHR</ptype> *<name>ust</name></param>
+            <param><ptype>EGLuint64KHR</ptype> *<name>msc</name></param>
+            <param><ptype>EGLuint64KHR</ptype> *<name>sbc</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLint</ptype> <name>eglProgramCacheGetAttribANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLenum</ptype> <name>attrib</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglProgramCacheQueryANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>index</name></param>
+            <param>void *<name>key</name></param>
+            <param><ptype>EGLint</ptype> *<name>keysize</name></param>
+            <param>void *<name>binary</name></param>
+            <param><ptype>EGLint</ptype> *<name>binarysize</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglProgramCachePopulateANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param>const void *<name>key</name></param>
+            <param><ptype>EGLint</ptype> <name>keysize</name></param>
+            <param>const void *<name>binary</name></param>
+            <param><ptype>EGLint</ptype> <name>binarysize</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLint</ptype> <name>eglProgramCacheResizeANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>limit</name></param>
+            <param><ptype>EGLint</ptype> <name>mode</name></param>
+        </command>
+        <command>
+            <proto>const char *<name>eglQueryStringiANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>name</name></param>
+            <param><ptype>EGLint</ptype> <name>index</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglDisplayAttribANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>attribute</name></param>
+            <param><ptype>EGLAttrib</ptype> *<name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglAcquireExternalContextANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSurface</ptype> <name>drawAndRead</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglReleaseExternalContextANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglSwapBuffersWithFrameTokenANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSurface</ptype> <name>surface</name></param>
+            <param><ptype>EGLFrameTokenANGLE</ptype> <name>frametoken</name></param>
+        </command>
+        <command>
+            <proto><ptype>void</ptype> <name>eglLockVulkanQueueANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+        </command>
+        <command>
+            <proto><ptype>void</ptype> <name>eglUnlockVulkanQueueANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglPrepareSwapBuffersANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSurface</ptype> <name>surface</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglReleaseHighPowerGPUANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLContext</ptype> <name>ctx</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglReacquireHighPowerGPUANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLContext</ptype> <name>ctx</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglHandleGPUSwitchANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglForceGPUSwitchANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>gpuIDHigh</name></param>
+            <param><ptype>EGLint</ptype> <name>gpuIDLow</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglQueryDisplayAttribANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLint</ptype> <name>attribute</name></param>
+            <param><ptype>EGLAttrib</ptype> *<name>value</name></param>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglExportVkImageANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLImage</ptype> <name>image</name></param>
+            <param>void *<name>vk_image</name></param>
+            <param>void *<name>vk_image_create_info</name></param>
+        </command>
+        <command>
+            <proto>void *<name>eglCopyMetalSharedEventANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSyncKHR</ptype> <name>sync</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglWaitUntilWorkScheduledANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+        </command>
+        <command>
+            <proto>void <name>eglSetValidationEnabledANGLE</name></proto>
+            <param><ptype>EGLBoolean</ptype> <name>validationState</name></param>
+        </command>
+    </commands>
+    <!-- SECTION: ANGLE extension interface definitions -->
+    <extensions>
+        <extension name="EGL_ANGLE_device_creation" supported="egl">
+            <require>
+                <command name="eglCreateDeviceANGLE"/>
+                <command name="eglReleaseDeviceANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_feature_control" supported="egl">
+            <require>
+                <command name="eglQueryStringiANGLE"/>
+                <command name="eglQueryDisplayAttribANGLE"/>
+                <enum name="EGL_FEATURE_NAME_ANGLE"/>
+                <enum name="EGL_FEATURE_CATEGORY_ANGLE"/>
+                <enum name="EGL_FEATURE_STATUS_ANGLE"/>
+                <enum name="EGL_FEATURE_COUNT_ANGLE"/>
+                <enum name="EGL_FEATURE_OVERRIDES_ENABLED_ANGLE"/>
+                <enum name="EGL_FEATURE_OVERRIDES_DISABLED_ANGLE"/>
+                <enum name="EGL_FEATURE_ALL_DISABLED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_external_context_and_surface" supported="egl">
+            <require>
+                <command name="eglAcquireExternalContextANGLE"/>
+                <command name="eglReleaseExternalContextANGLE"/>
+                <enum name="EGL_EXTERNAL_CONTEXT_ANGLE"/>
+                <enum name="EGL_EXTERNAL_SURFACE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_stream_producer_d3d_texture" supported="egl">
+            <require>
+                <command name="eglCreateStreamProducerD3DTextureANGLE"/>
+                <command name="eglStreamPostD3DTextureANGLE"/>
+                <enum name="EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_CHROMIUM_sync_control" supported="egl">
+            <require>
+                <command name="eglGetSyncValuesCHROMIUM"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_program_cache_control" supported="egl">
+            <require>
+                <command name="eglProgramCacheGetAttribANGLE"/>
+                <command name="eglProgramCacheQueryANGLE"/>
+                <command name="eglProgramCachePopulateANGLE"/>
+                <command name="eglProgramCacheResizeANGLE"/>
+                <enum name="EGL_PROGRAM_CACHE_SIZE_ANGLE"/>
+                <enum name="EGL_PROGRAM_CACHE_KEY_LENGTH_ANGLE"/>
+                <enum name="EGL_PROGRAM_CACHE_RESIZE_ANGLE"/>
+                <enum name="EGL_PROGRAM_CACHE_TRIM_ANGLE"/>
+                <enum name="EGL_CONTEXT_PROGRAM_BINARY_CACHE_ENABLED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_wait_until_work_scheduled" supported="egl">
+            <require>
+                <command name="eglWaitUntilWorkScheduledANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_swap_with_frame_token" supported="egl">
+            <require>
+                <command name="eglSwapBuffersWithFrameTokenANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_prepare_swap_buffers" supported="egl">
+            <require>
+                <command name="eglPrepareSwapBuffersANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_power_preference" supported="egl">
+            <require>
+                <command name="eglReleaseHighPowerGPUANGLE"/>
+                <command name="eglReacquireHighPowerGPUANGLE"/>
+                <command name="eglHandleGPUSwitchANGLE"/>
+                <command name="eglForceGPUSwitchANGLE"/>
+                <enum name="EGL_POWER_PREFERENCE_ANGLE"/>
+                <enum name="EGL_LOW_POWER_ANGLE"/>
+                <enum name="EGL_HIGH_POWER_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_display_semaphore_share_group" supported="egl">
+            <require>
+                <enum name="EGL_DISPLAY_SEMAPHORE_SHARE_GROUP_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_display_texture_share_group" supported="egl">
+            <require>
+                <enum name="EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_vulkan_image" supported="egl">
+            <require>
+                <command name="eglExportVkImageANGLE"/>
+                <enum name="EGL_VULKAN_IMAGE_ANGLE"/>
+                <enum name="EGL_VULKAN_IMAGE_CREATE_INFO_HI_ANGLE"/>
+                <enum name="EGL_VULKAN_IMAGE_CREATE_INFO_LO_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_metal_create_context_ownership_identity" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_colorspace_attribute_passthrough" supported="egl" />
+        <extension name="EGL_ANGLE_context_virtualization" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_create_context_backwards_compatible" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_create_context_client_arrays" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_CLIENT_ARRAYS_ENABLED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_create_context_extensions_enabled" supported="egl">
+            <require>
+                <enum name="EGL_EXTENSIONS_ENABLED_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_create_context_webgl_compatibility" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_WEBGL_COMPATIBILITY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_create_surface_swap_interval" supported="egl">
+            <require>
+                <enum name="EGL_SWAP_INTERVAL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_d3d_share_handle_client_buffer" supported="egl">
+            <require>
+                <enum name="EGL_D3D_TEXTURE_2D_SHARE_HANDLE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_cgl" supported="egl">
+            <require>
+                <enum name="EGL_CGL_CONTEXT_ANGLE"/>
+                <enum name="EGL_CGL_PIXEL_FORMAT_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_d3d9" supported="egl">
+            <require>
+                <enum name="EGL_D3D9_DEVICE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_d3d11" supported="egl">
+            <require>
+                <enum name="EGL_D3D11_DEVICE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_eagl" supported="egl">
+            <require>
+                <enum name="EGL_EAGL_CONTEXT_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_metal" supported="egl">
+            <require>
+                <enum name="EGL_METAL_DEVICE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_device_vulkan" supported="egl">
+            <require>
+                <enum name="EGL_VULKAN_VERSION_ANGLE"/>
+                <enum name="EGL_VULKAN_INSTANCE_ANGLE"/>
+                <enum name="EGL_VULKAN_INSTANCE_EXTENSIONS_ANGLE"/>
+                <enum name="EGL_VULKAN_PHYSICAL_DEVICE_ANGLE"/>
+                <enum name="EGL_VULKAN_DEVICE_ANGLE"/>
+                <enum name="EGL_VULKAN_DEVICE_EXTENSIONS_ANGLE"/>
+                <enum name="EGL_VULKAN_FEATURES_ANGLE"/>
+                <enum name="EGL_VULKAN_QUEUE_ANGLE"/>
+                <enum name="EGL_VULKAN_QUEUE_FAMILIY_INDEX_ANGLE"/>
+                <enum name="EGL_VULKAN_GET_INSTANCE_PROC_ADDR"/>
+                <command name="eglLockVulkanQueueANGLE"/>
+                <command name="eglUnlockVulkanQueueANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_direct_composition" supported="egl">
+            <require>
+                <enum name="EGL_DIRECT_COMPOSITION_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_display_power_preference" supported="egl">
+            <require>
+                <enum name="EGL_POWER_PREFERENCE_ANGLE"/>
+                <enum name="EGL_LOW_POWER_ANGLE"/>
+                <enum name="EGL_HIGH_POWER_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_experimental_present_path" supported="egl">
+            <require>
+                <enum name="EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE"/>
+                <enum name="EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE"/>
+                <enum name="EGL_EXPERIMENTAL_PRESENT_PATH_COPY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_ggp_stream_descriptor" supported="egl">
+            <require>
+                <enum name="EGL_GGP_STREAM_DESCRIPTOR_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_iosurface_client_buffer" supported="egl">
+            <require>
+                <enum name="EGL_IOSURFACE_ANGLE"/>
+                <enum name="EGL_IOSURFACE_PLANE_ANGLE"/>
+                <enum name="EGL_TEXTURE_RECTANGLE_ANGLE"/>
+                <enum name="EGL_TEXTURE_TYPE_ANGLE"/>
+                <enum name="EGL_TEXTURE_INTERNAL_FORMAT_ANGLE"/>
+                <enum name="EGL_IOSURFACE_USAGE_HINT_ANGLE"/>
+                <enum name="EGL_BIND_TO_TEXTURE_TARGET_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_keyed_mutex" supported="egl">
+            <require>
+                <enum name="EGL_DXGI_KEYED_MUTEX_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_metal_create_context_ownership_identity" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_metal_texture_client_buffer" supported="egl">
+            <require>
+                <enum name="EGL_METAL_TEXTURE_ANGLE"/>
+                <enum name="EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEBUG_LAYERS_ENABLED"/>
+                <enum name="EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_NULL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_d3d" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_REFERENCE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_d3d11on12" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_d3d_luid" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_device_context_volatile_cgl" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_CGL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_device_context_volatile_eagl" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_EAGL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_device_id" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_DISPLAY_KEY_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_device_type_egl" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_device_type_swiftshader" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_metal" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_null" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_webgpu" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_opengl" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_EGL_HANDLE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_vulkan" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_platform_angle_vulkan_device_uuid" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID_ANGLE"/>
+                <enum name="EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_robust_resource_initialization" supported="egl">
+            <require>
+                <enum name="EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_surface_orientation" supported="egl">
+            <require>
+                <enum name="EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_INVERT_X_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_INVERT_Y_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_surface_orientation" supported="egl">
+            <require>
+                <enum name="EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_INVERT_X_ANGLE"/>
+                <enum name="EGL_SURFACE_ORIENTATION_INVERT_Y_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_vulkan_display" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE"/>
+                <enum name="EGL_PLATFORM_VULKAN_DISPLAY_MODE_HEADLESS_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_metal_shared_event_sync" supported="egl">
+            <require>
+                <command name="eglCopyMetalSharedEventANGLE"/>
+                <enum name="EGL_SYNC_METAL_SHARED_EVENT_ANGLE"/>
+                <enum name="EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE"/>
+                <enum name="EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_LO_ANGLE"/>
+                <enum name="EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_HI_ANGLE"/>
+                <enum name="EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE" />
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_global_fence_sync" supported="egl">
+            <require>
+                <enum name="EGL_SYNC_GLOBAL_FENCE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_x11_visual" supported="egl">
+            <require>
+                <enum name="EGL_X11_VISUAL_ID_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_d3d_texture_client_buffer" supported="egl">
+            <require>
+                <enum name="EGL_D3D_TEXTURE_ANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_no_error" supported="egl">
+            <require>
+                <command name="eglSetValidationEnabledANGLE"/>
+            </require>
+        </extension>
+        <extension name="EGL_ANGLE_memory_usage_report" supported="egl">
+            <require>
+                <enum name="EGL_CONTEXT_MEMORY_USAGE_ANGLE"/>
+            </require>
+        </extension>
+    </extensions>
+
+    <!-- SECTION: EGL enumerant (token) definitions. -->
+    <enums namespace="EGL" start="0x3202" end="0x320F" vendor="ANGLE">
+        <enum value="0x3202" name="EGL_PLATFORM_ANGLE_ANGLE"/>
+        <enum value="0x3203" name="EGL_PLATFORM_ANGLE_TYPE_ANGLE"/>
+        <enum value="0x3204" name="EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE"/>
+        <enum value="0x3205" name="EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE"/>
+        <enum value="0x3206" name="EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE"/>
+        <enum value="0x3207" name="EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE"/>
+        <enum value="0x3208" name="EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE"/>
+        <enum value="0x3209" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE"/>
+        <enum value="0x320A" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE"/>
+        <enum value="0x320B" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE"/>
+        <enum value="0x320C" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_REFERENCE_ANGLE"/>
+        <enum value="0x320D" name="EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE"/>
+        <enum value="0x320E" name="EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE"/>
+        <enum value="0x320F" name="EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x322F" end="0x322F" vendor="ANGLE">
+        <enum value="0x322F" name="EGL_SWAP_INTERVAL_ANGLE" alias="EGL_SWAP_INTERVAL_EXT"/>
+    </enums>
+    <enums namespace="EGL" start="0x33A0" end="0x33AF" vendor="ANGLE">
+        <!-- 0x33A0-0x33A1 are defined in egl.xml already -->
+        <enum value="0x33A2" name="EGL_DXGI_KEYED_MUTEX_ANGLE"/>
+        <enum value="0x33A3" name="EGL_X11_VISUAL_ID_ANGLE"/>
+        <enum value="0x33A3" name="EGL_D3D_TEXTURE_ANGLE"/>
+        <enum value="0x33A4" name="EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE"/>
+        <enum value="0x33A5" name="EGL_DIRECT_COMPOSITION_ANGLE"/>
+        <enum value="0x33A7" name="EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE"/>
+        <enum value="0x33A8" name="EGL_SURFACE_ORIENTATION_ANGLE"/>
+        <enum value="0x33A9" name="EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE"/>
+        <enum value="0x33AA" name="EGL_EXPERIMENTAL_PRESENT_PATH_COPY_ANGLE"/>
+        <enum value="0x33AB" name="EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE"/>
+        <enum value="0x33AC" name="EGL_CONTEXT_WEBGL_COMPATIBILITY_ANGLE"/>
+        <enum value="0x33AE" name="EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE"/>
+        <enum value="0x33AF" name="EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x3450" end="0x345F" vendor="ANGLE">
+        <enum value="0x3450" name="EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE"/>
+        <enum value="0x3451" name="EGL_PLATFORM_ANGLE_DEBUG_LAYERS_ENABLED"/>
+        <enum value="0x3452" name="EGL_CONTEXT_CLIENT_ARRAYS_ENABLED_ANGLE"/>
+        <enum value="0x3453" name="EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE"/>
+        <enum value="0x3454" name="EGL_IOSURFACE_ANGLE"/>
+        <enum value="0x3455" name="EGL_PROGRAM_CACHE_SIZE_ANGLE"/>
+        <enum value="0x3456" name="EGL_PROGRAM_CACHE_KEY_LENGTH_ANGLE"/>
+        <enum value="0x3457" name="EGL_PROGRAM_CACHE_RESIZE_ANGLE"/>
+        <enum value="0x3458" name="EGL_PROGRAM_CACHE_TRIM_ANGLE"/>
+        <enum value="0x3459" name="EGL_CONTEXT_PROGRAM_BINARY_CACHE_ENABLED_ANGLE"/>
+        <enum value="0x345A" name="EGL_IOSURFACE_PLANE_ANGLE"/>
+        <enum value="0x345B" name="EGL_TEXTURE_RECTANGLE_ANGLE"/>
+        <enum value="0x345C" name="EGL_TEXTURE_TYPE_ANGLE"/>
+        <enum value="0x345D" name="EGL_TEXTURE_INTERNAL_FORMAT_ANGLE"/>
+        <enum value="0x345E" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_NULL_ANGLE"/>
+        <enum value="0x345F" name="EGL_EXTENSIONS_ENABLED_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x3460" end="0x346F" vendor="ANGLE">
+        <enum value="0x3460" name="EGL_FEATURE_NAME_ANGLE"/>
+        <enum value="0x3461" name="EGL_FEATURE_CATEGORY_ANGLE"/>
+        <enum value="0x3462" name="EGL_CONTEXT_MEMORY_USAGE_ANGLE"/>
+        <enum value="0x3464" name="EGL_FEATURE_STATUS_ANGLE"/>
+        <enum value="0x3465" name="EGL_FEATURE_COUNT_ANGLE"/>
+        <enum value="0x3466" name="EGL_FEATURE_OVERRIDES_ENABLED_ANGLE"/>
+        <enum value="0x3467" name="EGL_FEATURE_OVERRIDES_DISABLED_ANGLE"/>
+        <enum value="0x3469" name="EGL_FEATURE_ALL_DISABLED_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x3480" end="0x348F" vendor="ANGLE">
+        <enum value="0x3480" name="EGL_PLATFORM_ANGLE_EGL_HANDLE_ANGLE"/>
+        <enum value="0x3481" name="EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE"/>
+        <enum value="0x3482" name="EGL_POWER_PREFERENCE_ANGLE"/>
+        <enum value="0x3483" name="EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE"/>
+        <enum value="0x3485" name="EGL_CGL_CONTEXT_ANGLE"/>
+        <enum value="0x3486" name="EGL_CGL_PIXEL_FORMAT_ANGLE"/>
+        <enum value="0x3487" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE"/>
+        <enum value="0x3488" name="EGL_PLATFORM_ANGLE_D3D11ON12_ANGLE"/>
+        <enum value="0x3489" name="EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE"/>
+        <enum value="0x348A" name="EGL_IOSURFACE_USAGE_HINT_ANGLE"/>
+        <enum value="0x348B" name="EGL_GGP_STREAM_DESCRIPTOR_ANGLE"/>
+        <enum value="0x348C" name="EGL_EAGL_CONTEXT_ANGLE"/>
+
+        <!-- NOTE: Yes, these two values are the same according to the extension specs. -->
+        <enum value="0x348D" name="EGL_DISPLAY_SEMAPHORE_SHARE_GROUP_ANGLE"/>
+        <enum value="0x348D" name="EGL_BIND_TO_TEXTURE_TARGET_ANGLE"/>
+
+        <!-- NOTE: More duplicates!. -->
+        <enum value="0x348E" name="EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE"/>
+        <enum value="0x348E" name="EGL_EXTERNAL_CONTEXT_ANGLE"/>
+
+        <!-- NOTE: More duplicates!. -->
+        <enum value="0x348F" name="EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE"/>
+        <enum value="0x348F" name="EGL_EXTERNAL_SURFACE_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x34A0" end="0x34AF" vendor="ANGLE">
+        <enum value="0x34A0" name="EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE"/>
+        <enum value="0x34A1" name="EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE"/>
+        <enum value="0x34A2" name="EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_EAGL_ANGLE"/>
+        <enum value="0x34A3" name="EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_CGL_ANGLE"/>
+        <enum value="0x34A4" name="EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE"/>
+        <enum value="0x34A5" name="EGL_PLATFORM_VULKAN_DISPLAY_MODE_HEADLESS_ANGLE"/>
+        <enum value="0x34A6" name="EGL_METAL_DEVICE_ANGLE"/>
+        <enum value="0x34A7" name="EGL_METAL_TEXTURE_ANGLE"/>
+        <enum value="0x34A8" name="EGL_VULKAN_VERSION_ANGLE"/>
+        <enum value="0x34A9" name="EGL_VULKAN_INSTANCE_ANGLE"/>
+        <enum value="0x34AA" name="EGL_VULKAN_INSTANCE_EXTENSIONS_ANGLE"/>
+        <enum value="0x34AB" name="EGL_VULKAN_PHYSICAL_DEVICE_ANGLE"/>
+        <enum value="0x34AC" name="EGL_VULKAN_DEVICE_ANGLE"/>
+        <enum value="0x34AD" name="EGL_VULKAN_DEVICE_EXTENSIONS_ANGLE"/>
+        <enum value="0x34AE" name="EGL_VULKAN_FEATURES_ANGLE"/>
+        <enum value="0x34AF" name="EGL_VULKAN_QUEUE_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x34D0" end="0x34DF" vendor="ANGLE">
+        <enum value="0x34D0" name="EGL_VULKAN_QUEUE_FAMILIY_INDEX_ANGLE"/>
+        <enum value="0x34D1" name="EGL_VULKAN_GET_INSTANCE_PROC_ADDR"/>
+        <enum value="0x34D2" name="EGL_CONTEXT_METAL_OWNERSHIP_IDENTITY_ANGLE"/>
+        <enum value="0x34D3" name="EGL_VULKAN_IMAGE_ANGLE"/>
+        <enum value="0x34D4" name="EGL_VULKAN_IMAGE_CREATE_INFO_HI_ANGLE"/>
+        <enum value="0x34D5" name="EGL_VULKAN_IMAGE_CREATE_INFO_LO_ANGLE"/>
+        <enum value="0x34D6" name="EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE"/>
+        <enum value="0x34D7" name="EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE"/>
+        <enum value="0x34D8" name="EGL_SYNC_METAL_SHARED_EVENT_ANGLE"/>
+        <enum value="0x34D9" name="EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE"/>
+        <enum value="0x34DA" name="EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_LO_ANGLE"/>
+        <enum value="0x34DB" name="EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_HI_ANGLE"/>
+        <enum value="0x34DC" name="EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE" />
+        <enum value="0x34DC" name="EGL_PLATFORM_ANGLE_DISPLAY_KEY_ANGLE" />
+        <enum value="0x34DD" name="EGL_METAL_TEXTURE_ARRAY_SLICE_ANGLE"/>
+        <enum value="0x34DE" name="EGL_SYNC_GLOBAL_FENCE_ANGLE"/>
+        <enum value="0x34DF" name="EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" start="0x34F0" end="0x34FF" vendor="ANGLE">
+        <enum value="0x34F0" name="EGL_PLATFORM_ANGLE_VULKAN_DEVICE_UUID_ANGLE"/>
+        <enum value="0x34F1" name="EGL_PLATFORM_ANGLE_VULKAN_DRIVER_UUID_ANGLE"/>
+        <enum value="0x34F2" name="EGL_PLATFORM_ANGLE_VULKAN_DRIVER_ID_ANGLE"/>
+    </enums>
+    <enums namespace="EGL" vendor="ANGLE">
+        <enum value="0x0001" name="EGL_LOW_POWER_ANGLE"/>
+        <enum value="0x0002" name="EGL_HIGH_POWER_ANGLE"/>
+        <enum value="0x0001" name="EGL_SURFACE_ORIENTATION_INVERT_X_ANGLE"/>
+        <enum value="0x0002" name="EGL_SURFACE_ORIENTATION_INVERT_Y_ANGLE"/>
+    </enums>
+</registry>

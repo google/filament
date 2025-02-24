@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import os
+import sys
+
+_MISSING_DEPENDENCIES = """
+Error importing dependencies. Make sure ggplot and all associated dependencies
+are installed.
+
+Linux:
+  sudo apt-get install python-pip
+  pip install ggplot
+
+Mac:
+  sudo easy_install pip
+  pip install ggplot
+
+Windows:
+  No idea.
+"""
+
+
+if __name__ == '__main__':
+  try:
+    import ggplot
+    import pandas
+  except ImportError as e:
+    print _MISSING_DEPENDENCIES
+    sys.exit(1)
+
+  path_to_base = os.path.join(
+      os.path.dirname(__file__), '..')
+  sys.path.append(path_to_base)
+
+  from visualize_traces import visualize_traces
+  sys.exit(visualize_traces.Main())

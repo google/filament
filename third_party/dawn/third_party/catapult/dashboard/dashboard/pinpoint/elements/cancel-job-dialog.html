@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/components/app-route/app-route.html">
+
+<link rel="import" href="/components/iron-autogrow-textarea/iron-autogrow-textarea.html">
+<link rel="import" href="/components/iron-icon/iron-icon.html">
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+
+<link rel="import" href="/elements/base-style.html">
+
+<dom-module id="cancel-job-dialog">
+  <template>
+    <style include="base-style">
+    paper-fab {
+      color: var(--paper-grey-700);
+      --paper-fab-background: white;
+    }
+
+    .error {
+      color: var(--paper-red-500);
+    }
+
+    .clear {
+      margin: 0px;
+      padding: 0px;
+      display: inline;
+    }
+
+    .buttons {
+      margin: 0px;
+      padding: 0px;
+      display: inline;
+    }
+    </style>
+    <div class="buttons">
+      <paper-button on-tap="openDialog" class="clear">
+        <iron-icon icon="clear"></iron-icon>
+      </paper-button>
+    </div>
+    <paper-dialog id="cancel_dialog"
+      entry-animation="fade-in-animation"
+      exit-animation="fade-out-animation" modal>
+      <h2>Cancel job?</h2>
+      <div>
+        <p>You are attempting to cancel job id [[job.job_id]]
+        named "[[job.name]]"</p>
+        <template is="dom-if" if="[[error]]">
+          <p class="error">[[error]]</p>
+        </template>
+        <iron-form id="cancel_form" headers="[[client.authHeaders]]"
+          on-iron-form-error="handleError"
+          on-iron-form-response="handleResponse">
+          <form action="/api/job/cancel" method="POST">
+            <input type="hidden" name="job_id" value="[[job.job_id]]">
+            <iron-autogrow-textarea
+              rows="4" placeholder="Reason for cancellation."
+              name="reason" id="reason" value="{{reason}}" auto-validate>
+            </iron-autogrow-textarea>
+          </form>
+        </iron-form>
+        <div class="buttons">
+          <paper-button raised on-tap="close">Close Dialog</paper-button>
+          <paper-button raised on-tap="submit"
+            disabled="{{invalid}}">Cancel Job</paper-button>
+        </div>
+      </div>
+    </paper-dialog>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'cancel-job-dialog',
+
+      properties: {
+        error: Object,
+        job: Object,
+        reason: {
+          type: String,
+          observer: '_reasonChanged',
+        },
+        invalid: {
+          type: Boolean,
+          value: true,
+        },
+        client: {
+          type: Object,
+        },
+        user: {
+          type: String,
+          value: ''
+        }
+      },
+
+      openDialog() {
+        this.client.open_dialog = () => {
+          this.$.cancel_dialog.open();
+        }
+        this.client.requestAccessToken({hint: this.user});
+      },
+
+      close() {
+        this.$.cancel_dialog.close();
+      },
+
+      submit() {
+        this.$.cancel_form.submit();
+      },
+
+      handleError(event) {
+        this.error = event.detail.request.response.error;
+      },
+
+      handleResponse(event) {
+        this.$.cancel_dialog.close();
+      },
+
+      _reasonChanged() {
+        this.invalid = this.reason.length < 1;
+      },
+    });
+  </script>
+</dom-module>

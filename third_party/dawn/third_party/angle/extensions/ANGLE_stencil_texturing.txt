@@ -1,0 +1,153 @@
+Name
+
+    ANGLE_stencil_texturing
+
+Name Strings
+
+    GL_ANGLE_stencil_texturing
+
+Contributors
+
+    Contributors to ARB_stencil_texturing
+    Members of the WebGL working group
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: March 1, 2023
+    Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    This extension is written against the OpenGL ES 3.0 Specification.
+
+    OpenGL ES 3.0 and OpenGL ES Shading Language 3.00 are required.
+
+Overview
+
+    This extension allows texturing of the stencil component of a packed depth
+    stencil texture. Stencil values are returned as unsigned integers. It is
+    not possible to sample both depth and stencil values from the same
+    texture, and this extension allows the app to select which is sampled for
+    the bound texture.
+
+    This extension provides similar functionality to that of OpenGL ES 3.1.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameter* and GetTexParameter*:
+
+        DEPTH_STENCIL_TEXTURE_MODE_ANGLE                 0x90EA
+        STENCIL_INDEX_ANGLE                              0x1901
+
+Additions to the OpenGL ES 3.0 Specification
+
+Changes to Section 3.9.2.1 (Texture Access), page 167
+
+Add a new new bullet point on page 168:
+
+    "* The sampler used in a texture lookup function is one of the shadow
+    sampler types, the texture object's internal format is DEPTH_STENCIL,
+    and the DEPTH_STENCIL_TEXTURE_MODE_ANGLE is not DEPTH_COMPONENT."
+
+Then change the following paragraph that reads:
+
+    "The stencil texture internal component is ignored if the base internal
+    format is DEPTH_STENCIL."
+
+To the following:
+
+    "The stencil index texture internal component is ignored if the base
+    internal format is DEPTH_STENCIL and the value of
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE is not STENCIL_INDEX_ANGLE.
+
+    Texture lookups involving texture objects with an internal format
+    of DEPTH_STENCIL can read the stencil value as described in section
+    3.8 by setting the DEPTH_STENCIL_TEXTURE_MODE_ANGLE to STENCIL_INDEX_ANGLE.
+    The stencil value is read as an integer and assigned to R_t. An unsigned
+    integer sampler should be used to lookup the stencil component, otherwise
+    the results are undefined."
+
+Changes to Section 3.8.7 (Texture Parameters), page 150
+
+In Table 3.20 (Texture parameters and their values) add the following
+entry:
+
+    "
+    Name                              Type  Legal Values
+    -------------                     ----  ------------------------------------
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE  enum  DEPTH_COMPONENT, STENCIL_INDEX_ANGLE
+    "
+
+Changes to Section 3.8.12 (Combined Depth/Stencil Textures), page 160
+
+Modify the paragraph to read:
+
+    "If the texture image has a base internal format of DEPTH_STENCIL, then
+    the stencil index texture component is ignored by default. The texture
+    value <T> does not include a stencil index component, but includes
+    only the depth component.
+
+    In order to access the stencil index texture component, the
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE texture parameter should be set to
+    STENCIL_INDEX_ANGLE. When this mode is set the depth component is ignored
+    and the texture value includes only the stencil index component.
+    The stencil index value is treated as an unsigned integer texture and
+    returns an unsigned integer value when sampled. When sampling the stencil
+    index only NEAREST filtering is supported.
+    The DEPTH_STENCIL_TEXTURE_MODE_ANGLE is ignored for non depth/stencil
+    textures."
+
+Changes to Section 3.8.13 (Texture Completeness), page 161
+
+Add a new bullet point for the conditions that cause the texture
+to not be complete:
+
+    "* The internal format of the texture is DEPTH_STENCIL, the value of
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE for the texture is STENCIL_INDEX_ANGLE,
+    and either the magnification filter is not NEAREST or the minification
+    filter is neither NEAREST nor NEAREST_MIPMAP_NEAREST."
+
+Changes to Section 3.8.15 (Texture Comparison Modes), page 163
+
+Modify the following paragraph:
+
+    "Let Dt be the depth texture value and St be the stencil index component
+    of a depth/stencil texture. If there is no stencil component the value of
+    St is undefined. Let Dref be the reference value..."
+
+Insert a new paragraph after the paragraphs that ends:
+
+    "Then the effective texture value is computed as follows:
+        If the base internal format is DEPTH_STENCIL and the value of
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE is STENCIL_INDEX_ANGLE, then
+            r = St
+        Otherwise, if the value of TEXTURE_COMPARE_MODE is NONE, then
+            r = Dt
+        Otherwise, if the value of TEXTURE_COMPARE_MODE is
+    COMPARE_REF_TO_TEXTURE, then r depends on the texture comparison
+    function as shown in table 3.23.
+        The resulting r is assigned ..."
+
+New State
+
+    (Table 6.9, Textures) add the following entry:
+
+    Get Value                        Type  Get Command        Initial Value    Description                 Section
+    -------------------------------- ----  -----------------  ---------------  --------------------------  -------
+    DEPTH_STENCIL_TEXTURE_MODE_ANGLE  Z2   GetTexParameteriv  DEPTH_COMPONENT  Depth stencil texture mode  3.8.7
+
+Revision History
+
+    3/1/2023   First revision

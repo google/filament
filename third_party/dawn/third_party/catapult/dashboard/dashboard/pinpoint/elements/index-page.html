@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/elements/error-page.html">
+<link rel="import" href="/elements/job-page.html">
+<link rel="import" href="/elements/jobs-page.html">
+<link rel="import" href="/elements/migrate-page.html">
+<link rel="import" href="/elements/queue-stats-page.html">
+<link rel="import" href="/elements/stats-page.html">
+
+<dom-module id="index-page">
+  <template>
+    <style>
+      #content {
+        /* Add some extra space at the bottom to ensure any
+           Floating Action Buttons don't overlap anything. */
+        margin: 24px 24px 96px 24px;
+      }
+    </style>
+
+    <!--
+    The <app-location> element is what provides the sync between the
+    url and the app via the "route" object. This is passed to the
+    <app-route> elements to consume the route and in turn produce data
+    related to the route (ie. like the query params) and can also pass the
+    unconsumed portion of the route to other <app-route> elements.
+    The <app-route> elements can also notify via the "active" attribute if
+    that route matches and is active.
+    -->
+    <app-location route="{{route}}"></app-location>
+    <app-route route="{{route}}" pattern="/:page" data="{{routeData}}" tail="{{subroute}}"></app-route>
+
+    <navigation-bar user="{{user}}"></navigation-bar>
+
+    <!--
+    The <iron-pages> element can be used as a simple content switcher. We have a
+    single <app-route> defined which matches to a page, which is passed to
+    the <iron-pages> element via routeData.page.
+    -->
+    <div id="content">
+      <iron-pages selected="[[page]]" attr-for-selected="name" fallback-selection="error" on-iron-select="onSelectedPage" on-iron-deselect="onDeselectedPage">
+        <error-page name="error"></error-page>
+        <job-page name="job" route="{{subroute}}" user="[[user]]" client="{{client}}"></job-page>
+        <jobs-page name="jobs" route="{{subroute}}" user="[[user]]" client="{{client}}"></jobs-page>
+        <stats-page name="stats"></stats-page>
+        <queue-stats-page name="queue-stats" route="{{subroute}}"></queue-stats-page>
+      </iron-pages>
+    </div>
+
+    <load-analytics></load-analytics>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'index-page',
+
+      properties: {
+        page: {
+          type: String,
+          reflectToAttribute: true,
+        },
+        client: {
+          type: Object,
+          value: {},
+          notify: true
+        },
+      },
+
+      observers: [
+        '_routePageChanged(routeData.page)',
+      ],
+
+      ready() {
+        var clientId = '';
+        if (window.location.href.includes('-stage') || window.location.href.hostname == 'localhost') {
+          clientId = '22573382977-u263jlijs2uiio0uq7qm7vso3vuh7ec5.apps.googleusercontent.com';
+        }
+        else {
+          clientId = '62121018386-aqdfougp0ddn93knqj6g79vvn42ajmrg.apps.googleusercontent.com';
+        }
+        this.client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/userinfo.email',
+          ux_mode: 'popup',
+          prompt: '',
+          callback: (response) => {
+            if (response && response.access_token) {
+              var scope = 'https://www.googleapis.com/auth/userinfo.email';
+              if (google.accounts.oauth2.hasGrantedAnyScope(response, scope)) {
+                this.client.authHeaders = {
+                  Authorization: response.token_type + ' ' + response.access_token
+                };
+                this.notifyPath('client.authHeaders');
+                this.client.open_dialog();
+              }
+            }
+          },
+        });
+        this.client.authHeaders = {};
+      },
+
+      onDeselectedPage(e) {
+        const page = e.detail.item;
+        // Need to call the the page.* functions async since this callback is
+        // called sync while the route is being modified.
+        if ('deselected' in page) {
+          this.async(function() { page.deselected(); });
+        }
+      },
+
+      onSelectedPage(e) {
+        const page = e.detail.item;
+        // Need to call the the page.* functions async since this callback is
+        // called sync while the route is being modified.
+        if ('selected' in page) {
+          this.async(function() { page.selected(); });
+        }
+      },
+
+      _routePageChanged(page) {
+        this.page = page || 'jobs';
+      },
+
+      _showPage404() {
+        this.page = 'error';
+      },
+    });
+  </script>
+
+  <script>
+    'use strict';
+    // The Google analytics code assumes there will be a script element to
+    // inject into in the page. This empty element is used for that.
+  </script>
+</dom-module>
+

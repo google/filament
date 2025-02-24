@@ -1,0 +1,4 @@
+monorail {
+  component: "Test>Telemetry"
+}
+team_email: "telemetry@chromium.org"

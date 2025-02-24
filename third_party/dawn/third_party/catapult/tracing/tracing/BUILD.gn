@@ -1,0 +1,51 @@
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//testing/test.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+# C++ include dirs will start from the project root dir, e.g. catapult/.
+config("common_config") {
+  include_dirs = [ "../.." ]
+}
+
+source_set("histogram") {
+  public_configs = [ ":common_config" ]
+  sources = [
+    "value/histogram.cc",
+    "value/histogram.h",
+    "value/running_statistics.cc",
+    "value/running_statistics.h",
+  ]
+  public_deps = [
+    "proto:histogram_proto",
+    "//third_party/protobuf:protobuf_lite",
+  ]
+}
+
+source_set("reserved_infos") {
+  public_configs = [ ":common_config" ]
+  sources = [
+    "value/diagnostics/reserved_infos.cc",
+    "value/diagnostics/reserved_infos.h",
+  ]
+}
+
+test("histogram_unittests") {
+  sources = [
+    "value/histogram_unittest.cc",
+    "value/running_statistics_unittest.cc",
+  ]
+  public_configs = [
+    # Gtest uses abseil at least in WebRTC, so we need to support that as well.
+    "//third_party/abseil-cpp:absl_include_config",
+    "//third_party/abseil-cpp:absl_define_config",
+  ]
+  deps = [
+    ":histogram",
+    "proto:histogram_proto",
+    "//testing/gtest:gtest",
+    "//testing/gtest:gtest_main",
+  ]
+}

@@ -1,0 +1,265 @@
+Name
+
+    ANGLE_d3d_texture_client_buffer
+
+Name Strings
+
+    EGL_ANGLE_d3d_texture_client_buffer
+
+Contributors
+
+    Geoff Lang
+    Olli Etuaho
+    Sunny Sachanandani
+
+Contacts
+
+    Geoff Lang, Google Inc. (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 11, August 23, 2022
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.2
+    Specification.
+
+    References the EGL_ANGLE_device_d3d and EGL_KHR_image_base extensions.
+
+Overview
+
+    This extension allows creating EGL surfaces and EGL images from D3D texture
+    objects.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of eglCreateImageKHR and <buftype>
+    parameter of eglCreatePbufferFromClientBuffer:
+
+        EGL_D3D_TEXTURE_ANGLE            0x33A3
+
+Additions to Chapter 2 of the EGL 1.2 Specification (EGL Operation)
+
+    Add to section 2.5.1 "EGLImage Specification" (as defined by the
+    EGL_KHR_image_base specification), in the description of
+    eglCreateImageKHR:
+
+   "Values accepted for <target> are listed in Table aaa, below.
+
+      +----------------------------+-----------------------------------------+
+      |  <target>                  |  Notes                                  |
+      +----------------------------+-----------------------------------------+
+      |  EGL_D3D_TEXTURE_ANGLE     |  Used for Direct3D11 texture objects    |
+      +----------------------------+-----------------------------------------+
+       Table aaa.  Legal values for eglCreateImageKHR <target> parameter
+
+    ...
+
+    If <target> is EGL_D3D_TEXTURE_ANGLE, <dpy> must be a valid display, <ctx>
+    must be EGL_NO_CONTEXT, <buffer> must be a pointer to a valid D3D11 texture
+    object (cast into the type EGLClientBuffer), and attributes other than
+    EGL_TEXTURE_INTERNAL_FORMAT_ANGLE, EGL_TEXTURE_OFFSET_X_ANGLE, or
+    EGL_TEXTURE_OFFSET_Y_ANGLE are ignored. The width and height of the pbuffer
+    are determined by the width and height of <buffer>.
+
+    If EGL_TEXTURE_INTERNAL_FORMAT_ANGLE is specified, it is used to interpret
+    <buffer> according to the provided internal format. See table
+    egl.restrictions for acceptable texture object types and formats.
+
+    If EGL_D3D11_TEXTURE_PLANE_ANGLE is specified, it is used to access the
+    specified plane of <buffer>. See table egl.restrictions for acceptable
+    values.
+
+    If EGL_D3D11_TEXTURE_ARRAY_SLICE_ANGLE is specified, it is used to access
+    the specified array slice of the texture array <buffer>.
+
+    If EGL_TEXTURE_OFFSET_X_ANGLE or EGL_TEXTURE_OFFSET_Y_ANGLE are specified,
+    they are used to offset all rendering into the surface including blits,
+    clears and draws.
+
+    If the EGL_ANGLE_device_d3d extension is present, the provided D3D11 texture
+    object must have been created by the same D3D11 device queried from the
+    display. If these requirements are not met, an EGL_BAD_PARAMETER error is
+    generated.
+
+    The image may later be used as a GL_TEXTURE_2D or GL_TEXTURE_EXTERNAL_OES
+    target sibling based on the availability of GL_OES_EGL_image and/or
+    GL_OES_EGL_image_external extensions."
+
+Additions to Chapter 3 of the EGL 1.2 Specification (EGL Functions and Errors)
+
+    Replace the last sentence of paragraph 1 of Section 3.5.3 with the
+    following text.
+    "Currently, the only client API resources which may be bound in this
+    fashion are OpenVG VGImage objects and Direct3D texture objects."
+
+    Replace the last sentence of paragraph 2 ("To bind a client API...") of
+    Section 3.5.3 with the following text.
+    "When <buftype> is EGL_OPENVG_IMAGE or EGL_D3D_TEXTURE_ANGLE, the width and
+    height of the pbuffer are determined by the width and height of <buffer>."
+
+    Replace the third paragraph of Section 3.5.3 with the following text.
+    "<buftype> specifies the type of buffer to be bound. The only allowed values
+    of <buftype> are EGL_OPENVG_IMAGE and EGL_D3D_TEXTURE_ANGLE".
+
+    Append the following text to the fourth paragraph of Section 3.5.3.
+    "When <buftype> is EGL_D3D_TEXTURE_ANGLE, <buffer> must be
+    a valid D3D texture object, cast into the type EGLClientBuffer. See table
+    egl.restrictions for acceptable texture object types and formats. If the
+    EGL_ANGLE_device_d3d extension is present, the provided D3D texture object
+    must have been created by the same D3D device queried from the display.
+    If these requirements are not met, an EGL_BAD_PARAMETER error is
+    generated."
+
+    ---------------------------------------------------------------------------
+    Resource Type      Resource Restrictions
+    ---------------------------------------------------------------------------
+    IDirect3DTexture9  Memory pool must be D3DPOOL_DEFAULT.
+
+                       Format must be D3DFMT_R8G8B8, D3DFMT_A8R8G8B8,
+                       D3DFMT_A16B16G16R16F or D3DFMT_A32B32G32R32F.
+
+                       EGL_TEXTURE_INTERNAL_FORMAT_ANGLE is not supported.
+
+                       EGL_TEXTURE_OFFSET_X_ANGLE and EGL_TEXTURE_OFFSET_Y_ANGLE
+                       are not supported.
+
+    ID3D11Texture2D    Usage flags must be D3D11_USAGE_DEFAULT.
+
+                       Format must be
+                       DXGI_FORMAT_R8G8B8A8_UNORM,
+                       DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+                       DXGI_FORMAT_B8G8R8A8_UNORM,
+                       DXGI_FORMAT_B8G8R8A8_UNORM_SRGB (support is optional),
+                       DXGI_FORMAT_R8G8B8A8_TYPELESS (support is optional),
+                       DXGI_FORMAT_B8G8R8A8_TYPELESS (support is optional),
+                       DXGI_FORMAT_R16G16B16A16_FLOAT,
+                       DXGI_FORMAT_R32G32B32A32_FLOAT,
+                       DXGI_FORMAT_R10G10B10A2_UNORM,
+                       DXGI_FORMAT_R8_UNORM,
+                       DXGI_FORMAT_R16_UNORM,
+                       DXGI_FORMAT_R8G8_UNORM,
+                       DXGI_FORMAT_R16G16_UNORM,
+                       DXGI_FORMAT_NV12,
+                       DXGI_FORMAT_P010, or
+                       DXGI_FORMAT_P016.
+
+                       EGL_D3D11_TEXTURE_PLANE_ANGLE must be specified for YUV
+                       formats DXGI_FORMAT_NV12, DXGI_FORMAT_P010, or
+                       DXGI_FORMAT_P016, and must be 0 or 1. It is ignored for
+                       all non-YUV formats.
+
+                       EGL_TEXTURE_INTERNAL_FORMAT_ANGLE (if specified) must be
+                       GL_RGBA (supported for all RGBA and BGRA formats),
+                       GL_RGB (supported for all RGBA and BGRA formats except
+                               DXGI_FORMAT_R10G10B10A2_UNORM),
+                       GL_BGRA_EXT (supported only for
+                                    DXGI_FORMAT_B8G8R8A8_UNORM,
+                                    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, and
+                                    DXGI_FORMAT_B8G8R8A8_TYPELESS),
+                       GL_RGB10_A2_EXT (supported for
+                                        DXGI_FORMAT_R10G10B10A2_UNORM),
+                       GL_RED_EXT (supported for DXGI_FORMAT_R8_UNORM
+                                   and DXGI_FORMAT_R16_UNORM),
+                       GL_RG_EXT (supported for DXGI_FORMAT_R8G8_UNORM
+                                  and DXGI_FORMAT_R16G16_UNORM),
+                       GL_R16_EXT (supported for DXGI_FORMAT_R16_UNORM), or
+                       GL_RG16_EXT (supported for DXGI_FORMAT_R16G16_UNORM).
+                       It is ignored for all YUV formats.
+    --------------------------------------------------------------------------
+    Table egl.restrictions - Restrictions on D3D resources that can be used
+    as a <buffer>.
+    --------------------------------------------------------------------------
+
+    Append to the fifth paragraph of Section 3.5.3.
+    "In addition, in case buftype is EGL_D3D_TEXTURE_ANGLE and the D3D resource
+    has a typeless DXGI format, attrib_list may contain the attribute
+    EGL_GL_COLORSPACE."
+
+    Append to the end of Section 3.5.3.
+    "When a pbuffer is created with type EGL_D3D_TEXTURE_ANGLE, the contents
+    of the associcated D3D texture object are undefined while the pbuffer is
+    the current read surface, draw surface or bound to a client texture."
+
+    Append to the end of Section 3.5.3.
+    "When a pbuffer is created with type EGL_D3D_TEXTURE_ANGLE, and the
+    EGL_GL_COLORSPACE attribute is not specified in attrib_list, the
+    EGL_GL_COLORSPACE attribute of the surface is determined by the DXGI format
+    of the Direct3D texture. For *_SRGB DXGI formats, the value of
+    EGL_GL_COLORSPACE is EGL_GL_COLORSPACE_SRGB. For other formats including
+    *_TYPELESS DXGI formats, the value of EGL_GL_COLORSPACE defaults to
+    EGL_GL_COLORSPACE_LINEAR."
+
+Issues
+
+    1. What renderers allow the use of a multi-sampled texture?
+
+    PROPOSED: Multi-sampled texture support is currently limited to D3D11.
+    Additionally, the client is responsible for resolving the texture.
+
+    2. How does this extension interact with EXT_sRGB_write_control?
+
+    If GL_FRAMEBUFFER_SRGB_EXT is disabled and a pbuffer created from a D3D
+    texture with an *_SRGB format is being rendered to, it is undefined whether
+    SRGB conversion will be performed.
+
+    3. What renderers allow the use of typeless textures?
+
+    PROPOSED: Support for typeless textures is currently limited to D3D11.
+
+    4. Can RGB formats be supported?
+
+    RESOLVED: RGB internal formats are supported for creating images from D3D11
+    textures in version 5 by setting EGL_TEXTURE_INTERNAL_FORMAT_ANGLE attribute
+    to GL_RGB. Images with an RGB format will ensure that the alpha channel of
+    the texture is reset to 1.0 when it is used.
+
+    5. What operations do the texture offsets affect?
+
+    RESOLVED: The texture offsets specified by EGL_TEXTURE_OFFSET_X_ANGLE and
+    EGL_TEXTURE_OFFSET_Y_ANGLE affect only rendering into the surface.
+    Specifically these affect the internal D3D viewport and scissor rect states
+    for draws, clears, and blits. This is needed to apply the update offset
+    returned by calling BeginDraw() on IDCompositionSurface, and is needed for
+    correct rendering in that case.
+
+Revision History
+
+    Version 11, 2022/08/23 - clarify that GL_TEXTURE_2D is also allowed.
+
+    Version 10, 2022/06/15 - removed non-negative offsets restriction.
+
+    Version 9, 2021/09/07 - added support for R/RG formats and GL_RGB10_A2_EXT.
+
+    Version 8, 2021/01/13 - added support for texture array.
+
+    Version 7, 2021/01/12 - added support for NV12/P010/P016 planar formats.
+
+    Version 6, 2020/05/12 - added support for specifying texture offsets.
+
+    Version 5, 2019/09/06 - added support for creating EGLImage.
+
+    Version 4, 2019/04/15 - added support for DXGI_FORMAT_R10G10B10A2_UNORM.
+
+    Version 3, 2018/01/23 - added support for typeless textures.
+
+    Version 2, 2018/01/15 - clarified SRGB conversion handling.
+
+    Version 1, 2016/10/05 - first draft.

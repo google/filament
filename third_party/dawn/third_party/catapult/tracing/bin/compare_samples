@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+import argparse
+import os
+import sys
+
+tracing_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                               '..'))
+sys.path.append(tracing_path)
+from tracing.metrics import compare_samples
+
+def Main(argv):
+  parser = argparse.ArgumentParser(
+      description='Compare samples.')
+  parser.add_argument('sample_a', type=str,
+                      help='comma-separated list of paths to valuesets from '
+                           'sample a')
+  parser.add_argument('sample_b', type=str,
+                      help='comma-separated list of paths to valuesets from '
+                           'sample b')
+  parser.add_argument('metric', type=str,
+                      help='name of the metric to compare')
+  parser.add_argument('--chartjson', dest='format', action='store_const',
+                      const='chartjson',
+                      help='assume chartjson format for the input data')
+  parser.add_argument('--buildbot', dest='format', action='store_const',
+                      const='buildbot',
+                      help='assume buildbot result line format for the data')
+  args = parser.parse_args(argv[1:])
+
+  if not args.format:
+    filename = os.path.basename(sample_a.split(',')[0])
+    args.format = 'chartjson'
+
+  vinn_result = compare_samples.CompareSamples(
+      args.sample_a,
+      args.sample_b,
+      args.metric,
+      args.format
+  )
+  stdout = vinn_result.stdout
+  if not isinstance(stdout, str):
+    stdout = stdout.decode('utf-8')
+  print(stdout)
+  return vinn_result.returncode
+
+if __name__ == '__main__':
+  sys.exit(Main(sys.argv))

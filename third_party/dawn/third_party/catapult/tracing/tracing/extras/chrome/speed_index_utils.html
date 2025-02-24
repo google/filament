@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/earth_movers_distance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome', function() {
+  const earthMoversDistance = tr.b.math.earthMoversDistance;
+  class SpeedIndex {
+    /**
+     * Object containing a value representing how similar the current
+     * snapshot is to the last snapshot and the timestamp when the snapshot
+     * was taken.
+     * @typedef {{value: number, ts: number}} snapshotProgress
+     */
+
+    /**
+     * A histogram consisting of 3 channels (RGB) and each channel consists
+     * of 256 buckets.
+     * @typedef {Array.<number[]>} colorHistogram
+     */
+
+    /**
+     * Object containing a colorHistogram extracted from an image and a
+     * timestamp of when the image was taken.
+     * @typedef {{colorHistogram: colorHistogram, ts: number}}
+     * timestampedColorHistogram
+     */
+
+    /**
+     * @param {timestampedColorHistogram[]}  timestampedColorHistograms -
+     * It is assumed that the array is sorted in ascending order with
+     * respect to timestamps.
+     * @return {snapshotProgress[]}
+     */
+    static getSnapshotsProgress_(timestampedColorHistograms) {
+      const numberOfScreenshots = timestampedColorHistograms.length;
+      const firstHistogram = timestampedColorHistograms[0].colorHistogram;
+      const lastHistogram =
+            timestampedColorHistograms[numberOfScreenshots - 1].colorHistogram;
+      const totalDistance =
+                earthMoversDistance(firstHistogram[0], lastHistogram[0]) +
+                earthMoversDistance(firstHistogram[1], lastHistogram[1]) +
+                earthMoversDistance(firstHistogram[2], lastHistogram[2]);
+      if (totalDistance === 0) {
+        return [{value: 1, ts: timestampedColorHistograms[0].ts}];
+      }
+      const snapshotsProgress = new Array(numberOfScreenshots);
+      for (let i = 0; i < numberOfScreenshots; i++) {
+        const histogram = timestampedColorHistograms[i].colorHistogram;
+        const distance =
+                earthMoversDistance(histogram[0], lastHistogram[0]) +
+                earthMoversDistance(histogram[1], lastHistogram[1]) +
+                earthMoversDistance(histogram[2], lastHistogram[2]);
+        const moved = Math.max(totalDistance - distance, 0);
+        snapshotsProgress[i] =
+            {value: (moved / totalDistance),
+              ts: timestampedColorHistograms[i].ts};
+      }
+      return snapshotsProgress;
+    }
+
+    /**
+     * Calculates the speed index given an array of snapshotProgress objects
+     *
+     * Speed Index documentation:
+     * https://bit.ly/1HMvBg6
+     *
+     * @param {snapshotProgress[]} snapshotsProgress - an array containing
+     * snapshotProgress objects
+     * @return {number} - speed index
+     */
+    static speedIndexFromSnapshotsProgress_(snapshotsProgress) {
+      if (snapshotsProgress.length === 0) {
+        throw new Error('No snapshots were provided.');
+      }
+      let prevSnapshotTimeTaken = 0;
+      let prevSnapshotProgress = 0;
+      let speedIndex = 0;
+      const numberOfScreenshots = snapshotsProgress.length;
+      for (let i = 0; i < numberOfScreenshots; i++) {
+        const elapsed = snapshotsProgress[i].ts - prevSnapshotTimeTaken;
+        speedIndex += elapsed * (1.0 - prevSnapshotProgress);
+        prevSnapshotTimeTaken = snapshotsProgress[i].ts;
+        prevSnapshotProgress = snapshotsProgress[i].value;
+      }
+      return Math.round(speedIndex);
+    }
+
+    /** Extracts a color histogram from a flat array containing rgba values
+     * for each pixel. The resulting histogram has 3 channels (RGB), each
+     * channel has 256 buckets. Counts the number of pixels with the given
+     * color.
+     *
+     * @param {number[]} imagePixelValues - flat array of rgba pixel values.
+     * @return {colorHistogram}
+     */
+    static createColorHistogram(imagePixelValues) {
+      const n = imagePixelValues.length;
+      const histogram = new Array(3);
+      for (let j = 0; j < 3; j++) {
+        histogram[j] = new Array(256).fill(0);
+      }
+      for (let i = 0; i < n; i += 4) {
+        const r = imagePixelValues[i];
+        const g = imagePixelValues[i + 1];
+        const b = imagePixelValues[i + 2];
+        histogram[0][r]++;
+        histogram[1][g]++;
+        histogram[2][b]++;
+      }
+      return histogram;
+    }
+
+    static calculateSpeedIndex(timestampedColorHistograms) {
+      const snapshotsProgress =
+      SpeedIndex.getSnapshotsProgress_(timestampedColorHistograms);
+      return SpeedIndex.speedIndexFromSnapshotsProgress_(snapshotsProgress);
+    }
+
+    /**
+    * @param lineSweepRects - an array of rectangles, where each rect has the
+    * form: {left, right, top, bottom}
+    * @param viewport - a viewport object. In the form: {x, y, width, height}
+    * @return {number} - the area of the visible part of the union of the
+    * rectangles given.
+    */
+    static lineSweep(lineSweepRects, viewport) {
+      // Stores left and right edges of the rects.
+      const verticalSweepEdges = [];
+      // Stores top and bottom edges of the rects.
+      const horizontalSweepEdges = [];
+      for (let i = 0; i < lineSweepRects.length; i++) {
+        const rect = lineSweepRects[i];
+        let left = rect.left;
+        let right = rect.right;
+        let top = rect.top;
+        let bottom = rect.bottom;
+        if (left > viewport.x + viewport.width) continue;
+        if (right < viewport.x) continue;
+        if (top > viewport.y + viewport.height) continue;
+        if (bottom < viewport.y) continue;
+
+        left = Math.max(left, viewport.y);
+        right = Math.min(right, viewport.y + viewport.width);
+        top = Math.max(top, viewport.y);
+        // y coordinate increases towards the bottom.
+        bottom = Math.min(bottom, viewport.y + viewport.height);
+
+        verticalSweepEdges.push({id: i, value: left, type: 'left'},
+            {id: i, value: right, type: 'right'});
+        horizontalSweepEdges.push({id: i, value: top, type: 'top'},
+            {id: i, value: bottom, type: 'bottom'});
+      }
+
+      if (verticalSweepEdges.length === 0 ||
+          horizontalSweepEdges.length === 0) {
+        // If there is nothing visible, visible area is 0.
+        return 0;
+      }
+
+      verticalSweepEdges.sort((a, b) => a.value - b.value);
+      horizontalSweepEdges.sort((a, b) => a.value - b.value);
+
+      // A rectangle becomes active once we enter it (encounter its left edge).
+      // And goes back to being inactive once we leave it (encounter its right
+      // edge).
+      const active = new Array(lineSweepRects.length).fill(false);
+      let area = 0;
+      // Begin vertical sweep from left to right.
+      active[verticalSweepEdges[0].id] = true;
+      for (let i = 1; i < verticalSweepEdges.length; i++) {
+        const currentLine = verticalSweepEdges[i];
+        const previousLine = verticalSweepEdges[i - 1];
+        const deltaX = currentLine.value - previousLine.value;
+        // We could encounter this case if two rectangles start at the same x
+        // value.
+        if (deltaX === 0) continue;
+        let count = 0;
+        let firstRect;
+        // Begin horizontal sweep from top to bottom.
+        for (let j = 0; j < horizontalSweepEdges.length; j++) {
+          // Check whether the current rectangle is active.
+          if (active[horizontalSweepEdges[j].id] === true) {
+            if (horizontalSweepEdges[j].type === 'top') {
+              // If we just entered a new rectangle that is not overlapping
+              // with any other rectangle between current and previous vertical
+              // line then record its position in the list.
+              if (count === 0) {
+                firstRect = j;
+              }
+              count++;
+            } else {
+              // If we are leaving a rectangle and it happens to be the last
+              // rectangle at this point (i.e: there's a gap before we get to
+              // the next recatngle) then calculate length (deltaY) and use it
+              // to calucate area so far.
+              if (count === 1) {
+                const deltaY = horizontalSweepEdges[j].value -
+                horizontalSweepEdges[firstRect].value;
+                area += deltaX * deltaY;
+              }
+              count--;
+            }
+          }
+        }
+        active[currentLine.id] = (currentLine.type === 'left');
+      }
+      return area;
+    }
+
+    /**
+    * A quad is an array containing 4 coordinate points, so something like this
+    * [x1 y1 x2 y2 x3 y3 x4 y4].
+    * Therefore, we can use a quad to reperesnt a rectangle.
+    * To turn a quad back into a rectangle we only need 3 coordinate points
+    * (assuming we don't know the order of the points, otherwise, two opposite
+    * points would be enough).
+    *
+    * @param {number[]} quad
+    */
+    static quadToRect(quad) {
+      const left = Math.min(quad[0], quad[2], quad[4]);
+      const right = Math.max(quad[0], quad[2], quad[4]);
+      const top = Math.min(quad[1], quad[3], quad[5]);
+      const bottom = Math.max(quad[1], quad[3], quad[5]);
+      return {left, right, top, bottom};
+    }
+
+    static calculateRectsBasedSpeedIndex(timestampedPaintRects, viewport) {
+      const numberOfRects = timestampedPaintRects.length;
+      if (numberOfRects === 0) {
+        throw new Error('Can\'t calculate speed index without any paint ' +
+        'rectangles.');
+      }
+      const areaAddedAtTimestamp = new Array(numberOfRects);
+      const rects = [];
+      let previousAreaOfUnion = 0;
+      let totalAreaOfUnion = 0;
+      for (let i = numberOfRects - 1; i >= 0; i--) {
+        rects.push(timestampedPaintRects[i].rect);
+        const currentAreaOfUnion = SpeedIndex.lineSweep(rects, viewport);
+        areaAddedAtTimestamp[i] =
+            {value: currentAreaOfUnion - previousAreaOfUnion,
+              ts: timestampedPaintRects[i].ts};
+        totalAreaOfUnion +=
+            areaAddedAtTimestamp[i].value;
+        previousAreaOfUnion = currentAreaOfUnion;
+      }
+      // Paint progress at a timestamp is: the total area of the viewport that
+      // has reached its final state by that timestamp divided by the total area
+      // painted by the end of loading.
+      const paintProgressAtTimestamp = new Array(numberOfRects);
+      let lastProgressRecorded = 0;
+      for (let i = 0; i < numberOfRects; i++) {
+        paintProgressAtTimestamp[i] = {
+          value: areaAddedAtTimestamp[i].value / totalAreaOfUnion +
+              lastProgressRecorded,
+          ts: areaAddedAtTimestamp[i].ts};
+        lastProgressRecorded = paintProgressAtTimestamp[i].value;
+      }
+      return SpeedIndex.speedIndexFromSnapshotsProgress_(
+          paintProgressAtTimestamp);
+    }
+  }
+  return {
+    SpeedIndex,
+  };
+});
+</script>

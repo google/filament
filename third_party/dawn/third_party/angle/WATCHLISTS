@@ -1,0 +1,24 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Watchlist Rules
+# Refer: http://dev.chromium.org/developers/contributing-code/watchlists
+
+# IMPORTANT: The regular expression filepath is tested against each path using
+# re.search, so it is not usually necessary to add .*.
+
+{
+  'WATCHLIST_DEFINITIONS': {
+    'vulkan': {
+      'filepath': 'src/libANGLE/renderer/vulkan/',
+    },
+  },
+
+  ##############################################################################
+  # Please keep alphabetical
+  ##############################################################################
+  'WATCHLISTS': {
+    'vulkan': ['cclao+angleWatchVk@google.com'],
+  },
+}

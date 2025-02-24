@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script src="/jquery/jquery-2.1.4.min.js"></script>
+<script src="/flot/jquery.flot.min.js"></script>
+<script src="/flot/jquery.flot.crosshair.min.js"></script>
+<script src="/flot/jquery.flot.fillbetween.min.js"></script>
+<script src="/flot/jquery.flot.selection.min.js"></script>
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/polymer/polymer.html">
+
+<link rel="import" href="/dashboard/elements/alerts-table.html">
+<link rel="import" href="/dashboard/elements/bug-info.html">
+<link rel="import" href="/dashboard/elements/chart-container.html">
+<link rel="import" href="/dashboard/elements/login-warning.html">
+<link rel="import" href="/dashboard/elements/triage-dialog.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<dom-module id="group-report-page">
+  <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    /* The action bar contains the graph button and triage button. */
+    #action-bar {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    /* The top container contains the action bar and alerts list. */
+    #top {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      width: 100%
+    }
+
+    /* The bottom container contains the charts. */
+    #bottom {
+      display: flex;
+      flex-direction: column;
+      min-width: 100%;
+      min-height: 100%;
+    }
+
+    /* Triage dialog at the top level when the user clicks the triage button. */
+    triage-dialog {
+      position: absolute;
+      margin-top: 30px;
+      z-index: var(--layer-dialogs);
+    }
+
+    /* This class indicates a button toggled on (e.g. show improvements). */
+    .alert-togglebutton {
+      float: right;
+      margin-left: 4px;
+      margin-right: 4px;
+    }
+
+    #bisect-result-log {
+      width: 100%;
+      display: block;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .alert-togglebutton[active] {
+      background-color: #EEE;
+    }
+  </style>
+  <template>
+    <template is="dom-if" if="{{loading}}">
+      <div id="loading-spinner"><img src="//www.google.com/images/loading.gif"></div>
+    </template>
+    <template is="dom-if" if="{{error}}">
+      <div class="error">{{error}}</div>
+    </template>
+    <login-warning id="login-warning" login-link="{{loginLink}}"
+                   missing="{{missing}}">
+    </login-warning>
+    <div id="container" hidden$="{{computeOr(loading, error)}}">
+      <div id="top">
+        <div id="action-bar">
+          <paper-button toggles raised
+                        id="improvements-toggle"
+                        class="alert-togglebutton"
+                        active$="{{showingImprovements}}"
+                        on-click="onToggleImprovements">
+            {{getLabel(showingImprovements)}} all improvements
+          </paper-button>
+        </div>
+        <bug-info id="bug-info" xsrf-token="{{xsrfToken}}"></bug-info>
+        <alerts-table id="alerts-table"
+                      xsrf-token="{{xsrfToken}}"
+                      alert-list="{{alertList}}"
+                      on-changeselection="onAlertSelectionChange"
+                      selected-keys="{{selectedKeys}}"></alerts-table>
+      </div>
+
+      <div id="bottom">
+        <section id="charts-container"></section>
+      </div>
+    </div>
+
+    <div id="toasts" hidden>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'group-report-page',
+  properties: {
+    error: {
+      type: Boolean,
+      value: false
+    },
+
+    loading: {
+      type: Boolean,
+      value: true
+    },
+
+    alertList: {
+      type: Array,
+      value: () => []
+    },
+
+    ownerInfo: {
+      type: Object,
+      value: () => { return {}; }
+    },
+
+    revisionInfo: {
+      type: Object,
+      value: () => { return {}; }
+    },
+
+    loginLink: {
+      type: String,
+      value: ''
+    },
+
+    isInternalUser: {
+      type: Boolean,
+      value: false
+    },
+
+    missing: {
+      type: String,
+      notify: true,
+      value: ''
+    },
+
+    selectedKeys: {
+      type: Array,
+      value: () => []
+    },
+
+    testSuites: {
+      type: Object,
+      value: () => { return {}; }
+    },
+
+    xsrfToken: {
+      type: String,
+      value: ''
+    },
+
+    showingImprovements: {
+      type: Boolean,
+      value: true
+    },
+  },
+
+  listeners: {
+    openReportPage: 'openReportPage_',
+    promoteSparkLine: 'promoteSparkLine_',
+  },
+
+  openReportPage_(event) {
+    window.open(event.detail.url, '_blank');
+  },
+
+  promoteSparkLine_(event) {
+    const chart = document.createElement('chart-container');
+    const containerElement = this.$['charts-container'];
+    Polymer.dom(containerElement).appendChild(chart);
+    chart.graphParams = {
+      start_rev: event.detail.startRev,
+      end_rev: event.detail.endRev,
+    };
+    for (const testpath of event.detail.testpaths) {
+      chart.addSeriesGroup2(new d.SeriesGroup(
+          testpath.testpath, [testpath.testpath], []), true);
+    }
+    this.setChartData(chart);
+  },
+
+  get alertsTable() {
+    return this.$['alerts-table'];
+  },
+
+  getLabel: toggleState => (toggleState ? 'hide' : 'show'),
+
+  getCharts() {
+    // Note: This cannot be a property getter for attribute charts because
+    // polymer caches the getter result.
+    const charts = [];
+    const children = this.$['charts-container'].children;
+    for (let i = 0; i < children.length; i++) {
+      charts.push(children[i]);
+    }
+    return charts;
+  },
+
+  onToggleImprovements(event, details) {
+    const alertList = this.alertsTable.alertList;
+    const improvementsToggle = event.currentTarget;
+    if (improvementsToggle.hasAttribute('active')) {
+      for (let i = 0; i < alertList.length; i++) {
+        const alert = alertList[i];
+        if (alert.improvement) {
+          this.alertsTable.setAlertList(i, 'hideRow', false);
+        }
+      }
+    } else {
+      for (let i = 0; i < alertList.length; i++) {
+        const alert = alertList[i];
+        if (alert.improvement && !alert.selected) {
+          this.alertsTable.setAlertList(i, 'hideRow', true);
+          this.alertsTable.setAlertList(i, 'selected', false);
+        }
+      }
+      // Make the table update its list of checked alerts.
+      this.alertsTable.onCheckboxChange();
+    }
+    this.showingImprovements = !this.showingImprovements;
+  },
+
+  alertChangedRevisions(event) {
+    const alertList = this.alertsTable.alertList;
+    const nudgedAlert = event.detail.alerts[0];
+    for (let i = 0; i < alertList.length; i++) {
+      if (alertList[i].key == nudgedAlert.key) {
+        alertList[i].start_revision = event.detail.startRev;
+        alertList[i].end_revision = event.detail.endRev;
+        // Make the table update its list of checked alerts.
+        this.alertsTable.onCheckboxChange();
+        return;
+      }
+    }
+  },
+
+  onGraphClose(event) {
+    // Un-check the alert in the table.
+    const key = event.target.alertKey;
+    const alertList = this.alertsTable.alertList;
+    for (let i = 0; i < alertList.length; i++) {
+      if (alertList[i].key == key) {
+        alertList[i].selected = false;
+        break;
+      }
+    }
+
+    // Make the table update its list of checked alerts.
+    // This is necessary so that the triage dialog will get a correct list
+    // of alerts that should be affected by a triage action.
+    this.alertsTable.onCheckboxChange();
+
+    // Remove the graph from the set of currently-displayed graph elements.
+    delete this.graphElements_[key];
+  },
+
+  getTestPath(alert) {
+    return [
+      alert.master,
+      alert.bot,
+      alert.testsuite,
+      alert.test
+    ].join('/');
+  },
+
+  getTestPathAndSelectedSeries(alert) {
+    // Show the test for the alert, as well as the corresponding ref build
+    // if possible.
+    const testPath = this.getTestPath(alert);
+    const testPathParts = testPath.split('/');
+    const testName = testPathParts[testPathParts.length - 1];
+    const refPath = alert.ref_test;
+    if (refPath) {
+      const refPathParts = refPath.split('/');
+      const refName = refPathParts[refPathParts.length - 1];
+      if (testPathParts.length == refPathParts.length) {
+        // Main test and ref are siblings. List them as:
+        // [shared_test_path, [test_name, ref_name]]
+        testPathParts.pop();
+        return [testPathParts.join('/'), [testName, refName]];
+      } else if (testPathParts.length == refPathParts.length - 1) {
+        // Ref is a child of the main test. List them as:
+        // [full_main_test_path, [test_name, ref_name]]
+        // The server 'un-doubles' the main test name when listed this way.
+        return [testPath, [testName, refName]];
+      }
+    }
+    // No ref build or malformed ref build name, only show selected test.
+    return [testPath, [testName]];
+  },
+
+  setChartData(chart) {
+    chart.revisionInfo = this.revisionInfo;
+    chart.xsrfToken = this.xsrfToken;
+    chart.isInternalUser = this.isInternalUser;
+    chart.testSuites = this.testSuites;
+  },
+
+  addGraph(alerts, insertBefore) {
+    if (!alerts) {
+      return;
+    }
+
+    const containerElement = this.$['charts-container'];
+    for (let i = 0; i < alerts.length; i++) {
+      const alert = alerts[i];
+      const chart = document.createElement('chart-container');
+      this.graphElements_[alert.key] = chart;
+      if (insertBefore &&
+          Polymer.dom(containerElement).children.length > 0) {
+        Polymer.dom(containerElement).insertBefore(
+            chart, Polymer.dom(containerElement).children[0]);
+      } else {
+        Polymer.dom(containerElement).appendChild(chart);
+      }
+
+      // Set graph params.
+      const graphParams = {
+        'rev': alert.end_revision
+      };
+      chart.graphParams = graphParams;
+      chart.alertKey = alert.key;
+      chart.addSeriesGroup([this.getTestPathAndSelectedSeries(alert)]);
+      chart.addEventListener(
+          'chartclosed', this.onGraphClose.bind(this), false);
+      chart.addEventListener('alertChangedRevisions',
+          this.alertChangedRevisions, true);
+      this.setChartData(chart);
+    }
+  },
+
+  onAlertSelectionChange() {
+    // Make a set of all alerts that are checked in the table.
+    const alerts = {};
+    this.alertsTable.checkedAlerts.forEach(function(a) {
+      alerts[a.key] = a;
+    });
+    // Add graphs that are checked in the table but not added yet.
+    for (const key in alerts) {
+      if (!(key in this.graphElements_)) {
+        this.addGraph([alerts[key]], true);
+      }
+    }
+
+    // Remove graphs that are no longer checked in the table.
+    const chartsContainer = this.$['charts-container'];
+    for (const key in this.graphElements_) {
+      if (!(key in alerts) && key in this.graphElements_) {
+        if (Polymer.dom(this.graphElements_[key]).parentNode ==
+            chartsContainer) {
+          Polymer.dom(chartsContainer).removeChild(
+              this.graphElements_[key]);
+          delete this.graphElements_[key];
+        }
+      }
+    }
+  },
+
+  /**
+    * The url params determine what data to request from
+    * /group_report. sid is a hash of a group of keys.
+    */
+  ready() {
+    this.graphElements_ = {};
+    const params = {};
+    const sid = uri.getParameter('sid');
+    if (sid) {
+      params.sid = sid;
+    }
+    const keys = uri.getParameter('keys');
+    if (keys) {
+      params.keys = keys;
+    }
+    const bugId = uri.getParameter('bug_id');
+    if (bugId) {
+      params.bug_id = bugId;
+    }
+    const projectId = uri.getParameter('project_id');
+    if (projectId) {
+      params.project_id = projectId;
+    }
+    const rev = uri.getParameter('rev');
+    if (rev) {
+      params.rev = rev;
+    }
+    const groupId = uri.getParameter('group_id');
+    if (groupId) {
+      params.group_id = groupId;
+    }
+    simple_xhr.send('/group_report', params,
+        function(response) {
+          this.revisionInfo = response.revision_info;
+          this.loginLink = response.login_url;
+          this.isInternalUser = response.is_internal_user;
+          this.testSuites = response.test_suites;
+          this.xsrfToken = response.xsrf_token;
+          this.alertList = response.alert_list;
+          if (this.alertList.length == 0) {
+            this.missing = response.display_username;
+          }
+          this.selectedKeys = response.selected_keys;
+          this.bugId = uri.getParameter('bug_id');
+          this.projectId = uri.getParameter('project_id', 'chromium');
+          if (this.bugId) {
+            this.$['bug-info'].initialize(
+                this.bugId, this.projectId, this.alertsTable);
+          }
+          const charts = this.getCharts();
+          for (let i = 0; i < charts.length; i++) {
+            this.setChartData(charts[i]);
+          }
+          this.onAlertSelectionChange();
+          this.loading = false;
+        }.bind(this),
+        function(msg) {
+          this.error = msg;
+          this.loading = false;
+          this.missing = 'Unknown';
+        }.bind(this));
+  },
+  computeOr(error, loading) {
+    return error || loading;
+  }
+});
+</script>

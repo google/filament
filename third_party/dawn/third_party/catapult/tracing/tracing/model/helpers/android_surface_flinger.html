@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Class for representing SurfaceFlinger process and its Vsyncs.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  const findLowIndexInSortedArray = tr.b.findLowIndexInSortedArray;
+
+  const VSYNC_SF_NAME = 'android.VSYNC-sf';
+  const VSYNC_APP_NAME = 'android.VSYNC-app';
+  const VSYNC_FALLBACK_NAME = 'android.VSYNC';
+
+  // when sampling vsync, push samples back by this much to ensure
+  // frame start samples *between* vsyncs
+  const TIMESTAMP_FUDGE_MS = 0.01;
+
+  function getVsyncTimestamps(process, counterName) {
+    let vsync = process.counters[counterName];
+    if (!vsync) {
+      vsync = process.counters[VSYNC_FALLBACK_NAME];
+    }
+
+    if (vsync && vsync.numSeries === 1 && vsync.numSamples > 1) {
+      return vsync.series[0].timestamps;
+    }
+    return undefined;
+  }
+
+  /**
+   * Model for SurfaceFlinger specific data.
+   * @constructor
+   */
+  function AndroidSurfaceFlinger(process, thread) {
+    this.process = process;
+    this.thread = thread;
+
+    this.appVsync_ = undefined;
+    this.sfVsync_ = undefined;
+
+    this.appVsyncTimestamps_ = getVsyncTimestamps(process, VSYNC_APP_NAME);
+    this.sfVsyncTimestamps_ = getVsyncTimestamps(process, VSYNC_SF_NAME);
+
+    // separation of vsync of app vs sf - assume app has at least window of 5ms
+    this.deadlineDelayMs_ =
+        this.appVsyncTimestamps_ !== this.sfVsyncTimestamps_ ?
+          5 : TIMESTAMP_FUDGE_MS;
+  }
+
+  AndroidSurfaceFlinger.createForProcessIfPossible = function(process) {
+    const mainThread = process.getThread(process.pid);
+
+    // newer versions - main thread, lowercase name, preceeding forward slash
+    if (mainThread && mainThread.name &&
+        /surfaceflinger/.test(mainThread.name)) {
+      return new AndroidSurfaceFlinger(process, mainThread);
+    }
+
+    // older versions - another thread is named SurfaceFlinger
+    const primaryThreads = process.findAllThreadsNamed('SurfaceFlinger');
+    if (primaryThreads.length === 1) {
+      return new AndroidSurfaceFlinger(process, primaryThreads[0]);
+    }
+    return undefined;
+  };
+
+  AndroidSurfaceFlinger.prototype = {
+    get hasVsyncs() {
+      return !!this.appVsyncTimestamps_ && !!this.sfVsyncTimestamps_;
+    },
+
+    getFrameKickoff(timestamp) {
+      if (!this.hasVsyncs) {
+        throw new Error('cannot query vsync info without vsyncs');
+      }
+
+      const firstGreaterIndex =
+          findLowIndexInSortedArray(this.appVsyncTimestamps_,
+              function(x) { return x; },
+              timestamp + TIMESTAMP_FUDGE_MS);
+
+      if (firstGreaterIndex < 1) return undefined;
+      return this.appVsyncTimestamps_[firstGreaterIndex - 1];
+    },
+
+    getFrameDeadline(timestamp) {
+      if (!this.hasVsyncs) {
+        throw new Error('cannot query vsync info without vsyncs');
+      }
+
+      const firstGreaterIndex =
+          findLowIndexInSortedArray(this.sfVsyncTimestamps_,
+              function(x) { return x; },
+              timestamp + this.deadlineDelayMs_);
+      if (firstGreaterIndex >= this.sfVsyncTimestamps_.length) {
+        return undefined;
+      }
+      return this.sfVsyncTimestamps_[firstGreaterIndex];
+    }
+  };
+
+  return {
+    AndroidSurfaceFlinger,
+  };
+});
+</script>

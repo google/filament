@@ -1,0 +1,24 @@
+boto v2.19.0
+============
+
+:date: 2013/11/27
+
+This release adds support for max result limits for Amazon EC2 calls, adds
+support for Amazon RDS database snapshot copies and fixes links to the
+changelog.
+
+
+Features
+--------
+* Add max results parameters to EC2 describe instances and describe tags.
+    (:issue:`1873`, :issue:`1873`, :sha:`ad8a64a`)
+* Add support for RDS CopyDBSnapshot. (:issue:`1872`, :issue:`1872`,
+    :issue:`1865`, :sha:`bffb758`)
+
+
+Bugfixes
+--------
+* Update README.rst to link to ReadTheDocs changelogs. (:issue:`1869`,
+    :sha:`26f3dbe`)
+* Delete the old changelog in favor of the README link to ReadTheDocs
+    changelogs. (:issue:`1870`, :issue:`1870`, :sha:`32bc333`)

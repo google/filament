@@ -1,0 +1,99 @@
+Name
+
+    ANGLE_multiview_multisample
+
+Name Strings
+
+    GL_ANGLE_multiview_multisample
+
+Contributors
+
+    Olli Etuaho, NVIDIA Corporation
+
+Contact
+
+    Olli Etuaho (oetuaho 'at' nvidia.com)
+
+Status
+
+    Incomplete
+
+Version
+
+    Last Modified Date: September 12, 2018
+    Author Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    OpenGL ES 3.0 and the extensions ANGLE_texture_multisample, OVR_multiview2
+    and OES_texture_storage_multisample_2d_array are required.
+
+    With OpenGL ES 3.1, only the extensions ANGLE_multiview and
+    OES_texture_storage_multisample_2d_array are required.
+
+Overview
+
+    This extension enhances the functionality introduced in ANGLE_multiview by
+    enabling rendering into multisample texture arrays in addition to regular
+    non-multisampled texture arrays.
+
+IP Status
+
+    No known IP claims.
+
+New Tokens
+
+    None
+
+New Procedures and Functions
+
+    None
+
+Additions to Chapter 4 of the OpenGL ES 3.0 Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    Modify section 4.4.2 (Attaching Images to Framebuffer Objects), p. 202
+
+    Add the following bullet point:
+
+    "* Layers of a two-dimensional multisample array texture which can be used
+       for multi-view rendering."
+
+    Modify the error list of FramebufferTextureMultiviewOVR:
+
+    Change
+
+    "An INVALID_OPERATION error is generated if texture is not zero,
+    and does not name an existing texture object of type TEXTURE_2D_ARRAY."
+
+    to
+
+    "An INVALID_OPERATION error is generated if texture is not zero,
+    and does not name an existing texture object of type TEXTURE_2D_ARRAY or
+    TEXTURE_2D_MULTISAMPLE_ARRAY_OES."
+
+
+    Modify section 4.4.4.1 (Framebuffer Attachment Completeness), p. 213
+
+    Change the bullet point about num_views and base_view_index:
+
+    "If the value of FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is TEXTURE and
+    the value of FRAMEBUFFER_ATTACHMENT_OBJECT_NAME names a two-dimensional
+    array texture or a two-dimensional multisample array texture, then the sum
+    of FRAMEBUFFER_ATTACHMENT_TEXTURE_NUM_VIEWS_ANGLE and
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_BASE_VIEW_INDEX_ANGLE must be less than the
+    number of layers in the texture."
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+Issues

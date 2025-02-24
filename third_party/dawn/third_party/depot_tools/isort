@@ -1,0 +1,29 @@
+#!/usr/bin/env vpython3
+# Copyright 2022 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: We use tags here instead of refs because refs will always hit the
+# network to see if there are any updates.
+
+# [VPYTHON:BEGIN]
+# python_version: "3.8"
+#
+# wheel: <
+#   name: "infra/python/wheels/isort-py3"
+#   version: "version:5.10.1"
+# >
+#
+# [VPYTHON:END]
+
+from pathlib import Path
+import sys
+
+THIS_DIR = Path(__file__).resolve().parent
+RC_FILE = THIS_DIR / '.isort.cfg'
+
+# Set default config options.  If a project wants to deviate, they'll have to
+# manually override.
+sys.argv = sys.argv[:1] + [f'--settings-file={RC_FILE}'] + sys.argv[1:]
+
+import isort.__main__

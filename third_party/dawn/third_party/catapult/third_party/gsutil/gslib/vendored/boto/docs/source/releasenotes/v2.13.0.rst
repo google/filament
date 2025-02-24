@@ -1,0 +1,40 @@
+boto v2.13.0
+============
+
+:date: 2013/09/12
+
+This release adds support for VPC within AWS Opsworks, added dry-run support &
+the ability to modify reserved instances in EC2 as well as several important
+bugfixes for EC2, SNS & DynamoDBv2.
+
+
+Features
+--------
+
+* Added support for VPC within Opsworks. (:sha:`56e1df3`)
+* Added support for ``dry_run`` within EC2. (:sha:`dd7774c`)
+* Added support for ``modify_reserved_instances`` &
+  ``describe_reserved_instances_modifications`` within EC2. (:sha:`7a08672`)
+
+
+Bugfixes
+--------
+
+* Fixed EC2's ``associate_public_ip`` to work correctly. (:sha:`9db6101`)
+* Fixed a bug with ``dynamodb_load`` when working with sets. (:issue:`1664`,
+  :sha:`ef2d28b`)
+* Changed SNS ``publish`` to use POST. (:sha:`9c11772`)
+* Fixed inability to create LaunchConfigurations when using Block Device
+  Mappings. (:issue:`1709`, :issue:`1710`, :sha:`5fd728e`)
+* Fixed DynamoDBv2's ``batch_write`` to appropriately handle
+  ``UnprocessedItems``. (:issue:`1566`, :issue:`1679`, :issue:`1714`,
+  :sha:`2fc2369`)
+* Several documentation improvements/fixes:
+
+    * Added Opsworks docs to the index. (:sha:`5d48763`)
+    * Added docs on the correct string values for ``get_all_images``.
+      (:issue:`1674`, :sha:`1e4ed2e`)
+    * Removed a duplicate ``boto.s3.prefix`` entry from the docs.
+      (:issue:`1707`, :sha:`b42d34c`)
+    * Added an API reference for ``boto.swf.layer2``. (:issue:`1712`,
+      :sha:`9f7b15f`)

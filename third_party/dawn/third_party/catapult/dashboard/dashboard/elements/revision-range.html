@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The revision-range element is an in-line element that shows a revision range.
+-->
+
+<dom-module id="revision-range">
+  <template>
+    <a href="/group_report?keys={{alertKey}}" target="_blank">
+      <span>{{computeRevisionRange(start, end)}}</span>
+    </a>
+  </template>
+</dom-module>
+<script>
+'use strict';
+(function() {
+  /** Returns a date string for the given timestamp. */
+  function dateDisplay(secondsSinceEpoch) {
+    const d = new Date(secondsSinceEpoch * 1000);
+    return d.toISOString();
+  }
+
+  /**
+    * Returns a string to display for the given encoded Cr + CrOS point ID.
+    *
+    * Point IDs for Chrome OS data are of the following form:
+    * [aaaaa][bbb][ccccc][ddd][ee], where:
+    *   aaaaa is the Chrome build number
+    *   bbb is the Chrome patch number.
+    *   ccccc is the Chrome OS tip build number.
+    *   ddd is the Chrome OS branch build number.
+    *   ee is the Chrome OS branch branch build number.
+    */
+  function crosDisplay(pointId) {
+    const digits = zeroFill(pointId, 18);
+    const crBuild = Number(digits.substring(0, 5));
+    const crPatch = Number(digits.substring(5, 8));
+    const crosTipBuild = Number(digits.substring(8, 13));
+    const crosBranchBuild = Number(digits.substring(13, 16));
+    const crosSubbranchBuild = Number(digits.substring(16, 18));
+    return ('Cr ' + crBuild + '.' + crPatch +
+            ' / CrOS ' + crosTipBuild + '.' +
+            crosBranchBuild + '.' + crosSubbranchBuild);
+  }
+
+  /** Pads a number with zeroes; returns a string. */
+  function zeroFill(num, minWidth) {
+    const widthToFill = minWidth - num.toString().length;
+    if (widthToFill <= 0) {
+      return num.toString();
+    }
+    for (let i = 0; i < widthToFill; i++) {
+      num = '0' + num;
+    }
+    return num.toString();
+  }
+
+  /**
+    * Returns the string to display for a single revision number.
+    * @param {number|string} revision
+    * @return {string} Display revision.
+    */
+  function displayRevision(revision) {
+    if (revision.toString().length >= 16) {
+      return crosDisplay(revision);
+    }
+    if (revision.toString().length == 10) {
+      return dateDisplay(revision);
+    }
+    return revision.toString();
+  }
+
+  Polymer({
+    is: 'revision-range',
+    properties: {
+      end: { notify: true },
+      start: { notify: true }
+    },
+
+    computeRevisionRange(start, end) {
+      if (!start || !end) {
+        return '';
+      }
+      if (start == end) {
+        return displayRevision(end);
+      }
+      return (displayRevision(start) + ' - ' +
+              displayRevision(end));
+    }
+  });
+})();
+</script>

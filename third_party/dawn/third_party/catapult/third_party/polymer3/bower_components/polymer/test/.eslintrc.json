@@ -1,0 +1,15 @@
+{
+  "env": {
+    "mocha": true
+  },
+  "rules": {
+    "no-var": "off",
+    "strict": "off"
+  },
+  "globals": {
+    "assert": true,
+    "sinon": true,
+    "WCT": true,
+    "fixture": true
+  }
+}

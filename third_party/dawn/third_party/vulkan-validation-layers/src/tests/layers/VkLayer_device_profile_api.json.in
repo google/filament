@@ -1,0 +1,21 @@
+{
+    "file_format_version": "1.1.0",
+    "layer": {
+        "name": "VK_LAYER_LUNARG_device_profile_api",
+        "type": "GLOBAL",
+        "library_path": "@JSON_LIBRARY_PATH@",
+        "api_version": "1.4.307",
+        "implementation_version": "2",
+        "description": "LunarG Device Profile Api Layer",
+        "device_extensions": [
+            {
+                "name": "VK_LUNARG_LayerDeviceProfileApiEXT",
+                "spec_version": "0",
+                "entrypoints": [
+                    "vkSetPhysicalDeviceLimitsEXT",
+                    "vkGetOriginalPhysicalDeviceLimitsEXT"
+                ]
+            }
+        ]
+    }
+}

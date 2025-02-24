@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram_parameter_collector.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  test('empty', function() {
+    const collector = new tr.v.HistogramParameterCollector();
+    collector.process([]);
+    assert.lengthOf(collector.statisticNames, 2);
+    assert.strictEqual('avg', collector.statisticNames[0]);
+    assert.strictEqual('pct_090', collector.statisticNames[1]);
+    assert.strictEqual('name',
+        tr.b.getOnlyElement(collector.possibleGroupings).key);
+    assert.lengthOf(collector.labels, 0);
+  });
+
+  test('sortLabels', function() {
+    const collector = new tr.v.HistogramParameterCollector();
+    collector.process([
+      tr.v.Histogram.create('', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [
+            tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']),
+          ], [
+            tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(1000),
+          ],
+        ]),
+      }),
+      tr.v.Histogram.create('', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [
+            tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']),
+          ], [
+            tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(3000),
+          ],
+        ]),
+      }),
+      tr.v.Histogram.create('', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [
+            tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['C']),
+          ], [
+            tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(2000),
+          ],
+        ]),
+      }),
+    ]);
+    const labels = collector.labels;
+    assert.lengthOf(labels, 3);
+    assert.strictEqual(labels[0], 'A');
+    assert.strictEqual(labels[1], 'C');
+    assert.strictEqual(labels[2], 'B');
+  });
+
+  test('possibleGroupings', function() {
+    const collector = new tr.v.HistogramParameterCollector();
+    collector.process([
+      tr.v.Histogram.create('a', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['F'])],
+          [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+          [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(1000)],
+          [tr.v.d.RESERVED_NAMES.STORYSET_REPEATS, new tr.v.d.GenericSet([0])],
+          [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['R'])],
+        ]),
+      }),
+      tr.v.Histogram.create('b', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['F'])],
+          [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+          [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(3000)],
+          [tr.v.d.RESERVED_NAMES.STORYSET_REPEATS, new tr.v.d.GenericSet([1])],
+          [tr.v.d.RESERVED_NAMES.BENCHMARKS, new tr.v.d.GenericSet(['N'])],
+        ]),
+      }),
+      tr.v.Histogram.create('c', tr.b.Unit.byName.count, 0, {
+        diagnostics: new Map([
+          [tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['E', 'F'])],
+          [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['C'])],
+          [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(2000)],
+          [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['P'])],
+          [tr.v.d.RESERVED_NAMES.BENCHMARKS, new tr.v.d.GenericSet(['M'])],
+        ]),
+      }),
+    ]);
+
+    const possibleGroupingKeys = new Set(
+        collector.possibleGroupings.map(g => g.key));
+    assert.isTrue(possibleGroupingKeys.has(
+        tr.v.HistogramGrouping.HISTOGRAM_NAME.key));
+    assert.isTrue(possibleGroupingKeys.has(
+        tr.v.d.RESERVED_NAMES.BENCHMARKS));
+    assert.isTrue(possibleGroupingKeys.has(
+        tr.v.d.RESERVED_NAMES.STORYSET_REPEATS));
+    assert.isTrue(possibleGroupingKeys.has(
+        tr.v.d.RESERVED_NAMES.STORIES));
+    assert.isFalse(possibleGroupingKeys.has(
+        tr.v.HistogramGrouping.DISPLAY_LABEL.key));
+    assert.isFalse(possibleGroupingKeys.has(
+        tr.v.d.RESERVED_NAMES.TRACE_START));
+    assert.isTrue(possibleGroupingKeys.has('ETag'));
+    assert.isFalse(possibleGroupingKeys.has('FTag'));
+    assert.strictEqual(possibleGroupingKeys.size, 7);
+  });
+});
+</script>

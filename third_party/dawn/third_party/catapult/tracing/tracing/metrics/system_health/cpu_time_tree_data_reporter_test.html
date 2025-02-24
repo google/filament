@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/multi_dimensional_view.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_processes.html">
+<link rel="import" href="/tracing/metrics/system_health/cpu_time_tree_data_reporter.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const reportToHistogramSet =
+      tr.metrics.sh.CpuTimeTreeDataReporter.reportToHistogramSet;
+
+  test('reportToHistogramSet_reportsLeafNodes', () => {
+    const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+        3 /* dimensions (process, thread and rail stage / initiator) */,
+        2 /* valueCount (cpuPercentage and cpuTime) */);
+    mdvBuilder.addPath(
+        [['browser_process'], ['CrBrowserMain'], ['Animation', 'CSS']],
+        [42, 43], tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+    const rootNode = mdvBuilder.buildTopDownTreeView();
+
+    const histograms = new tr.v.HistogramSet();
+    reportToHistogramSet(rootNode, histograms);
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:browser_process:CrBrowserMain:Animation:CSS');
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:browser_process:CrBrowserMain:Animation:CSS');
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Histogram sample value is correct.
+    assert.closeTo(cpuPercentageHistogram.sum, 42, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 43, 1e-7);
+  });
+
+  test('reportToHistogramSet_reportsAllProcesses', () => {
+    const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+        3 /* dimensions (process, thread and rail stage / initiator) */,
+        2 /* valueCount (cpuPercentage and cpuTime) */);
+    mdvBuilder.addPath(
+        [['browser_process'], ['CrBrowserMain'], ['Animation', 'CSS']],
+        [42, 43], tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+    const rootNode = mdvBuilder.buildTopDownTreeView();
+
+    const histograms = new tr.v.HistogramSet();
+    reportToHistogramSet(rootNode, histograms);
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:all_processes:CrBrowserMain:Animation:CSS');
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:all_processes:CrBrowserMain:Animation:CSS');
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Histogram sample value is correct.
+    assert.closeTo(cpuPercentageHistogram.sum, 42, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 43, 1e-7);
+  });
+
+  test('reportToHistogramSet_reportsAllThreads', () => {
+    const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+        3 /* dimensions (process, thread and rail stage / initiator) */,
+        2 /* valueCount (cpuPercentage and cpuTime) */);
+    mdvBuilder.addPath(
+        [['browser_process'], ['CrBrowserMain'], ['Animation', 'CSS']],
+        [42, 43], tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+    const rootNode = mdvBuilder.buildTopDownTreeView();
+
+    const histograms = new tr.v.HistogramSet();
+    reportToHistogramSet(rootNode, histograms);
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:browser_process:all_threads:Animation:CSS');
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:browser_process:all_threads:Animation:CSS');
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Histogram sample value is correct.
+    assert.closeTo(cpuPercentageHistogram.sum, 42, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 43, 1e-7);
+  });
+
+  test('reportToHistogramSet_doesNotAggregateStagesWithoutAllStagesNode',
+      () => {
+        const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+            3 /* dimensions (process, thread and rail stage / initiator) */,
+            2 /* valueCount (cpuPercentage and cpuTime) */);
+        mdvBuilder.addPath(
+            [['browser_process'], ['CrBrowserMain'], ['Animation', 'CSS']],
+            [42, 43], tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+        const rootNode = mdvBuilder.buildTopDownTreeView();
+
+        const histograms = new tr.v.HistogramSet();
+        reportToHistogramSet(rootNode, histograms);
+
+        // all_stages:CSS does not make sense (e.g. we will never
+        // aggregate Scroll Response and Scroll Animation, even if that's a
+        // thing), so we use all_stages:all_initiators here.
+        assert.isUndefined(histograms.getHistogramNamed(
+            'cpuPercentage:' +
+            'browser_process:CrBrowserMain:all_stages:all_initiators'));
+        assert.isUndefined(histograms.getHistogramNamed(
+            'cpuTime:' +
+            'browser_process:CrBrowserMain:all_stages:all_initiators'));
+      });
+
+  test('reportToHistogramSet_' +
+       'doesNotAggregateInitiatorsWithoutAllInitiatorsNode',
+  () => {
+    const mdvBuilder = new tr.b.MultiDimensionalViewBuilder(
+        3 /* dimensions (process, thread and rail stage / initiator) */,
+        2 /* valueCount (cpuPercentage and cpuTime) */);
+    mdvBuilder.addPath(
+        [['browser_process'], ['CrBrowserMain'], ['Animation', 'CSS']],
+        [42, 43], tr.b.MultiDimensionalViewBuilder.ValueKind.TOTAL);
+    const rootNode = mdvBuilder.buildTopDownTreeView();
+
+    const histograms = new tr.v.HistogramSet();
+    reportToHistogramSet(rootNode, histograms);
+
+    assert.isUndefined(histograms.getHistogramNamed(
+        'cpuPercentage:' +
+            'browser_process:CrBrowserMain:Animation:all_initiators'));
+    assert.isUndefined(histograms.getHistogramNamed(
+        'cpuTime:browser_process:CrBrowserMain:Animation:all_initiators'));
+  });
+});
+</script>

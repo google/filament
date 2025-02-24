@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+import argparse
+import errno
+import os
+
+import boto
+from boto.compat import json
+from boto.compat import six
+
+
+DESCRIPTION = """Dump the contents of one or more DynamoDB tables to the local filesystem.
+
+Each table is dumped into two files:
+  - {table_name}.metadata stores the table's name, schema and provisioned
+    throughput.
+  - {table_name}.data stores the table's actual contents.
+
+Both files are created in the current directory. To write them somewhere else,
+use the --out-dir parameter (the target directory will be created if needed).
+"""
+
+
+def dump_table(table, out_dir):
+    metadata_file = os.path.join(out_dir, "%s.metadata" % table.name)
+    data_file = os.path.join(out_dir, "%s.data" % table.name)
+
+    with open(metadata_file, "w") as metadata_fd:
+        json.dump(
+            {
+                "name": table.name,
+                "schema": table.schema.dict,
+                "read_units": table.read_units,
+                "write_units": table.write_units,
+            },
+            metadata_fd
+        )
+
+    with open(data_file, "w") as data_fd:
+        for item in table.scan():
+            # JSON can't serialize sets -- convert those to lists.
+            data = {}
+            for k, v in six.iteritems(item):
+                if isinstance(v, (set, frozenset)):
+                    data[k] = list(v)
+                else:
+                    data[k] = v
+
+            data_fd.write(json.dumps(data))
+            data_fd.write("\n")
+
+
+def dynamodb_dump(tables, out_dir):
+    try:
+        os.makedirs(out_dir)
+    except OSError as e:
+        # We don't care if the dir already exists.
+        if e.errno != errno.EEXIST:
+            raise
+
+    conn = boto.connect_dynamodb()
+    for t in tables:
+        dump_table(conn.get_table(t), out_dir)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="dynamodb_dump",
+        description=DESCRIPTION
+    )
+    parser.add_argument("--out-dir", default=".")
+    parser.add_argument("tables", metavar="TABLES", nargs="+")
+
+    namespace = parser.parse_args()
+
+    dynamodb_dump(namespace.tables, namespace.out_dir)

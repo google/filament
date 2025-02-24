@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/pinpoint-job-dialog.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const page = document.createElement('pinpoint-job-dialog');
+    page.show();
+    this.addHTMLOutput(page);
+    page.close();
+  }, testOptions);
+
+  test('onCreateJob success fires event', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    await page.show();
+
+    let fired = false;
+    page.fire = function(eventName) {
+      if (eventName === 'pinpoint-new-response') {
+        fired = true;
+      }
+    };
+    await page.onCreateJob();
+    page.close();
+
+    assert.strictEqual(page.error, '');
+    assert.isTrue(fired);
+  }, testOptions);
+
+  test('onCreateJob failure shows error', async function() {
+    const mockResponse = {
+      'error': 'foo'
+    };
+    testing_common.addXhrMock('*', JSON.stringify(mockResponse));
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    await page.show();
+
+    let fired = false;
+    page.fire = function(eventName) {
+      if (eventName === 'pinpoint-new-response') {
+        fired = true;
+      }
+    };
+    await page.onCreateJob();
+    page.close();
+
+    assert.strictEqual(page.error, 'foo');
+    assert.isFalse(fired);
+  }, testOptions);
+
+  test('show prefills info', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    testing_common.addXhrMock(
+        '/pinpoint/new/prefill?test_path=master%2Fbot%2Fsuite%2Ffoo',
+        JSON.stringify({story_filter: 'foo'}));
+
+    page.bug_id = 123;
+    page.test_path = 'master/bot/suite/foo';
+    page.start_git_hash = '1234567890';
+    page.end_git_hash = '0987654321';
+    await page.show();
+
+    page.close();
+
+    assert.strictEqual(page.story_filter, 'foo');
+  }, testOptions);
+
+  const originalAsPromise = simple_xhr.asPromise;
+  const testOptionsOverwriteSimpleXhr = {
+    tearDown() {
+      simple_xhr.asPromise = originalAsPromise;
+    }
+  };
+
+  test('onCreateJob validate params performance', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.bug_id = 123;
+    page.test_path = 'master/bot/suite/foo';
+    page.start_commit = '1234567890';
+    page.end_commit = '0987654321';
+    await page.show();
+    page.story_filter = 'foo';
+
+    let params;
+    simple_xhr.asPromise = function(_, p) {
+      params = p;
+      return new Promise(function(resolve, reject) {
+        resolve({jobId: 12345});
+      });
+    };
+
+    await page.onCreateJob();
+    page.close();
+
+    assert.strictEqual(params.bug_id, 123);
+    assert.strictEqual(params.test_path, 'master/bot/suite/foo');
+    assert.strictEqual(params.start_commit, '1234567890');
+    assert.strictEqual(params.end_commit, '0987654321');
+    assert.strictEqual(params.story_filter, 'foo');
+    assert.strictEqual(params.bisect_mode, 'performance');
+  }, testOptionsOverwriteSimpleXhr);
+
+  test('onCreateJob validate params functional', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.bug_id = 123;
+    page.test_path = 'master/bot/suite/foo';
+    page.start_commit = '1234567890';
+    page.end_commit = '0987654321';
+    await page.show();
+    page.story_filter = 'foo';
+    page.$.functional.click();
+
+    let params;
+    simple_xhr.asPromise = function(_, p) {
+      params = p;
+      return new Promise(function(resolve, reject) {
+        resolve({jobId: 12345});
+      });
+    };
+
+    await page.onCreateJob();
+    page.close();
+
+    assert.strictEqual(params.bug_id, 123);
+    assert.strictEqual(params.test_path, 'master/bot/suite/foo');
+    assert.strictEqual(params.start_commit, '1234567890');
+    assert.strictEqual(params.end_commit, '0987654321');
+    assert.strictEqual(params.story_filter, 'foo');
+    assert.strictEqual(params.bisect_mode, 'functional');
+  }, testOptionsOverwriteSimpleXhr);
+
+  test('onCreateJob validate params alerts', async function() {
+    const mockResponse = {
+      'jobId': 12345
+    };
+    const page = document.createElement('pinpoint-job-dialog');
+    this.addHTMLOutput(page);
+
+    page.bug_id = 123;
+    page.test_path = 'master/bot/suite/foo';
+    page.start_commit = '1234567890';
+    page.end_commit = '0987654321';
+    await page.show();
+    page.story_filter = 'foo';
+    page.alerts = [{key: 'abc123'}];
+
+    let params;
+    simple_xhr.asPromise = function(_, p) {
+      params = p;
+      return new Promise(function(resolve, reject) {
+        resolve({jobId: 12345});
+      });
+    };
+
+    await page.onCreateJob();
+    page.close();
+
+    assert.strictEqual(params.alerts, JSON.stringify(['abc123']));
+  }, testOptionsOverwriteSimpleXhr);
+});
+</script>

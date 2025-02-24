@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/timeline_view_metadata_overlay.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('inactive', function() {
+    const el = document.createElement('tr-ui-timeline-view-metadata-overlay');
+    el.metadata = [
+      {
+        name: 'clientInfo',
+        value: {
+          command_line: './out/Release/Chromium.app/Contents/MacOS/Chromium --enable-threaded-compositing --force-compositing-mode --enable-impl-side-painting --enable-skia-benchmarking --allow-webui-compositing --flag-switches-begin --force-compositing-mode --disable-threaded-compositing --flag-switches-end', // @suppress longLineCheck
+          version: 'Chrome/29.0.1521.0'
+        }
+      },
+      {
+        name: 'somethingElse',
+        value: 'fascinating!'
+      }
+    ];
+
+    this.addHTMLOutput(el);
+  });
+});
+</script>

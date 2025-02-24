@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper code for working with tracing categories.
+ *
+ */
+tr.exportTo('tr.b', function() {
+  // Cached values for getCategoryParts.
+  const categoryPartsFor = {};
+
+  /**
+   * Categories are stored in comma-separated form, e.g: 'a,b' meaning
+   * that the event is part of the a and b category.
+   *
+   * This function returns the category split by string, caching the
+   * array for performance.
+   *
+   * Do not mutate the returned array!!!!
+   */
+  function getCategoryParts(category) {
+    let parts = categoryPartsFor[category];
+    if (parts !== undefined) return parts;
+    parts = category.split(',');
+    categoryPartsFor[category] = parts;
+    return parts;
+  }
+
+  return {
+    getCategoryParts,
+  };
+});
+</script>

@@ -1,0 +1,11 @@
+recursive-include python2 *.py *.txt
+recursive-include python3 *.py *.txt
+graft test
+graft tests
+include *.md
+include CHANGELOG
+include LICENSE
+include python2/httplib2/test/*.txt
+include requirements*.txt
+global-exclude __pycache__
+global-exclude *.py[cod]

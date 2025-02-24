@@ -1,0 +1,197 @@
+Name
+
+     NV_shader_atomic_int64
+
+Name Strings
+
+     GL_NV_shader_atomic_int64
+
+Contact
+
+     Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+     Pat Brown, NVIDIA
+     Jeff Bolz, NVIDIA
+     Cyril Crassin, NVIDIA
+     Christoph Kubisch, NVIDIA
+
+Status
+
+     Shipping
+
+Version
+
+     Last Modified Date:	May 11, 2021
+     NVIDIA Revision:		3
+
+Number
+
+     OpenGL Extension #455
+
+Dependencies
+
+     This extension is written against version 4.40 (revision 8) of the OpenGL
+     Shading Language Specification, dated January 22, 2014.
+
+     This extension interacts with NV_shader_buffer_store and NV_gpu_shader5.
+
+     This extension interacts with NV_gpu_program5, NV_compute_program5, and
+     NV_shader_storage_buffer_object.
+
+Overview
+
+     This extension provides additional GLSL built-in functions and assembly
+     opcodes allowing shaders to perform additional atomic read-modify-write
+     operations on 64-bit signed and unsigned integers stored in buffer object
+     memory.
+
+New Procedures and Functions
+
+     None.
+
+New Tokens
+
+     None.
+
+Additions to OpenGL 4.4 Specification
+
+     None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+     None.
+
+GLX Protocol
+
+     None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.40
+(revision 8)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+       #extension GL_NV_shader_atomic_int64 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+       #define GL_NV_shader_atomic_int64	 1
+
+    Modify Section 8.11, Atomic Memory Functions, p. 168
+
+    Add the following new functions to the table on p. 173:
+
+      uint64_t atomicMin(inout uint64_t mem, uint64_t data);
+      uint64_t atomicMax(inout uint64_t mem, uint64_t data);
+      uint64_t atomicAnd(inout uint64_t mem, uint64_t data);
+      uint64_t atomicOr (inout uint64_t mem, uint64_t data);
+      uint64_t atomicXor(inout uint64_t mem, uint64_t data);
+
+      int64_t atomicMin(inout int64_t mem, int64_t data);
+      int64_t atomicMax(inout int64_t mem, int64_t data);
+      int64_t atomicAnd(inout int64_t mem, int64_t data);
+      int64_t atomicOr (inout int64_t mem, int64_t data);
+      int64_t atomicXor(inout int64_t mem, int64_t data);
+
+      int64_t atomicAdd(inout int64_t mem, int64_t data);
+      int64_t atomicExchange(inout int64_t mem, int64_t data);
+      int64_t atomicCompSwap(inout int64_t mem, int64_t data);
+
+Dependencies on NV_shader_buffer_store and NV_gpu_shader5
+
+     If NV_shader_buffer_store and NV_gpu_shader5 are supported, the following
+     functions should be added to the "Section 8.Y, Shader Memory Functions"
+     language in the NV_shader_buffer_store specification:
+
+      uint64_t atomicMin(uint64_t *address, uint64_t data);
+      uint64_t atomicMax(uint64_t *address, uint64_t data);
+      uint64_t atomicAnd(uint64_t *address, uint64_t data);
+      uint64_t atomicOr (uint64_t *address, uint64_t data);
+      uint64_t atomicXor(uint64_t *address, uint64_t data);
+
+      int64_t atomicMin(int64_t *address, int64_t data);
+      int64_t atomicMax(int64_t *address, int64_t data);
+      int64_t atomicAnd(int64_t *address, int64_t data);
+      int64_t atomicOr (int64_t *address, int64_t data);
+      int64_t atomicXor(int64_t *address, int64_t data);
+
+      int64_t atomicAdd(int64_t *address, int64_t data);
+      int64_t atomicExchange(int64_t *address, int64_t data);
+      int64_t atomicCompSwap(int64_t *address, int64_t data);
+
+Dependencies on NV_gpu_program5, NV_compute_program5, and
+NV_shader_storage_buffer_object
+
+    If NV_gpu_program5 is supported and "OPTION NV_shader_atomic_int64" is
+    specified in an assembly program, new combinations of atomic operations
+    and storage modifiers are supported for the ATOM, ATOMB, and ATOMS
+    instructions.  (Note:  ATOMB comes from NV_shader_storage_buffer_object
+    and ATOMS comes from NV_compute_program5.)	"S64" should be allowed as a
+    storage modifier for the atomic operations "MIN', "MAX", "AND", "OR",
+    "XOR", "ADD", "EXCH", and "CSWAP".	"U64" should be allowed a s storage
+    modifier for the atomic operations "MIN", "MAX", "AND", "OR", and "XOR".
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+     as extended by NV_gpu_program5:)
+
+      + Extended 64-bit Atomic Operations (NV_shader_atomic_int64)
+
+	If a program specifies the "NV_shader_atomic_int64" option, it may
+	use the "S64" storage modifier with the atomic operations "MIN',
+	"MAX", "AND", "OR", "XOR", "ADD", "EXCH", and "CSWAP", and the "U64"
+	storage modifier with the atomic operations "MIN", "MAX", "AND", "OR",
+	and "XOR".
+
+    (Add "U64" and or "S64" opcode modifiers to the table in "Section 2.X.8.Z:
+     ATOM" in NV_gpu_program5, "Section 2.X.8.Z: ATOMS" in
+     NV_compute_program5, and "Section 2.X.8.Z: ATOMB" in
+     NV_shader_storage_buffer_object)
+
+      atomic	 storage
+      modifier	 modifiers	      operation
+      --------	 ------------------   --------------------------------------
+       ADD	 U32, S32, U64, S64   compute a sum
+       MIN	 U32, S32, U64, S64   compute minimum
+       MAX	 U32, S32, U64, S64   compute maximum
+       AND	 U32, S32, U64, S64   compute bit-wise AND
+       OR	 U32, S32, U64, S64   compute bit-wise OR
+       XOR	 U32, S32, U64, S64   compute bit-wise XOR
+       EXCH	 U32, S32, U64, S64   exchange memory with operand
+       CSWAP	 U32, S32, U64, S64   compare-and-swap
+
+    No new support is provided for the IWRAP and DWRAP atomic operations.
+
+Errors
+
+     None.
+
+New State
+
+     None.
+
+New Implementation Dependent State
+
+     None.
+
+Issues
+
+     None.
+
+Revision History
+
+    Revision 3, May 11, 2021
+
+      Fix typos in the NV_gpu_program5 assembly option name, which should
+      have been specified as "NV_shader_atomic_int64".
+
+    Revision 2, March 13, 2014 (pbrown)
+
+      Update to OpenGL 4.4 / GLSL 4.40, plus minor clarifications.
+
+    Revision 1, November 8, 2013 (ckubisch)
+
+      Initial revision.

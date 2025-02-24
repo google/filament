@@ -1,0 +1,65 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("spir") {
+  # TODO: The main.cpp file #includes ../math_brute_force/function_list.cpp, which is not easily
+  # allowed.  It's best to change this file to .h upstream, create a target with that include and
+  # add it to deps.  In the meantime, make gn not complain about this.  http://anglebug.com/42266967
+  check_includes = false
+
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/datagen.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/kernelargs.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/run_build_test.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/run_services.cpp",
+  ]
+  if (is_win) {
+    cflags = [
+      "/GR",
+      "/EHs",
+      "/EHc",
+    ]
+  } else {
+    cflags = [
+      "-fexceptions",
+      "-frtti",
+    ]
+  }
+  deps = [ ":copy_spir" ]
+}
+
+copy("copy_spir") {
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/api.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/atomics.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/basic.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/binary_type.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/commonfns.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/compile_and_link.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/conversions.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/enum_values.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/geometrics.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/half.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/images_kernel_read_write.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/images_samplerlessRead.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/integer_ops.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/kernel_attributes.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/kernel_image_methods.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/khr.csv",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/math_brute_force.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/printf.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/profiling.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/relationals.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/sampler_enumeration.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/select.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/vec_align.zip",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/spir/vec_step.zip",
+  ]
+  outputs = [ "$root_out_dir/{{source_file_part}}" ]
+}

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * YComponent is a class that handles storing the stableId and the percentage
+   * offset in the y direction of all tracks within a specific viewX and viewY
+   * coordinate.
+   * @constructor
+   */
+  function YComponent(stableId, yPercentOffset) {
+    this.stableId = stableId;
+    this.yPercentOffset = yPercentOffset;
+  }
+
+  YComponent.prototype = {
+    toDict() {
+      return {
+        stableId: this.stableId,
+        yPercentOffset: this.yPercentOffset
+      };
+    }
+  };
+
+  /**
+   * Location is a class that represents a spatial location on the timeline
+   * that is specified by percent offsets within tracks rather than specific
+   * points.
+   *
+   * @constructor
+   */
+  function Location(xWorld, yComponents) {
+    this.xWorld_ = xWorld;
+    this.yComponents_ = yComponents;
+  }
+
+  /**
+   * Returns a new Location given by x and y coordinates with respect to
+   * the timeline's drawing canvas.
+   */
+  Location.fromViewCoordinates = function(viewport, viewX, viewY) {
+    const dt = viewport.currentDisplayTransform;
+    const xWorld = dt.xViewToWorld(viewX);
+    const yComponents = [];
+
+    // Since we're given coordinates within the timeline canvas, we need to
+    // convert them to document coordinates to get the element.
+    let elem = document.elementFromPoint(
+        viewX + viewport.modelTrackContainer.canvas.offsetLeft,
+        viewY + viewport.modelTrackContainer.canvas.offsetTop);
+    // Build yComponents by calculating percentage offset with respect to
+    // each parent track.
+    while (elem instanceof tr.ui.tracks.Track) {
+      if (elem.eventContainer) {
+        const boundRect = elem.getBoundingClientRect();
+        const yPercentOffset = (viewY - boundRect.top) / boundRect.height;
+        yComponents.push(
+            new YComponent(elem.eventContainer.stableId, yPercentOffset));
+      }
+      elem = elem.parentElement;
+    }
+
+    if (yComponents.length === 0) return;
+    return new Location(xWorld, yComponents);
+  };
+
+  Location.fromStableIdAndTimestamp = function(viewport, stableId, ts) {
+    const xWorld = ts;
+    const yComponents = [];
+
+    // The y components' percentage offsets will be calculated with respect to
+    // the boundingRect's top of containing track.
+    const containerToTrack = viewport.containerToTrackMap;
+    let elem = containerToTrack.getTrackByStableId(stableId);
+    if (!elem) return;
+
+    const firstY = elem.getBoundingClientRect().top;
+    while (elem instanceof tr.ui.tracks.Track) {
+      if (elem.eventContainer) {
+        const boundRect = elem.getBoundingClientRect();
+        const yPercentOffset = (firstY - boundRect.top) / boundRect.height;
+        yComponents.push(
+            new YComponent(elem.eventContainer.stableId, yPercentOffset));
+      }
+      elem = elem.parentElement;
+    }
+
+    if (yComponents.length === 0) return;
+    return new Location(xWorld, yComponents);
+  };
+
+  Location.prototype = {
+
+    get xWorld() {
+      return this.xWorld_;
+    },
+
+    /**
+     * Returns the first valid containing track based on the
+     * internal yComponents.
+     */
+    getContainingTrack(viewport) {
+      const containerToTrack = viewport.containerToTrackMap;
+      for (const i in this.yComponents_) {
+        const yComponent = this.yComponents_[i];
+        const track = containerToTrack.getTrackByStableId(yComponent.stableId);
+        if (track !== undefined) return track;
+      }
+    },
+
+    /**
+     * Calculates and returns x and y coordinates of the current location with
+     * respect to the timeline's canvas.
+     */
+    toViewCoordinates(viewport) {
+      const dt = viewport.currentDisplayTransform;
+      const containerToTrack = viewport.containerToTrackMap;
+      const viewX = dt.xWorldToView(this.xWorld_);
+
+      let viewY = -1;
+      for (const index in this.yComponents_) {
+        const yComponent = this.yComponents_[index];
+        const track = containerToTrack.getTrackByStableId(yComponent.stableId);
+        if (track !== undefined) {
+          const boundRect = track.getBoundingClientRect();
+          viewY = yComponent.yPercentOffset * boundRect.height + boundRect.top;
+          break;
+        }
+      }
+
+      return {
+        viewX,
+        viewY
+      };
+    },
+
+    toDict() {
+      return {
+        xWorld: this.xWorld_,
+        yComponents: this.yComponents_
+      };
+    }
+  };
+
+  return {
+    Location,
+  };
+});
+</script>

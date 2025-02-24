@@ -1,0 +1,35 @@
+Name: Bloat - Generate webtreemap-compatible JSON summaries of binary size
+Short Name: bloat
+URL: https://github.com/martine/bloat
+Version: 0
+Date: 2013-04-23
+Revision: 2c22b831f081402a9160adb957b64b83316202e1
+License: Apache 2.0
+Security Critical: no
+Shipped: no
+
+Description:
+Generate webtreemap-compatible JSON summaries of binary size.
+
+Local Modifications:
+Only bloat.py is used (with no modifications).
+
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Webtreemap - Web-based treemap
+Short Name: webtreemap
+URL: https://github.com/martine/webtreemap
+Version: 0
+Date: 2013-04-23
+Revision: a2fa353833eca1a4821ba4c93fb6a7d546aed02a
+License: Apache 2.0
+Security Critical: no
+Shipped: no
+
+Description:
+A simple treemap implementation using web technologies (DOM nodes, CSS
+styling and transitions) rather than a big canvas/svg/plugin.
+
+Local Modifications:
+webtreemap.{js,css} are used with no modifications.  demo/demo.html
+was used as the basis for pnacl-sz.bloat.html.

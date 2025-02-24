@@ -1,0 +1,22 @@
+Name: symbols module from Chromium
+URL: https://chromium.googlesource.com/chromium/src.git
+License: BSD
+Shipped: yes
+
+Description:
+
+Originally added to src/build/android/pylib/symbols by Primiano Tucci:
+
+commit eb3ad0de43537c5bff297326b11b121c77cc18e6
+Author: primiano@chromium.org
+Date:   Mon Feb 24 19:23:59 2014 +0000
+
+    Add fast ELF Symbolizer to memory_inspector.
+
+    This CL introduces a multiprocess, pipelined and asynchronous ELF
+    symbolizer (based on addr2line) which gives honor to a bulkly workstation
+    when symbolizing large batches of symbols.
+
+    BUG=340294,339059
+
+    Review URL: https://codereview.chromium.org/167893009

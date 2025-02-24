@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+
+require('../src/common/tools/setup-ts-in-node.js');
+require('../src/common/tools/dev_server.ts');

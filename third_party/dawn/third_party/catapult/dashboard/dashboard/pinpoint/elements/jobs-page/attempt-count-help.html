@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+Copyright 2023 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/components/paper-icon-button/paper-icon-button.html">
+<dom-module id="attempt-count-help">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+      }
+    </style>
+    <paper-icon-button icon="help" title="attempt count help" on-tap="showDialog">
+    </paper-icon-button>
+    <paper-dialog id="help">
+      <h2>Attempt count defaults</h2>
+      <p>To promote more accurate regression detection on press benchmarks on Mac M1,
+        <br>Pinpoint will automatically update the default attempt count when jobs are
+        <br>configured on a Mac M1 bot and a press benchmark.
+      </p>
+      <dl>
+        <dt>Mac M1 devices:</dt>
+          <dd>- mac-m1_mini_2020-perf</dd>
+          <dd>- mac-m1_mini_2020-perf-pgo</dd>
+          <dd>- mac-14-m1-pro-perf</dd>
+        <dt>Press benchmarks:</dt>
+          <dd>- JetStream2</dd>
+          <dd>- Speedometer2</dd>
+          <dd>- MotionMark (found under rendering.desktop)</dd>
+      </dl>
+      <p>JetStream2 and Speedometer2 on Mac M1 will default to 30 attempts
+        <br>and MotionMark on Mac M1 will default to 60 attempts.
+        <br>All other devices and benchmarks will default to 10 attempts.
+        <br>Restarting jobs will use the same attempt count as the original job.
+        <br>The attempt count can be edited after selecting the bot and benchmark.
+      </p>
+      <p></p>
+      <p> Click <a href="http://go/mac-m1-iterations" target="_blank">here</a> for more details.</p>
+    </paper-dialog>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'attempt-count-help',
+      showDialog: function () {
+        this.$.help.toggle();
+      },
+    });
+  </script>
+</dom-module>

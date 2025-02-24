@@ -1,0 +1,1 @@
+@media all and (min-width:500px){@document url(http://www.w3.org/),url-prefix(http://www.w3.org/Style/),domain(mozilla.org),regexp("https:.*"){body{color:purple;background:yellow}}}

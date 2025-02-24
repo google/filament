@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  /**
+   * Stringify Arrays or dictionaries. Sorts dictionaries keys. Non-recursive.
+   *
+   * @param {!Object} obj
+   * @return {string}
+   */
+  function stableStringify(obj) {
+    let replacer;
+    if (!(obj instanceof Array) && obj !== null) {
+      replacer = Object.keys(obj).sort();
+    }
+    return JSON.stringify(obj, replacer);
+  }
+
+  /**
+   * @typedef {(null|number|string|boolean|Array.<!PlainOldData>|!Object)}
+   * PlainOldData
+   */
+
+  class GenericSet extends tr.v.d.Diagnostic {
+    /**
+     * @param {!Iterable.<!PlainOldData>} values
+     */
+    constructor(values) {
+      super();
+
+      if (typeof values[Symbol.iterator] !== 'function') {
+        throw new Error('GenericSet must be constructed from an interable.');
+      }
+
+      this.values_ = new Set(values);
+      this.has_objects_ = false;
+
+      for (const value of values) {
+        if (typeof value === 'object') {
+          this.has_objects_ = true;
+        }
+      }
+    }
+
+    get size() {
+      return this.values_.size;
+    }
+
+    get length() {
+      return this.values_.size;
+    }
+
+    * [Symbol.iterator]() {
+      for (const value of this.values_) {
+        yield value;
+      }
+    }
+
+    has(value) {
+      if (typeof value !== 'object') return this.values_.has(value);
+      const json = JSON.stringify(value);
+      for (const x of this) {
+        if (typeof x !== 'object') continue;
+        if (json === JSON.stringify(x)) return true;
+      }
+      return false;
+    }
+
+    equals(other) {
+      if (!(other instanceof GenericSet)) return false;
+      if (this.size !== other.size) return false;
+      for (const value of this) {
+        if (!other.has(value)) return false;
+      }
+      return true;
+    }
+
+    get hashKey() {
+      if (this.has_objects_) return undefined;
+
+      if (this.hash_key_ !== undefined) {
+        return this.hash_key_;
+      }
+
+      let key = '';
+      for (const value of Array.from(this.values_.values()).sort()) {
+        key += value;
+      }
+      this.hash_key_ = key;
+      return key;
+    }
+
+    serialize(serializer) {
+      const i = [...this].map(x => serializer.getOrAllocateId(x));
+      return (i.length === 1) ? i[0] : i;
+    }
+
+    asDictInto_(d) {
+      d.values = Array.from(this);
+    }
+
+    static deserialize(data, deserializer) {
+      if (!(data instanceof Array)) {
+        data = [data];
+      }
+      return new GenericSet(data.map(datum => deserializer.getObject(datum)));
+    }
+
+    static fromDict(d) {
+      return new GenericSet(d.values);
+    }
+
+    clone() {
+      return new GenericSet(this.values_);
+    }
+
+    canAddDiagnostic(otherDiagnostic) {
+      return otherDiagnostic instanceof GenericSet;
+    }
+
+    addDiagnostic(otherDiagnostic) {
+      const jsons = new Set();
+      for (const value of this) {
+        if (typeof value !== 'object') continue;
+        jsons.add(stableStringify(value));
+      }
+
+      for (const value of otherDiagnostic) {
+        if (typeof value === 'object') {
+          if (jsons.has(stableStringify(value))) {
+            continue;
+          }
+          this.has_objects_ = true;
+        }
+        this.values_.add(value);
+      }
+    }
+  }
+
+  tr.v.d.Diagnostic.register(GenericSet, {
+    elementName: 'tr-v-ui-generic-set-span'
+  });
+
+  return {
+    GenericSet,
+  };
+});
+</script>

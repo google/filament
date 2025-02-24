@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/constants.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/list_view.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/selection.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  const OPS_TIMING_ITERATIONS = 3; // Iterations to average op timing info over.
+  const ANNOTATION = 'Comment';
+  const BEGIN_ANNOTATION = 'BeginCommentGroup';
+  const END_ANNOTATION = 'EndCommentGroup';
+  const ANNOTATION_ID = 'ID: ';
+  const ANNOTATION_CLASS = 'CLASS: ';
+  const ANNOTATION_TAG = 'TAG: ';
+
+  const constants = tr.e.cc.constants;
+
+  /**
+   * @constructor
+   */
+  const PictureOpsListView =
+      tr.ui.b.define('tr-ui-e-chrome-cc-picture-ops-list-view');
+
+  PictureOpsListView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.style.borderTop = '1px solid grey';
+      this.style.overflow = 'auto';
+      this.opsList_ = new tr.ui.b.ListView();
+      Polymer.dom(this).appendChild(this.opsList_);
+
+      this.selectedOp_ = undefined;
+      this.selectedOpIndex_ = undefined;
+      this.opsList_.addEventListener(
+          'selection-changed', this.onSelectionChanged_.bind(this));
+
+      this.picture_ = undefined;
+    },
+
+    get picture() {
+      return this.picture_;
+    },
+
+    set picture(picture) {
+      this.picture_ = picture;
+      this.updateContents_();
+    },
+
+    updateContents_() {
+      this.opsList_.clear();
+
+      if (!this.picture_) return;
+
+      let ops = this.picture_.getOps();
+      if (!ops) return;
+
+      ops = this.picture_.tagOpsWithTimings(ops);
+
+      ops = this.opsTaggedWithAnnotations_(ops);
+
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i];
+        const item = document.createElement('div');
+        item.opIndex = op.opIndex;
+        Polymer.dom(item).textContent = i + ') ' + op.cmd_string;
+
+        // Display the element info associated with the op, if available.
+        if (op.elementInfo.tag || op.elementInfo.id || op.elementInfo.class) {
+          const elementInfo = document.createElement('span');
+          Polymer.dom(elementInfo).classList.add('elementInfo');
+          elementInfo.style.color = 'purple';
+          elementInfo.style.fontSize = 'small';
+          elementInfo.style.fontWeight = 'bold';
+          elementInfo.style.color = '#777';
+          const tag = op.elementInfo.tag ? op.elementInfo.tag : 'unknown';
+          const id = op.elementInfo.id ? 'id=' + op.elementInfo.id : undefined;
+          const className = op.elementInfo.class ? 'class=' +
+              op.elementInfo.class : undefined;
+          Polymer.dom(elementInfo).textContent =
+              '<' + tag + (id ? ' ' : '') +
+              (id ? id : '') + (className ? ' ' : '') +
+              (className ? className : '') + '>';
+          Polymer.dom(item).appendChild(elementInfo);
+        }
+
+        // Display the Skia params.
+        // FIXME: now that we have structured data, we should format it.
+        // (https://github.com/google/trace-viewer/issues/782)
+        if (op.info.length > 0) {
+          const infoItem = document.createElement('div');
+          Polymer.dom(infoItem).textContent = JSON.stringify(op.info);
+          infoItem.style.fontSize = 'x-small';
+          infoItem.style.color = '#777';
+          Polymer.dom(item).appendChild(infoItem);
+        }
+
+        // Display the op timing, if available.
+        if (op.cmd_time && op.cmd_time >= 0.0001) {
+          const time = document.createElement('span');
+          Polymer.dom(time).classList.add('time');
+          const rounded = op.cmd_time.toFixed(4);
+          Polymer.dom(time).textContent = '(' + rounded + 'ms)';
+          time.style.fontSize = 'x-small';
+          time.style.color = 'rgb(136, 0, 0)';
+          Polymer.dom(item).appendChild(time);
+        }
+
+        item.style.borderBottom = '1px solid #555';
+        item.style.fontSize = 'small';
+        item.style.fontWeight = 'bold';
+        item.style.paddingBottom = '5px';
+        item.style.paddingLeft = '5px';
+        item.style.cursor = 'pointer';
+
+        for (const child of item.children) {
+          child.style.fontWeight = 'normal';
+          child.style.marginLeft = '1em';
+          child.style.maxWidth = '300px';
+        }
+
+        Polymer.dom(this.opsList_).appendChild(item);
+      }
+    },
+
+    onSelectionChanged_(e) {
+      let beforeSelectedOp = true;
+
+      // Deselect on re-selection.
+      if (this.opsList_.selectedElement === this.selectedOp_) {
+        this.opsList_.selectedElement = undefined;
+        beforeSelectedOp = false;
+        this.selectedOpIndex_ = undefined;
+      }
+
+      this.selectedOp_ = this.opsList_.selectedElement;
+
+      // Set selection on all previous ops.
+      const ops = this.opsList_.children;
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i];
+        if (op === this.selectedOp_) {
+          beforeSelectedOp = false;
+          this.selectedOpIndex_ = op.opIndex;
+        } else if (beforeSelectedOp) {
+          Polymer.dom(op).setAttribute('beforeSelection', 'beforeSelection');
+          op.style.backgroundColor = 'rgb(103, 199, 165)';
+        } else {
+          Polymer.dom(op).removeAttribute('beforeSelection');
+          op.style.backgroundColor = '';
+        }
+      }
+
+      tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+    },
+
+    get numOps() {
+      return this.opsList_.children.length;
+    },
+
+    get selectedOpIndex() {
+      return this.selectedOpIndex_;
+    },
+
+    set selectedOpIndex(s) {
+      this.selectedOpIndex_ = s;
+
+      if (s === undefined) {
+        this.opsList_.selectedElement = this.selectedOp_;
+        this.onSelectionChanged_();
+      } else {
+        if (s < 0) throw new Error('Invalid index');
+        if (s >= this.numOps) throw new Error('Invalid index');
+        this.opsList_.selectedElement = this.opsList_.getElementByIndex(s + 1);
+        tr.ui.b.scrollIntoViewIfNeeded(this.opsList_.selectedElement);
+      }
+    },
+
+    /**
+     * Return Skia operations tagged by annotation.
+     *
+     * The ops returned from Picture.getOps() contain both Skia ops and
+     * annotations threaded together. This function removes all annotations
+     * from the list and tags each op with the associated annotations.
+     * Additionally, the last {tag, id, class} is stored as elementInfo on
+     * each op.
+     *
+     * @param {Array} ops Array of Skia operations and annotations.
+     * @return {Array} Skia ops where op.annotations contains the associated
+     *         annotations for a given op.
+     */
+    opsTaggedWithAnnotations_(ops) {
+      // This algorithm works by walking all the ops and pushing any
+      // annotations onto a stack. When a non-annotation op is found, the
+      // annotations stack is traversed and stored with the op.
+      const annotationGroups = [];
+      const opsWithoutAnnotations = [];
+      for (let opIndex = 0; opIndex < ops.length; opIndex++) {
+        const op = ops[opIndex];
+        op.opIndex = opIndex;
+        switch (op.cmd_string) {
+          case BEGIN_ANNOTATION:
+            annotationGroups.push([]);
+            break;
+          case END_ANNOTATION:
+            annotationGroups.pop();
+            break;
+          case ANNOTATION:
+            annotationGroups[annotationGroups.length - 1].push(op);
+            break;
+          default: {
+            const annotations = [];
+            let elementInfo = {};
+            annotationGroups.forEach(function(annotationGroup) {
+              elementInfo = {};
+              annotationGroup.forEach(function(annotation) {
+                annotation.info.forEach(function(info) {
+                  if (info.includes(ANNOTATION_TAG)) {
+                    elementInfo.tag = info.substring(
+                        info.indexOf(ANNOTATION_TAG) +
+                        ANNOTATION_TAG.length).toLowerCase();
+                  } else if (info.includes(ANNOTATION_ID)) {
+                    elementInfo.id = info.substring(
+                        info.indexOf(ANNOTATION_ID) +
+                        ANNOTATION_ID.length);
+                  } else if (info.includes(ANNOTATION_CLASS)) {
+                    elementInfo.class = info.substring(
+                        info.indexOf(ANNOTATION_CLASS) +
+                        ANNOTATION_CLASS.length);
+                  }
+
+                  annotations.push(info);
+                });
+              });
+            });
+            op.annotations = annotations;
+            op.elementInfo = elementInfo;
+            opsWithoutAnnotations.push(op);
+          }
+        }
+      }
+
+      return opsWithoutAnnotations;
+    }
+  };
+
+  return {
+    PictureOpsListView,
+  };
+});
+</script>

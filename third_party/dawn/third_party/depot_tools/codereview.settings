@@ -1,0 +1,6 @@
+# This file is used by git cl to get repository specific information.
+CC_LIST: chromium-reviews@chromium.org
+CODE_REVIEW_SERVER: chromium-review.googlesource.com
+GERRIT_HOST: True
+PROJECT: depot_tools
+VIEW_VC: https://chromium.googlesource.com/chromium/tools/depot_tools/+/

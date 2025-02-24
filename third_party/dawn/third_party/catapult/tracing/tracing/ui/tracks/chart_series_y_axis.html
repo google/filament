@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const IDEAL_MAJOR_MARK_HEIGHT_PX = 30;
+  const AXIS_LABLE_MARGIN_PX = 10;
+  const AXIS_LABLE_FONT_SIZE_PX = 9;
+  const AXIS_LABLE_FONT = 'Arial';
+
+  /**
+   * A vertical axis for a (set of) chart series which maps an arbitrary range
+   * of values [min, max] to the unit range [0, 1].
+   *
+   * @constructor
+   */
+  function ChartSeriesYAxis(opt_min, opt_max) {
+    this.guid_ = tr.b.GUID.allocateSimple();
+    this.bounds = new tr.b.math.Range();
+    if (opt_min !== undefined) this.bounds.addValue(opt_min);
+    if (opt_max !== undefined) this.bounds.addValue(opt_max);
+  }
+
+  ChartSeriesYAxis.prototype = {
+    get guid() {
+      return this.guid_;
+    },
+
+    valueToUnitRange(value) {
+      if (this.bounds.isEmpty) {
+        throw new Error('Chart series y-axis bounds are empty');
+      }
+      const bounds = this.bounds;
+      if (bounds.range === 0) return 0;
+      return (value - bounds.min) / bounds.range;
+    },
+
+    unitRangeToValue(unitRange) {
+      if (this.bounds.isEmpty) {
+        throw new Error('Chart series y-axis bounds are empty');
+      }
+      return unitRange * this.bounds.range + this.bounds.min;
+    },
+
+    /**
+     * Automatically set the y-axis bounds from the range of values of all
+     * series in a list.
+     *
+     * See the description of autoSetFromRange for the optional configuration
+     * argument flags.
+     */
+    autoSetFromSeries(series, opt_config) {
+      const range = new tr.b.math.Range();
+      series.forEach(function(s) {
+        range.addRange(s.range);
+      }, this);
+      this.autoSetFromRange(range, opt_config);
+    },
+
+    /**
+     * Automatically set the y-axis bound from a range of values.
+     *
+     * The following four flags, which affect the behavior of this method with
+     * respect to already defined bounds, can be present in the optional
+     * configuration (a flag is assumed to be false if it is not provided or if
+     * the configuration is not provided):
+     *
+     *   - expandMin: allow decreasing the min bound (if range.min < this.min)
+     *   - shrinkMin: allow increasing the min bound (if range.min > this.min)
+     *   - expandMax: allow increasing the max bound (if range.max > this.max)
+     *   - shrinkMax: allow decreasing the max bound (if range.max < this.max)
+     *
+     * This method will ensure that the resulting bounds are defined and valid
+     * (i.e. min <= max) provided that they were valid or empty before and the
+     * value range is non-empty and valid.
+     *
+     * Note that unless expanding/shrinking a bound is explicitly enabled in
+     * the configuration, non-empty bounds will not be changed under any
+     * circumstances.
+     *
+     * Observe that if no configuration is provided (or all flags are set to
+     * false), this method will only modify the y-axis bounds if they are empty.
+     */
+    autoSetFromRange(range, opt_config) {
+      if (range.isEmpty) return;
+
+      const bounds = this.bounds;
+      if (bounds.isEmpty) {
+        bounds.addRange(range);
+        return;
+      }
+
+      if (!opt_config) return;
+
+      const useRangeMin = (opt_config.expandMin && range.min < bounds.min ||
+                         opt_config.shrinkMin && range.min > bounds.min);
+      const useRangeMax = (opt_config.expandMax && range.max > bounds.max ||
+                         opt_config.shrinkMax && range.max < bounds.max);
+
+      // Neither bound is modified.
+      if (!useRangeMin && !useRangeMax) return;
+
+      // Both bounds are modified. Assuming the range argument is a valid
+      // range, no extra checks are necessary.
+      if (useRangeMin && useRangeMax) {
+        bounds.min = range.min;
+        bounds.max = range.max;
+        return;
+      }
+
+      // Only one bound is modified. We must ensure that it doesn't go
+      // over/under the other (unmodified) bound.
+      if (useRangeMin) {
+        bounds.min = Math.min(range.min, bounds.max);
+      } else {
+        bounds.max = Math.max(range.max, bounds.min);
+      }
+    },
+
+
+    majorMarkHeightWorld_(transform, pixelRatio) {
+      const idealMajorMarkHeightPx = IDEAL_MAJOR_MARK_HEIGHT_PX * pixelRatio;
+      const idealMajorMarkHeightWorld =
+          transform.vectorToWorldDistance(idealMajorMarkHeightPx);
+
+      return tr.b.math.preferredNumberLargerThanMin(idealMajorMarkHeightWorld);
+    },
+
+    draw(ctx, transform, showYAxisLabels, showYGridLines) {
+      if (!showYAxisLabels && !showYGridLines) return;
+
+      const pixelRatio = transform.pixelRatio;
+      const viewTop = transform.outerTopViewY;
+      const worldTop = transform.viewYToWorldY(viewTop);
+      const viewBottom = transform.outerBottomViewY;
+      const viewHeight = viewBottom - viewTop;
+      const viewLeft = transform.leftViewX;
+      const viewRight = transform.rightViewX;
+      const labelLeft = transform.leftYLabel;
+
+      ctx.save();
+      ctx.lineWidth = pixelRatio;
+      ctx.fillStyle = ColorScheme.getColorForReservedNameAsString('black');
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'center';
+
+      ctx.font =
+          (AXIS_LABLE_FONT_SIZE_PX * pixelRatio) + 'px ' + AXIS_LABLE_FONT;
+
+      // Draw left edge of chart series.
+      ctx.beginPath();
+      ctx.strokeStyle = ColorScheme.getColorForReservedNameAsString('black');
+      tr.ui.b.drawLine(
+          ctx, viewLeft, viewTop, viewLeft, viewBottom, viewLeft);
+      ctx.stroke();
+      ctx.closePath();
+
+      // Draw y-axis ticks and gridlines.
+      ctx.beginPath();
+      ctx.strokeStyle = ColorScheme.getColorForReservedNameAsString('grey');
+
+      const majorMarkHeight = this.majorMarkHeightWorld_(transform, pixelRatio);
+      const maxMajorMark = Math.max(transform.viewYToWorldY(viewTop),
+          Math.abs(transform.viewYToWorldY(viewBottom)));
+      for (let curWorldY = 0;
+        curWorldY <= maxMajorMark;
+        curWorldY += majorMarkHeight) {
+        const roundedUnitValue = Math.floor(curWorldY * 1000000) / 1000000;
+        const curViewYPositive = transform.worldYToViewY(curWorldY);
+        if (curViewYPositive >= viewTop) {
+          if (showYAxisLabels) {
+            ctx.fillText(roundedUnitValue, viewLeft + AXIS_LABLE_MARGIN_PX,
+                curViewYPositive - AXIS_LABLE_MARGIN_PX);
+          }
+          if (showYGridLines) {
+            tr.ui.b.drawLine(
+                ctx, viewLeft, curViewYPositive, viewRight, curViewYPositive);
+          }
+        }
+
+        const curViewYNegative = transform.worldYToViewY(-1 * curWorldY);
+        if (curViewYNegative <= viewBottom) {
+          if (showYAxisLabels) {
+            ctx.fillText(roundedUnitValue, viewLeft + AXIS_LABLE_MARGIN_PX,
+                curViewYNegative - AXIS_LABLE_MARGIN_PX);
+          }
+          if (showYGridLines) {
+            tr.ui.b.drawLine(
+                ctx, viewLeft, curViewYNegative, viewRight, curViewYNegative);
+          }
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  return {
+    ChartSeriesYAxis,
+  };
+});
+</script>

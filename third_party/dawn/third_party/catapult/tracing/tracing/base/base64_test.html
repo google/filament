@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base64.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('getDecodedLength', function() {
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YQ=='), 1);
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YWI='), 2);
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YWJj='), 3);
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YWJjZA=='), 4);
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YWJjZGU='), 5);
+    assert.strictEqual(tr.b.Base64.getDecodedBufferLength('YWJjZGVm'), 6);
+  });
+
+  test('DecodeToTypedArray', function() {
+    const buffer = new DataView(new ArrayBuffer(256));
+    tr.b.Base64.DecodeToTypedArray('YQ==', buffer);
+    assert.strictEqual(buffer.getInt8(0), 97);
+
+    tr.b.Base64.DecodeToTypedArray('YWJjZA==', buffer);
+    for (let i = 0; i < 4; i++) {
+      assert.strictEqual(buffer.getInt8(i), 97 + i);
+    }
+
+    tr.b.Base64.DecodeToTypedArray('YWJjZGVm', buffer);
+    for (let i = 0; i < 4; i++) {
+      assert.strictEqual(buffer.getInt8(i), 97 + i);
+    }
+  });
+
+  test('DecodeLengthReturn', function() {
+    const buffer = new DataView(new ArrayBuffer(256));
+    let len = tr.b.Base64.DecodeToTypedArray(btoa('h'), buffer);
+    assert.strictEqual(len, 1);
+    len = tr.b.Base64.DecodeToTypedArray(btoa('he'), buffer);
+    assert.strictEqual(len, 2);
+    len = tr.b.Base64.DecodeToTypedArray(btoa('hel'), buffer);
+    assert.strictEqual(len, 3);
+    len = tr.b.Base64.DecodeToTypedArray(btoa('hell'), buffer);
+    assert.strictEqual(len, 4);
+    len = tr.b.Base64.DecodeToTypedArray(btoa('hello'), buffer);
+    assert.strictEqual(len, 5);
+    len = tr.b.Base64.DecodeToTypedArray(btoa('hello!'), buffer);
+    assert.strictEqual(len, 6);
+  });
+
+  test('Base64.atob', function() {
+    const output = tr.b.Base64.atob('aGVsbG8gd29ybGQ=');
+    assert.strictEqual(output, 'hello world');
+  });
+
+  test('Base64.btoa', function() {
+    const output = tr.b.Base64.btoa('hello world');
+    assert.strictEqual(output, 'aGVsbG8gd29ybGQ=');
+  });
+});
+</script>

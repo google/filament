@@ -1,0 +1,2710 @@
+<!doctype html><html lang="en">
+ <head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+  <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
+  <title>WebGPU Explainer</title>
+  <meta content="CG-DRAFT" name="w3c-status">
+  <link href="https://www.w3.org/StyleSheets/TR/2021/cg-draft" rel="stylesheet">
+  <meta content="Bikeshed version ac5ea272d, updated Fri Dec 6 15:45:15 2024 -0800" name="generator">
+  <link href="https://gpuweb.github.io/gpuweb/explainer/" rel="canonical">
+  <link href="https://www.w3.org/2008/site/images/favicon.ico" rel="icon">
+  <meta content="dark light" name="color-scheme">
+  <link href="https://www.w3.org/StyleSheets/TR/2021/dark.css" media="(prefers-color-scheme: dark)" rel="stylesheet" type="text/css">
+<style>
+/* Our SVGs aren't responsive to light/dark mode, so they're opaque with a
+ * white or black background. Rounded corners make them a bit less jarring. */
+object[type="image/svg+xml"] {
+    border-radius: .5em;
+}
+</style>
+<style>/* Boilerplate: style-autolinks */
+.css.css, .property.property, .descriptor.descriptor {
+    color: var(--a-normal-text);
+    font-size: inherit;
+    font-family: inherit;
+}
+.css::before, .property::before, .descriptor::before {
+    content: "‘";
+}
+.css::after, .property::after, .descriptor::after {
+    content: "’";
+}
+.property, .descriptor {
+    /* Don't wrap property and descriptor names */
+    white-space: nowrap;
+}
+.type { /* CSS value <type> */
+    font-style: italic;
+}
+pre .property::before, pre .property::after {
+    content: "";
+}
+[data-link-type="property"]::before,
+[data-link-type="propdesc"]::before,
+[data-link-type="descriptor"]::before,
+[data-link-type="value"]::before,
+[data-link-type="function"]::before,
+[data-link-type="at-rule"]::before,
+[data-link-type="selector"]::before,
+[data-link-type="maybe"]::before {
+    content: "‘";
+}
+[data-link-type="property"]::after,
+[data-link-type="propdesc"]::after,
+[data-link-type="descriptor"]::after,
+[data-link-type="value"]::after,
+[data-link-type="function"]::after,
+[data-link-type="at-rule"]::after,
+[data-link-type="selector"]::after,
+[data-link-type="maybe"]::after {
+    content: "’";
+}
+
+[data-link-type].production::before,
+[data-link-type].production::after,
+.prod [data-link-type]::before,
+.prod [data-link-type]::after {
+    content: "";
+}
+
+[data-link-type=element],
+[data-link-type=element-attr] {
+    font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    font-size: .9em;
+}
+[data-link-type=element]::before { content: "<" }
+[data-link-type=element]::after  { content: ">" }
+
+[data-link-type=biblio] {
+    white-space: pre;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --selflink-text: black;
+        --selflink-bg: silver;
+        --selflink-hover-text: white;
+    }
+}
+</style>
+<style>/* Boilerplate: style-colors */
+/* Any --*-text not paired with a --*-bg is assumed to have a transparent bg */
+:root {
+    color-scheme: light dark;
+
+    --text: black;
+    --bg: white;
+
+    --unofficial-watermark: url(https://www.w3.org/StyleSheets/TR/2016/logos/UD-watermark);
+
+    --logo-bg: #1a5e9a;
+    --logo-active-bg: #c00;
+    --logo-text: white;
+
+    --tocnav-normal-text: #707070;
+    --tocnav-normal-bg: var(--bg);
+    --tocnav-hover-text: var(--tocnav-normal-text);
+    --tocnav-hover-bg: #f8f8f8;
+    --tocnav-active-text: #c00;
+    --tocnav-active-bg: var(--tocnav-normal-bg);
+
+    --tocsidebar-text: var(--text);
+    --tocsidebar-bg: #f7f8f9;
+    --tocsidebar-shadow: rgba(0,0,0,.1);
+    --tocsidebar-heading-text: hsla(203,20%,40%,.7);
+
+    --toclink-text: var(--text);
+    --toclink-underline: #3980b5;
+    --toclink-visited-text: var(--toclink-text);
+    --toclink-visited-underline: #054572;
+
+    --heading-text: #005a9c;
+
+    --hr-text: var(--text);
+
+    --algo-border: #def;
+
+    --del-text: red;
+    --del-bg: transparent;
+    --ins-text: #080;
+    --ins-bg: transparent;
+
+    --a-normal-text: #034575;
+    --a-normal-underline: #bbb;
+    --a-visited-text: var(--a-normal-text);
+    --a-visited-underline: #707070;
+    --a-hover-bg: rgba(75%, 75%, 75%, .25);
+    --a-active-text: #c00;
+    --a-active-underline: #c00;
+
+    --blockquote-border: silver;
+    --blockquote-bg: transparent;
+    --blockquote-text: currentcolor;
+
+    --issue-border: #e05252;
+    --issue-bg: #fbe9e9;
+    --issue-text: var(--text);
+    --issueheading-text: #831616;
+
+    --example-border: #e0cb52;
+    --example-bg: #fcfaee;
+    --example-text: var(--text);
+    --exampleheading-text: #574b0f;
+
+    --note-border: #52e052;
+    --note-bg: #e9fbe9;
+    --note-text: var(--text);
+    --noteheading-text: hsl(120, 70%, 30%);
+    --notesummary-underline: silver;
+
+    --assertion-border: #aaa;
+    --assertion-bg: #eee;
+    --assertion-text: black;
+
+    --advisement-border: orange;
+    --advisement-bg: #fec;
+    --advisement-text: var(--text);
+    --advisementheading-text: #b35f00;
+
+    --warning-border: red;
+    --warning-bg: hsla(40,100%,50%,0.95);
+    --warning-text: var(--text);
+
+    --amendment-border: #330099;
+    --amendment-bg: #F5F0FF;
+    --amendment-text: var(--text);
+    --amendmentheading-text: #220066;
+
+    --def-border: #8ccbf2;
+    --def-bg: #def;
+    --def-text: var(--text);
+    --defrow-border: #bbd7e9;
+
+    --datacell-border: silver;
+
+    --indexinfo-text: #707070;
+
+    --indextable-hover-text: black;
+    --indextable-hover-bg: #f7f8f9;
+
+    --outdatedspec-bg: rgba(0, 0, 0, .5);
+    --outdatedspec-text: black;
+    --outdated-bg: maroon;
+    --outdated-text: white;
+    --outdated-shadow: red;
+
+    --editedrec-bg: darkorange;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text: #ddd;
+        --bg: black;
+
+        --unofficial-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='%23100808' transform='translate(200 200) rotate(-45) translate(-200 -200)' stroke='%23100808' stroke-width='3'%3E%3Ctext x='50%25' y='220' style='font: bold 70px sans-serif; text-anchor: middle; letter-spacing: 6px;'%3EUNOFFICIAL%3C/text%3E%3Ctext x='50%25' y='305' style='font: bold 70px sans-serif; text-anchor: middle; letter-spacing: 6px;'%3EDRAFT%3C/text%3E%3C/g%3E%3C/svg%3E");
+
+        --logo-bg: #1a5e9a;
+        --logo-active-bg: #c00;
+        --logo-text: white;
+
+        --tocnav-normal-text: #999;
+        --tocnav-normal-bg: var(--bg);
+        --tocnav-hover-text: var(--tocnav-normal-text);
+        --tocnav-hover-bg: #080808;
+        --tocnav-active-text: #f44;
+        --tocnav-active-bg: var(--tocnav-normal-bg);
+
+        --tocsidebar-text: var(--text);
+        --tocsidebar-bg: #080808;
+        --tocsidebar-shadow: rgba(255,255,255,.1);
+        --tocsidebar-heading-text: hsla(203,20%,40%,.7);
+
+        --toclink-text: var(--text);
+        --toclink-underline: #6af;
+        --toclink-visited-text: var(--toclink-text);
+        --toclink-visited-underline: #054572;
+
+        --heading-text: #8af;
+
+        --hr-text: var(--text);
+
+        --algo-border: #456;
+
+        --del-text: #f44;
+        --del-bg: transparent;
+        --ins-text: #4a4;
+        --ins-bg: transparent;
+
+        --a-normal-text: #6af;
+        --a-normal-underline: #555;
+        --a-visited-text: var(--a-normal-text);
+        --a-visited-underline: var(--a-normal-underline);
+        --a-hover-bg: rgba(25%, 25%, 25%, .2);
+        --a-active-text: #f44;
+        --a-active-underline: var(--a-active-text);
+
+        --borderedblock-bg: rgba(255, 255, 255, .05);
+
+        --blockquote-border: silver;
+        --blockquote-bg: var(--borderedblock-bg);
+        --blockquote-text: currentcolor;
+
+        --issue-border: #e05252;
+        --issue-bg: var(--borderedblock-bg);
+        --issue-text: var(--text);
+        --issueheading-text: hsl(0deg, 70%, 70%);
+
+        --example-border: hsl(50deg, 90%, 60%);
+        --example-bg: var(--borderedblock-bg);
+        --example-text: var(--text);
+        --exampleheading-text: hsl(50deg, 70%, 70%);
+
+        --note-border: hsl(120deg, 100%, 35%);
+        --note-bg: var(--borderedblock-bg);
+        --note-text: var(--text);
+        --noteheading-text: hsl(120, 70%, 70%);
+        --notesummary-underline: silver;
+
+        --assertion-border: #444;
+        --assertion-bg: var(--borderedblock-bg);
+        --assertion-text: var(--text);
+
+        --advisement-border: orange;
+        --advisement-bg: #222218;
+        --advisement-text: var(--text);
+        --advisementheading-text: #f84;
+
+        --warning-border: red;
+        --warning-bg: hsla(40,100%,20%,0.95);
+        --warning-text: var(--text);
+
+        --amendment-border: #330099;
+        --amendment-bg: #080010;
+        --amendment-text: var(--text);
+        --amendmentheading-text: #cc00ff;
+
+        --def-border: #8ccbf2;
+        --def-bg: #080818;
+        --def-text: var(--text);
+        --defrow-border: #136;
+
+        --datacell-border: silver;
+
+        --indexinfo-text: #aaa;
+
+        --indextable-hover-text: var(--text);
+        --indextable-hover-bg: #181818;
+
+        --outdatedspec-bg: rgba(255, 255, 255, .5);
+        --outdatedspec-text: black;
+        --outdated-bg: maroon;
+        --outdated-text: white;
+        --outdated-shadow: red;
+
+        --editedrec-bg: darkorange;
+    }
+    /* In case a transparent-bg image doesn't expect to be on a dark bg,
+       which is quite common in practice... */
+    img { background: white; }
+}
+</style>
+<style>/* Boilerplate: style-counters */
+body {
+    counter-reset: example figure issue;
+}
+.issue {
+    counter-increment: issue;
+}
+.issue:not(.no-marker)::before {
+    content: "Issue " counter(issue);
+}
+
+.example {
+    counter-increment: example;
+}
+.example:not(.no-marker)::before {
+    content: "Example " counter(example);
+}
+.invalid.example:not(.no-marker)::before,
+.illegal.example:not(.no-marker)::before {
+    content: "Invalid Example" counter(example);
+}
+
+figcaption {
+    counter-increment: figure;
+}
+figcaption:not(.no-marker)::before {
+    content: "Figure " counter(figure) " ";
+}
+</style>
+<style>/* Boilerplate: style-dfn-panel */
+:root {
+    --dfnpanel-bg: #ddd;
+    --dfnpanel-text: var(--text);
+    --dfnpanel-target-bg: #ffc;
+    --dfnpanel-target-outline: orange;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --dfnpanel-bg: #222;
+        --dfnpanel-text: var(--text);
+        --dfnpanel-target-bg: #333;
+        --dfnpanel-target-outline: silver;
+    }
+}
+.dfn-panel {
+    position: absolute;
+    z-index: 35;
+    width: 20em;
+    width: 300px;
+    height: auto;
+    max-height: 500px;
+    overflow: auto;
+    padding: 0.5em 0.75em;
+    font: small Helvetica Neue, sans-serif, Droid Sans Fallback;
+    background: var(--dfnpanel-bg);
+    color: var(--dfnpanel-text);
+    border: outset 0.2em;
+    white-space: normal; /* in case it's moved into a pre */
+}
+.dfn-panel:not(.on) { display: none; }
+.dfn-panel * { margin: 0; padding: 0; text-indent: 0; }
+.dfn-panel > b { display: block; }
+.dfn-panel a { color: var(--dfnpanel-text); }
+.dfn-panel a:not(:hover) { text-decoration: none !important; border-bottom: none !important; }
+.dfn-panel a:focus {
+    outline: 5px auto Highlight;
+    outline: 5px auto -webkit-focus-ring-color;
+}
+.dfn-panel > b + b { margin-top: 0.25em; }
+.dfn-panel ul { padding: 0 0 0 1em; list-style: none; }
+.dfn-panel li a {
+    max-width: calc(300px - 1.5em - 1em);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dfn-panel.activated {
+    display: inline-block;
+    position: fixed;
+    left: 8px;
+    bottom: 2em;
+    margin: 0 auto;
+    max-width: calc(100vw - 1.5em - .4em - .5em);
+    max-height: 30vh;
+    transition: left 1s ease-out, bottom 1s ease-out;
+}
+
+.dfn-panel .link-item:hover {
+    text-decoration: underline;
+}
+.dfn-panel .link-item .copy-icon {
+    opacity: 0;
+}
+.dfn-panel .link-item:hover .copy-icon,
+.dfn-panel .link-item .copy-icon:focus {
+    opacity: 1;
+}
+
+.dfn-panel .copy-icon {
+    display: inline-block;
+    margin-right: 0.5em;
+    width: 0.85em;
+    height: 1em;
+    border-radius: 3px;
+    background-color: #ccc;
+    cursor: pointer;
+}
+
+.dfn-panel .copy-icon .icon {
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.dfn-panel .copy-icon .icon::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid black;
+    background-color: #ccc;
+    opacity: 0.25;
+    transform: translate(3px, -3px);
+}
+
+.dfn-panel .copy-icon:active .icon::before {
+    opacity: 1;
+}
+
+.dfn-paneled[role="button"] { cursor: help; }
+
+.highlighted {
+    animation: target-fade 3s;
+}
+
+@keyframes target-fade {
+    from {
+        background-color: var(--dfnpanel-target-bg);
+        outline: 5px solid var(--dfnpanel-target-outline);
+    }
+    to {
+        color: var(--a-normal-text);
+        background-color: transparent;
+        outline: transparent;
+    }
+}
+</style>
+<style>/* Boilerplate: style-issues */
+a[href].issue-return {
+    float: right;
+    float: inline-end;
+    color: var(--issueheading-text);
+    font-weight: bold;
+    text-decoration: none;
+}
+</style>
+<style>/* Boilerplate: style-md-lists */
+/* This is a weird hack for me not yet following the commonmark spec
+   regarding paragraph and lists. */
+[data-md] > :first-child {
+    margin-top: 0;
+}
+[data-md] > :last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>/* Boilerplate: style-ref-hints */
+:root {
+    --ref-hint-bg: #ddd;
+    --ref-hint-text: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ref-hint-bg: #222;
+        --ref-hint-text: var(--text);
+    }
+}
+
+.ref-hint {
+    display: inline-block;
+    position: absolute;
+    z-index: 35;
+    width: 20em;
+    width: 300px;
+    height: auto;
+    max-height: 500px;
+    overflow: auto;
+    padding: 0.5em 0.5em;
+    font: small Helvetica Neue, sans-serif, Droid Sans Fallback;
+    background: var(--ref-hint-bg);
+    color: var(--ref-hint-text);
+    border: outset 0.2em;
+    white-space: normal; /* in case it's moved into a pre */
+}
+
+.ref-hint * { margin: 0; padding: 0; text-indent: 0; }
+
+.ref-hint ul { padding: 0 0 0 1em; list-style: none; }
+</style>
+<style>/* Boilerplate: style-selflinks */
+:root {
+    --selflink-text: white;
+    --selflink-bg: gray;
+    --selflink-hover-text: black;
+}
+.heading, .issue, .note, .example, li, dt {
+    position: relative;
+}
+a.self-link {
+    position: absolute;
+    top: 0;
+    left: calc(-1 * (3.5rem - 26px));
+    width: calc(3.5rem - 26px);
+    height: 2em;
+    text-align: center;
+    border: none;
+    transition: opacity .2s;
+    opacity: .5;
+}
+a.self-link:hover {
+    opacity: 1;
+}
+.heading > a.self-link {
+    font-size: 83%;
+}
+.example > a.self-link,
+.note > a.self-link,
+.issue > a.self-link {
+    /* These blocks are overflow:auto, so positioning outside
+       doesn't work. */
+    left: auto;
+    right: 0;
+}
+li > a.self-link {
+    left: calc(-1 * (3.5rem - 26px) - 2em);
+}
+dfn > a.self-link {
+    top: auto;
+    left: auto;
+    opacity: 0;
+    width: 1.5em;
+    height: 1.5em;
+    background: var(--selflink-bg);
+    color: var(--selflink-text);
+    font-style: normal;
+    transition: opacity .2s, background-color .2s, color .2s;
+}
+dfn:hover > a.self-link {
+    opacity: 1;
+}
+dfn > a.self-link:hover {
+    color: var(--selflink-hover-text);
+}
+
+a.self-link::before            { content: "¶"; }
+.heading > a.self-link::before { content: "§"; }
+dfn > a.self-link::before      { content: "#"; }
+</style>
+<style>/* Boilerplate: style-syntax-highlighting */
+code.highlight { padding: .1em; border-radius: .3em; }
+pre.highlight, pre > code.highlight { display: block; padding: 1em; margin: .5em 0; overflow: auto; border-radius: 0; }
+
+.highlight:not(.idl) { background: rgba(0, 0, 0, .03); }
+c-[a] { color: #990055 } /* Keyword.Declaration */
+c-[b] { color: #990055 } /* Keyword.Type */
+c-[c] { color: #708090 } /* Comment */
+c-[d] { color: #708090 } /* Comment.Multiline */
+c-[e] { color: #0077aa } /* Name.Attribute */
+c-[f] { color: #669900 } /* Name.Tag */
+c-[g] { color: #222222 } /* Name.Variable */
+c-[k] { color: #990055 } /* Keyword */
+c-[l] { color: #000000 } /* Literal */
+c-[m] { color: #000000 } /* Literal.Number */
+c-[n] { color: #0077aa } /* Name */
+c-[o] { color: #999999 } /* Operator */
+c-[p] { color: #999999 } /* Punctuation */
+c-[s] { color: #a67f59 } /* Literal.String */
+c-[t] { color: #a67f59 } /* Literal.String.Single */
+c-[u] { color: #a67f59 } /* Literal.String.Double */
+c-[cp] { color: #708090 } /* Comment.Preproc */
+c-[c1] { color: #708090 } /* Comment.Single */
+c-[cs] { color: #708090 } /* Comment.Special */
+c-[kc] { color: #990055 } /* Keyword.Constant */
+c-[kn] { color: #990055 } /* Keyword.Namespace */
+c-[kp] { color: #990055 } /* Keyword.Pseudo */
+c-[kr] { color: #990055 } /* Keyword.Reserved */
+c-[ld] { color: #000000 } /* Literal.Date */
+c-[nc] { color: #0077aa } /* Name.Class */
+c-[no] { color: #0077aa } /* Name.Constant */
+c-[nd] { color: #0077aa } /* Name.Decorator */
+c-[ni] { color: #0077aa } /* Name.Entity */
+c-[ne] { color: #0077aa } /* Name.Exception */
+c-[nf] { color: #0077aa } /* Name.Function */
+c-[nl] { color: #0077aa } /* Name.Label */
+c-[nn] { color: #0077aa } /* Name.Namespace */
+c-[py] { color: #0077aa } /* Name.Property */
+c-[ow] { color: #999999 } /* Operator.Word */
+c-[mb] { color: #000000 } /* Literal.Number.Bin */
+c-[mf] { color: #000000 } /* Literal.Number.Float */
+c-[mh] { color: #000000 } /* Literal.Number.Hex */
+c-[mi] { color: #000000 } /* Literal.Number.Integer */
+c-[mo] { color: #000000 } /* Literal.Number.Oct */
+c-[sb] { color: #a67f59 } /* Literal.String.Backtick */
+c-[sc] { color: #a67f59 } /* Literal.String.Char */
+c-[sd] { color: #a67f59 } /* Literal.String.Doc */
+c-[se] { color: #a67f59 } /* Literal.String.Escape */
+c-[sh] { color: #a67f59 } /* Literal.String.Heredoc */
+c-[si] { color: #a67f59 } /* Literal.String.Interpol */
+c-[sx] { color: #a67f59 } /* Literal.String.Other */
+c-[sr] { color: #a67f59 } /* Literal.String.Regex */
+c-[ss] { color: #a67f59 } /* Literal.String.Symbol */
+c-[vc] { color: #0077aa } /* Name.Variable.Class */
+c-[vg] { color: #0077aa } /* Name.Variable.Global */
+c-[vi] { color: #0077aa } /* Name.Variable.Instance */
+c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
+
+@media (prefers-color-scheme: dark) {
+    .highlight:not(.idl) { background: rgba(255, 255, 255, .05); }
+
+    c-[a] { color: #d33682 } /* Keyword.Declaration */
+    c-[b] { color: #d33682 } /* Keyword.Type */
+    c-[c] { color: #2aa198 } /* Comment */
+    c-[d] { color: #2aa198 } /* Comment.Multiline */
+    c-[e] { color: #268bd2 } /* Name.Attribute */
+    c-[f] { color: #b58900 } /* Name.Tag */
+    c-[g] { color: #cb4b16 } /* Name.Variable */
+    c-[k] { color: #d33682 } /* Keyword */
+    c-[l] { color: #657b83 } /* Literal */
+    c-[m] { color: #657b83 } /* Literal.Number */
+    c-[n] { color: #268bd2 } /* Name */
+    c-[o] { color: #657b83 } /* Operator */
+    c-[p] { color: #657b83 } /* Punctuation */
+    c-[s] { color: #6c71c4 } /* Literal.String */
+    c-[t] { color: #6c71c4 } /* Literal.String.Single */
+    c-[u] { color: #6c71c4 } /* Literal.String.Double */
+    c-[ch] { color: #2aa198 } /* Comment.Hashbang */
+    c-[cp] { color: #2aa198 } /* Comment.Preproc */
+    c-[cpf] { color: #2aa198 } /* Comment.PreprocFile */
+    c-[c1] { color: #2aa198 } /* Comment.Single */
+    c-[cs] { color: #2aa198 } /* Comment.Special */
+    c-[kc] { color: #d33682 } /* Keyword.Constant */
+    c-[kn] { color: #d33682 } /* Keyword.Namespace */
+    c-[kp] { color: #d33682 } /* Keyword.Pseudo */
+    c-[kr] { color: #d33682 } /* Keyword.Reserved */
+    c-[ld] { color: #657b83 } /* Literal.Date */
+    c-[nc] { color: #268bd2 } /* Name.Class */
+    c-[no] { color: #268bd2 } /* Name.Constant */
+    c-[nd] { color: #268bd2 } /* Name.Decorator */
+    c-[ni] { color: #268bd2 } /* Name.Entity */
+    c-[ne] { color: #268bd2 } /* Name.Exception */
+    c-[nf] { color: #268bd2 } /* Name.Function */
+    c-[nl] { color: #268bd2 } /* Name.Label */
+    c-[nn] { color: #268bd2 } /* Name.Namespace */
+    c-[py] { color: #268bd2 } /* Name.Property */
+    c-[ow] { color: #657b83 } /* Operator.Word */
+    c-[mb] { color: #657b83 } /* Literal.Number.Bin */
+    c-[mf] { color: #657b83 } /* Literal.Number.Float */
+    c-[mh] { color: #657b83 } /* Literal.Number.Hex */
+    c-[mi] { color: #657b83 } /* Literal.Number.Integer */
+    c-[mo] { color: #657b83 } /* Literal.Number.Oct */
+    c-[sa] { color: #6c71c4 } /* Literal.String.Affix */
+    c-[sb] { color: #6c71c4 } /* Literal.String.Backtick */
+    c-[sc] { color: #6c71c4 } /* Literal.String.Char */
+    c-[dl] { color: #6c71c4 } /* Literal.String.Delimiter */
+    c-[sd] { color: #6c71c4 } /* Literal.String.Doc */
+    c-[se] { color: #6c71c4 } /* Literal.String.Escape */
+    c-[sh] { color: #6c71c4 } /* Literal.String.Heredoc */
+    c-[si] { color: #6c71c4 } /* Literal.String.Interpol */
+    c-[sx] { color: #6c71c4 } /* Literal.String.Other */
+    c-[sr] { color: #6c71c4 } /* Literal.String.Regex */
+    c-[ss] { color: #6c71c4 } /* Literal.String.Symbol */
+    c-[fm] { color: #268bd2 } /* Name.Function.Magic */
+    c-[vc] { color: #cb4b16 } /* Name.Variable.Class */
+    c-[vg] { color: #cb4b16 } /* Name.Variable.Global */
+    c-[vi] { color: #cb4b16 } /* Name.Variable.Instance */
+    c-[vm] { color: #cb4b16 } /* Name.Variable.Magic */
+    c-[il] { color: #657b83 } /* Literal.Number.Integer.Long */
+}
+</style>
+ <body class="h-entry">
+  <div class="head">
+   <p data-fill-with="logo"><a class="logo" href="https://www.w3.org/"> <img alt="W3C" height="48" src="https://www.w3.org/StyleSheets/TR/2021/logos/W3C" width="72"> </a> </p>
+   <h1 class="p-name no-ref" id="title">WebGPU Explainer</h1>
+   <p id="w3c-state"><a href="https://www.w3.org/standards/types/#CG-DRAFT">Draft Community Group Report</a>, <time class="dt-updated" datetime="2025-01-27">27 January 2025</time></p>
+   <details open>
+    <summary>More details about this document</summary>
+    <div data-fill-with="spec-metadata">
+     <dl>
+      <dt>This version:
+      <dd><a class="u-url" href="https://gpuweb.github.io/gpuweb/explainer/">https://gpuweb.github.io/gpuweb/explainer/</a>
+      <dt>Issue Tracking:
+      <dd><a href="#issues-index">Inline In Spec</a>
+      <dt class="editor">Editors:
+      <dd class="editor p-author h-card vcard" data-editor-id="99487"><a class="p-name fn u-email email" href="mailto:kainino@google.com">Kai Ninomiya</a> (<a class="p-org org" href="https://www.google.com">Google</a>)
+      <dd class="editor p-author h-card vcard"><a class="p-name fn u-email email" href="mailto:cwallez@google.com">Corentin Wallez</a> (<a class="p-org org" href="https://www.google.com">Google</a>)
+      <dd class="editor p-author h-card vcard" data-editor-id="96977"><a class="p-name fn u-email email" href="mailto:dmalyshau@mozilla.com">Dzmitry Malyshau</a> (<a class="p-org org" href="https://www.mozilla.org">Mozilla</a>)
+      <dt>Participate:
+      <dd><a href="https://github.com/gpuweb/gpuweb/issues/new?labels=explainer">File an issue</a> (<a href="https://github.com/gpuweb/gpuweb/labels/explainer">open issues</a>)
+     </dl>
+    </div>
+   </details>
+   <div data-fill-with="warning"></div>
+   <p class="copyright" data-fill-with="copyright"><a href="https://www.w3.org/policies/#copyright">Copyright</a> © 2025 the Contributors to the WebGPU Explainer Specification, published by the <a href="http://www.w3.org/community/gpu/">GPU for the Web Community Group</a> under the <a href="https://www.w3.org/community/about/agreements/cla/">W3C Community Contributor License Agreement (CLA)</a>.
+A human-readable <a href="http://www.w3.org/community/about/agreements/cla-deed/">summary</a> is available. </p>
+   <hr title="Separator for header">
+  </div>
+  <h2 class="no-num no-toc no-ref heading settled" id="sotd"><span class="content">Status of this document</span></h2>
+  <div data-fill-with="status">This specification was published by the <a href="https://www.w3.org/community/gpu/">GPU for the Web Community Group</a>.
+It is not a W3C Standard nor is it on the W3C Standards Track.
+
+Please note that under the <a href="https://www.w3.org/community/about/agreements/cla/">W3C Community Contributor License Agreement (CLA)</a> there is a limited opt-out and other conditions apply.
+
+Learn more about <a href="http://www.w3.org/community/">W3C Community and Business Groups</a>. </div>
+  <div data-fill-with="at-risk"></div>
+  <nav data-fill-with="table-of-contents" id="toc">
+   <h2 class="no-num no-toc no-ref" id="contents">Table of Contents</h2>
+   <ol class="toc" role="directory">
+    <li>
+     <a href="#introduction"><span class="secno">1</span> <span class="content">Introduction</span></a>
+     <ol class="toc">
+      <li><a href="#use-cases"><span class="secno">1.1</span> <span class="content">Use cases</span></a>
+      <li><a href="#goals"><span class="secno">1.2</span> <span class="content">Goals</span></a>
+      <li><a href="#why-not-webgl3"><span class="secno">1.3</span> <span class="content">Why not "WebGL 3"?</span></a>
+     </ol>
+    <li>
+     <a href="#background"><span class="secno">2</span> <span class="content">Additional Background</span></a>
+     <ol class="toc">
+      <li><a href="#gpu-process"><span class="secno">2.1</span> <span class="content">Sandboxed GPU Processes in Web Browsers</span></a>
+      <li><a href="#memory-visibility"><span class="secno">2.2</span> <span class="content">Memory Visibility with GPUs and GPU Processes</span></a>
+     </ol>
+    <li>
+     <a href="#api"><span class="secno">3</span> <span class="content">JavaScript API</span></a>
+     <ol class="toc">
+      <li>
+       <a href="#adapters-and-devices"><span class="secno">3.1</span> <span class="content">Adapters and Devices</span></a>
+       <ol class="toc">
+        <li><a href="#initialization"><span class="secno">3.1.1</span> <span class="content">Adapter Selection and Device Init</span></a>
+        <li><a href="#optional-capabilities"><span class="secno">3.1.2</span> <span class="content">Optional Capabilities</span></a>
+       </ol>
+      <li>
+       <a href="#invalid-and-destroyed"><span class="secno">3.2</span> <span class="content">Object Validity and Destroyed-ness</span></a>
+       <ol class="toc">
+        <li>
+         <a href="#error-monad"><span class="secno">3.2.1</span> <span class="content">WebGPU’s Error Monad</span></a>
+         <ol class="toc">
+          <li><a href="#error-monad-mental-model"><span class="secno">3.2.1.1</span> <span class="content">Mental Models</span></a>
+         </ol>
+        <li><a href="#early-destroy"><span class="secno">3.2.2</span> <span class="content">Early Destruction of WebGPU Objects</span></a>
+       </ol>
+      <li>
+       <a href="#errors"><span class="secno">3.3</span> <span class="content">Errors</span></a>
+       <ol class="toc">
+        <li>
+         <a href="#errors-solutions"><span class="secno">3.3.1</span> <span class="content">Problems and Solutions</span></a>
+         <ol class="toc">
+          <li><a href="#errors-cases-debugging"><span class="secno">3.3.1.1</span> <span class="content">Debugging</span></a>
+          <li><a href="#errors-cases-fatalerrors"><span class="secno">3.3.1.2</span> <span class="content">Fatal Errors: Adapter and Device Loss</span></a>
+          <li><a href="#errors-cases-other"><span class="secno">3.3.1.3</span> <span class="content">Fallible Allocation, Fallible Validation, and Telemetry</span></a>
+         </ol>
+        <li>
+         <a href="#errors-errorscopes"><span class="secno">3.3.2</span> <span class="content">Error Scopes</span></a>
+         <ol class="toc">
+          <li><a href="#errors-errorscopes-allocation"><span class="secno">3.3.2.1</span> <span class="content">How this solves <em>Fallible Allocation</em></span></a>
+          <li><a href="#errors-errorscopes-validation"><span class="secno">3.3.2.2</span> <span class="content">How this solves <em>Fallible Validation</em></span></a>
+          <li><a href="#errors-errorscopes-telemetry"><span class="secno">3.3.2.3</span> <span class="content">How this solves <em>App Telemetry</em></span></a>
+          <li><a href="#errors-errorscopes-labels"><span class="secno">3.3.2.4</span> <span class="content">Error Messages and Debug Labels</span></a>
+         </ol>
+        <li><a href="#errors-alternatives"><span class="secno">3.3.3</span> <span class="content">Alternatives Considered</span></a>
+       </ol>
+      <li><a href="#device-loss"><span class="secno">3.4</span> <span class="content">Device Loss</span></a>
+      <li>
+       <a href="#buffer-mapping"><span class="secno">3.5</span> <span class="content">Buffer Mapping</span></a>
+       <ol class="toc">
+        <li><a href="#buffer-mapping-ownership"><span class="secno">3.5.1</span> <span class="content">CPU-GPU Ownership Transfer</span></a>
+        <li><a href="#buffer-mapping-creation"><span class="secno">3.5.2</span> <span class="content">Creation of Mappable Buffers</span></a>
+        <li><a href="#buffer-mapping-access"><span class="secno">3.5.3</span> <span class="content">Accessing Mapped Buffers</span></a>
+        <li><a href="#buffer-mapping-at-creation"><span class="secno">3.5.4</span> <span class="content">Mapping Buffers at Creation</span></a>
+        <li><a href="#buffer-mapping-examples"><span class="secno">3.5.5</span> <span class="content">Examples</span></a>
+       </ol>
+      <li>
+       <a href="#multithreading"><span class="secno">3.6</span> <span class="content">Multithreading</span></a>
+       <ol class="toc">
+        <li><a href="#multithreading-transfer"><span class="secno">3.6.1</span> <span class="content">Unsolved: Synchronous Object Transfer</span></a>
+       </ol>
+      <li>
+       <a href="#command-encoding"><span class="secno">3.7</span> <span class="content">Command Encoding and Submission</span></a>
+       <ol class="toc">
+        <li><a href="#command-encoding-debug"><span class="secno">3.7.1</span> <span class="content">Debug Markers and Debug Groups</span></a>
+        <li><a href="#command-encoding-passes"><span class="secno">3.7.2</span> <span class="content">Passes</span></a>
+       </ol>
+      <li><a href="#pipelines"><span class="secno">3.8</span> <span class="content">Pipelines</span></a>
+      <li>
+       <a href="#image-input"><span class="secno">3.9</span> <span class="content">Image, Video, and Canvas input</span></a>
+       <ol class="toc">
+        <li><a href="#image-input-external-texture"><span class="secno">3.9.1</span> <span class="content">GPUExternalTexture</span></a>
+       </ol>
+      <li>
+       <a href="#canvas-output"><span class="secno">3.10</span> <span class="content">Canvas Output</span></a>
+       <ol class="toc">
+        <li><a href="#canvas-output-swap-chains"><span class="secno">3.10.1</span> <span class="content">Canvas Configuration</span></a>
+        <li><a href="#canvas-output-current-texture"><span class="secno">3.10.2</span> <span class="content">Current Texture</span></a>
+        <li><a href="#canvas-output-preferred-format"><span class="secno">3.10.3</span> <span class="content"><code>getPreferredCanvasFormat()</code></span></a>
+        <li>
+         <a href="#canvas-output-multiple-displays"><span class="secno">3.10.4</span> <span class="content">Multiple Displays</span></a>
+         <ol class="toc">
+          <li><a href="#canvas-output-multiple-adapters"><span class="secno">3.10.4.1</span> <span class="content">Multiple Adapters</span></a>
+         </ol>
+       </ol>
+      <li><a href="#bitflags"><span class="secno">3.11</span> <span class="content">Bitflags</span></a>
+     </ol>
+    <li>
+     <a href="#questionnaire"><span class="secno">4</span> <span class="content">Security and Privacy (self-review)</span></a>
+     <ol class="toc">
+      <li><a href="#questionnaire-1"><span class="secno">4.1</span> <span class="content">What information might this feature expose to Web sites or other parties, and for what purposes is that exposure necessary?</span></a>
+      <li><a href="#questionnaire-2"><span class="secno">4.2</span> <span class="content">Do features in your specification expose the minimum amount of information necessary to enable their intended uses?</span></a>
+      <li><a href="#questionnaire-3"><span class="secno">4.3</span> <span class="content">How do the features in your specification deal with personal information, personally-identifiable information (PII), or information derived from them?</span></a>
+      <li><a href="#questionnaire-4"><span class="secno">4.4</span> <span class="content">How do the features in your specification deal with sensitive information?</span></a>
+      <li><a href="#questionnaire-5"><span class="secno">4.5</span> <span class="content">Do the features in your specification introduce new state for an origin that persists across browsing sessions?</span></a>
+      <li><a href="#questionnaire-6"><span class="secno">4.6</span> <span class="content">Do the features in your specification expose information about the underlying platform to origins?</span></a>
+      <li><a href="#questionnaire-7"><span class="secno">4.7</span> <span class="content">Does this specification allow an origin to send data to the underlying platform?</span></a>
+      <li><a href="#questionnaire-8"><span class="secno">4.8</span> <span class="content">Do features in this specification allow an origin access to sensors on a user’s device?</span></a>
+      <li><a href="#questionnaire-9"><span class="secno">4.9</span> <span class="content">What data do the features in this specification expose to an origin? Please also document what data is identical to data exposed by other features, in the same or different contexts.</span></a>
+      <li><a href="#questionnaire-10"><span class="secno">4.10</span> <span class="content">Do features in this specification enable new script execution/loading mechanisms?</span></a>
+      <li><a href="#questionnaire-11"><span class="secno">4.11</span> <span class="content">Do features in this specification allow an origin to access other devices?</span></a>
+      <li><a href="#questionnaire-12"><span class="secno">4.12</span> <span class="content">Do features in this specification allow an origin some measure of control over a user agent’s native UI?</span></a>
+      <li><a href="#questionnaire-13"><span class="secno">4.13</span> <span class="content">What temporary identifiers do the features in this specification create or expose to the web?</span></a>
+      <li><a href="#questionnaire-14"><span class="secno">4.14</span> <span class="content">How does this specification distinguish between behavior in first-party and third-party contexts?</span></a>
+      <li><a href="#questionnaire-15"><span class="secno">4.15</span> <span class="content">How do the features in this specification work in the context of a browser’s Private Browsing or Incognito mode?</span></a>
+      <li><a href="#questionnaire-16"><span class="secno">4.16</span> <span class="content">Does this specification have both "Security Considerations" and "Privacy Considerations" sections?</span></a>
+      <li><a href="#questionnaire-17"><span class="secno">4.17</span> <span class="content">Do features in your specification enable origins to downgrade default security protections?</span></a>
+      <li><a href="#questionnaire-18"><span class="secno">4.18</span> <span class="content">What should this questionnaire have asked?</span></a>
+     </ol>
+    <li><a href="#wgsl"><span class="secno">5</span> <span class="content">WebGPU Shading Language</span></a>
+    <li>
+     <a href="#w3c-conformance"><span class="secno"></span> <span class="content">Conformance</span></a>
+     <ol class="toc">
+      <li><a href="#w3c-conventions"><span class="secno"></span> <span class="content">Document conventions</span></a>
+     </ol>
+    <li>
+     <a href="#index"><span class="secno"></span> <span class="content">Index</span></a>
+     <ol class="toc">
+      <li><a href="#index-defined-elsewhere"><span class="secno"></span> <span class="content">Terms defined by reference</span></a>
+     </ol>
+    <li>
+     <a href="#references"><span class="secno"></span> <span class="content">References</span></a>
+     <ol class="toc">
+      <li><a href="#normative"><span class="secno"></span> <span class="content">Normative References</span></a>
+     </ol>
+    <li><a href="#issues-index"><span class="secno"></span> <span class="content">Issues Index</span></a>
+   </ol>
+  </nav>
+  <main>
+   <p class="issue" id="issue-30876714"><a class="self-link" href="#issue-30876714"></a> Set up cross-linking into the WebGPU and WGSL specs. <a href="https://github.com/tabatkins/bikeshed/issues/2006">[Issue #tabatkins/bikeshed#2006]</a></p>
+   <p class="issue" id="issue-c681b067"><a class="self-link" href="#issue-c681b067"></a> Complete the planned sections. <a href="https://github.com/gpuweb/gpuweb/issues/1321">[Issue #gpuweb/gpuweb#1321]</a></p>
+   <h2 class="heading settled" data-level="1" id="introduction"><span class="secno">1. </span><span class="content">Introduction</span><a class="self-link" href="#introduction"></a></h2>
+   <p>WebGPU is a proposed Web API to enable webpages to use the system’s <a href="https://en.wikipedia.org/wiki/Graphics_processing_unit">GPU (Graphics Processing Unit)</a> to perform computations and draw complex images that can be presented inside the page.
+This goal is similar to the <a href="https://www.khronos.org/webgl/">WebGL</a> family of APIs, but WebGPU enables access to more advanced features of GPUs.
+Whereas WebGL is mostly for drawing images but can be repurposed (with great effort) to do other kinds of computations, WebGPU has first-class support for performing general computations on the GPU.</p>
+   <h3 class="heading settled" data-level="1.1" id="use-cases"><span class="secno">1.1. </span><span class="content">Use cases</span><a class="self-link" href="#use-cases"></a></h3>
+   <p>Example use cases for WebGPU that aren’t addressed by WebGL 2 are:</p>
+   <ul>
+    <li data-md>
+     <p>Drawing images with highly-detailed scenes with many different objects (such as CAD models). WebGPU’s drawing commands are individually cheaper than WebGL’s.</p>
+    <li data-md>
+     <p>Executing advanced algorithms for drawing realistic scenes.
+Many modern rendering techniques and optimizations cannot execute on WebGL 2 due to the lack of support for general computations.</p>
+    <li data-md>
+     <p>Executing machine learning models efficiently on the GPU.
+It is possible to do general-purpose GPU (GPGPU) computation in WebGL, but it is sub-optimal and much more difficult.</p>
+   </ul>
+   <p>Concrete examples are:</p>
+   <ul>
+    <li data-md>
+     <p>Improving existing Javascript 3D libraries like Babylon.js and Three.js with new rendering techniques (compute-based particles, fancier post-processing, ...) and offloading to the GPU expensive computations currently done on the CPU (culling, skinned model transformation, ...).</p>
+    <li data-md>
+     <p>Porting newer game engines to the Web, and enable engines to expose more advanced rendering features.
+ For example Unity’s WebGL export uses the lowest feature set of the engine, but WebGPU could use a higher feature set.</p>
+    <li data-md>
+     <p>Porting new classes of applications to the Web: many productivity applications offload computations to the GPU and need WebGPU’s support for general computations.</p>
+    <li data-md>
+     <p>Improving existing Web teleconferencing applications. For example, Google Meet uses machine learning to separate the user from the background.
+ Running the machine learning in WebGPU would make it faster and more power-efficient, allowing (1) these capabilities to reach cheaper, more accessible user devices and (2) more complex and robust models.</p>
+   </ul>
+   <h3 class="heading settled" data-level="1.2" id="goals"><span class="secno">1.2. </span><span class="content">Goals</span><a class="self-link" href="#goals"></a></h3>
+   <p>Goals:</p>
+   <ul>
+    <li data-md>
+     <p>Enable rendering of modern graphics both onscreen and offscreen.</p>
+    <li data-md>
+     <p>Enable general purpose computations to be executed efficiently on the GPU.</p>
+    <li data-md>
+     <p>Support implementations targeting various native GPU APIs: Microsoft’s D3D12, Apple’s Metal, and Khronos' Vulkan.</p>
+    <li data-md>
+     <p>Provide a human-authorable language to specify computations to run on the GPU.</p>
+    <li data-md>
+     <p>Be implementable in the multi-process architecture of browsers and uphold the security of the Web.</p>
+    <li data-md>
+     <p>As much as possible, have applications work portably across different user systems and browsers.</p>
+    <li data-md>
+     <p>Interact with the rest of the Web platform in useful but carefully-scoped ways (essentially sharing images one way or another).</p>
+    <li data-md>
+     <p>Provide a foundation to expose modern GPU functionality on the Web.
+WebGPU is structured similarly to all current native GPU APIs, even if it doesn’t provide all their features.
+There are plans to later extend it to have more modern functionality.
+See also: <a href="#why-not-webgl3">§ 1.3 Why not "WebGL 3"?</a>.</p>
+   </ul>
+   <p>Non-goals:</p>
+   <ul>
+    <li data-md>
+     <p>Expose support for hardware that’s not programmable at all, or much less flexible, like DSPs or specialized machine learning hardware.</p>
+    <li data-md>
+     <p>Expose support for hardware that can’t do general-purpose computations (like older mobile phones GPUs or even older desktop GPUs).</p>
+    <li data-md>
+     <p>Exhaustively expose all functionality available on native GPU APIs (some functionality is only available on GPUs from a single vendor, or is too niche to be added to WebGPU).</p>
+    <li data-md>
+     <p>Allow extensive mixing and matching of WebGL and WebGPU code.</p>
+    <li data-md>
+     <p>Tightly integrate with the page rendering flow like <a href="https://developer.mozilla.org/en-US/docs/Web/Houdini">CSS Houdini</a>.</p>
+   </ul>
+   <h3 class="heading settled" data-level="1.3" id="why-not-webgl3"><span class="secno">1.3. </span><span class="content">Why not "WebGL 3"?</span><a class="self-link" href="#why-not-webgl3"></a></h3>
+   <p>WebGL 1.0 and WebGL 2.0 are Javascript projections of the OpenGL ES 2.0 and OpenGL ES 3.0 APIs, respectively. WebGL’s design traces its roots back to the OpenGL 1.0 API released in 1992 (which further traces its roots back to IRIS GL from the 1980s). This lineage has many advantages, including the vast available body of knowledge and the relative ease of porting applications from OpenGL ES to WebGL.</p>
+   <p>However, this also means that WebGL doesn’t match the design of modern GPUs, causing CPU performance and GPU performance issues. It also makes it increasingly hard to implement WebGL on top of modern native GPU APIs. <a href="https://www.khronos.org/registry/webgl/specs/latest/2.0-compute/">WebGL 2.0 Compute</a> was an attempt at adding general compute functionality to WebGL but the impedance mismatch with native APIs made the effort incredibly difficult. Contributors to WebGL 2.0 Compute decided to focus their efforts on WebGPU instead.</p>
+   <h2 class="heading settled" data-level="2" id="background"><span class="secno">2. </span><span class="content">Additional Background</span><a class="self-link" href="#background"></a></h2>
+   <h3 class="heading settled" data-level="2.1" id="gpu-process"><span class="secno">2.1. </span><span class="content">Sandboxed GPU Processes in Web Browsers</span><a class="self-link" href="#gpu-process"></a></h3>
+   <p>A major design constraint for WebGPU is that it must be implementable and efficient in browsers that use a GPU-process architecture.
+GPU drivers need access to additional kernel syscalls than what’s otherwise used for Web content, and many GPU drivers are prone to hangs or crashes.
+To improve stability and sandboxing, browsers use a special process that contains the GPU driver and talks with the rest of the browser through asynchronous IPC.
+GPU processes are (or will be) used in Chromium, Gecko, and WebKit.</p>
+   <p>GPU processes are less sandboxed than content processes, and they are typically shared between multiple origins.
+Therefore, they must validate all messages, for example to prevent a compromised content process from being able to look at the GPU memory used by another content process.
+Most of WebGPU’s validation rules are necessary to ensure it is secure to use, so all the validation needs to happen in the GPU process.</p>
+   <p>Likewise, all GPU driver objects only live in the GPU process, including large allocations (like buffers and textures) and complex objects (like pipelines).
+In the content process, WebGPU types (<code>GPUBuffer</code>, <code>GPUTexture</code>, <code>GPURenderPipeline</code>, ...) are mostly just "handles" that identify objects that live in the GPU process.
+This means that the CPU and GPU memory used by WebGPU object isn’t necessarily known in the content process.
+A <code>GPUBuffer</code> object can use maybe 150 bytes of CPU memory in the content process but hold a 1GB allocation of GPU memory.</p>
+   <p>See also the description of <a href="https://gpuweb.github.io/gpuweb/#programming-model-timelines">the content and device timelines in the specification</a>.</p>
+   <h3 class="heading settled" data-level="2.2" id="memory-visibility"><span class="secno">2.2. </span><span class="content">Memory Visibility with GPUs and GPU Processes</span><a class="self-link" href="#memory-visibility"></a></h3>
+   <p>The two major types of GPUs are called "integrated GPUs" and "discrete GPUs".
+Discrete GPUs are separate from the CPU; they usually come as PCI-e cards that you plug into the motherboard of a computer.
+Integrated GPUs live on the same die as the CPU and don’t have their own memory chips; instead, they use the same RAM as the CPU.</p>
+   <p>When using a discrete GPU, it’s easy to see that most GPU memory allocations aren’t visible to the CPU because they are inside the GPU’s RAM (or VRAM for Video RAM).
+For integrated GPUs most memory allocations are in the same physical places, but not made visible to the GPU for various reasons (for example, the CPU and GPU can have separate caches for the same memory, so accesses are not cache-coherent).
+Instead, for the CPU to see the content of a GPU buffer, it must be "mapped", making it available in the virtual memory space of the application (think of mapped as in <code>mmap()</code>).
+GPUBuffers must be specially allocated in order to be mappable - this can make it less efficient to access from the GPU (for example if it needs to be allocate in RAM instead of VRAM).</p>
+   <p>All this discussion was centered around native GPU APIs, but in browsers, the GPU driver is loaded in the <em>GPU process</em>, so native GPU buffers can be mapped only in the GPU process’s virtual memory.
+In general, it is not possible to map the buffer directly inside the <em>content process</em> (though some systems can do this, providing optional optimizations).
+To work with this architecture an extra "staging" allocation is needed in shared memory between the GPU process and the content process.</p>
+   <p>The table below recapitulates which type of memory is visible where:</p>
+   <table class="data">
+    <thead>
+     <tr>
+      <th>
+      <th> Regular <code>ArrayBuffer</code> 
+      <th> Shared Memory 
+      <th> Mappable GPU buffer 
+      <th> Non-mappable GPU buffer (or texture) 
+    <tbody>
+     <tr>
+      <td> CPU, in the content process 
+      <td> <strong>Visible</strong> 
+      <td> <strong>Visible</strong> 
+      <td> Not visible 
+      <td> Not visible 
+     <tr>
+      <td> CPU, in the GPU process 
+      <td> Not visible 
+      <td> <strong>Visible</strong> 
+      <td> <strong>Visible</strong> 
+      <td> Not visible 
+     <tr>
+      <td> GPU 
+      <td> Not visible 
+      <td> Not visible 
+      <td> <strong>Visible</strong> 
+      <td> <strong>Visible</strong> 
+   </table>
+   <h2 class="heading settled" data-level="3" id="api"><span class="secno">3. </span><span class="content">JavaScript API</span><a class="self-link" href="#api"></a></h2>
+   <p>This section goes into details on important and unusual aspects of the WebGPU JavaScript API.
+Generally, each subsection can be considered its own "mini-explainer",
+though some require context from previous subsections.</p>
+   <h3 class="heading settled" data-level="3.1" id="adapters-and-devices"><span class="secno">3.1. </span><span class="content">Adapters and Devices</span><a class="self-link" href="#adapters-and-devices"></a></h3>
+   <p>A WebGPU "adapter" (<code>GPUAdapter</code>) is an object which identifies a particular WebGPU
+implementation on the system (e.g. a hardware accelerated implementation on an integrated or
+discrete GPU, or software implementation).
+Two different <code>GPUAdapter</code> objects on the same page could refer to the same underlying
+implementation, or to two different underlying implementations (e.g. integrated and discrete GPUs).</p>
+   <p>The set of adapters visible to the page is at the discretion of the user agent.</p>
+   <p>A WebGPU "device" (<code>GPUDevice</code>) represents a logical connection to a WebGPU adapter.
+It is called a "device" because it abstracts away the underlying implementation (e.g. video card)
+and encapsulates a single connection: code that owns a device can act as if it is the only user
+of the adapter.
+As part of this encapsulation, a device is the root owner of all WebGPU objects created from it
+(textures, etc.), which can be (internally) freed whenever the device is lost or destroyed.
+Multiple components on a single webpage can each have their own WebGPU device.</p>
+   <p>All WebGPU usage is done through a WebGPU device or objects created from it.
+In this sense, it serves a subset of the purpose of <code>WebGLRenderingContext</code>; however, unlike <code>WebGLRenderingContext</code>, it is not associated with a canvas object, and most commands are
+issued through "child" objects.</p>
+   <h4 class="heading settled" data-level="3.1.1" id="initialization"><span class="secno">3.1.1. </span><span class="content">Adapter Selection and Device Init</span><a class="self-link" href="#initialization"></a></h4>
+   <p>To get an adapter, an application calls <code>navigator.gpu.requestAdapter()</code>, optionally passing
+options which may influence what adapter is chosen, like a <code>powerPreference</code> (<code>"low-power"</code> or <code>"high-performance"</code>) or <code>forceFallbackAdapter</code> to force a software implementation.</p>
+   <p><code>requestAdapter()</code> never rejects, but may resolve to null if an adapter can’t be returned with
+the specified options.</p>
+   <p>A returned adapter exposes <code>info</code> (<code>vendor</code>/<code>architecture</code>/etc., implementation-defined), a boolean <code>isFallbackAdapter</code> so
+applications with fallback paths (like WebGL or 2D canvas) can avoid slow software implementations,
+and the <a href="#optional-capabilities">§ 3.1.2 Optional Capabilities</a> available on the adapter.</p>
+<pre class="highlight"><c- a>const</c-> adapter <c- o>=</c-> <c- k>await</c-> navigator<c- p>.</c->gpu<c- p>.</c->requestAdapter<c- p>(</c->options<c- p>);</c->
+<c- k>if</c-> <c- p>(</c-><c- o>!</c->adapter<c- p>)</c-> <c- k>return</c-> goToFallback<c- p>();</c->
+</pre>
+   <p>To get a device, an application calls <code>adapter.requestDevice()</code>, optionally passing a descriptor
+which enables additional optional capabilities - see <a href="#optional-capabilities">§ 3.1.2 Optional Capabilities</a>.</p>
+   <p><code>requestDevice()</code> will reject (only) if the request is invalid,
+i.e. it exceeds the capabilities of the adapter.
+If anything else goes wrong in creation of the device,
+it will resolve to a <code>GPUDevice</code> which has already been lost - see <a href="#device-loss">§ 3.4 Device Loss</a>.
+(This simplifies the number of different situations an app must handle
+by avoiding an extra possible return value like <code>null</code> or another exception type,.)</p>
+<pre class="highlight"><c- a>const</c-> device <c- o>=</c-> <c- k>await</c-> adapter<c- p>.</c->requestDevice<c- p>(</c->descriptor<c- p>);</c->
+device<c- p>.</c->lost<c- p>.</c->then<c- p>(</c->recoverFromDeviceLoss<c- p>);</c->
+</pre>
+   <p>An adapter may become unavailable, e.g. if it is unplugged from the system, disabled to save
+power, or marked "stale" (<code>[[current]]</code> becomes false).
+From then on, such an adapter can no longer vend valid devices,
+and always returns already-lost <code>GPUDevice</code>s.</p>
+   <h4 class="heading settled" data-level="3.1.2" id="optional-capabilities"><span class="secno">3.1.2. </span><span class="content">Optional Capabilities</span><a class="self-link" href="#optional-capabilities"></a></h4>
+   <p>Each adapter may have different optional capabilities called "features" and "limits".
+These are the maximum possible capabilities that can be requested when a device is created.</p>
+   <p>The set of optional capabilities exposed on each adapter is at the discretion of the user agent.</p>
+   <p>A device is created with an exact set of capabilities, specified in the arguments to <code>adapter.requestDevice()</code> (see above).</p>
+   <p>When any work is issued to a device, it is strictly validated against the capabilities of the
+device - not the capabilities of the adapter.
+This eases development of portable applications by avoiding implicit dependence on the
+capabilities of the development system.</p>
+   <h3 class="heading settled" data-level="3.2" id="invalid-and-destroyed"><span class="secno">3.2. </span><span class="content">Object Validity and Destroyed-ness</span><a class="self-link" href="#invalid-and-destroyed"></a></h3>
+   <h4 class="heading settled" data-level="3.2.1" id="error-monad"><span class="secno">3.2.1. </span><span class="content">WebGPU’s Error Monad</span><a class="self-link" href="#error-monad"></a></h4>
+   <p>A.k.a. Contagious Internal Nullability.
+A.k.a. transparent <a href="http://erights.org/elib/distrib/pipeline.html">promise pipelining</a>.</p>
+   <p>WebGPU is a very chatty API, with some applications making tens of thousands of calls per frame to render complex scenes.
+We have seen that the GPU processes needs to validate the commands to satisfy their security property.
+To avoid the overhead of validating commands twice in both the GPU and content process, WebGPU is designed so Javascript calls can be forwarded directly to the GPU process and validated there.
+See the error section for more details on what’s validated where and how errors are reported.</p>
+   <p>At the same time, during a single frame WebGPU objects can be created that depend on one another.
+For example a <code>GPUCommandBuffer</code> can be recorded with commands that use temporary <code>GPUBuffer</code>s created in the same frame.
+In this example, because of the performance constraint of WebGPU, it is not possible to send the message to create the <code>GPUBuffer</code> to the GPU process and synchronously wait for its processing before continuing Javascript execution.</p>
+   <p>Instead, in WebGPU all objects (like <code>GPUBuffer</code>) are created immediately on the content timeline and returned to JavaScript.
+The validation is almost all done asynchronously on the "device timeline".
+In the good case, when no errors occur , everything looks to JS as if it is synchronous.
+However, when an error occurs in a call, it becomes a no-op (except for error reporting).
+If the call returns an object (like <code>createBuffer</code>), the object is tagged as "invalid" on the GPU process side.</p>
+   <p>Since validation and allocation occur asynchronously, errors are reported asynchronously.
+By itself, this can make for challenging debugging - see <a href="#errors-cases-debugging">§ 3.3.1.1 Debugging</a>.</p>
+   <p>All WebGPU calls validate that all their arguments are valid objects.
+As a result, if a call takes one WebGPU object and returns a new one, the new object is also invalid (hence the term "contagious").</p>
+   <figure>
+    <figcaption> Timeline diagram of messages passing between processes, demonstrating how errors are propagated without synchronization. </figcaption>
+    <object data="img/error_monad_timeline_diagram.svg" type="image/svg+xml"></object>
+   </figure>
+   <div class="example" id="example-f252e2ff">
+    <a class="self-link" href="#example-f252e2ff"></a> Using the API when doing only valid calls looks like a synchronous API: 
+<pre class="highlight"><c- a>const</c-> srcBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    size<c- o>:</c-> <c- mf>4</c-><c- p>,</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->COPY_SRC
+<c- p>});</c->
+
+<c- a>const</c-> dstBuffer <c- o>=</c-> <c- p>...;</c->
+
+<c- a>const</c-> encoder <c- o>=</c-> device<c- p>.</c->createCommandEncoder<c- p>();</c->
+encoder<c- p>.</c->copyBufferToBuffer<c- p>(</c->srcBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> dstBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> <c- mf>4</c-><c- p>);</c->
+
+<c- a>const</c-> commands <c- o>=</c-> encoder<c- p>.</c->finish<c- p>();</c->
+device<c- p>.</c->queue<c- p>.</c->submit<c- p>([</c->commands<c- p>]);</c->
+</pre>
+   </div>
+   <div class="example" id="example-c2e692e2">
+    <a class="self-link" href="#example-c2e692e2"></a> Errors propagate contagiously when creating objects: 
+<pre class="highlight"><c- c1>// The size of the buffer is too big, this causes an OOM and srcBuffer is invalid.</c->
+<c- a>const</c-> srcBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    size<c- o>:</c-> BIG_NUMBER<c- p>,</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->COPY_SRC
+<c- p>});</c->
+
+<c- a>const</c-> dstBuffer <c- o>=</c-> <c- p>...;</c->
+
+<c- c1>// The encoder starts as a valid object.</c->
+<c- a>const</c-> encoder <c- o>=</c-> device<c- p>.</c->createCommandEncoder<c- p>();</c->
+<c- c1>// Special case: an invalid object is used when encoding commands, so the encoder</c->
+<c- c1>// becomes invalid.</c->
+encoder<c- p>.</c->copyBufferToBuffer<c- p>(</c->srcBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> dstBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> <c- mf>4</c-><c- p>);</c->
+
+<c- c1>// Since the encoder is invalid, encoder.finish() is invalid and returns</c->
+<c- c1>// an invalid object.</c->
+<c- a>const</c-> commands <c- o>=</c-> encoder<c- p>.</c->finish<c- p>();</c->
+<c- c1>// The command references an invalid object so it becomes a no-op.</c->
+device<c- p>.</c->queue<c- p>.</c->submit<c- p>([</c->commands<c- p>]);</c->
+</pre>
+   </div>
+   <h5 class="heading settled" data-level="3.2.1.1" id="error-monad-mental-model"><span class="secno">3.2.1.1. </span><span class="content">Mental Models</span><a class="self-link" href="#error-monad-mental-model"></a></h5>
+   <p>One way to interpret WebGPU’s semantics is that every WebGPU object is actually a <code>Promise</code> internally and that all WebGPU methods are <code>async</code> and <code>await</code> before using each of the WebGPU objects it gets as argument.
+However the execution of the async code is outsourced to the GPU process (where it is actually done synchronously).</p>
+   <p>Another way, closer to actual implementation details, is to imagine that each <code>GPUFoo</code> JS object maps to a <code>gpu::InternalFoo</code> C++/Rust object on the GPU process that contains a <code>bool isValid</code>.
+Then during the validation of each command on the GPU process, the <code>isValid</code> are all checked and a new, invalid object is returned if validation fails.
+On the content process side, the <code>GPUFoo</code> implementation doesn’t know if the object is valid or not.</p>
+   <h4 class="heading settled" data-level="3.2.2" id="early-destroy"><span class="secno">3.2.2. </span><span class="content">Early Destruction of WebGPU Objects</span><a class="self-link" href="#early-destroy"></a></h4>
+   <p>Most of the memory usage of WebGPU objects is in the GPU process: it can be GPU memory held by objects like <code>GPUBuffer</code> and <code>GPUTexture</code>, serialized commands held in CPU memory by <code>GPURenderBundles</code>, or complex object graphs for the WGSL AST in <code>GPUShaderModule</code>.
+The JavaScript garbage collector (GC) is in the renderer process and doesn’t know about the memory usage in the GPU process.
+Browsers have many heuristics to trigger GCs but a common one is that it should be triggered on memory pressure scenarios.
+However a single WebGPU object can hold on to MBs or GBs of memory without the GC knowing and never trigger the memory pressure event.</p>
+   <p>It is important for WebGPU applications to be able to directly free the memory used by some WebGPU objects without waiting for the GC.
+For example applications might create temporary textures and buffers each frame and without the explicit <code>.destroy()</code> call they would quickly run out of GPU memory.
+That’s why WebGPU has a <code>.destroy()</code> method on those object types which can hold on to arbitrary amount of memory.
+It signals that the application doesn’t need the content of the object anymore and that it can be freed as soon as possible.
+Of course, it becomes a validation error to use the object after the call to <code>.destroy()</code>.</p>
+   <div class="example" id="example-89395ec9">
+    <a class="self-link" href="#example-89395ec9"></a> 
+<pre class="highlight"><c- a>const</c-> dstBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    size<c- o>:</c-> <c- mf>4</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->COPY_DST
+<c- p>});</c->
+
+<c- c1>// The buffer is not destroyed (and valid), success!</c->
+device<c- p>.</c->queue<c- p>.</c->writeBuffer<c- p>(</c->dstBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> myData<c- p>);</c->
+
+dstBuffer<c- p>.</c->destroy<c- p>();</c->
+
+<c- c1>// The buffer is now destroyed, commands using that would use its</c->
+<c- c1>// content produce validation errors.</c->
+device<c- p>.</c->queue<c- p>.</c->writeBuffer<c- p>(</c->dstBuffer<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> myData<c- p>);</c->
+</pre>
+   </div>
+   <p>Note that, while this looks somewhat similar to the behavior of an invalid buffer, it is distinct.
+Unlike invalidity, destroyed-ness can change after creation, is not contagious, and is validated only when work is actually submitted (e.g. <code>queue.writeBuffer()</code> or <code>queue.submit()</code>), not when creating dependent objects (like command encoders, see above).</p>
+   <h3 class="heading settled" data-level="3.3" id="errors"><span class="secno">3.3. </span><span class="content">Errors</span><a class="self-link" href="#errors"></a></h3>
+   <p>In a simple world, error handling in apps would be synchronous with JavaScript exceptions.
+However, for multi-process WebGPU implementations, this is prohibitively expensive.</p>
+   <p>See <a href="#invalid-and-destroyed">§ 3.2 Object Validity and Destroyed-ness</a>, which also explains how the <em>browser</em> handles errors.</p>
+   <h4 class="heading settled" data-level="3.3.1" id="errors-solutions"><span class="secno">3.3.1. </span><span class="content">Problems and Solutions</span><a class="self-link" href="#errors-solutions"></a></h4>
+   <p>Developers and applications need error handling for a number of cases:</p>
+   <ul>
+    <li data-md>
+     <p><em>Debugging</em>:
+Getting errors synchronously during development, to break in to the debugger.</p>
+    <li data-md>
+     <p><em>Fatal Errors</em>:
+Handling device/adapter loss, either by restoring WebGPU or by fallback to non-WebGPU content.</p>
+    <li data-md>
+     <p><em>Fallible Allocation</em>:
+Making fallible GPU-memory resource allocations (detecting out-of-memory conditions).</p>
+    <li data-md>
+     <p><em>Fallible Validation</em>:
+Checking success of WebGPU calls, for applications' unit/integration testing, WebGPU
+conformance testing, or detecting errors in data-driven applications (e.g. loading glTF
+models that may exceed device limits).</p>
+    <li data-md>
+     <p><em>App Telemetry</em>:
+Collecting error logs in web app deployment, for bug reporting and telemetry.</p>
+   </ul>
+   <p>The following sections go into more details on these cases and how they are solved.</p>
+   <h5 class="heading settled" data-level="3.3.1.1" id="errors-cases-debugging"><span class="secno">3.3.1.1. </span><span class="content">Debugging</span><a class="self-link" href="#errors-cases-debugging"></a></h5>
+   <p><strong>Solution:</strong> Dev Tools.</p>
+   <p>Implementations should provide a way to enable synchronous validation,
+for example via a "break on WebGPU error" option in the developer tools.</p>
+   <p>This can be achieved with a content-process⇆gpu-process round-trip in every validated WebGPU
+call, though in practice this would be very slow.
+It can be optimized by running a "predictive" mirror of the validation steps in the content
+process, which either ignores out-of-memory errors (which it can’t predict),
+or uses round-trips only for calls that can produce out-of-memory errors.</p>
+   <h5 class="heading settled" data-level="3.3.1.2" id="errors-cases-fatalerrors"><span class="secno">3.3.1.2. </span><span class="content">Fatal Errors: Adapter and Device Loss</span><a class="self-link" href="#errors-cases-fatalerrors"></a></h5>
+   <p><strong>Solution:</strong> <a href="#device-loss">§ 3.4 Device Loss</a>.</p>
+   <h5 class="heading settled" data-level="3.3.1.3" id="errors-cases-other"><span class="secno">3.3.1.3. </span><span class="content">Fallible Allocation, Fallible Validation, and Telemetry</span><a class="self-link" href="#errors-cases-other"></a></h5>
+   <p><strong>Solution:</strong> <em>Error Scopes</em>.</p>
+   <p>For important context, see <a href="#invalid-and-destroyed">§ 3.2 Object Validity and Destroyed-ness</a>. In particular, all errors (validation and
+out-of-memory) are detected asynchronously, in a remote process.
+In the WebGPU spec, we refer to the thread of work for each WebGPU device as its "device timeline".</p>
+   <p>As such, applications need a way to instruct the device timeline on what to do with any errors
+that occur. To solve this, WebGPU uses <em>Error Scopes</em>.</p>
+   <h4 class="heading settled" data-level="3.3.2" id="errors-errorscopes"><span class="secno">3.3.2. </span><span class="content">Error Scopes</span><a class="self-link" href="#errors-errorscopes"></a></h4>
+   <p>WebGL exposes errors using a <code>getError</code> function which returns the first error since the last <code>getError</code> call.
+This is simple, but has two problems.</p>
+   <ul>
+    <li data-md>
+     <p>It is synchronous, incurring a round-trip and requiring all previously issued work to be finished.
+We solve this by returning errors asynchronously.</p>
+    <li data-md>
+     <p>Its flat state model composes poorly: errors can leak to/from unrelated code, possibly in
+libraries/middleware, browser extensions, etc. We solve this with a stack of error "scopes",
+allowing each component to hermetically capture and handle its own errors.</p>
+   </ul>
+   <p>In WebGPU, each device<sup>1</sup> maintains a persistent "error scope" stack state.
+Initially, the device’s error scope stack is empty. <code>GPUDevice.pushErrorScope('validation')</code> or <code>GPUDevice.pushErrorScope('out-of-memory')</code> begins an error scope and pushes it onto the stack.
+This scope captures only errors of a particular type depending on the type of error the application
+wants to detect.
+It is rare to need to detect both, so two nested error scopes are needed to do so.</p>
+   <p><code>GPUDevice.popErrorScope()</code> ends an error scope, popping it from the stack and returning a <code>Promise&lt;GPUError?></code>, which resolves once enclosed operations have completed and reported back.
+This includes exactly all fallible operations that were <em>issued</em> during between the push and pop calls.
+It resolves to <code>null</code> if no errors were captured, and otherwise resolves to an object describing
+the first error that was captured by the scope - either a <code>GPUValidationError</code> or a <code>GPUOutOfMemoryError</code>.</p>
+   <p>Any device-timeline error from an operation is passed to the top-most error scope on the stack at
+the time it was issued.</p>
+   <ul>
+    <li data-md>
+     <p>If an error scope captures an error, the error is not passed down the stack.
+Each error scope stores only the <strong>first</strong> error it captures; any further errors it captures
+are <strong>silently ignored</strong>.</p>
+    <li data-md>
+     <p>If not, the error is passed down the stack to the enclosing error scope.</p>
+    <li data-md>
+     <p>If an error reaches the bottom of the stack, it <strong>may</strong><sup>2</sup> fire the <code>uncapturederror</code> event on <code>GPUDevice</code><sup>3</sup> (and could issue a console warning as well).</p>
+   </ul>
+   <p><sup>1</sup> In the plan to add <a href="#multithreading">§ 3.6 Multithreading</a>, error scope state to actually be <strong>per-device, per-realm</strong>.
+That is, when a GPUDevice is posted to a Worker for the first time, the error scope stack for
+that device+realm is always empty.
+(If a GPUDevice is copied <em>back</em> to an execution context it already existed on, it shares its
+error scope state with all other copies on that execution context.)</p>
+   <p><sup>2</sup> The implementation may not choose to always fire the event for a given error, for example if it
+has fired too many times, too many times rapidly, or with too many errors of the same kind.
+This is similar to how Dev Tools console warnings work today for WebGL.
+In poorly-formed applications, this mechanism can prevent the events from having a significant
+performance impact on the system.</p>
+   <p><sup>3</sup> More specifically, with <a href="#multithreading">§ 3.6 Multithreading</a>, this event would only exist on the <em>originating</em> <code>GPUDevice</code> (the one that came from <code>createDevice</code>, and not by receiving posted messages);
+a distinct interface would be used for non-originating device objects.</p>
+<pre class="language-webidl highlight"><c- b>enum</c-> <c- g>GPUErrorFilter</c-> {
+    <c- s>"out-of-memory"</c->,
+    <c- s>"validation"</c->
+};
+
+<c- b>interface</c-> <c- g>GPUOutOfMemoryError</c-> {
+    <c- g>constructor</c->();
+};
+
+<c- b>interface</c-> <c- g>GPUValidationError</c-> {
+    <c- g>constructor</c->(<c- b>DOMString</c-> <c- g>message</c->);
+    <c- b>readonly</c-> <c- b>attribute</c-> <c- b>DOMString</c-> <c- g>message</c->;
+};
+
+<c- b>typedef</c-> (<c- n>GPUOutOfMemoryError</c-> <c- b>or</c-> <c- n>GPUValidationError</c->) <c- g>GPUError</c->;
+
+<c- b>partial</c-> <c- b>interface</c-> <c- g>GPUDevice</c-> {
+    <c- b>undefined</c-> <c- g>pushErrorScope</c->(<c- n>GPUErrorFilter</c-> <c- g>filter</c->);
+    <c- b>Promise</c->&lt;<c- n>GPUError</c->?> <c- g>popErrorScope</c->();
+};
+</pre>
+   <h5 class="heading settled" data-level="3.3.2.1" id="errors-errorscopes-allocation"><span class="secno">3.3.2.1. </span><span class="content">How this solves <em>Fallible Allocation</em></span><a class="self-link" href="#errors-errorscopes-allocation"></a></h5>
+   <p>If a call that fallibly allocates GPU memory (e.g. <code>createBuffer</code> or <code>createTexture</code>) fails, the
+resulting object is invalid (same as if there were a validation error), but an <code>'out-of-memory'</code> error is generated.
+An <code>'out-of-memory'</code> error scope can be used to detect it.</p>
+   <p><strong>Example: tryCreateBuffer</strong></p>
+<pre class="language-ts highlight"><c- k>async</c-> <c- a>function</c-> tryCreateBuffer<c- p>(</c->device<c- o>:</c-> <c- b>GPUDevice</c-><c- p>,</c-> descriptor<c- o>:</c-> <c- b>GPUBufferDescriptor</c-><c- p>)</c-><c- o>:</c-> Promise<c- o>&lt;</c->GPUBuffer <c- o>|</c-> <c- kc>null</c-><c- o>></c-> <c- p>{</c->
+  device<c- p>.</c->pushErrorScope<c- p>(</c-><c- t>'out-of-memory'</c-><c- p>);</c->
+  <c- a>const</c-> buffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>(</c->descriptor<c- p>);</c->
+  <c- k>if</c-> <c- p>(</c-><c- k>await</c-> device<c- p>.</c->popErrorScope<c- p>()</c-> <c- o>!==</c-> <c- kc>null</c-><c- p>)</c-> <c- p>{</c->
+    <c- k>return</c-> <c- kc>null</c-><c- p>;</c->
+  <c- p>}</c->
+  <c- k>return</c-> buffer<c- p>;</c->
+<c- p>}</c->
+</pre>
+   <p>This interacts with buffer mapping error cases in subtle ways due to numerous possible
+out-of-memory situations in implementations, but they are not explained here.
+The principle used to design the interaction is that app code should need to handle as few
+different edge cases as possible, so multiple kinds of situations should result in the same
+behavior.</p>
+   <p>In addition, there are (will be) rules on the relative ordering of most promise resolutions,
+to prevent non-portable browser behavior or flaky races between async code.</p>
+   <h5 class="heading settled" data-level="3.3.2.2" id="errors-errorscopes-validation"><span class="secno">3.3.2.2. </span><span class="content">How this solves <em>Fallible Validation</em></span><a class="self-link" href="#errors-errorscopes-validation"></a></h5>
+   <p>A <code>'validation'</code> error scope can be used to detect validation errors, as above.</p>
+   <p><strong>Example: Testing</strong></p>
+<pre class="language-ts highlight">device<c- p>.</c->pushErrorScope<c- p>(</c-><c- t>'out-of-memory'</c-><c- p>);</c->
+device<c- p>.</c->pushErrorScope<c- p>(</c-><c- t>'validation'</c-><c- p>);</c->
+
+<c- p>{</c->
+  <c- c1>// (Do stuff that shouldn't produce errors.)</c->
+
+  <c- p>{</c->
+    device<c- p>.</c->pushErrorScope<c- p>(</c-><c- t>'validation'</c-><c- p>);</c->
+    device<c- p>.</c->doOperationThatIsExpectedToError<c- p>();</c->
+    device<c- p>.</c->popErrorScope<c- p>().</c->then<c- p>(</c->error <c- p>=></c-> <c- p>{</c-> assert<c- p>(</c->error <c- o>!==</c-> <c- kc>null</c-><c- p>);</c-> <c- p>});</c->
+  <c- p>}</c->
+
+  <c- c1>// (More stuff that shouldn't produce errors.)</c->
+<c- p>}</c->
+
+<c- c1>// Detect unexpected errors.</c->
+device<c- p>.</c->popErrorScope<c- p>().</c->then<c- p>(</c->error <c- p>=></c-> <c- p>{</c-> assert<c- p>(</c->error <c- o>===</c-> <c- kc>null</c-><c- p>);</c-> <c- p>});</c->
+device<c- p>.</c->popErrorScope<c- p>().</c->then<c- p>(</c->error <c- p>=></c-> <c- p>{</c-> assert<c- p>(</c->error <c- o>===</c-> <c- kc>null</c-><c- p>);</c-> <c- p>});</c->
+</pre>
+   <h5 class="heading settled" data-level="3.3.2.3" id="errors-errorscopes-telemetry"><span class="secno">3.3.2.3. </span><span class="content">How this solves <em>App Telemetry</em></span><a class="self-link" href="#errors-errorscopes-telemetry"></a></h5>
+   <p>As mentioned above, if an error is not captured by an error scope, it <strong>may</strong> fire the
+originating device’s <code>uncapturederror</code> event.
+Applications can either watch for that event, or encapsulate parts of their application with
+error scopes, to detect errors for generating error reports.</p>
+   <p><code>uncapturederror</code> is not strictly necessary to solve this, but has the benefit of providing a
+single stream for uncaptured errors from all threads.</p>
+   <h5 class="heading settled" data-level="3.3.2.4" id="errors-errorscopes-labels"><span class="secno">3.3.2.4. </span><span class="content">Error Messages and Debug Labels</span><a class="self-link" href="#errors-errorscopes-labels"></a></h5>
+   <p>Every WebGPU object has a read-write attribute, <code>label</code>, which can be set by the application to
+provide information for debugging tools (error messages, native profilers like Xcode, etc.)
+Every WebGPU object creation descriptor has a member <code>label</code> which sets the initial value of the
+attribute.</p>
+   <p>Additionally, parts of command buffers can be labeled with debug markers and debug groups.
+See <a href="#command-encoding-debug">§ 3.7.1 Debug Markers and Debug Groups</a>.</p>
+   <p>For both debugging (dev tools messages) and app telemetry (<code>uncapturederror</code>)
+implementations can choose to report some kind of "stack trace" in their error messages,
+taking advantage of object debug labels.
+For example, a debug message string could be:</p>
+<pre>&lt;myQueue>.submit failed:
+- commands[0] (&lt;mainColorPass>) was invalid:
+- in the debug group &lt;environment>:
+- in the debug group &lt;tree 123>:
+- in setIndexBuffer, indexBuffer (&lt;mesh3.indices>) was invalid:
+- in createBuffer, desc.usage (0x89) was invalid
+</pre>
+   <h4 class="heading settled" data-level="3.3.3" id="errors-alternatives"><span class="secno">3.3.3. </span><span class="content">Alternatives Considered</span><a class="self-link" href="#errors-alternatives"></a></h4>
+   <ul>
+    <li data-md>
+     <p>Synchronous <code>getError</code>, like WebGL. Discussed at the beginning: <a href="#errors-errorscopes">§ 3.3.2 Error Scopes</a>.</p>
+    <li data-md>
+     <p>Callback-based error scope: <code>device.errorScope('out-of-memory', async () => { ... })</code>.
+Since it’s necessary to allow asynchronous work inside error scopes, this formulation is
+actually largely equivalent to the one shown above, as the callback could never resolve.
+Application architectures would be limited by the need to conform to a compatible call stack,
+or they would remap the callback-based API into a push/pop-based API.
+Finally, it’s generally not catastrophic if error scopes become unbalanced, though the
+stack could grow unboundedly resulting in an eventual crash (or device loss).</p>
+   </ul>
+   <h3 class="heading settled" data-level="3.4" id="device-loss"><span class="secno">3.4. </span><span class="content">Device Loss</span><a class="self-link" href="#device-loss"></a></h3>
+   <p>Any situation that prevents further use of a <code>GPUDevice</code> results in a <em>device loss</em>.
+These can arise due to WebGPU calls or external events; for example: <code>device.destroy()</code>, an unrecoverable out-of-memory condition, a GPU process crash, a long
+operation resulting in GPU reset, a GPU reset caused by another application, a discrete GPU being
+switched off to save power, or an external GPU being unplugged.</p>
+   <p><strong>Design principle:</strong> There should be as few different-looking error behaviors as possible.
+This makes it easier for developers to test their app’s behavior in different situations,
+improves robustness of applications in the wild, and improves portability between browsers.</p>
+   <p class="issue" id="issue-a7ca2e8b"><a class="self-link" href="#issue-a7ca2e8b"></a> Finish this explainer (see <a href="https://github.com/gpuweb/gpuweb/blob/main/design/ErrorHandling.md#fatal-errors-requestadapter-requestdevice-and-devicelost">ErrorHandling.md</a>).</p>
+   <h3 class="heading settled" data-level="3.5" id="buffer-mapping"><span class="secno">3.5. </span><span class="content">Buffer Mapping</span><a class="self-link" href="#buffer-mapping"></a></h3>
+   <p>A <code>GPUBuffer</code> represents a memory allocation usable by other GPU operations.
+This memory can be accessed linearly, contrary to <code>GPUTexture</code> for which the actual memory layout of sequences of texels are unknown. Think of <code>GPUBuffers</code> as the result of <code>gpu_malloc()</code>.</p>
+   <p><strong>CPU→GPU:</strong> When using WebGPU, applications need to transfer data from JavaScript to <code>GPUBuffer</code> very often and potentially in large quantities.
+This includes mesh data, drawing and computations parameters, ML model inputs, etc.
+That’s why an efficient way to update <code>GPUBuffer</code> data is needed. <code>GPUQueue.writeBuffer</code> is reasonably efficient but includes at least an extra copy compared to the buffer mapping used for writing buffers.</p>
+   <p><strong>GPU→CPU:</strong> Applications also often need to transfer data from the GPU to Javascript, though usually less often and in lesser quantities.
+This includes screenshots, statistics from computations, simulation or ML model results, etc.
+This transfer is done with buffer mapping for reading buffers.</p>
+   <p>See <a href="#memory-visibility">§ 2.2 Memory Visibility with GPUs and GPU Processes</a> for additional background on the various types of memory that buffer mapping interacts with.</p>
+   <h4 class="heading settled" data-level="3.5.1" id="buffer-mapping-ownership"><span class="secno">3.5.1. </span><span class="content">CPU-GPU Ownership Transfer</span><a class="self-link" href="#buffer-mapping-ownership"></a></h4>
+   <p>In native GPU APIs, when a buffer is mapped, its content becomes accessible to the CPU.
+At the same time the GPU can keep using the buffer’s content, which can lead to data races between the CPU and the GPU.
+This means that the usage of mapped buffer is simple but leaves the synchronization to the application.</p>
+   <p>On the contrary, WebGPU prevents almost all data races in the interest of portability and consistency.
+In WebGPU there is even more risk of non-portability with races on mapped buffers because of the additional "shared memory" step that may be necessary on some drivers.
+That’s why <code>GPUBuffer</code> mapping is done as an ownership transfer between the CPU and the GPU.
+At each instant, only one of the two can access it, so no race is possible.</p>
+   <p>When an application requests to map a buffer, it initiates a transfer of the buffer’s ownership to the CPU.
+At this time, the GPU may still need to finish executing some operations that use the buffer, so the transfer doesn’t complete until all previously-enqueued GPU operations are finished.
+That’s why mapping a buffer is an asynchronous operation (we’ll discuss the other arguments below):</p>
+<pre class="highlight"><c- b>typedef</c-> [<c- g>EnforceRange</c->] <c- b>unsigned</c-> <c- b>long</c-> <c- g>GPUMapModeFlags</c->;
+<c- b>namespace</c-> <c- g>GPUMapMode</c-> {
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>READ</c->  = 0x0001;
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>WRITE</c-> = 0x0002;
+};
+
+<c- b>partial</c-> <c- b>interface</c-> <c- g>GPUBuffer</c-> {
+  <c- b>Promise</c->&lt;<c- b>undefined</c->> <c- g>mapAsync</c->(<c- n>GPUMapModeFlags</c-> <c- g>mode</c->,
+                              <c- b>optional</c-> <c- n>GPUSize64</c-> <c- g>offset</c-> = 0,
+                              <c- b>optional</c-> <c- n>GPUSize64</c-> <c- g>size</c->);
+};
+</pre>
+   <div class="example" id="example-129360f5">
+    <a class="self-link" href="#example-129360f5"></a> Using it is done like so: 
+<pre class="highlight"><c- c1>// Mapping a buffer for writing. Here offset and size are defaulted,</c->
+<c- c1>// so the whole buffer is mapped.</c->
+<c- a>const</c-> myMapWriteBuffer <c- o>=</c-> <c- p>...;</c->
+<c- k>await</c-> myMapWriteBuffer<c- p>.</c->mapAsync<c- p>(</c->GPUMapMode<c- p>.</c->WRITE<c- p>);</c->
+
+<c- c1>// Mapping a buffer for reading. Only the first four bytes are mapped.</c->
+<c- a>const</c-> myMapReadBuffer <c- o>=</c-> <c- p>...;</c->
+<c- k>await</c-> myMapReadBuffer<c- p>.</c->mapAsync<c- p>(</c->GPUMapMode<c- p>.</c->READ<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> <c- mf>4</c-><c- p>);</c->
+</pre>
+   </div>
+   <p>Once the application has finished using the buffer on the CPU, it can transfer ownership back to the GPU by unmapping it.
+This is an immediate operation that makes the application lose all access to the buffer on the CPU (i.e. detaches <code>ArrayBuffers</code>):</p>
+<pre class="highlight"><c- b>partial</c-> <c- b>interface</c-> <c- g>GPUBuffer</c-> {
+  <c- b>undefined</c-> <c- g>unmap</c->();
+};
+</pre>
+   <div class="example" id="example-f8e2458b">
+    <a class="self-link" href="#example-f8e2458b"></a> Using it is done like so: 
+<pre class="highlight"><c- a>const</c-> myMapReadBuffer <c- o>=</c-> <c- p>...;</c->
+<c- k>await</c-> myMapReadBuffer<c- p>.</c->mapAsync<c- p>(</c->GPUMapMode<c- p>.</c->READ<c- p>,</c-> <c- mf>0</c-><c- p>,</c-> <c- mf>4</c-><c- p>);</c->
+<c- c1>// Do something with the mapped buffer.</c->
+buffer<c- p>.</c->unmap<c- p>();</c->
+</pre>
+   </div>
+   <p>When transferring ownership to the CPU, a copy may be necessary from the underlying mapped buffer to shared memory visible to the content process.
+To avoid copying more than necessary, the application can specify which range it is interested in when calling <code>GPUBuffer.mapAsync</code>.</p>
+   <p><code>GPUBuffer.mapAsync</code>’s <code>mode</code> argument controls which type of mapping operation is performed.
+At the moment its values are redundant with the buffer creation’s usage flags, but it is present for explicitness and future extensibility.</p>
+   <p>While a <code>GPUBuffer</code> is owned by the CPU, it is not possible to submit any operations on the device timeline that use it; otherwise, a validation error is produced.
+However it is valid (and encouraged!) to record <code>GPUCommandBuffer</code>s using the <code>GPUBuffer</code>.</p>
+   <h4 class="heading settled" data-level="3.5.2" id="buffer-mapping-creation"><span class="secno">3.5.2. </span><span class="content">Creation of Mappable Buffers</span><a class="self-link" href="#buffer-mapping-creation"></a></h4>
+   <p>The physical memory location for a <code>GPUBuffer</code>’s underlying buffer depends on whether it should be mappable and whether it is mappable for reading or writing (native APIs give some control on the CPU cache behavior for example).
+At the moment mappable buffers can only be used to transfer data (so they can only have the correct <code>COPY_SRC</code> or <code>COPY_DST</code> usage in addition to a <code>MAP_*</code> usage),
+That’s why applications must specify that buffers are mappable when they are created using the (currently) mutually exclusive <code>GPUBufferUsage.MAP_READ</code> and <code>GPUBufferUsage.MAP_WRITE</code> flags:</p>
+   <div class="example" id="example-136b06ef">
+    <a class="self-link" href="#example-136b06ef"></a> 
+<pre class="highlight"><c- a>const</c-> myMapReadBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->MAP_READ <c- o>|</c-> GPUBufferUsage<c- p>.</c->COPY_DST<c- p>,</c->
+    size<c- o>:</c-> <c- mf>1000</c-><c- p>,</c->
+<c- p>});</c->
+<c- a>const</c-> myMapWriteBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->MAP_WRITE <c- o>|</c-> GPUBufferUsage<c- p>.</c->COPY_SRC<c- p>,</c->
+    size<c- o>:</c-> <c- mf>1000</c-><c- p>,</c->
+<c- p>});</c->
+</pre>
+   </div>
+   <h4 class="heading settled" data-level="3.5.3" id="buffer-mapping-access"><span class="secno">3.5.3. </span><span class="content">Accessing Mapped Buffers</span><a class="self-link" href="#buffer-mapping-access"></a></h4>
+   <p>Once a <code>GPUBuffer</code> is mapped, it is possible to access its memory from JavaScript
+ This is done by calling <code>GPUBuffer.getMappedRange</code>, which returns an <code>ArrayBuffer</code> called a "mapping".
+These are available until <code>GPUBuffer.unmap</code> or <code>GPUBuffer.destroy</code> is called, at which point they are detached.
+These <code>ArrayBuffer</code>s typically aren’t new allocations, but instead pointers to some kind of shared memory visible to the content process (IPC shared memory, <code>mmap</code>ped file descriptor, etc.)</p>
+   <p>When transferring ownership to the GPU, a copy may be necessary from the shared memory to the underlying mapped buffer. <code>GPUBuffer.getMappedRange</code> takes an optional range of the buffer to map (for which <code>offset</code> 0 is the start of the buffer).
+This way the browser knows which parts of the underlying <code>GPUBuffer</code> have been "invalidated" and need to be updated from the memory mapping.</p>
+   <p>The range must be within the range requested in <code>mapAsync()</code>.</p>
+<pre class="highlight"><c- b>partial</c-> <c- b>interface</c-> <c- g>GPUBuffer</c-> {
+  <c- b>ArrayBuffer</c-> <c- g>getMappedRange</c->(<c- b>optional</c-> <c- n>GPUSize64</c-> <c- g>offset</c-> = 0,
+                             <c- b>optional</c-> <c- n>GPUSize64</c-> <c- g>size</c->);
+};
+</pre>
+   <div class="example" id="example-c7f08ce9">
+    <a class="self-link" href="#example-c7f08ce9"></a> Using it is done like so: 
+<pre class="highlight"><c- a>const</c-> myMapReadBuffer <c- o>=</c-> <c- p>...;</c->
+<c- k>await</c-> myMapReadBuffer<c- p>.</c->mapAsync<c- p>(</c->GPUMapMode<c- p>.</c->READ<c- p>);</c->
+<c- a>const</c-> data <c- o>=</c-> myMapReadBuffer<c- p>.</c->getMappedRange<c- p>();</c->
+<c- c1>// Do something with the data</c->
+myMapReadBuffer<c- p>.</c->unmap<c- p>();</c->
+</pre>
+   </div>
+   <h4 class="heading settled" data-level="3.5.4" id="buffer-mapping-at-creation"><span class="secno">3.5.4. </span><span class="content">Mapping Buffers at Creation</span><a class="self-link" href="#buffer-mapping-at-creation"></a></h4>
+   <p>A common need is to create a <code>GPUBuffer</code> that is already filled with some data.
+This could be achieved by creating a final buffer, then a mappable buffer, filling the mappable buffer, and then copying from the mappable to the final buffer, but this would be inefficient.
+Instead this can be done by making the buffer CPU-owned at creation: we call this "mapped at creation".
+All buffers can be mapped at creation, even if they don’t have the <code>MAP_WRITE</code> buffer usages.
+The browser will just handle the transfer of data into the buffer for the application.</p>
+   <p>Once a buffer is mapped at creation, it behaves as regularly mapped buffer: <code>GPUBUffer.getMappedRange()</code> is used to retrieve <code>ArrayBuffer</code>s, and ownership is transferred to the GPU with <code>GPUBuffer.unmap()</code>.</p>
+   <div class="example" id="example-f0fb4fc7">
+    <a class="self-link" href="#example-f0fb4fc7"></a> Mapping at creation is done by passing <code>mappedAtCreation: true</code> in the buffer descriptor on creation: 
+<pre class="highlight"><c- a>const</c-> buffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->UNIFORM<c- p>,</c->
+    size<c- o>:</c-> <c- mf>256</c-><c- p>,</c->
+    mappedAtCreation<c- o>:</c-> <c- kc>true</c-><c- p>,</c->
+<c- p>});</c->
+<c- a>const</c-> data <c- o>=</c-> buffer<c- p>.</c->getMappedRange<c- p>();</c->
+<c- c1>// write to data</c->
+buffer<c- p>.</c->unmap<c- p>();</c->
+</pre>
+   </div>
+   <p>When using advanced methods to transfer data to the GPU (with a rolling list of buffers that are mapped or being mapped), mapping buffer at creation can be used to immediately create additional space where to put data to be transferred.</p>
+   <h4 class="heading settled" data-level="3.5.5" id="buffer-mapping-examples"><span class="secno">3.5.5. </span><span class="content">Examples</span><a class="self-link" href="#buffer-mapping-examples"></a></h4>
+   <div class="example" id="example-c2073e23">
+    <a class="self-link" href="#example-c2073e23"></a> The optimal way to create a buffer with initial data, for example here a <a href="https://google.github.io/draco/">Draco</a>-compressed 3D mesh: 
+<pre class="highlight"><c- a>const</c-> dracoDecoder <c- o>=</c-> <c- p>...;</c->
+
+<c- a>const</c-> buffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    usage<c- o>:</c-> GPUBuffer<c- p>.</c->VERTEX <c- o>|</c-> GPUBuffer<c- p>.</c->INDEX<c- p>,</c->
+    size<c- o>:</c-> dracoDecoder<c- p>.</c->decompressedSize<c- p>,</c->
+    mappedAtCreation<c- o>:</c-> <c- kc>true</c-><c- p>,</c->
+<c- p>});</c->
+
+dracoDecoder<c- p>.</c->decodeIn<c- p>(</c->buffer<c- p>.</c->getMappedRange<c- p>());</c->
+buffer<c- p>.</c->unmap<c- p>();</c->
+</pre>
+   </div>
+   <div class="example" id="example-020d533f">
+    <a class="self-link" href="#example-020d533f"></a> Retrieving data from a texture rendered on the GPU: 
+<pre class="highlight"><c- a>const</c-> texture <c- o>=</c-> getTheRenderedTexture<c- p>();</c->
+
+<c- a>const</c-> readbackBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+    usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->COPY_DST <c- o>|</c-> GPUBufferUsage<c- p>.</c->MAP_READ<c- p>,</c->
+    size<c- o>:</c-> <c- mf>4</c-> <c- o>*</c-> textureWidth <c- o>*</c-> textureHeight<c- p>,</c->
+<c- p>});</c->
+
+<c- c1>// Copy data from the texture to the buffer.</c->
+<c- a>const</c-> encoder <c- o>=</c-> device<c- p>.</c->createCommandEncoder<c- p>();</c->
+encoder<c- p>.</c->copyTextureToBuffer<c- p>(</c->
+    <c- p>{</c-> texture <c- p>},</c->
+    <c- p>{</c-> buffer<c- o>:</c-> readbackBuffer<c- p>,</c-> bytesPerRow<c- o>:</c-> textureWidth <c- o>*</c-> <c- mf>4</c-> <c- p>},</c->
+    <c- p>[</c->textureWidth<c- p>,</c-> textureHeight<c- p>],</c->
+<c- p>);</c->
+device<c- p>.</c->queue<c- p>.</c->submit<c- p>([</c->encoder<c- p>.</c->finish<c- p>()]);</c->
+
+<c- c1>// Get the data on the CPU.</c->
+<c- k>await</c-> readbackBuffer<c- p>.</c->mapAsync<c- p>(</c->GPUMapMode<c- p>.</c->READ<c- p>);</c->
+saveScreenshot<c- p>(</c->readbackBuffer<c- p>.</c->getMappedRange<c- p>());</c->
+readbackBuffer<c- p>.</c->unmap<c- p>();</c->
+</pre>
+   </div>
+   <div class="example" id="example-eed014f1">
+    <a class="self-link" href="#example-eed014f1"></a> Updating a bunch of data on the GPU for a frame: 
+<pre class="highlight"><c- ow>void</c-> frame<c- p>()</c-> <c- p>{</c->
+    <c- c1>// Create a new buffer for our updates. In practice we would</c->
+    <c- c1>// reuse buffers from frame to frame by re-mapping them.</c->
+    <c- a>const</c-> stagingBuffer <c- o>=</c-> device<c- p>.</c->createBuffer<c- p>({</c->
+        usage<c- o>:</c-> GPUBufferUsage<c- p>.</c->MAP_WRITE <c- o>|</c-> GPUBufferUsage<c- p>.</c->COPY_SRC<c- p>,</c->
+        size<c- o>:</c-> <c- mf>16</c-> <c- o>*</c-> objectCount<c- p>,</c->
+        mappedAtCreation<c- o>:</c-> <c- kc>true</c-><c- p>,</c->
+    <c- p>});</c->
+    <c- a>const</c-> stagingData <c- o>=</c-> <c- ow>new</c-> Float32Array<c- p>(</c->stagingBuffer<c- p>.</c->getMappedRange<c- p>());</c->
+
+    <c- c1>// For each draw we are going to:</c->
+    <c- c1>//  - Put the data for the draw in stagingData.</c->
+    <c- c1>//  - Record a copy from the stagingData to the uniform buffer for the draw</c->
+    <c- c1>//  - Encoder the draw</c->
+    <c- a>const</c-> copyEncoder <c- o>=</c-> device<c- p>.</c->createCommandEncoder<c- p>();</c->
+    <c- a>const</c-> drawEncoder <c- o>=</c-> device<c- p>.</c->createCommandEncoder<c- p>();</c->
+    <c- a>const</c-> renderPass <c- o>=</c-> myCreateRenderPass<c- p>(</c->drawEncoder<c- p>);</c->
+    <c- k>for</c-> <c- p>(</c-><c- a>var</c-> i <c- o>=</c-> <c- mf>0</c-><c- p>;</c-> i <c- o>&lt;</c-> objectCount<c- p>;</c-> i<c- o>++</c-><c- p>)</c-> <c- p>{</c->
+        stagingData<c- p>[</c->i <c- o>*</c-> <c- mf>4</c-> <c- o>+</c-> <c- mf>0</c-><c- p>]</c-> <c- o>=</c-> <c- p>...;</c->
+        stagingData<c- p>[</c->i <c- o>*</c-> <c- mf>4</c-> <c- o>+</c-> <c- mf>1</c-><c- p>]</c-> <c- o>=</c-> <c- p>...;</c->
+        stagingData<c- p>[</c->i <c- o>*</c-> <c- mf>4</c-> <c- o>+</c-> <c- mf>2</c-><c- p>]</c-> <c- o>=</c-> <c- p>...;</c->
+        stagingData<c- p>[</c->i <c- o>*</c-> <c- mf>4</c-> <c- o>+</c-> <c- mf>3</c-><c- p>]</c-> <c- o>=</c-> <c- p>...;</c->
+
+        <c- a>const</c-> <c- p>{</c->uniformBuffer<c- p>,</c-> uniformOffset<c- p>}</c-> <c- o>=</c-> getUniformsForDraw<c- p>(</c->i<c- p>);</c->
+        copyEncoder<c- p>.</c->copyBufferToBuffer<c- p>(</c->
+            stagingBuffer<c- p>,</c-> i <c- o>*</c-> <c- mf>16</c-><c- p>,</c->
+            uniformBuffer<c- p>,</c-> uniformOffset<c- p>,</c->
+            <c- mf>16</c-><c- p>);</c->
+
+        encodeDraw<c- p>(</c->renderPass<c- p>,</c-> <c- p>{</c->uniformBuffer<c- p>,</c-> uniformOffset<c- p>});</c->
+    <c- p>}</c->
+    renderPass<c- p>.</c->end<c- p>();</c->
+
+    <c- c1>// We are finished filling the staging buffer, unmap() it so</c->
+    <c- c1>// we can submit commands that use it.</c->
+    stagingBuffer<c- p>.</c->unmap<c- p>();</c->
+
+    <c- c1>// Submit all the copies and then all the draws. The copies</c->
+    <c- c1>// will happen before the draw such that each draw will use</c->
+    <c- c1>// the data that was filled inside the for-loop above.</c->
+    device<c- p>.</c->queue<c- p>.</c->submit<c- p>([</c->
+        copyEncoder<c- p>.</c->finish<c- p>(),</c->
+        drawEncoder<c- p>.</c->finish<c- p>()</c->
+    <c- p>]);</c->
+<c- p>}</c->
+</pre>
+   </div>
+   <h3 class="heading settled" data-level="3.6" id="multithreading"><span class="secno">3.6. </span><span class="content">Multithreading</span><a class="self-link" href="#multithreading"></a></h3>
+   <p>Multithreading is a key part of modern graphics APIs.
+Unlike OpenGL, newer APIs allow applications to encode commands, submit work, transfer data to the GPU, and
+so on, from multiple threads at once, alleviating CPU bottlenecks.
+This is especially relevant to WebGPU, since IDL bindings are generally much slower than C calls.</p>
+   <p>WebGPU does not <em>yet</em> allow multithreaded use of a single <code>GPUDevice</code>, but the API has been
+designed from the ground up with this in mind.
+This section describes the tentative plan for how it will work.</p>
+   <p>As described in <a href="#gpu-process">§ 2.1 Sandboxed GPU Processes in Web Browsers</a>, most WebGPU objects are actually just "handles" that refer to
+objects in the browser’s GPU process.
+As such, it is relatively straightforward to allow these to be shared among threads.
+For example, a <code>GPUTexture</code> object can simply be <code>postMessage()</code>d to another thread, creating a
+new <code>GPUTexture</code> JavaScript object containing a handle to the <em>same</em> (ref-counted) GPU-process object.</p>
+   <p>Several objects, like <code>GPUBuffer</code>, have client-side state.
+Applications still need to use them from multiple threads without having to <code>postMessage</code> such
+objects back and forth with <code>[Transferable]</code> semantics (which would also create new wrapper
+objects, breaking old references).
+Therefore, these objects will also be <code>[Serializable]</code> but have a small amount of (content-side) <strong>shared state</strong>, just like <code>SharedArrayBuffer</code>.</p>
+   <p>Though access to this shared state is somewhat limited - it can’t be changed arbitrarily quickly
+on a single object - it might still be a timing attack vector, like <code>SharedArrayBuffer</code>,
+so it is tentatively gated on cross-origin isolation.
+See <a href="https://gpuweb.github.io/gpuweb/#security-timing">Timing attacks</a>.</p>
+   <div class="example" id="example-ca230bfa">
+    <a class="self-link" href="#example-ca230bfa"></a> Given threads "Main" and "Worker": 
+    <ul>
+     <li data-md>
+      <p>Main: <code>const B1 = device.createBuffer(...);</code>.</p>
+     <li data-md>
+      <p>Main: uses postMessage to send <code>B1</code> to Worker.</p>
+     <li data-md>
+      <p>Worker: receives message → <code>B2</code>.</p>
+     <li data-md>
+      <p>Worker: <code>const mapPromise = B2.mapAsync()</code> → successfully puts the buffer in the "map pending" state.</p>
+     <li data-md>
+      <p>Main: <code>B1.mapAsync()</code> → <strong>throws an exception</strong> (and doesn’t change the state of the buffer).</p>
+     <li data-md>
+      <p>Main: encodes some command that uses <code>B1</code>, like:</p>
+<pre class="language-js highlight">encoder<c- p>.</c->copyBufferToTexture<c- p>(</c->B1<c- p>,</c-> T<c- p>);</c->
+<c- a>const</c-> commandBuffer <c- o>=</c-> encoder<c- p>.</c->finish<c- p>();</c->
+</pre>
+      <p>→ succeeds, because this doesn’t depend on the buffer’s client side state.</p>
+     <li data-md>
+      <p>Main: <code>queue.submit(commandBuffer)</code> → <strong>asynchronous WebGPU error</strong>,
+because the CPU currently owns the buffer.</p>
+     <li data-md>
+      <p>Worker: <code>await mapPromise</code>, writes to the mapping, then calls <code>B2.unmap()</code>.</p>
+     <li data-md>
+      <p>Main: <code>queue.submit(commandBuffer)</code> → succeeds</p>
+     <li data-md>
+      <p>Main: <code>B1.mapAsync()</code> → successfully puts the buffer in the "map pending" state</p>
+    </ul>
+   </div>
+   <p>Further discussion can be found in <a href="https://github.com/gpuweb/gpuweb/issues/354">#354</a> (note not all of it reflects current thinking).</p>
+   <h4 class="heading settled" data-level="3.6.1" id="multithreading-transfer"><span class="secno">3.6.1. </span><span class="content">Unsolved: Synchronous Object Transfer</span><a class="self-link" href="#multithreading-transfer"></a></h4>
+   <p>Some application architectures require objects to be passed between threads without having to
+asynchronously wait for a message to arrive on the receiving thread.</p>
+   <p>The most crucial class of such architectures are in WebAssembly applications:
+Programs using native C/C++/Rust/etc. bindings for WebGPU will want to assume object handles
+are plain-old-data (e.g. <code>typedef struct WGPUBufferImpl* WGPUBuffer;</code>)
+that can be passed between threads freely.
+Unfortunately, this cannot be implemented in C-on-JS bindings (e.g. Emscripten) without complex,
+hidden, and slow asynchronicity (yielding on the receiving thread, interrupting the sending
+thread to send a message, then waiting for the object on the receiving thread).</p>
+   <p>Some alternatives are mentioned in issue <a href="https://github.com/gpuweb/gpuweb/issues/747">#747</a>:</p>
+   <ul>
+    <li data-md>
+     <p><code>SharedObjectTable</code>, an object with shared-state (like <code>SharedArrayBuffer</code>) containing a table of <code>[Serializable]</code> values. Effectively, a store into the table would serialize once, and then any
+thread with the <code>SharedObjectTable</code> could (synchronously) deserialize the object on demand.</p>
+    <li data-md>
+     <p>A synchronous <code>MessagePort.receiveMessage()</code> method.
+This would be less ideal as it would require any thread that creates one of these objects to
+eagerly send it to every thread, just in case they need it later.</p>
+    <li data-md>
+     <p>Allow "exporting" a numerical ID for an object that can be used to "import" the object on
+another thread. This bypasses the garbage collector and makes it easy to leak memory.</p>
+   </ul>
+   <h3 class="heading settled" data-level="3.7" id="command-encoding"><span class="secno">3.7. </span><span class="content">Command Encoding and Submission</span><a class="self-link" href="#command-encoding"></a></h3>
+   <p>Many operations in WebGPU are purely GPU-side operations that don’t use data from the CPU.
+These operations are not issued directly; instead, they are encoded into <code>GPUCommandBuffer</code>s
+via the builder-like <code>GPUCommandEncoder</code> interface, then later sent to the GPU with <code>gpuQueue.submit()</code>.
+This design is used by the underlying native APIs as well. It provides several benefits:</p>
+   <ul>
+    <li data-md>
+     <p>Command buffer encoding is independent of other state, allowing encoding (and command buffer
+validation) work to utilize multiple CPU threads.</p>
+    <li data-md>
+     <p>Provides a larger chunk of work at once, allowing the GPU driver to do more global
+optimization, especially in how it schedules work across the GPU hardware.</p>
+   </ul>
+   <h4 class="heading settled" data-level="3.7.1" id="command-encoding-debug"><span class="secno">3.7.1. </span><span class="content">Debug Markers and Debug Groups</span><a class="self-link" href="#command-encoding-debug"></a></h4>
+   <p>For error messages and debugging tools, it is possible to label work inside a command buffer.
+(See <a href="#errors-errorscopes-labels">§ 3.3.2.4 Error Messages and Debug Labels</a>.)</p>
+   <ul>
+    <li data-md>
+     <p><code>insertDebugMarker(markerLabel)</code> marks a point in a stream of commands.</p>
+    <li data-md>
+     <p><code>pushDebugGroup(groupLabel)</code>/<code>popDebugGroup()</code> nestably demarcate sub-streams of commands.
+This can be used e.g. to label which part of a command buffer corresponds to different objects
+or parts of a scene.</p>
+   </ul>
+   <h4 class="heading settled" data-level="3.7.2" id="command-encoding-passes"><span class="secno">3.7.2. </span><span class="content">Passes</span><a class="self-link" href="#command-encoding-passes"></a></h4>
+   <p class="issue" id="issue-872b53a1"><a class="self-link" href="#issue-872b53a1"></a> Briefly explain passes?</p>
+   <h3 class="heading settled" data-level="3.8" id="pipelines"><span class="secno">3.8. </span><span class="content">Pipelines</span><a class="self-link" href="#pipelines"></a></h3>
+   <h3 class="heading settled" data-level="3.9" id="image-input"><span class="secno">3.9. </span><span class="content">Image, Video, and Canvas input</span><a class="self-link" href="#image-input"></a></h3>
+   <p class="issue" id="issue-829f95ec"><a class="self-link" href="#issue-829f95ec"></a> Exact API still in flux as of this writing.</p>
+   <p>WebGPU is largely isolated from the rest of the Web platform, but has several interop points.
+One of these is image data input into the API.
+Aside from the general data read/write mechanisms (<code>writeTexture</code>, <code>writeBuffer</code>, and <code>mapAsync</code>),
+data can also come from <code>&lt;img></code>/<code>ImageBitmap</code>, canvases, and videos.
+There are many use-cases that require these, including:</p>
+   <ul>
+    <li data-md>
+     <p>Initializing textures from encoded images (JPEG, PNG, etc.)</p>
+    <li data-md>
+     <p>Rendering text with 2D canvas for use in WebGPU.</p>
+    <li data-md>
+     <p>Video element and video camera input for image processing, ML, 3D scenes, etc.</p>
+   </ul>
+   <p>There are two paths:</p>
+   <ul>
+    <li data-md>
+     <p><code>copyExternalImageToTexture()</code> copies color data from a sub-rectangle of an
+image/video/canvas object into an equally-sized sub-rectangle of a <code>GPUTexture</code>.
+The input data is captured at the moment of the call.</p>
+    <li data-md>
+     <p><code>importExternalTexture()</code> takes a video or canvas and creates a <code>GPUExternalTexture</code> object which <em>can</em> provide direct read access to an underlying resource if it exists on the (same) GPU already,
+avoiding unnecessary copies or CPU-GPU bandwidth.
+This is typically true of hardware-decoded videos and most canvas elements.</p>
+   </ul>
+   <h4 class="heading settled" data-level="3.9.1" id="image-input-external-texture"><span class="secno">3.9.1. </span><span class="content">GPUExternalTexture</span><a class="self-link" href="#image-input-external-texture"></a></h4>
+   <p>A <code>GPUExternalTexture</code> is a sampleable texture object which can be used in similar ways to normal
+sampleable <code>GPUTexture</code> objects.
+In particular, it can be bound as a texture resource to a shader and used directly from the GPU:
+when it is bound, additional metadata is attached that allows WebGPU to "automagically"
+transform the data from its underlying representation (e.g. YUV) to RGB sampled data.</p>
+   <p>A <code>GPUExternalTexture</code> represents a particular imported image, so the underlying data must not
+change after import, either from internal (WebGPU) or external (Web platform) access.</p>
+   <p class="issue" id="issue-effdb8e6"><a class="self-link" href="#issue-effdb8e6"></a> Describe how this is achieved for video element, VideoFrame, canvas element, and OffscreenCanvas.</p>
+   <h3 class="heading settled" data-level="3.10" id="canvas-output"><span class="secno">3.10. </span><span class="content">Canvas Output</span><a class="self-link" href="#canvas-output"></a></h3>
+   <p>Historically, drawing APIs (2d canvas, WebGL) are initialized from canvases using <code>getContext()</code>.
+However, WebGPU is more than a drawing API, and many applications do not need a canvas.
+WebGPU is initialized without a canvas - see <a href="#initialization">§ 3.1.1 Adapter Selection and Device Init</a>.</p>
+   <p>Following this, WebGPU has no "default" drawing buffer.
+Instead, a WebGPU device may be connected to <em>any number</em> of canvases (zero or more)
+and render to any number of them each frame.</p>
+   <p>Canvas context creation and WebGPU device creation are decoupled.
+Any <code>GPUCanvasContext</code> may be dynamically used with any <code>GPUDevice</code>.
+This makes device switches easy (e.g. after recovering from a device loss).
+(In comparison, WebGL context restoration is done on the same <code>WebGLRenderingContext</code> object,
+even though context state does not persist across loss/restoration.)</p>
+   <p>In order to access a canvas, an app gets a <code>GPUTexture</code> from the <code>GPUCanvasContext</code> and then writes to it, as it would with a normal <code>GPUTexture</code>.</p>
+   <h4 class="heading settled" data-level="3.10.1" id="canvas-output-swap-chains"><span class="secno">3.10.1. </span><span class="content">Canvas Configuration</span><a class="self-link" href="#canvas-output-swap-chains"></a></h4>
+   <p>Canvas <code>GPUTexture</code>s are vended in a very structured way:</p>
+   <ul>
+    <li data-md>
+     <p><code>canvas.getContext('webgpu')</code> provides a <code>GPUCanvasContext</code>.</p>
+    <li data-md>
+     <p><code>GPUCanvasContext.configure({ device, format, usage })</code> modifies the current configuration
+invalidating any previous texture object, attaching the canvas to the provided device,
+and setting options for vended textures and canvas behavior.</p>
+    <li data-md>
+     <p>Resizing the canvas also invalidates previous texture objects.</p>
+    <li data-md>
+     <p><code>GPUCanvasContext.getCurrentTexture()</code> provides a <code>GPUTexture</code>.</p>
+    <li data-md>
+     <p><code>GPUCanvasContext.unconfigure()</code> returns the context to its initial, unconfigured state.</p>
+   </ul>
+   <p>This structure provides maximal compatibility with optimized paths in native graphics APIs.
+In these, typically, a platform-specific "surface" object can produce an API object called a
+"swap chain" which provides, possibly up-front, a possibly-fixed list of 1-3 textures to render
+into.</p>
+   <h4 class="heading settled" data-level="3.10.2" id="canvas-output-current-texture"><span class="secno">3.10.2. </span><span class="content">Current Texture</span><a class="self-link" href="#canvas-output-current-texture"></a></h4>
+   <p>A <code>GPUCanvasContext</code> provides a "current texture" via <code>getCurrentTexture()</code>.
+For <code><a data-link-type="element" href="https://html.spec.whatwg.org/multipage/canvas.html#canvas" id="ref-for-canvas">canvas</a></code> elements, this returns a texture for the <em>current frame</em>:</p>
+   <ul>
+    <li data-md>
+     <p>On <code>getCurrentTexture()</code>, a new <code>[[drawingBuffer]]</code> is created if one doesn’t exist for the
+current frame, wrapped in a <code>GPUTexture</code>, and returned.</p>
+    <li data-md>
+     <p>During the "<a data-link-type="dfn" href="https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering" id="ref-for-update-the-rendering">Update the rendering</a>" step, the <code>[[drawingBuffer]]</code> becomes readonly. Then, it is
+shared by the browser compositor (for display) and the page’s canvas (readable using
+drawImage/toDataURL/etc.)</p>
+   </ul>
+   <h4 class="heading settled" data-level="3.10.3" id="canvas-output-preferred-format"><span class="secno">3.10.3. </span><span class="content"><code>getPreferredCanvasFormat()</code></span><a class="self-link" href="#canvas-output-preferred-format"></a></h4>
+   <p>Due to framebuffer hardware differences, different devices have different preferred byte layouts
+for display surfaces.
+Any allowed format is allowed on all systems, but applications may save power by using the
+preferred format.
+The exact format cannot be hidden, because the format is observable - e.g.,
+in the behavior of a <code>copyBufferToTexture</code> call and in compatibility rules with render pipelines
+(which specify a format, see <code>GPUColorTargetState.format</code>).</p>
+   <p>Most hardware prefers <code>bgra8unorm</code> (4 bytes in BGRA order) or is agnostic, while some mobile and
+embedded devices (like Android phones) prefer <code>rgba8unorm</code> (4 bytes in RGBA order).</p>
+   <p>For high-bit-depth, different systems may also prefer different formats,
+like <code>rgba16float</code> or <code>rgb10a2unorm</code>.</p>
+   <h4 class="heading settled" data-level="3.10.4" id="canvas-output-multiple-displays"><span class="secno">3.10.4. </span><span class="content">Multiple Displays</span><a class="self-link" href="#canvas-output-multiple-displays"></a></h4>
+   <p>Some systems have multiple displays with different capabilities (e.g. HDR vs non-HDR).
+Browser windows can be moved between these displays.</p>
+   <p>As today with WebGL, user agents can make their own decisions about how to expose these
+capabilities, e.g. choosing the capabilities of the initial, primary, or most-capable display.</p>
+   <p>In the future, an event might be provided that allows applications to detect when a canvas moves
+to a display with different properties so they can call <code>getPreferredCanvasFormat()</code> and <code>configure()</code> again.</p>
+   <h5 class="heading settled" data-level="3.10.4.1" id="canvas-output-multiple-adapters"><span class="secno">3.10.4.1. </span><span class="content">Multiple Adapters</span><a class="self-link" href="#canvas-output-multiple-adapters"></a></h5>
+   <p>Some systems have multiple displays connected to different hardware adapters; for example,
+laptops with switchable graphics might have the internal display connected to the integrated GPU
+and the HDMI port connected to the discrete GPU.</p>
+   <p>This can incur overhead, as rendering on one adapter and displaying on another typically incurs
+a copy or direct-memory-access (DMA) over a PCI bus.</p>
+   <p>Currently, WebGPU does not provide a way to detect which adapter is optimal for a given display.
+In the future, applications may be able to detect this, and receive events when this changes.</p>
+   <h3 class="heading settled" data-level="3.11" id="bitflags"><span class="secno">3.11. </span><span class="content">Bitflags</span><a class="self-link" href="#bitflags"></a></h3>
+   <p>WebGPU uses C-style bitflags in several places.
+(Search <code>GPUFlagsConstant</code> in the spec for instances.)
+A typical bitflag definition looks like this:</p>
+<pre class="highlight"><c- b>typedef</c-> [<c- g>EnforceRange</c->] <c- b>unsigned</c-> <c- b>long</c-> <c- g>GPUColorWriteFlags</c->;
+[<c- g>Exposed</c->=<c- n>Window</c->]
+<c- b>namespace</c-> <c- g>GPUColorWrite</c-> {
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>RED</c->   = 0x1;
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>GREEN</c-> = 0x2;
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>BLUE</c->  = 0x4;
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>ALPHA</c-> = 0x8;
+    <c- b>const</c-> <c- n>GPUFlagsConstant</c-> <c- g>ALL</c->   = 0xF;
+};
+</pre>
+   <p>This was chosen because there is no other particularly ergonomic way to describe
+"enum sets" in JavaScript today.</p>
+   <p>Bitflags are used in WebGL, which many WebGPU developers will be familiar with.
+They also match closely with the API shape that would be used by many native-language bindings.</p>
+   <p>The closest option is <code>sequence&lt;enum type></code>, but it doesn’t naturally describe
+an unordered set of unique items and doesn’t easily allow things like <code>GPUColorWrite.ALL</code> above.
+Additionally, <code>sequence&lt;enum type></code> has significant overhead, so we would have to avoid it in any
+APIs that are expected to be "hot paths" (like command encoder methods), causing inconsistency with
+parts of the API that <em>do</em> use it.</p>
+   <p>See also issue <a href="https://github.com/gpuweb/gpuweb/issues/747">#747</a> which mentions that strongly-typed bitflags in JavaScript would be useful.</p>
+   <h2 class="heading settled" data-level="4" id="questionnaire"><span class="secno">4. </span><span class="content">Security and Privacy (self-review)</span><a class="self-link" href="#questionnaire"></a></h2>
+   <p>This section is the Security and Privacy self-review.
+You can also see the <a href="https://gpuweb.github.io/gpuweb/#malicious-use">Malicious use considerations</a> section of the specification.</p>
+   <h3 class="heading settled" data-level="4.1" id="questionnaire-1"><span class="secno">4.1. </span><span class="content">What information might this feature expose to Web sites or other parties, and for what purposes is that exposure necessary?</span><a class="self-link" href="#questionnaire-1"></a></h3>
+   <p>The feature exposes information about the system’s GPUs (or lack thereof).</p>
+   <p>It allows determining if one of the GPUs in the system supports WebGPU by requesting a <code>GPUAdapter</code> without software fallback.
+This is necessary for sites to be able to fallback to hardware-accelerated WebGL if the system doesn’t support hardware-accelerated WebGPU.</p>
+   <p>For requested adapters the feature exposes a name, set of optional WebGPU capabilities that the <code>GPUAdapter</code> supports, as well as a set of numeric limits that the <code>GPUAdapter</code> supports.
+This is necessary because there is a lot of diversity in GPU hardware and while WebGPU target the lowest common denominator it is meant to scale to expose more powerful features when the hardware allows it.
+The name can be surfaced to the user when choosing, for example to let it choose an adapter and can be used by sites to do GPU-specific workarounds (this was critical in the past for WebGL).</p>
+   <p>Note that the user agent controls which name, optional features, and limits are exposed.
+It is not possible for sites to differentiate between hardware not supporting a feature and the user agent choosing not to expose it.
+User agents are expected to bucket the actual capabilities of the GPU and only expose a limited number of such buckets to the site.</p>
+   <h3 class="heading settled" data-level="4.2" id="questionnaire-2"><span class="secno">4.2. </span><span class="content">Do features in your specification expose the minimum amount of information necessary to enable their intended uses?</span><a class="self-link" href="#questionnaire-2"></a></h3>
+   <p>Yes.
+WebGPU only requires exposing if hardware-accelerated WebGPU is available, not why, or if the browser chose to not expose it etc.</p>
+   <p>For the name, optional features, and limits the information exposed is not specified to be minimal because each site might require a different subset of the limits and optional features.
+Instead the information exposed is controlled by the user-agent that is expected to only expose a small number of buckets that all expose the same information.</p>
+   <h3 class="heading settled" data-level="4.3" id="questionnaire-3"><span class="secno">4.3. </span><span class="content">How do the features in your specification deal with personal information, personally-identifiable information (PII), or information derived from them?</span><a class="self-link" href="#questionnaire-3"></a></h3>
+   <p>WebGPU doesn’t deal with PII unless the site puts PII inside the API, which means that Javascript got access to the PII before WebGPU could.</p>
+   <h3 class="heading settled" data-level="4.4" id="questionnaire-4"><span class="secno">4.4. </span><span class="content">How do the features in your specification deal with sensitive information?</span><a class="self-link" href="#questionnaire-4"></a></h3>
+   <p>WebGPU doesn’t deal with sensitive information.
+However some of the information it exposes could be correlated with sensitive information: the presence of powerful optional features or a high speed of GPU computation would allow deducing access to "high-end" GPUs which itself correlates with other information.</p>
+   <h3 class="heading settled" data-level="4.5" id="questionnaire-5"><span class="secno">4.5. </span><span class="content">Do the features in your specification introduce new state for an origin that persists across browsing sessions?</span><a class="self-link" href="#questionnaire-5"></a></h3>
+   <p>The WebGPU specification doesn’t introduce new state.
+However implementations are expected to cache the result of compiling shaders and pipelines.
+This introduces state that could be inspected by measuring how long compilation of a set of shaders and pipelines take.
+Note that GPU drivers also have their own caches so user-agents will have to find ways to disable that cache (otherwise state could be leaked across origins).</p>
+   <h3 class="heading settled" data-level="4.6" id="questionnaire-6"><span class="secno">4.6. </span><span class="content">Do the features in your specification expose information about the underlying platform to origins?</span><a class="self-link" href="#questionnaire-6"></a></h3>
+   <p>Yes.
+The specification exposes whether hardware-accelerated WebGPU is available and a user-agent controlled name and set of optional features and limits each <code>GPUAdapter</code> supports.
+Different requests for adapters returning adapters with different capabilities would also indicate the system contains multiple GPUs.</p>
+   <h3 class="heading settled" data-level="4.7" id="questionnaire-7"><span class="secno">4.7. </span><span class="content">Does this specification allow an origin to send data to the underlying platform?</span><a class="self-link" href="#questionnaire-7"></a></h3>
+   <p>WebGPU allows sending data to the system’s GPU.
+The WebGPU specification prevents ill-formed GPU commands from being sent to the hardware.
+It is also expected that user-agents will have work-arounds for bugs in the driver that could cause issue even with well-formed GPU commands.</p>
+   <h3 class="heading settled" data-level="4.8" id="questionnaire-8"><span class="secno">4.8. </span><span class="content">Do features in this specification allow an origin access to sensors on a user’s device?</span><a class="self-link" href="#questionnaire-8"></a></h3>
+   <p>No.</p>
+   <h3 class="heading settled" data-level="4.9" id="questionnaire-9"><span class="secno">4.9. </span><span class="content">What data do the features in this specification expose to an origin? Please also document what data is identical to data exposed by other features, in the same or different contexts.</span><a class="self-link" href="#questionnaire-9"></a></h3>
+   <p>WebGPU exposes whether hardware-accelerated WebGPU is available, which is a new piece of data.
+The adapter’s name, optional features, and limits has a large intersection with WebGL’s RENDERER_STRING, limits and extensions: even limits not in WebGL can mostly be deduced from the other limits exposed by WebGL (by deducing what GPU model the system has).</p>
+   <h3 class="heading settled" data-level="4.10" id="questionnaire-10"><span class="secno">4.10. </span><span class="content">Do features in this specification enable new script execution/loading mechanisms?</span><a class="self-link" href="#questionnaire-10"></a></h3>
+   <p>Yes.
+WebGPU allows running arbitrary GPU computations specified with the WebGPU Shading Language (WGSL).
+WGSL is compiled into a <code>GPUShaderModule</code> objects that are then used to specify "pipelines" that run computations on the GPU.</p>
+   <h3 class="heading settled" data-level="4.11" id="questionnaire-11"><span class="secno">4.11. </span><span class="content">Do features in this specification allow an origin to access other devices?</span><a class="self-link" href="#questionnaire-11"></a></h3>
+   <p>No.
+WebGPU allows access to PCI-e and external GPUs plugged into the system but these are just part of the system.</p>
+   <h3 class="heading settled" data-level="4.12" id="questionnaire-12"><span class="secno">4.12. </span><span class="content">Do features in this specification allow an origin some measure of control over a user agent’s native UI?</span><a class="self-link" href="#questionnaire-12"></a></h3>
+   <p>No.
+However WebGPU can be used to render to fullscreen or WebXR which does change the UI.
+WebGPU can also run GPU computations that take too long and cause of device timeout and a restart of GPU (TDR), which can produce a couple system-wide black frames.
+Note that this is possible with "just" HTML / CSS but WebGPU makes it easier to cause a TDR.</p>
+   <h3 class="heading settled" data-level="4.13" id="questionnaire-13"><span class="secno">4.13. </span><span class="content">What temporary identifiers do the features in this specification create or expose to the web?</span><a class="self-link" href="#questionnaire-13"></a></h3>
+   <p>None.</p>
+   <h3 class="heading settled" data-level="4.14" id="questionnaire-14"><span class="secno">4.14. </span><span class="content">How does this specification distinguish between behavior in first-party and third-party contexts?</span><a class="self-link" href="#questionnaire-14"></a></h3>
+   <p>There are no specific behavior difference between first-party and third-party contexts.
+However the user-agent can decide to limit the <code>GPUAdapters</code> returned to third-party contexts: by using fewer buckets, by using a single bucket, or by not exposing WebGPU.</p>
+   <h3 class="heading settled" data-level="4.15" id="questionnaire-15"><span class="secno">4.15. </span><span class="content">How do the features in this specification work in the context of a browser’s Private Browsing or Incognito mode?</span><a class="self-link" href="#questionnaire-15"></a></h3>
+   <p>There is no difference in Incognito mode, but the user-agent can decide to limit the <code>GPUAdapters</code> returned.
+User-agents will need to be careful not to reuse the shader compilation caches when in Incognito mode.</p>
+   <h3 class="heading settled" data-level="4.16" id="questionnaire-16"><span class="secno">4.16. </span><span class="content">Does this specification have both "Security Considerations" and "Privacy Considerations" sections?</span><a class="self-link" href="#questionnaire-16"></a></h3>
+   <p>Yes.
+They are both under the <a href="https://gpuweb.github.io/gpuweb/#malicious-use">Malicious use considerations</a> section.</p>
+   <h3 class="heading settled" data-level="4.17" id="questionnaire-17"><span class="secno">4.17. </span><span class="content">Do features in your specification enable origins to downgrade default security protections?</span><a class="self-link" href="#questionnaire-17"></a></h3>
+   <p>No.
+Except that WebGPU can be used to render to fullscreen or WebXR.</p>
+   <h3 class="heading settled" data-level="4.18" id="questionnaire-18"><span class="secno">4.18. </span><span class="content">What should this questionnaire have asked?</span><a class="self-link" href="#questionnaire-18"></a></h3>
+   <p>Does the specification allow interacting with cross-origin data? With DRM data?</p>
+   <p>At the moment WebGPU cannot do that but it is likely that someone will request these features in the future.
+It might be possible to introduce the concept of "protected queues" that only allow computations to end up on the screen, and not into Javascript.
+However investigation in WebGL show that GPU timings can be used to leak from such protected queues.</p>
+   <h2 class="heading settled" data-level="5" id="wgsl"><span class="secno">5. </span><span class="content">WebGPU Shading Language</span><a class="self-link" href="#wgsl"></a></h2>
+  </main>
+  <div data-fill-with="conformance">
+   <h2 class="no-ref no-num heading settled" id="w3c-conformance"><span class="content">Conformance</span><a class="self-link" href="#w3c-conformance"></a></h2>
+   <h3 class="no-ref no-num heading settled" id="w3c-conventions"><span class="content">Document conventions</span><a class="self-link" href="#w3c-conventions"></a></h3>
+   <p>Conformance requirements are expressed
+    with a combination of descriptive assertions
+    and RFC 2119 terminology.
+    The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL”
+    in the normative parts of this document
+    are to be interpreted as described in RFC 2119.
+    However, for readability,
+    these words do not appear in all uppercase letters in this specification. </p>
+   <p>All of the text of this specification is normative
+    except sections explicitly marked as non-normative, examples, and notes. <a data-link-type="biblio" href="#biblio-rfc2119" title="Key words for use in RFCs to Indicate Requirement Levels">[RFC2119]</a> </p>
+   <p>Examples in this specification are introduced with the words “for example”
+    or are set apart from the normative text
+    with <code>class="example"</code>,
+    like this: </p>
+   <div class="example" id="w3c-example">
+    <a class="self-link" href="#w3c-example"></a> 
+    <p>This is an example of an informative example. </p>
+   </div>
+   <p>Informative notes begin with the word “Note”
+    and are set apart from the normative text
+    with <code>class="note"</code>,
+    like this: </p>
+   <p class="note" role="note">Note, this is an informative note.</p>
+  </div>
+  <script src="https://www.w3.org/scripts/TR/2021/fixup.js"></script>
+  <h2 class="no-num no-ref heading settled" id="index"><span class="content">Index</span><a class="self-link" href="#index"></a></h2>
+  <h3 class="no-num no-ref heading settled" id="index-defined-elsewhere"><span class="content">Terms defined by reference</span><a class="self-link" href="#index-defined-elsewhere"></a></h3>
+  <ul class="index">
+   <li>
+    <a data-link-type="biblio">[HTML]</a> defines the following terms:
+    <ul>
+     <li><span class="dfn-paneled" id="0fc40460">canvas</span>
+     <li><span class="dfn-paneled" id="b815f411">update the rendering</span>
+    </ul>
+  </ul>
+  <h2 class="no-num no-ref heading settled" id="references"><span class="content">References</span><a class="self-link" href="#references"></a></h2>
+  <h3 class="no-num no-ref heading settled" id="normative"><span class="content">Normative References</span><a class="self-link" href="#normative"></a></h3>
+  <dl>
+   <dt id="biblio-html">[HTML]
+   <dd>Anne van Kesteren; et al. <a href="https://html.spec.whatwg.org/multipage/"><cite>HTML Standard</cite></a>. Living Standard. URL: <a href="https://html.spec.whatwg.org/multipage/">https://html.spec.whatwg.org/multipage/</a>
+   <dt id="biblio-rfc2119">[RFC2119]
+   <dd>S. Bradner. <a href="https://datatracker.ietf.org/doc/html/rfc2119"><cite>Key words for use in RFCs to Indicate Requirement Levels</cite></a>. March 1997. Best Current Practice. URL: <a href="https://datatracker.ietf.org/doc/html/rfc2119">https://datatracker.ietf.org/doc/html/rfc2119</a>
+  </dl>
+  <h2 class="no-num no-ref heading settled" id="issues-index"><span class="content">Issues Index</span><a class="self-link" href="#issues-index"></a></h2>
+  <div style="counter-reset:issue">
+   <div class="issue"> Set up cross-linking into the WebGPU and WGSL specs. <a href="https://github.com/tabatkins/bikeshed/issues/2006">[Issue #tabatkins/bikeshed#2006]</a> <a class="issue-return" href="#issue-30876714" title="Jump to section">↵</a></div>
+   <div class="issue"> Complete the planned sections. <a href="https://github.com/gpuweb/gpuweb/issues/1321">[Issue #gpuweb/gpuweb#1321]</a> <a class="issue-return" href="#issue-c681b067" title="Jump to section">↵</a></div>
+   <div class="issue"> Finish this explainer (see <a href="https://github.com/gpuweb/gpuweb/blob/main/design/ErrorHandling.md#fatal-errors-requestadapter-requestdevice-and-devicelost">ErrorHandling.md</a>). <a class="issue-return" href="#issue-a7ca2e8b" title="Jump to section">↵</a></div>
+   <div class="issue"> Briefly explain passes? <a class="issue-return" href="#issue-872b53a1" title="Jump to section">↵</a></div>
+   <div class="issue"> Exact API still in flux as of this writing. <a class="issue-return" href="#issue-829f95ec" title="Jump to section">↵</a></div>
+   <div class="issue"> Describe how this is achieved for video element, VideoFrame, canvas element, and OffscreenCanvas. <a class="issue-return" href="#issue-effdb8e6" title="Jump to section">↵</a></div>
+  </div>
+<script>/* Boilerplate: script-dom-helper */
+"use strict";
+function query(sel) { return document.querySelector(sel); }
+
+function queryAll(sel) { return [...document.querySelectorAll(sel)]; }
+
+function iter(obj) {
+	if(!obj) return [];
+	var it = obj[Symbol.iterator];
+	if(it) return it;
+	return Object.entries(obj);
+}
+
+function mk(tagname, attrs, ...children) {
+	const el = document.createElement(tagname);
+	for(const [k,v] of iter(attrs)) {
+		if(k.slice(0,3) == "_on") {
+			const eventName = k.slice(3);
+			el.addEventListener(eventName, v);
+		} else if(k[0] == "_") {
+			// property, not attribute
+			el[k.slice(1)] = v;
+		} else {
+			if(v === false || v == null) {
+        continue;
+      } else if(v === true) {
+        el.setAttribute(k, "");
+        continue;
+      } else {
+  			el.setAttribute(k, v);
+      }
+		}
+	}
+	append(el, children);
+	return el;
+}
+
+/* Create shortcuts for every known HTML element */
+[
+  "a",
+  "abbr",
+  "acronym",
+  "address",
+  "applet",
+  "area",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "base",
+  "basefont",
+  "bdo",
+  "big",
+  "blockquote",
+  "body",
+  "br",
+  "button",
+  "canvas",
+  "caption",
+  "center",
+  "cite",
+  "code",
+  "col",
+  "colgroup",
+  "datalist",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "dialog",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "embed",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "font",
+  "footer",
+  "form",
+  "frame",
+  "frameset",
+  "head",
+  "header",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "link",
+  "main",
+  "map",
+  "mark",
+  "meta",
+  "meter",
+  "nav",
+  "nobr",
+  "noscript",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "output",
+  "p",
+  "param",
+  "pre",
+  "progress",
+  "q",
+  "s",
+  "samp",
+  "script",
+  "section",
+  "select",
+  "small",
+  "source",
+  "span",
+  "strike",
+  "strong",
+  "style",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "template",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "title",
+  "tr",
+  "u",
+  "ul",
+  "var",
+  "video",
+  "wbr",
+  "xmp",
+].forEach(tagname=>{
+	mk[tagname] = (...args) => mk(tagname, ...args);
+});
+
+function* nodesFromChildList(children) {
+	for(const child of children.flat(Infinity)) {
+		if(child instanceof Node) {
+			yield child;
+		} else {
+			yield new Text(child);
+		}
+	}
+}
+function append(el, ...children) {
+	for(const child of nodesFromChildList(children)) {
+		if(el instanceof Node) el.appendChild(child);
+		else el.push(child);
+	}
+	return el;
+}
+
+function insertAfter(el, ...children) {
+	for(const child of nodesFromChildList(children)) {
+		el.parentNode.insertBefore(child, el.nextSibling);
+	}
+	return el;
+}
+
+function clearContents(el) {
+	el.innerHTML = "";
+	return el;
+}
+
+function parseHTML(markup) {
+	if(markup.toLowerCase().trim().indexOf('<!doctype') === 0) {
+		const doc = document.implementation.createHTMLDocument("");
+		doc.documentElement.innerHTML = markup;
+		return doc;
+	} else {
+		const el = mk.template({});
+		el.innerHTML = markup;
+		return el.content;
+	}
+}</script>
+<script>/* Boilerplate: script-dfn-panel */
+"use strict";
+{
+let dfnPanelData = {
+"0fc40460": {"dfnID":"0fc40460","dfnText":"canvas","external":true,"refSections":[{"refs":[{"id":"ref-for-canvas"}],"title":"3.10.2. Current Texture"}],"url":"https://html.spec.whatwg.org/multipage/canvas.html#canvas"},
+"b815f411": {"dfnID":"b815f411","dfnText":"update the rendering","external":true,"refSections":[{"refs":[{"id":"ref-for-update-the-rendering"}],"title":"3.10.2. Current Texture"}],"url":"https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering"},
+};
+
+document.addEventListener("DOMContentLoaded", ()=>{
+    genAllDfnPanels();
+
+    document.body.addEventListener("click", (e) => {
+        // If not handled already, just hide all dfn panels.
+        hideAllDfnPanels();
+    });
+});
+
+window.addEventListener("resize", () => {
+    // Pin any visible dfn panel
+    queryAll(".dfn-panel.on, .dfn-panel.activated").forEach(el=>positionDfnPanel(el));
+});
+
+function genAllDfnPanels() {
+    for(const panelData of Object.values(dfnPanelData)) {
+        const dfnID = panelData.dfnID;
+        const dfn = document.getElementById(dfnID);
+        if(!dfn) {
+            console.log(`Can't find dfn#${dfnID}.`, panelData);
+            continue;
+        }
+        dfn.panelData = panelData;
+        insertDfnPopupAction(dfn);
+    }
+}
+
+function genDfnPanel(dfn, { dfnID, url, dfnText, refSections, external }) {
+    const dfnPanel = mk.aside({
+        class: "dfn-panel on",
+        id: `infopanel-for-${dfnID}`,
+        "data-for": dfnID,
+        "aria-labelled-by":`infopaneltitle-for-${dfnID}`,
+        },
+        mk.span({id:`infopaneltitle-for-${dfnID}`, style:"display:none"},
+            `Info about the '${dfnText}' ${external?"external":""} reference.`),
+        mk.a({href:url, class:"dfn-link"}, url),
+        refSections.length == 0 ? [] :
+            mk.b({}, "Referenced in:"),
+            mk.ul({},
+                ...refSections.map(section=>
+                    mk.li({},
+                        ...section.refs.map((ref, refI)=>
+                            [
+                                mk.a({ href: `#${ref.id}` },
+                                    (refI == 0) ? section.title : `(${refI + 1})`
+                                ),
+                                " ",
+                            ]
+                        ),
+                    ),
+                ),
+            ),
+        genLinkingSyntaxes(dfn),
+    );
+
+    dfnPanel.addEventListener('click', (event) => {
+        if (event.target.nodeName == 'A') {
+            scrollToTargetAndHighlight(event);
+            pinDfnPanel(dfnPanel);
+        }
+        event.stopPropagation();
+        refocusOnTarget(event);
+    });
+    dfnPanel.addEventListener('keydown', (event) => {
+        if(event.keyCode == 27) { // Escape key
+            hideDfnPanel({dfnPanel});
+            event.stopPropagation();
+            event.preventDefault();
+        }
+    });
+
+    dfnPanel.dfn = dfn;
+    dfn.dfnPanel = dfnPanel;
+    return dfnPanel;
+}
+
+
+
+function hideAllDfnPanels() {
+    // Delete the currently-active dfn panel.
+    queryAll(".dfn-panel").forEach(dfnPanel=>hideDfnPanel({dfnPanel}));
+}
+
+function showDfnPanel(dfn) {
+    hideAllDfnPanels(); // Only display one at a time.
+
+    dfn.setAttribute("aria-expanded", "true");
+
+    const dfnPanel = genDfnPanel(dfn, dfn.panelData);
+
+    // Give the dfn a unique tabindex, and then
+    // give all the tabbable panel bits successive indexes.
+    let tabIndex = 100;
+    dfn.tabIndex = tabIndex++;
+    const tabbable = dfnPanel.querySelectorAll(":is(a, button)");
+    for (const el of tabbable) {
+        el.tabIndex = tabIndex++;
+    }
+
+    append(document.body, dfnPanel);
+    positionDfnPanel(dfnPanel);
+}
+
+function positionDfnPanel(dfnPanel) {
+    const dfn = dfnPanel.dfn;
+    const dfnPos = getBounds(dfn);
+    dfnPanel.style.top = dfnPos.bottom + "px";
+    dfnPanel.style.left = dfnPos.left + "px";
+
+    const panelPos = dfnPanel.getBoundingClientRect();
+    const panelMargin = 8;
+    const maxRight = document.body.parentNode.clientWidth - panelMargin;
+    if (panelPos.right > maxRight) {
+        const overflowAmount = panelPos.right - maxRight;
+        const newLeft = Math.max(panelMargin, dfnPos.left - overflowAmount);
+        dfnPanel.style.left = newLeft + "px";
+    }
+}
+
+function pinDfnPanel(dfnPanel) {
+    // Switch it to "activated" state, which pins it.
+    dfnPanel.classList.add("activated");
+    dfnPanel.style.position = "fixed";
+    dfnPanel.style.left = null;
+    dfnPanel.style.top = null;
+}
+
+function hideDfnPanel({dfn, dfnPanel}) {
+    if(!dfnPanel) dfnPanel = dfn.dfnPanel;
+    if(!dfn) dfn = dfnPanel.dfn;
+    dfn.dfnPanel = undefined;
+    dfnPanel.dfn = undefined;
+    dfn.setAttribute("aria-expanded", "false");
+    dfn.tabIndex = undefined;
+    dfnPanel.remove()
+}
+
+function toggleDfnPanel(dfn) {
+    if(dfn.dfnPanel) {
+        hideDfnPanel(dfn);
+    } else {
+        showDfnPanel(dfn);
+    }
+}
+
+function insertDfnPopupAction(dfn) {
+    dfn.setAttribute('role', 'button');
+    dfn.setAttribute('aria-expanded', 'false')
+    dfn.tabIndex = 0;
+    dfn.classList.add('has-dfn-panel');
+    dfn.addEventListener('click', (event) => {
+        toggleDfnPanel(dfn);
+        event.stopPropagation();
+    });
+    dfn.addEventListener('keypress', (event) => {
+        const kc = event.keyCode;
+        // 32->Space, 13->Enter
+        if(kc == 32 || kc == 13) {
+            toggleDfnPanel(dfn);
+            event.stopPropagation();
+            event.preventDefault();
+        }
+    });
+}
+
+function refocusOnTarget(event) {
+    const target = event.target;
+    setTimeout(() => {
+        // Refocus on the event.target element.
+        // This is needed after browser scrolls to the destination.
+        target.focus();
+    });
+}
+
+// TODO: shared util
+// Returns the root-level absolute position {left and top} of element.
+function getBounds(el, relativeTo=document.body) {
+    const relativeRect = relativeTo.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const top = elRect.top - relativeRect.top;
+    const left = elRect.left - relativeRect.left;
+    return {
+        top,
+        left,
+        bottom: top + elRect.height,
+        right: left + elRect.width,
+    }
+}
+
+function scrollToTargetAndHighlight(event) {
+    let hash = event.target.hash;
+    if (hash) {
+        hash = decodeURIComponent(hash.substring(1));
+        const dest = document.getElementById(hash);
+        if (dest) {
+            dest.classList.add('highlighted');
+            setTimeout(() => dest.classList.remove('highlighted'), 1000);
+        }
+    }
+}
+
+// Functions, divided by link type, that wrap an autolink's
+// contents with the appropriate outer syntax.
+// Alternately, a string naming another type they format
+// the same as.
+function needsFor(type) {
+    switch(type) {
+        case "descriptor":
+        case "value":
+        case "element-attr":
+        case "attr-value":
+        case "element-state":
+        case "method":
+        case "constructor":
+        case "argument":
+        case "attribute":
+        case "const":
+        case "dict-member":
+        case "event":
+        case "enum-value":
+        case "stringifier":
+        case "serializer":
+        case "iterator":
+        case "maplike":
+        case "setlike":
+        case "state":
+        case "mode":
+        case "context":
+        case "facet": return true;
+
+        default: return false;
+    }
+}
+function refusesFor(type) {
+    switch(type) {
+        case "property":
+        case "element":
+        case "interface":
+        case "namespace":
+        case "callback":
+        case "dictionary":
+        case "enum":
+        case "exception":
+        case "typedef":
+        case "http-header":
+        case "permission": return true;
+
+        default: return false;
+    }
+}
+function linkFormatterFromType(type) {
+    switch(type) {
+        case 'scheme':
+        case 'permission':
+        case 'dfn': return (text) => `[=${text}=]`;
+
+        case 'abstract-op': return (text) => `[\$${text}\$]`;
+
+        case 'function':
+        case 'at-rule':
+        case 'selector':
+        case 'value': return (text) => `''${text}''`;
+
+        case 'http-header': return (text) => `[:${text}:]`;
+
+        case 'interface':
+        case 'constructor':
+        case 'method':
+        case 'argument':
+        case 'attribute':
+        case 'callback':
+        case 'dictionary':
+        case 'dict-member':
+        case 'enum':
+        case 'enum-value':
+        case 'exception':
+        case 'const':
+        case 'typedef':
+        case 'stringifier':
+        case 'serializer':
+        case 'iterator':
+        case 'maplike':
+        case 'setlike':
+        case 'extended-attribute':
+        case 'event':
+        case 'idl': return (text) => `{{${text}}}`;
+
+        case 'element-state':
+        case 'element-attr':
+        case 'attr-value':
+        case 'element': return (element) => `<{${element}}>`;
+
+        case 'grammar': return (text) => `${text} (within a <pre class=prod>)`;
+
+        case 'type': return (text)=> `<<${text}>>`;
+
+        case 'descriptor':
+        case 'property': return (text) => `'${text}'`;
+
+        default: return;
+    };
+};
+
+function genLinkingSyntaxes(dfn) {
+    if(dfn.tagName != "DFN") return;
+
+    const type = dfn.getAttribute('data-dfn-type');
+    if(!type) {
+        console.log(`<dfn> doesn't have a data-dfn-type:`, dfn);
+        return [];
+    }
+
+    // Return a function that wraps link text based on the type
+    const linkFormatter = linkFormatterFromType(type);
+    if(!linkFormatter) {
+        console.log(`<dfn> has an unknown data-dfn-type:`, dfn);
+        return [];
+    }
+
+    let ltAlts;
+    if(dfn.hasAttribute('data-lt')) {
+        ltAlts = dfn.getAttribute('data-lt')
+            .split("|")
+            .map(x=>x.trim());
+    } else {
+        ltAlts = [dfn.textContent.trim()];
+    }
+    if(type == "type") {
+        // lt of "<foo>", but "foo" is the interior;
+        // <<foo/bar>> is how you write it with a for,
+        // not <foo/<bar>> or whatever.
+        for(var i = 0; i < ltAlts.length; i++) {
+            const lt = ltAlts[i];
+            const match = /<(.*)>/.exec(lt);
+            if(match) { ltAlts[i] = match[1]; }
+        }
+    }
+
+    let forAlts;
+    if(dfn.hasAttribute('data-dfn-for')) {
+        forAlts = dfn.getAttribute('data-dfn-for')
+            .split(",")
+            .map(x=>x.trim());
+    } else {
+        forAlts = [''];
+    }
+
+    let linkingSyntaxes = [];
+    if(!needsFor(type)) {
+        for(const lt of ltAlts) {
+            linkingSyntaxes.push(linkFormatter(lt));
+        }
+    }
+    if(!refusesFor(type)) {
+        for(const f of forAlts) {
+            linkingSyntaxes.push(linkFormatter(`${f}/${ltAlts[0]}`))
+        }
+    }
+    return [
+        mk.b({}, 'Possible linking syntaxes:'),
+        mk.ul({},
+            ...linkingSyntaxes.map(link => {
+                const copyLink = async () =>
+                    await navigator.clipboard.writeText(link);
+                return mk.li({},
+                    mk.div({ class: 'link-item' },
+                        mk.button({
+                            class: 'copy-icon', title: 'Copy',
+                            type: 'button',
+                            _onclick: copyLink,
+                            tabindex: 0,
+                        }, mk.span({ class: 'icon' }) ),
+                        mk.span({}, link)
+                    )
+                );
+            })
+        )
+    ];
+}
+}
+</script>
+<script>/* Boilerplate: script-ref-hints */
+"use strict";
+{
+let refsData = {
+"https://html.spec.whatwg.org/multipage/canvas.html#canvas": {"displayText":"canvas","export":true,"for_":[],"level":"1","normative":true,"shortname":"html","spec":"html","status":"current","text":"canvas","type":"element","url":"https://html.spec.whatwg.org/multipage/canvas.html#canvas"},
+"https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering": {"displayText":"update the rendering","export":true,"for_":[],"level":"1","normative":true,"shortname":"html","spec":"html","status":"current","text":"update the rendering","type":"dfn","url":"https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering"},
+};
+
+function mkRefHint(link, ref) {
+    const linkText = link.textContent;
+    let dfnTextElements = '';
+    if (ref.displayText.toLowerCase() != linkText.toLowerCase()) {
+        // Give the original term if it's being displayed in a different way.
+        // But allow casing differences, they're insignificant.
+        dfnTextElements =
+            mk.li({},
+                mk.b({}, "Term: "),
+                mk.span({}, ref.displayText)
+            );
+    }
+    const forList = ref.for_;
+    let forListElements;
+    if(forList.length == 0) {
+        forListElements = [];
+    } else if(forList.length == 1) {
+        forListElements = mk.li({},
+            mk.b({}, "For: "),
+            mk.span({}, forList[0]),
+        );
+    } else {
+        forListElements = mk.li({},
+            mk.b({}, "For: "),
+            mk.ul({},
+                ...forList.map(forItem =>
+                    mk.li({},
+                        mk.span({}, forItem)
+                    ),
+                ),
+            ),
+        );
+    }
+    const url = ref.url;
+    const safeUrl = encodeURIComponent(url);
+    const hintPanel = mk.aside({
+        class: "ref-hint",
+        id: `ref-hint-for-${safeUrl}`,
+        "data-for": url,
+        "aria-labelled-by": `ref-hint-for-${safeUrl}`,
+    },
+        mk.ul({},
+            dfnTextElements,
+            mk.li({},
+                mk.b({}, "URL: "),
+                mk.a({ href: url, class: "ref" }, url),
+            ),
+            mk.li({},
+                mk.b({}, "Type: "),
+                mk.span({}, `${ref.type}`),
+            ),
+            mk.li({},
+                mk.b({}, "Spec: "),
+                mk.span({}, `${ref.spec ? ref.spec : ''}`),
+            ),
+            forListElements
+        ),
+    );
+    hintPanel.forLink = link;
+    setupRefHintEventListeners(link, hintPanel);
+    return hintPanel;
+}
+
+function hideAllRefHints() {
+    queryAll(".ref-hint").forEach(el=>hideRefHint(el));
+}
+
+function hideRefHint(refHint) {
+    const link = refHint.forLink;
+    link.setAttribute("aria-expanded", "false");
+    if(refHint.teardownEventListeners) {
+        refHint.teardownEventListeners();
+    }
+    refHint.remove();
+}
+
+function showRefHint(link) {
+    if(link.classList.contains("dfn-link")) return;
+    const url = link.getAttribute("href");
+    const ref = refsData[url];
+    if(!ref) return;
+
+    hideAllRefHints(); // Only display one at this time.
+
+    const refHint = mkRefHint(link, ref);
+    append(document.body, refHint);
+    link.setAttribute("aria-expanded", "true");
+    positionRefHint(refHint);
+}
+
+function setupRefHintEventListeners(link, refHint) {
+    if (refHint.teardownEventListeners) return;
+    // Add event handlers to hide the refHint after the user moves away
+    // from both the link and refHint, if not hovering either within one second.
+    let timeout = null;
+    const startHidingRefHint = (event) => {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => {
+            hideRefHint(refHint);
+        }, 1000);
+    }
+    const resetHidingRefHint = (event) => {
+        if (timeout) clearTimeout(timeout);
+        timeout = null;
+    };
+    link.addEventListener("mouseleave", startHidingRefHint);
+    link.addEventListener("mouseenter", resetHidingRefHint);
+    link.addEventListener("blur", startHidingRefHint);
+    link.addEventListener("focus", resetHidingRefHint);
+    refHint.addEventListener("mouseleave", startHidingRefHint);
+    refHint.addEventListener("mouseenter", resetHidingRefHint);
+    refHint.addEventListener("blur", startHidingRefHint);
+    refHint.addEventListener("focus", resetHidingRefHint);
+
+    refHint.teardownEventListeners = () => {
+        // remove event listeners
+        resetHidingRefHint();
+        link.removeEventListener("mouseleave", startHidingRefHint);
+        link.removeEventListener("mouseenter", resetHidingRefHint);
+        link.removeEventListener("blur", startHidingRefHint);
+        link.removeEventListener("focus", resetHidingRefHint);
+        refHint.removeEventListener("mouseleave", startHidingRefHint);
+        refHint.removeEventListener("mouseenter", resetHidingRefHint);
+        refHint.removeEventListener("blur", startHidingRefHint);
+        refHint.removeEventListener("focus", resetHidingRefHint);
+    };
+}
+
+function positionRefHint(refHint) {
+    const link = refHint.forLink;
+    const linkPos = getBounds(link);
+    refHint.style.top = linkPos.bottom + "px";
+    refHint.style.left = linkPos.left + "px";
+
+    const panelPos = refHint.getBoundingClientRect();
+    const panelMargin = 8;
+    const maxRight = document.body.parentNode.clientWidth - panelMargin;
+    if (panelPos.right > maxRight) {
+        const overflowAmount = panelPos.right - maxRight;
+        const newLeft = Math.max(panelMargin, linkPos.left - overflowAmount);
+        refHint.style.left = newLeft + "px";
+    }
+}
+
+// TODO: shared util
+// Returns the root-level absolute position {left and top} of element.
+function getBounds(el, relativeTo=document.body) {
+    const relativeRect = relativeTo.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const top = elRect.top - relativeRect.top;
+    const left = elRect.left - relativeRect.left;
+    return {
+        top,
+        left,
+        bottom: top + elRect.height,
+        right: left + elRect.width,
+    }
+}
+
+function showRefHintListener(e) {
+    // If the target isn't in a link (or is a link),
+    // just ignore it.
+    let link = e.target.closest("a");
+    if(!link) return;
+
+    // If the target is in a ref-hint panel
+    // (aka a link in the already-open one),
+    // also just ignore it.
+    if(link.closest(".ref-hint")) return;
+
+    // Otherwise, show the panel for the link.
+    showRefHint(link);
+}
+
+function hideAllHintsListener(e) {
+    // If the click is inside a ref-hint panel, ignore it.
+    if(e.target.closest(".ref-hint")) return;
+    // Otherwise, close all the current panels.
+    hideAllRefHints();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.body.addEventListener("mousedown", showRefHintListener);
+    document.body.addEventListener("focus", showRefHintListener);
+
+    document.body.addEventListener("click", hideAllHintsListener);
+});
+
+window.addEventListener("resize", () => {
+    // Hide any open ref hint.
+    hideAllRefHints();
+});
+}
+</script>

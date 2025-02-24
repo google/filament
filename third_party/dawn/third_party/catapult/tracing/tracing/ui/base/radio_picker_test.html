@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/radio_picker.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('basic', function() {
+    const rp = document.createElement('tr-ui-b-radio-picker');
+    rp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'},
+      {key: 'Submarine', label: 'I want to swim'}
+    ];
+    this.addHTMLOutput(rp);
+    assert.strictEqual(rp.selectedKey, undefined);
+    rp.select('Toyota');
+    assert.strictEqual(rp.selectedKey, 'Toyota');
+  });
+
+  test('persistentState_setSelectedKeyAfterSettingItems', function() {
+    const items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'},
+      {key: 'Submarine', label: 'I want to swim'}
+    ];
+    const container1 = tr.ui.b.createDiv({textContent: 'Radio Picker One'});
+    container1.style.border = 'solid';
+    const rp = document.createElement('tr-ui-b-radio-picker');
+    rp.items = items;
+    rp.settingsKey = 'radio-picker-test-one';
+    Polymer.dom(container1).appendChild(rp);
+    this.addHTMLOutput(container1);
+    assert.strictEqual(rp.selectedKey, undefined);
+    rp.select('Toyota');
+    assert.strictEqual(rp.selectedKey, 'Toyota');
+
+    const container2 = tr.ui.b.createDiv({
+      textContent: 'Radio Picker Two (same settingKey as Radio Picker One)'});
+    container2.style.border = 'solid';
+    const rp2 = document.createElement('tr-ui-b-radio-picker');
+    rp2.items = items;
+    rp2.settingsKey = 'radio-picker-test-one';
+    Polymer.dom(container2).appendChild(rp2);
+    this.addHTMLOutput(container2);
+
+    assert.strictEqual(rp2.selectedKey, 'Toyota');
+  });
+
+  test('persistentState_setSelectedKeyBeforeSettingItems', function() {
+    const items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'},
+      {key: 'Submarine', label: 'I want to swim'}
+    ];
+    const container1 = tr.ui.b.createDiv({textContent: 'Radio Picker One'});
+    container1.style.border = 'solid';
+    const rp = document.createElement('tr-ui-b-radio-picker');
+    rp.settingsKey = 'radio-picker-test-two';
+    rp.items = items;
+    Polymer.dom(container1).appendChild(rp);
+    this.addHTMLOutput(container1);
+    assert.strictEqual(rp.selectedKey, undefined);
+    rp.select('Boeing');
+    assert.strictEqual(rp.selectedKey, 'Boeing');
+
+    const container2 = tr.ui.b.createDiv({
+      textContent: 'Radio Picker Two (same settingKey as Radio Picker One)'});
+    container2.style.border = 'solid';
+    const rp2 = document.createElement('tr-ui-b-radio-picker');
+    rp2.settingsKey = 'radio-picker-test-two';
+    Polymer.dom(container2).appendChild(rp2);
+    this.addHTMLOutput(container2);
+    rp2.items = items;
+
+    assert.strictEqual(rp2.selectedKey, 'Boeing');
+  });
+
+  test('changeEventFired', function() {
+    const items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'},
+      {key: 'Submarine', label: 'I want to swim'}
+    ];
+    const rp = document.createElement('tr-ui-b-radio-picker');
+    rp.items = items;
+    this.addHTMLOutput(rp);
+    rp.select('Boeing');
+    assert.strictEqual(rp.selectedKey, 'Boeing');
+    let fired = false;
+    rp.addEventListener('change', function(e) {
+      fired = true;
+      assert.strictEqual('Toyota', e.target.selectedKey);
+    });
+    rp.select('Toyota');
+    assert.isTrue(fired);
+  });
+
+  test('verticalAttribute', function() {
+    const items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'},
+      {key: 'Submarine', label: 'I want to swim'}
+    ];
+    const rp = document.createElement('tr-ui-b-radio-picker');
+    rp.items = items;
+    this.addHTMLOutput(rp);
+    assert.isNull(rp.getAttribute('vertical'));
+    rp.vertical = true;
+    assert.strictEqual(rp.getAttribute('vertical'), 'true');
+    rp.vertical = false;
+    assert.isNull(rp.getAttribute('vertical'));
+  });
+});
+</script>

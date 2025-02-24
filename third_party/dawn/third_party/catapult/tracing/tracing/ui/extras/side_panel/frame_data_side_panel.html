@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/frame_tree_node.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/render_frame.html">
+<link rel="import" href="/tracing/extras/chrome/blame_context/top_level.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel_registry.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-e-s-frame-data-side-panel'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      width: 600px;
+      flex-direction: column;
+    }
+    table-container {
+      display: flex;
+      overflow: auto;
+      font-size: 12px;
+    }
+    </style>
+    <div>
+      Organize by:
+      <select id="select">
+        <option value="none">None</option>
+        <option value="tree">Frame Tree</option>
+      </select>
+    </div>
+    <table-container>
+      <tr-ui-b-table id="table"></tr-ui-b-table>
+    </table-container>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.ui.e.s', function() {
+  const BlameContextSnapshot = tr.e.chrome.BlameContextSnapshot;
+  const FrameTreeNodeSnapshot = tr.e.chrome.FrameTreeNodeSnapshot;
+  const RenderFrameSnapshot = tr.e.chrome.RenderFrameSnapshot;
+  const TopLevelSnapshot = tr.e.chrome.TopLevelSnapshot;
+
+  const BlameContextInstance = tr.e.chrome.BlameContextInstance;
+  const FrameTreeNodeInstance = tr.e.chrome.FrameTreeNodeInstance;
+  const RenderFrameInstance = tr.e.chrome.RenderFrameInstance;
+  const TopLevelInstance = tr.e.chrome.TopLevelInstance;
+
+  /**
+   * @constructor
+   * If |context| is provided, creates a row for the given context.
+   * Otherwise, creates an empty Row template which can be used for aggregating
+   * data from a group of subrows.
+   */
+  function Row(context) {
+    this.subRows = undefined;
+    this.contexts = [];
+    this.type = undefined;
+    this.renderer = 'N/A';
+    this.url = undefined;
+    this.time = 0;
+    this.eventsOfInterest = new tr.model.EventSet();
+
+    if (context === undefined) return;
+
+    this.type = context.objectInstance.blameContextType;
+    this.contexts.push(context);
+    if (context instanceof FrameTreeNodeSnapshot) {
+      if (context.renderFrame) {
+        this.contexts.push(context.renderFrame);
+        this.renderer = context.renderFrame.objectInstance.parent.pid;
+      }
+    } else if (context instanceof RenderFrameSnapshot) {
+      if (context.frameTreeNode) {
+        this.contexts.push(context.frameTreeNode);
+      }
+      this.renderer = context.objectInstance.parent.pid;
+    } else if (context instanceof TopLevelSnapshot) {
+      this.renderer = context.objectInstance.parent.pid;
+    } else {
+      throw new Error('Unknown context type');
+    }
+    this.eventsOfInterest.addEventSet(this.contexts);
+
+    // TODO(xiaochengh): Handle the case where a subframe has a trivial url
+    // (e.g., about:blank), but inherits the origin of its parent. This is not
+    // needed now, but will be required if we want to group rows by origin.
+    this.url = context.url;
+  }
+
+  const groupFunctions = {
+    none: rows => rows,
+
+    // Group the rows according to the frame tree structure.
+    // Example: consider frame tree a(b, c(d)), where each frame has 1ms time
+    // attributed to it. The resulting table should look like:
+    //      Type     | Time | URL
+    // --------------+------+-----
+    // Frame Tree    |   4  |  a
+    // +- Frame      |   1  |  a
+    // +- Subframe   |   1  |  b
+    // +- Frame Tree |   2  |  c
+    //  +- Frame     |   1  |  c
+    //  +- Subframe  |   1  |  d
+    tree(rows, rowMap) {
+      // Finds the parent of a specific row. When there is conflict between the
+      // browser's dump of the frame tree and the renderers', use the browser's.
+      const getParentRow = function(row) {
+        let pivot;
+        row.contexts.forEach(function(context) {
+          if (context instanceof tr.e.chrome.FrameTreeNodeSnapshot) {
+            pivot = context;
+          }
+        });
+        if (pivot && pivot.parentContext) {
+          return rowMap[pivot.parentContext.guid];
+        }
+        return undefined;
+      };
+
+      const rootRows = [];
+      rows.forEach(function(row) {
+        const parentRow = getParentRow(row);
+        if (parentRow === undefined) {
+          rootRows.push(row);
+          return;
+        }
+        if (parentRow.subRows === undefined) {
+          parentRow.subRows = [];
+        }
+        parentRow.subRows.push(row);
+      });
+
+      const aggregateAllDescendants = function(row) {
+        if (!row.subRows) {
+          if (getParentRow(row)) {
+            row.type = 'Subframe';
+          }
+          return row;
+        }
+        const result = new Row();
+        result.type = 'Frame Tree';
+        result.renderer = row.renderer;
+        result.url = row.url;
+        result.subRows = [row];
+        row.subRows.forEach(
+            subRow => result.subRows.push(aggregateAllDescendants(subRow)));
+        result.subRows.forEach(function(subRow) {
+          result.time += subRow.time;
+          result.eventsOfInterest.addEventSet(subRow.eventsOfInterest);
+        });
+        row.subRows = undefined;
+        return result;
+      };
+
+      return rootRows.map(rootRow => aggregateAllDescendants(rootRow));
+    }
+
+    // TODO(xiaochengh): Add grouping by site and probably more...
+  };
+
+  Polymer({
+    is: 'tr-ui-e-s-frame-data-side-panel',
+    behaviors: [tr.ui.behaviors.SidePanel],
+
+    ready() {
+      this.model_ = undefined;
+      this.rangeOfInterest_ = new tr.b.math.Range();
+
+      this.$.table.showHeader = true;
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+      this.$.table.tableColumns = this.createFrameDataTableColumns_();
+
+      this.$.table.addEventListener('selection-changed', function(e) {
+        this.selectEventSet_(this.$.table.selectedTableRow.eventsOfInterest);
+      }.bind(this));
+
+      this.$.select.addEventListener('change', function(e) {
+        this.updateContents_();
+      }.bind(this));
+    },
+
+    selectEventSet_(eventSet) {
+      const event = new tr.model.RequestSelectionChangeEvent();
+      event.selection = eventSet;
+      this.dispatchEvent(event);
+    },
+
+    createFrameDataTableColumns_() {
+      return [
+        {
+          title: 'Renderer',
+          value: row => row.renderer,
+          cmp: (a, b) => a.renderer - b.renderer
+        },
+        {
+          title: 'Type',
+          value: row => row.type
+        },
+        // TODO(xiaochengh): Decide what details to show in the table:
+        // - URL seems necessary, but we may also want origin instead/both.
+        // - Distinguish between browser time and renderer time?
+        // - Distinguish between CPU time and wall clock time?
+        // - Memory? Network? ...
+        {
+          title: 'Time',
+          value: row => tr.v.ui.createScalarSpan(row.time, {
+            unit: tr.b.Unit.byName.timeStampInMs,
+            ownerDocument: this.ownerDocument
+          }),
+          cmp: (a, b) => a.time - b.time
+        },
+        {
+          title: 'URL',
+          value: row => row.url,
+          cmp: (a, b) => (a.url || '').localeCompare(b.url || '')
+        }
+      ];
+    },
+
+    createFrameDataTableRows_() {
+      if (!this.model_) return [];
+
+      // Gather contexts into skeletons of rows.
+      const rows = [];
+      const rowMap = {};
+      for (const proc of Object.values(this.model_.processes)) {
+        proc.objects.iterObjectInstances(function(objectInstance) {
+          if (!(objectInstance instanceof BlameContextInstance)) {
+            return;
+          }
+          objectInstance.snapshots.forEach(function(snapshot) {
+            if (rowMap[snapshot.guid]) return;
+
+            const row = new Row(snapshot);
+            row.contexts.forEach(context => rowMap[context.guid] = row);
+            rows.push(row);
+          }, this);
+        }, this);
+      }
+
+      // Find slices attributed to each row.
+      // TODO(xiaochengh): We should implement a getter
+      // BlameContextSnapshot.attributedEvents, instead of process the model in
+      // a UI component.
+      for (const proc of Object.values(this.model_.processes)) {
+        for (const thread of Object.values(proc.threads)) {
+          thread.sliceGroup.iterSlicesInTimeRange(function(topLevelSlice) {
+            topLevelSlice.contexts.forEach(function(context) {
+              if (!context.snapshot.guid || !rowMap[context.snapshot.guid]) {
+                return;
+              }
+              const row = rowMap[context.snapshot.guid];
+              row.eventsOfInterest.push(topLevelSlice);
+              row.time += topLevelSlice.selfTime || 0;
+            });
+          }, this.currentRangeOfInterest.min, this.currentRangeOfInterest.max);
+        }
+      }
+
+      // Apply grouping to rows.
+      const select = this.$.select;
+      const groupOption = select.options[select.selectedIndex].value;
+      const groupFunction = groupFunctions[groupOption];
+      return groupFunction(rows, rowMap);
+    },
+
+    updateContents_() {
+      this.$.table.tableRows = this.createFrameDataTableRows_();
+      this.$.table.rebuild();
+    },
+
+    supportsModel(m) {
+      if (!m) {
+        return {
+          supported: false,
+          reason: 'No model available.'
+        };
+      }
+
+      const ans = {supported: false};
+      for (const proc of Object.values(m.processes)) {
+        proc.objects.iterObjectInstances(function(instance) {
+          if (instance instanceof BlameContextInstance) {
+            ans.supported = true;
+          }
+        });
+      }
+
+      if (!ans.supported) {
+        ans.reason = 'No frame data available';
+      }
+      return ans;
+    },
+
+    get currentRangeOfInterest() {
+      if (this.rangeOfInterest_.isEmpty) {
+        return this.model_.bounds;
+      }
+      return this.rangeOfInterest_;
+    },
+
+    get rangeOfInterest() {
+      return this.rangeOfInterest_;
+    },
+
+    set rangeOfInterest(rangeOfInterest) {
+      this.rangeOfInterest_ = rangeOfInterest;
+      this.updateContents_();
+    },
+
+    get selection() {
+      // Not applicable.
+    },
+
+    set selection(_) {
+      // Not applicable.
+    },
+
+    get textLabel() {
+      return 'Frame Data';
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    set model(model) {
+      this.model_ = model;
+      this.updateContents_();
+    }
+  });
+
+  tr.ui.side_panel.SidePanelRegistry.register(function() {
+    return document.createElement('tr-ui-e-s-frame-data-side-panel');
+  });
+});
+</script>

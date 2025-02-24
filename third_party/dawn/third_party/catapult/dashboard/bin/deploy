@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+# Copyright 2022 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import logging
+import os
+import subprocess
+import sys
+
+
+def _AddToPathIfNeeded(path):
+  if path not in sys.path:
+    sys.path.insert(0, path)
+
+
+def Main(args, extra_args):
+  if args.dry_run:
+    logging.info('Dry-run mode, not actually deploying anything.')
+
+  dashboard_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+  _AddToPathIfNeeded(dashboard_path)
+  import dashboard
+
+  catapult_path = os.path.dirname(dashboard_path)
+  _AddToPathIfNeeded(catapult_path)
+
+  tracing_path = os.path.join(catapult_path, 'tracing')
+  _AddToPathIfNeeded(tracing_path)
+
+  # Initialise the node_runner module to ensure that we have the right modules
+  # available even if we hadn't run the tests or the presubmit.
+  _AddToPathIfNeeded(os.path.join(catapult_path, 'common', 'py_utils'))
+  _AddToPathIfNeeded(os.path.join(catapult_path, 'common', 'node_runner'))
+  from node_runner import node_util
+  node_util.InitNode()
+
+  try:
+    from dashboard_build import preprocess
+    from catapult_build import temp_deployment_dir
+    deployment_paths = dashboard.PathsForDeployment()
+    target_dir = args.target_dir if args.target_dir else None
+    with temp_deployment_dir.TempDeploymentDir(
+        deployment_paths, use_symlinks=not args.copy_files,
+        cleanup=not args.dry_run, reuse_path=target_dir) as tempdir:
+      logging.info('Temporary working directory: %s', tempdir)
+      viewer_dir_path = os.path.join(tempdir, 'vulcanized_histograms_viewer')
+      viewer_html_path = os.path.join(viewer_dir_path,
+                                      'vulcanized_histograms_viewer.html')
+      try:
+        os.mkdir(viewer_dir_path)
+      except OSError:
+        pass
+      with open(viewer_html_path, 'wb') as f:
+        from tracing_build import vulcanize_histograms_viewer
+        s = vulcanize_histograms_viewer.VulcanizeHistogramsViewer()
+        f.write(s.encode('utf-8'))
+
+      preprocess.PackPinpoint(catapult_path, tempdir, deployment_paths)
+      deployment_paths.append(viewer_dir_path)
+      logging.info('Deployment dir is at %s', tempdir)
+
+      if not args.dry_run:
+        from catapult_build import appengine_deploy
+        appengine_deploy.Deploy(deployment_paths, extra_args,
+                                os.environ.get('VERSION'))
+        if not extra_args:
+          logging.info(
+              'Deploying dashboard, api, upload, and pinpoint services')
+          appengine_deploy.Deploy(deployment_paths, [
+              'api.yaml', 'app.yaml', 'upload.yaml', 'upload-processing.yaml',
+              'pinpoint.yaml'
+          ], os.environ.get('VERSION'))
+  except RuntimeError as error:
+    logging.error('Encountered an error: %s', error)
+    sys.exit(1)
+  except subprocess.CalledProcessError as error:
+    logging.error('Failed: %s', error)
+    sys.exit(error.returncode)
+
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '-n',
+      '--dry_run',
+      help='Create the deployment directory but do not actually deploy.',
+      action='store_true')
+  parser.add_argument(
+      '-t',
+      '--target_dir',
+      help='Specify the target directory, instead of creating a new one.')
+  parser.add_argument(
+      '-c',
+      '--copy_files',
+      help='Specify whether to copy files instead of symlinking.',
+      action='store_true')
+  args, extra_args = parser.parse_known_args()
+
+  # Set up the logging from here.
+  logging.basicConfig(
+      stream=sys.stdout,
+      level=logging.INFO,
+      format='[%(asctime)s - %(levelname)s]:\t%(message)s')
+  logging.info('Starting deploy script.')
+  Main(args, extra_args)

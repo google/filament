@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+tr.exportTo('d', function() {
+  /*
+   * This class encapsulates memoization of results of asynchronous processes.
+   * Callers may either subclass and override |process_| or pass |opt_process|
+   * to the constructor. Either way, |get(key)| awaits on |process_(key)| and
+   * memoizes the Promise.
+   * Keys may be of any type, and Promises may resolve with any type.
+   */
+  class AsyncMap {
+    /**
+     * @param {!function(*):Promise} opt_process Async function that takes a key
+     * and returns a Promise that will resolve with the value for the key.
+     */
+    constructor(opt_process) {
+      if (opt_process) this.process_ = opt_process;
+      this.map_ = new Map();
+    }
+
+    get size() {
+      return this.map_.size;
+    }
+
+    async get(key) {
+      if (this.map_.has(key)) return await this.map_.get(key);
+
+      const promise = this.process_(key);
+      this.map_.set(key, promise);
+      return await promise;
+    }
+
+    /**
+     * @param {!Map.<*, Promise>} map
+     */
+    populateForTest(map) {
+      for (const [key, promise] of map) {
+        this.map_.set(key, promise);
+      }
+    }
+
+    reset() {
+      this.map_ = new Map();
+    }
+
+    async process_(key) {
+      throw new Error('Subclasses must override this method.');
+    }
+  }
+
+  return {
+    AsyncMap,
+  };
+});
+</script>

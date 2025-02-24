@@ -1,0 +1,221 @@
+Name
+
+    ATI_vertex_streams
+
+Name Strings
+
+    GL_ATI_vertex_streams
+
+Contact
+
+    Benj Lipchak, AMD (benj.lipchak 'at' amd.com)
+    Evan Hart, NVIDIA (ehart 'at' nvidia.com)
+
+Version
+
+    Date: 11/4/2006
+    Revision: 0.31
+
+Number
+
+    249
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    ARB_vertex_blend is required.
+    This extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension adds the ability to handle sets of auxilliary
+    vertex and normal coordinates. These sets of auxilliary
+    coordinates are termed streams, and can be routed selectively
+    into the blend stages provided by the vertex blending extension.
+    This functionality enables software animation techniques such
+    as keyframe vertex morphing.
+
+    
+
+IP Status
+
+    Unknown, but believed to be none. 
+
+Issues
+
+     
+
+New Procedures and Functions
+
+    void VertexStream{1234}{sifd}(enum stream, T coords)
+    void VertexStream{1234}{sifd}v(enum stream, T coords)
+
+    void NormalStream3{bsifd}(enum stream, T coords)
+    void NormalStream3{bsifd}v(enum stream, T coords)
+
+    void ClientActiveVertexStream(enum stream)
+
+    void VertexBlendEnv{if}(enum pname, T param)
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+      MAX_VERTEX_STREAMS_ATI           0x876B
+
+    Accepted by the <stream> parameters of VertexStream and
+    ClientActiveVertexStream:
+
+      VERTEX_STREAM0_ATI:              0x876C
+      VERTEX_STREAM1_ATI:              0x876D
+      VERTEX_STREAM2_ATI:              0x876E
+      VERTEX_STREAM3_ATI:              0x876F
+      VERTEX_STREAM4_ATI:              0x8770
+      VERTEX_STREAM5_ATI:              0x8771
+      VERTEX_STREAM6_ATI:              0x8772
+      VERTEX_STREAM7_ATI:              0x8773
+
+
+    Accepted by the <pname> parameter of VertexBlendEnv:
+
+      VERTEX_SOURCE_ATI:               0x8774
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    - (2.6, p. 12) Second paragraph changed to:
+
+          "Each vertex is specified with two, three, or four
+          coordinates. In addition, current auxilliary vertices, 
+          a current normal, auxilliary normals, current texture
+          coordinates, and current color may be used in processing
+          each vertex. Normals are used by the GL in lighting
+          calculations; the current normals are three-dimensional
+          vectors that may be set by sending three coordinates that
+          specify them. Texture coordinates determine how a texture
+          image is mapped onto a primitive."
+
+    - (2.6, p. 12) Added after the second paragraph:
+
+          "Each auxilliary set of vertex and normal coordinates
+          is refered to as a vertex stream. The vertex coordinate and
+          normal for a vertex are the 0th stream, and each auxilliary
+          set rpovided by the implementation after that is refered to
+          as the ith stream. The number of streams supported by an
+          implementation is return by Get when the pname parameter is
+          MAX_VERTEX_STREAMS_ATI."
+
+    - (2.6.3, p. 19) First paragraph changed to:
+
+          "The only GL commands that are allowed within any Begin/End
+          pairs are the commands for specifying vertex coordinates,
+          auxilliary vertex coordinates, vertex color, normal
+          coordinates, auxilliary normal coordinates, and texture
+          coordinates (Vertex, VertexStream, Color, Index, Normal,
+          NormalStream, TexCoord), the ArrayElement command (see
+          section 2.8), the EvalCoord and EvalPoint commands (see
+          section 5.1), commands for specifying lighting material
+          parameters (Material commands; see section 2.13.2), display
+          list invocation commands (CallList and CallLists; see
+          section 5.4), and the EdgeFlag command. Executing any other
+          GL command between the execution of a Begin and the
+          corresponding execution of End results in the error
+          INVALID_OPERATION. Executing Begin after Begin has already
+          been executed but before an End is executed generates the
+          INVALID_OPERATION error, as does executing End without
+          a previous corresponding Begin."
+
+    - (2.7, p. 20) Added after the first paragraph:
+
+          "Alternatively, vertices and auxilliary vertices can be
+          specified with the commands
+
+              void VertexStream{234}{sifd}(enum stream, T coords)
+              void VertexStream{234}{sifd}v(enum stream, T coords)
+
+          These commands operate identically the the corresponding
+          Vertex commands, but they may specify which stream the
+          vertex data is to be placed in. If the stream parameter
+          specifies a stream greater than the one minus the maximum
+          number of streams reported by Get, then the error
+          INVALID_ENUM is generated."
+
+    - (2.7, p. 20) Added after the third paragraph:
+
+          "The normals and auxilliary normals may also be specified
+          with the commands
+
+              void NormalStream3{bsifd}(enum stream, T coords)
+              void NormalStream3{bsifd}v(enum stream, T coords)
+
+          These commands operate identically to the corresponding
+          Normal commands, but they allow the specification of which
+          vertex stream the normal is to be used with. If the stream
+          parameter is VERTEX_STREAM0_ATI, then this is the default
+          current normal. Otherwise, it is one of the auxilliary
+          normals. If the stream parameter specifies a stream greater
+          than one minus the maximum number reported by Get, then
+          the error INVALID_ENUM is generated."
+
+    - (2.8, p. 23) Added after the second paragraph:
+
+          "Additionally, auxillary vertex and normal data can be 
+          specified through the VertexPointer and NormalPointer
+          commands. Whether these commands are affecting the primary
+          coordinates or the auxilliary coordinates is controlled by
+          the command:
+
+            void ClientActiveVertexStream(enum stream)
+
+          This sets the current client vertex stream, so that all
+          following VertexPointer and NormalPointer commands
+          affect that client stream. If ClientActiveVertexStream
+          is called with a stream greater than is reported as being
+          supported by get, then the error INVALID_ENUM is
+          generated."
+
+    - (2.10, p. 29) Added after the first paragraph:
+
+          "When vertex blending is enabled, and the vertex is
+          being transformed by multiple modelview matrices,
+          the auxiliary sets of vertex and normal data my be
+          supplied to a vertex unit to be transformed. Each
+          vertex unit transforms its currently selected stream.
+          The active vertex stream for a vertex unit is specified
+          by the command:
+
+            void VertexBlendEnv{if}(enum pname, T param)
+
+          This command changes the active vertex stream for the
+          currently selected vertex stage. Param must be less than
+          the maximum number of streams reported by get. The 
+          select the current vertex stage to effect is done by
+          calling MatrixMode with MODELVIEWn_ARB, where n is
+          the vertex stage." 
+
+
+
+Additions to Chapter 3:
+
+      None
+
+Additions to Chapter 4:
+
+      None
+
+Additions to Chapter 5:
+
+      Open issue with evaluators
+
+Additions to Chapter 6:
+
+      Rather obvious changes to Get
+
+Additions to Appendix A:
+
+      None
+
+
+
+      

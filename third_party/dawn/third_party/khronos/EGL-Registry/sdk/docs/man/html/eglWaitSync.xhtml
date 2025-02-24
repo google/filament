@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglWaitSync - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglWaitSync">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglWaitSync — 
+            Wait in the server for a sync object to be signalled
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglWaitSync</strong>(</code>
+              </td>
+              <td>(EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSync <var class="pdparam">sync</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">flags</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the <abbr class="acronym">EGL</abbr> display connection.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>sync</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the sync object to wait on.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>flags</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies flags controlling wait behavior.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglWaitSync</code> is similar to
+            <code class="function">eglClientWaitSync</code>, but instead of blocking
+            and not returning to the application until
+            <em class="parameter"><code>sync</code></em> is signaled,
+            <code class="function">eglWaitSync</code> returns immediately. On
+            success, <code class="constant">EGL_TRUE</code> is returned, and the
+            server for the client API context will block until
+            <em class="parameter"><code>sync</code></em> is signaled.
+        </p>
+        <p>
+            Note: <code class="function">eglWaitSync</code> allows applications to
+            continue to queue commands from the application in anticipation
+            of the sync being signaled, potentially increasing parallelism
+            between application, client API server code, and the GPU. The
+            server only blocks execution of commands for the specific
+            context on which <code class="function">eglWaitSync</code> was issued;
+            other contexts implemented by the same server are not affected..
+        </p>
+        <p>
+            <em class="parameter"><code>sync</code></em> has the same meaning as for
+            <code class="function">eglClientWaitSync</code>.
+        </p>
+        <p>
+            <em class="parameter"><code>flags</code></em> must be 0.
+        </p>
+        <p>
+            <code class="function">eglWaitSync</code> requires support from the bound
+            client API, and will not succeed unless the same client API
+            properties described for creation of fence syncs in
+            <a class="citerefentry" href="eglCreateSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateSync</span></span></a>
+            are satisfied.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="function">eglWaitSync</code> returns
+            <code class="constant">EGL_FALSE</code> on failure, and does not cause
+            the server for the client API context to block.
+        </p>
+        <p>
+            If the current context for the currently bound client API does
+            not support server waits, an <code class="constant">EGL_BAD_MATCH</code>
+            error is generated.
+        </p>
+        <p>
+            If no context is current for the currently bound client API
+            (i.e., <code class="function">eglGetCurrentContext</code> returns
+            <code class="constant">EGL_NO_CONTEXT</code>), an
+            <code class="constant">EGL_BAD_MATCH</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>display</code></em> does not match the
+            <span class="type">EGLDisplay</span> passed to
+            <code class="function">eglCreateSync</code> when
+            <em class="parameter"><code>sync</code></em> was created, the behavior is
+            undefined.
+        </p>
+        <p>
+            If <em class="parameter"><code>sync</code></em> is not a valid sync object for
+            <em class="parameter"><code>display</code></em>, an
+            <code class="constant">EGL_BAD_PARAMETER</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>flags</code></em> is not 0, an
+            <code class="constant">EGL_BAD_PARAMETER</code> error is generated.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglWaitSync</code> is available only if the EGL
+            version is 1.5 or greater.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglClientWaitSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglClientWaitSync</span></span></a>,
+            <a class="citerefentry" href="eglCreateSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateSync</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentContext</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+test_data
+skp_data
+third_party
+
+images
+tracing_build
+build
+
+app.yaml
+*_test.html
+
+*.gyp
+*.gypi
+*.gn
+
+*.py
+*.pyc

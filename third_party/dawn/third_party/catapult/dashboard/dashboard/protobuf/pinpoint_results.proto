@@ -1,0 +1,25 @@
+// Copyright 2021 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+syntax = "proto3";
+
+package dashboard;
+
+import "dashboard/protobuf/dims.proto";
+import "google/protobuf/timestamp.proto";
+
+// Represents a row in a BigQuery table.
+// Each row maps Dimensions (device, story, etc.) + pairing + metric -> value
+message Result {
+  // Top-level to enable clustering
+  string run_id = 1;
+  string batch_id = 2;
+
+  // Overall job start time
+  google.protobuf.Timestamp job_start_time = 3;
+
+  Dims dims = 4;
+  string metric = 5;
+  repeated float values = 6;
+  int32 attempt_count = 7;
+}

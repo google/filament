@@ -1,0 +1,20 @@
+// Typescript configuration for compile sources and
+// dependent files for usage directly with Node.js. This
+// is useful for running scripts in tools/ directly with Node
+// without including extra dependencies.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "incremental": false,
+    "noEmit": false,
+    "declaration": false,
+  },
+
+  "exclude": [
+    "src/common/runtime/wpt.ts",
+    "src/common/runtime/standalone.ts",
+    "src/common/runtime/helper/test_worker.ts",
+    "src/webgpu/web_platform/worker/worker_launcher.ts"
+  ]
+}

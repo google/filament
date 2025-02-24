@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  const BAR_PADDING = 1;
+  const BAR_WIDTH = 5;
+  const CHART_PADDING_LEFT = 65;
+  const CHART_PADDING_RIGHT = 30;
+  const CHART_PADDING_BOTTOM = 35;
+  const CHART_PADDING_TOP = 20;
+  const AXIS_PADDING_LEFT = 55;
+  const AXIS_PADDING_RIGHT = 30;
+  const AXIS_PADDING_BOTTOM = 35;
+  const AXIS_PADDING_TOP = 20;
+  const AXIS_TICK_SIZE = 5;
+  const AXIS_LABEL_PADDING = 5;
+  const VERTICAL_TICKS = 5;
+  const HUE_CHAR_CODE_ADJUSTMENT = 5.7;
+
+  /**
+   * Provides a chart showing the cumulative time spent in Skia operations
+   * during picture rasterization.
+   *
+   * @constructor
+   */
+  const PictureOpsChartView =
+      tr.ui.b.define('tr-ui-e-chrome-cc-picture-ops-chart-view');
+
+  PictureOpsChartView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.style.display = 'block';
+      this.style.height = '180px';
+      this.style.margin = 0;
+      this.style.padding = 0;
+      this.style.position = 'relative';
+
+      this.picture_ = undefined;
+      this.pictureOps_ = undefined;
+      this.opCosts_ = undefined;
+
+      this.chartScale_ = window.devicePixelRatio;
+
+      this.chart_ = document.createElement('canvas');
+      this.chartCtx_ = this.chart_.getContext('2d');
+      Polymer.dom(this).appendChild(this.chart_);
+
+      this.selectedOpIndex_ = undefined;
+      this.chartWidth_ = 0;
+      this.chartHeight_ = 0;
+      this.dimensionsHaveChanged_ = true;
+
+      this.currentBarMouseOverTarget_ = undefined;
+
+      this.ninetyFifthPercentileCost_ = 0;
+      this.totalOpCost_ = 0;
+
+      this.chart_.addEventListener('click', this.onClick_.bind(this));
+      this.chart_.addEventListener('mousemove', this.onMouseMove_.bind(this));
+      try {
+        new ResizeObserver(this.onResize_.bind(this)).observe(this);
+      } catch (e) {
+        // We can't set up resize observer under polyfill, but not being able
+        // to set up resize observer should not break everything else.
+      }
+
+      this.usePercentileScale_ = false;
+      this.usePercentileScaleCheckbox_ = tr.ui.b.createCheckBox(
+          this, 'usePercentileScale',
+          'PictureOpsChartView.usePercentileScale', false,
+          'Limit to 95%-ile');
+      Polymer.dom(this.usePercentileScaleCheckbox_).classList.add(
+          'use-percentile-scale');
+      this.usePercentileScaleCheckbox_.style.position = 'absolute';
+      this.usePercentileScaleCheckbox_.style.left = 0;
+      this.usePercentileScaleCheckbox_.style.top = 0;
+      Polymer.dom(this).appendChild(this.usePercentileScaleCheckbox_);
+    },
+
+    get dimensionsHaveChanged() {
+      return this.dimensionsHaveChanged_;
+    },
+
+    set dimensionsHaveChanged(dimensionsHaveChanged) {
+      this.dimensionsHaveChanged_ = dimensionsHaveChanged;
+    },
+
+    get usePercentileScale() {
+      return this.usePercentileScale_;
+    },
+
+    set usePercentileScale(usePercentileScale) {
+      this.usePercentileScale_ = usePercentileScale;
+      this.drawChartContents_();
+    },
+
+    get numOps() {
+      return this.opCosts_.length;
+    },
+
+    get selectedOpIndex() {
+      return this.selectedOpIndex_;
+    },
+
+    set selectedOpIndex(selectedOpIndex) {
+      if (selectedOpIndex < 0) throw new Error('Invalid index');
+      if (selectedOpIndex >= this.numOps) throw new Error('Invalid index');
+
+      this.selectedOpIndex_ = selectedOpIndex;
+    },
+
+    get picture() {
+      return this.picture_;
+    },
+
+    set picture(picture) {
+      this.picture_ = picture;
+      this.pictureOps_ = picture.tagOpsWithTimings(picture.getOps());
+      this.currentBarMouseOverTarget_ = undefined;
+      this.processPictureData_();
+      this.dimensionsHaveChanged = true;
+    },
+
+    processPictureData_() {
+      if (this.pictureOps_ === undefined) return;
+
+      let totalOpCost = 0;
+
+      // Take a copy of the picture ops data for sorting.
+      this.opCosts_ = this.pictureOps_.map(function(op) {
+        totalOpCost += op.cmd_time;
+        return op.cmd_time;
+      });
+      this.opCosts_.sort();
+
+      const ninetyFifthPercentileCostIndex = Math.floor(
+          this.opCosts_.length * 0.95);
+      this.ninetyFifthPercentileCost_ =
+          this.opCosts_[ninetyFifthPercentileCostIndex];
+      this.maxCost_ = this.opCosts_[this.opCosts_.length - 1];
+
+      this.totalOpCost_ = totalOpCost;
+    },
+
+    extractBarIndex_(e) {
+      let index = undefined;
+
+      if (this.pictureOps_ === undefined ||
+          this.pictureOps_.length === 0) {
+        return index;
+      }
+
+      const x = e.offsetX;
+      const y = e.offsetY;
+
+      const totalBarWidth = (BAR_WIDTH + BAR_PADDING) * this.pictureOps_.length;
+
+      const chartLeft = CHART_PADDING_LEFT;
+      const chartTop = 0;
+      const chartBottom = this.chartHeight_ - CHART_PADDING_BOTTOM;
+      const chartRight = chartLeft + totalBarWidth;
+
+      if (x < chartLeft || x > chartRight || y < chartTop || y > chartBottom) {
+        return index;
+      }
+
+      index = Math.floor((x - chartLeft) / totalBarWidth *
+          this.pictureOps_.length);
+
+      index = tr.b.math.clamp(index, 0, this.pictureOps_.length - 1);
+
+      return index;
+    },
+
+    onClick_(e) {
+      const barClicked = this.extractBarIndex_(e);
+
+      if (barClicked === undefined) return;
+
+      // If we click on the already selected item we should deselect.
+      if (barClicked === this.selectedOpIndex) {
+        this.selectedOpIndex = undefined;
+      } else {
+        this.selectedOpIndex = barClicked;
+      }
+
+      e.preventDefault();
+
+      tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+    },
+
+    onMouseMove_(e) {
+      const lastBarMouseOverTarget = this.currentBarMouseOverTarget_;
+      this.currentBarMouseOverTarget_ = this.extractBarIndex_(e);
+
+      if (this.currentBarMouseOverTarget_ === lastBarMouseOverTarget) {
+        return;
+      }
+
+      this.drawChartContents_();
+    },
+
+    onResize_() {
+      this.dimensionsHaveChanged = true;
+      this.updateChartContents();
+    },
+
+    scrollSelectedItemIntoViewIfNecessary() {
+      if (this.selectedOpIndex === undefined) {
+        return;
+      }
+
+      const width = this.offsetWidth;
+      const left = this.scrollLeft;
+      const right = left + width;
+      const targetLeft = CHART_PADDING_LEFT +
+          (BAR_WIDTH + BAR_PADDING) * this.selectedOpIndex;
+
+      if (targetLeft > left && targetLeft < right) {
+        return;
+      }
+
+      this.scrollLeft = (targetLeft - width * 0.5);
+    },
+
+    updateChartContents() {
+      if (this.dimensionsHaveChanged) {
+        this.updateChartDimensions_();
+      }
+
+      this.drawChartContents_();
+    },
+
+    updateChartDimensions_() {
+      if (!this.pictureOps_) return;
+
+      let width = CHART_PADDING_LEFT + CHART_PADDING_RIGHT +
+          ((BAR_WIDTH + BAR_PADDING) * this.pictureOps_.length);
+
+      if (width < this.offsetWidth) {
+        width = this.offsetWidth;
+      }
+
+      // Allow the element to be its natural size as set by flexbox, then lock
+      // the width in before we set the width of the canvas.
+      this.chartWidth_ = width;
+      this.chartHeight_ = this.getBoundingClientRect().height;
+
+      // Scale up the canvas according to the devicePixelRatio, then reduce it
+      // down again via CSS. Finally we apply a scale to the canvas so that
+      // things are drawn at the correct size.
+      this.chart_.width = this.chartWidth_ * this.chartScale_;
+      this.chart_.height = this.chartHeight_ * this.chartScale_;
+
+      this.chart_.style.width = this.chartWidth_ + 'px';
+      this.chart_.style.height = this.chartHeight_ + 'px';
+
+      this.chartCtx_.scale(this.chartScale_, this.chartScale_);
+
+      this.dimensionsHaveChanged = false;
+    },
+
+    drawChartContents_() {
+      this.clearChartContents_();
+
+      if (this.pictureOps_ === undefined ||
+          this.pictureOps_.length === 0 ||
+          this.pictureOps_[0].cmd_time === undefined) {
+        this.showNoTimingDataMessage_();
+        return;
+      }
+
+      this.drawSelection_();
+      this.drawBars_();
+      this.drawChartAxes_();
+      this.drawLinesAtTickMarks_();
+      this.drawLineAtBottomOfChart_();
+
+      if (this.currentBarMouseOverTarget_ === undefined) {
+        return;
+      }
+
+      this.drawTooltip_();
+    },
+
+    drawSelection_() {
+      if (this.selectedOpIndex === undefined) {
+        return;
+      }
+
+      const width = (BAR_WIDTH + BAR_PADDING) * this.selectedOpIndex;
+      this.chartCtx_.fillStyle = 'rgb(223, 235, 230)';
+      this.chartCtx_.fillRect(CHART_PADDING_LEFT, CHART_PADDING_TOP,
+          width, this.chartHeight_ - CHART_PADDING_TOP - CHART_PADDING_BOTTOM);
+    },
+
+    drawChartAxes_() {
+      const min = this.opCosts_[0];
+      const max = this.opCosts_[this.opCosts_.length - 1];
+      const height = this.chartHeight_ - AXIS_PADDING_TOP - AXIS_PADDING_BOTTOM;
+
+      const tickYInterval = height / (VERTICAL_TICKS - 1);
+      let tickYPosition = 0;
+      const tickValInterval = (max - min) / (VERTICAL_TICKS - 1);
+      let tickVal = 0;
+
+      this.chartCtx_.fillStyle = '#333';
+      this.chartCtx_.strokeStyle = '#777';
+      this.chartCtx_.save();
+
+      // Translate half a pixel to avoid blurry lines.
+      this.chartCtx_.translate(0.5, 0.5);
+
+      // Sides.
+      this.chartCtx_.beginPath();
+      this.chartCtx_.moveTo(AXIS_PADDING_LEFT, AXIS_PADDING_TOP);
+      this.chartCtx_.lineTo(AXIS_PADDING_LEFT, this.chartHeight_ -
+          AXIS_PADDING_BOTTOM);
+      this.chartCtx_.lineTo(this.chartWidth_ - AXIS_PADDING_RIGHT,
+          this.chartHeight_ - AXIS_PADDING_BOTTOM);
+      this.chartCtx_.stroke();
+      this.chartCtx_.closePath();
+
+      // Y-axis ticks.
+      this.chartCtx_.translate(AXIS_PADDING_LEFT, AXIS_PADDING_TOP);
+
+      this.chartCtx_.font = '10px Arial';
+      this.chartCtx_.textAlign = 'right';
+      this.chartCtx_.textBaseline = 'middle';
+
+      this.chartCtx_.beginPath();
+      for (let t = 0; t < VERTICAL_TICKS; t++) {
+        tickYPosition = Math.round(t * tickYInterval);
+        tickVal = (max - t * tickValInterval).toFixed(4);
+
+        this.chartCtx_.moveTo(0, tickYPosition);
+        this.chartCtx_.lineTo(-AXIS_TICK_SIZE, tickYPosition);
+        this.chartCtx_.fillText(tickVal,
+            -AXIS_TICK_SIZE - AXIS_LABEL_PADDING, tickYPosition);
+      }
+
+      this.chartCtx_.stroke();
+      this.chartCtx_.closePath();
+
+      this.chartCtx_.restore();
+    },
+
+    drawLinesAtTickMarks_() {
+      const height = this.chartHeight_ - AXIS_PADDING_TOP - AXIS_PADDING_BOTTOM;
+      const width = this.chartWidth_ - AXIS_PADDING_LEFT - AXIS_PADDING_RIGHT;
+      const tickYInterval = height / (VERTICAL_TICKS - 1);
+      let tickYPosition = 0;
+
+      this.chartCtx_.save();
+
+      this.chartCtx_.translate(AXIS_PADDING_LEFT + 0.5, AXIS_PADDING_TOP + 0.5);
+      this.chartCtx_.beginPath();
+      this.chartCtx_.strokeStyle = 'rgba(0,0,0,0.05)';
+
+      for (let t = 0; t < VERTICAL_TICKS; t++) {
+        tickYPosition = Math.round(t * tickYInterval);
+
+        this.chartCtx_.moveTo(0, tickYPosition);
+        this.chartCtx_.lineTo(width, tickYPosition);
+        this.chartCtx_.stroke();
+      }
+
+      this.chartCtx_.restore();
+      this.chartCtx_.closePath();
+    },
+
+    drawLineAtBottomOfChart_() {
+      this.chartCtx_.strokeStyle = '#AAA';
+      this.chartCtx_.beginPath();
+      this.chartCtx_.moveTo(0, this.chartHeight_ - 0.5);
+      this.chartCtx_.lineTo(this.chartWidth_, this.chartHeight_ - 0.5);
+      this.chartCtx_.stroke();
+      this.chartCtx_.closePath();
+    },
+
+    drawTooltip_() {
+      const tooltipData = this.pictureOps_[this.currentBarMouseOverTarget_];
+      const tooltipTitle = tooltipData.cmd_string;
+      const tooltipTime = tooltipData.cmd_time.toFixed(4);
+      const toolTipTimePercentage =
+          ((tooltipData.cmd_time / this.totalOpCost_) * 100).toFixed(2);
+
+      const tooltipWidth = 120;
+      const tooltipHeight = 40;
+      const chartInnerWidth = this.chartWidth_ - CHART_PADDING_RIGHT -
+          CHART_PADDING_LEFT;
+      const barWidth = BAR_WIDTH + BAR_PADDING;
+      const tooltipOffset = Math.round((tooltipWidth - barWidth) * 0.5);
+
+      const left = CHART_PADDING_LEFT + this.currentBarMouseOverTarget_ *
+          barWidth - tooltipOffset;
+      const top = Math.round((this.chartHeight_ - tooltipHeight) * 0.5);
+
+      this.chartCtx_.save();
+
+      this.chartCtx_.shadowOffsetX = 0;
+      this.chartCtx_.shadowOffsetY = 5;
+      this.chartCtx_.shadowBlur = 4;
+      this.chartCtx_.shadowColor = 'rgba(0,0,0,0.4)';
+
+      this.chartCtx_.strokeStyle = '#888';
+      this.chartCtx_.fillStyle = '#EEE';
+      this.chartCtx_.fillRect(left, top, tooltipWidth, tooltipHeight);
+
+      this.chartCtx_.shadowColor = 'transparent';
+      this.chartCtx_.translate(0.5, 0.5);
+      this.chartCtx_.strokeRect(left, top, tooltipWidth, tooltipHeight);
+
+      this.chartCtx_.restore();
+
+      this.chartCtx_.fillStyle = '#222';
+      this.chartCtx_.textAlign = 'left';
+      this.chartCtx_.textBaseline = 'top';
+      this.chartCtx_.font = '800 12px Arial';
+      this.chartCtx_.fillText(tooltipTitle, left + 8, top + 8);
+
+      this.chartCtx_.fillStyle = '#555';
+      this.chartCtx_.font = '400 italic 10px Arial';
+      this.chartCtx_.fillText(tooltipTime + 'ms (' +
+          toolTipTimePercentage + '%)', left + 8, top + 22);
+    },
+
+    drawBars_() {
+      let op;
+      let opColor = 0;
+      let opHeight = 0;
+      const opWidth = BAR_WIDTH + BAR_PADDING;
+      let opHover = false;
+
+      const bottom = this.chartHeight_ - CHART_PADDING_BOTTOM;
+      const maxHeight = this.chartHeight_ - CHART_PADDING_BOTTOM -
+          CHART_PADDING_TOP;
+
+      let maxValue;
+      if (this.usePercentileScale) {
+        maxValue = this.ninetyFifthPercentileCost_;
+      } else {
+        maxValue = this.maxCost_;
+      }
+
+      for (let b = 0; b < this.pictureOps_.length; b++) {
+        op = this.pictureOps_[b];
+        opHeight = Math.round(
+            (op.cmd_time / maxValue) * maxHeight);
+        opHeight = Math.max(opHeight, 1);
+        opHover = (b === this.currentBarMouseOverTarget_);
+        opColor = this.getOpColor_(op.cmd_string, opHover);
+
+        if (b === this.selectedOpIndex) {
+          this.chartCtx_.fillStyle = '#FFFF00';
+        } else {
+          this.chartCtx_.fillStyle = opColor;
+        }
+
+        this.chartCtx_.fillRect(CHART_PADDING_LEFT + b * opWidth,
+            bottom - opHeight, BAR_WIDTH, opHeight);
+      }
+    },
+
+    getOpColor_(opName, hover) {
+      const characters = opName.split('');
+
+      const hue = characters.reduce(this.reduceNameToHue, 0) % 360;
+      const saturation = 30;
+      const lightness = hover ? '75%' : '50%';
+
+      return 'hsl(' + hue + ', ' + saturation + '%, ' + lightness + '%)';
+    },
+
+    reduceNameToHue(previousValue, currentValue, index, array) {
+      // Get the char code and apply a magic adjustment value so we get
+      // pretty colors from around the rainbow.
+      return Math.round(previousValue + currentValue.charCodeAt(0) *
+          HUE_CHAR_CODE_ADJUSTMENT);
+    },
+
+    clearChartContents_() {
+      this.chartCtx_.clearRect(0, 0, this.chartWidth_, this.chartHeight_);
+    },
+
+    showNoTimingDataMessage_() {
+      this.chartCtx_.font = '800 italic 14px Arial';
+      this.chartCtx_.fillStyle = '#333';
+      this.chartCtx_.textAlign = 'center';
+      this.chartCtx_.textBaseline = 'middle';
+      this.chartCtx_.fillText('No timing data available.',
+          this.chartWidth_ * 0.5, this.chartHeight_ * 0.5);
+    }
+  };
+
+  return {
+    PictureOpsChartView,
+  };
+});
+</script>

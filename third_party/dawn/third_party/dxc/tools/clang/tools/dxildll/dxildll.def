@@ -1,0 +1,5 @@
+LIBRARY dxil
+
+EXPORTS
+    DxcCreateInstance
+    DxcCreateInstance2

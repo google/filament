@@ -1,0 +1,125 @@
+Name
+
+    ANGLE_request_extension
+
+Name Strings
+
+    GL_ANGLE_request_extension
+
+Contributors
+
+    Geoff Lang
+    James Darpinian
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, October 4, 2019
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 3.0 specification.
+
+Overview
+
+    This extension allows the client to query extensions that can be enabled and
+    explicitly request that an extension be enabled or disabled.
+
+New Procedures and Functions
+
+    void RequestExtension(const char *name)
+
+    void DisableExtension(const char *name)
+
+New Tokens
+
+    Accepted by the <name> parameter of GetString and GetStringi:
+
+        REQUESTABLE_EXTENSIONS_ANGLE      0x93A8
+
+    Accepted by the <value> parameter of the GetInteger* functions:
+
+        NUM_REQUESTABLE_EXTENSIONS_ANGLE  0x93A9
+
+Additions to the OpenGL ES 3.0 Specification
+
+    Add the following paragraph to the end paragraph 4 of section 6.1.6, String
+    Queries:
+
+    "REQUESTABLE_EXTENSIONS_ANGLE returns a list of extensions that can be
+    enabled at runtime by calling RequestExtension."
+
+    Change the following section of paragraph 6 of section 6.1.6, String Queries:
+
+    - "name may only be EXTENSIONS, indicating that the extension name
+    - corresponding to the indexth supported extension should be returned.
+    - <index> may range from zero to the value of NUM_EXTENSIONS minus one"
+    + "name may be EXTENSIONS or REQUESTABLE_EXTENSIONS_ANGLE, indicating that
+    + the extension name corresponding to the indexth supported or requestable
+    + extension should be returned. <index> may range from zero to the value of
+    + NUM_EXTENSIONS and NUM_REQUESTABLE_EXTENSIONS_ANGLE minus one"
+
+    The commands
+
+       void RequestExtension(const char *name)
+       void DisableExtension(const char *name)
+
+    enable or disable the requestable OpenGL ES extension named <name>. If the
+    requested extension was not requestable or disablable, INVALID_OPERATION is
+    generated. Not all requestable extensions can be disabled. There is
+    currently no query for disablable extensions.  This operation is not thread
+    safe, and the application is responsible for ensuring no other context in
+    the share group is accessed by another thread during this operation.
+
+New State
+
+    Add to Table 6.30 (Implementation Dependent Version and Extension Support)
+
+    Get value                        Type Get Cmd     Min Value Description                      Sec.
+    -------------------------------- ---- ----------- --------- -------------------------------- -----
+    NUM_REQUESTABLE_EXTENSIONS_ANGLE Z+   GetIntegerv -         Number of individual requestable 6.1.6
+                                                                extension names
+
+Interactions with the OpenGL ES 2.0 specification:
+
+    Remove all references to GetStringi and NUM_REQUESTABLE_EXTENSIONS_ANGLE.
+
+Issues
+
+    (1) How can the user determine which extensions can be enabled without
+        potentially generating errors?
+
+      This can be solved by:
+      a) Never generate an error in EnableExtensions, simply return false when
+         the extension is not recognized or cannot be enabled.
+      b) Add another query for the extensions that the context supports
+         enabling.
+
+      RESOLVED: Use (b) because it allows the context to explicity advertise
+      which extensions support enabling and doesn't generate errors in the
+      normal use case.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1    Nov 28, 2016  geofflang  Initial version
+      2    Oct 4, 2019   jdarpinian Add DisableExtension

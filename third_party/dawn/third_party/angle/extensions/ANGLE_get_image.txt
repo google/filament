@@ -1,0 +1,227 @@
+Name
+
+    ANGLE_get_image
+
+Name Strings
+
+    GL_ANGLE_get_image
+
+Contributors
+
+    Jamie Madill
+
+Contact
+
+    Jamie Madill (jmadill 'at' google.com)
+
+Notice
+
+    Copyright (c) 2019 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, Sept 15, 2021
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 3.2 specification.
+
+Overview
+
+    This extension allows the OpenGL application to query and read back Texture
+    and Renderbuffer pixel data. The OpenGL context exposes new queries for the
+    implementation pixel format and type similar to glReadPixels. The context
+    also exposes new commands to read back pixel data with these parameters.
+
+New Procedures and Functions
+
+    void GetTexImageANGLE(GLenum target, GLint level, GLenum format, GLenum type,
+                          void *pixels);
+
+    void GetCompressedTexImageANGLE(enum target, int level, void *pixels);
+
+    void GetRenderbufferImageANGLE(GLenum target, GLint level, GLenum format,
+                                   GLenum type, void *pixels);
+
+New Tokens
+
+    None
+
+Additions to the OpenGL ES Specification
+
+    Update section 8.11.2 "Texture Parameter Queries":
+
+    Change "<pname> must be one of IMAGE_FORMAT_COMPATIBILITY_TYPE, TEXTURE_-
+    IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, or one of the symbolic
+    values in table 8.19." to "<pname> must be one of IMAGE_FORMAT_COMPATIBILITY_-
+    TYPE, TEXTURE_IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, IMPLEMENTATION_-
+    COLOR_READ_TYPE, IMPLEMENTATION_COLOR_READ_FORMAT or one of the symbolic
+    values in table 8.19.".
+
+    Add a paragrah: "Querying <pname> with IMPLEMENTATION_COLOR_READ_TYPE or
+    IMPLEMENTATION_COLOR_READ_FORMAT returns the implementation-dependent read
+    format and type for use with GetTexImageANGLE."
+
+    Update section 9.2.6 "Renderbuffer Object Queries":
+
+    Add a paragraph: "If <pname> is IMPLEMENTATION_COLOR_READ_TYPE or
+    IMPLEMENTATION_COLOR_READ_FORMAT then <params> will contain the
+    implementation-dependent read format and type for use with
+    GetRenderbufferImageANGLE."
+
+    Add a section "Texture and Renderbuffer Image Queries":
+
+    Texture and Renderbuffer images may be obtained from a Texture or
+    Renderbuffer with the commands
+
+    void GetTexImageANGLE(GLenum target, GLint level, GLenum format, GLenum type,
+                          void *pixels);
+
+    void GetCompressedTexImageANGLE(GLenum target, GLint level, void *pixels);
+
+    void GetRenderbufferImageANGLE(GLenum target, GLenum format, GLenum type,
+                                   void *pixels);
+
+    For GetTexImageANGLE and GetCompressedTexImageANGLE, <target> specifies the
+    target to which the texture object is bound. target must be one of
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY, indicating
+    a two- or three-dimensional, two-dimensional array, cube map array
+    respectively. <target> may also be one of the targets from table 8.20,
+    indicating the corresponding face of a cube map texture.
+
+    For GetRenderbufferImageANGLE, <target> must be RENDERBUFFER.
+
+    <level> is a level-of-detail number, <format> is a pixel format from table 8.5,
+    and <type> is a pixel type from table 8.4.
+
+    GetTexImageANGLE and GetRenderbufferImageANGLE obtain component groups
+    from a texture or renderbuffer image with the indicated level-of-detail.
+    If <format> is a color format then the components are assigned among R,
+    G, B, and A, starting with the first group in the first row, and
+    continuing by obtaining groups in order from each row and proceeding from
+    the first row to the last, and from the first image to the last for
+    three-dimensional textures. Two-dimensional array and cube map array
+    textures are treated as three-dimensional images, where the layers are
+    treated as rows or images. Cube map textures are treated as
+    three-dimensional images with a depth of 6, where the cube map faces are
+    ordered as image layers as shown in table 8.24.
+
+    If <format> is DEPTH_COMPONENT, DEPTH_STENCIL, or STENCIL_INDEX, then
+    each depth component and/or stencil index is assigned with the same ordering of
+    rows and images.
+
+    These groups are then packed and placed in client or pixel buffer object memory.
+    If a pixel pack buffer is bound (as indicated by a non-zero value of PIXEL_-
+    PACK_BUFFER_BINDING), <pixels> is an offset into the pixel pack buffer;
+    otherwise, <pixels> is a pointer to client memory. Pixel storage modes that are
+    applicable to ReadPixels are applied, as described in table 16.1 and section
+    16.1.2.
+
+    When called, GetCompressedTexImageANGLE writes n ubytes of compressed
+    image data to the pixel pack buffer or client memory pointed to by pixels.
+    n is the value of TEXTURE_COMPRESSED_IMAGE_SIZE for the texture image. The
+    compressed image data is formatted according to the definition of the texture's
+    internal format.
+
+    For three-dimensional, two-dimensional array, cube map array, and cube map
+    textures pixel storage operations are applied as if the image were two-
+    dimensional, except that the additional pixel storage state values
+    PACK_IMAGE_HEIGHT and PACK_SKIP_IMAGES are applied. The correspondence of texels
+    to memory locations is as defined for TexImage3D in section 8.5.
+
+    The row length, number of rows, image depth, and number of images are determined
+    by the size of the texture or renderbuffer image (including any borders).
+
+    Errors:
+
+    An INVALID_ENUM error is generated by GetTexImage if <target> is
+    not one of TEXTURE_2D, TEXTURE_3D, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY,
+    or one of the targets from table 8.20.
+
+    An INVALID_ENUM error is generated by GetRenderbufferImage is <target> is not
+    RENDERBUFFER.
+
+    An INVALID_VALUE error is generated if <level> is negative or larger than
+    the maximum allowable level.
+
+    An INVALID_OPERATION error is generated if any of the following mismatches
+    between <format> and the internal format of the texture or renderbuffer image
+    exist:
+
+      * <format> is a color format (one of the formats in table 8.3 whose target is
+        the color buffer) and the base internal format of the texture or renderbuffer
+        image is not a color format.
+
+      * <format> is DEPTH_COMPONENT and the base internal format is not
+        DEPTH_COMPONENT or DEPTH_STENCIL.
+
+      * <format> is DEPTH_STENCIL and the base internal format is not DEPTH_-
+        STENCIL.
+
+      * <format> is STENCIL_INDEX and the base internal format is not
+        STENCIL_INDEX or DEPTH_STENCIL.
+
+      * <format> is one of the integer formats in table 8.5 and the internal format
+        of the texture or renderbuffer image is not integer, or <format> is not one
+        of the integer formats in table 8.5 and the internal format is integer.
+
+    An INVALID_OPERATION error is generated if a pixel pack buffer object
+    is bound and packing the texture or renderbuffer image into the buffer’s
+    memory would exceed the size of the buffer.
+
+    An INVALID_OPERATION error is generated if a pixel pack buffer object
+    is bound and <pixels> is not evenly divisible by the number of basic machine
+    units needed to store in memory the GL data type corresponding to type (see
+    table 8.4).
+
+    An INVALID_OPERATION error is generated by GetCompressedTexImageANGLE if the
+    texture image is stored with an uncompressed internal format.
+
+Dependencies on ARB_texture_rectangle
+
+    TEXTURE_RECTANGLE is accepted by GetTexImageANGLE and GetRenderbufferImageANGLE.
+
+    An INVALID_VALUE error is generated if <level> is non-zero and the effective
+    <target> is TEXTURE_RECTANGLE.
+
+New State
+
+    Add to table 21.10 "Textures (state per texture object)":
+
+    Get Value                         Type  Get Command            Initial Value   Description                  Section
+    --------------------------------  ----  -----------            -------------   ---------------------------  -------
+    IMPLEMENTATION_COLOR_READ_FORMAT  E     GetTextureParameteriv  empty           Implementation pixel format  8.11.2
+    IMPLEMENTATION_COLOR_READ_TYPE    E     GetTextureParameteriv  empty           Implementation pixel type    8.11.2
+
+    Add to table 21.17 "Renderbuffer (state per renderbuffer object)":
+
+    Get Value                         Type  Get Command                 Initial Value   Description                  Section
+    --------------------------------  ----  -----------                 -------------   ---------------------------  -------
+    IMPLEMENTATION_COLOR_READ_FORMAT  E     GetRenderbufferParameteriv  empty           Implementation pixel format  9.2.6
+    IMPLEMENTATION_COLOR_READ_TYPE    E     GetRenderbufferParameteriv  empty           Implementation pixel type    9.2.6
+
+Issues
+
+    1) Should GetTexImageANGLE/GetRenderbufferImageANGLE only accept IMPLEMENTATION-
+       _COLOR_READ_FORMAT/TYPE or should they behave the same as GetTexImage in GL?
+
+       Resolved: Keep the spec wording closer to the desktop GL version. It should
+       not involve much additional implementation work except for validation.
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      2   Sept 15, 2021  jmadill                Add GetCompressedTexImageANGLE
+      1   Oct 24, 2019   jmadill                Initial version

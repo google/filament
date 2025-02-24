@@ -1,0 +1,19 @@
+/**
+ * Sphinx Doc Design -- Sticky sidebar Overrides
+ */
+
+div.sphinxsidebar {
+    top: 30px;
+    left: 0px;
+    position: fixed;
+    margin: 0;
+    float: none;
+}
+
+div.related {
+    position: fixed;
+}
+
+div.documentwrapper {
+    margin-top: 30px;
+}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram_grouping.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('booleanTags', function() {
+    const aHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(
+            ['video', 'audio']),
+      ]]),
+    });
+    const bHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['audio']),
+      ]]),
+    });
+    const cHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['video']),
+      ]]),
+    });
+    const dHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet([]),
+      ]]),
+    });
+
+    const groupings = tr.v.HistogramGrouping.buildFromTags(
+        ['video', 'audio'], tr.v.d.RESERVED_NAMES.STORY_TAGS);
+    assert.lengthOf(groupings, 2);
+    assert.strictEqual(groupings[0].key, 'videoTag');
+    assert.strictEqual(groupings[1].key, 'audioTag');
+    assert.strictEqual(groupings[0].callback(aHist), 'video');
+    assert.strictEqual(groupings[0].callback(bHist), '~video');
+    assert.strictEqual(groupings[0].callback(cHist), 'video');
+    assert.strictEqual(groupings[0].callback(dHist), '~video');
+    assert.strictEqual(groupings[1].callback(aHist), 'audio');
+    assert.strictEqual(groupings[1].callback(bHist), 'audio');
+    assert.strictEqual(groupings[1].callback(cHist), '~audio');
+    assert.strictEqual(groupings[1].callback(dHist), '~audio');
+  });
+
+  test('keyValueTags', function() {
+    const aHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(['case:load']),
+      ]]),
+    });
+    const bHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(
+            ['case:browse']),
+      ]]),
+    });
+    const cHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet([]),
+      ]]),
+    });
+    const dHist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.STORY_TAGS, new tr.v.d.GenericSet(
+            ['case:load', 'case:browse']),
+      ]]),
+    });
+
+    const groupings = tr.v.HistogramGrouping.buildFromTags(
+        ['case:load', 'case:browse'], tr.v.d.RESERVED_NAMES.STORY_TAGS);
+    assert.lengthOf(groupings, 1);
+    assert.strictEqual(groupings[0].key, 'caseTag');
+    assert.strictEqual(groupings[0].callback(aHist), 'load');
+    assert.strictEqual(groupings[0].callback(bHist), 'browse');
+    assert.strictEqual(groupings[0].callback(cHist), '~case');
+    assert.strictEqual(groupings[0].callback(dHist), 'browse,load');
+  });
+
+  test('histogramNameGrouping', function() {
+    const hist = tr.v.Histogram.create('name', tr.b.Unit.byName.count, []);
+    assert.strictEqual(tr.v.HistogramGrouping.HISTOGRAM_NAME.callback(hist),
+        'name');
+  });
+
+  test('labelGrouping', function() {
+    const hist = tr.v.Histogram.create('name', tr.b.Unit.byName.count, []);
+    assert.strictEqual(tr.v.HistogramGrouping.DISPLAY_LABEL.callback(hist),
+        'Value');
+    hist.diagnostics.set(tr.v.d.RESERVED_NAMES.LABELS,
+        new tr.v.d.GenericSet(['H']));
+    assert.strictEqual(tr.v.HistogramGrouping.DISPLAY_LABEL.callback(hist),
+        'H');
+  });
+
+  test('genericSetGrouping', function() {
+    const grouping = new tr.v.GenericSetGrouping('foo');
+
+    const empty = tr.v.Histogram.create('', tr.b.Unit.byName.count, []);
+    assert.strictEqual(grouping.callback(empty), '');
+
+    const hist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([
+        ['foo', new tr.v.d.GenericSet(['baz', 'bar'])],
+      ]),
+    });
+    assert.strictEqual(grouping.callback(hist), 'bar,baz');
+  });
+
+  test('reservedGenericSetGroupings', function() {
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.ARCHITECTURES), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.BENCHMARKS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.BOTS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.BUILDS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.MASTERS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.MEMORY_AMOUNTS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.OS_NAMES), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.OS_VERSIONS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.PRODUCT_VERSIONS), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.STORIES), tr.v.GenericSetGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.STORYSET_REPEATS), tr.v.GenericSetGrouping);
+  });
+
+  test('dateRangeGrouping', function() {
+    const grouping = new tr.v.DateRangeGrouping('foo');
+
+    const empty = tr.v.Histogram.create('', tr.b.Unit.byName.count, []);
+    assert.strictEqual(grouping.callback(empty), '');
+
+    const hist = tr.v.Histogram.create('', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([
+        ['foo', new tr.v.d.DateRange(15e11)],
+      ]),
+    });
+    assert.strictEqual(grouping.callback(hist),
+        tr.b.formatDate(new Date(15e11)));
+  });
+
+  test('reservedDateRangeGroupings', function() {
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.BENCHMARK_START), tr.v.DateRangeGrouping);
+    assert.instanceOf(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.TRACE_START), tr.v.DateRangeGrouping);
+  });
+});
+</script>

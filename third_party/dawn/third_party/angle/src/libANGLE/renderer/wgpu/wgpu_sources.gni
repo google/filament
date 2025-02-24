@@ -1,0 +1,85 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../../gni/angle.gni")
+
+wgpu_backend_sources = [
+  "BufferWgpu.cpp",
+  "BufferWgpu.h",
+  "CompilerWgpu.cpp",
+  "CompilerWgpu.h",
+  "ContextWgpu.cpp",
+  "ContextWgpu.h",
+  "DeviceWgpu.cpp",
+  "DeviceWgpu.h",
+  "DisplayWgpu.cpp",
+  "DisplayWgpu.h",
+  "DisplayWgpu_api.h",
+  "FenceNVWgpu.cpp",
+  "FenceNVWgpu.h",
+  "FramebufferWgpu.cpp",
+  "FramebufferWgpu.h",
+  "ImageWgpu.cpp",
+  "ImageWgpu.h",
+  "ProgramExecutableWgpu.cpp",
+  "ProgramExecutableWgpu.h",
+  "ProgramPipelineWgpu.cpp",
+  "ProgramPipelineWgpu.h",
+  "ProgramWgpu.cpp",
+  "ProgramWgpu.h",
+  "QueryWgpu.cpp",
+  "QueryWgpu.h",
+  "RenderTargetWgpu.cpp",
+  "RenderTargetWgpu.h",
+  "RenderbufferWgpu.cpp",
+  "RenderbufferWgpu.h",
+  "SamplerWgpu.cpp",
+  "SamplerWgpu.h",
+  "ShaderWgpu.cpp",
+  "ShaderWgpu.h",
+  "SurfaceWgpu.cpp",
+  "SurfaceWgpu.h",
+  "SyncWgpu.cpp",
+  "SyncWgpu.h",
+  "TextureWgpu.cpp",
+  "TextureWgpu.h",
+  "TransformFeedbackWgpu.cpp",
+  "TransformFeedbackWgpu.h",
+  "VertexArrayWgpu.cpp",
+  "VertexArrayWgpu.h",
+  "wgpu_command_buffer.cpp",
+  "wgpu_command_buffer.h",
+  "wgpu_format_table_autogen.cpp",
+  "wgpu_format_utils.cpp",
+  "wgpu_format_utils.h",
+  "wgpu_helpers.cpp",
+  "wgpu_helpers.h",
+  "wgpu_pipeline_state.cpp",
+  "wgpu_pipeline_state.h",
+  "wgpu_utils.cpp",
+  "wgpu_utils.h",
+  "wgpu_wgsl_util.cpp",
+  "wgpu_wgsl_util.h",
+]
+
+if (is_win) {
+  wgpu_backend_sources += [
+    "win32/WindowSurfaceWgpuWin32.cpp",
+    "win32/WindowSurfaceWgpuWin32.h",
+  ]
+}
+
+if (is_mac) {
+  wgpu_backend_sources += [
+    "mac/WindowSurfaceWgpuMetalLayer.h",
+    "mac/WindowSurfaceWgpuMetalLayer.mm",
+  ]
+}
+
+if (angle_use_x11) {
+  wgpu_backend_sources += [
+    "linux/x11/WindowSurfaceWgpuX11.cpp",
+    "linux/x11/WindowSurfaceWgpuX11.h",
+  ]
+}

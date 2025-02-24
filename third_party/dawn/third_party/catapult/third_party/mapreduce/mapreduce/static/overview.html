@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MapReduce Overview</title>
+  <link rel="stylesheet" href="base.css" type="text/css">
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="jquery-json.js"></script>
+  <script type="text/javascript" src="status.js"></script>
+  <script type="text/javascript">
+    $(document).ready(initStatus);
+  </script>
+</head>
+<body>
+
+<div id="butter" style="display: none"></div>
+
+<h1>MapReduce Overview</h1>
+
+<div id="running">
+  <h2>Running jobs</h2>
+  <table id="running-list" class="status-table">
+    <thead style="display: none">
+    <tr>  
+      <th>Status</th>
+      <th>View</th>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Activity</th>
+      <th>Start time</th>
+      <th>Time elapsed</th>
+      <th>Control</th>
+    </tr>
+    </thead>
+
+    <tfoot style="display: none">
+      <tr>
+        <td colspan="8">
+          <a id="running-first-page" style="display: none" href="">First page</a>
+          <a id="running-next-page" style="display: none" href="">Next page &raquo;</a>
+        </td>
+      </tr>
+    </tfoot>
+
+    <tbody>
+      <tr>
+        <td colspan="8">Loading...</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TODO(user): Put launch job behind a twisty -->
+<div id="launch">
+  <h2>Launch job</h2>
+  <div id="launch-control">
+    Loading...
+  </div>
+  <div id="launch-container">
+  </div>
+</div>
+
+<!-- TODO(user): Consider a separate section for completed jobs. -->
+
+</body>
+</html>

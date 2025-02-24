@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/rect.html">
+<link rel="import" href="/tracing/extras/chrome/cc/constants.html">
+<link rel="import" href="/tracing/extras/chrome/cc/region.html">
+<link rel="import" href="/tracing/extras/chrome/cc/tile_coverage_rect.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const constants = tr.e.cc.constants;
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function LayerImplSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  LayerImplSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    preInitialize() {
+      tr.e.cc.preInitializeObject(this);
+
+      this.layerTreeImpl_ = undefined;
+      this.parentLayer = undefined;
+    },
+
+    initialize() {
+      // Defaults.
+      this.invalidation = new tr.e.cc.Region();
+      this.unrecordedRegion = new tr.e.cc.Region();
+      this.pictures = [];
+
+      // Import & validate this.args
+      tr.e.cc.moveRequiredFieldsFromArgsToToplevel(
+          this, ['layerId', 'layerQuad']);
+      tr.e.cc.moveOptionalFieldsFromArgsToToplevel(
+          this, ['children', 'maskLayer', 'replicaLayer',
+            'idealContentsScale', 'geometryContentsScale',
+            'layoutRects', 'usingGpuRasterization']);
+
+      // Leave gpu memory usage in both places.
+      this.gpuMemoryUsageInBytes = this.args.gpuMemoryUsage;
+
+      // Leave bounds in both places.
+      this.bounds = tr.b.math.Rect.fromXYWH(
+          0, 0,
+          this.args.bounds.width, this.args.bounds.height);
+
+      if (this.args.animationBounds) {
+        // AnimationBounds[2] and [5] are the Z-component of the box.
+        this.animationBoundsRect = tr.b.math.Rect.fromXYWH(
+            this.args.animationBounds[0], this.args.animationBounds[1],
+            this.args.animationBounds[3], this.args.animationBounds[4]);
+      }
+
+      // After Slimming Paint v2, compositor no longer knows hierarchy
+      // information. If the children value is undefined, the tracing
+      // data comes from the new version of cc, otherwise we set the
+      // parentLayer as we did before SPv2.
+      if (this.children) {
+        for (let i = 0; i < this.children.length; i++) {
+          this.children[i].parentLayer = this;
+        }
+      }
+      if (this.maskLayer) {
+        this.maskLayer.parentLayer = this;
+      }
+      if (this.replicaLayer) {
+        this.replicaLayer.parentLayer = this;
+      }
+      if (!this.geometryContentsScale) {
+        this.geometryContentsScale = 1.0;
+      }
+      if (!this.idealContentsScale) {
+        this.idealContentsScale = 1.0;
+      }
+
+      this.touchEventHandlerRegion = tr.e.cc.Region.fromArrayOrUndefined(
+          this.args.touchEventHandlerRegion);
+      this.wheelEventHandlerRegion = tr.e.cc.Region.fromArrayOrUndefined(
+          this.args.wheelEventHandlerRegion);
+      this.nonFastScrollableRegion = tr.e.cc.Region.fromArrayOrUndefined(
+          this.args.nonFastScrollableRegion);
+    },
+
+    get layerTreeImpl() {
+      if (this.layerTreeImpl_) {
+        return this.layerTreeImpl_;
+      }
+      if (this.parentLayer) {
+        return this.parentLayer.layerTreeImpl;
+      }
+      return undefined;
+    },
+    set layerTreeImpl(layerTreeImpl) {
+      this.layerTreeImpl_ = layerTreeImpl;
+    },
+
+    get activeLayer() {
+      if (this.layerTreeImpl.whichTree === constants.ACTIVE_TREE) {
+        return this;
+      }
+      const activeTree = this.layerTreeImpl.layerTreeHostImpl.activeTree;
+      return activeTree.findLayerWithId(this.layerId);
+    },
+
+    get pendingLayer() {
+      if (this.layerTreeImpl.whichTree === constants.PENDING_TREE) {
+        return this;
+      }
+      const pendingTree = this.layerTreeImpl.layerTreeHostImpl.pendingTree;
+      return pendingTree.findLayerWithId(this.layerId);
+    }
+  };
+
+  /**
+   * @constructor
+   */
+  function PictureLayerImplSnapshot() {
+    LayerImplSnapshot.apply(this, arguments);
+  }
+
+  PictureLayerImplSnapshot.prototype = {
+    __proto__: LayerImplSnapshot.prototype,
+
+    initialize() {
+      LayerImplSnapshot.prototype.initialize.call(this);
+
+      // Backward compatibility: the new format puts debug info fields under
+      // 'debugInfo', while the old format puts them directly under args.
+      if (this.args.debugInfo) {
+        for (const i in this.args.debugInfo) {
+          this.args[i] = this.args.debugInfo[i];
+        }
+        delete this.args.debugInfo;
+      }
+
+      if (this.args.annotatedInvalidationRects) {
+        this.invalidation = new tr.e.cc.Region();
+        for (const annotatedRect of this.args.annotatedInvalidationRects) {
+          const rect = annotatedRect.geometryRect;
+          rect.reason = annotatedRect.reason;
+          rect.client = annotatedRect.client;
+          this.invalidation.addRect(rect);
+        }
+        delete this.args.annotatedInvalidationRects;
+      } else if (this.args.invalidation) {
+        // Use unannotated invalidation rect if no annotated rects are
+        // available.
+        this.invalidation = tr.e.cc.Region.fromArray(this.args.invalidation);
+      }
+      delete this.args.invalidation;
+
+      if (this.args.unrecordedRegion) {
+        this.unrecordedRegion = tr.e.cc.Region.fromArray(
+            this.args.unrecordedRegion);
+        delete this.args.unrecordedRegion;
+      }
+
+      if (this.args.pictures) {
+        this.pictures = this.args.pictures;
+
+        // The picture list comes in with an unknown ordering. We resort based
+        // on timestamp order so we will draw the base picture first and the
+        // various fixes on top of that.
+        this.pictures.sort(function(a, b) { return a.ts - b.ts; });
+      }
+
+      this.tileCoverageRects = [];
+      if (this.args.coverageTiles) {
+        for (let i = 0; i < this.args.coverageTiles.length; ++i) {
+          const rect = this.args.coverageTiles[i].geometryRect.scale(
+              this.idealContentsScale);
+          const tile = this.args.coverageTiles[i].tile;
+          this.tileCoverageRects.push(new tr.e.cc.TileCoverageRect(rect, tile));
+        }
+        delete this.args.coverageTiles;
+      }
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      PictureLayerImplSnapshot,
+      {
+        typeName: 'cc::PictureLayerImpl'
+      });
+
+  ObjectSnapshot.subTypes.register(
+      LayerImplSnapshot,
+      {
+        typeNames: [
+          'cc::LayerImpl',
+          'cc::DelegatedRendererLayerImpl',
+          'cc::HeadsUpDisplayLayerImpl',
+          'cc::IOSurfaceLayerImpl',
+          'cc::NinePatchLayerImpl',
+          'cc::PictureImageLayerImpl',
+          'cc::ScrollbarLayerImpl',
+          'cc::SolidColorLayerImpl',
+          'cc::SolidColorScrollbarLayerImpl',
+          'cc::SurfaceLayerImpl',
+          'cc::TextureLayerImpl',
+          'cc::TiledLayerImpl',
+          'cc::VideoLayerImpl',
+          'cc::PaintedScrollbarLayerImpl',
+          'ClankPatchLayer',
+          'TabBorderLayer',
+          'CounterLayer'
+        ]
+      });
+
+  return {
+    LayerImplSnapshot,
+    PictureLayerImplSnapshot,
+  };
+});
+</script>

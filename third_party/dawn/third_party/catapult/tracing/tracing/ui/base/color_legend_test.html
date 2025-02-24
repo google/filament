@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/color_legend.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const CompoundEventSelectionState = tr.model.CompoundEventSelectionState;
+
+  function checkSquareColor(colorLegend, expectedColor) {
+    assert.strictEqual(
+        getComputedStyle(colorLegend.$.square).color, expectedColor);
+  }
+
+  test('noLabelSet', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(0, 0, 0)');
+  });
+
+  test('undefinedLabel', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = undefined;
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(0, 0, 0)');
+  });
+
+  test('emptyLabel', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = '';
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(255, 161, 161)');
+  });
+
+  test('nonEmptyLabel', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Frequency';
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(255, 133, 236)');
+  });
+
+  test('longLabel', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Total memory usage';
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(150, 193, 255)');
+  });
+
+  test('directlySetColorId', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.setLabelAndColorId('hello_world', 7 /* colorId */);
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(152, 220, 149)');
+  });
+
+  test('directlyProvidedLabelElement', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.setLabelAndColorId(
+        tr.ui.b.createSpan({textContent: 'hello',
+          className: 'hello-span'}),
+        7 /* colorId */);
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(152, 220, 149)');
+  });
+
+  test('cessObjectSelected', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Object selected';
+    colorLegend.compoundEventSelectionState =
+        CompoundEventSelectionState.EVENT_SELECTED;
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(228, 184, 134)');
+  });
+
+  test('cessSomeAssociatedObjectsSelected', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Some associated objects selected';
+    colorLegend.compoundEventSelectionState =
+        CompoundEventSelectionState.SOME_ASSOCIATED_EVENTS_SELECTED;
+
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(255, 155, 172)');
+  });
+
+  test('cessAllAssociatedObjectsSelected', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'All associated objects selected';
+    colorLegend.compoundEventSelectionState =
+        CompoundEventSelectionState.ALL_ASSOCIATED_EVENTS_SELECTED;
+
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(150, 193, 255)');
+  });
+
+  test('cessObjectAndSomeAssociatedObjectsSelected', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Object and some associated objects selected';
+    colorLegend.compoundEventSelectionState =
+        CompoundEventSelectionState.EVENT_AND_SOME_ASSOCIATED_SELECTED;
+
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(204, 158, 255)');
+  });
+
+  test('cessObjectAndAllAssociatedObjectsSelected', function() {
+    const colorLegend = document.createElement('tr-ui-b-color-legend');
+    colorLegend.label = 'Object and all associated objects selected';
+    colorLegend.compoundEventSelectionState =
+        CompoundEventSelectionState.EVENT_AND_ALL_ASSOCIATED_SELECTED;
+
+    this.addHTMLOutput(colorLegend);
+    checkSquareColor(colorLegend, 'rgb(255, 146, 193)');
+  });
+});
+</script>

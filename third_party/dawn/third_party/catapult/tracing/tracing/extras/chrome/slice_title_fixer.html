@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Some generic slice titles appear very frequently in traces,
+ * like MessageLoop::RunTask. Some of these slices have arguments that give
+ * useful context. This class combine such arguments with the slice title to
+ * generate a more useful title.
+ */
+tr.exportTo('tr.e.chrome', function() {
+  function SliceTitleFixer() {
+  }
+
+  // AsyncSlice uses virtual functions to accomplish something similar to what
+  // we're doing here. If this function ever becomes too complex we may consider
+  // using a similar pattern.
+  SliceTitleFixer.fromEvent = function(event) {
+    if (event.args && event.args.src_func) {
+      return event.title + ' <- ' + event.args.src_func;
+    }
+    return event.title;
+  };
+
+  return {
+    SliceTitleFixer,
+  };
+});
+</script>

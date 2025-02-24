@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/color_scheme.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Class representing a user activity that is running
+ * in the process.
+ * On the Android platform, activities are mapped to Android Activities
+ * running in the foreground of the process.
+ * On Windows/OS X this could for example represent
+ * the currently active window of the process.
+ */
+tr.exportTo('tr.model', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  /**
+   * @constructor
+   * @param {String} name Name of the activity
+   * @param {String} category Category of the activities
+   * @param {String} range The time range where the activity was running
+   * @param {String} args Additional arguments
+   */
+  function Activity(name, category, range, args) {
+    tr.model.TimedEvent.call(this, range.min);
+    this.title = name;
+    this.category = category;
+    this.colorId = ColorScheme.getColorIdForGeneralPurposeString(name);
+    this.duration = range.duration;
+    this.args = args;
+    this.name = name;
+  }
+
+  Activity.prototype = {
+    __proto__: tr.model.TimedEvent.prototype,
+
+    shiftTimestampsForward(amount) {
+      this.start += amount;
+    },
+
+    addBoundsToRange(range) {
+      range.addValue(this.start);
+      range.addValue(this.end);
+    }
+  };
+  return {
+    Activity,
+  };
+});
+</script>

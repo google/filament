@@ -1,0 +1,54 @@
+boto v2.10.0
+============
+
+:date: 2013/08/13
+
+This release adds Mobile Push Notification support to Amazon Simple Notification
+Service, better reporting for Amazon Redshift, SigV4 authorization for Amazon
+Elastic MapReduce & lots of bugfixes.
+
+
+Features
+--------
+
+* Added support for Mobile Push Notifications to SNS. This enables you to send
+  push notifications to mobile devices (such as iOS or Android) using SNS.
+  (:sha:`ccba574`)
+* Added support for better reporting within Redshift. (:sha:`9d55dd3`)
+* Switched Elastic MapReduce to use SigV4 for authorization. (:sha:`b80aa48`)
+
+
+Bugfixes
+--------
+
+* Added the ``MinAdjustmentType`` parameter to EC2 Autoscaling. (:issue:`1562`,
+  :issue:`1619`, :sha:`1760284`, :sha:`2a11fd9`, :sha:`2d14006` &
+  :sha:`b7f1ae1`)
+* Fixed how DynamoDB tracks changes to data in ``Item`` objects, fixing
+  failures with modified sets not being sent. (:issue:`1565`,
+  :sha:`b111fcf` & :sha:`812f9a6`)
+* Updated the CA certificates Boto ships with. (:issue:`1578`, :sha:`4dfadc8`)
+* Fixed how CloudSearch's ``Layer2`` object gets initialized. (:issue:`1629`,
+  :issue:`1630`, :sha:`40b3652` & :sha:`f797ff9`)
+* Fixed the ``-w`` flag in ``s3put``. (:issue:`1637`, :sha:`0865004` &
+  :sha:`3fe70ca`)
+* Added the ``ap-southeast-2`` endpoint for DynamoDB. (:issue:`1621`,
+  :sha:`501b637`)
+* Fixed test suite to run faster. (:sha:`243a67e`)
+* Fixed how non-JSON responses are caught from CloudSearch. (:issue:`1633`,
+  :issue:`1645`, :sha:`d5a5c01`, :sha:`954a50c`, :sha:`915d8ff` &
+  :sha:`4407fcb`)
+* Fixed how ``DeviceIndex`` is parsed from EC2. (:issue:`1632`, :issue:`1646`,
+  :sha:`ff15e1f`, :sha:`8337a0b` & :sha:`27c9b04`)
+* Fixed EC2's ``connect_to_region`` to respect the ``region`` parameter. (
+  :issue:`1616`, :issue:`1654`, :sha:`9c37256`, :sha:`5950d12` & :sha:`b7eebe8`)
+* Added ``modify_network_interface_atribute`` to EC2 connections.
+  (:issue:`1613`, :issue:`1656`, :sha:`e00b601`, :sha:`5b62f27`, :sha:`126f6e9`,
+  :sha:`bbfed1f` & :sha:`0c61293`)
+* Added support for ``param_group`` within RDS. (:issue:`1639`, :sha:`c47baf0`)
+* Added support for using ``Item.partial_save`` to create new records within
+  DynamoDBv2. (:issue:`1660`, :issue:`1521`, :sha:`bfa469f` & :sha:`58a13d7`)
+* Several documentation improvements/fixes:
+
+    * Updated guideline on how core should merge PRs. (:sha:`80a419c`)
+    * Fixed a typo in a CloudFront docstring. (:issue:`1657`, :sha:`1aa0621`)

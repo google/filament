@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/time_display_modes.html">
+<link rel="import" href="/tracing/model/event.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * TimedEvent is a base type for any entity in the trace model with a specific
+   * start and duration.
+   *
+   * @constructor
+   */
+  function TimedEvent(start) {
+    tr.model.Event.call(this);
+    this.start = start;
+    this.duration = 0;
+    this.cpuStart = undefined;
+    this.cpuDuration = undefined;
+    // The set of contexts this event belongs to (order is unimportant). This
+    // array should never be modified.
+    this.contexts = Object.freeze([]);
+  }
+
+  TimedEvent.prototype = {
+    __proto__: tr.model.Event.prototype,
+
+    get end() {
+      return this.start + this.duration;
+    },
+
+    get boundsRange() {
+      return tr.b.math.Range.fromExplicitRange(this.start, this.end);
+    },
+
+    addBoundsToRange(range) {
+      range.addValue(this.start);
+      range.addValue(this.end);
+    },
+
+    // TODO(charliea): Can this be implemented in terms of Event.range()?
+    // Returns true if 'that' TimedEvent is fully contained within 'this' timed
+    // event.
+    bounds(that, opt_precisionUnit) {
+      if (opt_precisionUnit === undefined) {
+        opt_precisionUnit = tr.b.TimeDisplayModes.ms;
+      }
+
+      const startsBefore = opt_precisionUnit.roundedLess(
+          that.start, this.start);
+      const endsAfter = opt_precisionUnit.roundedLess(this.end, that.end);
+      return !startsBefore && !endsAfter;
+    }
+  };
+
+  return {
+    TimedEvent,
+  };
+});
+</script>

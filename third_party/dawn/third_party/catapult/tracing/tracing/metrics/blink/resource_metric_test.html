@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright 2021 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/blink/resource_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('blinkRequestResourceCount_general', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      const mainFrame = { id: '0xdeadbeef', is_main: true };
+      const emitEvent = (time, cat, title, url, duration) => {
+        mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+          cat,
+          title,
+          start: time,
+          duration,
+          args: {url},
+        }));
+      };
+      emitEvent(1000, 'blink.resource', 'ResourceFetcher::requestResource', 'A.js', 0.1);
+      emitEvent(2001, 'blink.resource', 'ignore', 'A.js', 0.1);
+      emitEvent(2002, 'ignore', 'ignore', 'A.js', 0.1);
+      emitEvent(3200, 'blink.resource', 'ResourceFetcher::requestResource', 'b.js', 0.1);
+      emitEvent(4201, 'ignore', 'ResourceFetcher::requestResource', 'b.js', 0.1);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.blinkResourceMetric(histograms, model);
+    const histogram = histograms.getHistogramNamed('blinkRequestResourceCount');
+    assert.strictEqual(histogram.sampleValues.length, 1);
+    assert.strictEqual(histogram.running.count, 1);
+    assert.strictEqual(histogram.running.mean, 2);
+  });
+});

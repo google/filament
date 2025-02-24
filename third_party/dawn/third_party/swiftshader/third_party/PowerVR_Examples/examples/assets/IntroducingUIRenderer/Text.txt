@@ -1,0 +1,23 @@
+This is a UTF8 sequence and can handle many 
+different languages. UTF8 is a multibyte encoding 
+scheme which can accomodate the entire Unicode range.
+
+Αυτή είναι μια ακολουθία UTF8 και μπορεί να 
+χειριστεί πολλές διαφορετικές γλώσσες. Το UTF8 είναι 
+ένα σύστημα κωδικοποίησης multibyte το οποίο
+μπορεί να φιλοξενήσει όλη την γκάμα Unicode.
+
+これは、UTF8配列をであり、多くを処理することができます
+異なる言語。 UTF8はマルチバイト符号化方式です。
+全体のUnicodeの範囲に対応できる仕組み。
+
+Celle-ci est une séquence UTF8 et peut gérer de nombreuses 
+langues différentes. UTF8 est un schéma de codage 
+multi octets, qui peut accueillir toute la gamme Unicode.
+
+Jest to sekwencja UTF8 i może obsługiwać wiele 
+różnych językach. UTF8 jest multibyte schemat 
+kodowania, które mogą pomieścić cały zakres Unicode.
+
+Symbols are also supported. Examples are:
+Mathematics: ∫∑∆∈∡∞√∴ Currency: $£¥€₫₧₣¢

@@ -1,0 +1,530 @@
+Name
+
+    ARB_vertex_type_2_10_10_10_rev
+
+Name Strings
+
+    GL_ARB_vertex_type_2_10_10_10_rev
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Daniel Koch, TransGaming
+    Graham Sellers, AMD
+    Jeff Bolz, NVIDIA
+    Jon Leech
+    Contributors to the OES_vertex_type_10_10_10_2 extension
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date: March 8, 2010
+    Author Revision: 14
+
+Number
+
+    ARB Extension #86
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification,
+    compatibility profile.
+
+    OpenGL 1.1 is required.
+
+    The OpenGL 3.2, core profile specification affects the definition of
+    this extension.
+
+    This extension trivially interacts with the OES_vertex_type_10_10_10_2
+    extension.
+
+    This extension interacts with the EXT_vertex_array_bgra extension.
+
+Overview
+
+    This extension adds the following data formats:
+
+    Two new vertex attribute data formats: a signed 2.10.10.10 and an
+    unsigned 2.10.10.10 vertex data format. These vertex data formats
+    describe a 4 component stream which can be used to store normals or
+    other attributes in a quantized form. Normals, tangents, binormals
+    and other vertex attributes can often be specified at reduced
+    precision without introducing noticeable artifacts, reducing the
+    amount of memory and memory bandwidth they consume.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void VertexP2ui(enum type, uint value);
+    void VertexP3ui(enum type, uint value);
+    void VertexP4ui(enum type, uint value);
+    void VertexP2uiv(enum type, const uint *value);
+    void VertexP3uiv(enum type, const uint *value);
+    void VertexP4uiv(enum type, const uint *value);
+    void TexCoordP1ui(enum type, uint coords);
+    void TexCoordP2ui(enum type, uint coords);
+    void TexCoordP3ui(enum type, uint coords);
+    void TexCoordP4ui(enum type, uint coords);
+    void TexCoordP1uiv(enum type, const uint *coords);
+    void TexCoordP2uiv(enum type, const uint *coords);
+    void TexCoordP3uiv(enum type, const uint *coords);
+    void TexCoordP4uiv(enum type, const uint *coords);
+    void MultiTexCoordP1ui(enum texture, enum type, uint coords);
+    void MultiTexCoordP2ui(enum texture, enum type, uint coords);
+    void MultiTexCoordP3ui(enum texture, enum type, uint coords);
+    void MultiTexCoordP4ui(enum texture, enum type, uint coords);
+    void MultiTexCoordP1uiv(enum texture, enum type, const uint *coords);
+    void MultiTexCoordP2uiv(enum texture, enum type, const uint *coords);
+    void MultiTexCoordP3uiv(enum texture, enum type, const uint *coords);
+    void MultiTexCoordP4uiv(enum texture, enum type, const uint *coords);
+    void NormalP3ui(enum type, uint coords);
+    void NormalP3uiv(enum type, const uint *coords);
+    void ColorP3ui(enum type, uint color);
+    void ColorP4ui(enum type, uint color);
+    void ColorP3uiv(enum type, const uint *color);
+    void ColorP4uiv(enum type, const uint *color);
+    void SecondaryColorP3ui(enum type, uint color);
+    void SecondaryColorP3uiv(enum type, const uint *color);
+    void VertexAttribP1ui(uint index, enum type, boolean normalized,
+                          uint value);
+    void VertexAttribP2ui(uint index, enum type, boolean normalized,
+                          uint value);
+    void VertexAttribP3ui(uint index, enum type, boolean normalized,
+                          uint value);
+    void VertexAttribP4ui(uint index, enum type, boolean normalized,
+                          uint value);
+    void VertexAttribP1uiv(uint index, enum type, boolean normalized,
+                          const uint *value);
+    void VertexAttribP2uiv(uint index, enum type, boolean normalized,
+                          const uint *value);
+    void VertexAttribP3uiv(uint index, enum type, boolean normalized,
+                          const uint *value);
+    void VertexAttribP4uiv(uint index, enum type, boolean normalized,
+                          const uint *value);
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexAttribPointer, VertexPointer,
+    NormalPointer, ColorPointer, SecondaryColorPointer, TexCoordPointer,
+    VertexAttribP{1234}ui, VertexP*, TexCoordP*, MultiTexCoordP*, NormalP3ui,
+    ColorP*, SecondaryColorP* and VertexAttribP*
+
+        UNSIGNED_INT_2_10_10_10_REV                     0x8368 (existing core enum)
+        INT_2_10_10_10_REV                              0x8D9F
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (Compatibility Profile) (OpenGL Operation)
+
+    Modifications to Section 2.7 (Vertex Specification)
+
+    Add the following after the discussion of Vertex* on p.30
+
+        Vertex coordinates may be stored as packed components within a
+        larger natural type. Such data may be specified using
+
+            void VertexP{234}ui(enum type, uint coords);
+            void VertexP{234}uiv(enum type, uint *coords);
+
+        These commands specify up to four coordinates as described
+        above, packed into a single natural type as described in Section
+        2.8.1. The <type> parameter must be INT_2_10_10_10_REV or
+        UNSIGNED_INT_2_10_10_10_REV, specifying signed or unsigned data
+        respectively. The first two (x,y), three (x,y,z) or four
+        (x,y,z,w) components of the packed data are consumed by
+        VertexP2ui, VertexP3ui, and VertexP4ui, respectively. Note that
+        in the case of VertexP{234}uiv, <coords> contains the address of
+        a single uint containing the packed coordinate components.
+
+    Add the following after the discussion of TexCoord* on p.30
+
+        Texture coordinates may be stored as packed components within a
+        larger natural type. Such data may be specified using
+
+            void TexCoordP{1234}ui(enum type, uint coords);
+            void TexCoordP{1234}uiv(enum type, uint *coords);
+
+        This command specifies up to four components as described above,
+        packed into a single natural type as described in Section 2.8.1.
+        The <type> parameter must be INT_2_10_10_10_REV or
+        UNSIGNED_INT_2_10_10_10_REV, specifying signed or unsigned data,
+        respectively. The first one (x), two (x,y), three (x,y,z) or
+        four (x,y,z,w) components of the packed data are consumed by
+        TexCoordP1ui{v}, TexCoordP2ui{v}, TexCoordP3ui{v}, and
+        TexCoordP4ui{v}, respectively. Note that in the case
+        TexCoordP{1234}uiv, <coords> contains the address of a single
+        uint containing the packed texture coordinate components.
+
+    Add the following function to the list of prototypes defining
+    MultiTexCoord*
+
+            void MultiTexCoordP{1234}ui(enum texture, enum type, uint coords);
+            void MultiTexCoordP{1234}uiv(enum texture, enum type, uint *coords);
+
+    Add the following after the discussion of Normal3* on p.31
+
+        Normals may be stored as packed components within a larger
+        natural type. Such data may be specified using
+
+            void NormalP3ui(enum type, uint normal);
+            void NormalP3uiv(enum type, uint *normal);
+
+        This specifies a three component normal, packed into the first three
+        (x,y,z) components of the natural type as described in Section 2.8.1.
+        <type> must be INT_2_10_10_10_REV or UNSIGNED_INT_2_10_10_10_REV,
+        specifying signed or unsigned data, respectively.  Individual
+        components are converted to floating-point values according to
+        equations 2.1 and 2.2.  Note that in the case of NormalP3uiv, <normal>
+        contains the address of a single uint containing the packed normal
+        components.
+
+    Add the following after the discussion of Color* and SecondaryColor*
+    on p.32
+
+        RGBA colors may be stored as packed components within a larger
+        natural type. Such data may be specified using
+
+            void ColorP{34}ui(enum type, uint coords);
+            void ColorP{34}uiv(enum type, uint *coords);
+            void SecondaryColorP3ui(enum type, uint coords);
+            void SecondaryColorP3uiv(enum type, uint *coords);
+
+        The ColorP* command sets the primary color similarly to Color*,
+        above. The SecondaryColorP* command sets the secondary color similarly
+        to SecondaryColor*. <type> must be INT_2_10_10_10_REV or
+        UNSIGNED_INT_2_10_10_10_REV, specifying signed or unsigned data,
+        respectively. Colors are packed into a single natural type as
+        described in Section 2.8.1. The first three (x,y,z) or four (x,y,z,w)
+        components of the packed data are consumed by *ColorP3ui* and
+        *ColorP4ui*, respectively.  Individual components are converted to
+        floating-point values according to equations 2.1 and 2.2.  Note that
+        in the case of ColorP{34}uiv and SecondaryColorP3uiv, <coords>
+        contains the address of a single uint containing the packed color
+        components.
+
+    Add the following after the discussion of VertexAttribI* on p.33
+
+        Vertex data may be stored as packed components within a larger
+        natural type. Such data may be specified using
+
+            void VertexAttribP{1234}ui(uint index, enum type, boolean normalized, uint value);
+            void VertexAttribP{1234}uiv(uint index, enum type, boolean normalized, uint *value);
+
+        This command accepts packed data in a single natural type and
+        places it in the generic attribute at slot <index>. The <type>
+        parameter must be INT_2_10_10_10_REV or
+        UNSIGNED_INT_2_10_10_10_REV, specifying signed or unsigned data
+        respectively. The first one (x), two (x,y), three (x,y,z), or
+        four (x,y,z,w) components of the packed data are consumed by
+        VertexAttribP1ui, VertexAttribP2ui, VertexAttribP3ui, and
+        VertexAttribP4ui, respectively. Data specified by VertexAttribP*
+        will be converted to floating point by normalizing if
+        <normalized> is TRUE, and converted directly to floating point
+        otherwise. Note that in the case of VertexAttribP{1234}uiv,
+        <value> contains the address of a single uint containing the
+        packed attribute components.
+
+        The error INVALID_VALUE is generated if <index> is greater or
+        equal to the value of MAX_VERTEX_ATTRIBS. The error INVALID_ENUM
+        is generated if <type> is not INT_2_10_10_10_REV or
+        UNSIGNED_INT_2_10_10_10_REV.
+
+    Modifications to Section 2.8 (Vertex Arrays)
+
+        Add INT_2_10_10_10_REV and UNSIGNED_INT_2_10_10_10_REV as a
+        valid <type> value in Table 2.5 on p.36 for VertexPointer,
+        NormalPointer, ColorPointer, SecondaryColorPointer,
+        TexCoordPointer and VertexAttribPointer
+
+    Modify the pseudo-code explaining ArrayElement as follows (p.38)
+
+        if (normal array enabled) {
+            if (normal array contains packed data)
+                NormalP3uiv(type of data in normal array, normal array element i);
+            else
+                Normal3[type]v(normal array element i);
+        }
+        if (color array enabled) {
+            if (color array contains packed data)
+                ColorP[size]uiv(type of data in color array, color array element i);
+            else
+                Color[size][type]v(color array element i);
+        }
+        if (secondary color array enabled) {
+            if (secondary color array contains packed data)
+                SecondaryColorP3uiv(type of data in secondary color array, secondary color array element i);
+            else
+                SecondaryColor3[type]v(secondary color array element i);
+        }
+        if (fog coordinate array enabled)
+            FogCoord[type]v(fog coordinate array element i);
+        for (j = 0; j < textureUnits; j++) {
+            if (texture coordinate set j array enabled) {
+                if (texture coordinate set j contains packed data)
+                    MultiTexCoordP[size]uiv(TEXTURE0 + j, type of data in texture coordinate set j array element i, texture coordinate set j array element i);
+                else
+                    MultiTexCoord[size][type]v(TEXTURE0 + j, texture coordinate set j array element i);
+            }
+        }
+        if (color index array enabled)
+            Index[type]v(color index array element i);
+        if (edge flag array enabled)
+            EdgeFlagv(edge flag array element i);
+        for (j = 1; j < genericAttributes; j++) {
+            if (generic vertex attribute j array enabled) {
+                if (generic vertex attribute j array is a pure integer array)
+                    VertexAttribI[size][type]v(j, generic vertex attribute j array element i);
+                else if (generic vertex attribute j array normalization flag is set, and type is not FLOAT or DOUBLE) {
+                    if (generic vertex attribute j contains packed data)
+                        VertexAttribP[size]uiv(j, type of data in generic vertex attribute j, TRUE, generic vertex attribute j array element i);
+                    else
+                        VertexAttrib[size]N[type]v(j, generic vertex attribute j array element i);
+                }
+                else if (generic vertex attribute j contains packed data)
+                    VertexAttribP[size]uiv(j, type of data in generic vertex attribute j, FALSE, generic vertex attribute j array element i);
+                else
+                    VertexAttrib[size][type]v(j, generic vertex attribute j array element i);
+            }
+        }
+        if (generic vertex attribute array 0 enabled) {
+            if (generic vertex attribute 0 array is a pure integer array)
+                VertexAttribI[size][type]v(0, generic vertex attribute 0 array element i);
+            else if (generic vertex attribute 0 array normalization flag is set, and type is not FLOAT or DOUBLE) {
+                    if (generic vertex attribute 0 contains packed data)
+                        VertexAttribP[size]uiv(0, type of data in generic vertex attribute 0, TRUE, generic vertex attribute 0 array element i);
+                    else
+                        VertexAttrib[size]N[type]v(0, generic vertex attribute 0 array element i);
+                }
+            else
+                VertexAttrib[size][type]v(0, generic vertex attribute 0 array element i);
+        } else if (vertex array enabled) {
+            if (generic vertex attribute 0 contains packed data)
+                VertexAttribP[size]uiv(0, type of data in generic vertex attribute 0, FALSE, generic vertex attribute 0 array element i);
+            else
+                VertexAttrib[size]N[type]v(0, generic vertex attribute 0 array element i);
+        }
+
+    Add a new section 2.8.1 - Packed Vertex Data Formats, renumber
+    subsequent sections
+
+        UNSIGNED_INT_2_10_10_10_REV and INT_2_10_10_10_REV vertex data
+        formats describe packed, 4 component formats stored in a single
+        32-bit word.
+
+        For the UNSIGNED_INT_2_10_10_10_REV vertex data format, the
+        first (x), second (y), and third (z) components are represented
+        as a 10-bit unsigned integer value, and the fourth (w) component
+        is represented as a 2-bit unsigned integer value.
+
+        For the INT_2_10_10_10_REV vertex data format, the x, y and z
+        components are represented as a 10-bit signed two's complement
+        integer value and the w component is represented as a 2-bit
+        signed two's complement integer value.
+
+        The <normalized> value is used to indicate whether to normalize
+        the data to [0,1] (for unsigned type) or [-1,1] (for signed
+        type). During normalization, the conversion rules specified in
+        equations 2.1 and 2.2 are followed.
+
+        The following figure describes how these components are laid out
+        in a 32-bit word.
+
+  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+  -----------------------------------------------------------------------------------------------
+ |  w  |              z              |              y              |              x              |
+  -----------------------------------------------------------------------------------------------
+
+        If <size> is BGRA, the components are instead laid out as in the following figure
+
+  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+  -----------------------------------------------------------------------------------------------
+ |  w  |              x              |              y              |              z              |
+  -----------------------------------------------------------------------------------------------
+
+        Calls to VertexAttribPointer, VertexPointer, ColorPointer,
+        SecondaryColorPointer or TexCoordPointer with <type> of
+        INT_2_10_10_10_REV and UNSIGNED_INT_2_10_10_10_REV can only be
+        made with <size> = 4 or BGRA. <size> values other than 4 or BGRA
+        will generate an INVALID_OPERATION error.
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on OES_vertex_type_10_10_10_2
+
+    The OpenGL ES extension OES_vertex_type_10_10_10_2 defines the
+    UNSIGNED_INT_10_10_10_2_OES and INT_10_10_10_2_OES types for
+    vertices (although it uses different values for the former than the
+    core GL equivalent token). However, the OES extension did not define
+    a method for specifying individual attributes, which this extension
+    attempts to address through the addition of the VertexAttribP*
+    procedure; the OES extension allows <size> to be 3 in many of the
+    functions where <size> must be either four or BGRA in this
+    extension; and most importantly, uses a different component packing
+    (1010102 vs. 2101010REV) than this extension, reflecting different
+    underlying hardware capabilities.
+
+    Therefore while the purpose of the two extensions is similar, they
+    are not functionally, source-level, or data-level compatible.
+
+Dependencies with EXT_vertex_array_bgra
+
+    If EXT_vertex_array_bgra is not supported, remove references to BGRA as an
+    allowed parameter for <size> in VertexAttrib.
+
+Interaction with OpenGL 3.2, Core Profile
+
+    When using a core profile of OpenGL 3.2, remove references to
+    VertexPointer, NormalPointer, ColorPointer, SecondaryColorPointer,
+    and TexCoordPointer. Also, remove references to VertexP*,
+    NormalP3ui, TexCoordP*, ColorP*, and SecondaryColorP*.
+
+Errors
+
+    The error INVALID_ENUM is generated by VertexP*, NormalP*,
+    TexCoordP*, MultiTexCoordP*, ColorP*, or SecondaryColorP if <type>
+    is not UNSIGNED_INT_2_10_10_10_REV or INT_2_10_10_10_REV.
+
+    The error INVALID_OPERATION is generated if VertexAttribPointer is
+    called with <type> = UNSIGNED_INT_2_10_10_10_REV or
+    INT_2_10_10_10_REV, and the <size> parameter is not 4 or BGRA.
+
+    The error INVALID_OPERATION is generated if VertexPointer,
+    ColorPointer, SecondaryColorPointer or TexCoordPointer is called
+    with <type> = UNSIGNED_INT_2_10_10_10_REV or INT_2_10_10_10_REV, and
+    the <size> parameter is not 4 or BGRA.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1. Is it possible to pass unnormalized packed integer data into a
+       shader, for example through an ivec4 input attribute?
+
+       RESOLVED: No, not directly. One solution is to pass a uint input
+       attribute and use shifting and masking in the shader to access
+       the individual components.
+
+    2. What is the value in allowing 1 and 2 component <size>
+       parameters?
+
+       DISCUSSION: While it's unlikely to find much use, it doesn't
+       produce an ambiguous condition. However, only a four component
+       type is defined here, and the additional data may be thrown out
+       by a shader. Further extensions could add support for types that
+       contain only two or three components packed into 32-bit words,
+       such as UNSIGNED_SHORT_5_6_5 or UNSIGNED_INT_24_8. Such an
+       extension could allow the use of 2 or 3 as a <size> parameter.
+
+    3. What about packed 16-bit formats such as UNSIGNED_SHORT_5_6_6?
+       How do those get passed to the GL?
+
+       RESOLVED: This extension does not add support for any 16-bit
+       types. As a future extension would be required to add such
+       support, that extension could also define the new procedure.
+
+    4. Do we need 'v' versions of the immediate entry-points (i.e. those
+       that take a pointer, such as VertexAttribP4uiv)?
+
+       RESOLVED: They are included for consistency.
+
+    5. What component packing should be used?
+
+       Desktop hardware conventions use 2_10_10_10_REV packing (e.g.
+       xyzw / zyxw packed in reverse order with w occupying the high two
+       bits of a uint) in opposition to OpenGL ES hardware which uses
+       10_10_10_2 packing (with w occupying the low two bits of a uint).
+       Since the intent of this extension is compatibility with existing
+       hardware and performance, we follow the desktop convention
+       despite the incompatibility with the OES extension that results.
+
+    6. SecondaryColorPointer accepts 3 and 4 as <size> parameters with non
+       packed types. Should this extension accept 3 as a size parameter to
+       SecondaryColorPointer for packed types?
+
+       UNRESOLVED: Maybe. It doesn't, though.
+
+    7. This extension provides immediate mode and vertex array APIs to specify
+       fixed-function vertex attributes using packed components.  How are the
+       components interpreted?
+
+       RESOLVED:  For VertexP*, TexCoordP*, and MultiTexCoordP*, components
+       should be converted directly to floating-point values.  For NormalP*,
+       ColorP*, and SecondaryColorP*, they should produce normalized [0,1] or
+       [-1,1] values, as appropriate.  For VertexAttribP*, conversion or
+       normalization is controlled by the <normalized> argument.
+
+       Note that this extension does not provide any mechanisms to specify
+       vertex attributes that remain as integers, as can be done using the
+       VertexAttribI* APIs.
+
+Revision History
+
+    Rev.  Date          Author    Changes
+    ----  ------------  --------  ------------------------------------------------------
+    14    Mar 8, 2010   pbrown    Added language clarifying that NormalP*,
+                                  ColorP*, and SecondaryColorP* are always
+                                  normalized.  Also added issue 7.
+    13    Mar 5, 2010   pbrown    Expand the list of new functions to 
+                                  enumerate each function individually.
+    12    Feb 12, 2010  Jon Leech Change errors for invalid combinations of
+                                  otherwise legal parameters to
+                                  INVALID_OPERATION (bug 6014). Correct
+                                  'VertexPointerP*' to 'VertexP*' in
+                                  Errors section.
+    11    Feb 11, 2010  gsellers  Remove SecondaryColorP4*. Add error for non (4
+                                  or BGRA) size parameters to VertexPointer etc.
+                                  Add issue 6.
+    10    Feb 10, 2010  Jon Leech Add const attribute to commands taking arrays.
+     9    Jan 26, 2010  pbrown    Assign enum for INT_2_10_10_10_REV.
+     8    Jan 20, 2010  Jon Leech Update spec to make component ordering match
+                                  desktop hardware. Justify paragraphs.
+     7    Dec 10, 2009  dgkoch    de-ARBed new tokens
+     6    Nov 12, 2009  gsellers  Rename to ARB
+     5    Oct 22, 2009  gsellers  Add 'v' versions of new entry points. Resolve
+                                  issue 4. Update pseudo-code on p.38.
+     4    Oct 9, 2009   gsellers  Add issue 4. Upate dependency on
+                                  OES_vertex_type_10_10_10_2.
+     3    Oct 6, 2009   gsellers  Add ColorP, SecondaryColorP, NormalP. Disallow
+                                  sizes other than 4 or BGRA. Remove duplicate
+                                  dependency on EXT_vertex_array_bgra.
+     2    Oct 5, 2009   gsellers  Minor cleanup. Add support for VertexPointer,
+                                  NormalPointer, ColorPointer, SecondaryColorPointer,
+                                  and TexCoordPointer. Specify interaction with
+                                  BGRA vertex formats.
+     1    Sep 28, 2009  gsellers  Initial version based on GL_OES_vertex_type_10_10_10_2

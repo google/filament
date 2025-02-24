@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-listbox/paper-listbox.html">
+<link rel="import" href="/components/polymer/polymer.html">
+<link rel="import" href="/dashboard/elements/alerts-table.html">
+<link rel="import" href="/dashboard/static/base.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<dom-module id="speed-releasing-alerts">
+  <template>
+    <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    .center {
+      margin: auto;
+      padding: 10px;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    :host {
+      --test-suite-max-width: 15%;
+      --test-suite-width: 11%;
+      --bot-max-width: 10%;
+      --bot-min-width: 10%;
+      --bot-width: 5%;
+      --percent-changed-width: 45px;
+      --absolute-delta-width: 60px;
+    }
+    </style>
+
+    <template is="dom-if" if="{{loading}}">
+      <div id="loading-spinner"><img src="//www.google.com/images/loading.gif">
+      </div>
+    </template>
+    <template is="dom-if" if="{{!loading}}">
+      <template is="dom-if" if="{{error}}">
+        <div class="error">{{error}}</div>
+      </template>
+      <template is="dom-if" if="{{!error}}">
+        <div id="content">
+          <p>{{anomalies.length}} alerts.</p>
+          <alerts-table id="anomaly-table"
+                          xsrf-token="{{xsrfToken}}"
+                          alert-list="{{anomalies}}"
+                          on-sortby="onPushHistoryState"
+                          on-sortdirection="onPushHistoryState"
+                          sort-by="{{sortBy}}"
+                          sort-direction="{{sortDirection}}">
+            </alerts-table>
+        </div>
+      </template>
+    </template>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'speed-releasing-alerts',
+  properties: {
+    tableName: {
+      type: String,
+      notify: true,
+    },
+    loading: {
+      type: Boolean,
+      value: false,
+      notify: true
+    },
+    error: {
+      type: String,
+      value: '',
+      notify: true
+    },
+    xsrfToken: {
+      type: String,
+      value: ''
+    },
+    sortBy: {
+      type: String,
+      value: 'end_revision'
+    },
+    sortDirection: {
+      type: String,
+      value: 'up'
+    }
+  },
+
+  onPushHistoryState(event, detail) {
+    const sender = event.currentTarget;
+    if (!sender) {
+      return;
+    }
+    const params = uri.getAllParameters();
+    params.sortby = sender.sortBy;
+    params.sortdirection = sender.sortDirection;
+    const newUri = uri.getCurrentPathWithParams(params);
+    history.pushState(params, '', newUri);
+  },
+
+  ready() {
+    const params = {};
+    const revA = uri.getParameter('revA');
+    if (revA) {
+      params.revA = revA;
+    }
+    const revB = uri.getParameter('revB');
+    if (revB) {
+      params.revB = revB;
+    }
+    const m = uri.getParameter('m');
+    if (m) {
+      params.m = m;
+    }
+    params.anomalies = true;
+    const path = this.tableName;
+    this.loading = true;
+    simple_xhr.send('/speed_releasing/' + path, params,
+        function(response) {
+          this.anomalies = response.anomalies;
+          this.loading = false;
+        }.bind(this),
+        function(msg) {
+          this.error = msg;
+          this.loading = false;
+        }.bind(this));
+  }
+});
+</script>

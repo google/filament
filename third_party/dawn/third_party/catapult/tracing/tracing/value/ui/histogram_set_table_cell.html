@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/base/name_line_chart.html">
+<link rel="import" href="/tracing/value/ui/histogram_span.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id="tr-v-ui-histogram-set-table-cell">
+  <template>
+    <style>
+    #histogram_container {
+      display: flex;
+      flex-direction: row;
+    }
+
+    #missing, #empty, #unmergeable, #scalar {
+      flex-grow: 1;
+    }
+
+    #open_histogram, #close_histogram, #open_histogram svg, #close_histogram svg {
+      height: 1em;
+    }
+
+    #open_histogram svg {
+      margin-left: 4px;
+      stroke-width: 0;
+      stroke: blue;
+      fill: blue;
+    }
+    :host(:hover) #open_histogram svg {
+      background: blue;
+      stroke: white;
+      fill: white;
+    }
+
+    #scalar {
+      flex-grow: 1;
+      white-space: nowrap;
+    }
+
+    #histogram {
+      flex-grow: 1;
+    }
+
+    #close_histogram svg line {
+      stroke-width: 18;
+      stroke: black;
+    }
+    #close_histogram:hover svg {
+      background: black;
+    }
+    #close_histogram:hover svg line {
+      stroke: white;
+    }
+
+    #overview_container {
+      display: none;
+    }
+    </style>
+
+    <div id="histogram_container">
+      <span id="missing">(missing)</span>
+      <span id="empty">(empty)</span>
+      <span id="unmergeable">(unmergeable)</span>
+
+      <tr-v-ui-scalar-span id="scalar" on-click="openHistogram_"></tr-v-ui-scalar-span>
+
+      <span id="open_histogram" on-click="openHistogram_">
+        <svg viewbox="0 0 128 128">
+          <rect x="16" y="24" width="32" height="16"/>
+          <rect x="16" y="56" width="96" height="16"/>
+          <rect x="16" y="88" width="64" height="16"/>
+        </svg>
+      </span>
+
+      <span id="histogram"></span>
+
+      <span id="close_histogram" on-click="closeHistogram_">
+        <svg viewbox="0 0 128 128">
+          <line x1="28" y1="28" x2="100" y2="100"/>
+          <line x1="28" y1="100" x2="100" y2="28"/>
+        </svg>
+      </span>
+    </div>
+
+    <div id="overview_container">
+    </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-histogram-set-table-cell',
+
+    created() {
+      this.viewState_ = undefined;
+      this.rootListener_ = this.onRootStateUpdate_.bind(this);
+      this.row_ = undefined;
+      this.displayLabel_ = '';
+      this.histogram_ = undefined;
+      this.histogramSpan_ = undefined;
+      this.overviewChart_ = undefined;
+      this.mwuResult_ = undefined;
+    },
+
+    ready() {
+      this.addEventListener('click', this.onClick_.bind(this));
+    },
+
+    attached() {
+      if (this.row) {
+        this.row.rootViewState.addUpdateListener(this.rootListener_);
+      }
+    },
+
+    detached() {
+      this.row.rootViewState.removeUpdateListener(this.rootListener_);
+      // Don't need to removeUpdateListener for the row and cells; their
+      // lifetimes are the same as |this|.
+    },
+
+    updateMwu_() {
+      const referenceHistogram = this.referenceHistogram;
+      this.mwuResult_ = undefined;
+      if (!(this.histogram instanceof tr.v.Histogram)) return;
+      if (!this.histogram.canCompare(referenceHistogram)) return;
+      this.mwuResult_ = tr.b.math.Statistics.mwu(
+          this.histogram.sampleValues,
+          referenceHistogram.sampleValues,
+          this.row.rootViewState.alpha);
+    },
+
+    build(row, displayLabel, viewState) {
+      this.row_ = row;
+      this.displayLabel_ = displayLabel;
+      this.viewState_ = viewState;
+      this.histogram_ = this.row.columns.get(displayLabel);
+
+      if (this.viewState) {
+        // this.viewState is undefined when this.histogram_ is undefined.
+        // In that case, onViewStateUpdate_ wouldn't be able to do anything
+        // anyway.
+        this.viewState.addUpdateListener(this.onViewStateUpdate_.bind(this));
+      }
+      this.row.viewState.addUpdateListener(this.onRowStateUpdate_.bind(this));
+      if (this.isAttached) {
+        this.row.rootViewState.addUpdateListener(this.rootListener_);
+      }
+
+      this.updateMwu_();
+
+      // this.histogram_ and this.referenceHistogram might be undefined,
+      // a HistogramSet of unmergeable Histograms, or a Histogram.
+      this.updateContents_();
+    },
+
+    updateSignificance_() {
+      if (!this.mwuResult_) return;
+      this.$.scalar.significance = this.mwuResult_.significance;
+    },
+
+    get viewState() {
+      return this.viewState_;
+    },
+
+    get row() {
+      return this.row_;
+    },
+
+    get histogram() {
+      return this.histogram_;
+    },
+
+    get referenceHistogram() {
+      const referenceDisplayLabel =
+        this.row.rootViewState.referenceDisplayLabel;
+      if (!referenceDisplayLabel) return undefined;
+      if (referenceDisplayLabel === this.displayLabel_) return undefined;
+      return this.row.columns.get(referenceDisplayLabel);
+    },
+
+    get isHistogramOpen() {
+      return (this.histogramSpan_ !== undefined) &&
+        (this.$.histogram.style.display === 'block');
+    },
+
+    set isHistogramOpen(open) {
+      if (!(this.histogram instanceof tr.v.Histogram) ||
+          (this.histogram.numValues === 0)) {
+        return;
+      }
+
+      // Unfortunately, we can't use a css attribute for this since this stuff
+      // is tied up in all the possible states of this.histogram. See
+      // updateContents_().
+
+      this.$.scalar.style.display = open ? 'none' : 'flex';
+      this.$.open_histogram.style.display = open ? 'none' : 'block';
+
+      this.$.close_histogram.style.display = open ? 'block' : 'none';
+      this.$.histogram.style.display = open ? 'block' : 'none';
+
+      // Wait to create the histogram-span until the user wants to display it
+      // in order to speed up creating lots of histogram-set-table-cells when
+      // building the table.
+      if (open && this.histogramSpan_ === undefined) {
+        this.histogramSpan_ = document.createElement('tr-v-ui-histogram-span');
+        this.histogramSpan_.viewState = this.viewState;
+        this.histogramSpan_.rowState = this.row.viewState;
+        this.histogramSpan_.rootState = this.row.rootViewState;
+        this.histogramSpan_.build(this.histogram, this.referenceHistogram);
+        this.$.histogram.appendChild(this.histogramSpan_);
+      }
+
+      this.viewState.isOpen = open;
+    },
+
+    onViewStateUpdate_(event) {
+      if (event.delta.isOpen) {
+        this.isHistogramOpen = this.viewState.isOpen;
+      }
+    },
+
+    onRowStateUpdate_(event) {
+      if (event.delta.isOverviewed === undefined) return;
+      if (this.row.viewState.isOverviewed) {
+        this.showOverview();
+      } else {
+        this.hideOverview();
+      }
+    },
+
+    onRootStateUpdate_(event) {
+      if (event.delta.referenceDisplayLabel &&
+          this.histogramSpan_) {
+        this.histogramSpan_.build(this.histogram, this.referenceHistogram);
+      }
+
+      if (event.delta.displayStatisticName ||
+          event.delta.referenceDisplayLabel) {
+        this.updateMwu_();
+        this.updateContents_();
+      } else if (event.delta.alpha && this.mwuResult_) {
+        this.mwuResult_.compare(this.row.rootViewState.alpha);
+        this.updateSignificance_();
+      }
+
+      if (this.row.viewState.isOverviewed &&
+          (event.delta.sortColumnIndex ||
+           event.delta.sortDescending ||
+           event.delta.displayStatisticName ||
+           event.delta.referenceDisplayLabel)) {
+        if (this.overviewChart_ !== undefined) {
+          this.$.overview_container.removeChild(this.overviewChart_);
+          this.overviewChart_ = undefined;
+        }
+        this.showOverview();
+      }
+    },
+
+    onClick_(event) {
+      // Since the histogram-set-table's table doesn't support any kind of
+      // selection, clicking anywhere within a row that has subRows will
+      // expand/collapse that row, which can relayout the table and move things
+      // around. Prevent table relayout by preventing the tr-ui-b-table from
+      // receiving the click event.
+      event.stopPropagation();
+    },
+
+    openHistogram_() {
+      this.isHistogramOpen = true;
+      tr.b.Timing.instant('histogram-set-table-cell', 'open');
+    },
+
+    closeHistogram_() {
+      this.isHistogramOpen = false;
+      tr.b.Timing.instant('histogram-set-table-cell', 'close');
+    },
+
+    updateContents_() {
+      const isOpen = this.isHistogramOpen;
+
+      this.$.empty.style.display = 'none';
+      this.$.unmergeable.style.display = 'none';
+      this.$.scalar.style.display = 'none';
+      this.$.histogram.style.display = 'none';
+      this.$.close_histogram.style.display = 'none';
+      this.$.open_histogram.style.visibility = 'hidden';
+
+      if (!this.histogram) {
+        this.$.missing.style.display = 'block';
+        return;
+      }
+
+      this.$.missing.style.display = 'none';
+
+      if (this.histogram instanceof tr.v.HistogramSet) {
+        this.$.unmergeable.style.display = 'block';
+        return;
+      }
+
+      if (!(this.histogram instanceof tr.v.Histogram)) {
+        throw new Error('Invalid Histogram: ' + this.histogram);
+      }
+
+      if (this.histogram.numValues === 0) {
+        this.$.empty.style.display = 'block';
+        return;
+      }
+
+      this.$.open_histogram.style.display = 'block';
+      this.$.open_histogram.style.visibility = 'visible';
+      this.$.scalar.style.display = 'flex';
+
+      this.updateSignificance_();
+
+      const referenceHistogram = this.referenceHistogram;
+      const statName = this.histogram.getAvailableStatisticName(
+          this.row.rootViewState.displayStatisticName, referenceHistogram);
+      const statisticScalar = this.histogram.getStatisticScalar(
+          statName, referenceHistogram);
+      this.$.scalar.setValueAndUnit(
+          statisticScalar.value, statisticScalar.unit);
+
+      this.isHistogramOpen = isOpen;
+    },
+
+    showOverview() {
+      this.$.overview_container.style.display = 'block';
+      if (this.overviewChart_ !== undefined) return;
+
+      this.row.sortSubRows();
+      let referenceDisplayLabel =
+        this.row.rootViewState.referenceDisplayLabel;
+      if (referenceDisplayLabel === this.displayLabel_) {
+        referenceDisplayLabel = undefined;
+      }
+      const displayStatisticName = this.row.rootViewState.displayStatisticName;
+      const data = [];
+      let unit;
+
+      for (const subRow of this.row.subRows) {
+        const subHist = subRow.columns.get(this.displayLabel_);
+        if (!(subHist instanceof tr.v.Histogram)) continue;
+
+        if (unit === undefined) {
+          unit = subHist.unit;
+        } else if (unit !== subHist.unit) {
+          // The subrows have different units, so the overview chart cannot
+          // use a single unit to format all of the values, so don't display
+          // an overview chart at all.
+          data.splice(0);
+          break;
+        }
+
+        const refHist = subRow.columns.get(referenceDisplayLabel);
+        const statName = subHist.getAvailableStatisticName(
+            displayStatisticName, refHist);
+        const statScalar = subHist.getStatisticScalar(
+            statName, refHist);
+
+        if (statScalar !== undefined) {
+          data.push({
+            x: subRow.name,
+            y: statScalar.value,
+          });
+        }
+      }
+      if (data.length < 2) return;
+
+      this.overviewChart_ = new tr.ui.b.NameLineChart();
+      this.$.overview_container.appendChild(this.overviewChart_);
+      this.overviewChart_.displayXInHover = true;
+      this.overviewChart_.hideLegend = true;
+      this.overviewChart_.unit = unit;
+      this.overviewChart_.overrideDataRange = this.row.overviewDataRange;
+      this.overviewChart_.data = data;
+    },
+
+    hideOverview() {
+      this.$.overview_container.style.display = 'none';
+    }
+  });
+
+  return {
+  };
+});
+</script>

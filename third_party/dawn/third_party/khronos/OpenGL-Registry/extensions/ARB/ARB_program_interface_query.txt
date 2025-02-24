@@ -1,0 +1,2001 @@
+Name
+
+    ARB_program_interface_query
+
+Name Strings
+
+    GL_ARB_program_interface_query
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Members of the Khronos OpenGL ARB TSG
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: January 10, 2019
+    Revision:           21
+
+Number
+
+    ARB Extension #134
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    This extension is written against the OpenGL 4.2 Compatibility Profile
+    Specification (January 19, 2012).
+
+    OpenGL 3.0, ARB_transform_feedback, and EXT_transform_feedback affect the
+    definition of this extension.
+
+    OpenGL 3.1 and ARB_uniform_buffer_object affect the definition of this
+    extension.
+
+    OpenGL 4.0 and ARB_shader_subroutine affect the definition of this
+    extension.
+
+    OpenGL 4.2 and ARB_shader_atomic_counters affect the definition of this
+    extension.
+
+    OpenGL 4.3 and ARB_shader_storage_buffer_object affect the definition of
+    this extension.
+
+    OpenGL 4.3 and ARB_arrays_of_arrays affect the definition of this
+    extension.
+
+    OpenGL 4.3 and ARB_compute_shader affect the definition of this extension.
+
+    OpenGL 4.3 and ARB_explicit_uniform_location affect the definition of this
+    extension.
+
+Overview
+
+    This extension provides a single unified set of query commands that can be
+    used by applications to determine properties of various interfaces and
+    resources used by program objects to communicate with application code,
+    fixed-function OpenGL pipeline stages, and other programs.  In unextended
+    OpenGL 4.2, there is a separate set of query commands for each different
+    type of interface or resource used by the program.  These different sets
+    of queries are structured nearly identically, but the queries for some
+    interfaces have limited capability (e.g., there is no ability to enumerate
+    fragment shader outputs).
+
+    With the single set of query commands provided by this extension, a
+    consistent set of queries is available for all interfaces, and a new
+    interface can be added without having to introduce a completely new set of
+    query commands.  These queries are intended to provide a superset of the
+    capabilities provided by similar queries in OpenGL 4.2, and should allow
+    for the deprecation of the existing queries.
+
+    This extension defines two terms:  interfaces and active resources.  Each
+    interface of a program object provides a way for the program to
+    communicate with application code, fixed-function OpenGL pipeline stages,
+    and other programs.  Examples of interfaces for a program object include
+    inputs (receiving values from vertex attributes or outputs of other
+    programs), outputs (sending values to other programs or per-fragment
+    operations), uniforms (receiving values from API calls), uniform blocks
+    (receiving values from bound buffer objects), subroutines and subroutine
+    uniforms (receiving API calls to indicate functions to call during program
+    execution), and atomic counter buffers (holding values to be manipulated
+    by atomic counter shader functions).  Each interface of a program has a
+    set of active resources used by the program.  For example, the resources
+    of a program's input interface includes all active input variables used by
+    the first stage of the program.  The resources of a program's uniform
+    block interface consists of the set of uniform blocks with at least one
+    member used by any shader in the program.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+      void GetProgramInterfaceiv(uint program, enum programInterface,
+                                 enum pname, int *params);
+      uint GetProgramResourceIndex(uint program, enum programInterface,
+                                   const char *name);
+      void GetProgramResourceName(uint program, enum programInterface,
+                                  uint index, sizei bufSize, sizei *length,
+                                  char *name);
+      void GetProgramResourceiv(uint program, enum programInterface,
+                                uint index, sizei propCount,
+                                const enum *props, sizei bufSize,
+                                sizei *length, int *params);
+      int GetProgramResourceLocation(uint program, enum programInterface,
+                                     const char *name);
+      int GetProgramResourceLocationIndex(uint program, enum programInterface,
+                                          const char *name);
+
+New Tokens
+
+    Accepted by the <programInterface> parameter of GetProgramInterfaceiv,
+    GetProgramResourceIndex, GetProgramResourceName, GetProgramResourceiv,
+    GetProgramResourceLocation, and GetProgramResourceLocationIndex:
+
+        UNIFORM                                         0x92E1
+        UNIFORM_BLOCK                                   0x92E2
+        PROGRAM_INPUT                                   0x92E3
+        PROGRAM_OUTPUT                                  0x92E4
+        BUFFER_VARIABLE                                 0x92E5
+        SHADER_STORAGE_BLOCK                            0x92E6
+        ATOMIC_COUNTER_BUFFER                           (already in 4.2)
+        VERTEX_SUBROUTINE                               0x92E8
+        TESS_CONTROL_SUBROUTINE                         0x92E9
+        TESS_EVALUATION_SUBROUTINE                      0x92EA
+        GEOMETRY_SUBROUTINE                             0x92EB
+        FRAGMENT_SUBROUTINE                             0x92EC
+        COMPUTE_SUBROUTINE                              0x92ED
+        VERTEX_SUBROUTINE_UNIFORM                       0x92EE
+        TESS_CONTROL_SUBROUTINE_UNIFORM                 0x92EF
+        TESS_EVALUATION_SUBROUTINE_UNIFORM              0x92F0
+        GEOMETRY_SUBROUTINE_UNIFORM                     0x92F1
+        FRAGMENT_SUBROUTINE_UNIFORM                     0x92F2
+        COMPUTE_SUBROUTINE_UNIFORM                      0x92F3
+        TRANSFORM_FEEDBACK_VARYING                      0x92F4
+
+    Accepted by the <pname> parameter of GetProgramInterfaceiv:
+
+        ACTIVE_RESOURCES                                0x92F5
+        MAX_NAME_LENGTH                                 0x92F6
+        MAX_NUM_ACTIVE_VARIABLES                        0x92F7
+        MAX_NUM_COMPATIBLE_SUBROUTINES                  0x92F8
+
+    Accepted in the <props> array of GetProgramResourceiv:
+
+        NAME_LENGTH                                     0x92F9
+        TYPE                                            0x92FA
+        ARRAY_SIZE                                      0x92FB
+        OFFSET                                          0x92FC
+        BLOCK_INDEX                                     0x92FD
+        ARRAY_STRIDE                                    0x92FE
+        MATRIX_STRIDE                                   0x92FF
+        IS_ROW_MAJOR                                    0x9300
+        ATOMIC_COUNTER_BUFFER_INDEX                     0x9301
+        BUFFER_BINDING                                  0x9302
+        BUFFER_DATA_SIZE                                0x9303
+        NUM_ACTIVE_VARIABLES                            0x9304
+        ACTIVE_VARIABLES                                0x9305
+        REFERENCED_BY_VERTEX_SHADER                     0x9306
+        REFERENCED_BY_TESS_CONTROL_SHADER               0x9307
+        REFERENCED_BY_TESS_EVALUATION_SHADER            0x9308
+        REFERENCED_BY_GEOMETRY_SHADER                   0x9309
+        REFERENCED_BY_FRAGMENT_SHADER                   0x930A
+        REFERENCED_BY_COMPUTE_SHADER                    0x930B
+        TOP_LEVEL_ARRAY_SIZE                            0x930C
+        TOP_LEVEL_ARRAY_STRIDE                          0x930D
+        LOCATION                                        0x930E
+        LOCATION_INDEX                                  0x930F
+        IS_PER_PATCH                                    0x92E7
+
+        NUM_COMPATIBLE_SUBROUTINES                      (already in 4.2)
+        COMPATIBLE_SUBROUTINES                          (already in 4.2)
+
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.14.3, Program Objects (p. 97)
+
+    (insert at the end of the section, p. 101)
+
+    Program Interfaces
+
+    When a program object is made part of the current rendering state, its
+    executable code may communicate with other GL pipeline stages or
+    application code through a variety of /interfaces/.  When a program is
+    linked, the GL builds a list of /active resources/ for each interface.
+    Examples of active resources include variables, interface blocks, and
+    subroutines used by shader code.  Resources referenced in shader code are
+    considered /active/ unless the compiler and linker can conclusively
+    determine that they have no observable effect on the results produced by
+    the executable code of the program.  For example, variables might be
+    considered inactive if they are declared but not used in executable code,
+    used only in a clause of an "if" statement that would never be executed,
+    used only in functions that are never called, or used only in computations
+    of temporary variables having no effect on any shader output.  In cases
+    where the compiler or linker cannot make a conclusive determination, any
+    resource referenced by shader code will be considered active.  The set of
+    active resources on for any interface is implementation-dependent because
+    it depends on various analysis and optimizations performed by the compiler
+    and linker.
+
+    If a program is linked successfully, the GL will generate lists of active
+    resources based on the executable code produced by the link.  If a program
+    is linked unsuccessfully, the link may have failed for a number of
+    reasons, including cases where the program required more resources than
+    supported by the implementation.  Implementations are permitted, but not
+    required, to record lists of resources that would have been considered
+    active had the program linked successfully.  If an implementation does not
+    record information for any given interface, the corresponding list of
+    active resources is considered empty.  If a program has never been linked,
+    all lists of active resources are considered empty.
+
+    The GL provides a number of commands to query properties of the interfaces
+    of a program object.  Each such command accepts a <programInterface>
+    token, identifying a specific interface.  The supported values for
+    <programInterface> are as follows:
+
+      * UNIFORM corresponds to the set of active uniform variables (section
+        2.14.7) used by <program>.
+
+      * UNIFORM_BLOCK corresponds to the set of active uniform blocks (section
+        2.14.7) used by <program>.
+
+      * ATOMIC_COUNTER_BUFFER corresponds to the set of active atomic counter
+        buffer binding points (section 2.14.7) used by <program>.
+
+      * PROGRAM_INPUT corresponds to the set of active input variables used by
+        the first shader stage of <program>.  If <program> includes multiple
+        shader stages, input variables from any shader stage other than the
+        first will not be enumerated.
+
+      * PROGRAM_OUTPUT corresponds to the set of active output variables
+        (section 2.14.11) used by the last shader stage of <program>.  If
+        <program> includes multiple shader stages, output variables from any
+        shader stage other than the last will not be enumerated.
+
+      * VERTEX_SUBROUTINE, TESS_CONTROL_SUBROUTINE,
+        TESS_EVALUATION_SUBROUTINE, GEOMETRY_SUBROUTINE, FRAGMENT_SUBROUTINE,
+        and COMPUTE_SUBROUTINE correspond to the set of active subroutines for
+        the vertex, tessellation control, tessellation evaluation, geometry,
+        fragment, and compute shader stages of <program>, respectively
+        (section 2.14.8).
+
+      * VERTEX_SUBROUTINE_UNIFORM, TESS_CONTROL_SUBROUTINE_UNIFORM,
+        TESS_EVALUATION_SUBROUTINE_UNIFORM, GEOMETRY_SUBROUTINE_UNIFORM,
+        FRAGMENT_SUBROUTINE_UNIFORM, and COMPUTE_SUBROUTINE_UNIFORM correspond
+        to the set of active subroutine uniform variables used by the vertex,
+        tessellation control, tessellation evaluation, geometry, fragment, and
+        compute shader stages of <program>, respectively (section 2.14.8).
+
+      * TRANSFORM_FEEDBACK_VARYING corresponds to the set of output variables
+        in the last non-fragment stage of <program> that would be captured
+        when transform feedback is active (section 2.20.2).
+
+      * BUFFER_VARIABLE corresponds to the set of active buffer variables (see
+        the ARB_shader_storage_buffer_object extension) used by <program>.
+
+      * SHADER_STORAGE_BLOCK corresponds to the set of active shader storage
+        blocks (see the ARB_shader_storage_buffer_object extension) used by
+        <program>.
+
+    When building a list of active variable or interface blocks, resources
+    with aggregate types (such as arrays or structures) may produce multiple
+    entries in the active resource list for the corresponding interface.
+    Additionally, each active variable, interface block, or subroutine in the
+    list is assigned an associated name string that can be used by
+    applications to refer to the resources.  For interfaces involving
+    variables, interface blocks, or subroutines, the entries of active
+    resource lists are generated as follows:
+
+      * For an active variable declared as a single instance of a basic type,
+        a single entry will be generated, using the variable name from the
+        shader source.
+
+      * For an active variable declared as an array of basic types, a single
+        entry will be generated, with its name string formed by concatenating
+        the name of the array and the string "[0]".
+
+      * For an active variable declared as a structure, a separate entry will
+        be generated for each active structure member.  The name of each entry
+        is formed by concatenating the name of the structure, the "."
+        character, and the name of the structure member.  If a structure
+        member to enumerate is itself a structure or array, these enumeration
+        rules are applied recursively.
+
+      * For an active variable declared as an array of an aggregate data type
+        (structures or arrays), a separate entry will be generated for each
+        active array element, unless noted immediately below.  The name of
+        each entry is formed by concatenating the name of the array, the "["
+        character, an integer identifying the element number, and the "]"
+        character.  These enumeration rules are applied recursively, treating
+        each enumerated array element as a separate active variable.
+
+      * For an active shader storage block member declared as an array, an
+        entry will be generated only for the first array element, regardless
+        of its type.  For arrays of aggregate types, the enumeration rules are
+        applied recursively for the single enumerated array element.
+
+      * For an active interface block not declared as an array of block
+        instances, a single entry will be generated, using the block name from
+        the shader source.
+
+      * For an active interface block declared as an array of instances,
+        separate entries will be generated for each active instance.  The name
+        of the instance is formed by concatenating the block name, the "["
+        character, an integer identifying the instance number, and the "]"
+        character.
+
+      * For an active subroutine, a single entry will be generated, using the
+        subroutine name from the shader source.
+
+    When an integer array element or block instance number is part of the name
+    string, it will be specified in decimal form without a "+" or "-" sign or
+    any extra leading zeroes.  Additionally, the name string will not include
+    white space anywhere in the string.
+
+    The order of the active resource list is implementation-dependent for all
+    interfaces except for TRANSFORM_FEEDBACK_VARYING.  For
+    TRANSFORM_FEEDBACK_VARYING, the active resource list will use the variable
+    order specified in the the most recent call to TransformFeedbackVaryings
+    before the last call to LinkProgram.
+
+    For the ATOMIC_COUNTER_BUFFER interface, the list of active buffer binding
+    points is built by identifying each unique binding point associated with
+    one or more active atomic counter uniform variables.  Active atomic
+    counter buffers do not have an associated name string.
+
+    For the UNIFORM, PROGRAM_INPUT, PROGRAM_OUTPUT, and
+    TRANSFORM_FEEDBACK_VARYING interfaces, the active resource list will
+    include all active variables for the interface, including any active
+    built-in variables.
+
+    For PROGRAM_INPUT and PROGRAM_OUTPUT interfaces for shaders that recieve
+    or produce patch primitves, the active resource list will include both
+    per-vertex and per-patch inputs and outputs.
+
+    For the TRANSFORM_FEEDBACK_VARYING interface, the active resource list
+    will entries for the special varying names gl_NextBuffer,
+    gl_SkipComponents1, gl_SkipComponents2, gl_SkipComponents3, and
+    gl_SkipComponents4 (section 2.14.11).  These variables are used to control
+    how varying values are written to transform feedback buffers.  When
+    enumerating the properties of such resources, these variables are
+    considered to have a TYPE of NONE and an ARRAY_SIZE of 0 (gl_NextBuffer),
+    1, 2, 3, and 4, respectively.
+
+    When a program is linked successfully, active variables in the UNIFORM,
+    PROGRAM_INPUT, PROGRAM_OUTPUT interface, or in any of the subroutine
+    uniform interfaces, are assigned one or more signed integer /locations/.
+    These locations can be used by commands to assign values to uniforms and
+    subroutine uniforms, to identify generic vertex attributes associated with
+    vertex shader inputs, or to identify fragment color output numbers and
+    indices associated with fragment shader outputs.  For such variables
+    declared as arrays, separate locations will be assigned to each active
+    array element.  Not all active variables are assigned valid locations; the
+    following variables will have an effective location of -1:
+
+      * uniforms declared as atomic counters;
+
+      * members of a uniform block;
+
+      * built-in inputs, outputs, and uniforms (starting with "gl_"); and
+
+      * inputs or outputs not declared with a "location" layout qualifier,
+        except for vertex shader inputs and fragment shader outputs.
+
+    If a program has not been linked or has was last linked unsuccessfully, no
+    locations will be assigned.
+
+    The command
+
+      void GetProgramInterfaceiv(uint program, enum programInterface,
+                                 enum pname, int *params);
+
+    queries a property of the interface <programInterface> in program
+    <program>, returning its value in <params>.  The property to return is
+    specified by <pname>.
+
+    If <pname> is ACTIVE_RESOURCES, the value returned is the number of
+    resources in the active resource list for <programInterface>.  If the list
+    of active resources for <programInterface> is empty, zero is returned.
+
+    If <pname> is MAX_NAME_LENGTH, the value returned is the length of the
+    longest active name string for an active resource in <programInterface>.
+    This length includes an extra character for the null terminator.  If the
+    list of active resources for <programInterface> is empty, zero is
+    returned.  The error INVALID_OPERATION is generated if <programInterface>
+    is ATOMIC_COUNTER_BUFFER, since active atomic counter buffer resources are
+    not assigned name strings.
+
+    If <pname> is MAX_NUM_ACTIVE_VARIABLES, the value returned is the number
+    of active variables belonging to the interface block or atomic counter
+    buffer resource in <programInterface> with the most active variables.  If
+    the list of active resources for <programInterface> is empty, zero is
+    returned.  The error INVALID_OPERATION is generated if <programInterface>
+    is not UNIFORM_BLOCK, ATOMIC_COUNTER_BUFFER, or SHADER_STORAGE_BLOCK.
+
+    If <pname> is MAX_NUM_COMPATIBLE_SUBROUTINES, the value returned is the
+    number of compatible subroutines belonging to the active subroutine
+    uniform in <programInterface> with the most compatible subroutines.  If
+    the list of active resources for <programInterface> is empty, zero is
+    returned.  The error INVALID_OPERATION is generated unless
+    <programInterface> is VERTEX_SUBROUTINE_UNIFORM,
+    TESS_CONTROL_SUBROUTINE_UNIFORM, TESS_EVALUATION_SUBROUTINE_UNIFORM,
+    GEOMETRY_SUBROUTINE_UNIFORM, FRAGMENT_SUBROUTINE_UNIFORM, or
+    COMPUTE_SUBROUTINE_UNIFORM.
+
+    Each entry in the active resource list for an interface is assigned a
+    unique unsigned integer index in the range 0..<N>-1, where <N> is the
+    number of entries in the active resource list.  The command
+
+      uint GetProgramResourceIndex(uint program, enum programInterface,
+                                   const char *name);
+
+    returns the unsigned integer index assigned to a resource named <name> in
+    the interface type <programInterface> of program object <program>.  The
+    error INVALID_ENUM is generated if <programInterface> is
+    ATOMIC_COUNTER_BUFFER, since active atomic counter buffer resources are
+    not assigned name strings.
+
+    If <name> exactly matches the name string of one of the active resources
+    for <programInterface>, the index of the matched resource is returned.
+    Additionally, if <name> would exactly match the name string of an active
+    resource if "[0]" were appended to <name>, the index of the matched
+    resource is returned.  Otherwise, <name> is considered not to be the name
+    of an active resource, and INVALID_INDEX is returned.  Note that if an
+    interface enumerates a single active resource list entry for an array
+    variable (e.g., "a[0]"), a <name> identifying any array element other than
+    the first (e.g., "a[1]") is not considered to match.
+
+    For the interface TRANSFORM_FEEDBACK_VARYING, the value INVALID_INDEX
+    should be returned when querying the index assigned to the special names
+    "gl_NextBuffer", "gl_SkipComponents1", "gl_SkipComponents2",
+    "gl_SkipComponents3", and "gl_SkipComponents4".
+
+    The command
+
+      void GetProgramResourceName(uint program, enum programInterface,
+                                  uint index, sizei bufSize, sizei *length,
+                                  char *name);
+
+    returns the name string assigned to the single active resource with an
+    index of <index> in the interface <programInterface> of program object
+    <program>.  The error INVALID_VALUE is generated if <index> is greater
+    than or equal to the number of entries in the active resource list for
+    <programInterface>.  The error INVALID_ENUM is generated if
+    <programInterface> is ATOMIC_COUNTER_BUFFER, since active atomic counter
+    buffer resources are not assigned name strings.
+
+    The name string assigned to the active resource identified by <index> is
+    returned as a null-terminated string in <name>.  The actual number of
+    characters written into <name>, excluding the null terminator, is returned
+    in <length>.  If <length> is NULL, no length is returned.  The maximum
+    number of characters that may be written into <name>, including the null
+    terminator, is specified by <bufSize>.  If the length of the name string
+    (including the null terminator) is greater than <bufSize>, the first
+    <bufSize>-1 characters of the name string will be written to <name>,
+    followed by a null terminator.  If <bufSize> is zero, no error will be
+    generated but no characters will be written to <name>.  The length of the
+    longest name string for <programInterface>, including a null terminator,
+    can be queried by calling GetProgramInterfaceiv with a <pname> of
+    MAX_NAME_LENGTH.
+
+    The command
+
+      void GetProgramResourceiv(uint program, enum programInterface,
+                                uint index, sizei propCount,
+                                const enum *props, sizei bufSize,
+                                sizei *length, int *params);
+
+    returns values for multiple properties of a single active resource with an
+    index of <index> in the interface <programInterface> of program object
+    <program>.  For each resource, values for <propCount> properties specified
+    by the array <props> are returned.  The error INVALID_VALUE is generated
+    if <propCount> is zero.  The error INVALID_ENUM is generated if any value
+    in <props> is not one of the properties described immediately below.  The
+    error INVALID_OPERATION is generated if any value in <props> is not
+    allowed for <programInterface>.  The set of allowed <programInterface>
+    values for each property can be found in Table X.1.
+
+    The values associated with the properties of the active resource are
+    written to consecutive entries in <params>, in increasing order according
+    to position in <props>.  If no error is generated, only the first
+    <bufSize> integer values will be written to <params>; any extra values
+    will not be returned.  If <length> is not NULL, the actual number of
+    integer values written to <params> will be written to <length>.
+
+      Property                     Supported Interfaces
+      ---------------------------  ----------------------------------------
+      NAME_LENGTH                  all but ATOMIC_COUNTER_BUFFER
+
+      TYPE                         UNIFORM, PROGRAM_INPUT, PROGRAM_OUTPUT,
+                                     TRANSFORM_FEEDBACK_VARYING,
+                                     BUFFER_VARIABLE
+
+      ARRAY_SIZE                   UNIFORM, BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT, VERTEX_SUBROUTINE_
+                                     UNIFORM, TESS_CONTROL_SUBROUTINE_UNIFORM,
+                                     TESS_EVALUATION_SUBROUTINE_UNIFORM,
+                                     GEOMETRY_SUBROUTINE_UNIFORM, FRAGMENT_
+                                     SUBROUTINE_UNIFORM, COMPUTE_SUBROUTINE_
+                                     UNIFORM, TRANSFORM_FEEDBACK_VARYING
+
+      OFFSET                       UNIFORM, BUFFER_VARIABLE
+      BLOCK_INDEX                  UNIFORM, BUFFER_VARIABLE
+      ARRAY_STRIDE                 UNIFORM, BUFFER_VARIABLE
+      MATRIX_STRIDE                UNIFORM, BUFFER_VARIABLE
+      IS_ROW_MAJOR                 UNIFORM, BUFFER_VARIABLE
+
+      ATOMIC_COUNTER_BUFFER_INDEX  UNIFORM
+
+      BUFFER_BINDING               UNIFORM_BLOCK, ATOMIC_COUNTER_BUFFER,
+                                     SHADER_STORAGE_BLOCK
+      BUFFER_DATA_SIZE             UNIFORM_BLOCK, ATOMIC_COUNTER_BUFFER
+                                     SHADER_STORAGE_BLOCK
+      NUM_ACTIVE_VARIABLES         UNIFORM_BLOCK, ATOMIC_COUNTER_BUFFER
+                                     SHADER_STORAGE_BLOCK
+      ACTIVE_VARIABLES             UNIFORM_BLOCK, ATOMIC_COUNTER_BUFFER
+                                     SHADER_STORAGE_BLOCK
+
+      REFERENCED_BY_VERTEX_        UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        SHADER                       BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      REFERENCED_BY_TESS_          UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        CONTROL_SHADER               BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      REFERENCED_BY_TESS_          UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        EVALUATION_SHADER            BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      REFERENCED_BY_GEOMETRY_      UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        SHADER                       BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      REFERENCED_BY_FRAGMENT_      UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        SHADER                       BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      REFERENCED_BY_COMPUTE_       UNIFORM, UNIFORM_BLOCK, ATOMIC_COUNTER_
+        SHADER                       BUFFER, SHADER_STORAGE_BLOCK,
+                                     BUFFER_VARIABLE, PROGRAM_INPUT,
+                                     PROGRAM_OUTPUT
+
+      NUM_COMPATIBLE_SUBROUTINES   VERTEX_SUBROUTINE_UNIFORM, TESS_CONTROL_
+                                     SUBROUTINE_UNIFORM, TESS_EVALUATION_
+                                     SUBROUTINE_UNIFORM, GEOMETRY_SUBROUTINE_
+                                     UNIFORM, FRAGMENT_SUBROUTINE_UNIFORM,
+                                     COMPUTE_SUBROUTINE_UNIFORM
+
+      COMPATIBLE_SUBROUTINES       VERTEX_SUBROUTINE_UNIFORM, TESS_CONTROL_
+                                     SUBROUTINE_UNIFORM, TESS_EVALUATION_
+                                     SUBROUTINE_UNIFORM, GEOMETRY_SUBROUTINE_
+                                     UNIFORM, FRAGMENT_SUBROUTINE_UNIFORM,
+                                     COMPUTE_SUBROUTINE_UNIFORM
+
+      TOP_LEVEL_ARRAY_SIZE         BUFFER_VARIABLE
+
+      TOP_LEVEL_ARRAY_STRIDE       BUFFER_VARIABLE
+
+      LOCATION                     UNIFORM, PROGRAM_INPUT, PROGRAM_OUTPUT,
+                                     VERTEX_SUBROUTINE_UNIFORM, TESS_CONTROL_
+                                     SUBROUTINE_UNIFORM, TESS_EVALUATION_
+                                     SUBROUTINE_UNIFORM, GEOMETRY_SUBROUTINE_
+                                     UNIFORM, FRAGMENT_SUBROUTINE_UNIFORM,
+                                     COMPUTE_SUBROUTINE_UNIFORM
+
+      LOCATION_INDEX               PROGRAM_OUTPUT
+
+      IS_PER_PATCH                 PROGRAM_INPUT, PROGRAM_OUTPUT
+
+      Table X.1, GetProgramResourceiv properties and supported interfaces
+
+    For the property NAME_LENGTH, a single integer identifying the length of
+    the name string associated with an active variable, interface block, or
+    subroutine is written to <params>.  The name length includes a terminating
+    null character.
+
+    For the property TYPE, a single integer identifying the type of an active
+    variable is written to <params>.  The integer returned is one of the
+    values found in table 2.16.
+
+    For the property COMPATIBLE_SUBROUTINES, an array of integers is written
+    to <params>, with each integer specifying the index of an active
+    subroutine that can be assigned to the selected subroutine uniform. The
+    number of values written to <params> for an active subroutine is given
+    by the value of the property NUM_COMPATIBLE_SUBROUTINES for the
+    resource.
+
+    For the property ARRAY_SIZE, a single integer identifying the number of
+    active array elements of an active variable is written to <params>. The
+    array size returned is in units of the type associated with the property
+    TYPE. For active variables not corresponding to an array of basic types,
+    the value one is written to <params>. If the variable is a shader
+    storage block member in an array with no declared size, the value zero
+    is written to <params>.
+
+    For the property BLOCK_INDEX, a single integer identifying the index of
+    the active interface block containing an active variable is written to
+    <params>.  If the variable is not the member of an interface block, the
+    value -1 is written to <params>.
+
+    For the property OFFSET, a single integer identifying the offset of an
+    active variable is written to <params>.  For active variables backed by a
+    buffer object, the value written is the offset, in basic machine units,
+    relative to the base of buffer range holding the values of the variable.
+    For active variables not backed by a buffer object, an offset of -1 is
+    written to <params>.
+
+    For the property ARRAY_STRIDE, a single integer identifying the stride
+    between array elements in an active variable is written to <params>.  For
+    active variables declared as an array of basic types, the value written is
+    the difference, in basic machine units, between the offsets of consecutive
+    elements in an array.  For active variables not declared as an array of
+    basic types, zero is written to <params>.  For active variables not backed
+    by a buffer object, -1 is written to <params>, regardless of the variable
+    type.
+
+    For the property MATRIX_STRIDE, a single integer identifying the stride
+    between columns of a column-major matrix or rows of a row-major matrix is
+    written to <params>.  For active variables declared a single matrix or
+    array of matrices, the value written is the difference, in basic machine
+    units, between the offsets of consecutive columns or rows in each matrix.
+    For active variables not declared as a matrix or array of matrices, zero
+    is written to <params>.  For active variables not backed by a buffer
+    object, -1 is written to <params>, regardless of the variable type.
+
+    For the property IS_ROW_MAJOR, a single integer identifying whether an
+    active variable is a row-major matrix is written to <params>.  For active
+    variables backed by a buffer object, declared as a single matrix or array
+    of matrices, and stored in row-major order, one is written to <params>.
+    For all other active variables, zero is written to <params>.
+
+    For the property ATOMIC_COUNTER_BUFFER_INDEX, a single integer identifying
+    the index of the active atomic counter buffer containing an active
+    variable is written to <params>.  If the variable is not an atomic counter
+    uniform, the value -1 is written to <params>.
+
+    For the property of BUFFER_BINDING, to index of the buffer binding point
+    associated with the active uniform block, shader storage block, or atomic
+    counter buffer is written to <params>.
+
+    For the property of BUFFER_DATA_SIZE, then the implementation-dependent
+    minimum total buffer object size, in basic machine units, required to hold
+    all active variables associated with an active uniform block, shader
+    storage block, or atomic counter buffer is written to <params>.  If the
+    final member of an active shader storage block is array with no declared
+    size, the minimum buffer size is computed assuming the array was declared
+    as an array with one element.
+
+    For the property of NUM_ACTIVE_VARIABLES, the number of active variables
+    associated with an active uniform block, shader storage block, or atomic
+    counter buffer is written to <params>.
+
+    For the property of ACTIVE_VARIABLES, an array of active variable indices
+    associated with an active uniform block, shader storage block, or atomic
+    counter buffer is written to <params>.  The number of values written to
+    <params> for an active resource is given by the value of the property
+    NUM_ACTIVE_VARIABLES for the resource.
+
+    For the properties REFERENCED_BY_VERTEX_SHADER,
+    REFERENCED_BY_TESS_CONTROL_SHADER, REFERENCED_BY_TESS_EVALUATION_SHADER,
+    REFERENCED_BY_GEOMETRY_SHADER, REFERENCED_BY_FRAGMENT_SHADER, and
+    REFERENCED_BY_COMPUTE_SHADER, a single integer is written to <params>,
+    identifying whether the active resource is referenced by the vertex,
+    tessellation control, tessellation evaluation, geometry, or fragment
+    shaders, respectively, in the program object.  The value one is written to
+    <params> if an active variable is referenced by the corresponding shader,
+    or if an active uniform block, shader storage block, or atomic counter
+    buffer contains at least one variable referenced by the corresponding
+    shader.  Otherwise, the value zero is written to <params>.
+
+    For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying the
+    number of active array elements of the top-level shader storage block
+    member containing to the active variable is written to <params>.  If the
+    top-level block member is not declared as an array, the value one is
+    written to <params>.  If the top-level block member is an array with no
+    declared size, the value zero is written to <params>.
+
+    For the property TOP_LEVEL_ARRAY_STRIDE, a single integer identifying the
+    stride between array elements of the top-level shader storage block member
+    containing the active variable is written to <params>.  For top-level
+    block members declared as arrays, the value written is the difference, in
+    basic machine units, between the offsets of the active variable for
+    consecutive elements in the top-level array.  For top-level block members
+    not declared as an array, zero is written to <params>.
+
+    For the property LOCATION, a single integer identifying the assigned
+    location for an active uniform, input, output, or subroutine uniform
+    variable is written to <params>.  For input, output, or uniform variables
+    with locations specified by a layout qualifier, the specified location is
+    used.  For vertex shader input or fragment shader output variables without
+    a layout qualifier, the location assigned when a program is linked is
+    written to <params>.  For all other input and output variables, the value
+    -1 is written to <params>.  For uniforms in uniform blocks, the value -1
+    is written to <params>.
+
+    For the property LOCATION_INDEX, a single integer identifying the fragment
+    color index of an active fragment shader output variable is written to
+    <params>.  If the active variable is an output for a non-fragment shader,
+    the value -1 will be written to <params>.
+
+    For the property IS_PER_PATCH, a single integer identifying whether the
+    input or output is a per-patch attribute.  If the active variable is a
+    per-patch attribute (declared with the "patch" qualifier), the value one
+    is written to <params>; otherwise, the value zero is written to <params>.
+
+    The commands
+
+      int GetProgramResourceLocation(uint program, enum programInterface,
+                                     const char *name);
+      int GetProgramResourceLocationIndex(uint program, enum programInterface,
+                                          const char *name);
+
+    returns the location or the fragment color index, respectively, assigned
+    to the variable named <name> in interface <programInterface> of program
+    object <program>.  For both commands, the error INVALID_OPERATION is
+    generated if <program> has not been linked or was last linked
+    unsuccessfully.  For GetProgramResourceLocation, <programInterface> must
+    be one of UNIFORM, PROGRAM_INPUT, PROGRAM_OUTPUT,
+    VERTEX_SUBROUTINE_UNIFORM, TESS_CONTROL_SUBROUTINE_UNIFORM,
+    TESS_EVALUATION_SUBROUTINE_UNIFORM, GEOMETRY_SUBROUTINE_UNIFORM,
+    FRAGMENT_SUBROUTINE_UNIFORM, or COMPUTE_SUBROUTINE_UNIFORM.  For
+    GetProgramResourceLocationIndex, <programInterface> must be
+    PROGRAM_OUTPUT.  The value -1 will be returned by either command if an
+    error occurs, if <name> does not identify an active variable on
+    <programInterface>, or if <name> identifies an active variable that does
+    not have a valid location assigned, as described above.  The locations
+    returned by these commands are the same locations returned when querying
+    the LOCATION and LOCATION_INDEX resource properties.
+
+    A string provided to GetProgramResourceLocation or
+    GetProgramResourceLocationIndex is considered to match an active variable
+    if:
+
+      * the string exactly matches the name of the active variable;
+
+      * if the string identifies the base name of an active array, where the
+        string would exactly match the name of the variable if the suffix
+        "[0]" were appended to the string; or
+
+      * if the string identifies an active element of the array, where the
+        string ends with the concatenation of the "[" character, an integer
+        (with no "+" sign, extra leading zeroes, or whitespace) identifying an
+        array element, and the "]" character, the integer is less than the
+        number of active elements of the array variable, and where the string
+        would exactly match the enumerated name of the array if the decimal
+        integer were replaced with zero.
+
+    Any other string is considered not to identify an active variable.  If the
+    string specifies an element of an array variable,
+    GetProgramResourceLocation and GetProgramResourceLocationIndex return the
+    location or fragment color index assigned to that element.  If it
+    specifies the base name of an array, it identifies the resources
+    associated with the first element of the array.
+
+
+    Modify Section 2.14.6, Vertex Attributes, p. 109
+
+    (delete text beginning with the second paragraph of p. 110, through the
+     second paragraph of p. 112)
+
+    (modify the third paragraph, p. 112, removing the first sentence)  The
+    command
+
+      void BindAttribLocation(uint program, uint index, const char *name);
+
+    ...
+
+    (insert after second paragraph, p. 113)
+
+    To determine the set of active vertex attribute variables used by a
+    program, applications can query the properties and active resources of the
+    PROGRAM_INPUT interface of a program including a vertex shader.
+
+    Additionally, the command
+
+      void GetActiveAttrib(uint program, uint index,
+                           sizei bufSize, sizei *length, int *size,
+                           enum *type, char *name);
+
+    can be used to determine properties of the active input variable assigned
+    the index <index> in program object <program>.  If no error occurs, the
+    command is equivalent to calling:
+
+      const enum props[] = { ARRAY_SIZE, TYPE };
+      GetProgramResourceName(program, PROGRAM_INPUT, index, bufSize, length,
+                             name);
+      GetProgramResourceiv(program, PROGRAM_INPUT, index, 1, &props[0],
+                           1, NULL, size);
+      GetProgramResourceiv(program, PROGRAM_INPUT, index, 1, &props[1],
+                           1, NULL, (int *) type);
+
+    If <index> is not the index of an active input variable in <program>, the
+    error INVALID_VALUE is generated.  If <program> does not include a vertex
+    shader, it has no active vertex attributes and the error INVALID_VALUE is
+    generated for all values of <index>.  For GetActiveAttrib, all active
+    vertex shader input variables are enumerated, including the special
+    built-in inputs gl_VertexID and gl_InstanceID.
+
+    The command
+
+      int GetAttribLocation(uint program, const char *name);
+
+    can be used to determine the location assigned to the active input
+    variable named <name> in program object <program>.  The error
+    INVALID_OPERATION is generated and -1 is returned if <program> has not
+    been linked or was last linked unsuccessfully.  If <program> has been
+    successfully linked but contains no vertex shader, no error will be
+    generated but -1 will be returned.  Otherwise, the command is equivalent
+    to calling:
+
+      GetProgramResourceLocation(program, PROGRAM_INPUT, name);
+
+    There is an implementation-dependent limit on the number of active
+    attribute variables [[compatibility profile only:  (either conventional or
+    generic)]] in a vertex shader.  A program with more than
+    MAX_VERTEX_ATTRIBS active attribute variables may fail to link, unless
+    device-dependent optimizations are able to make the program fit within
+    available hardware resources.  For the purposes of this test, attribute
+    variables of the type dvec3, dvec4, dmat2x3, dmat2x4, dmat3, dmat3x4,
+    dmat4x3, and dmat4 may count as consuming twice as many attributes as
+    equivalent single-precision types.  While these types use the same number
+    of generic attributes as their single-precision equivalents,
+    implementations are permitted to consume two single-precision vectors of
+    internal storage for each three- or four-component double-precision
+    vector.
+
+
+    Modify Section 2.14.7, Uniform Variables, p. 113
+
+    (replace text starting with the 3rd paragraph on p. 115 through the 3rd
+    paragraph on p. 127)
+
+    To determine the set of active uniform variables used by a program,
+    applications can query the properties and active resources of the UNIFORM
+    interface of a program.
+
+    Additionally, several dedicated commands are provided to query properties
+    of active uniforms.  The commands
+
+      int GetUniformLocation(uint program, const char *name)
+
+      void GetActiveUniformName(uint program, uint uniformIndex,
+                                sizei bufSize, sizei *length,
+                                char *uniformName);
+
+    are equivalent to calling
+
+      GetProgramResourceLocation(program, UNIFORM, name);
+
+      GetProgramResourceName(program, UNIFORM, uniformIndex, bufSize, length,
+                             uniformName);
+
+    The command
+
+      void GetUniformIndices(uint program, sizei uniformCount,
+                             const char * const *uniformNames,
+                             uint *uniformIndices);
+
+    is equivalent to
+
+      for (int i = 0; i < uniformCount; i++) {
+        uniformIndices[i] =
+          GetProgramResourceIndex(program, UNIFORM, uniformNames[i];
+      }
+
+    The command
+
+      void GetActiveUniform(uint program, uint index, sizei bufSize,
+                            sizei *length, int *size, enum *type,
+                            char *name);
+
+    is equivalent to
+
+      const enum props[] = { ARRAY_SIZE, TYPE };
+      GetProgramResourceName(program, UNIFORM, index, bufSize, length, name);
+      GetProgramResourceiv(program, UNIFORM, index,
+                           1, &props[0], 1, NULL, size);
+      GetProgramResourceiv(program, UNIFORM, index,
+                           1, &props[1], 1, NULL, (int *) type);
+
+    The command
+
+      void GetActiveUniformsiv(uint program, sizei uniformCount,
+                               const uint *uniformIndices, enum pname,
+                               int *params);
+
+    is equivalent to
+
+      GLenum prop;
+      for (int i = 0; i < uniformCount; i++) {
+        GetProgramResourceiv(program, UNIFORM, uniformIndices[i], 1, &prop,
+                             1, NULL, &params[i]);
+      }
+
+    where the value of <prop> is taken from Table X.2, based on the value of
+    <pname>.
+
+        <pname>                         <prop>
+        ------------------------------  ------------------------------
+        UNIFORM_TYPE                    TYPE
+        UNIFORM_SIZE                    ARRAY_SIZE
+        UNIFORM_NAME_LENGTH             NAME_LENGTH
+        UNIFORM_BLOCK_INDEX             BLOCK_INDEX
+        UNIFORM_OFFSET                  OFFSET
+        UNIFORM_ARRAY_STRIDE            ARRAY_STRIDE
+        UNIFORM_MATRIX_STRIDE           MATRIX_STRIDE
+        UNIFORM_IS_ROW_MAJOR            IS_ROW_MAJOR
+        UNIFORM_ATOMIC_COUNTER_         ATOMIC_COUNTER_BUFFER_INDEX
+          BUFFER_INDEX
+
+        Table X.2, GetProgramResourceiv properties used by
+        GetActiveUniformsiv.
+
+    To determine the set of active uniform blocks used by a program,
+    applications can query the properties and active resources of the
+    UNIFORM_BLOCK interface of a program.
+
+    Additionally, several dedicated commands are provided to query properties
+    of active uniform blocks.  The commands
+
+      uint GetUniformBlockIndex(uint program, const char *uniformBlockName);
+
+      void GetActiveUniformBlockName(uint program, uint uniformBlockIndex,
+                                     sizei bufSize, sizei length,
+                                     char *uniformBlockName);
+
+    are equivalent to calling
+
+      GetProgramResourceIndex(program, UNIFORM_BLOCK, uniformBlockName);
+
+    and
+
+      GetProgramResourceName(program, UNIFORM_BLOCK, uniformBlockIndex,
+                             bufSize, length, uniformBlockName);
+
+    The command
+
+      void GetActiveUniformBlockiv(uint program, uint uniformBlockIndex,
+                                   enum pname, int *params);
+
+    is equivalent to calling
+
+      GLenum prop;
+      GetProgramResourceiv(program, UNIFORM_BLOCK, uniformBlockIndex,
+                           1, &prop, maxSize, NULL, params);
+
+    where the value of <prop> is taken from Table X.3, based on the value of
+    <pname>, and <maxSize> is taken to specify a sufficiently large buffer to
+    receive all values that would be written to <params>.
+
+        <pname>                         <prop>
+        ------------------------------  ------------------------------
+        UNIFORM_BLOCK_BINDING           BUFFER_BINDING
+        UNIFORM_BLOCK_DATA_SIZE         BUFFER_DATA_SIZE
+        UNIFORM_BLOCK_NAME_LENGTH       NAME_LENGTH
+        UNIFORM_BLOCK_ACTIVE_UNIFORMS   NUM_ACTIVE_VARIABLES
+        UNIFORM_BLOCK_ACTIVE_           ACTIVE_VARIABLES
+          UNIFORM_INDICES
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_VERTEX_SHADER
+          VERTEX_SHADER
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_TESS_CONTROL_SHADER
+          TESS_CONTROL_SHADER
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_TESS_EVALUATION_SHADER
+          TESS_EVALUATION_SHADER
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_GEOMETRY_SHADER
+          GEOMETRY_SHADER
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_FRAGMENT_SHADER
+          FRAGMENT_SHADER
+        UNIFORM_BLOCK_REFERENCED_BY_    REFERENCED_BY_COMPUTE_SHADER
+          COMPUTE_SHADER
+
+        Table X.3, GetProgramResourceiv properties used by
+        GetActiveUniformBlockiv.
+
+    To determine the set of active atomic counter buffer binding points used
+    by a program, applications can query the properties and active resources
+    of the ATOMIC_COUNTER_BUFFER interface of a program.
+
+    Additionally, the command
+
+      void GetActiveAtomicCounterBufferiv(uint program, uint bufferIndex,
+                                          enum pname, int *params);
+
+    can be used to determine properties of active atomic counter buffer
+    bindings used by <program> and is equivalent to calling
+
+      GLenum prop;
+      GetProgramResourceiv(program, ATOMIC_COUNTER_BUFFER, bufferIndex,
+                           1, &prop, maxSize, NULL, params);
+
+    where the value of <prop> is taken from Table X.4, based on the value of
+    <pname>, and <maxSize> is taken to specify a sufficiently large buffer to
+    receive all values that would be written to <params>.
+
+        <pname>                         <prop>
+        ------------------------------  ------------------------------
+        ATOMIC_COUNTER_BUFFER_BINDING   BUFFER_BINDING
+        ATOMIC_COUNTER_BUFFER_          BUFFER_DATA_SIZE
+          DATA_SIZE
+        ATOMIC_COUNTER_BUFFER_ACTIVE_   NUM_ACTIVE_VARIABLES
+          ATOMIC_COUNTERS
+        ATOMIC_COUNTER_BUFFER_ACTIVE_   ACTIVE_VARIABLES
+          ATOMIC_COUNTER_INDICES
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_VERTEX_SHADER
+          REFERENCED_BY_VERTEX_SHADER
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_TESS_CONTROL_SHADER
+          REFERENCED_BY_TESS_
+          CONTROL_SHADER
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_TESS_EVALUATION_SHADER
+          REFERENCED_BY_TESS_
+          EVALUATION_SHADER
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_GEOMETRY_SHADER
+          REFERENCED_BY_GEOMETRY_SHADER
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_FRAGMENT_SHADER
+          REFERENCED_BY_FRAGMENT_SHADER
+        ATOMIC_COUNTER_BUFFER_          REFERENCED_BY_COMPUTE_SHADER
+          REFERENCED_BY_COMPUTE_SHADER
+
+        Table X.4, GetProgramResourceiv properties used by
+        GetActiveAtomicCounterBufferiv.
+
+
+    Modify Section 2.14.8, Subroutine Uniform Variables, p. 136
+
+    (This section could probably use some reorganization and a high-level
+     introduction to how subroutines and subroutine variables work.  As
+     written now, it mostly talks about the GL APIs operating on these without
+     a lot of conceptual discussion.  These edits makes this section smaller
+     by redefining the old APIs in terms of the new ones.)
+
+    (replace language in the section describing the active subroutine and
+    subroutine uniform enumeration with the following)
+
+    To determine the set of active subroutines and subroutines used by a
+    particular shader stage of a program, applications can query the
+    properties and active resources of the interfaces for the shader type, as
+    listed in Tables X.5 and X.6.
+
+        Interface                       Shader Type
+        ------------------------------  ------------------------------
+        VERTEX_SUBROUTINE               VERTEX_SHADER
+        TESS_CONTROL_SUBROUTINE         TESS_CONTROL_SHADER
+        TESS_EVALUATION_SUBROUTINE      TESS_EVALUATION_SHADER
+        GEOMETRY_SUBROUTINE             GEOMETRY_SHADER
+        FRAGMENT_SUBROUTINE             FRAGMENT_SHADER
+        COMPUTE_SUBROUTINE              COMPUTE_SHADER
+
+        Table X.5, Interfaces for active subroutines for a particular shader
+        type in a program.
+
+        Interface                       Shader Type
+        ------------------------------  ------------------------------
+        VERTEX_SUBROUTINE_UNIFORM       VERTEX_SHADER
+        TESS_CONTROL_SUBROUTINE_        TESS_CONTROL_SHADER
+          UNIFORM
+        TESS_EVALUATION_SUBROUTINE      TESS_EVALUATION_SHADER
+          UNIFORM
+        GEOMETRY_SUBROUTINE_UNIFORM     GEOMETRY_SHADER
+        FRAGMENT_SUBROUTINE_UNIFORM     FRAGMENT_SHADER
+        COMPUTE_SUBROUTINE_UNIFORM      COMPUTE_SHADER
+
+        Table X.6, Interfaces for active subroutine uniforms for a particular
+        shader type in a program.
+
+    Dedicated commands are provided to determine properties of active
+    subroutines and active subroutine uniforms.  The commands
+
+      uint GetSubroutineIndex(uint program, enum shadertype,
+                              const char *name);
+
+      void GetActiveSubroutineName(uint program, enum shadertype, uint index,
+                                   sizei bufsize, sizei *length, char *name);
+
+    are equivalent to
+
+      GetProgramResourceIndex(program, programInterface, name);
+
+      GetProgramResourceName(program, programInterface, index, bufsize,
+                             length, name);
+
+    where <programInterface> is taken from Table X.5 according to the value of
+    <shadertype>.
+
+    The commands
+
+      void GetSubroutineUniformLocation(uint program, enum shadertype,
+                                        const char *name);
+
+      void GetActiveSubroutineUniformName(uint program, enum shadertype,
+                                          uint index, sizei bufsize,
+                                          sizei *length, char *name);
+
+      void GetActiveSubroutineUniformiv(uint program, enum shadertype,
+                                        uint index, enum pname, int *values);
+
+    are equivalent to
+
+      GetProgramResourceLocation(program, programInterface, name);
+
+      GetProgramResourceName(program, programInterface, index, bufsize, length,
+                             name);
+
+      GetProgramResourceiv(program, programInterface, index, 1, &pname,
+                           maxSize, NULL, values);
+
+    where <programInterface> is taken from Table X.6 according to the value of
+    <shadertype>.  For GetActiveSubroutineUniformiv, <pname> must be one of
+    NUM_COMPATIBLE_SUBROUTINES or COMPATIBLE_SUBROUTINES, and <maxSize> is
+    taken to specify a sufficiently large buffer to receive all values that
+    would be written to <params>.
+
+
+    Modify Section 2.14.11, Output Variables, p. 140
+
+    (replace last paragraph, p. 143 through next-to-last paragraph, p. 144
+    with the following)
+
+    To determine the set of output variables in a linked program object that
+    will be captured in transform feedback mode, applications can query the
+    properties and active resources of the TRANSFORM_FEEDBACK_VARYING
+    interface.
+
+    Additionally, the dedicated command
+
+      void GetTransformFeedbackVarying(uint program, uint index,
+                                       sizei bufSize, sizei *length,
+                                       sizei *size, enum *type, char *name);
+
+    can be used to enumerate properties of a single output variable captured
+    in transform feedback mode, and is equivalent to
+
+      const enum props[] = { ARRAY_SIZE, TYPE };
+      GetProgramResourceName(program, TRANSFORM_FEEDBACK_VARYING, index,
+                             bufSize, length, name);
+      GetProgramResourceiv(program, TRANSFORM_FEEDBACK_VARYING, index,
+                           1, &props[0], 1, NULL, size);
+      GetProgramResourceiv(program, TRANSFORM_FEEDBACK_VARYING, index,
+                           1, &props[1], 1, NULL, (int *) type);
+
+
+    GetTransformFeedbackVarying may be used to query any transform
+    feedback varying variable, not just those specified with
+    TransformFeedbackVarying.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    Modify Section 3.13.2, Shader Execution, p. 371
+
+    (replace next-to-last paragraph, p. 378 through the first paragraph,
+    p. 379 with the following)
+
+    To determine the set of fragment shader output attribute variables used by
+    a program, applications can query the properties and active resources of
+    the PROGRAM_OUTPUT interface of a program including a fragment shader.
+
+    Additionally, dedicated commands are provided to query the location and
+    fragment color index assigned to a fragment shader output variable.  For
+    the commands
+
+      int GetFragDataLocation(uint program, const char *name);
+
+      int GetFragDataIndex(uint program, const char *name);
+
+    the error INVALID_OPERATION is generated and -1 is returned if <program>
+    has not been linked or was last linked unsuccessfully.  If <program> has
+    been successfully linked but contains no fragment shader, no error will be
+    generated but -1 will be returned.  Otherwise, the commands are equivalent
+    to calling:
+
+      GetProgramResourceLocation(program, PROGRAM_OUTPUT, name);
+
+    or
+
+      GetProgramResourceLocationIndex(program, PROGRAM_OUTPUT, name);
+
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.  Note that all the commands added here are not included in display
+    lists, but no specification edits are required since existing blanket
+    language covers all Get* commands.
+
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 4.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to Appendix D of the OpenGL 4.2 (Compatibility Profile)
+Specification (Shared Objects and Multiple Contexts)
+
+    None.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on OpenGL 3.0, ARB_transform_feedback, and EXT_transform_feedback
+
+    If OpenGL 3.0, ARB_transform_feedback, and EXT_transform_feedback are not
+    supported, references to the TRANSFORM_FEEDBACK_VARYING interface should
+    be removed.
+
+Dependencies on OpenGL 3.1 and ARB_uniform_buffer_object
+
+    If OpenGL 3.1 and ARB_uniform_buffer_object are not supported, references
+    to the UNIFORM_BLOCK interface should be removed.
+
+Dependencies on OpenGL 4.0 and ARB_shader_subroutine
+
+    If OpenGL 4.0 and ARB_shader_subroutine are not supported, references to
+    the VERTEX_SUBROUTINE, TESS_CONTROL_SUBROUTINE,
+    TESS_EVALUATION_SUBROUTINE, GEOMETRY_SUBROUTINE, FRAGMENT_SUBROUTINE,
+    COMPUTE_SUBROUTINE, VERTEX_SUBROUTINE_UNIFORM,
+    TESS_CONTROL_SUBROUTINE_UNIFORM, TESS_EVALUATION_SUBROUTINE_UNIFORM,
+    GEOMETRY_SUBROUTINE_UNIFORM, FRAGMENT_SUBROUTINE_UNIFORM, and
+    COMPUTE_SUBROUTINE_UNIFORM interfaces should be removed.
+
+Dependencies on OpenGL 4.2 and ARB_shader_atomic_counters
+
+    If OpenGL 4.2 and ARB_shader_atomic_counters are not supported, references
+    to the ATOMIC_COUNTER_BUFFER interfaces should be removed.
+
+Dependencies on OpenGL 4.3 and ARB_shader_storage_buffer_object
+
+    If OpenGL 4.3 and ARB_shader_storage_buffer_object are not supported,
+    references to the BUFFER_VARIABLE and SHADER_STORAGE_BLOCK interfaces
+    should be removed.
+
+Dependencies on OpenGL 4.3 and ARB_arrays_of_arrays
+
+    If OpenGL 4.3 and ARB_arrays_of_arrays are not supported, language
+    describing the enumeration of multi-dimensional arrays (i.e., arrays of
+    arrays) should be removed.
+
+Dependencies on OpenGL 4.3 and ARB_compute_shader
+
+    If OpenGL 4.3 and ARB_compute_shader are not supported, references to the
+    COMPUTE_SUBROUTINE and COMPUTE_SUBROUTINE_UNIFORM interfaces should be
+    removed.
+
+Dependencies on OpenGL 4.3 and ARB_explicit_uniform_location
+
+    If OpenGL 4.3 and ARB_explicit_uniform_location are not supported,
+    references to uniform variables being declared with a layout qualifier
+    should be removed.
+
+Errors
+
+    An INVALID_VALUE error is generated by GetProgramInterfaceiv,
+    GetProgramResourceIndex, GetProgramResourceName, GetProgramResourceiv,
+    GetProgramResourceLocation, and GetProgramResourceLocationIndex if
+    <program> is not the name of either a shader or program object.
+
+    An INVALID_OPERATION error is generated by GetProgramInterfaceiv,
+    GetProgramResourceIndex, GetProgramResourceName, GetProgramResourceiv,
+    GetProgramResourceLocation, and GetProgramResourceLocationIndex if
+    <program> is the name of a shader object.
+
+    INVALID_OPERATION is generated by GetProgramInterfaceiv if the parameter
+    <pname> is not supported for the interface <programInterface>.
+
+    INVALID_ENUM is generated by GetProgramResourceIndex if <programInterface>
+    is ATOMIC_COUNTER_BUFFER.
+
+    INVALID_VALUE is generated by GetProgramResourceName if <index> is greater
+    than or equal to the number of entries in the active resource list for
+    <programInterface>.
+
+    INVALID_ENUM is generated by GetProgramResourceName if <programInterface>
+    is ATOMIC_COUNTER_BUFFER.
+
+    INVALID_VALUE is generated by GetProgramResourceiv if <propCount> is zero.
+
+    INVALID_ENUM is generated by GetProgramResourceiv if any value in <props>
+    is not a property name supported by the command.
+
+    INVALID_OPERATION is generated by GetProgramResourceiv if any value in
+    <props> is not supported for the interface <programInterface>.
+
+    INVALID_OPERATION is generated by GetProgramResourceLocation and
+    GetProgramResourceLocationIndex if <program> has not been linked or was
+    last linked unsuccessfully.
+
+New State
+
+    Insert new tables after Table 6.53, Program Object State (cont.), p. 557:
+
+    Add table, labeled "Program Interface State"
+
+                                                                   Initial
+    Get Value                         Type  Get Command            Value    Description                 Sec.
+    -----------------------           ----  -----------            -------  ------------------------    -----
+    ACTIVE_RESOURCES                  nxZ+  GetProgramInterfaceiv     0     number of active resources  2.14.3
+                                                                            on an interface
+    MAX_NAME_LENGTH                   nxZ+  GetProgramInterfaceiv     0     maximum name length for     2.14.3
+                                                                            active resources
+    MAX_NUM_ACTIVE_VARIABLES          nxZ+  GetProgramInterfaceiv     0     maximum number of active    2.14.3
+                                                                            variables for active
+                                                                            resources
+    MAX_NUM_COMPATIBLE_SUBROUTINES    nxZ+  GetProgramInterfaceiv     0     maximum number of compat-   2.14.3
+                                                                            ible subroutines for
+                                                                            subroutine uniforms
+
+    Add table, labeled "Program Object Resource State"
+
+                                                             Initial
+    Get Value                         Type  Get Command      Value    Description                Sec.
+    -----------------------           ----  -----------      -------  ------------------------   -----
+    NAME_LENGTH                       Z+    GetProgram-         -     length of active resource  2.14.3
+                                              Resourceiv              name
+    TYPE                              Z+    GetProgram-         -     active resource data type  2.14.3
+                                              Resourceiv
+    ARRAY_SIZE                        Z+    GetProgram-         -     active resource array size 2.14.3
+                                              Resourceiv
+    OFFSET                            Z+    GetProgram-         -     active resource offset in  2.14.3
+                                              Resourceiv              memory
+    BLOCK_INDEX                       Z+    GetProgram-         -     index of interface block   2.14.3
+                                              Resourceiv              owning resource
+    ARRAY_STRIDE                      Z+    GetProgram-         -     active resource array      2.14.3
+                                              Resourceiv              stride in memory
+    MATRIX_STRIDE                     Z+    GetProgram-         -     active resource matrix     2.14.3
+                                              Resourceiv              stride in memory
+    IS_ROW_MAJOR                      Z+    GetProgram-         -     active resource stored as  2.14.3
+                                              Resourceiv              a row major matrix?
+    ATOMIC_COUNTER_BUFFER_INDEX       Z+    GetProgram-         -     index of atomic counter    2.14.3
+                                              Resourceiv              buffer owning resource
+    BUFFER_BINDING                    Z+    GetProgram-         -     buffer binding assigned    2.14.3
+                                              Resourceiv              to active resource
+    BUFFER_DATA_SIZE                  Z+    GetProgram-         -     minimum buffer data size   2.14.3
+                                              Resourceiv              required for resource
+    NUM_ACTIVE_VARIABLES              Z+    GetProgram-         -     number of active variables 2.14.3
+                                              Resourceiv              owned by active resource
+    ACTIVE_VARIABLES                  Z+    GetProgram-         -     list of active variables   2.14.3
+                                              Resourceiv              owned by active resource
+    REFERENCED_BY_VERTEX_SHADER       Z+    GetProgram-         -     active resource used by    2.14.3
+                                              Resourceiv              vertex shader?
+    REFERENCED_BY_TESS_CONTROL_       Z+    GetProgram-         -     active resource used by    2.14.3
+      SHADER                                  Resourceiv              tess. control shader?
+    REFERENCED_BY_TESS_EVALUATION_    Z+    GetProgram-         -     active resource used by    2.14.3
+      SHADER                                  Resourceiv              tess evaluation shader?
+    REFERENCED_BY_GEOMETRY_SHADER     Z+    GetProgram-         -     active resource used by    2.14.3
+                                              Resourceiv              geometry shader?
+    REFERENCED_BY_FRAGMENT_SHADER     Z+    GetProgram-         -     active resource used by    2.14.3
+                                              Resourceiv              fragment shader?
+    REFERENCED_BY_COMPUTE_SHADER      Z+    GetProgram-         -     active resource used by    2.14.3
+                                              Resourceiv              compute shader?
+    TOP_LEVEL_ARRAY_SIZE              Z+    GetProgram-         -     array size of top level    2.14.3
+                                              Resourceiv              shd. storage block member
+    TOP_LEVEL_ARRAY_STRIDE            Z+    GetProgram-         -     array stride of top level  2.14.3
+                                              Resourceiv              shd. storage block member
+    LOCATION                          Z+    GetProgram-         -     location assigned to       2.14.3
+                                              Resourceiv              active resource
+    LOCATION_INDEX                    Z+    GetProgram-         -     location index assigned    2.14.3
+                                              Resourceiv              to active resource
+    IS_PER_PATCH                      Z+    GetProgram-         -     is active input/output     2.14.3
+                                              Resourceiv              a per-patch attribute?
+    NUM_COMPATIBLE_SUBROUTINES        Z+    GetProgram-         -     number of compatible       2.14.3
+                                              Resourceiv              subroutines for active
+                                                                      subroutine uniform
+    COMPATIBLE_SUBROUTINES            Z+    GetProgram-         -     list of compatible         2.14.3
+                                              Resourceiv              subroutines for active
+                                                                      subroutine uniform
+
+New Implementation Dependent State
+
+    None.
+
+Sample Code
+
+    !!! TBD !!!
+
+Conformance Tests
+
+    !!! TBD !!!
+
+Issues
+
+    (1) Does the list of active resources in a program include built-ins where
+        applicable?
+
+      RESOLVED:  Yes; built-ins should be enumerated when present.
+
+    (2) Should this extension fully support all program interfaces and
+        resources, even those that have limited or no query capabilities
+        today?  In particular, there is very little enumeration support for
+        fragment outputs and transform feedback varyings.  OpenGL 4.1 added
+        ARB_separate_shader_objects that allowed two independent programs to
+        form an interface, but provided no mechanism for querying the active
+        variables on either side of that interface.
+
+      RESOLVED:  Let's support as much as we can with a single set of
+      functions.
+
+    (3) How should we support enumeration of variables and interface blocks
+        provided by the ARB_shader_storage_buffer_object extension?
+
+      RESOLVED:  The enumeration mechanisms provided by this extension will be
+      the only way to enumerate buffer variables and shader storage blocks.
+      ARB_shader_storage_buffer_object will require this extension.
+
+    (4) The commands provided this extension are intended to supersede
+        existing enumeration APIs (e.g., GetActiveUniform, GetActiveAttrib).
+        The old APIs can eventually be deprecated.  Both new and old APIs
+        generate a list of active resources and assign indices to each entry
+        in the list.  Should assigned indices match between the new and old
+        APIs?
+
+      RESOLVED:  Yes.  While there is no strong reason why the new APIs
+      couldn't adopt new enumeration rules for existing resource types, it's
+      easier to enumerate the same way that we've done for the older API
+      calls, for several reasons:
+
+        * Minimizes changes for existing applications using the old
+          enumeration APIs or for applications needing to support both the new
+          and old APIs.  All they need to do is map their existing API usage
+          to the new APIs without having to reconsider whether any other
+          assumption of their old logic is still valid.
+
+        * Minimizes complexity for implementations needing to support both new
+          and old APIs, at least until the old APIs are deprecated/removed.
+
+        * Makes it easier to redefine the existing functions in terms of the
+          new ones.
+
+    (5) Existing enumeration APIs handle entities like arrays of structures by
+        unrolling them.  For example, a uniform array of structures with 8
+        elements and 3 structure members will result in 24 entries enumerated
+        by GetActiveUniform.  Should we re-work the API to enumerate fewer
+        entries?
+
+      RESOLVED:  For existing resources, no, for the reasons discussed above.
+      The main problem with that approach is if a shader uses a uniform block
+      with a large array of structures.  For newer resource types, we can and
+      will adopt new rules.
+
+    (6) How should enumeration rules work for complex arrays/structures in
+        shader storage blocks (ARB_shader_storage_buffer_object)?
+
+      RESOLVED:  One of the intended use cases is to allow for shader storage
+      blocks consisting of little more than a large (or unsized) array of
+      structures.  For example, we might have shader code like:
+
+        struct VertexInfo {
+          float position[3];
+          float normal[3];
+        };
+        buffer VertexCollection {
+          VertexInfo v[10000];
+        };
+
+      If existing uniform enumeration API rules were applied, this would
+      enumerate 20000 separate active resources (10000 array elements with two
+      members each).  That seems crazy.  This specification optimizes for this
+      case by flattening arrays at the top of the block.  For that shader, we
+      would enumerate only the first element of each array ("v[0].position[0]"
+      and "v[0].normal[0]").  The properties TOP_LEVEL_ARRAY_SIZE and
+      TOP_LEVEL_ARRAY_STRIDE allow applications to determine the size (if
+      declared) and stride in buffer object memory.
+
+      For more complex hierarchies, we chose to continue unrolling arrays in
+      the middle of the hierarchy to avoid the need to specify a more complex
+      API.  For example, in this code
+
+        struct VertexInfo {
+          float position[3];
+          float normal[3];
+        };
+        struct TriangleInfo {
+          VertexInfo v[3];
+        };
+        buffer VertexCollection {
+          TriangleInfo t[10000];
+        };
+
+      we would unroll "TriangleInfo" and enumerate six resources:
+
+        t[0].v[0].position[0]
+        t[0].v[0].normal[0]
+        t[0].v[1].position[0]
+        t[0].v[1].normal[0]
+        t[0].v[2].position[0]
+        t[0].v[2].normal[0]
+
+      Flattening "v[]" to a single entry would require either some sort of
+      recursive enumeration (e.g., enumerate "t" as a structure and provide
+      "pointers" to a collection of members), or some sort of new property
+      that returns a variable-length array of strides.
+
+    (7) The ARB_array_of_arrays extension allows shaders to declare
+        multi-dimensional arrays that could be enumerated by this API?  How
+        should arrays of arrays be enumerated?
+
+      RESOLVED:  We define rules consistent with our enumeration rules for
+      other complex types.  For existing one-dimensional arrays, we enumerate
+      a single entry if the array is an array of basic types, or separate
+      entries for each array element if the array is an array of structures.
+      We follow similar rules here.  For a uniform array such as:
+
+        uniform vec4 a[5][4][3];
+
+     we enumerate twenty different entries ("a[0][0][0]" through
+     "a[4][3][0]"), each of which is treated as an array with three elements.
+     This is morally equivalent to what you'd get if you worked around the
+     limitation in current GLSL via:
+
+        struct ArrayBottom { vec4 c[3]; };
+        struct ArrayMid    { ArrayBottom b[3]; };
+        uniform ArrayMid   a[5];
+
+     which would enumerate "a[0].b[0].c[0]" through "a[4].b[3].c[0]".
+
+     We also apply the top-level array flattening for shader storage block
+     members.  For example:
+
+       buffer Block {
+         vec4 a[5][4][3];
+       };
+
+     would enumerate only four entries -- "a[0][0][0]" through "a[0][3][0]",
+     where each enumerated entry corresponds to an array of size 3, has a
+     top-level size of 5, and has a top-level stride appropriate for its
+     layout in memory.
+
+    (8) For GetProgramResourceIndex, what sort of strings can be used to match
+        the resource names for arrays of arrays?  For example, let's say a
+        shader declares a uniform such as:
+
+          uniform vec4 a[3][4][5];
+
+       Which one of the following names are accepted?  "a[2][1][0]" to
+       identify the base of the bottom-level array?  "a[2][1]", to identify
+       the same without the final "[0]"?  "a[2]", equivalent to "a[2][0][0]"?
+       Just "a", equivalent to "a[0][0][0]"?
+
+       RESOLVED:  We only accept entries of the form "a[2][1][0]" or
+       "a[2][1]", which is consistent with the existing rules that only allow
+       applications to omit the last index of a bottom-level array that has
+       been rolled up.
+
+    (9) Should be consolidate the commands GetAttribLocation,
+        GetUniformLocation, GetSubroutineUniformLocation, GetFragDataLocation
+        (and GetFragDataIndex) into a single generic API?
+
+        RESOLVED:  Yes.  This spec provides GetProgramResourceLocation and
+        GetProgramResourceLocationIndex commands to consolidate the existing
+        set of commands.  Additionally, GetProgramResourceiv can be used to
+        query locations via the LOCATION and LOCATION_INDEX properties.
+
+        There are a number of irregularities in the assignment of locations as
+        compared to other uniform types:
+
+          * Atomic counter uniforms, uniforms in blocks are not assigned
+            locations.
+
+          * Built in inputs and outputs are not assigned locations.
+
+          * The locations of inputs other than vertex shader inputs and
+            fragment shader outputs don't interact with any other GL state;
+            they are used only for interfacing with other programs.  For such
+            variables, we choose the return the specified location number if a
+            variable is declared with a layout qualifier, and -1 (no valid
+            location) otherwise.  Variables declared without location layout
+            qualifiers will be assigned an internal location by the
+            compiler/linker, but those locations do not necessarily correspond
+            to the canonical integer locations supported in layout qualifiers.
+
+          * For fragment shader outputs, not only do we have a location, but
+            we also have an associated index that can be queried with
+            GetFragDataIndex.
+
+    (10) What should we do about tokens like ACTIVE_UNIFORMS and
+         ACTIVE_UNIFORM_MAX_LENGTH that are specific to an interface, but are
+         queried today by GetProgramiv?
+
+      RESOLVED:  We provide a new GetProgramInterfaceiv query to return
+      properties of an interface.  The value returned today by ACTIVE_UNIFORMS
+      can be determined by calling GetProgramInterfaceiv with a
+      <programInterface> of UNIFORM and a <pname> of ACTIVE_RESOURCES.
+      ACTIVE_RESOURCES can also be used for other interfaces to get values
+      returned today with other query tokens (e.g., ACTIVE_ATTRIBUTES).
+
+    (11) What sort of interface should we use for querying properties of
+         active resources?  We have two different styles of query today.
+         Functions like GetActiveUniform() allow applications to query
+         multiple (fixed) properties of a single active uniform.  Functions
+         like GetActiveUniforms() allow applications to query a single
+         property of multiple active uniforms?
+
+      RESOLVED:  GetProgramResourceiv allows applications to query multiple
+      properties of a single resource in a single call; applications pass in
+      an array of properties to query.
+
+      We considered providing a command GetProgramResourcesiv that would have
+      allowed an application to query multiple properties of multiple
+      resources in a single call, by passing in an array of resource indices.
+      We decided not to include this for simplicity.  Also note that the most
+      common use case we envisioned would be to query all properties of all
+      active resources, with code like the following:
+
+        struct VariableInfo {
+          GLenum type;
+          GLint location;
+        };
+        GLenum inputProps[] = { GL_TYPE, GL_LOCATION };
+        GLuint nInputProps = sizeof(inputProps) / sizeof(GLenum);
+        GLint nActive;
+        glGetProgramInterface(program, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES,
+                              &nActive);
+        VariableInfo *varInfo = malloc(nActive*sizeof(VariableInfo));
+        GLuint *indices = malloc(nActive*sizeof(GLuint));
+        for (GLuint i = 0; i < nActive; i++) { indices[i] = i; }
+        glGetProgramResourcesiv(program, GL_PROGRAM_INPUT,
+                                nActive, indices, nInputProps, inputProps,
+                                nActive*nInputProps, NULL, (GLint*)varInfo);
+
+      Such an API would require applications to fill in a dummy array of
+      indices to express "all indices".  With the simplified API, more GL
+      calls are required, but the code is overall simpler:
+
+        glGetProgramInterface(program, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES,
+                              &nActive);
+        VariableInfo *varInfo = malloc(nActive*sizeof(VariableInfo));
+        for (GLuint i = 0; i < nActive; i++) {
+          glGetProgramResourceiv(program, GL_PROGRAM_INPUT, i,
+                                 nInputProps, inputProps,
+                                 nActive*nInputProps, NULL,
+                                 (GLint*) (&varInfo[i]));
+        }
+
+    (12) For GetProgramResourceiv, how should we handle queries of properties
+         that return a variable number of values (e.g.,
+         COMPATIBLE_SUBROUTINES)?  Should we support these queries in the
+         general "multiple properties of multiple resources" query, or provide
+         a separate "single property of single resource query"?  Should we
+         just write out a variable number of values to <params>?  If we allow
+         for a variable number of values to be written to <params>, should we
+         provide some sort of <bufSize> parameter to guard against overflows?
+
+      RESOLVED:  We will support these properties in the general "multiple
+      properties of a single resource" query and write out the variable number
+      of values to consecutive locations in the array.  If an application
+      wants to query such properties for multiple resources at once, it can
+      parse the values returned by the GL.  If NUM_COMPATIBLE_SUBROUTINES is
+      immediately before COMPATIBLE_SUBROUTINES in the property list, the
+      number of compatible subroutines written to the buffer (N) will be found
+      immediately immediately prior to the N compatible subroutine numbers.
+      We will provide a <bufSize> parameter to guard against overflow.
+      Applications can ensure they have an adequately-sized buffer by calling
+      GetProgramInterfaceiv with a <pname> of MAX_NUM_COMPATIBLE_SUBROUTINES
+      to determine the maximum number of subroutines that will be written to
+      any one buffer.
+
+      It's not clear how valuable the variable-length enumeration queries
+      actually are.  Unextended OpenGL 4.2 has two such queries today:
+      COMPATIBLE_SUBROUTINES and UNIFORM_BLOCK_ACTIVE_UNIFORMS.
+      UNIFORM_BLOCK_ACTIVE_UNIFORMS isn't strictly needed; an application can
+      determine this list themselves by querying the UNIFORM_BLOCK_INDEX
+      property of each active uniform.  We could do something similar for
+      compatible subroutines.
+
+    (13) Should we add a mechanism for enumerating subroutine types supported
+         by a program and querying the subroutine type for subroutines and
+         subroutine uniforms?
+
+      RESOLVED:  No.  Such a mechanism could have been used to reduce the need
+      for variable-length return values for GetProgramResourcesiv in some
+      cases.  Instead of supporting COMPATIBLE_SUBROUTINES (list all
+      subroutines compatible with a uniform type), we could have allowed
+      applications to query the subroutine type for both subroutines and
+      subroutine uniforms and match them in application code.  The problem
+      with that approach is that subroutines can have multiple associated
+      subroutine types, so a variable-length return value would still be
+      needed to query subroutine types.
+
+    (14) Should we support "REFERENCED_BY_*" for uniforms and buffer
+         variables?
+
+      RESOLVED:  Yes.  It isn't supported in unextended OpenGL 4.2, but the
+      functionality seems to make sense.
+
+    (15) Since this extension is being developed at the same time as compute
+         shaders, should we add compute shader-specific enums for the old
+         queries that would be superseded by the the queries added here?  Or
+         should we rely solely on the new queries?  For example, should we add
+         a new token "UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER"?
+
+      RESOLVED:  Yes, we will add old-style enums for the compute shader stage
+      for all previously existing APIs.
+
+    (16) How are inputs and outputs in the built-in interface block
+         "gl_PerVertex" enumerated?
+
+      RESOLVED:  We will follow the default rule for enumerating block members
+      in the OpenGL API, which is:
+
+        * If a variable is a member of an interface block without an instance
+          name, it is enumerated using just the variable name.
+
+        * If a variable is a member of an interface block with an instance
+          name, it is enumerated as "BlockName.Member", where "BlockName" is
+          the name of the interface block (not the instance name) and "Member"
+          is the name of the variable.
+
+      For example, in the following code:
+
+        uniform Block1 {
+          int member1;
+        };
+        uniform Block2 {
+          int member2;
+        } instance2;
+        uniform Block3 {
+          int member3;
+        } instance3[2];  // uses two separate buffer bindings
+
+      the three uniforms (if active) are enumerated as "member1",
+      "Block2.member2", and "Block3.member3".
+
+      For tessellation control, tessellation evaluation, and geometry shaders,
+      per-vertex built-in inputs like gl_Position are in a block with an
+      instance name of "gl_in[]".  Additionally, for tessellation control
+      shaders, per-vertex built-in outputs like gl_Position are in a block
+      with an instance name of "gl_out[]".  In these cases, applying the
+      standard rules would result in an enumerated name of
+      "gl_PerVertex.gl_Position".
+
+    (17) Should we add support for enumerating per-patch shader
+         inputs/outputs?  If so, how to distinguish between per-vertex and
+         per-patch?
+
+      RESOLVED:  Yes.  When program inputs or outputs include per-patch
+      attributes, those variables will be enumerated along with per-vertex
+      attributes.  To determine if an input or output is per-patch, use the
+      resource property IS_PER_PATCH.
+
+    (18) Do we enumerate the special "marker" variables for transform feedback
+         varyings (gl_NextBuffer, gl_SkipComponents[1234])?  If so, what are
+         their properties?
+
+      RESOLVED:  Yes, we should definitely enumerate them so applications can
+      determine programmatically what would be written to transform feedback
+      buffers.  This capability is already supported by the existing
+      GetTransformFeedback query.  We follow the existing behavior -- all of
+      these entries are enumerated with a type of NONE.  gl_NextBuffer returns
+      an array size of 0; gl_SkipComponents[1234] returns an array size equal
+      to the specified number of components.
+
+    (19) Should we support a <bufsize> arguments to prevent buffer overflows
+         on the GetProgramInterfaceiv query?
+
+      RESOLVED:  Yes, to provide a "safe" mechanism since the query might
+      return an unpredictable and program-dependent amount of data.  We also
+      provide a <length> parameter that can be used to return the number of
+      words written by the query to be consistent with other similar APIs.
+
+    (20) Are "old" token names (e.g., UNIFORM_TYPE) accepted by "new"
+         commmands (GetProgramResourceiv)?  Are "new" token names (TYPE)
+         accepted by "old" commands (GetActiveUniforms)?
+
+      RESOLVED:  No.  New queries support only the new enums; old queries
+      support only the old ones.
+
+    (21) While programs may include shader code for multiple stages, shader
+         subroutines and subroutine uniforms are specific to a single stage in
+         the program.  This means that there is a separate interface for each
+         program stage.  Should we specify <programInterface> tokens for a
+         cross-product of interfaces and stages (e.g., VERTEX_SUBROUTINE,
+         FRAGMENT_SUBROUTINE_UNIFORM)?  Or should we provide generic
+         <programInterface> tokens (SUBROUTINE, SUBROUTINE_UNIFORM) and accept
+         a second <stage> parameter?
+
+      RESOLVED:  Use concatenated tokens to avoid creating adding a separate
+      set of per-stage APIs.  With this solution, we have means 12
+      concatenated tokens (6 stages crossed with SUBROUTINE and
+      SUBROUTINE_UNIFORM); we don't expect a massive number of new tokens in
+      the future.
+
+    (22) What data type should be used for the <params> (return data) argument
+         to GetProgramResourceiv()?
+
+      RESOLVED:  Use an "int *" to be consistent with all the other
+      "*iv"-style queries.
+
+      We considered using a "void *" so applications could avoid manual casts
+      for cases where the API would be used to fill a structure with
+      properties of a resource, as in code like the following:
+
+        struct VariableInfo {
+          GLenum type;
+          GLint location;
+        } varInfo;
+        GLenum inputProps[] = { GL_TYPE, GL_LOCATION };
+        GLuint nInputProps = sizeof(inputProps) / sizeof(GLenum);
+        ...
+        glGetProgramResourceiv(program, GL_PROGRAM_INPUT, index,
+                               nInputProps, inputProps, nInputProps, NULL,
+                               (GLint*)varInfo);
+
+    (23) The special "marker" names "gl_NextBuffer" and "gl_SkipComponents*"
+         may appear multiple times in the array of strings passed to
+         TransformFeedbackVaryings.  How is this condition handled in the new
+         enumeration APIs?
+
+      RESOLVED:  For the purposes of enumerating active resources in the
+      TRANSFORM_FEEDBACK_VARYINGS interface, each instance of the marker is
+      assigned its own index, and the name and properties associated with that
+      index can be queried.  [See also issue (18).]  This is consistent with
+      how GetTransformFeedbackVaryings works in unextended OpenGL 4.2.
+
+      The problem is that since a marker name can have multiple associated
+      indices, it's not clear what value should be returned when passing such
+      a string to GetProgramResourceIndex().  We specify that passing any of
+      these marker strings should return the value INVALID_INDEX, regardless
+      of the number of times the marker appears in the inputs to
+      TransformFeedbackVaryings.  Unextended OpenGL 4.2 does not provide the
+      ability to query the index associated with an active transform feedback
+      varying name, so this is a new issue in this extension.
+
+    (24) The PROGRAM_INPUT and PROGRAM_OUTPUT interfaces are provided to allow
+         applications to query active inputs and outputs in a program.  Do we
+         enumerate all variables qualified with "in" and "out", or should
+         special "system" built-ins such as gl_VertexID, gl_InstanceID, and
+         gl_FrontFacing be excluded?
+
+      RESOLVED:  We enumerate all active variables qualified with "in" or
+      "out" in the PROGRAM_INPUT and PROGRAM_OUTPUT interfaces, including
+      special variables.  Additionally, because we redefine the function
+      glGetActiveAttrib in terms of this in terms of the PROGRAM_INPUT
+      interface, we should enumerate the specials gl_VertexID and
+      gl_InstanceID there as well.  Previously, there was no explicit spec
+      language whether these variables should be enumerated by
+      GetActiveAttrib, and various OpenGL implementations behaved differently.
+      This approach allows applications to enumerate all inputs used by a
+      vertex shader, whether or not they correspond to attributes in
+      conventional or generic vertex attribute arrays.
+
+    (25) What should the value of ARRAY_SIZE be for non-array and unsized
+         array variables?
+
+      RESOLVED: For compatibility with GetActiveUniform, ARRAY_SIZE of a
+      non-array variable is one (initially this was specified as zero, an
+      unintentional incompatibility). For unsized array variables, the size
+      is zero.
+
+Revision History
+
+    Revision 21, January 10, 2019 (Jon Leech)
+      - Add the property COMPATIBLE_SUBROUTINES to those queriable by
+        GetProgramResourceiv (github OpenGL-Registry issue #11)
+    Revision 20, August 19, 2013 (Jon Leech)
+      - Change ARRAY_SIZE query to return one for active variables not
+        corresponding to an array of basic types, rather than zero, for
+        compatibility with GetActiveUniform (Bug 10647). Return zero for
+        explicitly unsized arrays (Bug 10641). Add extra 'const' qualifier
+        for GetUniformIndices <uniformNames> argument (Bug 10703).
+    Revision 19, July 11, 2013 (Jon Leech)
+      - Clarify that GetTransformFeedbackVarying can be used to query
+        any transform feedback varying variable (Bug 10472).
+    Revision 18, July 10, 2012 (pbrown)
+      - Specify an INVALID_ENUM error when ATOMIC_COUNTER_BUFFER is passed
+        to GetProgramResourceIndex or GetProgramResourceName.  Clarify that
+        the array element portion of a string passed to
+        GetProgramResourceLocation or GetProgramResourceLocationIndex
+        must not have, a "+" sign, extra leading zeroes, or whitespace (bug
+        9254).
+    Revision 17, July 7, 2012 (pbrown)
+      - Specify that "special" built-ins inputs and outputs such as
+        "gl_VertexID" should be enumerated in the PROGRAM_INPUT and
+        PROGRAM_OUTPUT interfaces, as well as the legacy function
+        GetActiveAttrib.  Add spec language counting the built-ins gl_VertexID
+        and gl_InstanceID against the active attribute limit (bug 9201).
+    Revision 16, July 2, 2012 (pbrown)
+      - Fix typos in the language mapping OpenGL 4.2 active subroutine and
+        subroutine uniform enumeration functions to the new interfaces.
+    Revision 15, June 21, 2012 (Jon Leech)
+      - Update errors to match the generic errors for all commands taking
+        <program> names (INVALID_VALUE if neither a shader nor program
+        object name, and INVALID_OPERATION if a shader object name) (Bug
+        9145).
+    Revision 14, June 14, 2012 (Jon Leech)
+      - Add INVALID_VALUE error if <program> is not the name of a valid
+        program object (Bug 9145).
+    Revision 13, May 31, 2012 (pbrown)
+      - Specify that passing the special "marker" strings "gl_NextBuffer"
+        and "gl_SkipComponents*" to GetProgramResourceIndex() will always
+        return INVALID_INDEX (bug 9071).
+    Revision 12, May 31, 2012 (pbrown)
+      - Allow the BUFFER_VARIABLE, PROGRAM_INPUT, and PROGRAM_OUTPUT
+        interfaces to be used by the REFERENCED_BY_*_SHADER property in
+        GetProgramResourceiv (bug 9007).
+      - Remove duplicate reference to BUFFER_VARIABLE in the list of
+        interfaces supported by the ARRAY_SIZE property in
+        GetProgramResourceiv.
+    Revision 11, May 18, 2012 (pbrown)
+      - Clarify that the LOCATION_INDEX property is only supported for the
+        PROGRAM_OUTPUT interface and not for PROGRAM_INPUT.
+    Revision 10, May 10, 2012 (pbrown)
+      - Rename the formal parameter <interface> used by the functions in this
+        extension to <programInterface>.  Certain versions of the Microsoft
+        C/C++ compiler and/or its headers cause "interface" to be treated as a
+        reserved keyword.
+    Revision 9, May 10, 2012 (pbrown)
+      - Fix incorrect enumerant assignments.  ATOMIC_COUNTER_BUFFER has
+        already been assigned for ARB_shader_atomic_counters.  Fix
+        cut-and-paste error assigning a duplicate value to
+        TESS_CONTROL_SUBROUTINE.  Reassign value for IS_PER_PATCH to fill
+        the ATOMIC_COUNTER_BUFFER hole.
+    Revision 8, May 2, 2012 (pbrown)
+      - Reserve enumerants.
+      - Add state table entries.
+      - Mark issues as resolved per the Khronos F2F.
+      - Add issue (22), where we decided to keep the "int *" argument to
+        GetProgramResourceiv().
+    Revision 7, April 25, 2012
+      - Rename IS_PATCH_ATTRIB to IS_PER_PATCH (bug 8752).
+    Revision 6, April 12, 2012
+      - Add explicit language indicating that per-patch attributes can be
+        enumerated in the PROGRAM_INPUT and PROGRAM_OUTPUT interfaces, plus
+        the IS_PATCH_ATTRIB property.
+      - Take a first cut at redefining all the existing enumeration APIs in
+        terms of the new APIs.
+      - Add missing OFFSET token to new token list.
+      - Rename BUFFER_SIZE to BUFFER_DATA_SIZE to be consistent with older
+        token names.
+      - Mark various issues as resolved.
+    Revision 5, April 12, 2012
+      - Remove support for querying properties of multiple resources in a
+        single call; rename GetProgramResourcesiv to GetProgramResourceiv
+        since only a single resource is queried at a time.
+      - Fold issue (22) into issue (11).
+    Revision 4, April 5, 2012
+      - Add issue (22) about the need to allocate/fill an array of indices even
+        if you want to query properties of all active resources at once.
+    Revision 3, April 5, 2012
+      - Checkpoint with various edits/cleanups.  Add an introduction; clean up
+        new procedures, tokens, errors, and issues sections.
+      - Rename APIs to GetProgramInterface and GetProgramResource*.
+      - Add GetProgramResourceLocation API as a generic location query.
+      - Add interactions with ARB_compute_shader.
+      - Add interactions with ARB_explicit_uniform_location.
+      - Add discussion of enumeration of built-in variables and special
+        transform feedback markers.
+      - Add general discussion of locations assigned to active variables.
+      - Add interface properties MAX_NUM_ACTIVE_VARIABLES and
+        MAX_NUM_COMPATIBLE_SUBROUTINES.
+      - Add resource properties LOCATION and LOCATION_INDEX.
+      - Add <bufSize> and <length> parameters to GetProgramResourcesiv.
+    Revision 2, March 22, 2012
+      - Added new function prototypes for review purposes.
+    Revision 1, March 14, 2012
+      - Initial revision.
+

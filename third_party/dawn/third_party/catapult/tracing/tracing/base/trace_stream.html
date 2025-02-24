@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  /**
+   * A TraceStream is a data structure holding trace data that supports
+   * sequentially reading data, efficiently. It also supports rewinding to the
+   * beginning of the trace data and building a sub-stream; but, the latter two
+   * operations do not have to be very efficient. For example, it is OK that an
+   * implementation sends a new XHR to get the trace data again when rewinding
+   * or creating a sub-stream from a large stream that does not fit in memory.
+   */
+  class TraceStream {
+    static get HEADER_SIZE() {
+      return Math.pow(2, 10);
+    }
+
+    static get CHUNK_SIZE() {
+      return Math.pow(2, 20);
+    }
+
+    get isBinary() {
+      throw new Error('Not implemented');
+    }
+
+    /**
+     * @returns {boolean} true if there is data remaining in the stream to read,
+     * without rewinding.
+     */
+    get hasData() {
+      throw new Error('Not implemented');
+    }
+
+    /**
+     * @returns {string} The first chunk of the stream. The header size is
+     * either given in the constructor or the default 1KB is used.
+     */
+    get header() {
+      throw new Error('Not implemented');
+    }
+
+    /**
+     * Reads until a given character, including the given character.
+     *
+     * @param {!string} delim A string of size exactly one.
+     *
+     * @returns {!string} The data until the delimiter as a string. If the
+     * delimiter is not found, all of the remaining data is returned.
+     */
+    readUntilDelimiter(delim) {
+      throw new Error('Not implemented');
+    }
+
+    /**
+     * Reads a specific number of bytes from the stream.
+     *
+     * @param {number=} opt_size The maximum number of bytes to be read from the
+     * stream. If unspecified, at most 1MB will be read.
+     *
+     * @returns {!string} A string of size opt_size, unless there is not enough
+     * data in the stream in which the string will be smaller.
+     */
+    readNumBytes(opt_size) {
+      throw new Error('Not implemented');
+    }
+
+    rewind() {
+      throw new Error('Not implemented');
+    }
+
+    /**
+     * Returns a new stream, created from a subset of this stream. This is
+     * needed to support importing subtraces. For example, when the importer
+     * encounters a trace event stream that has a BattOr subtrace in it, it will
+     * create a new stream for the BattOr subtrace and use the proper importer.
+     *
+     * @param {!number} startOffset The start offset of the new stream.
+     * @param {number=} opt_endOffset The end offset of the new stream
+     * (exclusive). If unspecified, the end offset of the current stream is
+     * used.
+     * @param {number=} opt_headerSize The header size of the new stream. If
+     * unspecified, the header size is assumed to be 1KB.
+     *
+     * @returns {!TraceStream} The new stream. The cursor of the new stream will
+     * be at the beginning.
+     */
+    substream(offset, opt_length, opt_headerSize) {
+      throw new Error('Not implemented');
+    }
+  }
+
+  return {
+    TraceStream,
+  };
+});
+</script>

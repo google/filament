@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unittest.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TitleOrCategoryFilter = tr.c.TitleOrCategoryFilter;
+  const ExactTitleFilter = tr.c.ExactTitleFilter;
+  const FullTextFilter = tr.c.FullTextFilter;
+
+  test('titleOrCategoryFilter', function() {
+    assert.throw(function() {
+      new TitleOrCategoryFilter();
+    });
+    assert.throw(function() {
+      new TitleOrCategoryFilter('');
+    });
+
+    const s0 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    assert.isTrue(new TitleOrCategoryFilter('a').matchSlice(s0));
+    assert.isTrue(new TitleOrCategoryFilter('cat').matchSlice(s0));
+    assert.isTrue(new TitleOrCategoryFilter('at').matchSlice(s0));
+    assert.isFalse(new TitleOrCategoryFilter('b').matchSlice(s0));
+    assert.isFalse(new TitleOrCategoryFilter('X').matchSlice(s0));
+
+    const s1 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'abc', start: 1, duration: 3});
+    assert.isTrue(new TitleOrCategoryFilter('abc').matchSlice(s1));
+    assert.isTrue(new TitleOrCategoryFilter('Abc').matchSlice(s1));
+    assert.isTrue(new TitleOrCategoryFilter('cat').matchSlice(s1));
+    assert.isTrue(new TitleOrCategoryFilter('Cat').matchSlice(s1));
+    assert.isFalse(new TitleOrCategoryFilter('cat1').matchSlice(s1));
+    assert.isFalse(new TitleOrCategoryFilter('X').matchSlice(s1));
+  });
+
+  test('exactTitleFilter', function() {
+    assert.throw(function() {
+      new ExactTitleFilter();
+    });
+    assert.throw(function() {
+      new ExactTitleFilter('');
+    });
+
+    const s0 = tr.c.TestUtils.newSliceEx({title: 'a', start: 1, duration: 3});
+    assert.isTrue(new ExactTitleFilter('a').matchSlice(s0));
+    assert.isFalse(new ExactTitleFilter('b').matchSlice(s0));
+    assert.isFalse(new ExactTitleFilter('A').matchSlice(s0));
+
+    const s1 = tr.c.TestUtils.newSliceEx({title: 'abc', start: 1, duration: 3});
+    assert.isTrue(new ExactTitleFilter('abc').matchSlice(s1));
+    assert.isFalse(new ExactTitleFilter('Abc').matchSlice(s1));
+    assert.isFalse(new ExactTitleFilter('bc').matchSlice(s1));
+    assert.isFalse(new ExactTitleFilter('a').matchSlice(s1));
+  });
+
+  test('fullTextFilter', function() {
+    assert.throw(function() {
+      new FullTextFilter();
+    });
+    assert.throw(function() {
+      new FullTextFilter('');
+    });
+
+    const s0 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    s0.args.key = 'value';
+    s0.args.anotherKey = 'anotherValue';
+    assert.isTrue(new FullTextFilter('cat').matchSlice(s0));
+    assert.isTrue(new FullTextFilter('a').matchSlice(s0));
+    assert.isTrue(new FullTextFilter('key').matchSlice(s0));
+    assert.isTrue(new FullTextFilter('value').matchSlice(s0));
+    assert.isTrue(new FullTextFilter('anotherValue').matchSlice(s0));
+    assert.isFalse(new FullTextFilter('not there').matchSlice(s0));
+
+    const s1 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    s1.args.key = 123;
+    assert.isTrue(new FullTextFilter('123').matchSlice(s1));
+
+    const s2 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    s2.args.key = ['innerValue1', 'innerValue2'];
+    assert.isTrue(new FullTextFilter('innerValue1').matchSlice(s2));
+    assert.isTrue(new FullTextFilter('innerValue2').matchSlice(s2));
+
+    const s3 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    s3.args.key = ['one', 'two', 'three'];
+    assert.isTrue(new FullTextFilter('two').matchSlice(s3));
+
+    const s4 = tr.c.TestUtils.newSliceEx(
+        {cat: 'cat', title: 'a', start: 1, duration: 3});
+    s4.args.key = undefined;
+    assert.isFalse(new FullTextFilter('not there').matchSlice(s4));
+  });
+});
+</script>

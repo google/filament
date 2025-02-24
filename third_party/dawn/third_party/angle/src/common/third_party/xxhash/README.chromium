@@ -1,0 +1,11 @@
+Name: xxHash
+URL: https://github.com/Cyan4973/xxHash
+Revision: 0f2dd4a1cb103e3fc8c55c855b821eb24c6d82c3
+Version: 0.8.2
+License: BSD-2-Clause
+License File: LICENSE
+Security Critical: yes
+Shipped: yes
+
+Description:
+Extremely fast non-cryptographic hash algorithm

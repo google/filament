@@ -1,0 +1,223 @@
+Name
+
+    EXT_cmyka
+
+Name Strings
+
+    GL_EXT_cmyka
+
+Version
+
+    $Date: 1997/02/26 03:36:26 $ $Revision: 1.17 $
+
+Number
+
+    18
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+
+Overview
+
+    This extension provides a simple method for OpenGL to read and store
+    images whose pixels have CMYK or CMYKA formats.  The algorithms used to
+    convert to RGBA from CMYKA and to convert back from RGBA to CMYKA are of
+    the "black-box" nature, meaning that the application has little control
+    over how the conversion is done.  Also, this black-box mechanism is
+    available only for transfers to or from memory, not for internal copies
+    of pixel data (such as invoked by CopyPixels, CopyTexImage1D, etc.)
+    However, the defined mechanism nicely handles 5-component CMYKA images,
+    and it is very easy to use.
+
+    A more configurable and potentially higher quality color conversion can
+    be implemented using the color tables, the color matrix, and possibly 3D
+    and 4D texture lookup.  Such a color conversion also applies to copied
+    pixel data.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, TexSubImage4DSGIS, GetTexImage,
+    ColorTableSGI, GetColorTableSGI, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, GetConvolutionFilterEXT,
+    SeparableFilter2DEXT, SeparableFilter3DEXT, GetSeparableFilterEXT,
+    GetHistogramEXT, and GetMinmaxEXT:
+
+        CMYK_EXT                0x800C
+        CMYKA_EXT               0x800D
+
+    Accepted by the <target> parameter of Hint, and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        PACK_CMYK_HINT_EXT      0x800E
+        UNPACK_CMYK_HINT_EXT    0x800F
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    Two entries are added to table 3.5 (DrawPixels and ReadPixels formats).
+    The new table is:
+
+                                                                        Target
+        Name                    Type            Elements                Buffer
+        ----                    ----            --------                ------
+        COLOR_INDEX             Index           Color Index             Color
+        STENCIL_INDEX           Index           Stencil value           Stencil
+        DEPTH_COMPONENT         Component       Depth value             Depth
+        RED                     Component       R                       Color
+        GREEN                   Component       G                       Color
+        BLUE                    Component       B                       Color
+        ALPHA                   Component       A                       Color
+        RGB                     Component       R, G, B                 Color
+        RGBA                    Component       R, G, B, A              Color
+        LUMINANCE               Component       Luminance value         Color
+        LUMINANCE_ALPHA         Component       Luminance value, A      Color
+        ABGR_EXT                Component       A, B, G, R              Color
+        CMYK_EXT                Component       Cyan value,             Color
+                                                Magenta value,
+                                                Yellow value,
+                                                Black value
+        CMYKA_EXT               Component       Cyan value,             Color
+                                                Magenta value,
+                                                Yellow value,
+                                                Black value, A
+
+        Table 3.5: DrawPixels and ReadPixels formats.  The third column
+        gives a description of and the number and order of elements in a
+        group.
+
+    The new formats CMYK_EXT and CMYKA_EXT are added to the discussion of
+    Conversion to RGB.  If the format is either of these two values, then
+    the cyan, magenta, yellow, and black values in each group are converted
+    to R, G, and B values using an undefined algorithm.  The value of
+    UNPACK_CMYK_HINT_EXT determines whether the implementation uses its
+    fastest, nicest, or favorite algorithm to accomplish this conversion.
+    The unpacking conversion hint is specified by calling Hint with
+    parameter <target> set to UNPACK_CMYK_HINT_EXT, and parameter <mode> set
+    to FASTEST, NICEST, or DONT_CARE.  If the format is CMYKA_EXT, the alpha
+    value is copied directly to A.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The new formats are added to the discussion of Obtaining Pixels from the
+    Framebuffer.  It should read "If the <format> is LUMINANCE,
+    LUMINANCE_ALPHA, CMYK_EXT, or CMYKA_EXT, then R, G, B, and A values are
+    obtained.  If the <format> is one of RED, GREEN, BLUE, ALPHA, RGB, RGBA,
+    ABGR_EXT, LUMINANCE, LUMINANCE_ALPHA, CMYK_EXT, or CMYKA_EXT, and the GL
+    is in color index mode, then the color index is obtained."
+
+    The new formats are added to the discussion of Index Lookup.  It should
+    read "If <format> is one of RED, GREEN, BLUE, ALPHA, RGB, RGBA,
+    ABGR_EXT, LUMINANCE, LUMINANCE_ALPHA, CMYK_EXT, or CMYKA_EXT, then the
+    index is used to reference 4 tables of color components:
+    PIXEL_MAP_I_TO_R, PIXEL_MAP_I_TO_G, PIXEL_MAP_I_TO_B, and
+    PIXEL_MAP_I_TO_A."
+
+    A new section, "Conversion to CMYK," is added immediately following the
+    section "Conversion to L."  It reads:
+
+        This step applies only to RGBA component groups, and only if the
+        <format> is either CMYK_EXT or CMYKA_EXT.  Values for cyan, magenta,
+        yellow, and black are computed from the R, G, and B values of the
+        pixel group using an undefined algorithm.  These cyan, magenta,
+        yellow, and black values replace the R, G, and B values in the
+        group.  The value of PACK_CMYK_HINT_EXT determines whether the
+        implementation uses its fastest, nicest, or favorite algorithm to
+        accomplish this conversion.  The packing conversion hint is
+        specified by calling Hint with parameter <target> set to
+        PACK_CMYK_HINT_EXT, and parameter <mode> set to FASTEST, NICEST, or
+        DONT_CARE.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Although PACK_CMYK_HINT_EXT and UNPACK_CMYK_HINT_EXT are modified using
+    the Hint interface, they are not included in the hint attribute set.
+    Rather, they are part of pixel storage state, meaning that they are not
+    pushed and popped by PushAttributes and PopAttributes, and that they are
+    client state rather than server state.  Also, like all other pixel
+    storage parameters, the CMYK hint modes in effect when a pixel command
+    (such as DrawPixels) is placed in a display list control the
+    interpretation of memory data.  The CMYK hints in effect when a display
+    list is executed are not significant.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+        None
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is not implemented, then references to ABGR_EXT in this
+    specification are void.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then references to TexImage3DEXT,
+    TexSubImage3DEXT, ConvolutionFilter3DEXT, and SeparableFilter3DEXT in
+    this specification are void.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not implemented, then references to
+    TexSubImage1DEXT, TexSubImage2DEXT, TexSubImage3DEXT, and
+    TexSubImage4DSGIS in this specification are void.
+
+Dependencies on EXT_histogram
+
+    If EXT_histogram is not implemented, then references to GetHistogramEXT
+    and GetMinmaxEXT in this extension are void.
+
+Dependencies on EXT_convolution
+
+    If EXT_convolution is not implemented, then references to
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT, and
+    GetSeparableFilterEXT in this extension are void.
+
+Dependencies on SGI_color_table
+
+    If SGI_color_table is not implemented, then references to ColorTableSGI
+    and GetColorTableSGI in this extension are void.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not implemented, then references to TexImage4DSGIS
+    and TexSubImage4DSGIS in this extension are void.
+
+Errors
+
+    None
+
+New State
+
+    Get Value                   Get Command     Type    Initial Value   Attrib
+    ---------                   -----------     ----    -------------   ------
+    PACK_CMYK_HINT_EXT          GetIntegerv     Z3      DONT_CARE       client
+    UNPACK_CMYK_HINT_EXT        GetIntegerv     Z3      DONT_CARE       client
+
+New Implementation Dependent State
+
+    None

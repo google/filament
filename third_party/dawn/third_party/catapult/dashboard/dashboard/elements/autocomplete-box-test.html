@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/autocomplete-box.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<dom-module id="autocomplete-box-test-fixture">
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'autocomplete-box-test-fixture',
+  behaviors: [AutocompleteBoxBehavior],
+  _template: null,
+});
+</script>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const item = function(name, opt_group, opt_head) {
+    const item = {name};
+    if (opt_group !== undefined) {
+      item.group = opt_group;
+    }
+    if (opt_head !== undefined) {
+      item.head = opt_head;
+    }
+    return item;
+  };
+
+  const testOptions = {
+    setUp() {
+      this.foo = {'name': 'Foo'};
+      this.fooish = {'name': 'Fooish'};
+      this.bar = {'name': 'Bar'};
+    },
+
+    tearDown() {
+    },
+  };
+
+  test('empty_query', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('query', '');
+    assert.deepEqual(fixture.get('suggestedItems'), [
+      {'name': 'Bar'},
+      {'name': 'Foo'},
+      {'name': 'Fooish'},
+    ]);
+  }, testOptions);
+
+  test('simple_query', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('query', 'Foo');
+    assert.deepEqual(fixture.get('suggestedItems'), [
+      {'name': 'Foo'},
+      {'name': 'Fooish'},
+    ]);
+  }, testOptions);
+
+  test('simple_update_query', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('query', 'Foo');
+    fixture.set('query', 'Foois');
+    assert.deepEqual(fixture.get('suggestedItems'), [
+      {'name': 'Fooish'},
+    ]);
+  }, testOptions);
+
+  test('simple_update_items', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('query', 'Foo');
+    fixture.shift('items');
+    assert.deepEqual(fixture.get('suggestedItems'), [
+      {'name': 'Fooish'},
+    ]);
+  }, testOptions);
+
+  test('simple_clear_item', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    assert.deepEqual(fixture.get('selectedItem'), null);
+    fixture.selectItem(this.foo);
+    assert.deepEqual(fixture.get('selectedItem'), this.foo);
+    fixture.clearItem();
+    assert.deepEqual(fixture.get('selectedItem'), null);
+    assert.deepEqual(fixture.get('query'), '');
+  }, testOptions);
+
+  test('simple_selecting_an_item', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    assert.deepEqual(fixture.get('selectedItem'), null);
+    fixture.selectItem(this.foo);
+    assert.deepEqual(fixture.get('selectedItem'), this.foo);
+    fixture.selectItem(this.bar);
+    assert.deepEqual(fixture.get('selectedItem'), this.bar);
+  }, testOptions);
+
+  test('simple_selecting_head_element_does_nothing', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    const animals = item('Animals', undefined, true);
+    const lion = item('Lion', 'Animals');
+    const elephant = item('Elephant', 'Animals');
+    const cucumber = item('Cucumber');
+    fixture.set('items', [animals, lion, elephant, cucumber]);
+    fixture.selectItem(animals);
+    assert.deepEqual(fixture.get('selectedItem'), null);
+  }, testOptions);
+
+  test('simple_selecting_another_item', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.selectItem(this.foo);
+    fixture.selectItem(this.bar);
+    assert.deepEqual(fixture.get('selectedItem'), this.bar);
+  }, testOptions);
+
+  test('simple_selecting_an_item_twice', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.selectItem(this.foo);
+    fixture.selectItem(this.foo);
+    assert.deepEqual(fixture.get('selectedItem'), this.foo);
+  }, testOptions);
+
+  test('preserves_selected_on_items_update', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('selectedItem', this.bar);
+    fixture.set('items', [item('Foo'), item('Bar')]);
+    assert.deepEqual(fixture.get('selectedItem'), this.bar);
+  }, testOptions);
+
+  test('selecting_doesnt_clear_the_query', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('query', 'foo');
+    fixture.selectItem(this.foo);
+    assert.strictEqual(fixture.get('query'), 'Foo');
+  }, testOptions);
+
+  test('has_suggestions', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    assert.isTrue(fixture.get('hasSuggestions'));
+    fixture.set('query', 'Baz');
+    assert.isFalse(fixture.get('hasSuggestions'));
+  }, testOptions);
+
+  test('show_dropdown', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    assert.isFalse(fixture.get('showDropdown'));
+    fixture.set('dropdownOpen', true);
+    assert.isTrue(fixture.get('showDropdown'));
+    fixture.set('query', 'Zed');
+    assert.isFalse(fixture.get('showDropdown'));
+    fixture.set('dropdownOpen', false);
+    assert.isFalse(fixture.get('showDropdown'));
+  }, testOptions);
+
+  test('on_query_change', function() {
+    const fixture = document.createElement('autocomplete-box');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.set('selectedItem', this.foo);
+
+    fixture.set('query', this.foo.name);
+    assert.deepEqual(fixture.get('selectedItem'), this.foo);
+
+    fixture.set('query', this.bar.name);
+    assert.deepEqual(fixture.get('selectedItem'), undefined);
+  }, testOptions);
+
+  test('on_blur_input', function() {
+    const fixture = document.createElement('autocomplete-box');
+    const master1 = item('Master1', undefined, true);
+    const master2 = item('Master2', undefined, true);
+    const botA1 = item('BotA', 'Master1');
+    const botB1 = item('BotB', 'Master1');
+    const botA2 = item('BotA', 'Master2');
+    fixture.set('items', [master1, botA1, botB1, master2, botA2]);
+    fixture.selectItem(botA2);
+
+    // Verify that the selection is not changed if the query is not changed.
+    fixture.onBlurInput();
+    assert.deepEqual(fixture.get('selectedItem'), botA2);
+
+    // Verify that the selection is not changed if the query is changed to
+    // same value.
+    fixture.set('query', botA1.name); // Setting it to "BotA"
+    fixture.onBlurInput();
+    assert.deepEqual(fixture.get('selectedItem'), botA2);
+
+    // Verify that it does when a new query is entered.
+    fixture.set('query', botB1.name);
+    fixture.onBlurInput();
+    assert.deepEqual(fixture.get('selectedItem'), botB1);
+  }, testOptions);
+
+  test('maybe_select_locus', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    fixture.maybeSelectLocus();
+    assert.deepEqual(fixture.get('selectedItem'), null);
+
+    fixture.set('query', 'Foo');
+    fixture.maybeSelectLocus();
+    assert.deepEqual(fixture.get('selectedItem'), null);
+
+    fixture.set('locusItem', this.bar);
+    fixture.maybeSelectLocus();
+    assert.deepEqual(fixture.get('selectedItem'), null);
+
+    fixture.set('query', 'Bar');
+    fixture.maybeSelectLocus();
+    assert.deepEqual(fixture.get('selectedItem'), this.bar);
+  }, testOptions);
+
+  test('selected_item', function() {
+    const fixture = document.createElement('autocomplete-box-test-fixture');
+    fixture.set('items', [this.foo, this.fooish, this.bar]);
+    assert.strictEqual(fixture.get('selectedItem'), null);
+    assert.strictEqual(fixture.get('selectedName'), '');
+    fixture.set('selectedItem', this.foo);
+    assert.strictEqual(fixture.get('selectedItem'), this.foo);
+    assert.strictEqual(fixture.get('selectedName'), 'Foo');
+  }, testOptions);
+
+  test('instantiate', function() {
+    const box = document.createElement('autocomplete-box');
+    box.placeholder = 'Placeholder text';
+    box.items = [
+      {'name': 'Apples'},
+      {'name': 'Bananas'},
+      {'name': 'Carrots'}
+    ];
+    this.addHTMLOutput(box);
+  });
+
+  test('instantiate_overlapping', function() {
+    const box = document.createElement('autocomplete-box');
+    box.placeholder = 'Placeholder text';
+    box.items = [
+      {'name': 'Foo'},
+      {'name': 'Fooish'},
+      {'name': 'Food'},
+      {'name': 'Foot'},
+      {'name': 'Arm'},
+      {'name': 'Army'},
+      {'name': 'a'},
+      {'name': 'ab'},
+      {'name': 'abc'},
+      {'name': 'abcd'},
+      {'name': 'abcdef'},
+      {'name': 'abcdefg'},
+      {'name': 'abcdefgh'},
+      {'name': 'abcdefghi'},
+      {'name': 'abcdefghij'},
+      {'name': 'abcdefghijk'},
+      {'name': 'abcdefghijkl'},
+      {'name': 'abcdefghijklm'},
+      {'name': 'abcdefghijklmn'},
+    ];
+    this.addHTMLOutput(box);
+  });
+
+  test('instantiate_complex', function() {
+    const box = document.createElement('autocomplete-box');
+    box.placeholder = 'Placeholder text';
+    box.multi = true;
+    box.items = [
+      {'name': 'ChromiumPerf', 'head': true},
+      {'name': 'windows', 'group': 'ChromiumPerf', 'tag': 'hello'},
+      {'name': 'mac', 'group': 'ChromiumPerf', 'tag': 'world'},
+      {'name': 'Android', 'head': true},
+      {'name': 'nexus5', 'group': 'Android'},
+      {'name': 'g1', 'group': 'Android'},
+      {'name': 'galaxy s6', 'group': 'Android'},
+    ];
+    this.addHTMLOutput(box);
+  });
+
+  test('required_passed_through', function() {
+    const box = document.createElement('autocomplete-box');
+    box.required = true;
+    this.addHTMLOutput(box);
+
+    assert.strictEqual(box.$.textbox.required, true);
+  });
+
+  test('validatable', function() {
+    const box = document.createElement('autocomplete-box');
+    this.addHTMLOutput(box);
+
+    assert.isDefined(box.validate);
+  });
+});
+</script>

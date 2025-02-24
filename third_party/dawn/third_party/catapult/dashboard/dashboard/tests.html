@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+  <title>Dashboard Tests: loading...</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <link rel="shortcut icon" href="data:image/x-icon;base64,"
+        type="image/x-icon">
+
+  <script src="/components/webcomponentsjs/webcomponents.js"></script>
+  
+  <link rel="import" href="/components/polymer/polymer.html">
+  <link rel="import" href="/tracing/base/unittest/interactive_test_runner.html">
+  <style>
+    html, body {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    'use strict';
+
+    window.addEventListener('load', function() {
+      HTMLImports.whenReady(function loadAndRunTests(e) {
+        tr.b.unittest.loadAndRunTests({
+          title: 'All Dashboard Tests',
+          getAllSuiteRelPathsAsync() {
+            return tr.b.getAsync('/dashboard/tests').then(function(json) {
+              return JSON.parse(json).test_relpaths;
+            }).catch (function(e) {
+              throw e;
+            });
+          },
+          testLinks: []
+        });
+      });
+    });
+  </script>
+</body>
+</html>

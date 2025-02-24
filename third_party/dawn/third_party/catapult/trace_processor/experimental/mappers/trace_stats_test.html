@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  var test_utils = tr.c.TestUtils;
+  var ThreadSlice = tr.model.ThreadSlice;
+
+  test('traceStatsTest', function() {
+    var m = test_utils.newModel(function(m) {
+      var p1 = m.getOrCreateProcess(1);
+      var t2 = p1.getOrCreateThread(2);
+      t2.sliceGroup.pushSlice(test_utils.newSliceEx({
+        name: 'some_slice',
+        start: 0, duration: 10
+      }));
+    });
+
+    var result = new pi.mre.MreResult();
+    pi.m.traceStatsFunctionForTest(result, m);
+
+    assert.equal(tr.b.dictionaryLength(result.pairs), 1);
+    var dict = result.pairs.stats;
+    assert.equal(dict.totalEvents, 1);
+    assert.equal(dict.firstTimeInMS, 0);
+    assert.equal(dict.lastTimeInMS, 10);
+    assert.equal(dict.durationInMS, 10);
+    assert.equal(dict.eventsPerSecond, 100);
+  });
+});
+
+</script>

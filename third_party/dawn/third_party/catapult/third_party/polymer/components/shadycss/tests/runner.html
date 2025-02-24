@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+    @license
+    Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+    This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+    The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+    The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+    Code distributed by Google as part of the polymer project is also
+    subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<title>ScopingShim Tests</title>
+<meta charset="utf-8">
+
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+
+<script>
+(function(){
+  var suites = [
+    'css-parse.html',
+    'apply-shim.html',
+    'async-loading.html',
+    'placeholder-ordering.html',
+    'scoping.html',
+    'mixin-ordering.html',
+    'svg.html',
+    'style-transformer.html',
+    'custom-style.html',
+    'custom-style-late.html',
+    'custom-style-only.html',
+    'complicated-mixin-ordering.html',
+    'dynamic-scoping.html',
+    'settings.html',
+    'chrome-devtools.html',
+    'workarounds.html',
+    'deferred-apply.html',
+    'no-applyshim/custom-style-only.html',
+    'wc-1.html',
+    'scoping-api.html',
+    'mixin-fallbacks.html'
+  ];
+
+  // http://eddmann.com/posts/cartesian-product-in-javascript/
+  function flatten(arr) { return [].concat.apply([], arr) }
+  function product(sets) {
+    return sets.reduce(function(acc, set) {
+      return flatten(acc.map(function(x) {
+          return set.map(function(y) { return x.concat(y); });
+      }));
+    }, [[]]);
+  }
+  function combinations(suites, flags) {
+    return product(flags).reduce(function(list, f) {
+      f = f.filter(function(i) { return i; }).join('&');
+      return list.concat(suites.map(function(s) { return s + (f ? '?' + f : '') }))
+    }, []);
+  }
+
+  function addUrlOption(previous, next) {
+    previous = previous || '';
+    next = next || '';
+    return previous + (previous ? '&' : '') + next;
+  }
+
+  // test shadowdom/custom elements polyfills together
+  // prefering both if possible.
+  var matrix = [''];
+  var webcomponents = '';
+  if (window.customElements) {
+    webcomponents = 'wc-register=true';
+  }
+  // if native is available, make sure to test polyfill
+  if (Element.prototype.attachShadow && document.documentElement.getRootNode) {
+    webcomponents = addUrlOption(webcomponents, 'wc-shadydom=true');
+  }
+  // ce + sd becomes a single test iteration.
+  if (webcomponents) {
+    matrix.push(webcomponents);
+  }
+  // economize testing by testing css shimming
+  // only against 1 environment (native or polyfill).
+  if (window.CSS && CSS.supports && CSS.supports('box-shadow', '0 0 0 var(--foo)')) {
+    var last = matrix[matrix.length-1];
+    matrix.push(addUrlOption(last, 'wc-shimcssproperties=true'));
+  }
+  suites = combinations(suites, [matrix]);
+
+  var orderingScenarios = [
+    'wc-order=apply,custom',
+    'wc-order=scoping,apply,custom',
+    'wc-order=apply,early,custom',
+    'wc-order=scoping,early,apply,custom',
+    'wc-order=scoping,apply,early,custom'
+  ];
+
+  suites = suites.concat(combinations(['ordering.html'], [matrix, orderingScenarios]));
+
+  if (matrix.length > 2) {
+    suites = suites.concat([
+      'no-scopingshim/apply-shim.html',
+      'no-scopingshim/mixin-ordering.html',
+      'no-scopingshim/custom-style.html',
+      'no-scopingshim/custom-style-late.html',
+      'no-scopingshim/complicated-mixin-ordering.html',
+      'no-scopingshim/custom-style-only.html',
+      'no-applyshim/custom-style.html',
+      'no-applyshim/custom-style-late.html'
+    ]);
+  }
+
+  console.log(suites);
+  WCT.loadSuites(suites);
+})();
+</script>

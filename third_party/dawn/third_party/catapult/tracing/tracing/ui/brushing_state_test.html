@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  const EventSet = tr.model.EventSet;
+  const SelectionState = tr.model.SelectionState;
+
+  function newSimpleModel() {
+    return tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.sA = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'a', start: 0, end: 5}));
+      m.sB = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'b', start: 10, end: 15}));
+      m.sC = m.t2.sliceGroup.pushSlice(
+          newSliceEx({title: 'c', start: 20, end: 20}));
+    });
+  }
+
+  test('brushingStateSimple', function() {
+    const m = newSimpleModel();
+
+    const bs = new tr.ui.b.BrushingState();
+    bs.selection = new EventSet([m.sA]);
+
+    bs.applyToEventSelectionStates(m);
+    assert.strictEqual(m.sA.selectionState, SelectionState.SELECTED);
+    bs.unapplyFromEventSelectionStates();
+    assert.strictEqual(m.sA.selectionState, SelectionState.NONE);
+  });
+
+
+  test('selectionAndAnalysisHover', function() {
+    const m = newSimpleModel();
+
+    const bs = new tr.ui.b.BrushingState();
+    bs.selection = new EventSet([m.sA]);
+    bs.analysisLinkHoveredEvents = new EventSet([m.sA, m.sB]);
+
+    bs.applyToEventSelectionStates(m);
+    assert.strictEqual(m.sA.selectionState, SelectionState.BRIGHTENED1);
+    assert.strictEqual(m.sB.selectionState, SelectionState.BRIGHTENED0);
+    bs.unapplyFromEventSelectionStates();
+    assert.strictEqual(m.sA.selectionState, SelectionState.DIMMED0);
+  });
+
+  test('brushingStateWithFindMatches', function() {
+    const m = newSimpleModel();
+
+    const bs = new tr.ui.b.BrushingState();
+    bs.selection = new EventSet([m.sA]);
+    bs.findMatches = new EventSet([m.sA, m.sB]);
+
+    bs.applyToEventSelectionStates(m);
+    assert.strictEqual(m.sA.selectionState, SelectionState.BRIGHTENED1);
+    assert.strictEqual(m.sB.selectionState, SelectionState.BRIGHTENED0);
+    assert.strictEqual(m.sC.selectionState, SelectionState.DIMMED0);
+    bs.unapplyFromEventSelectionStates();
+    assert.strictEqual(m.sA.selectionState, SelectionState.DIMMED0);
+    assert.strictEqual(m.sB.selectionState, SelectionState.DIMMED0);
+    assert.strictEqual(m.sC.selectionState, SelectionState.DIMMED0);
+  });
+
+  test('brushingTransfer', function() {
+    const m = newSimpleModel();
+
+    const bs = new tr.ui.b.BrushingState();
+    bs.selection = new EventSet([m.sA]);
+
+    const bs2 = bs.clone();
+
+    bs.applyToEventSelectionStates(m);
+    assert.strictEqual(m.sA.selectionState, SelectionState.SELECTED);
+    bs.transferModelOwnershipToClone(bs2);
+    assert.isFalse(bs.isAppliedToModel);
+    assert.isTrue(bs2.isAppliedToModel);
+
+    bs2.unapplyFromEventSelectionStates();
+    assert.strictEqual(m.sA.selectionState, SelectionState.NONE);
+    assert.strictEqual(m.sB.selectionState, SelectionState.NONE);
+    assert.strictEqual(m.sC.selectionState, SelectionState.NONE);
+  });
+
+  test('equality', function() {
+    const m = newSimpleModel();
+
+    const bs = new tr.ui.b.BrushingState();
+    bs.selection = new EventSet([m.sA]);
+    bs.findMatches = new EventSet([m.sB]);
+    bs.applyToEventSelectionStates = new EventSet([m.sC]);
+
+    // Clone equality, but with shared refs.
+    const bs2 = bs.clone();
+    assert.isTrue(bs.equals(bs2));
+
+    // Same value, different refs.
+    bs2.selection = new EventSet([m.sA]);
+    assert.isTrue(bs.equals(bs2));
+
+    // Different actual values.
+    bs2.selection = new EventSet([m.sB]);
+    assert.isFalse(bs.equals(bs2));
+  });
+});
+</script>

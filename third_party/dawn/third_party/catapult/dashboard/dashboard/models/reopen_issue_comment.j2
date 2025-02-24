@@ -1,0 +1,22 @@
+Reopened due to new regressions detected for this alert group:
+
+Added {{ regressions|length }} regressions to the group
+
+{% if skia_urls_text_internal %}
+  Internal (Googlers-only) Reports:
+  {%- for url_text in skia_urls_text_internal %}
+    - {{ url_text }}
+  {%- endfor -%}
+{% endif %}
+{% if skia_urls_text_public %}
+  Public Reports:
+  {%- for url_text in skia_urls_text_public %}
+    - {{ url_text }}
+  {%- endfor -%}
+{% endif %}
+  (Legacy) https://chromeperf.appspot.com/group_report?group_id={{ group.key.string_id() }}
+
+{#- Show the benchmark groupings conditionally. -#}
+{%- include 'benchmark_grouping.j2' -%}
+{# Group the anomalies by bot. #}
+{%- include 'bot_grouping.j2' %}

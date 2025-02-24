@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/timing_tool.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function create100PxWideViewportInto10WideWorld() {
+    const vp = new tr.ui.TimelineViewport(document.createElement('div'));
+    const tempDisplayTransform = new tr.ui.TimelineDisplayTransform();
+    tempDisplayTransform.xSetWorldBounds(0, 10, 100);
+    vp.setDisplayTransformImmediately(tempDisplayTransform);
+
+    assert.strictEqual(vp.currentDisplayTransform.xViewToWorld(0), 0);
+    assert.strictEqual(vp.currentDisplayTransform.xViewToWorld(100), 10);
+
+    return vp;
+  }
+
+  test('dragLeftInterestRegion', function() {
+    const vp = create100PxWideViewportInto10WideWorld();
+    vp.interestRange.min = 1;
+    vp.interestRange.max = 9;
+    const tool = new tr.ui.b.TimingTool(vp);
+
+    tool.mouseDownAt_(1.1, 0);
+    assert.isTrue(vp.interestRange.leftSelected);
+    tool.mouseMoveAt_(1.5, 0, true);
+    assert.strictEqual(vp.interestRange.min, 1.5);
+    tool.mouseUp_();
+    assert.strictEqual(vp.interestRange.min, 1.5);
+    assert.isFalse(vp.interestRange.leftSelected);
+  });
+
+  test('dragRightInterestRegion', function() {
+    const vp = create100PxWideViewportInto10WideWorld();
+    vp.interestRange.min = 1;
+    vp.interestRange.max = 9;
+    const tool = new tr.ui.b.TimingTool(vp);
+
+    tool.mouseDownAt_(9.1, 0);
+    assert.isTrue(vp.interestRange.rightSelected);
+    tool.mouseMoveAt_(8, 0, true);
+    assert.strictEqual(vp.interestRange.max, 8);
+    tool.mouseUp_();
+    assert.strictEqual(vp.interestRange.max, 8);
+    assert.isFalse(vp.interestRange.leftSelected);
+  });
+
+  test('dragInNewSpace', function() {
+    const vp = create100PxWideViewportInto10WideWorld();
+    vp.interestRange.min = 1;
+    vp.interestRange.max = 9;
+    const tool = new tr.ui.b.TimingTool(vp);
+
+    tool.mouseDownAt_(5, 0);
+    assert.isTrue(vp.interestRange.rightSelected);
+    assert.strictEqual(vp.interestRange.min, 5);
+    assert.strictEqual(vp.interestRange.max, 5);
+    tool.mouseMoveAt_(4, 0, true);
+    assert.strictEqual(vp.interestRange.min, 4);
+    assert.strictEqual(vp.interestRange.max, 5);
+    assert.isTrue(vp.interestRange.leftSelected);
+    tool.mouseUp_();
+    assert.strictEqual(vp.interestRange.min, 4);
+    assert.isFalse(vp.interestRange.leftSelected);
+    assert.isFalse(vp.interestRange.rightSelected);
+  });
+});
+</script>
+

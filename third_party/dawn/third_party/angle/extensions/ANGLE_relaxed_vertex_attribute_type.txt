@@ -1,0 +1,82 @@
+Name
+
+    ANGLE_relaxed_vertex_attribute_type
+
+Name Strings
+
+    GL_ANGLE_relaxed_vertex_attribute_type
+
+Contributors
+
+    Jamie Madill, Google
+    Kevin Jung, Samsung
+
+Contact
+
+    Jamie Madill (jmadill 'at' google.com)
+
+Notice
+
+    Copyright (c) 2021 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, March 25, 2021
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 3.0
+
+    Written against the OpenGL ES 3.0 specification.
+
+Overview
+
+    This extension defines behavior when the type parameter of
+    VertexAttribPointer has mismatched integer signedness with
+    the shader's attribute.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to the OpenGL ES Specification
+
+    Add after paragraph 6 of section 2.9 "Vertex Arrays" (beginning with
+    "When values for a vertex shader attribute variable are sourced..."):
+
+    If the generic attribute is specified by VertexAttribIPointer with an
+    unsigned type for base signed integer type attributes, or by a signed
+    type for base unsigned integer type attributes, the values loaded
+    into the shader attribute are reinterpreted as the corresponding
+    signed/unsigned type.
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author                 Changes
+    ----  -------------  ---------              ----------------------------------------
+      1   Mar 25, 2021   jmadill                Initial version

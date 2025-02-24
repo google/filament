@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span_behavior.html">
+
+<dom-module id="tr-v-ui-related-event-set-span">
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-related-event-set-span',
+    behaviors: [tr.v.ui.DIAGNOSTIC_SPAN_BEHAVIOR],
+
+    updateContents_() {
+      Polymer.dom(this).textContent = '';
+      const events = new tr.model.EventSet([...this.diagnostic]);
+      const link = document.createElement('tr-ui-a-analysis-link');
+      let label = events.length + ' events';
+      if (events.length === 1) {
+        const event = tr.b.getOnlyElement(events);
+        label = event.title + ' ';
+        label += tr.b.Unit.byName.timeDurationInMs.format(
+            event.duration);
+      }
+      link.setSelectionAndContent(events, label);
+      Polymer.dom(this).appendChild(link);
+    }
+  });
+
+  return {};
+});
+</script>

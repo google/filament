@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/url_json.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  function urlJson2Json(s) {
+    return JSON.stringify(tr.b.UrlJson.parse(s));
+  }
+
+  test('stringifyInvalid', function() {
+    assert.throws(() => tr.b.UrlJson.stringify([]));
+    assert.throws(() => tr.b.UrlJson.stringify(0));
+    assert.throws(() => tr.b.UrlJson.stringify(null));
+    assert.throws(() => tr.b.UrlJson.stringify(true));
+    assert.throws(() => tr.b.UrlJson.stringify(false));
+    assert.throws(() => tr.b.UrlJson.stringify({a: []}));
+    assert.throws(() => tr.b.UrlJson.stringify({a: 0}));
+    assert.throws(() => tr.b.UrlJson.stringify({a: null}));
+    assert.throws(() => tr.b.UrlJson.stringify({a: true}));
+    assert.throws(() => tr.b.UrlJson.stringify({a: false}));
+  });
+
+  test('stringify', function() {
+    assert.strictEqual('', tr.b.UrlJson.stringify({}));
+    assert.strictEqual('a-', tr.b.UrlJson.stringify({a: ''}));
+    assert.strictEqual('a-0', tr.b.UrlJson.stringify({a: '0'}));
+    assert.strictEqual('a-%25', tr.b.UrlJson.stringify({a: '%'}));
+    assert.strictEqual('a-(b-)', tr.b.UrlJson.stringify({a: {b: ''}}));
+    assert.strictEqual('a-.b-', tr.b.UrlJson.stringify({a: '', b: ''}));
+  });
+
+  test('parse', function() {
+    assert.strictEqual('{}', urlJson2Json(''));
+    assert.strictEqual('{"a":""}', urlJson2Json('a-'));
+    assert.strictEqual('{"a":"0"}', urlJson2Json('a-0'));
+    assert.strictEqual('{"a":"%"}', urlJson2Json('a-%25'));
+    assert.strictEqual('{"a":{"b":""}}', urlJson2Json('a-(b-)'));
+    assert.strictEqual('{"a":"","b":""}', urlJson2Json('a-.b-'));
+  });
+});
+</script>

@@ -1,0 +1,76 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script src=".././test-flags.js"></script>
+<script src="../../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../../node_modules/@webcomponents/template/template.js"></script>
+<script src="../../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+<script>
+  WCT = { waitFor: function (cb) { HTMLImports.whenReady(cb) } }
+</script>
+<script src="../../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+<script src="../../apply-shim.min.js"></script>
+<script>
+  if (window.customElements && customElements.polyfillWrapFlushCallback) {
+    // delay definition of custom-style until after template polyfill loads
+    customElements.polyfillWrapFlushCallback(function (cb) {
+      HTMLImports.whenReady(cb);
+    });
+  }
+</script>
+<script src="../../custom-style-interface.min.js"></script>
+<script src="../module/generated/make-element.js"></script>
+<script src="../module/generated/custom-style-element.js"></script>
+<script src="../../node_modules/wct-browser-legacy/browser.js"></script>
+
+
+<custom-style>
+  <style>
+    #target {
+      display: block;
+      @apply --late;
+    }
+  </style>
+</custom-style>
+
+<template id="late">
+  <custom-style class="late-style">
+    <style>
+    html {
+      --late: {
+        border: 2px solid red;
+      };
+    }
+    </style>
+  </custom-style>
+</template>
+
+<div id="target"></div>
+
+<script>
+suite('custom-style only', function() {
+  var host = document.querySelector('#target');
+  test('custom-style by itself works as expected', function() {
+    assert.equal(getComputedStyle(host).getPropertyValue('display').trim(), 'block');
+  });
+  test('late custom-style updates styling', function(done) {
+    var lateTemplate = document.querySelector('template#late');
+    document.body.appendChild(document.importNode(lateTemplate.content, true));
+    // two rAF to wait for after custom-style-interface's batching
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        assert.equal(getComputedStyle(host).borderTopWidth.trim(), '2px');
+        done();
+      });
+    });
+  })
+})
+</script>

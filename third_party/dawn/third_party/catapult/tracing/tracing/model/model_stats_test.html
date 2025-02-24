@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/model_stats.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ModelStats = tr.model.ModelStats;
+
+  test('getTraceEventStatsByCategory', function() {
+    const modelStats = new ModelStats();
+    modelStats.willProcessBasicTraceEvent('X', 'cat1', 'title1');
+    modelStats.willProcessBasicTraceEvent('X', 'cat1', 'title1');
+    modelStats.willProcessBasicTraceEvent('X', 'cat2', 'title3');
+
+    assert.strictEqual(modelStats.allTraceEventStats.length, 2);
+    assert.strictEqual(
+        modelStats.traceEventCountsByKey_.get('X/cat1/title1').numEvents,
+        2);
+    assert.strictEqual(
+        modelStats.traceEventCountsByKey_.get('X/cat2/title3').numEvents,
+        1);
+  });
+
+  test('getTraceEventStatsInTimeIntervals', function() {
+    const modelStats = new ModelStats();
+    const timeIntervalSizeInUs = modelStats.TIME_INTERVAL_SIZE_IN_MS * 1000;
+    modelStats.willProcessBasicTraceEvent('X', 'cat1', 'title1', 1, 1);
+    modelStats.willProcessBasicTraceEvent(
+        'X', 'cat1', 'title1', timeIntervalSizeInUs + 1, 2);
+    modelStats.willProcessBasicTraceEvent(
+        'X', 'cat1', 'title1', 2 * timeIntervalSizeInUs + 1, 3);
+    modelStats.willProcessBasicTraceEvent(
+        'X', 'cat2', 'title3', 2 * timeIntervalSizeInUs + 2, 4);
+
+    assert.strictEqual(modelStats.allTraceEventStatsInTimeIntervals.length, 3);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(0).numEvents, 1);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(1).numEvents, 1);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(2).numEvents, 2);
+
+    assert.isTrue(modelStats.hasEventSizesinBytes);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(0).totalEventSizeinBytes,
+        1);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(1).totalEventSizeinBytes,
+        2);
+    assert.strictEqual(
+        modelStats.traceEventStatsInTimeIntervals_.get(2).totalEventSizeinBytes,
+        7);
+  });
+});
+</script>

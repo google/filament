@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/display_item_list.html">
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/display_item_debugger.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  /*
+   * Displays a display item snapshot in a human readable form.
+   * @constructor
+   */
+  const DisplayItemSnapshotView = tr.ui.b.define(
+      'tr-ui-e-chrome-cc-display-item-list-view',
+      tr.ui.analysis.ObjectSnapshotView);
+
+  DisplayItemSnapshotView.prototype = {
+    __proto__: tr.ui.analysis.ObjectSnapshotView.prototype,
+
+    decorate() {
+      this.style.display = 'flex';
+      this.style.flexGrow = 1;
+      this.style.flexShrink = 1;
+      this.style.flexBasis = 'auto';
+      this.style.minWidth = 0;
+      this.displayItemDebugger_ = new tr.ui.e.chrome.cc.DisplayItemDebugger();
+      this.displayItemDebugger_.style.flexGrow = 1;
+      this.displayItemDebugger_.style.flexShrink = 1;
+      this.displayItemDebugger_.style.flexBasis = 'auto';
+      this.displayItemDebugger_.style.minWidth = 0;
+      Polymer.dom(this).appendChild(this.displayItemDebugger_);
+    },
+
+    updateContents() {
+      if (this.objectSnapshot_ && this.displayItemDebugger_) {
+        this.displayItemDebugger_.displayItemList = this.objectSnapshot_;
+      }
+    }
+  };
+
+  tr.ui.analysis.ObjectSnapshotView.register(
+      DisplayItemSnapshotView,
+      {
+        typeNames: ['cc::DisplayItemList'],
+        showInstances: false
+      });
+
+  return {
+    DisplayItemSnapshotView,
+  };
+});
+</script>

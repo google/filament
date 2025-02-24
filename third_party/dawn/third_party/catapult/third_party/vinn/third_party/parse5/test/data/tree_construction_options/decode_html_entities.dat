@@ -1,0 +1,22 @@
+#data
+<html><head></head><body>&nbsp;</body></html>
+#disable-html-entities-decoding
+true
+#errors
+#document
+| <html>
+|   <head>
+|   <body>
+|     "&nbsp;"
+
+#data
+<html><head></head><body><a href="&amp;test&copy;"></a></body></html>
+#disable-html-entities-decoding
+true
+#errors
+#document
+| <html>
+|   <head>
+|   <body>
+|     <a>
+|       href="&amp;test&copy;"

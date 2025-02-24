@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/category_util.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/extras/chrome/cc/display_item_list.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/extras/chrome/largest_contentful_paint.html">
+<link rel="import" href="/tracing/extras/chrome/time_to_interactive.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/breakdown_tree_helpers.html">
+<link rel="import" href="/tracing/metrics/system_health/rects_based_speed_index_metric.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_thread_helper.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+<link rel="import" href="/tracing/value/diagnostics/alert_groups.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const LONG_TASK_THRESHOLD_MS = 50;
+  const timeDurationInMs_smallerIsBetter =
+      tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const RelatedEventSet = tr.v.d.RelatedEventSet;
+  const hasCategoryAndName = tr.metrics.sh.hasCategoryAndName;
+  const EventFinderUtils = tr.e.chrome.EventFinderUtils;
+
+  /**
+   * @param {!Object.<string, Object>} breakdownTree
+   * @return {tr.v.d.Breakdown} A breakdown with categories and the total time
+   * (ms) spent under each category.
+   */
+  function createBreakdownDiagnostic(breakdownTree) {
+    const breakdownDiagnostic = new tr.v.d.Breakdown();
+    breakdownDiagnostic.colorScheme =
+        tr.v.d.COLOR_SCHEME_CHROME_USER_FRIENDLY_CATEGORY_DRIVER;
+
+    for (const label in breakdownTree) {
+      breakdownDiagnostic.set(label, breakdownTree[label].total);
+    }
+    return breakdownDiagnostic;
+  }
+
+  const LOADING_METRIC_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 1e3, 20)  // 50ms step to 1s
+      .addLinearBins(3e3, 20) // 100ms step to 3s
+      .addExponentialBins(20e3, 20);
+
+  const TIME_TO_INTERACTIVE_BOUNDARIES = tr.v.HistogramBinBoundaries
+  // 90-th percentiile of TTI is around 40 seconds, across warm and cold
+  // loads. Data obtained through Cluster Telemetry analysis.
+      .createExponential(1, 40e3, 35)
+      .addExponentialBins(80e3, 15);
+
+  const LAYOUT_SHIFT_SCORE_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 50, 25);
+
+  const SUMMARY_OPTIONS = {
+    avg: true,
+    count: false,
+    max: true,
+    min: true,
+    std: true,
+    sum: false,
+  };
+
+  function findFrameLoaderSnapshotAt(rendererHelper, frameIdRef, ts) {
+    const objects = rendererHelper.process.objects;
+    const frameLoaderInstances = objects.instancesByTypeName_.FrameLoader;
+    if (frameLoaderInstances === undefined) return undefined;
+
+    let snapshot;
+    for (const instance of frameLoaderInstances) {
+      if (!instance.isAliveAt(ts)) continue;
+      const maybeSnapshot = instance.getSnapshotAt(ts);
+      if (frameIdRef !== maybeSnapshot.args.frame.id_ref) continue;
+      snapshot = maybeSnapshot;
+    }
+
+    return snapshot;
+  }
+
+  function findAllEvents(rendererHelper, category, title) {
+    const targetEvents = [];
+
+    for (const ev of rendererHelper.process.getDescendantEvents()) {
+      if (!hasCategoryAndName(ev, category, title)) continue;
+      targetEvents.push(ev);
+    }
+
+    return targetEvents;
+  }
+
+  function getMostRecentValidEvent(rendererHelper, category, title) {
+    const targetEvents = findAllEvents(rendererHelper, category, title);
+    // Want to keep the event with the most recent timestamp
+    let validEvent;
+    for (const targetEvent of targetEvents) {
+      if (rendererHelper.modelHelper.isTelemetryInternalEvent(targetEvent)) {
+        continue;
+      }
+      if (validEvent === undefined) {
+        validEvent = targetEvent;
+      } else {
+        // Want to keep the event with the most recent timestamp
+        if (validEvent.start < targetEvent.start) {
+          validEvent = targetEvent;
+        }
+      }
+    }
+    return validEvent;
+  }
+
+  function getFirstViewportReadySamples(rendererHelper,
+      navIdToNavStartEvents) {
+    const samples = [];
+    // Want to measure the time from when navigation starts to when the load
+    // event fired for all non-ad resources.  This done with the associated
+    // navigation start event to the pc mark in the amp code, correlated by
+    // navigation id.
+    const pcEvent = getMostRecentValidEvent(
+        rendererHelper, 'blink.user_timing', 'pc');
+    if (pcEvent === undefined) return samples;
+
+    if (rendererHelper.modelHelper.isTelemetryInternalEvent(pcEvent)) {
+      return samples;
+    }
+
+    const navigationStartEvent = navIdToNavStartEvents.get(
+        pcEvent.args.data.navigationId);
+    if (navigationStartEvent === undefined) return samples;
+    const navStartToEventRange = tr.b.math.Range.fromExplicitRange(
+        navigationStartEvent.start, pcEvent.start);
+    const networkEvents = EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, navStartToEventRange);
+    // Main thread may be missing. See crbug.com/1059726 for an example.
+    if (rendererHelper.mainThread === undefined) return samples;
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, navStartToEventRange);
+    samples.push({
+      value: navStartToEventRange.duration,
+      breakdownTree,
+      diagnostics: {
+        breakdown: createBreakdownDiagnostic(breakdownTree),
+        Start: new RelatedEventSet(navigationStartEvent),
+        End: new RelatedEventSet(pcEvent)
+      }
+    });
+
+    return samples;
+  }
+
+  function getAboveTheFoldLoadedToVisibleSamples(rendererHelper) {
+    const samples = [];
+    // Want to measure the time from when the document is visible to the time
+    // when the load event fired for all non-ad resources.  This is done with
+    // two marks in the amp code: pc and visible.
+    const pcEvent = getMostRecentValidEvent(
+        rendererHelper, 'blink.user_timing', 'pc');
+    const visibleEvent = getMostRecentValidEvent(
+        rendererHelper, 'blink.user_timing', 'visible');
+    if (pcEvent !== undefined && visibleEvent !== undefined) {
+      samples.push({
+        value: Math.max(0.0, pcEvent.start - visibleEvent.start),
+        diagnostics: {
+          Start: new RelatedEventSet(visibleEvent),
+          End: new RelatedEventSet(pcEvent)
+        }
+      });
+    }
+    return samples;
+  }
+
+  // Assume that this event has |event.arg.frame|.
+  function findTimeToXEntries(
+      category, eventName, rendererHelper, frameToNavStartEvents,
+      navIdToNavStartEvents) {
+    const targetEvents = findAllEvents(rendererHelper, category, eventName);
+    const entries = [];
+    for (const targetEvent of targetEvents) {
+      if (rendererHelper.modelHelper.isTelemetryInternalEvent(targetEvent)) {
+        continue;
+      }
+      const frameIdRef = targetEvent.args.frame;
+      const snapshot = findFrameLoaderSnapshotAt(
+          rendererHelper, frameIdRef, targetEvent.start);
+      if (snapshot === undefined) continue;
+      // If isOutermostMainFrame is available, use it, if not use
+      // isLoadingMainFrame.
+      const isOutermostMainFrame =
+            (snapshot.args.isOutermostMainFrame !== undefined) ?
+              snapshot.args.isOutermostMainFrame :
+              snapshot.args.isLoadingMainFrame;
+      if (!isOutermostMainFrame) continue;
+      const url = snapshot.args.documentLoaderURL;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(url)) continue;
+      let navigationStartEvent;
+      if (targetEvent.args.data === undefined ||
+          targetEvent.args.data.navigationId === undefined) {
+        navigationStartEvent =
+            EventFinderUtils.findLastEventStartingOnOrBeforeTimestamp(
+                frameToNavStartEvents.get(frameIdRef) || [], targetEvent.start);
+      } else {
+        navigationStartEvent = navIdToNavStartEvents.get(
+            targetEvent.args.data.navigationId);
+      }
+
+      // Ignore layout w/o preceding navigationStart, as they are not
+      // attributed to any time-to-X metric.
+      if (navigationStartEvent === undefined) continue;
+      entries.push({
+        navigationStartEvent,
+        targetEvent,
+        url,
+      });
+    }
+    return entries;
+  }
+
+  function collectTimeToEvent(rendererHelper, timeToXEntries) {
+    const samples = [];
+    for (const { targetEvent, navigationStartEvent, url } of timeToXEntries) {
+      const navStartToEventRange = tr.b.math.Range.fromExplicitRange(
+          navigationStartEvent.start, targetEvent.start);
+      const networkEvents = EventFinderUtils.getNetworkEventsInRange(
+          rendererHelper.process, navStartToEventRange);
+      const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+          rendererHelper.mainThread, networkEvents, navStartToEventRange);
+      samples.push({
+        value: navStartToEventRange.duration,
+        breakdownTree,
+        diagnostics: {
+          breakdown: createBreakdownDiagnostic(breakdownTree),
+          url: new tr.v.d.GenericSet([url]),
+          Start: new RelatedEventSet(navigationStartEvent),
+          End: new RelatedEventSet(targetEvent)
+        }
+      });
+    }
+    return samples;
+  }
+
+  function collectTimeToEventInCpuTime(rendererHelper, timeToXEntries) {
+    const samples = [];
+    for (const { targetEvent, navigationStartEvent, url } of timeToXEntries) {
+      const navStartToEventRange = tr.b.math.Range.fromExplicitRange(
+          navigationStartEvent.start, targetEvent.start);
+
+      const mainThreadCpuTime =
+          rendererHelper.mainThread.getCpuTimeForRange(navStartToEventRange);
+
+      const breakdownTree = tr.metrics.sh.generateCpuTimeBreakdownTree(
+          rendererHelper.mainThread, navStartToEventRange);
+      samples.push({
+        value: mainThreadCpuTime,
+        breakdownTree,
+        diagnostics: {
+          breakdown: createBreakdownDiagnostic(breakdownTree),
+          start: new RelatedEventSet(navigationStartEvent),
+          end: new RelatedEventSet(targetEvent),
+          infos: new tr.v.d.GenericSet([{
+            pid: rendererHelper.pid,
+            start: navigationStartEvent.start,
+            event: targetEvent.start,
+          }]),
+        }
+      });
+    }
+    return samples;
+  }
+
+  function findMainFrameLayoutShiftSamples(rendererHelper) {
+    let sample;
+    EventFinderUtils.getSortedMainThreadEventsByFrame(rendererHelper,
+        'LayoutShift', 'loading').forEach((events) => {
+      // We want the final cumulative score, so look at the last event.
+      const evData = events.pop().args.data;
+      if (evData.is_main_frame) {
+        sample = {value: evData.cumulative_score};
+      }
+    });
+    // When there is no layout shift event on found on the page, CLS is 0.
+    return sample ? [sample] : [{value: 0}];
+  }
+
+  function findAllLayoutShiftSamples(chromeHelper) {
+    let total = 0;
+    let foundMainFrame = false;
+    for (const pid in chromeHelper.rendererHelpers) {
+      const rendererHelper = chromeHelper.rendererHelpers[pid];
+      if (rendererHelper.isChromeTracingUI) continue;
+
+      tr.e.chrome.EventFinderUtils.getSortedMainThreadEventsByFrame(
+          rendererHelper, 'LayoutShift', 'loading').forEach((events) => {
+        // Add up the scores for main frames and weighted scores for subframes.
+        for (const event of events) {
+          const evData = event.args.data;
+          if (evData.is_main_frame) {
+            total += evData.score;
+            foundMainFrame = true;
+          } else {
+            total += evData.weighted_score_delta;
+          }
+        }
+      });
+    }
+
+    // If no CLS is found, report value as 0 instead of null.
+    return foundMainFrame ? [{value: total}] : [{value: 0}];
+  }
+
+  function addFirstMeaningfulPaintSample(samples, rendererHelper,
+      navigationStart, fmpMarkerEvent, url) {
+    const navStartToFMPRange = tr.b.math.Range.fromExplicitRange(
+        navigationStart.start, fmpMarkerEvent.start);
+    const networkEvents = EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, navStartToFMPRange);
+    const timeToFirstMeaningfulPaint = navStartToFMPRange.duration;
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, navStartToFMPRange);
+    samples.push({
+      value: timeToFirstMeaningfulPaint,
+      breakdownTree,
+      diagnostics: {
+        breakdown: createBreakdownDiagnostic(breakdownTree),
+        start: new RelatedEventSet(navigationStart),
+        end: new RelatedEventSet(fmpMarkerEvent),
+        infos: new tr.v.d.GenericSet([{
+          url,
+          pid: rendererHelper.pid,
+          start: navigationStart.start,
+          fmp: fmpMarkerEvent.start,
+        }]),
+      }
+    });
+  }
+
+  function addFirstMeaningfulPaintCpuTimeSample(samples, rendererHelper,
+      navigationStart, fmpMarkerEvent, url) {
+    const navStartToFMPRange = tr.b.math.Range.fromExplicitRange(
+        navigationStart.start, fmpMarkerEvent.start);
+
+    const mainThreadCpuTime =
+        rendererHelper.mainThread.getCpuTimeForRange(navStartToFMPRange);
+
+    const breakdownTree = tr.metrics.sh.generateCpuTimeBreakdownTree(
+        rendererHelper.mainThread, navStartToFMPRange);
+    samples.push({
+      value: mainThreadCpuTime,
+      breakdownTree,
+      diagnostics: {
+        breakdown: createBreakdownDiagnostic(breakdownTree),
+        start: new RelatedEventSet(navigationStart),
+        end: new RelatedEventSet(fmpMarkerEvent),
+        infos: new tr.v.d.GenericSet([{
+          url,
+          pid: rendererHelper.pid,
+          start: navigationStart.start,
+          fmp: fmpMarkerEvent.start,
+        }]),
+      }
+    });
+  }
+
+  /**
+   * Object containing one value and associated diagnostics info for that value
+   * for a metric.
+   * @typedef {{value: number, diagnostics: !tr.v.d.DiagnosticMap}} MetricSample
+   */
+
+  /**
+   * Returns a MetricSample for interactivity metrics - First CPU Idle and Time
+   * to Interactive.
+   *
+   * @param {tr.model.helpers.ChromeRendererHelper} rendererHelper
+   * @param {?number} eventTimestamp - Timestamp of the event for which the
+   *     sample is being generated.
+   * @param {tr.model.ThreadSlice} navigationStartEvent
+   * @param {number} firstContentfulPaintTime
+   * @param {number} domContentLoadedEndTime
+   * @param {string} url - URL of the current main frame document.
+   * @returns {MetricSample|undefined}
+   */
+  function decorateInteractivitySampleWithDiagnostics_(rendererHelper,
+      eventTimestamp, navigationStartEvent, firstContentfulPaintTime,
+      domContentLoadedEndTime, url) {
+    if (eventTimestamp === undefined) return undefined;
+    const navigationStartTime = navigationStartEvent.start;
+    const navStartToEventTimeRange =
+        tr.b.math.Range.fromExplicitRange(
+            navigationStartTime, eventTimestamp);
+    const networkEvents = EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, navStartToEventTimeRange);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents,
+        navStartToEventTimeRange);
+    const breakdownDiagnostic = createBreakdownDiagnostic(breakdownTree);
+    return {
+      value: navStartToEventTimeRange.duration,
+      diagnostics: tr.v.d.DiagnosticMap.fromObject({
+        'Start': new RelatedEventSet(navigationStartEvent),
+        'Navigation infos': new tr.v.d.GenericSet([{
+          url,
+          pid: rendererHelper.pid,
+          navigationStartTime,
+          firstContentfulPaintTime,
+          domContentLoadedEndTime,
+          // eventTimestamp can be derived from value and navigationStartEvent,
+          // but it's useful to directly see the value in the UI.
+          eventTimestamp,
+        }]),
+        'Breakdown of [navStart, eventTimestamp]': breakdownDiagnostic,
+      }),
+    };
+  }
+
+  function getCandidateIndex(entry) {
+    return entry.targetEvent.args.data.candidateIndex;
+  }
+
+  function findLastCandidateForEachNavigation(timeToXEntries) {
+    const entryMap = new Map();
+    for (const e of timeToXEntries) {
+      const navStartEvent = e.navigationStartEvent;
+      if (!entryMap.has(navStartEvent)) {
+        entryMap.set(navStartEvent, []);
+      }
+      entryMap.get(navStartEvent).push(e);
+    }
+    const lastCandidates = [];
+    for (const timeToXEntriesByNavigation of entryMap.values()) {
+      let lastCandidate = timeToXEntriesByNavigation.shift();
+      for (const entry of timeToXEntriesByNavigation) {
+        if (getCandidateIndex(entry) > getCandidateIndex(lastCandidate)) {
+          lastCandidate = entry;
+        }
+      }
+      lastCandidates.push(lastCandidate);
+    }
+    return lastCandidates;
+  }
+
+  function findLargestTextPaintSamples(rendererHelper, frameToNavStartEvents,
+      navIdToNavStartEvents) {
+    const timeToPaintEntries = findTimeToXEntries('loading',
+        'LargestTextPaint::Candidate', rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const timeToPaintBlockingEntries = findTimeToXEntries('loading',
+        'LargestTextPaint::NoCandidate', rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const lastCandidateEvents =
+        findLastCandidateForEachNavigation(
+            timeToPaintEntries.concat(timeToPaintBlockingEntries))
+            .filter(event =>
+              event.targetEvent.title !== 'LargestTextPaint::NoCandidate');
+    return collectTimeToEvent(rendererHelper, lastCandidateEvents);
+  }
+
+  function findLargestImagePaintSamples(rendererHelper, frameToNavStartEvents,
+      navIdToNavStartEvents) {
+    const timeToPaintEntries = findTimeToXEntries('loading',
+        'LargestImagePaint::Candidate', rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const timeToPaintBlockingEntries = findTimeToXEntries('loading',
+        'LargestImagePaint::NoCandidate', rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const lastCandidateEvents =
+        findLastCandidateForEachNavigation(
+            timeToPaintEntries.concat(timeToPaintBlockingEntries))
+            .filter(event =>
+              event.targetEvent.title !== 'LargestImagePaint::NoCandidate');
+    return collectTimeToEvent(rendererHelper, lastCandidateEvents);
+  }
+
+  function findLargestContentfulPaintHistogramSamples(allBrowserEvents) {
+    const lcp = new tr.e.chrome.LargestContentfulPaint(allBrowserEvents);
+    const lcpSamples = lcp.findCandidates().map(candidate => {
+      const { durationInMilliseconds, size, type, inMainFrame,
+        mainFrameTreeNodeId } = candidate;
+      return {
+        value: durationInMilliseconds,
+        diagnostics: {
+          size: new tr.v.d.GenericSet([size]),
+          type: new tr.v.d.GenericSet([type]),
+          inMainFrame: new tr.v.d.GenericSet([inMainFrame]),
+          mainFrameTreeNodeId: new tr.v.d.GenericSet([mainFrameTreeNodeId]),
+        },
+      };
+    });
+    return lcpSamples;
+  }
+
+  function collectLoadingMetricsForRenderer(rendererHelper) {
+    const frameToNavStartEvents =
+        EventFinderUtils.getSortedMainThreadEventsByFrame(
+            rendererHelper, 'navigationStart', 'blink.user_timing');
+    const navIdToNavStartEvents =
+        EventFinderUtils.getSortedMainThreadEventsByNavId(
+            rendererHelper, 'navigationStart', 'blink.user_timing');
+    const firstPaintSamples = collectTimeToEvent(rendererHelper,
+        findTimeToXEntries('loading', 'firstPaint', rendererHelper,
+            frameToNavStartEvents, navIdToNavStartEvents));
+    const timeToFCPEntries = findTimeToXEntries('loading',
+        'firstContentfulPaint', rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const firstContentfulPaintSamples = collectTimeToEvent(rendererHelper,
+        timeToFCPEntries);
+    const firstContentfulPaintCpuTimeSamples = collectTimeToEventInCpuTime(
+        rendererHelper, timeToFCPEntries);
+    const onLoadSamples = collectTimeToEvent(rendererHelper, findTimeToXEntries(
+        'blink.user_timing', 'loadEventStart', rendererHelper,
+        frameToNavStartEvents, navIdToNavStartEvents));
+    const aboveTheFoldLoadedToVisibleSamples =
+        getAboveTheFoldLoadedToVisibleSamples(rendererHelper);
+    const firstViewportReadySamples = getFirstViewportReadySamples(
+        rendererHelper, navIdToNavStartEvents);
+    const largestImagePaintSamples = findLargestImagePaintSamples(
+        rendererHelper, frameToNavStartEvents, navIdToNavStartEvents);
+    const largestTextPaintSamples = findLargestTextPaintSamples(
+        rendererHelper, frameToNavStartEvents,
+        navIdToNavStartEvents);
+    const mainFrameLayoutShiftSamples = findMainFrameLayoutShiftSamples(
+        rendererHelper);
+    const navigationStartSamples = timeToFCPEntries.map(entry => {
+      return { value: entry.navigationStartEvent.start};
+    });
+
+    return {
+      frameToNavStartEvents,
+      firstPaintSamples,
+      firstContentfulPaintSamples,
+      firstContentfulPaintCpuTimeSamples,
+      onLoadSamples,
+      aboveTheFoldLoadedToVisibleSamples,
+      firstViewportReadySamples,
+      largestImagePaintSamples,
+      largestTextPaintSamples,
+      mainFrameLayoutShiftSamples,
+      navigationStartSamples,
+    };
+  }
+
+  function collectMetricsFromLoadExpectations(model, chromeHelper) {
+    // Add FMP, firstCpuIdle and interactive samples from load UE
+    const interactiveSamples = [];
+    const firstCpuIdleSamples = [];
+    const firstMeaningfulPaintSamples = [];
+    const firstMeaningfulPaintCpuTimeSamples = [];
+    const totalBlockingTimeSamples = [];
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(expectation.url)) {
+        continue;
+      }
+      const rendererHelper = chromeHelper.rendererHelpers[
+          expectation.renderProcess.pid];
+      if (expectation.fmpEvent !== undefined) {
+        addFirstMeaningfulPaintSample(firstMeaningfulPaintSamples,
+            rendererHelper, expectation.navigationStart, expectation.fmpEvent,
+            expectation.url);
+        addFirstMeaningfulPaintCpuTimeSample(firstMeaningfulPaintCpuTimeSamples,
+            rendererHelper, expectation.navigationStart, expectation.fmpEvent,
+            expectation.url);
+      }
+      if (expectation.firstCpuIdleTime !== undefined) {
+        firstCpuIdleSamples.push(decorateInteractivitySampleWithDiagnostics_(
+            rendererHelper, expectation.firstCpuIdleTime,
+            expectation.navigationStart,
+            expectation.fcpEvent.start,
+            expectation.domContentLoadedEndEvent.start, expectation.url));
+      }
+      if (expectation.timeToInteractive !== undefined) {
+        interactiveSamples.push(decorateInteractivitySampleWithDiagnostics_(
+            rendererHelper, expectation.timeToInteractive,
+            expectation.navigationStart,
+            expectation.fcpEvent.start,
+            expectation.domContentLoadedEndEvent.start, expectation.url));
+      }
+      if (expectation.totalBlockingTime !== undefined) {
+        totalBlockingTimeSamples.push({
+          value: expectation.totalBlockingTime,
+          diagnostics: {
+            url: new tr.v.d.GenericSet([expectation.url]),
+            navigationStart: new RelatedEventSet(expectation.navigationStart),
+            firstContentfulPaint: new RelatedEventSet(expectation.fcpEvent),
+            interactiveTime: new tr.v.d.GenericSet(
+                [expectation.timeToInteractive]),
+          }});
+      }
+    }
+
+    return {
+      firstMeaningfulPaintSamples,
+      firstMeaningfulPaintCpuTimeSamples,
+      firstCpuIdleSamples,
+      interactiveSamples,
+      totalBlockingTimeSamples,
+    };
+  }
+
+  function addSamplesToHistogram(samples, histogram, histograms) {
+    for (const sample of samples) {
+      histogram.addSample(sample.value, sample.diagnostics);
+    }
+  }
+
+  function loadingMetric(histograms, model) {
+    const firstPaintHistogram = histograms.createHistogram(
+        'timeToFirstPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'time to first paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const firstContentfulPaintHistogram = histograms.createHistogram(
+        'timeToFirstContentfulPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'time to first contentful paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const firstContentfulPaintCpuTimeHistogram = histograms.createHistogram(
+        'cpuTimeToFirstContentfulPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'CPU time to first contentful paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const onLoadHistogram = histograms.createHistogram(
+        'timeToOnload', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'time to onload. ' +
+            'This is temporary metric used for PCv1/v2 sanity checking',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const firstMeaningfulPaintHistogram = histograms.createHistogram(
+        'timeToFirstMeaningfulPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'time to first meaningful paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const firstMeaningfulPaintCpuTimeHistogram = histograms.createHistogram(
+        'cpuTimeToFirstMeaningfulPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'CPU time to first meaningful paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const timeToInteractiveHistogram = histograms.createHistogram(
+        'timeToInteractive', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TIME_TO_INTERACTIVE_BOUNDARIES,
+          description: 'Time to Interactive',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_INTERACTIVITY],
+        });
+    const totalBlockingTimeHistogram = histograms.createHistogram(
+        'totalBlockingTime', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TIME_TO_INTERACTIVE_BOUNDARIES,
+          description: 'Total Blocking Time',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_INTERACTIVITY],
+        });
+    const timeToFirstCpuIdleHistogram = histograms.createHistogram(
+        'timeToFirstCpuIdle', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TIME_TO_INTERACTIVE_BOUNDARIES,
+          description: 'Time to First CPU Idle',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_INTERACTIVITY],
+        });
+    const aboveTheFoldLoadedToVisibleHistogram = histograms.createHistogram(
+        'aboveTheFoldLoadedToVisible', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TIME_TO_INTERACTIVE_BOUNDARIES,
+          description: 'Time from first visible to load for AMP pages only.',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const firstViewportReadyHistogram = histograms.createHistogram(
+        'timeToFirstViewportReady', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TIME_TO_INTERACTIVE_BOUNDARIES,
+          description: 'Time from navigation to load for AMP pages only. ',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const largestImagePaintHistogram = histograms.createHistogram(
+        'largestImagePaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'Time to Largest Image Paint',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const largestTextPaintHistogram = histograms.createHistogram(
+        'largestTextPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'Time to Largest Text Paint',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    const largestContentfulPaintHistogram = histograms.createHistogram(
+        'largestContentfulPaint', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'Time to Largest Contentful Paint',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_PAINT],
+        });
+    const mainFrameLayoutShiftHistogram = histograms.createHistogram(
+        'mainFrameCumulativeLayoutShift', unitlessNumber_smallerIsBetter, [], {
+          binBoundaries: LAYOUT_SHIFT_SCORE_BOUNDARIES,
+          description: 'Main Frame Document Cumulative Layout Shift Score',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_LAYOUT],
+        });
+    const allLayoutShiftHistogram = histograms.createHistogram(
+        'overallCumulativeLayoutShift', unitlessNumber_smallerIsBetter, [], {
+          binBoundaries: LAYOUT_SHIFT_SCORE_BOUNDARIES,
+          description: 'Document Cumulative Layout Shift Score with iframes',
+          summaryOptions: SUMMARY_OPTIONS,
+          alertGrouping: [tr.v.d.ALERT_GROUPS.LOADING_LAYOUT],
+        });
+    const navigationStartHistogram = histograms.createHistogram(
+        'navigationStart', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: LOADING_METRIC_BOUNDARIES,
+          description: 'navigationStart',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+    tr.metrics.sh.rectsBasedSpeedIndexMetric(histograms, model);
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    // Layout Shift and LCP are reported in the browser process, so we do not
+    // need to loop over the renderers to add samples.
+    const allLayoutShiftSamples = findAllLayoutShiftSamples(chromeHelper);
+    addSamplesToHistogram(
+        allLayoutShiftSamples,
+        allLayoutShiftHistogram,
+        histograms);
+
+    const lcpSamples = findLargestContentfulPaintHistogramSamples(
+        chromeHelper.browserHelper.mainThread.sliceGroup.slices);
+    addSamplesToHistogram(
+        lcpSamples, largestContentfulPaintHistogram, histograms);
+
+    for (const pid in chromeHelper.rendererHelpers) {
+      const rendererHelper = chromeHelper.rendererHelpers[pid];
+      if (rendererHelper.isChromeTracingUI) continue;
+
+      const samplesSet =
+          collectLoadingMetricsForRenderer(rendererHelper);
+
+      addSamplesToHistogram(
+          samplesSet.firstPaintSamples, firstPaintHistogram, histograms);
+      addSamplesToHistogram(
+          samplesSet.firstContentfulPaintSamples,
+          firstContentfulPaintHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.firstContentfulPaintCpuTimeSamples,
+          firstContentfulPaintCpuTimeHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.onLoadSamples, onLoadHistogram, histograms);
+      addSamplesToHistogram(
+          samplesSet.aboveTheFoldLoadedToVisibleSamples,
+          aboveTheFoldLoadedToVisibleHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.firstViewportReadySamples,
+          firstViewportReadyHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.largestImagePaintSamples,
+          largestImagePaintHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.largestTextPaintSamples,
+          largestTextPaintHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.mainFrameLayoutShiftSamples,
+          mainFrameLayoutShiftHistogram,
+          histograms);
+      addSamplesToHistogram(
+          samplesSet.navigationStartSamples,
+          navigationStartHistogram,
+          histograms);
+    }
+
+    const samplesSet = collectMetricsFromLoadExpectations(model, chromeHelper);
+    addSamplesToHistogram(
+        samplesSet.firstMeaningfulPaintSamples,
+        firstMeaningfulPaintHistogram,
+        histograms);
+    addSamplesToHistogram(
+        samplesSet.firstMeaningfulPaintCpuTimeSamples,
+        firstMeaningfulPaintCpuTimeHistogram,
+        histograms);
+    addSamplesToHistogram(
+        samplesSet.interactiveSamples,
+        timeToInteractiveHistogram,
+        histograms);
+    addSamplesToHistogram(
+        samplesSet.firstCpuIdleSamples,
+        timeToFirstCpuIdleHistogram,
+        histograms);
+    addSamplesToHistogram(
+        samplesSet.totalBlockingTimeSamples,
+        totalBlockingTimeHistogram,
+        histograms);
+  }
+
+  tr.metrics.MetricRegistry.register(loadingMetric);
+
+  return {
+    loadingMetric,
+    createBreakdownDiagnostic
+  };
+});
+</script>

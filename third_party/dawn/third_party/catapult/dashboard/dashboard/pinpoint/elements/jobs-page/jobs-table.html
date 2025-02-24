@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/cancel-job-dialog.html">
+
+<dom-module id="jobs-table">
+  <template>
+    <style include="base-style">
+      table {
+        width: 100%;
+      }
+
+      th {
+        background-position: right 0.5em center;
+        background-repeat: no-repeat;
+        background-size: 0.8em;
+        border-bottom: solid 1px var(--paper-grey-400);
+        cursor: pointer;
+        text-align: left;
+      }
+
+      th:hover {
+        color: var(--paper-pink-a200);
+      }
+
+      th[data-sort-direction=true] {
+        background-image: url("/static/sort-up.svg");
+      }
+
+      th[data-sort-direction=false] {
+        background-image: url("/static/sort-down.svg");
+      }
+
+      td:first-child {
+        max-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 40%;
+      }
+
+      .status {
+        white-space: nowrap;
+      }
+    </style>
+
+    <table id="jobs">
+      <thead>
+        <tr>
+          <th id="name" on-click="columnHeaderClicked">Job name</th>
+          <th id="configuration" on-click="columnHeaderClicked">Configuration</th>
+          <th id="user" on-click="columnHeaderClicked">User</th>
+          <th id="bug_id" on-click="columnHeaderClicked">Bug</th>
+          <th id="created" on-click="columnHeaderClicked">Created</th>
+          <th id="comparison_mode" on-click="columnHeaderClicked">Type</th>
+          <th id="status" on-click="columnHeaderClicked">Status</th>
+          <th id="difference_count" on-click="columnHeaderClicked">Differences</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template is="dom-repeat" items="[[jobs]]" sort="[[jobSorter(sortBy, sortDescending)]]">
+          <tr>
+            <td><a href='/job/[[item.job_id]]'>[[item.name]]</a></td>
+            <td><a href='[[configurationLink(item.configuration)]]'>[[formatConfiguration(item.configuration)]]</a></td>
+            <td>[[formatEmail(item.user)]]</td>
+            <td>
+              <template is="dom-if" if="[[item.bug_id]]">
+                <a href='[[getJobIssueLink(item)]]'>
+                  [[getJobIssueText(item)]]
+                </a>
+              </template>
+            </td>
+            <td>[[formatDate(item.created)]]</td>
+            <td>[[formatComparisonMode(item.comparison_mode)]]</td>
+            <td>
+              <div class="status">
+                [[item.status]]
+                <template is="dom-if" if="[[canBeCancelled(item, user)]]">
+                  <cancel-job-dialog job="[[item]]"
+                                     user="[[user]]"
+                                     client="{{client}}"></cancel-job-dialog>
+                </template>
+              </div>
+            </td>
+            <td>[[item.difference_count]]</td>
+          </tr>
+        </template>
+    </table>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'jobs-table',
+
+      properties: {
+        jobs: {
+          type: Array,
+          value: () => []
+        },
+
+        /**
+         * The field to sort by. Note that this will be both the id of a th
+         * element in the table, and a property of an item in the job list.
+         */
+        sortBy: {
+          type: String,
+          value: 'created'
+        },
+
+        /**
+         * Sort direction, either 'down' (increasing) or 'up' (decreasing).
+         */
+        sortDescending: {
+          type: Boolean,
+          value: true
+        },
+      },
+
+      /**
+       * Custom element lifecycle callback, called once this element is ready.
+       */
+      ready() {
+        this.updateHeaders();
+      },
+
+      /**
+       * Callback for the click event for a column header.
+       * @param {Event} event Clicked event.
+       * @param {Object} detail Detail Object.
+       */
+      columnHeaderClicked(event, detail) {
+        if (this.sortBy == event.currentTarget.id) {
+          this.sortDescending = !this.sortDescending;
+        } else {
+          this.sortBy = event.currentTarget.id;
+          this.sortDescending = false;
+        }
+        this.updateHeaders();
+      },
+
+      /**
+       * Update the table headers to indicate the current table sorting.
+       */
+      updateHeaders() {
+        const headers = Polymer.dom(this.$.jobs).querySelectorAll('th');
+        for (let i = 0; i < headers.length; i++) {
+          if (headers[i].id == this.sortBy) {
+            Polymer.dom(headers[i]).setAttribute('data-sort-direction',
+                this.sortDescending);
+          } else {
+            Polymer.dom(headers[i]).removeAttribute('data-sort-direction');
+          }
+        }
+      },
+
+      /**
+       * Sorts the jobs list according to the current values of the properties
+       * sortDirection and sortBy.
+       */
+      jobSorter(sortBy, sortDescending) {
+        return (a, b) => {
+          const valA = a[sortBy] || a.arguments[sortBy] || '';
+          const valB = b[sortBy] || b.arguments[sortBy] || '';
+          let comparison = valA.localeCompare(valB);
+          if (sortDescending) {
+            comparison = -comparison;
+          }
+          return comparison;
+        };
+      },
+
+      formatDate(dateString) {
+        /** We want to use a subset of the ISO format to keep datetimes
+          * consistent independent of the user's locale, but still present a
+          * localized date.
+          */
+        function pad(n) {
+          if (n < 10) {
+            return '0' + n;
+          }
+          return n;
+        }
+
+        const d = new Date(dateString + 'Z');
+        return d.getFullYear() +
+          '-' + pad(d.getMonth() + 1) +
+          '-' + pad(d.getDate()) +
+          ' T' + pad(d.getHours()) +
+          ':' + pad(d.getMinutes()) +
+          ':' + pad(d.getSeconds());
+      },
+
+      formatComparisonMode(comparisonMode) {
+        if (!comparisonMode) {
+          return 'try';
+        }
+        return comparisonMode;
+      },
+
+      formatConfiguration(configuration) {
+        if (!configuration) {
+          return '(None)';
+        }
+        return configuration;
+      },
+
+      formatEmail(email) {
+        if (!email) {
+          return '(None)';
+        }
+        if (email.endsWith('@developer.gserviceaccount.com')) {
+          return '(Automation)';
+        }
+        // Replace all '@' with [at].
+        return email.replace('@', ' [at] ');
+      },
+
+      configurationLink(configuration) {
+        if (!configuration) {
+          return '#';
+        }
+        return '/queue-stats/' + configuration;
+      },
+
+      canBeCancelled(job, user) {
+        return (job.status == 'Queued' || job.status == 'Running') && user;
+      },
+
+      getProject(job) {
+        if (!job || !job.arguments || !job.arguments.project) {
+          return 'chromium';
+        }
+        return job.arguments.project;
+      },
+
+      getJobIssueLink(job) {
+        let link = ''
+        if (!job || !job.arguments || !job.arguments.bug_id) {
+          return link;
+        }
+        let bug_id = parseInt(job.arguments.bug_id);
+        if (bug_id > 2000000) {
+          link='https://b.corp.google.com/issues/'+bug_id;
+        }
+        else {
+          let project = this.getProject(job);
+          link='https://crbug.com/'+project+'/'+bug_id;
+        }
+        return link
+      },
+
+      getJobIssueText(job) {
+        let text = ''
+        if (!job || !job.arguments || !job.arguments.bug_id) {
+          return text;
+        }
+        let bug_id = parseInt(job.arguments.bug_id);
+        if (bug_id > 2000000) {
+          text=bug_id;
+        }
+        else {
+          let project = this.getProject(job);
+          text=project+':'+bug_id;
+        }
+        return text;
+      },
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/login-warning.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('should be hidden when "missing" attribute is empty', function() {
+    const element = document.createElement('login-warning');
+    assert.isTrue(element.messageElement.hidden);
+  });
+
+  test('should become visible when "missing" attribute is set', function() {
+    const element = document.createElement('login-warning');
+    Polymer.dom(element).setAttribute('missing', 'foo');
+    Polymer.dom(document.body).appendChild(element);
+    assert.isFalse(element.messageElement.hidden);
+  });
+});
+</script>

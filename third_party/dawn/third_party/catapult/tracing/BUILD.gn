@@ -1,0 +1,46 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("trace_viewer.gni")
+
+# TODO: ideally this would go into the target_gen_dir, but this requires some
+# changes to the scripts that process them.
+output_resource_dir = "$root_gen_dir/content/browser/tracing"
+
+action("generate_about_tracing") {
+  script = "bin/generate_about_tracing_contents"
+
+  inputs = tracing_files + tracing_python_files
+  outputs = [
+    "$output_resource_dir/about_tracing.js",
+    "$output_resource_dir/about_tracing.html",
+  ]
+
+  args = [
+    "--outdir", rebase_path(output_resource_dir, root_build_dir),
+  ]
+}
+
+# This could likely be refined & narrowed s.t. the interface targets below
+# only include what they need.
+group("tracing_common") {
+  visibility = [ ":*" ]
+
+  data = [
+    "../third_party/polymer/",
+    "third_party/",
+    "tracing/",
+    "tracing_project.py",
+  ]
+
+  data_deps = [
+    "../third_party/vinn",
+  ]
+}
+
+# GN interface. Should remain stable, even if the implementation doesn't.
+
+group("convert_chart_json") {
+  data_deps = [ ":tracing_common" ]
+}

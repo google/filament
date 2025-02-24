@@ -1,0 +1,250 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <title>iron-form demo</title>
+
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+  <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+  <link rel="import" href="../../paper-input/paper-input.html">
+  <link rel="import" href="../../paper-button/paper-button.html">
+  <link rel="import" href="../../paper-checkbox/paper-checkbox.html">
+  <link rel="import" href="../../paper-dropdown-menu/paper-dropdown-menu.html">
+  <link rel="import" href="../../paper-item/paper-item.html">
+  <link rel="import" href="../../paper-listbox/paper-listbox.html">
+  <link rel="import" href="../../paper-spinner/paper-spinner.html">
+  <link rel="import" href="../../paper-styles/shadow.html">
+  <link rel="import" href="../iron-form.html">
+  <link rel="import" href="cats-only.html">
+
+  <custom-style>
+    <style is="custom-style" include="demo-pages-shared-styles">
+      input, paper-input, paper-checkbox {
+        margin-bottom: 8px;
+      }
+      iron-form {
+        @apply --shadow-elevation-2dp;
+        padding: 20px;
+      }
+      paper-button {
+        display: inline-block;
+        width: 45%;
+        text-align: center;
+      }
+      #form1 paper-button {
+        width: 30%;
+      }
+      paper-button:not([disabled]) {
+        background: #03a9f4;
+        color: white;
+      }
+      paper-spinner {
+        width: 14px;
+        height: 14px;
+        margin-right: 20px;
+      }
+      .output {
+        margin-top: 20px;
+        word-wrap: break-word;
+        font-family: monospace;
+      }
+    </style>
+  </custom-style>
+</head>
+<body unresolved>
+  <div class="vertical-section-container centered">
+    <h3>Iron-form works with native and custom elements, and can prevent automatic redirection</h3>
+    <demo-snippet>
+      <template>
+        <input type="checkbox" checked onchange="form1.allowRedirect = !this.checked;"> Prevent automatic form redirection<br><br>
+
+        <iron-form id="form1">
+          <form action="/foo" method="get">
+            <paper-input type="text" name="name" required label="Name" value="Batman"></paper-input>
+            <input name="foo" required>
+            <input type="checkbox" name="donuts" checked>I like donuts<br>
+            <paper-checkbox name="food" value="pizza" checked>pizza</paper-checkbox><br>
+            <paper-checkbox name="food" value="cheese" required>cheese</paper-checkbox>
+            <br>
+            <paper-dropdown-menu label="Cars" name="cars" required>
+              <paper-listbox class="dropdown-content" slot="dropdown-content">
+                <paper-item value="volvo">Volvo</paper-item>
+                <paper-item value="saab">Saab</paper-item>
+                <paper-item value="fiat">Fiat</paper-item>
+                <paper-item value="audi">Audi</paper-item>
+              </paper-listbox>
+            </paper-dropdown-menu>
+            <br><br>
+            <paper-button raised onclick="form1.submit()">Submit</paper-button>
+            <paper-button raised onclick="form1.reset()">Reset</paper-button>
+            <paper-button raised onclick="form1.validate()">Validate</paper-button>
+          </form>
+          <br>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form1.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+        </script>
+      </template>
+    </demo-snippet>
+
+    <h3>You can submit a form in many different ways: by manually calling submit(),
+      using a native button, or by wrapping a paper-button in a native button:</h3>
+    <demo-snippet>
+      <template>
+        <iron-form id="form2">
+          <form action="/foo" method="get">
+            <paper-input label="Name" value="Batman" name="name"></paper-input>
+            <input type="checkbox" required> You must check this box.
+            <p>Using a native button to submit the form will display
+            the native browser validation UI for native elements: </p>
+            <button type="submit">Submit</button>
+            <button type="reset">Reset</button>
+
+            <p>Using a custom element to submit the form will not display
+            the native browser validation UI:</p>
+            <paper-button raised onclick="form2.submit()">Submit</paper-button>
+            <paper-button raised onclick="form2.reset()">Reset</paper-button>
+          </form>
+          <br>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form2.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+        </script>
+      </template>
+    </demo-snippet>
+
+    <h3>To customize the request sent to the server, you can listen to the `iron-form-presubmit` event</h3>
+    <demo-snippet>
+      <template>
+        <iron-form id="form3">
+          <form action="/foo" method="get">
+            <paper-input name="name" label="Name" value="Batman" required></paper-input>
+            <paper-button raised onclick="form3.submit()">Submit</paper-button>
+            <paper-button raised onclick="form3.reset()">Reset</paper-button>
+          </form>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form3.addEventListener('iron-form-presubmit', function(event) {
+            this.request.params['sidekick'] = 'Robin';
+          });
+          form3.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+        </script>
+      </template>
+    </demo-snippet>
+
+    <h3>Example of an <code>iron-form</code> reacting to state changes.</h3>
+    <p>This form will have the "Submit" button disabled until all fields
+      are valid, and then show a spinner during submission.</p>
+
+    <demo-snippet>
+      <template>
+        <iron-form id="form4">
+          <form action="/foo" method="get">
+            <paper-input name="name" label="Name" required auto-validate></paper-input>
+            <paper-checkbox name="read" required>You must check this box</paper-checkbox><br>
+
+            <paper-button raised onclick="_delayedSubmit(event)" disabled id="form4Submit">
+              <paper-spinner id="spinner" hidden></paper-spinner>Submit</paper-button>
+            <paper-button raised onclick="form4.reset()">Reset</paper-button>
+          </form>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form4.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+            spinner.active = false;
+            spinner.hidden = true;
+            form4Submit.disabled = false;
+          });
+          form4.addEventListener('change', function(event) {
+            // Validate the entire form to see if we should enable the `Submit` button.
+            form4Submit.disabled = !form4.validate();
+          });
+          function _delayedSubmit(event) {
+            spinner.active = true;
+            spinner.hidden = false;
+            form4Submit.disabled = true;
+            // Simulate a slow server response.
+            setTimeout(function() {
+              form4.submit()
+            }, 1000);
+          }
+        </script>
+      </template>
+    </demo-snippet>
+
+
+    <h3>Iron-form respects the novalidate form attribute</h3>
+    <demo-snippet>
+      <template>
+        <iron-form id="form5">
+          <form method="get" action="/foo" novalidate>
+            <paper-input name="name" label="Name" required></paper-input>
+            <cats-only name="cats"></cats-only>
+            <input name="animal" placeholder="animal" required value="meerkat"><br>
+            <paper-checkbox name="cheese" required>Cheese</paper-checkbox>
+            <br>
+            <paper-button raised onclick="form5.submit()">Submit</paper-button>
+            <paper-button raised onclick="form5.reset()">Reset</paper-button>
+          </form>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form5.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+        </script>
+      </template>
+    </demo-snippet>
+
+    <h3>Iron-form respects nested elements</h3>
+    <demo-snippet>
+      <template>
+        <iron-form id="form6">
+          <form method="get" action="/foo">
+            <p>
+              <input name="name" label="Name" required>
+              <cats-only name="cats"></cats-only>
+              <paper-checkbox name="cheese" required>Cheese</paper-checkbox>
+            </p>
+
+            <input type="submit" value="Submit">
+            <br>
+            <paper-button raised onclick="form6.submit()">Submit</paper-button>
+            <paper-button raised onclick="form6.reset()">Reset</paper-button>
+          </form>
+          <div class="output"></div>
+        </iron-form>
+        <script>
+          form6.addEventListener('iron-form-submit', function(event) {
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+        </script>
+      </template>
+    </demo-snippet>
+  </div>
+
+</body>
+</html>

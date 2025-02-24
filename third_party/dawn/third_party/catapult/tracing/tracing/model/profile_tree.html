@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Sample class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * A ProfileTree represents all call stack we collect in sampling
+   * in the form of a tree.
+   * By traversing from root to a leaf we get a call stack
+   * that belongs to some samples we collect.
+   */
+  function ProfileTree() {
+    this.startTime_ = undefined;
+    this.endTime_ = undefined;
+    this.tree_ = new Map();
+    this.pid_ = -1;
+    this.tid_ = -1;
+  }
+
+  ProfileTree.prototype = {
+    __proto__: Object.prototype,
+
+    get pid() {
+      return this.pid_;
+    },
+
+    set pid(value) {
+      this.pid_ = value;
+    },
+
+    get tid() {
+      return this.tid_;
+    },
+
+    set tid(value) {
+      this.tid_ = value;
+    },
+
+    get tree() {
+      return this.tree_;
+    },
+
+    get startTime() {
+      return this.startTime_;
+    },
+
+    set startTime(value) {
+      this.startTime_ = value;
+      this.endTime_ = value;
+    },
+
+    get endTime() {
+      return this.endTime_;
+    },
+
+    set endTime(value) {
+      this.endTime_ = value;
+    },
+
+    add(node) {
+      if (this.tree_.has(node.id)) {
+        throw new Error('Conflict id in the profile tree.');
+      }
+      this.tree_.set(node.id, node);
+      return node;
+    },
+
+    getNode(nodeId) {
+      return this.tree_.get(nodeId);
+    }
+  };
+
+  return {
+    ProfileTree,
+  };
+});
+</script>

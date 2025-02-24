@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const VMRegion = tr.model.VMRegion;
+  const VMRegionClassificationNode = tr.model.VMRegionClassificationNode;
+  const checkVMRegions = tr.model.MemoryDumpTestUtils.checkVMRegions;
+
+  function checkProtectionFlagsToString(protectionFlags, expectedString) {
+    const vmRegion = VMRegion.fromDict({
+      startAddress: 256,
+      sizeInBytes: 336,
+      protectionFlags,
+      mappedFile: '[stack:20310]',
+      byteStats: {
+        privateDirtyResident: 96,
+        swapped: 144,
+        proportionalResident: 158
+      }
+    });
+    assert.strictEqual(vmRegion.protectionFlagsToString, expectedString);
+  }
+
+  const TEST_RULES = {
+    name: 'Root',
+    children: [
+      {
+        name: 'Words',
+        file: /^[a-zA-Z]/,
+        children: [
+          {
+            name: 'A-D',
+            file: /^[a-dA-D]/
+          },
+          {
+            name: 'E-H',
+            file: /^[e-hE-H]/
+          }
+        ]
+      },
+      {
+        name: 'Digits',
+        file: /\d$/,
+        children: []
+      }
+    ]
+  };
+
+  // Constant representing the expectation that the children of a
+  // VMRegionClassificationNode have not been built yet.
+  const CHILDREN_NOT_BUILT_YET = {};
+
+  function checkTree(node, expectedStructure) {
+    assert.strictEqual(node.title, expectedStructure.title);
+    assert.strictEqual(node.hasRegions, expectedStructure.hasRegions);
+    assert.strictEqual(node.sizeInBytes, expectedStructure.sizeInBytes);
+    assert.deepEqual(node.byteStats, expectedStructure.byteStats || {});
+    assert.strictEqual(node.isLeafNode, expectedStructure.isLeafNode);
+
+    const actualRegions = node.regions;
+    const expectedRegions = expectedStructure.regions;
+    if (expectedRegions === undefined) {
+      assert.isUndefined(actualRegions);
+    } else {
+      assert.instanceOf(actualRegions, Array);
+      checkVMRegions(actualRegions, expectedRegions);
+    }
+
+    const expectedChildren = expectedStructure.children;
+    if (expectedChildren === CHILDREN_NOT_BUILT_YET) {
+      assert.isUndefined(node.children_);
+    } else if (expectedChildren === undefined) {
+      assert.isUndefined(node.children);
+    } else {
+      const actualChildrenMap = new Map();
+      node.children.forEach(function(childNode) {
+        actualChildrenMap.set(childNode.title, childNode);
+      });
+      const expectedChildrenMap = new Map();
+      expectedChildren.forEach(function(childNode) {
+        expectedChildrenMap.set(childNode.title, childNode);
+      });
+      assert.strictEqual(actualChildrenMap.size, expectedChildrenMap.size);
+      for (const title of expectedChildrenMap.keys()) {
+        checkTree(actualChildrenMap.get(title),
+            expectedChildrenMap.get(title));
+      }
+    }
+  }
+
+  function checkClassificationRules(mappedFile, expectedPath) {
+    const region = VMRegion.fromDict({
+      mappedFile,
+      sizeInBytes: 16,
+      byteStats: {
+        privateDirtyResident: 7
+      }
+    });
+    let node = VMRegionClassificationNode.fromRegions([region]);
+    for (const title of expectedPath) {
+      node = node.children.find(c => c.title === title);
+    }
+    assert.deepEqual(node.regions, [region]);
+  }
+
+  test('vmRegion_protectionFlagsToString', function() {
+    checkProtectionFlagsToString(undefined, undefined);
+    checkProtectionFlagsToString(0, '---p');
+    checkProtectionFlagsToString(VMRegion.PROTECTION_FLAG_READ, 'r--p');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_MAYSHARE,
+        'r--s');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_EXECUTE,
+        'r-xp');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_WRITE,
+        'rw-p');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_WRITE |
+            VMRegion.PROTECTION_FLAG_EXECUTE,
+        'rwxp');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_WRITE |
+            VMRegion.PROTECTION_FLAG_MAYSHARE,
+        'rw-s');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_EXECUTE |
+            VMRegion.PROTECTION_FLAG_MAYSHARE,
+        'r-xs');
+    checkProtectionFlagsToString(
+        VMRegion.PROTECTION_FLAG_READ | VMRegion.PROTECTION_FLAG_WRITE |
+            VMRegion.PROTECTION_FLAG_EXECUTE |
+            VMRegion.PROTECTION_FLAG_MAYSHARE,
+        'rwxs');
+  });
+
+  // The add(After|Before)Build tests below check that the classification tree
+  // has the correct structure regardless of the ordering of adding regions and
+  // the lazy construction.
+
+  test('vmRegionClassificationNode_constructor_addAfterBuild', function() {
+    const rootNode = new VMRegionClassificationNode(TEST_RULES);
+
+    // Check the root node and verify that the full tree structure has *not*
+    // been constructed yet.
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: false,
+      isLeafNode: false,
+      children: CHILDREN_NOT_BUILT_YET
+    });
+
+    // Reading the children of the root node *should* trigger building the
+    // full tree.
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: false,
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: false,
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: false,
+          isLeafNode: true,
+          regions: []
+        }
+      ]
+    });
+
+    // Add VM regions to the tree *after* it has been fully built.
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'W2',  // Root/Words/Other.
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32,
+        swapped: 64
+      }
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__42',  // Root/Digits.
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77
+      }
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 77,
+        swapped: 64
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: true,
+          sizeInBytes: 16,
+          byteStats: {
+            proportionalResident: 32,
+            swapped: 64
+          },
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'Other',
+              hasRegions: true,
+              sizeInBytes: 16,
+              byteStats: {
+                proportionalResident: 32,
+                swapped: 64
+              },
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'W2',
+                  sizeInBytes: 16,
+                  byteStats: {
+                    proportionalResident: 32,
+                    swapped: 64
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  test('vmRegionClassificationNode_constructor_addBeforeBuild', function() {
+    const rootNode = new VMRegionClassificationNode(TEST_RULES);
+
+    // Add regions to the tree *before* it has been fully built. This should
+    // *not* trigger building the full tree (but the total sizeInBytes and
+    // byteStats should be updated accordingly).
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__42',  // Root/Digits.
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77
+      }
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'W2',  // Root/Words/Other.
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32,
+        swapped: 64
+      }
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 77,
+        swapped: 64
+      },
+      isLeafNode: false,
+      children: CHILDREN_NOT_BUILT_YET
+    });
+
+    // Reading the children of the root node should trigger building the full
+    // tree.
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 77,
+        swapped: 64
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: true,
+          sizeInBytes: 16,
+          byteStats: {
+            proportionalResident: 32,
+            swapped: 64
+          },
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'Other',
+              hasRegions: true,
+              sizeInBytes: 16,
+              byteStats: {
+                proportionalResident: 32,
+                swapped: 64
+              },
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'W2',
+                  sizeInBytes: 16,
+                  byteStats: {
+                    proportionalResident: 32,
+                    swapped: 64
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Add more VM regions *after* the tree has been fully built.
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '%invalid%',  // Root/Other.
+      sizeInBytes: 123
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__43',  // Root/Digits.
+      byteStats: {
+        swapped: 19
+      }
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'free',  // Root/Words/E-H.
+      sizeInBytes: undefined
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 16 + 123,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 77,
+        swapped: 64 + 19,
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: true,
+          sizeInBytes: 16,
+          byteStats: {
+            proportionalResident: 32,
+            swapped: 64
+          },
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: true,
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'free'
+                }
+              ]
+            },
+            {
+              title: 'Other',
+              hasRegions: true,
+              sizeInBytes: 16,
+              byteStats: {
+                proportionalResident: 32,
+                swapped: 64
+              },
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'W2',
+                  sizeInBytes: 16,
+                  byteStats: {
+                    proportionalResident: 32,
+                    swapped: 64
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77,
+            swapped: 19
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            },
+            {
+              mappedFile: '__43',
+              byteStats: {
+                swapped: 19
+              }
+            }
+          ]
+        },
+        {
+          title: 'Other',
+          hasRegions: true,
+          sizeInBytes: 123,
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '%invalid%',
+              sizeInBytes: 123
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  test('vmRegionClassificationNode_fromRegions_addAfterBuild', function() {
+    // Construct the root node from a list of regions. This should *not*
+    // trigger building the full tree (but the total sizeInBytes and byteStats
+    // should be updated accordingly).
+    const rootNode = VMRegionClassificationNode.fromRegions([
+      VMRegion.fromDict({
+        mappedFile: '__42',  // Root/Digits.
+        byteStats: {
+          proportionalResident: 33,
+          privateDirtyResident: 77
+        }
+      }),
+      VMRegion.fromDict({
+        mappedFile: '__43',  // Root/Digits.
+        byteStats: {
+          swapped: 19
+        }
+      })
+    ], TEST_RULES);
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77,
+        swapped: 19
+      },
+      isLeafNode: false,
+      children: CHILDREN_NOT_BUILT_YET
+    });
+
+    // Reading the children of the root node should trigger building the full
+    // tree.
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77,
+        swapped: 19
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: false,
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77,
+            swapped: 19
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            },
+            {
+              mappedFile: '__43',
+              byteStats: {
+                swapped: 19
+              }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Add more VM regions *after* the tree has been fully built.
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'W2',  // Root/Words/Other.
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32,
+        swapped: 64
+      }
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 77,
+        swapped: 19 + 64,
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: true,
+          sizeInBytes: 16,
+          byteStats: {
+            proportionalResident: 32,
+            swapped: 64
+          },
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'Other',
+              hasRegions: true,
+              sizeInBytes: 16,
+              byteStats: {
+                proportionalResident: 32,
+                swapped: 64
+              },
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'W2',
+                  sizeInBytes: 16,
+                  byteStats: {
+                    proportionalResident: 32,
+                    swapped: 64
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77,
+            swapped: 19
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            },
+            {
+              mappedFile: '__43',
+              byteStats: {
+                swapped: 19
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  test('vmRegionClassificationNode_fromRegions_addBeforeBuild', function() {
+    // Construct the root node from a list of regions and then add another
+    // region. This should *not* trigger building the full tree (but the total
+    // sizeInBytes and byteStats should be updated accordingly).
+    const rootNode = VMRegionClassificationNode.fromRegions([
+      VMRegion.fromDict({
+        mappedFile: '__42',  // Root/Digits.
+        byteStats: {
+          proportionalResident: 33,
+          privateDirtyResident: 77
+        }
+      }),
+      VMRegion.fromDict({
+        mappedFile: '__43',  // Root/Digits.
+        byteStats: {
+          swapped: 19
+        }
+      })
+    ], TEST_RULES);
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__42',  // Root/Digits.
+      startAddress: 2048,  // Necessary to distinguish from the first region.
+      sizeInBytes: 1000,
+      byteStats: {
+        privateDirtyResident: 500
+      }
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 1000,
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77 + 500,
+        swapped: 19
+      },
+      isLeafNode: false,
+      children: CHILDREN_NOT_BUILT_YET
+    });
+
+    // Reading the children of the root node should trigger building the full
+    // tree.
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 1000,
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77 + 500,
+        swapped: 19
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: false,
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          sizeInBytes: 1000,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 77 + 500,
+            swapped: 19
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            },
+            {
+              mappedFile: '__43',
+              byteStats: {
+                swapped: 19
+              }
+            },
+            {
+              mappedFile: '__42',
+              startAddress: 2048,
+              sizeInBytes: 1000,
+              byteStats: {
+                privateDirtyResident: 500
+              }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Add more VM regions *after* the tree has been fully built.
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'W2',  // Root/Words/Other.
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32,
+        swapped: 64
+      }
+    }));
+    checkTree(rootNode, {
+      title: 'Root',
+      hasRegions: true,
+      sizeInBytes: 1000 + 16,
+      byteStats: {
+        proportionalResident: 32 + 33,
+        privateDirtyResident: 500 + 77,
+        swapped: 19 + 64,
+      },
+      isLeafNode: false,
+      children: [
+        {
+          title: 'Words',
+          hasRegions: true,
+          sizeInBytes: 16,
+          byteStats: {
+            proportionalResident: 32,
+            swapped: 64
+          },
+          isLeafNode: false,
+          children: [
+            {
+              title: 'A-D',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'E-H',
+              hasRegions: false,
+              isLeafNode: true,
+              regions: []
+            },
+            {
+              title: 'Other',
+              hasRegions: true,
+              sizeInBytes: 16,
+              byteStats: {
+                proportionalResident: 32,
+                swapped: 64
+              },
+              isLeafNode: true,
+              regions: [
+                {
+                  mappedFile: 'W2',
+                  sizeInBytes: 16,
+                  byteStats: {
+                    proportionalResident: 32,
+                    swapped: 64
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: 'Digits',
+          hasRegions: true,
+          sizeInBytes: 1000,
+          byteStats: {
+            proportionalResident: 33,
+            privateDirtyResident: 500 + 77,
+            swapped: 19
+          },
+          isLeafNode: true,
+          regions: [
+            {
+              mappedFile: '__42',
+              byteStats: {
+                proportionalResident: 33,
+                privateDirtyResident: 77
+              }
+            },
+            {
+              mappedFile: '__43',
+              byteStats: {
+                swapped: 19
+              }
+            },
+            {
+              mappedFile: '__42',
+              startAddress: 2048,
+              sizeInBytes: 1000,
+              byteStats: {
+                privateDirtyResident: 500
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  test('vmRegionClassificationNode_someRegion', function() {
+    const rootNode = new VMRegionClassificationNode(TEST_RULES);
+
+    // There are no regions in the tree, so the method should always return
+    // false.
+    assert.isFalse(rootNode.someRegion(function(region) {
+      throw new Error('There are no regions in the tree!!!');
+    }));
+
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: 'W2',  // Root/Words/Other.
+      sizeInBytes: 16,
+      byteStats: {
+        proportionalResident: 32,
+        swapped: 64
+      }
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__42',  // Root/Digits.
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77
+      }
+    }));
+    rootNode.addRegion(VMRegion.fromDict({
+      mappedFile: '__43',  // Root/Digits.
+      byteStats: {
+        proportionalResident: 33,
+        privateDirtyResident: 77
+      }
+    }));
+
+    function checkSomeRegion() {
+      // Find the order in which the regions are traversed and checked that all
+      // regions were visited.
+      const visitedRegionMappedFiles = [];
+      assert.isFalse(rootNode.someRegion(function(region) {
+        visitedRegionMappedFiles.push(region.mappedFile);
+        return false;
+      }));
+      assert.lengthOf(visitedRegionMappedFiles, 3);
+      assert.sameMembers(visitedRegionMappedFiles, ['W2', '__42', '__43']);
+
+      // Assuming the traversal order is deterministic, we check that once the
+      // callback returns true, no further regions are visited.
+      visitedRegionMappedFiles.forEach(
+          function(mappedFileToMatch, index) {
+            const visitedRegionMappedFiles2 = [];
+            assert.isTrue(rootNode.someRegion(function(region) {
+              this.files.push(region.mappedFile);
+              return region.mappedFile === mappedFileToMatch;
+            }, { files: visitedRegionMappedFiles2 } /* opt_this */));
+            assert.deepEqual(visitedRegionMappedFiles2,
+                visitedRegionMappedFiles.slice(0, index + 1));
+          });
+    }
+
+    // Before lazy construction (single node with a flat list of regions).
+    checkSomeRegion();
+    assert.isUndefined(rootNode.children_);
+
+    // After lazy construction (tree of nodes with lists of regions).
+    assert.isDefined(rootNode.children);  // Force building the tree.
+    assert.isDefined(rootNode.children_);
+    checkSomeRegion();
+  });
+
+  test('vmRegionClassificationNode_libraryMemory', function() {
+    const regions = [
+      VMRegion.fromDict({
+        sizeInBytes: 20,
+        protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+        mappedFile: '[stack:1234]',
+        byteStats: {
+          privateDirtyResident: 100,
+          proportionalResident: 124
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 500000,
+        protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+        mappedFile: '/data/app/com.google.chrome/base.apk',
+        byteStats: {
+          privateCleanResident: 100000,
+          proportionalResident: 124000
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 1000,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/base.apk',
+        byteStats: {
+          privateCleanResident: 100,
+          proportionalResident: 124
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 300,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/base.apk',
+        byteStats: {
+          proportionalResident: 58,
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 400,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/base.apk',
+        byteStats: {
+          privateCleanResident: 76,
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 50,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/base.apk',
+        byteStats: {
+          privateCleanResident: 8,
+          proportionalResident: 24,
+          sharedCleanResident: 10,
+        }
+      })];
+    const node = VMRegionClassificationNode.fromRegions(regions);
+    assert.strictEqual(node.sizeInBytes, 20 + 500000 + 1000 + 300 + 400 + 50);
+    assert.strictEqual(node.nativeLibrarySizeInBytes,
+        1000 + 300 + 400 + 50);
+
+    assert.deepEqual(node.byteStats, {
+      proportionalResident: 124 + 124000 + 124 + 58 + 24,
+      privateDirtyResident: 100,
+      privateCleanResident: 100000 + 100 + 76 + 8,
+      sharedCleanResident: 10,
+      nativeLibraryPrivateCleanResident: 100 + 76 + 8,
+      nativeLibrarySharedCleanResident: 10,
+      nativeLibraryProportionalResident: 124 + 58 + 24,
+    });
+  });
+
+  test('vmRegionClassificationNode_javaBaseMemory', function() {
+    const regions = [
+      VMRegion.fromDict({
+        sizeInBytes: 20,
+        protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+        mappedFile: '[stack:1234]',
+        byteStats: {
+          privateDirtyResident: 100,
+          proportionalResident: 124
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 500000,
+        protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+        mappedFile: '/data/app/com.google.chrome/oat/arm/base.vdex',
+        byteStats: {
+          privateCleanResident: 100000,
+          proportionalResident: 124000
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 1000,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/some/other.odex',
+        byteStats: {
+          privateCleanResident: 100,
+          proportionalResident: 124
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 300,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ),
+        mappedFile: '/data/app/com.google.chrome/oat/arm/base.odex',
+        byteStats: {
+          proportionalResident: 58,
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 400,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/base.vdex',
+        byteStats: {
+          privateCleanResident: 76,
+          privateDirtyResident: 17,
+        }
+      }),
+      VMRegion.fromDict({
+        sizeInBytes: 50,
+        protectionFlags: (VMRegion.PROTECTION_FLAG_READ |
+                          VMRegion.PROTECTION_FLAG_EXECUTE),
+        mappedFile: '/data/app/com.google.chrome/another/path/base.odex',
+        byteStats: {
+          privateCleanResident: 8,
+          proportionalResident: 24,
+          sharedCleanResident: 10,
+        }
+      })];
+    const node = VMRegionClassificationNode.fromRegions(regions);
+    assert.strictEqual(node.sizeInBytes, 20 + 500000 + 1000 + 300 + 400 + 50);
+
+    assert.deepEqual(node.byteStats, {
+      proportionalResident: 124 + 124000 + 124 + 58 + 24,
+      privateDirtyResident: 100 + 17,
+      privateCleanResident: 100000 + 100 + 76 + 8,
+      sharedCleanResident: 10,
+      javaBasePss: 124000 + 58 + 24,
+      javaBaseCleanResident: 100000 + 76 + 8 + 10,
+    });
+  });
+
+  test('classificationRules', function() {
+    checkClassificationRules('/dev/ashmem/dalvik-main space (deleted)',
+        ['Android', 'Java runtime', 'Spaces', 'Normal']);
+    checkClassificationRules('/dev/ashmem/dalvik-non moving space',
+        ['Android', 'Java runtime', 'Spaces', 'Non-moving']);
+    checkClassificationRules('/dev/ashmem/dalvik-zygote space (deleted)',
+        ['Android', 'Java runtime', 'Spaces', 'Zygote']);
+    checkClassificationRules('/dev/ashmem/dalvik-allocation stack (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules(
+        '/dev/ashmem/dalvik-allocspace main rosalloc space 1 live-bitmap 2',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules(
+        '/dev/ashmem/dalvik-allocspace non moving space live-bitmap 4',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-allocspace zygote / ' +
+        'non moving space live-bitmap 0 (deleted)',
+    ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-card table (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-large live objects (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-live stack (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules(
+        '/dev/ashmem/dalvik-mark sweep sweep array free buffer (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-rosalloc page map (deleted)',
+        ['Android', 'Java runtime', 'Accounting']);
+    checkClassificationRules('/dev/ashmem/dalvik-indirect ref table (deleted)',
+        ['Android', 'Java runtime', 'Indirect Reference Table']);
+    checkClassificationRules('/dev/ashmem/dalvik-LinearAlloc (deleted)',
+        ['Android', 'Java runtime', 'Linear Alloc']);
+    checkClassificationRules('/dev/ashmem/dalvik-jit-code-cache (deleted)',
+        ['Android', 'Java runtime', 'Cache']);
+    checkClassificationRules('/dev/ashmem/CursorWindow (deleted)',
+        ['Android', 'Cursor']);
+    checkClassificationRules('/dev/ashmem (deleted)', ['Android', 'Ashmem']);
+    checkClassificationRules('/dev/ashmem/GFXStats-10082',
+        ['Android', 'Ashmem']);
+
+    checkClassificationRules('[stack:23164]', ['Stack']);
+    checkClassificationRules('[stack]', ['Stack']);
+
+    checkClassificationRules('[discounted tracing overhead]', ['Native heap']);
+    checkClassificationRules('', ['Native heap']);
+    checkClassificationRules('[heap]', ['Native heap']);
+    checkClassificationRules('[anon:libc_malloc]', ['Native heap']);
+    checkClassificationRules('[anon:thread signal stack]', ['Native heap']);
+    checkClassificationRules('/dev/ashmem/libc malloc (deleted)',
+        ['Native heap']);
+
+    checkClassificationRules('/usr/lib/nvidia-340/libGL.so.331.79',
+        ['Files', 'so']);
+    checkClassificationRules('/usr/lib/x86_64-linux-gnu/libibus-1.0.so.5.0.505',
+        ['Files', 'so']);
+    checkClassificationRules('/data/data/com.google.android.apps.chrome/' +
+        'app_chrome/RELRO:libchrome.so (deleted)', ['Files', 'so']);
+    checkClassificationRules(
+        '/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf',
+        ['Files', 'ttf']);
+    checkClassificationRules(
+        '/data/app/com.google.android.apps.chrome-2/base.apk',
+        ['Files', 'apk']);
+    checkClassificationRules(
+        '/data/app/com.google.android.apps.chrome-2/lib/arm/libchrome.so',
+        ['Files', 'so']);
+    checkClassificationRules(
+        '/data/app/com.google.android.apps.chrome-2/oat/arm/base.odex',
+        ['Files', 'dex']);
+    checkClassificationRules(
+        '/data/dalvik-cache/arm/system@framework@boot.art', ['Files', 'art']);
+    checkClassificationRules(
+        '/data/dalvik-cache/arm/system@framework@boot.oat', ['Files', 'oat']);
+
+    checkClassificationRules('/dev/nvidia0', ['Devices', 'GPU']);
+    checkClassificationRules('/dev/kgsl-3d0', ['Devices', 'GPU']);
+    checkClassificationRules('anon_inode:dmabuf', ['Devices', 'DMA']);
+    checkClassificationRules('/dev/binder', ['Devices', 'Other']);
+
+    checkClassificationRules('/src/out/Release/chrome', ['Other']);
+    checkClassificationRules('/tmp/gluY4SVp (deleted)', ['Other']);
+    checkClassificationRules('/src/out/Release/resources.pak', ['Other']);
+    checkClassificationRules('[vdso]', ['Other']);
+    checkClassificationRules('[vsyscall]', ['Other']);
+    checkClassificationRules('[vectors]', ['Other']);
+    checkClassificationRules('[vvar]', ['Other']);
+  });
+});
+</script>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/ui/null_brushing_state_controller.html">
+<link rel="import" href="/tracing/value/csv_builder.html">
+<link rel="import" href="/tracing/value/histogram_parameter_collector.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_controls.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_table.html">
+
+<dom-module id="tr-v-ui-histogram-set-view">
+  <template>
+    <style>
+    :host {
+      font-family: sans-serif;
+    }
+
+    #zero {
+      color: red;
+      /* histogram-set-table is used by both metrics-side-panel and results.html.
+       * This font-size rule has no effect in results.html, but improves
+       * legibility in the metrics-side-panel, which sets font-size in order to
+       * make this table denser.
+       */
+      font-size: initial;
+    }
+
+    #container {
+      display: none;
+    }
+
+    </style>
+
+    <div id="zero">zero Histograms</div>
+
+    <div id="container">
+      <tr-v-ui-histogram-set-controls id="controls">
+      </tr-v-ui-histogram-set-controls>
+
+      <tr-v-ui-histogram-set-table id="table"></tr-v-ui-histogram-set-table>
+    </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-histogram-set-view',
+
+    listeners: {
+      export: 'onExport_',
+    },
+
+    created() {
+      this.brushingStateController_ = new tr.ui.NullBrushingStateController();
+      this.viewState_ = new tr.v.ui.HistogramSetViewState();
+    },
+
+    ready() {
+      this.$.table.viewState = this.viewState;
+      this.$.controls.viewState = this.viewState;
+    },
+
+    attached() {
+      this.brushingStateController.parentController =
+          tr.c.BrushingStateController.getControllerForElement(this.parentNode);
+    },
+
+    get brushingStateController() {
+      return this.brushingStateController_;
+    },
+
+    get viewState() {
+      return this.viewState_;
+    },
+
+    get histograms() {
+      return this.$.table.histograms;
+    },
+
+    /**
+     * @param {!tr.v.HistogramSet} histograms
+     * @param {!Object=} opt_options
+     * @param {function(string):!Promise=} opt_options.progressconst
+     * @param {string=} opt_options.helpHref
+     * @param {string=} opt_options.feedbackHref
+     */
+    async build(histograms, opt_options) {
+      const options = opt_options || {};
+      const progress = options.progress || (() => Promise.resolve());
+
+      if (options.helpHref) this.$.controls.helpHref = options.helpHref;
+      if (options.feedbackHref) {
+        this.$.controls.feedbackHref = options.feedbackHref;
+      }
+
+      if (histograms === undefined || histograms.length === 0) {
+        this.$.container.style.display = 'none';
+        this.$.zero.style.display = 'block';
+        this.style.display = 'block';
+        return;
+      }
+      this.$.zero.style.display = 'none';
+      this.$.container.style.display = 'block';
+      this.$.container.style.maxHeight = (window.innerHeight - 16) + 'px';
+
+      const buildMark = tr.b.Timing.mark('histogram-set-view', 'build');
+      await progress('Finding important Histograms...');
+      const sourceHistogramsMark = tr.b.Timing.mark(
+          'histogram-set-view', 'sourceHistograms');
+      const sourceHistograms = histograms.sourceHistograms;
+      sourceHistogramsMark.end();
+      // Disable show_all if all values are sourceHistograms.
+      this.$.controls.showAllEnabled = (
+        sourceHistograms.length !== histograms.length);
+
+      await progress('Collecting parameters...');
+      const collectParametersMark = tr.b.Timing.mark(
+          'histogram-set-view', 'collectParameters');
+      const parameterCollector = new tr.v.HistogramParameterCollector();
+      parameterCollector.process(histograms);
+      this.$.controls.baseStatisticNames = parameterCollector.statisticNames;
+      this.$.controls.possibleGroupings = parameterCollector.possibleGroupings;
+      const displayLabels = parameterCollector.labels;
+      this.$.controls.displayLabels = displayLabels;
+      collectParametersMark.end();
+
+      // Table.build() displays its own progress.
+      await this.$.table.build(
+          histograms, sourceHistograms, displayLabels, progress);
+
+      buildMark.end();
+    },
+
+    onExport_(event) {
+      const mark = tr.b.Timing.mark('histogram-set-view', 'export' +
+          (event.merged ? 'Merged' : 'Raw') + event.format.toUpperCase());
+
+      const histograms = event.merged ? this.$.table.leafHistograms :
+        this.histograms;
+
+      let blob;
+      if (event.format === 'csv') {
+        const csv = new tr.v.CSVBuilder(histograms);
+        csv.build();
+        blob = new window.Blob([csv.toString()], {type: 'text/csv'});
+      } else if (event.format === 'json') {
+        blob = new window.Blob([JSON.stringify(histograms.asDicts())],
+            {type: 'text/json'});
+      } else {
+        throw new Error(`Unable to export format "${event.format}"`);
+      }
+
+      const path = window.location.pathname.split('/');
+      const basename = path[path.length - 1].split('.')[0] || 'histograms';
+
+      const anchor = document.createElement('a');
+      anchor.download = `${basename}.${event.format}`;
+      anchor.href = window.URL.createObjectURL(blob);
+      anchor.click();
+      mark.end();
+    },
+  });
+
+  return {
+  };
+});
+</script>

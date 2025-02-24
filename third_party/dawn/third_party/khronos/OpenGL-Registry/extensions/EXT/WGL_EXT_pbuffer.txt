@@ -1,0 +1,266 @@
+Name
+
+    EXT_pbuffer
+
+Name Strings
+
+    WGL_EXT_pbuffer
+
+Version
+
+    Date: 1/27/1999   Version 1.6
+
+Number
+
+    171
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    WGL_EXT_pixel_format is required.
+    WGL_EXT_make_current_read affects the definition of this extension.
+
+Overview
+
+    This extension defines pixel buffers (pbuffer for short). Pbuffers are
+    additional non-visible rendering buffers for an OpenGL renderer.
+    Pbuffers are equivalent to a window that has the same pixel format
+    descriptor with the following exceptions:
+
+    1.  There is no rendering to a pbuffer by GDI.
+
+    2.  The pixel format descriptors used for a pbuffer can only be those
+        that are supported by the ICD.  Generic formats are not valid.
+
+    4.  The allocation of a pbuffer can fail if there are insufficient
+        resources (i.e., all the pbuffer memory has been allocated).
+
+    The intent of the pbuffer semantics is to enable implementations to
+    allocate pbuffers in non-visible frame buffer memory.  These
+    pbuffers are intended to be "static" resources in that a program
+    will typically allocate them only once rather than as a part of its
+    rendering loop.  (Pbuffers should be deallocated when the program is
+    no longer using them -- for example, if the program is iconified.)
+
+    The frame buffer resources that are associated with a pbuffer are
+    also static and are deallocated only when the pbuffer is destroyed.
+
+New Procedures and Functions
+
+    HPBUFFEREXT wglCreatePbufferEXT(HDC hDC,
+                                    int iPixelFormat,
+                                    int iWidth,
+                                    int iHeight,
+                                    const int *piAttribList);
+
+    HDC wglGetPbufferDCEXT(HPBUFFEREXT hPbuffer);
+
+    int wglReleasePbufferDCEXT(HPBUFFEREXT hPbuffer,
+                               HDC hDC);
+
+    BOOL wglDestroyPbufferEXT(HPBUFFEREXT hPbuffer);
+
+    BOOL wglQueryPbufferEXT(HPBUFFEREXT hPbuffer,
+                            int iAttribute,
+                            int *piValue);
+
+New Tokens
+
+    Accepted by the <attribute> parameter of wglGetPixelFormatAttribivEXT,
+    wglGetPixelFormatAttribfvEXT, and wglChoosePixelFormatEXT:
+
+      WGL_DRAW_TO_PBUFFER_EXT              0x202D
+      WGL_MAX_PBUFFER_PIXELS_EXT           0x202E
+      WGL_MAX_PBUFFER_WIDTH_EXT            0x202F
+      WGL_MAX_PBUFFER_HEIGHT_EXT           0x2030
+      WGL_OPTIMAL_PBUFFER_WIDTH_EXT        0x2031
+      WGL_OPTIMAL_PBUFFER_HEIGHT_EXT       0x2032
+
+    Accepted by the <piAttribList> parameter of wglCreatePbufferEXT:
+
+      WGL_PBUFFER_LARGEST_EXT              0x2033
+
+    Accepted by the <iAttribute> parameter of wglQueryPbufferEXT:
+
+      WGL_PBUFFER_WIDTH_EXT                0x2034
+      WGL_PBUFFER_HEIGHT_EXT               0x2035
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    A pixel buffer (pbuffer) can be created with wglCreatePbufferEXT
+    which returns a handle associated with the pbuffer.
+
+      HPBUFFEREXT wglCreatePbufferEXT(HDC hDC,
+                                      int iPixelFormat,
+                                      int iWidth,
+                                      int iHeight,
+                                      const int *piAttribList);
+
+    <hDC> specifies a device context for the device on which the pbuffer
+    is created. <iPixelFormat> specifies a non-generic pixel format
+    descriptor index.  Support for pbuffers may be restricted to
+    specific pixel formats.  Use wglGetPixelFormatAttribivEXT or
+    wglGetPixelFormatAttribfvEXT to query the WGL_DRAW_TO_PBUFFER_EXT
+    attribute to determine which pixel formats support the creation of
+    pbuffers.
+
+    <iWidth> and <iHeight> specify the pixel width and height of the
+    rectangular pbuffer.
+
+    <piAttribList> is a list of attributes {type, value} pairs containing
+    integer attribute values.  All of the attributes in the <piAttribList>
+    are followed by the corresponding required value.  The list is
+    terminated with a value of 0.
+
+    The following attributes are supported by wglCreatePbufferEXT:
+
+      WGL_PBUFFER_LARGEST_EXT     If this attribute is set to a
+                                  non-zero value, the largest
+                                  available pbuffer is allocated
+                                  when the allocation of the pbuffer
+                                  would otherwise fail due to
+                                  insufficient resources.  The width
+                                  or height of the allocated pbuffer
+                                  never exceeds <iWidth> and <iHeight>,
+                                  respectively.  Use wglQueryPbufferEXT
+                                  to retrieve the dimensions of the
+                                  allocated pbuffer.
+
+    The resulting pbuffer will contain color buffers and ancillary
+    buffers as specified by <iPixelFormat>.  Note that pbuffers use
+    framebuffer resources so applications should consider deallocating
+    them when they are not in use.
+
+    It is possible to create a pbuffer with back buffers and to swap
+    the front and back buffers by calling wglSwapLayerBuffers.  The
+    contents of the back buffers after the swap depends on the
+    <iPixelFormat>.  (Pbuffers are the same as windows in this respect.)
+
+    When wglCreatePbufferEXT fails to create a pbuffer, NULL is returned.
+    To get extended error information, call GetLastError.  Possible errors
+    are as follows:
+
+      ERROR_INVALID_PIXEL_FORMAT     Pixel format is not valid.
+      ERROR_NO_SYSTEM_RESOURCES      Insufficient resources exist.
+      ERROR_INVALID_DATA             <iWidth> or <iHeight> is negative
+                                     or zero.
+      ERROR_INVALID_DATA             <piAttribList> is not a valid attribute.
+
+    To create a device context for the pbuffer, call
+
+      HDC wglGetPbufferDCEXT(HPBUFFEREXT hPbuffer);
+
+    where <hPbuffer> is a handle returned from a previous call to
+    wglCreatePbufferEXT.  A device context is returned by
+    wglGetPbufferDCEXT which can be used to associate a rendering
+    context with the pbuffer.  Any rendering context created with
+    a wglCreateContext that is "compatible" with the <iPixelFormat> may be
+    used to render into the pbuffer. (See the description of
+    wglCreateContext, wglMakeCurrent, and wglMakeCurrentReadEXT for a
+    definition of "compatible".)
+
+    When wglGetPbufferDCEXT fails, NULL is returned.  To get extended
+    error information, call GetLastError. Possible errors are as follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+
+    To release a device context obtained from a previous call to
+    wglGetPbufferDCEXT, call
+
+        int wglReleasePbufferDCEXT(HPBUFFEREXT hPbuffer,
+                                   HDC hDC);
+
+    If the return value is a value of 1, the device context was released.
+    If the device context was not released, the return value is 0.  To get
+    extended error information, call GetLastError. Possible errors are
+    as follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+      ERROR_DC_NOT_FOUND             <hDC> is not a valid DC.
+
+    A pbuffer is destroyed by calling
+
+      BOOL wglDestroyPbufferEXT(HPBUFFEREXT hPbuffer);
+
+    The pbuffer is destroyed once it is no longer current to any rendering
+    context.  When a pbuffer is destroyed, any memory resources that are
+    attached to it are freed and its handle is no longer valid.
+
+    If wglDestroyPbufferEXT fails, FALSE is returned.  To get extended
+    error information, call GetLastError. Possible errors are as follows:
+
+      ERROR_INVALID_HANDLE             <hPbuffer> is not a valid handle.
+
+    To query the maximum width, height, or number of pixels in any given
+    pbuffer for a specific pixel format, use wglGetPixelFormatAttribivEXT
+    or wglGetPixelFormatAttribfvEXT with <attribute> set to one of
+    WGL_MAX_PBUFFER_WIDTH_EXT, WGL_MAX_PBUFFER_HEIGHT_EXT, or
+    WGL_MAX_PBUFFER_PIXELS_EXT.
+
+    WGL_MAX_PBUFFER_WIDTH_EXT and WGL_MAX_PBUFFER_HEIGHT_EXT indicate the
+    maximum width and height that can be passed into wglCreatePbufferEXT
+    and WGL_MAX_PBUFFER_PIXELS_EXT indicates the maximum number of pixels
+    (width x height) for a pbuffer.  Note that an implementation may
+    return a value for WGL_MAX_PBUFFER_PIXELS_EXT that is less than the
+    maximum width times the maximum height.  Also, the value for
+    WGL_MAX_PBUFFER_PIXELS_EXT is static and assumes that no other
+    pbuffers are contending for the framebuffer memory.  Thus it may
+    not be possible to allocate a pbuffer of the size given by
+    WGL_MAX_PBUFFER_PIXELS_EXT.
+
+    On some implementations, there may be an optimum width and height
+    to use when allocating a pbuffer. (For example, the implementation
+    may use fixed size tiles to allocate pbuffers.)  Use
+    WGL_OPTIMAL_PBUFFER_WIDTH_EXT and WGL_OPTIMAL_PBUFFER_HEIGHT to
+    determine this width and height.  If the value returned is zero,
+    there is no optimal width or height value.
+
+    To query an attribute associated with a specific pbuffer, call
+
+      BOOL wglQueryPbufferEXT(HPBUFFEREXT hPbuffer,
+                              int iAttribute,
+                              int *piValue);
+
+    with <hPbuffer> set to a previously returned pbuffer handle.
+    <iAttribute> must be set to one of WGL_PBUFFER_WIDTH_EXT or
+    WGL_PBUFFER_HEIGHT_EXT.
+
+    If wglQueryPbufferEXT fails, FALSE is returned.  To get extended
+    error information, call GetLastError. Possible errors are as follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+      ERROR_INVALID_DATA             <iAttribute> is not a valid attribute.
+
+    Because there is no way to extend wgl, these calls are defined in the
+    ICD and can be called by obtaining the address with wglGetProcAddress.
+    Because this is not a GL extension, it is not included in the
+    GL_EXTENSIONS string.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

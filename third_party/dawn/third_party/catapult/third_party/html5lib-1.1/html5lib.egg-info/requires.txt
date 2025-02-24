@@ -1,0 +1,18 @@
+six>=1.9
+webencodings
+
+[all]
+genshi
+chardet>=2.2
+
+[all:platform_python_implementation == 'CPython']
+lxml
+
+[chardet]
+chardet>=2.2
+
+[genshi]
+genshi
+
+[lxml:platform_python_implementation == 'CPython']
+lxml

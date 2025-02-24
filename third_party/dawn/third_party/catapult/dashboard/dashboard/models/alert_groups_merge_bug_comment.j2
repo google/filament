@@ -1,0 +1,5 @@
+Alert group ({{ group.key.string_id() }}) was automatically merged into {{ canonical_group.key.string_id() }} because corresponding issues were marked as duplicates.
+
+Dashboard will now post all updates about newly detected regressions to the canonical group issue.
+
+This behavior is set up by subscription config. One of the anomalies in the group had auto merge allowed. See go/chromeperf-auto-triage#opt-into-auto-merge for more details.

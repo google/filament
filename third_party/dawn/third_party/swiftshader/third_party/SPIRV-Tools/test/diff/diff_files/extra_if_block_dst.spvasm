@@ -1,0 +1,136 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main" %63 %69
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+               OpName %4 "main"
+               OpName %8 "f1("
+               OpName %10 "f2("
+               OpName %13 "v"
+               OpName %16 "Buffer"
+               OpMemberName %16 0 "flag1"
+               OpMemberName %16 1 "flag2"
+               OpName %18 ""
+               OpName %34 "v"
+               OpName %63 "color"
+               OpName %69 "v"
+               OpDecorate %8 RelaxedPrecision
+               OpDecorate %10 RelaxedPrecision
+               OpDecorate %13 RelaxedPrecision
+               OpMemberDecorate %16 0 RelaxedPrecision
+               OpMemberDecorate %16 0 Offset 0
+               OpMemberDecorate %16 1 RelaxedPrecision
+               OpMemberDecorate %16 1 Offset 4
+               OpDecorate %16 Block
+               OpDecorate %18 DescriptorSet 0
+               OpDecorate %18 Binding 0
+               OpDecorate %23 RelaxedPrecision
+               OpDecorate %24 RelaxedPrecision
+               OpDecorate %25 RelaxedPrecision
+               OpDecorate %26 RelaxedPrecision
+               OpDecorate %27 RelaxedPrecision
+               OpDecorate %28 RelaxedPrecision
+               OpDecorate %29 RelaxedPrecision
+               OpDecorate %30 RelaxedPrecision
+               OpDecorate %31 RelaxedPrecision
+               OpDecorate %34 RelaxedPrecision
+               OpDecorate %37 RelaxedPrecision
+               OpDecorate %38 RelaxedPrecision
+               OpDecorate %40 RelaxedPrecision
+               OpDecorate %41 RelaxedPrecision
+               OpDecorate %44 RelaxedPrecision
+               OpDecorate %45 RelaxedPrecision
+               OpDecorate %46 RelaxedPrecision
+               OpDecorate %48 RelaxedPrecision
+               OpDecorate %55 RelaxedPrecision
+               OpDecorate %56 RelaxedPrecision
+               OpDecorate %57 RelaxedPrecision
+               OpDecorate %58 RelaxedPrecision
+               OpDecorate %63 RelaxedPrecision
+               OpDecorate %63 Location 0
+               OpDecorate %64 RelaxedPrecision
+               OpDecorate %65 RelaxedPrecision
+               OpDecorate %67 RelaxedPrecision
+               OpDecorate %69 RelaxedPrecision
+               OpDecorate %69 Location 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeFunction %6
+         %12 = OpTypePointer Function %6
+         %14 = OpConstant %6 0
+         %15 = OpTypeInt 32 0
+         %16 = OpTypeStruct %15 %15
+         %17 = OpTypePointer Uniform %16
+         %18 = OpVariable %17 Uniform
+         %19 = OpTypeInt 32 1
+         %20 = OpConstant %19 1
+         %21 = OpTypePointer Uniform %15
+         %35 = OpConstant %19 0
+         %39 = OpConstant %6 10
+         %42 = OpConstant %6 0.5
+         %43 = OpConstant %6 0.699999988
+         %49 = OpConstant %15 0
+         %50 = OpTypeBool
+         %54 = OpConstant %6 0.100000001
+         %61 = OpTypeVector %6 4
+         %62 = OpTypePointer Output %61
+         %63 = OpVariable %62 Output
+         %66 = OpConstant %6 1
+         %68 = OpTypePointer Input %6
+         %69 = OpVariable %68 Input
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %64 = OpFunctionCall %6 %8
+         %65 = OpFunctionCall %6 %10
+         %67 = OpCompositeConstruct %61 %64 %65 %14 %66
+               OpStore %63 %67
+               OpReturn
+               OpFunctionEnd
+          %8 = OpFunction %6 None %7
+          %9 = OpLabel
+         %13 = OpVariable %12 Function
+               OpStore %13 %14
+         %22 = OpAccessChain %21 %18 %20
+         %23 = OpLoad %15 %22
+         %24 = OpConvertUToF %6 %23
+         %25 = OpExtInst %6 %1 Log2 %24
+         %26 = OpLoad %6 %13
+         %27 = OpFAdd %6 %26 %25
+               OpStore %13 %27
+         %28 = OpLoad %6 %13
+         %29 = OpLoad %6 %13
+         %30 = OpExtInst %6 %1 Sqrt %29
+         %31 = OpFSub %6 %28 %30
+               OpReturnValue %31
+               OpFunctionEnd
+         %10 = OpFunction %6 None %7
+         %11 = OpLabel
+         %34 = OpVariable %12 Function
+         %36 = OpAccessChain %21 %18 %35
+         %37 = OpLoad %15 %36
+         %38 = OpConvertUToF %6 %37
+         %40 = OpFDiv %6 %38 %39
+               OpStore %34 %40
+         %41 = OpLoad %6 %34
+         %44 = OpExtInst %6 %1 FClamp %41 %42 %43
+         %45 = OpLoad %6 %34
+         %46 = OpFMul %6 %45 %44
+               OpStore %34 %46
+         %47 = OpAccessChain %21 %18 %20
+         %48 = OpLoad %15 %47
+         %51 = OpINotEqual %50 %48 %49
+               OpSelectionMerge %53 None
+               OpBranchConditional %51 %52 %53
+         %52 = OpLabel
+         %55 = OpLoad %6 %34
+         %56 = OpFSub %6 %55 %54
+               OpStore %34 %56
+               OpBranch %53
+         %53 = OpLabel
+         %57 = OpLoad %6 %34
+         %58 = OpExtInst %6 %1 Exp %57
+               OpReturnValue %58
+               OpFunctionEnd
+

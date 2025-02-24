@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+function isDiagnosticSubclass(cls) {
+  cls = cls.__proto__;
+  while (cls) {
+    if (cls === tr.v.d.Diagnostic) return true;
+    cls = cls.__proto__;
+  }
+  return false;
+}
+
+function discoverDiagnostics(args) {
+  const discoveryMode = args.shift();
+  for (const arg of args) HTMLImportsLoader.loadHTML(arg);
+
+  const results = [];
+  if (discoveryMode === 'registry') {
+    for (const typeInfo of tr.v.d.Diagnostic.getAllRegisteredTypeInfos()) {
+      results.push(typeInfo.constructor.name);
+    }
+  } else if (discoveryMode === 'namespace') {
+    for (const cls of Object.values(tr.v.d)) {
+      if (isDiagnosticSubclass(cls)) results.push(cls.name);
+    }
+  } else {
+    console.log('First argument must be either "registry" or "namespace".');
+    return 1;
+  }
+  console.log(JSON.stringify(results));
+  return 0;
+}
+
+if (tr.isHeadless) {
+  quit(discoverDiagnostics(sys.argv.slice(1)));
+}
+</script>

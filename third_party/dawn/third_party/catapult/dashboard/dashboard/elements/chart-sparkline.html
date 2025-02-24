@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/async_map.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module name="chart-sparkline">
+  <template>
+  <style>
+  :host {
+    display: inline-flex;
+    flex-direction: column;
+    cursor: pointer;
+    border: 1px solid #ddd;
+  }
+  #plot {
+    flex-grow: 1;
+    height: 120px;
+    min-width: 200px;
+  }
+  #legend {
+    width: 340px;
+    display: flex;
+    justify-content: center;
+  }
+  #name {
+    margin-left: 1em;
+  }
+  #vline-container {
+    display: flex;
+  }
+  #vline {
+    width: 0;
+    height: 110px;
+    position: relative;
+    top: 8px;
+    border-left: 1px solid black;
+    display: none;
+  }
+  #loading-div {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  </style>
+
+  <div id="legend">
+    <div id="name">[[name]]</div>
+  </div>
+  <div id="vline-container">
+    <div id="vline">&nbsp;</div>
+    <div id="plot">
+      <div id="loading-div">
+        <!-- TODO(#3803): Use paper spinner. -->
+        <img src="//www.google.com/images/loading.gif">
+      </div>
+    </div>
+  </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+(function() {
+  class GraphJsonCache extends d.AsyncMap {
+    async process_(graphs) {
+      return await simple_xhr.asPromise('/graph_json', {graphs});
+    }
+  }
+  const GRAPH_JSON_CACHE = new GraphJsonCache();
+
+  Polymer({
+    is: 'chart-sparkline',
+    properties: {
+      graphJsonCache: {
+        type: Object,
+        value: () => GRAPH_JSON_CACHE,
+      },
+      name: {
+        type: String,
+      },
+      testpaths: {
+        type: Array,  // of {testpath: String, color: String}
+      },
+      vlinePointId: {
+        type: Number,
+        observer: 'onVlinePointIdSet_'
+      },
+      rev: {
+        type: String,
+      },
+      startRev: {
+        type: String,
+        observer: 'updatePlot_',
+      },
+      endRev: {
+        type: String,
+        observer: 'updatePlot_',
+      },
+      chartOptions: {
+        type: Object,
+        value: () => {
+          return {
+          };
+        },
+        observer: 'updatePlot_',
+      },
+      revisionMap: {
+        type: Object,
+        observer: 'updatePlot_',
+      },
+    },
+
+    created() {
+      this.plot_ = undefined;
+    },
+
+    ready() {
+      this.addEventListener('click', event => {
+        this.fire('promoteSparkLine', {
+          testpaths: this.testpaths,
+          startRev: this.startRev,
+          endRev: this.endRev,
+        });
+      });
+    },
+
+    attached() {
+      this.updatePlot_();
+    },
+
+    async updatePlot_() {
+      if (!this.testpaths) return;
+      if (this.style.display === 'none') return;
+
+      const params = JSON.stringify({
+        test_path_list: this.testpaths.map(e => e.testpath),
+        start_rev: parseInt(this.startRev),
+        end_rev: parseInt(this.endRev),
+        is_selected: true,
+      });
+
+      let json;
+      try {
+        json = await this.graphJsonCache.get(params);
+      } catch (e) {
+        this.style.display = 'none';
+        return;
+      }
+
+      // Re-check style.display in case it was changed by another user gesture
+      // while waiting for the XHR in graphJsonCache to return.
+      if (this.style.display === 'none') return;
+
+      if (!('data' in json) || Object.keys(json.data).length === 0) {
+        this.style.display = 'none';
+        return;
+      }
+
+      const numPoints = Object.keys(this.revisionMap).length;
+      this.revisionToIndexMap = {};
+      for (let i = 0; i < numPoints; ++i) {
+        this.revisionToIndexMap[this.revisionMap[i][0]] = i;
+      }
+
+      const foundTestPaths = [];
+      this.plotData_ = [];
+      for (let seriesi = 0; seriesi < this.testpaths.length; ++seriesi) {
+        if (!json.data[seriesi] || !json.data[seriesi].data) continue;
+        const series = json.data[seriesi];
+        const plotData = {
+          shadowSize: 0,
+          data: [],
+        };
+
+        for (const testpath of this.testpaths) {
+          if (testpath.testpath === series.testpath) {
+            plotData.color = testpath.color;
+            foundTestPaths.push(testpath);
+          }
+        }
+
+        this.plotData_.push(plotData);
+        for (let pairi = 0; pairi < series.data.length; ++pairi) {
+          const [rev, y] = series.data[pairi];
+
+          plotData.data.push([this.revisionToIndexMap[rev], y]);
+
+          this.chartOptions.yaxis.max = Math.max(
+              y, this.chartOptions.yaxis.max);
+          this.chartOptions.yaxis.min = Math.min(
+              y, this.chartOptions.yaxis.min);
+        }
+      }
+      this.set('testpaths', foundTestPaths);
+
+      if (this.plot_) {
+        const rect = this.plot_.getCanvas().getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+      }
+      this.plot_ = $.plot(this.$.plot, this.plotData_, this.chartOptions);
+      this.onVlinePointIdSet_();
+    },
+
+    onVlinePointIdSet_() {
+      this.$.vline.style.display = 'none';
+      if (!this.vlinePointId || !this.revisionToIndexMap) return;
+      const i = this.revisionToIndexMap[this.vlinePointId];
+      if (i === undefined) return;
+      let left = this.plot_.getData()[0].xaxis.p2c(i);
+      if (left < 0) return;
+      if (left > this.getBoundingClientRect().width) return;
+      left += 8;
+      this.$.vline.style.display = 'block';
+      this.$.vline.style.left = left + 'px';
+    },
+  });
+})();
+</script>

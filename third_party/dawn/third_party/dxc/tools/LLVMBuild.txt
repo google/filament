@@ -1,0 +1,48 @@
+;===- ./tools/LLVMBuild.txt ------------------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories =
+ dsymutil
+ llc
+ lli
+ llvm-as
+ llvm-bcanalyzer
+ llvm-cov
+ llvm-diff
+ llvm-dis
+ llvm-dwarfdump
+ llvm-extract
+ llvm-link
+ llvm-mc
+ llvm-mcmarkup
+ llvm-nm
+ llvm-objdump
+ llvm-pdbdump
+ llvm-profdata
+ llvm-rtdyld
+ llvm-size
+ macho-dump
+ opt
+ verify-uselistorder
+
+[component_0]
+type = Group
+name = Tools
+parent = $ROOT
+
+; HLSL Changes: remove bugpoint, llvm-ar, llvm-jitlistener, llvm-lto

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/model/user_model/animation_expectation.html">
+<link rel="import" href="/tracing/model/user_model/load_expectation.html">
+<link rel="import" href="/tracing/model/user_model/response_expectation.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  // In the case of Response, Load, and DiscreteAnimation UEs, Responsiveness is
+  // derived from the time between when the user thinks they begin an interation
+  // (expectedStart) and the time when the screen first changes to reflect the
+  // interaction (actualEnd).  There may be a delay between expectedStart and
+  // when chrome first starts processing the interaction (actualStart) if the
+  // main thread is busy.  The user doesn't know when actualStart is, they only
+  // know when expectedStart is. User responsiveness, by definition, considers
+  // only what the user experiences, so "duration" is defined as actualEnd -
+  // expectedStart.
+
+  function computeAnimationThroughput(animationExpectation) {
+    if (animationExpectation.frameEvents === undefined ||
+        animationExpectation.frameEvents.length === 0) {
+      throw new Error('Animation missing frameEvents ' +
+                      animationExpectation.stableId);
+    }
+
+    const durationInS = tr.b.convertUnit(animationExpectation.duration,
+        tr.b.UnitPrefixScale.METRIC.MILLI,
+        tr.b.UnitPrefixScale.METRIC.NONE);
+    return animationExpectation.frameEvents.length / durationInS;
+  }
+
+  function computeAnimationframeTimeDiscrepancy(animationExpectation) {
+    if (animationExpectation.frameEvents === undefined ||
+        animationExpectation.frameEvents.length === 0) {
+      throw new Error('Animation missing frameEvents ' +
+                      animationExpectation.stableId);
+    }
+
+    let frameTimestamps = animationExpectation.frameEvents;
+    frameTimestamps = frameTimestamps.toArray().map(function(event) {
+      return event.start;
+    });
+
+    const absolute = true;
+    return tr.b.math.Statistics.timestampsDiscrepancy(
+        frameTimestamps, absolute);
+  }
+
+  /**
+   * @param {!tr.v.HistogramSet} histograms
+   * @param {!tr.model.Model} model
+   * @param {!Object=} opt_options
+   */
+  function responsivenessMetric(histograms, model, opt_options) {
+    const responseNumeric = new tr.v.Histogram('response latency',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        tr.v.HistogramBinBoundaries.createLinear(100, 1e3, 50));
+    const throughputNumeric = new tr.v.Histogram('animation throughput',
+        tr.b.Unit.byName.unitlessNumber_biggerIsBetter,
+        tr.v.HistogramBinBoundaries.createLinear(10, 60, 10));
+    const frameTimeDiscrepancyNumeric = new tr.v.Histogram(
+        'animation frameTimeDiscrepancy',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        tr.v.HistogramBinBoundaries.createLinear(0, 1e3, 50).
+            addExponentialBins(1e4, 10));
+    const latencyNumeric = new tr.v.Histogram('animation latency',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        tr.v.HistogramBinBoundaries.createLinear(0, 300, 60));
+
+    model.userModel.expectations.forEach(function(ue) {
+      if (opt_options && opt_options.rangeOfInterest &&
+          !opt_options.rangeOfInterest.intersectsExplicitRangeInclusive(
+              ue.start, ue.end)) {
+        return;
+      }
+
+      const sampleDiagnosticMap = tr.v.d.DiagnosticMap.fromObject(
+          {relatedEvents: new tr.v.d.RelatedEventSet([ue])});
+
+      // Responsiveness is not defined for Idle or Startup expectations.
+      if (ue instanceof tr.model.um.IdleExpectation) {
+        return;
+      } else if (ue instanceof tr.model.um.StartupExpectation) {
+        return;
+      } else if (ue instanceof tr.model.um.LoadExpectation) {
+        // This is already covered by loadingMetric.
+      } else if (ue instanceof tr.model.um.ResponseExpectation) {
+        responseNumeric.addSample(ue.duration, sampleDiagnosticMap);
+      } else if (ue instanceof tr.model.um.AnimationExpectation) {
+        if (ue.frameEvents === undefined || ue.frameEvents.length === 0) {
+          // Ignore animation stages that do not have associated frames:
+          // https://github.com/catapult-project/catapult/issues/2446
+          return;
+        }
+        const throughput = computeAnimationThroughput(ue);
+        if (throughput === undefined) {
+          throw new Error('Missing throughput for ' +
+                          ue.stableId);
+        }
+
+        throughputNumeric.addSample(throughput, sampleDiagnosticMap);
+
+        const frameTimeDiscrepancy = computeAnimationframeTimeDiscrepancy(ue);
+        if (frameTimeDiscrepancy === undefined) {
+          throw new Error('Missing frameTimeDiscrepancy for ' +
+                          ue.stableId);
+        }
+
+        frameTimeDiscrepancyNumeric.addSample(
+            frameTimeDiscrepancy, sampleDiagnosticMap);
+
+        ue.associatedEvents.forEach(function(event) {
+          if (!(event instanceof tr.e.cc.InputLatencyAsyncSlice)) {
+            return;
+          }
+
+          latencyNumeric.addSample(event.duration, sampleDiagnosticMap);
+        });
+      } else {
+        throw new Error('Unrecognized stage for ' + ue.stableId);
+      }
+    });
+
+    [
+      responseNumeric, throughputNumeric, frameTimeDiscrepancyNumeric,
+      latencyNumeric
+    ].forEach(function(numeric) {
+      numeric.customizeSummaryOptions({
+        avg: true,
+        max: true,
+        min: true,
+        std: true
+      });
+    });
+
+    histograms.addHistogram(responseNumeric);
+    histograms.addHistogram(throughputNumeric);
+    histograms.addHistogram(frameTimeDiscrepancyNumeric);
+    histograms.addHistogram(latencyNumeric);
+  }
+
+  tr.metrics.MetricRegistry.register(responsivenessMetric, {
+    supportsRangeOfInterest: true,
+    requiredCategories: ['rail'],
+  });
+
+  return {
+    responsivenessMetric,
+  };
+});
+</script>

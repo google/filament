@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('clone', function() {
+    const diagnostics = new tr.v.d.DiagnosticMap();
+    diagnostics.set('generic', new tr.v.d.GenericSet([{a: ['b', 3]}]));
+    diagnostics.set('breakdown', new tr.v.d.Breakdown());
+    diagnostics.set('events', new tr.v.d.RelatedEventSet());
+
+    const clone = tr.v.d.DiagnosticMap.fromDict(diagnostics.asDict());
+    assert.instanceOf(clone.get('generic'), tr.v.d.GenericSet);
+    assert.deepEqual(tr.b.getOnlyElement(clone.get('generic')),
+        tr.b.getOnlyElement(diagnostics.get('generic')));
+    assert.instanceOf(clone.get('breakdown'), tr.v.d.Breakdown);
+    assert.instanceOf(clone.get('events'), tr.v.d.RelatedEventSet);
+  });
+
+  test('fromObject', function() {
+    assert.strictEqual(tr.v.d.DiagnosticMap.fromObject(
+        {a: new tr.v.d.GenericSet([])}).size, 1);
+    assert.strictEqual(tr.v.d.DiagnosticMap.fromObject(
+        new Map([['a', new tr.v.d.GenericSet([])]])).size, 1);
+  });
+
+  test('cloneWithRef', function() {
+    const diagnostics = new tr.v.d.DiagnosticMap();
+    diagnostics.set('ref', new tr.v.d.DiagnosticRef('abc'));
+
+    const clone = tr.v.d.DiagnosticMap.fromDict(diagnostics.asDict());
+    assert.instanceOf(clone.get('ref'), tr.v.d.DiagnosticRef);
+    assert.strictEqual(clone.get('ref').guid, 'abc');
+  });
+
+  test('requireFromDict', function() {
+    class MissingFromDict extends tr.v.d.Diagnostic { }
+    assert.throws(() => tr.v.d.Diagnostic.register(MissingFromDict));
+
+    class InvalidFromDict extends tr.v.d.Diagnostic {
+      static fromDict() {
+      }
+    }
+    assert.throws(() => tr.v.d.Diagnostic.register(InvalidFromDict));
+  });
+
+  test('merge', function() {
+    const event = tr.c.TestUtils.newSliceEx({
+      title: 'event',
+      start: 0,
+      duration: 1,
+    });
+    event.parentContainer = {
+      sliceGroup: {
+        stableId: 'fake_thread',
+        slices: [event],
+      },
+    };
+    const generic = new tr.v.d.GenericSet(['generic diagnostic']);
+    const generic2 = new tr.v.d.GenericSet(['generic diagnostic 2']);
+    const events = new tr.v.d.RelatedEventSet([event]);
+
+    // When Histograms are merged, first an empty clone is created with an empty
+    // DiagnosticMap.
+    const hist = new tr.v.Histogram('', tr.b.Unit.byName.count);
+
+    const hist2 = new tr.v.Histogram('', tr.b.Unit.byName.count);
+    hist2.diagnostics.set('a', generic);
+    hist.diagnostics.addDiagnostics(hist2.diagnostics);
+    assert.strictEqual(tr.b.getOnlyElement(generic),
+        tr.b.getOnlyElement(hist.diagnostics.get('a')));
+
+    // Separate keys are not merged.
+    const hist3 = new tr.v.Histogram('', tr.b.Unit.byName.count);
+    hist3.diagnostics.set('b', generic2);
+    hist.diagnostics.addDiagnostics(hist3.diagnostics);
+    assert.strictEqual(
+        tr.b.getOnlyElement(generic),
+        tr.b.getOnlyElement(hist.diagnostics.get('a')));
+    assert.strictEqual(
+        tr.b.getOnlyElement(generic2),
+        tr.b.getOnlyElement(hist.diagnostics.get('b')));
+
+    // Merging unmergeable diagnostics should produce an
+    // UnmergeableDiagnosticSet.
+    const hist4 = new tr.v.Histogram('', tr.b.Unit.byName.count);
+    hist4.diagnostics.set('a', new tr.v.d.RelatedNameMap());
+    hist.diagnostics.addDiagnostics(hist4.diagnostics);
+    assert.instanceOf(hist.diagnostics.get('a'),
+        tr.v.d.UnmergeableDiagnosticSet);
+    let diagnostics = Array.from(hist.diagnostics.get('a'));
+    assert.strictEqual(
+        tr.b.getOnlyElement(generic), tr.b.getOnlyElement(diagnostics[0]));
+
+    // UnmergeableDiagnosticSets are mergeable.
+    const hist5 = new tr.v.Histogram('', tr.b.Unit.byName.count);
+    hist5.diagnostics.set('a', new tr.v.d.UnmergeableDiagnosticSet([
+      events, generic2]));
+    hist.diagnostics.addDiagnostics(hist5.diagnostics);
+    assert.instanceOf(hist.diagnostics.get('a'),
+        tr.v.d.UnmergeableDiagnosticSet);
+    diagnostics = Array.from(hist.diagnostics.get('a'));
+    assert.lengthOf(diagnostics, 3);
+    assert.instanceOf(diagnostics[0], tr.v.d.GenericSet);
+    assert.deepEqual(Array.from(diagnostics[0]), [...generic, ...generic2]);
+    assert.instanceOf(diagnostics[2], tr.v.d.CollectedRelatedEventSet);
+  });
+
+  test('validateDiagnosticTypes', function() {
+    const hist = new tr.v.Histogram('', tr.b.Unit.byName.count);
+    function addInvalidDiagnosticType() {
+      hist.diagnostics.set(
+          tr.v.d.RESERVED_NAMES.TRACE_START, new tr.v.d.GenericSet(['foo']));
+    }
+    assert.throw(addInvalidDiagnosticType, Error,
+        `Diagnostics named "${tr.v.d.RESERVED_NAMES.TRACE_START}" must be ` +
+        'DateRange, not GenericSet');
+  });
+});
+</script>

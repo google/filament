@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/rects_based_speed_index_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('rectsBasedSpeedIndexMetric', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+
+      model.userModel.expectations.push(new tr.model.um.LoadExpectation(
+          model, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 300, 2100,
+          rendererProcess, {
+            cat: 'blink.user_timing',
+            title: 'navigationStart',
+            start: 0,
+            duration: 0.0,
+            args: {frame: '0xdeadbeef', data: {navigationId: '0xfirstnav'}}},
+          {}, {}, {}, {}, ' ', 0xdeadbeef));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'PaintTimingVisualizer::LayoutObjectPainted',
+        start: 500,
+        duration: 0.0,
+        args: {
+          data: {
+            rect: [50, 70, 60, 70, 60, 100, 50, 100]
+          }
+        }
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'PaintTimingVisualizer::LayoutObjectPainted',
+        start: 700,
+        duration: 0.0,
+        args: {
+          data: {
+            rect: [10, 30, 20, 30, 20, 50, 10, 50]
+          }
+        }
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'viewport',
+        start: 300,
+        duration: 0.0,
+        args: {
+          data: {
+            x: 0,
+            y: 0,
+            width: 150,
+            height: 150,
+            frameID: '0xdeadbeef'}}
+      }));
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.rectsBasedSpeedIndexMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('rectsBasedSpeedIndex');
+    assert.strictEqual(1, hist.running.count);
+    // First rectangle area is: 300
+    // Second rectangle area is: 200
+    // Total area is: 500
+    // visual completeness:   time: 500 progress: 0.6
+    //                        time: 700 progress: 1.0
+    // => speedIndex = 500 * (1 - 0.0) + 200 * (1 - 0.6) = 580
+    assert.strictEqual(580, hist.running.mean);
+  });
+});
+</script>

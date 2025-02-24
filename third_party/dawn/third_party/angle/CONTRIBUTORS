@@ -1,0 +1,243 @@
+﻿# This is the official list of people who can contribute
+# (and who have contributed) code to the ANGLE project
+# repository.
+# The AUTHORS file lists the copyright holders; this file
+# lists people.  For example, Google employees are listed here
+# but not in AUTHORS, because Google holds the copyright.
+#
+
+TransGaming Inc.
+ Nicolas Capens
+ Daniel Koch
+ Geoff Lang
+ Andrew Lewycky
+ Jamie Madill
+ Gavriel State
+ Shannon Woods
+
+Google Inc.
+ Brent Austin
+ Michael Bai
+ John Bauman
+ Peter Beverloo
+ Eric Binet
+ Steve Block
+ Rachel Blum
+ Eric Boren
+ Henry Bridge
+ Victor Costan
+ James Dong
+ Nat Duca
+ Courtney Goeltzenleuchter
+ Tobin Ehlis
+ Ian Elliott
+ Scott Graham
+ Peter Kasting
+ Vangelis Kokkevis
+ Charlie Lao
+ Jiacheng Lu
+ Zhenyao Mo
+ Daniel Nicoara
+ Kai Ninomiya
+ Cody Northrop
+ Justin Novosad
+ Alastair Patrick
+ Alok Priyadarshi
+ Kenneth Russell
+ Jonah Ryan-Davis
+ Brian Salomon
+ Justin Schuh
+ Gregg Tavares
+ thestig@chromium.org
+ Jeff Timanus
+ Tim Van Patten
+ Ben Vanik
+ Adrienne Walker
+ Corentin Wallez
+ Shahbaz Youssefi
+ Hailin Zhang
+
+Adobe Systems Inc.
+ Alexandru Chiculita
+ Steve Minns
+ Max Vujovic
+
+Apple Inc.
+ Dan Glastonbury
+ Dean Jackson
+ Kimmo Kinnunen
+ Kyle Piddington
+
+Autodesk, Inc.
+ Ranger Harke
+
+Cloud Party, Inc.
+ Conor Dickinson
+
+The Qt Company Ltd.
+ Andrew Knight
+
+Imagination Technologies Ltd.
+ Gregoire Payen de La Garanderie
+ Kyle Griffiths
+
+Intel Corporation
+ Jin Yang
+ Andy Chen
+ Josh Triplett
+ Sudarsana Nagineni
+ Jiajia Qin
+ Jiawei Shao
+ Jie Chen
+ Qiankun Miao
+ Bryan Bernhart
+ Yunchao He
+ Xinghua Cao
+ Brandon Jones
+ Enrico Galli
+
+Klarälvdalens Datakonsult AB
+ Milian Wolff
+
+Mozilla Corp.
+ Dzmitry Malyshau
+ Ehsan Akhgari
+ Edwin Flores
+ Kelsey Gilbert
+ Mike Hommey
+ Benoit Jacob
+ Makoto Kato
+ Vladimir Vukicevic
+ Josh Matthews
+
+Turbulenz
+ Michael Braithwaite
+
+Ulrik Persson (ddefrostt)
+Mark Banner (standard8mbp)
+David Kilzer
+Jacek Caban
+Tibor den Ouden
+Régis Fénéon
+Sebastian Bergstein
+James Ross-Gowan
+Andrei Volykhin
+Jérôme Duval
+Till Rathmann
+Nick Shaforostov
+
+Microsoft Corporation
+ Cooper Partin
+ Austin Kinross
+ Mingyu Hu
+ Minmin Gong
+ Shawn Hargreaves
+ Rafael Cintron
+ James Clarke
+ Nathan Zabriskie
+ Patrick To
+
+Microsoft Open Technologies, Inc.
+ Cooper Partin
+ Austin Kinross
+
+NVIDIA Corporation
+ Olli Etuaho
+ Arun Patole
+ Qingqing Deng
+ Kimmo Kinnunen
+ Sami Väisänen
+ Martin Radev
+ Joonatan Saarhelo
+ Markus Tavenrath
+ Anders Leino
+
+Opera Software ASA
+ Daniel Bratell
+ Tomasz Moniuszko
+ David Landell
+
+Advanced Micro Devices, Inc.
+ Russ Lind
+
+LG Electronics, Inc.
+ Jani Hautakangas
+ Ivan Murashov
+
+IBM Inc.
+ Junliang Yan
+
+AdaptVis GmbH
+ Sascha Kolodzey
+
+Samsung Electronics, Inc.
+ Arnold George
+ Brandon Schade
+ Colin Peter
+ Hyunchang Kim
+ Hyunseok Ko
+ Igor Nazarov
+ Jaedon Lee
+ Jaewoo Kim
+ Jeff Vigil
+ Jisun Lee
+ Jonah Taylor
+ Kevin Jung
+ Kyeongmin Kim
+ Mahmoud Kharsa
+ Mathew Prabakar
+ Minkyu Jeong
+ Mohan Maiya
+ Nirmal Singh
+ Peter Mowry
+ Sangwon Park
+ Saurabh Badenkal
+ Younggwan Kim
+ Sungyong Choi
+
+Arm Ltd.
+ Fei Yang
+ Xinyi He
+ Sunny Sun
+ Xiaoxuan Liu
+ Ancheng Qiao
+ Amy Liu
+ Jian Li
+ Cheryl Wei
+ Guoxing Wu
+ Min Zhang
+ Yuxiang Qian
+ Shufen Ma
+
+Broadcom Inc.
+ Gary Sweet
+
+Facebook, Inc.
+ Artem Bolgar
+
+The Khronos Group, Inc.
+ Alexey Knyazev
+
+Igalia, S.L.
+ Jose Dapena Paz
+
+Numfum GmbH
+ Carl Woffenden
+
+Collabora, Ltd.
+ Lubosz Sarnecki
+
+LunarG, Inc.
+ Mark Lobodzinski
+
+Valve Corporation
+ Steven Noonan
+
+Yandex LLC
+ Andrew Naumov
+
+Rive
+ Chris Dalton
+
+Institute of Software, Chinese Academy of Sciences
+ Wang Chen

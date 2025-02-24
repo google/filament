@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/system_health/responsiveness_metric.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel(collectionOfFrameTimestamps) {
+    const opts = {
+      customizeModelCallback(model) {
+        const thread = tr.c.TestUtils.newFakeThread();
+        collectionOfFrameTimestamps.forEach(function(frameTimestamps) {
+          frameTimestamps.sort((a, b) => a - b);
+          const ue = new tr.model.um.AnimationExpectation(
+              model, 'test', frameTimestamps[0],
+              frameTimestamps[frameTimestamps.length - 1]);
+          const group = new tr.model.SliceGroup(thread);
+          frameTimestamps.forEach(function(time) {
+            group.pushSlice(tr.c.TestUtils.newSliceEx({
+              title: tr.model.helpers.IMPL_RENDERING_STATS,
+              start: time,
+              end: time,
+              cpuStart: time,
+              cpuEnd: time
+            }));
+          });
+          group.createSubSlices();
+          group.slices.forEach(function(slice) {
+            ue.associatedEvents.push(slice);
+          });
+          model.userModel.expectations.push(ue);
+          model.userModel.expectations.push(
+              new tr.model.um.StartupExpectation(model, 0, 1));
+          model.userModel.expectations.push(
+              new tr.model.um.ResponseExpectation(model, 'test', 1, 1));
+        });
+      }
+    };
+    return tr.c.TestUtils.newModelWithEvents([], opts);
+  }
+
+  test('animationThroughputNoFrames', function() {
+    const model = createModel([[]]);
+    const valueList = new tr.v.HistogramSet();
+    tr.metrics.sh.responsivenessMetric(valueList, model);
+    const value = valueList.getHistogramNamed('animation throughput');
+    assert.strictEqual(value.numValues, 0);
+  });
+
+  test('animationThroughputFramesAndNoFrames', function() {
+    const model = createModel([[0, 100], []]);
+    const valueList = new tr.v.HistogramSet();
+    tr.metrics.sh.responsivenessMetric(valueList, model);
+    const value = valueList.getHistogramNamed('animation throughput');
+    assert.strictEqual(value.average, 20);
+  });
+});
+</script>

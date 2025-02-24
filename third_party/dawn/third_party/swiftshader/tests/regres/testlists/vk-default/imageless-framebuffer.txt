@@ -1,0 +1,6 @@
+dEQP-VK.imageless_framebuffer.color
+dEQP-VK.imageless_framebuffer.color_resolve
+dEQP-VK.imageless_framebuffer.depth_stencil
+dEQP-VK.imageless_framebuffer.depth_stencil_resolve
+dEQP-VK.imageless_framebuffer.different_attachments
+dEQP-VK.imageless_framebuffer.multisubpass

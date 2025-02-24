@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains implementations of the following metrics.
+ *
+ * rgb_decode_time
+ * ===========
+ * Duration in ms of the Blink RGB decoding path for a chunk of image data
+ * (possibly the whole image), as reported in cpu_duration of the
+ * ImageFrameGenerator::decode TRACE_EVENT (which is actually fired from
+ * ImageDecoderWrapper).
+ *
+ * yuv_decode_time
+ * ===========
+ * Duration in ms of the Blink YUV decoding path for a chunk of image data
+ * (always the whole image until incremental decoding is implemented in
+ * crbug.com/943519), as reported in cpu_duration of the
+ * ImageFrameGenerator::decodeToYuv TRACE_EVENT.
+ *
+ * blink_decode_time_gpu_rasterization
+ * ===========
+ * Duration in ms of decoding and scaling within the GpuImageDecodeCache for a
+ * chunk of image data (possibly the whole image). This is reported from the
+ * cpu_duration of the GpuImageDecodeCache::DecodeImage TRACE_EVENT.
+ *
+ * blink_decode_time_software_rasterization
+ * ===========
+ * Duration in ms of decoding and scaling within the SoftwareImageDecodeCache
+ * for a chunk of image data (possibly the whole image). This is reported from
+ * the cpu_duration of the SoftwareImageDecodeCache::DecodeImageInTask.
+ */
+tr.exportTo('tr.metrics.rendering', function() {
+  // Various tracing events.
+  const RGB_DECODE_EVENT = 'ImageFrameGenerator::decode';
+  const YUV_DECODE_EVENT = 'ImageFrameGenerator::decodeToYUV';
+  const BLINK_GPU_RASTER_DECODE_EVENT = 'GpuImageDecodeCache::DecodeImage';
+  const BLINK_SOFTWARE_RASTER_DECODE_EVENT = 'SoftwareImageDecodeCache::' +
+                                             'DecodeImageInTask';
+
+  /**
+    * Returns an array of tr.model.Event objects corresponding to all of the
+    * above image decoding trace events that occured while a story was
+    * run).
+    */
+  function getImageDecodingEvents_(modelHelper, ranges) {
+    if (!modelHelper || !modelHelper.rendererHelpers) return [];
+    const events = [];
+    for (const renderer of Object.values(modelHelper.rendererHelpers)) {
+      for (const thread of renderer.rasterWorkerThreads) {
+        const slices = thread.sliceGroup;
+        for (const slice of slices.getDescendantEventsInSortedRanges(ranges)) {
+          if (slice.title === RGB_DECODE_EVENT ||
+              slice.title === YUV_DECODE_EVENT ||
+              slice.title === BLINK_GPU_RASTER_DECODE_EVENT ||
+              slice.title === BLINK_SOFTWARE_RASTER_DECODE_EVENT) {
+            events.push(slice);
+          }
+        }
+      }
+    }
+    return events;
+  }
+
+  function addImageDecodeTimeHistograms(histograms, model, segments) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const decodeEvents = getImageDecodingEvents_(modelHelper,
+        segments.map(s => s.boundsRange));
+    if (!decodeEvents) return;
+
+    histograms.createHistogram(
+        'rgb_decode_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        decodeEvents.filter(slice => slice.title === RGB_DECODE_EVENT).map(
+            slice => slice.cpuDuration),
+        { description: 'Duration of the Blink RGB decoding path for a chunk ' +
+                       'of image data (possibly the whole image).',
+        summaryOptions: tr.metrics.rendering.SUMMARY_OPTIONS,
+        });
+
+    histograms.createHistogram(
+        'yuv_decode_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        decodeEvents.filter(slice => slice.title === YUV_DECODE_EVENT).map(
+            slice => slice.cpuDuration),
+        { description: 'Duration of the Blink YUV decoding path for a ' +
+                       'chunk of image data (possibly the whole image).',
+        summaryOptions: tr.metrics.rendering.SUMMARY_OPTIONS,
+        });
+
+    histograms.createHistogram(
+        'blink_decode_time_gpu_rasterization',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        decodeEvents.filter(
+            slice => slice.title === BLINK_GPU_RASTER_DECODE_EVENT).map(
+            slice => slice.cpuDuration),
+        { description: 'Duration of decoding and scaling within the ' +
+                       'GpuImageDecodeCache for a chunk of image data ' +
+                       '(possibly the whole image)',
+        summaryOptions: tr.metrics.rendering.SUMMARY_OPTIONS,
+        });
+
+    histograms.createHistogram(
+        'blink_decode_time_software_rasterization',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        decodeEvents.filter(
+            slice => slice.title === BLINK_SOFTWARE_RASTER_DECODE_EVENT).map(
+            slice => slice.cpuDuration),
+        { description: 'Duration of decoding and scaling within the ' +
+                       'SoftwareImageDecodeCache for a chunk of image data ' +
+                       '(possibly the whole image)',
+        summaryOptions: tr.metrics.rendering.SUMMARY_OPTIONS,
+        });
+  }
+
+  return {
+    addImageDecodeTimeHistograms
+  };
+});
+</script>

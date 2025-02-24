@@ -1,0 +1,75 @@
+Name
+
+    ANGLE_program_cache_control
+
+Name Strings
+
+    GL_ANGLE_program_cache_control
+
+Contributors
+
+    Jamie Madill, Google
+
+Contacts
+
+    Jamie Madill (jmadill 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, June 29, 2017
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    OpenGL ES 3.0 is required.
+
+    This extension is written against the wording of the OpenGL ES
+    3.0 specification.
+
+Overview
+
+    With the program cache enabled, created OpenGL ES contexts will use an
+    internal program binary cache to save linking time. The extension allows the
+    application to determine if a particular Context has this feature enabled.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter to IsEnabled and the <pname> parameter to
+    GetBooleanv, GetIntegerv, GetFloatv, and GetInteger64v:
+
+    PROGRAM_CACHE_ENABLED_ANGLE           0x93AC
+
+Additions to the OpenGL ES Specification:
+
+    Add to section 2.12.3 (Program Objects), p. 52, after paragraph 4:
+
+    Contexts with PROGRAM_CACHE_ENABLED_ANGLE set to TRUE will query the
+    internal program cache on any LinkProgram call, and re-use program binaries
+    if matching values are found. LinkProgram will succeed in this case. If the
+    binary load fails for any reason, LinkProgram will fall back to linking
+    normally.
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  -------------------------------------------
+      1   June 29, 2017  jmadill    Initial version

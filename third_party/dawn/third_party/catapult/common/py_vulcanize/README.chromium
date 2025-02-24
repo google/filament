@@ -1,0 +1,9 @@
+Name: py_vulcanize
+URL: N/A
+Version: N/A
+Shipped: yes
+
+Description:
+Py-vulcanize, formerly known as TVCM (trace-viewer component model).
+This code doesn't actually live anywhere else currently, but it may
+be split out into a separate repository in the future.

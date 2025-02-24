@@ -1,0 +1,148 @@
+<dom-module id="quic-view">
+  <template>
+    <div id=quic-view-tab-content class=content-box>
+      <!-- Only one of these two are shown -->
+      <div id=quic-view-quic-enabled-no-content><h4>QUIC is disabled</h4></div>
+      <div id=quic-view-quic-enabled-content>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>QUIC Option</th>
+            <th>Value</th>
+         </tr>
+        </thead>
+        <tbody>
+          <tr>
+             <td>Supported Versions</td>
+             <td><span id=quic-view-supported-versions></span></td>
+         </tr><tr>
+             <td>Connection options</td>
+             <td><span id=quic-view-connection-options></span></td>
+          </tr><tr>
+            <td>Max Packet Length</td>
+            <td><span id=quic-view-max-packet-length></span></td>
+          </tr><tr>
+            <td>Idle Connection Timeout In Seconds</td>
+            <td>
+              <span id=quic-view-idle-connection-timeout-seconds>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Reduced Ping Timeout In Seconds</td>
+            <td>
+              <span id=quic-view-reduced-ping-timeout-seconds>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Packet Reader Yield After Duration in Milliseconds</td>
+            <td>
+              <span id=quic-view-packet-reader-yield-after-duration-milliseconds>
+              </span>
+           </td>
+          </tr><tr>
+            <td>Mark QUIC Broken When Network Blackholes</td>
+            <td>
+              <span id=quic-view-mark-quic-broken-when-network-blackholes>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Do Not Mark QUIC Broken on Network Changes</td>
+            <td>
+              <span id=quic-view-do-not-mark-as-broken-on-network-change>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Retry without Alt-Svc on QUIC Errors</td>
+            <td>
+              <span id=quic-view-retry-without-alt-svc-on-quic-errors>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Do Not Fragment</td>
+            <td><span id=quic-view-do-not-fragment></span></td>
+          </tr><tr>
+            <td>Allow Server Migrations</td>
+            <td><span id=quic-view-allow-server-migration></span></td>
+          </tr><tr>
+            <td>Migrate Sessions Early V2</td>
+            <td><span id=quic-view-migrate-sessions-early-v2></span></td>
+          </tr><tr>
+            <td>Migrate Sessions on Network Change V2</td>
+            <td>
+              <span id=quic-view-migrate-sessions-on-network-change-v2>
+              </span>
+           </td>
+          </tr><tr>
+            <td>Retransmittable on Wire Timeout in Milliseconds</td>
+            <td>
+              <span id=quic-view-retransmittable-on-wire-timeout-milliseconds>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Disable Bidirectional Streams</td>
+            <td><span id=quic-view-disable-bidirectional-streams></span></td>
+          </tr><tr>
+            <td>Race Cert Verification</td>
+            <td><span id=quic-view-race-cert-verification></span></td>
+          </tr><tr>
+            <td>Race Stale DNS On Connection</td>
+            <td><span id=quic-view-race-stale-dns-on-connection></span></td>
+          </tr><tr>
+            <td>Estimate Initial RTT</td>
+            <td><span id=quic-view-estimate-initial-rtt></span></td>
+          </tr><tr>
+            <td>Force Head of Line Blocking</td>
+            <td><span id=quic-view-force-hol-blocking></span></td>
+          </tr><tr>
+            <td>Max Server Configs Stored in Properties</td>
+            <td>
+              <span id=quic-view-max-server-configs-stored-in-properties>
+              </span>
+            </td>
+          </tr><tr>
+            <td>Origins To Force QUIC On</td>
+            <td><span id=quic-view-origins-to-force-quic-on></span></td>
+          </tr><tr>
+            <td>Server Push Cancellation</td>
+            <td><span id=quic-view-server-push-cancellation></span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>QUIC sessions</h4>
+        <!-- Only one of these two are shown -->
+        <div id=quic-view-session-info-no-content><h4>None</h4></div>
+        <div id=quic-view-session-info-content>
+          <a href="#events&q=type:QUIC_SESSION%20is:active">View live QUIC sessions</a>
+          <p>
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Host</th>
+                  <th>Version</th>
+                  <th>Peer address</th>
+                  <th>Connection ID</th>
+                  <th>Active stream count</th>
+                  <th>Active streams</th>
+                  <th>Total stream count</th>
+                  <th>Packets Sent</th>
+                  <th>Packets Lost</th>
+                  <th>Packets Received</th>
+                  <th>Connected</th>
+                </tr>
+              </thead>
+              <tbody id=quic-view-session-info-tbody>
+              </tbody>
+            </table>
+          </p>
+        </div>
+      </div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'quic-view'
+    });
+  </script>
+</dom-module>
+

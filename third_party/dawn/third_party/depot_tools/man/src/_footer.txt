@@ -1,0 +1,8 @@
+CHROMIUM DEPOT_TOOLS
+--------------------
+
+Part of the chromium linkgit:depot_tools[7] suite. These tools are meant to
+assist with the development of chromium and related projects. Download the tools
+by checking out the link:{sys3:git config remote.origin.url}[git repository].
+
+// vim: ft=asciidoc:

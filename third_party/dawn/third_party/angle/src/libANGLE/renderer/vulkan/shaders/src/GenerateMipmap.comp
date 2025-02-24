@@ -1,0 +1,183 @@
+//
+// Copyright 2020 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// GenerateMipmap.comp: Generate mipmap of texture in a single pass.  Uses AMD's FFX SPD located in
+// third_parth/ffx_spd/.
+//
+// Note that due to bugs in that code, we only support downsampling 6 levels at a time (instead of
+// the 12 mips supported by FFX SPD).  The issue is that FFX SPD tries to `imageLoad` from `dst[5]`
+// with coordinates that can potentially be outside the level extents.  This results in transparent
+// black reads.  A possible solution is to clamp the coodinates in `SpdLoad`.  However, we opted to
+// supporting only 6 levels at a time because:
+//
+// - On most Android vendors, which is our primary optimization target,
+//   maxPerStageDescriptorStorageImages is commonly 4, which means we cannot generate mipmaps for
+//   even 6 levels at a time anyway.
+// - By removing support for >6 mips, we can remove the atomic counter logic required by FFX SPD to
+//   single out an invocation which will be downsampling the rest of the 6 mips.  This makes the
+//   generation of the first 6 mips faster.
+
+#version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+#if IsRGBA8 || IsRGBA8_UseHalf
+#define DST_FORMAT rgba8
+#elif IsRGBA16 || IsRGBA16_UseHalf
+#define DST_FORMAT rgba16
+#elif IsRGBA32F
+#define DST_FORMAT rgba32f
+#else
+#error "Not all formats are accounted for"
+#endif
+
+#if DestSize4
+#define DST_COUNT 4
+#elif DestSize6
+#define DST_COUNT 6
+#else
+#error "Not all destination sizes are accounted for"
+#endif
+
+// TODO: Support sRGB
+// TODO: Support non-float formats
+// TODO: Support subgroup mode
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, DST_FORMAT) uniform coherent image2D dst[DST_COUNT];
+layout(set = 0, binding = 1) uniform sampler2D src;
+
+layout(push_constant) uniform PushConstants {
+    // Inverse extents of src image for uv calculation.
+    vec2 invSrcExtent;
+    // Number of levels to generate mipmaps for.
+    uint levelCount;
+} params;
+
+#define A_GPU
+#define A_GLSL
+
+// For 8- and 16-bit-per-channel images, use half instead of float if supported.
+#if IsRGBA8_UseHalf || IsRGBA16_UseHalf
+#define A_HALF
+#endif
+
+#include "third_party/ffx_spd/ffx_a.h"
+
+// Shared memory
+#ifdef A_HALF
+shared AH4 spd_intermediate[16][16];
+#else
+shared AF4 spd_intermediate[16][16];
+#endif
+shared AU1 spd_counter;
+
+// Use a linear sampler to sample from mip 0 instead of multiple loads and manual averaging.
+#define SPD_LINEAR_SAMPLER
+
+// Utility functions used by ffx_spd.h
+
+#ifdef A_HALF
+
+#define SPD_PACKED_ONLY
+
+// Load from source image
+AH4 SpdLoadSourceImageH(ASU2 p)
+{
+   AF2 textureCoord = p * params.invSrcExtent + params.invSrcExtent;
+   return AH4(texture(src, textureCoord));
+}
+
+// SpdLoadH() takes a 32-bit signed integer 2D coordinate and loads color.
+// Loads the 5th mip level, each value is computed by a different thread group
+// last thread group will access all its elements and compute the subsequent mips.
+//
+// Unused as we don't support more than 6 levels.
+AH4 SpdLoadH(ASU2 p)
+{
+    return AH4(0);
+}
+
+// Define the store function
+void SpdStoreH(ASU2 p, AH4 value, AU1 mip)
+{
+    imageStore(dst[mip], p, AF4(value));
+}
+
+// Define the lds load and store functions
+AH4 SpdLoadIntermediateH(AU1 x, AU1 y)
+{
+    return spd_intermediate[x][y];
+}
+void SpdStoreIntermediateH(AU1 x, AU1 y, AH4 value)
+{
+    spd_intermediate[x][y] = value;
+}
+
+// Define your reduction function: takes as input the four 2x2 values and returns 1 output value
+AH4 SpdReduce4H(AH4 v0, AH4 v1, AH4 v2, AH4 v3)
+{
+    return (v0 + v1 + v2 + v3) * AH1(0.25);
+}
+
+#else  // A_HALF
+
+// Load from source image
+AF4 SpdLoadSourceImage(ASU2 p)
+{
+    AF2 textureCoord = p * params.invSrcExtent + params.invSrcExtent;
+    return texture(src, textureCoord);
+}
+
+// SpdLoad() takes a 32-bit signed integer 2D coordinate and loads color.
+// Loads the 5th mip level, each value is computed by a different thread group
+// last thread group will access all its elements and compute the subsequent mips
+//
+// Unused as we don't support more than 6 levels.
+AF4 SpdLoad(ASU2 p)
+{
+    return AF4(0);
+}
+
+// Define the store function
+void SpdStore(ASU2 p, AF4 value, AU1 mip)
+{
+    imageStore(dst[mip], p, value);
+}
+
+// Define the LDS load and store functions
+AF4 SpdLoadIntermediate(AU1 x, AU1 y)
+{
+    return spd_intermediate[x][y];
+}
+void SpdStoreIntermediate(AU1 x, AU1 y, AF4 value)
+{
+    spd_intermediate[x][y] = value;
+}
+
+// Define your reduction function: takes as input the four 2x2 values and returns 1 output value
+AF4 SpdReduce4(AF4 v0, AF4 v1, AF4 v2, AF4 v3)
+{
+    return (v0 + v1 + v2 + v3) * 0.25;
+}
+#endif  // A_HALF
+
+// Define the atomic counter increase function.  We don't support more than 6 mips, so these are
+// unused.  Returned value is arbitrary as SpdDownsample will early out before looking at it.
+#define SpdIncreaseAtomicCounter()
+#define SpdGetAtomicCounter() 0
+
+#include "third_party/ffx_spd/ffx_spd.h"
+
+void main()
+{
+#ifdef A_HALF
+    SpdDownsampleH(gl_WorkGroupID.xy, gl_LocalInvocationIndex, params.levelCount, 0);
+#else
+    SpdDownsample(gl_WorkGroupID.xy, gl_LocalInvocationIndex, params.levelCount, 0);
+#endif
+}

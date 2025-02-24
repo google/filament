@@ -1,0 +1,32 @@
+boto v2.12.0
+============
+
+:date: 2013/09/04
+
+This release adds support for Redis & replication groups to Elasticache as
+well as several bug fixes.
+
+
+Features
+--------
+
+* Added support for Redis & replication groups to Elasticache. (:sha:`f744ff6`)
+
+
+Bugfixes
+--------
+
+* Boto's User-Agent string has changed. Mostly additive to include more
+  information. (:sha:`edb038a`)
+* Headers that are part of S3's signing are now correctly coerced to the proper
+  case. (:issue:`1687`, :sha:`89eae8c`)
+* Altered S3 so that it's possible to track what portions of a multipart upload
+  succeeded. (:issue:`1305`, :issue:`1675`, :sha:`e9a2c59`)
+* Added ``create_lb_policy`` & ``set_lb_policies_of_backend_server`` to ELB.
+  (:issue:`1695`, :sha:`77a9458`)
+* Fixed pagination when listing vaults in Glacier. (:issue:`1699`,
+  :sha:`9afecca`)
+* Several documentation improvements/fixes:
+
+    * Added some docs about what command-line utilities ship with boto.
+      (:sha:`5d7d54d`)

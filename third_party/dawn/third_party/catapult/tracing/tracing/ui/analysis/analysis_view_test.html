@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/counter_sample.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/user_model/stub_expectation.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_view.html">
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const EventSet = tr.model.EventSet;
+  const BrushingStateController = tr.c.BrushingStateController;
+  const Model = tr.Model;
+  const Counter = tr.model.Counter;
+  const CounterSeries = tr.model.CounterSeries;
+  const CounterSample = tr.model.CounterSample;
+  const newThreadSlice = tr.c.TestUtils.newThreadSlice;
+  const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+  const StubExpectation = tr.model.um.StubExpectation;
+
+  function assertEventSet(actualEventSet, expectedEvents) {
+    const expectedEventSet = new EventSet(expectedEvents);
+    assert.isTrue(actualEventSet.equals(expectedEventSet),
+        'EventSet objects are not equal');
+  }
+
+  function checkTab(tab, expectedTagName, expectedSelectionEvents) {
+    assert.strictEqual(tab.tagName, expectedTagName.toUpperCase());
+    assertEventSet(tab.selection, expectedSelectionEvents);
+  }
+
+  test('selectedTabChange', function() {
+    // Set up the model.
+    const model = new Model();
+    const process = model.getOrCreateProcess(1);
+
+    const counter = process.getOrCreateCounter('universe', 'planets');
+    const series = counter.addSeries(new CounterSeries('x', 0));
+    const sample1 = series.addCounterSample(0, 100);
+    const sample2 = series.addCounterSample(1, 90);
+    const sample3 = series.addCounterSample(2, 80);
+
+    const thread = process.getOrCreateThread(2);
+    const slice1 = newThreadSlice(thread, SCHEDULING_STATE.RUNNING, 0, 1);
+    const slice2 = newThreadSlice(thread, SCHEDULING_STATE.SLEEPING, 1, 2.718);
+    thread.timeSlices = [slice1, slice2];
+
+    const record1 = new StubExpectation(
+        {parentModel: model, initiatorTitle: 'r1', start: 200, duration: 300});
+    record1.associatedEvents.push(sample1);
+    record1.associatedEvents.push(slice1);
+    const record2 = new StubExpectation(
+        {parentModel: model, initiatorTitle: 'r2', start: 600, duration: 100});
+    record2.associatedEvents.push(sample2);
+    record2.associatedEvents.push(sample3);
+    record2.associatedEvents.push(slice1);
+
+    // Set up the analysis views and brushing state controller.
+    const analysisView = document.createElement('tr-ui-a-analysis-view');
+    this.addHTMLOutput(analysisView);
+    const tabView = analysisView.tabView;
+    const controller = new BrushingStateController(undefined);
+    analysisView.brushingStateController = controller;
+
+    function checkSelectedTab(expectedSelectedTab, expectedRelatedEvents) {
+      assert.strictEqual(tabView.selectedSubView, expectedSelectedTab);
+      assertEventSet(controller.currentBrushingState.analysisViewRelatedEvents,
+          expectedRelatedEvents);
+    }
+
+    // 1. Empty selection (implicit).
+    assert.lengthOf(tabView.tabs, 0);
+    checkSelectedTab(undefined, []);
+
+    // 2. Event selection: two samples and one thread slice.
+    controller.changeSelectionFromRequestSelectionChangeEvent(
+        new EventSet([sample1, slice1, sample2]));
+    assert.lengthOf(tabView.tabs, 2);
+    const sampleTab2 = tabView.tabs[0];
+    checkTab(sampleTab2,
+        'tr-ui-a-counter-sample-sub-view',
+        [sample1, sample2]);
+    const singleThreadSliceTab2 = tabView.tabs[1];
+    checkTab(singleThreadSliceTab2,
+        'tr-ui-a-single-thread-time-slice-sub-view',
+        [slice1]);
+    // First tab should be selected.
+    checkSelectedTab(sampleTab2, []);
+
+    // 3. Tab selection: single thread slice tab.
+    tabView.selectedSubView = singleThreadSliceTab2;
+    checkSelectedTab(singleThreadSliceTab2, []);
+
+    // 4. Event selection: one sample, two thread slices, and one
+    // user expectation.
+    controller.changeSelectionFromRequestSelectionChangeEvent(
+        new EventSet([slice1, slice2, sample3, record1]));
+    assert.lengthOf(tabView.tabs, 3);
+    const sampleTab4 = tabView.tabs[1];
+    checkTab(sampleTab4,
+        'tr-ui-a-counter-sample-sub-view',
+        [sample3]);
+    const singleRecordTab4 = tabView.tabs[2];
+    checkTab(singleRecordTab4,
+        'tr-ui-a-single-user-expectation-sub-view',
+        [record1]);
+    const multiThreadSliceTab4 = tabView.tabs[0];
+    checkTab(multiThreadSliceTab4,
+        'tr-ui-a-multi-thread-time-slice-sub-view',
+        [slice1, slice2]);
+    // Remember selected tab (even though the tab was destroyed).
+    checkSelectedTab(multiThreadSliceTab4, []);
+
+    // 5. Tab selection: single user expectation tab.
+    tabView.selectedSubView = singleRecordTab4;
+    checkSelectedTab(singleRecordTab4, [sample1, slice1]);
+
+    // 6. Event selection: one user expectation.
+    controller.changeSelectionFromRequestSelectionChangeEvent(
+        new EventSet([record2]));
+    assert.lengthOf(tabView.tabs, 1);
+    const singleRecordTab6 = tabView.tabs[0];
+    checkTab(singleRecordTab6,
+        'tr-ui-a-single-user-expectation-sub-view',
+        [record2]);
+    // Remember selected tab.
+    checkSelectedTab(singleRecordTab6, [sample2, sample3, slice1]);
+  });
+});
+</script>

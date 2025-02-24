@@ -1,0 +1,26 @@
+# Copyright 2023 The Khronos Group Inc.
+# Copyright 2023 Valve Corporation
+# Copyright 2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+__pycache__
+*.pyc
+build
+.vscode/
+**/.*.swp
+external
+.cache
+
+# Chromium build artifacts
+.cipd/
+.gn
+.gclient
+.gclient_entries
+.gclient_previous_sync_commits
+out/
+third_party/
+buildtools/
+depot_tools/
+testing/
+tools/

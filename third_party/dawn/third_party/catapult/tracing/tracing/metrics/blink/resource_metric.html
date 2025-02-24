@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright 2021 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+
+<script>
+'use strict';
+
+/**
+ * This metric is used for for blink network metrics
+ * - blinkRequestResourceCount: the count of requested resources
+ */
+tr.exportTo('tr.metrics', function() {
+  function blinkResourceMetric(histograms, model, opt_options) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!chromeHelper) {
+      // Chrome isn't present.
+      return;
+    }
+    const CATEGORY = 'blink.resource';
+    const NAME = 'ResourceFetcher::requestResource';
+    let count = 0;
+    // Collect trace events.
+    for (const helper of Object.values(chromeHelper.rendererHelpers)) {
+      if (helper.isChromeTracingUI) continue;
+      const events = tr.e.chrome.EventFinderUtils.getMainThreadEvents(
+          helper, NAME, CATEGORY);
+      for (const event of events) {
+        count++;
+      }
+    }
+    // Generate histograms.
+    histograms.createHistogram(
+      'blinkRequestResourceCount', tr.b.Unit.byName.count, count);
+  }
+
+  tr.metrics.MetricRegistry.register(blinkResourceMetric, {
+    supportsRangeOfInterest: false,
+  });
+
+  return {
+    blinkResourceMetric,
+  };
+});
+</script>

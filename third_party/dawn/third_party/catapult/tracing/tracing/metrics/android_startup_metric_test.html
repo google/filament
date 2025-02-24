@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/android_startup_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createBrowserThread(model) {
+    const browserProcess = model.getOrCreateProcess(tr.b.GUID.allocateSimple());
+    const mainThread = browserProcess.getOrCreateThread(
+        tr.b.GUID.allocateSimple());
+    // Initializing the thread name helps passing validation checks made by the
+    // ChromeModelHelper.
+    mainThread.name = 'CrBrowserMain';
+    return mainThread;
+  }
+
+  function createRendererThread(model) {
+    const rendererProcess = model.getOrCreateProcess(
+        tr.b.GUID.allocateSimple());
+    const rendererMainThread =
+      rendererProcess.getOrCreateThread(tr.b.GUID.allocateSimple());
+    rendererMainThread.name = 'CrRendererMain';
+    return rendererMainThread;
+  }
+
+  function addNetworkEvents(startTime, durationTime, process) {
+    const slice = tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'netlog',
+          title: 'http://bbc.co.uk',
+          start: startTime,
+          args: { params: { method: 'GET' } },
+          duration: durationTime});
+    slice.args.params['method'] = 'GET';
+    const subSlice = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'netlog',
+      title: 'REQUEST_ALIVE',
+      start: startTime,
+      duration: durationTime});
+    slice.subSlices.push(subSlice);
+    const netThread = process.getOrCreateThread(tr.b.GUID.allocateSimple());
+    netThread.name = 'network.CrUtilityMain';
+    netThread.asyncSliceGroup.push(slice);
+  }
+
+  function getNetworkServiceProcess(model, browserMainThread, isOutOfProcessNetworkService) {
+    if (isOutOfProcessNetworkService) {
+      const networkServiceProcess = model.getOrCreateProcess(
+        tr.b.GUID.allocateSimple());
+      networkServiceProcess.name ="Service: network.mojom.NetworkService";
+      return networkServiceProcess;
+    }
+    return browserMainThread.parent;
+  }
+
+  function addNavigationEvent(threadForAdding, startTime, durationTime) {
+    threadForAdding.asyncSliceGroup.push(
+        tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'navigation',
+          title: 'Navigation StartToCommit',
+          start: startTime,
+          duration: durationTime}));
+  }
+
+  // Adds a browser and renderer to the process, with a few key events necessary
+  // to calculate the |androidStartupMetric|. An |offset| can be added to all
+  // events and the length of a few events can be extended by
+  // |incrementForMetrics|.
+  function fillModelWithOneBrowserSession(model, offset, incrementForMetrics,
+    isOutOfProcessNetworkService) {
+    // In order for the tests below to succeed with strictEqual, the floating
+    // point values should have exact representation as IEEE754 float.
+    const browserMainThread = createBrowserThread(model);
+    browserMainThread.asyncSliceGroup.push(
+        tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'startup',
+          title: 'Startup.LoadTime.ProcessCreateToApplicationStart',
+          start: (offset + 5000),
+          duration: (incrementForMetrics + 100)}));
+    browserMainThread.asyncSliceGroup.push(
+        tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'startup',
+          title: 'Startup.BrowserMessageLoopStartTime',
+          start: (offset + 6800.125),
+          duration: (incrementForMetrics + 1700.0625)}));
+    const navigationStart = offset + 9000.5 + incrementForMetrics;
+    addNavigationEvent(browserMainThread, navigationStart,
+        incrementForMetrics + 2000.5);
+    const rendererMainThread = createRendererThread(model);
+    rendererMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'loading,rail,devtools.timeline',
+      title: 'firstContentfulPaint',
+      start: (offset + 8400.125 + incrementForMetrics),
+      duration: 0.0,
+      args: {frame: '0x0'}}));
+
+    // Add an extra FCP event in the same renderer process appearing after the
+    // initial FCP even to check that it is ignored by metric computations.
+    rendererMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'loading,rail,devtools.timeline',
+      title: 'firstContentfulPaint',
+      start: (offset + 8400.125 + incrementForMetrics + 0.125),
+      duration: 0.0,
+      args: {frame: '0x0'}}));
+
+    // The metrics rely on having network access in netlog soon after the
+    // navigation starts.
+    addNetworkEvents(navigationStart + 110, 2, getNetworkServiceProcess(model, browserMainThread, isOutOfProcessNetworkService));
+    return browserMainThread;
+  }
+
+  // Adds early messageloop and FCP events. The metric should ignore these very
+  // first messageloop start and FCP events in the trace. The specific lengths
+  // are not important.
+  function addEarlyEventsToBeIgnored(model, offset) {
+    const browserMainThread = createBrowserThread(model);
+    browserMainThread.asyncSliceGroup.push(
+        tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'startup',
+          title: 'Startup.LoadTime.ProcessCreateToApplicationStart',
+          start: offset,
+          duration: 1.0}));
+    browserMainThread.asyncSliceGroup.push(
+        tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'startup',
+          title: 'Startup.BrowserMessageLoopStartTime',
+          start: (offset + 1.0),
+          duration: 10.0}));
+    const rendererMainThread = createRendererThread(model);
+    rendererMainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'loading,rail,devtools.timeline',
+      title: 'firstContentfulPaint',
+      start: (offset + 2.0),
+      duration: 1.0,
+      args: {frame: '0x0'}}));
+  }
+
+  function makeTestModel(offset, incrementForMetrics, isOOPNS) {
+    return tr.c.TestUtils.newModel(function(model) {
+      fillModelWithOneBrowserSession(model, offset, incrementForMetrics, isOOPNS);
+      addEarlyEventsToBeIgnored(model, offset);
+      addEarlyEventsToBeIgnored(model, offset + 20.0);
+    });
+  }
+
+  function verifyHistogram(histograms, name, numValues, average) {
+    const histogram = histograms.getHistogramNamed(name);
+    assert.strictEqual(numValues, histogram.numValues);
+    assert.strictEqual(average, histogram.average);
+  }
+
+  function verifyHistogramRange(histograms, name, numValues, min, max) {
+    const histogram = histograms.getHistogramNamed(name);
+    assert.strictEqual(numValues, histogram.numValues);
+    assert.strictEqual(min, histogram.min);
+    assert.strictEqual(max, histogram.max);
+  }
+
+  // Checks recording of the main histograms in the simplest case.
+  function makeSimpleTest(isOOPNS) { return function() {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidStartupMetric(histograms, makeTestModel(0.0, 0.0, isOOPNS));
+    verifyHistogram(histograms, 'messageloop_start_time', 1, 1700.0625);
+    verifyHistogram(histograms, 'experimental_navigation_start_time', 1,
+        2200.375);
+    verifyHistogram(histograms, 'experimental_network_request_start_time', 1,
+        2200.375 + 110);
+    verifyHistogram(histograms, 'navigation_commit_time', 1, 4200.875);
+    verifyHistogram(histograms, 'first_contentful_paint_time', 1, 1600);
+    verifyHistogram(histograms, 'process_create_to_app_start_time', 1, 100);
+  }}
+  test('androidStartupMetric_simple', makeSimpleTest());
+  test('androidStartupMetric_simple_OOPNS', makeSimpleTest(true));
+
+  // Emulates loss of the initial message loop start event. Checks that this
+  // event is ignored and the |androidStartupMetric| does not crash.
+  function makeMissingOneBrowserStartTest(isOOPNS) { return function() {
+    function makeTestModelWithOneEventMissing() {
+      return tr.c.TestUtils.newModel(function(model) {
+        fillModelWithOneBrowserSession(model, 0.0, 0.0,isOOPNS);
+        // Note: the initial Startup.BrowserMessageLoopStartTime'
+        // is intentionally missing.
+        createRendererThread(model).sliceGroup.pushSlice(
+            tr.c.TestUtils.newSliceEx({
+              cat: 'loading,rail,devtools.timeline',
+              title: 'firstContentfulPaint',
+              start: 2.0,
+              duration: 1.0,
+              args: {frame: '0x0'}}));
+        const browserMainThread = createBrowserThread(model);
+        browserMainThread.asyncSliceGroup.push(
+            tr.c.TestUtils.newAsyncSliceEx({
+              cat: 'startup',
+              title: 'Startup.BrowserMessageLoopStartTime',
+              start: (20.0 + 1.0),
+              duration: 10.0}));
+        const navigationStartTime = 20.0 + 11.0;
+        addNavigationEvent(browserMainThread, navigationStartTime, 10.0);
+        addNetworkEvents(navigationStartTime + 2, 2,
+         getNetworkServiceProcess(model, browserMainThread, isOOPNS));
+        const rendererMainThread = createRendererThread(model);
+        rendererMainThread.sliceGroup.pushSlice(
+            tr.c.TestUtils.newSliceEx({
+              cat: 'loading,rail,devtools.timeline',
+              title: 'firstContentfulPaint',
+              start: (20.0 + 2.0),
+              duration: 1.0,
+              args: {frame: '0x0'}}));
+      });
+    }
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidStartupMetric(histograms,
+        makeTestModelWithOneEventMissing(0.0));
+    verifyHistogram(histograms, 'messageloop_start_time', 1, 1700.0625);
+    verifyHistogram(histograms, 'experimental_navigation_start_time', 1,
+        2200.375);
+    verifyHistogram(histograms, 'experimental_network_request_start_time', 1,
+        2200.375 + 110);
+    verifyHistogram(histograms, 'navigation_commit_time', 1, 4200.875);
+    verifyHistogram(histograms, 'first_contentful_paint_time', 1, 1600);
+  }}
+  test('androidStartupMetric_missingOneBrowserStart',
+    makeMissingOneBrowserStartTest());
+  test('androidStartupMetric_missingOneBrowserStart_OOPNS',
+    makeMissingOneBrowserStartTest(true));
+
+  test('androidStartupMetric_missingExperimentalEvents', function() {
+    function makeTestModelWithMissingExperimentalEvents() {
+      return tr.c.TestUtils.newModel(function(model) {
+        const browserMainThread = createBrowserThread(model);
+        browserMainThread.asyncSliceGroup.push(
+            tr.c.TestUtils.newAsyncSliceEx({
+              cat: 'startup',
+              title: 'Startup.BrowserMessageLoopStartTime',
+              start: (20.0 + 1.0),
+              duration: 10.0}));
+        const rendererMainThread = createRendererThread(model);
+        rendererMainThread.sliceGroup.pushSlice(
+            tr.c.TestUtils.newSliceEx({
+              cat: 'loading,rail,devtools.timeline',
+              title: 'firstContentfulPaint',
+              start: (20.0 + 2.0),
+              duration: 1.0,
+              args: {frame: '0x0'}}));
+        addEarlyEventsToBeIgnored(model, 0.0, 0.0);
+        addEarlyEventsToBeIgnored(model, 10.0);
+      });
+    }
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidStartupMetric(histograms,
+        makeTestModelWithMissingExperimentalEvents());
+    verifyHistogram(histograms, 'messageloop_start_time', 1, 10);
+    verifyHistogram(histograms, 'experimental_navigation_start_time', 0,
+        undefined);
+    verifyHistogram(histograms, 'experimental_network_request_start_time', 0,
+        undefined);
+    verifyHistogram(histograms, 'navigation_commit_time', 0, undefined);
+    verifyHistogram(histograms, 'first_contentful_paint_time', 1, 2);
+    verifyHistogram(histograms, 'process_create_to_app_start_time', 0,
+        undefined);
+  });
+
+  // Checks the metrics after adding an offset to events in the model, and
+  // making a few durations longer by a constant.
+  function makeWithOffsetAndLongerTaskTest(isOOPNS) { return function() {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidStartupMetric(histograms, makeTestModel(5.0, 7.0, isOOPNS));
+    verifyHistogram(histograms, 'messageloop_start_time', 1, 1707.0625);
+    verifyHistogram(histograms, 'experimental_navigation_start_time', 1,
+        2207.375);
+    verifyHistogram(histograms, 'experimental_network_request_start_time', 1,
+        2207.375 + 110);
+    verifyHistogram(histograms, 'navigation_commit_time', 1, 4214.875);
+    verifyHistogram(histograms, 'first_contentful_paint_time', 1, 1607);
+    verifyHistogram(histograms, 'process_create_to_app_start_time', 1, 107);
+  }};
+  test('androidStartupMetric_withOffsetAndLongerTask',
+    makeWithOffsetAndLongerTaskTest());
+  test('androidStartupMetric_withOffsetAndLongerTask_OOPNS',
+    makeWithOffsetAndLongerTaskTest(true));
+
+  function makeTwoSessionsTest(isOOPNS) { return function() {
+    function makeTestModelWithTwoSessionsOneDelayed(
+        offset, incrementForMetrics) {
+      return tr.c.TestUtils.newModel(function(model) {
+        fillModelWithOneBrowserSession(model, 0.0, 0.0, isOOPNS);
+        fillModelWithOneBrowserSession(model, offset, incrementForMetrics,
+         isOOPNS);
+        addEarlyEventsToBeIgnored(model, 0.0, 0.0);
+        addEarlyEventsToBeIgnored(model, 0.0, 1.0);
+      });
+    }
+    const delta = 0.125;
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidStartupMetric(histograms,
+        makeTestModelWithTwoSessionsOneDelayed(10000.0, delta));
+    verifyHistogramRange(histograms, 'messageloop_start_time',
+        2, 1700.0625, 1700.0625 + delta);
+    verifyHistogramRange(histograms, 'experimental_navigation_start_time',
+        2, 2200.375, 2200.375 + delta);
+    verifyHistogramRange(histograms, 'experimental_network_request_start_time',
+        2, 2200.375 + 110, 2200.375 + delta + 110);
+    verifyHistogramRange(histograms, 'navigation_commit_time',
+        2, 4200.875, 4200.875 + delta * 2);
+    verifyHistogramRange(histograms, 'first_contentful_paint_time',
+        2, 1600, 1600 + delta);
+    verifyHistogramRange(histograms, 'process_create_to_app_start_time', 2, 100,
+        100 + delta);
+    };
+  }
+  test('androidStartupMetric_twoSessions', makeTwoSessionsTest());
+  test('androidStartupMetric_twoSessions_OOPNS', makeTwoSessionsTest(true));
+
+  function makeExtraNavigationsTest(isOOPNS) { return function() {
+    const histograms = new tr.v.HistogramSet();
+    function makeTestModelWithExtraNavigations() {
+      return tr.c.TestUtils.newModel(function(model) {
+        const mainThread = fillModelWithOneBrowserSession(model, 0.0, 0.0, isOOPNS);
+        addEarlyEventsToBeIgnored(model, 0.0);
+        addEarlyEventsToBeIgnored(model, 20.0);
+        // The first commit time is hardcoded to match how it is added in
+        // fillModelWithOneBrowserSession().
+        const veryFirstCommitTime = 9000.5 + 2000.5;
+        addNavigationEvent(mainThread, veryFirstCommitTime + 20.0, 5.0);
+      });
+    }
+    tr.metrics.sh.androidStartupMetric(histograms, makeTestModelWithExtraNavigations());
+    verifyHistogram(histograms, 'messageloop_start_time', 1, 1700.0625);
+    verifyHistogram(histograms, 'experimental_navigation_start_time', 1,
+        2200.375);
+    verifyHistogram(histograms, 'experimental_network_request_start_time', 1,
+        2200.375 + 110);
+  }};
+  test('androidStartupMetric_extraNavigations', makeExtraNavigationsTest());
+  test('androidStartupMetric_extraNavigations_OOPNS', makeExtraNavigationsTest(true));
+});
+</script>

@@ -1,0 +1,7 @@
+div.listingblock > div.content {
+  background: rgb(28, 28, 28);
+}
+
+div.listingblock > div > pre > code {
+  color: rgb(187, 187, 187);
+}

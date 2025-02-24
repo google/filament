@@ -1,0 +1,32 @@
+boto v2.32.1
+============
+
+:date: 2014/08/04
+
+This release fixes an incorrect Amazon VPC peering connection call, and fixes
+several minor issues related to Python 3 support including a regression when
+pickling authentication information.
+
+
+Fixes
+-----
+* Fix bin scripts for Python 3. (:issue:`2502`, :issue:`2490`, :sha:`cb78c52`)
+* Fix parsing of EMR step summary response. (:issue:`2456`, :sha:`2ffb00a`)
+* Update wheel to be universal for py2/py3. (:issue:`2478`, :sha:`e872d94`)
+* Add pypy to tox config. (:issue:`2458`, :sha:`16c6fbe`)
+* Fix Glacier file object hash calculation. (:issue:`2489`, :issue:`2488`,
+  :sha:`a9463c5`)
+* PEP8 fixes for Glacier. (:issue:`2469`, :sha:`0575a54`)
+* Use ConfigParser for Python 3 and SafeConfigParser for Python 2.
+  (:issue:`2498`, :issue:`2497`, :sha:`f580f73`)
+* Remove redundant __future__ imports. (:issue:`2496`, :sha:`e59e199`)
+* Fix dynamodb.types.Binary non-ASCII handling. (:issue:`2492`, :issue:`2491`,
+  :sha:`16284ea`)
+* Add missing dependency to requirements.txt. (:issue:`2494`, :sha:`33db71a`)
+* Fix TypeError when getting instance metadata under Python 3. (:issue:`2486`,
+  :issue:`2485`, :sha:`6ff525e`)
+* Handle Cloudsearch indexing errors. (:issue:`2370`, :sha:`494a091`)
+* Remove obsolete md5 import routine. (:issue:`2468`, :sha:`9808a77`)
+* Use encodebytes instead of encodestring. (:issue:`2484`, :issue:`2483`,
+  :sha:`984c5ff`)
+* Fix an auth class pickling bug. (:issue:`2479`, :sha:`07d6424`)

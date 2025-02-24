@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/annotation.html">
+<link rel="import" href="/tracing/model/location.html">
+<link rel="import" href="/tracing/model/rect_annotation.html">
+<link rel="import" href="/tracing/ui/annotations/comment_box_annotation_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  function CommentBoxAnnotation(location, text) {
+    tr.model.Annotation.apply(this, arguments);
+
+    this.location = location;
+    this.text = text;
+  }
+
+  CommentBoxAnnotation.fromDict = function(dict) {
+    const args = dict.args;
+    const location =
+        new tr.model.Location(args.location.xWorld, args.location.yComponents);
+    return new tr.model.CommentBoxAnnotation(location, args.text);
+  };
+
+  CommentBoxAnnotation.prototype = {
+    __proto__: tr.model.Annotation.prototype,
+
+    onRemove() {
+      this.view_.removeTextArea();
+    },
+
+    toDict() {
+      return {
+        typeName: 'comment_box',
+        args: {
+          text: this.text,
+          location: this.location.toDict()
+        }
+      };
+    },
+
+    createView_(viewport) {
+      return new tr.ui.annotations.CommentBoxAnnotationView(viewport, this);
+    }
+  };
+
+  tr.model.Annotation.register(
+      CommentBoxAnnotation, {typeName: 'comment_box'});
+
+  return {
+    CommentBoxAnnotation,
+  };
+});
+</script>

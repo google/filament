@@ -1,0 +1,184 @@
+//
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// ConvertIndexIndirectLineloop.comp: Convert lineloop to linelist with primitive restart
+// (if enabled). Will also output a new "command" buffer with adjusted index values.
+//
+// The following defines tweak the functionality, and a different shader is built based on these.
+//
+//  - IndicesBitsWidth:
+//    * Is8Bits:  Process 8-bit indices.
+//    * Is16Bits: Process 16-bit indices.
+//    * Is32Bits: Process 32-bit indices.
+//
+
+#version 450 core
+
+#if Is32Bits
+#define BITSMASK 0xffffffff
+#define IDXSHIFT 0
+#elif Is16Bits
+#define BITSMASK 0xffff
+#define IDXSHIFT 1                            // 16bits index division shift
+#define SRCSHIFT(index) ((index & 0x1) << 4)  // 16bits data shift value in 32bits index
+#elif Is8Bits
+#define BITSMASK 0xff
+#define IDXSHIFT 2                            // 8bits index division shift
+#define SRCSHIFT(index) ((index & 0x3) << 3)  // 8bits data shift value in 32bits index
+#else
+// Early error out
+#error "Not all bits are accounted for"
+#endif
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout (set = 0, binding = 0) buffer dst
+{
+    // Shader invocation outputs linelist(s) here.
+    uint dstData[];
+};
+
+layout (set = 0, binding = 1) readonly buffer src
+{
+    // Source index buffer
+    uint srcData[];
+};
+
+layout (set = 0, binding = 2) readonly buffer cmd
+{
+    // Shader invocations read the cmd data to determine what indices to convert
+    // Command data at offset cmdOffset of buffer
+    uint cmdData[];
+};
+
+layout (set = 0, binding = 3) buffer dstCmd
+{
+    // Shader outputs updated indirect buffer here.
+    uint dstCmdData[];
+};
+
+layout (push_constant) uniform PushConstants
+{
+    // Read offset in bytes into the cmdData array, divided by four.
+    uint cmdOffsetDiv4;
+    // Dst command offset in bytes into the cmdData array, divided by four.
+    uint dstCmdOffsetDiv4;
+    // Read offset in bytes into the srcData array, divided by four.
+    uint srcOffset;
+    // Write offset in bytes into the dstData array, divided by four.
+    uint dstOffsetDiv4;
+    // Maximum size of the read buffer. The highest index value we will convert.
+    uint isRestartEnabled;
+};
+
+// Structure of command data loaded at offset cmdOffsetDiv4 of the cmdData buffer
+// struct VkDrawIndexedIndirectCommand {
+//     uint32_t    indexCount;
+//     uint32_t    instanceCount;
+//     uint32_t    firstIndex;
+//     int32_t     vertexOffset;
+//     uint32_t    firstInstance;
+// };
+
+uint GetIndexValue(uint index)
+{
+    // Add buffer byte offset (converted to index offset).
+    index += srcOffset >> (2 - IDXSHIFT);
+
+#if Is32Bits
+    return srcData[index];
+#elif Is16Bits || Is8Bits
+    // srcData points to 32bit words, get the word with our index value
+    uint srcBlock = srcData[index >> IDXSHIFT];
+    // Compute the shift necessary to access desired index value
+    uint srcShift = SRCSHIFT(index);
+    // unpacking correct 8/16 bits index value from the 32bit word
+    uint value = (srcBlock >> srcShift) & BITSMASK;
+    return value;
+#else
+#error "Not all bits are accounted for"
+#endif // Is32Bits
+}
+
+void PutIndexValue(uint index, uint value)
+{
+#if Is32Bits
+    dstData[dstOffsetDiv4 + index] = value;
+#elif Is16Bits || Is8Bits
+    // Compute index into dstData for our index value
+    uint dstIndex = dstOffsetDiv4 + (index >> IDXSHIFT);
+    // Get dst index value
+    uint srcBlock = dstData[dstIndex];
+    // Compute the shift for our index value
+    uint srcShift = SRCSHIFT(index);
+
+    // Clear appropriate bits of 32bit word
+    srcBlock &= ~(BITSMASK << srcShift);
+    // Shift value to pack 8/16 bits value into 32bit word
+    srcBlock |= value << srcShift;
+    // Store updated value in destination
+    dstData[dstIndex] = srcBlock;
+#else
+#error "Not all bits are accounted for"
+#endif // Is32Bits
+}
+
+void main()
+{
+    // Load the relevant command info from cmdData
+    uint indexCount = cmdData[cmdOffsetDiv4];
+    uint firstIndex = cmdData[cmdOffsetDiv4 + 2];
+    uint endIndex = firstIndex + indexCount;
+
+    // Only first invocation does the work
+    if (gl_GlobalInvocationID.x >= 1)
+        return;
+
+    uint workingCount = 0;
+    uint srcIdx = firstIndex;
+    uint indicesRemaining = indexCount;
+    uint lineSize = 0;
+    uint firstIndexValue = 0;
+    while (indicesRemaining > 0)
+    {
+        uint indexValue;
+        uint restartValue = BITSMASK;
+        indexValue = GetIndexValue(srcIdx++);
+        if (lineSize == 0)
+        {
+            firstIndexValue = indexValue;
+        }
+        indicesRemaining--;
+        if ((isRestartEnabled == 1) && (indexValue == restartValue))
+        {
+            // We have a primitive restart, close the loop
+            if (lineSize > 1)
+            {
+                PutIndexValue(workingCount++, firstIndexValue);
+            }
+            if (lineSize > 0)
+            {
+                PutIndexValue(workingCount++, restartValue);
+            }
+            lineSize = 0;
+        } else {
+            PutIndexValue(workingCount, indexValue);
+            workingCount++;
+            lineSize++;
+        }
+    }
+    if (lineSize > 1)
+    {
+        PutIndexValue(workingCount, firstIndexValue);
+        workingCount++;
+    }
+
+    // Update new command buffer
+    dstCmdData[dstCmdOffsetDiv4] = workingCount;
+    dstCmdData[dstCmdOffsetDiv4 + 1] = cmdData[cmdOffsetDiv4 + 1];
+    dstCmdData[dstCmdOffsetDiv4 + 2] = 0;
+    dstCmdData[dstCmdOffsetDiv4 + 3] = cmdData[cmdOffsetDiv4 + 3];
+    dstCmdData[dstCmdOffsetDiv4 + 4] = cmdData[cmdOffsetDiv4 + 4];
+}

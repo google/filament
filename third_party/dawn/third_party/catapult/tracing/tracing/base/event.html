@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event_target.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  let Event;
+  if (tr.isHeadless) {
+    /**
+     * Creates a new event to be used with tr.b.EventTarget or DOM EventTarget
+     * objects.
+     * @param {string} type The name of the event.
+     * @param {boolean=} opt_bubbles Whether the event bubbles.
+     *     Default is false.
+     * @param {boolean=} opt_preventable Whether the default action of the event
+     *     can be prevented.
+     * @constructor
+     * @extends {Event}
+     */
+    function HeadlessEvent(type, opt_bubbles, opt_preventable) {
+      this.type = type;
+      this.bubbles = (opt_bubbles !== undefined ?
+        !!opt_bubbles : false);
+      this.cancelable = (opt_preventable !== undefined ?
+        !!opt_preventable : false);
+
+      this.defaultPrevented = false;
+      this.cancelBubble = false;
+    }
+
+    HeadlessEvent.prototype = {
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+
+      stopPropagation() {
+        this.cancelBubble = true;
+      }
+    };
+    Event = HeadlessEvent;
+  } else {
+    /**
+     * Creates a new event to be used with tr.b.EventTarget or DOM EventTarget
+     * objects.
+     * @param {string} type The name of the event.
+     * @param {boolean=} opt_bubbles Whether the event bubbles.
+     *     Default is false.
+     * @param {boolean=} opt_preventable Whether the default action of the event
+     *     can be prevented.
+     * @constructor
+     * @extends {Event}
+     */
+    function TrEvent(type, opt_bubbles, opt_preventable) {
+      const e = tr.doc.createEvent('Event');
+      e.initEvent(type, !!opt_bubbles, !!opt_preventable);
+      e.__proto__ = global.Event.prototype;
+      return e;
+    }
+
+    TrEvent.prototype = {
+      __proto__: global.Event.prototype
+    };
+    Event = TrEvent;
+  }
+
+  /**
+   * Dispatches a simple event on an event target.
+   * @param {!EventTarget} target The event target to dispatch the event on.
+   * @param {string} type The type of the event.
+   * @param {boolean=} opt_bubbles Whether the event bubbles or not.
+   * @param {boolean=} opt_cancelable Whether the default action of the event
+   *     can be prevented.
+   * @param {!Object=} opt_fields
+   *
+   * @return {boolean} If any of the listeners called {@code preventDefault}
+   *     during the dispatch this will return false.
+   */
+  function dispatchSimpleEvent(target, type, opt_bubbles, opt_cancelable,
+      opt_fields) {
+    const e = new tr.b.Event(type, opt_bubbles, opt_cancelable);
+    Object.assign(e, opt_fields);
+    return target.dispatchEvent(e);
+  }
+
+  async function dispatchSimpleEventAsync(target, type, opt_fields) {
+    const e = new tr.b.Event(type, false, false);
+    Object.assign(e, opt_fields);
+    return await target.dispatchAsync(e);
+  }
+
+  return {
+    Event,
+    dispatchSimpleEvent,
+    dispatchSimpleEventAsync,
+  };
+});
+</script>

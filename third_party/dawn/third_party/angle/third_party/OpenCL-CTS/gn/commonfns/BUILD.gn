@@ -1,0 +1,19 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("commonfns") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_binary_fn.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_clamp.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_mix.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_smoothstep.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_step.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/commonfns/test_unary_fn.cpp",
+  ]
+}

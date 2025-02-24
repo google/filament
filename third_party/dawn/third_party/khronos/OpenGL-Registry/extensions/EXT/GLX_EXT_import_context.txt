@@ -1,0 +1,208 @@
+Name
+
+        EXT_import_context
+
+Name Strings
+
+        GLX_EXT_import_context
+
+Version
+
+        Version 3, May 20, 2015
+
+Number
+
+        47
+
+Dependencies
+
+        This extension affects the definition of SGIX_FBConfig.
+
+Overview
+
+        This extension allows multiple X clients to share an indirect
+        rendering context.
+
+        Additional convenience procedures to get the current Display*
+        bound to a context as well as other context information are
+        also added.
+
+Issues
+
+        Does glXImportGLXContext also need to take an XVisualInfo*?
+
+        No.  This information will be retrieved from the server.
+
+New Procedures and Functions
+
+        Display *glXGetCurrentDisplayEXT();
+
+        int glXQueryContextInfoEXT(Display *dpy, GLXContext context,
+                                        int attribute,int *value);
+
+        GLXContextID glXGetContextIDEXT(const GLXContext context);
+
+        GLXContext glXImportContextEXT(Display *dpy, GLXContextID contextID);
+
+        void glXFreeContextEXT(Display *dpy, GLXContext context);
+
+New Tokens
+
+        Accepted by the <attribute> parameter of glXQueryContextInfoEXT:
+
+            GLX_SHARE_CONTEXT_EXT               0x800A
+            GLX_VISUAL_ID_EXT                   0x800B
+            GLX_SCREEN_EXT                      0x800C
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+        None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+        None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+        None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+        None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+        None
+
+Additions to the GLX Specification
+
+        [Add the following to Section 3.2.4 of the GLX Specification
+        (Rendering Contexts)]
+
+        To get the display associated with the current context, use
+
+            Display *glXGetCurrentDisplayEXT();
+
+        If there is no current context, NULL is returned. No round trip
+        is forced to the server; unlike most X calls that return a value,
+        glXGetCurrentDisplayEXT does not flush any pending events.
+
+        To obtain the value of a context's attribute, use
+
+            int glXQueryContextInfoEXT(Display *dpy, GLXContext context,
+                                       int attribute, int *value);
+
+        glxQueryContextInfoEXT returns through <value> the value of
+        <attribute> for <context>.  It may cause a round trip to the
+        server.
+
+        The values and types corresponding to each GLX context attribute
+        are listed in the table below.
+
+        GLX context attribute   type    context information
+        ---------------------   ----    -------------------
+        GLX_SHARE_CONTEXT_EXT   XID     xid of the share list context
+        GLX_VISUAL_ID_EXT       XID     visual id
+        GLX_SCREEN_EXT          int     screen number
+
+        glxQueryContextInfoEXT returns GLX_BAD_ATTRIBUTE if <attribute>
+        is not a valid GLX context attribute or GLX_BAD_CONTEXT if <context>
+        is invalid, otherwise it returns Success.
+
+        To obtain the XID of a GLXContext, use
+
+            GLXContextID glXGetContextIDEXT(const GLXContext context);
+
+        No round trip is forced to the server; unlike most X calls that
+        return a value, glXGetContextIDEXT does not flush any pending
+        events. If <context> is NULL, None is returned. If <context> is not
+        NULL and is not a valid GLXContext name, behavior is undefined.
+
+        To create a GLXContext given the XID of an existing GLXContext, use
+
+            GLXContext glXImportContextEXT(Display *dpy,
+                                           GLXContextID contextID);
+
+        glXImportContextEXT may be used in place of glXCreateContext to
+        share another process's indirect rendering context.
+
+        Only the server-side context information can be shared between
+        X clients; client-side state, such as pixel storage modes,
+        cannot be shared. Thus, glXImportContextEXT, must allocate
+        memory to store client-side information. This memory is freed
+        by calling  glXFreeContextEXT.
+
+        This call does not create a new XID.  It merely makes an
+        existing object available to the importing client (Display *).
+        Like any XID, it goes away when the creating client drops its
+        connection or the ID is explicitly deleted. Note that this is
+        when the XID goes away. The object goes away when the XID
+        goes away AND the context is not current to any thread.
+
+        If <contextID> does not refer to a valid context, then
+        a BadContext error is generated; if <contextID> refers to
+        direct rendering context then no error is generated but
+        glXImportContextEXT returns NULL.
+
+        To free the client-side part of a GLXContext that was created
+        with glXImportContext, use
+
+            void glXFreeContextEXT(Display *dpy, GLXContext context);
+
+        glXFreeContext does not free the server-side context information
+        or the XID associated with the server-side context.
+
+        [Add the following clarification to glXMakeCurrent]
+
+        Change:
+           If <context> is current to some other thread, then glXMakeCurrent
+           will generate a BadAccess error.
+
+        To:
+           If <context> is current to some other thread or process, then
+           glXMakeCurrent will generate a BadAccess error.
+
+GLX Protocol
+
+        One new GLX protocol command is added.
+
+        QueryContextInfo
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           4               request length
+            4           1024            vendor specific opcode
+            4           unused          corresponds to context tag in header
+            4           GLX_CONTEXT     context id
+           =>
+            1           1               Reply
+            1                           unused
+            2           CARD16          sequence number
+            4           2*n             reply length
+            4           CARD32          n
+            20                          unused
+            8*n         LISTofCARD32    attribute, value pairs
+
+Errors
+
+        None
+
+New State
+
+        None
+
+New Implementation Dependent State
+
+        None
+
+Revision History
+
+    Version 3, 2015/05/20 - Specify behavior of glXGetContextIDEXT when an
+    invalid <context> is passed (Bug 8344).
+
+    Version 2, 2006/08/24 - Fixed opcode for QueryContextInfo per Ian
+    Romanick (opcode is 1024 per glx.spec, which is used to generate
+    glxproto.h - not 15 as has been in the extension spec since 1995).
+
+    Version 1.14, 1995/10/14 - Last update from SGI.
+

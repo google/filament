@@ -1,0 +1,19 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("pipes") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_limits.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_query_functions.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_read_write.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_readwrite_errors.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/pipes/test_pipe_subgroups.cpp",
+  ]
+}

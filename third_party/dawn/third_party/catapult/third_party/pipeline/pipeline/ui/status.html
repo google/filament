@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="common.css" type="text/css" charset="utf-8">
+  <link rel="stylesheet" href="status.css" type="text/css" charset="utf-8">
+  <link rel="stylesheet" href="jquery.treeview.css" type="text/css" charset="utf-8">
+  <script type="text/javascript" src="jquery-1.4.2.min.js"></script>
+  <script type="text/javascript" src="jquery.cookie.js"></script>
+  <script type="text/javascript" src="jquery.treeview.min.js"></script>
+  <script type="text/javascript" src="jquery.timeago.js"></script>
+  <script type="text/javascript" src="jquery.ba-hashchange.min.js"></script>
+  <script type="text/javascript" src="jquery.json.min.js"></script>
+  <script type="text/javascript" src="common.js"></script>
+  <script type="text/javascript" src="status.js"></script>
+  <script type="text/javascript">
+    $(document).ready(initStatus);
+  </script>
+</head>
+<body>
+
+<div id="butter" style="display: none;"></div>
+
+<div id="sidebar" style="display: none;">
+<!-- Tree will go here -->
+</div>
+
+<div id="content">
+
+  <div id="control" style="display: none;">
+    <table id="control-table" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="control-cell">
+          <a class="abort-link" href="#" style="display: none;">Abort</a>
+        </td>
+        <td class="control-cell">
+          <a class="delete-link" href="#" style="display: none;">Delete</a>
+        </td>
+        <td class="control-cell">
+          <a class="refresh-link" href="#">Refresh</a>
+        </td>
+        <td class="control-cell">
+          <label for="auto-refresh">Auto-pilot</label>
+          <input type="checkbox" id="auto-refresh" checked="checked">
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div id="detail"><!-- Pipeline detail goes here --></div>
+
+  <iframe id="status-console" src="javascript:''" style="display: none;" frameborder="0" border="0"></iframe>
+
+</div>
+
+</body>
+</html>

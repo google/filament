@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+<link rel="import" href="/tracing/ui/extras/v8/multi_v8_thread_slice_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  function createModel() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+
+      m.s1 = m.t2.sliceGroup.pushSlice(
+          newSliceEx(
+              {title: 'V8.Execute',
+                start: 0,
+                end: 10,
+                type: tr.e.v8.V8ThreadSlice,
+                cat: 'v8',
+                args: {'runtime-call-stats':
+                {
+                  CompileFullCode: [3, 345],
+                  LoadIC_Miss: [5, 567],
+                  ParseLazy: [8, 890]
+                }}}));
+      m.s2 = m.t2.sliceGroup.pushSlice(
+          newSliceEx(
+              {title: 'V8.Execute',
+                start: 11,
+                end: 15,
+                type: tr.e.v8.V8ThreadSlice,
+                cat: 'v8',
+                args: {'runtime-call-stats':
+                {
+                  HandleApiCall: [1, 123],
+                  OptimizeCode: [7, 789]
+                }}}));
+    });
+    return m;
+  }
+
+  test('selectMultiV8ThreadSlices', function() {
+    const m = createModel();
+
+    const viewEl =
+        document.createElement('tr-ui-e-multi-v8-thread-slice-sub-view');
+    const selection = new tr.model.EventSet();
+    selection.push(m.s1);
+    selection.push(m.s2);
+    viewEl.selection = selection;
+    this.addHTMLOutput(viewEl);
+    const rows = viewEl.$.runtimeCallStats.$.table.tableRows;
+    assert.lengthOf(rows, 19);
+    assert.deepEqual(rows.map(r => r.time), [
+      2714,
+      567,
+      0,
+      789,
+      0,
+      345,
+      0,
+      890,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      123
+    ]);
+  });
+});
+</script>

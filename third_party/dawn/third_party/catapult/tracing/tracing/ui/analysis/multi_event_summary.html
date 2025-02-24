@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.ui.analysis', function() {
+  function MultiEventSummary(title, events) {
+    this.title = title;
+    this.duration_ = undefined;
+    this.selfTime_ = undefined;
+    this.events_ = events;
+
+    this.cpuTimesComputed_ = false;
+    this.cpuSelfTime_ = undefined;
+    this.cpuDuration_ = undefined;
+
+    this.maxDuration_ = undefined;
+    this.maxCpuDuration_ = undefined;
+    this.maxSelfTime_ = undefined;
+    this.maxCpuSelfTime_ = undefined;
+
+    this.untotallableArgs_ = [];
+    this.totalledArgs_ = undefined;
+  }
+  MultiEventSummary.prototype = {
+
+    set title(title) {
+      if (title === 'Totals') {
+        this.totalsRow = true;
+      }
+      this.title_ = title;
+    },
+
+    get title() {
+      return this.title_;
+    },
+
+    get duration() {
+      if (this.duration_ === undefined) {
+        this.duration_ = tr.b.math.Statistics.sum(
+            this.events_, function(event) {
+              return event.duration;
+            });
+      }
+      return this.duration_;
+    },
+
+    get cpuSelfTime() {
+      this.computeCpuTimesIfNeeded_();
+      return this.cpuSelfTime_;
+    },
+
+    get cpuDuration() {
+      this.computeCpuTimesIfNeeded_();
+      return this.cpuDuration_;
+    },
+
+    computeCpuTimesIfNeeded_() {
+      if (this.cpuTimesComputed_) return;
+      this.cpuTimesComputed_ = true;
+
+      let cpuSelfTime = 0;
+      let cpuDuration = 0;
+      let hasCpuData = false;
+      for (const event of this.events_) {
+        if (event.cpuDuration !== undefined) {
+          cpuDuration += event.cpuDuration;
+          hasCpuData = true;
+        }
+
+        if (event.cpuSelfTime !== undefined) {
+          cpuSelfTime += event.cpuSelfTime;
+          hasCpuData = true;
+        }
+      }
+      if (hasCpuData) {
+        this.cpuDuration_ = cpuDuration;
+        this.cpuSelfTime_ = cpuSelfTime;
+      }
+    },
+
+    get selfTime() {
+      if (this.selfTime_ === undefined) {
+        this.selfTime_ = 0;
+        for (const event of this.events_) {
+          if (event.selfTime !== undefined) {
+            this.selfTime_ += event.selfTime;
+          }
+        }
+      }
+      return this.selfTime_;
+    },
+
+    get events() {
+      return this.events_;
+    },
+
+    get numEvents() {
+      return this.events_.length;
+    },
+
+    get numAlerts() {
+      if (this.numAlerts_ === undefined) {
+        this.numAlerts_ = tr.b.math.Statistics.sum(this.events_, event =>
+          event.associatedAlerts.length
+        );
+      }
+      return this.numAlerts_;
+    },
+
+    get untotallableArgs() {
+      this.updateArgsIfNeeded_();
+      return this.untotallableArgs_;
+    },
+
+    get totalledArgs() {
+      this.updateArgsIfNeeded_();
+      return this.totalledArgs_;
+    },
+
+
+    get maxDuration() {
+      if (this.maxDuration_ === undefined) {
+        this.maxDuration_ = tr.b.math.Statistics.max(
+            this.events_, function(event) {
+              return event.duration;
+            });
+      }
+      return this.maxDuration_;
+    },
+
+
+    get maxCpuDuration() {
+      if (this.maxCpuDuration_ === undefined) {
+        this.maxCpuDuration_ = tr.b.math.Statistics.max(
+            this.events_, function(event) {
+              return event.cpuDuration;
+            });
+      }
+      return this.maxCpuDuration_;
+    },
+
+
+    get maxSelfTime() {
+      if (this.maxSelfTime_ === undefined) {
+        this.maxSelfTime_ = tr.b.math.Statistics.max(
+            this.events_, function(event) {
+              return event.selfTime;
+            });
+      }
+      return this.maxSelfTime_;
+    },
+
+
+    get maxCpuSelfTime() {
+      if (this.maxCpuSelfTime_ === undefined) {
+        this.maxCpuSelfTime_ = tr.b.math.Statistics.max(
+            this.events_, function(event) {
+              return event.cpuSelfTime;
+            });
+      }
+      return this.maxCpuSelfTime_;
+    },
+
+
+    updateArgsIfNeeded_() {
+      if (this.totalledArgs_ !== undefined) return;
+
+      const untotallableArgs = {};
+      const totalledArgs = {};
+      for (const event of this.events_) {
+        for (const argName in event.args) {
+          const argVal = event.args[argName];
+          const type = typeof argVal;
+          if (type !== 'number') {
+            untotallableArgs[argName] = true;
+            delete totalledArgs[argName];
+            continue;
+          }
+          if (untotallableArgs[argName]) {
+            continue;
+          }
+
+          if (totalledArgs[argName] === undefined) {
+            totalledArgs[argName] = 0;
+          }
+          totalledArgs[argName] += argVal;
+        }
+      }
+      this.untotallableArgs_ = Object.keys(untotallableArgs);
+      this.totalledArgs_ = totalledArgs;
+    }
+  };
+
+  return {
+    MultiEventSummary,
+  };
+});
+</script>

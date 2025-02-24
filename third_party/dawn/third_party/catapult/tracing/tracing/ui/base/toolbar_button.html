@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+</script>
+<dom-module id='tr-ui-b-toolbar-button'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      background-color: #f8f8f8;
+      border: 1px solid rgba(0, 0, 0, 0.5);
+      color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-self: stretch;
+      min-width: 23px;
+    }
+
+    :host(:hover) {
+      background-color: rgba(255, 255, 255, 1.0);
+      border-color: rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 .05em rgba(0, 0, 0, 0.4);
+      color: rgba(0, 0, 0, 1);
+    }
+
+    #aligner {
+      display: flex;
+      flex: 0 0 auto;
+      align-self: center;
+    }
+    </style>
+    <div id="aligner">
+      <slot></slot>
+    </div>
+  </template>
+</dom-module>
+<script>
+  'use strict';
+  Polymer({ is: 'tr-ui-b-toolbar-button' });
+</script>

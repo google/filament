@@ -1,0 +1,1 @@
+Updates all branches to have the latest changes from their upstreams.

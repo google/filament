@@ -1,0 +1,19 @@
+# This is the list of people with commit rights actively working on SwiftShader
+#
+# This list is used by Chromium and Android to make sure that one of the owners
+# in this list has approved a SwiftShader related change before landing it.
+#
+# Note that the upstream source-of-truth git repository at
+# swiftshader.googlesource.com/SwiftShader has ownership and access control
+# seperate from those controlled by this OWNERS file.
+
+syoussefi@google.com
+geofflang@google.com
+
+sugoi@google.com         #{LAST_RESORT_SUGGESTION}
+chrisforbes@google.com   #{LAST_RESORT_SUGGESTION}
+cwallez@google.com       #{LAST_RESORT_SUGGESTION}
+amaiorano@google.com     #{LAST_RESORT_SUGGESTION}
+natsu@google.com         #{LAST_RESORT_SUGGESTION}
+schuffelen@google.com    #{LAST_RESORT_SUGGESTION}
+bclayton@google.com      #{LAST_RESORT_SUGGESTION}

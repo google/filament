@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_registry.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const Event = tr.model.Event;
+  const EventRegistry = tr.model.EventRegistry;
+
+  /**
+   * A sample containing data about what fraction of a resource
+   * (CPU or GPU) is being used at a given point in time.
+   */
+  class ResourceUsageSample extends Event {
+    /**
+     * @param {ResourceUsageSeries } series The ResourceUsageSeries that this
+     * sample will be a part of.
+     * @param {float} start Time of the sample.
+     * @param {float} usage Fraction of the resource (CPU or GPU) in use at the
+     * time of the sample.
+     */
+    constructor(series, start, usage) {
+      super();
+
+      this.series_ = series;
+      this.start_ = start;
+      this.usage_ = usage;
+    }
+
+    get series() {
+      return this.series_;
+    }
+
+    get start() {
+      return this.start_;
+    }
+
+    set start(value) {
+      this.start_ = value;
+    }
+
+    get usage() {
+      return this.usage_;
+    }
+
+    set usage(value) {
+      this.usage_ = value;
+    }
+
+    addBoundsToRange(range) {
+      range.addValue(this.start);
+    }
+  }
+
+  EventRegistry.register(
+      ResourceUsageSample,
+      {
+        name: 'resourceUsageSample',
+        pluralName: 'resourceUsageSamples'
+      });
+
+  return {
+    ResourceUsageSample,
+  };
+});
+</script>

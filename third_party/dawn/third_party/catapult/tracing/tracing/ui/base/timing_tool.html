@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/slice.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the TimingTool class.
+ */
+tr.exportTo('tr.ui.b', function() {
+  /**
+   * Tool for taking time measurements in the TimelineTrackView using
+   * Viewportmarkers.
+   * @constructor
+   */
+  function TimingTool(viewport, targetElement) {
+    this.viewport_ = viewport;
+
+    // Prepare the event handlers to be added and removed repeatedly.
+    this.onMouseMove_ = this.onMouseMove_.bind(this);
+    this.onDblClick_ = this.onDblClick_.bind(this);
+    this.targetElement_ = targetElement;
+
+    // Valid only during mousedown.
+    this.isMovingLeftEdge_ = false;
+  }
+
+  TimingTool.prototype = {
+
+    onEnterTiming(e) {
+      this.targetElement_.addEventListener('mousemove', this.onMouseMove_);
+      this.targetElement_.addEventListener('dblclick', this.onDblClick_);
+    },
+
+    onBeginTiming(e) {
+      if (!this.isTouchPointInsideTrackBounds_(e.clientX, e.clientY)) {
+        return;
+      }
+
+      const pt = this.getSnappedToEventPosition_(e);
+      this.mouseDownAt_(pt.x, pt.y);
+
+      this.updateSnapIndicators_(pt);
+    },
+
+    updateSnapIndicators_(pt) {
+      if (!pt.snapped) return;
+
+      const ir = this.viewport_.interestRange;
+      if (ir.min === pt.x) {
+        ir.leftSnapIndicator = new tr.ui.SnapIndicator(pt.y, pt.height);
+      }
+      if (ir.max === pt.x) {
+        ir.rightSnapIndicator = new tr.ui.SnapIndicator(pt.y, pt.height);
+      }
+    },
+
+    onUpdateTiming(e) {
+      const pt = this.getSnappedToEventPosition_(e);
+      this.mouseMoveAt_(pt.x, pt.y, true);
+      this.updateSnapIndicators_(pt);
+    },
+
+    onEndTiming(e) {
+      this.mouseUp_();
+    },
+
+    onExitTiming(e) {
+      this.targetElement_.removeEventListener('mousemove', this.onMouseMove_);
+      this.targetElement_.removeEventListener('dblclick', this.onDblClick_);
+    },
+
+    onMouseMove_(e) {
+      if (e.button) return;
+
+      const worldX = this.getWorldXFromEvent_(e);
+      this.mouseMoveAt_(worldX, e.clientY, false);
+    },
+
+    onDblClick_(e) {
+      // TODO(nduca): Implement dobuleclicking.
+    },
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    isTouchPointInsideTrackBounds_(clientX, clientY) {
+      if (!this.viewport_ ||
+          !this.viewport_.modelTrackContainer ||
+          !this.viewport_.modelTrackContainer.canvas) {
+        return false;
+      }
+
+      const canvas = this.viewport_.modelTrackContainer.canvas;
+      const canvasRect = canvas.getBoundingClientRect();
+      if (clientX >= canvasRect.left && clientX <= canvasRect.right &&
+          clientY >= canvasRect.top && clientY <= canvasRect.bottom) {
+        return true;
+      }
+
+      return false;
+    },
+
+    mouseDownAt_(worldX, y) {
+      const ir = this.viewport_.interestRange;
+      const dt = this.viewport_.currentDisplayTransform;
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const nearnessThresholdWorld = dt.xViewVectorToWorld(6 * pixelRatio);
+
+      if (ir.isEmpty) {
+        ir.setMinAndMax(worldX, worldX);
+        ir.rightSelected = true;
+        this.isMovingLeftEdge_ = false;
+        return;
+      }
+
+
+      // Left edge test.
+      if (Math.abs(worldX - ir.min) < nearnessThresholdWorld) {
+        ir.leftSelected = true;
+        ir.min = worldX;
+        this.isMovingLeftEdge_ = true;
+        return;
+      }
+
+      // Right edge test.
+      if (Math.abs(worldX - ir.max) < nearnessThresholdWorld) {
+        ir.rightSelected = true;
+        ir.max = worldX;
+        this.isMovingLeftEdge_ = false;
+        return;
+      }
+
+      ir.setMinAndMax(worldX, worldX);
+      ir.rightSelected = true;
+      this.isMovingLeftEdge_ = false;
+    },
+
+    mouseMoveAt_(worldX, y, mouseDown) {
+      if (mouseDown) {
+        this.updateMovingEdge_(worldX);
+        return;
+      }
+
+      const ir = this.viewport_.interestRange;
+      const dt = this.viewport_.currentDisplayTransform;
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const nearnessThresholdWorld = dt.xViewVectorToWorld(6 * pixelRatio);
+
+      // Left edge test.
+      if (Math.abs(worldX - ir.min) < nearnessThresholdWorld) {
+        ir.leftSelected = true;
+        ir.rightSelected = false;
+        return;
+      }
+
+      // Right edge test.
+      if (Math.abs(worldX - ir.max) < nearnessThresholdWorld) {
+        ir.leftSelected = false;
+        ir.rightSelected = true;
+        return;
+      }
+
+      ir.leftSelected = false;
+      ir.rightSelected = false;
+      return;
+    },
+
+    updateMovingEdge_(newWorldX) {
+      const ir = this.viewport_.interestRange;
+      let a = ir.min;
+      let b = ir.max;
+      if (this.isMovingLeftEdge_) {
+        a = newWorldX;
+      } else {
+        b = newWorldX;
+      }
+
+      if (a <= b) {
+        ir.setMinAndMax(a, b);
+      } else {
+        ir.setMinAndMax(b, a);
+      }
+
+      if (ir.min === newWorldX) {
+        this.isMovingLeftEdge_ = true;
+        ir.leftSelected = true;
+        ir.rightSelected = false;
+      } else {
+        this.isMovingLeftEdge_ = false;
+        ir.leftSelected = false;
+        ir.rightSelected = true;
+      }
+    },
+
+    mouseUp_() {
+      const dt = this.viewport_.currentDisplayTransform;
+      const ir = this.viewport_.interestRange;
+
+      ir.leftSelected = false;
+      ir.rightSelected = false;
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const minWidthValue = dt.xViewVectorToWorld(2 * pixelRatio);
+      if (ir.range < minWidthValue) {
+        ir.reset();
+      }
+    },
+
+    getWorldXFromEvent_(e) {
+      const pixelRatio = window.devicePixelRatio || 1;
+      const canvas = this.viewport_.modelTrackContainer.canvas;
+      const worldOffset = canvas.getBoundingClientRect().left;
+      const viewX = (e.clientX - worldOffset) * pixelRatio;
+      return this.viewport_.currentDisplayTransform.xViewToWorld(viewX);
+    },
+
+
+    /**
+     * Get the closest position of an event within a vertical range of the mouse
+     * position if possible, otherwise use the position of the mouse pointer.
+     * @param {MouseEvent} e Mouse event with the current mouse coordinates.
+     * @return {
+     *   {Number} x, The x coordinate in world space.
+     *   {Number} y, The y coordinate in world space.
+     *   {Number} height, The height of the event.
+     *   {boolean} snapped Whether the coordinates are from a snapped event or
+     *     the mouse position.
+     * }
+     */
+    getSnappedToEventPosition_(e) {
+      const pixelRatio = window.devicePixelRatio || 1;
+      const EVENT_SNAP_RANGE = 16 * pixelRatio;
+
+      const modelTrackContainer = this.viewport_.modelTrackContainer;
+      const modelTrackContainerRect =
+        modelTrackContainer.getBoundingClientRect();
+
+      const viewport = this.viewport_;
+      const dt = viewport.currentDisplayTransform;
+      const worldMaxDist = dt.xViewVectorToWorld(EVENT_SNAP_RANGE);
+
+      const worldX = this.getWorldXFromEvent_(e);
+      const mouseY = e.clientY;
+
+      const selection = new tr.model.EventSet();
+
+      // Look at the track under mouse position first for better performance.
+      modelTrackContainer.addClosestEventToSelection(
+          worldX, worldMaxDist, mouseY, mouseY, selection);
+
+      // Look at all tracks visible on screen.
+      if (!selection.length) {
+        modelTrackContainer.addClosestEventToSelection(
+            worldX, worldMaxDist,
+            modelTrackContainerRect.top, modelTrackContainerRect.bottom,
+            selection);
+      }
+
+      let minDistX = worldMaxDist;
+      let minDistY = Infinity;
+      const pixWidth = dt.xViewVectorToWorld(1);
+
+      // Create result object with the mouse coordinates.
+      const result = {
+        x: worldX,
+        y: mouseY - modelTrackContainerRect.top,
+        height: 0,
+        snapped: false
+      };
+
+      const eventBounds = new tr.b.math.Range();
+      for (const event of selection) {
+        const track = viewport.trackForEvent(event);
+        const trackRect = track.getBoundingClientRect();
+
+        eventBounds.reset();
+        event.addBoundsToRange(eventBounds);
+        let eventX;
+        if (Math.abs(eventBounds.min - worldX) <
+            Math.abs(eventBounds.max - worldX)) {
+          eventX = eventBounds.min;
+        } else {
+          eventX = eventBounds.max;
+        }
+
+        const distX = eventX - worldX;
+
+        const eventY = trackRect.top;
+        const eventHeight = trackRect.height;
+        const distY = Math.abs(eventY + eventHeight / 2 - mouseY);
+
+        // Prefer events with a closer y position if their x difference is below
+        // the width of a pixel.
+        if ((distX <= minDistX || Math.abs(distX - minDistX) < pixWidth) &&
+            distY < minDistY) {
+          minDistX = distX;
+          minDistY = distY;
+
+          // Retrieve the event position from the hit.
+          result.x = eventX;
+          result.y = eventY +
+              modelTrackContainer.scrollTop - modelTrackContainerRect.top;
+          result.height = eventHeight;
+          result.snapped = true;
+        }
+      }
+
+      return result;
+    }
+  };
+
+  return {
+    TimingTool,
+  };
+});
+</script>

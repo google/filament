@@ -1,0 +1,225 @@
+Name
+
+    ANGLE_copy_texture_3d
+
+Name Strings
+
+    GL_ANGLE_copy_texture_3d
+
+Contributors
+
+    Brandon Jones, Intel
+
+Contacts
+
+    Brandon Jones, Intel (brandon1.jones 'at' intel 'dot' com)
+
+Status
+
+    Implemented.
+
+Version
+
+    Version 1, 2018-8-8
+
+Dependencies
+
+    OpenGL ES 3.0 required.
+
+Overview
+
+    This extension adds 3D texture support to the functionality
+    provided by the CHROMIUM_copy_texture extension. Two new
+    functions are exported, glCopyTexture3DANGLE and
+    glCopySubTexture3DANGLE that perform the same copy operations as
+    glCopyTextureCHROMIUM and glCopySubTextureCHROMIUM, respectively,
+    on GL_TEXTURE_3D and GL_TEXTURE_2D_ARRAY bound textures.
+
+New Procedures and Functions
+
+    void CopyTexture3DANGLE(uint sourceId,
+                            int sourceLevel,
+                            enum destTarget,
+                            uint destId,
+                            int destLevel,
+                            int internalFormat,
+                            enum destType,
+                            boolean unpackFlipY,
+                            boolean unpackPremultiplyAlpha,
+                            boolean unpackUnmultiplyAlpha)
+
+    void CopySubTexture3DANGLE(uint sourceId,
+                               int sourceLevel,
+                               enum destTarget,
+                               uint destId,
+                               int destLevel,
+                               int xoffset,
+                               int yoffset,
+                               int zoffset,
+                               int x,
+                               int y,
+                               int z,
+                               sizei width,
+                               sizei height,
+                               sizei depth,
+                               boolean unpackFlipY,
+                               boolean unpackPremultiplyAlpha,
+                               boolean unpackUnmultiplyAlpha)
+
+Additions to the OpenGL ES 3.0 Specification
+
+    The command
+
+        CopyTexture3DANGLE
+
+    All CopyTexture3DANGLE behavior is the same as
+    CopyTextureCHROMIUM unless otherwise defined below.
+
+    When source texture doesn't contain a superset of the component
+    required by <internalFormat>, fill the components by the
+    following rules.
+
+       source format           color components
+       ----------------------------------------
+       RED                     (R, 0, 0, 1)
+       RED_INTEGER             (R, 0, 0, 1)
+       RG                      (R, G, 0, 1)
+       RG_INTEGER              (R, G, 0, 1)
+       RGB                     (R, G, B, 1)
+       RGB_INTEGER             (R, G, B, 1)
+       RGBA                    (R, G, B, A)
+       RGBA_INTEGER            (R, G, B, A)
+       LUMINANCE_ALPHA         (L, L, L, A)
+       LUMINANCE               (L, L, L, 1)
+       ALPHA                   (0, 0, 0, A)
+
+    INVALID_OPERATION is generated if the format of <sourceId> is not
+    one of formats in Table 1.1.
+
+    INVALID_ENUM is generated if <destTarget> is not TEXTURE_3D or
+    TEXTURE_2D_ARRAY.
+
+    INVALID_VALUE is generated if the texture corresponding to
+    <sourceId> has not been bound as <destTarget>.
+
+    INVALID_OPERATION is generated if <internalFormat> is not one of
+    the sized internal formats in Table 1.0.
+
+    The command
+
+        CopySubTexture3DANGLE
+
+    All CopySubTexture3DANGLE behavior is the same as
+    CopySubTextureCHROMIUM unless otherwise defined below.
+
+    <zoffset> specifies a texel offset in the z direction
+    respectively within the destination texture.
+
+    <z> specifies a texel offset in the z direction respectively
+    within the source texture.
+
+    <depth> specifies the depth of the texture subimage.
+
+    INVALID_ENUM is generated if <destTarget> is not TEXTURE_3D or
+    TEXTURE_2D_ARRAY.
+
+    INVALID_VALUE is generated if the texture corresponding to
+    <sourceId> and <destId> have not been bound as <destTarget>.
+
+    INVALID_VALUE is generated if either <sourceId> texture or
+    <destId> texture is not defined.
+
+    INVALID_OPERATION is generated if the format of <sourceId> or
+    <destId> is not one of formats in Table 1.1.
+
+    INVALID_VALUE is generated if zoffset is less than 0.
+
+    INVALID_VALUE is generated if z is less than 0.
+
+    INVALID_VALUE is generated if depth is less than 0.
+
+    INVALID_VALUE is generated if (<z> + <depth>) > srcDepth.
+
+    INVALID_VALUE is generated if (<zoffset> + <depth>) > destDepth.
+
+    Table 1.0 internal formats for CopyTexture3DANGLE:
+
+        <internalFormat>
+        ---------------
+        RGB
+        RGBA
+        LUMINANCE
+        LUMINANCE_ALPHA
+        ALPHA
+        R8
+        R8_SNORM
+        R16F
+        R32F
+        R8UI
+        R8I
+        R16UI
+        R16I
+        R32UI
+        R32I
+        RG8
+        RG8_SNORM
+        RG16F
+        RG32F
+        RG8UI
+        RG8I
+        RG16UI
+        RG16I
+        RG32UI
+        RG32I
+        RGB8
+        SRGB8
+        RGB565
+        RGB8_SNORM
+        R11F_G11F_B10F
+        RGB9_E5
+        RGB16F
+        RGB32F
+        RGB8UI
+        RGB8I
+        RGB16UI
+        RGB16I
+        RGB32UI
+        RGB32I
+        RGBA8
+        SRGB8_ALPHA8
+        RGBA8_SNORM
+        RGB5_A1
+        RGBA4
+        RGB10_A2
+        RGBA16F
+        RGBA32F
+        RGBA8UI
+        RGBA8I
+        RGB10_A2UI
+        RGBA16UI
+        RGBA16I
+        RGBA32I
+        RGBA32UI
+
+    Table 1.1 Valid source texture formats for
+    CopyTexture3DANGLE and source and destination formats for
+    CopySubTexture3DANGLE:
+
+        Format
+        ---------------
+        RED
+        RED_INTEGER
+        RG
+        RG_INTEGER
+        RGB
+        RGB_INTEGER
+        RGBA
+        RGBA_INTEGER
+        LUMINANCE_ALPHA
+        LUMINANCE
+        ALPHA
+
+Revision History
+
+    Version 1, 2018-8-8 (Brandon Jones)
+        - Initial implementation.

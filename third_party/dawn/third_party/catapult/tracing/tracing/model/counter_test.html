@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/process.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Counter = tr.model.Counter;
+  const CounterSeries = tr.model.CounterSeries;
+  const CounterSample = tr.model.CounterSample;
+
+  const createCounterWithTwoSeries = function() {
+    const ctr = new Counter(null, 0, '', 'myCounter');
+    const aSeries = new CounterSeries('a', 0);
+    const bSeries = new CounterSeries('b', 0);
+    ctr.addSeries(aSeries);
+    ctr.addSeries(bSeries);
+
+    aSeries.addCounterSample(0, 5);
+    aSeries.addCounterSample(1, 6);
+    aSeries.addCounterSample(2, 5);
+    aSeries.addCounterSample(3, 7);
+
+    bSeries.addCounterSample(0, 10);
+    bSeries.addCounterSample(1, 15);
+    bSeries.addCounterSample(2, 12);
+    bSeries.addCounterSample(3, 16);
+
+    return ctr;
+  };
+
+  test('getSampleStatisticsWithSingleSelection', function() {
+    const ctr = createCounterWithTwoSeries();
+    const ret = ctr.getSampleStatistics([0]);
+
+    assert.strictEqual(ret[0].min, 5);
+    assert.strictEqual(ret[0].max, 5);
+    assert.strictEqual(ret[0].avg, 5);
+    assert.strictEqual(ret[0].start, 5);
+    assert.strictEqual(ret[0].end, 5);
+
+    assert.strictEqual(ret[1].min, 10);
+    assert.strictEqual(ret[1].max, 10);
+    assert.strictEqual(ret[1].avg, 10);
+    assert.strictEqual(ret[1].start, 10);
+    assert.strictEqual(ret[1].end, 10);
+  });
+
+  test('getSampleStatisticsWithMultipleSelections', function() {
+    const ctr = createCounterWithTwoSeries();
+    const ret = ctr.getSampleStatistics([0, 1]);
+
+    assert.strictEqual(ret[0].min, 5);
+    assert.strictEqual(ret[0].max, 6);
+    assert.strictEqual(ret[0].avg, (5 + 6) / 2);
+    assert.strictEqual(ret[0].start, 5);
+    assert.strictEqual(ret[0].end, 6);
+
+    assert.strictEqual(ret[1].min, 10);
+    assert.strictEqual(ret[1].max, 15);
+    assert.strictEqual(ret[1].avg, (10 + 15) / 2);
+    assert.strictEqual(ret[1].start, 10);
+    assert.strictEqual(ret[1].end, 15);
+  });
+
+  test('getSampleStatisticsWithOutofOrderIndices', function() {
+    const ctr = createCounterWithTwoSeries();
+    const ret = ctr.getSampleStatistics([1, 0]);
+
+    assert.strictEqual(ret[0].min, 5);
+    assert.strictEqual(ret[0].max, 6);
+    assert.strictEqual(ret[0].avg, (5 + 6) / 2);
+    assert.strictEqual(ret[0].start, 5);
+    assert.strictEqual(ret[0].end, 6);
+
+    assert.strictEqual(ret[1].min, 10);
+    assert.strictEqual(ret[1].max, 15);
+    assert.strictEqual(ret[1].avg, (10 + 15) / 2);
+    assert.strictEqual(ret[1].start, 10);
+    assert.strictEqual(ret[1].end, 15);
+  });
+
+  test('getSampleStatisticsWithAllSelections', function() {
+    const ctr = createCounterWithTwoSeries();
+    const ret = ctr.getSampleStatistics([1, 0, 2, 3]);
+
+    assert.strictEqual(ret[0].min, 5);
+    assert.strictEqual(ret[0].max, 7);
+    assert.strictEqual(ret[0].avg, (5 + 6 + 5 + 7) / 4);
+    assert.strictEqual(ret[0].start, 5);
+    assert.strictEqual(ret[0].end, 7);
+
+    assert.strictEqual(ret[1].min, 10);
+    assert.strictEqual(ret[1].max, 16);
+    assert.strictEqual(ret[1].avg, (10 + 15 + 12 + 16) / 4);
+    assert.strictEqual(ret[1].start, 10);
+    assert.strictEqual(ret[1].end, 16);
+  });
+
+  test('testCounterSortRemainInOrder', function() {
+    const model = new tr.Model();
+    const process = new tr.model.Process(model, 4);
+    const ctr1 = new Counter(process, 0, '', 'a');
+    const ctr2 = new Counter(process, 0, '', 'b');
+
+    const array = [ctr1, ctr2];
+    array.sort(tr.model.Counter.compare);
+
+    assert.strictEqual(array[0], ctr1);
+    assert.strictEqual(array[1], ctr2);
+  });
+});
+</script>
+

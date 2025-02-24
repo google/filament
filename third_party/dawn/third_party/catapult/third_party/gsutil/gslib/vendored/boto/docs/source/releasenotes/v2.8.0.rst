@@ -1,0 +1,45 @@
+===========
+boto v2.8.0
+===========
+
+The 2.8.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.7.0 release
+and the 2.8.0 release at https://github.com/boto/boto/compare/2.7.0...2.8.0.
+
+This release includes:
+
+* Added support for Amazon Elasticache
+* Added support for Amazon Elastic Transcoding Service
+
+As well as numerous bug fixes and improvements.
+
+Commits
+=======
+
+There were 115 commits in this release from 21 different authors.  The authors
+are listed below, in alphabetical order:
+
+* conorbranagan
+* dkavanagh
+* gaige
+* garnaat
+* halfaleague
+* jamesls
+* jjhooper
+* jordansissel
+* jterrace
+* Kodiologist
+* kopertop
+* mfschwartz
+* nathan11g
+* pasc
+* phobologic
+* schworer
+* seandst
+* SirAlvarex
+* Yaniv Ovadia
+* yig
+* yovadia12

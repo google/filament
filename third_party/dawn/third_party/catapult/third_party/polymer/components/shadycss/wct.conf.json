@@ -1,0 +1,14 @@
+{
+  "suites": ["tests/runner.html"],
+  "npm": true,
+  "plugins": {
+    "local": {
+      "browserOptions": {
+        "chrome": [
+          "disable-gpu",
+          "no-sandbox"
+        ]
+      }
+    }
+  }
+}

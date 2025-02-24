@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate0', async function() {
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    const histograms = new tr.v.HistogramSet();
+
+    const hist = new tr.v.Histogram('a', tr.b.Unit.byName.normalizedPercentage);
+    for (let i = 0; i < 1e2; ++i) {
+      hist.addSample(Math.random());
+    }
+    histograms.addHistogram(hist);
+
+    this.addHTMLOutput(view);
+    await view.build(histograms);
+
+    assert.strictEqual('none', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.textContent === 'zero Histograms')).display);
+    assert.strictEqual('block', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.id === 'container')).display);
+  });
+
+  test('implicitUndefinedHistogramSet', async function() {
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    this.addHTMLOutput(view);
+    assert.strictEqual('block', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.textContent === 'zero Histograms')).display);
+    assert.strictEqual('none', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.id === 'container')).display);
+  });
+
+  test('explicitUndefinedHistogramSet', async function() {
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    this.addHTMLOutput(view);
+    view.build(undefined);
+    assert.strictEqual('block', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.textContent === 'zero Histograms')).display);
+    assert.strictEqual('none', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.id === 'container')).display);
+  });
+
+  test('emptyHistogramSet', async function() {
+    const view = document.createElement('tr-v-ui-histogram-set-view');
+    this.addHTMLOutput(view);
+    view.build(new tr.v.HistogramSet());
+    assert.strictEqual('block', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.textContent === 'zero Histograms')).display);
+    assert.strictEqual('none', getComputedStyle(
+        tr.ui.b.findDeepElementMatchingPredicate(
+            view, e => e.id === 'container')).display);
+  });
+});
+</script>

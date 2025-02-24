@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglWaitClient">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglWaitClient</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglWaitClient</refname>
+        <refpurpose>
+            Complete client API execution prior to subsequent native
+            rendering calls
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglWaitClient</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            All rendering calls for the currently bound context, for the
+            current rendering API, made prior to
+            <function>eglWaitClient</function> are guaranteed to be
+            executed before native rendering calls made after
+            <function>eglWaitClient</function>. The same result can be
+            achieved using client API-specific commands such as
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>
+            or
+            <citerefentry><refentrytitle>vgFinish</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            <function>eglWaitClient</function> is ignored if there is no
+            current EGL rendering context for the current rendering API.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if
+            <function>eglWaitClient</function> fails,
+            <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            If there is no current context for the current rendering
+            API, the function has no effect but still returns
+            <constant>EGL_TRUE</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_CURRENT_SURFACE</constant> is generated if
+            the surface associated with the current context has a native
+            window or pixmap, and that window or pixmap is no longer
+            valid.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            <function>eglWaitClient</function> is supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <para>
+            <function>eglWaitClient</function> is a generalized version
+            of <function>eglWaitGL</function>, supporting multiple
+            client APIs.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitGL</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>vgFinish</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

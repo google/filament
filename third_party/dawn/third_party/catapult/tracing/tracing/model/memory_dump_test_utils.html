@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/vm_region.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper functions for tests involving memory dumps.
+ */
+tr.exportTo('tr.model', function() {
+  const GlobalMemoryDump = tr.model.GlobalMemoryDump;
+  const ProcessMemoryDump = tr.model.ProcessMemoryDump;
+  const MemoryAllocatorDump = tr.model.MemoryAllocatorDump;
+  const MemoryAllocatorDumpLink = tr.model.MemoryAllocatorDumpLink;
+  const VMRegion = tr.model.VMRegion;
+  const VMRegionClassificationNode = tr.model.VMRegionClassificationNode;
+  const Scalar = tr.b.Scalar;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+  const LIGHT = tr.model.ContainerMemoryDump.LevelOfDetail.LIGHT;
+
+  function castToScalar(value) {
+    if (typeof value === 'number') {
+      return new Scalar(sizeInBytes_smallerIsBetter, value);
+    }
+    assert.instanceOf(value, Scalar);
+    return value;
+  }
+
+  function getOption(opt_options, key, opt_defaultValue) {
+    if (opt_options && (key in opt_options)) {
+      return opt_options[key];
+    }
+    return opt_defaultValue;
+  }
+
+  function MemoryDumpTestUtils() {
+    throw new Error('Static class');
+  }
+
+  MemoryDumpTestUtils.SIZE_DELTA = 0.0001;
+
+  /**
+   * Create a new global memory dump and add it to a model.
+   *
+   * @param {!tr.Model} model The trace model to which the new global dump
+   *     should be added.
+   * @param {!{
+   *     ts: (number|undefined),
+   *     duration: (number|undefined),
+   *     levelOfDetail: (!tr.model.ContainerMemoryDump.LevelOfDetail|undefined)
+   * }=} opt_options Options for creating the new global dump.
+   * @return {!tr.model.GlobalMemoryDump} The newly created global memory dump.
+   */
+  MemoryDumpTestUtils.addGlobalMemoryDump = function(model, opt_options) {
+    const timestamp = getOption(opt_options, 'ts', 0);
+    const gmd = new GlobalMemoryDump(model, timestamp);
+    gmd.levelOfDetail = getOption(opt_options, 'levelOfDetail', LIGHT);
+    gmd.duration = getOption(opt_options, 'duration', 0);
+    model.globalMemoryDumps.push(gmd);
+    return gmd;
+  };
+
+  /**
+   * Create a new process memory dump and add it to a global memory dump.
+   *
+   * @param {!tr.model.GlobalMemoryDump} gmd The global dump to which the new
+   *     process dump should be added.
+   * @param {!tr.model.Process} pmd The process associated with the process
+   *     dump.
+   * @param {!{
+   *     ts: (number|undefined)
+   * }=} opt_options Options for creating the new process dump.
+   * @return {!tr.model.ProcessMemoryDump} The newly created process memory
+   *     dump.
+   */
+  MemoryDumpTestUtils.addProcessMemoryDump =
+      function(gmd, process, opt_options) {
+        const timestamp = getOption(opt_options, 'ts', gmd.start);
+        const pmd = new ProcessMemoryDump(gmd, process, timestamp);
+        process.memoryDumps.push(pmd);
+        if (process.pid in gmd.processMemoryDumps) {
+          // Test sanity check.
+          throw new Error('Process memory dump for process with pid=' +
+          process.pid + ' has already been provided');
+        }
+        gmd.processMemoryDumps[process.pid] = pmd;
+        return pmd;
+      };
+
+  /**
+   * Create a new memory allocator dump.
+   *
+   * @param {!tr.model.ContainerMemoryDump} containerDump The container dump
+   *     associated with the new allocator dump.
+   * @param {string} fullName The full name of the new allocator dump
+   *     (including ancestors).
+   * @param {!{
+   *     guid: (number|undefined),
+   *     numerics: (!Object<string, (number|!tr.b.Scalar)>|undefined)
+   * }=} opt_options Options for creating the new allocator dump.
+   * @return {!tr.model.MemoryAllocatorDump} The newly created memory allocator
+   *     dump.
+   */
+  MemoryDumpTestUtils.newAllocatorDump = function(
+      containerDump, fullName, opt_options) {
+    const dump = new MemoryAllocatorDump(containerDump, fullName,
+        getOption(opt_options, 'guid'));
+    const numerics = getOption(opt_options, 'numerics');
+    if (numerics) {
+      for (const [numericName, value] of Object.entries(numerics)) {
+        dump.addNumeric(numericName, castToScalar(value));
+      }
+    }
+    const children = getOption(opt_options, 'children');
+    if (children) dump.children = children;
+    return dump;
+  };
+
+  /**
+   * Create a new child memory allocator dump and add it to a parent memory
+   * allocator dump.
+   *
+   * @param {!tr.model.MemoryAllocatorDump} parentDump The parent allocator
+   *     dump.
+   * @param {string} name The name of the child allocator dump (excluding
+   *     ancestors).
+   * @param {!{
+   *     guid: (number|undefined),
+   *     numerics: (!Object<string, (number|!tr.b.Scalar)>|undefined)
+   * }=} opt_options Options for creating the child allocator dump.
+   * @return {!tr.model.MemoryAllocatorDump} The newly created child memory
+   *     allocator dump.
+   */
+  MemoryDumpTestUtils.addChildDump = function(parentDump, name, opt_options) {
+    const childDump = MemoryDumpTestUtils.newAllocatorDump(
+        parentDump.containerMemoryDump, parentDump.fullName + '/' + name,
+        opt_options);
+    childDump.parent = parentDump;
+    parentDump.children.push(childDump);
+    return childDump;
+  };
+
+  MemoryDumpTestUtils.addOwnershipLink = function(
+      ownerDump, ownedDump, opt_importance) {
+    assert.isUndefined(ownerDump.owns);  // Sanity check.
+    const ownershipLink =
+        new MemoryAllocatorDumpLink(ownerDump, ownedDump, opt_importance);
+    ownerDump.owns = ownershipLink;
+    ownedDump.ownedBy.push(ownershipLink);
+    return ownershipLink;
+  };
+
+  MemoryDumpTestUtils.checkDumpNumericsAndDiagnostics =
+      function(dump, expectedNumerics, expectedDiagnostics) {
+        const actualNumerics = dump.numerics;
+        assert.sameMembers(
+            Object.keys(actualNumerics), Object.keys(expectedNumerics));
+        for (const numericName in actualNumerics) {
+          const actualNumeric = actualNumerics[numericName];
+          const expectedNumeric = castToScalar(expectedNumerics[numericName]);
+          assert.instanceOf(actualNumeric, tr.b.Scalar);
+          assert.strictEqual(actualNumeric.unit, expectedNumeric.unit);
+          assert.closeTo(actualNumeric.value, expectedNumeric.value,
+              MemoryDumpTestUtils.SIZE_DELTA);
+        }
+
+        assert.deepEqual(dump.diagnostics, expectedDiagnostics);
+      };
+
+  MemoryDumpTestUtils.checkVMRegions = function(vmRegions, expectedRegions) {
+    if (vmRegions instanceof VMRegionClassificationNode) {
+      vmRegions = vmRegions.allRegionsForTesting;
+    }
+
+    const expectedRegionsMap = new Map();
+    expectedRegions.forEach(function(region) {
+      if (!(region instanceof VMRegion)) {
+        region = VMRegion.fromDict(region);
+      }
+      expectedRegionsMap.set(region.uniqueIdWithinProcess, region);
+    });
+    const actualRegionsMap = new Map();
+    vmRegions.forEach(function(region) {
+      actualRegionsMap.set(region.uniqueIdWithinProcess, region);
+    });
+
+    assert.strictEqual(actualRegionsMap.size, expectedRegionsMap.size);
+    for (const id of expectedRegionsMap.keys()) {
+      const expectedRegion = expectedRegionsMap.get(id);
+      const actualRegion = actualRegionsMap.get(id);
+
+      assert.instanceOf(actualRegion, VMRegion);
+      assert.strictEqual(actualRegion.startAddress,
+          expectedRegion.startAddress);
+      assert.strictEqual(actualRegion.sizeInBytes, expectedRegion.sizeInBytes);
+      assert.strictEqual(actualRegion.protectionFlags,
+          expectedRegion.protectionFlags);
+      assert.strictEqual(actualRegion.mappedFile, expectedRegion.mappedFile);
+      assert.deepEqual(actualRegion.byteStats, expectedRegion.byteStats);
+    }
+  };
+
+  return {
+    MemoryDumpTestUtils,
+  };
+});
+</script>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const BYTE_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createExponential(1, 1e9, 1e2);
+
+  /* This metric measures mapped and resident native code memory footprint. */
+  function nativeCodeResidentMemoryMetric(histograms, model) {
+    const histogram = new tr.v.Histogram(
+        'NativeCodeResidentMemory',
+        tr.b.Unit.byName.sizeInBytes_smallerIsBetter,
+        BYTE_BOUNDARIES);
+    for (const slice of model.getDescendantEvents()) {
+      if (slice.category === 'disabled-by-default-memory-infra' &&
+          slice.title === 'ReportGlobalNativeCodeResidentMemoryKb' &&
+          slice.args.NativeCodeResidentMemory) {
+        histogram.addSample(slice.args.NativeCodeResidentMemory);
+      }
+    }
+    histograms.addHistogram(histogram);
+  }
+
+  tr.metrics.MetricRegistry.register(nativeCodeResidentMemoryMetric);
+
+  return {
+    nativeCodeResidentMemoryMetric,
+  };
+});
+</script>

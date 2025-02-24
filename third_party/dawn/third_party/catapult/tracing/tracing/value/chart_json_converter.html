@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/legacy_unit_info.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v', function() {
+  class ChartJsonConverter {
+    /**
+     * Parses Values from |charts|, converts them to Histograms, and adds those
+     * to |histograms|.
+     *
+     * @param {!Array.<!Object>} charts
+     * @param {!tr.v.HistogramSet} histograms
+     */
+    static convertChartJson(charts, histograms) {
+      const traceValues = charts.charts.trace;
+
+      // The chromeperf dashboard requires some Diagnostics to be shared, even
+      // if there is only a single Histogram in the HistogramSet.
+      const diagnosticCaches = new Map();
+      function addSharedDiagnostic(hist, name, diagnostic) {
+        if (!diagnosticCaches.has(name)) {
+          diagnosticCaches.set(name, new Map());
+        }
+        const cache = diagnosticCaches.get(name);
+        const cacheKey = diagnostic instanceof tr.v.d.GenericSet ?
+          [...diagnostic].sort().join(',') : diagnostic.minDate;
+        if (!cache.has(cacheKey)) {
+          cache.set(cacheKey, diagnostic);
+          histograms.addSharedDiagnostic(diagnostic);
+        }
+        hist.diagnostics.set(name, cache.get(cacheKey));
+      }
+
+      for (const [name, pageValues] of Object.entries(charts.charts)) {
+        if (name === 'trace') continue;
+
+        const pageValuesCount = Object.keys(pageValues).length;
+        for (const [storyName, value] of Object.entries(pageValues)) {
+          if (pageValuesCount > 1 && storyName === 'summary') continue;
+
+          const unitInfo = tr.v.LEGACY_UNIT_INFO.get(value.units) || {};
+          const unitName = unitInfo.name || 'unitlessNumber';
+          const conversionFactor = unitInfo.conversionFactor || 1;
+
+          let improvementDirection = tr.b.ImprovementDirection.DONT_CARE;
+          if (unitInfo.defaultImprovementDirection !== undefined) {
+            improvementDirection = unitInfo.defaultImprovementDirection;
+          }
+          // Metrics have the final say.
+          if (value.improvement_direction !== undefined) {
+            improvementDirection =
+              ChartJsonConverter.convertImprovementDirection(
+                  value.improvement_direction);
+          }
+          const unitNameSuffix = tr.b.Unit.nameSuffixForImprovementDirection(
+              improvementDirection);
+
+          const hist = histograms.createHistogram(
+              value.name || name,
+              tr.b.Unit.byName[unitName + unitNameSuffix], [], {
+                binBoundaries: tr.v.HistogramBinBoundaries.SINGULAR,
+                description: value.description || '',
+              });
+
+          if (traceValues) {
+            const traceValue = traceValues[storyName] || {};
+            let traceUrl = traceValue.cloud_url;
+            if (!traceUrl && traceValue.file_path) {
+              traceUrl = 'file://' + traceValue.file_path;
+            }
+            if (traceUrl) {
+              addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.TRACE_URLS,
+                  new tr.v.d.GenericSet([traceUrl]));
+            }
+          }
+
+          if (pageValuesCount > 1) {
+            addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.STORIES,
+                new tr.v.d.GenericSet([storyName]));
+          }
+
+          const storyTags = [];
+          if (value.grouping_label) {
+            storyTags.push(`grouping_label:${value.grouping_label}`);
+          }
+          if (value.story_tags) {
+            storyTags.push(...value.story_tags);
+          }
+          if (storyTags.length) {
+            addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.STORY_TAGS,
+                new tr.v.d.GenericSet(storyTags));
+          }
+
+          if (charts.benchmark_name) {
+            addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.BENCHMARKS,
+                new tr.v.d.GenericSet([charts.benchmark_name]));
+          }
+
+          if (charts.label) {
+            addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.LABELS,
+                new tr.v.d.GenericSet([charts.label]));
+          }
+
+          if (charts.benchmarkStartMs) {
+            addSharedDiagnostic(hist, tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+                new tr.v.d.DateRange(charts.benchmarkStartMs));
+          }
+
+          if (value.type === 'histogram' || value.buckets) {
+            for (const bucket of value.buckets) {
+              // Take the center of the bin. This coarse granularity can amplify
+              // noise when a measurement moves from one bin to the next.
+              const sample = conversionFactor * (bucket.high + bucket.low) / 2;
+              for (let i = 0; i < bucket.count; ++i) {
+                hist.addSample(sample);
+              }
+            }
+          } else if (value.type === 'list_of_scalar_values' || value.values) {
+            // |value.values| is undefined if the list_of_scalar_values is
+            // empty.
+            if (value.values) {
+              for (const sample of value.values) {
+                hist.addSample(sample * conversionFactor);
+              }
+            }
+          } else if (value.type === 'scalar' || value.value !== undefined) {
+            hist.addSample(value.value * conversionFactor);
+          }
+        }
+      }
+    }
+
+    static convertImprovementDirection(improvementDirection) {
+      switch (improvementDirection) {
+        case 'down': return tr.b.ImprovementDirection.SMALLER_IS_BETTER;
+        case 'up': return tr.b.ImprovementDirection.BIGGER_IS_BETTER;
+        default: return tr.b.ImprovementDirection.DONT_CARE;
+      }
+    }
+  }
+
+  return {
+    ChartJsonConverter,
+  };
+});
+</script>

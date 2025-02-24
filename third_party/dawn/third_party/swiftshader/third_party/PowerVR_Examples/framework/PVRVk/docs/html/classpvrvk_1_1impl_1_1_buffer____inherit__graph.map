@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::Buffer_" name="pvrvk::impl::Buffer_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkBuffer,\l ObjectType::e_BUFFER \&gt;" alt="" coords="316,5,507,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkBuffer, PVRVkObjectType \&gt;" alt="" coords="5,13,268,54"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Buffer_ \&gt;" alt="" coords="316,86,507,127"/>
+</map>

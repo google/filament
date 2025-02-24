@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('binderParserImport', function() {
+    const lines = [
+      'binderLibTest-10619 (10619) [001] ...1 25191.335749: ' +
+        'binder_transaction: transaction=489053 dest_node=489048 ' +
+        'dest_proc=10670 dest_thread=0 reply=0 flags=0x10 code=0xd',
+      'binderLibTest-10670 (10670) [000] ...1 25191.335996:' +
+        ' binder_transaction_received: transaction=489053',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336167:' +
+        ' binder_transaction: transaction=489056 dest_node=161277 ' +
+        'dest_proc=3454 dest_thread=0 reply=0 flags=0x10 code=0x2',
+      '/system/bin/servicemanager-3454  ( 3454) [000] ...1 25191.336199:' +
+        ' binder_transaction_received: transaction=489056',
+      '/system/bin/servicemanager-3454  ( 3454) [000] ...1 25191.336302:' +
+        ' binder_transaction: transaction=489057 dest_node=0 dest_proc=10670' +
+        ' dest_thread=10670 reply=1 flags=0x0 code=0x0',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336334:' +
+        ' binder_transaction_received: transaction=489057',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336655:' +
+        ' binder_transaction: transaction=489059 dest_node=488755' +
+        ' dest_proc=10622 dest_thread=0 reply=0 flags=0x10 code=0x1',
+      'Binder_4-10645 (10622) [001] ...1 25191.336693:' +
+        ' binder_transaction_received: transaction=489059',
+      'Binder_4-10645 (10622) [001] ...1 25191.336754: binder_transaction:' +
+        ' transaction=489060 dest_node=0 dest_proc=10670 dest_thread=10670' +
+        ' reply=1 flags=0x0 code=0x0',
+      'binderLibTest-10670 (10670) [000] ...1 25191.337003:' +
+        ' binder_transaction_received: transaction=489060',
+      'binderLibTest-10670 (10670) [000] ...1 25191.337052:' +
+        ' binder_transaction: transaction=489061 dest_node=0 dest_proc=10619' +
+        ' dest_thread=10619 reply=1 flags=0x8 code=0x0',
+      'binderLibTest-10619 (10619) [001] ...1 25191.337085:' +
+        ' binder_transaction_received: transaction=489061',
+      'atrace-10618 (10618) [000] ...1 25196.059954: tracing_mark_write:' +
+        ' trace_event_clock_sync: parent_ts=25196.050781'
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shfitWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 4);
+  });
+
+  test('binderRecursiveTest', function() {
+    const lines = [
+      'binderLibTest-10619 (10619) [001] ...1 25191.335749: ' +
+        'binder_transaction: transaction=489053 dest_node=489048 ' +
+        'dest_proc=10670 dest_thread=0 reply=0 flags=0x10 code=0xd',
+      'binderLibTest-10670 (10670) [000] ...1 25191.335996:' +
+        ' binder_transaction_received: transaction=489053',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336167:' +
+        ' binder_transaction: transaction=489056 dest_node=161277 ' +
+        'dest_proc=3454 dest_thread=0 reply=0 flags=0x10 code=0x2',
+      '/system/bin/servicemanager-3454  ( 3454) [000] ...1 25191.336199:' +
+        ' binder_transaction_received: transaction=489056',
+      '/system/bin/servicemanager-3454  ( 3454) [000] ...1 25191.336302:' +
+        ' binder_transaction: transaction=489057 dest_node=0 dest_proc=10670' +
+        ' dest_thread=10670 reply=1 flags=0x0 code=0x0',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336334:' +
+        ' binder_transaction_received: transaction=489057',
+      'binderLibTest-10670 (10670) [000] ...1 25191.336655:' +
+        ' binder_transaction: transaction=489059 dest_node=488755' +
+        ' dest_proc=10622 dest_thread=0 reply=0 flags=0x10 code=0x1',
+      'Binder_4-10645 (10622) [001] ...1 25191.336693:' +
+        ' binder_transaction_received: transaction=489059',
+      'Binder_4-10645 (10622) [001] ...1 25191.336754: binder_transaction:' +
+        ' transaction=489060 dest_node=0 dest_proc=10670 dest_thread=10670' +
+        ' reply=1 flags=0x0 code=0x0',
+      'binderLibTest-10670 (10670) [000] ...1 25191.337003:' +
+        ' binder_transaction_received: transaction=489060',
+      'binderLibTest-10670 (10670) [000] ...1 25191.337052:' +
+        ' binder_transaction: transaction=489061 dest_node=0 dest_proc=10619' +
+        ' dest_thread=10619 reply=1 flags=0x8 code=0x0',
+      'binderLibTest-10619 (10619) [001] ...1 25191.337085:' +
+        ' binder_transaction_received: transaction=489061',
+      'atrace-10618 (10618) [000] ...1 25196.059954: tracing_mark_write:' +
+        ' trace_event_clock_sync: parent_ts=25196.050781'
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shfitWorldToZero: false
+    });
+    const threads = m.getAllThreads();
+
+    let thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 3454);
+    assert.strictEqual(thread.tid, 3454);
+    assert.strictEqual(thread.name, '/system/bin/servicemanager');
+    /* one main slice and one 'internal slice' for the end flow event' */
+    assert.strictEqual(thread.sliceGroup.length, 2);
+
+    /* check flow events for service manager */
+    let mainSlice = thread.sliceGroup.slices[0];
+    assert.strictEqual(mainSlice.inFlowEvents.length, 1);
+    assert.strictEqual(mainSlice.outFlowEvents.length, 1);
+    let internalSlice = thread.sliceGroup.slices[1];
+    assert.strictEqual(internalSlice.outFlowEvents.length, 1);
+
+    /* check name of slice */
+    assert.strictEqual(mainSlice.title, 'binder reply');
+    assert.strictEqual(mainSlice.args['Destination Process'], 10670);
+    assert.strictEqual(mainSlice.args['Destination Thread'], 10670);
+    assert.strictEqual(mainSlice.args['Reply transaction?'], true);
+    assert.strictEqual(mainSlice.args['Calling PID'], 3454);
+    assert.strictEqual(mainSlice.args['Calling tgid'], 3454);
+
+    /* check binderLibTest */
+    thread = threads[1];
+    assert.strictEqual(thread.parent.pid, 10619);
+    assert.strictEqual(thread.tid, 10619);
+    assert.strictEqual(thread.name, 'binderLibTest');
+
+    assert.strictEqual(2, thread.sliceGroup.length);
+
+    mainSlice = thread.sliceGroup.slices[0];
+    assert.strictEqual(mainSlice.inFlowEvents.length, 1);
+    assert.strictEqual(mainSlice.outFlowEvents.length, 1);
+    internalSlice = thread.sliceGroup.slices[1];
+    assert.strictEqual(internalSlice.inFlowEvents.length, 1);
+
+    assert.strictEqual(mainSlice.title, 'binder transaction');
+    assert.strictEqual(mainSlice.args['Destination Process'], 10670);
+    assert.strictEqual(mainSlice.args['Reply transaction?'], false);
+    assert.strictEqual(mainSlice.args['Calling PID'], 10619);
+    assert.strictEqual(mainSlice.args['Calling tgid'], 10619);
+
+    /* check Binder_4 */
+    thread = threads[2];
+    assert.strictEqual(thread.parent.pid, 10622);
+    assert.strictEqual(thread.tid, 10645);
+    assert.strictEqual(thread.name, 'Binder_4');
+    assert.strictEqual(2, thread.sliceGroup.length);
+
+    mainSlice = thread.sliceGroup.slices[0];
+    assert.strictEqual(mainSlice.inFlowEvents.length, 1);
+    assert.strictEqual(mainSlice.outFlowEvents.length, 1);
+    internalSlice = thread.sliceGroup.slices[1];
+    assert.strictEqual(internalSlice.outFlowEvents.length, 1);
+
+    assert.strictEqual(mainSlice.title, 'binder reply');
+    assert.strictEqual(mainSlice.args['Destination Process'], 10670);
+    assert.strictEqual(mainSlice.args['Destination Thread'], 10670);
+    assert.strictEqual(mainSlice.args['Reply transaction?'], true);
+    assert.strictEqual(mainSlice.args['Calling PID'], 10645);
+    assert.strictEqual(mainSlice.args['Calling tgid'], 10622);
+
+    /* check last binderLibTest with recursive slices */
+    thread = threads[3];
+    assert.strictEqual(thread.parent.pid, 10670);
+    assert.strictEqual(thread.tid, 10670);
+    assert.strictEqual(thread.name, 'binderLibTest');
+    assert.strictEqual(6, thread.sliceGroup.length);
+
+    mainSlice = thread.sliceGroup.slices[0];
+    assert.strictEqual(mainSlice.inFlowEvents.length, 1);
+    assert.strictEqual(mainSlice.outFlowEvents.length, 1);
+    internalSlice = thread.sliceGroup.slices[5];
+    assert.strictEqual(internalSlice.outFlowEvents.length, 1);
+
+    assert.strictEqual(mainSlice.title, 'binder reply');
+    assert.strictEqual(mainSlice.args['Destination Process'], 10619);
+    assert.strictEqual(mainSlice.args['Destination Thread'], 10619);
+    assert.strictEqual(mainSlice.args['Reply transaction?'], true);
+    assert.strictEqual(mainSlice.args['Calling PID'], 10670);
+    assert.strictEqual(mainSlice.args['Calling tgid'], 10670);
+
+    let recursive = thread.sliceGroup.slices[1];
+    let recursiveInternal = thread.sliceGroup.slices[2];
+    assert.strictEqual(recursive.inFlowEvents.length, 1);
+    assert.strictEqual(recursive.outFlowEvents.length, 1);
+    assert.strictEqual(recursiveInternal.inFlowEvents.length, 1);
+
+    assert.strictEqual(recursive.title, 'binder transaction');
+    assert.strictEqual(recursive.args['Destination Process'], 3454);
+    assert.strictEqual(recursive.args['Reply transaction?'], false);
+    assert.strictEqual(recursive.args['Calling PID'], 10670);
+    assert.strictEqual(recursive.args['Calling tgid'], 10670);
+
+    /* check second recursive slice and internal */
+
+    recursive = thread.sliceGroup.slices[3];
+    recursiveInternal = thread.sliceGroup.slices[4];
+    assert.strictEqual(recursive.inFlowEvents.length, 1);
+    assert.strictEqual(recursive.outFlowEvents.length, 1);
+    assert.strictEqual(recursiveInternal.inFlowEvents.length, 1);
+
+    assert.strictEqual(recursive.title, 'binder transaction');
+    assert.strictEqual(recursive.args['Destination Process'], 10622);
+    assert.strictEqual(recursive.args['Reply transaction?'], false);
+    assert.strictEqual(recursive.args['Calling PID'], 10670);
+    assert.strictEqual(recursive.args['Calling tgid'], 10670);
+  });
+
+  test('binderSimpleAsync', function() {
+    const lines = [
+      '/system/bin/surfaceflinger-3462  ( 3462) [000] ...1 108286.109437:' +
+        ' binder_transaction: transaction=923419 dest_node=175950' +
+        ' dest_proc=4044 dest_thread=0 reply=0 flags=0x11 code=0x1',
+      'Binder_5-12869 ( 4044) [000] ...1 108286.109835:' +
+        ' binder_transaction_received: transaction=923419'
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shfitWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads(0);
+    assert.strictEqual(threads.length, 2);
+
+    let thread = threads[0];
+    assert.strictEqual(thread.tid, 3462);
+    assert.strictEqual(thread.name, '/system/bin/surfaceflinger');
+    assert.strictEqual(thread.sliceGroup.length, 1);
+
+    let slice = thread.sliceGroup.slices[0];
+    assert.strictEqual(slice.outFlowEvents.length, 1);
+    assert.strictEqual(slice.inFlowEvents.length, 0);
+    assert.strictEqual(slice.title, 'binder transaction async');
+
+    thread = threads[1];
+    assert.strictEqual(thread.tid, 12869);
+    assert.strictEqual(thread.name, 'Binder_5');
+    assert.strictEqual(thread.sliceGroup.length, 1);
+
+    slice = thread.sliceGroup.slices[0];
+    assert.strictEqual(slice.inFlowEvents.length, 1);
+    assert.strictEqual(slice.outFlowEvents.length, 0);
+    assert.strictEqual(slice.title, 'binder Async recv');
+  });
+
+  test('binderAllocBuf', function() {
+    const lines = [
+      'binderLibTest-10619 (10619) [001] ...1 25191.335749: ' +
+        'binder_transaction: transaction=489053 dest_node=489048 ' +
+        'dest_proc=10670 dest_thread=0 reply=0 flags=0x10 code=0xd',
+      'binderLibTest-10619 (10619) [001] ...1 25191.335750: ' +
+        'binder_transaction_alloc_buf: transaction=489053 ' +
+        'data_size=1001 offsets_size=1002',
+      'binderLibTest-10670 (10620) [000] ...1 25191.335751: ' +
+        'binder_transaction_received: transaction=489053',
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shfitWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+    const threads = m.getAllThreads(0);
+    assert.strictEqual(threads.length, 1);
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.length, 1);
+    const slice = thread.sliceGroup.slices[0];
+    assert.strictEqual(slice.args['Data Size'], 1001);
+    assert.strictEqual(slice.args['Offsets Size'], 1002);
+  });
+});
+
+</script>

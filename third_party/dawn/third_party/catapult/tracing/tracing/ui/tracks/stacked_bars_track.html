@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays traces as stacked bars.
+   * @constructor
+   * @extends {Track}
+   */
+  const StackedBarsTrack = tr.ui.b.define(
+      'stacked-bars-track', tr.ui.tracks.Track);
+
+  StackedBarsTrack.prototype = {
+
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('stacked-bars-track');
+      this.objectInstance_ = null;
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    set heading(heading) {
+      this.heading_.heading = heading;
+    },
+
+    get heading() {
+      return this.heading_.heading;
+    },
+
+    set tooltip(tooltip) {
+      this.heading_.tooltip = tooltip;
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      const objectSnapshots = this.objectInstance_.snapshots;
+      objectSnapshots.forEach(function(obj) {
+        eventToTrackMap.addEvent(obj, this);
+      }, this);
+    },
+
+    /**
+     * Used to hit-test clicks in the graph.
+     */
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      function onSnapshot(snapshot) {
+        selection.push(snapshot);
+      }
+
+      const snapshots = this.objectInstance_.snapshots;
+      const maxBounds = this.objectInstance_.parent.model.bounds.max;
+
+      tr.b.iterateOverIntersectingIntervals(
+          snapshots,
+          function(x) { return x.ts; },
+          function(x, i) {
+            if (i === snapshots.length - 1) {
+              if (snapshots.length === 1) {
+                return maxBounds;
+              }
+
+              return snapshots[i].ts - snapshots[i - 1].ts;
+            }
+
+            return snapshots[i + 1].ts - snapshots[i].ts;
+          },
+          loWX, hiWX,
+          onSnapshot);
+    },
+
+    /**
+     * Add the item to the left or right of the provided item, if any, to the
+     * selection.
+     * @param {slice} The current slice.
+     * @param {Number} offset Number of slices away from the object to look.
+     * @param {Selection} selection The selection to add an event to,
+     * if found.
+     * @return {boolean} Whether an event was found.
+     * @private
+     */
+    addEventNearToProvidedEventToSelection(event, offset, selection) {
+      if (!(event instanceof tr.model.ObjectSnapshot)) {
+        throw new Error('Unrecognized event');
+      }
+      const objectSnapshots = this.objectInstance_.snapshots;
+      const index = objectSnapshots.indexOf(event);
+      const newIndex = index + offset;
+      if (newIndex >= 0 && newIndex < objectSnapshots.length) {
+        selection.push(objectSnapshots[newIndex]);
+        return true;
+      }
+      return false;
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      const snapshot = tr.b.findClosestElementInSortedArray(
+          this.objectInstance_.snapshots,
+          function(x) { return x.ts; },
+          worldX,
+          worldMaxDist);
+
+      if (!snapshot) return;
+
+      selection.push(snapshot);
+    }
+  };
+
+  return {
+    StackedBarsTrack,
+  };
+});
+</script>

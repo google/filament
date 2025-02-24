@@ -1,0 +1,64 @@
+<dom-module id="modules-view">
+  <template>    
+    <div id=modules-view-tab-content class=content-box>
+      <h4 style='margin-top:0'>Chrome Extensions</h4>
+      <div id="modules-view-extension-info">
+        <div id=modules-view-extension-info-unavailable>No information</div>
+        <div id=modules-view-extension-info-no-content>None</div>
+        <div id=modules-view-extension-info-content>
+          <table class=styled-table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>App</th>
+                <th>Enabled</th>
+                <th>Name</th>
+                <th>Version</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id=modules-view-extension-info-tbody class=modules-view-extension-list>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    
+      <!-- Only shown for Windows log dumps -->
+      <div id=modules-view-windows-service-providers>
+        <h4>Layered Service Providers</h4>
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Type</th>
+              <th>Socket Type</th>
+              <th>Protocol</th>
+              <th>Path</th>
+            </tr>
+          </thead>
+          <tbody id=modules-view-service-providers-tbody>
+          </tbody>
+        </table>
+        <h4>Namespace Providers</h4>
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Namespace</th>
+              <th>Active</th>
+            </tr>
+          </thead>
+          <tbody id=modules-view-namespace-providers-tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+  <script>
+    Polymer({
+      is: 'modules-view',
+    });
+  </script>
+</dom-module>

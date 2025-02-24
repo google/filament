@@ -1,0 +1,25 @@
+boto v2.46.0
+============
+
+:date: 2017/02/20
+
+This release migrates boto2 to the new endpoint format which is also used by
+boto3. The major advantage this provides is the ability to connect to regions
+that aren't hard-coded in our built in endpoints file without having to go and
+find out what the hostname for that service/region is yourself. No more
+waiting for updates just to get region support!
+
+Since this feature could potentially break assumptions, it is disabled by
+default. You can enable it by using either the ``use_endpoint_heuristics``
+config variable or the ``BOTO_USE_ENDPOINT_HEURISTICS`` environment variable.
+
+Even though we are changing the underlying format of our built in endpoints,
+the endpoints provided by ``endpoints_path`` or ``BOTO_ENDPOINTS`` will
+continue to use the legacy format, so you will not need to update your custom
+endpoints as part of this update.
+
+Changes
+-------
+* Endpoints v2 (:issue:`3675`, :sha:`d7253d8`)
+
+

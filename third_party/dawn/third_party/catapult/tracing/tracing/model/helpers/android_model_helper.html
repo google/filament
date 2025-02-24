@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/model/helpers/android_app.html">
+<link rel="import" href="/tracing/model/helpers/android_surface_flinger.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Class for managing android-specific model meta data,
+ * such as rendering apps, frames rendered, and SurfaceFlinger.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  const AndroidApp = tr.model.helpers.AndroidApp;
+  const AndroidSurfaceFlinger = tr.model.helpers.AndroidSurfaceFlinger;
+
+  const IMPORTANT_SURFACE_FLINGER_SLICES = {
+    'doComposition': true,
+    'updateTexImage': true,
+    'postFramebuffer': true
+  };
+  const IMPORTANT_UI_THREAD_SLICES = {
+    'Choreographer#doFrame': true,
+    'performTraversals': true,
+    'deliverInputEvent': true
+  };
+  const IMPORTANT_RENDER_THREAD_SLICES = {
+    'doFrame': true
+  };
+
+  function iterateImportantThreadSlices(thread, important, callback) {
+    if (!thread) return;
+
+    thread.sliceGroup.slices.forEach(function(slice) {
+      if (slice.title in important) {
+        callback(slice);
+      }
+    });
+  }
+
+  /**
+   * Model for Android-specific data.
+   * @constructor
+   */
+  function AndroidModelHelper(model) {
+    this.model = model;
+    this.apps = [];
+    this.surfaceFlinger = undefined;
+
+    const processes = model.getAllProcesses();
+    for (let i = 0; i < processes.length && !this.surfaceFlinger; i++) {
+      this.surfaceFlinger =
+          AndroidSurfaceFlinger.createForProcessIfPossible(processes[i]);
+    }
+
+    model.getAllProcesses().forEach(function(process) {
+      const app = AndroidApp.createForProcessIfPossible(
+          process, this.surfaceFlinger);
+      if (app) {
+        this.apps.push(app);
+      }
+    }, this);
+  }
+
+  AndroidModelHelper.guid = tr.b.GUID.allocateSimple();
+
+  AndroidModelHelper.supportsModel = function(model) {
+    return true;
+  };
+
+  AndroidModelHelper.prototype = {
+    iterateImportantSlices(callback) {
+      if (this.surfaceFlinger) {
+        iterateImportantThreadSlices(
+            this.surfaceFlinger.thread,
+            IMPORTANT_SURFACE_FLINGER_SLICES,
+            callback);
+      }
+
+      this.apps.forEach(function(app) {
+        iterateImportantThreadSlices(
+            app.uiThread,
+            IMPORTANT_UI_THREAD_SLICES,
+            callback);
+        iterateImportantThreadSlices(
+            app.renderThread,
+            IMPORTANT_RENDER_THREAD_SLICES,
+            callback);
+      });
+    }
+  };
+
+  return {
+    AndroidModelHelper,
+  };
+});
+</script>

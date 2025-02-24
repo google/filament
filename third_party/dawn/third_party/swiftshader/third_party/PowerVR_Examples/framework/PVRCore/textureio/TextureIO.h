@@ -1,0 +1,9 @@
+#pragma once
+#include "TextureReaderBMP.h"
+#include "TextureReaderDDS.h"
+#include "TextureReaderKTX.h"
+#include "TextureReaderPVR.h"
+#include "TextureReaderTGA.h"
+#include "TextureReaderXNB.h"
+#include "TextureWriterPVR.h"
+#include "TGAWriter.h"

@@ -1,0 +1,180 @@
+Name
+
+    ANGLE_robust_client_memory
+
+Name Strings
+
+    GL_ANGLE_robust_client_memory
+
+Contributors
+
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 4, March 30, 2017
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+    This extension is written against the wording of the OpenGL ES
+    3.2 specification.
+
+    Interacts with GL_KHR_debug, GL_EXT_disjoint_timer_queries,
+    GL_KHR_robustness.
+
+Overview
+
+    This extension adds overloads of many OpenGL ES functions that read from
+    and write to client memory to ensure that all reads and writes done by the
+    OpenGL ES implementation are safe.  When the OpenGL ES API is exposed to
+    users through complex bindings such as WebGL, allowing undefined behaviour
+    that may result in crashing the implementation is not acceptable.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    void GetBooleanvRobustANGLE(enum pname, sizei bufSize, sizei *length, boolean *data)
+    void GetBufferParameterivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetFloatvRobustANGLE(enum pname, sizei bufSize, sizei *length, float *data)
+    void GetFramebufferAttachmentParameterivRobustANGLE(enum target, enum attachment, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetIntegervRobustANGLE(enum pname, sizei bufSize, sizei *length, int *data)
+    void GetProgramivRobustANGLE(uint program, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetRenderbufferParameterivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetShaderivRobustANGLE(uint shader, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetTexParameterfvRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, float *params)
+    void GetTexParameterivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetUniformfvRobustANGLE(uint program, int location, sizei bufSize, sizei *length, float *params)
+    void GetUniformivRobustANGLE(uint program, int location, sizei bufSize, sizei *length, int *params)
+    void GetVertexAttribfvRobustANGLE(uint index, enum pname, sizei bufSize, sizei *length, float *params)
+    void GetVertexAttribivRobustANGLE(uint index, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetVertexAttribPointervRobustANGLE(uint index, enum pname, sizei bufSize, sizei *length, void **pointer)
+    void ReadPixelsRobustANGLE(int x, int y, sizei width, sizei height, enum format, enum type, sizei bufSize, sizei *length, sizei *columns, sizei *rows, void *pixels)
+    void TexImage2DRobustANGLE(enum target, int level, int internalformat, sizei width, sizei height, int border, enum format, enum type, sizei bufSize, const void *pixels)
+    void TexParameterfvRobustANGLE(enum target, enum pname, sizei bufSize, const GLfloat *params)
+    void TexParameterivRobustANGLE(enum target, enum pname, sizei bufSize, const GLint *params)
+    void TexSubImage2DRobustANGLE(enum target, int level, int xoffset, int yoffset, sizei width, sizei height, enum format, enum type, sizei bufSize, const void *pixels)
+    void CompressedTexImage2D(enum target, int level, enum internalformat, sizei width, sizei height, int border, sizei imageSize, sizei bufSize, const void* data)
+    void CompressedTexSubImage2D(enum target, int level, int xoffset, int yoffset, sizei width, sizei height, enum format, sizei imageSize, sizei bufSize, const void* data)
+    void CompressedTexImage3D(enum target, int level, enum internalformat, sizei width, sizei height, sizei depth, int border, sizei imageSize, sizei bufSize, const void* data)
+    void CompressedTexSubImage3D(enum target, int level, int xoffset, int yoffset, int zoffset, sizei width, sizei height, sizei depth, enum format, sizei imageSize, sizei bufSize, const void* data)
+
+    void TexImage3DRobustANGLE(enum target, int level, int internalformat, sizei width, sizei height, sizei depth, int border, enum format, enum type, sizei bufSize, const void *pixels);
+    void TexSubImage3DRobustANGLE(enum target, int level, int xoffset, int yoffset, int zoffset, sizei width, sizei height, sizei depth, enum format, enum type, sizei bufSize, const void *pixels);
+    void GetQueryivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetQueryObjectuivRobustANGLE(uint id, enum pname, sizei bufSize, sizei *length, uint *params)
+    void GetBufferPointervRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, void **params)
+    void GetIntegeri_vRobustANGLE(enum target, uint index, sizei bufSize, sizei *length, int *data)
+    void GetInternalformativRobustANGLE(enum target, enum internalformat, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetVertexAttribIivRobustANGLE(uint index, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetVertexAttribIuivRobustANGLE(uint index, enum pname, sizei bufSize, sizei *length, uint *params)
+    void GetUniformuivRobustANGLE(uint program, int location, sizei bufSize, sizei *length, uint *params)
+    void GetActiveUniformBlockivRobustANGLE(uint program, uint uniformBlockIndex, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetInteger64vRobustANGLE(enum pname, sizei bufSize, sizei *length, int64 *data)
+    void GetInteger64i_vRobustANGLE(enum target, uint index, sizei bufSize, sizei *length, int64 *data)
+    void GetBufferParameteri64vRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int64 *params)
+    void SamplerParameterivRobustANGLE(uint sampler, enum pname, sizei bufSize, const GLint *param)
+    void SamplerParameterfvRobustANGLE(uint sampler, enum pname, sizei bufSize, const GLfloat *param)
+    void GetSamplerParameterivRobustANGLE(uint sampler, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetSamplerParameterfvRobustANGLE(uint sampler, enum pname, sizei bufSize, sizei *length, float *params)
+
+    void GetFramebufferParameterivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetProgramInterfaceivRobustANGLE(uint program, enum programInterface, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetBooleani_vRobustANGLE(enum target, uint index, sizei bufSize, sizei *length, boolean *data)
+    void GetMultisamplefvRobustANGLE(enum pname, uint index, sizei bufSize, sizei *length, float *val)
+    void GetTexLevelParameterivRobustANGLE(enum target, int level, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetTexLevelParameterfvRobustANGLE(enum target, int level, enum pname, sizei bufSize, sizei *length, float *params)
+
+    void GetPointervRobustANGLERobustANGLE(enum pname, sizei bufSize, sizei *length, void **params)
+    void ReadnPixelsRobustANGLE(int x, int y, sizei width, sizei height, enum format, enum type, sizei bufSize, sizei *length, sizei *columns, sizei *rows, void *data)
+    void GetnUniformfvRobustANGLE(uint program, int location, sizei bufSize, sizei *length, float *params)
+    void GetnUniformivRobustANGLE(uint program, int location, sizei bufSize, sizei *length, int *params)
+    void GetnUniformuivRobustANGLE(uint program, int location, sizei bufSize, sizei *length, uint *params)
+    void TexParameterIivRobustANGLE(enum target, enum pname, sizei bufSize, const GLint *params)
+    void TexParameterIuivRobustANGLE(enum target, enum pname, sizei bufSize, const GLuint *params)
+    void GetTexParameterIivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetTexParameterIuivRobustANGLE(enum target, enum pname, sizei bufSize, sizei *length, uint *params)
+    void SamplerParameterIivRobustANGLE(uint sampler, enum pname, sizei bufSize, const GLint *param)
+    void SamplerParameterIuivRobustANGLE(uint sampler, enum pname, sizei bufSize, const GLuint *param)
+    void GetSamplerParameterIivRobustANGLE(uint sampler, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetSamplerParameterIuivRobustANGLE(uint sampler, enum pname, sizei bufSize, sizei *length, uint *params)
+
+    void GetQueryObjectivRobustANGLE(uint id, enum pname, sizei bufSize, sizei *length, int *params)
+    void GetQueryObjecti64vRobustANGLE(uint id, enum pname, sizei bufSize, sizei *length, int64 *params)
+    void GetQueryObjectui64vRobustANGLE(uint id, enum pname, sizei bufSize, sizei *length, uint64 *params)
+
+New Tokens
+
+    None
+
+Additions to the OpenGL ES Specification:
+
+    The xRobustANGLE entry points perform additional validation using <bufSize>
+    to indicate the maximum number of values that can be read from or written
+    to the provided buffer.  INVALID_OPERATION is generated if <bufSize> is not
+    large enough.  The optional <length> specifies an address of a variable to
+    recieve the number of values written to the buffer.  When an error is
+    generated nothing will be written to <length>.
+
+    The <columns> and <rows> parameters of ReadPixelsRobustANGLE and
+    ReadnPixelsRobustANGLE specify addresses of variables to recieve the number
+    of columns and rows of pixels written to the buffer which may be less than
+    the <width> and <height> parameters if they would have read outside of the
+    framebuffer.
+
+    Calls to "xRobustANGLE" will generate errors under the same conditions as
+    "x". Any instances of undefined behaviour in "x" will also be undefined in
+    "xRobustANGLE".  For example, it is invalid to call
+    GetPointervRobustANGLERobustANGLE without first verifying that the context
+    is at least OpenGL ES version 3.2 or the GL_KHR_debug extension is present.
+
+Issues
+
+    1) Should additional entry points be added to specify sizes of client side
+       data provided to the VertexAttribPointer functions?
+
+    2) Should <length> be allowed to be null?
+
+       RESOLVED: Yes, <length> will not be written to when it is a null
+       pointer.
+
+    3) Should <bufSize> be specified in bytes or values (uint, int, float,
+       etc)?
+
+       There is no consistancy in current entry points for this.  For example,
+       glGetnUniformuiv indicates that bufSize is in bytes while GetSynciv
+       uses values despite GetnUniformuiv having a clear value type.
+
+       RESOLOVED: <bufSize> always indicates size in values. Functions that
+       specify data by void* such as TexImage2DRobustANGLE treat the client
+       data as bytes.
+
+    4) Should <length> be written to if an error is generated?
+
+       RESOLVED: No, using the prescedent set by glGetSynciv.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  -------------------------------------------
+      1   Sept 26, 2016  geofflang  Initial version
+      2   Sept 28, 2016  geofflang  Changed name from ANGLE_robust_queries to
+                                    ANGLE_robust_client_memory, added issue 3.
+      3   Oct 7, 2016    geofflang  Added and resolved issue 4.
+      4   Mar 30, 2017   geofflang  Added columns and rows to ReadPixels.

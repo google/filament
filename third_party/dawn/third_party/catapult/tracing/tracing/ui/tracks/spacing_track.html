@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/spacing_track.css">
+
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track used to provide whitespace between the tracks above and below it.
+   *
+   * @constructor
+   * @extends {tr.ui.tracks.Track}
+   */
+  const SpacingTrack = tr.ui.b.define('spacing-track', tr.ui.tracks.Track);
+
+  SpacingTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('spacing-track');
+
+      this.heading_ = document.createElement('tr-ui-b-heading');
+      Polymer.dom(this).appendChild(this.heading_);
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+    }
+  };
+
+  return {
+    SpacingTrack,
+  };
+});
+</script>
+

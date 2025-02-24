@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/single_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const EventSet = tr.model.EventSet;
+  const newSampleNamed = tr.c.TestUtils.newSampleNamed;
+
+  test('instantiate_withSingleSample', function() {
+    let t53;
+    const model = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(model) {
+        t53 = model.getOrCreateProcess(52).getOrCreateThread(53);
+        model.samples.push(newSampleNamed(t53, 'X', 'my-category',
+            ['a', 'b', 'c'], 0.184));
+      }
+    });
+
+    const t53track = {};
+    t53track.thread = t53;
+
+    const selection = new EventSet();
+
+    assert.strictEqual(selection.length, 0);
+    selection.push(t53.samples[0]);
+    assert.strictEqual(selection.length, 1);
+
+    const view = document.createElement('tr-ui-a-single-sample-sub-view');
+    view.selection = selection;
+    this.addHTMLOutput(view);
+
+    const table = tr.ui.b.findDeepElementMatching(
+        view, 'tr-ui-b-table');
+
+    const rows = table.tableRows;
+    assert.strictEqual(rows.length, 3);
+    assert.strictEqual(rows[0].value, 'X');
+    assert.strictEqual(rows[1].value.value, 0.184);
+    assert.strictEqual(rows[1].value.unit, tr.b.Unit.byName.timeStampInMs);
+
+    const callStackRows = rows[2].value.tableRows;
+    assert.lengthOf(callStackRows, 3);
+    assert.deepEqual(callStackRows.map(x => x.title), ['a', 'b', 'c']);
+  });
+});
+</script>

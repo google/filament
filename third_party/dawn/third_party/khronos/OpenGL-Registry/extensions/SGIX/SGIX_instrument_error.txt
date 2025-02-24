@@ -1,0 +1,121 @@
+XXX - incomplete (needs number, errors, glx protocol, enumerant values, state)
+
+Name
+
+    SGIX_instrument_error
+
+Name Strings
+
+    GL_SGIX_instrument_error
+
+Version
+
+    $Date: 1998/10/20 23:55:52 $  $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGIX_instruments is required
+
+Overview
+
+    This extension provides a mechanism by which implementations can
+    return errors resulting from instrument reads.
+
+Issues
+
+    *   We require that a failed instrument would have returned a
+        packet of at least length four.  Is this acceptable?
+
+        A: Four would give us an instrument name, a length field, a
+           single integer payload, and a marker.  This seems
+           reasonable -- anything shorter would be pretty useless.
+
+    *   Is it reasonable to require the failure packet that is
+        returned be the same length as the packet that would have been
+        returned by a successful read, or should we just say that it
+        may have padding and won't be longer?
+
+    *   Returning failure due to a context switch seems to break
+        GL's invariance requirement.  
+
+        A: This is unfortunate but we can't think of any way to make
+           some instruments work across context switches.  We either
+           return the error in GL or we silently fail or we have some
+           non-GL way to indicate failure.  Using GL seems the most
+           useful.  
+
+    *   If an instrument defined in another extension may return
+        failure, do we have to mention that in the new extension?  Or
+        can failure just be returned in place of any instrument packet
+        at any time?
+
+New Tokens
+
+    Returned as the instrument name in an instrument buffer:
+
+	INSTRUMENT_FAILED_SGIX			XXXX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Add to the end of section 5.X entitled Instruments:
+
+    If GL detects that an issued instrument read cannot return a
+    correct value, GL will return a failure packet in place of the
+    instrument packet.  The failure packet is intended to be used in
+    cases where there was no error on the part of the application but
+    GL could not satisfy the request for some reason.
+
+    A failure packet contains the following information (starting and
+    the first int):
+
+        INSTRUMENT_FAILED_SGIX
+        length in words of the packet
+        enumerant name of failed instrument
+        optional pad word 0
+        optional pad word 1
+            .
+            .
+            .
+        optional pad word n
+        marker value for read
+
+    The pad words are inserted such that the packet is the same length
+    as the instrument packet that a successful read would have
+    generated.  If the packet length for the given instrument is not a
+    constant, the failure packet cannot be longer than the maximum
+    length of a successful read.  The last int of the packet contains
+    the user-specified marker value.  This mechanism requires that the
+    maximum original length of the packet was not less than 4.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None

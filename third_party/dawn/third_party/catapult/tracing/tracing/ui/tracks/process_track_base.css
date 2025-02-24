@@ -1,0 +1,43 @@
+/* Copyright (c) 2013 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+.process-track-header {
+  display: flex;
+  flex: 0 0 auto;
+  background-image: -webkit-gradient(linear,
+                                     0 0, 100% 0,
+                                     from(#E5E5E5),
+                                     to(#D1D1D1));
+  border-bottom: 1px solid #8e8e8e;
+  border-top: 1px solid white;
+  font-size: 75%;
+  /* keep process header visible while scrolled within that process */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.process-track-name {
+  flex-grow: 1;
+}
+
+.process-track-name:before {
+  content: '\25B8'; /* Right triangle */
+  padding: 0 5px;
+}
+
+.process-track-base.expanded .process-track-name:before {
+  content: '\25BE'; /* Down triangle */
+}
+
+.process-track-close {
+  color: black;
+  border: 1px solid transparent;
+  padding: 0px 2px;
+}
+
+.process-track-close:hover {
+  border: 1px solid grey;
+}

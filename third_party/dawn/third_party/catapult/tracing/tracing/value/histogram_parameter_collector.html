@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/value/histogram_grouping.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v', function() {
+  const getDisplayLabel =
+    tr.v.HistogramGrouping.DISPLAY_LABEL.callback;
+
+  const DEFAULT_POSSIBLE_GROUPS = [];
+
+  const EXCLUDED_GROUPING_KEYS = [
+    tr.v.HistogramGrouping.DISPLAY_LABEL.key,
+  ];
+  // HISTOGRAM_NAME is overridden.
+  // DISPLAY_LABEL is used to define the columns, so don't allow grouping rows
+  // by it.
+  for (const group of tr.v.HistogramGrouping.BY_KEY.values()) {
+    if (EXCLUDED_GROUPING_KEYS.includes(group.key)) continue;
+    DEFAULT_POSSIBLE_GROUPS.push(group);
+  }
+
+  // This Processor collects various parameters from a set of Histograms such as
+  // their statistics, displayLabels, and grouping keys in a single pass.
+  class HistogramParameterCollector {
+    constructor() {
+      this.statisticNames_ = new Set(['avg']);
+
+      this.labelsToStartTimes_ = new Map();
+
+      // @typedef {!Map.<string,!tr.v.HistogramGrouping>}
+      this.keysToGroupings_ = new Map(DEFAULT_POSSIBLE_GROUPS.map(
+          g => [g.key, g]));
+
+      // Map from HistogramGrouping keys to Sets of return values from the
+      // HistogramGroupings' callbacks.
+      this.keysToValues_ = new Map(DEFAULT_POSSIBLE_GROUPS.map(
+          g => [g.key, new Set()]));
+
+      // Never remove 'name' from keysToGroupings.
+      this.keysToValues_.delete(
+          tr.v.HistogramGrouping.HISTOGRAM_NAME.key);
+    }
+
+    process(histograms) {
+      const allStoryTags = new Set();
+      let maxSampleCount = 0;
+      for (const hist of histograms) {
+        maxSampleCount = Math.max(maxSampleCount, hist.numValues);
+
+        for (const statName of hist.statisticsNames) {
+          this.statisticNames_.add(statName);
+        }
+
+        let startTime = hist.diagnostics.get(
+            tr.v.d.RESERVED_NAMES.BENCHMARK_START);
+        if (startTime !== undefined) startTime = startTime.minDate.getTime();
+
+        const displayLabel = getDisplayLabel(hist);
+
+        if (this.labelsToStartTimes_.has(displayLabel)) {
+          startTime = Math.min(startTime,
+              this.labelsToStartTimes_.get(displayLabel));
+        }
+        this.labelsToStartTimes_.set(displayLabel, startTime);
+
+        for (const [groupingKey, values] of this.keysToValues_) {
+          const grouping = this.keysToGroupings_.get(groupingKey);
+          const value = grouping.callback(hist);
+          if (!value) continue;
+          values.add(value);
+          if (values.size > 1) {
+            // This grouping will definitely stay in keysToGroupings_. We don't
+            // need to see any more values in the rest of histograms. Remove
+            // this groupingKey from this.keysToValues_ so that we don't compute
+            // it for any more histograms and so that we don't delete it from
+            // keysToGroupings_.
+            this.keysToValues_.delete(groupingKey);
+          }
+        }
+
+        const storyTags = hist.diagnostics.get(
+            tr.v.d.RESERVED_NAMES.STORY_TAGS);
+        for (const tag of (storyTags || [])) {
+          allStoryTags.add(tag);
+        }
+      }
+      tr.b.Timing.instant(
+          'HistogramParameterCollector', 'maxSampleCount', maxSampleCount);
+
+      for (const tagGrouping of tr.v.HistogramGrouping.buildFromTags(
+          allStoryTags, tr.v.d.RESERVED_NAMES.STORY_TAGS)) {
+        const values = new Set();
+        for (const hist of histograms) {
+          values.add(tagGrouping.callback(hist));
+        }
+        if (values.size > 1) {
+          this.keysToGroupings_.set(tagGrouping.key, tagGrouping);
+          this.keysToValues_.set(tagGrouping.key, values);
+        }
+      }
+
+      this.statisticNames_.add('pct_090');
+    }
+
+    get statisticNames() {
+      return Array.from(this.statisticNames_);
+    }
+
+    get labels() {
+      const displayLabels = Array.from(this.labelsToStartTimes_.keys());
+      displayLabels.sort((x, y) =>
+        this.labelsToStartTimes_.get(x) - this.labelsToStartTimes_.get(y));
+      return displayLabels;
+    }
+
+    get possibleGroupings() {
+      for (const [key, values] of this.keysToValues_) {
+        if (values.size >= 2) continue;
+        // Remove this grouping from keysToGroupings_ if there is fewer than
+        // 2 possible values.
+        this.keysToGroupings_.delete(key);
+      }
+
+      return Array.from(this.keysToGroupings_.values());
+    }
+  }
+
+  return {
+    HistogramParameterCollector,
+  };
+});
+</script>

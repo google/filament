@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('i915Import', function() {
+    const lines = [
+      // NB: spliced from different traces; mismatched timestamps don't matter
+      '          chrome-1223  [000]  2784.773556: i915_gem_object_pwrite: ' +
+                 'obj=ffff88013f13fc00, offset=0, len=2984',
+      '          chrome-1539  [000] 18420.677750: ' +
+                 'i915_gem_object_change_domain: ' +
+                 'obj=ffff8800a88d1400, read=44=>40, write=00=>40',
+      '          chrome-1539  [000] 18420.677759: i915_gem_object_fault: ' +
+                 'obj=ffff8800a88d1400, GTT index=0 , writable',
+      '               X-964   [000]  2784.774864: i915_flip_request: ' +
+                 'plane=0, obj=ffff88013f0b9a00',
+      '          <idle>-0     [000]  2784.788644: i915_flip_complete: ' +
+                 'plane=0, obj=ffff88013f0b9a00',
+      '          chrome-1539  [001] 18420.681687: i915_gem_request_retire: ' +
+                 'dev=0, ring=1, seqno=1178152',
+      '          chrome-1539  [000] 18422.955688: i915_gem_request_add: ' +
+                 'dev=0, ring=1, seqno=1178364',
+      '             cat-21833 [000] 18422.956832: i915_gem_request_complete: ' +
+                 'dev=0, ring=1, seqno=1178364',
+      '             X-1012  [001] 18420.682511: i915_gem_request_wait_begin: ' +
+                 'dev=0, ring=4, seqno=1178156',
+      '               X-1012  [000] 18422.765707: i915_gem_request_wait_end: ' +
+                 'dev=0, ring=4, seqno=1178359',
+      '          chrome-1539  [000] 18422.955655: i915_gem_ring_flush: ' +
+                 'dev=0, ring=1, invalidate=001e, flush=0040',
+      '          chrome-1539  [000] 18422.955660: i915_gem_ring_dispatch: ' +
+                 'dev=0, ring=1, seqno=1178364',
+      '          chrome-1539  [000] 18420.677772: i915_reg_rw: ' +
+              'write reg=0x100030, len=8, val=(0xfca9001, 0xfce8007)',
+      '          kworker/u16:2-13998 [005] 1577664.436065: ' +
+              'intel_gpu_freq_change: new_freq=350'
+
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    let i915GemThread = undefined;
+    let i915FlipThread = undefined;
+    let i915GemRingThread = undefined;
+    let i915RegThread = undefined;
+    let i915GpuFreqThread = undefined;
+    m.getAllThreads().forEach(function(t) {
+      switch (t.name) {
+        case 'i915_gem':
+          i915GemThread = t;
+          break;
+        case 'i915_flip':
+          i915FlipThread = t;
+          break;
+        case 'i915_gem_ring':
+          i915GemRingThread = t;
+          break;
+        case 'i915_reg':
+          i915RegThread = t;
+          break;
+        case 'i915_gpu_freq':
+          i915GpuFreqThread = t;
+          break;
+        default:
+          assert.fail(t, undefined, 'Unexpected thread named ' + t.name);
+      }
+    });
+    assert.isDefined(i915GemThread);
+    assert.isDefined(i915FlipThread);
+    assert.isDefined(i915GemRingThread);
+    assert.isDefined(i915RegThread);
+    assert.isDefined(i915GpuFreqThread);
+
+    assert.strictEqual(i915GemThread.sliceGroup.length, 3);
+
+    assert.strictEqual(i915FlipThread.sliceGroup.length, 1);
+
+    assert.closeTo(
+        2784.774864 * 1000.0,
+        i915FlipThread.sliceGroup.slices[0].start,
+        1e-5);
+    assert.closeTo(
+        (2784.788644 - 2784.774864) * 1000.0,
+        i915FlipThread.sliceGroup.slices[0].duration,
+        1e-5);
+
+    assert.strictEqual(i915GemRingThread.sliceGroup.length, 7);
+    assert.strictEqual(i915RegThread.sliceGroup.length, 1);
+    assert.strictEqual(i915GpuFreqThread.sliceGroup.length, 1);
+  });
+});
+</script>
+

@@ -1,0 +1,81 @@
+Name
+
+    ANGLE_explicit_context_gles1
+
+Name Strings
+
+    GL_ANGLE_explicit_context_gles1
+
+Contributors
+
+    Brandon Jones, Intel
+
+Contacts
+
+    Brandon Jones, Intel (brandon1.jones 'at' intel 'dot' com)
+
+Status
+
+    Complete.
+
+Version
+
+    Version 1, 2018-5-22
+
+Number
+
+    GL Extension XXX
+
+Dependencies
+
+    OpenGL ES 1.0 is required.
+
+    EGL_ANGLE_explicit_context is required.
+
+Overview
+
+    This extension adds new OpenGL ES entry points that allow the user to pass the current EGL
+    context as a function parameter. This allows users to skip lookup of the thread's current
+    context upon entry.
+
+New Types
+
+    typedef void* GLeglContextANGLE
+
+New Procedures and Functions
+
+    For every OpenGL ES entry point available in OpenGL ES 1.0, an additional entry point is made
+    available. The entry points have the form of:
+
+    <return value> gl<entry point name>ContextANGLE(GLeglContextANGLE context, <entry point parameters>)
+
+    If a function already has an extension suffix, this form still applies.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL ES 1.0 Specification (OpenGL ES Operation)
+
+    The ContextANGLE entry points allow the user to pass the current EGL context as a function
+    parameter to provide better performance than looking up the current EGL context at every GL
+    entry point.
+
+    Calls made with an explicit context provide no additional validation for the passed context
+    parameter.
+
+    Calls made with an explicit context will generate errors under the same conditions as they
+    would without an explicit context. Any instances of undefined behaviour without specifying
+    an explicit context are still undefined when specifying an explicit context.
+
+    When an EGL context that is not current is explicitly passed, the resulting behavior is
+    undefined.
+
+Issues
+
+    None.
+
+Revision History
+
+    Version 1, 2018-5-22 (Brandon Jones)
+        - Initial draft

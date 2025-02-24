@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/ui/base/bar_chart.html">
+<link rel="import" href="/tracing/ui/base/d3.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const NameBarChart = tr.ui.b.define('name-bar-chart', tr.ui.b.BarChart);
+
+  const Y_AXIS_PADDING = 2;
+
+  NameBarChart.prototype = {
+    __proto__: tr.ui.b.BarChart.prototype,
+
+    getDataPointAtChartPoint_(chartPoint) {
+      return {
+        x: tr.ui.b.BarChart.prototype.getDataPointAtChartPoint_.call(
+            this, chartPoint).x,
+        y: parseInt(Math.floor(
+            (this.graphHeight - chartPoint.y) / this.barHeight))
+      };
+    },
+
+    getXForDatum_(datum, index) {
+      return index;
+    },
+
+    get yAxisWidth() {
+      if (this.data.length === 0) return 0;
+      return Y_AXIS_PADDING + tr.b.math.Statistics.max(
+          this.data_, d => tr.ui.b.getSVGTextSize(this, d.x).width);
+    },
+
+    get defaultGraphHeight() {
+      return (3 + this.textHeightPx_) * this.data.length;
+    },
+
+    updateYAxis_(yAxis) {
+      // Building the y-axis requires measuring text.
+      // If necessary, wait for this element to be displayed.
+      if (tr.ui.b.getSVGTextSize(this, 'test').width === 0) {
+        tr.b.requestAnimationFrame(() => this.updateYAxis_(yAxis));
+        return;
+      }
+
+      // When we can measure text, we're ready to build the y-axis.
+      yAxis.selectAll('*').remove();
+      if (this.hideYAxis) return;
+      const nameTexts = yAxis.selectAll('text').data(this.data_);
+      nameTexts
+          .enter()
+          .append('text')
+          .attr('x', d => -(
+            tr.ui.b.getSVGTextSize(this, d.x).width + Y_AXIS_PADDING))
+          .attr('y', (d, index) => this.verticalScale_(index))
+          .text(d => d.x);
+      nameTexts.exit().remove();
+
+      let previousTop = undefined;
+      for (const text of nameTexts[0]) {
+        const bbox = text.getBBox();
+        if ((previousTop === undefined) ||
+            (previousTop > (bbox.y + bbox.height))) {
+          previousTop = bbox.y;
+        } else {
+          text.style.opacity = 0;
+        }
+      }
+    }
+  };
+
+  return {
+    NameBarChart,
+  };
+});
+</script>

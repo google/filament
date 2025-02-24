@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2011 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+<title>Simple Embedded Viewer</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- WebComponents V0 origin trial token for localhost:8003. Expires 5 Nov 2020.
+     See https://crbug.com/1021137. -->
+<meta http-equiv="origin-trial" content="AmIXlLSm/iI9w4skkaEKFRo+EW9D0lDg4u4GZIp70Ggf4bHfY5U5Jwh2lv793zDl7SHbRMgrhPjAy6NcE6VDvwsAAABSeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDMiLCJmZWF0dXJlIjoiV2ViQ29tcG9uZW50c1YwIiwiZXhwaXJ5IjoxNjA0NjEzNzYwfQ==">
+<!-- WebComponents V0 origin trial token for 127.0.0.1:8003, which turns out to
+     be not the same as localhost. Expires 1 Feb 2021. -->
+<meta http-equiv="origin-trial" content="AuwWuUBIJgUHKi5rgEkqYaWR/Rbl/WrQPklxP3Lb9JBLQwdU4ykouPn0hTva5pHumlKNc1TqeZD1GEWo3YXTtQUAAABSeyJvcmlnaW4iOiJodHRwOi8vMTI3LjAuMC4xOjgwMDMiLCJmZWF0dXJlIjoiV2ViQ29tcG9uZW50c1YwIiwiZXhwaXJ5IjoxNjEyMjIzOTk5fQ==">
+<script src="/components/webcomponentsjs/webcomponents.js"></script>
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/importer/import.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">
+
+<style>
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    flex-direction: column;
+    display: flex;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > tr-ui-timeline-view {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  body > tr-ui-timeline-view:focus {
+    outline: none;
+  }
+</style>
+</head>
+<body>
+  <tr-ui-timeline-view>
+    <track-view-container id='track_view_container'></track-view-container>
+  </tr-ui-timeline-view>
+
+  <script>
+  'use strict';
+
+  let timelineViewEl;
+  let selectEl;
+
+  function loadTraces(filenames, onTracesLoaded) {
+    const loadTracesMark = tr.b.Timing.mark('TraceImport', 'loadTraces');
+    const traces = [];
+    for (let i = 0; i < filenames.length; i++) {
+      traces.push(undefined);
+    }
+    let numTracesPending = filenames.length;
+
+    filenames.forEach(function(filename, i) {
+      getAsync(filename, function(trace) {
+        traces[i] = trace;
+        numTracesPending--;
+        if (numTracesPending === 0) {
+          loadTracesMark.end();
+          onTracesLoaded(filenames, traces);
+        }
+      });
+    });
+  }
+
+
+  function getAsync(url, cb) {
+    return tr.b.getAsync(url).then(cb);
+  }
+
+  function createViewFromTraces(filenames, traces) {
+    const createViewFromTracesTimer = tr.b.Timing.mark(
+        'TraceImport', 'createViewFromTraces');
+    const m = new tr.Model();
+
+    const trackDetailedModelStatsEl = tr.ui.b.findDeepElementMatching(
+        document.body, '#track-detailed-model-stats');
+    const importOptions = new tr.importer.ImportOptions();
+    importOptions.trackDetailedModelStats = trackDetailedModelStatsEl.checked;
+    const i = new tr.importer.Import(m, importOptions);
+    const p = i.importTracesWithProgressDialog(traces);
+
+    p.then(
+        function() {
+          timelineViewEl.model = m;
+          timelineViewEl.updateDocumentFavicon();
+          timelineViewEl.globalMode = true;
+          timelineViewEl.viewTitle = '';
+          createViewFromTracesTimer.end();
+        },
+        function(err) {
+          const overlay = new tr.ui.b.Overlay();
+          overlay.textContent = tr.b.normalizeException(err).message;
+          overlay.title = 'Import error';
+          overlay.visible = true;
+          createViewFromTracesTimer.end();
+        });
+  }
+
+  function onSelectionChange() {
+    window.location.hash = '#' + selectEl.value;
+  }
+
+  function onHashChange() {
+    const file = window.location.hash.substr(1);
+    if (selectEl.children[selectEl.selectedIndex].value !== file) {
+      for (let i = 0; i < selectEl.children.length; i++) {
+        if (selectEl.children[i].value === file) {
+          selectEl.selectedIndex = i;
+          break;
+        }
+      }
+    }
+    reload();
+  }
+
+  function cleanFilename(file) {
+    const m = /\/tracing\/test_data\/(.+)/.exec(file);
+    const rest = m[1];
+
+    function upcase(letter) {
+      return ' ' + letter.toUpperCase();
+    }
+
+    return rest.replace(/_/g, ' ')
+        .replace(/\.[^\.]*$/, '')
+        .replace(/ ([a-z])/g, upcase)
+        .replace(/^[a-z]/, upcase);
+  }
+
+  function reload() {
+    loadTraces([window.location.hash.substr(1)], createViewFromTraces);
+  }
+
+  window.addEventListener('hashchange', onHashChange);
+
+  function onLoad() {
+    const onLoadTimer = tr.b.Timing.mark('TraceImport', 'onLoad');
+    timelineViewEl = document.querySelector('tr-ui-timeline-view');
+    timelineViewEl.globalMode = true;
+
+    selectEl = document.createElement('select');
+    // Don't hide the right hand controls ever. Bit of a hack since changing
+    // flex layout in timelineViewEl can break other trace viewer use cases.
+    selectEl.style.maxWidth = 'calc(100vw - 700px)';
+    timelineViewEl.leftControls.appendChild(selectEl);
+
+    getAsync('/tracing/test_data/__file_list__', function(data) {
+      const files = JSON.parse(data);
+      for (let i = 0; i < files.length; ++i) {
+        const opt = document.createElement('option');
+        opt.value = files[i];
+        opt.textContent = cleanFilename(files[i]);
+        selectEl.appendChild(opt);
+      }
+      selectEl.selectedIndex = 0;
+      selectEl.onchange = onSelectionChange;
+
+      if (!window.location.hash) {
+        // This will trigger an onHashChange so no need to reload directly.
+        window.location.hash =
+            '#' + selectEl.children[selectEl.selectedIndex].value;
+      } else {
+        onHashChange();
+      }
+    }).then(onLoadTimer.end());
+
+    const trackDetailedModelStatsEl = tr.ui.b.createCheckBox(
+        this, 'trackDetailedModelStats',
+        'traceViewer.trackDetailedModelStats', false,
+        'Detailed file size stats',
+        onHashChange);
+    trackDetailedModelStatsEl.id = 'track-detailed-model-stats';
+    timelineViewEl.leftControls.appendChild(trackDetailedModelStatsEl);
+  }
+
+  let loadEventFired = false;
+  let htmlImportsLoaded = false;
+  const maybeOnLoad = () => {
+    if (loadEventFired && htmlImportsLoaded) onLoad();
+  };
+
+  window.addEventListener('load', () => {
+    loadEventFired = true;
+    maybeOnLoad();
+  });
+
+  window.addEventListener('HTMLImportsLoaded', () => {
+    htmlImportsLoaded = true;
+    maybeOnLoad();
+  });
+
+  </script>
+</body>
+</html>

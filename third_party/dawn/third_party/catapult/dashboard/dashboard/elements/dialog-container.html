@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The dialog-container element is a transparent, repositionable dialog box.
+It was designed to contain paper-card elements for the chart-tooltip.
+-->
+<dom-module id='dialog-container'>
+  <style>
+    :host {
+      background:transparent;
+      z-index: var(--layer-dialogs);
+      margin: 20px;
+      min-height: 100px;
+      position: absolute;
+      visibility: hidden;
+    }
+  </style>
+  <template>
+    <content></content>
+  </template>
+</dom-module>
+<script>
+  'use strict';
+  Polymer({
+    is: 'dialog-container',
+
+    properties: {
+      targetid: {
+        type: String,
+      },
+      positionisfixed: {
+        type: Boolean,
+        value: false,
+      },
+      opened: {
+        type: Boolean,
+        value: false,
+      },
+    },
+
+    // TODO(aiolos): Add animation on open/close.
+
+    updatePositionFromCoords(top, left) {
+      if (!this.positionisfixed) {
+        this.style.left = (left + 15) + 'px';
+        this.style.top = (top + 15) + 'px';
+      }
+    },
+
+    toggleFixed() {
+      this.positionisfixed = !this.positionisfixed;
+    },
+
+    open() {
+      this.opened = true;
+      this.style.visibility = 'visible';
+    },
+
+    close() {
+      this.opened = false;
+      this.style.visibility = 'hidden';
+    },
+  });
+</script>

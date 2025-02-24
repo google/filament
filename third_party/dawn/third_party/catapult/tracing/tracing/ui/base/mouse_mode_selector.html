@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/hotkey_controller.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_icon.html">
+<link rel="import" href="/tracing/ui/base/mouse_modes.html">
+<link rel="import" href="/tracing/ui/base/mouse_tracker.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<dom-module id='tr-ui-b-mouse-mode-selector'>
+  <template>
+    <style>
+    :host {
+
+      -webkit-user-drag: element;
+      -webkit-user-select: none;
+
+      background: #DDD;
+      border: 1px solid #BBB;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      left: calc(100% - 120px);
+      position: absolute;
+      top: 100px;
+      user-select: none;
+      width: 29px;
+      z-index: 20;
+    }
+
+    .drag-handle {
+      background: url(../images/ui-states.png) 2px 3px no-repeat;
+      background-repeat: no-repeat;
+      border-bottom: 1px solid #BCBCBC;
+      cursor: move;
+      display: block;
+      height: 13px;
+      width: 27px;
+    }
+
+    .tool-button {
+      background-position: center center;
+      background-repeat: no-repeat;
+      border-bottom: 1px solid #BCBCBC;
+      border-top: 1px solid #F1F1F1;
+      cursor: pointer;
+    }
+
+    .buttons > .tool-button:last-child {
+      border-bottom: none;
+    }
+
+    </style>
+    <div class="drag-handle"></div>
+    <div class="buttons">
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const MOUSE_SELECTOR_MODE = tr.ui.b.MOUSE_SELECTOR_MODE;
+  const MOUSE_SELECTOR_MODE_INFOS = tr.ui.b.MOUSE_SELECTOR_MODE_INFOS;
+
+
+  const MIN_MOUSE_SELECTION_DISTANCE = 4;
+
+  const MODIFIER = {
+    SHIFT: 0x1,
+    SPACE: 0x2,
+    CMD_OR_CTRL: 0x4
+  };
+
+  function isCmdOrCtrlPressed(event) {
+    if (tr.isMac) return event.metaKey;
+    return event.ctrlKey;
+  }
+
+  /**
+   * Provides a panel for switching the interaction mode of the mouse.
+   * It handles the user interaction and dispatches events for the various
+   * modes.
+   */
+  Polymer({
+    is: 'tr-ui-b-mouse-mode-selector',
+
+    created() {
+      this.supportedModeMask_ = MOUSE_SELECTOR_MODE.ALL_MODES;
+
+      this.initialRelativeMouseDownPos_ = {x: 0, y: 0};
+
+      this.defaultMode_ = MOUSE_SELECTOR_MODE.PANSCAN;
+      this.settingsKey_ = undefined;
+      this.mousePos_ = {x: 0, y: 0};
+      this.mouseDownPos_ = {x: 0, y: 0};
+
+      this.onMouseDown_ = this.onMouseDown_.bind(this);
+      this.onMouseMove_ = this.onMouseMove_.bind(this);
+      this.onMouseUp_ = this.onMouseUp_.bind(this);
+
+      this.onKeyDown_ = this.onKeyDown_.bind(this);
+      this.onKeyUp_ = this.onKeyUp_.bind(this);
+
+      this.mode_ = undefined;
+      this.modeToKeyCodeMap_ = {};
+      this.modifierToModeMap_ = {};
+
+      this.targetElement_ = undefined;
+      this.modeBeforeAlternativeModeActivated_ = null;
+
+      this.isInteracting_ = false;
+      this.isClick_ = false;
+    },
+
+    ready() {
+      this.buttonsEl_ = Polymer.dom(this.root).querySelector('.buttons');
+      this.dragHandleEl_ = Polymer.dom(this.root).querySelector(
+          '.drag-handle');
+      this.supportedModeMask = MOUSE_SELECTOR_MODE.ALL_MODES;
+
+      this.dragHandleEl_.addEventListener('mousedown',
+          this.onDragHandleMouseDown_.bind(this));
+
+      this.buttonsEl_.addEventListener('mouseup', this.onButtonMouseUp_);
+      this.buttonsEl_.addEventListener('mousedown', this.onButtonMouseDown_);
+      this.buttonsEl_.addEventListener('click', this.onButtonPress_.bind(this));
+    },
+
+    attached() {
+      document.addEventListener('keydown', this.onKeyDown_);
+      document.addEventListener('keyup', this.onKeyUp_);
+    },
+
+    detached() {
+      document.removeEventListener('keydown', this.onKeyDown_);
+      document.removeEventListener('keyup', this.onKeyUp_);
+    },
+
+    get targetElement() {
+      return this.targetElement_;
+    },
+
+    set targetElement(target) {
+      if (this.targetElement_) {
+        this.targetElement_.removeEventListener('mousedown', this.onMouseDown_);
+      }
+      this.targetElement_ = target;
+      if (this.targetElement_) {
+        this.targetElement_.addEventListener('mousedown', this.onMouseDown_);
+      }
+    },
+
+    get defaultMode() {
+      return this.defaultMode_;
+    },
+
+    set defaultMode(defaultMode) {
+      this.defaultMode_ = defaultMode;
+    },
+
+    get settingsKey() {
+      return this.settingsKey_;
+    },
+
+    set settingsKey(settingsKey) {
+      this.settingsKey_ = settingsKey;
+      if (!this.settingsKey_) return;
+
+      let mode = tr.b.Settings.get(this.settingsKey_ + '.mode', undefined);
+      // Modes changed from 1,2,3,4 to 0x1, 0x2, 0x4, 0x8. Fix any stray
+      // settings to the best of our abilities.
+      if (MOUSE_SELECTOR_MODE_INFOS[mode] === undefined) {
+        mode = undefined;
+      }
+
+      // Restoring settings against unsupported modes should just go back to the
+      // default mode.
+      if ((mode & this.supportedModeMask_) === 0) {
+        mode = undefined;
+      }
+
+      if (!mode) mode = this.defaultMode_;
+      this.mode = mode;
+
+      const pos = tr.b.Settings.get(this.settingsKey_ + '.pos', undefined);
+      if (pos) this.pos = pos;
+    },
+
+    get supportedModeMask() {
+      return this.supportedModeMask_;
+    },
+
+    /**
+     * Sets the supported modes. Should be an OR-ing of MOUSE_SELECTOR_MODE
+     * values.
+     */
+    set supportedModeMask(supportedModeMask) {
+      if (this.mode && (supportedModeMask & this.mode) === 0) {
+        throw new Error('supportedModeMask must include current mode.');
+      }
+
+      function createButtonForMode(mode) {
+        return button;
+      }
+
+      this.supportedModeMask_ = supportedModeMask;
+      Polymer.dom(this.buttonsEl_).textContent = '';
+      for (const modeName in MOUSE_SELECTOR_MODE) {
+        if (modeName === 'ALL_MODES') continue;
+
+        const mode = MOUSE_SELECTOR_MODE[modeName];
+        if ((this.supportedModeMask_ & mode) === 0) continue;
+
+        const button = document.createElement('tr-ui-b-mouse-mode-icon');
+        button.mode = mode;
+        Polymer.dom(button).classList.add('tool-button');
+
+        Polymer.dom(this.buttonsEl_).appendChild(button);
+      }
+    },
+
+    getButtonForMode_(mode) {
+      for (let i = 0; i < this.buttonsEl_.children.length; i++) {
+        const buttonEl = this.buttonsEl_.children[i];
+        if (buttonEl.mode === mode) {
+          return buttonEl;
+        }
+      }
+      return undefined;
+    },
+
+    get mode() {
+      return this.currentMode_;
+    },
+
+    set mode(newMode) {
+      if (newMode !== undefined) {
+        if (typeof newMode !== 'number') {
+          throw new Error('Mode must be a number');
+        }
+        if ((newMode & this.supportedModeMask_) === 0) {
+          throw new Error('Cannot switch to this mode, it is not supported');
+        }
+        if (MOUSE_SELECTOR_MODE_INFOS[newMode] === undefined) {
+          throw new Error('Unrecognized mode');
+        }
+      }
+
+      let modeInfo;
+
+      if (this.currentMode_ === newMode) return;
+
+      if (this.currentMode_) {
+        const buttonEl = this.getButtonForMode_(this.currentMode_);
+        if (buttonEl) buttonEl.active = false;
+
+        // End event.
+        if (this.isInteracting_) {
+          const mouseEvent = this.createEvent_(
+              MOUSE_SELECTOR_MODE_INFOS[this.mode].eventNames.end);
+          this.dispatchEvent(mouseEvent);
+        }
+
+        // Exit event.
+        modeInfo = MOUSE_SELECTOR_MODE_INFOS[this.currentMode_];
+        tr.b.dispatchSimpleEvent(this, modeInfo.eventNames.exit, true);
+      }
+
+      this.currentMode_ = newMode;
+
+      if (this.currentMode_) {
+        const buttonEl = this.getButtonForMode_(this.currentMode_);
+        if (buttonEl) buttonEl.active = true;
+
+        // Entering a new mode resets mouse down pos.
+        this.mouseDownPos_.x = this.mousePos_.x;
+        this.mouseDownPos_.y = this.mousePos_.y;
+
+        // Enter event.
+        modeInfo = MOUSE_SELECTOR_MODE_INFOS[this.currentMode_];
+        if (!this.isInAlternativeMode_) {
+          tr.b.dispatchSimpleEvent(this, modeInfo.eventNames.enter, true);
+        }
+
+        // Begin event.
+        if (this.isInteracting_) {
+          const mouseEvent = this.createEvent_(
+              MOUSE_SELECTOR_MODE_INFOS[this.mode].eventNames.begin);
+          this.dispatchEvent(mouseEvent);
+        }
+      }
+
+      if (this.settingsKey_ && !this.isInAlternativeMode_) {
+        tr.b.Settings.set(this.settingsKey_ + '.mode', this.mode);
+      }
+    },
+
+    setKeyCodeForMode(mode, keyCode) {
+      if ((mode & this.supportedModeMask_) === 0) {
+        throw new Error('Mode not supported');
+      }
+      this.modeToKeyCodeMap_[mode] = keyCode;
+
+      if (!this.buttonsEl_) return;
+
+      const buttonEl = this.getButtonForMode_(mode);
+      if (buttonEl) {
+        buttonEl.acceleratorKey = String.fromCharCode(keyCode);
+      }
+    },
+
+    setCurrentMousePosFromEvent_(e) {
+      this.mousePos_.x = e.clientX;
+      this.mousePos_.y = e.clientY;
+    },
+
+    createEvent_(eventName, sourceEvent) {
+      const event = new tr.b.Event(eventName, true);
+      event.clientX = this.mousePos_.x;
+      event.clientY = this.mousePos_.y;
+      event.deltaX = this.mousePos_.x - this.mouseDownPos_.x;
+      event.deltaY = this.mousePos_.y - this.mouseDownPos_.y;
+      event.mouseDownX = this.mouseDownPos_.x;
+      event.mouseDownY = this.mouseDownPos_.y;
+      event.didPreventDefault = false;
+      event.preventDefault = function() {
+        event.didPreventDefault = true;
+        if (sourceEvent) {
+          sourceEvent.preventDefault();
+        }
+      };
+      event.stopPropagation = function() {
+        sourceEvent.stopPropagation();
+      };
+      event.stopImmediatePropagation = function() {
+        throw new Error('Not implemented');
+      };
+      return event;
+    },
+
+    onMouseDown_(e) {
+      if (e.button !== 0) return;
+      this.setCurrentMousePosFromEvent_(e);
+      const mouseEvent = this.createEvent_(
+          MOUSE_SELECTOR_MODE_INFOS[this.mode].eventNames.begin, e);
+      if (this.mode === MOUSE_SELECTOR_MODE.SELECTION) {
+        mouseEvent.appendSelection = isCmdOrCtrlPressed(e);
+      }
+      this.dispatchEvent(mouseEvent);
+      this.isInteracting_ = true;
+      this.isClick_ = true;
+      tr.ui.b.trackMouseMovesUntilMouseUp(this.onMouseMove_, this.onMouseUp_);
+    },
+
+    onMouseMove_(e) {
+      this.setCurrentMousePosFromEvent_(e);
+
+      const mouseEvent = this.createEvent_(
+          MOUSE_SELECTOR_MODE_INFOS[this.mode].eventNames.update, e);
+      this.dispatchEvent(mouseEvent);
+
+      if (this.isInteracting_) {
+        this.checkIsClick_(e);
+      }
+    },
+
+    onMouseUp_(e) {
+      if (e.button !== 0) return;
+
+      const mouseEvent = this.createEvent_(
+          MOUSE_SELECTOR_MODE_INFOS[this.mode].eventNames.end, e);
+      mouseEvent.isClick = this.isClick_;
+      this.dispatchEvent(mouseEvent);
+
+      if (this.isClick_ && !mouseEvent.didPreventDefault) {
+        this.dispatchClickEvents_(e);
+      }
+
+      this.isInteracting_ = false;
+      this.updateAlternativeModeState_(e);
+    },
+
+    onButtonMouseDown_(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    },
+
+    onButtonMouseUp_(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    },
+
+    onButtonPress_(e) {
+      this.modeBeforeAlternativeModeActivated_ = undefined;
+      this.mode = e.target.mode;
+      e.preventDefault();
+    },
+
+    onKeyDown_(e) {
+      // Keys dispatched to INPUT elements still bubble, even when they're
+      // handled. So, skip any events that targeted the input element.
+      if (e.path[0].tagName === 'INPUT') return;
+
+      if (e.keyCode === ' '.charCodeAt(0)) {
+        this.spacePressed_ = true;
+      }
+      this.updateAlternativeModeState_(e);
+    },
+
+    onKeyUp_(e) {
+      // Keys dispatched to INPUT elements still bubble, even when they're
+      // handled. So, skip any events that targeted the input element.
+      if (e.path[0].tagName === 'INPUT') return;
+
+      if (e.keyCode === ' '.charCodeAt(0)) {
+        this.spacePressed_ = false;
+      }
+
+      let didHandleKey = false;
+      for (const [modeStr, keyCode] of Object.entries(this.modeToKeyCodeMap_)) {
+        if (e.keyCode === keyCode) {
+          this.modeBeforeAlternativeModeActivated_ = undefined;
+          const mode = parseInt(modeStr);
+          this.mode = mode;
+          didHandleKey = true;
+        }
+      }
+
+      if (didHandleKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      this.updateAlternativeModeState_(e);
+    },
+
+    updateAlternativeModeState_(e) {
+      const shiftPressed = e.shiftKey;
+      const spacePressed = this.spacePressed_;
+      const cmdOrCtrlPressed = isCmdOrCtrlPressed(e);
+
+      // Figure out the new mode
+      const smm = this.supportedModeMask_;
+      let newMode;
+      let isNewModeAnAlternativeMode = false;
+      if (shiftPressed &&
+          (this.modifierToModeMap_[MODIFIER.SHIFT] & smm) !== 0) {
+        newMode = this.modifierToModeMap_[MODIFIER.SHIFT];
+        isNewModeAnAlternativeMode = true;
+      } else if (spacePressed &&
+                 (this.modifierToModeMap_[MODIFIER.SPACE] & smm) !== 0) {
+        newMode = this.modifierToModeMap_[MODIFIER.SPACE];
+        isNewModeAnAlternativeMode = true;
+      } else if (cmdOrCtrlPressed &&
+                 (this.modifierToModeMap_[MODIFIER.CMD_OR_CTRL] & smm) !== 0) {
+        newMode = this.modifierToModeMap_[MODIFIER.CMD_OR_CTRL];
+        isNewModeAnAlternativeMode = true;
+      } else {
+        // Go to the old mode, if there is one.
+        if (this.isInAlternativeMode_) {
+          newMode = this.modeBeforeAlternativeModeActivated_;
+          isNewModeAnAlternativeMode = false;
+        } else {
+          newMode = undefined;
+        }
+      }
+
+      // Maybe a mode change isn't needed.
+      if (this.mode === newMode || newMode === undefined) return;
+
+      // Okay, we're changing.
+      if (isNewModeAnAlternativeMode) {
+        this.modeBeforeAlternativeModeActivated_ = this.mode;
+      }
+      this.mode = newMode;
+    },
+
+    get isInAlternativeMode_() {
+      return !!this.modeBeforeAlternativeModeActivated_;
+    },
+
+    setModifierForAlternateMode(mode, modifier) {
+      this.modifierToModeMap_[modifier] = mode;
+    },
+
+    get pos() {
+      return {
+        x: parseInt(this.style.left),
+        y: parseInt(this.style.top)
+      };
+    },
+
+    set pos(pos) {
+      pos = this.constrainPositionToBounds_(pos);
+
+      this.style.left = pos.x + 'px';
+      this.style.top = pos.y + 'px';
+
+      if (this.settingsKey_) {
+        tr.b.Settings.set(this.settingsKey_ + '.pos', this.pos);
+      }
+    },
+
+    constrainPositionToBounds_(pos) {
+      const parent = this.offsetParent || document.body;
+      const parentRect = tr.ui.b.windowRectForElement(parent);
+
+      const top = 0;
+      const bottom = parentRect.height - this.offsetHeight;
+      const left = 0;
+      const right = parentRect.width - this.offsetWidth;
+
+      const res = {};
+      res.x = Math.max(pos.x, left);
+      res.x = Math.min(res.x, right);
+
+      res.y = Math.max(pos.y, top);
+      res.y = Math.min(res.y, bottom);
+      return res;
+    },
+
+    onDragHandleMouseDown_(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const mouseDownPos = {
+        x: e.clientX - this.offsetLeft,
+        y: e.clientY - this.offsetTop
+      };
+      tr.ui.b.trackMouseMovesUntilMouseUp(function(e) {
+        const pos = {};
+        pos.x = e.clientX - mouseDownPos.x;
+        pos.y = e.clientY - mouseDownPos.y;
+        this.pos = pos;
+      }.bind(this));
+    },
+
+    checkIsClick_(e) {
+      if (!this.isInteracting_ || !this.isClick_) return;
+
+      const deltaX = this.mousePos_.x - this.mouseDownPos_.x;
+      const deltaY = this.mousePos_.y - this.mouseDownPos_.y;
+      const minDist = MIN_MOUSE_SELECTION_DISTANCE;
+
+      if (deltaX * deltaX + deltaY * deltaY > minDist * minDist) {
+        this.isClick_ = false;
+      }
+    },
+
+    dispatchClickEvents_(e) {
+      if (!this.isClick_) return;
+
+      const modeInfo = MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.SELECTION];
+      const eventNames = modeInfo.eventNames;
+
+      let mouseEvent = this.createEvent_(eventNames.begin);
+      mouseEvent.appendSelection = isCmdOrCtrlPressed(e);
+      this.dispatchEvent(mouseEvent);
+
+      mouseEvent = this.createEvent_(eventNames.end);
+      this.dispatchEvent(mouseEvent);
+    }
+  });
+
+  return {
+    MIN_MOUSE_SELECTION_DISTANCE,
+    MODIFIER,
+  };
+});
+</script>

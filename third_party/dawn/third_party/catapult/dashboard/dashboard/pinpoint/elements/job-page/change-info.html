@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+
+<dom-module id="change-info">
+  <template>
+    <style include="base-style">
+      p {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+
+    <p><a href="[[url(change)]]" target="_blank">[[subject(change)]]</a></p>
+    <p class="commit">[[commit(change)]]</p>
+    <p class="byline">By [[author(change)]]</p>
+    <template is="dom-if" if="[[args]]">
+      <p class="byline">Extra Args: [[args]]</p>
+    </template>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'change-info',
+
+      properties: {
+        change: {
+          type: Object
+        },
+
+        args: {
+          type: String
+        },
+      },
+
+      visibleCommit_(change) {
+        if (!change) {
+          return {};
+        }
+
+        if (change.patch) {
+          return change.patch;
+        }
+
+        return change.commits[change.commits.length - 1];
+      },
+
+      url(change) {
+        return this.visibleCommit_(change).url;
+      },
+
+      subject(change) {
+        return this.visibleCommit_(change).subject;
+      },
+
+      author(change) {
+        return this.visibleCommit_(change).author;
+      },
+
+      commit(change) {
+        return this.visibleCommit_(change).git_hash;
+      },
+    });
+  </script>
+</dom-module>

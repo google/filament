@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/chart_base.html">
+<link rel="import" href="/tracing/ui/base/mouse_tracker.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  // This does not include the tick labels.
+  const D3_Y_AXIS_WIDTH_PX = 9;
+
+  // This includes the tick labels.
+  const D3_X_AXIS_HEIGHT_PX = 23;
+
+  // For charts with log y-axes, the y-axis tick values may need to be sanitized
+  // if the data is zero or negative.
+  function sanitizePower(x, defaultValue) {
+    if (!isNaN(x) && isFinite(x) && (x !== 0)) return x;
+    return defaultValue;
+  }
+
+  const ChartBase2D = tr.ui.b.define('chart-base-2d', tr.ui.b.ChartBase);
+
+  ChartBase2D.prototype = {
+    __proto__: tr.ui.b.ChartBase.prototype,
+
+    decorate() {
+      super.decorate();
+      Polymer.dom(this).classList.add('chart-base-2d');
+
+      this.xScale_ = d3.scale.linear();
+      this.yScale_ = d3.scale.linear();
+      this.isYLogScale_ = false;
+      this.yLogScaleBase_ = 10;
+      this.yLogScaleMin_ = undefined;
+      this.autoDataRange_ = new tr.b.math.Range();
+      this.overrideDataRange_ = undefined;
+      this.hideXAxis_ = false;
+      this.hideYAxis_ = false;
+      this.data_ = [];
+      this.xAxisLabel_ = '';
+      this.yAxisLabel_ = '';
+      this.textHeightPx_ = 0;
+      this.unit_ = undefined;
+
+      d3.select(this.chartAreaElement)
+          .append('g')
+          .attr('id', 'brushes');
+      d3.select(this.chartAreaElement)
+          .append('g')
+          .attr('id', 'series');
+
+      this.addEventListener('mousedown', this.onMouseDown_.bind(this));
+    },
+
+    get yLogScaleBase() {
+      return this.yLogScaleBase_;
+    },
+
+    set yLogScaleBase(b) {
+      this.yLogScaleBase_ = b;
+    },
+
+    get unit() {
+      return this.unit_;
+    },
+
+    set unit(unit) {
+      this.unit_ = unit;
+      this.updateContents_();
+    },
+
+    get xAxisLabel() {
+      return this.xAxisLabel_;
+    },
+
+    set xAxisLabel(label) {
+      this.xAxisLabel_ = label;
+    },
+
+    get yAxisLabel() {
+      return this.yAxisLabel_;
+    },
+
+    set yAxisLabel(label) {
+      this.yAxisLabel_ = label;
+    },
+
+    get hideXAxis() {
+      return this.hideXAxis_;
+    },
+
+    set hideXAxis(h) {
+      this.hideXAxis_ = h;
+      this.updateContents_();
+    },
+
+    get hideYAxis() {
+      return this.hideYAxis_;
+    },
+
+    set hideYAxis(h) {
+      this.hideYAxis_ = h;
+      this.updateContents_();
+    },
+
+    get data() {
+      return this.data_;
+    },
+
+    /**
+     * Sets the data array for the object
+     *
+     * @param {Array} data The data. Each element must be an object, with at
+     * least an x property. All other properties become series names in the
+     * chart. The data can be sparse (i.e. every x value does not have to
+     * contain data for every series).
+     */
+    set data(data) {
+      if (data === undefined) {
+        throw new Error('data must be an Array');
+      }
+
+      this.data_ = data;
+      this.updateSeriesKeys_();
+      this.updateDataRange_();
+      this.updateContents_();
+    },
+
+    set isYLogScale(logScale) {
+      if (logScale) {
+        this.yScale_ = d3.scale.log().base(this.yLogScaleBase);
+      } else {
+        this.yScale_ = d3.scale.linear();
+      }
+      this.isYLogScale_ = logScale;
+    },
+
+    getYScaleMin_() {
+      return this.isYLogScale_ ? this.yLogScaleMin_ : 0;
+    },
+
+    getYScaleDomain_(minValue, maxValue) {
+      if (this.overrideDataRange_ !== undefined) {
+        return [this.dataRange.min, this.dataRange.max];
+      }
+      if (this.isYLogScale_) {
+        return [this.getYScaleMin_(), maxValue];
+      }
+      return [Math.min(minValue, this.getYScaleMin_()), maxValue];
+    },
+
+    getSampleWidth_(data, index, leftSide) {
+      let leftIndex;
+      let rightIndex;
+      if (leftSide) {
+        leftIndex = Math.max(index - 1, 0);
+        rightIndex = index;
+      } else {
+        leftIndex = index;
+        rightIndex = Math.min(index + 1, data.length - 1);
+      }
+      const leftWidth = this.getXForDatum_(data[index], index) -
+        this.getXForDatum_(data[leftIndex], leftIndex);
+      const rightWidth = this.getXForDatum_(data[rightIndex], rightIndex) -
+        this.getXForDatum_(data[index], index);
+      return tr.b.math.Statistics.mean([leftWidth, rightWidth]);
+    },
+
+    updateSeriesKeys_() {
+      // Don't clear seriesByKey_; the caller might have put state in it using
+      // getDataSeries() before setting data.
+      this.data_.forEach(function(datum) {
+        Object.keys(datum).forEach(function(key) {
+          if (this.isDatumFieldSeries_(key)) {
+            this.getDataSeries(key);
+          }
+        }, this);
+      }, this);
+    },
+
+    isDatumFieldSeries_(fieldName) {
+      return fieldName !== 'x';
+    },
+
+    getXForDatum_(datum, index) {
+      return datum.x;
+    },
+
+    updateMargins_() {
+      this.margin.left = this.hideYAxis ? 0 : this.yAxisWidth;
+      this.margin.bottom = this.hideXAxis ? 0 : this.xAxisHeight;
+
+      if (this.hideXAxis && !this.hideYAxis) {
+        this.margin.bottom = 10;
+      }
+      if (this.hideYAxis && !this.hideXAxis) {
+        this.margin.left = 10;
+      }
+      this.margin.top = this.hideYAxis ? 0 : 10;
+
+      if (this.yAxisLabel) {
+        this.margin.top += this.textHeightPx_;
+      }
+      if (this.xAxisLabel) {
+        this.margin.right = Math.max(this.margin.right,
+            16 + tr.ui.b.getSVGTextSize(this, this.xAxisLabel).width);
+      }
+
+      super.updateMargins_();
+    },
+
+    get xAxisHeight() {
+      return D3_X_AXIS_HEIGHT_PX;
+    },
+
+    computeScaleTickWidth_(scale) {
+      if (this.data.length === 0) return 0;
+
+      let tickValues = scale.ticks();
+      let tickFormat = scale.tickFormat();
+
+      if (this.isYLogScale_) {
+        const enclosingPowers = this.dataRange.enclosingPowers();
+        tickValues = [];
+        const maxPower = sanitizePower(enclosingPowers.max, this.yLogScaleBase);
+        for (let power = sanitizePower(enclosingPowers.min, 1);
+          power <= maxPower;
+          power *= this.yLogScaleBase) {
+          tickValues.push(power);
+        }
+        tickFormat = v => v.toString();
+      }
+
+      if (this.unit) {
+        tickFormat = v => this.unit.format(v);
+      }
+
+      let maxTickWidth = 0;
+      for (const tickValue of tickValues) {
+        maxTickWidth = Math.max(maxTickWidth,
+            tr.ui.b.getSVGTextSize(this, tickFormat(tickValue)).width);
+      }
+
+      return D3_Y_AXIS_WIDTH_PX + maxTickWidth;
+    },
+
+    get yAxisWidth() {
+      return this.computeScaleTickWidth_(this.yScale_);
+    },
+
+    updateScales_() {
+      if (this.data_.length === 0) return;
+
+      this.xScale_.range([0, this.graphWidth]);
+      this.xScale_.domain(d3.extent(this.data_, this.getXForDatum_.bind(this)));
+
+      this.yScale_.range([this.graphHeight, 0]);
+      this.yScale_.domain([this.dataRange.min, this.dataRange.max]);
+    },
+
+    updateBrushContents_(brushSel) {
+      brushSel.selectAll('*').remove();
+    },
+
+    updateXAxis_(xAxis) {
+      xAxis.selectAll('*').remove();
+      xAxis[0][0].style.opacity = 0;
+      if (this.hideXAxis) return;
+
+      this.drawXAxis_(xAxis);
+
+      const label = xAxis.append('text').attr('class', 'label');
+      this.drawXAxisTicks_(xAxis);
+      this.drawXAxisLabel_(label);
+      xAxis[0][0].style.opacity = 1;
+    },
+
+    drawXAxis_(xAxis) {
+      xAxis.attr('transform', 'translate(0,' + this.graphHeight + ')')
+          .call(d3.svg.axis()
+              .scale(this.xScale_)
+              .orient('bottom'));
+    },
+
+    drawXAxisLabel_(label) {
+      label
+          .attr('x', this.graphWidth + 16)
+          .attr('y', 8)
+          .text(this.xAxisLabel);
+    },
+
+    drawXAxisTicks_(xAxis) {
+      let previousRight = undefined;
+      xAxis.selectAll('.tick')[0].forEach(function(tick) {
+        const currentLeft = tick.transform.baseVal[0].matrix.e;
+        if ((previousRight === undefined) ||
+            (currentLeft > (previousRight + 3))) {
+          const currentWidth = tick.getBBox().width;
+          previousRight = currentLeft + currentWidth;
+        } else {
+          tick.style.opacity = 0;
+        }
+      });
+    },
+
+    set overrideDataRange(range) {
+      this.overrideDataRange_ = range;
+    },
+
+    get dataRange() {
+      if (this.overrideDataRange_ !== undefined) {
+        return this.overrideDataRange_;
+      }
+      return this.autoDataRange_;
+    },
+
+    updateDataRange_() {
+      if (this.overrideDataRange_ !== undefined) return;
+
+      const dataBySeriesKey = this.getDataBySeriesKey_();
+      this.autoDataRange_.reset();
+      for (const [series, values] of Object.entries(dataBySeriesKey)) {
+        for (let i = 0; i < values.length; i++) {
+          this.autoDataRange_.addValue(values[i][series]);
+        }
+      }
+
+      // Choose the closest power of yLogScaleBase, rounded down, as the
+      // smallest tick to display.
+      this.yLogScaleMin_ = undefined;
+      if (this.autoDataRange_.min !== undefined) {
+        let minValue = this.autoDataRange_.min;
+        if (minValue === 0) {
+          minValue = 1;
+        }
+
+        const onePowerLess = tr.b.math.lesserPower(
+            minValue / this.yLogScaleBase);
+        this.yLogScaleMin_ = onePowerLess;
+      }
+    },
+
+    updateYAxis_(yAxis) {
+      yAxis.selectAll('*').remove();
+      yAxis[0][0].style.opacity = 0;
+      if (this.hideYAxis) return;
+
+      this.drawYAxis_(yAxis);
+      this.drawYAxisTicks_(yAxis);
+
+      const label = yAxis.append('text').attr('class', 'label');
+      this.drawYAxisLabel_(label);
+    },
+
+    drawYAxis_(yAxis) {
+      let axisModifier = d3.svg.axis()
+          .scale(this.yScale_)
+          .orient('left');
+
+      let tickFormat;
+
+      if (this.isYLogScale_) {
+        if (this.yLogScaleMin_ === undefined) return;
+        const tickValues = [];
+        const enclosingPowers = this.dataRange.enclosingPowers();
+        const maxPower = sanitizePower(enclosingPowers.max, this.yLogScaleBase);
+        for (let power = sanitizePower(enclosingPowers.min, 1);
+          power <= maxPower;
+          power *= this.yLogScaleBase) {
+          tickValues.push(power);
+        }
+
+        // The default tickFormat() for log scales always uses scientific
+        // notation. Override it to use Number.toString(), which only uses
+        // scientific notation for extreme values, and uses decimal notation for
+        // a broader range of values. Decimal notation is generally slightly
+        // easier to skim than scientific notation in the context of chart axes.
+        axisModifier = axisModifier.tickValues(tickValues);
+        tickFormat = v => v.toString();
+      }
+
+      if (this.unit) {
+        tickFormat = v => this.unit.format(v);
+      }
+
+      if (tickFormat) {
+        axisModifier = axisModifier.tickFormat(tickFormat);
+      }
+
+      yAxis.call(axisModifier);
+    },
+
+    drawYAxisLabel_(label) {
+      const labelWidthPx = Math.ceil(tr.ui.b.getSVGTextSize(
+          this.chartAreaElement, this.yAxisLabel).width);
+      label
+          .attr('x', -labelWidthPx)
+          .attr('y', -8)
+          .text(this.yAxisLabel);
+    },
+
+    drawYAxisTicks_(yAxis) {
+      let previousTop = undefined;
+      yAxis.selectAll('.tick')[0].forEach(function(tick) {
+        const bbox = tick.getBBox();
+        const currentTop = tick.transform.baseVal[0].matrix.f;
+        const currentBottom = currentTop + bbox.height;
+        if ((previousTop === undefined) ||
+            (previousTop > (currentBottom + 3))) {
+          previousTop = currentTop;
+        } else {
+          tick.style.opacity = 0;
+        }
+      });
+      yAxis[0][0].style.opacity = 1;
+    },
+
+    updateContents_() {
+      if (this.textHeightPx_ === 0) {
+        // Measure the height of a string that is as tall as it can be,
+        // with both an ascender and a descender.
+        // https://en.wikipedia.org/wiki/Ascender_(typography)
+        this.textHeightPx_ = tr.ui.b.getSVGTextSize(this, 'Ay').height;
+        // If the chart is not yet rooted in a document, then the height will be
+        // 0. Callers should make sure that updateContents_ is called at least
+        // once after the chart is rooted in a document so that textHeightPx_
+        // can be computed.
+      }
+
+      this.updateScales_();
+      super.updateContents_();
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      this.updateXAxis_(chartAreaSel.select('.x.axis'));
+      this.updateYAxis_(chartAreaSel.select('.y.axis'));
+      for (const child of Array.from(
+          this.querySelectorAll('.axis path, .axis line'))) {
+        child.style.fill = 'none';
+        child.style.shapeRendering = 'crispEdges';
+        child.style.stroke = 'black';
+      }
+      this.updateBrushContents_(chartAreaSel.select('#brushes'));
+      this.updateDataContents_(chartAreaSel.select('#series'));
+    },
+
+    updateDataContents_(seriesSel) {
+      throw new Error('Not implemented');
+    },
+
+    /**
+     * Returns a map of series key to the data for that series.
+     *
+     * Example:
+     * // returns {y: [{x: 1, y: 1}, {x: 3, y: 3}], z: [{x: 2, z: 2}]}
+     * this.data_ = [{x: 1, y: 1}, {x: 2, z: 2}, {x: 3, y: 3}];
+     * this.getDataBySeriesKey_();
+     * @return {Object} A map of series data by series key.
+     */
+    getDataBySeriesKey_() {
+      const dataBySeriesKey = {};
+      for (const [key, series] of this.seriesByKey_) {
+        dataBySeriesKey[key] = [];
+      }
+
+      this.data_.forEach(function(multiSeriesDatum, index) {
+        const x = this.getXForDatum_(multiSeriesDatum, index);
+
+        d3.keys(multiSeriesDatum).forEach(function(seriesKey) {
+          // Skip 'x' - it's not a series
+          if (seriesKey === 'x') return;
+
+          if (multiSeriesDatum[seriesKey] === undefined) return;
+
+          if (!this.isDatumFieldSeries_(seriesKey)) return;
+
+          const singleSeriesDatum = {x};
+          singleSeriesDatum[seriesKey] = multiSeriesDatum[seriesKey];
+          dataBySeriesKey[seriesKey].push(singleSeriesDatum);
+        }, this);
+      }, this);
+
+      return dataBySeriesKey;
+    },
+
+    getChartPointAtClientPoint_(clientPoint) {
+      const rect = this.getBoundingClientRect();
+      return {
+        x: clientPoint.x - rect.left - this.margin.left,
+        y: clientPoint.y - rect.top - this.margin.top
+      };
+    },
+
+    getDataPointAtChartPoint_(chartPoint) {
+      return {
+        x: tr.b.math.clamp(this.xScale_.invert(chartPoint.x),
+            this.xScale_.domain()[0], this.xScale_.domain()[1]),
+        y: tr.b.math.clamp(this.yScale_.invert(chartPoint.y),
+            this.yScale_.domain()[0], this.yScale_.domain()[1])
+      };
+    },
+
+    getDataPointAtClientPoint_(clientX, clientY) {
+      const chartPoint = this.getChartPointAtClientPoint_(
+          {x: clientX, y: clientY});
+      return this.getDataPointAtChartPoint_(chartPoint);
+    },
+
+    prepareDataEvent_(mouseEvent, dataEvent) {
+      const dataPoint = this.getDataPointAtClientPoint_(
+          mouseEvent.clientX, mouseEvent.clientY);
+      dataEvent.x = dataPoint.x;
+      dataEvent.y = dataPoint.y;
+    },
+
+    onMouseDown_(mouseEvent) {
+      tr.ui.b.trackMouseMovesUntilMouseUp(
+          this.onMouseMove_.bind(this, mouseEvent.button),
+          this.onMouseUp_.bind(this, mouseEvent.button));
+      mouseEvent.preventDefault();
+      mouseEvent.stopPropagation();
+      const dataEvent = new tr.b.Event('item-mousedown');
+      dataEvent.button = mouseEvent.button;
+      this.prepareDataEvent_(mouseEvent, dataEvent);
+      this.dispatchEvent(dataEvent);
+      for (const child of Array.from(this.querySelector('#brushes').children)) {
+        child.setAttribute('fill', 'rgb(103, 199, 165)');
+      }
+    },
+
+    onMouseMove_(button, mouseEvent) {
+      if (mouseEvent.buttons !== undefined) {
+        mouseEvent.preventDefault();
+        mouseEvent.stopPropagation();
+      }
+      const dataEvent = new tr.b.Event('item-mousemove');
+      dataEvent.button = button;
+      this.prepareDataEvent_(mouseEvent, dataEvent);
+      this.dispatchEvent(dataEvent);
+      for (const child of Array.from(this.querySelector('#brushes').children)) {
+        child.setAttribute('fill', 'rgb(103, 199, 165)');
+      }
+    },
+
+    onMouseUp_(button, mouseEvent) {
+      mouseEvent.preventDefault();
+      mouseEvent.stopPropagation();
+      const dataEvent = new tr.b.Event('item-mouseup');
+      dataEvent.button = button;
+      this.prepareDataEvent_(mouseEvent, dataEvent);
+      this.dispatchEvent(dataEvent);
+      for (const child of Array.from(this.querySelector('#brushes').children)) {
+        child.setAttribute('fill', 'rgb(213, 236, 229)');
+      }
+    }
+  };
+
+  return {
+    ChartBase2D,
+  };
+});
+</script>

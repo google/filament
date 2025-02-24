@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2021 The ANGLE Project Authors. All rights reserved.  Use of this
+  source code is governed by a BSD-style license that can be found in the
+  LICENSE file.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools"
+          package="com.android.angle">
+
+    <application android:allowBackup="false"
+                 android:label="com.android.angle"
+                 android:extractNativeLibs="false"
+                 android:forceQueryable="true"
+                 android:multiArch="true">
+
+        <activity android:name="com.android.angle.EmptyMainActivity"
+                  android:label="Empty Main Activity"
+                  android:visibleToInstantApps="true"
+                  android:launchMode="singleTask"
+                  android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.INFO"/>
+            </intent-filter>
+
+            <!-- Indicate that this PKG is ANGLE. -->
+            <intent-filter android:priority="1">
+                <action android:name="android.app.action.ANGLE_FOR_ANDROID" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>

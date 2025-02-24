@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/app-route/app-route.html">
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/job-search-tip.html">
+<link rel="import" href="/elements/jobs-page/jobs-table.html">
+<link rel="import" href="/elements/jobs-page/new-job-fab.html">
+<link rel="import" href="/elements/loading-wrapper.html">
+
+<dom-module id="jobs-page">
+  <template>
+    <style include="base-style">
+      #job-count {
+        background: var(--paper-indigo-50);
+        color: var(--paper-indigo-500);
+      }
+
+      new-job-fab {
+        bottom: 2em;
+        position: fixed;
+        right: 2em;
+      }
+
+      .pagination {
+        position: relative;
+        right: 80px;
+      }
+
+      .pagination a {
+        color: black;
+        float: right;
+        padding: 8px 16px;
+        text-decoration: none;
+        transition: background-color .3s;
+        border: 1px solid #ddd;
+      }
+
+      .pagination a.active {
+        background-color: dodgerblue;
+        color: white;
+      }
+
+      .pagination a:hover:not(.active) {
+        background-color: #ddd;
+        cursor: pointer;
+      }
+
+      .jobs-display {
+        cursor: pointer;
+      }
+    </style>
+
+    <app-route route="{{route}}" pattern="/:sortBy:sortDescending" query-params="{{queryParams}}"></app-route>
+
+    <h1>
+      [[jobTitle(user, user_view)]]
+      <span hidden$=[[!user]]>
+        (<a class="jobs-display" on-click="toggleJobsView">[[toggleJobsLink(user_view)]]</a>)
+      </span>
+      <span id="job-count" class="badge">
+        [[jobCount(jobs)]]
+      </span>
+      <job-search-tip></job-search-tip>
+    </h1>
+    <loading-wrapper
+      auto
+      params="[[computeParams(prev_cursor, next_cursor, user, user_view)]]"
+      url="/api/jobs"
+      response="{{jobs}}">
+      <div class="pagination">
+        <a hidden$=[[!jobs.next]] on-click="nextPage">Next &gt;</a>
+        <a hidden$=[[!jobs.prev]] on-click="prevPage">&lt; Prev</a>
+      </div>
+      <jobs-table id="jobs-table"
+          jobs="[[jobs.jobs]]"
+          sort-by="[[queryParams.sortBy]]"
+          sort-descending="[[queryParams.sortDescending]]"
+          user="[[user]]"
+          client="{{client}}">
+      </jobs-table>
+      <div class="pagination">
+        <a hidden$=[[!jobs.next]] on-click="nextPage">Next &gt;</a>
+        <a hidden$=[[!jobs.prev]] on-click="prevPage">&lt; Prev</a>
+      </div>
+    </loading-wrapper>
+    <new-job-fab hidden$=[[!user]] user="[[user]]" client="{{client}}"></new-job-fab>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'jobs-page',
+
+      properties: {
+        jobs: {
+          type: Object,
+        },
+        prev_cursor: {
+          value: '',
+          notify: true
+        },
+        next_cursor: {
+          value: '',
+          notify: true
+        },
+        user_view: {
+          value: true,
+          notify: true
+        },
+        user: {
+          type: String,
+          notify: true,
+          readonly: true,
+          observer: 'userChanged'
+        },
+      },
+
+      userChanged() {
+        this.set('prev_cursor', '');
+        this.set('next_cursor', '');
+        this.set('user_view', true);
+      },
+
+      jobTitle(user, user_view) {
+        if (user && user_view) {
+          return 'Jobs - ' + user;
+        } else {
+          return 'Jobs - All';
+        }
+      },
+
+      jobCount(jobs) {
+        if (jobs.count >= jobs.max_count) {
+          return String(jobs.max_count) + '+';
+        }
+        return String(jobs.count);
+      },
+
+      prevPage(event) {
+        this.set('prev_cursor', this.jobs.prev_cursor);
+        this.set('next_cursor', '');
+      },
+
+      nextPage(event) {
+        this.set('prev_cursor', '');
+        this.set('next_cursor', this.jobs.next_cursor);
+      },
+
+      toggleJobsView(event) {
+        this.set('prev_cursor', '');
+        this.set('next_cursor', '');
+        this.set('user_view', !this.user_view);
+      },
+
+      toggleJobsLink(user_view) {
+        if (user_view) {
+          return 'List All';
+        } else {
+          return 'List Own';
+        }
+      },
+
+      computeParams(prev_cursor, next_cursor, user, user_view) {
+        let filter = '';
+        if (user && user_view) {
+          filter = 'user=' + user;
+        }
+        let params = {
+            prev_cursor: prev_cursor,
+            next_cursor: next_cursor,
+            filter: filter
+        };
+        return params;
+      },
+
+      selected() {
+        if (this.jobs === undefined) {
+          this.$$('loading-wrapper').$.request.generateRequest();
+        }
+      },
+    });
+  </script>
+</dom-module>

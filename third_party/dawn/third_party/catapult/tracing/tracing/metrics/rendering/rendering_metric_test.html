@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/rendering/rendering_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('renderingMetric_gestureIR', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const rendererMain = model.getOrCreateProcess(1).getOrCreateThread(0);
+      rendererMain.name = 'CrRendererMain';
+      rendererMain.asyncSliceGroup.push(
+          tr.c.TestUtils.newAsyncSliceNamed(
+              'Interaction.Gesture_LoadAction', 10, 20));
+
+      const browserMain = model.getOrCreateProcess(0).getOrCreateThread(0);
+      browserMain.name = 'CrBrowserMain';
+      browserMain.asyncSliceGroup.push(
+          tr.c.TestUtils.newAsyncSliceNamed(
+              'SyntheticGestureController::running', 5, 30));
+      // Add 23 swap buffer events, at times 7, 9, 11, 13, 15 ..., 29, 31
+      for (let i = 7; i <= 31; i += 2) {
+        browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+            { title: 'BenchmarkInstrumentation::DisplayRenderingStats',
+              start: i, end: i }));
+      }
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.renderingMetric(histograms, model);
+
+    // The gesture interaction record should be adjusted to [10, 30]. So, the
+    // first two frames and the last frame are outside the interaction record
+    // and should be discarded. The remaining frames are 11 to 29 which result
+    // in 9 frames which have 1 task each.
+    const hist = histograms.getHistogramNamed('tasks_per_frame_total_all');
+    assert.closeTo(1, hist.min, 1e-6);
+    assert.closeTo(1, hist.max, 1e-6);
+    assert.closeTo(1, hist.average, 1e-6);
+  });
+});
+</script>

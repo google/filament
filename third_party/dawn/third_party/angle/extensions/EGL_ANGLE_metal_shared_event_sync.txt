@@ -1,0 +1,158 @@
+Name
+
+    ANGLE_metal_shared_event_sync
+
+Name Strings
+
+    EGL_ANGLE_metal_shared_event_sync
+
+Contributors
+
+    Dan Glastonbury, Apple
+
+Contacts
+
+    Dan Glastonbury, Apple (djg 'at' apple.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, 2022-09-08
+
+Number
+
+    EGL Extensions XXX
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension enables the creation of EGL fence sync objects that are
+    associated with a native Metal event object.  The EGL fence sync objects
+    have nearly identical semantics to those sync objects defined by the
+    EGL 1.5 Specification, except that they have an additional attribute
+    storing the id<MTLSharedEvent> referring to the metal event object and
+    the integer value to signal the event with.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    void* eglCopyMetalSharedEventANGLE(
+                        EGLDisplay dpy,
+                        EGLSync sync);
+
+New Tokens
+
+    Accepted by the <type> parameter of eglCreateSync, and returned
+    in <value> when eglGetSyncAttrib is called with <attribute>
+    EGL_SYNC_TYPE:
+
+    EGL_SYNC_METAL_SHARED_EVENT_ANGLE                   0x34D8
+
+    Accepted by the <attrib_list> parameter of eglCreateSync:
+
+    EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE            0x34D9
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_LO_ANGLE   0x34DA
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_HI_ANGLE   0x34DB
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE          0x34DC
+
+Additions to the EGL Specification
+
+    Add the following after the first paragraph of Section 3.8.1.1 (Creating
+    Fence Sync Objects),
+
+    "If <type> is EGL_SYNC_METAL_SHARED_EVENT_ANGLE, an EGL metal event sync
+    object is created. In this case the
+    EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE,
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_LO_ANGLE,
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_HI_ANGLE, and
+    EGL_SYNC_CONDITION may be specified.
+
+    If EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE attribute is specified, it must
+    be set to a pointer to a valid id<MTLSharedEvent>, or to a NULL pointer. If
+    EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE is not specified, or is a NULL
+    pointer, the EGL implementation will create a Metal event
+    object. Additionally, the EGL implementation assumes ownership of the Metal
+    event object and will follow Objective-C behavior and increase the Metal
+    event object's retain count.
+
+    EGL_SYNC_METAL_SHARED_EVENT_SIGNAL_VALUE_LO_ANGLE and
+    EGL_SYNC_METAL_SHARED_EVENT_HI_ANGLE are optional attributes specifying the
+    low and high 32-bit parts of an unsigned 64-bit value to be set when the
+    event is signaled. If these attributes are unspecified, the event is
+    signaled with one more than the event's signaledValue property at the time
+    of EGLSync creation. The signal value will wrap to 0 if the initial
+    signaledValue is the maximum value for uint64_t.
+
+    If EGL_SYNC_CONDITION attribute is specified, it must be either
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE or EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE.
+    The EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE condition is satisfied by the
+    signaling of the MTLSharedEvent referred to by the
+    EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE attribute. When this happens any
+    eglClientWaitSync commands blocking on <sync> unblock.
+
+    The default values for the EGL metal event sync object attributes are as
+    follows:
+
+      Attribute Name                     Initial Attribute Value(s)
+      --------------                     --------------------------
+      EGL_SYNC_TYPE                      EGL_SYNC_METAL_SHARED_EVENT_ANGLE
+      EGL_SYNC_STATUS                    EGL_UNSIGNALED
+      EGL_SYNC_CONDITION                 EGL_SYNC_PRIOR_COMMANDS_COMPLETE
+
+    Modify the list of eglCreateSync errors in Section 3.8.1.2 (Creating OpenCL
+    Event Sync Objects)
+
+    "Errors
+     ------
+    ..."
+
+    Modify the second paragraph of Section 3.8.1.1 (Creating Fence Sync Objects),
+
+    When a fence sync object is created or when an EGL metal shared event sync
+    object is created with the EGL_SYNC_CONDITION attribute set to
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE, eglCreateSync also inserts a fence command
+    into the command stream of the bound client API’s current context (i.e., the
+    context returned by eglGetCurrentContext), and associates it with the newly
+    created sync object.
+
+    Add the following after the last paragraph of Section 3.8.1 (Sync Objects):
+
+    "The command
+
+         void* eglCopyMetalSharedEventANGLE(
+                                EGLDisplay dpy,
+                                EGLSync sync);
+
+    increases the retain count of the id<MTLSharedEvent> stored in the
+    EGL_SYNC_METAL_SHARED_EVENT_OBJECT_ANGLE attribute of an EGL metal shared
+    event sync object and returns a pointer to the event as a void* pointer. If
+    this returns a non-null value, the caller is responsible for releasing the
+    MTLSharedEvent once after calling this function."
+
+Issues
+
+    1. What should the name be? METAL_EVENT_ANGLE? MTL or METAL?
+
+Revision History
+
+    Version 1, 2022-05-17
+      - Initial draft
+    Version 2, 2022-09-08
+      - Add eglCopyMetalSharedEventANGLE function
+    Version 3, 2023-03-06
+      - Add EGL_SYNC_METAL_SHARED_EVENT_SIGNALED_ANGLE
+

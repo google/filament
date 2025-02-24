@@ -1,0 +1,11 @@
+Name: pyasn1_modules
+URL: https://github.com/etingof/pyasn1-modules
+Version: 0.2.5
+Revision: 8764363979055eda0c736c49bad56abe6dc2687a
+License: BSD-2
+Shipped: yes
+
+Description:
+This is a small but growing collection of ASN.1 data structures expressed in Python terms using pyasn1 data model.
+
+This was installed as a dependency of google-auth via pip.

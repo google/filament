@@ -1,0 +1,15 @@
+runtime: python312
+
+handlers:
+
+# If the path is empty, show vulcanized app file.
+- url: /
+  static_files: static/vulcanized.html
+  upload: static/vulcanized.html
+  secure: always
+
+# Otherwise, find images in static directory.
+- url: /(.*\.png)$
+  static_files: static/\1
+  upload: static/.*\.png$
+  secure: always

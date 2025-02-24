@@ -1,0 +1,106 @@
+Name
+
+    ANGLE_experimental_present_path
+
+Name Strings
+
+    EGL_ANGLE_experimental_present_path
+
+Contributors
+
+    Austin Kinross
+
+Contacts
+
+    Austin Kinross (aukinros 'at' microsoft 'dot' com)
+
+Status
+
+    Experimental
+
+Version
+
+    Version 1, Jan 22 2016
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle_d3d.
+
+    Written against the wording of EGL 1.4 as modified by
+    ANGLE_platform_angle_d3d.
+
+Overview
+
+    This extension exposes an optimized, but potentially non-conformant,
+    rendering path for ANGLE's D3D11 renderer on Windows.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE      0x33A4
+
+    Accepted as values for the EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE attribute:
+
+        EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE 0x33A9
+        EGL_EXPERIMENTAL_PRESENT_PATH_COPY_ANGLE 0x33AA
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that enables this optimized rendering path,
+    the value of EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE should be set to
+    EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE. Setting this value may impact
+    OpenGL ES conformance (see Issue 1 below).
+
+    The only valid values for the attribute
+    EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE are
+    EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE and
+    EGL_EXPERIMENTAL_PRESENT_PATH_COPY_ANGLE. If any other value is specified
+    then an EGL_BAD_ATTRIBUTE error is generated and EGL_NO_DISPLAY is
+    returned.
+
+    If a value for EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE is specified and
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE is not set to
+    EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE then an EGL_BAD_ATTRIBUTE error is
+    generated and EGL_NO_DISPLAY is returned.
+
+	If the attribute EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE
+    is unspecified then it is implicitly set to
+    EGL_EXPERIMENTAL_PRESENT_PATH_COPY_ANGLE.
+
+Issues
+
+    1) Does setting EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE to be
+       EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE maintain OpenGL ES
+       conformance?
+
+       RESOLVED: Not necessarily, that is implementation-specific. Check then
+       EGL_CONFORMANT attribute to see if the implementation supports any
+       conformant EGL configs when EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE
+       is specified.
+
+Revision History
+
+    Version 1, Jan 22 2016 (Austin Kinross)
+      - Initial draft

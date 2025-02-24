@@ -1,0 +1,33 @@
+boto v2.27.0
+============
+
+:date: 2014/03/06
+
+This release adds support for configuring access logs on Elastic Load Balancing
+(including what Amazon Simple Storage Service (S3) bucket to use & how
+frequently logs should be added to the bucket), adds request hook documentation
+& a host of doc updates/bugfixes.
+
+
+Changes
+-------
+
+* Added support for ``AccessLog`` in ELB (:issue:`2150`, :sha:`7aa35ea`)
+* Added better BlockDeviceType deserialization in Autoscaling. (:issue:`2149`,
+  :sha:`04d29a5`)
+* Updated CloudFormation documentation (:issue:`2147`, :sha:`2535aca`)
+* Updated Kinesis documentation (:issue:`2146`, :sha:`01425dc`)
+* Add optional bucket tags to `lss3` output. (:issue:`2132`, :sha:`0f35924`)
+* Fix getting instance types for Eucalyptus 4.0. (:issue:`2118`, :sha:`18dc07d`)
+* Fixed how quoted strings are handled in SigV4 (:issue:`2142`, :sha:`2467547`)
+* Use system supplied certs without a bundle file (:issue:`2139`,
+  :sha:`70d15b8`)
+* Fixed incorrect test failures in EC2 ``trim_snapshots`` (:sha:`1fa9df7`)
+* Raise any exceptions that are tagSet not found (:sha:`56d7d3e`)
+* Added request hook docs (:issue:`2129`, :sha:`64eedce`)
+* Fixed Route53 ``alias-healthcheck`` (:issue:`2126`, :sha:`141077f`)
+* Fixed Elastic IP association in EC2 (:issue:`2131`, :issue:`1310`,
+  :sha:`d75fdfa`)
+* Fixed builds on Travis for installing dependencies (:sha:`5e84e30`)
+* Support printing tags on buckets when listing buckets (:sha:`c42a5dd`)
+* PEP8/pyflakes/(some)pylint (:sha:`149175e`)

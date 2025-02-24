@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/user_model/stub_expectation.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TestUtils = tr.c.TestUtils;
+  const CompoundEventSelectionState = tr.model.CompoundEventSelectionState;
+
+  function createModel(opt_customizeModelCallback) {
+    return TestUtils.newModel(function(model) {
+      model.p1 = model.getOrCreateProcess(1);
+      model.t2 = model.p1.getOrCreateThread(2);
+
+      model.s1 = model.t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'a', start: 10, end: 20
+      }));
+      model.s2 = model.t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'b', start: 20, end: 30
+      }));
+
+      model.ir1 = new tr.model.um.StubExpectation({
+        parentModel: model,
+        start: 100, end: 200,
+        typeName: 'Response',
+        normalizedEfficiency: 1.,
+        normalizedUserComfort: 0.0
+      });
+      model.userModel.expectations.push(model.ir1);
+      model.ir1.associatedEvents.push(model.s1);
+      model.ir1.associatedEvents.push(model.s2);
+
+      if (opt_customizeModelCallback) {
+        opt_customizeModelCallback(model);
+      }
+    });
+  }
+  test('notSelected', function() {
+    const model = createModel();
+
+    const sel = new tr.model.EventSet();
+
+    assert.strictEqual(CompoundEventSelectionState.NOT_SELECTED,
+        model.ir1.computeCompoundEvenSelectionState(sel));
+  });
+
+  test('directSelected', function() {
+    const model = createModel();
+
+    const sel = new tr.model.EventSet();
+    sel.push(model.ir1);
+
+    assert.strictEqual(CompoundEventSelectionState.EVENT_SELECTED,
+        model.ir1.computeCompoundEvenSelectionState(sel));
+  });
+
+  test('directAndSomeAssociatedSelected', function() {
+    const model = createModel();
+
+    const sel = new tr.model.EventSet();
+    sel.push(model.ir1);
+    sel.push(model.s1);
+
+    assert.strictEqual(
+        CompoundEventSelectionState.EVENT_AND_SOME_ASSOCIATED_SELECTED,
+        model.ir1.computeCompoundEvenSelectionState(sel));
+  });
+
+  test('allAssociatedEventsSelected', function() {
+    const model = createModel();
+
+    const sel = new tr.model.EventSet();
+    sel.push(model.s1);
+    sel.push(model.s2);
+
+    assert.strictEqual(
+        CompoundEventSelectionState.ALL_ASSOCIATED_EVENTS_SELECTED,
+        model.ir1.computeCompoundEvenSelectionState(sel));
+  });
+
+  test('directAndAllAssociated', function() {
+    const model = createModel();
+
+    const sel = new tr.model.EventSet();
+    sel.push(model.ir1);
+    sel.push(model.s1);
+    sel.push(model.s2);
+
+    assert.strictEqual(
+        CompoundEventSelectionState.EVENT_AND_ALL_ASSOCIATED_SELECTED,
+        model.ir1.computeCompoundEvenSelectionState(sel));
+  });
+
+  test('stableId', function() {
+    const model = TestUtils.newModel();
+
+    const ir1 = TestUtils.newInteractionRecord(model, 0, 10);
+    const ir2 = TestUtils.newInteractionRecord(model, 10, 10);
+    const ir3 = TestUtils.newInteractionRecord(model, 20, 10);
+
+    assert.strictEqual('UserExpectation.' + ir1.guid, ir1.stableId);
+    assert.strictEqual('UserExpectation.' + ir2.guid, ir2.stableId);
+    assert.strictEqual('UserExpectation.' + ir3.guid, ir3.stableId);
+  });
+});
+</script>

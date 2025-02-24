@@ -1,0 +1,13 @@
+rootProject.name='OpenCLMatrixMultiplication'
+
+//Copy all the build output stuff into the SDK/bin folder
+gradle.ext.PVR_BINARY_OUTPUT_DIR='bin'
+
+include('glm')
+project(':glm').projectDir=file('../../../../external/glm/build-android')
+include('pugixml')
+project(':pugixml').projectDir=file('../../../../external/pugixml/build-android')
+include('PVRCore')
+project(':PVRCore').projectDir=file('../../../../framework/PVRCore/build-android')
+include('PVRUtilsCL')
+project(':PVRUtilsCL').projectDir=file('../../../../framework/PVRUtils/OpenCL/build-android')

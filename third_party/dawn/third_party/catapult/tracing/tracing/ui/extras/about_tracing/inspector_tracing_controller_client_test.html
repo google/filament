@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/inspector_connection.html">
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/inspector_tracing_controller_client.html">
+
+<script>
+'use strict';
+
+function makeController() {
+  const controller =
+      new tr.ui.e.about_tracing.InspectorTracingControllerClient();
+  controller.conn_ = new (function() {
+    this.req = function(method, params) {
+      const msg = JSON.stringify({
+        id: 1,
+        method,
+        params
+      });
+      return new (function() {
+        this.msg = msg;
+        this.then = function(m1, m2) {
+          return this;
+        };
+      })();
+    };
+    this.setNotificationListener = function(method, listener) {
+    };
+  })();
+  return controller;
+}
+
+tr.b.unittest.testSuite(function() {
+  test('beginRecording_sendCategoriesAndOptions', function() {
+    const controller = makeController();
+
+    const recordingOptions = {
+      included_categories: ['a', 'b', 'c'],
+      excluded_categories: ['e'],
+      enable_systrace: false,
+      record_mode: 'record-until-full',
+      stream_format: 'json',
+    };
+
+    const result = JSON.parse(controller.beginRecording(recordingOptions).msg);
+    assert.deepEqual(
+        result.params.traceConfig.includedCategories, ['a', 'b', 'c']);
+    assert.deepEqual(
+        result.params.traceConfig.excludedCategories, ['e']);
+    assert.strictEqual(
+        result.params.traceConfig.recordMode, 'recordUntilFull');
+    assert.isFalse(
+        result.params.traceConfig.enableSystrace);
+    assert.isFalse('memoryDumpConfig' in result.params.traceConfig);
+    assert.strictEqual(result.params.streamFormat, 'json');
+  });
+
+  test('beginRecording_sendCategoriesAndOptionsWithProtoFormat', function() {
+    const controller = makeController();
+
+    const recordingOptions = {
+      included_categories: ['a', 'b', 'c'],
+      excluded_categories: ['e'],
+      enable_systrace: false,
+      record_mode: 'record-until-full',
+      stream_format: 'protobuf',
+    };
+
+    const result = JSON.parse(controller.beginRecording(recordingOptions).msg);
+    assert.deepEqual(
+        result.params.traceConfig.includedCategories, ['a', 'b', 'c']);
+    assert.deepEqual(
+        result.params.traceConfig.excludedCategories, ['e']);
+    assert.strictEqual(
+        result.params.traceConfig.recordMode, 'recordUntilFull');
+    assert.isFalse(
+        result.params.traceConfig.enableSystrace);
+    assert.isFalse('memoryDumpConfig' in result.params.traceConfig);
+    assert.strictEqual(result.params.streamFormat, 'proto');
+  });
+
+  test('beginRecording_sendCategoriesAndOptionsWithMemoryInfra', function() {
+    const controller = makeController();
+
+    const memoryConfig = { triggers: [] };
+    memoryConfig.triggers.push(
+        {'mode': 'detailed', 'periodic_interval_ms': 10000});
+    const recordingOptions = {
+      included_categories: ['c', 'disabled-by-default-memory-infra', 'a'],
+      excluded_categories: ['e'],
+      enable_systrace: false,
+      record_mode: 'test-mode',
+      stream_format: 'json',
+      memory_dump_config: memoryConfig,
+    };
+
+    const result = JSON.parse(controller.beginRecording(recordingOptions).msg);
+    assert.isTrue(
+        result.params.traceConfig.memoryDumpConfig.triggers.length === 1);
+    assert.strictEqual(result.params.traceConfig.memoryDumpConfig.
+        triggers[0].mode, 'detailed');
+    assert.strictEqual(result.params.traceConfig.memoryDumpConfig.
+        triggers[0].periodic_interval_ms, 10000);
+  });
+
+  test('oldFormat', function() {
+    const chunks = [];
+    tr.ui.e.about_tracing.appendTraceChunksTo(chunks, '"{ "method": "Tracing.dataCollected", "params": { "value": [ {"cat":"__metadata","pid":28871,"tid":0,"ts":0,"ph":"M","name":"num_cpus","args":{"number":4}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_sort_index","args":{"sort_index":-5}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_name","args":{"name":"Renderer"}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_labels","args":{"labels":"JS Bin"}},{"cat":"__metadata","pid":28871,"tid":28908,"ts":0,"ph":"M","name":"thread_sort_index","args":{"sort_index":-1}},{"cat":"__metadata","pid":28871,"tid":28917,"ts":0,"ph":"M","name":"thread_name","args":{"name":"Compositor"}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"thread_name","args":{"name":"Chrome_ChildIOThread"}},{"cat":"__metadata","pid":28871,"tid":28919,"ts":0,"ph":"M","name":"thread_name","args":{"name":"CompositorRasterWorker1/28919"}},{"cat":"__metadata","pid":28871,"tid":28908,"ts":0,"ph":"M","name":"thread_name","args":{"name":"CrRendererMain"}},{"cat":"ipc,toplevel","pid":28871,"tid":28911,"ts":22000084746,"ph":"X","name":"ChannelReader::DispatchInputData","args":{"class":64,"line":25},"tdur":0,"tts":1853064},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"overhead","args":{"average_overhead":0.015}} ] } }"'); // @suppress longLineCheck
+    assert.strictEqual(chunks.length, 1);
+    JSON.parse('[' + chunks.join('') + ']');
+  });
+
+  test('newFormat', function() {
+    const chunks = [];
+    tr.ui.e.about_tracing.appendTraceChunksTo(chunks, '"{ "method": "Tracing.dataCollected", "params": { "value": [{"cat":"__metadata","pid":28871,"tid":0,"ts":0,"ph":"M","name":"num_cpus","args":{"number":4}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_sort_index","args":{"sort_index":-5}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_name","args":{"name":"Renderer"}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"process_labels","args":{"labels":"JS Bin"}},{"cat":"__metadata","pid":28871,"tid":28908,"ts":0,"ph":"M","name":"thread_sort_index","args":{"sort_index":-1}},{"cat":"__metadata","pid":28871,"tid":28917,"ts":0,"ph":"M","name":"thread_name","args":{"name":"Compositor"}},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"thread_name","args":{"name":"Chrome_ChildIOThread"}},{"cat":"__metadata","pid":28871,"tid":28919,"ts":0,"ph":"M","name":"thread_name","args":{"name":"CompositorRasterWorker1/28919"}},{"cat":"__metadata","pid":28871,"tid":28908,"ts":0,"ph":"M","name":"thread_name","args":{"name":"CrRendererMain"}},{"cat":"ipc,toplevel","pid":28871,"tid":28911,"ts":22000084746,"ph":"X","name":"ChannelReader::DispatchInputData","args":{"class":64,"line":25},"tdur":0,"tts":1853064},{"cat":"__metadata","pid":28871,"tid":28911,"ts":0,"ph":"M","name":"overhead","args":{"average_overhead":0.015}}] } }"'); // @suppress longLineCheck
+    assert.strictEqual(chunks.length, 1);
+    JSON.parse('[' + chunks.join('') + ']');
+  });
+
+  test('stringAndObjectPayload', function() {
+    const connection =
+        new tr.ui.e.about_tracing.InspectorConnection({DevToolsHost: {}});
+    connection.setNotificationListener('Tracing.dataCollected',
+        function(message) {
+          assert.typeOf(message, 'string');
+          JSON.parse(message);
+        }
+    );
+    connection.dispatchMessage_('{ "method": "Tracing.dataCollected", "params": { "value": [] } }'); // @suppress longLineCheck
+    connection.dispatchMessage_({'method': 'Tracing.dataCollected', 'params': {'value': [] } }); // @suppress longLineCheck
+  });
+
+  // Makes a fake version of DevToolsHost, which is the object injected
+  // by the chrome inspector to allow tracing a remote instance of chrome.
+  //
+  // The fake host doesn't do much by itself - you have to install
+  // callbacks for incoming messages via handleMessage().
+  function makeFakeDevToolsHost() {
+    return new (function() {
+      this.pendingMethods_ = [];
+      this.messageHandlers_ = [];
+
+      // Sends a message to DevTools host. This is used by
+      // InspectorTracingControllerClient to communicate with the remote
+      // debugging tracing backend.
+      this.sendMessageToEmbedder = function(devtoolsMessageStr) {
+        this.pendingMethods_.push(JSON.parse(devtoolsMessageStr));
+        this.tryMessageHandlers_();
+      };
+
+      // Runs remote debugging message handlers. Handlers are installed
+      // by test code via handleMessage().
+      this.tryMessageHandlers_ = function() {
+        while (this.pendingMethods_.length !== 0) {
+          const message = this.pendingMethods_[0];
+          const params = JSON.parse(message.params);
+          let handled = false;
+          const handlersToRemove = [];
+
+          // Try to find a handler for this method.
+          for (const handler of this.messageHandlers_) {
+            if (handler(params, () => handlersToRemove.push(handler))) {
+              handled = true;
+              break;
+            }
+          }
+
+          // Remove any handlers that requested removal.
+          this.messageHandlers_ = this.messageHandlers_.filter(
+              (handler) => !handlersToRemove.includes(handler));
+
+          // Remove any handled messages.
+          if (handled) {
+            this.pendingMethods_.shift();
+          } else {
+            return;  // Methods must be handled in order.
+          }
+        }
+      };
+
+      // Installs a message handler that will be invoked for each
+      // incoming message from InspectorTracingControllerClient.
+      //
+      // handleMessage((message, removeSelf) => {
+      //   // Try to handle |message|.
+      //   // Call |removeSelf| to remove this handler for future messages.
+      //   // Return whether |message| was handled. Otherwise other handlers
+      //   // will be run until one of them succeeds.
+      // }
+      this.handleMessage = function(handler) {
+        this.messageHandlers_.push(handler);
+        this.tryMessageHandlers_();
+      };
+
+      // Installs a message handler that will handle the first call to the named
+      // method. Returns a promise for the parameters passed to the method.
+      this.handleMethod = function(method) {
+        const result = new Promise((resolve, reject) => {
+          this.handleMessage(
+              (requestParams, removeHandler) => {
+                if (requestParams.method === method) {
+                  removeHandler();
+                  resolve(requestParams);
+                  return true;
+                }
+                return false;
+              });
+        });
+        return result;
+      };
+
+      // Sends a response to a remote debugging method call (i.e.,
+      // "return") to InspectorTracingControllerClient.
+      this.respondToMethod = function(id, params) {
+        this.devToolsAPI_.dispatchMessage(JSON.stringify({
+          id,
+          result: params,
+        }));
+      };
+
+      // Sets the object used to send messages back to
+      // InspectorTracingControllerClient.
+      this.setDevToolsAPI = function(api) {
+        this.devToolsAPI_ = api;
+      };
+
+      // Sends a notification to InspectorTracingControllerClient.
+      this.sendNotification = function(method, params) {
+        this.devToolsAPI_.dispatchMessage(JSON.stringify({ method, params }));
+      };
+    })();
+  }
+
+  test('shouldUseLegacyTraceFormatIfNoStreamId', async function() {
+    const fakeDevToolsHost = makeFakeDevToolsHost();
+    const fakeWindow = {
+      DevToolsHost: fakeDevToolsHost,
+    };
+    const controller =
+      new tr.ui.e.about_tracing.InspectorTracingControllerClient(
+          new tr.ui.e.about_tracing.InspectorConnection(fakeWindow));
+    fakeDevToolsHost.setDevToolsAPI(fakeWindow.DevToolsAPI);
+
+    const runHost = (async() => {
+      const startParams = await fakeDevToolsHost.handleMethod('Tracing.start');
+      fakeDevToolsHost.respondToMethod(startParams.id, {});
+      const endParams = await fakeDevToolsHost.handleMethod('Tracing.end');
+      fakeDevToolsHost.respondToMethod(endParams.id, {});
+      fakeDevToolsHost.sendNotification('Tracing.tracingComplete', {});
+    })();
+
+    await controller.beginRecording({});
+    const traceData = await controller.endRecording();
+    await runHost;
+
+    assert.strictEqual('[]', traceData);
+  });
+
+  test('shouldReassembleTextDataChunks', async function() {
+    const fakeDevToolsHost = makeFakeDevToolsHost();
+    const fakeWindow = {
+      DevToolsHost: fakeDevToolsHost,
+    };
+    const controller =
+      new tr.ui.e.about_tracing.InspectorTracingControllerClient(
+          new tr.ui.e.about_tracing.InspectorConnection(fakeWindow));
+    fakeDevToolsHost.setDevToolsAPI(fakeWindow.DevToolsAPI);
+
+    const STREAM_HANDLE = 7;
+
+    const streamChunks = [
+      '[',
+      ']',
+      '\n',
+    ];
+
+    let streamClosed = false;
+
+    const handleIoRead = (index, params) => {
+      if (params.params.handle !== STREAM_HANDLE) {
+        throw new Error('Invalid stream handle');
+      }
+      if (streamClosed) {
+        throw new Error('stream is closed');
+      }
+      let data = '';
+      if (index < streamChunks.length) {
+        data = streamChunks[index];
+      }
+      const eof = (index >= streamChunks.length - 1);
+      fakeDevToolsHost.respondToMethod(params.id, {
+        eof,
+        base64Encoded: false,
+        data,
+      });
+      const nextIndex = eof ? streamChunks.length : index + 1;
+      return (async() =>
+        handleIoRead(nextIndex, await fakeDevToolsHost.handleMethod('IO.read'))
+      )();
+    };
+
+    const runHost = (async() => {
+      const startParams = await fakeDevToolsHost.handleMethod('Tracing.start');
+      fakeDevToolsHost.respondToMethod(startParams.id, {});
+      const endParams = await fakeDevToolsHost.handleMethod('Tracing.end');
+      fakeDevToolsHost.respondToMethod(endParams.id, {});
+      fakeDevToolsHost.sendNotification('Tracing.tracingComplete', {
+        'stream': STREAM_HANDLE,
+      });
+
+      const closePromise = (async() => {
+        const closeParams = await fakeDevToolsHost.handleMethod('IO.close');
+        assert.strictEqual(closeParams.params.handle, STREAM_HANDLE);
+        streamClosed = true;
+      })();
+
+      const readPromise = (async() =>
+        handleIoRead(0, await fakeDevToolsHost.handleMethod('IO.read'))
+      )();
+
+      await Promise.race([closePromise, readPromise]);
+      await closePromise;
+    })();
+
+    await controller.beginRecording({});
+    const traceData = await controller.endRecording();
+    await runHost;
+
+    assert.strictEqual(traceData, '[]\n');
+  });
+
+  test('shouldReassembleBase64TraceDataChunks', async function() {
+    const fakeDevToolsHost = makeFakeDevToolsHost();
+    const fakeWindow = {
+      DevToolsHost: fakeDevToolsHost,
+    };
+    const controller =
+      new tr.ui.e.about_tracing.InspectorTracingControllerClient(
+          new tr.ui.e.about_tracing.InspectorConnection(fakeWindow));
+    fakeDevToolsHost.setDevToolsAPI(fakeWindow.DevToolsAPI);
+
+    const STREAM_HANDLE = 7;
+
+    // This is the empty trace ('[]') gzip compressed and chunked to make
+    // sure reassembling base64 strings works properly.
+    const streamChunks = [
+      'Hw==',
+      'iwg=',
+      'ALg4',
+      'L1oAA4uOBQApu0wNAgAAAA==',
+    ];
+
+    let streamClosed = false;
+
+    const handleIoRead = (index, params) => {
+      if (params.params.handle !== STREAM_HANDLE) {
+        throw new Error('Invalid stream handle');
+      }
+      if (streamClosed) {
+        throw new Error('stream is closed');
+      }
+      let data = '';
+      if (index < streamChunks.length) {
+        data = streamChunks[index];
+      }
+      const eof = (index >= streamChunks.length - 1);
+      fakeDevToolsHost.respondToMethod(params.id, {
+        eof,
+        base64Encoded: true,
+        data,
+      });
+      const nextIndex = eof ? streamChunks.length : index + 1;
+      return (async() => {
+        handleIoRead(nextIndex, await fakeDevToolsHost.handleMethod('IO.read'));
+      })();
+    };
+
+    const runHost = (async() => {
+      const startParams = await fakeDevToolsHost.handleMethod('Tracing.start');
+      fakeDevToolsHost.respondToMethod(startParams.id, {});
+      const endParams = await fakeDevToolsHost.handleMethod('Tracing.end');
+      fakeDevToolsHost.respondToMethod(endParams.id, {});
+      fakeDevToolsHost.sendNotification('Tracing.tracingComplete', {
+        'stream': STREAM_HANDLE,
+        'streamCompression': 'gzip'
+      });
+      const closePromise = (async() => {
+        const closeParams = await fakeDevToolsHost.handleMethod('IO.close');
+        assert.strictEqual(closeParams.params.handle, STREAM_HANDLE);
+        streamClosed = true;
+      })();
+
+      const readPromise = (async() => {
+        handleIoRead(0, await fakeDevToolsHost.handleMethod('IO.read'));
+      })();
+
+      await Promise.race([closePromise, readPromise]);
+      await closePromise;
+    })();
+
+    await controller.beginRecording({});
+    const traceData = await controller.endRecording();
+    await runHost;
+
+    const dataArray = new Uint8Array(traceData);
+    const expectedArray = new Uint8Array([
+      0x1f, 0x8b, 0x8, 0x0, 0xb8, 0x38, 0x2f, 0x5a, 0x0, 0x3, 0x8b, 0x8e,
+      0x5, 0x0, 0x29, 0xbb, 0x4c, 0xd, 0x2, 0x0, 0x0, 0x0]);
+
+    assert.strictEqual(dataArray.length, expectedArray.length);
+
+    for (let i = 0; i < dataArray.length; ++i) {
+      assert.strictEqual(dataArray[i], expectedArray[i]);
+    }
+  });
+});
+</script>

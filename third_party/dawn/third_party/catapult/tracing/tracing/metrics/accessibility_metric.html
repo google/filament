@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  function accessibilityMetric(histograms, model) {
+    const browserAccessibilityEventsHist = new tr.v.Histogram(
+        'browser_accessibility_events',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    browserAccessibilityEventsHist.description =
+        'Browser accessibility events time';
+
+    const renderAccessibilityEventsHist = new tr.v.Histogram(
+        'render_accessibility_events',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    renderAccessibilityEventsHist.description =
+        'Render accessibility events time';
+
+    const renderAccessibilityLocationsHist = new tr.v.Histogram(
+        'render_accessibility_locations',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    renderAccessibilityLocationsHist.description =
+        'Render accessibility locations time';
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (chromeHelper === undefined) return;
+
+    for (const rendererHelper of Object.values(chromeHelper.rendererHelpers)) {
+      const mainThread = rendererHelper.mainThread;
+      if (mainThread === undefined) continue;
+
+      for (const slice of mainThread.getDescendantEvents()) {
+        if (!(slice instanceof tr.model.ThreadSlice)) continue;
+
+        if (slice.title ===
+            'RenderAccessibilityImpl::SendPendingAccessibilityEvents') {
+          renderAccessibilityEventsHist.addSample(slice.duration,
+              {event: new tr.v.d.RelatedEventSet(slice)});
+        }
+        if (slice.title ===
+            'RenderAccessibilityImpl::SendLocationChanges') {
+          renderAccessibilityLocationsHist.addSample(slice.duration,
+              {event: new tr.v.d.RelatedEventSet(slice)});
+        }
+      }
+    }
+
+    for (const browserHelper of Object.values(chromeHelper.browserHelpers)) {
+      const mainThread = browserHelper.mainThread;
+      if (mainThread === undefined) continue;
+
+      for (const slice of mainThread.getDescendantEvents()) {
+        if (slice.title ===
+            'BrowserAccessibilityManager::OnAccessibilityEvents') {
+          browserAccessibilityEventsHist.addSample(slice.duration,
+              {event: new tr.v.d.RelatedEventSet(slice)});
+        }
+      }
+    }
+
+    histograms.addHistogram(browserAccessibilityEventsHist);
+    histograms.addHistogram(renderAccessibilityEventsHist);
+    histograms.addHistogram(renderAccessibilityLocationsHist);
+  }
+
+  tr.metrics.MetricRegistry.register(accessibilityMetric);
+
+  return {
+    accessibilityMetric,
+  };
+});
+</script>

@@ -1,0 +1,28 @@
+boto v2.30.0
+============
+
+:date: 2014/07/01
+
+This release adds new Amazon EC2 instance types, new regions for AWS CloudTrail and Amazon Kinesis, Amazon S3 presigning using signature version 4, and several documentation and bugfixes.
+
+
+Changes
+-------
+* Add EC2 T2 instance types (:sha:`544f8925cb`)
+* Add new regions for CloudTrail and Kinesis (:sha:`4d67e19914`)
+* Fixed some code formatting and typo in SQS tutorial docs. (:issue:`2332`, :sha:`08c8fed`)
+* Documentation update -- Child workflows and poll API. (:issue:`2333`, :issue:`2063`, :issue:`2064`, :sha:`4835676`)
+* DOC Tutorial update for metrics and use of dimensions property. (:issue:`2340`, :issue:`2336`, :sha:`45fda90`)
+* Let people know only EC2 supported for cloudwatch. (:issue:`2341`, :sha:`98f03e2`)
+* Add namespace to AccessControlPolicy xml representation. (:issue:`2342`, :sha:`ce07446`)
+* Make ip_addr optional in Route53 HealthCheck. (:issue:`2345`, :sha:`79c35ca`)
+* Add S3 SigV4 Presigning. (:issue:`2349`, :sha:`125c4ce`)
+* Add missing route53 autodoc. (:issue:`2343`, :sha:`6472811`)
+* Adds scan_index_forward and limit to DynamoDB table query count. (:issue:`2184`, :sha:`4b6d222`)
+* Add method TaggedEC2Object.add_tags(). (:issue:`2259`, :sha:`eea5467`)
+* Add network interface lookup to EC2. Add update/attach/detach methods to NetworkInterface object. (:issue:`2311`, :sha:`4d44530`)
+* Parse date/time in a locale independent manner. (:issue:`2317`, :issue:`2271`, :sha:`3b715e5`)
+* Add documentation for delete_hosted_zone. (:issue:`2316`, :sha:`a0fdd39`)
+* s/existance/existence/ (:issue:`2315`, :sha:`b8dfa1c`)
+* Add multipart upload section to the S3 tutorial. (:issue:`2308`, :sha:`99953d4`)
+* Only attempt shared creds load if path is a file. (:issue:`2305`, :sha:`0bffa3b`)

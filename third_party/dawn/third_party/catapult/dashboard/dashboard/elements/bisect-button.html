@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+
+<link rel="import" href="/dashboard/elements/pinpoint-job-dialog.html">
+<link rel="import" href="/dashboard/static/pinpoint.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="bisect-button">
+  <template>
+    <style>
+      /*
+       * A special style for the "enabled" attribute is used because when style
+       * is applied to the button element, it seems to override the paper-button
+       * [disabled] style.
+       * The selector #button:enabled doesn't work because the underlying
+       * element inside paper-button is a div, not a form element.
+       */
+      #button:not([disabled]) {
+        background-color: #4285f4;
+        color: white;
+      }
+
+      /*
+       * Style for when this custom element when it has the class "mini".
+       * See: http://www.polymer-project.org/articles/styling-elements.html
+       */
+      :host(.mini) #button {
+        height: 22px;
+        line-height: 0.5em;
+        margin-left: 5px;
+        padding-top: 0;
+      }
+    </style>
+    <paper-button raised
+        id="button"
+        disabled$={{!computeCanBisect(bisectInfo)}}
+        on-click="onBisect">Bisect</paper-button>
+    <pinpoint-job-dialog id="pinpoint" alerts="[[alerts]]"></pinpoint-job-dialog>
+
+    <div id="toasts" hidden>
+      <div id="jobsubmitted">
+        <b>Pinpoint Job submitted!</b>
+        <a href="{{lastSubmittedJobUrl}}"
+           target="_blank">View job {{lastSubmittedJobId}}.</a>
+      </div>
+    </div>
+
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+(function() {
+  Polymer({
+
+    is: 'bisect-button',
+    properties: {
+      alerts: {},
+      bisectInfo: {
+        notify: true
+      },
+      bugId: { notify: true },
+      projectId: { notify: true },
+      xsrfToken: { notify: true }
+    },
+
+    ready() {
+      this.$.pinpoint.addEventListener(
+          'pinpoint-new-response',
+          this.onPinpointJobSubmitted.bind(this));
+    },
+
+    /**
+      * Determines whether or not this is bisectable.
+      */
+    computeCanBisect(bisectInfo) {
+      return bisectInfo !== null && bisectInfo.canBisect;
+    },
+
+    onPinpointJobSubmitted(e) {
+      this.lastSubmittedJobId = e.detail.jobId;
+      this.lastSubmittedJobUrl = e.detail.jobUrl;
+
+      this.fire('display-toast', {'content': this.$.jobsubmitted});
+    },
+
+    /**
+      * Displays the bisect-form when the bisect button is clicked.
+      */
+    onBisect() {
+      const testPathParts = this.bisectInfo.testPath.split('/');
+      const botName = testPathParts[1];
+
+      this.$.pinpoint.test_path = this.bisectInfo.testPath;
+      this.$.pinpoint.start_commit = this.bisectInfo.goodRev;
+      this.$.pinpoint.end_commit = this.bisectInfo.badRev;
+      this.$.pinpoint.bug_id = this.bugId;
+      this.$.pinpoint.project_id =
+          this.projectId != null ? this.projectId : 'chromium';
+      this.$.pinpoint.show();
+    }
+  });
+})();
+</script>

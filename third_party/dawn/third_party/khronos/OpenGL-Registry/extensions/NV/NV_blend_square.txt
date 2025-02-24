@@ -1,0 +1,151 @@
+Name
+
+    NV_blend_square
+
+Name Strings
+
+    GL_NV_blend_square
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999.
+
+Status
+
+    Shipping (version 1.1)
+
+Version
+
+    Date: 1/14/2000  Version: 1.1
+    $Date$ $Revision$
+
+Number
+
+    194
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+Overview
+
+    It is useful to be able to multiply a number by itself in the blending
+    stages -- for example, in certain types of specular lighting effects
+    where a result from a dot product needs to be taken to a high power.
+
+    This extension provides four additional blending factors to permit
+    this and other effects: SRC_COLOR and ONE_MINUS_SRC_COLOR for source
+    blending factors, and DST_COLOR and ONE_MINUS_DST_COLOR for destination
+    blending factors.
+
+    Direct3D provides capability bits for advertising these additional
+    blend modes.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Two lines are added to each of tables 4.1 and 4.2:
+
+        Value                           Blend Factors
+        -----                           -------------
+        ZERO                            (0, 0, 0, 0)
+        ONE                             (1, 1, 1, 1)
+        SRC_COLOR                       (Rs, Gs, Bs, As)                                        NEW
+        ONE_MINUS_SRC_COLOR             (1, 1, 1, 1) - (Rs, Gs, Bs, As)                         NEW
+        DST_COLOR                       (Rd, Gd, Bd, Ad)
+        ONE_MINUS_DST_COLOR             (1, 1, 1, 1) - (Rd, Gd, Bd, Ad)
+        SRC_ALPHA                       (As, As, As, As) / Ka
+        ONE_MINUS_SRC_ALPHA             (1, 1, 1, 1) - (As, As, As, As) / Ka
+        DST_ALPHA                       (Ad, Ad, Ad, Ad) / Ka
+        ONE_MINUS_DST_ALPHA             (1, 1, 1, 1) - (Ad, Ad, Ad, Ad) / Ka
+        CONSTANT_COLOR                  (Rc, Gc, Bc, Ac)
+        ONE_MINUS_CONSTANT_COLOR        (1, 1, 1, 1) - (Rc, Gc, Bc, Ac)
+        CONSTANT_ALPHA                  (Ac, Ac, Ac, Ac)
+        ONE_MINUS_CONSTANT_ALPHA        (1, 1, 1, 1) - (Ac, Ac, Ac, Ac)
+        SRC_ALPHA_SATURATE              (f, f, f, 1)
+
+        Table 4.1: Values controlling the source blending function and the
+        source blending values they compute.  f = min(As, 1 - Ad).
+
+        Value                           Blend Factors
+        -----                           -------------
+        ZERO                            (0, 0, 0, 0)
+        ONE                             (1, 1, 1, 1)
+        SRC_COLOR                       (Rs, Gs, Bs, As)
+        ONE_MINUS_SRC_COLOR             (1, 1, 1, 1) - (Rs, Gs, Bs, As)
+        DST_COLOR                       (Rd, Gd, Bd, Ad)                                        NEW
+        ONE_MINUS_DST_COLOR             (1, 1, 1, 1) - (Rd, Gd, Bd, Ad)                         NEW
+        SRC_ALPHA                       (As, As, As, As) / Ka
+        ONE_MINUS_SRC_ALPHA             (1, 1, 1, 1) - (As, As, As, As) / Ka
+        DST_ALPHA                       (Ad, Ad, Ad, Ad) / Ka
+        ONE_MINUS_DST_ALPHA             (1, 1, 1, 1) - (Ad, Ad, Ad, Ad) / Ka
+        CONSTANT_COLOR_EXT              (Rc, Gc, Bc, Ac)
+        ONE_MINUS_CONSTANT_COLOR_EXT    (1, 1, 1, 1) - (Rc, Gc, Bc, Ac)
+        CONSTANT_ALPHA_EXT              (Ac, Ac, Ac, Ac)
+        ONE_MINUS_CONSTANT_ALPHA_EXT    (1, 1, 1, 1) - (Ac, Ac, Ac, Ac)
+
+        Table 4.2: Values controlling the destination blending function and
+        the destination blending values they compute.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+(table 6.15, page 205)
+    Get Value                 Type  Get Command   Initial Value   Sec    Attribute
+    ------------------------  ----  ------------  -------------   -----  ---------
+    BLEND_SRC                  Z15  GetIntegerv        ONE        4.1.6  color-buffer
+    BLEND_DST                  Z14  GetIntegerv        ZERO       4.1.6  color-buffer
+
+NOTE: the only change is that Z13 changes to Z15 and Z12 changes to Z14
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    None

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses exynos events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux exynos trace events.
+   * @constructor
+   */
+  function ExynosParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('exynos_busfreq_target_int',
+        ExynosParser.prototype.busfreqTargetIntEvent.bind(this));
+    importer.registerEventHandler('exynos_busfreq_target_mif',
+        ExynosParser.prototype.busfreqTargetMifEvent.bind(this));
+
+    importer.registerEventHandler('exynos_page_flip_state',
+        ExynosParser.prototype.pageFlipStateEvent.bind(this));
+  }
+
+  ExynosParser.prototype = {
+    __proto__: Parser.prototype,
+
+    exynosBusfreqSample(name, ts, frequency) {
+      const targetCpu = this.importer.getOrCreateCpu(0);
+      const counter = targetCpu.getOrCreateCounter('', name);
+      if (counter.numSeries === 0) {
+        counter.addSeries(new tr.model.CounterSeries('frequency',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                counter.name + '.' + 'frequency')));
+      }
+      counter.series.forEach(function(series) {
+        series.addCounterSample(ts, frequency);
+      });
+    },
+
+    /**
+     * Parses exynos_busfreq_target_int events and sets up state.
+     */
+    busfreqTargetIntEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /frequency=(\d+)/.exec(eventBase.details);
+      if (!event) return false;
+
+      this.exynosBusfreqSample('INT Frequency', ts, parseInt(event[1]));
+      return true;
+    },
+
+    /**
+     * Parses exynos_busfreq_target_mif events and sets up state.
+     */
+    busfreqTargetMifEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /frequency=(\d+)/.exec(eventBase.details);
+      if (!event) return false;
+
+      this.exynosBusfreqSample('MIF Frequency', ts, parseInt(event[1]));
+      return true;
+    },
+
+    exynosPageFlipStateOpenSlice(ts, pipe, fb, state) {
+      const kthread = this.importer.getOrCreatePseudoThread(
+          'exynos_flip_state (pipe:' + pipe + ', fb:' + fb + ')');
+      kthread.openSliceTS = ts;
+      kthread.openSlice = state;
+    },
+
+    exynosPageFlipStateCloseSlice(ts, pipe, fb, args) {
+      const kthread = this.importer.getOrCreatePseudoThread(
+          'exynos_flip_state (pipe:' + pipe + ', fb:' + fb + ')');
+      if (kthread.openSlice) {
+        const slice = new tr.model.ThreadSlice('', kthread.openSlice,
+            ColorScheme.getColorIdForGeneralPurposeString(kthread.openSlice),
+            kthread.openSliceTS,
+            args,
+            ts - kthread.openSliceTS);
+        kthread.thread.sliceGroup.pushSlice(slice);
+      }
+      kthread.openSlice = undefined;
+    },
+
+    /**
+     * Parses page_flip_state events and sets up state in the importer.
+     */
+    pageFlipStateEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = /pipe=(\d+), fb=(\d+), state=(.*)/.exec(eventBase.details);
+      if (!event) return false;
+
+      const pipe = parseInt(event[1]);
+      const fb = parseInt(event[2]);
+      const state = event[3];
+
+      this.exynosPageFlipStateCloseSlice(ts, pipe, fb,
+          {
+            pipe,
+            fb
+          });
+      if (state !== 'flipped') {
+        this.exynosPageFlipStateOpenSlice(ts, pipe, fb, state);
+      }
+      return true;
+    }
+  };
+
+  Parser.register(ExynosParser);
+
+  return {
+    ExynosParser,
+  };
+});
+</script>
+

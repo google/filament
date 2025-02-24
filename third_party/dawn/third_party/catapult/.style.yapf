@@ -1,0 +1,7 @@
+[style]
+based_on_style = pep8
+
+allow_multiline_lambdas = True
+column_limit = 80
+indent_dictionary_value = True
+indent_width = 2

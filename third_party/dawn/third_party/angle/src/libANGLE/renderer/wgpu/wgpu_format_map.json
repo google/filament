@@ -1,0 +1,534 @@
+{
+  "image_map":
+    {
+      "NONE": "Undefined",
+      "ASTC_10x10_SRGB_BLOCK": "ASTC10x10UnormSrgb",
+      "ASTC_10x10_UNORM_BLOCK": "ASTC10x10Unorm",
+      "ASTC_10x5_SRGB_BLOCK": "ASTC10x5UnormSrgb",
+      "ASTC_10x5_UNORM_BLOCK": "ASTC10x5Unorm",
+      "ASTC_10x6_SRGB_BLOCK": "ASTC10x6UnormSrgb",
+      "ASTC_10x6_UNORM_BLOCK": "ASTC10x6Unorm",
+      "ASTC_10x8_SRGB_BLOCK": "ASTC10x8UnormSrgb",
+      "ASTC_10x8_UNORM_BLOCK": "ASTC10x8Unorm",
+      "ASTC_12x10_SRGB_BLOCK": "ASTC12x10UnormSrgb",
+      "ASTC_12x10_UNORM_BLOCK": "ASTC12x10Unorm",
+      "ASTC_12x12_SRGB_BLOCK": "ASTC12x12UnormSrgb",
+      "ASTC_12x12_UNORM_BLOCK": "ASTC12x12Unorm",
+      "ASTC_4x4_SRGB_BLOCK": "ASTC4x4UnormSrgb",
+      "ASTC_4x4_UNORM_BLOCK": "ASTC4x4Unorm",
+      "ASTC_5x4_SRGB_BLOCK": "ASTC5x4UnormSrgb",
+      "ASTC_5x4_UNORM_BLOCK": "ASTC5x4Unorm",
+      "ASTC_5x5_SRGB_BLOCK": "ASTC5x5UnormSrgb",
+      "ASTC_5x5_UNORM_BLOCK": "ASTC5x5Unorm",
+      "ASTC_6x5_SRGB_BLOCK": "ASTC6x5UnormSrgb",
+      "ASTC_6x5_UNORM_BLOCK": "ASTC6x5Unorm",
+      "ASTC_6x6_SRGB_BLOCK": "ASTC6x6UnormSrgb",
+      "ASTC_6x6_UNORM_BLOCK": "ASTC6x6Unorm",
+      "ASTC_8x5_SRGB_BLOCK": "ASTC8x5UnormSrgb",
+      "ASTC_8x5_UNORM_BLOCK": "ASTC8x5Unorm",
+      "ASTC_8x6_SRGB_BLOCK": "ASTC8x6UnormSrgb",
+      "ASTC_8x6_UNORM_BLOCK": "ASTC8x6Unorm",
+      "ASTC_8x8_SRGB_BLOCK": "ASTC8x8UnormSrgb",
+      "ASTC_8x8_UNORM_BLOCK": "ASTC8x8Unorm",
+      "B8G8R8A8_UNORM": "BGRA8Unorm",
+      "B8G8R8A8_UNORM_SRGB": "BGRA8UnormSrgb",
+      "BC1_RGBA_UNORM_BLOCK": "BC1RGBAUnorm",
+      "BC1_RGBA_UNORM_SRGB_BLOCK": "BC1RGBAUnormSrgb",
+      "BC2_RGBA_UNORM_BLOCK": "BC2RGBAUnorm",
+      "BC2_RGBA_UNORM_SRGB_BLOCK": "BC2RGBAUnormSrgb",
+      "BC3_RGBA_UNORM_BLOCK": "BC3RGBAUnorm",
+      "BC3_RGBA_UNORM_SRGB_BLOCK": "BC3RGBAUnormSrgb",
+      "BC4_RED_SNORM_BLOCK": "BC4RSnorm",
+      "BC4_RED_UNORM_BLOCK": "BC4RUnorm",
+      "BC5_RG_SNORM_BLOCK": "BC5RGSnorm",
+      "BC5_RG_UNORM_BLOCK": "BC5RGUnorm",
+      "BC6H_RGB_SFLOAT_BLOCK": "BC6HRGBFloat",
+      "BC6H_RGB_UFLOAT_BLOCK": "BC6HRGBUfloat",
+      "BC7_RGBA_UNORM_BLOCK": "BC7RGBAUnorm",
+      "BC7_RGBA_UNORM_SRGB_BLOCK": "BC7RGBAUnormSrgb",
+      "D16_UNORM": "Depth16Unorm",
+      "D24_UNORM_S8_UINT": "Depth24PlusStencil8",
+      "D32_FLOAT": "Depth32Float",
+      "EAC_R11_SNORM_BLOCK": "EACR11Snorm",
+      "EAC_R11_UNORM_BLOCK": "EACR11Unorm",
+      "EAC_R11G11_SNORM_BLOCK": "EACRG11Snorm",
+      "EAC_R11G11_UNORM_BLOCK": "EACRG11Unorm",
+      "ETC2_R8G8B8_SRGB_BLOCK": "ETC2RGB8UnormSrgb",
+      "ETC2_R8G8B8_UNORM_BLOCK": "ETC2RGB8Unorm",
+      "ETC2_R8G8B8A1_SRGB_BLOCK": "ETC2RGB8A1UnormSrgb",
+      "ETC2_R8G8B8A1_UNORM_BLOCK": "ETC2RGB8A1Unorm",
+      "ETC2_R8G8B8A8_UNORM_BLOCK": "ETC2RGBA8Unorm",
+      "ETC2_R8G8B8A8_SRGB_BLOCK": "ETC2RGBA8UnormSrgb",
+      "EXTERNAL0": "Undefined",
+      "EXTERNAL1": "Undefined",
+      "EXTERNAL2": "Undefined",
+      "EXTERNAL3": "Undefined",
+      "EXTERNAL4": "Undefined",
+      "EXTERNAL5": "Undefined",
+      "EXTERNAL6": "Undefined",
+      "EXTERNAL7": "Undefined",
+      "R10G10B10A2_SINT": "RGB10A2Uint",
+      "R10G10B10A2_UNORM": "RGB10A2Unorm",
+      "R11G11B10_FLOAT": "RG11B10Ufloat",
+      "R16_FLOAT": "R16Float",
+      "R16_SINT": "R16Sint",
+      "R16_SNORM": "R16Snorm",
+      "R16_UINT": "R16Uint",
+      "R16_UNORM": "R16Unorm",
+      "R16G16_FLOAT": "RG16Float",
+      "R16G16_SINT": "RG16Sint",
+      "R16G16_SNORM": "RG16Snorm",
+      "R16G16_UINT": "RG16Uint",
+      "R16G16_UNORM": "RG16Unorm",
+      "R16G16B16A16_FLOAT": "RGBA16Float",
+      "R16G16B16A16_SINT": "RGBA16Sint",
+      "R16G16B16A16_SNORM": "RGBA16Snorm",
+      "R16G16B16A16_UINT": "RGBA16Uint",
+      "R16G16B16A16_UNORM": "RGBA16Unorm",
+      "R32_FLOAT": "R32Float",
+      "R32_SINT": "R32Sint",
+      "R32_UINT": "R32Uint",
+      "R32G32_FLOAT": "RG32Float",
+      "R32G32_SINT": "RG32Sint",
+      "R32G32_UINT": "RG32Uint",
+      "R32G32B32A32_FLOAT": "RGBA32Float",
+      "R32G32B32A32_SINT": "RGBA32Sint",
+      "R32G32B32A32_UINT": "RGBA32Uint",
+      "R8_SINT": "R8Sint",
+      "R8_SNORM": "R8Snorm",
+      "R8_UINT": "R8Uint",
+      "R8_UNORM": "R8Unorm",
+      "R8G8_SINT": "RG8Sint",
+      "R8G8_SNORM": "RG8Snorm",
+      "R8G8_UINT": "RG8Uint",
+      "R8G8_UNORM": "RG8Unorm",
+      "R8G8B8A8_SINT": "RGBA8Sint",
+      "R8G8B8A8_SNORM": "RGBA8Snorm",
+      "R8G8B8A8_UINT": "RGBA8Uint",
+      "R8G8B8A8_UNORM": "RGBA8Unorm",
+      "R8G8B8A8_UNORM_SRGB": "RGBA8UnormSrgb",
+      "R9G9B9E5_SHAREDEXP": "RGB9E5Ufloat",
+      "S8_UINT": "Stencil8"
+    },
+  "buffer_map":
+      {
+        "NONE": "Undefined",
+        "EXTERNAL0": "Undefined",
+        "EXTERNAL1": "Undefined",
+        "EXTERNAL2": "Undefined",
+        "EXTERNAL3": "Undefined",
+        "EXTERNAL4": "Undefined",
+        "EXTERNAL5": "Undefined",
+        "EXTERNAL6": "Undefined",
+        "EXTERNAL7": "Undefined",
+        "R10G10B10A2_UNORM": "Unorm10_10_10_2",
+        "R16G16_FLOAT": "Float16x2",
+        "R16G16_SINT": "Sint16x2",
+        "R16G16_SNORM": "Snorm16x2",
+        "R16G16_UINT": "Uint16x2",
+        "R16G16_UNORM": "Unorm16x2",
+        "R16G16B16A16_FLOAT": "Float16x4",
+        "R16G16B16A16_SINT": "Sint16x4",
+        "R16G16B16A16_SNORM": "Snorm16x4",
+        "R16G16B16A16_UINT": "Uint16x4",
+        "R16G16B16A16_UNORM": "Unorm16x4",
+        "R32_FLOAT": "Float32",
+        "R32_SINT": "Sint32",
+        "R32_UINT": "Uint32",
+        "R32G32_FLOAT": "Float32x2",
+        "R32G32_SINT": "Sint32x2",
+        "R32G32_UINT": "Uint32x2",
+        "R32G32B32_FLOAT": "Float32x3",
+        "R32G32B32_SINT": "Sint32x3",
+        "R32G32B32_UINT": "Uint32x3",
+        "R32G32B32A32_FLOAT": "Float32x4",
+        "R32G32B32A32_SINT": "Sint32x4",
+        "R32G32B32A32_UINT": "Uint32x4",
+        "R8G8_SINT": "Sint8x2",
+        "R8G8_SNORM": "Snorm8x2",
+        "R8G8_UINT": "Uint8x2",
+        "R8G8_UNORM": "Unorm8x2",
+        "R8G8B8A8_SINT": "Sint8x4",
+        "R8G8B8A8_SNORM": "Snorm8x4",
+        "R8G8B8A8_UINT": "Uint8x4",
+        "R8G8B8A8_UNORM": "Unorm8x4"
+      },
+    "fallbacks": {
+        "A16_FLOAT": {
+        "image": "R16_FLOAT"
+        },
+      "A2R10G10B10_SINT_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_SINT"
+        },
+      "A2R10G10B10_SNORM_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_SNORM"
+        },
+      "A2R10G10B10_SSCALED_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "A2R10G10B10_UINT_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_UINT"
+        },
+      "A2R10G10B10_UNORM_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "A2R10G10B10_USCALED_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "A32_FLOAT": {
+        "image": "R32_FLOAT"
+        },
+      "A8_UNORM": {
+        "image": "R8_UNORM"
+        },
+      "ASTC_10x10_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_10x10_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_10x5_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_10x5_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_10x6_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_10x6_UNORM_BLOCK" : {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_10x8_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_10x8_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_12x10_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_12x10_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_12x12_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_12x12_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_4x4_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_4x4_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_5x4_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_5x4_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_5x5_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_5x5_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_6x5_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_6x5_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_6x6_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_6x6_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_8x5_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_8x5_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_8x6_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_8x6_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ASTC_8x8_SRGB_BLOCK": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "ASTC_8x8_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "B10G10R10A2_UNORM": {
+        "image": "R10G10B10A2_UNORM"
+        },
+      "B4G4R4A4_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "B5G5R5A1_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "B5G6R5_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "B8G8R8A8_UNORM_SRGB": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "B8G8R8X8_UNORM": {
+        "image": "B8G8R8A8_UNORM",
+        "buffer": "NONE"
+        },
+      "D32_UNORM": {
+        "image": "D32_FLOAT",
+        "buffer": "NONE"
+        },
+      "ETC2_R8G8B8A8_UNORM_BLOCK": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "ETC1_R8G8B8_UNORM_BLOCK": {
+        "image": "ETC2_R8G8B8_UNORM_BLOCK"
+        },
+      "L16_FLOAT": {
+        "image": "R16_FLOAT"
+        },
+      "L16A16_FLOAT": {
+        "image": "R16G16_FLOAT"
+        },
+      "L32_FLOAT": {
+        "image": "R32_FLOAT"
+        },
+      "L32A32_FLOAT": {
+        "image": "R32G32_FLOAT"
+        },
+      "L8_UNORM": {
+        "image": "R8_UNORM"
+        },
+      "L8A8_UNORM": {
+        "image": "R8G8_UNORM"
+        },
+      "PALETTE4_R4G4B4A4_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE4_R5G5B5A1_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE4_R5G6B5_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE4_R8G8B8_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE4_R8G8B8A8_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE8_R4G4B4A4_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE8_R5G5B5A1_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE8_R5G6B5_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE8_R8G8B8_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "PALETTE8_R8G8B8A8_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "R10G10B10A2_SNORM": {
+        "buffer": "R16G16B16A16_SNORM"
+        },
+      "R10G10B10A2_SSCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R10G10B10A2_UINT": {
+        "buffer": "R16G16B16A16_UINT"
+        },
+      "R10G10B10A2_USCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R10G10B10X2_UNORM": {
+        "image": "R10G10B10A2_UNORM",
+        "buffer": "NONE"
+        },
+      "R16_SSCALED": {
+        "buffer": "R32_FLOAT"
+      },
+      "R16_USCALED": {
+        "buffer": "R32_FLOAT"
+      },
+      "R16G16_SSCALED": {
+        "buffer": "R32G32_FLOAT"
+      },
+      "R16G16_USCALED": {
+        "buffer": "R32G32_FLOAT"
+      },
+      "R16G16B16_FLOAT": {
+        "image": "R16G16B16A16_FLOAT",
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R16G16B16_SINT": {
+        "image": "R16G16B16A16_SINT",
+        "buffer": "R16G16B16A16_SINT"
+        },
+      "R16G16B16_SNORM": {
+        "image": "R16G16B16A16_SNORM",
+        "buffer": "R16G16B16A16_SNORM"
+      },
+      "R32_FIXED": {
+        "buffer": "R32_FLOAT"
+        },
+      "R32_SNORM": {
+        "buffer": "R32_FLOAT"
+        },
+      "R32_SSCALED": {
+        "buffer": "R32_FLOAT"
+        },
+      "R32_UNORM": {
+        "buffer": "R32_FLOAT"
+        },
+      "R32_USCALED": {
+        "buffer": "R32_FLOAT"
+        },
+      "R32G32_FIXED": {
+        "buffer": "R32G32_FLOAT"
+        },
+      "R32G32_SNORM": {
+        "buffer": "R32G32_FLOAT"
+        },
+      "R32G32_SSCALED": {
+        "buffer": "R32G32_FLOAT"
+        },
+      "R32G32_UNORM": {
+        "buffer": "R32G32_FLOAT"
+        },
+      "R32G32_USCALED": {
+        "buffer": "R32G32_FLOAT"
+        },
+      "R32G32B32_SINT": {
+        "image": "R32G32B32A32_SINT"
+      },
+      "R32G32B32_SNORM": {
+        "buffer": "R32G32B32_FLOAT"
+        },
+      "R32G32B32_SSCALED": {
+        "buffer": "R32G32B32_FLOAT"
+        },
+      "R32G32B32_UINT": {
+        "buffer": "R32G32B32A32_UINT"
+        },
+      "R32G32B32_UNORM": {
+        "buffer": "R32G32B32_FLOAT"
+        },
+      "R32G32B32_USCALED": {
+        "buffer": "R32G32B32_FLOAT"
+        },
+      "R32G32B32A32_FIXED": {
+        "buffer": "R32G32B32A32_FLOAT"
+        },
+      "R32G32B32A32_SNORM": {
+        "buffer": "R32G32B32A32_FLOAT"
+        },
+      "R32G32B32A32_SSCALED": {
+        "buffer": "R32G32B32A32_FLOAT"
+        },
+      "R32G32B32A32_UNORM": {
+        "buffer": "R32G32B32A32_FLOAT"
+        },
+      "R32G32B32A32_USCALED": {
+        "buffer": "R32G32B32A32_FLOAT"
+        },
+      "R4G4B4A4_UNORM": {
+        "image": "R8G8B8A8_UNORM"
+        },
+      "R8_SSCALED": {
+        "buffer": "R32_FLOAT"
+        },
+      "R8_USCALED": {
+        "buffer": "R32_FLOAT"
+        },
+      "R8G8_SSCALED": {
+        "buffer": "R16G16_FLOAT"
+        },
+      "R8G8_USCALED": {
+        "buffer": "R16G16_FLOAT"
+        },
+      "R8G8B8_SINT": {
+        "image": "R8G8B8A8_SINT",
+        "buffer": "R8G8B8A8_SINT"
+        },
+      "R8G8B8_SNORM": {
+        "image": "R8G8B8A8_SNORM",
+        "buffer": "R8G8B8A8_SNORM"
+        },
+      "R8G8B8_SSCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R8G8B8_UINT": {
+        "image": "R8G8B8A8_UINT",
+        "buffer": "R8G8B8A8_UINT"
+        },
+      "R8G8B8_UNORM_SRGB": {
+        "image": "R8G8B8A8_UNORM_SRGB"
+        },
+      "R8G8B8_UNORM": {
+        "image": "R8G8B8A8_UNORM",
+        "buffer": "R8G8B8A8_UNORM"
+        },
+      "R8G8B8_USCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R8G8B8A8_SSCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R8G8B8A8_USCALED": {
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "R8G8B8X8_UNORM_SRGB": {
+        "image": "R8G8B8A8_UNORM_SRGB",
+        "buffer": "NONE"
+        },
+      "R8G8B8X8_UNORM": {
+        "image": "R8G8B8A8_UNORM",
+        "buffer": "NONE"
+        },
+      "X2R10G10B10_SINT_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_SINT"
+        },
+      "X2R10G10B10_SNORM_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_SNORM"
+        },
+      "X2R10G10B10_SSCALED_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_FLOAT"
+        },
+      "X2R10G10B10_UINT_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_UINT"
+        },
+      "X2R10G10B10_UNORM_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_UNORM"
+        },
+      "X2R10G10B10_USCALED_VERTEX": {
+        "image": "NONE",
+        "buffer": "R16G16B16A16_FLOAT"
+        }
+    }
+}
+ 

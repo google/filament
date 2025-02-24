@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel='import' href='/tracing/model/device.html'>
+<link rel='import' href='/tracing/model/model.html'>
+<link rel="import" href="/tracing/ui/base/constants.html">
+<link rel='import' href='/tracing/ui/timeline_display_transform.html'>
+<link rel='import' href='/tracing/ui/timeline_viewport.html'>
+<link rel='import' href='/tracing/ui/tracks/device_track.html'>
+<link rel='import' href='/tracing/ui/tracks/drawing_container.html'>
+<link rel='import' href='/tracing/ui/tracks/event_to_track_map.html'>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Device = tr.model.Device;
+  const DeviceTrack = tr.ui.tracks.DeviceTrack;
+  const Model = tr.Model;
+  const PowerSeries = tr.model.PowerSeries;
+
+  const createDrawingContainer = function(series) {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    if (series) {
+      series.updateBounds();
+      setDisplayTransformFromBounds(viewport, series.bounds);
+    }
+
+    return drawingContainer;
+  };
+
+  /**
+   * Sets the mapping between the input range of timestamps and the output range
+   * of horizontal pixels.
+   */
+  const setDisplayTransformFromBounds = function(viewport, bounds) {
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    const chartPixelWidth =
+        (window.innerWidth - tr.ui.b.constants.HEADING_WIDTH) * pixelRatio;
+    dt.xSetWorldBounds(bounds.min, bounds.max, chartPixelWidth);
+    viewport.setDisplayTransformImmediately(dt);
+  };
+
+  test('instantiate', function() {
+    const device = new Device(new Model());
+    device.powerSeries = new PowerSeries(device);
+    device.powerSeries.addPowerSample(0, 1);
+    device.powerSeries.addPowerSample(0.5, 2);
+    device.powerSeries.addPowerSample(1, 3);
+    device.powerSeries.addPowerSample(1.5, 4);
+
+    const drawingContainer = createDrawingContainer(device.powerSeries);
+    const track = new DeviceTrack(drawingContainer.viewport);
+    track.device = device;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(drawingContainer);
+  });
+
+  test('instantiate_noPowerSeries', function() {
+    const device = new Device(new Model());
+
+    const drawingContainer = createDrawingContainer(device.powerSeries);
+    const track = new DeviceTrack(drawingContainer.viewport);
+    track.device = device;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    // Adding output should throw due to no visible content.
+    assert.throw(function() { this.addHTMLOutput(drawingContainer); });
+  });
+
+  test('setDevice_clearsTrackBeforeUpdating', function() {
+    const device = new Device(new Model());
+    device.powerSeries = new PowerSeries(device);
+    device.powerSeries.addPowerSample(0, 1);
+    device.powerSeries.addPowerSample(0.5, 2);
+    device.powerSeries.addPowerSample(1, 3);
+    device.powerSeries.addPowerSample(1.5, 4);
+
+    const drawingContainer = createDrawingContainer(device.powerSeries);
+
+    // Set the device twice and make sure that this doesn't result in
+    // the track appearing twice.
+    const track = new DeviceTrack(drawingContainer.viewport);
+    track.device = device;
+    track.device = device;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(drawingContainer);
+
+    // The device track should still have two subtracks: one counter track and
+    // one spacing track.
+    assert.strictEqual(track.tracks_.length, 2);
+  });
+
+  test('addContainersToTrackMap', function() {
+    const device = new Device(new Model());
+    device.powerSeries = new PowerSeries(device);
+    device.powerSeries.addPowerSample(0, 1);
+
+    const drawingContainer = createDrawingContainer(device.series);
+    const track = new DeviceTrack(drawingContainer.viewport);
+    track.device = device;
+
+    const containerToTrackMap = new tr.ui.tracks.ContainerToTrackMap();
+    track.addContainersToTrackMap(containerToTrackMap);
+
+    assert.strictEqual(containerToTrackMap.getTrackByStableId('Device'), track);
+    assert.strictEqual(
+        containerToTrackMap.getTrackByStableId('Device.PowerSeries'),
+        track.powerSeriesTrack);
+  });
+
+  test('addEventsToTrackMap', function() {
+    const device = new Device(new Model());
+    device.powerSeries = new PowerSeries(device);
+    device.powerSeries.addPowerSample(0, 1);
+    device.powerSeries.addPowerSample(0.5, 2);
+
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+
+    const track = new DeviceTrack(viewport);
+    track.device = device;
+
+    const eventToTrackMap = new tr.ui.tracks.EventToTrackMap();
+    track.addEventsToTrackMap(eventToTrackMap);
+
+    const expected = new tr.ui.tracks.EventToTrackMap();
+    expected[device.powerSeries.samples[0].guid] = track.powerSeriesTrack;
+    expected[device.powerSeries.samples[1].guid] = track.powerSeriesTrack;
+
+    assert.deepEqual(eventToTrackMap, expected);
+  });
+});
+</script>

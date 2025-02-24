@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/job-page/patch-job-fab.html">
+<link rel="import" href="/elements/jobs-page/new-job-fab.html">
+
+<dom-module id="job-menu-fab">
+  <template>
+    <style include="base-style">
+      .fabs {
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        transition: opacity 0.2s, visibility 0s linear 0.2s;
+        visibility: hidden;
+      }
+
+      .fabs[opened] {
+        visibility: visible;
+        opacity: 1;
+        transition-delay: 0s;
+      }
+
+      .fabs > * {
+        margin-bottom: 1em;
+      }
+
+      .root {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: fixed;
+        bottom: 2em;
+        right: 2em;
+      }
+    </style>
+
+    <div class="root">
+      <div class="fabs" opened$="[[showing]]">
+        <patch-job-fab job="[[job]]" user="[[user]]" client="{{client}}"></patch-job-fab>
+        <new-job-fab submenu job="[[job]]" user="[[user]]" client="{{client}}"></new-job-fab>
+      </div>
+      <paper-fab id="expandButton" icon="add" on-tap="toggleMenu"></paper-fab>
+    </div>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'job-menu-fab',
+
+      properties: {
+        job: Object,
+        showing: {
+          type: Boolean,
+          value: false
+        }
+      },
+
+      toggleMenu() {
+        this.showing = !this.showing;
+
+        if (this.showing) {
+          this.$.expandButton.icon = 'close';
+        } else {
+          this.$.expandButton.icon = 'add';
+        }
+      },
+    });
+  </script>
+</dom-module>

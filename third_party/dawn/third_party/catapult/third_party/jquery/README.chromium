@@ -1,0 +1,14 @@
+Name: jQuery
+URL: https://jquery.com/
+Version: 2.1.4
+License: MIT
+Security Critical: No
+Shipped: yes
+
+Description:
+Flot is a JavaScript chart plotting library based on jQuery.
+
+Local Modifications:
+Three separate files downloaded from jquery.com: The minified version,
+the unminified version, and the map file.
+

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/unittest.html">
+<link rel="import" href="/tracing/base/unittest/html_test_results.html">
+<link rel="import" href="/tracing/base/unittest/suite_loader.html">
+<link rel="import" href="/tracing/base/unittest/test_runner.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<style>
+  x-base-interactive-test-runner {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+  }
+
+  x-base-interactive-test-runner > * {
+    flex: 0 0 auto;
+  }
+  x-base-interactive-test-runner > #title {
+    font-size: 16pt;
+  }
+
+  x-base-interactive-test-runner {
+    font-family: sans-serif;
+  }
+
+  x-base-interactive-test-runner > h1 {
+    margin: 5px 0px 10px 0px;
+  }
+
+  x-base-interactive-test-runner > #stats {
+  }
+
+  x-base-interactive-test-runner > #controls {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  x-base-interactive-test-runner > #controls > ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  x-base-interactive-test-runner > #controls > ul > li {
+    float: left;
+    margin-right: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  x-base-interactive-test-runner > #shortform-results {
+    color: green;
+    height; 40px;
+    word-wrap: break-word;
+  }
+
+  x-base-interactive-test-runner > #shortform-results > .fail {
+    color: darkred;
+    font-weight: bold;
+  }
+
+  x-base-interactive-test-runner > #shortform-results > .flaky {
+    color: darkorange;
+  }
+
+  x-base-interactive-test-runner > #shortform-results > .skipped {
+    color: blue;
+  }
+
+  x-base-interactive-test-runner > #results-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 4px 0 4px;
+  }
+
+  .unittest-pending {
+    color: orange;
+  }
+  .unittest-running {
+    color: orange;
+    font-weight: bold;
+  }
+
+  .unittest-passed {
+    color: darkgreen;
+  }
+
+  .unittest-failed {
+    color: darkred;
+    font-weight: bold;
+  }
+
+  .unittest-flaky {
+    color: darkorange;
+  }
+
+  .unittest-exception {
+    color: red;
+    font-weight: bold;
+  }
+
+  .unittest-failure {
+    border: 1px solid grey;
+    border-radius: 5px;
+    padding: 5px;
+  }
+</style>
+
+<template id="x-base-interactive-test-runner-template">
+  <h1 id="title">Tests</h1>
+  <div id="stats"></div>
+  <div id="controls">
+    <ul id="links">
+    </ul>
+    <div style="clear: both;"></div>
+
+    <div>
+      <span>
+        <label>
+          <input type="radio" name="test-type-to-run" value="unit" />
+          Run unit tests
+        </label>
+      </span>
+      <span>
+        <label>
+          <input type="radio" name="test-type-to-run" value="perf" />
+          Run perf tests
+          </label>
+      </span>
+      <span>
+        <label>
+          <input type="radio" name="test-type-to-run" value="all" />
+          Run all tests
+        </label>
+      </span>
+    </div>
+    <span>
+      <label>
+        <input type="checkbox" id="short-format" /> Short format</label>
+    </span>
+  </div>
+  <div id="shortform-results">
+  </div>
+  <div id="results-container">
+  </div>
+</template>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.unittest', function() {
+  const THIS_DOC = document._currentScript.ownerDocument;
+  const ALL_TEST_TYPES = 'all';
+
+  /**
+   * @constructor
+   */
+  const InteractiveTestRunner = tr.ui.b.define(
+      'x-base-interactive-test-runner');
+
+  InteractiveTestRunner.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.allTests_ = undefined;
+
+      this.suppressStateChange_ = false;
+
+      this.testFilterString_ = '';
+      this.testTypeToRun_ = tr.b.unittest.TestTypes.UNITTEST;
+      this.shortFormat_ = false;
+      this.testSuiteName_ = '';
+
+      this.rerunPending_ = false;
+      this.runner_ = undefined;
+      this.results_ = undefined;
+      this.headless_ = false;
+
+      this.onResultsStatsChanged_ = this.onResultsStatsChanged_.bind(this);
+      this.onTestFailed_ = this.onTestFailed_.bind(this);
+      this.onTestFlaky_ = this.onTestFlaky_.bind(this);
+      this.onTestSkipped_ = this.onTestSkipped_.bind(this);
+      this.onTestPassed_ = this.onTestPassed_.bind(this);
+
+      Polymer.dom(this).appendChild(tr.ui.b.instantiateTemplate(
+          '#x-base-interactive-test-runner-template', THIS_DOC));
+
+      Polymer.dom(this).querySelector(
+          'input[name=test-type-to-run][value=unit]').checked = true;
+      const testTypeToRunEls = Array.from(Polymer.dom(this).querySelectorAll(
+          'input[name=test-type-to-run]'));
+
+      testTypeToRunEls.forEach(
+          function(inputEl) {
+            inputEl.addEventListener(
+                'click', this.onTestTypeToRunClick_.bind(this));
+          }, this);
+
+      const shortFormatEl = Polymer.dom(this).querySelector('#short-format');
+      shortFormatEl.checked = this.shortFormat_;
+      shortFormatEl.addEventListener(
+          'click', this.onShortFormatClick_.bind(this));
+      this.updateShortFormResultsDisplay_();
+
+      // Oh, DOM, how I love you. Title is such a convenient property name and I
+      // refuse to change my worldview because of tooltips.
+      this.__defineSetter__(
+          'title',
+          function(title) {
+            Polymer.dom(Polymer.dom(this).querySelector('#title')).textContent =
+                title;
+          });
+    },
+
+    get allTests() {
+      return this.allTests_;
+    },
+
+    set allTests(allTests) {
+      this.allTests_ = allTests;
+      this.scheduleRerun_();
+    },
+
+    get testLinks() {
+      return this.testLinks_;
+    },
+    set testLinks(testLinks) {
+      this.testLinks_ = testLinks;
+      const linksEl = Polymer.dom(this).querySelector('#links');
+      Polymer.dom(linksEl).textContent = '';
+      this.testLinks_.forEach(function(l) {
+        const link = document.createElement('a');
+        link.href = l.linkPath;
+        Polymer.dom(link).textContent = l.title;
+
+        const li = document.createElement('li');
+        Polymer.dom(li).appendChild(link);
+
+        Polymer.dom(linksEl).appendChild(li);
+      }, this);
+    },
+
+    get testFilterString() {
+      return this.testFilterString_;
+    },
+
+    set testFilterString(testFilterString) {
+      this.testFilterString_ = testFilterString;
+      this.scheduleRerun_();
+      if (!this.suppressStateChange_) {
+        tr.b.dispatchSimpleEvent(this, 'statechange');
+      }
+    },
+
+    get shortFormat() {
+      return this.shortFormat_;
+    },
+
+    set shortFormat(shortFormat) {
+      this.shortFormat_ = shortFormat;
+      Polymer.dom(this).querySelector('#short-format').checked = shortFormat;
+      if (this.results_) {
+        this.results_.shortFormat = shortFormat;
+      }
+      if (!this.suppressStateChange_) {
+        tr.b.dispatchSimpleEvent(this, 'statechange');
+      }
+    },
+
+    onShortFormatClick_(e) {
+      this.shortFormat_ =
+          Polymer.dom(this).querySelector('#short-format').checked;
+      this.updateShortFormResultsDisplay_();
+      this.updateResultsGivenShortFormat_();
+      if (!this.suppressStateChange_) {
+        tr.b.dispatchSimpleEvent(this, 'statechange');
+      }
+    },
+
+    updateShortFormResultsDisplay_() {
+      const display = this.shortFormat_ ? '' : 'none';
+      Polymer.dom(this).querySelector('#shortform-results').style.display =
+          display;
+    },
+
+    updateResultsGivenShortFormat_() {
+      if (!this.results_) return;
+
+      if (this.testFilterString_.length || this.testSuiteName_.length) {
+        this.results_.showHTMLOutput = true;
+      } else {
+        this.results_.showHTMLOutput = false;
+      }
+      this.results_.showPendingAndPassedTests = this.shortFormat_;
+    },
+
+    get testTypeToRun() {
+      return this.testTypeToRun_;
+    },
+
+    set testTypeToRun(testTypeToRun) {
+      this.testTypeToRun_ = testTypeToRun;
+      let sel;
+      switch (testTypeToRun) {
+        case tr.b.unittest.TestTypes.UNITTEST:
+          sel = 'input[name=test-type-to-run][value=unit]';
+          break;
+        case tr.b.unittest.TestTypes.PERFTEST:
+          sel = 'input[name=test-type-to-run][value=perf]';
+          break;
+        case ALL_TEST_TYPES:
+          sel = 'input[name=test-type-to-run][value=all]';
+          break;
+        default:
+          throw new Error('Invalid test type to run: ' + testTypeToRun);
+      }
+      Polymer.dom(this).querySelector(sel).checked = true;
+      this.scheduleRerun_();
+      if (!this.suppressStateChange_) {
+        tr.b.dispatchSimpleEvent(this, 'statechange');
+      }
+    },
+
+    onTestTypeToRunClick_(e) {
+      switch (e.target.value) {
+        case 'unit':
+          this.testTypeToRun_ = tr.b.unittest.TestTypes.UNITTEST;
+          break;
+        case 'perf':
+          this.testTypeToRun_ = tr.b.unittest.TestTypes.PERFTEST;
+          break;
+        case 'all':
+          this.testTypeToRun_ = ALL_TEST_TYPES;
+          break;
+        default:
+          throw new Error('Inalid test type: ' + e.target.value);
+      }
+
+      this.scheduleRerun_();
+      if (!this.suppressStateChange_) {
+        tr.b.dispatchSimpleEvent(this, 'statechange');
+      }
+    },
+
+    onTestPassed_() {
+      Polymer.dom(Polymer.dom(this).querySelector('#shortform-results')).
+          appendChild(document.createTextNode('.'));
+    },
+
+    onTestFailed_() {
+      const span = document.createElement('span');
+      Polymer.dom(span).classList.add('fail');
+      Polymer.dom(span).appendChild(document.createTextNode('F'));
+      Polymer.dom(Polymer.dom(this).querySelector('#shortform-results'))
+          .appendChild(span);
+    },
+
+    onTestFlaky_() {
+      const span = document.createElement('span');
+      Polymer.dom(span).classList.add('flaky');
+      Polymer.dom(span).appendChild(document.createTextNode('~'));
+      Polymer.dom(Polymer.dom(this).querySelector('#shortform-results'))
+          .appendChild(span);
+    },
+
+    onTestSkipped_() {
+      const span = document.createElement('span');
+      Polymer.dom(span).classList.add('skipped');
+      Polymer.dom(span).appendChild(document.createTextNode('s'));
+      Polymer.dom(Polymer.dom(this).querySelector('#shortform-results'))
+          .appendChild(span);
+    },
+
+    onResultsStatsChanged_() {
+      const statsEl = Polymer.dom(this).querySelector('#stats');
+      const stats = this.results_.getStats();
+      const numTestsOverall = this.runner_.testCases.length;
+      const numTestsThatRan = stats.numTestsThatPassed +
+          stats.numTestsThatFailed +
+          stats.numFlakyTests +
+          stats.numSkippedTests;
+      Polymer.dom(statsEl).innerHTML =
+          '<span>' + numTestsThatRan + '/' + numTestsOverall +
+          '</span> tests run, ' +
+          '<span class="unittest-failed">' + stats.numTestsThatFailed +
+          '</span> failures, ' +
+          '<span class="unittest-flaky">' + stats.numFlakyTests +
+          '</span> flaky, ' +
+          '<span class="unittest-skipped">' + stats.numSkippedTests +
+          '</span> skipped, ' +
+          ' in ' + stats.totalRunTime.toFixed(2) + 'ms.';
+    },
+
+    scheduleRerun_() {
+      if (this.rerunPending_) return;
+      if (this.runner_) {
+        this.rerunPending_ = true;
+        this.runner_.beginToStopRunning();
+        const doRerun = function() {
+          this.rerunPending_ = false;
+          this.scheduleRerun_();
+        }.bind(this);
+        this.runner_.runCompletedPromise.then(
+            doRerun, doRerun);
+        return;
+      }
+      this.beginRunning_();
+    },
+
+    beginRunning_() {
+      const resultsContainer =
+          Polymer.dom(this).querySelector('#results-container');
+      if (this.results_) {
+        this.results_.removeEventListener('testpassed', this.onTestPassed_);
+        this.results_.removeEventListener('testfailed', this.onTestFailed_);
+        this.results_.removeEventListener('testflaky', this.onTestFlaky_);
+        this.results_.removeEventListener('testskipped', this.onTestSkipped_);
+        this.results_.removeEventListener('statschange',
+            this.onResultsStatsChanged_);
+        delete this.results_.getHRefForTestCase;
+        Polymer.dom(resultsContainer).removeChild(this.results_);
+      }
+
+      this.results_ = new tr.b.unittest.HTMLTestResults();
+      this.results_.headless = this.headless_;
+      this.results_.getHRefForTestCase = this.getHRefForTestCase.bind(this);
+      this.updateResultsGivenShortFormat_();
+
+      this.results_.shortFormat = this.shortFormat_;
+      this.results_.addEventListener('testpassed', this.onTestPassed_);
+      this.results_.addEventListener('testfailed', this.onTestFailed_);
+      this.results_.addEventListener('testflaky', this.onTestFlaky_);
+      this.results_.addEventListener('testskipped', this.onTestSkipped_);
+      this.results_.addEventListener('statschange',
+          this.onResultsStatsChanged_);
+      Polymer.dom(resultsContainer).appendChild(this.results_);
+
+      const tests = this.allTests_.filter(function(test) {
+        const i = test.fullyQualifiedName.indexOf(this.testFilterString_);
+        if (i === -1) return false;
+        if (this.testTypeToRun_ !== ALL_TEST_TYPES &&
+            test.testType !== this.testTypeToRun_) {
+          return false;
+        }
+        return true;
+      }, this);
+
+      this.runner_ = new tr.b.unittest.TestRunner(this.results_, tests);
+      this.runner_.beginRunning();
+
+      this.runner_.runCompletedPromise.then(
+          this.runCompleted_.bind(this),
+          this.runCompleted_.bind(this));
+    },
+
+    setState(state, opt_suppressStateChange) {
+      this.suppressStateChange_ = true;
+      if (state.testFilterString !== undefined) {
+        this.testFilterString = state.testFilterString;
+      } else {
+        this.testFilterString = '';
+      }
+
+      if (state.shortFormat === undefined) {
+        this.shortFormat = false;
+      } else {
+        this.shortFormat = state.shortFormat;
+      }
+
+      if (state.testTypeToRun === undefined) {
+        this.testTypeToRun = tr.b.unittest.TestTypes.UNITTEST;
+      } else {
+        this.testTypeToRun = state.testTypeToRun;
+      }
+
+      this.testSuiteName_ = state.testSuiteName || '';
+      this.headless_ = state.headless || false;
+
+      if (!opt_suppressStateChange) {
+        this.suppressStateChange_ = false;
+      }
+
+      this.onShortFormatClick_();
+      this.scheduleRerun_();
+      this.suppressStateChange_ = false;
+    },
+
+    getDefaultState() {
+      return {
+        testFilterString: '',
+        testSuiteName: '',
+        shortFormat: false,
+        testTypeToRun: tr.b.unittest.TestTypes.UNITTEST
+      };
+    },
+
+    getState() {
+      return {
+        testFilterString: this.testFilterString_,
+        testSuiteName: this.testSuiteName_,
+        shortFormat: this.shortFormat_,
+        testTypeToRun: this.testTypeToRun_
+      };
+    },
+
+    getHRefForTestCase(testCases) {
+      return undefined;
+    },
+
+    runCompleted_() {
+      this.runner_ = undefined;
+    }
+  };
+
+  function loadAndRunTests(runnerConfig) {
+    // The test runner no-ops pushState so keep it around.
+    const realWindowHistoryPushState = window.history.pushState.bind(
+        window.history);
+
+    function stateToSearchString(defaultState, state) {
+      const parts = [];
+      for (const k in state) {
+        if (state[k] === defaultState[k]) continue;
+        const v = state[k];
+        let kv;
+        if (v === true) {
+          kv = k;
+        } else if (v === false) {
+          kv = k + '=false';
+        } else if (v === '') {
+          continue;
+        } else {
+          kv = k + '=' + v;
+        }
+        parts.push(kv);
+      }
+      return parts.join('&');
+    }
+
+    function stateFromSearchString(string) {
+      const state = {};
+      string.split('&').forEach(function(part) {
+        if (part === '') return;
+        const kv = part.split('=');
+        let k;
+        let v;
+        if (kv.length === 1) {
+          k = kv[0];
+          v = true;
+        } else {
+          k = kv[0];
+          if (kv[1] === 'false') {
+            v = false;
+          } else {
+            v = kv[1];
+          }
+        }
+        state[k] = v;
+      });
+      return state;
+    }
+
+    function getSuiteRelpathsToLoad(state) {
+      if (state.testSuiteName) {
+        return new Promise(function(resolve) {
+          const parts = state.testSuiteName.split('.');
+          const testSuiteRelPath = '/' + parts.join('/') + '.html';
+
+          const suiteRelpathsToLoad = [testSuiteRelPath];
+          resolve(suiteRelpathsToLoad);
+        });
+      }
+      return runnerConfig.getAllSuiteRelPathsAsync();
+    }
+
+
+    function loadAndRunTestsImpl() {
+      const state = stateFromSearchString(
+          window.location.search.substring(1));
+      updateTitle(state);
+
+
+      showLoadingOverlay();
+
+      let loader;
+      let p = getSuiteRelpathsToLoad(state);
+      p = p.then(
+          function(suiteRelpathsToLoad) {
+            loader = new tr.b.unittest.SuiteLoader(suiteRelpathsToLoad);
+            return loader.allSuitesLoadedPromise;
+          },
+          function(e) {
+            hideLoadingOverlay();
+            throw e;
+          });
+      p = p.then(
+          function() {
+            hideLoadingOverlay();
+            // FIXME
+            window.addEventListener('WebComponentsReady', function() {
+              runTests(loader, state);
+            });
+            runTests(loader, state);
+          // Polymer.whenReady(function() {
+          //   runTests(loader, state);
+          // });
+          },
+          function(err) {
+            if (state.headless) {
+              tr.b.postAsync('/tracing/notify_test_error', err.stack);
+            }
+            hideLoadingOverlay();
+            tr.showPanic('Module loading failure', err);
+            throw err;
+          });
+      return p;
+    }
+
+    function showLoadingOverlay() {
+      const overlay = document.createElement('div');
+      overlay.id = 'tests-loading-overlay';
+      overlay.style.backgroundColor = 'white';
+      overlay.style.boxSizing = 'border-box';
+      overlay.style.color = 'black';
+      overlay.style.display = 'flex';
+      overlay.style.height = '100%';
+      overlay.style.left = 0;
+      overlay.style.padding = '8px';
+      overlay.style.position = 'fixed';
+      overlay.style.top = 0;
+      overlay.style.flexDirection = 'column';
+      overlay.style.width = '100%';
+
+      const element = document.createElement('div');
+      element.style.flex = '1 1 auto';
+      element.style.overflow = 'auto';
+      Polymer.dom(overlay).appendChild(element);
+
+      Polymer.dom(element).textContent = 'Loading tests...';
+      Polymer.dom(document.body).appendChild(overlay);
+    }
+    function hideLoadingOverlay() {
+      const overlay = Polymer.dom(document.body).querySelector(
+          '#tests-loading-overlay');
+      Polymer.dom(document.body).removeChild(overlay);
+    }
+
+    function updateTitle(state) {
+      const testFilterString = state.testFilterString || '';
+      const testSuiteName = state.testSuiteName || '';
+
+      let title;
+      if (testSuiteName && testFilterString.length) {
+        title = testFilterString + ' in ' + testSuiteName;
+      } else if (testSuiteName) {
+        title = testSuiteName;
+      } else if (testFilterString) {
+        title = testFilterString + ' in all tests';
+      } else {
+        title = runnerConfig.title;
+      }
+
+      if (state.shortFormat) title += '(s)';
+      document.title = title;
+      const runner = Polymer.dom(document).querySelector(
+          'x-base-interactive-test-runner');
+      if (runner) runner.title = title;
+    }
+
+    function runTests(loader, state) {
+      const runner = new tr.b.unittest.InteractiveTestRunner();
+      runner.style.width = '100%';
+      runner.style.height = '100%';
+      runner.testLinks = runnerConfig.testLinks;
+      runner.allTests = loader.getAllTests();
+      Polymer.dom(document.body).appendChild(runner);
+
+      runner.setState(state);
+      updateTitle(state);
+
+      runner.addEventListener('statechange', function() {
+        const state = runner.getState();
+        const stateString = stateToSearchString(
+            runner.getDefaultState(), state);
+        if (window.location.search.substring(1) === stateString) return;
+
+        updateTitle(state);
+        let stateURL;
+        if (stateString.length > 0) {
+          stateURL = window.location.pathname + '?' + stateString;
+        } else {
+          stateURL = window.location.pathname;
+        }
+        realWindowHistoryPushState(state, document.title, stateURL);
+      });
+
+      window.addEventListener('popstate', function(state) {
+        runner.setState(state, true);
+      });
+
+      runner.getHRefForTestCase = function(testCase) {
+        const state = runner.getState();
+        if (state.testFilterString === '' &&
+            state.testSuiteName === '') {
+          state.testSuiteName = testCase.suite.name;
+          state.testFilterString = '';
+          state.shortFormat = false;
+        } else {
+          state.testSuiteName = testCase.suite.name;
+          state.testFilterString = testCase.name;
+          state.shortFormat = false;
+        }
+        const stateString = stateToSearchString(
+            runner.getDefaultState(), state);
+        if (stateString.length > 0) {
+          return window.location.pathname + '?' + stateString;
+        }
+        return window.location.pathname;
+      };
+    }
+
+    loadAndRunTestsImpl();
+  }
+
+  return {
+    InteractiveTestRunner,
+    loadAndRunTests,
+  };
+});
+</script>

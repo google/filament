@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/ui/base/chart_base_2d.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const ScatterChart = tr.ui.b.define('scatter-chart', tr.ui.b.ChartBase2D);
+
+  // @constructor
+  ScatterChart.Dot = function(x, y, radius, color, breadcrumb) {
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.color = color;
+    this.breadcrumb = breadcrumb;
+  };
+
+  ScatterChart.prototype = {
+    __proto__: tr.ui.b.ChartBase2D.prototype,
+
+    decorate() {
+      super.decorate();
+      this.brushedXRange_ = new tr.b.math.Range();
+      this.brushedYRange_ = new tr.b.math.Range();
+    },
+
+    get hideLegend() {
+      return true;
+    },
+
+    get defaultGraphHeight() {
+      return 100;
+    },
+
+    get defaultGraphWidth() {
+      return 100;
+    },
+
+    updateMargins_() {
+      super.updateMargins_();
+      if (this.data.length === 0) return;
+
+      const rightOverhangPx = tr.b.math.Statistics.max(
+          this.data, d => this.xScale_(d.x) + d.radius - this.graphWidth);
+      this.margin.right = Math.max(this.margin.right, rightOverhangPx);
+
+      const topOverhangPx = tr.b.math.Statistics.max(
+          this.data, d => (this.graphHeight - this.yScale_(d.y)) + d.radius) -
+        this.graphHeight;
+      this.margin.top = Math.max(this.margin.top, topOverhangPx);
+    },
+
+    setBrushedRanges(xRange, yRange) {
+      this.brushedXRange_.reset();
+      this.brushedYRange_.reset();
+      this.brushedXRange_.addRange(xRange);
+      this.brushedYRange_.addRange(yRange);
+      this.updateContents_();
+    },
+
+    updateBrushContents_(brushSel) {
+      brushSel.selectAll('*').remove();
+      if (this.brushedXRange_.isEmpty || this.brushedYRange_.isEmpty) return;
+
+      const brushRectsSel = brushSel.selectAll('rect').data([undefined]);
+      brushRectsSel.enter().append('rect')
+          .attr('x', () => this.xScale_(this.brushedXRange_.min))
+          .attr('y', () => this.yScale_(this.brushedYRange_.max))
+          .attr('width', () => this.xScale_(this.brushedXRange_.max) -
+            this.xScale_(this.brushedXRange_.min))
+          .attr('height', () => this.yScale_(this.brushedYRange_.min) -
+            this.yScale_(this.brushedYRange_.max));
+      brushRectsSel.exit().remove();
+    },
+
+    setDataFromCallbacks(data, getX, getY, getRadius, getColor) {
+      this.data = data.map(d => new ScatterChart.Dot(
+          getX(d), getY(d), getRadius(d), getColor(d), d));
+    },
+
+    isDatumFieldSeries_(fieldName) {
+      return fieldName === 'y';
+    },
+
+    updateDataContents_(dataSel) {
+      dataSel.selectAll('*').remove();
+      dataSel.selectAll('circle')
+          .data(this.data_)
+          .enter()
+          .append('circle')
+          .attr('cx', d => this.xScale_(d.x))
+          .attr('cy', d => this.yScale_(d.y))
+          .attr('r', d => d.radius)
+          .attr('fill', d => d.color);
+    }
+  };
+
+  return {
+    ScatterChart,
+  };
+});
+</script>

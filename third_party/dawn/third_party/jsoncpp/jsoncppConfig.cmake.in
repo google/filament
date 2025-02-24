@@ -1,0 +1,11 @@
+cmake_policy(PUSH)
+cmake_policy(VERSION 3.0)
+
+@PACKAGE_INIT@
+
+include ( "${CMAKE_CURRENT_LIST_DIR}/jsoncpp-targets.cmake" )
+include ( "${CMAKE_CURRENT_LIST_DIR}/jsoncpp-namespaced-targets.cmake" )
+
+check_required_components(JsonCpp)
+
+cmake_policy(POP)

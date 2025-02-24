@@ -1,0 +1,29 @@
+git-thaw(1)
+=============
+
+NAME
+----
+git-thaw -
+include::_git-thaw_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git thaw'
+
+DESCRIPTION
+-----------
+
+`git thaw` takes a frozen branch (as made by linkgit:git-freeze[1]), and returns
+it to the status that it was in before it was frozen.
+
+If you freeze a branch multiple times (i.e. change files, freeze, change files,
+freeze), `git thaw` will thaw all of the freezes.
+
+SEE ALSO
+--------
+linkgit:git-freeze[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

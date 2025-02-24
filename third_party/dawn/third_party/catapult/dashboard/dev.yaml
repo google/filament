@@ -1,0 +1,86 @@
+runtime: python27
+threadsafe: true
+
+inbound_services:
+- warmup
+
+handlers:
+- url: /favicon.ico
+  static_files: dashboard/static/favicon.ico
+  upload: dashboard/static/favicon.ico
+
+- url: /dashboard/spa
+  static_dir: dashboard/spa/
+
+- url: /dashboard/static/
+  static_dir: dashboard/static/
+  secure: always
+  application_readable: true
+
+- url: /dashboard/elements/(.*\.html)$
+  static_files: dashboard/elements/\1
+  upload: dashboard/elements/.*\.html$
+  secure: always
+
+- url: /components/(.*)/(.*\.(html|js|css))$
+  static_files: polymer/components/\1/\2
+  upload: polymer/components/.*/.*\.(html|js|css)$
+  secure: always
+
+- url: /tracing/(.*)/(.*\.(html|js|css))$
+  static_files: tracing/\1/\2
+  upload: tracing/.*/.*\.(html|js|css)$
+  secure: always
+
+- url: /flot/(.*\.js)$
+  static_files: flot/\1
+  upload: flot/.*\.js$
+  secure: always
+
+- url: /jquery/(.*\.js)$
+  static_files: jquery/\1
+  upload: jquery/.*\.js$
+  secure: always
+
+- url: /gl-matrix-min.js
+  static_files: gl-matrix-min.js
+  upload: gl-matrix-min.js
+  secure: always
+
+- url: /
+  static_files: dashboard/spa/index.html
+  upload: dashboard/spa/index.html
+
+- url: /polymer-svg-template/(.*\.(html|js|css))$
+  static_files: ../third_party/polymer-svg-template/\1
+  upload: \.\./third_party/polymer-svg-template/.*\.(html|js|css)$
+
+- url: /idb/idb.js
+  static_files: ../third_party/idb/idb.js
+  upload: \.\./third_party/idb/idb\.js
+
+- url: /redux.min.js
+  static_files: redux/redux.min.js
+  upload: redux/redux\.min\.js
+
+- url: /gl-matrix-min.js
+  static_files: gl-matrix-min.js
+  upload: gl-matrix-min\.js
+
+- url: /mannwhitneyu
+  static_dir: mannwhitneyu
+
+- url: /tracing/(.*)/(.*\.(html|js|css))$
+  static_files: tracing/\1/\2
+  upload: tracing/.*/.*\.(html|js|css)$
+
+- url: /tracing/(.*)/(.*)/(.*\.(html|js|css))$
+  static_files: tracing/\1/\2/\3
+  upload: tracing/.*/.*/.*\.(html|js|css)$
+
+- url: /.+
+  script: dashboard.dispatcher.APP
+  secure: always
+
+includes:
+- scripts.yaml

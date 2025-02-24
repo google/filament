@@ -1,0 +1,65 @@
+# Copyright 2015 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+angle_perf_tests_sources = [
+  "perf_tests/BindingPerf.cpp",
+  "perf_tests/BlitFramebufferPerf.cpp",
+  "perf_tests/BufferSubData.cpp",
+  "perf_tests/ClearPerf.cpp",
+  "perf_tests/DispatchComputePerf.cpp",
+  "perf_tests/DrawCallPerf.cpp",
+  "perf_tests/DrawElementsPerf.cpp",
+  "perf_tests/DynamicPromotionPerfTest.cpp",
+  "perf_tests/EGLMakeCurrentPerf.cpp",
+  "perf_tests/FramebufferAttachmentPerfTest.cpp",
+  "perf_tests/GenerateMipmapPerf.cpp",
+  "perf_tests/ImagelessFramebufferPerfTest.cpp",
+  "perf_tests/IndexConversionPerf.cpp",
+  "perf_tests/InstancingPerf.cpp",
+  "perf_tests/InterleavedAttributeData.cpp",
+  "perf_tests/LinkProgramPerfTest.cpp",
+  "perf_tests/MapBufferRange.cpp",
+  "perf_tests/MultisampleResolvePerf.cpp",
+  "perf_tests/MultisampledRenderToTexturePerf.cpp",
+  "perf_tests/MultisampledSwapchainResolve.cpp",
+  "perf_tests/MultiviewPerf.cpp",
+  "perf_tests/ParallelLinkProgramPerfTest.cpp",
+  "perf_tests/PointSprites.cpp",
+  "perf_tests/PreRotationPerf.cpp",
+  "perf_tests/ProgramPipelineObjectPerfTest.cpp",
+  "perf_tests/RGBImageAllocation.cpp",
+  "perf_tests/TextureSampling.cpp",
+  "perf_tests/TextureUploadPerf.cpp",
+  "perf_tests/TexturesPerf.cpp",
+  "perf_tests/UniformsPerf.cpp",
+  "perf_tests/VertexArrayPerfTest.cpp",
+  "perf_tests/VulkanBarriersPerf.cpp",
+  "perf_tests/glmark2Benchmark.cpp",
+  "test_utils/ANGLETest.cpp",
+  "test_utils/ANGLETest.h",
+  "test_utils/MultiviewTest.cpp",
+  "test_utils/MultiviewTest.h",
+  "test_utils/draw_call_perf_utils.cpp",
+  "test_utils/draw_call_perf_utils.h",
+]
+
+angle_white_box_perf_tests_sources = [
+  "../image_util/AstcDecompressorTestUtils.h",
+  "angle_unittests_utils.h",
+  "perf_tests/AstcDecompressorPerf.cpp",
+  "perf_tests/BitSetIteratorPerf.cpp",
+  "perf_tests/CompilerPerf.cpp",
+  "perf_tests/EGLInitializePerf.cpp",  # Uses ANGLEGetDisplayPlatform, a
+                                       # non-standard EP.
+  "perf_tests/ResultPerf.cpp",
+]
+
+angle_white_box_perf_tests_vulkan_sources =
+    [ "perf_tests/VulkanPipelineCachePerf.cpp" ]
+
+angle_white_box_perf_tests_vulkan_command_buffer_sources = [
+  "perf_tests/VulkanCommandBufferPerf.cpp",
+  "test_utils/third_party/vulkan_command_buffer_utils.cpp",
+  "test_utils/third_party/vulkan_command_buffer_utils.h",
+]

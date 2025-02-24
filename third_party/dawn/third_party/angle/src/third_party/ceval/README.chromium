@@ -1,0 +1,17 @@
+Name: ceval
+URL: https://github.com/erstan/ceval-single-header
+Version: 1ed80ae78ba7bef1744b1ccdffc6c6802eeec8fa
+Revision: 1ed80ae78ba7bef1744b1ccdffc6c6802eeec8fa
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+A C/C++ header for parsing and evaluation of arithmetic expressions.
+
+Description of the patches:
+
+- 0001-remove-sprintf.patch
+
+  This patch removes uses of sprintf() and replaces them with snprintf().

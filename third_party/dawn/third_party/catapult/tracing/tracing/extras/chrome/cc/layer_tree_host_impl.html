@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/bbox2.html">
+<link rel="import" href="/tracing/extras/chrome/cc/constants.html">
+<link rel="import" href="/tracing/extras/chrome/cc/layer_tree_impl.html">
+<link rel="import" href="/tracing/extras/chrome/cc/util.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the LayerTreeHostImpl model-level objects.
+ */
+tr.exportTo('tr.e.cc', function() {
+  const constants = tr.e.cc.constants;
+
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+  const ObjectInstance = tr.model.ObjectInstance;
+
+  /**
+   * @constructor
+   */
+  function LayerTreeHostImplSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  LayerTreeHostImplSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    preInitialize() {
+      tr.e.cc.preInitializeObject(this);
+    },
+
+    initialize() {
+      tr.e.cc.moveRequiredFieldsFromArgsToToplevel(
+          this, ['deviceViewportSize',
+            'activeTree']);
+      tr.e.cc.moveOptionalFieldsFromArgsToToplevel(
+          this, ['pendingTree']);
+
+      // Move active_tiles into this.tiles. If that doesn't exist then, then as
+      // a backward compatability move tiles into this.tiles.
+      if (this.args.activeTiles !== undefined) {
+        this.activeTiles = this.args.activeTiles;
+        delete this.args.activeTiles;
+      } else if (this.args.tiles !== undefined) {
+        this.activeTiles = this.args.tiles;
+        delete this.args.tiles;
+      }
+
+      if (!this.activeTiles) {
+        this.activeTiles = [];
+      }
+
+      this.activeTree.layerTreeHostImpl = this;
+      this.activeTree.whichTree = constants.ACTIVE_TREE;
+      if (this.pendingTree) {
+        this.pendingTree.layerTreeHostImpl = this;
+        this.pendingTree.whichTree = constants.PENDING_TREE;
+      }
+    },
+
+    /**
+     * Get all of tile scales and their associated names.
+     */
+    getContentsScaleNames() {
+      const scales = {};
+      for (let i = 0; i < this.activeTiles.length; ++i) {
+        const tile = this.activeTiles[i];
+        // Return scale -> scale name mappings.
+        // Example:
+        //  0.25 -> LOW_RESOLUTION
+        //  1.0 -> HIGH_RESOLUTION
+        //  0.75 -> NON_IDEAL_RESOLUTION
+        scales[tile.contentsScale] = tile.resolution;
+      }
+      return scales;
+    },
+
+    getTree(whichTree) {
+      if (whichTree === constants.ACTIVE_TREE) {
+        return this.activeTree;
+      }
+      if (whichTree === constants.PENDING_TREE) {
+        return this.pendingTree;
+      }
+      throw new Exception('Unknown tree type + ' + whichTree);
+    },
+
+    get tilesHaveGpuMemoryUsageInfo() {
+      if (this.tilesHaveGpuMemoryUsageInfo_ !== undefined) {
+        return this.tilesHaveGpuMemoryUsageInfo_;
+      }
+
+      for (let i = 0; i < this.activeTiles.length; i++) {
+        if (this.activeTiles[i].gpuMemoryUsageInBytes === undefined) {
+          continue;
+        }
+        this.tilesHaveGpuMemoryUsageInfo_ = true;
+        return true;
+      }
+      this.tilesHaveGpuMemoryUsageInfo_ = false;
+      return false;
+    },
+
+    get gpuMemoryUsageInBytes() {
+      if (!this.tilesHaveGpuMemoryUsageInfo) return;
+
+      let usage = 0;
+      for (let i = 0; i < this.activeTiles.length; i++) {
+        const u = this.activeTiles[i].gpuMemoryUsageInBytes;
+        if (u !== undefined) usage += u;
+      }
+      return usage;
+    },
+
+    get userFriendlyName() {
+      let frameNumber;
+      if (!this.activeTree) {
+        frameNumber = this.objectInstance.snapshots.indexOf(this);
+      } else {
+        if (this.activeTree.sourceFrameNumber === undefined) {
+          frameNumber = this.objectInstance.snapshots.indexOf(this);
+        } else {
+          frameNumber = this.activeTree.sourceFrameNumber;
+        }
+      }
+      return 'cc::LayerTreeHostImpl frame ' + frameNumber;
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      LayerTreeHostImplSnapshot,
+      {typeName: 'cc::LayerTreeHostImpl'});
+
+  /**
+   * @constructor
+   */
+  function LayerTreeHostImplInstance() {
+    ObjectInstance.apply(this, arguments);
+
+    this.allLayersBBox_ = undefined;
+  }
+
+  LayerTreeHostImplInstance.prototype = {
+    __proto__: ObjectInstance.prototype,
+
+    get allContentsScales() {
+      if (this.allContentsScales_) {
+        return this.allContentsScales_;
+      }
+
+      const scales = {};
+      for (const tileID in this.allTileHistories_) {
+        const tileHistory = this.allTileHistories_[tileID];
+        scales[tileHistory.contentsScale] = true;
+      }
+      this.allContentsScales_ = Object.keys(scales);
+      return this.allContentsScales_;
+    },
+
+    get allLayersBBox() {
+      if (this.allLayersBBox_) {
+        return this.allLayersBBox_;
+      }
+      const bbox = new tr.b.math.BBox2();
+      function handleTree(tree) {
+        tree.renderSurfaceLayerList.forEach(function(layer) {
+          bbox.addQuad(layer.layerQuad);
+        });
+      }
+      this.snapshots.forEach(function(lthi) {
+        handleTree(lthi.activeTree);
+        if (lthi.pendingTree) {
+          handleTree(lthi.pendingTree);
+        }
+      });
+      this.allLayersBBox_ = bbox;
+      return this.allLayersBBox_;
+    }
+  };
+
+  ObjectInstance.subTypes.register(
+      LayerTreeHostImplInstance,
+      {typeName: 'cc::LayerTreeHostImpl'});
+
+  return {
+    LayerTreeHostImplSnapshot,
+    LayerTreeHostImplInstance,
+  };
+});
+</script>

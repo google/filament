@@ -1,0 +1,19 @@
+load("@tools_pip_deps//:requirements.bzl", "requirement")
+
+py_library(
+    name = "gbench",
+    srcs = glob(["gbench/*.py"]),
+    deps = [
+      requirement("numpy"),
+      requirement("scipy"),
+    ],
+)
+
+py_binary(
+    name = "compare",
+    srcs = ["compare.py"],
+    python_version = "PY3",
+    deps = [
+        ":gbench",
+    ],
+)

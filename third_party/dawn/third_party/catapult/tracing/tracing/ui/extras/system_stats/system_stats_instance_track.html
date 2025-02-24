@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet"
+      href="/tracing/ui/extras/system_stats/system_stats_instance_track.css">
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/event_presenter.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/object_instance_track.html">
+<link rel="import" href="/tracing/ui/tracks/stacked_bars_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.system_stats', function() {
+  const EventPresenter = tr.ui.b.EventPresenter;
+
+  let statCount;
+
+  const excludedStats = {'meminfo': {
+    'pswpin': 0,
+    'pswpout': 0,
+    'pgmajfault': 0},
+  'diskinfo': {
+    'io': 0,
+    'io_time': 0,
+    'read_time': 0,
+    'reads': 0,
+    'reads_merged': 0,
+    'sectors_read': 0,
+    'sectors_written': 0,
+    'weighted_io_time': 0,
+    'write_time': 0,
+    'writes': 0,
+    'writes_merged': 0},
+  'swapinfo': {},
+  'perfinfo': {
+    'idle_time': 0,
+    'read_transfer_count': 0,
+    'write_transfer_count': 0,
+    'other_transfer_count': 0,
+    'read_operation_count': 0,
+    'write_operation_count': 0,
+    'other_operation_count': 0,
+    'pagefile_pages_written': 0,
+    'pagefile_pages_write_ios': 0,
+    'available_pages': 0,
+    'pages_read': 0,
+    'page_read_ios': 0}
+  };
+
+  /**
+   * Tracks that display system stats data.
+   *
+   * @constructor
+   * @extends {StackedBarsTrack}
+   */
+
+  const SystemStatsInstanceTrack = tr.ui.b.define(
+      'tr-ui-e-system-stats-instance-track', tr.ui.tracks.StackedBarsTrack);
+
+  const kPageSizeWindows = 4096;
+
+  SystemStatsInstanceTrack.prototype = {
+
+    __proto__: tr.ui.tracks.StackedBarsTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.StackedBarsTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('tr-ui-e-system-stats-instance-track');
+      this.objectInstance_ = null;
+    },
+
+    set objectInstances(objectInstances) {
+      if (!objectInstances) {
+        this.objectInstance_ = [];
+        return;
+      }
+      if (objectInstances.length !== 1) {
+        throw new Error('Bad object instance count.');
+      }
+      this.objectInstance_ = objectInstances[0];
+      if (this.objectInstance_ !== null) {
+        this.computeRates_(this.objectInstance_.snapshots);
+        this.maxStats_ = this.computeMaxStats_(
+            this.objectInstance_.snapshots);
+      }
+    },
+
+    computeRates_(snapshots) {
+      for (let i = 0; i < snapshots.length; i++) {
+        const snapshot = snapshots[i];
+        const stats = snapshot.getStats();
+        let prevSnapshot;
+
+        if (i === 0) {
+          // Deltas will be zero.
+          prevSnapshot = snapshots[0];
+        } else {
+          prevSnapshot = snapshots[i - 1];
+        }
+        const prevStats = prevSnapshot.getStats();
+        let timeIntervalSeconds = (snapshot.ts - prevSnapshot.ts) / 1000;
+        // Prevent divide by zero.
+        if (timeIntervalSeconds === 0) {
+          timeIntervalSeconds = 1;
+        }
+
+        this.computeRatesRecursive_(prevStats, stats,
+            timeIntervalSeconds);
+      }
+    },
+
+    computeRatesRecursive_(prevStats, stats,
+        timeIntervalSeconds) {
+      for (const statName in stats) {
+        if (stats[statName] instanceof Object) {
+          this.computeRatesRecursive_(prevStats[statName],
+              stats[statName],
+              timeIntervalSeconds);
+        } else {
+          if (statName === 'sectors_read') {
+            stats.bytes_read_per_sec = (stats.sectors_read -
+                                           prevStats.sectors_read) *
+                                          512 / timeIntervalSeconds;
+          }
+          if (statName === 'sectors_written') {
+            stats.bytes_written_per_sec =
+                (stats.sectors_written -
+                 prevStats.sectors_written) *
+                512 / timeIntervalSeconds;
+          }
+          if (statName === 'pgmajfault') {
+            stats.pgmajfault_per_sec = (stats.pgmajfault -
+                                           prevStats.pgmajfault) /
+                                          timeIntervalSeconds;
+          }
+          if (statName === 'pswpin') {
+            stats.bytes_swpin_per_sec = (stats.pswpin -
+                                            prevStats.pswpin) *
+                                           1000 / timeIntervalSeconds;
+          }
+          if (statName === 'pswpout') {
+            stats.bytes_swpout_per_sec = (stats.pswpout -
+                                             prevStats.pswpout) *
+                                            1000 / timeIntervalSeconds;
+          }
+
+          // All the stats below are available only on Windows:
+
+          if (statName === 'idle_time') {
+            // Total amount of idle_time, in unit of 100 nanoseconds.
+            const units = tr.b.convertUnit(100.,
+                tr.b.UnitScale.TIME.NANO_SEC, tr.b.UnitScale.TIME.SEC);
+            const idleTile = (stats.idle_time - prevStats.idle_time) * units;
+            stats.idle_time_per_sec = idleTile / timeIntervalSeconds;
+          }
+          if (statName === 'read_transfer_count') {
+            const bytesRead = stats.read_transfer_count -
+                                   prevStats.read_transfer_count;
+            stats.bytes_read_per_sec = bytesRead / timeIntervalSeconds;
+          }
+          if (statName === 'write_transfer_count') {
+            const bytesWritten = stats.write_transfer_count -
+                                      prevStats.write_transfer_count;
+            stats.bytes_written_per_sec = bytesWritten / timeIntervalSeconds;
+          }
+          if (statName === 'other_transfer_count') {
+            const bytesTransfer = stats.other_transfer_count -
+                                       prevStats.other_transfer_count;
+            stats.bytes_other_per_sec = bytesTransfer / timeIntervalSeconds;
+          }
+          if (statName === 'read_operation_count') {
+            const readOperation = stats.read_operation_count -
+                                       prevStats.read_operation_count;
+            stats.read_operation_per_sec = readOperation / timeIntervalSeconds;
+          }
+          if (statName === 'write_operation_count') {
+            const writeOperation = stats.write_operation_count -
+                                      prevStats.write_operation_count;
+            stats.write_operation_per_sec =
+                writeOperation / timeIntervalSeconds;
+          }
+          if (statName === 'other_operation_count') {
+            const otherOperation = stats.other_operation_count -
+                                       prevStats.other_operation_count;
+            stats.other_operation_per_sec =
+                otherOperation / timeIntervalSeconds;
+          }
+          if (statName === 'pagefile_pages_written') {
+            const pageFileBytesWritten =
+                (stats.pagefile_pages_written -
+                     prevStats.pagefile_pages_written) * kPageSizeWindows;
+            stats.pagefile_bytes_written_per_sec =
+                pageFileBytesWritten / timeIntervalSeconds;
+          }
+          if (statName === 'pagefile_pages_write_ios') {
+            const pagefileWriteOperation =
+                stats.pagefile_pages_write_ios -
+                    prevStats.pagefile_pages_write_ios;
+            stats.pagefile_write_operation_per_sec =
+                pagefileWriteOperation / timeIntervalSeconds;
+          }
+          if (statName === 'available_pages') {
+            // Nothing to do here for now.
+            stats.available_pages_in_bytes =
+                stats.available_pages * kPageSizeWindows;
+            // TODO(sebmarchand): Add a available_pages_field that tracks the
+            // variation of this metric?
+          }
+          if (statName === 'pages_read') {
+            const pagesBytesRead =
+                (stats.pages_read - prevStats.pages_read) * kPageSizeWindows;
+            stats.bytes_read_per_sec = pagesBytesRead / timeIntervalSeconds;
+          }
+          if (statName === 'page_read_ios') {
+            const pagesBytesReadOperations =
+                stats.page_read_ios - prevStats.page_read_ios;
+            stats.pagefile_write_operation_per_sec =
+                pagesBytesReadOperations / timeIntervalSeconds;
+          }
+        }
+      }
+    },
+
+    computeMaxStats_(snapshots) {
+      const maxStats = {};
+      statCount = 0;
+
+      for (let i = 0; i < snapshots.length; i++) {
+        const snapshot = snapshots[i];
+        const stats = snapshot.getStats();
+
+        this.computeMaxStatsRecursive_(stats, maxStats,
+            excludedStats);
+      }
+
+      return maxStats;
+    },
+
+    computeMaxStatsRecursive_(stats, maxStats, excludedStats) {
+      for (const statName in stats) {
+        if (stats[statName] instanceof Object) {
+          if (!(statName in maxStats)) {
+            maxStats[statName] = {};
+          }
+
+          let excludedNested;
+          if (excludedStats && statName in excludedStats) {
+            excludedNested = excludedStats[statName];
+          } else {
+            excludedNested = null;
+          }
+
+          this.computeMaxStatsRecursive_(stats[statName],
+              maxStats[statName],
+              excludedNested);
+        } else {
+          if (excludedStats && statName in excludedStats) {
+            continue;
+          }
+          if (!(statName in maxStats)) {
+            maxStats[statName] = 0;
+            statCount++;
+          }
+          if (stats[statName] > maxStats[statName]) {
+            maxStats[statName] = stats[statName];
+          }
+        }
+      }
+    },
+
+    get height() {
+      return window.getComputedStyle(this).height;
+    },
+
+    set height(height) {
+      this.style.height = height;
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.GENERAL_EVENT:
+          this.drawStatBars_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawStatBars_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const bounds = this.getBoundingClientRect();
+      const width = bounds.width * pixelRatio;
+      const height = (bounds.height * pixelRatio) / statCount;
+
+      // Culling parameters.
+      const vp = this.viewport.currentDisplayTransform;
+
+      // Scale by the size of the largest snapshot.
+      const maxStats = this.maxStats_;
+
+      const objectSnapshots = this.objectInstance_.snapshots;
+      let lowIndex = tr.b.findLowIndexInSortedArray(
+          objectSnapshots,
+          function(snapshot) {
+            return snapshot.ts;
+          },
+          viewLWorld);
+
+      // Assure that the stack with the left edge off screen still gets drawn
+      if (lowIndex > 0) lowIndex -= 1;
+
+      for (let i = lowIndex; i < objectSnapshots.length; ++i) {
+        const snapshot = objectSnapshots[i];
+        const trace = snapshot.getStats();
+        const currentY = height;
+
+        const left = snapshot.ts;
+        if (left > viewRWorld) break;
+
+        let leftView = vp.xWorldToView(left);
+        if (leftView < 0) leftView = 0;
+
+        // Compute the edges for the column graph bar.
+        let right;
+        if (i !== objectSnapshots.length - 1) {
+          right = objectSnapshots[i + 1].ts;
+        } else {
+          // If this is the last snapshot of multiple snapshots, use the width
+          // of the previous snapshot for the width.
+          if (objectSnapshots.length > 1) {
+            right = objectSnapshots[i].ts + (objectSnapshots[i].ts -
+                objectSnapshots[i - 1].ts);
+          } else {
+            // If there's only one snapshot, use max bounds as the width.
+            right = this.objectInstance_.parent.model.bounds.max;
+          }
+        }
+
+        let rightView = vp.xWorldToView(right);
+        if (rightView > width) {
+          rightView = width;
+        }
+
+        // Floor the bounds to avoid a small gap between stacks.
+        leftView = Math.floor(leftView);
+        rightView = Math.floor(rightView);
+
+        // Descend into nested stats.
+        this.drawStatBarsRecursive_(snapshot,
+            leftView,
+            rightView,
+            height,
+            trace,
+            maxStats,
+            currentY);
+
+        if (i === lowIndex) {
+          this.drawStatNames_(leftView, height, currentY, '', maxStats);
+        }
+      }
+      ctx.lineWidth = 1;
+    },
+
+    drawStatBarsRecursive_(snapshot,
+        leftView,
+        rightView,
+        height,
+        stats,
+        maxStats,
+        currentY) {
+      const ctx = this.context();
+
+      for (const statName in maxStats) {
+        if (stats[statName] instanceof Object) {
+          // Use the y-position returned from the recursive call.
+          currentY = this.drawStatBarsRecursive_(snapshot,
+              leftView,
+              rightView,
+              height,
+              stats[statName],
+              maxStats[statName],
+              currentY);
+        } else {
+          const maxStat = maxStats[statName];
+
+          // Draw a bar for the stat. The height of the bar is scaled
+          // against the largest value of the stat across all snapshots.
+          ctx.fillStyle = EventPresenter.getBarSnapshotColor(
+              snapshot, Math.round(currentY / height));
+
+          let barHeight;
+          if (maxStat > 0) {
+            barHeight = height * Math.max(stats[statName], 0) / maxStat;
+          } else {
+            barHeight = 0;
+          }
+
+          ctx.fillRect(leftView, currentY - barHeight,
+              Math.max(rightView - leftView, 1), barHeight);
+
+          currentY += height;
+        }
+      }
+
+      // Return the updated y-position.
+      return currentY;
+    },
+
+    drawStatNames_(leftView, height, currentY, prefix, maxStats) {
+      const ctx = this.context();
+
+      ctx.textAlign = 'end';
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#000000';
+      for (const statName in maxStats) {
+        if (maxStats[statName] instanceof Object) {
+          currentY = this.drawStatNames_(leftView, height, currentY,
+              statName, maxStats[statName]);
+        } else {
+          let fullname = statName;
+
+          if (prefix !== '') {
+            fullname = prefix + ' :: ' + statName;
+          }
+
+          ctx.fillText(fullname, leftView - 10, currentY - height / 4);
+          currentY += height;
+        }
+      }
+
+      return currentY;
+    }
+  };
+
+  tr.ui.tracks.ObjectInstanceTrack.register(
+      SystemStatsInstanceTrack,
+      {typeName: 'base::TraceEventSystemStatsMonitor::SystemStats'});
+
+  return {
+    SystemStatsInstanceTrack,
+  };
+});
+</script>

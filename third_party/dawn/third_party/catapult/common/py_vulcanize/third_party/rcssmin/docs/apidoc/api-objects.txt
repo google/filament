@@ -1,0 +1,6 @@
+rcssmin	rcssmin-module.html
+rcssmin.__license__	rcssmin-module.html#__license__
+rcssmin._make_cssmin	rcssmin-module.html#_make_cssmin
+rcssmin.__doc__	rcssmin-module.html#__doc__
+rcssmin.__package__	rcssmin-module.html#__package__
+rcssmin.cssmin	rcssmin-module.html#cssmin

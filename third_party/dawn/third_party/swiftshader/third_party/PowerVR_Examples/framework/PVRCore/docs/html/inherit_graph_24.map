@@ -1,0 +1,14 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node2" href="$classpvr_1_1_file_not_found_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when file not found errors occur..." alt="" coords="187,157,354,184"/>
+<area shape="rect" id="node3" href="$classpvr_1_1_pvr_error.html" title="A simple std::runtime_error wrapper for throwing generic PVR exceptions" alt="" coords="219,208,322,235"/>
+<area shape="rect" id="node13" href="$classpvr_1_1utils_1_1_unicode_conversion_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when undertaking unicode conversions..." alt="" coords="164,259,377,301"/>
+<area shape="rect" id="node4" href="$classpvr_1_1_file_e_o_f_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when attempting to read past the End Of F..." alt="" coords="461,5,590,32"/>
+<area shape="rect" id="node5" href="$classpvr_1_1_file_i_o_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when undertaking File IO operations..." alt="" coords="466,56,585,83"/>
+<area shape="rect" id="node6" href="$classpvr_1_1_index_out_of_range.html" title="A simple std::runtime_error wrapper for throwing exceptions when attempting to use index out of range..." alt="" coords="442,107,609,133"/>
+<area shape="rect" id="node7" href="$classpvr_1_1_invalid_argument_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when invalid arguments are provided..." alt="" coords="430,157,621,184"/>
+<area shape="rect" id="node8" href="$classpvr_1_1_invalid_data_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when invalid data is provided" alt="" coords="447,208,604,235"/>
+<area shape="rect" id="node9" href="$classpvr_1_1_invalid_operation_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when invalid operations are attempted..." alt="" coords="430,259,621,285"/>
+<area shape="rect" id="node10" href="$classpvr_1_1_operation_failed_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when operations fail" alt="" coords="433,309,617,336"/>
+<area shape="rect" id="node11" href="$classpvr_1_1_texture_decompression_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when invalid operations are attempted..." alt="" coords="425,361,625,402"/>
+<area shape="rect" id="node12" href="$classpvr_1_1_unsupported_operation_error.html" title="A simple std::runtime_error wrapper for throwing exceptions when unsupported operations are attempted..." alt="" coords="426,426,625,467"/>
+</map>

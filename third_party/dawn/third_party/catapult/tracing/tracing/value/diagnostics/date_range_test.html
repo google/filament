@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/date_range.html">
+<link rel="import" href="/tracing/value/histogram_serializer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('deserialize', function() {
+    let dr = tr.v.d.DateRange.deserialize(1496693746123);
+    assert.strictEqual(dr.minTimestamp, 1496693746123);
+    assert.strictEqual(dr.maxTimestamp, 1496693746123);
+
+    dr = tr.v.d.DateRange.deserialize([1496693746000, 1496693746123]);
+    assert.strictEqual(dr.minTimestamp, 1496693746000);
+    assert.strictEqual(dr.maxTimestamp, 1496693746123);
+  });
+
+  test('serialize', function() {
+    const dr = new tr.v.d.DateRange(123);
+    assert.strictEqual(dr.serialize(), 123);
+    dr.addDiagnostic(new tr.v.d.DateRange(100));
+    assert.deepEqual(dr.serialize(), [100, 123]);
+  });
+});
+</script>

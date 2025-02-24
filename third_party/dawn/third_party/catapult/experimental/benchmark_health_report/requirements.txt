@@ -1,0 +1,4 @@
+google-api-python-client>=1.6.3
+httplib2>=0.10.3
+oauth2client>=4.1.2
+python-dateutil>=2.6.1

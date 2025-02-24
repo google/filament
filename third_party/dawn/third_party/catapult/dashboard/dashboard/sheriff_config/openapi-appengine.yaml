@@ -1,0 +1,211 @@
+# This is the OpenAPI specification for the sheriff-config service, exposing a
+# formal API for Cloud Endpoints.
+swagger: "2.0"
+info:
+  description: "The Chromeperf Sheriff Configuration Service."
+  title: "Chromeperf Sheriff Configuration"
+  version: "0.1.0"
+host: "sheriff-config-dot-chromeperf.appspot.com"
+schemes:
+  - "https"
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+paths:
+  "/service-metadata":
+    get:
+      description: "Get the service metadata describing the available validation endpoints."
+      operationId: service_metadata
+      responses:
+        200:
+          description: "The luci-config service metadata."
+          schema:
+            $ref: "#/definitions/ServiceMetadata"
+      security:
+        - legacy_luci_config_service_account: []
+        - luci_config_service_account: []
+  "/configs/validate":
+    post:
+      description: "Validate a text-formatted protobuf message."
+      operationId: configs_validate
+      responses:
+        200:
+          description: "Error messages for validation, if any."
+          schema:
+            $ref: "#/definitions/ValidationResponse"
+        400:
+          description: "Invalid request (malformed payload)."
+      parameters:
+        - in: "body"
+          name: "sheriff_config"
+          required: true
+          schema:
+            $ref: "#/definitions/ValidationRequest"
+      security:
+        - chromeperf_service_account: []
+        - legacy_luci_config_service_account: []
+        - luci_config_service_account: []
+  "/configs/update":
+    get:
+      description: "Polls the luci-config service and persists the most up-to-date configuration."
+      operationId: configs_update
+      responses:
+        200:
+          description: "A successful response means the poll succeeded."
+        500:
+          description: "There was an error polling the service."
+      security:
+        - chromeperf_service_account: []
+  "/subscriptions/match":
+    post:
+      description: "Provide a list of Subscriptions that match for a given timeseries path."
+      operationId: subscriptions_match
+      responses:
+        200:
+          description: "List of subscriptions and config sets that match."
+          schema:
+            $ref: "#/definitions/MatchResponse"
+        400:
+          description: "Invalid request (malformed payload)."
+      parameters:
+        - in: "body"
+          name: "match_request"
+          required: true
+          schema:
+            $ref: "#/definitions/MatchRequest"
+      security:
+        - chromeperf_service_account: []
+  "/subscriptions/list":
+    post:
+      description: "Provide a list of all Subscriptions."
+      operationId: subscriptions_list
+      responses:
+        200:
+          description: "List of subscriptions and config sets that match."
+          schema:
+            $ref: "#/definitions/ListResponse"
+        400:
+          description: "Invalid request (malformed payload)."
+      parameters:
+        - in: "body"
+          name: "list_request"
+          required: true
+          schema:
+            $ref: "#/definitions/ListRequest"
+      security:
+        - chromeperf_service_account: []
+definitions:
+  ServiceMetadata:
+    type: object
+    properties:
+      version: { type: "string" }
+      validation:
+        type: object
+        properties:
+          patterns:
+            type: array
+            items:
+              type: object
+              properties:
+                config_set: { type: "string" }
+                path: { type: "string" }
+          url: { type: "string" }
+  ValidationRequest:
+    type: object
+    properties:
+      config_set: { type: "string" }
+      path: { type: "string" }
+      content: { type: "string" }
+  ValidationResponse:
+    type: object
+    properties:
+      messages:
+        type: array
+        items:
+          type: object
+          properties:
+            path: { type: "string" }
+            severity: { type: "string" }
+            text: { type: "string" }
+  MatchRequest:
+    type: object
+    properties:
+      path: { type: "string" }
+      stats:
+        type: array
+        items: { type: "string" }
+      metadata:
+        type: object
+        properties:
+          units: { type: "string" }
+          master: { type: "string" }
+          bot: { type: "string" }
+          benchmark: { type: "string" }
+          metric_patrs:
+            type: array
+            items: { type: "string" }
+  MatchResponse:
+    type: object
+    properties:
+      subscriptions:
+        type: array
+        items:
+          type: object
+          properties:
+            config_set: { type: "string" }
+            revision: { type: "string" }
+            # TODO(dberris): Maybe spell out the Subscription type?
+            subscription: { type: "object" }
+  ListRequest:
+    type: object
+    properties:
+      identity_email: { type: "string" }
+  ListResponse:
+    type: object
+    properties:
+      subscriptions:
+        type: array
+        items:
+          type: object
+          properties:
+            config_set: { type: "string" }
+            revision: { type: "string" }
+            # TODO(dberris): Maybe spell out the Subscription type?
+            subscription: { type: "object" }
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "key"
+    in: "query"
+  chromeperf_service_account:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "chromeperf@appspot.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/chromeperf@appspot.gserviceaccount.com"
+  chromeperf_staging_service_account:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "chromeperf-stage@appspot.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/chromeperf-stage@appspot.gserviceaccount.com"
+  legacy_luci_config_service_account:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "luci-config@appspot.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/luci-config@appspot.gserviceaccount.com"
+  luci_config_service_account:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "config-service@luci-config.iam.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/config-service@luci-config.iam.gserviceaccount.com"
+  google_id_token:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "https://accounts.google.com"
+    x-google-jwks_uri: "https://www.googleapis.com/oauth2/v3/certs"
+    x-google-audiences: "62121018386-fqj719inosipr4qaghs3o4qoc4t20a2k.apps.googleusercontent.com"

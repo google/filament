@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram_deserializer.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  test('objects', function() {
+    const deserializer = new tr.v.HistogramDeserializer(['a', ['b']], {});
+    assert.strictEqual('a', deserializer.getObject(0));
+    assert.deepEqual(['b'], deserializer.getObject(1));
+    assert.isUndefined(deserializer.getObject(2));
+  });
+
+  test('deserialize', function() {
+    const hists = tr.v.HistogramDeserializer.deserialize([
+      [
+        'aaa',
+        [1, [1, 1000, 20]],
+        'a:c',
+        'a:d',
+        'ccc',
+        'ddd',
+        [4, 5],
+        'ggg',
+        'avg',
+        'count',
+        'max',
+        'min',
+        'std',
+        'sum',
+        'lorem ipsum',
+        '',
+      ],
+      {
+        Breakdown: {bbb: {4: [15, 6, 11, 31]}},
+        GenericSet: {
+          hhh: {1: 7},
+          statisticsNames: {2: [8, 9, 10, 11, 12, 13]},
+          description: {3: 14},
+        },
+        RelatedEventSet: {eee: {5: [['fff', 7, 3, 4]]}},
+        RelatedNameMap: {bbb: {0: [6, 2, 3]}},
+      },
+      [
+        0,
+        'count+',
+        1,
+        [0, 1, 2, 3],
+        [1, 0, undefined, 0, 0, 0, 0],
+        {0: [1, [undefined, 4, 5]]},
+        0,
+      ]
+    ]);
+
+    assert.lengthOf(hists, 1);
+    const hist = hists[0];
+    assert.instanceOf(hist, tr.v.Histogram);
+    assert.strictEqual('aaa', hist.name);
+    assert.strictEqual('lorem ipsum', hist.description);
+    assert.isTrue(tr.b.setsEqual(hist.statisticsNames, new Set([
+      'avg', 'count', 'max', 'min', 'std', 'sum'])));
+    assert.strictEqual(tr.b.Unit.byName.count_biggerIsBetter, hist.unit);
+    assert.strictEqual(0, hist.average);
+    assert.strictEqual(1, hist.numValues);
+    assert.strictEqual(0, hist.standardDeviation);
+    assert.strictEqual(0, hist.sum);
+    assert.strictEqual(0, hist.min);
+    assert.strictEqual(0, hist.max);
+
+    const names = hist.diagnostics.get('bbb');
+    assert.instanceOf(names, tr.v.d.RelatedNameMap);
+    assert.strictEqual(names.get('ccc'), 'a:c');
+    assert.strictEqual(names.get('ddd'), 'a:d');
+
+    const hhh = hist.diagnostics.get('hhh');
+    assert.instanceOf(hhh, tr.v.d.GenericSet);
+    assert.strictEqual('ggg', tr.b.getOnlyElement(hhh));
+
+    assert.lengthOf(hist.allBins, 22);
+    const bin = hist.allBins[0];
+    assert.lengthOf(bin.diagnosticMaps, 1);
+    const dm = bin.diagnosticMaps[0];
+    assert.strictEqual(dm.size, 2);
+    const bd = dm.get('bbb');
+    assert.instanceOf(bd, tr.v.d.Breakdown);
+    assert.strictEqual('', bd.colorScheme);
+    assert.strictEqual(bd.size, 2);
+    assert.strictEqual(11, bd.get('ccc'));
+    assert.strictEqual(31, bd.get('ddd'));
+  });
+});
+</script>

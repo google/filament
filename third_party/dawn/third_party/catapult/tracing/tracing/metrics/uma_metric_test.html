@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/uma_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  // 1 sample in [1, 3) and 2 samples in [3, 7).
+  const BROWSER_BUCKETS =
+      'LAAAAAwAAAAAAAAAAwAAAAEAAAADAAAAAAAAAAEAAAADAAAABwAAAAAAAAACAAAA';
+  // 1 sample in [3, 7).
+  const RENDERER_BUCKETS = 'HAAAABAAAAAAAAAAAgAAAAcAAAAJAAAAAAAAAAIAAAA=';
+  // 2 samples in [8, 10).
+  const RENDERER_INCOMPATIBLE_BUCKETS =
+      'HAAAAAkAAAAAAAAAAQAAAAgAAAAKAAAAAAAAAAEAAAA=';
+  // 1 sample in [1, 3) and 2 samples in [3, 7). The sum is 9.
+  const SHIFTED_SAMPLES =
+      'LAAAAAkAAAAAAAAAAwAAAAEAAAADAAAAAAAAAAEAAAADAAAABwAAAAAAAAACAAAA';
+  // 50 samples in [2^30, 2^30 + 2).
+  const LARGE_SUM = 'HAAAADIAAIAMAAAAMgAAAAAAAEACAABAAAAAADIAAAA=';
+
+  test('simpleUMA', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserProcess = model.getOrCreateProcess(0);
+      browserProcess.getOrCreateThread(0).name = 'CrBrowserMain';
+      browserProcess.instantEvents.push(tr.c.TestUtils.newInstantEvent({
+        title: 'UMAHistogramSamples', start: 2,
+        args: {
+          name: 'metric1',
+          buckets: BROWSER_BUCKETS}}));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.umaMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('metric1');
+
+    // The histogram looks like:
+    //         *
+    //   *     *
+    // 1 2 3 4 5 6 7
+    assert.closeTo(2, hist.min, 1e-6);
+    assert.closeTo(5, hist.max, 1e-6);
+    assert.closeTo(4, hist.average, 1e-6);
+
+    const bin = hist.getBinForValue(2);
+    const processes = tr.b.getOnlyElement(bin.diagnosticMaps).get('processes');
+    assert.closeTo(2, processes.get('browser_process_1'), 1e-6);
+  });
+
+  test('twoUMASnapshotsInDifferentProcesses', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserProcess = model.getOrCreateProcess(0);
+      browserProcess.getOrCreateThread(0).name = 'CrBrowserMain';
+      browserProcess.instantEvents.push(tr.c.TestUtils.newInstantEvent({
+        title: 'UMAHistogramSamples', start: 2,
+        args: {
+          name: 'metric1',
+          buckets: BROWSER_BUCKETS}}));
+      const process = model.getOrCreateProcess(1);
+      process.instantEvents.push(tr.c.TestUtils.newInstantEvent({
+        title: 'UMAHistogramSamples', start: 2,
+        args: {
+          name: 'metric1',
+          buckets: RENDERER_BUCKETS}}));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.umaMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('metric1');
+
+    // The aggregated histogram looks like
+    //         *     *
+    //   *     *     *
+    // 1 2 3 4 5 6 7 8 9
+    assert.closeTo(2, hist.min, 1e-6);
+    assert.closeTo(8, hist.max, 1e-6);
+    assert.closeTo(5.6, hist.average, 1e-6);
+
+    const bin = hist.getBinForValue(8);
+    for (const diagnostics of bin.diagnosticMaps) {
+      assert.closeTo(
+          8, diagnostics.get('processes').get('unknown_processes_1'), 1e-6);
+    }
+  });
+
+  test('samplesNotInTheMiddle', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserProcess = model.getOrCreateProcess(0);
+      browserProcess.getOrCreateThread(0).name = 'CrBrowserMain';
+      browserProcess.instantEvents.push(tr.c.TestUtils.newInstantEvent({
+        title: 'UMAHistogramSamples', start: 2,
+        args: {
+          name: 'metric1',
+          buckets: SHIFTED_SAMPLES}}));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.umaMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('metric1');
+
+    // There is 1 sample in [1, 3) and 2 samples in [3, 7). Since the sum is 9,
+    // we put samples lower than the middle of the bins so that they sum to 9.
+    assert.closeTo(1.4, hist.min, 1e-6);
+    assert.closeTo(3.8, hist.max, 1e-6);
+    assert.closeTo(3, hist.average, 1e-6);
+  });
+
+  test('largeSampleSum', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserProcess = model.getOrCreateProcess(0);
+      browserProcess.getOrCreateThread(0).name = 'CrBrowserMain';
+      browserProcess.instantEvents.push(tr.c.TestUtils.newInstantEvent({
+        title: 'UMAHistogramSamples', start: 2,
+        args: {
+          name: 'metric1',
+          buckets: LARGE_SUM}}));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.umaMetric(histograms, model);
+    const hist = histograms.getHistogramNamed('metric1');
+
+    assert.closeTo((1 << 30) + 1, hist.min, 1e-6);
+    assert.closeTo((1 << 30) + 1, hist.max, 1e-6);
+    assert.closeTo(((1 << 30) + 1) * 50, hist.sum, 1e-6);
+  });
+
+  test('incompatibleUMASnapshots', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      model.getOrCreateProcess(0).getOrCreateThread(0).name = 'CrBrowserMain';
+      model.getOrCreateProcess(1).instantEvents.push(
+          tr.c.TestUtils.newInstantEvent({
+            title: 'UMAHistogramSamples', start: 2,
+            args: {
+              name: 'metric1',
+              buckets: RENDERER_BUCKETS}})
+      );
+      model.getOrCreateProcess(2).instantEvents.push(
+          tr.c.TestUtils.newInstantEvent({
+            title: 'UMAHistogramSamples', start: 2,
+            args: {
+              name: 'metric1',
+              buckets: RENDERER_INCOMPATIBLE_BUCKETS}})
+      );
+    });
+    const histograms = new tr.v.HistogramSet();
+
+    assert.throws(function() {
+      tr.metrics.umaMetric(histograms, model);
+    }, 'Incompatible bins');
+  });
+});
+</script>

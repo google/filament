@@ -1,0 +1,205 @@
+.. _tutorials.i18n:
+
+Internationalization and localization with webapp2
+==================================================
+In this tutorial we will learn how to get started with
+:mod:`webapp2_extras.i18n`. This module provides a complete collection of
+tools to localize and internationalize apps. Using it you can create
+applications adapted for different locales and timezones and with
+internationalized date, time, numbers, currencies and more.
+
+
+Prerequisites
+-------------
+If you don't have a package installer in your system yet (like ``pip`` or
+``easy_install``), install one. See :ref:`tutorials.installing.packages`.
+
+
+Get Babel and Pytz
+------------------
+The i18n module depends on two libraries: ``babel`` and ``pytz`` (or
+``gaepytz``). So before we start you must add the ``babel`` and ``pytz``
+packages to your application directory (for App Engine) or install it in your
+virtual environment (for other servers).
+
+For App Engine, download ``babel`` and ``pytz`` and add those libraries to
+your app directory:
+
+- Babel: http://babel.edgewall.org/
+- Pytz: http://pypi.python.org/pypi/gaepytz
+
+For other servers, install those libraries in your system using ``pip``.
+App Engine users also need babel installed, as we use the command line
+utility provided py it to extract and update message catalogs.
+This assumes a `*nix` environment:
+
+.. code-block:: text
+
+   $ sudo pip install babel
+   $ sudo pip install gaepytz
+
+Or, if you don't have pip but have ``easy_install``:
+
+.. code-block:: text
+
+   $ sudo easy_install babel
+   $ sudo easy_install gaepytz
+
+
+Create a directory for translations
+-----------------------------------
+We need a directory inside our app to store a messages catalog extracted
+from templates and Python files. Create a directory named ``locale`` for
+this.
+
+If you want, later you can rename this directory the way you prefer and adapt
+the commands we describe below accordingly. If you do so, you must change the
+default i18n configuration to point to the right directory. The configuration
+is passed when you create an application, like this::
+
+    config = {}
+    config['webapp2_extras.i18n'] = {
+        'translations_path': 'path/to/my/locale/directory',
+    }
+
+    app = webapp2.WSGIApplication(config=config)
+
+If you use the default ``locale`` directory name, no configuration is needed.
+
+
+Create a simple app to be translated
+------------------------------------
+For the purposes of this tutorial we will create a very simple app with a
+single message to be translated. So create a new app and save this as
+``main.py``::
+
+    import webapp2
+
+    from webapp2_extras import i18n
+
+    class HelloWorldHandler(webapp2.RequestHandler):
+        def get(self):
+            # Set the requested locale.
+            locale = self.request.GET.get('locale', 'en_US')
+            i18n.get_i18n().set_locale(locale)
+
+            message = i18n.gettext('Hello, world!')
+            self.response.write(message)
+
+    app = webapp2.WSGIApplication([
+        ('/', HelloWorldHandler),
+    ], debug=True)
+
+    def main():
+        app.run()
+
+    if __name__ == '__main__':
+        main()
+
+Any string that should be localized in your code and templates must be wrapped
+by the function :func:`webapp2_extras.i18n.gettext` (or the shortcut ``_()``).
+
+Translated strings defined in module globals or class definitions should use
+:func:`webapp2_extras.i18n.lazy_gettext` instead, because we want translations
+to be dynamic -- if we call ``gettext()`` when the module is imported we'll
+set the value to a static translation for a given locale, and this is not
+what we want. ``lazy_gettext()`` solves this making the translation to be
+evaluated lazily, only when the string is used.
+
+
+Extract and compile translations
+--------------------------------
+We use the `babel command line interface <http://babel.edgewall.org/wiki/Documentation/cmdline.html>`_
+to extract, initialize, compile and update translations. Refer to Babel's
+manual for a complete description of the command options.
+
+The extract command can extract not only messages from several template engines
+but also ``gettext()`` (from :py:mod:`gettext`) and its variants from Python
+files. Access your project directory using the command line and follow this
+quick how-to:
+
+**1.** Extract all translations. We pass the current app directory to be
+scanned. This will create a ``messages.pot`` file in the ``locale``
+directory with all translatable strings that were found:
+
+.. code-block:: text
+
+   $ pybabel extract -o ./locale/messages.pot ./
+
+You can also provide a `extraction mapping file <http://babel.edgewall.org/wiki/Documentation/messages.html#extraction-method-mapping-and-configuration>`_
+that configures how messages are extracted. If the configuration file is
+saved as ``babel.cfg``, we point to it when extracting the messages:
+
+.. code-block:: text
+
+   $ pybabel extract -F ./babel.cfg -o ./locale/messages.pot ./
+
+**2.** Initialize the directory for each locale that your app will support.
+This is done only once per locale. It will use the ``messages.pot`` file
+created on step 1. Here we initialize three translations, ``en_US``, ``es_ES``
+and ``pt_BR``:
+
+.. code-block:: text
+
+   $ pybabel init -l en_US -d ./locale -i ./locale/messages.pot
+   $ pybabel init -l es_ES -d ./locale -i ./locale/messages.pot
+   $ pybabel init -l pt_BR -d ./locale -i ./locale/messages.pot
+
+**3.** Now the translation catalogs are created in the ``locale`` directory.
+Open each ``.po`` file and translate it. For the example above, we have only
+one message to translate: our ``Hello, world!``.
+
+Open ``/locale/es_ES/LC_MESSAGES/messages.po`` and translate it to
+``¡Hola, mundo!``.
+
+Open ``/locale/pt_BR/LC_MESSAGES/messages.po`` and translate it to
+``Olá, mundo!``.
+
+**4.** After all locales are translated, compile them with this command:
+
+.. code-block:: text
+
+   $ pybabel compile -f -d ./locale
+
+That's it.
+
+
+Update translations
+-------------------
+When translations change, first repeat step 1 above. It will create a new
+``.pot`` file with updated messages. Then update each locales:
+
+.. code-block:: text
+
+   $ pybabel update -l en_US -d ./locale/ -i ./locale/messages.pot
+   $ pybabel update -l es_ES -d ./locale/ -i ./locale/messages.pot
+   $ pybabel update -l pt_BR -d ./locale/ -i ./locale/messages.pot
+
+After you translate the new strings to each language, repeat step 4, compiling
+the translations again.
+
+
+Test your app
+-------------
+Start the development server pointing to the application you created for this
+tutorial and access the default language:
+
+    http://localhost:8080/
+
+Then try the Spanish version:
+
+    http://localhost:8080/?locale=es_ES
+
+And finally, try the Portuguese version:
+
+    http://localhost:8080/?locale=pt_BR
+
+Voilà! Our tiny app is now available in three languages.
+
+
+What else
+---------
+The :mod:`webapp2_extras.i18n` module provides several other functionalities
+besides localization. You can use it to internationalize dates, currencies
+and numbers, and there are helpers to set the locale or timezone automatically
+for each request. Explore the API documentation to learn more.

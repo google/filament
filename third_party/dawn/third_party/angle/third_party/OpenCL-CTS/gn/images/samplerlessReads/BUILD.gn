@@ -1,0 +1,24 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//gni/angle.gni")
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("samplerless_reads") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/",
+  ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/common.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_iterations.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_loops.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_read_1D.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_read_1D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_read_1D_buffer.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_read_2D_array.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/images/samplerlessReads/test_read_3D.cpp",
+  ]
+}

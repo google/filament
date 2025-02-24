@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('subViewThrowsNotImplementedErrors', function() {
+    const subView = document.createElement('tr-ui-a-sub-view');
+
+    assert.throw(function() {
+      subView.selection = new tr.model.EventSet();
+    }, 'Not implemented!');
+
+    assert.throw(function() {
+      const viewSelection = subView.selection;
+    }, 'Not implemented!');
+
+    subView.tabLabel = 'Tab Label';
+    assert.strictEqual(subView.getAttribute('tab-label'), 'Tab Label');
+    assert.strictEqual(subView.tabLabel, 'Tab Label');
+
+    subView.tabLabel = 'New Label';
+    assert.strictEqual(subView.getAttribute('tab-label'), 'New Label');
+    assert.strictEqual(subView.tabLabel, 'New Label');
+  });
+});
+</script>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('cpuFreqTargetImport', function() {
+    const lines = [
+      '<idle>-0     [000] ..s3  1043.718825: cpufreq_interactive_target: ' +
+          'cpu=0 load=2 cur=2000000 targ=300000\n',
+      '<idle>-0     [000] ..s3  1043.718825: cpufreq_interactive_target: ' +
+          'cpu=0 load=12 cur=1000000 actual=1000000 targ=200000\n'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 0);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.load, 2);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cur, 2000000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 300000);
+
+    assert.strictEqual(thread.sliceGroup.slices[1].args.cpu, 0);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.load, 12);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.cur, 1000000);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.actual, 1000000);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.targ, 200000);
+  });
+
+  test('cpuFreqNotYetImport', function() {
+    const lines = [
+      '<idle>-0     [001] ..s3  1043.718832: cpufreq_interactive_notyet: ' +
+          'cpu=1 load=10 cur=700000 targ=200000\n',
+      '<idle>-0     [001] ..s3  1043.718832: cpufreq_interactive_notyet: ' +
+          'cpu=1 load=10 cur=700000 actual=1000000 targ=200000\n'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 1);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.load, 10);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cur, 700000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 200000);
+
+    assert.strictEqual(thread.sliceGroup.slices[1].args.cpu, 1);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.load, 10);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.cur, 700000);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.actual, 1000000);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.targ, 200000);
+  });
+
+  test('cpuFreqSetSpeedImport', function() {
+    const lines = [
+      'cfinteractive-23    [001] ...1  1043.719688: ' +
+          'cpufreq_interactive_setspeed: cpu=0 targ=200000 actual=700000\n'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 0);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 200000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.actual, 700000);
+  });
+
+  test('cpuFreqAlreadyImport', function() {
+    const lines = [
+      '<idle>-0     [000] ..s3  1043.738822: cpufreq_interactive_already: cpu=0 load=18 cur=200000 actual=700000 targ=200000\n' // @suppress longLineCheck
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 0);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.load, 18);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cur, 200000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.actual, 700000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 200000);
+  });
+
+  test('cpuFreqBoostImport', function() {
+    const lines = [
+      'InputDispatcher-465   [001] ...1  1044.213948: ' +
+          'cpufreq_interactive_boost: pulse\n'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.type, 'pulse');
+  });
+
+  test('cpuFreqUnBoostImport', function() {
+    const lines = [
+      'InputDispatcher-465   [001] ...1  1044.213948: ' +
+          'cpufreq_interactive_unboost: pulse\n'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.type, 'pulse');
+  });
+
+  test('cpuFreqUpImport', function() {
+    const lines = [
+      'kinteractive-69    [003] .... 414324.164432: ' +
+          'cpufreq_interactive_up: cpu=1 targ=1400000 actual=800000'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 1);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 1400000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.actual, 800000);
+  });
+
+  test('cpuFreqDownImport', function() {
+    const lines = [
+      'kinteractive-69    [003] .... 414365.834193: ' +
+          'cpufreq_interactive_down: cpu=3 targ=800000 actual=1000000'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.sliceGroup.slices[0].args.cpu, 3);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.targ, 800000);
+    assert.strictEqual(thread.sliceGroup.slices[0].args.actual, 1000000);
+  });
+});
+</script>
+

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+<link rel="import" href="/tracing/ui/base/drag_handle.html">
+<link rel="import" href="/tracing/ui/base/hotkey_controller.html">
+<link rel="import" href="/tracing/ui/base/info_bar.html">
+<link rel="import" href="/tracing/ui/base/list_view.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_selector.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+<link rel="import"
+      href="/tracing/ui/extras/chrome/cc/picture_ops_chart_summary_view.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/picture_ops_chart_view.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/picture_ops_list_view.html">
+
+<template id="tr-ui-e-chrome-cc-picture-debugger-template">
+  <left-panel>
+    <picture-info>
+      <div>
+        <span class='title'>Skia Picture</span>
+        <span class='size'></span>
+      </div>
+      <div>
+        <input class='filename' type='text' value='skpicture.skp' />
+        <button class='export'>Export</button>
+      </div>
+    </picture-info>
+  </left-panel>
+  <right-panel>
+    <tr-ui-e-chrome-cc-picture-ops-chart-view>
+    </tr-ui-e-chrome-cc-picture-ops-chart-view>
+    <raster-area><canvas></canvas></raster-area>
+  </right-panel>
+</template>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  const THIS_DOC = document._currentScript.ownerDocument;
+
+  /**
+   * PictureDebugger is a view of a PictureSnapshot for inspecting
+   * the picture in detail. (e.g., timing information, etc.)
+   *
+   * @constructor
+   */
+  const PictureDebugger = tr.ui.b.define('tr-ui-e-chrome-cc-picture-debugger');
+
+  PictureDebugger.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      const node = tr.ui.b.instantiateTemplate(
+          '#tr-ui-e-chrome-cc-picture-debugger-template', THIS_DOC);
+
+      Polymer.dom(this).appendChild(node);
+
+      this.style.display = 'flex';
+      this.style.flexDirection = 'row';
+
+      const title = this.querySelector('.title');
+      title.style.fontWeight = 'bold';
+      title.style.marginLeft = '5px';
+      title.style.marginRight = '5px';
+
+      this.pictureAsImageData_ = undefined;
+      this.showOverdraw_ = false;
+      this.zoomScaleValue_ = 1;
+
+      this.sizeInfo_ = Polymer.dom(this).querySelector('.size');
+      this.rasterArea_ = Polymer.dom(this).querySelector('raster-area');
+      this.rasterArea_.style.backgroundColor = '#ddd';
+      this.rasterArea_.style.minHeight = '100px';
+      this.rasterArea_.style.minWidth = '200px';
+      this.rasterArea_.style.overflow = 'auto';
+      this.rasterArea_.style.paddingLeft = '5px';
+      this.rasterCanvas_ = Polymer.dom(this.rasterArea_)
+          .querySelector('canvas');
+      this.rasterCtx_ = this.rasterCanvas_.getContext('2d');
+
+      this.filename_ = Polymer.dom(this).querySelector('.filename');
+      this.filename_.style.userSelect = 'text';
+      this.filename_.style.marginLeft = '5px';
+
+      this.drawOpsChartSummaryView_ =
+          new tr.ui.e.chrome.cc.PictureOpsChartSummaryView();
+      this.drawOpsChartView_ = new tr.ui.e.chrome.cc.PictureOpsChartView();
+      this.drawOpsChartView_.addEventListener(
+          'selection-changed', this.onChartBarClicked_.bind(this));
+
+      this.exportButton_ = Polymer.dom(this).querySelector('.export');
+      this.exportButton_.addEventListener(
+          'click', this.onSaveAsSkPictureClicked_.bind(this));
+
+      this.trackMouse_();
+
+      const overdrawCheckbox = tr.ui.b.createCheckBox(
+          this, 'showOverdraw',
+          'pictureView.showOverdraw', false,
+          'Show overdraw');
+
+      const chartCheckbox = tr.ui.b.createCheckBox(
+          this, 'showSummaryChart',
+          'pictureView.showSummaryChart', false,
+          'Show timing summary');
+
+      const pictureInfo = Polymer.dom(this).querySelector('picture-info');
+      pictureInfo.style.flexGrow = 0;
+      pictureInfo.style.flexShrink = 0;
+      pictureInfo.style.flexBasis = 'auto';
+      pictureInfo.style.paddingTop = '2px';
+      Polymer.dom(pictureInfo).appendChild(overdrawCheckbox);
+      Polymer.dom(pictureInfo).appendChild(chartCheckbox);
+
+      this.drawOpsView_ = new tr.ui.e.chrome.cc.PictureOpsListView();
+      this.drawOpsView_.flexGrow = 1;
+      this.drawOpsView_.flexShrink = 1;
+      this.drawOpsView_.flexBasis = 'auto';
+      this.drawOpsView_.addEventListener(
+          'selection-changed', this.onChangeDrawOps_.bind(this));
+
+      const leftPanel = Polymer.dom(this).querySelector('left-panel');
+      leftPanel.style.flexDirection = 'column';
+      leftPanel.style.display = 'flex';
+      leftPanel.style.flexGrow = 0;
+      leftPanel.style.flexShrink = 0;
+      leftPanel.style.flexBasis = 'auto';
+      leftPanel.style.minWidth = '200px';
+      leftPanel.style.overflow = 'auto';
+      Polymer.dom(leftPanel).appendChild(this.drawOpsChartSummaryView_);
+      Polymer.dom(leftPanel).appendChild(this.drawOpsView_);
+
+      const middleDragHandle = document.createElement('tr-ui-b-drag-handle');
+      middleDragHandle.style.flexGrow = 0;
+      middleDragHandle.style.flexShrink = 0;
+      middleDragHandle.style.flexBasis = 'auto';
+      middleDragHandle.horizontal = false;
+      middleDragHandle.target = leftPanel;
+
+      const rightPanel = Polymer.dom(this).querySelector('right-panel');
+      rightPanel.style.flexGrow = 1;
+      rightPanel.style.flexShrink = 1;
+      rightPanel.style.flexBasis = 'auto';
+      rightPanel.style.minWidth = 0;
+      rightPanel.style.flexDirection = 'column';
+      rightPanel.style.display = 'flex';
+
+      const chartView = Polymer.dom(rightPanel).querySelector(
+          'tr-ui-e-chrome-cc-picture-ops-chart-view');
+      this.drawOpsChartView_.style.flexGrow = 0;
+      this.drawOpsChartView_.style.flexShrink = 0;
+      this.drawOpsChartView_.style.flexBasis = 'auto';
+      this.drawOpsChartView_.style.minWidth = 0;
+      this.drawOpsChartView_.style.overflowX = 'auto';
+      this.drawOpsChartView_.style.overflowY = 'hidden';
+      rightPanel.replaceChild(this.drawOpsChartView_, chartView);
+
+      this.infoBar_ = document.createElement('tr-ui-b-info-bar');
+      Polymer.dom(this.rasterArea_).appendChild(this.infoBar_);
+
+      Polymer.dom(this).insertBefore(middleDragHandle, rightPanel);
+
+      this.picture_ = undefined;
+
+      const hkc = document.createElement('tv-ui-b-hotkey-controller');
+      hkc.addHotKey(new tr.ui.b.HotKey({
+        eventType: 'keypress',
+        thisArg: this,
+        keyCode: 'h'.charCodeAt(0),
+        callback(e) {
+          this.moveSelectedOpBy(-1);
+          e.stopPropagation();
+        }
+      }));
+      hkc.addHotKey(new tr.ui.b.HotKey({
+        eventType: 'keypress',
+        thisArg: this,
+        keyCode: 'l'.charCodeAt(0),
+        callback(e) {
+          this.moveSelectedOpBy(1);
+          e.stopPropagation();
+        }
+      }));
+      Polymer.dom(this).appendChild(hkc);
+    },
+
+    onSaveAsSkPictureClicked_() {
+      // Decode base64 data into a String
+      const rawData = tr.b.Base64.atob(this.picture_.getBase64SkpData());
+
+      // Convert this String into an Uint8Array
+      const length = rawData.length;
+      const arrayBuffer = new ArrayBuffer(length);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      for (let c = 0; c < length; c++) {
+        uint8Array[c] = rawData.charCodeAt(c);
+      }
+
+      // Create a blob URL from the binary array.
+      const blob = new Blob([uint8Array], {type: 'application/octet-binary'});
+      const blobUrl = window.webkitURL.createObjectURL(blob);
+
+      // Create a link and click on it. BEST API EVAR!
+      const link = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
+      link.href = blobUrl;
+      link.download = this.filename_.value;
+      const event = document.createEvent('MouseEvents');
+      event.initMouseEvent(
+          'click', true, false, window, 0, 0, 0, 0, 0,
+          false, false, false, false, 0, null);
+      link.dispatchEvent(event);
+    },
+
+    get picture() {
+      return this.picture_;
+    },
+
+    set picture(picture) {
+      this.drawOpsView_.picture = picture;
+      this.drawOpsChartView_.picture = picture;
+      this.drawOpsChartSummaryView_.picture = picture;
+      this.picture_ = picture;
+
+      this.exportButton_.disabled = !this.picture_.canSave;
+
+      if (picture) {
+        const size = this.getRasterCanvasSize_();
+        this.rasterCanvas_.width = size.width;
+        this.rasterCanvas_.height = size.height;
+      }
+
+      const bounds = this.rasterArea_.getBoundingClientRect();
+      const selectorBounds = this.mouseModeSelector_.getBoundingClientRect();
+      this.mouseModeSelector_.pos = {
+        x: (bounds.right - selectorBounds.width - 10),
+        y: bounds.top
+      };
+
+      this.rasterize_();
+
+      this.scheduleUpdateContents_();
+    },
+
+    getRasterCanvasSize_() {
+      const style = window.getComputedStyle(this.rasterArea_);
+      const width =
+          Math.max(parseInt(style.width), this.picture_.layerRect.width);
+      const height =
+          Math.max(parseInt(style.height), this.picture_.layerRect.height);
+
+      return {
+        width,
+        height
+      };
+    },
+
+    scheduleUpdateContents_() {
+      if (this.updateContentsPending_) return;
+
+      this.updateContentsPending_ = true;
+      tr.b.requestAnimationFrameInThisFrameIfPossible(
+          this.updateContents_.bind(this)
+      );
+    },
+
+    updateContents_() {
+      this.updateContentsPending_ = false;
+
+      if (this.picture_) {
+        Polymer.dom(this.sizeInfo_).textContent = '(' +
+            this.picture_.layerRect.width + ' x ' +
+            this.picture_.layerRect.height + ')';
+      }
+
+      this.drawOpsChartView_.updateChartContents();
+      this.drawOpsChartView_.scrollSelectedItemIntoViewIfNecessary();
+
+      // Return if picture hasn't finished rasterizing.
+      if (!this.pictureAsImageData_) return;
+
+      this.infoBar_.visible = false;
+      this.infoBar_.removeAllButtons();
+      if (this.pictureAsImageData_.error) {
+        this.infoBar_.message = 'Cannot rasterize...';
+        this.infoBar_.addButton('More info...', function(e) {
+          const overlay = new tr.ui.b.Overlay();
+          Polymer.dom(overlay).textContent = this.pictureAsImageData_.error;
+          overlay.visible = true;
+          e.stopPropagation();
+          return false;
+        }.bind(this));
+        this.infoBar_.visible = true;
+      }
+
+      this.drawPicture_();
+    },
+
+    drawPicture_() {
+      const size = this.getRasterCanvasSize_();
+      if (size.width !== this.rasterCanvas_.width) {
+        this.rasterCanvas_.width = size.width;
+      }
+      if (size.height !== this.rasterCanvas_.height) {
+        this.rasterCanvas_.height = size.height;
+      }
+
+      this.rasterCtx_.clearRect(0, 0, size.width, size.height);
+
+      if (!this.pictureAsImageData_.imageData) return;
+
+      const imgCanvas = this.pictureAsImageData_.asCanvas();
+      const w = imgCanvas.width;
+      const h = imgCanvas.height;
+      this.rasterCtx_.drawImage(imgCanvas, 0, 0, w, h,
+          0, 0, w * this.zoomScaleValue_,
+          h * this.zoomScaleValue_);
+    },
+
+    rasterize_() {
+      if (this.picture_) {
+        this.picture_.rasterize(
+            {
+              stopIndex: this.drawOpsView_.selectedOpIndex,
+              showOverdraw: this.showOverdraw_
+            },
+            this.onRasterComplete_.bind(this));
+      }
+    },
+
+    onRasterComplete_(pictureAsImageData) {
+      this.pictureAsImageData_ = pictureAsImageData;
+      this.scheduleUpdateContents_();
+    },
+
+    moveSelectedOpBy(increment) {
+      if (this.selectedOpIndex === undefined) {
+        this.selectedOpIndex = 0;
+        return;
+      }
+      this.selectedOpIndex = tr.b.math.clamp(
+          this.selectedOpIndex + increment,
+          0, this.numOps);
+    },
+
+    get numOps() {
+      return this.drawOpsView_.numOps;
+    },
+
+    get selectedOpIndex() {
+      return this.drawOpsView_.selectedOpIndex;
+    },
+
+    set selectedOpIndex(index) {
+      this.drawOpsView_.selectedOpIndex = index;
+      this.drawOpsChartView_.selectedOpIndex = index;
+    },
+
+    onChartBarClicked_(e) {
+      this.drawOpsView_.selectedOpIndex =
+          this.drawOpsChartView_.selectedOpIndex;
+    },
+
+    onChangeDrawOps_(e) {
+      this.rasterize_();
+      this.scheduleUpdateContents_();
+
+      this.drawOpsChartView_.selectedOpIndex =
+          this.drawOpsView_.selectedOpIndex;
+    },
+
+    set showOverdraw(v) {
+      this.showOverdraw_ = v;
+      this.rasterize_();
+    },
+
+    set showSummaryChart(chartShouldBeVisible) {
+      if (chartShouldBeVisible) {
+        this.drawOpsChartSummaryView_.show();
+      } else {
+        this.drawOpsChartSummaryView_.hide();
+      }
+    },
+
+    trackMouse_() {
+      this.mouseModeSelector_ = document.createElement(
+          'tr-ui-b-mouse-mode-selector');
+      this.mouseModeSelector_.targetElement = this.rasterArea_;
+      Polymer.dom(this.rasterArea_).appendChild(this.mouseModeSelector_);
+
+      this.mouseModeSelector_.supportedModeMask =
+          tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.mode = tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.defaultMode = tr.ui.b.MOUSE_SELECTOR_MODE.ZOOM;
+      this.mouseModeSelector_.settingsKey = 'pictureDebugger.mouseModeSelector';
+
+      this.mouseModeSelector_.addEventListener('beginzoom',
+          this.onBeginZoom_.bind(this));
+      this.mouseModeSelector_.addEventListener('updatezoom',
+          this.onUpdateZoom_.bind(this));
+      this.mouseModeSelector_.addEventListener('endzoom',
+          this.onEndZoom_.bind(this));
+    },
+
+    onBeginZoom_(e) {
+      this.isZooming_ = true;
+
+      this.lastMouseViewPos_ = this.extractRelativeMousePosition_(e);
+
+      e.preventDefault();
+    },
+
+    onUpdateZoom_(e) {
+      if (!this.isZooming_) return;
+
+      const currentMouseViewPos = this.extractRelativeMousePosition_(e);
+
+      // Take the distance the mouse has moved and we want to zoom at about
+      // 1/1000th of that speed. 0.01 feels jumpy. This could possibly be tuned
+      // more if people feel it's too slow.
+      this.zoomScaleValue_ +=
+          ((this.lastMouseViewPos_.y - currentMouseViewPos.y) * 0.001);
+      this.zoomScaleValue_ = Math.max(this.zoomScaleValue_, 0.1);
+
+      this.drawPicture_();
+
+      this.lastMouseViewPos_ = currentMouseViewPos;
+    },
+
+    onEndZoom_(e) {
+      this.lastMouseViewPos_ = undefined;
+      this.isZooming_ = false;
+      e.preventDefault();
+    },
+
+    extractRelativeMousePosition_(e) {
+      return {
+        x: e.clientX - this.rasterArea_.offsetLeft,
+        y: e.clientY - this.rasterArea_.offsetTop
+      };
+    }
+  };
+
+  return {
+    PictureDebugger,
+  };
+});
+</script>

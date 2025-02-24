@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/all_diagnostics.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('roundtripPreservesGuid', function() {
+    const diagnostic = new tr.v.d.GenericSet(['generic']);
+    diagnostic.guid = 'foo';
+    const clone = tr.v.d.Diagnostic.fromDict(diagnostic.asDict());
+    assert.strictEqual('foo', clone.guid);
+  });
+
+  test('smoke', function() {
+    for (const info of tr.v.d.Diagnostic.getAllRegisteredTypeInfos()) {
+      assert.hasOwnProperty(info, 'equals');
+      assert.hasOwnProperty(info.constructor, 'fromDict');
+      assert.hasOwnProperty(info.constructor, 'deserialize');
+    }
+  });
+});
+</script>

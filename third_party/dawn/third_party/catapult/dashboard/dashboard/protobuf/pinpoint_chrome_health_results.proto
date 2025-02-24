@@ -1,0 +1,138 @@
+// Copyright 2021 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+syntax = "proto3";
+
+package dashboard;
+
+import "dashboard/protobuf/dims.proto";
+import "google/protobuf/timestamp.proto";
+
+message CoreWebVitals {
+  float largestContentfulPaint = 1;
+  float timeToFirstContentfulPaint = 2;
+  float overallCumulativeLayoutShift = 3;
+  float totalBlockingTime = 4;
+}
+
+message Speedometer2 {
+  float Angular2_TypeScript_TodoMVC = 1;
+  float AngularJS_TodoMVC = 2;
+  float BackboneJS_TodoMVC = 3;
+  float Elm_TodoMVC = 4;
+  float EmberJS_Debug_TodoMVC = 5;
+  float EmberJS_TodoMVC = 6;
+  float Flight_TodoMVC = 7;
+  float Inferno_TodoMVC = 8;
+  float jQuery_TodoMVC = 9;
+  float Preact_TodoMVC = 10;
+  float React_Redux_TodoMVC = 11;
+  float React_TodoMVC = 12;
+  float Vanilla_ES2015_Babel_Webpack_TodoMVC = 13;
+  float Vanilla_ES2015_TodoMVC = 14;
+  float VanillaJS_TodoMVC = 15;
+  float VueJS_TodoMVC = 16;
+  float RunsPerMinute = 17;
+}
+
+message MotionMark {
+  float motionmark = 1;
+  float canvas_arcs = 2;
+  float canvas_lines = 3;
+  float design = 4;
+  float images = 5;
+  float leaves = 6;
+  float multiply = 7;
+  float paths = 8;
+  float suits = 9;
+}
+
+message Jetstream2 {
+  float Score = 1;
+  float cube_3d_SP_Average = 2;
+  float raytrace_3d_SP_Average = 3;
+  float Air_Average = 4;
+  float Babylon_Average = 5;
+  float Basic_Average = 6;
+  float Box2D_Average = 7;
+  float FlightPlanner_Average = 8;
+  float HashSet_wasm_Runtime = 9;
+  float ML_Average = 10;
+  float OfflineAssembler_Average = 11;
+  float UniPoker_Average = 12;
+  float WSL_MainRun = 13;
+  float acorn_wtb_Average = 14;
+  float ai_astar_Average = 15;
+  float async_fs_Average = 16;
+  float babylon_wtb_Average = 17;
+  float base64_SP_Average = 18;
+  float bomb_workers_Average = 19;
+  float cdjs_Average = 20;
+  float chai_wtb_Average = 21;
+  float coffeescript_wtb_Average = 22;
+  float crypto_aes_SP_Average = 23;
+  float crypto_md5_SP_Average = 24;
+  float crypto_shal_SP_Average = 25;
+  float crypto_Average = 26;
+  float date_format_tofte_SP_Average = 27;
+  float date_format_xparb_SP_Average = 28;
+  float delta_blue_Average = 29;
+  float earley_boyer_Average = 30;
+  float espree_wtb_Average = 31;
+  float first_inspector_code_load_Average = 32;
+  float float_mm_c_Average = 33;
+  float gaussian_blur_Average = 34;
+  float gbemu_Average = 35;
+  float gcc_loops_wasm_Runtime = 36;
+  float hash_map_Average = 37;
+  float jshint_wtb_Average = 38;
+  float json_parse_inspector_Average = 39;
+  float json_stringify_inspector_Average = 40;
+  float lebab_wtb_Average = 41;
+  float mandreel_Average = 42;
+  float multi_inspector_code_load_Average = 43;
+  float n_body_SP_Average = 44;
+  float navier_stokes_Average = 45;
+  float octane_code_load_Average = 46;
+  float octane_zlib_Average = 47;
+  float pdfjs_Average = 48;
+  float prepack_wtb_Average = 49;
+  float quicksort_wasm_Runtime = 50;
+  float raytrace_Average = 51;
+  float regex_dna_SP_Average = 52;
+  float regexp_Average = 53;
+  float richards_wasm_Runtime = 54;
+  float richards_Average = 55;
+  float segmentation_Average = 56;
+  float splay_Average = 57;
+  float stanford_crypto_aes_Average = 58;
+  float stanford_crypto_pbkdf2_Average = 59;
+  float stanford_crypto_sha256_Average = 60;
+  float string_unpack_code_SP_Average = 61;
+  float tagcloud_SP_Average = 62;
+  float tsf_wasm_Runtime = 63;
+  float typescript_Average = 64;
+  float uglify_js_wtb_Average = 65;
+}
+
+message Measures {
+  CoreWebVitals core_web_vitals = 1;
+  Speedometer2 speedometer2 = 2;
+  MotionMark motionmark = 3;
+  Jetstream2 jetstream2 = 4;
+}
+
+// Represents a row in a BigQuery table.
+// Each row maps Dimensions (device, story, etc.) + pairing + metric -> value
+message ChromeHealthResult {
+  // Top-level to enable clustering
+  string run_id = 1;
+  string batch_id = 2;
+
+  Dims dims = 3;
+  Measures measures = 4;
+
+  // Overall job start time
+  google.protobuf.Timestamp job_start_time = 5;
+  int32 attempt_count = 6;
+}

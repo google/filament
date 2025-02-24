@@ -1,0 +1,1643 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head><link rel="stylesheet" type="text/css" href="/DXR.axd?r=2_1,1_4,2_2,1_3,1_2-h4wR7"><script type="text/javascript">
+// <![CDATA[
+var IsLoggedIn = false; var IsEmployee = false; var IsPostback = false; var PreferredLanguage = 'ru-RU'
+// ]]>
+</script><script type="text/javascript">
+// <![CDATA[
+var _wsData = {"Settings":{"TrackingEnabled":true},"UserInfo":{"IsEmployee":false,"IsLoggedIn":false}};
+//]]>
+</script><script type="text/javascript" src="/DXR.axd?r=9999_17-0GW98" id="dx-jquery"></script><link href="App_Themes/DX/Common/common.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/DX/Common/core.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/DX/Common/visual.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/DX/Editors/styles.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/DX/Web/styles.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><title>
+DevExpress: UI Controls, Reporting, Developer Tools and ORM
+</title><meta name="viewport" content="width=1205"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta http-equiv="Content-Style-Type" content="text/css"><meta name="verify-v1" content="KNQeM1g9mKNKeIC0NxliW33hAUryboFfWVc7EU1GMH8="><meta http-equiv="imagetoolbar" content="no"><meta name="robots" content="NOODP"><meta id="shareImage" property="og:image" content="https://www.devexpress.com/DXR.axd?r=9999_15-0GW98"><link id="favIcon1" rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2"><link id="favIcon2" rel="icon" type="image/x-icon" href="/favicon.ico?v=2"><link id="iPhoneIcon" rel="apple-touch-icon" href="https://www.devexpress.com/i/iphone.png"><link href="App_Themes/WS/Common/WebSite.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/WS/Plugins/tn3/dxInline.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="App_Themes/WS/Web/styles.css?wsCache=2_0_1_28565" type="text/css" rel="stylesheet"><link href="/DXR.axd?r=9999_1-0GW98" type="text/css" rel="stylesheet"><script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_require', 'inpage_linkid', '//www.google-analytics.com/plugins/ga/inpage_linkid.js']);
+_gaq.push(['_setAccount', 'UA-1384678-1']);
+_gaq.push(['_setDomainName', '.devexpress.com']);
+_gaq.push(['_setCustomVar', 1, 'VisitorStatus', 'SignedOut']);
+_gaq.push(['_trackPageview']);
+
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script><script type="text/javascript">
+var _kiq = _kiq || [];
+_kiq.push(['set', { 'SignedIn': 'false', }]);
+</script><script type="text/javascript" src="https://s3.amazonaws.com/ki.js/47776/9KF.js?wsCache=2_0_1_28565" async="true"></script><link href="/home/HomeCustomContent/styles-3.css?wsCache=635255518472425553" type="text/css" rel="stylesheet"><link href="/css/css.css?wsCache=635259097602664800" type="text/css" rel="stylesheet"><meta name="description" content="DevExpress: Feature-Complete UI Controls, IDE Tools, and Business Application Frameworks for Visual Studio, Delphi and C++Builder"><meta name="author" content="Developer Express Inc."><meta name="copyright" content="Copyright (c) 1998-2014 Developer Express Inc. All Rights Reserved."><meta name="distribution" content="Global"><meta name="rating" content="General"><meta http-equiv="content-language" content="en"><link href="https://www.devexpress.com/rss/news/news20.xml" type="application/rss+xml" rel="alternate" title="Developer Express News"></head>
+<body>
+<form name="aspnetForm" method="post" action="" id="aspnetForm">
+<div>
+<input type="hidden" autocomplete="off" name="__EVENTTARGET" id="__EVENTTARGET" value="">
+<input type="hidden" autocomplete="off" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="">
+<input type="hidden" autocomplete="off" name="__VSTATE" id="__VSTATE" value="/wEPGAEFHl9fQ29udHJvbHNSZXF1aXJlUG9zdEJhY2tLZXlfXxYBBR9jdGwwMCRQb3N0Q29udGVudCRjdGwyNyR3c1BvcHVwDwUKMTEzNzY1ODYxN2Q=">
+<input type="hidden" autocomplete="off" name="__VIEWSTATE" id="__VIEWSTATE" value="">
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+theForm.__EVENTTARGET.value = eventTarget;
+theForm.__EVENTARGUMENT.value = eventArgument;
+theForm.submit();
+}
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=bqCb_h7OYlBHWJIR7PJNJUmm4oYhaTgL7dsUo9V1CaKhmZUVFNbEXRsj9YeoQLjiV4Y_1FEQE6tOTlICy12eY8FxSaw1&amp;t=635089743480000000" type="text/javascript"></script>
+
+
+<script src="/DXR.axd?r=9999_0-0GW98" type="text/javascript"></script>
+<script src="/HyperCube/scripts.js?wsCache=2_0_1_28565" type="text/javascript"></script>
+<script src="/HyperCube/trackingScripts.js?wsCache=2_0_1_28565" type="text/javascript"></script>
+
+<div id="Header" class="TOCv3">
+<div class="TopBar GreyBar">
+<div class="Content">
+<script id="dxis_992503125" src="/DXR.axd?r=1_44,1_76,1_69,1_67,1_43-h4wR7" type="text/javascript"></script><a class="p-f-right" id="ctl00_TOCSignIn" href="https://www.devexpress.com/MyAccount/?returnUrl=https%3a%2f%2fwww.devexpress.com%2f">Log In</a>
+</div>
+</div><div id="TOCBar" class="MainMenuBar FullContent">
+<div id="Toolbar" class="Toolbar">
+<a id="ctl00_TOC-Cart" title="Shopping Cart" class="Item Cart Empty" href="https://www.devexpress.com/ClientCenter/Purchase/"><span>0</span></a><a id="ctl00_TOC-Blogs" title="Blogs" class="Item Blog" href="https://community.devexpress.com/blogs/"></a><div class="Item Search">
+<div class="Callout Hover">
+
+</div><div class="SubMenuBack Hover">
+<div class="Content">
+<div class="SearchBox">
+<input id="tbSiteSearch" class="TextBox" value="Type keywords here" type="text" autocomplete="off"><input id="btnSiteSearch" class="ButtonSearch" type="button"><div class="h-clear">
+
+</div>
+</div>
+</div>
+</div>
+</div><script type="text/javascript">
+var _wsToolBar = new _wsToolBarController();
+window.SearchServiceUrl = 'http://search.devexpress.com/?q='
+</script>
+</div><ul id="TOCv3Menu" class="MainMenu">
+<li class="Item"><span class="ItemTitle">Products</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="Products Suites">
+<div class="GroupTitle">
+Suites
+</div><div class="CategoryTitle">
+BEST VALUE
+</div><div class="BestValueItem">
+<div class="Chicklet U">
+
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-BestValueU" href="https://www.devexpress.com/Subscriptions/Universal.xml">Universal</a>
+</div><div class="CategoryItemDescription">
+(includes all DevExpress .NET products in one integrated suite)
+</div>
+</div><div class="BestValueItem">
+<div class="Chicklet DXP">
+
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-BestValueDXP" href="https://www.devexpress.com/Subscriptions/DXperience.xml">DXperience</a>
+</div><div class="CategoryItemDescription">
+(includes all DevExpress .NET Controls along with CodeRush)
+</div>
+</div><a id="ctl00_TOC-BestValueCompare" class="Compare" href="https://www.devexpress.com/Subscriptions/"></a>
+</div><div class="Products GroupBreak Full NETProducts">
+<div class="GroupTitle">
+.NET Products
+</div><div class="FirstColumn">
+<div class="CategoryTitle">
+INDIVIDUAL PLATFORMS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWinForms" href="https://www.devexpress.com/Products/NET/Controls/WinForms/" target="_self">WinForms</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsASP" href="https://www.devexpress.com/Products/NET/Controls/ASP/" target="_self">ASP.NET</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsASPMVC" href="https://www.devexpress.com/Products/NET/Controls/ASP/MVC/" target="_self">MVC</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWPF" href="https://www.devexpress.com/Products/NET/Controls/WPF/" target="_self">WPF</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsSilverlight" href="https://www.devexpress.com/Products/NET/Controls/Silverlight/" target="_self">Silverlight</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWinRT" href="https://www.devexpress.com/Products/NET/Controls/WinRT/" target="_self">Windows 8 XAML</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+FRAMEWORKS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETApplication_Framework" href="https://www.devexpress.com/Products/NET/Application_Framework/" target="_self">eXpressApp Framework</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+CODE-DEBUG-REFACTOR
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsCodeRush" href="https://www.devexpress.com/Products/CodeRush/" target="_self">CodeRush for Visual Studio</a>
+</div>
+</div><div class="SecondColumn">
+<div class="CategoryTitle">
+MOBILE (HTML JS)
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsHTMLJS" href="https://www.devexpress.com/Products/HTML-JS/" target="_self">DevExtreme</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+CROSS-PLATFORM
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-SubscriptionsReporting" href="https://www.devexpress.com/Subscriptions/Reporting/" target="_self">Reporting</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETDocumentServer" href="https://www.devexpress.com/Products/NET/Document-Server/" target="_self">Document Generation</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+ENTERPRISE TOOLS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETReportServer" href="https://www.devexpress.com/Products/NET/Report-Server/" target="_self">Report Server</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETDashboard" href="https://www.devexpress.com/Products/NET/Dashboard/" target="_self">Analytics Dashboard</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle Dummy">
+
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-SubscriptionsNew2013xml" href="https://www.devexpress.com/Subscriptions/New-2013.xml" target="_self">See What's New in 2013</a>
+</div>
+</div>
+</div><div class="Products GroupBreak Other">
+<div class="GroupTitle">
+HTML JavaScript Products
+</div><div class="FirstColumn">
+<div class="CategoryTitle">
+MOBILE
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httpphonejsdevexpresscom" href="https://phonejs.devexpress.com/" target="_blank">Phone JS</a>
+</div>
+</div><div class="SecondColumn">
+<div class="CategoryTitle">
+HTML 5 JS WIDGETS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httpchartjsdevexpresscom" href="https://chartjs.devexpress.com/" target="_blank">Chart JS</a>
+</div>
+</div>
+</div><div class="Products GroupBreak Other">
+<div class="GroupTitle">
+Testing Tools
+</div><div class="CategoryTitle">
+WEB TESTING
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httptestcafedevexpresscom" href="https://testcafe.devexpress.com/" target="_blank">TestCafé</a>
+</div>
+</div><div class="Products GroupBreak Other">
+<div class="GroupTitle">
+Delphi &amp; C++Builder Products
+</div><div class="CategoryTitle">
+DELPHI &amp; C++BUILDER
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsVCL" href="https://www.devexpress.com/Products/VCL/" target="_self">VCL</a>
+</div>
+</div><div class="h-clear">
+
+</div>
+</div>
+</div>
+</div></li><li class="Item"><span class="ItemTitle">Free Trials &amp; Demos</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="Downloads Trial">
+<div class="FreeTrial">
+
+</div><a id="ctl00_TOC-DownloadTrial" class="Download" href="https://www.devexpress.com/Home/try.xml"></a><div class="CategoryItemDescription TrialDownloadDescription">
+(includes all DevExpress .NET products and free technical support)
+</div>
+</div><div class="Downloads GroupBreak Full">
+<div class="GroupTitle">
+.NET Product Demos
+</div><div class="FirstColumn">
+<div class="CategoryTitle">
+BY PLATFORMS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWinFormsdemosxml" href="https://www.devexpress.com/Products/NET/Controls/WinForms/demos.xml" target="_self">WinForms</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsASPdemosxml" href="https://www.devexpress.com/Products/NET/Controls/ASP/demos.xml" target="_self">ASP.NET</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsASPMVCdemosxml" href="https://www.devexpress.com/Products/NET/Controls/ASP/MVC/demos.xml" target="_self">MVC</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWPFdemosxml" href="https://www.devexpress.com/Products/NET/Controls/WPF/demos.xml" target="_self">WPF</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsSilverlightdemosxml" href="https://www.devexpress.com/Products/NET/Controls/Silverlight/demos.xml" target="_self">Silverlight</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETControlsWinRTdemosxml" href="https://www.devexpress.com/Products/NET/Controls/WinRT/demos.xml" target="_self">Windows 8 XAML</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+CROSS-PLATFORM
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-SubscriptionsReportingdemosxml" href="https://www.devexpress.com/Subscriptions/Reporting/demos.xml" target="_self">Reporting</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETDocumentServerdemosxml" href="https://www.devexpress.com/Products/NET/Document-Server/demos.xml" target="_self">Document Generation</a>
+</div><div class="CategoryBreak">
+
+</div>
+</div><div class="SecondColumn">
+<div class="CategoryTitle">
+MOBILE (HTML JS)
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsHTMLJSdemosxml" href="https://www.devexpress.com/Products/HTML-JS/demos.xml" target="_self">DevExtreme</a>
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+ENTERPRISE TOOLS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETReportServerdemosxml" href="https://www.devexpress.com/Products/NET/Report-Server/demos.xml" target="_self">Report Server</a>
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETDashboarddemosxml" href="https://www.devexpress.com/Products/NET/Dashboard/demos.xml" target="_self">Analytics Dashboard</a>
+</div><div class="CategoryItemLink Dummy">
+
+</div><div class="CategoryBreak">
+
+</div><div class="CategoryTitle">
+FRAMEWORKS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsNETApplication_Frameworkdemosxml" href="https://www.devexpress.com/Products/NET/Application_Framework/demos.xml" target="_self">eXpressApp Framework</a>
+</div><a id="ctl00_TOC-ViewAllDemos" class="ViewAllDemos" href="https://www.devexpress.com/Support/Demos/"></a>
+</div>
+</div><div class="Downloads GroupBreak Other">
+<div class="GroupTitle">
+HTML Java Script Downloads
+</div><div class="FirstColumn">
+<div class="CategoryTitle">
+MOBILE
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httpphonejsdevexpresscom-1" href="https://phonejs.devexpress.com/" target="_blank">Phone JS</a>
+</div>
+</div><div class="SecondColumn">
+<div class="CategoryTitle">
+HTML 5 JS WIDGETS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httpchartjsdevexpresscom-1" href="https://chartjs.devexpress.com/" target="_blank">Chart JS</a>
+</div>
+</div>
+</div><div class="Downloads GroupBreak Other">
+<div class="GroupTitle">
+Testing Tools Downloads
+</div><div class="CategoryTitle">
+WEB TESTING
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-httptestcafedevexpresscom-1" href="https://testcafe.devexpress.com/" target="_blank">TestCafé</a>
+</div>
+</div><div class="Downloads GroupBreak Other">
+<div class="GroupTitle">
+Delphi &amp; C++Builder Downloads
+</div><div class="CategoryTitle">
+CONTROLS
+</div><div class="CategoryItemLink">
+<a id="ctl00_TOC-ProductsVCLdemosxml" href="https://www.devexpress.com/Products/VCL/demos.xml" target="_self">VCL</a>
+</div>
+</div>
+</div>
+</div>
+</div></li><li class="Item"><span class="ItemTitle">Buy</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="Buy">
+<table class="BigIconItems" border="0">
+<tbody><tr>
+<td><a id="ctl00_TOC-Subscriptions" class="Icon Compare" href="https://www.devexpress.com/Subscriptions/"><span></span>Compare Features<br>and Pricing</a></td><td><a id="ctl00_TOC-Subscriptionsbuyxml" class="Icon Buy" href="https://www.devexpress.com/Subscriptions/buy.xml"><span></span>Buy a New<br>Product Subscription</a></td><td><a id="ctl00_TOC-ClientCenterPurchaseUpgrades" class="Icon Renew" href="https://www.devexpress.com/ClientCenter/Purchase/#Upgrades"><span></span>Renew an<br>Existing Subscription</a></td>
+</tr>
+</tbody></table><div class="BigDescription">
+Need help or require more information?<br>Email us at <a href="mailto:info@devexpress.com">info@devexpress.com</a> or call +1 (818) 844-3383 between 7:30AM and 4:30PM Pacific Time.
+</div>
+</div>
+</div>
+</div>
+</div></li><li class="Item"><span class="ItemTitle">Support</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="Support Left">
+<div class="GroupTitle">
+Support Center
+</div><table class="BigIconItems" border="0">
+<tbody><tr>
+<td><a id="ctl00_TOC-SupportCenter" class="Icon KB" href="https://www.devexpress.com/Support/Center/"><span></span>Search the KB</a></td><td><a id="ctl00_TOC-SupportCenterQuestionChangeFilterSet1FavoritesOnlyFalseMyItemsOnlyTrueMyTeamItemsOnlyFalsePlatformNameAllPlatformsProductNameAllProductsTicketTypeAll" class="Icon Q" href="https://www.devexpress.com/Support/Center/Question/ChangeFilterSet/1?FavoritesOnly=False&amp;MyItemsOnly=True&amp;MyTeamItemsOnly=False&amp;PlatformName=AllPlatforms&amp;ProductName=AllProducts&amp;TicketType=All"><span></span>My Questions</a></td><td><a id="ctl00_TOC-SupportCenterExampleList" class="Icon Examples" href="https://www.devexpress.com/Support/Center/Example/List"><span></span>Code Examples</a></td>
+</tr>
+</tbody></table>
+</div><div class="Support">
+<div class="GroupTitle">
+Resources
+</div><table class="BigIconItems" border="0">
+<tbody><tr>
+<td><a id="ctl00_TOC-SupportStart" class="Icon GetStarted" href="https://www.devexpress.com/Support/Start/"><span></span>Getting Started</a></td><td><a id="ctl00_TOC-httpdocumentationdevexpresscom" class="Icon Doc" href="https://documentation.devexpress.com/"><span></span>Documentation</a></td><td><a id="ctl00_TOC-SupportDemos" class="Icon Demos" href="https://www.devexpress.com/Support/Demos/"><span></span>Demos</a></td><td><a class="Icon Training" href="https://www.devexpress.com/Home/Training/"><span></span>Training</a><div class="Icon Arrow">
+<span><div>
+New Training<br>Classes Announced
+</div></span>
+</div></td><td><a id="ctl00_TOC-SupportWebinars" class="Icon Webinars" href="https://www.devexpress.com/Support/Webinars/"><span></span>Webinars</a></td>
+</tr>
+</tbody></table>
+</div>
+</div>
+</div>
+</div></li><li class="Item"><span class="ItemTitle">My Account</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="MyAccount">
+<table class="BigIconItems" border="0">
+<tbody><tr>
+<td><a id="ctl00_TOC-httpswwwdevexpresscomMyAccount" class="Icon ManageAccount" href="https://www.devexpress.com/MyAccount/"><span></span>Manage<br>Your Profile<div class="SubDescription">
+Change your address<br>email and password
+</div></a></td><td><a id="ctl00_TOC-httpswwwdevexpresscomClientCenterContactsDefaultaspx" class="Icon ManageLicenses" href="https://www.devexpress.com/ClientCenter/Contacts/Default.aspx"><span></span>Assign <br>Licenses<div class="SubDescription">
+Manage licenses<br>for your dev team
+</div></a></td><td><a id="ctl00_TOC-httpswwwdevexpresscomClientCenterPurchaseUpgrades" class="Icon Renew" href="https://www.devexpress.com/ClientCenter/Purchase/#Upgrades"><span></span>Renew an<br>Existing Subscription</a></td><td><a id="ctl00_TOC-httpswwwdevexpresscomClientCenterPurchaseHistoryaspx" class="Icon PurchaseHistory" href="https://www.devexpress.com/ClientCenter/PurchaseHistory.aspx"><span></span>Purchase<br>History<div class="SubDescription">
+New order status<br>and previous purchases
+</div></a></td><td class="Separator"></td><td class="Last"><a id="ctl00_TOC-httpswwwdevexpresscomClientCenterDownloadsDownloadManager" class="Icon Download" href="https://www.devexpress.com/ClientCenter/Downloads/#DownloadManager"><span></span>Download<br>Your Products</a></td>
+</tr>
+</tbody></table><div class="BigDescription">
+Need help or require more information?<br>Email us at <a href="mailto:clientservices@devexpress.com">clientservices@devexpress.com</a> or call +1 (818) 844-3383 between 7:30AM and 4:30PM Pacific Time.
+</div>
+</div>
+</div>
+</div>
+</div></li><li class="Item"><span class="ItemTitle">About Us</span><div class="Separator">
+
+</div><div class="Callout Hover">
+
+</div><div class="SubMenu Hover">
+<div class="SubMenuContainer">
+<div class="Content">
+<div class="AboutUs Left">
+<div class="GroupTitle">
+Connect with DevExpress
+</div><table class="BigIconItems" border="0">
+<tbody><tr>
+<td><a id="ctl00_TOC-httpscommunitydevexpresscomblogs" class="Icon Blogs" href="https://community.devexpress.com/blogs/"><span></span>Blogs</a></td><td><a id="ctl00_TOC-HomeCommunity" class="Icon Events" href="https://www.devexpress.com/Home/Community/"><span></span>Upcoming<br>Events</a></td><td><a id="ctl00_TOC-HomeTraining" class="Icon Training" href="https://www.devexpress.com/Home/Training/"><span></span>Training</a></td><td><a id="ctl00_TOC-SupportWebinars-1" class="Icon Webinars" href="https://www.devexpress.com/Support/Webinars/"><span></span>Webinars</a></td>
+</tr>
+</tbody></table>
+</div><div class="AboutUs Right">
+<div class="GroupTitle">
+Learn More about DevExpress
+</div><div class="h-clear">
+
+</div><div class="p-f-left">
+<div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeMissionxml" class="IconLink AboutUs" href="https://www.devexpress.com/Home/Mission.xml"><span></span>About Us</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeAnnounces" class="IconLink News" href="https://www.devexpress.com/Home/Announces/"><span></span>News</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeCommentsxml" class="IconLink Comments" href="https://www.devexpress.com/Home/Comments.xml"><span></span>User Comments</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeCaseStudies" class="IconLink CaseStudies" href="https://www.devexpress.com/Home/Case-Studies/"><span></span>Case Studies</a><div class="h-clear">
+
+</div>
+</div>
+</div><div class="GroupBreak NoSeparator">
+<div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeAwardsxml" class="IconLink Awards" href="https://www.devexpress.com/Home/Awards.xml"><span></span>Our Awards</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomePublicationsxml" class="IconLink Review" href="https://www.devexpress.com/Home/Publications.xml"><span></span>Reviews &amp; Publications</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeCommunityMVPxml" class="IconLink MVP" href="https://www.devexpress.com/Home/Community/MVP.xml"><span></span>MVP Program</a><div class="h-clear">
+
+</div>
+</div><div>
+<a id="ctl00_TOC-httpswwwdevexpresscomHomeContactUsxml" class="IconLink ContactUs" href="https://www.devexpress.com/Home/ContactUs.xml"><span></span>Contact Us</a><div class="h-clear">
+
+</div>
+</div>
+</div>
+</div><div class="h-clear">
+
+</div><div class="BigDescription AboutUsDescription">
+Need help? Contact our  <a id="TOC-AboutUsDescriptionLink" href="https://www.devexpress.com/Home/devexpress-cares.xml">Developer Advocates</a> anytime.
+</div>
+</div>
+</div>
+</div></li>
+</ul><div class="SubMenuBack">
+
+</div>
+<script type="text/javascript">
+var _wsMenu = new _wsMenuController();
+</script>
+<a id="ctl00_TOC-Logo" title="DevExpress" class="Logo" href="https://www.devexpress.com/"></a><div class="h-clear">
+
+</div>
+</div>
+</div>
+
+
+<div class="LightBox Home">
+<div class="Content">
+<div class="Text">
+<div>
+<div class="contentblock" style="text-align:right;">
+<table cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="contentarea" valign="top" style="width:100%;"><div class="light-font" style="font-size:36px;padding-top:30px;line-height:100%;margin-right:-30px;">
+
+Meet DevExpress Universal 13.2
+
+</div><div class="light-font" style="font-size:24px;line-height:120%;color:#6a6a6a;">
+
+When only the best will do.
+
+</div><div style="padding-top:20px;color:#6a6a6a;margin-right:-30px;">
+
+Voted best in its class, the new products and features that make up our<br>
+
+Universal Subscription will help you create elegant, ultra-fast and touch enabled<br>
+
+solutions across all major .NET platforms.<br>
+
+</div><div style="padding-top:25px;width:465px;">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><a id="ctl00_PreContent_ctl27" class="V3Button" trackhandlerid="ctl00_PreContent_ctl27" href="https://go.devexpress.com/DevExpressDownload_UniversalTrial.aspx"><span>
+Download  Free Trial
+</span></a><script type="text/javascript" id="dxss_linkTrack">
+if(typeof _a_TrackDownloadUniversalTrialHome == 'function') { $("a[trackHandlerId='ctl00_PreContent_ctl27']").bind('click', _a_TrackDownloadUniversalTrialHome); }
+</script></td><td class="tc tlc" valign="top"><div style="padding-left:10px;">
+<a class="V3Button" href="/Subscriptions/New-2013.xml"><span>
+See What's New
+</span></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div><div style="padding-top:21px;margin-left:-20px;margin-right:-20px;">
+<div class="contentblock">
+<table cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="imagearea" valign="top"><a href="/Home/awards-2013.xml"><img id="ctl00_PreContent_ctl40" alt="DevExpress Awards - DevPro 2013 Gold.png" src="/i/awards/DevExpress-Awards-DevPro-2013.png" style="height:68px;width:103px;border-style:none;"></a></td><td class="contentspacer"><div>
+
+</div></td><td class="contentarea" valign="top" style="width:100%;"><p style="font-size:12px;">
+Once again DevExpress has dominated the DevProConnections Magazine Readers Choice Awards. Our deepest thanks to everyone who voted our products the best.
+</p></td>
+</tr>
+</tbody></table>
+</div>
+</div></td><td class="contentspacer"><div>
+
+</div></td><td class="imagearea" valign="top"><div style="margin-top:-2px;margin-left:-25px;">
+<img id="ctl00_PreContent_ctl45" alt="DevExpress Controls for Desktop and Mobile Applications" src="/i/banners/DevExpress-Controls-for-Desktop-and-Mobile-Apps.png" style="height:360px;width:719px;border-style:none;">
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div>
+</div>
+<div class="h-clear"></div>
+</div>
+</div>
+
+<div class="Page-Wrapper">
+<div class="l-data Content Main">
+
+
+<div class="HorizontalBar">
+<div class="InnerContainer LightBox-Bar">
+<div class="Links black-text underline" style="text-align:center;padding-top:10px;">
+<a href="/Home/Awards-2013.xml">Voted Best in 20+ Product Categories</a><span style="padding-left:20px;padding-right:20px;color:#ccc;">|</span><a href="/Home/VS2013.xml">Visual Studio 2013 support is here</a>
+</div>
+</div>
+</div><div class="h-clear">
+
+</div><div class="light-font" style="font-size:36px;text-align:center;padding-bottom:10px;padding-top:30px;">
+
+Your next great app starts here.
+
+</div><div class="light-font">
+<div class="gray-text" style="font-size:24px;text-align:center;">
+
+Explore our comprehensive product line and experience the DevExpress Difference.
+
+</div>
+</div><div style="padding-top:20px;padding-bottom:40px;">
+<div class="
+id-Carousel
+param-Round
+param-MovingStart
+" style="margin-left:-58px;visibility:hidden;">
+<div class="dxtable" style="margin-bottom:0px;">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" align="left" valign="middle" style="width:50%;"><div class="Carousel-PrevButton id-Carousel-PrevEvent">
+
+</div></td><td class="tc" valign="top"><div style="position:relative;overflow:hidden;">
+<div class="id-CarouselContent" style="position:absolute;left:0px;">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div class="id-CarouselPage">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/CodeRush/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl84" alt="CodeRush" src="/Home/i/carousel/coderush.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+CodeRush
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Code-Debug-Refactor</strong><br>
+Write code at the speed of thought. Find and fix defects. Refactor with ease.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://phonejs.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl98" alt="PhoneJS" src="/Home/i/carousel/Phone-JS-mobile-framework.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+PhoneJS
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>HTML 5 JS Mobile Framework</strong><br>
+Create native mobile applications using HTML5 and JavaScript with a single codebase and deliver solutions that target today's most popular smartphones and tablet devices.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://chartjs.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl112" alt="ChartJS" src="/Home/i/carousel/chart-js-html-widgets.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+ChartJS
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>HTML 5 JS Data Visualization</strong><br>
+The DevExpress ChartJS Library offers you a fully integrated collection of blazing fast and fully interactive data visualization widgets.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinForms/Coded-UI/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl126" alt="Coded UI Support" src="/Home/i/carousel/CodedUI-Support-for-WinForms.jpg" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Coded UI Support
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Functional Testing for WinForms</strong><br>
+DevExpress WinForms Coded UI extensions have been specifically engineered to exploit the power of Microsoft's Testing Framework.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://testcafe.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl140" alt="TestCafé" src="/Home/i/carousel/test-cafe-web.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+TestCafé
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Web Testing Redefined</strong><br>
+Record and execute tests on Windows, Mac and Linux in any desktop or mobile browser that supports HTML 5. Includes built-in Test Recorder and Traffic-Markup-Error Analysis.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/VCL/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl154" alt="VCL Controls" src="/Home/i/carousel/vcl-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+VCL Controls
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>for Delphi and C++Builder</strong><br>
+Deliver the solutions your customers expect today and leverage your existing VCL skillset to build next generation applications for tomorrow. The DevExpress VCL product line includes over 180 controls and libraries optimized for Delphi and C++Builder.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div></td><td class="tc" valign="top"><div class="id-CarouselPage">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinForms/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl181" alt="WinForms" src="/Home/i/carousel/winforms-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+WinForms
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 120 Controls and Libraries</strong><br>
+A robust and all-inclusive development toolset designed to address the needs of developers targeting the WinForms platform.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/ASP/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl195" alt="ASP.NET" src="/Home/i/carousel/asp-net-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+ASP.NET
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 90 AJAX Controls and Libraries</strong><br>
+Create engaging, interactive and touch-enabled web experiences that emulate the look, feel and capabilities of today's most popular web applications.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/ASP/MVC/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl209" alt="MVC" src="/Home/i/carousel/mvc-extensions.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+MVC
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 55 Native MVC Extensions</strong><br>
+Create engaging, interactive and touch-enabled web experiences that emulate the look, feel and capabilities of today's most popular web applications.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WPF/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl223" alt="WPF" src="/Home/i/carousel/wpf-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+WPF
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 80 Controls and Libraries</strong><br>
+Deliver highly interactive XAML based Windows desktop applications that address customer needs today and build next generation touch enabled solutions for tomorrow.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/Silverlight/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl237" alt="Silverlight" src="/Home/i/carousel/silverlight-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Silverlight
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 80 Controls and Libraries</strong><br>
+Deliver highly interactive XAML powered browser-based applications that address customer needs today and build next generation touch enabled solutions for tomorrow.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinRT/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl251" alt="Windows 8 XAML" src="/Home/i/carousel/windows-8-xaml-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Windows 8 XAML
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Modern UI Apps for Windows</strong><br>
+Powerful UI controls so you can create compelling business solutions that exploit the best parts of Windows® 8 when targeting next generation devices such as Microsoft Surface.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div></td><td class="tc" valign="top"><div class="id-CarouselPage">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Subscriptions/Reporting/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl278" alt="Reporting" src="/Home/i/carousel/net-reporting.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Reporting
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>for WinForms, ASP.NET, WPF and Silverlight</strong><br>
+A powerhouse reporting platform that includes native integration with DevExpress controls for an unequalled design-time experience and unmatched runtime flexibility.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Document-Server/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl292" alt="DOC, XLS, ZIP File Gen" src="/Home/i/carousel/document-server.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+DOC, XLS, ZIP File Gen
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>the Ultimate Document Generation Tool</strong><br>
+Generate XLS, XLSx, DOC, DOCx, RTF, CSV and Snap Report files using a straightforward .NET API without using Microsoft Office.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/HTML-JS/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl306" alt="DevExtreme Mobile" src="/Home/i/carousel/dxtreme-mobile-html-js.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+DevExtreme Mobile
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Multi-Device HTML 5 Development</strong><br>
+A fully integrated JavaScript mobile development framework so you can create store-ready, multi-device applications across platforms and devices.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Application_Framework/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl320" alt="eXpressApp Framework" src="/Home/i/carousel/net-application-framework.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+eXpressApp Framework
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>for Windows and Web Development</strong><br>
+A flexible application framework that allows you to create powerful line-of-business applications that simultaneously target Windows and the Web.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Dashboard/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl334" alt=".NET Dashboard" src="/Home/i/carousel/dashboard.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+.NET Dashboard
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>for Windows and the Web</strong><br>
+Elegantly interactive analytics Dashboard with built-in performance indicators.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Report-Server/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl348" alt="Report Server" src="/Home/i/carousel/report-server.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Report Server
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Enterprise-Ready, Cost-Effective</strong><br>
+Optimized for the enterprise and made to reduce pressures on development teams by empowering users to generate and manage reports.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div></td><td class="tc" valign="top"><div class="id-CarouselPage">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/CodeRush/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl375" alt="CodeRush" src="/Home/i/carousel/coderush.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+CodeRush
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Code-Debug-Refactor</strong><br>
+Write code at the speed of thought. Find and fix defects. Refactor with ease.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://phonejs.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl389" alt="PhoneJS" src="/Home/i/carousel/Phone-JS-mobile-framework.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+PhoneJS
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>HTML 5 JS Mobile Framework</strong><br>
+Create native mobile applications using HTML5 and JavaScript with a single codebase and deliver solutions that target today's most popular smartphones and tablet devices.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://chartjs.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl403" alt="ChartJS" src="/Home/i/carousel/chart-js-html-widgets.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+ChartJS
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>HTML 5 JS Data Visualization</strong><br>
+The DevExpress ChartJS Library offers you a fully integrated collection of blazing fast and fully interactive data visualization widgets.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinForms/Coded-UI/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl417" alt="Coded UI Support" src="/Home/i/carousel/CodedUI-Support-for-WinForms.jpg" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Coded UI Support
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Functional Testing for WinForms</strong><br>
+DevExpress WinForms Coded UI extensions have been specifically engineered to exploit the power of Microsoft's Testing Framework.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="https://testcafe.devexpress.com/" target="_blank"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl431" alt="TestCafé" src="/Home/i/carousel/test-cafe-web.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+TestCafé
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Web Testing Redefined</strong><br>
+Record and execute tests on Windows, Mac and Linux in any desktop or mobile browser that supports HTML 5. Includes built-in Test Recorder and Traffic-Markup-Error Analysis.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/VCL/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl445" alt="VCL Controls" src="/Home/i/carousel/vcl-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+VCL Controls
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>for Delphi and C++Builder</strong><br>
+Deliver the solutions your customers expect today and leverage your existing VCL skillset to build next generation applications for tomorrow. The DevExpress VCL product line includes over 180 controls and libraries optimized for Delphi and C++Builder.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div></td><td class="tc tlc" valign="top"><div class="id-CarouselPage">
+<div class="dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinForms/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl472" alt="WinForms" src="/Home/i/carousel/winforms-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+WinForms
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 120 Controls and Libraries</strong><br>
+A robust and all-inclusive development toolset designed to address the needs of developers targeting the WinForms platform.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/ASP/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl486" alt="ASP.NET" src="/Home/i/carousel/asp-net-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+ASP.NET
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 90 AJAX Controls and Libraries</strong><br>
+Create engaging, interactive and touch-enabled web experiences that emulate the look, feel and capabilities of today's most popular web applications.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/ASP/MVC/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl500" alt="MVC" src="/Home/i/carousel/mvc-extensions.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+MVC
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 55 Native MVC Extensions</strong><br>
+Create engaging, interactive and touch-enabled web experiences that emulate the look, feel and capabilities of today's most popular web applications.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr><tr>
+<td class="tc tfc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WPF/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl514" alt="WPF" src="/Home/i/carousel/wpf-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+WPF
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 80 Controls and Libraries</strong><br>
+Deliver highly interactive XAML based Windows desktop applications that address customer needs today and build next generation touch enabled solutions for tomorrow.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/Silverlight/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl528" alt="Silverlight" src="/Home/i/carousel/silverlight-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:0px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Silverlight
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Over 80 Controls and Libraries</strong><br>
+Deliver highly interactive XAML powered browser-based applications that address customer needs today and build next generation touch enabled solutions for tomorrow.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td><td class="tc tlc" valign="top"><div style="padding:18px;text-align:center;">
+<a href="/Products/NET/Controls/WinRT/"><div class="id-swipeUp" style="position:relative;width:330px;height:205px;border:1px solid #cfcfcf;background-color:white;box-shadow:0 1px 3px rgba(0,0,0,.15);display:inline-block;">
+<div style="width:310px;height:150px;background-color:lightgray;margin:10px;margin-bottom:0px;">
+<img id="ctl00_Content_ctl542" alt="Windows 8 XAML" src="/Home/i/carousel/windows-8-xaml-controls.png" style="height:150px;width:310px;border-style:none;">
+</div><div style="background-color:white;position:absolute;left:0px;bottom:0px;">
+<div class="id-swipeUp-content" style="text-align:center;margin-left:10px;margin-right:10px;width:310px;border-top-color:lightgray;border-top-style:none;border-top-width:1px;">
+<div class="gray-text" style="font-size:16px;width:inherit;padding-bottom:13px;padding-top:8px;">
+Windows 8 XAML
+</div><div class="id-swipeUp-description gray-text" style="font-size:13px;display:none;padding-bottom:7px;position:relative;top:-10px;">
+<strong>Modern UI Apps for Windows</strong><br>
+Powerful UI controls so you can create compelling business solutions that exploit the best parts of Windows® 8 when targeting next generation devices such as Microsoft Surface.
+
+</div>
+</div>
+</div>
+</div></a>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div>
+</div></td><td class="tc tlc" align="right" valign="middle" style="width:50%;"><div class="Carousel-NextButton id-Carousel-NextEvent">
+
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div><script type="text/javascript">
+$(document).ready(function () {
+(function () {
+var swipeUp = $(".id-swipeUp");
+var swipeUpDescription = swipeUp.find('.id-swipeUp-description');
+var swipeUpContent = swipeUp.find('.id-swipeUp-content');
+swipeUp.attr("hottracked", "false");
+var timeSwipe = 100;
+var delaySwipe = 150;
+var timer;
+swipeUp.hover(up, down);
+
+swipeUp.on('click', itemClick);
+// swipeUp.on('touchStart', itemClick);
+
+function itemClick(event) {
+
+if($(this).attr('hottracked') != 'true')
+event.preventDefaults();
+//var hotTrackClick = $(this).attr('hottracked');
+//var clickedElement = $(this).find('.id-swipeUp-description');
+//if ( !hotTrackClick ) {
+//event.preventDefault();
+//$(".id-swipeUp").attr("hottracked", "false");
+//$(this).attr("hottracked", "true");
+//swipeUpDescription.slideUp(timeSwipe);
+//clickedElement.show(timeSwipe);
+//swipeUpContent.css('border-top-style', 'none');
+//$(this).find('.id-swipeUp-content').css('border-top-style', 'solid');
+//}
+}
+function up(event) {
+console.log('inside up');
+$(".id-swipeUp").attr("hottracked", "false");
+$(this).attr("hottracked", "true");
+var description = $(this).find('.id-swipeUp-description');
+var content = $(this).find('.id-swipeUp-content');
+timer = setTimeout(function () {
+content.css('border-top-style', 'solid');
+description.slideDown(timeSwipe);
+}, delaySwipe);
+};
+function down(event) {
+clearTimeout(timer);
+var content = $(this).find('.id-swipeUp-content');
+$(this).find('.id-swipeUp-description').slideUp(timeSwipe, function () { content.css('border-top-style', 'none'); });
+};
+})();
+});
+</script>
+</div><div class="light-font" style="font-size:30px;text-align:center;padding-bottom:40px;padding-top:20px;">
+
+See why developers just like you trust<br>
+
+DevExpress for all their software development needs.
+
+
+</div><div style="padding-bottom:20px;">
+<div class="dxtable dxinternaltable i-dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top" style="width:50%;"><div style="padding-right:20px;">
+<div class="dxtable dxinternaltable i-dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="margin-right:30px;padding-top:10px;">
+<img id="ctl00_Content_ctl575" alt="Philip de Kock" src="/i/quotes/Philip-de-Kock.png" style="height:100px;width:100px;border-style:none;">
+</div></td><td class="tc tlc" valign="top"><h6>
+Philip de Kock
+</h6><div style="border:solid #d9d9d9 1px;padding-top:15px;margin-top:10px;padding-bottom:15px;padding-left:25px;padding-right:25px;position:relative;height:160px;">
+<p>I have been using DevExpress since the company started – so all 15 years. My Company, Fantus Technologies, uses DevExpress extensively and have found that our customers rave about the Grids, Pivots, Reports and Charts all the time.  They almost always make us look good.</p><p>Thank you for such brilliant products and keep up the good work.</p><div style="position:absolute;left:-28px;top:40px;background-image:url('/Home/i/quotes/callout-left.png');width:28px;height:29px;">
+
+</div>
+</div></td>
+</tr>
+</tbody></table>
+</div><div style="text-align:right;padding-top:5px;">
+<p>
+Learn more about <a href="/Subscriptions/Reporting/">Reporting</a> and <a href="/Products/NET/Controls/WinForms/">WinForms</a> Controls
+</p>
+</div>
+</div></td><td class="tc tlc" valign="top"><div style="padding-left:20px;">
+<div class="dxtable dxinternaltable i-dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top"><div style="margin-right:30px;padding-top:10px;">
+<img id="ctl00_Content_ctl591" alt="Ivy Hoang" src="/i/quotes/Ivy-Hoang.png" style="height:100px;width:100px;border-style:none;">
+</div></td><td class="tc tlc" valign="top"><h6>
+Ivy Hoang
+</h6><div style="border:solid #d9d9d9 1px;padding-top:15px;margin-top:10px;padding-bottom:15px;padding-left:25px;padding-right:25px;position:relative;height:120px;">
+<p>I have had the pleasure to work with WPF, WinForms, and ASP.NET and no one offers a more powerful, comprehensive, and just plain awesome set of tools as DevExpress.</p><div style="position:absolute;left:-28px;top:40px;background-image:url('/Home/i/quotes/callout-left.png');width:28px;height:29px;">
+
+</div>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div><div style="text-align:right;padding-top:5px;">
+<p>
+Learn more about <a href="/Products/NET/Controls/ASP/">ASP.NET</a> and <a href="/Products/NET/Controls/WPF/">WPF</a> Controls
+</p>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div>
+
+</div>
+
+<div class="PostContent">
+<div class="Content">
+<div class="dxtable dxinternaltable i-dxtable">
+<table class="t" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
+<tbody><tr>
+<td class="tc tfc" valign="top" style="width:50%;"><div style="padding-right:20px;">
+<div class="light-font gray-text-on-black" style="font-size:36px;">
+
+News &amp; Events
+
+</div><div>
+<div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Home/Announces/2013-VCL-Controls-13-2.xml">Announcing DevExpress VCL 13.2</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+With this release, DevExpress continues its 15 year commitment to the Delphi and C++Builder developer community by extending its product line with powerful new features designed to help VCL developers build next-generation user experiences on the Windows platform.
+</div><div class="white-text" style="padding-bottom:10px;">
+<a href="/Home/Announces/2013-VCL-Controls-13-2.xml">
+Read more
+</a>
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Home/Announces/2013-Universal-v13-2.xml">DevExpress Announces its Newest Release for .NET Developers</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+
+Let's build great apps, together. Learn how DevExpress has evolved its award-winning product line and addressed the needs of today and technology requirements of tomorrow.
+
+</div><div class="white-text" style="padding-bottom:10px;">
+<a href="/Home/Announces/2013-Universal-v13-2.xml">
+Read more
+</a>
+</div>
+</div><div>
+<div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Home/Community/">Code PaLOUsa 2014</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+One thing about Code PaLOUsa attendees is that they are leaders, whether that be in the community as a whole or just within their company.
+</div><div class="white-text" style="padding-bottom:10px;">
+<a href="/Home/Community/">
+Read more
+</a>
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Home/Community/">BASTA! Spring 2014</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+Independent developer conference for Microsoft technologies in Germany.
+Here, participants can benefit from the experience of renowned experts from
+all over Europe.
+</div><div class="white-text" style="padding-bottom:10px;">
+<a href="/Home/Community/">
+Read more
+</a>
+</div>
+</div>
+</div></td><td class="tc tlc" valign="top" style="width:50%;"><div style="padding-left:20px;">
+<div class="light-font  gray-text-on-black" style="font-size:36px;">
+
+Featured Tools
+
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Products/NET/Controls/touch.xml">
+The Future, Here Today <br>
+
+Touch-enabled controls across platforms.
+</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+
+Need to target multiple versions of Windows and still deliver Windows 8 inspired user experiences? See how DevExpress controls can bring the power of touch to your desktop apps:<a href="/Products/NET/Controls/touch.xml">Webpage</a>
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Products/NET/Controls/ASP/Grid/">
+Blazing Fast ASP.NET Grid <br>
+
+Because performance matters.
+</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+
+Want to see how fast the DevExpress ASPxGridView can load data? How it can handle hundreds of thousands of records with ease and group and sort just like Microsoft Outlook?
+
+</div><div class="gray-text-on-black" style="padding-bottom:10px;display:inline;float:left;">
+
+Take a look at our 650k dataset demo today:
+
+</div><div class="white-text" style="display:inline;padding-left:10px;">
+<a href="https://demos.devexpress.com/ASP/Performance/">Demo</a> | <input type="hidden" autocomplete="off" id="wsPopupWS" name="wsPopupWS" value="0:0:-1:-10000:-10000:0:-10000:-10000:1"><table id="wsPopup_PW0" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;border-collapse:separate;position:absolute;left:0px;top:0px;z-index:10000;visibility:hidden;display:none;">
+<tbody><tr>
+<td class="dxpcControl_Video" onmousedown="aspxPWMDown(event,'wsPopup',0,false)" style="height:397px;width:663px;cursor:default;min-width:0.00001%;"><table id="wsPopup_CLW0" cellspacing="0" cellpadding="0" border="0" style="height:397px;width:663px;border-collapse:collapse;border-collapse:separate;">
+<tbody><tr>
+<td id="wsPopup_PWC0" class="dxpcContent_Video" style="height:100%;"><div id="wsPopup_CSD0" class="dxpcContentPaddings_Video">
+<div class="l-data" id="wsPopup_0_RootCallbackPanel" style="overflow-y:hidden;overflow-x:hidden;">
+
+</div><table id="wsPopup_0_RootCallbackPanel_LP" class="dxcpLoadingPanelWithContent_DX" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;left:0px;top:0px;z-index:30000;display:none;">
+<tbody><tr>
+<td class="dx"><img src="/DXR.axd?r=9999_19-0GW98" alt="" align="middle" style="height:36px;width:36px;"></td>
+</tr>
+</tbody></table><div id="wsPopup_0_RootCallbackPanel_LD" class="dxcpLoadingDiv_DX" style="left:0px;top:0px;z-index:29999;display:none;position:absolute;">
+
+</div><script id="dxss_618606739" type="text/javascript">
+<!--
+
+var dxo = new ASPxClientCallbackPanel('wsPopup_0_RootCallbackPanel');
+window['wsPopup_cp_0'] = dxo;
+dxo.callBack = function(arg) { WebForm_DoCallback('ctl00$PostContent$ctl27$wsPopup$wsPopup_0_RootCallbackPanel',arg,aspxCallback,'wsPopup_0_RootCallbackPanel',aspxCallbackError,true); };
+dxo.uniqueID = 'ctl00$PostContent$ctl27$wsPopup$wsPopup_0_RootCallbackPanel';
+dxo.EndCallback.AddHandler(function(s, args) { _wsPopupWindowCallbackComplete(wsPopup.GetWindow(0), s); });
+dxo.cpWindowWidth=663;
+dxo.cpContentWidth='854px';
+dxo.cpWindow='wsPopup_cp_0';
+dxo.hideContentOnCallback=false;
+dxo.InlineInitialize();
+
+//-->
+</script>
+</div></td>
+</tr>
+</tbody></table></td>
+</tr>
+</tbody></table><iframe id="wsPopup_DXPWIF0" src="javascript:false" scrolling="no" frameborder="0" style="position:absolute;display:none;z-index:9999;filter:progid:DXImageTransform.Microsoft.Alpha(Style=0, Opacity=0);">
+
+</iframe><div id="wsPopup_DXPWMB0" class="dxpcModalBackground_Video" style="position:absolute;visibility:hidden;left:0px;top:0px;z-index:9999;">
+
+</div><table id="wsPopup_LP" class="dxpcLoadingPanel_Video" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;left:0px;top:0px;z-index:30000;display:none;">
+<tbody><tr>
+<td class="dx" style="padding-right:8px;"><img src="/DXR.axd?r=1_13-h4wR7" alt="" align="middle"></td><td class="dx" style="padding-left:0px;"><span id="wsPopup_TL">Loading…</span></td>
+</tr>
+</tbody></table><div id="wsPopup_LD" class="dxpcLoadingDiv_Video" style="left:0px;top:0px;z-index:29999;display:none;position:absolute;">
+
+</div><script id="dxss_175291375" type="text/javascript">
+<!--
+aspxAddHoverItems('wsPopup',[[['dxpcCloseButtonHover_Video'],[''],['HCB0'],,[['']],['Img']]]);
+
+var dxo = new ASPxClientPopupControl('wsPopup');
+window['wsPopup'] = dxo;
+dxo.callBack = function(arg) { WebForm_DoCallback('ctl00$PostContent$ctl27$wsPopup',arg,aspxCallback,'wsPopup',aspxCallbackError,true); };
+dxo.uniqueID = 'ctl00$PostContent$ctl27$wsPopup';
+dxo.renderIFrameForPopupElements = true;
+dxo.Init.AddHandler(_wsAttachESCOnInit);
+dxo.PopUp.AddHandler(_wsShowPopupWindow);
+dxo.Closing.AddHandler(StopVideo);
+dxo.cpEnableCallbacks=true;
+dxo.cpSendCallbackIfLoaded=true;
+dxo.enableAnimation=false;
+dxo.popupHorizontalAlign='WindowCenter';
+dxo.popupVerticalAlign='WindowCenter';
+dxo.isPopupPositionCorrectionOn=false;
+dxo.shadowVisible=false;
+dxo.hideBodyScrollWhenModal = false;
+dxo.windowsPopupElementIDList=[];
+dxo.CreateWindows(['wsPopup_cp_0']);
+dxo.InlineInitialize();
+
+//-->
+</script><a class="h-relative h-inline-block" onclick="wsPopup.ShowWindow(wsPopup.GetWindow(0)); return false;" href="http://www.youtube.com/embed/tSzMue-1EhE?autoplay=1">Video</a>
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="/Products/NET/Controls/WinForms/Spreadsheet/">
+Spreadsheets Everywhere<br>
+
+WinForms, WPF and ASP.NET
+</a>
+</div><div class="gray-text-on-black" style="padding-bottom:5px;">
+
+Ready to replicate the capabilities of Excel and introduce the power of spreadsheets to your application?
+
+</div><div class="gray-text-on-black" style="padding-bottom:10px;display:inline;float:left;">
+
+Learn more about our spreadsheet controls by platform:
+
+</div><div class="white-text" style="display:inline;padding-left:10px;">
+<a href="/Products/NET/Controls/WinForms/Spreadsheet/">WinForms</a> | <a href="/Products/NET/Controls/ASP/Spreadsheet/">ASP.NET</a> | <a href="/Products/NET/Controls/WPF/Spreadsheet/">WPF</a>
+</div><div class="white-text" style="font-size:18px;padding-top:20px;padding-bottom:5px;">
+<a href="https://testcafe.devexpress.com/" target="_blank">
+Web Testing Can Be Fun<br>
+
+We do the heavy lifting, you take the credit.
+</a>
+</div><div class="gray-text-on-black">
+
+Tired of browser automation tools pretending to be real web testing tools? Want a tool that allows you to leverage your JavaScript knowledge?
+Take a look at TestCafe and see what the future holds in store for you:<a href="https://testcafe.devexpress.com/" target="_blank">Webpage</a>
+</div>
+</div></td>
+</tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<div class="FooterV3">
+<div class="Content">
+<div class="Top">
+
+</div><div class="MainContent">
+<div class="Left">
+<div class="Group">
+DEVEXPRESS
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeMissionxml" href="https://www.devexpress.com/Home/Mission.xml" target="_self">About Us</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeAnnounces" href="https://www.devexpress.com/Home/Announces/" target="_self">News</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-Homeawardsxml" href="https://www.devexpress.com/Home/awards.xml" target="_self">Our Awards</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeCommunity" href="https://www.devexpress.com/Home/Community/" target="_self">Upcoming Events</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeCommentsxml" href="https://www.devexpress.com/Home/Comments.xml" target="_self">User Comments</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeCaseStudies" href="https://www.devexpress.com/Home/Case-Studies/" target="_self">Case Studies</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-Homepublicationsxml" href="https://www.devexpress.com/Home/publications.xml" target="_self">Reviews and Publications</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-Supportlicensingfaqxml" href="https://www.devexpress.com/Support/licensingfaq.xml" target="_self">Licensing</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportOrder" href="https://www.devexpress.com/Support/Order/" target="_self">Purchasing</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeCommunitymvpxml" href="https://www.devexpress.com/Home/Community/mvp.xml" target="_self">MVP Program</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeContactUsxml" href="https://www.devexpress.com/Home/ContactUs.xml" target="_self">Contact Us</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeLogosxml" href="https://www.devexpress.com/Home/Logos.xml" target="_self">Logos</a>
+</div>
+</div><div class="Middle">
+<div class="Column">
+<div class="Group">
+.NET CONTROLS
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsWinForms" href="https://www.devexpress.com/Products/NET/Controls/WinForms/" target="_self">WinForms</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsASP" href="https://www.devexpress.com/Products/NET/Controls/ASP/" target="_self">ASP.NET</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsASPMVC" href="https://www.devexpress.com/Products/NET/Controls/ASP/MVC/" target="_self">MVC</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsWPF" href="https://www.devexpress.com/Products/NET/Controls/WPF/" target="_self">WPF</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsSilverlight" href="https://www.devexpress.com/Products/NET/Controls/Silverlight/" target="_self">Silverlight</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETControlsWinRT" href="https://www.devexpress.com/Products/NET/Controls/WinRT/" target="_self">Windows 8 XAML</a>
+</div><div class="Group Break">
+CROSS PLATFORM
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SubscriptionsReporting" href="https://www.devexpress.com/Subscriptions/Reporting/" target="_self">Reporting</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETDocumentServer" href="https://www.devexpress.com/Products/NET/Document-Server/" target="_self">Document Automation</a>
+</div>
+</div><div class="Column">
+<div class="Group">
+MOBILE (HTML JS)
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsHTMLJS" href="https://www.devexpress.com/Products/HTML-JS/" target="_self">DevExtreme</a>
+</div><div class="Group Break">
+ENTERPRISE TOOLS
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETReportServer" href="https://www.devexpress.com/Products/NET/Report-Server/" target="_self">Report Server</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETDashboard" href="https://www.devexpress.com/Products/NET/Dashboard/" target="_self">Analytics Dashboard</a>
+</div><div class="Group Break">
+FRAMEWORKS
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsNETApplication_Framework" href="https://www.devexpress.com/Products/NET/Application_Framework/" target="_self">eXpressApp Framework</a>
+</div><div class="Group Break">
+CODE-DEBUG-REFACTOR
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsVisual_Studio_AddinCoding_Assistance" href="https://www.devexpress.com/Products/Visual_Studio_Add-in/Coding_Assistance/" target="_self">CodeRush for Visual Studio</a>
+</div>
+</div><div class="Column Last">
+<div class="Group">
+HTML JAVASCRIPT
+</div><div class="ItemLink">
+<a id="ctl00_Footer-httpphonejsdevexpresscom" href="https://phonejs.devexpress.com/" target="_blank">PhoneJS</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-httpchartjsdevexpresscom" href="https://chartjs.devexpress.com/" target="_blank">ChartJS</a>
+</div><div class="Group Break">
+FUNCTIONAL WEB TESTING
+</div><div class="ItemLink">
+<a id="ctl00_Footer-httptestcafedevexpresscom" href="https://testcafe.devexpress.com/" target="_blank">TestCafé</a>
+</div><div class="Group Break">
+DELPHI C++BUILDER
+</div><div class="ItemLink">
+<a id="ctl00_Footer-ProductsVCL" href="https://www.devexpress.com/Products/VCL/" target="_self">VCL</a>
+</div>
+</div>
+</div><div class="Right">
+<div class="Group">
+SUPPORT
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportCenter" href="https://www.devexpress.com/Support/Center/" target="_self">Search the Knowledge Base</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportCenterQuestionChangeFilterSet1FavoritesOnlyFalseMyItemsOnlyTrueMyTeamItemsOnlyFalsePlatformNameAllPlatformsProductNameAllProductsTicketTypeAll" href="https://www.devexpress.com/Support/Center/Question/ChangeFilterSet/1?FavoritesOnly=False&amp;MyItemsOnly=True&amp;MyTeamItemsOnly=False&amp;PlatformName=AllPlatforms&amp;ProductName=AllProducts&amp;TicketType=All" target="_self">My Questions</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportCenterExampleList" href="https://www.devexpress.com/Support/Center/Example/List" target="_self">Code Examples</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportStart" href="https://www.devexpress.com/Support/Start/" target="_self">Getting Started</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportDemos" href="https://www.devexpress.com/Support/Demos/" target="_self">Demos</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-httpdocumentationdevexpresscom" href="https://documentation.devexpress.com/" target="_self">Documentation</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-httpcommunitydevexpresscomblogs" href="https://community.devexpress.com/blogs/" target="_self">Blogs</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-HomeTraining" href="https://www.devexpress.com/Home/Training/" target="_self">Training</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportWebinars" href="https://www.devexpress.com/Support/Webinars/" target="_self">Webinars</a>
+</div><div class="ItemBreak">
+
+</div><div class="ItemLink">
+<a id="ctl00_Footer-Supportversionsxml" href="https://www.devexpress.com/Support/versions.xml" target="_self">Current Version/Build</a>
+</div><div class="ItemLink">
+<a id="ctl00_Footer-SupportWhatsNew" href="https://www.devexpress.com/Support/WhatsNew/" target="_self">Version History</a>
+</div>
+</div><div class="h-clear">
+
+</div>
+</div><div class="ChatInfo">
+<div class="ChatButton Offline" id="FooterChatButton">
+LIVE CHAT<div title="Live Chat is currently offline." tonline="Live Chat" toffline="Live Chat is currently offline.">
+
+</div>
+</div><div class="h-clear">
+
+</div><p>Chat is one of the many ways you can contact members of the DevExpress Team.<br>We are available Monday-Friday between 7:30am and 4:30pm Pacific Time.</p><p>If you need additional product information, write to us at <a href="mailto:info@devexpress.com">info@devexpress.com</a> or call us at <strong>+1 (818) 844-3383</strong></p>
+</div><div class="FollowUs">
+<div>
+FOLLOW US
+</div><a id="ctl00_Footer-Fackbook" title="Facebook" class="FollowIcon Facebook" href="http://www.facebook.com/DevExpress"></a><a id="ctl00_Footer-Twitter" title="Twitter" class="FollowIcon Twitter" href="http://twitter.com/DevExpress"></a><a id="ctl00_Footer-GPlus" title="Google+" class="FollowIcon GPlus" rel="publisher" href="https://plus.google.com/+devexpress/posts"></a><a id="ctl00_Footer-YouTube" title="YouTube" class="FollowIcon YouTube" href="http://www.youtube.com/user/DeveloperExpress"></a><a id="ctl00_Footer-Blogs" title="DevExpress Blogs" class="FollowIcon Blogs" href="https://community.devexpress.com/blogs/"></a>
+</div><div class="h-clear">
+
+</div><div class="Bottom">
+
+</div>
+</div>
+</div><div class="SubFooterV3 Content">
+<div class="Left">
+<p>DevExpress engineers feature-complete Presentation Controls, IDE Productivity Tools, Business Application Frameworks, and Reporting Systems for Visual Studio, along with high-performance HTML JS Mobile Frameworks for developers targeting iOS, Android and Windows Phone. Whether using WPF, Silverlight, ASP.NET, WinForms, HTML5 or Windows 8, DevExpress tools help you build and deliver your best in the shortest time possible.</p>
+</div><div class="Right Logo">
+
+</div><div class="h-clear">
+
+</div>
+</div><div class="UnderFooterV3">
+<div class="Content">
+<div class="Left">
+<a id="ctl00_Footer-PrivacyLink" href="https://www.devexpress.com/Home/Legal.xml">Your Privacy - Legal Statements</a>
+</div><div class="Right">
+Copyright © 1998-2014 Developer Express Inc.<br>All trademarks or registered trademarks are property of their respective owners
+</div><div class="h-clear">
+
+</div>
+</div>
+</div>
+<div style="display: none">
+<span id="lpButDivID-1321862534566"></span>
+<div id="lpMainScriptPlaceholder"></div>
+<div id="lpMonitorScriptPlaceholder"></div>
+<script type="text/javascript">
+(function() {
+function init_lp_async() {
+load_main_script();
+load_lp_monitor();
+}
+function load_main_script() {
+var myscript = document.createElement('script');
+myscript.type = 'text/javascript';
+myscript.src = ('https://server.iad.liveperson.net/hc/84180275/?cmd=mTagRepstate&site=84180275&buttonID=7&divID=lpButDivID-1321862534566&bt=3&c=1');
+var s = document.getElementById('lpMainScriptPlaceholder');
+s.appendChild(myscript);
+}
+function load_lp_monitor() {
+var myscript = document.createElement('script');
+myscript.type = 'text/javascript';
+myscript.src = ('/DXR.axd?r=9999_20-0GW98');
+var s = document.getElementById('lpMonitorScriptPlaceholder');
+s.appendChild(myscript);
+}
+if (window.attachEvent) {
+window.attachEvent('onload', init_lp_async);
+} else {
+if (window.addEventListener) {
+window.addEventListener('load', init_lp_async, false);
+}
+}
+
+var lcContainer = $('#lpButDivID-1321862534566');
+
+if(lcContainer != null && typeof _wsLiveChatStateChanged != 'undefined') {
+lcContainer.bind('contentchange', _wsLiveChatStateChanged);
+}
+})();
+</script>
+<!-- BEGIN LivePerson Monitor. -->
+<script language="javascript">
+var lpMTagConfig = { 'lpServer': "server.iad.liveperson.net", 'lpNumber': "84180275", 'lpProtocol': (document.location.toString().indexOf('https:') == 0) ? 'https' : 'http' }; function lpAddMonitorTag(src) { if (typeof (src) == 'undefined' || typeof (src) == 'object') { src = lpMTagConfig.lpMTagSrc ? lpMTagConfig.lpMTagSrc : '/hcp/html/mTag.js'; } if (src.indexOf('http') != 0) { src = lpMTagConfig.lpProtocol + "://" + lpMTagConfig.lpServer + src + '?site=' + lpMTagConfig.lpNumber; } else { if (src.indexOf('site=') < 0) { if (src.indexOf('?') < 0) src = src + '?'; else src = src + '&'; src = src + 'site=' + lpMTagConfig.lpNumber; } }; var s = document.createElement('script'); s.setAttribute('type', 'text/javascript'); s.setAttribute('charset', 'iso-8859-1'); s.setAttribute('src', src); document.getElementsByTagName('head').item(0).appendChild(s); } if (window.attachEvent) window.attachEvent('onload', lpAddMonitorTag); else window.addEventListener("load", lpAddMonitorTag, false);
+</script>
+<!-- END LivePerson Monitor. -->
+<!-- BEGIN Monitor Tracking Variables  -->
+<script type="text/javascript">
+if (typeof (lpMTagConfig) == "undefined") { lpMTagConfig = {}; }
+if (typeof (lpMTagConfig.pageVar) == "undefined") { lpMTagConfig.pageVar = []; }
+if (typeof(lpMTagConfig.visitorVar) == "undefined") { lpMTagConfig.visitorVar = []; }
+lpMTagConfig.visitorVar[lpMTagConfig.visitorVar.length] = 'customer=00000000-0000-0000-0000-000000000000';
+</script>
+<!-- End Monitor Tracking Variables  -->
+</div>
+
+</div>
+<div id="InPageChat" class="InPageChat Hidden">
+<div>
+Live Chat
+</div>
+</div><div style="width:0px;height:0px;overflow:hidden;">
+<script type="text/javascript">
+/* <![CDATA[ */
+var google_conversion_id = 1071759641;
+var google_custom_params = window.google_tag_params;
+var google_remarketing_only = true;
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://www.googleadservices.com/pagead/conversion.js?wsCache=2_0_1_28565"></script>
+<noscript>
+<div style="display:inline;">
+<img height="1" width="1" style="border-style:none;" alt="" src="https://googleads.g.doubleclick.net/pagead/viewthroughconversion/1071759641/?value=0&amp;guid=ON&amp;script=0"/>
+</div>
+</noscript>
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+
+var callBackFrameUrl='/WebResource.axd?d=84p-GtgwjLIDRt0Y-7-IGt4iHWtD4ocCTP5llznxOaSiN97KVFiawUX40UWqQ3T20H4dQQF3jAH0NRHbDc6gjUNCEiw1&t=635089743480000000';
+WebForm_InitCallback();//]]>
+</script>
+</form>
+
+
+</body></html>

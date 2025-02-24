@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/bisect-button.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+      testing_common.clearFixture();
+    }
+  };
+
+  test('instantiate_basic', function() {
+    const button = document.createElement('bisect-button');
+    this.addHTMLOutput(button);
+  }, testOptions);
+
+  test('onlyOneRevision_ButtonEnabled', function() {
+    const button = document.createElement('bisect-button');
+    button.bisectInfo = {
+      goodRev: 1,
+      badRev: 2,
+      canBisect: true
+    };
+    this.addHTMLOutput(button);
+    assert.isFalse(button.$.button.disabled);
+  }, testOptions);
+
+  test('moreThanOneRevision_ButtonEnabled', function() {
+    const button = document.createElement('bisect-button');
+    button.bisectInfo = {
+      goodRev: 1,
+      badRev: 10,
+      canBisect: true
+    };
+    this.addHTMLOutput(button);
+    assert.isFalse(button.$.button.disabled);
+  }, testOptions);
+
+  test('strings_ButtonEnabled', function() {
+    const button = document.createElement('bisect-button');
+    button.bisectInfo = {
+      goodRev: 'abc123',
+      badRev: 'def456',
+      canBisect: true
+    };
+    this.addHTMLOutput(button);
+    assert.isFalse(button.$.button.disabled);
+  }, testOptions);
+});
+</script>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<dom-module id='tr-ui-b-table-header-cell'>
+  <template>
+  <style>
+    :host {
+      -webkit-user-select: none;
+      display: flex;
+    }
+
+    span {
+      flex: 0 1 auto;
+    }
+
+    side-element {
+      -webkit-user-select: none;
+      flex: 1 0 auto;
+      padding-left: 4px;
+      vertical-align: top;
+      font-size: 15px;
+      font-family: sans-serif;
+      display: inline;
+      line-height: 85%;
+    }
+  </style>
+
+    <span id="title"></span><side-element id="side"></side-element>
+  </template>
+</dom-module>
+  <script>
+  'use strict';
+
+  Polymer({
+    is: 'tr-ui-b-table-header-cell',
+
+    listeners: {
+      'tap': 'onTap_'
+    },
+
+    created() {
+      this.tapCallback_ = undefined;
+      this.cellTitle_ = '';
+    },
+
+    set cellTitle(value) {
+      this.cellTitle_ = value;
+
+      const titleNode =
+          tr.ui.b.asHTMLOrTextNode(this.cellTitle_, this.ownerDocument);
+
+      this.$.title.innerText = '';
+      Polymer.dom(this.$.title).appendChild(titleNode);
+    },
+
+    get cellTitle() {
+      return this.cellTitle_;
+    },
+
+    clearSideContent() {
+      Polymer.dom(this.$.side).textContent = '';
+    },
+
+    set sideContent(content) {
+      Polymer.dom(this.$.side).textContent = content;
+    },
+
+    get sideContent() {
+      return Polymer.dom(this.$.side).textContent;
+    },
+
+    set tapCallback(callback) {
+      this.style.cursor = 'pointer';
+      this.tapCallback_ = callback;
+    },
+
+    get tapCallback() {
+      return this.tapCallback_;
+    },
+
+    onTap_() {
+      if (this.tapCallback_) {
+        this.tapCallback_();
+      }
+    }
+  });
+</script>

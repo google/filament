@@ -1,0 +1,11 @@
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See README.md for format.
+
+42266826 VULKAN : KHR-GLES2.texture_3d.compressed_texture.negative_compressed_tex_image = FAIL
+42266826 VULKAN : KHR-GLES2.texture_3d.compressed_texture.negative_compressed_tex_sub_image = FAIL
+
+// Snapdragon 8 Gen3 Mobile Reference Device
+b/328156792 PINEAPPLE VULKAN : KHR-GLES2.texture_3d.* = SKIP

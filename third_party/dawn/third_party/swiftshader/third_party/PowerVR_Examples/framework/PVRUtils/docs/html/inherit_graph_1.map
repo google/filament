@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classclutils_1_1_open_c_l_format_conversion_error.html" title="clutils::OpenCLFormatConversion\lError" alt="" coords="5,29,244,71"/>
+<area shape="rect" id="node2" href="$classpvr_1_1ui_1_1_u_i_renderer_error.html" title="A simple std::runtime_error wrapper for UIRenderer error codes." alt="" coords="292,37,467,63"/>
+<area shape="rect" id="node3" href="$classpvr_1_1ui_1_1_u_i_renderer_instance_max_error.html" title="A simple extension of a UIRendererError used to throwing errors due to reaching the maximum number of..." alt="" coords="515,29,713,71"/>
+</map>

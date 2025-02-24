@@ -1,0 +1,1 @@
+x:first-line {bla:blub}

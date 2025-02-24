@@ -1,0 +1,3753 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ShaderOpSet xmlns="http://schemas.microsoft.com/test/ShaderOp">
+  <ShaderOp Name="DerivFine" PS="PS" VS="VS" TopologyType="TRIANGLE">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), DescriptorTable(SRV(t0,numDescriptors=1))</RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="T0" Dimension="Texture2D" Width="4" Height="4" InitialResourceState="COPY_DEST" Init="FromBytes" Format="R32_FLOAT">
+      {.125f, .25f, .5f, 1.0f},
+      {2.0f, 4.0f, 16.0f, 32.0f},
+      {32.0f, 64.0f, 128.0f, 256.0f},
+      {256.0f, 512.0f, 1024.0f, 2048.0f}
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="VS" Target="vs_6_0">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+        PSInput main(float3 position : POSITION, float2 uv : TEXCOORD) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          return result;
+        }
+      ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_0">
+      <![CDATA[
+      struct PSInput {
+        float4 position : SV_POSITION;
+        float2 uv : TEXCOORD;
+      };
+
+      Texture2D<float> g_tex : register(t0);
+
+      float4 main(PSInput input) : SV_TARGET {
+        int3 offset = int3((input.uv * 64.0) % 4, 0);
+        float val = g_tex.Load(offset);
+        return float4(ddx_fine(val), ddy_fine(val), ddx_coarse(val), ddy_coarse(val));
+      }
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="WriteFloat4" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+
+    <Resource Name="Buffer" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue Index="0" ResName="Buffer" />
+    </RootValues>
+
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    RWStructuredBuffer<float4> g_buf : register(u0);
+    [numthreads(8,8,1)]
+    void main(uint GI : SV_GroupIndex) {
+      g_buf[GI] = GI;
+    };
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Derivatives" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(SRV(t0,numDescriptors=1), UAV(u0), UAV(u1), UAV(u2), UAV(u3)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="T0" Dimension="Texture2D" Width="4" Height="4" InitialResourceState="COPY_DEST" Init="FromBytes" Format="R32_FLOAT">
+      {.125f, .25f, .5f, 1.0f},
+      {2.0f, 4.0f, 16.0f, 32.0f},
+      {32.0f, 64.0f, 128.0f, 256.0f},
+      {256.0f, 512.0f, 1024.0f, 2048.0f}
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <Resource Name="U0" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U3" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="1024" StructureByteStride="16" />
+      <Descriptor Name='U1' Kind='UAV' ResName='U1'
+                  NumElements="1024" StructureByteStride="16" />
+      <Descriptor Name='U2' Kind='UAV' ResName='U2'
+                  NumElements="1024" StructureByteStride="16" />
+      <Descriptor Name='U3' Kind='UAV' ResName='U3'
+                  NumElements="1024" StructureByteStride="16" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="CS" Target="cs_6_6" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="AS" Target="as_6_6" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="MS" Target="ms_6_6" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="VS" Target="vs_6_0" EntryPoint="VSMain" Text="@PS"/>
+    <Shader Name="PS" Target="ps_6_0" EntryPoint="PSMain">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+        Texture2D<float> g_tex : register(t0);
+        RWStructuredBuffer<float4> g_bufMain : register(u0);
+        RWStructuredBuffer<float4> g_bufMesh : register(u1);
+        RWStructuredBuffer<float4> g_bufAmp : register(u2);
+        RWStructuredBuffer<uint4> g_bufDbg : register(u3);
+
+        float4 DerivTest(int2 uv) {
+          int3 offset = int3(uv%4, 0);
+          float val = g_tex.Load(offset);
+          return float4(ddx_fine(val), ddy_fine(val), ddx_coarse(val), ddy_coarse(val));
+        }
+
+        // Map group index to 4x4 UV texcoord block
+        int2 ConvertGroupIdx(uint groupIdx) {
+          return int2(((groupIdx&0x4)>>1) + (groupIdx&01), ((groupIdx&0x8)>>2) + ((groupIdx&02)>>1));
+        }
+
+        // Convert group index into uv texcoords and return derivatives test result
+        float4 DerivTest(uint groupIdx) {
+          return DerivTest(ConvertGroupIdx(groupIdx));
+        }
+
+        PSInput VSMain(float3 position : POSITION, float2 uv : TEXCOORD) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          return result;
+        }
+
+        struct Payload {
+          uint nothing;
+        };
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        uint convert2Dto1D(uint x, uint y, uint width) {
+          return (y * width) + x;
+        }
+
+        float4 PSMain(PSInput input) : SV_TARGET {
+          // Convert from texcoords into a groupIndex equivalent
+          int width = 64;
+          int height = 64;
+          int2 uv = int2(input.uv.x*width, input.uv.y*height);
+
+          uint ix = convert2Dto1D(uv.x, uv.y, DISPATCHX);
+
+          float4 res = 0.0;
+          if (uv.x < DISPATCHX && uv.y < DISPATCHY) {
+            res = DerivTest(uv);
+            g_bufMain[ix] = res;
+          }
+          return res;
+        }
+
+        [NumThreads(DISPATCHX, DISPATCHY, DISPATCHZ)]
+        void CSMain(uint3 id : SV_GroupThreadID, uint ix : SV_GroupIndex) {
+          if (DISPATCHY == 1 && DISPATCHZ == 1) {
+            g_bufMain[ix] = DerivTest(ix);
+            g_bufDbg[ix] = uint4(ix, ConvertGroupIdx(id.x), 0);
+           }
+          else {
+            g_bufMain[convert2Dto1D(id.x, id.y, DISPATCHX)] = DerivTest(id.xy);
+            g_bufDbg[convert2Dto1D(id.x, id.y, DISPATCHX)] = uint4(ix, id);
+          }
+        }
+
+#if DISPATCHX * DISPATCHY * DISPATCHZ > 128
+#undef DISPATCHX
+#undef DISPATCHY
+#undef DISPATCHZ
+
+#define DISPATCHX 4
+#define DISPATCHY 1
+#define DISPATCHZ 1
+#endif
+
+        [NumThreads(DISPATCHX, DISPATCHY, DISPATCHZ)]
+        void ASMain(uint3 id : SV_GroupThreadID, uint ix : SV_GroupIndex) {
+          Payload payload;
+          if (DISPATCHY == 1 && DISPATCHZ == 1)
+            g_bufAmp[ix] = DerivTest(ix);
+          else
+            g_bufAmp[convert2Dto1D(id.x, id.y, DISPATCHX)] = DerivTest(id.xy);
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(DISPATCHX, DISPATCHY, DISPATCHZ)]
+        [OutputTopology("triangle")]
+        void MSMain(
+          uint3 id : SV_GroupThreadID,
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            g_bufMesh[ix] = DerivTest(ix);
+            if (DISPATCHY == 1 && DISPATCHZ == 1) {
+              g_bufMesh[ix] = DerivTest(ix);
+              g_bufDbg[ix] = uint4(ix, id);
+            }
+            else {
+              g_bufMesh[convert2Dto1D(id.x, id.y, DISPATCHX)] = DerivTest(id.xy);
+              g_bufDbg[convert2Dto1D(id.x, id.y, DISPATCHX)] = uint4(ix, id);
+            }
+        }
+
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="QuadRead" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(UAV(u0), UAV(u1), UAV(u2))
+    </RootSignature>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <Resource Name="U0" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="1024" StructureByteStride="16" />
+      <Descriptor Name='U1' Kind='UAV' ResName='U1'
+                  NumElements="1024" StructureByteStride="16" />
+      <Descriptor Name='U2' Kind='UAV' ResName='U2'
+                  NumElements="1024" StructureByteStride="16" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="CS" Target="cs_6_0" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="AS" Target="as_6_6" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="MS" Target="ms_6_6" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="PS" Target="ps_6_0" EntryPoint="PSMain">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+        };
+        RWStructuredBuffer<int4> g_bufMain : register(u0);
+        RWStructuredBuffer<int4> g_bufMesh : register(u1);
+        RWStructuredBuffer<int4> g_bufAmp : register(u2);
+
+        uint4 QuadReadTest(uint ix) {
+          return int4(QuadReadLaneAt(ix, ix & 0x3), QuadReadAcrossX(ix),
+                      QuadReadAcrossY(ix), QuadReadAcrossDiagonal(ix));
+        }
+
+        struct Payload {
+          uint nothing;
+        };
+
+        [NumThreads(MESHDISPATCHX, MESHDISPATCHY, MESHDISPATCHZ)]
+        void ASMain(uint ix : SV_GroupIndex) {
+          Payload payload;
+          g_bufAmp[ix] = QuadReadTest(WaveGetLaneIndex());
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        [NumThreads(MESHDISPATCHX, MESHDISPATCHY, MESHDISPATCHZ)]
+        [OutputTopology("triangle")]
+        void MSMain(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            g_bufMesh[ix] = QuadReadTest(WaveGetLaneIndex());
+        }
+
+        void PSMain(PSInput input) {
+          return;
+        }
+
+        [NumThreads(DISPATCHX, DISPATCHY, DISPATCHZ)]
+        void CSMain(uint ix : SV_GroupIndex) {
+          g_bufMain[ix] = QuadReadTest(WaveGetLaneIndex());
+        }
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="ComputeSample" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(SRV(t0,numDescriptors=1), UAV(u0), UAV(u1), UAV(u2)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="T0" Dimension="Texture2D" Width="336" Height="336" MipLevels="7" InitialResourceState="COPY_DEST" Init="ByName" Format="R32_FLOAT" />
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="84" Height="4" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <Resource Name="U0" Dimension="BUFFER" Width="16384"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="2048"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="2048"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="336" StructureByteStride="16" />
+      <Descriptor Name='U1' Kind='UAV' ResName='U1'
+                  NumElements="128" StructureByteStride="16" />
+      <Descriptor Name='U2' Kind='UAV' ResName='U2'
+                  NumElements="128" StructureByteStride="16" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="CS" Target="cs_6_6" EntryPoint="CSMain1D" Text="@PS"/>
+    <Shader Name="AS" Target="as_6_6" EntryPoint="ASMain1D" Text="@PS"/>
+    <Shader Name="MS" Target="ms_6_6" EntryPoint="MSMain1D" Text="@PS"/>
+    <Shader Name="CS2" Target="cs_6_6" EntryPoint="CSMain2D" Text="@PS"/>
+    <Shader Name="AS2" Target="as_6_6" EntryPoint="ASMain2D" Text="@PS"/>
+    <Shader Name="MS2" Target="ms_6_6" EntryPoint="MSMain2D" Text="@PS"/>
+    <Shader Name="VS" Target="vs_6_0" EntryPoint="VSMain" Text="@PS"/>
+    <Shader Name="PS" Target="ps_6_0" EntryPoint="PSMain">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+
+        Texture2D<float> g_tex : register(t0);
+        RWStructuredBuffer<uint4> g_bufMain : register(u0);
+        RWStructuredBuffer<uint4> g_bufMesh : register(u1);
+        RWStructuredBuffer<uint4> g_bufAmp : register(u2);
+
+        PSInput VSMain(float3 position : POSITION, float2 uv : TEXCOORD) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          return result;
+        }
+
+        SamplerState g_samp : register(s0);
+
+        uint4 DerivTest(uint ix, uint iy, float left, float right, float top, float bot) {
+          return uint4(g_tex.CalculateLevelOfDetail(g_samp, float2(left, 0.5)) * (~ix&1) +
+                       g_tex.CalculateLevelOfDetail(g_samp, float2(right, 0.5)) * (ix&1),
+                       g_tex.Sample(g_samp, float2(left, 0.5)) * (~ix&1) +
+                       g_tex.Sample(g_samp, float2(right, 0.5)) * (ix&1),
+                       g_tex.CalculateLevelOfDetail(g_samp, float2(0.5, top)) * (~iy&1) +
+                       g_tex.CalculateLevelOfDetail(g_samp, float2(0.5, bot)) * (iy&1),
+                       g_tex.Sample(g_samp, float2(0.5, top)) * (~iy&1) +
+                       g_tex.Sample(g_samp, float2(0.5, bot)) * (iy&1));
+        }
+
+        // To avoid conditionals, two samples are performed one for left one for right
+        // They are step functioned on or off depending
+        uint4 DerivTest(uint ix, float threadCt) {
+          uint iy = ix>>1;
+          return DerivTest(ix, iy, ((ix^1)/threadCt)*(ix&1), (ix/threadCt)*(ix&1),
+                                   ((ix^2)/threadCt)*(iy&1), (ix/threadCt)*(iy&1));
+        }
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        struct Payload {
+          uint nothing;
+        };
+
+        uint convert2Dto1D(uint x, uint y, uint width) {
+          // Convert 2D coords to 1D for testing
+          // All completed rows of quads
+          uint prevRows = (y/2)*2*width;
+          // All previous full quads on this quad row
+          uint prevQuads = (x/2)*4;
+          // index into current quad
+          uint quadIx = (y&1)*2 + (x&1);
+          return prevRows + prevQuads + quadIx;
+        }
+
+        [NumThreads(116, 1, 1)]
+        void ASMain1D(uint ix : SV_GroupIndex) {
+          Payload payload;
+          g_bufAmp[ix] = DerivTest(ix, 116);
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(42, 2, 1)]
+        void ASMain2D(uint3 id : SV_GroupThreadID) {
+          Payload payload;
+          uint ix = convert2Dto1D(id.x, id.y, 42);
+          g_bufAmp[ix] = DerivTest(ix, 42*2);
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(116, 1, 1)]
+        [OutputTopology("triangle")]
+        void MSMain1D(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            g_bufMesh[ix] = DerivTest(ix, 116);
+        }
+
+        [NumThreads(42, 2, 1)]
+        [OutputTopology("triangle")]
+        void MSMain2D(
+          uint3 id : SV_GroupThreadID,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            uint ix = convert2Dto1D(id.x, id.y, 42);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            g_bufMesh[ix] = DerivTest(ix, 42*2);
+        }
+
+        float4 PSMain(PSInput input) : SV_TARGET {
+          // Dummy PS to satisfy pipeline creation requirements
+          return 1;
+        }
+        [NumThreads(336, 1, 1)]
+        void CSMain1D(uint ix : SV_GroupIndex) {
+          g_bufMain[ix] = DerivTest(ix, 336);
+        }
+
+        [NumThreads(84, 4, 3)]
+        void CSMain2D(uint3 id : SV_GroupThreadID) {
+          uint ix = convert2Dto1D(id.x, id.y, 84);
+          g_bufMain[ix] = DerivTest(ix, 84*4);
+        }
+
+      ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="ProgOffset" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(SRV(t0,numDescriptors=1), UAV(u0), UAV(u1), UAV(u2)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_POINT),
+      StaticSampler(s1, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_COMPARISON_MIN_MAG_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="T0" Dimension="Texture2D" Width="1000" Height="1000" InitialResourceState="COPY_DEST" Init="ByName" Format="R32_FLOAT" />
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="18" Height="18" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <Resource Name="U0" Dimension="BUFFER" Width="11552"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="11552"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="11552"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="722" StructureByteStride="16" />
+      <Descriptor Name='U1' Kind='UAV' ResName='U1'
+                  NumElements="722" StructureByteStride="16" />
+      <Descriptor Name='U2' Kind='UAV' ResName='U2'
+                  NumElements="722" StructureByteStride="16" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="CS" Target="cs_6_5" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="CS66" Target="cs_6_6" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="CS67" Target="cs_6_7" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="VS" Target="vs_6_5" EntryPoint="VSMain" Text="@PS"/>
+    <Shader Name="MS" Target="ms_6_5" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="MS66" Target="ms_6_6" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="MS67" Target="ms_6_7" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="MS66D" Target="ms_6_6" EntryPoint="MSMain" Arguments="/DDERIV_MESH_AMP=true" Text="@PS"/>
+    <Shader Name="MS67D" Target="ms_6_7" EntryPoint="MSMain" Arguments="/DDERIV_MESH_AMP=true" Text="@PS"/>
+    <Shader Name="AS" Target="as_6_5" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="AS66" Target="as_6_6" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="AS67" Target="as_6_7" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="AS66D" Target="as_6_6" EntryPoint="ASMain" Arguments="/DDERIV_MESH_AMP=true" Text="@PS"/>
+    <Shader Name="AS67D" Target="as_6_7" EntryPoint="ASMain" Arguments="/DDERIV_MESH_AMP=true" Text="@PS"/>
+    <Shader Name="PS67" Target="ps_6_7" EntryPoint="PSMain" Text="@PS"/>
+    <Shader Name="PS" Target="ps_6_5" EntryPoint="PSMain">
+      <![CDATA[
+        #define OFFSETS 18
+        #ifndef DERIV_MESH_AMP
+        #define DERIV_MESH_AMP false
+        #endif
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+
+        Texture2D<float> g_tex : register(t0);
+        RWStructuredBuffer<uint4> g_bufMain : register(u0);
+        RWStructuredBuffer<uint4> g_bufMesh : register(u1);
+        RWStructuredBuffer<uint4> g_bufAmp : register(u2);
+
+        SamplerState g_samp : register(s0);
+        SamplerComparisonState g_sampCmp : register(s1);
+
+        // It's not exactly a mask because of sign extension, but the concept
+        // is that it's treated like a 4-bit signed integer using the lowest 4 bits
+        int2 Mask4Offset(int2 offset) {
+          offset.x = (offset.x << 28) >> 28;
+          offset.y = (offset.y << 28) >> 28;
+          return offset;
+        }
+
+        // Tests Sample and SampleCmp variants with programmed offsets
+        uint4 DoTests( int2 coord, int2 offset, bool bDeriv ) {
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 7)
+          // offset for purposes of the compare value, which should only acknowledge the lower 4 bits
+          int2 moffset = Mask4Offset(offset);
+          // The index that should correspond to this location is the expected value
+          float cmp = (coord.y + moffset.y)*1000 + coord.x + moffset.x;
+          // Samples require float coords 0.0-1.0. Adding 0.5 prevents edge conditions
+          float2 fcoord = (coord + 0.5)/1000.0;
+          if (bDeriv) {
+            return uint4( g_tex.Sample(g_samp, fcoord, offset),
+                          g_tex.SampleCmp(g_sampCmp, fcoord, cmp, offset),
+                          g_tex.SampleCmpLevel(g_sampCmp, fcoord, cmp, 0, offset),
+                          g_tex.SampleCmpLevelZero(g_sampCmp, fcoord, cmp, offset));
+          } else {
+            return uint4( -1, -1,
+                          g_tex.SampleCmpLevel(g_sampCmp, fcoord, cmp, 0, offset),
+                          g_tex.SampleCmpLevelZero(g_sampCmp, fcoord, cmp, offset));
+          }
+#else
+          // Fake the offset by adding it to the integer coords
+          coord += Mask4Offset(offset);
+          // The index that should correspond to this location
+          float cmp = (coord.y)*1000 + coord.x;
+          // Samples require float coords 0.0-1.0. Adding 0.5 prevents edge conditions
+          float2 fcoord = (coord + 0.5)/1000.0;
+          if (bDeriv) {
+            return uint4( g_tex.Sample(g_samp, fcoord),
+                          g_tex.SampleCmp(g_sampCmp, fcoord, cmp),
+                          g_tex.SampleLevel(g_samp, fcoord, 0) == cmp,
+                          g_tex.SampleCmpLevelZero(g_sampCmp, fcoord, cmp));
+          } else {
+            return uint4( -1, -1,
+                          g_tex.SampleLevel(g_samp, fcoord, 0) == cmp,
+                          g_tex.SampleCmpLevelZero(g_sampCmp, fcoord, cmp));
+          }
+#endif
+        }
+
+        // Tests Load and Sample* variants with programmed offsets
+        uint4 DoMoarTests( int2 coord, int2 offset, bool bDeriv ) {
+          // Load requires a uint3 unlike the rest
+          uint3 lcoord = uint3(coord, 0);
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 7)
+          // Samples require float coords 0.0-1.0. Adding 0.5 prevents edge conditions
+          float2 fcoord = (coord + 0.5)/1000.0;
+          if (bDeriv) {
+            return uint4( g_tex.Load(lcoord, offset),
+                          g_tex.SampleBias(g_samp, fcoord, -1.0, offset),
+                          g_tex.SampleGrad(g_samp, fcoord, 1.0, 1.0, offset),
+                          g_tex.SampleLevel(g_samp, fcoord, 0, offset));
+          } else {
+            return uint4( g_tex.Load(lcoord, offset),
+                          -1,
+                          g_tex.SampleGrad(g_samp, fcoord, 1.0, 1.0, offset),
+                          g_tex.SampleLevel(g_samp, fcoord, 0, offset));
+          }
+#else
+          // Fake the offset by adding it to the integer coords
+          coord += Mask4Offset(offset);
+          // Load requires a uint3 unlike the rest
+          lcoord = uint3(coord, 0);
+          // Samples require float coords 0.0-1.0. Adding 0.5 prevents edge conditions
+          float2 fcoord = (coord + 0.5)/1000.0;
+          if (bDeriv) {
+            return uint4( g_tex.Load(lcoord),
+                          g_tex.SampleBias(g_samp, fcoord, -1.0),
+                          g_tex.SampleGrad(g_samp, fcoord, 1.0, 1.0),
+                          g_tex.SampleLevel(g_samp, fcoord, 0));
+          } else {
+            return uint4( g_tex.Load(lcoord),
+                          -1,
+                          g_tex.SampleGrad(g_samp, fcoord, 1.0, 1.0),
+                          g_tex.SampleLevel(g_samp, fcoord, 0));
+          }
+#endif
+        }
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        struct Payload {
+          uint nothing;
+        };
+
+        // Clearly these could be calculated in place, but it's illustrative to write them out
+        // These values were chosen to represent a selection of locations and the complete gamut of offsets
+        static const int coords[OFFSETS] = {100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950};
+        static const int offsets[OFFSETS] = {-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8};
+        [NumThreads(2, 2, 1)]
+        void ASMain(uint3 id : SV_GroupThreadId) {
+          Payload payload;
+          // Bunching up work to compensate for small numthreads limits
+          for (int y = 0; y < 9; y++) {
+            for (int x = 0; x < 9; x++) {
+              float2 coord = float2(coords[9*id.x+x], coords[9*id.y+y]);
+              int2 offset = uint2(offsets[9*id.x+x], offsets[9*id.y+y]);
+              g_bufAmp[2*(18*(9*id.y + y) + 9*id.x + x) + 0] = DoTests(coord, offset, DERIV_MESH_AMP);
+              g_bufAmp[2*(18*(9*id.y + y) + 9*id.x + x) + 1] = DoMoarTests(coord, offset, DERIV_MESH_AMP);
+            }
+          }
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(2, 2, 1)]
+        [OutputTopology("triangle")]
+        void MSMain(
+          uint3 id : SV_GroupThreadId,
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            if (ix == 0) {
+              for (uint i = 0; i < 6; ++i) {
+                verts[i].position = g_Verts[i];
+                verts[i].uv = g_UV[i];
+              }
+            }
+            if (ix < 2) {
+              tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            }
+            // Bunching up work to compensate for small numthreads limits
+            for (int y = 0; y < 9; y++) {
+              for (int x = 0; x < 9; x++) {
+                float2 coord = float2(coords[9*id.x+x], coords[9*id.y+y]);
+                int2 offset = uint2(offsets[9*id.x+x], offsets[9*id.y+y]);
+                g_bufMesh[2*(18*(9*id.y + y) + 9*id.x + x) + 0] = DoTests(coord, offset, DERIV_MESH_AMP);
+                g_bufMesh[2*(18*(9*id.y + y) + 9*id.x + x) + 1] = DoMoarTests(coord, offset, DERIV_MESH_AMP);
+              }
+            }
+          }
+
+        PSInput VSMain(float3 position : POSITION, float2 uv : TEXCOORD) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          return result;
+        }
+
+        float4 PSMain(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y * OFFSETS)*OFFSETS + uint(input.uv.x*OFFSETS);
+          // Retrieve coords and offsets based on texcoords
+          float2 coord = float2(coords[input.uv.x*OFFSETS], coords[input.uv.y*OFFSETS]);
+          uint2 offset = uint2(offsets[input.uv.x*OFFSETS], offsets[input.uv.y*OFFSETS]);
+          g_bufMain[2*ix] = DoTests(coord, offset, true);
+          g_bufMain[2*ix+1] = DoMoarTests(coord, offset, true);
+          return 1;
+        }
+
+        [NumThreads(OFFSETS, OFFSETS, 1)]
+        void CSMain(precise uint3 id : SV_GroupThreadId, precise uint ix : SV_GroupIndex) {
+          int2 coord = int2(coords[id.x], coords[id.y]);
+          int2 offset = int2(offsets[id.x], offsets[id.y]);
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 6)
+          g_bufMain[2*ix] = DoTests(coord, offset, true);
+          g_bufMain[2*ix+1] = DoMoarTests(coord, offset, true);
+#else
+          g_bufMain[2*ix] = DoTests(coord, offset, false);
+          g_bufMain[2*ix+1] = DoMoarTests(coord, offset, false);
+#endif
+        }
+
+      ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="SampleCmpLevel" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(SRV(t0,numDescriptors=1), UAV(u0), UAV(u1), UAV(u2)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT),
+      StaticSampler(s1, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="T0" Dimension="Texture2D" Width="336" Height="336" MipLevels="7" InitialResourceState="COPY_DEST" Init="ByName" Format="R32_FLOAT" />
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="84" Height="4" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <Resource Name="U0" Dimension="BUFFER" Width="8192"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="1024"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="1024"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="336" StructureByteStride="8" />
+      <Descriptor Name='U1' Kind='UAV' ResName='U1'
+                  NumElements="128" StructureByteStride="8" />
+      <Descriptor Name='U2' Kind='UAV' ResName='U2'
+                  NumElements="128" StructureByteStride="8" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="CS" Target="cs_6_7" EntryPoint="CSMain" Text="@PS"/>
+    <Shader Name="AS" Target="as_6_7" EntryPoint="ASMain" Text="@PS"/>
+    <Shader Name="MS" Target="ms_6_7" EntryPoint="MSMain" Text="@PS"/>
+    <Shader Name="VS" Target="vs_6_7" EntryPoint="VSMain" Text="@PS"/>
+    <Shader Name="PS" Target="ps_6_7" EntryPoint="PSMain">
+      <![CDATA[
+        #define MAX_MIP 7
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+
+        Texture2D<float> g_tex : register(t0);
+        RWStructuredBuffer<uint2> g_bufMain : register(u0);
+        RWStructuredBuffer<uint2> g_bufMesh : register(u1);
+        RWStructuredBuffer<uint2> g_bufAmp : register(u2);
+
+        SamplerState g_samp : register(s0); // Just used for the pre-6.7 fakes
+        SamplerComparisonState g_sampCmp : register(s1);
+
+        uint2 DoSampleCmpLevel( float2 coord, uint lod ) {
+          float expected = float(lod) + 0.5;
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 7)
+          return uint2( g_tex.SampleCmpLevelZero(g_sampCmp, coord, expected) == g_tex.SampleCmpLevel(g_sampCmp, coord, expected, 0),
+                        g_tex.SampleCmpLevel(g_sampCmp, coord, expected, lod));
+#else
+          // The initial compare is meaningless here, so just give the value expected
+          return uint2(1, g_tex.SampleLevel(g_samp, coord, lod) == expected);
+#endif
+        }
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        struct Payload {
+          uint nothing;
+        };
+
+        [NumThreads(8, 2, 1)]
+        void ASMain(uint ix : SV_GroupIndex) {
+          Payload payload;
+          g_bufAmp[ix % MAX_MIP] = DoSampleCmpLevel(float2(0.5, 0.5), ix % MAX_MIP);
+          payload.nothing = 0;
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 2, 1)]
+        [OutputTopology("triangle")]
+        void MSMain(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            g_bufMesh[ix % MAX_MIP] = DoSampleCmpLevel(float2(0.5, 0.5), ix % MAX_MIP);
+        }
+
+
+        PSInput VSMain(float3 position : POSITION, float2 uv : TEXCOORD) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          return result;
+        }
+
+        float4 PSMain(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.x * 336);
+          g_bufMain[ix % MAX_MIP] = DoSampleCmpLevel(input.uv, ix % MAX_MIP);
+          return 1;
+        }
+
+        [NumThreads(16, 1, 1)]
+        void CSMain(uint ix : SV_GroupIndex) {
+          // all mip levels contain the same values, so 0.5,0.5 is just as good as any
+          g_bufMain[ix % MAX_MIP] = DoSampleCmpLevel(float2(0.5, 0.5), ix % MAX_MIP);
+        }
+
+      ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="OOB" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), CBV(b0), DescriptorTable(SRV(t0,numDescriptors=2))</RootSignature>
+    <Resource Name="CB0" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" TransitionTo="VERTEX_AND_CONSTANT_BUFFER">
+      1.0f, 0.0f, 100.0f
+    </Resource>
+    <Resource Name="T0" Dimension="TEXTURE1D" InitialResourceState="COPY_DEST" Init="FromBytes" Format="R32_FLOAT">
+      1.0f, 0.5f, 1.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f
+    </Resource>
+    <Resource Name='VBuffer' Dimension='BUFFER' Flags='ALLOW_UNORDERED_ACCESS' InitialResourceState='COPY_DEST' Init='FromBytes'>
+      1.0f  1.0f 0, 1.0f -1.0f 0.0f, -1.0f -1.0f 0,
+      -1.0f  1.0f 0, 1.0f  1.0f 0.0f, -1.0f -1.0f 0,
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="320" Height="200" Format="R8G8B8A8_UNORM" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+      <RootValue ResName="CB0" />
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name='ResHeap' Type='CBV_SRV_UAV'>
+      <Descriptor Name='T0' Kind='SRV' ResName='T0' />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName='POSITION' Format='R32G32B32_FLOAT' AlignedByteOffset='0' />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+    <Shader Name='VS' Target='vs_6_0' EntryPoint='VSMain' Text="@PS" />
+    <Shader Name='PS' Target='ps_6_0' EntryPoint='PSMain'>
+      <![CDATA[
+        // Resources that are not local scalars (and thus are bound):
+        // - array in cbuffer
+        // - array in local
+        // - array in groupshared
+        // - array in signature element
+        // - resource access operations:
+        //  - sampling
+        //  - loading
+        //  - storing
+        //
+        // In all cases, for HLSL, out-of-bound reads yield zero, and
+        // out-of-bound writes are no-ops.
+        cbuffer C {
+          float c_arr;
+          float zero_idx;
+          float oob_idx;
+        };
+        Texture1D<float> g_t1d: register(t0);
+        struct PSInput {
+         float4 position : SV_POSITION;
+        };
+        PSInput VSMain(float4 position: POSITION) {
+         PSInput result;
+         result.position = position;
+         return result;
+        }
+        float4 PSMain(PSInput input) : SV_TARGET {
+         float x = input.position.x;
+         float p0 = g_t1d.Load(zero_idx);
+         float p1 = g_t1d.Load(oob_idx);
+         float r = 0;
+         // every color should be pure red (saturated red channel, zero'ed green channel).
+         return float4(p0, p1, 0, 1);
+        }
+      ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name='Saturate' PS='PS' VS='VS'>
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), DescriptorTable(UAV(u0), CBV(b0))
+    </RootSignature>
+    <Resource Name='VBuffer' Dimension='BUFFER' Flags='ALLOW_UNORDERED_ACCESS' InitialResourceState='COPY_DEST' Init='FromBytes'>
+      1.0f  1.0f 0, 1.0f -1.0f 0.0f, -1.0f -1.0f 0,
+      -1.0f  1.0f 0, 1.0f  1.0f 0.0f, -1.0f -1.0f 0,
+    </Resource>
+    <Resource Name='CB0' Dimension='BUFFER' Width="256" InitialResourceState='COPY_DEST' Init='FromBytes'>
+      -inf, -1.5f, -denorm, -0, 0, denorm, 1.5f, inf, nan,
+	  0,0,0,0,0,0,0,0,0,0,0,
+	  0,0,0,0,0,0,0,0,0,0,0,
+	  0,0,0,0,0,0,0,0,0,0,0,
+	  0,0,0,0,0,0,0,0,0,0,0,
+	  0,0,0,0,0,0,0,0,0,0,0
+    </Resource>
+    <Resource Name="U0" Dimension="BUFFER" Width="1280"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R8G8B8A8_UNORM" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <DescriptorHeap Name='RtvHeap' NumDescriptors='1' Type='RTV'>
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name='ResHeap' Type='CBV_SRV_UAV'>
+      <!-- Create a descriptor for a RWStructuredBuffer. The underlying resource must be of type DXGI_FORMAT_UNKNOWN. -->
+      <Descriptor Name='U0' Kind='UAV' ResName='U0'
+                  NumElements="320" StructureByteStride="4" />
+      <Descriptor Name='CB0' Kind='CBV' ResName='CB0' />
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName='POSITION' Format='R32G32B32_FLOAT' AlignedByteOffset='0' />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+    <Shader Name='VS' Target='vs_6_0' EntryPoint='VSMain' Text='@PS'/>
+    <Shader Name='PS' Target='ps_6_0' EntryPoint='PSMain'>
+      <![CDATA[
+      struct c_floats_t {
+       float c_neg_inf;
+       float c_neg_f;
+       float c_neg_denorm;
+       float c_neg_zero;
+       float c_zero;
+       float c_denorm;
+       float c_f;
+       float c_inf;
+       float c_nan;
+      };
+      RWStructuredBuffer<float> g_buf : register(u0);
+      c_floats_t g_cf : register(b0);
+      struct PSInput {
+       float4 position : SV_POSITION;
+       float4 color : COLOR;
+      };
+      PSInput VSMain(float4 position: POSITION) {
+       PSInput result;
+       result.position = position;
+       result.color = 1;
+       return result;
+      }
+      float4 PSMain(PSInput input) : SV_TARGET {
+       uint x = (uint)input.position.x;
+       float val;
+       switch (x) {
+       case 0:  val = saturate(g_cf.c_neg_inf); break;
+       case 1:  val = saturate(g_cf.c_neg_f); break;
+       case 2:  val = saturate(g_cf.c_neg_denorm); break;
+       case 3:  val = saturate(g_cf.c_neg_zero); break;
+       case 4:  val = saturate(g_cf.c_zero); break;
+       case 5:  val = saturate(g_cf.c_denorm); break;
+       case 6:  val = saturate(g_cf.c_f); break;
+       case 7:  val = saturate(g_cf.c_inf); break;
+       case 8:  val = saturate(g_cf.c_nan); break;
+       default: val = x; break;
+       }
+       g_buf[x] = val;
+       float r = 1;
+       return float4(r, 0, 0, 1);
+      }]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="UnaryFPOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SUnaryFPOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SUnaryFPOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="BinaryFPOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SBinaryFPOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SBinaryFPOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="UnaryIntOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SUnaryIntOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SUnaryIntOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="UnaryUintOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SUnaryUintOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SUnaryUintOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="BinaryIntOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SBinaryIntOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SBinaryIntOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="BinaryUintOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SBinaryUintOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SBinaryUintOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="TertiaryFPOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="STertiaryFPOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="STertiaryFPOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="TertiaryIntOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="STertiaryIntOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="STertiaryIntOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="TertiaryUintOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="STertiaryUintOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="STertiaryUintOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+    void main(uint GI : SV_GroupIndex) {};
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="DotOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SDotOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SDotOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Dot2AddHalfOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SDot2AddHalfOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SDot2AddHalfOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_4">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Dot4AddI8PackedOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SDot4AddI8PackedOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SDot4AddI8PackedOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_4">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Dot4AddU8PackedOp" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SDot4AddU8PackedOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SDot4AddU8PackedOp" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_4">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Msad4" CS="CS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SMsad4" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SMsad4"/>
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="WaveIntrinsicsOp" CS="CS" DispatchX="1" DispatchY="1">
+    <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+    <Resource Name="SWaveIntrinsicsOp" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SWaveIntrinsicsOp"/>
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Triangle" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)</RootSignature>
+
+    <Resource Name="VBuffer" Dimension="BUFFER" Width="84" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" Init="FromBytes">
+      { {   0.0f,  0.25f , 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+      { {  0.25f, -0.25f , 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+      { { -0.25f, -0.25f , 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="320" Height="200" Format="R8G8B8A8_UNORM" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="COLOR" Format="R32G32B32A32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+
+    <Shader Name="VS" Target="vs_6_0">
+      <![CDATA[
+    struct PSInput {
+      float4 position : SV_POSITION;
+      float4 color : COLOR;
+    };
+    PSInput main(float4 position : POSITION, float4 color : COLOR) {
+      PSInput result;
+      float ratio = 320.0 / 200.0;
+      result.position = position;
+      result.position.y *= ratio;
+      result.color = color;
+      return result;
+    }
+    ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_0">
+      <![CDATA[
+    struct PSInput {
+      float4 position : SV_POSITION;
+      float4 color : COLOR;
+    };
+    float4 main(PSInput input) : SV_TARGET {
+      return 1;
+    }
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="TriangleHalf" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)</RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" Width="48" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" Init="FromBytes">
+      { {   0.0h,  0.25h , 0.0h, 1.0h }, { 1.0h, 1.0h, 1.0h, 1.0h } },
+      { {  0.25h, -0.25h , 0.0h, 1.0h }, { 1.0h, 1.0h, 1.0h, 1.0h } },
+      { { -0.25h, -0.25h , 0.0h, 1.0h }, { 1.0h, 1.0h, 1.0h, 1.0h } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="320" Height="200" Format="R8G8B8A8_UNORM" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R16G16B16A16_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="COLOR" Format="R16G16B16A16_FLOAT" AlignedByteOffset="8" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+
+    <Shader Name="VS" Target="vs_6_2" Arguments="/enable-16bit-types">
+    <![CDATA[
+    struct PSInput {
+      half4 position : SV_POSITION;
+      half4 color : COLOR;
+    };
+    PSInput main(half4 position : POSITION, half4 color : COLOR) {
+      PSInput result;
+      float ratio = 320.0 / 200.0;
+      result.position = position;
+      result.position.y *= ratio;
+      result.color = color;
+      return result;
+    }
+    ]]>
+    </Shader>
+
+    <Shader Name="PS" Target="ps_6_2" Arguments="/enable-16bit-types">
+    <![CDATA[
+    struct PSInput {
+      half4 position : SV_POSITION;
+      half4 color : COLOR;
+    };
+    half4 main(PSInput input) : SV_TARGET {
+      return input.color;
+    }
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="CBufferTestHalf" PS="PS" VS="VS" TopologyType="TRIANGLE">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), CBV(b0), DescriptorTable(SRV(t0,numDescriptors=2))</RootSignature>
+    <Resource Name="CB0" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="ByName" TransitionTo="VERTEX_AND_CONSTANT_BUFFER">
+      1.25h, 1.75h, 1.25h, 1.875h
+    </Resource>
+    <Resource Name='VBuffer' Dimension='BUFFER' Flags='ALLOW_UNORDERED_ACCESS' InitialResourceState='COPY_DEST' Init='FromBytes'>
+      1.0f  1.0f 0, 1.0f -1.0f 0.0f, -1.0f -1.0f 0,
+      -1.0f  1.0f 0, 1.0f  1.0f 0.0f, -1.0f -1.0f 0,
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="320" Height="200" Format="R16G16B16A16_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+      <RootValue ResName="CB0" />
+    </RootValues>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName='POSITION' Format='R32G32B32_FLOAT' AlignedByteOffset='0' />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+    <Shader Name='VS' Target='vs_6_2' EntryPoint='VSMain' Arguments='-enable-16bit-types' Text="@PS" />
+    <Shader Name='PS' Target='ps_6_2' EntryPoint='PSMain' Arguments='-enable-16bit-types'>
+      <![CDATA[
+        cbuffer c_buf {
+          half first;
+          half second;
+          half third;
+          half fourth;
+        };
+        struct PSInput {
+         float4 position : SV_POSITION;
+        };
+        PSInput VSMain(float4 position: POSITION) {
+         PSInput result;
+         result.position = position;
+         return result;
+        }
+        half4 PSMain(PSInput input) : SV_TARGET {
+         return half4(first, second, third, fourth);
+        }
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="Barycentrics" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)</RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" Init="ByName" ReadBack="true">
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="COLOR" Format="R32G32B32A32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget" />
+    </RenderTargets>
+    <Shader Name="VS" Target="vs_6_1">
+      <![CDATA[
+      struct PSInput {
+        float4 position : SV_POSITION;
+        nointerpolation float4 color : COLOR;
+      };
+      PSInput main(float4 position : POSITION, float4 color : COLOR) {
+        PSInput result;
+        result.position = position;
+        result.color = color;
+        return result;
+      }
+      ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_1">
+      <![CDATA[
+      struct PSInput {
+        float4 position : SV_POSITION;
+        nointerpolation float4 color : COLOR;
+      };
+      float4 main(PSInput input, float3 bary : SV_Barycentrics) : SV_Target {
+        float4 vColor0 = GetAttributeAtVertex(input.color, 0);
+        float4 vColor1 = GetAttributeAtVertex(input.color, 1);
+        float4 vColor2 = GetAttributeAtVertex(input.color, 2);
+        return bary.x * vColor0 + bary.y * vColor1 + bary.z * vColor2;
+      }
+      ]]>          
+    </Shader>
+    
+    <!-- This part of the shader op is for the barycentrics ordering part of the barycentrics test -->
+    <Shader Name="PSordering" Target="ps_6_1" EntryPoint="PSMain" Text="@MAIN"/>
+    <Shader Name="VSordering" Target="vs_6_1" EntryPoint="VSMain" Text="@MAIN"/>
+
+    <Shader Name="MAIN" Target="vs_6_1" EntryPoint="VSMain">
+      <![CDATA[
+    struct PSInput {
+      float4 position : SV_POSITION;
+      nointerpolation float4 color : COLOR;
+      uint svid : SVertexID;
+    };    
+            
+    PSInput VSMain(float4 position : POSITION, float4 color : COLOR, uint svid : SV_VertexID) {
+      PSInput result;
+      result.position = position;
+      result.color = color;
+      result.svid = svid;
+         
+      return result;
+    }
+    
+    float4 PSMain(PSInput input) : SV_Target {
+      // check to make sure that the pixel shader will see the barycentric weight associated
+      // with the first vertex in the x component of the SV_Barycentric vector, and likewise for subsequent vertices
+      
+      return float4(float3(GetAttributeAtVertex(input.svid, 0),
+                     GetAttributeAtVertex(input.svid, 1),
+                     GetAttributeAtVertex(input.svid, 2)) * 0.5, 1.0);    
+    }
+      
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="ComputeRawBufferLdSt32Bit" CS="CS">
+    <RootSignature>RootFlags(0), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="120" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="120" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="120" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="120" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="10" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="40" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="30" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="120" />
+    </DescriptorHeap>
+    <Shader Name="CS" Target="cs_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>>
+  
+  <ShaderOp Name="ComputeRawBufferLdSt64Bit" CS="CS">
+    <RootSignature>RootFlags(0), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="240" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="240" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="240" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="240" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="20" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="80" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="60" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="240" />
+    </DescriptorHeap>
+    <Shader Name="CS" Target="cs_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>>
+
+  <ShaderOp Name="ComputeRawBufferLdSt16Bit" CS="CS">
+    <RootSignature>RootFlags(0), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="20" InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="20" InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="20" InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="20" InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="5" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="20" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="15" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="60" />
+    </DescriptorHeap>
+    <Shader Name="CS" Target="cs_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>>
+
+  <ShaderOp Name="GraphicsRawBufferLdSt32Bit" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="40"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="120" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="120" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="120" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="120" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f,  0.0f } },
+      { {  1.0f, 1.0f,  0.0f } },
+      { { -1.0f, -1.0f, 0.0f } },
+
+      { { -1.0f, -1.0f, 0.0f } },
+      { {  1.0f,  1.0f, 0.0f } },
+      { {  1.0f, -1.0f, 0.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="10" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="40" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="30" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="120" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="VS" Target="vs_6_2">
+      <![CDATA[
+        struct PSInput {
+          float4 pos : SV_POSITION;
+        };
+        PSInput main(float3 pos : POSITION) {
+          PSInput r;
+          r.pos = float4(pos, 1); 
+          return r;
+        }
+      ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>
+  
+  <ShaderOp Name="GraphicsRawBufferLdSt64Bit" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="80"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="240" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="240" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="240" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="240" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f,  0.0f } },
+      { {  1.0f, 1.0f,  0.0f } },
+      { { -1.0f, -1.0f, 0.0f } },
+
+      { { -1.0f, -1.0f, 0.0f } },
+      { {  1.0f,  1.0f, 0.0f } },
+      { {  1.0f, -1.0f, 0.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="20" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="80" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="60" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="240" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="VS" Target="vs_6_2">
+      <![CDATA[
+        struct PSInput {
+          float4 pos : SV_POSITION;
+        };
+        PSInput main(float3 pos : POSITION) {
+          PSInput r;
+          r.pos = float4(pos, 1); 
+          return r;
+        }
+      ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="GraphicsRawBufferLdSt16Bit" PS="PS" VS="VS">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), SRV(t0), SRV(t1), UAV(u0), UAV(u1), DescriptorTable(SRV(t2,numDescriptors=2), UAV(u2,numDescriptors=2))</RootSignature>
+    <Resource Name="SRVBuffer0" Dimension="BUFFER" Width="20"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer1" Dimension="BUFFER" Width="20"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="SRVBuffer2" Dimension="BUFFER" Width="20"  InitialResourceState="COPY_DEST" Init="ByName" Format="R32_TYPELESS"/>
+    <Resource Name="SRVBuffer3" Dimension="BUFFER" Width="20"  InitialResourceState="COPY_DEST" Init="ByName" />
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer1" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="UAVBuffer2" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="UAVBuffer3" Dimension="BUFFER" Width="60" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f,  0.0f } },
+      { {  1.0f, 1.0f,  0.0f } },
+      { { -1.0f, -1.0f, 0.0f } },
+
+      { { -1.0f, -1.0f, 0.0f } },
+      { {  1.0f,  1.0f, 0.0f } },
+      { {  1.0f, -1.0f, 0.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="SRVBuffer0" />
+      <RootValue Index="1" ResName="SRVBuffer1" />
+      <RootValue Index="2" ResName="UAVBuffer0" />
+      <RootValue Index="3" ResName="UAVBuffer1" />
+      <RootValue Index="4" HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name='SRVBuffer2' Kind='SRV' ResName='SRVBuffer2' Flags='RAW' NumElements="5" Format="R32_TYPELESS" />
+      <Descriptor Name='SRVBuffer3' Kind='SRV' ResName='SRVBuffer3' NumElements="1" StructureByteStride="20" />
+      <Descriptor Name='UAVBuffer2' Kind='UAV' ResName='UAVBuffer2' Flags='RAW' NumElements="15" Format="R32_TYPELESS" />
+      <Descriptor Name='UAVBuffer3' Kind='UAV' ResName='UAVBuffer3' NumElements="1" StructureByteStride="60" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="VS" Target="vs_6_2">
+      <![CDATA[
+        struct PSInput {
+          float4 pos : SV_POSITION;
+        };
+        PSInput main(float3 pos : POSITION) {
+          PSInput r;
+          r.pos = float4(pos, 1); 
+          return r;
+        }
+      ]]>
+    </Shader>
+    <Shader Name="PS" Target="ps_6_2">
+      <![CDATA[// Shader source code will be set at runtime]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="WaveSizeTest" CS="CS">
+      <RootSignature>RootFlags(0), UAV(u0)</RootSignature>
+      <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="512" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS" ReadBack="true" Format="R32_TYPELESS" />
+      <RootValues>
+          <RootValue Index="0" ResName="UAVBuffer0" />
+      </RootValues>
+      <Shader Name="CS" Target="cs_6_6">
+          <![CDATA[// Shader source code will be set at runtime]]>
+      </Shader>
+  </ShaderOp>>
+
+  <ShaderOp Name="PackUnpackOp" CS="CS" DispatchX="1" DispatchY="1">
+    <RootSignature>RootFlags(0), UAV(u0), UAV(u1), UAV(u2)</RootSignature>
+    <Resource Name="g_bufIn" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="false" />
+    <Resource Name="g_bufOutPacked" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="g_bufOutPackedUnpacked" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="g_bufIn" />
+      <RootValue Index="1" ResName="g_bufOutPacked" />
+      <RootValue Index="2" ResName="g_bufOutPackedUnpacked" />
+    </RootValues>
+    <Shader Name="CS" Target="cs_6_0">
+      <![CDATA[
+      void main(uint GI : SV_GroupIndex) {};
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <!-- 64-bit raw atomics tests. Used for tests that don't require atomics on heap resources -->
+  <!-- For explanations of the atomics tests, see comments in and around VerifyAtomicResults in Executiontest.cpp -->
+  <ShaderOp Name="AtomicsRoot" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      UAV(u0), UAV(u1), UAV(u2), UAV(u3), UAV(u4), UAV(u5),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <!-- Raw buffers -->
+    <Resource Name="U0" Dimension="BUFFER" Width="576"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      {
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 99999999I, 99999999I, 0I, 0I, 99999999I, 99999999I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, -1I, -1I, 0I, 0I, -1I, -1I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      }
+    </Resource>
+    <Resource Name="U1" Dimension="BUFFER" Width="9216"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="256"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U3" Dimension="BUFFER" Width="1024"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <!-- groupshared output buffers -->
+    <Resource Name="U4" Dimension="BUFFER" Width="256"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U5" Dimension="BUFFER" Width="1024"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <RootValues>
+      <!-- Raw buffers -->
+      <RootValue Index="0" ResName="U0" />
+      <RootValue Index="1" ResName="U1" />
+      <RootValue Index="2" ResName="U2" />
+      <RootValue Index="3" ResName="U3" />
+      <!-- groupshared output buffers -->
+      <RootValue Index="4" ResName="U4" />
+      <RootValue Index="5" ResName="U5" />
+    </RootValues>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="ASSH64" Target="as_6_6" EntryPoint="ASMainShared64" Text="@CS"/>
+    <Shader Name="MSSH64" Target="ms_6_6" EntryPoint="MSMainShared64" Text="@CS"/>
+    <Shader Name="CSSH64" Target="cs_6_6" EntryPoint="CSMainShared64" Text="@CS"/>
+    <Shader Name="PS" Target="ps_6_6" EntryPoint="PSMainRaw64" Text="@CS"/>
+    <Shader Name="AS" Target="as_6_6" EntryPoint="ASMainRaw64" Text="@CS"/>
+    <Shader Name="MS" Target="ms_6_6" EntryPoint="MSMainRaw64" Text="@CS"/>
+    <Shader Name="VS" Target="vs_6_6" EntryPoint="VSMainRaw64" Text="@CS"/>
+    <Shader Name="CS" Target="cs_6_6" EntryPoint="CSMainRaw64">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+
+        struct Atomic64Stuff {
+          float2 prepad[3];
+          uint64_t uintEl[2];
+          int64_t2  sintEl;
+          struct useless {
+            uint3 unused;
+          } postpad;
+          float last;
+        };
+
+        RWStructuredBuffer<Atomic64Stuff> g_struct64Buf : register(u0);
+        RWStructuredBuffer<Atomic64Stuff> g_strXchg64Buf : register(u1);
+
+        RWByteAddressBuffer g_raw64Buf : register(u2);
+        RWByteAddressBuffer g_rawXchg64Buf : register(u3);
+
+        RWStructuredBuffer<uint64_t> g_share64Buf : register(u4);
+        RWStructuredBuffer<uint64_t> g_shareXchg64Buf : register(u5);
+
+        groupshared uint64_t g_uint64Share[6];
+        groupshared int64_t g_sint64Share[3];
+        groupshared uint64_t g_xchg64Share[64];
+
+        #define VEC_CALL(op, uav, ix, val) op(uav[ix*stride], val);
+
+        #define USTRUCT_CALL(op, uav, ix, val) op(uav[ix].uintEl[stride], val);
+        #define SSTRUCT64_CALL(op, uav, ix, val) op(uav[ix].sintEl.y, val);
+
+        #define URAW_CALL(op, uav, ix, val) uav.op(8*ix, val);
+        #define SRAW_CALL(op, uav, ix, val) uav.op(8*(5+ix), val); // signed at end. raw buffers don't need separate buffers
+
+        #define OP_TEST(ucall, scall, uuav, suav) \
+          ucall(InterlockedAdd, uuav, 0, addVal); \
+          scall(InterlockedMin, suav, 1, sminMaxVal); \
+          scall(InterlockedMax, suav, 2, sminMaxVal); \
+          ucall(InterlockedMin, uuav, 1, uminMaxVal); \
+          ucall(InterlockedMax, uuav, 2, uminMaxVal); \
+          ucall(InterlockedAnd, uuav, 3, ~value); \
+          ucall(InterlockedOr,  uuav, 4, value); \
+          ucall(InterlockedXor, uuav, 5, xorVal);
+
+        #define VEC_CALL3(op, uav, ix, cmp, val) op(uav[(ix)*stride], cmp, val)
+        #define VEC_CALL4(op, uav, ix, cmp, val, o) op(uav[(ix)*stride], cmp, val, o)
+
+        #define STRUCT_CALL3(op, uav, ix, cmp, val) op(uav[ix].uintEl[stride], cmp, val)
+        #define STRUCT_CALL4(op, uav, ix, cmp, val, o) op(uav[ix].uintEl[stride], cmp, val, o)
+
+        #define RAW_CALL3(op, uav, ix, cmp, val) uav.op(8*(ix), cmp, val)
+        #define RAW_CALL4(op, uav, ix, cmp, val, o) uav.op(8*(ix), cmp, val, o)
+
+        // The first of four to match gets the first and then the winner performs the last two exchanges
+        #define XCHG_TEST(call3, call4, uav) \
+          call3(InterlockedCompareStore,    uav, (ix/3)%64, 0,           xchgVal - 2); \
+          call4(InterlockedCompareExchange, uav, (ix/3)%64, xchgVal - 2, xchgVal - 1, output); \
+          if (output == xchgVal - 2) { call3(InterlockedExchange, uav, (ix/3)%64, xchgVal, output);}
+
+        void AtomicRaw64Test(uint ix, uint64_t bitSize) {
+          uint64_t lix = ix;
+          uint stride = 1;
+          uint64_t value = (lix) | ((lix) << (bitSize/2));
+          uint64_t addVal = value;
+          uint64_t uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int64_t sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint64_t xorVal = 1ULL << (lix%(bitSize-1));
+          // make higher bits differ while lower bits match
+          uint64_t xchgVal = (lix << (bitSize/2)) | ((lix/3)%64);
+          uint64_t output = 0;
+
+          OP_TEST(USTRUCT_CALL, SSTRUCT64_CALL, g_struct64Buf, g_struct64Buf)
+          XCHG_TEST(STRUCT_CALL3, STRUCT_CALL4, g_strXchg64Buf)
+
+          // ByteAddressBuffer for 64-bit values are a special case. inlined here
+          URAW_CALL(InterlockedAdd64, g_raw64Buf, 0, addVal);
+          SRAW_CALL(InterlockedMin64, g_raw64Buf, 1, sminMaxVal);
+          SRAW_CALL(InterlockedMax64, g_raw64Buf, 2, sminMaxVal);
+          URAW_CALL(InterlockedMin64, g_raw64Buf, 1, uminMaxVal);
+          URAW_CALL(InterlockedMax64, g_raw64Buf, 2, uminMaxVal);
+          URAW_CALL(InterlockedAnd64, g_raw64Buf, 3, ~value);
+          URAW_CALL(InterlockedOr64,  g_raw64Buf, 4, value);
+          URAW_CALL(InterlockedXor64, g_raw64Buf, 5, xorVal);
+
+          RAW_CALL3(InterlockedCompareStore64,    g_rawXchg64Buf, (ix/3)%64, 0,           xchgVal - 2);
+          RAW_CALL4(InterlockedCompareExchange64, g_rawXchg64Buf, (ix/3)%64, xchgVal - 2, xchgVal - 1, output);
+          if (output == xchgVal - 2) { RAW_CALL3(InterlockedExchange64, g_rawXchg64Buf, (ix/3)%64, xchgVal, output);}
+        }
+
+        void InitSharedMem64(uint ix) {
+          // Zero-init shared memory, with special cases
+          if (ix < 6)
+            g_uint64Share[ix] = ix == 1 ? 99999999ULL | (99999999ULL << 32) : ix == 3 ? ~0ULL : 0;
+          if (ix < 3)
+            g_sint64Share[ix] = ix == 1 ? 99999999ULL | (99999999ULL << 32) : 0;
+          if (ix < 64)
+            g_xchg64Share[ix] = 0;
+
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        void AtomicGroupShared64Test(uint ix) {
+          uint64_t lix = ix;
+          uint stride = 1;
+          uint64_t bitSize = 64;
+          uint64_t value = (lix) | ((lix) << (bitSize/2));
+          uint64_t addVal = value;
+          uint64_t uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int64_t sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint64_t xorVal = 1ULL << (lix%(bitSize-1));
+          uint64_t xchgVal = (lix << (bitSize/2)) | ((lix/3)%64);
+          uint64_t output = 0;
+
+          OP_TEST(VEC_CALL, VEC_CALL, g_uint64Share, g_sint64Share)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchg64Share)
+
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        // Payloads are used to transport AS test results to MS where they are finalized
+        struct Payload {
+          uint arith[16];
+          uint xchg[64];
+        };
+
+        struct Payload64 {
+          uint64_t arith[16];
+          uint64_t xchg[64];
+        };
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        [NumThreads(8, 8, 2)]
+        void ASMainRaw64(uint ix : SV_GroupIndex) {
+          Payload payload = (Payload)0;
+          AtomicRaw64Test(64*64 + 8*8*2 + ix, 64);
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMainRaw64(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            AtomicRaw64Test(64*64 + ix, 64);
+        }
+
+        PSInput VSMainRaw64(float3 position : POSITION, float2 uv : TEXCOORD, uint ix : SV_VertexID) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          AtomicRaw64Test(64*64 + ix, 64);
+          return result;
+        }
+
+        float4 PSMainRaw64(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y*64)*64 + input.uv.x*64;
+          AtomicRaw64Test(ix, 64);
+          return 1;
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMainRaw64(uint ix : SV_GroupIndex) {
+          AtomicRaw64Test(ix, 64);
+        }
+
+        groupshared Payload64 payload64;
+
+        [NumThreads(8, 8, 2)]
+        void ASMainShared64(uint ix : SV_GroupIndex) {
+          InitSharedMem64(ix);
+          AtomicGroupShared64Test(ix);
+
+          // Copy AS test results to payload and ultimately to MS
+          // More threads than results are possible,
+          // so indices will result in duplicate copies
+          payload64.arith[ix%6] = g_uint64Share[ix%6];
+          payload64.arith[ix%3 + 6] = g_sint64Share[ix%3 + 1];
+          payload64.xchg[ix%64] = g_xchg64Share[ix%64];
+
+          DispatchMesh(1, 1, 1, payload64);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMainShared64(
+          uint ix : SV_GroupIndex,
+          in payload Payload64 payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+
+            // Load AS test results from payload
+            // More threads than results are possible,
+            // so indices will result in duplicate copies
+            g_uint64Share[ix%6] = payload.arith[ix%6];
+            g_sint64Share[ix%3] = payload.arith[ix%3 + 6];
+            g_xchg64Share[ix%64] = payload.xchg[ix%64];
+
+            GroupMemoryBarrierWithGroupSync();
+
+            AtomicGroupShared64Test(8*8*2 + ix);
+
+            // Copy final AS + MS results to output UAVs
+            g_share64Buf[ix%6] = g_uint64Share[ix%6];
+            g_share64Buf[ix%3 + 6] = g_sint64Share[ix%3 + 1];
+            g_shareXchg64Buf[ix%64] = g_xchg64Share[ix%64];
+
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMainShared64(uint ix : SV_GroupIndex) {
+          InitSharedMem64(ix);
+          AtomicGroupShared64Test(ix);
+
+          // Copy final results to output UAVs
+          g_share64Buf[ix%6] = g_uint64Share[ix%6];
+          g_share64Buf[ix%3 + 6] = g_sint64Share[ix%3 + 1];
+          g_shareXchg64Buf[ix%64] = g_xchg64Share[ix%64];
+
+        }
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <!-- Used by 32-bit atomics and typed 64-bit atomics tests, which require heap descriptor support  -->
+  <!-- For explanations of the atomics tests, see comments in and around VerifyAtomicResults in Executiontest.cpp -->
+  <ShaderOp Name="AtomicsHeap" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(UAV(u0), UAV(u1), UAV(u2), UAV(u3), UAV(u4), UAV(u5), UAV(u6), UAV(u7), UAV(u8), UAV(u9), UAV(u10), UAV(u11), UAV(u12), UAV(u13), UAV(u14), UAV(u15), UAV(u16), UAV(u17)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <!-- Raw buffers -->
+    <Resource Name="U0" Dimension="BUFFER" Width="576"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      {
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 99999999I, 99999999I, 0I, 0I, 99999999I, 99999999I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, -1I, -1I, 0I, 0I, -1I, -1I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0I, 0, 0, 0, 0,
+      }
+    </Resource>
+    <Resource Name="U1" Dimension="BUFFER" Width="9216"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="64" Format="R32_TYPELESS"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U3" Dimension="BUFFER" Width="1024" Format="R32_TYPELESS"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <!-- groupshared output buffers -->
+    <Resource Name="U4" Dimension="BUFFER" Width="256"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U5" Dimension="BUFFER" Width="1024"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <!-- 32-bit typed resources -->
+    <Resource Name="U6" Dimension="BUFFER" Width="64" Format="R32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U7" Dimension="BUFFER" Width="64" Format="R32_SINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U8" Dimension="BUFFER" Width="1024" Format="R32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U9" Dimension="TEXTURE1D" Width="16" Format="R32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U10" Dimension="TEXTURE1D" Width="16" Format="R32_SINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U11" Dimension="TEXTURE1D" Width="128" Format="R32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <!-- 64-bit typed resources -->
+    <Resource Name="U12" Dimension="BUFFER" Width="64" Format="R32G32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U13" Dimension="BUFFER" Width="64" Format="R32G32_SINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U14" Dimension="BUFFER" Width="1024" Format="R32G32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U15" Dimension="TEXTURE1D" Width="8" Format="R32G32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U16" Dimension="TEXTURE1D" Width="8" Format="R32G32_SINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="FromBytes" ReadBack="true" TransitionTo="UNORDERED_ACCESS" >
+      { 0I, 0I, 99999999I, 99999999I, 0I, 0I, -1I, -1I, 0I, 0I, 0I, 0I, 42I, 42I, 42I, 42I }
+    </Resource>
+    <Resource Name="U17" Dimension="TEXTURE1D" Width="128" Format="R32G32_UINT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <!-- Raw buffers -->
+      <Descriptor Name="U0" Kind="UAV" ResName="U0"
+                  NumElements="8" StructureByteStride="72" />
+      <Descriptor Name="U1" Kind="UAV" ResName="U1"
+                  NumElements="128" StructureByteStride="72" />
+      <Descriptor Name="U2" Kind="UAV" ResName="U2" Flags='RAW' Format="R32_TYPELESS"
+                  NumElements="16" StructureByteStride="0" />
+      <Descriptor Name="U3" Kind="UAV" ResName="U3" Flags='RAW' Format="R32_TYPELESS"
+                  NumElements="128" StructureByteStride="0" />
+      <!-- groupshared output buffers -->
+      <Descriptor Name="U4" Kind="UAV" ResName="U4"
+                  NumElements="8" StructureByteStride="8" />
+      <Descriptor Name="U5" Kind="UAV" ResName="U5"
+                  NumElements="64" StructureByteStride="8" />
+      <!-- 32-bit typed resources -->
+      <Descriptor Name="U6" Kind="UAV" ResName="U6" Dimension="BUFFER"
+                  NumElements="16"  Format="R32_UINT" />
+      <Descriptor Name="U7" Kind="UAV" ResName="U7" Dimension="BUFFER"
+                  NumElements="16"  Format="R32_UINT" />
+      <Descriptor Name="U8" Kind="UAV" ResName="U8" Dimension="BUFFER"
+                  NumElements="128"  Format="R32_UINT" />
+      <Descriptor Name="U9" Kind="UAV" ResName="U9" Dimension="TEXTURE1D"
+                  NumElements="16"  Format="R32_UINT" />
+      <Descriptor Name="U10" Kind="UAV" ResName="U10" Dimension="TEXTURE1D"
+                  NumElements="16"  Format="R32_UINT" />
+      <Descriptor Name="U11" Kind="UAV" ResName="U11" Dimension="TEXTURE1D"
+                  NumElements="128"  Format="R32_UINT" />
+      <!-- 64-bit typed resources -->
+      <Descriptor Name="U12" Kind="UAV" ResName="U12" Dimension="BUFFER"
+                  NumElements="8"  Format="R32G32_UINT" />
+      <Descriptor Name="U13" Kind="UAV" ResName="U13" Dimension="BUFFER"
+                  NumElements="8"  Format="R32G32_UINT" />
+      <Descriptor Name="U14" Kind="UAV" ResName="U14" Dimension="BUFFER"
+                  NumElements="128"  Format="R32G32_UINT" />
+      <Descriptor Name="U15" Kind="UAV" ResName="U15" Dimension="TEXTURE1D"
+                  NumElements="8"  Format="R32G32_UINT" />
+      <Descriptor Name="U16" Kind="UAV" ResName="U16" Dimension="TEXTURE1D"
+                  NumElements="8"  Format="R32G32_UINT" />
+      <Descriptor Name="U17" Kind="UAV" ResName="U17" Dimension="TEXTURE1D"
+                  NumElements="128"  Format="R32G32_UINT" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="PS64" Target="ps_6_6" EntryPoint="PSMainRaw64" Text="@CS"/>
+    <Shader Name="AS64" Target="as_6_6" EntryPoint="ASMainRaw64" Text="@CS"/>
+    <Shader Name="MS64" Target="ms_6_6" EntryPoint="MSMainRaw64" Text="@CS"/>
+    <Shader Name="VS64" Target="vs_6_6" EntryPoint="VSMainRaw64" Text="@CS"/>
+    <Shader Name="CS64" Target="cs_6_6" EntryPoint="CSMainRaw64" Text="@CS"/>
+    <Shader Name="PSTY64" Target="ps_6_6" EntryPoint="PSMainTyped64" Text="@CS"/>
+    <Shader Name="ASTY64" Target="as_6_6" EntryPoint="ASMainTyped64" Text="@CS"/>
+    <Shader Name="MSTY64" Target="ms_6_6" EntryPoint="MSMainTyped64" Text="@CS"/>
+    <Shader Name="VSTY64" Target="vs_6_6" EntryPoint="VSMainTyped64" Text="@CS"/>
+    <Shader Name="CSTY64" Target="cs_6_6" EntryPoint="CSMainTyped64" Text="@CS"/>
+    <Shader Name="AS"   Target="as_6_5" EntryPoint="ASMain32"   Text="@CS"/>
+    <Shader Name="MS"   Target="ms_6_5" EntryPoint="MSMain32"   Text="@CS"/>
+    <Shader Name="VS"   Target="vs_6_0" EntryPoint="VSMain32"   Text="@CS"/>
+    <Shader Name="PS"   Target="ps_6_0" EntryPoint="PSMain32"   Text="@CS"/>
+    <Shader Name="CS"   Target="cs_6_0" EntryPoint="CSMain32">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+        struct AtomicStuff {
+          float2 prepad[3];
+          uint uintEl[4];
+          int4  sintEl;
+          struct useless {
+            uint3 unused;
+          } postpad;
+          float last;
+        };
+        struct Atomic64Stuff {
+          float2 prepad[3];
+          uint64_t uintEl[2];
+          int64_t2  sintEl;
+          struct useless {
+            uint3 unused;
+          } postpad;
+          float last;
+        };
+        RWStructuredBuffer<AtomicStuff> g_structBuf : register(u0);
+        RWStructuredBuffer<AtomicStuff> g_strXchgBuf : register(u1);
+
+        RWByteAddressBuffer g_rawBuf : register(u2);
+        RWByteAddressBuffer g_rawXchgBuf : register(u3);
+
+        RWStructuredBuffer<uint2> g_shareBuf : register(u4);
+        RWStructuredBuffer<uint2> g_shareXchgBuf : register(u5);
+
+        RWBuffer<uint> g_uintBuf : register(u6);
+        RWBuffer<int> g_sintBuf : register(u7);
+        RWBuffer<int> g_xchgBuf : register(u8);
+
+        RWTexture1D<uint> g_utexBuf : register(u9);
+        RWTexture1D<int> g_stexBuf : register(u10);
+        RWTexture1D<int> g_xtexBuf : register(u11);
+
+        groupshared uint g_uintShare[12];
+        groupshared int g_sintShare[6];
+        groupshared uint g_xchgShare[128];
+
+        RWStructuredBuffer<Atomic64Stuff> g_struct64Buf : register(u0);
+        RWStructuredBuffer<Atomic64Stuff> g_strXchg64Buf : register(u1);
+
+        RWByteAddressBuffer g_raw64Buf : register(u2);
+        RWByteAddressBuffer g_rawXchg64Buf : register(u3);
+
+        RWBuffer<uint64_t> g_uint64Buf : register(u12);
+        RWBuffer<int64_t> g_sint64Buf : register(u13);
+        RWBuffer<int64_t> g_xchg64Buf : register(u14);
+
+        RWTexture1D<uint64_t> g_utex64Buf : register(u15);
+        RWTexture1D<int64_t> g_stex64Buf : register(u16);
+        RWTexture1D<int64_t> g_xtex64Buf : register(u17);
+
+        #define VEC_CALL(op, uav, ix, val) op(uav[ix*stride], val);
+
+        #define USTRUCT_CALL(op, uav, ix, val) op(uav[ix].uintEl[stride], val);
+        #define SSTRUCT_CALL(op, uav, ix, val) op(uav[ix].sintEl.z, val);
+        #define SSTRUCT64_CALL(op, uav, ix, val) op(uav[ix].sintEl.y, val);
+
+        #define URAW_CALL(op, uav, ix, val) uav.op(8*ix, val);
+        #define SRAW_CALL(op, uav, ix, val) uav.op(8*(5+ix), val); // signed at end. raw buffers don't need separate buffers
+
+        #define OP_TEST(ucall, scall, uuav, suav) \
+          ucall(InterlockedAdd, uuav, 0, addVal); \
+          scall(InterlockedMin, suav, 1, sminMaxVal); \
+          scall(InterlockedMax, suav, 2, sminMaxVal); \
+          ucall(InterlockedMin, uuav, 1, uminMaxVal); \
+          ucall(InterlockedMax, uuav, 2, uminMaxVal); \
+          ucall(InterlockedAnd, uuav, 3, ~value); \
+          ucall(InterlockedOr,  uuav, 4, value); \
+          ucall(InterlockedXor, uuav, 5, xorVal);
+
+        #define VEC_CALL3(op, uav, ix, cmp, val) op(uav[(ix)*stride], cmp, val)
+        #define VEC_CALL4(op, uav, ix, cmp, val, o) op(uav[(ix)*stride], cmp, val, o)
+
+        #define STRUCT_CALL3(op, uav, ix, cmp, val) op(uav[ix].uintEl[stride], cmp, val)
+        #define STRUCT_CALL4(op, uav, ix, cmp, val, o) op(uav[ix].uintEl[stride], cmp, val, o)
+
+        #define RAW_CALL3(op, uav, ix, cmp, val) uav.op(8*(ix), cmp, val)
+        #define RAW_CALL4(op, uav, ix, cmp, val, o) uav.op(8*(ix), cmp, val, o)
+
+        // The first of four to match gets the first and then the winner performs the last two exchanges
+        #define XCHG_TEST(call3, call4, uav) \
+          call3(InterlockedCompareStore,    uav, (ix/3)%64, 0,           xchgVal - 2); \
+          call4(InterlockedCompareExchange, uav, (ix/3)%64, xchgVal - 2, xchgVal - 1, output); \
+          if (output == xchgVal - 2) { call3(InterlockedExchange, uav, (ix/3)%64, xchgVal, output);}
+
+        void AtomicTest(uint ix, uint bitSize) {
+          uint stride = 2;
+          uint value = (ix) | ((ix) << (bitSize/2));
+          uint addVal = ix; // 32 bits isn't enough room to dupliate upper and lower
+          uint uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint xorVal = 1U << (ix%(bitSize-1));
+          // make higher bits differ while lower bits match
+          uint xchgVal = (ix << (bitSize/2)) | ((ix/3)%64);
+          uint output = 0;
+
+          // structured
+          OP_TEST(USTRUCT_CALL, SSTRUCT_CALL, g_structBuf, g_structBuf)
+          XCHG_TEST(STRUCT_CALL3, STRUCT_CALL4, g_strXchgBuf)
+
+          // raw
+          OP_TEST(URAW_CALL, SRAW_CALL, g_rawBuf, g_rawBuf)
+          XCHG_TEST(RAW_CALL3, RAW_CALL4, g_rawXchgBuf)
+
+          // typed buffer
+          OP_TEST(VEC_CALL, VEC_CALL, g_uintBuf, g_sintBuf)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchgBuf)
+
+          // texture
+          OP_TEST(VEC_CALL, VEC_CALL, g_utexBuf, g_stexBuf)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xtexBuf)
+        }
+
+        void AtomicRaw64Test(uint ix, uint64_t bitSize) {
+          uint64_t lix = ix;
+          uint stride = 1;
+          uint64_t value = (lix) | ((lix) << (bitSize/2));
+          uint64_t addVal = value;
+          uint64_t uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int64_t sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint64_t xorVal = 1ULL << (lix%(bitSize-1));
+          // make higher bits differ while lower bits match
+          uint64_t xchgVal = (lix << (bitSize/2)) | ((lix/3)%64);
+          uint64_t output = 0;
+
+          OP_TEST(USTRUCT_CALL, SSTRUCT64_CALL, g_struct64Buf, g_struct64Buf)
+          XCHG_TEST(STRUCT_CALL3, STRUCT_CALL4, g_strXchg64Buf)
+
+          // ByteAddressBuffer for 64-bit values are a special case. inlined here
+          URAW_CALL(InterlockedAdd64, g_raw64Buf, 0, addVal);
+          SRAW_CALL(InterlockedMin64, g_raw64Buf, 1, sminMaxVal);
+          SRAW_CALL(InterlockedMax64, g_raw64Buf, 2, sminMaxVal);
+          URAW_CALL(InterlockedMin64, g_raw64Buf, 1, uminMaxVal);
+          URAW_CALL(InterlockedMax64, g_raw64Buf, 2, uminMaxVal);
+          URAW_CALL(InterlockedAnd64, g_raw64Buf, 3, ~value);
+          URAW_CALL(InterlockedOr64,  g_raw64Buf, 4, value);
+          URAW_CALL(InterlockedXor64, g_raw64Buf, 5, xorVal);
+
+          RAW_CALL3(InterlockedCompareStore64,    g_rawXchg64Buf, (ix/3)%64, 0,           xchgVal - 2);
+          RAW_CALL4(InterlockedCompareExchange64, g_rawXchg64Buf, (ix/3)%64, xchgVal - 2, xchgVal - 1, output);
+          if (output == xchgVal - 2) { RAW_CALL3(InterlockedExchange64, g_rawXchg64Buf, (ix/3)%64, xchgVal, output);}
+        }
+
+        void AtomicTyped64Test(uint ix, uint64_t bitSize) {
+          uint64_t lix = ix;
+          uint stride = 1;
+          uint64_t value = (lix) | ((lix) << (bitSize/2));
+          uint64_t addVal = value;
+          uint64_t uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int64_t sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint64_t xorVal = 1ULL << (lix%(bitSize-1));
+          // make higher bits differ while lower bits match
+          uint64_t xchgVal = (lix << (bitSize/2)) | ((lix/3)%64);
+          uint64_t output = 0;
+
+          OP_TEST(VEC_CALL, VEC_CALL, g_uint64Buf, g_sint64Buf)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchg64Buf)
+
+          OP_TEST(VEC_CALL, VEC_CALL, g_utex64Buf, g_stex64Buf)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xtex64Buf)
+        }
+
+        void InitSharedMem(uint ix) {
+          // Zero-init shared memory, with special cases
+          if (ix < 6)
+            g_uintShare[ix] = ix == 1 ? 99999999 : ix == 3 ? -1 : 0;
+          if (ix < 3)
+            g_sintShare[ix] = ix == 1 ? 99999999 : 0;
+          if (ix < 64)
+            g_xchgShare[ix] = 0;
+
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        void AtomicGroupSharedTest(uint ix) {
+          uint stride = 1;
+          uint bitSize = 32;
+          uint value = (ix) | ((ix) << (bitSize/2));
+          uint addVal = ix; // 32 bits isn't enough room to dupliate upper and lower
+          uint uminMaxVal = ~value*(~value&1) + value*(value&1);
+          int sminMaxVal = ~value*(~value&1) + value*(value&1);
+          uint xorVal = 1U << (ix%(bitSize-1));
+          uint xchgVal = (ix << (bitSize/2)) | ((ix/3)%64);
+          uint output = 0;
+
+          OP_TEST(VEC_CALL, VEC_CALL, g_uintShare, g_sintShare)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchgShare)
+
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        // Payloads are used to transport AS test results to MS where they are finalized
+        struct Payload {
+          uint arith[16];
+          uint xchg[64];
+        };
+
+        struct Payload64 {
+          uint64_t arith[16];
+          uint64_t xchg[64];
+        };
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        groupshared Payload payload;
+
+        [NumThreads(8, 8, 2)]
+        void ASMain32(uint ix : SV_GroupIndex) {
+          AtomicTest(64*64 + 8*8*2 + ix, 32);
+
+          InitSharedMem(ix);
+          AtomicGroupSharedTest(ix);
+
+          // Copy AS test results to payload and ultimately to MS
+          // More threads than results are possible,
+          // so indices will result in duplicate copies
+          payload.arith[ix%6] = g_uintShare[ix%6];
+          payload.arith[ix%3 + 6] = g_sintShare[ix%3 + 1];
+          payload.xchg[ix%64] = g_xchgShare[ix%64];
+
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMain32(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+
+            AtomicTest(64*64 + ix, 32);
+
+            // Load AS test results from payload
+            // More threads than results are possible,
+            // so indices will result in duplicate copies
+            g_uintShare[ix%6] = payload.arith[ix%6];
+            g_sintShare[ix%3 + 1] = payload.arith[ix%3 + 6];
+            g_xchgShare[ix%64] = payload.xchg[ix%64];
+
+            GroupMemoryBarrierWithGroupSync();
+
+            AtomicGroupSharedTest(8*8*2 + ix);
+
+            // Copy final AS + MS results to output UAVs
+            g_shareBuf[ix%6].x = g_uintShare[ix%6];
+            g_shareBuf[ix%3 + 6].x = g_sintShare[ix%3 + 1];
+            g_shareXchgBuf[ix%64].x = g_xchgShare[ix%64];
+        }
+
+        PSInput VSMain32(float3 position : POSITION, float2 uv : TEXCOORD, uint ix : SV_VertexID) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          AtomicTest(64*64 + ix, 32);
+          return result;
+        }
+
+        float4 PSMain32(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y*64)*64 + input.uv.x*64;
+          AtomicTest(ix, 32);
+          return 1;
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMain32(uint ix : SV_GroupIndex) {
+          AtomicTest(ix, 32);
+          InitSharedMem(ix);
+          AtomicGroupSharedTest(ix);
+
+          g_shareBuf[ix%6].x = g_uintShare[ix%6];
+          g_shareBuf[ix%3 + 6].x = g_sintShare[ix%3 + 1];
+
+          g_shareXchgBuf[ix%64].x = g_xchgShare[ix%64];
+        }
+
+        [NumThreads(8, 8, 2)]
+        void ASMainRaw64(uint ix : SV_GroupIndex) {
+          Payload payload = (Payload)0;
+          AtomicRaw64Test(64*64 + 8*8*2 + ix, 64);
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMainRaw64(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            AtomicRaw64Test(64*64 + ix, 64);
+        }
+
+        PSInput VSMainRaw64(float3 position : POSITION, float2 uv : TEXCOORD, uint ix : SV_VertexID) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          AtomicRaw64Test(64*64 + ix, 64);
+          return result;
+        }
+
+        float4 PSMainRaw64(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y*64)*64 + input.uv.x*64;
+          AtomicRaw64Test(ix, 64);
+          return 1;
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMainRaw64(uint ix : SV_GroupIndex) {
+          AtomicRaw64Test(ix, 64);
+        }
+
+        [NumThreads(8, 8, 2)]
+        void ASMainTyped64(uint ix : SV_GroupIndex) {
+          AtomicTyped64Test(64*64 + 8*8*2 + ix, 64);
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMainTyped64(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+            AtomicTyped64Test(64*64 + ix, 64);
+        }
+
+        PSInput VSMainTyped64(float3 position : POSITION, float2 uv : TEXCOORD, uint ix : SV_VertexID) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          AtomicTyped64Test(64*64 + ix, 64);
+          return result;
+        }
+
+        float4 PSMainTyped64(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y*64)*64 + input.uv.x*64;
+          AtomicTyped64Test(ix, 64);
+          return 1;
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMainTyped64(uint ix : SV_GroupIndex) {
+          AtomicTyped64Test(ix, 64);
+        }
+
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="FloatAtomics" PS="PS" VS="VS" CS="CS" AS="AS" MS="MS" TopologyType="TRIANGLE">
+    <RootSignature>
+      RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+      DescriptorTable(UAV(u0), UAV(u1), UAV(u2), UAV(u3), UAV(u4)),
+      StaticSampler(s0, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT)
+    </RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="64" Height="64" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" />
+    <Resource Name="U0" Dimension="BUFFER" Width="2816"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U1" Dimension="BUFFER" Width="256" Format="R32_TYPELESS"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U2" Dimension="BUFFER" Width="256"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U3" Dimension="TEXTURE1D" Width="64" Format="R32_FLOAT"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <Resource Name="U4" Dimension="BUFFER" Width="256"
+              Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+              Init="Zero" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+    <RootValues>
+      <RootValue HeapName="ResHeap" />
+    </RootValues>
+    <DescriptorHeap Name="ResHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name="U0" Kind="UAV" ResName="U0"
+                  NumElements="64" StructureByteStride="44" />
+      <Descriptor Name="U1" Kind="UAV" ResName="U1" Flags='RAW' Format="R32_TYPELESS"
+                  NumElements="64" StructureByteStride="0" />
+      <Descriptor Name="U2" Kind="UAV" ResName="U2"
+                  NumElements="64" Format="R32_FLOAT" />
+      <Descriptor Name="U3" Kind="UAV" ResName="U3" Dimension="TEXTURE1D"
+                  NumElements="64" Format="R32_FLOAT" />
+      <Descriptor Name="U4" Kind="UAV" ResName="U4"
+                  NumElements="64" Format="R32_FLOAT" />
+    </DescriptorHeap>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget"/>
+    </RenderTargets>
+    <Shader Name="AS"   Target="as_6_5" EntryPoint="ASMain"   Text="@CS"/>
+    <Shader Name="MS"   Target="ms_6_5" EntryPoint="MSMain"   Text="@CS"/>
+    <Shader Name="VS"   Target="vs_6_0" EntryPoint="VSMain"   Text="@CS"/>
+    <Shader Name="PS"   Target="ps_6_0" EntryPoint="PSMain"   Text="@CS"/>
+    <Shader Name="CS"   Target="cs_6_0" EntryPoint="CSMain">
+      <![CDATA[
+        struct PSInput {
+          float4 position : SV_POSITION;
+          float2 uv : TEXCOORD;
+        };
+        struct AtomicStuff {
+          float2 prepad[3];
+          float fltEl[2];
+          struct useless {
+            uint3 unused;
+          } postpad;
+        };
+
+        RWStructuredBuffer<AtomicStuff> g_strXchgBuf : register(u0);
+        RWByteAddressBuffer g_rawXchgBuf : register(u1);
+        RWBuffer<float> g_xchgBuf : register(u2);
+        RWTexture1D<float> g_xtexBuf : register(u3);
+        RWBuffer<float> g_shareXchgBuf : register(u4);
+
+        groupshared float g_xchgShare[1024];
+
+        #define VEC_CALL3(op, uav, ix, cmp, val) op(uav[(ix)], cmp, val)
+        #define VEC_CALL4(op, uav, ix, cmp, val, o) op(uav[(ix)], cmp, val, o)
+
+        #define STRUCT_CALL3(op, uav, ix, cmp, val) op(uav[ix].fltEl[1], cmp, val)
+        #define STRUCT_CALL4(op, uav, ix, cmp, val, o) op(uav[ix].fltEl[1], cmp, val, o)
+
+        #define RAW_CALL3(op, uav, ix, cmp, val) uav.op(4*(ix), cmp, val)
+        #define RAW_CALL4(op, uav, ix, cmp, val, o) uav.op(4*(ix), cmp, val, o)
+
+        // The first of four to match gets the first and then the winner performs the last two exchanges
+        #define XCHG_TEST(call3, call4, uav) \
+          call3(InterlockedCompareStoreFloatBitwise,    uav, (ix/3)%63 + 1, 0,           xchgVal - 2); \
+          call4(InterlockedCompareExchangeFloatBitwise, uav, (ix/3)%63 + 1, xchgVal - 2, xchgVal - 1, output); \
+          if (output == xchgVal - 2) { call3(InterlockedExchange, uav, (ix/3)%63 + 1, xchgVal, output);}
+
+        void AtomicTest(uint ix) {
+          float xchgVal = ix;
+          float output = 0;
+
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchgBuf)
+          XCHG_TEST(STRUCT_CALL3, STRUCT_CALL4, g_strXchgBuf)
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xtexBuf)
+
+          // Special case for ByteAddressBuffers
+          RAW_CALL3(InterlockedCompareStoreFloatBitwise,    g_rawXchgBuf, (ix/3)%63 + 1, 0,           xchgVal - 2);
+          RAW_CALL4(InterlockedCompareExchangeFloatBitwise, g_rawXchgBuf, (ix/3)%63 + 1, xchgVal - 2, xchgVal - 1, output);
+          if (output == xchgVal - 2) { RAW_CALL3(InterlockedExchangeFloat, g_rawXchgBuf, (ix/3)%63 + 1, xchgVal, output);}
+
+          // Check NaN corner case
+          InterlockedCompareExchangeFloatBitwise(g_xchgBuf[0], 0, sqrt(-1), output);
+          if (output == 0.0) InterlockedCompareStoreFloatBitwise(g_xchgBuf[0], sqrt(-1), 0.123);
+
+          InterlockedCompareExchangeFloatBitwise(g_strXchgBuf[0].fltEl[1], 0, sqrt(-1), output);
+          if (output == 0.0) InterlockedCompareStoreFloatBitwise(g_strXchgBuf[0].fltEl[1], sqrt(-1), 0.123);
+
+          g_rawXchgBuf.InterlockedCompareExchangeFloatBitwise(0, 0, sqrt(-1), output);
+          if (output == 0.0) g_rawXchgBuf.InterlockedCompareStoreFloatBitwise(0, sqrt(-1), 0.123);
+
+          InterlockedCompareExchangeFloatBitwise(g_xtexBuf[0], 0, sqrt(-1), output);
+          if (output == 0.0) InterlockedCompareStoreFloatBitwise(g_xtexBuf[0], sqrt(-1), 0.123);
+        }
+
+        void InitSharedMem(uint ix) {
+          // Zero-init shared memory
+          g_xchgShare[ix%64] = 0;
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        void AtomicGroupSharedTest(uint ix) {
+          float xchgVal = ix;
+          float output = 0;
+
+          XCHG_TEST(VEC_CALL3, VEC_CALL4, g_xchgShare)
+
+          InterlockedCompareExchangeFloatBitwise(g_xchgShare[0], 0, sqrt(-1), output);
+          if (output == 0.0) InterlockedCompareStoreFloatBitwise(g_xchgShare[0], sqrt(-1), 0.123);
+
+          GroupMemoryBarrierWithGroupSync();
+        }
+
+        // Payloads are used to transport AS test results to MS where they are finalized
+        struct Payload {
+          float xchg[64];
+        };
+
+        static float4 g_Verts[6] = {
+          { -1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+
+          { -1.0f, -1.0f, 0.0f, 1.0f },
+          {  1.0f,  1.0f, 0.0f, 1.0f },
+          {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+        static float2 g_UV[6] = {
+          { 0.0f, 0.0f },
+          { 1.0f, 0.0f },
+          { 0.0f, 1.0f },
+
+          { 0.0f, 1.0f },
+          { 1.0f, 0.0f },
+          { 1.0f, 1.0f }};
+
+        groupshared Payload payload;
+
+        [NumThreads(8, 8, 2)]
+        void ASMain(uint ix : SV_GroupIndex) {
+          AtomicTest(64*64 + 8*8*2 + ix);
+
+          InitSharedMem(ix);
+          AtomicGroupSharedTest(ix);
+
+          // Copy AS test results to payload and ultimately to MS
+          // More threads than results are possible,
+          // so indices will result in duplicate copies
+          payload.xchg[ix%64] = g_xchgShare[ix%64];
+          DispatchMesh(1, 1, 1, payload);
+        }
+
+        [NumThreads(8, 8, 2)]
+        [OutputTopology("triangle")]
+        void MSMain(
+          uint ix : SV_GroupIndex,
+          in payload Payload payload,
+          out vertices PSInput verts[6],
+          out indices uint3 tris[2]) {
+            SetMeshOutputCounts(6, 2);
+            // Assign static fullscreen 2 tri quad
+            verts[ix%6].position = g_Verts[ix%6];
+            verts[ix%6].uv = g_UV[ix%6];
+            tris[ix&1] = uint3((ix&1)*3, (ix&1)*3 + 1, (ix&1)*3 + 2);
+
+            AtomicTest(64*64 + ix);
+
+            // Load AS test results from payload
+            // More threads than results are possible,
+            // so indices will result in duplicate copies
+            g_xchgShare[ix%64] = payload.xchg[ix%64];
+            GroupMemoryBarrierWithGroupSync();
+
+            AtomicGroupSharedTest(8*8*2 + ix);
+
+            // Copy final AS + MS results to output UAVs
+            g_shareXchgBuf[ix%64] = g_xchgShare[ix%64];
+        }
+
+        PSInput VSMain(float3 position : POSITION, float2 uv : TEXCOORD, uint ix : SV_VertexID) {
+          PSInput result;
+          result.position = float4(position, 1.0);
+          result.uv = uv;
+          AtomicTest(64*64 + ix);
+          return result;
+        }
+
+        float4 PSMain(PSInput input) : SV_TARGET {
+          uint ix = uint(input.uv.y*64)*64 + input.uv.x*64;
+          AtomicTest(ix);
+          return 1;
+        }
+
+        [NumThreads(32, 32, 1)]
+        void CSMain(uint ix : SV_GroupIndex) {
+          AtomicTest(ix);
+
+          InitSharedMem(ix);
+          AtomicGroupSharedTest(ix);
+
+          g_shareXchgBuf[ix%64] = g_xchgShare[ix%64];
+        }
+      ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="HelperLaneTestNoWave" PS="PS" VS="VS" TopologyType="TRIANGLE">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), UAV(u0)</RootSignature>
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+        { { -1.0f,  1.0f, 0.0f } },
+        { {  1.0f,  1.0f, 0.0f } },
+        { {  1.0f, -1.0f, 0.0f } },
+    </Resource>
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="120" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <RootValues>
+        <RootValue Index="0" ResName="UAVBuffer0" />
+    </RootValues>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget">
+        <Viewport Width="2.0" Height="2.0" MaxDepth="1.0"/>
+      </RenderTarget>
+    </RenderTargets>
+    <!-- Disable sink optimization to avoid issue #5744 -->
+    <Shader Name="VS" Target="vs_6_0" EntryPoint="VSMain" Text="@PS" Arguments="@PS"/>
+    <Shader Name="PS" Target="ps_6_0" EntryPoint="PSMain" Arguments="-opt-disable sink">
+        <![CDATA[
+
+        struct HelperLaneTestResult{
+            int is_helper_00;
+            int is_helper_10;
+            int is_helper_01;
+            int is_helper_11;
+        };
+        
+        RWStructuredBuffer<HelperLaneTestResult> g_testResults : register(u0);
+        
+        int ReadAcrossX_DD(int value, bool isLeft) {
+          int d = ddx_fine(value);
+          return isLeft ? value + d : value - d;
+        }
+        
+        int ReadAcrossY_DD(int value, bool isTop) {
+          int d = ddy_fine(value);
+          return isTop ? value + d : value - d;
+        }
+        
+        int ReadAcrossDiagonal_DD(int value, bool isLeft, bool isTop) {
+          return ReadAcrossY_DD(ReadAcrossX_DD(value, isLeft), isTop);
+        }
+
+        struct PSInput {
+            float4 pos : SV_POSITION;
+        };
+        
+        PSInput VSMain(float3 pos : POSITION) {
+            PSInput r;
+            r.pos = float4(pos, 1); 
+            return r;
+        }
+
+        uint4 PSMain(PSInput input) : SV_TARGET {
+          bool isLeft = (input.pos.x < 1.0f);
+          bool isTop = (input.pos.y < 1.0f);
+          
+          for (int i = 0; i < 2; i++) {
+            int is_helper = IsHelperLane();
+            int is_helper_accross_X = ReadAcrossX_DD(is_helper, isLeft);
+            int is_helper_accross_Y = ReadAcrossY_DD(is_helper, isTop);
+            int is_helper_accross_Diag = ReadAcrossDiagonal_DD(is_helper, isLeft, isTop);
+          
+            if (!isLeft && !isTop) { //bottom right pixel writes results
+              g_testResults[i].is_helper_00 = is_helper_accross_Diag;
+              g_testResults[i].is_helper_10 = is_helper_accross_Y;
+              g_testResults[i].is_helper_01 = is_helper_accross_X;
+              g_testResults[i].is_helper_11 = is_helper;
+            }
+
+            if (i == 0 && isLeft && isTop) // discard top left pixel
+              discard;
+          }
+          return uint4(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 1);
+        }
+        ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="HelperLaneTestWave" CS="CS" PS="PS" VS="VS" DispatchX="3" DispatchY="1" TopologyType="TRIANGLE">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), UAV(u0)</RootSignature>
+      <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+            { { -1.0f,  1.0f, 0.0f } },
+            { {  1.0f,  1.0f, 0.0f } },
+            { {  1.0f, -1.0f, 0.0f } },
+      </Resource>
+      <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="1024" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" Format="R32_TYPELESS" />
+      <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+      <RootValues>
+        <RootValue Index="0" ResName="UAVBuffer0" />
+      </RootValues>
+      <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+         <Descriptor Name="RTarget" Kind="RTV"/>
+      </DescriptorHeap>
+      <InputElements>
+         <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      </InputElements>
+      <RenderTargets>
+          <RenderTarget Name="RTarget">
+              <Viewport Width="2.0" Height="2.0" MaxDepth="1.0"/>
+          </RenderTarget>
+      </RenderTargets>
+      <Shader Name="PS65" Target="ps_6_5" EntryPoint="PSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="VS65" Target="vs_6_5" EntryPoint="VSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="CS65" Target="cs_6_5" EntryPoint="CSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="PS66" Target="ps_6_6" EntryPoint="PSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="VS66" Target="vs_6_6" EntryPoint="VSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="CS66" Target="cs_6_6" EntryPoint="CSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="VS"   Target="vs_6_0" EntryPoint="VSMain"   Text="@CS" Arguments="@CS"/>
+      <Shader Name="PS"   Target="ps_6_0" EntryPoint="PSMain"   Text="@CS" Arguments="@CS"/>
+      <Shader Name="PS67" Target="ps_6_7" EntryPoint="PSMain65" Text="@CS" Arguments="@CS"/>
+      <Shader Name="CS"   Target="cs_6_0" EntryPoint="CSMain" Arguments="/Od">
+        <![CDATA[
+
+        // 6.0 wave ops
+        struct HelperLaneWaveTestResult60 {
+            int anyTrue;
+            int allTrue;
+            uint4 ballot;
+            int waterfallLoopCount;
+            int allEqual;
+            int countBits;
+            int sum;
+            int product;
+            int bitAnd;
+            int bitOr;
+            int bitXor;
+            int min;
+            int max;
+            int prefixCountBits;
+            int prefixProduct;
+            int prefixSum;
+        };
+        
+        struct HelperLaneQuadTestResult {
+            int is_helper_this;
+            int is_helper_across_X;
+            int is_helper_across_Y;
+            int is_helper_across_Diag;
+        };
+        
+        // 6.5 wave ops
+        struct HelperLaneWaveTestResult65 {
+            uint4 match;
+            int mpCountBits;
+            int mpSum;
+            int mpProduct;
+            int mpBitAnd;
+            int mpBitOr;
+            int mpBitXor;
+        };
+        
+        struct HelperLaneWaveTestResult {
+            HelperLaneWaveTestResult60 sm60_wave;
+            HelperLaneQuadTestResult sm60_quad;
+            HelperLaneWaveTestResult65 sm65_wave;
+        };
+        
+        RWStructuredBuffer<HelperLaneWaveTestResult> g_TestResults : register(u0);
+        
+        #define CS_INDEX    0
+        #define VS_INDEX    0
+        #define PS_INDEX    1
+        #define PS_INDEX_AFTER_DISCARD 2
+        
+        HelperLaneWaveTestResult60 RunHelperLaneWaveTests60() {
+            HelperLaneWaveTestResult60 tr;
+            bool is_helper = IsHelperLane();
+            tr.anyTrue = WaveActiveAnyTrue(is_helper);
+            tr.allTrue = WaveActiveAllTrue(!is_helper);
+            tr.ballot = WaveActiveBallot(true);
+
+            // waterfall loop
+            int count = 0;
+            int waveCount = WaveGetLaneCount();
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 7)
+            // Count active lanes - includes helper lanes
+            while (count < waveCount) {
+                count++;
+                if (WaveIsFirstLane()) {
+                    break;
+                }
+            }
+#else
+            // Count active lanes and ensure none are helper lanes
+            while (count < waveCount) {
+                count++;
+                if (WaveReadLaneFirst(!IsHelperLane()) && WaveIsFirstLane()) {
+                    break;
+                }
+            }
+#endif
+            tr.waterfallLoopCount = count;
+            
+            is_helper = IsHelperLane();
+            tr.allEqual = WaveActiveAllEqual(is_helper);
+            tr.countBits = WaveActiveCountBits(true);
+            tr.sum = WaveActiveSum(4);
+            tr.product = WaveActiveProduct(4);
+            tr.bitAnd = WaveActiveBitAnd((uint)!is_helper);
+            tr.bitOr = WaveActiveBitOr((uint)is_helper);
+            tr.bitXor = WaveActiveBitXor((uint)is_helper);
+            tr.min = WaveActiveMin(is_helper ? 1 : 10);
+            tr.max = WaveActiveMax(is_helper ? 10 : 1);
+            tr.prefixCountBits = WavePrefixCountBits(1);
+            tr.prefixProduct = WavePrefixProduct(4);
+            tr.prefixSum = WavePrefixSum(2);
+
+            return tr;
+        }
+        
+        HelperLaneQuadTestResult RunHelperLaneQuadTests() {
+            HelperLaneQuadTestResult tr;
+            int is_helper = IsHelperLane();
+
+            tr.is_helper_this = is_helper;
+            tr.is_helper_across_X = QuadReadAcrossX(is_helper);
+            tr.is_helper_across_Y = QuadReadAcrossY(is_helper);
+            tr.is_helper_across_Diag = QuadReadAcrossDiagonal(is_helper);
+            
+            return tr;
+        }
+        
+        HelperLaneWaveTestResult65 RunHelperLaneWaveTests65() {
+            HelperLaneWaveTestResult65 tr;
+            uint4 noMaskedBits = (uint4)0xFFFFFFFF;
+            bool is_helper = IsHelperLane();
+
+            tr.match = WaveMatch(true);
+            tr.mpCountBits = WaveMultiPrefixCountBits(1, noMaskedBits);
+            tr.mpSum = WaveMultiPrefixSum(2, noMaskedBits);
+            tr.mpProduct = WaveMultiPrefixProduct(4, noMaskedBits);
+            tr.mpBitAnd = WaveMultiPrefixBitAnd(is_helper ? 0 : 1, noMaskedBits);
+            tr.mpBitOr = WaveMultiPrefixBitOr(is_helper ? 1 : 0, noMaskedBits);
+            tr.mpBitXor = WaveMultiPrefixBitXor(is_helper ? 1 : 0, noMaskedBits);
+            return tr;
+        }
+        
+        struct PSInput {
+            float4 pos : SV_POSITION;
+        };
+        
+        PSInput VSMain(float3 pos : POSITION, uint vid:SV_VertexID) {
+            HelperLaneWaveTestResult60 tr60 = RunHelperLaneWaveTests60();
+            uint laneID = WaveGetLaneIndex();
+            uint maxLaneID = WaveActiveMax( laneID );
+            // Note: lane with vid == 2 doesn't mean it is the last lane.
+            bool hasVID2 = WaveActiveAnyTrue(vid == 2);
+            // Last lane in the wave with vid 2 writes results, assume only 3 vertices.
+            if ( hasVID2 && laneID == maxLaneID ) {
+                g_TestResults[VS_INDEX].sm60_wave = tr60;
+            }
+            PSInput r;
+            r.pos = float4(pos, 1); 
+            return r;
+        }
+        
+        PSInput VSMain65(float3 pos : POSITION, uint vid:SV_VertexID) {
+            HelperLaneWaveTestResult60 tr60 = RunHelperLaneWaveTests60();
+            HelperLaneWaveTestResult65 tr65 = RunHelperLaneWaveTests65();
+            uint laneID = WaveGetLaneIndex();
+            uint maxLaneID = WaveActiveMax( laneID );
+            // Note: lane with vid == 2 doesn't mean it is the last lane.
+            bool hasVID2 = WaveActiveAnyTrue(vid == 2);
+            // Last lane in the wave with vid 2 writes results, assume only 3 vertices.
+            if ( hasVID2 && laneID == maxLaneID ) {
+                g_TestResults[VS_INDEX].sm60_wave = tr60;
+                g_TestResults[VS_INDEX].sm65_wave = tr65;
+            }
+            PSInput r;
+            r.pos = float4(pos, 1); 
+            return r;
+        }
+
+        uint4 PSMain(PSInput input) : SV_TARGET {
+            HelperLaneWaveTestResult60 tr60 = RunHelperLaneWaveTests60();
+            HelperLaneQuadTestResult tr60_quad = RunHelperLaneQuadTests();
+        
+            if (input.pos.x > 1.0f && input.pos.y > 1.0f) { // bottom right pixel writes results
+                g_TestResults[PS_INDEX].sm60_wave = tr60;
+                g_TestResults[PS_INDEX].sm60_quad = tr60_quad;
+            }
+            if (input.pos.x < 1.0f && input.pos.y < 1.0f) // discard top left pixel
+                discard;
+                
+            HelperLaneWaveTestResult60 tr60_disc = RunHelperLaneWaveTests60();
+            HelperLaneQuadTestResult tr60_quad_disc = RunHelperLaneQuadTests();
+
+            if (input.pos.x > 1.0f && input.pos.y > 1.0f) { // bottom right pixel writes results
+                g_TestResults[PS_INDEX_AFTER_DISCARD].sm60_wave = tr60_disc;
+                g_TestResults[PS_INDEX_AFTER_DISCARD].sm60_quad = tr60_quad_disc;
+            }
+            return uint4(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 1);
+        }
+
+#if  __SHADER_TARGET_MAJOR > 6 || (__SHADER_TARGET_MAJOR == 6 && __SHADER_TARGET_MINOR >= 7)
+        [waveopsincludehelperlanes]
+#endif
+        uint4 PSMain65(PSInput input) : SV_TARGET {
+            HelperLaneWaveTestResult tr;
+            tr.sm60_wave = RunHelperLaneWaveTests60();
+            tr.sm60_quad = RunHelperLaneQuadTests();
+            tr.sm65_wave = RunHelperLaneWaveTests65();
+            
+            if (input.pos.x > 1.0f && input.pos.y > 1.0f) { // bottom right pixel writes results
+                g_TestResults[PS_INDEX] = tr;
+            }
+
+            if (input.pos.x < 1.0f && input.pos.y < 1.0f) // discard top left pixel
+                discard;
+                
+            HelperLaneWaveTestResult tr_disc;
+            tr_disc.sm60_wave = RunHelperLaneWaveTests60();
+            tr_disc.sm60_quad = RunHelperLaneQuadTests();
+            tr_disc.sm65_wave = RunHelperLaneWaveTests65();
+            
+            if (input.pos.x > 1.0f && input.pos.y > 1.0f) { // bottom right pixel writes results
+                g_TestResults[PS_INDEX_AFTER_DISCARD] = tr_disc;
+            }
+            return uint4(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 1);
+        }
+        
+        [numthreads(3,1,1)]
+        void CSMain(uint3 tid : SV_GroupThreadID) {
+            HelperLaneWaveTestResult60 tr60 = RunHelperLaneWaveTests60();
+            HelperLaneQuadTestResult tr60_quad = RunHelperLaneQuadTests();
+            if (WaveGetLaneIndex() == 2) { // last lane writes results
+                g_TestResults[CS_INDEX].sm60_wave = tr60;
+                g_TestResults[CS_INDEX].sm60_quad = tr60_quad;
+            }
+        }
+        
+        [numthreads(3,1,1)]
+        void CSMain65() {
+            HelperLaneWaveTestResult tr;
+            tr.sm60_wave = RunHelperLaneWaveTests60();
+            tr.sm60_quad = RunHelperLaneQuadTests();
+            tr.sm65_wave = RunHelperLaneWaveTests65();
+
+            if (WaveGetLaneIndex() == 2) { // last lane writes results
+                g_TestResults[CS_INDEX] = tr;
+            }
+        }
+]]>
+    </Shader>
+  </ShaderOp>
+  <ShaderOp Name="QuadAnyAll" CS="CS" PS="PS" DispatchX="8" DispatchY="8">
+    <RootSignature>RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), UAV(u0)</RootSignature>
+    <Resource Name="UAVBuffer0" Dimension="BUFFER" Width="2048" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ZERO" ReadBack="true"/>
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_UINT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true" />
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+      { { -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+
+      { { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+      { { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+      { { 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } }
+    </Resource>
+    <RootValues>
+      <RootValue Index="0" ResName="UAVBuffer0" />
+    </RootValues>
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+      <InputElement SemanticName="TEXCOORD" Format="R32G32_FLOAT" AlignedByteOffset="12" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget">
+        <Viewport Width="2.0" Height="2.0" MaxDepth="1.0"/>
+      </RenderTarget>
+    </RenderTargets>
+    
+    <Shader Name="PS" Target="ps_6_5" EntryPoint="PSMain" Text="@CS"/>
+    <Shader Name="AS67" Target="as_6_7" EntryPoint="ASMain" Text="@CS"/>
+    <Shader Name="AS" Target="as_6_5" EntryPoint="ASMain" Text="@CS"/>
+    <Shader Name="MS67" Target="ms_6_7" EntryPoint="MSMain" Text="@CS"/>
+    <Shader Name="MS" Target="ms_6_5" EntryPoint="MSMain" Text="@CS"/>
+    <Shader Name="CS67" Target="cs_6_7" EntryPoint="CSMain" Text="@CS"/>
+    <Shader Name="CS" Target="cs_6_0" EntryPoint="CSMain">
+    <![CDATA[
+RWStructuredBuffer<int2> Values : register(u0);
+groupshared uint WaveOffset = 0;
+
+struct PSInput {
+  float4 position : SV_POSITION;
+  float2 uv : TEXCOORD;
+};
+
+static float4 g_Verts[6] = {
+  { -1.0f,  1.0f, 0.0f, 1.0f },
+  {  1.0f,  1.0f, 0.0f, 1.0f },
+  { -1.0f, -1.0f, 0.0f, 1.0f },
+
+  { -1.0f, -1.0f, 0.0f, 1.0f },
+  {  1.0f,  1.0f, 0.0f, 1.0f },
+  {  1.0f, -1.0f, 0.0f, 1.0f }};
+
+static float2 g_UV[6] = {
+  { 0.0f, 0.0f },
+  { 1.0f, 0.0f },
+  { 0.0f, 1.0f },
+
+  { 0.0f, 1.0f },
+  { 1.0f, 0.0f },
+  { 1.0f, 1.0f }};
+
+float4 PSMain(PSInput input) : SV_TARGET {
+  // This output doesn't actually matter
+  return input.position;
+}
+
+void QuadAnyAllTest(uint GID, uint StartOffset) {
+  if (GID == 0)
+    WaveOffset = 0;
+  GroupMemoryBarrierWithGroupSync();
+  uint Offset = StartOffset;
+  uint QuadElem = WaveGetLaneIndex() & 3;
+  if (QuadElem == 0)
+    Offset += WavePrefixSum(4);
+  Offset = QuadReadLaneAt(Offset, 0) + QuadElem;
+  uint LocalWaveOffset = 0;
+  if (WaveGetLaneIndex() == 0) {
+    InterlockedAdd(WaveOffset, WaveGetLaneCount(), LocalWaveOffset);
+  }
+  uint Idx = Offset + WaveReadLaneFirst(LocalWaveOffset);
+  uint2 ID = {Idx / 8, Idx % 8};
+  uint QuadId = Idx / 4;
+  uint QuadMask = 0x1U << QuadElem;
+  bool ThreadBool = (QuadMask & QuadId) != 0;
+  Values[Idx].x = QuadAny(ThreadBool) ? 1 : 2;
+  Values[Idx].y = QuadAll(ThreadBool) ? 3 : 4;
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint GID: SV_GroupIndex) {
+  QuadAnyAllTest(GID, 0);
+}
+
+struct Payload {
+  uint nothing;
+};
+
+groupshared Payload P{0};
+
+[numthreads(8, 8, 1)]
+void ASMain(uint GID : SV_GroupIndex) {
+  QuadAnyAllTest(GID, 0);
+  DispatchMesh(1, 1, 1, P);
+}
+
+[numthreads(8, 8, 1)]
+[OutputTopology("triangle")]
+void MSMain(uint GID : SV_GroupIndex,
+            in payload Payload payload,
+            out vertices PSInput verts[6],
+            out indices uint3 tris[2]) {
+    SetMeshOutputCounts(6, 2);
+    // Assign static fullscreen 2 tri quad
+    verts[GID%6].position = g_Verts[GID%6];
+    verts[GID%6].uv = g_UV[GID%6];
+    tris[GID&1] = uint3((GID&1)*3, (GID&1)*3 + 1, (GID&1)*3 + 2);
+    QuadAnyAllTest(GID, 64);
+}
+]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="DynamicResourcesDynamicIndexing" CS="CS66" VS="VS66" PS="PS66">
+
+    <Resource Name="ConstantBuffer" Dimension="BUFFER" Width="256" InitialResourceState="COPY_DEST" Init="FromBytes" ReadBack="true">
+      { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u}
+    </Resource>
+    
+    <Resource Name="T0"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" >
+      10.0
+    </Resource>
+
+    <Resource Name="T1"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" >
+      11.0
+    </Resource>
+
+    <Resource Name="T2"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" >
+      12.0
+    </Resource>
+
+    <Resource Name="T3"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" >
+      13.0
+    </Resource>
+
+    <Resource Name="T4"            Dimension="Texture2D"  Width="4" Height="4"  InitialResourceState="COPY_DEST" Init="FromBytes" Format="R32_FLOAT">
+      14.0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    </Resource>
+    <Resource Name="T5"            Dimension="Texture2D"  Width="4" Height="4"  InitialResourceState="COPY_DEST" Init="FromBytes" Format="R32_FLOAT">
+      15.0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    </Resource>
+    
+    <Resource Name="U0"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS">
+      20.0
+    </Resource>
+    <Resource Name="U1"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS">
+      21.0
+    </Resource>
+    
+    <Resource Name="U2"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS">
+      22.0
+    </Resource>
+    <Resource Name="U3"            Dimension="BUFFER"     Width="32"            InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" TransitionTo="UNORDERED_ACCESS">
+      23.0
+    </Resource>
+    
+    <Resource Name="U4"            Dimension="TEXTURE1D"  Width="4"             InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" Format="R32_FLOAT" TransitionTo="UNORDERED_ACCESS">
+      24.0 0 0 0
+    </Resource>
+    <Resource Name="U5"            Dimension="TEXTURE1D"  Width="4"             InitialResourceState="COPY_DEST" Init="FromBytes" Flags="ALLOW_UNORDERED_ACCESS" Format="R32_FLOAT" TransitionTo="UNORDERED_ACCESS">
+      25.0 0 0 0
+    </Resource>
+    
+    <Resource Name="VBuffer" Dimension="BUFFER" InitialResourceState="COPY_DEST" Init="FromBytes" Topology="TRIANGLELIST">
+    { -1.0f, 1.0f, 0.0f },
+    { 1.0f, 1.0f, 0.0f },
+    { -1.0f, -1.0f, 0.0f },
+    { -1.0f, -1.0f, 0.0f },
+    { 1.0f, 1.0f, 0.0f },
+    { 1.0f, -1.0f, 0.0f },
+    </Resource>
+    
+    <Resource Name="g_result"      Dimension="BUFFER"     Width="64"            InitialResourceState="COPY_DEST" Init="ZERO"      Flags="ALLOW_UNORDERED_ACCESS" ReadBack="true"  TransitionTo="UNORDERED_ACCESS"/>
+    <Resource Name="g_resultPS"    Dimension="BUFFER"     Width="64"            InitialResourceState="COPY_DEST" Init="ZERO"      Flags="ALLOW_UNORDERED_ACCESS" ReadBack="true"  TransitionTo="UNORDERED_ACCESS"/>
+    <Resource Name="g_resultVS"    Dimension="BUFFER"     Width="64"            InitialResourceState="COPY_DEST" Init="ZERO"      Flags="ALLOW_UNORDERED_ACCESS" ReadBack="true"  TransitionTo="UNORDERED_ACCESS"/>
+    
+    <Resource Name="RTarget" Dimension="TEXTURE2D" Width="16" Height="16" Format="R32G32B32A32_FLOAT" Flags="ALLOW_RENDER_TARGET" InitialResourceState="COPY_DEST" ReadBack="true"/>
+
+    <DescriptorHeap Name="ResourceDescriptorHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name="T0" Kind="SRV" Flags='RAW' NumElements="1" Format="R32_TYPELESS"/>
+      <Descriptor Name="T1" Kind="SRV" Flags='RAW' NumElements="1" Format="R32_TYPELESS"/>
+      <Descriptor Name="T2" Kind="SRV" NumElements="1" StructureByteStride="4"/>
+      <Descriptor Name="T3" Kind="SRV" NumElements="1" StructureByteStride="4"/>
+      <Descriptor Name="T4" Kind="SRV" />
+      <Descriptor Name="T5" Kind="SRV" />
+      <Descriptor Name="U0" Kind="UAV" Flags='RAW' NumElements="1" Format="R32_TYPELESS"/>
+      <Descriptor Name="U1" Kind="UAV" Flags='RAW' NumElements="1" Format="R32_TYPELESS"/>
+      <Descriptor Name="U2" Kind="UAV" NumElements="1" StructureByteStride="4"/>
+      <Descriptor Name="U3" Kind="UAV" NumElements="1" StructureByteStride="4"/>
+      <Descriptor Name="U4" Kind="UAV" Dimension="TEXTURE1D" Format="R32_FLOAT"/>
+      <Descriptor Name="U5" Kind="UAV" Dimension="TEXTURE1D" Format="R32_FLOAT"/>
+      <Descriptor Name="ConstantBuffer" Kind="CBV"/>
+      <Descriptor Name="g_result"   NumElements="16" Kind="UAV"  StructureByteStride="4"/>
+      <Descriptor Name="g_resultVS" NumElements="16" Kind="UAV"  StructureByteStride="4"/>
+      <Descriptor Name="g_resultPS" NumElements="16" Kind="UAV"  StructureByteStride="4"/>
+    </DescriptorHeap>
+
+    <DescriptorHeap Name="SamplerDescriptorHeap" Type="SAMPLER">
+      <Descriptor Kind="SAMPLER" AddressU="BORDER" AddressV="BORDER" BorderColorR="30.0" Filter="MIN_MAG_MIP_POINT"/>
+      <Descriptor Kind="SAMPLER" AddressU="BORDER" AddressV="BORDER" BorderColorR="31.0" Filter="MIN_MAG_MIP_POINT" />
+      <Descriptor Kind="SAMPLER" AddressU="BORDER" AddressV="BORDER" BorderColorR="32.0" ComparisonFunc="EQUAL" Filter="COMPARISON_MIN_MAG_MIP_POINT"/>
+      <Descriptor Kind="SAMPLER" AddressU="BORDER" AddressV="BORDER" BorderColorR="33.0" ComparisonFunc="EQUAL" Filter="COMPARISON_MIN_MAG_MIP_POINT"/>
+    </DescriptorHeap>
+    
+    <DescriptorHeap Name="RtvHeap" NumDescriptors="1" Type="RTV">
+      <Descriptor Name="RTarget" Kind="RTV"/>
+    </DescriptorHeap>
+
+    <InputElements>
+      <InputElement SemanticName="POSITION" Format="R32G32B32_FLOAT" AlignedByteOffset="0" />
+    </InputElements>
+    <RenderTargets>
+      <RenderTarget Name="RTarget">
+        <Viewport Width="2.0" Height="2.0" MaxDepth="1.0"/>
+      </RenderTarget>
+    </RenderTargets>
+
+    <!-- -->
+    <Shader Name="PS66" Target="ps_6_6" EntryPoint="PSMain" Text="@MAIN"/> 
+    <Shader Name="VS66" Target="vs_6_6" EntryPoint="VSMain" Text="@MAIN"/>
+    <Shader Name="CS66" Target="cs_6_6" EntryPoint="main" Text="@MAIN"/> 
+    <!-- -->
+    
+    <!-- This root value is only applied in the fallback case -->
+    <RootValues>
+      <RootValue HeapName="ResourceDescriptorHeap" Index="0" />
+      <RootValue HeapName="SamplerDescriptorHeap"  Index="1" />
+    </RootValues>
+
+    <Shader Name="MAIN" Target="cs_6_6" EntryPoint="main">
+      <![CDATA[
+    struct Constants
+    {
+      uint idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10;
+    };
+    
+    // globally declare these so that non-fallback won't throw an unknown identifier error
+    
+    #ifndef NON_UNIFORM
+    #define INDEXER(idx,ix) idx
+    #else
+    #define INDEXER(idx,ix) NonUniformResourceIndex(idx + ix%2)
+    #endif
+
+
+    #ifdef FALLBACK
+
+    #define ROOT_SIG [RootSignature("RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), DescriptorTable( SRV(t0, numDescriptors=6), UAV(u6, numDescriptors=6), CBV(b12), UAV(u13,numDescriptors=3) ), \
+    DescriptorTable(Sampler(s0, numDescriptors=2), Sampler(s2, numDescriptors=2))")]
+    
+    ByteAddressBuffer g_fallback_rawBuf[2]              : register(t0);
+    StructuredBuffer<float> g_fallback_structBuf[2]     : register(t2);
+    Texture2D<float> g_fallback_tex[2]                  : register(t4);
+    RWByteAddressBuffer g_fallback_rwRawBuf[2]          : register(u6);
+    RWStructuredBuffer<float> g_fallback_rwStructBuf[2] : register(u8);
+    RWTexture1D<float> g_fallback_rwTex[2]              : register(u10);
+
+    SamplerState g_fallback_samp[2]              : register(s0);
+    SamplerComparisonState g_fallback_sampCmp[2] : register(s2);
+
+    ConstantBuffer<Constants> CB               : register(b12);
+    // Result buffers
+    RWStructuredBuffer <float> g_result   : register(u13);
+    RWStructuredBuffer <float> g_resultVS : register(u14);
+    RWStructuredBuffer <float> g_resultPS : register(u15);
+    
+    #else // NO FALLBACK
+
+    #define ROOT_SIG [RootSignature("RootFlags(CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | SAMPLER_HEAP_DIRECTLY_INDEXED | ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)")]
+    
+    static const int CBIndex = 12;
+    static ConstantBuffer<Constants> CB = ResourceDescriptorHeap[CBIndex];
+
+    // Result buffers
+    static RWStructuredBuffer<float> g_result   = ResourceDescriptorHeap[CBIndex+1];
+    static RWStructuredBuffer<float> g_resultVS = ResourceDescriptorHeap[CBIndex+2];
+    static RWStructuredBuffer<float> g_resultPS = ResourceDescriptorHeap[CBIndex+3];
+    
+    #endif // FALLBACK
+    
+    
+    void TestResources(RWStructuredBuffer<float> result, uint ix) {
+        
+    #ifndef FALLBACK
+        ByteAddressBuffer rawBuf = ResourceDescriptorHeap[INDEXER(CB.idx0,ix)];
+        StructuredBuffer<float> structBuf = ResourceDescriptorHeap[INDEXER(CB.idx2,ix)];
+        Texture2D<float> tex = ResourceDescriptorHeap[INDEXER(CB.idx4,ix)];
+        RWByteAddressBuffer rwRawBuf = ResourceDescriptorHeap[INDEXER(CB.idx6,ix)];
+        RWStructuredBuffer<float> rwStructBuf = ResourceDescriptorHeap[INDEXER(CB.idx8,ix)];
+        RWTexture1D<float> rwTex = ResourceDescriptorHeap[INDEXER(CB.idx10,ix)];
+        
+        static SamplerState g_samp = SamplerDescriptorHeap[INDEXER(CB.idx0, ix)];
+        static SamplerComparisonState g_sampCmp  = SamplerDescriptorHeap[INDEXER(CB.idx2, ix)];
+    #endif
+    
+    #ifdef FALLBACK
+        ByteAddressBuffer rawBuf = g_fallback_rawBuf[INDEXER(0,ix)];
+        StructuredBuffer<float> structBuf = g_fallback_structBuf[INDEXER(0,ix)];
+        Texture2D<float> tex = g_fallback_tex[INDEXER(0,ix)];
+        RWByteAddressBuffer rwRawBuf = g_fallback_rwRawBuf[INDEXER(0,ix)];
+        RWStructuredBuffer<float> rwStructBuf = g_fallback_rwStructBuf[INDEXER(0,ix)];
+        RWTexture1D<float> rwTex = g_fallback_rwTex[INDEXER(0,ix)];
+        
+        static SamplerState g_samp = g_fallback_samp[INDEXER(0, ix)];
+        static SamplerComparisonState g_sampCmp = g_fallback_sampCmp[INDEXER(0, ix)];
+   #endif
+
+        result[0*2 + ix%2] = rawBuf.Load<float>(0);
+        result[1*2 + ix%2] = structBuf.Load(0);
+        result[2*2 + ix%2] = tex.Load(0);
+        result[3*2 + ix%2] = rwRawBuf.Load<float>(0);
+        result[4*2 + ix%2] = rwStructBuf.Load(0);
+        result[5*2 + ix%2] = rwTex.Load(0);
+        result[6*2 + ix%2] = tex.SampleLevel(g_samp, -0.5, 0);
+        result[7*2 + ix%2] = tex.SampleCmpLevelZero(g_sampCmp, -0.5, (float)INDEXER(32, ix)) ? (float)INDEXER(32, ix) : 0.0;
+    }
+
+    ROOT_SIG
+    [NumThreads(2, 2, 1)]
+    void main(uint ix : SV_GroupIndex) {
+        TestResources(g_result, ix);
+    }
+    
+    struct PSInput {
+      float4 position : SV_POSITION;
+    };
+
+    ROOT_SIG
+    float4 PSMain(PSInput input) : SV_TARGET {
+        int ix = WaveGetLaneIndex();
+        TestResources(g_resultPS, ix);      
+        // This output doesn't actually matter
+        return input.position;
+    }
+    
+    ROOT_SIG
+    PSInput VSMain(float3 pos : POSITION, uint ix : SV_VertexID) {
+        TestResources(g_resultVS, ix);
+        PSInput r;
+        r.position = float4(pos, 1); 
+        return r;
+    }
+  ]]>
+    </Shader>
+  </ShaderOp>
+
+  <ShaderOp Name="IsNormal" CS="CS60">
+    <Resource Name="g_TestData" Dimension="BUFFER" Width="96" InitialResourceState="COPY_DEST" Init="ByName" Flags="ALLOW_UNORDERED_ACCESS" ReadBack="true" TransitionTo="UNORDERED_ACCESS" />
+
+    <DescriptorHeap Name="ResourceDescriptorHeap" Type="CBV_SRV_UAV">
+      <Descriptor Name="g_TestData" NumElements="12" Kind="UAV" StructureByteStride="8"/>
+    </DescriptorHeap>
+    
+    <RootValues>
+      <RootValue HeapName="ResourceDescriptorHeap" Index="0" />
+    </RootValues>
+    
+    <Shader Name="CS60" Target="cs_6_0" EntryPoint="main" Text="@MAIN" Callback="True"/> 
+    <Shader Name="MAIN" Target="cs_6_0" EntryPoint="main">
+      <![CDATA[
+      struct TestPoint{
+        float input;
+        uint output;
+      };
+    
+      // Result buffers
+      RWStructuredBuffer <TestPoint> g_TestData     : register(u0);
+   
+      [RootSignature("RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), DescriptorTable( UAV(u0, numDescriptors=1))")]
+      [NumThreads(12, 1, 1)]
+      void main(uint ix : SV_GroupIndex)
+      {
+        g_TestData[ix].output = isnan(g_TestData[ix].input);
+      }
+    
+    ]]>
+    </Shader>
+  </ShaderOp>
+
+</ShaderOpSet>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * Indicates how much of a compound-event is selected [if any].
+   *
+   * The CompoundEventSelectionState enum is used with events that are
+   * directly selectable, but also have associated events, too, that can be
+   * selected. In this situation, there are a variety of different
+   * selected states other than just "yes, no". This enum encodes those
+   * various possible states.
+   */
+  const CompoundEventSelectionState = {
+    // Basic bit states.
+    NOT_SELECTED: 0,
+    EVENT_SELECTED: 0x1,
+    SOME_ASSOCIATED_EVENTS_SELECTED: 0x2,
+    ALL_ASSOCIATED_EVENTS_SELECTED: 0x4,
+
+    // Common combinations.
+    EVENT_AND_SOME_ASSOCIATED_SELECTED: 0x1 | 0x2,
+    EVENT_AND_ALL_ASSOCIATED_SELECTED: 0x1 | 0x4
+  };
+
+  return {
+    CompoundEventSelectionState,
+  };
+});
+</script>

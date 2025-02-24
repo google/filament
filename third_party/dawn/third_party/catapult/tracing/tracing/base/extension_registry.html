@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/extension_registry_base.html">
+<link rel="import" href="/tracing/base/extension_registry_basic.html">
+<link rel="import" href="/tracing/base/extension_registry_type_based.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper code for defining extension registries, which can be
+ * used to make a part of trace-viewer extensible.
+ *
+ * This file provides two basic types of extension registries:
+ * - Generic: register a type with metadata, query for those types based on
+ *            a predicate
+ *
+ * - TypeName-based: register a type that handles some combination
+ *                   of tracing categories or typeNames, then query
+ *                   for it based on a category, typeName or both.
+ *
+ * When you register subtypes, you pass the constructor for the
+ * subtype, and any metadata you want associated with the subtype. Use metadata
+ * instead of stuffing fields onto the constructor. E.g.:
+ *     registry.register(MySubclass, {titleWhenShownInTabStrip: 'MySub'})
+ *
+ * Some registries want a default object that is returned when a more precise
+ * subtype has not been registered. To provide one, set the defaultConstructor
+ * option on the registry options.
+ *
+ * TODO: Extension registry used to make reference to mandatoryBaseType but it
+ * was never enforced. We may want to add it back in the future in order to
+ * enforce the types that can be put into a given registry.
+ */
+tr.exportTo('tr.b', function() {
+  function decorateExtensionRegistry(registry, registryOptions) {
+    if (registry.register) {
+      throw new Error('Already has registry');
+    }
+
+    registryOptions.freeze();
+    if (registryOptions.mode === tr.b.BASIC_REGISTRY_MODE) {
+      tr.b._decorateBasicExtensionRegistry(registry, registryOptions);
+    } else if (registryOptions.mode === tr.b.TYPE_BASED_REGISTRY_MODE) {
+      tr.b._decorateTypeBasedExtensionRegistry(registry, registryOptions);
+    } else {
+      throw new Error('Unrecognized mode');
+    }
+
+    // Make it an event target.
+    if (registry.addEventListener === undefined) {
+      tr.b.EventTarget.decorate(registry);
+    }
+  }
+
+  return {
+    decorateExtensionRegistry,
+  };
+});
+</script>

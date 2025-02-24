@@ -1,0 +1,18 @@
+{
+    "rules":[
+      {
+          "description": "Applications in this list will use ANGLE",
+          "choice": "angle",
+          "apps": [
+              {
+                  "packageName": "com.android.angle"
+              }
+          ]
+      },
+      {
+          "description": "Applications in this list will not use ANGLE",
+          "choice": "native",
+          "apps": []
+      }
+   ]
+}

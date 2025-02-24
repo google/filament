@@ -1,0 +1,85 @@
+Name
+
+    ANGLE_global_fence_sync
+
+Name Strings
+
+    EGL_ANGLE_global_fence_sync
+
+Contributors
+
+    Shahbaz Youssefi, Google
+
+Contacts
+
+    Shahbaz Youssefi, Google (syoussefi 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2024-02-13
+
+Number
+
+    EGL Extensions XXX
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension enables the creation of EGL fence sync objects that
+    synchronize with all past submissions of all contexts.  Normally, if two
+    contexts make submissions, even on the same thread, the inserted fence sync
+    only guarantees synchronization with the submissions from the context in
+    which the fence was inserted.  With the new fence sync type introduced by
+    this extension, the application can synchronize with both contexts in this
+    example using a single fence.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <type> parameter of eglCreateSync, and returned
+    in <value> when eglGetSyncAttrib is called with <attribute>
+    EGL_SYNC_TYPE:
+
+    EGL_SYNC_GLOBAL_FENCE_ANGLE                         0x34DE
+
+Additions to the EGL Specification
+
+    Add the following after the second paragraph of Section 3.8.1.1 (Creating
+    Fence Sync Objects),
+
+    "If <type> is EGL_SYNC_GLOBAL_FENCE_ANGLE, behavior is identical to
+    EGL_SYNC_FENCE except that synchronization is additionally done with all
+    previously submitted commands by all contexts."
+
+    In the Errors of eglCreateSync, replace all instances of "If type is
+    EGL_SYNC_FENCE" with "If type is EGL_SYNC_FENCE or
+    EGL_SYNC_GLOBAL_FENCE_ANGLE".
+
+Issues
+
+    None.
+
+Revision History
+
+    Version 1, 2024-02-13
+      - Initial draft
+

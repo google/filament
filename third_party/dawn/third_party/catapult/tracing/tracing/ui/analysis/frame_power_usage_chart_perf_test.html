@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_sample.html">
+<link rel="import" href="/tracing/model/power_series.html">
+<link rel="import" href="/tracing/ui/analysis/frame_power_usage_chart.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function instantiateManyFrames() {
+    const model = new tr.Model();
+    const numFrames = 200;
+    const samplesPerFrame = 200;
+
+    // Set up the test data.
+    const series = new tr.model.PowerSeries(model.device);
+    const vsyncTimestamps = [];
+    for (let i = 0; i < numFrames; i++) {
+      vsyncTimestamps.push(i * samplesPerFrame);
+      for (let j = 0; j < samplesPerFrame; j++) {
+        series.addPowerSample(vsyncTimestamps[i] + j, j);
+      }
+    }
+    const samples = series.samples;
+
+    // Display the chart.
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(samples), vsyncTimestamps);
+    this.addHTMLOutput(chart);
+  }
+
+  timedPerfTest('frame_power_usage_chart', instantiateManyFrames, {
+    iterations: 1
+  });
+});
+</script>

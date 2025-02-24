@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses drm driver events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux vmscan trace events.
+   * @constructor
+   */
+  function MemReclaimParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('mm_vmscan_kswapd_wake',
+        MemReclaimParser.prototype.kswapdWake.bind(this));
+    importer.registerEventHandler('mm_vmscan_kswapd_sleep',
+        MemReclaimParser.prototype.kswapdSleep.bind(this));
+    importer.registerEventHandler('mm_vmscan_direct_reclaim_begin',
+        MemReclaimParser.prototype.reclaimBegin.bind(this));
+    importer.registerEventHandler('mm_vmscan_direct_reclaim_end',
+        MemReclaimParser.prototype.reclaimEnd.bind(this));
+    importer.registerEventHandler('lowmemory_kill',
+        MemReclaimParser.prototype.lowmemoryKill.bind(this));
+  }
+
+  // Matches the mm_vmscan_kswapd_wake record
+  //  mm_vmscan_kswapd_wake: nid=%d order=%d
+  const kswapdWakeRE = /nid=(\d+) order=(\d+)/;
+
+  // Matches the mm_vmscan_kswapd_sleep record
+  //  mm_vmscan_kswapd_sleep: order=%d
+  const kswapdSleepRE = /nid=(\d+)/;
+
+  // Matches the mm_vmscan_direct_reclaim_begin record
+  //  mm_vmscan_direct_reclaim_begin: order=%d may_writepage=%d gfp_flags=%s
+  const reclaimBeginRE = /order=(\d+) may_writepage=\d+ gfp_flags=(.+)/;
+
+  // Matches the mm_vmscan_direct_reclaim_end record
+  //  mm_vmscan_direct_reclaim_end: nr_reclaimed=%lu
+  const reclaimEndRE = /nr_reclaimed=(\d+)/;
+
+  // Matches the lowmemory_kill record
+  const lowmemoryRE =
+    /([^ ]+) \((\d+)\), page cache (\d+)kB \(limit (\d+)kB\), free (-?\d+)Kb/;
+
+  MemReclaimParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses memreclaim events and sets up state in the importer.
+     */
+    kswapdWake(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = kswapdWakeRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const tgid = parseInt(eventBase.tgid);
+
+      const nid = parseInt(event[1]);
+      const order = parseInt(event[2]);
+
+      const kthread = this.importer.getOrCreateKernelThread(
+          eventBase.threadName, tgid, pid);
+
+      if (kthread.openSliceTS) {
+        if (order > kthread.order) {
+          kthread.order = order;
+        }
+      } else {
+        kthread.openSliceTS = ts;
+        kthread.order = order;
+      }
+      kthread.waitingFor = 'kswapSleep';
+      return true;
+    },
+
+    kswapdSleep(eventName, cpuNumber, pid, ts, eventBase) {
+      const tgid = parseInt(eventBase.tgid);
+
+      const kthread = this.importer.getOrCreateKernelThread(
+          eventBase.threadName, tgid, pid);
+      if (kthread.waitingFor !== 'kswapSleep') return false;
+      kthread.waitingFor = undefined;
+
+      if (kthread.openSliceTS) {
+        kthread.thread.sliceGroup.pushCompleteSlice(
+            'memreclaim', eventBase.threadName, kthread.openSliceTS,
+            ts - kthread.openSliceTS, 0, 0,
+            {
+              order: kthread.order
+            });
+      }
+      kthread.openSliceTS = undefined;
+      kthread.order = undefined;
+      return true;
+    },
+
+    reclaimBegin(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = reclaimBeginRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const order = parseInt(event[1]);
+      const gfp = event[2];
+      const tgid = parseInt(eventBase.tgid);
+
+      const kthread = this.importer.getOrCreateKernelThread(
+          eventBase.threadName, tgid, pid);
+
+      kthread.openMemReclaimSliceTS = ts;
+      kthread.order = order;
+      kthread.gfp = gfp;
+      kthread.waitingFor = 'reclaimEnd';
+      return true;
+    },
+
+    reclaimEnd(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = reclaimEndRE.exec(eventBase.details);
+      if (!event) return false;
+      const nrReclaimed = parseInt(event[1]);
+      const tgid = parseInt(eventBase.tgid);
+
+      const kthread = this.importer.getOrCreateKernelThread(
+          eventBase.threadName, tgid, pid);
+      if (kthread.waitingFor !== 'reclaimEnd') return false;
+      kthread.waitingFor = undefined;
+
+      if (kthread.openMemReclaimSliceTS !== undefined) {
+        kthread.thread.sliceGroup.pushCompleteSlice('memreclaim',
+            'direct reclaim', kthread.openMemReclaimSliceTS,
+            ts - kthread.openMemReclaimSliceTS,
+            0, 0,
+            {
+              order: kthread.order,
+              gfp: kthread.gfp,
+              nr_reclaimed: nrReclaimed
+            });
+        kthread.openMemReclaimSliceTS = undefined;
+        kthread.order = undefined;
+        kthread.gfp = undefined;
+        return true;
+      }
+      return false;
+    },
+
+    lowmemoryKill(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = lowmemoryRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const tgid = parseInt(eventBase.tgid);
+      const killedName = event[1];
+      const killedPid = parseInt(event[2]);
+      const cache = parseInt(event[3]);
+      const free = parseInt(event[5]);
+
+      const kthread = this.importer.getOrCreateKernelThread(
+          eventBase.threadName, tgid, pid);
+
+      kthread.thread.sliceGroup.pushCompleteSlice('lowmemory',
+          'low memory kill', ts, 0,
+          0, 0,
+          {
+            killed_name: killedName,
+            killed_pid: killedPid,
+            cache,
+            free
+          });
+      return true;
+    }
+  };
+
+  Parser.register(MemReclaimParser);
+
+  return {
+    MemReclaimParser,
+  };
+});
+</script>

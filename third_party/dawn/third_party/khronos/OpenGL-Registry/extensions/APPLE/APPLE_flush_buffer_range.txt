@@ -1,0 +1,280 @@
+Name
+
+    APPLE_flush_buffer_range
+
+Name Strings
+
+    GL_APPLE_flush_buffer_range
+
+Contact
+
+    Chris Niederauer, Apple (ccn 'at' apple.com)
+
+Status
+
+    Shipping on Mac OS X.
+
+Version
+
+    Last Modified Date: 19 March 2008
+    Author Revision: 1.1
+
+Number
+
+    321
+
+Dependencies
+
+    Buffer Objects as per ARB_vertex_buffer_object or OpenGL 1.5 are required.
+
+    If ARB_pixel_buffer_object is NOT supported and the OpenGL version is less
+    than 2.1, ignore references to PIXEL_UNPACK_BUFFER and PIXEL_PACK_BUFFER.
+
+    If APPLE_fence or similar fencing mechanism is NOT suppported, Finish can
+    be used in place of TestObject, FinishObject, TestFence and FinishFence.
+
+    Written based on the wording of the OpenGL 2.1 specification.
+
+Overview
+
+    APPLE_flush_buffer_range expands the buffer object API to allow greater
+    performance when a client application only needs to write to a sub-range
+    of a buffer object. To that end, this extension introduces two new buffer
+    object features: non-serialized buffer modification and explicit sub-range
+    flushing for mapped buffer objects.
+
+    OpenGL requires that commands occur in a FIFO manner meaning that any
+    changes to buffer objects either block until the data has been processed by
+    the OpenGL pipeline or else create extra copies to avoid such a block.  By
+    providing a method to asynchronously modify buffer object data, an
+    application is then able to manage the synchronization points themselves
+    and modify ranges of data contained by a buffer object even though OpenGL
+    might still be using other parts of it.
+
+    This extension also provides a method for explicitly flushing ranges of a
+    mapped buffer object so OpenGL does not have to assume that the entire
+    range may have been modified.
+
+    Affects ARB_vertex_buffer_object, ARB_pixel_buffer_object and OpenGL 1.5
+    Buffer Objects.
+
+Issues
+
+    Should the ability to update other Buffer Object state such as BUFFER_SIZE
+    and BUFFER_USAGE be added to BufferParameteriAPPLE?
+
+        RESOLVED:  No.  API already exists for setting this state and allowing
+        this new API to update this state would add more semantics that this
+        extension is not trying to address.  Also as decided when working on
+        the ARB_vertex_buffer_object extension: "It is desirable for the
+        implementation to know the usage when the buffer is initialized, so
+        including it in the initialization command makes sense."
+
+    Should a MapSubBuffer API be added to avoid having the application manually
+    flush memory which is not modified within a buffer object?
+
+        RESOLVED:  No.  An application may still want to modify multiple
+        sections of a buffer object simultaneously such as for procedural data
+        and providing a range flushing routine allows an implementation to
+        effectively achieve the same performance benefits.
+
+        Secondly, providing a MapSubBuffer routine might be confusing to
+        developers as one might think that MapSubBuffers could know which
+        sections need to block or provide temporary intermediary buffers and
+        in theory achieve the same benefits as adding a flag that states that
+        the application would like to asynchronously modify some buffer object
+        data; however, implementing a "smart" MapSubBuffer function would be
+        difficult to make efficient.
+
+    When flushing ranges manually, should new API be added or should
+    BufferSubData be overloaded?
+
+        RESOLVED:  New API should be added specifically for this task.  Trying
+        to override BufferSubData becomes cumbersome for many reasons.  In
+        order to use BufferSubData, the behavior would need to change when
+        called inside of a MapBuffer/UnmapBuffer pair to not throw an error and
+        the <data> parameter would then either not be used or cause a specific
+        behavior.  It is much simpler to provide new API specifically targeted
+        at the task of manually flushing memory regions.  This is also less
+        prone to errors in legacy applications that may incorrectly use
+        BufferSubData in situations that should cause invalid operation errors
+        prior to the introduction of this extension.
+
+New Procedures and Functions
+
+    void BufferParameteriAPPLE(enum target, enum pname, int param);
+
+    void FlushMappedBufferRangeAPPLE(enum target, intptr offset,
+                                     sizeiptr size);
+
+New Tokens
+
+    Accepted by the <pname> parameter of BufferParameteriAPPLE and
+    GetBufferParameteriv:
+
+        BUFFER_SERIALIZED_MODIFY_APPLE      0x8A12
+        BUFFER_FLUSHING_UNMAP_APPLE         0x8A13
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (Buffer Objects)
+
+    - (2.9, p. 33) Add new BufferParameter parameters:
+
+    Add to Table 2.6 (p. 34):
+
+        Name                             Type     Initial Value   Legal Values
+        ------------------------------   -------  -------------   ------------
+        BUFFER_SERIALIZED_MODIFY_APPLE   boolean      TRUE        TRUE, FALSE
+        BUFFER_FLUSHING_UNMAP_APPLE      boolean      TRUE        TRUE, FALSE
+
+    Change Table 2.7 (p. 36) caption to:
+
+        Table 2.7: Buffer object state set by BufferData.
+
+    Add to the end of Section 2.9 (p. 38):
+
+    The serialized modification and flushing unmap parameters are specified by
+    calling
+
+        void BufferParameteriAPPLE(enum target, enum pname, int param);
+
+    with <target> set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER, or PIXEL_PACK_BUFFER.  <pname> is one of
+    BUFFER_SERIALIZED_MODIFY_APPLE or BUFFER_FLUSHING_UNMAP_APPLE and <param>
+    specifies the new value for parameter <pname>.
+        By setting the value of the parameter BUFFER_SERIALIZED_MODIFY_APPLE to
+    FALSE, the client must then manually synchronize any modifcations to the
+    buffer object data and usage by OpenGL.  In order to maintain coherency
+    when BUFFER_SERIALIZED_MODIFY_APPLE is disabled, synchronization must be
+    done after drawing with a buffer object prior to mapping its data for
+    modification using fences.  A fence, such as the type of fence defined in
+    the APPLE_fence extension, allows selective synchronization.  The client
+    can set a fence immediately after drawing with the data in question and
+    test or finish that fence prior to calling MapBuffer or BufferSubData.
+    This serialization relaxation also applies to all OpenGL commands which may
+    write to a buffer object such as ReadPixels and GetTexImage.
+        Setting the value of the parameter BUFFER_FLUSHING_UNMAP_APPLE to FALSE
+    allows the client to specify regions of a mapped buffer object that have
+    been modified by calling
+
+        void FlushMappedBufferRangeAPPLE(enum target, intptr offset,
+                                         sizeiptr size);
+
+    prior to unmapping.  <target> must be set to one of ARRAY_BUFFER,
+    ELEMENT_ARRAY_BUFFER, PIXEL_UNPACK_BUFFER, or PIXEL_PACK_BUFFER.  <offset>
+    and <size> indicate the range of data in the buffer object that has been
+    modified in terms of basic machine units.  An INVALID_VALUE error is
+    generated if <offset> or <size> is less than zero, or if <offset> + <size>
+    is greater than the value of BUFFER_SIZE. When BUFFER_FLUSHING_UNMAP_APPLE
+    is set to FALSE, FlushMappedBufferRangeAPPLE must be called on all modified
+    ranges of a mapped buffer object after the data within each specified range
+    has been modified and prior to unmapping it, allowing OpenGL to flush only
+    the portions of the buffer object that have been modified.  Any modified
+    ranges of a mapped buffer object that are not explicitly flushed prior to
+    unmapping when BUFFER_FLUSHING_UNMAP_APPLE is set to FALSE become
+    undefined.
+
+Errors
+
+    INVALID_ENUM is generated if the <target> parameter of
+    BufferParameteriAPPLE and FlushMappedBufferRangeAPPLE is not ARRAY_BUFFER,
+    ELEMENT_ARRAY_BUFFER, PIXEL_PACK_BUFFER or PIXEL_UNPACK_BUFFER.
+
+    INVALID_ENUM is generated if the <pname> parameter of BufferParameteriAPPLE
+    is not BUFFER_SERIALIZED_MODIFY_APPLE or BUFFER_NON_FLUSHING_UNMAP_APPLE.
+
+    INVALID_OPERATION is generated if BufferParameteriAPPLE or
+    FlushMappedBufferRangeAPPLE is executed while zero is bound to the <target>
+    parameter.
+
+    INVALID_OPERATION is generated if FlushMappedBufferRangeAPPLE is called
+    outside the execution of a MapBuffer and the corresponding execution of
+    UnmapBuffer.
+
+    INVALID_OPERATION may be generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+    INVALID_VALUE is generated if the <offset> or <size> parameters of
+    FlushMappedBufferRangeAPPLE are negative.
+
+    INVALID_VALUE is generated if the <offset> and <size> parameters of
+    FlushMappedBufferRangeAPPLE define a region of memory that extends beyond
+    that allocated by BufferData.
+
+New State
+
+    Add to Table 6.9 (p. 274):
+                                                                Initial
+    Get Value                       Type  Get Command            Value   Description                     Sec  Attrib
+    ------------------------------  ----  --------------------  -------  ------------------------------  ---  ------
+    BUFFER_SERIALIZED_MODIFY_APPLE   B    GetBufferParameteriv   TRUE    Buffer serialized modify param  2.9    -
+    BUFFER_FLUSHING_UNMAP_APPLE      B    GetBufferParameteriv   TRUE    Buffer flushing unmap param     2.9    -
+
+New Implementation Dependent State
+
+    None
+
+Usage Examples
+
+    This extension can be used in place of using multiple buffer objects for
+    applications that may have algorithms that can not efficiently use the
+    existing buffer object API.
+
+    Convenient macro definition for specifying buffer offsets:
+
+        #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+    Example of updating small amounts of data in a large VBO:
+
+        //  setup time
+        glBindBuffer(GL_ARRAY_BUFFER, my_vbo);
+        glBufferData(GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW);
+        glBufferParameteriAPPLE(GL_ARRAY_BUFFER, GL_BUFFER_FLUSHING_UNMAP_APPLE, GL_FALSE);
+
+        //  update/draw time
+        glBindBuffer(GL_ARRAY_BUFFER, my_vbo);
+        GLvoid *data = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        for i to n {
+            if (need_to_change_region_i) {
+                //  modify region i
+                glFlushMappedBufferRangeAPPLE(GL_ARRAY_BUFFER, BUFFER_OFFSET(region_i_offset), region_i_size);
+            }
+        }
+        glUnmapBuffer(GL_ARRAY_BUFFER);
+        //  draw from vertex data in buffer object
+
+    Example of updating sections of a VBO serializing with APPLE_fence:
+
+        //  setup time
+        glBindBuffer(GL_ARRAY_BUFFER, my_vbo);
+        glBufferData(GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW);
+        glBufferParameteriAPPLE(GL_ARRAY_BUFFER, GL_BUFFER_SERIALIZING_MODIFY_APPLE, GL_FALSE);
+        glBufferParameteriAPPLE(GL_ARRAY_BUFFER, GL_BUFFER_FLUSHING_UNMAP_APPLE, GL_FALSE);
+
+        //  update/draw time
+        glBindBuffer(GL_ARRAY_BUFFER, my_vbo);
+        while(!glTestFenceAPPLE(current_regions_fence))
+        {
+            //  Do some more work if OpenGL is still using the
+            //  portions of the VBO that we want to modify.
+        }
+        GLvoid *data = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        for i to n in regions {
+            if (need_to_change_region_i) {
+                //  modify region i
+                glFlushMappedBufferRangeAPPLE(GL_ARRAY_BUFFER, BUFFER_OFFSET(region_i_offset), region_i_size);
+            }
+        }
+        glUnmapBuffer(GL_ARRAY_BUFFER);
+        //  draw from vertex data in region and set appropriate fence afterward
+
+Revision History
+
+    03/19/2008    1.1
+        - Introduced errors when FlushMappedBufferRangeAPPLE is given bad
+          offset or size parameters.
+        - Clarified that FlushMappedBufferRangeAPPLE must be called after the
+          data in the mapped buffer object range has been modified.
+
+    10/04/2006    1.0
+        - Initial public revision.

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/scripting_controller.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/tquery/tquery.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createTestModel(sliceCount) {
+    const slices = [];
+    for (let i = 0; i < sliceCount; i++) {
+      slices.push(tr.c.TestUtils.newSliceEx({start: 1, duration: 2}));
+    }
+    return createTestModelWithSlices(slices);
+  }
+
+  function createTestModelWithSlices(slices) {
+    const model = new tr.Model();
+    const cpu = model.kernel.getOrCreateCpu(1);
+    for (let i = 0; i < slices.length; i++) {
+      cpu.slices.push(slices[i]);
+    }
+    return model;
+  }
+
+  function getScriptObject(name) {
+    const typeInfos = tr.c.ScriptingObjectRegistry.getAllRegisteredTypeInfos();
+    for (let i = 0; i < typeInfos.length; i++) {
+      if (typeInfos[i].metadata.name === name) {
+        return typeInfos[i].constructor;
+      }
+    }
+  }
+
+  test('tqueryAsyncSelection', function() {
+    const model = createTestModel(3);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    return tquery.ready().then(function(selection) {
+      assert.strictEqual(selection.length, 3);
+    });
+  });
+
+  test('tquerySyncSelection', function() {
+    let model = createTestModel(3);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    assert.strictEqual(tquery.selection.length, 3);
+
+    // Selection should get reset when the model changes.
+    model = createTestModel(5);
+    tquery.onModelChanged(model);
+    assert.strictEqual(tquery.selection.length, 5);
+  });
+
+  test('tqueryPassThroughFiltering', function() {
+    const model = new createTestModel(3);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    const result = tquery.filter().filter().selection;
+    assert.strictEqual(result.length, 3);
+  });
+
+  test('tqueryFilterHasTitle', function() {
+    const hasTitle = getScriptObject('hasTitle');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b'},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(hasTitle('a')).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 1);
+
+    result = tquery.filter('b').selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 2);
+
+    result = tquery.filter(/^c$/).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 3);
+  });
+
+  test('tqueryFilterHasAncestor', function() {
+    const hasAncestor = getScriptObject('hasAncestor');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b', subSlices: [{guid: 4}]},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(hasAncestor('b')).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 4);
+
+    result = tquery.filter(hasAncestor()).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 4);
+
+    result = tquery.filter(hasAncestor('a')).selection;
+    assert.strictEqual(result.length, 0);
+  });
+
+  test('tqueryFilterAllOf', function() {
+    const allOf = getScriptObject('allOf');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a1'},
+      {guid: 2, title: 'b1'},
+      {guid: 3, title: 'c1'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(allOf('a1')).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 1);
+
+    result = tquery.filter(allOf('a1', /1/)).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 1);
+
+    result = tquery.filter(allOf()).selection;
+    assert.strictEqual(result.length, 3);
+  });
+
+  test('tqueryFilterAnyOf', function() {
+    const anyOf = getScriptObject('anyOf');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b'},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(anyOf('a', 'b')).selection;
+    assert.strictEqual(result.length, 2);
+    let nextGuid = 1;
+    for (const event of result) {
+      assert.strictEqual(event.guid, nextGuid++);
+    }
+
+    result = tquery.filter(anyOf('not there', 'a')).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 1);
+
+    result = tquery.filter(anyOf()).selection;
+    assert.strictEqual(result.length, 3);
+  });
+
+  test('tqueryFilterIsTopLevel', function() {
+    const isTopLevel = getScriptObject('isTopLevel');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b', subSlices: [{guid: 4}]},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(isTopLevel()).selection;
+    assert.strictEqual(result.length, 3);
+    let nextGuid = 1;
+    for (const event of result) {
+      assert.strictEqual(event.guid, nextGuid++);
+    }
+
+    result = tquery.filter(isTopLevel('a')).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 1);
+  });
+
+  test('tqueryFilterHasDuration', function() {
+    const hasDuration = getScriptObject('hasDuration');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a', duration: 1},
+      {guid: 2, title: 'b', duration: 2},
+      {guid: 3, title: 'c', duration: 3},
+      {guid: 4, title: 'no duration'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    let result = tquery.filter(hasDuration(1.5, 2.5)).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 2);
+
+    result = tquery.filter(hasDuration(3, Infinity)).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 3);
+
+    result = tquery.filter(hasDuration(-1, 0)).selection;
+    assert.strictEqual(result.length, 0);
+
+    result = tquery.filter(hasDuration(function(d) {
+      return d > 2;
+    })).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 3);
+  });
+
+  test('tqueryFilterNot', function() {
+    const not = getScriptObject('not');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b'},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    const result = tquery.filter(not(/a/)).selection;
+    assert.strictEqual(result.length, 2);
+    let nextGuid = 2;
+    for (const event of result) {
+      assert.strictEqual(event.guid, nextGuid++);
+    }
+
+    // Test a not() without any subexpressions.
+    assert.throws(function() { not(); });
+
+    // Test a not() with too many subexpressions.
+    assert.throws(function() { not(/a/, /b/); });
+  });
+
+  test('tqueryFilterNoneOf', function() {
+    const noneOf = getScriptObject('noneOf');
+    const model = createTestModelWithSlices([
+      {guid: 1, title: 'a'},
+      {guid: 2, title: 'b'},
+      {guid: 3, title: 'c'}
+    ]);
+    const tquery = new tr.e.tquery.TQuery(model);
+
+    const result = tquery.filter(noneOf(/a/, /b/)).selection;
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(tr.b.getOnlyElement(result).guid, 3);
+  });
+});
+</script>

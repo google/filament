@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/spacing_track.html">
+<link rel="import" href="/tracing/ui/tracks/thread_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays threads with only scheduling information but no
+   * slices. By default it's collapsed to minimize initial visual difference
+   * while allowing the user to drill-down into whatever process is
+   * interesting to them.
+   * @constructor
+   * @extends {ContainerTrack}
+   */
+  const OtherThreadsTrack = tr.ui.b.define(
+      'other-threads-track', tr.ui.tracks.OtherThreadsTrack);
+
+  const SpacingTrack = tr.ui.tracks.SpacingTrack;
+
+  OtherThreadsTrack.prototype = {
+
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+
+      this.header_ = document.createElement('tr-ui-b-heading');
+      this.header_.addEventListener('click', this.onHeaderClick_.bind(this));
+      this.header_.heading = 'Other Threads';
+      this.header_.tooltip = 'Threads with only scheduling information';
+      this.header_.arrowVisible = true;
+
+      this.threads_ = [];
+      this.expanded = false;
+      this.collapsible_ = true;
+    },
+
+    set threads(threads) {
+      this.threads_ = threads;
+      this.updateContents_();
+    },
+
+    set collapsible(collapsible) {
+      this.collapsible_ = collapsible;
+      this.updateContents_();
+    },
+
+    onHeaderClick_(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      this.expanded = !this.expanded;
+    },
+
+    get expanded() {
+      return this.header_.expanded;
+    },
+
+    set expanded(expanded) {
+      expanded = !!expanded;
+
+      if (this.expanded === expanded) return;
+
+      this.header_.expanded = expanded;
+
+      // Expanding and collapsing tracks is, essentially, growing and shrinking
+      // the viewport. We dispatch a change event to trigger any processing
+      // to happen.
+      this.viewport_.dispatchChangeEvent();
+
+      this.updateContents_();
+    },
+
+    updateContents_() {
+      this.detach();
+      if (this.collapsible_) {
+        Polymer.dom(this).appendChild(this.header_);
+      }
+      if (this.expanded || !this.collapsible_) {
+        for (const thread of this.threads_) {
+          const track = new tr.ui.tracks.ThreadTrack(this.viewport);
+          track.thread = thread;
+          if (!track.hasVisibleContent) return;
+
+          Polymer.dom(this).appendChild(track);
+          Polymer.dom(this).appendChild(new SpacingTrack(this.viewport));
+        }
+      }
+    }
+  };
+
+  return {
+    OtherThreadsTrack,
+  };
+});
+</script>

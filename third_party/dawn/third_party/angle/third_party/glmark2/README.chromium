@@ -1,0 +1,13 @@
+Name: glmark2
+Short Name: glmark2
+URL: https://github.com/glmark2/glmark2
+Version: ca8de51fedb70bace5351c6b002eb952c747e889
+Security Critical: no
+Shipped: no
+License: GPL v3
+
+Description:
+glmark2 is an OpenGL 2.0 and ES 2.0 benchmark.
+
+glmark2 is developed by Alexandros Frantzis and Jesse Barker based on the
+original glmark benchmark by Ben Smith.

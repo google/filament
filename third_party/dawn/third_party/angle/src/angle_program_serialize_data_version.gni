@@ -1,0 +1,89 @@
+# Copyright 2022 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define a list of source files that ANGLE_PROGRAM_VERSION hash value is
+# generated from. When any of the files listed below changes, the
+# ANGLE_PROGRAM_VERSION should change and we will invalidate shader program
+# cache blobs: applications will compile shader programs from scratch and not
+# loading from blob caches.
+
+# The path of all the files added to angle_code_affecting_program_serialize
+# must be relative to angle_root.
+
+import("compiler.gni")
+import("libANGLE/renderer/d3d/d3d_backend.gni")
+import("libANGLE/renderer/gl/gl_backend.gni")
+import("libANGLE/renderer/metal/metal_backend.gni")
+import("libANGLE/renderer/null/null_backend.gni")
+import("libANGLE/renderer/vulkan/vulkan_backend.gni")
+import("libANGLE/renderer/wgpu/wgpu_sources.gni")
+import("libGLESv2.gni")
+
+angle_code_affecting_program_serialize = libangle_common_sources
+angle_code_affecting_program_serialize += libangle_headers
+angle_code_affecting_program_serialize += libangle_sources
+angle_code_affecting_program_serialize += libangle_includes
+angle_code_affecting_program_serialize += angle_translator_exported_headers
+angle_code_affecting_program_serialize += angle_translator_sources
+angle_code_affecting_program_serialize += angle_translator_glsl_base_sources
+angle_code_affecting_program_serialize +=
+    angle_translator_glsl_and_vulkan_base_sources
+angle_code_affecting_program_serialize += angle_translator_essl_sources
+angle_code_affecting_program_serialize += angle_translator_glsl_sources
+angle_code_affecting_program_serialize += angle_translator_glsl_apple_sources
+angle_code_affecting_program_serialize += angle_translator_hlsl_sources
+angle_code_affecting_program_serialize += angle_translator_lib_spirv_sources
+angle_code_affecting_program_serialize +=
+    angle_translator_essl_symbol_table_sources
+angle_code_affecting_program_serialize += angle_translator_lib_msl_sources
+angle_code_affecting_program_serialize += angle_translator_lib_wgsl_sources
+angle_code_affecting_program_serialize += angle_preprocessor_sources
+
+angle_dependencies_affecting_program_serialize = []
+
+vulkan_backend_dir = "libANGLE/renderer/vulkan/"
+angle_code_affecting_program_serialize +=
+    rebase_path(vulkan_backend_sources, angle_root, vulkan_backend_dir)
+
+gl_backend_dir = "libANGLE/renderer/gl/"
+angle_code_affecting_program_serialize +=
+    rebase_path(gl_backend_sources, angle_root, gl_backend_dir)
+
+d3d_backend_dir = "libANGLE/renderer/d3d/"
+angle_code_affecting_program_serialize +=
+    rebase_path(d3d_shared_sources, angle_root, d3d_backend_dir)
+
+if (angle_enable_d3d9) {
+  angle_code_affecting_program_serialize +=
+      rebase_path(d3d9_backend_sources, angle_root, d3d_backend_dir)
+}
+
+if (angle_enable_d3d11) {
+  angle_code_affecting_program_serialize +=
+      rebase_path(d3d11_backend_sources, angle_root, d3d_backend_dir)
+}
+
+null_backend_dir = "libANGLE/renderer/null/"
+angle_code_affecting_program_serialize +=
+    rebase_path(null_backend_sources, angle_root, null_backend_dir)
+
+if (angle_enable_metal) {
+  metal_backend_dir = "libANGLE/renderer/metal/"
+  angle_code_affecting_program_serialize +=
+      rebase_path(metal_backend_sources, angle_root, metal_backend_dir)
+  if (metal_internal_shader_compilation_supported) {
+    angle_dependencies_affecting_program_serialize +=
+        [ "src/libANGLE/renderer/metal:angle_metal_internal_shaders" ]
+  }
+}
+
+if (angle_enable_wgpu) {
+  wgpu_backend_dir = "libANGLE/renderer/wgpu/"
+  angle_code_affecting_program_serialize +=
+      rebase_path(wgpu_backend_sources, angle_root, wgpu_backend_dir)
+}
+
+if (angle_has_frame_capture) {
+  angle_code_affecting_program_serialize += libangle_capture_sources
+}

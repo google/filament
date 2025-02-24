@@ -1,0 +1,60 @@
+[
+  {
+    "cmd": [
+      "gn",
+      "gen",
+      "out/Release"
+    ],
+    "name": "gn"
+  },
+  {
+    "cmd": [
+      "ninja",
+      "-C",
+      "out/Release"
+    ],
+    "name": "ninja"
+  },
+  {
+    "cmd": [
+      "cipd",
+      "ensure",
+      "-root",
+      "[CACHE]/windows_sdk",
+      "-ensure-file",
+      "chrome_internal/third_party/sdk/windows uploaded:2018-06-13",
+      "-max-threads",
+      "0",
+      "-json-output",
+      "/path/to/tmp/json"
+    ],
+    "infra_step": true,
+    "name": "ensure_installed",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"result\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"instance_id\": \"resolved-instance_id-of-uploaded:2018-06\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"package\": \"chrome_internal/third_party/sdk/windows\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    ]@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "taskkill.exe",
+      "/f",
+      "/t",
+      "/im",
+      "mspdbsrv.exe"
+    ],
+    "name": "taskkill mspdbsrv"
+  },
+  {
+    "name": "$result"
+  }
+]

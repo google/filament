@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/dropdown.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function dispatchClick(elem, x, y) {
+    const clickEvent = document.createEvent('MouseEvents');
+    const bubbles = true;
+    const cancelable = false;
+    const button = 0;
+    const ctrlKey = false;
+    const altKey = false;
+    const shiftKey = false;
+    const metaKey = false;
+    clickEvent.initMouseEvent(
+        'click', bubbles, cancelable, document.defaultView, button, x, y, x,
+        y, ctrlKey, altKey, shiftKey, metaKey, button, elem);
+    elem.dispatchEvent(clickEvent);
+  }
+
+  // See https://crbug.com/1143376.
+  skipTest('basic', function() {
+    const dd = document.createElement('tr-ui-b-dropdown');
+    dd.style.marginLeft = '50px';
+    dd.style.width = '50px';
+    dd.label = 'Settings';
+
+    const textDiv = tr.ui.b.createDiv({textContent: 'text'});
+    Polymer.dom(dd).appendChild(textDiv);
+    const target = {};
+    const checkbox = tr.ui.b.createCheckBox(
+        target, 'enabled', undefined, true, 'checkbox');
+    const actualCheckbox = checkbox.querySelector('input');
+    Polymer.dom(dd).appendChild(checkbox);
+
+    const container = tr.ui.b.createDiv();
+    container.style.height = '100px';
+    Polymer.dom(container).appendChild(dd);
+    Polymer.dom(container).appendChild(
+        tr.ui.b.createDiv({textContent: 'some text'}));
+    this.addHTMLOutput(container);
+
+    dd.open();
+    assert.isTrue(dd.isOpen);
+
+    dd.close();
+    assert.isFalse(dd.isOpen);
+
+    dd.open();
+    assert.isTrue(dd.isOpen);
+
+    // Dispatching a click event at contents of the dropdown should never close
+    // it, even if it is outside of the dropdown, which can happen if the user
+    // presses the spacebar while the checkbox is focused.
+    const actualCheckboxRect = actualCheckbox.getBoundingClientRect();
+    dispatchClick(
+        actualCheckbox, actualCheckboxRect.left, actualCheckboxRect.top);
+    assert.isTrue(dd.isOpen);
+    dispatchClick(actualCheckbox, 0, 0);
+    assert.isTrue(dd.isOpen);
+
+    const textDivRect = textDiv.getBoundingClientRect();
+    dispatchClick(textDiv, textDivRect.left, textDivRect.top);
+    assert.isTrue(dd.isOpen);
+    dispatchClick(textDiv, 0, 0);
+    assert.isTrue(dd.isOpen);
+
+    // Clicking outside the dropdown should close it.
+    dispatchClick(dd.$.dialog, 0, 0);
+    assert.isFalse(dd.isOpen);
+  });
+});
+</script>

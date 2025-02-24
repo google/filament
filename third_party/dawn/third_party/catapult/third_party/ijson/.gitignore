@@ -1,0 +1,3 @@
+*.pyc
+.tox
+ijson.egg-info

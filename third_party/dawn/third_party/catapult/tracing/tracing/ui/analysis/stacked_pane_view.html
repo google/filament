@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<!--
+@fileoverview Analysis view container which displays vertically stacked panes.
+The panes represent a hierarchy where a child pane contains the details of the
+current selection in its parent pane. The container provides simple primitives
+for panes to request changing their child pane:
+
+  +=<tr-ui-a-stacked-pane-view>=+              +=<tr-ui-a-stacked-pane-view>=+
+  |+.<tr-ui-a-stacked-pane>....+|              |+.<tr-ui-a-stacked-pane>....+|
+  |: Pane 1                    +| ===========> |: Pane 1                    +|
+  |+...........................+|    Pane 1    |+...........................+|
+  |+.<tr-ui-a-stacked-pane>....+|   requests   |+.<tr-ui-a-stacked-pane>....+|
+  |: Pane 2 (detail of Pane 1) +|  child pane  |: Pane 4 (detail of Pane 1) +|
+  |+...........................+| change (e.g. |+...........................+|
+  |+.<tr-ui-a-stacked-pane>....+|  selection   +=============================+
+  |: Pane 3 (detail of Pane 2) +|   changed)
+  |+...........................+|
+  +=============================+
+
+Note that the actual UI provided by tr-ui-a-stacked-pane-view and
+tr-ui-a-stacked-pane is merely a wrapper container with flex box vertical
+stacking. No other visual features (such as pane spacing or borders) is
+provided by either element.
+
+The stacked pane element (tr-ui-a-stacked-pane) is defined in a separate file.
+
+Sample use case:
+
+  Create an empty stacked pane view and add it to the DOM:
+
+    const paneView = document.createElement('tr-ui-a-stacked-pane-view');
+    Polymer.dom(someParentView).appendChild(paneView);
+
+  Define one or more pane subclasses:
+
+    TODO(polymer): Write this documentation
+    <polymer-element name="some-pane-1" extends="tr-ui-a-stacked-pane">
+      ...
+    </polymer-element>
+
+  Set the top-level pane (by providing a builder function):
+
+    paneView.setPaneBuilder(function() {
+      const topPane = document.createElement('some-pane-1');
+      pane.someProperty = someValue;
+      return topPane;
+    });
+
+  Show a child pane with details upon user interaction (these methods should be
+  in the definition of the pane subclass Polymer element):
+
+    ready: function() {
+      this.$.table.addEventListener(
+          'selection-changed', this.changeChildPane_.bind(this));
+    }
+
+    changeChildPane_: function() {
+      this.childPaneBuilder = function() {
+        const selectedRow = this.$.table.selectedTableRow;
+        const detailsPane = document.createElement('some-pane-2');
+        detailsPane.someProperty = selectedRow;
+        return detailsPane;
+      }.bind(this);
+    }
+-->
+<dom-module id='tr-ui-a-stacked-pane-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #pane_container > * {
+      flex: 0 0 auto;
+    }
+    </style>
+    <div id="pane_container">
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-stacked-pane-view',
+
+  /**
+   * Add a pane to the stacked pane view. This method performs two operations:
+   *
+   *   1. Remove existing descendant panes
+   *      If the optional parent pane is provided, all its current descendant
+   *      panes are removed. Otherwise, all panes are removed from the view.
+   *
+   *   2. Build and add new pane
+   *      If a pane builder is provided and returns a pane, the new pane is
+   *      appended to the view (after the provided parent, or at the top).
+   */
+  setPaneBuilder(paneBuilder, opt_parentPane) {
+    const paneContainer = this.$.pane_container;
+
+    // If the parent pane is provided, it must be an HTML element and a child
+    // of the pane container.
+    if (opt_parentPane) {
+      if (!(opt_parentPane instanceof HTMLElement)) {
+        throw new Error('Parent pane must be an HTML element');
+      }
+      if (opt_parentPane.parentElement !== paneContainer) {
+        throw new Error('Parent pane must be a child of the pane container');
+      }
+    }
+
+    // Remove all descendants of the parent pane (or all panes if no parent
+    // pane was specified) in reverse order.
+    while (Polymer.dom(paneContainer).lastElementChild !== null &&
+           Polymer.dom(paneContainer).lastElementChild !== opt_parentPane) {
+      const removedPane = Polymer.dom(this.$.pane_container).lastElementChild;
+      const listener = this.listeners_.get(removedPane);
+      if (listener === undefined) {
+        throw new Error('No listener associated with pane');
+      }
+      this.listeners_.delete(removedPane);
+      removedPane.removeEventListener(
+          'request-child-pane-change', listener);
+      Polymer.dom(paneContainer).removeChild(removedPane);
+    }
+
+    if (opt_parentPane && opt_parentPane.parentElement !== paneContainer) {
+      throw new Error('Parent pane was removed from the pane container');
+    }
+
+    // This check is performed here (and not at the beginning of the method)
+    // because undefined pane builder means that the parent pane requested
+    // having no child pane (e.g. when selection is cleared).
+    if (!paneBuilder) return;
+
+    const pane = paneBuilder();
+    if (!pane) return;
+
+    if (!(pane instanceof HTMLElement)) {
+      throw new Error('Pane must be an HTML element');
+    }
+
+    // Listen for child pane change requests from the newly added pane.
+    const listener = function(event) {
+      this.setPaneBuilder(pane.childPaneBuilder, pane);
+    }.bind(this);
+    if (!this.listeners_) {
+      // Instead of initializing the listeners map in a created() callback,
+      // we do it lazily here so that subclasses could provide their own
+      // created() callback (Polymer currently doesn't allow calling overriden
+      // superclass methods in strict mode).
+      this.listeners_ = new WeakMap();
+    }
+    this.listeners_.set(pane, listener);
+    pane.addEventListener('request-child-pane-change', listener);
+
+    Polymer.dom(paneContainer).appendChild(pane);
+    pane.appended();
+  },
+
+  /**
+   * Request rebuilding all panes in the view. The panes are rebuilt from the
+   * top to the bottom (so that parent panes could request changing their
+   * child panes when they're being rebuilt and the newly constructed child
+   * panes would be rebuilt as well).
+   */
+  rebuild() {
+    let currentPane = Polymer.dom(this.$.pane_container).firstElementChild;
+    while (currentPane) {
+      currentPane.rebuild();
+      currentPane = currentPane.nextElementSibling;
+    }
+  },
+
+  // For testing purposes.
+  get panesForTesting() {
+    const panes = [];
+    let currentChild = Polymer.dom(this.$.pane_container).firstElementChild;
+    while (currentChild) {
+      panes.push(currentChild);
+      currentChild = currentChild.nextElementSibling;
+    }
+    return panes;
+  }
+});
+</script>

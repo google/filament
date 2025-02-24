@@ -1,0 +1,69 @@
+//===- subzero/src/IceInstX8664.def - X-macros for x86-64 insts -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of lowered x86 instructions in the
+// form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICEINSTX86_DEF
+#define SUBZERO_SRC_ICEINSTX86_DEF
+
+#define ICEINSTX86BR_TABLE                                                     \
+  /* val, encode, opposite, dump, emit */                                      \
+  X(Br_o, 0, Br_no, "o", "jo")                                                 \
+  X(Br_no, 1, Br_o, "no", "jno")                                               \
+  X(Br_b, 2, Br_ae, "b", "jb")                                                 \
+  X(Br_ae, 3, Br_b, "ae", "jae")                                               \
+  X(Br_e, 4, Br_ne, "e", "je")                                                 \
+  X(Br_ne, 5, Br_e, "ne", "jne")                                               \
+  X(Br_be, 6, Br_a, "be", "jbe")                                               \
+  X(Br_a, 7, Br_be, "a", "ja")                                                 \
+  X(Br_s, 8, Br_ns, "s", "js")                                                 \
+  X(Br_ns, 9, Br_s, "ns", "jns")                                               \
+  X(Br_p, 10, Br_np, "p", "jp")                                                \
+  X(Br_np, 11, Br_p, "np", "jnp")                                              \
+  X(Br_l, 12, Br_ge, "l", "jl")                                                \
+  X(Br_ge, 13, Br_l, "ge", "jge")                                              \
+  X(Br_le, 14, Br_g, "le", "jle")                                              \
+  X(Br_g, 15, Br_le, "g", "jg")
+//#define X(val, encode, opp, dump, emit)
+
+#define ICEINSTX86CMPPS_TABLE                                                  \
+  /* val, emit */                                                              \
+  X(Cmpps_eq, "eq")                                                            \
+  X(Cmpps_lt, "lt")                                                            \
+  X(Cmpps_le, "le")                                                            \
+  X(Cmpps_unord, "unord")                                                      \
+  X(Cmpps_neq, "neq")                                                          \
+  X(Cmpps_nlt, "nlt")                                                          \
+  X(Cmpps_nle, "nle")                                                          \
+  X(Cmpps_ord, "ord")
+//#define X(val, emit)
+
+#define ICETYPEX86_TABLE                                                       \
+  /* tag,  elty, cvt,  sdss, pdps, spsd, int_, unpack, pack, width, fld */     \
+  X(void, void, "?", "", "", "", "", "", "", "", "")                           \
+  X(i1, void, "si", "", "", "", "", "", "", "b", "")                           \
+  X(i8, void, "si", "", "", "", "", "", "", "b", "")                           \
+  X(i16, void, "si", "", "", "", "", "", "", "w", "")                          \
+  X(i32, void, "si", "", "", "", "", "", "", "l", "")                          \
+  X(i64, void, "si", "", "", "", "", "", "", "q", "")                          \
+  X(f32, void, "ss", "ss", "ps", "ss", "d", "", "", "", "s")                   \
+  X(f64, void, "sd", "sd", "pd", "sd", "q", "", "", "", "l")                   \
+  X(v4i1, i32, "?", "", "", "", "d", "dq", "", "", "")                         \
+  X(v8i1, i16, "?", "", "", "", "w", "wd", "", "", "")                         \
+  X(v16i1, i8, "?", "", "", "", "b", "bw", "", "", "")                         \
+  X(v16i8, i8, "?", "", "", "", "b", "bw", "", "", "")                         \
+  X(v8i16, i16, "?", "", "", "", "w", "wd", "wb", "", "")                      \
+  X(v4i32, i32, "dq", "", "", "", "d", "dq", "dw", "", "")                     \
+  X(v4f32, f32, "ps", "", "ps", "ps", "d", "dq", "", "", "")
+//#define X(tag, elty, cvt, sdss, pdps, spsd, int_, unpack, pack, width, fld)
+
+#endif // SUBZERO_SRC_ICEINSTX8664_DEF

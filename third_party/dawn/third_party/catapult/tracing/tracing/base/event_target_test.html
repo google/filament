@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/event_target.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('sync', function() {
+    let listenerCallCount = 0;
+    function listener() { listenerCallCount++; }
+
+    const div = new tr.b.EventTarget();
+    tr.b.EventTarget.decorate(div);
+
+    assert.isFalse(div.hasEventListener('foo'));
+
+    div.addEventListener('foo', listener);
+    assert.isTrue(div.hasEventListener('foo'));
+
+    tr.b.dispatchSimpleEvent(div, 'foo');
+    assert.strictEqual(listenerCallCount, 1);
+
+    div.removeEventListener('foo', listener);
+
+    tr.b.dispatchSimpleEvent(div, 'foo');
+    assert.strictEqual(listenerCallCount, 1);
+
+    assert.isFalse(div.hasEventListener('foo'));
+  });
+
+  test('async', function() {
+    let listenerCallCount = 0;
+    async function listener() {
+      listenerCallCount++;
+      await Promise.resolve();
+    }
+
+    const div = new tr.b.EventTarget();
+    tr.b.EventTarget.decorate(div);
+
+    assert.isFalse(div.hasEventListener('foo'));
+
+    div.addEventListener('foo', listener);
+    assert.isTrue(div.hasEventListener('foo'));
+
+    tr.b.dispatchSimpleEventAsync(div, 'foo');
+    assert.strictEqual(listenerCallCount, 1);
+
+    div.removeEventListener('foo', listener);
+
+    tr.b.dispatchSimpleEventAsync(div, 'foo');
+    assert.strictEqual(listenerCallCount, 1);
+
+    assert.isFalse(div.hasEventListener('foo'));
+  });
+});
+</script>

@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color.html">
+<link rel="import" href="/tracing/base/math/quad.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/extras/chrome/cc/debug_colors.html">
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/extras/chrome/cc/render_pass.html">
+<link rel="import" href="/tracing/extras/chrome/cc/tile.html">
+<link rel="import" href="/tracing/extras/chrome/cc/util.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/base/info_bar.html">
+<link rel="import" href="/tracing/ui/base/quad_stack_view.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<template id='tr-ui-e-chrome-cc-layer-tree-quad-stack-view-template'>
+  <style>
+  #input-event {
+    background-image: url('./images/input-event.png');
+    display: none;
+  }
+  </style>
+  <img id='input-event'/>
+</template>
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Graphical view of  LayerTreeImpl, with controls for
+ * type of layer content shown and info bar for content-loading warnings.
+ */
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  const ColorScheme = tr.b.ColorScheme;
+
+  const THIS_DOC = document.currentScript.ownerDocument;
+  const TILE_HEATMAP_TYPE = {};
+  TILE_HEATMAP_TYPE.NONE = 'none';
+  TILE_HEATMAP_TYPE.SCHEDULED_PRIORITY = 'scheduledPriority';
+  TILE_HEATMAP_TYPE.USING_GPU_MEMORY = 'usingGpuMemory';
+
+  const cc = tr.ui.e.chrome.cc;
+
+  function createTileRectsSelectorBaseOptions() {
+    return [{label: 'None', value: 'none'},
+      {label: 'Coverage Rects', value: 'coverage'}];
+  }
+
+
+  /**
+   * @constructor
+   */
+  const LayerTreeQuadStackView =
+      tr.ui.b.define('tr-ui-e-chrome-cc-layer-tree-quad-stack-view');
+
+  LayerTreeQuadStackView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.style.flexGrow = 1;
+      this.style.flexShrink = 1;
+      this.style.flexBasis = 'auto';
+      this.style.flexDirection = 'column';
+      this.style.minHeight = 0;
+      this.style.display = 'flex';
+
+      this.isRenderPassQuads_ = false;
+      this.pictureAsImageData_ = {}; // Maps picture.guid to PictureAsImageData.
+      this.messages_ = [];
+      this.controls_ = document.createElement('top-controls');
+      this.controls_.style.flexGrow = 0;
+      this.controls_.style.flexShrink = 0;
+      this.controls_.style.flexBasis = 'auto';
+      this.controls_.style.backgroundImage =
+        '-webkit-gradient(linear, 0 0, 100% 0, from(#E5E5E5), to(#D1D1D1))';
+      this.controls_.style.borderBottom = '1px solid #8e8e8e';
+      this.controls_.style.borderTop = '1px solid white';
+      this.controls_.style.display = 'flex';
+      this.controls_.style.flexDirection = 'row';
+      this.controls_.style.flexWrap = 'wrap';
+      this.controls_.style.fontSize = '14px';
+      this.controls_.style.paddingLeft = '2px';
+      this.controls_.style.overflow = 'hidden';
+      this.infoBar_ = document.createElement('tr-ui-b-info-bar');
+      this.quadStackView_ = new tr.ui.b.QuadStackView();
+      this.quadStackView_.addEventListener(
+          'selectionchange', this.onQuadStackViewSelectionChange_.bind(this));
+      this.quadStackView_.style.flexGrow = 1;
+      this.quadStackView_.style.flexShrink = 1;
+      this.quadStackView_.style.flexBasis = 'auto';
+      this.quadStackView_.style.minWidth = '200px';
+
+      this.extraHighlightsByLayerId_ = undefined;
+      this.inputEventImageData_ = undefined;
+
+      const m = tr.ui.b.MOUSE_SELECTOR_MODE;
+      const mms = this.quadStackView_.mouseModeSelector;
+      mms.settingsKey = 'tr.e.cc.layerTreeQuadStackView.mouseModeSelector';
+      mms.setKeyCodeForMode(m.SELECTION, 'Z'.charCodeAt(0));
+      mms.setKeyCodeForMode(m.PANSCAN, 'X'.charCodeAt(0));
+      mms.setKeyCodeForMode(m.ZOOM, 'C'.charCodeAt(0));
+      mms.setKeyCodeForMode(m.ROTATE, 'V'.charCodeAt(0));
+
+      const node = tr.ui.b.instantiateTemplate(
+          '#tr-ui-e-chrome-cc-layer-tree-quad-stack-view-template', THIS_DOC);
+      Polymer.dom(this).appendChild(node);
+      Polymer.dom(this).appendChild(this.controls_);
+      Polymer.dom(this).appendChild(this.infoBar_);
+      Polymer.dom(this).appendChild(this.quadStackView_);
+
+      this.tileRectsSelector_ = tr.ui.b.createSelector(
+          this, 'howToShowTiles',
+          'layerView.howToShowTiles', 'none',
+          createTileRectsSelectorBaseOptions());
+      Polymer.dom(this.controls_).appendChild(this.tileRectsSelector_);
+
+      const tileHeatmapText = tr.ui.b.createSpan({
+        textContent: 'Tile heatmap:'
+      });
+      Polymer.dom(this.controls_).appendChild(tileHeatmapText);
+
+      const tileHeatmapSelector = tr.ui.b.createSelector(
+          this, 'tileHeatmapType',
+          'layerView.tileHeatmapType', TILE_HEATMAP_TYPE.NONE,
+          [{label: 'None',
+            value: TILE_HEATMAP_TYPE.NONE},
+          {label: 'Scheduled Priority',
+            value: TILE_HEATMAP_TYPE.SCHEDULED_PRIORITY},
+          {label: 'Is using GPU memory',
+            value: TILE_HEATMAP_TYPE.USING_GPU_MEMORY}
+          ]);
+      Polymer.dom(this.controls_).appendChild(tileHeatmapSelector);
+
+      const showOtherLayersCheckbox = tr.ui.b.createCheckBox(
+          this, 'showOtherLayers',
+          'layerView.showOtherLayers', true,
+          'Other layers/passes');
+      showOtherLayersCheckbox.title =
+          'When checked, show all layers, selected or not.';
+      Polymer.dom(this.controls_).appendChild(showOtherLayersCheckbox);
+
+      const showInvalidationsCheckbox = tr.ui.b.createCheckBox(
+          this, 'showInvalidations',
+          'layerView.showInvalidations', true,
+          'Invalidations');
+      showInvalidationsCheckbox.title =
+          'When checked, compositing invalidations are highlighted in red';
+      Polymer.dom(this.controls_).appendChild(showInvalidationsCheckbox);
+
+      const showUnrecordedRegionCheckbox = tr.ui.b.createCheckBox(
+          this, 'showUnrecordedRegion',
+          'layerView.showUnrecordedRegion', true,
+          'Unrecorded area');
+      showUnrecordedRegionCheckbox.title =
+          'When checked, unrecorded areas are highlighted in yellow';
+      Polymer.dom(this.controls_).appendChild(showUnrecordedRegionCheckbox);
+
+      const showBottlenecksCheckbox = tr.ui.b.createCheckBox(
+          this, 'showBottlenecks',
+          'layerView.showBottlenecks', true,
+          'Bottlenecks');
+      showBottlenecksCheckbox.title =
+          'When checked, scroll bottlenecks are highlighted';
+      Polymer.dom(this.controls_).appendChild(showBottlenecksCheckbox);
+
+      const showLayoutRectsCheckbox = tr.ui.b.createCheckBox(
+          this, 'showLayoutRects',
+          'layerView.showLayoutRects', false,
+          'Layout rects');
+      showLayoutRectsCheckbox.title =
+          'When checked, shows rects for regions where layout happened';
+      Polymer.dom(this.controls_).appendChild(showLayoutRectsCheckbox);
+
+      const showContentsCheckbox = tr.ui.b.createCheckBox(
+          this, 'showContents',
+          'layerView.showContents', true,
+          'Contents');
+      showContentsCheckbox.title =
+          'When checked, show the rendered contents inside the layer outlines';
+      Polymer.dom(this.controls_).appendChild(showContentsCheckbox);
+
+      const showAnimationBoundsCheckbox = tr.ui.b.createCheckBox(
+          this, 'showAnimationBounds',
+          'layerView.showAnimationBounds', false,
+          'Animation Bounds');
+      showAnimationBoundsCheckbox.title = 'When checked, show a border around' +
+          ' a layer showing the extent of its animation.';
+      Polymer.dom(this.controls_).appendChild(showAnimationBoundsCheckbox);
+
+      const showInputEventsCheckbox = tr.ui.b.createCheckBox(
+          this, 'showInputEvents',
+          'layerView.showInputEvents', true,
+          'Input events');
+      showInputEventsCheckbox.title = 'When checked, input events are ' +
+          'displayed as circles.';
+      Polymer.dom(this.controls_).appendChild(showInputEventsCheckbox);
+
+      this.whatRasterizedLink_ = document.createElement(
+          'tr-ui-a-analysis-link');
+      this.whatRasterizedLink_.style.position = 'absolute';
+      this.whatRasterizedLink_.style.bottom = '15px';
+      this.whatRasterizedLink_.style.left = '10px';
+      this.whatRasterizedLink_.selection =
+          this.getWhatRasterizedEventSet_.bind(this);
+      Polymer.dom(this.quadStackView_).appendChild(this.whatRasterizedLink_);
+    },
+
+    get layerTreeImpl() {
+      return this.layerTreeImpl_;
+    },
+
+    set isRenderPassQuads(newValue) {
+      this.isRenderPassQuads_ = newValue;
+    },
+
+    set layerTreeImpl(layerTreeImpl) {
+      if (this.layerTreeImpl_ === layerTreeImpl) return;
+
+      // FIXME(pdr): We may want to clear pictureAsImageData_ here to save
+      //             memory at the cost of performance. Note that
+      //             pictureAsImageData_ will be cleared when this is
+      //             destructed, but this view might live for several
+      //             layerTreeImpls.
+      this.layerTreeImpl_ = layerTreeImpl;
+      this.selection = undefined;
+    },
+
+    get extraHighlightsByLayerId() {
+      return this.extraHighlightsByLayerId_;
+    },
+
+    set extraHighlightsByLayerId(extraHighlightsByLayerId) {
+      this.extraHighlightsByLayerId_ = extraHighlightsByLayerId;
+      this.scheduleUpdateContents_();
+    },
+
+    get showOtherLayers() {
+      return this.showOtherLayers_;
+    },
+
+    set showOtherLayers(show) {
+      this.showOtherLayers_ = show;
+      this.updateContents_();
+    },
+
+    get showAnimationBounds() {
+      return this.showAnimationBounds_;
+    },
+
+    set showAnimationBounds(show) {
+      this.showAnimationBounds_ = show;
+      this.updateContents_();
+    },
+
+    get showInputEvents() {
+      return this.showInputEvents_;
+    },
+
+    set showInputEvents(show) {
+      this.showInputEvents_ = show;
+      this.updateContents_();
+    },
+
+    get showContents() {
+      return this.showContents_;
+    },
+
+    set showContents(show) {
+      this.showContents_ = show;
+      this.updateContents_();
+    },
+
+    get showInvalidations() {
+      return this.showInvalidations_;
+    },
+
+    set showInvalidations(show) {
+      this.showInvalidations_ = show;
+      this.updateContents_();
+    },
+
+    get showUnrecordedRegion() {
+      return this.showUnrecordedRegion_;
+    },
+
+    set showUnrecordedRegion(show) {
+      this.showUnrecordedRegion_ = show;
+      this.updateContents_();
+    },
+
+    get showBottlenecks() {
+      return this.showBottlenecks_;
+    },
+
+    set showBottlenecks(show) {
+      this.showBottlenecks_ = show;
+      this.updateContents_();
+    },
+
+    get showLayoutRects() {
+      return this.showLayoutRects_;
+    },
+
+    set showLayoutRects(show) {
+      this.showLayoutRects_ = show;
+      this.updateContents_();
+    },
+
+    get howToShowTiles() {
+      return this.howToShowTiles_;
+    },
+
+    set howToShowTiles(val) {
+      // Make sure val is something we expect.
+      if (val !== 'none' && val !== 'coverage' && isNaN(parseFloat(val))) {
+        throw new Error(
+            'howToShowTiles requires "none" or "coverage" or a number');
+      }
+
+      this.howToShowTiles_ = val;
+      this.updateContents_();
+    },
+
+    get tileHeatmapType() {
+      return this.tileHeatmapType_;
+    },
+
+    set tileHeatmapType(val) {
+      this.tileHeatmapType_ = val;
+      this.updateContents_();
+    },
+
+    get selection() {
+      return this.selection_;
+    },
+
+    set selection(selection) {
+      if (this.selection === selection) return;
+
+      this.selection_ = selection;
+      tr.b.dispatchSimpleEvent(this, 'selection-change');
+      this.updateContents_();
+    },
+
+    regenerateContent() {
+      this.updateTilesSelector_();
+      this.updateContents_();
+    },
+
+    loadDataForImageElement_(image, callback) {
+      const imageContent = window.getComputedStyle(image).backgroundImage;
+      if (!imageContent) {
+        // The style has not been applied because the view has not been added
+        // into the DOM tree yet. Try again in another cycle.
+        this.scheduleUpdateContents_();
+        return;
+      }
+      image.src = tr.ui.b.extractUrlString(imageContent);
+      image.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.drawImage(image, 0, 0);
+        const imageData = ctx.getImageData(
+            0, 0, canvas.width, canvas.height);
+        callback(imageData);
+      };
+    },
+
+    onQuadStackViewSelectionChange_(e) {
+      const selectableQuads = e.quads.filter(function(q) {
+        return q.selectionToSetIfClicked !== undefined;
+      });
+      if (selectableQuads.length === 0) {
+        this.selection = undefined;
+        return;
+      }
+
+      // Sort the quads low to high on stackingGroupId.
+      selectableQuads.sort(function(x, y) {
+        const z = x.stackingGroupId - y.stackingGroupId;
+        if (z !== 0) return z;
+
+        return x.selectionToSetIfClicked.specicifity -
+            y.selectionToSetIfClicked.specicifity;
+      });
+
+      // TODO(nduca): Support selecting N things at once.
+      const quadToSelect = selectableQuads[selectableQuads.length - 1];
+      this.selection = quadToSelect.selectionToSetIfClicked;
+    },
+
+    scheduleUpdateContents_() {
+      if (this.updateContentsPending_) return;
+
+      this.updateContentsPending_ = true;
+      tr.b.requestAnimationFrameInThisFrameIfPossible(
+          this.updateContents_, this);
+    },
+
+    updateContents_() {
+      if (!this.layerTreeImpl_) {
+        this.quadStackView_.headerText = 'No tree';
+        this.quadStackView_.quads = [];
+        return;
+      }
+
+
+      const status = this.computePictureLoadingStatus_();
+      if (!status.picturesComplete) return;
+
+      const lthi = this.layerTreeImpl_.layerTreeHostImpl;
+      const lthiInstance = lthi.objectInstance;
+      const worldViewportRect = tr.b.math.Rect.fromXYWH(
+          0, 0,
+          lthi.deviceViewportSize.width, lthi.deviceViewportSize.height);
+      this.quadStackView_.deviceRect = worldViewportRect;
+      if (this.isRenderPassQuads_) {
+        this.quadStackView_.quads = this.generateRenderPassQuads();
+      } else {
+        this.quadStackView_.quads = this.generateLayerQuads();
+      }
+
+      this.updateWhatRasterizedLinkState_();
+
+      let message = '';
+      if (lthi.tilesHaveGpuMemoryUsageInfo) {
+        const thisTreeUsageInBytes = this.layerTreeImpl_.gpuMemoryUsageInBytes;
+        const otherTreeUsageInBytes = lthi.gpuMemoryUsageInBytes -
+            thisTreeUsageInBytes;
+        message +=
+            tr.b.convertUnit(thisTreeUsageInBytes,
+                tr.b.UnitPrefixScale.BINARY.NONE,
+                tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) +
+            ' MiB on this tree';
+        if (otherTreeUsageInBytes) {
+          message += ', ' +
+              tr.b.convertUnit(otherTreeUsageInBytes,
+                  tr.b.UnitPrefixScale.BINARY.NONE,
+                  tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) +
+              ' MiB on the other tree';
+        }
+      } else {
+        if (this.layerTreeImpl_) {
+          const thisTreeUsageInBytes =
+            this.layerTreeImpl_.gpuMemoryUsageInBytes;
+          message +=
+              tr.b.convertUnit(thisTreeUsageInBytes,
+                  tr.b.UnitPrefixScale.BINARY.NONE,
+                  tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) +
+              ' MiB on this tree';
+
+          if (this.layerTreeImpl_.otherTree) {
+            // Older Chromes don't report enough data to know how much memory is
+            // being used across both trees. We know the memory consumed by each
+            // tree, but there is resource sharing *between the trees* so we
+            // can't simply sum up the per-tree costs. We need either the total
+            // plus one tree, to guess the unique on the other tree, etc. Newer
+            // chromes report memory per tile, which allows LTHI to compute the
+            // total tile memory usage, letting us figure things out properly.
+            message += ', ??? MiB on other tree. ';
+          }
+        }
+      }
+
+      if (lthi.args.tileManagerBasicState) {
+        const tmgs = lthi.args.tileManagerBasicState.globalState;
+        message += ' (softMax=' +
+            tr.b.convertUnit(tmgs.softMemoryLimitInBytes,
+                tr.b.UnitPrefixScale.BINARY.NONE,
+                tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) +
+            ' MiB, hardMax=' +
+            tr.b.convertUnit(tmgs.hardMemoryLimitInBytes,
+                tr.b.UnitPrefixScale.BINARY.NONE,
+                tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) + ' MiB, ' +
+            tmgs.memoryLimitPolicy + ')';
+      } else {
+        // Old Chromes do not have a globalState on the LTHI dump.
+        // But they do issue a DidManage event wiht the globalstate. Find that
+        // event so that we show some global state.
+        const thread = lthi.snapshottedOnThread;
+        const didManageTilesSlices = thread.sliceGroup.slices.filter(s => {
+          if (s.category !== 'tr.e.cc') return false;
+
+          if (s.title !== 'DidManage') return false;
+
+          if (s.end > lthi.ts) return false;
+
+          return true;
+        });
+        didManageTilesSlices.sort(function(x, y) {
+          return x.end - y.end;
+        });
+        if (didManageTilesSlices.length > 0) {
+          const newest = didManageTilesSlices[didManageTilesSlices.length - 1];
+          const tmgs = newest.args.state.global_state;
+          message += ' (softMax=' +
+            tr.b.convertUnit(tmgs.softMemoryLimitInBytes,
+                tr.b.UnitPrefixScale.BINARY.NONE,
+                tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) +
+            ' MiB, hardMax=' +
+            tr.b.convertUnit(tmgs.hardMemoryLimitInBytes,
+                tr.b.UnitPrefixScale.BINARY.NONE,
+                tr.b.UnitPrefixScale.BINARY.MEBI).toFixed(1) + ' MiB, ' +
+            tmgs.memoryLimitPolicy + ')';
+        }
+      }
+
+      if (this.layerTreeImpl_.otherTree) {
+        message += ' (Another tree exists)';
+      }
+
+      if (message.length) {
+        this.quadStackView_.headerText = message;
+      } else {
+        this.quadStackView_.headerText = undefined;
+      }
+
+      this.updateInfoBar_(status.messages);
+    },
+
+    updateTilesSelector_() {
+      const data = createTileRectsSelectorBaseOptions();
+
+      if (this.layerTreeImpl_) {
+        // First get all of the scales information from LTHI.
+        const lthi = this.layerTreeImpl_.layerTreeHostImpl;
+        const scaleNames = lthi.getContentsScaleNames();
+        for (const scale in scaleNames) {
+          data.push({
+            label: 'Scale ' + scale + ' (' + scaleNames[scale] + ')',
+            value: scale
+          });
+        }
+      }
+
+      // Then create a new selector and replace the old one.
+      const newSelector = tr.ui.b.createSelector(
+          this, 'howToShowTiles',
+          'layerView.howToShowTiles', 'none',
+          data);
+      this.controls_.replaceChild(newSelector, this.tileRectsSelector_);
+      this.tileRectsSelector_ = newSelector;
+    },
+
+    computePictureLoadingStatus_() {
+      // Figure out if we can draw the quads yet. While we're at it, figure out
+      // if we have any warnings we need to show.
+      const layers = this.layers;
+      const status = {
+        messages: [],
+        picturesComplete: true
+      };
+      if (this.showContents) {
+        let hasPendingRasterizeImage = false;
+        let firstPictureError = undefined;
+        let hasMissingLayerRect = false;
+        let hasUnresolvedPictureRef = false;
+        for (let i = 0; i < layers.length; i++) {
+          const layer = layers[i];
+          for (let ir = 0; ir < layer.pictures.length; ++ir) {
+            const picture = layer.pictures[ir];
+
+            if (picture.idRef) {
+              hasUnresolvedPictureRef = true;
+              continue;
+            }
+            if (!picture.layerRect) {
+              hasMissingLayerRect = true;
+              continue;
+            }
+
+            const pictureAsImageData = this.pictureAsImageData_[picture.guid];
+            if (!pictureAsImageData) {
+              hasPendingRasterizeImage = true;
+              this.pictureAsImageData_[picture.guid] =
+                  tr.e.cc.PictureAsImageData.Pending(this);
+              picture.rasterize(
+                  {stopIndex: undefined},
+                  function(pictureImageData) {
+                    const picture_ = pictureImageData.picture;
+                    this.pictureAsImageData_[picture_.guid] = pictureImageData;
+                    this.scheduleUpdateContents_();
+                  }.bind(this));
+              continue;
+            }
+            if (pictureAsImageData.isPending()) {
+              hasPendingRasterizeImage = true;
+              continue;
+            }
+            if (pictureAsImageData.error) {
+              if (!firstPictureError) {
+                firstPictureError = pictureAsImageData.error;
+              }
+              break;
+            }
+          }
+        }
+        if (hasPendingRasterizeImage) {
+          status.picturesComplete = false;
+        } else {
+          if (hasUnresolvedPictureRef) {
+            status.messages.push({
+              header: 'Missing picture',
+              details: 'Your trace didn\'t have pictures for every layer. ' +
+                  'Old chrome versions had this problem'});
+          }
+          if (hasMissingLayerRect) {
+            status.messages.push({
+              header: 'Missing layer rect',
+              details: 'Your trace may be corrupt or from a very old ' +
+                  'Chrome revision.'});
+          }
+          if (firstPictureError) {
+            status.messages.push({
+              header: 'Cannot rasterize',
+              details: firstPictureError});
+          }
+        }
+      }
+      if (this.showInputEvents && this.layerTreeImpl.tracedInputLatencies &&
+          this.inputEventImageData_ === undefined) {
+        const image = Polymer.dom(this).querySelector('#input-event');
+        if (!image.src) {
+          this.loadDataForImageElement_(image, function(imageData) {
+            this.inputEventImageData_ = imageData;
+            this.updateContentsPending_ = false;
+            this.scheduleUpdateContents_();
+          }.bind(this));
+        }
+        status.picturesComplete = false;
+      }
+      return status;
+    },
+
+    get selectedRenderPass() {
+      if (this.selection) {
+        return this.selection.renderPass_;
+      }
+    },
+
+    get selectedLayer() {
+      if (this.selection) {
+        const selectedLayerId = this.selection.associatedLayerId;
+        return this.layerTreeImpl_.findLayerWithId(selectedLayerId);
+      }
+    },
+
+    get renderPasses() {
+      let renderPasses =
+          this.layerTreeImpl.layerTreeHostImpl.args.frame.renderPasses;
+      if (!this.showOtherLayers) {
+        const selectedRenderPass = this.selectedRenderPass;
+        if (selectedRenderPass) {
+          renderPasses = [selectedRenderPass];
+        }
+      }
+      return renderPasses;
+    },
+
+    get layers() {
+      let layers = this.layerTreeImpl.renderSurfaceLayerList;
+      if (!this.showOtherLayers) {
+        const selectedLayer = this.selectedLayer;
+        if (selectedLayer) {
+          layers = [selectedLayer];
+        }
+      }
+      return layers;
+    },
+
+    appendImageQuads_(quads, layer, layerQuad) {
+      // Generate image quads for the layer
+      for (let ir = 0; ir < layer.pictures.length; ++ir) {
+        const picture = layer.pictures[ir];
+        if (!picture.layerRect) continue;
+
+        const unitRect = picture.layerRect.asUVRectInside(layer.bounds);
+        const iq = layerQuad.projectUnitRect(unitRect);
+
+        const pictureData = this.pictureAsImageData_[picture.guid];
+        if (this.showContents && pictureData && pictureData.imageData) {
+          iq.imageData = pictureData.imageData;
+          iq.borderColor = 'rgba(0,0,0,0)';
+        } else {
+          iq.imageData = undefined;
+        }
+
+        iq.stackingGroupId = layerQuad.stackingGroupId;
+        quads.push(iq);
+      }
+    },
+
+    appendAnimationQuads_(quads, layer, layerQuad) {
+      if (!layer.animationBoundsRect) return;
+
+      const rect = layer.animationBoundsRect;
+      const abq = tr.b.math.Quad.fromRect(rect);
+
+      abq.backgroundColor = 'rgba(164,191,48,0.5)';
+      abq.borderColor = 'rgba(205,255,0,0.75)';
+      abq.borderWidth = 3.0;
+      abq.stackingGroupId = layerQuad.stackingGroupId;
+      abq.selectionToSetIfClicked = new cc.AnimationRectSelection(
+          layer, rect);
+      quads.push(abq);
+    },
+
+    appendInvalidationQuads_(quads, layer, layerQuad) {
+      if (layer.layerTreeImpl.hasSourceFrameBeenDrawnBefore) return;
+
+      // Generate the invalidation rect quads.
+      for (const rect of layer.invalidation.rects) {
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const iq = layerQuad.projectUnitRect(unitRect);
+        iq.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+        if (rect.reason === 'appeared') {
+          iq.backgroundColor = 'rgba(0, 255, 128, 0.1)';
+        }
+        iq.borderColor = 'rgba(0, 255, 0, 1)';
+        iq.stackingGroupId = layerQuad.stackingGroupId;
+
+        let message = 'Invalidation rect';
+        if (rect.reason) {
+          message += ' (' + rect.reason + ')';
+        }
+        if (rect.client) {
+          message += ' for ' + rect.client;
+        }
+
+        iq.selectionToSetIfClicked = new cc.LayerRectSelection(
+            layer, message, rect, rect);
+        quads.push(iq);
+      }
+    },
+
+    appendUnrecordedRegionQuads_(quads, layer, layerQuad) {
+      // Generate the unrecorded region quads.
+      for (let ir = 0; ir < layer.unrecordedRegion.rects.length; ir++) {
+        const rect = layer.unrecordedRegion.rects[ir];
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const iq = layerQuad.projectUnitRect(unitRect);
+        iq.backgroundColor = 'rgba(240, 230, 140, 0.3)';
+        iq.borderColor = 'rgba(240, 230, 140, 1)';
+        iq.stackingGroupId = layerQuad.stackingGroupId;
+        iq.selectionToSetIfClicked = new cc.LayerRectSelection(
+            layer, 'Unrecorded area', rect, rect);
+        quads.push(iq);
+      }
+    },
+
+    appendBottleneckQuads_(quads, layer, layerQuad, stackingGroupId) {
+      function processRegion(region, label, borderColor) {
+        const backgroundColor = borderColor.clone();
+        backgroundColor.a = 0.4 * (borderColor.a || 1.0);
+
+        if (!region || !region.rects) return;
+
+        for (let ir = 0; ir < region.rects.length; ir++) {
+          const rect = region.rects[ir];
+          const unitRect = rect.asUVRectInside(layer.bounds);
+          const iq = layerQuad.projectUnitRect(unitRect);
+          iq.backgroundColor = backgroundColor.toString();
+          iq.borderColor = borderColor.toString();
+          iq.borderWidth = 4.0;
+          iq.stackingGroupId = stackingGroupId;
+          iq.selectionToSetIfClicked = new cc.LayerRectSelection(
+              layer, label, rect, rect);
+          quads.push(iq);
+        }
+      }
+
+      processRegion(layer.touchEventHandlerRegion, 'Touch listener',
+          tr.b.Color.fromString('rgb(228, 226, 27)'));
+      processRegion(layer.wheelEventHandlerRegion, 'Wheel listener',
+          tr.b.Color.fromString('rgb(176, 205, 29)'));
+      processRegion(layer.nonFastScrollableRegion, 'Repaints on scroll',
+          tr.b.Color.fromString('rgb(213, 134, 32)'));
+    },
+
+    appendTileCoverageRectQuads_(
+        quads, layer, layerQuad, heatmapType) {
+      if (!layer.tileCoverageRects) return;
+
+      const tiles = [];
+      for (let ct = 0; ct < layer.tileCoverageRects.length; ++ct) {
+        const tile = layer.tileCoverageRects[ct].tile;
+        if (tile !== undefined) tiles.push(tile);
+      }
+
+      const lthi = this.layerTreeImpl_.layerTreeHostImpl;
+      const minMax =
+          this.getMinMaxForHeatmap_(lthi.activeTiles, heatmapType);
+      const heatmapResult =
+          this.computeHeatmapColors_(tiles, minMax, heatmapType);
+      let heatIndex = 0;
+
+      for (let ct = 0; ct < layer.tileCoverageRects.length; ++ct) {
+        let rect = layer.tileCoverageRects[ct].geometryRect;
+        rect = rect.scale(1.0 / layer.geometryContentsScale);
+
+        const tile = layer.tileCoverageRects[ct].tile;
+
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const quad = layerQuad.projectUnitRect(unitRect);
+
+        quad.backgroundColor = 'rgba(0, 0, 0, 0)';
+        quad.stackingGroupId = layerQuad.stackingGroupId;
+        let type = tr.e.cc.tileTypes.missing;
+        if (tile) {
+          type = tile.getTypeForLayer(layer);
+          quad.backgroundColor = heatmapResult[heatIndex].color;
+          ++heatIndex;
+        }
+
+        quad.borderColor = tr.e.cc.tileBorder[type].color;
+        quad.borderWidth = tr.e.cc.tileBorder[type].width;
+        let label;
+        if (tile) {
+          label = 'coverageRect';
+        } else {
+          label = 'checkerboard coverageRect';
+        }
+        quad.selectionToSetIfClicked = new cc.LayerRectSelection(
+            layer, label, rect, layer.tileCoverageRects[ct]);
+
+        quads.push(quad);
+      }
+    },
+
+    appendLayoutRectQuads_(quads, layer, layerQuad) {
+      if (!layer.layoutRects) {
+        return;
+      }
+
+      for (let ct = 0; ct < layer.layoutRects.length; ++ct) {
+        let rect = layer.layoutRects[ct].geometryRect;
+        rect = rect.scale(1.0 / layer.geometryContentsScale);
+
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const quad = layerQuad.projectUnitRect(unitRect);
+
+        quad.backgroundColor = 'rgba(0, 0, 0, 0)';
+        quad.stackingGroupId = layerQuad.stackingGroupId;
+
+        quad.borderColor = 'rgba(0, 0, 200, 0.7)';
+        quad.borderWidth = 2;
+        const label = 'Layout rect';
+        quad.selectionToSetIfClicked = new cc.LayerRectSelection(
+            layer, label, rect);
+
+        quads.push(quad);
+      }
+    },
+
+    getValueForHeatmap_(tile, heatmapType) {
+      if (heatmapType === TILE_HEATMAP_TYPE.SCHEDULED_PRIORITY) {
+        return tile.scheduledPriority === 0 ?
+          undefined :
+          tile.scheduledPriority;
+      } else if (heatmapType === TILE_HEATMAP_TYPE.USING_GPU_MEMORY) {
+        if (tile.isSolidColor) return 0.5;
+        return tile.isUsingGpuMemory ? 0 : 1;
+      }
+    },
+
+    getMinMaxForHeatmap_(tiles, heatmapType) {
+      const range = new tr.b.math.Range();
+      if (heatmapType === TILE_HEATMAP_TYPE.USING_GPU_MEMORY) {
+        range.addValue(0);
+        range.addValue(1);
+        return range;
+      }
+
+      for (let i = 0; i < tiles.length; ++i) {
+        const value = this.getValueForHeatmap_(tiles[i], heatmapType);
+        if (value === undefined) continue;
+        range.addValue(value);
+      }
+      if (range.range === 0) {
+        range.addValue(1);
+      }
+      return range;
+    },
+
+    computeHeatmapColors_(tiles, minMax, heatmapType) {
+      const min = minMax.min;
+      const max = minMax.max;
+
+      const color = function(value) {
+        let hue = 120 * (1 - (value - min) / (max - min));
+        if (hue < 0) hue = 0;
+        return 'hsla(' + hue + ', 100%, 50%, 0.5)';
+      };
+
+      const values = [];
+      for (let i = 0; i < tiles.length; ++i) {
+        const tile = tiles[i];
+        const value = this.getValueForHeatmap_(tile, heatmapType);
+        const res = {
+          value,
+          color: value !== undefined ? color(value) : undefined
+        };
+        values.push(res);
+      }
+
+      return values;
+    },
+
+    appendTilesWithScaleQuads_(
+        quads, layer, layerQuad, scale, heatmapType) {
+      const lthi = this.layerTreeImpl_.layerTreeHostImpl;
+
+      const tiles = [];
+      for (let i = 0; i < lthi.activeTiles.length; ++i) {
+        const tile = lthi.activeTiles[i];
+
+        if (Math.abs(tile.contentsScale - scale) > 1e-6) {
+          continue;
+        }
+
+        // TODO(vmpstr): Make the stiching of tiles and layers a part of
+        // tile construction (issue 346)
+        if (layer.layerId !== tile.layerId) continue;
+
+        tiles.push(tile);
+      }
+
+      const minMax =
+          this.getMinMaxForHeatmap_(lthi.activeTiles, heatmapType);
+      const heatmapResult =
+          this.computeHeatmapColors_(tiles, minMax, heatmapType);
+
+      for (let i = 0; i < tiles.length; ++i) {
+        const tile = tiles[i];
+        const rect = tile.layerRect;
+        if (!tile.layerRect) continue;
+
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const quad = layerQuad.projectUnitRect(unitRect);
+
+        quad.backgroundColor = 'rgba(0, 0, 0, 0)';
+        quad.stackingGroupId = layerQuad.stackingGroupId;
+
+        const type = tile.getTypeForLayer(layer);
+        quad.borderColor = tr.e.cc.tileBorder[type].color;
+        quad.borderWidth = tr.e.cc.tileBorder[type].width;
+
+        quad.backgroundColor = heatmapResult[i].color;
+        const data = {
+          tileType: type
+        };
+        if (heatmapType !== TILE_HEATMAP_TYPE.NONE) {
+          data[heatmapType] = heatmapResult[i].value;
+        }
+        quad.selectionToSetIfClicked = new cc.TileSelection(tile, data);
+        quads.push(quad);
+      }
+    },
+
+    appendHighlightQuadsForLayer_(
+        quads, layer, layerQuad, highlights) {
+      highlights.forEach(function(highlight) {
+        const rect = highlight.rect;
+
+        const unitRect = rect.asUVRectInside(layer.bounds);
+        const quad = layerQuad.projectUnitRect(unitRect);
+
+        let colorId = ColorScheme.getColorIdForGeneralPurposeString(
+            highlight.colorKey);
+        const offset = ColorScheme.properties.brightenedOffsets[0];
+        colorId = ColorScheme.getVariantColorId(colorId, offset);
+
+        const color = ColorScheme.colors[colorId];
+
+        const quadForDrawing = quad.clone();
+        quadForDrawing.backgroundColor = color.withAlpha(0.5).toString();
+        quadForDrawing.borderColor = color.withAlpha(1.0).darken().toString();
+        quadForDrawing.stackingGroupId = layerQuad.stackingGroupId;
+        quads.push(quadForDrawing);
+      }, this);
+    },
+
+    generateRenderPassQuads() {
+      if (!this.layerTreeImpl.layerTreeHostImpl.args.frame) return [];
+      const renderPasses = this.renderPasses;
+      if (!renderPasses) return [];
+
+      const quads = [];
+      for (let i = 0; i < renderPasses.length; ++i) {
+        const quadList = renderPasses[i].quadList;
+        for (let j = 0; j < quadList.length; ++j) {
+          const drawQuad = quadList[j];
+          const quad = drawQuad.rectAsTargetSpaceQuad.clone();
+          quad.borderColor = 'rgb(170, 204, 238)';
+          quad.borderWidth = 2;
+          quad.stackingGroupId = i;
+          quads.push(quad);
+        }
+      }
+      return quads;
+    },
+
+    generateLayerQuads() {
+      this.updateContentsPending_ = false;
+
+      // Generate the quads for the view.
+      const layers = this.layers;
+      const quads = [];
+      let nextStackingGroupId = 0;
+      const alreadyVisitedLayerIds = {};
+
+
+      let selectionHighlightsByLayerId;
+      if (this.selection) {
+        selectionHighlightsByLayerId = this.selection.highlightsByLayerId;
+      } else {
+        selectionHighlightsByLayerId = {};
+      }
+
+      const extraHighlightsByLayerId = this.extraHighlightsByLayerId || {};
+
+      for (let i = 1; i <= layers.length; i++) {
+        // Generate quads back-to-front.
+        const layer = layers[layers.length - i];
+        alreadyVisitedLayerIds[layer.layerId] = true;
+        if (layer.objectInstance.name === 'cc::NinePatchLayerImpl') {
+          continue;
+        }
+
+        const layerQuad = layer.layerQuad.clone();
+        if (layer.usingGpuRasterization) {
+          const pixelRatio = window.devicePixelRatio || 1;
+          layerQuad.borderWidth = 2.0 * pixelRatio;
+          layerQuad.borderColor = 'rgba(154,205,50,0.75)';
+        } else {
+          layerQuad.borderColor = 'rgba(0,0,0,0.75)';
+        }
+        layerQuad.stackingGroupId = nextStackingGroupId++;
+        layerQuad.selectionToSetIfClicked = new cc.LayerSelection(layer);
+        layerQuad.layer = layer;
+        if (this.showOtherLayers && this.selectedLayer === layer) {
+          layerQuad.upperBorderColor = 'rgb(156,189,45)';
+        }
+
+        if (this.showAnimationBounds) {
+          this.appendAnimationQuads_(quads, layer, layerQuad);
+        }
+
+        this.appendImageQuads_(quads, layer, layerQuad);
+        quads.push(layerQuad);
+
+
+        if (this.showInvalidations) {
+          this.appendInvalidationQuads_(quads, layer, layerQuad);
+        }
+        if (this.showUnrecordedRegion) {
+          this.appendUnrecordedRegionQuads_(quads, layer, layerQuad);
+        }
+        if (this.showBottlenecks) {
+          this.appendBottleneckQuads_(quads, layer, layerQuad,
+              layerQuad.stackingGroupId);
+        }
+        if (this.showLayoutRects) {
+          this.appendLayoutRectQuads_(quads, layer, layerQuad);
+        }
+
+        if (this.howToShowTiles === 'coverage') {
+          this.appendTileCoverageRectQuads_(
+              quads, layer, layerQuad, this.tileHeatmapType);
+        } else if (this.howToShowTiles !== 'none') {
+          this.appendTilesWithScaleQuads_(
+              quads, layer, layerQuad,
+              this.howToShowTiles, this.tileHeatmapType);
+        }
+
+        let highlights;
+        highlights = extraHighlightsByLayerId[layer.layerId];
+        if (highlights) {
+          this.appendHighlightQuadsForLayer_(
+              quads, layer, layerQuad, highlights);
+        }
+
+        highlights = selectionHighlightsByLayerId[layer.layerId];
+        if (highlights) {
+          this.appendHighlightQuadsForLayer_(
+              quads, layer, layerQuad, highlights);
+        }
+      }
+
+      this.layerTreeImpl.iterLayers(function(layer, depth, isMask, isReplica) {
+        if (!this.showOtherLayers && this.selectedLayer !== layer) return;
+        if (alreadyVisitedLayerIds[layer.layerId]) return;
+
+        const layerQuad = layer.layerQuad;
+        const stackingGroupId = nextStackingGroupId++;
+        if (this.showBottlenecks) {
+          this.appendBottleneckQuads_(quads, layer, layerQuad, stackingGroupId);
+        }
+      }, this);
+
+      const tracedInputLatencies = this.layerTreeImpl.tracedInputLatencies;
+      if (this.showInputEvents && tracedInputLatencies) {
+        for (let i = 0; i < tracedInputLatencies.length; i++) {
+          const coordinatesArray =
+            tracedInputLatencies[i].args.data.coordinates;
+          for (let j = 0; j < coordinatesArray.length; j++) {
+            const inputQuad = tr.b.math.Quad.fromXYWH(
+                coordinatesArray[j].x - 25,
+                coordinatesArray[j].y - 25,
+                50,
+                50);
+            inputQuad.borderColor = 'rgba(0, 0, 0, 0)';
+            inputQuad.imageData = this.inputEventImageData_;
+            quads.push(inputQuad);
+          }
+        }
+      }
+
+      return quads;
+    },
+
+    updateInfoBar_(infoBarMessages) {
+      if (infoBarMessages.length) {
+        this.infoBar_.removeAllButtons();
+        this.infoBar_.message = 'Some problems were encountered...';
+        this.infoBar_.addButton('More info...', function(e) {
+          const overlay = new tr.ui.b.Overlay();
+          Polymer.dom(overlay).textContent = '';
+          infoBarMessages.forEach(function(message) {
+            const title = document.createElement('h3');
+            Polymer.dom(title).textContent = message.header;
+
+            const details = document.createElement('div');
+            Polymer.dom(details).textContent = message.details;
+
+            Polymer.dom(overlay).appendChild(title);
+            Polymer.dom(overlay).appendChild(details);
+          });
+          overlay.visible = true;
+
+          e.stopPropagation();
+          return false;
+        });
+        this.infoBar_.visible = true;
+      } else {
+        this.infoBar_.removeAllButtons();
+        this.infoBar_.message = '';
+        this.infoBar_.visible = false;
+      }
+    },
+
+    getWhatRasterized_() {
+      const lthi = this.layerTreeImpl_.layerTreeHostImpl;
+      const renderProcess = lthi.objectInstance.parent;
+      const tasks = [];
+      for (const event of renderProcess.getDescendantEvents()) {
+        if (!(event instanceof tr.model.Slice)) continue;
+
+        const tile = tr.e.cc.getTileFromRasterTaskSlice(event);
+        if (tile === undefined) continue;
+
+        if (tile.containingSnapshot === lthi) {
+          tasks.push(event);
+        }
+      }
+      return tasks;
+    },
+
+    updateWhatRasterizedLinkState_() {
+      const tasks = this.getWhatRasterized_();
+      if (tasks.length) {
+        Polymer.dom(this.whatRasterizedLink_).textContent =
+            tasks.length + ' raster tasks';
+        this.whatRasterizedLink_.style.display = '';
+      } else {
+        Polymer.dom(this.whatRasterizedLink_).textContent = '';
+        this.whatRasterizedLink_.style.display = 'none';
+      }
+    },
+
+    getWhatRasterizedEventSet_() {
+      return new tr.model.EventSet(this.getWhatRasterized_());
+    }
+  };
+
+  return {
+    LayerTreeQuadStackView,
+  };
+});
+</script>

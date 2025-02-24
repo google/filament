@@ -1,0 +1,462 @@
+{
+  "config_type": "BaseConfig",
+  "dependencies": {
+    "avconv": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "03896ec9bdc9f1d6fa388f893d8f62f454e7e707",
+          "download_path": "bin/linux/x86_64/avconv"
+        }
+      }
+    },
+    "bitmaptools": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "661ce936b3276f7ec3d687ab62be05b96d796f21",
+          "download_path": "bin/linux/x86_64/bitmaptools"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "c7b1bfc6399dc683058e88dac1ef0f877edea74b",
+          "download_path": "bin/mac/x86_64/bitmaptools"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "ac4fee89a51662b9d920bce443c19b9b2929b198",
+          "download_path": "bin/win/AMD64/bitmaptools.exe"
+        },
+        "win_x86": {
+          "cloud_storage_hash": "ac4fee89a51662b9d920bce443c19b9b2929b198",
+          "download_path": "bin/win/x86/bitmaptools.exe"
+        }
+      }
+    },
+    "clear_system_cache": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "accb5e416968d40e1d43551d175ff11e34ef1b87",
+          "download_path": "bin/android/arm64-v8a/clear_system_cache"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "32dbb38d1d54339013444be7c85090650edb1963",
+          "download_path": "bin/android/armeabi-v7a/clear_system_cache"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "b0c6b5bde3f4e3148440d950b5db911fa57aec5f",
+          "download_path": "bin/android/x86/clear_system_cache"
+        },
+        "linux_x86_64": {
+          "cloud_storage_hash": "158e9cfe11f85e295783b67f8fed55f6eb6499b3",
+          "download_path": "bin/linux/x86_64/clear_system_cache"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "0f0ef42a9223592fa234ee5d248f6216fee2b677",
+          "download_path": "bin/mac/x86_64/clear_system_cache"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "f050295e6b4a9f93a853d45ba077d5eaa4662000",
+          "download_path": "bin/win/AMD64/clear_system_cache.exe"
+        }
+      }
+    },
+    "device_forwarder": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "90cc60cefb497512d95d774045146754c477b433",
+          "download_path": "bin/android/arm64-v8a/device_forwarder"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "3a5ade8fbaffea3b0670bffaa845288db5e4d567",
+          "download_path": "bin/android/armeabi-v7a/device_forwarder"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "0cfcf7ea333337e10f0cb735924c6cea51609878",
+          "download_path": "bin/android/x86/device_forwarder"
+        }
+      }
+    },
+    "dump_syms": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "9e9683ef71a50de811cc2d60058cd04227496c5b",
+          "download_path": "bin/linux/x86_64/dump_syms"
+        }
+      }
+    },
+    "gdb": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm": {
+          "cloud_storage_hash": "9231584d135fb76bb7075d96ce387679de7ada7b",
+          "download_path": "bin/android/arm/arm-linux-androideabi-gdb"
+        },
+        "android_x64": {
+          "cloud_storage_hash": "09177be2fed00b44df0e777932828425440b23b3",
+          "download_path": "bin/android/x64/x86_64-linux-androideabi-gdb"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "bcf02af039713a48b69b89bd7f0f9c81ed8183a4",
+          "download_path": "bin/android/x86/i686-linux-androideabi-gdb"
+        }
+      }
+    },
+    "host_forwarder": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "63653293098d7fe17aa115b147c8d9aa253b0912",
+          "download_path": "bin/linux/x86_64/host_forwarder"
+        }
+      }
+    },
+    "hprof-conv": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "0b14eeee2e2a51cc94e361295379f69ee6f7cf8f",
+          "download_path": "../bin/linux/x86_64/hprof-conv"
+        }
+      }
+    },
+    "httparchive_go": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_aarch64": {
+          "cloud_storage_hash": "832777729a6c8e1f1ca8284369352bf677a9f6e4",
+          "download_path": "bin/linux/aarch64/httparchive",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "linux_armv7l": {
+          "cloud_storage_hash": "798fe83e12b646f1b6c9765ed2a080d843e25c6b",
+          "download_path": "bin/linux/armv7l/httparchive",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "linux_x86_64": {
+          "cloud_storage_hash": "cc7a1e9dba1693adcd45f4a6c43f5eb43b4ad70d",
+          "download_path": "bin/linux/x86_64/httparchive",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "mac_arm64": {
+          "cloud_storage_hash": "ff2a2e4b096e9b09d3e1caa8dadb3b96baceb451",
+          "download_path": "bin/mac/arm64/httparchive",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "ea3319f80cc48d2a14493b6745e4eda45e542eb7",
+          "download_path": "bin/mac/x86_64/httparchive",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "f7219d358ff648f78baa1eb2561107204cb49842",
+          "download_path": "bin/win/AMD64/httparchive.exe",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "win_x86": {
+          "cloud_storage_hash": "e134302919f0ebeff70322431644cea41750b0e2",
+          "download_path": "bin/win/x86/httparchive.exe",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        }
+      }
+    },
+    "ipfw": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "0c96ed5a618083100cb2269e9c0400ef73708351",
+          "download_path": "bin/linux/x86_64/ipfw"
+        }
+      }
+    },
+    "ipfw_mod": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "91d3336cec855d4ed4aafadf7f9d496f3c09b07c",
+          "download_path": "bin/linux/x86_64/ipfw_mod.ko"
+        }
+      }
+    },
+    "md5sum_bin": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "fca070d85c5c732bc6fb098fc061f53474148dc0",
+          "download_path": "bin/android/arm64-v8a/md5sum_bin"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "293c093c4487b2f1cdff6ed8c93b0214e45c4e7c",
+          "download_path": "bin/android/armeabi-v7a/md5sum_bin"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "12cc00d0804bd3b4757bd33b269206dfbd13b98b",
+          "download_path": "bin/android/x86/md5sum_bin"
+        }
+      }
+    },
+    "md5sum_bin_host": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "1f5060df87c9332d423bf25a31ffcd4c6c0ef1bf",
+          "download_path": "bin/linux/x86_64/md5sum_bin_host"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "b068e3ba81a1fb7dbfe121edd2dac0c3942eb7e6",
+          "download_path": "bin/mac/x86_64/md5sum_bin_host"
+        }
+      }
+    },
+    "memtrack_helper": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "c80618de34416bb095562df1c4d2fcf725576ba6",
+          "download_path": "bin/android/arm64-v8a/memtrack_helper"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "3add8b8d122af3099f4efd5e33c2c0d733dfe13c",
+          "download_path": "bin/android/armeabi-v7a/memtrack_helper"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "f7e70cb564be222c41dfbe549476ab18dfdec015",
+          "download_path": "bin/android/x86/memtrack_helper"
+        },
+        "android_x86_64": {
+          "cloud_storage_hash": "5703a35ec38302d9247f961f066e6dc357035bc1",
+          "download_path": "bin/android/x64/memtrack_helper"
+        }
+      }
+    },
+    "minidump_dump": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "7e3711b77837f7851f0be5022ecf086f82225809",
+          "download_path": "bin/linux/x86_64/minidump_dump"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "c39bd7a3b9fa6279893b2d759045699d79ce4dcb",
+          "download_path": "bin/mac/x86_64/minidump_dump"
+        }
+      }
+    },
+    "minidump_stackwalk": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "3d0b7c55cac2a3b50c9973055561876ffe6025b3",
+          "download_path": "bin/linux/x86_64/minidump_stackwalk"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "76c5983fc9e9316a9d4251ba3e68b955c4fc9bf3",
+          "download_path": "bin/mac/x86_64/minidump_stackwalk"
+        }
+      }
+    },
+    "perf": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "a43abae56791cf7de2b6f0fcbb0f06035b9e4b07",
+          "download_path": "bin/android/arm64-v8a/perf"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "c0173517d500728a8755eefcc1ed26ba31fce13b",
+          "download_path": "bin/android/armeabi-v7a/perf"
+        }
+      }
+    },
+    "perfetto_monolithic_perfetto": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "02431fd96ab4f098aa270d42d5b675ca29e62c98",
+          "download_path": "bin/android/arm64-v8a/perfetto"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "a6dd7a0875bbd74c61e9e50cd9a03422a843b72a",
+          "download_path": "bin/android/armeabi-v7a/perfetto"
+        }
+      }
+    },
+    "perfetto_monolithic_traced": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "28805f8a7da39ef0f20f59bb265e32ed8aa10ae0",
+          "download_path": "bin/android/arm64-v8a/traced"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "fe8b812f637de8b40c86741bc08ddadf579a967a",
+          "download_path": "bin/android/armeabi-v7a/traced"
+        }
+      }
+    },
+    "perfetto_monolithic_traced_probes": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "58611385179adcca91f0fa18c5d97f99782419e3",
+          "download_path": "bin/android/arm64-v8a/traced_probes"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "0cf8f88b0b72a7346bbfa05f6cb615041854eb24",
+          "download_path": "bin/android/armeabi-v7a/traced_probes"
+        }
+      }
+    },
+    "perfhost": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "ddb9b3508fe3e8b056071fc7c3d069d13635d371",
+          "download_path": "bin/linux/x86_64/perfhost"
+        }
+      }
+    },
+    "perfhost_precise": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "ddb9b3508fe3e8b056071fc7c3d069d13635d371",
+          "download_path": "bin/linux/x86_64/perfhost_precise"
+        }
+      }
+    },
+    "perfhost_trusty": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "cd0980a3a0b119bc4764bbbac53429e1d9013e70",
+          "download_path": "bin/linux/x86_64/perfhost_trusty"
+        }
+      }
+    },
+    "push_apps_to_background_apk": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "c48a84ab4eda6c2d25fbcaab99b0626f0c5dd40c",
+          "download_path": "bin/android/arm64-v8a/PushAppsToBackground.apk"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "c48a84ab4eda6c2d25fbcaab99b0626f0c5dd40c",
+          "download_path": "bin/android/armeabi-v7a/PushAppsToBackground.apk"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "c48a84ab4eda6c2d25fbcaab99b0626f0c5dd40c",
+          "download_path": "bin/android/x86/PushAppsToBackground.apk"
+        },
+        "android_x86_64": {
+          "cloud_storage_hash": "c48a84ab4eda6c2d25fbcaab99b0626f0c5dd40c",
+          "download_path": "bin/android/x64/PushAppsToBackground.apk"
+        }
+      }
+    },
+    "simpleperf": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_arm64-v8a": {
+          "cloud_storage_hash": "d181b501ced66cd59e571c2215200961e2113c59",
+          "download_path": "bin/android/arm64-v8a/simpleperf"
+        },
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "dce5e87832c1e94a4048a0e273a03e812dedc360",
+          "download_path": "bin/android/armeabi-v7a/simpleperf"
+        },
+        "android_x64": {
+          "cloud_storage_hash": "884a063bf42ad3a911d33cd2779e54a21927588f",
+          "download_path": "bin/android/x64/simpleperf"
+        },
+        "android_x86": {
+          "cloud_storage_hash": "fda8f607c63acba1de761842b879f79b0ab96e25",
+          "download_path": "bin/android/x86/simpleperf"
+        }
+      }
+    },
+    "tcpdump": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "android_armeabi-v7a": {
+          "cloud_storage_hash": "6cf2d56024208a08ceaf3a04ea98d5a362396fca",
+          "download_path": "bin/android/armeabi-v7a/tcpdump"
+        }
+      }
+    },
+    "wpr_go": {
+      "cloud_storage_base_folder": "binary_dependencies",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_aarch64": {
+          "cloud_storage_hash": "129a66a1378dfcbb815596f66ca680728f77da36",
+          "download_path": "bin/linux/aarch64/wpr",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "linux_armv7l": {
+          "cloud_storage_hash": "92ff5bdb9370b36d2844c2f018e2b7d9c3b8ed39",
+          "download_path": "bin/linux/armv7l/wpr",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "linux_mips": {
+          "cloud_storage_hash": "179432b97e830a4f5b5cf71ce70b3f4577975f9d",
+          "download_path": "bin/linux/mips/wpr",
+          "version_in_cs": "b758fe6d082e3fc04b4494e775570693a018a331"
+        },
+        "linux_x86_64": {
+          "cloud_storage_hash": "6caa467dc6bef92e1c34256f539f8ed8f26a2fe1",
+          "download_path": "bin/linux/x86_64/wpr",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "mac_arm64": {
+          "cloud_storage_hash": "c68bd02b247e38a68a8e8ca154164fab75638e2e",
+          "download_path": "bin/mac/arm64/wpr",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "57443617185913f5e9af20e69a105419eb4cbea5",
+          "download_path": "bin/mac/x86_64/wpr",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "8b5310e99091991b949103b1edf39db45c7818f5",
+          "download_path": "bin/win/AMD64/wpr.exe",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        },
+        "win_x86": {
+          "cloud_storage_hash": "2d4d0b2cddf338bd07c0981fadb2fd7ed2c2de0f",
+          "download_path": "bin/win/x86/wpr.exe",
+          "version_in_cs": "45b6f9844a30e44f31c037ebc1ccd52eb917b55d"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+# Author: Chris Moyer <cmoyer@newstex.com>
+# Description: CloudWatch Utility
+# For listing stats, creating alarms, and managing 
+# other CloudWatch aspects
+
+import boto
+cw = boto.connect_cloudwatch()
+
+from datetime import datetime, timedelta
+
+def _parse_time(time_string):
+    """Internal function to parse a time string"""
+
+def _parse_dict(d_string):
+    result = {}
+    if d_string:
+        for d in d_string.split(","):
+            d = d.split(":")
+            result[d[0]] = d[1]
+    return result
+
+def ls(namespace=None):
+    """
+    List metrics, optionally filtering by a specific namespace
+        namespace: Optional Namespace to filter on
+    """
+    print "%-10s %-50s %s" % ("Namespace", "Metric Name", "Dimensions")
+    print "-"*80
+    for m in cw.list_metrics():
+        if namespace is None or namespace.upper() in m.namespace:
+            print "%-10s %-50s %s" % (m.namespace, m.name, m.dimensions)
+
+def stats(namespace, metric_name, dimensions=None, statistics="Average", start_time=None, end_time=None, period=60, unit=None):
+    """
+    Lists the statistics for a specific metric
+        namespace: The namespace to use, usually "AWS/EC2", "AWS/SQS", etc.
+        metric_name: The name of the metric to track, pulled from `ls`
+        dimensions: The dimensions to use, formatted as Name:Value (such as QueueName:myQueue)
+        statistics: The statistics to measure, defaults to "Average"
+             'Minimum', 'Maximum', 'Sum', 'Average', 'SampleCount'
+        start_time: Start time, default to now - 1 day
+        end_time: End time, default to now
+        period: Period/interval for counts, default to 60 minutes
+        unit: Unit to track, default depends on what metric is being tracked
+    """
+
+    # Parse the dimensions
+    dimensions = _parse_dict(dimensions)
+
+    # Parse the times
+    if end_time:
+        end_time = _parse_time(end_time)
+    else:
+        end_time = datetime.utcnow()
+    if start_time:
+        start_time = _parse_time(start_time)
+    else:
+        start_time = datetime.utcnow() - timedelta(days=1)
+            
+    print "%-30s %s" % ('Timestamp', statistics)
+    print "-"*50
+    data = {}
+    for m in cw.get_metric_statistics(int(period), start_time, end_time, metric_name, namespace, statistics, dimensions, unit):
+        data[m['Timestamp']] = m[statistics]
+    keys = data.keys()
+    keys.sort()
+    for k in keys:
+        print "%-30s %s" % (k, data[k])
+
+def put(namespace, metric_name, dimensions=None, value=None, unit=None, statistics=None, timestamp=None):
+    """
+    Publish custom metrics
+        namespace: The namespace to use; values starting with "AWS/" are reserved
+        metric_name: The name of the metric to update
+        dimensions: The dimensions to use, formatted as Name:Value (such as QueueName:myQueue)
+        value: The value to store, mutually exclusive with `statistics`
+        statistics: The statistics to store, mutually exclusive with `value`
+            (must specify all of "Minimum", "Maximum", "Sum", "SampleCount")
+        timestamp: The timestamp of this measurement, default is current server time
+        unit: Unit to track, default depends on what metric is being tracked
+    """
+    
+    def simplify(lst):
+        return lst[0] if len(lst) == 1 else lst
+
+    print cw.put_metric_data(namespace, simplify(metric_name.split(';')),
+        dimensions = simplify(map(_parse_dict, dimensions.split(';'))) if dimensions else None,
+        value = simplify(value.split(';')) if value else None,
+        statistics = simplify(map(_parse_dict, statistics.split(';'))) if statistics else None,
+        timestamp = simplify(timestamp.split(';')) if timestamp else None,
+        unit = simplify(unit.split(';')) if unit else None)
+
+def help(fnc=None):
+    """
+    Print help message, optionally about a specific function
+    """
+    import inspect
+    self = sys.modules['__main__']
+    if fnc:
+        try:
+            cmd = getattr(self, fnc)
+        except:
+            cmd = None
+        if not inspect.isfunction(cmd):
+            print "No function named: %s found" % fnc
+            sys.exit(2)
+        (args, varargs, varkw, defaults) = inspect.getargspec(cmd)
+        print cmd.__doc__
+        print "Usage: %s %s" % (fnc, " ".join([ "[%s]" % a for a in args]))
+    else:
+        print "Usage: cwutil [command]"
+        for cname in dir(self):
+            if not cname.startswith("_") and not cname == "cmd":
+                cmd = getattr(self, cname)
+                if inspect.isfunction(cmd):
+                    doc = cmd.__doc__
+                    print "\t%s - %s" % (cname, doc)
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    import sys
+    self = sys.modules['__main__']
+    if len(sys.argv) >= 2:
+        try:
+            cmd = getattr(self, sys.argv[1])
+        except:
+            cmd = None
+        args = sys.argv[2:]
+    else:
+        cmd = help
+        args = []
+    if not cmd:
+        cmd = help
+    try:
+        cmd(*args)
+    except TypeError as e:
+        print e
+        help(cmd.__name__)

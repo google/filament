@@ -1,0 +1,156 @@
+{
+    "repos": [
+        {
+            "name": "Vulkan-Headers",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+            "sub_dir": "Vulkan-Headers",
+            "build_dir": "Vulkan-Headers/build",
+            "install_dir": "Vulkan-Headers/build/install",
+            "commit": "v1.4.307"
+        },
+        {
+            "name": "Vulkan-Utility-Libraries",
+            "url": "https://github.com/KhronosGroup/Vulkan-Utility-Libraries.git",
+            "sub_dir": "Vulkan-Utility-Libraries",
+            "build_dir": "Vulkan-Utility-Libraries/build",
+            "install_dir": "Vulkan-Utility-Libraries/build/install",
+            "commit": "v1.4.307",
+            "deps": [
+                {
+                    "var_name": "VULKAN_HEADERS_INSTALL_DIR",
+                    "repo_name": "Vulkan-Headers"
+                }
+            ]
+        },
+        {
+            "name": "SPIRV-Headers",
+            "url": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+            "sub_dir": "SPIRV-Headers",
+            "build_dir": "SPIRV-Headers/build",
+            "install_dir": "SPIRV-Headers/build/install",
+            "commit": "e7294a8ebed84f8c5bd3686c68dbe12a4e65b644"
+        },
+        {
+            "name": "SPIRV-Tools",
+            "url": "https://github.com/KhronosGroup/SPIRV-Tools.git",
+            "sub_dir": "SPIRV-Tools",
+            "build_dir": "SPIRV-Tools/build",
+            "install_dir": "SPIRV-Tools/build/install",
+            "cmake_options": [
+                "-DSPIRV-Headers_SOURCE_DIR={repo_dir}/../SPIRV-Headers",
+                "-DSPIRV_WERROR=OFF",
+                "-DSPIRV_SKIP_TESTS=ON",
+                "-DSPIRV_SKIP_EXECUTABLES=OFF"
+            ],
+            "commit": "7cf95f1d50e1ac7b226697f6efe56734a4dce7ad"
+        },
+        {
+            "name": "robin-hood-hashing",
+            "url": "https://github.com/martinus/robin-hood-hashing.git",
+            "sub_dir": "robin-hood-hashing",
+            "build_dir": "robin-hood-hashing/build",
+            "install_dir": "robin-hood-hashing/build/install",
+            "cmake_options": [
+                "-DRH_STANDALONE_PROJECT=OFF"
+            ],
+            "commit": "3.11.5"
+        },
+        {
+            "name": "mimalloc",
+            "url": "https://github.com/microsoft/mimalloc.git",
+            "sub_dir": "mimalloc",
+            "build_dir": "mimalloc/build",
+            "install_dir": "mimalloc/build/install",
+            "cmake_options": [
+                "-DMI_BUILD_STATIC=ON",
+                "-DMI_BUILD_OBJECT=OFF",
+                "-DMI_BUILD_SHARED=OFF",
+                "-DMI_BUILD_TESTS=OFF"
+            ],
+            "commit": "v2.1.2",
+            "build_platforms": [
+                "windows"
+            ]
+        },
+        {
+            "name": "googletest",
+            "url": "https://github.com/google/googletest.git",
+            "sub_dir": "googletest",
+            "build_dir": "googletest/build",
+            "install_dir": "googletest/build/install",
+            "cmake_options": [
+                "-DBUILD_GMOCK=OFF",
+                "-Dgtest_force_shared_crt=ON",
+                "-DBUILD_SHARED_LIBS=OFF"
+            ],
+            "commit": "v1.14.0",
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "glslang",
+            "url": "https://github.com/KhronosGroup/glslang.git",
+            "sub_dir": "glslang",
+            "build_dir": "glslang/build",
+            "install_dir": "glslang/build/install",
+            "commit": "1b65bd602b23d401d1c4c86dfa90a36a52c66294",
+            "cmake_options": [
+                "-DENABLE_OPT=OFF"
+            ],
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "Vulkan-Loader",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+            "sub_dir": "Vulkan-Loader",
+            "build_dir": "Vulkan-Loader/build",
+            "install_dir": "Vulkan-Loader/build/install",
+            "commit": "v1.4.307",
+            "build_step": "skip",
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "Vulkan-Profiles",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Profiles.git",
+            "sub_dir": "Vulkan-Profiles",
+            "build_dir": "Vulkan-Profiles/build",
+            "install_dir": "Vulkan-Profiles/build/install",
+            "commit": "v1.4.306",
+            "build_step": "skip",
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "Vulkan-Tools",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Tools.git",
+            "sub_dir": "Vulkan-Tools",
+            "build_dir": "Vulkan-Tools/build",
+            "install_dir": "Vulkan-Tools/build/install",
+            "commit": "v1.4.307",
+            "build_step": "skip",
+            "optional": [
+                "tests"
+            ]
+        }
+    ],
+    "install_names": {
+        "glslang": "GLSLANG_INSTALL_DIR",
+        "Vulkan-Headers": "VULKAN_HEADERS_INSTALL_DIR",
+        "Vulkan-Utility-Libraries": "VULKAN_UTILITY_LIBRARIES_INSTALL_DIR",
+        "SPIRV-Headers": "SPIRV_HEADERS_INSTALL_DIR",
+        "SPIRV-Tools": "SPIRV_TOOLS_INSTALL_DIR",
+        "robin-hood-hashing": "ROBIN_HOOD_HASHING_INSTALL_DIR",
+        "googletest": "GOOGLETEST_INSTALL_DIR",
+        "mimalloc": "MIMALLOC_INSTALL_DIR"
+    }
+}

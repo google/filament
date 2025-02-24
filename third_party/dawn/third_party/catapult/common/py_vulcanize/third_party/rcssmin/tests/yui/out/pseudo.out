@@ -1,0 +1,1 @@
+p :link{ba:zinga;foo:bar}

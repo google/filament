@@ -1,0 +1,118 @@
+Name
+
+    CHROMIUM_bind_generates_resource
+
+Name Strings
+
+    GL_CHROMIUM_bind_generates_resource
+
+Contributors
+
+    Geoff Lang
+
+Contact
+
+    Geoff Lang (geofflang 'at' google.com)
+
+Notice
+
+    Copyright (c) 2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, September 19, 2016
+
+Number
+
+    OpenGL ES Extension #??
+
+Dependencies
+
+    Requires OpenGL ES 2.0
+
+    Written against the OpenGL ES 2.0 specification.
+
+Overview
+
+    This extension allows the user to control the behaviour when binding an
+    object that has not been generated.  This functionality is useful to
+    notify the user of potential use-after-free errors or support other APIs
+    such as WebGL on top of an OpenGL ES context.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter to IsEnabled and the <pname> parameter to
+    GetBooleanv, GetIntegerv, GetFloatv, and GetInteger64v:
+
+    BIND_GENERATES_RESOURCE_CHROMIUM            0x9244
+
+Additions to the OpenGL ES Specification
+
+    Add to the end of Section 2.9 "Buffer Objects":
+
+    If BIND_GENERATES_RESOURCE_CHROMIUM is false, BindBuffer fails and an
+    INVALID_OPERATION error is generated if buffer is not zero or a name
+    returned from a previous call to GenBuffers, or if such a name has since
+    been deleted with DeleteBuffers.
+
+    Add to the end of Section 3.7.13 "Texture Objects":
+
+    If BIND_GENERATES_RESOURCE_CHROMIUM is false, BindTexture fails and an
+    INVALID_OPERATION error is generated if texture is not zero or a name
+    returned from a previous call to GenTextures, or if such a name has since
+    been deleted with DeleteTextures.
+
+    Add to the end of Section 4.4.1 "Binding and Managing Framebuffer Objects":
+
+    If BIND_GENERATES_RESOURCE_CHROMIUM is false, BindFramebuffer fails and an
+    INVALID_OPERATION error is generated if framebuffer is not zero or a name
+    returned from a previous call to GenFramebuffers, or if such a name has
+    since been deleted with DeleteFramebuffers.
+
+    Add to the end of Section 4.4.3 "Renderbuffer Objects":
+
+    If BIND_GENERATES_RESOURCE_CHROMIUM is false, BindRenderbuffer fails and an
+    INVALID_OPERATION error is generated if renderbuffer is not zero or a name
+    returned from a previous call to GenRenderbuffers, or if such a name has
+    since been deleted with DeleteRenderbuffers.
+
+New State
+
+    Modify Table 6.22, Miscellaneous
+
+    Add:
+
+                                                      Initial
+    Get Value                        Type Get Command Value   Description
+    -----------------------          ---- ----------- ------- --------------
+    BIND_GENERATES_RESOURCE_CHROMIUM B    IsEnabled   TRUE    Bind generates
+                                                              new resources
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    (1) Should the BIND_GENERATES_RESOURCE_CHROMIUM state be enabled at context
+        creation time or dynamically through the Enable and Disable functions?
+
+    RESOLOVED: BIND_GENERATES_RESOURCE_CHROMIUM is initialized by a context
+    creation attribute and cannot be modified.  One of the major use cases of
+    this extension is to back WebGL contexts and the end user should not be
+    allowed to modify this state.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Sept 19, 2016  geofflang  Initial version

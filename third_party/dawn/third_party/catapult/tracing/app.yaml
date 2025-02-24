@@ -1,0 +1,58 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+runtime: python27
+threadsafe: true
+api_version: 1
+
+handlers:
+
+- url: /base
+  static_dir: tracing/tracing/base
+  secure: always
+
+- url: /core
+  static_dir: tracing/tracing/core
+  secure: always
+
+- url: /extras
+  static_dir: tracing/tracing/extras
+  secure: always
+
+- url: /ui
+  static_dir: tracing/tracing/ui
+  secure: always
+
+- url: /components
+  static_dir: tracing/third_party/components
+  secure: always
+
+- url: /trace_viewer
+  static_dir: tracing/tracing
+  secure: always
+
+- url: /gl-matrix-min.js
+  static_files: tracing/third_party/gl-matrix/dist/gl-matrix-min.js
+  upload: tracing/third_party/gl-matrix/dist/gl-matrix-min.js
+  secure: always
+
+- url: /mannwhitneyu.js
+  static_files: tracing/third_party/mannwhitneyu/mannwhitneyu.js
+  upload: tracing/third_party/mannwhitneyu/mannwhitneyu.js
+  secure: always
+
+- url: /pako.min.js
+  static_files: tracing/third_party/pako/pako.min.js
+  upload: tracing/third_party/pako/pako.min.js
+  secure: always
+
+- url: /d3.min.js
+  static_files: tracing/third_party/d3/d3.min.js
+  upload: tracing/third_party/d3/d3.min.js
+  secure: always
+
+- url: /.*
+  static_files: tracing/tracing/ui/extras/drive/index.html
+  upload: tracing/tracing/ui/extras/drive/index.html
+  secure: always

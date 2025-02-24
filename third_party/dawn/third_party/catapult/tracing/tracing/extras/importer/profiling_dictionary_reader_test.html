@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/profiling_dictionary_reader.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeEvent(json) {
+    return {
+      args: {
+        data: json
+      },
+    };
+  }
+
+  test('deferenceStrings', function() {
+    const stringToId = id => '' + id;
+    const result = tr.e.importer.deferenceStringsForTest(stringToId, {
+      foo: 'foo',
+      one_bar_sid: 1,
+      many_baz_sids: 2,
+    });
+    assert.deepEqual(result, {
+      foo: 'foo',
+      one_bar_sid: 1,
+      many_baz_sids: 2,
+      one_bar: '1',
+      many_baz: '2',
+    });
+  });
+
+  test('singularize', function() {
+    assert.strictEqual('name', tr.e.importer.singularize('names'));
+    assert.strictEqual('aircraft', tr.e.importer.singularize('aircraft'));
+  });
+
+  test('throws_an_error_if_version_key_missing', function() {
+    const data = {};
+    const expander = new tr.e.importer.ProfilingDictionaryReader();
+    assert.throws(() => expander.expandData(data));
+  });
+
+  test('throws_an_error_if_map_entry_is_missing_an_id', function() {
+    const data = {
+      maps: {
+        version: 1,
+        price: [
+          { 'i_dont_have_an_id_key': 100 },
+        ],
+      },
+    };
+    const expander = new tr.e.importer.ProfilingDictionaryReader();
+    assert.throws(() => expander.expandData(data));
+  });
+
+  test('has_an_empty_constructor_to_create_an_empty_reader', function() {
+    const expander = tr.e.importer.ProfilingDictionaryReader.empty();
+    assert.strictEqual(expander.metadata.size, 0);
+    assert.deepEqual(expander.raw, {});
+    assert.deepEqual(expander.inflated, {});
+  });
+
+  test('reads_extra_metadata', function() {
+    const data = {
+      version: 1,
+      myStringMetadata: '1',
+      myNumberMetadata: 2,
+      myArrayMetadata: [3],
+    };
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData(data);
+    assert.deepEqual(expander2.metadata.get('myStringMetadata'), '1');
+    assert.deepEqual(expander2.metadata.get('myNumberMetadata'), 2);
+    assert.deepEqual(expander2.metadata.get('myArrayMetadata'), [3]);
+  });
+
+  test('reads_a_single_event_with_single_group_and_single_row', function() {
+    const data = {
+      version: 1,
+      allocators: {
+        books: {
+          page_counts: [10, 20, 30],
+        },
+      },
+    };
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData(data);
+    assert.deepEqual(expander2.raw.books, [
+      { page_counts: 10 },
+      { page_counts: 20 },
+      { page_counts: 30 },
+    ]);
+    // Note that the 'inflated' property singularizes key names.
+    assert.deepEqual(expander2.inflated.books, [
+      { page_count: 10 },
+      { page_count: 20 },
+      { page_count: 30 },
+    ]);
+  });
+
+  test('supports_persistant_maps', function() {
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData({
+      version: 1,
+      maps: {
+        authors: [{ id: 0, name: 'DE Knuth' }],
+      },
+    });
+    const expander3 = expander2.expandData({
+      version: 1,
+      maps: {
+        authors: [{ id: 1, name: 'JH Morris' }],
+        papers: [{ id: 0, title: 'Literate programming', citations: 1378 }],
+      },
+    });
+    assert.isTrue(expander3.hasMap('authors'));
+    assert.isTrue(expander3.hasMap('papers'));
+    assert.isFalse(expander3.hasMap('books'));
+    assert.strictEqual(expander3.getMapValue('authors', 0).name, 'DE Knuth');
+    assert.strictEqual(expander3.getMapValue('authors', 1).name, 'JH Morris');
+    assert.strictEqual(expander3.getMapValue('papers', 0).citations, 1378);
+    assert.strictEqual(expander3.getMapValue('papers', 1), undefined);
+
+    assert.strictEqual(expander2.getMapValue('authors', 0).name, 'DE Knuth');
+    assert.strictEqual(expander2.getMapValue('authors', 1), undefined);
+  });
+
+  test('has_special_support_for_start_time', function() {
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData({
+      version: 1,
+      startTime: 100,
+      allocators: {
+        sales: {
+          price: [1, 2, 3, 4],
+        },
+      },
+    });
+    assert.deepEqual(expander2.inflated.sales, [
+      { time: 100, price: 1 },
+      { time: 100, price: 2 },
+      { time: 100, price: 3 },
+      { time: 100, price: 4 },
+    ]);
+  });
+
+  test('has_special_support_for_time_deltas', function() {
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData({
+      version: 1,
+      startTime: 100,
+      allocators: {
+        sales: {
+          timeDelta: [1, 1, 10, 10],
+          price: [1, 2, 3, 4],
+        },
+      },
+    });
+    assert.deepEqual(expander2.inflated.sales, [
+      { time: 101, timeDelta: 1, price: 1 },
+      { time: 102, timeDelta: 1, price: 2 },
+      { time: 112, timeDelta: 10, price: 3 },
+      { time: 122, timeDelta: 10, price: 4 },
+    ]);
+  });
+
+  test('has_special_support_for_strings', function() {
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandData({
+      version: 1,
+      allocators: {
+        books: {
+          authors: [1, 1, 2, 3],
+          isbn: [100, 101, 102, 103],
+          title_sid: [10, 11, 12, 13],
+        },
+      },
+      maps: {
+        authors: [
+          { id: 1, name_sid: 1 },
+          { id: 2, name_sid: 1 },
+          { id: 3, name_sid: 2 },
+        ],
+        strings: [
+          { id: 1, string: 'DFW' },
+          { id: 2, string: 'C. Stross' },
+          { id: 2, string: 'C. Stross' },
+          { id: 10, string: 'Infinite Jest' },
+          { id: 11, string: 'The Laundry Files' },
+          { id: 12, string: 'Accelerando' },
+          { id: 13, string: 'Halting State' },
+        ],
+      },
+    });
+
+    assert.strictEqual(expander2.inflated.books[0].author.name, 'DFW');
+    assert.strictEqual(expander2.inflated.books[0].isbn, 100);
+    assert.strictEqual(expander2.inflated.books[0].title, 'Infinite Jest');
+  });
+
+  test('can_parse_events_directly', function() {
+    const data = {
+      version: 1,
+      allocators: {
+        books: {
+          pages: [10, 20, 30],
+        },
+      },
+    };
+    const expander1 = new tr.e.importer.ProfilingDictionaryReader();
+    const expander2 = expander1.expandEvent(makeEvent(data));
+    assert.deepEqual(expander2.raw.books, [
+      { pages: 10 },
+      { pages: 20 },
+      { pages: 30 },
+    ]);
+  });
+
+  test('full_example', function() {
+    let reader = new tr.e.importer.ProfilingDictionaryReader();
+    reader = reader.expandData({
+      version: 1,
+      maps: {
+        authors: [
+          { id: 1, name_sid: 1 },
+        ],
+        strings: [
+          { id: 1, string: 'DFW' },
+          { id: 10, string: 'Book A' },
+          { id: 11, string: 'Book B' },
+        ],
+      }
+    });
+    reader = reader.expandData({
+      version: 1,
+      startTime: 1992,
+      allocators: {
+        books: {
+          timeDelta: [1, 0, 2, 3],
+          authors: [1, 1, 2, 2],
+          isbns: [100, 101, 102, 103],
+          title_sid: [10, 11, 12, 13],
+        },
+        papers: {
+          authors: [1, 1, 2, 2],
+        },
+      },
+      maps: {
+        authors: [
+          { id: 2, name_sid: 2 },
+        ],
+        strings: [
+          { id: 2, string: 'C. Stross' },
+          { id: 12, string: 'Book C' },
+          { id: 13, string: 'Book D' },
+        ],
+      }
+    });
+
+    assert.strictEqual(reader.getMapValue('strings', 1).string, 'DFW');
+    assert.strictEqual(reader.getString(2), 'C. Stross');
+    assert.strictEqual(reader.inflated.books[0].author.name, 'DFW');
+    assert.strictEqual(reader.inflated.books[0].isbn, 100);
+    assert.strictEqual(reader.inflated.books[0].title, 'Book A');
+  });
+});
+</script>
+

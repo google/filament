@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains implementations of the following metrics.
+ *
+ * mean_pixels_approximated
+ * ========================
+ * The percentage of tiles which are missing or of low or non-ideal resolution.
+ *
+ * TODO(crbug.com/875010): The documentation claims that
+ * mean_pixels_approximated should be greater than or equal to
+ * mean_pixels_checkerboarded. This claim is not consistent with numbers from
+ * the perf dashboard. We should either correct the documentations or fix the
+ * metrics.
+ * This metric does not require summary_options as it reports only one number.
+ *
+ * mean_pixels_checkerboarded
+ * ==========================
+ * The percentage of tiles which are only missing. It does not take into
+ * consideration tiles which are of low or non-ideal resolution.
+ * This metric does not require summary_options as it reports only one number.
+ */
+tr.exportTo('tr.metrics.rendering', function() {
+  const IMPL_THREAD_RENDERING_STATS_EVENT =
+      'BenchmarkInstrumentation::ImplThreadRenderingStats';
+  const VISIBLE_CONTENT_DATA = 'visible_content_area';
+  const APPROXIMATED_VISIBLE_CONTENT_DATA = 'approximated_visible_content_area';
+  const CHECKERBOARDED_VISIBLE_CONTENT_DATA =
+      'checkerboarded_visible_content_area';
+
+  function addPixelsHistograms(histograms, model, segments) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!chromeHelper) return;
+
+    const approximatedPixelPercentages = [];
+    const checkerboardedPixelPercentages = [];
+    const ranges = segments.map(s => s.boundsRange);
+    for (const rendererHelper of Object.values(chromeHelper.rendererHelpers)) {
+      if (rendererHelper.compositorThread === undefined) continue;
+      const slices = rendererHelper.compositorThread.sliceGroup;
+      for (const slice of slices.getDescendantEventsInSortedRanges(ranges)) {
+        if (slice.title !== IMPL_THREAD_RENDERING_STATS_EVENT) continue;
+        const data = slice.args.data;
+        if (!(VISIBLE_CONTENT_DATA in data)) {
+          throw new Error(`${VISIBLE_CONTENT_DATA} is missing`);
+        }
+        const visibleContentArea = data[VISIBLE_CONTENT_DATA];
+        if (visibleContentArea === 0) {
+          // TODO(crbug.com/877056): This is reported as an error in the legacy
+          // code, which indicates there should be no rendering stats event with
+          // zero visible content area. But, the TBMv2 implementation encounters
+          // such events. Maybe they are coming from OOPIFs which are ignored in
+          // the legacy code? Investigate why they exist and what should be
+          // done.
+          //
+          // throw new Error(`${VISIBLE_CONTENT_DATA} is zero`);
+          continue;
+        }
+        if (APPROXIMATED_VISIBLE_CONTENT_DATA in data) {
+          approximatedPixelPercentages.push(
+              data[APPROXIMATED_VISIBLE_CONTENT_DATA] / visibleContentArea);
+        }
+        if (CHECKERBOARDED_VISIBLE_CONTENT_DATA in data) {
+          checkerboardedPixelPercentages.push(
+              data[CHECKERBOARDED_VISIBLE_CONTENT_DATA] / visibleContentArea);
+        }
+      }
+    }
+
+    // TODO(crbug.com/892501): The averages are multiplied by 100 to match an
+    // error in legacy code so that we have continuity in graphs in the perf
+    // dashboard. We should fix historic data and remove the multiplication.
+    histograms.createHistogram(
+        'mean_pixels_approximated',
+        tr.b.Unit.byName.normalizedPercentage_smallerIsBetter,
+        100 * tr.b.math.Statistics.mean(approximatedPixelPercentages),
+        { description: 'Percentage of pixels that were approximated ' +
+                       '(checkerboarding, low-resolution tiles, etc.).',
+        summaryOptions: {},
+        });
+    histograms.createHistogram(
+        'mean_pixels_checkerboarded',
+        tr.b.Unit.byName.normalizedPercentage_smallerIsBetter,
+        100 * tr.b.math.Statistics.mean(checkerboardedPixelPercentages),
+        { description: 'Percentage of pixels that were checkerboarded.',
+          summaryOptions: {},
+        });
+  }
+
+  return {
+    addPixelsHistograms,
+  };
+});
+</script>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="filter.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src='https://unpkg.com/vue-select'></script>
+    <script src="http://underscorejs.org/underscore-min.js"></script>
+    <script src="./graph_data.js"></script>
+    <script src="./line_plotter.js"></script>
+    <script src="./box_plotter.js"></script>
+    <script src="./graph_plotter.js"></script>
+    <script src="./dot_plotter.js"></script>
+    <script src="./graph_utils.js"></script>
+    <script src="./metric_significance.js"></script>
+    <script src="../../tracing/third_party/mannwhitneyu/mannwhitneyu.js"></script>
+    <script src="./stat_test_summary.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="./bar_plotter.js"></script>
+    <script src="./stacked_bar_plotter.js"></script>
+    <script src="state_manager.js"></script>
+</head>
+
+<body>
+    <style>
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+        }
+      </style>
+
+<script type="text/x-template" id="table-template">
+  'use strict';
+  <table>
+    <thead>
+      <tr>
+        <template v-for='key in columns'>
+            <th
+            @click="sortBy(key)"
+            :class="{ active: state.sortKey == key }">
+            {{ key | capitalize }}
+            <span class="arrow" :class="state.sortOrders[key] > 0 ? 'asc' : 'dsc'">
+            </span>
+          </th>
+        </template>
+        <template v-for='add in additional'>
+            <th
+            @click="sortBy(add)"
+            :class="{ active: state.sortKey == add }">
+            <input type='checkbox' @click='pickHeadTable(add)' class='checkbox-head'/>&nbsp;
+            {{ add | capitalize }}
+            <span class="arrow" :class="state.sortOrders[add] > 0 ? 'asc' : 'dsc'">
+            </span>
+          </th>
+        </template>
+      </tr>
+    </thead>
+    <tbody>
+      <template v-for="entry in filteredData">
+          <tr 
+            id='entry'>
+            <td  @click.self='toggleMetric(entry)' 
+              :class="{'state.openedMetric': state.openedMetric.includes(entry.id)}">
+              <input type='checkbox' @click='pickTableMetric(entry)' class='checkbox-metric'/>&nbsp;
+              {{entry['metric']}}
+            </td>
+            <template v-for='add in additional'>
+              <td>
+                {{entry[add]}}
+              </td>
+            </template>
+          </tr>
+          <template v-if='state.openedMetric.includes(entry.id)'>
+          <template v-for='story in state.storiesEntries'>
+              <tr
+                id ='story-row'>
+                <td id='story-story' @click.self='toggleStory(story)' 
+                  :class="{'state.openedStory': state.openedStory.includes(story.story)}">
+                  <input type='checkbox'@click='pickTableStory(story)' class='checkbox-story'/>&nbsp;
+                   {{ story.story }}
+                </td>
+                <template v-for='el of additional'>
+                  <td id='story-sample'> {{story[el]}}</td>
+                </template>
+              </tr>
+              <template v-if='state.openedStory.includes(story.story)'>
+                       <tr>
+                          <v-select placeholder='Available storysetRepeats'
+                                    multiple v-model='state.selected_diagnostics'
+                                    :options='diagnostics_options'
+                                    v-if='seen_diagnostics'
+                                    id='storySetRepeats'></v-select>
+                      </tr>
+              </template>
+            </template>
+          </template> 
+      </template>
+    </tbody>
+  </table>
+</script>
+
+<!-- Template for stats_test_summary_component.js -->
+<script type="text/x-template" id="stat-test-summary-template">
+  'use strict';
+  <div id="statistical-sig">
+    <div v-if="testResults.length">
+        <p> Reference Column: {{referenceColumn}}</p>
+        <p>Statistically significant metrics:</p>
+        <ol>
+          <li v-for="result in testResults">
+            <p class="link"
+                v-bind:class="result.evidence.type"
+                v-on:click="splitMemoryMetric(result.metric)">
+                {{ result.metric }}
+            </p> 
+            <p>
+              p: {{result.evidence.p}}
+            </p>
+            <div v-if="result.stories.length">
+              <p>Stories</p>
+              <ol>
+                <li v-for="story in result.stories">
+                    <p v-bind:class="story.evidence.type">
+                      {{ story.story }} 
+                    </p>
+                    <p>
+                      p: {{story.evidence.p}} 
+                    </p>
+                </li>
+              </ol>
+            </div>
+            <p v-else>
+                Insufficient evidence for statistically significant changes in stories under this metric.
+            </p>
+          </li>
+        </ol>
+    </div>
+    <p v-else>No statistically significant changes found.</p>
+  </div>
+</script>
+
+<div class="app-layout">
+  <div class='menuLeft' id='menu'>
+    <input type='file' id='file-input' class='file_input'/>
+    <div id='filterItem'>
+      <sup>Memory metrics</sup>
+      <v-select placeholder='browser'
+          :options = 'browserOptions'
+          v-model='state.browser'
+          id='filterBox'
+          ></v-select>
+      <v-select placeholder='subprocess'
+          :options = 'subprocessOptions'
+          v-model='state.subprocess'
+          id='filterBox'
+          ></v-select>
+      <v-select placeholder='size'
+          :options='sizeOptions'
+          v-model='state.size'
+          id='filterBox'
+          ></v-select>
+      <v-select placeholder='component'
+          :options='componentsOptions'
+          v-model='state.component'
+          id='filterBox'
+          ></v-select>
+      <v-select placeholder='subcomponent'
+          id='subcomponentBox'
+          v-model='state.subcomponent'
+          :options='firstSubcompOptions'
+          ></v-select>
+      <v-select placeholder='subcomponent'
+          id='subcomponentBox_'
+          v-model='state.subsubcomponent'
+          :options='secondSubcompOptions'
+          ></v-select>
+      <button v-on:click="apply"
+              id='apply_button'>
+              Apply</button>
+    </div>
+    <v-select placeholder="Please select a reference column"
+        :options="allLabels"
+        v-model="state.referenceColumn"></v-select>
+    <stat-test-summary
+        v-bind:test-results="state.testResults"
+        v-bind:reference-column="state.referenceColumn"></stat-test-summary>
+  </div>
+  <!-- the root component -->
+  <div class='appRight' id='app'>
+        <div id='canvas'></div>
+        <form id="search">
+          <input v-if="gridDataLoaded"
+                id='inputBox'
+                placeholder="Search a metric" 
+                name="query" 
+                v-model="state.searchQuery">
+          <v-select placeholder='Pick type of plot'
+              id='globalTypeOfPlot'
+              :options='state.typesOfPlot'
+              v-model='state.chosenTypeOfPlot'
+              v-if='gridDataLoaded'></v-select>
+        </form>
+    <button v-if="hasHistory()" v-on:click="undo">BACK</button>
+
+        <button v-if='data_loaded'
+          id='reset_table'
+          v-on:click='resetTableData()'>
+          Reset table
+        </button>
+        <data-table v-if="gridDataLoaded"
+          :data="state.gridData"
+          :columns="gridColumns"
+          :filter-key="state.searchQuery"
+          :additional='columnsForChosenDiagnostic'
+          :plot = 'state.chosenTypeOfPlot'
+          ref='tableComponent'>
+        </data-table>
+    </div
+
+</div>
+<script src='app.js'></script>
+<script src="filter.js"></script>
+<script src='table_component.js'></script>
+<script src='metrics_parser.js'></script>
+</body>
+</html>

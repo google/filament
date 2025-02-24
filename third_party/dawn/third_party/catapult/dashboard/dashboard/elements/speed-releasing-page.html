@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-listbox/paper-listbox.html">
+<link rel="import" href="/components/polymer/polymer.html">
+
+<link rel="import" href="/dashboard/elements/speed-releasing-alerts.html">
+<link rel="import" href="/dashboard/elements/speed-releasing-landing-page.html">
+<link rel="import" href="/dashboard/elements/speed-releasing-table.html">
+<link rel="import" href="/dashboard/static/base.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<dom-module id="speed-releasing-page">
+  <template>
+    <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    .center {
+      margin: auto;
+      padding: 10px;
+    }
+
+    #content {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    </style>
+    <template is="dom-if" if="{{loading}}">
+      <div id="loading-spinner"><img src="//www.google.com/images/loading.gif"></div>
+    </template>
+    <template is="dom-if" if="{{!loading}}">
+      <template is="dom-if" if="{{error}}">
+        <div class="error">{{error}}</div>
+      </template>
+      <template is="dom-if" if="{{!error}}">
+        <div id="content">
+          <template is="dom-if" if="{{!showList}}">
+            <speed-releasing-table table-name="{{tableName}}">
+            </speed-releasing-table>
+            <speed-releasing-alerts table-name="{{tableName}}">
+            </speed-releasing-alerts>
+          </template>
+          <template is="dom-if" if="{{showList}}">
+            <speed-releasing-landing-page list="{{tableList}}">
+            </speed-releasing-landing-page>
+          </template>
+        </div>
+      </template>
+    </template>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'speed-releasing-page',
+  properties: {
+    loading: {
+      type: Boolean,
+      value: false,
+      notify: true
+    },
+    error: {
+      type: String,
+      value: '',
+      notify: true
+    },
+    showList: {
+      type: Boolean,
+      notify: true,
+    },
+    tableList: {
+      type: Array,
+      notify: true,
+    },
+    tableName: {
+      type: String,
+      notify: true,
+    },
+  },
+
+  ready() {
+    const params = {};
+    let path = uri.getPathName();
+    if (!path) { // Go get the list.
+      path = '';
+      simple_xhr.send('/speed_releasing/' + path, params,
+          function(response) {
+            this.loading = false;
+            this.tableName = response.name;
+            this.showList = response.show_list;
+            this.tableList = response.list;
+          }.bind(this),
+          function(msg) {
+            this.error = msg;
+            this.loading = false;
+          }.bind(this));
+    } else { // POST in speed-releasing-table will get the values.
+      this.tableName = path;
+      this.showList = false;
+      this.loading = false;
+    }
+  }
+
+});
+</script>

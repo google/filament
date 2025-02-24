@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/ui/base/container_that_decorates_its_children.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Simple list view.
+ */
+tr.exportTo('tr.ui.b', function() {
+  /**
+   * @constructor
+   */
+  const ListView = tr.ui.b.define(
+      'x-list-view', tr.ui.b.ContainerThatDecoratesItsChildren);
+
+  ListView.prototype = {
+    __proto__: tr.ui.b.ContainerThatDecoratesItsChildren.prototype,
+
+    decorate() {
+      tr.ui.b.ContainerThatDecoratesItsChildren.prototype.decorate.call(this);
+
+      Polymer.dom(this).classList.add('x-list-view');
+      this.style.display = 'block';
+      this.style.userSelect = 'none';
+      this.style.outline = 'none';
+      this.onItemClicked_ = this.onItemClicked_.bind(this);
+      this.onKeyDown_ = this.onKeyDown_.bind(this);
+      this.tabIndex = 0;
+      this.addEventListener('keydown', this.onKeyDown_);
+
+      this.selectionChanged_ = false;
+    },
+
+    decorateChild_(item) {
+      Polymer.dom(item).classList.add('list-item');
+      item.style.paddingTop = '2px';
+      item.style.paddingRight = '4px';
+      item.style.paddingBottom = '2px';
+      item.style.paddingLeft = '4px';
+      item.addEventListener('click', this.onItemClicked_, true);
+
+      Object.defineProperty(
+          item,
+          'selected', {
+            configurable: true,
+            get: () => item.hasAttribute('selected'),
+            set: value => {
+              // |this| is the ListView.
+              const oldSelection = this.selectedElement;
+              if (oldSelection && oldSelection !== item && value) {
+                Polymer.dom(this.selectedElement).removeAttribute('selected');
+              }
+              if (value) {
+                Polymer.dom(item).setAttribute('selected', 'selected');
+                item.style.backgroundColor = 'rgb(171, 217, 202)';
+                item.style.outline = '1px dotted rgba(0,0,0,0.1)';
+                item.style.outlineOffset = 0;
+              } else {
+                Polymer.dom(item).removeAttribute('selected');
+                item.style.backgroundColor = '';
+              }
+              const newSelection = this.selectedElement;
+              if (newSelection !== oldSelection) {
+                tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+              }
+            },
+          });
+    },
+
+    undecorateChild_(item) {
+      this.selectionChanged_ |= item.selected;
+
+      Polymer.dom(item).classList.remove('list-item');
+      item.removeEventListener('click', this.onItemClicked_);
+      delete item.selected;
+    },
+
+    beginDecorating_() {
+      this.selectionChanged_ = false;
+    },
+
+    doneDecoratingForNow_() {
+      if (this.selectionChanged_) {
+        tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+      }
+    },
+
+    get selectedElement() {
+      const el = Polymer.dom(this).querySelector('.list-item[selected]');
+      if (!el) return undefined;
+      return el;
+    },
+
+    set selectedElement(el) {
+      if (!el) {
+        if (this.selectedElement) {
+          this.selectedElement.selected = false;
+        }
+        return;
+      }
+
+      if (el.parentElement !== this) {
+        throw new Error(
+            'Can only select elements that are children of this list view');
+      }
+      el.selected = true;
+    },
+
+    getElementByIndex(index) {
+      return Polymer.dom(this)
+          .querySelector('.list-item:nth-child(' + index + ')');
+    },
+
+    clear() {
+      const changed = this.selectedElement !== undefined;
+      tr.ui.b.ContainerThatDecoratesItsChildren.prototype.clear.call(this);
+      if (changed) {
+        tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+      }
+    },
+
+    onItemClicked_(e) {
+      const currentSelectedElement = this.selectedElement;
+      if (currentSelectedElement) {
+        Polymer.dom(currentSelectedElement).removeAttribute('selected');
+      }
+      let element = e.target;
+      while (element.parentElement !== this) {
+        element = element.parentElement;
+      }
+      if (element !== currentSelectedElement) {
+        Polymer.dom(element).setAttribute('selected', 'selected');
+      }
+      tr.b.dispatchSimpleEvent(this, 'selection-changed', false);
+    },
+
+    onKeyDown_(e) {
+      if (this.selectedElement === undefined) return;
+
+      if (e.keyCode === 38) { // Up arrow.
+        const prev = Polymer.dom(this.selectedElement).previousSibling;
+        if (prev) {
+          prev.selected = true;
+          tr.ui.b.scrollIntoViewIfNeeded(prev);
+          e.preventDefault();
+          return true;
+        }
+      } else if (e.keyCode === 40) { // Down arrow.
+        const next = Polymer.dom(this.selectedElement).nextSibling;
+        if (next) {
+          next.selected = true;
+          tr.ui.b.scrollIntoViewIfNeeded(next);
+          e.preventDefault();
+          return true;
+        }
+      }
+    },
+
+    addItem(textContent) {
+      const item = document.createElement('div');
+      Polymer.dom(item).textContent = textContent;
+      Polymer.dom(this).appendChild(item);
+      item.style.userSelect = 'none';
+      return item;
+    }
+
+  };
+
+  return {
+    ListView,
+  };
+});
+</script>

@@ -1,0 +1,1 @@
+pre{border:solid red;opacity:0.8;-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=80)";filter:PROGID:DXImageTransform.Microsoft.Alpha(Opacity=80);zoom:1}code{-ms-filter:"PROGID:DXImageTransform.Microsoft.Alpha(Opacity=80)";filter:progid:DXImageTransform.Microsoft.Alpha(Opacity=80)}

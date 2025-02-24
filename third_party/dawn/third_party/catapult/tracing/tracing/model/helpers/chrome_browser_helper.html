@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_process_helper.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Utilities for accessing trace data about the Chrome browser.
+ */
+tr.exportTo('tr.model.helpers', function() {
+  function ChromeBrowserHelper(modelHelper, process) {
+    tr.model.helpers.ChromeProcessHelper.call(this, modelHelper, process);
+    this.mainThread_ = process.findAtMostOneThreadNamed('CrBrowserMain');
+    if (!process.name) {
+      process.name = ChromeBrowserHelper.PROCESS_NAME;
+    }
+  }
+
+  ChromeBrowserHelper.PROCESS_NAME = 'Browser';
+
+  ChromeBrowserHelper.isBrowserProcess = function(process) {
+    return !!process.findAtMostOneThreadNamed('CrBrowserMain');
+  };
+
+  ChromeBrowserHelper.prototype = {
+    __proto__: tr.model.helpers.ChromeProcessHelper.prototype,
+
+    // TODO(petrcermak): Pass browser name in a metadata event (see
+    // crbug.com/605088).
+    get browserName() {
+      const hasInProcessRendererThread = this.process.findAllThreadsNamed(
+          'Chrome_InProcRendererThread').length > 0;
+      return hasInProcessRendererThread ? 'webview' : 'chrome';
+    },
+
+    get mainThread() {
+      return this.mainThread_;
+    },
+
+    get rendererHelpers() {
+      return this.modelHelper.rendererHelpers;
+    },
+
+    getLoadingEventsInRange(rangeOfInterest) {
+      return this.getAllAsyncSlicesMatching(function(slice) {
+        return slice.title.indexOf('WebContentsImpl Loading') === 0 &&
+            rangeOfInterest.intersectsExplicitRangeInclusive(
+                slice.start, slice.end);
+      });
+    },
+
+    getCommitProvisionalLoadEventsInRange(rangeOfInterest) {
+      return this.getAllAsyncSlicesMatching(function(slice) {
+        return slice.title === 'RenderFrameImpl::didCommitProvisionalLoad' &&
+            rangeOfInterest.intersectsExplicitRangeInclusive(
+                slice.start, slice.end);
+      });
+    },
+
+    get hasLatencyEvents() {
+      let hasLatency = false;
+      for (const thread of this.modelHelper.model.getAllThreads()) {
+        for (const event of thread.getDescendantEvents()) {
+          if (!event.isTopLevel) continue;
+          if (!(event instanceof tr.e.cc.InputLatencyAsyncSlice)) {
+            continue;
+          }
+          hasLatency = true;
+        }
+      }
+      return hasLatency;
+    },
+
+    getLatencyEventsInRange(rangeOfInterest) {
+      return this.getAllAsyncSlicesMatching(function(slice) {
+        return (slice.title.indexOf('InputLatency') === 0) &&
+            rangeOfInterest.intersectsExplicitRangeInclusive(
+                slice.start, slice.end);
+      });
+    },
+
+    getAllAsyncSlicesMatching(pred, opt_this) {
+      const events = [];
+      this.iterAllThreads(function(thread) {
+        for (const slice of thread.getDescendantEvents()) {
+          if (pred.call(opt_this, slice)) {
+            events.push(slice);
+          }
+        }
+      });
+      return events;
+    },
+
+    iterAllThreads(func, opt_this) {
+      for (const thread of Object.values(this.process.threads)) {
+        func.call(opt_this, thread);
+      }
+
+      for (const rendererHelper of Object.values(this.rendererHelpers)) {
+        const rendererProcess = rendererHelper.process;
+        for (const thread of Object.values(rendererProcess.threads)) {
+          func.call(opt_this, thread);
+        }
+      }
+    }
+  };
+
+  return {
+    ChromeBrowserHelper,
+  };
+});
+</script>

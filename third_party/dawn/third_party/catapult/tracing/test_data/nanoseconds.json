@@ -1,0 +1,22 @@
+{
+  "traceEvents": [
+    {"name": "us1", "ph": "B", "pid": 1, "tid": 1, "ts": 0},
+    {"name": "us1", "ph": "E", "pid": 1, "tid": 1, "ts": 1.1},
+    {"name": "us2", "ph": "B", "pid": 1, "tid": 1, "ts": 1.1},
+    {"name": "us2", "ph": "E", "pid": 1, "tid": 1, "ts": 1.3},
+    {"name": "us3", "ph": "B", "pid": 1, "tid": 1, "ts": 1.3},
+    {"name": "us3", "ph": "E", "pid": 1, "tid": 1, "ts": 1.6},
+    {"name": "us4", "ph": "B", "pid": 1, "tid": 1, "ts": 1.7},
+    {"name": "us4", "ph": "E", "pid": 1, "tid": 1, "ts": 2.1},
+
+    {"name": "ns1", "ph": "B", "pid": 1, "tid": 1, "ts": 3.000},
+    {"name": "ns1", "ph": "E", "pid": 1, "tid": 1, "ts": 3.011},
+    {"name": "ns2", "ph": "B", "pid": 1, "tid": 1, "ts": 3.011},
+    {"name": "ns2", "ph": "E", "pid": 1, "tid": 1, "ts": 3.013},
+    {"name": "ns3", "ph": "B", "pid": 1, "tid": 1, "ts": 3.013},
+    {"name": "ns3", "ph": "E", "pid": 1, "tid": 1, "ts": 3.016},
+    {"name": "ns4", "ph": "B", "pid": 1, "tid": 1, "ts": 3.017},
+    {"name": "ns4", "ph": "E", "pid": 1, "tid": 1, "ts": 3.021}
+  ],
+  "displayTimeUnit": "ns"
+}

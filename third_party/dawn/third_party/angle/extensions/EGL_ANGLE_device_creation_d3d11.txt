@@ -1,0 +1,92 @@
+Name
+
+    ANGLE_device_creation_d3d11
+
+Name Strings
+
+    EGL_ANGLE_device_creation_d3d11
+
+Contributors
+
+    Austin Kinross  (aukinros 'at' microsoft.com)
+
+Contact
+
+    Austin Kinross  (aukinros 'at' microsoft.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Nov 02, 2015
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_ANGLE_device_d3d and EGL_ANGLE_device_creation.
+
+    Written against the wording of EGL 1.5 as modified by EGL_ANGLE_device_d3d
+    and EGL_ANGLE_device_creation.
+
+Overview
+
+    ANGLE has the ability to run GPU commands on a native D3D device. This
+    extension defines a way to create a EGL device which maps to an inputted
+    Direct3D 11 device.
+
+    This extension is intended to be used with EGL_EXT_platform_device to
+    initialize a display using an existing Direct3D 11 device, but
+    EGL_EXT_platform_device is not required.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Changes to section 3.2 (Devices)
+
+    Modify the language in section 3.2 (Devices) describing valid attribute
+    names passed into eglCreateDeviceANGLE via <device_type>:
+
+    "This specification defines one value for <device_type>:
+    EGL_D3D11_DEVICE_ANGLE. If this device type is specified then
+    <native_device> must be a valid pointer to a Direct3D 11 device. If
+    <native_device> is not a valid pointer to a Direct3D 11 device then the
+    resulting behavior is undefined."
+
+    Append the following to the end of section 3.2 (Devices):
+
+    "If a Direct3D 11 device used to create a device experiences a "lost device"
+    then all resulting behavior of the device (and any dependent EGL objects) is
+    undefined. It is the caller's responsibility to monitor for "lost device"
+    and to create a new device (and dependent EGL objects) as appropriate. For
+    more information on "lost device", see the Direct3D documentation."
+
+Issues
+
+    None.
+
+Revision History
+
+    Version 1, Nov 2, 2015 (Austin Kinross)
+        - Initial Draft

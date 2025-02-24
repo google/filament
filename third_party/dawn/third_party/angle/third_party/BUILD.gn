@@ -1,0 +1,47 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# See:
+# https://chromium.googlesource.com/chromium/src/+/main/third_party/BUILD.gn
+
+import("//third_party/libjpeg.gni")
+
+assert(!is_ios, "This is not used on iOS, don't drag it in unintentionally")
+
+config("system_libjpeg_config") {
+  libs = [ "jpeg" ]
+  defines = [ "USE_SYSTEM_LIBJPEG" ]
+}
+
+config("libjpeg_turbo_config") {
+  defines = [ "USE_LIBJPEG_TURBO=1" ]
+}
+
+# This is a meta target that forwards to the system's libjpeg,
+# third_party/libjpeg, or third_party/libjpeg_turbo depending on the build args
+# declared in this file.
+group("jpeg") {
+  if (use_system_libjpeg) {
+    public_configs = [ ":system_libjpeg_config" ]
+  } else if (use_libjpeg_turbo) {
+    public_deps = [ "//third_party/libjpeg_turbo:libjpeg" ]
+    public_configs = [ ":libjpeg_turbo_config" ]
+  } else {
+    public_deps = [ "//third_party/libjpeg:libjpeg" ]
+  }
+}
+
+# This is a meta target that forwards include paths only to the system's
+# libjpeg, third_party/libjpeg, or third_party/libjpeg_turbo depending on the
+# build args declared in this file. This is needed, rarely, for targets that
+# need to reference libjpeg without explicitly building it.
+group("jpeg_includes") {
+  if (use_system_libjpeg) {
+    public_configs = [ ":system_libjpeg_config" ]
+  } else if (use_libjpeg_turbo) {
+    public_configs = [ "//third_party/libjpeg_turbo:libjpeg_config" ]
+  } else {
+    public_configs = [ "//third_party/libjpeg:libjpeg_config" ]
+  }
+}

@@ -1,0 +1,20 @@
+build_with_chromium = false
+build_with_angle = true
+dawn_build_dxc = false
+
+dawn_angle_dir = "//"
+dawn_glfw_dir = "//third_party/dawn/third_party/glfw"
+dawn_googletest_dir = "//third_party/googletest/src"
+dawn_jinja2_dir = "//third_party/jinja2"
+dawn_jsoncpp_dir = "//third_party/jsoncpp"
+dawn_spirv_tools_dir = "//third_party/spirv-tools/src"
+dawn_swiftshader_dir = "//third_party/SwiftShader"
+dawn_vulkan_headers_dir = "//third_party/vulkan-headers/src"
+dawn_vulkan_loader_dir = "//third_party/vulkan-loader/src"
+dawn_vulkan_utility_libraries_dir = "//third_party/vulkan-utility-libraries/src"
+dawn_vulkan_validation_layers_dir = "//third_party/vulkan-validation-layers/src"
+dawn_dxc_dir = "//third_party/dawn/third_party/dxc"
+dawn_dxheaders_dir = "//third_party/dawn/third_party/dxheaders"
+dawn_opengl_registry_dir = "//third_party/OpenGL-Registry/src"
+dawn_egl_registry_dir = "//third_party/EGL-Registry/src"
+dawn_abseil_dir = "//third_party/abseil-cpp/"

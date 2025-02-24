@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('msmImport', function() {
+    const lines = [
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.637650: msm_gpu_submit_flush: id=164270 pid=20803 ring=0:164271 ticks=5854915894',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.638074: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.638521: msm_gpu_submit_flush: id=164271 pid=20803 ring=0:164272 ticks=5854932654',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.650267: msm_gpu_submit_retired: id=164270 pid=20803 ring=0:164271 elapsed=11198437 ns mhz=179 start=5854916032 end=5855131042',  // @suppress longLineCheck
+      '   kworker/u16:1-21183 (21183) [003] ....  2569.650297: msm_gpu_freq_change: new_freq=800',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.652039: msm_gpu_submit_retired: id=164271 pid=20803 ring=0:164272 elapsed=1594895 ns mhz=216 start=5855131119 end=5855161741',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.654153: msm_gpu_submit_flush: id=164272 pid=20803 ring=0:164273 ticks=5855232953',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.654563: msm_gpu_submit_flush: id=164273 pid=20803 ring=0:164274 ticks=5855240817',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.657140: msm_gpu_submit_retired: id=164272 pid=20803 ring=0:164273 elapsed=2771979 ns mhz=799 start=5855233005 end=5855286227',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.659900: msm_gpu_submit_retired: id=164273 pid=20803 ring=0:164274 elapsed=549166 ns mhz=800 start=5855286249 end=5855296793',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.663715: msm_gpu_freq_change: new_freq=267',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.670766: msm_gpu_submit_flush: id=164274 pid=20803 ring=0:164275 ticks=5855552051',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [007] ....  2569.671356: msm_gpu_submit_flush: id=164275 pid=20803 ring=0:164276 ticks=5855563392',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.676930: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.679942: msm_gpu_submit_retired: id=164274 pid=20803 ring=0:164275 elapsed=8682343 ns mhz=241 start=5855552151 end=5855718852',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.682724: msm_gpu_submit_retired: id=164275 pid=20803 ring=0:164276 elapsed=1663906 ns mhz=179 start=5855718929 end=5855750876',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.688592: msm_gpu_submit_flush: id=164276 pid=20803 ring=0:164277 ticks=5855894498',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.689192: msm_gpu_submit_flush: id=164277 pid=20803 ring=0:164278 ticks=5855906029',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.693595: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.699896: msm_gpu_submit_retired: id=164276 pid=20803 ring=0:164277 elapsed=11185572 ns mhz=179 start=5855894608 end=5856109371',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.701729: msm_gpu_submit_retired: id=164277 pid=20803 ring=0:164278 elapsed=1686666 ns mhz=180 start=5856109447 end=5856141831',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.704179: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.704660: msm_gpu_submit_flush: id=164278 pid=20803 ring=0:164279 ticks=5856203141',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.705313: msm_gpu_submit_flush: id=164279 pid=20803 ring=0:164280 ticks=5856215696',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.715973: msm_gpu_freq_change: new_freq=800',  // @suppress longLineCheck
+      '   kworker/u16:1-21183 (21183) [003] ....  2569.715991: msm_gpu_submit_retired: id=164278 pid=20803 ring=0:164279 elapsed=11180989 ns mhz=179 start=5856203256 end=5856417931',  // @suppress longLineCheck
+      '   kworker/u16:1-21183 (21183) [003] ....  2569.716802: msm_gpu_submit_retired: id=164279 pid=20803 ring=0:164280 elapsed=876718 ns mhz=669 start=5856418010 end=5856434843',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.721188: msm_gpu_submit_flush: id=164280 pid=20803 ring=0:164281 ticks=5856520661',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.721710: msm_gpu_submit_flush: id=164281 pid=20803 ring=0:164282 ticks=5856530679',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.725951: msm_gpu_submit_retired: id=164280 pid=20803 ring=0:164281 elapsed=2776406 ns mhz=799 start=5856520717 end=5856574024',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.726539: msm_gpu_submit_retired: id=164281 pid=20803 ring=0:164282 elapsed=546458 ns mhz=800 start=5856574047 end=5856584539',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.727104: msm_gpu_freq_change: new_freq=355',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.738225: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.742288: msm_gpu_submit_flush: id=164282 pid=20803 ring=0:164283 ticks=5856925966',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.742994: msm_gpu_submit_flush: id=164283 pid=20803 ring=0:164284 ticks=5856939530',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.749148: msm_gpu_freq_change: new_freq=180',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.753702: msm_gpu_submit_retired: id=164282 pid=20803 ring=0:164283 elapsed=11166041 ns mhz=179 start=5856926090 end=5857140478',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.754644: msm_gpu_submit_flush: id=164284 pid=20803 ring=0:164285 ticks=5857163320',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.755242: msm_gpu_submit_retired: id=164283 pid=20803 ring=0:164284 elapsed=1697864 ns mhz=179 start=5857140557 end=5857173156',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.755419: msm_gpu_submit_flush: id=164285 pid=20803 ring=0:164286 ticks=5857178216',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.760258: msm_gpu_freq_change: new_freq=800',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.762807: msm_gpu_submit_retired: id=164284 pid=20803 ring=0:164285 elapsed=6796979 ns mhz=329 start=5857173223 end=5857303725',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.763401: msm_gpu_submit_retired: id=164285 pid=20803 ring=0:164286 elapsed=550937 ns mhz=799 start=5857303747 end=5857314325',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.770442: msm_gpu_submit_flush: id=164286 pid=20803 ring=0:164287 ticks=5857466816',  // @suppress longLineCheck
+      ' UnityGfxDeviceW-20803 (20764) [006] ....  2569.771292: msm_gpu_submit_flush: id=164287 pid=20803 ring=0:164288 ticks=5857483141',  // @suppress longLineCheck
+      '   kworker/u16:5-416   (  416) [001] ....  2569.773496: msm_gpu_submit_retired: id=164286 pid=20803 ring=0:164287 elapsed=2780833 ns mhz=799 start=5857466871 end=5857520263',  // @suppress longLineCheck
+      '   kworker/u16:1-21183 (21183) [003] ....  2569.774162: msm_gpu_freq_change: new_freq=430',  // @suppress longLineCheck
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    let gpuThread = undefined;
+    m.getAllThreads().forEach(function(t) {
+      switch (t.name) {
+        case 'GPU':
+          gpuThread = t;
+          break;
+        default:
+          assert.fail(t, undefined, 'Unexpected thread named ' + t.name);
+      }
+    });
+    assert.isDefined(gpuThread);
+
+    assert.strictEqual(gpuThread.sliceGroup.length, 17);
+
+    function ticks2ms(ticks) {
+      return ticks / 19200;
+    }
+
+    const queuedDuration = ticks2ms(
+        5854916032 - /* start= from retire trace */
+        5854915894); /* ticks= from flush trace */
+    const runningDuration = ticks2ms(
+        5855131042 - /* end= from retire trace */
+        5854916032); /* start= from retire trace */
+
+    assert.closeTo(
+        (2569.637650 * 1000.0) + queuedDuration,
+        gpuThread.sliceGroup.slices[0].start,
+        1e-5);
+    assert.closeTo(
+        runningDuration,
+        gpuThread.sliceGroup.slices[0].duration,
+        1e-5);
+  });
+});
+</script>
+

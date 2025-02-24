@@ -1,0 +1,207 @@
+<html>
+<head>
+     <!--#include virtual="header.html" -->
+    <title>Joe Gregorio | BitWorking | Projects | httplib2.py</title>
+</head>
+<body class='main' id="top" name="top" >
+    <div class="body">
+        <!--#include virtual="titlebar.html" -->
+
+        <div class="content">
+
+            <div>
+
+                <h2>Httplib2</h2>
+                <p>A comprehensive HTTP client library, <code>httplib2.py</code>
+                supports many features left out of other HTTP libraries.
+                </p>
+                <dl>
+                    <dt>HTTP and HTTPS</dt>
+                    <dd>HTTPS support is only available if the socket module was compiled with SSL support.
+                    </dd>
+
+                    <dt>Keep-Alive</dt>
+                    <dd>Supports HTTP 1.1 Keep-Alive, keeping the socket
+                    open and performing multiple requests over the same connection
+                    if possible.
+                    </dd>
+
+                    <dt>Authentication</dt>
+                    <dd>The following types of HTTP Authentication are supported.
+                    These can be used over both HTTP and HTTPS.
+                    <ul>
+                        <li><a href="http://www.faqs.org/rfcs/rfc2617.html">Digest</a></li>
+                        <li><a href="http://www.faqs.org/rfcs/rfc2617.html">Basic</a></li>
+                        <li><a href="http://www.xml.com/pub/a/2003/12/17/dive.html">WSSE</a></li>
+                        <li><a href="http://franklinmint.fm/2006/02/28/draft-sayre-http-hmac-digest.html">HMAC Digest</a></li>
+                        <li><a href="http://code.google.com/apis/accounts/AuthForInstalledApps.html">Google Account Authentication</a></li>
+                    </ul>
+                    </dd>
+
+                    <dt>Caching</dt>
+                    <dd>The module can optionally operate with a private
+                    cache that understands the Cache-Control: header and
+                    uses both the ETag and Last-Modified cache validators.
+                    </dd>
+
+                    <dt>All Methods</dt>
+                    <dd>The module can handle any HTTP request method, not just GET and POST.</dd>
+
+                    <dt>Redirects</dt>
+                    <dd>Automatically follows 3XX redirects on GETs.</dd>
+
+                    <dt>Compression</dt>
+                    <dd>Handles both 'deflate' and 'gzip' types of compression.</dd>
+
+                    <dt>Lost update support</dt>
+                    <dd>Automatically adds back ETags into PUT requests to resources
+                    we have already cached. This implements Section 3.2 of
+                    <a href="http://www.w3.org/1999/04/Editing/#Table">Detecting the Lost Update Problem Using Unreserved Checkout</a></dd>
+
+                    <dt>Unit Tested</dt>
+                    <dd>A large and growing set of unit tests.</dd>
+
+                </dl>
+
+<h3>Usage</h3>
+
+<p>A simple retrieval:</p>
+
+<pre><code>import httplib2
+h = httplib2.Http(".cache")
+resp, content = h.request("http://example.org/", "GET")
+</code></pre>
+
+<p>The 'content' is the content retrieved from the URL.
+The content is already decompressed or unzipped if necessary.
+The 'resp' contains all the response headers.
+</p>
+
+<p>To PUT some content to a server that uses SSL
+and Basic authentication:</p>
+
+<pre><code>import httplib2
+h = httplib2.Http(".cache")
+h.add_credentials('name', 'password')
+resp, content = h.request("https://example.org/chap/2",
+    "PUT", body="This is text",
+    headers={'content-type':'text/plain'} )
+</code></pre>
+
+<p>Use the Cache-Control: header to control
+   how the caching operates.</p>
+
+<pre><code>import httplib2
+h = httplib2.Http(".cache")
+resp, content = h.request("http://bitworking.org/")
+ ...
+resp, content = h.request("http://bitworking.org/",
+    headers={'cache-control':'no-cache'})
+</code></pre>
+
+<p>The first request will be cached and since this is a request to
+bitworking.org it will be set to be cached for two hours, because
+that is how I have my server configured.
+Any subsequent GET to that URI will return the value from the
+on-disk cache and no request will be made to the server.
+You can use the Cache-Control: header to change the caches behavior and
+in this example the second request adds the Cache-Control: header with a value
+of 'no-cache' which tells the library that the cached copy
+must not be used when handling this request.
+</p>
+
+<h3>Requirements</h3>
+
+<p>Requires Python 2.7, 3.4, or later. Does not require
+any libraries beyond what is found in the core library.</p>
+
+<h3>Download/Installation</h3>
+
+<p>The latest release of httplib2 is 0.3.0 and
+can be <a href="dist">downloaded from the from
+    the dist directory</a>. See the
+<a href="CHANGELOG">CHANGELOG</a> for what's new in this
+version.</p>
+
+
+<p>The httplib2 module is shipped as a distutils package.  To install
+the library, first unpack the distribution archive, and issue the following
+command:</p>
+
+<pre><code>$ python setup.py install</code></pre>
+
+<p><a href="dist">Download the distribution archives from here</a>. </p>
+
+<p> <a href="test">The resources used in the unit test cases</a>
+  are available also. More documentation on them will be forthcoming.</p>
+
+<p>You can also get the sources directly from the SourceForge hosted
+  subversion repository.</p>
+
+<pre>svn co https://httplib2.svn.sourceforge.net/svnroot/httplib2/trunk httplib2</pre>
+
+
+<h3>Documentation</h3>
+
+<p>In addition to the <a href="ref/">Python library style documentation</a> there
+are also two articles on XML.com, <a href="http://www.xml.com/pub/a/2006/02/01/doing-http-caching-right-introducing-httplib2.html">
+    Doing HTTP Caching Right: Introducing httplib2</a> and
+<a href="http://www.xml.com/pub/a/2006/03/29/httplib2-http-persistence-and-authentication.html">
+httplib2: HTTP Persistence and Authentication </a>.
+
+</p>
+
+<h3>Feedback</h3>
+
+<p>Bugs and enhancement requests are handled through
+<a href="http://sourceforge.net/projects/httplib2/">SourceForge</a>, and anything is up for discussion
+on the <a href="http://sourceforge.net/mail/?group_id=161082">httplib2 mailing list</a>.
+</p>
+
+<h3>To Do</h3>
+
+<p>This module is not perfect and needs the following:</p>
+<ul>
+    <li>Support for Proxies</li>
+    <li>A pluggable store for the cache is in place, with plugins for
+    flat files and memcached.
+    I eventually want to have plugins that allow keeping the cache in Berkeley DB, MySQL, etc.</li>
+    <li>More unit tests</li>
+</ul>
+
+<h3>Project Goal</h3>
+
+<p>To become a worthy addition to the Python core library.</p>
+
+<h3>Additional Information</h3>
+
+<p>
+   <dl>
+       <dt>Author</dt>
+       <dd>Joe Gregorio</dd>
+
+       <dt>License</dt>
+       <dd>MIT</dd>
+
+       <dt>Contributors</dt>
+
+       <dd> Thomas Broyer (t.broyer@ltgt.net) </dd>
+       <dd> James Antill </dd>
+       <dd> Xavier Verges Farrero </dd>
+       <dd> Jonathan Feinberg </dd>
+       <dd> Blair Zajac </dd>
+       <dd> Sam Ruby</dd>
+       <dd> Louis Nyffenegger </dd>
+       <dd> (Your Name Here) </dd>
+   </dl>
+</p>
+
+  <p style="font-size: small">This page last updated on: $LastChangedDate$.</p>
+
+            </div>
+        </div>
+     <!--#include virtual="footer.html" -->
+    </div>
+</body>
+
+</html>

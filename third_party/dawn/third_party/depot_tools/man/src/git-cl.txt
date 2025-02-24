@@ -1,0 +1,119 @@
+git-cl(1)
+=========
+
+NAME
+----
+git-cl -
+include::_git-cl_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git cl <subcommand> [options]'
+
+DESCRIPTION
+-----------
+
+`git cl` is the home of all of the tools for interacting with changelists.
+
+Run `git cl help <subcommand>` for a more detailed listing of that command
+and its options.
+
+SUBCOMMANDS
+-----------
+
+archive::
+  archives and deletes branches associated with closed changelists
+
+baseurl::
+  gets or sets base-url for this branch
+
+checkout::
+  checks out a branch associated with a given Rietveld or Gerrit issue
+
+comments::
+  shows or posts review comments for any changelist
+
+config::
+  edits configuration for this tree
+
+dcommit::
+  DEPRECATED: Used to commit the current changelist via git-svn
+
+description::
+  brings up the editor for the current CL's description
+
+diff::
+  shows differences between local tree and last upload
+
+format::
+  runs auto-formatting tools (clang-format etc.) on the diff
+
+help::
+  prints list of commands or help for a specific command
+
+issue::
+  sets or displays the current code review issue number
+
+land::
+  commits the current changelist via git
+
+lint::
+  runs cpplint on the current changelist
+
+owners::
+  interactively find the owners for reviewing
+
+patch::
+  applies (cherry-picks) a Gerrit changelist locally
+
+presubmit::
+  runs presubmit tests on the current changelist
+
+set-close::
+  closes the issue
+
+set-commit::
+  sets the commit bit to trigger the Commit Queue
+
+split::
+  splits a branch into smaller branches and uploads CLs
+
+status::
+  show status of changelists
+
+tree::
+  shows the status of the tree
+
+try::
+  triggers try jobs using either BuildBucket or CQ dry run
+
+try-results::
+  prints info about try jobs associated with current CL
+
+upload::
+  uploads the current changelist to codereview
+
+upstream::
+  prints or sets the name of the upstream branch, if any
+
+web::
+  opens the current CL in the web browser
+
+
+OPTIONS
+-------
+
+--version::
+  show program's version number and exit
+
+-h, --help::
+  show this help message and exit
+
+-v, --verbose::
+  Use 2 times for more debugging info
+
+
+include::_footer.txt[]
+
+// vim: ft:asciidoc:

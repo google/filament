@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mre/mre_result.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  var test_utils = tr.c.TestUtils;
+  test('basicChrome', function() {
+    var m = tr.e.chrome.ChromeTestUtils.newChromeModel(function(m) {
+      // Browser.
+      m.browserMain.sliceGroup.pushSlice(test_utils.newSliceEx({
+        name: 'BrowserSlice',
+        start: 0, duration: 10
+      }));
+
+      // Renderer.
+      m.rendererMain.sliceGroup.pushSlice(test_utils.newSliceEx({
+        name: 'RendererSlice',
+        start: 0, duration: 10
+      }));
+
+      // Something else else.
+      m.otherProcess = m.getOrCreateProcess(20);
+      m.otherProcessMain = m.otherProcess.getOrCreateThread(21);
+      m.otherProcessMain.sliceGroup.pushSlice(test_utils.newSliceEx({
+        name: 'RendererSlice',
+        start: 0, duration: 10
+      }));
+    });
+
+    var tg = new pi.m.ThreadGrouping();
+    tg.autoInitUsingHelpers(m);
+
+    var allSlices = new tr.model.EventSet();
+    for (var e of m.getDescendantEvents())
+      if (e instanceof tr.model.Slice)
+        allSlices.push(e);
+    var groups = tg.divideEventSetIntoSubGroups(allSlices);
+    var numGrouped = 0;
+    tr.b.iterItems(groups, function(groupName, eventSet) {
+      numGrouped += eventSet.length;
+    });
+    assert.equal(numGrouped, allSlices.length);
+    assert.equal(groups.Browser.length, 1);
+    assert.equal(groups.Renderer.length, 1);
+    assert.equal(groups.Other.length, 1);
+  });
+});
+</script>

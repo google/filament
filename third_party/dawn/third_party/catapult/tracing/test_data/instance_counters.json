@@ -1,0 +1,28 @@
+[
+  {"name": "a", "args": {},"pid": 52, "ts": 9524, "cat": "foo", "tid": 53,
+      "ph": "B"},
+  {"name": "a", "args": {},"pid": 52, "ts": 9560, "cat": "foo", "tid": 53,
+      "ph": "E"},
+  {"name": "b", "args": {},"pid": 52, "ts": 9629, "cat": "foo", "tid": 53,
+      "ph": "B"},
+  {"name": "b", "args": {},"pid": 52, "ts": 9631, "cat": "foo", "tid": 53,
+      "ph": "E"},
+
+  {"name": "counter", "args": {"value": 2}, "pid": 52, "ts": 9524,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+  {"name": "counter", "args": {"value": 10}, "pid": 52, "ts": 9626,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+  {"name": "counter", "args": {"value": 5}, "pid": 52, "ts": 9627,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+  {"name": "counter", "args": {"value": 8}, "pid": 52, "ts": 9628,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+  {"name": "counter", "args": {"value": 4}, "pid": 52, "ts": 9629,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+  {"name": "counter", "args": {"value": 10}, "pid": 52, "ts": 9631,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "123"},
+
+  {"name": "counter", "args": {"value": 10}, "pid": 52, "ts": 9524,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "b"},
+  {"name": "counter", "args": {"value": 0}, "pid": 52, "ts": 9631,
+      "cat": "foo", "tid": 53, "ph": "C", "id": "b"}
+]

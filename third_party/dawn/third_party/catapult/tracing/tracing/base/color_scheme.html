@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/color.html">
+<link rel="import" href="/tracing/base/sinebow_color_generator.html">
+<link rel="import" href="/tracing/base/utils.html">
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides color scheme related functions.
+ */
+tr.exportTo('tr.b', function() {
+  // Basic constants...
+  const numGeneralPurposeColorIds = 23;
+  const generalPurposeColors = new Array(numGeneralPurposeColorIds);
+  const sinebowAlpha = 1.0;
+  const sinebowBrightness = 1.5;
+  const sinebowColorGenerator =
+    new tr.b.SinebowColorGenerator(sinebowAlpha, sinebowBrightness);
+  for (let i = 0; i < numGeneralPurposeColorIds; i++) {
+    generalPurposeColors[i] = sinebowColorGenerator.nextColor();
+  }
+
+  const reservedColorsByName = {
+    thread_state_uninterruptible: new tr.b.Color(182, 125, 143),
+    thread_state_iowait: new tr.b.Color(255, 140, 0),
+    thread_state_running: new tr.b.Color(126, 200, 148),
+    thread_state_runnable: new tr.b.Color(133, 160, 210),
+    thread_state_sleeping: new tr.b.Color(240, 240, 240),
+    thread_state_unknown: new tr.b.Color(199, 155, 125),
+
+    background_memory_dump: new tr.b.Color(0, 180, 180),
+    light_memory_dump: new tr.b.Color(0, 0, 180),
+    detailed_memory_dump: new tr.b.Color(180, 0, 180),
+
+    vsync_highlight_color: new tr.b.Color(0, 0, 255),
+    generic_work: new tr.b.Color(125, 125, 125),
+
+    good: new tr.b.Color(0, 125, 0),
+    bad: new tr.b.Color(180, 125, 0),
+    terrible: new tr.b.Color(180, 0, 0),
+
+    black: new tr.b.Color(0, 0, 0),
+    grey: new tr.b.Color(221, 221, 221),
+    white: new tr.b.Color(255, 255, 255),
+    yellow: new tr.b.Color(255, 255, 0),
+    olive: new tr.b.Color(100, 100, 0),
+
+    rail_response: new tr.b.Color(67, 135, 253),
+    rail_animation: new tr.b.Color(244, 74, 63),
+    rail_idle: new tr.b.Color(238, 142, 0),
+    rail_load: new tr.b.Color(13, 168, 97),
+    startup: new tr.b.Color(230, 230, 0),
+
+    heap_dump_stack_frame: new tr.b.Color(128, 128, 128),
+    heap_dump_object_type: new tr.b.Color(0, 0, 255),
+    heap_dump_child_node_arrow: new tr.b.Color(204, 102, 0),
+
+    cq_build_running: new tr.b.Color(255, 255, 119),
+    cq_build_passed: new tr.b.Color(153, 238, 102),
+    cq_build_failed: new tr.b.Color(238, 136, 136),
+    cq_build_abandoned: new tr.b.Color(187, 187, 187),
+
+    cq_build_attempt_runnig: new tr.b.Color(222, 222, 75),
+    cq_build_attempt_passed: new tr.b.Color(103, 218, 35),
+    cq_build_attempt_failed: new tr.b.Color(197, 81, 81)
+  };
+
+  // Some constants we'll need for later lookups.
+  const numReservedColorIds = Object.keys(reservedColorsByName).length;
+  const numColorsPerVariant = numGeneralPurposeColorIds + numReservedColorIds;
+
+  function ColorScheme() {
+  }
+
+  /*
+   * A flat array of tr.b.Color values of the palette, and their variants.
+   *
+   * This array is made up of a set of base colors, repeated N times to form
+   * a set of variants on that base color.
+   *
+   * Within the base colors, there are "general purpose" colors,
+   * which can be used for random color selection, and
+   * reserved colors, which are used when specific colors
+   * need to be used, e.g. where red is desired.
+   *
+   * The variants are automatically generated from the base colors. The 0th
+   * variant is the default apeparance of the color, and the varaiants are
+   * mutations of that color, e.g. several brightening levels and desaturations.
+   *
+   * For example, a very simple version of this array looks like the following:
+   *     0: Generic Color 0
+   *     1: Generic Color 1
+   *     2: Named Color 'foo'
+   *     3: Brightened Generic Color 0
+   *     4: Brightened Generic Color 1
+   *     5: Brightened Named Color 'foo'
+   */
+  const paletteBase = [];
+  paletteBase.push.apply(paletteBase, generalPurposeColors);
+  paletteBase.push.apply(paletteBase, Object.values(reservedColorsByName));
+  ColorScheme.colors = [];
+  ColorScheme.properties = {};
+  ColorScheme.properties = {
+    numColorsPerVariant,
+  };
+
+  function pushVariant(func) {
+    const variantColors = paletteBase.map(func);
+    ColorScheme.colors.push.apply(ColorScheme.colors, variantColors);
+  }
+
+  // Basic colors.
+  pushVariant(function(c) { return c; });
+
+  // Brightened variants.
+  ColorScheme.properties.brightenedOffsets = [];
+  ColorScheme.properties.brightenedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.lighten(0.3, 0.8);
+  });
+
+  ColorScheme.properties.brightenedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.lighten(0.48, 0.85);
+  });
+
+  ColorScheme.properties.brightenedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.lighten(0.65, 0.9);
+  });
+
+
+  // Desaturated variants.
+  ColorScheme.properties.dimmedOffsets = [];
+  ColorScheme.properties.dimmedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.desaturate();
+  });
+  ColorScheme.properties.dimmedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.desaturate(0.5);
+  });
+  ColorScheme.properties.dimmedOffsets.push(ColorScheme.colors.length);
+  pushVariant(function(c) {
+    return c.desaturate(0.3);
+  });
+
+  /**
+   * A toString'd representation of ColorScheme.colors.
+   */
+  ColorScheme.colorsAsStrings = ColorScheme.colors.map(function(c) {
+    return c.toString();
+  });
+
+  // Build reservedColorNameToIdMap.
+  const reservedColorNameToIdMap = (function() {
+    const m = new Map();
+    let i = generalPurposeColors.length;
+    for (const key of Object.keys(reservedColorsByName)) {
+      m.set(key, i++);
+    }
+    return m;
+  })();
+
+  /**
+   * @param {String} name The color name.
+   * @return {Number} The color ID for the given color name.
+   */
+  ColorScheme.getColorIdForReservedName = function(name) {
+    const id = reservedColorNameToIdMap.get(name);
+    if (id === undefined) {
+      throw new Error('Unrecognized color ' + name);
+    }
+    return id;
+  };
+
+  ColorScheme.getColorForReservedNameAsString = function(reservedName) {
+    const id = ColorScheme.getColorIdForReservedName(reservedName);
+    return ColorScheme.colorsAsStrings[id];
+  };
+
+  /**
+   * Computes a simplistic hashcode of the provide name. Used to chose colors
+   * for slices.
+   * @param {string} name The string to hash.
+   */
+  ColorScheme.getStringHash = function(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; ++i) {
+      hash = (hash + 37 * hash + 11 * name.charCodeAt(i)) % 0xFFFFFFFF;
+    }
+    return hash;
+  };
+
+  // Previously computed string color IDs. They are based on a stable hash, so
+  // it is safe to save them throughout the program time.
+  const stringColorIdCache = new Map();
+
+  /**
+   * @return {Number} A color ID that is stably associated to the provided via
+   * the getStringHash method. The color ID will be chosen from the general
+   * purpose ID space only, e.g. no reserved ID will be used.
+   */
+  ColorScheme.getColorIdForGeneralPurposeString = function(string) {
+    if (stringColorIdCache.get(string) === undefined) {
+      const hash = ColorScheme.getStringHash(string);
+      stringColorIdCache.set(string, hash % numGeneralPurposeColorIds);
+    }
+    return stringColorIdCache.get(string);
+  };
+
+  /**
+   * @return {Number} A color id generated consistently from a |colorId| and
+   * number |n|.
+   */
+  ColorScheme.getAnotherColorId = function(colorId, n) {
+    return (colorId + n) % numColorsPerVariant;
+  };
+
+  /**
+   * @return {Number} A color ID that the |offset| variant of |colorId|.
+   */
+  ColorScheme.getVariantColorId = function(colorId, offset) {
+    return colorId + offset;
+  };
+
+  return {
+    ColorScheme,
+  };
+});
+</script>

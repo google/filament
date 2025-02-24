@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+// Get the current git hash, and save (overwrite) it into gen/.../version.js
+// so it can be read when running inside the browser.
+
+/* eslint-disable no-console */
+
+require('../src/common/tools/setup-ts-in-node.js');
+const fs = require('fs');
+
+const myself = 'tools/gen_version';
+if (!fs.existsSync(myself)) {
+  console.error('Must be run from repository root');
+  process.exit(1);
+}
+
+const { version } = require('../src/common/tools/version.ts');
+
+fs.mkdirSync('./gen/common/internal', { recursive: true });
+// This will be copied into the various other build directories.
+fs.writeFileSync(
+  './gen/common/internal/version.js',
+  `\
+// AUTO-GENERATED - DO NOT EDIT. See ${myself}.
+
+export const version = '${version}';
+`
+);

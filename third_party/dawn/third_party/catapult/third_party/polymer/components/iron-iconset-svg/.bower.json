@@ -1,0 +1,44 @@
+{
+  "name": "iron-iconset-svg",
+  "description": "Manages a set of svg icons",
+  "version": "1.1.2",
+  "keywords": [
+    "web-components",
+    "polymer",
+    "icon"
+  ],
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "private": true,
+  "authors": [
+    "The Polymer Authors"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/PolymerElements/iron-iconset-svg.git"
+  },
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.0.0",
+    "iron-meta": "PolymerElements/iron-meta#^1.0.0"
+  },
+  "devDependencies": {
+    "paper-styles": "polymerelements/paper-styles#^1.0.2",
+    "iron-component-page": "polymerelements/iron-component-page#^1.0.0",
+    "iron-icon": "polymerelements/iron-icon#^1.0.0",
+    "promise-polyfill": "polymerlabs/promise-polyfill#^1.0.0",
+    "test-fixture": "polymerelements/test-fixture#^1.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0",
+    "web-component-tester": "^4.0.0"
+  },
+  "main": "iron-iconset-svg.html",
+  "ignore": [],
+  "homepage": "https://github.com/polymerelements/iron-iconset-svg",
+  "_release": "1.1.2",
+  "_resolution": {
+    "type": "version",
+    "tag": "v1.1.2",
+    "commit": "9647bdd1d15ad63b6cbe44cd128e43192bfe94c8"
+  },
+  "_source": "https://github.com/polymerelements/iron-iconset-svg.git",
+  "_target": "^1.0.0",
+  "_originalSource": "polymerelements/iron-iconset-svg"
+}

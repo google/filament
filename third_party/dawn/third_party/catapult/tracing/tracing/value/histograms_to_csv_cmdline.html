@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/value/csv_builder.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+if (tr.isHeadless) {
+  const histograms = new tr.v.HistogramSet();
+  histograms.importDicts(JSON.parse(tr.b.getSync('file://' + sys.argv[1])));
+  const csv = new tr.v.CSVBuilder(histograms);
+  csv.build();
+  console.log(csv.toString());
+}
+</script>

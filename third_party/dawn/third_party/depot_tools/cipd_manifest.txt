@@ -1,0 +1,69 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains version pins of a few infrastructure tools.
+# If a tool is broken, revert a recent CL touching this file.
+# Note that Chromium has its own depot_tools pin, so if in a rush, revert the
+# depot_tools roll as well: https://chromium-review.googlesource.com/q/project:chromium/src+file:DEPS+depot_tools
+# or just wait for the autoroller to auto-roll your revert to Chromium.
+
+# Pin resolved versions in the repo, to reduce trust in the CIPD backend.
+#
+# Most of these tools are generated via builders at
+# https://ci.chromium.org/p/infra/g/infra/console
+#
+# For these, the git revision is the one of
+# https://chromium.googlesource.com/infra/infra.git.
+#
+# To regenerate them (after modifying this file):
+#   cipd ensure-file-resolve -ensure-file cipd_manifest.txt
+$ResolvedVersions cipd_manifest.versions
+
+# Fully supported platforms.
+$VerifiedPlatform linux-amd64 linux-arm64 mac-amd64 mac-arm64 windows-amd64
+
+# Platform with best-effort support: we have some binaries cross-compiled for
+# them, but we do not test they work. They also may not have all necessary
+# vpython packages.
+$VerifiedPlatform linux-386 linux-ppc64 linux-ppc64le linux-riscv64 linux-s390x
+$VerifiedPlatform linux-armv6l linux-mips64 linux-mips64le linux-mipsle
+$VerifiedPlatform windows-arm64
+
+# vpython.
+infra/tools/luci/vpython3/${platform} git_revision:ad0c4b622c7d4cee870f57eed8170c059ca42ed3
+
+# LUCI editor
+infra/tools/luci/led/${platform} git_revision:26a4eddc87d48a9d8901396e3ce027f090b5108e
+
+# LUCI config generator
+infra/tools/luci/lucicfg/${platform} git_revision:edacaa9ffe572276dd37ce20ae76ab388e77a032
+
+# Mac toolchain installer
+infra/tools/mac_toolchain/${os=mac}-${arch} git_revision:59b5b4b5a506dc23eae31ef0f5b168281c6521da
+
+# LUCI rpc command line tool
+infra/tools/prpc/${platform} git_revision:b1f414539ac10cc67a0250890a38712cc06cf102
+
+# LUCI authentication command line tool
+infra/tools/luci-auth/${platform} git_revision:78b3b3ca47e64b3280a5dd5b83c23ce89f04d328
+
+# LUCI Git credential helper
+infra/tools/luci/git-credential-luci/${platform} git_revision:5f7dad779fb1dac21084fbc9610285ba9dc943ad
+
+# LUCI Buildbucket CLI
+infra/tools/bb/${platform} git_revision:b1f414539ac10cc67a0250890a38712cc06cf102
+
+# LUCI ResultDB CLI
+infra/tools/rdb/${platform} git_revision:b1f414539ac10cc67a0250890a38712cc06cf102
+
+# dirmd, a tool to work with DIR_METADATA files
+infra/tools/dirmd/${platform} git_revision:b1f414539ac10cc67a0250890a38712cc06cf102
+
+# Pinpoint CLI
+infra/chromeperf/pinpoint/${platform} git_revision:b1f414539ac10cc67a0250890a38712cc06cf102
+
+@Subdir reclient
+# reclient, currently this is only for ChromeOS build.
+# TODO(http://b/242680623): we may change how to distribute reclient.
+infra/rbe/client/${platform=linux-amd64} re_client_version:0.124.1.13f78cc-gomaip

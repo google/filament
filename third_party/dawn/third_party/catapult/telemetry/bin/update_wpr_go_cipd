@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+# Copyright 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Downloads wpr_go binaries from GCS to local disk and then update them to CIPD
+# repository (go/luci-cipd).
+import os
+import shutil
+import sys
+import subprocess
+import platform
+
+TELEMETRY_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+sys.path.insert(1, TELEMETRY_DIR)
+from telemetry.internal.util import binary_manager
+
+
+_SUPPORTED_PLATFORMS = (
+  ('win', 'x86'),
+  ('mac', 'arm64'),
+  ('mac', 'x86_64'),
+  ('linux', 'x86_64'),
+  ('win', 'AMD64'),
+  ('linux', 'armv7l'),
+  ('linux', 'aarch64'),
+  ('linux', 'mips')
+)
+
+# The list of platforms supported in CIPD.
+_SUPPORTED_CIPD_PLATFORMS = [
+    'linux_x86_64'
+]
+
+_DEFAULT_PKG_DEF_TEMPLATE ="""
+package: infra/tools/wpr/{plat}
+description: wpr_go executable on {plat}
+install_mode: copy
+data:
+  - file: {wpr_binary}
+"""
+
+_UPDATE_DEPS_MSG = """
+Instruction to update your chromium/src/DEPS file:
+  - Open DEPS with an editor
+  - Find entry 'src/third_party/webpagereplay'
+  - Find the entry with 'package' : 'infra/tools/wpr/{platform}'
+  - Change the entry version string to 'version' : '{version}'
+  - Create a commit and send for review.
+  - The final diff of DEFS looks like:
+
+  'src/third_party/webpagereplay': {{
+      'packages' : [
+          {{
+              'package': 'infra/tools/wpr/{platform}',
+              'version': '{version}',
+          }},
+      ],
+      'condition': 'checkout_android',
+      'dep_type': 'cipd',
+  }},
+"""
+
+INSTANCE = 'Instance'
+
+
+class cipd_uploader(object):
+  """Helper to upload wpr binaries to CIPD repository."""
+  def __init__(self):
+    self._common_path = None
+    self._binaries_to_upload = {}
+    self._cipd_instances = {}
+
+  def register_binary_to_upload(self, path):
+    """Registers the binary for later batch upload."""
+    path_segments = path.split(os.sep)
+    if self._common_path:
+      assert(self._common_path == os.sep.join(path_segments[:-4]))
+    else:
+      self._common_path = os.sep.join(path_segments[:-4])
+    related_path = os.sep.join(path_segments[-4:])
+    platform = '_'.join(path_segments[-3:-1])
+    self._binaries_to_upload[platform] = related_path
+
+  def upload_to_cipd(self):
+    """Uploads the binaries to CIPD repository as a batch."""
+    for platform in _SUPPORTED_CIPD_PLATFORMS:
+      if platform not in self._binaries_to_upload:
+        raise RuntimeError('The wpr binary for platform %s is not registered.',
+                           platform)
+      pkg_def_file = self._write_pkg_def_file(platform)
+      instance_id = self._upload_cipd(pkg_def_file)
+      if instance_id:
+        self._cipd_instances[platform] = instance_id
+
+  def _write_pkg_def_file(self, platform):
+    """Creates a CIPD pkg_def file on disk and returns path.
+
+    Args:
+      platform: The platform of wpr binary to work with.
+
+    Returns:
+      A pkg_def file path.
+    """
+    pkg_def_path = os.path.join(self._common_path, 'cipd.yaml')
+
+    with open(pkg_def_path, 'w') as pkg_def:
+      pkg_def.write(_DEFAULT_PKG_DEF_TEMPLATE.format(
+          plat=platform, wpr_binary=self._binaries_to_upload[platform]))
+      print('Created CIPD pkg_def file {0} on {1}'.format(pkg_def_path, platform))
+    return pkg_def_path
+
+  def _upload_cipd(self, pkg_def):
+    """Uploads CIPD with pkg_def.
+
+    Args:
+      pkg_def: The path of the pkg_def file used to upload to CIPD repository.
+    Returns:
+      A instance id to be stored later into _cipd_instances.
+    """
+    upload_cmd = ['cipd', 'create',
+                  '-pkg-def', os.path.basename(pkg_def)]
+    instance_id = None
+    p = subprocess.check_output(upload_cmd, cwd=os.path.dirname(pkg_def))
+    if INSTANCE in p:
+      p = p[p.find(INSTANCE):]
+      parts = p.split(':')
+      if len(parts) > 2:
+        instance_id = parts[2].rstrip()
+    return instance_id
+
+  def print_update_instructions(self):
+    """Prints out the update diff to DEPS file."""
+    for platform in _SUPPORTED_CIPD_PLATFORMS:
+      if platform not in self._cipd_instances:
+        continue
+      print(_UPDATE_DEPS_MSG.format(platform=platform,
+                                    version=self._cipd_instances[platform]))
+
+
+def download_from_gcs_and_update_cipd():
+  """Builds proper wpr_go binaries and update them to CIPD repository."""
+  uploader = cipd_uploader()
+
+  for os_name, arch_name in _SUPPORTED_PLATFORMS:
+    print('Download WPR binary dependency for OS {0} Arch {1}'.format(
+        os_name, arch_name))
+    # Downloads wpr_binaries from GCS.
+    if binary_manager.NeedsInit():
+      binary_manager.InitDependencyManager(None)
+    wpr_bin = binary_manager.FetchPath(
+        'wpr_go', os_name=os_name, arch=arch_name)
+    print('The downloaded binary is {0}'.format(wpr_bin))
+    # Register each wpr_binary with uploader and then batch upload.
+    uploader.register_binary_to_upload(wpr_bin)
+
+  uploader.upload_to_cipd()
+  uploader.print_update_instructions()
+
+
+def main():
+  download_from_gcs_and_update_cipd()
+
+
+if __name__ == "__main__":
+  sys.exit(main())

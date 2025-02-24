@@ -1,0 +1,85 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglDestroyImage">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglDestroyImage</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglDestroyImage</refname>
+        <refpurpose>
+            Destroy an <type>EGLImage</type> object
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLBoolean <function>eglDestroyImage</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLImage <parameter>image</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>image</parameter></term>
+                <listitem><para>
+                    Specifies the image to destroy.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglDestroyImage</function> is used to destroy the
+            specified <type>EGLImage</type> object
+            <parameter>image</parameter>. Once destroyed,
+            <parameter>image</parameter> may not be used to create any
+            additional <type>EGLImage</type> target resources within any
+            client API contexts, although existing <type>EGLImage</type>
+            siblings may continue to be used. <constant>EGL_TRUE</constant>
+            is returned on success.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            On failure, <function>eglDestroyImage</function> returns
+            <constant>EGL_FALSE</constant>
+        </para>
+        <para>
+            If <parameter>display</parameter> is not the handle of a valid
+            <type>EGLDisplay</type> object, the error
+            <constant>EGL_BAD_DISPLAY</constant> is generated.
+        </para>
+        <para>
+            If <parameter>image</parameter> is not a valid
+            <type>EGLImage</type> object created with respect to
+            <parameter>display</parameter>, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglDestroyImage</function> is available only if the
+            EGL version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateImage</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

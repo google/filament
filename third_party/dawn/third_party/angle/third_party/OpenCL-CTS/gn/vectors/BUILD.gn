@@ -1,0 +1,18 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("vectors") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/globals.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/structs.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/test_step.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/test_vec_align.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/vectors/type_replacer.cpp",
+  ]
+}

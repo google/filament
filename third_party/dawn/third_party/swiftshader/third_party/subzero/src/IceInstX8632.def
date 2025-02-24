@@ -1,0 +1,182 @@
+//===- subzero/src/IceInstX8632.def - X-macros for x86-32 insts -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of lowered x86-32 instructions in the
+// form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICEINSTX8632_DEF
+#define SUBZERO_SRC_ICEINSTX8632_DEF
+
+#include "IceRegList.h"
+
+// x86-32 ABI:
+//   Scratch GPRs: eax, ecx, edx
+//   Callee-save GPRs: ebx, ebp, esi, edi
+//   Scratch XMMs: xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+// Key to table columns:
+//   val: Enum value, when a specific register is needed during lowering.
+//   encode: Encoding in the integrated assembler.
+//   name: Name used for the external assembler.
+//   scratch: Scratch (caller-save) register.
+//   preserved: Preserved (callee-save) register.
+//   stackptr: This register is used as the stack pointer.
+//   frameptr: This register is used as the frame pointer if needed.
+//   isGPR: This is a GPR (integer-type).
+//   is64: This is a 64-bit GPR.
+//   is32: This is a 32-bit GPR.
+//   is16: This is a 16-bit GPR.
+//   is8: This is an 8-bit GPR.
+//   isXmm: This is an XMM register for FP and vector ops.
+//   is64To8: A 64-bit GPR truncable to 8-bit.
+//   is32To8: A 32-bit GPR truncable to 8-bit.
+//   is16To8: A 16-bit GPR truncable to 8-bit.
+//   isTrunc8Rcvr: An 8-bit GPR that a wider GPR trivially truncates to.
+//   isAhRcvr: An 8-bit GPR that register "ah" can be assigned to.
+//   aliases: List of register aliases, which need not include this register.
+#define REGX8632_BYTEREG_TABLE                                                 \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,             \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* 8-bit registers */                                                        \
+  X(Reg_al, 0, "al", Reg_eax, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,                \
+    REGLIST2(RegX8632, eax, ax))                                               \
+  X(Reg_cl, 1, "cl", Reg_ecx, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,                \
+    REGLIST2(RegX8632, ecx, cx))                                               \
+  X(Reg_dl, 2, "dl", Reg_edx, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,                \
+    REGLIST2(RegX8632, edx, dx))                                               \
+  X(Reg_bl, 3, "bl", Reg_ebx, 0,1,0,0, 1,0,0,0,1, 0, 0,0,0,1,1,                \
+    REGLIST2(RegX8632, ebx, bx))                                               \
+  /* High 8-bit registers */                                                   \
+  X(Reg_ah, 4, "ah", Reg_eax, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,0,1,                \
+    REGLIST2(RegX8632, eax, ax))                                               \
+  X(Reg_ch, 5, "ch", Reg_ecx, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,0,1,                \
+    REGLIST2(RegX8632, ecx, cx))                                               \
+  X(Reg_dh, 6, "dh", Reg_edx, 1,0,0,0, 1,0,0,0,1, 0, 0,0,0,0,1,                \
+    REGLIST2(RegX8632, edx, dx))                                               \
+  X(Reg_bh, 7, "bh", Reg_ebx, 0,1,0,0, 1,0,0,0,1, 0, 0,0,0,0,1,                \
+    REGLIST2(RegX8632, ebx, bx))                                               \
+  /* End of 8-bit register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8, is16To8,
+//          isTrunc8Rcvr, isAhRcvr, aliases)
+
+#define REGX8632_GPR_TABLE                                                     \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,             \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* 32-bit registers */                                                       \
+  X(Reg_eax, 0, "eax", Reg_eax, 1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,              \
+    REGLIST3(RegX8632, ax, al, ah))                                            \
+  X(Reg_ecx, 1, "ecx", Reg_ecx, 1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,              \
+    REGLIST3(RegX8632, cx, cl, ch))                                            \
+  X(Reg_edx, 2, "edx", Reg_edx, 1,0,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,              \
+    REGLIST3(RegX8632, dx, dl, dh))                                            \
+  X(Reg_ebx, 3, "ebx", Reg_ebx, 0,1,0,0, 1,0,1,0,0, 0, 0,1,0,0,0,              \
+    REGLIST3(RegX8632, bx, bl, bh))                                            \
+  X(Reg_esp, 4, "esp", Reg_esp, 0,0,1,0, 1,0,0,0,0, 0, 0,0,0,0,0,              \
+    REGLIST1(RegX8632, sp))                                                    \
+  X(Reg_ebp, 5, "ebp", Reg_ebp, 0,1,0,1, 1,0,1,0,0, 0, 0,0,0,0,0,              \
+    REGLIST1(RegX8632, bp))                                                    \
+  X(Reg_esi, 6, "esi", Reg_esi, 0,1,0,0, 1,0,1,0,0, 0, 0,0,0,0,0,              \
+    REGLIST1(RegX8632, si))                                                    \
+  X(Reg_edi, 7, "edi", Reg_edi, 0,1,0,0, 1,0,1,0,0, 0, 0,0,0,0,0,              \
+    REGLIST1(RegX8632, di))                                                    \
+  /* 16-bit registers */                                                       \
+  X(Reg_ax, 0, "ax", Reg_eax, 1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,                \
+    REGLIST3(RegX8632, eax, al, ah))                                           \
+  X(Reg_cx, 1, "cx", Reg_ecx, 1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,                \
+    REGLIST3(RegX8632, ecx, cl, ch))                                           \
+  X(Reg_dx, 2, "dx", Reg_edx, 1,0,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,                \
+    REGLIST3(RegX8632, edx, dl, dh))                                           \
+  X(Reg_bx, 3, "bx", Reg_ebx, 0,1,0,0, 1,0,0,1,0, 0, 0,0,1,0,0,                \
+    REGLIST3(RegX8632, ebx, bl, bh))                                           \
+  X(Reg_sp, 4, "sp", Reg_esp, 0,0,1,0, 1,0,0,0,0, 0, 0,0,0,0,0,                \
+    REGLIST1(RegX8632, esp))                                                   \
+  X(Reg_bp, 5, "bp", Reg_ebp, 0,1,0,1, 1,0,0,1,0, 0, 0,0,0,0,0,                \
+    REGLIST1(RegX8632, ebp))                                                   \
+  X(Reg_si, 6, "si", Reg_esi, 0,1,0,0, 1,0,0,1,0, 0, 0,0,0,0,0,                \
+    REGLIST1(RegX8632, esi))                                                   \
+  X(Reg_di, 7, "di", Reg_edi, 0,1,0,0, 1,0,0,1,0, 0, 0,0,0,0,0,                \
+    REGLIST1(RegX8632, edi))                                                   \
+  /* 8-bit registers */                                                        \
+  REGX8632_BYTEREG_TABLE                                                       \
+  /* End of GPR register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8, is16To8,
+//          isTrunc8Rcvr, isAhRcvr, aliases)
+
+// Note: It would be more appropriate to list the xmm register aliases as
+// REGLIST0(), but the corresponding empty initializer gives a syntax error, so
+// we use REGLIST1() to redundantly assign the register itself as an alias.
+#define REGX8632_XMM_TABLE                                                     \
+  /* val, encode, name, base, scratch,preserved,stackptr,frameptr,             \
+     isGPR,is64,is32,is16,is8, isXmm,                                          \
+     is64To8,is32To8,is16To8,isTrunc8Rcvr,isAhRcvr, aliases */                 \
+  /* xmm registers */                                                          \
+  X(Reg_xmm0, 0, "xmm0", Reg_xmm0, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm1, 1, "xmm1", Reg_xmm1, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm2, 2, "xmm2", Reg_xmm2, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm3, 3, "xmm3", Reg_xmm3, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm4, 4, "xmm4", Reg_xmm4, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm5, 5, "xmm5", Reg_xmm5, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm6, 6, "xmm6", Reg_xmm6, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  X(Reg_xmm7, 7, "xmm7", Reg_xmm7, 1,0,0,0, 0,0,0,0,0, 1, 0,0,0,0,0,           \
+    NO_ALIASES())                                                              \
+  /* End of xmm register set */
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8, is16To8,
+//          isTrunc8Rcvr, isAhRcvr, aliases)
+
+// We also provide a combined table, so that there is a namespace where
+// all of the registers are considered and have distinct numberings.
+// This is in contrast to the above, where the "encode" is based on how
+// the register numbers will be encoded in binaries and values can overlap.
+#define REGX8632_TABLE                                                         \
+  REGX8632_GPR_TABLE                                                           \
+  REGX8632_XMM_TABLE
+//#define X(val, encode, name, base, scratch, preserved, stackptr, frameptr,
+//          isGPR, is64, is32, is16, is8, isXmm, is64To8, is32To8, is16To8,
+//          isTrunc8Rcvr, isAhRcvr, aliases)
+
+// X86 segment registers.
+#define SEG_REGX8632_TABLE                                                     \
+  /* val, name, prefix */                                                      \
+  X(SegReg_CS, "cs", 0x2E)                                                     \
+  X(SegReg_DS, "ds", 0x3E)                                                     \
+  X(SegReg_ES, "es", 0x26)                                                     \
+  X(SegReg_SS, "ss", 0x36)                                                     \
+  X(SegReg_FS, "fs", 0x64)                                                     \
+  X(SegReg_GS, "gs", 0x65)
+//#define X(val, name, prefix)
+
+// X87 ST(n) registers.
+#define X87ST_REGX8632_TABLE                                                   \
+  /* val, encode, name */                                                      \
+  X(X87ST_First, 0, "st(0)")                                                   \
+  X(X87ST_0, 0, "st(0)")                                                       \
+  X(X87ST_1, 1, "st(1)")                                                       \
+  X(X87ST_2, 2, "st(2)")                                                       \
+  X(X87ST_3, 3, "st(3)")                                                       \
+  X(X87ST_4, 4, "st(4)")                                                       \
+  X(X87ST_5, 5, "st(5)")                                                       \
+  X(X87ST_6, 6, "st(6)")                                                       \
+  X(X87ST_7, 7, "st(7)")                                                       \
+  X(X87ST_Last, 7, "st(7)")
+//#define X(val, encode, name)
+
+#endif // SUBZERO_SRC_ICEINSTX8632_DEF

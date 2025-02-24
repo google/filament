@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const MOUSE_SELECTOR_MODE = {};
+  MOUSE_SELECTOR_MODE.SELECTION = 0x1;
+  MOUSE_SELECTOR_MODE.PANSCAN = 0x2;
+  MOUSE_SELECTOR_MODE.ZOOM = 0x4;
+  MOUSE_SELECTOR_MODE.TIMING = 0x8;
+  MOUSE_SELECTOR_MODE.ROTATE = 0x10;
+  MOUSE_SELECTOR_MODE.ALL_MODES = 0x1F;
+
+  const MOUSE_SELECTOR_MODE_INFOS = {};
+  MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.PANSCAN] = {
+    name: 'PANSCAN',
+    mode: MOUSE_SELECTOR_MODE.PANSCAN,
+    title: 'pan',
+    eventNames: {
+      enter: 'enterpan',
+      begin: 'beginpan',
+      update: 'updatepan',
+      end: 'endpan',
+      exit: 'exitpan'
+    },
+    activeBackgroundPosition: '-30px -10px',
+    defaultBackgroundPosition: '0 -10px'
+  };
+  MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.SELECTION] = {
+    name: 'SELECTION',
+    mode: MOUSE_SELECTOR_MODE.SELECTION,
+    title: 'selection',
+    eventNames: {
+      enter: 'enterselection',
+      begin: 'beginselection',
+      update: 'updateselection',
+      end: 'endselection',
+      exit: 'exitselection'
+    },
+    activeBackgroundPosition: '-30px -40px',
+    defaultBackgroundPosition: '0 -40px'
+  };
+
+  MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.ZOOM] = {
+    name: 'ZOOM',
+    mode: MOUSE_SELECTOR_MODE.ZOOM,
+    title: 'zoom',
+    eventNames: {
+      enter: 'enterzoom',
+      begin: 'beginzoom',
+      update: 'updatezoom',
+      end: 'endzoom',
+      exit: 'exitzoom'
+    },
+    activeBackgroundPosition: '-30px -70px',
+    defaultBackgroundPosition: '0 -70px'
+  };
+  MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.TIMING] = {
+    name: 'TIMING',
+    mode: MOUSE_SELECTOR_MODE.TIMING,
+    title: 'timing',
+    eventNames: {
+      enter: 'entertiming',
+      begin: 'begintiming',
+      update: 'updatetiming',
+      end: 'endtiming',
+      exit: 'exittiming'
+    },
+    activeBackgroundPosition: '-30px -100px',
+    defaultBackgroundPosition: '0 -100px'
+  };
+  MOUSE_SELECTOR_MODE_INFOS[MOUSE_SELECTOR_MODE.ROTATE] = {
+    name: 'ROTATE',
+    mode: MOUSE_SELECTOR_MODE.ROTATE,
+    title: 'rotate',
+    eventNames: {
+      enter: 'enterrotate',
+      begin: 'beginrotate',
+      update: 'updaterotate',
+      end: 'endrotate',
+      exit: 'exitrotate'
+    },
+    activeBackgroundPosition: '-30px -130px',
+    defaultBackgroundPosition: '0 -130px'
+  };
+
+  return {
+    MOUSE_SELECTOR_MODE_INFOS,
+    MOUSE_SELECTOR_MODE,
+  };
+});
+</script>

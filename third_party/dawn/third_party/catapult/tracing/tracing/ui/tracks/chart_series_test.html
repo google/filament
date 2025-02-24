@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/timeline_display_transform.html">
+<link rel="import" href="/tracing/ui/tracks/chart_point.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_transform.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const EventSet = tr.model.EventSet;
+  const TimelineDisplayTransform = tr.ui.TimelineDisplayTransform;
+  const Event = tr.model.Event;
+  const SelectionState = tr.model.SelectionState;
+  const ChartSeriesYAxis = tr.ui.tracks.ChartSeriesYAxis;
+  const ChartPoint = tr.ui.tracks.ChartPoint;
+  const ChartSeries = tr.ui.tracks.ChartSeries;
+  const ChartTransform = tr.ui.tracks.ChartTransform;
+  const ChartSeriesType = tr.ui.tracks.ChartSeriesType;
+
+  const CANVAS_WIDTH = 800;
+  const CANVAS_HEIGHT = 80;
+
+  function getSelectionStateForTesting(index) {
+    index = index % 7;
+    if (index < 5) {
+      return SelectionState.getFromBrighteningLevel(index % 4);
+    }
+    return SelectionState.getFromDimmingLevel(index % 3);
+  }
+
+  function buildSeries(renderingConfig) {
+    const points = [];
+    for (let i = 0; i < 60; i++) {
+      const event = new Event();
+      event.index = i;
+      const phase = i * Math.PI / 15;
+      const value = Math.sin(phase);
+      const peakIndex = Math.floor((phase + Math.PI / 2) / (2 * Math.PI));
+      const base = peakIndex % 2 === 0 ? undefined : -1 + value / 1.5;
+      const point = new ChartPoint(event, i - 30, value, base);
+      points.push(point);
+    }
+    const seriesYAxis = new ChartSeriesYAxis(-1, 1);
+    return new ChartSeries(points, seriesYAxis, renderingConfig);
+  }
+
+  function drawSeriesWithDetails(test, series, highDetails) {
+    const div = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    Polymer.dom(div).appendChild(canvas);
+
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    canvas.width = CANVAS_WIDTH * pixelRatio;
+    canvas.style.width = CANVAS_WIDTH + 'px';
+    canvas.height = CANVAS_HEIGHT * pixelRatio;
+    canvas.style.height = CANVAS_HEIGHT + 'px';
+
+    const displayTransform = new TimelineDisplayTransform();
+    displayTransform.scaleX = CANVAS_WIDTH * pixelRatio / 60;
+    displayTransform.panX = 30;
+
+    const transform = new ChartTransform(
+        displayTransform,
+        series.seriesYAxis,
+        CANVAS_WIDTH * pixelRatio,
+        CANVAS_HEIGHT * pixelRatio,
+        10 * pixelRatio,
+        10 * pixelRatio,
+        pixelRatio);
+
+    series.draw(canvas.getContext('2d'), transform, highDetails);
+
+    test.addHTMLOutput(div);
+  }
+
+  function drawSeries(test, series) {
+    drawSeriesWithDetails(test, series, false);
+    drawSeriesWithDetails(test, series, true);
+    series.stepGraph_ = !series.stepGraph_;
+    drawSeriesWithDetails(test, series, false);
+    drawSeriesWithDetails(test, series, true);
+  }
+
+  test('instantiate_defaultConfig', function() {
+    const series = buildSeries(undefined);
+    drawSeries(this, series);
+  });
+
+  test('instantiate_lineChart', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.LINE,
+      colorId: 4,
+      unselectedPointSize: 6,
+      lineWidth: 2,
+      unselectedPointDensityOpaque: 0.08
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_areaChart', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      colorId: 2,
+      backgroundOpacity: 0.2
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_largeSkipDistance', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      colorId: 1,
+      skipDistance: 40,
+      unselectedPointDensityTransparent: 0.07
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_selection', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      colorId: 10
+    });
+    series.points.forEach(function(point, index) {
+      point.modelItem.selectionState = getSelectionStateForTesting(index);
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_selectionWithSolidDots', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      selectedPointSize: 10,
+      unselectedPointSize: 6,
+      solidSelectedDots: true,
+      colorId: 10
+    });
+    series.points.forEach(function(point, index) {
+      point.modelItem.selectionState = getSelectionStateForTesting(index);
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_selectionWithAllConfigFlags', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      selectedPointSize: 10,
+      unselectedPointSize: 6,
+      colorId: 15,
+      lineWidth: 2,
+      skipDistance: 25,
+      unselectedPointDensityOpaque: 0.07,
+      unselectedPointDensityTransparent: 0.09,
+      backgroundOpacity: 0.8
+    });
+    series.points.forEach(function(point, index) {
+      point.modelItem.selectionState = getSelectionStateForTesting(index);
+    });
+    drawSeries(this, series);
+  });
+
+  test('instantiate_selectionWithDotLetters', function() {
+    const series = buildSeries({
+      chartType: ChartSeriesType.AREA,
+      selectedPointSize: 10,
+      unselectedPointSize: 6,
+      solidSelectedDots: true,
+      colorId: 10
+    });
+    series.points.forEach(function(point, index) {
+      point.modelItem.selectionState = getSelectionStateForTesting(index);
+      if (index % 10 === 3) {
+        point.dotLetter = 'P';
+      } else if (index % 10 === 7) {
+        point.dotLetter = '\u26A0';
+      }
+    });
+    drawSeries(this, series);
+  });
+
+  test('checkRange', function() {
+    const series = buildSeries();
+    const range = series.range;
+    assert.isFalse(range.isEmpty);
+    assert.closeTo(range.min, -1, 0.05);
+    assert.closeTo(range.max, 1, 0.05);
+  });
+
+  test('checkaddIntersectingEventsInRangeToSelectionInWorldSpace', function() {
+    const series = buildSeries();
+
+    // Too far left.
+    let sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -1000, -30.5, 40, sel);
+    assert.lengthOf(sel, 0);
+
+    // Select first point.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -30.5, -29.5, 40, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 0);
+
+    // Select second point.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -28.8, -28.2, 40, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 1);
+
+    // Select points in the middle.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -0.99, 1.01, 40, sel);
+    assert.lengthOf(sel, 3);
+    const iterator = sel[Symbol.iterator]();
+    assert.strictEqual(iterator.next().value.index, 29);
+    assert.strictEqual(iterator.next().value.index, 30);
+    assert.strictEqual(iterator.next().value.index, 31);
+
+    // Select the last point.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        668.99, 668.99, 40, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 59);
+
+    // Too far right.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        669.01, 2000, 40, sel);
+    assert.lengthOf(sel, 0);
+
+    // Select everything.
+    sel = new EventSet();
+    series.addIntersectingEventsInRangeToSelectionInWorldSpace(
+        -29.01, 669.01, 40, sel);
+    assert.lengthOf(sel, 60);
+  });
+
+  test('checkaddEventNearToProvidedEventToSelection', function() {
+    const series = buildSeries();
+
+    // Invalid event.
+    let sel = new EventSet();
+    assert.isFalse(series.addEventNearToProvidedEventToSelection(
+        new Event(), 1, sel));
+    assert.lengthOf(sel, 0);
+
+    sel = new EventSet();
+    assert.isFalse(series.addEventNearToProvidedEventToSelection(
+        new Event(), -1, sel));
+    assert.lengthOf(sel, 0);
+
+    // First point.
+    sel = new EventSet();
+    assert.isTrue(series.addEventNearToProvidedEventToSelection(
+        series.points[0].modelItem, 1, sel));
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 1);
+
+    sel = new EventSet();
+    assert.isFalse(series.addEventNearToProvidedEventToSelection(
+        series.points[0].modelItem, -1, sel));
+    assert.lengthOf(sel, 0);
+
+    // Middle point.
+    sel = new EventSet();
+    assert.isTrue(series.addEventNearToProvidedEventToSelection(
+        series.points[30].modelItem, 1, sel));
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 31);
+
+    sel = new EventSet();
+    assert.isTrue(series.addEventNearToProvidedEventToSelection(
+        series.points[30].modelItem, -1, sel));
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 29);
+
+    // Last point.
+    sel = new EventSet();
+    assert.isFalse(series.addEventNearToProvidedEventToSelection(
+        series.points[59].modelItem, 1, sel));
+    assert.lengthOf(sel, 0);
+
+    sel = new EventSet();
+    assert.isTrue(series.addEventNearToProvidedEventToSelection(
+        series.points[59].modelItem, -1, sel));
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 58);
+  });
+
+  test('checkAddClosestEventToSelection', function() {
+    const series = buildSeries();
+
+    // Left of first point.
+    let sel = new EventSet();
+    series.addClosestEventToSelection(-40, 9, -0.5, 0.5, sel);
+    assert.lengthOf(sel, 0);
+
+    sel = new EventSet();
+    series.addClosestEventToSelection(-40, 11, -0.5, 0.5, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 0);
+
+    // Between two points.
+    sel = new EventSet();
+    series.addClosestEventToSelection(0.4, 0.3, -0.5, 0.5, sel);
+    assert.lengthOf(sel, 0);
+
+    sel = new EventSet();
+    series.addClosestEventToSelection(0.4, 0.4, -0.5, 0.5, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 30);
+
+    // Right of last point.
+    sel = new EventSet();
+    series.addClosestEventToSelection(40, 10, -0.5, 0.5, sel);
+    assert.lengthOf(sel, 0);
+
+    sel = new EventSet();
+    series.addClosestEventToSelection(40, 12, -0.5, 0.5, sel);
+    assert.strictEqual(tr.b.getOnlyElement(sel).index, 59);
+  });
+});
+</script>

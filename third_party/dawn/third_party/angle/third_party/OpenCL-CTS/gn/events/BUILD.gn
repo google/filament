@@ -1,0 +1,20 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("events") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/action_classes.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_callbacks.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_event_dependencies.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_events.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_userevents.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_userevents_multithreaded.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/events/test_waitlists.cpp",
+  ]
+}

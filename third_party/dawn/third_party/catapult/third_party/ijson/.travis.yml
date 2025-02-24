@@ -1,0 +1,10 @@
+language: python
+python:
+  - "2.7"
+  - "3.4"
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libyajl1
+install:
+  - pip install .
+script: python tests.py

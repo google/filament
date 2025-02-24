@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/category_util.html">
+<link rel="import" href="/tracing/base/math/piecewise_linear_function.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.v8.utils', function() {
+  // The title of the idle task event.
+  const IDLE_TASK_EVENT = 'SingleThreadIdleTaskRunner::RunTask';
+
+  // V8 execution event.
+  const V8_EXECUTE = 'V8.Execute';
+
+  // GC events start with this prefix.
+  const GC_EVENT_PREFIX = 'V8.GC';
+
+  // Special handling is required for full GCs inside low memory notification.
+  const FULL_GC_EVENT = 'V8.GCCompactor';
+
+  const LOW_MEMORY_EVENT = 'V8.GCLowMemoryNotification';
+
+  const MAJOR_GC_EVENT = 'MajorGC';
+  const MINOR_GC_EVENT = 'MinorGC';
+
+  // Maps the top-level GC events in timeline to telemetry friendly names.
+  const TOP_GC_EVENTS = {
+    'V8.GCCompactor': 'v8-gc-full-mark-compactor',
+    'V8.GCFinalizeMC': 'v8-gc-latency-mark-compactor',
+    'V8.GCFinalizeMCReduceMemory': 'v8-gc-memory-mark-compactor',
+    'V8.GCIncrementalMarking': 'v8-gc-incremental-step',
+    'V8.GCIncrementalMarkingStart': 'v8-gc-incremental-start',
+    'V8.GCPhantomHandleProcessingCallback': 'v8-gc-phantom-handle-callback',
+    'V8.GCScavenger': 'v8-gc-scavenger',
+    'V8.GCMinorMS': 'v8-gc-minor-mark-sweeper'
+  };
+
+  const MARK_COMPACTOR_EVENTS = new Set([
+    'V8.GCCompactor',
+    'V8.GCFinalizeMC',
+    'V8.GCFinalizeMCReduceMemory',
+    'V8.GCIncrementalMarking',
+    'V8.GCIncrementalMarkingStart',
+    'V8.GCPhantomHandleProcessingCallback'
+  ]);
+
+  const LOW_MEMORY_MARK_COMPACTOR = 'v8-gc-low-memory-mark-compactor';
+
+  /**
+   * Finds the first parent of the |event| for which the |predicate| holds.
+   */
+  function findParent(event, predicate) {
+    let parent = event.parentSlice;
+    while (parent) {
+      if (predicate(parent)) {
+        return parent;
+      }
+      parent = parent.parentSlice;
+    }
+    return null;
+  }
+
+  function isIdleTask(event) {
+    return event.title === IDLE_TASK_EVENT;
+  }
+
+  function isLowMemoryEvent(event) {
+    return event.title === LOW_MEMORY_EVENT;
+  }
+
+  function isV8Event(event) {
+    return event.title.startsWith('V8.');
+  }
+
+  function isV8ExecuteEvent(event) {
+    return event.title === V8_EXECUTE;
+  }
+
+  function isTopV8ExecuteEvent(event) {
+    return isV8ExecuteEvent(event) && findParent(isV8ExecuteEvent) === null;
+  }
+
+  function isGarbageCollectionEvent(event) {
+    // Low memory notification is handled specially because it contains
+    // several full mark compact events.
+    return event.title && event.title.startsWith(GC_EVENT_PREFIX) &&
+           event.title !== LOW_MEMORY_EVENT;
+  }
+
+  function isTopGarbageCollectionEvent(event) {
+    return event.title in TOP_GC_EVENTS;
+  }
+
+  function isForcedGarbageCollectionEvent(event) {
+    return findParent(event, isLowMemoryEvent) !== null;
+  }
+
+  function isSubGarbageCollectionEvent(event) {
+    // To reduce number of results, we return only the first level of GC
+    // subevents. Some subevents are nested in MajorGC or MinorGC events, so
+    // we have to check for it explicitly.
+    return isGarbageCollectionEvent(event) &&
+           event.parentSlice &&
+           (isTopGarbageCollectionEvent(event.parentSlice) ||
+            event.parentSlice.title === MAJOR_GC_EVENT ||
+            event.parentSlice.title === MINOR_GC_EVENT);
+  }
+
+  function isNotForcedTopGarbageCollectionEvent(event) {
+    // We exclude garbage collection events forced by benchmark runner,
+    // because they cannot happen in real world.
+    return tr.metrics.v8.utils.isTopGarbageCollectionEvent(event) &&
+           !tr.metrics.v8.utils.isForcedGarbageCollectionEvent(event);
+  }
+
+  function isNotForcedSubGarbageCollectionEvent(event) {
+    // We exclude garbage collection events forced by benchmark runner,
+    // because they cannot happen in real world.
+    return tr.metrics.v8.utils.isSubGarbageCollectionEvent(event) &&
+           !tr.metrics.v8.utils.isForcedGarbageCollectionEvent(event);
+  }
+
+  function isFullMarkCompactorEvent(event) {
+    return event.title === 'V8.GCCompactor';
+  }
+
+  function isMarkCompactorSummaryEvent(event) {
+    return event.title === 'V8.GCMarkCompactorSummary';
+  }
+
+  function isMarkCompactorMarkingSummaryEvent(event) {
+    return event.title === 'V8.GCMarkCompactorMarkingSummary';
+  }
+
+  function isScavengerStackScanningEvent(event) {
+    return event.title === 'V8.GCScavengerStackScanning';
+  }
+
+  function isIncrementalMarkingEvent(event) {
+    return event.title.startsWith('V8.GCIncrementalMarking');
+  }
+
+  function isLatencyMarkCompactorEvent(event) {
+    return event.title === 'V8.GCFinalizeMC';
+  }
+
+  function isMemoryMarkCompactorEvent(event) {
+    return event.title === 'V8.GCFinalizeMCReduceMemory';
+  }
+
+  function isScavengerEvent(event) {
+    return event.title === 'V8.GCScavenger';
+  }
+
+  function isCompileOptimizeRCSCategory(name) {
+    return name === 'Optimize';
+  }
+
+  function isCompileUnoptimizeRCSCategory(name) {
+    return name === 'Compile';
+  }
+
+  function isCompileParseRCSCategory(name) {
+    return name === 'Parse';
+  }
+
+  function isCompileRCSCategory(name) {
+    return name === 'Compile' || name === 'Optimize' || name === 'Parse';
+  }
+
+  function isV8RCSEvent(event) {
+    return event instanceof tr.e.v8.V8ThreadSlice;
+  }
+
+  function isMarkCompactorEvent(event) {
+    return MARK_COMPACTOR_EVENTS.has(event.title);
+  }
+
+  function isNotForcedMarkCompactorEvent(event) {
+    return !isForcedGarbageCollectionEvent(event) &&
+        isMarkCompactorEvent(event);
+  }
+
+  function forcedGCEventName() {
+    return LOW_MEMORY_EVENT;
+  }
+
+  function topGarbageCollectionEventName(event) {
+    if (event.title === FULL_GC_EVENT) {
+      // Full mark compact events inside a low memory notification
+      // are counted as low memory mark compacts.
+      if (findParent(event, isLowMemoryEvent)) {
+        return LOW_MEMORY_MARK_COMPACTOR;
+      }
+    }
+    return TOP_GC_EVENTS[event.title];
+  }
+
+  function topGarbageCollectionEventNames() {
+    return Object.values(TOP_GC_EVENTS);
+  }
+
+  function subGarbageCollectionEventName(event) {
+    const topEvent = findParent(event, isTopGarbageCollectionEvent);
+    const prefix = topEvent ? topGarbageCollectionEventName(topEvent) :
+      'unknown';
+    // Remove redundant prefixes and convert to lower case.
+    const name = event.title.replace('V8.GC_MC_', '')
+        .replace('V8.GC_SCAVENGER_', '')
+        .replace('V8.GC_', '')
+        .replace(/_/g, '-').toLowerCase();
+    return prefix + '-' + name;
+  }
+
+  /**
+   * Finds all threads in renderer processes of the given model that
+   * can execute JavaScript code (the main thread and web worker threads).
+   * These threads are relevant for computing GC metrics.
+   */
+  function jsExecutionThreads(model) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    let threads = [];
+    for (const rendererHelper of Object.values(chromeHelper.rendererHelpers)) {
+      if (rendererHelper.isChromeTracingUI) continue;
+      threads.push(rendererHelper.mainThread);
+      threads = threads.concat(rendererHelper.dedicatedWorkerThreads);
+      threads = threads.concat(rendererHelper.serviceWorkerThreads);
+      threads = threads.concat(rendererHelper.foregroundWorkerThreads);
+      threads = threads.concat(rendererHelper.utilityWorkerThreads);
+    }
+    return threads;
+  }
+
+  /**
+   * Filters events using the |filterCallback|, then groups events by the user
+   * provided group using the |groupCallback|, and then invokes
+   * the |processCallback| with the grouped events.
+   * @param {Function} filterCallback Takes an event and returns a boolean.
+   * @param {Function} groupCallback Takes event and a group object which can
+   * be a string or number.
+   * @param {Function} processCallback Takes a group, and an array of events.
+   * @param {!Array<String>} groups Optional list of groups. If it is provided,
+   * then discovered groups that are not in this list will be ignored.
+   */
+  function groupAndProcessEvents(model, filterCallback,
+      groupCallback, processCallback, groups) {
+    // Map: group -> [events].
+    const groupToEvents = {};
+    if (groups) {
+      for (const group of groups) {
+        groupToEvents[group] = [];
+      }
+    }
+    const threads = jsExecutionThreads(model);
+    for (const thread of threads) {
+      for (const event of thread.sliceGroup.childEvents()) {
+        if (!filterCallback(event)) continue;
+        const group = groupCallback(event);
+        if (groups && !(group in groupToEvents)) {
+          // The list of groups was provided explicitly and the current group
+          // is not in the list, so skip it.
+          continue;
+        }
+        groupToEvents[group] = groupToEvents[group] || [];
+        groupToEvents[group].push(event);
+      }
+    }
+
+    for (const [group, events] of Object.entries(groupToEvents)) {
+      processCallback(group, events);
+    }
+  }
+
+  /**
+   * Returns the set of events that pass the |filterCallback| filter.
+   * @param {Function} filterCallback Takes an event and returns a boolean.
+   */
+  function filterEvents(model, filterCallback) {
+    const threads = jsExecutionThreads(model);
+    const events = [];
+    for (const thread of threads) {
+      for (const event of thread.sliceGroup.childEvents()) {
+        if (!filterCallback(event)) continue;
+        events.push(event);
+      }
+    }
+    return events;
+  }
+
+  /**
+   * Returns a map of events that pass the |filterCallback| filter. The keys
+   * for the map are produced by |keyCallback|.
+   * @param {Function} filterCallback Takes an event and returns a boolean.
+   * @param {Function} keyCallback Takes an event and returns a string.
+   */
+  function filterAndOrderEvents(model, filterCallback, keyCallback) {
+    const threads = jsExecutionThreads(model);
+    const events = {};
+    for (const thread of threads) {
+      for (const event of thread.sliceGroup.childEvents()) {
+        if (!filterCallback(event)) continue;
+        const key = keyCallback(event);
+        if (events[key]) {
+          events[key].push(event);
+        } else {
+          events[key] = [event];
+        }
+      }
+    }
+    return events;
+  }
+
+  /**
+   * Given a list of intervals, returns a new list with all overalapping
+   * intervals merged into a single interval.
+   */
+  function unionOfIntervals(intervals) {
+    if (intervals.length === 0) return [];
+    return tr.b.math.mergeRanges(
+        intervals.map(x => { return { min: x.start, max: x.end }; }), 1e-6,
+        function(ranges) {
+          return {
+            start: ranges.reduce(
+                (acc, x) => Math.min(acc, x.min), ranges[0].min),
+            end: ranges.reduce((acc, x) => Math.max(acc, x.max), ranges[0].max)
+          };
+        }
+    );
+  }
+
+  function hasV8Stats(globalMemoryDump) {
+    let v8stats = undefined;
+    globalMemoryDump.iterateContainerDumps(function(dump) {
+      v8stats = v8stats || dump.getMemoryAllocatorDumpByFullName('v8');
+    });
+    return !!v8stats;
+  }
+
+  function rangeForMemoryDumps(model) {
+    const startOfFirstDumpWithV8 =
+        model.globalMemoryDumps.filter(hasV8Stats).reduce(
+            (start, dump) => Math.min(start, dump.start), Infinity);
+    // Empty range.
+    if (startOfFirstDumpWithV8 === Infinity) return new tr.b.math.Range();
+    return tr.b.math.Range.fromExplicitRange(startOfFirstDumpWithV8, Infinity);
+  }
+
+  /**
+   * An end-point of a window that is sliding from left to right
+   * over |points| starting from time |start|.
+   * It is intended to be used only by the |mutatorUtilization| function.
+   * @constructor
+   */
+  class WindowEndpoint {
+    constructor(start, points) {
+      this.points = points;
+      // The index of the last passed point.
+      this.lastIndex = -1;
+      // The position of the end-point in the time line.
+      this.position = start;
+      this.distanceUntilNextPoint = points[0].position - start;
+      // The cumulative duration of GC pauses until this position.
+      this.cummulativePause = 0;
+      // The number of entered GC intervals.
+      this.stackDepth = 0;
+    }
+
+    // Advance the end-point by the given |delta|.
+    advance(delta) {
+      if (delta < this.distanceUntilNextPoint) {
+        this.position += delta;
+        this.cummulativePause += this.stackDepth > 0 ? delta : 0;
+        this.distanceUntilNextPoint =
+            this.points[this.lastIndex + 1].position - this.position;
+      } else {
+        this.position += this.distanceUntilNextPoint;
+        this.cummulativePause +=
+            this.stackDepth > 0 ? this.distanceUntilNextPoint : 0;
+        this.distanceUntilNextPoint = 0;
+        this.lastIndex++;
+        if (this.lastIndex < this.points.length) {
+          this.stackDepth += this.points[this.lastIndex].delta;
+          if (this.lastIndex + 1 < this.points.length) {
+            this.distanceUntilNextPoint =
+                this.points[this.lastIndex + 1].position - this.position;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns mutator utilization as a piecewise linear function.
+   * Mutator utilization for a window size w is a function of time mu_w(t)
+   * that shows how much time in [t, t+w] is left for the mutator relative
+   * to the time window size.
+   * More formally:
+   * mu_w(t) = (w - total_time_spent_in_gc_in(t, t + w)) / w.
+   * The range of mu_w(t) is [0..1].
+   * See "A Parallel, Real-Time Garbage Collector" by Cheng et. al. for
+   * more info [https://www.cs.cmu.edu/~guyb/papers/gc2001.pdf].
+   *
+   * All parameters must use the same time unit.
+   * @param {number} start The start time of execution.
+   * @param {number} end The end time of execution.
+   * @param {number} timeWindow The size of the time window.
+   * @param {!Array<!{start: number, end: number}>} intervals The list of
+   *     GC pauses.
+   */
+  function mutatorUtilization(start, end, timeWindow, intervals) {
+    const mu = new tr.b.math.PiecewiseLinearFunction();
+    // If the interval is smaller than the time window, then the function is
+    // empty.
+    if (end - start <= timeWindow) {
+      return mu;
+    }
+
+    // If there are GC pauses then the mutator utilization is 1.0.
+    if (intervals.length === 0) {
+      mu.push(start, 1.0, end - timeWindow, 1.0);
+      return mu;
+    }
+
+    intervals = unionOfIntervals(intervals);
+
+    // Create a point for the start and the end of each interval.
+    const points = [];
+    for (const interval of intervals) {
+      points.push({position: interval.start, delta: 1});
+      points.push({position: interval.end, delta: -1});
+    }
+    points.sort((a, b) => a.position - b.position);
+    points.push({position: end, delta: 0});
+
+    // The left and the right limit of the sliding window.
+    const left = new WindowEndpoint(start, points);
+    const right = new WindowEndpoint(start, points);
+
+    // Advance the right end-point until we get the correct window size.
+    // Allow the floating-point precision errors of this magnitude.
+    const EPSILON = 1e-6;
+    while (right.position - left.position < timeWindow - EPSILON) {
+      right.advance(timeWindow - (right.position - left.position));
+    }
+
+    while (right.lastIndex < points.length) {
+      // Advance the window end-points by the largest possible amount
+      // without jumping over a point.
+      const distanceUntilNextPoint =
+          Math.min(left.distanceUntilNextPoint, right.distanceUntilNextPoint);
+      const position1 = left.position;
+      const value1 = right.cummulativePause - left.cummulativePause;
+      left.advance(distanceUntilNextPoint);
+      right.advance(distanceUntilNextPoint);
+      // Add a new mutator utilization segment only if it is non-trivial.
+      if (distanceUntilNextPoint > 0) {
+        const position2 = left.position;
+        const value2 = right.cummulativePause - left.cummulativePause;
+        mu.push(position1, 1.0 - value1 / timeWindow,
+            position2, 1.0 - value2 / timeWindow);
+      }
+    }
+    return mu;
+  }
+
+  /**
+   * Computes the minimum mutator utilization (MMU) metric for the given time
+   * windows and the given renderers. The results are added as histograms to
+   * the given histogram set.
+   *
+   * For example, passing 'v8-gc-mark-compactor-mmu' as the metric name and
+   * [16, 50, 100] as the time windows will produce the following:
+   * - v8-gc-mark-compactor-mmu-16ms_window
+   * - v8-gc-mark-compactor-mmu-50ms_window
+   * - v8-gc-mark-compactor-mmu-100ms_window
+   *
+   * @param {!string} metricName the name of the metric.
+   * @param {!function(tr.b.Event): boolean} eventFilter the predicate for
+   *     filtering the events that will be used for computing the MMU.
+   * @param {!Array.<tr.model.helpers.ChromeRendererHelper>} rendererHelpers
+   * @param {!tr.v.HistogramSet} histograms
+   */
+  function addMutatorUtilization(
+      metricName, eventFilter, timeWindows, rendererHelpers, histograms) {
+    const histogramMap = new Map();
+
+    for (const timeWindow of timeWindows) {
+      const summaryOptions = {
+        avg: false,
+        count: false,
+        max: false,
+        min: true,
+        std: false,
+        sum: false
+      };
+      const description =
+          `The minimum mutator utilization in ${timeWindow}ms time window`;
+      const histogram = histograms.createHistogram(
+          `${metricName}-${timeWindow}ms_window`,
+          tr.b.Unit.byName.normalizedPercentage_biggerIsBetter,
+          [], {summaryOptions, description});
+      histogramMap.set(timeWindow, histogram);
+    }
+
+    for (const rendererHelper of rendererHelpers) {
+      if (rendererHelper.isChromeTracingUI) continue;
+      // Main thread may be missing. See crbug.com/1059726 for an example.
+      if (rendererHelper.mainThread === undefined) continue;
+      const pauses = [];
+      for (const event of rendererHelper.mainThread.sliceGroup.childEvents()) {
+        if (eventFilter(event) && event.end > event.start) {
+          pauses.push({start: event.start, end: event.end});
+        }
+      }
+      pauses.sort((a, b) => a.start - b.start);
+      const start = rendererHelper.mainThread.bounds.min;
+      const end = rendererHelper.mainThread.bounds.max;
+      for (const timeWindow of timeWindows) {
+        const mu = mutatorUtilization(start, end, timeWindow, pauses);
+        histogramMap.get(timeWindow).addSample(mu.min);
+      }
+    }
+  }
+
+
+  return {
+    addMutatorUtilization,
+    findParent,
+    forcedGCEventName,
+    filterEvents,
+    filterAndOrderEvents,
+    groupAndProcessEvents,
+    isForcedGarbageCollectionEvent,
+    isFullMarkCompactorEvent,
+    isGarbageCollectionEvent,
+    isIdleTask,
+    isIncrementalMarkingEvent,
+    isLatencyMarkCompactorEvent,
+    isLowMemoryEvent,
+    isMarkCompactorSummaryEvent,
+    isMarkCompactorMarkingSummaryEvent,
+    isMemoryMarkCompactorEvent,
+    isNotForcedMarkCompactorEvent,
+    isNotForcedTopGarbageCollectionEvent,
+    isNotForcedSubGarbageCollectionEvent,
+    isScavengerEvent,
+    isScavengerStackScanningEvent,
+    isSubGarbageCollectionEvent,
+    isTopGarbageCollectionEvent,
+    isTopV8ExecuteEvent,
+    isV8Event,
+    isV8ExecuteEvent,
+    isV8RCSEvent,
+    isCompileRCSCategory,
+    isCompileOptimizeRCSCategory,
+    isCompileUnoptimizeRCSCategory,
+    isCompileParseRCSCategory,
+    mutatorUtilization,
+    rangeForMemoryDumps,
+    subGarbageCollectionEventName,
+    topGarbageCollectionEventName,
+    topGarbageCollectionEventNames,
+    unionOfIntervals,
+  };
+});
+</script>

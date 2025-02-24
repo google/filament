@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/related_timeseries.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('relatedTimeseries', function() {
+    const related = d.buildRelatedTimeseries([
+      {
+        color: 'a',
+        testpath:
+          'master/benchmark/bot/memory:chrome:all_processes:reported_by_chrome:effective_size_avg',  // eslint-disable-line max-len
+      },
+      {
+        color: 'b',
+        testpath: 'master/benchmark/bot/memory:chrome:all_processes:reported_by_chrome:effective_size_avg/story_tag',  // eslint-disable-line max-len
+      },
+    ]);
+    assert.lengthOf(related, 2);
+
+    assert.strictEqual(related[0].name, 'Process');
+    assert.lengthOf(related[0].sparklines, 6);
+    assert.strictEqual(related[0].sparklines[0].name, 'browser_process');
+    assert.lengthOf(related[0].sparklines[0].testpaths, 6);
+    assert.strictEqual(related[0].sparklines[0].testpaths[0].color, 'a');
+    assert.strictEqual(related[0].sparklines[0].testpaths[0].testpath, 'master/benchmark/bot/memory:chrome:browser_process:reported_by_chrome:effective_size_avg');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[0].testpaths[1].color, 'a');
+    assert.strictEqual(related[0].sparklines[0].testpaths[1].testpath, 'master/benchmark/bot/memory:webview:browser_process:reported_by_chrome:effective_size_avg');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[0].testpaths[2].color, 'a');
+    assert.strictEqual(related[0].sparklines[0].testpaths[2].testpath, 'master/benchmark/bot/memory:unknown_browser:browser_process:reported_by_chrome:effective_size_avg');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[0].testpaths[3].color, 'b');
+    assert.strictEqual(related[0].sparklines[0].testpaths[3].testpath, 'master/benchmark/bot/memory:chrome:browser_process:reported_by_chrome:effective_size_avg/story_tag');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[0].testpaths[4].color, 'b');
+    assert.strictEqual(related[0].sparklines[0].testpaths[4].testpath, 'master/benchmark/bot/memory:webview:browser_process:reported_by_chrome:effective_size_avg/story_tag');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[0].testpaths[5].color, 'b');
+    assert.strictEqual(related[0].sparklines[0].testpaths[5].testpath, 'master/benchmark/bot/memory:unknown_browser:browser_process:reported_by_chrome:effective_size_avg/story_tag');  // eslint-disable-line max-len
+    assert.strictEqual(related[0].sparklines[1].name, 'renderer_processes');
+    assert.lengthOf(related[0].sparklines[1].testpaths, 6);
+    assert.strictEqual(related[0].sparklines[1].testpaths[0].color, 'a');
+    assert.strictEqual(related[0].sparklines[2].name, 'gpu_process');
+    assert.lengthOf(related[0].sparklines[2].testpaths, 6);
+    assert.strictEqual(related[0].sparklines[3].name, 'ppapi_process');
+    assert.lengthOf(related[0].sparklines[3].testpaths, 6);
+    assert.strictEqual(related[0].sparklines[4].name, 'unknown_processes');
+    assert.lengthOf(related[0].sparklines[4].testpaths, 6);
+    assert.strictEqual(related[0].sparklines[5].name, 'all_processes');
+    assert.lengthOf(related[0].sparklines[5].testpaths, 4);
+
+    assert.strictEqual(related[1].name, 'Component');
+    assert.lengthOf(related[1].sparklines, 33);
+    assert.strictEqual(related[1].sparklines[0].name, 'blink_gc');
+    assert.lengthOf(related[1].sparklines[0].testpaths, 2);
+  });
+
+  test('empty', function() {
+    const related = d.buildRelatedTimeseries([{
+      color: 'a',
+      testpath: 'master/benchmark/bot/ttfmp',
+    }]);
+    assert.lengthOf(related, 0);
+  });
+});
+</script>

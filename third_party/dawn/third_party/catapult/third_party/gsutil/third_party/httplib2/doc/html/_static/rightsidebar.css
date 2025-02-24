@@ -1,0 +1,16 @@
+/**
+ * Sphinx Doc Design -- Right Side Bar Overrides
+ */
+
+
+div.sphinxsidebar {
+    float: right;
+}
+
+div.bodywrapper {
+    margin: 0 230px 0 0;
+}
+
+div.inlinecomments {
+    right: 250px;
+}

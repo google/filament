@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Task = tr.b.Task;
+
+  function setupTimeline() {
+    const container = document.createElement('track-view-container');
+    container.id = 'track_view_container';
+
+    const view = document.createElement('tr-ui-timeline-view');
+    Polymer.dom(view).appendChild(container);
+    view.trackViewContainer_ = container;
+    return view;
+  }
+
+  const createFullyPopulatedModel = function(opt_withError, opt_withMetadata) {
+    const withError = opt_withError !== undefined ? opt_withError : true;
+    const withMetadata = opt_withMetadata !== undefined ?
+      opt_withMetadata : true;
+
+    const numTests = 50;
+    let testIndex = 0;
+    const startTime = 0;
+
+    const model = new tr.Model();
+    const io = new tr.importer.ImportOptions();
+    model.importOptions = io;
+
+    const cpu = model.kernel.getOrCreateCpu(0);
+    cpu.getOrCreateCounter('Category Name', 'Counter Name Here');
+    cpu.createSubSlices();
+
+    for (testIndex = 0; testIndex < numTests; ++testIndex) {
+      const process = model.getOrCreateProcess(10000 + testIndex);
+      if (testIndex % 2 === 0) {
+        const thread = process.getOrCreateThread('Thread Name Here');
+        thread.sliceGroup.pushSlice(new tr.model.ThreadSlice(
+            'foo', 'a', 0, startTime, {}, 1));
+        thread.sliceGroup.pushSlice(new tr.model.ThreadSlice(
+            'bar', 'b', 0, startTime + 23, {}, 10));
+      } else {
+        const thread = process.getOrCreateThread('Name');
+        thread.sliceGroup.pushSlice(new tr.model.ThreadSlice(
+            'foo', 'a', 0, startTime + 4, {}, 11));
+        thread.sliceGroup.pushSlice(new tr.model.ThreadSlice(
+            'bar', 'b', 0, startTime + 22, {}, 14));
+      }
+    }
+    const p1000 = model.getOrCreateProcess(1000);
+    const objects = p1000.objects;
+    objects.idWasCreated('0x1000', 'tr.e.cc', 'LayerTreeHostImpl', 10);
+    objects.addSnapshot('0x1000', 'tr.e.cc', 'LayerTreeHostImpl', 10,
+        'snapshot-1');
+    objects.addSnapshot('0x1000', 'tr.e.cc', 'LayerTreeHostImpl', 25,
+        'snapshot-2');
+    objects.addSnapshot('0x1000', 'tr.e.cc', 'LayerTreeHostImpl', 40,
+        'snapshot-3');
+    objects.idWasDeleted('0x1000', 'tr.e.cc', 'LayerTreeHostImpl', 45);
+    model.updateCategories_();
+
+    // Add a known problematic piece of data to test the import errors UI.
+    model.importWarning({
+      type: 'test_error',
+      message: 'Synthetic Import Error',
+      showToUser: true,
+    });
+    model.updateBounds();
+
+    // Add data with metadata information stored
+    model.metadata.push({name: 'a', value: 'testA'});
+    model.metadata.push({name: 'b', value: 'testB'});
+    model.metadata.push({name: 'c', value: 'testC'});
+
+    return model;
+  };
+
+  const visibleTracks = function(trackButtons) {
+    return trackButtons.reduce(function(numVisible, button) {
+      const style = button.parentElement.style;
+      const visible = (style.display.indexOf('none') === -1);
+      return visible ? numVisible + 1 : numVisible;
+    }, 0);
+  };
+
+  const modelsEquivalent = function(lhs, rhs) {
+    if (lhs.length !== rhs.length) return false;
+
+    return lhs.every(function(lhsItem, index) {
+      const rhsItem = rhs[index];
+      return rhsItem.regexpText === lhsItem.regexpText &&
+          rhsItem.isOn === lhsItem.isOn;
+    });
+  };
+
+  test('instantiate', async function() {
+    const model11 = createFullyPopulatedModel(true, true);
+
+    const view = setupTimeline();
+    view.style.height = '400px';
+    view.style.border = '1px solid black';
+    view.model = model11;
+
+    const simpleButton1 = document.createElement('tr-ui-b-toolbar-button');
+    Polymer.dom(simpleButton1).textContent = 'M';
+    Polymer.dom(view.leftControls).appendChild(simpleButton1);
+
+    const simpleButton2 = document.createElement('tr-ui-b-toolbar-button');
+    Polymer.dom(simpleButton2).textContent = 'am button';
+    Polymer.dom(view.leftControls).appendChild(simpleButton2);
+
+    this.addHTMLOutput(view);
+    await view.builtPromise;
+  });
+
+  test('changeModelToSomethingDifferent', async function() {
+    const model00 = createFullyPopulatedModel(false, false);
+    const model11 = createFullyPopulatedModel(true, true);
+
+    const view = setupTimeline();
+    view.style.height = '400px';
+    view.model = model00;
+    view.model = undefined;
+    view.model = model11;
+    view.model = model00;
+
+    this.addHTMLOutput(view);
+    await view.builtPromise;
+  });
+
+  test('setModelToSameThingAgain', async function() {
+    const model = createFullyPopulatedModel(false, false);
+
+    // Create a view with a model.
+    const view = setupTimeline();
+    this.addHTMLOutput(view);
+    view.style.height = '400px';
+    view.model = model;
+    const sc = view.brushingStateController;
+
+    // Mutate the model and update the view.
+    const t123 = model.getOrCreateProcess(123).getOrCreateThread(123);
+    t123.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+        {title: 'somethingUnusual', start: 0, duration: 5}));
+    view.model = model;
+
+    await view.builtPromise;
+
+    // Verify that the new bits of the model show up in the view.
+    const selection = new tr.model.EventSet();
+    const filter = new tr.c.TitleOrCategoryFilter('somethingUnusual');
+    const filterTask = sc.addAllEventsMatchingFilterToSelectionAsTask(
+        filter, selection);
+    Task.RunSynchronously(filterTask);
+    assert.strictEqual(selection.length, 1);
+  });
+
+  test('setModelBeforeAttached', async function() {
+    const view = document.createElement('tr-ui-timeline-view');
+    view.style.height = '400px';
+    view.model = createFullyPopulatedModel(false, false);
+
+    const container = document.createElement('track-view-container');
+    container.id = 'track_view_container';
+    Polymer.dom(view).appendChild(container);
+    this.addHTMLOutput(view);
+    await view.builtPromise;
+  });
+
+  test('filterProcessesUI', async function() {
+    const view = document.createElement('tr-ui-timeline-view');
+    view.style.height = '400px';
+    view.model = createFullyPopulatedModel(false, false);
+
+    const container = document.createElement('track-view-container');
+    container.id = 'track_view_container';
+    Polymer.dom(view).appendChild(container);
+    this.addHTMLOutput(view);
+    await view.builtPromise;
+
+    const procFilter = Polymer.dom(view.processFilter_);
+    const checkboxes = procFilter.querySelectorAll('input[type=checkbox]');
+    assert.lengthOf(checkboxes, 52);
+
+    const trackView =
+      view.trackViewContainer_.querySelector('tr-ui-timeline-track-view');
+    const countVisibleTracks = () => trackView.processViews.filter(
+        view => view.visible).length;
+    assert.strictEqual(checkboxes.length, trackView.processViews.length);
+    assert.strictEqual(countVisibleTracks(), 52);
+    assert.isTrue(trackView.processViews[0].visible);
+
+    checkboxes[0].click();
+    assert.strictEqual(countVisibleTracks(), 51);
+    assert.isFalse(trackView.processViews[0].visible);
+    assert.isTrue(trackView.processViews[1].visible);
+    assert.isAbove(trackView.processViews[1].tracks_.length, 0);
+
+    // Hide a track. Validate that the checkbox updated state correctly.
+    trackView.processViews[1].visible = false;
+    assert.isFalse(trackView.processViews[1].visible);
+    assert.isFalse(checkboxes[1].checked);
+    assert.strictEqual(trackView.processViews[1].tracks_.length, 0);
+  });
+});
+</script>

@@ -1,0 +1,2284 @@
+Name
+
+    ARB_gl_spirv
+
+Name Strings
+
+    GL_ARB_gl_spirv
+
+Contributors
+
+    John Kessenich, Google
+    Daniel Koch, NVIDIA
+    Christophe Riccio, Unity
+    Graham Sellers, AMD
+    Alejandro Piñeiro, Igalia
+
+Contact Point for Bug Reports
+
+    https://github.com/KhronosGroup/OpenGL-Registry/issues/
+
+Notice
+
+    Copyright (c) 2015-2019 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Ratified by the Khronos Board of Promoters on July 22, 2016.
+
+Version
+
+    Last Modified Date: August 19, 2020
+    Revision: 46
+
+Number
+
+    ARB Extension #190
+
+Dependencies
+
+    This extension requires version 3.3 or later of The OpenGL Graphics System.
+    (It is not written for OpenGL ES.)
+
+    This extension is written against the following specifications:
+      - The GL_KHR_vulkan_glsl extension, Version 30, April 12, 2016.
+      - The OpenGL Graphics System, Version 4.5, Core Profile, May 28, 2015.
+      - The OpenGL Shading Language, Version 4.50, Revision 6, April 14, 2016.
+      - SPIR-V Specification, Version 1.00, Revision 5
+
+    This extension interacts with ARB_parallel_shader_compile.
+
+    This extension interacts with ARB_separate_shader_objects.
+
+    This extension interacts with ARB_program_interface_query.
+
+Overview
+
+    This is version 100 of the GL_ARB_gl_spirv extension.
+
+    This extension does two things:
+
+    1. Allows a SPIR-V module to be specified as containing a programmable
+       shader stage, rather than using GLSL, whatever the source language
+       was used to create the SPIR-V module.
+
+    2. Modifies GLSL to be a source language for creating SPIR-V modules
+       for OpenGL consumption. Such GLSL can be used to create such SPIR-V
+       modules, outside of the OpenGL runtime.
+
+    Enabling GLSL SPIR-V Features
+    -----------------------------
+
+    This extension is not enabled with a #extension as other extensions are.
+    It is also not enabled through use of a profile or #version.  The intended
+    level of GLSL features comes from the traditional use of #version, profile,
+    and #extension.
+
+    Instead, use of this extension is an effect of using a GLSL front-end in a
+    mode that has it generate SPIR-V for OpenGL.  Such tool use is outside the
+    scope of using the OpenGL API and outside the definition of GLSL and this
+    extension. See the documentation of the compiler to see how to request
+    generation of SPIR-V for OpenGL.
+
+    When a front-end is used to accept the GLSL features in this extension, it
+    must error check and reject shaders not adhering to this specification, and
+    accept those that do.  Implementation-dependent maximums and capabilities
+    are supplied to, or part of, the front-end, so it can do error checking
+    against them.
+
+    A shader can query the level of GLSL SPIR-V support available, using the
+    predefined
+
+        #define GL_SPIRV 100
+
+    This allows shader code to say, for example,
+
+        #ifdef GL_SPIRV
+            layout(constant_id = 11) const int count = 4;
+            #if GL_SPIRV > 100
+                ...
+            #endif
+        #else
+            const int count = 6;
+        #endif
+
+    SPIR-V Modules
+    --------------
+
+    An entire stage is held in a single SPIR-V module.  The SPIR-V model is
+    that multiple (e.g., GLSL) compilation units forming a single stage
+    in a high-level language are all compiled and linked together to form a
+    single entry point (and its call tree) in a SPIR-V module.  This would be
+    done prior to using the OpenGL API to create a program object containing the
+    stage.
+
+    The OpenGL API expects the SPIR-V module to have already been validated,
+    and can return an error if it discovers anything invalid in
+    the module.  An invalid SPIR-V module is allowed to result in undefined
+    behavior.
+
+    Specialization Constants
+    ------------------------
+
+    SPIR-V specialization constants, which can be set later by the client API,
+    can be declared using "layout(constant_id=...)". For example, to make a
+    specialization constant with a default value of 12:
+
+        layout(constant_id = 17) const int arraySize = 12;
+
+    Above, "17" is the ID by which the API or other tools can later refer to
+    this specific specialization constant.  The API or an intermediate tool can
+    then change its value to another constant integer before it is fully
+    lowered to executable code.  If it is never changed before final lowering,
+    it will retain the value of 12.
+
+    Specialization constants have const semantics, except they don't fold.
+    Hence, an array can be declared with 'arraySize' from above:
+
+        vec4 data[arraySize];  // legal, even though arraySize might change
+
+    Specialization constants can be in expressions:
+
+        vec4 data2[arraySize + 2];
+
+    This will make data2 be sized by 2 more than whatever constant value
+    'arraySize' has when it is time to lower the shader to executable code.
+
+    An expression formed with specialization constants also behaves in the
+    shader like a specialization constant, not a like a constant.
+
+        arraySize + 2       // a specialization constant (with no constant_id)
+
+    Such expressions can be used in the same places as a constant.
+
+    The constant_id can only be applied to a scalar *int*, a scalar *float*
+    or a scalar *bool*.
+
+    Only basic operators and constructors can be applied to a specialization
+    constant and still result in a specialization constant:
+
+        layout(constant_id = 17) const int arraySize = 12;
+        sin(float(arraySize));    // result is not a specialization constant
+
+    While SPIR-V specialization constants are only for scalars, a vector
+    can be made by operations on scalars:
+
+        layout(constant_id = 18) const int scX = 1;
+        layout(constant_id = 19) const int scZ = 1;
+        const vec3 scVec = vec3(scX, 1, scZ);  // partially specialized vector
+
+    A built-in variable can have a 'constant_id' attached to it:
+
+        layout(constant_id = 18) gl_MaxImageUnits;
+
+    This makes it behave as a specialization constant.  It is not a full
+    redeclaration; all other characteristics are left intact from the
+    original built-in declaration.
+
+    The built-in vector gl_WorkGroupSize can be specialized using special
+    layout local_size_{xyz}_id's applied to the "in" qualifier.  For example:
+
+        layout(local_size_x_id = 18, local_size_z_id = 19) in;
+
+    This leaves gl_WorkGroupSize.y as a non-specialization constant, with
+    gl_WorkGroupSize being a partially specialized vector.  Its x and z
+    components can be later specialized using the ID's 18 and 19.
+
+    gl_FragColor
+    ------------
+
+    The fragment-stage built-in gl_FragColor, which implies a broadcast to all
+    outputs, is not present in SPIR-V. Shaders where writing to gl_FragColor
+    is allowed can still write to it, but it only means to write to an output:
+     - of the same type as gl_FragColor
+     - decorated with location 0
+     - not decorated as a built-in variable.
+    There is no implicit broadcast.
+
+    Mapping to SPIR-V
+    -----------------
+
+    For informational purposes (non-specification), the following is an
+    expected way for an implementation to map GLSL constructs to SPIR-V
+    constructs:
+
+    Mapping of Storage Classes:
+
+      uniform sampler2D...;        -> UniformConstant
+      uniform variable (non-block) -> UniformConstant
+      uniform blockN { ... } ...;  -> Uniform, with Block decoration
+      in / out variable            -> Input/Output, possibly with block (below)
+      in / out block...            -> Input/Output, with Block decoration
+      buffer  blockN { ... } ...;  -> Uniform, with BufferBlock decoration
+      ... uniform atomic_uint ...  -> AtomicCounter
+      shared                       -> Workgroup
+      <normal global>              -> Private
+
+    Mapping of input/output blocks or variables is the same for all versions
+    of GLSL. To the extent variables or members are available in a
+    version and a stage, its location is as follows:
+
+      These are mapped to SPIR-V individual variables, with similarly spelled
+      built-in decorations (except as noted):
+
+        General:
+
+            in gl_VertexID
+            in gl_InstanceID
+            in gl_InvocationID
+            in gl_PatchVerticesIn      (PatchVertices)
+            in gl_PrimitiveIDIn        (PrimitiveID)
+            in/out gl_PrimitiveID      (in/out based only on storage qualifier)
+            in gl_TessCoord
+
+            in/out gl_Layer
+            in/out gl_ViewportIndex
+
+            patch in/out gl_TessLevelOuter  (uses Patch decoration)
+            patch in/out gl_TessLevelInner  (uses Patch decoration)
+
+        Compute stage only:
+
+            in gl_NumWorkGroups
+            in gl_WorkGroupSize
+            in gl_WorkGroupID
+            in gl_LocalInvocationID
+            in gl_GlobalInvocationID
+            in gl_LocalInvocationIndex
+
+        Fragment stage only:
+
+            in gl_FragCoord
+            in gl_FrontFacing
+            in gl_ClipDistance
+            in gl_CullDistance
+            in gl_PointCoord
+            in gl_SampleID
+            in gl_SamplePosition
+            in gl_HelperInvocation
+            out gl_FragDepth
+            in gl_SampleMaskIn        (SampleMask)
+            out gl_SampleMask         (in/out based only on storage qualifier)
+
+      These are mapped to SPIR-V blocks, as implied by the pseudo code, with
+      the members decorated with similarly spelled built-in decorations:
+
+        Non-fragment stage:
+
+            in/out gl_PerVertex {  // some subset of these members will be used
+                gl_Position
+                gl_PointSize
+                gl_ClipDistance
+                gl_CullDistance
+            }                      // name of block is for debug only
+
+      There is at most one input and one output block per stage in SPIR-V.
+      The subset and order of members will match between stages sharing an
+      interface.
+
+    Mapping of precise:
+
+      precise -> NoContraction
+
+    Mapping of atomic_uint /offset/ layout qualifier
+
+      offset         ->  Offset (decoration)
+
+    Mapping of images
+
+      imageLoad()   -> OpImageRead
+      imageStore()  -> OpImageWrite
+      texelFetch()  -> OpImageFetch
+
+      imageAtomicXXX(params, data)  -> %ptr = OpImageTexelPointer params
+                                              OpAtomicXXX %ptr, data
+
+      XXXQueryXXX(combined) -> %image = OpImage combined
+                                        OpXXXQueryXXX %image
+
+    Mapping of layouts
+
+      std140/std430  ->  explicit *Offset*, *ArrayStride*, and *MatrixStride*
+                         Decoration on struct members
+      shared/packed  ->  not allowed
+      <default>      ->  not shared, but std140 or std430
+      xfb_offset     ->  *Offset* Decoration on the object or struct member
+      xfb_buffer     ->  *XfbBuffer* Decoration on the object
+      xfb_stride     ->  *XfbStride* Decoration on the object
+      any xfb_*      ->  the *Xfb* Execution Mode is set
+      captured XFB   ->  has both *XfbBuffer* and *Offset*
+      non-captured   ->  lacking *XfbBuffer* or *Offset*
+
+      max_vertices   ->  OutputVertices
+
+    Mapping of barriers
+
+      barrier() (compute) -> OpControlBarrier(/*Execution*/Workgroup,
+                                              /*Memory*/Workgroup,
+                                              /*Semantics*/AcquireRelease |
+                                                           WorkgroupMemory)
+
+      barrier() (tess control) -> OpControlBarrier(/*Execution*/Workgroup,
+                                                   /*Memory*/Invocation,
+                                                   /*Semantics*/None)
+
+      memoryBarrier() -> OpMemoryBarrier(/*Memory*/Device,
+                                         /*Semantics*/AcquireRelease |
+                                                      UniformMemory |
+                                                      WorkgroupMemory |
+                                                      ImageMemory)
+
+      memoryBarrierBuffer() -> OpMemoryBarrier(/*Memory*/Device,
+                                               /*Semantics*/AcquireRelease |
+                                                            UniformMemory)
+
+      memoryBarrierShared() -> OpMemoryBarrier(/*Memory*/Device,
+                                               /*Semantics*/AcquireRelease |
+                                                            WorkgroupMemory)
+
+      memoryBarrierImage() -> OpMemoryBarrier(/*Memory*/Device,
+                                              /*Semantics*/AcquireRelease |
+                                                           ImageMemory)
+
+      groupMemoryBarrier() -> OpMemoryBarrier(/*Memory*/Workgroup,
+                                              /*Semantics*/AcquireRelease |
+                                                           UniformMemory |
+                                                           WorkgroupMemory |
+                                                           ImageMemory)
+
+    Mapping of atomics
+
+      all atomic builtin functions -> Semantics = None(Relaxed)
+
+      atomicExchange()      -> OpAtomicExchange
+      imageAtomicExchange() -> OpAtomicExchange
+      atomicCompSwap()      -> OpAtomicCompareExchange
+      imageAtomicCompSwap() -> OpAtomicCompareExchange
+      NA                    -> OpAtomicCompareExchangeWeak
+
+      atomicCounterIncrement -> OpAtomicIIncrement
+      atomicCounterDecrement -> OpAtomicIDecrement (with post decrement)
+      atomicCounter          -> OpAtomicLoad
+
+    Mapping of uniform initializers
+
+      Using the OpVariable initializer logic, but only from a constant
+      instruction (not a global one).
+
+    Mapping of other instructions
+
+      %     -> OpUMod/OpSMod
+      mod() -> OpFMod
+      NA    -> OpSRem/OpFRem
+
+      pack/unpack (conversion)    -> pack/unpack in GLSL extended instructions
+      pack/unpack (no conversion) -> OpBitcast
+
+    Differences Relative to Other Specifications
+    --------------------------------------------
+
+    The following summarizes the set of differences to existing specifications.
+
+    Additional use of existing SPIR-V features, relative to Vulkan:
+      + The *UniformConstant* Storage Class can be used on individual
+        variables at global scope. (That is, uniforms don't have to be in a
+        block, unless they are built-in members that are in block in GLSL
+        version 4.5.)
+      + *AtomicCounter* Storage Class can use the *Offset* decoration
+      + OriginLowerLeft
+      + Uniforms support constant initializers.
+
+    Corresponding features that GLSL keeps, despite GL_KHR_vulkan_glsl removal:
+      . default uniforms (those not inside a uniform block)
+      . atomic-counter bindings have the /offset/ layout qualifier
+      . special rules for locations for input doubles in the vertex shader
+      . origin_lower_left
+
+    Addition of features to GLSL:
+      + specialization constants, as per GL_KHR_vulkan_glsl
+      + #define GL_SPIRV 100, when compiled for OpenGL and SPIR-V generation
+      + offset can organize members in a different order than declaration order
+
+    Non-acceptance of SPIR-V features, relative to Vulkan:
+      - VertexIndex and InstanceIndex built-in decorations cannot be used
+      - Push-constant buffers cannot be used
+      - *DescriptorSet* must always be 0, if present
+      - input targets and input attachments
+      - OpTypeSampler
+
+    Corresponding features not added to GLSL that GL_KHR_vulkan_glsl added:
+      . gl_VertexIndex and gl_InstanceIndex
+          (gl_VertexID and gl_InstanceID have same semantics as in GLSL)
+      . push_constant buffers
+      . descriptor sets
+      . input_attachment_index and accessing input targets
+      . shader-combining of textures and samplers
+
+    Removal of features from GLSL, as removed by GL_KHR_vulkan_glsl:
+      - subroutines
+      - the already deprecated texturing functions (e.g., texture2D())
+      - the already deprecated noise functions (e.g., noise1())
+      - compatibility profile features
+      - gl_DepthRangeParameters and gl_NumSamples
+      - *shared* and *packed* block layouts
+
+    Addition of features to The OpenGL Graphics System:
+      + a command to associate a SPIR-V module with a program (ShaderBinary)
+      + a command to select a SPIR-V entry point and set specialization
+        constants in a SPIR-V module (SpecializeShaderARB)
+      + a new appendix for SPIR-V validation rules, precision, etc.
+
+    Changes of system features, relative to Vulkan:
+      . Vulkan uses only one binding point for a resource array, while OpenGL
+        still uses multiple binding points, so binding numbers are counted
+        differently for SPIR-V used in Vulkan and OpenGL
+      . gl_FragColor can be written to, but it won't broadcast, for versions of
+        OpenGL that support gl_FragColor
+      . Vulkan does not allow multi-dimensional arrays of resources like
+        UBOs and SSBOs in its SPIR-V environment spec. SPIR-V supports
+        it and OpenGL already allows this for GLSL shaders. SPIR-V
+        for OpenGL also allows it.
+
+    Additions to the SPIR-V specification:
+      + *Offset* can also apply to an object, for transform feedback.
+      + *Offset* can also apply to a default uniform, for atomic_uint offset.
+
+New Procedures and Functions
+
+    void SpecializeShaderARB(uint shader,
+                             const char* pEntryPoint,
+                             uint numSpecializationConstants,
+                             const uint* pConstantIndex,
+                             const uint* pConstantValue);
+
+New Tokens
+
+    Accepted by the <binaryformat> parameter of ShaderBinary:
+
+        SHADER_BINARY_FORMAT_SPIR_V_ARB         0x9551
+
+    Accepted by the <pname> parameter of GetShaderiv:
+
+        SPIR_V_BINARY_ARB                       0x9552
+
+Modifications to Chapter 7 of the OpenGL 4.5 (Core Profile) Specification
+(Programs and Shaders)
+
+  Additions to overview of Chapter 7, "Programs and Shaders"
+
+    Modify the 4th paragraph beginning with "Alternatively, pre-compiled
+    shader binary code..." as follows:
+
+    "Alternatively, pre-compiled shader binary code can be loaded
+    into a shader object. A SPIR-V module can also be associated with a
+    shader and then _specialized_. An implementation must..."
+
+  Additions to Section 7.1, "Shader Objects":
+
+    Add the following to the end of the description of ShaderSource:
+
+    "If <shader> was previously associated with a SPIR-V module (via the
+    ShaderBinary command), that association is broken. Upon successful
+    completion of this command the SPIR_V_BINARY_ARB state of <shader>
+    is set to FALSE."
+
+    Add a new error for the CompileShader command:
+
+    "An INVALID_OPERATION error is generated if the SPIR_V_BINARY_ARB
+    state of <shader> is TRUE."
+
+    [[ if ARB_parallel_shader_compile is supported: ]]
+    Modify the preamble to the MaxShaderCompilerThreadsARB command to read:
+
+    "Applications may use the following to hint to the driver the maximum
+    number of background threads it would like to be used in the process
+    of compiling or specializing shaders, or linking programs, ..."
+
+  Additions to Section 7.2, "Shader Binaries":
+
+    In the description of ShaderBinary, remove the text stating that GL
+    defines no specific binary formats and replace it with the following:
+
+    "GL defines an execution environment for shaders created from SPIR-V
+    modules. To load a SPIR-V binary into GL, set <binaryformat> to
+    SHADER_BINARY_FORMAT_SPIR_V_ARB. <binary> should point to the start
+    of a valid SPIR-V module binary and <length> should contain the length
+    of that binary, in bytes. Upon successful consumption of the SPIR-V
+    module:
+    * each entry of <shaders> will be associated with that SPIR-V module,
+    * the SPIR_V_BINARY_ARB state of each shader is set to TRUE,
+    * the COMPILE_STATUS of each of these shaders is set to FALSE,
+    * any existing source string (specified by ShaderSource) is removed, and
+    * any information about a previous compile is lost.
+    Shaders associated with SPIR-V modules must be finalized by calling
+    SpecializeShaderARB as described in Section 7.2.1.
+
+    GL also provides a mechanism to obtain token values for additional
+    binary formats provided by extensions. The number of binary formats..."
+
+    Replace the error condition for ShaderBinary which states:
+
+    "An INVALID_OPERATION error is generated if more than one of the
+    handles in shaders refers to the same type of shader object."
+
+    with the following:
+
+    "An INVALID_OPERATION error is generated if <binaryformat> is not
+    SHADER_BINARY_FORMAT_SPIR_V_ARB and more than one of the
+    handles in shaders refers to the same type of shader object."
+
+  Insert Subsection 7.2.1, "Shader Specialization":
+
+    "Shaders associated with SPIR-V modules must be specialized before they
+    can be linked into a program object. It is not necessary to specialize
+    the shader before it is attached to a program object. Once specialized,
+    a shader may not be specialized again without first re-associating the
+    original SPIR-V module with it, through ShaderBinary.
+
+    Specialization does two things:
+
+        * Selects the name of the entry point, for that shader's stage, from
+          the SPIR-V module.
+        * Sets the values of all, or a subset of, the specialization constants
+          in the SPIR-V module.
+
+    To specialize a shader created from a SPIR-V module, call:
+
+        void SpecializeShaderARB(uint shader,
+                                 const char* pEntryPoint,
+                                 uint numSpecializationConstants,
+                                 const uint* pConstantIndex,
+                                 const uint* pConstantValue);
+
+    <shader> is the name of a shader object containing unspecialized SPIR-V
+    as created from a successful call to ShaderBinary to which a SPIR-V
+    module was passed. <pEntryPoint> is a pointer to a NUL-terminated UTF-8
+    string specifying the name of the entry point in the SPIR-V module to
+    use for this shader. <numSpecializationConstants> is the number
+    of specialization constants whose values to set in this call.
+    <pConstantIndex> is a pointer to an array of
+    <numSpecializationConstants> unsigned integers, each holding the index
+    of a specialization constant in the SPIR-V module whose value to set.
+    The corresponding entry in <pConstantValue> is used to set the value of
+    the specialization constant indexed by the entry in <pConstantIndex>.
+    Although this array is of unsigned integer, each entry is bitcast to the
+    appropriate type for the module, and therefore, floating-point constants
+    may be set by including their IEEE-754 bit representation in the
+    <pConstantValue> array. Specialization constants not referenced by
+    <pConstantIndex> retain their default values as specified in the SPIR-V
+    module.
+
+    On successful shader specialization, the compile status for <shader>
+    is set to TRUE. On failure, the compile status for <shader> is set to
+    FALSE and additional information about the cause of the failure may
+    be available in the shader compilation log. Specialization can fail
+    if the SPIR-V module fails to meet the requirements listed in Appendix
+    "The OpenGL SPIR-V Execution Environment".
+
+        Errors
+
+        An INVALID_VALUE error is generated if <shader> is not the name
+        of either a program or shader object.
+
+        An INVALID_OPERATION error is generated if <shader> is the name
+        of a program object.
+
+        INVALID_OPERATION is generated if the value of SPIR_V_BINARY_ARB
+        for <shader> is not TRUE, or if the shader has already been
+        specialized.
+
+        INVALID_VALUE is generated if <pEntryPoint> does not match the
+        <Name> of any OpEntryPoint declaration in the SPIR-V module
+        associated with <shader>.
+
+        INVALID_OPERATION is generated if the <Execution Mode> of the
+        OpEntryPoint indicated by <pEntryPoint> does not match the type
+        of <shader>.
+
+        INVALID_VALUE is generated if any element of <pConstantIndex>
+        refers to a specialization constant that does not exist in the
+        shader module contained in <shader>."
+
+  Additions to Section 7.3, "Program Objects":
+
+    Modify the first paragraph after the AttachShader command to read:
+
+    "Shader objects may be attached to program objects before source code
+    or shader binary has been loaded into the shader object, or before the
+    shader object has been compiled or specialized. Multiple shader ..."
+
+    Modify the first paragraph after the LinkProgram command to read:
+
+    "Linking can fail for a variety of reasons as specified in the OpenGL
+    Shading language specification for source shaders, or if the requirements
+    in the Appendix "The OpenGL SPIR-V Execution Environment" are not met
+    for SPIR-V shaders, as well as any of the following reasons..."
+
+    Modify the second bullet point in the list of reasons LinkProgram can
+    fail:
+
+    "One or more of the shader objects attached to <program> are not compiled
+    or specialized successfully."
+
+    Add a new bullet point to this list:
+
+    "All the shader objects attached to <program> do not have the same value
+    for the SPIR_V_BINARY_ARB state."
+
+  Modifications to Section 7.3.1, "Program Interfaces"
+
+    Add the following paragraph after the list of rules describing how the
+    name string is generated, before the paragraph that begins "The order
+    of the active resource list...":
+
+    "For shaders constructed from SPIR-V binaries (that is with a state of
+    SPIR_V_BINARY_ARB equal to TRUE), variables may not have names associated
+    with them as the OpName and OpMemberName debug instructions are optional
+    and may not be present in a SPIR-V module. When the Op*Name instructions
+    are present, it is implementation-dependent if these are reported via
+    the name reflection APIs. If no _name reflection information_ is
+    available, the name string associated with each active variable is the
+    empty string (""). In this case, any queries that operate with a name
+    as input, will return INVALID_INDEX or -1 as appropriate, and any queries
+    that return information about the name of a resource will report a
+    name length of one (for the null character) and return an empty string
+    with a length of zero."
+
+  Add a new subsection "7.4.spv, SPIR-V Shader Interface Matching" after
+  section 7.4.1 "Shader Interface Matching":
+
+    "7.4.spv, SPIR-V Shader Interface Matching
+
+    SPIR-V shaders must also follow the rules in this section, whether they
+    add to or override those given in section 7.4.1 "Shader Interface
+    Matching."  Most importantly, SPIR-V variables and structure members
+    do not have names and so no interface matching is done by name strings.
+
+    All variables forming the input or output interfaces of shader stages
+    must be listed as operands to the *OpEntryPoint* instruction and are
+    declared with the *Input* or *Output* Storage Classes, respectively,
+    in the SPIR-V module.
+
+    Shader built-in variables meeting the following requirements define the
+    built-in interface block. They must:
+      - be explicitly declared (there are no implicit built-ins),
+      - be decorated with the *BuiltIn* decoration,
+      - be declared in a block whose top-level members are the built-ins.
+      - not have any *Location* or *Component* decorations.
+    Built-ins only participate in interface matching if they are declared in
+    such a block. There must be no more than one built-in interface block
+    per shader per interface.
+
+    User-defined interface variables must be decorated with a *Location*
+    and can also be decorated with a *Component*. These correspond to the
+    location and component discussed in section 7.4.1 "Shader Interface
+    Matching". Uniform and shader storage block variables must also be
+    decorated with a *Binding*.
+
+    A user-defined output variable is considered to match an input variable
+    in the subsequent stage only if the two variables are declared with the
+    same *Location* and *Component* decoration and match in type and
+    decoration, except that interpolation decorations are not required to
+    match.
+
+    Variables or block members declared as structures are considered to
+    match in type if and only if the structure members match in type,
+    decoration, number, and declaration order. Variables or block members
+    declared as arrays are considered to match in type only if both
+    declarations specify the same element type and size.
+
+    At an interface between two non-fragment shader stages, the built-in
+    interface block must match exactly, as described above. At an interface
+    involving the fragment shader inputs, the presence or absence of any
+    built-in output does not affect the interface matching.
+
+    At an interface between two shader stages, the user-defined variable
+    interface must match exactly. Additionally, scalar and vector inputs
+    are well-defined if there is a corresponding output satisfying all of
+    the following conditions:
+     - the input and output match exactly in decoration,
+     - the output is a vector with the same basic type and has at least as
+       many components as the input, and
+     - the common component type of the input and output is 32-bit integer
+       or floating-point (64-bit component types are excluded).
+    In this case, the components of the input will be taken from the first
+    components of the output, and any extra components of the output will
+    be ignored."
+
+  Add a new subsection 7.6.2.spv "SPIR-V Uniform Offsets and Strides" after
+  section 7.6.2.2 "Standard Uniform Block Layout":
+
+    "7.6.2.spv SPIR-V Uniform Offsets and Strides
+
+    The SPIR-V decorations *GLSLShared* or *GLSLPacked* must not be used. A
+    variable in the *Uniform* Storage Class decorated as a *Block* or
+    *BufferBlock* must be explicitly laid out using the *Offset*, *ArrayStride*,
+    and *MatrixStride* decorations. These must follow the alignment rules listed
+    above, but not necessarily the packing rules. More specifically, explicit
+    SPIR-V offsets and strides must obey the following:
+
+    Define the /base alignment/ recursively as:
+
+      - A scalar of size N has a base alignment of N.
+
+      - A two-component vector, with components of size N, has a base alignment
+        of 2N.
+
+      - A three- or four-component vector, with components of size N, has a base
+        alignment of 4N.
+
+      - An array has a base alignment equal to the base alignment of its element
+        type, rounded up to a multiple of 16.
+
+      - A structure has a base alignment equal to the largest base alignment of
+        any of its members, rounded up to a multiple of 16.
+
+      - A row-major matrix of C columns has a base alignment equal to the base
+        alignment of a vector of C matrix components.
+
+      - A column-major matrix has a base alignment equal to the base alignment
+        of the matrix column type.
+
+    Given this definition, blocks must be laid out such that:
+
+      - The *Offset* decoration must be a multiple of its base alignment.
+
+      - Any *ArrayStride* or *MatrixStride* decoration must be an integer
+        multiple of the base alignment of the array or matrix.
+
+      - The *Offset* decoration of a member must not place it between the end of
+        a structure or an array and the next multiple of the base alignment of
+        that structure or array.
+
+      - The numeric order of *Offset* decorations need not follow member
+        declaration order.
+
+    With one exception: Variables in the *Uniform* storage class with a
+    decoration of *BufferBlock* do not need their base alignments rounded up
+    to a multiple of 16.
+
+  Modifications to Section 7.13 "Shader, Program, and Program Pipeline Queries"
+
+    Add the following to the list of <pname> that are accepted by GetShaderiv:
+
+    "If <pname> is SPIR_V_BINARY_ARB, TRUE is returned if the shader has been
+    successfully associated with a SPIR-V binary module by the ShaderBinary
+    command and FALSE is returned otherwise."
+
+    Modify the description of COMPILE_STATUS to be as follows:
+
+    "If <pname> is COMPILE_STATUS, TRUE is returned if the shader was last
+    compiled or specialized successfully, and FALSE is returned otherwise."
+
+    [[ if ARB_parallel_shader_compile is supported: ]]
+    Modify the description of COMPLETION_STATUS_ARB to be as follows:
+
+    "If <pname> is COMPLETION_STATUS_ARB, FALSE is returned if the shader is
+     currently being compiled or specialized by a background thread, TRUE
+     otherwise."
+
+    Modify the Errors list for GetShaderiv and add SPIR_V_BINARY_ARB to the
+    list of <pname> that are accepted.
+
+    In the description of the GetProgramiv command, modify the definitions of
+    the ACTIVE_ATTRIBUTE_MAX_LENGTH, ACTIVE_UNIFORM_MAX_LENGTH,
+    TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH, and
+    ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH <pname> values to be as follows:
+
+    "If pname is ACTIVE_ATTRIBUTE_MAX_LENGTH, the length of the longest
+    active attribute name, including a null terminator, is returned.
+    If no active attributes exist, zero is returned. If no name reflection
+    information is available, one is returned."
+
+    "If pname is ACTIVE_UNIFORM_MAX_LENGTH, the length of the longest active
+    uniform name, including a null terminator, is returned. If no active
+    uniforms exist, zero is returned. If no name reflection information is
+    available, one is returned."
+
+    "If pname is TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH, the length of the
+    longest output variable name specified to be used for transform feedback,
+    including a null terminator, is returned. If no outputs are used for
+    transform feedback, zero is returned. If no name reflection information
+    is available, one is returned."
+
+    "If pname is ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, the length of the
+    longest active uniform block name, including the null terminator, is
+    returned. If no active uniform blocks exist, zero is returned. If no
+    name reflection information is available, one is returned."
+
+    Modify the description of GetShaderInfoLog to read as follows:
+
+    "If <shader> is a shader object, GetShaderInfoLog will return either
+    an empty string or information about the last compilation or
+    specialization attempt for that object."
+
+  Modifications to Section 7.14 "Required State":
+
+    Add to the list of state per shader object:
+
+    "A boolean holding the SPIR-V binary status, initially FALSE."
+
+Modifications to Chapter 11 of the OpenGL 4.5 (Core Profile) Specification
+(Programmable Vertex Processing)
+
+  Modify Section 11.1.1 "Vertex Attributes"
+
+    Replace the last sentence in the first paragraph ("This binding can be..")
+    with the following:
+
+    "This binding can be specified in the shader text using the location
+    qualifier, in a SPIR-V shader using the *Location* decoration, by the
+    application before the program is linked, or automatically assigned by
+    the GL when the program is linked."
+
+    In the second paragraph of the definition of BindAttribLocation, replace
+    occurrences of "shader text" with "shader text or SPIR-V binary".
+
+    Add to the end of the third paragraph of the definition of
+    BindAttribLocation:
+
+    "BindAttribLocation has no effect on SPIR-V shaders as the locations
+    must always be fully specified in the SPIR-V shader as described in
+    section 11.1.1.1 (SPIR-V Vertex Input Interface)."
+
+  Add the following new subsection to the end of section 11.1.1
+  "Vertex Attributes":
+
+    "Section 11.1.1.1 SPIR-V Vertex Input interface
+
+    When a SPIR-V vertex stage is present, the vertex shader
+    variables listed by *OpEntryPoint* with the *Input* Storage Class
+    form the vertex input attribute interface. These inputs must be
+    decorated with a *Location* and can also be decorated with a
+    *Component* decoration. These correspond to the location and
+    component layout discussed in section  11.1.1 "Vertex Attributes."
+
+    The vertex shader input variables are matched only by the
+    *Location* and *Component* decorations, and must have a corresponding
+    attribute and binding in the pipeline."
+
+  Modify section 11.1.2.1 "Output Variables"
+
+    Replace the first sentence of the second paragraph describing transform
+    feedback mode ("The set of variables to record...") with the following:
+
+    "The set of variables to record can be specified in shader text using
+    xfb_buffer, xfb_offset, or xfb_stride layout qualifiers. For SPIR-V
+    shaders, these are specified by the *XfbBuffer*, *Offset*, and *XfbStride*
+    decorations, respectively. When a SPIR-V entry point is using any of these
+    for transform feedback, it must declare the *Xfb* Execution Mode."
+
+    Modify the last paragraph of the definition of TransformFeedbackVaryings
+    ("If the shader is used to record...") as follows:
+
+    "If the shader used to record output variables for transform feedback
+    varyings uses the xfb_buffer, xfb_offset, or xfb_stride layout qualifiers,
+    or its SPIR-V entry point declares the *Xfb* Execution Mode, the values
+    specified by TransformFeedbackVaryings are ignored, and the set of
+    variables captured for transform feedback is instead derived from the
+    specified layout qualifiers or SPIR-V decorations: outputs specifying both
+    an *XfbBuffer* and an *Offset* are captured, while outputs not specifying
+    both of these are not captured. Values are captured each time the shader
+    writes to such a decorated object."
+
+Modifications to Chapter 15 of the OpenGL 4.5 (Core Profile) Specification
+(Programmable Fragment Processing)
+
+  Modify section 15.2.3 "Shader Outputs"
+
+    Replace the sentence leading up to the definition of the
+    BindFragDataLocationIndexed command with the following:
+
+    "The binding of a user-defined output variable to components of a
+    fragment color number can be specified explicitly in the shader text,
+    SPIR-V shader, or using the command ..."
+
+    Modify the paragraph following the definition of BindFragDataLocation,
+    replacing the second and third sentences with the following:
+
+    "Output variables declared with location, component, or index layout
+    qualifiers will use the values specified in the shader text. For SPIR-V
+    shaders, these are specified by the *Location*, *Component*, and *Index*
+    decorations. Output variables without such layout or decoration qualifiers
+    will use the bindings specified by BindFragDataLocationIndexed or
+    BindFragDataLocation, if any. BindFragDataLocation* has no effect on
+    SPIR-V shaders as the locations must always be fully specified as
+    described in section 15.2.3.1 (SPIR-V Fragment Output Interface)."
+
+  Add the following new subsection to the end of 15.2.3 "Shader Outputs"
+
+    "Section 15.2.3.1 "SPIR-V Fragment Output Interface"
+
+    When a SPIR-V fragment stage is present, the variables listed by
+    *OpEntryPoint* with the *Output* Storage Class form the fragment
+    output interface. These variables must be decorated with a *Location*
+    They can also be decorated with a *Component* and/or an *Index*.
+
+    User-defined fragment shader output variables are matched only by their
+    *Location*, *Component*, and *Index* decorations. If two outputs
+    are placed within the same location, they must have the same underlying
+    type (floating-point or integer). No component aliasing of output
+    variables is allowed.  That is, there must not be two output variables
+    which have the same location, component, and index, either explicitly
+    declared or implied. Output values written by a fragment shader must
+    be declared with either *OpTypeFloat* or *OpTypeInt*, and a *Width* of
+    32. Composites of these types are also permitted."
+
+
+Add Appendix A.spv "The OpenGL SPIR-V Execution Environment" to the OpenGL 4.5
+(Core Profile) Specification
+
+    "A.spv.1 (Required Versions and Formats)
+
+    An implementation of this extension must support the 1.0 version of
+    SPIR-V and the 1.0 version of the SPIR-V Extended Instructions for GLSL.
+
+    A SPIR-V module passed into ShaderBinary is interpreted as a series of
+    32-bit words in host endianness, with literal strings packed as described
+    in section 2.2 of the SPIR-V Specification. The first few words of the
+    SPIR-V module must be a magic number and a SPIR-V version number, as
+    described in section 2.3 of the SPIR-V Specification.
+
+    A.spv.2 (Valid SPIR-V Built-In Variable Decorations)
+
+    Implementations supporting GL 4.5 must support the following
+    built-in variable decorations. When used with earlier versions
+    of GL, this list may be subset to the functionality in that
+    version. Each built-in below lists the minimum OpenGL version
+    (or extension) that is required to use the built-in variable
+    decoration.
+
+
+        Built-in Variable Decoration    Minimum GL version (Extension)
+        ----------------------------    -----------------------------
+        NumWorkgroups                   GL 4.3 (ARB_compute_shader)
+        WorkgroupSize                   GL 4.3 (ARB_compute_shader)
+        WorkgroupId                     GL 4.3 (ARB_compute_shader)
+        LocalInvocationId               GL 4.3 (ARB_compute_shader)
+        GlobalInvocationId              GL 4.3 (ARB_compute_shader)
+        LocalInvocationIndex            GL 4.3 (ARB_compute_shader)
+
+        VertexId
+        InstanceId
+
+        Position
+        PointSize
+        ClipDistance
+        CullDistance                    GL 4.5 (ARB_cull_distance)
+
+        PrimitiveId
+        InvocationId                    GL 4.0 (ARB_tessellation_shader)
+
+        Layer
+        ViewportIndex                   GL 4.1 (ARB_viewport_array)
+
+        PatchVertices                   GL 4.0 (ARB_tessellation_shader)
+        TessLevelOuter                  GL 4.0 (ARB_tessellation_shader)
+        TessLevelInner                  GL 4.0 (ARB_tessellation_shader)
+        TessCoord                       GL 4.0 (ARB_tessellation_shader)
+
+        FragCoord
+        FrontFacing
+        PointCoord
+        SampleId                        GL 4.0 (ARB_sample_shading)
+        SamplePosition                  GL 4.0 (ARB_sample_shading)
+        SampleMask                      GL 4.0 (ARB_sample_shading)
+        HelperInvocation                GL 4.5 (ARB_ES3_1_compatibility)
+        FragDepth
+
+    A.spv.3 (Valid SPIR-V Capabilities)
+
+    Implementations supporting OpenGL 4.5 must support the following
+    capability operands declared by OpCapability.
+
+    When used against earlier versions of GL, this list may be subset
+    to the functionality in that version. Each capability below lists
+    the OpenGL version (or extension) that is required to use the
+    OpCapability.
+
+        OpCapability                        Minimum GL version (Extension)
+        ------------------------------      -----------------------------
+        Matrix
+        Shader
+        Geometry
+        Tessellation                        GL 4.0 (ARB_tessellation_shader)
+        Float64                             GL 4.0 (ARB_gpu_shader_fp64)
+        AtomicStorage                       GL 4.2 (ARB_shader_atomic_counters)
+        TessellationPointSize               GL 4.0 (ARB_tessellation_shader)
+        GeometryPointSize
+        ImageGatherExtended                 GL 4.0 (ARB_gpu_shader5)
+        StorageImageMultisample             GL 4.2 (ARB_shader_image_load_store)
+        UniformBufferArrayDynamicIndexing   GL 4.0 (ARB_gpu_shader5)
+        SampledImageArrayDynamicIndexing    GL 4.0 (ARB_gpu_shader5)
+        StorageBufferArrayDynamicIndexing   GL 4.3 (ARB_shader_storage_buffer_object)
+        StorageImageArrayDynamicIndexing    GL 4.2 (ARB_shader_image_load_store)
+        ClipDistance
+        CullDistance                        GL 4.5 (ARB_cull_distance)
+        ImageCubeArray                      GL 4.0 (ARB_texture_cube_map_array)
+        SampleRateShading                   GL 4.0 (ARB_sample_shading)
+        ImageRect
+        SampledRect
+        Sampled1D
+        Image1D
+        SampledCubeArray                    GL 4.0 (ARB_texture_cube_map_array)
+        SampledBuffer
+        ImageBuffer
+        ImageMSArray
+        StorageImageExtendedFormats         GL 4.2 (ARB_shader_image_load_store)
+        ImageQuery
+        DerivativeControl                   GL 4.5 (ARB_derivative_control)
+        InterpolationFunction               GL 4.0 (ARB_gpu_shader5)
+        TransformFeedback
+        GeometryStreams                     GL 4.0 (ARB_gpu_shader5)
+        StorageImageWriteWithoutFormat      GL 4.2 (ARB_shader_image_load_store)
+        MultiViewport                       GL 4.1 (ARB_viewport_array)
+
+    Implementations supporting ARB_gpu_shader_int64 must support the
+    following operand declared by OpCapability:
+
+        Int64
+
+    Implementations supporting ARB_sparse_texture2 must support the
+    following operand declared by OpCapability:
+
+        SparseResidency
+
+    Implementations supporting ARB_sparse_texture_clamp must support the
+    following operand declared by OpCapability:
+
+        MinLod
+
+    Implementations supporting EXT_shader_image_load_formatted must
+    support the following operand declared by OpCapability:
+
+        StorageImageReadWithoutFormat
+
+    Implementations supporting NV_shader_atomic_int64 must support the
+    following operand declared by OpCapability:
+
+        Int64Atomics
+
+    A.spv.4 (Validation rules)
+
+    (in addition to what's allowed/disallowed above)
+
+    Every entry point must have no return value and accept no arguments.
+
+    The *Logical* addressing model must be selected.
+
+    *Scope* for execution must be limited to:
+      - Workgroup
+      - Subgroup
+
+    *Scope* for memory must be limited to:
+      - Device
+      - Workgroup
+      - Invocation
+
+    *Storage Class* must be limited to:
+      - *UniformConstant*
+      - *Input*
+      - *Uniform*
+      - *Output*
+      - *Workgroup*
+      - *Private*
+      - *Function*
+      - *AtomicCounter*
+      - *Image*
+
+    Images:
+      - OpTypeImage must declare a scalar 32-bit float or 32-bit integer
+        type for the /Sampled Type/.
+      - OpSampledImage, OpImageQuerySizeLod, and OpImageQueryLevels must
+        only consume an /Image/ operand whose type has its /Sampled/
+        operand set to 1.
+      - The /Depth/ operand of OpTypeImage is ignored.
+      - The Image Format of OpImageWrite must not be Unknown, unless the
+        StorageImageWriteWithoutFormat OpCapability was declared.
+
+    *AtomicCounter* storage class:
+      - Unless otherwise specified, variables declared in the AtomicCounter
+        storage class must be unsigned 32-bit integers.
+      - When using the Atomic Instructions, the 'Memory Semantics' operand
+        must be *AtomicCounterMemory*, without inclusion of memory-ordering
+        bits (implying *Relaxed* semantics).
+
+    Decorations:
+      - The Flat, NoPerspective, Sample, and Centroid decorations must not
+        be used on variables with Storage Class other than *Input* or on
+        variables used in the interface of non-fragment shader entry points.
+      - The Patch decoration must not be used on variables in the interface
+        of a vertex, geometry, or fragment shader stage's entry point.
+      - OpTypeRuntimeArray must only be used for the last member of an
+        OpTypeStruct in the Uniform Storage Class and is decorated as
+        BufferBlock.
+      - If the *Xfb* Execution Mode is set, any output variable that is at
+        least partially captured:
+        * must be decorated with an *XfbBuffer*, declaring the capturing buffer
+        * must have at least one captured output variable in the capturing
+          buffer decorated with an *XfbStride* (and all such *XfbStride* values
+          for the capturing buffer must be equal)
+      - If the *Xfb* Execution Mode is set, any captured output:
+        * must be a non-structure decorated with *Offset* or a member of a
+          structure whose type member is decorated with *Offset*
+          (not all members of such a struct need be captured)
+        * must be a numerical type scalar, vector, matrix, or array of these
+        * must have an *Offset* that is a multiple of its first component
+        * must have an *Offset* that is a multiple of 8 if any captured output
+          in the capturing buffer is a 64-bit type, in which case the
+          corresponding *XfbStride* must also be a multiple of 8
+        * must not overlap (i.e., alias in any capturing buffer) any other
+          captured output
+        * must not have an *Offset* that causes overflow of the *XfbStride*
+
+    Compute Shaders
+      - For each compute shader entry point, either a LocalSize execution
+        mode or an object decorated with the WorkgroupSize decoration must
+        be specified.
+
+    Recursion:
+      - For all entry points, the static function-call graph rooted at that
+        entry point must not contain cycles.
+
+    User declared input and output variables:
+      - Must not use OpTypeBool, either directly or as part of an aggregate.
+
+    Atomic Access Rules:
+      - Atomic instructions must declare a scalar 32-bit integer type, or a
+        scalar 64-bit integer type if the *Int64Atomics* capability is enabled,
+        for the value pointed to by *Pointer*
+
+    A.spv.5 (Precision and Operation of SPIR-V Instructions)
+
+    The following rules apply to both single and double-precision floating
+    point instructions:
+     - Positive and negative infinities and positive and negative zeros are
+       generated as dictated by [IEEE 754], but subject to the precisions
+       allowed in the following table.
+     - Dividing a non-zero by a zero results in the appropriately signed
+       IEEE 754 infinity.
+     - Any denormalized value input into a shader or potentially generated
+       by any instruction in a shader may be flushed to 0.
+     - The rounding mode cannot be set and is undefined.
+     - NaNs are not required to be generated. Instructions that operate on
+       a NaN are not required to return a NaN as the result.
+     - Support for signaling NaNs is optional and exceptions are never
+       raised.
+
+    The precision of double-precision instructions is at least that of
+    single precision. For single precision (32 bit) instructions,
+    precisions are required to be at least as follows:
+
+       Instruction                                           Precision
+       -----------                                           ---------
+       OpFAdd                                            Correctly rounded
+       OpFSub                                            Correctly rounded
+       OpFMul                                            Correctly rounded
+       OpFOrdEqual, OpFUnordEqual                          Correct result
+       OpFOrdLessThan, OpFUnordLessThan                    Correct result
+       OpFOrdGreaterThan, OpFUnordGreaterThan              Correct result
+       OpFOrdLessThanEqual, OpFUnordLessThanEqual          Correct result
+       OpFOrdGreaterThanEqual, OpFUnordGreaterThanEqual    Correct result
+       OpFDiv                                          2.5 ULP for b in the
+                                                  range [2^(-126), 2^(126)]
+       conversions between types                         Correctly rounded
+
+    A.spv.6 (Precision of GLSL.std.450 Instructions)
+
+       Instruction                                           Precision
+       -----------                                           ---------
+       fma()             Inherited from OpFMul followed by OpFAdd.
+       exp(x), exp2(x)   (3+2*|x|) ULP
+       log(), log2()     3 ULP outside the range [0.5, 2.0]
+                         absolute error < 2^(-21) inside the range [0.5, 2.0]
+       pow(x, y)         Inherited from exp2(y * log2(x))
+       sqrt()            Inherited from 1.0 / inversesqrt()
+       inversesqrt()     2 ULP
+
+    GLSL.std.450 extended instructions specifically defined in terms of
+    the above instructions inherit the above errors. GLSL.std.450
+    extended instructions not listed above and not defined in terms of the
+    above have undefined precision. These include, for example, the
+    trigonometric functions and determinant.
+
+    For the OpSRem and OpSMod instructions, if either operand is negative
+    the result is undefined.
+
+Changes to The OpenGL Shading Language Specification, Version 4.50
+
+  Changes to Chapter 1 of the OpenGL Shading Language 4.50 Specification
+  (Introduction)
+
+    Add a paragraph: "The OpenGL API will specify the OpenGL commands used to
+    manipulate SPIR-V shaders.  Independent offline tool chains will compile
+    GLSL down to the SPIR-V intermediate language. SPIR-V generation is not
+    enabled with a #extension, #version, or a profile.  Instead, use of GLSL
+    for SPIR-V is determined by offline tool-chain use. See the documentation
+    of such tools to see how to request generation of SPIR-V for OpenGL."
+
+    "GLSL -> SPIR-V compilers must be directed as to what SPIR-V *Capabilities*
+    are legal at run-time and give errors for GLSL feature use outside those
+    capabilities.  This is also true for implementation-dependent limits that
+    can be error checked by the front-end against constants present in the
+    GLSL source: the front-end can be informed of such limits, and report
+    errors when they are exceeded."
+
+  Changes to Chapter 3 of the OpenGL Shading Language 4.50 Specification
+  (Basics)
+
+    After describing the compatibility profile rules, add:
+
+       "Compatibility-profile features are not available when generating SPIR-V."
+
+    Add a new paragraph at the end of section "3.3 Preprocessor":  "When
+    shaders are compiled for OpenGL SPIR-V, the following predefined macro is
+    available:
+
+        #define GL_SPIRV 100
+
+  Changes to Chapter 4 of the OpenGL Shading Language 4.50 Specification
+  (Variables and Types)
+
+    Change section 4.3.3 Constant Expressions:
+
+      Add a new very first sentence to this section:
+
+        "SPIR-V specialization constants are expressed in GLSL as const, with
+        a layout qualifier identifier of constant_id, as described in section
+        4.4.x Specialization-Constant Qualifier."
+
+      Add to this bullet
+
+        "A constant expression is one of...
+          * a variable declared with the const qualifier and an initializer,
+            where the initializer is a constant expression"
+
+      to make it say:
+
+        "A constant expression is one of...
+          * a variable declared with the const qualifier and an initializer,
+            where the initializer is a constant expression; this includes both
+            const declared with a specialization-constant layout qualifier,
+            e.g., 'layout(constant_id = ...)' and those declared without a
+            specialization-constant layout qualifier"
+
+      Add to "including getting an element of a constant array," that
+
+        "an array access with a specialization constant as an index does
+        not result in a constant expression"
+
+      Add to this bullet
+
+        "A constant expression is one of...
+          * the value returned by a built-in function..."
+
+      to make it say:
+
+        "A constant expression is one of...
+          * for non-specialization-constants only: the value returned by a
+            built-in function... (when any function is called with an argument
+            that is a specialization constant, the result is not a constant
+            expression)"
+
+      Rewrite the last half of the last paragraph to be its own paragraph
+      saying:
+
+        "Non-specialization constant expressions may be evaluated by the
+        compiler's host platform, and are therefore not required ...
+        [rest of paragraph stays the same]"
+
+      Add a paragraph
+
+        "Specialization constant expressions are never evaluated by the
+        front-end, but instead retain the operations needed to evaluate them
+        later on the host."
+
+    Add to the table in section 4.4 Layout Qualifiers:
+
+                             | Individual Variable | Block | Allowed Interface
+      ------------------------------------------------------------------------
+      constant_id =          |     scalar only     |       |      const
+      ------------------------------------------------------------------------
+
+    (The other columns remain blank.)
+
+    Also add to this table:
+
+                         | Qualifier Only | Allowed Interface
+      -------------------------------------------------------
+      local_size_x_id =  |        X       |       in
+      local_size_y_id =  |        X       |       in
+      local_size_z_id =  |        X       |       in
+
+    (The other columns remain blank.)
+
+    Expand this sentence in section 4.4.1 Input Layout Qualifiers
+
+      "Where integral-constant-expression is defined in section 4.3.3 Constant
+      Expressions as 'integral constant expression'"
+
+    to include the following:
+
+      ", with it being a compile-time error for integer-constant-expression to
+      be a specialization constant:  The constant used to set a layout
+      identifier X in layout(layout-qualifier-name = X) must evaluate to a
+      front-end constant containing no specialization constants."
+
+    At the end of the paragraphs describing the *location* rules, add this
+    paragraph:
+
+      "When generating SPIR-V, all *in* and *out* qualified user-declared
+      (non built-in) variables and blocks (or all their members) must have a
+      shader-specified *location*. Otherwise, a compile-time error is
+      generated."
+
+    [Note that an earlier existing rule just above this says "If a block has
+    no block-level *location* layout qualifier, it is required that either all
+    or none of its members have a *location* layout qualifier, or a compile-
+    time error results."]
+
+    Add a new subsection at the end of section 4.4:
+
+      "4.4.x Specialization-Constant Qualifier
+
+      "Specialization constants are declared using "layout(constant_id=...)".
+      For example:
+
+        layout(constant_id = 17) const int arraySize = 12;
+
+      "The above makes a specialization constant with a default value of 12.
+      17 is the ID by which the API or other tools can later refer to
+      this specific specialization constant. If it is never changed before
+      final lowering, it will retain the value of 12. It is a compile-time
+      error to use the constant_id qualifier on anything but a scalar bool,
+      int, uint, float, or double.
+
+      "Built-in constants can be declared to be specialization constants.
+      For example,
+
+        layout(constant_id = 31) gl_MaxClipDistances;  // add specialization id
+
+      "The declaration uses just the name of the previously declared built-in
+      variable, with a constant_id layout declaration.  It is a compile-time
+      error to do this after the constant has been used: Constants are strictly
+      either non-specialization constants or specialization constants, not
+      both.
+
+      "The built-in constant vector gl_WorkGroupSize can be specialized using
+      the local_size_{xyz}_id qualifiers, to individually give the components
+      an id. For example:
+
+          layout(local_size_x_id = 18, local_size_z_id = 19) in;
+
+      "This leaves gl_WorkGroupSize.y as a non-specialization constant, with
+      gl_WorkGroupSize being a partially specialized vector.  Its x and z
+      components can be later specialized using the ids 18 and 19.  These ids
+      are declared independently from declaring the workgroup size:
+
+        layout(local_size_x = 32, local_size_y = 32) in;   // size is (32,32,1)
+        layout(local_size_x_id = 18) in;                   // constant_id for x
+        layout(local_size_z_id = 19) in;                   // constant_id for z
+
+      "Existing rules for declaring local_size_x, local_size_y, and
+      local_size_z are not changed by this extension. For the local-size ids,
+      it is a compile-time error to provide different id values for the same
+      local-size id, or to provide them after any use.  Otherwise, order,
+      placement, number of statements, and replication do not cause errors.
+
+      "Two arrays sized with specialization constants are the same type only if
+      sized with the same symbol, involving no operations.
+
+        layout(constant_id = 51) const int aSize = 20;
+        const int pad = 2;
+        const int total = aSize + pad; // specialization constant
+        int a[total], b[total];        // a and b have the same type
+        int c[22];                     // different type than a or b
+        int d[aSize + pad];            // different type than a, b, or c
+        int e[aSize + 2];              // different type than a, b, c, or d
+
+      "Types containing arrays sized with a specialization constant cannot be
+      compared, assigned as aggregates, declared with an initializer, or used
+      as an initializer.  They can, however, be passed as arguments to
+      functions having formal parameters of the same type.
+
+      "Arrays inside a block may be sized with a specialization constant, but
+      the block will have a static layout.  Changing the specialized size will
+      not re-layout the block. In the absence of explicit offsets, the layout
+      will be based on the default size of the array."
+
+    Change section 4.4.5 Uniform and Shader Storage Block Layout Qualifiers
+
+      Add
+
+        "The 'shared' and 'packed' layout qualifiers are not available when
+        generating SPIR-V."
+
+      Change
+
+        "The initial state of compilation is as if the following were declared:"
+
+      To
+
+        "The initial state of compilation when generating SPIR-V is as if the
+        following were declared:"
+
+          layout(std140, column_major) uniform;
+          layout(std430, column_major) buffer;
+
+        "The initial state of compilation when not generating SPIR-V is as if
+        the following were declared:..."
+
+      Change
+
+        "It is a compile-time error to specify an offset that is smaller than
+        the offset of the previous member in the block or that lies within the
+        previous member of the block."
+
+      To
+
+        "It is a compile-time error to have any offset, explicit or assigned,
+        that lies within another member of the block. When not generating
+        SPIR-V, it is a compile-time error to specify an offset that is smaller
+        than the offset of the previous member in the block."
+
+  Changes to Chapter 5 of the OpenGL Shading Language 4.50 Specification
+  (Operators and Expressions)
+
+    Add a section at the end of section 5
+
+      "5.x Specialization Constant Operations"
+
+      Only some operations discussed in this section may be applied to a
+      specialization constant and still yield a result that is as
+      specialization constant.  The operations allowed are listed below.
+      When a specialization constant is operated on with one of these
+      operators and with another constant or specialization constant, the
+      result is implicitly a specialization constant.
+
+       - int(), uint(), and bool() constructors for type conversions
+         from any of the following types to any of the following types:
+           * int
+           * uint
+           * bool
+       - vector versions of the above conversion constructors
+       - allowed implicit conversions of the above
+       - swizzles (e.g., foo.yx)
+       - The following when applied to integer or unsigned integer types:
+           * unary negative ( - )
+           * binary operations ( + , - , * , / , % )
+           * shift ( <<, >> )
+           * bitwise operations ( & , | , ^ )
+       - The following when applied to integer or unsigned integer scalar types:
+           * comparison ( == , != , > , >= , < , <= )
+       - The following when applied to the Boolean scalar type:
+           * not ( ! )
+           * logical operations ( && , || , ^^ )
+           * comparison ( == , != )
+       - The ternary operator ( ? : )
+
+  Changes to Chapter 6 of the OpenGL Shading Language 4.50 Specification
+
+    Add at the beginning of section 6.1.2 Subroutines:
+
+      "Subroutine functionality is not available when generating SPIR-V."
+
+  Changes to Chapter 7 of the OpenGL Shading Language 4.50 Specification
+  (Built-In Variables)
+
+    Add to the beginning of section 7.4 Built-In Uniform State:
+
+      "Built-in uniform state is not available when generating SPIR-V."
+
+  Section 8.14 "Noise Functions"
+
+    Add: "Noise functions are not present when generating SPIR-V."
+
+  Changes to Chapter 9 of the OpenGL Shading Language 4.50 Specification
+  (Shading Language Grammar for Core Profile)
+
+    Arrays can no longer require the size to be a compile-time folded constant
+    expression.  Change
+
+      | LEFT_BRACKET constant_expression RIGHT_BRACKET
+
+    to
+
+      | LEFT_BRACKET conditional_expression RIGHT_BRACKET
+
+    and change
+
+      | array_specifier LEFT_BRACKET constant_expression RIGHT_BRACKET
+
+    to
+
+      | array_specifier LEFT_BRACKET conditional_expression RIGHT_BRACKET
+
+Changes to the SPIR-V specification
+
+  Section 3.20. Decoration
+
+    *Offset* can also apply to an object, for transform feedback.
+
+    *Offset* can also apply to an object in AtomicCounter storage for an
+    atomic counter.
+
+Dependencies on ARB_parallel_shader_compile
+
+    If ARB_parallel_shader_compile is supported, the shader specialization
+    may occur on a background thread in the same manner that compiling and
+    linking does.
+
+Dependencies on ARB_separate_shader_objects
+
+    If ARB_separate_shader_objects is not supported, ignore all references
+    to separable program objects.
+
+Dependencies on ARB_program_interface_query
+
+    If ARB_prorgram_interface_query is not supported, ignore references
+    to commands added by this extension, however other commands defined
+    in terms of these functions still operate as specified before the
+    addition of the program interface query extension.
+
+New State
+
+Add the following to Table 23.30 "Shader Object State"
+
+Get Value         Type  Get Command  Initial Value Description           Sec
+----------------- ----- ------------ ------------- --------------------- ---
+SPIR_V_BINARY_ARB  B    GetShaderiv  FALSE         Shader is associated  7.2
+                                                   with a SPIR-V module.
+
+Usage Example
+
+    const uint* pSpirVModule;   // This points to the SPIR-V code in memory
+    uint spirVLength;           // Length of pSpirVModule in bytes.
+
+    // Create the shader object.
+    GLuint shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+    // Load the SPIR-V module into the shader object
+    glShaderBinary(1, &shader,
+                   GL_SHADER_BINARY_FORMAT_SPIR_V_ARB,
+                   pSpirVModule, spirVLength);
+
+    // This will now return FALSE
+    GLint status;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+
+    // Specialize the shader
+    const GLuint constantIndices[] = { 0, 7, 3 };
+    const GLuint constantValues[] = { 1, 42, 0x3F800000 };
+    glSpecializeShaderARB(shader,
+                          "main",
+                          3,
+                          constantIndices,
+                          constantValues);
+
+    // This should now return TRUE
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+
+    // Create a program, attach our shader to it, and link
+    GLuint program = glCreateProgram();
+
+    glAttachShader(program, shader);
+
+    glLinkProgram(program);
+
+
+Issues
+
+1. Do we need separate extensions to expose legacy GLSL and ESSL legacy
+   capabilities in SPIR-V?
+
+    DISCUSSION:
+
+    When GLSL was created, multiple extensions were simultaneously introduced
+    to separate the API mechanism (ARB_shader_objects), the shading language
+    (GL_ARB_shading_language_100) and the shader stages (GL_ARB_vertex_shader,
+    GL_ARB_fragment_shader).
+
+    We can expect that future versions of OpenGL will support SPIR-V
+    as well but with a different set of capabilities.
+
+    Additionally, it's probably enough for the ARB to only define a SPIR-V
+    capabilities for OpenGL 4.5 but SPIR-V is not only going to be consumed by
+    OpenGL implementation but also by engine tool chains which can't afford to
+    only support the last version of OpenGL. As a result Unity would define its
+    own private extensions at least to clearly define the capability sets our
+    engine supports at time T, e.g.: GL_UNITY_spirv_webgl,
+    GL_UNITY_spirv_base_level, GL_UNITY_spirv_base_compute,
+    GL_UNITY_spirv_max_level, etc to target older versions of OpenGL without
+    being forced to use a specific GLSL version.
+
+    For example, GL_UNITY_spirv_base_compute has a feature subset between
+    GLSL 420 + GL_ARB_shader_storage_buffer_object + GL_ARB_compute_shader +
+    GL_ARB_shader_image_load_store and GLES 310 would correspond to what we
+    call an OpenGL device level in Unity 5.1.
+
+    We should except that many engines would have the need of such ISV
+    specific capability sets. This said it's important for the Khronos Group
+    to set future convergence point but OpenGL 4.5 is not realistic today, which
+    is the domain where ISVs must work.
+
+    Possible Resolution:
+       Two extensions:
+        - GL_ARB_program_binary_spirv to specify the mechanism.
+        - GL_ARB_spir_v_gl_450 to specify the required SPIR-V capabilities for
+        OpenGL 4.5.
+
+    Key data needed: What will IHVs actually support?
+
+    RESOLVED:
+
+    Minimum: 3.3 for desktop
+             3.1 for ES [ however, ES is not covered by this extension ]
+
+    Need to add capabilities needed to distinguish between 3.3 and 4.5.
+
+    See bug 14520 for data on fine-grained capabilities and other
+    relevant details.
+
+2. Do we want to look at SPIR-V as a shading language or a binary format?
+
+    DISCUSSION:
+
+    Practically, this issue is about whether we want to load SPIR-V
+    through the shader object API, the program binary API or do we need
+    a new construct. Unfortunately, there is a lot of issues with the
+    two first options and the third might be a little too complex.
+
+    Support through program binary API:
+    - SPIR-V is the standard binary format
+    - It makes SPIR-V a post LinkProgram construct
+    - No location remapping is possible (glBindAttribLocation,
+      glBindFragDataLocation[Indexed])
+    - Can't support multiple OpEntryPoint instructions
+    - Can't provide program arguments (alternative to #pragma)
+    - Can't retrieve SPIR-V source. GL_NUM_PROGRAM_BINARY_FORMATS can
+    enumerate multiple format but glGetProgramBinary doesn't allow us to
+    select the format we want to query back.
+    - Currently SPIR-V doesn't support multiple shader stages per module
+    but this would be useful for linked programs.
+
+    Support through shader object API:
+    - OpenGL API allows to attach multiple shader objects but SPIR-V modules
+    are fully contained: A single module define the entire stage.
+    - SPIR-V modules don't have to support multiple stage per module but we
+    lose the represent linked program and perform offline cross shader stage
+    dead code elimination.
+    - Need a new glCompileShader variant to support multiple entry-points
+    (OpEntryPoint) or compilation arguments (OpCompileFlag)
+    - glShaderSource doesn't allow to specify the shading language. Is looking
+    at the first bytes to check the magic string okay?
+    - Reflection may be striped from SPIR-V modules
+
+    Support through new API, "modules":
+    // The difference between a module and a shader:
+    // - Can contain multiple entry points
+    // - Could specify the language, support both GLSL and SPIR-V (maybe)
+    // - Can contain multiple shader stages
+    // - Cross shader stage dead code elimination could be perform offline. (How to hint the compiler? OpCompileFlag?)
+    // - Could be faster to compile shader variants?
+    // - Programs created with glLinkProgramModule don't need GL_PROGRAM_SEPARABLE
+    // - No need to specify the shader stage at object creation, it's embedded in the SPIR-V module
+
+    GLint length = 0;
+    GLbyte* binary = LoadBinary(Path, &length);
+
+    GLuint ModuleName = 0;
+    glCreateModules(1, &ModuleName);
+    glCompileModule(ModuleName, GL_SHADING_LANGUAGE_SPIR_V, &binary, &length);
+
+    GLboolean HasReflection = GL_FALSE;
+    glGetModuleiv(ModuleName, GL_MODULE_REFLECTION, &HasReflection);
+
+    GLuint ProgramName[2];
+    glCreatePrograms(2, &ProgramName[0]);
+
+    assert(HasReflection == GL_TRUE);
+    GLchar const * Strings[] = {"gl_Position", "block.Color"};
+    glTransformFeedbackVaryings(ProgramName[0], 2, Strings, GL_INTERLEAVED_ATTRIBS);
+    glBindAttribLocation(ProgramName[0], 0, "Position");
+    glBindAttribLocation(ProgramName[0], 1, "Color");
+    glBindFragDataLocation(ProgramName[0], 0, "Color");
+    glLinkProgramModule(ProgramName[0], ModuleName, "mainA", "-pragma optimize(on)");
+
+    glLinkProgramModule(ProgramName[1], ModuleName, "mainB", "-pragma optimize(on)");
+
+    Other notes:
+
+     - API doesn't require GLSL -> SPIR-V followed by getProgramBinary()
+       * need an ID for specifying you want a SPIR-V binary?
+        (christophe) GetProgramBinary doesn't do conversion, currently we would retrieve a SPIR-V
+        is the program binary was a SPIR-V binary. However, that would prevent query a of native
+        binary cache. I guess we could add a program parameter or specific that if we use
+        GL_PROGRAM_BINARY_RETRIEVABLE_HINT GetProgramBinary return a native program binary cache,
+        otherwise we get a SPIR-V binary back.
+
+     - LoadProgramBinary() needs a flag to link by SSO or by name?
+        * or does API spec. just say this comes from using SSO mode or...?
+        (christophe) GL_PROGRAM_SEPARABLE doesn't change linking by name or by location.
+        In GLSL 450, when locations are present, we link by location. Otherwise, we link by name.
+        GL_PROGRAM_SEPARABLE protects the shader code against a backward compatibility change regarding
+        gl_PerVertex block. With separated shader stages, the block must be declared in the shader will
+        before it was optional. This behavior was requested by AMD during the separated program
+        ratification process.
+
+    Neither the program binary API or the shader object API
+    seem to match SPIR-V features. Creating a new module API has potential but maybe
+    we could build something around the shader object.
+
+    RESOLVED: Use the existing ShaderBinary() and a new entry point,
+    SpecializeShaderARB() to set specialization constants.
+
+3. Allow more than one stage per SPIR-V module?
+
+    DISCUSSION:
+
+    SPIR-V supports multiple entry points per module, of any stage, or any
+    number of instances of the same stage.  However, the knowledge of which
+    of those might be used together lies outside the module.
+
+    OpenGL supports both linked programs and separated programs. If we
+    consider strict separated programs with a program per shader stage, we can
+    rely on a SPIR-V module per program. However, linked programs allows
+    combining multiple shader stages into a single program. Furthermore,
+    linked programs are more efficient than separated programs as the
+    implementation can perform cross shader stages optimizations and packing of
+    inputs and outputs with linked programs.
+
+    Allowing multiple shader stage in a module would profile a semantic for
+    linked programs and would allow performing dead code elimination and input
+    and output location packing offline.
+
+    RESOLVED: Allow full generality of what SPIR-V supports, and have
+    the new entry points in the API select the subset of a module that it
+    cares about.
+
+4. Do we want to expose multiple entry points?
+
+    DISCUSSION:
+
+    SPIR-V supports multiple entry points through the OpEntryPoint
+    instruction. Do we want to expose this?
+
+    A way to expose it would be to introduce a variant of glLinkProgram
+    which takes the entry point main as an argument.
+
+    Typically, engines such as UE4 and Unity are rebuilding a big shared shader
+    library over and over again for each shader variation.
+
+    While orthogonal to GL_ARB_program_instance, this feature would work
+    extremely well with program instance for an application.
+
+    We could defer but I'll rather have all the SPIR-V interactions
+    mechanisms defined in one extension from start to provide first class
+    citizenship to SPIR-V.
+
+    RESOLVED: This is mostly a duplicate of Issue 3, and a single resolution
+    for both is needed there in that one place.
+
+5. Do we want to add support for "constantId" in OpenGL?
+
+    RESOLVED: Have the new entry points in the API support specializing
+    constants, as in Vulkan.
+
+6. Do we want to support multiple modules per program
+
+    DISCUSSION:
+
+    A use case could be to compile subroutines into different modules
+    and link a set of subroutines we want to use into a program canvas.
+    In another use case, using multiple entry points we could build multiple
+    code paths sharing the same shader library.
+
+    SPIR-V for Vulkan currently expects fully linked stages.
+
+    This could be part of a much needed rework or the subroutines.
+    Okay to defer for now.
+
+    RESOLVED: Fully linked modules only, no direct "subroutine" support.
+
+7. Do we want to be able to provide compilation arguments?
+
+    DISCUSSION:
+
+    SPIR-V supports the OpCompileFlag instructions to store
+    compilation arguments however OpenGL doesn't support compilation
+    arguments. If we add a new variant of glLinkProgram, it could be an
+    opportunity to add a compilation arguments parameter to glLinkProgram.
+
+    Some use cases:
+    - Compiling the shaders with different optimizations: It's currently
+    supported with #pragma but SPIR-V doesn't contain preprocessor
+    information
+    - Vendors refused to fix GLSL bugs and there are a lot of them. The
+    reason is that fixing these bugs could cause to break shader compilation
+    hence applications. If we want to start a virtue circle, we need to
+    give developers the opportunity to enforce conformant compilation.
+    - Display on or off warnings in the compilation log.
+    - All the cool stuff C++ compilers are using compilation arguments for.
+
+    Note that the instruction OpCompileFlag was removed from SPIR-V, and
+    a Bug 13418 "Need a way to control target-compiler behavior from the API"
+    was deferred to a future release.
+
+    RESOLVED: No flags in first release.
+
+8. Do we want to build a reflection API on SPIR-V modules specifics?
+
+    - Retrieve compilation arguments
+    - Retrieve shader stages included
+    - Retrieve the list of entry points
+    - Retrieve the list of required capabilities
+
+    Arguably, it's trivial to build a SPIR-V parser and figure this out
+    ourselves.
+
+    DISCUSSION:
+
+    If drivers implement SPIR-V support by lowering it to the same
+    representation that GLSL is lowered to, and that representation is the
+    source of reflection information, much reflection would naturally be
+    present.
+
+    RESOLVED: First start without reflection, then add later if needed.
+    In the meantime, we have to document how the existing API operates
+    with no reflection information. See Issue 22.
+
+9. Separate programs require gl_PerVertex output blocks to be declared.
+   How do we enforce this requirement in SPIR-V modules?
+
+    DISCUSSION: Force compiler to generate a gl_PerVertex block if the
+    shader code writes vertex-shader output built-ins?
+
+    RESOLVED: (In the validation rules): SPIR-V should contain the
+    same form of input/output block as expected by recent versions of GLSL.
+    All in/out built-in show up in SPIR-V in blocks, as per Vulkan rules.
+    GLSL can stay the same, front ends need to block non-blocked built-ins.
+
+10. Do we want to support glBindAttribLocation and glBindFragDataLocation[Indexed]
+    with SPIR-V?  Also, what about glTransformFeedbackVaryings?
+
+    DISCUSSION: Locations can be explicitly put into the shader, and
+    then the application uses the right location.
+
+    Note that SPIR-V 1.0 does not allow using specialization constants for
+
+        layout(location=X) ...  // X must be a literal, not specialized
+
+    Alternatively, add a SPIR-V instruction that assigns a string name to an
+    input which the API can use to link with.  This would initially be an
+    extension to SPIR-V as part of this.
+
+    RESOLVED: Don't support any of glBindAttribLocation,
+    glBindFragDataLocation[Index], or glTransformFeedbackVaryings.
+
+11. What capabilities do we need for GL 4.5?
+
+    RESOLVED: There is a Appendix A.spv for this.
+
+12. How is user-linkage done between stages?
+
+    DISCUSSION: SPIR-V linkage is by location number and BuiltIn decoration.
+    Does OpenGL need linkage by name? Is SSO required to work with SPIR-V?
+    Require OpName can't be stripped out for linkage objects.  If we use the
+    program binary API, yes but this is not desirable. See issue 2.
+
+    RESOLVED: Link the Vulkan way: built-in decorations, location numbers,
+    etc., never by name.  No reflection required.  This is a lot like SSO.
+
+13. Can we really handle separate textures and samplers?
+
+    DISCUSSION: AMD: No, can't do this because OpenGL has features that need
+    cross validation that can't be done.
+
+    RESOLVED: Remove separate textures and samplers.
+
+14. Are there differences in binding counting between Vulkan and OpenGL?
+
+    DISCUSSION: Yes, OpenGL uses multiple binding points for a resource array
+    while Vulkan uses just one.
+
+    RESOLVED: This leaves OpenGL as is, but state in the overview what this
+    difference is.
+
+15. What GL version(s) should be required for the ImageQuery OpCapability?
+
+    DISCUSSION: The GL features it corresponds with are:
+        - textureSize - EXT_gpu_shader4 (GL 3.0)
+        - textureQueryLod - ARB_texture_query_lod (GL 4.0)
+        - textureQueryLevels - ARB_texture_query_levels (GL 4.3)
+        - imageSize - ARB_shader_image_size (GL 4.3)
+        - textureSamples, imageSamples - ARB_shader_texture_image_samples (GL 4.5)
+    The belief is that these are largely software features and while some
+    of them were not added until later API versions, it was not because of
+    hardware reasons.
+
+    RESOLVED: Require ImageQuery to be supported for all versions of GL,
+    as it is required for all Vulkan implementations.
+
+16. At what point should an error due to an invalid SPIR-V module/capability
+    be reported? ShaderBinary, SpecializeShaderARB, LinkProgram time?
+    ShaderBinary says a "valid SPIR-V module binary" is required, but you
+    can have a valid module that uses capabilities or extensions not
+    supported by an implementation.
+
+    RESOLVED. ShaderBinary is expected to form an association between the
+    SPIR-V module and likely would not parse the module as would be required
+    to detect unsupported capabilities or other validation failures. In order
+    to avoid requiring the implementation to parse the module multiples times,
+    we allow this analysis to happen at either SpecializeShaderARB or
+    LinkProgram time, similar to how many errors for source shaders are
+    detected at either compile or link time.
+
+17. Should we allow program objects to contain both source shaders and
+    SPIR-V binary shaders, or should this be a link time failure?
+
+    RESOLVED. No. This would be needlessly complex to specify. Make this
+    a link-time error. This can be determined by examining the
+    SPIR_V_BINARY_ARB state of each shader. They must either: all be TRUE
+    (SPIR-V shader) or all be FALSE (source shaders). If an application
+    really wishes to mix source and SPIR-V binary shaders, this can be
+    done at program object boundaries by using separable program objects
+    (if supported).
+
+18. Do we need a section for "SPIR-V Transform Feedback Interface"?
+    This would discuss any requirements for the Xfb related decorations
+    in SPIR-V.
+
+    RESOLVED. Yes.
+
+19. How should the program interface query operations behave for program
+    objects created from SPIR-V shaders?
+
+    DISCUSSION: we previously said we didn't need reflection to work
+    for SPIR-V shaders (at least for the first version), however we
+    are left with specifying how it should "not work". The primary issue
+    is that SPIR-V binaries are not required to have names associated
+    with variables. They can be associated in debug information, but there
+    is no requirement for that to be present, and it should not be relied
+    upon.
+
+    Options:
+    A) Make it work.  If debug names are present they are enumerated
+    correctly with associated variables. If the names aren't present,
+    the compiler or driver gets to make them up. Alternatively, we could
+    augment SPIR-V to have a mode where all interface variables need to
+    have names which must not be stripped.
+
+    B) Completely disallow it. All/Most such operations return an error.
+    This may result in some implementation-dependent behavior which
+    is impossible to know (although this problem may exist anyhow due
+    to the offline-compilation step).  This would likely include not
+    being able to tell how many active resources there are and related
+    problems.
+
+    C) Allow as much as possible to work "naturally". You can query for
+    the number of active resources, and for details about them. Anything
+    that doesn't query by name will work as expected. Queries for maximum
+    length of names return one. Queries for anything "by name" return
+    INVALID_INDEX (or -1). Querying the name property of a resource
+    returns an empty string. This may allow many queries to work, but it's
+    not clear how useful it would be if you can't actually know which
+    specific variable you are retrieving information on. If everything
+    is specified a-priori by location/binding/offset/index/component
+    in the shader, this may be sufficient.
+
+    RESOLVED.  Pick (c), but also allow debug names to be returned if an
+    implementation wants to.
+
+20. How should we deal with implementation-dependent behavior that
+    must normally be queried after linking? Examples include:
+     - set of active resources
+     - offsets and strides of GLSLShared and GLSLPacked UBO/SSBOs
+     - MATRIX_STRIDE, UNIFORM_ARRAY_STRIDE for UBOs (only relevant for
+       packed/shared?)
+     - UNIFORM_ARRAY_STRIDE for arrays of atomic counter buffers.
+
+    DISCUSSION:
+    - Option (c) from issue 19 allows determination of active resources (by
+      shader specified layouts, but not name).
+    - GLSLShared and GLSLPacked should not be allowed in this
+      extension as there is no way to sensibly support, short of Option (a)
+      from Issue 19.
+    - For arrays of atomic counters, Option (c) from Issue 19 may be enough
+      to figure this out, but I'm not sure that will work for offline
+      compilation. Do we need to define a standard "layout" (stride) for
+      arrays of atomic counters?
+
+    RESOLVED:
+    Picked (c) in issue 19, allowing determination of the number and types
+    of active resources.
+    Remove the shared and packed layouts and have the same behavior as in
+    Vulkan.
+    Atomic counter buffers don't have an associated name string already so
+    there should be no issue with figuring out the UNIFORM_ARRAY_STRIDE for
+    them.
+
+21. What do we need to say about various linking rules related to "named
+    uniform blocks" and "named shader storage blocks"?
+
+    RESOLVED. We don't need to say anything, as they won't have
+    names in SPIR-V shaders, so they aren't really "named". Instead of
+    being identified by name they are identified (and matched) by
+    uniform block index and/or binding.
+
+22. How do the program interface query APIs work when no name reflection
+    information is available?
+
+    RESOLVED: The following naturally follows from the specification:
+
+    GetProgramInterfaceiv(.., pname=MAX_NAME_LENGTH, ..) -> params = 1
+    GetProgramResourceIndex(.., name) -> INVALID_INDEX
+    GetProgramResourceName(.., length, name) -> length=0, name = ""
+    GetProgramResourceiv(.., props=NAME_LENGTH, ..) -> params = 1
+    GetProgramResourceLocation(.., name) -> -1
+    GetProgramResourceLocationIndex(.., name) -> -1
+    GetUniformLocation(.., name) -> -1
+    GetActiveUniformName(.., length, uniformName) -> length=0, uniformName = ""
+    GetUniformIndices(..,uniformNames, uniformIndices) -> uniformIndices=INVALID_INDEX
+    GetActiveUniform(..,length,.., name) -> length = 0, name = ""
+    GetActiveUniformsiv(..,pname=UNIFORM_NAME_LENGTH,..) -> params = 1
+    GetUniformBlockIndex(.., uniformBlockName) -> INVALID_INDEX
+    GetActiveUniformBlockName(..,length,uniformBlockName) -> length=0, uniformBlockName=""
+    GetActiveUniformBlockiv(.., pname=UNIFORM_BLOCK_NAME_LENGTH, ..) -> params = 1
+    GetActiveAttrib(..) -> length = 0, name = ""
+    GetAttribLocation(.., name) -> -1
+    GetTransformFeedbackVarying(..) -> length = 0, name = ""
+    GetFragDatatLocation(.., name) -> -1
+    GetFragDataIndex(.., name) -> -1
+    GetProgramiv(.., pname=ACTIVE_ATTRIBUTE_MAX_LENGTH, ..) -> params = 1
+    GetProgramiv(.., pname=ACTIVE_UNIFORM_MAX_LENGTH, ..) -> params = 1
+    GetProgramiv(.., pname=TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH, ..) -> params = 1
+    GetProgramiv(.., pname=ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, ..) -> params = 1
+
+23. How does setting uniforms work if we can't query for locations based on
+    names?
+
+    RESOLVED. The shaders need to specify explicit locations for all uniform
+    variables. The application can use offline reflection (or a reflection
+    library) to know which variables are at which location, and then
+    use that to specify the values of uniforms by location, as normal
+    (e.g. Uniform*, ProgramUniform*).
+
+24. What about UniformBlockBinding and ShaderStorageBlockBinding?
+
+    RESOLVED. Because it is not possible to obtain the uniform block index
+    or storage block index from an unnamed block, the binding value remains
+    as specified in the shader by the layout qualifier or decoration.
+    If you are feeling lucky you could just guess and remap used index values
+    [0, #active blocks), but you won't really know what is going
+    where, so just treat it as an immutable binding, similar to the atomic
+    counter buffer binding point. Really.
+
+25. What about subroutine queries based on names?
+
+    RESOLVED. SPIR-V does not currently support subroutines, so it is not
+    possibly to have any active subroutines from a SPIR-V based shader,
+    and thus there is never anything to report.
+
+26. How do we change the location of samplers and images?
+
+    RESOLVED. You don't. Well you can using Uniform1i as usual, but you have
+    no way of knowing which location corresponds to which sampler or image
+    variable as GetUniformLocation won't work without a named variable. Best
+    to just treat them as immutable bindings which are specified in the
+    shader source or binary.
+
+27. Appendix A.spv.3 gives a list of required capabilities that correspond
+    to the core GL 4.5 features as well as for *some* of the ARB extensions
+    that require shading language support. What about the rest of the
+    ARB and vendor extensions that require shading language support?
+
+    RESOLVED: Extensions that can be represented in terms of core
+    SPIR-V 1.0 functionality don't need any specific consideration.
+    Other ARB or vendor extensions that require SPIR-V functionality that
+    can't be expressed in terms of SPIR-V 1.0 functionality will need to
+    have SPIR-V extensions defined to add the required functionality.
+    Further GL extensions can be defined to advertise support for
+    consuming such SPIR-V capabilities once they have been defined.
+
+    A (partial) list of extensions that are expected to need some form
+    of modification to SPIR-V follows.
+
+        ARB_shader_viewport_layer_array
+            - need to allow ViewportIndex and Layer to be output by VS
+              and TES.
+        ARB_shader_clock
+            - need clock() builtin function
+        ARB_shader_ballot
+            - use subgroup capability and add other builtins
+        ARB_shader_atomic_counter_ops
+            - need atomic counter builtin functions
+        ARB_post_depth_coverage
+            - need post_depth_coverage layout
+        ARB_fragment_shader_interlock
+            - need new layouts and interlock builtin functions
+        KHR_blend_equation_advanced
+            - need new layouts
+        ARB_shader_group_vote
+            - need new builtin functions
+        ARB_shader_draw_parameters
+            - need new builtin variables
+        ARB_bindless_texture
+            - need new layout qualifiers and probably other semantics
+        ARB_compute_variable_group_size
+            - need new layout qualifiers and builtin variables
+
+28. Should a SPIR-V binary linked through this extension work with
+    ARB_get_program_binary? Do we need to define what would happen
+    with specialization constants?
+
+    RESOLVED. Yes it should work seamlessly, and no, it shouldn't be
+    required to add more details on how to store specialization
+    constants. It is expected that GetProgramBinary should operate
+    irrespective of how the program was created.
+
+    (from GL 4.6 spec section 7.5, Program Binaries):
+
+        GetProgramBinary returns a binary representation of the
+        program object's compiled and linked executable source,
+        henceforth referred to as its program binary.
+
+    There are two ways you can end up with a linked executable.
+
+    GLSL sources:
+        ShaderSource() -> CompileShader() -> AttachShader() -> LinkProgram()
+    SPIR-V binaries:
+        ShaderBinary() -> SpecializeShader() -> AttachShader() -> LinkProgram()
+
+    Exactly what is stored in a program binary is not defined by the
+    GL spec.
+
+    If the driver is storing the final compiled machine assembly for
+    the program in the program binary, it clearly shouldn't matter
+    which path it takes to get to the LinkProgram step.
+
+    If instead the driver is storing some higher level representation
+    of the shaders (say the original sources, or some IR) then it's up
+    to the implementation to store whatever it needs to reconstitute
+    the linked binary. If the given implementation happened to choose
+    to store the SPIR-V code then it would also need to store any
+    relevant specialization information with it as well.
+
+
+Revision History
+
+    Rev.    Date         Author         Changes
+    ----  -----------    ------------   ---------------------------------
+    46    19-Aug-2020    dgkoch         Atomic pointers must be 32-bit or
+                                        64-bit scalar integers (SPIR-V/254,
+                                        internal API issue 132)
+    45    17-Sep-2019    Jon Leech      Add OpTypeBool constraint on user
+                                        interface variables, and require the
+                                        StorageImageWriteWithoutFormat
+                                        capability for OpImageWrite to
+                                        Unknown formats in the Validation
+                                        Rules section (internal API issues
+                                        111 and 112, respectively).
+    44    15-Feb-2019    apinheiro      Added issue 28, about interaction with
+                                        ARB_get_program_binary (internal API issue 100)
+    43    15-Feb-2019    apinheiro      Add uniform initializers reference and
+                                        mapping (internal API issue 99)
+    42    9-Jan-2019     JohnK          Explicitly give rules for SPIR-V
+                                        uniform offsets (internal API issue
+                                        92)
+    41    10-Dec-2018    Jon Leech      Use 'workgroup' consistently
+                                        throughout (Bug 11723, internal API
+                                        issue 87).
+    40    29-May-2018    dgkoch         note post decrement for atomicCounterDecrement
+                                        mapping
+    39    25-Apr-2018    JohnK          add mappings of barriers and atomics
+    38    10-Apr-2018    dgkoch         OpImageQuerySizeLod and OpImageQuerylevels
+                                        only work with Sampled images
+                                        (SPIR-V/issues/280).
+    37    20-Feb-2018    dgkoch         Add whitelist for accepted storage
+                                        classes (SPIR-V/issues/166).
+                                        Require Binding for uniform and storage
+                                        buffer blocks (opengl/api/issues/55).
+    36    15-Nov-2017    dgkoch         clarify error for glSpecializeShader
+                                        and add new error if shader types
+                                        mismatch (OpenGL-API/issues/16)
+    35    25-Oct-2017    JohnK          remove the already deprecated noise
+                                        functions
+    34    29-May-2017    dgkoch         Fix typos. RuntimeArrays are only
+                                        supported on SSBOs.
+    33    26-May-2017    JohnK          Require in/out explicit locations
+    32    25-Apr-2017    JohnK          Bring up-to-date:
+                                          Out-of-order block offsets
+                                          gl_NumSamples not supported
+                                          atomic counter restrictions
+                                          bug fixes
+    31    21-Jul-2016    dgkoch         Clarify string length on queries
+    30    13-Jul-2016    JohnK          SPIR-V Offset can also apply to an
+                                        atomic_uint offset.
+    29    04-Jul-2015    dgkoch         Allow handles of the same shader types
+                                        for ShaderBinary when using SPIRV.
+    28    09-Jun-2016    dgkoch         Move future extensions to Issue 27.
+    27    08-Jun-2016    dgkoch         Assign enums, add a couple missing
+                                        errors. Editorial fixes.
+                                        Specify required version and format
+                                        of SPIRV. Add Issue 27.
+    26    02-Jun-2016    JohnK          Completion of draft. Pack/unpack, TBD,
+                                        and resolutions.
+    25    02-Jun-2016    JohnK          Include XFB linking/interface rules
+    24    02-Jun-2016    JohnK          Remove use of GLSL shared/packed
+                                        and SPIR-V GLSLShared/GLSLPacked,
+                                        bringing in KHR_vulkan_glsl rules for
+                                        std140 and std430
+    23    01-Jun-2016    dgkoch         Finish API edits. Cleanup editing
+                                        pass on formatting and issue resolutions.
+                                        Add issues 22-26 and resolve the rest.
+    22    26-May-2016    dgkoch         Add ARB suffix to SpecializeShader
+                                        Add SPIR_V_BINARY_ARB shader state
+                                        (and some but not all related rules)
+                                        Add a bunch of API edits alluding to
+                                        SPIR-V shaders. Lots of comments about
+                                        outstanding API areas that still need
+                                        to be addressed.
+                                        Add unresolved issues 16-21.
+    21    25-May-2016    JohnK          Add interface matching rules
+    20    19-May-2016    dgkoch         Remove language about 'default entry point'
+                                        Recast features in terms of GL version.
+    19    19-May-2016    dgkoch         Add min GLSL version required for
+                                        built-in variable decorations and
+                                        OpCapabilities. Fix various dates.
+    18    13-May-2016    JohnK          Bring in the actual correct subset of
+                                        GL_KHR_vulkan_glsl, rather than refer
+                                        to it with differences
+    17    12-May-2016    dgkoch         Verify capabilities for GLSL 4.50
+                                        Add capabilities for non-core ARB
+                                        extensions, and extensions that
+                                        already have SPIR-V correspondence.
+    16    12-May-2016    dgkoch         grammatical fixes, replace non-ascii
+                                        chars, formatting
+    15    11-May-2016    JohnK          Clear up misc. TBDs throughout
+    14    11-May-2016    JohnK          Flesh out GL_KHR_vulkan_glsl changes
+    13    11-May-2016    JohnK          Move to final organization to flesh out
+    12    10-May-2016    JohnK          Add the Vulkan validation rules that
+                                        apply and the TBD from the f2f
+    11    21-Apr-2016    JohnK          Editorial update to API description
+    10    11-Feb-2016    gsellers       Add prototype API language.
+     9    31-Jan-2016    JohnK          Issues 13 & 14
+     8    04-Dec-2015    JohnK          Resolve issue 10
+     7    05-Nov-2015    JohnK          Remove gl_FragColor, update issue 10
+     6    22-Oct-2015    JohnK          Resolutions from Houston
+     5    21-Oct-2015    JohnK          Make into a consistent format
+     4    16-Oct-2015    JohnK          Added dependencies with GL_KHR_vulkan_glsl
+     3    08-Oct-2015    JohnK          Added exec. env. detail, updated issues
+     2    22-Apr-2015    Christophe     Added issues
+     1    26-Mar-2015    JohnK          Initial revision

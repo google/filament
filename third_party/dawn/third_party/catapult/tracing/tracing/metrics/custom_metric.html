@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+
+<script>
+'use strict';
+
+/**
+ * This metric is used for custom performance benchmark.
+ * It captures the following:
+ * - Metrics reported by telemetry in the format of
+ * performance.mark('custom_metric:manifest:[{"name":<METRIC_NAME1>},{"name":<METRIC_NAME2>}...]');
+ * - Duration between performance.mark('<METRIC_NAME>:metric_begin')
+ * and performance.mark('<METRIC_NAME>:metric_end') on the JS side.
+ * - performance.mark('<METRIC_NAME>:<METRIC_VALUE>:metric_value')
+ * on the JS side.
+ */
+tr.exportTo('tr.metrics', function() {
+  function customMetric(histograms, model, opt_options) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!chromeHelper) {
+      // Chrome isn't present.
+      return;
+    }
+
+    const metrics = getMetrics(chromeHelper);
+    const traces = new Map();
+    const benchmarkValues = new Map();
+    // Collect trace events.
+    for (const helper of chromeHelper.browserHelpers) {
+      helper.iterAllThreads(function(thread) {
+        for (const slice of thread.sliceGroup.slices.concat(
+          thread.asyncSliceGroup.slices)) {
+          if (!slice.error && metrics.has(slice.title)) {
+            if (!traces.has(slice.title)) {
+              traces.set(slice.title, []);
+            }
+            traces.get(slice.title).push(slice.duration);
+          }
+        }
+      });
+    }
+
+    // Collect performance.mark().
+    const METRIC_BEGIN = 'metric_begin';
+    const METRIC_END = 'metric_end';
+    const METRIC_VALUE = 'metric_value';
+    const marks = new Map();
+    for (const helper of Object.values(chromeHelper.rendererHelpers)) {
+      if (!helper.mainThread) continue;
+      for (const event of helper.mainThread.sliceGroup.childEvents()) {
+        if (!event.category.includes('blink.user_timing')) continue;
+        const {title} = event;
+        const index = title.lastIndexOf(':');
+        if (index === -1) {
+          continue;
+        }
+        const name = title.substring(0, index);
+        const lastPart = title.substring(index + 1);
+        if (lastPart === METRIC_BEGIN) {
+          marks.set(name, event);
+        } else if (lastPart === METRIC_END) {
+          if (!marks.has(name)) {
+            continue;
+          }
+          const range = tr.b.math.Range.fromExplicitRange(
+              marks.get(name).start, event.start);
+          if (!traces.has(name)) {
+            traces.set(name, []);
+          }
+          traces.get(name).push(range.duration);
+          marks.delete(name);
+        } else if (lastPart === METRIC_VALUE) {
+          const index2 = name.lastIndexOf(':');
+          if (index2 === -1) {
+            continue;
+          }
+          const key = name.substring(0, index2);
+          const value = Number(name.substring(index2 + 1));
+          if (key && !isNaN(value)) {
+            if (!benchmarkValues.has(key)) {
+              benchmarkValues.set(key, []);
+            }
+            benchmarkValues.get(key).push(value);
+          }
+        }
+      }
+    }
+
+    // Generate histograms.
+    traces.forEach((value, key) => {
+      createMetricHistogram(histograms,
+                            key,
+                            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+                            value,
+                            metrics.get(key));
+    });
+    benchmarkValues.forEach((value, key) => {
+      createMetricHistogram(histograms,
+                            key,
+                            tr.b.Unit.byName.unitlessNumber_smallerIsBetter,
+                            value,
+                            metrics.get(key));
+    });
+  }
+
+  // Get metrics from performance.mark()
+  function getMetrics(chromeHelper) {
+    const CUSTOM_METRIC_MANIFEST_PREFIX = 'custom_metric:manifest:'
+    for (const helper of Object.values(chromeHelper.rendererHelpers)) {
+      if (!helper.mainThread) continue;
+      for (const event of helper.mainThread.sliceGroup.childEvents()) {
+        if (!event.category.includes('blink.user_timing')) continue;
+        const {title} = event;
+        if (title.startsWith(CUSTOM_METRIC_MANIFEST_PREFIX)) {
+          const result = JSON.parse(title.substring(CUSTOM_METRIC_MANIFEST_PREFIX.length));
+          return new Map(result.map(event => [event.name, event]));
+        }
+      }
+    }
+    return new Map();
+  }
+
+  // Create histogram with default unit and
+  // read unit and description from the metric manifest if available.
+  function createMetricHistogram(histograms, key, defaultUnit, value, metric) {
+    let unit = metric && metric.unit;
+    if (unit) {
+      unit = tr.b.Unit.fromJSON(unit);
+    }
+    const description = metric && metric.description;
+    const histogram = histograms.createHistogram(key,
+        unit || defaultUnit,
+        value);
+    if (description) {
+      histogram.description = description;
+    }
+    return histogram;
+  }
+
+  tr.metrics.MetricRegistry.register(customMetric, {
+    supportsRangeOfInterest: false,
+  });
+
+  return {
+    customMetric,
+  };
+});
+</script>

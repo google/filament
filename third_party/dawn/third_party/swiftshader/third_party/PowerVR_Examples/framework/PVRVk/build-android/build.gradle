@@ -1,0 +1,59 @@
+apply plugin: 'com.android.library'
+
+android {
+	compileSdkVersion 28
+	defaultConfig {
+		minSdkVersion 21
+		targetSdkVersion 26
+		versionCode 1
+		versionName "1.0"
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static", "-DPVRVK_USE_PLATFORM=VK_USE_PLATFORM_ANDROID_KHR"
+				targets "PVRVk"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+tasks.whenTaskAdded { task ->
+	// We want to be able to build with the "assembleDebug" and "assembleRelease" commands on the entire SDK:
+	// We replace these tasks with basically dependencies on the native builds to generate the native library
+	if (task.name.startsWith('assemble')) {
+		def flavor = task.name.substring('assemble'.length())
+		tasks['assemble'].actions.clear()
+		tasks['assemble'].dependsOn.clear()
+		task.actions.clear()
+		task.dependsOn.clear()
+		
+		tasks["assemble${flavor}"].dependsOn = ["externalNativeBuild${flavor}"]
+	}
+}
+
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}

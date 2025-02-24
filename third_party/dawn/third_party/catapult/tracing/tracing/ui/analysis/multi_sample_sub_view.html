@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/multi_dimensional_view.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-multi-sample-sub-view'>
+  <template>
+    <style>
+    :host { display: block; }
+    #control {
+      background-color: #e6e6e6;
+      background-image: -webkit-gradient(linear, 0 0, 0 100%,
+                                         from(#E5E5E5), to(#D1D1D1));
+      flex: 0 0 auto;
+      overflow-x: auto;
+    }
+    #control::-webkit-scrollbar { height: 0px; }
+    #control {
+      font-size: 12px;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      margin: 1px;
+      margin-right: 2px;
+    }
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+    <div id="control">
+      Sample View Option
+    </div>
+    <tr-ui-b-table id="table">
+    </tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+(function() {
+  const MultiDimensionalViewBuilder = tr.b.MultiDimensionalViewBuilder;
+
+  Polymer({
+    is: 'tr-ui-a-multi-sample-sub-view',
+    behaviors: [tr.ui.analysis.AnalysisSubView],
+
+    created() {
+      this.viewOption_ = undefined;
+      this.selection_ = undefined;
+    },
+
+    ready() {
+      const viewSelector = tr.ui.b.createSelector(
+          this, 'viewOption', 'tracing.ui.analysis.multi_sample_sub_view',
+          MultiDimensionalViewBuilder.ViewType.TOP_DOWN_TREE_VIEW,
+          [
+            {
+              label: 'Top-down (Tree)',
+              value: MultiDimensionalViewBuilder.ViewType.TOP_DOWN_TREE_VIEW
+            },
+            {
+              label: 'Top-down (Heavy)',
+              value: MultiDimensionalViewBuilder.ViewType.TOP_DOWN_HEAVY_VIEW
+            },
+            {
+              label: 'Bottom-up (Heavy)',
+              value: MultiDimensionalViewBuilder.ViewType.BOTTOM_UP_HEAVY_VIEW
+            }
+          ]);
+      Polymer.dom(this.$.control).appendChild(viewSelector);
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+    },
+
+    get selection() {
+      return this.selection_;
+    },
+
+    set selection(selection) {
+      this.selection_ = selection;
+      this.updateContents_();
+    },
+
+    get viewOption() {
+      return this.viewOption_;
+    },
+
+    set viewOption(viewOption) {
+      this.viewOption_ = viewOption;
+      this.updateContents_();
+    },
+
+    createSamplingSummary_(selection, viewOption) {
+      const builder = new MultiDimensionalViewBuilder(
+          1 /* dimensions */, 1 /* valueCount */);
+      const samples = selection.filter(
+          event => event instanceof tr.model.Sample);
+
+      samples.forEach(function(sample) {
+        builder.addPath([sample.userFriendlyStack.reverse()],
+            [1], MultiDimensionalViewBuilder.ValueKind.SELF);
+      });
+
+      return builder.buildView(viewOption);
+    },
+
+    processSampleRows_(rows) {
+      for (const row of rows) {
+        let title = row.title[0];
+        let results = /(.*) (Deoptimized reason: .*)/.exec(title);
+        if (results !== null) {
+          row.deoptReason = results[2];
+          title = results[1];
+        }
+        results = /(.*) url: (.*)/.exec(title);
+        if (results !== null) {
+          row.functionName = results[1];
+          row.url = results[2];
+          if (row.functionName === '') {
+            row.functionName = '(anonymous function)';
+          }
+          if (row.url === '') {
+            row.url = 'unknown';
+          }
+        } else {
+          row.functionName = title;
+          row.url = 'unknown';
+        }
+        this.processSampleRows_(row.subRows);
+      }
+    },
+
+    updateContents_() {
+      if (this.selection === undefined) {
+        this.$.table.tableColumns = [];
+        this.$.table.tableRows = [];
+        this.$.table.rebuild();
+        return;
+      }
+
+      const samplingData = this.createSamplingSummary_(
+          this.selection, this.viewOption);
+      const total = samplingData.values[0].total;
+      const columns = [
+        this.createPercentColumn_('Total', total),
+        this.createSamplesColumn_('Total'),
+        this.createPercentColumn_('Self', total),
+        this.createSamplesColumn_('Self'),
+        {
+          title: 'Function Name',
+          value(row) {
+            // For function that got deoptimized, show function name
+            // as red italic with a tooltip
+            if (row.deoptReason !== undefined) {
+              const spanEl = tr.ui.b.createSpan({
+                italic: true,
+                color: '#F44336',
+                tooltip: row.deoptReason
+              });
+              spanEl.innerText = row.functionName;
+              return spanEl;
+            }
+            return row.functionName;
+          },
+          width: '150px',
+          cmp: (a, b) => a.functionName.localeCompare(b.functionName),
+          showExpandButtons: true
+        },
+        {
+          title: 'Location',
+          value(row) { return row.url; },
+          width: '250px',
+          cmp: (a, b) => a.url.localeCompare(b.url),
+        }
+      ];
+
+      this.processSampleRows_(samplingData.subRows);
+      this.$.table.tableColumns = columns;
+      this.$.table.sortColumnIndex = 1; /* Total samples */
+      this.$.table.sortDescending = true;
+      this.$.table.tableRows = samplingData.subRows;
+      this.$.table.rebuild();
+    },
+
+    createPercentColumn_(title, samplingDataTotal) {
+      const field = title.toLowerCase();
+      return {
+        title: title + ' percent',
+        value(row) {
+          return tr.v.ui.createScalarSpan(
+              row.values[0][field] / samplingDataTotal, {
+                customContextRange: tr.b.math.Range.PERCENT_RANGE,
+                unit: tr.b.Unit.byName.normalizedPercentage,
+                context: { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+              });
+        },
+        width: '60px',
+        cmp: (a, b) => a.values[0][field] - b.values[0][field]
+      };
+    },
+
+    createSamplesColumn_(title) {
+      const field = title.toLowerCase();
+      return {
+        title: title + ' samples',
+        value(row) {
+          return tr.v.ui.createScalarSpan(row.values[0][field], {
+            unit: tr.b.Unit.byName.unitlessNumber,
+            context: { maximumFractionDigits: 0 },
+          });
+        },
+        width: '60px',
+        cmp: (a, b) => a.values[0][field] - b.values[0][field]
+      };
+    }
+  });
+
+  tr.ui.analysis.AnalysisSubView.register(
+      'tr-ui-a-multi-sample-sub-view',
+      tr.model.Sample,
+      {
+        multi: true,
+        title: 'Samples',
+      });
+})();
+</script>

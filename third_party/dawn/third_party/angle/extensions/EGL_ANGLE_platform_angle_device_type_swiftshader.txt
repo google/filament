@@ -1,0 +1,82 @@
+Name
+
+    ANGLE_platform_angle_device_type_swiftshader
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_device_type_swiftshader
+
+Contributors
+
+    Jamie Madill, Google
+
+Contacts
+
+    Jamie Madill, Google (jmadill 'at' google 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2019-08-24
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_ANGLE_platform_angle_vulkan.
+
+Overview
+
+    This extension enables choosing the SwiftShader Vulkan implementation
+    when it is available.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE     0x3487
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    When calling eglGetPlatformDisplay:
+
+    To request a SwiftShader-backed Vulkan implementation with ANGLE, the value
+    of EGL_PLATFORM_ANGLE_TYPE_ANGLE should be EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE
+    and the value of EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE.
+
+    If EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE is
+    EGL_PLATFORM_ANGLE_DEVICE_TYPE_SWIFTSHADER_ANGLE and
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE is not
+    EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE then an EGL_BAD_ATTRIBUTE
+    error is generated and EGL_NO_DISPLAY is returned.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2019-08-29 (Jamie Madill)
+      - Initial draft

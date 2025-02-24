@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/related_name_map.html">
+<link rel="import" href="/tracing/value/histogram_deserializer.html">
+<link rel="import" href="/tracing/value/histogram_serializer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('deserialize', function() {
+    const d = new tr.v.HistogramDeserializer([
+      'a', 'b', 'c', [0, 1, 2], 'd', 'e', 'f']);
+    const names = tr.v.d.RelatedNameMap.deserialize([3, 4, 5, 6], d);
+    assert.strictEqual(names.get('a'), 'd');
+    assert.strictEqual(names.get('b'), 'e');
+    assert.strictEqual(names.get('c'), 'f');
+  });
+
+  test('serialize', function() {
+    const names = tr.v.d.RelatedNameMap.fromEntries([
+      ['a', 'x'], ['b', 'y'], ['c', 'z']]);
+    const s = new tr.v.HistogramSerializer();
+    assert.deepEqual(names.serialize(s), [6, 0, 1, 2]);
+  });
+});
+</script>

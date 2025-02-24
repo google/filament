@@ -1,0 +1,306 @@
+Name
+
+    ARB_shader_viewport_layer_array
+
+Name Strings
+
+    GL_ARB_shader_viewport_layer_array
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date: February 12, 2019
+    Revision: 2
+
+Number
+
+    ARB Extension #185
+
+Dependencies
+
+    OpenGL 4.1 is required.
+
+    The extension is written against the OpenGL 4.5 Specification, Core Profile,
+    February 2, 2015 and the OpenGL Shading Language Specification,
+    version 4.50.5.
+
+Overview
+
+    The gl_ViewportIndex and gl_Layer built-in variables were introduced by
+    the in OpenGL 4.1. These variables are available in un-extended OpenGL
+    only to the geometry shader. When written in the geometry shader, they
+    cause geometry to be directed to one of an array of several independent
+    viewport rectangles or framebuffer attachment layers, respectively.
+
+    In order to use any viewport or attachment layer other than zero, a
+    geometry shader must be present. Geometry shaders introduce processing
+    overhead and potential performance issues. The AMD_vertex_shader_layer
+    and AMD_vertex_shader_viewport_index extensions allowed the gl_Layer
+    and gl_ViewportIndex outputs to be written directly from the vertex shader
+    with no geometry shader present.
+
+    This extension effectively merges the AMD_vertex_shader_layer and
+    AMD_vertex_shader_viewport_index extensions together and extends them further
+    to allow both outputs to be written from tessellation evaluation shaders.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 9 of the OpenGL 4.5 (Core) Specification (Framebuffers
+and Framebuffer Objects)
+
+    Modify section 9.8, "Layered Framebuffers" as follows:
+
+        Remove the bullet list explaining when layer number zero is used
+    and replace the language with:
+
+        The layer number of a fragment is zero if no vertex processing shader
+    (vertex, tessellation evaluation or geometry) statically assigns a value
+    to the built-in output gl_Layer.
+
+    Replace the following paragraph with:
+
+        Otherwise, the layer for each point, line, or triangle is taken from
+    the gl_Layer output of the last active vertex processing stage to one of
+    the vertices of the primitive. The vertex used is implementation-dependent.
+    To get defined results, all vertices of each primitive should set the same
+    value for gl_Layer. The layer number written by a vertex procesing shader
+    has no effect if the framebuffer is not layered.
+
+Additions to Chapter 11 of the OpenGL 4.5 (Core) Specification (Programmable
+Vertex Processing)
+
+    Add the following to Subsection 11.1.3.10, "Shader Outputs"
+
+        The built-in output gl_Layer is used in layered rendering, and is
+    discussed further in the next section.
+        The built-in output gl_ViewportIndex is used to direct rendering
+    to one of several viewports and is discussed further in the next section.
+
+    Move Subsection 11.3.4.6, "Layer and Viewport Selection" into a new section
+    11.4, "Layer and Viewport Selection", renumber surrounding sections
+    appropriately.
+
+        Replace all instances of "Geometry shaders" in Section 11.4 with
+    "Vertex, tessellation and geometry shaders".
+
+Additions to Chapter 13 of the OpenGL 4.5 (Core) Specification (Fixed-Function
+Vertex Post-Processing)
+
+    Modify section 13.6.1 "Controlling the Viewport" as follows:
+
+        Replace the paragraph beginning "Multiple viewports are available ..."
+    with:
+
+        Multiple viewports are available and are numbered zero through the value
+    of MAX_VIEWPORTS minus one. If an active vertex processing shader is active and
+    writes to gl_ViewportIndex, the viewport transformation uses the viewport
+    corresponding to the value assigned to gl_ViewportIndex taken from an
+    implementation-dependent primitive vertex. If the value of the viewport
+    index is outside the range zero to the value of MAX_VIEWPORTS minus one,
+    the results of the viewport transformation are undefined. If the active
+    vertex, tessellation or geometry shaders (if present) do not write to
+    gl_ViewportIndex, the viewport numbered zero is used by the viewport
+    transformation.
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_viewport_layer_array : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_viewport_layer_array    1
+
+    Modify Section 7.1 (Built-In Language Variables), p. 122
+
+    Add to the list of vertex shader built-ins:
+
+        out gl_PerVertex {
+            ...
+            int gl_ViewportIndex;
+            int gl_Layer;
+        };
+
+    Add to the list of tessellation evaluation shader built-ins:
+
+        out gl_PerVertex {
+            ...
+            int gl_ViewportIndex;
+            int gl_Layer;
+        };
+
+    Modify the language introducing "gl_Layer" on p.127 as follows:
+
+    The variable gl_Layer is available as an output variable in the vertex,
+    tessellation evaluation, and geometry (VTG) languages and an input
+    variable in the fragment language. In the VTG languages, it is used to
+    select a specific layer (or face and layer of a cube map) of a
+    multi-layer framebuffer attachment. The actual layer used will come
+    from one of the vertices in the primitive being shaded. Which vertex
+    the layer comes from is discussed in section 11.4 "Layer and
+    Viewport Selection" of the OpenGL Specification. It might be undefined,
+    so it is best to write the same layer value for all vertices of a
+    primitive. If a shader statically assigns a value to gl_Layer, layered
+    rendering mode is enabled. See section 11.3.4.5 "Geometry Shader
+    Outputs" and section 9.4.9 "Layered Framebuffers" of the OpenGL
+    Graphics System Specification for more information. If a shader
+    statically assigns a value to gl_Layer, and there is an execution path
+    through the shader that does not set gl_Layer, then the value of
+    gl_Layer is undefined for executions of the shader that take that path.
+
+    ...
+
+    The input variable gl_Layer in the fragment language will have the same
+    value that was written to the output variable gl_Layer in the VTG
+    languages. If the final VTG stage does not dynamically assign a value to
+    gl_Layer, the value of gl_Layer in the fragment stage will be undefined.
+    If the final VTG stage makes no static assignment to gl_Layer, the input
+    gl_Value in the fragment stage will be zero. Otherwise, the fragment stage
+    will read the same value written by the final VTG stage, even if that value
+    is out of range. If a fragment shader contains a static access to gl_Layer,
+    it will count against the implementation defined limit for the maximum
+    number of inputs to the fragment stage.
+
+    Modify the language introducing "gl_ViewportIndex" on p.128 as follows:
+
+    The variable gl_ViewportIndex is available as an output variable in the
+    VTG languages and an input variable in the fragment language. In the
+    geometry language, it provides the index of the viewport to which the next
+    primitive emitted from the geometry shader should be drawn. In the vertex
+    and tessellation evaluation languages, it provides the index of the viewport
+    associated with the vertex being shaded. Primitives will undergo viewport
+    transformation and scissor testing using the viewport transformation and
+    scissor rectangle selected by the value of gl_ViewportIndex. The viewport
+    index used will come from one of the vertices in the primitive being
+    shaded. However, which vertex the viewport index comes from is
+    implementation-dependent, so it is best to use the same viewport index for
+    all vertices of the primitive. If the final VTG stage does not assign a
+    value to gl_ViewportIndex, viewport transform and
+    scissor rectangle zero will be used. If a shader statically assigns a value
+    to gl_ViewportIndex and there is a path through the shader that does not
+    assign a value to gl_ViewportIndex, the value of gl_ViewportIndex is
+    undefined for executions of the shader that take that path. See section
+    11.4 "Layer and Viewport Selection" of the OpenGL Graphics System
+    Specification for more information.
+
+    The input variable gl_ViewportIndex in the fragment stage will have the
+    same value that was written to the output variable gl_ViewportIndex in the
+    final VTG stage. If the final VTG stage does not dynamically assign to
+    gl_ViewportIndex, the value of gl_ViewportIndex in the fragment shader will
+    be undefined. If the final VTG stage makes no static assignment to
+    gl_ViewportIndex, the fragment stage will read zero. Otherwise, the
+    fragment stage will read the same value written by the final VTG stage,
+    even if that value is out of range. If a fragment shader contains a static
+    access to gl_ViewportIndex, it will count against the implementation
+    defined limit for the maximum number of inputs to the fragment stage.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) Do we want to allow writes to these built-in variables from tessellation
+    shaders?
+
+    RESOLVED: Yes, this is allowed in tessellation evaluation shaders. Note that
+    it is not possible to write either variable in the tessellation control shader.
+
+    2) What happens if gl_ViewportIndex or gl_Layer is written in the vertex
+    shader and a geometry shader is present?
+
+    RESOLVED: The value written by the last vertex processing stage is used.
+    If the last vertex processing stage (vertex, tessellation evaluation or
+    geometry) does not statically assign to gl_ViewportIndex or gl_Layer,
+    index or layer zero is assumed.
+
+    3) Are provoking vertex semantics honored for the purposes of writes to
+    gl_ViewportIndex in the VS?
+
+    RESOLVED: Yes, they are. Query VIEWPORT_INDEX_PROVOKING_VERTEX to determine
+    the 'provokingness' of gl_ViewportIndex. In general, though, it's best
+    practice to ensure that all vertices of a single primitive (including
+    strips, fans and loops) have the same value for gl_ViewportIndex.
+
+    4) Do we want gl_ViewportIndexIn or gl_LayerIn inputs to shaders to allow
+    automatic passing of these variables along the pipe?
+
+    DISCUSSION: Rather not. This is just emualating things that the application
+    could and should do itself. Pushing built-ins down the pipe that aren't consuming
+    dedicated hardware resources just complicates things like counting rules and
+    ultimately ends up pretty inefficient.
+
+    5) Are the gl_ViewportIndex and gl_Layer builtins part of the "out gl_PerVertex"
+    block or not?
+
+    RESOLVED: The initial version of this extension didn't specify and many
+    implementations treated them as loose variables (or didn't care). However,
+    the spec language makes it quite clear that there is an instance of these
+    variables and a shader is expected to write the same value for each
+    vertex.
+    In practise, unless an application is trying to redeclare these variables
+    it isn't really possible to tell where they are declared.
+
+Revision History
+
+    Rev.   Date       Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     1    03/19/2015  gsellers  Initial version merging AMD_vertex_shader_viewport_index
+                                and AMD_vertex_shader_layer
+     2    02/12/2019  dkoch     opengl/api/44: clarify that builtins should be
+                                part of the "out gl_PerVertex" block.

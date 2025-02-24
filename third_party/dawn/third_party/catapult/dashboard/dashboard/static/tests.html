@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <title>Tests</title>
+    <script src="../../web-component-tester/browser.js"></script>
+  </head>
+
+  <body>
+    <script>
+      'use strict';
+      WCT.loadSuites([
+        'autocomplete_test.html',
+        'bisect_utils_test.html',
+        'uri_test.html',
+        'debug_alert_test.html',
+        'embed_test.html'
+      ]);
+    </script>
+  </body>
+</html>

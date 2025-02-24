@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/heap_dump.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/stack_frame.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const GlobalMemoryDump = tr.model.GlobalMemoryDump;
+  const ProcessMemoryDump = tr.model.ProcessMemoryDump;
+  const StackFrame = tr.model.StackFrame;
+  const HeapEntry = tr.model.HeapEntry;
+  const HeapDump = tr.model.HeapDump;
+
+  test('heapDumps', function() {
+    const model = new tr.Model();
+    const process = model.getOrCreateProcess(89);
+    const gmd = new GlobalMemoryDump(model, 42);
+    model.globalMemoryDumps.push(gmd);
+    const pmd = new ProcessMemoryDump(gmd, process, 42);
+    process.memoryDumps.push(pmd);
+
+    const rootFrame = new StackFrame(
+        undefined, tr.b.GUID.allocateSimple(), undefined);
+    const childFrame = new StackFrame(
+        rootFrame, tr.b.GUID.allocateSimple(), 'draw');
+    rootFrame.addChild(childFrame);
+
+    const dump = new HeapDump(pmd);
+    assert.strictEqual(dump.processMemoryDump, pmd);
+    assert.lengthOf(dump.entries, 0);
+
+    const entry1 = dump.addEntry(
+        childFrame, 'HTMLImportLoader', 1024, undefined);
+    assert.strictEqual(entry1.heapDump, dump);
+    assert.strictEqual(entry1.leafStackFrame, childFrame);
+    assert.strictEqual(entry1.objectTypeName, 'HTMLImportLoader');
+    assert.strictEqual(entry1.size, 1024);
+    assert.isUndefined(entry1.count);
+
+    const entry2 = dump.addEntry(undefined, undefined, 1048576, 42);
+    assert.strictEqual(entry2.heapDump, dump);
+    assert.isUndefined(entry2.leafStackFrame);
+    assert.isUndefined(entry2.objectTypeName);
+    assert.strictEqual(entry2.size, 1048576);
+    assert.strictEqual(entry2.count, 42);
+
+    assert.deepEqual(dump.entries, [entry1, entry2]);
+  });
+});
+</script>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/async_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.net', function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+
+  function NetAsyncSlice() {
+    AsyncSlice.apply(this, arguments);
+    this.url_ = undefined;
+    this.byteCount_ = undefined;
+    // Boolean variables indicating whether we have computed corresponding
+    // fields. Computing these fields needs iteration through all sub-slices and
+    // so recomputation will be costly.
+    this.isTitleComputed_ = false;
+    this.isUrlComputed_ = false;
+  }
+
+  NetAsyncSlice.prototype = {
+    __proto__: AsyncSlice.prototype,
+
+    get viewSubGroupTitle() {
+      return 'NetLog';
+    },
+
+    get title() {
+      if (this.isTitleComputed_ || !this.isTopLevel) {
+        return this.title_;
+      }
+
+      if (this.url !== undefined && this.url.length > 0) {
+        // Set the title so we do not have to recompute when it is redrawn.
+        this.title_ = this.url;
+      } else if (this.args !== undefined &&
+                 this.args.source_type !== undefined) {
+        // We do not have a URL, use the source type as the title.
+        this.title_ = this.args.source_type;
+      }
+      this.isTitleComputed_ = true;
+      return this.title_;
+    },
+
+    set title(title) {
+      this.title_ = title;
+    },
+
+    // A recursive helper function that gets the url param of a slice or its
+    // nested subslices if there is one.
+    get url() {
+      if (this.isUrlComputed_) {
+        return this.url_;
+      }
+      if (this.args !== undefined && this.args.params !== undefined &&
+          this.args.params.url !== undefined) {
+        this.url_ = this.args.params.url;
+      } else if (this.subSlices !== undefined && this.subSlices.length > 0) {
+        for (let i = 0; i < this.subSlices.length && ! this.url_; i++) {
+          if (this.subSlices[i].url !== undefined) {
+            this.url_ = this.subSlices[i].url;
+          }
+        }
+      }
+      this.isUrlComputed_ = true;
+      return this.url_;
+    },
+
+    get byteCount() {
+      if (this.byteCount_ !== undefined) {
+        return this.byteCount_;
+      }
+
+      this.byteCount_ = 0;
+      if ((this.originalTitle === 'URL_REQUEST_JOB_FILTERED_BYTES_READ' ||
+           this.originalTitle === 'URL_REQUEST_JOB_BYTES_READ') &&
+           this.args !== undefined && this.args.params !== undefined &&
+           this.args.params.byte_count !== undefined) {
+        this.byteCount_ = this.args.params.byte_count;
+      }
+      for (let i = 0; i < this.subSlices.length; i++) {
+        this.byteCount_ += this.subSlices[i].byteCount;
+      }
+      return this.byteCount_;
+    }
+  };
+
+  AsyncSlice.subTypes.register(
+      NetAsyncSlice,
+      {
+        categoryParts: ['netlog', 'disabled-by-default-netlog']
+      });
+
+  return {
+    NetAsyncSlice,
+  };
+});
+</script>

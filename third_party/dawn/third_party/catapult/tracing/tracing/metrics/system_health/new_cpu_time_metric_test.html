@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/multi_dimensional_view.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/new_cpu_time_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const cpuTimeMetric = tr.metrics.sh.newCpuTimeMetric;
+  const CHROME_PROCESS_NAMES =
+      tr.e.chrome.chrome_processes.CHROME_PROCESS_NAMES;
+
+  test('cpuTimeMetric_customRangeOfInterest', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const process = model.getOrCreateProcess(1);
+      process.name = 'Browser';
+      const thread = process.getOrCreateThread(1);
+      thread.name = 'CrBrowserMain';
+
+      // Slice from 0 to 50.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 50,
+        cpuStart: 0,
+        cpuDuration: 25
+      }));
+
+      // Slice from 300 to 350.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 300,
+        duration: 50,
+        cpuStart: 100,
+        cpuDuration: 25
+      }));
+    });
+
+    const metricNameSuffix = CHROME_PROCESS_NAMES.BROWSER +
+        ':CrBrowserMain:all_stages:all_initiators';
+    const rangeOfInterest = new tr.b.math.Range.fromExplicitRange(0, 200);
+    const histograms = new tr.v.HistogramSet();
+    cpuTimeMetric(histograms, model, {rangeOfInterest});
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:' + metricNameSuffix);
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:' + metricNameSuffix);
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Assert histogram sample value is correct:
+    // rangeOfInterest only contains the first slice (with a CPU time of 25),
+    // and total duration of the range is 200.
+    assert.closeTo(cpuPercentageHistogram.sum, 25 / 200, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 25, 1e-7);
+  });
+
+  test('cpuTimeMetric_rangeOfInterestBeyondModelBounds', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const process = model.getOrCreateProcess(1);
+      process.name = 'Browser';
+      const thread = process.getOrCreateThread(1);
+      thread.name = 'CrBrowserMain';
+
+      // Slice from 0 to 50.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 50,
+        cpuStart: 0,
+        cpuDuration: 25
+      }));
+
+      // Slice from 300 to 350.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 300,
+        duration: 50,
+        cpuStart: 100,
+        cpuDuration: 25
+      }));
+    });
+
+    const metricNameSuffix = CHROME_PROCESS_NAMES.BROWSER +
+        ':CrBrowserMain:all_stages:all_initiators';
+    const rangeOfInterest = new tr.b.math.Range.fromExplicitRange(-100, 200);
+    const histograms = new tr.v.HistogramSet();
+    cpuTimeMetric(histograms, model, {rangeOfInterest});
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:' + metricNameSuffix);
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:' + metricNameSuffix);
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Assert histogram sample value is correct:
+    // model.bounds is [0, 350] here. If rangeOfInterest is beyond these bounds,
+    // the effective range for calculating total duration for cpuPercentage is
+    // the intersection of rangeOfInterest and model.bounds, which is [0, 200]
+    // here. rangeOfInterest only contains the first slice, with a CPU time of
+    // 25, and the total effective duration is 200, not 300.
+    assert.closeTo(cpuPercentageHistogram.sum, 25 / 200, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 25, 1e-7);
+  });
+
+  test('cpuTimeMetric_defaultRangeOfInterest', () => {
+    const model = tr.c.TestUtils.newModel(model => {
+      const process = model.getOrCreateProcess(1);
+      process.name = 'Browser';
+      const thread = process.getOrCreateThread(1);
+      thread.name = 'CrBrowserMain';
+
+      // Slice from 0 to 50.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 0,
+        duration: 50,
+        cpuStart: 0,
+        cpuDuration: 25
+      }));
+
+      // Slice from 300 to 350.
+      thread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        isTopLevel: true,
+        start: 300,
+        duration: 50,
+        cpuStart: 100,
+        cpuDuration: 25
+      }));
+    });
+
+    const metricNameSuffix = CHROME_PROCESS_NAMES.BROWSER +
+        ':CrBrowserMain:all_stages:all_initiators';
+    const histograms = new tr.v.HistogramSet();
+    cpuTimeMetric(histograms, model);
+
+    const cpuPercentageHistogram = histograms.getHistogramNamed(
+        'cpuPercentage:' + metricNameSuffix);
+    const cpuTimeHistogram = histograms.getHistogramNamed(
+        'cpuTime:' + metricNameSuffix);
+
+    // Histograms exist.
+    assert.isDefined(cpuPercentageHistogram);
+    assert.isDefined(cpuTimeHistogram);
+
+    // Each histogram contains a single sample.
+    assert.strictEqual(cpuPercentageHistogram.running.count, 1);
+    assert.strictEqual(cpuTimeHistogram.running.count, 1);
+
+    // Assert histogram sample value is correct:
+    // When no custom rangeOfInterest is set, the effective range for
+    // calculating CPU usage should be model.bounds, which is [0, 350] here.
+    // Total CPU time is 25 + 25 from the two slices.
+    assert.closeTo(cpuPercentageHistogram.sum, (25 + 25) / 350, 1e-7);
+    assert.closeTo(cpuTimeHistogram.sum, 25 + 25, 1e-7);
+  });
+});
+</script>

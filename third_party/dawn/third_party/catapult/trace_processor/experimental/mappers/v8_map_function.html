@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mappers/slice_cost.html">
+<link rel="import" href="/perf_insights/mappers/thread_grouping.html">
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/ir_coverage.html">
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+
+<script>
+'use strict';
+
+
+tr.exportTo('pi.m', function() {
+  function v8ReportMapFunction(result, model) {
+    var allIRs = [];
+    model.userModel.expectations.forEach(function(ir) {
+      if (!(ir instanceof tr.model.um.UserExpectation))
+        return;
+      allIRs.push(ir);
+    });
+
+    var railTypeNameByGUID = getStageTitleForEventsByGUID(model, allIRs);
+
+    var threadGrouping = new pi.m.ThreadGrouping();
+    threadGrouping.autoInitUsingHelpers(model);
+    var lastKnownFramework = ['Unknown/Uncategorized'];
+
+    var sliceCosts = [];
+
+    for (var event of model.getDescendantEvents()) {
+      if (!(event instanceof tr.model.ThreadSlice))
+        continue;
+
+      if (!event.title.startsWith('V8.') && !event.title.startsWith('V8Test.'))
+        continue;
+
+      function _getParentData(event) {
+        var curSlice = event;
+
+        var data = {};
+        data['js'] = 'Unknown';
+        while (curSlice) {
+          if (curSlice.title === 'v8.run') {
+            data['js'] = curSlice.args['fileName'];
+          } else if (curSlice.title === 'v8.compile') {
+            data['js'] = curSlice.args['fileName'];
+          } else if (curSlice.title === 'v8.callModuleMethod') {
+            data['js'] = 'Unknown';
+          } else if (curSlice.title === 'FunctionCall') {
+            var scriptName = curSlice.args['data']['scriptName'];
+            if (scriptName.indexOf('http') !== -1) {
+              data['js'] = scriptName;
+            }
+          } else if (curSlice.title === 'V8Test.ParseScript') {
+            data['js'] = curSlice.args['name'];
+          } else if (curSlice.title === 'V8Test.Compile') {
+            data['js'] = curSlice.args['name'];
+          } else if (curSlice.title === 'V8Test.CompileFullCode') {
+            data['js'] = curSlice.args['name'];
+          }
+          curSlice = curSlice.parentSlice;
+        }
+        return data;
+      }
+
+      function _guessFrameworkFromJsFile(jsFile) {
+        var frameworks = {
+          // Some commone js libs.
+          'jQuery': ['jquery'],
+          'Angular': ['angular'],
+          'Underscore': ['underscore'],
+          'Respond.js': ['respond.js'],
+          'Easeljs': ['easeljs'],
+          'Modernizr': ['modernizr'],
+          'Cloudflare': ['cloudflare.min.js'],
+          'Greensock': ['gsap/'],
+          'Mootools': ['mootools'],
+          'Zepto': ['zepto.'],
+          'Webfont': ['webfont.js'],
+          'Closure': ['closure/'],
+          'Ektron': ['ektron'],
+          'SWFObject': ['swfobject'],
+          'Html5shiv': ['html5shiv'],
+          'Requirejs': ['require.js'],
+          'Tweenjs': ['tweenjs'],
+
+          // Just dividing these out into common sites.
+          'Google - Search': ['google.com/search?', 'www.google.'],
+          'Google - Adsense': ['pagead2.googlesyndication.com/pagead/'],
+          'Google - Analytics': ['google-analytics.com'],
+          'Google - Misc': ['google.', 'googleapis.'],
+          'Adobe - Misc': ['adobe.'],
+          'Facebook': ['facebook.', 'fbcdn.'],
+          'Outlook': ['outlook.', '.live.'],
+          'Craigslist': ['craigslist.'],
+          'Amazon': ['amazon.'],
+          'Yandex': ['yandex.'],
+          'Scene7': ['s7sdk/'],
+          'DoubleClick': [
+            '.doubleclick', 'gpt.js', 'gtm.js', '.googletagservices.'],
+          'Baidu': ['baidu.'],
+          'Bing': ['bing.'],
+          'Twitter': ['twitter.'],
+          'Wish': ['MobileWebsiteCore'],
+          'Extensions - Misc': ['chrome-extension://', 'chrome://']
+        };
+
+        var jsFileLowercase = jsFile.toLowerCase();
+        for (var k in frameworks) {
+          var keywords = frameworks[k];
+          for (var i = 0; i < keywords.length; i++) {
+            if (jsFileLowercase.indexOf(keywords[i]) > -1) {
+              // lastKnownFramework[0] = k;
+              return k;
+            }
+          }
+        }
+
+        // TODO: This is terrible, find a better way to attribute the
+        // unknown callers to a framework. Ideally we'd actually have
+        // access to data about the script or method that's running.
+        return lastKnownFramework[0];
+      }
+
+      function _cleanupFrameworkName(name) {
+        var jsName = name;
+        if (jsName === '') {
+          jsName = 'Unknown';
+        }
+        if (jsName.length > 120) {
+          jsName = jsName.substring(0, 120) + '...';
+        }
+        return jsName;
+      }
+
+      var ufc = model.getUserFriendlyCategoryFromEvent(event);
+      var data = _getParentData(event);
+      data.framework = _guessFrameworkFromJsFile(data.js);
+      var scriptURLClean = _cleanupFrameworkName(data.js);
+
+      var slice = event;
+      if (slice.title === 'V8.Execute') {
+        // V8.Execute events may generate several sliceCostInfo, based on the
+        // origin of the JS being executed.
+        var range = new tr.b.math.Range();
+        slice.addBoundsToRange(range);
+        var filtered = range.filterArray(
+            slice.parentContainer.samples,
+            function(sample) {return sample.start;});
+        filtered.forEach(function(sample) {
+          // Let's use the state of the leaf frame. TODO(chiniforooshan):
+          // understand what it means if frames of a sample stack are in
+          // different states (BUG #1542).
+          var sliceData = {
+            threadGroup: threadGrouping.getGroupNameForEvent(slice),
+            railTypeName: railTypeNameByGUID[slice.guid],
+            userFriendlyCategory: ufc || 'other',
+            title: tr.e.chrome.SliceTitleFixer.fromEvent(slice),
+            selfTime: sample.weight,
+            cpuSelfTime: sample.weight,
+            scriptURL: data.js,
+            scriptURLClean: scriptURLClean,
+            framework: data.framework,
+            traceURL: model.canonicalUrl
+          };
+
+          var JSSourceState = tr.model.source_info.JSSourceState;
+          sliceData.jsTimeByState = {};
+          for (var state in JSSourceState) {
+            sliceData.jsTimeByState[JSSourceState[state]] = 0;
+          }
+
+          var sourceInfo = sample.leafStackFrame.sourceInfo;
+          if (sourceInfo === undefined ||
+              !(sourceInfo instanceof tr.model.source_info.JSSourceInfo)) {
+            sliceData.jsTime = sample.weight;
+            sliceData.jsTimeByState[JSSourceState.UNKNOWN] = sample.weight;
+          } else {
+            sliceData.jsTimeByState[sourceInfo.state] = sample.weight;
+          }
+
+          var key = sliceData.threadGroup + '/' +
+                    sliceData.railTypeName + '/' +
+                    sliceData.framework + '/' +
+                    // sliceData.scriptURLClean + '/' +
+                    sliceData.title;
+          sliceCosts.push({key: key, value: sliceData});
+        });
+        return;
+      }
+
+      var sliceData = {
+        threadGroup: threadGrouping.getGroupNameForEvent(event),
+        railTypeName: railTypeNameByGUID[event.guid],
+        userFriendlyCategory: ufc || 'other',
+        title: tr.e.chrome.SliceTitleFixer.fromEvent(event),
+        selfTime: event.selfTime,
+        cpuSelfTime: event.cpuSelfTime,
+        scriptURL: data.js,
+        scriptURLClean: scriptURLClean,
+        framework: data.framework,
+        traceURL: model.canonicalUrl
+      };
+
+      var key = sliceData.threadGroup + '/' +
+                sliceData.railTypeName + '/' +
+                sliceData.framework + '/' +
+                // sliceData.scriptURLClean + '/' +
+                sliceData.title;
+
+      var newElement = {
+        key: key,
+        value: sliceData
+      };
+      sliceCosts.push(newElement);
+    }
+
+    result.addPair('wr', sliceCosts);
+  }
+
+  function getStageTitleForEventsByGUID(model, expectations) {
+    var stageTitleByGUID = {};
+    expectations.forEach(function applyAssociatedToRTN(ir) {
+      ir.associatedEvents.forEach(function applyEventToRTN(event) {
+        // Unassociated events have already been assigned to a RTN.
+        if (stageTitleByGUID[event.guid] !== undefined)
+          return;
+        stageTitleByGUID[event.guid] = ir.stageTitle;
+      }, this);
+    }, this);
+
+    for (var event of model.getDescendantEvents()) {
+      if (stageTitleByGUID[event.guid] !== undefined)
+        return;
+      stageTitleByGUID[event.guid] = 'Unknown';
+    }
+    return stageTitleByGUID;
+  }
+
+  pi.FunctionRegistry.register(v8ReportMapFunction);
+
+  // Exporting for tests.
+  return {
+    v8ReportMapFunction: v8ReportMapFunction
+  };
+});
+
+</script>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/v8/wasm_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel(start, end, slices) {
+    return tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      const group = mainThread.sliceGroup;
+      for (const slice of slices) {
+        group.pushSlice(tr.c.TestUtils.newSliceEx(slice));
+      }
+      group.createSubSlices();
+      mainThread.updateBounds();
+    });
+  }
+
+  function runMetrics(slices) {
+    // There has to be at least one slice, so that `reduce` below works.
+    assert.isAbove(slices.length, 0);
+    const histograms = new tr.v.HistogramSet();
+    const startTime = slices.reduce(
+        (acc, slice) => (Math.min(acc, slice.start)));
+    const endTime = slices.reduce((acc, slice) => (Math.max(acc, slice.end)));
+    const model = createModel(startTime - 1, endTime + 1, slices);
+    tr.metrics.v8.wasmMetric(histograms, model, {include_sub_events: true});
+    return histograms;
+  }
+
+  test('testInstantiateMetric', function() {
+    const slices = [
+      {
+        title: 'wasm.SyncInstantiate', args: {}, start: 10, end: 20,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'wasm.SyncInstantiate', args: {}, start: 30, end: 60,
+        cpuStart: 300, cpuEnd: 600
+      }
+    ];
+    const histograms = runMetrics(slices);
+
+    const cpuValue =
+      histograms.getHistogramNamed('v8:wasm:sync_instantiate:cpu_time');
+    assert.strictEqual(cpuValue.running.sum, 400);
+    assert.strictEqual(cpuValue.numValues, 2);
+    assert.strictEqual(cpuValue.average, 200);
+    assert.strictEqual(cpuValue.running.max, 300);
+
+    const wallValue =
+      histograms.getHistogramNamed('v8:wasm:sync_instantiate:wall_time');
+    assert.strictEqual(wallValue.running.sum, 40);
+    assert.strictEqual(wallValue.numValues, 2);
+    assert.strictEqual(wallValue.average, 20);
+    assert.strictEqual(wallValue.running.max, 30);
+  });
+
+  test('testSyncCompileMetric', function() {
+    const slices = [
+      {
+        title: 'wasm.SyncCompile', args: {}, start: 10, end: 20,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'wasm.SyncCompile', args: {}, start: 30, end: 60,
+        cpuStart: 300, cpuEnd: 600
+      }
+    ];
+    const histograms = runMetrics(slices);
+
+    const cpuValue =
+      histograms.getHistogramNamed('v8:wasm:sync_compile:cpu_time');
+    assert.strictEqual(cpuValue.running.sum, 400);
+    assert.strictEqual(cpuValue.numValues, 2);
+    assert.strictEqual(cpuValue.average, 200);
+    assert.strictEqual(cpuValue.running.max, 300);
+
+    const wallValue =
+      histograms.getHistogramNamed('v8:wasm:sync_compile:wall_time');
+    assert.strictEqual(wallValue.running.sum, 40);
+    assert.strictEqual(wallValue.numValues, 2);
+    assert.strictEqual(wallValue.average, 20);
+    assert.strictEqual(wallValue.running.max, 30);
+  });
+
+  test('testDeserializeMetric', function() {
+    const slices = [
+      {
+        title: 'wasm.Deserialize', args: {}, start: 10, end: 20,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'wasm.Deserialize', args: {}, start: 30, end: 60,
+        cpuStart: 300, cpuEnd: 600
+      }
+    ];
+    const histograms = runMetrics(slices);
+
+    const cpuValue =
+      histograms.getHistogramNamed('v8:wasm:deserialize:cpu_time');
+    assert.strictEqual(cpuValue.running.sum, 400);
+    assert.strictEqual(cpuValue.numValues, 2);
+    assert.strictEqual(cpuValue.average, 200);
+    assert.strictEqual(cpuValue.running.max, 300);
+
+    const wallValue =
+      histograms.getHistogramNamed('v8:wasm:deserialize:wall_time');
+    assert.strictEqual(wallValue.running.sum, 40);
+    assert.strictEqual(wallValue.numValues, 2);
+    assert.strictEqual(wallValue.average, 20);
+    assert.strictEqual(wallValue.running.max, 30);
+  });
+
+  test('testLazyCompilationMetric', function() {
+    const slices = [
+      {
+        title: 'wasm.CompileLazy', args: {}, start: 10, end: 20,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'wasm.CompileLazy', args: {}, start: 30, end: 60,
+        cpuStart: 300, cpuEnd: 600
+      }
+    ];
+    const histograms = runMetrics(slices);
+
+    const cpuValue =
+      histograms.getHistogramNamed('v8:wasm:lazy_compilation:cpu_time');
+    assert.strictEqual(cpuValue.running.sum, 400);
+    assert.strictEqual(cpuValue.numValues, 2);
+    assert.strictEqual(cpuValue.average, 200);
+    assert.strictEqual(cpuValue.running.max, 300);
+
+    const wallValue =
+      histograms.getHistogramNamed('v8:wasm:lazy_compilation:wall_time');
+    assert.strictEqual(wallValue.running.sum, 40);
+    assert.strictEqual(wallValue.numValues, 2);
+    assert.strictEqual(wallValue.average, 20);
+    assert.strictEqual(wallValue.running.max, 30);
+  });
+
+  test('testBackgroundCompilationMetric', function() {
+    const slices = [
+      {
+        title: 'wasm.ExecuteCompilationUnits', args: {}, start: 10, end: 20,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'wasm.ExecuteCompilationUnits', args: {}, start: 30, end: 60,
+        cpuStart: 300, cpuEnd: 600
+      }
+    ];
+    const histograms = runMetrics(slices);
+
+    const cpuValue =
+      histograms.getHistogramNamed('v8:wasm:background_compilation:cpu_time');
+    assert.strictEqual(cpuValue.running.sum, 400);
+    assert.strictEqual(cpuValue.numValues, 2);
+    assert.strictEqual(cpuValue.average, 200);
+    assert.strictEqual(cpuValue.running.max, 300);
+
+    const wallValue =
+      histograms.getHistogramNamed('v8:wasm:background_compilation:wall_time');
+    assert.strictEqual(wallValue.running.sum, 40);
+    assert.strictEqual(wallValue.numValues, 2);
+    assert.strictEqual(wallValue.average, 20);
+    assert.strictEqual(wallValue.running.max, 30);
+  });
+});
+</script>

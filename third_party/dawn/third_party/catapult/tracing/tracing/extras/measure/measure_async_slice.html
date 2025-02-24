@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/async_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.measure', function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+
+  // Split on first : with an optional `/` + base64 suffix
+  const MEASURE_NAME_REGEX = /([^\/:]+):(.*?)(?:\/([A-Za-z0-9+/]+=?=?))?$/;
+
+  function MeasureAsyncSlice() {
+    this.groupTitle_ = 'Ungrouped Measure';
+    const matched = MEASURE_NAME_REGEX.exec(arguments[1]);
+    if (matched !== null) {
+      arguments[1] = matched[2];
+      this.groupTitle_ = matched[1];
+    }
+    AsyncSlice.apply(this, arguments);
+  }
+
+  MeasureAsyncSlice.prototype = {
+    __proto__: AsyncSlice.prototype,
+
+    get viewSubGroupTitle() {
+      return this.groupTitle_;
+    },
+
+    get title() {
+      return this.title_;
+    },
+
+    set title(title) {
+      this.title_ = title;
+    }
+  };
+
+  AsyncSlice.subTypes.register(
+      MeasureAsyncSlice,
+      {
+        categoryParts: ['blink.user_timing']
+      });
+
+  return {
+    MEASURE_NAME_REGEX,
+    MeasureAsyncSlice,
+  };
+});
+</script>

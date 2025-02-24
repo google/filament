@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/console_error_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeEvent(cat, name, source, timestamp) {
+    return {
+      cat,
+      name,
+      args: {source},
+      ts: timestamp,
+      pid: 52,
+      tid: 53,
+      ph: 'B'
+    };
+  }
+
+  test('consoleErrorMetric_noErrors', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      makeEvent('foo', '', 10),
+      makeEvent('bar', '', 20)
+    ];
+    tr.metrics.console.consoleErrorMetric(histograms,
+        tr.c.TestUtils.newModelWithEvents([events]));
+    const all = histograms.getHistogramNamed('console:error:all').running;
+    assert.strictEqual(all.count, 1);
+    assert.strictEqual(all.mean, 0);
+    const js = histograms.getHistogramNamed('console:error:js').running;
+    assert.strictEqual(js.count, 1);
+    assert.strictEqual(js.mean, 0);
+    const net = histograms.getHistogramNamed('console:error:network').running;
+    assert.strictEqual(net.count, 1);
+    assert.strictEqual(net.mean, 0);
+  });
+
+  test('consoleErrorMetric_Errors', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      makeEvent('blink.console', 'foo', '', 10),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'XML', 20),
+      makeEvent('blink.console', 'bar', '', 30),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'Network', 40),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'JS', 50),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'Network', 60),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'Network', 70),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'JS', 80),
+      makeEvent('blink.console', 'ConsoleMessage::Error', 'Network', 90),
+      makeEvent('bar', '', 300)
+    ];
+    tr.metrics.console.consoleErrorMetric(histograms,
+        tr.c.TestUtils.newModelWithEvents([events]));
+    const all = histograms.getHistogramNamed('console:error:all').running;
+    assert.strictEqual(all.count, 1);
+    assert.strictEqual(all.mean, 7);
+    const js = histograms.getHistogramNamed('console:error:js').running;
+    assert.strictEqual(js.count, 1);
+    assert.strictEqual(js.mean, 2);
+    const net = histograms.getHistogramNamed('console:error:network').running;
+    assert.strictEqual(net.count, 1);
+    assert.strictEqual(net.mean, 4);
+  });
+
+  test('consoleErrorMetric_V8', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      makeEvent('v8.console', 'foo', '', 10),
+      makeEvent('v8.console', 'V8ConsoleMessage::Error', '', 20),
+      makeEvent('v8.console', 'bar', '', 30),
+      makeEvent('v8.console', 'V8ConsoleMessage::Exception', '', 40),
+      makeEvent('v8.console', 'V8ConsoleMessage::Assert', '', 50),
+      makeEvent('v8.console', 'V8ConsoleMessage::Ignore', '', 60),
+      makeEvent('v8.console', 'V8ConsoleMessage::Ignore', '', 70),
+      makeEvent('v8.console', 'bar', '', 300)
+    ];
+    tr.metrics.console.consoleErrorMetric(histograms,
+        tr.c.TestUtils.newModelWithEvents([events]));
+    const all = histograms.getHistogramNamed('console:error:all').running;
+    assert.strictEqual(all.count, 1);
+    assert.strictEqual(all.mean, 3);
+    const js = histograms.getHistogramNamed('console:error:js').running;
+    assert.strictEqual(js.count, 1);
+    assert.strictEqual(js.mean, 3);
+    const net = histograms.getHistogramNamed('console:error:network').running;
+    assert.strictEqual(net.count, 1);
+    assert.strictEqual(net.mean, 0);
+  });
+});
+</script>

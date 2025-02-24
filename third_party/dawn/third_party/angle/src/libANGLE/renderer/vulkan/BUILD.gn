@@ -1,0 +1,211 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE Vulkan back-end.
+
+import("//build/config/dcheck_always_on.gni")
+import("//build_overrides/swiftshader.gni")
+import("vulkan_backend.gni")
+
+#import("../../../../gni/angle.gni")
+
+assert(angle_enable_vulkan)
+
+declare_args() {
+  # Enable custom (cpu-side) secondary command buffers
+  angle_enable_custom_vulkan_cmd_buffers = true
+
+  # Enable Vulkan GPU trace event capability
+  angle_enable_vulkan_gpu_trace_events = false
+}
+
+declare_args() {
+  # Enable custom secondary command buffers for outside render pass commands only
+  angle_enable_custom_vulkan_outside_render_pass_cmd_buffers =
+      angle_enable_custom_vulkan_cmd_buffers
+
+  # Enable custom secondary command buffers for render pass commands only
+  angle_enable_custom_vulkan_render_pass_cmd_buffers =
+      angle_enable_custom_vulkan_cmd_buffers
+
+  # Enable shared ring buffer command buffer allocator
+  angle_enable_vulkan_shared_ring_buffer_cmd_alloc = false
+
+  # Enable using CRC for pipeline cache data
+  angle_enable_crc_for_pipeline_cache = true
+}
+
+angle_source_set("angle_vk_mem_alloc_wrapper") {
+  deps = [
+    "$angle_root/src/common/vulkan:angle_vulkan_headers",
+    "$angle_vulkan_memory_allocator_dir",
+  ]
+  include_dirs = [ "$angle_vulkan_memory_allocator_dir/include" ]
+  configs += [ "$angle_root:angle_no_cfi_unrelated_cast" ]
+  sources = [
+    "vk_mem_alloc_wrapper.cpp",
+    "vk_mem_alloc_wrapper.h",
+  ]
+  if (is_clang) {
+    cflags_cc = [
+      "-Wno-extra-semi-stmt",
+      "-Wno-missing-field-initializers",
+      "-Wno-suggest-destructor-override",
+      "-Wno-suggest-override",
+      "-Wno-inconsistent-missing-destructor-override",
+    ]
+  }
+}
+
+config("angle_vulkan_backend_config") {
+  defines = [ "ANGLE_ENABLE_VULKAN" ]
+  if (angle_enable_swiftshader) {
+    defines += [ "ANGLE_ENABLE_SWIFTSHADER" ]
+  }
+  if (angle_enable_vulkan_gpu_trace_events) {
+    defines += [ "ANGLE_ENABLE_VULKAN_GPU_TRACE_EVENTS=1" ]
+  }
+  if (angle_enable_vulkan_validation_layers) {
+    defines += [ "ANGLE_ENABLE_VULKAN_VALIDATION_LAYERS" ]
+  }
+  if (angle_enable_vulkan_api_dump_layer) {
+    defines += [ "ANGLE_ENABLE_VULKAN_API_DUMP_LAYER" ]
+  }
+
+  defines += [ "ANGLE_ENABLE_VULKAN_SHARED_RING_BUFFER_CMD_ALLOC=" +
+               "${angle_enable_vulkan_shared_ring_buffer_cmd_alloc}" ]
+
+  # Ensures that the memory allocation logging can only be enabled with debug layers.
+  assert(angle_debug_layers_enabled || !angle_enable_memory_alloc_logging)
+  if (angle_enable_memory_alloc_logging) {
+    defines += [ "ANGLE_ENABLE_MEMORY_ALLOC_LOGGING=1" ]
+  }
+
+  if (angle_enable_crc_for_pipeline_cache) {
+    defines += [ "ANGLE_ENABLE_CRC_FOR_PIPELINE_CACHE" ]
+  }
+}
+
+if (is_android) {
+  # Used only in generated Android.bp file for DMA-BUF-enabled builds on Android.
+  # See b/353262025 for details.
+  angle_source_set("angle_android_vulkan_dma_buf") {
+    sources = vulkan_backend_dma_buf_sources
+    deps = [
+      ":angle_vulkan_backend",
+      "$angle_root/src/common/linux:angle_dma_buf",
+    ]
+    defines = [
+      "ANGLE_ANDROID_DMA_BUF",
+      "ANGLE_USE_VULKAN_DISPLAY",
+      "ANGLE_VULKAN_DISPLAY_MODE_OFFSCREEN",
+    ]
+    if (angle_use_gbm) {
+      deps += [ "//third_party/minigbm" ]
+    }
+  }
+}
+
+template("angle_vulkan_backend_template") {
+  config("${target_name}_internal_config") {
+    defines = []
+    if (invoker.enable_custom_outside_render_pass_cmd_buffers) {
+      defines += [ "ANGLE_USE_CUSTOM_VULKAN_OUTSIDE_RENDER_PASS_CMD_BUFFERS=1" ]
+    }
+    if (invoker.enable_custom_render_pass_cmd_buffers) {
+      defines += [ "ANGLE_USE_CUSTOM_VULKAN_RENDER_PASS_CMD_BUFFERS=1" ]
+    }
+  }
+
+  angle_source_set(target_name) {
+    sources = vulkan_backend_sources
+    libs = []
+    deps = [
+      ":angle_vk_mem_alloc_wrapper",
+      "$angle_root:angle_abseil",
+      "$angle_root:angle_compression",
+      "$angle_root:angle_gpu_info_util",
+      "$angle_root:angle_image_util",
+      "$angle_root/src/common/spirv:angle_spirv_base",
+      "$angle_root/src/common/spirv:angle_spirv_builder",
+      "$angle_root/src/common/spirv:angle_spirv_headers",
+      "$angle_root/src/common/spirv:angle_spirv_parser",
+      "$angle_spirv_headers_dir:spv_headers",
+    ]
+
+    if (angle_enable_cl || is_android) {
+      deps += [ "$angle_root:angle_version_info" ]
+    }
+
+    # OpenCL on ANGLE needs both spirv-tools and clspv for compiler
+    if (angle_enable_cl) {
+      deps += [
+        "$angle_root/third_party/clspv/:clspv_core_shared",
+        "$angle_root/third_party/spirv-tools/src/:spvtools",
+        "$angle_root/third_party/spirv-tools/src/:spvtools_opt",
+      ]
+      include_dirs = [
+        "$angle_root/third_party/spirv-tools/src/include",
+        "$angle_root/third_party/clspv/src/include",
+      ]
+    }
+
+    public_deps = [
+      "$angle_root:libANGLE_headers",
+      "$angle_root/src/common/vulkan",
+      "$angle_root/src/common/vulkan:angle_libvulkan_loader",
+      "$angle_root/src/common/vulkan:angle_vulkan_entry_points",
+      "$angle_root/src/common/vulkan:angle_vulkan_headers",
+    ]
+    public_configs = [
+      ":angle_vulkan_backend_config",
+      ":${target_name}_internal_config",
+    ]
+
+    if (angle_use_wayland) {
+      public_configs += [ "$angle_root:angle_wayland_config" ]
+    }
+
+    data_deps = []
+
+    defines = []
+
+    if (angle_enable_vulkan_validation_layers) {
+      defines += [ "ANGLE_ENABLE_VULKAN_VALIDATION_LAYERS_BY_DEFAULT" ]
+      data_deps += [ "$angle_root/src/common/vulkan:vulkan_validation_layers" ]
+    }
+
+    if (angle_enable_vulkan_api_dump_layer &&
+        current_toolchain == default_toolchain) {
+      data_deps += [ "$angle_root/src/common/vulkan:lunarg_vulkantools" ]
+    }
+
+    if (is_linux || is_chromeos) {
+      deps += [ "$angle_root/src/common/linux:angle_dma_buf" ]
+      if (angle_use_gbm) {
+        deps += [ "//third_party/minigbm" ]
+      }
+    }
+
+    if (is_fuchsia) {
+      public_deps += [ "$angle_root/src/common/fuchsia_egl:backend" ]
+    }
+
+    # Include generated shaders.
+    import("vk_internal_shaders_autogen.gni")
+    sources += angle_vulkan_internal_shaders
+  }
+}
+
+angle_vulkan_backend_template("angle_vulkan_backend") {
+  enable_custom_outside_render_pass_cmd_buffers =
+      angle_enable_custom_vulkan_outside_render_pass_cmd_buffers
+  enable_custom_render_pass_cmd_buffers =
+      angle_enable_custom_vulkan_render_pass_cmd_buffers
+}
+
+angle_vulkan_backend_template("angle_vulkan_secondaries_backend") {
+  enable_custom_outside_render_pass_cmd_buffers = false
+  enable_custom_render_pass_cmd_buffers = false
+}

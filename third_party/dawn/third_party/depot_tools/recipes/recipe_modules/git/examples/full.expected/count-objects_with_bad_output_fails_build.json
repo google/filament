@@ -1,0 +1,111 @@
+[
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::git]/resources/git_setup.py",
+      "--path",
+      "[START_DIR]/src",
+      "--url",
+      "https://chromium.googlesource.com/chromium/src.git"
+    ],
+    "name": "git setup"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "main",
+      "--recurse-submodules",
+      "--progress"
+    ],
+    "cwd": "[START_DIR]/src",
+    "env": {
+      "PATH": "RECIPE_REPO[depot_tools]:<PATH>"
+    },
+    "infra_step": true,
+    "name": "git fetch"
+  },
+  {
+    "cmd": [
+      "git",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git checkout"
+  },
+  {
+    "cmd": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "read revision",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@<br/>checked out 'deadbeef'<br/>@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git clean"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "sync"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "submodule sync"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "update",
+      "--init",
+      "--recursive"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "submodule update"
+  },
+  {
+    "cmd": [
+      "git",
+      "-c",
+      "foo=bar",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "count-objects",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@exception@ValueError(\"invalid literal for int() with base 10: 'xxx'\")@@@",
+      "@@@STEP_LOG_END@exception@@@",
+      "@@@STEP_WARNINGS@@@"
+    ]
+  },
+  {
+    "failure": {
+      "humanReason": "count-objects failed: invalid literal for int() with base 10: 'xxx'"
+    },
+    "name": "$result"
+  }
+]

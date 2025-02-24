@@ -1,0 +1,252 @@
+#!/usr/bin/env python
+# Copyright (c) 2009 Chris Moyer http://coredumped.org/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+
+#
+# Utility to launch an EC2 Instance
+#
+VERSION="0.2"
+
+
+CLOUD_INIT_SCRIPT = """#!/usr/bin/env python
+f = open("/etc/boto.cfg", "w")
+f.write(\"\"\"%s\"\"\")
+f.close()
+"""
+import boto.pyami.config
+import boto.utils
+import re, os
+from boto.compat import ConfigParser
+
+class Config(boto.pyami.config.Config):
+    """A special config class that also adds import abilities
+    Directly in the config file. To have a config file import
+    another config file, simply use "#import <path>" where <path>
+    is either a relative path or a full URL to another config
+    """
+
+    def __init__(self):
+        ConfigParser.__init__(self, {'working_dir' : '/mnt/pyami', 'debug' : '0'})
+
+    def add_config(self, file_url):
+        """Add a config file to this configuration
+        :param file_url: URL for the file to add, or a local path
+        :type file_url: str
+        """
+        if not re.match("^([a-zA-Z0-9]*:\/\/)(.*)", file_url):
+            if not file_url.startswith("/"):
+                file_url = os.path.join(os.getcwd(), file_url)
+            file_url = "file://%s" % file_url
+        (base_url, file_name) = file_url.rsplit("/", 1)
+        base_config = boto.utils.fetch_file(file_url)
+        base_config.seek(0)
+        for line in base_config.readlines():
+            match = re.match("^#import[\s\t]*([^\s^\t]*)[\s\t]*$", line)
+            if match:
+                self.add_config("%s/%s" % (base_url, match.group(1)))
+        base_config.seek(0)
+        self.readfp(base_config)
+
+    def add_creds(self, ec2):
+        """Add the credentials to this config if they don't already exist"""
+        if not self.has_section('Credentials'):
+            self.add_section('Credentials')
+            self.set('Credentials', 'aws_access_key_id', ec2.aws_access_key_id)
+            self.set('Credentials', 'aws_secret_access_key', ec2.aws_secret_access_key)
+
+
+    def __str__(self):
+        """Get config as string"""
+        from StringIO import StringIO
+        s = StringIO()
+        self.write(s)
+        return s.getvalue()
+
+SCRIPTS = []
+
+def scripts_callback(option, opt, value, parser):
+    arg = value.split(',')
+    if len(arg) == 1:
+        SCRIPTS.append(arg[0])
+    else:
+        SCRIPTS.extend(arg)
+    setattr(parser.values, option.dest, SCRIPTS)
+
+def add_script(scr_url):
+    """Read a script and any scripts that are added using #import"""
+    base_url = '/'.join(scr_url.split('/')[:-1]) + '/'
+    script_raw = boto.utils.fetch_file(scr_url)
+    script_content = ''
+    for line in script_raw.readlines():
+        match = re.match("^#import[\s\t]*([^\s^\t]*)[\s\t]*$", line)
+        #if there is an import
+        if match:
+            #Read the other script and put it in that spot
+            script_content += add_script("%s/%s" % (base_url, match.group(1)))
+        else:
+            #Otherwise, add the line and move on
+            script_content += line
+    return script_content
+
+if __name__ == "__main__":
+    try:
+        import readline
+    except ImportError:
+        pass
+    import sys
+    import time
+    import boto
+    from boto.ec2 import regions
+    from optparse import OptionParser
+    from boto.mashups.iobject import IObject
+    parser = OptionParser(version=VERSION, usage="%prog [options] config_url")
+    parser.add_option("-c", "--max-count", help="Maximum number of this type of instance to launch", dest="max_count", default="1")
+    parser.add_option("--min-count", help="Minimum number of this type of instance to launch", dest="min_count", default="1")
+    parser.add_option("--cloud-init", help="Indicates that this is an instance that uses 'CloudInit', Ubuntu's cloud bootstrap process. This wraps the config in a shell script command instead of just passing it in directly", dest="cloud_init", default=False, action="store_true")
+    parser.add_option("-g", "--groups", help="Security Groups to add this instance to",  action="append", dest="groups")
+    parser.add_option("-a", "--ami", help="AMI to launch", dest="ami_id")
+    parser.add_option("-t", "--type", help="Type of Instance (default m1.small)", dest="type", default="m1.small")
+    parser.add_option("-k", "--key", help="Keypair", dest="key_name")
+    parser.add_option("-z", "--zone", help="Zone (default us-east-1a)", dest="zone", default="us-east-1a")
+    parser.add_option("-r", "--region", help="Region (default us-east-1)", dest="region", default="us-east-1")
+    parser.add_option("-i", "--ip", help="Elastic IP", dest="elastic_ip")
+    parser.add_option("-n", "--no-add-cred", help="Don't add a credentials section", default=False, action="store_true", dest="nocred")
+    parser.add_option("--save-ebs", help="Save the EBS volume on shutdown, instead of deleting it", default=False, action="store_true", dest="save_ebs")
+    parser.add_option("-w", "--wait", help="Wait until instance is running", default=False, action="store_true", dest="wait")
+    parser.add_option("-d", "--dns", help="Returns public and private DNS (implicates --wait)", default=False, action="store_true", dest="dns")
+    parser.add_option("-T", "--tag", help="Set tag", default=None, action="append", dest="tags", metavar="key:value")
+    parser.add_option("-s", "--scripts", help="Pass in a script or a folder containing scripts to be run when the instance starts up, assumes cloud-init. Specify scripts in a list specified by commas. If multiple scripts are specified, they are run lexically (A good way to ensure they run in the order is to prefix filenames with numbers)", type='string', action="callback", callback=scripts_callback)
+    parser.add_option("--role", help="IAM Role to use, this implies --no-add-cred", dest="role")
+
+    (options, args) = parser.parse_args()
+
+    if len(args) < 1:
+        parser.print_help()
+        sys.exit(1)
+    file_url = os.path.expanduser(args[0])
+
+    cfg = Config()
+    cfg.add_config(file_url)
+
+    for r in regions():
+        if r.name == options.region:
+            region = r
+            break
+    else:
+        print("Region %s not found." % options.region)
+        sys.exit(1)
+    ec2 = boto.connect_ec2(region=region)
+    if not options.nocred and not options.role:
+        cfg.add_creds(ec2)
+
+    iobj = IObject()
+    if options.ami_id:
+        ami = ec2.get_image(options.ami_id)
+    else:
+        ami_id = options.ami_id
+        l = [(a, a.id, a.location) for a in ec2.get_all_images()]
+        ami = iobj.choose_from_list(l, prompt='Choose AMI')
+
+    if options.key_name:
+        key_name = options.key_name
+    else:
+        l = [(k, k.name, '') for k in ec2.get_all_key_pairs()]
+        key_name = iobj.choose_from_list(l, prompt='Choose Keypair').name
+
+    if options.groups:
+        groups = options.groups
+    else:
+        groups = []
+        l = [(g, g.name, g.description) for g in ec2.get_all_security_groups()]
+        g = iobj.choose_from_list(l, prompt='Choose Primary Security Group')
+        while g != None:
+            groups.append(g)
+            l.remove((g, g.name, g.description))
+            g = iobj.choose_from_list(l, prompt='Choose Additional Security Group (0 to quit)')
+
+    user_data = str(cfg)
+    # If it's a cloud init AMI,
+    # then we need to wrap the config in our
+    # little wrapper shell script
+
+    if options.cloud_init:
+        user_data = CLOUD_INIT_SCRIPT % user_data
+        scriptuples = []
+        if options.scripts:
+            scripts = options.scripts
+            scriptuples.append(('user_data', user_data))
+            for scr in scripts:
+                scr_url = scr
+                if not re.match("^([a-zA-Z0-9]*:\/\/)(.*)", scr_url):
+                    if not scr_url.startswith("/"):
+                        scr_url = os.path.join(os.getcwd(), scr_url)
+                    try:
+                        newfiles = os.listdir(scr_url)
+                        for f in newfiles:
+                            #put the scripts in the folder in the array such that they run in the correct order
+                            scripts.insert(scripts.index(scr) + 1, scr.split("/")[-1] + "/" + f)
+                    except OSError:
+                        scr_url = "file://%s" % scr_url
+                try:
+                    scriptuples.append((scr, add_script(scr_url)))
+                except Exception as e:
+                    pass
+
+            user_data = boto.utils.write_mime_multipart(scriptuples, compress=True)
+
+    shutdown_proc = "terminate"
+    if options.save_ebs:
+        shutdown_proc = "save"
+
+    instance_profile_name = None
+    if options.role:
+        instance_profile_name = options.role
+
+    r = ami.run(min_count=int(options.min_count), max_count=int(options.max_count),
+            key_name=key_name, user_data=user_data,
+            security_groups=groups, instance_type=options.type,
+            placement=options.zone, instance_initiated_shutdown_behavior=shutdown_proc,
+            instance_profile_name=instance_profile_name)
+
+    instance = r.instances[0]
+
+    if options.tags:
+        for tag_pair in options.tags:
+            name = tag_pair
+            value = ''
+            if ':' in tag_pair:
+                name, value = tag_pair.split(':', 1)
+            instance.add_tag(name, value)
+
+    if options.dns:
+        options.wait = True
+
+    if not options.wait:
+        sys.exit(0)
+
+    while True:
+        instance.update()
+        if instance.state == 'running':
+            break
+        time.sleep(3)
+
+    if options.dns:
+        print("Public DNS name: %s" % instance.public_dns_name)
+        print("Private DNS name: %s" % instance.private_dns_name)

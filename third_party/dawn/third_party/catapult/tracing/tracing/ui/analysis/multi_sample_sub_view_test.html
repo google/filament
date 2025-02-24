@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/multi_sample_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newSampleNamed = tr.c.TestUtils.newSampleNamed;
+
+  function instantiateWithTraces(traces) {
+    let t53;
+    const m = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(model) {
+        t53 = model.getOrCreateProcess(52).getOrCreateThread(53);
+        traces.forEach(function(trace, index) {
+          model.samples.push(
+              newSampleNamed(t53, 'X', 'cat', trace, index * 0.02));
+        });
+      }
+    });
+
+    const t53track = {};
+    t53track.thread = t53;
+
+    const selection = new tr.model.EventSet();
+    for (let i = 0; i < t53.samples.length; i++) {
+      selection.push(t53.samples[i]);
+    }
+
+    const view = document.createElement('tr-ui-a-multi-sample-sub-view');
+    view.style.height = '500px';
+    this.addHTMLOutput(view);
+    view.selection = selection;
+    return view;
+  }
+
+  test('instantiate_flat', function() {
+    instantiateWithTraces.call(this, [
+      ['BBB'],
+      ['AAA'],
+      ['AAA'],
+      ['Sleeping'],
+      ['BBB'],
+      ['AAA'],
+      ['CCC'],
+      ['Sleeping']
+    ]);
+  });
+
+  test('instantiate_nested', function() {
+    instantiateWithTraces.call(this, [
+      ['AAA', 'BBB'],
+      ['AAA', 'BBB', 'CCC'],
+      ['AAA', 'BBB'],
+      ['BBB', 'AAA', 'BBB'],
+      ['BBB', 'AAA', 'BBB'],
+      ['BBB', 'AAA', 'BBB']
+    ]);
+  });
+});
+</script>

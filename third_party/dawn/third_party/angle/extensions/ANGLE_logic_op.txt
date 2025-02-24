@@ -1,0 +1,79 @@
+Name
+
+    ANGLE_logic_op
+
+Name Strings
+
+    GL_ANGLE_logic_op
+
+Contributors
+
+    Shahbaz Youssefi, Google
+
+Contact
+
+    Shahbaz Youssefi, Google (syoussefi 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: Sep 14, 2022
+    Revision: 1
+
+Number
+
+    TBD
+
+Dependencies
+
+    Written against the OpenGL ES 2.0 specifications
+
+Overview
+
+    For internal use of ANGLE for GLES1 emulation, through this extension the
+    backend lets the frontend know that the equivalent of glLogicOp is natively
+    supported and can be used.
+
+New Procedures and Functions
+
+    The following commands are added:
+
+        void LogicOpANGLE(enum op);
+
+New Tokens
+
+    The following tokens are added:
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled:
+
+        COLOR_LOGIC_OP_ANGLE                 0x0BF2
+
+    Accepted by the <op> parameter of LogicOpANGLE:
+
+        LOGIC_OP_CLEAR_ANGLE                 0x1500
+        LOGIC_OP_AND_ANGLE                   0x1501
+        LOGIC_OP_AND_REVERSE_ANGLE           0x1502
+        LOGIC_OP_COPY_ANGLE                  0x1503
+        LOGIC_OP_AND_INVERTED_ANGLE          0x1504
+        LOGIC_OP_NOOP_ANGLE                  0x1505
+        LOGIC_OP_XOR_ANGLE                   0x1506
+        LOGIC_OP_OR_ANGLE                    0x1507
+        LOGIC_OP_NOR_ANGLE                   0x1508
+        LOGIC_OP_EQUIV_ANGLE                 0x1509
+        LOGIC_OP_INVERT_ANGLE                0x150A
+        LOGIC_OP_OR_REVERSE_ANGLE            0x150B
+        LOGIC_OP_COPY_INVERTED_ANGLE         0x150C
+        LOGIC_OP_OR_INVERTED_ANGLE           0x150D
+        LOGIC_OP_NAND_ANGLE                  0x150E
+        LOGIC_OP_SET_ANGLE                   0x150F
+
+The semantics of LogicOpANGLE and COLOR_LOGIC_OP_ANGLE are identical to LogicOp
+and COLOR_LOGIC_OP in the OpenGL ES 1.0 specification.
+
+Revision History
+
+    Revision 1, 2022-07-14 (Shahbaz Youssefi)
+        - Initial draft

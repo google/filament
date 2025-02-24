@@ -1,0 +1,91 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_color_matrix_accuracy
+
+Name Strings
+
+    GL_SGIX_color_matrix_accuracy
+
+Version
+
+    $Date: 1999/03/08 21:20:12 $ $Revision: 1.2 $
+
+Number
+
+    ??
+
+Dependencies
+
+    SGI_color_matrix is required.
+
+Overview
+
+    This extension adds an accuracy hint for the color matrix.  It
+    allows the program to trade off precision for speed.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of glHint and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        COLOR_MATRIX_HINT		0x8317
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+    
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Add to section 5.6 ("Hints"):
+
+    If the <target> argument of Hint is specified as COLOR_MATRIX_HINT
+    then the <hint> argument indicates the desired quality of pixel
+    colors after transformation by the color matrix.  Higher quality
+    may correspond to higher-precision arithmetic, although an
+    implementation may ignore the hint.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on SGI_color_matrix:
+
+    SGI_color_matrix is required.  This extension modifies the
+    accuracy of the color matrix.
+
+Errors
+
+    None
+
+New State
+
+    Get Value		Get Command	Type	Value		Attrib
+    ---------		-----------	----	-------		------
+    COLOR_MATRIX_HINT   GetIntegerv     Z3      DONT_CARE       hint
+
+New Implementation Dependent State
+
+    None

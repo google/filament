@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/bug-details.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+const mockResponse = {
+  'review_urls': [
+    'http://codereview.google.com/12345',
+    'http://review.chromium.org/23435'
+  ],
+  'bisects': [
+    {
+      'status': 'failed',
+      'metric': 'Total',
+      'buildbucket_link': '/foo/bar',
+      'bot': 'android-nexus5-perf-bisect'
+    },
+    {
+      'status': 'started',
+      'metric': 'Total',
+      'buildbucket_link': '/foo/bar',
+      'bot': 'windows-perf-bisect'
+    },
+  ],
+  'owner': 'foo@bar.com',
+  'published': '2017-02-17T23:08:44',
+  'state': 'open',
+  'status': 'Untriaged',
+  'summary': 'A regression in Sunspider occurred!',
+  'comments': [
+    {
+      'author': 'foo@chromium.org',
+      'published': '2017-02-17T23:08:44',
+      'content': 'hello!'
+    },
+    {
+      'author': 'bar@chromium.org',
+      'published': '2017-02-17T23:08:44',
+      'content': 'world!'
+    }
+  ]
+};
+const mockResponseVariation = {
+  'review_urls': [
+    'http://codereview.google.com/1',
+    'http://review.chromium.org/2'
+  ],
+  'bisects': [
+    {
+      'status': 'failed',
+      'metric': 'Total',
+      'buildbucket_link': '/foo/bar',
+      'bot': 'android-nexus5-perf-bisect'
+    },
+    {
+      'status': 'failed',
+      'metric': 'Total',
+      'buildbucket_link': '/foo/bar',
+      'bot': 'windows-perf-bisect'
+    },
+  ],
+  'owner': 'foo@bar.baz',
+  'published': '2017-03-22T23:08:44',
+  'state': 'closed',
+  'status': 'WontFix',
+  'summary': 'This is a descriptive title.',
+  'comments': [
+    {
+      'author': 'foo@chromium.org',
+      'published': '2017-02-17T23:08:44',
+      'content': 'hello!'
+    }
+  ]
+};
+const errorResponse = new Error('invalid bug!');
+
+let xhrCalls = 0;  // Keeps track of misses on the cache.
+
+const testOptions = {
+  setUp() {
+    // TODO(eakuefner) Be able to correctly mock XHR here.
+    // See https://github.com/catapult-project/catapult/issues/3449
+    d.BUG_DETAILS.reset();
+    xhrCalls = 0;
+    d.BUG_DETAILS.process_ = async function(bugId) {
+      xhrCalls = xhrCalls + 1;
+      return await mockResponse;
+    };
+  },
+  tearDown() {
+  }
+};
+
+const testOptionsForError = {
+  setUp() {
+    d.BUG_DETAILS.reset();
+    xhrCalls = 0;
+    d.BUG_DETAILS.process_ = async function(bugId) {
+      xhrCalls = xhrCalls + 1;
+      return Promise.reject(errorResponse);
+    };
+  },
+  tearDown() {
+  }
+};
+
+tr.b.unittest.testSuite(function() {
+  test('benchmarkSuccess', function() {
+    d.BUG_DETAILS.populateForTest(new Map(
+        [[12345, Promise.resolve(mockResponse)]]));
+
+    const e = document.createElement('bug-details');
+    e.bugId = 12345;
+    this.addHTMLOutput(e);
+
+    assert.strictEqual(xhrCalls, 0);
+    assert.strictEqual(d.BUG_DETAILS.size, 1);
+  }, testOptions);
+
+  test('benchmarkErrorAndSuccess', function() {
+    d.BUG_DETAILS.populateForTest(new Map([
+      [12345, Promise.resolve(mockResponse)],
+      [54321, Promise.reject(errorResponse)],
+    ]));
+
+    let e = document.createElement('bug-details');
+    e.bugId = 12345;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = 54321;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = -2;
+    this.addHTMLOutput(e);  // This should show an error.
+
+    assert.strictEqual(xhrCalls, 0);
+    assert.strictEqual(d.BUG_DETAILS.size, 2);
+  }, testOptions);
+
+  test('compactAllInTableErrorAndSuccess', function() {
+    d.BUG_DETAILS.populateForTest(new Map([
+      [1, Promise.resolve(mockResponse)],
+      [2, Promise.resolve(mockResponseVariation)],
+      [3, Promise.reject(errorResponse)],
+    ]));
+
+    let e = document.createElement('bug-details');
+    e.bugId = 1;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = 2;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = 3;
+    e.compactView = true;
+    this.addHTMLOutput(e);  // This should show an error.
+
+    // This one shouldn't add anything to the Map.
+    e = document.createElement('bug-details');
+    e.bugId = -2;
+    e.compactView = true;
+    this.addHTMLOutput(e);  // This won't appear (because it's compact view).
+
+    assert.strictEqual(xhrCalls, 0);  // 0 because everything was in the cache.
+    assert.strictEqual(d.BUG_DETAILS.size, 3);
+  }, testOptions);
+
+  test('compactNoneInTableSuccess', function() {
+    let e = document.createElement('bug-details');
+    e.bugId = 1;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = 2;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    assert.strictEqual(xhrCalls, 2);  // 2 because nothing was in the cache.
+    assert.strictEqual(d.BUG_DETAILS.size, 2);
+  }, testOptions);
+
+  test('compactNoneInTableError', function() {
+    let e = document.createElement('bug-details');
+    e.bugId = 1;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    e = document.createElement('bug-details');
+    e.bugId = 2;
+    e.compactView = true;
+    this.addHTMLOutput(e);
+
+    // This one shouldn't add anything to the Map.
+    e = document.createElement('bug-details');
+    e.bugId = -2;
+    e.compactView = true;
+    this.addHTMLOutput(e);  // This won't appear.
+
+    assert.strictEqual(xhrCalls, 2);  // 2 because nothing was in the cache.
+    assert.strictEqual(d.BUG_DETAILS.size, 2);
+  }, testOptionsForError);
+});
+</script>

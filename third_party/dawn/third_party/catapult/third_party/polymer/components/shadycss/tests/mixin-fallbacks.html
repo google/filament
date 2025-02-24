@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2018 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script>
+  WCT = { waitFor: function (cb) { HTMLImports.whenReady(cb) } }
+</script>
+<script src="./test-flags.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../node_modules/@webcomponents/template/template.js"></script>
+<script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+<script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+<script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+<script src="../scoping-shim.min.js"></script>
+<script src="../apply-shim.min.js"></script>
+<script src="../custom-style-interface.min.js"></script>
+<script src="module/generated/make-element.js"></script>
+
+<template id="mixin-element">
+  <style>
+    :host {
+      background-color: rgb(0, 0, 255);
+      height: 100px;
+      display: block;
+    }
+    :host {
+      @apply --mixin;
+    }
+  </style>
+</template>
+
+<template id="outer-element">
+  <style>
+    :host > * {
+      --mixin: {
+        background-color: rgb(255, 0, 0);
+      }
+    }
+  </style>
+  <mixin-element></mixin-element>
+</template>
+
+<script>
+  suite('Mixin Fallbacks', function() {
+    suiteSetup(function() {
+      makeElement('mixin-element');
+      makeElement('outer-element');
+    });
+
+    test('outer-element sets mixin color', function() {
+      const el = document.createElement('outer-element');
+      document.body.appendChild(el);
+      const inner = el.shadowRoot.querySelector('mixin-element');
+      const color = getComputedStyle(inner).getPropertyValue('background-color').trim();
+      assert.equal(color, 'rgb(255, 0, 0)');
+    });
+    test('mixin-element by itself falls back correctly', function() {
+      const mixinOnly = document.createElement('mixin-element');
+      document.body.appendChild(mixinOnly);
+      const color = getComputedStyle(mixinOnly).getPropertyValue('background-color').trim();
+      assert.equal(color, 'rgb(0, 0, 255)');
+    });
+  });
+</script>

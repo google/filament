@@ -1,0 +1,225 @@
+Name
+
+    EXT_swap_control
+
+Name Strings
+
+    GLX_EXT_swap_control
+
+Contributors
+
+    Brian Nguyen, NVIDIA, brnguyen at nvidia.com
+    James Jones, NVIDIA, jajones at nvidia.com
+    Ian Romanick, Intel, idr at freedesktop.org
+    Jesse Barnes, Intel, jbarnes at virtuousgeek.org
+    Aaron Plattner, NVIDIA, aplattner at nvidia.com
+
+Contact
+
+    Brian Nguyen, NVIDIA, brnguyen at nvidia.com
+
+Status
+
+    Completed.
+
+Version
+
+    Version 8 (November 8, 2011)
+
+Number
+
+    375
+
+Dependencies
+
+    This specification is written against the GLX 1.3 specification, but
+    only GLX 1.1 or greater with the ARB_get_proc_address extension is
+    required, for glXQueryExtensionString and glXGetProcAddressARB
+    respectively.
+
+    This specification affects the GLX_SGI_swap_control extension.
+
+    Based on GLX_MESA_swap_control version 1.1, GLX_SGI_swap_control
+    version 1.9, and WGL_EXT_swap_control version 1.5.
+
+Overview
+
+    This extension allows an application to specify a minimum
+    periodicity of color buffer swaps, measured in video frame periods,
+    for a particular drawable. It also allows an application to query
+    the swap interval and the implementation-dependent maximum swap
+    interval of a drawable.
+
+IP Status
+
+    There are no known IP issues.
+
+Issues
+
+    1. Should implementations that export GLX_EXT_swap_control also
+    export GL_EXT_swap_control?
+
+    RESOLVED: No. GL_EXT_swap_control is exported by WGL_EXT_swap_control
+    because of shortcomings in the WGL extension querying mechanisms. GLX
+    has no such shortcomings, so exporting only a GLX extension is
+    sufficient.
+
+    2. How should the swap interval interact with non-visible drawables?
+
+    RESOLVED: The definition of the swap interval does not make sense
+    when applied to drawables that are not visible on a display device,
+    so it makes no sense to modify or query the swap interval of such
+    drawables.  BadWindow should be returned if the <drawable> argument
+    of glXSwapIntervalEXT is not a window, and the result of querying
+    the swap interval of a non-window drawable should be undefined.
+
+    3. How should the implementations maximum swap interval and current
+    swap interval be exposed?
+
+    RESOVLED: These are both properties of a GLX drawable, so they are
+    exposed through glXQueryDrawable.
+
+New Procedures and Functions
+
+    void glXSwapIntervalEXT(Display *dpy,
+                            GLXDrawable drawable,
+                            int interval);
+
+New Tokens
+
+    GLX_SWAP_INTERVAL_EXT               0x20F1
+    GLX_MAX_SWAP_INTERVAL_EXT           0x20F2
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL
+Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the GLX 1.3 Specification
+
+    [Add the following to Section 3.3.10 of the GLX specification
+    (Double Buffering)]
+
+    glXSwapIntervalEXT specifies the minimum number of video frame
+    periods per buffer swap for a particular GLX drawable (e.g. a value
+    of two means that the color buffers will be swapped at most every
+    other video frame). The interval takes effect when glXSwapBuffers
+    is first called on the drawable subsequent to the glXSwapIntervalEXT
+    call.
+
+    A video frame period is the time required by the monitor to display
+    a full frame of video data.  In the case of an interlaced monitor,
+    this is typically the time required to display both the even and odd
+    fields of a frame of video data.
+
+    If <interval> is set to a value of 0, buffer swaps are not
+    synchronized to a video frame.  The <interval> value is silently
+    clamped to the maximum implementation-dependent value supported
+    before being stored.
+
+    The current swap interval and implementation-dependent max swap
+    interval for a particular drawable can be obtained by calling
+    glXQueryDrawable with the attributes GLX_SWAP_INTERVAL_EXT and
+    GLX_MAX_SWAP_INTERVAL_EXT respectively. The value returned by
+    glXQueryDrawable is undefined if the drawable is not a GLXWindow
+    and these attributes are given.
+
+    Calling glXSwapIntervalSGI is equivalent to calling
+    glXSwapIntervalEXT on the current drawable, if one exists.
+
+GLX Protocol
+
+    One new GLX protocol command is added.
+
+    SwapIntervalEXT
+        1           CARD8           opcode (X assigned)
+        1           16              GLX opcode (glXVendorPrivate)
+        2           5               request length
+        4           1416            vendor-specific opcode
+        4           CARD32          unused
+        4           GLX_DRAWABLE    drawable
+        4           INT32           interval
+
+Errors
+
+    glXSwapIntervalEXT generates BadValue if parameter <interval> is
+    less than zero.
+
+    glXSwapIntervalEXT generates BadWindow if parameter <drawable> is
+    not a GLXWindow or Window XID.
+
+Usage Examples
+
+    Example 1: Set swap interval for the current drawable
+
+    Display *dpy = glXGetCurrentDisplay();
+    GLXDrawable drawable = glXGetCurrentDrawable();
+    const int interval = 1;
+
+    if (drawable) {
+        glXSwapIntervalEXT(dpy, drawable, interval);
+    }
+
+    Example 2: Query current drawable for swap interval and max swap
+    interval
+
+    Display *dpy = glXGetCurrentDisplay();
+    GLXDrawable drawable = glXGetCurrentDrawable();
+    unsigned int swap, maxSwap;
+
+    if (drawable) {
+        glXQueryDrawable(dpy, drawable, GLX_SWAP_INTERVAL_EXT, &swap);
+        glXQueryDrawable(dpy, drawable, GLX_MAX_SWAP_INTERVAL_EXT,
+                         &maxSwap);
+        printf("The swap interval is %u and the max swap interval is "
+               "%u\n", swap, maxSwap);
+    }
+
+Version History
+
+    8. 8 Nov 2011 - BrianN
+        - Added missing GLX protocol
+
+    7. 22 Aug 2011 - BrianN
+        - Fixed example code and spec to reflect glXSwapIntervalEXT
+          has void return value
+
+    6. 26 Jan 2010 - AaronP
+        - Fixed and simplified the example code.
+        - Removed temporary tags from enum values.
+
+    5. 08 Oct 2009 - Jon Leech
+        -Fixed typos and removed temporary label on token values
+
+    4. 28 Sep 2009 - JamesJ
+        -Added extension number
+        -Corrected token values
+
+    3. 08 Sep 2009 - JamesJ
+        -Marked complete.
+
+    2. 20 Jul 2009 - BrianN
+        -Fixed formatting issues
+        -Modified proposed error values of glXSwapIntervalEXT
+
+    1. 20 Jul 2009 - BrianN
+        -Initial version

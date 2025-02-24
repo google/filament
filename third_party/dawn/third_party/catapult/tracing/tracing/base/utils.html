@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  const URL_REGEX = /^(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b|file:\/\/)([-a-zA-Z0-9@:%_\+.~#?&//=]*)$/;  // eslint-disable-line max-len
+
+  function deepCopy(value) {
+    if (!(value instanceof Object)) {
+      if (value === undefined || value === null) return value;
+      if (typeof value === 'string') return value.substring();
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'number') return value;
+      throw new Error('Unrecognized: ' + typeof value);
+    }
+
+    const object = value;
+    if (object instanceof Array) {
+      const res = new Array(object.length);
+      for (let i = 0; i < object.length; i++) {
+        res[i] = deepCopy(object[i]);
+      }
+      return res;
+    }
+
+    if (object.__proto__ !== Object.prototype) {
+      throw new Error('Can only clone simple types');
+    }
+    const res = {};
+    for (const key in object) {
+      res[key] = deepCopy(object[key]);
+    }
+    return res;
+  }
+
+  function normalizeException(e) {
+    if (e === undefined || e === null) {
+      return {
+        typeName: 'UndefinedError',
+        message: 'Unknown: null or undefined exception',
+        stack: 'Unknown'
+      };
+    }
+
+    if (typeof(e) === 'string') {
+      return {
+        typeName: 'StringError',
+        message: e,
+        stack: [e]
+      };
+    }
+
+    let typeName;
+    if (e.name) {
+      typeName = e.name;
+    } else if (e.constructor) {
+      if (e.constructor.name) {
+        typeName = e.constructor.name;
+      } else {
+        typeName = 'AnonymousError';
+      }
+    } else {
+      typeName = 'ErrorWithNoConstructor';
+    }
+
+    const msg = e.message ? e.message : 'Unknown';
+    return {
+      typeName,
+      message: msg,
+      stack: e.stack ? e.stack : [msg]
+    };
+  }
+
+  function stackTraceAsString() {
+    return new Error().stack + '';
+  }
+  function stackTrace() {
+    let stack = stackTraceAsString();
+    stack = stack.split('\n');
+    return stack.slice(2);
+  }
+
+  function getUsingPath(path, fromDict) {
+    const parts = path.split('.');
+    let cur = fromDict;
+
+    for (let part; parts.length && (part = parts.shift());) {
+      if (!parts.length) {
+        return cur[part];
+      } else if (part in cur) {
+        cur = cur[part];
+      } else {
+        return undefined;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Format date as a string "YYYY-MM-DD HH:mm:ss". The timezone is implicitly
+   * UTC. This format is based on the ISO format, but without milliseconds and
+   * the 'T' is replaced with a space for legibility.
+   *
+   * @param {!Date} date
+   * @return {string}
+   */
+  function formatDate(date) {
+    return date.toISOString().replace('T', ' ').slice(0, 19);
+  }
+
+  /**
+   * Infinity and NaN are left out of JSON for security reasons that do not
+   * apply to our use cases. This helper function allows serializing them
+   * independently of null.
+   *
+   * @param {!number} n
+   * @return {!(number|string)}
+   */
+  function numberToJson(n) {
+    if (isNaN(n)) return 'NaN';
+    if (n === Infinity) return 'Infinity';
+    if (n === -Infinity) return '-Infinity';
+    return n;
+  }
+
+  /**
+   * Infinity and NaN are left out of JSON for security reasons that do not
+   * apply to our use cases. This helper function allows deserializing them
+   * independently of null.
+   *
+   * @param {!(number|string)} n
+   * @return {!number}
+   */
+  function numberFromJson(n) {
+    if (n === 'NaN' || n === null) return NaN;
+    if (n === 'Infinity') return Infinity;
+    if (n === '-Infinity') return -Infinity;
+    return n;
+  }
+
+  /**
+   * @param {Array.<T>} ary
+   * @returns {Array.<Object.<T, number>>} The run length encoding of the array
+   * as an array of {value, count} objects.
+   * @template T
+   */
+  function runLengthEncoding(ary) {
+    const encodedArray = [];
+    for (const element of ary) {
+      if (encodedArray.length === 0 ||
+          encodedArray[encodedArray.length - 1].value !== element) {
+        encodedArray.push({
+          value: element,
+          count: 1,
+        });
+      } else {
+        encodedArray[encodedArray.length - 1].count += 1;
+      }
+    }
+    return encodedArray;
+  }
+
+  /**
+   * @param {string} s
+   * @return {boolean}
+   */
+  function isUrl(s) {
+    return typeof(s) === 'string' && s.match(URL_REGEX) !== null;
+  }
+
+  /**
+   * Returns the only element in the iterable. If the iterable is empty or has
+   * more than one element, an error is thrown.
+   */
+  function getOnlyElement(iterable) {
+    const iterator = iterable[Symbol.iterator]();
+
+    const firstIteration = iterator.next();
+    if (firstIteration.done) {
+      throw new Error('getOnlyElement was passed an empty iterable.');
+    }
+
+    const secondIteration = iterator.next();
+    if (!secondIteration.done) {
+      throw new Error(
+          'getOnlyElement was passed an iterable with multiple elements.');
+    }
+
+    return firstIteration.value;
+  }
+
+  /**
+   * Returns the first element in the iterable. If the iterable is empty, an
+   * error is thrown.
+   */
+  function getFirstElement(iterable) {
+    const iterator = iterable[Symbol.iterator]();
+    const result = iterator.next();
+    if (result.done) {
+      throw new Error('getFirstElement was passed an empty iterable.');
+    }
+
+    return result.value;
+  }
+
+  function compareArrays(x, y, elementCmp) {
+    const minLength = Math.min(x.length, y.length);
+    let i;
+    for (i = 0; i < minLength; i++) {
+      const tmp = elementCmp(x[i], y[i]);
+      if (tmp) return tmp;
+    }
+    if (x.length === y.length) return 0;
+
+    if (x[i] === undefined) return -1;
+
+    return 1;
+  }
+
+  /**
+   * Returns a new Map with items grouped by the return value of the
+   * specified function being called on each item.
+   * @param {!Array.<!*>} ary The array being iterated through
+   * @param {!function(!*):!*} callback The mapping function between the array
+   * value and the map key.
+   * @param {*=} opt_this
+   */
+  function groupIntoMap(ary, callback, opt_this, opt_arrayConstructor) {
+    const arrayConstructor = opt_arrayConstructor || Array;
+    const results = new Map();
+    for (const element of ary) {
+      const key = callback.call(opt_this, element);
+      let items = results.get(key);
+      if (items === undefined) {
+        items = new arrayConstructor();
+        results.set(key, items);
+      }
+      items.push(element);
+    }
+    return results;
+  }
+
+  function inPlaceFilter(array, predicate, opt_this) {
+    opt_this = opt_this || this;
+    let nextPosition = 0;
+    for (let i = 0; i < array.length; i++) {
+      if (!predicate.call(opt_this, array[i], i)) continue;
+      if (nextPosition < i) {
+        array[nextPosition] = array[i];  // Move elements only if necessary.
+      }
+      nextPosition++;
+    }
+
+    if (nextPosition < array.length) {
+      array.length = nextPosition;  // Truncate the array only if necessary.
+    }
+  }
+
+  /**
+   * Convert an array of dictionaries to a dictionary of arrays.
+   *
+   * The keys of the resulting dictionary are a union of the keys of all
+   * dictionaries in the provided array. Each array in the resulting dictionary
+   * has the same length as the provided array and contains the values of its
+   * key in the dictionaries in the provided array. Example:
+   *
+   *   INPUT:
+   *
+   *     [
+   *       {a: 6, b: 5      },
+   *       undefined,
+   *       {a: 4, b: 3, c: 2},
+   *       {      b: 1, c: 0}
+   *     ]
+   *
+   *   OUTPUT:
+   *
+   *     {
+   *       a: [6,         undefined, 4, undefined],
+   *       b: [5,         undefined, 3, 1        ],
+   *       c: [undefined, undefined, 2, 0        ]
+   *     }
+   *
+   * @param {!Array} array Array of items to be inverted. If opt_dictGetter
+   *     is not provided, all elements of the array must be either undefined,
+   *     or dictionaries.
+   * @param {?(function(*): (!Object|undefined))=} opt_dictGetter Optional
+   *     function mapping defined elements of array to dictionaries.
+   * @param {*=} opt_this Optional 'this' context for opt_dictGetter.
+   */
+  function invertArrayOfDicts(array, opt_dictGetter, opt_this) {
+    opt_this = opt_this || this;
+    const result = {};
+    for (let i = 0; i < array.length; i++) {
+      const item = array[i];
+      if (item === undefined) continue;
+      const dict = opt_dictGetter ? opt_dictGetter.call(opt_this, item) : item;
+      if (dict === undefined) continue;
+      for (const key in dict) {
+        let valueList = result[key];
+        if (valueList === undefined) {
+          result[key] = valueList = new Array(array.length);
+        }
+        valueList[i] = dict[key];
+      }
+    }
+    return result;
+  }
+
+  function setsEqual(a, b) {
+    if (!(a instanceof Set) || !(b instanceof Set)) return false;
+    if (a.size !== b.size) return false;
+    // Avoid Array.from() here -- it creates garbage.
+    for (const x of a) {
+      if (!b.has(x)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Finds the first index in the array whose value is >= loVal.
+   *
+   * The key for the search is defined by the mapFn. This array must
+   * be prearranged such that ary.map(mapFn) would also be sorted in
+   * ascending order.
+   *
+   * @param {Array} ary An array of arbitrary objects.
+   * @param {function():*} mapFn Callback that produces a key value
+   *     from an element in ary.
+   * @param {number} loVal Value for which to search.
+   * @return {Number} Offset o into ary where all ary[i] for i <= o
+   *     are < loVal, or ary.length if loVal is greater than all elements in
+   *     the array.
+   */
+  function findLowIndexInSortedArray(ary, mapFn, loVal) {
+    if (ary.length === 0) return 1;
+
+    let low = 0;
+    let high = ary.length - 1;
+    let i;
+    let comparison;
+    let hitPos = -1;
+    while (low <= high) {
+      i = Math.floor((low + high) / 2);
+      comparison = mapFn(ary[i]) - loVal;
+      if (comparison < 0) {
+        low = i + 1; continue;
+      } else if (comparison > 0) {
+        high = i - 1; continue;
+      } else {
+        hitPos = i;
+        high = i - 1;
+      }
+    }
+    // return where we hit, or failing that the low pos
+    return hitPos !== -1 ? hitPos : low;
+  }
+
+  /**
+   * Finds an index in an array of intervals that either intersects
+   * the provided loVal, or if no intersection is found, -1 or ary.length.
+   *
+   * The array of intervals is defined implicitly via two mapping functions
+   * over the provided ary. mapLoFn determines the lower value of the interval,
+   * mapWidthFn the width. Intersection is lower-inclusive, e.g. [lo,lo+w).
+   *
+   * The array of intervals formed by this mapping must be non-overlapping and
+   * sorted in ascending order by loVal.
+   *
+   * @param {Array} ary An array of objects that can be converted into sorted
+   *     nonoverlapping ranges [x,y) using the mapLoFn and mapWidth.
+   * @param {function():*} mapLoFn Callback that produces the low value for the
+   *     interval represented by an  element in the array.
+   * @param {function():*} mapWidthFn Callback that produces the width for the
+   *     interval represented by an  element in the array.
+   * @param {number} loVal The low value for the search.
+   * @return {Number} An index in the array that intersects or is first-above
+   *     loVal, -1 if none found and loVal is below than all the intervals,
+   *     ary.length if loVal is greater than all the intervals.
+   */
+  function findIndexInSortedIntervals(ary, mapLoFn, mapWidthFn, loVal) {
+    const first = findLowIndexInSortedArray(ary, mapLoFn, loVal);
+    if (first === 0) {
+      if (loVal >= mapLoFn(ary[0]) &&
+          loVal < mapLoFn(ary[0]) + mapWidthFn(ary[0], 0)) {
+        return 0;
+      }
+      return -1;
+    }
+
+    if (first < ary.length) {
+      if (loVal >= mapLoFn(ary[first]) &&
+          loVal < mapLoFn(ary[first]) + mapWidthFn(ary[first], first)) {
+        return first;
+      }
+      if (loVal >= mapLoFn(ary[first - 1]) &&
+          loVal < mapLoFn(ary[first - 1]) +
+          mapWidthFn(ary[first - 1], first - 1)) {
+        return first - 1;
+      }
+      return ary.length;
+    }
+
+    if (first === ary.length) {
+      if (loVal >= mapLoFn(ary[first - 1]) &&
+          loVal < mapLoFn(ary[first - 1]) +
+          mapWidthFn(ary[first - 1], first - 1)) {
+        return first - 1;
+      }
+      return ary.length;
+    }
+
+    return ary.length;
+  }
+
+  /**
+   * Finds an index in an array of sorted closed intervals that either
+   * intersects the provided val, or if no intersection is found, -1 or
+   *  ary.length.
+   *
+   * The array of intervals is defined implicitly via two mapping functions
+   * over the provided ary. mapLoFn determines the lower value of the interval,
+   * mapHiFn the high. Intersection is closed, e.g. [lo,hi], unlike with
+   * findIndexInSortedIntervals, which is right-open.
+   *
+   * The array of intervals formed by this mapping must be non-overlapping, and
+   * sorted in ascending order by val.
+   *
+   * @param {Array} ary An array of objects that can be converted into sorted
+   *     nonoverlapping ranges [x,y) using the mapLoFn and mapWidth.
+   * @param {function():*} mapLoFn Callback that produces the low value for the
+   *     interval represented by an  element in the array.
+   * @param {function():*} mapHiFn Callback that produces the high for the
+   *     interval represented by an  element in the array.
+   * @param {number} val The value for the search.
+   * @return {Number} An index in the array that intersects or is first-above
+   *     val, -1 if none found and val is below than all the intervals,
+   *     ary.length if val is greater than all the intervals.
+   */
+  function findIndexInSortedClosedIntervals(ary, mapLoFn, mapHiFn, val) {
+    const i = findLowIndexInSortedArray(ary, mapLoFn, val);
+    if (i === 0) {
+      if (val >= mapLoFn(ary[0], 0) &&
+          val <= mapHiFn(ary[0], 0)) {
+        return 0;
+      }
+      return -1;
+    }
+
+    if (i < ary.length) {
+      if (val >= mapLoFn(ary[i - 1], i - 1) &&
+          val <= mapHiFn(ary[i - 1], i - 1)) {
+        return i - 1;
+      }
+      if (val >= mapLoFn(ary[i], i) &&
+          val <= mapHiFn(ary[i], i)) {
+        return i;
+      }
+      return ary.length;
+    }
+
+    if (i === ary.length) {
+      if (val >= mapLoFn(ary[i - 1], i - 1) &&
+          val <= mapHiFn(ary[i - 1], i - 1)) {
+        return i - 1;
+      }
+      return ary.length;
+    }
+
+    return ary.length;
+  }
+
+  /**
+   * Calls cb for all intervals in the implicit array of intervals
+   * defnied by ary, mapLoFn and mapHiFn that intersect the range
+   * [loVal,hiVal)
+   *
+   * This function uses the same scheme as findLowIndexInSortedArray
+   * to define the intervals. The same restrictions on sortedness and
+   * non-overlappingness apply.
+   *
+   * @param {Array} ary An array of objects that can be converted into sorted
+   * nonoverlapping ranges [x,y) using the mapLoFn and mapWidth.
+   * @param {function():*} mapLoFn Callback that produces the low value for the
+   * interval represented by an element in the array.
+   * @param {function():*} mapWidthFn Callback that produces the width for the
+   * interval represented by an element in the array.
+   * @param {number} loVal The low value for the search, inclusive.
+   * @param {number} hiVal The high value for the search, non inclusive.
+   * @param {function():*} cb The function to run for intersecting intervals.
+   */
+  function iterateOverIntersectingIntervals(ary, mapLoFn, mapWidthFn, loVal,
+      hiVal, cb) {
+    if (ary.length === 0) return;
+
+    if (loVal > hiVal) return;
+
+    let i = findLowIndexInSortedArray(ary, mapLoFn, loVal);
+    if (i === -1) {
+      return;
+    }
+    if (i > 0) {
+      const hi = mapLoFn(ary[i - 1]) + mapWidthFn(ary[i - 1], i - 1);
+      if (hi >= loVal) {
+        cb(ary[i - 1], i - 1);
+      }
+    }
+    if (i === ary.length) {
+      return;
+    }
+
+    for (let n = ary.length; i < n; i++) {
+      const lo = mapLoFn(ary[i]);
+      if (lo >= hiVal) break;
+      cb(ary[i], i);
+    }
+  }
+
+  /**
+   * Finds the element in the array whose value is closest to |val|.
+   *
+   * The same restrictions on sortedness as for findLowIndexInSortedArray apply.
+   *
+   * @param {Array} ary An array of arbitrary objects.
+   * @param {function():*} mapFn Callback that produces a key value
+   *     from an element in ary.
+   * @param {number} val Value for which to search.
+   * @param {number} maxDiff Maximum allowed difference in value between |val|
+   *     and an element's value.
+   * @return {object} Object in the array whose value is closest to |val|, or
+   *     null if no object is within range.
+   */
+  function findClosestElementInSortedArray(ary, mapFn, val, maxDiff) {
+    if (ary.length === 0) return null;
+
+    let aftIdx = findLowIndexInSortedArray(ary, mapFn, val);
+    const befIdx = aftIdx > 0 ? aftIdx - 1 : 0;
+
+    if (aftIdx === ary.length) aftIdx -= 1;
+
+    const befDiff = Math.abs(val - mapFn(ary[befIdx]));
+    const aftDiff = Math.abs(val - mapFn(ary[aftIdx]));
+
+    if (befDiff > maxDiff && aftDiff > maxDiff) return null;
+
+    const idx = befDiff < aftDiff ? befIdx : aftIdx;
+    return ary[idx];
+  }
+
+  /**
+   * Finds the closest interval in the implicit array of intervals
+   * defined by ary, mapLoFn and mapHiFn.
+   *
+   * This function uses the same scheme as findLowIndexInSortedArray
+   * to define the intervals. The same restrictions on sortedness and
+   * non-overlappingness apply.
+   *
+   * @param {Array} ary An array of objects that can be converted into sorted
+   *     nonoverlapping ranges [x,y) using the mapLoFn and mapHiFn.
+   * @param {function():*} mapLoFn Callback that produces the low value for the
+   *     interval represented by an element in the array.
+   * @param {function():*} mapHiFn Callback that produces the high for the
+   *     interval represented by an element in the array.
+   * @param {number} val The value for the search.
+   * @param {number} maxDiff Maximum allowed difference in value between |val|
+   *     and an interval's low or high value.
+   * @return {interval} Interval in the array whose high or low value is closest
+   *     to |val|, or null if no interval is within range.
+   */
+  function findClosestIntervalInSortedIntervals(ary, mapLoFn, mapHiFn, val,
+      maxDiff) {
+    if (ary.length === 0) return null;
+
+    let idx = findLowIndexInSortedArray(ary, mapLoFn, val);
+    if (idx > 0) idx -= 1;
+
+    const hiInt = ary[idx];
+    let loInt = hiInt;
+
+    if (val > mapHiFn(hiInt) && idx + 1 < ary.length) {
+      loInt = ary[idx + 1];
+    }
+
+    const loDiff = Math.abs(val - mapLoFn(loInt));
+    const hiDiff = Math.abs(val - mapHiFn(hiInt));
+
+    if (loDiff > maxDiff && hiDiff > maxDiff) return null;
+
+    if (loDiff < hiDiff) return loInt;
+
+    return hiInt;
+  }
+
+  /**
+  * Returns first index i in |array| such that |test| is true for array[i].
+  * Returns array.length if no such i is found. Assumes |test| is monotonic
+  * boolean on |array|, i.e. if test(array[i]) is true, then test(array[i + 1])
+  * is also true.
+  *
+  * @param {Array} array Array of elements to perform binary search on.
+  * @param {function(*):boolean} test Monotonic boolean test function.
+  */
+  function findFirstTrueIndexInSortedArray(array, test) {
+    let i0 = 0;
+    let i1 = array.length;
+    while (i0 < i1) {
+      const i = Math.trunc((i0 + i1) / 2);
+      if (test(array[i])) {
+        i1 = i;  // Explore the left branch.
+      } else {
+        i0 = i + 1;  // Explore the right branch.
+      }
+    }
+    return i1;
+  }
+
+  return {
+    compareArrays,
+    deepCopy,
+    findClosestElementInSortedArray,
+    findClosestIntervalInSortedIntervals,
+    findFirstTrueIndexInSortedArray,
+    findIndexInSortedClosedIntervals,
+    findIndexInSortedIntervals,
+    findLowIndexInSortedArray,
+    formatDate,
+    getFirstElement,
+    getOnlyElement,
+    getUsingPath,
+    groupIntoMap,
+    inPlaceFilter,
+    invertArrayOfDicts,
+    isUrl,
+    iterateOverIntersectingIntervals,
+    normalizeException,
+    numberFromJson,
+    numberToJson,
+    runLengthEncoding,
+    setsEqual,
+    stackTrace,
+    stackTraceAsString,
+  };
+});
+</script>

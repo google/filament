@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/picture_debugger.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const picture = new tr.e.cc.PictureSnapshot({id: '31415'}, 10, {
+      'params': {
+        'opaque_rect': [-15, -15, 0, 0],
+        'layer_rect': [-15, -15, 46, 833]
+      },
+      'skp64': 'DAAAAHYEAADzAQAABwAAAAFkYWVy8AAAAAgAAB4DAAAADAAAIAAAgD8AAIA/CAAAHgMAAAAcAAADAAAAAAAAAAAAwI5EAID5QwEAAADoAAAACAAAHgMAAAAMAAAjAAAAAAAAAAAMAAAjAAAAAAAAAAAcAAADAAAAAAAAAAAAwI5EAID5QwEAAADkAAAAGAAAFQEAAAAAAAAAAAAAAADAjkQAgPlDGAAAFQIAAAAAAAAAAAAAAADAjkQAgPlDCAAAHgMAAAAcAAADAAAAAAAAAAAAwI5EAID5QwEAAADgAAAAGAAAFQMAAAAAAKBAAACgQAAAgEIAAIBCBAAAHAQAABwEAAAcBAAAHHRjYWYBAAAADVNrU3JjWGZlcm1vZGVjZnB0AAAAAHlhcmGgAAAAIHRucAMAAAAAAEBBAACAPwAAAAAAAIA/AAAAAAAAgEAAAP//ADABAAAAAAAAAEBBAACAPwAAAAAAAIA/AAAAAAAAgED/////AjABAAAAAAAAAAAAAAAAAAEAAAAEAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEEAAIA/AAAAAAAAgD8AAAAAAACAQP8AAP8AMAEAAAAAACBmb2U=' // @suppress longLineCheck
+    });
+    picture.preInitialize();
+    picture.initialize();
+
+    const dbg = new tr.ui.e.chrome.cc.PictureDebugger();
+    this.addHTMLOutput(dbg);
+    dbg.picture = picture;
+    dbg.style.border = '1px solid black';
+  });
+});
+</script>

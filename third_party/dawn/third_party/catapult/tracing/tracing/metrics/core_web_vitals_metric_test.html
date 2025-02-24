@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!--
+Copyright 2022 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/core_web_vitals_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const {
+    FCP_HISTOGRAM_NAME,
+    LCP_HISTOGRAM_NAME,
+    CLS_HISTOGRAM_NAME,
+  } = tr.metrics.CWV_HISTOGRAM_NAMES;
+
+  const timingUpdateEvent = (args) => {
+    return tr.c.TestUtils.newSliceEx({
+      title: 'UkmPageLoadTimingUpdate',
+      cat: 'loading',
+      start: args.ts,
+      duration: 0,
+      args: {
+        ukm_page_load_timing_update: {
+          ukm_source_id: args.sourceId,
+          first_contentful_paint_ms: args.fcp,
+          latest_largest_contentful_paint_ms: args.lcp,
+          latest_cumulative_layout_shift: args.cls,
+        },
+      },
+    });
+  };
+
+  test('histogramsAreAlwaysCreatedButCanBeEmpty', () => {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      console.log(model);
+      model.browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+            {title: 'SomeRandomEvent', start: 2, duration: 0}));
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, model);
+
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+  });
+
+  test('metricIsReportedFromLatestEvent', () => {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+          {sourceId: 42, ts: 11, fcp: 123, lcp: 300, cls: 2}));
+      model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+          {sourceId: 42, ts: 12, fcp: 124, lcp: 301, cls: 3}));
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, model);
+
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        124, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        301, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        3, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).max);
+  });
+
+  test('noMetricIsReportedIfFCPIsNotReached', () => {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+          {sourceId: 42, ts: 11, lcp: 300, cls: 2}));  // FCP missing.
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, model);
+
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        0, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+  });
+
+  test('multipleNavigations', () => {
+    const modelClsMissing =
+        tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+          // First navigation.
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 42, ts: 11, fcp: 123, lcp: 300, cls: 2}));
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 42, ts: 11, fcp: 123, lcp: 301, cls: 3}));
+
+          // Second navigation.
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 43, ts: 11, fcp: 223, lcp: 400, cls: 12}));
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 43, ts: 11, fcp: 223, lcp: 401, cls: 13}));
+        });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, modelClsMissing);
+
+    assert.strictEqual(
+        2, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        123, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).min);
+    assert.strictEqual(
+        223, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        2, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        301, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).min);
+    assert.strictEqual(
+        401, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        2, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        3, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).min);
+    assert.strictEqual(
+        13, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).max);
+  });
+
+  test('metricIsNotReportedIfMissingInLatestButPresentInEarlierEvent', () => {
+    // Metric can become missing in later update events if it's invalidated /
+    // tainted somehow in the browser. We do not report the metric when that
+    // happens (as opposed to reporting the last valid value of the metric.)
+
+    const modelClsMissing =
+        tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+          // First navigation.
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 42, ts: 11, fcp: 123, lcp: 300, cls: 2}));
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 42, ts: 11, fcp: 123, lcp: 301}));  // CLS missing.
+
+          // Second navigation.
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 43, ts: 11, fcp: 123, lcp: 300, cls: 2}));
+          model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+              {sourceId: 43, ts: 11, fcp: 123, cls: 3}));  // LCP missing.
+        });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, modelClsMissing);
+
+    assert.strictEqual(
+        2, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        301, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        3, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).max);
+  });
+
+  test('metricIsNotReportedFromTelemetryInternalRanges', () => {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel((model) => {
+      model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+          {sourceId: 42, ts: 100, fcp: 123, lcp: 300, cls: 2}));
+      model.browserMain.sliceGroup.pushSlice(timingUpdateEvent(
+          {sourceId: 48, ts: 300, fcp: 124, lcp: 301, cls: 3}));
+
+      // Create telemetry internal ranges from 50 to 150ms.
+      model.rendererMain.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'blink.console',
+          title: 'telemetry.internal.warm_cache.warm.start',
+          start: 50,
+          duration: 3.0,  // Arbitrary small duration.
+          }));
+      model.rendererMain.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSliceEx({
+          cat: 'blink.console',
+          title: 'telemetry.internal.warm_cache.warm.end',
+          start: 150,
+          duration: 3.0,  // Arbitrary small duration.
+          }));
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.coreWebVitalsMetric(histograms, model);
+
+    // Only the second group of metrics are reported, since the first group
+    // falls within internal ranges.
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        124, histograms.getHistogramNamed(FCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        301, histograms.getHistogramNamed(LCP_HISTOGRAM_NAME).max);
+    assert.strictEqual(
+        1, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).numValues);
+    assert.strictEqual(
+        3, histograms.getHistogramNamed(CLS_HISTOGRAM_NAME).max);
+  });
+});
+</script>

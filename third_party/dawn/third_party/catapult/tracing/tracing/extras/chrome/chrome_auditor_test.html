@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_auditor.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/scoped_id.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const newAsyncSliceEx = tr.c.TestUtils.newAsyncSliceEx;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  function createMainProcesses(m) {
+    m.browserProcess = m.getOrCreateProcess(1);
+    m.browserMain = m.browserProcess.getOrCreateThread(2);
+    m.browserMain.name = 'CrBrowserMain';
+
+    m.renderer1 = m.getOrCreateProcess(3);
+    m.renderer1Main = m.renderer1.getOrCreateThread(4);
+    m.renderer1Main.name = 'CrRendererMain';
+
+    m.renderer1Compositor = m.renderer1.getOrCreateThread(4);
+    m.renderer1Compositor.name = 'Compositor';
+  }
+
+  function newInputLatencyEvent(tsStart, tsEnd, opt_args) {
+    const e = new tr.model.AsyncSlice(
+        'benchmark', 'InputLatency',
+        ColorScheme.getColorIdForGeneralPurposeString('InputLatency'),
+        tsStart, opt_args);
+    e.duration = tsEnd - tsStart;
+    return e;
+  }
+
+  function newImplRenderingStatsEvent(ts, opt_args) {
+    const e = new tr.model.ThreadSlice(
+        'benchmark', 'BenchmarkInstrumentation::ImplThreadRenderingStats',
+        ColorScheme.getColorIdForGeneralPurposeString('x'),
+        ts, opt_args, 0);
+    return e;
+  }
+
+  test('simple', function() {
+    tr.c.TestUtils.newModelWithAuditor(function(m) {
+      createMainProcesses(m);
+      const bAsyncSlices = m.browserMain.asyncSliceGroup;
+      bAsyncSlices.push(newInputLatencyEvent(100, 130));
+      bAsyncSlices.push(newInputLatencyEvent(116, 150));
+      bAsyncSlices.push(newInputLatencyEvent(133, 166));
+      bAsyncSlices.push(newInputLatencyEvent(150, 183));
+      bAsyncSlices.push(newInputLatencyEvent(166, 200));
+      bAsyncSlices.push(newInputLatencyEvent(183, 216));
+
+      const rm1Slices = m.renderer1Compositor.sliceGroup;
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(113));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(130));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(147));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(163));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(180));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(197));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(213));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(230));
+      rm1Slices.pushSlice(newImplRenderingStatsEvent(247));
+    }, tr.e.audits.ChromeAuditor);
+  });
+
+  test('refsToBrowser', function() {
+    const events = [
+      // An object created and snapshotted in the browser process.
+      {ts: 1000, pid: 1, tid: 2, ph: 'N', cat: 'c', id: '0x1000', name: 'a',
+        args: {}},
+      {ts: 1100, pid: 1, tid: 2, ph: 'O', cat: 'c', id: '0x1000', name: 'a',
+        args: {snapshot: {foo: 12345}}},
+      {ts: 1300, pid: 1, tid: 2, ph: 'D', cat: 'c', id: '0x1000', name: 'a',
+        args: {}},
+
+      // A reference to the object in the browser from the renderer process.
+      {ts: 1200, pid: 3, tid: 4, ph: 'X', cat: 'c', name: 'b', dur: 100,
+        args: {bar: {pid_ref: -1, id_ref: '0x1000'}}}
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false,
+      pruneEmptyContainers: false,
+      customizeModelCallback: createMainProcesses,
+      auditorConstructors: [tr.e.audits.ChromeAuditor]
+    });
+
+    const browserObject = m.browserProcess.objects.getObjectInstanceAt(
+        new tr.model.ScopedId('ptr', '0x1000'), 1.2);
+    assert.isDefined(browserObject);
+    const foo = browserObject.getSnapshotAt(1.2);
+    assert.isDefined(foo);
+
+    assert.strictEqual(m.renderer1Main.sliceGroup.slices.length, 1);
+    const slice = m.renderer1Main.sliceGroup.slices[0];
+    assert.strictEqual(slice.title, 'b');
+    assert.strictEqual(slice.args.bar, foo);
+  });
+
+  test('filterTracingUI', function() {
+    const m = tr.c.TestUtils.newModelWithAuditor(function(m) {
+      m.browserProcess = m.getOrCreateProcess(1);
+      m.browserMain = m.browserProcess.getOrCreateThread(2);
+      m.browserMain.name = 'CrBrowserMain';
+
+      m.renderer1 = m.getOrCreateProcess(3);
+      m.renderer1.labels = ['https://google.com'];
+      m.renderer1Main = m.renderer1.getOrCreateThread(4);
+      m.renderer1Main.name = 'CrRendererMain';
+
+      m.renderer2 = m.getOrCreateProcess(5);
+      m.renderer2.labels = ['chrome://tracing'];
+      m.renderer2Main = m.renderer2.getOrCreateThread(6);
+      m.renderer2Main.name = 'CrRendererMain';
+    }, tr.e.audits.ChromeAuditor);
+
+    assert.isTrue(m.renderer1.important);
+    assert.isFalse(m.renderer2.important);
+  });
+
+  test('missedFrameAlerts', function() {
+    const m = tr.c.TestUtils.newModelWithAuditor(function(m) {
+      m.renderProcess = m.getOrCreateProcess(1);
+      m.compositorThread = m.renderProcess.getOrCreateThread(2);
+      m.compositorThread.name = 'Compositor'; // required
+
+      m.browserProcess = m.getOrCreateProcess(3);
+      m.browserThread = m.browserProcess.getOrCreateThread(4);
+      m.browserThread.name = 'CrBrowserMain'; // required
+
+      const noArgsFrameSlice = newAsyncSliceEx({
+        title: 'PipelineReporter', start: 200, duration: 15, args: {}});
+
+      const submittedFrameSlice = newAsyncSliceEx({
+        title: 'PipelineReporter',
+        start: 200,
+        duration: 15,
+        args: {
+          chrome_frame_reporter: {state: 'STATE_PRESENTED_ALL'}
+        }
+      });
+
+      const missedFrameSliceNotAffectingSmoothness = newAsyncSliceEx({
+        title: 'PipelineReporter',
+        start: 200,
+        duration: 15,
+        args: {
+          chrome_frame_reporter: {
+            affects_smoothness: false,
+            state: 'STATE_DROPPED'
+          }
+        }
+      });
+
+      const missedFrameSliceAffectingSmoothness = newAsyncSliceEx({
+        title: 'PipelineReporter',
+        start: 200,
+        duration: 15,
+        args: {
+          chrome_frame_reporter: {
+            affects_smoothness: true,
+            state: 'STATE_DROPPED'
+          }
+        }
+      });
+
+      const missedFrameSlice = newAsyncSliceEx({
+        title: 'PipelineReporter',
+        start: 200,
+        duration: 15,
+        args: {
+          chrome_frame_reporter: {state: 'STATE_DROPPED'}
+        }
+      });
+
+      m.compositorThread.asyncSliceGroup.push(noArgsFrameSlice);
+      m.compositorThread.asyncSliceGroup.push(submittedFrameSlice);
+      m.compositorThread.asyncSliceGroup.push(missedFrameSliceNotAffectingSmoothness);
+      m.compositorThread.asyncSliceGroup.push(missedFrameSliceAffectingSmoothness);
+      m.compositorThread.asyncSliceGroup.push(missedFrameSlice);
+    }, tr.e.audits.ChromeAuditor);
+
+    assert.strictEqual(m.alerts.length, 1);
+  });
+});
+</script>

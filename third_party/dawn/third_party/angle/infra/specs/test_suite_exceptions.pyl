@@ -1,0 +1,108 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+#
+# For more info see Chromium's test_suite_exceptions.pyl in testing/buildbot.
+
+{
+  'angle_deqp_egl_vulkan_tests': {
+    'remove_from': [
+      # Occasionally hangs the machine http://anglebug.com/368553850
+      'linux-exp-nvidia',
+    ],
+  },
+  'angle_deqp_gles2_d3d11_tests': {
+    'modifications': {
+      # anglebug.com/352528974 suspecting OOM caused by multiprocess
+      'win10-x64-exp-intel': {
+        'args': [
+          '--max-processes=2',
+        ],
+      },
+    },
+  },
+  'angle_end2end_tests': {
+    'modifications': {
+      # anglebug.com/352528974 suspecting OOM caused by multiprocess
+      'win10-x64-exp-intel': {
+        'args': [
+          '--max-processes=2',
+        ],
+        'swarming': {
+          'shards': 3,
+        },
+      },
+      # anglebug.com/40644897 suspecting device lost caused by multiprocess
+      'win10-x64-intel': {
+        'args': [
+          '--max-processes=1',
+        ],
+        'swarming': {
+          'shards': 4,
+        },
+      },
+    },
+  },
+  'angle_perftests': {
+    'modifications': {
+      'android-arm64-pixel6-perf': {
+        'args': [
+          # Custom temp throttling for perf tests on pixel6 b/345514719
+          '--custom-throttling-temp=38',
+        ],
+      },
+    },
+  },
+  'angle_restricted_trace_gold_tests': {
+    'modifications': {
+      # anglebug.com/42263955 flaky 4x8 pixel artifacts on Win Intel
+      'win10-x64-intel': {
+        'args': [
+          '--flaky-retries=1',
+        ],
+      },
+    },
+  },
+  'angle_trace_interpreter_tests': {
+    'remove_from': [
+      # TODO: Implement on Android. http://anglebug.com/42266248
+      'android-arm64-pixel4',
+    ],
+  },
+  'angle_trace_perf_native_tests': {
+    'modifications': {
+      'android-arm64-pixel6-perf': {
+        'args': [
+          # Custom temp throttling for perf tests on pixel6 b/345514719
+          '--custom-throttling-temp=38',
+        ],
+      },
+    },
+  },
+  'angle_trace_perf_vulkan_tests': {
+    'modifications': {
+      'android-arm64-pixel6-perf': {
+        'args': [
+          # Custom temp throttling for perf tests on pixel6 b/345514719
+          '--custom-throttling-temp=38',
+        ],
+      },
+    },
+  },
+  'angle_white_box_tests': {
+    'modifications': {
+      # anglebug.com/40644897 suspecting device lost caused by multiprocess
+      'win10-x64-intel': {
+        'args': [
+          '--max-processes=1',
+        ],
+      },
+    },
+  },
+}

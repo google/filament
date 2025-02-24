@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/v8/runtime_stats_entry.html">
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-e-v8-runtime-call-stats-table'>
+  <template>
+    <style>
+    #table, #blink_rcs_table {
+      flex: 0 0 auto;
+      align-self: stretch;
+      margin-top: 1em;
+      font-size: 12px;
+    }
+
+    #v8_rcs_heading, #blink_rcs_heading {
+        padding-top: 1em;
+        font-size: 18px;
+    }
+    </style>
+    <h1 id="v8_rcs_heading"></h1>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+    <h1 id="blink_rcs_heading"></h1>
+    <tr-ui-b-table id="blink_rcs_table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.v8', function() {
+  const codeSearchURL_ = 'https://cs.chromium.org/search/?sq=package:chromium&type=cs&q=';
+
+  function removeBlinkPrefix_(name) {
+    if (name.startsWith('Blink_')) name = name.substring(6);
+    return name;
+  }
+
+  function handleCodeSearchForV8_(event) {
+    if (event.target.parentNode === undefined) return;
+    let name = event.target.parentNode.entryName;
+    if (name.startsWith('API_')) name = name.substring(4);
+    const url = codeSearchURL_ + encodeURIComponent(name) + '+file:src/v8/src';
+    window.open(url, '_blank');
+  }
+
+  function handleCodeSearchForBlink_(event) {
+    if (event.target.parentNode === undefined) return;
+    const name = event.target.parentNode.entryName;
+    const url = codeSearchURL_ +
+      encodeURIComponent('RuntimeCallStats::CounterId::k' + name) +
+      '+file:src/third_party/WebKit/|src/out/Debug/';
+    window.open(url, '_blank');
+  }
+
+  function createCodeSearchEl_(handleCodeSearch) {
+    const codeSearchEl = document.createElement('span');
+    codeSearchEl.innerText = '?';
+    codeSearchEl.style.float = 'right';
+    codeSearchEl.style.borderRadius = '5px';
+    codeSearchEl.style.backgroundColor = '#EEE';
+    codeSearchEl.addEventListener('click',
+        handleCodeSearch.bind(this));
+    return codeSearchEl;
+  }
+
+  const timeColumn_ = {
+    title: 'Time',
+    value(row) {
+      const typeEl = document.createElement('span');
+      typeEl.innerText = (row.time / 1000.0).toFixed(3) + ' ms';
+      return typeEl;
+    },
+    width: '100px',
+    cmp(a, b) {
+      return a.time - b.time;
+    }
+  };
+
+  const countColumn_ = {
+    title: 'Count',
+    value(row) {
+      const typeEl = document.createElement('span');
+      typeEl.innerText = row.count;
+      return typeEl;
+    },
+    width: '100px',
+    cmp(a, b) {
+      return a.count - b.count;
+    }
+  };
+
+  function percentColumn_(title, totalTime) {
+    return {
+      title,
+      value(row) {
+        const typeEl = document.createElement('span');
+        typeEl.innerText = (row.time / totalTime * 100).toFixed(3) + '%';
+        return typeEl;
+      },
+      width: '100px',
+      cmp(a, b) {
+        return a.time - b.time;
+      }
+    };
+  }
+
+  function nameColumn_(handleCodeSearch, modifyName) {
+    return {
+      title: 'Name',
+      value(row) {
+        const typeEl = document.createElement('span');
+        let name = row.name;
+        if (modifyName) name = modifyName(name);
+        typeEl.innerText = name;
+        if (!(row instanceof tr.e.v8.RuntimeStatsGroup)) {
+          typeEl.title = 'click ? for code search';
+          typeEl.entryName = name;
+          const codeSearchEl = createCodeSearchEl_(handleCodeSearch);
+          typeEl.appendChild(codeSearchEl);
+        }
+        return typeEl;
+      },
+      width: '200px',
+      showExpandButtons: true
+    };
+  }
+
+  function initializeCommonOptions_(table) {
+    table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+    table.sortColumnIndex = 1;
+    table.sortDescending = true;
+    table.subRowsPropertyName = 'values';
+  }
+
+  Polymer({
+    is: 'tr-ui-e-v8-runtime-call-stats-table',
+
+    ready() {
+      this.table_ = this.$.table;
+      this.blink_rcs_table_ = this.$.blink_rcs_table;
+      this.totalTime_ = 0;
+    },
+
+    constructV8RCSTable_(totalTime) {
+      this.table_.tableColumns = [
+        nameColumn_(handleCodeSearchForV8_),
+        timeColumn_,
+        countColumn_,
+        percentColumn_('Percent', totalTime)
+      ];
+
+      initializeCommonOptions_(this.table_);
+    },
+
+    constructBlinkRCSTable_(blinkCppTotalTime) {
+      this.blink_rcs_table_.tableColumns = [
+        nameColumn_(handleCodeSearchForBlink_, removeBlinkPrefix_),
+        timeColumn_,
+        countColumn_,
+        percentColumn_('Percent (of \'Blink C++\' + \'API\')',
+            blinkCppTotalTime)
+      ];
+
+      initializeCommonOptions_(this.blink_rcs_table_);
+    },
+
+    set slices(slices) {
+      const runtimeGroupCollection = new tr.e.v8.RuntimeStatsGroupCollection();
+      runtimeGroupCollection.addSlices(slices);
+      if (runtimeGroupCollection.totalTime > 0) {
+        this.$.v8_rcs_heading.textContent = 'V8 Runtime Call Stats';
+        this.constructV8RCSTable_(runtimeGroupCollection.totalTime);
+        this.table_.tableRows = runtimeGroupCollection.runtimeGroups;
+        this.table_.rebuild();
+      }
+
+      const blinkRCSGroupCollection =
+        runtimeGroupCollection.blinkRCSGroupCollection;
+      if (runtimeGroupCollection.blinkCppTotalTime > 0 &&
+          blinkRCSGroupCollection.totalTime > 0) {
+        this.$.blink_rcs_heading.textContent = 'Blink Runtime Call Stats';
+        this.constructBlinkRCSTable_(runtimeGroupCollection.blinkCppTotalTime);
+        this.blink_rcs_table_.tableRows = blinkRCSGroupCollection.runtimeGroups;
+        this.blink_rcs_table_.rebuild();
+      }
+    }
+  });
+
+  return {};
+});
+</script>

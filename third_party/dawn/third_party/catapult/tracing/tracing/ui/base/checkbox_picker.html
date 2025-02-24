@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/checkbox.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id='tr-ui-b-checkbox-picker'>
+  <template>
+    <style>
+    #container {
+      display: flex;
+      flex-direction: column;
+    }
+    </style>
+
+    <div id="container">
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-checkbox-picker',
+  created() {
+    this.needsInit_ = true;
+    this.settingsKey_ = undefined;
+    this.is_ready_ = false;
+    this.checkboxes_ = undefined;
+  },
+
+  ready() {
+    this.is_ready_ = true;
+    this.maybeInit_();
+    this.maybeRenderCheckboxes_();
+  },
+
+  get settingsKey() {
+    return this.settingsKey_;
+  },
+
+  set settingsKey(settingsKey) {
+    if (!this.needsInit_) {
+      throw new Error('Already initialized.');
+    }
+    this.settingsKey_ = settingsKey;
+    this.maybeInit_();
+  },
+
+  maybeInit_() {
+    if (!this.needsInit_) return;
+    if (this.settingsKey_ === undefined) return;
+    if (this.checkboxes_ === undefined) return;
+
+    this.needsInit_ = false;
+
+    for (const key in this.checkboxes_) {
+      this.checkboxes_[key].defaultCheckedValue = false;
+      this.checkboxes_[key].settingsKey = this.settingsKey_ + key;
+    }
+  },
+
+  set items(items) {
+    this.checkboxes_ = {};
+    items.forEach(function(e) {
+      if (e.key in this.checkboxes_) {
+        throw new Error(e.key + ' already exists');
+      }
+      const checkboxEl = document.createElement('tr-ui-b-checkbox');
+      checkboxEl.label = e.label;
+      this.checkboxes_[e.key] = checkboxEl;
+    }.bind(this));
+    this.maybeInit_();
+    this.maybeRenderCheckboxes_();
+  },
+
+  maybeRenderCheckboxes_() {
+    if (!this.is_ready_) return;
+    if (this.checkboxes_ === undefined) return;
+    for (const key in this.checkboxes_) {
+      Polymer.dom(this.$.container).appendChild(this.checkboxes_[key]);
+    }
+  },
+
+  selectCheckbox(key) {
+    if (!(key in this.checkboxes_)) {
+      throw new Error(key + ' does not exists');
+    }
+    this.checkboxes_[key].checked = true;
+  },
+
+  unselectCheckbox(key) {
+    if (!(key in this.checkboxes_)) {
+      throw new Error(key + ' does not exists');
+    }
+    this.checkboxes_[key].checked = false;
+  },
+
+  get checkedKeys() {
+    return Object.keys(this.checkboxes_).filter(function(k) {
+      return this.checkboxes_[k].checked;
+    }.bind(this));
+  }
+});
+</script>

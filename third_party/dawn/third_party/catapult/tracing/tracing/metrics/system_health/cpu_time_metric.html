@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_renderer_helper.html">
+<link rel="import" href="/tracing/value/diagnostics/alert_groups.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  // Use a lower bound of 0.01 for the metric boundaries (when no CPU time
+  // is consumed) and an upper bound of 50 (fifty cores are all active
+  // for the entire time). We can't use zero exactly for the lower bound with an
+  // exponential histogram.
+  const CPU_TIME_PERCENTAGE_BOUNDARIES =
+      tr.v.HistogramBinBoundaries.createExponential(0.01, 50, 200);
+
+  /**
+   * This metric measures total CPU time for Chrome processes, per second of
+   *   clock time.
+   * This metric requires only the 'toplevel' tracing category.
+   *
+   * @param {!tr.v.HistogramSet} histograms
+   * @param {!tr.model.Model} model
+   * @param {!Object=} opt_options
+   */
+  function cpuTimeMetric(histograms, model, opt_options) {
+    let rangeOfInterest = model.bounds;
+
+    if (opt_options && opt_options.rangeOfInterest) {
+      rangeOfInterest = opt_options.rangeOfInterest;
+    } else {
+      // If no range of interest is provided, limit the relevant range to
+      // Chrome processes. This prevents us from normalizing against non-Chrome
+      // related slices in the trace.
+      const chromeHelper = model.getOrCreateHelper(
+          tr.model.helpers.ChromeModelHelper);
+      if (chromeHelper) {
+        const chromeBounds = chromeHelper.chromeBounds;
+        if (chromeBounds) {
+          rangeOfInterest = chromeBounds;
+        }
+      }
+    }
+
+    let allProcessCpuTime = 0;
+
+    for (const pid in model.processes) {
+      const process = model.processes[pid];
+      if (tr.model.helpers.ChromeRendererHelper.isTracingProcess(process)) {
+        continue;
+      }
+
+      let processCpuTime = 0;
+      for (const tid in process.threads) {
+        const thread = process.threads[tid];
+        processCpuTime += thread.getCpuTimeForRange(rangeOfInterest);
+      }
+      allProcessCpuTime += processCpuTime;
+    }
+
+    // Normalize cpu time by clock time.
+    let normalizedAllProcessCpuTime = 0;
+    if (rangeOfInterest.duration > 0) {
+      normalizedAllProcessCpuTime =
+          allProcessCpuTime / rangeOfInterest.duration;
+    }
+
+    const unit = tr.b.Unit.byName.normalizedPercentage_smallerIsBetter;
+    const cpuTimeHist = new tr.v.Histogram(
+        'cpu_time_percentage', unit, CPU_TIME_PERCENTAGE_BOUNDARIES);
+    cpuTimeHist.description =
+        'Percent CPU utilization, normalized against a single core. Can be ' +
+        'greater than 100% if machine has multiple cores.';
+    cpuTimeHist.setAlertGrouping([tr.v.d.ALERT_GROUPS.CPU_USAGE]);
+    cpuTimeHist.customizeSummaryOptions({
+      avg: true,
+      count: false,
+      max: false,
+      min: false,
+      std: false,
+      sum: false
+    });
+    cpuTimeHist.addSample(normalizedAllProcessCpuTime);
+    histograms.addHistogram(cpuTimeHist);
+  }
+
+  tr.metrics.MetricRegistry.register(cpuTimeMetric, {
+    supportsRangeOfInterest: true
+  });
+
+  return {
+    cpuTimeMetric,
+  };
+});
+</script>

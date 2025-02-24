@@ -1,0 +1,11 @@
+Name: astc-encoder
+Short Name: astc-encoder
+URL: https://github.com/ARM-software/astc-encoder
+Version: 573c475389bf51d16a5c3fc8348092e094e50e8f
+Security Critical: no
+Shipped: yes
+License: Apache-2.0
+License File: src/LICENSE.txt
+
+Description:
+This is the official repository for the Arm ASTC Encoder, a texture compressor for the Adaptive Scalable Texture Compression data format.

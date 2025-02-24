@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/base64.html">
+<script>
+
+'use strict';
+
+/**
+ * A devtools protocol stream object.
+ *
+ * This reads a stream of data over the remote debugging connection.
+ */
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  class DevtoolsStream {
+    constructor(connection, streamHandle) {
+      this.connection_ = connection;
+      this.streamHandle_ = streamHandle;
+      this.closed_ = false;
+    }
+
+    async read() {
+      if (this.closed_) {
+        throw new Error('stream is closed');
+      }
+
+      const pendingRequests = [];
+
+      const READ_REQUEST_BYTES = 32768;
+      const makeRequest = () => {
+        pendingRequests.push(this.connection_.req(
+            'IO.read',
+            {
+              handle: this.streamHandle_,
+              size: READ_REQUEST_BYTES,
+            }));
+      };
+
+      const MAX_CONCURRENT_REQUESTS = 2;
+      for (let i = 0; i < MAX_CONCURRENT_REQUESTS; ++i) {
+        makeRequest();
+      }
+
+      const chunks = [];
+      let base64 = false;
+      while (true) {
+        const request = pendingRequests.shift();
+        const response = await request;
+
+        chunks.push(response.data);
+        if (response.base64Encoded) {
+          base64 = true;
+        }
+        if (response.eof) {
+          break;
+        }
+
+        makeRequest();
+      }
+
+      if (base64) {
+        let totalSize = 0;
+        for (const chunk of chunks) {
+          totalSize += tr.b.Base64.getDecodedBufferLength(chunk);
+        }
+        const buffer = new ArrayBuffer(totalSize);
+        let offset = 0;
+        for (const chunk of chunks) {
+          offset += tr.b.Base64.DecodeToTypedArray(
+              chunk,
+              new DataView(buffer, offset));
+        }
+        return buffer;
+      }
+
+      return chunks.join('');
+    }
+
+    close() {
+      this.closed_ = true;
+      return this.connection_.req('IO.close', { handle: this.streamHandle_ });
+    }
+
+    async readAndClose() {
+      const data = await this.read();
+      this.close();
+      return data;
+    }
+  }
+
+  return {
+    DevtoolsStream,
+  };
+});
+</script>

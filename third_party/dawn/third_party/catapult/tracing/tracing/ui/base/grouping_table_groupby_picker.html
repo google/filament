@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/dropdown.html">
+
+<dom-module id='tr-ui-b-grouping-table-groupby-picker'>
+  <template>
+    <style>
+    #container {
+      display: flex;
+    }
+    #container *:not(:first-child) {
+      padding-left: 3px;
+      border-left: 1px solid black;
+      margin-left: 3px;
+    }
+    </style>
+
+    <div id="container"></div>
+  </template>
+</dom-module>
+
+<dom-module id="tr-ui-b-grouping-table-groupby-picker-group">
+  <template>
+    <style>
+    :host {
+      white-space: nowrap;
+    }
+    #left, #right {
+      user-select: none;
+      cursor: pointer;
+    }
+    </style>
+
+    <span id="left" on-click="moveLeft_">&#9664;</span>
+    <input type="checkbox" id="enabled" on-change="onEnableChanged_">
+    <label for="enabled" id="label"></label>
+    <span id="right" on-click="moveRight_">&#9654;</span>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+
+  Polymer({
+    is: 'tr-ui-b-grouping-table-groupby-picker-group',
+
+    created() {
+      this.picker_ = undefined;
+      this.group_ = undefined;
+    },
+
+    get picker() {
+      return this.picker_;
+    },
+
+    set picker(picker) {
+      this.picker_ = picker;
+    },
+
+    get group() {
+      return this.group_;
+    },
+
+    set group(g) {
+      this.group_ = g;
+      this.$.label.textContent = g.label;
+    },
+
+    get enabled() {
+      return this.$.enabled.checked;
+    },
+
+    set enabled(enabled) {
+      this.$.enabled.checked = enabled;
+      if (!this.enabled) {
+        this.$.left.style.display = 'none';
+        this.$.right.style.display = 'none';
+      }
+    },
+
+    set isFirst(isFirst) {
+      this.$.left.style.display = (!this.enabled || isFirst) ? 'none' :
+        'inline';
+    },
+
+    set isLast(isLast) {
+      this.$.right.style.display = (!this.enabled || isLast) ? 'none' :
+        'inline';
+    },
+
+    moveLeft_() {
+      this.picker.moveLeft_(this);
+    },
+
+    moveRight_() {
+      this.picker.moveRight_(this);
+    },
+
+    onEnableChanged_() {
+      if (!this.enabled) {
+        this.$.left.style.display = 'none';
+        this.$.right.style.display = 'none';
+      }
+      this.picker.onEnableChanged_(this);
+    }
+  });
+
+  Polymer({
+    is: 'tr-ui-b-grouping-table-groupby-picker',
+
+    created() {
+      this.settingsKey_ = undefined;
+    },
+
+    get settingsKey() {
+      return this.settingsKey_;
+    },
+
+    set settingsKey(settingsKey) {
+      this.settingsKey_ = settingsKey;
+      if (this.$.container.children.length) {
+        this.restoreSetting_();
+      }
+    },
+
+    restoreSetting_() {
+      if (this.settingsKey_ === undefined) return;
+      this.currentGroupKeys = tr.b.Settings.get(this.settingsKey_,
+          this.currentGroupKeys);
+    },
+
+    get possibleGroups() {
+      return Array.from(this.$.container.children).map(
+          groupEl => groupEl.group);
+    },
+
+    set possibleGroups(possibleGroups) {
+      Polymer.dom(this.$.container).textContent = '';
+      for (let i = 0; i < possibleGroups.length; ++i) {
+        const groupEl = document.createElement(
+            'tr-ui-b-grouping-table-groupby-picker-group');
+        groupEl.picker = this;
+        groupEl.group = possibleGroups[i];
+        Polymer.dom(this.$.container).appendChild(groupEl);
+      }
+      this.restoreSetting_();
+      this.updateFirstLast_();
+    },
+
+    updateFirstLast_() {
+      const groupEls = Array.from(this.$.container.children);
+      const enabledGroupEls = groupEls.filter(el => el.enabled);
+      for (let i = 0; i < enabledGroupEls.length; ++i) {
+        enabledGroupEls[i].isFirst = i === 0;
+        enabledGroupEls[i].isLast = i === enabledGroupEls.length - 1;
+      }
+    },
+
+    get currentGroupKeys() {
+      return this.currentGroups.map(group => group.key);
+    },
+
+    get currentGroups() {
+      const groups = [];
+      for (const groupEl of Array.from(this.$.container.children)) {
+        if (groupEl.enabled) {
+          groups.push(groupEl.group);
+        }
+      }
+      return groups;
+    },
+
+    set currentGroupKeys(newKeys) {
+      if (!tr.b.compareArrays(this.currentGroupKeys, newKeys,
+          (x, y) => x.localeCompare(y))) {
+        return;
+      }
+
+      const possibleGroups = new Map();
+      for (const group of this.possibleGroups) {
+        possibleGroups.set(group.key, group);
+      }
+
+      const groupEls = this.$.container.children;
+
+      let i = 0;
+      for (i = 0; i < newKeys.length; ++i) {
+        const group = possibleGroups.get(newKeys[i]);
+        if (group === undefined) {
+          newKeys.splice(i, 1);
+          --i;
+          continue;
+        }
+        groupEls[i].group = group;
+        groupEls[i].enabled = true;
+        possibleGroups.delete(newKeys[i]);
+      }
+
+      for (const group of possibleGroups.values()) {
+        groupEls[i].group = group;
+        groupEls[i].enabled = false;
+        ++i;
+      }
+
+      this.updateFirstLast_();
+      this.onCurrentGroupsChanged_();
+    },
+
+    moveLeft_(groupEl) {
+      const reference = groupEl.previousSibling;
+      Polymer.dom(this.$.container).removeChild(groupEl);
+      Polymer.dom(this.$.container).insertBefore(groupEl, reference);
+      this.updateFirstLast_();
+
+      if (groupEl.enabled) {
+        this.onCurrentGroupsChanged_();
+      }
+    },
+
+    moveRight_(groupEl) {
+      const reference = groupEl.nextSibling.nextSibling;
+      Polymer.dom(this.$.container).removeChild(groupEl);
+      if (reference) {
+        Polymer.dom(this.$.container).insertBefore(groupEl, reference);
+      } else {
+        Polymer.dom(this.$.container).appendChild(groupEl);
+      }
+      this.updateFirstLast_();
+
+      if (groupEl.enabled) {
+        this.onCurrentGroupsChanged_();
+      }
+    },
+
+    onCurrentGroupsChanged_() {
+      this.dispatchEvent(new tr.b.Event('current-groups-changed'));
+      tr.b.Settings.set(this.settingsKey_, this.currentGroupKeys);
+    },
+
+    onEnableChanged_(groupEl) {
+      this.updateFirstLast_();
+      this.onCurrentGroupsChanged_();
+    }
+  });
+
+  return {
+  };
+});
+</script>

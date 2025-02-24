@@ -1,0 +1,55 @@
+<b>📍 {% if differences|length == 1 -%}
+Found a significant difference at 1 commit
+{%- else -%}
+Found significant differences at {{ differences|length }} commits
+{%- endif -%}
+.</b>
+{%- if not examined_count is none %}
+{% if examined_count == 1 -%}
+1 revision
+{%- else -%}
+{{ examined_count }} revisions
+{%- endif %} compared.{% endif %}
+{{url}}
+
+{% if differences|length != 1 -%}
+The top {{ differences[:3]|length }} are:
+
+{% endif -%}
+
+{% for diff in differences[:3] -%}
+<b>{% if differences|length != 1 -%}{{ loop.index }}. {% endif -%}
+{{ diff.commit_info['subject'] }}</b> by {{ diff.commit_info['author'] }}
+{{ diff.commit_info['url'] }}
+{% if metric %}{{ metric }}: {% endif -%}
+{{ diff.Formatted() }}
+{%- if not loop.last %}
+{% endif %}
+{% endfor -%}
+{% if notify_why_text %}
+{{ notify_why_text }}
+{% endif %}
+Understanding performance regressions:
+  http://g.co/ChromePerformanceRegressions
+{%- if differences %}{{doc_links}}{%- endif %}
+
+You can view the full results and re-run the Pinpoint job at:
+
+{{url}}
+
+If you think Pinpoint blamed the wrong commit, please add issue to
+`Chromeperf-CulpritDetection-NeedsAttention` (hotlist:5670048) and
+unassign yourself so that a sheriff can help diagnose.
+{% if missing_values|length > 0 -%}
+
+NOTE: Pinpoint detected some transitions from "no values" to "some values"
+measured while bisecting. Here's a list of {{missing_values[:3]|length}}:
+{% for diff in missing_values[:3] -%}
+<b>{{ diff.commit_info['subject'] }}</b> by {{ diff.commit_info['author'] }}
+{{ diff.commit_info['url'] }}
+{% if metric %}{{ metric }}: {% endif -%}
+{{ diff.Formatted() }}
+{%- if not loop.last %}
+{% endif %}
+{% endfor -%}
+{% endif -%}

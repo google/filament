@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+/**
+ * @fileoverview Blah.
+ */
+'use strict';
+
+tr.exportTo('tr.e.importer.ddms', function() {
+  const kPid = 0;
+  const kCategory = 'java';
+  const kMethodLutEndMarker = '\n*end\n';
+  const kThreadsStart = '\n*threads\n';
+  const kMethodsStart = '\n*methods\n';
+
+  const kTraceMethodEnter = 0x00;       // method entry
+  const kTraceMethodExit = 0x01;        // method exit
+  const kTraceUnroll = 0x02;            // method exited by exception unrolling
+  // 0x03 currently unused
+  const kTraceMethodActionMask = 0x03;  // two bits
+
+  const kTraceHeaderLength = 32;
+  const kTraceMagicValue = 0x574f4c53;
+  const kTraceVersionSingleClock = 2;
+  const kTraceVersionDualClock = 3;
+  const kTraceRecordSizeSingleClock = 10;  // using v2
+  const kTraceRecordSizeDualClock = 14;  // using v3 with two timestamps
+
+  function Reader(stringPayload) {
+    this.position_ = 0;
+    this.data_ = new Uint8Array(stringPayload.length);
+    for (let i = 0; i < stringPayload.length; ++i) {
+      this.data_[i] = stringPayload.charCodeAt(i);
+    }
+  }
+
+  Reader.prototype = {
+    __proto__: Object.prototype,
+
+    uint8() {
+      const result = this.data_[this.position_];
+      this.position_ += 1;
+      return result;
+    },
+
+    uint16() {
+      let result = 0;
+      result += this.uint8();
+      result += this.uint8() << 8;
+      return result;
+    },
+
+    uint32() {
+      let result = 0;
+      result += this.uint8();
+      result += this.uint8() << 8;
+      result += this.uint8() << 16;
+      result += this.uint8() << 24;
+      return result;
+    },
+
+    uint64() {
+      // Javascript isn't able to manage 64-bit numeric values.
+      const low = this.uint32();
+      const high = this.uint32();
+      const lowStr = ('0000000' + low.toString(16)).substr(-8);
+      const highStr = ('0000000' + high.toString(16)).substr(-8);
+      const result = highStr + lowStr;
+      return result;
+    },
+
+    seekTo(position) {
+      this.position_ = position;
+    },
+
+    hasMore() {
+      return this.position_ < this.data_.length;
+    }
+  };
+
+  /**
+   * Imports DDMS method tracing events into a specified model.
+   * @constructor
+   */
+  function DdmsImporter(model, data) {
+    this.importPriority = 3;
+    this.model_ = model;
+    this.data_ = data;
+  }
+
+  /**
+   * Guesses whether the provided events is from a DDMS method trace.
+   * @return {boolean} True when events is a DDMS method trace.
+   */
+  DdmsImporter.canImport = function(data) {
+    if (typeof(data) === 'string' || data instanceof String) {
+      const header = data.slice(0, 1000);
+      return header.startsWith('*version\n') &&
+        header.indexOf('\nvm=') >= 0 &&
+        header.indexOf(kThreadsStart) >= 0;
+    }
+    /* key bit */
+    return false;
+  };
+
+  DdmsImporter.prototype = {
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'DdmsImporter';
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    /**
+     * Imports the data in this.data_ into this.model_.
+     */
+    importEvents() {
+      const divider = this.data_.indexOf(kMethodLutEndMarker) +
+          kMethodLutEndMarker.length;
+      this.metadata_ = this.data_.slice(0, divider);
+      this.methods_ = {};
+      this.parseThreads();
+      this.parseMethods();
+
+      const traceReader = new Reader(this.data_.slice(divider));
+      const magic = traceReader.uint32();
+      if (magic !== kTraceMagicValue) {
+        throw Error('Failed to match magic value');
+      }
+      this.version_ = traceReader.uint16();
+      if (this.version_ !== kTraceVersionDualClock) {
+        throw Error('Unknown version');
+      }
+      const dataOffest = traceReader.uint16();
+      const startDateTime = traceReader.uint64();
+      const recordSize = traceReader.uint16();
+
+      traceReader.seekTo(dataOffest);
+
+      while (traceReader.hasMore()) {
+        this.parseTraceEntry(traceReader);
+      }
+    },
+
+    parseTraceEntry(reader) {
+      const tid = reader.uint16();
+      const methodPacked = reader.uint32();
+      const cpuSinceStart = reader.uint32();
+      const wallClockSinceStart = reader.uint32();
+      let method = methodPacked & ~kTraceMethodActionMask;
+      const action = methodPacked & kTraceMethodActionMask;
+      const thread = this.getTid(tid);
+      method = this.getMethodName(method);
+      if (action === kTraceMethodEnter) {
+        thread.sliceGroup.beginSlice(kCategory, method, wallClockSinceStart,
+            undefined, cpuSinceStart);
+      } else if (thread.sliceGroup.openSliceCount) {
+        thread.sliceGroup.endSlice(wallClockSinceStart, cpuSinceStart);
+      }
+    },
+
+    parseThreads() {
+      let threads = this.metadata_.slice(this.metadata_.indexOf(kThreadsStart) +
+          kThreadsStart.length);
+      threads = threads.slice(0, threads.indexOf('\n*'));
+      threads = threads.split('\n');
+      threads.forEach(this.parseThread.bind(this));
+    },
+
+    parseThread(threadLine) {
+      const tid = threadLine.slice(0, threadLine.indexOf('\t'));
+      const thread = this.getTid(parseInt(tid));
+      thread.name = threadLine.slice(threadLine.indexOf('\t') + 1);
+    },
+
+    getTid(tid) {
+      return this.model_.getOrCreateProcess(kPid)
+          .getOrCreateThread(tid);
+    },
+
+    parseMethods() {
+      let methods = this.metadata_.slice(this.metadata_.indexOf(kMethodsStart) +
+          kMethodsStart.length);
+      methods = methods.slice(0, methods.indexOf('\n*'));
+      methods = methods.split('\n');
+      methods.forEach(this.parseMethod.bind(this));
+    },
+
+    parseMethod(methodLine) {
+      const data = methodLine.split('\t');
+      const methodId = parseInt(data[0]);
+      const methodName = data[1] + '.' + data[2] + data[3];
+      this.addMethod(methodId, methodName);
+    },
+
+    addMethod(methodId, methodName) {
+      this.methods_[methodId] = methodName;
+    },
+
+    getMethodName(methodId) {
+      return this.methods_[methodId];
+    }
+  };
+
+  // Register the DdmsImporter to the Importer.
+  tr.importer.Importer.register(DdmsImporter);
+
+  return {
+    DdmsImporter,
+  };
+});
+</script>

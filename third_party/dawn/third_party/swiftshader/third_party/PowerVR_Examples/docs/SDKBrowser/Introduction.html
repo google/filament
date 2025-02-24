@@ -1,0 +1,167 @@
+
+
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The PowerVR SDK &#8212; PowerVR SDK Browser  documentation</title>
+    <link rel="stylesheet" href="_static/img_style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/img_style.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Build Instructions" href="Build.html" />
+    <link rel="prev" title="Contents" href="index.html" />
+<div id="GlobalHeaderContainer">
+		<div id="GlobalHeader">
+			<div class="logo">
+				<a href="https://www.imgtec.com/developers/" target="_blank"><img src="_static/PVRlogo.png"/></a>
+            </div>
+			<div class="sitetitle"> PowerVR SDK Browser </div>
+		</div>
+</div>
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="Build.html" title="Build Instructions"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="index.html" title="Contents"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PowerVR SDK Browser  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The PowerVR SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Build.html">Build Instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Framework.html">PowerVR SDK Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ExamplesVulkan.html">Vulkan Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SDK_Documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Licence.html">EULA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Contact.html">Contact Us</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="figure align-default">
+<img alt="_images/WelcomeGraphic.png" src="_images/WelcomeGraphic.png" />
+</div>
+<div class="section" id="the-powervr-sdk">
+<h1>The PowerVR SDK<a class="headerlink" href="#the-powervr-sdk" title="Permalink to this headline">¶</a></h1>
+<p>The PowerVR SDK is an open source codebase to help with the development of graphics applications for PowerVR and other platforms.
+It consists of two main parts: the Framework and a set of examples.</p>
+<p>The Framework is a collection of libraries that aim to make development of OpenGL ES and Vulkan real-time applications much easier by removing boilerplate code and enhancing productivity. It can be used to easily create the lowest-level parts of a graphics engine - the main loop, platform abstraction, and graphical utilities. There are even a couple of
+examples showing how it is possible to build a pseudo-engine on top of the Vulkan Framework using our PVRPfx library.</p>
+<p>The Framework is intended to reduce the amount of boilerplate code in an application. This allows a developer to focus on the key graphics API calls for drawing to screen rather than standard application setup.</p>
+<p>The examples themselves are mostly code samples intended to:</p>
+<ul class="simple">
+<li><p>Show the basics of OpenGL ES and Vulkan, with the HelloAPI and IntroducingPVRShell examples.</p></li>
+<li><p>Demonstrate optimal implementations for techniques relevant for PowerVR, such as our DeferredShading with Pixel Local Storage/transient attachments, or our Gaussian Blur using a Sliding Average compute shader for reducing bandwidth.</p></li>
+<li><p>Demonstrate how to use important extensions that may improve performance, PowerVR specific or otherwise, such as IMGFramebufferDownsample and IMGTextureFilterCubic.</p></li>
+</ul>
+<p>The examples are built on top of the Framework and optimised so that only the relevant code is left. The examples range from setting up a simple application using the Framework to implementing more advanced graphics techniques, such as physically-based rendering.
+Examples are available using Vulkan, OpenGL ES, and OpenCL.</p>
+<p>Developers can interact with our online Community at <a class="reference external" href="https://www.imgtec.com/developers/">www.imgtec.com/developers</a>.</p>
+<div class="section" id="graphics-drivers">
+<h2>Graphics Drivers<a class="headerlink" href="#graphics-drivers" title="Permalink to this headline">¶</a></h2>
+<p>The PowerVR SDK does not provide OpenGL ES or Vulkan API system libraries. Please ask the platform provider for these libraries if they are not present.
+PVRVFrame is provided for platforms without native support for OpenGL ES but where OpenGL is supported.</p>
+</div>
+<div class="section" id="building">
+<h2>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h2>
+<p>The PowerVR SDK uses CMake for building for any platform, and additionally uses Gradle when building for Android.
+To build the SDK navigate to the root of the SDK or alternatively to the root folder for any example, create a cmake binary directory, and run CMake from this created folder.
+For Android, navigate to the <code class="docutils literal notranslate"><span class="pre">build-android</span></code> folder of the item to build, and run the platform specific Gradle wrapper script provided (gradlew.bat/gradlew.sh).</p>
+<p>For detailed instructions for building the SDK, see <a class="reference external" href="Build.html">here</a>.</p>
+</div>
+<div class="section" id="pvrvframe">
+<h2>PVRVFrame<a class="headerlink" href="#pvrvframe" title="Permalink to this headline">¶</a></h2>
+<p>PVRVFrame is included as part of the PowerVR SDK and provides a set of desktop emulation libraries for OpenGL ES wrapping desktop OpenGL allowing deployment of OpenGL ES applications on desktop Windows, macOS, and Linux which can help to speed up development times and improve productivity.
+<strong>*Note:</strong> As  PVRVFrame provides an OpenGL ES wrapper for desktop OpenGL performance and capabilities depend on the 3D acceleration present in the system.
+<strong>*Note:</strong> The PVRVFrame libraries are not intended to be a completely accurate replication of the behaviour of PowerVR hardware.</p>
+<ul class="simple">
+<li><p>The PVRVFrame libraries can be found pre-installed in the <code class="docutils literal notranslate"><span class="pre">[path-to-sdk]/libs</span></code> folder.</p></li>
+<li><p>If the SDK was installed using the PowerVR SDK installer, the PVRVFrame emulation libraries may already be present in the PATH environment variable if this was requested during installation.</p></li>
+<li><p>Otherwise, the PVRVFrame libraries can be manually added to the PATH or can be copied to a DLL-accessible directory prior to running the SDK applications - This may be anywhere in the path, next to the executable, system default folders etc.</p></li>
+</ul>
+<p><strong>*Note:</strong> To install PVRVFrame system-wide on Windows and run both 32 and 64-bit builds using the PVRVFrame libraries, copy the 64-bit version to <code class="docutils literal notranslate"><span class="pre">%windir%\System32</span></code> and the 32-bit version to <code class="docutils literal notranslate"><span class="pre">%windir%\SysWOW64</span></code> so that they are automatically selected by the corresponding applications. Otherwise, it may be necessary to manually modify the path based on which architecture needs to be run. For instance, if the 32-bit libraries are in the PATH, 64-bit applications cannot be run and vice versa.</p>
+<p>The PVRVFrame library filenames are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">libEGL.dll</span></code>     (EGL)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">libGLES_CM.dll</span></code> (OpenGL ES 1.x)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">libGLESv2.dll</span></code>  (OpenGL ES 2.0 and 3.x)</p></li>
+</ul>
+</div>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>The PowerVR SDK has a number of third-party dependencies, each of which may have their own license:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/g-truc/glm">glm</a>: OpenGL Mathematics</p></li>
+<li><p><a class="reference external" href="https://github.com/zeux/pugixml">pugixml</a>: Light-weight, simple and fast XML parser for C++ with XPath support</p></li>
+<li><p><a class="reference external" href="https://github.com/cameron314/concurrentqueue">concurrentqueue</a>: A fast multi-producer, multi-consumer lock-free concurrent queue for C++11</p></li>
+<li><p><a class="reference external" href="https://github.com/KhronosGroup/glslang">glslang</a>: Shader front end and validator</p></li>
+<li><p><a class="reference external" href="https://github.com/syoyo/tinygltf">tinygltf</a>: Header only C++11 tiny glTF 2.0 library</p></li>
+<li><p><a class="reference external" href="https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator">vma</a>: Vulkan Memory Allocator</p></li>
+<li><p><a class="reference external" href="https://github.com/KhronosGroup/Vulkan-Docs">vulkan</a>: Sources for the formal documentation of the Vulkan API</p></li>
+</ul>
+</div>
+<div class="section" id="release-notes">
+<h2>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h2>
+<p>For the latest version of the Release Notes detailing what has changed in this release, please visit <a class="reference external" href="https://www.imgtec.com/developers/powervr-sdk-tools/whats-new/">Release Notes</a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="Build.html" title="Build Instructions"
+             >next</a></li>
+        <li class="right" >
+          <a href="index.html" title="Contents"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PowerVR SDK Browser  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<div id="FooterMainContainer">
+    <div id="FooterContainer">
+		<div class="footerlogo">
+			<a href="http://www.imgtec.com" target="_blank"><img src="_static/img-footer-logo-grey.png" width="25%" height="50%" /></a>
+		</div>
+	<div class="copyright">&copy; Imagination Technologies Limited<br> All rights reserved</div>
+	</div>
+</div>
+  </body>
+</html>

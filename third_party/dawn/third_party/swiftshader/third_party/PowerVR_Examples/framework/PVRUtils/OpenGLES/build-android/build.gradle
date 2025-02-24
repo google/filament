@@ -1,0 +1,72 @@
+apply plugin: 'com.android.library'
+
+def projectDependencies = ["PVRCore", "PVRAssets"]
+
+android {
+	compileSdkVersion 28
+	defaultConfig {
+		minSdkVersion 21
+		targetSdkVersion 26
+		versionCode 1
+		versionName "1.0"
+		externalNativeBuild {
+			cmake {
+				cppFlags "-fexceptions"
+				arguments "-DANDROID_STL=c++_static", "-DPVR_PREBUILT_DEPENDENCIES=ON"
+				targets "PVRUtilsGles"
+			}
+		}
+		ndk
+		{
+			abiFilters "$ANDROID_ABI".replace(" ", "").split(",")
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../CMakeLists.txt"
+			version "3.10.2"
+		}
+	}
+}
+
+tasks.whenTaskAdded { task ->
+	// We add a dependency on all projects dependencies corresponding externalNativeBuild tasks
+	if (task.name.startsWith('generateJsonModel')) {
+		def flavor = task.name.substring('generateJsonModel'.length()) // generateJsonModelDebug -> Debug
+		projectDependencies.each {s -> task.dependsOn ":${s}:externalNativeBuild${flavor}" }
+	}
+
+	// We want to be able to build with the "assembleDebug" and "assembleRelease" commands on the entire SDK:
+	// We replace these tasks with basically dependencies on the native builds to generate the native library
+	if (task.name.startsWith('assemble') || task.name.startsWith('verify')) {
+		if (task.name.startsWith('assemble')){
+			tasks['assemble'].actions.clear()
+			tasks['assemble'].dependsOn.clear()
+			task.actions.clear() // For verify, this is dummy
+			task.dependsOn.clear()
+
+			def flavor = task.name.substring('assemble'.length())
+			tasks["assemble${flavor}"].dependsOn = ["externalNativeBuild${flavor}"]
+		}
+		else{
+			task.enabled = false
+		}
+	}
+}
+
+buildscript {
+	repositories {
+		google()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:3.5.3'
+	}
+}
+
+allprojects {
+	repositories {
+		google()
+		jcenter()
+	}
+}

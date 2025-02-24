@@ -1,0 +1,449 @@
+{
+    "description": [
+        "Copyright 2022 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "mtl_features.json: Optional features for the Metal renderer."
+    ],
+    "features": [
+        {
+            "name": "has_base_vertex_instanced_draw",
+            "category": "Features",
+            "description": [
+                "The renderer supports base vertex instanced draw"
+            ]
+        },
+        {
+            "name": "has_explicit_mem_barrier",
+            "category": "Features",
+            "description": [
+                "The renderer supports explicit memory barrier"
+            ]
+        },
+        {
+            "name": "has_cheap_render_pass",
+            "category": "Features",
+            "description": [
+                "The renderer can cheaply break a render pass."
+            ]
+        },
+        {
+            "name": "has_non_uniform_dispatch",
+            "category": "Features",
+            "description": [
+                "The renderer supports non uniform compute shader dispatch's group size"
+            ]
+        },
+        {
+            "name": "has_shader_stencil_output",
+            "category": "Features",
+            "description": [
+                "The renderer supports stencil output from fragment shader"
+            ]
+        },
+        {
+            "name": "has_texture_swizzle",
+            "category": "Features",
+            "description": [
+                "The renderer supports texture swizzle"
+            ]
+        },
+        {
+            "name": "has_depth_auto_resolve",
+            "category": "Features",
+            "description": [
+                "The renderer supports MSAA depth auto resolve at the end of render pass"
+            ]
+        },
+        {
+            "name": "has_stencil_auto_resolve",
+            "category": "Features",
+            "description": [
+                "The renderer supports MSAA stencil auto resolve at the end of render pass"
+            ]
+        },
+        {
+            "name": "has_events",
+            "category": "Features",
+            "description": [
+                "The renderer supports MTL(Shared)Event"
+            ]
+        },
+        {
+            "name": "allow_inline_const_vertex_data",
+            "category": "Features",
+            "description": [
+                "The renderer supports using inline constant data for small client vertex data"
+            ]
+        },
+        {
+            "name": "allow_separate_depth_stencil_buffers",
+            "category": "Features",
+            "description": [
+                "Some Apple platforms such as iOS allows separate depth and stencil buffers, ",
+                "whereas others such as macOS don't"
+            ]
+        },
+        {
+            "name": "allow_runtime_sampler_compare_mode",
+            "category": "Features",
+            "description": [
+                "The renderer supports changing sampler's compare mode outside shaders"
+            ]
+        },
+        {
+            "name": "allow_sampler_compare_gradient",
+            "category": "Features",
+            "description": [
+                "The renderer supports sample_compare with gradients"
+            ]
+        },
+        {
+            "name": "allow_buffer_read_write",
+            "category": "Features",
+            "description": [
+                "The renderer supports buffer read and write in the same shader"
+            ]
+        },
+        {
+            "name": "allow_multisample_store_and_resolve",
+            "category": "Features",
+            "description": [
+                "The renderer supports MSAA store and resolve in the same pass"
+            ]
+        },
+        {
+            "name": "allow_gen_multiple_mips_per_pass",
+            "category": "Features",
+            "description": [
+                "The renderer supports generating multiple mipmaps per pass"
+            ]
+        },
+        {
+            "name": "force_D24S8_as_unsupported",
+            "category": "Features",
+            "description": [
+                "Force Depth24Stencil8 format as unsupported."
+            ]
+        },
+        {
+            "name": "force_buffer_GPU_storage",
+            "category": "Features",
+            "description": [
+                "On systems that support both buffer' memory allocation on GPU and shared memory (such as ",
+                    "macOS), force using GPU memory allocation for buffers everytime or not."
+            ]
+        },
+        {
+            "name": "force_non_CS_base_mipmap_generation",
+            "category": "Features",
+            "description": [
+                "Turn this feature on to disallow Compute Shader based mipmap generation. Compute Shader ",
+                "based mipmap generation might cause GPU hang on some older iOS devices."
+            ]
+        },
+        {
+            "name": "emulate_transform_feedback",
+            "category": "Features",
+            "description": [
+                "Turn this on to allow transform feedback in Metal using a 2-pass VS for GLES3."
+            ]
+        },
+        {
+            "name": "intel_explicit_bool_cast_workaround",
+            "category": "Workarounds",
+            "description": [
+                "Insert explicit casts for float/double/unsigned/signed int on macOS 10.15 with Intel ",
+                "driver"
+            ]
+        },
+        {
+            "name": "intel_disable_fast_math",
+            "category": "Workarounds",
+            "description": [
+                "Disable fast math in atan and invariance cases when running below macOS 12.0"
+            ]
+        },
+        {
+            "name": "allow_renderpass_without_attachment",
+            "category": "Features",
+            "description": [
+                "Allow creation of render passes without any attachments"
+            ]
+        },
+        {
+            "name": "avoid_stencil_texture_swizzle",
+            "category": "Features",
+            "description": [
+                "Do not create swizzled views of stencil textures"
+            ]
+        },
+        {
+            "name": "emulate_alpha_to_coverage",
+            "category": "Workarounds",
+            "description": [
+                "Some GPUs ignore alpha-to-coverage when [[sample_mask]] is written"
+            ]
+        },
+        {
+            "name": "write_helper_sample_mask",
+            "category": "Workarounds",
+            "description": [
+                "Some GPUs produce incorrect derivatives unless [[sample_mask]] is written"
+            ]
+        },
+        {
+            "name": "pre_transform_texture_cube_grad_derivatives",
+            "category": "Workarounds",
+            "description": [
+                "Apply a vendor-specific transformation to explicit cubemap derivatives"
+            ]
+        },
+        {
+            "name": "multisample_color_format_shader_read_workaround",
+            "category": "Workarounds",
+            "description": [
+                "Add shaderRead usage to some multisampled texture formats"
+            ],
+            "issue": "http://anglebug.com/42265518"
+        },
+        {
+            "name": "copy_IOSurface_to_non_IOSurface_for_read_optimization",
+            "category": "Workarounds",
+            "description": [
+                "some GPUs are faster to read an IOSurface texture by first copying the texture to a ",
+                "non-IOSurface texture"
+            ],
+            "issue": "http://anglebug.com/40096835 http://anglebug.com/40096850"
+        },
+        {
+            "name": "copy_texture_to_buffer_for_read_optimization",
+            "category": "Workarounds",
+            "description": [
+                "some GPUs are faster to read a texture by first copying the texture to a buffer"
+            ],
+            "issue": "http://anglebug.com/40096835"
+        },
+        {
+            "name": "limit_max_draw_buffers_for_testing",
+            "category": "Features",
+            "description": [
+                "Used to check the backend works when the device's advertized limit is less than the code's limit"
+            ],
+            "issue": "http://anglebug.com/42265754"
+        },
+        {
+            "name": "limit_max_color_target_bits_for_testing",
+            "category": "Features",
+            "description": [
+                "Metal iOS has a limit on the number of color target bits per pixel."
+            ],
+            "issue": "http://anglebug.com/42265754"
+        },
+        {
+            "name": "preemptively_start_provoking_vertex_command_buffer",
+            "category": "Features",
+            "description": [
+                "AMD Metal Drivers appear to have a bug this works around"
+            ],
+            "issue": "http://anglebug.com/42266101"
+        },
+        {
+            "name": "upload_data_to_iosurfaces_with_staging_buffers",
+            "category": "Workarounds",
+            "description": [
+                "When uploading data to IOSurface-backed textures, use a staging buffer."
+            ],
+            "issue": "http://anglebug.com/40096850"
+        },
+        {
+            "name": "always_use_staged_buffer_updates",
+            "category": "Features",
+            "description": [
+                "Always update buffers by copying the data to a staging buffer and then blitting it to the actual buffer"
+            ],
+            "issue": "http://anglebug.com/40644888"
+        },
+        {
+            "name": "use_shadow_buffers_when_appropriate",
+            "category": "Features",
+            "description": [
+                "On some architectures using a shadow buffer can be faster for certain size buffers"
+            ],
+            "issue": "http://anglebug.com/40644888"
+        },
+        {
+            "name": "always_use_managed_storage_mode_for_buffers",
+            "category": "Features",
+            "description": [
+                "Metal buffers can be managed, shared, or private. Sometimes managed is fastest"
+            ],
+            "issue": "http://anglebug.com/40644888"
+        },
+        {
+            "name": "always_use_shared_storage_mode_for_buffers",
+            "category": "Features",
+            "description": [
+                "Metal buffers can be managed, shared, or private. Sometimes shared is fastest"
+            ],
+            "issue": "http://anglebug.com/40644888"
+        },
+        {
+            "name": "prefer_cpu_for_buffersubdata",
+            "category": "Features",
+            "description": [
+                "Makes bufferSubData always update via CPU"
+            ],
+            "issue": "http://anglebug.com/40644888"
+        },
+        {
+            "name": "disable_programmable_blending",
+            "category": "Features",
+            "description": [
+                "Disable programmable blending in order to test read_write pixel local storage textures"
+            ],
+            "issue": "http://anglebug.com/40096838"
+        },
+        {
+            "name": "disable_r_w_texture_tier2_support",
+            "category": "Features",
+            "description": [
+                "Disable tier2 read_write textures in order to test tier1 support"
+            ],
+            "issue": "http://anglebug.com/40096838"
+        },
+        {
+            "name": "disable_raster_order_groups",
+            "category": "Features",
+            "description": [
+                "Disable raster order groups in order to test pixel local storage memory barriers"
+            ],
+            "issue": "http://anglebug.com/40096838"
+        },
+        {
+            "name": "enable_in_memory_mtl_library_cache",
+            "category": "Features",
+            "description": [
+                "Cache MTLLibrary objects in memory."
+            ],
+            "issue": "http://crbug.com/1385510"
+        },
+        {
+            "name": "enable_parallel_mtl_library_compilation",
+            "category": "Features",
+            "description": [
+                "Compile MTLLibrary in multiple threads."
+            ],
+            "issue": "http://crbug.com/1385510"
+        },
+        {
+            "name": "always_prefer_staged_texture_uploads",
+            "category": "Features",
+            "description": [
+                "Always prefer to upload texture data via a staging buffer and avoid MTLTexture::replaceRegion."
+            ],
+            "issue": "http://crbug.com/1380790"
+        },
+        {
+            "name": "disable_staged_initialization_of_packed_texture_formats",
+            "category": "Features",
+            "description": [
+                "Staged GPU upload of some packed texture formats such as RGB9_E5 fail on Intel GPUs."
+            ],
+            "issue": "http://anglebug.com/40644905"
+        },
+        {
+            "name": "compile_metal_shaders",
+            "category": "Features",
+            "description": [
+                "Compiles metal shaders using command line tools and saves to BlobCache. ",
+                "Requires using --no-sandbox and disabling enableParallelMtlLibraryCompilation."
+            ],
+            "issue": "http://crbug.com/1423136"
+        },
+        {
+            "name": "load_metal_shaders_from_blob_cache",
+            "category": "Features",
+            "description": [
+                "Loads metal shaders from blob cache. Useful if compile_metal_shaders was used to ",
+                "generate shaders."
+            ],
+            "issue": "http://crbug.com/1423136"
+        },
+        {
+            "name": "print_metal_shaders",
+            "category": "Features",
+            "description": [
+                "Prints the source to a shader before it's compiled."
+            ],
+            "issue": "http://crbug.com/1423136"
+        },
+        {
+            "name": "generate_shareable_shaders",
+            "category": "Features",
+            "description": [
+                "Attempts to generate shaders that are shareable. More specifically, shaders",
+                " end up with conditionals that are decided at run time via input parameters vs",
+                " compile time. This results in bigger shaders."
+            ],
+            "issue": "http://crbug.com/1423136"
+        },
+        {
+            "name": "disable_metal_on_nvidia",
+            "category": "Features",
+            "description": [
+                "NVIDIA GPUs are unsupported due to scarcity of the hardware."
+            ],
+            "issue": "http://anglebug.com/42266609"
+        },
+        {
+            "name": "flush_after_stream_vertex_data",
+            "category": "Features",
+            "description": [
+                "Flush after calls to StreamVertexData to work around driver bugs."
+            ]
+        },
+        {
+            "name": "require_gpu_family_2",
+            "category": "Features",
+            "description": [
+                "Mac GPU Family 2 is required to support all the features of OpenGL ES 2.0"
+            ],
+            "issue": "http://anglebug.com/40096869"
+        },
+        {
+            "name": "rescope_global_variables",
+            "category": "Features",
+            "description": [
+                "Rescope global variables that are only used in one function to be function-local."
+            ],
+            "issue": "http://anglebug.com/42266744"
+        },
+        {
+            "name": "enable_multisampled_render_to_texture_on_non_tilers",
+            "category": "Features",
+            "description": [
+                "Enable EXT_multisampled_render_to_texture on non tiled GPUs."
+            ],
+            "issue": "http://anglebug.com/42261786"
+        },
+        {
+            "name": "emulate_dont_care_load_with_random_clear",
+            "category": "Features",
+            "description": [
+                "Emulate DontCare loadAction with Clear loadAction. The clear values will be randomized."
+            ],
+            "issue": "http://anglebug.com/42261786"
+        },
+        {
+            "name": "inject_asm_statement_into_loop_bodies",
+            "category": "Features",
+            "description": [
+                "Inject asm(\"\") statements into loop bodies to force all loops to be treated as ",
+                "having side effects and not optimized out."
+            ],
+            "issue": "http://crbug.com/1513738"
+        }
+    ]
+}

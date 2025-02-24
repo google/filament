@@ -1,0 +1,26 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("svm") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_allocate_shared_buffer.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_byte_granularity.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_cross_buffer_pointers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_enqueue_api.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_fine_grain_memory_consistency.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_fine_grain_sync_buffers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_migrate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_pointer_passing.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_set_kernel_exec_info_svm_ptrs.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_shared_address_space_coarse_grain.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_shared_address_space_fine_grain.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_shared_address_space_fine_grain_buffers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/SVM/test_shared_sub_buffers.cpp",
+  ]
+}

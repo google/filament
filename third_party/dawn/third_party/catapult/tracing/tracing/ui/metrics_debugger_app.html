@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/extras/full_config.html">
+<link rel="import" href="/tracing/importer/import.html">
+<link rel="import" href="/tracing/metrics/all_metrics.html">
+<link rel="import" href="/tracing/metrics/metric_map_function.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/file.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id='tracing-ui-metrics-debugger-app'>
+  <style>
+    pre {
+      overflow: auto;
+    }
+    #bar {
+      display: flex;
+      flex-direction: row;
+      padding: 1px 6px;
+    }
+  </style>
+
+  <template>
+  <top-left-controls id="top_left_controls"></top-left-controls>
+  <input id="load_trace" type="file"/>
+  <button id="run_metric">Run metric</button>
+  <div id="trace_info"></div>
+  <pre id="map_results">
+  </pre>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui', function() {
+  Polymer({
+    is: 'tracing-ui-metrics-debugger-app',
+    created() {
+      this.metrics_ = [];
+      tr.metrics.MetricRegistry.getAllRegisteredTypeInfos().forEach(
+          function(m) {
+            this.metrics_.push({
+              label: m.constructor.name,
+              value: m.constructor.name
+            });
+          }, this);
+      this.activeTrace_ = undefined;
+      this.settingsKey_ = undefined;
+      this.currentMetricName_ = undefined;
+      this.settingsKey_ = 'metrics-debugger-app-metric-name';
+    },
+
+    ready() {
+      const metricSelector = tr.ui.b.createSelector(
+          this, 'currentMetricName_',
+          this.settingsKey_,
+          this.metrics_[0].value,
+          this.metrics_);
+      Polymer.dom(this.$.top_left_controls).appendChild(
+          metricSelector);
+
+      this.$.load_trace.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        this.onTraceFileSelected_(file);
+      }.bind(this));
+      this.$.run_metric.addEventListener(
+          'click', function(event) {
+            event.stopPropagation();
+            this.onRunMetricClicked_();
+          }.bind(this));
+    },
+
+    onRunMetricClicked_() {
+      if (this.activeTrace_ === undefined) {
+        tr.ui.b.Overlay.showError('You must load a trace first!');
+        return;
+      }
+      const result = new tr.mre.MreResult();
+      const model = this.activeTrace_.model;
+      const options = {metrics: [this.currentMetricName_]};
+      try {
+        tr.metrics.metricMapFunction(result, model, options);
+        this.set(
+            '$.map_results.textContent',
+            'Metric result:\n' + JSON.stringify(result.asDict(), undefined, 2));
+      } catch (err) {
+        tr.ui.b.Overlay.showError('Error running metric:\n' + err.stack);
+      }
+    },
+
+    onTraceFileSelected_(file) {
+      tr.ui.b.readFile(file).then(
+          function(data) {
+            this.setActiveTrace(file.name, data);
+          }.bind(this),
+          function(err) {
+            tr.ui.b.Overlay.showError('Error while loading file: ' + err);
+          });
+    },
+
+    setActiveTrace(filename, data) {
+      const model = new tr.Model();
+      const importOptions = new tr.importer.ImportOptions();
+      importOptions.pruneEmptyContainers = false;
+      importOptions.showImportWarnings = true;
+      importOptions.trackDetailedModelStats = true;
+
+      const i = new tr.importer.Import(model, importOptions);
+      i.importTracesWithProgressDialog([data]).then(
+          function() {
+            this.activeTrace_ = {
+              filename,
+              model,
+            };
+            Polymer.dom(this.$.trace_info).textContent = 'Trace file ' +
+                filename + ' is loaded.';
+          }.bind(this),
+          function(err) {
+            tr.ui.b.Overlay.showError('Trace import error: ' + err);
+          });
+    },
+  });
+  return {};
+});
+</script>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/ui/diagnostic_span_behavior.html">
+
+<dom-module id="tr-v-ui-date-range-span">
+  <template>
+    <content></content>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-date-range-span',
+    behaviors: [tr.v.ui.DIAGNOSTIC_SPAN_BEHAVIOR],
+
+    updateContents_() {
+      if (this.diagnostic === undefined) {
+        Polymer.dom(this).textContent = '';
+        return;
+      }
+
+      Polymer.dom(this).textContent = this.diagnostic.toString();
+    }
+  });
+
+  return {};
+});
+</script>

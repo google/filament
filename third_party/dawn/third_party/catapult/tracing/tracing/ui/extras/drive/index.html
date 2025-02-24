@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+
+  <link rel="import" href="/components/polymer/polymer.html">
+  <link rel="import" href="/tracing/ui/extras/drive/drive_comment_provider.html">
+  <link rel="import" href="/tracing/ui/extras/full_config.html">
+  <link rel="import" href="/tracing/ui/timeline_view.html">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    body > x-timeline-view {
+      flex: 1 1 auto;
+      overflow: hidden;
+      position: absolute;
+      top: 0px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    body > x-timeline-view:focus {
+      outline: none;
+    }
+    nav {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+    #navbar button {
+      height: 24px;
+      padding-bottom: 3px;
+      vertical-align: middle;
+      box-shadow: none;
+      background-color: #4d90fe;
+      background-image: -webkit-linear-gradient(top,#4d90fe,#4787ed);
+      border: 1px solid #3079ed;
+      color: #fff;
+      border-radius: 2px;
+      cursor: default;
+      font-size: 11px;
+      font-weight: bold;
+      text-align: center;
+      white-space: nowrap;
+      line-height: 27px;
+      min-width: 54px;
+      outline: 0px;
+      padding: 0 8px;
+      font: normal 13px arial,sans-serif;
+      margin: 5px;
+    }
+    #collabs {
+      display: flex;
+      flex-direction: row;
+    }
+    .collaborator-div {
+      display: inline-block;
+      vertical-align: middle;
+      min-height: 0;
+      width: 100px;
+      font-size: 11px;
+      font-weight: bold;
+      font: normal 13px arial,sans-serif;
+      margin: 10px;
+    }
+    .collaborator-img {
+      margin: 2px;
+    }
+    .collaborator-tooltip {
+      z-index: 10000;
+      transition: visibility 0,opacity .13s ease-in;
+      background-color: #2a2a2a;
+      border: 1px solid #fff;
+      color: #fff;
+      cursor: default;
+      display: block;
+      font-family: arial, sans-serif;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: -1px;
+      opacity: 1;
+      padding: 7px 9px;
+      word-break: break-word;
+      position: absolute;
+    }
+    .collaborator-tooltip-content {
+      color: #fff;
+    }
+    .collaborator-tooltip-arrow {
+      position: absolute;
+      top: -6px;
+    }
+    .collaborator-tooltip-arrow-before {
+      border-color: #fff transparent !important;
+      left: -6px;
+      border: 6px solid;
+      border-top-width: 0;
+      content: '';
+      display: block;
+      height: 0;
+      position: absolute;
+      width: 0;
+    }
+    .collaborator-tooltip-arrow-after {
+      top: 1px;
+      border-color: #2a2a2a transparent !important;
+      left: -5px;
+      border: 5px solid;
+      border-top-width: 0;
+      content: '';
+      display: block;
+      height: 0;
+      position: absolute;
+      width: 0;
+    }
+
+  </style>
+  <title>Trace Viewer</title>
+</head>
+<body>
+  <nav id="navbar">
+    <div id="collabs"></div>
+    <button id="x-drive-save-to-disk">Save to disk</button>
+    <button id="x-drive-save-to-drive">Save to Drive</button>
+    <button id="x-drive-load-from-drive">Load from Drive</button>
+    <button id="x-drive-share">Share</button>
+  </nav>
+  <x-timeline-view>
+  </x-timeline-view>
+
+  <script>
+  'use strict';
+
+  // Needs to be global as it's passed through the Google API as a
+  // GET parameter.
+  let onAPIClientLoaded_ = null;
+
+  (function() {
+    tr.exportTo('tr.ui.e.drive', function() {
+      const appId = '239864068844';
+      const constants = {
+        APP_ID: appId,
+        ANCHOR_NAME: appId + '.trace_viewer',
+        DEVELOPER_KEY: 'AIzaSyDR-6_wL9vHg1_oz4JHk8IQAkv2_Y0Y8-M',
+        CLIENT_ID: '239864068844-c7gefbfdcp0j6grltulh2r88tsvl18c1.apps.' +
+            'googleusercontent.com',
+        SCOPE: [
+          'https://www.googleapis.com/auth/drive',
+          'https://www.googleapis.com/auth/drive.install',
+          'https://www.googleapis.com/auth/drive.file',
+          'profile'
+        ]
+      };
+
+      return {
+        getDriveFileId() { return driveFileId_; },
+        constants
+      };
+    });
+
+
+    let pickerApiLoaded_ = false;
+    let oauthToken_ = null;
+
+    let timelineViewEl_ = null;
+    let driveDocument_ = null;
+    let shareClient_ = null;
+    let fileIdToLoad_ = null;
+    let driveFileId_ = null;
+
+    function parseGETParameter(val) {
+      let result = null;
+      let tmp = [];
+      location.search.substr(1).split('&').forEach(function(item) {
+        tmp = item.split('=');
+        if (tmp[0] === val) {
+          result = decodeURIComponent(tmp[1]);
+        }
+      });
+      return result;
+    }
+
+    // Use the Google API Loader script to load the google.picker script.
+    onAPIClientLoaded_ = function() {
+      const driveState = parseGETParameter('state');
+      if (driveState !== null) {
+        const driveStateJson = JSON.parse(driveState);
+        fileIdToLoad_ = String(driveStateJson.ids);
+      }
+
+      gapi.load('picker', {'callback': onPickerApiLoad});
+      gapi.load('auth', {'callback'() {
+        onAuthApiLoad(true, onAuthResultSuccess);
+        return tr.b.timeout(30e3)
+            .then(() => onAuthApiLoad(true, function() {}))
+            .then(() => tr.b.timeout(30e3))
+            .then(() => onRepeatAuthApiLoad);
+      }});
+    };
+
+    function onAuthApiLoad(tryImmediate, resultCallback) {
+      window.gapi.auth.authorize(
+          {'client_id': tr.ui.e.drive.constants.CLIENT_ID,
+            'scope': tr.ui.e.drive.constants.SCOPE, 'immediate': tryImmediate},
+          function(authResult) {
+            handleAuthResult(authResult, tryImmediate, resultCallback);
+          });
+    }
+
+    function onPickerApiLoad() {
+      pickerApiLoaded_ = true;
+      if (fileIdToLoad_ === null) {
+        createPicker();
+      }
+    }
+
+    function onAuthResultSuccess() {
+      if (fileIdToLoad_ === null) {
+        createPicker();
+      } else {
+        loadFileFromDrive(fileIdToLoad_);
+      }
+    }
+
+    function handleAuthResult(authResult, wasImmediate, resultCallback) {
+      if (authResult && !authResult.error) {
+        oauthToken_ = authResult.access_token;
+        resultCallback();
+      } else if (wasImmediate) {
+        onAuthApiLoad(false);
+      }
+    }
+
+    function createPicker() {
+      if (pickerApiLoaded_ && oauthToken_) {
+        const view = new google.picker.View(google.picker.ViewId.DOCS);
+        view.setMimeTypes('application/json,application/octet-stream');
+        const picker = new google.picker.PickerBuilder()
+            .enableFeature(google.picker.Feature.NAV_HIDDEN)
+            .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+            .setAppId(tr.ui.e.drive.constants.APP_ID)
+            .setOAuthToken(oauthToken_)
+            .addView(view)
+            .addView(new google.picker.DocsUploadView())
+            .setDeveloperKey(tr.ui.e.drive.constants.DEVELOPER_KEY)
+            .setCallback(pickerCallback)
+            .build();
+        picker.setVisible(true);
+      }
+    }
+
+    function pickerCallback(data) {
+      if (data.action === google.picker.Action.PICKED) {
+        loadFileFromDrive(data.docs[0].id);
+      }
+    }
+
+    function initShareButton() {
+      shareClient_ = new gapi.drive.share.ShareClient(
+          tr.ui.e.drive.constants.APP_ID);
+      shareClient_.setItemIds([driveFileId_]);
+    }
+
+    function loadFileFromDrive(fileId) {
+      gapi.client.load('drive', 'v2', function() {
+        const request = gapi.client.drive.files.get({fileId});
+        request.execute(function(resp) { downloadFile(resp); });
+        driveFileId_ = fileId;
+        gapi.load('drive-share', initShareButton);
+      });
+    }
+
+    function downloadFile(file) {
+      if (file.downloadUrl) {
+        const downloadingOverlay = tr.ui.b.Overlay();
+        downloadingOverlay.title = 'Downloading...';
+        downloadingOverlay.userCanClose = false;
+        downloadingOverlay.msgEl = document.createElement('div');
+        Polymer.dom(downloadingOverlay).appendChild(downloadingOverlay.msgEl);
+        downloadingOverlay.msgEl.style.margin = '20px';
+        downloadingOverlay.update = function(msg) {
+          Polymer.dom(this.msgEl).textContent = msg;
+        };
+        downloadingOverlay.visible = true;
+
+        const accessToken = gapi.auth.getToken().access_token;
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', file.downloadUrl);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+        xhr.onload = function() {
+          downloadingOverlay.visible = false;
+          onDownloaded(file.title, xhr.responseText);
+        };
+        xhr.onprogress = function(evt) {
+          downloadingOverlay.update(
+              Math.floor(evt.position * 100 / file.fileSize) + '% complete');
+        };
+        xhr.onerror = function() { alert('Failed downloading!'); };
+        xhr.send();
+      } else {
+        alert('No URL!');
+      }
+    }
+
+    function displayAllCollaborators() {
+      const allCollaborators = driveDocument_.getCollaborators();
+      const collaboratorCount = allCollaborators.length;
+      const collabspan = document.getElementById('collabs');
+      Polymer.dom(collabspan).innerHTML = '';
+      const imageList = [];
+      for (let i = 0; i < collaboratorCount; i++) {
+        const user = allCollaborators[i];
+
+        const img = document.createElement('img');
+        img.src = user.photoUrl;
+        img.alt = user.displayName;
+        img.height = 30;
+        img.width = 30;
+        img.className = 'collaborator-img';
+        Polymer.dom(collabspan).appendChild(img);
+        imageList.push({'image': img, 'name': user.displayName});
+      }
+      for (i = 0; i < imageList.length; i++) {
+        const collabTooltip = tr.ui.b.createDiv({
+          className: 'collaborator-tooltip'
+        });
+        const collabTooltipContent = tr.ui.b.createDiv({
+          className: 'collaborator-tooltip-content'
+        });
+        Polymer.dom(collabTooltipContent).textContent = imageList[i].name;
+        Polymer.dom(collabTooltip).appendChild(collabTooltipContent);
+        Polymer.dom(collabspan).appendChild(collabTooltip);
+        const collabTooltipArrow = tr.ui.b.createDiv({
+          className: 'collaborator-tooltip-arrow'});
+        Polymer.dom(collabTooltip).appendChild(collabTooltipArrow);
+        const collabTooltipArrowBefore = tr.ui.b.createDiv({
+          className: 'collaborator-tooltip-arrow-before'});
+        Polymer.dom(collabTooltipArrow).appendChild(collabTooltipArrowBefore);
+        const collabTooltipArrowAfter = tr.ui.b.createDiv({
+          className: 'collaborator-tooltip-arrow-after'});
+        Polymer.dom(collabTooltipArrow).appendChild(collabTooltipArrowAfter);
+
+        const rect = imageList[i].image.getBoundingClientRect();
+        collabTooltip.style.top = (rect.bottom - 6) + 'px';
+        collabTooltip.style.left =
+            (rect.left + 16 - (collabTooltip.offsetWidth / 2)) + 'px';
+        collabTooltipArrow.style.left = (collabTooltip.offsetWidth / 2) + 'px';
+        collabTooltip.style.visibility = 'hidden';
+        function visibilityDelegate(element, visibility) {
+          return function() {
+            element.style.visibility = visibility;
+          };
+        }
+        imageList[i].image.addEventListener(
+            'mouseover', visibilityDelegate(collabTooltip, 'visible'));
+        imageList[i].image.addEventListener(
+            'mouseout', visibilityDelegate(collabTooltip, 'hidden'));
+      }
+    }
+
+    function onRealtimeFileLoaded(doc) {
+      if (driveDocument_) {
+        driveDocument_.close();
+      }
+      driveDocument_ = doc;
+      doc.addEventListener(gapi.drive.realtime.EventType.COLLABORATOR_JOINED,
+          displayAllCollaborators);
+      doc.addEventListener(gapi.drive.realtime.EventType.COLLABORATOR_LEFT,
+          displayAllCollaborators);
+
+      displayAllCollaborators(doc);
+    }
+
+    function onRealtimeError(e) {
+      alert('Error loading realtime: ' + e);
+    }
+
+    function onDownloaded(filename, content) {
+      gapi.load('auth:client,drive-realtime,drive-share', function() {
+        gapi.drive.realtime.load(driveFileId_,
+            onRealtimeFileLoaded,
+            null,
+            onRealtimeError);
+      });
+
+      const traces = [];
+      const filenames = [];
+      filenames.push(filename);
+      traces.push(content);
+      createViewFromTraces(filenames, traces);
+    }
+
+    function createViewFromTraces(filenames, traces) {
+      const m = new tr.Model();
+      const i = new tr.importer.Import(m);
+      const p = i.importTracesWithProgressDialog(traces);
+      p.then(
+          function() {
+            timelineViewEl_.model = m;
+            timelineViewEl_.updateDocumentFavicon();
+            timelineViewEl_.globalMode = true;
+            timelineViewEl_.viewTitle = '';
+          },
+          function(err) {
+            const downloadingOverlay = new tr.ui.b.Overlay();
+            Polymer.dom(downloadingOverlay).textContent =
+                tr.b.normalizeException(err).message;
+            downloadingOverlay.title = 'Import error';
+            downloadingOverlay.visible = true;
+          });
+    }
+
+    function onSaveToDiskClicked() {
+      throw new Error('Not implemented');
+    }
+
+    function onSaveToDriveClicked() {
+      throw new Error('Not implemented');
+    }
+
+    function onLoadFromDriveClicked() {
+      createPicker();
+    }
+
+    function onLoad() {
+      timelineViewEl_ = Polymer.dom(document).querySelector('x-timeline-view');
+      timelineViewEl_.globalMode = true;
+      const navbar = document.getElementById('navbar');
+      timelineViewEl_.style.top = navbar.offsetHeight + 'px';
+      tr.ui.b.decorate(timelineViewEl_, tr.ui.TimelineView);
+    }
+
+    window.addEventListener('load', onLoad);
+
+    document.getElementById('x-drive-save-to-disk').onclick =
+        onSaveToDiskClicked;
+    document.getElementById('x-drive-save-to-drive').onclick =
+        onSaveToDriveClicked;
+    document.getElementById('x-drive-load-from-drive').onclick =
+        onLoadFromDriveClicked;
+    document.getElementById('x-drive-share').onclick = function() {
+      shareClient_.showSettingsDialog();
+    };
+  }());
+
+  </script>
+  <script type="text/javascript"
+          src="https://apis.google.com/js/client.js?onload=onAPIClientLoaded_">
+  </script>
+</body>

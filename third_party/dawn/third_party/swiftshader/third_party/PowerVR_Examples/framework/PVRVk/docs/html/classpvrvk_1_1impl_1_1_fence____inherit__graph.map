@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::Fence_" name="pvrvk::impl::Fence_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkFence, ObjectType\l::e_FENCE \&gt;" alt="" coords="313,5,559,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkFence, PVRVkObjectType \&gt;" alt="" coords="5,13,265,54"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Fence_ \&gt;" alt="" coords="341,86,531,127"/>
+</map>

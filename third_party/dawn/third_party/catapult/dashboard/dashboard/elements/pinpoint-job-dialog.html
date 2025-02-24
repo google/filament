@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/app-route/app-route.html">
+<link rel="import" href="/components/iron-form/iron-form.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/components/paper-input/paper-input.html">
+<link rel="import" href="/components/paper-radio-button/paper-radio-button.html">
+<link rel="import" href="/components/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+<link rel="import" href="/components/polymer/polymer.html">
+
+<link rel="import" href="/dashboard/static/base.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="pinpoint-job-dialog">
+  <template>
+    <style>
+    form > paper-button {
+      margin-top: 20px;
+    }
+    form > paper-button:not([disabled]) {
+      background: var(--paper-green-700);
+      color: white;
+    }
+    .close-icon {
+      cursor: pointer;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
+    .error {
+      color: #dd4b39;
+    }
+    #container {
+      width: 500px;
+    }
+    #loading {
+      width: 28px;
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+    }
+    </style>
+
+    <paper-dialog id="container" autoCloseDisabled="true">
+      <form>
+        <paper-input id="test-path" label="Test Path" value="{{test_path::input}}" disabled></paper-input>
+        <paper-input id="project-id" label="Monorail Project" value="{{project_id::input}}"></paper-input>
+        <paper-input id="bug-id" label="Bug ID" value="{{bug_id::input}}"></paper-input>
+        <paper-input id="start_commit" label="Start Commit" value="{{start_commit::input}}" allowed-pattern="[A-Fa-f0-9]" required auto-validate prevent-invalid-input></paper-input>
+        <paper-input id="end_commit" label="End Commit" value="{{end_commit::input}}" allowed-pattern="[A-Fa-f0-9]" required auto-validate prevent-invalid-input></paper-input>
+        <paper-input id="story-filter" label="Story" value="{{story_filter::input}}" disabled$="[[loading]]"></paper-input>
+        <paper-input id="pin" label="Patch to Apply to the Entire Job (optional)" value="{{pin::input}}"></paper-input>
+        <paper-radio-group id="bisect_mode" selected="performance">
+          <paper-radio-button id="performance" name="performance">Performance</paper-radio-button>
+          <paper-radio-button id="functional" name="functional">Functional</paper-radio-button>
+        </paper-radio-group>
+        <div>
+          <paper-button raised disabled$="[[getCreateDisabled(create_disabled, loading)]]" on-click="onCreateJob">Create</paper-button>
+        </div>
+        <p class="error">{{error}}</p>
+        <div class="close-icon" on-click="close">
+          ❌ <!-- cross mark U+274C -->
+        </div>
+      </form>
+      <template is="dom-if" if="[[loading]]">
+        <div id="loading">
+          <paper-spinner active></paper-spinner>
+        </div>
+      </template>
+    </paper-dialog>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'pinpoint-job-dialog',
+
+  properties: {
+    alerts: {},
+    bug_id: {
+      type: Number,
+    },
+    project_id: {
+      type: String,
+      value: 'chromium',
+    },
+    test_path: {
+      type: String,
+      value: '',
+    },
+    story_filter: {
+      type: String,
+      value: '',
+    },
+    start_commit: {
+      type: String,
+      value: '',
+    },
+    end_commit: {
+      type: String,
+      value: '',
+    },
+    pin: {
+      type: String,
+      value: '',
+    },
+    loading: {
+      type: Boolean,
+      value: false,
+    },
+    create_disabled: {
+      type: Boolean,
+      value: false,
+    },
+    error: {
+      type: String,
+      value: '',
+    }
+  },
+
+  computeIsDisabled(e) {
+    return !!e;
+  },
+
+  async onCreateJob(e) {
+    const alerts = [];
+    if (this.alerts) {
+      for (const a of this.alerts) {
+        alerts.push(a.key);
+      }
+    }
+
+    const params = {
+      test_path: this.test_path,
+      start_commit: this.start_commit,
+      end_commit: this.end_commit,
+      bug_id: this.bug_id,
+      project_id: this.project_id,
+      story_filter: this.story_filter,
+      pin: this.pin,
+      bisect_mode: this.$.bisect_mode.selected,
+      alerts: JSON.stringify(alerts),
+    };
+
+    try {
+      this.error = '';
+      this.create_disabled = true;
+      const results = await simple_xhr.asPromise(
+          '/pinpoint/new/bisect', params);
+      this.fire('pinpoint-new-response', {
+        'jobId': results.jobId,
+        'jobUrl': results.jobUrl,
+      });
+      this.close();
+    } catch (e) {
+      this.error = e;
+    }
+    this.create_disabled = false;
+  },
+
+  ready() {
+  },
+
+  getCreateDisabled(createDisabled, loading) {
+    return createDisabled || loading;
+  },
+
+  /**
+    * Initializes and shows the bisect form.
+    */
+  async show() {
+    this.create_disabled = false;
+    this.loading = true;
+    this.story_filter = '';
+    this.pin = '';
+    this.error = '';
+    this.open();
+
+    try {
+      const params = {
+        test_path: this.test_path,
+      };
+
+      const results = await simple_xhr.asPromise(
+          '/pinpoint/new/prefill', params);
+      this.story_filter = results.story_filter;
+    } catch (e) {
+      this.error = e;
+    }
+
+    this.loading = false;
+  },
+
+  open() {
+    this.$.container.open();
+  },
+
+  close() {
+    this.$.container.close();
+  }
+
+});
+</script>

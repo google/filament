@@ -1,0 +1,15 @@
+Bumped to 2.47.0
+
+boto v2.47.0
+============
+
+:date: 2017/05/24
+
+Adds features for Google Cloud Storage.
+
+Changes
+-------
+* Loosen requirements for ID field in PROJECT_PRIVATE_RE. (:issue:`3729`, :sha:`5e85d7c7`)
+* Populate storage class from HEAD Object responses. (:issue:`3691`, :sha:`315b76e0`)
+
+

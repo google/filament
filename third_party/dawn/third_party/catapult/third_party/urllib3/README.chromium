@@ -1,0 +1,12 @@
+Name: urllib3
+URL: https://github.com/urllib3/urllib3
+Version: 1.25.3
+Revision: 10f362e2b6e06e77943ca4823fd6eccbb38c394f
+CPEPrefix: cpe:/a:python:urllib3:1.25.3
+License: MIT
+Shipped: yes
+
+Description:
+urllib3 is a powerful, sanity-friendly HTTP client for Python.
+
+This was installed as a dependency of requests via pip.

@@ -1,0 +1,1306 @@
+
+<!DOCTYPE html>
+<html lang="en-US-x-hixie" class="split index"><head><title>HTML Standard</title><script>
+var loadTimer = new Date();
+var current_revision = "r" + "$Revision: 8434 $".substr(11);
+current_revision = current_revision.substr(0, current_revision.length - 2);
+var last_known_revision = current_revision;
+function F( /* varargs... */) {
+var fragment = document.createDocumentFragment();
+for (var index = 0; index < arguments.length; index += 1) {
+if (arguments[index] instanceof Array) {
+fragment.appendChild(F.apply(this, arguments[index]));
+} else if (typeof arguments[index] == 'string') {
+fragment.appendChild(document.createTextNode(arguments[index]));
+} else {
+fragment.appendChild(arguments[index]);
+}
+}
+return fragment;
+}
+function E(name, /* optional */ attributes /*, varargs... */) {
+var element = document.createElement(name);
+var index = 1;
+if ((arguments.length > 1) && (typeof attributes != 'string') &&
+(!(attributes instanceof Node)) && (!(attributes instanceof Array))) {
+for (var attName in attributes) {
+if (typeof attributes[attName] == 'boolean') {
+if (attributes[attName])
+element.setAttribute(attName, '');
+} else if (typeof attributes[attName] == 'function') {
+element[attName] = attributes[attName];
+} else {
+element.setAttribute(attName, attributes[attName]);
+}
+}
+index = 2;
+}
+for (; index < arguments.length; index += 1) {
+if (arguments[index] instanceof Array) {
+element.appendChild(F.apply(this, arguments[index]));
+} else if (typeof arguments[index] == 'string') {
+element.appendChild(document.createTextNode(arguments[index]));
+} else {
+element.appendChild(arguments[index]);
+}
+}
+return element;
+}
+function getCookie(name) {
+var params = location.search.substr(1).split("&");
+for (var index = 0; index < params.length; index++) {
+if (params[index] == name)
+return "1";
+var data = params[index].split("=");
+if (data[0] == name)
+return unescape(data[1]);
+}
+var cookies = document.cookie.split("; ");
+for (var index = 0; index < cookies.length; index++) {
+var data = cookies[index].split("=");
+if (data[0] == name)
+return unescape(data[1]);
+}
+return null;
+}
+var currentAlert;
+var currentAlertTimeout;
+function showAlert(s, href) {
+if (!currentAlert) {
+currentAlert = document.createElement('div');
+currentAlert.id = 'alert';
+var x = document.createElement('button');
+x.textContent = '\u2573';
+x.onclick = closeAlert2;
+currentAlert.appendChild(x);
+currentAlert.appendChild(document.createElement('span'));
+currentAlert.onmousemove = function () {
+clearTimeout(currentAlertTimeout);
+currentAlert.className = '';
+currentAlertTimeout = setTimeout(closeAlert, 10000);
+}
+document.body.appendChild(currentAlert);
+} else {
+clearTimeout(currentAlertTimeout);
+currentAlert.className = '';
+}
+currentAlert.lastChild.textContent = '';
+currentAlert.lastChild.appendChild(F(s));
+if (href) {
+var link = document.createElement('a');
+link.href = href;
+link.textContent = href;
+currentAlert.lastChild.appendChild(F(' ', link));
+}
+currentAlertTimeout = setTimeout(closeAlert, 10000);
+}
+function closeAlert() {
+clearTimeout(currentAlertTimeout);
+if (currentAlert) {
+currentAlert.className = 'closed';
+currentAlertTimeout = setTimeout(closeAlert2, 3000);
+}
+}
+function closeAlert2() {
+clearTimeout(currentAlertTimeout);
+if (currentAlert) {
+currentAlert.parentNode.removeChild(currentAlert);
+currentAlert = null;
+}
+}
+window.addEventListener('keydown', function (event) {
+if (event.keyCode == 27) {
+if (currentAlert)
+closeAlert2();
+} else {
+closeAlert();
+}
+}, false);
+window.addEventListener('scroll', function (event) {
+closeAlert();
+}, false);
+function load(script) {
+var e = document.createElement('script');
+e.setAttribute('src', 'http://www.whatwg.org/specs/web-apps/current-work/' + script);
+document.body.appendChild(e);
+}
+</script><link rel="stylesheet" href="http://www.whatwg.org/style/specification"><link rel="icon" href="http://www.whatwg.org/images/icon"><style>
+.proposal { border: blue solid; padding: 1em; }
+.bad, .bad *:not(.XXX) { color: gray; border-color: gray; background: transparent; }
+#updatesStatus { display: none; z-index: 10; }
+#updatesStatus.relevant { display: block; position: fixed; right: 1em; top: 1em; padding: 0.5em; font: bold small sans-serif; min-width: 25em; width: 30%; max-width: 40em; height: auto; border: ridge 4px gray; background: #EEEEEE; color: black; }
+div.head .logo { width: 11em; margin-bottom: 20em; }
+#configUI { position: absolute; z-index: 20; top: 10em; right: 0; width: 11em; padding: 0 0.5em 0 0.5em; font-size: small; background: gray; background: rgba(32,32,32,0.9); color: white; border-radius: 1em 0 0 1em; -moz-border-radius: 1em 0 0 1em; }
+#configUI p { margin: 0.75em 0; padding: 0.3em; }
+#configUI p label { display: block; }
+#configUI #updateUI, #configUI .loginUI { text-align: center; }
+#configUI input[type=button] { display: block; margin: auto; }
+#configUI :link, #configUI :visited { color: white; }
+#configUI :link:hover, #configUI :visited:hover { background: transparent; }
+#reviewer { position: fixed; bottom: 0; right: 0; padding: 0.15em 0.25em 0em 0.5em; white-space: nowrap; overflow: hidden; z-index: 30; background: gray; background: rgba(32,32,32,0.9); color: white; border-radius: 1em 0 0 0; -moz-border-radius: 1em 0 0 0; max-width: 90%; }
+#reviewer input { max-width: 50%; }
+#reviewer * { font-size: small; }
+#reviewer.off > :not(:first-child) { display: none; }
+#alert { position: fixed; top: 20%; left: 20%; right: 20%; font-size: 2em; padding: 0.5em; z-index: 40; background: gray; background: rgba(32,32,32,0.9); color: white; border-radius: 1em; -moz-border-radius: 1em; -webkit-transition: opacity 1s linear; }
+#alert.closed { opacity: 0; }
+#alert button { position: absolute; top: -1em; right: 2em; border-radius: 1em 1em 0 0; border: none; line-height: 0.9; color: white; background: rgb(64,64,64); font-size: 0.6em; font-weight: 900; cursor: pointer; }
+#alert :link, #alert :visited { color: white; }
+#alert :link:hover, #alert :visited:hover { background: transparent; }
+@media print { #configUI { display: none; } }
+.rfc2119 { font-variant: small-caps; text-shadow: 0 0 0.5em yellow; position: static; }
+.rfc2119::after { position: absolute; left: 0; width: 25px; text-align: center; color: yellow; text-shadow: 0.075em 0.075em 0.2em black; }
+.rfc2119.m\ust::after { content: '\2605'; }
+.rfc2119.s\hould::after { content: '\2606'; }
+[hidden] { display: none; }
+</style><style type="text/css">
+
+.fingerprint { float: right; }
+
+.applies thead th > * { display: block; }
+.applies thead code { display: block; }
+.applies td { text-align: center; }
+.applies .yes { background: yellow; }
+
+.matrix, .matrix td { border: hidden; text-align: right; }
+.matrix { margin-left: 2em; }
+
+.vertical-summary-table tr > th[rowspan="2"]:first-child + th,
+.vertical-summary-table tr > td[rowspan="2"]:first-child + td { border-bottom: hidden; }
+
+.dice-example { border-collapse: collapse; border-style: hidden solid solid hidden; border-width: thin; margin-left: 3em; }
+.dice-example caption { width: 30em; font-size: smaller; font-style: italic; padding: 0.75em 0; text-align: left; }
+.dice-example td, .dice-example th { border: solid thin; width: 1.35em; height: 1.05em; text-align: center; padding: 0; }
+
+td.eg { border-width: thin; text-align: center; }
+
+#table-example-1 { border: solid thin; border-collapse: collapse; margin-left: 3em; }
+#table-example-1 * { font-family: "Essays1743", serif; line-height: 1.01em; }
+#table-example-1 caption { padding-bottom: 0.5em; }
+#table-example-1 thead, #table-example-1 tbody { border: none; }
+#table-example-1 th, #table-example-1 td { border: solid thin; }
+#table-example-1 th { font-weight: normal; }
+#table-example-1 td { border-style: none solid; vertical-align: top; }
+#table-example-1 th { padding: 0.5em; vertical-align: middle; text-align: center; }
+#table-example-1 tbody tr:first-child td { padding-top: 0.5em; }
+#table-example-1 tbody tr:last-child td { padding-bottom: 1.5em; }
+#table-example-1 tbody td:first-child { padding-left: 2.5em; padding-right: 0; width: 9em; }
+#table-example-1 tbody td:first-child::after { content: leader(". "); }
+#table-example-1 tbody td { padding-left: 2em; padding-right: 2em; }
+#table-example-1 tbody td:first-child + td { width: 10em; }
+#table-example-1 tbody td:first-child + td ~ td { width: 2.5em; }
+#table-example-1 tbody td:first-child + td + td + td ~ td { width: 1.25em; }
+
+.apple-table-examples { border: none; border-collapse: separate; border-spacing: 1.5em 0em; width: 40em; margin-left: 3em; }
+.apple-table-examples * { font-family: "Times", serif; }
+.apple-table-examples td, .apple-table-examples th { border: none; white-space: nowrap; padding-top: 0; padding-bottom: 0; }
+.apple-table-examples tbody th:first-child { border-left: none; width: 100%; }
+.apple-table-examples thead th:first-child ~ th { font-size: smaller; font-weight: bolder; border-bottom: solid 2px; text-align: center; }
+.apple-table-examples tbody th::after, .apple-table-examples tfoot th::after { content: leader(". ") }
+.apple-table-examples tbody th, .apple-table-examples tfoot th { font: inherit; text-align: left; }
+.apple-table-examples td { text-align: right; vertical-align: top; }
+.apple-table-examples.e1 tbody tr:last-child td { border-bottom: solid 1px; }
+.apple-table-examples.e1 tbody + tbody tr:last-child td { border-bottom: double 3px; }
+.apple-table-examples.e2 th[scope=row] { padding-left: 1em; }
+.apple-table-examples sup { line-height: 0; }
+
+.three-column-nowrap tr > td:first-child,
+.three-column-nowrap tr > td:first-child + td,
+.three-column-nowrap tr > td:first-child + td + td { white-space: nowrap; }
+
+.details-example img { vertical-align: top; }
+
+#base64-table {
+white-space: nowrap;
+font-size: 0.6em;
+column-width: 6em;
+column-count: 5;
+column-gap: 1em;
+-moz-column-width: 6em;
+-moz-column-count: 5;
+-moz-column-gap: 1em;
+-webkit-column-width: 6em;
+-webkit-column-count: 5;
+-webkit-column-gap: 1em;
+}
+#base64-table thead { display: none; }
+#base64-table * { border: none; }
+#base64-table tbody td:first-child:after { content: ':'; }
+#base64-table tbody td:last-child { text-align: right; }
+
+#named-character-references-table {
+white-space: nowrap;
+font-size: 0.6em;
+column-width: 30em;
+column-gap: 1em;
+-moz-column-width: 30em;
+-moz-column-gap: 1em;
+-webkit-column-width: 30em;
+-webkit-column-gap: 1em;
+}
+#named-character-references-table > table > tbody > tr > td:first-child + td,
+#named-character-references-table > table > tbody > tr > td:last-child { text-align: center; }
+#named-character-references-table > table > tbody > tr > td:last-child:hover > span { position: absolute; top: auto; left: auto; margin-left: 0.5em; line-height: 1.2; font-size: 5em; border: outset; padding: 0.25em 0.5em; background: white; width: 1.25em; height: auto; text-align: center; }
+#named-character-references-table > table > tbody > tr#entity-CounterClockwiseContourIntegral > td:first-child { font-size: 0.5em; }
+
+.glyph.control { color: red; }
+
+@font-face {
+font-family: 'Essays1743';
+src: url('http://www.whatwg.org/specs/web-apps/current-work/fonts/Essays1743.ttf');
+}
+@font-face {
+font-family: 'Essays1743';
+font-weight: bold;
+src: url('http://www.whatwg.org/specs/web-apps/current-work/fonts/Essays1743-Bold.ttf');
+}
+@font-face {
+font-family: 'Essays1743';
+font-style: italic;
+src: url('http://www.whatwg.org/specs/web-apps/current-work/fonts/Essays1743-Italic.ttf');
+}
+@font-face {
+font-family: 'Essays1743';
+font-style: italic;
+font-weight: bold;
+src: url('http://www.whatwg.org/specs/web-apps/current-work/fonts/Essays1743-BoldItalic.ttf');
+}
+
+</style><link rel="stylesheet" href="data:text/css," title="Normal"><link rel="stylesheet alternate" href="data:text/css,.impl%20%7B%20background:%20pink;%20%7D" title="Highlight implementation-only prose"><link rel="stylesheet" href="status.css"><script>
+var startedInit = 0;
+function init() {
+startedInit = 1;
+if (location.search == '?slow-browser')
+return;
+var configUI = document.createElement('div');
+configUI.id = 'configUI';
+document.body.appendChild(configUI);
+load('reviewer.js');
+if (document.documentElement.className == "" || document.documentElement.className == "split index")
+load('toc.js');
+load('updater.js');
+load('dfn.js');
+load('status.js');
+if (getCookie('profile') == '1')
+document.getElementsByTagName('h2')[0].textContent += '; load: ' + (new Date() - loadTimer) + 'ms';
+}
+if (document.documentElement.className == "")
+setTimeout(function () {
+if (!startedInit)
+showAlert("Too slow? Try reading the multipage copy of the spec instead:", "http://whatwg.org/html");
+}, 6000);
+
+window.addEventListener('keypress', function (event) {
+if ((event.which == 114) && (event.metaKey)) {
+if (!confirm('Are you sure you want to reload this page?'))
+event.preventDefault();
+}
+}, false);
+
+</script>
+<script src="link-fixup.js"></script>
+</head><body onload="fixBrokenLink(); init()"><header class="head" id="head"><p><a href="http://www.whatwg.org/" class="logo"><img width="101" src="/images/logo" alt="WHATWG" height="101"></a></p>
+<hgroup><h1 class="allcaps">HTML</h1>
+<h2 class="no-num no-toc">Living Standard — Last Updated 28 January 2014</h2>
+</hgroup><dl><dt><strong>Web developer edition:</strong></dt>
+<dd><strong><a href="http://developers.whatwg.org/">http://developers.whatwg.org/</a></strong></dd>
+<dt>Multiple-page version:</dt>
+<dd><a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/">http://whatwg.org/html</a></dd>
+<dt>One-page version:</dt>
+<dd><a href="http://www.whatwg.org/specs/web-apps/current-work/">http://whatwg.org/c</a></dd>
+<dt>Validators</dt>
+<dd><a href="http://validator.whatwg.org/">http://validator.whatwg.org/</a></dd>
+<dt>Participate:</dt>
+<dd><a href="http://www.whatwg.org/mailing-list">whatwg@whatwg.org</a></dd>
+<dd><a href="http://forums.whatwg.org/">http://forums.whatwg.org/</a></dd>
+<dd><a href="http://wiki.whatwg.org/wiki/IRC">IRC: #whatwg on Freenode</a></dd>
+<dt>FAQ:</dt>
+<dd><a href="http://wiki.whatwg.org/wiki/FAQ">http://wiki.whatwg.org/wiki/FAQ</a></dd>
+<dt>Version history:</dt>
+<dd>Twitter updates: <a href="http://twitter.com/WHATWG">http://twitter.com/WHATWG</a></dd>
+<dd>Commit-Watchers mailing list: <a href="http://lists.whatwg.org/listinfo.cgi/commit-watchers-whatwg.org">http://lists.whatwg.org/listinfo.cgi/commit-watchers-whatwg.org</a></dd>
+<dd>Interactive Web interface: <a href="http://html5.org/tools/web-apps-tracker">http://html5.org/tools/web-apps-tracker</a></dd>
+<dd>Subversion interface: <a href="http://svn.whatwg.org/">http://svn.whatwg.org/</a></dd>
+<dt>Issues:</dt>
+<dd>To view the open bugs: <a href="https://www.w3.org/Bugs/Public/buglist.cgi?query_format=advanced&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;product=WHATWG&amp;component=HTML&amp;longdesc_type=allwordssubstr&amp;longdesc=&amp;bug_file_loc_type=allwordssubstr&amp;bug_file_loc=&amp;status_whiteboard_type=allwordssubstr&amp;status_whiteboard=&amp;keywords_type=allwords&amp;keywords=&amp;bug_status=UNCONFIRMED&amp;bug_status=NEW&amp;bug_status=ASSIGNED&amp;bug_status=REOPENED&amp;emailtype1=substring&amp;email1=&amp;emailtype2=substring&amp;email2=&amp;bug_id_type=anyexact&amp;bug_id=&amp;votes=&amp;chfieldfrom=&amp;chfieldto=Now&amp;chfieldvalue=&amp;cmdtype=doit&amp;order=Reuse+same+sort+as+last+time&amp;field0-0-0=noop&amp;type0-0-0=noop&amp;value0-0-0=">HTML bug list</a></dd>
+<dd>To file bugs, use the "submit review comments" feature at the bottom of the window</dd>
+<dd>To send feedback by e-mail: <a href="http://www.whatwg.org/mailing-list">whatwg@whatwg.org</a></dd>
+<dd>To view and vote on e-mail feedback: <a href="http://www.whatwg.org/issues/">http://www.whatwg.org/issues/</a></dd>
+<dt>Editor:</dt>
+<dd>Ian Hickson, Google, ian@hixie.ch</dd>
+</dl><p class="copyright">© Copyright 2004-2011 Apple Computer, Inc.,
+Mozilla Foundation, and Opera Software ASA.</p>
+<p class="copyright">You are granted a license to use, reproduce
+and create derivative works of this document.</p>
+</header><hr><h2 class="no-num no-toc" id="contents">Table of contents</h2>
+
+<!--begin-toc-->
+<ol class="toc"><li><a href="introduction.html#introduction"><span class="secno">1 </span>Introduction</a>
+<ol><li><a href="introduction.html#abstract"><span class="secno">1.1 </span>Where does this specification fit?</a></li>
+<li><a href="introduction.html#is-this-html5?"><span class="secno">1.2 </span>Is this HTML5?</a></li>
+<li><a href="introduction.html#background"><span class="secno">1.3 </span>Background</a></li>
+<li><a href="introduction.html#audience"><span class="secno">1.4 </span>Audience</a></li>
+<li><a href="introduction.html#scope"><span class="secno">1.5 </span>Scope</a></li>
+<li><a href="introduction.html#history-1"><span class="secno">1.6 </span>History</a></li>
+<li><a href="introduction.html#design-notes"><span class="secno">1.7 </span>Design notes</a>
+<ol><li><a href="introduction.html#serializability-of-script-execution"><span class="secno">1.7.1 </span>Serializability of script execution</a></li>
+<li><a href="introduction.html#compliance-with-other-specifications"><span class="secno">1.7.2 </span>Compliance with other specifications</a></li>
+<li><a href="introduction.html#extensibility"><span class="secno">1.7.3 </span>Extensibility</a></li></ol></li>
+<li><a href="introduction.html#html-vs-xhtml"><span class="secno">1.8 </span>HTML vs XHTML</a></li>
+<li><a href="introduction.html#structure-of-this-specification"><span class="secno">1.9 </span>Structure of this specification</a>
+<ol><li><a href="introduction.html#how-to-read-this-specification"><span class="secno">1.9.1 </span>How to read this specification</a></li>
+<li><a href="introduction.html#typographic-conventions"><span class="secno">1.9.2 </span>Typographic conventions</a></li></ol></li>
+<li><a href="introduction.html#fingerprint"><span class="secno">1.10 </span>Privacy concerns</a></li>
+<li><a href="introduction.html#a-quick-introduction-to-html"><span class="secno">1.11 </span>A quick introduction to HTML</a>
+<ol><li><a href="introduction.html#writing-secure-applications-with-html"><span class="secno">1.11.1 </span>Writing secure applications with HTML</a></li>
+<li><a href="introduction.html#common-pitfalls-to-avoid-when-using-the-scripting-apis"><span class="secno">1.11.2 </span>Common pitfalls to avoid when using the scripting APIs</a></li>
+<li><a href="introduction.html#how-to-catch-mistakes-when-writing-html:-validators-and-conformance-checkers"><span class="secno">1.11.3 </span>How to catch mistakes when writing HTML: validators and conformance checkers</a></li></ol></li>
+<li><a href="introduction.html#conformance-requirements-for-authors"><span class="secno">1.12 </span>Conformance requirements for authors</a>
+<ol><li><a href="introduction.html#presentational-markup"><span class="secno">1.12.1 </span>Presentational markup</a></li>
+<li><a href="introduction.html#syntax-errors"><span class="secno">1.12.2 </span>Syntax errors</a></li>
+<li><a href="introduction.html#restrictions-on-content-models-and-on-attribute-values"><span class="secno">1.12.3 </span>Restrictions on content models and on attribute values</a></li></ol></li>
+<li><a href="introduction.html#suggested-reading"><span class="secno">1.13 </span>Suggested reading</a></li></ol></li>
+<li><a href="infrastructure.html#infrastructure"><span class="secno">2 </span>Common infrastructure</a>
+<ol><li><a href="infrastructure.html#terminology"><span class="secno">2.1 </span>Terminology</a>
+<ol><li><a href="infrastructure.html#resources"><span class="secno">2.1.1 </span>Resources</a></li>
+<li><a href="infrastructure.html#xml"><span class="secno">2.1.2 </span>XML</a></li>
+<li><a href="infrastructure.html#dom-trees"><span class="secno">2.1.3 </span>DOM trees</a></li>
+<li><a href="infrastructure.html#scripting-0"><span class="secno">2.1.4 </span>Scripting</a></li>
+<li><a href="infrastructure.html#plugins"><span class="secno">2.1.5 </span>Plugins</a></li>
+<li><a href="infrastructure.html#encoding-terminology"><span class="secno">2.1.6 </span>Character encodings</a></li></ol></li>
+<li><a href="infrastructure.html#conformance-requirements"><span class="secno">2.2 </span>Conformance requirements</a>
+<ol><li><a href="infrastructure.html#conformance-classes"><span class="secno">2.2.1 </span>Conformance classes</a></li>
+<li><a href="infrastructure.html#dependencies"><span class="secno">2.2.2 </span>Dependencies</a></li>
+<li><a href="infrastructure.html#extensibility-0"><span class="secno">2.2.3 </span>Extensibility</a></li>
+<li><a href="infrastructure.html#interactions-with-xpath-and-xslt"><span class="secno">2.2.4 </span>Interactions with XPath and XSLT</a></li></ol></li>
+<li><a href="infrastructure.html#case-sensitivity-and-string-comparison"><span class="secno">2.3 </span>Case-sensitivity and string comparison</a></li>
+<li><a href="common-microsyntaxes.html#common-microsyntaxes"><span class="secno">2.4 </span>Common microsyntaxes</a>
+<ol><li><a href="common-microsyntaxes.html#common-parser-idioms"><span class="secno">2.4.1 </span>Common parser idioms</a></li>
+<li><a href="common-microsyntaxes.html#boolean-attributes"><span class="secno">2.4.2 </span>Boolean attributes</a></li>
+<li><a href="common-microsyntaxes.html#keywords-and-enumerated-attributes"><span class="secno">2.4.3 </span>Keywords and enumerated attributes</a></li>
+<li><a href="common-microsyntaxes.html#numbers"><span class="secno">2.4.4 </span>Numbers</a>
+<ol><li><a href="common-microsyntaxes.html#signed-integers"><span class="secno">2.4.4.1 </span>Signed integers</a></li>
+<li><a href="common-microsyntaxes.html#non-negative-integers"><span class="secno">2.4.4.2 </span>Non-negative integers</a></li>
+<li><a href="common-microsyntaxes.html#floating-point-numbers"><span class="secno">2.4.4.3 </span>Floating-point numbers</a></li>
+<li><a href="common-microsyntaxes.html#percentages-and-dimensions"><span class="secno">2.4.4.4 </span>Percentages and lengths</a></li>
+<li><a href="common-microsyntaxes.html#lists-of-integers"><span class="secno">2.4.4.5 </span>Lists of integers</a></li>
+<li><a href="common-microsyntaxes.html#lists-of-dimensions"><span class="secno">2.4.4.6 </span>Lists of dimensions</a></li></ol></li>
+<li><a href="common-microsyntaxes.html#dates-and-times"><span class="secno">2.4.5 </span>Dates and times</a>
+<ol><li><a href="common-microsyntaxes.html#months"><span class="secno">2.4.5.1 </span>Months</a></li>
+<li><a href="common-microsyntaxes.html#dates"><span class="secno">2.4.5.2 </span>Dates</a></li>
+<li><a href="common-microsyntaxes.html#yearless-dates"><span class="secno">2.4.5.3 </span>Yearless dates</a></li>
+<li><a href="common-microsyntaxes.html#times"><span class="secno">2.4.5.4 </span>Times</a></li>
+<li><a href="common-microsyntaxes.html#local-dates-and-times"><span class="secno">2.4.5.5 </span>Local dates and times</a></li>
+<li><a href="common-microsyntaxes.html#time-zones"><span class="secno">2.4.5.6 </span>Time zones</a></li>
+<li><a href="common-microsyntaxes.html#global-dates-and-times"><span class="secno">2.4.5.7 </span>Global dates and times</a></li>
+<li><a href="common-microsyntaxes.html#weeks"><span class="secno">2.4.5.8 </span>Weeks</a></li>
+<li><a href="common-microsyntaxes.html#durations"><span class="secno">2.4.5.9 </span>Durations</a></li>
+<li><a href="common-microsyntaxes.html#vaguer-moments-in-time"><span class="secno">2.4.5.10 </span>Vaguer moments in time</a></li></ol></li>
+<li><a href="common-microsyntaxes.html#colors"><span class="secno">2.4.6 </span>Colors</a></li>
+<li><a href="common-microsyntaxes.html#space-separated-tokens"><span class="secno">2.4.7 </span>Space-separated tokens</a></li>
+<li><a href="common-microsyntaxes.html#comma-separated-tokens"><span class="secno">2.4.8 </span>Comma-separated tokens</a></li>
+<li><a href="common-microsyntaxes.html#syntax-references"><span class="secno">2.4.9 </span>References</a></li>
+<li><a href="common-microsyntaxes.html#mq"><span class="secno">2.4.10 </span>Media queries</a></li></ol></li>
+<li><a href="urls.html#urls"><span class="secno">2.5 </span>URLs</a>
+<ol><li><a href="urls.html#terminology-0"><span class="secno">2.5.1 </span>Terminology</a></li>
+<li><a href="urls.html#resolving-urls"><span class="secno">2.5.2 </span>Resolving URLs</a></li>
+<li><a href="urls.html#dynamic-changes-to-base-urls"><span class="secno">2.5.3 </span>Dynamic changes to base URLs</a></li></ol></li>
+<li><a href="fetching-resources.html#fetching-resources"><span class="secno">2.6 </span>Fetching resources</a>
+<ol><li><a href="fetching-resources.html#terminology-1"><span class="secno">2.6.1 </span>Terminology</a></li>
+<li><a href="fetching-resources.html#processing-model"><span class="secno">2.6.2 </span>Processing model</a></li>
+<li><a href="fetching-resources.html#encrypted-http-and-related-security-concerns"><span class="secno">2.6.3 </span>Encrypted HTTP and related security concerns</a></li>
+<li><a href="fetching-resources.html#content-type-sniffing"><span class="secno">2.6.4 </span>Determining the type of a resource</a></li>
+<li><a href="fetching-resources.html#extracting-character-encodings-from-meta-elements"><span class="secno">2.6.5 </span>Extracting character encodings from <code>meta</code> elements</a></li>
+<li><a href="fetching-resources.html#cors-settings-attributes"><span class="secno">2.6.6 </span>CORS settings attributes</a></li>
+<li><a href="fetching-resources.html#cors-enabled-fetch"><span class="secno">2.6.7 </span>CORS-enabled fetch</a></li></ol></li>
+<li><a href="common-dom-interfaces.html#common-dom-interfaces"><span class="secno">2.7 </span>Common DOM interfaces</a>
+<ol><li><a href="common-dom-interfaces.html#reflecting-content-attributes-in-idl-attributes"><span class="secno">2.7.1 </span>Reflecting content attributes in IDL attributes</a></li>
+<li><a href="common-dom-interfaces.html#collections-0"><span class="secno">2.7.2 </span>Collections</a>
+<ol><li><a href="common-dom-interfaces.html#htmlallcollection-0"><span class="secno">2.7.2.1 </span>HTMLAllCollection</a></li>
+<li><a href="common-dom-interfaces.html#htmlformcontrolscollection-0"><span class="secno">2.7.2.2 </span>HTMLFormControlsCollection</a></li>
+<li><a href="common-dom-interfaces.html#htmloptionscollection-0"><span class="secno">2.7.2.3 </span>HTMLOptionsCollection</a></li>
+<li><a href="common-dom-interfaces.html#htmlpropertiescollection-0"><span class="secno">2.7.2.4 </span>HTMLPropertiesCollection</a></li></ol></li>
+<li><a href="common-dom-interfaces.html#domstringmap-0"><span class="secno">2.7.3 </span>DOMStringMap</a></li>
+<li><a href="common-dom-interfaces.html#domelementmap-0"><span class="secno">2.7.4 </span>DOMElementMap</a></li>
+<li><a href="common-dom-interfaces.html#transferable-objects"><span class="secno">2.7.5 </span>Transferable objects</a></li>
+<li><a href="common-dom-interfaces.html#safe-passing-of-structured-data"><span class="secno">2.7.6 </span>Safe passing of structured data</a></li>
+<li><a href="common-dom-interfaces.html#callbacks"><span class="secno">2.7.7 </span>Callbacks</a></li>
+<li><a href="common-dom-interfaces.html#garbage-collection"><span class="secno">2.7.8 </span>Garbage collection</a></li></ol></li>
+<li><a href="namespaces.html#namespaces"><span class="secno">2.8 </span>Namespaces</a></li></ol></li>
+<li><a href="dom.html#dom"><span class="secno">3 </span>Semantics, structure, and APIs of HTML documents</a>
+<ol><li><a href="dom.html#documents"><span class="secno">3.1 </span>Documents</a>
+<ol><li><a href="dom.html#the-document-object"><span class="secno">3.1.1 </span>The <code>Document</code> object</a></li>
+<li><a href="dom.html#resource-metadata-management"><span class="secno">3.1.2 </span>Resource metadata management</a></li>
+<li><a href="dom.html#dom-tree-accessors"><span class="secno">3.1.3 </span>DOM tree accessors</a></li>
+<li><a href="dom.html#loading-xml-documents"><span class="secno">3.1.4 </span>Loading XML documents</a></li></ol></li>
+<li><a href="elements.html#elements"><span class="secno">3.2 </span>Elements</a>
+<ol><li><a href="elements.html#semantics-0"><span class="secno">3.2.1 </span>Semantics</a></li>
+<li><a href="elements.html#elements-in-the-dom"><span class="secno">3.2.2 </span>Elements in the DOM</a></li>
+<li><a href="elements.html#element-definitions"><span class="secno">3.2.3 </span>Element definitions</a>
+<ol><li><a href="elements.html#attributes"><span class="secno">3.2.3.1 </span>Attributes</a></li></ol></li>
+<li><a href="elements.html#content-models"><span class="secno">3.2.4 </span>Content models</a>
+<ol><li><a href="elements.html#kinds-of-content"><span class="secno">3.2.4.1 </span>Kinds of content</a>
+<ol><li><a href="elements.html#metadata-content-0"><span class="secno">3.2.4.1.1 </span>Metadata content</a></li>
+<li><a href="elements.html#flow-content-0"><span class="secno">3.2.4.1.2 </span>Flow content</a></li>
+<li><a href="elements.html#sectioning-content-0"><span class="secno">3.2.4.1.3 </span>Sectioning content</a></li>
+<li><a href="elements.html#heading-content-0"><span class="secno">3.2.4.1.4 </span>Heading content</a></li>
+<li><a href="elements.html#phrasing-content-0"><span class="secno">3.2.4.1.5 </span>Phrasing content</a></li>
+<li><a href="elements.html#embedded-content-0"><span class="secno">3.2.4.1.6 </span>Embedded content</a></li>
+<li><a href="elements.html#interactive-content-0"><span class="secno">3.2.4.1.7 </span>Interactive content</a></li>
+<li><a href="elements.html#palpable-content-0"><span class="secno">3.2.4.1.8 </span>Palpable content</a></li>
+<li><a href="elements.html#script-supporting-elements-0"><span class="secno">3.2.4.1.9 </span>Script-supporting elements</a></li></ol></li>
+<li><a href="elements.html#transparent-content-models"><span class="secno">3.2.4.2 </span>Transparent content models</a></li>
+<li><a href="elements.html#paragraphs"><span class="secno">3.2.4.3 </span>Paragraphs</a></li></ol></li>
+<li><a href="elements.html#global-attributes"><span class="secno">3.2.5 </span>Global attributes</a>
+<ol><li><a href="elements.html#the-id-attribute"><span class="secno">3.2.5.1 </span>The <code>id</code> attribute</a></li>
+<li><a href="elements.html#the-title-attribute"><span class="secno">3.2.5.2 </span>The <code title="attr-title">title</code> attribute</a></li>
+<li><a href="elements.html#the-lang-and-xml:lang-attributes"><span class="secno">3.2.5.3 </span>The <code title="attr-lang">lang</code> and <code title="attr-xml-lang">xml:lang</code> attributes</a></li>
+<li><a href="elements.html#the-translate-attribute"><span class="secno">3.2.5.4 </span>The <code title="attr-translate">translate</code> attribute</a></li>
+<li><a href="elements.html#the-xml:base-attribute-(xml-only)"><span class="secno">3.2.5.5 </span>The <code>xml:base</code> attribute (XML only)</a></li>
+<li><a href="elements.html#the-dir-attribute"><span class="secno">3.2.5.6 </span>The <code>dir</code> attribute</a></li>
+<li><a href="elements.html#classes"><span class="secno">3.2.5.7 </span>The <code>class</code> attribute</a></li>
+<li><a href="elements.html#the-style-attribute"><span class="secno">3.2.5.8 </span>The <code>style</code> attribute</a></li>
+<li><a href="elements.html#embedding-custom-non-visible-data-with-the-data-*-attributes"><span class="secno">3.2.5.9 </span>Embedding custom non-visible data with the <code title="attr-data-*">data-*</code> attributes</a></li></ol></li>
+<li><a href="elements.html#requirements-relating-to-the-bidirectional-algorithm"><span class="secno">3.2.6 </span>Requirements relating to the bidirectional algorithm</a>
+<ol><li><a href="elements.html#authoring-conformance-criteria-for-bidirectional-algorithm-formatting-characters"><span class="secno">3.2.6.1 </span>Authoring conformance criteria for bidirectional-algorithm formatting characters</a></li>
+<li><a href="elements.html#user-agent-conformance-criteria"><span class="secno">3.2.6.2 </span>User agent conformance criteria</a></li></ol></li>
+<li><a href="elements.html#wai-aria"><span class="secno">3.2.7 </span>WAI-ARIA</a></li></ol></li></ol></li>
+<li><a href="semantics.html#semantics"><span class="secno">4 </span>The elements of HTML</a>
+<ol><li><a href="semantics.html#the-root-element"><span class="secno">4.1 </span>The root element</a>
+<ol><li><a href="semantics.html#the-html-element"><span class="secno">4.1.1 </span>The <code>html</code> element</a></li></ol></li>
+<li><a href="semantics.html#document-metadata"><span class="secno">4.2 </span>Document metadata</a>
+<ol><li><a href="semantics.html#the-head-element"><span class="secno">4.2.1 </span>The <code>head</code> element</a></li>
+<li><a href="semantics.html#the-title-element"><span class="secno">4.2.2 </span>The <code>title</code> element</a></li>
+<li><a href="semantics.html#the-base-element"><span class="secno">4.2.3 </span>The <code>base</code> element</a></li>
+<li><a href="semantics.html#the-link-element"><span class="secno">4.2.4 </span>The <code>link</code> element</a></li>
+<li><a href="semantics.html#the-meta-element"><span class="secno">4.2.5 </span>The <code>meta</code> element</a>
+<ol><li><a href="semantics.html#standard-metadata-names"><span class="secno">4.2.5.1 </span>Standard metadata names</a></li>
+<li><a href="semantics.html#other-metadata-names"><span class="secno">4.2.5.2 </span>Other metadata names</a></li>
+<li><a href="semantics.html#pragma-directives"><span class="secno">4.2.5.3 </span>Pragma directives</a></li>
+<li><a href="semantics.html#other-pragma-directives"><span class="secno">4.2.5.4 </span>Other pragma directives</a></li>
+<li><a href="semantics.html#charset"><span class="secno">4.2.5.5 </span>Specifying the document's character encoding</a></li></ol></li>
+<li><a href="semantics.html#the-style-element"><span class="secno">4.2.6 </span>The <code>style</code> element</a>
+<ol><li><a href="semantics.html#the-@global-rule"><span class="secno">4.2.6.1 </span>The <code title="">@global</code> rule</a></li></ol></li>
+<li><a href="semantics.html#interactions-of-styling-and-scripting"><span class="secno">4.2.7 </span>Interactions of styling and scripting</a></li></ol></li>
+<li><a href="sections.html#sections"><span class="secno">4.3 </span>Sections</a>
+<ol><li><a href="sections.html#the-body-element"><span class="secno">4.3.1 </span>The <code>body</code> element</a></li>
+<li><a href="sections.html#the-article-element"><span class="secno">4.3.2 </span>The <code>article</code> element</a></li>
+<li><a href="sections.html#the-section-element"><span class="secno">4.3.3 </span>The <code>section</code> element</a></li>
+<li><a href="sections.html#the-nav-element"><span class="secno">4.3.4 </span>The <code>nav</code> element</a></li>
+<li><a href="sections.html#the-aside-element"><span class="secno">4.3.5 </span>The <code>aside</code> element</a></li>
+<li><a href="sections.html#the-h1,-h2,-h3,-h4,-h5,-and-h6-elements"><span class="secno">4.3.6 </span>The <code>h1</code>, <code>h2</code>, <code>h3</code>, <code>h4</code>, <code>h5</code>, and
+<code>h6</code> elements</a></li>
+<li><a href="sections.html#the-hgroup-element"><span class="secno">4.3.7 </span>The <code>hgroup</code> element</a></li>
+<li><a href="sections.html#the-header-element"><span class="secno">4.3.8 </span>The <code>header</code> element</a></li>
+<li><a href="sections.html#the-footer-element"><span class="secno">4.3.9 </span>The <code>footer</code> element</a></li>
+<li><a href="sections.html#the-address-element"><span class="secno">4.3.10 </span>The <code>address</code> element</a></li>
+<li><a href="sections.html#headings-and-sections"><span class="secno">4.3.11 </span>Headings and sections</a>
+<ol><li><a href="sections.html#outlines"><span class="secno">4.3.11.1 </span>Creating an outline</a></li>
+<li><a href="sections.html#sample-outlines"><span class="secno">4.3.11.2 </span>Sample outlines</a></li></ol></li>
+<li><a href="sections.html#usage-summary-0"><span class="secno">4.3.12 </span>Usage summary</a>
+<ol><li><a href="sections.html#article-or-section"><span class="secno">4.3.12.1 </span>Article or section?</a></li></ol></li></ol></li>
+<li><a href="grouping-content.html#grouping-content"><span class="secno">4.4 </span>Grouping content</a>
+<ol><li><a href="grouping-content.html#the-p-element"><span class="secno">4.4.1 </span>The <code>p</code> element</a></li>
+<li><a href="grouping-content.html#the-hr-element"><span class="secno">4.4.2 </span>The <code>hr</code> element</a></li>
+<li><a href="grouping-content.html#the-pre-element"><span class="secno">4.4.3 </span>The <code>pre</code> element</a></li>
+<li><a href="grouping-content.html#the-blockquote-element"><span class="secno">4.4.4 </span>The <code>blockquote</code> element</a></li>
+<li><a href="grouping-content.html#the-ol-element"><span class="secno">4.4.5 </span>The <code>ol</code> element</a></li>
+<li><a href="grouping-content.html#the-ul-element"><span class="secno">4.4.6 </span>The <code>ul</code> element</a></li>
+<li><a href="grouping-content.html#the-li-element"><span class="secno">4.4.7 </span>The <code>li</code> element</a></li>
+<li><a href="grouping-content.html#the-dl-element"><span class="secno">4.4.8 </span>The <code>dl</code> element</a></li>
+<li><a href="grouping-content.html#the-dt-element"><span class="secno">4.4.9 </span>The <code>dt</code> element</a></li>
+<li><a href="grouping-content.html#the-dd-element"><span class="secno">4.4.10 </span>The <code>dd</code> element</a></li>
+<li><a href="grouping-content.html#the-figure-element"><span class="secno">4.4.11 </span>The <code>figure</code> element</a></li>
+<li><a href="grouping-content.html#the-figcaption-element"><span class="secno">4.4.12 </span>The <code>figcaption</code> element</a></li>
+<li><a href="grouping-content.html#the-main-element"><span class="secno">4.4.13 </span>The <code>main</code> element</a></li>
+<li><a href="grouping-content.html#the-div-element"><span class="secno">4.4.14 </span>The <code>div</code> element</a></li></ol></li>
+<li><a href="text-level-semantics.html#text-level-semantics"><span class="secno">4.5 </span>Text-level semantics</a>
+<ol><li><a href="text-level-semantics.html#the-a-element"><span class="secno">4.5.1 </span>The <code>a</code> element</a></li>
+<li><a href="text-level-semantics.html#the-em-element"><span class="secno">4.5.2 </span>The <code>em</code> element</a></li>
+<li><a href="text-level-semantics.html#the-strong-element"><span class="secno">4.5.3 </span>The <code>strong</code> element</a></li>
+<li><a href="text-level-semantics.html#the-small-element"><span class="secno">4.5.4 </span>The <code>small</code> element</a></li>
+<li><a href="text-level-semantics.html#the-s-element"><span class="secno">4.5.5 </span>The <code>s</code> element</a></li>
+<li><a href="text-level-semantics.html#the-cite-element"><span class="secno">4.5.6 </span>The <code>cite</code> element</a></li>
+<li><a href="text-level-semantics.html#the-q-element"><span class="secno">4.5.7 </span>The <code>q</code> element</a></li>
+<li><a href="text-level-semantics.html#the-dfn-element"><span class="secno">4.5.8 </span>The <code>dfn</code> element</a></li>
+<li><a href="text-level-semantics.html#the-abbr-element"><span class="secno">4.5.9 </span>The <code>abbr</code> element</a></li>
+<li><a href="text-level-semantics.html#the-data-element"><span class="secno">4.5.10 </span>The <code>data</code> element</a></li>
+<li><a href="text-level-semantics.html#the-time-element"><span class="secno">4.5.11 </span>The <code>time</code> element</a></li>
+<li><a href="text-level-semantics.html#the-code-element"><span class="secno">4.5.12 </span>The <code>code</code> element</a></li>
+<li><a href="text-level-semantics.html#the-var-element"><span class="secno">4.5.13 </span>The <code>var</code> element</a></li>
+<li><a href="text-level-semantics.html#the-samp-element"><span class="secno">4.5.14 </span>The <code>samp</code> element</a></li>
+<li><a href="text-level-semantics.html#the-kbd-element"><span class="secno">4.5.15 </span>The <code>kbd</code> element</a></li>
+<li><a href="text-level-semantics.html#the-sub-and-sup-elements"><span class="secno">4.5.16 </span>The <code>sub</code> and <code>sup</code> elements</a></li>
+<li><a href="text-level-semantics.html#the-i-element"><span class="secno">4.5.17 </span>The <code>i</code> element</a></li>
+<li><a href="text-level-semantics.html#the-b-element"><span class="secno">4.5.18 </span>The <code>b</code> element</a></li>
+<li><a href="text-level-semantics.html#the-u-element"><span class="secno">4.5.19 </span>The <code>u</code> element</a></li>
+<li><a href="text-level-semantics.html#the-mark-element"><span class="secno">4.5.20 </span>The <code>mark</code> element</a></li>
+<li><a href="text-level-semantics.html#the-ruby-element"><span class="secno">4.5.21 </span>The <code>ruby</code> element</a></li>
+<li><a href="text-level-semantics.html#the-rt-element"><span class="secno">4.5.22 </span>The <code>rt</code> element</a></li>
+<li><a href="text-level-semantics.html#the-rp-element"><span class="secno">4.5.23 </span>The <code>rp</code> element</a></li>
+<li><a href="text-level-semantics.html#the-bdi-element"><span class="secno">4.5.24 </span>The <code>bdi</code> element</a></li>
+<li><a href="text-level-semantics.html#the-bdo-element"><span class="secno">4.5.25 </span>The <code>bdo</code> element</a></li>
+<li><a href="text-level-semantics.html#the-span-element"><span class="secno">4.5.26 </span>The <code>span</code> element</a></li>
+<li><a href="text-level-semantics.html#the-br-element"><span class="secno">4.5.27 </span>The <code>br</code> element</a></li>
+<li><a href="text-level-semantics.html#the-wbr-element"><span class="secno">4.5.28 </span>The <code>wbr</code> element</a></li>
+<li><a href="text-level-semantics.html#usage-summary"><span class="secno">4.5.29 </span>Usage summary</a></li></ol></li>
+<li><a href="edits.html#edits"><span class="secno">4.6 </span>Edits</a>
+<ol><li><a href="edits.html#the-ins-element"><span class="secno">4.6.1 </span>The <code>ins</code> element</a></li>
+<li><a href="edits.html#the-del-element"><span class="secno">4.6.2 </span>The <code>del</code> element</a></li>
+<li><a href="edits.html#attributes-common-to-ins-and-del-elements"><span class="secno">4.6.3 </span>Attributes common to <code>ins</code> and <code>del</code> elements</a></li>
+<li><a href="edits.html#edits-and-paragraphs"><span class="secno">4.6.4 </span>Edits and paragraphs</a></li>
+<li><a href="edits.html#edits-and-lists"><span class="secno">4.6.5 </span>Edits and lists</a></li>
+<li><a href="edits.html#edits-and-tables"><span class="secno">4.6.6 </span>Edits and tables</a></li></ol></li>
+<li><a href="embedded-content-1.html#embedded-content-1"><span class="secno">4.7 </span>Embedded content</a>
+<ol><li><a href="embedded-content-1.html#the-img-element"><span class="secno">4.7.1 </span>The <code>img</code> element</a>
+<ol><li><a href="embedded-content-1.html#alt"><span class="secno">4.7.1.1 </span>Requirements for providing text to act as an alternative for images</a>
+<ol><li><a href="embedded-content-1.html#general-guidelines"><span class="secno">4.7.1.1.1 </span>General guidelines</a></li>
+<li><a href="embedded-content-1.html#a-link-or-button-containing-nothing-but-the-image"><span class="secno">4.7.1.1.2 </span>A link or button containing nothing but the image</a></li>
+<li><a href="embedded-content-1.html#a-phrase-or-paragraph-with-an-alternative-graphical-representation:-charts,-diagrams,-graphs,-maps,-illustrations"><span class="secno">4.7.1.1.3 </span>A phrase or paragraph with an alternative graphical representation: charts, diagrams, graphs, maps, illustrations</a></li>
+<li><a href="embedded-content-1.html#a-short-phrase-or-label-with-an-alternative-graphical-representation:-icons,-logos"><span class="secno">4.7.1.1.4 </span>A short phrase or label with an alternative graphical representation: icons, logos</a></li>
+<li><a href="embedded-content-1.html#text-that-has-been-rendered-to-a-graphic-for-typographical-effect"><span class="secno">4.7.1.1.5 </span>Text that has been rendered to a graphic for typographical effect</a></li>
+<li><a href="embedded-content-1.html#a-graphical-representation-of-some-of-the-surrounding-text"><span class="secno">4.7.1.1.6 </span>A graphical representation of some of the surrounding text</a></li>
+<li><a href="embedded-content-1.html#a-purely-decorative-image-that-doesn't-add-any-information"><span class="secno">4.7.1.1.7 </span>A purely decorative image that doesn't add any information</a></li>
+<li><a href="embedded-content-1.html#a-group-of-images-that-form-a-single-larger-picture-with-no-links"><span class="secno">4.7.1.1.8 </span>A group of images that form a single larger picture with no links</a></li>
+<li><a href="embedded-content-1.html#a-group-of-images-that-form-a-single-larger-picture-with-links"><span class="secno">4.7.1.1.9 </span>A group of images that form a single larger picture with links</a></li>
+<li><a href="embedded-content-1.html#a-key-part-of-the-content"><span class="secno">4.7.1.1.10 </span>A key part of the content</a></li>
+<li><a href="embedded-content-1.html#an-image-not-intended-for-the-user"><span class="secno">4.7.1.1.11 </span>An image not intended for the user</a></li>
+<li><a href="embedded-content-1.html#an-image-in-an-e-mail-or-private-document-intended-for-a-specific-person-who-is-known-to-be-able-to-view-images"><span class="secno">4.7.1.1.12 </span>An image in an e-mail or private document intended for a specific person who is known to be able to view images</a></li>
+<li><a href="embedded-content-1.html#guidance-for-markup-generators"><span class="secno">4.7.1.1.13 </span>Guidance for markup generators</a></li>
+<li><a href="embedded-content-1.html#guidance-for-conformance-checkers"><span class="secno">4.7.1.1.14 </span>Guidance for conformance checkers</a></li></ol></li>
+<li><a href="embedded-content-1.html#adaptive-images"><span class="secno">4.7.1.2 </span>Adaptive images</a></li></ol></li>
+<li><a href="the-iframe-element.html#the-iframe-element"><span class="secno">4.7.2 </span>The <code>iframe</code> element</a></li>
+<li><a href="the-iframe-element.html#the-embed-element"><span class="secno">4.7.3 </span>The <code>embed</code> element</a></li>
+<li><a href="the-iframe-element.html#the-object-element"><span class="secno">4.7.4 </span>The <code>object</code> element</a></li>
+<li><a href="the-iframe-element.html#the-param-element"><span class="secno">4.7.5 </span>The <code>param</code> element</a></li>
+<li><a href="the-video-element.html#the-video-element"><span class="secno">4.7.6 </span>The <code>video</code> element</a></li>
+<li><a href="the-video-element.html#the-audio-element"><span class="secno">4.7.7 </span>The <code>audio</code> element</a></li>
+<li><a href="the-video-element.html#the-source-element"><span class="secno">4.7.8 </span>The <code>source</code> element</a></li>
+<li><a href="the-video-element.html#the-track-element"><span class="secno">4.7.9 </span>The <code>track</code> element</a></li>
+<li><a href="the-video-element.html#media-elements"><span class="secno">4.7.10 </span>Media elements</a>
+<ol><li><a href="the-video-element.html#error-codes"><span class="secno">4.7.10.1 </span>Error codes</a></li>
+<li><a href="the-video-element.html#location-of-the-media-resource"><span class="secno">4.7.10.2 </span>Location of the media resource</a></li>
+<li><a href="the-video-element.html#mime-types"><span class="secno">4.7.10.3 </span>MIME types</a></li>
+<li><a href="the-video-element.html#network-states"><span class="secno">4.7.10.4 </span>Network states</a></li>
+<li><a href="the-video-element.html#loading-the-media-resource"><span class="secno">4.7.10.5 </span>Loading the media resource</a></li>
+<li><a href="the-video-element.html#offsets-into-the-media-resource"><span class="secno">4.7.10.6 </span>Offsets into the media resource</a></li>
+<li><a href="the-video-element.html#ready-states"><span class="secno">4.7.10.7 </span>Ready states</a></li>
+<li><a href="the-video-element.html#playing-the-media-resource"><span class="secno">4.7.10.8 </span>Playing the media resource</a></li>
+<li><a href="the-video-element.html#seeking"><span class="secno">4.7.10.9 </span>Seeking</a></li>
+<li><a href="the-video-element.html#media-resources-with-multiple-media-tracks"><span class="secno">4.7.10.10 </span>Media resources with multiple media tracks</a>
+<ol><li><a href="the-video-element.html#audiotracklist-and-videotracklist-objects"><span class="secno">4.7.10.10.1 </span><code>AudioTrackList</code> and <code>VideoTrackList</code> objects</a></li>
+<li><a href="the-video-element.html#selecting-specific-audio-and-video-tracks-declaratively"><span class="secno">4.7.10.10.2 </span>Selecting specific audio and video tracks declaratively</a></li></ol></li>
+<li><a href="the-video-element.html#synchronising-multiple-media-elements"><span class="secno">4.7.10.11 </span>Synchronising multiple media elements</a>
+<ol><li><a href="the-video-element.html#introduction-0"><span class="secno">4.7.10.11.1 </span>Introduction</a></li>
+<li><a href="the-video-element.html#media-controllers"><span class="secno">4.7.10.11.2 </span>Media controllers</a></li>
+<li><a href="the-video-element.html#assigning-a-media-controller-declaratively"><span class="secno">4.7.10.11.3 </span>Assigning a media controller declaratively</a></li></ol></li>
+<li><a href="the-video-element.html#timed-text-tracks"><span class="secno">4.7.10.12 </span>Timed text tracks</a>
+<ol><li><a href="the-video-element.html#text-track-model"><span class="secno">4.7.10.12.1 </span>Text track model</a></li>
+<li><a href="the-video-element.html#sourcing-in-band-text-tracks"><span class="secno">4.7.10.12.2 </span>Sourcing in-band text tracks</a></li>
+<li><a href="the-video-element.html#sourcing-out-of-band-text-tracks"><span class="secno">4.7.10.12.3 </span>Sourcing out-of-band text tracks</a></li>
+<li><a href="the-video-element.html#guidelines-for-exposing-cues-in-various-formats-as-text-track-cues"><span class="secno">4.7.10.12.4 </span>Guidelines for exposing cues in various formats as text track cues</a></li>
+<li><a href="the-video-element.html#text-track-api"><span class="secno">4.7.10.12.5 </span>Text track API</a></li>
+<li><a href="the-video-element.html#text-tracks-describing-chapters"><span class="secno">4.7.10.12.6 </span>Text tracks describing chapters</a></li>
+<li><a href="the-video-element.html#cue-events"><span class="secno">4.7.10.12.7 </span>Event handlers for objects of the text track APIs</a></li>
+<li><a href="the-video-element.html#best-practices-for-metadata-text-tracks"><span class="secno">4.7.10.12.8 </span>Best practices for metadata text tracks</a></li></ol></li>
+<li><a href="the-video-element.html#user-interface"><span class="secno">4.7.10.13 </span>User interface</a></li>
+<li><a href="the-video-element.html#time-ranges"><span class="secno">4.7.10.14 </span>Time ranges</a></li>
+<li><a href="the-video-element.html#the-trackevent-interface"><span class="secno">4.7.10.15 </span>The <code>TrackEvent</code> interface</a></li>
+<li><a href="the-video-element.html#mediaevents"><span class="secno">4.7.10.16 </span>Event summary</a></li>
+<li><a href="the-video-element.html#security-and-privacy-considerations"><span class="secno">4.7.10.17 </span>Security and privacy considerations</a></li>
+<li><a href="the-video-element.html#best-practices-for-authors-using-media-elements"><span class="secno">4.7.10.18 </span>Best practices for authors using media elements</a></li>
+<li><a href="the-video-element.html#best-practices-for-implementors-of-media-elements"><span class="secno">4.7.10.19 </span>Best practices for implementors of media elements</a></li></ol></li>
+<li><a href="the-map-element.html#the-map-element"><span class="secno">4.7.11 </span>The <code>map</code> element</a></li>
+<li><a href="the-map-element.html#the-area-element"><span class="secno">4.7.12 </span>The <code>area</code> element</a></li>
+<li><a href="the-map-element.html#image-maps"><span class="secno">4.7.13 </span>Image maps</a>
+<ol><li><a href="the-map-element.html#authoring"><span class="secno">4.7.13.1 </span>Authoring</a></li>
+<li><a href="the-map-element.html#processing-model-0"><span class="secno">4.7.13.2 </span>Processing model</a></li></ol></li>
+<li><a href="the-map-element.html#mathml"><span class="secno">4.7.14 </span>MathML</a></li>
+<li><a href="the-map-element.html#svg-0"><span class="secno">4.7.15 </span>SVG</a></li>
+<li><a href="the-map-element.html#dimension-attributes"><span class="secno">4.7.16 </span>Dimension attributes</a></li></ol></li>
+<li><a href="links.html#links"><span class="secno">4.8 </span>Links</a>
+<ol><li><a href="links.html#introduction-1"><span class="secno">4.8.1 </span>Introduction</a></li>
+<li><a href="links.html#links-created-by-a-and-area-elements"><span class="secno">4.8.2 </span>Links created by <code>a</code> and <code>area</code> elements</a></li>
+<li><a href="links.html#following-hyperlinks-0"><span class="secno">4.8.3 </span>Following hyperlinks</a></li>
+<li><a href="links.html#downloading-resources"><span class="secno">4.8.4 </span>Downloading resources</a>
+<ol><li><a href="links.html#hyperlink-auditing"><span class="secno">4.8.4.1 </span>Hyperlink auditing</a></li></ol></li>
+<li><a href="links.html#linkTypes"><span class="secno">4.8.5 </span>Link types</a>
+<ol><li><a href="links.html#rel-alternate"><span class="secno">4.8.5.1 </span>Link type "<code>alternate</code>"</a></li>
+<li><a href="links.html#link-type-author"><span class="secno">4.8.5.2 </span>Link type "<code>author</code>"</a></li>
+<li><a href="links.html#link-type-bookmark"><span class="secno">4.8.5.3 </span>Link type "<code>bookmark</code>"</a></li>
+<li><a href="links.html#link-type-external"><span class="secno">4.8.5.4 </span>Link type "<code>external</code>"</a></li>
+<li><a href="links.html#link-type-help"><span class="secno">4.8.5.5 </span>Link type "<code>help</code>"</a></li>
+<li><a href="links.html#rel-icon"><span class="secno">4.8.5.6 </span>Link type "<code>icon</code>"</a></li>
+<li><a href="links.html#link-type-license"><span class="secno">4.8.5.7 </span>Link type "<code>license</code>"</a></li>
+<li><a href="links.html#link-type-nofollow"><span class="secno">4.8.5.8 </span>Link type "<code>nofollow</code>"</a></li>
+<li><a href="links.html#link-type-noreferrer"><span class="secno">4.8.5.9 </span>Link type "<code>noreferrer</code>"</a></li>
+<li><a href="links.html#link-type-pingback"><span class="secno">4.8.5.10 </span>Link type "<code>pingback</code>"</a></li>
+<li><a href="links.html#link-type-prefetch"><span class="secno">4.8.5.11 </span>Link type "<code>prefetch</code>"</a></li>
+<li><a href="links.html#link-type-search"><span class="secno">4.8.5.12 </span>Link type "<code>search</code>"</a></li>
+<li><a href="links.html#link-type-sidebar"><span class="secno">4.8.5.13 </span>Link type "<code>sidebar</code>"</a></li>
+<li><a href="links.html#link-type-stylesheet"><span class="secno">4.8.5.14 </span>Link type "<code>stylesheet</code>"</a></li>
+<li><a href="links.html#link-type-tag"><span class="secno">4.8.5.15 </span>Link type "<code>tag</code>"</a></li>
+<li><a href="links.html#sequential-link-types"><span class="secno">4.8.5.16 </span>Sequential link types</a>
+<ol><li><a href="links.html#link-type-next"><span class="secno">4.8.5.16.1 </span>Link type "<code>next</code>"</a></li>
+<li><a href="links.html#link-type-prev"><span class="secno">4.8.5.16.2 </span>Link type "<code>prev</code>"</a></li></ol></li>
+<li><a href="links.html#other-link-types"><span class="secno">4.8.5.17 </span>Other link types</a></li></ol></li></ol></li>
+<li><a href="tabular-data.html#tabular-data"><span class="secno">4.9 </span>Tabular data</a>
+<ol><li><a href="tabular-data.html#the-table-element"><span class="secno">4.9.1 </span>The <code>table</code> element</a>
+<ol><li><a href="tabular-data.html#table-descriptions-techniques"><span class="secno">4.9.1.1 </span>Techniques for describing tables</a></li>
+<li><a href="tabular-data.html#table-layout-techniques"><span class="secno">4.9.1.2 </span>Techniques for table design</a></li></ol></li>
+<li><a href="tabular-data.html#the-caption-element"><span class="secno">4.9.2 </span>The <code>caption</code> element</a></li>
+<li><a href="tabular-data.html#the-colgroup-element"><span class="secno">4.9.3 </span>The <code>colgroup</code> element</a></li>
+<li><a href="tabular-data.html#the-col-element"><span class="secno">4.9.4 </span>The <code>col</code> element</a></li>
+<li><a href="tabular-data.html#the-tbody-element"><span class="secno">4.9.5 </span>The <code>tbody</code> element</a></li>
+<li><a href="tabular-data.html#the-thead-element"><span class="secno">4.9.6 </span>The <code>thead</code> element</a></li>
+<li><a href="tabular-data.html#the-tfoot-element"><span class="secno">4.9.7 </span>The <code>tfoot</code> element</a></li>
+<li><a href="tabular-data.html#the-tr-element"><span class="secno">4.9.8 </span>The <code>tr</code> element</a></li>
+<li><a href="tabular-data.html#the-td-element"><span class="secno">4.9.9 </span>The <code>td</code> element</a></li>
+<li><a href="tabular-data.html#the-th-element"><span class="secno">4.9.10 </span>The <code>th</code> element</a></li>
+<li><a href="tabular-data.html#attributes-common-to-td-and-th-elements"><span class="secno">4.9.11 </span>Attributes common to <code>td</code> and <code>th</code> elements</a></li>
+<li><a href="tabular-data.html#processing-model-1"><span class="secno">4.9.12 </span>Processing model</a>
+<ol><li><a href="tabular-data.html#forming-a-table"><span class="secno">4.9.12.1 </span>Forming a table</a></li>
+<li><a href="tabular-data.html#header-and-data-cell-semantics"><span class="secno">4.9.12.2 </span>Forming relationships between data cells and header cells</a></li></ol></li>
+<li><a href="tabular-data.html#table-sorting-model"><span class="secno">4.9.13 </span>Table sorting model</a></li>
+<li><a href="tabular-data.html#examples"><span class="secno">4.9.14 </span>Examples</a></li></ol></li>
+<li><a href="forms.html#forms"><span class="secno">4.10 </span>Forms</a>
+<ol><li><a href="forms.html#introduction-2"><span class="secno">4.10.1 </span>Introduction</a>
+<ol><li><a href="forms.html#writing-a-form's-user-interface"><span class="secno">4.10.1.1 </span>Writing a form's user interface</a></li>
+<li><a href="forms.html#implementing-the-server-side-processing-for-a-form"><span class="secno">4.10.1.2 </span>Implementing the server-side processing for a form</a></li>
+<li><a href="forms.html#configuring-a-form-to-communicate-with-a-server"><span class="secno">4.10.1.3 </span>Configuring a form to communicate with a server</a></li>
+<li><a href="forms.html#client-side-form-validation"><span class="secno">4.10.1.4 </span>Client-side form validation</a></li>
+<li><a href="forms.html#enabling-client-side-automatic-filling-of-form-controls"><span class="secno">4.10.1.5 </span>Enabling client-side automatic filling of form controls</a></li>
+<li><a href="forms.html#improving-the-user-experience-on-mobile-devices"><span class="secno">4.10.1.6 </span>Improving the user experience on mobile devices</a></li>
+<li><a href="forms.html#the-difference-between-the-field-type,-the-autofill-field-name,-and-the-input-modality"><span class="secno">4.10.1.7 </span>The difference between the field type, the autofill field name, and the input modality</a></li>
+<li><a href="forms.html#input-author-notes"><span class="secno">4.10.1.8 </span>Date, time, and number formats</a></li></ol></li>
+<li><a href="forms.html#categories"><span class="secno">4.10.2 </span>Categories</a></li>
+<li><a href="forms.html#the-form-element"><span class="secno">4.10.3 </span>The <code>form</code> element</a></li>
+<li><a href="forms.html#the-label-element"><span class="secno">4.10.4 </span>The <code>label</code> element</a></li>
+<li><a href="the-input-element.html#the-input-element"><span class="secno">4.10.5 </span>The <code>input</code> element</a>
+<ol><li><a href="states-of-the-type-attribute.html#states-of-the-type-attribute"><span class="secno">4.10.5.1 </span>States of the <code title="attr-input-type">type</code> attribute</a>
+<ol><li><a href="states-of-the-type-attribute.html#hidden-state-(type=hidden)"><span class="secno">4.10.5.1.1 </span>Hidden state (<code title="">type=hidden</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#text-(type=text)-state-and-search-state-(type=search)"><span class="secno">4.10.5.1.2 </span>Text (<code title="">type=text</code>) state and Search state (<code title="">type=search</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#telephone-state-(type=tel)"><span class="secno">4.10.5.1.3 </span>Telephone state (<code title="">type=tel</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#url-state-(type=url)"><span class="secno">4.10.5.1.4 </span>URL state (<code title="">type=url</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#e-mail-state-(type=email)"><span class="secno">4.10.5.1.5 </span>E-mail state (<code title="">type=email</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#password-state-(type=password)"><span class="secno">4.10.5.1.6 </span>Password state (<code title="">type=password</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#date-and-time-state-(type=datetime)"><span class="secno">4.10.5.1.7 </span>Date and Time state (<code title="">type=datetime</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#date-state-(type=date)"><span class="secno">4.10.5.1.8 </span>Date state (<code title="">type=date</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#month-state-(type=month)"><span class="secno">4.10.5.1.9 </span>Month state (<code title="">type=month</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#week-state-(type=week)"><span class="secno">4.10.5.1.10 </span>Week state (<code title="">type=week</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#time-state-(type=time)"><span class="secno">4.10.5.1.11 </span>Time state (<code title="">type=time</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#local-date-and-time-state-(type=datetime-local)"><span class="secno">4.10.5.1.12 </span>Local Date and Time state (<code title="">type=datetime-local</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#number-state-(type=number)"><span class="secno">4.10.5.1.13 </span>Number state (<code title="">type=number</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#range-state-(type=range)"><span class="secno">4.10.5.1.14 </span>Range state (<code title="">type=range</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#color-state-(type=color)"><span class="secno">4.10.5.1.15 </span>Color state (<code title="">type=color</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#checkbox-state-(type=checkbox)"><span class="secno">4.10.5.1.16 </span>Checkbox state (<code title="">type=checkbox</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#radio-button-state-(type=radio)"><span class="secno">4.10.5.1.17 </span>Radio Button state (<code title="">type=radio</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#file-upload-state-(type=file)"><span class="secno">4.10.5.1.18 </span>File Upload state (<code title="">type=file</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#submit-button-state-(type=submit)"><span class="secno">4.10.5.1.19 </span>Submit Button state (<code title="">type=submit</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#image-button-state-(type=image)"><span class="secno">4.10.5.1.20 </span>Image Button state (<code title="">type=image</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#reset-button-state-(type=reset)"><span class="secno">4.10.5.1.21 </span>Reset Button state (<code title="">type=reset</code>)</a></li>
+<li><a href="states-of-the-type-attribute.html#button-state-(type=button)"><span class="secno">4.10.5.1.22 </span>Button state (<code title="">type=button</code>)</a></li></ol></li>
+<li><a href="states-of-the-type-attribute.html#input-impl-notes"><span class="secno">4.10.5.2 </span>Implemention notes regarding localization of form controls</a></li>
+<li><a href="common-input-element-attributes.html#common-input-element-attributes"><span class="secno">4.10.5.3 </span>Common <code>input</code> element attributes</a>
+<ol><li><a href="common-input-element-attributes.html#the-maxlength-and-minlength-attributes"><span class="secno">4.10.5.3.1 </span>The <code title="attr-input-maxlength">maxlength</code> and <code title="attr-input-minlength">minlength</code> attributes</a></li>
+<li><a href="common-input-element-attributes.html#the-size-attribute"><span class="secno">4.10.5.3.2 </span>The <code title="attr-input-size">size</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-readonly-attribute"><span class="secno">4.10.5.3.3 </span>The <code title="attr-input-readonly">readonly</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-required-attribute"><span class="secno">4.10.5.3.4 </span>The <code title="attr-input-required">required</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-multiple-attribute"><span class="secno">4.10.5.3.5 </span>The <code title="attr-input-multiple">multiple</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-pattern-attribute"><span class="secno">4.10.5.3.6 </span>The <code title="attr-input-pattern">pattern</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-min-and-max-attributes"><span class="secno">4.10.5.3.7 </span>The <code title="attr-input-min">min</code> and <code title="attr-input-max">max</code> attributes</a></li>
+<li><a href="common-input-element-attributes.html#the-step-attribute"><span class="secno">4.10.5.3.8 </span>The <code title="attr-input-step">step</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-list-attribute"><span class="secno">4.10.5.3.9 </span>The <code title="attr-input-list">list</code> attribute</a></li>
+<li><a href="common-input-element-attributes.html#the-placeholder-attribute"><span class="secno">4.10.5.3.10 </span>The <code title="attr-input-placeholder">placeholder</code> attribute</a></li></ol></li>
+<li><a href="common-input-element-attributes.html#common-input-element-apis"><span class="secno">4.10.5.4 </span>Common <code>input</code> element APIs</a></li>
+<li><a href="common-input-element-attributes.html#common-input-element-events"><span class="secno">4.10.5.5 </span>Common event behaviors</a></li></ol></li>
+<li><a href="the-button-element.html#the-button-element"><span class="secno">4.10.6 </span>The <code>button</code> element</a></li>
+<li><a href="the-button-element.html#the-select-element"><span class="secno">4.10.7 </span>The <code>select</code> element</a></li>
+<li><a href="the-button-element.html#the-datalist-element"><span class="secno">4.10.8 </span>The <code>datalist</code> element</a></li>
+<li><a href="the-button-element.html#the-optgroup-element"><span class="secno">4.10.9 </span>The <code>optgroup</code> element</a></li>
+<li><a href="the-button-element.html#the-option-element"><span class="secno">4.10.10 </span>The <code>option</code> element</a></li>
+<li><a href="the-button-element.html#the-textarea-element"><span class="secno">4.10.11 </span>The <code>textarea</code> element</a></li>
+<li><a href="the-button-element.html#the-keygen-element"><span class="secno">4.10.12 </span>The <code>keygen</code> element</a></li>
+<li><a href="the-button-element.html#the-output-element"><span class="secno">4.10.13 </span>The <code>output</code> element</a></li>
+<li><a href="the-button-element.html#the-progress-element"><span class="secno">4.10.14 </span>The <code>progress</code> element</a></li>
+<li><a href="the-button-element.html#the-meter-element"><span class="secno">4.10.15 </span>The <code>meter</code> element</a></li>
+<li><a href="the-button-element.html#the-fieldset-element"><span class="secno">4.10.16 </span>The <code>fieldset</code> element</a></li>
+<li><a href="the-button-element.html#the-legend-element"><span class="secno">4.10.17 </span>The <code>legend</code> element</a></li>
+<li><a href="the-button-element.html#form-control-infrastructure"><span class="secno">4.10.18 </span>Form control infrastructure</a>
+<ol><li><a href="the-button-element.html#a-form-control's-value"><span class="secno">4.10.18.1 </span>A form control's value</a></li>
+<li><a href="the-button-element.html#mutability"><span class="secno">4.10.18.2 </span>Mutability</a></li>
+<li><a href="association-of-controls-and-forms.html#association-of-controls-and-forms"><span class="secno">4.10.18.3 </span>Association of controls and forms</a></li></ol></li>
+<li><a href="association-of-controls-and-forms.html#attributes-common-to-form-controls"><span class="secno">4.10.19 </span>Attributes common to form controls</a>
+<ol><li><a href="association-of-controls-and-forms.html#naming-form-controls:-the-name-attribute"><span class="secno">4.10.19.1 </span>Naming form controls: the <code title="attr-fe-name">name</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#submitting-element-directionality:-the-dirname-attribute"><span class="secno">4.10.19.2 </span>Submitting element directionality: the <code title="attr-fe-dirname">dirname</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#limiting-user-input-length:-the-maxlength-attribute"><span class="secno">4.10.19.3 </span>Limiting user input length: the <code title="attr-fe-maxlength">maxlength</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#setting-minimum-input-length-requirements:-the-minlength-attribute"><span class="secno">4.10.19.4 </span>Setting minimum input length requirements: the <code title="attr-fe-minlength">minlength</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#enabling-and-disabling-form-controls:-the-disabled-attribute"><span class="secno">4.10.19.5 </span>Enabling and disabling form controls: the <code title="attr-fe-disabled">disabled</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#form-submission-0"><span class="secno">4.10.19.6 </span>Form submission</a></li>
+<li><a href="association-of-controls-and-forms.html#autofocusing-a-form-control:-the-autofocus-attribute"><span class="secno">4.10.19.7 </span>Autofocusing a form control: the <code title="attr-fe-autofocus">autofocus</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#input-modalities:-the-inputmode-attribute"><span class="secno">4.10.19.8 </span>Input modalities: the <code title="attr-fe-inputmode">inputmode</code> attribute</a></li>
+<li><a href="association-of-controls-and-forms.html#autofilling-form-controls:-the-autocomplete-attribute"><span class="secno">4.10.19.9 </span>Autofilling form controls: the <code title="attr-fe-autocomplete">autocomplete</code> attribute</a></li></ol></li>
+<li><a href="association-of-controls-and-forms.html#textFieldSelection"><span class="secno">4.10.20 </span>APIs for the text field selections</a></li>
+<li><a href="association-of-controls-and-forms.html#constraints"><span class="secno">4.10.21 </span>Constraints</a>
+<ol><li><a href="association-of-controls-and-forms.html#definitions"><span class="secno">4.10.21.1 </span>Definitions</a></li>
+<li><a href="association-of-controls-and-forms.html#constraint-validation"><span class="secno">4.10.21.2 </span>Constraint validation</a></li>
+<li><a href="association-of-controls-and-forms.html#the-constraint-validation-api"><span class="secno">4.10.21.3 </span>The constraint validation API</a></li>
+<li><a href="association-of-controls-and-forms.html#security-forms"><span class="secno">4.10.21.4 </span>Security</a></li></ol></li>
+<li><a href="association-of-controls-and-forms.html#form-submission"><span class="secno">4.10.22 </span>Form submission</a>
+<ol><li><a href="association-of-controls-and-forms.html#introduction-3"><span class="secno">4.10.22.1 </span>Introduction</a></li>
+<li><a href="association-of-controls-and-forms.html#implicit-submission"><span class="secno">4.10.22.2 </span>Implicit submission</a></li>
+<li><a href="association-of-controls-and-forms.html#form-submission-algorithm"><span class="secno">4.10.22.3 </span>Form submission algorithm</a></li>
+<li><a href="association-of-controls-and-forms.html#constructing-form-data-set"><span class="secno">4.10.22.4 </span>Constructing the form data set</a></li>
+<li><a href="association-of-controls-and-forms.html#selecting-a-form-submission-encoding"><span class="secno">4.10.22.5 </span>Selecting a form submission encoding</a></li>
+<li><a href="association-of-controls-and-forms.html#url-encoded-form-data"><span class="secno">4.10.22.6 </span>URL-encoded form data</a></li>
+<li><a href="association-of-controls-and-forms.html#multipart-form-data"><span class="secno">4.10.22.7 </span>Multipart form data</a></li>
+<li><a href="association-of-controls-and-forms.html#plain-text-form-data"><span class="secno">4.10.22.8 </span>Plain text form data</a></li></ol></li>
+<li><a href="association-of-controls-and-forms.html#resetting-a-form"><span class="secno">4.10.23 </span>Resetting a form</a></li></ol></li>
+<li><a href="interactive-elements.html#interactive-elements"><span class="secno">4.11 </span>Interactive elements</a>
+<ol><li><a href="interactive-elements.html#the-details-element"><span class="secno">4.11.1 </span>The <code>details</code> element</a></li>
+<li><a href="interactive-elements.html#the-summary-element"><span class="secno">4.11.2 </span>The <code>summary</code> element</a></li>
+<li><a href="interactive-elements.html#the-menu-element"><span class="secno">4.11.3 </span>The <code>menu</code> element</a></li>
+<li><a href="interactive-elements.html#the-menuitem-element"><span class="secno">4.11.4 </span>The <code>menuitem</code> element</a></li>
+<li><a href="interactive-elements.html#context-menus"><span class="secno">4.11.5 </span>Context menus</a>
+<ol><li><a href="interactive-elements.html#declaring-a-context-menu"><span class="secno">4.11.5.1 </span>Declaring a context menu</a></li>
+<li><a href="interactive-elements.html#processing-model-2"><span class="secno">4.11.5.2 </span>Processing model</a></li>
+<li><a href="interactive-elements.html#the-relatedevent-interfaces"><span class="secno">4.11.5.3 </span>The <code>RelatedEvent</code> interfaces</a></li></ol></li>
+<li><a href="commands.html#commands"><span class="secno">4.11.6 </span>Commands</a>
+<ol><li><a href="commands.html#facets-0"><span class="secno">4.11.6.1 </span>Facets</a></li>
+<li><a href="commands.html#using-the-a-element-to-define-a-command"><span class="secno">4.11.6.2 </span>Using the <code>a</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-button-element-to-define-a-command"><span class="secno">4.11.6.3 </span>Using the <code>button</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-input-element-to-define-a-command"><span class="secno">4.11.6.4 </span>Using the <code>input</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-option-element-to-define-a-command"><span class="secno">4.11.6.5 </span>Using the <code>option</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-menuitem-element-to-define-a-command"><span class="secno">4.11.6.6 </span>Using the <code>menuitem</code> element to define a
+command</a></li>
+<li><a href="commands.html#using-the-command-attribute-on-menuitem-elements-to-define-a-command-indirectly"><span class="secno">4.11.6.7 </span>Using the <code title="attr-menuitem-command">command</code> attribute on <code>menuitem</code> elements to define
+a command indirectly</a></li>
+<li><a href="commands.html#using-the-accesskey-attribute-on-a-label-element-to-define-a-command"><span class="secno">4.11.6.8 </span>Using the <code title="attr-accesskey">accesskey</code> attribute
+on a <code>label</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-accesskey-attribute-on-a-legend-element-to-define-a-command"><span class="secno">4.11.6.9 </span>Using the <code title="attr-accesskey">accesskey</code> attribute
+on a <code>legend</code> element to define a command</a></li>
+<li><a href="commands.html#using-the-accesskey-attribute-to-define-a-command-on-other-elements"><span class="secno">4.11.6.10 </span>Using the <code title="attr-accesskey">accesskey</code>
+attribute to define a command on other elements</a></li></ol></li>
+<li><a href="commands.html#the-dialog-element"><span class="secno">4.11.7 </span>The <code>dialog</code> element</a>
+<ol><li><a href="commands.html#anchor-points"><span class="secno">4.11.7.1 </span>Anchor points</a></li></ol></li></ol></li>
+<li><a href="scripting-1.html#scripting-1"><span class="secno">4.12 </span>Scripting</a>
+<ol><li><a href="scripting-1.html#the-script-element"><span class="secno">4.12.1 </span>The <code>script</code> element</a>
+<ol><li><a href="scripting-1.html#scriptingLanguages"><span class="secno">4.12.1.1 </span>Scripting languages</a></li>
+<li><a href="scripting-1.html#restrictions-for-contents-of-script-elements"><span class="secno">4.12.1.2 </span>Restrictions for contents of <code>script</code> elements</a></li>
+<li><a href="scripting-1.html#inline-documentation-for-external-scripts"><span class="secno">4.12.1.3 </span>Inline documentation for external scripts</a></li>
+<li><a href="scripting-1.html#scriptTagXSLT"><span class="secno">4.12.1.4 </span>Interaction of <code>script</code> elements and XSLT</a></li></ol></li>
+<li><a href="scripting-1.html#the-noscript-element"><span class="secno">4.12.2 </span>The <code>noscript</code> element</a></li>
+<li><a href="scripting-1.html#the-template-element"><span class="secno">4.12.3 </span>The <code>template</code> element</a>
+<ol><li><a href="scripting-1.html#template-XSLT-XPath"><span class="secno">4.12.3.1 </span>Interaction of <code>template</code> elements with XSLT and XPath</a></li></ol></li>
+<li><a href="the-canvas-element.html#the-canvas-element"><span class="secno">4.12.4 </span>The <code>canvas</code> element</a>
+<ol><li><a href="the-canvas-element.html#proxying-canvases-to-workers"><span class="secno">4.12.4.1 </span>Proxying canvases to workers</a></li>
+<li><a href="the-canvas-element.html#2dcontext"><span class="secno">4.12.4.2 </span>The 2D rendering context</a>
+<ol><li><a href="the-canvas-element.html#implementation-notes"><span class="secno">4.12.4.2.1 </span>Implementation notes</a></li>
+<li><a href="the-canvas-element.html#the-canvas-state"><span class="secno">4.12.4.2.2 </span>The canvas state</a></li>
+<li><a href="the-canvas-element.html#drawingstyle-objects"><span class="secno">4.12.4.2.3 </span><code>DrawingStyle</code> objects</a></li>
+<li><a href="the-canvas-element.html#line-styles"><span class="secno">4.12.4.2.4 </span>Line styles</a></li>
+<li><a href="the-canvas-element.html#text-styles"><span class="secno">4.12.4.2.5 </span>Text styles</a></li>
+<li><a href="the-canvas-element.html#building-paths"><span class="secno">4.12.4.2.6 </span>Building paths</a></li>
+<li><a href="the-canvas-element.html#path-objects"><span class="secno">4.12.4.2.7 </span><code>Path</code> objects</a></li>
+<li><a href="the-canvas-element.html#transformations"><span class="secno">4.12.4.2.8 </span>Transformations</a></li>
+<li><a href="the-canvas-element.html#image-sources-for-2d-rendering-contexts"><span class="secno">4.12.4.2.9 </span>Image sources for 2D rendering contexts</a></li>
+<li><a href="the-canvas-element.html#fill-and-stroke-styles"><span class="secno">4.12.4.2.10 </span>Fill and stroke styles</a></li>
+<li><a href="the-canvas-element.html#drawing-rectangles-to-the-bitmap"><span class="secno">4.12.4.2.11 </span>Drawing rectangles to the bitmap</a></li>
+<li><a href="the-canvas-element.html#drawing-text-to-the-bitmap"><span class="secno">4.12.4.2.12 </span>Drawing text to the bitmap</a></li>
+<li><a href="the-canvas-element.html#drawing-paths-to-the-canvas"><span class="secno">4.12.4.2.13 </span>Drawing paths to the canvas</a></li>
+<li><a href="the-canvas-element.html#drawing-images"><span class="secno">4.12.4.2.14 </span>Drawing images</a></li>
+<li><a href="the-canvas-element.html#hit-regions"><span class="secno">4.12.4.2.15 </span>Hit regions</a></li>
+<li><a href="the-canvas-element.html#pixel-manipulation"><span class="secno">4.12.4.2.16 </span>Pixel manipulation</a></li>
+<li><a href="the-canvas-element.html#compositing"><span class="secno">4.12.4.2.17 </span>Compositing</a></li>
+<li><a href="the-canvas-element.html#image-smoothing"><span class="secno">4.12.4.2.18 </span>Image smoothing</a></li>
+<li><a href="the-canvas-element.html#shadows"><span class="secno">4.12.4.2.19 </span>Shadows</a></li>
+<li><a href="the-canvas-element.html#drawing-model"><span class="secno">4.12.4.2.20 </span>Drawing model</a></li>
+<li><a href="the-canvas-element.html#best-practices"><span class="secno">4.12.4.2.21 </span>Best practices</a></li>
+<li><a href="the-canvas-element.html#examples-0"><span class="secno">4.12.4.2.22 </span>Examples</a></li></ol></li>
+<li><a href="the-canvas-element.html#color-spaces-and-color-correction"><span class="secno">4.12.4.3 </span>Color spaces and color correction</a></li>
+<li><a href="the-canvas-element.html#serializing-bitmaps-to-a-file"><span class="secno">4.12.4.4 </span>Serializing bitmaps to a file</a></li>
+<li><a href="the-canvas-element.html#security-with-canvas-elements"><span class="secno">4.12.4.5 </span>Security with <code>canvas</code> elements</a></li></ol></li></ol></li>
+<li><a href="common-idioms.html#common-idioms"><span class="secno">4.13 </span>Common idioms without dedicated elements</a>
+<ol><li><a href="common-idioms.html#the-main-part-of-the-content"><span class="secno">4.13.1 </span>The main part of the content</a></li>
+<li><a href="common-idioms.html#rel-up"><span class="secno">4.13.2 </span>Bread crumb navigation</a></li>
+<li><a href="common-idioms.html#tag-clouds"><span class="secno">4.13.3 </span>Tag clouds</a></li>
+<li><a href="common-idioms.html#conversations"><span class="secno">4.13.4 </span>Conversations</a></li>
+<li><a href="common-idioms.html#footnotes"><span class="secno">4.13.5 </span>Footnotes</a></li></ol></li>
+<li><a href="common-idioms.html#disabled-elements"><span class="secno">4.14 </span>Disabled elements</a></li>
+<li><a href="selectors.html#selectors"><span class="secno">4.15 </span>Matching HTML elements using selectors</a>
+<ol><li><a href="selectors.html#case-sensitivity"><span class="secno">4.15.1 </span>Case-sensitivity</a></li>
+<li><a href="selectors.html#pseudo-classes"><span class="secno">4.15.2 </span>Pseudo-classes</a></li></ol></li></ol></li>
+<li><a href="microdata.html#microdata"><span class="secno">5 </span>Microdata</a>
+<ol><li><a href="microdata.html#introduction-4"><span class="secno">5.1 </span>Introduction</a>
+<ol><li><a href="microdata.html#overview"><span class="secno">5.1.1 </span>Overview</a></li>
+<li><a href="microdata.html#the-basic-syntax"><span class="secno">5.1.2 </span>The basic syntax</a></li>
+<li><a href="microdata.html#typed-items"><span class="secno">5.1.3 </span>Typed items</a></li>
+<li><a href="microdata.html#global-identifiers-for-items"><span class="secno">5.1.4 </span>Global identifiers for items</a></li>
+<li><a href="microdata.html#selecting-names-when-defining-vocabularies"><span class="secno">5.1.5 </span>Selecting names when defining vocabularies</a></li>
+<li><a href="microdata.html#using-the-microdata-dom-api"><span class="secno">5.1.6 </span>Using the microdata DOM API</a></li></ol></li>
+<li><a href="microdata.html#encoding-microdata"><span class="secno">5.2 </span>Encoding microdata</a>
+<ol><li><a href="microdata.html#the-microdata-model"><span class="secno">5.2.1 </span>The microdata model</a></li>
+<li><a href="microdata.html#items"><span class="secno">5.2.2 </span>Items</a></li>
+<li><a href="microdata.html#names:-the-itemprop-attribute"><span class="secno">5.2.3 </span>Names: the <code>itemprop</code> attribute</a></li>
+<li><a href="microdata.html#values"><span class="secno">5.2.4 </span>Values</a></li>
+<li><a href="microdata.html#associating-names-with-items"><span class="secno">5.2.5 </span>Associating names with items</a></li>
+<li><a href="microdata.html#microdata-and-other-namespaces"><span class="secno">5.2.6 </span>Microdata and other namespaces</a></li></ol></li>
+<li><a href="microdata.html#microdata-dom-api"><span class="secno">5.3 </span>Microdata DOM API</a></li>
+<li><a href="microdata.html#mdvocabs"><span class="secno">5.4 </span>Sample microdata vocabularies</a>
+<ol><li><a href="microdata.html#vcard"><span class="secno">5.4.1 </span>vCard</a>
+<ol><li><a href="microdata.html#conversion-to-vcard"><span class="secno">5.4.1.1 </span>Conversion to vCard</a></li>
+<li><a href="microdata.html#examples-1"><span class="secno">5.4.1.2 </span>Examples</a></li></ol></li>
+<li><a href="microdata.html#vevent"><span class="secno">5.4.2 </span>vEvent</a>
+<ol><li><a href="microdata.html#conversion-to-icalendar"><span class="secno">5.4.2.1 </span>Conversion to iCalendar</a></li>
+<li><a href="microdata.html#examples-2"><span class="secno">5.4.2.2 </span>Examples</a></li></ol></li>
+<li><a href="microdata.html#licensing-works"><span class="secno">5.4.3 </span>Licensing works</a>
+<ol><li><a href="microdata.html#examples-3"><span class="secno">5.4.3.1 </span>Examples</a></li></ol></li></ol></li>
+<li><a href="microdata.html#converting-html-to-other-formats"><span class="secno">5.5 </span>Converting HTML to other formats</a>
+<ol><li><a href="microdata.html#json"><span class="secno">5.5.1 </span>JSON</a></li></ol></li></ol></li>
+<li><a href="browsers.html#browsers"><span class="secno">6 </span>Loading Web pages</a>
+<ol><li><a href="browsers.html#windows"><span class="secno">6.1 </span>Browsing contexts</a>
+<ol><li><a href="browsers.html#nested-browsing-contexts"><span class="secno">6.1.1 </span>Nested browsing contexts</a>
+<ol><li><a href="browsers.html#navigating-nested-browsing-contexts-in-the-dom"><span class="secno">6.1.1.1 </span>Navigating nested browsing contexts in the DOM</a></li></ol></li>
+<li><a href="browsers.html#auxiliary-browsing-contexts"><span class="secno">6.1.2 </span>Auxiliary browsing contexts</a>
+<ol><li><a href="browsers.html#navigating-auxiliary-browsing-contexts-in-the-dom"><span class="secno">6.1.2.1 </span>Navigating auxiliary browsing contexts in the DOM</a></li></ol></li>
+<li><a href="browsers.html#secondary-browsing-contexts"><span class="secno">6.1.3 </span>Secondary browsing contexts</a></li>
+<li><a href="browsers.html#security-nav"><span class="secno">6.1.4 </span>Security</a></li>
+<li><a href="browsers.html#groupings-of-browsing-contexts"><span class="secno">6.1.5 </span>Groupings of browsing contexts</a></li>
+<li><a href="browsers.html#browsing-context-names"><span class="secno">6.1.6 </span>Browsing context names</a></li></ol></li>
+<li><a href="browsers.html#the-window-object"><span class="secno">6.2 </span>The <code>Window</code> object</a>
+<ol><li><a href="browsers.html#security-window"><span class="secno">6.2.1 </span>Security</a></li>
+<li><a href="browsers.html#apis-for-creating-and-navigating-browsing-contexts-by-name"><span class="secno">6.2.2 </span>APIs for creating and navigating browsing contexts by name</a></li>
+<li><a href="browsers.html#accessing-other-browsing-contexts"><span class="secno">6.2.3 </span>Accessing other browsing contexts</a></li>
+<li><a href="browsers.html#named-access-on-the-window-object"><span class="secno">6.2.4 </span>Named access on the <code>Window</code> object</a></li>
+<li><a href="browsers.html#garbage-collection-and-browsing-contexts"><span class="secno">6.2.5 </span>Garbage collection and browsing contexts</a></li>
+<li><a href="browsers.html#closing-browsing-contexts"><span class="secno">6.2.6 </span>Closing browsing contexts</a></li>
+<li><a href="browsers.html#browser-interface-elements"><span class="secno">6.2.7 </span>Browser interface elements</a></li>
+<li><a href="browsers.html#the-windowproxy-object"><span class="secno">6.2.8 </span>The <code>WindowProxy</code> object</a></li></ol></li>
+<li><a href="origin-0.html#origin-0"><span class="secno">6.3 </span>Origin</a>
+<ol><li><a href="origin-0.html#relaxing-the-same-origin-restriction"><span class="secno">6.3.1 </span>Relaxing the same-origin restriction</a></li></ol></li>
+<li><a href="origin-0.html#sandboxing"><span class="secno">6.4 </span>Sandboxing</a></li>
+<li><a href="history.html#history"><span class="secno">6.5 </span>Session history and navigation</a>
+<ol><li><a href="history.html#the-session-history-of-browsing-contexts"><span class="secno">6.5.1 </span>The session history of browsing contexts</a></li>
+<li><a href="history.html#the-history-interface"><span class="secno">6.5.2 </span>The <code>History</code> interface</a></li>
+<li><a href="history.html#the-location-interface"><span class="secno">6.5.3 </span>The <code>Location</code> interface</a>
+<ol><li><a href="history.html#security-location"><span class="secno">6.5.3.1 </span>Security</a></li></ol></li>
+<li><a href="history.html#history-notes"><span class="secno">6.5.4 </span>Implementation notes for session history</a></li></ol></li>
+<li><a href="history.html#browsing-the-web"><span class="secno">6.6 </span>Browsing the Web</a>
+<ol><li><a href="history.html#navigating-across-documents"><span class="secno">6.6.1 </span>Navigating across documents</a></li>
+<li><a href="history.html#read-html"><span class="secno">6.6.2 </span>Page load processing model for HTML files</a></li>
+<li><a href="history.html#read-xml"><span class="secno">6.6.3 </span>Page load processing model for XML files</a></li>
+<li><a href="history.html#read-text"><span class="secno">6.6.4 </span>Page load processing model for text files</a></li>
+<li><a href="history.html#read-multipart-x-mixed-replace"><span class="secno">6.6.5 </span>Page load processing model for <code>multipart/x-mixed-replace</code> resources</a></li>
+<li><a href="history.html#read-media"><span class="secno">6.6.6 </span>Page load processing model for media</a></li>
+<li><a href="history.html#read-plugin"><span class="secno">6.6.7 </span>Page load processing model for content that uses plugins</a></li>
+<li><a href="history.html#read-ua-inline"><span class="secno">6.6.8 </span>Page load processing model for inline
+content that doesn't have a DOM</a></li>
+<li><a href="history.html#scroll-to-fragid"><span class="secno">6.6.9 </span>Navigating to a fragment identifier</a></li>
+<li><a href="history.html#history-traversal"><span class="secno">6.6.10 </span>History traversal</a>
+<ol><li><a href="history.html#the-popstateevent-interface"><span class="secno">6.6.10.1 </span>The <code>PopStateEvent</code> interface</a></li>
+<li><a href="history.html#the-hashchangeevent-interface"><span class="secno">6.6.10.2 </span>The <code>HashChangeEvent</code> interface</a></li>
+<li><a href="history.html#the-pagetransitionevent-interface"><span class="secno">6.6.10.3 </span>The <code>PageTransitionEvent</code> interface</a></li></ol></li>
+<li><a href="history.html#unloading-documents"><span class="secno">6.6.11 </span>Unloading documents</a>
+<ol><li><a href="history.html#the-beforeunloadevent-interface"><span class="secno">6.6.11.1 </span>The <code>BeforeUnloadEvent</code> interface</a></li></ol></li>
+<li><a href="history.html#aborting-a-document-load"><span class="secno">6.6.12 </span>Aborting a document load</a></li></ol></li>
+<li><a href="offline.html#offline"><span class="secno">6.7 </span>Offline Web applications</a>
+<ol><li><a href="offline.html#introduction-5"><span class="secno">6.7.1 </span>Introduction</a>
+<ol><li><a href="offline.html#supporting-offline-caching-for-legacy-applications"><span class="secno">6.7.1.1 </span>Supporting offline caching for legacy applications</a></li>
+<li><a href="offline.html#appcacheevents"><span class="secno">6.7.1.2 </span>Event summary</a></li></ol></li>
+<li><a href="offline.html#appcache"><span class="secno">6.7.2 </span>Application caches</a></li>
+<li><a href="offline.html#manifests"><span class="secno">6.7.3 </span>The cache manifest syntax</a>
+<ol><li><a href="offline.html#some-sample-manifests"><span class="secno">6.7.3.1 </span>Some sample manifests</a></li>
+<li><a href="offline.html#writing-cache-manifests"><span class="secno">6.7.3.2 </span>Writing cache manifests</a></li>
+<li><a href="offline.html#parsing-cache-manifests"><span class="secno">6.7.3.3 </span>Parsing cache manifests</a></li></ol></li>
+<li><a href="offline.html#downloading-or-updating-an-application-cache"><span class="secno">6.7.4 </span>Downloading or updating an application cache</a></li>
+<li><a href="offline.html#the-application-cache-selection-algorithm"><span class="secno">6.7.5 </span>The application cache selection algorithm</a></li>
+<li><a href="offline.html#changesToNetworkingModel"><span class="secno">6.7.6 </span>Changes to the networking model</a></li>
+<li><a href="offline.html#expiring-application-caches"><span class="secno">6.7.7 </span>Expiring application caches</a></li>
+<li><a href="offline.html#disk-space"><span class="secno">6.7.8 </span>Disk space</a></li>
+<li><a href="offline.html#application-cache-api"><span class="secno">6.7.9 </span>Application cache API</a></li>
+<li><a href="offline.html#browser-state"><span class="secno">6.7.10 </span>Browser state</a></li></ol></li></ol></li>
+<li><a href="webappapis.html#webappapis"><span class="secno">7 </span>Web application APIs</a>
+<ol><li><a href="webappapis.html#scripting"><span class="secno">7.1 </span>Scripting</a>
+<ol><li><a href="webappapis.html#introduction-6"><span class="secno">7.1.1 </span>Introduction</a></li>
+<li><a href="webappapis.html#enabling-and-disabling-scripting"><span class="secno">7.1.2 </span>Enabling and disabling scripting</a></li>
+<li><a href="webappapis.html#processing-model-3"><span class="secno">7.1.3 </span>Processing model</a>
+<ol><li><a href="webappapis.html#definitions-0"><span class="secno">7.1.3.1 </span>Definitions</a></li>
+<li><a href="webappapis.html#script-settings-for-browsing-contexts"><span class="secno">7.1.3.2 </span>Script settings for browsing contexts</a></li>
+<li><a href="webappapis.html#calling-scripts"><span class="secno">7.1.3.3 </span>Calling scripts</a></li>
+<li><a href="webappapis.html#creating-scripts"><span class="secno">7.1.3.4 </span>Creating scripts</a></li>
+<li><a href="webappapis.html#killing-scripts"><span class="secno">7.1.3.5 </span>Killing scripts</a></li>
+<li><a href="webappapis.html#runtime-script-errors"><span class="secno">7.1.3.6 </span>Runtime script errors</a>
+<ol><li><a href="webappapis.html#runtime-script-errors-in-documents"><span class="secno">7.1.3.6.1 </span>Runtime script errors in documents</a></li>
+<li><a href="webappapis.html#the-errorevent-interface"><span class="secno">7.1.3.6.2 </span>The <code>ErrorEvent</code> interface</a></li></ol></li></ol></li>
+<li><a href="webappapis.html#event-loops"><span class="secno">7.1.4 </span>Event loops</a>
+<ol><li><a href="webappapis.html#definitions-1"><span class="secno">7.1.4.1 </span>Definitions</a></li>
+<li><a href="webappapis.html#processing-model-4"><span class="secno">7.1.4.2 </span>Processing model</a></li>
+<li><a href="webappapis.html#generic-task-sources"><span class="secno">7.1.4.3 </span>Generic task sources</a></li></ol></li>
+<li><a href="webappapis.html#events"><span class="secno">7.1.5 </span>Events</a>
+<ol><li><a href="webappapis.html#event-handler-attributes"><span class="secno">7.1.5.1 </span>Event handlers</a></li>
+<li><a href="webappapis.html#event-handlers-on-elements,-document-objects,-and-window-objects"><span class="secno">7.1.5.2 </span>Event handlers on elements, <code>Document</code> objects, and <code>Window</code> objects</a>
+<ol><li><a href="webappapis.html#idl-definitions"><span class="secno">7.1.5.2.1 </span>IDL definitions</a></li></ol></li>
+<li><a href="webappapis.html#event-firing"><span class="secno">7.1.5.3 </span>Event firing</a></li>
+<li><a href="webappapis.html#events-and-the-window-object"><span class="secno">7.1.5.4 </span>Events and the <code>Window</code> object</a></li></ol></li></ol></li>
+<li><a href="webappapis.html#atob"><span class="secno">7.2 </span>Base64 utility methods</a></li>
+<li><a href="webappapis.html#dynamic-markup-insertion"><span class="secno">7.3 </span>Dynamic markup insertion</a>
+<ol><li><a href="webappapis.html#opening-the-input-stream"><span class="secno">7.3.1 </span>Opening the input stream</a></li>
+<li><a href="webappapis.html#closing-the-input-stream"><span class="secno">7.3.2 </span>Closing the input stream</a></li>
+<li><a href="webappapis.html#document.write()"><span class="secno">7.3.3 </span><code title="dom-document-write">document.write()</code></a></li>
+<li><a href="webappapis.html#document.writeln()"><span class="secno">7.3.4 </span><code title="dom-document-writeln">document.writeln()</code></a></li></ol></li>
+<li><a href="timers.html#timers"><span class="secno">7.4 </span>Timers</a></li>
+<li><a href="timers.html#user-prompts"><span class="secno">7.5 </span>User prompts</a>
+<ol><li><a href="timers.html#simple-dialogs"><span class="secno">7.5.1 </span>Simple dialogs</a></li>
+<li><a href="timers.html#printing"><span class="secno">7.5.2 </span>Printing</a></li>
+<li><a href="timers.html#dialogs-implemented-using-separate-documents"><span class="secno">7.5.3 </span>Dialogs implemented using separate documents</a></li></ol></li>
+<li><a href="timers.html#system-state-and-capabilities"><span class="secno">7.6 </span>System state and capabilities</a>
+<ol><li><a href="timers.html#the-navigator-object"><span class="secno">7.6.1 </span>The <code>Navigator</code> object</a>
+<ol><li><a href="timers.html#client-identification"><span class="secno">7.6.1.1 </span>Client identification</a></li>
+<li><a href="timers.html#language-preferences"><span class="secno">7.6.1.2 </span>Language preferences</a></li>
+<li><a href="timers.html#custom-handlers"><span class="secno">7.6.1.3 </span>Custom scheme and content handlers</a>
+<ol><li><a href="timers.html#security-and-privacy"><span class="secno">7.6.1.3.1 </span>Security and privacy</a></li>
+<li><a href="timers.html#sample-handler-impl"><span class="secno">7.6.1.3.2 </span>Sample user interface</a></li></ol></li>
+<li><a href="timers.html#manually-releasing-the-storage-mutex"><span class="secno">7.6.1.4 </span>Manually releasing the storage mutex</a></li>
+<li><a href="timers.html#plugins-0"><span class="secno">7.6.1.5 </span>Plugins</a></li></ol></li>
+<li><a href="timers.html#the-external-interface"><span class="secno">7.6.2 </span>The <code>External</code> interface</a></li></ol></li>
+<li><a href="timers.html#images"><span class="secno">7.7 </span>Images</a></li></ol></li>
+<li><a href="editing.html#editing"><span class="secno">8 </span>User interaction</a>
+<ol><li><a href="editing.html#the-hidden-attribute"><span class="secno">8.1 </span>The <code>hidden</code> attribute</a></li>
+<li><a href="editing.html#inert-subtrees"><span class="secno">8.2 </span>Inert subtrees</a>
+<ol><li><a href="editing.html#the-inert-attribute"><span class="secno">8.2.1 </span>The <code>inert</code> attribute</a></li></ol></li>
+<li><a href="editing.html#activation"><span class="secno">8.3 </span>Activation</a></li>
+<li><a href="editing.html#focus"><span class="secno">8.4 </span>Focus</a>
+<ol><li><a href="editing.html#sequential-focus-navigation-and-the-tabindex-attribute"><span class="secno">8.4.1 </span>Sequential focus navigation and the <code title="attr-tabindex">tabindex</code> attribute</a></li>
+<li><a href="editing.html#focus-management"><span class="secno">8.4.2 </span>Focus management</a></li>
+<li><a href="editing.html#document-level-focus-apis"><span class="secno">8.4.3 </span>Document-level focus APIs</a></li>
+<li><a href="editing.html#element-level-focus-apis"><span class="secno">8.4.4 </span>Element-level focus APIs</a></li></ol></li>
+<li><a href="editing.html#assigning-keyboard-shortcuts"><span class="secno">8.5 </span>Assigning keyboard shortcuts</a>
+<ol><li><a href="editing.html#introduction-7"><span class="secno">8.5.1 </span>Introduction</a></li>
+<li><a href="editing.html#the-accesskey-attribute"><span class="secno">8.5.2 </span>The <code>accesskey</code> attribute</a></li>
+<li><a href="editing.html#processing-model-5"><span class="secno">8.5.3 </span>Processing model</a></li></ol></li>
+<li><a href="editing.html#editing-0"><span class="secno">8.6 </span>Editing</a>
+<ol><li><a href="editing.html#contenteditable"><span class="secno">8.6.1 </span>Making document regions editable: The <code title="attr-contenteditable">contenteditable</code> content attribute</a></li>
+<li><a href="editing.html#making-entire-documents-editable:-the-designmode-idl-attribute"><span class="secno">8.6.2 </span>Making entire documents editable: The <code title="dom-document-designMode">designMode</code> IDL attribute</a></li>
+<li><a href="editing.html#best-practices-for-in-page-editors"><span class="secno">8.6.3 </span>Best practices for in-page editors</a></li>
+<li><a href="editing.html#editing-apis"><span class="secno">8.6.4 </span>Editing APIs</a></li>
+<li><a href="editing.html#spelling-and-grammar-checking"><span class="secno">8.6.5 </span>Spelling and grammar checking</a></li></ol></li>
+<li><a href="dnd.html#dnd"><span class="secno">8.7 </span>Drag and drop</a>
+<ol><li><a href="dnd.html#introduction-8"><span class="secno">8.7.1 </span>Introduction</a></li>
+<li><a href="dnd.html#the-drag-data-store"><span class="secno">8.7.2 </span>The drag data store</a></li>
+<li><a href="dnd.html#the-datatransfer-interface"><span class="secno">8.7.3 </span>The <code>DataTransfer</code> interface</a>
+<ol><li><a href="dnd.html#the-datatransferitemlist-interface"><span class="secno">8.7.3.1 </span>The <code>DataTransferItemList</code> interface</a></li>
+<li><a href="dnd.html#the-datatransferitem-interface"><span class="secno">8.7.3.2 </span>The <code>DataTransferItem</code> interface</a></li></ol></li>
+<li><a href="dnd.html#the-dragevent-interface"><span class="secno">8.7.4 </span>The <code>DragEvent</code> interface</a></li>
+<li><a href="dnd.html#drag-and-drop-processing-model"><span class="secno">8.7.5 </span>Drag-and-drop processing model</a></li>
+<li><a href="dnd.html#dndevents"><span class="secno">8.7.6 </span>Events summary</a></li>
+<li><a href="dnd.html#the-draggable-attribute"><span class="secno">8.7.7 </span>The <code>draggable</code> attribute</a></li>
+<li><a href="dnd.html#the-dropzone-attribute"><span class="secno">8.7.8 </span>The <code>dropzone</code> attribute</a></li>
+<li><a href="dnd.html#security-risks-in-the-drag-and-drop-model"><span class="secno">8.7.9 </span>Security risks in the drag-and-drop model</a></li></ol></li></ol></li>
+<li><a href="comms.html#comms"><span class="secno">9 </span>Communication</a>
+<ol><li><a href="comms.html#the-messageevent-interfaces"><span class="secno">9.1 </span>The <code>MessageEvent</code> interfaces</a></li>
+<li><a href="comms.html#server-sent-events"><span class="secno">9.2 </span>Server-sent events</a>
+<ol><li><a href="comms.html#server-sent-events-intro"><span class="secno">9.2.1 </span>Introduction</a></li>
+<li><a href="comms.html#the-eventsource-interface"><span class="secno">9.2.2 </span>The <code>EventSource</code> interface</a></li>
+<li><a href="comms.html#processing-model-6"><span class="secno">9.2.3 </span>Processing model</a></li>
+<li><a href="comms.html#parsing-an-event-stream"><span class="secno">9.2.4 </span>Parsing an event stream</a></li>
+<li><a href="comms.html#event-stream-interpretation"><span class="secno">9.2.5 </span>Interpreting an event stream</a></li>
+<li><a href="comms.html#authoring-notes"><span class="secno">9.2.6 </span>Authoring notes</a></li>
+<li><a href="comms.html#eventsource-push"><span class="secno">9.2.7 </span>Connectionless push and other features</a></li>
+<li><a href="comms.html#garbage-collection-0"><span class="secno">9.2.8 </span>Garbage collection</a></li>
+<li><a href="comms.html#implementation-advice"><span class="secno">9.2.9 </span>Implementation advice</a></li>
+<li><a href="comms.html#iana-considerations"><span class="secno">9.2.10 </span>IANA considerations</a>
+<ol><li><a href="comms.html#text/event-stream"><span class="secno">9.2.10.1 </span><code>text/event-stream</code></a></li>
+<li><a href="comms.html#last-event-id"><span class="secno">9.2.10.2 </span><code>Last-Event-ID</code></a></li></ol></li></ol></li>
+<li><a href="network.html#network"><span class="secno">9.3 </span>Web sockets</a>
+<ol><li><a href="network.html#network-intro"><span class="secno">9.3.1 </span>Introduction</a></li>
+<li><a href="network.html#the-websocket-interface"><span class="secno">9.3.2 </span>The <code>WebSocket</code> interface</a></li>
+<li><a href="network.html#feedback-from-the-protocol"><span class="secno">9.3.3 </span>Feedback from the protocol</a></li>
+<li><a href="network.html#ping-and-pong-frames"><span class="secno">9.3.4 </span>Ping and Pong frames</a></li>
+<li><a href="network.html#parsing-websocket-urls"><span class="secno">9.3.5 </span>Parsing WebSocket URLs</a></li>
+<li><a href="network.html#the-closeevent-interfaces"><span class="secno">9.3.6 </span>The <code>CloseEvent</code> interfaces</a></li>
+<li><a href="network.html#garbage-collection-1"><span class="secno">9.3.7 </span>Garbage collection</a></li></ol></li>
+<li><a href="web-messaging.html#web-messaging"><span class="secno">9.4 </span>Cross-document messaging</a>
+<ol><li><a href="web-messaging.html#introduction-9"><span class="secno">9.4.1 </span>Introduction</a></li>
+<li><a href="web-messaging.html#security-postmsg"><span class="secno">9.4.2 </span>Security</a>
+<ol><li><a href="web-messaging.html#authors"><span class="secno">9.4.2.1 </span>Authors</a></li>
+<li><a href="web-messaging.html#user-agents"><span class="secno">9.4.2.2 </span>User agents</a></li></ol></li>
+<li><a href="web-messaging.html#posting-messages"><span class="secno">9.4.3 </span>Posting messages</a></li></ol></li>
+<li><a href="web-messaging.html#channel-messaging"><span class="secno">9.5 </span>Channel messaging</a>
+<ol><li><a href="web-messaging.html#introduction-10"><span class="secno">9.5.1 </span>Introduction</a>
+<ol><li><a href="web-messaging.html#examples-4"><span class="secno">9.5.1.1 </span>Examples</a></li>
+<li><a href="web-messaging.html#ports-as-the-basis-of-an-object-capability-model-on-the-web"><span class="secno">9.5.1.2 </span>Ports as the basis of an object-capability model on the Web</a></li>
+<li><a href="web-messaging.html#ports-as-the-basis-of-abstracting-out-service-implementations"><span class="secno">9.5.1.3 </span>Ports as the basis of abstracting out service implementations</a></li></ol></li>
+<li><a href="web-messaging.html#message-channels"><span class="secno">9.5.2 </span>Message channels</a></li>
+<li><a href="web-messaging.html#message-ports"><span class="secno">9.5.3 </span>Message ports</a></li>
+<li><a href="web-messaging.html#broadcasting-to-many-ports"><span class="secno">9.5.4 </span>Broadcasting to many ports</a></li>
+<li><a href="web-messaging.html#ports-and-garbage-collection"><span class="secno">9.5.5 </span>Ports and garbage collection</a></li></ol></li>
+<li><a href="web-messaging.html#broadcasting-to-other-browsing-contexts"><span class="secno">9.6 </span>Broadcasting to other browsing contexts</a></li></ol></li>
+<li><a href="workers.html#workers"><span class="secno">10 </span>Web workers</a>
+<ol><li><a href="workers.html#introduction-11"><span class="secno">10.1 </span>Introduction</a>
+<ol><li><a href="workers.html#scope-0"><span class="secno">10.1.1 </span>Scope</a></li>
+<li><a href="workers.html#examples-5"><span class="secno">10.1.2 </span>Examples</a>
+<ol><li><a href="workers.html#a-background-number-crunching-worker"><span class="secno">10.1.2.1 </span>A background number-crunching worker</a></li>
+<li><a href="workers.html#worker-used-for-background-i/o"><span class="secno">10.1.2.2 </span>Worker used for background I/O</a></li>
+<li><a href="workers.html#shared-workers-introduction"><span class="secno">10.1.2.3 </span>Shared workers introduction</a></li>
+<li><a href="workers.html#shared-state-using-a-shared-worker"><span class="secno">10.1.2.4 </span>Shared state using a shared worker</a></li>
+<li><a href="workers.html#delegation"><span class="secno">10.1.2.5 </span>Delegation</a></li></ol></li>
+<li><a href="workers.html#tutorials"><span class="secno">10.1.3 </span>Tutorials</a>
+<ol><li><a href="workers.html#creating-a-dedicated-worker"><span class="secno">10.1.3.1 </span>Creating a dedicated worker</a></li>
+<li><a href="workers.html#communicating-with-a-dedicated-worker"><span class="secno">10.1.3.2 </span>Communicating with a dedicated worker</a></li>
+<li><a href="workers.html#shared-workers"><span class="secno">10.1.3.3 </span>Shared workers</a></li></ol></li></ol></li>
+<li><a href="workers.html#infrastructure-0"><span class="secno">10.2 </span>Infrastructure</a>
+<ol><li><a href="workers.html#the-global-scope"><span class="secno">10.2.1 </span>The global scope</a>
+<ol><li><a href="workers.html#the-workerglobalscope-common-interface"><span class="secno">10.2.1.1 </span>The <code>WorkerGlobalScope</code> common interface</a></li>
+<li><a href="workers.html#dedicated-workers-and-the-dedicatedworkerglobalscope-interface"><span class="secno">10.2.1.2 </span>Dedicated workers and the <code>DedicatedWorkerGlobalScope</code> interface</a></li>
+<li><a href="workers.html#shared-workers-and-the-sharedworkerglobalscope-interface"><span class="secno">10.2.1.3 </span>Shared workers and the <code>SharedWorkerGlobalScope</code> interface</a></li></ol></li>
+<li><a href="workers.html#worker-event-loop"><span class="secno">10.2.2 </span>The event loop</a></li>
+<li><a href="workers.html#the-worker's-lifetime"><span class="secno">10.2.3 </span>The worker's lifetime</a></li>
+<li><a href="workers.html#processing-model-7"><span class="secno">10.2.4 </span>Processing model</a></li>
+<li><a href="workers.html#runtime-script-errors-0"><span class="secno">10.2.5 </span>Runtime script errors</a></li>
+<li><a href="workers.html#creating-workers"><span class="secno">10.2.6 </span>Creating workers</a>
+<ol><li><a href="workers.html#the-abstractworker-abstract-interface"><span class="secno">10.2.6.1 </span>The <code>AbstractWorker</code> abstract interface</a></li>
+<li><a href="workers.html#script-settings-for-workers"><span class="secno">10.2.6.2 </span>Script settings for workers</a></li>
+<li><a href="workers.html#dedicated-workers-and-the-worker-interface"><span class="secno">10.2.6.3 </span>Dedicated workers and the <code>Worker</code> interface</a></li>
+<li><a href="workers.html#shared-workers-and-the-sharedworker-interface"><span class="secno">10.2.6.4 </span>Shared workers and the <code>SharedWorker</code> interface</a></li></ol></li></ol></li>
+<li><a href="workers.html#apis-available-to-workers"><span class="secno">10.3 </span>APIs available to workers</a>
+<ol><li><a href="workers.html#importing-scripts-and-libraries"><span class="secno">10.3.1 </span>Importing scripts and libraries</a></li>
+<li><a href="workers.html#the-workernavigator-object"><span class="secno">10.3.2 </span>The <code>WorkerNavigator</code> object</a></li>
+<li><a href="workers.html#interface-objects-and-constructors"><span class="secno">10.3.3 </span>Interface objects and constructors</a></li>
+<li><a href="workers.html#worker-locations"><span class="secno">10.3.4 </span>Worker locations</a></li></ol></li></ol></li>
+<li><a href="webstorage.html#webstorage"><span class="secno">11 </span>Web storage</a>
+<ol><li><a href="webstorage.html#introduction-12"><span class="secno">11.1 </span>Introduction</a></li>
+<li><a href="webstorage.html#storage"><span class="secno">11.2 </span>The API</a>
+<ol><li><a href="webstorage.html#the-storage-interface"><span class="secno">11.2.1 </span>The <code>Storage</code> interface</a></li>
+<li><a href="webstorage.html#the-sessionstorage-attribute"><span class="secno">11.2.2 </span>The <code title="dom-sessionStorage">sessionStorage</code> attribute</a></li>
+<li><a href="webstorage.html#the-localstorage-attribute"><span class="secno">11.2.3 </span>The <code title="dom-localStorage">localStorage</code> attribute</a></li>
+<li><a href="webstorage.html#the-storage-event"><span class="secno">11.2.4 </span>The <code title="event-storage">storage</code> event</a>
+<ol><li><a href="webstorage.html#the-storageevent-interface"><span class="secno">11.2.4.1 </span>The <code>StorageEvent</code> interface</a></li></ol></li>
+<li><a href="webstorage.html#threads"><span class="secno">11.2.5 </span>Threads</a></li></ol></li>
+<li><a href="webstorage.html#disk-space-0"><span class="secno">11.3 </span>Disk space</a></li>
+<li><a href="webstorage.html#privacy"><span class="secno">11.4 </span>Privacy</a>
+<ol><li><a href="webstorage.html#user-tracking"><span class="secno">11.4.1 </span>User tracking</a></li>
+<li><a href="webstorage.html#sensitivity-of-data"><span class="secno">11.4.2 </span>Sensitivity of data</a></li></ol></li>
+<li><a href="webstorage.html#security-storage"><span class="secno">11.5 </span>Security</a>
+<ol><li><a href="webstorage.html#dns-spoofing-attacks"><span class="secno">11.5.1 </span>DNS spoofing attacks</a></li>
+<li><a href="webstorage.html#cross-directory-attacks"><span class="secno">11.5.2 </span>Cross-directory attacks</a></li>
+<li><a href="webstorage.html#implementation-risks"><span class="secno">11.5.3 </span>Implementation risks</a></li></ol></li></ol></li>
+<li><a href="syntax.html#syntax"><span class="secno">12 </span>The HTML syntax</a>
+<ol><li><a href="syntax.html#writing"><span class="secno">12.1 </span>Writing HTML documents</a>
+<ol><li><a href="syntax.html#the-doctype"><span class="secno">12.1.1 </span>The DOCTYPE</a></li>
+<li><a href="syntax.html#elements-0"><span class="secno">12.1.2 </span>Elements</a>
+<ol><li><a href="syntax.html#start-tags"><span class="secno">12.1.2.1 </span>Start tags</a></li>
+<li><a href="syntax.html#end-tags"><span class="secno">12.1.2.2 </span>End tags</a></li>
+<li><a href="syntax.html#attributes-0"><span class="secno">12.1.2.3 </span>Attributes</a></li>
+<li><a href="syntax.html#optional-tags"><span class="secno">12.1.2.4 </span>Optional tags</a></li>
+<li><a href="syntax.html#element-restrictions"><span class="secno">12.1.2.5 </span>Restrictions on content models</a></li>
+<li><a href="syntax.html#cdata-rcdata-restrictions"><span class="secno">12.1.2.6 </span>Restrictions on the contents of raw text and escapable raw text elements</a></li></ol></li>
+<li><a href="syntax.html#text-0"><span class="secno">12.1.3 </span>Text</a>
+<ol><li><a href="syntax.html#newlines"><span class="secno">12.1.3.1 </span>Newlines</a></li></ol></li>
+<li><a href="syntax.html#character-references"><span class="secno">12.1.4 </span>Character references</a></li>
+<li><a href="syntax.html#cdata-sections"><span class="secno">12.1.5 </span>CDATA sections</a></li>
+<li><a href="syntax.html#comments"><span class="secno">12.1.6 </span>Comments</a></li></ol></li>
+<li><a href="parsing.html#parsing"><span class="secno">12.2 </span>Parsing HTML documents</a>
+<ol><li><a href="parsing.html#overview-of-the-parsing-model"><span class="secno">12.2.1 </span>Overview of the parsing model</a></li>
+<li><a href="parsing.html#the-input-byte-stream"><span class="secno">12.2.2 </span>The input byte stream</a>
+<ol><li><a href="parsing.html#parsing-with-a-known-character-encoding"><span class="secno">12.2.2.1 </span>Parsing with a known character encoding</a></li>
+<li><a href="parsing.html#determining-the-character-encoding"><span class="secno">12.2.2.2 </span>Determining the character encoding</a></li>
+<li><a href="parsing.html#character-encodings"><span class="secno">12.2.2.3 </span>Character encodings</a></li>
+<li><a href="parsing.html#changing-the-encoding-while-parsing"><span class="secno">12.2.2.4 </span>Changing the encoding while parsing</a></li>
+<li><a href="parsing.html#preprocessing-the-input-stream"><span class="secno">12.2.2.5 </span>Preprocessing the input stream</a></li></ol></li>
+<li><a href="parsing.html#parse-state"><span class="secno">12.2.3 </span>Parse state</a>
+<ol><li><a href="parsing.html#the-insertion-mode"><span class="secno">12.2.3.1 </span>The insertion mode</a></li>
+<li><a href="parsing.html#the-stack-of-open-elements"><span class="secno">12.2.3.2 </span>The stack of open elements</a></li>
+<li><a href="parsing.html#the-list-of-active-formatting-elements"><span class="secno">12.2.3.3 </span>The list of active formatting elements</a></li>
+<li><a href="parsing.html#the-element-pointers"><span class="secno">12.2.3.4 </span>The element pointers</a></li>
+<li><a href="parsing.html#other-parsing-state-flags"><span class="secno">12.2.3.5 </span>Other parsing state flags</a></li></ol></li>
+<li><a href="tokenization.html#tokenization"><span class="secno">12.2.4 </span>Tokenization</a>
+<ol><li><a href="tokenization.html#data-state"><span class="secno">12.2.4.1 </span>Data state</a></li>
+<li><a href="tokenization.html#character-reference-in-data-state"><span class="secno">12.2.4.2 </span>Character reference in data state</a></li>
+<li><a href="tokenization.html#rcdata-state"><span class="secno">12.2.4.3 </span>RCDATA state</a></li>
+<li><a href="tokenization.html#character-reference-in-rcdata-state"><span class="secno">12.2.4.4 </span>Character reference in RCDATA state</a></li>
+<li><a href="tokenization.html#rawtext-state"><span class="secno">12.2.4.5 </span>RAWTEXT state</a></li>
+<li><a href="tokenization.html#script-data-state"><span class="secno">12.2.4.6 </span>Script data state</a></li>
+<li><a href="tokenization.html#plaintext-state"><span class="secno">12.2.4.7 </span>PLAINTEXT state</a></li>
+<li><a href="tokenization.html#tag-open-state"><span class="secno">12.2.4.8 </span>Tag open state</a></li>
+<li><a href="tokenization.html#end-tag-open-state"><span class="secno">12.2.4.9 </span>End tag open state</a></li>
+<li><a href="tokenization.html#tag-name-state"><span class="secno">12.2.4.10 </span>Tag name state</a></li>
+<li><a href="tokenization.html#rcdata-less-than-sign-state"><span class="secno">12.2.4.11 </span>RCDATA less-than sign state</a></li>
+<li><a href="tokenization.html#rcdata-end-tag-open-state"><span class="secno">12.2.4.12 </span>RCDATA end tag open state</a></li>
+<li><a href="tokenization.html#rcdata-end-tag-name-state"><span class="secno">12.2.4.13 </span>RCDATA end tag name state</a></li>
+<li><a href="tokenization.html#rawtext-less-than-sign-state"><span class="secno">12.2.4.14 </span>RAWTEXT less-than sign state</a></li>
+<li><a href="tokenization.html#rawtext-end-tag-open-state"><span class="secno">12.2.4.15 </span>RAWTEXT end tag open state</a></li>
+<li><a href="tokenization.html#rawtext-end-tag-name-state"><span class="secno">12.2.4.16 </span>RAWTEXT end tag name state</a></li>
+<li><a href="tokenization.html#script-data-less-than-sign-state"><span class="secno">12.2.4.17 </span>Script data less-than sign state</a></li>
+<li><a href="tokenization.html#script-data-end-tag-open-state"><span class="secno">12.2.4.18 </span>Script data end tag open state</a></li>
+<li><a href="tokenization.html#script-data-end-tag-name-state"><span class="secno">12.2.4.19 </span>Script data end tag name state</a></li>
+<li><a href="tokenization.html#script-data-escape-start-state"><span class="secno">12.2.4.20 </span>Script data escape start state</a></li>
+<li><a href="tokenization.html#script-data-escape-start-dash-state"><span class="secno">12.2.4.21 </span>Script data escape start dash state</a></li>
+<li><a href="tokenization.html#script-data-escaped-state"><span class="secno">12.2.4.22 </span>Script data escaped state</a></li>
+<li><a href="tokenization.html#script-data-escaped-dash-state"><span class="secno">12.2.4.23 </span>Script data escaped dash state</a></li>
+<li><a href="tokenization.html#script-data-escaped-dash-dash-state"><span class="secno">12.2.4.24 </span>Script data escaped dash dash state</a></li>
+<li><a href="tokenization.html#script-data-escaped-less-than-sign-state"><span class="secno">12.2.4.25 </span>Script data escaped less-than sign state</a></li>
+<li><a href="tokenization.html#script-data-escaped-end-tag-open-state"><span class="secno">12.2.4.26 </span>Script data escaped end tag open state</a></li>
+<li><a href="tokenization.html#script-data-escaped-end-tag-name-state"><span class="secno">12.2.4.27 </span>Script data escaped end tag name state</a></li>
+<li><a href="tokenization.html#script-data-double-escape-start-state"><span class="secno">12.2.4.28 </span>Script data double escape start state</a></li>
+<li><a href="tokenization.html#script-data-double-escaped-state"><span class="secno">12.2.4.29 </span>Script data double escaped state</a></li>
+<li><a href="tokenization.html#script-data-double-escaped-dash-state"><span class="secno">12.2.4.30 </span>Script data double escaped dash state</a></li>
+<li><a href="tokenization.html#script-data-double-escaped-dash-dash-state"><span class="secno">12.2.4.31 </span>Script data double escaped dash dash state</a></li>
+<li><a href="tokenization.html#script-data-double-escaped-less-than-sign-state"><span class="secno">12.2.4.32 </span>Script data double escaped less-than sign state</a></li>
+<li><a href="tokenization.html#script-data-double-escape-end-state"><span class="secno">12.2.4.33 </span>Script data double escape end state</a></li>
+<li><a href="tokenization.html#before-attribute-name-state"><span class="secno">12.2.4.34 </span>Before attribute name state</a></li>
+<li><a href="tokenization.html#attribute-name-state"><span class="secno">12.2.4.35 </span>Attribute name state</a></li>
+<li><a href="tokenization.html#after-attribute-name-state"><span class="secno">12.2.4.36 </span>After attribute name state</a></li>
+<li><a href="tokenization.html#before-attribute-value-state"><span class="secno">12.2.4.37 </span>Before attribute value state</a></li>
+<li><a href="tokenization.html#attribute-value-(double-quoted)-state"><span class="secno">12.2.4.38 </span>Attribute value (double-quoted) state</a></li>
+<li><a href="tokenization.html#attribute-value-(single-quoted)-state"><span class="secno">12.2.4.39 </span>Attribute value (single-quoted) state</a></li>
+<li><a href="tokenization.html#attribute-value-(unquoted)-state"><span class="secno">12.2.4.40 </span>Attribute value (unquoted) state</a></li>
+<li><a href="tokenization.html#character-reference-in-attribute-value-state"><span class="secno">12.2.4.41 </span>Character reference in attribute value state</a></li>
+<li><a href="tokenization.html#after-attribute-value-(quoted)-state"><span class="secno">12.2.4.42 </span>After attribute value (quoted) state</a></li>
+<li><a href="tokenization.html#self-closing-start-tag-state"><span class="secno">12.2.4.43 </span>Self-closing start tag state</a></li>
+<li><a href="tokenization.html#bogus-comment-state"><span class="secno">12.2.4.44 </span>Bogus comment state</a></li>
+<li><a href="tokenization.html#markup-declaration-open-state"><span class="secno">12.2.4.45 </span>Markup declaration open state</a></li>
+<li><a href="tokenization.html#comment-start-state"><span class="secno">12.2.4.46 </span>Comment start state</a></li>
+<li><a href="tokenization.html#comment-start-dash-state"><span class="secno">12.2.4.47 </span>Comment start dash state</a></li>
+<li><a href="tokenization.html#comment-state"><span class="secno">12.2.4.48 </span>Comment state</a></li>
+<li><a href="tokenization.html#comment-end-dash-state"><span class="secno">12.2.4.49 </span>Comment end dash state</a></li>
+<li><a href="tokenization.html#comment-end-state"><span class="secno">12.2.4.50 </span>Comment end state</a></li>
+<li><a href="tokenization.html#comment-end-bang-state"><span class="secno">12.2.4.51 </span>Comment end bang state</a></li>
+<li><a href="tokenization.html#doctype-state"><span class="secno">12.2.4.52 </span>DOCTYPE state</a></li>
+<li><a href="tokenization.html#before-doctype-name-state"><span class="secno">12.2.4.53 </span>Before DOCTYPE name state</a></li>
+<li><a href="tokenization.html#doctype-name-state"><span class="secno">12.2.4.54 </span>DOCTYPE name state</a></li>
+<li><a href="tokenization.html#after-doctype-name-state"><span class="secno">12.2.4.55 </span>After DOCTYPE name state</a></li>
+<li><a href="tokenization.html#after-doctype-public-keyword-state"><span class="secno">12.2.4.56 </span>After DOCTYPE public keyword state</a></li>
+<li><a href="tokenization.html#before-doctype-public-identifier-state"><span class="secno">12.2.4.57 </span>Before DOCTYPE public identifier state</a></li>
+<li><a href="tokenization.html#doctype-public-identifier-(double-quoted)-state"><span class="secno">12.2.4.58 </span>DOCTYPE public identifier (double-quoted) state</a></li>
+<li><a href="tokenization.html#doctype-public-identifier-(single-quoted)-state"><span class="secno">12.2.4.59 </span>DOCTYPE public identifier (single-quoted) state</a></li>
+<li><a href="tokenization.html#after-doctype-public-identifier-state"><span class="secno">12.2.4.60 </span>After DOCTYPE public identifier state</a></li>
+<li><a href="tokenization.html#between-doctype-public-and-system-identifiers-state"><span class="secno">12.2.4.61 </span>Between DOCTYPE public and system identifiers state</a></li>
+<li><a href="tokenization.html#after-doctype-system-keyword-state"><span class="secno">12.2.4.62 </span>After DOCTYPE system keyword state</a></li>
+<li><a href="tokenization.html#before-doctype-system-identifier-state"><span class="secno">12.2.4.63 </span>Before DOCTYPE system identifier state</a></li>
+<li><a href="tokenization.html#doctype-system-identifier-(double-quoted)-state"><span class="secno">12.2.4.64 </span>DOCTYPE system identifier (double-quoted) state</a></li>
+<li><a href="tokenization.html#doctype-system-identifier-(single-quoted)-state"><span class="secno">12.2.4.65 </span>DOCTYPE system identifier (single-quoted) state</a></li>
+<li><a href="tokenization.html#after-doctype-system-identifier-state"><span class="secno">12.2.4.66 </span>After DOCTYPE system identifier state</a></li>
+<li><a href="tokenization.html#bogus-doctype-state"><span class="secno">12.2.4.67 </span>Bogus DOCTYPE state</a></li>
+<li><a href="tokenization.html#cdata-section-state"><span class="secno">12.2.4.68 </span>CDATA section state</a></li>
+<li><a href="tokenization.html#tokenizing-character-references"><span class="secno">12.2.4.69 </span>Tokenizing character references</a></li></ol></li>
+<li><a href="tree-construction.html#tree-construction"><span class="secno">12.2.5 </span>Tree construction</a>
+<ol><li><a href="tree-construction.html#creating-and-inserting-nodes"><span class="secno">12.2.5.1 </span>Creating and inserting nodes</a></li>
+<li><a href="tree-construction.html#parsing-elements-that-contain-only-text"><span class="secno">12.2.5.2 </span>Parsing elements that contain only text</a></li>
+<li><a href="tree-construction.html#closing-elements-that-have-implied-end-tags"><span class="secno">12.2.5.3 </span>Closing elements that have implied end tags</a></li>
+<li><a href="tree-construction.html#parsing-main-inhtml"><span class="secno">12.2.5.4 </span>The rules for parsing tokens in HTML content</a>
+<ol><li><a href="tree-construction.html#the-initial-insertion-mode"><span class="secno">12.2.5.4.1 </span>The "initial" insertion mode</a></li>
+<li><a href="tree-construction.html#the-before-html-insertion-mode"><span class="secno">12.2.5.4.2 </span>The "before html" insertion mode</a></li>
+<li><a href="tree-construction.html#the-before-head-insertion-mode"><span class="secno">12.2.5.4.3 </span>The "before head" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inhead"><span class="secno">12.2.5.4.4 </span>The "in head" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inheadnoscript"><span class="secno">12.2.5.4.5 </span>The "in head noscript" insertion mode</a></li>
+<li><a href="tree-construction.html#the-after-head-insertion-mode"><span class="secno">12.2.5.4.6 </span>The "after head" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inbody"><span class="secno">12.2.5.4.7 </span>The "in body" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-incdata"><span class="secno">12.2.5.4.8 </span>The "text" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intable"><span class="secno">12.2.5.4.9 </span>The "in table" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intabletext"><span class="secno">12.2.5.4.10 </span>The "in table text" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-incaption"><span class="secno">12.2.5.4.11 </span>The "in caption" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-incolgroup"><span class="secno">12.2.5.4.12 </span>The "in column group" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intbody"><span class="secno">12.2.5.4.13 </span>The "in table body" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intr"><span class="secno">12.2.5.4.14 </span>The "in row" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intd"><span class="secno">12.2.5.4.15 </span>The "in cell" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inselect"><span class="secno">12.2.5.4.16 </span>The "in select" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inselectintable"><span class="secno">12.2.5.4.17 </span>The "in select in table" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-intemplate"><span class="secno">12.2.5.4.18 </span>The "in template" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-afterbody"><span class="secno">12.2.5.4.19 </span>The "after body" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-inframeset"><span class="secno">12.2.5.4.20 </span>The "in frameset" insertion mode</a></li>
+<li><a href="tree-construction.html#parsing-main-afterframeset"><span class="secno">12.2.5.4.21 </span>The "after frameset" insertion mode</a></li>
+<li><a href="tree-construction.html#the-after-after-body-insertion-mode"><span class="secno">12.2.5.4.22 </span>The "after after body" insertion mode</a></li>
+<li><a href="tree-construction.html#the-after-after-frameset-insertion-mode"><span class="secno">12.2.5.4.23 </span>The "after after frameset" insertion mode</a></li></ol></li>
+<li><a href="tree-construction.html#parsing-main-inforeign"><span class="secno">12.2.5.5 </span>The rules for parsing tokens in foreign content</a></li></ol></li>
+<li><a href="the-end.html#the-end"><span class="secno">12.2.6 </span>The end</a></li>
+<li><a href="the-end.html#coercing-an-html-dom-into-an-infoset"><span class="secno">12.2.7 </span>Coercing an HTML DOM into an infoset</a></li>
+<li><a href="the-end.html#an-introduction-to-error-handling-and-strange-cases-in-the-parser"><span class="secno">12.2.8 </span>An introduction to error handling and strange cases in the parser</a>
+<ol><li><a href="the-end.html#misnested-tags:-b-i-/b-/i"><span class="secno">12.2.8.1 </span>Misnested tags: &lt;b&gt;&lt;i&gt;&lt;/b&gt;&lt;/i&gt;</a></li>
+<li><a href="the-end.html#misnested-tags:-b-p-/b-/p"><span class="secno">12.2.8.2 </span>Misnested tags: &lt;b&gt;&lt;p&gt;&lt;/b&gt;&lt;/p&gt;</a></li>
+<li><a href="the-end.html#unexpected-markup-in-tables"><span class="secno">12.2.8.3 </span>Unexpected markup in tables</a></li>
+<li><a href="the-end.html#scripts-that-modify-the-page-as-it-is-being-parsed"><span class="secno">12.2.8.4 </span>Scripts that modify the page as it is being parsed</a></li>
+<li><a href="the-end.html#the-execution-of-scripts-that-are-moving-across-multiple-documents"><span class="secno">12.2.8.5 </span>The execution of scripts that are moving across multiple documents</a></li>
+<li><a href="the-end.html#unclosed-formatting-elements"><span class="secno">12.2.8.6 </span>Unclosed formatting elements</a></li></ol></li></ol></li>
+<li><a href="the-end.html#serializing-html-fragments"><span class="secno">12.3 </span>Serializing HTML fragments</a></li>
+<li><a href="the-end.html#parsing-html-fragments"><span class="secno">12.4 </span>Parsing HTML fragments</a></li>
+<li><a href="named-character-references.html#named-character-references"><span class="secno">12.5 </span>Named character references</a></li></ol></li>
+<li><a href="the-xhtml-syntax.html#the-xhtml-syntax"><span class="secno">13 </span>The XHTML syntax</a>
+<ol><li><a href="the-xhtml-syntax.html#writing-xhtml-documents"><span class="secno">13.1 </span>Writing XHTML documents</a></li>
+<li><a href="the-xhtml-syntax.html#parsing-xhtml-documents"><span class="secno">13.2 </span>Parsing XHTML documents</a></li>
+<li><a href="the-xhtml-syntax.html#serializing-xhtml-fragments"><span class="secno">13.3 </span>Serializing XHTML fragments</a></li>
+<li><a href="the-xhtml-syntax.html#parsing-xhtml-fragments"><span class="secno">13.4 </span>Parsing XHTML fragments</a></li></ol></li>
+<li><a href="rendering.html#rendering"><span class="secno">14 </span>Rendering</a>
+<ol><li><a href="rendering.html#introduction-13"><span class="secno">14.1 </span>Introduction</a></li>
+<li><a href="rendering.html#the-css-user-agent-style-sheet-and-presentational-hints"><span class="secno">14.2 </span>The CSS user agent style sheet and presentational hints</a></li>
+<li><a href="rendering.html#non-replaced-elements"><span class="secno">14.3 </span>Non-replaced elements</a>
+<ol><li><a href="rendering.html#hidden-elements"><span class="secno">14.3.1 </span>Hidden elements</a></li>
+<li><a href="rendering.html#the-page"><span class="secno">14.3.2 </span>The page</a></li>
+<li><a href="rendering.html#flow-content-1"><span class="secno">14.3.3 </span>Flow content</a></li>
+<li><a href="rendering.html#phrasing-content-1"><span class="secno">14.3.4 </span>Phrasing content</a></li>
+<li><a href="rendering.html#bidi-rendering"><span class="secno">14.3.5 </span>Bidirectional text</a></li>
+<li><a href="rendering.html#quotes"><span class="secno">14.3.6 </span>Quotes</a></li>
+<li><a href="rendering.html#sections-and-headings"><span class="secno">14.3.7 </span>Sections and headings</a></li>
+<li><a href="rendering.html#lists"><span class="secno">14.3.8 </span>Lists</a></li>
+<li><a href="rendering.html#tables"><span class="secno">14.3.9 </span>Tables</a></li>
+<li><a href="rendering.html#margin-collapsing-quirks"><span class="secno">14.3.10 </span>Margin collapsing quirks</a></li>
+<li><a href="rendering.html#form-controls"><span class="secno">14.3.11 </span>Form controls</a></li>
+<li><a href="rendering.html#the-hr-element-0"><span class="secno">14.3.12 </span>The <code>hr</code> element</a></li>
+<li><a href="rendering.html#the-fieldset-and-legend-elements"><span class="secno">14.3.13 </span>The <code>fieldset</code> and <code>legend</code> elements</a></li></ol></li>
+<li><a href="rendering.html#replaced-elements"><span class="secno">14.4 </span>Replaced elements</a>
+<ol><li><a href="rendering.html#embedded-content-2"><span class="secno">14.4.1 </span>Embedded content</a></li>
+<li><a href="rendering.html#images-0"><span class="secno">14.4.2 </span>Images</a></li>
+<li><a href="rendering.html#attributes-for-embedded-content-and-images"><span class="secno">14.4.3 </span>Attributes for embedded content and images</a></li>
+<li><a href="rendering.html#image-maps-0"><span class="secno">14.4.4 </span>Image maps</a></li></ol></li>
+<li><a href="rendering.html#bindings"><span class="secno">14.5 </span>Bindings</a>
+<ol><li><a href="rendering.html#introduction-14"><span class="secno">14.5.1 </span>Introduction</a></li>
+<li><a href="rendering.html#the-button-element-0"><span class="secno">14.5.2 </span>The <code>button</code> element</a></li>
+<li><a href="rendering.html#the-details-element-0"><span class="secno">14.5.3 </span>The <code>details</code> element</a></li>
+<li><a href="rendering.html#the-input-element-as-a-text-entry-widget"><span class="secno">14.5.4 </span>The <code>input</code> element as a text entry widget</a></li>
+<li><a href="rendering.html#the-input-element-as-domain-specific-widgets"><span class="secno">14.5.5 </span>The <code>input</code> element as domain-specific widgets</a></li>
+<li><a href="rendering.html#the-input-element-as-a-range-control"><span class="secno">14.5.6 </span>The <code>input</code> element as a range control</a></li>
+<li><a href="rendering.html#the-input-element-as-a-color-well"><span class="secno">14.5.7 </span>The <code>input</code> element as a color well</a></li>
+<li><a href="rendering.html#the-input-element-as-a-checkbox-and-radio-button-widgets"><span class="secno">14.5.8 </span>The <code>input</code> element as a checkbox and radio button widgets</a></li>
+<li><a href="rendering.html#the-input-element-as-a-file-upload-control"><span class="secno">14.5.9 </span>The <code>input</code> element as a file upload control</a></li>
+<li><a href="rendering.html#the-input-element-as-a-button"><span class="secno">14.5.10 </span>The <code>input</code> element as a button</a></li>
+<li><a href="rendering.html#the-marquee-element-0"><span class="secno">14.5.11 </span>The <code>marquee</code> element</a></li>
+<li><a href="rendering.html#the-meter-element-0"><span class="secno">14.5.12 </span>The <code>meter</code> element</a></li>
+<li><a href="rendering.html#the-progress-element-0"><span class="secno">14.5.13 </span>The <code>progress</code> element</a></li>
+<li><a href="rendering.html#the-select-element-0"><span class="secno">14.5.14 </span>The <code>select</code> element</a></li>
+<li><a href="rendering.html#the-textarea-element-0"><span class="secno">14.5.15 </span>The <code>textarea</code> element</a></li>
+<li><a href="rendering.html#the-keygen-element-0"><span class="secno">14.5.16 </span>The <code>keygen</code> element</a></li></ol></li>
+<li><a href="rendering.html#frames-and-framesets"><span class="secno">14.6 </span>Frames and framesets</a></li>
+<li><a href="rendering.html#interactive-media"><span class="secno">14.7 </span>Interactive media</a>
+<ol><li><a href="rendering.html#links,-forms,-and-navigation"><span class="secno">14.7.1 </span>Links, forms, and navigation</a></li>
+<li><a href="rendering.html#the-title-attribute-0"><span class="secno">14.7.2 </span>The <code title="attr-title">title</code> attribute</a></li>
+<li><a href="rendering.html#editing-hosts"><span class="secno">14.7.3 </span>Editing hosts</a></li>
+<li><a href="rendering.html#text-rendered-in-native-user-interfaces"><span class="secno">14.7.4 </span>Text rendered in native user interfaces</a></li></ol></li>
+<li><a href="rendering.html#print-media"><span class="secno">14.8 </span>Print media</a></li>
+<li><a href="rendering.html#unstyled-xml-documents"><span class="secno">14.9 </span>Unstyled XML documents</a></li></ol></li>
+<li><a href="obsolete.html#obsolete"><span class="secno">15 </span>Obsolete features</a>
+<ol><li><a href="obsolete.html#obsolete-but-conforming-features"><span class="secno">15.1 </span>Obsolete but conforming features</a>
+<ol><li><a href="obsolete.html#warnings-for-obsolete-but-conforming-features"><span class="secno">15.1.1 </span>Warnings for obsolete but conforming features</a></li></ol></li>
+<li><a href="obsolete.html#non-conforming-features"><span class="secno">15.2 </span>Non-conforming features</a></li>
+<li><a href="obsolete.html#requirements-for-implementations"><span class="secno">15.3 </span>Requirements for implementations</a>
+<ol><li><a href="obsolete.html#the-applet-element"><span class="secno">15.3.1 </span>The <code>applet</code> element</a></li>
+<li><a href="obsolete.html#the-marquee-element"><span class="secno">15.3.2 </span>The <code>marquee</code> element</a></li>
+<li><a href="obsolete.html#frames"><span class="secno">15.3.3 </span>Frames</a></li>
+<li><a href="obsolete.html#other-elements,-attributes-and-apis"><span class="secno">15.3.4 </span>Other elements, attributes and APIs</a></li></ol></li></ol></li>
+<li><a href="iana.html#iana"><span class="secno">16 </span>IANA considerations</a>
+<ol><li><a href="iana.html#text/html"><span class="secno">16.1 </span><code>text/html</code></a></li>
+<li><a href="iana.html#multipart/x-mixed-replace"><span class="secno">16.2 </span><code>multipart/x-mixed-replace</code></a></li>
+<li><a href="iana.html#application/xhtml+xml"><span class="secno">16.3 </span><code>application/xhtml+xml</code></a></li>
+<li><a href="iana.html#application/x-www-form-urlencoded"><span class="secno">16.4 </span><code>application/x-www-form-urlencoded</code></a></li>
+<li><a href="iana.html#text/cache-manifest"><span class="secno">16.5 </span><code>text/cache-manifest</code></a></li>
+<li><a href="iana.html#text/ping"><span class="secno">16.6 </span><code>text/ping</code></a></li>
+<li><a href="iana.html#application/microdata+json"><span class="secno">16.7 </span><code>application/microdata+json</code></a></li>
+<li><a href="iana.html#ping-from"><span class="secno">16.8 </span><code>Ping-From</code></a></li>
+<li><a href="iana.html#ping-to"><span class="secno">16.9 </span><code>Ping-To</code></a></li>
+<li><a href="iana.html#web+-scheme-prefix"><span class="secno">16.10 </span><code>web+</code> scheme prefix</a></li></ol></li>
+<li><a href="section-index.html#index" class="no-num">Index</a>
+<ol><li><a href="section-index.html#elements-1" class="no-num">Elements</a></li>
+<li><a href="section-index.html#element-content-categories" class="no-num">Element content categories</a></li>
+<li><a href="section-index.html#attributes-1" class="no-num">Attributes</a></li>
+<li><a href="section-index.html#element-interfaces" class="no-num">Element Interfaces</a></li>
+<li><a href="section-index.html#all-interfaces" class="no-num">All Interfaces</a></li>
+<li><a href="section-index.html#events-0" class="no-num">Events</a></li></ol></li>
+<li><a href="references.html#references" class="no-num">References</a></li>
+<li><a href="acknowledgments.html#acknowledgments" class="no-num">Acknowledgments</a></li></ol><!--end-toc--></body></html>

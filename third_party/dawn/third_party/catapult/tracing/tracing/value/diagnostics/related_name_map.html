@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class RelatedNameMap extends tr.v.d.Diagnostic {
+    constructor(opt_info) {
+      super();
+      this.map_ = new Map();
+      if (opt_info) {
+        for (const [key, name] of Object.entries(opt_info)) {
+          this.set(key, name);
+        }
+      }
+    }
+
+    clone() {
+      const clone = new RelatedNameMap();
+      clone.addDiagnostic(this);
+      return clone;
+    }
+
+    equals(other) {
+      if (!(other instanceof RelatedNameMap)) return false;
+
+      const keys1 = new Set(this.map_.keys());
+      const keys2 = new Set(other.map_.keys());
+      if (!tr.b.setsEqual(keys1, keys2)) return false;
+
+      for (const [key, name] of this) {
+        if (name !== other.get(key)) return false;
+      }
+
+      return true;
+    }
+
+    canAddDiagnostic(otherDiagnostic) {
+      return otherDiagnostic instanceof RelatedNameMap;
+    }
+
+    addDiagnostic(otherDiagnostic) {
+      for (const [key, name] of otherDiagnostic) {
+        const existing = this.get(key);
+        if (existing === undefined) {
+          this.set(key, name);
+        } else if (existing !== name) {
+          throw new Error('Histogram names differ: ' +
+              `"${existing}" != "${name}"`);
+        }
+      }
+    }
+
+    serialize(serializer) {
+      const keys = [...this.map_.keys()];
+      keys.sort();
+      const names = keys.map(k => serializer.getOrAllocateId(this.get(k)));
+      const keysId = serializer.getOrAllocateId(keys.map(k =>
+        serializer.getOrAllocateId(k)));
+      return [keysId, ...names];
+    }
+
+    asDictInto_(d) {
+      d.names = {};
+      for (const [key, name] of this) d.names[key] = name;
+    }
+
+    set(key, name) {
+      this.map_.set(key, name);
+    }
+
+    get(key) {
+      return this.map_.get(key);
+    }
+
+    * [Symbol.iterator]() {
+      for (const pair of this.map_) yield pair;
+    }
+
+    * values() {
+      for (const value of this.map_.values()) yield value;
+    }
+
+    static fromEntries(entries) {
+      const names = new RelatedNameMap();
+      for (const [key, name] of entries) {
+        names.set(key, name);
+      }
+      return names;
+    }
+
+    static deserialize(data, deserializer) {
+      const names = new RelatedNameMap();
+      const keys = deserializer.getObject(data[0]);
+      for (let i = 0; i < keys.length; ++i) {
+        names.set(
+            deserializer.getObject(keys[i]),
+            deserializer.getObject(data[i + 1]));
+      }
+      return names;
+    }
+
+    static fromDict(d) {
+      return RelatedNameMap.fromEntries(Object.entries(d.names || {}));
+    }
+  }
+
+  tr.v.d.Diagnostic.register(RelatedNameMap, {
+    elementName: 'tr-v-ui-related-name-map-span',
+  });
+
+  return {
+    RelatedNameMap,
+  };
+});
+</script>

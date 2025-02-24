@@ -1,0 +1,252 @@
+Name
+
+     EXT_texture_norm16
+
+Name Strings
+
+     GL_EXT_texture_norm16
+
+Contributors
+
+     Contributors to EXT_texture_snorm
+     Daniel Koch, NVIDIA
+     Jan-Harald Fredriksen, ARM
+
+Contact
+
+     Mathias Heyer, NVIDIA (mheyer [at] nvidia.com)
+
+Status
+
+     Complete
+
+Version
+
+     Last Modified Date:  2014-10-24
+     Revision:            5
+
+Number
+
+    OpenGL ES Extension #207
+
+Dependencies
+
+     OpenGL ES 3.1 is required.
+
+     This extension is written against the OpenGL ES 3.1 (June 4, 2014)
+     specification.
+
+     This extension interacts with EXT_texture_buffer.
+
+     This extension interacts with EXT_texture_view.
+
+     This extension interacts with OES_texture_storage_multisample_2d_array.
+
+     This extension interacts with EXT_copy_image.
+
+     This extension interacts with EXT_texture_compression_s3tc.
+
+     This extension interacts with EXT_texture_compression_rgtc.
+
+     This extension interacts with NV_texture_compression_s3tc.
+
+     This extension interacts with NV_sRGB_formats.
+
+Overview
+
+     OpenGL ES 3.1 supports 8-bit (signed) normalized textures.
+
+     This extension provides a set of new 16 bit signed normalized and
+     unsigned normalized fixed point texture, renderbuffer and
+     texture buffer formats.
+
+
+New Procedures and Functions
+
+     None
+
+New Tokens
+
+
+     Accepted by the <internalFormat> parameter of TexImage2D,TexImage3D,
+     TexStorage2D, TexStorage3D and TexStorage2DMultisample,
+     TexStorage3DMultisampleOES, TexBufferEXT, TexBufferRangeEXT,
+     TextureViewEXT, RenderbufferStorage and RenderbufferStorageMultisample:
+
+        R16_EXT                                     0x822A
+        RG16_EXT                                    0x822C
+        RGBA16_EXT                                  0x805B
+
+     Accepted by the <internalFormat> parameter of TexImage2D,TexImage3D,
+     TexStorage2D, TexStorage3D, TexStorage2DMultisample,
+     TexStorage3DMultisampleOES and TextureViewEXT:
+
+        RGB16_EXT                                   0x8054
+
+        R16_SNORM_EXT                               0x8F98
+        RG16_SNORM_EXT                              0x8F99
+        RGB16_SNORM_EXT                             0x8F9A
+        RGBA16_SNORM_EXT                            0x8F9B
+
+
+Additions to Chapter 8 of the OpenGL  ES 3.1 Specification
+(Textures and Samplers)
+
+    Add to Table 4.X.1 (introduced by EXT_copy_image) "Compatible internal
+    Formats  for copying between compressed and uncompressed...."
+
+        ------------------------------------------------------------------------------
+        | 64-bit  | RGBA16_EXT,          | COMPRESSED_RGB_S3TC_DXT1_EXT,             |
+        |         | RGBA16_SNORM_EXT     | COMPRESSED_SRGB_S3TC_DXT1_NV,             |
+        |         |                      | COMPRESSED_RGBA_S3TC_DXT1_EXT,            |
+        |         |                      | COMPRESSED_SRGB_ALPHA_S3TC_DXT1_NV,       |
+        |         |                      | COMPRESSED_RED_RGTC1_EXT,                 |
+        |         |                      | COMPRESSED_SIGNED_RED_RGTC1_EXT,          |
+        |         |                      | COMPRESSED_RGB8_ETC2,                     |
+        |         |                      | COMPRESSED_SRGB8_ETC2,                    |
+        |         |                      | COMPRESSED_R11_EAC,                       |
+        |         |                      | COMPRESSED_SIGNED_R11_EAC,                |
+        |         |                      | COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, |
+        |         |                      | COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 |
+        ------------------------------------------------------------------------------
+
+    Add a row to Table 8.2 "Valid combinations of format, type and sized
+    internal formats":
+
+        Format          Type            External Bytes  Internal Format
+                                        per Pixel
+        --------------- --------------- --------------- ---------------
+        RED             UNSIGNED_SHORT  2               R16_EXT
+        RG              UNSIGNED_SHORT  4               RG16_EXT
+        RGB             UNSIGNED_SHORT  6               RGB16_EXT
+        RGBA            UNSIGNED_SHORT  8               RGBA16_EXT
+
+        RED             SHORT           2               R16_SNORM_EXT
+        RG              SHORT           4               RG16_SNORM_EXT
+        RGB             SHORT           6               RGB16_SNORM_EXT
+        RGBA            SHORT           8               RGBA16_SNORM_EXT
+
+
+    Add to Table 8.13 "Correspondence of sized internal formats to base
+    internal formats,...":
+
+        Sized            Base            Bits/component              CR   TF  Req.  Req.
+        Internal         Internal        S are shared bits                    rend. tex.
+        Format           Format          R     G    B    A    S
+        ------------     -----------     ----  ---- ---- ---  ----   ---  --- ----  ---
+        R16_EXT          RED             16                           X    X   X     X
+        RG16_EXT         RG              16    16                     X    X   X     X
+        RGB16_EXT        RGB             16    16   16                -    X   -     X
+        RGBA16_EXT       RGBA            16    16   16   16           X    X   X     X
+
+        R16_SNORM_EXT    RED             s16                          -    X   -     X
+        RG16_SNORM_EXT   RG              s16   s16                    -    X   -     X
+        RGB16_SNORM_EXT  RGB             s16   s16  s16               -    X   -     X
+        RGBA16_SNORM_EXT RGBA            s16   s16  s16  s16          -    X   -     X
+
+    Add to Table 8.15: "ReadPixels format and type used during CopyTex*."
+
+        Read Buffer Format                     format  type
+        -------------------------------------  ------  --------------
+        16bit Unsigned Normalized Fixed-point  RGBA    UNSIGNED_SHORT
+
+
+    Add to Table 8.X.2 "Compatible internal formats for TextureViewEXT. ..."
+
+        --------------------------------------------------------------------------
+        | Class                      | Internal formats                          |
+        --------------------------------------------------------------------------
+        | VIEW_CLASS_64_BITS         | RGBA16_EXT, RGBA16_SNORM_EXT              |
+        --------------------------------------------------------------------------
+        | VIEW_CLASS_48_BITS         | RGB16_EXT, RGB16_SNORM_EXT                |
+        --------------------------------------------------------------------------
+        | VIEW_CLASS_32_BITS         | RG16_EXT, RG16_SNORM_EXT                  |
+        --------------------------------------------------------------------------
+        | VIEW_CLASS_16_BITS         | R16_EXT, R16_SNORM_EXT                    |
+        --------------------------------------------------------------------------
+
+        (If EXT_texture_view is not supported, this additions will apply to
+        Table 4.X.2 "Compatible internal formats for CopyImageSubDataEXT" as
+        introduced by EXT_copy_image)
+
+
+    Add to Table texbo1, "Internal Formats for Buffer Textures. ..."
+
+                                                            Component
+        Sized Internal Format Base Type  Components  Norm    0 1 2 3
+        --------------------- ---------  ----------  ----   ---------
+        R16_EXT               ushort      1           Yes    R 0 0 1
+        RG16_EXT              ushort      2           Yes    R G 0 1
+        RGBA16_EXT            ushort      4           Yes    R G B A
+
+
+Additions to Chapter 15 of the OpenGL ES 3.1 Specification
+(Writing Fragments and Samples to the Framebuffer)
+
+        Add to the second paragraph of Section 16.1.2 "ReadPixels":
+
+        "For 16bit unsigned normalized fixed-point rendering surfaces,
+         the combination format RGBA and type UNSIGNED_SHORT is accepted."
+
+Errors
+
+    No new errors.
+
+Interactions with EXT_texture_buffer
+
+    If EXT_texture_buffer is not supported, remove references to TexBufferEXT
+    and TexBufferRangeEXT. Also remove additions to Table textbo1.
+
+
+Interactions with EXT_texture_view
+
+    If EXT_texture_view is not supported, remove references to TextureViewEXT.
+    Also remove additions to Table 8.X.2.
+
+Interactions with OES_texture_storage_multisample_2d_array
+
+    If OES_texture_storage_multisample_2d_array is not supported, remove
+    references to TexStorage3DMultisampleOES
+
+Interactions with EXT_copy_image
+
+    If EXT_copy_image is not supported, remove additions to Table 8.X.2.
+    (If EXT_texture_view is not supported remove references to Table 4.X.2)
+
+Interactions with EXT_texture_compression_s3tc (or equivalent):
+
+    If EXT_texture_compression_s3tc or similar functionality (i.e.
+    NV_texture_compression_s3tc etc) is not supported, ignore references
+    to the following texture formats: COMPRESSED_RGB_S3TC_DXT1_EXT and
+    COMPRESSED_RGBA_S3TC_DXT1_EXT.
+
+Interactions with NV_sRGB_formats (or equivalent):
+
+    If NV_sRGB_formats or similar functionality is not
+    supported, ignore references to the following texture formats:
+    COMPRESSED_SRGB_S3TC_DXT1_NV and COMPRESSED_SRGB_ALPHA_S3TC_DXT1_NV.
+
+Interactions with EXT_texture_compression_rgtc (or equivalent):
+
+    If EXT_texture_compression_rgtc or equivalent functionality is not
+    supported, ignore references to the following texture formats:
+    COMPRESSED_RED_RGTC1_EXT, COMPRESSED_SIGNED_RED_RGTC1_EXT.
+
+Issues
+
+    None yet.
+
+Revision History:
+
+   Revision 1 2014-07-03 (mheyer)
+        initial revision
+   Revision 2 2014-07-18 (mheyer)
+        add EXT_texture_buffer, EXT_texture_view, EXT_copy_image and
+        OES_texture_storage_multisample_2d_array interactions
+   Revision 3 2014-07-18 (mheyer)
+        rename to NV_texture_norm16, mark SNORM formats as non color-renderable
+   Revision 4 2014-08-05 (mheyer)
+        rename to EXT_texture_norm16, added interactions with compressed
+        texture format extensions
+   Revision: 5 2014-10-24 (dkoch)
+        mark complete, publishing cleanup

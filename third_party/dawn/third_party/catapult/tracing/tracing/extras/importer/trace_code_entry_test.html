@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/trace_code_entry.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('lazy_compile_method', function() {
+    const tce = new tr.e.importer.TraceCodeEntry(
+        '0x123', 10, 'Handler:timeStamp', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'timeStamp');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, -1);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('non_lazy_compile_method', function() {
+    const tce = new tr.e.importer.TraceCodeEntry(
+        '0x123', 10, 'Handler:timeStamp', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'timeStamp');
+    assert.strictEqual(tce.sourceInfo.state, 'compiled');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, -1);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('native_matching', function() {
+    const tce = new tr.e.importer.TraceCodeEntry('0x123', 10,
+        'LazyCompile:~IsAccessorDescriptor native v8natives.js:183', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'IsAccessorDescriptor');
+    assert.strictEqual(tce.sourceInfo.isNative, true);
+    assert.strictEqual(tce.sourceInfo.state, 'optimizable');
+    assert.strictEqual(tce.sourceInfo.file, 'v8natives.js');
+    assert.strictEqual(tce.sourceInfo.line, 182);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('strips_*_from_name', function() {
+    const tce = new tr.e.importer.TraceCodeEntry('0x123', 10,
+        'LazyCompile:*IsAccessorDescriptor native v8natives.js:183', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'IsAccessorDescriptor');
+    assert.strictEqual(tce.sourceInfo.isNative, true);
+    assert.strictEqual(tce.sourceInfo.state, 'optimized');
+    assert.strictEqual(tce.sourceInfo.file, 'v8natives.js');
+    assert.strictEqual(tce.sourceInfo.line, 182);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('non_native_matching', function() {
+    const tce = new tr.e.importer.TraceCodeEntry('0x123', 10,
+        'LazyCompile:~IsAccessorDescriptor v8natives.js:183', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'IsAccessorDescriptor');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, 'v8natives.js');
+    assert.strictEqual(tce.sourceInfo.line, 182);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('lazy_compile_without_script', function() {
+    const tce = new tr.e.importer.TraceCodeEntry(
+        '0x123', 10, 'LazyCompile:~Object', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'Object');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, -1);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('line_matching_without_script', function() {
+    const tce = new tr.e.importer.TraceCodeEntry('0x123', 10,
+        'LazyCompile:~Object :220', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, 'Object');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, 219);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+
+  test('unknown_method_name', function() {
+    let tce = new tr.e.importer.TraceCodeEntry('0x123', 10, 'LazyCompile:', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, '');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, -1);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+
+    tce = new tr.e.importer.TraceCodeEntry(
+        '0x123', 10, 'LazyCompile:~ :37', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, '');
+    assert.strictEqual(tce.sourceInfo.isNative, false);
+    assert.strictEqual(tce.sourceInfo.file, '');
+    assert.strictEqual(tce.sourceInfo.line, 36);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+
+    tce = new tr.e.importer.TraceCodeEntry('0x123', 10,
+        'LazyCompile:~ native liveedit.js:37:10', 12);
+    assert.strictEqual(tce.size, 10);
+    assert.strictEqual(tce.name, '');
+    assert.strictEqual(tce.sourceInfo.isNative, true);
+    assert.strictEqual(tce.sourceInfo.file, 'liveedit.js');
+    assert.strictEqual(tce.sourceInfo.line, 36);
+    assert.strictEqual(tce.sourceInfo.column, 9);
+    assert.strictEqual(tce.sourceInfo.scriptId, 12);
+  });
+});
+</script>

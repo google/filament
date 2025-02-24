@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/rect.html">
+<link rel="import" href="/tracing/extras/chrome/cc/util.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function RenderPassSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  RenderPassSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    preInitialize() {
+      tr.e.cc.preInitializeObject(this);
+    },
+
+    initialize() {
+      tr.e.cc.moveRequiredFieldsFromArgsToToplevel(
+          this, ['quadList']);
+    }
+  };
+
+  ObjectSnapshot.subTypes.register(
+      RenderPassSnapshot,
+      {typeName: 'cc::RenderPass'});
+
+  return {
+    RenderPassSnapshot,
+  };
+});
+</script>

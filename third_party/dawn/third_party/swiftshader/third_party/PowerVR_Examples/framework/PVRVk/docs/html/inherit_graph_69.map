@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Queue_ \&gt;" alt="" coords="349,5,539,47"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_queue__.html" title="Wraps vulkan queue object." alt="" coords="617,50,771,77"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkQueue, PVRVkObjectType \&gt;" alt="" coords="5,79,271,120"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkQueue, ObjectType\l::e_DEVICE \&gt;" alt="" coords="319,71,569,127"/>
+</map>

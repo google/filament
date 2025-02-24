@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/tile.html">
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+<link rel="import" href="/tracing/ui/analysis/object_snapshot_view.html">
+
+<script>
+
+'use strict';
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  /*
+   * Displays a tile in a human readable form.
+   * @constructor
+   */
+  const TileSnapshotView = tr.ui.b.define(
+      'tr-ui-e-chrome-cc-tile-snapshot-view',
+      tr.ui.analysis.ObjectSnapshotView);
+
+  TileSnapshotView.prototype = {
+    __proto__: tr.ui.analysis.ObjectSnapshotView.prototype,
+
+    decorate() {
+      Polymer.dom(this).classList.add('tr-ui-e-chrome-cc-tile-snapshot-view');
+      this.layerTreeView_ =
+          new tr.ui.e.chrome.cc.LayerTreeHostImplSnapshotView();
+      Polymer.dom(this).appendChild(this.layerTreeView_);
+    },
+
+    updateContents() {
+      const tile = this.objectSnapshot_;
+      const layerTreeHostImpl = tile.containingSnapshot;
+      if (!layerTreeHostImpl) return;
+
+      this.layerTreeView_.objectSnapshot = layerTreeHostImpl;
+      this.layerTreeView_.selection = new tr.ui.e.chrome.cc.TileSelection(tile);
+    }
+  };
+
+  tr.ui.analysis.ObjectSnapshotView.register(
+      TileSnapshotView,
+      {
+        typeName: 'cc::Tile',
+        showInTrackView: false
+      });
+
+  return {
+    TileSnapshotView,
+  };
+});
+</script>

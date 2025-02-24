@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id='tr-ui-b-radio-picker'>
+  <template>
+    <style>
+    :host([vertical]) #container {
+      flex-direction: column;
+    }
+    :host(:not[vertical]) #container {
+      flex-direction: row;
+    }
+    #container {
+      display: flex;
+    }
+    #container > div {
+      padding-left: 1em;
+      padding-bottom: 0.5em;
+    }
+    </style>
+    <div id="container"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-radio-picker',
+
+  created() {
+    this.needsInit_ = true;
+    this.settingsKey_ = undefined;
+    this.isReady_ = false;
+    this.radioButtons_ = undefined;
+    // Keeping track of which key is selected. This member should only be set
+    // set inside select() method to make sure that logical state & the UI
+    // state is consistent.
+    this.selectedKey_ = undefined;
+  },
+
+  ready() {
+    this.isReady_ = true;
+    this.maybeInit_();
+    this.maybeRenderRadioButtons_();
+  },
+
+  get vertical() {
+    return this.getAttribute('vertical');
+  },
+
+  set vertical(vertical) {
+    if (vertical) {
+      this.setAttribute('vertical', true);
+    } else {
+      this.removeAttribute('vertical');
+    }
+  },
+
+  get settingsKey() {
+    return this.settingsKey_;
+  },
+
+  set settingsKey(settingsKey) {
+    if (!this.needsInit_) {
+      throw new Error('Already initialized.');
+    }
+    this.settingsKey_ = settingsKey;
+    this.maybeInit_();
+  },
+
+  maybeInit_() {
+    if (!this.needsInit_) return;
+    if (this.settingsKey_ === undefined) return;
+    this.needsInit_ = false;
+    this.select(tr.b.Settings.get(this.settingsKey_));
+  },
+
+  set items(items) {
+    this.radioButtons_ = {};
+    items.forEach(function(e) {
+      if (e.key in this.radioButtons_) {
+        throw new Error(e.key + ' already exists');
+      }
+      const radioButton = document.createElement('div');
+      const input = document.createElement('input');
+      const label = document.createElement('label');
+      input.type = 'radio';
+      input.id = e.label;
+      input.addEventListener('click', function() {
+        this.select(e.key);
+      }.bind(this));
+      Polymer.dom(label).innerHTML = e.label;
+      label.htmlFor = e.label;
+      label.style.display = 'inline';
+      Polymer.dom(radioButton).appendChild(input);
+      Polymer.dom(radioButton).appendChild(label);
+      this.radioButtons_[e.key] = input;
+    }.bind(this));
+
+    this.maybeInit_();
+    this.maybeRenderRadioButtons_();
+  },
+
+  maybeRenderRadioButtons_() {
+    if (!this.isReady_) return;
+    if (this.radioButtons_ === undefined) return;
+    for (const key in this.radioButtons_) {
+      Polymer.dom(this.$.container).appendChild(
+          this.radioButtons_[key].parentElement);
+    }
+    if (this.selectedKey_ !== undefined) {
+      this.select(this.selectedKey_);
+    }
+  },
+
+  select(key) {
+    if (key === undefined || key === this.selectedKey_) {
+      return;
+    }
+    if (this.radioButtons_ === undefined) {
+      this.selectedKey_ = key;
+      return;
+    }
+    if (!(key in this.radioButtons_)) {
+      throw new Error(key + ' does not exists');
+    }
+    // Unselect the previous radio, update the key & select the new one.
+    if (this.selectedKey_ !== undefined) {
+      this.radioButtons_[this.selectedKey_].checked = false;
+    }
+    this.selectedKey_ = key;
+    tr.b.Settings.set(this.settingsKey_, this.selectedKey_);
+    if (this.selectedKey_ !== undefined) {
+      this.radioButtons_[this.selectedKey_].checked = true;
+    }
+
+    this.dispatchEvent(new tr.b.Event('change', false));
+  },
+
+  get selectedKey() {
+    return this.selectedKey_;
+  },
+});
+</script>

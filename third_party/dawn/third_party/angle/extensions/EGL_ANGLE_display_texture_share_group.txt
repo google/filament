@@ -1,0 +1,82 @@
+Name
+
+    ANGLE_display_texture_share_group
+
+Name Strings
+
+    EGL_ANGLE_display_texture_share_group
+
+Contributors
+
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, February 7, 2017
+
+Number
+
+    EGL Extension TBD
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5 specification.
+
+Overview
+
+    This extension allows for the creation of OpenGL ES contexts that share
+    texture objects with other contexts owned by the same display. This method
+    of sharing textures can be used in conjuction with regular share groups.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE    0x33AF
+
+Additions to the EGL 1.5 Specification
+
+    Add a new section entitled "OpenGL ES Global Texture Share Groups"
+    to section 3.7.1:
+
+    "If the attribute EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE is set to EGL_TRUE,
+    a context that shares textures with other contexts owned by the same
+    display and created with EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE set to
+    EGL_TRUE will be created. If the share_context parameter to
+    eglCreateContext is not NULL, all contexts within the share group must have
+    been created with the same value of EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE.
+    The default value of EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE is EGL_FALSE."
+
+Issues
+
+    (1) What happens to the shared textures when a context in the global share
+        group is destroyed?
+
+    RESOLOVED: When the last context in the global texture share group is
+    destroyed, all textures in the global texture share group are released. If
+    a new context is created in the global texture share group, no textures
+    will exist.
+
+    This mirrors how regular share groups work, releasing all objects when the
+    last context is destroyed.
+
+Revision History
+
+    Version 1, 2017/02/07 - first draft.

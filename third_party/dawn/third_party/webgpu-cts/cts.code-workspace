@@ -1,0 +1,116 @@
+// Note: VS Code's setting precedence is `.vscode/` > `cts.code-workspace` > global user settings.
+{
+  "folders": [
+    {
+      "name": "cts",
+      "path": "."
+    },
+    {
+      "name": "webgpu",
+      "path": "src/webgpu"
+    }
+  ],
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode"
+    ]
+  },
+  "settings": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.detectIndentation": false,
+    "editor.rulers": [100],
+    "editor.tabSize": 2,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true,
+    "files.exclude": {
+      "*.tmp.txt": true,
+      ".gitignore": true,
+      ".travis.yml": true,
+      ".tscache": true,
+      "deploy_key.enc": true,
+      "node_modules": true,
+      "out": true,
+      "out-node": true,
+      "out-wpt": true,
+      "docs/tsdoc": true,
+      "package-lock.json": true
+    },
+    // Configure VSCode to use the right style when automatically adding imports on autocomplete.
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.preferences.importModuleSpecifierEnding": "js",
+    "typescript.preferences.quoteStyle": "single",
+    "typescript.tsdk": "cts/node_modules/typescript/lib"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      // Only supports "shell" and "process" tasks.
+      // https://code.visualstudio.com/docs/editor/multi-root-workspaces#_workspace-task-configuration
+      {
+        // Use "group": "build" instead of "test" so it's easy to access from cmd-shift-B.
+        "group": "build",
+        "label": "npm: test",
+        "detail": "Run all presubmit checks",
+
+        "type": "shell",
+        "command": "npm run test",
+        "problemMatcher": []
+      },
+      {
+        "group": "build",
+        "label": "npm: check",
+        "detail": "Just typecheck",
+
+        "type": "shell",
+        "command": "npm run check",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "group": "build",
+        "label": "npm: standalone",
+        "detail": "Build standalone and typecheck",
+
+        "type": "shell",
+        "command": "npm run standalone",
+        "problemMatcher": []
+      },
+      {
+        "group": "build",
+        "label": "npm: wpt",
+        "detail": "Build for WPT and typecheck",
+
+        "type": "shell",
+        "command": "npm run wpt",
+        "problemMatcher": []
+      },
+      {
+        "group": "build",
+        "label": "npm: unittest",
+        "detail": "Build standalone, typecheck, and unittest",
+
+        "type": "shell",
+        "command": "npm run unittest",
+        "problemMatcher": []
+      },
+      {
+        "group": "build",
+        "label": "npm: tsdoc",
+        "detail": "Build docs/tsdoc/",
+
+        "type": "shell",
+        "command": "npm run tsdoc",
+        "problemMatcher": []
+      },
+      {
+        "group": "build",
+        "label": "grunt: run:lint",
+        "detail": "Run eslint",
+
+        "type": "shell",
+        "command": "npx grunt run:lint",
+        "problemMatcher": ["$eslint-stylish"]
+      },
+    ]
+  }
+}

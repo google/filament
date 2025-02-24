@@ -1,0 +1,116 @@
+# Copyright 2019 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../../src/swiftshader.gni")
+
+import("//testing/test.gni")
+
+config("marl_config") {
+  include_dirs = [ "include" ]
+  if (!is_win) {
+    defines = [ "MARL_USE_PTHREAD_THREAD_LOCAL=1" ]
+  }
+}
+
+swiftshader_source_set("Marl_headers") {
+  sources = [
+    "include/marl/blockingcall.h",
+    "include/marl/conditionvariable.h",
+    "include/marl/containers.h",
+    "include/marl/debug.h",
+    "include/marl/defer.h",
+    "include/marl/event.h",
+    "include/marl/finally.h",
+    "include/marl/memory.h",
+    "include/marl/mutex.h",
+    "include/marl/parallelize.h",
+    "include/marl/pool.h",
+    "include/marl/sanitizers.h",
+    "include/marl/scheduler.h",
+    "include/marl/task.h",
+    "include/marl/thread.h",
+    "include/marl/ticket.h",
+    "include/marl/trace.h",
+    "include/marl/tsa.h",
+    "include/marl/waitgroup.h",
+  ]
+
+  public_configs = [ ":marl_config" ]
+}
+
+swiftshader_source_set("Marl") {
+  sources = [
+    "src/debug.cpp",
+    "src/memory.cpp",
+    "src/scheduler.cpp",
+    "src/thread.cpp",
+    "src/trace.cpp",
+  ]
+
+  if (!is_win) {
+    if (current_cpu == "arm64") {
+      sources += [
+        "src/osfiber_aarch64.c",
+        "src/osfiber_asm_aarch64.h",
+        "src/osfiber_asm_aarch64.S",
+      ]
+    } else if (current_cpu == "arm") {
+      sources += [
+        "src/osfiber_arm.c",
+        "src/osfiber_asm_arm.h",
+        "src/osfiber_asm_arm.S",
+      ]
+    } else if (current_cpu == "mips64") {
+      sources += [
+        "src/osfiber_mips64.c",
+        "src/osfiber_asm_mips64.h",
+        "src/osfiber_asm_mips64.S",
+      ]
+    } else if (current_cpu == "ppc64") {
+      sources += [
+        "src/osfiber_ppc64.c",
+        "src/osfiber_asm_ppc64.h",
+        "src/osfiber_asm_ppc64.S",
+      ]
+    } else if (current_cpu == "riscv64") {
+      sources += [
+        "src/osfiber_rv64.c",
+        "src/osfiber_asm_rv64.h",
+        "src/osfiber_asm_rv64.S",
+      ]
+    } else if (current_cpu == "loong64") {
+      sources += [
+        "src/osfiber_loongarch64.c",
+        "src/osfiber_asm_loongarch64.h",
+        "src/osfiber_asm_loongarch64.S",
+      ]
+    } else if (current_cpu == "x64") {
+      sources += [
+        "src/osfiber_x64.c",
+        "src/osfiber_asm_x64.h",
+        "src/osfiber_asm_x64.S",
+      ]
+    } else if (current_cpu == "x86") {
+      sources += [
+        "src/osfiber_x86.c",
+        "src/osfiber_asm_x86.h",
+        "src/osfiber_asm_x86.S",
+      ]
+    } else {
+      assert(false, "Unhandled value for current-cpu=" + current_cpu)
+    }
+  }
+
+  public_deps = [ ":Marl_headers" ]
+}

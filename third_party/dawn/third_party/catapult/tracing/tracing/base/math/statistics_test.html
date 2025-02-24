@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/statistics.html">
+<script>
+'use strict';
+
+// TODO(charliea): Remove:
+/* eslint-disable catapult-camelcase */
+
+tr.b.unittest.testSuite(function() {
+  const Statistics = tr.b.math.Statistics;
+
+  /**
+   * Lloyd relaxation in 1D.
+   *
+   * Keeps the position of the first and last sample.
+   **/
+  function relax(samples, opt_iterations) {
+    opt_iterations = opt_iterations || 10;
+    for (let i = 0; i < opt_iterations; i++) {
+      const voronoiBoundaries = [];
+      for (let j = 1; j < samples.length; j++) {
+        voronoiBoundaries.push((samples[j] + samples[j - 1]) * 0.5);
+      }
+
+      const relaxedSamples = [];
+      relaxedSamples.push(samples[0]);
+      for (let j = 1; j < samples.length - 1; j++) {
+        relaxedSamples.push(
+            (voronoiBoundaries[j - 1] + voronoiBoundaries[j]) * 0.5);
+      }
+      relaxedSamples.push(samples[samples.length - 1]);
+      samples = relaxedSamples;
+    }
+    return samples;
+  }
+
+  function createRandomSamples(numSamples) {
+    const samples = [];
+    let position = 0.0;
+    samples.push(position);
+    for (let i = 1; i < numSamples; i++) {
+      position += Math.random();
+      samples.push(position);
+    }
+    return samples;
+  }
+
+  test('normalDistribution', function() {
+    for (let mean = -100; mean <= 100; mean += 25) {
+      for (let stddev = 0.1; stddev < 2; stddev += 0.2) {
+        const dist = new Statistics.NormalDistribution(mean, stddev * stddev);
+        assert.closeTo(mean, dist.mean, 1e-6);
+        assert.closeTo(stddev, dist.standardDeviation, 1e-6);
+        assert.closeTo(0, dist.standardDeviation * dist.computeDensity(
+            -1e10), 1e-5);
+        assert.closeTo(0.05399, dist.standardDeviation * dist.computeDensity(
+            dist.mean - 2 * dist.standardDeviation), 1e-5);
+        assert.closeTo(0.24197, dist.standardDeviation * dist.computeDensity(
+            dist.mean - dist.standardDeviation), 1e-5);
+        assert.closeTo(0.39894, dist.standardDeviation * dist.computeDensity(
+            dist.mean), 1e-5);
+        assert.closeTo(0.24197, dist.standardDeviation * dist.computeDensity(
+            dist.mean + dist.standardDeviation), 1e-5);
+        assert.closeTo(0.054, dist.standardDeviation * dist.computeDensity(
+            dist.mean + 2 * dist.standardDeviation), 1e-5);
+        assert.closeTo(0, dist.standardDeviation * dist.computeDensity(
+            1e10), 1e-5);
+
+        assert.closeTo(0, dist.computePercentile(-1e10), 1e-5);
+        assert.closeTo(0.02275, dist.computePercentile(
+            dist.mean - 2 * dist.standardDeviation), 1e-5);
+        assert.closeTo(0.15866, dist.computePercentile(
+            dist.mean - dist.standardDeviation), 1e-5);
+        assert.closeTo(0.5, dist.computePercentile(dist.mean), 1e-5);
+        assert.closeTo(0.841344, dist.computePercentile(
+            dist.mean + dist.standardDeviation), 1e-5);
+        assert.closeTo(0.97725, dist.computePercentile(
+            dist.mean + 2 * dist.standardDeviation), 1e-5);
+        assert.closeTo(1, dist.computePercentile(1e10), 1e-5);
+      }
+    }
+  });
+
+  test('logNormalDistribution', function() {
+    // Unlike the Normal distribution, the LogNormal distribution can look very
+    // different depending on its parameters, and it's defined in terms of the
+    // Normal distribution anyway, so only test the standard LogNormal
+    // distribution.
+    const dist = new Statistics.LogNormalDistribution(0, 1);
+    assert.closeTo(0.3678, dist.mode, 1e-4);
+    assert.closeTo(1, dist.median, 1e-6);
+    assert.closeTo(1.6487, dist.mean, 1e-4);
+    assert.closeTo(0.65774, dist.computeDensity(dist.mode), 1e-5);
+    assert.closeTo(0.39894, dist.computeDensity(dist.median), 1e-5);
+    assert.closeTo(0.21354, dist.computeDensity(dist.mean), 1e-5);
+    assert.closeTo(0, dist.computePercentile(1e-10), 1e-6);
+    assert.closeTo(0.15865, dist.computePercentile(dist.mode), 1e-5);
+    assert.closeTo(0.5, dist.computePercentile(dist.median), 1e-6);
+    assert.closeTo(0.69146, dist.computePercentile(dist.mean), 1e-5);
+    assert.closeTo(1, dist.computePercentile(1e100), 1e-5);
+  });
+
+  test('divideIfPossibleOrZero', function() {
+    assert.strictEqual(Statistics.divideIfPossibleOrZero(1, 2), 0.5);
+    assert.strictEqual(Statistics.divideIfPossibleOrZero(0, 2), 0);
+    assert.strictEqual(Statistics.divideIfPossibleOrZero(1, 0), 0);
+    assert.strictEqual(Statistics.divideIfPossibleOrZero(0, 0), 0);
+  });
+
+  test('sumBasic', function() {
+    assert.strictEqual(Statistics.sum([1, 2, 3]), 6);
+  });
+
+  test('sumWithFunctor', function() {
+    const ctx = {};
+    const ary = [1, 2, 3];
+    assert.strictEqual(12, Statistics.sum(ary, function(x, i) {
+      assert.strictEqual(this, ctx);
+      assert.strictEqual(ary[i], x);
+      return x * 2;
+    }, ctx));
+  });
+
+  test('minMaxWithFunctor', function() {
+    const ctx = {};
+    const ary = [1, 2, 3];
+    function func(x, i) {
+      assert.strictEqual(this, ctx);
+      assert.strictEqual(ary[i], x);
+      return x;
+    }
+    assert.strictEqual(Statistics.max(ary, func, ctx), 3);
+    assert.strictEqual(Statistics.min(ary, func, ctx), 1);
+
+    const range = Statistics.range(ary, func, ctx);
+    assert.isFalse(range.isEmpty);
+    assert.strictEqual(range.min, 1);
+    assert.strictEqual(range.max, 3);
+  });
+
+  test('maxExtrema', function() {
+    assert.strictEqual(Statistics.max([]), -Infinity);
+    assert.strictEqual(Statistics.min([]), Infinity);
+  });
+
+  test('meanBasic', function() {
+    assert.closeTo(Statistics.mean([1, 2, 3]), 2, 1e-6);
+    assert.closeTo(Statistics.mean(new Set([1, 2, 3])), 2, 1e-6);
+  });
+
+  test('geometricMean', function() {
+    assert.strictEqual(1, Statistics.geometricMean([]));
+    assert.strictEqual(1, Statistics.geometricMean([1]));
+    assert.strictEqual(0, Statistics.geometricMean([-1]));
+    assert.strictEqual(0, Statistics.geometricMean([0]));
+    assert.strictEqual(0, Statistics.geometricMean([1, 2, 3, 0]));
+    assert.strictEqual(0, Statistics.geometricMean([1, 2, 3, -1]));
+    assert.strictEqual(1, Statistics.geometricMean([1, 1, 1]));
+    assert.strictEqual(2, Statistics.geometricMean([2]));
+    assert.closeTo(Math.sqrt(6), Statistics.geometricMean([2, 3]), 1e-6);
+    assert.closeTo(6, Statistics.geometricMean(new Set([4, 9])), 1e-6);
+
+    let samples = [];
+    for (let i = 0; i < 1e3; ++i) {
+      samples.push(Number.MAX_SAFE_INTEGER);
+    }
+    assert.closeTo(Number.MAX_SAFE_INTEGER, Statistics.geometricMean(samples),
+        Number.MAX_SAFE_INTEGER * 1e-13);
+
+    samples = [];
+    for (let i = 0; i < 1e3; ++i) {
+      samples.push(Number.MAX_VALUE / 1e3);
+    }
+    assert.closeTo(Number.MAX_VALUE / 1e3, Statistics.geometricMean(samples),
+        Number.MAX_VALUE * 1e-13);
+  });
+
+  test('weightedMean', function() {
+    function getWeight(element) {
+      return element.weight;
+    }
+    function getValue(element) {
+      return element.value;
+    }
+
+    let data = [
+      {value: 10, weight: 3},
+      {value: 20, weight: 1},
+      {value: 30, weight: 6}
+    ];
+    assert.strictEqual(23, Statistics.weightedMean(data, getWeight, getValue));
+
+    data = [
+      {value: 10, weight: 0},
+      {value: 20, weight: 0},
+      {value: 30, weight: 0}
+    ];
+    assert.strictEqual(
+        undefined, Statistics.weightedMean(data, getWeight, getValue));
+
+    data = [
+      {value: 10, weight: -10},
+      {value: 20, weight: 5},
+      {value: 30, weight: 5}
+    ];
+    assert.strictEqual(
+        undefined, Statistics.weightedMean(data, getWeight, getValue));
+  });
+
+  test('weightedMean_positionDependent', function() {
+    function getWeight(element, idx) {
+      return idx;
+    }
+    // 3 has weight of 0, 6 has weight of 1, 9 has weight of 2
+    assert.strictEqual(8, Statistics.weightedMean([3, 6, 9], getWeight));
+  });
+
+  test('max_positionDependent', function() {
+    function getValue(element, idx) {
+      return element * idx;
+    }
+    assert.strictEqual(6, Statistics.max([1, 2, 3], getValue));
+  });
+
+  test('min_positionDependent', function() {
+    function getValue(element, idx) {
+      return element * idx;
+    }
+    assert.strictEqual(-6, Statistics.min([1, 2, -3], getValue));
+  });
+
+  test('varianceBasic', function() {
+    // In [2, 4, 4, 2], all items have a deviation of 1.0 from the mean so the
+    // population variance is 4.0 / 4 = 1.0, but the sample variance is 4.0 / 3.
+    assert.strictEqual(Statistics.variance([2, 4, 4, 2]), 4.0 / 3);
+
+    // In [1, 2, 3], the squared deviations are 1.0, 0.0 and 1.0 respectively;
+    // population variance 2.0 / 3 but sample variance is 2.0 / 2 = 1.0.
+    assert.strictEqual(Statistics.variance([1, 2, 3]), 1.0);
+  });
+
+  test('varianceWithFunctor', function() {
+    const ctx = {};
+    const ary = [{x: 2},
+      {x: 4},
+      {x: 4},
+      {x: 2}];
+    assert.strictEqual(4.0 / 3, Statistics.variance(ary, function(d) {
+      assert.strictEqual(ctx, this);
+      return d.x;
+    }, ctx));
+  });
+
+  test('stddevBasic', function() {
+    assert.strictEqual(Statistics.stddev([2, 4, 4, 2]), Math.sqrt(4.0 / 3));
+  });
+
+  test('stddevWithFunctor', function() {
+    const ctx = {};
+    const ary = [{x: 2},
+      {x: 4},
+      {x: 4},
+      {x: 2}];
+    assert.strictEqual(Math.sqrt(4.0 / 3), Statistics.stddev(ary, function(d) {
+      assert.strictEqual(ctx, this);
+      return d.x;
+    }, ctx));
+  });
+
+  test('percentile', function() {
+    const ctx = {};
+    const ary = [{x: 0},
+      {x: 1},
+      {x: 2},
+      {x: 3},
+      {x: 4},
+      {x: 5},
+      {x: 6},
+      {x: 7},
+      {x: 8},
+      {x: 9}];
+    function func(d, i) {
+      assert.strictEqual(ctx, this);
+      return d.x;
+    }
+    assert.strictEqual(Statistics.percentile(ary, 0, func, ctx), 0);
+    assert.strictEqual(Statistics.percentile(ary, .5, func, ctx), 4);
+    assert.strictEqual(Statistics.percentile(ary, .75, func, ctx), 6);
+    assert.strictEqual(Statistics.percentile(ary, 1, func, ctx), 9);
+  });
+
+  test('percentile_positionDependent', function() {
+    const ctx = {};
+    const ary = [{x: 0},
+      {x: 1},
+      {x: 2},
+      {x: 3},
+      {x: 4},
+      {x: 5},
+      {x: 6},
+      {x: 7},
+      {x: 8},
+      {x: 9}];
+    function func(d, i) {
+      assert.strictEqual(ctx, this);
+      assert.strictEqual(d.x, i);
+      return d.x * i;
+    }
+    assert.strictEqual(Statistics.percentile(ary, 0, func, ctx), 0);
+    assert.strictEqual(Statistics.percentile(ary, .5, func, ctx), 16);
+    assert.strictEqual(Statistics.percentile(ary, .75, func, ctx), 36);
+    assert.strictEqual(Statistics.percentile(ary, 1, func, ctx), 81);
+  });
+
+  test('normalizeSamples', function() {
+    let samples = [];
+    let results = Statistics.normalizeSamples(samples);
+    assert.deepEqual(results.normalized_samples, []);
+    assert.deepEqual(results.scale, 1.0);
+
+    samples = [0.0, 0.0];
+    results = Statistics.normalizeSamples(samples);
+    assert.deepEqual(results.normalized_samples, [0.5, 0.5]);
+    assert.deepEqual(results.scale, 1.0);
+
+    samples = [0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0];
+    results = Statistics.normalizeSamples(samples);
+    assert.deepEqual(results.normalized_samples,
+        [1.0 / 8.0, 3.0 / 8.0, 5.0 / 8.0, 7.0 / 8.0]);
+    assert.deepEqual(results.scale, 0.75);
+
+    samples = [1.0 / 8.0, 3.0 / 8.0, 5.0 / 8.0, 7.0 / 8.0];
+    results = Statistics.normalizeSamples(samples);
+    assert.deepEqual(results.normalized_samples, samples);
+    assert.deepEqual(results.scale, 1.0);
+  });
+
+  /**
+   *Tests NormalizeSamples and Discrepancy with random samples.
+   *
+   *  Generates 10 sets of 10 random samples, computes the discrepancy,
+   *  relaxes the samples using Llloyd's algorithm in 1D, and computes the
+   *  discrepancy of the relaxed samples. Discrepancy of the relaxed samples
+   *  must be less than or equal to the discrepancy of the original samples.
+   **/
+  test('discrepancy_Random', function() {
+    for (let i = 0; i < 10; i++) {
+      const samples = Statistics.normalizeSamples(
+          createRandomSamples(10)).normalized_samples;
+      const d = Statistics.discrepancy(samples);
+      const relaxedSamples = relax(samples);
+      const dRelaxed = Statistics.discrepancy(relaxedSamples);
+      assert.isBelow(dRelaxed, d);
+    }
+  });
+
+
+  /* Computes discrepancy for sample sets with known statistics. */
+  test('discrepancy_Analytic', function() {
+    let samples = [];
+    let d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.0);
+
+    samples = [0.5];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.5);
+
+    samples = [0.0, 1.0];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 1.0);
+
+    samples = [0.5, 0.5, 0.5];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 1.0);
+
+    samples = [1.0 / 8.0, 3.0 / 8.0, 5.0 / 8.0, 7.0 / 8.0];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.25);
+
+    samples = [1.0 / 8.0, 5.0 / 8.0, 5.0 / 8.0, 7.0 / 8.0];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.5);
+
+    samples = [1.0 / 8.0, 3.0 / 8.0, 5.0 / 8.0, 5.0 / 8.0, 7.0 / 8.0];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.4);
+
+    samples = [0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0];
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.5);
+
+    samples = Statistics.normalizeSamples(samples).normalized_samples;
+    d = Statistics.discrepancy(samples);
+    assert.strictEqual(d, 0.25);
+  });
+
+  test('timestampsDiscrepancy', function() {
+    let timestamps = [];
+    let dAbs = Statistics.timestampsDiscrepancy(timestamps, true);
+    assert.strictEqual(dAbs, 0.0);
+
+    timestamps = [4];
+    dAbs = Statistics.timestampsDiscrepancy(timestamps, true);
+    assert.strictEqual(dAbs, 0.5);
+
+    const timestampsA = [0, 1, 2, 3, 5, 6];
+    const timestampsB = [0, 1, 2, 3, 5, 7];
+    const timestampsC = [0, 2, 3, 4];
+    const timestampsD = [0, 2, 3, 4, 5];
+
+
+    const dAbsA = Statistics.timestampsDiscrepancy(timestampsA, true);
+    const dAbsB = Statistics.timestampsDiscrepancy(timestampsB, true);
+    const dAbsC = Statistics.timestampsDiscrepancy(timestampsC, true);
+    const dAbsD = Statistics.timestampsDiscrepancy(timestampsD, true);
+    const dRelA = Statistics.timestampsDiscrepancy(timestampsA, false);
+    const dRelB = Statistics.timestampsDiscrepancy(timestampsB, false);
+    const dRelC = Statistics.timestampsDiscrepancy(timestampsC, false);
+    const dRelD = Statistics.timestampsDiscrepancy(timestampsD, false);
+
+
+    assert.isBelow(dAbsA, dAbsB);
+    assert.isBelow(dRelA, dRelB);
+    assert.isBelow(dRelD, dRelC);
+    assert.closeTo(dAbsD, dAbsC, 0.0001);
+  });
+
+  test('discrepancyMultipleRanges', function() {
+    const samples = [[0.0, 1.2, 2.3, 3.3], [6.3, 7.5, 8.4], [4.2, 5.4, 5.9]];
+    const d0 = Statistics.timestampsDiscrepancy(samples[0]);
+    const d1 = Statistics.timestampsDiscrepancy(samples[1]);
+    const d2 = Statistics.timestampsDiscrepancy(samples[2]);
+    const d = Statistics.timestampsDiscrepancy(samples);
+    assert.strictEqual(d, Math.max(d0, d1, d2));
+  });
+
+  /**
+   * Tests approimate discrepancy implementation by comparing to exact
+   * solution.
+   **/
+  test('approximateDiscrepancy', function() {
+    for (let i = 0; i < 5; i++) {
+      let samples = createRandomSamples(10);
+      samples = Statistics.normalizeSamples(samples).normalized_samples;
+      const d = Statistics.discrepancy(samples);
+      const dApprox = Statistics.discrepancy(samples, 500);
+      assert.closeTo(d, dApprox, 0.01);
+    }
+  });
+
+  test('uniformlySampleArray', function() {
+    const samples = ['A', 'B', 'C', 'D', 'E'];
+    for (let i = samples.length; i >= 0; --i) {
+      Statistics.uniformlySampleArray(samples, i);
+      assert.lengthOf(samples, i);
+    }
+  });
+
+  test('uniformlySampleStream', function() {
+    let samples = [];
+    Statistics.uniformlySampleStream(samples, 1, 'A', 5);
+    assert.deepEqual(['A'], samples);
+    Statistics.uniformlySampleStream(samples, 2, 'B', 5);
+    Statistics.uniformlySampleStream(samples, 3, 'C', 5);
+    Statistics.uniformlySampleStream(samples, 4, 'D', 5);
+    Statistics.uniformlySampleStream(samples, 5, 'E', 5);
+    assert.deepEqual(['A', 'B', 'C', 'D', 'E'], samples);
+
+    Statistics.uniformlySampleStream(samples, 6, 'F', 5);
+    // Can't really assert anything more than the length since the elements are
+    // drawn at random.
+    assert.strictEqual(samples.length, 5);
+
+    // Try starting with a non-empty array.
+    samples = [0, 0, 0];
+    Statistics.uniformlySampleStream(samples, 1, 'G', 5);
+    assert.deepEqual(['G', 0, 0], samples);
+  });
+
+  test('mergeSampledStreams', function() {
+    let samples = [];
+    Statistics.mergeSampledStreams(samples, 0, ['A'], 1, 5);
+    assert.deepEqual(['A'], samples);
+    Statistics.mergeSampledStreams(samples, 1, ['B', 'C', 'D', 'E'], 4, 5);
+    assert.deepEqual(['A', 'B', 'C', 'D', 'E'], samples);
+
+    Statistics.mergeSampledStreams(samples, 9, ['F', 'G', 'H', 'I', 'J'], 7, 5);
+    // Can't really assert anything more than the length since the elements are
+    // drawn at random.
+    assert.strictEqual(samples.length, 5);
+
+    samples = ['A', 'B'];
+    Statistics.mergeSampledStreams(samples, 2, ['F', 'G', 'H', 'I', 'J'], 7, 5);
+    assert.strictEqual(samples.length, 5);
+  });
+
+  test('mannWhitneyUTestSmokeTest', function() {
+    // x < 0.01
+    let sampleA = [1, 2, 2.1, 2.2, 2, 1];
+    let sampleB = [12, 13, 13.1, 13.2, 13, 12];
+    let results = Statistics.mwu(sampleA, sampleB);
+    assert.isBelow(results.p, Statistics.DEFAULT_ALPHA);
+
+    assert.strictEqual(results.significance,
+        Statistics.Significance.SIGNIFICANT);
+    assert.strictEqual(results.compare(Statistics.DEFAULT_ALPHA / 10),
+        Statistics.Significance.INSIGNIFICANT);
+    assert.strictEqual(results.significance,
+        Statistics.Significance.INSIGNIFICANT);
+
+    // 0.01 < x < 0.1
+    sampleA = [1, 2, 2.1, 2.2, 2, 1];
+    sampleB = [2, 3, 3.1, 3.2, 3, 2];
+    results = Statistics.mwu(sampleA, sampleB);
+    assert.isBelow(results.p, 0.1);
+    assert.isAbove(results.p, 0.01);
+
+    // 0.1 < x
+    sampleA = [1, 2, 2.1, 2.2, 2, 1];
+    sampleB = [1, 2, 2.1, 2.2, 2, 1];
+    results = Statistics.mwu(sampleA, sampleB);
+    assert.isAbove(results.p, 0.1);
+  });
+
+  test('mannWhitneyUEdgeCases', function() {
+    const longRepeatingSample = [
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    ];
+    const emptySample = [];
+    const singleLargeValue = [1000000];
+    // mean 10, std 2
+    const normallyDistributedSample = [
+      8.341540e+0, 7.216640e+0, 8.844310e+0, 9.801980e+0, 1.048760e+1,
+      6.915150e+0, 7.881740e+0, 1.131160e+1, 9.959400e+0, 9.030880e+0
+    ];
+    // Identical samples should not cause the null to be rejected.
+    let results = Statistics.mwu(longRepeatingSample, longRepeatingSample);
+    assert.isAbove(results.p, 0.05);
+    results = Statistics.mwu(normallyDistributedSample,
+        normallyDistributedSample);
+    assert.isAbove(results.p, 0.05);
+    results = Statistics.mwu(singleLargeValue, singleLargeValue);
+
+    // A single value is generally not sufficient to reject the null, no matter
+    // how far off it is.
+    results = Statistics.mwu(normallyDistributedSample, singleLargeValue);
+    assert.isAbove(results.p, 0.05);
+
+    // A single value way outside the first sample may be enough to reject,
+    // if the first sample is large enough.
+    results = Statistics.mwu(longRepeatingSample, singleLargeValue);
+    assert.isBelow(results.p, 0.005);
+
+    // Empty samples should not be comparable.
+    results = Statistics.mwu(emptySample, emptySample);
+    assert(isNaN(results.p));
+
+    results = Statistics.mwu(
+        emptySample, emptySample, Statistics.DEFAULT_ALPHA, 1);
+    assert.strictEqual(results.significance,
+        Statistics.Significance.NEED_MORE_DATA);
+    assert.strictEqual(results.compare(0.9),
+        Statistics.Significance.NEED_MORE_DATA);
+    assert.strictEqual(results.significance,
+        Statistics.Significance.NEED_MORE_DATA);
+
+    // The result of comparing a sample against an empty sample should not be a
+    // valid p value. NOTE: The current implementation returns 0, it is up to
+    // the caller to interpret this.
+    results = Statistics.mwu(normallyDistributedSample, emptySample);
+    assert(!results.p);
+  });
+});
+</script>

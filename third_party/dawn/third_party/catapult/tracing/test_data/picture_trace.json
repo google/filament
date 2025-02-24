@@ -1,0 +1,38 @@
+[
+    { "args" :
+      {
+        "snapshot": {
+          "picture" : "AQAAAJABAACQAAAAIQAAAB8AAACQAQAAkAAAAAAAAAAAAAAACwAAACEAAAAfAAAAAwAAAAFkYWVyTAEAAAgAAB4DAAAACAAAHgMAAAAMAAAjAADIwwAAEMMcAAADAADIQwAAEEMAgNhDAAAvQwEAAABEAQAAGAAAFQEAAAAAAMhDAAAQQwCA2EMAAC9DDAAAIwAAAAAAAAAADAAAIwAAAAAAAAAAGAAAFQIAAAAAAMhDAAAQQwCA2EMAAC9DGAAAFQIAAAAAAMhDAAAQQwCA2EMAAC9DCAAAHgMAAAAcAAADAADQQwAAIEMAgAFEAAAxQwEAAADUAAAAGAAAFQMAAAAAANBDAAAgQwCAAUQAADFDBAAAHGwAABQEAAAAGgAAADMASwBMAE8ATABTAAMANQBSAEoASABVAFYAAAANAAAAANYdQwAGNEMAAC5DAADQQwCA1UMAgNpDAIDcQwCA3kMAgOBDAIDlQwAA50MAAO1DAADyQwAA90MAgPtDAID+QwQAABwEAAAcdGNhZgIAAAAPU2tDbGVhclhmZXJtb2RlDVNrU3JjWGZlcm1vZGVjZnB0AQAAAAEBBUFyaWFsBApBcmlhbCBCb2xkBgxBcmlhbC1Cb2xkTVT+/wAAeWFyYfQAAAAgdG5wBAAAAAAAQEEAAIA/AAAAAAAAgD8AAAAAAACAQAAAAP8CMAAAAAAAAAAAAAAAAAAAAQAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQQAAgD8AAAAAAACAPwAAAAAAAIBA/////wIwAQAAAAAAAAAAAAAAAAACAAAABAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBBAACAPwAAAAAAAIA/AAAAAAAAgED+uYKZADABAAAAAAAAAIBBAACAPwAAAAAAAIA/AAAAAAAAgEAzMzP/ARCBAAMAAAABAAAAIGZvZQ=="
+        }
+      },
+      "cat" : "cc",
+      "id" : "0x79418600",
+      "name" : "cc::Picture::Raster",
+      "ph" : "O",
+      "pid" : 61248,
+      "tid" : 1799,
+      "ts" : 1293319602204
+    },
+  { "args" : { "data" : { "contentRectHeight" : 19,
+                          "contentRectWidth" : 364,
+                          "contentRectX" : -3,
+                          "contentRectY" : 37,
+                          "contents_scale" : 0.25,
+                          "picture_id" : { "id_ref" : "0x79418600" }
+                        } },
+    "cat" : "cc",
+    "name" : "Picture::Raster",
+    "ph" : "B",
+    "pid" : 61248,
+    "tid" : 30491,
+    "ts" : 1293319602760
+  },
+  { "args" : {},
+    "cat" : "cc",
+    "name" : "Picture::Raster",
+    "ph" : "E",
+    "pid" : 61248,
+    "tid" : 30491,
+    "ts" : 1293320602760
+  }
+]

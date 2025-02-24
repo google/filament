@@ -1,0 +1,5 @@
+---
+# Disable clang-format for generated code
+DisableFormat: true
+SortIncludes: false
+...

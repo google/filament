@@ -1,0 +1,3413 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/trace_stream.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/extras/importer/heap_dump_trace_event_importer.html">
+<link rel="import" href="/tracing/extras/importer/legacy_heap_dump_trace_event_importer.html">
+<link rel="import" href="/tracing/extras/importer/oboe.html">
+<link rel="import" href="/tracing/extras/importer/profiling_dictionary_reader.html">
+<link rel="import" href="/tracing/extras/importer/trace_code_entry.html">
+<link rel="import" href="/tracing/extras/importer/trace_code_map.html">
+<link rel="import" href="/tracing/extras/importer/v8/codemap.html">
+<link rel="import" href="/tracing/extras/measure/measure_async_slice.html">
+<link rel="import" href="/tracing/importer/context_processor.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/comment_box_annotation.html">
+<link rel="import" href="/tracing/model/constants.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+<link rel="import" href="/tracing/model/flow_event.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/instant_event.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/profile_node.html">
+<link rel="import" href="/tracing/model/profile_tree.html">
+<link rel="import" href="/tracing/model/rect_annotation.html">
+<link rel="import" href="/tracing/model/scoped_id.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/model/vm_region.html">
+<link rel="import" href="/tracing/model/x_marker_annotation.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview TraceEventImporter imports TraceEvent-formatted data
+ * into the provided model.
+ */
+tr.exportTo('tr.e.importer', function() {
+  const Base64 = tr.b.Base64;
+  const deepCopy = tr.b.deepCopy;
+  const ColorScheme = tr.b.ColorScheme;
+  const HeapDumpTraceEventImporter = tr.e.importer.HeapDumpTraceEventImporter;
+  const LegacyHeapDumpTraceEventImporter =
+      tr.e.importer.LegacyHeapDumpTraceEventImporter;
+  const StreamingEventExpander = tr.e.importer.StreamingEventExpander;
+  const ProfilingDictionaryReader = tr.e.importer.ProfilingDictionaryReader;
+  const MEASURE_NAME_REGEX = tr.e.measure.MEASURE_NAME_REGEX;
+
+  function getEventColor(event, opt_customName) {
+    if (event.cname) {
+      return ColorScheme.getColorIdForReservedName(event.cname);
+    } else if (opt_customName || event.name) {
+      return ColorScheme.getColorIdForGeneralPurposeString(
+          opt_customName || event.name);
+    }
+  }
+
+  function isLegacyChromeClockSyncEvent(event) {
+    return event.name !== undefined &&
+        event.name.startsWith(LEGACY_CHROME_CLOCK_SYNC_EVENT_NAME_PREFIX) &&
+        ((event.ph === 'S') || (event.ph === 'F'));
+  }
+
+  const PRODUCER = 'producer';
+  const CONSUMER = 'consumer';
+  const STEP = 'step';
+
+  const BACKGROUND = tr.model.ContainerMemoryDump.LevelOfDetail.BACKGROUND;
+  const LIGHT = tr.model.ContainerMemoryDump.LevelOfDetail.LIGHT;
+  const DETAILED = tr.model.ContainerMemoryDump.LevelOfDetail.DETAILED;
+  const MEMORY_DUMP_LEVEL_OF_DETAIL_ORDER = [undefined, BACKGROUND, LIGHT,
+    DETAILED];
+
+  const GLOBAL_MEMORY_ALLOCATOR_DUMP_PREFIX = 'global/';
+
+  const LEGACY_CHROME_CLOCK_SYNC_EVENT_NAME_PREFIX = 'ClockSyncEvent.';
+
+  // Map from raw memory dump byte stat names to model byte stat names. See
+  // //base/trace_event/process_memory_maps.cc in Chromium.
+  const BYTE_STAT_NAME_MAP = {
+    'pc': 'privateCleanResident',
+    'pd': 'privateDirtyResident',
+    'sc': 'sharedCleanResident',
+    'sd': 'sharedDirtyResident',
+    'pss': 'proportionalResident',
+    'sw': 'swapped'
+  };
+
+  // See tr.model.MemoryAllocatorDump 'weak' field and
+  // base::trace_event::MemoryAllocatorDump::Flags::WEAK in the Chromium
+  // codebase.
+  const WEAK_MEMORY_ALLOCATOR_DUMP_FLAG = 1 << 0;
+
+  // Object type name patterns for various compilers.
+  const OBJECT_TYPE_NAME_PATTERNS = [
+    {
+      // Clang.
+      prefix: 'const char *WTF::getStringWithTypeName() [T = ',
+      suffix: ']'
+    },
+    {
+      // GCC.
+      prefix: 'const char* WTF::getStringWithTypeName() [with T = ',
+      suffix: ']'
+    },
+    {
+      // Microsoft Visual C++
+      prefix: 'const char *__cdecl WTF::getStringWithTypeName<',
+      suffix: '>(void)'
+    }
+  ];
+
+  // The list of fields on the trace that are known to contain subtraces.
+  const SUBTRACE_FIELDS = new Set([
+    'powerTraceAsString',
+    'systemTraceEvents',
+    'androidProcessDump',
+    'cgroupDump',
+  ]);
+
+  // The complete list of fields on the trace that should not be treated as
+  // trace metadata.
+  const NON_METADATA_FIELDS = new Set([
+    'displayTimeUnit',
+    'samples',
+    'stackFrames',
+    'traceAnnotations',
+    'traceEvents',
+    ...SUBTRACE_FIELDS
+  ]);
+
+  function TraceEventImporter(model, eventData) {
+    this.hasEvents_ = undefined;  // Set properly when importEvents is called.
+    this.importPriority = 1;
+    this.model_ = model;
+    this.events_ = undefined;
+    this.sampleEvents_ = undefined;
+    this.stackFrameEvents_ = undefined;
+    this.stackFrameTree_ = new tr.model.ProfileTree();
+    this.subtraces_ = [];
+    this.eventsWereFromString_ = false;
+    this.softwareMeasuredCpuCount_ = undefined;
+
+
+    this.allAsyncEvents_ = [];
+    this.allFlowEvents_ = [];
+    this.allObjectEvents_ = [];
+
+    this.contextProcessorPerThread = {};
+
+    this.traceEventSampleStackFramesByName_ = {};
+
+    this.v8ProcessCodeMaps_ = {};
+    this.v8ProcessRootStackFrame_ = {};
+    this.v8SamplingData_ = [];
+
+    // Profile Tree Map.
+    // Type of Profile Tree -> Map(ID -> Profile Tree)
+    this.profileTrees_ = new Map();
+    // ID -> Info Object
+    this.profileInfo_ = new Map();
+
+    // For tracking async events that is used to create back-compat clock sync
+    // event.
+    this.legacyChromeClockSyncStartEvent_ = undefined;
+    this.legacyChromeClockSyncFinishEvent_ = undefined;
+
+    // Dump ID -> PID -> [process memory dump events].
+    this.allMemoryDumpEvents_ = {};
+
+    // Unpacks size, count, stackId and heapId from 'P' events. Also remembers
+    // stack frame and type information.
+    this.heapProfileExpander = new ProfilingDictionaryReader();
+
+    // PID -> Object type ID -> Object type name.
+    this.objectTypeNameMap_ = {};
+
+    // For old Chrome traces with no clock domain metadata, just use a
+    // placeholder clock domain.
+    this.clockDomainId_ = tr.model.ClockDomainId.UNKNOWN_CHROME_LEGACY;
+    // A function able to transform timestamps in |clockDomainId| to timestamps
+    // in the model clock domain.
+    this.toModelTime_ = undefined;
+
+    if (typeof(eventData) === 'string' || eventData instanceof String) {
+      eventData = eventData.trim();
+      // If the event data begins with a [, then we know it should end with a ].
+      // The reason we check for this is because some tracing implementations
+      // cannot guarantee that a ']' gets written to the trace file. So, we are
+      // forgiving and if this is obviously the case, we fix it up before
+      // throwing the string at JSON.parse.
+      if (eventData[0] === '[') {
+        eventData = eventData.replace(/\s*,\s*$/, '');
+        if (eventData[eventData.length - 1] !== ']') {
+          eventData = eventData + ']';
+        }
+      }
+
+      this.events_ = JSON.parse(eventData);
+      this.eventsWereFromString_ = true;
+    } else {
+      this.events_ = eventData;
+    }
+
+    // Some trace_event implementations put the actual trace events
+    // inside a container. E.g { ... , traceEvents: [ ] }
+    // If we see that, just pull out the trace events.
+    if (this.events_.traceEvents) {
+      const container = this.events_;
+      this.events_ = this.events_.traceEvents;
+
+      for (const subtraceField of SUBTRACE_FIELDS) {
+        if (container[subtraceField]) {
+          this.storeSubtrace_(container[subtraceField]);
+        }
+      }
+      this.storeSamples_(container.samples);
+      this.storeStackFrames_(container.stackFrames);
+      this.storeDisplayTimeUnit_(container.displayTimeUnit);
+      this.storeTraceAnnotations_(container.traceAnnotations);
+      this.storeMetadata_(container);
+    } else if (this.events_ instanceof tr.b.TraceStream) {
+      const parser = oboe()
+          .node('{cat ph}', function(e) { return oboe.drop; })
+          .node('!.powerTraceAsString', this.storeSubtrace_.bind(this))
+          .node('!.systemTraceEvents', this.storeSubtrace_.bind(this))
+          .node('!.samples', this.storeSamples_.bind(this))
+          .node('!.stackFrames', this.storeStackFrames_.bind(this))
+          .node('!.displayTimeUnit', this.storeDisplayTimeUnit_.bind(this))
+          .node('!.traceAnnotations', this.storeTraceAnnotations_.bind(this))
+          .done(this.storeMetadata_.bind(this));
+      this.events_.rewind();
+      while (this.events_.hasData) {
+        parser.write(this.events_.readNumBytes());
+      }
+      parser.finish();
+    }
+  }
+
+  /**
+   * @return {boolean} Whether obj is a TraceEvent array.
+   */
+  TraceEventImporter.canImport = function(eventData) {
+    // May be encoded JSON. But we dont want to parse it fully yet.
+    // Use a simple heuristic:
+    //   - eventData that starts with [ are probably trace_event
+    //   - eventData that starts with { are probably trace_event
+    // May be encoded JSON. Treat files that start with { as importable by us.
+    if (eventData instanceof tr.b.TraceStream) {
+      if (eventData.isBinary) return false;
+      eventData = eventData.header;
+    }
+
+    if (typeof(eventData) === 'string' || eventData instanceof String) {
+      eventData = eventData.trim();
+      return eventData[0] === '{' || eventData[0] === '[';
+    }
+
+    // Might just be an array of events
+    if (eventData instanceof Array && eventData.length && eventData[0].ph) {
+      return true;
+    }
+
+    // Might be an object with a traceEvents field in it.
+    if (eventData.traceEvents) {
+      if (eventData.traceEvents instanceof Array) {
+        if (eventData.traceEvents.length && eventData.traceEvents[0].ph) {
+          return true;
+        }
+        if (eventData.samples && eventData.samples.length &&
+            eventData.stackFrames !== undefined) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  /**
+   * Extracts a scoped ID from an event.
+   *
+   * In legacy trace files, the ID of an event is always stored in the 'id'
+   * field and the event phase determines if the ID is process-local or
+   * global. For example, async event IDs are considered global and object
+   * event IDs are considered process-local.
+   *
+   * New trace files can explicitly specify whether an event ID is
+   * process-local or global. These new IDs are stored in the 'id2' field so
+   * that old trace importers that do not implement this logic break when they
+   * try to import a new trace file. The value of id2 can be either of the
+   * form '{global: 0x1000}' or of the form '{local: 0x1000}'.
+   *
+   * @param {!Object} event A trace event.
+   * @return {!tr.model.ScopedId}
+   */
+  TraceEventImporter.scopedIdForEvent_ = function(event) {
+    const scope = event.scope || tr.model.OBJECT_DEFAULT_SCOPE;
+    let pid = undefined;
+    if (event.id !== undefined) {
+      if (event.id2 !== undefined) {
+        throw new Error('Event has both id and id2');
+      }
+      pid = tr.model.LOCAL_ID_PHASES.has(event.ph) ? event.pid : undefined;
+      return new tr.model.ScopedId(scope, event.id, pid);
+    } else if (event.id2 !== undefined) {
+      if (event.id2.global !== undefined) {
+        return new tr.model.ScopedId(scope, event.id2.global);
+      } else if (event.id2.local !== undefined) {
+        return new tr.model.ScopedId(scope, event.id2.local, event.pid);
+      }
+      throw new Error(
+          'Event that uses id2 must have either a global or local ID');
+    }
+    return undefined;
+  };
+
+  TraceEventImporter.prototype = {
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'TraceEventImporter';
+    },
+
+    extractSubtraces() {
+      // Because subtraces can be quite large, we need to make sure that we
+      // don't hold a reference to the memory.
+      const subtraces = this.subtraces_;
+      this.subtraces_ = [];
+      return subtraces;
+    },
+
+    /**
+     * Deep copying is only needed if the trace was given to us as events.
+     */
+    deepCopyIfNeeded_(obj) {
+      if (obj === undefined) obj = {};
+      if (this.eventsWereFromString_) return obj;
+      return deepCopy(obj);
+    },
+
+    /**
+     * Always perform deep copying.
+     */
+    deepCopyAlways_(obj) {
+      if (obj === undefined) obj = {};
+      return deepCopy(obj);
+    },
+
+    /**
+     * Helper to process an async event.
+     */
+    processAsyncEvent(event) {
+      const thread = this.model_.getOrCreateProcess(event.pid).
+          getOrCreateThread(event.tid);
+      this.allAsyncEvents_.push({
+        sequenceNumber: this.allAsyncEvents_.length,
+        event,
+        thread
+      });
+    },
+
+    /**
+     * Helper to process a flow event.
+     */
+    processFlowEvent(event, opt_slice) {
+      const thread = this.model_.getOrCreateProcess(event.pid).
+          getOrCreateThread(event.tid);
+      this.allFlowEvents_.push({
+        refGuid: tr.b.GUID.getLastSimpleGuid(),
+        sequenceNumber: this.allFlowEvents_.length,
+        event,
+        slice: opt_slice,  // slice for events that have flow info
+        thread
+      });
+    },
+
+    /**
+     * Helper that creates and adds samples to a Counter object based on
+     * 'C' phase events.
+     */
+    processCounterEvent(event) {
+      let ctrName;
+      if (event.id !== undefined) {
+        ctrName = event.name + '[' + event.id + ']';
+      } else {
+        ctrName = event.name;
+      }
+
+      const ctr = this.model_.getOrCreateProcess(event.pid)
+          .getOrCreateCounter(event.cat, ctrName);
+      const reservedColorId = event.cname ? getEventColor(event) : undefined;
+
+      // Initialize the counter's series fields if needed.
+      if (ctr.numSeries === 0) {
+        for (const seriesName in event.args) {
+          const colorId = reservedColorId ||
+              getEventColor(event, ctr.name + '.' + seriesName);
+          ctr.addSeries(new tr.model.CounterSeries(seriesName, colorId));
+        }
+
+        if (ctr.numSeries === 0) {
+          this.model_.importWarning({
+            type: 'counter_parse_error',
+            message: 'Expected counter ' + event.name +
+                ' to have at least one argument to use as a value.'
+          });
+
+          // Drop the counter.
+          delete ctr.parent.counters[ctr.name];
+          return;
+        }
+      }
+
+      const ts = this.toModelTimeFromUs_(event.ts);
+      ctr.series.forEach(function(series) {
+        const val = event.args[series.name] ? event.args[series.name] : 0;
+        series.addCounterSample(ts, val);
+      });
+    },
+
+    processObjectEvent(event) {
+      const thread = this.model_.getOrCreateProcess(event.pid).
+          getOrCreateThread(event.tid);
+      this.allObjectEvents_.push({
+        sequenceNumber: this.allObjectEvents_.length,
+        event,
+        thread});
+      if (thread.guid in this.contextProcessorPerThread) {
+        const processor = this.contextProcessorPerThread[thread.guid];
+        const scopedId = TraceEventImporter.scopedIdForEvent_(event);
+        if (event.ph === 'D') {
+          processor.destroyContext(scopedId);
+        }
+        // The context processor maintains a cache of unique context objects and
+        // active context sets to reduce memory usage. If an object is modified,
+        // we should invalidate this cache, because otherwise context sets from
+        // before and after the modification may erroneously point to the same
+        // context snapshot (as both are the same set/object instances).
+        processor.invalidateContextCacheForSnapshot(scopedId);
+      }
+    },
+
+    processContextEvent(event) {
+      const thread = this.model_.getOrCreateProcess(event.pid).
+          getOrCreateThread(event.tid);
+      if (!(thread.guid in this.contextProcessorPerThread)) {
+        this.contextProcessorPerThread[thread.guid] =
+            new tr.importer.ContextProcessor(this.model_);
+      }
+      const scopedId = TraceEventImporter.scopedIdForEvent_(event);
+      const contextType = event.name;
+      const processor = this.contextProcessorPerThread[thread.guid];
+      if (event.ph === '(') {
+        processor.enterContext(contextType, scopedId);
+      } else if (event.ph === ')') {
+        processor.leaveContext(contextType, scopedId);
+      } else {
+        this.model_.importWarning({
+          type: 'unknown_context_phase',
+          message: 'Unknown context event phase: ' + event.ph + '.'
+        });
+      }
+    },
+
+    setContextsFromThread_(thread, slice) {
+      if (thread.guid in this.contextProcessorPerThread) {
+        slice.contexts =
+            this.contextProcessorPerThread[thread.guid].activeContexts;
+      }
+    },
+
+    processDurationEvent(event) {
+      const thread = this.model_.getOrCreateProcess(event.pid)
+          .getOrCreateThread(event.tid);
+      const ts = this.toModelTimeFromUs_(event.ts);
+      if (event.dur === 0 &&
+          !thread.sliceGroup.isTimestampValidForBeginOrEnd(ts)) {
+        this.model_.importWarning({
+          type: 'duration_parse_error',
+          message: 'Timestamps are moving backward.'
+        });
+        return;
+      }
+
+      if (event.ph === 'B') {
+        const slice = thread.sliceGroup.beginSlice(
+            event.cat, event.name, this.toModelTimeFromUs_(event.ts),
+            this.deepCopyIfNeeded_(event.args),
+            this.toModelTimeFromUs_(event.tts), event.argsStripped,
+            getEventColor(event), event.bind_id);
+        slice.startStackFrame = this.getStackFrameForEvent_(event);
+        this.setContextsFromThread_(thread, slice);
+      } else if (event.ph === 'I' || event.ph === 'i' || event.ph === 'R') {
+        if (event.s !== undefined && event.s !== 't') {
+          throw new Error('This should never happen');
+        }
+
+        thread.sliceGroup.beginSlice(event.cat, event.name,
+            this.toModelTimeFromUs_(event.ts),
+            this.deepCopyIfNeeded_(event.args),
+            this.toModelTimeFromUs_(event.tts),
+            event.argsStripped,
+            getEventColor(event), event.bind_id);
+        const slice = thread.sliceGroup.endSlice(
+            this.toModelTimeFromUs_(event.ts),
+            this.toModelTimeFromUs_(event.tts));
+        slice.startStackFrame = this.getStackFrameForEvent_(event);
+        slice.endStackFrame = undefined;
+      } else {
+        if (!thread.sliceGroup.openSliceCount) {
+          this.model_.importWarning({
+            type: 'duration_parse_error',
+            message: 'E phase event without a matching B phase event.'
+          });
+          return;
+        }
+
+        const slice = thread.sliceGroup.endSlice(
+            this.toModelTimeFromUs_(event.ts),
+            this.toModelTimeFromUs_(event.tts),
+            getEventColor(event));
+        if (event.name && slice.title !== event.name) {
+          this.model_.importWarning({
+            type: 'title_match_error',
+            message: 'Titles do not match. Title is ' +
+                slice.title + ' in openSlice, and is ' +
+                event.name + ' in endSlice'
+          });
+        }
+        slice.endStackFrame = this.getStackFrameForEvent_(event);
+
+        this.mergeArgsInto_(slice.args, event.args, slice.title);
+      }
+    },
+
+    mergeArgsInto_(dstArgs, srcArgs, eventName) {
+      for (const arg in srcArgs) {
+        if (dstArgs[arg] !== undefined) {
+          this.model_.importWarning({
+            type: 'arg_merge_error',
+            message: 'Different phases of ' + eventName +
+                ' provided values for argument ' + arg + '.' +
+                ' The last provided value will be used.'
+          });
+        }
+        dstArgs[arg] = this.deepCopyIfNeeded_(srcArgs[arg]);
+      }
+    },
+
+    processCompleteEvent(event) {
+      // Preventing the overhead slices from making it into the model. This
+      // only applies to legacy traces, as the overhead traces have been
+      // removed from the chromium code.
+      if (event.cat !== undefined &&
+          event.cat.indexOf('trace_event_overhead') > -1) {
+        return undefined;
+      }
+
+      const thread = this.model_.getOrCreateProcess(event.pid)
+          .getOrCreateThread(event.tid);
+
+      if (event.flow_out) {
+        if (event.flow_in) {
+          event.flowPhase = STEP;
+        } else {
+          event.flowPhase = PRODUCER;
+        }
+      } else if (event.flow_in) {
+        event.flowPhase = CONSUMER;
+      }
+
+      const slice = thread.sliceGroup.pushCompleteSlice(event.cat, event.name,
+
+          this.toModelTimeFromUs_(event.ts),
+          this.durationFromUs_(event.dur),
+          this.maybeToModelTimeFromUs_(event.tts),
+          this.durationFromUs_(event.tdur),
+          this.deepCopyIfNeeded_(event.args),
+          event.argsStripped,
+          getEventColor(event),
+          event.bind_id);
+      slice.startStackFrame = this.getStackFrameForEvent_(event);
+      slice.endStackFrame = this.getStackFrameForEvent_(event, true);
+      this.setContextsFromThread_(thread, slice);
+
+      return slice;
+    },
+
+    processJitCodeEvent(event) {
+      if (this.v8ProcessCodeMaps_[event.pid] === undefined) {
+        this.v8ProcessCodeMaps_[event.pid] = new tr.e.importer.TraceCodeMap();
+      }
+      const map = this.v8ProcessCodeMaps_[event.pid];
+
+      const data = event.args.data;
+      // TODO(dsinclair): There are _a lot_ of JitCode events so I'm skipping
+      // the display for now. Can revisit later if we want to show them.
+      // Handle JitCodeMoved and JitCodeAdded event.
+      if (event.name === 'JitCodeMoved') {
+        map.moveEntry(data.code_start, data.new_code_start, data.code_len);
+      } else {  // event.name === 'JitCodeAdded'
+        map.addEntry(data.code_start, data.code_len, data.name, data.script_id);
+      }
+    },
+
+    processMetadataEvent(event) {
+      // V8 JIT events are currently logged as phase 'M' so we need to
+      // separate them out and handle specially.
+      if (event.name === 'JitCodeAdded' || event.name === 'JitCodeMoved') {
+        this.v8SamplingData_.push(event);
+        return;
+      }
+
+      // The metadata events aren't useful without args.
+      if (event.argsStripped) return;
+
+      if (event.name === 'process_name') {
+        const process = this.model_.getOrCreateProcess(event.pid);
+        process.name = event.args.name;
+      } else if (event.name === 'process_labels') {
+        const process = this.model_.getOrCreateProcess(event.pid);
+        const stackFrames = event.args.stackFrames;
+        if (event.args.labels === undefined) {
+          this.model_.importWarning({
+            type: 'metadata_parse_error',
+            message: 'No labels found in a \'' + event.name +
+                '\' metadata event'
+          });
+        } else {
+          const labels = event.args.labels.split(',');
+          for (let i = 0; i < labels.length; i++) {
+            process.addLabelIfNeeded(labels[i]);
+          }
+        }
+      } else if (event.name === 'process_uptime_seconds') {
+        const process = this.model_.getOrCreateProcess(event.pid);
+        process.uptime_seconds = event.args.uptime;
+      } else if (event.name === 'process_sort_index') {
+        const process = this.model_.getOrCreateProcess(event.pid);
+        process.sortIndex = event.args.sort_index;
+      } else if (event.name === 'thread_name') {
+        const thread = this.model_.getOrCreateProcess(event.pid).
+            getOrCreateThread(event.tid);
+        thread.name = event.args.name;
+      } else if (event.name === 'thread_sort_index') {
+        const thread = this.model_.getOrCreateProcess(event.pid).
+            getOrCreateThread(event.tid);
+        thread.sortIndex = event.args.sort_index;
+      } else if (event.name === 'num_cpus') {
+        let n = event.args.number;
+        // Not all render processes agree on the cpu count in trace_event. Some
+        // processes will report 1, while others will report the actual cpu
+        // count. To deal with this, take the max of what is reported.
+        if (this.softwareMeasuredCpuCount_ !== undefined) {
+          n = Math.max(n, this.softwareMeasuredCpuCount_);
+        }
+        this.softwareMeasuredCpuCount_ = n;
+      } else if (event.name === 'stackFrames') {
+        const stackFrames = event.args.stackFrames;
+        if (stackFrames === undefined) {
+          this.model_.importWarning({
+            type: 'metadata_parse_error',
+            message: 'No stack frames found in a \'' + event.name +
+                '\' metadata event'
+          });
+        } else {
+          this.importStackFrames_(stackFrames, 'p' + event.pid + ':');
+        }
+      } else if (event.name === 'typeNames') {
+        const objectTypeNameMap = event.args.typeNames;
+        if (objectTypeNameMap === undefined) {
+          this.model_.importWarning({
+            type: 'metadata_parse_error',
+            message: 'No mapping from object type IDs to names found in a \'' +
+                event.name + '\' metadata event'
+          });
+        } else {
+          this.importObjectTypeNameMap_(objectTypeNameMap, event.pid);
+        }
+      } else if (event.name === 'TraceConfig') {
+        this.model_.metadata.push(
+            {name: 'TraceConfig', value: event.args.value});
+      } else {
+        this.model_.importWarning({
+          type: 'metadata_parse_error',
+          message: 'Unrecognized metadata name: ' + event.name
+        });
+      }
+    },
+
+    processInstantEvent(event) {
+      // V8 JIT events were logged as phase 'I' in the old format,
+      // so we need to separate them out and handle specially.
+      if (event.name === 'JitCodeAdded' || event.name === 'JitCodeMoved') {
+        this.v8SamplingData_.push(event);
+        return;
+      }
+
+      // Thread-level instant events are treated as zero-duration slices.
+      if (event.s === 't' || event.s === undefined) {
+        this.processDurationEvent(event);
+        return;
+      }
+
+      let constructor;
+      let parent;
+      switch (event.s) {
+        case 'g':
+          constructor = tr.model.GlobalInstantEvent;
+          parent = this.model_;
+          break;
+        case 'p':
+          constructor = tr.model.ProcessInstantEvent;
+          parent = this.model_.getOrCreateProcess(event.pid);
+          break;
+        default:
+          this.model_.importWarning({
+            type: 'instant_parse_error',
+            message: 'I phase event with unknown "s" field value.'
+          });
+          return;
+      }
+
+      const instantEvent = new constructor(event.cat, event.name,
+          getEventColor(event), this.toModelTimeFromUs_(event.ts),
+          this.deepCopyIfNeeded_(event.args), parent);
+      parent.instantEvents.push(instantEvent);
+    },
+
+    getOrCreateProfileTree_(sampleType, id) {
+      if (!this.profileTrees_.has(sampleType)) {
+        this.profileTrees_.set(sampleType, new Map());
+      }
+      const profileTreeMap = this.profileTrees_.get(sampleType);
+      if (profileTreeMap.has(id)) {
+        return profileTreeMap.get(id);
+      }
+      const profileTree = new tr.model.ProfileTree();
+      profileTreeMap.set(id, profileTree);
+      const info = this.profileInfo_.get(id);
+      if (info !== undefined) {
+        profileTree.startTime = info.startTime;
+        profileTree.pid = info.pid;
+        profileTree.tid = info.tid;
+      }
+      return profileTree;
+    },
+
+    processSample(event) {
+      if (event.args === undefined || event.args.data === undefined) {
+        return;
+      }
+      if (event.id === undefined) {
+        throw new Error('No event ID in sample');
+      }
+
+      const data = event.args.data;
+      // Sampling usually happens in a separate thread, but start time is issued
+      // in the main thread, in order to get the correct thread object,
+      // we should use pid and tid from main thread.
+      if (data.startTime !== undefined) {
+        this.profileInfo_.set(`${event.pid} ${event.id}`, {
+          startTime: data.startTime,
+          pid: event.pid,
+          tid: event.tid
+        });
+      }
+      const timeDeltas = data.timeDeltas;
+      for (const sampleType in data) {
+        if (sampleType === 'timeDeltas' || sampleType === 'startTime') {
+          continue;
+        }
+        // The length of samples array and the length of timeDeltas array
+        // should be the same.
+        if (data[sampleType].samples && timeDeltas &&
+            data[sampleType].samples.length !== timeDeltas.length) {
+          // eslint-disable-next-line
+          throw new Error('samples and timeDeltas array should have same length');
+        }
+
+        const profileTree = this.getOrCreateProfileTree_(sampleType,
+            `${event.pid} ${event.id}`);
+        const nodes = data[sampleType].nodes;
+        const samples = data[sampleType].samples;
+        if (nodes !== undefined) {
+          for (const node of nodes) {
+            // Get the sepcific ProfileNode type based on sampleType.
+            const ProfileNodeType =
+                tr.model.ProfileNode.subTypes.getConstructor(undefined,
+                    sampleType);
+            const profileNode = ProfileNodeType.constructFromObject(profileTree,
+                node);
+            if (profileNode === undefined) {
+              continue;
+            }
+            profileTree.add(profileNode);
+          }
+        }
+        // The samples array contains id pointing to the profile node.
+        if (samples !== undefined) {
+          const thread = this.model_.getOrCreateProcess(profileTree.pid)
+              .getOrCreateThread(profileTree.tid);
+          for (let i = 0, len = samples.length; i < len; ++i) {
+            const node = profileTree.getNode(samples[i]);
+            profileTree.endTime += timeDeltas[i];
+            if (node === undefined) continue;
+            const start = this.toModelTimeFromUs_(profileTree.endTime);
+            this.model_.samples.push(
+                new tr.model.Sample(start, node.sampleTitle, node, thread));
+          }
+        }
+      }
+    },
+
+    processLegacyV8Sample(event) {
+      const data = event.args.data;
+      const sampleType = 'legacySample';
+      const ProfileNodeType =
+          tr.model.ProfileNode.subTypes.getConstructor(undefined, sampleType);
+
+      // As-per DevTools, the backend sometimes creates bogus samples. Skip it.
+      if (data.vm_state === 'js' && !data.stack.length) return;
+
+      const profileTree = this.getOrCreateProfileTree_(sampleType, event.pid);
+      if (profileTree.getNode(-1) === undefined) {
+        profileTree.add(
+            new ProfileNodeType(-1, {
+              url: '',
+              scriptId: -1,
+              functionName: 'unknown'
+            }, undefined));
+      }
+      // There are several types of v8 sample events, gc, native, compiler, etc.
+      // Some of these types have stacks and some don't, we handle those two
+      // cases differently. For types that don't have any stack frames attached
+      // we synthesize one based on the type of thing that's happening so when
+      // we view all the samples we'll see something like 'external' or 'gc'
+      // as a fraction of the time spent.
+      let node = undefined;
+      if (data.stack.length > 0 && this.v8ProcessCodeMaps_[event.pid]) {
+        const map = this.v8ProcessCodeMaps_[event.pid];
+        // Stacks have the leaf node first, flip them around so the root
+        // comes first.
+        data.stack.reverse();
+        let parentNode = undefined;
+        for (let i = 0; i < data.stack.length; i++) {
+          const entry = map.lookupEntry(data.stack[i]);
+          if (entry === undefined) {
+            node = profileTree.getNode(-1);
+          } else {
+            node = profileTree.getNode(entry.id);
+            if (node === undefined) {
+              const sourceInfo = entry.sourceInfo;
+              node = new ProfileNodeType(entry.id, {
+                functionName: entry.name,
+                url: entry.sourceInfo.file,
+                lineNumber: sourceInfo.line !== -1 ? sourceInfo.line :
+                  undefined,
+                columnNumber: sourceInfo.column !== -1 ? sourceInfo.column :
+                  undefined,
+                scriptid: entry.sourceInfo.scriptId
+              }, parentNode);
+              profileTree.add(node);
+            }
+          }
+          parentNode = node;
+        }
+      } else {
+        node = profileTree.getNode(data.vm_state);
+        if (node === undefined) {
+          node = new ProfileNodeType(data.vm_state, {
+            url: '',
+            functionName: data.vm_state
+          }, undefined);
+          profileTree.add(node);
+        }
+      }
+
+      const thread = this.model_.getOrCreateProcess(event.pid)
+          .getOrCreateThread(event.tid);
+
+      this.model_.samples.push(
+          new tr.model.Sample(this.toModelTimeFromUs_(event.ts),
+              node.sampleTitle, node, thread));
+    },
+
+    processTraceSampleEvent(event) {
+      if (event.name === 'V8Sample' || event.name.startsWith('Profile')) {
+        this.v8SamplingData_.push(event);
+        return;
+      }
+
+      let node = this.stackFrameTree_.getNode(event.name);
+      if (node === undefined && event.sf !== undefined) {
+        node = this.stackFrameTree_.getNode('g' + event.sf);
+      }
+
+      if (node === undefined) {
+        let id = event.name;
+        if (event.sf) {
+          id = 'g' + event.sf;
+        }
+        const ProfileNodeType =
+            tr.model.ProfileNode.subTypes.getConstructor(undefined,
+                'legacySample');
+        node = this.stackFrameTree_.add(new ProfileNodeType(
+            id, {
+              functionName: event.name
+            }, undefined
+        ));
+      }
+      const thread = this.model_.getOrCreateProcess(event.pid)
+          .getOrCreateThread(event.tid);
+
+      const sample = new tr.model.Sample(
+          this.toModelTimeFromUs_(event.ts), 'Trace Event Sample',
+          node, thread, undefined, 1,
+          this.deepCopyIfNeeded_(event.args));
+      this.setContextsFromThread_(thread, sample);
+      this.model_.samples.push(sample);
+    },
+
+    processMemoryDumpEvent(event) {
+      // TODO(chiniforooshan): Make memory dumps either use local or global IDs
+      // instead of the generic IDs with different phases.
+      // https://github.com/catapult-project/catapult/issues/2957
+      if (event.ph !== 'v') {
+        throw new Error('Invalid memory dump event phase "' + event.ph + '".');
+      }
+
+      const dumpId = event.id;
+      if (dumpId === undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Memory dump event (phase \'' + event.ph +
+              '\') without a dump ID.'
+        });
+        return;
+      }
+
+      const pid = event.pid;
+      if (pid === undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Memory dump event (phase\'' + event.ph + '\', dump ID \'' +
+              dumpId + '\') without a PID.'
+        });
+        return;
+      }
+
+      // Dump ID -> PID -> [process memory dump events].
+      const allEvents = this.allMemoryDumpEvents_;
+
+      // PID -> [process memory dump events].
+      let dumpIdEvents = allEvents[dumpId];
+      if (dumpIdEvents === undefined) {
+        allEvents[dumpId] = dumpIdEvents = {};
+      }
+
+      // [process memory dump events].
+      let processEvents = dumpIdEvents[pid];
+      if (processEvents === undefined) {
+        dumpIdEvents[pid] = processEvents = [];
+      }
+
+      processEvents.push(event);
+    },
+
+    processClockSyncEvent(event) {
+      if (event.ph !== 'c') {
+        throw new Error('Invalid clock sync event phase "' + event.ph + '".');
+      }
+
+      const syncId = event.args.sync_id;
+      if (syncId === undefined) {
+        this.model_.importWarning({
+          type: 'clock_sync_parse_error',
+          message: 'Clock sync at time ' + event.ts + ' without an ID.'
+        });
+        return;
+      }
+
+      if (event.args && event.args.issue_ts !== undefined) {
+        // When Chrome is the tracing controller and is the requester of the
+        // clock sync, the clock sync event looks like:
+        //
+        //   {
+        //     "args": {
+        //       "sync_id": "abc123",
+        //       "issue_ts": 12340
+        //     }
+        //     "ph": "c"
+        //     "ts": 12345
+        //     ...
+        //   }
+        this.model_.clockSyncManager.addClockSyncMarker(
+            this.clockDomainId_, syncId,
+            tr.b.Unit.timestampFromUs(event.args.issue_ts),
+            tr.b.Unit.timestampFromUs(event.ts));
+      } else {
+        // When Chrome is a tracing agent and is the recipient of the clock
+        // sync request, the clock sync event looks like:
+        //
+        //   {
+        //     "args": { "sync_id": "abc123" }
+        //     "ph": "c"
+        //     "ts": 12345
+        //     ...
+        //   }
+        this.model_.clockSyncManager.addClockSyncMarker(
+            this.clockDomainId_, syncId, tr.b.Unit.timestampFromUs(event.ts));
+      }
+    },
+
+    processLegacyChromeClockSyncEvent(event) {
+      // Older versions of Chrome don't support the devtools clock sync API, but
+      // Telemetry can work around this by creating clock sync events via
+      // console.time & console.timeEnd, which issue trace events as long as the
+      // 'blink.console' category is enabled. When we encounter async events
+      // with names starting with the prefix 'ClockSyncEvent.' , treat these as
+      // clock sync markers.
+      if (event.ph === 'S') {
+        this.legacyChromeClockSyncStartEvent_ = event;
+      } else if (event.ph === 'F') {
+        this.legacyChromeClockSyncFinishEvent_ = event;
+      }
+
+      if (this.legacyChromeClockSyncStartEvent_ === undefined ||
+          this.legacyChromeClockSyncFinishEvent_ === undefined) {
+        return;
+      }
+
+      const startSyncId = this.legacyChromeClockSyncStartEvent_.name.substring(
+          LEGACY_CHROME_CLOCK_SYNC_EVENT_NAME_PREFIX.length);
+      const finishSyncId =
+        this.legacyChromeClockSyncFinishEvent_.name.substring(
+            LEGACY_CHROME_CLOCK_SYNC_EVENT_NAME_PREFIX.length);
+
+      if (startSyncId !== finishSyncId) {
+        throw new Error(
+            'Inconsistent clock sync ID of legacy Chrome clock sync events');
+      }
+
+      this.model_.clockSyncManager.addClockSyncMarker(
+          this.clockDomainId_, startSyncId,
+          tr.b.Unit.timestampFromUs(this.legacyChromeClockSyncStartEvent_.ts),
+          tr.b.Unit.timestampFromUs(this.legacyChromeClockSyncFinishEvent_.ts));
+    },
+
+    // Because the order of Jit code events and V8 samples are not guaranteed,
+    // We store them in an array, sort by timestamp, and then process them.
+    processV8Events() {
+      this.v8SamplingData_.sort(function(a, b) {
+        if (a.ts !== b.ts) return a.ts - b.ts;
+        if (a.ph === 'M' || a.ph === 'I') {
+          return -1;
+        } else if (b.ph === 'M' || b.ph === 'I') {
+          return 1;
+        }
+        return 0;
+      });
+      const length = this.v8SamplingData_.length;
+      for (let i = 0; i < length; ++i) {
+        const event = this.v8SamplingData_[i];
+        if (event.ph === 'M' || event.ph === 'I') {
+          this.processJitCodeEvent(event);
+        } else if (event.ph === 'P') {
+          // The current sampling format and legacy sampling format
+          // have the same ph, but the current sampling format will
+          // start with 'Profile' in its name.
+          if (event.name.startsWith('Profile')) {
+            this.processSample(event);
+          } else {
+            this.processLegacyV8Sample(event);
+          }
+        }
+      }
+    },
+
+    importClockSyncMarkers() {
+      if (this.events_ instanceof tr.b.TraceStream) {
+        const parser = oboe().node(
+            '{cat ph}', this.importClockSyncMarker_.bind(this));
+        this.events_.rewind();
+        while (this.events_.hasData) {
+          parser.write(this.events_.readNumBytes());
+        }
+        parser.finish();
+      } else {
+        for (let i = 0; i < this.events_.length; i++) {
+          this.importClockSyncMarker_(this.events_[i]);
+        }
+      }
+    },
+
+    importClockSyncMarker_(event) {
+      const isLegacyChromeClockSync = isLegacyChromeClockSyncEvent(event);
+      if (event.ph !== 'c' && !isLegacyChromeClockSync) return;
+
+      const eventSizeInBytes =
+          this.model_.importOptions.trackDetailedModelStats ?
+            JSON.stringify(event).length : undefined;
+
+      this.model_.stats.willProcessBasicTraceEvent(
+          'clock_sync', event.cat, event.name, event.ts, eventSizeInBytes);
+
+      if (isLegacyChromeClockSync) {
+        this.processLegacyChromeClockSyncEvent(event);
+      } else {
+        this.processClockSyncEvent(event);
+      }
+    },
+
+    /**
+     * Walks through the events_ list and outputs the structures discovered to
+     * model_.
+     */
+    importEvents() {
+      this.hasEvents_ = false;
+      if (this.stackFrameEvents_) {
+        this.importStackFrames_(this.stackFrameEvents_, 'g');
+      }
+
+      if (this.traceAnnotations_) this.importAnnotations_();
+
+      if (this.events_ instanceof tr.b.TraceStream) {
+        const parser = oboe().node('{cat ph}', this.processEvent_.bind(this));
+        this.events_.rewind();
+        while (this.events_.hasData) {
+          parser.write(this.events_.readNumBytes());
+        }
+        parser.finish();
+      } else {
+        for (let eI = 0; eI < this.events_.length; eI++) {
+          this.processEvent_(this.events_[eI]);
+        }
+      }
+
+      // Import calls importEvents then autoCloseOpenSlices then finalizeImport.
+      // AsyncSlices must be created in importEvents so they can be auto-closed.
+      this.createAsyncSlices_();
+
+      this.processV8Events();
+
+      // Remove all the root stack frame children as they should
+      // already be added.
+      for (const frame of Object.values(this.v8ProcessRootStackFrame_)) {
+        frame.removeAllChildren();
+      }
+    },
+
+    // Some trace authors store subtraces as specific properties of the trace.
+    storeSubtrace_(subtrace) {
+      this.subtraces_.push(subtrace);
+      return oboe.drop;
+    },
+
+    storeSamples_(samples) {
+      this.sampleEvents_ = samples;
+      return oboe.drop;
+    },
+
+    storeStackFrames_(stackFrames) {
+      this.stackFrameEvents_ = stackFrames;
+      return oboe.drop;
+    },
+
+    // Some implementations specify displayTimeUnit
+    storeDisplayTimeUnit_(unitName) {
+      if (!unitName) return;
+      const unit = tr.b.TimeDisplayModes[unitName];
+      if (unit === undefined) {
+        throw new Error('Unit ' + unitName + ' is not supported.');
+      }
+      this.model_.intrinsicTimeUnit = unit;
+      return oboe.drop;
+    },
+
+    storeTraceAnnotations_(traceAnnotations) {
+      this.traceAnnotations_ = traceAnnotations;
+      return oboe.drop;
+    },
+
+    // Any fields in the container that is not in NON_METADATA_FIELDS should be
+    // treated as metadata.
+    storeMetadata_(container) {
+      for (const fieldName of Object.keys(container)) {
+        if (NON_METADATA_FIELDS.has(fieldName)) continue;
+        this.model_.metadata.push(
+            { name: fieldName, value: container[fieldName] });
+        if (fieldName !== 'metadata') continue;
+        const metadata = container[fieldName];
+        if (metadata['highres-ticks']) {
+          this.model_.isTimeHighResolution = metadata['highres-ticks'];
+        }
+        if (metadata['clock-domain']) {
+          this.clockDomainId_ = metadata['clock-domain'];
+        }
+      }
+      return oboe.drop;
+    },
+
+    processEvent_(event) {
+      this.hasEvents_ = true;
+      const importOptions = this.model_.importOptions;
+      const trackDetailedModelStats = importOptions.trackDetailedModelStats;
+      const modelStats = this.model_.stats;
+
+      if (event.args === '__stripped__') {
+        event.argsStripped = true;
+        event.args = undefined;
+      }
+
+      let eventSizeInBytes = undefined;
+      if (trackDetailedModelStats) {
+        eventSizeInBytes = JSON.stringify(event).length;
+      }
+
+      switch (event.ph) {
+        case 'B':
+        case 'E':
+          modelStats.willProcessBasicTraceEvent(
+              'begin_end (non-compact)', event.cat, event.name, event.ts,
+              eventSizeInBytes);
+          this.processDurationEvent(event);
+          break;
+
+        case 'X': {
+          modelStats.willProcessBasicTraceEvent(
+              'begin_end (compact)', event.cat, event.name, event.ts,
+              eventSizeInBytes);
+          const slice = this.processCompleteEvent(event);
+          // TODO(yuhaoz): If Chrome supports creating other events with flow,
+          // we will need to call processFlowEvent for them also.
+          // https://github.com/catapult-project/catapult/issues/1259
+          if (slice !== undefined && event.bind_id !== undefined) {
+            this.processFlowEvent(event, slice);
+          }
+          break;
+        }
+
+        case 'b':
+        case 'e':
+        case 'n':
+        case 'S':
+        case 'F':
+        case 'T':
+        case 'p':
+          modelStats.willProcessBasicTraceEvent(
+              'async', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processAsyncEvent(event);
+          break;
+
+        // Note, I is historic. The instant event marker got changed, but we
+        // want to support loading old trace files so we have both I and i.
+        case 'I':
+        case 'i':
+        case 'R':
+          modelStats.willProcessBasicTraceEvent(
+              'instant', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processInstantEvent(event);
+          break;
+
+        case 'P':
+          modelStats.willProcessBasicTraceEvent(
+              'samples', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processTraceSampleEvent(event);
+          break;
+
+        case 'C':
+          modelStats.willProcessBasicTraceEvent(
+              'counters', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processCounterEvent(event);
+          break;
+
+        case 'M':
+          modelStats.willProcessBasicTraceEvent(
+              'metadata', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processMetadataEvent(event);
+          break;
+
+        case 'N':
+        case 'D':
+        case 'O':
+          modelStats.willProcessBasicTraceEvent(
+              'objects', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processObjectEvent(event);
+          break;
+
+        case 's':
+        case 't':
+        case 'f':
+          modelStats.willProcessBasicTraceEvent(
+              'flows', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.processFlowEvent(event);
+          break;
+
+        case 'v':
+          modelStats.willProcessBasicTraceEvent(
+              'memory_dumps', event.cat, event.name, event.ts,
+              eventSizeInBytes);
+          this.processMemoryDumpEvent(event);
+          break;
+
+        case '(':
+        case ')':
+          this.processContextEvent(event);
+          break;
+
+        // No-op. Clock sync events have already been processed in
+        // importClockSyncMarkers().
+        case 'c':
+          break;
+
+        default:
+          modelStats.willProcessBasicTraceEvent(
+              'unknown', event.cat, event.name, event.ts, eventSizeInBytes);
+          this.model_.importWarning({
+            type: 'parse_error',
+            message: 'Unrecognized event phase: ' +
+                event.ph + ' (' + event.name + ')'
+          });
+      }
+      return oboe.drop;
+    },
+
+    importStackFrames_(rawStackFrames, idPrefix) {
+      const model = this.model_;
+
+      for (const id in rawStackFrames) {
+        const rawStackFrame = rawStackFrames[id];
+        const fullId = idPrefix + id;
+        const textForColor = rawStackFrame.category ?
+          rawStackFrame.category : rawStackFrame.name;
+        const stackFrame = new tr.model.StackFrame(
+            undefined /* parentFrame */, fullId, rawStackFrame.name,
+            ColorScheme.getColorIdForGeneralPurposeString(textForColor));
+        model.addStackFrame(stackFrame);
+      }
+
+      for (const id in rawStackFrames) {
+        const fullId = idPrefix + id;
+        const stackFrame = model.stackFrames[fullId];
+        if (stackFrame === undefined) {
+          throw new Error('Internal error');
+        }
+
+        const rawStackFrame = rawStackFrames[id];
+        const parentId = rawStackFrame.parent;
+        let parentStackFrame;
+        if (parentId === undefined) {
+          parentStackFrame = undefined;
+        } else {
+          const parentFullId = idPrefix + parentId;
+          parentStackFrame = model.stackFrames[parentFullId];
+          if (parentStackFrame === undefined) {
+            this.model_.importWarning({
+              type: 'metadata_parse_error',
+              message: 'Missing parent frame with ID ' + parentFullId +
+                  ' for stack frame \'' + stackFrame.name + '\' (ID ' + fullId +
+                  ').'
+            });
+          }
+        }
+        stackFrame.parentFrame = parentStackFrame;
+      }
+
+      // This section is a reimplementation of the above behaviour but using
+      // the new ProfileNode type instead of StackFrame.
+      // We keep the StackFrame version for compatibility for now.
+      const ProfileNodeType =
+          tr.model.ProfileNode.subTypes.getConstructor(undefined,
+              'legacySample');
+      if (idPrefix === 'g') {
+        for (const id in rawStackFrames) {
+          const rawStackFrame = rawStackFrames[id];
+          const textForColor = rawStackFrame.category ?
+            rawStackFrame.category : rawStackFrame.name;
+          const node = this.stackFrameTree_.add(new ProfileNodeType(
+              'g' + id, {
+                functionName: rawStackFrame.name
+              }, undefined));
+          node.colorId =
+            ColorScheme.getColorIdForGeneralPurposeString(textForColor);
+          node.parentId = rawStackFrame.parent;
+        }
+
+        for (const id in rawStackFrames) {
+          const node = this.stackFrameTree_.getNode('g' + id);
+          const parentId = node.parentId;
+          let parentNode = undefined;
+          if (parentId !== undefined) {
+            parentNode = this.stackFrameTree_.getNode('g' + parentId);
+            if (parentNode === undefined) {
+              this.model_.importWarning({
+                type: 'metadata_parse_error',
+                message: 'Missing parent frame with ID ' + parentId +
+                  ' for stack frame \'' + node.name + '\' (ID ' + node.id +
+                  ').'
+              });
+            }
+            node.parentNode = parentNode;
+          }
+        }
+      }
+    },
+
+    importObjectTypeNameMap_(rawObjectTypeNameMap, pid) {
+      if (pid in this.objectTypeNameMap_) {
+        this.model_.importWarning({
+          type: 'metadata_parse_error',
+          message: 'Mapping from object type IDs to names provided for pid=' +
+              pid + ' multiple times.'
+        });
+        return;
+      }
+
+      let objectTypeNamePrefix = undefined;
+      let objectTypeNameSuffix = undefined;
+      const objectTypeNameMap = {};
+      for (const objectTypeId in rawObjectTypeNameMap) {
+        const rawObjectTypeName = rawObjectTypeNameMap[objectTypeId];
+
+        // If we haven't figured out yet which compiler the object type names
+        // come from, we try to do it now.
+        if (objectTypeNamePrefix === undefined) {
+          for (let i = 0; i < OBJECT_TYPE_NAME_PATTERNS.length; i++) {
+            const pattern = OBJECT_TYPE_NAME_PATTERNS[i];
+            if (rawObjectTypeName.startsWith(pattern.prefix) &&
+                rawObjectTypeName.endsWith(pattern.suffix)) {
+              objectTypeNamePrefix = pattern.prefix;
+              objectTypeNameSuffix = pattern.suffix;
+              break;
+            }
+          }
+        }
+
+        if (objectTypeNamePrefix !== undefined &&
+            rawObjectTypeName.startsWith(objectTypeNamePrefix) &&
+            rawObjectTypeName.endsWith(objectTypeNameSuffix)) {
+          // With compiler-specific prefix and suffix (automatically annotated
+          // object types).
+          objectTypeNameMap[objectTypeId] = rawObjectTypeName.substring(
+              objectTypeNamePrefix.length,
+              rawObjectTypeName.length - objectTypeNameSuffix.length);
+        } else {
+          // Without compiler-specific prefix and suffix (manually annotated
+          // object types and '[unknown]').
+          objectTypeNameMap[objectTypeId] = rawObjectTypeName;
+        }
+      }
+
+      this.objectTypeNameMap_[pid] = objectTypeNameMap;
+    },
+
+    importAnnotations_() {
+      for (const id in this.traceAnnotations_) {
+        const annotation = tr.model.Annotation.fromDictIfPossible(
+            this.traceAnnotations_[id]);
+        if (!annotation) {
+          this.model_.importWarning({
+            type: 'annotation_warning',
+            message: 'Unrecognized traceAnnotation typeName \"' +
+                this.traceAnnotations_[id].typeName + '\"'
+          });
+          continue;
+        }
+        this.model_.addAnnotation(annotation);
+      }
+    },
+
+    /**
+     * Called by the Model after all other importers have imported their
+     * events.
+     */
+    finalizeImport() {
+      if (this.softwareMeasuredCpuCount_ !== undefined) {
+        this.model_.kernel.softwareMeasuredCpuCount =
+            this.softwareMeasuredCpuCount_;
+      }
+      this.createFlowSlices_();
+      this.createExplicitObjects_();
+      this.createImplicitObjects_();
+      this.createMemoryDumps_();
+    },
+
+    /* Events can have one or more stack frames associated with them, but
+     * that frame might be encoded either as a stack trace of program counters,
+     * or as a direct stack frame reference. This handles either case and
+     * if found, returns the stackframe.
+     */
+    getStackFrameForEvent_(event, opt_lookForEndEvent) {
+      let sf;
+      let stack;
+      if (opt_lookForEndEvent) {
+        sf = event.esf;
+        stack = event.estack;
+      } else {
+        sf = event.sf;
+        stack = event.stack;
+      }
+      if (stack !== undefined && sf !== undefined) {
+        this.model_.importWarning({
+          type: 'stack_frame_and_stack_error',
+          message: 'Event at ' + event.ts +
+              ' cannot have both a stack and a stackframe.'
+        });
+        return undefined;
+      }
+
+      if (stack !== undefined) {
+        return this.model_.resolveStackToStackFrame_(event.pid, stack);
+      }
+      if (sf === undefined) return undefined;
+
+      const stackFrame = this.model_.stackFrames['g' + sf];
+      if (stackFrame === undefined) {
+        this.model_.importWarning({
+          type: 'sample_import_error',
+          message: 'No frame for ' + sf
+        });
+        return;
+      }
+      return stackFrame;
+    },
+
+    resolveStackToStackFrame_(pid, stack) {
+      // TODO(alph,fmeawad): Add codemap resolution code here.
+      return undefined;
+    },
+
+    importSampleData() {
+      if (!this.sampleEvents_) return;
+      const m = this.model_;
+
+      // If this is the only importer, then fake-create the threads.
+      const events = this.sampleEvents_;
+      if (this.hasEvents_ === undefined) {
+        throw new Error('importEvents is not run before importSampleData');
+      } else if (!this.hasEvents_) {
+        for (let i = 0; i < events.length; i++) {
+          const event = events[i];
+          m.getOrCreateProcess(event.tid).getOrCreateThread(event.tid);
+        }
+      }
+
+      const threadsByTid = {};
+      m.getAllThreads().forEach(function(t) {
+        threadsByTid[t.tid] = t;
+      });
+
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i];
+        const thread = threadsByTid[event.tid];
+        if (thread === undefined) {
+          m.importWarning({
+            type: 'sample_import_error',
+            message: 'Thread ' + events.tid + 'not found'
+          });
+          continue;
+        }
+
+        let cpu;
+        if (event.cpu !== undefined) {
+          cpu = m.kernel.getOrCreateCpu(event.cpu);
+        }
+
+        const leafNode = this.stackFrameTree_.getNode('g' + event.sf);
+
+        const sample = new tr.model.Sample(
+            this.toModelTimeFromUs_(event.ts),
+            event.name,
+            leafNode,
+            thread,
+            cpu,
+            event.weight
+        );
+        m.samples.push(sample);
+      }
+    },
+
+    createAsyncSlices_() {
+      if (this.allAsyncEvents_.length === 0) return;
+
+      this.allAsyncEvents_.sort(function(x, y) {
+        const d = x.event.ts - y.event.ts;
+        if (d !== 0) return d;
+        return x.sequenceNumber - y.sequenceNumber;
+      });
+
+      const legacyEvents = [];
+      // Group nestable async events by ID. Events with the same ID should
+      // belong to the same parent async event.
+      const nestableAsyncEventsByKey = {};
+      const nestableMeasureAsyncEventsByKey = {};
+      for (let i = 0; i < this.allAsyncEvents_.length; i++) {
+        const asyncEventState = this.allAsyncEvents_[i];
+        const event = asyncEventState.event;
+        if (event.ph === 'S' || event.ph === 'F' || event.ph === 'T' ||
+            event.ph === 'p') {
+          legacyEvents.push(asyncEventState);
+          continue;
+        }
+        if (event.cat === undefined) {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'Nestable async events (ph: b, e, or n) require a ' +
+                'cat parameter.'
+          });
+          continue;
+        }
+
+        if (event.name === undefined) {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'Nestable async events (ph: b, e, or n) require a ' +
+                'name parameter.'
+          });
+          continue;
+        }
+
+        const id = TraceEventImporter.scopedIdForEvent_(event);
+        if (id === undefined) {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'Nestable async events (ph: b, e, or n) require an ' +
+                'id parameter.'
+          });
+          continue;
+        }
+
+        if (event.cat === 'blink.user_timing') {
+          const matched = MEASURE_NAME_REGEX.exec(event.name);
+          if (matched !== null) {
+            const key = matched[1] + ':' + event.cat;
+            try {
+              event.args = JSON.parse(Base64.atob(matched[3]) || '{}');
+            } catch (e) {
+              // ignored because we assume that we accidentally
+              // matched a performance.measure() where the user was
+              // not aware of this convention.
+            }
+            if (nestableMeasureAsyncEventsByKey[key] === undefined) {
+              nestableMeasureAsyncEventsByKey[key] = [];
+            }
+            nestableMeasureAsyncEventsByKey[key].push(asyncEventState);
+            continue;
+          }
+        }
+
+        const key = event.cat + ':' + id.toStringWithDelimiter(':');
+        if (nestableAsyncEventsByKey[key] === undefined) {
+          nestableAsyncEventsByKey[key] = [];
+        }
+        nestableAsyncEventsByKey[key].push(asyncEventState);
+      }
+      // Handle legacy async events.
+      this.createLegacyAsyncSlices_(legacyEvents);
+
+      // Parse nestable measure async events into AsyncSlices.
+      this.createNestableAsyncSlices_(nestableMeasureAsyncEventsByKey);
+
+      // Parse nestable async events into AsyncSlices.
+      this.createNestableAsyncSlices_(nestableAsyncEventsByKey);
+    },
+
+    createLegacyAsyncSlice_(events) {
+      const asyncEventState = events[events.length - 1];
+      const event = asyncEventState.event;
+      const name = event.name;
+      const id = TraceEventImporter.scopedIdForEvent_(event);
+      const key = id.toStringWithDelimiter(':');
+      const asyncSliceConstructor = tr.model.AsyncSlice.subTypes.getConstructor(
+          events[0].event.cat, name);
+      let duration;
+      if (event.ts !== undefined) {
+        duration = this.toModelTimeFromUs_(event.ts - events[0].event.ts);
+      }
+      const slice = new asyncSliceConstructor(
+          events[0].event.cat,
+          name,
+          getEventColor(events[0].event),
+          this.toModelTimeFromUs_(events[0].event.ts),
+          Object.assign({}, events[0].event.args, event.args),
+          duration || 0,
+          true,
+          undefined,
+          undefined,
+          events[0].event.argsStripped);
+      if (duration === undefined) {
+        slice.didNotFinish = true;
+        slice.error = 'Slice has no matching END. End time has been adjusted.';
+        // End time will be adjusted by AsyncSliceGroup.autoCloseOpenSlices().
+        this.model_.importWarning({
+          type: 'async_slice_parse_error',
+          message: 'Legacy async BEGIN event at ' +
+            events[0].event.ts + ' with name="' +
+            name + '" and id=' + key + ' was unmatched.'
+        });
+      }
+      slice.startThread = events[0].thread;
+      slice.endThread = asyncEventState.thread;
+      slice.id = key;
+
+      const stepType = events[1].event.ph;
+      let isValid = true;
+
+      // Create subSlices for each step. Skip the start and finish events,
+      // which are always first and last respectively.
+      for (let j = 1; j < events.length - 1; ++j) {
+        if (events[j].event.ph === 'T' || events[j].event.ph === 'p') {
+          isValid = this.assertStepTypeMatches_(stepType, events[j]);
+          if (!isValid) break;
+        }
+
+        if (events[j].event.ph === 'S') {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'At ' + events[j].event.ts + ', a slice named "' +
+                name + '" with id=' + id +
+                ' had a step before the start event.'
+          });
+          continue;
+        }
+
+        if (events[j].event.ph === 'F') {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'At ' + events[j].event.ts + ', a slice named ' +
+                name + ' with id=' + id +
+                ' had a step after the finish event.'
+          });
+          continue;
+        }
+
+        const startIndex = j + (stepType === 'T' ? 0 : -1);
+        const endIndex = startIndex + 1;
+
+        let subName = name;
+        if (!events[j].event.argsStripped &&
+            (events[j].event.ph === 'T' || events[j].event.ph === 'p')) {
+          subName = events[j].event.args.step;
+        }
+
+        const asyncSliceConstructor =
+            tr.model.AsyncSlice.subTypes.getConstructor(
+                events[0].event.cat,
+                subName);
+        let duration;
+        if (events[endIndex].event.ts !== undefined) {
+          duration = this.toModelTimeFromUs_(
+              events[endIndex].event.ts - events[startIndex].event.ts);
+        }
+        const subSlice = new asyncSliceConstructor(
+            events[0].event.cat,
+            subName,
+            getEventColor(events[0].event, subName + j),
+            this.toModelTimeFromUs_(events[startIndex].event.ts),
+            this.deepCopyIfNeeded_(events[j].event.args),
+            duration || 0,
+            undefined,
+            undefined,
+            events[startIndex].event.argsStripped);
+        if (duration === undefined) {
+          subSlice.didNotFinish = true;
+          subSlice.error =
+              'Slice has no matching END. End time has been adjusted.';
+          // End time will be adjusted by AsyncSliceGroup.autoCloseOpenSlices().
+        }
+        subSlice.startThread = events[startIndex].thread;
+        subSlice.endThread = events[endIndex].thread;
+        subSlice.id = key;
+
+        slice.subSlices.push(subSlice);
+      }
+
+      if (isValid) {
+        // Add |slice| to the start-thread's asyncSlices.
+        slice.startThread.asyncSliceGroup.push(slice);
+      }
+    },
+
+    createLegacyAsyncSlices_(legacyEvents) {
+      if (legacyEvents.length === 0) return;
+
+      legacyEvents.sort(function(x, y) {
+        const d = x.event.ts - y.event.ts;
+        if (d !== 0) return d;
+        return x.sequenceNumber - y.sequenceNumber;
+      });
+
+      const asyncEventStatesByNameThenID = {};
+
+      for (let i = 0; i < legacyEvents.length; i++) {
+        const asyncEventState = legacyEvents[i];
+
+        const event = asyncEventState.event;
+        const name = event.name;
+        if (name === undefined) {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'Async events (ph: S, T, p, or F) require a name ' +
+                ' parameter.'
+          });
+          continue;
+        }
+
+        const id = TraceEventImporter.scopedIdForEvent_(event);
+        if (id === undefined) {
+          this.model_.importWarning({
+            type: 'async_slice_parse_error',
+            message: 'Async events (ph: S, T, p, or F) require an id parameter.'
+          });
+          continue;
+        }
+        const key = id.toStringWithDelimiter(':');
+        // TODO(simonjam): Add a synchronous tick on the appropriate thread.
+
+        if (event.ph === 'S') {
+          if (asyncEventStatesByNameThenID[name] === undefined) {
+            asyncEventStatesByNameThenID[name] = {};
+          }
+          if (asyncEventStatesByNameThenID[name][key]) {
+            this.model_.importWarning({
+              type: 'async_slice_parse_error',
+              message: 'At ' + event.ts + ', a slice of the same id ' + id +
+                  ' was alrady open.'
+            });
+            continue;
+          }
+          asyncEventStatesByNameThenID[name][key] = [];
+          asyncEventStatesByNameThenID[name][key].push(asyncEventState);
+        } else {
+          if (asyncEventStatesByNameThenID[name] === undefined) {
+            this.model_.importWarning({
+              type: 'async_slice_parse_error',
+              message: `At ${event.ts}, no slice named "${name}" was open.`,
+            });
+            continue;
+          }
+          if (asyncEventStatesByNameThenID[name][key] === undefined) {
+            this.model_.importWarning({
+              type: 'async_slice_parse_error',
+              message:
+                `At ${event.ts}, no slice named "${name}" with id=${id} was ` +
+                'open.',
+            });
+            continue;
+          }
+          const events = asyncEventStatesByNameThenID[name][key];
+          events.push(asyncEventState);
+
+          if (event.ph === 'F') {
+            this.createLegacyAsyncSlice_(events);
+            delete asyncEventStatesByNameThenID[name][key];
+          }
+        }
+      }
+
+      // Auto-close unmatched S events by creating a fake F event.
+      for (const [name, statesByID] of
+        Object.entries(asyncEventStatesByNameThenID)) {
+        for (const [id, states] of Object.entries(statesByID)) {
+          const startEvent = states[0].event;
+          // Don't set 'ts' in the fake 'F' event. createLegacyAsyncSlice_ will
+          // set duration=undefined and didNotFinish=true.
+          // AsyncSliceGroup.autoCloseOpenSlices() will set duration so that the
+          // AsyncSlice ends when the trace ends.
+          states.push({
+            sequenceNumber: 1 + states[states.length - 1].sequenceNumber,
+            event: {
+              ph: 'F',
+              name,
+              id: startEvent.id,
+              id2: startEvent.id2,
+              scope: startEvent.scope,
+              pid: startEvent.pid,
+              tid: startEvent.tid,
+              cat: startEvent.cat,
+              args: {},
+            },
+            thread: this.model_.getOrCreateProcess(startEvent.pid).
+                getOrCreateThread(startEvent.tid),
+          });
+          this.createLegacyAsyncSlice_(states);
+        }
+      }
+    },
+
+    createNestableAsyncSlices_(nestableEventsByKey) {
+      for (const key in nestableEventsByKey) {
+        const eventStateEntries = nestableEventsByKey[key];
+        // Stack of enclosing BEGIN events.
+        const parentStack = [];
+        for (let i = 0; i < eventStateEntries.length; ++i) {
+          const eventStateEntry = eventStateEntries[i];
+          // If this is the end of an event, match it to the start.
+          if (eventStateEntry.event.ph === 'e') {
+            // Walk up the parent stack to find the corresponding BEGIN for
+            // this END.
+            let parentIndex = -1;
+            for (let k = parentStack.length - 1; k >= 0; --k) {
+              if (parentStack[k].event.name === eventStateEntry.event.name) {
+                parentIndex = k;
+                break;
+              }
+            }
+            if (parentIndex === -1) {
+              // Unmatched end.
+              eventStateEntry.finished = false;
+            } else {
+              parentStack[parentIndex].end = eventStateEntry;
+              // Pop off all enclosing unmatched BEGINs util parentIndex.
+              while (parentIndex < parentStack.length) {
+                parentStack.pop();
+              }
+            }
+          }
+          // Inherit the current parent.
+          if (parentStack.length > 0) {
+            eventStateEntry.parentEntry = parentStack[parentStack.length - 1];
+          }
+          if (eventStateEntry.event.ph === 'b') {
+            parentStack.push(eventStateEntry);
+          }
+        }
+        const topLevelSlices = [];
+        for (let i = 0; i < eventStateEntries.length; ++i) {
+          const eventStateEntry = eventStateEntries[i];
+          // Skip matched END, as its slice will be created when we
+          // encounter its corresponding BEGIN.
+          if (eventStateEntry.event.ph === 'e' &&
+              eventStateEntry.finished === undefined) {
+            continue;
+          }
+          let startState = undefined;
+          let endState = undefined;
+          let sliceArgs = eventStateEntry.event.args || {};
+          let sliceError = undefined;
+          const id = TraceEventImporter.scopedIdForEvent_(
+              eventStateEntry.event);
+          if (eventStateEntry.event.ph === 'n') {
+            startState = eventStateEntry;
+            endState = eventStateEntry;
+          } else if (eventStateEntry.event.ph === 'b') {
+            if (eventStateEntry.end === undefined) {
+              // Unmatched BEGIN. End it when last event with this ID ends.
+              eventStateEntry.end =
+                eventStateEntries[eventStateEntries.length - 1];
+              sliceError =
+                'Slice has no matching END. End time has been adjusted.';
+              this.model_.importWarning({
+                type: 'async_slice_parse_error',
+                message: 'Nestable async BEGIN event at ' +
+                  eventStateEntry.event.ts + ' with name="' +
+                  eventStateEntry.event.name + '" and id=' + id +
+                  ' was unmatched.'
+              });
+            } else {
+              // Include args for both END and BEGIN for a matched pair.
+              function concatenateArguments(args1, args2) {
+                if (args1.params === undefined || args2.params === undefined) {
+                  return Object.assign({}, args1, args2);
+                }
+                // Make an argument object to hold the combined params.
+                const args3 = {};
+                args3.params = Object.assign({}, args1.params, args2.params);
+                return Object.assign({}, args1, args2, args3);
+              }
+              const endArgs = eventStateEntry.end.event.args || {};
+              sliceArgs = concatenateArguments(sliceArgs, endArgs);
+            }
+            startState = eventStateEntry;
+            endState = eventStateEntry.end;
+          } else {
+            // Unmatched END. Start it at the first event with this ID starts.
+            sliceError =
+              'Slice has no matching BEGIN. Start time has been adjusted.';
+            this.model_.importWarning({
+              type: 'async_slice_parse_error',
+              message: 'Nestable async END event at ' +
+                eventStateEntry.event.ts + ' with name=' +
+                eventStateEntry.event.name +
+                ' and id=' + id + ' was unmatched.'
+            });
+            startState = eventStateEntries[0];
+            endState = eventStateEntry;
+          }
+
+          const isTopLevel = (eventStateEntry.parentEntry === undefined);
+          const asyncSliceConstructor =
+              tr.model.AsyncSlice.subTypes.getConstructor(
+                  eventStateEntry.event.cat,
+                  eventStateEntry.event.name);
+
+          let threadStart = undefined;
+          let threadDuration = undefined;
+          if (startState.event.tts && startState.event.use_async_tts) {
+            threadStart = this.toModelTimeFromUs_(startState.event.tts);
+            if (endState.event.tts) {
+              const threadEnd = this.toModelTimeFromUs_(endState.event.tts);
+              threadDuration = threadEnd - threadStart;
+            }
+          }
+
+          const slice = new asyncSliceConstructor(
+              eventStateEntry.event.cat,
+              eventStateEntry.event.name,
+              getEventColor(endState.event),
+              this.toModelTimeFromUs_(startState.event.ts),
+              sliceArgs,
+              this.toModelTimeFromUs_(endState.event.ts - startState.event.ts),
+              isTopLevel,
+              threadStart,
+              threadDuration,
+              startState.event.argsStripped);
+
+          slice.startThread = startState.thread;
+          slice.endThread = endState.thread;
+
+          slice.startStackFrame = this.getStackFrameForEvent_(startState.event);
+          slice.endStackFrame = this.getStackFrameForEvent_(endState.event);
+
+          slice.id = key;
+          if (sliceError !== undefined) {
+            slice.error = sliceError;
+          }
+          eventStateEntry.slice = slice;
+          // Add the slice to the topLevelSlices array if there is no parent.
+          // Otherwise, add the slice to the subSlices of its parent.
+          if (isTopLevel) {
+            topLevelSlices.push(slice);
+          } else if (eventStateEntry.parentEntry.slice !== undefined) {
+            eventStateEntry.parentEntry.slice.subSlices.push(slice);
+          }
+        }
+        for (let si = 0; si < topLevelSlices.length; si++) {
+          topLevelSlices[si].startThread.asyncSliceGroup.push(
+              topLevelSlices[si]);
+        }
+      }
+    },
+
+    assertStepTypeMatches_(stepType, event) {
+      if (stepType !== event.event.ph) {
+        this.model_.importWarning({
+          type: 'async_slice_parse_error',
+          message: 'At ' + event.event.ts + ', a slice named ' +
+              event.event.name + ' with id=' +
+              TraceEventImporter.scopedIdForEvent_(event.event) +
+              ' had both begin and end steps, which is not allowed.'
+        });
+        return false;
+      }
+      return true;
+    },
+
+    validateFlowEvent_(event) {
+      if (event.name === undefined) {
+        this.model_.importWarning({
+          type: 'flow_slice_parse_error',
+          message: 'Flow events (ph: s, t or f) require a name parameter.'
+        });
+        return false;
+      }
+
+      // Support Flow API v1.
+      if (event.ph === 's' || event.ph === 'f' || event.ph === 't') {
+        if (event.id === undefined) {
+          this.model_.importWarning({
+            type: 'flow_slice_parse_error',
+            message: 'Flow events (ph: s, t or f) require an id parameter.'
+          });
+          return false;
+        }
+        return true;
+      }
+
+      // Support Flow API v2.
+      if (event.bind_id) {
+        if (event.flow_in === undefined && event.flow_out === undefined) {
+          this.model_.importWarning({
+            type: 'flow_slice_parse_error',
+            message: 'Flow producer or consumer require flow_in or flow_out.'
+          });
+          return false;
+        }
+        return true;
+      }
+
+      return false;
+    },
+
+    createFlowSlices_() {
+      if (this.allFlowEvents_.length === 0) return;
+
+      const createFlowEvent = function(thread, event, opt_slice) {
+        let startSlice;
+        let flowId;
+        let flowStartTs;
+
+        if (event.bind_id) {
+          // Support Flow API v2.
+          startSlice = opt_slice;
+          flowId = event.bind_id;
+          flowStartTs = this.toModelTimeFromUs_(event.ts + event.dur);
+        } else {
+          // Support Flow API v1.
+          const ts = this.toModelTimeFromUs_(event.ts);
+          startSlice = thread.sliceGroup.findSliceAtTs(ts);
+          if (startSlice === undefined) return undefined;
+          flowId = event.id;
+          flowStartTs = ts;
+        }
+
+        const flowEvent = new tr.model.FlowEvent(
+            event.cat,
+            flowId,
+            event.name,
+            getEventColor(event),
+            flowStartTs,
+            this.deepCopyAlways_(event.args));
+        flowEvent.startSlice = startSlice;
+        flowEvent.startStackFrame = this.getStackFrameForEvent_(event);
+        flowEvent.endStackFrame = undefined;
+        startSlice.outFlowEvents.push(flowEvent);
+        return flowEvent;
+      }.bind(this);
+
+      const finishFlowEventWith = function(
+          flowEvent, thread, event, refGuid, bindToParent, opt_slice) {
+        let endSlice;
+
+        if (event.bind_id) {
+          // Support Flow API v2.
+          endSlice = opt_slice;
+        } else {
+          // Support Flow API v1.
+          const ts = this.toModelTimeFromUs_(event.ts);
+          if (bindToParent) {
+            endSlice = thread.sliceGroup.findSliceAtTs(ts);
+          } else {
+            endSlice = thread.sliceGroup.findNextSliceAfter(ts, refGuid);
+          }
+          if (endSlice === undefined) return false;
+        }
+
+        endSlice.inFlowEvents.push(flowEvent);
+        flowEvent.endSlice = endSlice;
+        flowEvent.duration =
+            this.toModelTimeFromUs_(event.ts) - flowEvent.start;
+        flowEvent.endStackFrame = this.getStackFrameForEvent_(event);
+        this.mergeArgsInto_(flowEvent.args, event.args, flowEvent.title);
+        return true;
+      }.bind(this);
+
+      const processFlowConsumer = function(
+          flowIdToEvent, sliceGuidToEvent, event, slice) {
+        let flowEvent = flowIdToEvent[event.bind_id];
+        if (flowEvent === undefined) {
+          this.model_.importWarning({
+            type: 'flow_slice_ordering_error',
+            message: 'Flow consumer ' + event.bind_id + ' does not have ' +
+                  'a flow producer'});
+          return false;
+        } else if (flowEvent.endSlice) {
+          // One flow producer can have more than one flow consumers.
+          // In this case, create a new flow event using the flow producer.
+          const flowProducer = flowEvent.startSlice;
+          flowEvent = createFlowEvent(undefined,
+              sliceGuidToEvent[flowProducer.guid], flowProducer);
+        }
+
+        const refGuid = undefined;
+        const ok = finishFlowEventWith(flowEvent, undefined, event,
+            refGuid, undefined, slice);
+        if (ok) {
+          this.model_.flowEvents.push(flowEvent);
+        } else {
+          this.model_.importWarning({
+            type: 'flow_slice_end_error',
+            message: 'Flow consumer ' + event.bind_id + ' does not end ' +
+                  'at an actual slice, so cannot be created.'});
+          return false;
+        }
+
+        return true;
+      }.bind(this);
+
+      const processFlowProducer = function(
+          flowIdToEvent, flowStatus, event, slice) {
+        if (flowIdToEvent[event.bind_id] &&
+            flowStatus[event.bind_id]) {
+          // Can't open the same flow again while it's still open.
+          // This is essentially the multi-producer case which we don't support
+          this.model_.importWarning({
+            type: 'flow_slice_start_error',
+            message: 'Flow producer ' + event.bind_id + ' already seen'});
+          return false;
+        }
+
+        const flowEvent = createFlowEvent(undefined, event, slice);
+        if (!flowEvent) {
+          this.model_.importWarning({
+            type: 'flow_slice_start_error',
+            message: 'Flow producer ' + event.bind_id + ' does not start' +
+                  'a flow'});
+          return false;
+        }
+        flowIdToEvent[event.bind_id] = flowEvent;
+      }.bind(this);
+
+      // Actual import.
+      this.allFlowEvents_.sort(function(x, y) {
+        const d = x.event.ts - y.event.ts;
+        if (d !== 0) return d;
+        return x.sequenceNumber - y.sequenceNumber;
+      });
+
+      const flowIdToEvent = {};
+      const sliceGuidToEvent = {};
+      const flowStatus = {}; // true: open; false: closed.
+      for (let i = 0; i < this.allFlowEvents_.length; ++i) {
+        const data = this.allFlowEvents_[i];
+        const refGuid = data.refGuid;
+        const event = data.event;
+        const thread = data.thread;
+
+        if (!this.validateFlowEvent_(event)) continue;
+
+        // Support for Flow API v2.
+        if (event.bind_id) {
+          const slice = data.slice;
+          sliceGuidToEvent[slice.guid] = event;
+
+          if (event.flowPhase === PRODUCER) {
+            if (!processFlowProducer(flowIdToEvent, flowStatus, event, slice)) {
+              continue;
+            }
+            flowStatus[event.bind_id] = true; // open the flow.
+          } else {
+            if (!processFlowConsumer(flowIdToEvent, sliceGuidToEvent,
+                event, slice)) {
+              continue;
+            }
+            flowStatus[event.bind_id] = false; // close the flow.
+
+            if (event.flowPhase === STEP) {
+              if (!processFlowProducer(flowIdToEvent, flowStatus,
+                  event, slice)) {
+                continue;
+              }
+              flowStatus[event.bind_id] = true; // open the flow again.
+            }
+          }
+          continue;
+        }
+
+        const fullFlowId = JSON.stringify({
+          id: event.id,
+          cat: event.cat,
+          name: event.name
+        });
+
+        // Support for Flow API v1.
+        let flowEvent;
+        if (event.ph === 's') {
+          if (flowIdToEvent[fullFlowId]) {
+            this.model_.importWarning({
+              type: 'flow_slice_start_error',
+              message: 'event id ' + event.id + ' already seen when ' +
+                  'encountering start of flow event.'});
+            continue;
+          }
+          flowEvent = createFlowEvent(thread, event);
+          if (!flowEvent) {
+            this.model_.importWarning({
+              type: 'flow_slice_start_error',
+              message: 'event id ' + event.id + ' does not start ' +
+                  'at an actual slice, so cannot be created.'});
+            continue;
+          }
+          flowIdToEvent[fullFlowId] = flowEvent;
+        } else if (event.ph === 't' || event.ph === 'f') {
+          flowEvent = flowIdToEvent[fullFlowId];
+          if (flowEvent === undefined) {
+            this.model_.importWarning({
+              type: 'flow_slice_ordering_error',
+              message: 'Found flow phase ' + event.ph + ' for id: ' + event.id +
+                  ' but no flow start found.'
+            });
+            continue;
+          }
+
+          let bindToParent = event.ph === 't';
+
+          if (event.ph === 'f') {
+            if (event.bp === undefined) {
+              // TODO(yuhaoz): In flow V2, there is no notion of binding point.
+              // Removal of binding point is tracked in
+              // https://github.com/google/trace-viewer/issues/991.
+              if (event.cat.indexOf('input') > -1) {
+                bindToParent = true;
+              } else if (event.cat.indexOf('ipc.flow') > -1) {
+                bindToParent = true;
+              }
+            } else {
+              if (event.bp !== 'e') {
+                this.model_.importWarning({
+                  type: 'flow_slice_bind_point_error',
+                  message: 'Flow event with invalid binding point (event.bp).'
+                });
+                continue;
+              }
+              bindToParent = true;
+            }
+          }
+
+          const ok = finishFlowEventWith(flowEvent, thread, event,
+              refGuid, bindToParent);
+          if (ok) {
+            this.model_.flowEvents.push(flowEvent);
+          } else {
+            this.model_.importWarning({
+              type: 'flow_slice_end_error',
+              message: 'event id ' + event.id + ' does not end ' +
+                  'at an actual slice, so cannot be created.'});
+          }
+          flowIdToEvent[fullFlowId] = undefined;
+
+          // If this is a step, then create another flow event.
+          if (ok && event.ph === 't') {
+            flowEvent = createFlowEvent(thread, event);
+            flowIdToEvent[fullFlowId] = flowEvent;
+          }
+        }
+      }
+    },
+
+    /**
+     * This function creates objects described via the N, D, and O phase
+     * events.
+     */
+    createExplicitObjects_() {
+      if (this.allObjectEvents_.length === 0) return;
+
+      const processEvent = function(objectEventState) {
+        const event = objectEventState.event;
+        const scopedId = TraceEventImporter.scopedIdForEvent_(event);
+        const thread = objectEventState.thread;
+        if (event.name === undefined) {
+          this.model_.importWarning({
+            type: 'object_parse_error',
+            message: 'While processing ' + JSON.stringify(event) + ': ' +
+                'Object events require an name parameter.'
+          });
+        }
+
+        if (scopedId === undefined || scopedId.id === undefined) {
+          this.model_.importWarning({
+            type: 'object_parse_error',
+            message: 'While processing ' + JSON.stringify(event) + ': ' +
+                'Object events require an id parameter.'
+          });
+        }
+        const process = thread.parent;
+        const ts = this.toModelTimeFromUs_(event.ts);
+        let instance;
+        if (event.ph === 'N') {
+          try {
+            instance = process.objects.idWasCreated(
+                scopedId, event.cat, event.name, ts);
+          } catch (e) {
+            this.model_.importWarning({
+              type: 'object_parse_error',
+              message: 'While processing create of ' +
+                  scopedId + ' at ts=' + ts + ': ' + e
+            });
+            return;
+          }
+        } else if (event.ph === 'O') {
+          if (event.args.snapshot === undefined) {
+            this.model_.importWarning({
+              type: 'object_parse_error',
+              message: 'While processing ' + scopedId + ' at ts=' + ts + ': ' +
+                  'Snapshots must have args: {snapshot: ...}'
+            });
+            return;
+          }
+          let snapshot;
+          try {
+            const args = this.deepCopyIfNeeded_(event.args.snapshot);
+            let cat;
+            if (args.cat) {
+              cat = args.cat;
+              delete args.cat;
+            } else {
+              cat = event.cat;
+            }
+
+            let baseTypename;
+            if (args.base_type) {
+              baseTypename = args.base_type;
+              delete args.base_type;
+            } else {
+              baseTypename = undefined;
+            }
+            snapshot = process.objects.addSnapshot(
+                scopedId, cat, event.name, ts, args, baseTypename);
+            snapshot.snapshottedOnThread = thread;
+          } catch (e) {
+            this.model_.importWarning({
+              type: 'object_parse_error',
+              message: 'While processing snapshot of ' +
+                  scopedId + ' at ts=' + ts + ': ' + e
+            });
+            return;
+          }
+          instance = snapshot.objectInstance;
+        } else if (event.ph === 'D') {
+          try {
+            process.objects.idWasDeleted(scopedId, event.cat, event.name, ts);
+            const instanceMap = process.objects.getOrCreateInstanceMap_(
+                scopedId);
+            instance = instanceMap.lastInstance;
+          } catch (e) {
+            this.model_.importWarning({
+              type: 'object_parse_error',
+              message: 'While processing delete of ' +
+                  scopedId + ' at ts=' + ts + ': ' + e
+            });
+            return;
+          }
+        }
+
+        if (instance) {
+          instance.colorId = getEventColor(event, instance.typeName);
+        }
+      }.bind(this);
+
+      this.allObjectEvents_.sort(function(x, y) {
+        const d = x.event.ts - y.event.ts;
+        if (d !== 0) return d;
+        return x.sequenceNumber - y.sequenceNumber;
+      });
+
+      const allObjectEvents = this.allObjectEvents_;
+      for (let i = 0; i < allObjectEvents.length; i++) {
+        const objectEventState = allObjectEvents[i];
+        try {
+          processEvent.call(this, objectEventState);
+        } catch (e) {
+          this.model_.importWarning({
+            type: 'object_parse_error',
+            message: e.message
+          });
+        }
+      }
+    },
+
+    createImplicitObjects_() {
+      for (const proc of Object.values(this.model_.processes)) {
+        this.createImplicitObjectsForProcess_(proc);
+      }
+    },
+
+    // Here, we collect all the snapshots that internally contain a
+    // Javascript-level object inside their args list that has an "id" field,
+    // and turn that into a snapshot of the instance referred to by id.
+    createImplicitObjectsForProcess_(process) {
+      function processField(referencingObject,
+          referencingObjectFieldName,
+          referencingObjectFieldValue,
+          containingSnapshot) {
+        if (!referencingObjectFieldValue) return;
+
+        if (referencingObjectFieldValue instanceof
+            tr.model.ObjectSnapshot) {
+          return null;
+        }
+        if (referencingObjectFieldValue.id === undefined) return;
+
+        const implicitSnapshot = referencingObjectFieldValue;
+
+        const rawId = implicitSnapshot.id;
+        const m = /(.+)\/(.+)/.exec(rawId);
+        if (!m) {
+          throw new Error('Implicit snapshots must have names.');
+        }
+        delete implicitSnapshot.id;
+        const name = m[1];
+        const id = m[2];
+        let res;
+
+        let cat;
+        if (implicitSnapshot.cat !== undefined) {
+          cat = implicitSnapshot.cat;
+        } else {
+          cat = containingSnapshot.objectInstance.category;
+        }
+
+        let baseTypename;
+        if (implicitSnapshot.base_type) {
+          baseTypename = implicitSnapshot.base_type;
+        } else {
+          baseTypename = undefined;
+        }
+
+        const scope = containingSnapshot.objectInstance.scopedId.scope;
+
+        try {
+          res = process.objects.addSnapshot(
+              new tr.model.ScopedId(scope, id), cat,
+              name, containingSnapshot.ts,
+              implicitSnapshot, baseTypename);
+        } catch (e) {
+          this.model_.importWarning({
+            type: 'object_snapshot_parse_error',
+            message: 'While processing implicit snapshot of ' +
+                rawId + ' at ts=' + containingSnapshot.ts + ': ' + e
+          });
+          return;
+        }
+        res.objectInstance.hasImplicitSnapshots = true;
+        res.containingSnapshot = containingSnapshot;
+        res.snapshottedOnThread = containingSnapshot.snapshottedOnThread;
+        referencingObject[referencingObjectFieldName] = res;
+        if (!(res instanceof tr.model.ObjectSnapshot)) {
+          throw new Error('Created object must be instanceof snapshot');
+        }
+        return res.args;
+      }
+
+      /**
+       * Iterates over the fields in the object, calling func for every
+       * field/value found.
+       *
+       * @return {object} If the function does not want the field's value to be
+       * iterated, return null. If iteration of the field value is desired, then
+       * return either undefined (if the field value did not change) or the new
+       * field value if it was changed.
+       */
+      function iterObject(object, func, containingSnapshot, thisArg) {
+        if (!(object instanceof Object)) return;
+
+        if (object instanceof Array) {
+          for (let i = 0; i < object.length; i++) {
+            const res = func.call(thisArg, object, i, object[i],
+                containingSnapshot);
+            if (res === null) continue;
+            if (res) {
+              iterObject(res, func, containingSnapshot, thisArg);
+            } else {
+              iterObject(object[i], func, containingSnapshot, thisArg);
+            }
+          }
+          return;
+        }
+
+        for (const key in object) {
+          const res = func.call(thisArg, object, key, object[key],
+              containingSnapshot);
+          if (res === null) continue;
+          if (res) {
+            iterObject(res, func, containingSnapshot, thisArg);
+          } else {
+            iterObject(object[key], func, containingSnapshot, thisArg);
+          }
+        }
+      }
+
+      // TODO(nduca): We may need to iterate the instances in sorted order by
+      // creationTs.
+      process.objects.iterObjectInstances(function(instance) {
+        instance.snapshots.forEach(function(snapshot) {
+          if (snapshot.args.id !== undefined) {
+            throw new Error('args cannot have an id field inside it');
+          }
+          iterObject(snapshot.args, processField, snapshot, this);
+        }, this);
+      }, this);
+    },
+
+    // Takes an object of type: PID -> [process memory dump events]
+    // Returns smallest timestamp among events or Infinity if there are none.
+    minimalTimestampInPidToEvents_(pidToEvents) {
+      let smallestTs = Infinity;
+      for (const events of Object.values(pidToEvents)) {
+        for (const event of events) {
+          if (event.ts < smallestTs) {
+            smallestTs = event.ts;
+          }
+        }
+      }
+      return smallestTs;
+    },
+
+    createMemoryDumps_() {
+      // We must create the global dumps in chronological order since later
+      // heap dumps can depend on earlier ones. Not all events within a single
+      // global dump have the same timestamp but events for two different
+      // global dumps can not be interspersed. However, for consistency,
+      // we sort the global dumps by the earliest timestamp present in an event
+      // in that dump.
+      const pairs = Object.entries(this.allMemoryDumpEvents_);
+      const key = x => this.minimalTimestampInPidToEvents_(x);
+      pairs.sort((x, y) => key(x[1]) - key(y[1]));
+      for (const [dumpId, pidToEvents] of pairs) {
+        this.createGlobalMemoryDump_(pidToEvents, dumpId);
+      }
+    },
+
+    createGlobalMemoryDump_(dumpIdEvents, dumpId) {
+      // 1. Create a GlobalMemoryDump for the provided process memory dump
+      // the events, all of which have the same dump ID.
+
+      // Calculate the range of the global memory dump.
+      const globalRange = new tr.b.math.Range();
+      for (const pid in dumpIdEvents) {
+        const processEvents = dumpIdEvents[pid];
+        for (let i = 0; i < processEvents.length; i++) {
+          globalRange.addValue(this.toModelTimeFromUs_(processEvents[i].ts));
+        }
+      }
+      if (globalRange.isEmpty) {
+        throw new Error('Internal error: Global memory dump without events');
+      }
+
+      // Create the global memory dump.
+      const globalMemoryDump = new tr.model.GlobalMemoryDump(
+          this.model_, globalRange.min);
+      globalMemoryDump.duration = globalRange.range;
+      this.model_.globalMemoryDumps.push(globalMemoryDump);
+
+      const globalMemoryAllocatorDumpsByFullName = {};
+      const levelsOfDetail = {};
+      const allMemoryAllocatorDumpsByGuid = {};
+
+      // 2. Create a ProcessMemoryDump for each PID in the provided process
+      // memory dump events. Everything except for edges between memory
+      // allocator dumps is parsed from the process memory dump trace events at
+      // this step.
+      for (const pid in dumpIdEvents) {
+        this.createProcessMemoryDump_(globalMemoryDump,
+            globalMemoryAllocatorDumpsByFullName, levelsOfDetail,
+            allMemoryAllocatorDumpsByGuid, dumpIdEvents[pid], pid, dumpId);
+      }
+
+      // 3. Set the level of detail and memory allocator dumps of the
+      // GlobalMemoryDump, which come from the process memory dump trace
+      // events parsed in the prebvious step.
+      globalMemoryDump.levelOfDetail = levelsOfDetail.global;
+
+      // Find the root allocator dumps and establish the parent links of
+      // the global memory dump.
+      globalMemoryDump.memoryAllocatorDumps =
+          this.inferMemoryAllocatorDumpTree_(
+              globalMemoryAllocatorDumpsByFullName);
+
+      // 4. Finally, parse the edges between all memory allocator dumps within
+      // the GlobalMemoryDump. This can only be done once all memory allocator
+      // dumps have been parsed (i.e. it is necessary to iterate over the
+      // process memory dump trace events once more).
+      this.parseMemoryDumpAllocatorEdges_(allMemoryAllocatorDumpsByGuid,
+          dumpIdEvents, dumpId);
+    },
+
+    createProcessMemoryDump_(globalMemoryDump,
+        globalMemoryAllocatorDumpsByFullName, levelsOfDetail,
+        allMemoryAllocatorDumpsByGuid, processEvents, pid, dumpId) {
+      // Calculate the range of the process memory dump.
+      const processRange = new tr.b.math.Range();
+      for (let i = 0; i < processEvents.length; i++) {
+        processRange.addValue(this.toModelTimeFromUs_(processEvents[i].ts));
+      }
+      if (processRange.isEmpty) {
+        throw new Error('Internal error: Process memory dump without events');
+      }
+
+      // Create the process memory dump.
+      const process = this.model_.getOrCreateProcess(pid);
+      const processMemoryDump = new tr.model.ProcessMemoryDump(
+          globalMemoryDump, process, processRange.min);
+      processMemoryDump.duration = processRange.range;
+      process.memoryDumps.push(processMemoryDump);
+      globalMemoryDump.processMemoryDumps[pid] = processMemoryDump;
+
+      const processMemoryAllocatorDumpsByFullName = {};
+
+      // Parse all process memory dump trace events for the newly created
+      // ProcessMemoryDump.
+      for (let i = 0; i < processEvents.length; i++) {
+        const processEvent = processEvents[i];
+
+        const dumps = processEvent.args.dumps;
+        if (dumps === undefined) {
+          this.model_.importWarning({
+            type: 'memory_dump_parse_error',
+            message: '\'dumps\' field not found in a process memory dump' +
+                ' event for PID=' + pid + ' and dump ID=' + dumpId + '.'
+          });
+          continue;
+        }
+
+        // Totals, VM regions, and heap dumps for the newly created
+        // ProcessMemoryDump should be present in at most one event, so they
+        // can be added to the ProcessMemoryDump immediately.
+        this.parseMemoryDumpTotals_(processMemoryDump, dumps, pid, dumpId);
+        this.parseMemoryDumpVmRegions_(processMemoryDump, dumps, pid, dumpId);
+        this.parseMemoryDumpHeapDumps_(processMemoryDump, dumps, pid, dumpId);
+
+        // All process memory dump trace events for the newly created
+        // ProcessMemoryDump must be processed before level of detail and
+        // allocator dumps can be added to it.
+        this.parseMemoryDumpLevelOfDetail_(levelsOfDetail, dumps, pid,
+            dumpId);
+        this.parseMemoryDumpAllocatorDumps_(processMemoryDump, globalMemoryDump,
+            processMemoryAllocatorDumpsByFullName,
+            globalMemoryAllocatorDumpsByFullName,
+            allMemoryAllocatorDumpsByGuid, dumps, pid, dumpId);
+      }
+
+      if (levelsOfDetail.process === undefined) {
+        // Infer level of detail from the presence of VM regions in legacy
+        // traces (where raw process memory dump events don't contain the
+        // level_of_detail field). These traces will not have BACKGROUND mode.
+        levelsOfDetail.process = processMemoryDump.vmRegions ? DETAILED : LIGHT;
+      }
+      if (!this.updateMemoryDumpLevelOfDetail_(
+          levelsOfDetail, 'global', levelsOfDetail.process)) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'diffent levels of detail provided for global memory' +
+              ' dump (dump ID=' + dumpId + ').'
+        });
+      }
+      processMemoryDump.levelOfDetail = levelsOfDetail.process;
+      delete levelsOfDetail.process;  // Reused for all process dumps.
+
+      // Find the root allocator dumps and establish the parent links of
+      // the process memory dump.
+      processMemoryDump.memoryAllocatorDumps =
+          this.inferMemoryAllocatorDumpTree_(
+              processMemoryAllocatorDumpsByFullName);
+    },
+
+    parseMemoryDumpTotals_(processMemoryDump, dumps, pid, dumpId) {
+      const rawTotals = dumps.process_totals;
+      if (rawTotals === undefined) return;
+
+      if (processMemoryDump.totals !== undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Process totals provided multiple times for' +
+              ' process memory dump for PID=' + pid +
+              ' and dump ID=' + dumpId + '.'
+        });
+        return;
+      }
+
+      const totals = {};
+      let platformSpecificTotals = undefined;
+
+      for (const rawTotalName in rawTotals) {
+        const rawTotalValue = rawTotals[rawTotalName];
+        if (rawTotalValue === undefined) continue;
+
+        // Total resident bytes.
+        if (rawTotalName === 'resident_set_bytes') {
+          totals.residentBytes = parseInt(rawTotalValue, 16);
+          continue;
+        }
+
+        // Peak resident bytes.
+        if (rawTotalName === 'peak_resident_set_bytes') {
+          totals.peakResidentBytes = parseInt(rawTotalValue, 16);
+          continue;
+        }
+        if (rawTotalName === 'is_peak_rss_resetable') {
+          totals.arePeakResidentBytesResettable = !!rawTotalValue;
+          continue;
+        }
+
+        // Private footprint
+        if (rawTotalName === 'private_footprint_bytes') {
+          totals.privateFootprintBytes = parseInt(rawTotalValue, 16);
+          continue;
+        }
+
+        // OS-specific totals (e.g. private resident on Mac).
+        if (platformSpecificTotals === undefined) {
+          platformSpecificTotals = {};
+          totals.platformSpecific = platformSpecificTotals;
+        }
+        platformSpecificTotals[rawTotalName] = parseInt(rawTotalValue, 16);
+      }
+
+      // Either both peak_resident_set_bytes and is_peak_rss_resetable should
+      // be present in the trace, or neither.
+      if (totals.peakResidentBytes === undefined &&
+          totals.arePeakResidentBytesResettable !== undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Optional field peak_resident_set_bytes found' +
+                ' but is_peak_rss_resetable not found in' +
+                ' process memory dump for PID=' + pid +
+                ' and dump ID=' + dumpId + '.'
+        });
+      }
+      if (totals.arePeakResidentBytesResettable !== undefined &&
+          totals.peakResidentBytes === undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Optional field is_peak_rss_resetable found' +
+                ' but peak_resident_set_bytes not found in' +
+                ' process memory dump for PID=' + pid +
+                ' and dump ID=' + dumpId + '.'
+        });
+      }
+
+      processMemoryDump.totals = totals;
+    },
+
+    parseMemoryDumpVmRegions_(processMemoryDump, dumps, pid, dumpId) {
+      const rawProcessMmaps = dumps.process_mmaps;
+      if (rawProcessMmaps === undefined) return;
+
+      const rawVmRegions = rawProcessMmaps.vm_regions;
+      if (rawVmRegions === undefined) return;
+
+      if (processMemoryDump.vmRegions !== undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'VM regions provided multiple times for' +
+              ' process memory dump for PID=' + pid +
+              ' and dump ID=' + dumpId + '.'
+        });
+        return;
+      }
+
+      // In Chromium under //services/resource_coordinator/public see
+      // mojom/memory_instrumentation/memory_instrumentation.mojom and
+      // cpp/memory_instrumentation/tracing_observer.cc
+      if (rawVmRegions === null) return;
+      const vmRegions = new Array(rawVmRegions.length);
+      for (let i = 0; i < rawVmRegions.length; i++) {
+        const rawVmRegion = rawVmRegions[i];
+
+        const byteStats = {};
+        const rawByteStats = rawVmRegion.bs;
+        for (const rawByteStatName in rawByteStats) {
+          const rawByteStatValue = rawByteStats[rawByteStatName];
+          if (rawByteStatValue === undefined) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Byte stat \'' + rawByteStatName + '\' of VM region ' +
+                  i + ' (' + rawVmRegion.mf + ') in process memory dump for ' +
+                  'PID=' + pid + ' and dump ID=' + dumpId +
+                  ' does not have a value.'
+            });
+            continue;
+          }
+          const byteStatName = BYTE_STAT_NAME_MAP[rawByteStatName];
+          if (byteStatName === undefined) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Unknown byte stat name \'' + rawByteStatName + '\' (' +
+                  rawByteStatValue + ') of VM region ' + i + ' (' +
+                  rawVmRegion.mf + ') in process memory dump for PID=' + pid +
+                  ' and dump ID=' + dumpId + '.'
+            });
+            continue;
+          }
+          byteStats[byteStatName] = parseInt(rawByteStatValue, 16);
+          // OSX does not report PSS and instead emits all zeros.
+          // Zero is a valid value for some byteStats but not PSS so this could
+          // could to confusion when we later compute with and display the PSS.
+          // To avoid this we ignore zero PSS values (since PSS should never
+          // be zero). See: github.com/catapult-project/catapult/issues/3501
+          if (byteStatName === 'proportionalResident' &&
+              byteStats[byteStatName] === 0) {
+            byteStats[byteStatName] = undefined;
+          }
+        }
+
+        vmRegions[i] = new tr.model.VMRegion(
+            parseInt(rawVmRegion.sa, 16),  // startAddress
+            parseInt(rawVmRegion.sz, 16),  // sizeInBytes
+            rawVmRegion.pf,  // protectionFlags
+            rawVmRegion.mf,  // mappedFile
+            byteStats);
+      }
+
+      processMemoryDump.vmRegions =
+          tr.model.VMRegionClassificationNode.fromRegions(vmRegions);
+    },
+
+    parseMemoryDumpHeapDumps_(processMemoryDump, dumps, pid, dumpId) {
+      const idPrefix = 'p' + pid + ':';
+      let importer;
+      if (dumps.heaps) {
+        const processTypeMap = this.objectTypeNameMap_[pid];
+        if (processTypeMap === undefined) {
+          this.model_.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'Missing mapping from object type IDs to names.'
+          });
+        }
+        importer = new LegacyHeapDumpTraceEventImporter(this.model_,
+            processMemoryDump, processTypeMap, idPrefix, dumpId, dumps.heaps);
+      } else if (dumps.heaps_v2) {
+        const data = dumps.heaps_v2;
+        this.heapProfileExpander = this.heapProfileExpander.expandData(data);
+        // TODO(hjd): Unify how we are reading & inflating stack frame data.
+        this.addNewStackFramesFromExpander_(this.heapProfileExpander, idPrefix);
+        importer = new HeapDumpTraceEventImporter(this.heapProfileExpander,
+            this.model_.stackFrames, processMemoryDump, idPrefix, this.model_);
+      }
+
+      if (!importer) return;
+
+      const heapDumps = importer.parse();
+      if (!heapDumps) return;
+
+      if (processMemoryDump.heapDumps !== undefined) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'Heap dumps provided multiple times for' +
+              ' process memory dump for PID=' + pid +
+              ' and dump ID=' + dumpId + '.'
+        });
+        return;
+      }
+
+      if (Object.keys(heapDumps).length > 0) {
+        processMemoryDump.heapDumps = heapDumps;
+      }
+    },
+
+    addNewStackFramesFromExpander_(expander, idPrefix) {
+      const nodeMap = expander.getNewMap('nodes');
+      const newStackFrames = {};
+      for (const [id, stackFrame] of nodeMap.entries()) {
+        if (!this.model_.stackFrames[idPrefix + id]) {
+          newStackFrames[id] = {
+            id,
+            name: expander.getString(stackFrame.name_sid),
+          };
+          if (stackFrame.parent) newStackFrames[id].parent = stackFrame.parent;
+        }
+      }
+      this.importStackFrames_(newStackFrames, idPrefix);
+    },
+
+    parseMemoryDumpLevelOfDetail_(levelsOfDetail, dumps, pid,
+        dumpId) {
+      const rawLevelOfDetail = dumps.level_of_detail;
+      let level;
+      switch (rawLevelOfDetail) {
+        case 'background':
+          level = BACKGROUND;
+          break;
+        case 'light':
+          level = LIGHT;
+          break;
+        case 'detailed':
+          level = DETAILED;
+          break;
+        case undefined:
+          level = undefined;
+          break;
+        default:
+          this.model_.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'unknown raw level of detail \'' + rawLevelOfDetail +
+                '\' of process memory dump for PID=' + pid +
+                ' and dump ID=' + dumpId + '.'
+          });
+          return;
+      }
+
+      if (!this.updateMemoryDumpLevelOfDetail_(
+          levelsOfDetail, 'process', level)) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'diffent levels of detail provided for process memory' +
+              ' dump for PID=' + pid + ' (dump ID=' + dumpId + ').'
+        });
+      }
+    },
+
+    updateMemoryDumpLevelOfDetail_(levelsOfDetail, scope, level) {
+      // If all process memory dump events have the same level of detail (for
+      // the particular 'process' or 'global' scope), return true.
+      if (!(scope in levelsOfDetail) || level === levelsOfDetail[scope]) {
+        levelsOfDetail[scope] = level;
+        return true;
+      }
+
+      // If the process memory dump events have different levels of detail (for
+      // the particular 'process' or 'global' scope), use the highest level and
+      // return false.
+      if (MEMORY_DUMP_LEVEL_OF_DETAIL_ORDER.indexOf(level) >
+          MEMORY_DUMP_LEVEL_OF_DETAIL_ORDER.indexOf(levelsOfDetail[scope])) {
+        levelsOfDetail[scope] = level;
+      }
+      return false;
+    },
+
+    parseMemoryDumpAllocatorDumps_(processMemoryDump,
+        globalMemoryDump, processMemoryAllocatorDumpsByFullName,
+        globalMemoryAllocatorDumpsByFullName, allMemoryAllocatorDumpsByGuid,
+        dumps, pid, dumpId) {
+      const rawAllocatorDumps = dumps.allocators;
+      if (rawAllocatorDumps === undefined) return;
+
+      // Construct the MemoryAllocatorDump objects without parent links
+      // and add them to the processMemoryAllocatorDumpsByName and
+      // globalMemoryAllocatorDumpsByName indices appropriately.
+      for (let fullName in rawAllocatorDumps) {
+        const rawAllocatorDump = rawAllocatorDumps[fullName];
+
+        // Every memory allocator dump should have a GUID. If not, then
+        // it cannot be associated with any edges.
+        const guid = rawAllocatorDump.guid;
+        if (guid === undefined) {
+          this.model_.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'Memory allocator dump ' + fullName + ' for PID=' + pid +
+                ' and dump ID=' + dumpId + ' does not have a GUID.'
+          });
+        }
+
+        // A memory allocator dump can have optional flags.
+        const flags = rawAllocatorDump.flags || 0;
+        const isWeakDump = !!(flags & WEAK_MEMORY_ALLOCATOR_DUMP_FLAG);
+
+        // Determine if this is a global memory allocator dump (check if
+        // it's prefixed with 'global/').
+        let containerMemoryDump;
+        let dstIndex;
+        if (fullName.startsWith(GLOBAL_MEMORY_ALLOCATOR_DUMP_PREFIX)) {
+          // Global memory allocator dump.
+          fullName = fullName.substring(
+              GLOBAL_MEMORY_ALLOCATOR_DUMP_PREFIX.length);
+          containerMemoryDump = globalMemoryDump;
+          dstIndex = globalMemoryAllocatorDumpsByFullName;
+        } else {
+          // Process memory allocator dump.
+          containerMemoryDump = processMemoryDump;
+          dstIndex = processMemoryAllocatorDumpsByFullName;
+        }
+
+        // Construct or retrieve a memory allocator dump with the provided
+        // GUID.
+        let allocatorDump = allMemoryAllocatorDumpsByGuid[guid];
+        if (allocatorDump === undefined) {
+          if (fullName in dstIndex) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Multiple GUIDs provided for' +
+                  ' memory allocator dump ' + fullName + ': ' +
+                  dstIndex[fullName].guid + ', ' + guid + ' (ignored) for' +
+                  ' PID=' + pid + ' and dump ID=' + dumpId + '.'
+            });
+            continue;
+          }
+          allocatorDump = new tr.model.MemoryAllocatorDump(
+              containerMemoryDump, fullName, guid);
+          allocatorDump.weak = isWeakDump;
+          dstIndex[fullName] = allocatorDump;
+          if (guid !== undefined) {
+            allMemoryAllocatorDumpsByGuid[guid] = allocatorDump;
+          }
+        } else {
+          // A memory allocator dump with this GUID has already been
+          // dumped (so we will only add new attributes). Check that it
+          // belonged to the same process or was also global.
+          if (allocatorDump.containerMemoryDump !== containerMemoryDump) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Memory allocator dump ' + fullName +
+                ' (GUID=' + guid + ') for PID=' + pid + ' and dump ID=' +
+                dumpId + ' dumped in different contexts.'
+            });
+            continue;
+          }
+          // Check that the names of the memory allocator dumps match.
+          if (allocatorDump.fullName !== fullName) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Memory allocator dump with GUID=' + guid + ' for PID=' +
+                pid + ' and dump ID=' + dumpId + ' has multiple names: ' +
+                allocatorDump.fullName + ', ' + fullName + ' (ignored).'
+            });
+            continue;
+          }
+          if (!isWeakDump) {
+            // A MemoryAllocatorDump is non-weak if at least one process dumped
+            // it without WEAK_MEMORY_ALLOCATOR_DUMP_FLAG.
+            allocatorDump.weak = false;
+          }
+        }
+
+        // Add all new attributes to the memory allocator dump.
+        let attributes = rawAllocatorDump.attrs;
+        if (attributes === undefined) {
+          this.model_.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'Memory allocator dump ' + fullName + ' (GUID=' + guid +
+                ') for PID=' + pid + ' and dump ID=' + dumpId +
+                ' does not have attributes.'
+          });
+          attributes = {};
+        }
+
+        for (const attrName in attributes) {
+          const attrArgs = attributes[attrName];
+          const attrType = attrArgs.type;
+          const attrValue = attrArgs.value;
+
+          switch (attrType) {
+            case 'scalar': {
+              if (attrName in allocatorDump.numerics) {
+                this.model_.importWarning({
+                  type: 'memory_dump_parse_error',
+                  message: 'Multiple values provided for scalar attribute ' +
+                    attrName + ' of memory allocator dump ' + fullName +
+                    ' (GUID=' + guid + ') for PID=' + pid + ' and dump ID=' +
+                    dumpId + '.'
+                });
+                break;
+              }
+              const unit = attrArgs.units === 'bytes' ?
+                tr.b.Unit.byName.sizeInBytes_smallerIsBetter :
+                tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+              const value = parseInt(attrValue, 16);
+              allocatorDump.addNumeric(attrName,
+                  new tr.b.Scalar(unit, value));
+              break;
+            }
+
+            case 'string':
+              if (attrName in allocatorDump.diagnostics) {
+                this.model_.importWarning({
+                  type: 'memory_dump_parse_error',
+                  message: 'Multiple values provided for string attribute ' +
+                    attrName + ' of memory allocator dump ' + fullName +
+                    ' (GUID=' + guid + ') for PID=' + pid + ' and dump ID=' +
+                    dumpId + '.'
+                });
+                break;
+              }
+              allocatorDump.addDiagnostic(attrName, attrValue);
+              break;
+
+            default:
+              this.model_.importWarning({
+                type: 'memory_dump_parse_error',
+                message: 'Unknown type provided for attribute ' + attrName +
+                  ' of memory allocator dump ' + fullName + ' (GUID=' + guid +
+                  ') for PID=' + pid + ' and dump ID=' + dumpId + ': ' +
+                  attrType
+              });
+              break;
+          }
+        }
+      }
+    },
+
+    inferMemoryAllocatorDumpTree_(memoryAllocatorDumpsByFullName) {
+      const rootAllocatorDumps = [];
+
+      const fullNames = Object.keys(memoryAllocatorDumpsByFullName);
+      fullNames.sort();
+      for (let i = 0; i < fullNames.length; i++) {
+        let fullName = fullNames[i];
+        let allocatorDump = memoryAllocatorDumpsByFullName[fullName];
+
+        // This is a loop because we might need to build implicit
+        // ancestors in case they were not present in the trace.
+        while (true) {
+          const lastSlashIndex = fullName.lastIndexOf('/');
+          if (lastSlashIndex === -1) {
+            // If the dump is a root, add it to the top-level
+            // rootAllocatorDumps list.
+            rootAllocatorDumps.push(allocatorDump);
+            break;
+          }
+
+          // If the dump is not a root, find its parent.
+          const parentFullName = fullName.substring(0, lastSlashIndex);
+          let parentAllocatorDump =
+              memoryAllocatorDumpsByFullName[parentFullName];
+
+          // If the parent dump does not exist yet, we build an implicit
+          // one and continue up the ancestor chain.
+          let parentAlreadyExisted = true;
+          if (parentAllocatorDump === undefined) {
+            parentAlreadyExisted = false;
+            parentAllocatorDump = new tr.model.MemoryAllocatorDump(
+                allocatorDump.containerMemoryDump, parentFullName);
+            if (allocatorDump.weak !== false) {
+              // If we are inferring a parent dump (e.g. 'root/parent') of a
+              // current dump (e.g. 'root/parent/current') which is weak (or
+              // was also inferred and we don't know yet whether it's weak or
+              // not), then we clear the weak flag on the parent dump because
+              // we don't know yet whether it should be weak or non-weak:
+              //
+              //   * We can't mark the parent as non-weak straightaway because
+              //     the parent might have no non-weak descendants (in which
+              //     case we want the inferred parent to be weak, so that it
+              //     would be later removed like the current dump).
+              //   * We can't mark the parent as weak immediately either. If we
+              //     did and later encounter a non-weak child of the parent
+              //     (e.g. 'root/parent/another_child'), then we couldn't
+              //     retroactively mark the inferred parent dump as non-weak
+              //     because we couldn't tell whether the parent dump was
+              //     dumped in the trace as weak (in which case it should stay
+              //     weak and be subsequently removed) or whether it was
+              //     inferred as weak (in which case it should be changed to
+              //     non-weak).
+              //
+              // Therefore, we defer marking the inferred parent as
+              // weak/non-weak. If an inferred parent dump does not have any
+              // non-weak child, it will be marked as weak at the end of this
+              // method.
+              //
+              // Note that this should not be confused with the recursive
+              // propagation of the weak flag from parent dumps to their
+              // children and from owned dumps to their owners, which is
+              // performed in GlobalMemoryDump.prototype.removeWeakDumps().
+              parentAllocatorDump.weak = undefined;
+            }
+            memoryAllocatorDumpsByFullName[parentFullName] =
+                parentAllocatorDump;
+          }
+
+          // Setup the parent <-> children relationships
+          allocatorDump.parent = parentAllocatorDump;
+          parentAllocatorDump.children.push(allocatorDump);
+
+          // If the parent already existed, then its ancestors were/will be
+          // constructed in another iteration of the forEach loop.
+          if (parentAlreadyExisted) {
+            if (!allocatorDump.weak) {
+              // If the current dump is non-weak, then we must ensure that all
+              // its inferred ancestors are also non-weak.
+              while (parentAllocatorDump !== undefined &&
+                     parentAllocatorDump.weak === undefined) {
+                parentAllocatorDump.weak = false;
+                parentAllocatorDump = parentAllocatorDump.parent;
+              }
+            }
+            break;
+          }
+
+          fullName = parentFullName;
+          allocatorDump = parentAllocatorDump;
+        }
+      }
+
+      // All inferred ancestor dumps that have a non-weak child have already
+      // been marked as non-weak. We now mark the rest as weak.
+      for (const fullName in memoryAllocatorDumpsByFullName) {
+        const allocatorDump = memoryAllocatorDumpsByFullName[fullName];
+        if (allocatorDump.weak === undefined) {
+          allocatorDump.weak = true;
+        }
+      }
+
+      return rootAllocatorDumps;
+    },
+
+    parseMemoryDumpAllocatorEdges_(allMemoryAllocatorDumpsByGuid,
+        dumpIdEvents, dumpId) {
+      for (const pid in dumpIdEvents) {
+        const processEvents = dumpIdEvents[pid];
+
+        for (let i = 0; i < processEvents.length; i++) {
+          const processEvent = processEvents[i];
+
+          const dumps = processEvent.args.dumps;
+          if (dumps === undefined) continue;
+
+          const rawEdges = dumps.allocators_graph;
+          if (rawEdges === undefined) continue;
+
+          for (let j = 0; j < rawEdges.length; j++) {
+            const rawEdge = rawEdges[j];
+
+            const sourceGuid = rawEdge.source;
+            const sourceDump = allMemoryAllocatorDumpsByGuid[sourceGuid];
+            if (sourceDump === undefined) {
+              this.model_.importWarning({
+                type: 'memory_dump_parse_error',
+                message: 'Edge for PID=' + pid + ' and dump ID=' + dumpId +
+                    ' is missing source memory allocator dump (GUID=' +
+                    sourceGuid + ').'
+              });
+              continue;
+            }
+
+            const targetGuid = rawEdge.target;
+            const targetDump = allMemoryAllocatorDumpsByGuid[targetGuid];
+            if (targetDump === undefined) {
+              this.model_.importWarning({
+                type: 'memory_dump_parse_error',
+                message: 'Edge for PID=' + pid + ' and dump ID=' + dumpId +
+                    ' is missing target memory allocator dump (GUID=' +
+                    targetGuid + ').'
+              });
+              continue;
+            }
+
+            const importance = rawEdge.importance;
+            const edge = new tr.model.MemoryAllocatorDumpLink(
+                sourceDump, targetDump, importance);
+
+            switch (rawEdge.type) {
+              case 'ownership':
+                if (sourceDump.owns !== undefined) {
+                  this.model_.importWarning({
+                    type: 'memory_dump_parse_error',
+                    message: 'Memory allocator dump ' + sourceDump.fullName +
+                        ' (GUID=' + sourceGuid + ') already owns a memory' +
+                        ' allocator dump (' +
+                        sourceDump.owns.target.fullName + ').'
+                  });
+                } else {
+                  sourceDump.owns = edge;
+                  targetDump.ownedBy.push(edge);
+                }
+                break;
+
+              case 'retention':
+                sourceDump.retains.push(edge);
+                targetDump.retainedBy.push(edge);
+                break;
+
+              default:
+                this.model_.importWarning({
+                  type: 'memory_dump_parse_error',
+                  message: 'Invalid edge type: ' + rawEdge.type +
+                      ' (PID=' + pid + ', dump ID=' + dumpId +
+                      ', source=' + sourceGuid + ', target=' + targetGuid +
+                      ', importance=' + importance + ').'
+                });
+            }
+          }
+        }
+      }
+    },
+
+    /**
+     * Converts |ts| (in microseconds) to a timestamp in the model clock domain
+     * (in milliseconds).
+     */
+    toModelTimeFromUs_(ts) {
+      if (!this.toModelTime_) {
+        this.toModelTime_ =
+            this.model_.clockSyncManager.getModelTimeTransformer(
+                this.clockDomainId_);
+      }
+
+      return this.toModelTime_(tr.b.Unit.timestampFromUs(ts));
+    },
+
+    /**
+     * Converts |ts| (in microseconds) to a timestamp in the model clock domain
+     * (in milliseconds). If |ts| is undefined, undefined is returned.
+     */
+    maybeToModelTimeFromUs_(ts) {
+      if (ts === undefined) {
+        return undefined;
+      }
+
+      return this.toModelTimeFromUs_(ts);
+    },
+
+    /**
+     * Converts |dur| (in microseconds) to a millisecond value. If |dur| is
+     * undefined, undefined is returned.
+     */
+    durationFromUs_(dur) {
+      if (dur === undefined) {
+        return undefined;
+      }
+
+      return tr.b.Unit.timestampFromUs(dur);
+    }
+  };
+
+  tr.importer.Importer.register(TraceEventImporter);
+
+  return {
+    TraceEventImporter,
+  };
+});
+</script>

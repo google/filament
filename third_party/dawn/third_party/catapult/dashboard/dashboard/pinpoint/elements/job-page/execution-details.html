@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/job-page/exception-details.html">
+
+<dom-module id="execution-details">
+  <template>
+    <style include="base-style">
+      #exception {
+        font-size: 0.8em;
+        margin: 1em 0;
+        white-space: pre-wrap;
+      }
+
+      table {
+        table-layout: fixed;
+        width: 100%;
+      }
+
+      th {
+        text-align: right;
+        width: 4em;
+      }
+
+      td {
+        overflow-wrap: break-word;
+      }
+    </style>
+
+    <template is="dom-if" if="[[hasExecutionDetails(execution)]]">
+      <table>
+        <template is="dom-repeat" items="[[executionDetails(execution)]]">
+          <tr>
+            <th>[[item.key]]
+            <td>
+              <template is="dom-if" if="[[item.url]]">
+                <a href="[[item.url]]" target="_blank">[[item.value]]</a>
+              </template>
+              <template is="dom-if" if="[[isTask(item.key)]]">
+                <copy id="swarming" on-click="swarming" task="{{item.value}}">🖥️</copy>
+                <paper-tooltip for="swarming" type="explanatory">
+                  Command to run swarming
+                </paper-tooltip>
+              </template>
+              <paper-tooltip for="tooltip_swarming">Run swarming</paper-tooltip>
+              <template is="dom-if" if="[[isTask(item.key)]]">
+                <copy id="swarmingHelp" on-click="openSwarmingDialog">❓</copy>
+                <paper-tooltip for="swarmingHelp" type="explanatory">
+                  Help
+                </paper-tooltip>
+              </template>
+              <template is="dom-if" if="[[!item.url]]">
+                [[item.value]]
+              </template>
+          </tr>
+        </template>
+      </table>
+    </template>
+
+    <paper-dialog id="tooltip_swarming" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
+      <h2>Button usage:</h2>
+      <p>
+        🖥️: Copy the swarming command which kicks off the swarming tests with corresponding parameters.
+      </p>
+      <h2>Pre-requisite: depot_tools and swarming</h2>
+      <div>
+        <p>
+          You need <a href="https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#install"
+                      target="_blank">depot_tools(download instructions)  </a>
+          and <a href="https://g3doc.corp.google.com/company/teams/chrome/ops/luci/swarming/index.md?cl=head" target="_blank">swarming</a> installed to run the tests locally.
+        </p>
+        <code>
+          # To set up swarming in your current folder, copy code below and paste to terminal after you installed depot_tools
+        </code>
+        </br>
+        <code>
+          # (if needed, use "\${platform}" as-is) cipd install "infra/tools/luci/swarming/\${platform}" -root bar
+        </code>
+        </br>
+        <code>
+          # (if needed) ./bar/swarming login
+        </code>
+        </br>
+        <code>
+          # '-realm' is only needed if resultdb is enabled for the task.
+        </code>
+        </br>
+        <code>
+          # Please use a realm that has 'role/resultdb.invocationCreator' in the realms.cfg of your project.
+        </code>
+      </div>
+    </paper-dialog>
+
+    <exception-details exception="[[exception(execution)]]"></exception-details>
+    <paper-toast id="swarmingToast"></paper-toast>
+  </template>
+
+  <script>
+    'use strict';
+
+    const _SWARMING_PREFIX = 'swarming reproduce -S chrome-swarming.appspot.com -realm project:foo '
+    const _SWARMING_SUCCESS_PREFIX = 'Swarming command copied for task: '
+
+    Polymer({
+      is: 'execution-details',
+
+      properties: {
+        execution: {
+          type: Object,
+        },
+      },
+
+      openSwarmingDialog() {
+        this.$.tooltip_swarming.open();
+      },
+
+      isTask(s) {
+        if (s == 'task') {
+          return true;
+        }
+        return false;
+      },
+
+      swarming(e) {
+        navigator.clipboard.writeText(_SWARMING_PREFIX + e.target.task);
+        const toast = document.getElementById('swarmingToast');
+        toast.text = _SWARMING_SUCCESS_PREFIX + e.target.task;
+        toast.show();
+      },
+
+      exception(execution) {
+        if (!execution) {
+          return null;
+        }
+        return execution.exception;
+      },
+
+      hasExecutionDetails(execution) {
+        return this.executionDetails(execution).length;
+      },
+
+      executionDetails(execution) {
+        if (!execution) {
+          return [];
+        }
+        return execution.details;
+      },
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,24 @@
+.gitcookies problem report:
+
+  .googlesource.com wildcard record detected:
+
+    Chrome Infrastructure team recommends to list full host names explicitly.
+
+  The following hosts were defined twice:
+
+    dup.googlesource.com
+
+  Credentials should come in pairs for Git and Gerrit hosts. These hosts are missing:
+
+    gpartial-review.googlesource.com    but gpartial.googlesource.com defined
+    partial.googlesource.com            but partial-review.googlesource.com defined
+
+  The following Git hosts have differing credentials from their Gerrit counterparts:
+
+    conflict.googlesource.com    git-example.google.com vs git-example.chromium.org
+
+  You can manually remove corresponding lines in your ~%(sep)s.gitcookies file and visit the following URLs with correct account to generate correct credential lines:
+
+    https://conflict.googlesource.com/new-password
+    https://gpartial.googlesource.com/new-password
+    https://partial.googlesource.com/new-password

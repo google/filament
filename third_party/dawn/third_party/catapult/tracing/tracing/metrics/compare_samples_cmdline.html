@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/base/xhr.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+const escapeChars = s => s.replace(/[\:|=\/#&,]/g, '_');
+
+function findUnescapedKey(escaped, d) {
+  if (!d) {
+    return undefined;
+  }
+
+  for (const k of Object.keys(d)) {
+    if (escapeChars(k) === escapeChars(escaped)) {
+      return k;
+    }
+  }
+}
+
+function geoMeanFromHistogram(h) {
+  if (!h.hasOwnProperty('buckets')) return 0.0;
+  let count = 0;
+  let sumOfLogs = 0;
+  for (const bucket of h.buckets) {
+    if (bucket.hasOwnProperty('high')) {
+      bucket.mean = (bucket.low + bucket.high) / 2.0;
+    } else {
+      bucket.mean = bucket.low;
+    }
+
+    if (bucket.mean > 0) {
+      sumOfLogs += Math.log(bucket.mean) * bucket.count;
+      count += bucket.count;
+    }
+  }
+  if (count === 0) return 0.0;
+  return Math.exp(sumOfLogs / count);
+}
+
+function guessFullMetricName(metricName) {
+  const parts = metricName.split('/');
+  if (parts.length === 2) {
+    return metricName + '/summary';
+  }
+  return undefined;
+}
+
+function splitMetric(metricName) {
+  const parts = metricName.split('/');
+  let interactionName;
+  let traceName = 'summary';
+  let chartName = parts[0];
+  if (parts.length === 3) {
+    // parts[1] is the interactionName
+    if (parts[1]) chartName = parts[1] + '@@' + chartName;
+    traceName = parts[2];
+  } else if (parts.length === 2) {
+    if (chartName !== parts[1]) traceName = parts[1];
+  } else {
+    throw new Error('Could not parse metric name.');
+  }
+  return [chartName, traceName];
+}
+
+function valuesFromCharts(listOfCharts, metricName) {
+  const allValues = [];
+  const chartAndTrace = splitMetric(metricName);
+  for (const charts of listOfCharts) {
+    const chartName = findUnescapedKey(chartAndTrace[0], charts.charts);
+    if (chartName) {
+      const traceName = findUnescapedKey(
+          chartAndTrace[1], charts.charts[chartName]);
+      if (traceName) {
+        if (charts.charts[chartName][traceName].type ===
+            'list_of_scalar_values') {
+          if (charts.charts[chartName][traceName].values === null) continue;
+          allValues.push(tr.b.math.Statistics.mean(
+              charts.charts[chartName][traceName].values));
+        }
+        if (charts.charts[chartName][traceName].type === 'histogram') {
+          allValues.push(
+              geoMeanFromHistogram(charts.charts[chartName][traceName]));
+        }
+        if (charts.charts[chartName][traceName].type === 'scalar') {
+          allValues.push(charts.charts[chartName][traceName].value);
+        }
+      }
+    }
+  }
+  return allValues;
+}
+
+function valuesFromChartsWithFallback(listOfCharts, metricName) {
+  const allValues = valuesFromCharts(listOfCharts, metricName);
+  if (allValues.length > 0) return allValues;
+
+  // If this had a grouping_label, the "summary" part may have been stripped by
+  // the dashboard during upload. We can re-add it here.
+  const fullMetricName = guessFullMetricName(metricName);
+  if (!fullMetricName) return [];
+
+  return valuesFromCharts(listOfCharts, fullMetricName);
+}
+
+function parseFiles(files) {
+  const results = [];
+  for (const path of files) {
+    const current = tr.b.getSync('file://' + path);
+    results.push(JSON.parse(current));
+  }
+  return results;
+}
+
+const escapeForRegExp = s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+const strFromRE = re => re.toString().split('/')[1];
+
+function valuesFromBuildbotOutput(out, metric) {
+  if (!out) return [];
+
+  let stringVals = [];
+  const floatVals = [];
+  const chartAndTrace = splitMetric(metric);
+  const metricRE = escapeForRegExp(
+      'RESULT ' + chartAndTrace[0] + ': ' + chartAndTrace[1] + '=');
+  const singleResultRE = new RegExp(metricRE +
+      strFromRE(/\s*([-]?[\d\.]+)/), 'g');
+  const multiResultsRE = new RegExp(metricRE +
+      strFromRE(/\s*\[\s*([\d\., -]+)\s*\]/), 'g');
+  const meanStdDevRE = new RegExp(metricRE +
+      strFromRE(/\s*\{\s*([-]?\d*(?:\.\d*)?),\s*([-]?\d*(?:\.\d*)?)\}/), 'g');
+  for (const line of out.split(/\r?\n/)) {
+    const singleResultMatch = singleResultRE.exec(line);
+    const multiResultsMatch = multiResultsRE.exec(line);
+    const meanStdDevMatch = meanStdDevRE.exec(line);
+    if (singleResultMatch && singleResultMatch.length > 1) {
+      stringVals.push(singleResultMatch[1]);
+    } else if (multiResultsMatch && multiResultsMatch.length > 1) {
+      const values = multiResultsMatch[1].split(',');
+      stringVals = stringVals.concat(values);
+    } else if (meanStdDevMatch && meanStdDevMatch.length > 1) {
+      stringVals.push(meanStdDevMatch[1]);
+    }
+  }
+  for (const val of stringVals) {
+    const f = parseFloat(val);
+    if (!isNaN(f)) floatVals.push(f);
+  }
+  return floatVals;
+}
+
+function parseMultipleBuildbotStreams(files, metric) {
+  let allValues = [];
+  for (const path of files) {
+    let contents;
+    try {
+      contents = tr.b.getSync('file://' + path);
+    } catch (ex) {
+      const err = new Error('Could not open' + path);
+      err.name = 'File loading error';
+      throw err;
+    }
+    allValues = allValues.concat(valuesFromBuildbotOutput(contents, metric));
+  }
+  return allValues;
+}
+
+const buildComparisonResultOutput = function(a, b) {
+  let comparisonResult;
+  if (!a.length || !b.length) {
+    comparisonResult = {
+      significance: tr.b.math.Statistics.Significance.NEED_MORE_DATA
+    };
+  } else {
+    comparisonResult = tr.b.math.Statistics.mwu(
+        a, b, tr.b.math.Statistics.DEFAULT_ALPHA,
+        tr.b.math.Statistics.MAX_SUGGESTED_SAMPLE_SIZE).asDict();
+  }
+  return {
+    sampleA: a,
+    sampleB: b,
+    result: comparisonResult
+  };
+};
+
+const SampleComparison = {
+
+  compareBuildbotOutputs(
+      buildbotOutputAPathList, buildbotOutputBPathList, metric) {
+    const aPaths = buildbotOutputAPathList.split(',');
+    const bPaths = buildbotOutputBPathList.split(',');
+    const sampleA = parseMultipleBuildbotStreams(aPaths, metric);
+    const sampleB = parseMultipleBuildbotStreams(bPaths, metric);
+    return buildComparisonResultOutput(sampleA, sampleB);
+  },
+
+  compareCharts(chartPathListA, chartPathListB, metric) {
+    const aPaths = chartPathListA.split(',');
+    const bPaths = chartPathListB.split(',');
+    const chartsA = parseFiles(aPaths);
+    const chartsB = parseFiles(bPaths);
+    const sampleA = valuesFromChartsWithFallback(chartsA, metric);
+    const sampleB = valuesFromChartsWithFallback(chartsB, metric);
+    return buildComparisonResultOutput(sampleA, sampleB);
+  }
+
+};
+
+if (tr.isHeadless) {
+  const [method, ...rest] = sys.argv.slice(1);
+  if (SampleComparison[method]) {
+    console.log(JSON.stringify(SampleComparison[method](...rest)));
+  }
+}
+</script>

@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; DeviceMemory_ \&gt;" alt="" coords="536,5,765,47"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_device_memory__.html" title="VkDeviceMemory wrapper" alt="" coords="813,42,1023,69"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkDeviceMemory,\l PVRVkObjectType \&gt;" alt="" coords="5,57,193,113"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkDeviceMemory,\l ObjectType::e_DEVICE_MEMORY \&gt;" alt="" coords="241,57,488,113"/>
+<area shape="rect" id="node5" href="$classpvrvk_1_1impl_1_1_i_device_memory__.html" title="VkDeviceMemory wrapper" alt="" coords="544,71,757,98"/>
+</map>

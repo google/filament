@@ -1,0 +1,60 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//gni/angle.gni")
+
+config("test_common_config") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_common",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/autotest",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/miniz",
+    "$angle_root/third_party/OpenCL-ICD-Loader/src/loader",
+  ]
+}
+
+source_set("test_common") {
+  cflags = [
+    "-Wno-deprecated-declarations",
+    "-Wno-#warnings",
+    "-Wno-format",
+    "-Wno-vla-cxx-extension",
+    "-Wno-deprecated-volatile",
+    "-Wno-c++11-narrowing",
+  ]
+
+  defines = [ "CL_TARGET_OPENCL_VERSION=300" ]
+
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/ThreadPool.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/conversions.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/crc32.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/deviceInfo.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/errorHelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/featureHelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/genericThread.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/imageHelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/kernelHelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/mingw_compat.c",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/msvc9.c",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/mt19937.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/os_helpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/parseParameters.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/propertyHelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/rounding_mode.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/testHarness.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/harness/typeWrappers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_common/miniz/miniz.c",
+  ]
+
+  configs += [ ":test_common_config" ]
+
+  deps = [
+    "$angle_root:cl_includes",
+    "$angle_root/third_party/OpenCL-ICD-Loader:opencl_icd_loader",
+  ]
+
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs -= [ "//build/config/compiler:no_exceptions" ]
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<dom-module id='tr-ui-b-deep-utils-test-a'>
+  <template>
+    <div></div>
+  </template>
+</dom-module>
+<dom-module id='tr-ui-b-deep-utils-test-b'>
+  <template>
+    <div></div>
+  </template>
+</dom-module>
+<dom-module id='tr-ui-b-deep-utils-test-c'>
+  <template>
+    <tr-ui-b-deep-utils-test-b class='x'></tr-ui-b-deep-utils-test-b>
+    <tr-ui-b-deep-utils-test-a class='x'></tr-ui-b-deep-utils-test-a>
+    <tr-ui-b-deep-utils-test-a class='x'></tr-ui-b-deep-utils-test-a>
+  </template>
+</dom-module>
+<dom-module id='tr-ui-b-deep-utils-test-d'>
+  <template>
+    <tr-ui-b-deep-utils-test-c></tr-ui-b-deep-utils-test-c>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-deep-utils-test-a'
+});
+
+Polymer({
+  is: 'tr-ui-b-deep-utils-test-b'
+});
+
+Polymer({
+  is: 'tr-ui-b-deep-utils-test-c'
+});
+
+Polymer({
+  is: 'tr-ui-b-deep-utils-test-d'
+});
+
+tr.b.unittest.testSuite(function() {
+  test('testFindDeepElementMatching', function() {
+    const d = document.createElement('tr-ui-b-deep-utils-test-d');
+
+    const b = tr.ui.b.findDeepElementMatching(d, 'tr-ui-b-deep-utils-test-b.x');
+    assert.isDefined(b);
+    assert.strictEqual(b.tagName, 'TR-UI-B-DEEP-UTILS-TEST-B');
+  });
+
+  test('testFindDeepElementsMatching', function() {
+    const d = document.createElement('tr-ui-b-deep-utils-test-d');
+
+    const a = tr.ui.b.findDeepElementsMatching(
+        d, 'tr-ui-b-deep-utils-test-a.x');
+    assert.isDefined(a);
+    assert.strictEqual(a[0].tagName, 'TR-UI-B-DEEP-UTILS-TEST-A');
+    assert.strictEqual(a[1].tagName, 'TR-UI-B-DEEP-UTILS-TEST-A');
+  });
+});
+</script>

@@ -1,0 +1,137 @@
+// Copyright (c) 2024 The Khronos Group Inc.
+// Copyright (c) 2024 Valve Corporation
+// Copyright (c) 2024 LunarG, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// NOTE: This file doesn't contain any entrypoints and should be compiled with the --no-link option for glslang
+
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+#if defined(GL_ARB_gpu_shader_int64)
+#extension GL_ARB_gpu_shader_int64 : require
+#else
+#error No extension available for 64-bit integers.
+#endif
+
+#include "gpuav_error_header.h"
+#include "gpuav_shaders_constants.h"
+#include "common_descriptor_sets.h"
+
+bool inst_ray_query_comp(const uint inst_num, const uvec4 stage_info, const uint ray_flags, const vec3 ray_origin, const float ray_tmin, const vec3 ray_direction, const float ray_tmax)
+{
+    uint error = 0u;
+    uint param_0 = 0u;
+
+    do {
+        if (isnan(ray_tmin)) {
+            error = kErrorSubCodeRayQueryMinNaN;
+            break;
+        }
+        if (isnan(ray_tmax)) {
+            error = kErrorSubCodeRayQueryMaxNaN;
+            break;
+        }
+        if (isnan(ray_origin.x) || isnan(ray_origin.y) || isnan(ray_origin.z)) {
+            error = kErrorSubCodeRayQueryOriginNaN;
+            break;
+        }
+        if (isnan(ray_direction.x) || isnan(ray_direction.y) || isnan(ray_direction.z)) {
+            error = kErrorSubCodeRayQueryDirectionNaN;
+            break;
+        }
+        if (isinf(ray_origin.x) || isinf(ray_origin.y) || isinf(ray_origin.z)) {
+            error = kErrorSubCodeRayQueryOriginFinite;
+            break;
+        }
+        if (isinf(ray_direction.x) || isinf(ray_direction.y) || isinf(ray_direction.z)) {
+            error = kErrorSubCodeRayQueryDirectionFinite;
+            break;
+        }
+        if (ray_tmin < 0.0f) {
+            error = kErrorSubCodeRayQueryNegativeMin;
+            break;
+        }
+        if (ray_tmax < 0.0f) {
+            error = kErrorSubCodeRayQueryNegativeMax;
+            break;
+        }
+        if (ray_tmax < ray_tmin) {
+            error = kErrorSubCodeRayQueryMinMax;
+            break;
+        }
+        // From SPIRV-Headers
+        const uint OpaqueKHR = 0x00000001;
+        const uint NoOpaqueKHR = 0x00000002;
+        const uint CullBackFacingTrianglesKHR = 0x00000010;
+        const uint CullFrontFacingTrianglesKHR = 0x00000020;
+        const uint CullOpaqueKHR = 0x00000040;
+        const uint CullNoOpaqueKHR = 0x00000080;
+        const uint SkipTrianglesKHR = 0x00000100;
+        const uint SkipAABBsKHR = 0x00000200;
+
+        const uint both_skip = SkipTrianglesKHR | SkipAABBsKHR;
+        uint skip_cull_mask = ray_flags &(SkipTrianglesKHR | CullBackFacingTrianglesKHR | CullFrontFacingTrianglesKHR);
+        uint opaque_mask = ray_flags &(OpaqueKHR | NoOpaqueKHR | CullOpaqueKHR | CullNoOpaqueKHR);
+
+        if ((ray_flags & both_skip) == both_skip) {
+            error = kErrorSubCodeRayQueryBothSkip;
+            param_0 = ray_flags;
+            break;
+        }
+        if (skip_cull_mask != 0 && ((skip_cull_mask & (skip_cull_mask - 1)) != 0)) {
+            error = kErrorSubCodeRayQuerySkipCull;
+            param_0 = ray_flags;
+            break;
+        }
+        if (opaque_mask != 0 && ((opaque_mask & (opaque_mask - 1)) != 0)) {
+            error = kErrorSubCodeRayQueryOpaque;
+            param_0 = ray_flags;
+            break;
+        }
+    } while (false);
+
+    if (0u != error) {
+        const uint cmd_id = inst_cmd_resource_index_buffer.index[0];
+        const uint cmd_errors_count = atomicAdd(inst_cmd_errors_count_buffer.errors_count[cmd_id], 1);
+        const bool max_cmd_errors_count_reached = cmd_errors_count >= kMaxErrorsPerCmd;
+
+        if (max_cmd_errors_count_reached) return false;
+
+        uint write_pos = atomicAdd(inst_errors_buffer.written_count, kErrorRecordSize);
+        const bool errors_buffer_not_filled = (write_pos + kErrorRecordSize) <= uint(inst_errors_buffer.data.length());
+
+        if (errors_buffer_not_filled) {
+            inst_errors_buffer.data[write_pos + kHeaderErrorRecordSizeOffset] = kErrorRecordSize;
+            inst_errors_buffer.data[write_pos + kHeaderShaderIdOffset] = kLinkShaderId;
+            inst_errors_buffer.data[write_pos + kHeaderInstructionIdOffset] = inst_num;
+            inst_errors_buffer.data[write_pos + kHeaderStageIdOffset] = stage_info.x;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_0] = stage_info.y;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_1] = stage_info.z;
+            inst_errors_buffer.data[write_pos + kHeaderStageInfoOffset_2] = stage_info.w;
+
+            inst_errors_buffer.data[write_pos + kHeaderErrorGroupOffset] = kErrorGroupInstRayQuery;
+            inst_errors_buffer.data[write_pos + kHeaderErrorSubCodeOffset] = error;
+
+            inst_errors_buffer.data[write_pos + kHeaderActionIdOffset] = inst_action_index_buffer.index[0];
+            inst_errors_buffer.data[write_pos + kHeaderCommandResourceIdOffset] = inst_cmd_resource_index_buffer.index[0];
+
+            inst_errors_buffer.data[write_pos + kInstRayQueryParamOffset_0] = param_0;
+        }
+        return false;
+    }
+
+    return true;
+}

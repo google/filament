@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/ui/analysis/generic_object_view.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_icon.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-timeline-view-metadata-overlay'>
+  <template>
+    <style>
+    :host {
+      width: 700px;
+
+      overflow: auto;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-timeline-view-metadata-overlay',
+
+  created() {
+    this.metadata_ = undefined;
+  },
+
+  ready() {
+    this.$.table.tableColumns = [
+      {
+        title: 'name',
+        value: d => d.name,
+      },
+      {
+        title: 'value',
+        value: d => {
+          const gov = document.createElement('tr-ui-a-generic-object-view');
+          gov.object = d.value;
+          return gov;
+        },
+      }
+    ];
+  },
+
+  get metadata() {
+    return this.metadata_;
+  },
+
+  set metadata(metadata) {
+    this.metadata_ = metadata;
+    this.$.table.tableRows = this.metadata_;
+    this.$.table.rebuild();
+  }
+});
+</script>

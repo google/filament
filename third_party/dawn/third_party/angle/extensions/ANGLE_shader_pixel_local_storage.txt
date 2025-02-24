@@ -1,0 +1,1360 @@
+Name
+
+    ANGLE_shader_pixel_local_storage
+
+Name Strings
+
+    GL_ANGLE_shader_pixel_local_storage
+    GL_ANGLE_shader_pixel_local_storage_coherent
+
+Contact
+
+    Chris Dalton (chris 'at' rive.app)
+
+Contributors
+
+    Chris Dalton, Rive
+    Kenneth Russell, Google Inc.
+    Shahbaz Youssefi, Google Inc.
+    Kelsey Gilbert, Mozilla Corp.
+    Geoff Lang, Google Inc.
+    Kimmo Kinnunen, Apple Inc.
+    Contributors to the EXT_shader_pixel_local_storage specification
+    Contributors to the ARB_fragment_shader_interlock specification
+    Contributors to the INTEL_fragment_shader_ordering specification
+    Contributors to the EXT_shader_framebuffer_fetch specification
+    Contributors to the ARB_shader_image_load_store specification
+    Contributors to the QCOM_tiled_rendering specification
+    Contributors to the KHR_blend_equation_advanced specification
+    Contributors to the NV_texture_barrier specification
+    Contributors to the (Vulkan) EXT_fragment_shader_interlock specification
+    Contributors to the (Vulkan) ARM_rasterization_order_attachment_access specification
+
+Status
+
+    Incomplete
+
+Version
+
+    Last Modified Date: Aug 18, 2022
+    Author Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    OpenGL ES 3.0 and GLSL ES 3.00 are required.
+
+    This extension is written against the OpenGL ES 3.0 specification and the
+    OpenGL ES Shading Language 3.00 specification.
+
+    This extension interacts with ANGLE_robust_client_memory.
+
+    This extension interacts with ANGLE_request_extension.
+
+    This extension interacts with ANGLE_polygon_mode.
+
+    This extension interacts with ANGLE_provoking_vertex.
+
+    This extension interacts with EXT_blend_func_extended.
+
+    This extension interacts with EXT_clip_control.
+
+    This extension interacts with EXT_clip_cull_distance.
+
+    This extension interacts with EXT_depth_clamp.
+
+    This extension interacts with EXT_draw_buffers_indexed.
+
+    This extension interacts with EXT_polygon_offset_clamp.
+
+    This extension interacts with KHR_blend_equation_advanced.
+
+    This extension interacts with KHR_debug.
+
+    This extension interacts with NV_polygon_mode.
+
+    This extension interacts with NV_scissor_exclusive.
+
+    This extension interacts with OES_draw_buffers_indexed.
+
+    This extension interacts with OES_sample_variables.
+
+    This extension interacts with OpenGL ES 3.1.
+
+    This extension interacts with GLSL ES 3.10.
+
+Overview
+
+    A major feature missing from WebGL is the ability to access rendering
+    results from fragment shaders and perform tasks like programmable blending.
+    This is especially desirable on Tile-Based Deferred Rendering (TBDR)
+    architectures, as it can be implemented entirely on-chip to achieve maximum
+    performance.
+
+    Capabilities in this area vary widely, but it is the case that all major GPU
+    vendors, on all major APIs, have some mechanism, direct or indirect, whereby
+    a fragment shader can access prior rendering results. The intent of this
+    extension is to condense this myriad of hardware and API features into a
+    simple interface with straightforward implementation(s) on every graphics
+    API.
+
+    Similar to EXT_shader_pixel_local_storage, this extension provides a means
+    for fragment shaders to load and store user-defined data associated with the
+    pixel being covered. The data is accessed via GLSL built-in functions
+    pixelLocalLoadANGLE() and pixelLocalStoreANGLE(). Only the current pixel's
+    data can be accessed; data associated with other pixels is not accessible to
+    the fragment shader. Pixel local storage persists across all fragment
+    invocations and across all draws issued between OpenGL ES API calls
+    BeginPixelLocalStorageANGLE() and EndPixelLocalStorageANGLE(), even if the
+    application binds different shader programs.
+
+    Applications define custom, formatted planes of pixel local storage data, up
+    to an implementation-dependent maximum, using the OpenGL ES API functions
+    FramebufferMemorylessPixelLocalStorageANGLE() and
+    FramebufferTexturePixelLocalStorageANGLE(). These methods behave similarly
+    to FramebufferTextureLayer(). Fragment shaders access a specific local
+    storage plane using one of the opaque GLSL types {pixelLocalANGLE,
+    ipixelLocalANGLE, upixelLocalANGLE}, which are analogous to samplers or
+    images.
+
+    This extension provides two different extension string entries:
+
+        - GL_ANGLE_shader_pixel_local_storage: Provides the new pixel local
+          storage functionality, but each pixel may only be touched once in any
+          single rendering pass. The command PixelLocalStorageBarrierANGLE() is
+          provided to indicate a boundary between passes. Rendering the same
+          pixel twice without a barrier can yield incorrect results. However,
+          "incorrect" does _not_ mean they can be random, uninitialized, or
+          leaked from outside the current draw framebuffer; any artifacts are
+          strictly a result of race conditions between overlapping fragment
+          invocations involved in the current rendering pass.
+
+        - GL_ANGLE_shader_pixel_local_storage_coherent: Guarantees that pixel
+          local storage operations touching the same pixel are invoked
+          synchronously and in API primitive order. No barriers are required and
+          render passes can emit overlapping fragments.
+
+    Some implementations may support GL_ANGLE_shader_pixel_local_storage without
+    supporting GL_ANGLE_shader_pixel_local_storage_coherent.
+
+    A note on performance: On some platforms, this feature will be polyfilled
+    with shader images. While every implementation can be expected to run
+    reasonably fast, certain platforms may see some performance degradation at
+    times from using pixel local storage instead of the normal raster pipeline.
+    As always, benchmark and consider other options before using pixel local
+    storage.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void FramebufferMemorylessPixelLocalStorageANGLE(int plane,
+                                                     enum internalformat)
+
+    void FramebufferTexturePixelLocalStorageANGLE(int plane,
+                                                  uint backingtexture,
+                                                  int level,
+                                                  int layer)
+
+    void FramebufferPixelLocalClearValue{f,i,ui}vANGLE(int plane,
+                                                       const T value[])
+
+    void BeginPixelLocalStorageANGLE(sizei n, const enum loadops[])
+
+    void EndPixelLocalStorageANGLE(sizei n, const enum storeops[])
+
+    void PixelLocalStorageBarrierANGLE()
+
+    void FramebufferPixelLocalStorageInterruptANGLE()
+
+    void FramebufferPixelLocalStorageRestoreANGLE()
+
+    void GetFramebufferPixelLocalStorageParameter{f,i}vANGLE(int plane,
+                                                             enum pname,
+                                                             T *params)
+
+    (the following commands are supported only if ANGLE_robust_client_memory is
+     supported)
+
+    void GetFramebufferPixelLocalStorageParameter{f,i}vRobustANGLE(int plane,
+                                                                   enum pname,
+                                                                   GLsizei bufSize,
+                                                                   GLsizei *length,
+                                                                   T *params)
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv():
+
+        MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE                              0x96E0
+        MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE       0x96E1
+        MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE    0x96E2
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE                           0x96E3
+
+    Accepted as array elements in the <loadops> parameter of
+    BeginPixelLocalStorageANGLE():
+
+        LOAD_OP_ZERO_ANGLE                                                0x96E4
+        LOAD_OP_CLEAR_ANGLE                                               0x96E5
+        LOAD_OP_LOAD_ANGLE                                                0x96E6
+
+    Accepted as array elements in the <storeops> parameter of
+    EndPixelLocalStorageANGLE():
+
+        STORE_OP_STORE_ANGLE                                              0x96E7
+
+    Accepted by the <pname> parameter of
+    GetFramebufferPixelLocalStorageParameterivANGLE() and
+    GetFramebufferPixelLocalStorageParameterivRobustANGLE():
+
+        PIXEL_LOCAL_FORMAT_ANGLE                                          0x96E8
+        PIXEL_LOCAL_TEXTURE_NAME_ANGLE                                    0x96E9
+        PIXEL_LOCAL_TEXTURE_LEVEL_ANGLE                                   0x96EA
+        PIXEL_LOCAL_TEXTURE_LAYER_ANGLE                                   0x96EB
+
+    Accepted by the <pname> parameter of
+    GetFramebufferPixelLocalStorageParameterfvANGLE() and
+    GetFramebufferPixelLocalStorageParameterfvRobustANGLE():
+
+        PIXEL_LOCAL_CLEAR_VALUE_FLOAT_ANGLE                               0x96EC
+
+    Accepted by the <pname> parameter of
+    GetFramebufferPixelLocalStorageParameterivANGLE() and
+    GetFramebufferPixelLocalStorageParameterivRobustANGLE():
+
+        PIXEL_LOCAL_CLEAR_VALUE_INT_ANGLE                                 0x96ED
+        PIXEL_LOCAL_CLEAR_VALUE_UNSIGNED_INT_ANGLE                        0x96EE
+
+New GLSL Opaque Types
+
+    pixelLocalANGLE
+    ipixelLocalANGLE
+    upixelLocalANGLE
+
+New GLSL Built-in Functions
+
+    gvec4 pixelLocalLoadANGLE(gpixelLocalANGLE)
+    void pixelLocalStoreANGLE(gpixelLocalANGLE, gvec4 value)
+
+Additions to the OpenGL ES Specification, Version 3.0.6
+
+  Modify Chapter 2 "OpenGL ES Operation"
+
+  (Insert a new numbered section before 2.14 "Asynchronous Queries".)
+
+  Section 2.X "Pixel Local Storage"
+
+    Pixel local storage provides a means for fragment shaders to load and store
+    user-defined data associated with the pixel being covered. Pixel local
+    storage is configured on a framebuffer as described in Section 4.4.2.X
+    "Configuring Pixel Local Storage on a Framebuffer". Fragment shaders may
+    access pixel local storage data as described in OpenGL ES Shading Language
+    Specification.
+
+    Pixel local storage is activated and deactivated for the current draw
+    framebuffer using the commands:
+
+      void BeginPixelLocalStorageANGLE(sizei n, const enum loadops[])
+
+      void EndPixelLocalStorageANGLE(sizei n, const enum storeops[])
+
+    Parameters:
+
+      * <n> specifies the length of the <loadops> or <storeops> array.
+
+      * <loadops> specifies an array of <n> pixel local storage "Load
+                  Operations", whose ith element describes the Load Operation to
+                  perform on the ith pixel local storage plane. Supported Load
+                  Operations are listed in Table X.1. Load Operations are
+                  performed on the entire area of each plane, irrespective of
+                  scissor or viewport state.
+
+        Load Operation           Description
+        -----------------------------------------------------------------------
+        LOAD_OP_ZERO_ANGLE       Clear all components of the pixel local storage
+                                 plane to 0. This is recommended over
+                                 LOAD_OP_CLEAR_ANGLE, as it is more likely to be
+                                 performant on all implementations.
+
+        LOAD_OP_CLEAR_ANGLE      Clear the pixel local storage plane to its
+                                 framebuffer's ith clear value of corresponding
+                                 type. Pixel local clear values are specified
+                                 with
+                                 FramebufferPixelLocalClearValue{f,i,ui}vANGLE(),
+                                 as described in section 4.4.2.Y "Pixel Local
+                                 Clear State". If the magnitude of any component
+                                 of the clear value is too large to be
+                                 represented in the plane's internalformat, it
+                                 is clamped.
+
+        LOAD_OP_LOAD_ANGLE       Load the contents of the bound texture image
+                                 into pixel local storage. This Load Operation
+                                 is only valid for pixel local storage planes
+                                 that have a texture binding. Texture bindings
+                                 are established with
+                                 FramebufferTexturePixelLocalStorageANGLE() as
+                                 described in section 4.4.2.X "Configuring Pixel
+                                 Local Storage on a Framebuffer".
+
+        DONT_CARE                Leave the initial contents of the pixel local
+                                 storage plane undefined, favoring speed, and
+                                 with the caveat that they are _not_ leaked from
+                                 outside the current draw framebuffer.
+
+        Table X.1: Pixel local storage Load Operations.
+
+      * <storeops> specifies an array of <n> pixel local storage "Store
+                   Operations", whose ith element describes the Store Operation
+                   to perform on the backing texture of the ith pixel local
+                   storage plane. The store operation is ignored if its plane is
+                   memoryless. Supported Store Operations are listed in Table
+                   X.2.
+
+        Store Operation         Description
+        -----------------------------------------------------------------------
+        STORE_OP_STORE_ANGLE    Update the the bound texture image to reflect
+                                the pixel local storage contents.
+
+        DONT_CARE               Leave the bound texture image contents
+                                undefined, with the caveat that they are either
+                                unchanged, or not leaked from outside the
+                                current draw framebuffer.
+
+        Table X.2: Pixel local storage Store Operations.
+
+    Errors generated by BeginPixelLocalStorageANGLE():
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the default framebuffer
+        object name 0 is bound to DRAW_FRAMEBUFFER.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_OPERATION is generated if
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is nonzero.
+
+      * INVALID_OPERATION is generated if the value of SAMPLE_BUFFERS is 1
+        (i.e., if rendering to a multisampled framebuffer).
+
+      * INVALID_OPERATION is generated if DITHER is enabled.
+
+      * INVALID_OPERATION is generated if RASTERIZER_DISCARD is enabled.
+
+      * INVALID_OPERATION is generated if TRANSFORM_FEEDBACK_ACTIVE is TRUE.
+
+      * INVALID_OPERATION is generated if BLEND_DST_ALPHA, BLEND_DST_RGB,
+        BLEND_SRC_ALPHA, or BLEND_SRC_RGB, for any draw buffer, is a blend
+        function requiring the secondary color input, as specified in
+        EXT_blend_func_extended (SRC1_COLOR_EXT, ONE_MINUS_SRC1_COLOR_EXT,
+        SRC1_ALPHA_EXT, ONE_MINUS_SRC1_ALPHA_EXT).
+
+      * INVALID_OPERATION is generated if BLEND_EQUATION_RGB and/or
+        BLEND_EQUATION_ALPHA is an advanced blend equation defined in
+        KHR_blend_equation_advanced.
+
+      * INVALID_VALUE is generated if
+        <n> < 1 or <n> > MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the draw framebuffer has
+        an image attached to any color attachment point on or after:
+
+          COLOR_ATTACHMENT0 +
+          MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the draw framebuffer has
+        an image attached to any color attachment point on or after:
+
+          COLOR_ATTACHMENT0 +
+          MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE - <n>
+
+      * INVALID_VALUE is generated if <loadops> is NULL.
+
+      * INVALID_ENUM is generated if <loadops>[0..<n>-1] is not one of the Load
+        Operations enumerated in Table X.1.
+
+      * INVALID_OPERATION is generated if a pixel local storage plane at index
+        [0..<n>-1] is in a deinitialized state.
+
+      * INVALID_OPERATION is generated if <loadops>[0..<n>-1] is
+        LOAD_OP_LOAD_ANGLE and the pixel local storage plane at that same index
+        is memoryless.
+
+      * INVALID_OPERATION is generated if all enabled, texture-backed pixel
+        local storage planes do not have the same width and height.
+
+      * INVALID_OPERATION is generated if the draw framebuffer has other
+        attachments, and its enabled, texture-backed pixel local storage planes
+        do not have identical dimensions with the rendering area.
+
+        (The rendering area is defined in section 4.4.1 "Binding and Managing
+        Framebuffer Objects" as the intersection of rectangles having a lower
+        left of [0, 0] and an upper right of [width, height] for each
+        attachment.)
+
+      * INVALID_OPERATION is generated if the draw framebuffer has no
+        attachments and no enabled, texture-backed pixel local storage planes.
+
+      * INVALID_OPERATION is generated if a single texture image is bound to
+        more than one active pixel local storage plane.
+
+      * INVALID_OPERATION is generated if a single texture image is
+        simultaneously bound to a pixel local storage plane and attached to the
+        draw framebuffer.
+
+    Errors generated by EndPixelLocalStorageANGLE():
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_OPERATION is generated if
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is zero.
+
+      * INVALID_VALUE is generated if
+        <n> != PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE.
+
+      * INVALID_ENUM is generated if
+        <storeops>[0..PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE-1] is not one of
+        the Store Operations enumerated in Table X.2.
+
+    A successful call to BeginPixelLocalStorageANGLE() has the following side
+    effects:
+
+      * Pixel local storage planes indexed in the range [0..<n>-1] are fully
+        activated, initialized and available for fragment shaders to read and
+        write.
+
+      * PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is updated to equal <n>.
+
+      * BLEND is disabled and COLOR_WRITEMASK is updated to {TRUE, TRUE, TRUE,
+        TRUE} for all draw buffers whose index is >= <i>, where:
+
+        <i> = min(
+           MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE,
+           MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE - <n>)
+
+    Pixel local storage data will persist across all fragment invocations and
+    across all draws issued until the application calls
+    EndPixelLocalStorageANGLE(), even if the application binds different shader
+    programs. In order to make this guarantee, the the OpenGL ES API only allows
+    a limited set of commands while PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is
+    nonzero. All other commands generate INVALID_OPERATION. Valid commands while
+    pixel local storage is active are listed in Table X.3.
+
+        ActiveTexture
+        BindBuffer
+        BindBufferBase
+        BindBufferRange
+        BindFramebuffer
+        BindSampler
+        BindTexture
+        BindVertexArray
+        BlendEquationSeparatei*
+        BlendEquationi*
+        BlendFuncSeparatei*
+        BlendFunci*
+        BufferData
+        BufferSubData
+        CheckFramebufferStatus
+        ClearBuffer*
+        ClipControlEXT
+        ColorMaski*
+        CullFace
+        DebugMessageCallback*
+        DebugMessageControl*
+        DebugMessageInsert*
+        Delete*
+        DepthFunc
+        DepthMask
+        DepthRangef
+        Disable
+        DisableVertexAttribArray
+        Disablei*
+        DispatchComputeIndirect
+        DrawArrays*
+        DrawBuffers
+        DrawElements*
+        DrawRangeElements*
+        Enable
+        EnableClientState
+        EnableVertexAttribArray
+        Enablei*
+        EndPixelLocalStorageANGLE
+        FlushMappedBufferRange
+        FramebufferMemorylessPixelLocalStorageANGLE
+        FramebufferParameter*
+        FramebufferPixelLocalStorageInterruptANGLE
+        FramebufferRenderbuffer
+        FramebufferTexture*
+        FrontFace
+        Gen*
+        Get*
+        Is*
+        MapBufferRange
+        ObjectLabel*
+        ObjectPtrLabel*
+        PixelLocalStorageBarrierANGLE
+        PolygonMode*
+        PolygonOffset*
+        PopDebugGroup*
+        ProvokingVertexANGLE
+        PushDebugGroup*
+        SamplerParameter*
+        Scissor
+        StencilFunc
+        StencilFuncSeparate
+        StencilMask
+        StencilMaskSeparate
+        StencilOp
+        StencilOpSeparate
+        TexParameter*
+        Uniform*
+        UnmapBuffer
+        UseProgram
+        ValidateProgram
+        VertexAttrib*
+        Viewport
+
+        Table X.3: Valid commands while PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE
+        is nonzero.
+
+    Additional restrictions also go into effect while
+    PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is nonzero:
+
+      * Calls that modify the current draw framebuffer, or change the
+        DRAW_FRAMEBUFFER_BINDING, end pixel local storage implicitly with
+        <storeops> of STORE_OP_STORE_ANGLE.
+
+        e.g., BindFramebuffer, DrawBuffers, FramebufferTexture2D,
+        FramebufferTextureLayer, FramebufferRenderbuffer,
+        FramebufferParameteri, FramebufferTexturePixelLocalStorageANGLE,
+        FramebufferMemorylessPixelLocalStorageANGLE, etc. (When <target> is
+        FRAMEBUFFER or DRAW_FRAMEBUFFER, or when the framebuffer object being
+        modified is the draw framebuffer whose pixel local storage is currently
+        active).
+
+      * INVALID_OPERATION is generated by Enable(), Disable() if <cap> is not
+        one of: BLEND, CULL_FACE, DEBUG_OUTPUT, DEBUG_OUTPUT_SYNCHRONOUS,
+        DEPTH_CLAMP_EXT, DEPTH_TEST, POLYGON_OFFSET_POINT_NV,
+        POLYGON_OFFSET_LINE_NV, POLYGON_OFFSET_LINE_ANGLE, POLYGON_OFFSET_FILL,
+        PRIMITIVE_RESTART_FIXED_INDEX, SCISSOR_TEST, SCISSOR_TEST_EXCLUSIVE_NV,
+        STENCIL_TEST, CLIP_DISTANCE[0..7]_EXT
+
+      * Calls to ClearBuffer{f,i,ui}v() are ignored if <buffer> is COLOR and any
+        of the following are true:
+
+        <buffer> >= MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE
+        <buffer> >=
+            (MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE -
+             ACTIVE_PIXEL_LOCAL_STORAGE_PLANES_ANGLE)
+
+      * Calls to EnableiOES(BLEND, <i>) and ColorMaskiOES(<i>, ...) are ignored
+        if any of the following are true:
+
+        <i> >= MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE
+        <i> >= (MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE -
+                ACTIVE_PIXEL_LOCAL_STORAGE_PLANES_ANGLE)
+
+      * Calls to Enable(BLEND) and ColorMask() only update state on draw buffers
+        whose index is less than <n>, where:
+
+        <n> = min(
+                MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE,
+                MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE -
+                ACTIVE_PIXEL_LOCAL_STORAGE_PLANES_ANGLE);
+
+        i.e., their behavior is overridden to the equivalence of:
+
+        for (int i = 0; i < <n>; ++i)
+            EnableiOES(BLEND, i)
+
+        for (int i = 0; i < <n>; ++i)
+            ColorMaskiOES(i, ...)
+
+      * INVALID_OPERATION is generated by Enablei*(), Disablei*() if <cap> is
+        not one of: BLEND, SCISSOR_TEST, SCISSOR_TEST_EXCLUSIVE_NV
+
+      * INVALID_OPERATION is generated by BlendFunc*() if <srcRGB>, <dstRGB>,
+        <srcAlpha>, or <dstAlpha> is a blend function requiring the secondary
+        color input, as specified in EXT_blend_func_extended (SRC1_COLOR_EXT,
+        ONE_MINUS_SRC1_COLOR_EXT, SRC1_ALPHA_EXT, ONE_MINUS_SRC1_ALPHA_EXT).
+
+      * INVALID_OPERATION is generated by BlendEquation*() if <mode> is one of
+        the advanced blend equations defined in KHR_blend_equation_advanced.
+
+      * INVALID_OPERATION is generated if a draw is issued with a fragment
+        shader that accesses a texture bound to pixel local storage.
+
+      * INVALID_OPERATION is generated if a draw is issued with a fragment
+        shader that has a pixel local uniform bound to an inactive pixel local
+        storage plane.
+
+      * INVALID_OPERATION is generated if a draw is issued with a fragment
+        shader that does _not_ have a pixel local uniform bound to an _active_
+        pixel local storage plane (i.e., the fragment shader must declare
+        uniforms bound to every single active pixel local storage plane).
+
+        This is because many backend implementations need to account for every
+        active pixel local storage plane, even if the application code does not
+        access it during a particular shader invocation.
+
+      * INVALID_OPERATION is generated if a draw is issued with a fragment
+        shader that has a pixel local storage uniform whose format layout
+        qualifier does not identically match the internalformat of its
+        associated pixel local storage plane on the current draw framebuffer, as
+        enumerated in Table X.4.
+
+    Because of the "implementation-dependent" clause of the framebuffer
+    completeness test, and because a pixel local storage implementation may add
+    additional attachments to the underlying framebuffer object, it is strongly
+    advised that an application also check to see if the framebuffer is complete
+    after BeginPixelLocalStorageANGLE() and prior to rendering. (See section
+    4.4.4.2 "Whole Framebuffer Completeness".)
+
+    If BeginPixelLocalStorageANGLE() generates an error,
+    PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is not modified, and a balancing
+    call to EndPixelLocalStorageANGLE() may therefore also generate an error.
+
+    When PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is zero, any draw issued with a
+    fragment shader that declares pixel local storage uniforms generates an
+    INVALID_FRAMEBUFFER_OPERATION error.
+
+  Section 2.X.1 "Non-coherent Pixel Local Storage"
+
+    When GL_ANGLE_shader_pixel_local_storage_coherent is _not_ supported, and
+    pixel local storage is active, applications must also split their rendering
+    of pixel local storage into separate passes, none of which touch an
+    individual pixel more than once. The command:
+
+      void PixelLocalStorageBarrierANGLE()
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_OPERATION is generated if
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is zero.
+
+    delimits a boundary between distinct, non-self-overlapping rendering passes.
+    Pixel local storage loads issued after the barrier will reflect stores
+    issued prior to the barrier, and stores issued after the barrier will not
+    execute until all accesses initiated prior to the barrier are complete.
+
+    Rendering to the same pixel more than once without a barrier in between can
+    yield incorrect results in pixel local storage, however, "incorrect" does
+    _not_ mean they can be random, uninitialized, or leaked from outside the
+    current draw framebuffer. Any artifacts are strictly a result of race
+    conditions between overlapping fragment invocations involved in the current
+    rendering pass.
+
+  Section 2.X.2 "Interrupting Pixel Local Storage"
+
+    An application may need to interrupt a pixel local storage rendering pass.
+    One example of this may be a browser implementing WebGL. The command:
+
+      void FramebufferPixelLocalStorageInterruptANGLE()
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the current interrupt
+        count on the draw framebuffer is equal to 255.
+
+    Increments an interrupt counter on the current draw framebuffer. When the
+    counter increments from 0 to 1, and PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE
+    is nonzero, this command also ends pixel local storage using
+    STORE_OP_STORE_ANGLE for every plane. The contents of any memoryless planes
+    are lost. The counter value cannot be incremented greater than 255. This
+    command is ignored when the default framebuffer object name 0 is bound. When
+    a framebuffer's pixel local storage interupt counter is nonzero, it is
+    considered to be in an "interrupted" state.
+
+    The command:
+
+      void FramebufferPixelLocalStorageRestoreANGLE()
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is not in an interrupted state.
+
+    Decrements the pixel local storage interrupt counter on the current draw
+    framebuffer. When the counter decrements from 1 to 0, and
+    PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE was nonzero at the time this
+    framebuffer entered an interrupted state, the command also begins pixel
+    local storage using LOAD_OP_LOAD_ANGLE for texture backed planes and
+    DONT_CARE for memoryless planes. The number of planes activated is equal to
+    the value of PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE at the time this
+    framebuffer entered an interrupted state. This command is ignored when the
+    default framebuffer object name 0 is bound.
+
+  Modify Section 4.4.2 "Attaching Images to Framebuffer Objects"
+
+  (Add a new paragraph to 4.4.2.3 "Attaching Renderbuffer Images to a
+   Framebuffer".)
+
+    If a renderbuffer object is deleted while its image is attached to the
+    currently bound draw framebuffer, and pixel local storage is active, then it
+    is as if EndPixelLocalStorageANGLE() had been called with
+    <n>=PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE and <storeops> of
+    STORE_OP_STORE_ANGLE.
+
+  (Add a new paragraph to 4.4.2.4 "Attaching Texture Images to a Framebuffer".)
+
+    If a texture object is deleted while its image is attached to the currently
+    bound draw framebuffer, and pixel local storage is active, then it is as if
+    EndPixelLocalStorageANGLE() had been called with
+    <n>=PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE and <storeops> of
+    STORE_OP_STORE_ANGLE.
+
+  (Insert two new numbered section after 4.4.2.4 "Attaching Texture Images to a
+   Framebuffer".)
+
+  Section 4.4.2.X "Configuring Pixel Local Storage on a Framebuffer"
+
+    The GL provides an array of configurable pixel local storage planes on
+    framebuffer objects. These planes are numbered beginning with zero, with the
+    total number of pixel local storage planes provided given by the
+    implementation-dependent constant MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+    Fragment shaders may access pixel local storage data as described in OpenGL
+    ES Shading Language Specification. Initially, pixel local storage planes are
+    in a deinitialized state and are unusable.
+
+    A memoryless pixel local storage plane may be established on the current
+    draw framebuffer by calling:
+
+      void FramebufferMemorylessPixelLocalStorageANGLE(int plane,
+                                                       enum internalformat)
+
+    Parameters:
+
+      * <plane> identifies the pixel local storage plane index.
+
+      * <internalformat> selects the data format, as enumerated in Table X.4.
+
+        internalformat   Clear Value Type   Pixel Local Type   format qualifier
+        -----------------------------------------------------------------------
+        RGBA8            FLOAT              pixelLocalANGLE    rgba8
+        RGBA8I           INT                ipixelLocalANGLE   rgba8i
+        RGBA8UI          UNSIGNED_INT       upixelLocalANGLE   rgba8ui
+        R32F             FLOAT              pixelLocalANGLE    r32f
+        R32UI            UNSIGNED_INT       upixelLocalANGLE   r32ui
+
+        Table X.4: Supported pixel local storage internalformats, with the Clear
+        Value Type used by BeginPixelLocalStorageANGLE(), and their required
+        corresponding GLSL Pixel Local Type and format layout qualifier.
+
+        Note that all pixel local storage formats consume exactly 4 bytes of
+        storage.
+
+        Note that r32i is excluded from this table because it is not supported
+        by EXT_shader_pixel_local_storage.
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the default framebuffer
+        object name 0 is bound to DRAW_FRAMEBUFFER.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_OPERATION is generated if
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is nonzero.
+
+      * INVALID_VALUE is generated if
+        <plane> < 0 or <plane> >= MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+
+      * INVALID_ENUM is generated if <internalformat> is not one of the
+        acceptable values in Table X.4, or NONE.
+
+    If <internalformat> is NONE, the pixel local storage plane at index <plane>
+    is deinitialized and any internal storage is released.
+
+    Otherwise, this call establishes a formatted plane of pixel local storage
+    data at index <plane>, accessible exclusively to fragment shaders, whose
+    liftetime will be scoped between calls to BeginPixelLocalStorageANGLE() and
+    EndPixelLocalStorageANGLE(). The pixel local storage plane is "memoryless"
+    from the application's perspective; its contents are cleared upon calling
+    BeginPixelLocalStorageANGLE(), and its contents are lost after the
+    application calls EndPixelLocalStorageANGLE(). The implementation will make
+    a best effort to store this data exclusively in high performance local
+    caches, e.g., tiled memory, but accessing the data may still result in
+    memory transactions on some platforms.
+
+    Additionally, the GL supports binding a layer of an immutable texture object
+    to pixel local storage. In this scenario, the pixel local storage data is
+    not lost upon calling EndPixelLocalStorageANGLE(), but rather, will be
+    stored in the given texture image. Such behavior is useful for applications
+    such as blending in the fragment shader, where the application renders to
+    pixel local storage instead of a color attachment.
+
+    When a texture image is bound to pixel local storage, the application may
+    also choose to initialize the pixel local storage plane using its bound
+    texture image contents during BeginPixelLocalStorageANGLE(), by passing Load
+    Operation LOAD_OP_LOAD_ANGLE.
+
+    An immutable texture layer image may be bound to a pixel local storage plane
+    on the current draw framebuffer by calling:
+
+      void FramebufferTexturePixelLocalStorageANGLE(int plane,
+                                                    uint backingtexture,
+                                                    int level,
+                                                    int layer)
+
+    Parameters:
+
+      * <plane> identifies the pixel local storage plane index.
+
+      * <backingtexture> specifies the name of an existing immutable texture
+                         object to bind.
+
+      * <level> selectes the mipmap level to bind.
+
+      * <layer> specifies the texture layer to bind:
+
+        - Zero if <backingtexture> is a TEXTURE_2D
+        - The array index to bind if <backingtexture> is a TEXTURE_2D_ARRAY
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the default framebuffer
+        object name 0 is bound to DRAW_FRAMEBUFFER.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_OPERATION is generated if
+        PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is nonzero.
+
+      * INVALID_VALUE is generated if
+        <plane> < 0 or <plane> >= MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+
+      * INVALID_OPERATION is generated if <backingtexture> is not the name of an
+        existing immutable texture object, or zero.
+
+      * INVALID_OPERATION is generated if <backingtexture> is nonzero and not of
+        type TEXTURE_2D or TEXTURE_2D_ARRAY.
+
+      * INVALID_VALUE is generated if <backingtexture> is nonzero and
+        <level> < 0.
+
+      * INVALID_VALUE is generated if <backingtexture> is nonzero and
+        <level> >= the immutable number of mipmap levels in <backingtexture>.
+
+      * INVALID_VALUE is generated if <backingtexture> is nonzero and
+        <layer> < 0.
+
+      * INVALID_VALUE is generated if <backingtexture> is nonzero and
+        <layer> >= the immutable number of texture layers in <backingtexture>.
+
+      * INVALID_ENUM is generated if <backingtexture> is nonzero and its
+        internalformat is not one of the acceptable values in Table X.4.
+
+    If <backingtexture> is 0, <level> and <layer> are ignored and the pixel
+    local storage plane <plane> is deinitialized.
+
+    Otherwise, this call establishes a formatted plane of pixel local storage
+    data at index <plane>, whose contents are bound to the given texture layer
+    image.
+
+    When a texture object is deleted, any pixel local storage plane to which it
+    is bound is automatically deinitialized.
+
+    If a texture object is deleted while its image is bound to a pixel local
+    storage plane on the currently bound draw framebuffer, and pixel local
+    storage is active, then it is as if EndPixelLocalStorageANGLE() had been
+    called with <n>=PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE and <storeops> of
+    STORE_OP_STORE_ANGLE.
+
+  Section 4.4.2.Y "Pixel Local Clear State"
+
+    Each pixel local storage plane on a framebuffer has state for three separate
+    clear values: a 4-component vector of type FLOAT, INT, and UNSIGNED_INT.
+    When the Load Operation LOAD_OP_CLEAR_ANGLE is executed, a pixel local
+    storage plane is cleared to the value whose type corresponds to its
+    internalformat. (See Table X.4.) Clear values are set with the commands:
+
+      void FramebufferPixelLocalClearValuefvANGLE(int plane,
+                                                  const float value[])
+
+      void FramebufferPixelLocalClearValueivANGLE(int plane,
+                                                  const int value[])
+
+      void FramebufferPixelLocalClearValueuivANGLE(int plane,
+                                                   const uint value[])
+
+    Parameters:
+
+      * <plane> identifies the pixel local storage plane index.
+
+      * <value> specifies the new 4-component clear value.
+
+    Description:
+
+      Sets the clear value state of specific type for a plane of pixel local
+      storage on the current draw framebuffer.
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the default framebuffer
+        object name 0 is bound to DRAW_FRAMEBUFFER.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_VALUE is generated if
+        <plane> < 0 or <plane> >= MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+
+  Modify Section 6.1 "Querying GL State"
+
+  (Insert a new numbered section after 6.1.14 "Renderbuffer Object Queries".)
+
+  Section 6.1.X "Pixel Local Storage Queries"
+
+    The application may query the state of a pixel local storage plane on the
+    current draw famebuffer using the commands:
+
+      void GetFramebufferPixelLocalStorageParameterfvANGLE(int plane,
+                                                           enum pname,
+                                                           GLsizei bufSize,
+                                                           GLsizei *length,
+                                                           GLfloat *params)
+
+      void GetFramebufferPixelLocalStorageParameterivANGLE(int plane,
+                                                           enum pname,
+                                                           GLsizei bufSize,
+                                                           GLsizei *length,
+                                                           GLint *params)
+
+    Parameters:
+
+      * <plane> identifies the pixel local storage plane index.
+
+      * <pname> specifies the parameter of the plane to query.
+
+      * <params> receives the value(s) for parameter <pname> of the pixel local
+        storage plane at index <plane>. When an error is generated, nothing is
+        written to <params>.
+
+    Description:
+
+      * If <pname> is PIXEL_LOCAL_FORMAT_ANGLE, <params> will contain the
+        internalformat of the plane from Table X.4, or NONE if the selected
+        pixel local storage plane is in a deinitialized state.
+
+      * If <pname> is PIXEL_LOCAL_TEXTURE_NAME_ANGLE, <params> will contain the
+        name of the immutable texture object which contains the image bound to
+        the plane, or 0 if the plane is memoryless or deinitialized.
+
+        Note that when the texture object bound to a plane is deleted, the plane
+        is automatically converted to memoryless. See section 4.4.2.X
+        "Configuring Pixel Local Storage on a Framebuffer".
+
+      * If <pname> is PIXEL_LOCAL_TEXTURE_LEVEL_ANGLE, <params> will contain the
+        mipmap level of the bound texture object, or 0 if the plane is
+        memoryless or deinitialized.
+
+      * If <pname> is PIXEL_LOCAL_TEXTURE_LAYER_ANGLE, <params> will contain the
+        layer of the bound texture object, or 0 if the plane is memoryless or
+        deinitialized.
+
+      * If <pname> is PIXEL_LOCAL_CLEAR_VALUE_FLOAT_ANGLE,
+        PIXEL_LOCAL_CLEAR_VALUE_INT_ANGLE, or
+        PIXEL_LOCAL_CLEAR_VALUE_UNSIGNED_INT_ANGLE, <params> will contain 4
+        values: the 4 color components of the clear value of corresponding type.
+
+    Errors:
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if the default framebuffer
+        object name 0 is bound to DRAW_FRAMEBUFFER.
+
+      * INVALID_FRAMEBUFFER_OPERATION is generated if pixel local storage on the
+        draw framebuffer is in an interrupted state. (See section 2.X.2
+        "Interrupting Pixel Local Storage")
+
+      * INVALID_VALUE is generated if
+        <plane> < 0 or <plane> >= MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE.
+
+      * INVALID_ENUM is generated if <pname> is not in Table 6.Y, or if the
+        command issued is not the associated "Get Command" for <pname> in Table
+        6.Y.
+
+      * INVALID_VALUE is generated if <params> is NULL.
+
+    If ANGLE_robust_client_memory is supported, the alternative query commands
+    may also be used:
+
+      void GetFramebufferPixelLocalStorageParameterfvRobustANGLE(int plane,
+                                                                 enum pname,
+                                                                 GLsizei bufSize,
+                                                                 GLsizei *length,
+                                                                 GLfloat *params)
+
+      void GetFramebufferPixelLocalStorageParameterivRobustANGLE(int plane,
+                                                                 enum pname,
+                                                                 GLsizei bufSize,
+                                                                 GLsizei *length,
+                                                                 GLint *params)
+
+    Additional Parameters:
+
+      * <bufSize> indicates the maximum number of values that can be written to
+        <params>.
+
+      * <length> may be NULL. If not NULL, it receives the number of values
+        written to <params>. When an error is generated, nothing is written to
+        <length>.
+
+    Additional Errors:
+
+      * INVALID_OPERATION is generated if <bufSize> is not large enough to
+        receive the requested parameter.
+
+
+  Modify Section 6.1 "State Tables"
+
+  (Insert two new numbered tables.)
+
+                                                          Minimum
+    Get Value                          Type  Get Command    Value       Sec.
+    ------------------------------------------------------------------------
+    MAX_PIXEL_LOCAL_STORAGE-
+    _PLANES_ANGLE                       Z+   GetIntegerv      4      4.4.2.X
+
+    MAX_COLOR_ATTACHMENTS_WITH-
+    _ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE   Z+   GetIntegerv     *0!         2.X
+
+    MAX_COMBINED_DRAW_BUFFERS_AND-
+    _PIXEL_LOCAL_STORAGE_PLANES_ANGLE   Z+   GetIntegerv      4          2.X
+
+    Table 6.X: Impementation Dependent Pixel Local Storage Limits
+
+    Note that MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE may be
+    zero, in which case the application cannot render to any other color
+    attachments while PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE is nonzero.
+
+                                                                Initial
+    Get Value                  Type  Get Command                 Value    Sec.
+    --------------------------------------------------------------------------
+    PIXEL_LOCAL_STORAGE-
+    _ACTIVE_PLANES_ANGLE        Z+   GetIntegerv                   0       2.X
+
+    PIXEL_LOCAL_FORMAT-              GetFramebufferPixelLocal-
+    _ANGLE                      Z+   StorageParameterivANGLE     NONE    6.1.X
+
+    PIXEL_LOCAL_TEXTURE-             GetFramebufferPixelLocal-
+    _NAME_ANGLE                 Z+   StorageParameterivANGLE       0     6.1.X
+
+    PIXEL_LOCAL_TEXTURE-             GetFramebufferPixelLocal-
+    _LEVEL_ANGLE                Z+   StorageParameterivANGLE       0     6.1.X
+
+    PIXEL_LOCAL_TEXTURE-             GetFramebufferPixelLocal-
+    _LAYER_ANGLE                Z    StorageParameterivANGLE       0     6.1.X
+
+    PIXEL_LOCAL_CLEAR-               GetFramebufferPixelLocal-
+    _VALUE_FLOAT_ANGLE         4*R   StorageParameterfvANGLE    0,0,0,0  6.1.X
+
+    PIXEL_LOCAL_CLEAR-               GetFramebufferPixelLocal-
+    _VALUE_INT_ANGLE           4*Z   StorageParameterivANGLE    0,0,0,0  6.1.X
+
+    PIXEL_LOCAL_CLEAR_VALUE-         GetFramebufferPixelLocal-
+    _UNSIGNED_INT_ANGLE        4*Z+  StorageParameterivANGLE    0,0,0,0  6.1.X
+
+    Table 6.Y: Pixel Local Storage State
+
+
+Interactions with the ANGLE_request_extension specification
+
+    When either ANGLE_shader_pixel_local_storage or
+    ANGLE_shader_pixel_local_storage_coherent is enabled, the following
+    extensions are all implicitly enabled, if supported:
+
+      * OES_draw_buffers_indexed
+      * EXT_draw_buffers_indexed
+      * EXT_color_buffer_float
+      * EXT_color_buffer_half_float
+      * ANGLE_shader_pixel_local_storage_coherent
+      * ANGLE_shader_pixel_local_storage
+
+Interactions with ANGLE_provoking_vertex, ANGLE_polygon_mode,
+EXT_blend_func_extended, EXT_clip_control, EXT_clip_cull_distance,
+EXT_depth_clamp, EXT_draw_buffers_indexed, EXT_polygon_offset_clamp,
+KHR_blend_equation_advanced, KHR_debug, NV_polygon_mode,
+NV_scissor_exclusive, OES_draw_buffers_indexed
+
+    If any of these extensions is not supported, ignore the applicable
+    references to the extension itself, and to BlendEquationSeparatei*,
+    BlendEquationi*, BlendFuncSeparatei*, BlendFunci*, ColorMaski*,
+    DebugMessageCallback*, DebugMessageControl*, DebugMessageInsert*, Disablei*,
+    ClipControlEXT, Enablei*, ObjectLabel*, PolygonMode*, PolygonOffsetClampEXT,
+    ProvokingVertexANGLE, ObjectPtrLabel*, PopDebugGroup*, PushDebugGroup*,
+    DEBUG_OUTPUT, DEBUG_OUTPUT_SYNCHRONOUS, SCISSOR_TEST_EXCLUSIVE_NV,
+    CLIP_DISTANCE[0..7]_EXT, POLYGON_OFFSET_POINT_NV, POLYGON_OFFSET_LINE_NV,
+    POLYGON_OFFSET_LINE_ANGLE symbols.
+
+Interactions with OpenGL ES 3.1
+
+  Modify Section 8.22 "Texture Image Loads and Stores"
+
+  (Modify the final paragraph.)
+
+  Add active pixel local storage planes to the list of resource types that count
+  against MAX_COMBINED_SHADER_OUTPUT_RESOURCES.
+
+
+Additions to the OpenGL ES Shading Language Specification, Version 3.00
+
+    Including the following line in a fragment shader controls the language
+    features described in this extension:
+
+      #extension GL_ANGLE_shader_pixel_local_storage : <behavior>
+
+    Where <behavior> is as specified in section 3.5.
+
+    Whether or not the application relies on the "_coherent" extension string
+    from the OpenGL ES API side, the language features described in this section
+    are identical, and fragment shaders should only enable
+    GL_ANGLE_shader_pixel_local_storage.
+
+  Modify Section 4.1 "Basic Types"
+
+    (Add the following new types.)
+
+    Pixel Local Types (opaque)
+
+      * pixelLocalANGLE
+          a handle for accessing floating-point pixel local storage data
+
+      * ipixelLocalANGLE
+          a handle for accessing integer pixel local storage data
+
+      * upixelLocalANGLE
+          a handle for accessing unsigned integer pixel local storage data
+
+  Modify Section 4.1.7 "Opaque Types"
+
+  (Insert a new numbered section after 4.1.7.1 "Samplers".)
+
+  Section 4.1.7.X "Pixel Local Storage"
+
+    Pixel local types (e.g. pixelLocalANGLE) are opaque types. They are handles
+    for accessing user-defined data that is associated with the pixel being
+    covered. They are used with the built-in functions described in section 8.X
+    "Pixel Local Storage Functions".
+
+    In addition to the limitations already imposed on opaque types, pixel local
+    types are subject to additional constraints:
+
+      * They cannot be aggregated in arrays.
+
+      * As uniforms, they must be declared at global scope; they cannot be
+        declared in structs or interface blocks.
+
+      * As uniforms, they are not visible to the OpenGL ES API and cannot be
+        accessed via GetUniformLocation() or GetActiveUniform(). (This
+        facilitates backends that are implemented entirely in-shader, e.g.,
+        EXT_shader_pixel_local_storage.)
+
+      * As uniforms, they must declare "binding" and "format" layout qualifiers,
+        as described in section 4.3.8.X "Pixel Local Storage Layout Qualifiers".
+
+      * As function arguments, they cannot have layout qualifiers. Any function
+        that accepts pixel local type(s) as arguments is inlined by the compiler,
+        and the bindings and formats are determined at the call site.
+
+      * They cannot be aliased; it is a compile-time error to declare two pixel
+        local uniforms with duplicate binding layout qualifiers.
+
+      * They can only be declared in a fragment shader.
+
+    Fragment shaders that declare pixel local storage uniforms are subject to
+    additional shader-wide restrictions as well:
+
+      * discard is illegal
+
+          When polyfilled with shader images, pixel local storage requires
+          early_fragment_tests, which causes discard to interact differently
+          with the depth and stencil tests.
+
+          In order to ensure identical behavior across all backends (some of
+          which may not have access to early_fragment_tests), we disallow
+          discard if pixel local storage uniforms have been declared.
+
+      * return from main() is illegal
+
+          ARB_fragment_shader_interlock functions cannot be called within flow
+          control, which includes any code that might execute after a return
+          statement. To keep things simple, and since these "interlock" calls
+          are automatically generated by the compiler inside of main(), we
+          disallow return from main() if pixel local storage uniforms have been
+          declared.
+
+      * assignment to gl_FragDepth(EXT) or gl_SampleMask is illegal
+
+          When polyfilled with shader images, pixel local storage requires
+          early_fragment_tests, which causes assignments to gl_FragDepth(EXT)
+          and gl_SampleMask to be ignored.
+
+          In order to ensure identical behavior across all backends, we disallow
+          assignment to these values if pixel local storage uniforms have been
+          declared.
+
+      * EXT_blend_func_extended: nonzero values of the <index> layout qualifier
+        are illegal
+
+          Nonzero <index> values may restrict the number of draw buffers, which
+          can invalidate a PLS implementation.
+
+      * EXT_blend_func_extended: multiple unassigned fragment output locations
+        are illegal
+
+          Since PLS may use additional internal fragment outputs, we ban all
+          implicit fragment output assignments while PLS is in use.
+
+      * KHR_blend_equation_advanced: "blend_support" layout qualifiers are
+        illegal
+
+          KHR_blend_equation_advanced is incompatible with multiple draw
+          buffers, which is a required feature for many PLS implementations.
+
+  Modify Section 4.3.8 "Layout Qualifiers"
+
+  (Insert a new numbered section after 4.3.8.3 "Uniform Block Layout
+   Qualifiers")
+
+  Section 4.3.8.X "Pixel Local Storage Layout Qualifiers"
+
+    The layout qualifier identifiers for pixel local storage types are:
+
+      layout-qualifier-id
+        binding = <integer-constant>
+        <format>
+
+    Accepable identifiers for <format> are enumerated in Table X.4.
+
+    It is a compile-time error to declare a pixel local storage uniform that
+    does not specify both of these layout qualifiers, or to specify a format
+    layout qualifier on any type other than that format's corresponding "Pixel
+    Local Type", as enumerated in Table X.4.
+
+  Modify Section 8 "Built-in Functions"
+
+  (Insert a new numbered section after 8.9 "Fragment Processing Functions".)
+
+  Section 8.X "Pixel Local Storage Functions"
+
+    The built-in functions defined in this section accept pixel local storage
+    handles (abbreviated as "PLS handles") in order to load and store data
+    associated with the pixel being covered.
+
+    A reference to a specific PLS plane is established by indexing into the
+    current draw framebuffer's PLS planes using the PLS handle's "binding"
+    layout qualifier. If any PLS handle references an inactive PLS plane, or a
+    PLS plane whose internalformat does not match the handle's format, the
+    shader does not execute and a draw-time error is generated in the OpenGL ES
+    API instead.
+
+    Syntax:
+
+      vec4 pixelLocalLoadANGLE(pixelLocalANGLE handle)
+      ivec4 pixelLocalLoadANGLE(ipixelLocalANGLE handle)
+      uvec4 pixelLocalLoadANGLE(upixelLocalANGLE handle)
+
+    Description:
+
+      Reads the current pixel's data from the PLS plane referenced by <handle>.
+
+    Syntax:
+
+      void pixelLocalStoreANGLE(pixelLocalANGLE handle, vec4 value)
+      void pixelLocalStoreANGLE(ipixelLocalANGLE handle, ivec4 value)
+      void pixelLocalStoreANGLE(upixelLocalANGLE handle, uvec4 value)
+
+    Description:
+
+      Replaces the current pixel's data with <value> in the PLS plane referenced
+      by <handle>. If the magnitude of <value> is too large to be represented in
+      the PLS format, it is clamped.
+
+  Modify Section 9 "Shading Language Grammar"
+
+    (Add the following tokens to the lexical analysis.)
+
+    PIXELLOCALANGLE IPIXELLOCALANGLE UPIXELLOCALANGLE
+
+
+Interactions with GLSL ES 3.10
+
+    If GLSL ES 3.10 is supported, pixel local storage and images cannot be used
+    in the same shader; it is a compile time error for a shader to declare both
+    image uniforms and pixel local storage uniforms.
+
+
+Issues
+
+    (1) EXT_shader_pixel_local_storage has a clause that PLS contents become
+    undefined if an application causes color data to be flushed to the
+    framebuffer. Can we use this extension and still guarantee the security of
+    WebGL?
+
+      RESOLVED: We have confirmation that all mobile vendors guarantee there's
+      no data leaked from outside the render pass. There can be data leaked from
+      normal framebuffer attachments to PLS planes, but said attachments
+      themselves are not shared between WebGL contexts, so should not be a
+      security concern.
+
+      Imagination gave the caveat that we must also initialize PLS data up front
+      in order to not get left-over data from a previous render pass, but this
+      is exactly what our API is designed to do via load operations. If
+      EXT_shader_pixel_local_storage2 is supported, we can clear PLS using
+      ClearPixelLocalStorageuiEXT(). Otherwise, we can clear or load PLS data
+      from a texture by issuing a fullscreen draw.
+
+      Additionally, if the browser uses virtual contexts and wishes to interrupt
+      a PLS render pass, it must be sure to internally call
+      FramebufferPixelLocalStorageInterruptANGLE() before handing off control to
+      the other virtual context, and FramebufferPixelLocalStorageRestoreANGLE()
+      again before returning control.
+
+    (2) Depending on the implementation, <loadops> of LOAD_OP_ZERO_ANGLE and
+    LOAD_OP_LOAD_ANGLE can have very different performance characteristics.
+    Would a <loadop> of DONT_CARE, which makes the PLS contents undefined, be
+    acceptable in WebGL?
+
+      RESOLVED: From a security standpoint, the crucial aspect is that the data
+      doesn't come from another context, and that needs to be specified. Similar
+      decisions have been made previously in performance-critical areas of the
+      spec.
+
+    (3) Should we support the ability to enable/disable pixel local storage
+    planes on an individual basis? (e.g., "LOAD_OP_DISABLE_ANGLE".)
+
+      RESOLVED: No. Some implementations need to reserve color attachments for
+      internal use. Allowing any combination of planes to be enabled or disabled
+      would make this specification unnecessarily complex. Furthermore, browsers
+      implementing WebGL will need the ability to interrupt pixel local storage
+      rendering passes, which would also be more complicated if we were to
+      support enabling and disabling planes individually.
+
+    (4) Should we support binding cube map layers to pixel local storage?
+
+      RESOLVED: No. There is currently a 1:1 mapping on every implementation
+      from pixel local storage shaders to backend shaders, but binding a cube
+      map layer would require a texelFetch() implementation to behave
+      differently in the shader. We can always add cube map support in the
+      future, if the need arises.
+
+    (5) Can we support transform feedback?
+
+      RESOLVED: No. Transform feedback can lead to render pass breaks in the
+      Vulkan backend.

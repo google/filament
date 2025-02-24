@@ -1,0 +1,17 @@
+# Ignore filename patterns wherever they appear
+*~
+*.o
+*.orig
+*.pyc
+*.swp
+.#*
+\#*
+
+# Ignore specific patterns at the top-level directory
+/pnacl-sz
+/build/
+/crosstest/Output/
+
+# Ignore WASM torture tests
+/torture-s/
+/torture-s2wasm-sexpr-wasm/

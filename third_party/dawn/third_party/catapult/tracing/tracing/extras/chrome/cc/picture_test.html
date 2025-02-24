@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/cc/cc.html">
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script src="/tracing/extras/chrome/cc/layer_tree_host_impl_test_data.js">
+</script>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('basic', function() {
+    const m = tr.c.TestUtils.newModelWithEvents([g_catLTHIEvents]);
+    const p = Object.values(m.processes)[0];
+
+    const instance = p.objects.getAllInstancesNamed('cc::Picture')[0];
+    const snapshot = instance.snapshots[0];
+
+    assert.instanceOf(snapshot, tr.e.cc.PictureSnapshot);
+    instance.wasDeleted(150);
+  });
+
+  test('getOps', function() {
+    const m = tr.c.TestUtils.newModelWithEvents([g_catLTHIEvents]);
+    const p = Object.values(m.processes)[0];
+
+    const instance = p.objects.getAllInstancesNamed('cc::Picture')[0];
+    const snapshot = instance.snapshots[0];
+
+    const ops = snapshot.getOps();
+    if (!ops) return;
+    assert.strictEqual(ops.length, 142);
+
+    const op0 = ops[0];
+    assert.strictEqual(op0.cmd_string, 'Save');
+    assert.instanceOf(op0.info, Array);
+  });
+
+  function setUpFakeSkiaBenchmarking() {
+    if (tr.e.cc.PictureSnapshot.CanRasterize() &&
+        tr.e.cc.PictureSnapshot.CanGetOps()) {
+      return window.chrome;
+    }
+
+    const oldChrome = window.chrome;
+    window.chrome = {
+      skiaBenchmarking: {
+        rasterize() {},
+        getOps() {},
+      }
+    };
+    return oldChrome;
+  }
+
+  test('rasterizeZeroSize', function() {
+    if (!window) return;
+
+    const oldChrome = setUpFakeSkiaBenchmarking();
+    try {
+      const picture = new tr.e.cc.Picture(
+          '', {x: 0, y: 0, width: 0, height: 50});
+      let result;
+      picture.rasterize({}, function(data) { result = data; });
+      assert.strictEqual(result.picture, picture);
+      assert.isUndefined(result.imageData);
+      assert.isNull(result.error);
+    } finally {
+      window.chrome = oldChrome;
+    }
+  });
+});
+</script>

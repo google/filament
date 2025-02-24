@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import codecs
+import json
+import sys
+import os
+import six
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+from tracing_build import render_histograms_viewer
+from tracing_build import vulcanize_histograms_viewer
+
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Upgrade a results.html or add a new HistogramSet.',
+      add_help=False)
+  parser.add_argument('html_path', metavar='HTML_PATH',
+                      help='HTML file path (output).')
+  parser.add_argument('-h', '--help', action='help',
+                      help='Show this help message and exit.')
+  parser.add_argument('--html', nargs='+', default=[],
+                      help='Zero or more HTML file paths (input).')
+  parser.add_argument('--json', nargs='+', default=[],
+                      help='Zero or more HistogramSet JSON file paths (input).')
+  parser.add_argument('--mapresults', nargs='+', default=[],
+                      help='Zero or more map results JSON file paths (input).')
+  args = parser.parse_args()
+
+  histograms = []
+
+  for html_path in args.html:
+    histograms.extend(render_histograms_viewer.ReadExistingResults(
+        open(html_path, 'r').read()))
+
+  for json_path in args.json:
+    histograms.extend(json.load(open(json_path, 'r')))
+
+  for json_path in args.mapresults:
+    for filename, results in six.iteritems(json.load(open(json_path, 'r'))):
+      for histogram in results['pairs']['histograms']:
+        histograms.append(histogram)
+
+  open(args.html_path, 'a').close() # Create file if it doesn't exist.
+  with codecs.open(args.html_path,
+                   mode='r+', encoding='utf-8') as output_stream:
+    vulcanize_histograms_viewer.VulcanizeAndRenderHistogramsViewer(
+        histograms, output_stream)
+
+if __name__ == '__main__':
+  sys.exit(main())

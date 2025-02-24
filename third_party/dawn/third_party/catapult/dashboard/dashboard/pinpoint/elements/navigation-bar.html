@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/components/paper-tooltip/paper-tooltip.html">
+
+<dom-module id="navigation-bar">
+  <template>
+    <style>
+      nav {
+        background-color: var(--paper-indigo-500);
+        display: flex;
+        font-weight: bold;
+        width: 100%;
+      }
+
+      #spacer {
+          margin: auto;
+      }
+
+      a {
+        color: var(--paper-indigo-50);
+      }
+
+      a:hover {
+        color: white;
+      }
+
+      #signin_button {
+        margin: 0;
+        padding: 6px;
+      }
+
+      #signout_button {
+        margin: 0;
+        padding: 16px;
+        color: white;
+        text-decoration: none;
+        cursor: pointer;
+      }
+    </style>
+
+    <nav id="navbar">
+      <a href="/">
+        <paper-icon-button src="/static/logo.svg"></paper-icon-button>
+      </a>
+      <span id="spacer"></span>
+      <a href="https://chromium.googlesource.com/catapult/+/HEAD/dashboard/dashboard/pinpoint/README.md" target="_blank">
+        <paper-icon-button icon="help"></paper-icon-button>
+        <paper-tooltip>Documentation</paper-tooltip>
+      </a>
+      <a id="buglink" on-tap="handleBugClick" href="https://bugs.chromium.org/p/chromium/issues/entry?summary=[%F0%9F%93%8D]%20&comment=&components=Speed%3EBisection&description=[[bugDescription]]" target="_blank">
+        <paper-icon-button icon="feedback"></paper-icon-button>
+        <paper-tooltip>File a bug</paper-tooltip>
+      </a>
+      <div id="g_id_onload"
+        data-context="signin"
+        data-ux_mode="popup"
+        data-callback="onSignIn"
+        data-auto_prompt="false">
+      </div>
+      <div id="signin_button"
+        class="g_id_signin"
+        data-type="standard"
+        data-shape="rectangular"
+        data-theme="filled_blue"
+        data-text="signin_with"
+        data-size="medium"
+        data-logo_alignment="left"
+        hidden$="[[isSignedIn]]">
+      </div>
+      <div id="signout_button"
+        class="g_id_signout"
+        hidden$="[[!isSignedIn]]"
+        onclick="onSignOut()">
+        Sign Out
+      </div>
+    </nav>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'navigation-bar',
+
+      properties: {
+        bugDescription: {
+          type: String,
+          value: ''
+        },
+        user: {
+          type: String,
+          value: '',
+          notify: true,
+          readonly: true,
+        },
+        isSignedIn: {
+          type: Boolean,
+          computed: 'computeIsSignedIn(user)',
+        },
+        client: {
+          type: Object
+        },
+      },
+      computeIsSignedIn(user) {
+        return user != '';
+      },
+      created() {
+        window.onSignIn = (token) => {
+          const user = parseJwt(token);
+          if (user && user.email) {
+            this.user = user.email;
+            document.cookie = 'username=' + this.user;
+          }
+        };
+        window.onSignOut = () => {
+          this.user = '';
+          document.cookie = 'username=';
+        };
+      },
+      ready() {
+
+        const username_cookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('username='))
+          ?.split('=')[1];
+        this.user = username_cookie ? username_cookie : '';
+        var clientId = '';
+        if (window.location.href.includes('-stage') || window.location.href.hostname == 'localhost') {
+          clientId = '22573382977-u263jlijs2uiio0uq7qm7vso3vuh7ec5.apps.googleusercontent.com';
+        }
+        else {
+          clientId = '62121018386-aqdfougp0ddn93knqj6g79vvn42ajmrg.apps.googleusercontent.com';
+        }
+        this.$.g_id_onload.setAttribute('data-client_id', clientId);
+        var script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        document.head.appendChild(script);
+      },
+      handleBugClick() {
+        this.updateBugDescription();
+      },
+      updateBugDescription() {
+        let jobEl = document.querySelector('job-page');
+        let description = [`Filed via: ${window.location.href}\n`];
+        if (jobEl && jobEl.job) {
+          let job = Object.assign({}, jobEl.job);
+          // These fields are certainly potentially useful in debugging
+          // but they are quite large, so we remove them before setting
+          // the issue description.
+          delete job.state;
+          delete job.bots;
+          if (job.exception) {
+            delete job.exception.traceback;
+          }
+          description.push(JSON.stringify(job, null, 1));
+        }
+        this.bugDescription = encodeURIComponent(description.join('\n'));
+      },
+    });
+    function parseJwt(token) {
+      var base64Url = token.credential.split('.')[1];
+      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    };
+  </script>
+</dom-module>

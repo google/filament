@@ -1,0 +1,23 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("buffers") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/array_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_copy.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_fill.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_map.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_mem.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_migrate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_read.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_buffer_write.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_image_migrate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/buffers/test_sub_buffers.cpp",
+  ]
+}

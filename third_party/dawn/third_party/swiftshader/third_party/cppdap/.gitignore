@@ -1,0 +1,6 @@
+build/
+fuzz/corpus
+fuzz/logs
+.vs/
+.vscode/settings.json
+CMakeSettings.json

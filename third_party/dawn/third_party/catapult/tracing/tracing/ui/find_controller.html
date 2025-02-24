@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview FindController.
+ */
+tr.exportTo('tr.ui', function() {
+  const Task = tr.b.Task;
+
+  function FindController(brushingStateController) {
+    this.brushingStateController_ = brushingStateController;
+    this.filterHits_ = [];
+    this.currentHitIndex_ = -1;
+    this.activePromise_ = Promise.resolve();
+    this.activeTask_ = undefined;
+  }
+
+  FindController.prototype = {
+    __proto__: Object.prototype,
+
+    get model() {
+      return this.brushingStateController_.model;
+    },
+
+    get brushingStateController() {
+      return this.brushingStateController_;
+    },
+
+    enqueueOperation_(operation) {
+      let task;
+      if (operation instanceof tr.b.Task) {
+        task = operation;
+      } else {
+        task = new tr.b.Task(operation, this);
+      }
+      if (this.activeTask_) {
+        this.activeTask_ = this.activeTask_.enqueue(task);
+      } else {
+        // We're enqueuing the first task, schedule it.
+        this.activeTask_ = task;
+        this.activePromise_ = Task.RunWhenIdle(this.activeTask_);
+        this.activePromise_.then(function() {
+          this.activePromise_ = undefined;
+          this.activeTask_ = undefined;
+        }.bind(this));
+      }
+    },
+
+    /**
+     * Updates the filter hits based on the provided |filterText|. Returns a
+     * promise which resolves when |filterHits| has been refreshed.
+     */
+    startFiltering(filterText) {
+      const sc = this.brushingStateController_;
+      if (!sc) return;
+
+      // TODO(beaudoin): Cancel anything left in the task queue, without
+      // invalidating the promise.
+      this.enqueueOperation_(function() {
+        this.filterHits_ = [];
+        this.currentHitIndex_ = -1;
+      }.bind(this));
+
+      // Try constructing a UIState from the filterText.
+      // UIState.fromUserFriendlyString will throw an error only if the string
+      // is syntactically correct to a UI state string but with invalid values.
+      // It will return undefined if there is no syntactic match.
+      let stateFromString;
+      try {
+        stateFromString = sc.uiStateFromString(filterText);
+      } catch (e) {
+        this.enqueueOperation_(function() {
+          const overlay = new tr.ui.b.Overlay();
+          Polymer.dom(overlay).textContent = e.message;
+          overlay.title = 'UI State Navigation Error';
+          overlay.visible = true;
+        });
+        return this.activePromise_;
+      }
+
+      if (stateFromString !== undefined) {
+        this.enqueueOperation_(
+            sc.navToPosition.bind(this, stateFromString, true));
+      } else {
+        // filterText is not a navString here -- proceed with find and filter.
+        if (filterText.length === 0) {
+          this.enqueueOperation_(sc.findTextCleared.bind(sc));
+        } else {
+          const filter = new tr.c.FullTextFilter(filterText);
+          const filterHitSet = new tr.model.EventSet();
+          this.enqueueOperation_(sc.addAllEventsMatchingFilterToSelectionAsTask(
+              filter, filterHitSet));
+          this.enqueueOperation_(function() {
+            this.filterHits_ = filterHitSet.toArray();
+            sc.findTextChangedTo(filterHitSet);
+          }.bind(this));
+        }
+      }
+      return this.activePromise_;
+    },
+
+    /**
+     * Returns the most recent filter hits as an array. Call
+     * |startFiltering| to ensure this is up to date after the filter settings
+     * have been changed.
+     */
+    get filterHits() {
+      return this.filterHits_;
+    },
+
+    get currentHitIndex() {
+      return this.currentHitIndex_;
+    },
+
+    find_(dir) {
+      const firstHit = this.currentHitIndex_ === -1;
+      if (firstHit && dir < 0) {
+        this.currentHitIndex_ = 0;
+      }
+
+      const N = this.filterHits.length;
+      this.currentHitIndex_ = (this.currentHitIndex_ + dir + N) % N;
+
+      if (!this.brushingStateController_) return;
+
+      this.brushingStateController_.findFocusChangedTo(
+          new tr.model.EventSet(this.filterHits[this.currentHitIndex]));
+    },
+
+    findNext() {
+      this.find_(1);
+    },
+
+    findPrevious() {
+      this.find_(-1);
+    }
+  };
+
+  return {
+    FindController,
+  };
+});
+</script>

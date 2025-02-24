@@ -1,0 +1,12 @@
+{
+  global:
+    vkGetInstanceProcAddr;
+    vkGetDeviceProcAddr;
+    vkEnumerateInstanceLayerProperties;
+    vkEnumerateInstanceExtensionProperties;
+    vkNegotiateLoaderLayerInterfaceVersion;
+    vkEnumerateDeviceLayerProperties;
+    vkEnumerateDeviceExtensionProperties;
+  local:
+    *;
+};

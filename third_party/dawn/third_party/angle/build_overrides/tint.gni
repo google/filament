@@ -1,0 +1,14 @@
+build_with_chromium = false
+tint_build_benchmarks = false
+tint_has_build = false
+tint_build_unittests = false
+
+tint_root_dir = "//third_party/dawn"
+tint_spirv_tools_dir = "//third_party/spirv-tools/src"
+tint_googletest_dir = "//third_party/googletest/src"
+tint_spirv_headers_dir = "//third_party/spirv-headers/src"
+
+tint_build_spv_reader = false
+tint_build_spv_writer = true
+tint_build_wgsl_reader = true
+tint_build_wgsl_writer = true

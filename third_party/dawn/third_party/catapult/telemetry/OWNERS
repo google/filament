@@ -1,0 +1,38 @@
+# Overall Owners
+johnchen@chromium.org
+wenbinzhang@google.com  # Overall backup reviewer
+
+# crash symbolization/minidumps and functional testing
+bsheedy@chromium.org
+
+# expectations.config format
+rmhasan@google.com
+
+# tracing and artifacts
+eseckler@chromium.org
+khokhlov@google.com
+
+# For CrOS-related changes.
+achuith@chromium.org
+
+# For CrOS OOBE-related changes.
+dkuzmin@google.com
+
+# For Android-related changes.
+wnwen@chromium.org
+
+# emeritus:
+# aiolos@chromium.org
+# chrishenry@google.com
+# dtu@chromium.org
+# eakuefner@chromium.org
+# skyostil@chromium.org
+# ernstm@chromium.org
+# marja@chromium.org
+# nduca@chromium.org
+# sullivan@chromium.org
+# tonyg@chromium.org
+# zhenw@chromium.org
+# nednguyen@google.com
+# perezju@chromium.org
+# rsorokin@chromium.org

@@ -1,0 +1,15 @@
+/* Copyright (c) 2013 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+.tr-ui-e-chrome-gpu-state-snapshot-view {
+  background: url('./images/checkerboard.png');
+  display: flex;
+  overflow: auto;
+}
+
+.tr-ui-e-chrome-gpu-state-snapshot-view img {
+  display: block;
+  margin: 16px auto 16px auto;
+}

@@ -1,0 +1,299 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script>
+WCT = {waitFor: function (cb) {HTMLImports.whenReady(cb)}}
+</script>
+<script src="./test-flags.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../node_modules/@webcomponents/template/template.js"></script>
+<script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+<script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+<script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+<script src="../scoping-shim.min.js"></script>
+<script src="module/generated/style-transformer.js"></script>
+<title>Style Transformer</title>
+
+<template id="host">
+  <style>
+  :host {
+    color: blue;
+  }
+  :host([red]) {
+    color: red;
+  }
+  :host > * {
+    color: green;
+  }
+  :host(.bar) :-webkit-any(.foo, .bar) {
+    color: purple;
+  };
+  :-webkit-any([baz], [zot="foo"]) :matches(foo, bar) > :-moz-any(:not(:defined), :unresolved) {
+    color: rgb(123, 123, 123);
+  }
+  :matches(a, b) {
+    color: black;
+  }
+  </style>
+</template>
+
+<template id="slotted">
+  <style>
+  div::slotted(.foo) {
+    color: gray;
+  }
+  ::slotted(.bar) {
+    color: lightgray;
+  }
+  :host > ::slotted(*:nth-of-type(2n - 1)) {
+    color: red;
+  }
+  </style>
+</template>
+
+<template id="dir">
+  <style>
+  div:dir(rtl) {
+    color: blue;
+  }
+  :host(:dir(rtl)) {
+    color: blue;
+  }
+  </style>
+</template>
+
+<template id="custom-style">
+  <style>
+  :root {
+    color: black;
+  }
+  </style>
+</template>
+
+<template id="shared-style">
+  <style>
+    html, :host {
+      color: gray;
+    }
+  </style>
+</template>
+
+<template id="attribute-style">
+  <style>
+    [foo="foo:bar"] {
+      background-color: blue;
+    }
+  </style>
+</template>
+
+<template id="nested-attribute-style">
+  <style>
+    [foo="foo:bar"] [foo="foo:bar"] {
+      background-color: blue;
+    }
+  </style>
+</template>
+
+<template id="prepended-attribute-style">
+  <style>
+    foo[foo="foo:bar"] {
+      background-color: blue;
+    }
+  </style>
+</template>
+
+<script>
+function processTemplate(templateName, elementName) {
+  var template = document.querySelector('template#' + templateName);
+  window.ShadyCSS.prepareTemplate(template, elementName);
+  return template._styleAst;
+}
+suite('Style Transformer', function() {
+  setup(function() {
+    if (window.ShadyCSS.nativeShadow) {
+      this.skip();
+    }
+  })
+  suite(':host transforms', function() {
+    var ast;
+    suiteSetup(function() {
+      ast = processTemplate('host', 'x-foo');
+    });
+
+    test(':host{}', function() {
+      assert.equal(ast.rules[0].selector, 'x-foo');
+    });
+
+    test(':host([red]){}', function() {
+      assert.equal(ast.rules[1].selector, 'x-foo[red]');
+    });
+
+    test(':host > *{}', function() {
+      assert.equal(ast.rules[2].selector, 'x-foo > *.x-foo');
+    });
+
+    test(':host() :-webkit-any()', function() {
+      assert.equal(ast.rules[3].selector, 'x-foo.bar :-webkit-any(.foo, .bar).x-foo');
+    });
+
+    test('lots of :matches()', function() {
+      assert.equal(ast.rules[4].selector, ':-webkit-any([baz], [zot="foo"]).x-foo :matches(foo, bar).x-foo > :-moz-any(:not(:defined), :unresolved).x-foo');
+    });
+
+    test('only match', function() {
+      assert.equal(ast.rules[5].selector, ':matches(a, b).x-foo');
+    });
+  });
+
+  suite('::slotted transforms', function() {
+    var ast;
+    suiteSetup(function() {
+      ast = processTemplate('slotted', 'x-slot');
+    });
+
+    test('div::slotted(.foo)', function() {
+      assert.equal(ast.rules[0].selector, 'div.x-slot > .foo');
+    });
+
+    test('::slotted(.bar)', function() {
+      assert.equal(ast.rules[1].selector, 'x-slot > .bar');
+    });
+
+    test(':host > ::slotted(*:nth-of-type(2n - 1))', function() {
+      assert.equal(ast.rules[2].selector, 'x-slot > *:nth-of-type(2n-1)');
+    });
+  });
+
+  suite('dir transforms', function() {
+    var ast;
+    suiteSetup(function() {
+      ast = processTemplate('dir', 'x-dir');
+    });
+
+    test('div:dir(rtl)', function() {
+      assert.equal(ast.rules[0].selector, '[dir="rtl"] div.x-dir, div.x-dir[dir="rtl"]');
+    });
+
+    test('host(:dir(rtl))', function() {
+      assert.equal(ast.rules[1].selector, '[dir="rtl"] x-dir, x-dir[dir="rtl"]');
+    });
+
+  });
+
+  suite('custom-style transforms', function() {
+    var rule;
+    setup(function() {
+      var template = document.querySelector('template#custom-style');
+      var style = template.content.querySelector('style').cloneNode(true);
+      var ast = window.ShadyCSS.ScopingShim.getStyleAst(style);
+      rule = ast.rules[0];
+    });
+
+    test('native ShadowDOM', function() {
+      window.StyleTransformer.normalizeRootSelector(rule);
+      assert.equal(rule.selector, 'html');
+    });
+
+    test('ShadyDOM', function() {
+      window.StyleTransformer.documentRule(rule);
+      assert.equal(rule.selector, 'html:not(.style-scope)');
+    });
+  });
+
+  suite('shared style (light or shadow dom) transforms', function() {
+    let rule;
+
+    setup(function() {
+      const template = document.querySelector('template#shared-style');
+      const style = template.content.querySelector('style').cloneNode(true);
+      const ast = window.ShadyCSS.ScopingShim.getStyleAst(style);
+      rule = ast.rules[0];
+    });
+
+    test('native ShadowDOM', function() {
+      window.StyleTransformer.normalizeRootSelector(rule);
+      assert.equal(rule.selector, 'html, :host');
+    });
+
+    test('ShadyDOM', function() {
+      window.StyleTransformer.documentRule(rule);
+      assert.equal(rule.selector, 'html:not(.style-scope)');
+    });
+  });
+
+  suite('attribute selectors', function() {
+
+    suite('simple', function() {
+      let rule;
+
+      setup(function() {
+        const template = document.querySelector('template#attribute-style');
+        const style = template.content.querySelector('style').cloneNode(true);
+        const ast = window.ShadyCSS.ScopingShim.getStyleAst(style);
+        rule = ast.rules[0];
+      });
+
+      test('native ShadowDOM', function() {
+        window.StyleTransformer.normalizeRootSelector(rule);
+        assert.equal(rule.selector, '[foo="foo:bar"]');
+      });
+
+      test('ShadyDOM', function() {
+        window.StyleTransformer.documentRule(rule);
+        assert.equal(rule.selector, ':not(.style-scope)[foo="foo:bar"]');
+      });
+    });
+
+    suite('nested', function() {
+      let rule;
+
+      setup(function() {
+        const template = document.querySelector('template#nested-attribute-style');
+        const style = template.content.querySelector('style').cloneNode(true);
+        const ast = window.ShadyCSS.ScopingShim.getStyleAst(style);
+        rule = ast.rules[0];
+      });
+
+      test('native ShadowDOM', function() {
+        window.StyleTransformer.normalizeRootSelector(rule);
+        assert.equal(rule.selector, '[foo="foo:bar"] [foo="foo:bar"]');
+      });
+
+      test('ShadyDOM', function() {
+        window.StyleTransformer.documentRule(rule);
+        assert.equal(rule.selector, ':not(.style-scope)[foo="foo:bar"] :not(.style-scope)[foo="foo:bar"]');
+      });
+    });
+
+    suite('prepended', function() {
+      let rule;
+
+      setup(function() {
+        const template = document.querySelector('template#prepended-attribute-style');
+        const style = template.content.querySelector('style').cloneNode(true);
+        const ast = window.ShadyCSS.ScopingShim.getStyleAst(style);
+        rule = ast.rules[0];
+      });
+
+      test('native ShadowDOM', function() {
+        window.StyleTransformer.normalizeRootSelector(rule);
+        assert.equal(rule.selector, 'foo[foo="foo:bar"]');
+      });
+
+      test('ShadyDOM', function() {
+        window.StyleTransformer.documentRule(rule);
+        assert.equal(rule.selector, 'foo:not(.style-scope)[foo="foo:bar"]');
+      });
+    });
+  });
+});
+</script>

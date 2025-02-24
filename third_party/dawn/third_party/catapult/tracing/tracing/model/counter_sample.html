@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_registry.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * The value of a given measurement at a given time.
+   *
+   * As an example, if we're measuring the throughput of data sent over a USB
+   * connection, each counter sample might represent the instantaneous
+   * throughput of the connection at a given time.
+   *
+   * @constructor
+   * @extends {Event}
+   */
+  function CounterSample(series, timestamp, value) {
+    tr.model.Event.call(this);
+    this.series_ = series;
+    this.timestamp_ = timestamp;
+    this.value_ = value;
+  }
+
+  CounterSample.groupByTimestamp = function(samples) {
+    const samplesByTimestamp = tr.b.groupIntoMap(samples, s => s.timestamp);
+    const timestamps = Array.from(samplesByTimestamp.keys());
+    timestamps.sort();
+    const groups = [];
+    for (const ts of timestamps) {
+      const group = samplesByTimestamp.get(ts);
+      group.sort((x, y) => x.series.seriesIndex - y.series.seriesIndex);
+      groups.push(group);
+    }
+    return groups;
+  };
+
+  CounterSample.prototype = {
+    __proto__: tr.model.Event.prototype,
+
+    get series() {
+      return this.series_;
+    },
+
+    get timestamp() {
+      return this.timestamp_;
+    },
+
+    get value() {
+      return this.value_;
+    },
+
+    set timestamp(timestamp) {
+      this.timestamp_ = timestamp;
+    },
+
+    addBoundsToRange(range) {
+      range.addValue(this.timestamp);
+    },
+
+    getSampleIndex() {
+      return tr.b.findLowIndexInSortedArray(
+          this.series.timestamps,
+          function(x) { return x; },
+          this.timestamp_);
+    },
+
+    get userFriendlyName() {
+      return 'Counter sample from ' + this.series_.title + ' at ' +
+          tr.b.Unit.byName.timeStampInMs.format(this.timestamp);
+    }
+  };
+
+
+  tr.model.EventRegistry.register(
+      CounterSample,
+      {
+        name: 'counterSample',
+        pluralName: 'counterSamples'
+      });
+
+  return {
+    CounterSample,
+  };
+});
+</script>

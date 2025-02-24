@@ -1,0 +1,142 @@
+Name
+
+    ANGLE_base_vertex_base_instance_shader_builtin
+
+Name Strings
+
+    GL_ANGLE_base_vertex_base_instance_shader_builtin
+
+Contributors
+
+    Shrek Shao, Google Inc.
+    Contributors to the ANGLE_base_vertex_base_instance specification
+    Contributors to the ARB_shader_draw_parameters specification
+
+Contact
+
+    Shrek Shao (shrekshao 'at' google.com)
+
+Status
+
+    Incomplete
+
+Version
+
+    Last Modified Date: Nov 19, 2021
+    Author Revision: 1
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    The extension is based on ANGLE_base_vertex_base_instance, all limitations of which
+    apply to this extension.
+
+Overview
+
+    This extension is based on ANGLE_base_vertex_base_instance. It should be enabled
+    only if ANGLE_base_vertex_base_instance is enabled.
+
+    Additional to the functionality exposed by ANGLE_base_vertex_base_instance,
+    <gl_BaseVertex> and <gl_BaseInstance> builtins are added to the shading language.
+    For any *BaseVertex* draw call variant, the <baseVertex> of the draw may be
+    read by the vertex shader as <gl_BaseVertex>. For non *BaseVertex* calls,
+    the value of <gl_BaseVertex> is 0.
+    For any *BaseInstance draw call variant, the baseInstance of the draw may
+    be read by the vertex shader as <gl_BaseInstance>. For non *BaseInstance
+    calls, the value of <gl_BaseInstance> is 0.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 10 of the OpenGL ES 3.2 Specification
+
+    Section 10.5 Drawing Commands Using Vertex Arrays:
+
+    The base index of the instance may be read by a vertex shader as
+    <gl_BaseInstance>, for the commands
+
+    void DrawArraysInstancedBaseInstanceANGLE(
+        enum mode,
+        int first,
+        sizei count,
+        sizei instanceCount,
+        uint baseInstance);
+
+    and
+
+    void MultiDrawArraysInstancedBaseInstanceANGLE(
+        enum mode,
+        const int *firsts,
+        const sizei *counts,
+        const sizei *instanceCounts,
+        const uint *baseInstances,
+        sizei drawcount);
+
+    The base index of the vertex may be read by a vertex shader as
+    <gl_BaseVertex>. This value is also added to the <gl_VertexID>.
+
+    The base index of the instance may be read by a vertex shader as
+    <gl_BaseInstance>. Note that this value is not added to the
+    <gl_InstanceID>, for the commands
+
+    void DrawElementsInstancedBaseVertexBaseInstanceANGLE(
+        enum mode,
+        sizei count,
+        enum type,
+        const void *indices,
+        sizei instanceCount,
+        int baseVertex,
+        uint baseInstance);
+
+    and
+
+    void MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(
+        enum mode,
+        const sizei *counts,
+        enum type,
+        const void *const *indices,
+        const sizei *instanceCounts,
+        const int *baseVertices,
+        const uint *baseInstances,
+        sizei drawcount);
+
+Errors
+
+    None.
+
+Modifications to the OpenGL ES Shading Language Specification, Version 3.00
+
+    Including the following line in a shader controls the
+    language featured described in this extension:
+
+      #extension GL_ANGLE_base_vertex_base_instance_shader_builtin : <behavior>
+
+    where <behavior> is as specified in section 3.5.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_ANGLE_base_vertex_base_instance_shader_builtin 1
+
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date    Author            Changes
+    ----  --------  ----------------  --------------------------------------------
+    1     11/19/21   Shrek Shao       First revision.
+    2     06/21/22   Alexey Knyazev   Fixed typos and type usage.

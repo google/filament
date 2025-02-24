@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/picture_ops_list_view.html">
+
+<script src="/tracing/extras/chrome/cc/layer_tree_host_impl_test_data.js">
+</script>
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const PictureOpsListView = tr.ui.e.chrome.cc.PictureOpsListView;
+
+  test('instantiate', function() {
+    if (!tr.e.cc.PictureSnapshot.CanRasterize()) return;
+
+    const m = new tr.Model(g_catLTHIEvents);
+    const p = Object.values(m.processes)[0];
+
+    const instance = p.objects.getAllInstancesNamed('cc::Picture')[0];
+    const snapshot = instance.snapshots[0];
+
+    const view = new PictureOpsListView();
+    view.picture = snapshot;
+    assert.strictEqual(view.opsList_.children.length, 142);
+  });
+
+  test('selection', function() {
+    if (!tr.e.cc.PictureSnapshot.CanRasterize()) return;
+
+    const m = new tr.Model(g_catLTHIEvents);
+    const p = Object.values(m.processes)[0];
+
+    const instance = p.objects.getAllInstancesNamed('cc::Picture')[0];
+    const snapshot = instance.snapshots[0];
+
+    const view = new PictureOpsListView();
+    view.picture = snapshot;
+    let didSelectionChange = 0;
+    view.addEventListener('selection-changed', function() {
+      didSelectionChange = true;
+    });
+    assert.isFalse(didSelectionChange);
+    view.opsList_.selectedElement = view.opsList_.children[3];
+    assert.isTrue(didSelectionChange);
+  });
+});
+</script>

@@ -1,0 +1,471 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+iron-request can be used to perform XMLHttpRequests.
+
+    <iron-request id="xhr"></iron-request>
+    ...
+    this.$.xhr.send({url: url, body: params});
+-->
+<script>
+  'use strict';
+
+  Polymer({
+    is: 'iron-request',
+
+    hostAttributes: {
+      hidden: true
+    },
+
+    properties: {
+
+      /**
+       * A reference to the XMLHttpRequest instance used to generate the
+       * network request.
+       *
+       * @type {XMLHttpRequest}
+       */
+      xhr: {
+        type: Object,
+        notify: true,
+        readOnly: true,
+        value: function() {
+          return new XMLHttpRequest();
+        }
+      },
+
+      /**
+       * A reference to the parsed response body, if the `xhr` has completely
+       * resolved.
+       *
+       * @type {*}
+       * @default null
+       */
+      response: {
+        type: Object,
+        notify: true,
+        readOnly: true,
+        value: function() {
+          return null;
+        }
+      },
+
+      /**
+       * A reference to the status code, if the `xhr` has completely resolved.
+       */
+      status: {
+        type: Number,
+        notify: true,
+        readOnly: true,
+        value: 0
+      },
+
+      /**
+       * A reference to the status text, if the `xhr` has completely resolved.
+       */
+      statusText: {
+        type: String,
+        notify: true,
+        readOnly: true,
+        value: ''
+      },
+
+      /**
+       * A promise that resolves when the `xhr` response comes back, or rejects
+       * if there is an error before the `xhr` completes.
+       * The resolve callback is called with the original request as an argument.
+       * By default, the reject callback is called with an `Error` as an argument.
+       * If `rejectWithRequest` is true, the reject callback is called with an 
+       * object with two keys: `request`, the original request, and `error`, the 
+       * error object.
+       *
+       * @type {Promise}
+       */
+      completes: {
+        type: Object,
+        readOnly: true,
+        notify: true,
+        value: function() {
+          return new Promise(function(resolve, reject) {
+            this.resolveCompletes = resolve;
+            this.rejectCompletes = reject;
+          }.bind(this));
+        }
+      },
+
+      /**
+       * An object that contains progress information emitted by the XHR if
+       * available.
+       *
+       * @default {}
+       */
+      progress: {
+        type: Object,
+        notify: true,
+        readOnly: true,
+        value: function() {
+          return {};
+        }
+      },
+
+      /**
+       * Aborted will be true if an abort of the request is attempted.
+       */
+      aborted: {
+        type: Boolean,
+        notify: true,
+        readOnly: true,
+        value: false,
+      },
+
+      /**
+       * Errored will be true if the browser fired an error event from the
+       * XHR object (mainly network errors).
+       */
+      errored: {
+        type: Boolean,
+        notify: true,
+        readOnly: true,
+        value: false
+      },
+
+      /**
+       * TimedOut will be true if the XHR threw a timeout event.
+       */
+      timedOut: {
+        type: Boolean,
+        notify: true,
+        readOnly: true,
+        value: false
+      }
+    },
+
+    /**
+     * Succeeded is true if the request succeeded. The request succeeded if it
+     * loaded without error, wasn't aborted, and the status code is ≥ 200, and
+     * < 300, or if the status code is 0.
+     *
+     * The status code 0 is accepted as a success because some schemes - e.g.
+     * file:// - don't provide status codes.
+     *
+     * @return {boolean}
+     */
+    get succeeded() {
+      if (this.errored || this.aborted || this.timedOut) {
+        return false;
+      }
+      var status = this.xhr.status || 0;
+
+      // Note: if we are using the file:// protocol, the status code will be 0
+      // for all outcomes (successful or otherwise).
+      return status === 0 ||
+        (status >= 200 && status < 300);
+    },
+
+    /**
+     * Sends an HTTP request to the server and returns a promise (see the `completes`
+     * property for details).
+     *
+     * The handling of the `body` parameter will vary based on the Content-Type
+     * header. See the docs for iron-ajax's `body` property for details.
+     *
+     * @param {{
+     *   url: string,
+     *   method: (string|undefined),
+     *   async: (boolean|undefined),
+     *   body: (ArrayBuffer|ArrayBufferView|Blob|Document|FormData|null|string|undefined|Object),
+     *   headers: (Object|undefined),
+     *   handleAs: (string|undefined),
+     *   jsonPrefix: (string|undefined),
+     *   withCredentials: (boolean|undefined),
+     *   timeout: (Number|undefined),
+     *   rejectWithRequest: (boolean|undefined)}} options -
+     *   - url The url to which the request is sent.
+     *   - method The HTTP method to use, default is GET.
+     *   - async By default, all requests are sent asynchronously. To send synchronous requests,
+     *         set to false.
+     *   -  body The content for the request body for POST method.
+     *   -  headers HTTP request headers.
+     *   -  handleAs The response type. Default is 'text'.
+     *   -  withCredentials Whether or not to send credentials on the request. Default is false.
+     *   -  timeout - Timeout for request, in milliseconds.
+     *   -  rejectWithRequest Set to true to include the request object with promise rejections.
+     * @return {Promise}
+     */
+    send: function(options) {
+      var xhr = this.xhr;
+
+      if (xhr.readyState > 0) {
+        return null;
+      }
+
+      xhr.addEventListener('progress', function(progress) {
+        this._setProgress({
+          lengthComputable: progress.lengthComputable,
+          loaded: progress.loaded,
+          total: progress.total
+        });
+      }.bind(this));
+
+      xhr.addEventListener('error', function(error) {
+        this._setErrored(true);
+        this._updateStatus();
+        var response = options.rejectWithRequest ? {
+          error: error,
+          request: this
+        } : error;
+        this.rejectCompletes(response);
+      }.bind(this));
+
+      xhr.addEventListener('timeout', function(error) {
+        this._setTimedOut(true);
+        this._updateStatus();
+        var response = options.rejectWithRequest ? {
+          error: error,
+          request: this
+        } : error;
+        this.rejectCompletes(response);
+      }.bind(this));
+
+      xhr.addEventListener('abort', function() {
+        this._setAborted(true);
+        this._updateStatus();
+        var error = new Error('Request aborted.');
+        var response = options.rejectWithRequest ? {
+          error: error,
+          request: this
+        } : error;
+        this.rejectCompletes(response);
+      }.bind(this));
+
+      // Called after all of the above.
+      xhr.addEventListener('loadend', function() {
+        this._updateStatus();
+        this._setResponse(this.parseResponse());
+
+        if (!this.succeeded) {
+          var error = new Error('The request failed with status code: ' + this.xhr.status);
+          var response = options.rejectWithRequest ? {
+            error: error,
+            request: this
+          } : error;
+          this.rejectCompletes(response);
+          return;
+        }
+
+        this.resolveCompletes(this);
+      }.bind(this));
+
+      this.url = options.url;
+      xhr.open(
+        options.method || 'GET',
+        options.url,
+        options.async !== false
+      );
+
+      var acceptType = {
+        'json': 'application/json',
+        'text': 'text/plain',
+        'html': 'text/html',
+        'xml': 'application/xml',
+        'arraybuffer': 'application/octet-stream'
+      }[options.handleAs];
+      var headers = options.headers || Object.create(null);
+      var newHeaders = Object.create(null);
+      for (var key in headers) {
+        newHeaders[key.toLowerCase()] = headers[key];
+      }
+      headers = newHeaders;
+
+      if (acceptType && !headers['accept']) {
+        headers['accept'] = acceptType;
+      }
+      Object.keys(headers).forEach(function(requestHeader) {
+        if (/[A-Z]/.test(requestHeader)) {
+          Polymer.Base._error('Headers must be lower case, got', requestHeader);
+        }
+        xhr.setRequestHeader(
+          requestHeader,
+          headers[requestHeader]
+        );
+      }, this);
+
+      if (options.async !== false) {
+        if (options.async) {
+          xhr.timeout = options.timeout;
+        }
+
+        var handleAs = options.handleAs;
+
+        // If a JSON prefix is present, the responseType must be 'text' or the
+        // browser won’t be able to parse the response.
+        if (!!options.jsonPrefix || !handleAs) {
+          handleAs = 'text';
+        }
+
+        // In IE, `xhr.responseType` is an empty string when the response
+        // returns. Hence, caching it as `xhr._responseType`.
+        xhr.responseType = xhr._responseType = handleAs;
+
+        // Cache the JSON prefix, if it exists.
+        if (!!options.jsonPrefix) {
+          xhr._jsonPrefix = options.jsonPrefix;
+        }
+      }
+
+      xhr.withCredentials = !!options.withCredentials;
+
+
+      var body = this._encodeBodyObject(options.body, headers['content-type']);
+
+      xhr.send(
+        /** @type {ArrayBuffer|ArrayBufferView|Blob|Document|FormData|
+                   null|string|undefined} */
+        (body));
+
+      return this.completes;
+    },
+
+    /**
+     * Attempts to parse the response body of the XHR. If parsing succeeds,
+     * the value returned will be deserialized based on the `responseType`
+     * set on the XHR.
+     *
+     * @return {*} The parsed response,
+     * or undefined if there was an empty response or parsing failed.
+     */
+    parseResponse: function() {
+      var xhr = this.xhr;
+      var responseType = xhr.responseType || xhr._responseType;
+      var preferResponseText = !this.xhr.responseType;
+      var prefixLen = (xhr._jsonPrefix && xhr._jsonPrefix.length) || 0;
+
+      try {
+        switch (responseType) {
+          case 'json':
+            // If the xhr object doesn't have a natural `xhr.responseType`,
+            // we can assume that the browser hasn't parsed the response for us,
+            // and so parsing is our responsibility. Likewise if response is
+            // undefined, as there's no way to encode undefined in JSON.
+            if (preferResponseText || xhr.response === undefined) {
+              // Try to emulate the JSON section of the response body section of
+              // the spec: https://xhr.spec.whatwg.org/#response-body
+              // That is to say, we try to parse as JSON, but if anything goes
+              // wrong return null.
+              try {
+                return JSON.parse(xhr.responseText);
+              } catch (_) {
+                return null;
+              }
+            }
+
+            return xhr.response;
+          case 'xml':
+            return xhr.responseXML;
+          case 'blob':
+          case 'document':
+          case 'arraybuffer':
+            return xhr.response;
+          case 'text':
+          default: {
+            // If `prefixLen` is set, it implies the response should be parsed
+            // as JSON once the prefix of length `prefixLen` is stripped from
+            // it. Emulate the behavior above where null is returned on failure
+            // to parse.
+            if (prefixLen) {
+              try {
+                return JSON.parse(xhr.responseText.substring(prefixLen));
+              } catch (_) {
+                return null;
+              }
+            }
+            return xhr.responseText;
+          }
+        }
+      } catch (e) {
+        this.rejectCompletes(new Error('Could not parse response. ' + e.message));
+      }
+    },
+
+    /**
+     * Aborts the request.
+     */
+    abort: function() {
+      this._setAborted(true);
+      this.xhr.abort();
+    },
+
+    /**
+     * @param {*} body The given body of the request to try and encode.
+     * @param {?string} contentType The given content type, to infer an encoding
+     *     from.
+     * @return {*} Either the encoded body as a string, if successful,
+     *     or the unaltered body object if no encoding could be inferred.
+     */
+    _encodeBodyObject: function(body, contentType) {
+      if (typeof body == 'string') {
+        return body;  // Already encoded.
+      }
+      var bodyObj = /** @type {Object} */ (body);
+      switch(contentType) {
+        case('application/json'):
+          return JSON.stringify(bodyObj);
+        case('application/x-www-form-urlencoded'):
+          return this._wwwFormUrlEncode(bodyObj);
+      }
+      return body;
+    },
+
+    /**
+     * @param {Object} object The object to encode as x-www-form-urlencoded.
+     * @return {string} .
+     */
+    _wwwFormUrlEncode: function(object) {
+      if (!object) {
+        return '';
+      }
+      var pieces = [];
+      Object.keys(object).forEach(function(key) {
+        // TODO(rictic): handle array values here, in a consistent way with
+        //   iron-ajax params.
+        pieces.push(
+            this._wwwFormUrlEncodePiece(key) + '=' +
+            this._wwwFormUrlEncodePiece(object[key]));
+      }, this);
+      return pieces.join('&');
+    },
+
+    /**
+     * @param {*} str A key or value to encode as x-www-form-urlencoded.
+     * @return {string} .
+     */
+    _wwwFormUrlEncodePiece: function(str) {
+      // Spec says to normalize newlines to \r\n and replace %20 spaces with +.
+      // jQuery does this as well, so this is likely to be widely compatible.
+      if (str === null || str === undefined || !str.toString) {
+        return '';
+      }
+
+      return encodeURIComponent(str.toString().replace(/\r?\n/g, '\r\n'))
+        .replace(/%20/g, '+');
+    },
+
+    /**
+     * Updates the status code and status text.
+     */
+    _updateStatus: function() {
+      this._setStatus(this.xhr.status);
+      this._setStatusText((this.xhr.statusText === undefined) ? '' : this.xhr.statusText);
+    }
+  });
+</script>

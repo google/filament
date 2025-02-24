@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/chrome/speed_index_utils.html">
+<link rel="import" href="/tracing/metrics/system_health/breakdown_tree_helpers.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const timeDurationInMs_smallerIsBetter =
+      tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const SpeedIndex = tr.e.chrome.SpeedIndex;
+  const EventFinderUtils = tr.e.chrome.EventFinderUtils;
+
+  const BIN_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 1e3, 20)  // 50ms step to 1s
+      .addLinearBins(3e3, 20) // 100ms step to 3s
+      .addExponentialBins(20e3, 20);
+
+
+  const SUMMARY_OPTIONS = {
+    avg: true,
+    count: false,
+    max: true,
+    min: true,
+    std: true,
+    sum: false,
+  };
+
+  /**
+   * Adds a speed index sample.
+   *
+   * @param {tr.model.helpers.ChromeBrowserrHelper} browserHelper
+   * @param {number[]} samples
+   * @param {tr.model.ThreadSlice} navigationStart
+   */
+  function addRectsBasedSpeedIndexSample(samples, rendererHelper,
+      navigationStart, loadDuration, frameID) {
+    let viewport;
+    // We're looking for the last viewport recorded before end of loading.
+    for (const event of EventFinderUtils.getMainThreadEvents(rendererHelper,
+        'viewport', 'loading')) {
+      if (event.args.data.frameID === frameID &&
+        event.start < (navigationStart + loadDuration)) {
+        viewport = event.args.data;
+      }
+    }
+    if (!viewport) return;
+
+    const timestampedPaintRects = [];
+    for (const event of EventFinderUtils.getMainThreadEvents(rendererHelper,
+        'PaintTimingVisualizer::LayoutObjectPainted', 'loading')) {
+      if (event.start >= navigationStart &&
+        event.start < navigationStart + loadDuration) {
+        const paintRect = event.args.data.rect;
+        if (!paintRect) continue;
+        timestampedPaintRects.push({
+          rect: SpeedIndex.quadToRect(paintRect),
+          ts: event.start});
+      }
+    }
+    const numberOfRects = timestampedPaintRects.length;
+    if (numberOfRects === 0) return;
+
+    samples.push({
+      value: SpeedIndex.calculateRectsBasedSpeedIndex(timestampedPaintRects,
+          viewport) - navigationStart
+    });
+  }
+
+  function collectRectsBasedSpeedIndexSamplesFromLoadExpectations(model,
+      chromeHelper) {
+    const rectsBasedSpeedIndexSamples = [];
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(expectation.url)) {
+        continue;
+      }
+      const rendererHelper = chromeHelper.rendererHelpers[
+          expectation.renderProcess.pid];
+      addRectsBasedSpeedIndexSample(rectsBasedSpeedIndexSamples, rendererHelper,
+          expectation.navigationStart.start, expectation.duration,
+          expectation.navigationStart.args.frame);
+    }
+    return rectsBasedSpeedIndexSamples;
+  }
+
+  function rectsBasedSpeedIndexMetric(histograms, model) {
+    const rectsBasedSpeedIndexHistogram = histograms.createHistogram(
+        'rectsBasedSpeedIndex', timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: BIN_BOUNDARIES,
+          description: ' the average time at which visible parts of the' +
+          ' page are displayed (in ms).',
+          summaryOptions: SUMMARY_OPTIONS,
+        });
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    const samples = collectRectsBasedSpeedIndexSamplesFromLoadExpectations(
+        model, chromeHelper);
+    for (const sample of samples) {
+      rectsBasedSpeedIndexHistogram.addSample(sample.value);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(rectsBasedSpeedIndexMetric);
+
+  return {
+    rectsBasedSpeedIndexMetric
+  };
+});
+</script>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id="tr-ui-b-chart-legend-key">
+  <template>
+    <style>
+      #checkbox {
+        margin: 0;
+        visibility: hidden;
+        vertical-align: text-top;
+      }
+      #label, #link {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        display: inline-block;
+      }
+    </style>
+
+    <input type=checkbox id="checkbox" checked>
+    <tr-ui-a-analysis-link id="link"></tr-ui-a-analysis-link>
+    <label id="label"></label>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-chart-legend-key',
+
+  ready() {
+    this.$.checkbox.addEventListener(
+        'change', this.onCheckboxChange_.bind(this));
+  },
+
+  /**
+   * Dispatch an event when the checkbox is toggled.
+   * The checkbox is visible when optional is set to true.
+   */
+  onCheckboxChange_() {
+    tr.b.dispatchSimpleEvent(this, tr.ui.b.DataSeriesEnableChangeEventType,
+        true, false,
+        {key: Polymer.dom(this).textContent, enabled: this.enabled});
+  },
+
+  set textContent(t) {
+    Polymer.dom(this.$.label).textContent = t;
+    Polymer.dom(this.$.link).textContent = t;
+    this.updateContents_();
+  },
+
+  set width(w) {
+    w -= 20;  // reserve 20px for the checkbox
+    this.$.link.style.width = w + 'px';
+    this.$.label.style.width = w + 'px';
+  },
+
+  get textContent() {
+    return Polymer.dom(this.$.label).textContent;
+  },
+
+  /**
+   * When a legend-key is "optional", then its checkbox is visible to allow
+   * the user to enable/disable the data series for the key.
+   *
+   * @param {boolean} optional
+   */
+  set optional(optional) {
+    this.$.checkbox.style.visibility = optional ? 'visible' : 'hidden';
+  },
+
+  get optional() {
+    return this.$.checkbox.style.visibility === 'visible';
+  },
+
+  set enabled(enabled) {
+    this.$.checkbox.checked = enabled ? 'checked' : '';
+  },
+
+  get enabled() {
+    return this.$.checkbox.checked;
+  },
+
+  set color(c) {
+    this.$.label.style.color = c;
+    this.$.link.color = c;
+  },
+
+  /**
+   * When target is defined, label is hidden and link is shown.
+   * When the link is clicked, then a RequestSelectionChangeEvent is
+   * dispatched containing the target.
+   * When target is undefined, label is shown and link is hidden, so that the
+   * link is not clickable.
+   */
+  set target(target) {
+    this.$.link.setSelectionAndContent(
+        target, Polymer.dom(this.$.label).textContent);
+    this.updateContents_();
+  },
+
+  get target() {
+    return this.$.link.selection;
+  },
+
+  set title(title) {
+    this.$.link.title = title;
+  },
+
+  updateContents_() {
+    this.$.link.style.display = this.target ? '' : 'none';
+    this.$.label.style.display = this.target ? 'none' : '';
+    this.$.label.htmlFor = this.optional ? 'checkbox' : '';
+  }
+});
+</script>

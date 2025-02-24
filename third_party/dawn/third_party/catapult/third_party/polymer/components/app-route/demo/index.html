@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at
+http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at
+http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at
+http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at
+http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+<script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+<title>app-route Demo</title>
+<link rel="import" href="../../polymer/polymer.html">
+
+<link rel="import" href="../../iron-demo-helpers/url-bar.html">
+<link rel="import" href="../../iron-pages/iron-pages.html">
+
+<link rel="import" href="../app-location.html">
+<link rel="import" href="../app-route.html">
+
+<link rel="import" href="youtube-demo/youtube-search.html">
+<link rel="import" href="youtube-demo/youtube-toolbar.html">
+<link rel="import" href="youtube-demo/video-viewer.html">
+<link rel="import" href="youtube-demo/search-results.html">
+
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  url-bar {
+    background-color: white;
+  }
+</style>
+</head>
+
+<body>
+
+<url-bar></url-bar>
+
+<app-router-demo></app-router-demo>
+
+<dom-module id="app-router-demo">
+  <template>
+    <style>
+      :host {
+        display: block;
+        position: relative;
+        height: 100vh;
+        @apply(--paper-font-common-base);
+      }
+
+      :host([video-page-active]) {
+        overflow: hidden;
+      }
+
+      :host([video-page-active]) iron-pages {
+        transform: translateY(-170px);
+      }
+
+      iron-pages {
+        transition: transform 0.3s;
+      }
+    </style>
+
+
+    <!-- app-location binds with the URL and produces a route for
+    app-route elements to consume. Since this demo needs to run without
+    server cooperation (e.g. with polyserve, in the elements catalog, etc) we'll
+    use the hash portion of the URL for our route paths. -->
+    <app-location route="{{route}}" use-hash-as-path></app-location>
+
+    <!-- app-routes parse route paths based on the their `pattern`.
+    Parameters are extracted into the `data` object. The rest of the path that
+    comes after the `pattern` is put into the `tail` object, which can be
+    passed to the `route` property of downstream app-routes. -->
+    <app-route route="{{route}}" pattern="/:page" data="{{data}}"></app-route>
+    <app-route route="{{route}}" pattern="/search" tail="{{searchTail}}"></app-route>
+    <app-route route="{{route}}" pattern="/video" tail="{{videoTail}}" active="{{videoPageActive}}"></app-route>
+
+    <youtube-toolbar collapsed$="{{videoPageActive}}">
+      <!-- The youtube-search has a app-route that consumes the tail of
+      another route (`searchTail`) -->
+      <youtube-search
+          route="{{searchTail}}"
+          video-data="{{videoData}}">
+      </youtube-search>
+    </youtube-toolbar>
+
+    <iron-pages attr-for-selected="id" selected="{{data.page}}">
+      <search-results id="search" items="{{videos}}"></search-results>
+
+      <!-- The video-viewer has a app-route that consumes the tail of
+      another route -->
+      <video-viewer id="video" route="{{videoTail}}"></video-viewer>
+    </iron-pages>
+
+  </template>
+
+  <script>
+    window.addEventListener('WebComponentsReady', function() {
+      Polymer({
+        is: 'app-router-demo',
+
+        properties: {
+          route: {
+            type: Object
+          },
+
+          videoData: {
+            type: Object,
+            observer: '_videoDataChanged'
+          },
+
+          videoPageActive: {
+            type: Boolean,
+            reflectToAttribute: true,
+            observer: '_videoPageActiveChanged'
+          },
+
+          searchTail: {
+            type: Object,
+            notify: true
+          },
+
+          videoTail: {
+            type: Object,
+            notify: true
+          },
+
+          newCategory: {
+            type: String
+          },
+
+          videos: {
+            type: Array,
+            value: function() {
+              return [];
+            }
+          },
+
+          data: {
+            type: Object,
+            value: function() {
+              return {
+                page: '/search/'
+              };
+            }
+          }
+        },
+
+        observers: [
+          '_onRoutePathChanged(route.path)'
+        ],
+
+        _onRoutePathChanged: function(path) {
+          // If we do not have an initial URL, we redirect to /search
+          if (!path) {
+            this.set('route.path', '/search/');
+          }
+        },
+
+        _videoDataChanged: function(data) {
+          var allVideos = [];
+
+          var that = this;
+
+          data.items.forEach(function (videoItem) {
+            var youtubeVideo = {
+              id: videoItem.id.videoId,
+              title: videoItem.snippet.title,
+              thumbnail: videoItem.snippet.thumbnails.high.url
+            };
+
+            allVideos.push(youtubeVideo);
+          });
+
+          this.set('videos', allVideos);
+        },
+
+        _videoPageActiveChanged: function(videoPageActive, previousValue) {
+          // change color of page on page change
+          var newColor;
+
+          if (videoPageActive) {
+            // black
+            newColor = 0;
+          } else {
+            // white
+            newColor = 255;
+          }
+
+          document.body.style.backgroundColor = 'rgb(' + newColor + ',' + newColor
+              + ','  + newColor + ')';
+
+          // on first load, set the color then allow color transition animations
+          if (previousValue === undefined) {
+            document.body.style.transition = 'background-color .2s linear';
+            return;
+          }
+        }
+      });
+    });
+  </script>
+</dom-module>
+</body>
+</html>

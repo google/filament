@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+tr.exportTo('pi.m', function() {
+  const LONG_TASK_MS = 100;
+
+  const UNINTERESTING_TASKS = [
+    'MessageLoop::RunTask',
+    'TaskQueueManager::DoWork',
+    'TaskQueueManager::ProcessTaskFromWorkQueue',
+    'TaskQueueManager::RunTask',
+    'ThreadControllerImpl::RunTask',
+    'TimerBase::run',
+    'ProxyMain::BeginMainFrame',
+    'ParseHTML',
+    'TimerFire',
+    'EventDispatch',
+    'WebViewImpl::updateAllLifecyclePhases',
+    'ScheduledAction::execute',
+    'HTMLDocumentParser::processParsedChunkFromBackgroundParser',
+    'HTMLScriptRunner::executeScriptsWaitingForLoad',
+    'ResourceDispatcher::OnRequestComplete',
+    'HTMLScriptRunner::execute',
+    'ChannelProxy::Context::OnDispatchMessage',
+    'XHRReadyStateChange',
+    'RenderFrameImpl::didFinishDocumentLoad',
+    'ResourceDispatcher::OnReceivedData',
+    'WebViewImpl::beginFrame',
+    'RenderFrameImpl::OnBeforeUnload',
+    'WindowProxy::initialize',
+    'Sampler::InstallJitCodeEventHandler',
+    'ResourceMsg_DataReceived',
+    'ResourceReceivedData',
+    'RenderWidgetInputHandler::OnHandleInputEvent',
+    'ProxyMain::BeginMainFrame::commit',
+    'ResourceMsg_RequestComplete',
+    'ExtensionMsg_Response',
+    'ExtensionMsg_MessageInvoke',
+    'SyncChannel::Send',
+    'SingleThreadIdleTaskRunner::RunTask',
+    'ResourceDispatcher::OnReceivedResponse',
+    'FireAnimationFrame',
+    'InputMsg_HandleInputEvent',
+    'WebURLLoaderImpl::Context::OnCompletedRequest',
+    'WebURLLoaderImpl::Context::OnReceivedData',
+    'v8.callFunction',
+    'ExtensionMsg_Loaded',
+    'ProxyMain::BeginMainFrame::commit',
+    'XHRLoad',
+    'RenderFrameImpl::OnNavigate',
+    'CommitLoad',
+    'FrameMsg_Navigate',
+    'ResourceFinish',
+    'RenderViewImpl::OnResize',
+    'HostDispatcher::OnMessageReceived',
+    'HTMLScriptRunner::executeScriptsWaitingForParsing',
+    'HTMLScriptRunner::executeScriptsWaitingForResources',
+    'FrameMsg_JavaScriptExecuteRequest',
+    'v8.callModuleMethod'
+  ];
+
+  function longRunningScriptsMapper(result, model) {
+    const resultArray = [];
+
+    iterateRendererMainThreads(model, function(thread) {
+      thread.sliceGroup.topLevelSlices.forEach(function(slice) {
+        const interestingSlice = findLongestInterestingSlice(slice);
+        if (interestingSlice.duration < LONG_TASK_MS) return;
+
+        const scriptURL = getScriptURL(interestingSlice);
+        if (scriptURL !== undefined && scriptURL !== '') {
+          const topLevelDomain = extractDomain(scriptURL);
+          resultArray.push({
+            key: topLevelDomain,
+            float_value: interestingSlice.duration
+          });
+        }
+      });
+    });
+
+    result.addPair('values', resultArray);
+  }
+
+
+  tr.mre.FunctionRegistry.register(longRunningScriptsMapper);
+
+  return {
+    longRunningScriptsMapper,
+  };
+
+  function iterateRendererMainThreads(model, cb, opt_this) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    Object.values(modelHelper.rendererHelpers).forEach(
+        function(rendererHelper) {
+          if (!rendererHelper.mainThread) return;
+          cb.call(opt_this, rendererHelper.mainThread);
+        });
+  }
+
+  function getScriptURL(slice) {
+    let url = undefined;
+
+    if (slice.title === 'v8.run') {
+      url = slice.args.fileName;
+    } else if (slice.title === 'v8.compile') {
+      url = slice.args.fileName;
+    } else if (slice.title === 'FunctionCall') {
+      url = slice.args.data.scriptName;
+    } else if (slice.title === 'EvaluateScript') {
+      url = slice.args.data.url;
+    } else if (slice.title === 'HTMLScriptRunner ExecuteScript') {
+      url = slice.args.data.url;
+    }
+
+    return url;
+  }
+
+  function findLongestInterestingSlice(slice) {
+    if (UNINTERESTING_TASKS.indexOf(slice.title) >= 0) {
+      let longestSlice = undefined;
+      const subSlices = slice.subSlices;
+      for (let i = 0; i < subSlices.length; ++i) {
+        if (longestSlice === undefined ||
+            longestSlice.duration < subSlices[i].duration) {
+          longestSlice = subSlices[i];
+        }
+      }
+
+      if (longestSlice !== undefined) {
+        return findLongestInterestingSlice(longestSlice);
+      }
+    }
+
+    return slice;
+  }
+
+  function extractDomain(url) {
+    let domain;
+    // Find & remove protocol (http, ftp, etc.) and get domain.
+    if (url.indexOf('://') > -1) {
+      domain = url.split('/')[2];
+    } else {
+      domain = url.split('/')[0];
+    }
+
+    // Find & remove port number.
+    domain = domain.split(':')[0];
+
+    return domain;
+  }
+});
+
+</script>

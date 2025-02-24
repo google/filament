@@ -1,0 +1,13 @@
+---
+# Currently this matches the style of the rest of the repo.
+# A concern doing this is this will be more difficult to find
+# matching text across the scripts and their generated files.
+#
+# If that becomes an issue in the future, then someone just needs
+# to pick the minimum styles desired.
+BasedOnStyle: Google
+IndentWidth: 4
+AccessModifierOffset: -2
+ColumnLimit: 132
+SortIncludes: false
+...

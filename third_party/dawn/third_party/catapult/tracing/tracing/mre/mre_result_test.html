@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/mre/failure.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('mreResultAsDictTest', function() {
+    const result = new tr.mre.MreResult();
+
+    const failure = new tr.mre.Failure('1', '2', '3', 'err', 'desc', 'stack');
+    result.addFailure(failure);
+
+    result.addPair('foo', 'bar');
+
+    const resultDict = result.asDict();
+
+    assert.deepEqual(resultDict.failures, [failure.asDict()]);
+    assert.deepEqual(resultDict.pairs, {foo: 'bar'});
+  });
+});
+
+</script>

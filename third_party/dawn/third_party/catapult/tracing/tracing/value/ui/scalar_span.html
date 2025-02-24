@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/ui/scalar_context_controller.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  /**
+   * One common simple way to use this function is
+   * createScalarSpan(number, {unit: tr.b.Unit.byName.whatever})
+   *
+   * This function can also take a Scalar, undefined, or a Histogram plus
+   * significance, contextGroup, customContextRange, leftAlign and/or inline.
+   *
+   * @param {undefined|tr.b.Scalar|tr.v.Histogram} value
+   * @param {Object=} opt_config
+   * @param {!tr.b.math.Range=} opt_config.customContextRange
+   * @param {boolean=} opt_config.leftAlign
+   * @param {boolean=} opt_config.inline
+   * @param {!tr.b.Unit=} opt_config.unit
+   * @param {tr.b.math.Statistics.Significance=} opt_config.significance
+   * @param {string=} opt_config.contextGroup
+   * @return {(string|!HTMLElement)}
+   */
+  function createScalarSpan(value, opt_config) {
+    if (value === undefined) return '';
+
+    const config = opt_config || {};
+    const ownerDocument = config.ownerDocument || document;
+
+    const span = unwrap(ownerDocument).createElement('tr-v-ui-scalar-span');
+
+    let numericValue;
+    if (value instanceof tr.b.Scalar) {
+      span.value = value;
+      numericValue = value.value;
+    } else if (value instanceof tr.v.Histogram) {
+      numericValue = value.average;
+      if (numericValue === undefined) return '';
+      span.setValueAndUnit(numericValue, value.unit);
+    } else {
+      const unit = config.unit;
+      if (unit === undefined) {
+        throw new Error(
+            'Unit must be provided in config when value is a number');
+      }
+      span.setValueAndUnit(value, unit);
+      numericValue = value;
+    }
+
+    if (config.context) {
+      span.context = config.context;
+    }
+
+    if (config.customContextRange) {
+      span.customContextRange = config.customContextRange;
+    }
+
+    if (config.leftAlign) {
+      span.leftAlign = true;
+    }
+
+    if (config.inline) {
+      span.inline = true;
+    }
+
+    if (config.significance !== undefined) {
+      span.significance = config.significance;
+    }
+
+    if (config.contextGroup !== undefined) {
+      span.contextGroup = config.contextGroup;
+    }
+
+    return span;
+  }
+
+  return {
+    createScalarSpan,
+  };
+});
+</script>
+
+<dom-module id="tr-v-ui-scalar-span">
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+      position: relative;
+      /* Limit the sparkline's negative z-index to the span only. */
+      isolation: isolate;
+    }
+
+    :host(.left-align) {
+      justify-content: flex-start;
+    }
+
+    :host(.inline) {
+      display: inline-flex;
+    }
+
+    #sparkline {
+      width: 0%;
+      position: absolute;
+      bottom: 0;
+      display: none;
+      height: 100%;
+      background-color: hsla(216, 100%, 94.5%, .75);
+      border-color: hsl(216, 100%, 89%);
+      box-sizing: border-box;
+      z-index: -1;
+    }
+    #sparkline.positive {
+      border-right-style: solid;
+      /* The border width must be kept in sync with buildSparklineStyle_(). */
+      border-right-width: 1px;
+    }
+    #sparkline:not(.positive) {
+      border-left-style: solid;
+      /* The border width must be kept in sync with buildSparklineStyle_(). */
+      border-left-width: 1px;
+    }
+    #sparkline.better {
+      background-color: hsla(115, 100%, 93%, .75);
+      border-color: hsl(118, 60%, 80%);
+    }
+    #sparkline.worse {
+      background-color: hsla(0, 100%, 88%, .75);
+      border-color: hsl(0, 100%, 80%);
+    }
+
+    #content {
+      white-space: nowrap;
+    }
+    #content, #significance, #warning {
+      flex-grow: 0;
+    }
+    #content.better {
+      color: green;
+    }
+    #content.worse {
+      color: red;
+    }
+
+    #significance svg {
+      margin-left: 4px;
+      display: none;
+      height: 1em;
+      vertical-align: text-top;
+      stroke-width: 4;
+      fill: rgba(0, 0, 0, 0);
+    }
+    #significance #insignificant {
+      stroke: black;
+    }
+    #significance #significantly_better {
+      stroke: green;
+    }
+    #significance #significantly_worse {
+      stroke: red;
+    }
+
+    #warning {
+      display: none;
+      margin-left: 4px;
+      height: 1em;
+      vertical-align: text-top;
+      stroke-width: 0;
+    }
+    #warning path {
+      fill: rgb(255, 185, 185);
+    }
+    #warning rect {
+      fill: red;
+    }
+    </style>
+
+    <span id="sparkline"></span>
+
+    <span id="content"></span>
+
+    <span id="significance">
+      <!-- Neutral face -->
+      <svg viewbox="0 0 128 128" id="insignificant">
+        <circle r="60" cx="64" cy="64"/>
+        <circle r="4" cx="44" cy="44"/>
+        <circle r="4" cx="84" cy="44"/>
+        <line x1="36" x2="92" y1="80" y2="80"/>
+      </svg>
+
+      <!-- Smiling face -->
+      <svg viewbox="0 0 128 128" id="significantly_better">
+        <circle r="60" cx="64" cy="64"/>
+        <circle r="4" cx="44" cy="44"/>
+        <circle r="4" cx="84" cy="44"/>
+        <path d="M 28 64 Q 64 128 100 64"/>
+      </svg>
+
+      <!-- Frowning face -->
+      <svg viewbox="0 0 128 128" id="significantly_worse">
+        <circle r="60" cx="64" cy="64"/>
+        <circle r="4" cx="44" cy="44"/>
+        <circle r="4" cx="84" cy="44"/>
+        <path d="M 36 96 Q 64 48 92 96"/>
+      </svg>
+    </span>
+
+    <svg viewbox="0 0 128 128" id="warning">
+      <path d="M 64 0 L 128 128 L 0 128 L 64 0"/>
+      <rect x="60" width="8" y="0" height="84"/>
+      <rect x="60" width="8" y="100" height="24"/>
+    </svg>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-v-ui-scalar-span',
+
+  properties: {
+    /**
+     * String identifier for grouping scalar spans with common context (e.g.
+     * all scalar spans in a single table column would typically share a common
+     * context and, thus, have the same context group identifier). If falsy,
+     * the scalar span will NOT be associated with any context.
+     */
+    contextGroup: {
+      type: String,
+      reflectToAttribute: true,
+      observer: 'contextGroupChanged_'
+    }
+  },
+
+  created() {
+    this.value_ = undefined;
+    this.unit_ = undefined;
+
+    // TODO(petrcermak): Merge this into the context controller.
+    this.context_ = undefined;
+
+    this.warning_ = undefined;
+    this.significance_ = tr.b.math.Statistics.Significance.DONT_CARE;
+
+    // To avoid unnecessary DOM traversal, search for the context controller
+    // only when necessary (when the span is attached and has a context group).
+    this.shouldSearchForContextController_ = false;
+    this.lazyContextController_ = undefined;
+    this.onContextUpdated_ = this.onContextUpdated_.bind(this);
+    this.updateContents_ = this.updateContents_.bind(this);
+
+    // The span can specify a custom context range, which will override the
+    // values from the context controller.
+    this.customContextRange_ = undefined;
+  },
+
+  get significance() {
+    return this.significance_;
+  },
+
+  set significance(s) {
+    this.significance_ = s;
+    this.updateContents_();
+  },
+
+  set contentTextDecoration(deco) {
+    this.$.content.style.textDecoration = deco;
+  },
+
+  get value() {
+    return this.value_;
+  },
+
+  set value(value) {
+    if (value instanceof tr.b.Scalar) {
+      this.value_ = value.value;
+      this.unit_ = value.unit;
+    } else {
+      this.value_ = value;
+    }
+    this.updateContents_();
+    if (this.hasContext_(this.contextGroup)) {
+      this.contextController_.onScalarSpanUpdated(this.contextGroup, this);
+    } else {
+      this.updateSparkline_();
+    }
+  },
+
+  get contextController_() {
+    if (this.shouldSearchForContextController_) {
+      this.lazyContextController_ =
+          tr.v.ui.getScalarContextControllerForElement(this);
+      this.shouldSearchForContextController_ = false;
+    }
+    return this.lazyContextController_;
+  },
+
+  hasContext_(contextGroup) {
+    // The ordering here is important. It ensures that we avoid a DOM traversal
+    // when the span doesn't have a context group.
+    return !!(contextGroup && this.contextController_);
+  },
+
+  contextGroupChanged_(newContextGroup, oldContextGroup) {
+    this.detachFromContextControllerIfPossible_(oldContextGroup);
+    if (!this.attachToContextControllerIfPossible_(newContextGroup)) {
+      // If the span failed to attach to a controller, it won't receive a
+      // context-updated event, so we trigger it manually.
+      this.onContextUpdated_();
+    }
+  },
+
+  attachToContextControllerIfPossible_(contextGroup) {
+    if (!this.hasContext_(contextGroup)) return false;
+
+    this.contextController_.addEventListener(
+        'context-updated', this.onContextUpdated_);
+    this.contextController_.onScalarSpanAdded(contextGroup, this);
+    return true;
+  },
+
+  detachFromContextControllerIfPossible_(contextGroup) {
+    if (!this.hasContext_(contextGroup)) return;
+
+    this.contextController_.removeEventListener(
+        'context-updated', this.onContextUpdated_);
+    this.contextController_.onScalarSpanRemoved(contextGroup, this);
+  },
+
+  attached() {
+    tr.b.Unit.addEventListener(
+        'display-mode-changed', this.updateContents_);
+    this.shouldSearchForContextController_ = true;
+    this.attachToContextControllerIfPossible_(this.contextGroup);
+  },
+
+  detached() {
+    tr.b.Unit.removeEventListener(
+        'display-mode-changed', this.updateContents_);
+    this.detachFromContextControllerIfPossible_(this.contextGroup);
+    this.shouldSearchForContextController_ = false;
+    this.lazyContextController_ = undefined;
+  },
+
+  onContextUpdated_() {
+    this.updateSparkline_();
+  },
+
+  get context() {
+    return this.context_;
+  },
+
+  set context(context) {
+    this.context_ = context;
+    this.updateContents_();
+  },
+
+  get unit() {
+    return this.unit_;
+  },
+
+  set unit(unit) {
+    this.unit_ = unit;
+    this.updateContents_();
+    this.updateSparkline_();
+  },
+
+  setValueAndUnit(value, unit) {
+    this.value_ = value;
+    this.unit_ = unit;
+    this.updateContents_();
+  },
+
+  get customContextRange() {
+    return this.customContextRange_;
+  },
+
+  set customContextRange(customContextRange) {
+    this.customContextRange_ = customContextRange;
+    this.updateSparkline_();
+  },
+
+  get inline() {
+    return Polymer.dom(this).classList.contains('inline');
+  },
+
+  set inline(inline) {
+    if (inline) {
+      Polymer.dom(this).classList.add('inline');
+    } else {
+      Polymer.dom(this).classList.remove('inline');
+    }
+  },
+
+  get leftAlign() {
+    return Polymer.dom(this).classList.contains('left-align');
+  },
+
+  set leftAlign(leftAlign) {
+    if (leftAlign) {
+      Polymer.dom(this).classList.add('left-align');
+    } else {
+      Polymer.dom(this).classList.remove('left-align');
+    }
+  },
+
+  updateSparkline_() {
+    Polymer.dom(this.$.sparkline).classList.remove('positive');
+    Polymer.dom(this.$.sparkline).classList.remove('better');
+    Polymer.dom(this.$.sparkline).classList.remove('worse');
+    Polymer.dom(this.$.sparkline).classList.remove('same');
+    this.$.sparkline.style.display = 'none';
+    this.$.sparkline.style.left = '0';
+    this.$.sparkline.style.width = '0';
+
+    // Custom context range takes precedence over controller context range.
+    let range = this.customContextRange_;
+    if (!range && this.hasContext_(this.contextGroup)) {
+      const context = this.contextController_.getContext(this.contextGroup);
+      if (context) {
+        range = context.range;
+      }
+    }
+    if (!range || range.isEmpty) return;
+
+    const leftPoint = Math.min(range.min, 0);
+    const rightPoint = Math.max(range.max, 0);
+    const pointDistance = rightPoint - leftPoint;
+    if (pointDistance === 0) {
+      // This can happen, for example, when all spans within the context have
+      // zero values (so |range| is [0, 0]).
+      return;
+    }
+
+    // Draw the sparkline.
+    this.$.sparkline.style.display = 'block';
+    let left;
+    let width;
+    if (this.value > 0) {
+      width = Math.min(this.value, rightPoint);
+      left = -leftPoint;
+      Polymer.dom(this.$.sparkline).classList.add('positive');
+    } else if (this.value <= 0) {
+      width = -Math.max(this.value, leftPoint);
+      left = (-leftPoint) - width;
+    }
+    this.$.sparkline.style.left = this.buildSparklineStyle_(
+        left / pointDistance, false);
+    this.$.sparkline.style.width = this.buildSparklineStyle_(
+        width / pointDistance, true);
+
+    // Set the sparkline color (if applicable).
+    const changeClass = this.changeClassName_;
+    if (changeClass) {
+      Polymer.dom(this.$.sparkline).classList.add(changeClass);
+    }
+  },
+
+  buildSparklineStyle_(ratio, isWidth) {
+    // To avoid visual glitches around the zero value bar, we subtract 1 pixel
+    // from the width of the element and multiply the remainder (100% - 1px) by
+    // |ratio|. The extra pixel is used for the sparkline border. This allows
+    // us to align zero sparklines with both positive and negative values:
+    //
+    //                          ::::::::::|  +10 MiB
+    //                          :::::|        +5 MiB
+    //                          |              0 MiB
+    //                     |:::::             -5 MiB
+    //                |::::::::::            -10 MiB
+    //
+    let position = 'calc(' + ratio + ' * (100% - 1px)';
+    if (isWidth) {
+      position += ' + 1px';  // Extra pixel for sparkline border.
+    }
+    position += ')';
+    return position;
+  },
+
+  updateContents_() {
+    Polymer.dom(this.$.content).textContent = '';
+    Polymer.dom(this.$.content).classList.remove('better');
+    Polymer.dom(this.$.content).classList.remove('worse');
+    Polymer.dom(this.$.content).classList.remove('same');
+    this.$.insignificant.style.display = '';
+    this.$.significantly_better.style.display = '';
+    this.$.significantly_worse.style.display = '';
+
+    if (this.unit_ === undefined) return;
+
+    this.$.content.title = '';
+    Polymer.dom(this.$.content).textContent =
+        this.unit_.format(this.value, this.context);
+    this.updateDelta_();
+  },
+
+  updateDelta_() {
+    let changeClass = this.changeClassName_;
+    if (!changeClass) {
+      this.$.significance.style.display = 'none';
+      return;  // Not a delta or we don't care.
+    }
+
+    this.$.significance.style.display = 'inline';
+
+    let title;
+    switch (changeClass) {
+      case 'better':
+        title = 'improvement';
+        break;
+
+      case 'worse':
+        title = 'regression';
+        break;
+
+      case 'same':
+        title = 'no change';
+        break;
+
+      default:
+        throw new Error('Unknown change class: ' + changeClass);
+    }
+
+    // Set the content class separately from the significance class so that
+    // the Neutral face is always a neutral color.
+    Polymer.dom(this.$.content).classList.add(changeClass);
+
+    switch (this.significance) {
+      case tr.b.math.Statistics.Significance.DONT_CARE:
+        break;
+
+      case tr.b.math.Statistics.Significance.INSIGNIFICANT:
+        if (changeClass !== 'same') title = 'insignificant ' + title;
+        this.$.insignificant.style.display = 'inline';
+        changeClass = 'same';
+        break;
+
+      case tr.b.math.Statistics.Significance.SIGNIFICANT:
+        if (this.ignoreSignificance()) {
+          if (changeClass !== 'same') title = 'insignificant ' + title;
+          this.$.insignificant.style.display = 'inline';
+          changeClass = 'same';
+          break;
+        }
+        if (changeClass === 'same') {
+          throw new Error('How can no change be significant?');
+        }
+
+        this.$['significantly_' + changeClass].style.display = 'inline';
+        title = 'significant ' + title;
+        break;
+
+      default:
+        throw new Error('Unknown significance ' + this.significance);
+    }
+
+    this.$.significance.title = title;
+    this.$.content.title = title;
+  },
+
+  ignoreSignificance() {
+    // Ingore significance when the size of the change is less than 1%
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=1416622
+    if (this.unit.baseUnit.unitName == 'normalizedPercentage') {
+     if (Math.abs(this.value) < 0.01) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  get changeClassName_() {
+    if (!this.unit_ || !this.unit_.isDelta) return undefined;
+
+    switch (this.unit_.improvementDirection) {
+      case tr.b.ImprovementDirection.DONT_CARE:
+        return undefined;
+
+      case tr.b.ImprovementDirection.BIGGER_IS_BETTER:
+        if (this.value === 0) return 'same';
+        return this.value > 0 ? 'better' : 'worse';
+
+      case tr.b.ImprovementDirection.SMALLER_IS_BETTER:
+        if (this.value === 0) return 'same';
+        return this.value < 0 ? 'better' : 'worse';
+
+      default:
+        throw new Error('Unknown improvement direction: ' +
+            this.unit_.improvementDirection);
+    }
+  },
+
+  get warning() {
+    return this.warning_;
+  },
+
+  set warning(warning) {
+    this.warning_ = warning;
+    const warningEl = this.$.warning;
+    if (this.warning_) {
+      warningEl.title = warning;
+      warningEl.style.display = 'inline';
+    } else {
+      warningEl.title = '';
+      warningEl.style.display = '';
+    }
+  },
+
+  // tr-v-ui-time-stamp-span property
+  get timestamp() {
+    return this.value;
+  },
+
+  set timestamp(timestamp) {
+    if (timestamp instanceof tr.b.u.TimeStamp) {
+      this.value = timestamp;
+      return;
+    }
+    this.setValueAndUnit(timestamp, tr.b.u.Units.timeStampInMs);
+  },
+
+  // tr-v-ui-time-duration-span property
+  get duration() {
+    return this.value;
+  },
+
+  set duration(duration) {
+    if (duration instanceof tr.b.u.TimeDuration) {
+      this.value = duration;
+      return;
+    }
+    this.setValueAndUnit(duration, tr.b.u.Units.timeDurationInMs);
+  }
+});
+</script>

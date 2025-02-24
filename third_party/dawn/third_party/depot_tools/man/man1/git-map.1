@@ -1,0 +1,179 @@
+'\" t
+.\"     Title: git-map
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-MAP" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-map \- Display history of all branches in a colorized terminal format\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit map\fR [<extra_args>\&...]
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Git map formats the output of \fBgit log \-\-graph\fR from all refs such that:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Current branch is
+cyan\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Local branches are
+green\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Remote branches are
+red\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Tags are
+magenta\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Merge Base markers are
+white\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The currently checked out commit is highlighted with a
+blue background\&.
+.RE
+.sp
+The output is automatically piped through the \fBless\fR pager command, even on windows\&.
+.SH "OPTIONS"
+.PP
+<extra_args>\&...
+.RS 4
+Extra parameters to pass to the internal
+\fBgit-log\fR(1)
+invocation\&. This can be used to restrict what refs
+\fIgit map\fR
+operates on, etc\&.
+.sp
+If you run git map with a series of fixed arguments frequently, you can use the depot\-tools\&.map\-extra configuration variable to pre\-set arguments (See
+\fBCONFIGURATION VARIABLES\fR)
+.RE
+.SH "CONFIGURATION VARIABLES"
+.SS "depot\-tools\&.map\-extra"
+.sp
+Each value of the \fIdepot\-tools\&.map\-extra\fR config variable is applied as an additional argument to \fBgit log\fR during the execution of git map\&. If you wish to configure this, use git \fBconfig \-\-add depot\-tools\&.map\-extra <value>\fR to do so\&.
+.SH "EXAMPLE"
+.sp
+Running \fIgit map\fR would result in an output something like:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git map\fR
+* \fBd0fb9c7283\fR	\fB(HEAD \-> frozen_branch\fR\fB) \fR2014\-04\-10 ~ FREEZE\&.unindexed
+* \fBf48f415e0f\fR	2014\-04\-10 ~ modfile
+* \fB4c5b9c0afd\fR	2014\-04\-10 ~ a deleted file
+* \fBf7ce1e4b36\fR	\fB(fixit\fR\fB) \fR2014\-04\-10 ~ Add neat feature
+* \fB3726937ae6\fR	2014\-04\-10 ~ Epic README update
+| * \fB14db2e5a60\fR	\fB(cool_feature\fR\fB) \fR2014\-04\-10 ~ Respond to CL comments
+| | * \fBee3f972810\fR	\fB(subfeature\fR\fB) \fR2014\-04\-10 ~ integrate with CoolService
+| | * \fB4f9f5082c8\fR	2014\-04\-10 ~ slick commenting action
+| |/
+| * \fB7d84f8580a\fR	2014\-04\-10 ~ another improvement    <(\fBsubfeature\fR)
+| * \fB27abea4b40\fR	\fB(spleen_tag\fR\fB) \fR2014\-04\-10 ~ Refactor spleen
+| * \fBd8abe739e3\fR	2014\-04\-10 ~ Add widget
+|/
+* \fBbeec6f4746\fR	\fB(origin/main\fR\fB, origin/HEAD\fR\fB) \fR2014\-04\-10 ~ Make ReflectorImpl use mailboxes    <(\fBfixit, cool_feature\fR)
+* \fB41290e02b7\fR	2014\-04\-10 ~ don\*(Aqt use glibc\-specific execinfo\&.h on uclibc builds
+* \fBa76fde7b7b\fR	2014\-04\-10 ~ [fsp] Add requestUnmount() method together with the request manager\&.
+* \fB9de7a713b3\fR	2014\-04\-10 ~ linux_aura: Use system configuration for middle clicking the titlebar\&.
+* \fB073b0c203a\fR	2014\-04\-10 ~ ContentView\->ContentViewCore in ContentViewRenderView
+* \fB2250f532d7\fR	2014\-04\-10 ~ ozone: evdev: Filter devices by path
+* \fB33a7a742b7\fR	2014\-04\-10 ~ Always output seccomp error messages to stderr
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.sp
+As you can see, the structure of the commit history is visible, particularly what the parents of each commit are\&. In order to see the \fIupstream\fR relationships of the branches (i\&.e\&. which branch is tracking which other branch), use the \fBgit-map-branches\fR(1) command\&.
+.SH "SEE ALSO"
+.sp
+\fBgit-map-branches\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

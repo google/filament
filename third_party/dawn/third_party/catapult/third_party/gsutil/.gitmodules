@@ -1,0 +1,84 @@
+[submodule "third_party/pyparsing"]
+	path = third_party/pyparsing
+	url = https://github.com/pyparsing/pyparsing.git
+[submodule "third_party/httplib2"]
+	path = third_party/httplib2
+	url = https://github.com/httplib2/httplib2.git
+[submodule "third_party/crcmod"]
+	path = third_party/crcmod
+	url = https://github.com/gsutil-mirrors/crcmod.git
+[submodule "third_party/crcmod_osx"]
+	path = third_party/crcmod_osx
+	url = https://github.com/gsutil-mirrors/crcmod-osx.git
+[submodule "third_party/retry-decorator"]
+	path = third_party/retry-decorator
+	url = https://github.com/pnpnpn/retry-decorator.git
+[submodule "third_party/gcs-oauth2-boto-plugin"]
+	path = third_party/gcs-oauth2-boto-plugin
+	url = https://github.com/GoogleCloudPlatform/gcs-oauth2-boto-plugin.git
+[submodule "third_party/six"]
+	path = third_party/six
+	url = https://github.com/gsutil-mirrors/six.git
+[submodule "third_party/apitools"]
+	path = third_party/apitools
+	url = https://github.com/google/apitools.git
+[submodule "third_party/rsa"]
+	path = third_party/rsa
+	url = https://github.com/gsutil-mirrors/rsa.git
+[submodule "third_party/pyasn1"]
+	path = third_party/pyasn1
+	url = https://github.com/gsutil-mirrors/pyasn1.git
+[submodule "third_party/pyasn1-modules"]
+	path = third_party/pyasn1-modules
+	url = https://github.com/gsutil-mirrors/pyasn1-modules.git
+[submodule "third_party/mock"]
+	path = third_party/mock
+	url = https://github.com/gsutil-mirrors/mock.git
+[submodule "third_party/funcsigs"]
+	path = third_party/funcsigs
+	url = https://github.com/testing-cabal/funcsigs.git
+[submodule "third_party/argcomplete"]
+	path = third_party/argcomplete
+	url = https://github.com/kislyuk/argcomplete.git
+[submodule "third_party/fasteners"]
+	path = third_party/fasteners
+	url = https://github.com/gsutil-mirrors/fasteners.git
+[submodule "third_party/monotonic"]
+	path = third_party/monotonic
+	url = https://github.com/gsutil-mirrors/monotonic.git
+[submodule "third_party/google-reauth-python"]
+	path = third_party/google-reauth-python
+	url = https://github.com/google/google-reauth-python
+[submodule "third_party/pyu2f"]
+	path = third_party/pyu2f
+	url = https://github.com/google/pyu2f
+[submodule "gslib/vendored/boto"]
+	path = gslib/vendored/boto
+	url = https://github.com/gsutil-mirrors/boto.git
+[submodule "gslib/vendored/oauth2client"]
+	path = gslib/vendored/oauth2client
+	url = https://github.com/gsutil-mirrors/oauth2client.git
+[submodule "third_party/google-auth-library-python"]
+	path = third_party/google-auth-library-python
+	url = https://github.com/googleapis/google-auth-library-python
+[submodule "third_party/cachetools"]
+	path = third_party/cachetools
+	url = https://github.com/tkem/cachetools
+[submodule "third_party/requests"]
+	path = third_party/requests
+	url = https://github.com/psf/requests
+[submodule "third_party/urllib3"]
+	path = third_party/urllib3
+	url = https://github.com/urllib3/urllib3
+[submodule "third_party/idna"]
+	path = third_party/idna
+	url = https://github.com/kjd/idna
+[submodule "third_party/charset_normalizer"]
+	path = third_party/charset_normalizer
+	url = https://github.com/Ousret/charset_normalizer
+[submodule "third_party/chardet"]
+	path = third_party/chardet
+	url = https://github.com/chardet/chardet
+[submodule "third_party/certifi"]
+	path = third_party/certifi
+	url = https://github.com/certifi/python-certifi.git

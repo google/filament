@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class UnmergeableDiagnosticSet extends tr.v.d.Diagnostic {
+    /**
+     * @param {!Array.<!tr.v.d.Diagnostic>} diagnostics
+     */
+    constructor(diagnostics) {
+      super();
+      this._diagnostics = diagnostics;
+    }
+
+    clone() {
+      const clone = new tr.v.d.UnmergeableDiagnosticSet();
+      clone.addDiagnostic(this);
+      return clone;
+    }
+
+    canAddDiagnostic(otherDiagnostic) {
+      return true;
+    }
+
+    /**
+     * If |otherDiagnostic| is an UnmergeableDiagnosticSet, then add clones of
+     * its diagnostics to |this|. Otherwise, try to add |otherDiagnostic| to one
+     * of the diagnostics already in this set. If that fails, add a clone of
+     * |otherDiagnostic| to this set.
+     *
+     * @param {!tr.v.d.Diagnostic} otherDiagnostic
+     * @return {!tr.v.d.UnmergeableDiagnostic} this
+     */
+    addDiagnostic(otherDiagnostic) {
+      if (otherDiagnostic instanceof UnmergeableDiagnosticSet) {
+        for (const subOtherDiagnostic of otherDiagnostic) {
+          const clone = subOtherDiagnostic.clone();
+          this.addDiagnostic(clone);
+        }
+        return;
+      }
+
+      for (let i = 0; i < this._diagnostics.length; ++i) {
+        if (this._diagnostics[i].canAddDiagnostic(otherDiagnostic)) {
+          this._diagnostics[i].addDiagnostic(otherDiagnostic);
+          return;
+        }
+      }
+
+      const clone = otherDiagnostic.clone();
+      this._diagnostics.push(clone);
+    }
+
+    get length() {
+      return this._diagnostics.length;
+    }
+
+    * [Symbol.iterator]() {
+      for (const diagnostic of this._diagnostics) yield diagnostic;
+    }
+
+    asDictInto_(d) {
+      d.diagnostics = this._diagnostics.map(d => d.asDictOrReference());
+    }
+
+    static deserialize(data, deserializer) {
+      return new UnmergeableDiagnosticSet(d.map(i =>
+        deserializer.getDiagnostic(i).diagnostic));
+    }
+
+    serialize(serializer) {
+      return this._diagnostics.map(d =>
+        serializer.getOrAllocateDiagnosticId('', d));
+    }
+
+    static fromDict(d) {
+      return new UnmergeableDiagnosticSet(d.diagnostics.map(
+          d => ((typeof d === 'string') ?
+            new tr.v.d.DiagnosticRef(d) : tr.v.d.Diagnostic.fromDict(d))));
+    }
+  }
+
+  tr.v.d.Diagnostic.register(UnmergeableDiagnosticSet, {
+    elementName: 'tr-v-ui-unmergeable-diagnostic-set-span'
+  });
+
+  return {
+    UnmergeableDiagnosticSet,
+  };
+});
+</script>

@@ -1,0 +1,18 @@
+{
+    "name": "benchmark",
+    "version": "1.0.0",
+    "description": "parse5 regression benchmark",
+    "main": "index.js",
+    "scripts": {
+        "test": "node index"
+    },
+    "author": "Ivan Nikulin <ifaaan@gmail.com>",
+    "license": "MIT",
+    "dependencies": {
+        "benchmark": "~1.0.0",
+        "parse5": "*"
+    },
+    "optionalDependencies": {
+        "microtime": "~0.4.0"
+    }
+}

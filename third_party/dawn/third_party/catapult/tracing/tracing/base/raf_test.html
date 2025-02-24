@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/raf.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  if (tr.isHeadless) return;
+
+  test('idleCallbackWorks', function() {
+    return new Promise(function(resolve, reject) {
+      tr.b.requestIdleCallback(resolve);
+    });
+  });
+
+  test('forceAllPendingTasksToRunForTest', function() {
+    let rafRan = false;
+    tr.b.requestAnimationFrame(function() {
+      rafRan = true;
+    });
+    let idleRan = false;
+    tr.b.requestIdleCallback(function() {
+      idleRan = true;
+    });
+    assert.isFalse(rafRan);
+    assert.isFalse(idleRan);
+    tr.b.forceAllPendingTasksToRunForTest();
+    assert.isTrue(rafRan);
+    assert.isTrue(idleRan);
+  });
+
+  test('forcePendingRAFTasksToRun', function() {
+    let rafRan = false;
+    tr.b.requestAnimationFrame(function() {
+      rafRan = true;
+    });
+    let idleRan = false;
+    tr.b.requestIdleCallback(function() {
+      idleRan = true;
+    });
+    tr.b.forcePendingRAFTasksToRun();
+    assert.isTrue(rafRan);
+    assert.isFalse(idleRan);
+  });
+
+  let fakeNow = undefined;
+  function withFakeWindowPerformanceNow(func) {
+    const oldNow = window.performance.now;
+    try {
+      window.performance.now = function() { return fakeNow; };
+      func();
+    } finally {
+      window.performance.now = oldNow;
+    }
+  }
+
+  // None of the following tests are relevant if the browser supports idle
+  // callbacks natively. Nevertheless, run them without native idle support to
+  // make sure the fallback keeps working.
+  function withoutNativeIdleCallbacks(func) {
+    const oldRIC = window.requestIdleCallback;
+    try {
+      window.requestIdleCallback = undefined;
+      func();
+    } finally {
+      window.requestIdleCallback = oldRIC;
+    }
+  }
+
+  function withMockedScheduling(func) {
+    withFakeWindowPerformanceNow(function() {
+      withoutNativeIdleCallbacks(func);
+    });
+  }
+
+  test('runIdleTaskWhileIdle', function() {
+    withMockedScheduling(function() {
+      tr.b.forceAllPendingTasksToRunForTest();
+
+      let rafRan = false;
+      tr.b.requestAnimationFrame(function() {
+        rafRan = true;
+      });
+      let idleRan = false;
+      tr.b.requestIdleCallback(function() {
+        idleRan = true;
+      });
+      fakeNow = 0;
+      tr.b.forcePendingRAFTasksToRun(fakeNow);
+      assert.isFalse(idleRan);
+      assert.isTrue(rafRan);
+      tr.b.forcePendingRAFTasksToRun(fakeNow);
+      assert.isTrue(idleRan);
+    });
+  });
+
+  test('twoShortIdleCallbacks', function() {
+    withMockedScheduling(function() {
+      tr.b.forceAllPendingTasksToRunForTest();
+
+      let idle1Ran = false;
+      let idle2Ran = false;
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 1;
+        idle1Ran = true;
+      });
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 1;
+        idle2Ran = true;
+      });
+      fakeNow = 0;
+      tr.b.forcePendingRAFTasksToRun(fakeNow);
+      assert.isTrue(idle1Ran);
+      assert.isTrue(idle2Ran);
+    });
+  });
+
+
+  test('oneLongOneShortIdleCallback', function() {
+    withMockedScheduling(function() {
+      tr.b.forceAllPendingTasksToRunForTest();
+
+      let idle1Ran = false;
+      let idle2Ran = false;
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 100;
+        idle1Ran = true;
+      });
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 1;
+        idle2Ran = true;
+      });
+      fakeNow = 0;
+      tr.b.forcePendingRAFTasksToRun(fakeNow);
+      assert.isTrue(idle1Ran);
+      assert.isFalse(idle2Ran);
+
+      // Reset idle1Ran to verify that it dosn't run again.
+      idle1Ran = false;
+
+      // Now run. idle2 should now run.
+      tr.b.forcePendingRAFTasksToRun(fakeNow);
+      assert.isFalse(idle1Ran);
+      assert.isTrue(idle2Ran);
+    });
+  });
+
+  test('buggyPerformanceNowDoesNotBlockIdleTasks', function() {
+    withMockedScheduling(function() {
+      tr.b.forcePendingRAFTasksToRun();  // Clear current RAF task queue.
+
+      let idle1Ran = false;
+      let idle2Ran = false;
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 100;
+        idle1Ran = true;
+      });
+      tr.b.requestIdleCallback(function() {
+        fakeNow += 1;
+        idle2Ran = true;
+      });
+      fakeNow = 10000;
+      tr.b.forcePendingRAFTasksToRun(0);
+      assert.isTrue(idle1Ran);
+      assert.isFalse(idle2Ran);
+
+      // Reset idle1Ran to verify that it dosn't run again.
+      idle1Ran = false;
+
+      // Now run. idle2 should now run.
+      tr.b.forcePendingRAFTasksToRun(0);
+      assert.isFalse(idle1Ran);
+      assert.isTrue(idle2Ran);
+    });
+  });
+
+  function withFixedIdleTimeRemaining(idleTime, func) {
+    const oldRIC = window.requestIdleCallback;
+    try {
+      const pendingIdleCallbacks = [];
+      window.requestIdleCallback = function(callback) {
+        const deadline = {
+          timeRemaining() {
+            return idleTime;
+          }
+        };
+        pendingIdleCallbacks.push(function() {
+          callback(deadline, false /* didTimeout */);
+        });
+      };
+      func(pendingIdleCallbacks);
+    } finally {
+      window.requestIdleCallback = oldRIC;
+    }
+  }
+
+  test('idleCallbackWithIdletime', function() {
+    withFixedIdleTimeRemaining(1000, function(pendingIdleCallbacks) {
+      let idle1Ran = false;
+      let idle2Ran = false;
+      tr.b.requestIdleCallback(function() {
+        idle1Ran = true;
+      });
+      tr.b.requestIdleCallback(function() {
+        idle2Ran = true;
+      });
+      assert.lengthOf(pendingIdleCallbacks, 1);
+      pendingIdleCallbacks.shift()();
+
+      // Both callbacks should have run since there was idle time.
+      assert.isTrue(idle1Ran);
+      assert.isTrue(idle2Ran);
+    });
+  });
+
+  test('idleCallbackWithoutIdletime', function() {
+    withFixedIdleTimeRemaining(0, function(pendingIdleCallbacks) {
+      let idle1Ran = false;
+      let idle2Ran = false;
+      tr.b.requestIdleCallback(function() {
+        idle1Ran = true;
+      });
+      tr.b.requestIdleCallback(function() {
+        idle2Ran = true;
+      });
+      assert.lengthOf(pendingIdleCallbacks, 1);
+      pendingIdleCallbacks.shift()();
+
+      // Only the first idle callback should have run since there was no idle
+      // time left.
+      assert.isTrue(idle1Ran);
+      assert.isFalse(idle2Ran);
+
+      // Run the remaining idle task.
+      assert.lengthOf(pendingIdleCallbacks, 1);
+      pendingIdleCallbacks.shift()();
+      assert.isTrue(idle2Ran);
+    });
+  });
+});
+</script>

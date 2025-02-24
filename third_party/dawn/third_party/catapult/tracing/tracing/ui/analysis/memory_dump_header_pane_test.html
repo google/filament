@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/memory_dump_header_pane.html">
+<link rel="import"
+    href="/tracing/ui/analysis/memory_dump_sub_view_test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AggregationMode = tr.ui.analysis.MemoryColumn.AggregationMode;
+  const isElementDisplayed = tr.ui.analysis.isElementDisplayed;
+
+  function createAndCheckMemoryDumpHeaderPane(test, containerMemoryDumps,
+      expectedLabelText, expectedChildPaneRequested, expectedSelectorVisible) {
+    const viewEl =
+        tr.ui.analysis.createTestPane('tr-ui-a-memory-dump-header-pane');
+    viewEl.containerMemoryDumps = containerMemoryDumps;
+    viewEl.rebuild();
+    test.addHTMLOutput(viewEl);
+    checkMemoryDumpHeaderPane(viewEl, containerMemoryDumps, expectedLabelText,
+        expectedChildPaneRequested, expectedSelectorVisible);
+  }
+
+  function checkMemoryDumpHeaderPane(viewEl, containerMemoryDumps,
+      expectedLabelText, expectedChildPaneRequested, expectedSelectorVisible) {
+    // The default aggregation mode is DIFF.
+    assert.strictEqual(viewEl.aggregationMode, AggregationMode.DIFF);
+
+    // Check the text in the label.
+    assert.strictEqual(
+        Polymer.dom(viewEl.$.label).textContent, expectedLabelText);
+
+    // Check the visibility of aggregation mode selector.
+    const aggregationModeContainerVisible =
+        isElementDisplayed(viewEl.$.aggregation_mode_container);
+    const childPanes = viewEl.requestedChildPanes;
+
+    // Check the requested child panes.
+    if (containerMemoryDumps === undefined ||
+        containerMemoryDumps.length === 0) {
+      assert.isTrue(!expectedSelectorVisible);  // Test sanity check.
+      assert.isFalse(aggregationModeContainerVisible);
+      assert.lengthOf(childPanes, 1);
+      assert.isUndefined(childPanes[0]);
+      return;
+    }
+
+    const expectedProcessMemoryDumps = containerMemoryDumps.map(
+        function(containerMemoryDump) {
+          return containerMemoryDump.processMemoryDumps;
+        });
+    function checkLastChildPane(expectedChildPaneCount) {
+      assert.lengthOf(childPanes, expectedChildPaneCount);
+      const lastChildPane = childPanes[expectedChildPaneCount - 1];
+      assert.strictEqual(
+          lastChildPane.tagName, 'TR-UI-A-MEMORY-DUMP-OVERVIEW-PANE');
+      assert.deepEqual(lastChildPane.processMemoryDumps,
+          expectedProcessMemoryDumps);
+      assert.strictEqual(lastChildPane.aggregationMode, viewEl.aggregationMode);
+    }
+
+    checkLastChildPane(1);
+
+    // Check the behavior of aggregation mode selector (if visible).
+    if (!expectedSelectorVisible) {
+      assert.isFalse(aggregationModeContainerVisible);
+      return;
+    }
+
+    assert.isTrue(aggregationModeContainerVisible);
+    const selector = tr.ui.b.findDeepElementMatching(viewEl, 'select');
+
+    selector.selectedValue = AggregationMode.MAX;
+    viewEl.rebuild();
+    assert.strictEqual(viewEl.aggregationMode, AggregationMode.MAX);
+    checkLastChildPane(2);
+
+    selector.selectedValue = AggregationMode.DIFF;
+    viewEl.rebuild();
+    assert.strictEqual(viewEl.aggregationMode, AggregationMode.DIFF);
+    checkLastChildPane(3);
+  }
+
+  test('instantiate_empty', function() {
+    tr.ui.analysis.createAndCheckEmptyPanes(this,
+        'tr-ui-a-memory-dump-header-pane', 'containerMemoryDumps',
+        function(viewEl) {
+          checkMemoryDumpHeaderPane(viewEl, [], 'No memory dumps selected',
+              false /* no child pane requested */,
+              false /* aggregation mode selector hidden */);
+        });
+  });
+
+  test('instantiate_singleGlobalMemoryDump', function() {
+    createAndCheckMemoryDumpHeaderPane(this,
+        [tr.ui.analysis.createSingleTestGlobalMemoryDump()],
+        'Selected 1 memory dump in global space at 68.000 ms',
+        true /* child pane requested */,
+        false /* aggregation mode selector hidden */);
+  });
+
+  test('instantiate_multipleGlobalMemoryDumps', function() {
+    createAndCheckMemoryDumpHeaderPane(this,
+        tr.ui.analysis.createMultipleTestGlobalMemoryDumps(),
+        'Selected 3 memory dumps in global space at 42.000 ms\u2026100.000 ms',
+        true /* child pane requested */,
+        true /* aggregation selector visible */);
+  });
+
+  test('instantiate_singleProcessMemoryDump', function() {
+    createAndCheckMemoryDumpHeaderPane(this,
+        [tr.ui.analysis.createSingleTestProcessMemoryDump()],
+        'Selected 1 memory dump in Process 2 at 69.000 ms',
+        true /* child pane requested */,
+        false /* aggregation mode selector hidden */);
+  });
+
+  test('instantiate_multipleProcessMemoryDumps', function() {
+    createAndCheckMemoryDumpHeaderPane(this,
+        tr.ui.analysis.createMultipleTestProcessMemoryDumps(),
+        'Selected 3 memory dumps in Process 2 at 42.000 ms\u2026102.000 ms',
+        true /* child pane requested */,
+        true /* aggregation selector visible */);
+  });
+});
+</script>

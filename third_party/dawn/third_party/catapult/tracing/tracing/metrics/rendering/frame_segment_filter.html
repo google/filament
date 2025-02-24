@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+Copyright 2022 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/metrics/rendering/cpu_utilization.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+<link rel="import" href="/tracing/value/diagnostics/related_event_set.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview This file contains helper methods to filter Segments to just
+ * those for the displaying of frames.
+ */
+tr.exportTo('tr.metrics.rendering', function() {
+  // Various tracing events.
+  const DISPLAY_EVENT = 'BenchmarkInstrumentation::DisplayRenderingStats';
+  const DRM_EVENT = 'DrmEventFlipComplete';
+  const SURFACE_FLINGER_EVENT = 'vsync_before';
+
+
+  // The least number of frames needed to report frame_times.
+  // Measurements done with very few frames tend to be unstable.
+  // See crbug.com/954984 for example.
+  const MIN_FRAME_COUNT = 10;
+
+
+  class FrameEvent {
+    constructor(event) {
+      this.event_ = event;
+    }
+
+    get eventStart() {
+      return this.event_.start;
+    }
+
+    get frameStart() {
+      if (this.event_.title !== DRM_EVENT) return this.event_.start;
+      const data = this.event_.args.data;
+      const TIME = tr.b.UnitScale.TIME;
+      return tr.b.convertUnit(data['vblank.tv_sec'], TIME.SEC, TIME.MILLI_SEC) +
+          tr.b.convertUnit(
+              data['vblank.tv_usec'], TIME.MICRO_SEC, TIME.MILLI_SEC);
+    }
+
+    get event() { return this.event_; }
+  }
+
+
+  function getDisplayCompositorPresentationEvents_(model) {
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (!modelHelper || !modelHelper.browserProcess) return [];
+    // On ChromeOS, DRM events, if they exist, are the source of truth. On
+    // Android, Surface Flinger events are the source of truth. Otherwise, look
+    // for display rendering stats. With viz, display rendering stats are
+    // emitted from the GPU process; otherwise, they are emitted from the
+    // browser process.
+    let events = [];
+    if (modelHelper.surfaceFlingerProcess) {
+      events = [...modelHelper.surfaceFlingerProcess.findTopmostSlicesNamed(
+          SURFACE_FLINGER_EVENT)];
+      if (events.length > 0) return events;
+    }
+    if (modelHelper.gpuHelper) {
+      const gpuProcess = modelHelper.gpuHelper.process;
+      events = [...gpuProcess.findTopmostSlicesNamed(DRM_EVENT)];
+      if (events.length > 0) return events;
+      events = [...gpuProcess.findTopmostSlicesNamed(DISPLAY_EVENT)];
+      if (events.length > 0) return events;
+    }
+    return [...modelHelper.browserProcess.findTopmostSlicesNamed(
+        DISPLAY_EVENT)];
+  }
+
+
+  function computeFrameSegments(model, segments) {
+    const events = getDisplayCompositorPresentationEvents_(model);
+    if (!events) return [];
+    // We use filterArray for the sake of a cleaner code. The time complexity
+    // will be O(m + n log m), where m is |timestamps| and n is |segments|.
+    // Alternatively, we could directly loop through the timestamps and segments
+    // here for a slightly better time complexity of O(m + n).
+    const frameEvents = events.map(e => new FrameEvent(e));
+    const frameSegments = [];
+    for (const segment of segments) {
+      const filtered = segment.boundsRange.filterArray(
+          frameEvents, x => x.eventStart);
+      if (filtered.length < MIN_FRAME_COUNT) continue;
+      for (let i = 1; i < filtered.length; i++) {
+        const duration = filtered[i].frameStart - filtered[i - 1].frameStart;
+        frameSegments.push(new tr.model.um.Segment(filtered[i - 1].eventStart, duration));
+      }
+    }
+    return frameSegments;
+  }
+
+  return {
+    computeFrameSegments,
+  };
+});
+</script>

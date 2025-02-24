@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/etw/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses threads events in the Windows event trace format.
+ *
+ * The Windows thread events are:
+ *
+ * - DCStart: Describes a thread that was already running when the trace
+ *    started. ETW automatically generates these events for all running
+ *    threads at the beginning of the trace.
+ * - Start: Describes a thread that started during the tracing session.
+ * - End: Describes a thread that ended during the tracing session.
+ * - DCEnd: Describes a thread that was still alive when the trace ended.
+ *
+ * See http://msdn.microsoft.com/library/windows/desktop/aa364132.aspx
+ */
+tr.exportTo('tr.e.importer.etw', function() {
+  const Parser = tr.e.importer.etw.Parser;
+
+  // Constants for Thread events.
+  const guid = '3D6FA8D1-FE05-11D0-9DDA-00C04FD7BA7C';
+  const kThreadStartOpcode = 1;
+  const kThreadEndOpcode = 2;
+  const kThreadDCStartOpcode = 3;
+  const kThreadDCEndOpcode = 4;
+  const kThreadCSwitchOpcode = 36;
+
+  /**
+   * Parses Windows threads trace events.
+   * @constructor
+   */
+  function ThreadParser(importer) {
+    Parser.call(this, importer);
+
+    // Register handlers.
+    importer.registerEventHandler(guid, kThreadStartOpcode,
+        ThreadParser.prototype.decodeStart.bind(this));
+    importer.registerEventHandler(guid, kThreadEndOpcode,
+        ThreadParser.prototype.decodeEnd.bind(this));
+    importer.registerEventHandler(guid, kThreadDCStartOpcode,
+        ThreadParser.prototype.decodeDCStart.bind(this));
+    importer.registerEventHandler(guid, kThreadDCEndOpcode,
+        ThreadParser.prototype.decodeDCEnd.bind(this));
+    importer.registerEventHandler(guid, kThreadCSwitchOpcode,
+        ThreadParser.prototype.decodeCSwitch.bind(this));
+  }
+
+  ThreadParser.prototype = {
+    __proto__: Parser.prototype,
+
+    decodeFields(header, decoder) {
+      if (header.version > 3) {
+        throw new Error('Incompatible Thread event version ' +
+                        header.version + '.');
+      }
+
+      // Common fields to all Thread events.
+      const processId = decoder.decodeUInt32();
+      const threadId = decoder.decodeUInt32();
+
+      // Extended fields.
+      let stackBase;
+      let stackLimit;
+      let userStackBase;
+      let userStackLimit;
+      let affinity;
+      let startAddr;
+      let win32StartAddr;
+      let tebBase;
+      let subProcessTag;
+      let basePriority;
+      let pagePriority;
+      let ioPriority;
+      let threadFlags;
+      let waitMode;
+
+      if (header.version === 1) {
+        // On version 1, only start events have extended information.
+        if (header.opcode === kThreadStartOpcode ||
+            header.opcode === kThreadDCStartOpcode) {
+          stackBase = decoder.decodeUInteger(header.is64);
+          stackLimit = decoder.decodeUInteger(header.is64);
+          userStackBase = decoder.decodeUInteger(header.is64);
+          userStackLimit = decoder.decodeUInteger(header.is64);
+          startAddr = decoder.decodeUInteger(header.is64);
+          win32StartAddr = decoder.decodeUInteger(header.is64);
+          waitMode = decoder.decodeInt8();
+          decoder.skip(3);
+        }
+      } else {
+        stackBase = decoder.decodeUInteger(header.is64);
+        stackLimit = decoder.decodeUInteger(header.is64);
+        userStackBase = decoder.decodeUInteger(header.is64);
+        userStackLimit = decoder.decodeUInteger(header.is64);
+
+        // Version 2 produces a field named 'startAddr'.
+        if (header.version === 2) {
+          startAddr = decoder.decodeUInteger(header.is64);
+        } else {
+          affinity = decoder.decodeUInteger(header.is64);
+        }
+
+        win32StartAddr = decoder.decodeUInteger(header.is64);
+        tebBase = decoder.decodeUInteger(header.is64);
+        subProcessTag = decoder.decodeUInt32();
+
+        if (header.version === 3) {
+          basePriority = decoder.decodeUInt8();
+          pagePriority = decoder.decodeUInt8();
+          ioPriority = decoder.decodeUInt8();
+          threadFlags = decoder.decodeUInt8();
+        }
+      }
+
+      return {
+        processId,
+        threadId,
+        stackBase,
+        stackLimit,
+        userStackBase,
+        userStackLimit,
+        affinity,
+        startAddr,
+        win32StartAddr,
+        tebBase,
+        subProcessTag,
+        waitMode,
+        basePriority,
+        pagePriority,
+        ioPriority,
+        threadFlags
+      };
+    },
+
+    decodeCSwitchFields(header, decoder) {
+      // The only difference in version 3 is that oldThreadWaitMode is renamed
+      // to ThreadFlags. There is no difference between version 3 and version 4.
+      // Therefore we can safely handle all of these versions with the same code
+      // since we don't interpret oldThreadWaitMode at all.
+      // To see the layout of the CSwitch_V4 class you can run wbemtest
+      // elevated, "Connect...", change root\cimv2 to root\WMI, "Connect",
+      // "Open Class...", "CSwitch_V4", "Show MOF".
+      if (header.version < 2 || header.version > 4) {
+        throw new Error('Incompatible cswitch event version ' +
+                        header.version + '.');
+      }
+
+      // Decode CSwitch payload.
+      const newThreadId = decoder.decodeUInt32();
+      const oldThreadId = decoder.decodeUInt32();
+      const newThreadPriority = decoder.decodeInt8();
+      const oldThreadPriority = decoder.decodeInt8();
+      const previousCState = decoder.decodeUInt8();
+      const spareByte = decoder.decodeInt8();
+      const oldThreadWaitReason = decoder.decodeInt8();
+      // oldThreadWaitMode is called ThreadFlags in V3 and V4.
+      const oldThreadWaitMode = decoder.decodeInt8();
+      const oldThreadState = decoder.decodeInt8();
+      const oldThreadWaitIdealProcessor = decoder.decodeInt8();
+      const newThreadWaitTime = decoder.decodeUInt32();
+      const reserved = decoder.decodeUInt32();
+
+      return {
+        newThreadId,
+        oldThreadId,
+        newThreadPriority,
+        oldThreadPriority,
+        previousCState,
+        spareByte,
+        oldThreadWaitReason,
+        oldThreadWaitMode,
+        oldThreadState,
+        oldThreadWaitIdealProcessor,
+        newThreadWaitTime,
+        reserved
+      };
+    },
+
+    decodeStart(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      this.importer.createThreadIfNeeded(fields.processId, fields.threadId);
+      return true;
+    },
+
+    decodeEnd(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      this.importer.removeThreadIfPresent(fields.threadId);
+      return true;
+    },
+
+    decodeDCStart(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      this.importer.createThreadIfNeeded(fields.processId, fields.threadId);
+      return true;
+    },
+
+    decodeDCEnd(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      this.importer.removeThreadIfPresent(fields.threadId);
+      return true;
+    },
+
+    decodeCSwitch(header, decoder) {
+      const fields = this.decodeCSwitchFields(header, decoder);
+      const cpu = this.importer.getOrCreateCpu(header.cpu);
+      const newThread =
+          this.importer.getThreadFromWindowsTid(fields.newThreadId);
+
+      // Generate the new thread name. If some events were lost, it's possible
+      // that information about the new thread or process is not available.
+      let newThreadName;
+      if (newThread && newThread.userFriendlyName) {
+        newThreadName = newThread.userFriendlyName;
+      } else {
+        const newProcessId = this.importer.getPidFromWindowsTid(
+            fields.newThreadId);
+        const newProcess = this.model.getProcess(newProcessId);
+        let newProcessName;
+        if (newProcess) {
+          newProcessName = newProcess.name;
+        } else {
+          newProcessName = 'Unknown process';
+        }
+
+        newThreadName =
+            newProcessName + ' (tid ' + fields.newThreadId + ')';
+      }
+
+      cpu.switchActiveThread(
+          header.timestamp,
+          {},
+          fields.newThreadId,
+          newThreadName,
+          fields);
+      return true;
+    }
+
+  };
+
+  Parser.register(ThreadParser);
+
+  return {
+    ThreadParser,
+  };
+});
+</script>

@@ -1,0 +1,10 @@
+# Copyright 2023 The Khronos Group Inc.
+# Copyright 2023 Valve Corporation
+# Copyright 2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+build_with_chromium = false
+ignore_elf32_limitations = true
+linux_use_bundled_binutils_override = false
+use_system_xcode = true

@@ -1,0 +1,98 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglDestroySync">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglDestroySync</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglDestroySync</refname>
+        <refpurpose>
+            Destroy a sync object
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLBoolean <function>eglDestroySync</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLSync <parameter>sync</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>sync</parameter></term>
+                <listitem><para>
+                    Specifies the sync object to destroy.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglDestroySync</function> is used to destroy an
+            existing sync object.
+        </para>
+        <para>
+            If any <function>eglClientWaitSync</function> or
+            <function>eglWaitSync</function> commands are blocking on
+            <parameter>sync</parameter> when
+            <function>eglDestroySync</function> is called,
+            <parameter>sync</parameter> is flagged for deletion and will be
+            deleted when the associated fence command or OpenCL event object
+            has completed, and <parameter>sync</parameter> is no longer
+            blocking any such <function>egl*WaitSync</function> command.
+            Otherwise, the sync object is destroyed immediately.
+        </para>
+        <para>
+            If no errors are generated, <constant>EGL_TRUE</constant> is
+            returned, and <parameter>sync</parameter> will no longer be the
+            handle of a valid sync object.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            On failure, <function>eglDestroySync</function> returns
+            <constant>EGL_FALSE</constant>.
+        </para>
+        <para>
+            If <parameter>sync</parameter> is not a valid sync object for
+            <parameter>display</parameter>, <constant>EGL_FALSE</constant>
+            is returned and an <constant>EGL_BAD_PARAMETER</constant> error
+            is generated.
+        </para>
+        <para>
+            If <parameter>display</parameter> does not match the display
+            passed to <function>eglCreateSync</function> when
+            <parameter>sync</parameter> was created, the behaviour is
+            undefined.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglDestroySync</function> is available only if the EGL
+            version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglClientWaitSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitSync</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node2" href="$classpvr_1_1_gl_error.html" title="A simple std::runtime_error wrapper for OpenGLES error codes." alt="" coords="189,5,285,32"/>
+<area shape="rect" id="node3" href="$classpvr_1_1_gl_extension_not_supported_error.html" title="A simple std::runtime_error wrapper for OpenGLES extension not supported error codes." alt="" coords="128,57,347,98"/>
+</map>

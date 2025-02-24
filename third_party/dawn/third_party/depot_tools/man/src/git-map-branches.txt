@@ -1,0 +1,64 @@
+git-map-branches(1)
+===================
+
+NAME
+----
+git-map-branches -
+include::_git-map-branches_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git map-branches'
+
+DESCRIPTION
+-----------
+
+Git map-branches displays all local branches such that:
+
+* Current branch is [aqua]#cyan#.
+** The branch which will be modified with git-commit is denoted with an asterisk
+   (`*`) after the name.
+* Local branches are [green]#green#.
+* Remote branches are [red]#red# (usually, the root of all other branches).
+* 'branch-heads' branches are [blue]#blue#.
+* `{NO UPSTREAM}` is a special placeholder in [fuchsia]#magenta#.
+** Branches which have this as their parent are usually misconfigured, and
+   should be assigned a parent by checking out the branch and running git branch
+   --set-upstream-to=<correct parent branch>.
+
+NOTE: If multiple branches are on the same commit, they will all be cyan.
+
+OPTIONS
+-------
+
+--no-color::
+  Turn off colors.
+
+-v::
+  Be more verbose. Pass once to show tracking info, twice for hash and review
+  URL, thrice for review status.
+
+EXAMPLE
+-------
+
+Given the hypothetical demo repo in linkgit:git-map[1]\'s EXAMPLE section, and
+assuming that the `frozen_changes` branch was currently checked out, running
+'git map-branches' would result in an output like:
+
+demo:1[]
+
+include::_aliases.txt[]
+
+----
+[alias]
+  bmap = map-branches
+----
+
+SEE ALSO
+--------
+linkgit:git-map[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

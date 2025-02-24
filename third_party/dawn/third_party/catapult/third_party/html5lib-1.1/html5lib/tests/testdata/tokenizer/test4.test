@@ -1,0 +1,532 @@
+{"tests": [
+
+{"description":"< in attribute name",
+"input":"<z/0  <>",
+"output":[["StartTag", "z", {"0": "", "<": ""}]],
+"errors":[
+    { "code": "unexpected-solidus-in-tag", "line": 1, "col": 4 },
+    { "code": "unexpected-character-in-attribute-name", "line": 1, "col": 7 }
+]},
+
+{"description":"< in unquoted attribute value",
+"input":"<z x=<>",
+"output":[["StartTag", "z", {"x": "<"}]],
+"errors":[
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 6 }
+]},
+
+{"description":"= in unquoted attribute value",
+"input":"<z z=z=z>",
+"output":[["StartTag", "z", {"z": "z=z"}]],
+"errors":[
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 7 }
+]},
+
+{"description":"= attribute",
+"input":"<z =>",
+"output":[["StartTag", "z", {"=": ""}]],
+"errors":[
+    { "code": "unexpected-equals-sign-before-attribute-name", "line": 1, "col": 4 }
+]},
+
+{"description":"== attribute",
+"input":"<z ==>",
+"output":[["StartTag", "z", {"=": ""}]],
+"errors":[
+    { "code": "unexpected-equals-sign-before-attribute-name", "line": 1, "col": 4 },
+    { "code": "missing-attribute-value", "line": 1, "col": 6 }
+]},
+
+{"description":"=== attribute",
+"input":"<z ===>",
+"output":[["StartTag", "z", {"=": "="}]],
+"errors":[
+    { "code": "unexpected-equals-sign-before-attribute-name", "line": 1, "col": 4 },
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 6 }
+]},
+
+{"description":"==== attribute",
+"input":"<z ====>",
+"output":[["StartTag", "z", {"=": "=="}]],
+"errors":[
+    { "code": "unexpected-equals-sign-before-attribute-name", "line": 1, "col": 4 },
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 6 },
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 7 }
+]},
+
+{"description":"\" after ampersand in double-quoted attribute value",
+"input":"<z z=\"&\">",
+"output":[["StartTag", "z", {"z": "&"}]]},
+
+{"description":"' after ampersand in double-quoted attribute value",
+"input":"<z z=\"&'\">",
+"output":[["StartTag", "z", {"z": "&'"}]]},
+
+{"description":"' after ampersand in single-quoted attribute value",
+"input":"<z z='&'>",
+"output":[["StartTag", "z", {"z": "&"}]]},
+
+{"description":"\" after ampersand in single-quoted attribute value",
+"input":"<z z='&\"'>",
+"output":[["StartTag", "z", {"z": "&\""}]]},
+
+{"description":"Text after bogus character reference",
+"input":"<z z='&xlink_xmlns;'>bar<z>",
+"output":[["StartTag","z",{"z":"&xlink_xmlns;"}],["Character","bar"],["StartTag","z",{}]]},
+
+{"description":"Text after hex character reference",
+"input":"<z z='&#x0020; foo'>bar<z>",
+"output":[["StartTag","z",{"z":"  foo"}],["Character","bar"],["StartTag","z",{}]]},
+
+{"description":"Attribute name starting with \"",
+"input":"<foo \"='bar'>",
+"output":[["StartTag", "foo", {"\"": "bar"}]],
+"errors":[
+    { "code": "unexpected-character-in-attribute-name", "line": 1, "col": 6 }
+]},
+
+{"description":"Attribute name starting with '",
+"input":"<foo '='bar'>",
+"output":[["StartTag", "foo", {"'": "bar"}]],
+"errors":[
+    { "code": "unexpected-character-in-attribute-name", "line": 1, "col": 6 }
+]},
+
+{"description":"Attribute name containing \"",
+"input":"<foo a\"b='bar'>",
+"output":[["StartTag", "foo", {"a\"b": "bar"}]],
+"errors":[
+    { "code": "unexpected-character-in-attribute-name", "line": 1, "col": 7 }
+]},
+
+{"description":"Attribute name containing '",
+"input":"<foo a'b='bar'>",
+"output":[["StartTag", "foo", {"a'b": "bar"}]],
+"errors":[
+    { "code": "unexpected-character-in-attribute-name", "line": 1, "col": 7 }
+]},
+
+{"description":"Unquoted attribute value containing '",
+"input":"<foo a=b'c>",
+"output":[["StartTag", "foo", {"a": "b'c"}]],
+"errors":[
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 9 }
+]},
+
+
+{"description":"Unquoted attribute value containing \"",
+"input":"<foo a=b\"c>",
+"output":[["StartTag", "foo", {"a": "b\"c"}]],
+"errors":[
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 9 }
+]},
+
+{"description":"Double-quoted attribute value not followed by whitespace",
+"input":"<foo a=\"b\"c>",
+"output":[["StartTag", "foo", {"a": "b", "c": ""}]],
+"errors":[
+    { "code": "missing-whitespace-between-attributes", "line": 1, "col": 11 }
+]},
+
+{"description":"Single-quoted attribute value not followed by whitespace",
+"input":"<foo a='b'c>",
+"output":[["StartTag", "foo", {"a": "b", "c": ""}]],
+"errors":[
+    { "code": "missing-whitespace-between-attributes", "line": 1, "col": 11 }
+]},
+
+{"description":"Quoted attribute followed by permitted /",
+"input":"<br a='b'/>",
+"output":[["StartTag","br",{"a":"b"},true]]},
+
+{"description":"Quoted attribute followed by non-permitted /",
+"input":"<bar a='b'/>",
+"output":[["StartTag","bar",{"a":"b"},true]]},
+
+{"description":"CR EOF after doctype name",
+"input":"<!doctype html \r",
+"output":[["DOCTYPE", "html", null, null, false]],
+"errors":[
+    { "code": "eof-in-doctype", "line": 2, "col": 1 }
+]},
+
+{"description":"CR EOF in tag name",
+"input":"<z\r",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 2, "col": 1 }
+]},
+
+{"description":"Slash EOF in tag name",
+"input":"<z/",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 4 }
+]},
+
+{"description":"Zero hex numeric entity",
+"input":"&#x0",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "missing-semicolon-after-character-reference", "line": 1, "col": 5 },
+    { "code": "null-character-reference", "line": 1, "col": 5 }
+]},
+
+{"description":"Zero decimal numeric entity",
+"input":"&#0",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "missing-semicolon-after-character-reference", "line": 1, "col": 4 },
+    { "code": "null-character-reference", "line": 1, "col": 4 }
+]},
+
+{"description":"Zero-prefixed hex numeric entity",
+"input":"&#x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041;",
+"output":[["Character", "A"]]},
+
+{"description":"Zero-prefixed decimal numeric entity",
+"input":"&#000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065;",
+"output":[["Character", "A"]]},
+
+{"description":"Empty hex numeric entities",
+"input":"&#x &#X ",
+"output":[["Character", "&#x &#X "]],
+"errors":[
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 4 },
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 8 }
+]},
+
+{"description":"Invalid digit in hex numeric entity",
+"input":"&#xZ",
+"output":[["Character", "&#xZ"]],
+"errors":[
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 4 }
+]},
+
+{"description":"Empty decimal numeric entities",
+"input":"&# &#; ",
+"output":[["Character", "&# &#; "]],
+"errors":[
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 3 },
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 6 }
+]},
+
+{"description":"Invalid digit in decimal numeric entity",
+"input":"&#A",
+"output":[["Character", "&#A"]],
+"errors":[
+    { "code": "absence-of-digits-in-numeric-character-reference", "line": 1, "col": 3 }
+]},
+
+{"description":"Non-BMP numeric entity",
+"input":"&#x10000;",
+"output":[["Character", "\uD800\uDC00"]]},
+
+{"description":"Maximum non-BMP numeric entity",
+"input":"&#X10FFFF;",
+"output":[["Character", "\uDBFF\uDFFF"]],
+"errors":[
+    { "code": "noncharacter-character-reference", "line": 1, "col": 11 }
+]},
+
+
+{"description":"Above maximum numeric entity",
+"input":"&#x110000;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 11 }
+]},
+
+{"description":"32-bit hex numeric entity",
+"input":"&#x80000041;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 13 }
+]},
+
+{"description":"33-bit hex numeric entity",
+"input":"&#x100000041;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 14 }
+]},
+
+{"description":"33-bit decimal numeric entity",
+"input":"&#4294967361;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 14 }
+]},
+
+{"description":"65-bit hex numeric entity",
+"input":"&#x10000000000000041;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 22 }
+]},
+
+{"description":"65-bit decimal numeric entity",
+"input":"&#18446744073709551681;",
+"output":[["Character", "\uFFFD"]],
+"errors":[
+    { "code": "character-reference-outside-unicode-range", "line": 1, "col": 24 }
+]},
+
+{"description":"Surrogate code point edge cases",
+"input":"&#xD7FF;&#xD800;&#xD801;&#xDFFE;&#xDFFF;&#xE000;",
+"output":[["Character", "\uD7FF\uFFFD\uFFFD\uFFFD\uFFFD\uE000"]],
+"errors":[
+    { "code": "surrogate-character-reference", "line": 1, "col": 17 },
+    { "code": "surrogate-character-reference", "line": 1, "col": 25 },
+    { "code": "surrogate-character-reference", "line": 1, "col": 33 },
+    { "code": "surrogate-character-reference", "line": 1, "col": 41 }
+]},
+
+{"description":"Uppercase start tag name",
+"input":"<X>",
+"output":[["StartTag", "x", {}]]},
+
+{"description":"Uppercase end tag name",
+"input":"</X>",
+"output":[["EndTag", "x"]]},
+
+{"description":"Uppercase attribute name",
+"input":"<x X>",
+"output":[["StartTag", "x", { "x":"" }]]},
+
+{"description":"Tag/attribute name case edge values",
+"input":"<x@AZ[`az{ @AZ[`az{>",
+"output":[["StartTag", "x@az[`az{", { "@az[`az{":"" }]]},
+
+{"description":"Duplicate different-case attributes",
+"input":"<x x=1 x=2 X=3>",
+"output":[["StartTag", "x", { "x":"1" }]],
+"errors":[
+    { "code": "duplicate-attribute", "line": 1, "col": 9 },
+    { "code": "duplicate-attribute", "line": 1, "col": 13 }
+]},
+
+{"description":"Uppercase close tag attributes",
+"input":"</x X>",
+"output":[["EndTag", "x"]],
+"errors":[
+    { "code": "end-tag-with-attributes", "line": 1, "col": 6 }
+]},
+
+{"description":"Duplicate close tag attributes",
+"input":"</x x x>",
+"output":[["EndTag", "x"]],
+"errors":[
+    { "code": "duplicate-attribute", "line": 1, "col": 8 },
+    { "code": "end-tag-with-attributes", "line": 1, "col": 8 }
+]},
+
+{"description":"Permitted slash",
+"input":"<br/>",
+"output":[["StartTag","br",{},true]]},
+
+{"description":"Non-permitted slash",
+"input":"<xr/>",
+"output":[["StartTag","xr",{},true]]},
+
+{"description":"Permitted slash but in close tag",
+"input":"</br/>",
+"output":[["EndTag", "br"]],
+"errors":[
+    { "code": "end-tag-with-trailing-solidus", "line": 1, "col": 6 }
+]},
+
+{"description":"Doctype public case-sensitivity (1)",
+"input":"<!DoCtYpE HtMl PuBlIc \"AbC\" \"XyZ\">",
+"output":[["DOCTYPE", "html", "AbC", "XyZ", true]]},
+
+{"description":"Doctype public case-sensitivity (2)",
+"input":"<!dOcTyPe hTmL pUbLiC \"aBc\" \"xYz\">",
+"output":[["DOCTYPE", "html", "aBc", "xYz", true]]},
+
+{"description":"Doctype system case-sensitivity (1)",
+"input":"<!DoCtYpE HtMl SyStEm \"XyZ\">",
+"output":[["DOCTYPE", "html", null, "XyZ", true]]},
+
+{"description":"Doctype system case-sensitivity (2)",
+"input":"<!dOcTyPe hTmL sYsTeM \"xYz\">",
+"output":[["DOCTYPE", "html", null, "xYz", true]]},
+
+{"description":"U+0000 in lookahead region after non-matching character",
+"input":"<!doc>\u0000",
+"output":[["Comment", "doc"], ["Character", "\u0000"]],
+"errors":[
+    { "code": "incorrectly-opened-comment", "line": 1, "col": 3 },
+    { "code": "unexpected-null-character", "line": 1, "col": 7 }
+]},
+
+{"description":"U+0000 in lookahead region",
+"input":"<!doc\u0000",
+"output":[["Comment", "doc\uFFFD"]],
+"errors":[
+    { "code": "incorrectly-opened-comment", "line": 1, "col": 3 },
+    { "code": "unexpected-null-character", "line": 1, "col": 6 }
+]},
+
+{"description":"U+0080 in lookahead region",
+"input":"<!doc\u0080",
+"output":[["Comment", "doc\u0080"]],
+"errors":[
+    { "code": "incorrectly-opened-comment", "line": 1, "col": 3 },
+    { "code": "control-character-in-input-stream", "line": 1, "col": 6 }
+]},
+
+{"description":"U+FDD1 in lookahead region",
+"input":"<!doc\uFDD1",
+"output":[["Comment", "doc\uFDD1"]],
+"errors":[
+    { "code": "incorrectly-opened-comment", "line": 1, "col": 3 },
+    { "code": "noncharacter-in-input-stream", "line": 1, "col": 6 }
+]},
+
+{"description":"U+1FFFF in lookahead region",
+"input":"<!doc\uD83F\uDFFF",
+"output":[["Comment", "doc\uD83F\uDFFF"]],
+"errors":[
+    { "code": "incorrectly-opened-comment", "line": 1, "col": 3 },
+    { "code": "noncharacter-in-input-stream", "line": 1, "col": 6 }
+]},
+
+{"description":"CR followed by non-LF",
+"input":"\r?",
+"output":[["Character", "\n?"]]},
+
+{"description":"CR at EOF",
+"input":"\r",
+"output":[["Character", "\n"]]},
+
+{"description":"LF at EOF",
+"input":"\n",
+"output":[["Character", "\n"]]},
+
+{"description":"CR LF",
+"input":"\r\n",
+"output":[["Character", "\n"]]},
+
+{"description":"CR CR",
+"input":"\r\r",
+"output":[["Character", "\n\n"]]},
+
+{"description":"LF LF",
+"input":"\n\n",
+"output":[["Character", "\n\n"]]},
+
+{"description":"LF CR",
+"input":"\n\r",
+"output":[["Character", "\n\n"]]},
+
+{"description":"text CR CR CR text",
+"input":"text\r\r\rtext",
+"output":[["Character", "text\n\n\ntext"]]},
+
+{"description":"Doctype publik",
+"input":"<!DOCTYPE html PUBLIK \"AbC\" \"XyZ\">",
+"output":[["DOCTYPE", "html", null, null, false]],
+"errors":[
+    { "code": "invalid-character-sequence-after-doctype-name", "line": 1, "col": 16 }
+]},
+
+{"description":"Doctype publi",
+"input":"<!DOCTYPE html PUBLI",
+"output":[["DOCTYPE", "html", null, null, false]],
+"errors":[
+    { "code": "invalid-character-sequence-after-doctype-name", "line": 1, "col": 16 }
+]},
+
+{"description":"Doctype sistem",
+"input":"<!DOCTYPE html SISTEM \"AbC\">",
+"output":[["DOCTYPE", "html", null, null, false]],
+"errors":[
+    { "code": "invalid-character-sequence-after-doctype-name", "line": 1, "col": 16 }
+]},
+
+{"description":"Doctype sys",
+"input":"<!DOCTYPE html SYS",
+"output":[["DOCTYPE", "html", null, null, false]],
+"errors":[
+    { "code": "invalid-character-sequence-after-doctype-name", "line": 1, "col": 16 }
+]},
+
+{"description":"Doctype html x>text",
+"input":"<!DOCTYPE html x>text",
+"output":[["DOCTYPE", "html", null, null, false], ["Character", "text"]],
+"errors":[
+    { "code": "invalid-character-sequence-after-doctype-name", "line": 1, "col": 16 }
+]},
+
+{"description":"Grave accent in unquoted attribute",
+"input":"<a a=aa`>",
+"output":[["StartTag", "a", {"a":"aa`"}]],
+"errors":[
+    { "code": "unexpected-character-in-unquoted-attribute-value", "line": 1, "col": 8 }
+]},
+
+{"description":"EOF in tag name state ",
+"input":"<a",
+"output":[],
+"errors": [
+    { "code": "eof-in-tag", "line": 1, "col": 3 }
+]},
+
+{"description":"EOF in before attribute name state",
+"input":"<a ",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 4 }
+]},
+
+{"description":"EOF in attribute name state",
+"input":"<a a",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 5 }
+]},
+
+{"description":"EOF in after attribute name state",
+"input":"<a a ",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 6 }
+]},
+
+{"description":"EOF in before attribute value state",
+"input":"<a a =",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 7 }
+]},
+
+{"description":"EOF in attribute value (double quoted) state",
+"input":"<a a =\"a",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 9 }
+]},
+
+{"description":"EOF in attribute value (single quoted) state",
+"input":"<a a ='a",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 9 }
+]},
+
+{"description":"EOF in attribute value (unquoted) state",
+"input":"<a a =a",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 8 }
+]},
+
+{"description":"EOF in after attribute value state",
+"input":"<a a ='a'",
+"output":[],
+"errors":[
+    { "code": "eof-in-tag", "line": 1, "col": 10 }
+]}
+
+]}

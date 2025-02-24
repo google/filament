@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/frame.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/instant_event.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/process.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('getOrCreateCounter', function() {
+    const model = new tr.Model();
+    const process = new tr.model.Process(model, 7);
+    const ctrBar = process.getOrCreateCounter('foo', 'bar');
+    const ctrBar2 = process.getOrCreateCounter('foo', 'bar');
+    assert.strictEqual(ctrBar2, ctrBar);
+  });
+
+  test('shiftTimestampsForward', function() {
+    const model = new tr.Model();
+    const process = new tr.model.Process(model, 7);
+    const ctr = process.getOrCreateCounter('foo', 'bar');
+    const thread = process.getOrCreateThread(1);
+
+    const instantEvent = new tr.model.InstantEvent('cat', 'event1', 1, 100);
+    process.instantEvents.push(instantEvent);
+
+    const slice = new tr.model.ThreadSlice('', 'a', 0, 1, {}, 4);
+    const frame =
+        new tr.model.Frame([slice], [{thread, start: 100, end: 200}]);
+    process.frames.push(frame);
+
+    const memoryDump = new tr.model.GlobalMemoryDump(model, 100);
+    process.memoryDumps.push(memoryDump);
+
+    let shiftCount = 0;
+    thread.shiftTimestampsForward = function(ts) {
+      if (ts === 0.32) {
+        shiftCount++;
+      }
+    };
+    ctr.shiftTimestampsForward = function(ts) {
+      if (ts === 0.32) {
+        shiftCount++;
+      }
+    };
+
+    process.shiftTimestampsForward(0.32);
+    assert.strictEqual(shiftCount, 2);
+    assert.strictEqual(instantEvent.start, 100.32);
+    assert.strictEqual(frame.start, 100.32);
+    assert.strictEqual(frame.end, 200.32);
+    assert.strictEqual(memoryDump.start, 100.32);
+  });
+
+  test('compareOnPID', function() {
+    let model = new tr.Model();
+    const p1 = new tr.model.Process(model, 1);
+    p1.name = 'Renderer';
+
+    model = new tr.Model();
+    const p2 = new tr.model.Process(model, 2);
+    p2.name = 'Renderer';
+
+    assert.isBelow(p1.compareTo(p2), 0);
+  });
+
+  test('compareOnSortIndex', function() {
+    const model = new tr.Model();
+    const p1 = new tr.model.Process(model, 1);
+    p1.name = 'Renderer';
+    p1.sortIndex = 1;
+
+    const p2 = new tr.model.Process(model, 2);
+    p2.name = 'Renderer';
+
+    assert.isAbove(p1.compareTo(p2), 0);
+  });
+
+  test('compareOnName', function() {
+    const model = new tr.Model();
+    const p1 = new tr.model.Process(model, 1);
+    p1.name = 'Browser';
+
+    const p2 = new tr.model.Process(model, 2);
+    p2.name = 'Renderer';
+
+    assert.isBelow(p1.compareTo(p2), 0);
+  });
+
+  test('compareOnLabels', function() {
+    const model = new tr.Model();
+    const p1 = new tr.model.Process(model, 1);
+    p1.name = 'Renderer';
+    p1.labels = ['a'];
+
+    const p2 = new tr.model.Process(model, 2);
+    p2.name = 'Renderer';
+    p2.labels = ['b'];
+
+    assert.isBelow(p1.compareTo(p2), 0);
+  });
+
+  test('compareOnUptime', function() {
+    const model = new tr.Model();
+    const p1 = new tr.model.Process(model, 1);
+    p1.name = 'Renderer';
+    p1.uptime_seconds = 10;
+
+    const p2 = new tr.model.Process(model, 2);
+    p2.name = 'Renderer';
+    p2.uptime_seconds = 20;
+
+    assert.isBelow(p1.compareTo(p2), 0);
+  });
+});
+</script>
+

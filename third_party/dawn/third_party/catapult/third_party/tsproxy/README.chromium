@@ -1,0 +1,14 @@
+Name: tsproxy
+Short Name: tsproxy
+URL: https://github.com/WPO-Foundation/tsproxy
+Version: 7915adec656341bfab173484e1e0ca661eea1627 (commit hash)
+License: Apache
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Local modification: add OWNERS file to make it easier for code review of roll.
+
+Description:
+tsproxy provides basic latency, download and upload traffic shaping while only
+requiring user-level access (no root permissions required)

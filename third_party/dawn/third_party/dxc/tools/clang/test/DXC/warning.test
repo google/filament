@@ -1,0 +1,7 @@
+// Check Warning
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Dcheck_warning 2>&1 | FileCheck %s --check-prefix=CHECK_WARNING
+// CHECK_WARNING:warning:
+
+// /no-warnings
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Dcheck_warning /no-warnings 2>&1 | FileCheck %s --check-prefix=CHECK_NOWARNING
+// CHECK_NOWARNING-NOT:warning:

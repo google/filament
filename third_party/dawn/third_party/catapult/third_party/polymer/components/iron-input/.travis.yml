@@ -1,0 +1,24 @@
+language: node_js
+sudo: required
+before_script:
+  - npm install -g bower polylint web-component-tester
+  - bower install
+  - polylint
+env:
+  global:
+    - secure: >-
+        NQunbnhwQFU/uRU1Dz8VIYXpG9cq4wEldllph4To1XJqEa21pG1Q9+a/M4+aOkW6iIPRgfI/bQ6mPWaRnE/KGrsusARqgYDytq42dJpSoLOiLYbVdRKIHI3t9cr1MiZKUxwz/vpOsKcMK8dW5RmR6zJ8k5roijNAmjFRlzfGOKY=
+    - secure: >-
+        Ge6m7GkHZdhv6Ru7uNEVS9jUQ15CsCa9ZBcBQncA/w8zEmDfM2tzcTUJ54piZ03mo9qnWOcV4IcJj78nXsyKcYZHiGpe63w5R5NWhO3uZ72C48SMPbWQxL0Kyt6PN4u7i5MNCMJ3+a+ttyet8H9qTzxAwOLVSFCUr3On1/B1APU=
+node_js: '6'
+addons:
+  firefox: latest
+  apt:
+    sources:
+      - google-chrome
+    packages:
+      - google-chrome-stable
+script:
+  - xvfb-run wct
+  - 'if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then wct -s ''default''; fi'
+dist: trusty

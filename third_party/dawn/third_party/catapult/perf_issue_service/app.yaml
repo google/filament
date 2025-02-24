@@ -1,0 +1,29 @@
+service: perf-issue-service
+
+runtime: python
+env: flex
+
+runtime_config:
+  # As of Q1 2023, the latest python supported by Appengine flexible is 3.7.9.
+  python_version: 3.7
+
+entrypoint: gunicorn -b:$PORT -w 8 main:APP
+
+automatic_scaling:
+  min_num_instances: 30
+  max_num_instances: 40
+  cpu_utilization:
+    target_utilization: 0.7
+
+readiness_check:
+  path: "/"
+  check_interval_sec: 60
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
+
+beta_settings:
+  service_account_scopes: >
+    https://www.googleapis.com/auth/userinfo.email,
+    https://www.googleapis.com/auth/buganizer,

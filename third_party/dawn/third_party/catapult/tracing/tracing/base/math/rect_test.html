@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/rect.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('UVRectBasic', function() {
+    function assertRectEquals(a, b, opt_message) {
+      const ok = true;
+      if (a.x === b.x && a.y === b.y &&
+          a.width === b.width && a.height === b.height) {
+        return;
+      }
+      const message = opt_message || 'Expected "' + a.toString() +
+          '", got "' + b.toString() + '"';
+      assert.fail(a, b, message);
+    }
+    const container = tr.b.math.Rect.fromXYWH(0, 0, 10, 10);
+    const inner = tr.b.math.Rect.fromXYWH(1, 1, 8, 8);
+    const uv = inner.asUVRectInside(container);
+    assertRectEquals(uv, tr.b.math.Rect.fromXYWH(0.1, 0.1, .8, .8));
+    assert.strictEqual(10, container.size().width);
+    assert.strictEqual(10, container.size().height);
+  });
+});
+</script>

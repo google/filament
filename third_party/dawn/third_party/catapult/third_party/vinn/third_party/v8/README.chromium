@@ -1,0 +1,12 @@
+Name: Chrome d8 for executing javascript
+Short Name: d8
+URL: https://developers.google.com/v8/
+Version: 10.1.124.11 (linux), 7.0.276.40 (mac), 5.6.326.50 (win)
+License: BSD
+License File: LICENSE, LICENSE.v8, LICENSE.strongtalk, LICENSE.valgrind
+Security Critical: no
+Shipped: yes
+Description: d8 binaries is used for executing trace-viewer's trace analyzing
+code.
+Local modifications: We ignore the source code & only keep the d8 binaries. Use
+tracing/bin/update_v8 to update the binary on your current OS.

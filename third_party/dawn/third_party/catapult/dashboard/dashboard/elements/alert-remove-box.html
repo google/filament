@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The alert-remove-box element provides the functionality of dis-associating
+an alert from an issue on the issue tracker.
+-->
+
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="alert-remove-box">
+  <template>
+    <style>
+      .close-icon {
+        padding: 1px;
+        margin: 1px;
+        cursor: pointer;
+        display: inline-block;
+      }
+
+      .spinner {
+        height: 14px;
+        width: 14px;
+      }
+
+      .spinner:not([active]) {
+        display: none;
+      }
+    </style>
+    <div class="close-icon" hidden$="{{loading}}" on-click="onRemoveBug">
+      ❌ <!-- cross mark U+274C -->
+    </div>
+    <paper-spinner class="spinner" active$="{{loading}}"></paper-spinner>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+
+  is: 'alert-remove-box',
+  properties: {
+    key: { notify: true },
+    xsrfToken: { notify: true }
+  },
+  /**
+    * Sends a request to /edit_anomalies to reset the bug ID of this alert.
+    */
+  onRemoveBug(event, detail) {
+    event.preventDefault();
+    this.loading = true;
+    const params = {
+      'keys': this.key,
+      'bug_id': 'REMOVE',
+      'xsrf_token': this.xsrfToken
+    };
+    simple_xhr.send('/edit_anomalies', params,
+        function(info) {
+          this.loading = false;
+          this.fire('untriaged', {'key': this.key});
+        }.bind(this),
+        function(msg) {
+          this.loading = false;
+          alert(msg);
+        }.bind(this)
+    );
+  }
+});
+</script>

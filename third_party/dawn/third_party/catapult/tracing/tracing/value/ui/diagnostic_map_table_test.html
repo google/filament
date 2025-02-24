@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_map_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const map0 = new tr.v.d.DiagnosticMap();
+    map0.set('genericA', new tr.v.d.GenericSet([{a: 0}]));
+    map0.set('genericB', new tr.v.d.GenericSet([{b: 0}]));
+    const map1 = new tr.v.d.DiagnosticMap();
+    map1.set('genericA', new tr.v.d.GenericSet([{a: 1}]));
+    map1.set('genericB', new tr.v.d.GenericSet([{b: 1}]));
+    const table = document.createElement('tr-v-ui-diagnostic-map-table');
+    table.diagnosticMaps = [map0, map1];
+    this.addHTMLOutput(table);
+  });
+});
+</script>

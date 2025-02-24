@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/raf.html">
+
+<dom-module id="tr-v-ui-scalar-context-controller">
+  <template></template>
+</dom-module>
+
+<!--
+@fileoverview Polymer element for controlling common context across scalar
+spans. To facilitate multiple separate contexts (e.g. a separate context for
+each table column), each scalar span has to specify which "context group"
+it belongs to:
+
+  +============ some container element (e.g. <div>) ============+
+  |                                                             |
+  |         <tr-v-ui-scalar-context-controller>                 |
+  |             ^                         ^                     |
+  |             |                         |                     |
+  |             v                         v                     |
+  | .... Context group 1 .... .... Context group 2 ....         |
+  | : <tr-v-ui-scalar-span> : : <tr-v-ui-scalar-span> :         |
+  | : <tr-v-ui-scalar-span> : : <tr-v-ui-scalar-span> :  . . .  |
+  | :          . . .        : :         . . .         :         |
+  | :.......................: :.......................:         |
+  +=============================================================+
+
+An element can find its enclosing context controller using the
+getScalarContextControllerForElement(node) defined in this file. Scalar spans
+can push their state to the controller using the following three methods:
+
+  1. onScalarSpanAdded(contextGroup, span)
+     This method should be called when a span is attached to the DOM tree (or
+     afterwards when added to a context group).
+
+  2. onScalarSpanRemoved(contextGroup, span)
+     This method should be called when a span is detached from the DOM tree (or
+     beforehand when removed from a context group).
+
+  3. onScalarSpanUpdated(contextGroup, span)
+     This method should be called when the value of a span changes.
+
+Note: If a span wants to change its context group, it should first call
+onScalarSpanRemoved with the old group and then onScalarSpanAdded with the new
+group.
+
+If one or more group contexts are modified (due to one of the three methods
+above), the controller will asynchronously (at the next RAF) update them and
+fire a 'context-updated' event. Scalar spans can listen for this event and
+update their UI accordingly.
+
+The context currently consists of the range of values of the associated spans.
+This allows automatic display of relative sizes using sparklines.
+
+The controller design is based on:
+https://docs.google.com/document/d/16ih8yYK8kF8MMlPnB-5KlyfS_AjjtbyAfi3pkxoZ8xs/edit?usp=sharing
+-->
+<script>
+'use strict';
+
+tr.exportTo('tr.v.ui', function() {
+  Polymer({
+    is: 'tr-v-ui-scalar-context-controller',
+
+    created() {
+      this.host_ = undefined;
+      this.groupToContext_ = new Map();
+      this.dirtyGroups_ = new Set();
+    },
+
+    attached() {
+      if (this.host_) {
+        throw new Error(
+            'Scalar context controller is already attached to a host');
+      }
+
+      const host = findParentOrHost(this);
+      if (host.__scalarContextController) {
+        throw new Error(
+            'Multiple scalar context controllers attached to this host');
+      }
+
+      host.__scalarContextController = this;
+      this.host_ = host;
+    },
+
+    detached() {
+      if (!this.host_) {
+        throw new Error('Scalar context controller is not attached to a host');
+      }
+      if (this.host_.__scalarContextController !== this) {
+        throw new Error(
+            'Scalar context controller is not attached to its host');
+      }
+
+      delete this.host_.__scalarContextController;
+      this.host_ = undefined;
+    },
+
+    getContext(group) {
+      return this.groupToContext_.get(group);
+    },
+
+    onScalarSpanAdded(group, span) {
+      let context = this.groupToContext_.get(group);
+      if (context === undefined) {
+        context = {
+          spans: new Set(),
+          range: new tr.b.math.Range()
+        };
+        this.groupToContext_.set(group, context);
+      }
+      if (context.spans.has(span)) {
+        throw new Error('Scalar span already registered with group: ' + group);
+      }
+      context.spans.add(span);
+      this.markGroupDirtyAndScheduleUpdate_(group);
+    },
+
+    onScalarSpanRemoved(group, span) {
+      const context = this.groupToContext_.get(group);
+      if (!context.spans.has(span)) {
+        throw new Error('Scalar span not registered with group: ' + group);
+      }
+      context.spans.delete(span);
+      this.markGroupDirtyAndScheduleUpdate_(group);
+    },
+
+    onScalarSpanUpdated(group, span) {
+      const context = this.groupToContext_.get(group);
+      if (!context.spans.has(span)) {
+        throw new Error('Scalar span not registered with group: ' + group);
+      }
+      this.markGroupDirtyAndScheduleUpdate_(group);
+    },
+
+    markGroupDirtyAndScheduleUpdate_(group) {
+      const alreadyDirty = this.dirtyGroups_.size > 0;
+      this.dirtyGroups_.add(group);
+      if (!alreadyDirty) {
+        tr.b.requestAnimationFrameInThisFrameIfPossible(
+            this.updateContext, this);
+      }
+    },
+
+    updateContext() {
+      const groups = this.dirtyGroups_;
+      if (groups.size === 0) return;
+      this.dirtyGroups_ = new Set();
+
+      for (const group of groups) {
+        this.updateGroup_(group);
+      }
+
+      const event = new tr.b.Event('context-updated');
+      event.groups = groups;
+      this.dispatchEvent(event);
+    },
+
+    updateGroup_(group) {
+      const context = this.groupToContext_.get(group);
+      if (context.spans.size === 0) {
+        this.groupToContext_.delete(group);
+        return;
+      }
+      context.range.reset();
+      for (const span of context.spans) {
+        context.range.addValue(span.value);
+      }
+    }
+  });
+
+  function getScalarContextControllerForElement(element) {
+    while (element) {
+      if (element.__scalarContextController) {
+        return element.__scalarContextController;
+      }
+      element = findParentOrHost(element);
+    }
+    return undefined;
+  }
+
+  function findParentOrHost(node) {
+    if (node.parentElement) {
+      return node.parentElement;
+    }
+    while (Polymer.dom(node).parentNode) {
+      node = Polymer.dom(node).parentNode;
+    }
+    return node.host;
+  }
+
+  return {
+    getScalarContextControllerForElement,
+  };
+});
+</script>

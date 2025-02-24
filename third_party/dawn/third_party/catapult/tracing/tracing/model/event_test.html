@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/alert.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_info.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Alert = tr.model.Alert;
+  const Event = tr.model.Event;
+  const EventInfo = tr.model.EventInfo;
+  const EventSet = tr.model.EventSet;
+  const ImmutableEventSet = tr.model.ImmutableEventSet;
+
+  test('checkModelItem', function() {
+    const event = new Event;
+    assert.strictEqual(event.modelItem, event);
+  });
+
+  test('checkAssociatedAlerts', function() {
+    const event = new Event();
+    assert.strictEqual(event.associatedAlerts, EventSet.IMMUTABLE_EMPTY_SET);
+    assert.sameMembers(event.associatedAlerts.toArray(), []);
+
+    const info1 = new EventInfo('Critical', 'Critical alert!!!', []);
+    const alert1 = new Alert(info1, 7);
+    event.addAssociatedAlert(alert1);
+    assert.instanceOf(event.associatedAlerts, EventSet);
+    assert.sameMembers(event.associatedAlerts.toArray(), [alert1]);
+
+    const info2 = new EventInfo('Warning', 'Warning alert???', []);
+    const alert2 = new Alert(info2, 42);
+    event.addAssociatedAlert(alert2);
+    assert.instanceOf(event.associatedAlerts, EventSet);
+    assert.sameMembers(event.associatedAlerts.toArray(), [alert1, alert2]);
+  });
+});
+</script>

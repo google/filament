@@ -1,0 +1,304 @@
+{
+  "B5G6R5_UNORM": {
+    "fboImplementationInternalFormat": "GL_RGB565"
+  },
+  "B5G5R5A1_UNORM": {
+    "fboImplementationInternalFormat": "GL_RGB5_A1",
+    "channelStruct": "A1R5G5B5"
+  },
+  "B8G8R8X8_UNORM": {
+    "glInternalFormat": "GL_BGRA8_EXT",
+    "channelStruct": "B8G8R8X8"
+  },
+  "R8G8B8X8_UNORM": {
+    "glInternalFormat": "GL_RGBX8_ANGLE",
+    "channelStruct": "R8G8B8X8"
+  },
+  "R9G9B9E5_SHAREDEXP": {
+    "componentType":  "float",
+    "channelStruct":  "R9G9B9E5"
+  },
+  "B4G4R4A4_UNORM": {
+    "fboImplementationInternalFormat": "GL_RGBA4",
+    "channelStruct":  "A4R4G4B4"
+  },
+  "R8G8B8A8_UNORM_SRGB": {
+    "channelStruct":  "R8G8B8A8SRGB"
+  },
+  "R8G8B8A8_TYPELESS": {
+    "glInternalFormat": "GL_RGBA8"
+  },
+  "R8G8B8A8_TYPELESS_SRGB": {
+    "glInternalFormat": "GL_SRGB8_ALPHA8"
+  },
+  "B8G8R8A8_TYPELESS": {
+    "glInternalFormat": "GL_BGRA8_EXT"
+  },
+  "B8G8R8A8_TYPELESS_SRGB": {
+    "glInternalFormat": "GL_BGRA8_SRGB_ANGLEX"
+  },
+  "B8G8R8X8_UNORM_SRGB": {
+    "glInternalFormat": "GL_BGRX8_SRGB_ANGLEX"
+  },
+  "R8G8B8X8_UNORM_SRGB": {
+    "glInternalFormat": "GL_RGBX8_SRGB_ANGLEX"
+  },
+  "ASTC_4x4_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x4_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x4_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x4_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x5_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x5_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x6_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x6_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x8_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_8x8_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x5_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x6_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x6_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x8_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x8_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x10_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_10x10_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_12x10_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_12x10_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_12x12_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_12x12_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_3x3x3_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x3x3_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x4x3_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x4x4_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x4x4_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5x4_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x5x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6x5_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6x6_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_3x3x3_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x3x3_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x4x3_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_4x4x4_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x4x4_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5x4_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_5x5x5_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x5x5_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6x5_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ASTC_6x6x6_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC1_RGB_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC1_RGBA_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC1_RGBA_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC1_RGB_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC2_RGBA_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC2_RGBA_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC3_RGBA_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC3_RGBA_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC4_RED_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC4_RED_SNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "BC5_RG_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC5_RG_SNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC6H_RGB_UFLOAT_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC6H_RGB_SFLOAT_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC7_RGBA_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "BC7_RGBA_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "EAC_R11_SNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "EAC_R11_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "EAC_R11G11_SNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "EAC_R11G11_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ETC1_R8G8B8_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC1_LOSSY_DECODE_R8G8B8_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC2_R8G8B8_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC2_R8G8B8_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC2_R8G8B8A1_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC2_R8G8B8A1_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "ETC2_R8G8B8A8_UNORM_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "ETC2_R8G8B8A8_SRGB_BLOCK": {
+    "blockPixelBytes": "16"
+  },
+  "PVRTC1_RGB_4BPP_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGB_2BPP_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGBA_4BPP_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGBA_2BPP_UNORM_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGB_2BPP_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGB_4BPP_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGBA_2BPP_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "PVRTC1_RGBA_4BPP_UNORM_SRGB_BLOCK": {
+    "blockPixelBytes": "8"
+  },
+  "G8_B8_R8_3PLANE_420_UNORM": {
+    "channelStruct": "R8G8B8"
+  },
+  "G8_B8R8_2PLANE_420_UNORM": {
+    "channelStruct": "R8G8B8"
+  }
+}

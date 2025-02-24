@@ -1,0 +1,130 @@
+# Appveyor, continuous integration for Windows
+# https://ci.appveyor.com/project/nedbat/coveragepy
+
+version: '{branch}-{build}'
+
+shallow_clone: true
+
+environment:
+
+  CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\ci\\run_with_env.cmd"
+
+  matrix:
+    - JOB: "2.6 32-bit"
+      TOXENV: "py26"
+      PYTHON: "C:\\Python26.6"
+      PYTHON_VERSION: "2.6.6"
+      PYTHON_ARCH: "32"
+
+    - JOB: "2.6 64-bit"
+      TOXENV: "py26"
+      PYTHON: "C:\\Python26.6-x64"
+      PYTHON_VERSION: "2.6.6"
+      PYTHON_ARCH: "64"
+
+    - JOB: "2.7 32-bit"
+      TOXENV: "py27"
+      PYTHON: "C:\\Python27.10"
+      PYTHON_VERSION: "2.7.10"
+      PYTHON_ARCH: "32"
+
+    - JOB: "2.7 64-bit"
+      TOXENV: "py27"
+      PYTHON: "C:\\Python27.10-x64"
+      PYTHON_VERSION: "2.7.10"
+      PYTHON_ARCH: "64"
+
+    - JOB: "3.3 32-bit"
+      TOXENV: "py33"
+      PYTHON: "C:\\Python33"
+      PYTHON_VERSION: "3.3"
+      PYTHON_ARCH: "32"
+
+    - JOB: "3.3 64-bit"
+      TOXENV: "py33"
+      PYTHON: "C:\\Python33-x64"
+      PYTHON_VERSION: "3.3"
+      PYTHON_ARCH: "64"
+
+    - JOB: "3.4 32-bit"
+      TOXENV: "py34"
+      PYTHON: "C:\\Python34"
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "32"
+
+    - JOB: "3.4 64-bit"
+      TOXENV: "py34"
+      PYTHON: "C:\\Python34-x64"
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "64"
+
+    - JOB: "3.5 32-bit"
+      TOXENV: "py35"
+      PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.0"
+      PYTHON_ARCH: "32"
+
+    - JOB: "3.5 64-bit"
+      TOXENV: "py35"
+      PYTHON: "C:\\Python35-x64"
+      PYTHON_VERSION: "3.5.0"
+      PYTHON_ARCH: "64"
+
+    # Meta coverage
+    - JOB: "Meta 2.7"
+      TOXENV: "py27"
+      PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "32"
+      COVERAGE_COVERAGE: "yes"
+
+    - JOB: "Meta 3.4"
+      TOXENV: "py34"
+      PYTHON: "C:\\Python34"
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "32"
+      COVERAGE_COVERAGE: "yes"
+
+init:
+  - "ECHO %TOXENV%"
+
+install:
+  # Install Python (from the official .msi of http://python.org) and pip when
+  # not already installed.
+  - ps: if (-not(Test-Path($env:PYTHON))) { & ci\install.ps1 }
+
+  # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  # Check that we have the expected version and architecture for Python
+  - "python --version"
+  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
+
+  # Upgrade to the latest version of pip to avoid it displaying warnings
+  # about it being out of date.
+  - "pip install --disable-pip-version-check --user --upgrade pip"
+
+  # Install requirements.
+  - "%CMD_IN_ENV% pip install -r requirements/tox.pip -r requirements/wheel.pip"
+
+  # Make a python3.4.bat file in the current directory so that tox will find it
+  # and python3.4 will mean what we want it to.
+  - "python -c \"import os; open('python{0}.{1}.bat'.format(*os.environ['TOXENV'][2:]), 'w').write('@{0}\\\\python \\x25*\\n'.format(os.environ['PYTHON']))\""
+
+build_script:
+  # If not a metacov job, then build wheels and .exe installers.
+  - if NOT "%COVERAGE_COVERAGE%" == "yes" %CMD_IN_ENV% %PYTHON%\python setup.py bdist_wheel bdist_wininst
+
+  # Push everything in dist\ as an artifact.
+  - ps: if ( Test-Path 'dist' -PathType Container ) { Get-ChildItem dist\*.* | % { Push-AppveyorArtifact $_.FullName -FileName ('dist\' + $_.Name) } }
+
+test_script:
+  - "%CMD_IN_ENV% %PYTHON%\\Scripts\\tox"
+
+after_test:
+  - if "%COVERAGE_COVERAGE%" == "yes" 7z a metacov-win-%TOXENV%.zip %APPVEYOR_BUILD_FOLDER%\.metacov*
+
+artifacts:
+  - path: "metacov-*.zip"

@@ -1,0 +1,10 @@
+{# Group the anomalies by bot. #}
+{%- for bot, grouped_regressions in regressions|groupby("bot_name") %}
+{%- set sorted_regressions = grouped_regressions|sort(attribute="relative_delta",reverse=True) %}
+{% set top_regressions=sorted_regressions[:3] %}
+Top {{ top_regressions|length }} affected measurements in {{ bot }}:
+{%- for regression in top_regressions %}
+  - {{ regression.test.string_id().split('/')[2:]|join('/') }}
+    {{ '%8.2f'|format(regression.relative_delta*100.0) }}%: {{ regression.median_before_anomaly }} -> {{ regression.median_after_anomaly }} {{ parse_unit(regression.units) }}
+{%- endfor %}
+{% endfor %}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v', function() {
+  /*
+   * HistogramGrouping objects are registered named functions that map from
+   * Histogram objects to strings.
+   *
+   * They are used to group Histograms by
+   * tr.v.HistogramSet.groupHistogramsRecursively()
+   *
+   * The tr-ui-b-grouping-table-groupby-picker module within the
+   * tr-v-ui-histogram-set-controls module allows users to select and reorder
+   * groupings.
+   */
+  class HistogramGrouping {
+    /**
+     * @param {string} key
+     * @param {!function(!tr.v.Histogram):string} callback
+     */
+    constructor(key, callback) {
+      this.key_ = key;
+      this.callback_ = callback;
+
+      HistogramGrouping.BY_KEY.set(key, this);
+    }
+
+    get key() {
+      return this.key_;
+    }
+
+    get callback() {
+      return this.callback_;
+    }
+
+    get label() {
+      return this.key;
+    }
+
+    /**
+     * @param {!Set.<string>} tags
+     * @param {string} diagnosticName
+     * @return {!Array.<!HistogramGrouping>}
+     */
+    static buildFromTags(tags, diagnosticName) {
+      const booleanTags = new Set();
+      const keyValueTags = new Set();
+      for (const tag of tags) {
+        if (tag.includes(':')) {
+          const key = tag.split(':')[0];
+          if (booleanTags.has(key)) {
+            throw new Error(
+                `Tag "${key}" cannot be both boolean and key-value`);
+          }
+          keyValueTags.add(key);
+        } else {
+          if (keyValueTags.has(tag)) {
+            throw new Error(
+                `Tag "${tag}" cannot be both boolean and key-value`);
+          }
+          booleanTags.add(tag);
+        }
+      }
+
+      const groupings = [];
+      for (const tag of booleanTags) {
+        groupings.push(HistogramGrouping.buildBooleanTagGrouping_(
+            tag, diagnosticName));
+      }
+      for (const tag of keyValueTags) {
+        groupings.push(HistogramGrouping.buildKeyValueTagGrouping_(
+            tag, diagnosticName));
+      }
+      return groupings;
+    }
+
+    static buildBooleanTagGrouping_(tag, diagnosticName) {
+      return new HistogramGrouping(`${tag}Tag`, h => {
+        const tags = h.diagnostics.get(diagnosticName);
+        if (tags === undefined || !tags.has(tag)) return `~${tag}`;
+        return tag;
+      });
+    }
+
+    static buildKeyValueTagGrouping_(tag, diagnosticName) {
+      return new HistogramGrouping(`${tag}Tag`, h => {
+        const tags = h.diagnostics.get(diagnosticName);
+        if (tags === undefined) return `~${tag}`;
+        const values = new Set();
+        for (const value of tags) {
+          const kvp = value.split(':');
+          if (kvp.length < 2 || kvp[0] !== tag) continue;
+          values.add(kvp[1]);
+        }
+        if (values.size === 0) return `~${tag}`;
+        const sortedValues = Array.from(values);
+        sortedValues.sort();
+        return sortedValues.join(',');
+      }, `${tag} tag`);
+    }
+  }
+
+  HistogramGrouping.BY_KEY = new Map();
+
+  HistogramGrouping.HISTOGRAM_NAME = new HistogramGrouping('name', h => h.name);
+
+  HistogramGrouping.DISPLAY_LABEL = new HistogramGrouping(
+      'displayLabel', hist => {
+        const labels = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.LABELS);
+        if (labels !== undefined && labels.size > 0) {
+          return Array.from(labels).join(',');
+        }
+
+        const benchmarks = hist.diagnostics.get(
+            tr.v.d.RESERVED_NAMES.BENCHMARKS);
+        const start = hist.diagnostics.get(
+            tr.v.d.RESERVED_NAMES.BENCHMARK_START);
+        if (benchmarks === undefined) {
+          if (start === undefined) return 'Value';
+
+          return start.toString();
+        }
+        const benchmarksStr = Array.from(benchmarks).join('\n');
+
+        if (start === undefined) return benchmarksStr;
+
+        return benchmarksStr + '\n' + start.toString();
+      });
+
+  class GenericSetGrouping extends HistogramGrouping {
+    constructor(name) {
+      super(name, undefined);
+      this.callback_ = this.compute_.bind(this);
+    }
+
+    compute_(hist) {
+      const diag = hist.diagnostics.get(this.key);
+      if (diag === undefined) return '';
+      const parts = Array.from(diag);
+      parts.sort();
+      return parts.join(',');
+    }
+  }
+
+  GenericSetGrouping.NAMES = [
+    tr.v.d.RESERVED_NAMES.ARCHITECTURES,
+    tr.v.d.RESERVED_NAMES.BENCHMARKS,
+    tr.v.d.RESERVED_NAMES.BOTS,
+    tr.v.d.RESERVED_NAMES.BUILDS,
+    tr.v.d.RESERVED_NAMES.DEVICE_IDS,
+    tr.v.d.RESERVED_NAMES.MASTERS,
+    tr.v.d.RESERVED_NAMES.MEMORY_AMOUNTS,
+    tr.v.d.RESERVED_NAMES.OS_NAMES,
+    tr.v.d.RESERVED_NAMES.OS_VERSIONS,
+    tr.v.d.RESERVED_NAMES.PRODUCT_VERSIONS,
+    tr.v.d.RESERVED_NAMES.STORIES,
+    tr.v.d.RESERVED_NAMES.STORYSET_REPEATS,
+    tr.v.d.RESERVED_NAMES.STORY_TAGS,
+    tr.v.d.RESERVED_NAMES.TEST_PATH,
+  ];
+
+  for (const name of GenericSetGrouping.NAMES) {
+    // Instantiating a HistogramGrouping adds it to BY_KEY.
+    new GenericSetGrouping(name);
+  }
+
+  class DateRangeGrouping extends HistogramGrouping {
+    constructor(name) {
+      super(name, undefined);
+      this.callback_ = this.compute_.bind(this);
+    }
+
+    compute_(hist) {
+      const diag = hist.diagnostics.get(this.key);
+      if (diag === undefined) return '';
+      return diag.toString();
+    }
+  }
+
+  DateRangeGrouping.NAMES = [
+    tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+    tr.v.d.RESERVED_NAMES.TRACE_START,
+  ];
+
+  for (const name of DateRangeGrouping.NAMES) {
+    new DateRangeGrouping(name);
+  }
+
+  return {
+    HistogramGrouping,
+    GenericSetGrouping,
+    DateRangeGrouping,
+  };
+});
+</script>

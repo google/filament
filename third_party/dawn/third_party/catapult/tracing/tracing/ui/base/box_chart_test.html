@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/box_chart.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiation_singleSeries', function() {
+    const chart = new tr.ui.b.BoxChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {
+        x: 'a'.repeat(15) + 'A',
+        percentile_0: 30,
+        percentile_25: 60,
+        percentile_50: 110,
+        percentile_75: 160,
+        percentile_100: 210,
+      },
+      {
+        x: 'b'.repeat(10) + 'B',
+        percentile_0: 0,
+        percentile_25: 50,
+        percentile_50: 100,
+        percentile_75: 150,
+        percentile_100: 200,
+      },
+      {
+        x: 'c'.repeat(5) + 'C',
+        percentile_0: 100,
+        percentile_25: 150,
+        percentile_50: 200,
+        percentile_75: 250,
+        percentile_100: 300,
+      },
+    ];
+  });
+});
+</script>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright 2021 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/components/iron-icons/iron-icons.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/components/paper-icon-button/paper-icon-button.html">
+<dom-module id="job-search-tip">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+      }
+    </style>
+    <paper-icon-button icon="help" title="search help" on-tap="showDialog">
+    </paper-icon-button>
+    <paper-dialog id="help">
+      <h2>Filtering jobs with the CLI</h2>
+      <p>
+        <b style="color: red;">New!</b>
+        Use the <code>pinpoint</code> command line utility in
+        <code>depot_tools</code> to list and filter jobs by user and/or by
+        configuration from your terminal shell:
+      </p>
+      <pre>pinpoint list-jobs</pre>
+      <p>To list jobs by a particular user:</p>
+      <pre>pinpoint list-jobs --filter=user=user@example.com</pre>
+      <p>To list jobs by configuration:</p>
+      <pre>pinpoint list-jobs --filter=configuration=linux-perf</pre>
+      <p>Use <code>AND</code> to combine the filters:</p>
+      <pre>pinpoint list-jobs --filter='user=user@example.com AND configuration=linux-perf'</pre>
+      <p>For more up-to-date information:</p>
+      <pre>pinpoint list-jobs --help</pre>
+    </paper-dialog>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'job-search-tip',
+      showDialog: function () {
+        this.$.help.toggle();
+      },
+    });
+  </script>
+</dom-module>

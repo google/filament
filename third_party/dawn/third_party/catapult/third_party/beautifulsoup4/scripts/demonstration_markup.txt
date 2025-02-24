@@ -1,0 +1,34 @@
+A bare string
+<!DOCTYPE xsl:stylesheet SYSTEM "htmlent.dtd">
+<!DOCTYPE xsl:stylesheet PUBLIC "htmlent.dtd">
+<div><![CDATA[A CDATA section where it doesn't belong]]></div>
+<div><svg><![CDATA[HTML5 does allow CDATA sections in SVG]]></svg></div>
+<div>A <meta> tag</div>
+<div>A <br> tag that supposedly has contents.</br></div>
+<div>AT&T</div>
+<div><textarea>Within a textarea, markup like <b> tags and <&<&amp; should be treated as literal</textarea></div>
+<div><script>if (i < 2) { alert("<b>Markup within script tags should be treated as literal.</b>"); }</script></div>
+<div>This numeric entity is missing the final semicolon: <x t="pi&#241ata"></div>
+<div><a href="http://example.com/</a> that attribute value never got closed</div>
+<div><a href="foo</a>, </a><a href="bar">that attribute value was closed by the subsequent tag</a></div>
+<! This document starts with a bogus declaration ><div>a</div>
+<div>This document contains <!an incomplete declaration <div>(do you see it?)</div>
+<div>This document ends with <!an incomplete declaration
+<div><a style={height:21px;}>That attribute value was bogus</a></div>
+<! DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">The doctype is invalid because it contains extra whitespace
+<div><table><td nowrap>That boolean attribute had no value</td></table></div>
+<div>Here's a nonexistent entity: &#foo; (do you see it?)</div>
+<div>This document ends before the entity finishes: &gt
+<div><p>Paragraphs shouldn't contain block display elements, but this one does: <dl><dt>you see?</dt></p>
+<b b="20" a="1" b="10" a="2" a="3" a="4">Multiple values for the same attribute.</b>
+<div><table><tr><td>Here's a table</td></tr></table></div>
+<div><table id="1"><tr><td>Here's a nested table:<table id="2"><tr><td>foo</td></tr></table></td></div>
+<div>This tag contains nothing but whitespace: <b>    </b></div>
+<div><blockquote><p><b>This p tag is cut off by</blockquote></p>the end of the blockquote tag</div>
+<div><table><div>This table contains bare markup</div></table></div>
+<div><div id="1">\n <a href="link1">This link is never closed.\n</div>\n<div id="2">\n <div id="3">\n   <a href="link2">This link is closed.</a>\n  </div>\n</div></div>
+<div>This document contains a <!DOCTYPE surprise>surprise doctype</div>
+<div><a><B><Cd><EFG>Mixed case tags are folded to lowercase</efg></CD></b></A></div>
+<div><our☃>Tag name contains Unicode characters</our☃></div>
+<div><a ☃="snowman">Attribute name contains Unicode characters</a></div>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

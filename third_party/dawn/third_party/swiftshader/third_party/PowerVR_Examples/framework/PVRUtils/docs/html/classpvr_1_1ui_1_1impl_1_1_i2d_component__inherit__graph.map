@@ -1,0 +1,5 @@
+<map id="pvr::ui::impl::I2dComponent" name="pvr::ui::impl::I2dComponent">
+<area shape="rect" id="node2" href="$classpvr_1_1ui_1_1impl_1_1_image__.html" title="Use this class through the reference counted Framework Object pvr::ui::Image. Represents a 2D Image (..." alt="" coords="5,80,161,107"/>
+<area shape="rect" id="node3" href="$classpvr_1_1ui_1_1impl_1_1_pixel_group__.html" title="This class is wrapped into the pvr::ui::Group reference counted Framework Object. Use to apply a tran..." alt="" coords="186,80,373,107"/>
+<area shape="rect" id="node4" href="$classpvr_1_1ui_1_1impl_1_1_text__.html" title="Use this class through the reference counted Framework Object pvr::ui::Text. Represents some text tha..." alt="" coords="397,80,540,107"/>
+</map>

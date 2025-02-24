@@ -1,0 +1,53 @@
+//===- subzero/src/IceTargetLoweringX8664.def - x86-64 X-macros -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines certain patterns for lowering to x86-64 target
+// instructions, in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETARGETLOWERINGX8664_DEF
+#define SUBZERO_SRC_ICETARGETLOWERINGX8664_DEF
+
+#define FCMPX8664_TABLE                                              \
+  /*       <---- scalar comparison ---->  <- vector comparison -> */ \
+  /* val,  dflt, swap, C1,      C2,       swap,  predicate        */ \
+  X(False, 0,    0,    Br_None, Br_None,  0,     Cmpps_Invalid)      \
+  X(Oeq,   0,    0,    Br_ne,   Br_p,     0,     Cmpps_eq)           \
+  X(Ogt,   1,    0,    Br_a,    Br_None,  1,     Cmpps_lt)           \
+  X(Oge,   1,    0,    Br_ae,   Br_None,  1,     Cmpps_le)           \
+  X(Olt,   1,    1,    Br_a,    Br_None,  0,     Cmpps_lt)           \
+  X(Ole,   1,    1,    Br_ae,   Br_None,  0,     Cmpps_le)           \
+  X(One,   1,    0,    Br_ne,   Br_None,  0,     Cmpps_Invalid)      \
+  X(Ord,   1,    0,    Br_np,   Br_None,  0,     Cmpps_ord)          \
+  X(Ueq,   1,    0,    Br_e,    Br_None,  0,     Cmpps_Invalid)      \
+  X(Ugt,   1,    1,    Br_b,    Br_None,  0,     Cmpps_nle)          \
+  X(Uge,   1,    1,    Br_be,   Br_None,  0,     Cmpps_nlt)          \
+  X(Ult,   1,    0,    Br_b,    Br_None,  1,     Cmpps_nle)          \
+  X(Ule,   1,    0,    Br_be,   Br_None,  1,     Cmpps_nlt)          \
+  X(Une,   1,    0,    Br_ne,   Br_p,     0,     Cmpps_neq)          \
+  X(Uno,   1,    0,    Br_p,    Br_None,  0,     Cmpps_unord)        \
+  X(True,  1,    0,    Br_None, Br_None,  0,     Cmpps_Invalid)      \
+//#define X(val, dflt, swapS, C1, C2, swapV, pred)
+
+#define ICMPX8664_TABLE                     \
+  /* val, C_32,  C1_64,   C2_64,   C3_64 */ \
+  X(Eq,   Br_e,  Br_None, Br_ne,   Br_e)    \
+  X(Ne,   Br_ne, Br_ne,   Br_None, Br_ne)   \
+  X(Ugt,  Br_a,  Br_a,    Br_b,    Br_a)    \
+  X(Uge,  Br_ae, Br_a,    Br_b,    Br_ae)   \
+  X(Ult,  Br_b,  Br_b,    Br_a,    Br_b)    \
+  X(Ule,  Br_be, Br_b,    Br_a,    Br_be)   \
+  X(Sgt,  Br_g,  Br_g,    Br_l,    Br_a)    \
+  X(Sge,  Br_ge, Br_g,    Br_l,    Br_ae)   \
+  X(Slt,  Br_l,  Br_l,    Br_g,    Br_b)    \
+  X(Sle,  Br_le, Br_l,    Br_g,    Br_be)   \
+//#define X(val, C_32, C1_64, C2_64, C3_64)
+
+#endif // SUBZERO_SRC_ICETARGETLOWERINGX8664_DEF

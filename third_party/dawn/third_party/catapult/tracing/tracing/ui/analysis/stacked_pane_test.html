@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/stacked_pane.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('changeChildPane', function() {
+    const pane = document.createElement('tr-ui-a-stacked-pane');
+    let didFireEvent;
+    pane.addEventListener('request-child-pane-change', function() {
+      didFireEvent = true;
+    });
+
+    didFireEvent = false;
+    pane.childPaneBuilder = undefined;
+    assert.isTrue(didFireEvent);
+
+    didFireEvent = false;
+    pane.childPaneBuilder = function() {
+      return undefined;
+    };
+    assert.isTrue(didFireEvent);
+
+    didFireEvent = false;
+    pane.childPaneBuilder = function() {
+      return document.createElement('tr-ui-a-stacked-pane');
+    };
+    assert.isTrue(didFireEvent);
+  });
+});
+</script>

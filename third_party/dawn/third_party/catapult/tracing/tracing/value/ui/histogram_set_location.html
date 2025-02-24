@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/base/url_json.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view_state.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  // This number is used to decide whether the tableStates can fit in the URL,
+  // and omit them if not.
+  // There is no specification for maximum URL length, so it is typically
+  // limited by hosts, not browsers.
+  // TODO(#3816) Tune this number.
+  const MAX_URL_LENGTH = 2048;
+
+  // This class wraps |window.location| and |window.history| to allow tests to
+  // mock it.
+  class Locus {
+    get origin() {
+      return window.location.origin;
+    }
+
+    get pathname() {
+      return window.location.pathname;
+    }
+
+    get search() {
+      return window.location.search;
+    }
+
+    get hash() {
+      return window.location.hash;
+    }
+
+    get state() {
+      if (this.stateMode === '#') return this.hash.substr(1);
+      return this.search.substr(1);
+    }
+
+    get stateMode() {
+      if (this.hash) return '#';
+      return '?';
+    }
+
+    buildUrlFromState(state) {
+      let url = this.origin + this.pathname;
+      if (this.stateMode === '#') url += this.search;
+      url += this.stateMode + state;
+      return url;
+    }
+
+    pushState(state) {
+      if (state === this.state) return;
+
+      // TODO(#3837) When should this actually call pushState()?
+      window.history.replaceState(null, null, this.buildUrlFromState(state));
+    }
+
+    addPopStateListener(listener) {
+      window.addEventListener('popstate', listener);
+    }
+  }
+
+  class HistogramSetLocation {
+    constructor(opt_location) {
+      // Optional dependency injection for testing.
+      this.location_ = opt_location || new Locus();
+      this.location_.addPopStateListener(this.onPopState_.bind(this));
+
+      this.viewState_ = undefined;
+      this.rowListener_ = this.onRowStateUpdate_.bind(this);
+      this.cellListener_ = this.onCellStateUpdate_.bind(this);
+
+      // pushState_ is disabled while handling onPopState_.
+      this.poppingState_ = false;
+    }
+
+    /**
+     * @return {!tr.v.ui.HistogramSetViewState}
+     */
+    get viewState() {
+      return this.viewState_;
+    }
+
+    /**
+     * @param {!tr.v.ui.HistogramSetViewState} vs
+     */
+    async build(vs) {
+      if (this.viewState !== undefined) {
+        throw new Error('viewState must be set exactly once.');
+      }
+      this.viewState_ = vs;
+      this.viewState.addUpdateListener(this.onViewStateUpdate_.bind(this));
+
+      await this.onPopState_();
+    }
+
+    onViewStateUpdate_(event) {
+      if (event.delta.tableRowStates) {
+        for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+            event.delta.tableRowStates.previous.values())) {
+          row.removeUpdateListener(this.rowListener_);
+          for (const cell of row.cells.values()) {
+            cell.removeUpdateListener(this.cellListener_);
+          }
+        }
+        for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+            event.delta.tableRowStates.current.values())) {
+          row.addUpdateListener(this.rowListener_);
+          for (const cell of row.cells.values()) {
+            cell.addUpdateListener(this.cellListener_);
+          }
+        }
+      }
+
+      this.pushState_();
+    }
+
+    onRowStateUpdate_(event) {
+      // This assumes that subRows and cells are not updated.
+      this.pushState_();
+    }
+
+    onCellStateUpdate_(event) {
+      this.pushState_();
+    }
+
+    pushState_() {
+      if (this.poppingState_) return;
+      const mark = tr.b.Timing.mark('HistogramSetLocation', 'pushState');
+
+      const params = new Map();
+      if (this.viewState.searchQuery) {
+        params.set('q', this.viewState.searchQuery);
+      }
+      if (this.viewState.referenceDisplayLabel) {
+        params.set('r', this.viewState.referenceDisplayLabel);
+      }
+      params.set('s', this.viewState.displayStatisticName);
+      if (!this.viewState.showAll) params.set('m', '');
+      params.set('g', this.viewState.groupings.map(g => g.key).join('.'));
+      if (this.viewState.sortColumnIndex !== undefined) {
+        params.set('c', '' + this.viewState.sortColumnIndex);
+      }
+      if (this.viewState.sortDescending) params.set('d', '');
+      if (!this.viewState.constrainNameColumn) params.set('n', '0');
+      if (!tr.b.math.approximately(this.viewState.alpha, 0.01)) {
+        params.set('p', ('' + this.viewState.alpha).substr(0, 5));
+      }
+
+      let urlState = '';
+      for (const [key, value] of params) {
+        if (urlState) urlState += '&';
+        urlState += key + '=' + window.encodeURIComponent(value);
+      }
+
+      const rowDicts = {};
+      for (const [name, rowState] of this.viewState.tableRowStates) {
+        const dict = rowState.asCompactDict();
+        if (dict === undefined) continue;
+        rowDicts[name] = dict;
+      }
+
+      if (Object.keys(rowDicts).length > 0) {
+        const rowsParam = '&t=' + tr.b.UrlJson.stringify(rowDicts);
+
+        if (this.location_.buildUrlFromState(urlState + rowsParam).length <
+            MAX_URL_LENGTH) {
+          urlState += rowsParam;
+        }
+      }
+
+      this.location_.pushState(urlState);
+      mark.end();
+    }
+
+    async onPopState_() {
+      const mark = tr.b.Timing.mark('HistogramSetLocation', 'onPopState');
+      this.poppingState_ = true;
+
+      const params = new Map();
+      for (const kvp of this.location_.state.split('&')) {
+        const [key, value] = kvp.split('=');
+        try {
+          params.set(key, window.decodeURIComponent(value));
+        } catch (e) {
+          // If the user tampers with the params so that a value cannot be
+          // decoded, ignore it.
+        }
+      }
+
+      const delta = new Map();
+      if (params.has('q')) delta.set('searchQuery', params.get('q'));
+      if (params.has('r')) delta.set('referenceDisplayLabel', params.get('r'));
+      if (params.has('s')) delta.set('displayStatisticName', params.get('s'));
+      delta.set('showAll', !params.has('m'));
+      if (params.has('g')) {
+        delta.set('groupings', params.get('g').split('.').map(
+            k => tr.v.HistogramGrouping.BY_KEY.get(k)));
+      }
+      if (params.has('c')) {
+        delta.set('sortColumnIndex', parseInt(params.get('c')));
+      } else {
+        delta.set('sortColumnIndex', 0);
+      }
+      delta.set('sortDescending', params.has('d'));
+      delta.set('constrainNameColumn', params.get('n') !== '0');
+      if (params.has('p')) {
+        delta.set('alpha', parseFloat(params.get('p')));
+      }
+
+      await this.viewState.update(delta);
+
+      if (params.has('t')) {
+        let rowDicts;
+        try {
+          rowDicts = tr.b.UrlJson.parse(params.get('t'));
+        } catch (e) {
+          // If the user tampers with the params so that rowDicts cannot be
+          // parsed, ignore it.
+        }
+
+        if (rowDicts) {
+          for (const [name, rowDict] of Object.entries(rowDicts)) {
+            const rowState = this.viewState.tableRowStates.get(name);
+            if (rowState === undefined) continue;
+            await rowState.updateFromCompactDict(rowDict);
+          }
+        }
+      }
+
+      this.poppingState_ = false;
+      mark.end();
+    }
+  }
+
+  HistogramSetLocation.Locus = Locus;
+
+  return {
+    HistogramSetLocation,
+  };
+});
+</script>

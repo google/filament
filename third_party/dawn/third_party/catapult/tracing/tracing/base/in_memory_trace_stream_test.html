@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/in_memory_trace_stream.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function stringToUint8Array(str) {
+    const buffer = new ArrayBuffer(str.length);
+    const bufferView = new Uint8Array(buffer);
+    for (let i = 0; i < bufferView.length; i++) {
+      bufferView[i] = str.charCodeAt(i);
+    }
+    return bufferView;
+  }
+
+  test('readUntilDelimiter', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('line 1\nline 2\n'), false);
+    assert.strictEqual(stream.readUntilDelimiter('\n'), 'line 1\n');
+    assert.strictEqual(stream.readUntilDelimiter('\n'), 'line 2\n');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readUntilDelimiter_noDelimiter', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('line 1'), false);
+    assert.isTrue(stream.hasData);
+    assert.strictEqual(stream.readUntilDelimiter('\n'), 'line 1');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readUntilDelimiter_noData', function() {
+    const stream = new tr.b.InMemoryTraceStream(new Uint8Array(0), false);
+    assert.isFalse(stream.hasData);
+    assert.strictEqual(stream.readUntilDelimiter('\n'), '');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readUntilDelimiter_multiCharacterDelimiterThrows', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('Line 1'), false);
+    assert.throws(stream.readUntilDelimiter.bind(stream, 'xy'));
+  });
+
+  test('readNumBytes', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('first block second large block and the rest'),
+        false);
+    assert.isTrue(stream.hasData);
+    assert.strictEqual(stream.readNumBytes(12), 'first block ');
+    assert.strictEqual(stream.readNumBytes(19), 'second large block ');
+    // Read a chunk of default length.
+    assert.strictEqual(stream.readNumBytes(), 'and the rest');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readNumBytes_noData', function() {
+    const stream = new tr.b.InMemoryTraceStream(new Uint8Array(0), false);
+    assert.isFalse(stream.hasData);
+    assert.strictEqual(stream.readNumBytes(10), '');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readNumBytes_notEnoughData', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('bla'), false);
+    assert.isTrue(stream.hasData);
+    assert.strictEqual(stream.readNumBytes(10), 'bla');
+    assert.isFalse(stream.hasData);
+  });
+
+  test('readNumBytes_negativeSize', function() {
+    const stream = new tr.b.InMemoryTraceStream(
+        stringToUint8Array('bla'), false);
+    assert.throws(stream.readNumBytes.bind(stream, -10));
+  });
+});
+
+</script>

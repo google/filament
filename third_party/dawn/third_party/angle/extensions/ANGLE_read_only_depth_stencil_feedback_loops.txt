@@ -1,0 +1,97 @@
+Name
+
+    ANGLE_read_only_depth_stencil_feedback_loops
+
+Name Strings
+
+    GL_ANGLE_read_only_depth_stencil_feedback_loops
+
+Contributors
+
+    Jamie Madill, Google Inc.
+    Shahbaz Youssefi, Google Inc.
+
+Contact
+
+    Jamie Madill, Google Inc. (jmadill 'at' google 'dot' com)
+
+Status
+
+    WIP
+
+Version
+
+    Last Modified Date: Dec 22, 2022
+    Author Revision: 1
+
+Number
+
+    OpenGL ES Extension ###
+
+Dependencies
+
+    OpenGL ES 3.0 is required.
+
+    The extension is written against the OpenGL ES 3.2 specification.
+
+Overview
+
+    This extension allows defined results when reading from a depth or stencil
+    texture that is bound as a read-only depth or stencil buffer.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 8 of the OpenGL ES 3.2 Specification (Textures and
+Samplers)
+
+    Added to the list of conditions in 8.14.2.1 (Rendering Feedback Loops):
+
+    "The texture is not a depth texture, or the value of
+    DEPTH_WRITEMASK is not FALSE."
+
+    "The texture is not a stencil texture, or stencil is not being modified."
+
+Additions to Chapter 9 of the OpenGL ES 3.1 Specification (Framebuffers and
+Framebuffer Objects)
+
+    Removed from the end of section in 9.3.1 (Rendering Feedback Loops):
+
+    "Also note that even if writing to a given texture is disabled (e.g. via the color,
+    depth, or stencil writemasks) during rendering, a feedback loop will still occur."
+
+    Added from the end of section in 9.3.1 (Rendering Feedback Loops):
+
+    "Note that if writing to a given depth texture is disabled (via the depth
+    writemask) during rendering, a feedback loop will not occur.  Additionally,
+    if writing to a given stencil texture is disabled (via the stencil mask and ops),
+    a feedback loop will not occur."
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Issues
+
+    TBD
+
+Revision History
+
+    Revision 2, 2022/12/22
+      - Adjust language to exclude read-only stencil from feedback loop
+    Revision 1, 2022/05/09
+      - Initial revision.
+

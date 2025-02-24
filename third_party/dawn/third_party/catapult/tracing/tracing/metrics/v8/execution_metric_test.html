@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/v8/execution_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('executionMetricBasic', function() {
+    const model = tr.c.TestUtils.newModel();
+    const histograms = new tr.v.HistogramSet();
+
+    tr.metrics.v8.executionMetric(histograms, model);
+
+    [
+      'v8_execution_cpu_total',
+      'v8_execution_wall_total',
+      'v8_execution_cpu_self',
+      'v8_execution_wall_self',
+      'v8_parse_lazy_cpu_self',
+      'v8_parse_lazy_wall_self',
+      'v8_compile_full_code_cpu_self',
+      'v8_compile_full_code_wall_self',
+      'v8_compile_ignition_cpu_self',
+      'v8_compile_ignition_wall_self',
+      'v8_recompile_synchronous_cpu_total',
+      'v8_recompile_synchronous_wall_total',
+      'v8_recompile_concurrent_cpu_total',
+      'v8_recompile_concurrent_wall_total',
+      'v8_recompile_overall_cpu_total',
+      'v8_recompile_overall_wall_total',
+      'v8_optimize_code_cpu_total',
+      'v8_optimize_code_wall_total',
+      'v8_deoptimize_code_cpu_total',
+      'v8_deoptimize_code_wall_total',
+    ].forEach(function(name) {
+      assert.isDefined(histograms.getHistogramNamed(name));
+    });
+  });
+
+  test('noDoubleCounting', function() {
+    const events = [
+      {name: 'V8.Execute', args: {}, pid: 52, ts: 0, cat: 'foo', tid: 53,
+        ph: 'B'},
+      {name: 'V8.Execute', args: {}, pid: 52, ts: 100, cat: 'foo', tid: 53,
+        ph: 'E'},
+      {name: 'V8.Execute', args: {}, pid: 52, ts: 20, cat: 'foo', tid: 53,
+        ph: 'B'},
+      {name: 'V8.Execute', args: {}, pid: 52, ts: 40, cat: 'foo', tid: 53,
+        ph: 'E'}
+    ];
+
+    const model = tr.c.TestUtils.newModelWithEvents(JSON.stringify(events), {
+      shiftWorldToZero: false
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.v8.executionMetric(histograms, model);
+
+    const value = histograms.getHistogramNamed('v8_execution_wall_total');
+    assert.closeTo(value.running.sum, 0.1, 1e-5);
+  });
+});
+</script>

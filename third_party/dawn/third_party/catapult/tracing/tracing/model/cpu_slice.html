@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/thread_time_slice.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the CpuSlice class.
+ */
+tr.exportTo('tr.model', function() {
+  const Slice = tr.model.Slice;
+
+  /**
+   * A CpuSlice represents a slice of time on a CPU.
+   *
+   * @constructor
+   */
+  function CpuSlice(cat, title, colorId, start, args, opt_duration) {
+    Slice.apply(this, arguments);
+    this.threadThatWasRunning = undefined;
+    this.cpu = undefined;
+  }
+
+  CpuSlice.prototype = {
+    __proto__: Slice.prototype,
+
+    get analysisTypeName() {
+      return 'tr.ui.analysis.CpuSlice';
+    },
+
+    getAssociatedTimeslice() {
+      if (!this.threadThatWasRunning) {
+        return undefined;
+      }
+      const timeSlices = this.threadThatWasRunning.timeSlices;
+      for (let i = 0; i < timeSlices.length; i++) {
+        const timeSlice = timeSlices[i];
+        if (timeSlice.start !== this.start) {
+          continue;
+        }
+        if (timeSlice.duration !== this.duration) {
+          continue;
+        }
+        return timeSlice;
+      }
+      return undefined;
+    }
+  };
+
+  tr.model.EventRegistry.register(
+      CpuSlice,
+      {
+        name: 'cpuSlice',
+        pluralName: 'cpuSlices'
+      });
+
+  return {
+    CpuSlice,
+  };
+});
+</script>

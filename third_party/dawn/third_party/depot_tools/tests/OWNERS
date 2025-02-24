@@ -1,0 +1,7 @@
+per-file autoninja_test.py=file://BUILD_OWNERS
+per-file bazel_test.py=file://CROS_OWNERS
+per-file build_telemetry_test.py=file://BUILD_OWNERS
+per-file gn_helper_test.py=file://BUILD_OWNERS
+per-file ninjalog_uploader_test.py=tikuta@chromium.org
+per-file reclient*=file://BUILD_OWNERS
+per-file reclient*=file://RECLIENT_OWNERS

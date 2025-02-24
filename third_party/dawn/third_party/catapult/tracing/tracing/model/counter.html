@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+<link rel="import" href="/tracing/model/event_container.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  /**
+   * A container holding all series of a given type of measurement.
+   *
+   * As an example, if we're measuring the throughput of data sent over several
+   * USB connections, the throughput of each cable might be added as a separate
+   * series to a single counter.
+   *
+   * @constructor
+   * @extends {EventContainer}
+   */
+  function Counter(parent, id, category, name) {
+    tr.model.EventContainer.call(this);
+
+    this.parent_ = parent;
+    this.id_ = id;
+    this.category_ = category || '';
+    this.name_ = name;
+
+    this.series_ = [];
+    this.totals = [];
+  }
+
+  Counter.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    get parent() {
+      return this.parent_;
+    },
+
+    get id() {
+      return this.id_;
+    },
+
+    get category() {
+      return this.category_;
+    },
+
+    get name() {
+      return this.name_;
+    },
+
+    * childEvents() {
+    },
+
+    * childEventContainers() {
+      yield* this.series;
+    },
+
+    set timestamps(arg) {
+      throw new Error('Bad counter API. No cookie.');
+    },
+
+    set seriesNames(arg) {
+      throw new Error('Bad counter API. No cookie.');
+    },
+
+    set seriesColors(arg) {
+      throw new Error('Bad counter API. No cookie.');
+    },
+
+    set samples(arg) {
+      throw new Error('Bad counter API. No cookie.');
+    },
+
+    addSeries(series) {
+      series.counter = this;
+      series.seriesIndex = this.series_.length;
+      this.series_.push(series);
+      return series;
+    },
+
+    getSeries(idx) {
+      return this.series_[idx];
+    },
+
+    get series() {
+      return this.series_;
+    },
+
+    get numSeries() {
+      return this.series_.length;
+    },
+
+    get numSamples() {
+      if (this.series_.length === 0) return 0;
+      return this.series_[0].length;
+    },
+
+    get timestamps() {
+      if (this.series_.length === 0) return [];
+      return this.series_[0].timestamps;
+    },
+
+    /**
+     * Obtains min, max, avg, values, start, and end for different series for
+     * a given counter
+     *     getSampleStatistics([0,1])
+     * The statistics objects that this returns are an array of objects, one
+     * object for each series for the counter in the form:
+     * {min: minVal, max: maxVal, avg: avgVal, start: startVal, end: endVal}
+     *
+     * @param {Array.<Number>} Indices to summarize.
+     * @return {Object} An array of statistics. Each element in the array
+     * has data for one of the series in the selected counter.
+     */
+    getSampleStatistics(sampleIndices) {
+      sampleIndices.sort();
+
+      const ret = [];
+      this.series_.forEach(function(series) {
+        ret.push(series.getStatistics(sampleIndices));
+      });
+      return ret;
+    },
+
+    /**
+     * Shifts all the timestamps inside this counter forward by the amount
+     * specified.
+     */
+    shiftTimestampsForward(amount) {
+      for (let i = 0; i < this.series_.length; ++i) {
+        this.series_[i].shiftTimestampsForward(amount);
+      }
+    },
+
+    /**
+     * Updates the bounds for this counter based on the samples it contains.
+     */
+    updateBounds() {
+      this.totals = [];
+      this.maxTotal = 0;
+      this.bounds.reset();
+
+      if (this.series_.length === 0) return;
+
+      const firstSeries = this.series_[0];
+      const lastSeries = this.series_[this.series_.length - 1];
+
+      this.bounds.addValue(firstSeries.getTimestamp(0));
+      this.bounds.addValue(lastSeries.getTimestamp(lastSeries.length - 1));
+
+      const numSeries = this.numSeries;
+      this.maxTotal = -Infinity;
+
+      // Sum the samples at each timestamp.
+      // Note, this assumes that all series have all timestamps.
+      for (let i = 0; i < firstSeries.length; ++i) {
+        let total = 0;
+        this.series_.forEach(function(series) {
+          total += series.getSample(i).value;
+          this.totals.push(total);
+        }.bind(this));
+
+        this.maxTotal = Math.max(total, this.maxTotal);
+      }
+    }
+  };
+
+  /**
+   * Comparison between counters that orders by parent.compareTo, then name.
+   */
+  Counter.compare = function(x, y) {
+    let tmp = x.parent.compareTo(y.parent);
+    if (tmp !== 0) return tmp;
+    tmp = x.name.localeCompare(y.name);
+    if (tmp === 0) return x.tid - y.tid;
+    return tmp;
+  };
+
+  return {
+    Counter,
+  };
+});
+</script>

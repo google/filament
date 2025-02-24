@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/selectable_item.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Event class.
+ */
+tr.exportTo('tr.model', function() {
+  const SelectableItem = tr.model.SelectableItem;
+  const SelectionState = tr.model.SelectionState;
+  const IMMUTABLE_EMPTY_SET = tr.model.EventSet.IMMUTABLE_EMPTY_SET;
+
+  /**
+   * An Event is the base type for any non-container, selectable piece
+   * of data in the trace model.
+   *
+   * @constructor
+   * @extends {SelectableItem}
+   */
+  function Event() {
+    SelectableItem.call(this, this /* modelItem */);
+    this.guid_ = tr.b.GUID.allocateSimple();
+    this.selectionState = SelectionState.NONE;
+    this.info = undefined;
+  }
+
+  Event.prototype = {
+    __proto__: SelectableItem.prototype,
+
+    get guid() {
+      return this.guid_;
+    },
+
+    get stableId() {
+      return undefined;
+    },
+
+    get range() {
+      const range = new tr.b.math.Range();
+      this.addBoundsToRange(range);
+      return range;
+    },
+
+    // Empty by default. Lazily initialized on an instance in
+    // addAssociatedAlert(). See #1930.
+    associatedAlerts: IMMUTABLE_EMPTY_SET,
+
+    addAssociatedAlert(alert) {
+      if (this.associatedAlerts === IMMUTABLE_EMPTY_SET) {
+        this.associatedAlerts = new tr.model.EventSet();
+      }
+      this.associatedAlerts.push(alert);
+    },
+
+    // Adds the range of timestamps for this event to the specified range.
+    // If this is not overridden in subclass, it means that type of event
+    // doesn't have timestamps.
+    addBoundsToRange(range) {}
+  };
+
+  return {
+    Event,
+  };
+});
+</script>

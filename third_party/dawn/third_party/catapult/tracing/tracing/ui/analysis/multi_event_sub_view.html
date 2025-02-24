@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_summary_table.html">
+<link rel="import" href="/tracing/ui/analysis/selection_summary_table.html">
+<link rel="import" href="/tracing/ui/base/radio_picker.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/value/diagnostics/scalar.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/ui/histogram_span.html">
+
+<dom-module id='tr-ui-a-multi-event-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      overflow: auto;
+    }
+    #content {
+      display: flex;
+      flex-direction: column;
+      flex: 0 1 auto;
+      align-self: stretch;
+    }
+    #content > * {
+      flex: 0 0 auto;
+      align-self: stretch;
+    }
+    #histogramContainer {
+      display: flex;
+    }
+
+    tr-ui-a-multi-event-summary-table {
+      border-bottom: 1px solid #aaa;
+    }
+
+    tr-ui-a-selection-summary-table  {
+      margin-top: 1.25em;
+      border-top: 1px solid #aaa;
+      background-color: #eee;
+      font-weight: bold;
+      margin-bottom: 1.25em;
+      border-bottom: 1px solid #aaa;
+    }
+    </style>
+    <div id="content">
+      <tr-ui-a-multi-event-summary-table id="eventSummaryTable">
+      </tr-ui-a-multi-event-summary-table>
+      <tr-ui-a-selection-summary-table id="selectionSummaryTable">
+      </tr-ui-a-selection-summary-table>
+      <tr-ui-b-radio-picker id="radioPicker">
+      </tr-ui-b-radio-picker>
+      <div id="histogramContainer">
+        <tr-v-ui-histogram-span id="histogramSpan">
+        </tr-v-ui-histogram-span>
+      </div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const EVENT_FIELD = [
+    {key: 'start', label: 'Start'},
+    {key: 'cpuDuration', label: 'CPU Duration'},
+    {key: 'duration', label: 'Duration'},
+    {key: 'cpuSelfTime', label: 'CPU Self Time'},
+    {key: 'selfTime', label: 'Self Time'}
+  ];
+
+  function buildDiagnostics_(slice) {
+    const diagnostics = {};
+    for (const item of EVENT_FIELD) {
+      const fieldName = item.key;
+      if (slice[fieldName] === undefined) continue;
+      diagnostics[fieldName] = new tr.v.d.Scalar(new tr.b.Scalar(
+          tr.b.Unit.byName.timeDurationInMs, slice[fieldName]));
+    }
+    diagnostics.args = new tr.v.d.GenericSet([slice.args]);
+    diagnostics.event = new tr.v.d.RelatedEventSet(slice);
+    return diagnostics;
+  }
+
+  Polymer({
+    is: 'tr-ui-a-multi-event-sub-view',
+    behaviors: [tr.ui.analysis.AnalysisSubView],
+
+    created() {
+      this.currentSelection_ = undefined;
+      this.eventsHaveDuration_ = true;
+      this.eventsHaveSubRows_ = true;
+    },
+
+    ready() {
+      this.$.radioPicker.style.display = 'none';
+      this.$.radioPicker.items = EVENT_FIELD;
+      this.$.radioPicker.select('cpuSelfTime');
+      this.$.radioPicker.addEventListener('change', () => {
+        if (this.isAttached) this.updateContents_();
+      });
+
+      this.$.histogramSpan.graphWidth = 400;
+      this.$.histogramSpan.canMergeSampleDiagnostics = false;
+      this.$.histogramContainer.style.display = 'none';
+    },
+
+    attached() {
+      if (this.currentSelection_ !== undefined) this.updateContents_();
+    },
+
+    set selection(selection) {
+      if (selection.length <= 1) {
+        throw new Error('Only supports multiple items');
+      }
+      this.setSelectionWithoutErrorChecks(selection);
+    },
+
+    get selection() {
+      return this.currentSelection_;
+    },
+
+    setSelectionWithoutErrorChecks(selection) {
+      this.currentSelection_ = selection;
+      if (this.isAttached) this.updateContents_();
+    },
+
+    get eventsHaveDuration() {
+      return this.eventsHaveDuration_;
+    },
+
+    set eventsHaveDuration(eventsHaveDuration) {
+      this.eventsHaveDuration_ = eventsHaveDuration;
+      if (this.isAttached) this.updateContents_();
+    },
+
+    get eventsHaveSubRows() {
+      return this.eventsHaveSubRows_;
+    },
+
+    set eventsHaveSubRows(eventsHaveSubRows) {
+      this.eventsHaveSubRows_ = eventsHaveSubRows;
+      if (this.isAttached) this.updateContents_();
+    },
+
+    buildHistogram_(selectedKey) {
+      let leftBoundary = Number.MAX_VALUE;
+      let rightBoundary = tr.b.math.Statistics.percentile(
+          this.currentSelection_, 0.95,
+          function(value) {
+            leftBoundary = Math.min(leftBoundary, value[selectedKey]);
+            return value[selectedKey];
+          });
+
+      if (leftBoundary === rightBoundary) rightBoundary += 1;
+      const histogram = new tr.v.Histogram(
+          '',
+          tr.b.Unit.byName.timeDurationInMs,
+          tr.v.HistogramBinBoundaries.createLinear(
+              leftBoundary, rightBoundary,
+              Math.ceil(Math.sqrt(this.currentSelection_.length))));
+      histogram.customizeSummaryOptions({
+        sum: false,
+        percentile: [0.5, 0.9],
+      });
+      for (const slice of this.currentSelection_) {
+        histogram.addSample(slice[selectedKey],
+            buildDiagnostics_(slice));
+      }
+
+      return histogram;
+    },
+
+    updateContents_() {
+      const selection = this.currentSelection_;
+      if (!selection) return;
+
+      const eventsByTitle = selection.getEventsOrganizedByTitle();
+      const numTitles = Object.keys(eventsByTitle).length;
+
+      this.$.eventSummaryTable.configure({
+        showTotals: numTitles > 1,
+        eventsByTitle,
+        eventsHaveDuration: this.eventsHaveDuration_,
+        eventsHaveSubRows: this.eventsHaveSubRows_
+      });
+
+      this.$.selectionSummaryTable.selection = this.currentSelection_;
+
+      if (numTitles === 1) {
+        this.$.radioPicker.style.display = 'block';
+        this.$.histogramContainer.style.display = 'flex';
+        this.$.histogramSpan.build(
+            this.buildHistogram_(this.$.radioPicker.selectedKey));
+        if (this.$.histogramSpan.histogram.numValues === 0) {
+          this.$.histogramContainer.style.display = 'none';
+        }
+      } else {
+        this.$.radioPicker.style.display = 'none';
+        this.$.histogramContainer.style.display = 'none';
+      }
+    }
+  });
+
+  return {};
+});
+</script>

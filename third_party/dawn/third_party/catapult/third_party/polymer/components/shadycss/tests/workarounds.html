@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+  <script>
+    WCT = { waitFor: function (cb) { HTMLImports.whenReady(cb) } }
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/make-element.js"></script>
+</head>
+<body>
+  <template id="x-bug">
+    <style>
+      :host {
+        --bg: rgb(255, 0, 0);
+      }
+      div::after {
+        content: 'test';
+        background-color: var(--bg);
+      }
+    </style>
+    <div></div>
+  </template>
+  <script>
+    suite('Workarounds', function() {
+      test('Edge 15', function() {
+        makeElement('x-bug');
+        let el = document.createElement('x-bug');
+        document.body.appendChild(el);
+        let div = el.shadowRoot.querySelector('div');
+        assert.notEqual(getComputedStyle(div).getPropertyValue('background-color').trim(), 'rgb(255, 0, 0)');
+      })
+    });
+  </script>
+</body>
+</html>

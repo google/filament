@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/mre/failure.html">
+<link rel="import" href="/tracing/mre/file_handle.html">
+<link rel="import" href="/tracing/mre/function_handle.html">
+<link rel="import" href="/tracing/mre/job.html">
+<link rel="import" href="/tracing/mre/map_single_trace.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+tr.exportTo('tr.mre', function() {
+  const Failure = tr.mre.Failure;
+
+  function createModelFromTraceData(traceData,
+      canonicalUrl,
+      opt_extraImportOptions) {
+    const model = new tr.Model();
+    try {
+      const importOptions = new tr.importer.ImportOptions();
+      importOptions.pruneEmptyContainers = false;
+      importOptions.showImportWarnings = false;
+      if (opt_extraImportOptions !== undefined) {
+        for (const property in opt_extraImportOptions) {
+          if (opt_extraImportOptions.hasOwnProperty(property)) {
+            importOptions[property] = opt_extraImportOptions[property];
+          }
+        }
+      }
+
+      const i = new tr.importer.Import(model, importOptions);
+      i.importTraces([traceData]);
+    } catch (ex) {
+      ex.name = 'TraceImportError';
+      throw ex;
+    }
+
+    model.canonicalUrl = canonicalUrl;
+
+    return model;
+  }
+
+  function mapSingleTraceWithResult(options) {
+    const result = new tr.mre.MreResult();
+
+    tr.mre.runAndConvertErrorsToFailures(
+        result, options.job, options.traceHandle,
+        function() {
+          const mapFunction = options.job.mapFunctionHandle.load();
+          const traceData = options.traceHandle.load();
+          const model = createModelFromTraceData(
+              traceData, options.traceHandle.canonicalUrl,
+              options.extraImportOptions);
+          const opt_options = options.job.mapFunctionHandle.options;
+          tr.mre.mapSingleTrace(result, model, opt_options, mapFunction);
+        });
+    return result;
+  }
+
+  function mapSingleTraceMain(args) {
+    if (args.length !== 2 && args.length !== 3) {
+      throw new Error('Must provide two or three arguments.');
+    }
+
+    const options = {
+      traceHandle: tr.mre.FileHandle.fromDict(JSON.parse(args[0])),
+      job: tr.mre.Job.fromDict(JSON.parse(args[1])),
+      extraImportOptions: args.length === 3 ? JSON.parse(args[2]) : undefined
+    };
+
+    const result = mapSingleTraceWithResult(options);
+
+    console.log('MRE_RESULT: ' + JSON.stringify(result.asDict()));
+    return 0;
+  }
+
+  return {
+    mapSingleTraceMain,
+    mapSingleTraceWithResult
+  };
+});
+
+if (tr.isHeadless) {
+  quit(tr.mre.mapSingleTraceMain(sys.argv.slice(1)));
+}
+
+</script>

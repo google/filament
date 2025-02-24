@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/csv_builder.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('csvBuilder', function() {
+    const hist0 = new tr.v.Histogram('hist0', tr.b.Unit.byName.sizeInBytes,
+        tr.v.HistogramBinBoundaries.createLinear(0, 1e3, 10));
+    hist0.customizeSummaryOptions({
+      nans: true,
+      percentile: [0.1, 0.9],
+    });
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.BENCHMARKS,
+        new tr.v.d.GenericSet(['benchmark A']));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.LABELS,
+        new tr.v.d.GenericSet(['label A']));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['story A']));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.TRACE_URLS,
+        new tr.v.d.GenericSet(['file://a/b.html']));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+        new tr.v.d.DateRange(0));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.STORYSET_REPEATS,
+        new tr.v.d.GenericSet([0]));
+    for (let i = 0; i <= 1e3; i += 10) {
+      hist0.addSample(i);
+    }
+    hist0.addSample(NaN);
+
+    const hist1 = new tr.v.Histogram('hist1', tr.b.Unit.byName.sigma);
+    hist0.customizeSummaryOptions({
+      std: false,
+      count: false,
+      sum: false,
+      min: false,
+      max: false,
+    });
+
+    const hist2 = new tr.v.Histogram('hist2', tr.b.Unit.byName.count);
+    hist2.diagnostics.set(tr.v.d.RESERVED_NAMES.BENCHMARKS,
+        new tr.v.d.GenericSet(['benchmark A']));
+    hist0.diagnostics.set(tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+        new tr.v.d.DateRange(1499726648646));
+
+    const histograms = new tr.v.HistogramSet([hist0, hist1, hist2]);
+    let csv = new tr.v.CSVBuilder(histograms);
+    csv.build();
+    csv = csv.toString().split('\n');
+    assert.lengthOf(csv, histograms.length + 2);
+    assert.strictEqual(csv[0],
+        'name,unit,avg,count,max,min,nans,pct_010,pct_090,std,sum,' +
+        'architectures,benchmarks,benchmarkStart,bots,builds,deviceIds,' +
+        'displayLabel,masters,memoryAmounts,osNames,osVersions,' +
+        'productVersions,stories,storysetRepeats,traceStart,traceUrls');
+    assert.strictEqual(csv[1],
+        'hist0,B,500,101,1000,0,1,150,950,293.00170647967224,50500,,' +
+        'benchmark A,2017-07-10 22:44:08,,,,label A,,,,,,story A,0,,' +
+        'file://a/b.html');
+    assert.strictEqual(csv[2],
+        'hist1,σ,,0,-Infinity,Infinity,0,,,,0,,,,,,,Value,,,,,,,,,');
+    assert.strictEqual(csv[3],
+        'hist2,,,0,-Infinity,Infinity,0,,,,0,,benchmark A,,,,,' +
+        'benchmark A,,,,,,,,,');
+    assert.strictEqual(csv[4], '');
+  });
+});
+</script>

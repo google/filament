@@ -1,0 +1,26 @@
+[
+  {
+    "cmd": [
+      "vpython3",
+      "RECIPE_REPO[depot_tools]/presubmit_support.py",
+      "--json_output",
+      "/path/to/tmp/json"
+    ],
+    "env_suffixes": {
+      "DEPOT_TOOLS_UPDATE": [
+        "0"
+      ],
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "name": "presubmit",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "name": "$result"
+  }
+]

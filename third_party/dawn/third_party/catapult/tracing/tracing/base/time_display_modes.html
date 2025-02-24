@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit_scale.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Time currentDisplayUnit
+ */
+tr.exportTo('tr.b', function() {
+  const msDisplayMode = {
+    scale: 1e-3,
+    suffix: 'ms',
+    // Compares a < b with adjustments to precision errors.
+    roundedLess(a, b) {
+      return Math.round(a * 1000) < Math.round(b * 1000);
+    },
+    formatSpec: {
+      unitScale: [tr.b.UnitScale.TIME.MILLI_SEC],
+      minimumFractionDigits: 3,
+    }
+  };
+
+  const nsDisplayMode = {
+    scale: 1e-9,
+    suffix: 'ns',
+    // Compares a < b with adjustments to precision errors.
+    roundedLess(a, b) {
+      return Math.round(a * 1000000) < Math.round(b * 1000000);
+    },
+    formatSpec: {
+      unitScale: [tr.b.UnitScale.TIME.NANO_SEC],
+      maximumFractionDigits: 0
+    }
+  };
+
+  const TimeDisplayModes = {
+    ns: nsDisplayMode,
+    ms: msDisplayMode
+  };
+
+  return {
+    TimeDisplayModes,
+  };
+});
+</script>

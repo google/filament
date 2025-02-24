@@ -1,0 +1,10 @@
+;; Tests that two forwarded type pointers with mismatching types aren't matched
+               OpCapability Kernel
+               OpCapability Addresses
+               OpCapability Linkage
+               OpMemoryModel Logical OpenCL
+               OpName %Aptr "Aptr"
+               OpTypeForwardPointer %Aptr UniformConstant
+       %uint = OpTypeInt 32 0
+          %A = OpTypeStruct %Aptr %uint
+  %Aptr = OpTypePointer UniformConstant %A

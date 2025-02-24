@@ -1,0 +1,68 @@
+Name
+
+    ANGLE_direct3d_display
+
+Name Strings
+
+    EGL_ANGLE_direct3d_display
+
+Contributors
+
+    Nicolas Capens
+    Shannon Woods
+
+Contacts
+
+    Shannon Woods, Google Inc. (shannonwoods 'at' chromium.org)
+
+Status
+
+    In progress
+
+Version
+
+    Version 1, May 15, 2013
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification. 
+
+Overview
+
+    This extension allows for specifying the behavior of the renderer backing the display.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    EGL_D3D11_ELSE_D3D9_DISPLAY_ANGLE         (EGLNativeDisplayType)-2
+    EGL_D3D11_ONLY_DISPLAY_ANGLE              (EGLNativeDisplayType)-3
+
+Additions to Chapter 3 of the EGL 1.4 Specification (EGL Functions and Errors)
+
+    Add before the last sentence of the first paragraph of section 3.2,
+    "Initialization":
+
+    "If <display_id> is EGL_D3D11_ELSE_D3D9_DISPLAY_ANGLE, the display returned
+    will be backed by a Direct3D 11 renderer if one is available, or by a
+    Direct3D 9 renderer otherwise. If <display_id> is EGL_D3D11_ONLY_DISPLAY_ANGLE,
+    the display returned will be backed by a Direct3D 11 renderer if one is
+    available, or will return NULL otherwise."
+
+Issues
+
+Revision History
+
+    Version 1, 2013/05/15 - First draft.
+

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram_grouping.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v', function() {
+  const IGNORE_GROUPING_KEYS = [
+    'name',
+    'storyTags',
+    'testPath',
+  ];
+
+  class CSVBuilder {
+    /**
+     * @param {!tr.v.HistogramSet} histograms
+     */
+    constructor(histograms) {
+      this.histograms_ = histograms;
+      this.table_ = [];
+      this.statisticsNames_ = new Set();
+      this.groupings_ = [];
+    }
+
+    build() {
+      this.prepare_();
+      this.buildHeader_();
+      this.buildTable_();
+    }
+
+    prepare_() {
+      for (const [key, grouping] of tr.v.HistogramGrouping.BY_KEY) {
+        if (IGNORE_GROUPING_KEYS.includes(key)) continue;
+        this.groupings_.push(grouping);
+      }
+      this.groupings_.push(new tr.v.GenericSetGrouping(
+          tr.v.d.RESERVED_NAMES.TRACE_URLS));
+
+      this.groupings_.sort((a, b) => a.key.localeCompare(b.key));
+
+      for (const hist of this.histograms_) {
+        for (const name of hist.statisticsNames) {
+          this.statisticsNames_.add(name);
+        }
+      }
+      this.statisticsNames_ = Array.from(this.statisticsNames_);
+      this.statisticsNames_.sort();
+    }
+
+    buildHeader_() {
+      const header = ['name', 'unit'];
+      for (const name of this.statisticsNames_) {
+        header.push(name);
+      }
+      for (const grouping of this.groupings_) {
+        header.push(grouping.key);
+      }
+      this.table_.push(header);
+    }
+
+    buildTable_() {
+      for (const hist of this.histograms_) {
+        const row = [hist.name, hist.unit.unitString];
+        this.table_.push(row);
+
+        for (const name of this.statisticsNames_) {
+          const stat = hist.getStatisticScalar(name);
+          if (stat) {
+            row.push(stat.value);
+          } else {
+            row.push('');
+          }
+        }
+
+        for (const grouping of this.groupings_) {
+          row.push(grouping.callback(hist));
+        }
+      }
+    }
+
+    toString() {
+      let str = '';
+      for (const row of this.table_) {
+        for (let i = 0; i < row.length; ++i) {
+          if (i > 0) {
+            str += ',';
+          }
+          let cell = '' + row[i];
+          cell = cell.replace(/\n/g, ' ');
+          if (cell.indexOf(',') >= 0 || cell.indexOf('"') >= 0) {
+            cell = '"' + cell.replace(/"/g, '""') + '"';
+          }
+          str += cell;
+        }
+        str += '\n';
+      }
+      return str;
+    }
+  }
+
+  return {
+    CSVBuilder,
+  };
+});
+</script>

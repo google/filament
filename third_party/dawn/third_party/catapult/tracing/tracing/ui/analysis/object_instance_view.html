@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const ObjectInstanceView = tr.ui.b.define('object-instance-view');
+
+  ObjectInstanceView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.objectInstance_ = undefined;
+    },
+
+    get requiresTallView() {
+      return true;
+    },
+
+    set modelEvent(obj) {
+      this.objectInstance = obj;
+    },
+
+    get modelEvent() {
+      return this.objectInstance;
+    },
+
+    get objectInstance() {
+      return this.objectInstance_;
+    },
+
+    set objectInstance(i) {
+      this.objectInstance_ = i;
+      this.updateContents();
+    },
+
+    updateContents() {
+      throw new Error('Not implemented');
+    }
+  };
+
+  const options = new tr.b.ExtensionRegistryOptions(
+      tr.b.TYPE_BASED_REGISTRY_MODE);
+  options.mandatoryBaseClass = ObjectInstanceView;
+  options.defaultMetadata = {
+    showInTrackView: true
+  };
+  tr.b.decorateExtensionRegistry(ObjectInstanceView, options);
+
+  return {
+    ObjectInstanceView,
+  };
+});
+</script>

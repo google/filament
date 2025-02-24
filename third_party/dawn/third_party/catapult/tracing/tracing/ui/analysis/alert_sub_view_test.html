@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_view.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('instantiate', function() {
+    const slice = newSliceEx({title: 'b', start: 0, duration: 0.002});
+
+    const alertInfo = new tr.model.EventInfo(
+        'alertInfo', 'Critical alert',
+        [{
+          label: 'Project Page',
+          textContent: 'Trace-Viewer Github Project',
+          href: 'https://github.com/google/trace-viewer/'
+        }]);
+
+    const alert = new tr.model.Alert(alertInfo, 5, [slice]);
+    assert.strictEqual(1, alert.associatedEvents.length);
+
+    const subView = document.createElement('tr-ui-a-alert-sub-view');
+    subView.selection = new tr.model.EventSet(alert);
+    assert.isTrue(
+        subView.relatedEventsToHighlight.equals(alert.associatedEvents));
+    this.addHTMLOutput(subView);
+
+    const table = tr.ui.b.findDeepElementMatching(
+        subView, 'tr-ui-b-table');
+
+    const rows = table.tableRows;
+    const columns = table.tableColumns;
+    assert.lengthOf(rows, 4);
+    assert.lengthOf(columns, 2);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_twoAlertsWithRelatedEvents', function() {
+    const slice1 = newSliceEx({title: 'b', start: 0, duration: 0.002});
+    const slice2 = newSliceEx({title: 'b', start: 1, duration: 0.002});
+
+    const alertInfo1 = new tr.model.EventInfo(
+        'alertInfo1', 'Critical alert',
+        [{
+          label: 'Project Page',
+          textContent: 'Trace-Viewer Github Project',
+          href: 'https://github.com/google/trace-viewer/'
+        }]);
+
+    const alertInfo2 = new tr.model.EventInfo(
+        'alertInfo2', 'Critical alert',
+        [{
+          label: 'Google Homepage',
+          textContent: 'Google Search Page',
+          href: 'http://www.google.com'
+        }]);
+
+    const alert1 = new tr.model.Alert(alertInfo1, 5, [slice1]);
+    const alert2 = new tr.model.Alert(alertInfo2, 5, [slice2]);
+
+    const subView = document.createElement('tr-ui-a-alert-sub-view');
+    subView.selection = new tr.model.EventSet([alert1, alert2]);
+    assert.isTrue(subView.relatedEventsToHighlight.equals(
+        new tr.model.EventSet([
+          tr.b.getOnlyElement(alert1.associatedEvents),
+          tr.b.getOnlyElement(alert2.associatedEvents)
+        ])));
+  });
+});
+</script>

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/time_display_modes.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  const TimeDisplayModes = tr.b.TimeDisplayModes;
+
+  const PLUS_MINUS_SIGN = String.fromCharCode(177);
+
+  const CACHED_FORMATTERS = {};
+  function getNumberFormatter(minSpec, maxSpec, minCtx, maxCtx) {
+    const key = minSpec + '-' + maxSpec + '-' + minCtx + '-' + maxCtx;
+    let formatter = CACHED_FORMATTERS[key];
+    if (formatter === undefined) {
+      let minimumFractionDigits = minCtx !== undefined ? minCtx : minSpec;
+      let maximumFractionDigits = maxCtx !== undefined ? maxCtx : maxSpec;
+
+      // If the context overrides only one of the two |*FractionDigits|
+      // properties and the other one is provided by the unit, we might need to
+      // shift the other property so that
+      // |minimumFractionDigits| <= |maximumFractionDigits|.
+      if (minimumFractionDigits > maximumFractionDigits) {
+        if (minCtx !== undefined && maxCtx === undefined) {
+          // Only minimumFractionDigits was overriden by context.
+          maximumFractionDigits = minimumFractionDigits;
+        } else if (minCtx === undefined && maxCtx !== undefined) {
+          // Only maximumFractionDigits was overriden by context.
+          minimumFractionDigits = maximumFractionDigits;
+        }
+      }
+
+      formatter = new Intl.NumberFormat(undefined, {
+        minimumFractionDigits,
+        maximumFractionDigits,
+      });
+
+      CACHED_FORMATTERS[key] = formatter;
+    }
+    return formatter;
+  }
+
+  function max(a, b) {
+    if (a === undefined) return b;
+    if (b === undefined) return a;
+    return a.scale > b.scale ? a : b;
+  }
+
+  /** @enum */
+  const ImprovementDirection = {
+    DONT_CARE: 0,
+    BIGGER_IS_BETTER: 1,
+    SMALLER_IS_BETTER: 2
+  };
+
+  /** @constructor */
+  function Unit(unitName, jsonName, scaleBaseUnit, isDelta,
+      improvementDirection, formatSpec) {
+    this.unitName = unitName;
+    this.jsonName = jsonName;
+    this.scaleBaseUnit = scaleBaseUnit;
+    this.isDelta = isDelta;
+    this.improvementDirection = improvementDirection;
+    this.formatSpec_ = formatSpec;
+
+    // Example: powerInWattsDelta_biggerIsBetter -> powerInWatts.
+    this.baseUnit = undefined;
+
+    // Example: energyInJoules_smallerIsBetter ->
+    // energyInJoulesDelta_smallerIsBetter.
+    this.correspondingDeltaUnit = undefined;
+  }
+
+  Unit.prototype = {
+    asJSON() {
+      return this.jsonName;
+    },
+
+    asJSON2() {
+      return this.asJSON().replace(
+          '_smallerIsBetter', '-').replace('_biggerIsBetter', '+');
+    },
+
+    /**
+     * Remove insignificant digits from a number so that it consumes less disk
+     * space when serialized.
+     *
+     * @param {number} value
+     * @return {number}
+     */
+    truncate(value) {
+      if (typeof value !== 'number') return value;
+      if (0 === (value % 1)) return value;
+
+      if (typeof this.formatSpec_ !== 'function' &&
+          (!this.formatSpec_.unitScale ||
+           ((this.formatSpec_.unitScale.length === 1) &&
+            (this.formatSpec_.unitScale[0].value === 1)))) {
+        const digits = this.formatSpec_.maximumFractionDigits ||
+          this.formatSpec_.minimumFractionDigits;
+        return tr.b.math.truncate(value, digits + 1);
+      }
+
+      // If formatSpec is a function or uses a unitScale, then its formatting is
+      // unpredictable.
+      // Binary search to find the smallest number of decimal digits that
+      // preserves the correct formatted value.
+
+      const formatted = this.format(value);
+      let test = Math.round(value);
+      if (formatted === this.format(test)) return test;
+
+      let lo = 1;
+      let hi = 16;
+      while (lo < hi - 1) {
+        const digits = parseInt((lo + hi) / 2);
+        test = tr.b.math.truncate(value, digits);
+        if (formatted === this.format(test)) {
+          hi = digits;
+        } else {
+          lo = digits;
+        }
+      }
+
+      test = tr.b.math.truncate(value, lo);
+      if (formatted === this.format(test)) return test;
+
+      return tr.b.math.truncate(value, hi);
+    },
+
+    getUnitScale_(opt_context) {
+      let formatSpec = this.formatSpec_;
+      let formatSpecWasFunction = false;
+      if (typeof formatSpec === 'function') {
+        formatSpecWasFunction = true;
+        formatSpec = formatSpec();
+      }
+      const context = opt_context || {};
+
+      let scale = undefined;
+      if (context.unitScale) {
+        scale = context.unitScale;
+      } else if (context.unitPrefix) {
+        // TODO(aiolos): Switch all calls to format to use UnitScales instead
+        // of UnitPrefixScales. UnitPrefixeScales use in Unit is deprecated.
+        const symbol = formatSpec.baseSymbol ?
+          formatSpec.baseSymbol : this.scaleBaseUnit.baseSymbol;
+        scale = tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+            symbol, symbol, [context.unitPrefix]).AUTO;
+      } else {
+        scale = formatSpec.unitScale;
+        if (!scale) {
+          // Unit has no conversion value(s). Ex: Watts, count.
+          scale = [{
+            value: 1,
+            symbol: formatSpec.baseSymbol || '',
+            baseSymbol: formatSpec.baseSymbol || ''
+          }];
+          if (!formatSpecWasFunction) formatSpec.unitScale = scale;
+        }
+      }
+      if (!(scale instanceof Array)) {
+        throw new Error('Unit has a malformed unit scale.');
+      }
+      return scale;
+    },
+
+    get unitString() {
+      const scale = this.getUnitScale_();
+      if (!scale) {
+        throw new Error(
+            'A UnitScale could not be found for Unit ' + this.unitName);
+      }
+      return scale[0].symbol;
+    },
+
+    /**
+     * Returns a human readable string representation of the value passed.
+     *
+     * Example: .00023 formatted using the timeInMsAutoFormat Unit would return
+     *   '230 ns' since the base unit scale is ms.
+     *
+     * @param {number} value - The value to be formatted.
+     * @param {Object} [opt_context] - Optional formatting parameters.
+     * @param {!tr.b.UnitScale=} [opt_context.unitScale] - A UnitScale to use
+     *   while formatting the value instead of this Unit's UnitScale.
+     * @param {!tr.b.UnitPrefix=} [opt_context.unitPrefix] - A UnitPrefix that
+     *   the value should be formatted into.
+     * @param {number} [opt_context.deltaValue] - Format the value based on
+     *   this delta between it and another number instead of the actual value.
+     */
+    format(value, opt_context) {
+      let signString = '';
+      if (value < 0) {
+        signString = '-';
+        value = -value;  // Treat positive and negative values symmetrically.
+      } else if (this.isDelta) {
+        signString = value === 0 ? PLUS_MINUS_SIGN : '+';
+      }
+
+      const context = opt_context || {};
+      const scale = this.getUnitScale_(context);
+      let deltaValue = context.deltaValue === undefined ? value :
+        context.deltaValue;
+      deltaValue = Math.abs(deltaValue) * this.scaleBaseUnit.value;
+      if (deltaValue === 0) {
+        // In this special case we need to format to unit the same, if the value
+        // was 1. It is required for example to prevent 0 nJ instead of 0 J.
+        deltaValue = 1;
+      }
+      let i = 0;
+      while (i < scale.length - 1 &&
+             deltaValue / scale[i + 1].value >= 1) {
+        i++;
+      }
+      const selectedSubUnit = scale[i];
+
+      let formatSpec = this.formatSpec_;
+      if (typeof formatSpec === 'function') formatSpec = formatSpec();
+      let unitString = '';
+      if (selectedSubUnit.symbol) {
+        if (!formatSpec.avoidSpacePrecedingUnit) unitString = ' ';
+        unitString += selectedSubUnit.symbol;
+      }
+
+      value = tr.b.convertUnit(value, this.scaleBaseUnit, selectedSubUnit);
+      const numberString = getNumberFormatter(
+          formatSpec.minimumFractionDigits,
+          formatSpec.maximumFractionDigits,
+          context.minimumFractionDigits,
+          context.maximumFractionDigits).format(value);
+
+      return signString + numberString + unitString;
+    }
+  };
+
+  Unit.reset = function() {
+    Unit.currentTimeDisplayMode = TimeDisplayModes.ms;
+  };
+
+  Unit.timestampFromUs = function(us) {
+    return tr.b.convertUnit(us, tr.b.UnitPrefixScale.METRIC.MICRO,
+        tr.b.UnitPrefixScale.METRIC.MILLI);
+  };
+
+  Object.defineProperty(Unit, 'currentTimeDisplayMode', {
+    get() {
+      return Unit.currentTimeDisplayMode_;
+    },
+    // Use tr-v-ui-preferred-display-unit element instead of directly setting.
+    set(value) {
+      if (Unit.currentTimeDisplayMode_ === value) return;
+
+      Unit.currentTimeDisplayMode_ = value;
+      Unit.dispatchEvent(new tr.b.Event('display-mode-changed'));
+    }
+  });
+
+  Unit.didPreferredTimeDisplayUnitChange = function() {
+    let largest = undefined;
+    // TODO(aiolos): base should not depend on ui. Move the functionality of
+    //     searching for preferred-display-unit out of Unit.
+    // https://github.com/catapult-project/catapult/issues/3092
+    const els = tr.ui.b.findDeepElementsMatching(document.body,
+        'tr-v-ui-preferred-display-unit');
+    els.forEach(function(el) {
+      largest = max(largest, el.preferredTimeDisplayMode);
+    });
+
+    Unit.currentTimeDisplayMode = largest === undefined ?
+      TimeDisplayModes.ms : largest;
+  };
+
+  Unit.byName = {};
+  Unit.byJSONName = {};
+
+  Unit.fromJSON = function(object) {
+    if (typeof(object) === 'string') {
+      if (object.endsWith('+')) {
+        object = object.slice(0, object.length - 1) + '_biggerIsBetter';
+      } else if (object.endsWith('-')) {
+        object = object.slice(0, object.length - 1) + '_smallerIsBetter';
+      }
+      const u = Unit.byJSONName[object];
+      if (u) return u;
+    }
+    throw new Error(`Unrecognized unit "${object}"`);
+  };
+
+  /**
+   * Define all combinations of a unit with isDelta and improvementDirection
+   * flags. For example, the following code:
+   *
+   *   Unit.define({
+   *     baseUnitName: 'powerInWatts'
+   *     baseJsonName: 'W'
+   *     formatSpec: {
+   *       // Specification of how the unit should be formatted (unit symbol,
+   *       // unit prefix, fraction digits, etc), or a function returning such
+   *       // a specification.
+   *     }
+   *   });
+   *
+   * generates the following six units (JSON names shown in parentheses):
+   *
+   *   Unit.byName.powerInWatts (W)
+   *   Unit.byName.powerInWatts_smallerIsBetter (W_smallerIsBetter)
+   *   Unit.byName.powerInWatts_biggerIsBetter (W_biggerIsBetter)
+   *   Unit.byName.powerInWattsDelta (WDelta)
+   *   Unit.byName.powerInWattsDelta_smallerIsBetter (WDelta_smallerIsBetter)
+   *   Unit.byName.powerInWattsDelta_biggerIsBetter (WDelta_biggerIsBetter)
+   *
+   * with the appropriate flags and formatting code (including +/- prefixes
+   * for deltas).
+   */
+  Unit.define = function(params) {
+    const definedUnits = [];
+
+    for (const improvementDirection of Object.values(ImprovementDirection)) {
+      const regularUnit =
+          Unit.defineUnitVariant_(params, false, improvementDirection);
+      const deltaUnit =
+          Unit.defineUnitVariant_(params, true, improvementDirection);
+
+      regularUnit.correspondingDeltaUnit = deltaUnit;
+      deltaUnit.correspondingDeltaUnit = deltaUnit;
+      definedUnits.push(regularUnit, deltaUnit);
+    }
+
+    const baseUnit = Unit.byName[params.baseUnitName];
+    definedUnits.forEach(u => u.baseUnit = baseUnit);
+  };
+
+  Unit.nameSuffixForImprovementDirection = function(improvementDirection) {
+    switch (improvementDirection) {
+      case ImprovementDirection.DONT_CARE:
+        return '';
+      case ImprovementDirection.BIGGER_IS_BETTER:
+        return '_biggerIsBetter';
+      case ImprovementDirection.SMALLER_IS_BETTER:
+        return '_smallerIsBetter';
+      default:
+        throw new Error(
+            'Unknown improvement direction: ' + improvementDirection);
+    }
+  };
+
+  Unit.defineUnitVariant_ = function(params, isDelta, improvementDirection) {
+    let nameSuffix = isDelta ? 'Delta' : '';
+    nameSuffix += Unit.nameSuffixForImprovementDirection(improvementDirection);
+
+    const unitName = params.baseUnitName + nameSuffix;
+    const jsonName = params.baseJsonName + nameSuffix;
+    if (Unit.byName[unitName] !== undefined) {
+      throw new Error('Unit \'' + unitName + '\' already exists');
+    }
+    if (Unit.byJSONName[jsonName] !== undefined) {
+      throw new Error('JSON unit \'' + jsonName + '\' alread exists');
+    }
+
+    let scaleBaseUnit = params.scaleBaseUnit;
+    if (!scaleBaseUnit) {
+      let formatSpec = params.formatSpec;
+      if (typeof formatSpec === 'function') formatSpec = formatSpec();
+      const baseSymbol = formatSpec.unitScale ?
+        formatSpec.unitScale[0].baseSymbol : (formatSpec.baseSymbol || '');
+      scaleBaseUnit = { value: 1, symbol: baseSymbol, baseSymbol };
+    }
+    const unit = new Unit(unitName, jsonName, scaleBaseUnit,
+        isDelta, improvementDirection, params.formatSpec);
+    Unit.byName[unitName] = unit;
+    Unit.byJSONName[jsonName] = unit;
+
+    return unit;
+  };
+
+  tr.b.EventTarget.decorate(Unit);
+  Unit.reset();
+
+  // Known display units follow.
+  //////////////////////////////////////////////////////////////////////////////
+
+  Unit.define({
+    baseUnitName: 'timeInMsAutoFormat',
+    baseJsonName: 'msBestFitFormat',
+    scaleBaseUnit: tr.b.UnitScale.TIME.MILLI_SEC,
+    formatSpec: {
+      unitScale: tr.b.UnitScale.TIME.AUTO,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'timeDurationInMs',
+    baseJsonName: 'ms',
+    scaleBaseUnit: tr.b.UnitScale.TIME.MILLI_SEC,
+    formatSpec() {
+      return Unit.currentTimeDisplayMode_.formatSpec;
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'timeStampInMs',
+    baseJsonName: 'tsMs',
+    scaleBaseUnit: tr.b.UnitScale.TIME.MILLI_SEC,
+    formatSpec() {
+      return Unit.currentTimeDisplayMode_.formatSpec;
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'normalizedPercentage',
+    baseJsonName: 'n%',
+    formatSpec: {
+      unitScale: [{value: 0.01, symbol: '%'}],
+      avoidSpacePrecedingUnit: true,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'sizeInBytes',
+    baseJsonName: 'sizeInBytes',
+    formatSpec: {
+      unitScale: tr.b.UnitScale.MEMORY.AUTO,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'bandwidthInBytesPerSecond',
+    baseJsonName: 'bytesPerSecond',
+    formatSpec: {
+      unitScale: tr.b.UnitScale.BANDWIDTH_BYTES.AUTO,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'energyInJoules',
+    baseJsonName: 'J',
+    formatSpec: {
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'J', 'JOULE', tr.b.UnitPrefixScale.METRIC, 'JOULE').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'powerInWatts',
+    baseJsonName: 'W',
+    formatSpec: {
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'W', 'WATT', tr.b.UnitPrefixScale.METRIC, 'WATT').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'electricCurrentInAmperes',
+    baseJsonName: 'A',
+    formatSpec: {
+      baseSymbol: 'A',
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'A', 'AMPERE', tr.b.UnitPrefixScale.METRIC, 'AMPERE').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'batteryChargeInAmpereHours',
+    baseJsonName: 'Ah',
+    formatSpec: {
+      baseSymbol: 'Ah',
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'Ah', 'AMPEREHOUR', tr.b.UnitPrefixScale.METRIC, 'AMPEREHOUR').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'electricPotentialInVolts',
+    baseJsonName: 'V',
+    formatSpec: {
+      baseSymbol: 'V',
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'V', 'VOLT', tr.b.UnitPrefixScale.METRIC, 'VOLT').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'frequencyInHertz',
+    baseJsonName: 'Hz',
+    formatSpec: {
+      baseSymbol: 'Hz',
+      unitScale: tr.b.UnitScale.defineUnitScaleFromPrefixScale(
+          'Hz', 'HERTZ', tr.b.UnitPrefixScale.METRIC, 'HERTZ').AUTO,
+      minimumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'unitlessNumber',
+    baseJsonName: 'unitless',
+    formatSpec: {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'count',
+    baseJsonName: 'count',
+    formatSpec: {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  });
+
+  Unit.define({
+    baseUnitName: 'sigma',
+    baseJsonName: 'sigma',
+    formatSpec: {
+      baseSymbol: String.fromCharCode(963),
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }
+  });
+
+  return {
+    ImprovementDirection,
+    Unit,
+  };
+});
+</script>

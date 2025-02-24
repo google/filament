@@ -1,0 +1,31 @@
+name: Weekly tag
+
+# run every Sunday at 00:15 UTC
+on:
+  schedule:
+  - cron: "15 0 * * 0"
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+    - name: Create Tag
+      uses: actions/github-script@v7
+      with:
+        script: |
+          let output = '';
+          const options = {};
+          options.listeners = {
+            stdout: (data) => {
+              output += data.toString();
+            }
+          };
+          await exec.exec('date', ['+snapshot-%Gwk%V'], options);
+          const date = output.trim()
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: `refs/tags/${date}`,
+            sha: context.sha
+          })

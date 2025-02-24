@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-b-grouping-table'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    #table {
+      flex: 1 1 auto;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  function Row(title, data, groupingKeyFuncs, rowStatsConstructor) {
+    this.title = title;
+    this.data_ = data;
+    if (groupingKeyFuncs === undefined) {
+      groupingKeyFuncs = [];
+    }
+    this.groupingKeyFuncs_ = groupingKeyFuncs;
+    this.rowStatsConstructor_ = rowStatsConstructor;
+
+    this.subRowsBuilt_ = false;
+    this.subRows_ = undefined;
+
+    this.rowStats_ = undefined;
+  }
+
+  Row.prototype = {
+    getCurrentGroupingKeyFunc_() {
+      if (this.groupingKeyFuncs_.length === 0) return undefined;
+      return this.groupingKeyFuncs_[0];
+    },
+
+    get data() {
+      return this.data_;
+    },
+
+    get rowStats() {
+      if (this.rowStats_ === undefined) {
+        this.rowStats_ = new this.rowStatsConstructor_(this);
+      }
+      return this.rowStats_;
+    },
+
+    rebuildSubRowsIfNeeded_() {
+      if (this.subRowsBuilt_) return;
+      this.subRowsBuilt_ = true;
+
+      const groupingKeyFunc = this.getCurrentGroupingKeyFunc_();
+      if (groupingKeyFunc === undefined) {
+        this.subRows_ = undefined;
+        return;
+      }
+
+      const dataByKey = {};
+      let hasValues = false;
+      this.data_.forEach(function(datum) {
+        const key = groupingKeyFunc(datum);
+        hasValues = hasValues || (key !== undefined);
+        if (dataByKey[key] === undefined) {
+          dataByKey[key] = [];
+        }
+        dataByKey[key].push(datum);
+      });
+      if (!hasValues) {
+        this.subRows_ = undefined;
+        return;
+      }
+
+      this.subRows_ = [];
+      for (const key in dataByKey) {
+        const row = new Row(key,
+            dataByKey[key],
+            this.groupingKeyFuncs_.slice(1),
+            this.rowStatsConstructor_);
+        this.subRows_.push(row);
+      }
+    },
+
+    get isExpanded() {
+      return (this.subRows &&
+              (this.subRows.length > 0) &&
+              (this.subRows.length < 5));
+    },
+
+    get subRows() {
+      this.rebuildSubRowsIfNeeded_();
+      return this.subRows_;
+    }
+  };
+
+  Polymer({
+    is: 'tr-ui-b-grouping-table',
+
+    created() {
+      this.dataToGroup_ = undefined;
+      this.groupBy_ = undefined;
+      this.rowStatsConstructor_ = undefined;
+    },
+
+    get tableColumns() {
+      return this.$.table.tableColumns;
+    },
+
+    set tableColumns(tableColumns) {
+      this.$.table.tableColumns = tableColumns;
+    },
+
+    get tableRows() {
+      return this.$.table.tableRows;
+    },
+
+    get sortColumnIndex() {
+      return this.$.table.sortColumnIndex;
+    },
+
+    set sortColumnIndex(sortColumnIndex) {
+      this.$.table.sortColumnIndex = sortColumnIndex;
+    },
+
+    get sortDescending() {
+      return this.$.table.sortDescending;
+    },
+
+    set sortDescending(sortDescending) {
+      this.$.table.sortDescending = sortDescending;
+    },
+
+    get selectionMode() {
+      return this.$.table.selectionMode;
+    },
+
+    set selectionMode(selectionMode) {
+      this.$.table.selectionMode = selectionMode;
+    },
+
+    get rowHighlightStyle() {
+      return this.$.table.rowHighlightStyle;
+    },
+
+    set rowHighlightStyle(rowHighlightStyle) {
+      this.$.table.rowHighlightStyle = rowHighlightStyle;
+    },
+
+    get cellHighlightStyle() {
+      return this.$.table.cellHighlightStyle;
+    },
+
+    set cellHighlightStyle(cellHighlightStyle) {
+      this.$.table.cellHighlightStyle = cellHighlightStyle;
+    },
+
+    get selectedColumnIndex() {
+      return this.$.table.selectedColumnIndex;
+    },
+
+    set selectedColumnIndex(selectedColumnIndex) {
+      this.$.table.selectedColumnIndex = selectedColumnIndex;
+    },
+
+    get selectedTableRow() {
+      return this.$.table.selectedTableRow;
+    },
+
+    set selectedTableRow(selectedTableRow) {
+      this.$.table.selectedTableRow = selectedTableRow;
+    },
+
+    get groupBy() {
+      return this.groupBy_;
+    },
+
+    set groupBy(groupBy) {
+      this.groupBy_ = groupBy;
+      this.updateContents_();
+    },
+
+    get dataToGroup() {
+      return this.dataToGroup_;
+    },
+
+    set dataToGroup(dataToGroup) {
+      this.dataToGroup_ = dataToGroup;
+      this.updateContents_();
+    },
+
+    get rowStatsConstructor() {
+      return this.rowStatsConstructor_;
+    },
+
+    set rowStatsConstructor(rowStatsConstructor) {
+      this.rowStatsConstructor_ = rowStatsConstructor;
+      this.updateContents_();
+    },
+
+    rebuild() {
+      this.$.table.rebuild();
+    },
+
+    updateContents_() {
+      const groupBy = this.groupBy_ || [];
+      const dataToGroup = this.dataToGroup_ || [];
+      const rowStatsConstructor = this.rowStatsConstructor_ || function() {};
+
+      const superRow = new Row('', dataToGroup, groupBy,
+          rowStatsConstructor);
+      this.$.table.tableRows = superRow.subRows || [];
+    }
+  });
+
+  return {
+  };
+});
+</script>

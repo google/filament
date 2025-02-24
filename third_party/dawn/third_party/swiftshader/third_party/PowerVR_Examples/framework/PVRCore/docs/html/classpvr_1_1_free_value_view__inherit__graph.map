@@ -1,0 +1,4 @@
+<map id="pvr::FreeValueView" name="pvr::FreeValueView">
+<area shape="rect" id="node2" href="$structpvr_1_1_free_value.html" title="A Free Value View that is backed by a 64&#45;byte statically allocated array: Enough to hold one item of ..." alt="" coords="5,80,120,107"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_typed_mem.html" title="Represents Free Value View that is backed by a (usually small) dynamically allocated block..." alt="" coords="145,80,266,107"/>
+</map>

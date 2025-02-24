@@ -1,0 +1,190 @@
+# The settings in this file can be used to configure the behavior of
+# layers in this repository.
+#
+# Note that this file is not regulary updated, so not all possible layer
+# settings may be listed, and some layer settings may even be obsolete.
+
+# VK_LAYER_KHRONOS_validation
+
+# Debug Action
+# =====================
+# Specifies what action is to be taken when a layer reports information
+khronos_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+
+# Log Filename
+# =====================
+# Specifies the output filename
+khronos_validation.log_filename = stdout
+
+# Message Severity
+# =====================
+# Comma-delineated list of options specifying the types of messages to be
+# reported
+khronos_validation.report_flags = error
+
+# Limit Duplicated Messages
+# =====================
+# Enable limiting of duplicate messages.
+khronos_validation.enable_message_limit = true
+
+# Max Duplicated Messages
+# =====================
+# Maximum number of times any single validation message should be reported.
+khronos_validation.duplicate_message_limit = 10
+
+# Mute Message VUIDs
+# =====================
+# List of VUIDs and VUID identifers which are to be IGNORED by the validation
+# layer
+khronos_validation.message_id_filter =
+
+# Disables
+# =====================
+# Specify areas of validation to be disabled
+khronos_validation.disables = VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT
+
+# Enables
+# =====================
+# Setting an option here will enable specialized areas of validation
+khronos_validation.enables =
+
+# Redirect Printf messages to stdout
+# =====================
+# Enable redirection of Debug Printf messages from the debug callback to stdout
+#khronos_validation.printf_to_stdout = true
+
+# Printf verbose
+# =====================
+# Set the verbosity of debug printf messages
+#khronos_validation.printf_verbose = false
+
+# Printf buffer size
+# =====================
+# Set the size in bytes of the buffer used by debug printf
+#khronos_validation.printf_buffer_size = 1024
+
+# Shader instrumentation
+# =====================
+# Instrument shaders to validate descriptors, descriptor indexing, buffer device addresses and ray queries.
+# Warning: will considerably slow down shader executions
+#khronos_validation.gpuav_shader_instrumentation = true
+
+# Check descriptor indexing accesses
+# =====================
+# Enable descriptor indexing and buffer out of bounds checking
+#khronos_validation.gpuav_descriptor_checks = true
+
+# Generate warning on out of bounds accesses even if buffer robustness is enabled
+# =====================
+# Warn on out of bounds accesses even if robustness is enabled
+#khronos_validation.gpuav_warn_on_robust_oob = true
+
+# Out of bounds buffer device addresses
+# =====================
+# Check for invalid access using buffer device address
+#khronos_validation.gpuav_buffer_address_oob = true
+
+# Specify the maximum number of buffer device addresses in simultaneous use
+# =====================
+# Specify the maximum number of buffer device addresses to allow GPU-AV allocate resources
+#khronos_validation.gpuav_max_buffer_device_addresses = 10000
+
+# Validate RayQuery SPIR-V Instructions
+# =====================
+# Enable shader instrumentation on SPV_KHR_ray_query
+#khronos_validation.gpuav_validate_ray_query = true
+
+# Post Process Descriptor Indexing
+# =====================
+# Track which descriptor indexes were used in shader to run normal validation afterwards
+#khronos_validation.gpuav_post_process_descriptor_indexing = true
+
+# Select which shaders to instrument by passing a VkValidationFeaturesEXT struct with GPU-AV enabled in the VkShaderModuleCreateInfo pNext
+# =====================
+# Enable selection of shaders to instrument
+#khronos_validation.gpuav_select_instrumented_shaders = false
+
+# Buffer content validation
+# =====================
+# Validate buffers containing parameters used in indirect Vulkan commands, or used in copy commands
+#khronos_validation.gpuav_buffers_validation = true
+
+# Indirect draws parameters
+# =====================
+# Validate buffers containing draw parameters used in indirect draw commands
+# Includes vkCmdDrawMeshTasks* calls as well
+#khronos_validation.gpuav_indirect_draws_buffers = true
+
+# Indirect dispatch parameters
+# =====================
+# Validate buffers containing dispatch parameters used in indirect dispatch commands
+#khronos_validation.gpuav_indirect_dispatches_buffers = true
+
+# Indirect trace rays parameters
+# =====================
+# Validate buffers containing ray tracing parameters used in indirect ray tracing commands
+#khronos_validation.gpuav_indirect_trace_rays_buffers = true
+
+# Buffer copies
+# =====================
+# Validate copies involving a VkBuffer. Right now only validates copy buffer to image
+#khronos_validation.gpuav_buffer_copies = true
+
+# Index copies
+# =====================
+# Validate that indexed draws do not fetch indices outside of the bounds of the index buffer
+# Also validates that those indices are not out of the bounds of the fetched vertex buffers
+#khronos_validation.gpuav_index_buffers = true
+
+# Use linear vma allocator for GPU-AV output buffers
+# =====================
+# Use VMA linear memory allocations for GPU-AV output buffers
+#khronos_validation.gpuav_vma_linear_output = true
+
+# Use GPU-AV to do Image Layout checks
+# =====================
+# (Warning - still known to have false positives)
+# Use GPU-AV to detect which descriptors where accessed.
+# Then using post processing, check that the layout of each image subresource is correct whenever it is used by a command buffer
+#khronos_validation.gpuav_image_layout = true
+
+# Fine Grained Locking
+# =====================
+# Enable fine grained locking for Core Validation, which should improve
+# performance in multithreaded applications.
+khronos_validation.fine_grained_locking = true
+
+# Display Application Name
+# =====================
+# Useful when running multiple instances to know which instance the message is from
+#khronos_validation.message_format_display_application_name = false
+
+# Best Practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
+
+# Best Practices with ARM best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_ARM
+
+# Best Practices with AMD best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_AMD
+
+# Best Practices with Imagination Tech best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_IMG
+
+# Best Practices with Nvidia Specific Check
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_NVIDIA
+
+# Best Practices with ALL Vendor Specific Checks
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_ALL

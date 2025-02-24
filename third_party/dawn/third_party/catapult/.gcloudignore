@@ -1,0 +1,4 @@
+.gcloudignore
+.git
+*.pyc
+#!include:.gitignore

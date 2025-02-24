@@ -1,0 +1,149 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE Metal back-end.
+
+import("../../../../gni/angle.gni")
+import("metal_backend.gni")
+
+if (metal_internal_shader_compilation_supported) {
+  import("//build/config/mac/mac_sdk.gni")
+}
+
+assert(is_mac || is_ios)
+assert(angle_enable_metal)
+
+config("angle_metal_backend_config") {
+  defines = [ "ANGLE_ENABLE_METAL" ]
+  ldflags = [
+    "-weak_framework",
+    "Metal",
+  ]
+  include_dirs = [ "$root_gen_dir/angle" ]
+}
+
+if (metal_internal_shader_compilation_supported) {
+  _metal_internal_shaders_air_file =
+      "$root_gen_dir/angle/mtl_internal_shaders_autogen.air"
+
+  action("angle_metal_internal_shaders_to_air") {
+    script = "shaders/metal_wrapper.py"
+
+    outputs = [ _metal_internal_shaders_air_file ]
+
+    _metal_internal_shaders_metal_source =
+        "shaders/mtl_internal_shaders_autogen.metal"
+    sources = [ _metal_internal_shaders_metal_source ]
+
+    args = [
+      mac_bin_path + "metal",
+      "-c",
+      rebase_path(_metal_internal_shaders_metal_source, root_build_dir),
+      "-o",
+      rebase_path(_metal_internal_shaders_air_file, root_build_dir),
+    ]
+
+    if (is_mac) {
+      args += [
+        "--std=macos-metal2.1",
+        "-mmacosx-version-min=10.14",
+      ]
+    } else if (is_ios) {
+      args += [
+        "--std=ios-metal2.1",
+        "-mios-version-min=12",
+      ]
+    }
+  }
+
+  _metal_internal_shaders_metallib_file =
+      "$root_gen_dir/angle/mtl_internal_shaders_autogen.metallib"
+
+  action("angle_metal_internal_shaders_to_mtllib") {
+    script = "shaders/metal_wrapper.py"
+
+    outputs = [ _metal_internal_shaders_metallib_file ]
+
+    sources = [ _metal_internal_shaders_air_file ]
+
+    deps = [ ":angle_metal_internal_shaders_to_air" ]
+
+    args = [
+      mac_bin_path + "metallib",
+      rebase_path(_metal_internal_shaders_air_file, root_build_dir),
+      "-o",
+      rebase_path(_metal_internal_shaders_metallib_file, root_build_dir),
+    ]
+  }
+
+  config("angle_metal_internal_shaders_config") {
+    include_dirs = [ "$root_gen_dir/angle" ]
+  }
+
+  action("angle_metal_internal_shaders") {
+    script = "shaders/embed_in_header.py"
+
+    outputs = [ metal_internal_shaders_header ]
+
+    sources = [ _metal_internal_shaders_metallib_file ]
+
+    deps = [ ":angle_metal_internal_shaders_to_mtllib" ]
+
+    args = [
+      "--source",
+      rebase_path(_metal_internal_shaders_metallib_file, root_build_dir),
+      "--variable-name",
+      "gDefaultMetallib",
+      "--header",
+      rebase_path(metal_internal_shaders_header, root_build_dir),
+    ]
+
+    public_configs = [ ":angle_metal_internal_shaders_config" ]
+  }
+}
+
+angle_source_set("angle_metal_backend") {
+  public_configs = [ ":angle_metal_backend_config" ]
+
+  sources = metal_backend_sources
+
+  cflags = []
+  cflags_cc = []
+  cflags_objc = []
+  cflags_objcc = []
+  ldflags = []
+  libs = []
+  defines = []
+
+  public_deps = [
+    "${angle_root}:angle_common",
+    "${angle_root}:angle_gpu_info_util",
+    "${angle_root}:angle_image_util",
+    "${angle_root}:libANGLE_headers",
+    "${angle_root}:translator",
+  ]
+
+  if (metal_internal_shader_compilation_supported) {
+    public_deps += [ ":angle_metal_internal_shaders" ]
+    defines += [ "ANGLE_METAL_HAS_PREBUILT_INTERNAL_SHADERS" ]
+  }
+
+  objc_flags = [
+    "-Wno-nullability-completeness",
+    "-Wno-unguarded-availability",
+    "-fno-objc-arc",
+  ]
+  cflags_objc += objc_flags
+  cflags_objcc += objc_flags
+
+  if (is_apple) {
+    frameworks = [
+      "IOSurface.framework",
+      "QuartzCore.framework",
+    ]
+    if (is_mac) {
+      frameworks += [ "Cocoa.framework" ]
+    }
+  }
+}

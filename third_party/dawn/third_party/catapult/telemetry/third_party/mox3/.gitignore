@@ -1,0 +1,71 @@
+*.py[co]
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+.testrepository
+
+#Translations
+*.mo
+
+# virtualenv
+.venv
+
+#Mr Developer
+.mr.developer.cfg
+
+# https://github.com/h5bp/html5-boilerplate/blob/master/.gitignore
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log
+*.rej
+*.swo
+*.swp
+*.vi
+*~
+
+# OS or Editor folders
+.DS_Store
+Thumbs.db
+.cache
+.project
+.settings
+.tmproj
+nbproject
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+.komodotools
+
+# Folders to ignore
+.hg
+.svn
+.CVS
+intermediate
+publish
+.idea
+
+# PyDev
+.pydevproject
+
+# pbr
+AUTHORS
+ChangeLog

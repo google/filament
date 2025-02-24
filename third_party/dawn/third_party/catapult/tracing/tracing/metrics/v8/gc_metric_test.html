@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/v8/gc_metric.html">
+<link rel="import" href="/tracing/model/slice_group.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel(slices, backgroundSlices) {
+    function addSlices(thread, slices) {
+      const group = thread.sliceGroup;
+      for (const slice of slices) {
+        group.pushSlice(tr.c.TestUtils.newSliceEx(slice));
+      }
+      group.createSubSlices();
+      thread.updateBounds();
+    }
+    return tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      addSlices(model.rendererMain, slices);
+      if (backgroundSlices) {
+        addSlices(model.foregroundWorker1, backgroundSlices);
+      }
+    });
+  }
+
+  function constructName(name, suffix) {
+    return name + '_' + suffix;
+  }
+
+  function run(slices) {
+    const histograms = new tr.v.HistogramSet();
+    const model = createModel(slices);
+    tr.metrics.v8.gcMetric(histograms, model, {include_sub_events: true});
+    return histograms;
+  }
+
+  function addGarbageCollectionMetrics(metrics, slices, backgroundSlices) {
+    const histograms = new tr.v.HistogramSet();
+    const model = createModel(slices, backgroundSlices);
+    tr.metrics.v8.addGarbageCollectionMetrics(metrics, histograms, model);
+    return histograms;
+  }
+
+  test('topEvents', function() {
+    const events = {
+      'V8.GCCompactor': 'v8-gc-full-mark-compactor',
+      'V8.GCFinalizeMC': 'v8-gc-latency-mark-compactor',
+      'V8.GCFinalizeMCReduceMemory': 'v8-gc-memory-mark-compactor',
+      'V8.GCIncrementalMarking': 'v8-gc-incremental-step',
+      'V8.GCIncrementalMarkingStart': 'v8-gc-incremental-start',
+      'V8.GCPhantomHandleProcessingCallback': 'v8-gc-phantom-handle-callback',
+      'V8.GCScavenger': 'v8-gc-scavenger',
+      'V8.GCMinorMS': 'v8-gc-minor-mark-sweeper'
+    };
+    for (const [timelineName, telemetryName] of Object.entries(events)) {
+      const slices = [
+        {
+          title: timelineName, args: {}, start: 100, end: 200,
+          cpuStart: 100, cpuEnd: 200
+        }
+      ];
+      const actual = run(slices);
+
+      const value = actual.getHistogramNamed(telemetryName);
+      assert.strictEqual(value.running.sum, 100);
+      assert.strictEqual(value.numValues, 1);
+      assert.strictEqual(value.average, 100);
+      assert.strictEqual(value.running.max, 100);
+      assert.closeTo(value.getApproximatePercentile(0.90), 100, 1);
+    }
+  });
+
+  test('subEvents', function() {
+    const slices = [
+      {
+        title: 'V8.GCFinalizeMC', args: {}, start: 100, end: 200,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'V8.GC_MC_MARK', args: {}, start: 110, end: 190,
+        cpuStart: 110, cpuEnd: 190
+      },
+    ];
+    const actual = run(slices);
+    const telemetryName = 'v8-gc-latency-mark-compactor-mark';
+    const value = actual.getHistogramNamed(telemetryName);
+    assert.strictEqual(value.average, 80);
+    assert.strictEqual(value.running.max, 80);
+    assert.closeTo(value.getApproximatePercentile(0.90), 80, 1);
+  });
+
+  test('total', function() {
+    const slices = [
+      {
+        title: 'V8.GCFinalizeMC', args: {}, start: 100, end: 200,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'V8.GCIncrementalMarking', args: {}, start: 210, end: 290,
+        cpuStart: 210, cpuEnd: 290
+      }
+    ];
+    const actual = run(slices);
+
+    const value = actual.getHistogramNamed('v8-gc-total');
+    assert.strictEqual(value.running.sum, 180);
+    assert.strictEqual(value.numValues, 2);
+    assert.strictEqual(value.average, 90);
+    assert.strictEqual(value.running.max, 100);
+  });
+
+  test('percentageInV8Execute', function() {
+    const slices = [
+      {
+        title: 'V8.Execute',
+        args: {}, start: 100, end: 200,
+        cpuStart: 100, cpuEnd: 200
+      },
+      {
+        title: 'V8.GCFinalizeMC', args: {}, start: 110, end: 190,
+        cpuStart: 110, cpuEnd: 190
+      },
+      {
+        title: 'V8.GCFinalizeMC', args: {}, start: 210, end: 220,
+        cpuStart: 210, cpuEnd: 220
+      }
+    ];
+    const actual = run(slices);
+    const value = actual.getHistogramNamed(
+        'v8-gc-latency-mark-compactor_percentage_in_v8_execute');
+    assert.strictEqual(value.average,
+        (190 - 110) / ((190 - 110) + (220 - 210)));
+  });
+
+  test('markCompactorMutatorUtilization', function() {
+    const slices = [
+      {
+        title: 'V8.GCIncrementalMarkingStart',
+        args: {}, start: 100, end: 110,
+        cpuStart: 100, cpuEnd: 110
+      },
+      {
+        title: 'V8.GCIncrementalMarking',
+        args: {}, start: 150, end: 160,
+        cpuStart: 150, cpuEnd: 160
+      },
+      {
+        title: 'V8.GCFinalizeMC',
+        args: {}, start: 250, end: 300,
+        cpuStart: 250, cpuEnd: 300
+      }
+    ];
+    const histograms = run(slices);
+    const mmu = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-mmu-100ms_window');
+    assert.closeTo(0.5, mmu.min, 1e-3);
+    assert.strictEqual(mmu.summaryOptions.get('min'), true);
+    assert.strictEqual(mmu.summaryOptions.get('max'), false);
+  });
+
+  test('markCompactorSummary', function() {
+    const slices = [
+      {
+        title: 'V8.GCMarkCompactorSummary',
+        args: {'duration': 3.1, 'background_duration': 1.3},
+        start: 100, end: 100,
+        cpuStart: 100, cpuEnd: 100
+      },
+    ];
+    const histograms = run(slices);
+    const markCompactorForeground = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-foreground');
+    assert.closeTo(3.1, markCompactorForeground.sum, 1e-3);
+    const markCompactorBackground = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-background');
+    assert.closeTo(1.3, markCompactorBackground.sum, 1e-3);
+    const markCompactorTotal = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-total');
+    assert.closeTo(4.4, markCompactorTotal.sum, 1e-3);
+  });
+
+  test('markCompactorMarkingSummary', function() {
+    const slices = [
+      {
+        title: 'V8.GCMarkCompactorMarkingSummary',
+        args: {'duration': 4.1, 'background_duration': 1.4},
+        start: 100, end: 100,
+        cpuStart: 100, cpuEnd: 100
+      },
+    ];
+    const histograms = run(slices);
+    const markCompactorForeground = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-marking-foreground');
+    assert.closeTo(4.1, markCompactorForeground.sum, 1e-3);
+    const markCompactorBackground = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-marking-background');
+    assert.closeTo(1.4, markCompactorBackground.sum, 1e-3);
+    const markCompactorTotal = histograms.getHistogramNamed(
+        'v8-gc-mark-compactor-marking-total');
+    assert.closeTo(5.5, markCompactorTotal.sum, 1e-3);
+  });
+
+  test('scavenverSurvivedFromStackEvents', function() {
+    const slices = [
+      {
+        title: 'V8.GCScavengerStackScanning',
+        args: {'survived_bytes_before': 50, 'survived_bytes_after': 100},
+        start: 100, end: 100, cpuStart: 100, cpuEnd: 100
+      },
+      {
+        title: 'V8.GCScavengerStackScanning',
+        args: {'survived_bytes_before': 0, 'survived_bytes_after': 0},
+        start: 200, end: 200, cpuStart: 200, cpuEnd: 200
+      },
+      {
+        title: 'V8.GCScavengerStackScanning',
+        args: {'survived_bytes_before': 50, 'survived_bytes_after': 50},
+        start: 300, end: 300, cpuStart: 300, cpuEnd: 300
+      },
+      {
+        title: 'V8.GCScavengerStackScanning',
+        args: {'survived_bytes_before': 0, 'survived_bytes_after': 250},
+        start: 400, end: 400, cpuStart: 400, cpuEnd: 400
+      },
+    ];
+    const histograms = run(slices);
+    const totalBytesWithoutStack = histograms.getHistogramNamed(
+        'v8-gc-scavenger-survived-total-bytes-without-stack');
+    assert.strictEqual(100, totalBytesWithoutStack.sum, 1e-3);
+    const totalBytesWithStack = histograms.getHistogramNamed(
+        'v8-gc-scavenger-survived-total-bytes-with-stack');
+    assert.strictEqual(400, totalBytesWithStack.sum, 1e-3);
+    const totalPercentageFromStack = histograms.getHistogramNamed(
+        'v8-gc-scavenger-survived-total-percentage-from-stack');
+    assert.closeTo(0.75, totalPercentageFromStack.average, 1e-3);
+    const percentageFromStack = histograms.getHistogramNamed(
+        'v8-gc-scavenger-survived-percentage-from-stack');
+    assert.closeTo(0.375, percentageFromStack.average, 1e-3);
+  });
+
+  test('cycleAndEvent', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 200, cpuStart: 200, end: 220, cpuEnd: 220,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 300, cpuStart: 300, end: 400, cpuEnd: 400,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 300, cpuStart: 300, end: 340, cpuEnd: 340,
+      },
+    ];
+    const backgroundSlices = [];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:atomic:mark', 40],
+      ['v8:gc:cycle:main_thread:full:incremental:mark', 10 + 20],
+      ['v8:gc:event:main_thread:full:atomic:mark', 40],
+      ['v8:gc:event:main_thread:full:incremental:mark', (10 + 20) / 2],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('nested', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 900, cpuEnd: 900,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 100, cpuStart: 100, end: 300, cpuEnd: 300,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 110, cpuStart: 110, end: 120, cpuEnd: 120,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 111, cpuStart: 111, end: 112, cpuEnd: 112,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 230, cpuStart: 230, end: 250, cpuEnd: 250,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 232, cpuStart: 232, end: 234, cpuEnd: 234,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 400, cpuStart: 400, end: 500, cpuEnd: 500,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 403, cpuStart: 403, end: 406, cpuEnd: 406,
+      },
+    ];
+    const backgroundSlices = [];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:atomic:mark', 200 + 100],
+      ['v8:gc:event:main_thread:full:atomic:mark', (200 + 100) / 2],
+      ['v8:gc:cycle:main_thread:full:atomic:mark:cpp', 1 + 2 + 3],
+      ['v8:gc:event:main_thread:full:atomic:mark:cpp', (1 + 2 + 3) / 3],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('phases', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 900, cpuEnd: 900,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8.gc',
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'V8.GC_MC_CLEAR',
+        cat: 'v8.gc',
+        start: 200, cpuStart: 200, end: 220, cpuEnd: 220,
+      },
+      {
+        title: 'V8.GC_MC_EVACUATE',
+        cat: 'v8.gc',
+        start: 300, cpuStart: 300, end: 330, cpuEnd: 330,
+      },
+      {
+        title: 'V8.GC_MC_SWEEP',
+        cat: 'v8.gc',
+        start: 400, cpuStart: 400, end: 440, cpuEnd: 440,
+      },
+    ];
+    const backgroundSlices = [];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:atomic:mark', 10],
+      ['v8:gc:cycle:main_thread:full:atomic:weak', 20],
+      ['v8:gc:cycle:main_thread:full:atomic:compact', 30],
+      ['v8:gc:cycle:main_thread:full:atomic:sweep', 40],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('minorPhases', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MINOR_MARK_SWEEPER',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 900, cpuEnd: 900,
+      },
+      {
+        title: 'V8.GC_MINOR_MS_MARK',
+        cat: 'v8.gc',
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'V8.GC_MINOR_MS_CLEAR',
+        cat: 'v8.gc',
+        start: 200, cpuStart: 200, end: 220, cpuEnd: 220,
+      },
+      {
+        title: 'V8.GC_MINOR_MS_SWEEP',
+        cat: 'v8.gc',
+        start: 400, cpuStart: 400, end: 440, cpuEnd: 440,
+      },
+    ];
+    const backgroundSlices = [];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:young:atomic:mark', 10],
+      ['v8:gc:cycle:main_thread:young:atomic:weak', 20],
+      ['v8:gc:cycle:main_thread:young:atomic:sweep', 40],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('fullAndYoung', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'V8.GC_SCAVENGER',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 200, cpuStart: 200, end: 220, cpuEnd: 220,
+      },
+      {
+        title: 'V8.GC_SCAVENGER',
+        cat: 'v8',
+        args: {'epoch': 2},
+        start: 300, cpuStart: 300, end: 330, cpuEnd: 330,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 4},
+        start: 400, cpuStart: 400, end: 440, cpuEnd: 440,
+      },
+      {
+        title: 'V8.GC_MINOR_MARK_SWEEPER',
+        cat: 'v8',
+        args: {'epoch': 5},
+        start: 500, cpuStart: 500, end: 550, cpuEnd: 550,
+      },
+    ];
+    const backgroundSlices = [];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:atomic', (10 + 40) / 2],
+      ['v8:gc:cycle:main_thread:full', (10 + 40) / 2],
+      ['v8:gc:cycle:full', (10 + 40) / 2],
+      ['v8:gc:cycle:main_thread:young:atomic', (20 + 30 + 50) / 3],
+      ['v8:gc:cycle:main_thread:young', (20 + 30 + 50) / 3],
+      ['v8:gc:cycle:young', (20 + 30 + 50) / 3],
+      ['v8:gc:cycle:main_thread', (10 + 20 + 30 + 40 + 50) / 5],
+      ['v8:gc:cycle', (10 + 20 + 30 + 40 + 50) / 5],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('cpp', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 200, cpuEnd: 200,
+      },
+      {
+        title: 'CppGC.IncrementalMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 110, cpuStart: 110, end: 120, cpuEnd: 120,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 200, cpuStart: 200, end: 300, cpuEnd: 300,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 220, cpuStart: 220, end: 240, cpuEnd: 240,
+      },
+    ];
+    const backgroundSlices = [
+      {
+        title: 'CppGC.ConcurrentMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 130, cpuStart: 130, end: 160, cpuEnd: 160,
+      },
+      {
+        title: 'CppGC.ConcurrentMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 240, cpuStart: 240, end: 280, cpuEnd: 280,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:atomic:mark:cpp', 20],
+      ['v8:gc:cycle:main_thread:full:incremental:mark:cpp', 10],
+      ['v8:gc:cycle:full:atomic:mark:cpp', 20 + 40],
+      ['v8:gc:cycle:full:incremental:mark:cpp', 30 + 10],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('atomicAndIncremental', function() {
+    const mainSlices = [
+    {
+        title: 'V8.GC_MC_COMPLETE_SWEEPING',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 80, cpuStart: 80, end: 100, cpuEnd: 100,
+      },
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 200, cpuStart: 200, end: 300, cpuEnd: 300,
+      },
+      {
+        title: 'V8.GC_MC_MARK',
+        cat: 'v8',
+        start: 200, cpuStart: 200, end: 220, cpuEnd: 220,
+      },
+    ];
+    const backgroundSlices = [
+      {
+        title: 'V8.GC_MC_BACKGROUND_MARKING',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 100, cpuStart: 100, end: 130, cpuEnd: 130,
+      },
+      {
+        title: 'V8.GC_MC_BACKGROUND_MARKING',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 200, cpuStart: 200, end: 240, cpuEnd: 240,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:main_thread:full:incremental:sweep', 20],
+      ['v8:gc:cycle:main_thread:full:atomic:mark', 20],
+      ['v8:gc:cycle:main_thread:full:incremental:mark', 10],
+      ['v8:gc:cycle:background_threads:full:atomic:mark', 40],
+      ['v8:gc:cycle:background_threads:full:incremental:mark', 30],
+      ['v8:gc:cycle:full:atomic:mark', 20 + 40],
+      ['v8:gc:cycle:full:incremental:mark', 10 + 30],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('multipleCycles', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 110, cpuEnd: 110,
+      },
+      {
+        title: 'CppGC.IncrementalMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 220, cpuStart: 220, end: 240, cpuEnd: 240,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 300, cpuStart: 300, end: 400, cpuEnd: 400,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 330, cpuStart: 330, end: 360, cpuEnd: 360,
+      },
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 600, cpuStart: 600, end: 640, cpuEnd: 640,
+      },
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 1},
+        start: 700, cpuStart: 700, end: 900, cpuEnd: 900,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 2},
+        start: 750, cpuStart: 750, end: 800, cpuEnd: 800,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:full', ((10 + 20 + 100) + (40 + 200)) / 2],
+      ['v8:gc:cycle:full:cpp', ((20 + 30) + (50)) / 2],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(metrics, mainSlices, []);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('standaloneCppGC', function() {
+    const mainSlices = [
+      {
+        title: 'CppGC.IncrementalMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 220, cpuStart: 220, end: 240, cpuEnd: 240,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 330, cpuStart: 330, end: 360, cpuEnd: 360,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 2},
+        start: 750, cpuStart: 750, end: 800, cpuEnd: 800,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:full', ((20 + 30) + (50)) / 2],
+      ['v8:gc:cycle:full:cpp', ((20 + 30) + (50)) / 2],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(metrics, mainSlices, []);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('ambiguousEpoch', function() {
+    const mainSlices = [
+      {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 300, cpuStart: 300, end: 400, cpuEnd: 400,
+      },
+      {
+        title: 'CppGC.AtomicMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 300, cpuStart: 300, end: 330, cpuEnd: 330,
+      },
+      {
+        title: 'V8.GC_MC_INCREMENTAL',
+        cat: 'v8',
+        args: {'epoch': 3},
+        start: 600, cpuStart: 600, end: 640, cpuEnd: 640,
+      },
+      {
+        title: 'CppGC.ConcurrentSweep',
+        cat: 'cpp.gc',
+        args: {'epoch': 1},
+        start: 600, cpuStart: 600, end: 610, cpuEnd: 610,
+      },
+      {
+        title: 'CppGC.IncrementalMark',
+        cat: 'cpp.gc',
+        args: {'epoch': 2},
+        start: 610, cpuStart: 610, end: 640, cpuEnd: 640,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:full', ((100) + (40)) / 2],
+      ['v8:gc:cycle:full:cpp', ((30 + 10) + (30)) / 2],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(metrics, mainSlices, []);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+
+  test('sweepingInEvacuation', function() {
+    const mainSlices = [
+    {
+        title: 'V8.GC_MARK_COMPACTOR',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 100, cpuStart: 100, end: 200, cpuEnd: 200,
+      },
+      {
+        title: 'V8.GC_MC_EVACUATE',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 110, cpuStart: 110, end: 150, cpuEnd: 150,
+      },
+      {
+        title: 'V8.GC_MC_SWEEP',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 120, cpuStart: 120, end: 140, cpuEnd: 140,
+      },
+      {
+        title: 'V8.GC_MC_SWEEP',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 160, cpuStart: 160, end: 190, cpuEnd: 190,
+      },
+    ];
+    const backgroundSlices = [
+    {
+        title: 'V8.GC_MC_BACKGROUND_EVACUATE_COPY',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 110, cpuStart: 110, end: 150, cpuEnd: 150,
+      },
+      {
+        title: 'V8.GC_MC_BACKGROUND_SWEEPING',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 120, cpuStart: 120, end: 140, cpuEnd: 140,
+      },
+      {
+        title: 'V8.GC_MC_BACKGROUND_SWEEPING',
+        cat: 'v8',
+        args: {'epoch': 0},
+        start: 160, cpuStart: 160, end: 190, cpuEnd: 190,
+      },
+    ];
+    const expectedAverages = [
+      ['v8:gc:cycle:full:sweep', 30 + 30],
+    ];
+    const metrics = expectedAverages.map(pair => pair[0]);
+    const histograms = addGarbageCollectionMetrics(
+        metrics, mainSlices, backgroundSlices);
+    for (const [name, expectedAverage] of expectedAverages) {
+      const h = histograms.getHistogramNamed(name);
+      assert.closeTo(expectedAverage, h.average, 1e-3);
+    }
+  });
+});
+</script>

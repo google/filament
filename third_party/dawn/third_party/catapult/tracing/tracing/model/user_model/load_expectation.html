@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.um', function() {
+  const LOAD_SUBTYPE_NAMES = {
+    SUCCESSFUL: 'Successful',
+    FAILED: 'Failed',
+  };
+
+  const DOES_LOAD_SUBTYPE_NAME_EXIST = {};
+  for (const key in LOAD_SUBTYPE_NAMES) {
+    DOES_LOAD_SUBTYPE_NAME_EXIST[LOAD_SUBTYPE_NAMES[key]] = true;
+  }
+
+  function LoadExpectation(parentModel, initiatorTitle, start, duration,
+      renderer, navigationStart, fmpEvent, fcpEvent, dclEndEvent, cpuIdleTime,
+      timeToInteractive, totalBlockingTime, url, frameId) {
+    if (!DOES_LOAD_SUBTYPE_NAME_EXIST[initiatorTitle]) {
+      throw new Error(initiatorTitle + ' is not in LOAD_SUBTYPE_NAMES');
+    }
+
+    tr.model.um.UserExpectation.call(
+        this, parentModel, initiatorTitle, start, duration);
+
+    // |renderProcess| is the renderer process that contains the loading
+    // RenderFrame.
+    this.renderProcess = renderer;
+
+    // |renderMainThread| is the CrRendererMain thread in the |renderProcess|
+    // that contains the loading RenderFrame.
+    this.renderMainThread = undefined;
+
+    // |routingId| identifies the loading RenderFrame within the renderer
+    // process.
+    this.routingId = undefined;
+
+    // |parentRoutingId| identifies the RenderFrame that created and contains
+    // the loading RenderFrame.
+    this.parentRoutingId = undefined;
+
+    // |loadFinishedEvent|, if present, signals that this is a main frame.
+    this.loadFinishedEvent = undefined;
+
+    // Startup LoadExpectations do not have renderProcess, routingId, or
+    // parentRoutingId. Maybe RenderLoadExpectation should be a separate class?
+
+    // Navigation start event. The start of this event is the start time of
+    // load expectation.
+    this.navigationStart = navigationStart;
+
+    // First meaningful paint event corresponding to the navigation start event.
+    this.fmpEvent = fmpEvent;
+
+    // First contentful paint event corresponding to the navigation start event.
+    this.fcpEvent = fcpEvent;
+
+    // DomcontentLoadedEndEvent corresponding to the navigation start event.
+    this.domContentLoadedEndEvent = dclEndEvent;
+
+    // The computed firstCpuIdleTime. Please look at time_to_interactive.html
+    // for further details about this.
+    this.firstCpuIdleTime = cpuIdleTime;
+
+    // The time at which renderer is interactive. Please look at
+    // time_to_interactive.html for further details on how this is computed.
+    this.timeToInteractive = timeToInteractive;
+
+    // Sum of all blocking time (time in top level task exceeding 50ms) between
+    // FCP and TTI.
+    this.totalBlockingTime = totalBlockingTime;
+
+    this.url = url;
+    this.frameId = frameId;
+  }
+
+  LoadExpectation.prototype = {
+    __proto__: tr.model.um.UserExpectation.prototype,
+    constructor: LoadExpectation
+  };
+
+  tr.model.um.UserExpectation.subTypes.register(LoadExpectation, {
+    stageTitle: 'Load',
+    colorId: tr.b.ColorScheme.getColorIdForReservedName('rail_load')
+  });
+
+  return {
+    LOAD_SUBTYPE_NAMES,
+    LoadExpectation,
+  };
+});
+</script>

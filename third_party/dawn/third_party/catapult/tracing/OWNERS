@@ -1,0 +1,16 @@
+dproy@chromium.org  # Prefers javascript reviews.
+khokhlov@google.com
+
+# For changes related to system_health/loading_metric.html and its tests.
+kouhei@chromium.org
+
+
+# These folks have made huge contributions to the project, but are no longer
+# actively reviewing patches.
+nduca@chromium.org
+# petrcermak@chromium.org
+# dsinclair@chromium.org
+# charliea@chromium.org
+# eakuefner@chromium.org
+# fmeawad@chromium.org
+# lpy@chromium.org

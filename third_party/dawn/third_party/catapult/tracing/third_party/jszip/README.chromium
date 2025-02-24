@@ -1,0 +1,16 @@
+Name: JSZip
+Short Name: JSZip
+URL: https://github.com/Stuk/jszip
+Date: Aug 2 2022
+Version: 3.10.1
+Revision: 0f2f1e4d0509514417db83fe5b86bde90e0ffe8d
+License: LICENSE.markdown
+License File: MIT
+Security Critical: no
+Shipped: yes
+
+Description:
+Create, read and edit .zip files with Javascript
+
+Local Modifications:
+None

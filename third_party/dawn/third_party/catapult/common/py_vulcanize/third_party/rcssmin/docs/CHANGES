@@ -1,0 +1,42 @@
+Changes with version 1.0.5
+
+ *) Added support for pypy 2.2
+
+ *) Updated benchmarks
+
+ *) Relint with newer pylint
+
+ *) Fix locale problem with the setup script on python3.
+    Submitted by https://github.com/svenstaro
+
+
+Changes with version 1.0.4
+
+ *) Documentation and benchmark updates
+
+
+Changes with version 1.0.3
+
+ *) Added support for the following grouping @-rules:
+    @supports, @document, @keyframes
+
+ *) Added support for Python 3.4 and Jython 2.7
+
+
+Changes with version 1.0.2
+
+ *) Added compat option to setup.py supporting the pip installer
+
+ *) Added support for pypy (1.9, 2.0)
+
+ *) Added support for jython (2.5)
+
+
+Changes with version 1.0.1
+
+ *) Added support for Python 3.3
+
+
+Changes with version 1.0.0
+
+ *) First stable release.

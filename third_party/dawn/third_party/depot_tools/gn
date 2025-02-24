@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Copyright 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+base_dir=$(dirname "$0")
+
+# In git bash on Windows, invoke the batch file.
+if [ "$(expr "$(uname -s)" : "^MINGW64_NT")" == "10" ]; then
+    gn.bat "$@"
+    exit
+fi
+
+PYTHONDONTWRITEBYTECODE=1 exec python3 "$base_dir/gn.py" "$@"

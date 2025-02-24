@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/object_instance.html">
+<link rel="import" href="/tracing/model/time_to_object_instance_map.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const createObjectInstance = function(
+      parent, id, category, name, creationTs) {
+    return new tr.model.ObjectInstance(
+        parent, id, category, name, creationTs);
+  };
+
+  test('timeToObjectInstanceMap', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    m.addSnapshot('cat', 'name', 10, 'a1');
+    m.addSnapshot('cat', 'name', 20, 'a2');
+    m.idWasDeleted('cat', 'name', 30);
+    m.addSnapshot('cat', 'name', 40, 'b');
+
+    assert.strictEqual(m.instances.length, 2);
+
+    const i0 = m.getInstanceAt(0);
+    const i10 = m.getInstanceAt(10);
+    assert.strictEqual(i0, i10);
+
+    assert.isDefined(i10);
+    assert.strictEqual(i10.snapshots.length, 2);
+    assert.strictEqual(i10.snapshots[0].args, 'a1');
+    assert.strictEqual(i10.snapshots[1].args, 'a2');
+
+    assert.strictEqual(i10.deletionTs, 30);
+
+    const i15 = m.getInstanceAt(15);
+    assert.strictEqual(i15, i10);
+
+    const i20 = m.getInstanceAt(20);
+    assert.strictEqual(i20, i10);
+
+    const i30 = m.getInstanceAt(30);
+    assert.isUndefined(i30);
+
+    const i35 = m.getInstanceAt(35);
+    assert.isUndefined(i35);
+
+    const i40 = m.getInstanceAt(40);
+    assert.isDefined(i40);
+    assert.notEqual(i40, i10);
+    assert.strictEqual(i40.snapshots.length, 1);
+    assert.strictEqual(i40.creationTs, 40);
+    assert.strictEqual(i40.deletionTs, Number.MAX_VALUE);
+
+    const i41 = m.getInstanceAt(41);
+    assert.strictEqual(i40, i41);
+  });
+
+  test('timeToObjectInstanceMapsBoundsLogic', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    m.addSnapshot('cat', 'name', 10, 'a1');
+    m.addSnapshot('cat', 'name', 20, 'a2');
+    m.idWasDeleted('cat', 'name', 30);
+    m.addSnapshot('cat', 'name', 40, 'b');
+    m.addSnapshot('cat', 'name', 41, 'b');
+
+    m.instances.forEach(function(i) { i.updateBounds(); });
+
+    const iA = m.getInstanceAt(10);
+    assert.strictEqual(iA.bounds.min, 10);
+    assert.strictEqual(iA.bounds.max, 30);
+
+    const iB = m.getInstanceAt(40);
+    assert.strictEqual(iB.bounds.min, 40);
+    assert.strictEqual(iB.bounds.max, 41);
+  });
+
+  test('earlySnapshot', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const i10 = m.idWasCreated('cat', 'name', 10, 'a1');
+    m.idWasDeleted('cat', 'name', 20);
+
+    assert.throws(function() {
+      m.addSnapshot('cat', 'name', 5, 'a1');
+    });
+    assert.strictEqual(i10.creationTs, 10);
+    assert.strictEqual(i10.deletionTs, 20);
+  });
+
+  test('earlySnapshotWithImplicitCreate', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const i10 = m.idWasDeleted('cat', 'name', 20);
+    m.addSnapshot('cat', 'name', 5, 'a1');
+    assert.strictEqual(i10.creationTs, 5);
+    assert.strictEqual(i10.deletionTs, 20);
+  });
+
+  test('getInstanceBeforeCreationImplicitCreate', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const i10 = m.idWasCreated('cat', 'name', 10, 'a1');
+    m.idWasDeleted('cat', 'name', 20);
+    assert.isUndefined(m.getInstanceAt(5));
+  });
+
+  test('getInstanceBeforeCreationImplicitCreateWithSnapshot', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const s5 = m.addSnapshot('cat', 'name', 5, 'a1');
+    const i10 = m.idWasDeleted('cat', 'name', 20);
+    assert.strictEqual(m.getInstanceAt(5), i10);
+  });
+
+  test('successiveDeletions', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const i20 = m.idWasDeleted('cat', 'name', 20);
+    const i30 = m.idWasDeleted('cat', 'name', 30);
+    const i40 = m.idWasDeleted('cat', 'name', 40);
+    assert.strictEqual(i20.creationTs, 20);
+    assert.isFalse(i20.creationTsWasExplicit);
+    assert.strictEqual(i20.deletionTs, 20);
+    assert.isTrue(i20.deletionTsWasExplicit);
+
+    assert.strictEqual(i30.creationTs, 30);
+    assert.isFalse(i30.creationTsWasExplicit);
+    assert.strictEqual(i30.deletionTs, 30);
+    assert.isTrue(i30.deletionTsWasExplicit);
+
+
+    assert.strictEqual(i40.creationTs, 40);
+    assert.isFalse(i40.creationTsWasExplicit);
+    assert.strictEqual(i40.deletionTs, 40);
+    assert.isTrue(i40.deletionTsWasExplicit);
+  });
+
+  test('snapshotAfterDeletion', function() {
+    const m = new tr.model.TimeToObjectInstanceMap(
+        createObjectInstance, {}, 7);
+    const i10 = m.idWasCreated('cat', 'name', 10, 'a1');
+    m.idWasDeleted('cat', 'name', 20);
+
+    const s25 = m.addSnapshot('cat', 'name', 25, 'a1');
+    const i25 = s25.objectInstance;
+
+    assert.strictEqual(i10.creationTs, 10);
+    assert.strictEqual(i10.deletionTs, 20);
+    assert.notEqual(i25, i10);
+    assert.strictEqual(i25.creationTs, 25);
+    assert.strictEqual(i25.deletionTs, Number.MAX_VALUE);
+  });
+});
+</script>
+

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/base/heading.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/track.html">
+
+<style>
+.x-axis-track {
+  height: 12px;
+}
+
+.x-axis-track.tall-mode {
+  height: 30px;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays the x-axis.
+   * @constructor
+   * @extends {Track}
+   */
+  const XAxisTrack = tr.ui.b.define('x-axis-track', tr.ui.tracks.Track);
+
+  XAxisTrack.prototype = {
+    __proto__: tr.ui.tracks.Track.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.Track.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('x-axis-track');
+      this.strings_secs_ = [];
+      this.strings_msecs_ = [];
+      this.strings_usecs_ = [];
+      this.strings_nsecs_ = [];
+
+      this.viewportChange_ = this.viewportChange_.bind(this);
+      viewport.addEventListener('change', this.viewportChange_);
+
+      const heading = document.createElement('tr-ui-b-heading');
+      heading.arrowVisible = false;
+      Polymer.dom(this).appendChild(heading);
+    },
+
+    detach() {
+      tr.ui.tracks.Track.prototype.detach.call(this);
+      this.viewport.removeEventListener('change',
+          this.viewportChange_);
+    },
+
+    viewportChange_() {
+      if (this.viewport.interestRange.isEmpty) {
+        Polymer.dom(this).classList.remove('tall-mode');
+      } else {
+        Polymer.dom(this).classList.add('tall-mode');
+      }
+    },
+
+    draw(type, viewLWorld, viewRWorld, viewHeight) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.GRID:
+          this.drawGrid_(viewLWorld, viewRWorld);
+          break;
+        case tr.ui.tracks.DrawType.MARKERS:
+          this.drawMarkers_(viewLWorld, viewRWorld);
+          break;
+      }
+    },
+
+    drawGrid_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const canvasBounds = ctx.canvas.getBoundingClientRect();
+      const trackBounds = this.getBoundingClientRect();
+      const width = canvasBounds.width * pixelRatio;
+      const height = trackBounds.height * pixelRatio;
+
+      const hasInterestRange = !this.viewport.interestRange.isEmpty;
+
+      const xAxisHeightPx = hasInterestRange ? (height * 2) / 5 : height;
+
+      const vp = this.viewport;
+      const dt = vp.currentDisplayTransform;
+
+      vp.updateMajorMarkData(viewLWorld, viewRWorld);
+      const majorMarkDistanceWorld = vp.majorMarkWorldPositions.length > 1 ?
+        vp.majorMarkWorldPositions[1] - vp.majorMarkWorldPositions[0] : 0;
+
+      const numTicksPerMajor = 5;
+      const minorMarkDistanceWorld = majorMarkDistanceWorld / numTicksPerMajor;
+      const minorMarkDistancePx = dt.xWorldVectorToView(minorMarkDistanceWorld);
+
+      const minorTickHeight = Math.floor(xAxisHeightPx * 0.25);
+
+      ctx.save();
+
+      ctx.lineWidth = Math.round(pixelRatio);
+
+      // Apply subpixel translate to get crisp lines.
+      // http://www.mobtowers.com/html5-canvas-crisp-lines-every-time/
+      const crispLineCorrection = (ctx.lineWidth % 2) / 2;
+      ctx.translate(crispLineCorrection, -crispLineCorrection);
+
+      ctx.fillStyle = 'rgb(0, 0, 0)';
+      ctx.strokeStyle = 'rgb(0, 0, 0)';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      ctx.font = (9 * pixelRatio) + 'px sans-serif';
+
+      const tickLabels = [];
+      ctx.beginPath();
+      for (let i = 0; i < vp.majorMarkWorldPositions.length; i++) {
+        const curXWorld = vp.majorMarkWorldPositions[i];
+        const curXView = dt.xWorldToView(curXWorld);
+        const displayText = vp.majorMarkUnit.format(
+            curXWorld, {deltaValue: majorMarkDistanceWorld});
+        ctx.fillText(displayText, curXView + (2 * pixelRatio), 0);
+
+        // Draw major mark.
+        tr.ui.b.drawLine(ctx, curXView, 0, curXView, xAxisHeightPx);
+
+        // Draw minor marks.
+        if (minorMarkDistancePx) {
+          for (let j = 1; j < numTicksPerMajor; ++j) {
+            const xView = Math.floor(curXView + minorMarkDistancePx * j);
+            tr.ui.b.drawLine(ctx,
+                xView, xAxisHeightPx - minorTickHeight,
+                xView, xAxisHeightPx);
+          }
+        }
+      }
+
+      // Draw bottom bar.
+      ctx.strokeStyle = 'rgb(0, 0, 0)';
+      tr.ui.b.drawLine(ctx, 0, height, width, height);
+      ctx.stroke();
+
+      // Give distance between directly adjacent markers.
+      if (!hasInterestRange) return;
+
+      // Draw middle bar.
+      tr.ui.b.drawLine(ctx, 0, xAxisHeightPx, width, xAxisHeightPx);
+      ctx.stroke();
+
+      // Distance Variables.
+      let displayDistance;
+      const displayTextColor = 'rgb(0,0,0)';
+
+      // Arrow Variables.
+      const arrowSpacing = 10 * pixelRatio;
+      const arrowColor = 'rgb(128,121,121)';
+      const arrowPosY = xAxisHeightPx * 1.75;
+      const arrowWidthView = 3 * pixelRatio;
+      const arrowLengthView = 10 * pixelRatio;
+      const spaceForArrowsView = 2 * (arrowWidthView + arrowSpacing);
+
+      ctx.textBaseline = 'middle';
+      ctx.font = (14 * pixelRatio) + 'px sans-serif';
+      const textPosY = arrowPosY;
+
+      const interestRange = vp.interestRange;
+
+      // If the range is zero, draw it's min timestamp next to the line.
+      if (interestRange.range === 0) {
+        const markerWorld = interestRange.min;
+        const markerView = dt.xWorldToView(markerWorld);
+
+        const textToDraw = vp.majorMarkUnit.format(markerWorld);
+        let textLeftView = markerView + 4 * pixelRatio;
+        const textWidthView = ctx.measureText(textToDraw).width;
+
+        // Put text to the left in case it gets cut off.
+        if (textLeftView + textWidthView > width) {
+          textLeftView = markerView - 4 * pixelRatio - textWidthView;
+        }
+
+        ctx.fillStyle = displayTextColor;
+        ctx.fillText(textToDraw, textLeftView, textPosY);
+        return;
+      }
+
+      const leftMarker = interestRange.min;
+      const rightMarker = interestRange.max;
+
+      const leftMarkerView = dt.xWorldToView(leftMarker);
+      const rightMarkerView = dt.xWorldToView(rightMarker);
+
+      const distanceBetweenMarkers = interestRange.range;
+      const distanceBetweenMarkersView =
+          dt.xWorldVectorToView(distanceBetweenMarkers);
+      const positionInMiddleOfMarkersView =
+          leftMarkerView + (distanceBetweenMarkersView / 2);
+
+      const textToDraw = vp.majorMarkUnit.format(distanceBetweenMarkers);
+      const textWidthView = ctx.measureText(textToDraw).width;
+      const spaceForArrowsAndTextView =
+          textWidthView + spaceForArrowsView + arrowSpacing;
+
+      // Set text positions.
+      let textLeftView = positionInMiddleOfMarkersView - textWidthView / 2;
+      const textRightView = textLeftView + textWidthView;
+
+      if (spaceForArrowsAndTextView > distanceBetweenMarkersView) {
+        // Print the display distance text right of the 2 markers.
+        textLeftView = rightMarkerView + 2 * arrowSpacing;
+
+        // Put text to the left in case it gets cut off.
+        if (textLeftView + textWidthView > width) {
+          textLeftView = leftMarkerView - 2 * arrowSpacing - textWidthView;
+        }
+
+        ctx.fillStyle = displayTextColor;
+        ctx.fillText(textToDraw, textLeftView, textPosY);
+
+        // Draw the arrows pointing from outside in and a line in between.
+        ctx.strokeStyle = arrowColor;
+        ctx.beginPath();
+        tr.ui.b.drawLine(ctx, leftMarkerView, arrowPosY, rightMarkerView,
+            arrowPosY);
+        ctx.stroke();
+
+        ctx.fillStyle = arrowColor;
+        tr.ui.b.drawArrow(ctx,
+            leftMarkerView - 1.5 * arrowSpacing, arrowPosY,
+            leftMarkerView, arrowPosY,
+            arrowLengthView, arrowWidthView);
+        tr.ui.b.drawArrow(ctx,
+            rightMarkerView + 1.5 * arrowSpacing, arrowPosY,
+            rightMarkerView, arrowPosY,
+            arrowLengthView, arrowWidthView);
+      } else if (spaceForArrowsView <= distanceBetweenMarkersView) {
+        let leftArrowStart;
+        let rightArrowStart;
+        if (spaceForArrowsAndTextView <= distanceBetweenMarkersView) {
+          // Print the display distance text.
+          ctx.fillStyle = displayTextColor;
+          ctx.fillText(textToDraw, textLeftView, textPosY);
+
+          leftArrowStart = textLeftView - arrowSpacing;
+          rightArrowStart = textRightView + arrowSpacing;
+        } else {
+          leftArrowStart = positionInMiddleOfMarkersView;
+          rightArrowStart = positionInMiddleOfMarkersView;
+        }
+
+        // Draw the arrows pointing inside out.
+        ctx.strokeStyle = arrowColor;
+        ctx.fillStyle = arrowColor;
+        tr.ui.b.drawArrow(ctx,
+            leftArrowStart, arrowPosY,
+            leftMarkerView, arrowPosY,
+            arrowLengthView, arrowWidthView);
+        tr.ui.b.drawArrow(ctx,
+            rightArrowStart, arrowPosY,
+            rightMarkerView, arrowPosY,
+            arrowLengthView, arrowWidthView);
+      }
+
+      ctx.restore();
+    },
+
+    drawMarkers_(viewLWorld, viewRWorld) {
+      const pixelRatio = window.devicePixelRatio || 1;
+      const trackBounds = this.getBoundingClientRect();
+      const viewHeight = trackBounds.height * pixelRatio;
+
+      if (!this.viewport.interestRange.isEmpty) {
+        this.viewport.interestRange.draw(this.context(),
+            viewLWorld, viewRWorld, viewHeight);
+      }
+    },
+
+    /**
+     * Adds items intersecting the given range to a selection.
+     * @param {number} loVX Lower X bound of the interval to search, in
+     *     viewspace.
+     * @param {number} hiVX Upper X bound of the interval to search, in
+     *     viewspace.
+     * @param {number} loVY Lower Y bound of the interval to search, in
+     *     viewspace.
+     * @param {number} hiVY Upper Y bound of the interval to search, in
+     *     viewspace.
+     * @param {Selection} selection Selection to which to add results.
+     */
+    addIntersectingEventsInRangeToSelection(
+        loVX, hiVX, loY, hiY, selection) {
+      // Does nothing. There's nothing interesting to pick on the xAxis
+      // track.
+    },
+
+    addAllEventsMatchingFilterToSelection(filter, selection) {
+    }
+  };
+
+  return {
+    XAxisTrack,
+  };
+});
+</script>

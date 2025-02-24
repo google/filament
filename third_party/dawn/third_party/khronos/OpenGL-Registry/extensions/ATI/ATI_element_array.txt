@@ -1,0 +1,252 @@
+
+Name
+
+    ATI_element_array
+
+
+Name Strings
+
+    GL_ATI_element_array
+
+
+Contact
+
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+
+
+Version
+
+    0.3 - 11/04/06
+    Updated contact info after ATI/AMD merger.
+
+    0.2 - 09/18/01
+    Changed default behavior of draw commands when element array is
+    not enabled. Now generates an error and draws nothing.
+
+    0.1 - 07/06/01
+    Initial revision
+
+
+Number
+
+    256
+    
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1 is required. ATI_vertex_array_object affects the
+    definition of this extension.
+
+    
+Overview
+
+    This extension provides a mechanism for an application to create
+    an array of index data for use in specifying geometric primitives.
+    
+    This extension is most useful when used in conjunction with the
+    ATI_vertex_array_object extension. ATI_vertex_array_object
+    provides an interface for storing vertex array data in persistent,
+    hardware-addressable memory. In cases where large amounts of
+    vertex data are in use, the index data used to construct
+    primitives (typically as passed to the GL through DrawElements)
+    can impose a significant bandwidth burden. ATI_element_array
+    allows the application to specify independent arrays of elements,
+    which can then be cached using ATI_vertex_array_object.
+
+    
+Issues
+
+    Should we allow ElementPointerATI to specify a stride?
+    
+        No, the expectation is that the indices are always packed
+        together. 
+    
+    Should we allow ElementPointerATI to accept more types than those
+    accepted by DrawElements and DrawRangeElements?
+    
+        No, it doesn't seem useful to allow float indices, they have
+        to get converted to some kind of int anyways.
+    
+    Should the element count be specified in the draw command, or as
+    part of the definition of the element array.
+    
+        As part of the draw command. Specifying it as part of the
+        definition of element array sort of makes sense, but it
+        doesn't really fit with the way that vertex arrays currently
+        work.
+
+    Do we want to specify new entry points for the draw commands?
+
+        Yes. The alternative is to overload DrawElements and
+        DrawRangeElements by doing something funky like passing a null
+        pointer. This seems like it would be too confusing.
+
+    Is it useful to have the draw commands do something (other than
+    return an error) when the element array is disabled?
+
+        No. It's very hard to ascertain the intent of the application
+	at this point, so it's probably best to not draw anything.
+
+    
+New Procedures and Functions
+    
+    void ElementPointerATI(enum type, const void *pointer)
+    
+    void DrawElementArrayATI(enum mode, sizei count)
+    
+    void DrawRangeElementArrayATI(enum mode, uint start, 
+                                  uint end, sizei count)
+    
+    
+New Tokens
+    
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState, the <value> parameter of IsEnabled, and if
+    ATI_vertex_array_object is defined, the <array> parameter of
+    ArrayObjectATI, GetArrayObjectivATI, GetArrayObjectfvATI:
+    
+        ELEMENT_ARRAY_ATI		0x8768
+    
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+    
+        ELEMENT_ARRAY_TYPE_ATI		0x8769
+
+    Accepted by the <pname> paramater of GetPointerv:
+    
+        ELEMENT_ARRAY_POINTER_ATI	0x876A
+    
+    
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    In section 2.6.3, GL Commands within Begin/End, add
+    ElementArrayATI to the list of commands that are not allowed
+    within any Begin/End pair, but may or may not generate an error.
+
+
+    Inserted in section 2.8, Vertex Arrays, after the description of
+    DrawRangeElements, but before the description of
+    InterleavedArrays:
+    
+    The commands
+    
+        void DrawElementArrayATI(enum mode, sizei count)
+    
+        void DrawRangeElementArrayATI(enum mode, uint start, 
+                                      uint end, sizei count)
+    
+    can be used to construct a sequence of geometric primitives in the
+    same manner as DrawElements and DrawRangeElements, but using
+    a previously defined array of indices. For DrawElementArrayATI,
+    the <mode> and <count> arguments match the corresponding arguments
+    to DrawElements. For DrawRangeElementArrayATI, the <mode>,
+    <start>, <end> and <count> arguments match the corresponding
+    arguments to DrawRangeElements.
+    
+    For both DrawElementArrayATI and DrawRangeElementArrayATI, the
+    list of indices used to generate primitives is defined by the
+    command
+    
+        void ElementPointer(enum type, const void *pointer)
+    
+    The <pointer> argument is used to specify the list of indices, and
+    the <type> argument specifies their format. These arguments match
+    the <type> and <indices> arguments to DrawElements and
+    DrawRangeElements, and the allowed types match those accepted by
+    these two commands -- GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, and
+    GL_UNSIGNED_INT. ElementPointer does not specify a stride between
+    successive indices in the array, the values must be stored
+    sequentially in memory.
+    
+    The array of element indices can be enabled and disabled by
+    calling EnableClientState and DisableClientState with the argument
+    ELEMENT_ARRAY_ATI. DrawElements and DrawRangeElements ignore the
+    currently enabled element array.
+    
+    If a DrawElementArrayATI or DrawRangeElementArrayATI command is
+    issued when there is no currently enabled element array, an error
+    is generated, no drawing is done and the current state is not
+    updated. 
+    
+    
+    
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    In section 5.4, Display Lists, change the last sentence of the first
+    paragraph to read: 
+    
+    (Vertex array and element array pointers are dereferenced when the
+    commands ArrayElement, DrawArrays, DrawElements,
+    DrawRangeElements, DrawElementArrayATI, or
+    DrawRangeElementArrayATI are accumulated into a display list.)
+    
+    In section 5.4, Display Lists, add ElementArrayATI to the list of
+    commands that are not compiled into display lists but are executed
+    immediately.
+
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+    In section 6.1.11, Pointer and String Queries, add
+    ELEMENT_ARRAY_POINTER_ATI to the list of possible values for the
+    <pname> parameter of GetPointerv.
+    
+    
+Additions to the specification of ATI_vertex_array_object
+    
+    Added to the discussion of the <size>, <type>, and <stride>
+    parameters of ArrayObjectATI:
+    
+    If the <array> parameter of ArrayObjectATI is ELEMENT_ARRAY_ATI,
+    then <size> must be one, and <stride> must be zero. INVALID_VALUE
+    is generated if either of these parameters is invalid. The <type>
+    parameter must be UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT.
+    INVALID_ENUM is generated if <type> is not one of these values.
+    
+    
+Errors
+    
+    Invalid <mode> or <count> parameters to DrawElementArrayATI
+    generate the same errors as would the corresponding call to
+    DrawElements.
+    
+    Invalid <mode>, <count>, <start>, or <end> parameters to
+    DrawRangeElementArrayATI generate the same errors as would the
+    corresponding call to DrawRangeElements.
+    
+    INVALID_ENUM is generated if the <type> parameter of
+    ElementArrayATI is not UNSIGNED_BYTE, UNSIGNED_SHORT, or
+    UNSIGNED_INT. 
+
+    INVALID_OPERATION is generated if a DrawElementArrayATI or
+    DrawRangeElementArrayATI command is issued when there is no
+    currently enabled element array.
+
+    
+New State
+    
+    Added to table 6.6, Vertex Array Data
+    
+    Get Value                   Get Command     Type    Initial Value   Attrib
+    ---------                   -----------     ----    -------------   ------
+    ELEMENT_ARRAY_ATI           IsEnabled       B       False           client
+    ELEMENT_ARRAY_TYPE_ATI      GetIntegerv     Z4      UNSIGNED_INT    client
+    ELEMENT_ARRAY_POINTER_ATI   GetPointerv     Z+      0               client
+        
+    
+Implementation Notes
+
+    For maximum performance, applications should use
+    UNSIGNED_SHORT or UNSIGNED_INT indices.

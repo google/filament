@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2011 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+<title>chrome://inspect test shell</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+<link rel="import" href="/tracing/ui/base/base.html">
+<link rel="import" href="/tracing/ui/extras/about_tracing/profiling_view.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body > x-profiling-view {
+    flex: 1 1 auto;
+    overflow: hidden;
+    position: absolute;
+    top: 0px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+</style>
+</head>
+<body>
+  <script>
+  'use strict';
+
+  let profilingViewEl;
+
+  function onLoad() {
+    if (window.DevToolsHost === undefined) {
+      tr.showPanic(
+          'This page only works when launched from chrome://inspect',
+          'Try going to ' +
+          'chrome://inspect/?browser-inspector=' +
+          'http://localhost:8003/examples/chrome_inspect_test_shell.html' +
+          '#devices ' +
+          'and then clicking the inspect link on a browser');
+
+      return;
+    }
+
+    const tracingControllerClient =
+        new tr.ui.e.about_tracing.InspectorTracingControllerClient(
+            new tr.ui.e.about_tracing.InspectorConnection(window));
+    profilingViewEl = new tr.ui.e.about_tracing.ProfilingView(tracingControllerClient); // @suppress longLineCheck
+    document.body.appendChild(profilingViewEl);
+  }
+  window.addEventListener('load', onLoad);
+  </script>
+</body>
+</html>

@@ -1,0 +1,4440 @@
+Name
+
+    ARB_direct_state_access
+
+Name Strings
+
+    GL_ARB_direct_state_access
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+    Christophe Riccio (christophe.riccio 'at' unity3d.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Piers Daniell, NVIDIA
+    Christophe Riccio, Unity
+    Daniel Rákos, AMD
+    Daniel Koch, NVIDIA
+    Pat Brown, NVIDIA
+    Jon Leech
+    Members of the OpenGL ARB working group
+    Contributors to GL_EXT_direct_state_access
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date:         September 17, 2019
+    Author Revision:            51
+
+Number
+
+    ARB Extension #164
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    This extension is written against the OpenGL 4.4 (core) specification.
+
+Overview
+
+    In unextended OpenGL, most mutation of state contained in objects is through
+    an indirection known as a binding. Objects are attached to a context (either
+    directly or indirectly via a container) and then commands to modify or
+    query their state are issued on that context, indirecting through its
+    attachments and into the underlying object. This is known as `bind-to-edit'.
+
+    This extension derives from the GL_EXT_direct_state_access extension, which
+    added accessors for most state on most objects, allowing it to be queried
+    and modified without the object needing to be bound to a context. In cases
+    where a single property of an object is to be modified, directly accessing
+    its state can be more efficient than binding the object to the context and
+    then indirecting through it. Further, directly accessing the state of
+    objects through their names rather than by bind-to-edit does not disturb
+    the bindings of the current context, which is useful for tools, middleware
+    and other applications that are unaware of the outer state but it can also
+    avoid cases of redundant state changes.
+
+    There are several subtle differences between this extension and the older
+    GL_EXT_direct_state_access extension. First, this extension only expands
+    functionality that still exists in core profile OpenGL. Second, any function
+    that only partially avoids bind-to-edit (for example, explicitly specifying
+    a texture unit, bypassing the active texture selector but still indirecting
+    through a texture binding) has been omitted. Finally, the original extension
+    effectively allowed any function to create new objects whereas in unextended
+    OpenGL, only binding functions created objects (bind-to-create), even if
+    their names were obtained through one of the glGen* functions. This
+    extension does not allow on-the-spot creation of objects. Rather than rely
+    on bind-to-create (which would defeat the purpose of the extension), we add
+    glCreate* functions that produce new names that represent state vectors
+    initialized to their default values. Due to this last change, several
+    functions no longer require their <target> parameters, and so where
+    applicable, this parameter is absent from this extension.
+
+New Procedures and Functions
+
+    /* Transform Feedback object functions */
+
+    void CreateTransformFeedbacks(sizei n, uint *ids);
+
+    void TransformFeedbackBufferBase(uint xfb, uint index,
+                                     uint buffer);
+
+    void TransformFeedbackBufferRange(uint xfb, uint index,
+                                      uint buffer, intptr offset, sizeiptr size);
+
+    void GetTransformFeedbackiv(uint xfb, enum pname, int *param);
+
+    void GetTransformFeedbacki_v(uint xfb, enum pname, uint index,
+                                 int *param);
+
+    void GetTransformFeedbacki64_v(uint xfb, enum pname, uint index,
+                                   int64 *param);
+
+
+    /* Buffer object functions */
+
+    void CreateBuffers(sizei n, uint *buffers);
+
+    void NamedBufferStorage(uint buffer,
+                            sizeiptr size,
+                            const void *data,
+                            bitfield flags);
+
+    void NamedBufferData(uint buffer,
+                         sizeiptr size,
+                         const void *data,
+                         enum usage);
+
+    void NamedBufferSubData(uint buffer,
+                            intptr offset, sizeiptr size,
+                            const void *data);
+
+    void CopyNamedBufferSubData(uint readBuffer, uint writeBuffer,
+                                intptr readOffset, intptr writeOffset,
+                                sizeiptr size);
+
+    void ClearNamedBufferData(uint buffer,
+                              enum internalformat,
+                              enum format,
+                              enum type,
+                              const void *data);
+
+    void ClearNamedBufferSubData(uint buffer,
+                                 enum internalformat,
+                                 intptr offset,
+                                 sizeiptr size,
+                                 enum format,
+                                 enum type,
+                                 const void *data);
+
+    void *MapNamedBuffer(uint buffer, enum access);
+
+    void *MapNamedBufferRange(uint buffer,
+                              intptr offset, sizeiptr length,
+                              bitfield access);
+
+    boolean UnmapNamedBuffer(uint buffer);
+
+    void FlushMappedNamedBufferRange(uint buffer, intptr offset,
+                                     sizeiptr length);
+
+    void GetNamedBufferParameteriv(uint buffer,
+                                   enum pname, int *params);
+
+    void GetNamedBufferParameteri64v(uint buffer,
+                                   enum pname, int64 *params);
+
+    void GetNamedBufferPointerv(uint buffer,
+                                enum pname, void **params);
+
+    void GetNamedBufferSubData(uint buffer,
+                               intptr offset, sizeiptr size, void *data);
+
+
+    /* Framebuffer object functions */
+
+    void CreateFramebuffers(sizei n, uint *framebuffers);
+
+    void NamedFramebufferRenderbuffer(uint framebuffer,
+                                      enum attachment,
+                                      enum renderbuffertarget,
+                                      uint renderbuffer);
+
+    void NamedFramebufferParameteri(uint framebuffer,
+                                    enum pname,
+                                    int param);
+
+    void NamedFramebufferTexture(uint framebuffer,
+                                 enum attachment,
+                                 uint texture, int level);
+
+    void NamedFramebufferTextureLayer(uint framebuffer,
+                                      enum attachment,
+                                      uint texture, int level, int layer);
+
+    void NamedFramebufferDrawBuffer(uint framebuffer, enum mode);
+
+    void NamedFramebufferDrawBuffers(uint framebuffer, sizei n,
+                                     const enum *bufs);
+
+    void NamedFramebufferReadBuffer(uint framebuffer, enum mode);
+
+    void InvalidateNamedFramebufferData(uint framebuffer,
+                                        sizei numAttachments,
+                                        const enum *attachments);
+
+    void InvalidateNamedFramebufferSubData(uint framebuffer,
+                                           sizei numAttachments,
+                                           const enum *attachments,
+                                           int x, int y,
+                                           sizei width, sizei height);
+
+    void ClearNamedFramebufferiv(uint framebuffer, enum buffer,
+                                 int drawbuffer, const int *value);
+
+    void ClearNamedFramebufferuiv(uint framebuffer, enum buffer,
+                                  int drawbuffer, const uint *value);
+
+    void ClearNamedFramebufferfv(uint framebuffer, enum buffer,
+                                 int drawbuffer, const float *value);
+
+    void ClearNamedFramebufferfi(uint framebuffer, enum buffer,
+                                 int drawbuffer, float depth, int stencil);
+
+    void BlitNamedFramebuffer(uint readFramebuffer,
+                              uint drawFramebuffer,
+                              int srcX0,
+                              int srcY0,
+                              int srcX1,
+                              int srcY1,
+                              int dstX0,
+                              int dstY0,
+                              int dstX1,
+                              int dstY1,
+                              bitfield mask,
+                              enum filter);
+
+    enum CheckNamedFramebufferStatus(uint framebuffer, enum target);
+
+    void GetNamedFramebufferParameteriv(uint framebuffer,
+                                        enum pname,
+                                        int *param);
+
+    void GetNamedFramebufferAttachmentParameteriv(uint framebuffer,
+                                                  enum attachment,
+                                                  enum pname,
+                                                  int *params);
+
+
+    /* Renderbuffer object functions */
+
+    void CreateRenderbuffers(sizei n, uint *renderbuffers);
+
+    void NamedRenderbufferStorage(uint renderbuffer,
+                                  enum internalformat,
+                                  sizei width, sizei height);
+
+    void NamedRenderbufferStorageMultisample(uint renderbuffer,
+                                             sizei samples,
+                                             enum internalformat,
+                                             sizei width, sizei height);
+
+    void GetNamedRenderbufferParameteriv(uint renderbuffer,
+                                         enum pname, int *params);
+
+
+    /* Texture object functions */
+
+    void CreateTextures(enum target, sizei n, uint *textures);
+
+    void TextureBuffer(uint texture,
+                       enum internalformat, uint buffer);
+
+    void TextureBufferRange(uint texture,
+                            enum internalformat, uint buffer,
+                            intptr offset, sizeiptr size);
+
+    void TextureStorage1D(uint texture, sizei levels,
+                          enum internalformat,
+                          sizei width);
+
+    void TextureStorage2D(uint texture, sizei levels,
+                          enum internalformat,
+                          sizei width, sizei height);
+
+    void TextureStorage3D(uint texture, sizei levels,
+                          enum internalformat,
+                          sizei width, sizei height, sizei depth);
+
+    void TextureStorage2DMultisample(uint texture, sizei samples,
+                                     enum internalformat, sizei width,
+                                     sizei height,
+                                     boolean fixedsamplelocations);
+
+    void TextureStorage3DMultisample(uint texture, sizei samples,
+                                     enum internalformat, sizei width,
+                                     sizei height, sizei depth,
+                                     boolean fixedsamplelocations);
+
+    void TextureSubImage1D(uint texture, int level,
+                           int xoffset, sizei width,
+                           enum format, enum type,
+                           const void *pixels);
+
+    void TextureSubImage2D(uint texture, int level,
+                           int xoffset, int yoffset,
+                           sizei width, sizei height,
+                           enum format, enum type,
+                           const void *pixels);
+
+    void TextureSubImage3D(uint texture, int level,
+                           int xoffset, int yoffset, int zoffset,
+                           sizei width, sizei height, sizei depth,
+                           enum format, enum type,
+                           const void *pixels);
+
+    void CompressedTextureSubImage1D(uint texture, int level,
+                                     int xoffset,
+                                     sizei width,
+                                     enum format,
+                                     sizei imageSize, const void *data);
+
+    void CompressedTextureSubImage2D(uint texture, int level,
+                                     int xoffset, int yoffset,
+                                     sizei width, sizei height,
+                                     enum format,
+                                     sizei imageSize, const void *data);
+
+    void CompressedTextureSubImage3D(uint texture, int level,
+                                     int xoffset, int yoffset, int zoffset,
+                                     sizei width, sizei height, sizei depth,
+                                     enum format,
+                                     sizei imageSize, const void *data);
+
+    void CopyTextureSubImage1D(uint texture,
+                               int level,
+                               int xoffset,
+                               int x, int y,
+                               sizei width);
+
+    void CopyTextureSubImage2D(uint texture,
+                               int level,
+                               int xoffset, int yoffset,
+                               int x, int y,
+                               sizei width, sizei height);
+
+    void CopyTextureSubImage3D(uint texture,
+                               int level,
+                               int xoffset, int yoffset, int zoffset,
+                               int x, int y,
+                               sizei width, sizei height);
+
+    void TextureParameterf(uint texture,
+                           enum pname, float param);
+
+    void TextureParameterfv(uint texture,
+                            enum pname, const float *param);
+
+    void TextureParameteri(uint texture,
+                           enum pname, int param);
+
+    void TextureParameterIiv(uint texture,
+                             enum pname, const int *params);
+
+    void TextureParameterIuiv(uint texture,
+                              enum pname, const uint *params);
+
+    void TextureParameteriv(uint texture,
+                            enum pname, const int *param);
+
+    void GenerateTextureMipmap(uint texture);
+
+    void BindTextureUnit(uint unit, uint texture);
+
+    void GetTextureImage(uint texture, int level,
+                         enum format, enum type,
+                         sizei bufSize,
+                         void *pixels);
+
+    void GetCompressedTextureImage(uint texture, int level,
+                                   sizei bufSize,
+                                   void *pixels);
+
+    void GetTextureLevelParameterfv(uint texture,
+                                    int level,
+                                    enum pname, float *params);
+
+    void GetTextureLevelParameteriv(uint texture,
+                                    int level,
+                                    enum pname, int *params);
+
+    void GetTextureParameterfv(uint texture,
+                               enum pname, float *params);
+
+    void GetTextureParameterIiv(uint texture,
+                                enum pname, int *params);
+
+    void GetTextureParameterIuiv(uint texture,
+                                 enum pname, uint *params);
+
+    void GetTextureParameteriv(uint texture,
+                               enum pname, int *params);
+
+
+    /* Vertex Array object functions */
+
+    void CreateVertexArrays(sizei n, uint *arrays);
+
+    void DisableVertexArrayAttrib(uint vaobj, uint index);
+
+    void EnableVertexArrayAttrib(uint vaobj, uint index);
+
+    void VertexArrayElementBuffer(uint vaobj, uint buffer);
+
+    void VertexArrayVertexBuffer(uint vaobj, uint bindingindex, uint buffer,
+                                 intptr offset, sizei stride);
+
+    void VertexArrayVertexBuffers(uint vaobj, uint first, sizei count,
+                                  const uint *buffers,
+                                  const intptr *offsets,
+                                  const sizei *strides);
+
+    void VertexArrayAttribFormat(uint vaobj, uint attribindex, int size,
+                                 enum type, boolean normalized,
+                                 uint relativeoffset);
+
+    void VertexArrayAttribIFormat(uint vaobj, uint attribindex, int size,
+                                  enum type, uint relativeoffset);
+
+    void VertexArrayAttribLFormat(uint vaobj, uint attribindex, int size,
+                                  enum type, uint relativeoffset);
+
+    void VertexArrayAttribBinding(uint vaobj, uint attribindex,
+                                  uint bindingindex);
+
+    void VertexArrayBindingDivisor(uint vaobj, uint bindingindex,
+                                   uint divisor);
+
+    void GetVertexArrayiv(uint vaobj,
+                          enum pname,
+                          int *param);
+
+    void GetVertexArrayIndexediv(uint vaobj,
+                                 uint index,
+                                 enum pname,
+                                 int *param);
+
+    void GetVertexArrayIndexed64iv(uint vaobj,
+                                   uint index,
+                                   enum pname,
+                                   int64 *param);
+
+    /* Sampler object functions */
+
+    void CreateSamplers(sizei n, uint *samplers);
+
+
+    /* Program Pipeline object functions */
+
+    void CreateProgramPipelines(sizei n, uint *pipelines);
+
+
+    /* Query object functions */
+
+    void CreateQueries(enum target, sizei n, uint *ids);
+    void GetQueryBufferObjectiv(uint id, uint buffer, enum pname,
+                                intptr offset);
+    void GetQueryBufferObjectuiv(uint id, uint buffer, enum pname,
+                                 intptr offset);
+    void GetQueryBufferObjecti64v(uint id, uint buffer, enum pname,
+                                  intptr offset);
+    void GetQueryBufferObjectui64v(uint id, uint buffer, enum pname,
+                                   intptr offset);
+
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetTextureParameter{if}v and
+    GetTextureParameterI{i ui}v:
+
+        TEXTURE_TARGET                                      0x1006
+
+    Accepted by the <pname> parameter of GetQueryObjectiv:
+
+        QUERY_TARGET                                        0x82EA
+
+    Accepted by the <pname> parameter of GetIntegeri_v:
+
+        TEXTURE_BINDING_1D                                  <existing>
+        TEXTURE_BINDING_1D_ARRAY                            <existing>
+        TEXTURE_BINDING_2D                                  <existing>
+        TEXTURE_BINDING_2D_ARRAY                            <existing>
+        TEXTURE_BINDING_2D_MULTISAMPLE                      <existing>
+        TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY                <existing>
+        TEXTURE_BINDING_3D                                  <existing>
+        TEXTURE_BINDING_BUFFER                              <existing>
+        TEXTURE_BINDING_CUBE_MAP                            <existing>
+        TEXTURE_BINDING_CUBE_MAP_ARRAY                      <existing>
+        TEXTURE_BINDING_RECTANGLE                           <existing>
+
+Additions to Chapter 2 of the OpenGL 4.4 (core) Specification (OpenGL
+Fundamentals)
+
+    Replace the final paragraph of Section 2.5.1.1, "Name Spaces, Name
+    Generation and Object Creation" with the following:
+
+    Objects may also be created directly by functions that return a new
+    name or names representing a freshly initialized object. Some functions
+    return a single object name directly whereas others are able to create a
+    large number of new objects, returning their names in an array. Examples of
+    the former are CreateProgram for program objects and FenceSync for fence
+    sync objects. Examples of the latter are CreateBuffers, CreateTextures and
+    CreateVertexArrays for buffers, textures and vertex arrays, respectively.
+
+Additions to Chapter 4 of the OpenGL 4.4 (core) Specification (Event Model)
+
+    Modifications to Section 4.2, "Query Objects and Asynchronous Queries"
+
+    (Insert the following after the description of GenQueries and before the
+    introduction of DeleteQueries, p 39)
+
+    Query objects may also be created with the command
+
+        void CreateQueries(enum target, sizei n, uint *ids);
+
+    CreateQueries returns <n> previously unused query object names in <ids>,
+    each representing a new query object with the specified <target>.
+    <target> must be one of the query object targets described in section
+    4.2.
+
+    The initial state of the resulting query object is that the result is
+    marked available (the value of QUERY_RESULT_AVAILABLE) for the query
+    object is TRUE) and the result value (the value of QUERY_RESULT) is
+    zero.
+
+    Errors
+
+    An INVALID_ENUM error is generated if <target> is not one of the query
+    object targets described in section 4.2.
+
+    An INVALID_VALUE error is generated if <n> is negative.
+
+
+    (Modify the introduction of GetQueryObject* as follows, p. ??, to add
+    the QUERY_TARGET <pname> and the GetQueryBufferObject* commands)
+
+    The state of a query object may be queried with the commands
+
+    void GetQueryObjectiv(uint id,enum pname,int *params);
+    void GetQueryObjectuiv(uint id,enum pname,uint *params);
+    void GetQueryObjecti64v(uint id,enum pname,int64 *params);
+    void GetQueryObjectui64v(uint id,enum pname,uint64 *params);
+    void GetQueryBufferObjectiv(uint id,uint buffer,enum pname,intptr offset);
+    void GetQueryBufferObjectuiv(uint id,uint buffer,enum pname,intptr offset);
+    void GetQueryBufferObjecti64v(uint id,uint buffer,enum pname,intptr offset);
+    void GetQueryBufferObjectui64v(uint id,uint buffer,enum pname,intptr offset);
+
+    <id> is the name of a query object.
+
+    For GetQueryBufferObject*, <buffer> is the name of a buffer object and
+    <offset> is an offset into <buffer> at which the queried value is
+    written.
+
+    For GetQueryObject*, the queried value may be returned either in client
+    memory or in a buffer object. If zero is bound to the current query
+    result buffer binding point (see QUERY_RESULT in
+    section~\ref{vert:vbo:bind), then <params> is treated as a pointer into
+    client memory at which the queried value is written. Otherwise, <params>
+    is treated as an offset into the query result buffer object at which the
+    queried value is written.
+
+    There may be an indeterminate delay ...
+
+    If <pname> is QUERY_TARGET, then the target of the query object is
+    returned as a single integer.
+
+    If <pname> is QUERY_RESULT, then the query object's result value is
+    returned as a single integer. If the value ...
+
+    If <pname> is QUERY_RESULT_NO_WAIT, then the query object's result value
+    is returned as a single integer if the result ...
+
+    If multiple queries are issued using the same object name prior to
+    calling these query commands, the result and availability information
+    returned ...
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <id> is not the name of a
+    query object, or if the query object named by <id> is currently active.
+
+    An INVALID_OPERATION error is generated by GetQueryBufferObject* if
+    <buffer> is not the name of an existing buffer object.
+
+    An INVALID_ENUM error is generated if <pname> is not QUERY_RESULT,
+    QUERY_RESULT_AVAILABLE, QUERY_RESULT_NO_WAIT, or QUERY_TARGET.
+
+    An INVALID_OPERATION error is generated if the query writes to a buffer
+    object, and the specified buffer offset would cause data to be written
+    beyond the bounds of that buffer object.
+
+    An INVALID_VALUE error is generated by GetQueryBufferObject* if <offset>
+    is negative.
+
+
+    Modifications to Section 4.3, "Time Queries"
+
+    (Add following the description of QueryCounter on p. 45)
+
+    A timer query object is created with the commands
+
+        void QueryCounter(uint id, enum target);
+
+    ... <id> must be the name of an existing query object of that type.
+
+    Alternatively, TIMESTAMP query objects can be created by calling
+    CreateQueries with <target> set to TIMESTAMP.
+
+    When QueryCounter is called ... for that object is marked available.
+    Timer queries can be used within a BeginQuery / EndQuery block where the
+    <target> is ...
+
+    (Retain the remainder of the section.)
+
+Additions to Chapter 6 of the OpenGL 4.4 (core) Specification (Buffer Objects)
+
+    (Insert the following before the introduction of DeleteBuffers, p. 53)
+
+    In addition to generating an unused name and then binding it to a target
+    with BindBuffer, a buffer object may also be created with the command
+
+        void CreateBuffers(sizei n, uint *buffers);
+
+    CreateBuffers returns <n> previously unused buffer names in <buffers>, each
+    representing a new buffer object initialized as if it had been bound to
+    an unspecified target.
+
+    Errors
+
+    An INVALID_VALUE error is generated if <n> is negative.
+
+
+    Modifications to Section 6.2, "Creating and Modifying Buffer Object Data Stores"
+
+    (Modify the introduction of BufferStorage as follows, p. 59)
+
+    The data store of a buffer object is created with the commands
+
+        void BufferStorage(enum target, sizeiptr size,
+                           const void *data, bitfield flags);
+        void NamedBufferStorage(uint buffer, sizeiptr size,
+                                const void *data, bitfield flags);
+
+    For BufferStorage, the data store belongs to the buffer object bound to
+    <target>, which must be one of the values listed in table 6.1. For
+    NamedBufferStorage, <buffer> is the name of the buffer object. <size> is
+    the size of the data store in basic machine units, and <flags> contains
+    a bitfield describing the intended usage of the data store.
+
+    The data store of the buffer object is allocated as a result of these
+    commands, and cannot be de-allocated ...
+
+    (Retain the remainder of the section, but replace references to
+    "BufferStorage" with "*BufferStorage").
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedBufferStorage if
+    <buffer> is not the name of an existing buffer object.
+
+
+    (Modify the introduction of BufferData as follows, p. 61)
+
+    A mutable data store may be allocated for a buffer object with the
+    commands
+
+        void BufferData(enum target, sizeiptr size,
+                        const void *data, enum usage);
+        void NamedBufferData(uint buffer, sizeiptr size,
+                             const void *data, enum usage);
+
+    For BufferData, the buffer object is that bound to <target>, which must
+    be one of the targets listed in table 6.1. For NamedBufferData, <buffer>
+    is the name of the buffer object.
+
+    <size> is the size of the data store in basic machine units, <data>
+    points to the source data in client memory, and <usage> indicates the
+    expected application usage pattern of the data store.
+
+    If <data> is non-NULL ...
+
+    (Retain the remainder of the section, but replace references to
+    "BufferData" with "*BufferData").
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedBufferData if <buffer>
+    is not the name of an existing buffer object.
+
+
+    (Modify the introduction of BufferSubData as follows, p. 63)
+
+    To modify some or all of the data contained in a buffer object's data
+    store, the client may use the commands
+
+        void BufferSubData(enum target, intptr offset,
+                           sizeiptr size, const void *data);
+        void NamedBufferSubData(uint buffer, intptr offset,
+                                sizeiptr size, const void *data);
+
+    For BufferSubData, <target> specifies the target to which the buffer
+    object is bound, and must be one of the values listed in table 6.1. For
+    NamedBufferSubData, <buffer> is the name of the buffer object.
+
+    (Retain the remainder of the section.)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedBufferSubData if
+    <buffer> is not the name of an existing buffer object.
+
+
+    Modifications to Section 6.2.1, "Clearing Buffer Object Data Stores"
+
+    (Modify the introduction of ClearBufferSubData as follows, p. 64)
+
+    To fill all or part of a buffer object's data store with constant
+    values, use the commands
+
+        void ClearBufferSubData(enum target, enum internalformat, intptr offset,
+                                sizeiptr size, enum format, enum type,
+                                const void *data);
+        void ClearNamedBufferSubData(uint buffer, enum internalformat,
+                                     intptr offset, sizeiptr size, enum format,
+                                     enum type, const void *data);
+
+    For ClearBufferSubData, the buffer object is that bound to <target>,
+    which must be one of the values listed in table 6.1. For
+    ClearNamedBufferSubData, <buffer> is the name of the buffer object.
+
+    (Retain the remainder of the section.)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by ClearNamedBufferSubData if
+    <buffer> is not the name of an existing buffer object.
+
+
+    (Retain the remainder of the section.)
+
+    (Modify the introduction of ClearBufferData as follows, p. 65)
+
+    The commands
+
+        void ClearBufferData(enum target, enum internalformat, enum format,
+                             enum type, const void *data);
+        void ClearNamedBufferData(uint buffer, enum internalformat, enum format,
+                                  enum type, const void *data);
+
+    are respectively equivalent to
+
+        ClearBufferSubData(target, internalformat, 0, size,
+                           format, type, data);
+
+    and
+
+        ClearNamedBufferSubData(buffer, internalformat, 0, size,
+                                format, type, data);
+
+    where <size> is the value of BUFFER_SIZE for the destination buffer
+    object.
+
+
+    Modifications to Section 6.3, "Mapping and Unmapping Buffer Data"
+
+    (Modify the introduction of MapBufferRange as follows, p. 65)
+
+    All or part of the data store of a buffer object may be mapped into the
+    client's address space with the commands
+
+        void *MapBufferRange(enum target, intptr offset, sizeiptr length,
+                             bitfield acesss);
+        void *MapNamedBufferRange(uint buffer, intptr offset, sizeiptr length,
+                                  bitfield access);
+
+    For MapBufferRange, the buffer object is that bound to <target>, which
+    and must be one of the values listed in table 6.1. For
+    MapNamedBufferRange, <buffer> is the name of the buffer object.
+
+    <offset> and <length> indicate the range of data in the buffer object
+    that is to be mapped, in terms of basic machine units. <access> is a
+    bitfield containing flags which describe the requested mapping. These
+    flags are described below.
+
+    (Retain the remainder of the section, but replace further references
+    to "MapBufferRange" with "Map*BufferRange").
+
+    Errors
+
+    An INVALID_OPERATION error is generated by MapNamedBufferRange if
+    <buffer> is not the name of an existing buffer object.
+
+
+    (Modify the introduction of MapBuffer with the following, p. 69)
+
+    The entire data store of a buffer object can be mapped into the client's
+    address space with the commands
+
+        void *MapBuffer(enum target, enum access);
+        void *MapNamedBuffer(uint buffer, enum access);
+
+    These commands are respectively equivalent to
+
+        MapBufferRange(target, 0, length, flags);
+
+    and
+
+        MapNamedBufferRange(buffer, 0, length, flags);
+
+    where <length> is ...
+
+    (Retain remainder of the section.)
+
+
+    (Modify the introduction of FlushMappedBufferRange as follows, p. 69)
+
+    If a buffer object is mapped with the MAP_FLUSH_EXPLICIT_BIT flag,
+    modifications to the mapped range may be indicated with the commands
+
+        void FlushMappedBufferRange(enum target,
+                                    intptr offset,
+                                    sizeiptr length);
+        void FlushMappedNamedBufferRange(uint buffer,
+                                         intptr offset,
+                                         sizeiptr length);
+
+    For FlushMappedBufferRange, the buffer object is that bound to <target>,
+    which must be one of the targets listed in Table 6.1. For
+    FlushMappedNamedBufferRange, <buffer> is the name of the buffer object.
+
+    <offset> and <length> ...
+
+    Retain the remainder of Section 6.3, but replace the two further references
+    to FlushMappedBufferRange with "FlushMapped*BufferRange").
+
+    Errors
+
+    An INVALID_OPERATION error is generated by FlushMappedNamedBufferRange
+    if <buffer> is not the name of an existing buffer object.
+
+
+    Modifications to Section 6.3.1, "Unmapping Buffers"
+
+    (Modify the introduction of UnmapBuffer as follows, p. 70)
+
+    After the client ..., the mapping must be relinquished with one
+    of the commands
+
+        boolean UnmapBuffer(enum target);
+        boolean UnmapNamedBuffer(uint buffer);
+
+    For UnmapBuffer, the buffer object is that bound to <target>, which must
+    be one of the targets listed in table 6.1. For UnmapNamedBuffer,
+    <buffer> is the name of the buffer object.
+
+    Unmapping a mapped buffer ...
+
+    (Retain the remainder of Section 6.3.1, but replace any further
+    reference to "UnmapBuffer" with "Unmap*Buffer").
+
+    If an error is generated, FALSE is returned.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by UnmapNamedBuffer if <buffer>
+    is not the name of an existing buffer object.
+
+    An INVALID_OPERATION error is generated if the buffer object's
+    data store is already in the unmapped state.
+
+
+    Modifications to Section 6.6, "Copying Between Buffers"
+
+    (Modify the introduction of CopyBufferSubData as follows, p. 72)
+
+    All or part of the data store of a buffer object may be copied to the
+    data store of another buffer object with the commands
+
+        void CopyBufferSubData(enum readTarget, enum writeTarget,
+                               intptr readOffset, intptr writeOffset,
+                               sizeiptr size);
+        void CopyNamedBufferSubData(uint readBuffer, uint writeBuffer,
+                                    intptr readOffset, intptr writeOffset,
+                                    sizeiptr size);
+
+    For CopyBufferSubData, <readTarget> and <writeTarget> are the targets to
+    which the source and destination buffers are bound, and each must be one
+    of the targets listed in table 6.1. For CopyNamedBufferSubData,
+    <readBuffer> and <writeBuffer> are the names of the source and
+    destination buffers, respectively.
+
+    While any of these targets may be used, COPY_READ_BUFFER and
+    COPY_WRITE_BUFFER are provided specifically for copies, so that they can
+    be used without affecting other buffer binding targets that may be in
+    use.
+
+    <writeOffset> and <size> specify the range of data in the destination
+    buffer object that is to be replaced, in terms of basic machine units.
+    <readOffset> and <size> specify the range of data in the source buffer
+    object that is to be copied to the corresponding region of the
+    destination buffer object.
+
+    (Replace references in the Errors section of "the buffer object bound to
+    <readTarget> / <writeTarget>" with "the source / destination buffer
+    object", respectively).
+
+    Errors
+
+    An INVALID_OPERATION error is generated by CopyNamedBufferSubData if
+    <readBuffer> or <writeBuffer> is not the name of an existing buffer
+    object.
+
+
+    Modifications to Section 6.7, "Buffer Object Queries"
+
+    (Replace the introduction of GetBufferParameteri{64}v with the following,
+    p. 73)
+
+    To query information about a buffer object, use the commands
+
+        void GetBufferParameteriv(enum target, enum pname, int *data);
+        void GetBufferParamereri64v(enum target, enum pname, int64 *data);
+        void GetNamedBufferParameteriv(uint buffer, enum pname, int *data);
+        void GetNamedBufferParameteri64v(uint buffer, enum pname, int64 *data);
+
+    For GetBufferParameter*, the buffer object is that bound to <target>,
+    which must be one of the targets listed in table 6.1. For
+    GetNamedBufferParameter*, <buffer> is the name of the buffer object.
+
+    <pname> must be one of the buffer object parameters in table 6.2, other
+    than BUFFER_MAP_POINTER. The value of the specified parameter of the
+    target buffer object is returned in <data>.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetNamedBufferParameter* if
+    <buffer> is not the name of an existing buffer object.
+
+
+    (Replace the introduction of GetBufferSubData with the following, p. 73)
+
+    To query the data store of a buffer object, use the commands
+
+        void GetBufferSubData(enum target, intptr offset,
+                              sizeiptr size, void *data);
+        void GetNamedBufferSubData(uint buffer, intptr offset,
+                                   sizeiptr size, void *data);
+
+    For GetBufferSubData, <target> specifies the target to which the source
+    buffer object is bound, and must be one of the values listed in table
+    6.1. For GetNamedBufferSubData, <buffer> specifies the name of the source
+    buffer object.
+
+    <offset> and <size> indicate ...
+
+    (Retain the remainder of the section, but replace references to
+    "the buffer object bound to <target>" with "the source buffer object").
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetNamedBufferSubData if
+    <buffer> is not the name of an existing buffer object.
+
+
+    (Replace the introduction of GetBufferPointerv with the following, p. 74)
+
+    While part or all of the data store of a buffer object is mapped, the
+    pointer to the mapped range of the data store can be queried with the
+    commands
+
+        void GetBufferPointerv(enum target, enum pname, const void **params);
+        void GetNamedBufferPointerv(uint buffer, enum pname,
+                                    const void **params);
+
+    For GetBufferPointerv, the buffer object is that bound tp <target>,
+    which must be one of the targets listed in table 6.1. For
+    GetNamedBufferPointerv, <buffer> is the name of the buffer object.
+
+    (Retain the remainder of the section.)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetNamedBufferPointerv if
+    <buffer> is not the name of an existing buffer object.
+
+
+Additions to Chapter 7 of the OpenGL 4.4 (core) Specification (Programs and
+Shaders)
+
+    Modifications to Section 7.4, "Program Pipeline Objects"
+
+    (Insert the following after the description of BindProgramPipeline, p. 110)
+
+    Program pipeline objects may also be created with the command
+
+        void CreateProgramPipelines(sizei n, uint *pipelines);
+
+    CreateProgramPipelines returns <n> previously unused program pipeline
+    names in <pipelines>, each representing a new program pipeline object
+    which is a state vector comprising all the state and with the same
+    initial values listed in table 23.31.
+
+    Errors
+
+    An INVALID_VALUE error is generated if <n> is negative.
+
+
+Additions to Chapter 8 of the OpenGL 4.4 (core) Specification (Textures and
+Samplers)
+
+    Modifications to Section 8.1, "Texture Objects"
+
+    (Insert the following after the description of BindTextures, p. 164)
+
+    The command
+
+        void BindTextureUnit(uint unit, uint texture);
+
+    binds an existing texture object to the texture unit numbered <unit>.
+    <texture> must be zero or the name of an existing texture object. When
+    <texture> is the name of an existing texture object, that object is
+    bound to the target, in the corresponding texture unit, that was
+    specified when the object was created. When <texture> is zero, each of
+    the targets enumerated at the beginning of this section is reset to its
+    default texture for the corresponding texture image unit.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by BindTextureUnit if <texture>
+    is not zero or the name of an existing texture object.
+
+
+    Texture objects may also be created with the command
+
+        void CreateTextures(enum target, sizei n, uint *textures);
+
+    CreateTextures returns <n> previously unused texture names in
+    <textures>, each representing a new texture object that is a state
+    vector comprising all the state and with the same initial values listed
+    in section 8.22. The new texture objects are and remain textures of the
+    dimensionality and type specified by <target> until they are deleted.
+
+    Errors
+
+    An INVALID_VALUE error is generated if <n> is negative.
+
+
+    Modifications to Section 8.2, "Sampler Objects"
+
+    (Insert the following after the description of GenSamplers, p. 165)
+
+    Sampler objects may also be created with the command
+
+        void CreateSamplers(sizei n, uint *samplers);
+
+    CreateSamplers returns <n> previously unused sampler names in
+    <samplers>, each representing a new sampler object which is a state
+    vector comprising all the state and with the same initial values listed
+    in table 23.18.
+
+    Errors
+
+    An INVALID_VALUE error is generated if <n> is negative.
+
+
+    Modifications to Section 8.6, "Alternate Texture Image Specification"
+
+    (Modify introduction and add to the list of commands comprising
+    TexSubImage*D and CopyTexSubImage*D, p. 201)
+
+    To respecify only a rectangular subregion of the texel array of a
+    texture object, use the commands
+
+        ...
+        void TextureSubImage1D(uint texture,
+                               int level, int xoffset, sizei width,
+                               enum format, enum type,
+                               const void *pixels);
+        void TextureSubImage2D(uint texture,
+                               int level, int xoffset, int yoffset,
+                               sizei width, sizei height,
+                               enum format, enum type,
+                               const void *pixels);
+        void TextureSubImage3D(uint texture,
+                               int level,
+                               int xoffset, int yoffset, int zoffset,
+                               sizei width, sizei height, sizei depth,
+                               enum format, enum type,
+                               const void *pixels);
+        void CopyTextureSubImage1D(uint texture,
+                                   int level,
+                                   int xoffset,
+                                   int x, int y,
+                                   sizei width);
+        void CopyTextureSubImage2D(uint texture,
+                                   int level,
+                                   int xoffset, int yoffset,
+                                   int x, int y,
+                                   sizei width, sizei height);
+        void CopyTextureSubImage3D(uint texture,
+                                   int level,
+                                   int xoffset, int yoffset, int zoffset,
+                                   int x, int y,
+                                   sizei width, sizei height);
+
+    For *TexSubImage*, the texture object is that bound to <target>. For
+    *TextureSubImage*, <texture> is the name of the texture object. <target>
+    or the effective target of <texture> (the value of TEXTURE_TARGET; see
+    section 8.10) must match each command as shown in table 8.subtarg.
+
+    Command Name            Valid <target>s or effective <target>s
+    ---------------------   --------------------------------------
+    TexSubImage1D           TEXTURE_1D
+    CopyTexSubImage1D
+    TextureSubImage1D
+    CopyTextureSubImage1D
+
+    TexSubImage2D           TEXTURE_2D,
+    CopyTexSubImage2D       TEXTURE_1D_ARRAY,
+    TextureSubImage2D       TEXTURE_RECTANGLE, or one of the
+    CopyTextureSubImage2D   cube map face targets from table 8.18
+
+    TextureSubImage2D       TEXTURE_2D,
+    CopyTextureSubImage2D   TEXTURE_1D_ARRAY, or
+                            TEXTURE_RECTANGLE
+
+    TexSubImage3D           TEXTURE_3D,
+    CopyTexSubImage3D       TEXTURE_2D_ARRAY, or
+                            TEXTURE_CUBE_MAP_ARRAY
+
+    TextureSubImage3D       TEXTURE_3D,
+    CopyTextureSubImage3D   TEXTURE_2D_ARRAY,
+                            TEXTURE_CUBE_MAP_ARRAY or
+                            TEXTURE_CUBE_MAP
+    ----------------------------------------------------------------
+    Table 8.subtarg: Valid texture <target> parameters or effective
+    <texture> targets for texture subimage commands.
+
+    No change is made to the <internalformat> ...
+
+    The <level> parameter of each command specifies ...
+
+    Errors
+
+    An INVALID_ENUM error is generated by *TexSubImage* if <target> does
+    not match the command, as shown in table 8.subtarg.
+
+    An INVALID_OPERATION error is generated by *TextureSubImage* if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by *TextureSubImage* if the
+    effective target of <texture> does not match the command, as shown in
+    table 8.subtarg.
+
+    An INVALID_VALUE error is generated if the effective <target> is
+    TEXTURE_RECTANGLE and <level> is not zero.
+
+
+    Modifications to Section 8.7, "Compressed Texture Images"
+
+    To respecify only a rectangular subregion of the texel array of an
+    texture object, with incoming data stored in a specific compressed
+    format, use the commands
+
+        ...
+        void CompressedTextureSubImage1D(uint texture, int level,
+                                         int xoffset, sizei width,
+                                         enum format,
+                                         sizei imageSize, const void *data);
+        void CompressedTextureSubImage2D(uint texture, int level,
+                                         int xoffset, int yoffset,
+                                         sizei width, sizei height,
+                                         enum format,
+                                         sizei imageSize, const void *data);
+        void CompressedTextureSubImage3D(uint texture, int level,
+                                         int xoffset, int yoffset,
+                                         int zoffset,
+                                         sizei width, sizei height,
+                                         sizei depth, enum format,
+                                         sizei imageSize, const void *data);
+
+    Modify the following text, beginning "respecify only a rectangular
+    region ..." as follows:
+
+    The <target>, <texture>, <level>, <xoffset>, <yoffset>, <zoffset>,
+    <width>, <height>, and <depth> parameters have the same meaning as in
+    the corresponding commands from section 8.6 without the Compressed
+    prefix (where those parameters are present). <data> points to compressed
+    image data stored in the compressed image format corresponding to
+    <format>.
+
+    ...
+
+    Errors
+
+    Modify existing errors to apply to all forms of the commands by dropping
+    "bound to <target>" phrasing and using "effective <target>" instead of
+    "<target>".
+
+    An INVALID_OPERATION error is generated by CompressedTextureSubImage*D
+    if <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by CompressedTextureSubImage*D
+    if the effective <target> is TEXTURE_RECTANGLE.
+
+
+    Modifications to Section 8.9, "Buffer Textures"
+
+    (Modify the introduction of TexBuffer with the following, p. 214)
+
+    The commands
+
+        void TexBufferRange(enum target, enum internalformat,
+                            uint buffer, intptr offset, sizeiptr size);
+        void TextureBufferRange(uint texture, enum internalformat,
+                                uint buffer, intptr offset, sizeiptr size);
+
+    attach the range of the storage for the buffer object named <buffer> for
+    <size> basic machine units, starting at <offset> (also in basic machine
+    units) to a buffer texture.
+
+    For TexBufferRange, the buffer texture is that currently bound to
+    <target>. For TextureBufferRange, <texture> is the name of the buffer
+    texture. <target> or the effective target of <texture> must be
+    TEXTURE_BUFFER
+
+    If <buffer> is zero, then any buffer object attached to the buffer
+    texture is detached, the values <offset> and <size> are ignored and the
+    state for <offset> and <size> for the buffer texture are reset to zero.
+    <internalformat> specifies the storage format for the texel array found
+    in the range of the attached buffer object, and must be one of the sized
+    internal formats from table 8.15.
+
+    Errors
+
+    Modify existing errors to apply to all forms of the command where
+    parameters are equivalent.
+
+    An INVALID_OPERATION error is generated by TextureBufferRange if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by TextureBufferRange if the
+    effective <target> is not TEXTURE_BUFFER.
+
+    (Replace the introduction of TexBuffer with the following, p. 214)
+
+    The commands
+
+        TexBuffer(enum target, enum internalformat, uint buffer);
+        TextureBuffer(uint texture, enum internalformat, uint buffer);
+
+    are respectively equivalent to
+
+        TexBufferRange(<target>, <internalformat>, <buffer>, 0, size);
+
+    and
+
+        TextureBufferRange(<texture>, <internalformat>, <buffer>, 0, size);
+
+    where <size> is set to the value of BUFFER_SIZE for <buffer>.
+
+    (Retain the remainder of the section.)
+
+
+    Modifications to Section 8.10, "Texture Parameters"
+
+    (Modify introduction to the section)
+
+    Texture parameters control how the texel array of a texture object is
+    treated when specified or changed, and when applied to a fragment. Each
+    parameter is set with the commands
+
+        void TexParameter{if}(enum target, enum pname, T param);
+        void TexParameter{if}v(enum target, enum pname, const T *params);
+        void TexParameterI{i ui}v(enum target, enum pname, const T *params);
+        void TextureParameter{if}(uint texture, enum pname, T param);
+        void TextureParameter{if}v(uint texture, enum pname, const T *params);
+        void TextureParameterI{i ui}v(uint texture, enum pname, const T *params);
+
+    For TexParameter*, the texture object is that bound to <target>. For
+    TextureParameter*, <texture> is the name of the texture object. <target>
+    or the effective target of <texture> must be one of [insert existing
+    list of valid texture targets].
+
+    ...
+
+    Errors
+
+    Modify existing errors to apply to all forms of the command where
+    parameters are equivalent.
+
+    An INVALID_OPERATION error is generated by TextureParameter* if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by TextureParameter* if
+    the effective <target> is not one of the valid targets listed above.
+
+    An INVALID_OPERATION error is generated by TextureParameter* if the
+    effective <target> is either TEXTURE_2D_MULTISAMPLE or
+    TEXTURE_2D_MULTISAMPLE_ARRAY , and pname is any sampler state from table
+    23.23.
+
+
+    Modifications to Section 8.11.2, "Texture Parameter Queries", p. 220
+
+    Parameters of a texture object may be queried with the commands
+
+        void GetTexParameter{if}v(enum target, enum pname, T *params);
+        void GetTexParameterI{i ui}v(enum target, enum pname, T *params);
+        void GetTextureParameter{if}v(uint texture, enum pname, T *params);
+        void GetTextureParameterI{i ui}v(uint texture, enum pname, T *params);
+
+    For GetTexParameter*, the texture object is that bound to <target>. For
+    GetTextureParameter*, <texture> is the name of the texture object.
+
+    The value of texture parameter <pname> for the texture is returned in
+    <params>.
+
+    <target> or the effective target of <texture> must be one of TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY,
+    TEXTURE_RECTANGLE, TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY,
+    TEXTURE_2D_MULTISAMPLE, or TEXTURE_2D_MULTISAMPLE_ARRAY, indicating the
+    currently bound one-, two-, or three-dimensional, one- or
+    two-dimensional array, rectangle, cube map, cube map array,
+    two-dimensional multisample, or two-dimensional multisample array
+    texture object.
+
+    <pname> must be one of IMAGE_FORMAT_COMPATIBILITY_TYPE,
+    TEXTURE_IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, TEXTURE_TARGET,
+    TEXTURE_VIEW_MIN_LEVEL, TEXTURE_VIEW_NUM_LEVELS, TEXTURE_VIEW_MIN_LAYER,
+    TEXTURE_VIEW_NUM_LAYERS, or one of the symbolic values in table 8.16.
+
+    Querying pname TEXTURE_BORDER_COLOR with GetTex*ParameterIiv or
+    GetTex*ParameterIuiv returns the border color values as signed integers or
+    unsigned integers, respectively; otherwise the values are returned as
+    described in section 2.2.2. If the border color is queried with a type
+    that does not match the original type with which it was specified, the
+    result is undefined.
+
+    Querying <pname> TEXTURE_TARGET returns the <effective target> of the
+    texture object. For GetTexParameter*, this is the <target> parameter.
+    For GetTextureParameter*, it is the target to which <texture> was
+    initially bound when it was created, or the value of the <target>
+    parameter to the call to CreateTextures which created the texture.
+
+
+    Errors
+
+    Modify existing errors to apply to all forms of the command where
+    parameters are equivalent.
+
+    An INVALID_OPERATION error is generated by GetTextureParameter* if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by GetTextureParameter* if the
+    effective <target> is not one of the texture targets described above.
+
+
+    Modifications to Section 8.11.3, "Texture Level Parameter Queries", p. 220
+
+    Parameters of a specified level-of-detail of a texture object may
+    be queried with the commands
+
+
+        void GetTexLevelParameter{if}v(enum target, int level,
+                                       enum pname, T *params);
+        void GetTextureLevelParameter{if}v(uint texture, int level,
+                                           enum pname, T *params);
+
+    For GetTexLevelParameter*, the texture object is that bound to <target>.
+    For GetTextureLevelParameter*, <texture> is the name of the texture
+    object.
+
+    The value of texture parameter <pname> for level-of-detail <level> of
+    the texture is returned in <params>. <pname> must be one of the symbolic
+    values in tables 23.16- 23.17.
+
+    The effective target of the texture object must be one of [incorporate
+    the existing list of valid targets, but remove "one of the cube map face
+    targets from table 8.18" and "one of the six distinct 2D images making
+    up the cube map texture object"] ...
+
+    For GetTexLevelParameter* only, target may also be one of the cube map
+    face targets from table 8.18, indicating one of the six distinct
+    two-dimensional images making up the cube map texture object. Note that
+    TEXTURE_CUBE_MAP is not a valid target parameter for
+    GetTexLevelParameter*.
+
+    For GetTextureLevelParameter* only, texture may also be a cube map
+    texture object. In this case the query is always performed for face zero
+    (the TEXTURE_CUBE_MAP_POSITIVE_X face), since there is no way to
+    specify another face.
+
+    <level> determins which level-of-detail's state is returned...
+
+    Errors
+
+    Modify existing errors to apply to all forms of the command where
+    parameters are equivalent.
+
+    An INVALID_OPERATION error is generated by GetTextureLevelParameter* if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by GetTextureLevelParameter* if
+    the effective <target> is not one of the targets described above as
+    valid for the corresponding command.
+
+
+    Modifications to Section 8.11.4, "Texture Image Queries"
+
+    (Replace the first paragraph with the following, p. 223)
+
+    Texture images may be obtained from a texture object with the commands
+
+        void GetTexImage(enum target, int level, enum format,
+                         enum type, void *pixels);
+        void GetTextureImage(uint texture, int level, enum format,
+                             enum type, sizei bufSize, void *pixels);
+
+    For GetTexImage, <target> specifies the target to which the texture
+    object is bound. <target> must be one of TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY
+    or TEXTURE_RECTANGLE, indicating a one-, two- or three-dimensional, one-
+    or two-dimensional array, cube map array or rectangle texture,
+    respectively, of one of the targets from table 8.18, indicating the
+    corresponding face of a cube map texture.
+
+    For GetTextureImage, <texture> is the name of the texture object
+    containing the image to be retrieved. In addition to the types of
+    textures accepted by the Get*TexImage commands, GetTextureImage also
+    accepts cube map texture objects (with effective <target>
+    TEXTURE_CUBE_MAP).
+
+    <level> is a level-of-detail number, <format> is a pixel format from
+    table 8.3, and <type> is a pixel type from table 8.2.
+
+    For GetTextureImage, <bufSize> is the size of the buffer to receive the
+    retrieved pixel data. GetTextureImage does not write more than <bufSize>
+    bytes into <pixels>.
+
+    (Modify remaining paragraphs as shown)
+
+    These commands obtain component groups ... where the layers are treated
+    as rows or images. Cube map textures are treated as three-dimensional
+    images with a depth of 6, where the cube map faces are ordered as image
+    layers as shown in table 9.2
+
+    These groups are then packed and placed ...
+
+    For three-dimensional, two-dimensional array, cube map array, and cube
+    map textures, pixel storage operations are applied as if ...
+
+    The row length ...
+
+    Errors
+
+    Replace references to <lod> by <level>.
+
+    An INVALID_OPERATION error is generated by GetTextureImage if <texture>
+    is not the name of an existing texture object.
+
+    An INVALID_ENUM error is generated by GetTexImage if <target> is not one
+    of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY, TEXTURE_RECTANGLE, or one of
+    the targets from table 8.18.
+
+    An INVALID_OPERATION error is generated by GetTextureImage if <target>
+    is not one of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY, TEXTURE_RECTANGLE, or
+    TEXTURE_CUBE_MAP.
+
+    An INVALID_OPERATION error is generated by GetTextureImage if the buffer
+    size required to store the requested data is greater than <bufSize>
+
+
+    (Replace the introduction of GetCompressedTexImage by the following, p. 225)
+
+    Texture images stored in compressed form may be obtained with the
+    commands
+
+        void GetCompressedTexImage(enum target, int level, void *pixels);
+        void GetCompressedTextureImage(uint texture, int level, sizei bufSize,
+                                       void *pixels);
+
+    For GetCompressedTexImage, the texture is that
+    which is bound to <target>.
+    For GetCompressedTextureImage, <texture> is the name of the texture object.
+
+    <target>, <level>, <bufSize> and <pixels> are interpreted in the same
+    manner as the corresponding parameters of GetTexImage and
+    GetTextureImage.
+
+    GetCompressedTexImage writes <n> ubytes of compressed image data to the
+    pixel pack buffer or client memory pointed to by <pixels>, while
+    GetCompressedTextureImage writes min(n, bufSize) ubytes. <n> is the
+    value of TEXTURE_COMPRESSED_IMAGE_SIZE for the texture image. The
+    compressed image data is formatted according to the definition of the
+    texture's internal format.
+
+    By default the pixel storage modes ...
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetCompressedTextureImage if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_VALUE error is generated if <level> is negative, or greater
+    than the maximum allowable level.
+
+    An INVALID_OPERATION error is generated if the texture image is stored
+    with an uncompressed internal format.
+
+    An INVALID_OPERATION error is generated if a pixel pack buffer object is
+    bound and packing the texture image into the buffer's memory would
+    exceed the size of the buffer.
+
+    An INVALID_OPERATION error is generated by GetCompressedTextureImage if
+    the buffer size required to store the requested data is greated than
+    <bufSize>.
+
+
+    Modifications to Section 8.14.4, "Manual Mipmap Generation"
+
+    (Modify the introduction of GenerateMipmap by the following, p. 237)
+
+    Mipmaps can be generated manually for a texture object with the commands
+
+        void GenerateMipmap(enum target);
+        void GenerateTextureMipmap(uint texture);
+
+    For GenerateMipmap, <target> specifies the target to which the texture
+    object is bound. For GenerateTextureMipmap, <texture> is the name of the
+    texture object.
+
+    <target> or the effective target of <texture> must be
+    one of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, or
+    TEXTURE_CUBE_MAP_ARRAY.
+
+    If <target> or the effective target of <texture> is TEXTURE_CUBE_MAP or
+    TEXTURE_CUBE_MAP_ARRAY, then the texture object must be cube complete or
+    cube array complete respectively, as defined in section 8.17.
+
+    (include the remainder of the description of GenerateMipmap, starting
+    with "Mipmap generation replaces...")
+
+    Errors
+
+    An INVALID_ENUM error is generated by GenerateMipmap if <target> is
+    not one of the valid targets listed above.
+
+    An INVALID_OPERATION error is generated by GenerateTextureMipmap if
+    <texture> is not the name of an existing texture object.
+
+    An INVALID_OPERATION error is generated by GenerateTextureMipmap if the
+    effective <target> is not one of the valid targets listed above.
+
+    An INVALID_OPERATION error is generated by GenerateTextureMipmap if the
+    effective <target> is TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY, and
+    the texture object is not cube complete or cube array complete,
+    respectively.
+
+
+    Modifications to Section 8.19, "Immutable-Format Texture Images"
+
+    (Replace the list of "generic" errors generated by these commands,
+    following the third paragraph of the section)
+
+    The TexStorage* commands specify properties of the texture object bound
+    to the <target> parameter of each command.
+
+    The TextureStorage* commands behave similarly to the equivalent
+    TexStorage* commands, but specify properties of the texture object named
+    by the <texture> parameter of each command. The effective target of
+    <texture> must be compatible with the <target> parameter of the
+    equivalent TexStore* command.
+
+
+    Errors
+
+    An INVALID_OPERATION error is generated by TexStorage* if zero is bound
+    to <target>.
+
+    An INVALID_OPERATION error is generated by TextureStorage* if <texture>
+    is not the name of an existing texture object.
+
+    An INVALID_VALUE error is generated if <width>, <height>, <depth> or
+    <levels> is less than 1, for commands with the corresponding parameters.
+
+    An INVALID_ENUM error is generated if <internalformat> is one of the
+    unsized base internal formats listed in table 8.11.
+
+
+    (Modify the introduction of TexStorage1D as follows, p. 247)
+
+    The commands
+
+        void TexStorage1D(enum target, sizei levels,
+                          enum internalformat, sizei width);
+        void TextureStorage1D(uint texture, sizei levels,
+                              enum internalformat, sizei width);
+
+    specify all the levels of a one-dimensional texture (or, for
+    TexStorage1D, proxy) at the same time. TexStorage1D is described by the
+    pseudocode below:
+
+    (Include original TexStorage1D pseudocode, p. 247)
+
+    (add to the Errors section for TexStorage1D)
+
+    Errors
+
+    In addition to the generic errors described at the start of this
+    section,
+
+    An INVALID_OPERATION error is generated by TextureStorage1D if
+    the effective <target> is not TEXTURE_1D.
+
+
+    (Modify the introduction of TexStorage2D as follows, 247)
+
+    The commands
+
+        void TexStorage2D(enum target, sizei levels, enum internalformat,
+                          sizei width, sizei height);
+        void TextureStorage2D(uint texture, sizei levels, enum internalformat,
+                              sizei width, sizei height);
+
+    specify all the levels of a two-dimensional, cube-map, one-dimensional
+    array or rectangle texture (or, for TexStorage2D, proxy) at the same
+    time. TexStorage2D is described by the <target>-dependent pseudocode
+    below:
+
+    (Include original TexStorage2D pseudocode, p. 248)
+
+    (add to the Errors section for TexStorage2D)
+
+    Errors
+
+    In addition to the generic errors described at the start of this
+    section,
+
+    An INVALID_OPERATION error is generated by TextureStorage2D if the
+    effective <target> is not one of those listed above.
+
+
+    (Modify the introduction of TexStorage3D as follows, p. 249)
+
+    The commands
+
+        void TexStorage3D(enum target, sizei levels, enum internalformat,
+                          sizei width, sizei height, sizei depth);
+        void TextureStorage3D(uint texture, sizei levels, enum internalformat,
+                              sizei width, sizei height, sizei depth);
+
+    specify all the levels of a three-dimensional, two-dimensional array
+    texture or cube-map array texture (or, for TexStorage3D, proxy).
+    TexStorage3D is described by the <target>-dependent pseudocode below:
+
+    (Include original TexStorage3D pseudocode, p. 249)
+
+    (add to the Errors section for TexStorage3D)
+
+    Errors
+
+    In addition to the generic errors described at the start of this
+    section,
+
+    An INVALID_OPERATION error is generated by TextureStorage3D if the
+    effective <target> is not one of those listed above.
+
+
+    (Modify the introduction of TexStorage2DMultisample as follows, p. 250)
+
+    The commands
+
+        void TexStorage2DMultisample(enum target, sizei samples,
+                                     enum internalformat, sizei width,
+                                     sizei height,
+                                     boolean fixedsamplelocations);
+        void TextureStorage2DMultisample(uint texture, sizei samples,
+                                         enum internalformat, sizei width,
+                                         sizei height,
+                                         boolean fixedsamplelocations);
+
+    specify a two-dimensional multisample texture (or, for
+    TexStorage2DMultisample, proxy). For TexStorage2DMultisample, <target>
+    must be TEXTURE_2D_MULTISAMPLE or PROXY_TEXTURE_2D_MULTISAMPLE. Calling
+    TexStorage2DMultisample is equivalent to calling TexImage2DMultisample
+    with the equivalently named parameters set to the same values, except
+    that the resulting texture has immutable format.
+
+    Errors
+
+    In addition to the generic errors described at the start of this
+    section,
+
+    An INVALID_OPERATION error is generated by TextureStorage2DMultisample
+    if the effective <target> is not TEXTURE_2D_MULTISAMPLE.
+
+
+    (Modify the introduction of TexStorage3DMultisample as follows, p. 250)
+
+    The commands
+
+        void TexStorage3DMultisample(enum target, sizei samples,
+                                     enum internalformat, sizei width,
+                                     sizei height, sizei depth,
+                                     boolean fixedsamplelocations);
+        void TextureStorage3DMultisample(uint texture, sizei samples,
+                                         enum internalformat, sizei width,
+                                         sizei height, sizei depth,
+                                         boolean fixedsamplelocations);
+
+    specify a two-dimensional multisample array texture (or, for
+    TexStorage3DMultisample, proxy). For TexStorage3DMultisample, <target>
+    must be TEXTURE_2D_MULTISAMPLE_ARRAY or
+    PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY.
+
+    Calling TexStorage3DMultisample is equivalent to calling
+    TexImage3DMultisample with the equivalently named parameters set to the
+    same values, except that the resulting texture has immutable format.
+
+    Errors
+
+    In addition to the generic errors described at the start of this
+    section,
+
+    An INVALID_OPERATION error is generated by TextureStorage3DMultisample
+    if the effective <target> is not TEXTURE_2D_MULTISAMPLE_ARRAY.
+
+
+Additions to Chapter 9 of the OpenGL 4.4 (core) Specification (Framebuffers and
+Framebuffer Objects)
+
+    Modifications to Section 9.2, "Binding and Managing Framebuffer Objects"
+
+    (Insert the following, after the description of BindFramebuffer, p. 272)
+
+    Framebuffer objects may also be created with the command
+
+        void CreateFramebuffers(sizei n, uint *framebuffers);
+
+    CreateFramebuffers returns <n> previously unused framebuffer names in
+    <framebuffers>, each representing a new framebuffer object which is a
+    state vector, comprising all the state and with the same initial values
+    listed in table 23.24, as well as one set of the state values listed in
+    table 23.25 for each attachment point of the framebuffer, with the same
+    initial values.
+
+    Errors
+
+    An INVALID_VALUE error is generated by CreateFramebuffers if <n> is
+    negative.
+
+
+    Modifications to Section 9.2.1, "Framebuffer Object Parameters"
+
+    (Modify the introduction of FramebufferParameteri as follows, p. 274)
+
+    Parameters of a framebuffer object are set using the commands
+
+        void FramebufferParameteri(enum target, enum pname, int param);
+        void NamedFramebufferParameteri(uint framebuffer, enum pname, int param);
+
+    For FramebufferParameteri, the framebuffer object is that bound to
+    <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    NamedFramebufferParameteri, <framebuffer> is the name of the framebuffer
+    object.
+
+    <pname> specifies the parameter of the framebuffer object to set.
+
+    When a framebuffer ...
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferParameteri if
+    <framebuffer> is not the name of an existing framebuffer object.
+
+
+    Modifications to Section 9.2.3, "Framebuffer Object Queries"
+
+    (Modify the introduction of GetFramebufferParameteriv as follows, p. 277)
+
+    Parameters of a framebuffer object may be queried with the commands
+
+        void GetFramebufferParameteriv(enum target,
+                                       enum pname,
+                                       int *params);
+        void GetNamedFramebufferParameteriv(uint framebuffer,
+                                            enum pname,
+                                            int *params);
+
+    For GetFramebufferParameteriv, the framebuffer object is that bound to
+    <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    GetNamedFramebufferParameteriv, <framebuffer> may be zero, indicating
+    the default draw framebuffer, or the name of the framebuffer object.
+
+    The value of framebuffer parameter <pname> for the framebuffer object is
+    returned in <params>.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by
+    GetNamedFramebufferParameteriv if <framebuffer> is not zero or the name
+    of an existing framebuffer object.
+
+
+    (Modify the introduction of GetFramebufferAttachmentParameter as
+    follows, p. 277)
+
+    Attachments of a framebuffer object or buffers of a default framebuffer
+    may be queried with the commands
+
+        void GetFramebufferAttachmentParameteriv(enum target,
+                                                 enum attachment,
+                                                 enum pname,
+                                                 int *params);
+        void GetNamedFramebufferAttachmentParameteriv(uint framebuffer,
+                                                      enum attachment,
+                                                      enum pname,
+                                                      int *params);
+
+    For GetFramebufferAttachmentParameteriv, the framebuffer object is that
+    bound to <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    GetNamedFramebufferAttachmentParameteriv, <framebuffer> is zero or the
+    name of the framebuffer object. If <framebuffer> is zero, then the
+    default draw framebuffer is queried.
+
+    If a default framebuffer is queried, then <attachment> must be one of
+    FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, or BACK_RIGHT, identifying a color
+    buffer; DEPTH, identifying the depth buffer; or STENCIL, identifying the
+    stencil buffer.
+
+    Otherwise, <attachment> must be one of the framebuffer object attachment
+    points listed in table 9.1
+
+    (Retain the remainder of the section, but replace the reference to
+    "GetFramebufferAttachmentParameteriv" with
+    "GetNamedFramebufferAttachmentParameteriv or
+    GetFramebuffferAttachmentParameteriv", p. 278)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by
+    GetNamedFramebufferAttachmentParameteriv if <framebuffer> is not zero or
+    the name of an existing framebuffer object.
+
+
+    Modifications to Section 9.2.4, "Renderbuffer Objects"
+
+    (Insert the following after the description of BindRenderbuffer, p. 280)
+
+    New renderbuffers may also be created with the command
+
+        void CreateRenderbuffers(sizei n, uint *renderbuffers);
+
+    CreateRenderbuffers returns <n> previously unused renderbuffer names in
+    <renderbuffers>, each representing a new renderbuffer object which is a
+    state vector comprising all the state and with the initial values listed
+    in table 23.27. The state of each renderbuffer object is as if a name
+    returned from GenRenderbuffers had been bound to the RENDERBUFFER
+    target, except that any existing binding to RENDERBUFFER is not
+    affected.
+
+    Errors
+
+    An INVALID_VALUE error is generated by CreateRenderbuffers if <n> is
+    negative.
+
+    (Replace the introduction of RenderbufferStorageMultisample with the
+    following, p. 282)
+
+    The data storage, format, dimensions, and number of samples of a
+    renderbuffer object's image are established with the commands
+
+        void RenderbufferStorageMultisample(enum target,
+                                            sizei samples,
+                                            enum internalformat,
+                                            sizei width, sizei height);
+        void NamedRenderbufferStorageMultisample(uint renderbuffer,
+                                                 sizei samples,
+                                                 enum internalformat,
+                                                 sizei width, sizei height);
+
+    For RenderbufferStorageMultisample, the renderbuffer object is that
+    bound to <target>, which must be RENDERBUFFER. For
+    NamedRenderbuferStorageMultisample, <renderbuffer> is the name of the
+    renderbuffer object.
+
+    <internalformat> must be color-renderable, depth-renderable, or
+    stencil-renderable (as defined in section 9.4). <width> and <height> are
+    the dimensions, in pixels, of the renderbuffer.
+
+    (Retain the remainder of the section, but replace further references to
+    "RenderbufferStorageMultisample" with "*RenderbufferStorageMultisample")
+
+    Errors
+
+    An INVALID_OPERATION error is generated by
+    NamedRenderbufferStorageMultisample if <renderbuffer> is not the name of
+    an existing renderbuffer object.
+
+
+    (Insert the following at the end of Section 9.2.4, p. 283)
+
+    The command
+
+        void NamedRenderbufferStorage(uint renderbuffer,
+                                      enum internalformat,
+                                      sizei width, sizei height);
+
+    is equivalent to
+
+        NamedRenderbufferStorageMultisample(renderbuffer, 0, internalfomat,
+                                            width, height);
+
+
+    Modifications to Section 9.2.6, "Renderbuffer Object Queries"
+
+    (Replace the introduction of GetRenderbufferParameteriv by the following,
+    p. 283)
+
+    Parameters of a renderbuffer object may be queried with the commands
+
+        void GetRenderbufferParameteriv(enum target,
+                                        enum pname, int *params);
+        void GetNamedRenderbufferParameteriv(uint renderbuffer,
+                                         enum pname, int *params);
+
+    For GetRenderbufferParameteriv, the renderbuffer object is that bound to
+    <target>, which must be RENDERBUFFER. For
+    GetNamedRenderbufferParameteriv, <renderbuffer> is the name of the
+    renderbuffer object.
+
+    The value of renderbuffer parameter <pname> for the renderbuffer object
+    is returned in <params>. <pname> must be one of the symbolic values...
+
+    (Retain the remainder of the section but replace instances of "the
+    renderbuffer currently bound to <target>" with "the renderbuffer
+    object", p. 284)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetRenderbufferParameteriv if
+    zero is bound to <target>.
+
+    An INVALID_OPERATION error is generated by
+    GetNamedRenderbufferParameteriv if <renderbuffer> is not the name of an
+    existing renderbuffer object.
+
+
+    Modifications to Section 9.2.7, "Attaching Renderbuffer Images to a
+    Framebuffer"
+
+    (Modify the introduction of FramebufferRenderbuffer as follows, p. 284)
+
+    A renderbuffer object can be attached as one of the logical buffers of a
+    framebuffer object with the commands
+
+        void FramebufferRenderbuffer(enum target, enum attachment,
+                                     enum renderbuffertarget,
+                                     uint renderbuffer);
+        void NamedFramebufferRenderbuffer(uint framebuffer,
+                                          enum attachment,
+                                          enum renderbuffertarget,
+                                          uint renderbuffer);
+
+    For FramebufferRenderbuffer the framebuffer object is that bound to
+    <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    NamedFramebufferRenderbuffer, <framebuffer> is the name of the
+    framebuffer object.
+
+    (Retain the remainder of the section but replace instances of
+    "FramebufferRenderbuffer" with "*FramebufferRenderbuffer", and of "the
+    framebuffer bound to <target>" with "the framebuffer object".
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferRenderbuffer
+    if <framebuffer> is not the name of an existing framebuffer object.
+
+
+    Modifications to Section 9.2.8, "Attaching Texture Images to a
+    Framebuffer"
+
+    (Modify the introduction of FramebufferTexture as follows, p. 286)
+
+    To render directly into a texture image, a specified level of a texture
+    object can be attached as one of the logical buffers of a framebuffer
+    object with the commands
+
+        void FramebufferTexture(enum target, enum attachment,
+                                uint texture, int level);
+        void NamedFramebufferTexture(uint framebuffer, enum attachment,
+                                     uint texture, int level);
+
+    For FramebufferTexture, the framebuffer object is that bound to
+    <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    NamedFramebufferTexture, <framebuffer> is the name of the framebuffer
+    object.
+
+    <attachment> must be one of the attachment points of the framebuffer
+    listed in table 9.1.
+
+    If <texture> is zero, any image or array of images attached to the
+    attachment point named by <attachment> is detached. Any additional
+    parameters (<level>) are ignored when <texture> is zero.
+
+    If <texture> is non-zero, the specified mipmap <level> of the texture
+    object named <texture> is attached to the framebuffer attachment point
+    named by <attachment>.
+
+    If <texture> is the name of a three-dimensional texture, cube map texture,
+    one- or two-dimensional array texture, cube map array texture, or two-
+    dimensional multisample array texture, the texture level attached to the
+    framebuffer attachment point is an array of images, and the framebuffer
+    attachment is considered layered.
+
+    (Retain the remainder of the section.)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferTexture if
+    <framebuffer> is not the name of an existing framebuffer object.
+
+
+    (Replace the introduction of FramebufferTextureLayer with the following,
+    p. 288)
+
+    A single layer of a three-dimensional or array texture object can be
+    attached as one of the logical buffers of a framebuffer object with the
+    commands
+
+        void FramebufferTextureLayer(enum target, enum attachment,
+                                     uint texture,
+                                     int level, int layer);
+        void NamedFramebufferTextureLayer(uint framebuffer, enum attachment,
+                                          uint texture,
+                                          int level, int layer);
+
+    These commands operate identically to the equivalent FramebufferTexture
+    and NamedFramebufferTexture commands, respectively, except for the
+    additional <layer> argument which selects a layer of the texture object
+    to attach.
+
+    <layer> specifies the layer of a one- or two-dimensional image within
+    <texture>, except for cube map and cube map array textures. For cube map
+    textures, <layer> is translated into a cube map face as described in
+    table 9.2. For cube map array textures, <layer> is translated into an
+    array layer and a cube map face as described for layer-face numbers in
+    section 8.5.3.
+
+    If <texture> is a three-dimensional texture, then ...
+
+    Errors
+
+    In addition to the corresponding errors for FramebufferTexture and
+    NamedFramebufferTexture when called with the same parameters (other than
+    <layer>):
+
+    An INVALID_OPERATION error is generated by NamedFramebufferTextureLayer
+    if <framebuffer> is not the name of an existing framebuffer object.
+
+    (Remove the final two paragraphs of section 9.2.8, starting "Unlike
+    FramebufferTexture3D...")
+
+
+    Modifications to Section 9.2.8.1, "Effects of Attaching a Texture Image"
+
+    (change all references to FramebufferTexture* to *FramebufferTexture*,
+    to include the NamedFramebufferTexture* variants)
+
+
+    Modifications to Section 9.4.2, "Whole Framebuffer Completeness"
+
+    (Replace the defintion of CheckFramebufferStatus, p. 297)
+
+    The status of a framebuffer object or default framebuffer can be queried
+    with the commands
+
+        enum CheckFramebufferStatus(enum target);
+        enum CheckNamedFramebufferStatus(uint framebuffer, enum target);
+
+    For CheckFramebufferStatus, the framebuffer object is that bound to
+    <target>. For CheckNamedFramebufferStatus, <framebuffer> is zero or the
+    name of the framebuffer object.
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER or FRAMEBUFFER.
+    FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER.
+
+    If <framebuffer> is zero, then the status of the default read or draw
+    framebuffer (as determined by <target>) is returned.
+
+    A value is returned that identifies whether or not the framebuffer
+    object or default framebuffer is complete when treated as a read or draw
+    framebuffer (as determined by <target>). If the framebuffer object is
+    complete, then FRAMEBUFFER_COMPLETE is returned. Otherwise, the value
+    returned is one of the error codes defined at the start of section 9.4.2
+    identifying one of the rules of framebuffer completeness that is
+    violated.
+
+    Errors
+
+    If CheckFramebufferStatus generates an error, zero is returned.
+
+    An INVALID_ENUM error is generated by CheckFramebufferStatus and
+    CheckNamedFramebufferStatus if <target> is not DRAW_FRAMEBUFFER,
+    READ_FRAMEBUFFER or FRAMEBUFFER.
+
+    An INVALID_OPERATION error is generated by CheckNamedFramebufferStatus
+    if <framebuffer> is not zero or the name of an existing framebuffer
+    object.
+
+
+Additions to Chapter 10 of the OpenGL 4.4 (core) Specification (Vertex
+Specification and Drawing Commands)
+
+    Modifications to Section 10.3, "Vertex Arrays"
+
+    (Insert the following after the introduction of vertex arrays, first
+    paragraph of Section 10.3, p. 314)
+
+    All of the state required to represent the vertex arrays is
+    stored in a vertex array object (VAO).
+
+
+    (Insert all of Section 10.4, "Vertex Array Objects" as new section 10.3.1,
+    renumber subsequent sections and delete the original section 10.4, p. 314)
+
+    (Insert the following after the description of BindVertexArray, p. 327)
+
+    Vertex array objects may also be created with the command
+
+        void CreateVertexArrays(sizei n, uint *arrays);
+
+    CreateVertexArrays returns <n> previously unused vertex array object
+    names in <arrays>, each representing a state vector comprising all the
+    state and with the same initial values listed in tables 23.3 and 23.4.
+
+    Errors
+
+    An INVALID_VALUE error is generated by CreateVertexArrays if <n> is
+    negative.
+
+
+    (Insert the following after the description of IsVertexArray, p. 327)
+
+    To bind a buffer object to the element array buffer bind point of a
+    vertex array object, use the command
+
+        void VertexArrayElementBuffer(uint vaobj, uint buffer);
+
+    <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object, and <buffer> is zero or the name of
+    the buffer object. If <buffer> is zero, any existing element array
+    buffer binding to <vaobj> is removed.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by VertexArrayElementBuffer if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_OPERATION error is generated if <buffer> is not zero or the
+    name of an existing buffer object.
+
+
+    (Modify the introduction of EnableVertexAttribArray and
+    DisableVertexAttribArray with the following, p. 320)
+
+    An individual generic vertex attribute array in a vertex array object
+    is enabled with the commands
+
+        void EnableVertexAttribArray(uint index);
+        void EnableVertexArrayAttrib(uint vaobj, uint index);
+
+    and is disabled with the commands
+
+        void DisableVertexAttribArray(uint index);
+        void DisableVertexArrayAttrib(uint vaobj, uint index);
+
+    <index> is the generic vertex attribute array to enable or disable. For
+    EnableVertexAttribArray and DisableVertexAttribArray, the vertex array
+    object is the currently bound vertex array object. For
+    EnableVertexArrayAttrib and DisableVertexArrayAttrib, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by EnableVertexAttribArray and
+    DisableVertexAttribArray if no vertex array object is bound.
+
+    An INVALID_OPERATION error is generated by EnableVertexArrayAttrib and
+    DisableVertexArrayAttrib if <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_VALUE error is generated if <index> is greater than or equal
+    to the value of MAX_VERTEX_ATTRIBS.
+
+
+    Modifications to Subsection 10.3.2 (which was previously 10.3.1),
+    "Specifying Arrays for Generic Vertex Attributes"
+
+    (Replace the introduction of the subsection with the following, p. 314)
+
+    To specify the organization of arrays storing generic vertex attributes
+    of a vertex array object, use the commands
+
+        void VertexAttribFormat(uint attribindex, int size,
+                                enum type, boolean normalized,
+                                uint relativeoffset);
+        void VertexAttribIFormat(uint attribindex, int size,
+                                 enum type, uint relativeoffset);
+        void VertexAttribLFormat(uint attribindex, int size,
+                                 enum type, uint relativeoffset);
+        void VertexArrayAttribFormat(uint vaobj, uint attribindex, int size,
+                                     enum type, boolean normalized,
+                                     uint relativeoffset);
+        void VertexArrayAttribIFormat(uint vaobj, uint attribindex, int size,
+                                      enum type, uint relativeoffset);
+        void VertexArrayAttribLFormat(uint vaobj, uint attribindex, int size,
+                                      enum type, uint relativeoffset);
+
+    For VertexAttrib*Format, the vertex array object is that bound to
+    VERTEX_ARRAY_BINDING. For VertexArrayAttrib*Format, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object.
+
+    (Retain remainder of language.)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by VertexArrayAttrib*Format if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+
+    (Modify the introduction of BindVertexBuffer with the following, p. 317)
+
+    The source of data for a generic vertex attribute may be determined by
+    attaching a buffer object to a vertex array object with the commands
+
+        void BindVertexBuffer(uint bindingindex, uint buffer,
+                              intptr offset, sizei stride);
+        void VertexArrayVertexBuffer(uint vaobj, uint bindingindex,
+                                     uint buffer, intptr offset,
+                                     sizei stride);
+
+    For BindVertexBuffer, the vertex array object is the currently bound
+    vertex array object. For VertexArrayVertexBuffer, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object.
+
+    <buffer> is either zero or
+      [compatibility profile: an unused name.
+       core profile: a name returned by GenBuffers or CreateBuffers.]
+
+    If <buffer> is zero, any buffer object attached to <bindingindex> is
+    detached.
+
+    If <buffer> is not the name of an existing buffer object, the GL first
+    creates a new state vector, initialized with a zero-sized memory buffer
+    and comprising all the state and with the same initial values listed in
+    table 6.2, just as for BindBuffer. <buffer> is then attached to the
+    specified <bindingindex> of the vertex array object.
+
+    When sourcing vertex data from the buffer object, <offset> specifies the
+    offset in basic machine units of the first element in the vertex buffer.
+    Pointers to the <i>th and <i+1>st elements of the array differ by
+    <stride> basic machine units, the pointer to the <i+1>st element being
+    greater.
+
+    If the operation is successful no change is made to the state of the
+    buffer object, and any previous attachment to <bindingindex> is broken.
+
+    Errors
+
+      [core profile only:
+    An INVALID_OPERATION error is generated by BindVertexBuffer if no vertex
+    array object is bound.
+
+    An INVALID_OPERATION error is generated if <buffer> is not zero or a
+    name returned from a previous call to GenBuffers or CreateBuffers, or if
+    such a name has since been deleted with DeleteBuffers.
+      ]
+
+    An INVALID_OPERATION error is generated by VertexArrayVertexBuffer if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_VALUE error is generated if <bindingindex> is greater than or
+    equal to the value of MAX_VERTEX_ATTRIB_BINDINGS.
+
+    An INVALID_VALUE error is generated if <stride> or <offset> is negative,
+    or if <stride> is greater than the value of MAX_VERTEX_ATTRIB_STRIDE.
+
+
+    The source of data for multiple vertex attributes may be determined by
+    attaching multiple existing buffer objects to a vertex array object with
+    the commands
+
+        void BindVertexBuffers(uint first, sizei count,
+                               const uint *buffers,
+                               const intptr *offsets,
+                               const sizei *strides);
+        void VertexArrayVertexBuffers(uint vaobj, uint first, sizei count,
+                                      const uint *buffers,
+                                      const intptr *offsets,
+                                      const sizei *strides);
+
+    For BindVertexBuffers, the vertex array object is the currently bound
+    vertex array object. For VertexArrayVertexBuffers, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object.
+
+    <count> existing buffer objects are attached to vertex buffer binding
+    points numbered <first> through <first> + <count> - 1. ...
+
+    BindVertexBuffers is equivalent (assuming no errors are generated) to
+
+    (Retain pseudocode example)
+
+    except the buffers  will not be created if they do not exist.
+
+    VertexArrayVertexBuffers is equivalent to the pseudocode above, but
+    replacing BindVertexBuffer(args) with VertexArrayVertexBuffers(vaobj,
+    args).
+
+    The values specified ...
+
+    Errors
+
+      [core profile only:
+    An INVALID_OPERATION error is generated by BindVertexBuffers if no
+    vertex array object is bound.
+      ]
+
+    An INVALID_OPERATION error is generated by VertexArrayVertexBuffer if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    (Retain existing list of errors)
+
+
+    (Modify the introduction of VertexAttribBinding with the following, p. 340)
+
+    The association between a vertex attribute and the vertex buffer binding
+    used by that attribute is set by the commands
+
+        void VertexAttribBinding(uint attribindex, uint bindingindex);
+        void VertexArrayAttribBinding(uint vaobj, uint attribindex,
+                                      uint bindingindex);
+
+    For VertexAttribBinding, the vertex array object is the currently bound
+    vertex array object. For VertexArrayAttribBinding, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by VertexArrayAttribBinding if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+
+    Modifications to Subsection 10.3.3, "Vertex Attribute Divisors"
+
+    (Replace the description of VertexBindingDivisor, p. 320)
+
+    The divisor value for attributes taken from a target vertex array object
+    is set with the commands
+
+        void VertexBindingDivisor(uint bindingindex, uint divisor);
+        void VertexArrayBindingDivisor(uint vaobj, uint bindingindex,
+                                       uint divisor);
+
+    For VertexBindingDivisor, the vertex array object is the currently bound
+    vertex array object. For VertexArrayBindingDivisor, <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object. These commands set the divisor for
+    the buffer bound to the specified <bindingindex> of the vertex array
+    object to <divisor>.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by VertexArrayBindingDivisor if
+    <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_VALUE error is generated if <bindingindex> is greater than or
+    equal to the value of MAX_VERTEX_ATTRIB_BINDINGS.
+
+
+    Modifications to Section 10.4, "Vertex Array Objects"
+
+    (Move this section to subsection 10.3.1 and delete Section 10.4,
+    renumber subsequent section, p. 325)
+
+    Modifications to Section 10.5 (was 10.6), "Vertex Array and Vertex Array
+    Object Queries"
+
+    (Insert the following at the start of the section, p. 338)
+
+    To query parameters of a vertex array object, use the command
+
+        void GetVertexArrayiv(uint vaobj, enum pname, int *param);
+
+    <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object. The value of parameter <pname> for
+    attribute <index> of <vaobj> is returned in <param>. <pname> must be
+    ELEMENT_ARRAY_BUFFER_BINDING.
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_ENUM error is generated if <pname> is not
+    ELEMENT_ARRAY_BUFFER_BINDING.
+
+
+    To query parameters of an attribute of a vertex array object, use
+    the commands
+
+        void GetVertexArrayIndexediv(uint vaobj,
+                                     uint index,
+                                     enum pname,
+                                     int *param);
+        void GetVertexArrayIndexed64iv(uint vaobj,
+                                       uint index,
+                                       enum pname,
+                                       int64 *param);
+
+    <vaobj> is
+      [compatibility profile:
+       zero, indicating the default vertex array object, or]
+    the name of the vertex array object. The value of parameter <pname> for
+    attribute <index> of <vaobj> is returned in <param>.
+
+    For GetVertexArrayIndexediv, <pname> must be one of
+    VERTEX_ATTRIB_ARRAY_ENABLED, VERTEX_ATTRIB_ARRAY_SIZE,
+    VERTEX_ATTRIB_ARRAY_STRIDE, VERTEX_ATTRIB_ARRAY_TYPE,
+    VERTEX_ATTRIB_ARRAY_NORMALIZED, VERTEX_ATTRIB_ARRAY_INTEGER,
+    VERTEX_ATTRIB_ARRAY_LONG, VERTEX_ATTRIB_ARRAY_DIVISOR, or
+    VERTEX_ATTRIB_RELATIVE_OFFSET. For GetVertexArrayIndexed64iv, <pname>
+    must be VERTEX_BINDING_OFFSET.
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <vaobj> is not
+      [compatibility profile: zero or]
+    the name of an existing vertex array object.
+
+    An INVALID_VALUE error is generated if <index> is greater than or equal
+    to the value of MAX_VERTEX_ATTRIBS.
+
+    An INVALID_ENUM error is generated if <pname> is not one of the valid
+    values listed above for the corresponding command.
+
+
+Additions to Chapter 13 of the OpenGL 4.4 (core) Specification (Fixed-Function
+Vertex Post-Processing)
+
+    Modifications to Section 13.2.2, "Transform Feedback Primitive Capture"
+
+    (Insert the following after the description of BindTransformFeedback, p.
+    398)
+
+    New transform feedback objects may also be created with the command
+
+        void CreateTransformFeedbacks(sizei n, uint *ids);
+
+    CreateTransformFeedbacks returns <n> previously unused transform
+    feedback object names in <ids>, each representing a new state vector,
+    comprising the state and with all the same initial values listed in
+    table 23.48.
+
+    Errors
+
+    An INVALID_VALUE error is generated by CreateTransformFeedbacks if <n>
+    is negative.
+
+
+    (Replace the paragraph beginning with "Regions of buffer objects are
+    bound as ..." after the description of ResumeTransformFeedback, p. 400)
+
+    Regions of buffer objects are bound as targets of the currently bound
+    transform feedback object by calling one of the BindBuffer* commands
+    (see sections 6.1 and 6.2) with <target> set to
+    TRANSFORM_FEEDBACK_BUFFER. Alternatively, regions of buffer objects may
+    be bound directly to a transform feedback object with the commands
+
+        void TransformFeedbackBufferRange(uint xfb, uint index,
+                                          uint buffer, intptr offset,
+                                          sizeiptr size);
+        void TransformFeedbackBufferBase(uint xfb, uint index, uint buffer);
+
+    <xfb> must be zero or the name of an existing transform feedback object,
+    and <buffer> must be the name of an existing buffer object.
+    TransformFeedbackBufferRange and TransformFeedbackBufferBase behave
+    similarly to BindBufferRange and BindBufferBase, respectively, except
+    that the target of the operation is <xfb>, and they do not affect any
+    binding to the generic TRANSFORM_FEEDBACK_BUFFER target.
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <xfb> is not zero or the name
+    of an existing transform feedback object.
+
+    An INVALID_VALUE error is generated if <buffer> is not zero or the name
+    of an existing buffer object.
+
+    An INVALID_VALUE error is generated if <index> is greater than or equal
+    to the number of binding points for transform feedback, as described in
+    section 6.7.1.
+
+    An INVALID_VALUE error is generated by TransformFeedbackBufferRange if
+    <offset> is negative.
+
+    An INVALID_VALUE error is generated by TransformFeedbackBufferRange if
+    <size> is less than or equal to zero.
+
+    An INVALID_VALUE error is generated by TransformFeedbackBufferRange if
+    <offset> or <size> do not satisfy the constraints described for those
+    parameters for transform feedback array bindings, as described in
+    section 6.7.1.
+
+
+Additions to Chapter 17 of the OpenGL 4.4 (core) Specification (Writing
+Fragments and Samples to the Framebuffer)
+
+    Modifications to Section 17.4.1, "Selecting Buffers for Writing"
+
+    (Modify the introduction and description of DrawBuffer with the following,
+    p. 467)
+
+    The first such operation is controlling the color buffers into which each
+    of the fragment color values is written. This is accomplished with one of
+    DrawBuffer, NamedFramebufferDrawBuffer, DrawBuffers or
+    NamedFramebufferDrawBuffers.
+
+    The set of buffers of a framebuffer object to which fragment color zero
+    is written is controlled with the commands
+
+        void DrawBuffer(enum buf);
+        void NamedFramebufferDrawBuffer(uint framebuffer, enum buf);
+
+    For DrawBuffer, the framebuffer object is that bound to the
+    DRAW_FRAMEBUFFER binding. For NamedFramebufferDrawBuffer, <framebuffer>
+    is zero or the name of a framebuffer object. If <framebuffer> is zero,
+    then the default framebuffer is affected.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferDrawBuffer if
+    <framebuffer> is not zero or the name of an existing framebuffer object.
+
+    An INVALID_OPERATION error is generated if the default framebuffer is
+    affected and <buf> is a value (other than NONE) that does not indicate
+    one of the color buffers allocated to the default framebuffer.
+
+    An INVALID_OPERATION error is generated if a framebuffer object is
+    affected and <buf> is one of the constants from table 17.4 (other than
+    NONE), or COLOR_ATTACHMENT<m> and <m> is greater than or equal to the
+    value of MAX_COLOR_ATTACHMENTS.
+
+
+    (Modify the introduction and description of DrawBuffers with the following,
+    p. 469)
+
+    The set of buffers of a framebuffer object to which all fragment colors
+    are written is controlled with the commands
+
+        void DrawBuffers(sizei n, const enum *bufs);
+        void NamedFramebufferDrawBuffers(uint framebuffer, sizei n,
+                                    const enum *bufs);
+
+    For DrawBuffer, the framebuffer object is that bound to the
+    DRAW_FRAMEBUFFER binding. For NamedFramebufferDrawBuffer, <framebuffer>
+    is zero or the name of a framebuffer object. If <framebuffer> is zero,
+    then the default framebuffer is affected.
+
+    (Modify the language in the following paragraphs referring to
+    "DRAW_FRAMEBUFFER_BINDING" to read "DRAW_FRAMEBUFFER_BINDING or
+    <framebuffer>", p. 469)
+
+    (Modify the sentences beginning with "If the GL is bound to" to read "If
+    the referenced framebuffer is", p. 469)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferDrawBuffers
+    if <framebuffer> is not zero or the name of an existing framebuffer
+    object.
+
+    An INVALID_OPERATION error is generated if the default framebuffer is
+    affected and any value in <bufs> is a constant (other than NONE or BACK)
+    that does not indicate one of the color buffers allocated to the default
+    framebuffer.
+
+    An INVALID_OPERATION error is generated if a framebuffer object is
+    affected and any value in <bufs> is a constant from table 17.6, or
+    COLOR_ATTACHMENT<m> and <m> is greater than or equal to the value of
+    MAX_COLOR_ATTACHMENTS.
+
+
+    Modifications in Section 17.4.3.1, "Clearing Individual Buffers".
+
+    (Modify the introduction of ClearBuffer{if ui}v with the following, p. 474)
+
+    Individual buffers of a framebuffer object may be cleared with the
+    commands
+
+        void ClearBuffer{if ui}v(enum buffer, int drawbuffer, const T* value);
+        void ClearNamedFramebuffer{if ui}v(uint framebuffer, enum buffer,
+                                           int drawbuffer, const T* value);
+
+    For ClearBuffer*, the framebuffer object is that bound to the
+    DRAW_FRAMEBUFFER binding. For ClearNamedFramebuffer*, <framebuffer> is
+    zero or the name of a framebuffer object. If <framebuffer> is zero, then
+    the default framebuffer is affected.
+
+    <buffer> and <drawbuffer> identify a buffer to clear, and <value>
+    specifies the values to clear it to. The *fv, *iv, and *uiv forms of
+    these commands should be used to clear fixed- and floating-point, signed
+    integer, and unsigned integer color buffers respectively.
+
+    (Retain remainder of section, but insert references to ClearFramebuffer*
+    wherever there are additional references to ClearBuffer*, p. 474-475)
+
+    (Modify the introduction of ClearBufferfi with the following, p. 475)
+
+    Both depth and stencil buffers of a framebuffer object may be cleared
+    with the commands
+
+        void ClearBufferfi(enum buffer, int drawbuffer, float depth, int stencil);
+        void ClearNamedFramebufferfi(uint framebuffer, enum buffer, int drawbuffer,
+                                     float depth, int stencil);
+
+    For ClearBufferfi, the framebuffer object is that bound to the
+    DRAW_FRAMEBUFFER binding. For ClearNamedFramebufferfi, <framebuffer> is
+    zero or the name of a framebuffer object. If <framebuffer> is zero, then
+    the default framebuffer is affected.
+
+    <buffer> must be DEPTH_STENCIL ...
+
+    Errors
+
+    An INVALID_OPERATION error is generated by ClearNamedFramebuffer* if
+    <framebuffer> is not zero or the name of an existing framebuffer object.
+
+
+    Modifications in Section 17.4.4, "Invalidating Framebuffer Contents"
+
+    (Modify the introduction of InvalidateSubFramebuffer as following, p. 476)
+
+    To signal that the GL need not preserve all contents of a framebuffer
+    object (invalidating portions of every pixel or a subregion of pixels),
+    use the commands
+
+        void InvalidateSubFramebuffer(enum target, sizei numAttachments,
+                                      const enum *attachments, inx x,
+                                      int y, sizei width, sizei height);
+        void InvalidateNamedFramebufferSubData(uint framebuffer,
+                                               sizei numAttachments,
+                                               const enum *attachments,
+                                               int x, int y,
+                                               sizei width, sizei height);
+
+    For InvalidateSubFramebuffer, the framebuffer object is that bound to
+    <target>, which must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER or
+    FRAMEBUFFER. FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. For
+    InvalidateNamedFramebufferSubData, <framebuffer> is the name of the
+    framebuffer object. If <framebuffer> is zero, the default draw
+    framebuffer is affected.
+
+    (Retain the remainder of the language)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by
+    InvalidateNamedFramebufferSubData if <framebuffer> is not zero or the
+    name of an existing framebuffer object.
+
+
+    (Modify the introduction of InvalidateFramebuffer with the following,
+    p. 477)
+
+    The commands
+
+        void InvalidateFramebuffer(enum target, sizei numAttachments,
+                                   const enum *attachments);
+        void InvalidateNamedFramebufferData(uint framebuffer,
+                                            sizei numAttachments,
+                                            const enum *attachments);
+
+    are equivalent to
+
+        InvalidateSubFramebuffer(target, numAttachments, attachments,
+                                 0, 0, vw, vh);
+
+    and
+
+        InvalidateNamedFramebufferSubData(framebuffer, numAttachments,
+                                          attachments, 0, 0, vw, vh);
+
+    respectively, where <vw> and <vh> are equal to the maximum viewport width
+    and height, respectively, obtained by querying MAX_VIEWPORT_DIMS.
+
+Additions to Chapter 18 of the OpenGL 4.4 (core) Specification (Reading and
+Copying Pixels)
+
+    Modifications in Section 18.2.1 "Selecting Buffers for Reading"
+
+    (Modify the introduction of ReadBuffer with the following, p. 478)
+
+    When reading pixels from a color buffer of a framebuffer object, the
+    buffer selected for reading is termed the <read buffer>, and is
+    controlled with the commands
+
+        void ReadBuffer(enum src);
+        void NamedFramebufferReadBuffer(uint framebuffer, enum src);
+
+    For ReadBuffer, the framebuffer object is that bound to
+    READ_FRAMEBUFFER. For NamedFramebufferReadBuffer, <framebuffer> is zero
+    or the name of the framebuffer object. If <framebuffer> is zero, the
+    default read framebuffer is affected.
+
+    If the default framebuffer is affected (see chapter 9), <src> must be
+    one of the values listed in table 17.4 ...
+
+    If a framebuffer object is affected, <src> must be one of the values
+    listed in table 17.5 ...
+
+    (Retain the remainder of this section)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by NamedFramebufferReadBuffer if
+    <framebuffer> is not zero or the name of an existing framebuffer object.
+
+    An INVALID_OPERATION error is generated if the default framebuffer is
+    affected, and <src> is a value (other than NONE) that does not indicate
+    any of the color buffers allocated to the default framebuffer.
+
+    An INVALID_OPERATION error is generated if a framebuffer object is
+    affected, <src> is one of the constants from table 17.4 (other than
+    NONE, or COLOR_ATTACHMENTm where m is greater than or equal to the value
+    of MAX_COLOR_ATTACHMENTS.
+
+
+
+    Modifications in Section 18.3.1 "Blitting Pixel Rectangles"
+
+    (Modify the introduction of BlitFramebuffer with the following, p. 487)
+
+    To transfer a rectangle of pixel values from one region of a source
+    framebuffer to another region of a destination framebuffer, use the
+    commands The commands
+
+        void BlitFramebuffer(int srcX0, int srcY0,
+                             int srcX1, int srcY1,
+                             int dstX0, int dstY0,
+                             int dstX1, int dstY1,
+                             bitfield mask, enum filter);
+        void BlitNamedFramebuffer(uint readFramebuffer, uint drawFramebuffer,
+                                  int srcX0, int srcY0,
+                                  int srcX1, int srcY1,
+                                  int dstX0, int dstY0,
+                                  int dstX1, int dstY1,
+                                  bitfield mask, enum filter);
+
+    For BlitFramebuffer, the source and destination framebuffers are those
+    bound to READ_FRAMEBUFFER and DRAW_FRAMEBUFFER respectively. For
+    BlitNamedFramebuffer, <readFramebuffer> and <drawFramebuffer> are the
+    names of the source and destination framebuffers respectively.
+
+    If no framebuffer is bound to READ_FRAMEBUFFER or DRAW_FRAMEBUFFER (for
+    BlitFramebuffer), or if <readFramebuffer> or <drawFramebuffer> is zero
+    (for BlitNamedFramebuffer), then the default read or draw framebuffer is
+    used as the corresponding source or destination framebuffer,
+    respectively.
+
+    <mask> is zero or the bitwise OR ...
+
+    (Retain the remainder of this section)
+
+    Errors
+
+    An INVALID_OPERATION error is generated by BlitNamedFramebuffer if
+    <readFramebuffer> or <drawFramebuffer> is not zero or the name of an
+    existing framebuffer object.
+
+
+Additions to Chapter 22 of the OpenGL 4.4 (core) specification, "Context State
+Queries"
+
+    (Add Subsection 22.4, "Transform Feedback State Queries", p. 527)
+
+    State of the currently bound transform feedback object may be queried by
+    calling GetIntegerv, GetIntegeri_v, GetInteger64i_v, GetBooleanv, or
+    other simple query functions with <pname> set to one of the tokens
+    listed in table 23.48.
+
+    Alternatively, the state of a transform feedback object may be queried
+    with the commands
+
+        void GetTransformFeedbackiv(uint xfb, enum pname, int *param);
+
+        void GetTransformFeedbacki_v(uint xfb, enum pname, uint index,
+                                     int *param);
+
+        void GetTransformFeedbacki64_v(uint xfb, enum pname, uint index,
+                                       int64 *param);
+
+    <xfb> must be zero, indicating the default transform feedback object, or
+    the name of an existing transform feedback object. <pname> must be one
+    of the tokens listed in table 23.48, depending on the command name as
+    shown in the errors section below. For indexed state, <index> is the
+    index of the transform feedback stream. <param> is the address of a
+    variable to receive the result of the query.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by GetTransformFeedbackiv,
+    GetTransformFeedbacki_v and GetTransformFeedbacki64_v if <xfb> is not
+    zero or the name of an existing transform feedback object.
+
+    An INVALID_ENUM error is generated by GetTransformFeedbackiv if <pname>
+    is not TRANSFORM_FEEDBACK_PAUSED or TRANSFORM_FEEDBACK_ACTIVE.
+
+    An INVALID_ENUM error is generated by GetTransformFeedbacki_v if <pname>
+    is not TRANSFORM_FEEDBACK_BUFFER_BINDING.
+
+    An INVALID_ENUM error is generated by GetTransformFeedbacki64_v if
+    <pname> is not TRANSFORM_FEEDBACK_BUFFER_START or
+    TRANSFORM_FEEDBACK_BUFFER_SIZE.
+
+    An INVALID_VALID error is generated by GetTransformFeedbacki_v and
+    GetTransformFeedbacki64_v if <index> is greater than or equal to the
+    number of binding points for transform feedback, as described in section
+    6.7.1.
+
+
+    (Add Subsection 22.5, "Indexed Binding State Queries", p. 527)
+
+    The name of the texture object bound to the active texture unit may be
+    queried by calling GetIntegerv with <pname> TEXTURE_BINDING_1D,
+    TEXTURE_BINDING_1D_ARRAY, TEXTURE_BINDING_2D, TEXTURE_BINDING_2D_ARRAY,
+    TEXTURE_BINDING_2D_MULTISAMPLE, TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY,
+    TEXTURE_BINDING_3D, TEXTURE_BINDING_BUFFER, TEXTURE_BINDING_CUBE_MAP,
+    TEXTURE_BINDING_CUBE_MAP_ARRAY, or TEXTURE_BINDING_RECTANGLE.
+    Likewise, the current sampler bound to the active
+    texture unit may be queried by calling GetIntegerv with <pname>
+    SAMPLER_BINDING.
+
+    To query the bound texture or sampler object bound to a specific texture
+    unit without changing the active texture selector, call GetIntegeri_v
+    with one of the valid <pname>s listed above, and with <index> set to the
+    zero-based texture unit index to be queried.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    TBD.
+
+GLX Protocol
+
+    TBD.
+
+New State
+
+    Append to Table 23.15, "Textures (state per texture object)"
+
+    +-----------------------------------+-------+------------------------+---------------------+------------------------------------+---------+
+    | Get Value                         | Type  | Get Command            | Initial Value       | Description                        | Sec.    |
+    +-----------------------------------+-------+------------------------+---------------------+------------------------------------+---------+
+    | TEXTURE_TARGET                    | E     | GetTexParameteriv      | NONE                | Target of texture object           | 8.11    |
+    |                                   |       | GetTextureParameteriv  |                     |                                    |         |
+    +-----------------------------------+-------+------------------------+---------------------+------------------------------------+---------+
+
+
+    Append to Table 23.44, "Query Object State"
+
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+---------+
+    | Get Value                         | Type  | Get Command        | Initial Value                  | Description                        | Sec.    |
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+---------+
+    | QUERY_TARGET                      | E     | GetQueryObjectiv   | NONE                           | Target of query object             | 4.2     |
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+---------+
+
+
+Modified state tables
+
+    Modify Table 23.3, "Vertex Array Object State"
+
+    Add GetVertexArrayAttribiv in 'Get Command' for
+    VERTEX_ATTRIB_ARRAY_ENABLED,
+    VERTEX_ATTRIB_ARRAY_SIZE,
+    VERTEX_ATTRIB_ARRAY_STRIDE,
+    VERTEX_ATTRIB_ARRAY_TYPE,
+    VERTEX_ATTRIB_ARRAY_NORMALIZED,
+    VERTEX_ATTRIB_ARRAY_INTEGER,
+    VERTEX_ATTRIB_ARRAY_LONG,
+    VERTEX_ATTRIB_ARRAY_DIVISOR, and
+    VERTEX_ATTRIB_RELATIVE_OFFSET states
+
+
+    Modify Table 23.4, "Vertex Array Object State"
+
+    Add GetVertexArrayiv in 'Get Command' for
+    ELEMENT_ARRAY_BUFFER_BINDING state
+
+    Add GetVertexArrayIndexediv in 'Get Command' for
+    VERTEX_ATTRIB_ARRAY_BUFFER_BINDING
+    VERTEX_ATTRIB_BINDING,
+    VERTEX_ATTRIB_RELATIVE_OFFSET,
+    VERTEX_BINDING_OFFSET, and
+    VERTEX_BINDING_STRIDE states
+
+    Add GetVertexArrayIndexed64iv in 'Get Command' for
+    VERTEX_BINDING_OFFSET state
+
+
+    Modify Table 23.6, "Buffer Object State"
+
+    Add GetNamedBufferSubData in 'Get Command' for
+    the entry described as "Buffer data".
+
+    Add GetNamedBufferParameteri64v in 'Get Command' for
+    BUFFER_USAGE,
+    BUFFER_ACCESS,
+    BUFFER_ACCESS_FLAGS, and
+    BUFFER_MAP_LENGTH states
+
+    Add GetNamedBufferParameteriv in 'Get Command' for
+    BUFFER_SIZE,
+    BUFFER_MAP_OFFSET,
+    BUFFER_MAP_LENGTH,
+    BUFFER_IMMUTABLE_STORAGE,
+    BUFFER_STORAGE_FLAGS, and
+    BUFFER_MAPPED states
+
+    Add GetNamedBufferPointerv in 'Get Command' for
+    BUFFER_MAP_POINTER state
+
+
+    Modify Table 23.12, "Textures (state per texture unit)"
+
+    Add GetIntegeri_v in 'Get Command' for
+    TEXTURE_BINDING_1D,
+    TEXTURE_BINDING_1D_ARRAY,
+    TEXTURE_BINDING_2D,
+    TEXTURE_BINDING_2D_ARRAY,
+    TEXTURE_BINDING_2D_MULTISAMPLE,
+    TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY
+    TEXTURE_BINDING_3D,
+    TEXTURE_BINDING_BUFFER,
+    TEXTURE_BINDING_CUBE_MAP,
+    TEXTURE_BINDING_CUBE_MAP_ARRAY, and
+    TEXTURE_BINDING_RECTANGLE states
+
+
+    Modify Table 23.14, "Textures (state per texture object)"
+
+    Add GetTextureParameteriv in 'Get Command' for
+    TEXTURE_SWIZZLE_R,
+    TEXTURE_SWIZZLE_G,
+    TEXTURE_SWIZZLE_B,
+    TEXTURE_SWIZZLE_A,
+    TEXTURE_MIN_FILTER,
+    TEXTURE_MAG_FILTER,
+    TEXTURE_WRAP_S,
+    TEXTURE_WRAP_T,
+    TEXTURE_WRAP_R,
+    DEPTH_STENCIL_TEXTURE_MODE,
+    TEXTURE_COMPARE_MODE,
+    TEXTURE_COMPARE_FUNC,
+    IMAGE_FORMAT_COMPATIBILITY_TYPE,
+    TEXTURE_IMMUTABLE_FORMAT,
+    TEXTURE_IMMUTABLE_LEVELS,
+    TEXTURE_VIEW_MIN_LEVEL,
+    TEXTURE_VIEW_NUM_LEVELS,
+    TEXTURE_VIEW_MIN_LAYER and
+    TEXTURE_VIEW_NUM_LAYERS states
+
+    Add GetTextureParameterfv in 'Get Command' for
+    TEXTURE_BORDER_COLOR,
+    TEXTURE_MIN_LOD,
+    TEXTURE_MAX_LOD,
+    TEXTURE_BASE_LEVEL,
+    TEXTURE_MAX_LEVEL and
+    TEXTURE_LOD_BIAS states.
+
+
+    Modify Table 23.16 and 2317, "Textures (state per texture image)"
+
+    Add GetTextureLevelParameterv in 'Get Command' for each state of
+    the table.
+
+
+    Modify Table 23.25. "Framebuffer (state per attachment point)"
+
+    Add GetNamedFramebufferAttachmentParameteriv in 'Get Command'
+    for each state of the table.
+
+
+    Modify Table 23.27. "Renderbuffer (state per renderbuffer object)"
+
+    Add GetNamedRenderbufferParameteriv in 'Get Command' for
+    RENDERBUFFER_WIDTH,
+    RENDERBUFFER_HEIGHT,
+    RENDERBUFFER_INTERNAL_FORMAT,
+    RENDERBUFFER_RED_SIZE,
+    RENDERBUFFER_GREEN_SIZE,
+    RENDERBUFFER_BLUE_SIZE,
+    RENDERBUFFER_ALPHA_SIZE,
+    RENDERBUFFER_DEPTH_SIZE,
+    RENDERBUFFER_STENCIL_SIZE, and
+    RENDERBUFFER_SAMPLES states
+
+
+    Modify Table 23.48, "Transform Feedback State"
+
+    Add GetTransformFeedbackiv in 'Get Command' for
+    TRANSFORM_FEEDBACK_BUFFER_BINDING,
+    TRANSFORM_FEEDBACK_PAUSED and
+    TRANSFORM_FEEDBACK_ACTIVE states
+
+    Add GetTransformFeedbacki64_v in 'Get Command' for
+    TRANSFORM_FEEDBACK_BUFFER_START and
+    TRANSFORM_FEEDBACK_BUFFER_SIZE states
+
+    Add GetTransformFeedbacki_v in 'Get Command' for
+    TRANSFORM_FEEDBACK_BUFFER_BINDING state
+
+
+New Implementation Dependent State
+
+    None.
+
+Usage Examples
+
+    Example 1:
+        // Bind to Edit
+        void streamChunks(const Chunks & chunks)
+        {
+            GLuint restore = 0;
+            glGetIntegerv(GL_ARRAY_BUFFER_BINDING, restore)
+            glBindBuffer(GL_ARRAY_BUFFER, chunks.buffer());
+
+            uint8* pointer = reinterpret_cast<uint8*>(glMapBufferRange(
+              GL_ARRAY_BUFFER, 0, chunks.size(), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
+
+            for(std::size_t i = 0; i < chunks.count(); ++i)
+            {
+                // Do something
+                glFlushMappedBufferRange(GL_ARRAY_BUFFER, chunks.offset(), chunks.length());
+            }
+
+            glUnmapNamedBuffer(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, restore);
+        }
+
+        // Direct State Access, stream while rendering, no rendering state polution
+        void streamChunks(const Chunks & chunks)
+        {
+            uint8* pointer = reinterpret_cast<uint8*>(glMapNamedBufferRange(
+              chunks.buffer(), 0, chunks.size(), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
+
+            for(int i = 0; i < chunks.count(); ++i)
+            {
+                // Do something
+                glFlushMappedNamedBufferRange(chunks.buffer(), chunks.offset(), chunks.length());
+            }
+
+            glUnmapNamedBuffer(chunks.buffer());
+        }
+
+    Example 2: Creating a buffer object without polluting the OpenGL states
+
+        // Bind to Create
+        GLuint CreateBuffer()
+        {
+          // Save the previous bound buffer
+          GLuint restoreBuffer = 0;
+          glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &restoreBuffer);
+
+          // Reserve the buffer name and create the buffer object
+          uint buffer = 0;
+          glGenBuffers(1, &buffer);
+          glBindBuffer(GL_ARRAY_BUFFER, buffer);
+
+          // Restaure the previous bound buffer to avoid polluting
+          // the rendering states
+          glBindBuffer(GL_ARRAY_BUFFER, restoreBuffer);
+
+          return buffer;
+        }
+
+        // Direct State Access
+        GLuint CreateBuffer()
+        {
+          GLuint buffer = 0;
+          glCreateBuffer(1, &buffer);
+
+          return buffer;
+        }
+
+    Example 3: Creating a vertex array object without polluting the OpenGL states
+
+        // OpenGL 3.0 Bind to Create for vertex array object
+        GLuint CreateVertexArray(GLuint BufferName[])
+        {
+          // Save the previous bound vertex array and array buffer
+          GLuint restoreVertexArray = 0;
+          glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &restoreVertexArray);
+          GLuint restoreBuffer = 0;
+          glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &restoreBuffer);
+
+          glGenVertexArrays(1, &VertexArrayName);
+          glBindVertexArray(VertexArrayName);
+            glEnableVertexAttribArray(semantic::attr::POSITION);
+            glEnableVertexAttribArray(semantic::attr::TEXCOORD);
+
+            glBindBuffer(GL_ARRAY_BUFFER, BufferName[buffer::VERTEX]);
+            glVertexAttribPointer(semantic::attr::POSITION, 2, GL_FLOAT, GL_FALSE, sizeof(glf::vertex_v2fv2f), BUFFER_OFFSET(0));
+            glVertexAttribPointer(semantic::attr::TEXCOORD, 2, GL_FLOAT, GL_FALSE, sizeof(glf::vertex_v2fv2f), BUFFER_OFFSET(sizeof(glm::vec2)));
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BufferName[buffer::ELEMENT]);
+
+          // The GL_ARRAY_BUFFER_BINDING is a context state, not a vertex array state.
+          glBindBuffer(GL_ARRAY_BUFFER, restoreBuffer);
+          glBindVertexArray(restoreVertexArray);
+
+          return vertexArrayName;
+        }
+
+        // OpenGL 4.3 Bind to Create for vertex array object
+        GLuint CreateVertexArray(GLuint BufferName[])
+        {
+          // Save the previous bound vertex array
+          GLuint restoreVertexArray = 0;
+          glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &restoreVertexArray);
+
+          GLuint vertexArrayName = 0;
+          glGenVertexArrays(1, &vertexArrayName);
+          glBindVertexArray(VertexArrayName);
+            glEnableVertexAttribArray(semantic::attr::POSITION);
+            glEnableVertexAttribArray(semantic::attr::TEXCOORD);
+
+            glVertexAttribBinding(semantic::attr::POSITION, 0);
+            glVertexAttribFormat(semantic::attr::POSITION, 2, GL_FLOAT, GL_FALSE, 0);
+
+            glVertexAttribBinding(semantic::attr::TEXCOORD, 0);
+            glVertexAttribFormat(semantic::attr::TEXCOORD, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BufferName[buffer::ELEMENT]);
+            glBindVertexBuffer(0, BufferName[buffer::VERTEX], 0, 0);
+          glBindVertexArray(restoreVertexArray);
+
+          return vertexArrayName;
+        }
+
+        // Direct State Access
+        GLuint CreateVertexArray(GLuint BufferName[])
+        {
+          GLuint vertexArrayName = 0;
+          glCreateVertexArrays(1, &vertexArrayName);
+
+          glEnableVertexArrayAttrib(VertexArrayName, semantic::attr::POSITION);
+          glEnableVertexArrayAttrib(VertexArrayName, semantic::attr::TEXCOORD);
+
+          glVertexArrayAttribBinding(VertexArrayName, semantic::attr::POSITION, 0);
+          glVertexArrayAttribFormat(VertexArrayName, semantic::attr::POSITION, 2, GL_FLOAT, GL_FALSE, 0);
+
+          glVertexArrayAttribBinding(VertexArrayName, semantic::attr::TEXCOORD, 0);
+          glVertexArrayAttribFormat(VertexArrayName, semantic::attr::TEXCOORD, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2);
+
+          glVertexArrayElementBuffer(VertexArrayName, BufferName[buffer::ELEMENT]);
+          glVertexArrayVertexBuffer(VertexArrayName, 0, BufferName[buffer::VERTEX], 0, 0);
+
+          return vertexArrayName;
+        }
+
+    Example 4: Querying the bound texture to a texture image unit for debugging
+
+        // Select to query
+        // We need the <target> or we need to loop over all the possible targets
+        GLuint GetBoundTexture(GLenum target, GLuint unit)
+        {
+          GLuint restore = 0;
+          glGetIntegerv(GL_ACTIVE_TEXTURE, &restore);
+
+          glActiveTexture(unit);
+
+          GLuint name = 0;
+          glGetIntegerv(target, &name);
+
+          glActiveTexture(restore);
+        }
+
+        // Direct State Access
+        // target_binding is e.g. GL_TEXTURE_BINDING_2D for the 2D texture
+        GLuint GetBoundTexture(GLenum target_binding, GLuint unit)
+        {
+          GLuint name = 0;
+          glGetIntegeri_v(target_binding, unit, &name);
+          return name;
+        }
+
+Transistioning guide to ARB_direct_state_access
+
+    This section is only for the purpose of transistioning an application to
+    the modern direct state access approach. It is not part of the specification
+    as such.
+
+    TBD.
+
+Interactions with OpenGL 3.0 or ARB_framebuffer_object
+
+    If neither OpenGL 3.0 nor ARB_framebuffer_object are supported,
+    ignore the support for GenerateTextureMipmap, NamedFramebufferRenderbuffer,
+    NamedFramebufferTexture, NamedFramebufferTextureLayer,
+    NamedFramebufferDrawBuffer, NamedFramebufferDrawBuffers,
+    NamedFramebufferReadBuffer, ClearNamedFramebufferiv,
+    ClearNamedFramebufferuiv, ClearNamedFramebufferfv, ClearNamedFramebufferfi,
+    BlitNamedFramebuffer, GetNamedFramebufferAttachmentParameteriv,
+    CheckNamedFramebufferStatus, CreateRenderbuffers, NamedRenderbufferStorage,
+    NamedRenderbufferStorageMultisample and GetNamedRenderbufferParameteriv.
+
+Interactions with OpenGL 3.0 or ARB_map_buffer_range
+
+    If neither OpenGL 3.0 nor ARB_map_buffer_range are supported,
+    ignore the support for MapNamedBufferRange and FlushMappedNamedBufferRange
+
+Interactions with OpenGL 3.0 or ARB_vertex_array_object
+
+    If neither OpenGL 3.0 nor ARB_vertex_array_object are supported,
+    ignore the support for CreateVertexArrays, DisableVertexArrayAttrib,
+    EnableVertexArrayAttrib, VertexArrayElementBuffer, GetVertexArrayiv,
+    and GetVertexArrayIndexediv.
+
+Interactions with OpenGL 3.1 or ARB_copy_buffer
+
+    If neither OpenGL 3.1 nor ARB_copy_buffer are supported,
+    ignore the support for CopyNamedBufferSubData.
+
+Interactions with OpenGL 3.3 or ARB_instanced_arrays
+
+    If neither OpenGL 3.3 nor ARB_instanced_arrays are supported,
+    ignore the support for VertexArrayAttribDivisor and
+    VertexArrayBindingDivisor.
+
+Interactions with OpenGL 3.3 or ARB_sampler_objects
+
+    If neither OpenGL 4.1 nor ARB_separate_shader_objects are supported,
+    ignore the support for CreateSamplers.
+
+Interactions with OpenGL 4.0 or ARB_transform_feedback2
+
+    If neither OpenGL 4.0 nor ARB_transform_feedback2 are supported,
+    ignore the support for CreateTransformFeedbacks, GetTransformFeedbackiv,
+    GetTransformFeedbacki_v, GetTransformFeedbacki64_v, and TextureBuffer.
+
+Interactions with OpenGL 4.1 or ARB_vertex_attrib_64bit
+
+    If neither OpenGL 4.1 nor ARB_vertex_attrib_64bit are supported,
+    ignore the support for VertexArrayAttribLFormat.
+
+Interactions with OpenGL 4.1 or ARB_separate_shader_objects
+
+    If neither OpenGL 4.1 nor ARB_separate_shader_objects are supported,
+    ignore the support for CreateProgramPipelines.
+
+Interactions with OpenGL 4.2 or ARB_texture_storage
+
+    If neither OpenGL 4.2 nor ARB_texture_storage are supported,
+    ignore the support for TextureStorage1D, TextureStorage2D and
+    TextureStorage3D.
+
+Interactions with OpenGL 4.3 or ARB_texture_storage_multisample
+
+    If neither OpenGL 4.2 nor ARB_texture_storage are supported,
+    ignore the support for TextureStorage2DMultisample and
+    TextureStorage3DMultisample.
+
+Interactions with OpenGL 4.3 or ARB_vertex_attrib_binding
+
+    If neither OpenGL 4.3 nor ARB_vertex_attrib_binding are supported,
+    ignore the support for VertexArrayVertexBuffer, VertexArrayAttribFormat,
+    VertexArrayAttribIFormat, VertexArrayAttribLFormat,
+    VertexArrayAttribBinding, VertexArrayBindingDivisor.
+
+Interactions with OpenGL 4.3 or ARB_invalidate_subdata
+
+    If neither OpenGL 4.3 nor ARB_invalidate_subdata are supported,
+    ignore the support for InvalidateNamedFramebufferData and
+    InvalidateNamedFramebufferSubData.
+
+Interactions with OpenGL 4.3 or ARB_texture_buffer_range
+
+    If neither OpenGL 4.3 nor ARB_texture_buffer_range are supported,
+    ignore the support for TextureBufferRange.
+
+Interactions with OpenGL 4.3 or ARB_clear_buffer_object
+
+    If neither OpenGL 4.3 nor ARB_clear_buffer_object are supported,
+    ignore the support for ClearNamedBufferData and ClearNamedBufferSubData.
+
+Interactions with OpenGL 4.3 or ARB_framebuffer_no_attachments
+
+    If neither OpenGL 4.3 nor ARB_framebuffer_no_attachments are supported,
+    ignore the support for NamedFramebufferParameteri and GetNamedFramebufferParameteriv.
+
+Interactions with OpenGL 4.4 or ARB_buffer_storage
+
+    If neither OpenGL 4.3 nor ARB_buffer_storage are supported,
+    ignore the support for NamedBufferStorage.
+
+Interactions with OpenGL 4.4 or ARB_clear_texture
+
+    If neither OpenGL 4.4 nor ARB_clear_texture are supported,
+    ignore the support for ClearNamedBufferData and ClearNamedBufferSubData.
+
+Interactions with OpenGL 4.4 or ARB_multi_bind
+
+    If neither OpenGL 4.4 nor ARB_multi_bind are supported,
+    ignore the support for VertexArrayVertexBuffers.
+
+Interactions with OpenGL 4.4 or ARB_query_buffer_object
+
+     If neither OpenGL 4.4 nor ARB_query_buffer_object are supported, ignore
+     the support for GetQueryBufferObjectiv, GetQueryBufferObjectuiv,
+     GetQueryBufferObjecti64v and GetQueryBufferObjectui64v.
+
+TODO
+
+    Document more errors. Currently, only the errors that check the new
+    parameters are documented. Errors for parameters equivalent to the non-DSA
+    versions of functions are not documented.
+
+    Add Usage Examples
+    Add Transitioning guide to ARB_direct_state_access
+    Add language for 9.2.3 Framebuffer Object Queries
+    Describe bufSize
+
+    Issues left: 0
+
+    What vendors extensions, vendor needs to resolve interaction with ARB_direct_state_access
+
+Issues
+
+    0) What are the difference between ARB_direct_state_access and
+       EXT_direct_state_access?
+
+       <TBD>
+
+    1) Should MultiBind be the only way to bind functions in DSA?
+
+       Do we need BindTextureUnit to replace the couple ActiveTexture and
+       BindTexture? Do we need both VertexArrayVertexBuffer and
+       VertexArrayVertexBuffers?
+
+       RESOLVED: No, both approaches are arguably valuable, add
+       BindTextureUnit, VertexArrayVertexBuffer and
+       VertexArrayVertexBuffers.
+
+    2) NamedBufferData (and the corresponding function from the original EXT)
+       do not include the <target> parameter. Does implementations may make
+       initial assumptions about the usage of a data store based on this
+       parameter. Where did it go? Should we bring it back?
+
+       RESOLVED: No need for a target parameter for buffer. Implemetations
+       don't make usage assumption based on the <target> parameter. Only one
+       vendor extension do so AMD_pinned_memory. A for consistent approach
+       to specify a buffer usage would be to add a new flag for that <flags>
+       parameter of BufferStorage.
+
+    3) Do we need <target> parameters to all the APIs? There are several APIs
+       that either only allow one value, or for which the <target> parameter
+       is of debatable worth.
+
+       RESOLVED: Only keep the target parameter when it is functional.
+
+    4) Do we need a <target> for query object creation?
+
+       RESOLVED: Yes. You can immediately query a result, and the number of
+       bytes written depends on the target.
+
+    5) This extension omits TextureImageND (mutable texture definitions), but
+       includes CompressedTextureImageND (mutable, compressed texture). Why?
+       Can't we have immutable compressed textures?
+
+       RESOLVED: The core specification does not include
+       CompressedTexStorageND, only CompressedTexImageND because immutable
+       textures created with TextureStorageND can be both compressed and
+       uncompressed.
+
+    6) Do TransformFeedbackBufferBase and TransformFeedbackBufferRange need
+       a <target> parameter, as the only acceptable value should be
+       TRANSFORM_FEEDBACK_BUFFER?
+
+       RESOLVED: No.
+
+    7) Do TransformFeedbackBufferBase and TransformFeedbackBufferRange also
+       bind the buffer to the generic TRANSFORM_FEEDBACK_BUFFER target as
+       well as the indexed one as BindBuffer{Base/Range} would?
+
+       RESOLVED: No.
+
+    8) Do we need the support for query conversions for DSA queries?
+
+       For example, with the default transform feedback we can retrive the
+       state values for TRANSFORM_FEEDBACK_BUFFER_START and
+       TRANSFORM_FEEDBACK_BUFFER_SIZE using GetDoublev.
+
+       RESOLVED: No.
+
+    9) The language for VertexArrayVertexBuffer is inserted in subsection
+       10.3.1 after BindVertexBuffer, but vertex array objects are not
+       introduced until 10.4 - after all the state that they encapsulate.
+       This is backwards. We should probably give a brief overview of what
+       vertex arrays are (first paragraph or so of 10.3), followed by
+       introducing the VAO itself ("All the state required to represent
+       vertex arrays is stored in a VAO. Blah blah."), followed by most of
+       section 10.4, followed by all the state that's in the VAO (what is
+       currently section 10.3). This allows the clean introduction of all
+       vertex array state in both DSA and direct-to-context form. Should we
+       make this change?
+
+       RESOLVED: YES. This draft moves section 10.4 to a new subsection at
+       the start of section 10.3 and deletes the original 10.4. This allows
+       the remainder of section 10.3 to refer back to VAOs.
+
+    10) What should be called GetVertexArrayIntegeri_v?
+
+        This name is inconsistent with OpenGL convensions and there are
+        already two precedent in the specification
+
+        A/ In the core specification and alternative to "i" for indexed is to
+        use "Indexed", but there is no precedent for the
+        GetVertexArrayIntegeri_v construct.
+
+        glDepthRangeIndexed
+        glEndQueryIndexed
+        glGetQueryIndexediv
+        glScissorIndexedv
+        glViewportIndexedfv
+
+        Following this precedent for GetVertexArrayIntegeri_v and rename it
+        GetVertexArrayIndexediv.
+
+        B/ Another precedent is:
+
+        void glGetVertexAttribIiv(GLuint index, GLenum pname, GLint *params);
+
+        "Iiv" is not very explicit out of context.
+
+        RESOLVED: GetVertexArrayIndexediv
+
+    11) Do we need GetVertexArrayAttribPointerv?
+
+        RESOLVED: No. Following the line of the resolution of issue 31, if we
+        don't provide a DSA API for VertexAttrib*Pointer, there is no client
+        vertex array support and pointer to query, hence this function as no
+        purpose.
+
+    12) What's the purpose of the new Create* API?
+
+        With the Gen* API, objects are not created, only an object name is
+        reserved. The actual operation creating the object happen after and
+        may require additional informations: texture and query object requires
+        a target to create the approciate data store.
+
+        The following function can create actually object:
+        BindTexture
+        BindBuffer
+        BindFramebuffer
+        BindVertexArray
+        BindProgramPipeline
+        BindRenderbuffer
+        FenceSync
+        BeginQuery*
+        QueryCounter
+        SamplerParameter*
+        UseProgramStages
+
+        The Create* API is an alternative to the Gen* + Call approach to
+        create an object where the object is created when its name is
+        reserved.
+
+    13) What should GetTransformFeedbackBooleanv be called?
+
+        RESOLVED: We don't need it! The OpenGL specification doesn't have
+        precedent for GetTransformFeedbackBooleanv but there are boolean
+        states. For example VERTEX_ATTRIB_ARRAY_ENABLED is queried with
+        GetVertexAttribiv of GetVertexArrayiv
+
+    14) Does InvalidateNamedFramebufferData and
+        InvalidateNamedFramebufferSubData need a <target> parameter?
+
+        RESOLVED: No. For Invalidate{Sub,}Framebuffer the <target> parameter is
+        only used to select between the framebuffer at the read binding point
+        and the one at the draw binding point. Since the framebuffer being
+        invalidated is identified directly by the <framebuffer> parameter, no
+        <target> is necessary.
+
+    15) What should we do with the PixelStore?
+
+        They have that B2E flavor except that instead of binding an object
+        to edit it, we need to query/set states to edit some objects like
+        selectors. Just like B2E, there are generating side effects in
+        applications. Hence, it is worth to investigate how we could DSA
+        PixelStore.
+
+        PixelStore interacts with TextureSubImage*, CompressedTextureSubImage*
+        functions that we are adding in this extension, and ReadPixels.
+
+        Possible solutions for this issue:
+        a) Add a pointer parameter to the functions concerned taking a
+           structure. with all the pixel store states. If null is passed,
+           use the default pixel store states.
+
+        b) A pixel store object. (hard to imagine, different from other APIs,
+           where to store those in an engine?)
+
+        c) Adding pixel store states to the texture object.
+
+        An alternative would be allowing the user to submit a structure with
+        all the pixel store parameters.
+
+        The interactions with sparse textures make it PixelStore particularly
+        interesting.
+
+        RESOLVED: The primary motivation for this extension is getting rid of
+        selectors. Pixel store parameters are just global state. Fixing that
+        is beyond the scope of this extension (and there is a lot of other
+        state too!).
+
+    16) Do we need DSA for UniformSubroutinesuiv?
+
+        RESOLVED: Deferred. Do subroutines have a future?
+
+    17) How do we resolve the inconsistency between Create* and Gen* APIs?
+
+        The Create API is typically equivalent to the Gen API and Binding
+        the object.
+
+        For example:
+        // Direct State Access
+        uint buffer;
+        CreateBuffer(1, &buffer);
+
+        Is the logical equivalent to:
+
+        // Bind to Edit
+        uint restoreBuffer;
+        GetIntegerv(ARRAY_BUFFER_BINDING, &restoreBuffer);
+        uint buffer;
+        GenBuffers(1, &buffer);
+        BindBuffer(ARRAY_BUFFER, buffer);
+        BindBuffer(ARRAY_BUFFER, restoreBuffer);
+
+        Typically with DSA objects are created with [Create] while [Gen+Bind]
+        is used to create the objects with B2E. Unfortunately, [Gen+Bind]
+        is not systematic:
+
+        In OpenGL 4.4, here is the functions that create objects:
+        - BindTexture
+        - BindBuffer
+        - BindProgramPipeline
+        - BindRenderbuffer
+        - BindSampler
+        - UseProgramStages
+        - SamplerParameter*
+        - GetSamplerParameter*
+        - IsSampler
+        - BeginQuery
+        - BeginQueryIndexed
+        - QueryCounter
+
+        Effectively, the sampler object behaves as if it was created at Gen*.
+
+        The query API is resolved with CreateQueries that effectively
+        creates the query object with a target that can also be TIMESTAMP
+        which is used with QueryCounter with the Gen* method.
+
+        An approach to make the B2E API more consistent without breaking
+        compatibility would be allowing any program pipeline function to
+        create the program pipeline object so that effectively
+        GenProgramPipelines would behave like CreateProgramPipelines.
+
+        RESOLVED: Only the Create* API provide a consistent behaviour.
+
+        We can't really fix the Gen* consistency but all the DSA functions
+        behave identically if we use the Create* API. That is:
+
+        1/ The object is effectively created by Create*
+        2/ A DSA function modifying an object, won't generated an invalid
+           operation error if that object was created with the corresponding
+           Create* function and if that object was deleted by the
+           corresponding Delete* function.
+
+    18) Should we take the DSA effort further to improve API consistency
+        further so that we could have a clear message so say "this is the
+        DSA API"?
+
+        All the DSA functions could have the prefix "DSA" so that if we want
+        an understandable message for the community would be:
+
+        "All the DSA functions starts by glDSA".
+
+        Considering the request for clarity by the OpenGL community, it seems
+        valuable to consider this idea.
+
+        However, a lot of the DSA API is already in the core specification.
+        To provide this API consistency, we would need to create aliases for
+        existing functions.
+
+        Propose changes:
+        1/ Rename all functions introduced by this extension removing
+           "Named" and adding the prefix "DSA"
+        2/ Add aliases to the following DSA functions already in core:
+
+        ClearTexImage -> DSAClearTexImage
+        ClearTexSubImage -> DSAClearTexSubImage
+        InvalidateTexSubImage -> DSAInvalidateTexSubImage
+        InvalidateTexImage -> DSAInvalidateTexImage
+        InvalidateBufferSubData -> DSAInvalidateBufferSubData
+        InvalidateBufferData -> DSAInvalidateBufferData
+        CompileShader -> DSACompileShader
+        TextureView -> DSATexView
+        CopyImageSubData -> DSACopyImageSubData
+        UseProgramStages -> DSAProgramPipelineStages
+        ProgramParameteri -> DSAProgramParameteri
+        ProgramUniform* -> DSAProgramUniform*
+        ProgramBinary -> DSAProgramBinary
+        LinkProgram -> DSALinkProgram
+        GetProgramBinary -> DSAGetProgramBinary
+        GetProgramInfoLog -> DSAGetProgramInfoLog
+        CreateShaderProgram -> DSACreateShaderProgram
+        SamplerParameter* -> DSASamplerParameter*
+        GetSamplerParameter* -> DSAGetSamplerParameter*
+        ValidateProgramPipeline -> DSAValidateProgramPipeline
+        UseProgramStages -> DSAProgramPipelineStages
+        GetProgramPipelineInfoLog -> DSAGetProgramPipelineInfoLog
+        GetProgramInterfaceiv -> DSAGetProgramInterfaceiv
+        GetProgramResourceIndex -> DSAGetProgramResourceIndex
+        GetProgramResourceName -> DSAGetProgramResourceName
+        GetProgramResourceiv -> DSAGetProgramResourceiv
+        GetProgramResourceLocation -> DSAGetProgramResourceLocation
+        GetProgramResourceLocationIndex -> DSAGetProgramResourceLocationIndex
+        GetAttachedShaders -> DSAGetAttachedShaders
+        GetShaderiv -> DSAGetShaderiv
+        GetShaderSource -> DSAGetShaderSource
+        GetShaderPrecisionFormat -> DSAGetShaderPrecisionFormat
+        GetProgramInfoLog -> DSAGetProgramInfoLog
+        GetUniformfv -> DSAGetUniformfv
+        GetUniformiv -> DSAGetUniformiv
+        GetUniformuiv -> DSAGetUniformuiv
+        GetUniformdv -> DSAGetUniformdv
+        GetProgramStageiv -> DSAGetProgramStageiv
+
+        CreateShader -> DSACreateShaders
+        CreateProgram -> DSACreatePrograms
+
+        GetSynciv -> DSAGetSynciv
+        FenceSync -> DSAFenceSync
+        WaitSync -> DSAWaitSync
+        ClientWaitSync -> DSAClientWaitSync
+
+        Do we want to add delete functions?
+
+        RESOLVED: No. Some people liked this, some didn't. Some liked the
+        prefix idea, but not the letters "DSA" (who wants to explain that in
+        5 years?). Some people liked the idea of aliasing existing commands
+        and some didn't. Some had other ideas for naming conventions. In the
+        end we opted for "get 'er done!" and as a result we will have GL 4.5
+        with DSA in it.
+
+        For those who really want the prefixed API, this can easily be done
+        by renaming the commands when they are dynamically loaded.
+        Additionally, with DSA, a C++ interface for GL can easily be written
+        which will hide all the ugly details off things like C function names.
+
+    19) Can we use DSA functions on default objects? Default framebuffer,
+        transform feedback, program pipeline, texture, vertex array?
+
+        RESOLVED:
+
+          - Default textures: NO. There are too many texture objects named
+            zero, the default textures are rarely used, and adding selectors
+            to all the commands is too much work for a corner case.
+          - Default vertex array objects: YES, but only in the compatibility
+            profile, where they exist (see issue 40).
+          - Default transform feedback and program pipeline objects; YES.
+          - Default framebuffer objects: YES, with certain exceptions as
+            described in issue 34.
+
+    20) Should we introduce glCreate* function capable to create multiple
+        program and shader objects? Same for glDelete*.
+
+        RESOLVED: There is very little value to add these functions. Unless we
+        figure out a way to add more value to it, from the resolution of issue
+        18 for example, no need to add them.
+
+    21) Why do we have TransformFeedbackBufferBase/Range but nothing for
+        atomic counters, SSBOs, or UBOs?
+
+        RESOLVED: TransformFeedbackBufferBase/Range are the DSA version of
+        BindBufferBase and BindBufferRange on transform feedback object with
+        the Bind To Edit API. Atomic counters, SSBOs and UBOs binding are
+        exclusively context states. There is no object to attach them to.
+
+    22) How should we query the bound textures with the DSA API?
+
+        With the current specification we need to use bind to edit:
+
+        GLuint GetTextureName(GLuint unit, GLenum target)
+        {
+          GLuint restore = 0;
+          glGetIntegerv(GL_ACTIVE_TEXTURE, &restore);
+
+          glActiveTexture(unit);
+
+          GLuint name;
+          glGetIntegerv(target, &name);
+
+          glActiveTexture(restore);
+
+          return name;
+        }
+
+        Furthermore, with this extension <target> is a texture object state,
+        not an input.
+
+        An approach to resolve this issue is using glGetIntegeri_v for
+        textures:
+
+        void glGetIntegeri_v(GLenum target_binding,
+          GLuint index,
+          GLint * data);
+
+        <target_binding> is e.g. GL_TEXTURE_BINDING_2D for the
+        two-dimensional texture binding.
+
+        Instead of using GL_TEXTURE0, an integer <index> identifies a
+        texture unit.
+
+        NOTE: In the initially released version of this extension,
+        queries of form
+
+            glGetIntegeri_v(GL_TEXTURE_BINDING, index, &texname);
+
+        were supported. This was a mistake and was not implementable,
+        because there can always be multiple different bindings to a
+        texture unit for different targets. This token and the
+        corresponding state has been removed from this extension and
+        from the OpenGL 4.5 API Specification. The glGetIntegeri_v query
+        is still supported, but the target-specific binding tokens must
+        be passed.
+
+    23) Do state tables chapter 23 needs to be updated to contain DSA queries too?
+
+        RESOLVED: Yes.
+
+    24) Do we need DSA functions for mutable textures?
+
+        RESOLVED: No. Immutable texture is a more robust approach to handle
+        textures
+
+    25) Should the DSA API collapse Texture*ND functions into a single
+        function per functionality?
+
+        - New extensions ARB_geometry_shader4, ARB_clear_texture,
+          ARB_sparse_texture, ARB_copy_image have move away from separate ND
+          functions
+        - The TEXTURE_TARGET state allows IHVs baking the <target> parameter
+          into the texture object. ISVs would like to do the same but can't
+          because the target is required to select the correct texture
+          function. Typically, if we fill a GL_TEXTURE_2D or a
+          GL_TEXTURE_2D_ARRAY we need to call respectively TexSubImage2D or
+          TexSubImage3D. A collapse glTexSubImage using three coordinates
+          would resolve this issue.
+
+        What the set of texture functions do we want?
+
+        a) All ND functions:
+
+            void TextureStorage1D(uint texture, sizei levels, enum internalformat,
+                                  sizei width);
+
+            void TextureStorage2D(uint texture, sizei levels, enum internalformat,
+                                  sizei width, sizei height);
+
+            void TextureStorage3D(uint texture, sizei levels, enum internalformat,
+                                  sizei width, sizei height, sizei depth);
+
+            void TextureStorage2DMultisample(uint texture, sizei samples, enum internalformat,
+                                             sizei width, sizei height,
+                                             boolean fixedsamplelocations);
+
+            void TextureStorage3DMultisample(uint texture, sizei samples, enum internalformat,
+                                             sizei width, sizei height, sizei depth,
+                                             boolean fixedsamplelocations);
+
+            void TextureSubImage1D(uint texture, int level,
+                                   int xoffset, sizei width,
+                                   enum format, enum type, const void *pixels);
+
+            void TextureSubImage2D(uint texture, int level,
+                                   int xoffset, int yoffset,
+                                   sizei width, sizei height,
+                                   enum format, enum type, const void *pixels);
+
+            void TextureSubImage3D(uint texture, int level,
+                                   int xoffset, int yoffset, int zoffset,
+                                   sizei width, sizei height, sizei depth,
+                                   enum format, enum type, const void *pixels);
+
+            void CompressedTextureSubImage1D(uint texture, int level,
+                                             int xoffset, sizei width,
+                                             enum format, sizei imageSize, const void *data);
+
+            void CompressedTextureSubImage2D(uint texture, int level,
+                                             int xoffset, int yoffset,
+                                             sizei width, sizei height,
+                                             enum format, sizei imageSize, const void *data);
+
+            void CompressedTextureSubImage3D(uint texture, int level,
+                                             int xoffset, int yoffset, int zoffset,
+                                             sizei width, sizei height, sizei depth,
+                                             enum format, sizei imageSize, const void *data);
+
+            void CopyTextureSubImage1D(uint texture, int level,
+                                       int xoffset,
+                                       int x, int y,
+                                       sizei width);
+
+            void CopyTextureSubImage2D(uint texture, int level,
+                                       int xoffset, int yoffset,
+                                       int x, int y,
+                                       sizei width, sizei height);
+
+            void CopyTextureSubImage3D(uint texture, int level,
+                                       int xoffset, int yoffset, int zoffset,
+                                       int x, int y,
+                                       sizei width, sizei height);
+
+        b) Collapsed ND functions (all addressed with 3D coordinates):
+
+            void TextureStorage(uint texture, sizei levels, enum internalformat,
+                                sizei width, sizei height, sizei depth);
+
+            void TextureStorageMultisample(uint texture, sizei samples, enum internalformat,
+                                           sizei width, sizei height, sizei depth,
+                                           boolean fixedsamplelocations);
+
+            void TextureSubImage(uint texture, int level,
+                                 int xoffset, int yoffset, int zoffset,
+                                 sizei width, sizei height, sizei depth,
+                                 enum format, enum type, const void *pixels);
+
+            void CompressedTextureSubImage(uint texture, int level,
+                                           int xoffset, int yoffset, int zoffset,
+                                           sizei width, sizei height, sizei depth,
+                                           enum format, sizei imageSize, const void *data);
+
+            void CopyTextureSubImage(uint texture, int level,
+                                     int xoffset, int yoffset, int zoffset,
+                                     int x, int y,
+                                     sizei width, sizei height);
+
+        c) Both a) and b)
+
+        RESOLVED: a) All the ND versions only. This is what matches the OpenGL
+        4.4 set of functionality.
+
+    26) DSA functions for VertexAttrib are missing, do we want them?
+
+        The list of the functions concerned is:
+
+        void VertexAttrib{1234}{sfd}( uint index, T values );
+        void VertexAttrib{123}{sfd}v( uint index, const T *values );
+        void VertexAttrib4{bsifd ub us ui}v( uint index, const T *values );
+        void VertexAttrib4Nub( uint index, ubyte x, ubyte y, ubyte z, ubyte w );
+        void VertexAttrib4N{bsi ub us ui}v( uint index, const T *values );
+        void VertexAttribI{1234}{i ui}( uint index, T values );
+        void VertexAttribI{1234}{i ui}v( uint index, const T *values );
+        void VertexAttribI4{b s ub us}v( uint index, const T *values );
+        void VertexAttribL{1234}d( uint index, const T values );
+        void VertexAttribL{1234}dv( uint index, const T *values );
+        void VertexAttribP{1234}ui(uint index,enum type,boolean normalized,uint value);
+        void VertexAttribP{1234}uiv(uint index,enum type,boolean normalized,const uint *value);
+
+        RESOLVED: The default vertex attribute value is not a VAO state. No
+        need to add any function. We can still use the existing functions on a
+        software design based on DSA.
+
+    27) Should we add multi bind versions of TransformFeedbackBufferBase and
+        TransformFeedbackBufferRange?
+
+        RESOLVED: No. On the contrary to the vertex array object, the
+        transform feedback object doesn't contain a lot of state and actually
+        most of the states are relatived to the bound buffers.
+
+        The purpose of BindVertexBuffers for the VAOs it to quickly switch
+        buffers while remaining the same set of buffers in the rendering loop.
+
+        With the transform buffer object, we essentially only have buffers. If
+        the OpenGL programmer want to quickly switch transform feedback
+        buffers, he can create multiple transform feedback objects.
+
+    28) What ARB only extensions have interactions with
+        ARB_direct_state_access?
+
+        RESOLVED: GL_ARB_sparse_texture and GL_ARB_sparse_buffer
+
+    29) Are we missing CreateSync?
+
+        RESOLVED: No. Sync object are created with FenceSync which behave
+        similarly to the new Create* API expect that it returns a handle. The
+        sync object is perfectly compatible with the DSA programming paradigm.
+
+    30) Do we need NamedFramebufferTextureND?
+
+        RESOLVED: No. In unextended OpenGL 4.4 there is at least one case that
+        NamedFramebufferTexture and NamedFramebufferTextureLayer can't handle:
+        non layered rendering to a cube map. In this extension, we extend
+        FramebufferTextureLayer (and NamedFramebufferTextureLayer) to allow
+        non-layered rendering to cube map faces. See also Issue 36.
+
+    31) Do we need VertexArray*Offset? These are present in
+        EXT_direct_state_access.
+
+        RESOLVED: No. GL 4.4 intoduced ARB_vertex_attrib_binding which allows
+        separately changing the buffer (via BindVertexBuffer) and setting the
+        format (via VertexAttribFormat). In this version we provide DSA routines
+        to match these: VertexArrayVertexBuffer and VertexArrayAttribFormat.
+
+        Futhermore, no need to add VertexArrayAttribBinding, we can use
+        VertexArrayBindingDivisor which is based on ARB_vertex_attrib_binding
+        too.
+
+        UNRESOLVED: If there's no VertexArrayAttribBinding, the example
+        code needs to be rewritten accordingly.
+
+    32) Do we need DSA for renderbuffer?
+
+        RESOLVED: Keep renderbuffers. We don't need them as texture objects
+        are a superset of renderbuffer objects but the group decided to keep
+        them.
+
+    33) Atomic buffers only have a shader binding qualifier but no API.
+        Should we add ProgramAtomicBufferBinding?
+
+        RESOLVED: Deferred.
+
+    34) Can the default framebuffer be targeted? If so, how?
+
+        RESOLVED: YES, with certain exceptions. Most commands accepting a
+        <framebuffer> name accept zero and explicitly target the default
+        read or draw framebuffer in this case, matching behavior of the
+        non-Named versions. CheckFramebufferStatus adds a <target> selector.
+        There is a minor loss of functionality for
+        GetNamedFramebufferParameteriv,
+        GetNamedFramebufferAttachmentParameteriv,
+        InvalidateNamedFramebufferSubData, and
+        InvalidateNamedFramebufferData. These commands accept <framebuffer>
+        zero and target the default draw framebuffer. They cannot be used to
+        target the default read framebuffer without adding an explicit
+        selector, which we felt was too much work for a corner case.
+
+        DISCUSSION: Christophe suggested using CreateFramebuffers to create
+        non-zero names for the read and draw framebuffer objects. We decided
+        not to do this as it's quite complex to work out all the details.
+
+    35) Does the CheckNamedFramebufferStatus need a <target> parameter to
+        specify what type of completeness should be checked for?
+
+        RESOLVED: Yes.
+
+        DISCUSSION: CheckFramebufferStatus checks framebuffer completeness
+        independently for the "read framebuffer" and the "draw framebuffer"
+        cases and it's not because one is complete that the other is
+        complete as well.
+
+        Three approaches to resolve this issue:
+
+        a) Add a <target> to CheckNamedFramebufferStatus. The
+           EXT_framebuffer_object way with clearer language.
+
+        b) Add a <target> to the framebuffer object just like we did for
+           the texture object and the query object.
+
+        c) Always check for both. The application can use ReadBuffer(NONE)
+           or DrawBuffer(NONE) if it is really concerned by respectively
+           only the "read framebuffer" or "draw framebuffer" case.
+
+    36) Can we fix FramebufferTexture?
+
+        OpenGL 4.4 has 5 different functions to attach textures to a
+        framebuffer where each function has specific behaviors, that either
+        attached a texture image, enable layered or both according to the
+        target. Specific functions like FramebufferTexture1D and
+        FramebufferTexture3D apply only on the target 1D and target 3D
+        respectively. Finally, we can only attach cube map faces using
+        FramebufferTexture2D while there is no specific functional
+        limitation to be able to do it with FramebufferTextureLayer. This
+        inconsistency is largely due to legacy.
+
+        FramebufferTexture, single layer:
+        - one-or two-dimensional texture
+        - rectangle texture
+        - two-dimensional multisample texture
+
+         FramebufferTexture, Layered:
+        - three-dimensional texture
+        - cube map texture
+        - one-or two-dimensional array texture
+        - two-dimensional multisample array texture
+        - cube map array texture (intended - Bug 12336)
+
+        FramebufferTextureLayer, single layer:
+        - three-dimensional texture
+        - cube map array texture
+        - one-or two-dimensional array texture
+        - two-dimensional multisample array texture
+        [*missing* cube map face]
+
+        FramebufferTexture1D, single layer:
+        - one-dimensional texture
+
+        FramebufferTexture2D, single layer:
+        - cube map face
+        - rectangle texture
+        - two-dimensional texture
+        - two-dimensional multisample texture
+
+        FramebufferTexture3D, single layer:
+        - three-dimensional texture
+
+        DSA is an opportunity for some clean up.
+
+        RESOLVED.  We will add NamedFramebufferTexture and
+        NamedFramebufferTextureLayer, but not NamedFramebufferTexture1D/2D/3D.
+        We'll augment FramebufferTextureLayer and NamedFramebufferTextureLayer
+        with support for cube map textures, so that these methods are
+        complete replacements for the (now legacy) FramebufferTextureND functions.
+
+    37) How to handle UNPACK_SKIP_IMAGES pixel store state if we
+        resolve issue 25 by collapsing Texture*ND functions?
+
+        DISCUSSION:
+
+        The OpenGL 4.4 core specification specify a specific behavior for
+        TexImage2D where UNPACK_SKIP_IMAGES is ignored using the following
+        language:
+
+        "For the purposes of decoding the texture image, TexImage2D is
+        equivalent to calling TexImage3D with corresponding arguments and
+        depth of 1, except that UNPACK_SKIP_IMAGES is ignored"
+
+        However, the specification doesn't clarify anything for regarding
+        the equivalent issue UNPACK_SKIP_ROWS with TexImage1D which seems to
+        imply that UNPACK_SKIP_IMAGES and UNPACK_SKIP_ROWS have inconsistent
+        behaviours.
+
+        A threaded producer and consumer OpenGL implementation might perform
+        the unparking on the application thread in which case it may have no
+        information about the texture object states, hence no access to the
+        implied texture target that could have been used to select whether
+        UNPACK_SKIP_IMAGES should be ignore or not.
+
+        In practice, even if UNPACK_SKIP_IMAGES was active for TexImage2D,
+        it would have an effect only if the default value (zero) is replaced
+        by a positive value.
+
+        The theory behind collapsing Tex*ND functions is that any set of
+        coordinates is a generalization of any set of coordinates with N or
+        less coordinates. There is no reason to forbid UNPACK_SKIP_IMAGES or
+        UNPACK_SKIP_ROWS for collapsed any Tex* functions.
+
+        We can't simply relax UNPACK_SKIP_IMAGES on TexImage2D because an
+        application may rely on the side effects of this behavior which
+        would result in a backward compatibility break.
+
+        RESOLVED: Not applicable. We didn't include these commands.
+
+    38) Do we need the CopyTextureImageSubData command?
+
+        RESOLVED. No. It is already a DSA command. It would allow us to get
+        rid of the (mostly meaningless) <target> parameter, but that is not a
+        selector and it wouldn't be full replacement as it can't support
+        renderbuffers.
+
+    39) Do we need BeginNamedQuery / EndNamedQuery / QueryNamedCounter?
+
+        RESOLVED. No. CreateQueries adds a <target>, so strictly speaking the
+        <target> command isn't needed for BeginQuery/EndQuery, but in the end,
+        this also isn't a selector, so we decided not to change it.
+
+    40) Should commands accepting a vertex array object name allow it to be
+        zero in the compatibility profile?
+
+        RESOLVED: Yes. All commands accepting <vaobj> names accept zero,
+        indicating the default VAO, in the compatibility profile only.
+
+        DISCUSSION: this case may have been overlooked because the extension
+        was written against the core profile specification. EXT_dsa doesn't
+        appear to allow it, although the error discussion there doesn't
+        exclude it, either (with the odd result that it may imply that a VAO
+        named zero will be created if it doesn't exist).
+
+        The introduction says that "this extension only expands
+        functionality that still exists in core profile OpenGL." However,
+        this is in tension with the desire to not have loss of functionality
+        with the non-DSA functions in this case, and the resolution of issue
+        19 is that DSA functions *can* be used on default objects.
+
+    41) Can READ_BUFFER and DRAW_BUFFERi state be queried with
+        GetNamedFramebufferParameteriv?
+
+        RESOLVED: No. The non-DSA query does not support these
+        tokens so neither does the DSA query.
+
+        Previous versions of the extension contained the following state
+        table additions:
+
+           "Modify Table 23.24, "Framebuffer (state per framebuffer object)"
+
+            Add GetNamedFramebufferParameteriv in 'Get Command' for
+            DRAW_BUFFERi and READ_BUFFER states"
+
+        However, there was no corresponding spec language change explaining
+        how these additional tokens worked, and vendors did not implement
+        support for it.
+
+Revision History
+
+    Rev.    Date        Author    Changes
+    ----  -----------   --------- ---------------------------------------------
+    51    17 Sep 2019   Jon Leech Modify DSA commands to generate
+                                  INVALID_OPERATION errors instead of
+                                  INVALID_ENUM for "effective texture
+                                  <target>" mismatches, following the GL 4.6
+                                  specification (gitlab #22).
+
+    50    14 Jun 2018   T. Karras Use English variable names and fix API usage
+                                  in examples.
+
+    49    23 Jul 2017   Jon Leech Replace the long list of valid <target>
+                                  parameters for BeginQueryIndexed,
+                                  EndQueryIndexed, and GetQueryIndexediv
+                                  with a reference to the list of query
+                                  targets in section 4.2 (gitlab #18).
+
+    48    29 Sep 2016   Jon Leech Add interaction with ARB_query_buffer_object
+                                  (Bug 13490).
+
+    47    22 Oct 2015   Jon Leech Add missing drawbuffer parameter to
+                                  ClearNamedFramebufferfi (public Bug 1394,
+                                  Bug 13469).
+
+    46    25 Jun 2015   Jon Leech Add issue 41 noting that read and drawbuffer
+                                  state cannot be queried with
+                                  GetNamedFramebufferParameteriv (Bug 14207).
+
+    45    20 Apr 2015   Jon Leech Change generated error fo *TexSubImage* with
+                                  invalid <target> to INVALID_ENUM instead of
+                                  INVALID_VALUE (Bug 13563).
+
+    44    27 Jan 2015   Jon Leech Remove unimplementable TEXTURE_BINDING token
+                                  and state, and update Issue 22 (Bug 13278).
+
+    43    26 Sep 2014   Jon Leech Add GetQueryBufferObject* to New Commands +
+                                  minor spacing fixes.
+
+    42    18 Sep 2014   Jon Leech Add GetQueryBufferObject* queries (Bug 1214).
+
+    41    24 Jul 2014   Jon Leech Allow cube map textures to be queried with
+                                  GetTextureLevelParameter*. Don't allow
+                                  cube map face targets as effective targets
+                                  of *TextureSubImage2D, but do allow cube
+                                  map textures as effective targets of the
+                                  corresponding *3D commands (Bug 12451).
+
+    40    17 Jul 2014   Jon Leech Remove TRANSFORM_FEEDBACK_BUFFER_BINDING as
+                                  a valid target for GetTransformFeedbackiv
+                                  (Bug 12462).
+
+    39    17 Jul 2014   criccio   Fix missing VertexArrayAttribBinding function
+
+    38    16 Jul 2014   Jon Leech Fix drawBuffer -> drawbuffer capitalization.
+
+    37    15 Jul 2014   Jon Leech Specify that a zero <framebuffer> argument
+                                  to GetNamedFramebufferParameteriv queries
+                                  the default draw framebuffer, matching API
+                                  spec.
+
+    36    10 Jul 2014   Jon Leech Fix error condition for
+                                  Check*FramebufferStatus.
+
+    35    03 Jul 2014   Jon Leech Fix error condition for BindTextureUnit.
+
+    34    29 Jun 2014   Jon Leech Fix typo in spec prototype for
+                                  TextureStorage2D. Clarify that not all
+                                  GetTransformFeedback* commands accept
+                                  all token names from the state table.
+
+    33    16 Jun 2014   Jon Leech Fix typos.
+
+                                  Require GetTextureImage to accept cube map
+                                  texture objects and to respect
+                                  three-dimensional pixel pack state in this
+                                  case (Bug 12329).
+
+    32    16 Jun 2014   Jon Leech Reflow Issues list and add issue 40.
+
+                                  Finish merging errors and language from
+                                  core API spec.
+
+                                  Allow CheckNamedFramebufferStatus to
+                                  accept a zero <framebuffer> argument,
+                                  indicating the default read or draw
+                                  framebuffer.
+
+                                  Remove VERTEX_ATTRIB_ARRAY_POINTER query
+                                  and add VERTEX_ATTRIB_RELATIVE_OFFSET (Bug
+                                  12330).
+
+                                  Allow commands taking vertex object names
+                                  to accept the name zero, indicating the
+                                  default VAO, in the compatibility profile
+                                  only (issues 19, 40).
+
+                                  Add parameter validation errors for
+                                  TransformFeedbackBuffer{Base,Range} and
+                                  GetTransformFeedback{i,i64}_v.
+
+    31    12 Jun 2014   Jon Leech Merge updated errors and language from the
+                                  core API spec (only done up through
+                                  CreateRenderbuffers, more to be done).
+
+    30    08 Jun 2014   Jon Leech Merged errors into body in new spec style
+                                  (still not up to date with 4.5 API spec).
+                                  Remove VertexArrayAttribBinding per issue
+                                  31. Allow querying the default draw
+                                  framebuffer with
+                                  GetFramebufferAttachmentParameteriv
+                                  (making errors consistent with spec body).
+                                  Reflow a few paragraphs and adjust
+                                  indentation for consistency. Assign enum
+                                  values for QUERY_TARGET, TEXTURE_BINDING,
+                                  and TEXTURE_TARGET.
+
+    29    06 Jun 2014   Jon Leech Remove 'or if such an object has been deleted'
+                                  language from object name validation errors,
+                                  since an 'existing' object has by definition
+                                  not been deleted. Remove tabs.
+
+    28    03 Jun 2014   Jon Leech Fix typo 'img' -> 'pixels'.
+
+    27    30 May 2014   dkoch     Resolved issue 30, 36, and supporting edits.
+                                  Resolved issue 25 and removed collapsed
+                                  commands variants. Resolved issue 37.
+                                  Resolved issue 15, 18 (wontfix).
+                                  Removed CopyTextureImageSubData (Issue 38).
+                                  Removed Begin/EndNamedQuery/QueryNamedCounter
+                                  (Issue 39).
+                                  Rename BindTextureBase to BindTextureUnit
+
+    26    28 May 2014   criccio   Improved the structural consistency.
+
+    25    27 May 2014   criccio   Documented issue 36.
+                                  Added proposed language to resolve issue 36.
+
+    24    26 May 2014   criccio   Added issue 36.
+                                  Added issue 37.
+
+    23    26 May 2014   dkoch     Fix typos, parameter names and references.
+
+    22    23 May 2014   criccio   Renamed CopyTextureSubImageData into
+                                  CopyTextureImageSubData from Daniel comments.
+                                  Updated issue 18 discussion.
+                                  Added collapsed texture functions languages.
+                                  Issue 25 is still to be fixed.
+                                  Added new sample.
+
+    21    22 May 2014   criccio   Fixed Get*TextureImage parameters order.
+                                  Completed modification to tables chapter 23.
+                                  Added missing GetVertexArrayIndexed64iv.
+                                  Fixed accepted enum for GetVertexArray*.
+
+    20    21 May 2014   criccio   Document issue 35 with the three alternatives
+                                  envisioned.
+                                  Clean up.
+
+    19    21 May 2014   dkoch     Added FramebufferTexture*D, QueryNamedCounter.
+                                  Fixed CheckNamedFramebufferStatus and Issue 35.
+
+    18    21 May 2014   criccio   Fixed typos.
+                                  Integrated Daniel review.
+                                  Document issue 34.
+                                  Updated table chapter 23.
+
+    17    20 May 2014   criccio   There is no default VAO in core profile, fix
+                                  functions allowing zero.
+                                  Added invalid operation error on
+                                  TextureBuffer.
+
+    16    19 May 2014   criccio   Documented issue 30 and resolved it.
+                                  Added issue 34.
+                                  Added all the errors relative the object name
+                                  passed to the new DSA functions.
+
+    15    18 May 2014   criccio   Resolved issue 19 and added errors relative
+                                  to this issue.
+                                  Updated and resolved issue 12.
+                                  Updated and resolved issue 24.
+                                  Resolved issue 27.
+                                  Added language for query object interaction.
+                                  Added issue 32.
+                                  Resolved issue 11 accordingly to the
+                                  resolution of issue 31.
+                                  Updated and resolved issue 29.
+                                  Resolved issue 20.
+                                  Added example 1 to 3.
+                                  Document issue 25 and 18.
+                                  Added issue 33 and 34.
+
+    14    17 May 2014   criccio   Resolved issue 22.
+                                  Add comments to the resolution of issue 31.
+                                  Added language for missing functions.
+
+    13    17 May 2014   dkoch     Finish removing GetTransformFeedbackBooleanv.
+                                  Added NamedFramebufferTextureND (Issue 30).
+                                  Removed VertexArray*Offset (Issue 31).
+                                  Minor editorial changes.
+
+    12    16 May 2014   criccio   Added BeginNamedQuery and EndNamedQuery
+                                  function and a target state to the query
+                                  object to complete the resolution of issue 4.
+                                  Removed GetTransformFeedbackBooleanv function
+                                  and added modifications for transform feedback
+                                  state table to list the DSA functions to query
+                                  the transform feedback states.
+
+    11    16 May 2014   dkoch     Fixed various typos. Resolved issue 4, 13, 14.
+                                  Fixed prototypes and description of
+                                  InvalidateNamed{Sub}Framebuffer.
+
+    10    16 May 2014   criccio   Added issues 0, 22, 24 to 29.
+                                  Resolved issue 26.
+                                  Fixed the language for GetCompressedTextureImage
+                                  and GetTextureImage: <pixels> and <level>
+                                  instead of <img> and <lod>.
+                                  Additional reorganization of "New Procedures
+                                  and Functions" section.
+                                  Added dependence to OpenGL 2.0.
+                                  Added interactions with all the extensions
+                                  concerned since OpenGL 2.0.
+
+    9     16 May 2014   criccio   Fixed BlitNamedFramebuffer language inconsistency.
+                                  Added list of missing functions in todo section.
+                                  Reorganized "New Procedures and Functions"
+                                  section for better readability.
+
+    8     16 May 2014   criccio   Applied DanielK: Typos, renamed
+                                  VERTEX_ARRAY_ELEMENT_BINDING into
+                                  ELEMENT_ARRAY_BUFFER_BINDING.
+                                  Added and fixed issue 21.
+
+    7     15 May 2014   criccio   Removed left over for CompressedTextureImage1D,
+                                  CompressedTextureImage2D and
+                                  CompressedTextureImage3D.
+                                  Removed left over for CopyTextureImage1D,
+                                  CopyTextureImage2D, TextureImage1D,
+                                  TextureImage2D and TextureImage3D.
+
+                                  Added and resolve issue 10.
+                                  Fixed GetVertexArrayAttribPointerv prototype
+                                  and language.
+                                  Added issue 11.
+                                  Resolved issue 5 and 3.
+                                  Resolved issue 6 and fix associated prototype.
+                                  Added issues 12 to 20.
+                                  Updated issue 1 and 8 to be less specific.
+                                  Added Transistioning guide to
+                                  ARB_direct_state_access section.
+
+      6   15 May 2014   gsellers  More updates. Will it ever end?
+
+      5   15 Apr 2014   criccio   Clean up, typos.
+
+      4    2 Apr 2014   gsellers  More updates.
+
+      3    7 Fev 2014   gsellers  More updates. Ready for initial review. All
+                                  functions mostly documented.
+
+      2   30 Jan 2014   gsellers  Updates - documented more functions.
+
+      1   23 Dec 2013   gsellers  Initial revision based on EXT_dsa.

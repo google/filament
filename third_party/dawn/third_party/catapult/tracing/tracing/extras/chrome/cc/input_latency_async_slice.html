@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/async_slice.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.cc', function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+  const EventSet = tr.model.EventSet;
+
+  const UI_COMP_NAME = 'INPUT_EVENT_LATENCY_UI_COMPONENT';
+  const ORIGINAL_COMP_NAME = 'INPUT_EVENT_LATENCY_ORIGINAL_COMPONENT';
+  const BEGIN_COMP_NAME = 'INPUT_EVENT_LATENCY_BEGIN_RWH_COMPONENT';
+  const END_COMP_NAME = 'INPUT_EVENT_GPU_SWAP_BUFFER_COMPONENT';
+  const LEGACY_END_COMP_NAME =
+      'INPUT_EVENT_LATENCY_TERMINATED_FRAME_SWAP_COMPONENT';
+
+  const MAIN_RENDERER_THREAD_NAME = 'CrRendererMain';
+  const COMPOSITOR_THREAD_NAME = 'Compositor';
+
+  // toplevel.flow now covers both of the old categories.
+  // Leaving them here for compatibility with older versions.
+  const OLD_IPC_FLOW_EVENT = 'disabled-by-default-ipc.flow';
+  const OLD_POSTTASK_FLOW_EVENT = 'disabled-by-default-toplevel.flow';
+  const NEW_POSTTASK_FLOW_EVENT = 'toplevel.flow';
+
+  const INPUT_EVENT_TYPE_NAMES = {
+    CHAR: 'Char',
+    CLICK: 'GestureClick',
+    CONTEXT_MENU: 'ContextMenu',
+    FLING_CANCEL: 'GestureFlingCancel',
+    FLING_START: 'GestureFlingStart',
+    KEY_DOWN: 'KeyDown',
+    KEY_DOWN_RAW: 'RawKeyDown',
+    KEY_UP: 'KeyUp',
+    LATENCY_SCROLL_UPDATE: 'ScrollUpdate',
+    MOUSE_DOWN: 'MouseDown',
+    MOUSE_ENTER: 'MouseEnter',
+    MOUSE_LEAVE: 'MouseLeave',
+    MOUSE_MOVE: 'MouseMove',
+    MOUSE_UP: 'MouseUp',
+    MOUSE_WHEEL: 'MouseWheel',
+    PINCH_BEGIN: 'GesturePinchBegin',
+    PINCH_END: 'GesturePinchEnd',
+    PINCH_UPDATE: 'GesturePinchUpdate',
+    SCROLL_BEGIN: 'GestureScrollBegin',
+    SCROLL_END: 'GestureScrollEnd',
+    SCROLL_UPDATE: 'GestureScrollUpdate',
+    SCROLL_UPDATE_RENDERER: 'ScrollUpdate',
+    SHOW_PRESS: 'GestureShowPress',
+    TAP: 'GestureTap',
+    TAP_CANCEL: 'GestureTapCancel',
+    TAP_DOWN: 'GestureTapDown',
+    TOUCH_CANCEL: 'TouchCancel',
+    TOUCH_END: 'TouchEnd',
+    TOUCH_MOVE: 'TouchMove',
+    TOUCH_START: 'TouchStart',
+    UNKNOWN: 'UNKNOWN'
+  };
+
+  function InputLatencyAsyncSlice() {
+    AsyncSlice.apply(this, arguments);
+    this.associatedEvents_ = new EventSet();
+    this.typeName_ = undefined;
+    if (!this.isLegacyEvent) {
+      this.determineModernTypeName_();
+    }
+  }
+
+  InputLatencyAsyncSlice.prototype = {
+    __proto__: AsyncSlice.prototype,
+
+    // Legacy InputLatencyAsyncSlices involve a top-level slice titled
+    // "InputLatency" containing a subSlice whose title starts with
+    // "InputLatency:". Modern InputLatencyAsyncSlices involve a single
+    // top-level slice whose title starts with "InputLatency::".
+    // Legacy subSlices are not available at construction time, so
+    // determineLegacyTypeName_() must be called at get time.
+    // So this returns false for the legacy subSlice events titled like
+    // "InputLatency:Foo" even though they are technically legacy events.
+    get isLegacyEvent() {
+      return this.title === 'InputLatency';
+    },
+
+    get typeName() {
+      if (!this.typeName_) {
+        this.determineLegacyTypeName_();
+      }
+      return this.typeName_;
+    },
+
+    checkTypeName_() {
+      if (!this.typeName_) {
+        throw new Error('Unable to determine typeName');
+      }
+      let found = false;
+      for (const typeName in INPUT_EVENT_TYPE_NAMES) {
+        if (this.typeName === INPUT_EVENT_TYPE_NAMES[typeName]) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        this.typeName_ = INPUT_EVENT_TYPE_NAMES.UNKNOWN;
+      }
+    },
+
+    determineModernTypeName_() {
+      // This method works both on modern events titled like
+      // "InputLatency::Foo" and also on the legacy subSlices titled like
+      // "InputLatency:Foo". Modern events' titles contain 2 colons, whereas the
+      // legacy subSlices events contain 1 colon.
+
+      const lastColonIndex = this.title.lastIndexOf(':');
+      if (lastColonIndex < 0) return;
+
+      const characterAfterLastColonIndex = lastColonIndex + 1;
+      this.typeName_ = this.title.slice(characterAfterLastColonIndex);
+
+      // Check that the determined typeName is known.
+      this.checkTypeName_();
+    },
+
+    determineLegacyTypeName_() {
+      // Iterate over all descendent subSlices.
+      for (const subSlice of this.enumerateAllDescendents()) {
+        // If |subSlice| is not an InputLatencyAsyncSlice, then ignore it.
+        const subSliceIsAInputLatencyAsyncSlice = (
+          subSlice instanceof InputLatencyAsyncSlice);
+        if (!subSliceIsAInputLatencyAsyncSlice) continue;
+
+        // If |subSlice| does not have a typeName, then ignore it.
+        if (!subSlice.typeName) continue;
+
+        // If |this| already has a typeName and |subSlice| has a different
+        // typeName, then explode!
+        if (this.typeName_ && subSlice.typeName_) {
+          const subSliceHasDifferentTypeName = (
+            this.typeName_ !== subSlice.typeName_);
+          if (subSliceHasDifferentTypeName) {
+            throw new Error(
+                'InputLatencyAsyncSlice.determineLegacyTypeName_() ' +
+                ' found multiple typeNames');
+          }
+        }
+
+        // The typeName of |this| top-level event is whatever the typeName of
+        // |subSlice| is. Set |this.typeName_| to the subSlice's typeName.
+        this.typeName_ = subSlice.typeName_;
+      }
+
+      // If typeName could not be determined, then explode!
+      if (!this.typeName_) {
+        throw new Error(
+            'InputLatencyAsyncSlice.determineLegacyTypeName_() failed');
+      }
+
+      // Check that the determined typeName is known.
+      this.checkTypeName_();
+    },
+
+    getRendererHelper(sourceSlices) {
+      const traceModel = this.startThread.parent.model;
+      const modelHelper = traceModel.getOrCreateHelper(
+          tr.model.helpers.ChromeModelHelper);
+      if (!modelHelper) return undefined;
+
+      let mainThread = undefined;
+      let compositorThread = undefined;
+
+      for (const i in sourceSlices) {
+        if (sourceSlices[i].parentContainer.name ===
+            MAIN_RENDERER_THREAD_NAME) {
+          mainThread = sourceSlices[i].parentContainer;
+        } else if (sourceSlices[i].parentContainer.name ===
+            COMPOSITOR_THREAD_NAME) {
+          compositorThread = sourceSlices[i].parentContainer;
+        }
+
+        if (mainThread && compositorThread) break;
+      }
+
+      const rendererHelpers = modelHelper.rendererHelpers;
+
+      const pids = Object.keys(rendererHelpers);
+      for (let i = 0; i < pids.length; i++) {
+        const pid = pids[i];
+        const rendererHelper = rendererHelpers[pid];
+        if (rendererHelper.mainThread === mainThread ||
+            rendererHelper.compositorThread === compositorThread) {
+          return rendererHelper;
+        }
+      }
+
+      return undefined;
+    },
+
+    addEntireSliceHierarchy(slice) {
+      this.associatedEvents_.push(slice);
+      slice.iterateAllSubsequentSlices(function(subsequentSlice) {
+        this.associatedEvents_.push(subsequentSlice);
+      }, this);
+    },
+
+    addDirectlyAssociatedEvents(flowEvents) {
+      const slices = [];
+
+      flowEvents.forEach(function(flowEvent) {
+        this.associatedEvents_.push(flowEvent);
+        const newSource = flowEvent.startSlice.mostTopLevelSlice;
+        if (slices.indexOf(newSource) === -1) {
+          slices.push(newSource);
+        }
+      }, this);
+
+      const lastFlowEvent = flowEvents[flowEvents.length - 1];
+      const lastSource = lastFlowEvent.endSlice.mostTopLevelSlice;
+      if (slices.indexOf(lastSource) === -1) {
+        slices.push(lastSource);
+      }
+
+      return slices;
+    },
+
+    // Return true if the slice hierarchy is tracked by LatencyInfo of other
+    // input latency events. If the slice hierarchy is tracked by both, this
+    // function still returns true.
+    belongToOtherInputs(slice, flowEvents) {
+      let fromOtherInputs = false;
+
+      slice.iterateEntireHierarchy(function(subsequentSlice) {
+        if (fromOtherInputs) return;
+
+        subsequentSlice.inFlowEvents.forEach(function(inflow) {
+          if (fromOtherInputs) return;
+
+          if (inflow.category.indexOf('input') > -1) {
+            if (flowEvents.indexOf(inflow) === -1) {
+              fromOtherInputs = true;
+            }
+          }
+        }, this);
+      }, this);
+
+      return fromOtherInputs;
+    },
+
+    // Return true if |event| triggers slices of other inputs.
+    triggerOtherInputs(event, flowEvents) {
+      if (event.outFlowEvents === undefined ||
+          event.outFlowEvents.length === 0) {
+        return false;
+      }
+
+      // Once we fix the bug of flow event binding, there should exist one and
+      // only one outgoing flow (PostTask) from ScheduleBeginImplFrameDeadline
+      // and PostComposite.
+      const flow = event.outFlowEvents[0];
+      const isPostTask = flow.category === NEW_POSTTASK_FLOW_EVENT ||
+                         flow.category === OLD_POSTTASK_FLOW_EVENT;
+
+      if (!isPostTask || !flow.endSlice) {
+        return false;
+      }
+
+      const endSlice = flow.endSlice;
+      if (this.belongToOtherInputs(endSlice.mostTopLevelSlice, flowEvents)) {
+        return true;
+      }
+
+      return false;
+    },
+
+    // Follow outgoing flow of subsequentSlices in the current hierarchy.
+    // We also handle cases where different inputs interfere with each other.
+    followSubsequentSlices(event, queue, visited, flowEvents) {
+      let stopFollowing = false;
+      let inputAck = false;
+
+      event.iterateAllSubsequentSlices(function(slice) {
+        if (stopFollowing) return;
+
+        // Do not follow TaskQueueManager::RunTask because it causes
+        // many false events to be included.
+        if (slice.title === 'TaskQueueManager::RunTask') return;
+
+        // Do not follow ScheduledActionSendBeginMainFrame because the real
+        // main thread BeginMainFrame is already traced by LatencyInfo flow.
+        if (slice.title === 'ProxyImpl::ScheduledActionSendBeginMainFrame') {
+          return;
+        }
+
+        // Do not follow ScheduleBeginImplFrameDeadline that triggers an
+        // OnBeginImplFrameDeadline that is tracked by another LatencyInfo.
+        if (slice.title === 'Scheduler::ScheduleBeginImplFrameDeadline') {
+          if (this.triggerOtherInputs(slice, flowEvents)) return;
+        }
+
+        // Do not follow PostComposite that triggers CompositeImmediately
+        // that is tracked by another LatencyInfo.
+        if (slice.title === 'CompositorImpl::PostComposite') {
+          if (this.triggerOtherInputs(slice, flowEvents)) return;
+        }
+
+        // Stop following the rest of the current slice hierarchy if
+        // FilterAndSendWebInputEvent occurs after ProcessInputEventAck.
+        if (slice.title === 'InputRouterImpl::ProcessInputEventAck') {
+          inputAck = true;
+        }
+        if (inputAck &&
+            slice.title === 'InputRouterImpl::FilterAndSendWebInputEvent') {
+          stopFollowing = true;
+        }
+
+        this.followCurrentSlice(slice, queue, visited);
+      }, this);
+    },
+
+    // Follow outgoing flow events of the current slice.
+    followCurrentSlice(event, queue, visited) {
+      event.outFlowEvents.forEach(function(outflow) {
+        if ((outflow.category === NEW_POSTTASK_FLOW_EVENT ||
+            outflow.category === OLD_POSTTASK_FLOW_EVENT ||
+            outflow.category === OLD_IPC_FLOW_EVENT) &&
+            outflow.endSlice) {
+          this.associatedEvents_.push(outflow);
+
+          const nextEvent = outflow.endSlice.mostTopLevelSlice;
+          if (!visited.contains(nextEvent)) {
+            visited.push(nextEvent);
+            queue.push(nextEvent);
+          }
+        }
+      }, this);
+    },
+
+    backtraceFromDraw(beginImplFrame, visited) {
+      const pendingEventQueue = [];
+      pendingEventQueue.push(beginImplFrame.mostTopLevelSlice);
+
+      while (pendingEventQueue.length !== 0) {
+        const event = pendingEventQueue.pop();
+
+        this.addEntireSliceHierarchy(event);
+
+        // TODO(yuhao): For now, we backtrace all the way to the source input.
+        // But is this really needed? I will have an entry in the design
+        // doc to discuss this.
+        event.inFlowEvents.forEach(function(inflow) {
+          if (inflow.category === POSTTASK_FLOW_EVENT && inflow.startSlice) {
+            const nextEvent = inflow.startSlice.mostTopLevelSlice;
+            if (!visited.contains(nextEvent)) {
+              visited.push(nextEvent);
+              pendingEventQueue.push(nextEvent);
+            }
+          }
+        }, this);
+      }
+    },
+
+    sortRasterizerSlices(rasterWorkerThreads,
+        sortedRasterizerSlices) {
+      rasterWorkerThreads.forEach(function(rasterizer) {
+        Array.prototype.push.apply(sortedRasterizerSlices,
+            rasterizer.sliceGroup.slices);
+      }, this);
+
+      sortedRasterizerSlices.sort(function(a, b) {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+        return a.guid - b.guid;
+      });
+    },
+
+    // Find rasterization slices that have the source_prepare_tiles_id
+    // same as the prepare_tiles_id of TileManager::PrepareTiles
+    // The C++ CL that makes this connection is at:
+    // https://codereview.chromium.org/1208683002/
+    addRasterizationEvents(prepareTiles, rendererHelper,
+        visited, flowEvents, sortedRasterizerSlices) {
+      if (!prepareTiles.args.prepare_tiles_id) return;
+
+      if (!rendererHelper || !rendererHelper.rasterWorkerThreads) {
+        return;
+      }
+
+      const rasterWorkerThreads = rendererHelper.rasterWorkerThreads;
+      const prepareTileId = prepareTiles.args.prepare_tiles_id;
+      const pendingEventQueue = [];
+
+      // Collect all the rasterizer tasks. Return the cached copy if possible.
+      if (sortedRasterizerSlices.length === 0) {
+        this.sortRasterizerSlices(rasterWorkerThreads, sortedRasterizerSlices);
+      }
+
+      // TODO(yuhao): Once TaskSetFinishedTaskImpl also get the prepareTileId
+      // we can simply track by checking id rather than counting.
+      let numFinishedTasks = 0;
+      const RASTER_TASK_TITLE = 'RasterizerTaskImpl::RunOnWorkerThread';
+      const IMAGEDECODE_TASK_TITLE = 'ImageDecodeTaskImpl::RunOnWorkerThread';
+      const FINISHED_TASK_TITLE = 'TaskSetFinishedTaskImpl::RunOnWorkerThread';
+
+      for (let i = 0; i < sortedRasterizerSlices.length; i++) {
+        const task = sortedRasterizerSlices[i];
+
+        if (task.title === RASTER_TASK_TITLE ||
+            task.title === IMAGEDECODE_TASK_TITLE) {
+          if (task.args.source_prepare_tiles_id === prepareTileId) {
+            this.addEntireSliceHierarchy(task.mostTopLevelSlice);
+          }
+        } else if (task.title === FINISHED_TASK_TITLE) {
+          if (task.start > prepareTiles.start) {
+            pendingEventQueue.push(task.mostTopLevelSlice);
+            if (++numFinishedTasks === 3) break;
+          }
+        }
+      }
+
+      // Trace PostTask from rasterizer tasks.
+      while (pendingEventQueue.length !== 0) {
+        const event = pendingEventQueue.pop();
+
+        this.addEntireSliceHierarchy(event);
+        this.followSubsequentSlices(event, pendingEventQueue, visited,
+            flowEvents);
+      }
+    },
+
+    addOtherCausallyRelatedEvents(rendererHelper, sourceSlices,
+        flowEvents, sortedRasterizerSlices) {
+      const pendingEventQueue = [];
+      // Keep track of visited nodes when traversing a DAG
+      const visitedEvents = new EventSet();
+      let beginImplFrame = undefined;
+      let prepareTiles = undefined;
+      sortedRasterizerSlices = [];
+
+      sourceSlices.forEach(function(sourceSlice) {
+        if (!visitedEvents.contains(sourceSlice)) {
+          visitedEvents.push(sourceSlice);
+          pendingEventQueue.push(sourceSlice);
+        }
+      }, this);
+
+      while (pendingEventQueue.length !== 0) {
+        const event = pendingEventQueue.pop();
+
+        // Push the current event chunk into associatedEvents.
+        this.addEntireSliceHierarchy(event);
+
+        this.followCurrentSlice(event, pendingEventQueue, visitedEvents);
+
+        this.followSubsequentSlices(event, pendingEventQueue, visitedEvents,
+            flowEvents);
+
+        // The rasterization work (CompositorTileWorker thread) and the
+        // Compositor tile manager are connect by the prepare_tiles_id
+        // instead of flow events.
+        const COMPOSITOR_PREPARE_TILES = 'TileManager::PrepareTiles';
+        prepareTiles = event.findDescendentSlice(COMPOSITOR_PREPARE_TILES);
+        if (prepareTiles) {
+          this.addRasterizationEvents(prepareTiles, rendererHelper,
+              visitedEvents, flowEvents, sortedRasterizerSlices);
+        }
+
+        // OnBeginImplFrameDeadline could be triggered by other inputs.
+        // For now, we backtrace from it.
+        // TODO(yuhao): There are more such slices that we need to backtrace
+        const COMPOSITOR_ON_BIFD = 'Scheduler::OnBeginImplFrameDeadline';
+        beginImplFrame = event.findDescendentSlice(COMPOSITOR_ON_BIFD);
+        if (beginImplFrame) {
+          this.backtraceFromDraw(beginImplFrame, visitedEvents);
+        }
+      }
+    },
+
+    get associatedEvents() {
+      if (this.associatedEvents_.length !== 0) {
+        return this.associatedEvents_;
+      }
+
+      const modelIndices = this.startThread.parent.model.modelIndices;
+      const flowEvents = modelIndices.getFlowEventsWithId(this.id);
+
+      if (flowEvents.length === 0) {
+        return this.associatedEvents_;
+      }
+
+      // Step 1: Get events that are directly connected by the LatencyInfo
+      // flow events. This gives us a small set of events that are guaranteed
+      // to be associated with the input, but are almost certain incomplete.
+      // We call this set "source" event set.
+      // This step returns the "source" event set (sourceSlices), which is then
+      // used in the second step.
+      const sourceSlices = this.addDirectlyAssociatedEvents(flowEvents);
+
+      // Step 2: Start from the previously constructed "source" event set, we
+      // follow the toplevel (i.e., PostTask) and IPC flow events. Any slices
+      // that are reachable from the "source" event set via PostTasks or IPCs
+      // are conservatively considered associated with the input event.
+      // We then deal with specific cases where flow events either over include
+      // or miss capturing slices.
+      const rendererHelper = this.getRendererHelper(sourceSlices);
+      this.addOtherCausallyRelatedEvents(rendererHelper, sourceSlices,
+          flowEvents);
+
+      return this.associatedEvents_;
+    },
+
+    get inputLatency() {
+      if (!('data' in this.args)) return undefined;
+
+      const data = this.args.data;
+      const endTimeComp = data[END_COMP_NAME] || data[LEGACY_END_COMP_NAME];
+      if (endTimeComp === undefined) return undefined;
+
+      let latency = 0;
+      const endTime = endTimeComp.time;
+      if (ORIGINAL_COMP_NAME in data) {
+        latency = endTime - data[ORIGINAL_COMP_NAME].time;
+      } else if (UI_COMP_NAME in data) {
+        latency = endTime - data[UI_COMP_NAME].time;
+      } else if (BEGIN_COMP_NAME in data) {
+        latency = endTime - data[BEGIN_COMP_NAME].time;
+      } else {
+        throw new Error('No valid begin latency component');
+      }
+      return latency;
+    }
+  };
+
+  const eventTypeNames = [
+    'Char',
+    'ContextMenu',
+    'GestureClick',
+    'GestureFlingCancel',
+    'GestureFlingStart',
+    'GestureScrollBegin',
+    'GestureScrollEnd',
+    'GestureScrollUpdate',
+    'GestureShowPress',
+    'GestureTap',
+    'GestureTapCancel',
+    'GestureTapDown',
+    'GesturePinchBegin',
+    'GesturePinchEnd',
+    'GesturePinchUpdate',
+    'KeyDown',
+    'KeyUp',
+    'MouseDown',
+    'MouseEnter',
+    'MouseLeave',
+    'MouseMove',
+    'MouseUp',
+    'MouseWheel',
+    'RawKeyDown',
+    'ScrollUpdate',
+    'TouchCancel',
+    'TouchEnd',
+    'TouchMove',
+    'TouchStart'
+  ];
+  const allTypeNames = ['InputLatency'];
+  eventTypeNames.forEach(function(eventTypeName) {
+    // Old style.
+    allTypeNames.push('InputLatency:' + eventTypeName);
+
+    // New style.
+    allTypeNames.push('InputLatency::' + eventTypeName);
+  });
+
+  AsyncSlice.subTypes.register(
+      InputLatencyAsyncSlice,
+      {
+        typeNames: allTypeNames,
+        categoryParts: ['latencyInfo']
+      });
+
+  return {
+    InputLatencyAsyncSlice,
+    INPUT_EVENT_TYPE_NAMES,
+  };
+});
+</script>

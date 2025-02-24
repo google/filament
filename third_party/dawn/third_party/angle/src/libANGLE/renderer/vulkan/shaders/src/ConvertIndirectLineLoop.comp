@@ -1,0 +1,90 @@
+//
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// ConvertArrayIndirectLineloop.comp: Construct an index buffer for an indirect
+// draw that draws all the specified vertices and repeats the last vertex at
+// the end to give lineloop behavior.
+// Will also output a new indirect "command" buffer with adjusted index values.
+//
+//
+
+#version 450 core
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout (set = 0, binding = 0) readonly buffer srcIndirectBuf
+{
+    // Shader invocations read the cmd data to determine what indices to convert
+    // Command data at offset cmdOffset of buffer
+    uint indirectBuf[];
+};
+
+layout (set = 0, binding = 1) buffer dstIndirectBuf
+{
+    // Shader outputs updated indirect buffer here.
+    uint indexIndirectBuf[];
+};
+
+layout (set = 0, binding = 2) buffer dstIndexBuf
+{
+    // Shader invocation outputs linelist(s) here.
+    uint dstData[];
+};
+
+layout (push_constant) uniform PushConstants
+{
+    // Read offset in bytes into the indirectBuf, divided by four.
+    uint indirectBufferOffsetDiv4;
+    // Dst command offset in bytes into the indexIndirectBuff, divided by four.
+    uint indexIndirectBufOffsetDiv4;
+    // Write offset in bytes into the dstData array, divided by four.
+    uint dstDataOffsetDiv4;
+};
+
+// Structure of command data loaded at offset indirectBufferOffsetDiv4 of the indirectBuf buffer
+// struct VkDrawIndirectCommand {
+//     uint32_t    vertexCount;
+//     uint32_t    instanceCount;
+//     uint32_t    firstVertex;
+//     uint32_t    firstInstance;
+// };
+
+// Structure of command data loaded at offset indexIndirectBufferOffsetDiv4 of the
+// indexIndirectBuf buffer
+// struct VkDrawIndexedIndirectCommand {
+//     uint32_t    indexCount;
+//     uint32_t    instanceCount;
+//     uint32_t    firstIndex;
+//     int32_t     vertexOffset;
+//     uint32_t    firstInstance;
+// };
+
+void main()
+{
+    // Load the relevant command info from cmdData
+    uint vertexCount = indirectBuf[indirectBufferOffsetDiv4];
+    uint firstVertex = indirectBuf[indirectBufferOffsetDiv4 + 2];
+
+    // Only first invocation does the work
+    if (gl_GlobalInvocationID.x >= 1)
+        return;
+
+    for (uint i = 0; i < vertexCount; i++)
+    {
+        dstData[dstDataOffsetDiv4 + i] = firstVertex + i;
+    }
+    if (vertexCount > 1)
+    {
+        dstData[dstDataOffsetDiv4 + vertexCount] = firstVertex;
+        vertexCount++;
+    }
+
+    // Write new indirect data in indexIndirectBuf.
+    indexIndirectBuf[indexIndirectBufOffsetDiv4] = vertexCount;
+    indexIndirectBuf[indexIndirectBufOffsetDiv4 + 1] = indirectBuf[indirectBufferOffsetDiv4 + 1];
+    indexIndirectBuf[indexIndirectBufOffsetDiv4 + 2] = 0;
+    indexIndirectBuf[indexIndirectBufOffsetDiv4 + 3] = 0;
+    indexIndirectBuf[indexIndirectBufOffsetDiv4 + 4] = indirectBuf[indirectBufferOffsetDiv4 + 3];
+}

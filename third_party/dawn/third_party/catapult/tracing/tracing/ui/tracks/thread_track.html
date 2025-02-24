@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="stylesheet" href="/tracing/ui/tracks/thread_track.css">
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/async_slice_group_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/sample_track.html">
+<link rel="import" href="/tracing/ui/tracks/slice_group_track.html">
+<link rel="import" href="/tracing/ui/tracks/slice_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * Visualizes a Thread using a series of SliceTracks.
+   * @constructor
+   */
+  const ThreadTrack = tr.ui.b.define('thread-track',
+      tr.ui.tracks.ContainerTrack);
+  ThreadTrack.prototype = {
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('thread-track');
+      this.heading_ = document.createElement('tr-ui-b-heading');
+    },
+
+    get thread() {
+      return this.thread_;
+    },
+
+    set thread(thread) {
+      this.thread_ = thread;
+      this.updateContents_();
+    },
+
+    get hasVisibleContent() {
+      return this.tracks_.length > 0;
+    },
+
+    get hasSlices() {
+      return this.thread_.asyncSliceGroup.length > 0 ||
+          this.thread_.sliceGroup.length > 0;
+    },
+
+    get hasTimeSlices() {
+      return this.thread_.timeSlices;
+    },
+
+    get eventContainer() {
+      return this.thread;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.ContainerTrack.prototype.addContainersToTrackMap.apply(
+          this, arguments);
+      containerToTrackMap.addContainer(this.thread, this);
+    },
+
+    updateContents_() {
+      this.detach();
+
+      if (!this.thread_) return;
+
+      this.heading_.heading = this.thread_.userFriendlyName;
+      this.heading_.tooltip = this.thread_.userFriendlyDetails;
+
+      if (this.thread_.asyncSliceGroup.length) {
+        this.appendAsyncSliceTracks_();
+      }
+
+      this.appendThreadSamplesTracks_();
+
+      let needsHeading = false;
+      if (this.thread_.timeSlices) {
+        const timeSlicesTrack = new tr.ui.tracks.SliceTrack(this.viewport);
+        timeSlicesTrack.heading = '';
+        timeSlicesTrack.height = tr.ui.b.THIN_SLICE_HEIGHT + 'px';
+        timeSlicesTrack.slices = this.thread_.timeSlices;
+        if (timeSlicesTrack.hasVisibleContent) {
+          needsHeading = true;
+          Polymer.dom(this).appendChild(timeSlicesTrack);
+        }
+      }
+
+      if (this.thread_.sliceGroup.length) {
+        const track = new tr.ui.tracks.SliceGroupTrack(this.viewport);
+        track.heading = this.thread_.userFriendlyName;
+        track.tooltip = this.thread_.userFriendlyDetails;
+        track.group = this.thread_.sliceGroup;
+        if (track.hasVisibleContent) {
+          needsHeading = false;
+          Polymer.dom(this).appendChild(track);
+        }
+      }
+
+      if (needsHeading) {
+        Polymer.dom(this).appendChild(this.heading_);
+      }
+    },
+
+    appendAsyncSliceTracks_() {
+      const subGroups = this.thread_.asyncSliceGroup.viewSubGroups;
+      // TODO(kraynov): Support nested sub-groups.
+      subGroups.forEach(function(subGroup) {
+        const asyncTrack = new tr.ui.tracks.AsyncSliceGroupTrack(this.viewport);
+        asyncTrack.group = subGroup;
+        asyncTrack.heading = subGroup.title;
+        if (asyncTrack.hasVisibleContent) {
+          Polymer.dom(this).appendChild(asyncTrack);
+        }
+      }, this);
+    },
+
+    appendThreadSamplesTracks_() {
+      const threadSamples = this.thread_.samples;
+      if (threadSamples === undefined || threadSamples.length === 0) {
+        return;
+      }
+      const samplesByTitle = {};
+      threadSamples.forEach(function(sample) {
+        if (samplesByTitle[sample.title] === undefined) {
+          samplesByTitle[sample.title] = [];
+        }
+        samplesByTitle[sample.title].push(sample);
+      });
+
+      const sampleTitles = Object.keys(samplesByTitle);
+      sampleTitles.sort();
+
+      sampleTitles.forEach(function(sampleTitle) {
+        const samples = samplesByTitle[sampleTitle];
+        const samplesTrack = new tr.ui.tracks.SampleTrack(this.viewport);
+        samplesTrack.group = this.thread_;
+        samplesTrack.samples = samples;
+        samplesTrack.heading = this.thread_.userFriendlyName + ': ' +
+            sampleTitle;
+        samplesTrack.tooltip = this.thread_.userFriendlyDetails;
+        samplesTrack.selectionGenerator = function() {
+          const selection = new tr.model.EventSet();
+          for (let i = 0; i < samplesTrack.samples.length; i++) {
+            selection.push(samplesTrack.samples[i]);
+          }
+          return selection;
+        };
+        Polymer.dom(this).appendChild(samplesTrack);
+      }, this);
+    },
+
+    collapsedDidChange(collapsed) {
+      if (collapsed) {
+        let h = parseInt(this.tracks[0].height);
+        for (let i = 0; i < this.tracks.length; ++i) {
+          if (h > 2) {
+            this.tracks[i].height = Math.floor(h) + 'px';
+          } else {
+            this.tracks[i].style.display = 'none';
+          }
+          h = h * 0.5;
+        }
+      } else {
+        for (let i = 0; i < this.tracks.length; ++i) {
+          this.tracks[i].height = this.tracks[0].height;
+          this.tracks[i].style.display = '';
+        }
+      }
+    }
+  };
+
+  return {
+    ThreadTrack,
+  };
+});
+</script>

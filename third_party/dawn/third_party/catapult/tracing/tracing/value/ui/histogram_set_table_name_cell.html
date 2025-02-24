@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/ui/base/name_line_chart.html">
+
+<dom-module id="tr-v-ui-histogram-set-table-name-cell">
+  <template>
+    <style>
+    #name_container {
+      display: flex;
+    }
+
+    #name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    #show_overview, #hide_overview, #show_overview svg, #hide_overview svg {
+      height: 1em;
+      margin-left: 5px;
+    }
+
+    #show_overview svg {
+      stroke: blue;
+      stroke-width: 16;
+    }
+
+    #show_overview:hover svg {
+      background: blue;
+      stroke: white;
+    }
+
+    #hide_overview {
+      display: none;
+    }
+
+    #hide_overview svg {
+      stroke-width: 18;
+      stroke: black;
+    }
+
+    #hide_overview:hover svg {
+      background: black;
+      stroke: white;
+    }
+
+    #open_histograms, #close_histograms, #open_histograms svg, #close_histograms svg {
+      height: 1em;
+    }
+
+    #close_histograms {
+      display: none;
+    }
+
+    #open_histograms svg {
+      margin-left: 4px;
+      stroke-width: 0;
+      stroke: blue;
+      fill: blue;
+    }
+    #open_histograms:hover svg {
+      background: blue;
+      stroke: white;
+      fill: white;
+    }
+
+    #close_histograms line {
+      stroke-width: 18;
+      stroke: black;
+    }
+    #close_histograms:hover {
+      background: black;
+    }
+    #close_histograms:hover line {
+      stroke: white;
+    }
+
+    #overview_container {
+      display: none;
+    }
+    </style>
+
+    <div id="name_container">
+      <span id="name"></span>
+
+      <span id="show_overview" on-click="showOverview_">
+        <svg viewbox="0 0 128 128">
+          <line x1="19" y1="109" x2="49" y2="49"/>
+          <line x1="49" y1="49" x2="79" y2="79"/>
+          <line x1="79" y1="79" x2="109" y2="19"/>
+        </svg>
+      </span>
+
+      <span id="hide_overview" on-click="hideOverview_">
+        <svg viewbox="0 0 128 128">
+          <line x1="28" y1="28" x2="100" y2="100"/>
+          <line x1="28" y1="100" x2="100" y2="28"/>
+        </svg>
+      </span>
+
+      <span id="open_histograms" on-click="openHistograms_">
+        <svg viewbox="0 0 128 128">
+          <rect x="16" y="24" width="32" height="16"/>
+          <rect x="16" y="56" width="96" height="16"/>
+          <rect x="16" y="88" width="64" height="16"/>
+        </svg>
+      </span>
+
+      <span id="close_histograms" on-click="closeHistograms_">
+        <svg viewbox="0 0 128 128">
+          <line x1="28" y1="28" x2="100" y2="100"/>
+          <line x1="28" y1="100" x2="100" y2="28"/>
+        </svg>
+      </span>
+    </div>
+
+    <div id="overview_container">
+    </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  const NAME_COLUMN_WIDTH_PX = 300;
+
+  Polymer({
+    is: 'tr-v-ui-histogram-set-table-name-cell',
+
+    created() {
+      this.row_ = undefined;
+      this.overviewChart_ = undefined;
+      this.cellListener_ = this.onCellStateUpdate_.bind(this);
+      this.rootListener_ = this.onRootStateUpdate_.bind(this);
+    },
+
+    attached() {
+      if (this.row) {
+        this.row.rootViewState.addUpdateListener(this.rootListener_);
+      }
+    },
+
+    detached() {
+      this.row.rootViewState.removeUpdateListener(this.rootListener_);
+      // Don't need to removeUpdateListener for the row and cells; their
+      // lifetimes are the same as |this|.
+    },
+
+    get row() {
+      return this.row_;
+    },
+
+    build(row) {
+      if (this.row_ !== undefined) {
+        throw new Error('row must be set exactly once.');
+      }
+      this.row_ = row;
+      this.row.viewState.addUpdateListener(this.onRowStateUpdate_.bind(this));
+      this.constrainWidth = this.row.rootViewState.constrainNameColumn;
+      if (this.isAttached) {
+        this.row.rootViewState.addUpdateListener(this.rootListener_);
+      }
+
+      for (const cellState of this.row.viewState.cells.values()) {
+        cellState.addUpdateListener(this.cellListener_);
+      }
+
+      Polymer.dom(this.$.name).textContent = this.row.name;
+
+      this.title = this.row.name;
+      if (this.row.description) {
+        this.title += '\n' + this.row.description;
+      }
+
+      if (this.row.overviewDataRange.isEmpty ||
+          this.row.overviewDataRange.min === this.row.overviewDataRange.max) {
+        // TODO(#3744) Also hide this button when column or subrow units don't
+        // match.
+        this.$.show_overview.style.display = 'none';
+      }
+
+      let histogramCount = 0;
+      for (const cell of this.row.columns.values()) {
+        if (cell instanceof tr.v.Histogram &&
+            cell.numValues > 0) {
+          ++histogramCount;
+        }
+      }
+      if (histogramCount <= 1) {
+        this.$.open_histograms.style.display = 'none';
+      }
+    },
+
+    set constrainWidth(constrain) {
+      this.$.name.style.maxWidth = constrain ?
+        (this.nameWidthPx + 'px') : 'none';
+    },
+
+    get nameWidthPx() {
+      // tr-ui-b-table adds 16px of padding for each additional level of subRows
+      // nesting, so outer nameDivs can be wider than inner nameDivs.
+      return NAME_COLUMN_WIDTH_PX - (16 * this.row.depth);
+    },
+
+    get isOverflowing() {
+      return this.$.name.style.maxWidth !== 'none' &&
+          this.$.name.getBoundingClientRect().width === this.nameWidthPx;
+    },
+
+    get isOverviewed() {
+      return this.$.overview_container.style.display === 'block';
+    },
+
+    set isOverviewed(isOverviewed) {
+      if (isOverviewed === this.isOverviewed) return;
+      if (isOverviewed) {
+        this.showOverview_();
+      } else {
+        this.hideOverview_();
+      }
+    },
+
+    hideOverview_(opt_event) {
+      this.$.overview_container.style.display = 'none';
+      this.$.hide_overview.style.display = 'none';
+      this.$.show_overview.style.display = 'block';
+
+      if (opt_event !== undefined) {
+        opt_event.stopPropagation();
+        tr.b.Timing.instant('histogram-set-table-name-cell', 'hideOverview');
+        this.row.viewState.isOverviewed = this.isOverviewed;
+      }
+    },
+
+    showOverview_(opt_event) {
+      if (opt_event !== undefined) {
+        opt_event.stopPropagation();
+        tr.b.Timing.instant('histogram-set-table-name-cell', 'showOverview');
+        this.row.viewState.isOverviewed = true;
+      }
+
+      this.$.overview_container.style.display = 'block';
+      this.$.hide_overview.style.display = 'block';
+      this.$.show_overview.style.display = 'none';
+
+      if (this.overviewChart_ === undefined) {
+        const displayStatisticName =
+          this.row.rootViewState.displayStatisticName;
+        const data = [];
+        let unit;
+
+        for (const [displayLabel, hist] of this.row.sortedColumns()) {
+          if (!(hist instanceof tr.v.Histogram)) continue;
+
+          if (unit === undefined) {
+            unit = hist.unit;
+          } else if (unit !== hist.unit) {
+            // The columns have different units, so the overview chart cannot
+            // use a single unit to format all of the values, so don't display
+            // an overview chart at all.
+            data.splice(0);
+            break;
+          }
+
+          const statName = hist.getAvailableStatisticName(displayStatisticName);
+          const statScalar = hist.getStatisticScalar(statName);
+
+          if (statScalar !== undefined) {
+            data.push({
+              x: displayLabel,
+              y: statScalar.value,
+            });
+          }
+        }
+        if (data.length < 2) {
+          return;
+        }
+
+        this.overviewChart_ = new tr.ui.b.NameLineChart();
+        this.$.overview_container.appendChild(this.overviewChart_);
+        this.overviewChart_.displayXInHover = true;
+        this.overviewChart_.hideLegend = true;
+        this.overviewChart_.unit = unit;
+        this.overviewChart_.overrideDataRange = this.row.overviewDataRange;
+        this.overviewChart_.data = data;
+      }
+    },
+
+    openHistograms_(event) {
+      event.stopPropagation();
+      tr.b.Timing.instant('histogram-set-table-name-cell', 'openHistograms');
+      for (const cell of this.row.cells.values()) {
+        cell.isHistogramOpen = true;
+      }
+      this.$.close_histograms.style.display = 'block';
+      this.$.open_histograms.style.display = 'none';
+    },
+
+    closeHistograms_(event) {
+      event.stopPropagation();
+      tr.b.Timing.instant('histogram-set-table-name-cell', 'closeHistograms');
+      for (const cell of this.row.cells.values()) {
+        cell.isHistogramOpen = false;
+      }
+      this.$.open_histograms.style.display = 'block';
+      this.$.close_histograms.style.display = 'none';
+    },
+
+    onRootStateUpdate_(event) {
+      if (event.delta.constrainNameColumn) {
+        this.constrainWidth = this.row.rootViewState.constrainNameColumn;
+      }
+      if (this.row.viewState.isOverviewed &&
+          event.delta.displayStatisticName) {
+        this.row.resetOverviewDataRange();
+        if (this.overviewChart_ !== undefined) {
+          this.$.overview_container.removeChild(this.overviewChart_);
+          this.overviewChart_ = undefined;
+        }
+        this.showOverview_();
+      }
+    },
+
+    onRowStateUpdate_(event) {
+      if (event.delta.isOverviewed) {
+        this.isOverviewed = this.row.viewState.isOverviewed;
+      }
+      // This assumes that cell states are not updated.
+    },
+
+    onCellStateUpdate_(event) {
+      if (!event.delta.isOpen) return;
+
+      let cellCount = 0;
+      let openCellCount = 0;
+      for (const cell of this.row.cells.values()) {
+        if (!(cell.histogram instanceof tr.v.Histogram) ||
+            (cell.histogram.numValues === 0)) {
+          continue;
+        }
+        ++cellCount;
+        if (cell.isHistogramOpen) ++openCellCount;
+      }
+      if (cellCount <= 1) return;
+      const mostlyOpen = openCellCount > (cellCount / 2);
+      this.$.open_histograms.style.display = mostlyOpen ? 'none' : 'block';
+      this.$.close_histograms.style.display = mostlyOpen ? 'block' : 'none';
+    }
+  });
+
+  return {
+    NAME_COLUMN_WIDTH_PX,
+  };
+});
+</script>

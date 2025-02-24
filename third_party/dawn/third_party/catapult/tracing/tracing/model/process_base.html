@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/object_collection.html">
+<link rel="import" href="/tracing/model/thread.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the ProcessBase class.
+ */
+tr.exportTo('tr.model', function() {
+  const Thread = tr.model.Thread;
+  const Counter = tr.model.Counter;
+
+  /**
+   * The ProcessBase is a partial base class, upon which Kernel
+   * and Process are built.
+   *
+   * @constructor
+   * @extends {tr.model.EventContainer}
+   */
+  function ProcessBase(model) {
+    if (!model) {
+      throw new Error('Must provide a model');
+    }
+    tr.model.EventContainer.call(this);
+    this.model = model;
+    this.threads = {};
+    this.counters = {};
+    this.objects = new tr.model.ObjectCollection(this);
+    this.sortIndex = 0;
+  }
+
+  ProcessBase.compare = function(x, y) {
+    return x.sortIndex - y.sortIndex;
+  };
+
+  ProcessBase.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    get stableId() {
+      throw new Error('Not implemented');
+    },
+
+    * childEventContainers() {
+      yield* Object.values(this.threads);
+      yield* Object.values(this.counters);
+      yield this.objects;
+    },
+
+    iterateAllPersistableObjects(cb) {
+      cb(this);
+      for (const tid in this.threads) {
+        this.threads[tid].iterateAllPersistableObjects(cb);
+      }
+    },
+
+    /**
+     * Gets the number of threads in this process.
+     */
+    get numThreads() {
+      let n = 0;
+      for (const p in this.threads) {
+        n++;
+      }
+      return n;
+    },
+
+    /**
+     * Shifts all the timestamps inside this process forward by the amount
+     * specified.
+     */
+    shiftTimestampsForward(amount) {
+      for (const child of this.childEventContainers()) {
+        child.shiftTimestampsForward(amount);
+      }
+    },
+
+    /**
+     * Closes any open slices.
+     */
+    autoCloseOpenSlices() {
+      for (const tid in this.threads) {
+        const thread = this.threads[tid];
+        thread.autoCloseOpenSlices();
+      }
+    },
+
+    autoDeleteObjects(maxTimestamp) {
+      this.objects.autoDeleteObjects(maxTimestamp);
+    },
+
+    /**
+     * Called by the model after finalizing imports,
+     * but before joining refs.
+     */
+    preInitializeObjects() {
+      this.objects.preInitializeAllObjects();
+    },
+
+    /**
+     * Called by the model after joining refs.
+     */
+    initializeObjects() {
+      this.objects.initializeAllObjects();
+    },
+
+    /**
+     * Merge slices from the kernel with those from userland for each thread.
+     */
+    mergeKernelWithUserland() {
+      for (const tid in this.threads) {
+        const thread = this.threads[tid];
+        thread.mergeKernelWithUserland();
+      }
+    },
+
+    updateBounds() {
+      this.bounds.reset();
+      for (const tid in this.threads) {
+        this.threads[tid].updateBounds();
+        this.bounds.addRange(this.threads[tid].bounds);
+      }
+      for (const id in this.counters) {
+        this.counters[id].updateBounds();
+        this.bounds.addRange(this.counters[id].bounds);
+      }
+      this.objects.updateBounds();
+      this.bounds.addRange(this.objects.bounds);
+    },
+
+    addCategoriesToDict(categoriesDict) {
+      for (const tid in this.threads) {
+        this.threads[tid].addCategoriesToDict(categoriesDict);
+      }
+      for (const id in this.counters) {
+        categoriesDict[this.counters[id].category] = true;
+      }
+      this.objects.addCategoriesToDict(categoriesDict);
+    },
+
+    findAllThreadsMatching(predicate, opt_this) {
+      const threads = [];
+      for (const tid in this.threads) {
+        const thread = this.threads[tid];
+        if (predicate.call(opt_this, thread)) {
+          threads.push(thread);
+        }
+      }
+      return threads;
+    },
+
+    /**
+     * @param {String} The name of the thread to find.
+     * @return {Array} An array of all the matched threads.
+     */
+    findAllThreadsNamed(name) {
+      const threads = this.findAllThreadsMatching(function(thread) {
+        if (!thread.name) return false;
+        return thread.name === name;
+      });
+      return threads;
+    },
+
+    findAtMostOneThreadNamed(name) {
+      const threads = this.findAllThreadsNamed(name);
+      if (threads.length === 0) return undefined;
+      if (threads.length > 1) {
+        throw new Error('Expected no more than one ' + name);
+      }
+      return threads[0];
+    },
+
+    /**
+     * Removes threads from the process that are fully empty.
+     */
+    pruneEmptyContainers() {
+      const threadsToKeep = {};
+      for (const tid in this.threads) {
+        const thread = this.threads[tid];
+        if (!thread.isEmpty) {
+          threadsToKeep[tid] = thread;
+        }
+      }
+      this.threads = threadsToKeep;
+    },
+
+    /**
+     * @return {TimelineThread} The thread identified by tid on this process,
+     * or undefined if it doesn't exist.
+     */
+    getThread(tid) {
+      return this.threads[tid];
+    },
+
+    /**
+     * @return {TimelineThread} The thread identified by tid on this process,
+     * creating it if it doesn't exist.
+     */
+    getOrCreateThread(tid) {
+      if (!this.threads[tid]) {
+        this.threads[tid] = new Thread(this, tid);
+      }
+      return this.threads[tid];
+    },
+
+    /**
+     * @return {Counter} The counter on this process with the given
+     * category/name combination, creating it if it doesn't exist.
+     */
+    getOrCreateCounter(cat, name) {
+      const id = cat + '.' + name;
+      if (!this.counters[id]) {
+        this.counters[id] = new Counter(this, id, cat, name);
+      }
+      return this.counters[id];
+    },
+
+    getSettingsKey() {
+      throw new Error('Not implemented');
+    },
+
+    createSubSlices() {
+      for (const tid in this.threads) {
+        this.threads[tid].createSubSlices();
+      }
+    }
+  };
+
+  return {
+    ProcessBase,
+  };
+});
+</script>

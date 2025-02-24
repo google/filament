@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('dmaFenceEventImport', function() {
+    const lines = [
+      '       test-3268  ( 3214) [010] ....   505.064394: dma_fence_init: driver=virtio_gpu timeline=controlq context=1 seqno=0', // @suppress longLineCheck
+      '       test-3268  ( 3214) [010] ....   505.064396: dma_fence_emit: driver=virtio_gpu timeline=controlq context=1 seqno=109779', // @suppress longLineCheck
+      '       test-3268  ( 3214) [010] ....   505.064467: dma_fence_wait_start: driver=virtio_gpu timeline=controlq context=1 seqno=109779', // @suppress longLineCheck
+      'kworker/2:1-109   (  109) [002] d...   505.065121: dma_fence_signaled: driver=virtio_gpu timeline=controlq context=1 seqno=109779', // @suppress longLineCheck
+      '       test-3268  ( 3214) [010] ....   505.065206: dma_fence_wait_end: driver=virtio_gpu timeline=controlq context=1 seqno=109779', // @suppress longLineCheck
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+
+    let threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 2);
+
+    threads = m.findAllThreadsNamed('test');
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].sliceGroup.length, 1);
+    assert.strictEqual('dma_fence_wait("controlq")',
+        threads[0].sliceGroup.slices[0].title);
+
+    threads = m.findAllThreadsNamed('controlq');
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].sliceGroup.length, 1);
+    assert.strictEqual('fence_signal(109779)',
+        threads[0].sliceGroup.slices[0].title);
+  });
+
+  test('fenceEventImport', function() {
+    const lines = [
+      'HwBinder:595_2-650   (  595) [001] .... 584509.195956: ' +
+         'fence_init: driver=sde_fence:crtc111:25602 timeline=crtc111 ' +
+         'context=3 seqno=256022',
+      'crtc_event:111-247   (  247) [001] d..1 584509.213897: ' +
+         'fence_signaled: driver=sde_fence:crtc111:25602 timeline=crtc111 ' +
+         'context=3 seqno=256022'
+    ];
+
+    const m = tr.c.TestUtils.newModelWithEvents([lines.join('\n')], {
+      shiftWorldToZero: false
+    });
+    assert.isFalse(m.hasImportWarnings);
+  });
+});
+</script>
+

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/heap_dump.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Logic for importing a Heap Dump.
+ */
+tr.exportTo('tr.e.importer', function() {
+  /**
+   * @constructor
+   * @param {!tr.model.Model} model The model we are currently building.
+   * @param {!tr.model.ProcessMemoryDump} processMemoryDump
+   *     The parent memory dump for this heap dump.
+   * @param {!Map|undefined} processObjectTypeNameMap
+   *     A map from raw heap dump 'type' ids to human-readable names.
+   * @param {!string} idPrefix Process-specific prefix to prepend to a stack
+   *     trace id before looking it up in the model.
+   * @param {!string} dumpId
+   *     Raw heap dump id, used only for nice error messages.
+   * @param {!Object} rawHeapDumps
+   *     Raw heap dump.
+   */
+  function LegacyHeapDumpTraceEventImporter(
+      model,
+      processMemoryDump,
+      processObjectTypeNameMap,
+      idPrefix,
+      dumpId,
+      rawHeapDumps) {
+    this.model_ = model;
+    this.processObjectTypeNameMap_ = processObjectTypeNameMap;
+    this.idPrefix_ = idPrefix;
+    this.processMemoryDump_ = processMemoryDump;
+    this.pid_ = this.processMemoryDump_.process.pid;
+    this.dumpId_ = dumpId;
+    this.rawHeapDumps_ = rawHeapDumps;
+  }
+
+  LegacyHeapDumpTraceEventImporter.prototype = {
+    /**
+     * Parse rawHeapDump and add entries to heapDump.
+     *
+     * @param {!{!entries:(!Array<!Object>|undefined)}} rawHeapDump
+     *     The data we're going to parse.
+     * @param {!string} allocatorName e.g. malloc.
+     * @return {!tr.model.HeapDump} on success or undefined on an error.
+     */
+    parseRawHeapDump(rawHeapDump, allocatorName) {
+      const model = this.model_;
+      const processMemoryDump = this.processMemoryDump_;
+      const heapDump = new tr.model.HeapDump(processMemoryDump, allocatorName);
+
+      const entries = rawHeapDump.entries;
+      if (entries === undefined || entries.length === 0) {
+        this.model_.importWarning({
+          type: 'memory_dump_parse_error',
+          message: 'No heap entries in a ' + allocatorName +
+              ' heap dump for PID=' + this.pid_ +
+              ' and dump ID=' + this.dumpId_ + '.'
+        });
+
+        return undefined;
+      }
+
+      // The old format always starts with a {size: <total>} entry.
+      // See https://goo.gl/WYStil
+      // TODO(petrcermak): Remove support for the old format once the new
+      // format has been around long enough.
+      const isOldFormat = entries[0].bt === undefined;
+      if (!isOldFormat && this.processObjectTypeNameMap_ === undefined) {
+        // Mapping from object type IDs to names must be provided in the new
+        // format.
+        return undefined;
+      }
+
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const size = parseInt(entry.size, 16);
+        const leafStackFrameIndex = entry.bt;
+        let leafStackFrame;
+
+        // There are two possible mappings from leaf stack frame indices
+        // (provided in the trace) to the corresponding stack frames
+        // depending on the format.
+        if (isOldFormat) {
+          // Old format:
+          //   Undefined index        -> / (root)
+          //   Defined index for /A/B -> /A/B/<self>
+          if (leafStackFrameIndex === undefined) {
+            leafStackFrame = undefined; /* root */
+          } else {
+            // Get the leaf stack frame corresponding to the provided index.
+            let leafStackFrameId = this.idPrefix_ + leafStackFrameIndex;
+            if (leafStackFrameIndex === '') {
+              leafStackFrame = undefined; /* root */
+            } else {
+              leafStackFrame = model.stackFrames[leafStackFrameId];
+              if (leafStackFrame === undefined) {
+                this.model_.importWarning({
+                  type: 'memory_dump_parse_error',
+                  message: 'Missing leaf stack frame (ID ' +
+                      leafStackFrameId + ') of heap entry ' + i + ' (size ' +
+                      size + ') in a ' + allocatorName +
+                      ' heap dump for PID=' + this.pid_ + '.'
+                });
+                continue;
+              }
+            }
+
+            // Inject an artificial <self> leaf stack frame.
+            leafStackFrameId += ':self';
+            if (model.stackFrames[leafStackFrameId] !== undefined) {
+              // The frame might already exist if there are multiple process
+              // memory dumps (for the same process) in the trace.
+              leafStackFrame = model.stackFrames[leafStackFrameId];
+            } else {
+              leafStackFrame = new tr.model.StackFrame(
+                  leafStackFrame, leafStackFrameId, '<self>',
+                  undefined /* colorId */);
+              model.addStackFrame(leafStackFrame);
+            }
+          }
+        } else {
+          // New format:
+          //   Undefined index        -> (invalid value)
+          //   Defined index for /A/B -> /A/B
+          if (leafStackFrameIndex === undefined) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Missing stack frame ID of heap entry ' + i +
+                  ' (size ' + size + ') in a ' + allocatorName +
+                  ' heap dump for PID=' + this.pid_ + '.'
+            });
+            continue;
+          }
+
+          // Get the leaf stack frame corresponding to the provided index.
+          const leafStackFrameId = this.idPrefix_ + leafStackFrameIndex;
+          if (leafStackFrameIndex === '') {
+            leafStackFrame = undefined; /* root */
+          } else {
+            leafStackFrame = model.stackFrames[leafStackFrameId];
+            if (leafStackFrame === undefined) {
+              this.model_.importWarning({
+                type: 'memory_dump_parse_error',
+                message: 'Missing leaf stack frame (ID ' + leafStackFrameId +
+                    ') of heap entry ' + i + ' (size ' + size + ') in a ' +
+                    allocatorName + ' heap dump for PID=' + this.pid_ + '.'
+              });
+              continue;
+            }
+          }
+        }
+
+        const objectTypeId = entry.type;
+        let objectTypeName;
+        if (objectTypeId === undefined) {
+          objectTypeName = undefined; /* total over all types */
+        } else if (this.processObjectTypeNameMap_ === undefined) {
+          // This can only happen when the old format is used.
+          continue;
+        } else {
+          objectTypeName = this.processObjectTypeNameMap_[objectTypeId];
+          if (objectTypeName === undefined) {
+            this.model_.importWarning({
+              type: 'memory_dump_parse_error',
+              message: 'Missing object type name (ID ' + objectTypeId +
+                  ') of heap entry ' + i + ' (size ' + size + ') in a ' +
+                  allocatorName + ' heap dump for PID=' + this.pid_ + '.'
+            });
+            continue;
+          }
+        }
+
+        const count = entry.count === undefined ? undefined :
+          parseInt(entry.count, 16);
+        heapDump.addEntry(leafStackFrame, objectTypeName, size, count);
+      }
+
+      return heapDump;
+    },
+
+    parse() {
+      const heapDumps = {};
+      for (const allocatorName in this.rawHeapDumps_) {
+        const rawHeapDump = this.rawHeapDumps_[allocatorName];
+        const heapDump = this.parseRawHeapDump(rawHeapDump, allocatorName);
+
+        // Throw away heap dumps with no entries. This can happen if all raw
+        // entries in the trace are skipped for some reason (e.g. invalid leaf
+        // stack frame ID).
+        if (heapDump !== undefined && heapDump.entries.length > 0) {
+          heapDumps[allocatorName] = heapDump;
+        }
+      }
+      return heapDumps;
+    },
+
+  };
+
+  return {
+    LegacyHeapDumpTraceEventImporter,
+  };
+});
+</script>

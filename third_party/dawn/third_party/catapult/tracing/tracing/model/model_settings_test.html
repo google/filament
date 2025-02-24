@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/model_settings.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('process_name_uniqueness_0', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const settings = new tr.model.ModelSettings(model);
+    assert.isFalse(settings.hasUniqueSettingKey(p1));
+  });
+
+  test('process_name_uniqueness_1', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    p1.name = 'Browser';
+    const settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.hasUniqueSettingKey(p1));
+  });
+
+  test('process_name_uniqueness_2', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const p2 = model.getOrCreateProcess(2);
+    p1.name = 'Renderer';
+    p2.name = 'Renderer';
+    const settings = new tr.model.ModelSettings(model);
+    assert.isFalse(settings.hasUniqueSettingKey(p1));
+    assert.isFalse(settings.hasUniqueSettingKey(p2));
+  });
+
+  test('process_name_uniqueness_3', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const p2 = model.getOrCreateProcess(2);
+    p1.name = 'Renderer';
+    p1.labels.push('Google Search');
+    p2.name = 'Renderer';
+    const settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.hasUniqueSettingKey(p1));
+    assert.isTrue(settings.hasUniqueSettingKey(p2));
+  });
+
+  test('thread_name_uniqueness_0', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const p2 = model.getOrCreateProcess(2);
+    const t1 = p1.getOrCreateThread(1);
+    const t2 = p2.getOrCreateThread(2);
+    p1.name = 'Browser';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    const settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.hasUniqueSettingKey(t1));
+    assert.isTrue(settings.hasUniqueSettingKey(t2));
+  });
+
+  test('thread_name_uniqueness_1', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const p2 = model.getOrCreateProcess(2);
+    const t1 = p1.getOrCreateThread(1);
+    const t2 = p2.getOrCreateThread(2);
+    p1.name = 'Renderer';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    const settings = new tr.model.ModelSettings(model);
+    assert.isFalse(settings.hasUniqueSettingKey(t1));
+    assert.isFalse(settings.hasUniqueSettingKey(t2));
+  });
+
+  test('process_persistence_when_not_unique', function() {
+    let model = new tr.Model();
+    let p1 = model.getOrCreateProcess(1);
+    let settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(p1, 'true_by_default', true));
+
+    settings.setSettingFor(p1, 'true_by_default', false);
+    assert.isFalse(settings.getSettingFor(p1, 'true_by_default', true));
+
+    // Now, clobber the model, and verify that it didn't persist.
+    model = new tr.Model();
+    p1 = model.getOrCreateProcess(1);
+    settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(p1, 'true_by_default', true));
+  });
+
+  test('process_persistence_when_not_unique_with_name', function() {
+    let model = new tr.Model();
+    let p1 = model.getOrCreateProcess(1);
+    p1.name = 'Browser';
+    let settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(p1, 'true_by_default', true));
+
+    settings.setSettingFor(p1, 'true_by_default', false);
+    assert.isFalse(settings.getSettingFor(p1, 'true_by_default', true));
+
+    // Now, clobber the model, and verify that it persisted.
+    model = new tr.Model();
+    p1 = model.getOrCreateProcess(1);
+    p1.name = 'Browser';
+    settings = new tr.model.ModelSettings(model);
+    assert.isFalse(settings.getSettingFor(p1, 'true_by_default', true));
+  });
+
+  test('thread_persistence_when_not_unique', function() {
+    let model = new tr.Model();
+    let p1 = model.getOrCreateProcess(1);
+    let p2 = model.getOrCreateProcess(2);
+    let t1 = p1.getOrCreateThread(1);
+    let t2 = p2.getOrCreateThread(2);
+    p1.name = 'Renderer';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    let settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(t1, 'true_by_default', true));
+
+    settings.setSettingFor(t1, 'true_by_default', false);
+    assert.isFalse(settings.getSettingFor(t1, 'true_by_default', true));
+
+    // Now, clobber the model, and verify that it persisted.
+    model = new tr.Model();
+    p1 = model.getOrCreateProcess(1);
+    p2 = model.getOrCreateProcess(2);
+    t1 = p1.getOrCreateThread(1);
+    t2 = p2.getOrCreateThread(2);
+    p1.name = 'Renderer';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(t1, 'true_by_default', true));
+  });
+
+  test('thread_persistence_when_unique', function() {
+    let model = new tr.Model();
+    let p1 = model.getOrCreateProcess(1);
+    let p2 = model.getOrCreateProcess(2);
+    let t1 = p1.getOrCreateThread(1);
+    let t2 = p2.getOrCreateThread(2);
+    p1.name = 'Browser';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    let settings = new tr.model.ModelSettings(model);
+    assert.isTrue(settings.getSettingFor(t1, 'true_by_default', true));
+
+    settings.setSettingFor(t1, 'true_by_default', false);
+    assert.isFalse(settings.getSettingFor(t1, 'true_by_default', true));
+
+    // Now, clobber the model, and verify that it persisted.
+    model = new tr.Model();
+    p1 = model.getOrCreateProcess(1);
+    p2 = model.getOrCreateProcess(2);
+    t1 = p1.getOrCreateThread(1);
+    t2 = p2.getOrCreateThread(2);
+    p1.name = 'Browser';
+    p2.name = 'Renderer';
+    t1.name = 'Main';
+    t2.name = 'Main';
+    settings = new tr.model.ModelSettings(model);
+    assert.isFalse(settings.getSettingFor(t1, 'true_by_default', true));
+  });
+});
+</script>
+

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/chart_legend_key.html">
+<link rel="import" href="/tracing/ui/base/d3.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<template id="chart-base-template">
+  <svg> <!-- svg tag is dropped by ChartBase.decorate. -->
+    <g xmlns="http://www.w3.org/2000/svg" id="chart-area">
+      <g class="x axis"></g>
+      <g class="y axis"></g>
+      <text id="title"></text>
+    </g>
+  </svg>
+</template>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const DataSeriesEnableChangeEventType = 'data-series-enabled-change';
+
+  const THIS_DOC = document._currentScript.ownerDocument;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const ColorScheme = tr.b.ColorScheme;
+
+  function getColorOfKey(key, selected) {
+    let id = ColorScheme.getColorIdForGeneralPurposeString(key);
+    if (selected) {
+      id += ColorScheme.properties.brightenedOffsets[0];
+    }
+    return ColorScheme.colorsAsStrings[id];
+  }
+
+  /**
+   * Returns width and height of SVG text node.
+   *
+   * @param {!Element} parentNode
+   * @param {string} text
+   * @param {function(!Element)=} opt_callback
+   * @param {*=} opt_this
+   * @returns {!Object}
+   */
+  function getSVGTextSize(parentNode, text, opt_callback, opt_this) {
+    const textNode = document.createElementNS(
+        'http://www.w3.org/2000/svg', 'text');
+    textNode.setAttributeNS(null, 'x', 0);
+    textNode.setAttributeNS(null, 'y', 0);
+    textNode.setAttributeNS(null, 'fill', 'black');
+    textNode.appendChild(document.createTextNode(text));
+    parentNode.appendChild(textNode);
+    if (opt_callback) {
+      opt_callback.call(opt_this || parentNode, textNode);
+    }
+    const width = textNode.getComputedTextLength();
+    const height = textNode.getBBox().height;
+    parentNode.removeChild(textNode);
+    return {width, height};
+  }
+
+  function DataSeries(key) {
+    this.key_ = key;
+    this.target_ = undefined;
+    this.title_ = '';
+    this.optional_ = false;
+    this.enabled_ = true;
+    this.color_ = getColorOfKey(key, false);
+    this.highlightedColor_ = getColorOfKey(key, true);
+  }
+
+  DataSeries.prototype = {
+    get key() {
+      return this.key_;
+    },
+
+    get title() {
+      return this.title_;
+    },
+
+    set title(t) {
+      this.title_ = t;
+    },
+
+    get color() {
+      return this.color_;
+    },
+
+    set color(c) {
+      this.color_ = c;
+    },
+
+    get highlightedColor() {
+      return this.highlightedColor_;
+    },
+
+    set highlightedColor(c) {
+      this.highlightedColor_ = c;
+    },
+
+    get optional() {
+      return this.optional_;
+    },
+
+    set optional(optional) {
+      this.optional_ = optional;
+    },
+
+    get enabled() {
+      return this.enabled_;
+    },
+
+    set enabled(enabled) {
+      // If the caller is disabling a data series, but it wasn't optional, then
+      // force it to be optional.
+      if (!this.optional && !enabled) {
+        this.optional = true;
+      }
+      this.enabled_ = enabled;
+    },
+
+    get target() {
+      return this.target_;
+    },
+
+    set target(t) {
+      this.target_ = t;
+    }
+  };
+
+  /**
+   * A virtual base class for basic charts that provides basic chart
+   * infrastructure such as a title and legend.
+   *
+   * Generally, setting a field on a chart instance will cause it to update its
+   * contents, which assumes that the chart is attached to a document, so
+   * callers should create the chart and immediately attach it to a document
+   * before configuring it. Embedders that are polymer dom-modules can use the
+   * attached() callback to wait to configure the chart until they are attached
+   * to a document.
+   *
+   * TODO(#3058) Use a class for Polymer 2.0.
+   *
+   * @constructor
+   */
+  const ChartBase = tr.ui.b.define('svg', undefined, svgNS);
+
+  ChartBase.prototype = {
+    __proto__: HTMLUnknownElement.prototype,
+
+    getDataSeries(key) {
+      if (!this.seriesByKey_.has(key)) {
+        this.seriesByKey_.set(key, new DataSeries(key));
+      }
+      return this.seriesByKey_.get(key);
+    },
+
+    decorate() {
+      Polymer.dom(this).classList.add('chart-base');
+      this.setAttribute('style', 'cursor: default; user-select: none;');
+      this.chartTitle_ = undefined;
+      this.seriesByKey_ = new Map();
+      this.graphWidth_ = undefined;
+      this.graphHeight_ = undefined;
+      this.margin = {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      };
+      this.hideLegend_ = false;
+      this.showTitleInLegend_ = false;
+      this.titleHeight_ = '16pt';
+
+      // This should use tr.ui.b.instantiateTemplate. However, creating
+      // svg-namespaced elements inside a template isn't possible. Thus, this
+      // hack.
+      const template =
+          Polymer.dom(THIS_DOC).querySelector('#chart-base-template');
+      const svgEl = Polymer.dom(template.content).querySelector('svg');
+      for (let i = 0; i < Polymer.dom(svgEl).children.length; i++) {
+        Polymer.dom(this).appendChild(
+            Polymer.dom(svgEl.children[i]).cloneNode(true));
+      }
+
+      this.addEventListener(DataSeriesEnableChangeEventType,
+          this.onDataSeriesEnableChange_.bind(this));
+    },
+
+    get hideLegend() {
+      return this.hideLegend_;
+    },
+
+    set hideLegend(h) {
+      this.hideLegend_ = h;
+      this.updateContents_();
+    },
+
+    get showTitleInLegend() {
+      return this.showTitleInLegend_;
+    },
+
+    set showTitleInLegend(s) {
+      this.showTitleInLegend_ = s;
+      this.updateContents_();
+    },
+
+    isSeriesEnabled(key) {
+      return this.getDataSeries(key).enabled;
+    },
+
+    onDataSeriesEnableChange_(event) {
+      this.getDataSeries(event.key).enabled = event.enabled;
+      this.updateContents_();
+    },
+
+    get chartTitle() {
+      return this.chartTitle_;
+    },
+
+    set chartTitle(chartTitle) {
+      this.chartTitle_ = chartTitle;
+      this.updateContents_();
+    },
+
+    get chartAreaElement() {
+      return Polymer.dom(this).querySelector('#chart-area');
+    },
+
+    get graphWidth() {
+      if (this.graphWidth_ === undefined) return this.defaultGraphWidth;
+      return this.graphWidth_;
+    },
+
+    set graphWidth(width) {
+      this.graphWidth_ = width;
+      this.updateContents_();
+    },
+
+    get defaultGraphWidth() {
+      return 0;
+    },
+
+    get graphHeight() {
+      if (this.graphHeight_ === undefined) return this.defaultGraphHeight;
+      return this.graphHeight_;
+    },
+
+    set graphHeight(height) {
+      this.graphHeight_ = height;
+      this.updateContents_();
+    },
+
+    get titleHeight() {
+      return this.titleHeight_;
+    },
+
+    set titleHeight(height) {
+      this.titleHeight_ = height;
+      this.updateContents_();
+    },
+
+    get defaultGraphHeight() {
+      return 0;
+    },
+
+    get totalWidth() {
+      return this.margin.left + this.graphWidth + this.margin.right;
+    },
+
+    get totalHeight() {
+      return this.margin.top + this.graphHeight + this.margin.bottom;
+    },
+
+    updateMargins_() {
+      const legendSize = this.computeLegendSize_();
+      this.margin.right = Math.max(this.margin.right, legendSize.width);
+      this.margin.bottom = Math.max(
+          this.margin.bottom,
+          legendSize.height - this.graphHeight);
+
+      if (this.chartTitle_) {
+        const titleSize = getSVGTextSize(this, this.chartTitle_, textNode => {
+          textNode.style.fontSize = '16pt';
+        });
+        this.margin.top = Math.max(this.margin.top, titleSize.height + 15);
+        const horizontalOverhangPx = (titleSize.width - this.graphWidth) / 2;
+        this.margin.left = Math.max(this.margin.left, horizontalOverhangPx);
+        this.margin.right = Math.max(this.margin.right, horizontalOverhangPx);
+      }
+    },
+
+    computeLegendSize_() {
+      let width = 0;
+      let height = 0;
+      if (this.hideLegend) return {width, height};
+
+      let series = [...this.seriesByKey_.values()];
+      if (this.showTitleInLegend) {
+        series = series.filter(series => series.title !== '');
+      }
+
+      for (const seriesEntry of series) {
+        const legendText = this.showTitleInLegend ? seriesEntry.title :
+          seriesEntry.key;
+        const textSize = getSVGTextSize(this, legendText);
+        width = Math.max(width, textSize.width + 30);
+        height += textSize.height;
+      }
+
+      return {width, height};
+    },
+
+    updateDimensions_() {
+      const thisSel = d3.select(this);
+      thisSel.attr('width', this.totalWidth);
+      thisSel.attr('height', this.totalHeight);
+
+      d3.select(this.chartAreaElement).attr(
+          'transform',
+          'translate(' + this.margin.left + ', ' + this.margin.top + ')');
+    },
+
+    updateContents_() {
+      this.updateMargins_();
+      this.updateDimensions_();
+      this.updateTitle_();
+      this.updateLegend_();
+    },
+
+    updateTitle_() {
+      const titleSel = d3.select(this.chartAreaElement).select('#title');
+      if (!this.chartTitle_) {
+        titleSel.style('display', 'none');
+        return;
+      }
+      titleSel.attr('transform', 'translate(' + this.graphWidth * 0.5 + ',-15)')
+          .style('display', undefined)
+          .style('text-anchor', 'middle')
+          .style('font-size', this.titleHeight)
+          .attr('class', 'title')
+          .attr('width', this.graphWidth)
+          .text(this.chartTitle_);
+    },
+
+    updateLegend_() {
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      chartAreaSel.selectAll('.legend').remove();
+      if (this.hideLegend) return;
+
+      let series;
+      let seriesText;
+      if (this.showTitleInLegend) {
+        series = [...this.seriesByKey_.values()].
+            filter(series => series.title !== '').
+            filter(series => series.color !== 'transparent').reverse();
+        seriesText = series => series.title;
+      } else {
+        series = [...this.seriesByKey_.values()].
+            filter(series => series.color !== 'transparent').reverse();
+        seriesText = series => series.key;
+      }
+
+      const legendEntriesSel = chartAreaSel.selectAll('.legend').data(series);
+
+      legendEntriesSel.enter()
+          .append('foreignObject')
+          .attr('class', 'legend')
+          .attr('x', this.graphWidth + 2)
+          .attr('width', this.margin.right)
+          .attr('height', 18)
+          .attr('transform', (series, i) => 'translate(0,' + i * 18 + ')')
+          .append('xhtml:body')
+          .style('margin', 0)
+          .append('tr-ui-b-chart-legend-key')
+          .property('color', series =>
+            ((this.currentHighlightedLegendKey === series.key) ?
+              series.highlightedColor : series.color))
+          .property('width', this.margin.right)
+          .property('target', series => series.target)
+          .property('title', series => series.title)
+          .property('optional', series => series.optional)
+          .property('enabled', series => series.enabled)
+          .text(seriesText);
+      legendEntriesSel.exit().remove();
+    },
+
+    get highlightedLegendKey() {
+      return this.highlightedLegendKey_;
+    },
+
+    set highlightedLegendKey(highlightedLegendKey) {
+      this.highlightedLegendKey_ = highlightedLegendKey;
+      this.updateHighlight_();
+    },
+
+    get currentHighlightedLegendKey() {
+      if (this.tempHighlightedLegendKey_) {
+        return this.tempHighlightedLegendKey_;
+      }
+      return this.highlightedLegendKey_;
+    },
+
+    pushTempHighlightedLegendKey(key) {
+      if (this.tempHighlightedLegendKey_) {
+        throw new Error('push cannot nest');
+      }
+      this.tempHighlightedLegendKey_ = key;
+      this.updateHighlight_();
+    },
+
+    popTempHighlightedLegendKey(key) {
+      if (this.tempHighlightedLegendKey_ !== key) {
+        throw new Error('pop cannot happen');
+      }
+      this.tempHighlightedLegendKey_ = undefined;
+      this.updateHighlight_();
+    },
+
+    updateHighlight_() {
+      // Update label colors.
+      const chartAreaSel = d3.select(this.chartAreaElement);
+      const legendEntriesSel = chartAreaSel.selectAll('.legend');
+      const getDataSeries = chart.getDataSeries.bind(chart);
+      const currentHighlightedLegendKey = chart.currentHighlightedLegendKey;
+      legendEntriesSel.each(function(key) {
+        // NOTE: this = legendEntry
+        const dataSeries = getDataSeries(key);
+        if (key === currentHighlightedLegendKey) {
+          this.style.fill = dataSeries.highlightedColor;
+          this.style.fontWeight = 'bold';
+        } else {
+          this.style.fill = dataSeries.color;
+          this.style.fontWeight = '';
+        }
+      });
+    }
+  };
+
+  return {
+    ChartBase,
+    DataSeriesEnableChangeEventType,
+    getColorOfKey,
+    getSVGTextSize,
+  };
+});
+</script>

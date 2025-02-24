@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<dom-module id='tr-ui-a-alert-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #table {
+      flex: 1 1 auto;
+      align-self: stretch;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table">
+    </tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-alert-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  ready() {
+    this.currentSelection_ = undefined;
+    this.$.table.tableColumns = [
+      {
+        title: 'Label',
+        value(row) { return row.name; },
+        width: '150px'
+      },
+      {
+        title: 'Value',
+        width: '100%',
+        value(row) { return row.value; }
+      }
+    ];
+    this.$.table.showHeader = false;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.updateContents_();
+  },
+
+  getRowsForSingleAlert_(alert) {
+    const rows = [];
+
+    // Arguments
+    for (const argName in alert.args) {
+      const argView =
+          document.createElement('tr-ui-a-generic-object-view');
+      argView.object = alert.args[argName];
+      rows.push({ name: argName, value: argView });
+    }
+
+    // Associated events
+    if (alert.associatedEvents.length) {
+      alert.associatedEvents.forEach(function(event, i) {
+        const linkEl = document.createElement('tr-ui-a-analysis-link');
+        linkEl.setSelectionAndContent(
+            new tr.model.EventSet(event), event.title);
+
+        let valueString = '';
+        if (event instanceof tr.model.TimedEvent) {
+          valueString = 'took ' + event.duration.toFixed(2) + 'ms';
+        }
+
+        rows.push({
+          name: linkEl,
+          value: valueString
+        });
+      });
+    }
+
+    // Description
+    const descriptionEl = tr.ui.b.createDiv({
+      textContent: alert.info.description,
+      maxWidth: '300px'
+    });
+    rows.push({
+      name: 'Description',
+      value: descriptionEl
+    });
+
+    // Additional Reading Links
+    if (alert.info.docLinks) {
+      alert.info.docLinks.forEach(function(linkObject) {
+        const linkEl = document.createElement('a');
+        linkEl.target = '_blank';
+        linkEl.href = linkObject.href;
+        Polymer.dom(linkEl).textContent = Polymer.dom(linkObject).textContent;
+        rows.push({
+          name: linkObject.label,
+          value: linkEl
+        });
+      });
+    }
+    return rows;
+  },
+
+  getRowsForAlerts_(alerts) {
+    if (alerts.length === 1) {
+      const rows = [{
+        name: 'Alert',
+        value: tr.b.getOnlyElement(alerts).title
+      }];
+      const detailRows = this.getRowsForSingleAlert_(tr.b.getOnlyElement(
+          alerts));
+      rows.push.apply(rows, detailRows);
+      return rows;
+    }
+    return alerts.map(function(alert) {
+      return {
+        name: 'Alert',
+        value: alert.title,
+        isExpanded: alerts.size < 10, // This is somewhat arbitrary for now.
+        subRows: this.getRowsForSingleAlert_(alert)
+      };
+    }, this);
+  },
+
+  updateContents_() {
+    if (this.currentSelection_ === undefined) {
+      this.$.table.rows = [];
+      this.$.table.rebuild();
+      return;
+    }
+
+    const alerts = this.currentSelection_;
+    this.$.table.tableRows = this.getRowsForAlerts_(alerts);
+    this.$.table.rebuild();
+  },
+
+  get relatedEventsToHighlight() {
+    if (!this.currentSelection_) return undefined;
+    const result = new tr.model.EventSet();
+    for (const event of this.currentSelection_) {
+      result.addEventSet(event.associatedEvents);
+    }
+    return result;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-alert-sub-view',
+    tr.model.Alert,
+    {
+      multi: false,
+      title: 'Alert',
+    });
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-alert-sub-view',
+    tr.model.Alert,
+    {
+      multi: true,
+      title: 'Alerts',
+    });
+</script>

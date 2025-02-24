@@ -1,0 +1,64 @@
+# Copyright 2017 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("libpng_config") {
+  include_dirs = [ "src" ]
+  cflags = []
+  if (is_clang) {
+    cflags += [ "-Wno-tautological-constant-out-of-range-compare" ]
+  }
+  if (is_apple) {
+    # TODO(crbug.com/41492875): this can be removed once libpng is updated to include
+    # https://github.com/pnggroup/libpng/commit/893b8113f04d408cc6177c6de19c9889a48faa24
+    cflags += [ "-fno-define-target-os-macros" ]
+  }
+}
+
+static_library("libpng") {
+  sources = [
+    "src/png.c",
+    "src/pngerror.c",
+    "src/pngget.c",
+    "src/pngmem.c",
+    "src/pngpread.c",
+    "src/pngread.c",
+    "src/pngrio.c",
+    "src/pngrtran.c",
+    "src/pngrutil.c",
+    "src/pngset.c",
+    "src/pngtrans.c",
+    "src/pngwio.c",
+    "src/pngwrite.c",
+    "src/pngwtran.c",
+    "src/pngwutil.c",
+  ]
+
+  # Note: currently pnglibconf.h defines this, but if it gets dropped in a
+  # future roll, needs to be added here for the other defines to work.
+  # defines = [ "PNG_SET_OPTION_SUPPORTED" ]
+  if (current_cpu == "x86" || current_cpu == "x64") {
+    sources += [
+      "src/intel/filter_sse2_intrinsics.c",
+      "src/intel/intel_init.c",
+    ]
+    defines = [ "PNG_INTEL_SSE_OPT=1" ]
+  } else if (target_cpu == "arm" || target_cpu == "arm64") {
+    sources += [
+      "src/arm/arm_init.c",
+      "src/arm/filter_neon_intrinsics.c",
+      "src/arm/palette_neon_intrinsics.c",
+    ]
+    defines = [
+      "PNG_ARM_NEON_OPT=2",
+      "PNG_ARM_NEON_IMPLEMENTATION=1",
+    ]
+  }
+  if (is_win) {
+    cflags = [ "/wd4028" ]
+  }
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
+  public_configs = [ ":libpng_config" ]
+  deps = [ "//third_party/zlib:zlib" ]
+}

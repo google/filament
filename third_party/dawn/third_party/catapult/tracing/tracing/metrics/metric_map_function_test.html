@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/metric_map_function.html">
+<link rel="import" href="/tracing/metrics/sample_metric.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const TestUtils = tr.c.TestUtils;
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  test('metricMapTest', function() {
+    const events = [
+      {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'E'}
+    ];
+    const m = TestUtils.newModelWithEvents(JSON.stringify(events), {
+      shiftWorldToZero: false,
+      pruneEmptyContainers: false,
+      trackDetailedModelStats: true,
+      customizeModelCallback(m) {
+        const p1 = m.getOrCreateProcess(1);
+        const t2 = p1.getOrCreateThread(2);
+        t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+          type: ThreadSlice,
+          name: 'some_slice',
+          start: 0, end: 10
+        }));
+        t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+          type: ThreadSlice,
+          name: 'some_slice',
+          start: 20, end: 30
+        }));
+      }
+    });
+
+    assert.throw(function() {
+      const result = new tr.mre.MreResult();
+      tr.metrics.metricMapFunction(result, m, {});
+    }, Error, 'Metric names should be specified.');
+
+    assert.throw(function() {
+      const result = new tr.mre.MreResult();
+      tr.metrics.metricMapFunction(result, m, {'metrics': ['wrongMetric']});
+    }, Error, '"wrongMetric" is not a registered metric.');
+
+    const result = new tr.mre.MreResult();
+    tr.metrics.metricMapFunction(
+        result, m, {'metrics': ['sampleMetric']});
+    assert.property(result.pairs, 'histograms');
+    assert.strictEqual(result.pairs.histograms.length, 4);
+    assert.property(result.pairs, 'scalars');
+    assert.strictEqual(result.pairs.scalars.length, 19);
+    assert.lengthOf(result.failures, 0);
+  });
+
+  test('exceptionMetric', function() {
+    const events = [
+      {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'E'}
+    ];
+    const m = TestUtils.newModelWithEvents(JSON.stringify(events), {
+      shiftWorldToZero: false,
+      pruneEmptyContainers: false,
+      trackDetailedModelStats: true,
+      customizeModelCallback(m) {
+        const p1 = m.getOrCreateProcess(1);
+        const t2 = p1.getOrCreateThread(2);
+        t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+          type: ThreadSlice,
+          name: 'some_slice',
+          start: 0, end: 10
+        }));
+        t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+          type: ThreadSlice,
+          name: 'some_slice',
+          start: 20, end: 30
+        }));
+      }
+    });
+
+    const result = new tr.mre.MreResult();
+    tr.metrics.metricMapFunction(
+        result, m, {'metrics': ['sampleExceptionMetric']});
+    assert.property(result.pairs, 'histograms');
+    assert.strictEqual(result.pairs.histograms.length, 4);
+    assert.property(result.pairs, 'scalars');
+    assert.strictEqual(result.pairs.scalars.length, 19);
+    assert.lengthOf(result.failures, 1);
+  });
+
+  function invalidDiagnosticNameMetric(histograms, model) {
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [], {diagnostics: {
+      [tr.v.d.RESERVED_NAMES.BOTS]: new tr.v.d.GenericSet([]),
+    }});
+  }
+
+  tr.metrics.MetricRegistry.register(invalidDiagnosticNameMetric);
+
+  test('validateDiagnosticNames', function() {
+    const result = new tr.mre.MreResult();
+    const m = TestUtils.newModel();
+
+    assert.throw(function() {
+      tr.metrics.metricMapFunction(result, m, {
+        'metrics': ['invalidDiagnosticNameMetric'],
+      });
+    }, Error, 'Illegal diagnostic name ' +
+        `"${tr.v.d.RESERVED_NAMES.BOTS}" on Histogram "a"`);
+  });
+
+  test('setCanonicalUrl', function() {
+    const result = new tr.mre.MreResult();
+    const m = TestUtils.newModel(model => {
+      model.canonicalUrl = 'url';
+    });
+    tr.metrics.metricMapFunction(result, m, {metrics: ['sampleMetric']});
+    assert.property(result.pairs, 'histograms');
+    assert.strictEqual(result.pairs.histograms.length, 5);
+    assert.strictEqual(result.pairs.histograms[0].values[0], 'url');
+  });
+
+  function requiresDefaultCategoryMetric(histograms, model) {
+  }
+
+  tr.metrics.MetricRegistry.register(requiresDefaultCategoryMetric, {
+    requiredCategories: ['foo'],
+  });
+
+  function requiresDisabledCategoryMetric(histograms, model) {
+  }
+
+  tr.metrics.MetricRegistry.register(requiresDisabledCategoryMetric, {
+    requiredCategories: ['disabled-by-default-foo'],
+  });
+
+  test('validateRequiredCategories', function() {
+    const result = new tr.mre.MreResult();
+    let m = TestUtils.newModel(model => {
+      model.metadata = [{
+        name: 'metadata',
+        value: {
+          'trace-config': JSON.stringify({
+            excluded_categories: ['foo'],
+          }),
+        },
+      }];
+    });
+
+    assert.throw(function() {
+      tr.metrics.metricMapFunction(result, m, {metrics:
+        ['requiresDefaultCategoryMetric']});
+    }, Error, 'Trace is missing required category "foo"');
+
+    m = TestUtils.newModel(model => {
+      model.metadata = [{
+        name: 'TraceConfig',
+        value: {
+        },
+      }];
+    });
+
+    assert.throw(function() {
+      tr.metrics.metricMapFunction(result, m, {metrics:
+        ['requiresDisabledCategoryMetric']});
+    }, Error, 'Trace is missing required category "disabled-by-default-foo"');
+  });
+
+  test('processStrippedConfig', function() {
+    const result = new tr.mre.MreResult();
+    const m = TestUtils.newModel(model => {
+      model.metadata = [{
+        name: 'metadata',
+        value: {
+          'trace-config': '__stripped__'
+        },
+      }];
+    });
+    tr.metrics.metricMapFunction(
+        result, m, {'metrics': ['sampleMetric']});
+    assert.lengthOf(result.failures, 0);
+  });
+
+  test('metricMetrics', function() {
+    const model = new tr.Model();
+    // We can't customize the model the normal way using
+    // test_utils.newModel(customizeModelCallback) because that callback is run
+    // before the end of the import phase, so our import duration will be
+    // overwritten.
+    model.stats.traceImportDurationMs = 10;
+
+    const histograms = tr.metrics.runMetrics(
+        model, {'metrics': ['sampleMetric']});
+
+    assert.strictEqual(
+        histograms.getHistogramNamed('trace_import_duration').average, 10);
+  });
+});
+</script>

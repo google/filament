@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/object_instance.html">
+<link rel="import" href="/tracing/model/object_snapshot.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('snapshotTypeRegistry', function() {
+    function MySnapshot() {
+      tr.model.ObjectSnapshot.apply(this, arguments);
+      this.myFoo = this.args.foo;
+    }
+
+    MySnapshot.prototype = {
+      __proto__: tr.model.ObjectSnapshot.prototype
+    };
+
+    const instance = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'MySnapshot', 10);
+    try {
+      tr.model.ObjectSnapshot.subTypes.register(
+          MySnapshot,
+          {typeName: 'MySnapshot'});
+      const snapshot = instance.addSnapshot(15, {foo: 'bar'});
+      assert.instanceOf(snapshot, MySnapshot);
+      assert.strictEqual(snapshot.myFoo, 'bar');
+    } finally {
+      tr.model.ObjectSnapshot.subTypes.unregister(MySnapshot);
+    }
+  });
+});
+</script>
+

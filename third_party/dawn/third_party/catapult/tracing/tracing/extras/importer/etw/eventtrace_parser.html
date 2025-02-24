@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/etw/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses EventTrace events in the Windows event trace format.
+ */
+
+tr.exportTo('tr.e.importer.etw', function() {
+  const Parser = tr.e.importer.etw.Parser;
+
+  // Constants for EventTrace events.
+  const guid = '68FDD900-4A3E-11D1-84F4-0000F80464E3';
+  const kEventTraceHeaderOpcode = 0;
+
+  /**
+   * Parses Windows EventTrace trace events.
+   * @constructor
+   */
+  function EventTraceParser(importer) {
+    Parser.call(this, importer);
+
+    // Register handlers.
+    importer.registerEventHandler(guid, kEventTraceHeaderOpcode,
+        EventTraceParser.prototype.decodeHeader.bind(this));
+  }
+
+  EventTraceParser.prototype = {
+    __proto__: Parser.prototype,
+
+    decodeFields(header, decoder) {
+      if (header.version !== 2) {
+        throw new Error('Incompatible EventTrace event version.');
+      }
+
+      const bufferSize = decoder.decodeUInt32();
+      const version = decoder.decodeUInt32();
+      const providerVersion = decoder.decodeUInt32();
+      const numberOfProcessors = decoder.decodeUInt32();
+      const endTime = decoder.decodeUInt64ToString();
+      const timerResolution = decoder.decodeUInt32();
+      const maxFileSize = decoder.decodeUInt32();
+      const logFileMode = decoder.decodeUInt32();
+      const buffersWritten = decoder.decodeUInt32();
+      const startBuffers = decoder.decodeUInt32();
+      const pointerSize = decoder.decodeUInt32();
+      const eventsLost = decoder.decodeUInt32();
+      const cpuSpeed = decoder.decodeUInt32();
+      const loggerName = decoder.decodeUInteger(header.is64);
+      const logFileName = decoder.decodeUInteger(header.is64);
+      const timeZoneInformation = decoder.decodeTimeZoneInformation();
+      const padding = decoder.decodeUInt32();
+      const bootTime = decoder.decodeUInt64ToString();
+      const perfFreq = decoder.decodeUInt64ToString();
+      const startTime = decoder.decodeUInt64ToString();
+      const reservedFlags = decoder.decodeUInt32();
+      const buffersLost = decoder.decodeUInt32();
+      const sessionNameString = decoder.decodeW16String();
+      const logFileNameString = decoder.decodeW16String();
+
+      return {
+        bufferSize,
+        version,
+        providerVersion,
+        numberOfProcessors,
+        endTime,
+        timerResolution,
+        maxFileSize,
+        logFileMode,
+        buffersWritten,
+        startBuffers,
+        pointerSize,
+        eventsLost,
+        cpuSpeed,
+        loggerName,
+        logFileName,
+        timeZoneInformation,
+        bootTime,
+        perfFreq,
+        startTime,
+        reservedFlags,
+        buffersLost,
+        sessionNameString,
+        logFileNameString
+      };
+    },
+
+    decodeHeader(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      // TODO(etienneb): Update the Model with |fields|.
+      return true;
+    }
+
+  };
+
+  Parser.register(EventTraceParser);
+
+  return {
+    EventTraceParser,
+  };
+});
+</script>
+

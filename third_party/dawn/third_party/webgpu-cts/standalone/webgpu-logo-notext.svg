@@ -1,0 +1,34 @@
+<svg id="Logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="768" height="600" viewBox="0 0 768 600">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #005a9c;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6 {
+        fill-rule: evenodd;
+      }
+
+      .cls-2 {
+        fill: #0066b0;
+      }
+
+      .cls-3 {
+        fill: #0076cc;
+      }
+
+      .cls-4 {
+        fill: #0086e8;
+      }
+
+      .cls-5 {
+        fill: #0093ff;
+      }
+    </style>
+  </defs>
+  <path id="Triangle_1" data-name="Triangle 1" class="cls-1" d="M265.5,504L24.745,87h481.51Z"/>
+  <path id="Triangle_2" data-name="Triangle 2" class="cls-2" d="M506.5,87L386,295H627Z"/>
+  <path id="Triangle_3" data-name="Triangle 3" class="cls-3" d="M506.5,503L386,295H627Z"/>
+  <path id="Triangle_4" data-name="Triangle 4" class="cls-4" d="M626.5,296L566,192H687Z"/>
+  <path id="Triangle_5" data-name="Triangle 5" class="cls-5" d="M626.5,88L566,192H687Z"/>
+</svg>

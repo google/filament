@@ -1,0 +1,28 @@
+<dom-module id="alt-svc-view">
+  <template>
+    <div id=alt-svc-view-tab-content class=content-box>
+      <h4>Alternate Service Mappings</h4>
+      <div id=alt-svc-view-alternate-protocol-mappings>
+        <div id=alt-svc-view-mappings-no-content>None</div>
+        <div id=alt-svc-view-mappings-content>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Server</th>
+                <th>Alternative Service</th>
+              </tr>
+            </thead>
+            <tbody id=alt-svc-view-mappings-tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'alt-svc-view',
+    });
+  </script>
+</dom-module>

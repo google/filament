@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/importer/find_input_expectations.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.vr', function() {
+  function webxrMetric(histograms, model, opt_options) {
+    const DEFAULT_BIN_BOUNDARIES = tr.v.HistogramBinBoundaries.createLinear(
+        20, 120, 25);
+    // Maps XR trace counters to histograms. Counters can have multiple series,
+    // but all XR counters currently only use the default "value" series, so we
+    // don't need to handle that.
+    const counterHistogramsByTitle = new Map();
+    counterHistogramsByTitle.set(
+        'gpu.WebXR FPS',
+        histograms.createHistogram(
+            'webxr_fps',
+            tr.b.Unit.byName.count_biggerIsBetter, [],
+            {
+              description: 'WebXR frames per second',
+              binBoundaries: DEFAULT_BIN_BOUNDARIES,
+            }
+        )
+    );
+
+    // Map the events that we use to generate the input expectations to
+    // histograms. Each event can have an arbitarary number of fields in
+    // its "args" field, so we iterate over each of those that we expect.
+    const instantHistogramsByTitle = new Map();
+    const expectationEvents = tr.importer.WEBXR_INSTANT_EVENTS;
+    for (const [eventName, eventData] of Object.entries(expectationEvents)) {
+      const argsToHistograms = {};
+      for (const [argName, argData] of Object.entries(eventData)) {
+        argsToHistograms[argName] = histograms.createHistogram(
+            argData.histogramName,
+            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [],
+            {
+              description: argData.description,
+              binBoundaries: DEFAULT_BIN_BOUNDARIES,
+            }
+        );
+      }
+      instantHistogramsByTitle.set(eventName, argsToHistograms);
+    }
+
+    const rangeOfInterestEnabled = opt_options && opt_options.rangeOfInterest;
+    const rangeOfInterest = (rangeOfInterestEnabled ?
+      opt_options.rangeOfInterest : tr.b.math.Range.fromExplicitRange(
+          -Infinity, Infinity));
+    for (const ue of model.userModel.expectations) {
+      if (!rangeOfInterest.intersectsExplicitRangeInclusive(
+          ue.start, ue.end)) {
+        continue;
+      }
+
+      // By default, only do calculations in the VR animation expectation, i.e.
+      // some time after we've entered VR, in order to avoid skewed results
+      // caused by VR entry, but allow calculation on the response expectation
+      // if we've manually selected it as a range of interest
+      if (ue.initiatorType !== tr.model.um.INITIATOR_TYPE.VR) continue;
+      if (!rangeOfInterestEnabled) {
+        if (!(ue instanceof tr.model.um.AnimationExpectation)) continue;
+      } else {
+        if (!(ue instanceof tr.model.um.AnimationExpectation ||
+              ue instanceof tr.model.um.ResponseExpectation)) continue;
+      }
+
+      // Handle counter-type events.
+      for (const counter of model.getAllCounters()) {
+        if (!(counterHistogramsByTitle.has(counter.id))) continue;
+
+        for (const series of counter.series) {
+          for (const sample of series.samples) {
+            if (sample.timestamp < ue.start || sample.timestamp >= ue.end) {
+              continue;
+            }
+            if (!rangeOfInterest.intersectsExplicitRangeInclusive(
+                sample.timestamp, sample.timestamp)) {
+              continue;
+            }
+
+            counterHistogramsByTitle.get(counter.id).addSample(sample.value);
+          }
+        }
+      }
+
+      // Handle instant events.
+      for (const event of ue.associatedEvents.asSet()) {
+        // Skip events that are neither in the range of interest nor part of the
+        // instant events we care about.
+        if (!(instantHistogramsByTitle.has(event.title))) {
+          continue;
+        }
+        if (!rangeOfInterest.intersectsExplicitRangeInclusive(
+            event.start, event.start)) {
+          continue;
+        }
+        const eventHistograms = instantHistogramsByTitle.get(event.title);
+        for (const [key, value] of Object.entries(event.args)) {
+          if (key in eventHistograms) {
+            eventHistograms[key].addSample(value,
+                {event: new tr.v.d.RelatedEventSet(event)});
+          }
+        }
+      }
+    }
+
+    // Make sure we always report a value for WebXR FPS so that failing to
+    // submit frames will show up as a regression
+    if (counterHistogramsByTitle.get('gpu.WebXR FPS').numValues === 0) {
+      counterHistogramsByTitle.get('gpu.WebXR FPS').addSample(0);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(webxrMetric, {
+    supportsRangeOfInterest: true,
+  });
+
+  return {
+    webxrMetric,
+  };
+});
+</script>

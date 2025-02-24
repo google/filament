@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+# Copyright (c) 2011 Jim Browne http://www.42lines.net
+# Borrows heavily from boto/bin/list_instances which has no attribution
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+
+VERSION="0.1"
+usage = """%prog [options]
+Options:
+  -h, --help            show help message (including options list) and exit
+"""
+
+from operator import itemgetter
+
+HEADERS = {
+    'ID': {'get': itemgetter('id'), 'length':14},
+    'Zone': {'get': itemgetter('zone'), 'length':14},
+    'Hostname': {'get': itemgetter('dns'), 'length':20},
+    'Code': {'get': itemgetter('code'), 'length':18},
+    'Description': {'get': itemgetter('description'), 'length':30},
+    'NotBefore': {'get': itemgetter('not_before'), 'length':25},
+    'NotAfter': {'get': itemgetter('not_after'), 'length':25},
+    'T:': {'length': 30},
+}
+
+def get_column(name, event=None):
+    if name.startswith('T:'):
+        return event[name]
+    return HEADERS[name]['get'](event)
+
+def list(region, headers, order, completed):
+    """List status events for all instances in a given region"""
+
+    import re
+
+    ec2 = boto.connect_ec2(region=region)
+
+    reservations = ec2.get_all_reservations()
+
+    instanceinfo = {}
+    events = {}
+    
+    displaytags = [ x for x in headers if x.startswith('T:') ]
+
+    # Collect the tag for every possible instance
+    for res in reservations:
+        for instance in res.instances:
+            iid = instance.id
+            instanceinfo[iid] = {}
+            for tagname in displaytags:
+                _, tag = tagname.split(':', 1)
+                instanceinfo[iid][tagname] = instance.tags.get(tag,'')
+            instanceinfo[iid]['dns'] = instance.public_dns_name
+        
+    stats = ec2.get_all_instance_status()
+
+    for stat in stats:
+        if stat.events:
+            for event in stat.events:
+                events[stat.id] = {}
+                events[stat.id]['id'] = stat.id
+                events[stat.id]['dns'] = instanceinfo[stat.id]['dns']
+                events[stat.id]['zone'] = stat.zone
+                for tag in displaytags:
+                    events[stat.id][tag] = instanceinfo[stat.id][tag]
+                events[stat.id]['code'] = event.code
+                events[stat.id]['description'] = event.description
+                events[stat.id]['not_before'] = event.not_before
+                events[stat.id]['not_after'] = event.not_after
+                if completed and re.match('^\[Completed\]',event.description):
+                    events[stat.id]['not_before'] = 'Completed'
+                    events[stat.id]['not_after'] = 'Completed'
+
+    # Create format string
+    format_string = ""
+    for h in headers:
+        if h.startswith('T:'):
+            format_string += "%%-%ds" % HEADERS['T:']['length']
+        else:
+            format_string += "%%-%ds" % HEADERS[h]['length']
+
+
+    print format_string % headers
+    print "-" * len(format_string % headers)
+                    
+    for instance in sorted(events,
+                           key=lambda ev: get_column(order, events[ev])):
+        e = events[instance]
+        print format_string % tuple(get_column(h, e) for h in headers)
+
+if __name__ == "__main__":
+    import boto
+    from optparse import OptionParser
+    from boto.ec2 import regions
+
+    parser = OptionParser(version=VERSION, usage=usage)
+    parser.add_option("-a", "--all", help="check all regions", dest="all", default=False,action="store_true")
+    parser.add_option("-r", "--region", help="region to check (default us-east-1)", dest="region", default="us-east-1")
+    parser.add_option("-H", "--headers", help="Set headers (use 'T:tagname' for including tags)", default=None, action="store", dest="headers", metavar="ID,Zone,Hostname,Code,Description,NotBefore,NotAfter,T:Name")
+    parser.add_option("-S", "--sort", help="Header for sort order", default=None, action="store", dest="order",metavar="HeaderName")
+    parser.add_option("-c", "--completed", help="List time fields as \"Completed\" for completed events (Default: false)", default=False, action="store_true", dest="completed")
+
+    (options, args) = parser.parse_args()
+
+    if options.headers:
+        headers = tuple(options.headers.split(','))
+    else:
+        headers = ('ID', 'Zone', 'Hostname', 'Code', 'NotBefore', 'NotAfter')
+
+    if options.order:
+        order = options.order
+    else:
+        order = 'ID'
+
+    if options.all:
+        for r in regions():
+            print "Region %s" % r.name
+            list(r, headers, order, options.completed)
+    else:
+        # Connect the region
+        for r in regions():
+            if r.name == options.region:
+                region = r
+                break
+        else:
+            print "Region %s not found." % options.region
+            sys.exit(1)
+
+        list(r, headers, order, options.completed)

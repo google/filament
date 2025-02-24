@@ -1,0 +1,3 @@
+#!/usr/bin/env -S deno run --unstable --allow-read --allow-write --allow-env --allow-net=deno.land --no-check
+
+import '../out/common/runtime/cmdline.js';

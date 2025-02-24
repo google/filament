@@ -1,0 +1,17 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Override settings for third_party integration with Google Test.
+
+# Exclude support for registering main function in multi-process tests.
+gtest_include_multiprocess = true
+
+# Exclude support for platform-specific operations across unit tests.
+gtest_include_platform_test = true
+
+# Exclude support for testing Objective C code on OS X and iOS.
+gtest_include_objc_support = true
+
+# Exclude support for flushing coverage files on iOS.
+gtest_include_ios_coverage = true

@@ -1,0 +1,104 @@
+//===- subzero/src/IceInst.def - X-macros for ICE instructions  -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of ICE instructions in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICEINST_DEF
+#define SUBZERO_SRC_ICEINST_DEF
+
+// Floating point addition and multiplication are commutative.
+// 1) non-special values and infinities are required to commute.
+// 2) signed zeroes are handled by:
+//    From IEEE standard 754-2008:
+//      When the sum of two operands with opposite signs (or the difference of
+//      two operands with like signs) is exactly zero, the sign of that sum
+//      (or difference) shall be +0 in all rounding-direction attributes
+//      except roundTowardNegative; under that attribute, the sign of an exact
+//      zero sum (or difference) shall be −0.
+// 3) NaNs are handled by:
+//    http://grouper.ieee.org/groups/1788/email/msg03558.html
+//      clause of 754 at work is 6.2.3 NaN propagation:
+//      "If two or more inputs are NaN, then the payload of the resulting NaN
+//      should be identical to the payload of one of the input NaNs if
+//      representable in the destination format. This standard does not
+//      specify which of the input NaNs will provide the payload."
+
+#define ICEINSTARITHMETIC_TABLE                                                \
+  /* enum value, printable string, commutative */                              \
+  X(Add,         "add",            1)                                          \
+  X(Fadd,        "fadd",           1)                                          \
+  X(Sub,         "sub",            0)                                          \
+  X(Fsub,        "fsub",           0)                                          \
+  X(Mul,         "mul",            1)                                          \
+  X(Fmul,        "fmul",           1)                                          \
+  X(Udiv,        "udiv",           0)                                          \
+  X(Sdiv,        "sdiv",           0)                                          \
+  X(Fdiv,        "fdiv",           0)                                          \
+  X(Urem,        "urem",           0)                                          \
+  X(Srem,        "srem",           0)                                          \
+  X(Frem,        "frem",           0)                                          \
+  X(Shl,         "shl",            0)                                          \
+  X(Lshr,        "lshr",           0)                                          \
+  X(Ashr,        "ashr",           0)                                          \
+  X(And,         "and",            1)                                          \
+  X(Or,          "or",             1)                                          \
+  X(Xor,         "xor",            1)
+//#define X(tag, str, commutative)
+
+#define ICEINSTCAST_TABLE                                                      \
+  /* enum value, printable string */                                           \
+  X(Trunc,       "trunc")                                                      \
+  X(Zext,        "zext")                                                       \
+  X(Sext,        "sext")                                                       \
+  X(Fptrunc,     "fptrunc")                                                    \
+  X(Fpext,       "fpext")                                                      \
+  X(Fptoui,      "fptoui")                                                     \
+  X(Fptosi,      "fptosi")                                                     \
+  X(Uitofp,      "uitofp")                                                     \
+  X(Sitofp,      "sitofp")                                                     \
+  X(Bitcast,     "bitcast")
+//#define X(tag, str)
+
+#define ICEINSTFCMP_TABLE                                                      \
+  /* enum value, printable string */                                           \
+  X(False,       "false")                                                      \
+  X(Oeq,         "oeq")                                                        \
+  X(Ogt,         "ogt")                                                        \
+  X(Oge,         "oge")                                                        \
+  X(Olt,         "olt")                                                        \
+  X(Ole,         "ole")                                                        \
+  X(One,         "one")                                                        \
+  X(Ord,         "ord")                                                        \
+  X(Ueq,         "ueq")                                                        \
+  X(Ugt,         "ugt")                                                        \
+  X(Uge,         "uge")                                                        \
+  X(Ult,         "ult")                                                        \
+  X(Ule,         "ule")                                                        \
+  X(Une,         "une")                                                        \
+  X(Uno,         "uno")                                                        \
+  X(True,        "true")
+//#define X(tag, str)
+
+#define ICEINSTICMP_TABLE                                                      \
+  /* enum value, reverse, printable string */                                  \
+  X(Eq,          Eq,      "eq")                                                \
+  X(Ne,          Ne,      "ne")                                                \
+  X(Ugt,         Ult,     "ugt")                                               \
+  X(Uge,         Ule,     "uge")                                               \
+  X(Ult,         Ugt,     "ult")                                               \
+  X(Ule,         Uge,     "ule")                                               \
+  X(Sgt,         Slt,     "sgt")                                               \
+  X(Sge,         Sle,     "sge")                                               \
+  X(Slt,         Sgt,     "slt")                                               \
+  X(Sle,         Sge,     "sle")
+//#define X(tag, reverse, str)
+
+#endif // SUBZERO_SRC_ICEINST_DEF

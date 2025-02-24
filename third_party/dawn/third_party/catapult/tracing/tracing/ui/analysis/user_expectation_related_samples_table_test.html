@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/sample.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+<link rel="import"
+  href="/tracing/ui/analysis/user_expectation_related_samples_table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel() {
+    const m = tr.c.TestUtils.newModel(function(m) {
+      m.p1 = m.getOrCreateProcess(1);
+      m.t2 = m.p1.getOrCreateThread(2);
+      const node = tr.c.TestUtils.newProfileNodes(m, ['fake']);
+      const s1 = new tr.model.Sample(1, 'a_1', node, m.t2);
+      const s2 = new tr.model.Sample(2, 'a_2', node, m.t2);
+      const s3 = new tr.model.Sample(3, 'a_3', node, m.t2);
+      const s4 = new tr.model.Sample(4, 'a_4', node, m.t2);
+      const s5 = new tr.model.Sample(5, 'a_5', node, m.t2);
+      const s6 = new tr.model.Sample(6, 'a_6', node, m.t2);
+      m.samples.push(s1, s2, s3, s4, s5, s6);
+      m.ve = new tr.c.TestUtils.newSliceEx(
+          {title: 'V8.Execute', start: 0, end: 4, type: tr.model.ThreadSlice});
+      m.t2.sliceGroup.pushSlice(m.ve);
+      m.up = new tr.c.TestUtils.newInteractionRecord(m, 0, 4);
+      m.up.associatedEvents.push(m.ve);
+      m.userModel.expectations.push(m.up);
+    });
+    return m;
+  }
+
+  test('overlappingSamples', function() {
+    const m = createModel();
+
+    const viewEl = document.createElement(
+        'tr-ui-a-user-expectation-related-samples-table');
+    viewEl.selection = new tr.model.EventSet([m.up]);
+
+    let overlappingSamples;
+    viewEl.$.table.tableRows.forEach(function(row) {
+      if (row.type === 'Overlapping samples') {
+        assert.isUndefined(overlappingSamples);
+        overlappingSamples = row.selection;
+      }
+    });
+
+    const samplesTitles = overlappingSamples.map(function(e) {
+      return e.title;
+    });
+    assert.sameMembers(samplesTitles,
+        ['a_1', 'a_2', 'a_3', 'a_4']);
+  });
+});
+</script>

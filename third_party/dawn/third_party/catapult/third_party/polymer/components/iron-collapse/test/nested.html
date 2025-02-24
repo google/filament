@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<html>
+  <head>
+    <title>iron-collapse-nested</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../test-fixture/test-fixture-mocha.js"></script>
+
+    <link rel="import" href="../../test-fixture/test-fixture.html">
+    <link rel="import" href="../iron-collapse.html">
+  </head>
+  <body>
+
+    <test-fixture id="test">
+      <template>
+        <iron-collapse id="outer-collapse">
+          <div style="height:100px;">
+            Lorem ipsum
+          </div>
+
+          <iron-collapse id="inner-collapse-vertical">
+            <div style="height:100px;">
+              consectetur adipiscing elit
+            </div>
+          </iron-collapse>
+
+          <iron-collapse id="inner-collapse-horizontal" horizontal style="display: inline-block">
+            <div style="width:100px;">
+              consectetur adipiscing elit
+            </div>
+          </iron-collapse>
+        </iron-collapse>
+      </template>
+    </test-fixture>
+
+    <script>
+
+      suite('nested', function() {
+
+        var outerCollapse;
+        var innerCollapse;
+
+        setup(function () {
+          outerCollapse = fixture('test');
+        });
+
+        suite('vertical', function() {
+
+          setup(function () {
+            innerCollapse = outerCollapse.querySelector('#inner-collapse-vertical');
+          });
+
+          test('inner collapse default opened attribute', function() {
+            assert.equal(innerCollapse.opened, false);
+          });
+
+          test('inner collapse default style height', function() {
+            assert.equal(innerCollapse.style.maxHeight, '0px');
+          });
+
+          test('open inner collapse updates size without animation', function() {
+            innerCollapse.opened = true;
+
+            // Animation disabled
+            assert.equal(innerCollapse.style.transitionDuration, '0s');
+          });
+
+          test('open inner collapse then open outer collapse reveals inner collapse with expanded height', function() {
+            innerCollapse.opened = true;
+            outerCollapse.opened = true;
+
+            assert.equal(innerCollapse.getBoundingClientRect().height, 100);
+          });
+
+          test('notifyResize triggered only on element\'s animations', function(done) {
+            var spy = sinon.spy(outerCollapse, 'notifyResize');
+
+            outerCollapse.opened = true;
+            innerCollapse.opened = true;
+
+            setTimeout(function() {
+              assert.equal(spy.callCount, 1, 'notifyResize called once');
+              done();
+            }, 400);
+          });
+
+        });
+
+        suite('horizontal', function() {
+
+          setup(function () {
+            innerCollapse = outerCollapse.querySelector('#inner-collapse-horizontal');
+          });
+
+          test('inner collapse default style width', function() {
+            assert.equal(innerCollapse.style.maxWidth, '0px');
+          });
+
+          test('open inner collapse updates size without animation', function() {
+            innerCollapse.opened = true;
+
+            // Animation disabled
+            assert.equal(innerCollapse.style.transitionDuration, '0s');
+          });
+
+          test('open inner collapse then open outer collapse reveals inner collapse with expanded width', function() {
+            innerCollapse.opened = true;
+            outerCollapse.opened = true;
+
+            assert.equal(innerCollapse.getBoundingClientRect().width, 100);
+          });
+
+        });
+      });
+    </script>
+
+  </body>
+</html>

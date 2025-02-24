@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+import boto
+from boto.exception import S3ResponseError
+from boto.s3.connection import OrdinaryCallingFormat
+
+
+def sizeof_fmt(num):
+    for x in ['b ', 'KB', 'MB', 'GB', 'TB', 'XB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+    return "%3.1f %s" % (num, x)
+
+
+def list_bucket(b, prefix=None, marker=None):
+    """List everything in a bucket"""
+    from boto.s3.prefix import Prefix
+    from boto.s3.key import Key
+    total = 0
+
+    if prefix:
+        if not prefix.endswith("/"):
+            prefix = prefix + "/"
+        query = b.list(prefix=prefix, delimiter="/", marker=marker)
+        print("%s" % prefix)
+    else:
+        query = b.list(delimiter="/", marker=marker)
+
+    num = 0
+    for k in query:
+        num += 1
+        mode = "-rwx---"
+        if isinstance(k, Prefix):
+            mode = "drwxr--"
+            size = 0
+        else:
+            size = k.size
+            for g in k.get_acl().acl.grants:
+                if g.id == None:
+                    if g.permission == "READ":
+                        mode = "-rwxr--"
+                    elif g.permission == "FULL_CONTROL":
+                        mode = "-rwxrwx"
+        if isinstance(k, Key):
+            print("%s\t%s\t%010s\t%s" % (mode, k.last_modified,
+                                         sizeof_fmt(size), k.name))
+        else:
+           #If it's not a Key object, it doesn't have a last_modified time, so
+           #print nothing instead
+            print("%s\t%s\t%010s\t%s" % (mode, ' ' * 24,
+                                         sizeof_fmt(size), k.name))
+        total += size
+    print ("=" * 80)
+    print ("\t\tTOTAL:  \t%010s \t%i Files" % (sizeof_fmt(total), num))
+
+
+def list_buckets(s3, display_tags=False):
+    """List all the buckets"""
+    for b in s3.get_all_buckets():
+        print(b.name)
+        if display_tags:
+            try:
+                tags = b.get_tags()
+                for tag in tags[0]:
+                    print("   %s:%s" % (tag.key, tag.value))
+            except S3ResponseError as e:
+                if e.status != 404:
+                    raise
+
+
+def main():
+    import optparse
+    import sys
+
+    usage = "usage: %prog [options] [BUCKET1] [BUCKET2]"
+    description = "List all S3 buckets OR list keys in the named buckets"
+    parser = optparse.OptionParser(description=description, usage=usage)
+    parser.add_option('-m', '--marker',
+                      help='The S3 key where the listing starts after it.')
+    parser.add_option('-t', '--tags', action='store_true',
+                      help='Display tags when listing all buckets.')
+    options, buckets = parser.parse_args()
+    marker = options.marker
+
+    if not buckets:
+        list_buckets(boto.connect_s3(), options.tags)
+        sys.exit(0)
+
+    if options.tags:
+        print("-t option only works for the overall bucket list")
+        sys.exit(1)
+
+    pairs = []
+    mixedCase = False
+    for name in buckets:
+        if "/" in name:
+            pairs.append(name.split("/", 1))
+        else:
+            pairs.append([name, None])
+        if pairs[-1][0].lower() != pairs[-1][0]:
+            mixedCase = True
+
+    if mixedCase:
+        s3 = boto.connect_s3(calling_format=OrdinaryCallingFormat())
+    else:
+        s3 = boto.connect_s3()
+
+    for name, prefix in pairs:
+        list_bucket(s3.get_bucket(name), prefix, marker=marker)
+
+
+if __name__ == "__main__":
+    main()

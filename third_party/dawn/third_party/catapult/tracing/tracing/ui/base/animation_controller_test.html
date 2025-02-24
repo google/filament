@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/animation_controller.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function SimpleAnimation(options) {
+    this.stopTime = options.stopTime;
+
+    this.startCalled = false;
+    this.didStopEarlyCalled = false;
+    this.wasTakenOver = false;
+    this.tickCount = 0;
+  }
+
+  SimpleAnimation.prototype = {
+    __proto__: tr.ui.b.Animation.prototype,
+
+    canTakeOverFor(existingAnimation) {
+      return false;
+    },
+
+    takeOverFor(existingAnimation, newStartTimestamp, target) {
+      throw new Error('Not implemented');
+    },
+
+    start(timestamp, target) {
+      this.startCalled = true;
+    },
+
+    didStopEarly(timestamp, target, willBeTakenOver) {
+      this.didStopEarlyCalled = true;
+      this.wasTakenOver = willBeTakenOver;
+    },
+
+    /**
+     * @return {boolean} true if the animation is finished.
+     */
+    tick(timestamp, target) {
+      this.tickCount++;
+      return timestamp >= this.stopTime;
+    }
+  };
+
+  test('cancel', function() {
+    const target = {
+      x: 0,
+      cloneAnimationState() { return {x: this.x}; }
+    };
+
+    const controller = new tr.ui.b.AnimationController();
+    controller.target = target;
+
+    const animation = new SimpleAnimation({stopTime: 100});
+    controller.queueAnimation(animation);
+
+    tr.b.forcePendingRAFTasksToRun(0);
+    assert.strictEqual(animation.tickCount, 1);
+    controller.cancelActiveAnimation();
+    assert.isFalse(controller.hasActiveAnimation);
+    assert.isTrue(animation.didStopEarlyCalled);
+  });
+
+  test('simple', function() {
+    const target = {
+      x: 0,
+      cloneAnimationState() { return {x: this.x}; }
+    };
+
+    const controller = new tr.ui.b.AnimationController();
+    controller.target = target;
+
+    const animation = new SimpleAnimation({stopTime: 100});
+    controller.queueAnimation(animation);
+
+    tr.b.forcePendingRAFTasksToRun(0);
+    assert.strictEqual(animation.tickCount, 1);
+    assert.isTrue(controller.hasActiveAnimation);
+
+    tr.b.forcePendingRAFTasksToRun(100);
+    assert.strictEqual(animation.tickCount, 2);
+    assert.isFalse(controller.hasActiveAnimation);
+  });
+
+  test('queueTwo', function() {
+    // Clear all pending rafs so if something is lingering it will blow up here.
+    tr.b.forcePendingRAFTasksToRun(0);
+
+    const target = {
+      x: 0,
+      cloneAnimationState() { return {x: this.x}; }
+    };
+
+    const controller = new tr.ui.b.AnimationController();
+    controller.target = target;
+
+    const a1 = new SimpleAnimation({stopTime: 100});
+    const a2 = new SimpleAnimation({stopTime: 100});
+    controller.queueAnimation(a1, 0);
+    assert.isTrue(a1.startCalled);
+    controller.queueAnimation(a2, 50);
+    assert.isTrue(a1.didStopEarlyCalled);
+    assert.isTrue(a2.startCalled);
+
+    tr.b.forcePendingRAFTasksToRun(150);
+    assert.isFalse(controller.hasActiveAnimation);
+    assert.isAbove(a2.tickCount, 0);
+  });
+
+  /**
+   * @constructor
+   */
+  function AnimationThatCanTakeOverForSimpleAnimation() {
+    this.takeOverForAnimation = undefined;
+  }
+
+  AnimationThatCanTakeOverForSimpleAnimation.prototype = {
+    __proto__: tr.ui.b.Animation.prototype,
+
+
+    canTakeOverFor(existingAnimation) {
+      return existingAnimation instanceof SimpleAnimation;
+    },
+
+    takeOverFor(existingAnimation, newStartTimestamp, target) {
+      this.takeOverForAnimation = existingAnimation;
+    },
+
+    start(timestamp, target) {
+      this.startCalled = true;
+    }
+  };
+
+  test('takeOver', function() {
+    const target = {
+      x: 0,
+      cloneAnimationState() { return {x: this.x}; }
+    };
+
+    const controller = new tr.ui.b.AnimationController();
+    controller.target = target;
+
+    const a1 = new SimpleAnimation({stopTime: 100});
+    const a2 = new AnimationThatCanTakeOverForSimpleAnimation();
+    controller.queueAnimation(a1, 0);
+    assert.isTrue(a1.startCalled);
+    assert.strictEqual(a1.tickCount, 0);
+    controller.queueAnimation(a2, 10);
+    assert.isTrue(a1.didStopEarlyCalled);
+    assert.isTrue(a1.wasTakenOver);
+    assert.strictEqual(a1.tickCount, 1);
+
+    assert.strictEqual(a1, a2.takeOverForAnimation);
+    assert.isTrue(a2.startCalled);
+
+    controller.cancelActiveAnimation();
+    assert.isFalse(controller.hasActiveAnimation);
+  });
+});
+</script>

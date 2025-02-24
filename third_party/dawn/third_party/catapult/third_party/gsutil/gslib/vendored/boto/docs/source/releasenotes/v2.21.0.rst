@@ -1,0 +1,43 @@
+boto v2.21.0
+============
+
+:date: 2013/12/19
+
+This release adds support for the latest AWS OpsWorks, AWS Elastic Beanstalk,
+Amazon DynamoDB, Amazon Elastic MapReduce (EMR), Amazon Simple Storage Service
+(S3), Amazon Elastic Transcoder, AWS CloudTrail, and AWS Support APIs. It also
+includes documentation and other fixes.
+
+.. note::
+
+    Although Boto now includes support for the newly announced China (Beijing)
+    Region, the service endpoints will not be accessible until the Region’s
+    limited preview is launched in early 2014. To find out more about the new
+    Region and request a limited preview account, please visit
+    http://www.amazonaws.cn/.
+
+
+Features
+--------
+* Add support for Elastic Transcoder pagination and new codecs (:sha:`dcb1c5a`)
+* Add support for new CloudTrail calling format (:sha:`aeafe9b`)
+* Update to the latest Support API (:sha:`45e1884`)
+* Add support for arbitrarily large SQS messages stored in S3 via BigMessage. (:issue:`1917`, :sha:`e6cd665`)
+* Add support for ``encoding_type`` to S3 (:sha:`6b2d967`)
+* Add support for Elastic MapReduce tags (:issue:`1928`, :issue:`1920`, :sha:`b9749c6`, :sha:`8e4c595`)
+* Add high level support for global secondary indexes in DynamoDB (:issue:`1924`, :issue:`1913`, :sha:`32dac5b`)
+* Add support for Elastic Beanstalk worker environments. (:issue:`1911`, :sha:`bbd4fbf`)
+* Add support for OpsWorks IAM user permissions per stack (:sha:`ac6e4e7`)
+* Add support for SigV4 to S3 (:sha:`deb9e18`)
+* Add support for SigV4 to EC2 (:sha:`bdebfe0`)
+* Add support for SigV4 to ElastiCache (:sha:`b892b45`)
+
+
+Bugfixes
+--------
+* Add documentation describing account usage for multipart uploads in S3 (:sha:`af03d8d`)
+* Update DesiredCapacity if AutoScalingGroup.desired_capacity is not None. (:issue:`1906`, :issue:`1906`, :issue:`1757`, :sha:`b6670ce`)
+* Documentation: add Kinesis API reference (:issue:`1921`, :sha:`c169836`)
+* Documentation: sriovNetSupport instance attribute (:issue:`1915`, :sha:`e1bafcc`)
+* Update RDS documentation for API version: 2013-09-09 (:issue:`1914`, :sha:`fcf702a`)
+* Switch all classes to new style classes which results in memory use improvements (:sha:`ca36fa2`)

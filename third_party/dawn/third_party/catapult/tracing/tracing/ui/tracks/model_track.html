@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/category_util.html">
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/alert_track.html">
+<link rel="import" href="/tracing/ui/tracks/container_track.html">
+<link rel="import" href="/tracing/ui/tracks/cpu_usage_track.html">
+<link rel="import" href="/tracing/ui/tracks/device_track.html">
+<link rel="import" href="/tracing/ui/tracks/global_memory_dump_track.html">
+<link rel="import" href="/tracing/ui/tracks/interaction_track.html">
+<link rel="import" href="/tracing/ui/tracks/kernel_track.html">
+<link rel="import" href="/tracing/ui/tracks/memory_track.html">
+<link rel="import" href="/tracing/ui/tracks/process_track.html">
+
+<style>
+.model-track {
+  flex-grow: 1;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const SelectionState = tr.model.SelectionState;
+  const ColorScheme = tr.b.ColorScheme;
+  const EventPresenter = tr.ui.b.EventPresenter;
+
+  /**
+   * Visualizes a Model by building ProcessTracks and CpuTracks.
+   * @constructor
+   */
+  const ModelTrack = tr.ui.b.define('model-track', tr.ui.tracks.ContainerTrack);
+
+  ModelTrack.VSYNC_HIGHLIGHT_ALPHA = 0.1;
+  ModelTrack.VSYNC_DENSITY_TRANSPARENT = 0.20;
+  ModelTrack.VSYNC_DENSITY_OPAQUE = 0.10;
+  ModelTrack.VSYNC_DENSITY_RANGE =
+      ModelTrack.VSYNC_DENSITY_TRANSPARENT - ModelTrack.VSYNC_DENSITY_OPAQUE;
+
+  /**
+   * Generate a zebra striping from a list of times.
+   *
+   * @param {!Array.<number>} times A sorted array of timestamps.
+   * @param {number} minTime the lower bound of time to start striping at.
+   * @param {number} maxTime the upper bound of time to stop striping at.
+   *     of |times|.
+   *
+   * @returns {!Array.<tr.b.math.Range>} An array of ranges where each element
+   *     represents the time range that a stripe covers. Each range is a subset
+   *     of the interval [minTime, maxTime].
+   */
+  ModelTrack.generateStripes_ = function(times, minTime, maxTime) {
+    if (times.length === 0) return [];
+
+    // Find the lowest and highest index within the viewport.
+    const lowIndex = tr.b.findLowIndexInSortedArray(
+        times, (x => x), minTime);
+    let highIndex = lowIndex - 1;
+    while (times[highIndex + 1] <= maxTime) {
+      highIndex++;
+    }
+
+    const stripes = [];
+    // Must start at an even index and end at an odd index.
+    for (let i = lowIndex - (lowIndex % 2); i <= highIndex; i += 2) {
+      const left = i < lowIndex ? minTime : times[i];
+      const right = i + 1 > highIndex ? maxTime : times[i + 1];
+      stripes.push(tr.b.math.Range.fromExplicitRange(left, right));
+    }
+
+    return stripes;
+  };
+
+
+  ModelTrack.prototype = {
+
+    __proto__: tr.ui.tracks.ContainerTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ContainerTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('model-track');
+
+      this.upperMode_ = false;
+      this.annotationViews_ = [];
+      this.vSyncTimes_ = [];
+    },
+
+    get processViews() {
+      return Polymer.dom(this).querySelectorAll('.process-track-base');
+    },
+
+    // upperMode is true if the track is being used on the ruler.
+    get upperMode() {
+      return this.upperMode_;
+    },
+
+    set upperMode(upperMode) {
+      this.upperMode_ = upperMode;
+      this.updateContents_();
+    },
+
+    detach() {
+      tr.ui.tracks.ContainerTrack.prototype.detach.call(this);
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    set model(model) {
+      this.model_ = model;
+      this.updateContents_();
+
+      this.model_.addEventListener('annotationChange',
+          this.updateAnnotations_.bind(this));
+    },
+
+    get hasVisibleContent() {
+      return this.children.length > 0;
+    },
+
+    updateContents_() {
+      Polymer.dom(this).textContent = '';
+      if (!this.model_) return;
+
+      if (this.upperMode_) {
+        this.updateContentsForUpperMode_();
+      } else {
+        this.updateContentsForLowerMode_();
+      }
+    },
+
+    updateContentsForUpperMode_() {
+    },
+
+    updateContentsForLowerMode_() {
+      if (this.model_.userModel.expectations.length > 1) {
+        const mrt = new tr.ui.tracks.InteractionTrack(this.viewport_);
+        mrt.model = this.model_;
+        Polymer.dom(this).appendChild(mrt);
+      }
+
+      if (this.model_.alerts.length) {
+        const at = new tr.ui.tracks.AlertTrack(this.viewport_);
+        at.alerts = this.model_.alerts;
+        Polymer.dom(this).appendChild(at);
+      }
+
+      if (this.model_.globalMemoryDumps.length) {
+        const gmdt = new tr.ui.tracks.GlobalMemoryDumpTrack(this.viewport_);
+        gmdt.memoryDumps = this.model_.globalMemoryDumps;
+        Polymer.dom(this).appendChild(gmdt);
+      }
+
+      this.appendDeviceTrack_();
+      this.appendCpuUsageTrack_();
+      this.appendMemoryTrack_();
+      this.appendKernelTrack_();
+
+      // Get a sorted list of processes.
+      const processes = this.model_.getAllProcesses();
+      processes.sort(tr.model.Process.compare);
+
+      for (let i = 0; i < processes.length; ++i) {
+        const process = processes[i];
+
+        const track = new tr.ui.tracks.ProcessTrack(this.viewport);
+        track.process = process;
+        if (!track.hasVisibleContent) continue;
+
+        Polymer.dom(this).appendChild(track);
+      }
+      this.viewport_.rebuildEventToTrackMap();
+      this.viewport_.rebuildContainerToTrackMap();
+      this.vSyncTimes_ = this.model_.device.vSyncTimestamps;
+
+      this.updateAnnotations_();
+    },
+
+    getContentBounds() { return this.model.bounds; },
+
+    addAnnotation(annotation) {
+      this.model.addAnnotation(annotation);
+    },
+
+    removeAnnotation(annotation) {
+      this.model.removeAnnotation(annotation);
+    },
+
+    updateAnnotations_() {
+      this.annotationViews_ = [];
+      const annotations = this.model_.getAllAnnotations();
+      for (let i = 0; i < annotations.length; i++) {
+        this.annotationViews_.push(
+            annotations[i].getOrCreateView(this.viewport_));
+      }
+      this.invalidateDrawingContainer();
+    },
+
+    addEventsToTrackMap(eventToTrackMap) {
+      if (!this.model_) return;
+
+      const tracks = this.children;
+      for (let i = 0; i < tracks.length; ++i) {
+        tracks[i].addEventsToTrackMap(eventToTrackMap);
+      }
+
+      if (this.instantEvents === undefined) return;
+
+      const vp = this.viewport_;
+      this.instantEvents.forEach(function(ev) {
+        eventToTrackMap.addEvent(ev, this);
+      }.bind(this));
+    },
+
+    appendDeviceTrack_() {
+      const device = this.model.device;
+      const track = new tr.ui.tracks.DeviceTrack(this.viewport);
+      track.device = this.model.device;
+      if (!track.hasVisibleContent) return;
+      Polymer.dom(this).appendChild(track);
+    },
+
+    appendKernelTrack_() {
+      const kernel = this.model.kernel;
+      const track = new tr.ui.tracks.KernelTrack(this.viewport);
+      track.kernel = this.model.kernel;
+      if (!track.hasVisibleContent) return;
+      Polymer.dom(this).appendChild(track);
+    },
+
+    appendCpuUsageTrack_() {
+      const track = new tr.ui.tracks.CpuUsageTrack(this.viewport);
+      track.initialize(this.model);
+      if (!track.hasVisibleContent) return;
+
+      this.appendChild(track);
+    },
+
+    appendMemoryTrack_() {
+      const track = new tr.ui.tracks.MemoryTrack(this.viewport);
+      track.initialize(this.model);
+      if (!track.hasVisibleContent) return;
+
+      Polymer.dom(this).appendChild(track);
+    },
+
+    drawTrack(type) {
+      const ctx = this.context();
+      if (!this.model_) return;
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const bounds = this.getBoundingClientRect();
+      const canvasBounds = ctx.canvas.getBoundingClientRect();
+
+      ctx.save();
+      ctx.translate(0, pixelRatio * (bounds.top - canvasBounds.top));
+
+      const dt = this.viewport.currentDisplayTransform;
+      const viewLWorld = dt.xViewToWorld(0);
+      const viewRWorld = dt.xViewToWorld(canvasBounds.width * pixelRatio);
+      const viewHeight = bounds.height * pixelRatio;
+
+      switch (type) {
+        case tr.ui.tracks.DrawType.GRID:
+          this.viewport.drawMajorMarkLines(ctx, viewHeight);
+          // The model is the only thing that draws grid lines.
+          ctx.restore();
+          return;
+
+        case tr.ui.tracks.DrawType.FLOW_ARROWS:
+          if (this.model_.flowIntervalTree.size === 0) {
+            ctx.restore();
+            return;
+          }
+
+          this.drawFlowArrows_(viewLWorld, viewRWorld);
+          ctx.restore();
+          return;
+
+        case tr.ui.tracks.DrawType.INSTANT_EVENT:
+          if (!this.model_.instantEvents ||
+              this.model_.instantEvents.length === 0) {
+            break;
+          }
+
+          tr.ui.b.drawInstantSlicesAsLines(
+              ctx,
+              this.viewport.currentDisplayTransform,
+              viewLWorld,
+              viewRWorld,
+              bounds.height,
+              this.model_.instantEvents,
+              4);
+
+          break;
+
+        case tr.ui.tracks.DrawType.MARKERS:
+          if (!this.viewport.interestRange.isEmpty) {
+            this.viewport.interestRange.draw(
+                ctx, viewLWorld, viewRWorld, viewHeight);
+            this.viewport.interestRange.drawIndicators(
+                ctx, viewLWorld, viewRWorld);
+          }
+          ctx.restore();
+          return;
+
+        case tr.ui.tracks.DrawType.HIGHLIGHTS:
+          this.drawVSyncHighlight(
+              ctx, dt, viewLWorld, viewRWorld, viewHeight);
+          ctx.restore();
+          return;
+
+        case tr.ui.tracks.DrawType.ANNOTATIONS:
+          for (let i = 0; i < this.annotationViews_.length; i++) {
+            this.annotationViews_[i].draw(ctx);
+          }
+          ctx.restore();
+          return;
+      }
+      ctx.restore();
+
+      tr.ui.tracks.ContainerTrack.prototype.drawTrack.call(this, type);
+    },
+
+    drawFlowArrows_(viewLWorld, viewRWorld) {
+      const ctx = this.context();
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 1;
+
+      const events =
+          this.model_.flowIntervalTree.findIntersection(viewLWorld, viewRWorld);
+
+      const canvasBounds = ctx.canvas.getBoundingClientRect();
+      for (let i = 0; i < events.length; ++i) {
+        // Check whether some category of |events[i]| is in
+        // |selectedFlowEvents|. If not, don't draw the flow arrow unless the
+        // event is selected or highlighted.
+        const onlyHighlighted = !tr.b.getCategoryParts(events[i].category).some(
+            (x) => this.viewport.selectedFlowEvents.has(x));
+        if (onlyHighlighted &&
+            events[i].selectionState !== SelectionState.SELECTED &&
+            events[i].selectionState !== SelectionState.HIGHLIGHTED) {
+          continue;
+        }
+        this.drawFlowArrow_(ctx, events[i], canvasBounds);
+      }
+    },
+
+    drawFlowArrow_(ctx, flowEvent, canvasBounds) {
+      const dt = this.viewport.currentDisplayTransform;
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const startTrack = this.viewport.trackForEvent(flowEvent.startSlice);
+      const endTrack = this.viewport.trackForEvent(flowEvent.endSlice);
+
+      // TODO(nduca): Figure out how to draw flow arrows even when
+      // processes are collapsed, bug #931.
+      if (startTrack === undefined || endTrack === undefined) return;
+
+      const startBounds = startTrack.getBoundingClientRect();
+      const endBounds = endTrack.getBoundingClientRect();
+
+      if (flowEvent.selectionState === SelectionState.SELECTED) {
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = 'red';
+        ctx.shadowOffsety = 2;
+        ctx.strokeStyle = tr.b.ColorScheme.colorsAsStrings[
+            tr.b.ColorScheme.getVariantColorId(
+                flowEvent.colorId,
+                tr.b.ColorScheme.properties.brightenedOffsets[0])];
+      } else if (flowEvent.selectionState === SelectionState.HIGHLIGHTED) {
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = 'red';
+        ctx.shadowOffsety = 2;
+        ctx.strokeStyle = tr.b.ColorScheme.colorsAsStrings[
+            tr.b.ColorScheme.getVariantColorId(
+                flowEvent.colorId,
+                tr.b.ColorScheme.properties.brightenedOffsets[0])];
+      } else if (flowEvent.selectionState === SelectionState.DIMMED) {
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.strokeStyle = tr.b.ColorScheme.colorsAsStrings[flowEvent.colorId];
+      } else {
+        let hasBoost = false;
+        const startSlice = flowEvent.startSlice;
+        hasBoost |= startSlice.selectionState === SelectionState.SELECTED;
+        hasBoost |= startSlice.selectionState === SelectionState.HIGHLIGHTED;
+        const endSlice = flowEvent.endSlice;
+        hasBoost |= endSlice.selectionState === SelectionState.SELECTED;
+        hasBoost |= endSlice.selectionState === SelectionState.HIGHLIGHTED;
+        if (hasBoost) {
+          ctx.shadowBlur = 1;
+          ctx.shadowColor = 'rgba(255, 0, 0, 0.4)';
+          ctx.shadowOffsety = 2;
+          ctx.strokeStyle = tr.b.ColorScheme.colorsAsStrings[
+              tr.b.ColorScheme.getVariantColorId(
+                  flowEvent.colorId,
+                  tr.b.ColorScheme.properties.brightenedOffsets[0])];
+        } else {
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.strokeStyle = tr.b.ColorScheme.colorsAsStrings[flowEvent.colorId];
+        }
+      }
+
+      const startSize = startBounds.left + startBounds.top +
+          startBounds.bottom + startBounds.right;
+      const endSize = endBounds.left + endBounds.top +
+          endBounds.bottom + endBounds.right;
+      // Nothing to do if both ends of the track are collapsed.
+      if (startSize === 0 && endSize === 0) return;
+
+      const startY = this.calculateTrackY_(startTrack, canvasBounds);
+      const endY = this.calculateTrackY_(endTrack, canvasBounds);
+
+      // Flow arrows' y values are calculated in world space. If the canvas
+      // was repositioned as the user scrolled down we offset any
+      // canvas translations here.
+      const worldOffset = this.getBoundingClientRect().top - canvasBounds.top;
+      const pixelStartY = pixelRatio * (startY - worldOffset);
+      const pixelEndY = pixelRatio * (endY - worldOffset);
+
+      const startXView = dt.xWorldToView(flowEvent.start);
+      const endXView = dt.xWorldToView(flowEvent.end);
+      const midXView = (startXView + endXView) / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(startXView, pixelStartY);
+      ctx.bezierCurveTo(
+          midXView, pixelStartY,
+          midXView, pixelEndY,
+          endXView, pixelEndY);
+      ctx.stroke();
+
+      const arrowWidth = 5 * pixelRatio;
+      const distance = endXView - startXView;
+      if (distance <= (2 * arrowWidth)) return;
+
+      const tipX = endXView;
+      const tipY = pixelEndY;
+      const arrowHeight = (endBounds.height / 4) * pixelRatio;
+      tr.ui.b.drawTriangle(ctx,
+          tipX, tipY,
+          tipX - arrowWidth, tipY - arrowHeight,
+          tipX - arrowWidth, tipY + arrowHeight);
+      ctx.fill();
+    },
+
+    /**
+     * Highlights VSync events on the model track (using "zebra" striping).
+     */
+    drawVSyncHighlight(ctx, dt, viewLWorld, viewRWorld, viewHeight) {
+      if (!this.viewport_.highlightVSync) {
+        return;
+      }
+
+      const stripes = ModelTrack.generateStripes_(
+          this.vSyncTimes_, viewLWorld, viewRWorld);
+      if (stripes.length === 0) {
+        return;
+      }
+
+      const vSyncHighlightColor =
+          new tr.b.Color(ColorScheme.getColorForReservedNameAsString(
+              'vsync_highlight_color'));
+
+      const stripeRange = stripes[stripes.length - 1].max - stripes[0].min;
+      const stripeDensity =
+        stripeRange ? stripes.length / (dt.scaleX * stripeRange) : 0;
+      const clampedStripeDensity =
+          tr.b.math.clamp(stripeDensity, ModelTrack.VSYNC_DENSITY_OPAQUE,
+              ModelTrack.VSYNC_DENSITY_TRANSPARENT);
+      const opacity =
+          (ModelTrack.VSYNC_DENSITY_TRANSPARENT - clampedStripeDensity) /
+          ModelTrack.VSYNC_DENSITY_RANGE;
+      if (opacity === 0) {
+        return;
+      }
+
+      ctx.fillStyle = vSyncHighlightColor.toStringWithAlphaOverride(
+          ModelTrack.VSYNC_HIGHLIGHT_ALPHA * opacity);
+
+      for (let i = 0; i < stripes.length; i++) {
+        const xLeftView = dt.xWorldToView(stripes[i].min);
+        const xRightView = dt.xWorldToView(stripes[i].max);
+        ctx.fillRect(xLeftView, 0, xRightView - xLeftView, viewHeight);
+      }
+    },
+
+    calculateTrackY_(track, canvasBounds) {
+      const bounds = track.getBoundingClientRect();
+      const size = bounds.left + bounds.top + bounds.bottom + bounds.right;
+      if (size === 0) {
+        return this.calculateTrackY_(
+            Polymer.dom(track).parentNode, canvasBounds);
+      }
+
+      return bounds.top - canvasBounds.top + (bounds.height / 2);
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      function onPickHit(instantEvent) {
+        selection.push(instantEvent);
+      }
+      const instantEventWidth = 3 * viewPixWidthWorld;
+      tr.b.iterateOverIntersectingIntervals(this.model_.instantEvents,
+          function(x) { return x.start; },
+          function(x) { return x.duration + instantEventWidth; },
+          loWX, hiWX,
+          onPickHit.bind(this));
+
+      tr.ui.tracks.ContainerTrack.prototype.
+          addIntersectingEventsInRangeToSelectionInWorldSpace.
+          apply(this, arguments);
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      this.addClosestInstantEventToSelection(this.model_.instantEvents,
+          worldX, worldMaxDist, selection);
+      tr.ui.tracks.ContainerTrack.prototype.addClosestEventToSelection.
+          apply(this, arguments);
+    }
+  };
+
+  return {
+    ModelTrack,
+  };
+});
+</script>

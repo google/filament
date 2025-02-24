@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/fixed_color_scheme.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/metrics/all_fixed_color_schemes.html">
+<link rel="import" href="/tracing/ui/base/column_chart.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span_behavior.html">
+
+<dom-module id="tr-v-ui-breakdown-span">
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #table_container {
+      display: flex;
+      flex: 0 0 auto;
+    }
+    #table {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    </style>
+
+    <div id="empty">(empty)</div>
+    <div id="table_container">
+      <div id="container"></div>
+      <span>
+        <tr-ui-b-table id="table"></tr-ui-b-table>
+      </span>
+    </div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.ui', function() {
+  const DEFAULT_COLOR_SCHEME = new tr.b.SinebowColorGenerator();
+
+  function getHistogramName(histogram, diagnosticName, key) {
+    if (histogram === undefined) return undefined;
+    const nameMap = histogram.diagnostics.get(diagnosticName);
+    if (nameMap === undefined) return undefined;
+    return nameMap.get(key);
+  }
+
+  class BreakdownTableSummaryRow {
+    constructor(displayElement, histogramNames) {
+      this.displayElement_ = displayElement;
+      this.histogramNames_ = histogramNames;
+      this.keySpan_ = undefined;
+    }
+
+    get numberValue() {
+      // Prevent this row from appearing in the ColumnChart.
+      return undefined;
+    }
+
+    get keySpan() {
+      if (this.keySpan_ === undefined) {
+        if (this.histogramNames_.length) {
+          this.keySpan_ = document.createElement('tr-ui-a-analysis-link');
+          this.keySpan_.setSelectionAndContent(
+              this.histogramNames_, 'Select All');
+        } else {
+          this.keySpan_ = 'Sum';
+        }
+      }
+      return this.keySpan_;
+    }
+
+    get name() {
+      return 'Sum';
+    }
+
+    get displayElement() {
+      return this.displayElement_;
+    }
+
+    get stringPercent() {
+      return '100%';
+    }
+  }
+
+  class BreakdownTableRow {
+    constructor(name, value, histogramName, unit, color) {
+      this.name_ = name;
+      this.value_ = value;
+      this.histogramName_ = histogramName;
+      this.unit_ = unit;
+
+      if (typeof value !== 'number') {
+        throw new Error('unsupported value ' + value);
+      }
+
+      this.tableSum_ = undefined;
+      this.keySpan_ = undefined;
+
+      this.color_ = color;
+      const hsl = this.color.toHSL();
+      hsl.l *= 0.85;
+      this.highlightedColor_ = tr.b.Color.fromHSL(hsl);
+
+      if (this.unit_) {
+        this.displayElement_ = tr.v.ui.createScalarSpan(this.numberValue, {
+          unit: this.unit_,
+        });
+      } else {
+        this.displayElement_ = tr.ui.b.createSpan({
+          textContent: this.stringValue,
+        });
+      }
+    }
+
+    get name() {
+      return this.name_;
+    }
+
+    get color() {
+      return this.color_;
+    }
+
+    get highlightedColor() {
+      return this.highlightedColor_;
+    }
+
+    get keySpan() {
+      if (this.keySpan_ === undefined) {
+        if (this.histogramName_) {
+          this.keySpan_ = document.createElement('tr-ui-a-analysis-link');
+          this.keySpan_.setSelectionAndContent(
+              [this.histogramName_], this.name);
+          this.keySpan_.color = this.color;
+          this.keySpan_.title = this.histogramName_;
+        } else {
+          this.keySpan_ = document.createElement('span');
+          this.keySpan_.innerText = this.name;
+          this.keySpan_.style.color = this.color;
+        }
+      }
+      return this.keySpan_;
+    }
+
+    /**
+    * @return {number|undefined}
+    */
+    get numberValue() {
+      if (!isNaN(this.value_) &&
+          (this.value_ !== Infinity) &&
+          (this.value_ !== -Infinity) &&
+          (this.value_ > 0)) return this.value_;
+      // Prevent this row from appearing in the ColumnChart.
+      return undefined;
+    }
+
+    get stringValue() {
+      if ((this.unit_ !== undefined) &&
+          !isNaN(this.value_) &&
+          (this.value_ !== Infinity) &&
+          (this.value_ !== -Infinity)) {
+        return this.unit_.format(this.value_);
+      }
+      return this.value_.toString();
+    }
+
+    set tableSum(s) {
+      this.tableSum_ = s;
+    }
+
+    get stringPercent() {
+      if (this.tableSum_ === undefined) return '';
+      const num = this.numberValue;
+      if (num === undefined) return '';
+      return Math.floor(num * 100.0 / this.tableSum_) + '%';
+    }
+
+    get displayElement() {
+      return this.displayElement_;
+    }
+
+    compare(other) {
+      if (this.numberValue === undefined) {
+        if (other.numberValue === undefined) {
+          return this.name.localeCompare(other.name);
+        }
+        return 1;
+      }
+      if (other.numberValue === undefined) {
+        return -1;
+      }
+      if (this.numberValue === other.numberValue) {
+        return this.name.localeCompare(other.name);
+      }
+      return other.numberValue - this.numberValue;
+    }
+  }
+
+  Polymer({
+    is: 'tr-v-ui-breakdown-span',
+    behaviors: [tr.v.ui.DIAGNOSTIC_SPAN_BEHAVIOR],
+
+    created() {
+      this.chart_ = new tr.ui.b.ColumnChart();
+      this.chart_.graphHeight = 130;
+      this.chart_.isStacked = true;
+      this.chart_.hideXAxis = true;
+      this.chart_.hideLegend = true;
+      this.chart_.enableHoverBox = false;
+      this.chart_.addEventListener('rect-mouseenter',
+          event => this.onRectMouseEnter_(event));
+      this.chart_.addEventListener('rect-mouseleave',
+          event => this.onRectMouseLeave_(event));
+    },
+
+    onRectMouseEnter_(event) {
+      for (const row of this.$.table.tableRows) {
+        if (row.name === event.rect.key) {
+          row.displayElement.style.background = event.rect.color;
+          row.keySpan.scrollIntoViewIfNeeded();
+        } else {
+          row.displayElement.style.background = '';
+        }
+      }
+    },
+
+    onRectMouseLeave_(event) {
+      for (const row of this.$.table.tableRows) {
+        row.displayElement.style.background = '';
+      }
+    },
+
+    ready() {
+      Polymer.dom(this.$.container).appendChild(this.chart_);
+
+      this.$.table.zebra = true;
+      this.$.table.showHeader = false;
+      this.$.table.tableColumns = [
+        {
+          value: row => row.keySpan,
+        },
+        {
+          value: row => row.displayElement,
+          align: tr.ui.b.TableFormat.ColumnAlignment.RIGHT,
+        },
+        {
+          value: row => row.stringPercent,
+          align: tr.ui.b.TableFormat.ColumnAlignment.RIGHT,
+        },
+      ];
+    },
+
+    updateContents_() {
+      this.$.container.style.display = 'none';
+      this.$.table.style.display = 'none';
+      this.$.empty.style.display = 'block';
+
+      if (!this.diagnostic_) {
+        this.chart_.data = [];
+        return;
+      }
+
+      if (this.histogram_) this.chart_.unit = this.histogram_.unit;
+
+      let colorScheme = undefined;
+      // https://github.com/catapult-project/catapult/issues/2970
+      if (this.diagnostic.colorScheme ===
+          tr.v.d.COLOR_SCHEME_CHROME_USER_FRIENDLY_CATEGORY_DRIVER) {
+        colorScheme = (name) => {
+          let cat = name.split(' ');
+          cat = cat[cat.length - 1];
+          return tr.e.chrome.ChromeUserFriendlyCategoryDriver.getColor(cat);
+        };
+      } else if (this.diagnostic.colorScheme) {
+        // Default Breakdown.colorScheme has been both undefined and ''.
+        colorScheme = (name) => tr.b.FixedColorSchemeRegistry.lookUp(
+            this.diagnostic.colorScheme).getColor(name);
+      } else {
+        colorScheme = (name) => DEFAULT_COLOR_SCHEME.colorForKey(name);
+      }
+
+      const tableRows = [];
+      let tableSum = 0;
+      const histogramNames = [];
+      for (const [key, value] of this.diagnostic) {
+        const histogramName = getHistogramName(
+            this.histogram_, this.name_, key);
+        const row = new BreakdownTableRow(
+            key, value, histogramName, this.chart_.unit, colorScheme(key));
+        tableRows.push(row);
+        if (row.numberValue !== undefined) tableSum += row.numberValue;
+        if (histogramName) {
+          histogramNames.push(histogramName);
+        }
+      }
+      tableRows.sort((x, y) => x.compare(y));
+
+      if (tableSum > 0) {
+        let summaryDisplayElement = tableSum;
+        if (this.chart_.unit !== undefined) {
+          summaryDisplayElement = this.chart_.unit.format(tableSum);
+        }
+        summaryDisplayElement = tr.ui.b.createSpan({
+          textContent: summaryDisplayElement,
+        });
+        tableRows.unshift(new BreakdownTableSummaryRow(
+            summaryDisplayElement, histogramNames));
+      }
+
+      const chartData = {x: 0};
+      for (const row of tableRows) {
+        if (row.numberValue === undefined) continue;
+
+        // Let the row compute its percentage.
+        row.tableSum = tableSum;
+
+        // Add it to the chart.
+        chartData[row.name] = row.numberValue;
+
+        // Configure the colors.
+        const dataSeries = this.chart_.getDataSeries(row.name);
+        dataSeries.color = row.color;
+        dataSeries.highlightedColor = row.highlightedColor;
+      }
+
+      if (tableRows.length > 0) {
+        this.$.table.style.display = 'block';
+        this.$.empty.style.display = 'none';
+        this.$.table.tableRows = tableRows;
+        this.$.table.rebuild();
+      }
+
+      if (Object.keys(chartData).length > 1) {
+        this.$.container.style.display = 'block';
+        this.$.empty.style.display = 'none';
+        this.chart_.data = [chartData];
+      }
+    }
+  });
+
+  return {};
+});
+</script>

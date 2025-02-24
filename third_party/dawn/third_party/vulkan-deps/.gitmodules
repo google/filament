@@ -1,0 +1,30 @@
+[submodule "glslang/src"]
+	path = glslang/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/glslang
+[submodule "lunarg-vulkantools/src"]
+	path = lunarg-vulkantools/src
+	url = https://chromium.googlesource.com/external/github.com/LunarG/VulkanTools
+[submodule "spirv-cross/src"]
+	path = spirv-cross/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross
+[submodule "spirv-headers/src"]
+	path = spirv-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers
+[submodule "spirv-tools/src"]
+	path = spirv-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Tools
+[submodule "vulkan-headers/src"]
+	path = vulkan-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Headers
+[submodule "vulkan-loader/src"]
+	path = vulkan-loader/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Loader
+[submodule "vulkan-tools/src"]
+	path = vulkan-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Tools
+[submodule "vulkan-utility-libraries/src"]
+	path = vulkan-utility-libraries/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Utility-Libraries
+[submodule "vulkan-validation-layers/src"]
+	path = vulkan-validation-layers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-ValidationLayers

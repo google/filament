@@ -1,0 +1,67 @@
+﻿Name
+
+   ANGLE_memory_usage_report
+
+Name Strings
+
+   EGL_ANGLE_memory_usage_report
+
+Contact
+
+   Le Hoang Quyen, Google (lehoangquyen 'at' google.com)
+
+Status
+
+   Draft.
+
+Version
+
+   Version 1, 2024-12-10
+
+Number
+
+   ???
+
+Dependencies
+
+   The extension is written against the EGL 1.3 Specification, although it
+   should work on other versions of these specifications.
+
+Overview
+
+   This extension provides a function that reports memory allocated for live
+   GL objects. The memory usage only accounts for buffers, textures and renderbuffers.
+
+Issues
+
+   None.
+
+IP Status
+
+   No known issues.
+
+New Procedures and Functions
+
+   None
+
+New Tokens
+   Accepted by the <attribute> parameter of eglQueryContext
+
+   EGL_CONTEXT_MEMORY_USAGE_ANGLE   0x3462
+
+Additions to the EGL 1.3 Specification
+
+   If <attribute>=EGL_CONTEXT_MEMORY_USAGE_ANGLE is passed to eglQueryContext, then the
+   <value> pointer is expected to point to an array of 2 32-bit values. Upon a successful
+   return, value[0] and value[1]  will contain the low and high 32-bit parts of a 64-bit
+   value. This 64-bit value is the estimated memory usage of all live GL objects belonging
+   to the given context's shared group.
+
+New Implementation Dependent State
+
+   None
+
+Revision History
+
+    Version 1, 2024-12-10 (Le Hoang Quyen)
+       - Initial draft

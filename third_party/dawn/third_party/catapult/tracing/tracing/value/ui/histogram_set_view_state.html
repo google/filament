@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/view_state.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  class HistogramSetViewState extends tr.b.ViewState {
+    constructor() {
+      super();
+      this.define('searchQuery', '');
+      this.define('referenceDisplayLabel', '');
+      this.define('displayStatisticName', '');
+      this.define('showAll', true);
+      this.define('groupings', []);
+      this.define('sortColumnIndex', 0);
+      this.define('sortDescending', false);
+      this.define('constrainNameColumn', true);
+      this.define('tableRowStates', new Map());
+      this.define('alpha', 0.01);
+    }
+  }
+
+  tr.b.ViewState.register(HistogramSetViewState);
+
+  class HistogramSetTableRowState extends tr.b.ViewState {
+    constructor() {
+      super();
+      this.define('isExpanded', false);
+      this.define('isOverviewed', false);
+      this.define('cells', new Map());
+      this.define('subRows', new Map());
+      this.define('diagnosticsTab', '');
+    }
+
+    asCompactDict() {
+      const result = {};
+      if (this.isExpanded) result.e = '1';
+      if (this.isOverviewed) result.o = '1';
+      if (this.diagnosticsTab) result.d = this.diagnosticsTab;
+      const cells = {};
+      for (const [name, cell] of this.cells) {
+        const cellDict = cell.asCompactDict();
+        if (cellDict === undefined) continue;
+        cells[name] = cellDict;
+      }
+      if (Object.keys(cells).length > 0) result.c = cells;
+
+      const subRows = {};
+      for (const [name, row] of this.subRows) {
+        const rowDict = row.asCompactDict();
+        if (rowDict === undefined) continue;
+        subRows[name] = rowDict;
+      }
+      if (Object.keys(subRows).length > 0) result.r = subRows;
+
+      if (Object.keys(result).length === 0) return undefined;
+
+      return result;
+    }
+
+    async updateFromCompactDict(dict) {
+      await this.update({
+        isExpanded: dict.e === '1',
+        isOverviewed: dict.o === '1',
+        diagnosticsTab: dict.d || '',
+      });
+
+      for (const [name, cellDict] of Object.entries(dict.c || {})) {
+        const cell = this.cells.get(name);
+        if (cell === undefined) continue;
+        await cell.updateFromCompactDict(cellDict);
+      }
+
+      for (const [name, subRowDict] of Object.entries(dict.r || {})) {
+        const subRow = this.subRows.get(name);
+        if (subRow === undefined) continue;
+        await subRow.updateFromCompactDict(subRowDict);
+      }
+    }
+
+    * walk() {
+      yield this;
+      for (const row of this.subRows.values()) yield* row.walk();
+    }
+
+    static* walkAll(rootRows) {
+      for (const rootRow of rootRows) yield* rootRow.walk();
+    }
+  }
+
+  tr.b.ViewState.register(HistogramSetTableRowState);
+
+  class HistogramSetTableCellState extends tr.b.ViewState {
+    constructor() {
+      super();
+      this.define('isOpen', false);
+      this.define('brushedBinRange', new tr.b.math.Range());
+      this.define('mergeSampleDiagnostics', true);
+    }
+
+    asCompactDict() {
+      const result = {};
+      if (this.isOpen) result.o = '1';
+      if (!this.mergeSampleDiagnostics) result.m = '0';
+      if (!this.brushedBinRange.isEmpty) {
+        result.b = this.brushedBinRange.min + '_' + this.brushedBinRange.max;
+      }
+      if (Object.keys(result).length === 0) return undefined;
+      return result;
+    }
+
+    async updateFromCompactDict(dict) {
+      let binRange = this.brushedBinRange;
+      if (dict.b) {
+        let [bMin, bMax] = dict.b.split('_');
+        bMin = parseInt(bMin);
+        bMax = parseInt(bMax);
+        if (bMin !== binRange.min || bMax !== binRange.max) {
+          binRange = tr.b.math.Range.fromExplicitRange(bMin, bMax);
+        }
+      }
+      await this.update({
+        isOpen: dict.o === '1',
+        brushedBinRange: binRange,
+        mergeSampleDiagnostics: dict.m !== '0',
+      });
+    }
+  }
+
+  tr.b.ViewState.register(HistogramSetTableCellState);
+
+  return {
+    HistogramSetTableCellState,
+    HistogramSetTableRowState,
+    HistogramSetViewState,
+  };
+});
+</script>

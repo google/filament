@@ -1,0 +1,137 @@
+rootProject.name='PowerVR_SDK'
+
+//Copy all the build output stuff into the SDK/bin folder
+gradle.ext.PVR_BINARY_OUTPUT_DIR='../../../../build-android/bin'
+
+if (!hasProperty('PVR_BUILD_OPENGLES_EXAMPLES') && !hasProperty('PVR_BUILD_VULKAN_EXAMPLES') && !hasProperty('PVR_BUILD_OPENCL_EXAMPLES')) {
+	ext.PVR_BUILD_EVERYTHING = 1
+}
+
+ext.PVR_OPENGLES_EXAMPLES = [ 
+	'01_HelloAPI',
+	'02_IntroducingPVRShell',
+	'03_IntroducingPVRUtils',
+	'04_IntroducingUIRenderer',
+	'05_IntroducingPVRCamera',
+	'MultiviewVR',
+	'PostProcessing',
+	'OpenCLExample',
+	'Skinning',
+	'ParticleSystem',
+	'GaussianBlur',
+	'Navigation2D',
+	'Navigation3D',
+	'DeferredShading',
+	'PVRScopeExample',
+	'PVRScopeRemote',
+	'IMGFramebufferDownsample',
+	'IMGTextureFilterCubic',
+	'ImageBasedLighting',
+	'GameOfLife',
+	'BinaryShaders',
+	'Multithreading',
+	'Bumpmap'
+]
+
+ext.PVR_VULKAN_EXAMPLES = [ 
+	'01_HelloAPI',
+	'02_IntroducingPVRShell',
+	'03_IntroducingPVRVk',
+	'04_IntroducingPVRUtils',
+	'05_IntroducingUIRenderer',
+	'Skinning',
+	'MultiSampling',
+	'PostProcessing',
+	'GnomeHorde',
+	'ParticleSystem',
+	'Bumpmap',
+	'GaussianBlur',
+	'Navigation2D',
+	'Navigation3D',
+	'Multithreading',
+	'ExampleUI',
+	'DeferredShading',
+	'DeferredShadingPFX',
+	'Glass',
+	'PVRScopeExample',
+	'PVRScopeRemote',
+	'ImageBasedLighting',
+	'IMGTextureFilterCubic',
+	'ImageBasedLightingMapGenerator',
+	'GameOfLife',
+	'PipelineCache'
+]
+
+ext.PVR_OPENCL_EXAMPLES = [ 
+	'MatrixMultiplication'
+]
+
+include('glm')
+project(':glm').projectDir=file('../external/glm/build-android')
+include('pugixml')
+project(':pugixml').projectDir=file('../external/pugixml/build-android')
+include('tinygltf')
+project(':tinygltf').projectDir=file('../external/tinygltf/build-android')
+
+include('PVRCore')
+project(':PVRCore').projectDir=file('../framework/PVRCore/build-android')
+
+if (hasProperty('PVR_BUILD_OPENGLES_EXAMPLES') || (hasProperty('PVR_BUILD_EVERYTHING') && file('../examples/OpenGLES/CMakeLists.txt').exists())) {
+	ext.PVR_BUILD_OPENGLES_EXAMPLES = 1
+	include('PVRCamera')
+	project(':PVRCamera').projectDir=file('../framework/PVRCamera/build-android')
+	include('PVRUtilsGles')
+	project(':PVRUtilsGles').projectDir=file('../framework/PVRUtils/OpenGLES/build-android')
+	include('PVRAssets')
+	project(':PVRAssets').projectDir=file('../framework/PVRAssets/build-android')
+	include('PVRShell')
+	project(':PVRShell').projectDir=file('../framework/PVRShell/build-android')
+
+	ext.PVR_OPENGLES_EXAMPLES.each { example ->
+		def exampleTaskName = "OpenGLES${example.indexOf('_') == 2 ? example.substring(3) : example}"
+		include(":${exampleTaskName}")
+		project(":${exampleTaskName}").projectDir=file("../examples/OpenGLES/${example}/build-android")
+	}
+}
+
+if (hasProperty('PVR_BUILD_VULKAN_EXAMPLES') || (hasProperty('PVR_BUILD_EVERYTHING') && file('../examples/Vulkan/CMakeLists.txt').exists())) {
+	ext.PVR_BUILD_VULKAN_EXAMPLES = 1
+	include('glslang')
+	project(':glslang').projectDir=file('../external/glslang/build-android')
+	include('glslangValidator')
+	project(':glslangValidator').projectDir=file('../external/glslangValidator/build-android')
+	include('VulkanMemoryAllocator')
+	project(':VulkanMemoryAllocator').projectDir=file('../external/VulkanMemoryAllocator/build-android')
+	include(':PVRVk')
+	project(':PVRVk').projectDir=file('../framework/PVRVk/build-android')
+	include(':PVRUtilsVk')
+	project(':PVRUtilsVk').projectDir=file('../framework/PVRUtils/Vulkan/build-android')
+	include(':PVRPfx')
+	project(':PVRPfx').projectDir=file('../framework/PVRPfx/build-android')
+	include('PVRAssets')
+	project(':PVRAssets').projectDir=file('../framework/PVRAssets/build-android')
+	include('PVRShell')
+	project(':PVRShell').projectDir=file('../framework/PVRShell/build-android')
+
+	ext.PVR_VULKAN_EXAMPLES.each { example ->	
+		def exampleTaskName = "Vulkan${example.indexOf('_') == 2 ? example.substring(3) : example}"
+		include(":${exampleTaskName}")
+		project(":${exampleTaskName}").projectDir=file("../examples/Vulkan/${example}/build-android")
+	}
+}
+
+if (hasProperty('PVR_BUILD_OPENCL_EXAMPLES') || (hasProperty('PVR_BUILD_EVERYTHING')) && file('../examples/OpenCL/CMakeLists.txt').exists()){ 
+	ext.PVR_BUILD_OPENCL_EXAMPLES = 1
+	include('PVRUtilsGles')
+	project(':PVRUtilsGles').projectDir=file('../framework/PVRUtils/OpenGLES/build-android')
+	include('PVRUtilsCL')
+	project(':PVRUtilsCL').projectDir=file('../framework/PVRUtils/OpenCL/build-android')
+	include('PVRAssets')
+	project(':PVRAssets').projectDir=file('../framework/PVRAssets/build-android')
+	
+	PVR_OPENCL_EXAMPLES.each { example ->
+		def exampleTaskName = "OpenCL${example.indexOf('_') == 2 ? example.substring(3) : example}"
+		include(":${exampleTaskName}")
+		project(":${exampleTaskName}").projectDir=file("../examples/OpenCL/${example}/build-android")
+	}
+}

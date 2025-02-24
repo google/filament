@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const UnitPrefixScale = tr.b.UnitPrefixScale;
+  const UnitScale = tr.b.UnitScale;
+
+  test('convertUnit', function() {
+    // UnitPrefixScale to UnitScale
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitPrefixScale.BINARY.MEBI, UnitScale.MEMORY.MEBI_BYTE),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        43, UnitPrefixScale.BINARY.MEBI, UnitScale.MEMORY.BYTE), 45088768);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitPrefixScale.BINARY.NONE, UnitScale.MEMORY.KIBI_BYTE),
+    -0.390625);
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitPrefixScale.METRIC.MILLI, UnitScale.TIME.MILLI_SEC),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        50, UnitPrefixScale.METRIC.MILLI, UnitScale.TIME.SEC), 0.05);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitPrefixScale.METRIC.NONE, UnitScale.TIME.MICRO_SEC),
+    -400000000);
+
+    // UnitScale to UnitPrefixScale
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitScale.MEMORY.MEBI_BYTE, UnitPrefixScale.BINARY.MEBI),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        43, UnitScale.MEMORY.MEBI_BYTE, UnitPrefixScale.BINARY.NONE),
+    45088768);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitScale.MEMORY.BYTE, UnitPrefixScale.BINARY.KIBI),
+    -0.390625);
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitScale.TIME.MILLI_SEC, UnitPrefixScale.METRIC.MILLI),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        50, UnitPrefixScale.METRIC.MILLI, UnitScale.TIME.SEC), 0.05);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitPrefixScale.METRIC.NONE, UnitScale.TIME.MICRO_SEC),
+    -400000000);
+
+    // UnitScale to UnitScale
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitScale.MEMORY.MEBI_BYTE, UnitScale.MEMORY.MEBI_BYTE),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        43, UnitScale.MEMORY.MEBI_BYTE, UnitScale.MEMORY.BYTE), 45088768);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitScale.MEMORY.BYTE, UnitScale.MEMORY.KIBI_BYTE),
+    -0.390625);
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitScale.TIME.MILLI_SEC, UnitScale.TIME.MILLI_SEC), 43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        50, UnitScale.TIME.MILLI_SEC, UnitScale.TIME.SEC), 0.05);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitScale.TIME.SEC, UnitScale.TIME.MICRO_SEC), -400000000);
+    assert.closeTo(tr.b.convertUnit(
+        12, UnitScale.TIME.YEAR, UnitScale.TIME.MONTH), 144, 1.e-8);
+
+    // UnitPrefixScale to UnitPrefixScale
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitPrefixScale.BINARY.MEBI, UnitPrefixScale.BINARY.MEBI),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        43, UnitPrefixScale.BINARY.MEBI, UnitPrefixScale.BINARY.NONE),
+    45088768);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitPrefixScale.BINARY.NONE, UnitPrefixScale.BINARY.KIBI),
+    -0.390625);
+    assert.strictEqual(tr.b.convertUnit(
+        43.53, UnitPrefixScale.METRIC.MILLI, UnitPrefixScale.METRIC.MILLI),
+    43.53);
+    assert.strictEqual(tr.b.convertUnit(
+        50, UnitPrefixScale.METRIC.MILLI, UnitPrefixScale.METRIC.NONE),
+    0.05);
+    assert.strictEqual(tr.b.convertUnit(
+        -400, UnitPrefixScale.METRIC.NONE, UnitPrefixScale.METRIC.MICRO),
+    -400000000);
+  });
+
+  test('defineUnitScale', function() {
+    assert.strictEqual(UnitPrefixScale.PONY, undefined);
+    const ponyScale = {
+      SHORT_JUMPS: { value: 1e-3, symbol: 'SJ', baseSymbol: 'J'},
+      REGULAR_JUMPS: { value: 1, symbol: 'J', baseSymbol: 'J'},
+      LONG_JUMPS: {value: 1e3, symbol: 'LJ', baseSymbol: 'J'},
+      EPIC_JUMPS: {value: 1e6, symbol: 'EJ', baseSymbol: 'J'}
+    };
+    UnitScale.defineUnitScale('PONY', ponyScale);
+    assert.strictEqual(tr.b.convertUnit(
+        32.1, UnitScale.PONY.REGULAR_JUMPS, UnitScale.PONY.SHORT_JUMPS),
+    32100);
+    assert.strictEqual(tr.b.convertUnit(
+        -32, UnitScale.PONY.SHORT_JUMPS, UnitScale.PONY.REGULAR_JUMPS),
+    -0.032);
+    assert.strictEqual(tr.b.convertUnit(
+        32.1, UnitScale.PONY.EPIC_JUMPS, UnitScale.PONY.LONG_JUMPS),
+    32100);
+    assert.strictEqual(tr.b.convertUnit(
+        -34600000, UnitScale.PONY.SHORT_JUMPS, UnitScale.PONY.EPIC_JUMPS),
+    -0.0346);
+  });
+
+  test('defineUnitScaleFromPrefixScale', function() {
+    assert.strictEqual(UnitPrefixScale.BUNNY, undefined);
+    UnitScale.defineUnitScaleFromPrefixScale(
+        'H', 'HOPS', UnitPrefixScale.METRIC, 'BUNNY');
+    assert.strictEqual(tr.b.convertUnit(
+        32.1, UnitScale.BUNNY.HOPS, UnitScale.BUNNY.MILLI_HOPS),
+    32100);
+    assert.strictEqual(tr.b.convertUnit(
+        -32, UnitScale.BUNNY.MILLI_HOPS, UnitScale.BUNNY.HOPS),
+    -0.032);
+    assert.strictEqual(tr.b.convertUnit(
+        32.1, UnitScale.BUNNY.GIGA_HOPS, UnitScale.BUNNY.KILO_HOPS),
+    32100000);
+    assert.strictEqual(tr.b.convertUnit(
+        -32, UnitScale.BUNNY.KILO_HOPS, UnitScale.BUNNY.MEGA_HOPS),
+    -0.032);
+  });
+
+  test('timeScale', function() {
+    assert.strictEqual(tr.b.convertUnit(
+        123.45, UnitScale.TIME.NANO_SEC, UnitScale.TIME.MICRO_SEC), 0.12345);
+    assert.strictEqual(tr.b.convertUnit(
+        123.45, UnitScale.TIME.MICRO_SEC, UnitScale.TIME.MILLI_SEC), 0.12345);
+    assert.strictEqual(tr.b.convertUnit(
+        123.45, UnitScale.TIME.MILLI_SEC, UnitScale.TIME.SEC), 0.12345);
+    assert.strictEqual(tr.b.convertUnit(
+        123.45, UnitScale.TIME.SEC, UnitScale.TIME.MINUTE), 2.0575);
+    assert.strictEqual(tr.b.convertUnit(
+        123.45, UnitScale.TIME.MINUTE, UnitScale.TIME.HOUR), 2.0575);
+    assert.strictEqual(tr.b.convertUnit(
+        123.48, UnitScale.TIME.HOUR, UnitScale.TIME.DAY), 5.145);
+    assert.strictEqual(tr.b.convertUnit(
+        123.48, UnitScale.TIME.DAY, UnitScale.TIME.WEEK), 17.64);
+    assert.strictEqual(tr.b.convertUnit(
+        123.48, UnitScale.TIME.WEEK, UnitScale.TIME.MONTH),
+    28.3984709324388);
+    assert.closeTo(tr.b.convertUnit(
+        123.48, UnitScale.TIME.MONTH, UnitScale.TIME.YEAR), 10.29,
+    0.000001);
+  });
+
+  test('memoryScale', function() {
+    assert.strictEqual(tr.b.convertUnit(
+        4608, UnitScale.MEMORY.BYTE, UnitScale.MEMORY.KIBI_BYTE), 4.5);
+    assert.strictEqual(tr.b.convertUnit(
+        4608, UnitScale.MEMORY.KIBI_BYTE, UnitScale.MEMORY.MEBI_BYTE), 4.5);
+    assert.strictEqual(tr.b.convertUnit(
+        4608, UnitScale.MEMORY.MEBI_BYTE, UnitScale.MEMORY.GIBI_BYTE), 4.5);
+    assert.strictEqual(tr.b.convertUnit(
+        4608, UnitScale.MEMORY.GIBI_BYTE, UnitScale.MEMORY.TEBI_BYTE), 4.5);
+  });
+});
+</script>

@@ -1,0 +1,78 @@
+//===- subzero/src/IceTimerTree.def - X-macros for timing -------*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file lists predefined timing tags. New tags can be added to avoid a
+// runtime string lookup.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETIMERTREE_DEF
+#define SUBZERO_SRC_ICETIMERTREE_DEF
+
+#define TIMERTREE_TABLE                                                        \
+  /* enum value */                                                             \
+  X(O2)                                                                        \
+  X(Om1)                                                                       \
+  X(advancedPhiLowering)                                                       \
+  X(alloca)                                                                    \
+  X(computeLoopNestDepth)                                                      \
+  X(convertToIce)                                                              \
+  X(deletePhis)                                                                \
+  X(doAddressOpt)                                                              \
+  X(doArgLowering)                                                             \
+  X(doBranchOpt)                                                               \
+  X(emitAsm)                                                                   \
+  X(emitGlobalInitializers)                                                    \
+  X(findRMW)                                                                   \
+  X(floatConstantCse)                                                          \
+  X(genCode)                                                                   \
+  X(genFrame)                                                                  \
+  X(genHelpers)                                                                \
+  X(initUnhandled)                                                             \
+  X(linearScan)                                                                \
+  X(liveRange)                                                                 \
+  X(liveness)                                                                  \
+  X(livenessLightweight)                                                       \
+  X(llvmConvert)                                                               \
+  X(loadOpt)                                                                   \
+  X(localCse)                                                                  \
+  X(loopInvariantCodeMotion)                                                   \
+  X(lowerPhiAssignments)                                                       \
+  X(materializeVectorShuffles)                                                 \
+  X(parse)                                                                     \
+  X(parseConstants)                                                            \
+  X(parseFunctions)                                                            \
+  X(parseFunctionValuesymtabs)                                                 \
+  X(parseGlobals)                                                              \
+  X(parseModule)                                                               \
+  X(parseModuleValuesymtabs)                                                   \
+  X(parseTypes)                                                                \
+  X(phiValidation)                                                             \
+  X(placePhiLoads)                                                             \
+  X(placePhiStores)                                                            \
+  X(qEmitPop)                                                                  \
+  X(qEmitPush)                                                                 \
+  X(qTransPop)                                                                 \
+  X(qTransPush)                                                                \
+  X(regAlloc)                                                                  \
+  X(renumberInstructions)                                                      \
+  X(shortCircuit)                                                              \
+  X(splitGlobalVars)                                                           \
+  X(splitLocalVars)                                                            \
+  X(szmain)                                                                    \
+  X(translate)                                                                 \
+  X(translateFunctions)                                                        \
+  X(validateLiveness)                                                          \
+  X(vmetadata)                                                                 \
+  X(wasm)                                                                      \
+  X(wasmGenIce)                                                                \
+  X(writeELF)
+//#define X(tag)
+
+#endif // SUBZERO_SRC_ICETIMERTREE_DEF

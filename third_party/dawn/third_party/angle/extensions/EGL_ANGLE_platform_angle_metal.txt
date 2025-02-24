@@ -1,0 +1,76 @@
+Name
+
+    ANGLE_platform_angle_metal
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_metal
+
+Contributors
+
+    Jamie Madill, Google
+
+Contacts
+
+    Jamie Madill, Google (jmadill 'at' google 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, 2019-10-09
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of Metal display types.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE               0x3489
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that is backed by a Metal driver, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE.
+
+Issues
+
+    1) Should the application be able to choose a specific version of Metal?
+
+        RESOLVED: No, use the default returned by the system. It doesn't
+        seem like recommended practice to choose a Metal version when
+        initializing a Metal device.
+
+Revision History
+
+    Version 1, 2019-10-09 (Jamie Madill)
+      - Initial draft

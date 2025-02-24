@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/components/app-route/app-route.html">
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/loading-wrapper.html">
+
+<dom-module id="queue-stats-page">
+  <template>
+    <style include="base-style">
+      td {
+        text-align: center;
+      }
+
+      svg {
+        fill: var(--paper-indigo-500);
+        height: 56px;
+        overflow: visible;
+        width: 505px;
+      }
+    </style>
+    <app-route route="{{route}}" pattern="/:configuration" data="{{routeData}}"></app-route>
+    <h1>Queue Stats for [[routeData.configuration]]</h1>
+    <loading-wrapper id="loading" auto="[[auto]]" response="{{stats}}">
+      <table>
+          <thead>
+              <tr>
+                  <th>Queued</th>
+                  <th>Running</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td>[[jobs(stats, 'queued_jobs')]]</td>
+                  <td>[[jobs(stats, 'running_jobs')]]</td>
+              </tr>
+          </tbody>
+      </table>
+      <h2>Queue Time Distribution (7 days)</h2>
+      <p>This histogram shows the rough distribution of time (in hours)
+          elements from the queue have been waiting to get scheduled. We
+          store the last 7 days worth of time measurements.</p>
+      <svg id="queueTimeDistribution"></svg>
+      <h2>Queue Contents</h2>
+      <ul>
+        <template is="dom-repeat"
+          items="{{stats.job_id_with_status}}" as="job">
+          <li>
+            <a href="/job/{{job.job_id}}">{{job.job_id}}</a> ({{job.status}})
+          </li>
+        </template>
+      </ul>
+    </loading-wrapper>
+  </template>
+  <script>
+      'use strict';
+      Polymer({
+        is: 'queue-stats-page',
+        properties: {
+          auto: {
+            type: Boolean,
+            value: false
+          },
+          stats: {
+            type: Object,
+            observer: '_statsChanged',
+          }
+        },
+
+        observers: [
+          'routeChanged(route, routeData)',
+        ],
+
+        routeChanged(route, routeData) {
+          if (route.prefix == '/queue-stats') {
+            this.$.loading.url = '/api/queue-stats/' + routeData.configuration;
+            this.$.loading.$.request.generateRequest();
+          }
+        },
+
+        _statsChanged() {
+          this.async(this.drawDurationHistograms, 1);
+        },
+
+        drawDurationHistograms() {
+          drawHistogram(d3.select(this.$.queueTimeDistribution),
+              this.stats.queue_time_samples.map(v => v[0]));
+        },
+
+        jobs(stats, key) {
+          return ((key in stats) ? stats[key] : 0);
+        },
+
+        selected() {
+          this.$$('loading-wrapper').$.request.generateRequest();
+        },
+      });
+
+      function drawHistogram(svg, values) {
+        // The values we get are in hours, computed on the service side.
+        // Here we create a histogram showing the distribution.
+        svg.selectAll('*').remove();
+
+        const x = d3.scaleLinear().domain([0, 50]).rangeRound([0, 500]);
+        svg.append('g')
+            .attr('transform', 'translate(0, 40)')
+            .call(d3.axisBottom(x).ticks(10));
+        const histogram = d3.histogram()
+            .domain([0, d3.max(values)])
+            .thresholds(x.ticks(96));
+        const histogramBins = bins(histogram, values);
+        const maxBucket = d3.max(
+            histogramBins, bucket => bucket.proportion);
+        const y = d3.scaleLinear()
+            .domain([0, maxBucket])
+            .range([40, 0]);
+
+        const rect = svg.selectAll('rect')
+            .data(histogramBins.filter(bin => bin.length));
+        rect.enter().append('rect')
+            .attr('x', d => x(d.x0))
+            .attr('width', d => x(Math.min(d.x1, 50.5)) - x(d.x0))
+            .attr('y', d => y(d.proportion))
+            .attr('height', d => y(0) - y(d.proportion));
+      }
+
+      function bins(histogram, values) {
+        const bins = histogram(values);
+        for (const bin of bins) {
+          bin.proportion = bin.length / values.length;
+        }
+        return bins;
+      }
+  </script>
+</dom-module>

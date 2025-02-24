@@ -1,0 +1,118 @@
+# Copyright 2018 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/rules.gni")
+import("../gni/angle.gni")
+
+vulkan_validation_layers = [ "VkLayer_khronos_validation" ]
+
+angle_libraries = [
+  "libEGL",
+  "libGLESv1_CM",
+  "libGLESv2",
+  "libfeature_support",
+]
+
+if (enable_java_templates) {
+  template("angle_apk") {
+    manifest_target_name = "${target_name}__manifest"
+    manifest_path =
+        "${target_gen_dir}/${target_name}/android/AndroidManifest.xml"
+
+    jinja_template(manifest_target_name) {
+      input = "${angle_root}/android/AndroidManifest.xml.jinja2"
+      output = manifest_path
+      variables = [
+        "manifest_package=${invoker.package_name}",
+        "extract_native_libs=${angle_extract_native_libs}",
+      ]
+    }
+
+    android_assets("${invoker.package_name}_assets") {
+      disable_compression = true
+      sources = [ "src/feature_support_util/a4a_rules.json" ]
+    }
+
+    android_apk(target_name) {
+      forward_variables_from(invoker, "*")
+      android_manifest = manifest_path
+      android_manifest_dep = ":$manifest_target_name"
+      version_code = invoker.version_code
+      version_name = invoker.version_name
+      min_sdk_version = 26
+      target_sdk_version = 28
+      deps = [ ":${invoker.package_name}_assets" ]
+      if (symbol_level != 0) {
+        deps += [ ":compressed_symbols" ]
+        if (android_64bit_target_cpu &&
+            defined(android_secondary_abi_toolchain)) {
+          deps += [ ":compressed_symbols($android_secondary_abi_toolchain)" ]
+        }
+      }
+
+      if (android_64bit_target_cpu &&
+          defined(android_secondary_abi_toolchain)) {
+        if (symbol_level == 0) {
+          secondary_abi_shared_libraries = []
+          foreach(_library, angle_libraries) {
+            secondary_abi_shared_libraries +=
+                [ "$angle_root:${_library}($android_secondary_abi_toolchain)" ]
+          }
+          if (angle_enable_vulkan_validation_layers) {
+            foreach(_layer, vulkan_validation_layers) {
+              secondary_abi_shared_libraries +=
+                  [ "$angle_vulkan_validation_layers_dir:${_layer}" +
+                    "($android_secondary_abi_toolchain)" ]
+            }
+          }
+        } else {
+          _secondary_out_dir = get_label_info(
+                  ":compressed_symbols($android_secondary_abi_toolchain)",
+                  "root_out_dir")
+          secondary_abi_loadable_modules = []
+          foreach(_library, angle_libraries) {
+            secondary_abi_loadable_modules += [ "$_secondary_out_dir/lib.compressed/${_library}${angle_libs_suffix}${shlib_extension}" ]
+          }
+          if (angle_enable_vulkan_validation_layers) {
+            foreach(_layer, vulkan_validation_layers) {
+              secondary_abi_loadable_modules += [ "${_secondary_out_dir}/lib.compressed/lib${_layer}${shlib_extension}" ]
+            }
+          }
+        }
+      }
+
+      if (symbol_level == 0) {
+        shared_libraries = []
+        foreach(_library, angle_libraries) {
+          shared_libraries += [ "$angle_root:$_library" ]
+        }
+        if (angle_enable_vulkan_validation_layers) {
+          foreach(_layer, vulkan_validation_layers) {
+            shared_libraries +=
+                [ "$angle_vulkan_validation_layers_dir:${_layer}" ]
+          }
+        }
+        if (angle_enable_vulkan_api_dump_layer) {
+          shared_libraries +=
+              [ "$angle_lunarg_vulkantools_dir:VkLayer_lunarg_api_dump" ]
+        }
+      } else {
+        loadable_modules = []
+        foreach(_library, angle_libraries) {
+          loadable_modules += [ "$root_out_dir/lib.compressed/${_library}${angle_libs_suffix}${shlib_extension}" ]
+        }
+        if (angle_enable_vulkan_validation_layers) {
+          foreach(_layer, vulkan_validation_layers) {
+            loadable_modules += [
+              "$root_out_dir/lib.compressed/lib${_layer}${shlib_extension}",
+            ]
+          }
+        }
+        if (angle_enable_vulkan_api_dump_layer) {
+          loadable_modules += [ "$root_out_dir/lib.compressed/libVkLayer_lunarg_api_dump${shlib_extension}" ]
+        }
+      }
+    }
+  }
+}

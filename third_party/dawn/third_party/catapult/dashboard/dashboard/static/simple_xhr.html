@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+// This variable name is supposed to not be camelCased, in order for it
+// to match up with the file name.
+// eslint-disable-next-line
+const simple_xhr = (function() {
+  const LOGIN_ERROR_MESSAGE = 'Please check if you are logged in with a ' +
+                            'google.com or chromium.org account in the ' +
+                            'upper right corner of the page.';
+
+  const handleError_ = function(request, callback) {
+    callback(LOGIN_ERROR_MESSAGE);
+  };
+
+  // For abort request, error callback is called without message.
+  const handleAbort_ = function(request, callback) {
+    callback(null);
+  };
+
+  const handleLoad_ = function(request, loadCallback, errorCallback) {
+    if (request.status != 200) {
+      errorCallback('HTTP error ' + request.status);
+      return;
+    }
+    let response;
+    try {
+      response = JSON.parse(request.responseText);
+    } catch (e) {
+      errorCallback(LOGIN_ERROR_MESSAGE);
+      return;
+    }
+    if (response.error) {
+      errorCallback(response.error);
+      return;
+    }
+    loadCallback(response);
+  };
+
+  const paramString_ = function(params) {
+    const strings = [];
+    for (const name in params) {
+      strings.push(name + '=' + encodeURIComponent(params[name]));
+    }
+    return strings.join('&');
+  };
+
+  const send = function(url, params, loadCallback, errorCallback) {
+    const postdata = paramString_(params);
+    const request = new XMLHttpRequest();
+    request.onerror = handleError_.bind(this, request, errorCallback);
+    request.onabort = handleAbort_.bind(this, request, errorCallback);
+    request.onload = handleLoad_.bind(
+        this, request, loadCallback, errorCallback);
+    request.open('post', url, true);
+    request.setRequestHeader(
+        'Content-type', 'application/x-www-form-urlencoded');
+    request.send(postdata);
+    return request;
+  };
+
+  const asPromise = function(url, params) {
+    return new Promise((resolve, reject) => {
+      simple_xhr.send(
+          url, params, response => resolve(response), error => reject(error));
+    });
+  };
+
+  return {asPromise, send};
+})();
+</script>

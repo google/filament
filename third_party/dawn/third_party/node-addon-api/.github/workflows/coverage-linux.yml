@@ -1,0 +1,64 @@
+name: Coverage Linux
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '**.md'
+      - benchmark/**
+      - doc/**
+      - tools/**
+      - unit-test/**
+      - .github/**
+      - '!.github/workflows/coverage-linux.yml'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - benchmark/**
+      - doc/**
+      - tools/**
+      - unit-test/**
+      - .github/**
+      - '!.github/workflows/coverage-linux.yml'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20.x'
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b  # v4.1.5
+        with:
+          persist-credentials: false
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Environment Information
+        run: npx envinfo
+      - name: Install gcovr
+        run: pip install gcovr==6.0
+      - name: Install dependencies
+        run: npm install
+      - name: Test with coverage
+        run: |
+          npm run create-coverage
+      - name: Generate coverage report (XML)
+        run: |
+          npm run report-coverage-xml
+      - name: Upload
+        uses: codecov/codecov-action@5ecb98a3c6b747ed38dc09f787459979aebb39be  # v4.3.1
+        with:
+          directory: ./coverage-xml
+          token: ${{ secrets.CODECOV_TOKEN }} # To bypass public API rate limiting, see https://github.com/codecov/codecov-action/issues/557

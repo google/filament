@@ -1,0 +1,285 @@
+Coverage.py TODO
+
+Key:
+    * Heading
+    - Not done yet.
+    + Done.
+    x Not going to do.
+
+* 4.0
+
+- What defaults should change?
+    x --source = . ?
+    x --branch = True ?
+
+- Remove 2.3, 2.4, 2.5 limitations
+    + set, sorted, reversed, rpartition
+    + generator expressions
+    + decorators
+    + collections.defaultdict
+    + .startswith((,))
+    + "with" statements
+    - .format() ?
+    + try/except/finally
+    + with assertRaises
+    + addCleanup instead of tearDown
+    + exec statement can look like a function in py2 (since when?)
+    - runpy ?
+    + we can use "except ExcClass as e:"
+
+- Plugins
+    + Clean up
+    + implement plugin support in CTracer
+    + remove plugin support from PyTracer
+    x add services:
+        - filelocator
+        - warning
+    - dynamic_source_filename: return should be a canonical path
+        - update the omit test to use "quux*" instead of "*quux*"
+    + docs
++ Make reports use filenames, not module names
+- documentation
+    - test helpers
+    + cov.config["run:branch"] api (well, coverage.get_option etc)
+    + "added in 4.0"
+    - tweaks to theme?
+    - Plugins!
+        Once per process
+        Once per file
+            - create a file tracer
+            - call its has_dynamic_source_file()
+        Once per call
+        Once per line
+- build process
+    - don't publish to nedbat.com any more (but still need the sample html reports)
+        + don't need .px tooling
+        - write a new nedbat.com/code/coverage page.
+    - all doc links should point to rtfd
++ Remove code only run on <2.6
++ Change data file to json
++ Create data api
++ gevent, etc.
++ Remove the old command-line syntax
+    + A pain, b/c of the structure of the tests.
+    + BTW: make an easier way to write those tests.
+
+- tests
+    - test the kit has the right contents
+    - test the kit installs the right stuff
+
+
+* --source stuff:
+    + warn if a package is never found.
+    + warn if no data was collected
+    - tie --source into reporting
+
+* Soon
+
++ Better omit handling that ignores files during measurement.
+    - Deal with ~ in specified paths correctly.
++ while TRUE claims to be partial.
+    + A way to mark lines as partial branches, with a regex?
+        + Default to "while True:", "while 1:"
++ HTML keyboard short cuts
+
+
+* 3.2
+
++ Some kind of indication in the HTML where yellow lines aren't going.
+- Profile the reporting code: it's REALLY slow.
+    - parser is doing some redundant work.
++ Analysis class should do rolling up of stats also (actually Numbers)
++ Update docs for --branch.
+x self.coverage.data.has_arcs is ugly.
++ Branches that never jump to nocover lines shouldn't be marked as partial.
+    (see top of test_cogapp for examples)
++ Maybe turning off yellow lines should make those lines green?
++ A missing branch to leave the function shows an annotation of -1. Now "exit".
++ XML report needs to get branch information.
++ Add branch info to "coverage debug data"
++ Polish up the help, and double-check the docs.
+
+
+* Speed
+
++ C extension collector
+- bitvector in trace extension.
+- Ignore certain modules
++ Record linenos rather than (file,lineno) pairs in tracer.
+x Tricky swapping of collector like figleaf, pycov, et al. (Don't need to do
+    this with C collector).
+- Seems like there should be a faster way to manage all the line number sets in
+    CodeParser.raw_parse.
+- If tracing, canonical_filename_cache overlaps with should_trace_cache.  Skip
+    canonical_filename_cache. Maybe it isn't even worth it...
+- Would pre-allocating line number integers make the C tracer faster? It would
+    use less memory.
+
+
+* Accuracy
+
+- Record magic number of module to ensure code hasn't changed
+- Record version of coverage data file, so we can update what's stored there.
+- Record options in coverage data file, so multiple runs are certain to make
+    sense together.
+- Do I still need the lines in annotate_file that deal specially with "else"?
+
+
+* Power
+
++ Branch coverage
+    Titus' idea:
+        1: if a:
+        2:     b = 2
+        3: c = 3
+    if the coverage data shows 1,2,3, it was if-then.  if it's 1,3, then the
+    missing else was executed.
++ API for getting coverage data.
+- Instruction tracing instead of line tracing.
+- Path tracing (how does this even work?)
+- Count execution of lines
+- Track callers of functions (ala std module trace)
+- Method/Class/Module coverage reporting.
+- .coverage files that can be kept separate, rather than accumulated.
+- test/coverage map: http://rbtcollins.wordpress.com/2009/09/16/back-from-hiatus/
+    - Similar to figleaf's sections.
+
+
+* Convenience
+
+- Command line modules should also be directories, meaning all the modules in that
+    directory.
+- Why can't a morf also be a string, the name of a module?
+- ignore by module as well as file?
++ Use a .coveragerc file to control coverage.py without the programmatic API.
+- Add a --data switch to explicitly control the data file on the command line.
+x Why can't you specify execute (-x) and report (-r) in the same invocation?
+    Maybe just because -x needs the rest of the command line?
++ Support 2.3 - 3.1!
+    http://pythonology.blogspot.com/2009/02/making-code-run-on-python-20-through-30.html
+    http://www.rfk.id.au/blog/entry/preparing-pyenchant-for-python-3
+    http://pydev.blogspot.com/2008/11/making-code-work-in-python-2-and-3.html
+    + Explicitly set pickle protocol to 2.
+- An inference mode that marks lines as executed if they "must have been" executed:
+    class definitions, etc, when coverage is started after the class is defined.
+- Different categories of exclude pragma? So you can enable and disable them
+    from the command line, to reconsider exclusions.
++ Reporting on files never touched by coverage.py (package completeness)
+- A setup.py command? http://jeetworks.org/node/50
+- Deltas: indicate the change in coverage percentage from the last run.
++ Show lines missing rather than lines run in the reporting, since that's what
+  you need to focus on.
+
+
+* Beauty
+
++ HTML report
+    - Colored bars indicating coverage per file.
+    - Package navigation.
+    - Rolled-up statistics.
+    - Some way to focus in on red and yellow
+        - Show only lines near highlights?
+        + Jump to next highlight?
+            + Keyboard navigation: j and k.
+    - Cookie for changes to pyfile.html state.
+    + Clickable column headers on the index page.
+    + Syntax coloring in HTML report.
+    + Dynamic effects in HTML report.
+    + Footer in reports pointing to coverage.py home page.
+    + Baseline grid for linenumber font.
+    + Separate out css and HTML.
+    + Does it work right with utf-8 source files? http://www.python.org/dev/peps/pep-0263/
+    - Use vim modeline to determine tab width: http://vimdoc.sourceforge.net/htmldoc/options.html#modeline
+
+
+* Community
+
++ New docs, rather than pointing to Gareth's
+    + Min python version is 2.3.
+    - Three phases of work:
+        - Collection
+        - Analysis
+        - Reporting
+    - Distinction between:
+        - ignore (files not to collect)
+        - exclude (lines not to report as missed)
+        - omit (files not to report)
+    - Changes from coverage.py 2.x:
+        - Bare "except:" lines now count as executable code.
+        - Double function decorators: all decorator lines count as executable code.
+    x Document the .coverage file format.
+    + HTML reporting.
+        - Much more detail about what's in the report.
+    - References between pages are off:
+        - They have <em> tags around them.
+        - They use #anchors that don't survive the px->html conversion.
++ Be sure --help text is complete (-i is missing).
++ Host the project somewhere with a real bug tracker: bitbucket.org
++ Point discussion to TIP
+- PEP 8 compliance?
+
+
+* Programmability
+
++ Don't use sys.exit in CoverageScript.
++ Remove singleton
+    + Initialization of instance variables in the class.
+
+
+* Installation
+
+x How will coverage.py package install over coverage.py module?
+x pip can't install it: it reads the coverage.py html page, and finds the kit link,
+    but then can't handle the root-relative link.
+
+
+* Modernization
+
++ Decide on minimum supported version
+    + 2.3
+    + Get rid of the basestring protection
+    + Use enumerate
+    + Use sets instead of dicts
++ Switch from getopt to optparse.
++ Get rid of the recursive nonsense.
++ Docstrings.
++ Remove huge document-style comments.
+- Better names:
+    + self.cache -> self.cache_filename -> CoverageData.filename
+    + self.usecache -> CoverageData.use_file
+- More classes:
+    - Module munging
+    + Coverage data files
++ Why are some imports at the top of the file, and some in functions?
++ Get rid of sys.exitfunc use.
++ True and False (with no backward adaptation: the constants are new in 2.2.1)
++ Get rid of compiler module
+    + In analyzing code
+    + In test_coverage.py
++ Style:
+    + lineno
+    + filename
+
+
+* Correctness
+
+- What does -p (parallel mode) mean with -e (erase data)?
+
+
+* Tests
+
++ Switch to a real test runner, like nose.
++ Test both the C trace function and the Python trace function.
++ parser.py has no direct tests.
++ Tests about the .coverage file.
++ Tests about the --long-form of arguments.
++ Tests about overriding the .coverage filename.
+- Tests about parallel mode.
++ Tests about assigning a multi-line string.
+- Tests about tricky docstrings.
++ Coverage test coverage.py!
+- Tests that tracing stops after calling stop()
+- More intensive thread testing.
+x Tests about the "import __main__" in cmdline.py
++ What happens if the -x script raises an exception?
+- Test that the kit has all the proper contents.

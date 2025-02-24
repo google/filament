@@ -1,0 +1,323 @@
+Name
+
+    EXT_external_objects_win32
+
+Name Strings
+
+    GL_EXT_memory_object_win32
+    GL_EXT_semaphore_win32
+
+Contributors
+
+    Carsten Rohde, NVIDIA
+    James Jones, NVIDIA
+    Jan-Harald Fredriksen, ARM
+    Jeff Juliano, NVIDIA
+
+Contact
+
+    James Jones, NVIDIA (jajones 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: June 2, 2017
+    Revision: 8
+
+Number
+
+    505
+    OpenGL ES Extension #282
+
+Dependencies
+
+    Written against the OpenGL 4.5 and OpenGL ES 3.2 specifications
+
+    GL_EXT_memory_object_win32 requires GL_EXT_memory_object
+
+    GL_EXT_semaphore_win32 requires GL_EXT_semaphore
+
+Overview
+
+    Building upon the OpenGL memory object and semaphore framework
+    defined in EXT_external_objects, this extension enables an OpenGL
+    application to import a memory object or semaphore from a Win32 NT
+    handle or a KMT share handle.
+
+
+New Procedures and Functions
+
+    If the GL_EXT_memory_object_win32 string is reported, the following
+    commands are added:
+
+    void ImportMemoryWin32HandleEXT(uint memory,
+                                    uint64 size,
+                                    enum handleType,
+                                    void *handle);
+
+    void ImportMemoryWin32NameEXT(uint memory,
+                                  uint64 size,
+                                  enum handleType,
+                                  const void *name);
+
+    If the GL_EXT_semaphore_win32 string is reported, the following commands
+    are added:
+
+    void ImportSemaphoreWin32HandleEXT(uint semaphore,
+                                       enum handleType,
+                                       void *handle);
+
+    void ImportSemaphoreWin32NameEXT(uint semaphore,
+                                     enum handleType,
+                                     const void *name);
+
+New Tokens
+
+    The following tokens are added if either of the
+    GL_EXT_memory_object_win32 or GL_EXT_semaphore_win32 strings are
+    reported:
+
+    Accepted by the <handleType> parameter of
+    ImportMemoryWin32HandleEXT(), ImportMemoryWin32NameEXT(),
+    ImportSemaphoreWin32HandleEXT(), and ImportSemaphoreWin32NameEXT():
+
+        HANDLE_TYPE_OPAQUE_WIN32_EXT               0x9587
+
+    Accepted by the <handleType> parameter of
+    ImportMemoryWin32HandleEXT() and ImportSemaphoreWin32HandleEXT():
+
+        HANDLE_TYPE_OPAQUE_WIN32_KMT_EXT           0x9588
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetFloatv,
+    GetIntegerv, GetInteger64v, GetBooleani_v, GetIntegeri_v, GetFloati_v,
+    GetDoublei_v, and GetInteger64i_v:
+
+        DEVICE_LUID_EXT                            0x9599
+        DEVICE_NODE_MASK_EXT                       0x959A
+
+    Constant values:
+
+        LUID_SIZE_EXT                              8
+
+    If the GL_EXT_memory_object_win32 string is reported, the following
+    tokens are added:
+
+    Accepted by the <handleType> parameter of
+    ImportMemoryWin32HandleEXT() and ImportMemoryWin32NameEXT():
+
+        HANDLE_TYPE_D3D12_TILEPOOL_EXT             0x9589
+        HANDLE_TYPE_D3D12_RESOURCE_EXT             0x958A
+        HANDLE_TYPE_D3D11_IMAGE_EXT                0x958B
+
+    Accepted by the <handleType> parameter of
+    ImportMemoryWin32HandleEXT():
+        HANDLE_TYPE_D3D11_IMAGE_KMT_EXT            0x958C
+
+    If the GL_EXT_semaphore_win32 string is reported, the following tokens
+    are added:
+
+    Accepted by the <handleType> parameter of
+    ImportSemaphoreWin32HandleEXT():
+
+        HANDLE_TYPE_D3D12_FENCE_EXT                0x9594
+
+    Accepted by the <pname> parameter of SemaphoreParameterui64v() and
+    GetSemaphoreParameterui64v():
+
+        D3D12_FENCE_VALUE_EXT                      0x9595
+
+Additions to Chapter 4 of the OpenGL 4.5 Specification (Event Model)
+
+    Add the following entries to table 4.2 "Commands for importing
+    external semaphore handles."
+
+        | Handle Type                      | Import commands                |
+        +----------------------------------+--------------------------------+
+        | HANDLE_TYPE_OPAQUE_WIN32_EXT     | ImportSemaphoreWin32HandleEXT, |
+        |                                  | ImportSemaphoreWin32NameEXT    |
+        | HANDLE_TYPE_OPAQUE_WIN32_KMT_EXT | ImportSemaphoreWin32HandleEXT  |
+        | HANDLE_TYPE_D3D12_FENCE_EXT      | ImportSemaphoreWin32HandleEXT, |
+        |                                  | ImportSemaphoreWin32NameEXT    |
+        +----------------------------------+--------------------------------+
+
+    Add the following after the second paragraph of section 4.2.1 "Importing
+    External Semaphore Handles into Semaphores"
+
+        The devices in use by the current context may also be identified by
+        an (LUID, node) pair.  To determine the LUID of the
+        current context, call GetUnsignedBytev with <pname> set to
+        DEVICE_LUID_EXT and <data> set to point to an array of LUID_SIZE_EXT
+        unsigned bytes.  Following the call, <data> can be cast to a pointer
+        to an LUID object that will be equal to the locally unique
+        identifier of an IDXGIAdapter1 object corresponding to the adapter
+        used by the current context.  To identify which individual devices
+        within an adapter are used by the current context, call GetIntegerv
+        with <pname> set to DEVICE_NODE_MASK_EXT.  A bitfield is returned
+        with one bit set for each device node used by the current context.
+        The bits set will be subset of those available on a Direct3D 12
+        device created on an adapter with the same LUID as the current
+        context.
+
+    Replace the paragraph in section 4.2.1 beginning "External handles
+    are often defined..." with the following
+
+        The commands
+
+            void ImportSemaphoreWin32HandleEXT(uint semaphore,
+                                               enum handleType,
+                                               void *handle);
+
+            void ImportSemaphoreWin32NameEXT(uint semaphore,
+                                             enum handleType,
+                                             const void *name);
+
+        import a semaphore from the win32 handle <handle> or the win32
+        object name <name>.  <handle> is a windows HANDLE cast to the type
+        "void*".  <name> is a NULL-terminated array of UTF-16 characters.
+        What type of object <handle> or <name> refers to is determined by
+        <handleType>.  Importing a Windows handle does not transfer
+        ownership of the handle to the GL implementation.  For handle types
+        defined as NT handles, the application must release the handle using
+        an appropriate system call when it is no longer needed.
+
+        The parameter <handle> takes the value of a windows HANDLE cast to
+
+
+    Add the following entries to table 4.3 "Semaphore parameters"
+
+        | Name                  | Handle Types                | Legal Values |
+        +-----------------------+-----------------------------+--------------+
+        | D3D12_FENCE_VALUE_EXT | HANDLE_TYPE_D3D12_FENCE_EXT | any value    |
+        +-----------------------+-----------------------------+--------------+
+
+    Add the following after the first paragraph of section 4.2.3 "Waiting
+    for Semaphores"
+
+        If <semaphore> was imported from a handle of the type
+        HANDLE_TYPE_D3D12_FENCE_EXT, it will reach the signaled state when
+        its value is greater than or equal to the value specified by its
+        D3D12_FENCE_VALUE_EXT parameter.
+
+    Add the following after the first paragraph of section 4.2.4 "Signaling
+    Semaphores"
+
+        If <semaphore> was imported from a handle of the type
+        HANDLE_TYPE_D3D12_FENCE_EXT, its value will be set to the value
+        specified by its D3D12_FENCE_VALUE_EXT parameter when the signal
+        operation completes.
+
+Additions to Chapter 6 of the OpenGL 4.5 Specification (Memory Objects)
+
+    Add the following entry to table 6.2 "Commands for importing
+    external memory handles."
+
+        | Handle Type                      | Import command              |
+        +----------------------------------+-----------------------------+
+        | HANDLE_TYPE_OPAQUE_WIN32_EXT     | ImportMemoryWin32HandleEXT, |
+        |                                  | ImportMemoryWin32NameEXT    |
+        | HANDLE_TYPE_OPAQUE_WIN32_KMT_EXT | ImportMemoryWin32HandleEXT, |
+        | HANDLE_TYPE_D3D12_TILEPOOL_EXT   | ImportMemoryWin32HandleEXT, |
+        |                                  | ImportMemoryWin32NameEXT    |
+        | HANDLE_TYPE_D3D12_RESOURCE_EXT   | ImportMemoryWin32HandleEXT, |
+        |                                  | ImportMemoryWin32NameEXT    |
+        | HANDLE_TYPE_D3D11_IMAGE_EXT      | ImportMemoryWin32HandleEXT, |
+        |                                  | ImportMemoryWin32NameEXT    |
+        | HANDLE_TYPE_D3D11_KMT_IMAGE_EXT  | ImportMemoryWin32HandleEXT  |
+        +----------------------------------------------------------------+
+
+    Replace the paragraph in section 6.1 beginning "External handles are
+    often defined..." with the following
+
+        The commands
+
+            void ImportMemoryWin32HandleEXT(uint memory,
+                                            uint64 size,
+                                            enum handleType,
+                                            void *handle);
+
+            void ImportMemoryWin32NameEXT(uint memory,
+                                          uint64 size,
+                                          enum handleType,
+                                          const void *name);
+
+        import a memory object of length <size> from the win32 handle
+        <handle> or the win32 object name <name>.  <handle> is a windows
+        HANDLE cast to the type "void*".  <name> is NULL-terminated array of
+        UTF-16 characters.  What type of object <handle> or <name> refers to
+        is determined by <handleType>.  Importing a Windows handle does not
+        transfer ownership of the handle to the GL implementation.  For
+        handle types defined as NT handles, the application must release the
+        handle using an appropriate system call when it is no longer needed.
+
+Additions to Chapter 21 of the OpenGL 4.5 Specification (Special Functions)
+
+    Add the following to section 21.4.1, Commands Not Usable in Display
+    Lists.
+
+    Under the "Memory Objects" section:
+
+        ImportMemoryWin32HandleEXT, ImportMemoryWin32NameEXT
+
+    Under the "GL command stream management" section:
+
+        ImportSemaphoreWin32HandleEXT, ImportSemaphoreWin32NameEXT
+
+Issues
+
+    1) What should the type of the <name> parameter be in the functions
+       ImportMemoryWin32NameEXT() and ImportSemaphoreWin32NameEXT()?
+
+       RESOLVED: const void*.  There is no wchar type in GL, and the issues
+       with C's wchar_t make it seem undesirable to introduce one.
+       Further, wchar_t isn't necessarily the correct type.  The win32 type
+       LPCWSTR is the fully correct type, but using it directly would
+       introduce dependencies on windows headers in glext.h.  Reusing
+       GLshort or GLushort would result in a correctly sized type, but
+       casting would still often be needed, and it looks non-intuitive.
+       Therefore, it seems best to leave the pointer loosely typed in the
+       prototype and define its type through spec language.
+
+Revision History
+
+    Revision 9, 2022-07-15 (James Jones)
+        - Added commands to the list of commands not permitted in display
+          lists.
+
+    Revision 8, 2017-06-02 (James Jones)
+        - Added extension numbers.
+        - Fixed the name of GL_HANDLE_TYPE_D3D12_RESOURCE_EXT.
+        - Fixed the name -f GL_HANDLE_TYPE_D3D11_IMAGE_KMT_EXT.
+        - Clarified which extensions each command and token belongs to.
+        - Clarified how to assign values to the "handle" import parameters.
+        - Marked complete.
+
+    Revision 7, 2017-05-24 (James Jones)
+        - Filled in real token values
+        - Refer to the GL implementation, not the Vulkan implementation.
+        - ImportSemaphoreWin32HandleEXT is used to import semaphores,
+          not ImportMemoryWin32HandleEXT.
+        - Added name-based object import functions.
+
+    Revision 6, 2017-04-05 (James Jones)
+        - Added context device LUID and node mask queries.
+
+    Revision 5, 2017-04-04 (James Jones)
+        - Clarified the effects of import operations on handles.
+
+    Revision 4, 2017-03-17 (James Jones)
+        - Renamed from KHR to EXT
+        - Added D3D12 fence value semaphore parameter
+
+    Revision 3, 2016-09-28 (James Jones)
+        - Merged the GL_KHR_memory_object_win32 and GL_KHR_semaphore_win32
+          specs.
+        - Added spec body describing how to use the new commands and tokens.
+
+    Revision 2, 2016-08-15 (Jeff Juliano)
+        - Clarified overview text.
+
+    Revision 1, 2016-08-05 (James Jones)
+        - Initial draft.

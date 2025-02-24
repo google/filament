@@ -1,0 +1,93 @@
+/* Copyright 2017 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+ html {
+  font-family: 'Helvetica', sans-serif;
+  font-size: 18px;
+}
+
+body > div {
+  margin: 10px 5px;
+}
+
+a {
+  text-decoration: none;
+}
+
+#error,
+#tracing_in_progress,
+#tracing_complete {
+  display: none;
+}
+
+#trace_status {
+  display: inline-block;
+  box-sizing: border-box;
+  width: calc(100% - 36px);
+  border: 1px inset #eee;
+  padding: 2px 5px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#stop_btn img {
+  height: 24px;
+  border: 0;
+  vertical-align: middle;
+}
+
+#trace_download img {
+  height: 16px;
+  vertical-align: middle;
+}
+
+#error {
+  color: #900;
+  text-align: center;
+  background-color: lightpink;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+#error_msg {
+  font-size: 14px;
+  font-weight: 200;
+  text-align: left;
+  margin: 5px 0 0 0;
+  color: #100;
+}
+
+#download_row {
+  font-weight: 200;
+}
+
+#upload_row {
+  margin: 20px;
+  text-align: center;
+}
+
+#upload_row img {
+  height: 32px;
+  vertical-align: middle;
+}
+
+#upload_row a {
+  color: firebrick;
+  font-size: 1.25em;
+  font-weight: bold;
+}
+
+#settings_row {
+  font-size: 12px;
+  font-weight: 200;
+}
+
+#disclaimer {
+  font-size: 10px;
+  color: #999;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: solid 1px #eee;
+}

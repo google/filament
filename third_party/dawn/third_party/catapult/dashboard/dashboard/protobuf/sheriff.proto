@@ -1,0 +1,266 @@
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+syntax = "proto3";
+
+package dashboard;
+
+// A Pattern message identifies patterns which apply to the various metrics,
+// expressed as test paths in the dashboard.
+message Pattern {
+  // Only one of a glob or a regular expression can be used when defining a
+  // pattern matcher.
+  oneof pattern {
+    // Used for path-based globbing.
+    string glob = 1;
+
+    // Use for regular expression matching.
+    string regex = 2;
+  }
+
+  // We support a number of statistic-based patterns, specific to the metrics we
+  // store and available from the dashboard. A pattern will appply to any of the
+  // statistics defined in the `stats` repeated field.
+  enum StatType {
+    STAT_TYPE_UNSPECIFIED = 0;
+    MIN = 1;
+    MEDIAN = 2;
+    MEAN = 3;
+    PCT_90 = 4;
+    PCT_99 = 5;
+    PCT_999 = 6;
+    MAX = 7;
+    STD_DEV = 8;
+    COUNT = 9;
+    SUM = 10;
+  }
+
+  // The pattern will match for any stats defined in this repeated field for the
+  // metrics that match. If this is empty, it applies to the default set of
+  // stats we alert for -- currently, [MEAN].
+  repeated StatType stats = 3;
+}
+
+// We can't exclude patterns using regular expression due to re2's limitation.
+// A typical usage is like:
+// {
+//   match: [
+//     { glob: "*" }
+//   ],
+//   exclude: [
+//     { glob: "*/exclude_something/*" }
+//   ]
+// }
+// It will match everything except */exclude_something/*.
+message Rules {
+  repeated Pattern match = 1;
+  repeated Pattern exclude = 2;
+}
+
+// An AnomalyConfig defines the bounds for which a change in a matching metric
+// can be considered "anomalous". For metrics that are matched, we apply the
+// anomaly config to determine whether we should create an alert.
+//
+// The configuration settings defined for an anomaly configuration override
+// defaults that are defined by the anomaly detection algorithm. Typically these
+// settings are applied in an "all or nothing" manner (i.e. logical and) -- if
+// one of the criteria set isn't met then a detected anomaly is rejected.
+//
+// The default values given below come from ../common/defaults.py.
+message AnomalyConfig {
+  // Setting the max_window_size influences the number of datapoints to consider
+  // when performing anomaly detection. Default is 50.
+  uint64 max_window_size = 1;
+
+  // Setting the min_segment_size lets the anomaly detection algorithm filter
+  // out anomalies that don't have at least min_segment_size data points
+  // before/after the candidate change-point. Default is 6.
+  uint64 min_segment_size = 2;
+
+  // Setting the min_absolute_change lets the anomaly detection algorithm filter
+  // out detected changes that don't meet the minimum absolute change for values
+  // before and at the candidate change-point. Default is 0.
+  float min_absolute_change = 3;
+
+  // Setting the min_relative_change lets the anomaly detection algorithm filter
+  // out detected changes that don't meet the minimum relative change for values
+  // before and at the candidate change-point. Default is 0.10.
+  float min_relative_change = 4;
+
+  // "Setppiness" is a number between 0 and 1 that indicates how similar the
+  // shape of a sequence of values to a perfect step function, where 1
+  // represents a step function. It uses the slope of normalized values to make
+  // this determination. Default is 0.5.
+  float min_steppiness = 5;
+
+  // The minimum multiple of the standard deviation for an absolute change to be
+  // considered significant. If absolute change / std-dev is less than this
+  // value then the anomaly detection algorithm will reject it. Default is 2.5.
+  float multiple_of_std_dev = 6;
+
+  reserved "patterns";
+  reserved 7;
+
+  // The rules to which this anomaly configuration apply.
+  reserved 8;
+  Rules rules = 9;
+}
+
+// Sheriff can use enable flag or rules to select tests being auto triaged. But
+// when sending Match request to the sheriff-config service, we only respond
+// enable or not without rules.
+message AutoTriage {
+  oneof auto_triage {
+    bool enable = 1;
+    Rules rules = 2;
+  };
+}
+
+// Sheriff can use enable flag or rules to select tests' groups being
+// automatically merged when corresponding bugs are marked as duplicate. But
+// when sending Match request to the sheriff-config service, we only respond
+// enable or not without rules. Available only if auto triage is enabled.
+message AutoMerge {
+  oneof auto_merge {
+    bool enable = 1;
+    Rules rules = 2;
+  };
+}
+
+// Sheriff can use enable flag or rules to select tests being auto bisected. But
+// when sending Match request to the sheriff-config service, we only respond
+// enable or not without rules.
+message AutoBisection {
+  oneof auto_bisection {
+    bool enable = 1;
+    Rules rules = 2;
+  };
+}
+
+// TODO(fancl): Maybe split Subscription used in config with the one used in
+// sheriff-config's response. We only return part of the Subscription info
+// from sheriff-config.
+// A Subscription describes a configuration through which we determine routing
+// information for alerts generated to matching metrics.
+// Next ID: 16
+message Subscription {
+  reserved 8;
+  reserved "patterns";
+
+  // A name is a free-form name for human readability purposes. It does not
+  // serve as a unique key nor have any value other than for identifying a
+  // subscription in logs, error messages, and in human readable contexts.
+  string name = 1;
+
+  // An optional URL for more information about the subscription. This can be a
+  // URL to a team's sheriff rotation, a link to a team mailing list, etc.
+  string rotation_url = 2;
+
+  // The notification email address where reports are sent.
+  string notification_email = 3;
+
+  // The contact email address who onws this sheriff config.
+  string contact_email = 10;
+
+  // A list of labels applied to the alerts (Monorail issues) associated with
+  // this subscription.
+  repeated string bug_labels = 4;
+
+  // A list of components to associate alerts to for this subscription.
+  repeated string bug_components = 5;
+
+  // A list of email addresses to CC for issues filed by the dashboard.
+  repeated string bug_cc_emails = 6;
+
+  // A string representing the Monorail project id to which the bug will be
+  // filed.
+  string monorail_project_id = 14;
+
+  // Enable automatic create issue based on alert group
+  AutoTriage auto_triage = 11;
+
+  // Enable automatic merge of alert groups when issues are marked as
+  // duplicate. Available only if auto triage is enabled.
+  AutoMerge auto_merge = 15;
+
+  // Enable automatic create pinpint bisection job based on alert group
+  AutoBisection auto_bisection = 13;
+
+  enum VisibilityTag {
+    INTERNAL_ONLY = 0;
+    PUBLIC = 1;
+  }
+
+  // Controls the visibility of this subscription, on whether the data that
+  // match the patterns should be considered "internal only" or "public".
+  //
+  // Consider two subscriptions, a public one, and an internal-only one. If
+  // there are alerts that come up for internal-only bots but match a public
+  // subscription, we shouldn't match that subscription. Consequently if there
+  // is an alert for a public bot which matches both subscriptions, we should
+  // file two different issues (i.e. we should not let the publicly raised
+  // issues know that there are internal-only subscribers to those).
+  //
+  // This also controls whether the subscription shows up in the UI for users
+  // that are considered "internal" or "public".
+  VisibilityTag visibility = 7;
+
+  // A list of rules to which a subscription applies. This means any alerts
+  // generated for the rule that match will include the `notification_email`
+  // in the list of CC'ed email addresses.
+  Rules rules = 12;
+
+  // Subscription-specific anomaly configurations. These refine the thresholds
+  // for alerts generated for this subscription specifically. If an alert would
+  // have been generated for multiple subscriptions, these anomaly
+  // configurations apply to the individual alert to determine whether this
+  // subscription even gets alerted for the particular alert.
+  repeated AnomalyConfig anomaly_configs = 9;
+}
+
+// A SheriffConfig lists the subscriptions for a project with their own sheriff
+// rotations. Typically, a project will have a single subscription
+// configuration. However, a project can define sub-teams and higher fidelity
+// subscriptions for certain groups of metrics with different anomaly
+// configurations. Given a hypothetical team which has sub-teams which care
+// about different kinds of metrics, we can have a configuration like the
+// following:
+//
+//   subscriptions {
+//     name: "Release Team"
+//     notification_email: "release-team@example.com"
+//     contact_email: "release-team@example.com"
+//     bug_labels: ["release-blocker"]
+//     rules: {
+//       match: [
+//         { glob: "project/**" }
+//       ]
+//     }
+//   }
+//
+//   subscriptions {
+//     name: "Memory Team"
+//     notification_email: "memory-team@example.com"
+//     contact_email: "memory-team@example.com"
+//     bug_labels: ["memory-regressions"]
+//
+//     // Get all default alerts for memory regressions from 'project/'.
+//     patterns {
+//       regex: "^project/.*memory_.*$"
+//     }
+//
+//     // Only look at peak memory usage changes of at least 10%.
+//     anomaly_configs {
+//       min_relative_change: 0.10  // 10%
+//       patterns {
+//         regex: "^project/platform/.*/memory_peak$"
+//       }
+//     }
+//   }
+//
+// Note that Sheriff configurations apply globally, for all metrics that get
+// uploaded to the dashboard. It is possible to define broad patterns which will
+// catch all anomalies found for every metric.
+message SheriffConfig {
+  repeated Subscription subscriptions = 1;
+}

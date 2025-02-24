@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.powervr.VulkanIntroducingPVRShell"
+		android:versionCode="1"
+        android:versionName="1.0">
+
+    <!-- 
+        The INTERNET permission is included to allow PVRTrace and PVRScope to use 
+        their renderstate override/remote capabilities with this application 
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 
+        The WRITE_EXTERNAL_STORAGE permission is included so PVRTrace 
+        can write trace files to external storage when recording this application
+    --> 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+    <application
+            android:allowBackup="true"
+            android:icon="@drawable/ic_launcher_icon"
+            android:label="@string/app_name" >
+        <activity android:name="VulkanIntroducingPVRShell"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="landscape"
+            android:clearTaskOnLaunch="true">
+            <meta-data android:name="android.app.lib_name" android:value="VulkanIntroducingPVRShell" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

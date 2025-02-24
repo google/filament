@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id="login-warning">
+  <style>
+    #message {
+      color: #dd4b39;
+      font-size: 20px;
+    }
+  </style>
+  <template>
+    <div id="message" hidden$="{{!missing}}">
+      No data available for {{missing}}. Please <a href$="{{loginLink}}">sign in</a> with a chromium.org account or a google.com account.
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'login-warning',
+  properties: {
+    loginLink: { notify: true },
+    missing: {
+      value: null,
+      notify: true
+    }
+  },
+  get messageElement() {
+    return this.$.message;
+  }
+});
+</script>

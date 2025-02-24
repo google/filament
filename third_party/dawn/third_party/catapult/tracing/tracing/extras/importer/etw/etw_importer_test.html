@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/etw/etw_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Base64 = tr.b.Base64;
+
+  test('canImport', function() {
+    assert.isFalse(tr.e.importer.etw.EtwImporter.canImport('string'));
+    assert.isFalse(tr.e.importer.etw.EtwImporter.canImport([]));
+
+    // Must not parse an invalid name.
+    const dummy = { name: 'dummy', content: [] };
+    assert.isFalse(tr.e.importer.etw.EtwImporter.canImport(dummy));
+
+    // Must parse  an empty valid trace.
+    const valid = { name: 'ETW', content: [] };
+    assert.isTrue(tr.e.importer.etw.EtwImporter.canImport(valid));
+  });
+
+  test('getModel', function() {
+    const model = 'dummy';
+    const events = [];
+    const importer = new tr.e.importer.etw.EtwImporter(model, events);
+    assert.strictEqual(importer.model, model);
+  });
+
+  test('registerEventHandler', function() {
+    // Create a dummy EtwImporter.
+    const model = 'dummy';
+    const events = ['events'];
+    const importer = new tr.e.importer.etw.EtwImporter(model, events);
+    const dummyHandler = function() {};
+
+    // The handler must not exists.
+    assert.isUndefined(importer.getEventHandler('ABCDEF', 2));
+
+    // Register an event handler for guid: ABCDEF and opcode: 2.
+    importer.registerEventHandler('ABCDEF', 2, dummyHandler);
+
+    // The handler exists now, must find it.
+    assert.isDefined(importer.getEventHandler('ABCDEF', 2));
+
+    // Must be able to manage an invalid handler.
+    assert.isUndefined(importer.getEventHandler('zzzzzz', 2));
+  });
+
+  test('parseEvent', function() {
+    const model = 'dummy';
+    const events = [];
+    const importer = new tr.e.importer.etw.EtwImporter(model, events);
+    let handlerCalled = false;
+    const dummyHandler = function() { handlerCalled = true; return true; };
+
+    // Register a valid handler.
+    importer.registerEventHandler('aaaa', 42, dummyHandler);
+
+    // Try to parse an invalid event with missing fields.
+    const incompleteEvent = { 'guid': 'aaaa', 'op': 42, 'ver': 0 };
+    assert.isFalse(importer.parseEvent(incompleteEvent));
+    assert.isFalse(handlerCalled);
+
+    // Try to parse a valid event.
+    const validEvent = {
+      'guid': 'aaaa', 'op': 42, 'ver': 0, 'cpu': 0, 'ts': 0,
+      'payload': Base64.btoa('0')
+    };
+    assert.isTrue(importer.parseEvent(validEvent));
+    assert.isTrue(handlerCalled);
+  });
+
+  test('resetTooSmall', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    const oldByteLength = decoder.payload_.byteLength;
+    // Decode a payload too big for the actual buffer.
+    decoder.reset('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+    const newByteLength = decoder.payload_.byteLength;
+
+    // Validate the buffer has been resized.
+    assert.isBelow(oldByteLength, newByteLength);
+  });
+
+  test('decode', function() {
+    const model = 'dummy';
+    const events = [];
+    const importer = new tr.e.importer.etw.EtwImporter(model, events);
+
+    const decoder = importer.decoder_;
+
+    decoder.reset('YQBiYw==');
+    assert.strictEqual(decoder.decodeInt32(), 0x63620061);
+
+    // Decode unsigned numbers.
+    decoder.reset('AQ==');
+    assert.strictEqual(decoder.decodeUInt8(), 0x01);
+
+    decoder.reset('AQI=');
+    assert.strictEqual(decoder.decodeUInt16(), 0x0201);
+
+    decoder.reset('AQIDBA==');
+    assert.strictEqual(decoder.decodeUInt32(), 0x04030201);
+
+    decoder.reset('AQIDBAUGBwg=');
+    assert.strictEqual(decoder.decodeUInt64ToString(), '0807060504030201');
+
+    // Decode signed numbers.
+    decoder.reset('AQ==');
+    assert.strictEqual(decoder.decodeInt8(), 0x01);
+
+    decoder.reset('AQI=');
+    assert.strictEqual(decoder.decodeInt16(), 0x0201);
+
+    decoder.reset('AQIDBA==');
+    assert.strictEqual(decoder.decodeInt32(), 0x04030201);
+
+    decoder.reset('AQIDBAUGBwg=');
+    assert.strictEqual(decoder.decodeInt64ToString(), '0807060504030201');
+
+    // Last value before being a signed number.
+    decoder.reset('fw==');
+    assert.strictEqual(decoder.decodeInt8(), 127);
+
+    // Decode negative numbers.
+    decoder.reset('1g==');
+    assert.strictEqual(decoder.decodeInt8(), -42);
+
+    decoder.reset('gA==');
+    assert.strictEqual(decoder.decodeInt8(), -128);
+
+    decoder.reset('hYI=');
+    assert.strictEqual(decoder.decodeInt16(), -32123);
+
+    decoder.reset('hYL//w==');
+    assert.strictEqual(decoder.decodeInt32(), -32123);
+
+    decoder.reset('Lv1ptv////8=');
+    assert.strictEqual(decoder.decodeInt32(), -1234567890);
+
+    // Decode number with zero (nul) in the middle of the string.
+    decoder.reset('YQBiYw==');
+    assert.strictEqual(decoder.decodeInt32(), 0x63620061);
+  });
+
+  test('decodeUInteger', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    decoder.reset('AQIDBAUGBwg=');
+    assert.strictEqual(decoder.decodeUInteger(false), 0x04030201);
+
+    decoder.reset('AQIDBAUGBwg=');
+    assert.strictEqual(decoder.decodeUInteger(true), '0807060504030201');
+  });
+
+  test('decodeString', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    decoder.reset('dGVzdAA=');
+    assert.strictEqual(decoder.decodeString(), 'test');
+
+    decoder.reset('VGhpcyBpcyBhIHRlc3Qu');
+    assert.strictEqual(decoder.decodeString(), 'This is a test.');
+  });
+
+  test('decodeW16String', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+    decoder.reset('dABlAHMAdAAAAA==');
+    assert.strictEqual(decoder.decodeW16String(), 'test');
+  });
+
+  test('decodeFixedW16String', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+    decoder.reset('dABlAHMAdAAAAA==');
+    assert.strictEqual(decoder.decodeFixedW16String(32), 'test');
+    assert.strictEqual(decoder.position_, 64);
+
+    decoder.reset('dABlAHMAdAAAAA==');
+    assert.strictEqual(decoder.decodeFixedW16String(1), 't');
+    assert.strictEqual(decoder.position_, 2);
+  });
+
+  test('decodeBytes', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+    decoder.reset('AAECAwQFBgc=');
+    const bytes = decoder.decodeBytes(8);
+    for (let i = 0; i < bytes.length; ++i) {
+      assert.strictEqual(bytes[i], i);
+    }
+  });
+
+  test('decodeSID', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    // Decode a SID structure with 64-bit pointer.
+    decoder.reset(
+        'AQIDBAECAwQFBAMCAAAAAAEFAAAAAAAFFQAAAAECAwQFBgcICQoLDA0DAAA=');
+    const sid = decoder.decodeSID(true);
+
+    assert.strictEqual(sid.pSid, '0403020104030201');
+    assert.strictEqual(sid.attributes, 0x02030405);
+    assert.strictEqual(sid.sid.length, 20);
+  });
+
+  test('decodeSystemTime', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    // Decode a SystemTime structure.
+    decoder.reset('AQACAAMABAAFAAYABwAIAA==');
+    const time = decoder.decodeSystemTime();
+    assert.strictEqual(time.wYear, 1);
+    assert.strictEqual(time.wMonth, 2);
+    assert.strictEqual(time.wDayOfWeek, 3);
+    assert.strictEqual(time.wDay, 4);
+    assert.strictEqual(time.wHour, 5);
+    assert.strictEqual(time.wMinute, 6);
+    assert.strictEqual(time.wSecond, 7);
+    assert.strictEqual(time.wMilliseconds, 8);
+  });
+
+  test('decodeTimeZoneInformation', function() {
+    const importer = new tr.e.importer.etw.EtwImporter('dummy', []);
+    const decoder = importer.decoder_;
+
+    // Decode a TimeZoneInformation structure.
+    decoder.reset('AQIDBGEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIAAwAEAAUABgAHAAgABA' +
+                  'MCAWIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIAAwAEAAUABgAHAAgACAgI' +
+                  'CA==');
+    const time = decoder.decodeTimeZoneInformation();
+
+    assert.strictEqual(time.bias, 0x04030201);
+    assert.strictEqual(time.standardBias, 0x01020304);
+    assert.strictEqual(time.daylightBias, 0x08080808);
+    assert.strictEqual(time.standardName, 'a');
+    assert.strictEqual(time.daylightName, 'b');
+  });
+
+  test('manageThreads', function() {
+    const events = [];
+    const model = 'dummy';
+    const importer = new tr.e.importer.etw.EtwImporter(model, events);
+
+    // After initialisation, no threads must exists.
+    assert.strictEqual(
+        Object.getOwnPropertyNames(importer.tidsToPid_).length, 0);
+
+    // Add some threads.
+    const thread10 = importer.createThreadIfNeeded(1, 10);
+    const thread11 = importer.createThreadIfNeeded(1, 11);
+    const thread20 = importer.createThreadIfNeeded(2, 20);
+
+    assert.strictEqual(
+        Object.getOwnPropertyNames(importer.tidsToPid_).length, 3);
+    assert.isTrue(importer.tidsToPid_.hasOwnProperty(10));
+    assert.isTrue(importer.tidsToPid_.hasOwnProperty(11));
+    assert.isTrue(importer.tidsToPid_.hasOwnProperty(20));
+
+    // Retrieve existing threads and processes.
+    const pid10 = importer.getPidFromWindowsTid(10);
+    const pid11 = importer.getPidFromWindowsTid(11);
+    const pid20 = importer.getPidFromWindowsTid(20);
+
+    assert.strictEqual(pid10, 1);
+    assert.strictEqual(pid11, 1);
+    assert.strictEqual(pid20, 2);
+  });
+});
+</script>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+
+<dom-module id="loading-wrapper">
+  <template>
+    <style>
+      .error {
+        color: var(--paper-red-500);
+      }
+
+      #loading-spinner {
+        align-items: center;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        padding: 1em;
+        width: 100%;
+      }
+    </style>
+
+    <iron-ajax id="request" auto="[[auto]]" url="[[url]]" params="[[params]]" headers="[[headers]]"
+               loading="{{loading}}" last-error="{{error}}"
+               last-response="{{response}}"></iron-ajax>
+    <template is="dom-if" if="[[loading]]">
+      <div id="loading-spinner">
+        <paper-spinner active></paper-spinner>
+      </div>
+    </template>
+    <template is="dom-if" if="[[!loading]]">
+      <template is="dom-if" if="[[error]]">
+        <template is="dom-if" if="[[error.response.error]]">
+          <p class="error">[[error.response.error]]
+        </template>
+        <template is="dom-if" if="[[!error.response.error]]">
+          <p class="error">[[error.error]]
+        </template>
+      </template>
+      <template is="dom-if" if="[[!error]]">
+        <div>
+          <slot></slot>
+        </div>
+      </template>
+    </template>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'loading-wrapper',
+
+      properties: {
+        auto: {
+          type: Boolean,
+          value: false,
+        },
+
+        url: {
+          type: String,
+        },
+
+        params: {
+          type: Object,
+        },
+
+        headers: {
+          type: Object,
+        },
+
+        loading: {
+          type: Boolean,
+        },
+
+        error: {
+          type: Object,
+        },
+
+        response: {
+          type: Object,
+          notify: true,
+          readonly: true,
+        },
+      },
+    });
+  </script>
+</dom-module>

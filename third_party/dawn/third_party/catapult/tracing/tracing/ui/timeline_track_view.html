@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/x_marker_annotation.html">
+<link rel="import" href="/tracing/ui/base/hotkey_controller.html">
+<link rel="import" href="/tracing/ui/base/mouse_mode_selector.html">
+<link rel="import" href="/tracing/ui/base/timing_tool.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/timeline_display_transform_animations.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/model_track.html">
+<link rel="import" href="/tracing/ui/tracks/x_axis_track.html">
+
+<!--
+  Interactive visualizaiton of Model objects based loosely on gantt charts.
+  Each thread in the Model is given a set of Tracks, one per subrow in the
+  thread. The TimelineTrackView class acts as a controller, creating the
+  individual tracks, while Tracks do actual drawing.
+
+  Visually, the TimelineTrackView produces (prettier) visualizations like the
+  following:
+    Thread1:  AAAAAAAAAA         AAAAA
+                  BBBB              BB
+    Thread2:     CCCCCC                 CCCCC
+-->
+<dom-module id='tr-ui-timeline-track-view'>
+  <template>
+    <style>
+    :host {
+      flex-direction: column;
+      display: flex;
+      position: relative;
+    }
+
+    :host ::content * {
+      -webkit-user-select: none;
+      cursor: default;
+    }
+
+    #drag_box {
+      background-color: rgba(0, 0, 255, 0.25);
+      border: 1px solid rgb(0, 0, 96);
+      font-size: 75%;
+      position: fixed;
+    }
+
+    #hint_text {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      font-size: 8pt;
+    }
+    </style>
+    <slot></slot>
+
+    <div id='drag_box'></div>
+    <div id='hint_text'></div>
+
+    <tv-ui-b-hotkey-controller id='hotkey_controller'>
+    </tv-ui-b-hotkey-controller>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-timeline-track-view',
+
+  ready() {
+    this.displayTransform_ = new tr.ui.TimelineDisplayTransform();
+    this.model_ = undefined;
+
+    this.timelineView_ = undefined;
+    this.pollIfViewportAttachedInterval_ = undefined;
+
+    this.viewport_ = new tr.ui.TimelineViewport(this);
+    this.viewportDisplayTransformAtMouseDown_ = undefined;
+    this.brushingStateController_ = undefined;
+
+    this.rulerTrackContainer_ =
+        new tr.ui.tracks.DrawingContainer(this.viewport_);
+    Polymer.dom(this).appendChild(this.rulerTrackContainer_);
+    this.rulerTrackContainer_.invalidate();
+    this.rulerTrackContainer_.style.overflowY = 'hidden';
+    this.rulerTrackContainer_.style.flexShrink = '0';
+
+    this.rulerTrack_ = new tr.ui.tracks.XAxisTrack(this.viewport_);
+    Polymer.dom(this.rulerTrackContainer_).appendChild(this.rulerTrack_);
+
+    this.upperModelTrack_ = new tr.ui.tracks.ModelTrack(this.viewport_);
+    this.upperModelTrack_.upperMode = true;
+    Polymer.dom(this.rulerTrackContainer_).appendChild(this.upperModelTrack_);
+
+    this.modelTrackContainer_ =
+        new tr.ui.tracks.DrawingContainer(this.viewport_);
+    Polymer.dom(this).appendChild(this.modelTrackContainer_);
+    this.modelTrackContainer_.style.display = 'block';
+    this.modelTrackContainer_.style.flexGrow = '1';
+    this.modelTrackContainer_.invalidate();
+
+    this.viewport_.modelTrackContainer = this.modelTrackContainer_;
+
+    this.modelTrack_ = new tr.ui.tracks.ModelTrack(this.viewport_);
+    Polymer.dom(this.modelTrackContainer_).appendChild(this.modelTrack_);
+
+    this.timingTool_ = new tr.ui.b.TimingTool(this.viewport_, this);
+
+    this.initMouseModeSelector();
+
+    this.hideDragBox_();
+
+    this.initHintText_();
+
+    this.onSelectionChanged_ = this.onSelectionChanged_.bind(this);
+
+    this.onDblClick_ = this.onDblClick_.bind(this);
+    this.addEventListener('dblclick', this.onDblClick_);
+
+    this.onMouseWheel_ = this.onMouseWheel_.bind(this);
+    this.addEventListener('mousewheel', this.onMouseWheel_);
+
+    this.onMouseDown_ = this.onMouseDown_.bind(this);
+    this.addEventListener('mousedown', this.onMouseDown_);
+
+    this.onMouseMove_ = this.onMouseMove_.bind(this);
+    this.addEventListener('mousemove', this.onMouseMove_);
+
+    this.onTouchStart_ = this.onTouchStart_.bind(this);
+    this.addEventListener('touchstart', this.onTouchStart_);
+
+    this.onTouchMove_ = this.onTouchMove_.bind(this);
+    this.addEventListener('touchmove', this.onTouchMove_);
+
+    this.onTouchEnd_ = this.onTouchEnd_.bind(this);
+    this.addEventListener('touchend', this.onTouchEnd_);
+
+
+    this.addHotKeys_();
+
+    this.mouseViewPosAtMouseDown_ = {x: 0, y: 0};
+    this.lastMouseViewPos_ = {x: 0, y: 0};
+
+    this.lastTouchViewPositions_ = [];
+
+    this.alert_ = undefined;
+
+    this.isPanningAndScanning_ = false;
+    this.isZooming_ = false;
+  },
+
+  initMouseModeSelector() {
+    this.mouseModeSelector_ = document.createElement(
+        'tr-ui-b-mouse-mode-selector');
+    this.mouseModeSelector_.targetElement = this;
+    Polymer.dom(this).appendChild(this.mouseModeSelector_);
+
+    this.mouseModeSelector_.addEventListener('beginpan',
+        this.onBeginPanScan_.bind(this));
+    this.mouseModeSelector_.addEventListener('updatepan',
+        this.onUpdatePanScan_.bind(this));
+    this.mouseModeSelector_.addEventListener('endpan',
+        this.onEndPanScan_.bind(this));
+
+    this.mouseModeSelector_.addEventListener('beginselection',
+        this.onBeginSelection_.bind(this));
+    this.mouseModeSelector_.addEventListener('updateselection',
+        this.onUpdateSelection_.bind(this));
+    this.mouseModeSelector_.addEventListener('endselection',
+        this.onEndSelection_.bind(this));
+
+    this.mouseModeSelector_.addEventListener('beginzoom',
+        this.onBeginZoom_.bind(this));
+    this.mouseModeSelector_.addEventListener('updatezoom',
+        this.onUpdateZoom_.bind(this));
+    this.mouseModeSelector_.addEventListener('endzoom',
+        this.onEndZoom_.bind(this));
+
+    this.mouseModeSelector_.addEventListener('entertiming',
+        this.timingTool_.onEnterTiming.bind(this.timingTool_));
+    this.mouseModeSelector_.addEventListener('begintiming',
+        this.timingTool_.onBeginTiming.bind(this.timingTool_));
+    this.mouseModeSelector_.addEventListener('updatetiming',
+        this.timingTool_.onUpdateTiming.bind(this.timingTool_));
+    this.mouseModeSelector_.addEventListener('endtiming',
+        this.timingTool_.onEndTiming.bind(this.timingTool_));
+    this.mouseModeSelector_.addEventListener('exittiming',
+        this.timingTool_.onExitTiming.bind(this.timingTool_));
+
+    const m = tr.ui.b.MOUSE_SELECTOR_MODE;
+    this.mouseModeSelector_.supportedModeMask =
+        m.SELECTION | m.PANSCAN | m.ZOOM | m.TIMING;
+    this.mouseModeSelector_.settingsKey =
+        'timelineTrackView.mouseModeSelector';
+    this.mouseModeSelector_.setKeyCodeForMode(m.PANSCAN, '2'.charCodeAt(0));
+    this.mouseModeSelector_.setKeyCodeForMode(m.SELECTION, '1'.charCodeAt(0));
+    this.mouseModeSelector_.setKeyCodeForMode(m.ZOOM, '3'.charCodeAt(0));
+    this.mouseModeSelector_.setKeyCodeForMode(m.TIMING, '4'.charCodeAt(0));
+
+    this.mouseModeSelector_.setModifierForAlternateMode(
+        m.SELECTION, tr.ui.b.MODIFIER.SHIFT);
+    this.mouseModeSelector_.setModifierForAlternateMode(
+        m.PANSCAN, tr.ui.b.MODIFIER.SPACE);
+  },
+
+  get brushingStateController() {
+    return this.brushingStateController_;
+  },
+
+  set brushingStateController(brushingStateController) {
+    if (this.brushingStateController_) {
+      this.brushingStateController_.removeEventListener('change',
+          this.onSelectionChanged_);
+    }
+    this.brushingStateController_ = brushingStateController;
+    if (this.brushingStateController_) {
+      this.brushingStateController_.addEventListener('change',
+          this.onSelectionChanged_);
+    }
+  },
+
+  set timelineView(view) {
+    this.timelineView_ = view;
+  },
+
+  get processViews() {
+    return this.modelTrack_.processViews;
+  },
+
+  onSelectionChanged_() {
+    this.showHintText_('Press \'m\' to mark current selection');
+    this.viewport_.dispatchChangeEvent();
+  },
+
+  set selection(selection) {
+    throw new Error('DO NOT CALL THIS');
+  },
+
+  set highlight(highlight) {
+    throw new Error('DO NOT CALL THIS');
+  },
+
+  detach() {
+    this.modelTrack_.detach();
+    this.upperModelTrack_.detach();
+
+    if (this.pollIfViewportAttachedInterval_) {
+      window.clearInterval(this.pollIfViewportAttachedInterval_);
+      this.pollIfViewportAttachedInterval_ = undefined;
+    }
+    this.viewport_.detach();
+  },
+
+  get viewport() {
+    return this.viewport_;
+  },
+
+  get model() {
+    return this.model_;
+  },
+
+  set model(model) {
+    if (!model) {
+      throw new Error('Model cannot be undefined');
+    }
+
+    const modelInstanceChanged = this.model_ !== model;
+    this.model_ = model;
+    this.modelTrack_.model = model;
+    this.upperModelTrack_.model = model;
+
+    // Set up a reasonable viewport.
+    if (modelInstanceChanged) {
+      // The following code uses an interval to detect when the parent element
+      // is attached to the document. That is a trigger to run the setup
+      // function and install a resize listener.
+      this.pollIfViewportAttachedInterval_ = window.setInterval(
+          this.pollIfViewportAttached_.bind(this), 250);
+    }
+  },
+
+  get hasVisibleContent() {
+    return this.modelTrack_.hasVisibleContent ||
+        this.upperModelTrack_.hasVisibleContent;
+  },
+
+  /**
+   * Checks whether the parentNode is attached to the document.
+   * When it is, the method installs the iframe-based resize detection hook
+   * and then runs setInitialViewport_, if present.
+   */
+  pollIfViewportAttached_() {
+    if (!this.viewport_.isAttachedToDocumentOrInTestMode ||
+        this.viewport_.clientWidth === 0) {
+      return;
+    }
+    window.addEventListener(
+        'resize', this.viewport_.dispatchChangeEvent);
+    window.clearInterval(this.pollIfViewportAttachedInterval_);
+    this.pollIfViewportAttachedInterval_ = undefined;
+
+    this.setInitialViewport_();
+  },
+
+  setInitialViewport_() {
+    // We need the canvas size to be up-to-date at this point. We maybe in
+    // here before the raf fires, so the size may have not been updated since
+    // the canvas was resized.
+    this.modelTrackContainer_.updateCanvasSizeIfNeeded_();
+    const w = this.modelTrackContainer_.canvas.width;
+
+    let min;
+    let range;
+
+    if (this.model_.bounds.isEmpty) {
+      min = 0;
+      range = 1000;
+    } else if (this.model_.bounds.range === 0) {
+      min = this.model_.bounds.min;
+      range = 1000;
+    } else {
+      min = this.model_.bounds.min;
+      range = this.model_.bounds.range;
+    }
+
+    const boost = range * 0.15;
+    this.displayTransform_.set(this.viewport_.currentDisplayTransform);
+    this.displayTransform_.xSetWorldBounds(
+        min - boost, min + range + boost, w);
+    this.viewport_.setDisplayTransformImmediately(this.displayTransform_);
+  },
+
+  /**
+   * @param {Filter} filter The filter to use for finding matches.
+   * @param {Selection} selection The selection to add matches to.
+   * @return {Task} which performs the filtering.
+   */
+  addAllEventsMatchingFilterToSelectionAsTask(filter, selection) {
+    const modelTrack = this.modelTrack_;
+    const firstT = modelTrack.addAllEventsMatchingFilterToSelectionAsTask(
+        filter, selection);
+    const lastT = firstT.after(function() {
+      this.upperModelTrack_.addAllEventsMatchingFilterToSelection(
+          filter, selection);
+    }, this);
+    return firstT;
+  },
+
+  onMouseMove_(e) {
+    // Zooming requires the delta since the last mousemove so we need to avoid
+    // tracking it when the zoom interaction is active.
+    if (this.isZooming_) return;
+
+    this.storeLastMousePos_(e);
+  },
+
+  onTouchStart_(e) {
+    this.storeLastTouchPositions_(e);
+    this.focusElements_();
+  },
+
+  onTouchMove_(e) {
+    e.preventDefault();
+    this.onUpdateTransformForTouch_(e);
+  },
+
+  onTouchEnd_(e) {
+    this.storeLastTouchPositions_(e);
+    this.focusElements_();
+  },
+
+  addHotKeys_() {
+    this.addKeyDownHotKeys_();
+    this.addKeyPressHotKeys_();
+  },
+
+  addKeyPressHotKey(dict) {
+    dict.eventType = 'keypress';
+    dict.useCapture = false;
+    dict.thisArg = this;
+    const binding = new tr.ui.b.HotKey(dict);
+    this.$.hotkey_controller.addHotKey(binding);
+  },
+
+  addKeyPressHotKeys_() {
+    this.addKeyPressHotKey({
+      keyCodes: ['w'.charCodeAt(0), ','.charCodeAt(0)],
+      callback(e) {
+        this.zoomBy_(1.5, true);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCodes: ['s'.charCodeAt(0), 'o'.charCodeAt(0)],
+      callback(e) {
+        this.zoomBy_(1 / 1.5, true);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'g'.charCodeAt(0),
+      callback(e) {
+        this.onGridToggle_(true);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'G'.charCodeAt(0),
+      callback(e) {
+        this.onGridToggle_(false);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCodes: ['W'.charCodeAt(0), '<'.charCodeAt(0)],
+      callback(e) {
+        this.zoomBy_(10, true);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCodes: ['S'.charCodeAt(0), 'O'.charCodeAt(0)],
+      callback(e) {
+        this.zoomBy_(1 / 10, true);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'a'.charCodeAt(0),
+      callback(e) {
+        this.queueSmoothPan_(this.viewWidth_ * 0.3, 0);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCodes: ['d'.charCodeAt(0), 'e'.charCodeAt(0)],
+      callback(e) {
+        this.queueSmoothPan_(this.viewWidth_ * -0.3, 0);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'A'.charCodeAt(0),
+      callback(e) {
+        this.queueSmoothPan_(viewWidth * 0.5, 0);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'D'.charCodeAt(0),
+      callback(e) {
+        this.queueSmoothPan_(viewWidth * -0.5, 0);
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: '0'.charCodeAt(0),
+      callback(e) {
+        this.setInitialViewport_();
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'f'.charCodeAt(0),
+      callback(e) {
+        this.zoomToSelection();
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'm'.charCodeAt(0),
+      callback(e) {
+        this.setCurrentSelectionAsInterestRange_();
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'p'.charCodeAt(0),
+      callback(e) {
+        this.selectPowerSamplesInCurrentTimeRange_();
+        e.stopPropagation();
+      }
+    });
+
+    this.addKeyPressHotKey({
+      keyCode: 'h'.charCodeAt(0),
+      callback(e) {
+        this.toggleHighDetails_();
+        e.stopPropagation();
+      }
+    });
+  },
+
+  get viewWidth_() {
+    return this.modelTrackContainer_.canvas.clientWidth;
+  },
+
+  addKeyDownHotKeys_() {
+    const addBinding = function(dict) {
+      dict.eventType = 'keydown';
+      dict.useCapture = false;
+      dict.thisArg = this;
+      const binding = new tr.ui.b.HotKey(dict);
+      this.$.hotkey_controller.addHotKey(binding);
+    }.bind(this);
+
+    addBinding({
+      keyCode: 37, // Left arrow.
+      callback(e) {
+        const curSel = this.brushingStateController_.selection;
+        const sel = this.viewport.getShiftedSelection(curSel, -1);
+
+        if (sel) {
+          this.brushingStateController.changeSelectionFromTimeline(sel);
+          this.panToSelection();
+        } else {
+          this.queueSmoothPan_(this.viewWidth_ * 0.3, 0);
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    addBinding({
+      keyCode: 39, // Right arrow.
+      callback(e) {
+        const curSel = this.brushingStateController_.selection;
+        const sel = this.viewport.getShiftedSelection(curSel, 1);
+        if (sel) {
+          this.brushingStateController.changeSelectionFromTimeline(sel);
+          this.panToSelection();
+        } else {
+          this.queueSmoothPan_(-this.viewWidth_ * 0.3, 0);
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+  },
+
+  onDblClick_(e) {
+    if (this.mouseModeSelector_.mode !==
+        tr.ui.b.MOUSE_SELECTOR_MODE.SELECTION) {
+      return;
+    }
+
+    const curSelection = this.brushingStateController_.selection;
+    if (!curSelection.length || !tr.b.getOnlyElement(curSelection).title) {
+      return;
+    }
+
+    const selection = new tr.model.EventSet();
+    const filter = new tr.c.ExactTitleFilter(
+        tr.b.getOnlyElement(curSelection).title);
+    this.modelTrack_.addAllEventsMatchingFilterToSelection(filter,
+        selection);
+
+    this.brushingStateController.changeSelectionFromTimeline(selection);
+  },
+
+  onMouseWheel_(e) {
+    if (!e.altKey) return;
+
+    const delta = e.wheelDelta / 120;
+    const zoomScale = Math.pow(1.5, delta);
+    this.zoomBy_(zoomScale);
+    e.preventDefault();
+  },
+
+  onMouseDown_(e) {
+    if (this.mouseModeSelector_.mode !==
+        tr.ui.b.MOUSE_SELECTOR_MODE.SELECTION) {
+      return;
+    }
+
+    // Mouse down must start on ruler track for crosshair guide lines to draw.
+    if (e.target !== this.rulerTrack_) return;
+
+    // Make sure we don't start a selection drag event here.
+    this.dragBeginEvent_ = undefined;
+
+    // Remove nav string marker if it exists, since we're clearing the
+    // find control box.
+    if (this.xNavStringMarker_) {
+      this.model.removeAnnotation(this.xNavStringMarker_);
+      this.xNavStringMarker_ = undefined;
+    }
+
+    const dt = this.viewport_.currentDisplayTransform;
+    tr.ui.b.trackMouseMovesUntilMouseUp(function(e) { // Mouse move handler.
+      // If mouse event is on ruler, don't do anything.
+      if (e.target === this.rulerTrack_) return;
+
+      const relativePosition = this.extractRelativeMousePosition_(e);
+      const loc = tr.model.Location.fromViewCoordinates(
+          this.viewport_, relativePosition.x, relativePosition.y);
+      // Not all points on the timeline represents a valid location.
+      // ex. process header tracks, letter dot tracks.
+      if (!loc) return;
+
+      if (this.guideLineAnnotation_ === undefined) {
+        this.guideLineAnnotation_ =
+            new tr.model.XMarkerAnnotation(loc.xWorld);
+        this.model.addAnnotation(this.guideLineAnnotation_);
+      } else {
+        this.guideLineAnnotation_.timestamp = loc.xWorld;
+        this.modelTrackContainer_.invalidate();
+      }
+
+      // Set the findcontrol's text to nav string of current state.
+      const state = new tr.ui.b.UIState(loc,
+          this.viewport_.currentDisplayTransform.scaleX);
+      this.timelineView_.setFindCtlText(
+          state.toUserFriendlyString(this.viewport_));
+    }.bind(this),
+    undefined, // Mouse up handler.
+    function onKeyUpDuringDrag() {
+      if (this.dragBeginEvent_) {
+        this.setDragBoxPosition_(this.dragBoxXStart_, this.dragBoxYStart_,
+            this.dragBoxXEnd_, this.dragBoxYEnd_);
+      }
+    }.bind(this));
+  },
+
+  queueSmoothPan_(viewDeltaX, deltaY) {
+    const deltaX = this.viewport_.currentDisplayTransform.xViewVectorToWorld(
+        viewDeltaX);
+    const animation = new tr.ui.TimelineDisplayTransformPanAnimation(
+        deltaX, deltaY);
+    this.viewport_.queueDisplayTransformAnimation(animation);
+  },
+
+  /**
+   * Zoom in or out on the timeline by the given scale factor.
+   * @param {Number} scale The scale factor to apply.  If <1, zooms out.
+   * @param {boolean} Whether to change the zoom level smoothly.
+   */
+  zoomBy_(scale, smooth) {
+    if (scale <= 0) {
+      return;
+    }
+
+    smooth = !!smooth;
+    const vp = this.viewport_;
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    const goalFocalPointXView = this.lastMouseViewPos_.x * pixelRatio;
+    const goalFocalPointXWorld = vp.currentDisplayTransform.xViewToWorld(
+        goalFocalPointXView);
+    if (smooth) {
+      const animation = new tr.ui.TimelineDisplayTransformZoomToAnimation(
+          goalFocalPointXWorld, goalFocalPointXView,
+          vp.currentDisplayTransform.panY,
+          scale);
+      vp.queueDisplayTransformAnimation(animation);
+    } else {
+      this.displayTransform_.set(vp.currentDisplayTransform);
+      this.displayTransform_.scaleX *= scale;
+      this.displayTransform_.xPanWorldPosToViewPos(
+          goalFocalPointXWorld, goalFocalPointXView, this.viewWidth_);
+      vp.setDisplayTransformImmediately(this.displayTransform_);
+    }
+  },
+
+  /**
+   * Zoom into the current selection.
+   */
+  zoomToSelection() {
+    if (!this.brushingStateController.selectionOfInterest.length) return;
+
+    const bounds = this.brushingStateController.selectionOfInterest.bounds;
+    if (!bounds.range) return;
+
+    const worldCenter = bounds.center;
+    const viewCenter = this.modelTrackContainer_.canvas.width / 2;
+    const adjustedWorldRange = bounds.range * 1.25;
+    const newScale = this.modelTrackContainer_.canvas.width /
+        adjustedWorldRange;
+    const zoomInRatio = newScale /
+        this.viewport_.currentDisplayTransform.scaleX;
+
+    const animation = new tr.ui.TimelineDisplayTransformZoomToAnimation(
+        worldCenter, viewCenter,
+        this.viewport_.currentDisplayTransform.panY,
+        zoomInRatio);
+    this.viewport_.queueDisplayTransformAnimation(animation);
+  },
+
+  /**
+   * Pan the view so the current selection becomes visible.
+   */
+  panToSelection() {
+    if (!this.brushingStateController.selectionOfInterest.length) return;
+
+    const bounds = this.brushingStateController.selectionOfInterest.bounds;
+    const worldCenter = bounds.center;
+    const viewWidth = this.viewWidth_;
+
+    const dt = this.viewport_.currentDisplayTransform;
+    if (false && !bounds.range) {
+      if (dt.xWorldToView(bounds.center) < 0 ||
+          dt.xWorldToView(bounds.center) > viewWidth) {
+        this.displayTransform_.set(dt);
+        this.displayTransform_.xPanWorldPosToViewPos(
+            worldCenter, 'center', viewWidth);
+        const deltaX = this.displayTransform_.panX - dt.panX;
+        const animation = new tr.ui.TimelineDisplayTransformPanAnimation(
+            deltaX, 0);
+        this.viewport_.queueDisplayTransformAnimation(animation);
+      }
+      return;
+    }
+
+    this.displayTransform_.set(dt);
+    this.displayTransform_.xPanWorldBoundsIntoView(
+        bounds.min,
+        bounds.max,
+        viewWidth);
+    const deltaX = this.displayTransform_.panX - dt.panX;
+    const animation = new tr.ui.TimelineDisplayTransformPanAnimation(
+        deltaX, 0);
+    this.viewport_.queueDisplayTransformAnimation(animation);
+  },
+
+  navToPosition(uiState, showNavLine) {
+    const location = uiState.location;
+    const scaleX = uiState.scaleX;
+    const track = location.getContainingTrack(this.viewport_);
+
+    const worldCenter = location.xWorld;
+    const viewCenter = this.modelTrackContainer_.canvas.width / 5;
+    const zoomInRatio = scaleX /
+        this.viewport_.currentDisplayTransform.scaleX;
+
+    // Vertically scroll so track is in view.
+    track.scrollIntoViewIfNeeded();
+
+    // Perform zoom and panX animation.
+    const animation = new tr.ui.TimelineDisplayTransformZoomToAnimation(
+        worldCenter, viewCenter,
+        this.viewport_.currentDisplayTransform.panY,
+        zoomInRatio);
+    this.viewport_.queueDisplayTransformAnimation(animation);
+
+    if (!showNavLine) return;
+    // Add an X Marker Annotation at the specified timestamp.
+    if (this.xNavStringMarker_) {
+      this.model.removeAnnotation(this.xNavStringMarker_);
+    }
+    this.xNavStringMarker_ =
+        new tr.model.XMarkerAnnotation(worldCenter);
+    this.model.addAnnotation(this.xNavStringMarker_);
+  },
+
+  selectPowerSamplesInCurrentTimeRange_() {
+    const selectionBounds = this.brushingStateController_.selection.bounds;
+    if (this.model.device.powerSeries && !selectionBounds.empty) {
+      const events = this.model.device.powerSeries.getSamplesWithinRange(
+          selectionBounds.min, selectionBounds.max);
+      const selection = new tr.model.EventSet(events);
+      this.brushingStateController_.changeSelectionFromTimeline(selection);
+    }
+  },
+
+  setCurrentSelectionAsInterestRange_() {
+    const selectionBounds = this.brushingStateController_.selection.bounds;
+    if (selectionBounds.empty) {
+      this.viewport_.interestRange.reset();
+      return;
+    }
+
+    if (this.viewport_.interestRange.min === selectionBounds.min &&
+        this.viewport_.interestRange.max === selectionBounds.max) {
+      this.viewport_.interestRange.reset();
+    } else {
+      this.viewport_.interestRange.set(selectionBounds);
+    }
+  },
+
+  toggleHighDetails_() {
+    this.viewport_.highDetails = !this.viewport_.highDetails;
+  },
+
+  hideDragBox_() {
+    this.$.drag_box.style.left = '-1000px';
+    this.$.drag_box.style.top = '-1000px';
+    this.$.drag_box.style.width = 0;
+    this.$.drag_box.style.height = 0;
+  },
+
+  setDragBoxPosition_(xStart, yStart, xEnd, yEnd) {
+    const loY = Math.min(yStart, yEnd);
+    const hiY = Math.max(yStart, yEnd);
+    const loX = Math.min(xStart, xEnd);
+    const hiX = Math.max(xStart, xEnd);
+    const modelTrackRect = this.modelTrack_.getBoundingClientRect();
+    const dragRect = {left: loX, top: loY, width: hiX - loX, height: hiY - loY};
+
+    dragRect.right = dragRect.left + dragRect.width;
+    dragRect.bottom = dragRect.top + dragRect.height;
+
+    const modelTrackContainerRect =
+        this.modelTrackContainer_.getBoundingClientRect();
+    const clipRect = {
+      left: modelTrackContainerRect.left,
+      top: modelTrackContainerRect.top,
+      right: modelTrackContainerRect.right,
+      bottom: modelTrackContainerRect.bottom
+    };
+
+    const headingWidth = window.getComputedStyle(
+        Polymer.dom(this).querySelector('tr-ui-b-heading')).width;
+    const trackTitleWidth = parseInt(headingWidth);
+    clipRect.left = clipRect.left + trackTitleWidth;
+
+    const intersectRect_ = function(r1, r2) {
+      if (r2.left > r1.right || r2.right < r1.left ||
+          r2.top > r1.bottom || r2.bottom < r1.top) {
+        return false;
+      }
+
+      const results = {};
+      results.left = Math.max(r1.left, r2.left);
+      results.top = Math.max(r1.top, r2.top);
+      results.right = Math.min(r1.right, r2.right);
+      results.bottom = Math.min(r1.bottom, r2.bottom);
+      results.width = results.right - results.left;
+      results.height = results.bottom - results.top;
+      return results;
+    };
+
+    // TODO(dsinclair): intersectRect_ can return false (which should actually
+    // be undefined) but we use finalDragBox without checking the return value
+    // which could potentially blowup. Fix this .....
+    const finalDragBox = intersectRect_(clipRect, dragRect);
+
+    this.$.drag_box.style.left = finalDragBox.left + 'px';
+    this.$.drag_box.style.width = finalDragBox.width + 'px';
+    this.$.drag_box.style.top = finalDragBox.top + 'px';
+    this.$.drag_box.style.height = finalDragBox.height + 'px';
+    this.$.drag_box.style.whiteSpace = 'nowrap';
+
+    const pixelRatio = window.devicePixelRatio || 1;
+    const canv = this.modelTrackContainer_.canvas;
+    const dt = this.viewport_.currentDisplayTransform;
+    const loWX = dt.xViewToWorld(
+        (loX - canv.offsetLeft) * pixelRatio);
+    const hiWX = dt.xViewToWorld(
+        (hiX - canv.offsetLeft) * pixelRatio);
+
+    Polymer.dom(this.$.drag_box).textContent =
+        tr.b.Unit.byName.timeDurationInMs.format(hiWX - loWX);
+
+    const e = new tr.b.Event('selectionChanging');
+    e.loWX = loWX;
+    e.hiWX = hiWX;
+    this.dispatchEvent(e);
+  },
+
+  onGridToggle_(left) {
+    const selection = this.brushingStateController_.selection;
+    const tb = left ? selection.bounds.min : selection.bounds.max;
+
+    // Toggle the grid off if the grid is on, the marker position is the same
+    // and the same element is selected (same timebase).
+    if (this.viewport_.gridEnabled &&
+        this.viewport_.gridSide === left &&
+        this.viewport_.gridInitialTimebase === tb) {
+      this.viewport_.gridside = undefined;
+      this.viewport_.gridEnabled = false;
+      this.viewport_.gridInitialTimebase = undefined;
+      return;
+    }
+
+    // Shift the timebase left until its just left of model_.bounds.min.
+    const numIntervalsSinceStart = Math.ceil((tb - this.model_.bounds.min) /
+        this.viewport_.gridStep_);
+
+    this.viewport_.gridEnabled = true;
+    this.viewport_.gridSide = left;
+    this.viewport_.gridInitialTimebase = tb;
+    this.viewport_.gridTimebase = tb -
+        (numIntervalsSinceStart + 1) * this.viewport_.gridStep_;
+  },
+
+  storeLastMousePos_(e) {
+    this.lastMouseViewPos_ = this.extractRelativeMousePosition_(e);
+  },
+
+  storeLastTouchPositions_(e) {
+    this.lastTouchViewPositions_ = this.extractRelativeTouchPositions_(e);
+  },
+
+  extractRelativeMousePosition_(e) {
+    const canv = this.modelTrackContainer_.canvas;
+    return {
+      x: e.clientX - canv.offsetLeft,
+      y: e.clientY - canv.offsetTop
+    };
+  },
+
+  extractRelativeTouchPositions_(e) {
+    const canv = this.modelTrackContainer_.canvas;
+
+    const touches = [];
+    for (let i = 0; i < e.touches.length; ++i) {
+      touches.push({
+        x: e.touches[i].clientX - canv.offsetLeft,
+        y: e.touches[i].clientY - canv.offsetTop
+      });
+    }
+    return touches;
+  },
+
+  storeInitialMouseDownPos_(e) {
+    const position = this.extractRelativeMousePosition_(e);
+
+    this.mouseViewPosAtMouseDown_.x = position.x;
+    this.mouseViewPosAtMouseDown_.y = position.y;
+  },
+
+  focusElements_() {
+    this.$.hotkey_controller.childRequestsGeneralFocus(this);
+  },
+
+  storeInitialInteractionPositionsAndFocus_(e) {
+    this.storeInitialMouseDownPos_(e);
+    this.storeLastMousePos_(e);
+
+    this.focusElements_();
+  },
+
+  onBeginPanScan_(e) {
+    const vp = this.viewport_;
+    this.viewportDisplayTransformAtMouseDown_ =
+        vp.currentDisplayTransform.clone();
+    this.isPanningAndScanning_ = true;
+
+    this.storeInitialInteractionPositionsAndFocus_(e);
+    e.preventDefault();
+  },
+
+  onUpdatePanScan_(e) {
+    if (!this.isPanningAndScanning_) return;
+
+    const viewWidth = this.viewWidth_;
+
+    const pixelRatio = window.devicePixelRatio || 1;
+    const xDeltaView = pixelRatio * (this.lastMouseViewPos_.x -
+        this.mouseViewPosAtMouseDown_.x);
+
+    const yDelta = this.lastMouseViewPos_.y -
+        this.mouseViewPosAtMouseDown_.y;
+
+    this.displayTransform_.set(this.viewportDisplayTransformAtMouseDown_);
+    this.displayTransform_.incrementPanXInViewUnits(xDeltaView);
+    this.displayTransform_.panY -= yDelta;
+    this.viewport_.setDisplayTransformImmediately(this.displayTransform_);
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    this.storeLastMousePos_(e);
+  },
+
+  onEndPanScan_(e) {
+    this.isPanningAndScanning_ = false;
+
+    this.storeLastMousePos_(e);
+
+    if (!e.isClick) {
+      e.preventDefault();
+    }
+  },
+
+  onBeginSelection_(e) {
+    const canv = this.modelTrackContainer_.canvas;
+    const rect = this.modelTrack_.getBoundingClientRect();
+    const canvRect = canv.getBoundingClientRect();
+
+    const inside = rect &&
+        e.clientX >= rect.left &&
+        e.clientX < rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY < rect.bottom &&
+        e.clientX >= canvRect.left &&
+        e.clientX < canvRect.right;
+
+    if (!inside) return;
+
+    this.dragBeginEvent_ = e;
+
+    this.storeInitialInteractionPositionsAndFocus_(e);
+    e.preventDefault();
+  },
+
+  onUpdateSelection_(e) {
+    if (!this.dragBeginEvent_) return;
+
+    // Update the drag box
+    this.dragBoxXStart_ = this.dragBeginEvent_.clientX;
+    this.dragBoxXEnd_ = e.clientX;
+    this.dragBoxYStart_ = this.dragBeginEvent_.clientY;
+    this.dragBoxYEnd_ = e.clientY;
+    this.setDragBoxPosition_(this.dragBoxXStart_, this.dragBoxYStart_,
+        this.dragBoxXEnd_, this.dragBoxYEnd_);
+  },
+
+  onEndSelection_(e) {
+    e.preventDefault();
+
+    if (!this.dragBeginEvent_) return;
+
+    // Stop the dragging.
+    this.hideDragBox_();
+    const eDown = this.dragBeginEvent_;
+    this.dragBeginEvent_ = undefined;
+
+    // Figure out extents of the drag.
+    const loY = Math.min(eDown.clientY, e.clientY);
+    const hiY = Math.max(eDown.clientY, e.clientY);
+    const loX = Math.min(eDown.clientX, e.clientX);
+    const hiX = Math.max(eDown.clientX, e.clientX);
+
+    // Convert to worldspace.
+    const canv = this.modelTrackContainer_.canvas;
+    const worldOffset = canv.getBoundingClientRect().left;
+    const loVX = loX - worldOffset;
+    const hiVX = hiX - worldOffset;
+
+    // Figure out what has been selected.
+    const selection = new tr.model.EventSet();
+    if (eDown.appendSelection) {
+      const previousSelection = this.brushingStateController_.selection;
+      if (previousSelection !== undefined) {
+        selection.addEventSet(previousSelection);
+      }
+    }
+    this.modelTrack_.addIntersectingEventsInRangeToSelection(
+        loVX, hiVX, loY, hiY, selection);
+
+    // Activate the new selection.
+    this.brushingStateController_.changeSelectionFromTimeline(selection);
+  },
+
+  onBeginZoom_(e) {
+    this.isZooming_ = true;
+
+    this.storeInitialInteractionPositionsAndFocus_(e);
+    e.preventDefault();
+  },
+
+  onUpdateZoom_(e) {
+    if (!this.isZooming_) return;
+
+    const newPosition = this.extractRelativeMousePosition_(e);
+
+    const zoomScaleValue = 1 + (this.lastMouseViewPos_.y -
+        newPosition.y) * 0.01;
+
+    this.zoomBy_(zoomScaleValue, false);
+    this.storeLastMousePos_(e);
+  },
+
+  onEndZoom_(e) {
+    this.isZooming_ = false;
+
+    if (!e.isClick) {
+      e.preventDefault();
+    }
+  },
+
+  computeTouchCenter_(positions) {
+    let xSum = 0;
+    let ySum = 0;
+    for (let i = 0; i < positions.length; ++i) {
+      xSum += positions[i].x;
+      ySum += positions[i].y;
+    }
+    return {
+      x: xSum / positions.length,
+      y: ySum / positions.length
+    };
+  },
+
+  computeTouchSpan_(positions) {
+    let xMin = Number.MAX_VALUE;
+    let yMin = Number.MAX_VALUE;
+    let xMax = Number.MIN_VALUE;
+    let yMax = Number.MIN_VALUE;
+    for (let i = 0; i < positions.length; ++i) {
+      xMin = Math.min(xMin, positions[i].x);
+      yMin = Math.min(yMin, positions[i].y);
+      xMax = Math.max(xMax, positions[i].x);
+      yMax = Math.max(yMax, positions[i].y);
+    }
+    return Math.sqrt((xMin - xMax) * (xMin - xMax) +
+        (yMin - yMax) * (yMin - yMax));
+  },
+
+  onUpdateTransformForTouch_(e) {
+    const newPositions = this.extractRelativeTouchPositions_(e);
+    const currentPositions = this.lastTouchViewPositions_;
+
+    const newCenter = this.computeTouchCenter_(newPositions);
+    const currentCenter = this.computeTouchCenter_(currentPositions);
+
+    const newSpan = this.computeTouchSpan_(newPositions);
+    const currentSpan = this.computeTouchSpan_(currentPositions);
+
+    const vp = this.viewport_;
+    const viewWidth = this.viewWidth_;
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    const xDelta = pixelRatio * (newCenter.x - currentCenter.x);
+    const yDelta = newCenter.y - currentCenter.y;
+    const zoomScaleValue = currentSpan > 10 ? newSpan / currentSpan : 1;
+
+    const viewFocus = pixelRatio * newCenter.x;
+    const worldFocus = vp.currentDisplayTransform.xViewToWorld(viewFocus);
+
+    this.displayTransform_.set(vp.currentDisplayTransform);
+    this.displayTransform_.scaleX *= zoomScaleValue;
+    this.displayTransform_.xPanWorldPosToViewPos(
+        worldFocus, viewFocus, viewWidth);
+    this.displayTransform_.incrementPanXInViewUnits(xDelta);
+    this.displayTransform_.panY -= yDelta;
+    vp.setDisplayTransformImmediately(this.displayTransform_);
+    this.storeLastTouchPositions_(e);
+  },
+
+  initHintText_() {
+    this.$.hint_text.style.display = 'none';
+
+    this.pendingHintTextClearTimeout_ = undefined;
+  },
+
+  showHintText_(text) {
+    if (this.pendingHintTextClearTimeout_) {
+      window.clearTimeout(this.pendingHintTextClearTimeout_);
+      this.pendingHintTextClearTimeout_ = undefined;
+    }
+    this.pendingHintTextClearTimeout_ = setTimeout(
+        this.hideHintText_.bind(this), 1000);
+    Polymer.dom(this.$.hint_text).textContent = text;
+    this.$.hint_text.style.display = '';
+  },
+
+  hideHintText_() {
+    this.pendingHintTextClearTimeout_ = undefined;
+    this.$.hint_text.style.display = 'none';
+  }
+});
+</script>

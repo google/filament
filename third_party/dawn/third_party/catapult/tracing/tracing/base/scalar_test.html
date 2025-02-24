@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('nonUnitThrows', function() {
+    assert.throws(function() { new tr.b.Scalar('foo', -273.15); });
+  });
+
+  test('nonNumberScalarThrows', function() {
+    const unit = tr.b.Unit.byName.sizeInBytes;
+    assert.throws(function() { new tr.b.Scalar(unit, 'foo'); });
+  });
+
+  test('scalarBasic', function() {
+    const unit = tr.b.Unit.byName.sizeInBytes;
+
+    const d = {
+      unit: unit.asJSON(),
+      value: 42
+    };
+
+    assert.deepEqual(d, tr.b.Scalar.fromDict(d).asDict());
+  });
+});
+</script>

@@ -1,0 +1,13 @@
+Name: six
+URL: https://pypi.org/project/six/
+Version: 1.16.0
+Date: 2021-05-05
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: yes
+
+Description:
+Six provides utilities for wrapping over differences between Python 2 and 3.
+
+It is included in catapult because webtest depends on it.

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  function MetricRegistry() {}
+
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  options.defaultMetadata = {};
+  tr.b.decorateExtensionRegistry(MetricRegistry, options);
+
+  function camelCaseToHackerString(camelCase) {
+    let hackerString = '';
+    for (const c of camelCase) {
+      const lowered = c.toLocaleLowerCase();
+      if (lowered === c) {
+        hackerString += c;
+      } else {
+        hackerString += '_' + lowered;
+      }
+    }
+    return hackerString;
+  }
+
+  function getCallStack() {
+    try {
+      throw new Error();
+    } catch (error) {
+      return error.stack;
+    }
+  }
+
+  function getPathsFromStack(stack) {
+    return stack.split('\n').map(line => {
+      line = line.replace(/^ */, '').split(':');
+      if (line.length < 4) return '';
+      return line[line.length - 3].split('/');
+    }).filter(x => x);
+  }
+
+  MetricRegistry.checkFilename = function(metricName, opt_metricPathForTest) {
+    if (metricName === 'runtimeStatsTotalMetric' ||
+        metricName === 'v8AndMemoryMetrics') {
+      // TODO(crbug.com/688342) Remove the runtimeStatsTotalMetric exception.
+      // TODO(3275) Remove the v8AndMemoryMetrics exception.
+      // https://github.com/catapult-project/catapult/issues/3275
+      return;
+    }
+
+    const expectedFilename = camelCaseToHackerString(metricName) + '.html';
+    const stack = getCallStack();
+
+    let metricPath = opt_metricPathForTest;
+    if (metricPath === undefined) {
+      const paths = getPathsFromStack(stack);
+      const METRIC_STACK_INDEX = 5;
+
+      // This filename is in paths[0]. If this file is not vulcanized, then the
+      // metric's filename is in paths[METRIC_STACK_INDEX]. If this file is
+      // vulcanized, then they are the same, and paths[METRIC_STACK_INDEX] is
+      // not the metric's filename.
+      if (paths.length <= METRIC_STACK_INDEX ||
+          paths[METRIC_STACK_INDEX].join('/') === paths[0].join('/')) {
+        return;
+      }
+
+      metricPath = paths[METRIC_STACK_INDEX].slice(
+          paths[METRIC_STACK_INDEX].length - 2);
+    }
+
+    if (!metricPath[1].endsWith('_test.html') &&
+        !metricPath[1].endsWith('_test.html.js') &&
+        metricPath[1] !== expectedFilename &&
+        metricPath[1] !== expectedFilename + '.js' &&
+        metricPath.join('_') !== expectedFilename &&
+        metricPath.join('_') !== expectedFilename + '.js') {
+      throw new Error(
+          'Expected ' + metricName + ' to be in a file named ' +
+          expectedFilename + '; actual: ' + metricPath.join('/') +
+          '; stack: ' + stack.replace(/\n/g, '\n  '));
+    }
+  };
+
+  MetricRegistry.addEventListener('will-register', function(e) {
+    const metric = e.typeInfo.constructor;
+    if (!(metric instanceof Function)) {
+      throw new Error('Metrics must be functions.');
+    }
+
+    if (!metric.name.endsWith('Metric') &&
+        !metric.name.endsWith('Metrics')) {
+      throw new Error('Metric names must end with "Metric" or "Metrics".');
+    }
+
+    if (metric.length < 2) {
+      throw new Error('Metrics take a HistogramSet and a Model and ' +
+                      'optionally an options dictionary.');
+    }
+
+    MetricRegistry.checkFilename(metric.name);
+  });
+
+  return {
+    MetricRegistry,
+  };
+});
+</script>

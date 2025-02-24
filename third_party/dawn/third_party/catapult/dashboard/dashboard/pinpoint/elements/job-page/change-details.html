@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-selector/iron-selector.html">
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/job-page/change-info.html">
+<link rel="import" href="/elements/job-page/execution-details.html">
+
+<dom-module id="change-details">
+  <template>
+    <style include="base-style">
+      .commit-title {
+        margin-top: 8px;
+      }
+
+      #openDownloadDialog {
+        color: var(--paper-indigo-500);
+        cursor: pointer;
+        float: right;
+        font-size: 14px;
+        line-height: 26px;
+        font-weight: bold;
+      }
+
+      .emphasis {
+        font-weight: bold;
+      }
+
+      h2 > .emphasis {
+        font-weight: normal;
+      }
+
+      .flex {
+        display: flex;
+      }
+
+      .box {
+        display: flex;
+        overflow: auto;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+      }
+
+      iron-selector > *:hover {
+        background-color: var(--paper-pink-50);
+      }
+
+      iron-selector > *.iron-selected {
+        background-color: var(--paper-pink-100);
+      }
+
+      .status-item {
+        height: 18px;
+        line-height: 18px;
+        margin: 2px;
+        min-width: 18px;
+      }
+
+      .status-header {
+        font-weight: bold;
+        padding: 0 0.5em;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .status-box {
+        border-radius: 2px;
+        text-align: center;
+      }
+
+      .completed {
+        background-color: var(--paper-green-500);
+      }
+
+      .failed {
+        background-color: var(--paper-red-500);
+      }
+
+      .pending {
+        border: solid 1px var(--paper-grey-500);
+      }
+
+      .running {
+        background-color: var(--paper-grey-500);
+      }
+
+      p {
+        margin: 1em 0;
+      }
+    </style>
+
+    <template is="dom-if" if="[[changeState]]">
+      <h2 class="commit-title" >Commit [[changeString(changeState.change)]]
+        <copy id="casDownload" on-click="casDownload" isolate="{{isolateDetail(changeState.attempts.0.executions.0.details)}}" >
+           ⬇️
+        </copy>
+        <paper-tooltip for="casDownload" type="explanatory">
+          Click to copy the command that downloads Chrome release folder from CAS
+        </paper-tooltip>
+        <copy id="copyBenchmark" on-click="copyBenchmark" suffix="[[getArguments(job)]]" >
+          🖥️
+        </copy>
+        <paper-tooltip for="copyBenchmark" type="explanatory">
+          Click to copy the command that runs benchmark
+        </paper-tooltip>
+        <span id="openDownloadDialog" on-click="openDownloadDialog" >
+          Reproduce Locally
+        </span>
+        <paper-tooltip for="openDownloadDialog" type="explanatory">
+          Help
+        </paper-tooltip>
+      </h2>
+
+      <change-info change="[[changeState.change]]" args="[[extraArgs]]"></change-info>
+
+      <p>There are <span class="emphasis">[[attemptCount(changeState)]]</span> repeats at this commit.</p>
+
+      <div class="flex">
+        <div class="column">
+          <div class="status-item status-header"></div>
+          <template is="dom-repeat" items="[[job.quests]]">
+            <div class="status-item status-header">[[item]]</div>
+          </template>
+        </div>
+        <iron-selector class="box" selected="{{attemptIndex}}">
+          <template is="dom-repeat" items="[[changeState.attempts]]" as="attempt">
+            <div class="column">
+              <div class="status-item status-box">[[addOne(index)]]</div>
+              <template is="dom-repeat" items="[[attempt.executions]]" as="execution">
+                <div class$="status-item status-box [[status(execution)]]"></div>
+              </template>
+            </div>
+          </template>
+        </iron-selector>
+      </div>
+
+      <h2>Repeat #<span class="emphasis">[[addOne(attemptIndex)]]</span> execution details</h2>
+      <template is="dom-repeat" items="[[job.quests]]">
+        <h3>[[item]]</h3>
+        <execution-details execution="[[currentExecution(changeState.attempts, attemptIndex, index)]]"></execution-details>
+      </template>
+    </template>
+
+    <paper-dialog id="tooltip_download" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
+      <h2>Buttons usage:</h2>
+      <p>
+        <copy id="casDownload" on-click="casDownload" isolate="{{isolateDetail(changeState.attempts.0.executions.0.details)}}" >
+          ⬇️:
+        </copy>
+        Copy the CAS command which downloads the corresponding Chrome isolate binaries in terminal for reproducing the tests locally.
+      </p>
+      <p>
+        <copy id="copyBenchmark" on-click="copyBenchmark" suffix="[[getArguments(job)]]" >
+          🖥️:
+        </copy>
+        Copy the benchmark command which kicks off the local reproduction tests with corresponding parameters.
+      </p>
+      <h2>Pre-requisite: depot_tools and CAS</h2>
+      <div>
+        <p>
+          You need <a href="https://chromium.googlesource.com/chromium/src/+/HEAD/docs/windows_build_instructions.md#install"
+            target="_blank">depot_tools(download instructions) </a>
+          and <a href="https://g3doc.corp.google.com/devtools/foundry/g3doc/dev/architecture/cas.md?cl=head" target="_blank">CAS</a> installed to run the tests locally.
+        </p>
+        <code>
+          # To set up CAS in your current folder, copy code below and paste to terminal after you installed depot_tools
+        </code>
+        </br>
+        <code>
+          # (if needed, use "\${platform}" as-is) cipd install "infra/tools/luci/cas/\${platform}" -root bar
+        </code>
+        </br>
+        <code>
+          # (if needed) ./bar/cas login
+        </code>
+      </div>
+    </paper-dialog>
+    <paper-toast id="casDownloadToast"></paper-toast>
+    <paper-toast id="benchmarkToast" text="Benchmark command copied"></paper-toast>
+  </template>
+
+  <script>
+    'use strict';
+
+    const _CAS_DOWNLOAD_SUCCESS_PREFIX = 'Download command copied for isolate: '
+    const _CAS_DOWNLOAD_PREFIX = 'cas download -cas-instance projects/chrome-swarming/instances/default_instance -digest '
+    const _CAS_DOWNLOAD_SUFFIX = ' -dir foo'
+    const _BENCHMARK_CMD_WINDOWS = 'vpython3 foo/tools/perf/run_benchmark --output-format=json-test-results --output-dir=blah -d --pageset-repeat 1 --browser release_x64'
+    const _BENCHMARK_CMD = 'foo/tools/perf/run_benchmark --output-format=json-test-results --output-dir=blah -d --pageset-repeat 1 --browser release'
+    const _BENCHMARK_ARGS = {'benchmark': ' ', 'story': ' --story-filter ', 'story_tags': ' --story-tag-filter '}
+
+    Polymer({
+      is: 'change-details',
+
+      properties: {
+        job: {
+          type: Object
+        },
+
+        changeState: {
+          type: Object
+        },
+
+        attemptIndex: {
+          type: Number,
+          value: 0
+        },
+
+        extraArgs: {
+          type: String
+        },
+      },
+
+      getArguments(job) {
+        if (!job) {
+          return '';
+        }
+        const args = Object.assign({}, job.arguments);
+        let res = '';
+        for (const key in _BENCHMARK_ARGS) {
+          if (args[key]) {
+            res += _BENCHMARK_ARGS[key];
+            if (key === 'story') {
+              res += '"^' + args[key] + '$"';
+            } else {
+              res += args[key];
+            }
+          }
+        }
+        return res;
+      },
+
+      copyBenchmark(e) {
+        const args = e.target.suffix;
+        if (window.navigator.userAgent.indexOf('Windows') != -1) {
+          navigator.clipboard.writeText(_BENCHMARK_CMD_WINDOWS + args);
+        } else {
+          navigator.clipboard.writeText(_BENCHMARK_CMD + args);
+        }
+        document.getElementById('benchmarkToast').show();
+      },
+
+      openDownloadDialog() {
+        this.$.tooltip_download.open();
+      },
+
+      isolateDetail(details) {
+        let i = 0;
+        while (i < details.length) {
+          if (details[i].key == 'isolate') {
+            return details[i].value;
+          }
+          i += 1;
+        }
+      },
+
+      casDownload(e) {
+        let isolate  = e.target.isolate;
+        navigator.clipboard.writeText(_CAS_DOWNLOAD_PREFIX + isolate + _CAS_DOWNLOAD_SUFFIX);
+        const toast = document.getElementById('casDownloadToast');
+        toast.text = _CAS_DOWNLOAD_SUCCESS_PREFIX + isolate;
+        toast.show();
+      },
+
+      changeString(change) {
+        if (!change) {
+          return;
+        }
+
+        const lastCommit = change.commits[change.commits.length - 1];
+        let changeString = lastCommit.commit_position ||
+          lastCommit.git_hash.substring(0, 7);
+        if (change.patch) {
+          changeString += ' + ' + change.patch.author.split('@')[0];
+        }
+        return changeString;
+      },
+
+      attemptCount(changeState) {
+        if (!changeState) {
+          return;
+        }
+        return changeState.attempts.length;
+      },
+
+      addOne(num) {
+        return num + 1;
+      },
+
+      status(execution) {
+        if (!execution) {
+          return 'pending';
+        }
+        if (execution.exception) {
+          return 'failed';
+        }
+        if (execution.completed) {
+          return 'completed';
+        }
+        return 'running';
+      },
+
+      currentExecution(attempts, attemptIndex, questIndex) {
+        return attempts[attemptIndex].executions[questIndex];
+      },
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,25 @@
+# Specifies the build flags that are set by the LLVM GN build. The LLVM build
+# options specific to clspv targets go in here.
+
+# Contains only LLVM specific options
+declare_args() {
+  # Whether to enable assertions.
+  llvm_enable_assertions = true
+
+  # Whether to enable expensive checks.
+  llvm_enable_expensive_checks = false
+
+  # Whether to build with ThinLTO.
+  use_thinlto = false
+}
+
+# Below are libs setup as in `llvm/utils/gn/build/libs/*`
+declare_args() {
+  llvm_enable_libcurl = false
+  llvm_enable_libedit = host_os == "mac"
+  llvm_enable_threads = current_os != "win" && current_os != "android"
+  llvm_enable_libxar = host_os == "mac"
+  llvm_enable_libxml2 = current_os != "win" && current_os != "android"
+  llvm_enable_terminfo = false
+  llvm_enable_zlib = host_os != "win"
+}

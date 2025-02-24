@@ -1,0 +1,24 @@
+service: sheriff-config
+runtime: custom
+env: flex
+
+automatic_scaling:
+  min_num_instances: 10
+  max_num_instances: 50
+  cool_down_period_sec: 180
+  cpu_utilization:
+    target_utilization: 0.6
+
+resources:
+  cpu: 4
+  memory_gb: 4.8
+
+liveness_check:
+  path: /service-metadata
+
+readiness_check:
+  path: /warmup
+
+endpoints_api_service:
+  name: sheriff-config-dot-chromeperf.appspot.com
+  rollout_strategy: managed

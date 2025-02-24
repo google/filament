@@ -1,0 +1,290 @@
+#!/usr/bin/env python
+# Copyright (c) 2011 Joel Barciauskas http://joel.barciausk.as/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+
+#
+# Auto Scaling Groups Tool
+#
+VERSION="0.1"
+usage = """%prog [options] [command]
+Commands:
+    list|ls                           List all Auto Scaling Groups
+    list-lc|ls-lc                     List all Launch Configurations
+    delete    <name>                  Delete ASG <name>
+    delete-lc <name>                  Delete Launch Configuration <name>
+    get       <name>                  Get details of ASG <name>
+    create    <name>                  Create an ASG
+    create-lc <name>                  Create a Launch Configuration
+    update    <name> <prop> <value>   Update a property of an ASG
+    update-image <asg-name> <lc-name> Update image ID for ASG by creating a new LC
+    migrate-instances <name>          Shut down current instances one by one and wait for ASG to start up a new instance with the current AMI (useful in conjunction with update-image)
+
+Examples:
+
+    1) Create launch configuration
+        bin/asadmin create-lc my-lc-1 -i ami-1234abcd -t c1.xlarge -k my-key -s web-group -m
+
+    2) Create auto scaling group in us-east-1a and us-east-1c with a load balancer and min size of 2 and max size of 6
+        bin/asadmin create my-asg -z us-east-1a -z us-east-1c -l my-lc-1 -b my-lb -H ELB -p 180 -x 2 -X 6
+"""
+
+def get_group(autoscale, name):
+    g = autoscale.get_all_groups(names=[name])
+    if len(g) < 1:
+        print "No auto scaling groups by the name of %s found" % name
+        return sys.exit(1)
+    return g[0]
+
+def get_lc(autoscale, name):
+    l = autoscale.get_all_launch_configurations(names=[name])
+    if len(l) < 1:
+        print "No launch configurations by the name of %s found" % name
+        sys.exit(1)
+    return l[0]
+
+def list(autoscale):
+    """List all ASGs"""
+    print "%-20s %s" %  ("Name", "LC Name")
+    print "-"*80
+    groups = autoscale.get_all_groups()
+    for g in groups:
+        print "%-20s %s" % (g.name, g.launch_config_name)
+
+def list_lc(autoscale):
+    """List all LCs"""
+    print "%-30s %-20s %s" %  ("Name", "Image ID", "Instance Type")
+    print "-"*80
+    for l in autoscale.get_all_launch_configurations():
+        print "%-30s %-20s %s" % (l.name, l.image_id, l.instance_type)
+
+def get(autoscale, name):
+    """Get details about ASG <name>"""
+    g = get_group(autoscale, name)
+    print "="*80
+    print "%-30s %s" % ('Name:', g.name)
+    print "%-30s %s" % ('Launch configuration:', g.launch_config_name)
+    print "%-30s %s" % ('Minimum size:', g.min_size)
+    print "%-30s %s" % ('Maximum size:', g.max_size)
+    print "%-30s %s" % ('Desired capacity:', g.desired_capacity)
+    print "%-30s %s" % ('Load balancers:', ','.join(g.load_balancers))
+
+    print
+
+    print "Instances"
+    print "---------"
+    print "%-20s %-20s %-20s %s" % ("ID", "Status", "Health", "AZ")
+    for i in g.instances:
+        print "%-20s %-20s %-20s %s" % \
+        (i.instance_id, i.lifecycle_state, i.health_status, i.availability_zone)
+
+    print
+
+def create(autoscale, name, zones, lc_name, load_balancers, hc_type, hc_period,
+        min_size, max_size, cooldown, capacity):
+    """Create an ASG named <name>"""
+    g = AutoScalingGroup(name=name, launch_config=lc_name,
+            availability_zones=zones, load_balancers=load_balancers,
+            default_cooldown=cooldown, health_check_type=hc_type,
+            health_check_period=hc_period, desired_capacity=capacity,
+            min_size=min_size, max_size=max_size)
+    g = autoscale.create_auto_scaling_group(g)
+    return list(autoscale)
+
+def create_lc(autoscale, name, image_id, instance_type, key_name,
+        security_groups, instance_monitoring):
+    l = LaunchConfiguration(name=name, image_id=image_id,
+            instance_type=instance_type,key_name=key_name,
+            security_groups=security_groups,
+            instance_monitoring=instance_monitoring)
+    l = autoscale.create_launch_configuration(l)
+    return list_lc(autoscale)
+
+def update(autoscale, name, prop, value):
+    g = get_group(autoscale, name)
+    setattr(g, prop, value)
+    g.update()
+    return get(autoscale, name)
+
+def delete(autoscale, name, force_delete=False):
+    """Delete this ASG"""
+    g = get_group(autoscale, name)
+    autoscale.delete_auto_scaling_group(g.name, force_delete)
+    print "Auto scaling group %s deleted" % name
+    return list(autoscale)
+
+def delete_lc(autoscale, name):
+    """Delete this LC"""
+    l = get_lc(autoscale, name)
+    autoscale.delete_launch_configuration(name)
+    print "Launch configuration %s deleted" % name
+    return list_lc(autoscale)
+
+def update_image(autoscale, name, lc_name, image_id, is_migrate_instances=False):
+    """ Get the current launch config,
+        Update its name and image id
+        Re-create it as a new launch config
+        Update the ASG with the new LC
+        Delete the old LC """
+
+    g = get_group(autoscale, name)
+    l = get_lc(autoscale, g.launch_config_name)
+
+    old_lc_name = l.name
+    l.name = lc_name
+    l.image_id = image_id
+    autoscale.create_launch_configuration(l)
+    g.launch_config_name = l.name
+    g.update()
+
+    if(is_migrate_instances):
+        migrate_instances(autoscale, name)
+    else:
+        return get(autoscale, name)
+
+def migrate_instances(autoscale, name):
+    """ Shut down instances of the old image type one by one
+        and let the ASG start up instances with the new image """
+    g = get_group(autoscale, name)
+
+    old_instances = g.instances
+    ec2 = boto.connect_ec2()
+    for old_instance in old_instances:
+        print "Terminating instance " + old_instance.instance_id
+        ec2.terminate_instances([old_instance.instance_id])
+        while True:
+            g = get_group(autoscale, name)
+            new_instances = g.instances
+            for new_instance in new_instances:
+                hasOldInstance = False
+                instancesReady = True
+                if(old_instance.instance_id == new_instance.instance_id):
+                    hasOldInstance = True
+                    print "Waiting for old instance to shut down..."
+                    break
+                elif(new_instance.lifecycle_state != 'InService'):
+                    instancesReady = False
+                    print "Waiting for instances to be ready...."
+                    break
+            if(not hasOldInstance and instancesReady):
+                break
+            else:
+                time.sleep(20)
+    return get(autoscale, name)
+
+if __name__ == "__main__":
+    try:
+        import readline
+    except ImportError:
+        pass
+    import boto
+    import sys
+    import time
+    from optparse import OptionParser
+    from boto.mashups.iobject import IObject
+    from boto.ec2.autoscale import AutoScalingGroup
+    from boto.ec2.autoscale import LaunchConfiguration
+    parser = OptionParser(version=VERSION, usage=usage)
+    """ Create launch config options """
+    parser.add_option("-i", "--image-id",
+            help="Image (AMI) ID", action="store",
+            type="string", default=None, dest="image_id")
+    parser.add_option("-t", "--instance-type",
+            help="EC2 Instance Type (e.g., m1.large, c1.xlarge), default is m1.large",
+            action="store", type="string", default="m1.large", dest="instance_type")
+    parser.add_option("-k", "--key-name",
+            help="EC2 Key Name",
+            action="store", type="string", dest="key_name")
+    parser.add_option("-s", "--security-group",
+            help="EC2 Security Group",
+            action="append", default=[], dest="security_groups")
+    parser.add_option("-m", "--monitoring",
+            help="Enable instance monitoring",
+            action="store_true", default=False, dest="instance_monitoring")
+
+    """ Create auto scaling group options """
+    parser.add_option("-z", "--zone", help="Add availability zone", action="append", default=[], dest="zones")
+    parser.add_option("-l", "--lc-name",
+            help="Launch configuration name",
+            action="store", default=None, type="string", dest="lc_name")
+    parser.add_option("-b", "--load-balancer",
+            help="Load balancer name",
+            action="append", default=[], dest="load_balancers")
+    parser.add_option("-H", "--health-check-type",
+            help="Health check type (EC2 or ELB)",
+            action="store", default="EC2", type="string", dest="hc_type")
+    parser.add_option("-p", "--health-check-period",
+            help="Health check period in seconds (default 300s)",
+            action="store", default=300, type="int", dest="hc_period")
+    parser.add_option("-X", "--max-size",
+            help="Max size of ASG (default 10)",
+            action="store", default=10, type="int", dest="max_size")
+    parser.add_option("-x", "--min-size",
+            help="Min size of ASG (default 2)",
+            action="store", default=2, type="int", dest="min_size")
+    parser.add_option("-c", "--cooldown",
+            help="Cooldown time after a scaling activity in seconds (default 300s)",
+            action="store", default=300, type="int", dest="cooldown")
+    parser.add_option("-C", "--desired-capacity",
+            help="Desired capacity of the ASG",
+            action="store", default=None, type="int", dest="capacity")
+    parser.add_option("-f", "--force",
+            help="Force delete ASG",
+            action="store_true", default=False, dest="force")
+    parser.add_option("-y", "--migrate-instances",
+            help="Automatically migrate instances to new image when running update-image",
+            action="store_true", default=False, dest="migrate_instances")
+
+    (options, args) = parser.parse_args()
+
+    if len(args) < 1:
+        parser.print_help()
+        sys.exit(1)
+
+    autoscale = boto.connect_autoscale()
+
+    print "%s" % (autoscale.region.endpoint)
+
+    command = args[0].lower()
+    if command in ("ls", "list"):
+        list(autoscale)
+    elif command in ("ls-lc", "list-lc"):
+        list_lc(autoscale)
+    elif command == "get":
+        get(autoscale, args[1])
+    elif command == "create":
+        create(autoscale, args[1], options.zones, options.lc_name,
+                options.load_balancers, options.hc_type,
+                options.hc_period, options.min_size, options.max_size,
+                options.cooldown, options.capacity)
+    elif command == "create-lc":
+        create_lc(autoscale, args[1], options.image_id, options.instance_type,
+                options.key_name, options.security_groups,
+                options.instance_monitoring)
+    elif command == "update":
+        update(autoscale, args[1], args[2], args[3])
+    elif command == "delete":
+        delete(autoscale, args[1], options.force)
+    elif command == "delete-lc":
+        delete_lc(autoscale, args[1])
+    elif command == "update-image":
+        update_image(autoscale, args[1], args[2],
+                options.image_id, options.migrate_instances)
+    elif command == "migrate-instances":
+        migrate_instances(autoscale, args[1])

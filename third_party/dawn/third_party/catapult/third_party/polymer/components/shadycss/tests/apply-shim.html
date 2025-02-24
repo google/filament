@@ -1,0 +1,343 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+
+  <meta charset="utf-8">
+  <script>
+  WCT = {waitFor: function (cb) {HTMLImports.whenReady(cb)}}
+  </script>
+  <script src="./test-flags.js"></script>
+  <script src="../node_modules/wct-browser-legacy/browser.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+  <script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="../node_modules/@webcomponents/template/template.js"></script>
+  <script src="../node_modules/@webcomponents/html-imports/html-imports.min.js"></script>
+  <script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+  <script src="../node_modules/@webcomponents/custom-elements/custom-elements.min.js"></script>
+  <script src="../scoping-shim.min.js"></script>
+  <script src="../apply-shim.min.js"></script>
+  <script>
+  if (customElements.polyfillWrapFlushCallback) {
+    // delay definition of custom-style until after template polyfill loads
+    customElements.polyfillWrapFlushCallback(function(cb) {
+      HTMLImports.whenReady(cb);
+    });
+  }
+  </script>
+  <script src="../custom-style-interface.min.js"></script>
+  <script src="module/generated/custom-style-element.js"></script>
+  <script src="module/generated/make-element.js"></script>
+  <title>Apply Shim</title>
+
+</head>
+<body>
+  <template id="basic">
+    <style>
+    :host {
+      --mixin: {
+        border: 2px solid black;
+      };
+    }
+    div {
+      @apply --mixin;
+    }
+    </style>
+  </template>
+
+  <template id="defaults">
+    <style>
+    :host {
+      --mixin: {
+        border: 2px solid black;
+      }
+    }
+    div {
+      border: 1px dotted orange;
+      @apply --mixin;
+    }
+    span {
+      border: inherit;
+      @apply --mixin;
+    }
+    span {
+      border: initial;
+      @apply --mixin;
+    }
+    </style>
+  </template>
+
+  <template id="override">
+    <style>
+    :host {
+      --override: {
+        padding: 2px;
+      };
+    }
+    :host([override]) {
+      --override: {
+        border: 2px solid black;
+      };
+    }
+    div {
+      @apply --override;
+    }
+    </style>
+  </template>
+
+  <template id="override-with-property">
+    <style>
+    :root {
+      --prop-mixin: {
+        border: 2px solid black;
+      };
+    }
+    x-foo {
+      --prop-mixin: blue;
+      color: var(--prop-mixin);
+    }
+    div {
+      @apply --prop-mixin;
+    }
+    </style>
+  </template>
+
+  <template id="define-with-var">
+    <style>
+    :root {
+      --mixin-var: {
+        border: 2px solid black;
+      };
+    }
+    div {
+      --mixin-var2: var(--mixin-var);
+    }
+    span {
+      --mixin-var: 20px;
+      --variable: var(--mixin-var);
+    }
+    </style>
+  </template>
+
+  <template id="x-element">
+    <style>
+    :host {
+      @apply --my-mixin;
+    }
+    </style>
+  </template>
+
+  <template id="x-element2">
+    <custom-style>
+    <style>
+    html {
+      --my-mixin: {
+        border: 2px solid black;
+      };
+    }
+    </style>
+    </custom-style>
+  </template>
+  <template id="important">
+    <style>
+    :host {
+      --mixin-important: {
+        background-color: white;
+        border: 2px solid black !important;
+        color: white !important;
+      };
+      --mixin: {
+        background-color: red;
+        border: 1px dotted orange;
+        color: black !important;
+      };
+    }
+    div {
+      @apply --mixin-important;
+      @apply --mixin;
+    }
+    </style>
+  </template>
+  <script>
+  suite('Apply Shim', function() {
+    function copy(name) {
+      var template = document.querySelector('template#' + name);
+      return template.content.cloneNode(true);
+    }
+
+    function prep(templateName, elementName) {
+      var style = copy(templateName).querySelector('style');
+      var ast = window.ShadyCSS.ApplyShim.transformStyle(style, elementName);
+      return {style: style, ast: ast};
+    }
+
+    suite('Basic', function() {
+      var style, ast;
+      suiteSetup(function() {
+        var info = prep('basic');
+        style = info.style;
+        ast = info.ast;
+        style.textContent = window.ShadyCSS.ScopingShim.styleAstToString(ast);
+      });
+
+      test('style is transformed', function() {
+        var orig = copy('basic').querySelector('style');
+        assert.notEqual(style.textContent, orig.textContent);
+      });
+
+      test('mixin became custom properties', function() {
+        var definition = ast.rules[0];
+        var application = ast.rules[1];
+        assert.match(definition.cssText, /--mixin_-_border:\s*2px solid black/);
+        assert.match(application.cssText, /border:\s*var\(--mixin_-_border\)/);
+      });
+    });
+    suite('Defaults', function() {
+      var style, ast; // eslint-disable-line no-unused-vars
+      suiteSetup(function() {
+        var info = prep('defaults');
+        style = info.style;
+        ast = info.ast;
+      });
+
+      test('properties defined before mixin are used as defaults', function() {
+        var application = ast.rules[1];
+        assert.match(application.cssText, /border:\s*var\(--mixin_-_border,\s*1px dotted orange\)/);
+      });
+
+      test('inherit and initial default values are preserved', function() {
+        var application = ast.rules[2];
+        assert.match(application.cssText, /border:\s*var\(--mixin_-_border,\s*inherit\)/);
+        application = ast.rules[3];
+        assert.match(application.cssText, /border:\s*var\(--mixin_-_border,\s*initial\)/);
+      });
+    });
+
+    suite('override', function() {
+      var style, ast; // eslint-disable-line no-unused-vars
+      suiteSetup(function() {
+        var info = prep('override');
+        style = info.style;
+        ast = info.ast;
+      });
+
+      test('mixin redefinition sets unused properties to initial', function() {
+        var def1 = ast.rules[0];
+        assert.match(def1.cssText, /--override_-_padding:\s*2px/);
+        var def2 = ast.rules[1];
+        assert.match(def2.cssText, /--override_-_padding:\s*initial/);
+        assert.match(def2.cssText, /--override_-_border:\s*2px solid black/);
+      });
+
+      test('mixin application includes all values', function() {
+        var application = ast.rules[2];
+        assert.match(application.cssText, /padding:\s*var\(--override_-_padding\)/);
+        assert.match(application.cssText, /border:\s*var\(--override_-_border\)/);
+      });
+    });
+
+    suite('override with property', function() {
+      var style, ast; // eslint-disable-line no-unused-vars
+      suiteSetup(function() {
+        var info = prep('override-with-property');
+        style = info.style;
+        ast = info.ast;
+      });
+
+      test('mixin definition defers to property definition', function() {
+        var def = ast.rules[1];
+        assert.notMatch(def.cssText, /border:\s*var\(--prop-mixin_-_border\)/);
+      });
+
+      test('mixin can still be used by other parts of the page', function() {
+        var def = ast.rules[2];
+        assert.match(def.cssText, /border:\s*var\(--prop-mixin_-_border\)/);
+      });
+    });
+
+    suite('define with var()', function() {
+      var style, ast; // eslint-disable-line no-unused-vars
+      suiteSetup(function() {
+        var info = prep('define-with-var');
+        style = info.style;
+        ast = info.ast;
+      });
+
+      test('mixin-var2 is defined with mixin-var\'s values', function() {
+        var def = ast.rules[1];
+        assert.match(def.cssText, /--mixin-var2_-_border:\s*var\(--mixin-var_-_border\)/);
+      });
+
+      test('var usage of mixin is not removed, preserving override functionality', function() {
+        var def = ast.rules[2];
+        assert.match(def.cssText, /--variable:\s*var\(--mixin-var\)/);
+      });
+    });
+
+    suite('invalidation on new definitions', function() {
+      var style, ast, element;
+      suiteSetup(function() {
+        makeElement('x-element');
+        element = document.createElement('x-element');
+        document.body.appendChild(element);
+        style = element.shadowRoot ? element.shadowRoot.querySelector('style') : document.head.querySelector('style[scope=x-element]');
+      });
+
+      test('element initially has no definition', function() {
+        var ast = window.ShadyCSS.ScopingShim._styleInfoForNode(element)._getStyleRules();
+        assert.equal(ast.rules[0].cssText, ';');
+      });
+
+      test('Revalidating Apply Shim on element template fills in properties', function() {
+        var nodes = copy('x-element2');
+        document.body.appendChild(nodes);
+        window.ShadyCSS.styleDocument();
+        var ast = window.ShadyCSS.ScopingShim._styleInfoForNode(element)._getStyleRules();
+        if (window.ShadyCSS.nativeCss) {
+          assert.match(ast.rules[0].cssText, /border:\s*var\(--my-mixin_-_border\)/);
+        } else {
+          assert.match(ast.rules[0].cssText, /border:\s*2px solid black/);
+        }
+      });
+    });
+    suite('!important', function() {
+      var ast;
+      suiteSetup(function() {
+        var info = prep('important');
+        ast = info.ast;
+      });
+
+      test('!important in mixin correctly translates to !important in resulting custom property', function() {
+        var application = ast.rules[1];
+        assert.match(application.cssText, /border:\s*var\(--mixin-important_-_border\)\s*!important/);
+      });
+      test("Fallback of related property without !important is kept without !important in resulting custom property", function() {
+        var application = ast.rules[1];
+        assert.match(application.cssText, /border:\s*var\(--mixin_-_border,\s*var\(--mixin-important_-_border\)\)/);
+      });
+      test('Two mixins with both !important are treated in correct order while also preserving !important in resulting custom property', function () {
+        var application = ast.rules[1];
+        assert.match(application.cssText, /color:\s*var\(--mixin-important_-_color\)\s*!important/);
+        assert.match(application.cssText, /color:\s*var\(--mixin_-_color,\s*var\(--mixin-important_-_color\)\)\s*!important/);
+      })
+      test('Properties without !important in a mixin with !important are treated independently', function() {
+        var application = ast.rules[1];
+        assert.match(application.cssText, /background-color:\s*var\(--mixin_-_background-color,\s*var\(--mixin-important_-_background-color\)\)/);
+        assert.notMatch(application.cssText, /background-color:\s*var\(--mixin_-_background-color,\s*var\(--mixin-important_-_background-color\)\)\s*!important/);
+
+        assert.match(application.cssText, /background-color:\s*var\(--mixin-important_-_background-color\)/);
+        assert.notMatch(application.cssText, /background-color:\s*var\(--mixin-important_-_background-color\)\s*!important/);
+      });
+    });
+  });
+  </script>
+</body>
+</html>

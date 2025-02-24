@@ -1,0 +1,244 @@
+# Copyright (c) 2021-2024 Valve Corporation
+# Copyright (c) 2021-2024 LunarG, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: tools
+
+on:
+    push:
+    pull_request:
+        branches:
+            - main
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  # github.head_ref is only defined on pull_request
+  # Fallback to the run ID, which is guaranteed to be both unique and defined for the run.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id  }}
+  cancel-in-progress: true
+
+jobs:
+    linux:        
+        needs: tools_codegen
+        runs-on: ${{matrix.os}}
+
+        strategy:
+            matrix:
+                cc: [ gcc ]
+                cxx: [ g++ ]
+                config: [ Debug, Release ]
+                os: [ ubuntu-22.04, ubuntu-22.04 ]
+                include:
+                    # Test clang on ubuntu 22
+                  - cc: clang
+                    cxx: clang++
+                    config: Debug
+                    os: ubuntu-22.04
+                    # Test clang on ubuntu 24
+                  - cc: clang
+                    cxx: clang++
+                    config: Release
+                    os: ubuntu-24.04
+
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.10'
+            - run: |
+                sudo apt-get -qq update
+                sudo apt install --yes libwayland-dev xorg-dev wayland-protocols
+            - uses: lukka/get-cmake@latest
+              with:
+                cmakeVersion: 3.22.1
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                key: ${{ runner.os }}-${{ matrix.config }}-${{ matrix.cc }}
+            # This is to combat a bug when using 6.6 linux kernels with thread/address sanitizer
+            # https://github.com/google/sanitizers/issues/1716
+            - run: sudo sysctl vm.mmap_rnd_bits=28
+            - name: Configure
+              run: |
+                cmake -S. -B build -G "Ninja" \
+                -D CMAKE_BUILD_TYPE=${{matrix.config}} \
+                -D UPDATE_DEPS=ON \
+                -D BUILD_WERROR=ON \
+                -D INSTALL_ICD=ON \
+                -D BUILD_TESTS=ON \
+                -D ENABLE_ADDRESS_SANITIZER=ON
+              env:
+                CC: ${{matrix.cc}}
+                CXX: ${{matrix.cxx}}
+                CMAKE_CXX_COMPILER_LAUNCHER: ccache
+                CMAKE_C_COMPILER_LAUNCHER: ccache
+
+            - name: Build
+              run: cmake --build build
+
+            - name: Install
+              run: cmake --install build/ --prefix build/install
+
+            - name: Test
+              working-directory: ./build
+              run: ctest --output-on-failure
+
+    codegen:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - run: scripts/update_deps.py --dir ext --no-build
+        - run: scripts/generate_source.py --verify ext/Vulkan-Headers/registry/
+
+    windows:       
+        needs: tools_codegen
+        runs-on: ${{matrix.os}}
+
+        strategy:
+            matrix:
+                arch: [ Win32, x64 ]
+                config: [ Debug, Release ]
+                os: [ windows-latest ]
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.10'
+            - uses: lukka/get-cmake@latest
+            - uses: ilammy/msvc-dev-cmd@v1
+              with:
+                arch: ${{ matrix.arch }}
+
+            - name: Configure
+              run: cmake -S. -B build -G "Ninja" -DCMAKE_BUILD_TYPE=${{matrix.config}} -D UPDATE_DEPS=ON -D INSTALL_ICD=ON -D BUILD_TESTS=ON -D BUILD_WERROR=ON
+
+            - name: Build
+              run: cmake --build ./build
+
+            - name: Install
+              run: cmake --install build/ --prefix build/install
+
+            - name: Test
+              working-directory: ./build
+              run: ctest --output-on-failure
+
+    mac:
+        # mac is 10x expensive to run on GitHub machines, so only run if we know something else fast/simple passed as well
+        needs: chromium
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.8'
+            - uses: lukka/get-cmake@latest
+
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                key: macos
+
+            # NOTE: Add ccache this way instead of with CMAKE_<LANG>_COMPILER_LAUNCHER since MoltenVK doesn't use CMake.
+            - name: Add ccache to PATH
+              run: echo "/usr/lib/ccache:/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+
+            - run: cmake -S. -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -D UPDATE_DEPS=ON -D INSTALL_ICD=ON -D BUILD_TESTS=ON -D ENABLE_ADDRESS_SANITIZER=ON -D BUILD_WERROR=ON
+
+            - run: cmake --build build
+
+            - run: ctest --output-on-failure --test-dir build/
+
+            - run: cmake --install build --prefix /tmp
+
+    android:      
+      needs: tools_codegen
+      runs-on: ubuntu-22.04
+      strategy:
+        matrix:
+          abi: [ armeabi-v7a, arm64-v8a ]
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v5
+          with:
+            python-version: '3.8'
+        - uses: lukka/get-cmake@latest
+        - name: Configure
+          run: |
+            cmake -S . -B build/ --toolchain $ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -D ANDROID_PLATFORM=23 \
+            -D CMAKE_ANDROID_ARCH_ABI=${{matrix.abi}} \
+            -D CMAKE_ANDROID_STL_TYPE=c++_static \
+            -D ANDROID_USE_LEGACY_TOOLCHAIN_FILE=NO \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D UPDATE_DEPS=ON \
+            -D BUILD_TESTS=ON \
+            -D BUILD_WERROR=ON \
+            -G "Ninja"
+        - name: Build
+          run: cmake --build build
+        - name: Test
+          working-directory: ./build
+          run: ctest --output-on-failure -C Release
+        - name: Install
+          run: cmake --install build --prefix /tmp
+
+    mingw:
+        needs: tools_codegen
+        runs-on: windows-latest
+        defaults:
+          run:
+            shell: bash
+        steps:
+          - uses: actions/checkout@v4
+          - name: Setup ccache
+            uses: hendrikmuhs/ccache-action@v1.2
+            with:
+              key: mingw-ccache
+          - uses: actions/setup-python@v5
+            with:
+              python-version: '3.10'
+          - uses: lukka/get-cmake@latest
+          - name: GCC Version
+            run: gcc --version # If this fails MINGW is not setup correctly
+          - name: Configure
+            run: cmake -S. -B build -D UPDATE_DEPS=ON -D CMAKE_BUILD_TYPE=Release
+            env:
+              LDFLAGS: -fuse-ld=lld # MINGW linking is very slow. Use llvm linker instead.
+              CMAKE_C_COMPILER_LAUNCHER: ccache
+              CMAKE_CXX_COMPILER_LAUNCHER: ccache
+              CMAKE_GENERATOR: Ninja
+          - run: cmake --build build
+          - run: cmake --install build --prefix build/install
+
+    tools_codegen:
+      needs: codegen
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v5
+          with:
+            python-version: '3.10'
+        - run: sudo apt-get -qq update && sudo apt install --yes libwayland-dev xorg-dev wayland-protocols
+        - run: cmake -S . -B build/ -D UPDATE_DEPS=ON -D UPDATE_DEPS_DIR=external -D TOOLS_CODEGEN=ON
+        - run: cmake --build build --target tools_codegen
+        - run: git diff --exit-code
+
+    chromium:
+      needs: tools_codegen
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - run: scripts/gn/gn.py

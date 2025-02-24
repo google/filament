@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mappers/task_info_map_function.html">
+<link rel="import" href="/perf_insights/mre/mre_result.html">
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  var test_utils = tr.c.TestUtils;
+
+  test('taskInfoMapFunctionTest', function() {
+    var m = test_utils.newModel(function(m) {
+      var p1 = m.getOrCreateProcess(1);
+      p1.name = 'Process';
+      var t2 = p1.getOrCreateThread(2);
+      t2.name = 'CrBrowserMain';  // To identify as browser process.
+      // t2_s0 is not a top-level, no incoming flow.
+      var t2_s0 = test_utils.newSliceEx(
+          { start: 0, duration: 9.7, cpuStart: 0, cpuDuration: 5.3});
+      // t2_s1 is not a top-level, no incoming flow.
+      var t2_s1 = test_utils.newSliceEx(
+          { start: 11, duration: 20.1, cpuStart: 11, cpuDuration: 8.9 });
+      // t2_s2 is a top-level slice: f2 flows into it.
+      var t2_s2 = test_utils.newSliceEx(
+          { start: 15, duration: 10.4, cpuStart: 15, cpuDuration: 3.0 });
+      // t2_s3 is not a top-level slice because it's a child of t2_s2.
+      var t2_s3 = test_utils.newSliceEx(
+          { start: 17, duration: 2.4, cpuStart: 17, cpuDuration: 1.1 });
+      t2.sliceGroup.pushSlice(t2_s0);
+      t2.sliceGroup.pushSlice(t2_s1);
+      t2.sliceGroup.pushSlice(t2_s2);
+      t2.sliceGroup.pushSlice(t2_s3);
+      var f1 = test_utils.newFlowEventEx({
+        start: 0, duration: 18.1, startSlice: t2_s0, endSlice: t2_s3
+      });
+      var f2 = test_utils.newFlowEventEx({
+        start: 9, duration: 7.2, startSlice: t2_s0, endSlice: t2_s2
+      });
+      m.flowEvents.push(f1);
+      m.flowEvents.push(f2);
+    });
+
+    var result = new pi.mre.MreResult();
+    pi.m.taskInfoMapFunctionForTest(result, m);
+
+    assert.equal(tr.b.dictionaryLength(result.pairs), 3);
+    var time_spent_in_queue = result.pairs.time_spent_in_queue;
+    assert.equal(tr.b.dictionaryLength(time_spent_in_queue.Browser), 1);
+    var histogram = tr.v.Histogram.fromDict(
+        time_spent_in_queue['Browser']['CrBrowserMain']);
+    assert.equal(histogram.getBinForValue(7.2).count, 1);
+    assert.equal(histogram.getBinForValue(18.1).count, 1);
+    var time_spent_in_top_level_task = (
+        result.pairs.time_spent_in_top_level_task);
+    assert.equal(tr.b.dictionaryLength(
+        time_spent_in_top_level_task['Browser']), 1);
+    histogram = tr.v.Histogram.fromDict(
+        time_spent_in_top_level_task['Browser']['CrBrowserMain']);
+    assert.equal(histogram.getBinForValue(10.4).count, 1);
+    var cpu_time_spent_in_top_level_task = (
+        result.pairs.cpu_time_spent_in_top_level_task);
+    assert.equal(tr.b.dictionaryLength(
+        cpu_time_spent_in_top_level_task['Browser']), 1);
+    histogram = tr.v.Histogram.fromDict(
+        cpu_time_spent_in_top_level_task['Browser']['CrBrowserMain']);
+    assert.equal(histogram.getBinForValue(3.0).count, 1);
+  });
+});
+
+</script>

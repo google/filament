@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/flow_classifier.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-a-related-events'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #table {
+      flex: 1 1 auto;
+      align-self: stretch;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+function* getEventInFlowEvents(event) {
+  if (!event.inFlowEvents) return;
+  yield* event.inFlowEvents;
+}
+
+function* getEventOutFlowEvents(event) {
+  if (!event.outFlowEvents) return;
+  yield* event.outFlowEvents;
+}
+
+function* getEventAncestors(event) {
+  if (!event.enumerateAllAncestors) return;
+  yield* event.enumerateAllAncestors();
+}
+
+function* getEventDescendents(event) {
+  if (!event.enumerateAllDescendents) return;
+  yield* event.enumerateAllDescendents();
+}
+
+Polymer({
+  is: 'tr-ui-a-related-events',
+
+  ready() {
+    this.eventGroups_ = [];
+    this.cancelFunctions_ = [];
+
+    this.$.table.tableColumns = [
+      {
+        title: 'Event(s)',
+        value(row) {
+          const typeEl = document.createElement('span');
+          typeEl.innerText = row.type;
+          if (row.tooltip) {
+            typeEl.title = row.tooltip;
+          }
+          return typeEl;
+        },
+        width: '150px'
+      },
+      {
+        title: 'Link',
+        width: '100%',
+        value(row) {
+          const linkEl = document.createElement('tr-ui-a-analysis-link');
+          if (row.name) {
+            linkEl.setSelectionAndContent(row.selection, row.name);
+          } else {
+            linkEl.selection = row.selection;
+          }
+          return linkEl;
+        }
+      }
+    ];
+  },
+
+  hasRelatedEvents() {
+    return (this.eventGroups_ && this.eventGroups_.length > 0);
+  },
+
+  setRelatedEvents(eventSet) {
+    this.cancelAllTasks_();
+    this.eventGroups_ = [];
+    this.addRuntimeCallStats_(eventSet);
+    this.addOverlappingV8ICStats_(eventSet);
+    this.addV8GCObjectStats_(eventSet);
+    this.addV8Slices_(eventSet);
+    this.addConnectedFlows_(eventSet);
+    this.addConnectedEvents_(eventSet);
+    this.addOverlappingSamples_(eventSet);
+    this.updateContents_();
+  },
+
+  addConnectedFlows_(eventSet) {
+    const classifier = new tr.ui.analysis.FlowClassifier();
+    eventSet.forEach(function(slice) {
+      if (slice.inFlowEvents) {
+        slice.inFlowEvents.forEach(function(flow) {
+          classifier.addInFlow(flow);
+        });
+      }
+      if (slice.outFlowEvents) {
+        slice.outFlowEvents.forEach(function(flow) {
+          classifier.addOutFlow(flow);
+        });
+      }
+    });
+    if (!classifier.hasEvents()) return;
+
+    const addToEventGroups = function(type, flowEvent) {
+      this.eventGroups_.push({
+        type,
+        selection: new tr.model.EventSet(flowEvent),
+        name: flowEvent.title
+      });
+    };
+
+    classifier.inFlowEvents.forEach(
+        addToEventGroups.bind(this, 'Incoming flow'));
+    classifier.outFlowEvents.forEach(
+        addToEventGroups.bind(this, 'Outgoing flow'));
+    classifier.internalFlowEvents.forEach(
+        addToEventGroups.bind(this, 'Internal flow'));
+  },
+
+  cancelAllTasks_() {
+    this.cancelFunctions_.forEach(function(cancelFunction) {
+      cancelFunction();
+    });
+    this.cancelFunctions_ = [];
+  },
+
+  addConnectedEvents_(eventSet) {
+    this.cancelFunctions_.push(this.createEventsLinkIfNeeded_(
+        'Preceding events',
+        'Add all events that have led to the selected one(s), connected by ' +
+            'flow arrows or by call stack.',
+        eventSet,
+        function* (event) {
+          yield* getEventInFlowEvents(event);
+          yield* getEventAncestors(event);
+          if (event.startSlice) {
+            yield event.startSlice;
+          }
+        }.bind(this)));
+    this.cancelFunctions_.push(this.createEventsLinkIfNeeded_(
+        'Following events',
+        'Add all events that have been caused by the selected one(s), ' +
+            'connected by flow arrows or by call stack.',
+        eventSet,
+        function* (event) {
+          yield* getEventOutFlowEvents(event);
+          yield* getEventDescendents(event);
+          if (event.endSlice) {
+            yield event.endSlice;
+          }
+        }.bind(this)));
+    this.cancelFunctions_.push(this.createEventsLinkIfNeeded_(
+        'All connected events',
+        'Add all events connected to the selected one(s) by flow arrows or ' +
+            'by call stack.',
+        eventSet,
+        function* (event) {
+          yield* getEventInFlowEvents(event);
+          yield* getEventOutFlowEvents(event);
+          yield* getEventAncestors(event);
+          yield* getEventDescendents(event);
+          if (event.startSlice) {
+            yield event.startSlice;
+          }
+          if (event.endSlice) {
+            yield event.endSlice;
+          }
+        }.bind(this)));
+  },
+
+  createEventsLinkIfNeeded_(title, tooltip, events, connectedFn) {
+    events = new tr.model.EventSet(events);
+    const eventsToProcess = new Set(events);
+    // for (let event of events)
+    //  eventsToProcess.add(event);
+    let wasChanged = false;
+    let task;
+    let isCanceled = false;
+    function addEventsUntilTimeout() {
+      if (isCanceled) return;
+      // Let's grant ourselves a budget of 8 ms. If time runs out, then
+      // create another task to do the rest.
+      const timeout = window.performance.now() + 8;
+      // TODO(alexandermont): Don't check window.performance.now
+      // every iteration.
+      while (eventsToProcess.size > 0 &&
+          window.performance.now() <= timeout) {
+        // Get the next event.
+        const nextEvent = tr.b.getFirstElement(eventsToProcess);
+        eventsToProcess.delete(nextEvent);
+
+        // Add the connected events to the list.
+        for (const eventToAdd of connectedFn(nextEvent)) {
+          if (!events.contains(eventToAdd)) {
+            events.push(eventToAdd);
+            eventsToProcess.add(eventToAdd);
+            wasChanged = true;
+          }
+        }
+      }
+      if (eventsToProcess.size > 0) {
+        // There are still events to process, but we ran out of time. Post
+        // more work for later.
+        const newTask = new tr.b.Task(
+            addEventsUntilTimeout.bind(this), this);
+        task.after(newTask);
+        task = newTask;
+        return;
+      }
+      // Went through all events, add the link.
+      if (!wasChanged) return;
+      this.eventGroups_.push({
+        type: title,
+        tooltip,
+        selection: events
+      });
+      this.updateContents_();
+    }
+    function cancelTask() {
+      isCanceled = true;
+    }
+    task = new tr.b.Task(addEventsUntilTimeout.bind(this), this);
+    tr.b.Task.RunWhenIdle(task);
+    return cancelTask;
+  },
+
+  addOverlappingSamples_(eventSet) {
+    const samples = new tr.model.EventSet();
+    for (const slice of eventSet) {
+      if (!slice.parentContainer || !slice.parentContainer.samples) {
+        continue;
+      }
+      const candidates = slice.parentContainer.samples;
+      const range = tr.b.math.Range.fromExplicitRange(
+          slice.start, slice.start + slice.duration);
+      const filteredSamples = range.filterArray(
+          candidates, function(value) {return value.start;});
+      for (const sample of filteredSamples) {
+        samples.push(sample);
+      }
+    }
+    if (samples.length > 0) {
+      this.eventGroups_.push({
+        type: 'Overlapping samples',
+        tooltip: 'All samples overlapping the selected slice(s).',
+        selection: samples
+      });
+    }
+  },
+
+  addV8Slices_(eventSet) {
+    const v8Slices = new tr.model.EventSet();
+    for (const slice of eventSet) {
+      if (slice.category === 'v8') {
+        v8Slices.push(slice);
+      }
+    }
+    if (v8Slices.length > 0) {
+      this.eventGroups_.push({
+        type: 'V8 Slices',
+        tooltip: 'All V8 slices in the selected slice(s).',
+        selection: v8Slices
+      });
+    }
+  },
+
+  addRuntimeCallStats_(eventSet) {
+    const slices = eventSet.filter(function(slice) {
+      return (slice.category === 'v8' ||
+              slice.category === 'disabled-by-default-v8.runtime_stats') &&
+        slice.runtimeCallStats;
+    });
+    if (slices.length > 0) {
+      this.eventGroups_.push({
+        type: 'Runtime call stats table',
+        // eslint-disable-next-line
+        tooltip: 'All V8 slices containing runtime call stats table in the selected slice(s).',
+        selection: slices
+      });
+    }
+  },
+
+  addV8GCObjectStats_(eventSet) {
+    const slices = new tr.model.EventSet();
+    for (const slice of eventSet) {
+      if (slice.title === 'V8.GC_Objects_Stats') {
+        slices.push(slice);
+      }
+    }
+    if (slices.length > 0) {
+      this.eventGroups_.push({
+        type: 'V8 GC stats table',
+        tooltip: 'All V8 GC statistics slices in the selected set.',
+        selection: slices
+      });
+    }
+  },
+
+  addOverlappingV8ICStats_(eventSet) {
+    const slices = new tr.model.EventSet();
+    for (const slice of eventSet) {
+      if (!slice.parentContainer || !slice.parentContainer.sliceGroup) {
+        continue;
+      }
+      const sliceGroup = slice.parentContainer.sliceGroup.slices;
+      const range = tr.b.math.Range.fromExplicitRange(
+          slice.start, slice.start + slice.duration);
+      const filteredSlices = range.filterArray(
+          sliceGroup, value => value.start);
+      const icSlices = filteredSlices.filter(x => x.title === 'V8.ICStats');
+      for (const icSlice of icSlices) {
+        slices.push(icSlice);
+      }
+    }
+    if (slices.length > 0) {
+      this.eventGroups_.push({
+        type: 'Overlapping V8 IC stats',
+        tooltip: 'All V8 IC statistics overlapping the selected set.',
+        selection: slices
+      });
+    }
+  },
+
+  updateContents_() {
+    const table = this.$.table;
+    if (this.eventGroups_ === undefined) {
+      table.tableRows = [];
+    } else {
+      table.tableRows = this.eventGroups_.slice();
+    }
+    table.rebuild();
+  }
+});
+</script>

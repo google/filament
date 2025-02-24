@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/object_instance.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.img', function() {
+  const ObjectSnapshot = tr.model.ObjectSnapshot;
+
+  /**
+   * @constructor
+   */
+  function ImageSnapshot() {
+    ObjectSnapshot.apply(this, arguments);
+  }
+
+  ImageSnapshot.prototype = {
+    __proto__: ObjectSnapshot.prototype,
+
+    initialize() {
+      this.data_ = this.args.data;
+      this.type_ = this.args.params.type;
+    },
+
+    /**
+     * @return {String} base64 encoded data if available.
+     */
+    get data() {
+      return this.data_;
+    },
+
+    /**
+     * @return {String} the type of image data
+     */
+    get type() {
+      return this.type_;
+    },
+  };
+
+  ObjectSnapshot.subTypes.register(
+      ImageSnapshot,
+      {typeNames: ['gfx::Image']});
+
+  return {
+    ImageSnapshot,
+  };
+});
+</script>

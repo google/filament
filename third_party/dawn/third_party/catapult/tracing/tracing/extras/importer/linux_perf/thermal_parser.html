@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+<link rel="import" href="/tracing/model/counter_series.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses trace_marker events that were inserted in the trace by
+ * userland.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux trace mark events that were inserted in the trace by userland.
+   * @constructor
+   */
+  function ThermalParser(importer) {
+    Parser.call(this, importer);
+
+    importer.registerEventHandler('thermal_temperature',
+        ThermalParser.prototype.traceMarkWriteTemperatureEvent.bind(this));
+    importer.registerEventHandler('cdev_update',
+        ThermalParser.prototype.traceMarkWriteCdevEvent.bind(this));
+    this.model_ = importer.model_;
+    this.ppids_ = {};
+  }
+
+  ThermalParser.prototype = {
+    __proto__: Parser.prototype,
+
+    thermalMark(name, subName, value, ts) {
+      const ctr = this.model_.kernel
+          .getOrCreateCounter(null, name + ' ' + subName);
+      // Initialize the counter's series fields if needed.
+      if (ctr.numSeries === 0) {
+        ctr.addSeries(new tr.model.CounterSeries('value',
+            ColorScheme.getColorIdForGeneralPurposeString(
+                ctr.name + '.' + 'value')));
+      }
+      ctr.series.forEach(function(series) {
+        series.addCounterSample(ts, value);
+      });
+    },
+
+    traceMarkWriteTemperatureEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /thermal_zone=(\S+) id=(\d+) temp_prev=(\d+) temp=(\d+)/
+          .exec(eventBase.details);
+      const name = event[1];
+      const temp = parseInt(event[4]);
+      this.thermalMark(name, 'Temperature', temp, ts);
+      return true;
+    },
+
+    traceMarkWriteCdevEvent(eventName, cpuNumber, pid, ts,
+        eventBase, threadName) {
+      const event = /type=(\S+) target=(\d+)/.exec(eventBase.details);
+      const name = event[1];
+      const rate = parseInt(event[2]);
+      this.thermalMark(name, 'CoolingDevice', rate, ts);
+      return true;
+    }
+  };
+
+  Parser.register(ThermalParser);
+
+  return {
+    ThermalParser,
+  };
+});
+</script>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/v8/v8_log_importer.html">
+<link rel="import" href="/tracing/extras/v8_config.html">
+
+<script>
+
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const V8LogImporter = tr.e.importer.v8.V8LogImporter;
+
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('tickEventInSharedLibrary', function() {
+    const lines = [
+      'shared-library,"/usr/lib/libc++.1.dylib",0x99d8aae0,0x99dce729',
+      'tick,0x99d8aae4,12158,0,0x0,5'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 1);
+    assert.strictEqual(t.samples[0].title, 'V8 PC');
+    assert.strictEqual(t.samples[0].start, 12158 / 1000);
+    assert.strictEqual(t.samples[0].leafNode.title, '/usr/lib/libc++.1.dylib');
+  });
+
+  test('tickEventInGeneratedCode', function() {
+    const lines = [
+      'shared-library,"/usr/lib/libc++.1.dylib",0x99d8aae0,0x99dce729',
+      'code-creation,Stub,2,0x5b60ce80,1259,"StringAddStub"',
+      'tick,0x5b60ce84,12158,0,0x0,5'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const threads = p.findAllThreadsNamed('V8');
+    const t = threads[0];
+    assert.strictEqual(t.samples.length, 1);
+    assert.strictEqual(t.samples[0].leafNode.title, 'StringAddStub');
+  });
+
+  test('tickEventInUknownCode', function() {
+    const lines = [
+      'shared-library,"/usr/lib/libc++.1.dylib",0x99d8aae0,0x99dce729',
+      'code-creation,Stub,2,0x5b60ce80,1259,"StringAddStub"',
+      'tick,0x4,0xbff02f08,12158,0,0x0,5'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const threads = p.findAllThreadsNamed('V8');
+    const t = threads[0];
+    assert.strictEqual(t.samples.length, 1);
+    assert.strictEqual(t.samples[0].leafNode.title, 'unknown');
+  });
+
+  test('tickEventWithStack', function() {
+    const lines = [
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x7fc6fe34,528674,0,0x3,0,0x2905d304'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 1);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown'],
+        t.samples[0].userFriendlyStack);
+  });
+
+  test('twoTickEventsWithStack', function() {
+    const lines = [
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x7fc6fe34,528674,0,0x3,0,0x2905d304',
+      'tick,0x7fd2a534,536213,0,0x81d8d080,0,0x2905d304'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 2);
+    assert.strictEqual(t.samples[0].start, 528674 / 1000);
+    assert.strictEqual(t.samples[1].start, 536213 / 1000);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown'],
+        t.samples[0].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown'],
+        t.samples[1].userFriendlyStack);
+    assert.strictEqual(t.samples[0].leafNode,
+        t.samples[1].leafNode);
+  });
+
+  test('twoTickEventsWithTwoStackFrames', function() {
+    const lines = [
+      'code-creation,LazyCompile,0,0x2904d560,876,"Instantiate native apinatives.js:9:21",0x56b190c8,~', // @suppress longLineCheck
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x7fc6fe34,528674,0,0x3,0,0x2905d304,0x2904d6e8',
+      'tick,0x7fd2a534,536213,0,0x81d8d080,0,0x2905d304,0x2904d6e8'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 2);
+
+    assert.strictEqual(t.samples[0].start, 528674 / 1000);
+    assert.strictEqual(t.samples[1].start, 536213 / 1000);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[0].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[1].userFriendlyStack);
+
+    assert.strictEqual(t.samples[0].leafNode, t.samples[1].leafNode);
+  });
+
+  test('threeTickEventsWithTwoStackFrames', function() {
+    const lines = [
+      'code-creation,LazyCompile,0,0x2904d560,876,"Instantiate native apinatives.js:9:21",0x56b190c8,~', // @suppress longLineCheck
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x7fd7f75c,518328,0,0x81d86da8,2,0x2904d6e8',
+      'tick,0x7fc6fe34,528674,0,0x3,0,0x2905d304,0x2904d6e8',
+      'tick,0x7fd2a534,536213,0,0x81d8d080,0,0x2905d304,0x2904d6e8'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const threads = p.findAllThreadsNamed('V8');
+
+    const t = threads[0];
+    assert.strictEqual(t.samples.length, 3);
+    assert.strictEqual(t.samples[0].start, 518328 / 1000);
+    assert.strictEqual(t.samples[1].start, 528674 / 1000);
+    assert.strictEqual(t.samples[2].start, 536213 / 1000);
+    assert.deepEqual(
+        ['~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[0].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[1].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[2].userFriendlyStack);
+
+    const topLevelNode = t.samples[0].leafNode;
+    const leafNode = t.samples[1].leafNode;
+    assert.strictEqual(t.samples[2].leafNode, leafNode);
+    assert.strictEqual(topLevelNode, leafNode.parentNode);
+  });
+
+  test('twoSubStacks', function() {
+    const lines = [
+      'code-creation,LazyCompile,0,0x2904d560,876,"Instantiate native apinatives.js:9:21",0x56b190c8,~', // @suppress longLineCheck
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x7fd7f75c,518328,0,0x81d86da8,2,0x2904d6e8',
+      'tick,0x7fc6fe34,528674,0,0x3,0,0x2905d304,0x2904d6e8',
+      'tick,0x7fd2a534,536213,0,0x81d8d080,0,0x2905d304,0x2904d6e8',
+      'code-creation,Script,0,0x2906a7c0,792,"http://www.google.com/",0x5b12fe50,~', // @suppress longLineCheck
+      'tick,0xb6f51d30,794049,0,0xb6f7b368,2,0x2906a914',
+      'tick,0xb6f51d30,799145,0,0xb6f7b368,0,0x2906a914'
+    ];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const threads = p.findAllThreadsNamed('V8');
+    const t = threads[0];
+    assert.strictEqual(t.samples.length, 5);
+
+    assert.strictEqual(t.samples[0].start, 518328 / 1000);
+    assert.strictEqual(t.samples[1].start, 528674 / 1000);
+    assert.strictEqual(t.samples[2].start, 536213 / 1000);
+    assert.strictEqual(t.samples[3].start, 794049 / 1000);
+    assert.strictEqual(t.samples[4].start, 799145 / 1000);
+
+    assert.deepEqual(
+        ['~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[0].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[1].userFriendlyStack);
+    assert.deepEqual(
+        ['InstantiateFunction native apinatives.js:26:29 url: unknown',
+          '~Instantiate native apinatives.js:9:21 url: unknown'],
+        t.samples[2].userFriendlyStack);
+    assert.deepEqual(['~http://www.google.com/ url: unknown'],
+        t.samples[3].userFriendlyStack);
+    assert.deepEqual(['~http://www.google.com/ url: unknown'],
+        t.samples[4].userFriendlyStack);
+
+    const firstNode = t.samples[0].leafNode;
+    const firstChildNode = t.samples[1].leafNode;
+    assert.strictEqual(firstChildNode, t.samples[2].leafNode);
+    assert.strictEqual(firstNode, firstChildNode.parentNode);
+
+    const secondNode = t.samples[3].leafNode;
+    assert.strictEqual(secondNode, t.samples[4].leafNode);
+    assert.isUndefined(secondNode.parentNode);
+  });
+
+  test('timerEventSliceCreation', function() {
+    const lines = ['timer-event,"V8.External",38189483,3'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const threads = p.findAllThreadsNamed('V8 Timers');
+    assert.isDefined(threads);
+    assert.strictEqual(threads.length, 1);
+    const t = threads[0];
+    assert.strictEqual(t.sliceGroup.length, 1);
+  });
+
+  test('processThreadCreation', function() {
+    const lines = ['timer-event,"V8.External",38189483,3'];
+    const m = newModel(lines.join('\n'));
+    assert.isDefined(m);
+    const p = m.processes[-32];
+    assert.isDefined(p);
+    const threads = p.findAllThreadsNamed('V8 Timers');
+    assert.isDefined(threads);
+    assert.strictEqual(1, threads.length);
+    const t = threads[0];
+    assert.strictEqual('V8 Timers', t.name);
+  });
+
+  test('canImport', function() {
+    assert.isTrue(V8LogImporter.canImport(
+        'timer-event,"V8.External",38189483,3'));
+    assert.isTrue(V8LogImporter.canImport('v8-version,4,3,66,0,0'));
+    assert.isFalse(V8LogImporter.canImport(''));
+    assert.isFalse(V8LogImporter.canImport([]));
+  });
+
+  test('CppSymbolsProcess', function() {
+    const lines = [
+      'shared-library,"/usr/loca/v8/out/native/d8",0x00400000, 0x01860000',
+      'cpp,0x00600000,100,"v8::internal::Heap::AllocateByteArray"',
+      'cpp,0x00700000,100,"v8::internal::Utf8StringKey::AsHandle"',
+      'tick,0x00600010,121,0,0x0,5',
+      'tick,0x00700010,122,0,0x0,5',
+      'tick,0x00800010,123,0,0x0,5'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 3);
+    assert.strictEqual(t.samples[0].leafNode.title,
+        'v8::internal::Heap::AllocateByteArray');
+    assert.strictEqual(t.samples[1].leafNode.title,
+        'v8::internal::Utf8StringKey::AsHandle');
+    assert.strictEqual(t.samples[2].leafNode.title,
+        '/usr/loca/v8/out/native/d8');
+  });
+
+  test('CppSymbolsWithJsStack', function() {
+    const lines = [
+      'shared-library,"/usr/loca/v8/out/native/d8",0x00400000, 0x01860000',
+      'cpp,0x00600000,100,"v8::internal::Heap::AllocateByteArray"',
+      'cpp,0x00700000,100,"v8::internal::Utf8StringKey::AsHandle"',
+      'code-creation,LazyCompile,0,0x2905d0c0,1800,"InstantiateFunction native apinatives.js:26:29",0x56b19124,', // @suppress longLineCheck
+      'tick,0x00700010,1,0,0x3,0,0x2905d304',
+      'tick,0x00600010,3,0,0x3,0,0x2905d306',
+      'tick,0x00800010,5,0,0x3,0,0x2905d306',
+      'tick,0x01860010,5,0,0x3,0,0x2905d306'];
+    const m = newModel(lines.join('\n'));
+    const p = m.processes[-32];
+    const t = p.findAllThreadsNamed('V8')[0];
+    assert.strictEqual(t.samples.length, 4);
+    assert.deepEqual(t.samples[0].userFriendlyStack, [
+      'v8::internal::Utf8StringKey::AsHandle url: /usr/loca/v8/out/native/d8',
+      'InstantiateFunction native apinatives.js:26:29 url: unknown'
+    ]);
+    assert.deepEqual(t.samples[1].userFriendlyStack, [
+      'v8::internal::Heap::AllocateByteArray url: /usr/loca/v8/out/native/d8',
+      'InstantiateFunction native apinatives.js:26:29 url: unknown'
+    ]);
+    assert.deepEqual(t.samples[2].userFriendlyStack, [
+      '/usr/loca/v8/out/native/d8 url: unknown',
+      'InstantiateFunction native apinatives.js:26:29 url: unknown'
+    ]);
+    assert.deepEqual(t.samples[3].userFriendlyStack, [
+      'InstantiateFunction native apinatives.js:26:29 url: unknown'
+    ]);
+  });
+});
+</script>
+

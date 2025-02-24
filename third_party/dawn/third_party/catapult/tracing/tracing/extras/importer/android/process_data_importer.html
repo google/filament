@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/importer/simple_line_reader.html">
+<link rel="import" href="/tracing/model/activity.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+/**
+ * @fileoverview
+ */
+'use strict';
+
+tr.exportTo('tr.e.importer.android.process_data', function() {
+  const Importer = tr.importer.Importer;
+
+  const PROCESS_DUMP_HEADER = 'PROCESS DUMP';
+
+  /**
+   * Imports android process data
+   * @constructor
+   */
+  function ProcessDataImporter(model, processData) {
+    this.model_ = model;
+    this.processDataLines = processData.split('\n');
+    this.importPriority = 3;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  ProcessDataImporter.canImport = function(events) {
+    if (!(typeof(events) === 'string' || events instanceof String)) {
+      return false;
+    }
+
+    if (events.split('\n')[0] === PROCESS_DUMP_HEADER) {
+      return true;
+    }
+
+    return false;
+  };
+
+  ProcessDataImporter.prototype = {
+    __proto__: Importer.prototype,
+
+    get importerName() {
+      return 'ProcessDataImporter';
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    parseEventData(data) {
+      const allDumpedProcesses = {};
+
+      let parseProcesses = false;
+      let parseThreads = false;
+      let legacy = false;
+
+      // Skip header on line 1.
+      for (let i = 1; i < data.length; i++) {
+        const cols = data[i].split(/\s+/);
+        if (cols[0].startsWith('USER')) {
+          if (parseProcesses) {
+            parseProcesses = false;
+            parseThreads = true;
+          } else {
+            parseThreads = false;
+            parseProcesses = true;
+          }
+
+          const colCount = cols.length;
+          if (parseProcesses && colCount === 9) {
+            legacy = false;
+          } else if (parseProcesses && colCount === 8) {
+            legacy = true;
+          }
+          continue;
+        }
+
+        if (parseProcesses) {
+          const pid = Number(cols[1]);
+          if (allDumpedProcesses[pid] === undefined) {
+            allDumpedProcesses[pid] = {};
+          }
+          allDumpedProcesses[pid] = {
+            'name': cols[8], pid, 'comm': cols[9]
+          };
+          continue;
+        }
+
+        if (parseThreads) {
+          let pid;
+          let tid;
+          let name;
+
+          // In legacy ps dumps, the PID is actually shown in the PPID column
+          // for thread lines, but PID column for the process line
+          if (legacy) {
+            pid = Number(cols[1]);
+            if (allDumpedProcesses[pid] !== undefined) {
+              // this is a process line in the dump.
+              tid = pid;
+            } else {
+              // Thread line, so swap.
+              tid = pid;
+              pid = Number(cols[2]);  // i.e. the PPID column.
+            }
+            name = cols.slice(8).join(' ');
+          } else {
+            pid = Number(cols[1]);
+            tid = Number(cols[2]);
+            name = cols.slice(3).join(' ');
+          }
+
+          // Thread data for a process we didn't identify, skip.
+          if (allDumpedProcesses[pid] === undefined) continue;
+
+          if (allDumpedProcesses[pid].threads === undefined) {
+            allDumpedProcesses[pid].threads = {};
+          }
+          allDumpedProcesses[pid].threads[tid] = {tid, name};
+          continue;
+        }
+      }
+      return allDumpedProcesses;
+    },
+
+    importEvents() {
+      // Merge the snapshots into a single object, indexable by PID.
+
+      const allDumpedProcesses = this.parseEventData(this.processDataLines);
+
+      // Update the model with the new process / thread name data.
+      const modelProcesses = this.model_.getAllProcesses();
+      for (let i = 0; i < modelProcesses.length; i++) {
+        const modelProcess = modelProcesses[i];
+        const pid = modelProcess.pid;
+        const dumpedProcess = allDumpedProcesses[pid];
+        if (dumpedProcess === undefined) {
+          // There's a process in the model that the ps dump doesn't know about,
+          // nothing we can do so skip it.
+          continue;
+        }
+
+        modelProcess.name = dumpedProcess.name;
+        const processDumpThreads = dumpedProcess.threads;
+        if (processDumpThreads !== undefined) {
+          for (const tid in modelProcess.threads) {
+            const modelThread = modelProcess.threads[tid];
+            if (Number(pid) === Number(tid)) {
+              modelThread.name = 'UI thread';
+            } else if (modelThread.name === '<...>') {
+              if (processDumpThreads[tid] !== undefined) {
+                // Use the stored thread name that we have.
+                modelThread.name = processDumpThreads[tid].name;
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  Importer.register(ProcessDataImporter);
+
+  return {
+    ProcessDataImporter,
+  };
+});
+</script>

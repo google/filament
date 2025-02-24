@@ -1,0 +1,31 @@
+@mEdia all and (min-width : 500px) {
+    @docuMent url(http://www.w3.org/),
+                   url-prefix(http://www.w3.org/Style/),
+                   domain(mozilla.org),
+                   regexp("https:.*")
+    {
+        @suPpoRts ( (perspective: 10px) or (-moz-perspective: 10px) or (-webkit-perspective: 10px) or (-ms-perspective: 10px) or (-o-perspective: 10px) ) {
+            @keyFRames slidein {
+                from {
+                    margin-left : 100%;
+                    width: 300%
+                }
+      
+                75% {
+                    font-size:300%;
+                    margin-left:25%;
+                    width:150%;
+                }
+      
+                to {
+                    margin-left:0%;
+                    width:100%;
+                }
+            }
+
+            @pagE :last {
+                margin : 3in;
+            }
+        }
+    }
+}

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Slice class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * A Slice represents an interval of time plus parameters associated
+   * with that interval.
+   *
+   * @constructor
+   */
+  function Slice(category, title, colorId, start, args, opt_duration,
+      opt_cpuStart, opt_cpuDuration, opt_argsStripped,
+      opt_bindId) {
+    if (new.target) {
+      throw new Error('Can\'t instantiate pure virtual class Slice');
+    }
+    tr.model.TimedEvent.call(this, start);
+
+    this.category = category || '';
+    this.title = title;
+    this.colorId = colorId;
+    this.args = args;
+    this.startStackFrame = undefined;
+    this.endStackFrame = undefined;
+    this.didNotFinish = false;
+    this.inFlowEvents = [];
+    this.outFlowEvents = [];
+    this.subSlices = [];
+    this.selfTime = undefined;
+    this.cpuSelfTime = undefined;
+    this.important = false;
+    this.parentContainer = undefined;
+    this.argsStripped = false;
+
+    this.bind_id_ = opt_bindId;
+
+    // parentSlice and isTopLevel will be set by SliceGroup.
+    this.parentSlice = undefined;
+    this.isTopLevel = false;
+    // After SliceGroup processes Slices, isTopLevel should be equivalent to
+    // !parentSlice.
+
+    if (opt_duration !== undefined) {
+      this.duration = opt_duration;
+    }
+
+    if (opt_cpuStart !== undefined) {
+      this.cpuStart = opt_cpuStart;
+    }
+
+    if (opt_cpuDuration !== undefined) {
+      this.cpuDuration = opt_cpuDuration;
+    }
+
+    if (opt_argsStripped !== undefined) {
+      this.argsStripped = true;
+    }
+  }
+
+  Slice.prototype = {
+    __proto__: tr.model.TimedEvent.prototype,
+
+
+    get analysisTypeName() {
+      return this.title;
+    },
+
+    get userFriendlyName() {
+      return 'Slice ' + this.title + ' at ' +
+          tr.b.Unit.byName.timeStampInMs.format(this.start);
+    },
+
+    get stableId() {
+      const parentSliceGroup = this.parentContainer.sliceGroup;
+      return parentSliceGroup.stableId + '.' +
+          parentSliceGroup.slices.indexOf(this);
+    },
+
+    get bindId() {
+      return this.bind_id_;
+    },
+
+    findDescendentSlice(targetTitle) {
+      if (!this.subSlices) {
+        return undefined;
+      }
+
+      for (let i = 0; i < this.subSlices.length; i++) {
+        if (this.subSlices[i].title === targetTitle) {
+          return this.subSlices[i];
+        }
+        const slice = this.subSlices[i].findDescendentSlice(targetTitle);
+        if (slice) return slice;
+      }
+      return undefined;
+    },
+
+    get mostTopLevelSlice() {
+      if (!this.parentSlice) return this;
+      return this.parentSlice.mostTopLevelSlice;
+    },
+
+    getProcess() {
+      const thread = this.parentContainer;
+      if (thread && thread.getProcess) {
+        return thread.getProcess();
+      }
+      return undefined;
+    },
+
+    get model() {
+      const process = this.getProcess();
+      if (process !== undefined) {
+        return this.getProcess().model;
+      }
+      return undefined;
+    },
+
+    /**
+     * Finds all topmost slices relative to this slice.
+     *
+     * Slices may have multiple direct descendants which satisfy
+     * |eventPredicate|, and in this case, all of them are topmost as long as
+     * this slice does not satisfy the predicate.
+     *
+     * For instance, suppose we are passing a predicate that checks whether
+     * events titles begin with 'C'.
+     *  C1.findTopmostSlicesRelativeToThisSlice() returns C1 in this example:
+     * [   C1  ]
+     *   [ C2 ]
+     *
+     * and D.findTopmostSlicesRelativeToThisSlice() returns C1 and C2 in this
+     * example:
+     * [      D     ]
+     *   [C1]  [C2]
+     */
+    * findTopmostSlicesRelativeToThisSlice(eventPredicate) {
+      if (eventPredicate(this)) {
+        yield this;
+        return;
+      }
+      for (const s of this.subSlices) {
+        yield* s.findTopmostSlicesRelativeToThisSlice(eventPredicate);
+      }
+    },
+
+    /**
+     * Obtains all subsequent slices of this slice.
+     *
+     * Subsequent slices are slices that get executed after a particular
+     * slice, i.e., all the functions that are called after the current one.
+     *
+     * For instance, E.iterateAllSubsequentSlices() in the following example:
+     * [     A          ]
+     * [ B][  D   ][ G  ]
+     *  [C] [E][F]  [H]
+     * will pass F, G, then H to the provided callback.
+     *
+     * The reason we need subsequent slices of a particular slice is that
+     * when there is flow event goes into, e.g., E, we only want to highlight
+     * E's subsequent slices to indicate the execution order.
+     *
+     * The idea to calculate the subsequent slices of slice E is to view
+     * the slice group as a tree where the top-level slice A is the root node.
+     * The preorder depth-first-search (DFS) order is naturally equivalent
+     * to the function call order. We just need to perform a DFS, and start
+     * recording the slices after we see the occurance of E.
+     */
+    iterateAllSubsequentSlices(callback, opt_this) {
+      const parentStack = [];
+      let started = false;
+
+      // get the root node and push it to the DFS stack
+      const topmostSlice = this.mostTopLevelSlice;
+      parentStack.push(topmostSlice);
+
+      // Using the stack to perform DFS
+      while (parentStack.length !== 0) {
+        const curSlice = parentStack.pop();
+
+        if (started) {
+          callback.call(opt_this, curSlice);
+        } else {
+          started = (curSlice.guid === this.guid);
+        }
+
+        for (let i = curSlice.subSlices.length - 1; i >= 0; i--) {
+          parentStack.push(curSlice.subSlices[i]);
+        }
+      }
+    },
+
+    get subsequentSlices() {
+      const res = [];
+
+      this.iterateAllSubsequentSlices(function(subseqSlice) {
+        res.push(subseqSlice);
+      });
+
+      return res;
+    },
+
+    /**
+     * Obtains the parents of a slice, from the most immediate to the root.
+     *
+     * For instance, E.enumerateAllAncestors() in the following example:
+     * [     A          ]
+     * [ B][  D   ][ G  ]
+     *  [C] [E][F]  [H]
+     * will yield D, then A, in the order from the leaves to the root.
+     */
+    * enumerateAllAncestors() {
+      let curSlice = this.parentSlice;
+      while (curSlice) {
+        yield curSlice;
+        curSlice = curSlice.parentSlice;
+      }
+    },
+
+    get ancestorSlices() {
+      return Array.from(this.enumerateAllAncestors());
+    },
+
+    iterateEntireHierarchy(callback, opt_this) {
+      const mostTopLevelSlice = this.mostTopLevelSlice;
+      callback.call(opt_this, mostTopLevelSlice);
+      mostTopLevelSlice.iterateAllSubsequentSlices(callback, opt_this);
+    },
+
+    get entireHierarchy() {
+      const res = [];
+
+      this.iterateEntireHierarchy(function(slice) {
+        res.push(slice);
+      });
+
+      return res;
+    },
+
+    /**
+     * Returns this slice, and its ancestor and subsequent slices.
+     *
+     * For instance, E.ancestorAndSubsequentSlices in the following example:
+     * [     A          ]
+     * [ B][  D   ][ G  ]
+     *  [C] [E][F]  [H]
+     * will return E, D, A, F, G, and H, where E is itself, D and A are
+     * E's ancestors, and F, G, and H are subsequent slices of E
+     */
+    get ancestorAndSubsequentSlices() {
+      const res = [];
+
+      res.push(this);
+
+      for (const aSlice of this.enumerateAllAncestors()) {
+        res.push(aSlice);
+      }
+
+      this.iterateAllSubsequentSlices(function(sSlice) {
+        res.push(sSlice);
+      });
+
+      return res;
+    },
+
+    * enumerateAllDescendents() {
+      for (const slice of this.subSlices) {
+        yield slice;
+      }
+      for (const slice of this.subSlices) {
+        yield* slice.enumerateAllDescendents();
+      }
+    },
+
+    get descendentSlices() {
+      const res = [];
+      for (const slice of this.enumerateAllDescendents()) {
+        res.push(slice);
+      }
+      return res;
+    }
+
+  };
+
+  return {
+    Slice,
+  };
+});
+</script>

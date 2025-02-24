@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/jobs-page/jobs-table.html">
+<link rel="import" href="/static/testing_common.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {};
+
+  // TODO(dberris): Add asssertions for what kind of data is showing up in the
+  // component.
+  test('instantiate', function() {
+    const table = document.createElement('jobs-table');
+    table.jobs = [{
+      'job_id': 12345,
+      'comparison_mode': 'performance',
+      'configuration': 'configuration',
+      'test_suite': 'test_suite',
+      'test': 'test',
+      'metric': 'metric',
+      'status': 'Running',
+      'created': '2017-01-30',
+      'updated': '2017-01-30'
+    }];
+    this.addHTMLOutput(table);
+  }, testOptions);
+
+  test('missingConfiguration', function() {
+    const table = document.createElement('jobs-table');
+    table.id = 'missingConfigurationTable';
+    table.jobs = [{
+      'job_id': 12345,
+      'comparison_mode': 'performance',
+      'test_suite': 'test_suite',
+      'test': 'test',
+      'metric': 'metric',
+      'status': 'Running',
+      'created': '2017-01-30',
+      'updated': '2017-01-30'
+    }];
+    this.addHTMLOutput(table);
+  }, testOptions);
+});
+</script>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.console', function() {
+  const COUNT_BOUNDARIES = tr.v.HistogramBinBoundaries.createExponential(
+      1, 1e4, 30);
+  // We store a single value, so we only need one of the statistics to keep
+  // track. We choose the average for that.
+  const SUMMARY_OPTIONS = tr.v.Histogram.AVERAGE_ONLY_SUMMARY_OPTIONS;
+
+  // Sources of console error message that we are interested in.
+  const SOURCES = ['all', 'js', 'network'];
+
+  /**
+   * This metric counts slices named 'ConsoleErrorMessage' and adds:
+   * - console:error:all - all console error messages.
+   * - console:error:js - console error messages coming from JS.
+   * - console:error:network - console error messages coming from network.
+   * If a console error message does not come from JS or network, it is still
+   * accounted in the console_error_all.
+   */
+  function consoleErrorMetric(histograms, model) {
+    const counts = {};
+    for (const source of SOURCES) {
+      counts[source] = {count: 0, details: []};
+    }
+    for (const slice of model.getDescendantEvents()) {
+      if (slice.category === 'blink.console' &&
+          slice.title === 'ConsoleMessage::Error') {
+        const source = slice.args.source.toLowerCase();
+        counts.all.count++;
+        if (slice.args.message) {
+          counts.all.details.push(
+              {pid: slice.getProcess().pid, ...slice.args.message});
+        }
+        if (source in counts) {
+          counts[source].count++;
+          if (slice.args.message) {
+            counts[source].details.push(
+                {pid: slice.getProcess().pid, ...slice.args.message});
+          }
+        }
+      }
+      if (slice.category === 'v8.console' && (
+        slice.title === 'V8ConsoleMessage::Exception' ||
+        slice.title === 'V8ConsoleMessage::Error' ||
+        slice.title === 'V8ConsoleMessage::Assert')) {
+        counts.all.count++;
+        counts.js.count++;
+      }
+    }
+    for (const source of SOURCES) {
+      const hist = histograms.createHistogram(
+          `console:error:${source}`,
+          tr.b.Unit.byName.count_smallerIsBetter, {
+            value: counts[source].count, diagnostics: {
+              details: new tr.v.d.GenericSet(counts[source].details)
+            }
+          }, {
+            description: `Number of ${source} console error messages`,
+            summaryOptions: SUMMARY_OPTIONS,
+          });
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(consoleErrorMetric);
+
+  return {
+    consoleErrorMetric,
+  };
+});
+</script>

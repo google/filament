@@ -1,0 +1,14 @@
+{
+  "env": {
+    "mocha": true
+  },
+  "globals": {
+    "assert": true,
+    "sinon": true,
+    "WCT": true,
+    "fixture": true,
+    "Polymer": true,
+    "MockInteractions": true,
+    "a11ySuite": true
+  }
+}

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/assert_utils.html">
+<link rel="import" href="/tracing/ui/base/bar_chart.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiation_singleSeries', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, value: 100},
+      {x: 20, value: 110},
+      {x: 30, value: 100},
+      {x: 40, value: 50}
+    ];
+  });
+
+  test('instantiation_singleDatum', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: 100},
+    ];
+  });
+
+  test('instantiation_stacked', function() {
+    const chart = new tr.ui.b.BarChart();
+    chart.isStacked = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, foo: 10, bar: 5, qux: 7},
+      {x: 20, foo: 11, bar: 6, qux: 3},
+      {x: 30, foo: 10, bar: 4, qux: 8},
+      {x: 40, foo: 5, bar: 1, qux: 2}
+    ];
+  });
+
+  test('undefined', function() {
+    const chart = new tr.ui.b.BarChart();
+    assert.throws(function() {
+      chart.data = undefined;
+    });
+  });
+
+  test('instantiation_twoSeries', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 100, beta: 50},
+      {x: 20, alpha: 110, beta: 75},
+      {x: 30, alpha: 100, beta: 125},
+      {x: 40, alpha: 50, beta: 125}
+    ];
+    chart.brushedRange = tr.b.math.Range.fromExplicitRange(20, 40);
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueSparse', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 20, beta: undefined},
+      {x: 20, alpha: undefined, beta: 10},
+      {x: 30, alpha: 10, beta: undefined},
+      {x: 45, alpha: undefined, beta: 20},
+      {x: 50, alpha: 25, beta: 30}
+    ];
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueNotSparse', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, alpha: 20, beta: 40},
+      {x: 20, alpha: undefined, beta: 10},
+      {x: 30, alpha: 10, beta: undefined},
+      {x: 45, alpha: undefined, beta: 20},
+      {x: 50, alpha: 30, beta: undefined}
+    ];
+  });
+
+  test('instantiation_interactiveBrushing', function() {
+    const chart = new tr.ui.b.BarChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 10, value: 50},
+      {x: 20, value: 60},
+      {x: 30, value: 80},
+      {x: 40, value: 20},
+      {x: 50, value: 30},
+      {x: 60, value: 20},
+      {x: 70, value: 15},
+      {x: 80, value: 20}
+    ];
+
+    let mouseDownX = undefined;
+    let curMouseX = undefined;
+
+    function updateBrushedRange() {
+      if (mouseDownX === undefined || (mouseDownX === curMouseX)) {
+        chart.brushedRange = new tr.b.math.Range();
+        return;
+      }
+      const r = new tr.b.math.Range();
+      r.min = Math.min(mouseDownX, curMouseX);
+      r.max = Math.max(mouseDownX, curMouseX);
+      chart.brushedRange = r;
+    }
+
+    chart.addEventListener('item-mousedown', function(e) {
+      mouseDownX = e.x;
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mousemove', function(e) {
+      if (e.button === undefined) return;
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mouseup', function(e) {
+      curMouseX = e.x;
+      updateBrushedRange();
+    });
+  });
+
+  test('instantiation_overrideDataRange', function() {
+    let chart = new tr.ui.b.BarChart();
+    chart.overrideDataRange = tr.b.math.Range.fromExplicitRange(10, 90);
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: -20},
+      {x: 1, value: 100},
+      {x: 2, value: -40},
+      {x: 3, value: 100},
+    ];
+
+    chart = new tr.ui.b.BarChart();
+    chart.overrideDataRange = tr.b.math.Range.fromExplicitRange(-10, 100);
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, value: 0},
+      {x: 1, value: 50},
+    ];
+  });
+
+  test('instantiation_Waterfall', function() {
+    const chart = new tr.ui.b.BarChart();
+    chart.graphWidth = 300;
+    chart.graphHeight = 200;
+    chart.isStacked = true;
+    chart.isGrouped = true;
+    chart.isWaterfall = true;
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, alpha: 40, group: 'group1' },
+      {x: 1, alpha: 30, group: 'group2' },
+      {x: 2},
+      {x: 3, hide: 40, beta: 55, group: 'group1' },
+      {x: 4, hide: 40, beta: 65, group: 'group2' },
+      {x: 5},
+      {x: 6, hide: 95, omega: 10, group: 'group1' },
+      {x: 7, hide: 95, omega: 20, group: 'group2' }
+    ];
+  });
+
+  test('instantiation_showHoverValuesForTransparentData', function() {
+    const chart = new tr.ui.b.BarChart();
+    chart.graphWidth = 300;
+    chart.graphHeight = 200;
+    chart.isStacked = true;
+    chart.isGrouped = true;
+    chart.displayXInHover = true;
+    chart.getDataSeries('alpha').color = 'transparent';
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 0, alpha: 40, beta: 32, omega: 13, group: 'group1' },
+      {x: 1, alpha: 30, beta: 22, omega: 14, group: 'group2' },
+      {x: 2},
+      {x: 3, alpha: 55, beta: 35, omega: 15, group: 'group1' },
+      {x: 4, alpha: 45, beta: 40, omega: 16, group: 'group2' },
+      {x: 5},
+      {x: 6, alpha: 50, beta: 10, omega: 17, group: 'group1' },
+      {x: 7, alpha: 60, beta: 15, omega: 18, group: 'group2' }
+    ];
+  });
+});
+</script>

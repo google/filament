@@ -1,0 +1,50 @@
+//===- subzero/crosstest/test_bitmanip.def - macros for tests -*- C++ -*---===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for testing bit manipulation intrinsics.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_BIT_MANIP_DEF
+#define TEST_BIT_MANIP_DEF
+
+#include "xdefs.h"
+
+#define STR(s) #s
+
+#define BMI_OPS  \
+  /* inst */     \
+  X(ctlz)        \
+  X(cttz)        \
+  X(ctpop)
+// #define X(inst)
+
+#define BMI_TYPES \
+  /* type */      \
+  X(uint32)     \
+  X(uint64)
+// #define X(type)
+
+#define FOR_ALL_BMI_TYPES_INST(F, inst) \
+  F(inst, uint32)                     \
+  F(inst, uint64)
+
+#define FOR_ALL_BMI_OP_TYPES(X) \
+  FOR_ALL_BMI_TYPES_INST(X, ctlz)     \
+  FOR_ALL_BMI_TYPES_INST(X, cttz)     \
+  FOR_ALL_BMI_TYPES_INST(X, ctpop)
+//#define X(inst, type)
+
+#define BSWAP_TABLE              \
+  /* type, builtin_name */       \
+  X(uint16_t, __builtin_bswap16) \
+  X(uint32, __builtin_bswap32) \
+  X(uint64, __builtin_bswap64)
+
+#endif // TEST_BIT_MANIP_DEF

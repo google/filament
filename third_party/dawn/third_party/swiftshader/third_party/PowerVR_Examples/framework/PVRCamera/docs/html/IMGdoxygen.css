@@ -1,0 +1,640 @@
+/* This CSS overwrites the default Doxygen stylesheet */
+
+/*---------------------------------------------------------------*/
+/* Global Style
+/*---------------------------------------------------------------*/
+
+html,body {width:100%;}
+
+body {
+	margin: 0px;
+	font-family: HelvNeuRoman, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-size: 13px;
+	color: #555;
+}
+
+div.header
+{
+	background-image: none;
+	background-color: white;
+	max-width: 960px;
+	position: relative;
+	margin: 0 auto;
+	border-bottom: none;
+}
+
+div.title {
+	font-family: HelvNeuMed, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-weight: normal;
+	font-size: 34px;
+	letter-spacing: -0.01em;
+	color: #000;
+	margin-top: 20px;
+}
+
+.headertitle .title {
+	margin-left: -10px;
+}
+
+.headertitle .title .el {
+	font-family: HelvNeuMed, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-weight: normal;
+	font-size: 34px;
+	letter-spacing: -0.01em;
+	color: #000;
+}
+
+.headertitle .title .el:hover {
+	color: #cd239d;
+}
+
+h1 {
+	font-size:  2.3em;
+	font-family: 'Roboto', sans-serif;
+	font-weight: 500;
+	color: #222;
+    margin-bottom: 1em;
+	margin-right: 0px;
+}
+
+h2 {
+	font-size: 1.7em;
+	font-family: 'Roboto', sans-serif;
+	font-weight: 400;
+	color: #222;
+	padding-bottom: 5px;
+	border-bottom: 1px solid #d0d0d0;
+	margin: 1.5em 0 .5em 0;
+}
+
+h2.groupheader {
+	color: #555;
+	border-bottom: 1px solid #cd239d;
+}
+
+h3 {
+	color: #222;
+    font-size: 1.5em;
+    line-height: 1.3;
+    font-weight: 300;
+    margin-bottom: 0;
+    margin-top: 1em;
+	font-family: 'Roboto', sans-serif;
+}
+
+
+p {
+	font-size: 13px;
+	line-height: 18px;
+}
+
+a, a.code {
+	color: #cd239d;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #555;
+	text-decoration: none;
+}
+
+.contents a:visited { 
+	color: #cd239d;
+}
+
+.contents a:visited:hover { 
+	color: #555;
+}
+
+div.contents {
+	max-width: 960px;
+	position: relative;
+	margin: 10px auto 0px auto;
+}
+
+div.fragment {
+    padding: 8px;
+    margin-bottom: 15px;
+    background-color: #f5f5f5;
+    border: 1px solid #dddddd;
+}
+
+hr {
+	height: 0px;
+	border: none;
+}
+
+div.toc {
+    background-color: #fff;
+    border-top: 1px solid #eee;
+	border-bottom: 1px solid #eee;
+	border-left: none;
+	border-right: none;
+	border-radius: 0px;
+	float: none;
+	margin-right: 0px;
+	margin-left: 0px;
+	padding: 0px;
+	width: 960px;
+}
+
+div.toc li {
+    background: url("bdwn.png") no-repeat scroll 0 5px transparent;
+    font-family: HelvNeuRoman, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-size: 12px;
+}
+
+div.toc h3 {
+    font-family: HelvNeuRoman, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-size: 12px;
+    color: #555;
+	margin-top: 15px;
+}
+
+.directory tr.even {
+    background-color: #F5F5F5;
+}
+
+.directory .levels span {
+    color: #72166B;
+}
+
+.tabsearch {
+	background-image: none;
+	background: #F2F2F2;
+}
+
+.SelectItem {
+	font-family: HelvNeuRoman, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+div.ingroups {
+	margin-top: 20px;
+}
+
+/*---------------------------------------------------------------*/
+/* Header
+/*---------------------------------------------------------------*/
+
+#titlearea
+{
+	background-color: #000000;
+}
+
+.headercontent {
+	max-width: 960px;
+	height: 83px;
+	margin: 0px auto;
+	display: block;
+	overflow: hidden;
+}
+
+.PVRlogo {
+	position: absolute;
+	margin-top: 15px;
+}
+
+a.SiteTitle {
+	font-family: Roboto, sans-serif;
+	font-weight: normal;
+	font-size: 34px;
+	letter-spacing: -0.01em;
+	color: white;
+	float: right;
+	margin-top: 20px;
+	text-decoration: none;
+}
+
+#projectname
+{
+	font-family: HelvNeuMed, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-size: inherit;
+}
+
+/*---------------------------------------------------------------*/
+/* Tab Navigation
+/*---------------------------------------------------------------*/
+
+.tabs , .tabs2, .tabs3{
+	background-image: none;
+	width: 100%;
+	z-index: 101;
+	font-size: 13px;
+	font-family: Roboto, sans-serif;
+	min-height: 41px;
+	text-align: center;
+	border-top: 1px solid #ffffff;
+	background-color: #000000;
+}
+
+.tabs2, .tabs3 {
+	border-top: 5px solid #ffffff;
+}
+
+.tablist {
+	max-width: 960px;
+	position: relative;
+	margin: 0px auto;
+	width: 100%;
+}
+
+.tablist a {
+	min-height: 41px;
+	display: block;
+	font-weight: normal;
+	font-size: 16px;
+	padding-top: 3px;
+	font-family: Roboto, sans-serif;
+	color: #fff;
+	text-shadow: none;
+	text-decoration: none;
+	outline: none;
+	background: #000000;
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	border-left: 1px solid #d9d9d9;
+	border-right: 1px solid #d9d9d9;
+}
+
+.tablist a:hover {
+	background-image: none;
+	text-shadow: none;
+	text-decoration: none;
+	color: #222;
+	background: #fff;
+}
+
+.tablist li.current a {
+	background-image: none;
+	background-color: #300b33;
+	color: #fff;
+	text-decoration: none;
+	text-shadow: none;
+}
+
+.tablist li.current a:hover {
+	background-color: #fff;
+	color: #222;
+}
+
+#navrow1 a:hover {
+	background-image: none;
+	text-shadow: none;
+	text-decoration: none;
+	color: #fff;
+	background: #afafaf;
+}
+
+#navrow1 li.current a {
+	background-image: none;
+	background-color: #afafaf;
+	color: #fff;
+	text-decoration: none;
+	text-shadow: none;
+}
+
+#navrow1 li.current a:hover {
+}
+
+/*---------------------------------------------------------------*/
+/* Search bar
+/*---------------------------------------------------------------*/
+
+#MSearchBox {
+	display: block;
+	margin-right: -10px;
+}
+
+#MSearchSelectWindow {
+	display: none;
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 2;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	background: #f2f2f2;
+	border: 1px solid #d9d9d9;
+	-webkit-box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+	-moz-box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+#MSearchResultsWindow {
+	z-index: 1;
+	border: 1px solid #d9d9d9;
+	background-color: #f5f5f5;
+}
+
+.tablist #MSearchClose:hover {
+	box-shadow: none;
+	background: none;
+}
+
+/*---------------------------------------------------------------*/
+/* Footer
+/*---------------------------------------------------------------*/
+
+#FooterMainContainer {
+	width: 100%;
+	background-color: #F9F9F9;
+	border-bottom: 10px solid #999;
+	border-top: 1px solid #e4e4e4;
+}
+
+#FooterContainer {
+	max-width: 960px;
+	height: 100px;
+	margin: 0px auto;
+	padding-bottom: 20px;
+}
+
+#FooterContainer .footerlogo {
+	margin-top: 20px;
+	text-align: center;
+}
+
+#FooterContainer .copyright {
+	font-family: HelvNeuMed, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-weight: normal;
+	letter-spacing: -0.01em;
+	color: #999;
+	text-align: center;
+}
+
+/*---------------------------------------------------------------*/
+/* Group member descriptions
+/*---------------------------------------------------------------*/
+
+.mdescLeft, .mdescRight,
+.memItemLeft, .memItemRight,
+.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
+	background-color: #F9F9F9;
+}
+
+/*---------------------------------------------------------------*/
+/* Group member details
+/*---------------------------------------------------------------*/
+
+.memitem {
+	padding: 4px 0 0 0;
+}
+
+.memproto, dl.reflist dt {
+    border-top: 1px solid #BBB;
+    border-left: 1px solid #BBB;
+    border-right: 1px solid #BBB;
+    padding: 6px 0px 6px 0px;
+	color: #555;	
+    font-weight: bold;
+	text-shadow: none;
+	background-image: none;
+	background-repeat: no-repeat;
+	background-color: #e4e4e4;	
+    /* opera specific markup */
+    box-shadow: 5px 5px 5px rgba(255, 255, 255, 0.5);
+    border-top-right-radius: 4px;
+    border-top-left-radius: 4px;
+    /* firefox specific markup */
+    -moz-box-shadow: rgba(255, 255, 255, 0.5) 5px 5px 5px;
+    -moz-border-radius-topright: 4px;
+    -moz-border-radius-topleft: 4px;
+    /* webkit specific markup */
+    -webkit-box-shadow: 5px 5px 5px rgba(255, 255, 255, 0.5);
+    -webkit-border-top-right-radius: 4px;
+    -webkit-border-top-left-radius: 4px;
+	display: block;
+	overflow: hidden;
+}
+
+.memdoc, dl.reflist dd {
+    border-bottom: 1px solid #BBB;      
+    border-left: 1px solid #BBB;      
+    border-right: 1px solid #BBB; 
+    padding: 6px 10px 2px 10px;
+	background-color: white;
+    border-top-width: 0;
+	background-image: none;
+	background-repeat: no-repeat;
+    /* opera specific markup */
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    box-shadow: 5px 5px 5px rgba(255, 255, 255, 0.5);
+    /* firefox specific markup */
+    -moz-border-radius-bottomleft: 4px;
+    -moz-border-radius-bottomright: 4px;
+    -moz-box-shadow: rgba(255, 255, 255, 0.5) 5px 5px 5px;
+    /* webkit specific markup */
+    -webkit-border-bottom-left-radius: 4px;
+    -webkit-border-bottom-right-radius: 4px;
+    -webkit-box-shadow: 5px 5px 5px rgba(255, 255, 255, 0.5);
+}
+
+table.doxtable {
+	border-collapse: separate;
+    background: #fff;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    margin: 0;
+    border: 1px solid #dddddd;
+    color: #222;
+}
+
+table.doxtable td, table.doxtable th {
+	border: none;
+	padding: 8px 10px 9px;
+}
+
+table.doxtable tr:nth-child(odd) {
+    background: #f9f9f9;
+}
+
+table.doxtable th {
+	background-color: #f5f5f5;
+	color: #222;
+	font-weight: bold;
+    font-size: 13px;
+    border: 1px solid #fff;
+	padding: 8px 10px 9px;
+}
+
+table.fieldtable {
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    border: 1px solid #BBB;
+    border-spacing: 0px;        
+    -moz-box-shadow: rgba(255, 255, 255, 0.5) 2px 2px 2px;
+    -webkit-box-shadow: 2px 2px 2px rgba(255, 255, 255, 0.5);
+    box-shadow: 2px 2px 2px rgba(255, 255, 255, 0.5);
+}
+
+.fieldtable td.fieldtype, .fieldtable td.fieldname {
+    white-space: nowrap;
+    border-right: 1px solid #BBB;
+    border-bottom: 1px solid #BBB;
+    vertical-align: top;
+}
+
+.fieldtable td.fielddoc {
+    border-bottom: 1px solid #BBB;
+}
+
+.fieldtable th {
+    background-image: none;
+    background-color: #e4e4e4;
+    font-size: 90%;
+    color: #555;
+    padding-bottom: 4px;
+    padding-top: 5px;
+    text-align: left;
+    -moz-border-radius-topleft: 4px;
+    -moz-border-radius-topright: 4px;
+    -webkit-border-top-left-radius: 4px;
+    -webkit-border-top-right-radius: 4px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom: 1px solid #BBB;
+}
+
+.paramname {
+	color: #555;
+}
+
+span.mlabel {
+	background-color: #770172;
+	border: 1px solid #2b0029;
+	color: #fff;
+}
+
+div.directory {
+    border-top: 1px solid #770172;
+    border-bottom: 1px solid #770172;
+}
+
+/*---------------------------------------------------------------*/
+/* Navigation Path
+/*---------------------------------------------------------------*/
+
+div.qindex, div.navtab{
+	background-color: #770172;
+}
+
+div.qindex, div.navpath {
+	font-size: 11px;
+	height: 30px;
+	line-height: 30px;
+	overflow: hidden;
+	padding: 0px;
+	text-align: center;
+	background: #f6f6f6;
+	max-width: 960px;
+	position: relative;
+	margin: 0 auto;
+}
+
+.navpath ul
+{
+	background-image: none;
+	display: block;
+	color: #555;
+	border: none;
+	overflow: hidden;
+	margin: 0px 10px;
+	padding: 0px 2px;
+}
+
+.navpath li
+{
+	padding-left: 0px;
+	padding-right: 0px;
+	background-image: none;
+	color: #555;
+}
+
+.navpath li.navelem a
+{
+	color: #cd239d;
+	font-family: Geneva, Arial, Helvetica, sans-serif;
+	text-shadow: none;
+	display: inline-block;
+}
+
+.navpath li.navelem a:hover
+{
+	color: #555;
+	text-decoration: none;
+}
+
+.navpath ul li.navelem:before {
+	content: ">";
+	color: #555;
+	padding-right: 10px;
+	padding-left: 10px;
+}
+
+.navpath ul li.navelem:first-child:before {
+	content: " ";
+	padding: 0px;
+}
+
+.navpath li.footer
+{
+	list-style-type: none;
+	float: right;
+	padding: 0;
+	background-image: none;
+	color: #364D7C;
+	font-size: 8pt;
+}
+
+/*---------------------------------------------------------------*/
+/* Media Queries. These are used for making the page responsive to different screen sizes.
+/*---------------------------------------------------------------*/
+
+@media screen and (max-width:720px) {
+
+.headercontent .PVRlogo {
+	display: none;
+}
+
+a.SiteTitle {
+	float: left;
+}
+
+#FooterContainer .footerlogo {
+	float: left;
+}
+
+#FooterContainer .copyright {
+	float: left;
+	text-align: left;
+	margin-left: -136px;
+}
+
+#MSearchBox {
+	display: block;
+	top: -60px;
+}
+}
+
+@media screen and (max-width:480px) {
+
+#MSearchBox {
+	display: none;
+	
+}
+}
+
+@media (max-width: 370px) {
+
+a.SiteTitle {
+	font-size: 20px;
+	text-align: center;
+	margin-top: 30px;
+	width: 100%;
+}
+}

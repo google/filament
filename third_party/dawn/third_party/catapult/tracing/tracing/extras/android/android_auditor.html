@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/model/alert.html">
+<link rel="import" href="/tracing/model/frame.html">
+<link rel="import" href="/tracing/model/helpers/android_model_helper.html">
+<link rel="import" href="/tracing/model/thread_time_slice.html">
+<link rel="import" href="/tracing/model/user_model/response_expectation.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Class for Android-specific Auditing.
+ */
+tr.exportTo('tr.e.audits', function() {
+  const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+  const Auditor = tr.c.Auditor;
+  const AndroidModelHelper = tr.model.helpers.AndroidModelHelper;
+  const ColorScheme = tr.b.ColorScheme;
+  const Statistics = tr.b.math.Statistics;
+  const FRAME_PERF_CLASS = tr.model.FRAME_PERF_CLASS;
+  const Alert = tr.model.Alert;
+  const EventInfo = tr.model.EventInfo;
+  const Scalar = tr.b.Scalar;
+  const timeDurationInMs = tr.b.Unit.byName.timeDurationInMs;
+
+  // TODO: extract from VSYNC, since not all devices have vsync near 60fps
+  const EXPECTED_FRAME_TIME_MS = 16.67;
+
+  function getStart(e) { return e.start; }
+  function getDuration(e) { return e.duration; }
+  // used for general UI thread responsiveness alerts, falls back to duration
+  function getCpuDuration(e) {
+    return (e.cpuDuration !== undefined) ? e.cpuDuration : e.duration;
+  }
+
+  function frameIsActivityStart(frame) {
+    return frame.associatedEvents.any(x => x.title === 'activityStart');
+  }
+
+  function frameMissedDeadline(frame) {
+    return frame.args.deadline && frame.args.deadline < frame.end;
+  }
+
+  /** Builder object for EventInfo docLink structures */
+  function DocLinkBuilder() {
+    this.docLinks = [];
+  }
+  DocLinkBuilder.prototype = {
+    addAppVideo(name, videoId) {
+      this.docLinks.push({
+        label: 'Video Link',
+        textContent: ('Android Performance Patterns: ' + name),
+        href: 'https://www.youtube.com/watch?list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE&v=' + videoId // @suppress longLineCheck
+      });
+      return this;
+    },
+    addDacRef(name, link) {
+      this.docLinks.push({
+        label: 'Doc Link',
+        textContent: (name + ' documentation'),
+        href: 'https://developer.android.com/reference/' + link
+      });
+      return this;
+    },
+    build() {
+      return this.docLinks;
+    }
+  };
+
+  /**
+   * Auditor for Android-specific traces.
+   * @constructor
+   */
+  function AndroidAuditor(model) {
+    Auditor.call(this, model);
+
+    const helper = model.getOrCreateHelper(AndroidModelHelper);
+    if (helper.apps.length || helper.surfaceFlinger) {
+      this.helper = helper;
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Rendering / RenderThread alerts - only available on SDK 22+
+  //////////////////////////////////////////////////////////////////////////////
+
+  AndroidAuditor.viewAlphaAlertInfo_ = new EventInfo(
+      'Inefficient View alpha usage',
+      'Setting an alpha between 0 and 1 has significant performance costs, if one of the fast alpha paths is not used.', // @suppress longLineCheck
+      new DocLinkBuilder()
+          .addAppVideo('Hidden Cost of Transparency', 'wIy8g8yNhNk')
+          .addDacRef('View#setAlpha()', 'android/view/View.html#setAlpha(float)') // @suppress longLineCheck
+          .build());
+  AndroidAuditor.saveLayerAlertInfo_ = new EventInfo(
+      'Expensive rendering with Canvas#saveLayer()',
+      'Canvas#saveLayer() incurs extremely high rendering cost. They disrupt the rendering pipeline when drawn, forcing a flush of drawing content. Instead use View hardware layers, or static Bitmaps. This enables the offscreen buffers to be reused in between frames, and avoids the disruptive render target switch.', // @suppress longLineCheck
+      new DocLinkBuilder()
+          .addAppVideo('Hidden Cost of Transparency', 'wIy8g8yNhNk')
+          .addDacRef('Canvas#saveLayerAlpha()', 'android/graphics/Canvas.html#saveLayerAlpha(android.graphics.RectF, int, int)') // @suppress longLineCheck
+          .build());
+  AndroidAuditor.getSaveLayerAlerts_ = function(frame) {
+    const badAlphaRegEx =
+        /^(.+) alpha caused (unclipped )?saveLayer (\d+)x(\d+)$/;
+    const saveLayerRegEx = /^(unclipped )?saveLayer (\d+)x(\d+)$/;
+
+    const ret = [];
+    const events = [];
+
+    frame.associatedEvents.forEach(function(slice) {
+      const match = badAlphaRegEx.exec(slice.title);
+      if (match) {
+        // due to bug in tracing code on SDK 22, ignore
+        // presence of 'unclipped' string in View alpha slices
+        const args = { 'view name': match[1],
+          'width': parseInt(match[3]),
+          'height': parseInt(match[4]) };
+        ret.push(new Alert(AndroidAuditor.viewAlphaAlertInfo_,
+            slice.start, [slice], args));
+      } else if (saveLayerRegEx.test(slice.title)) {
+        events.push(slice);
+      }
+    }, this);
+
+    if (events.length > ret.length) {
+      // more saveLayers than bad alpha can account for - add another alert
+
+      const unclippedSeen = Statistics.sum(events, function(slice) {
+        return saveLayerRegEx.exec(slice.title)[1] ? 1 : 0;
+      });
+      const clippedSeen = events.length - unclippedSeen;
+      const earliestStart = Statistics.min(events, function(slice) {
+        return slice.start;
+      });
+
+      const args = {
+        'Unclipped saveLayer count (especially bad!)': unclippedSeen,
+        'Clipped saveLayer count': clippedSeen
+      };
+
+      events.push(frame);
+      ret.push(new Alert(AndroidAuditor.saveLayerAlertInfo_,
+          earliestStart, events, args));
+    }
+
+    return ret;
+  };
+
+
+  AndroidAuditor.pathAlertInfo_ = new EventInfo(
+      'Path texture churn',
+      'Paths are drawn with a mask texture, so when a path is modified / newly drawn, that texture must be generated and uploaded to the GPU. Ensure that you cache paths between frames and do not unnecessarily call Path#reset(). You can cut down on this cost by sharing Path object instances between drawables/views.'); // @suppress longLineCheck
+  AndroidAuditor.getPathAlert_ = function(frame) {
+    const uploadRegEx = /^Generate Path Texture$/;
+
+    const events = frame.associatedEvents.filter(function(event) {
+      return event.title === 'Generate Path Texture';
+    });
+    const start = Statistics.min(events, getStart);
+    const duration = Statistics.sum(events, getDuration);
+
+    if (duration < 3) return undefined;
+
+    events.push(frame);
+    return new Alert(AndroidAuditor.pathAlertInfo_, start, events,
+        { 'Time spent': new Scalar(timeDurationInMs, duration) });
+  };
+
+
+  AndroidAuditor.uploadAlertInfo_ = new EventInfo(
+      'Expensive Bitmap uploads',
+      'Bitmaps that have been modified / newly drawn must be uploaded to the GPU. Since this is expensive if the total number of pixels uploaded is large, reduce the amount of Bitmap churn in this animation/context, per frame.'); // @suppress longLineCheck
+  AndroidAuditor.getUploadAlert_ = function(frame) {
+    const uploadRegEx = /^Upload (\d+)x(\d+) Texture$/;
+
+    const events = [];
+    let start = Number.POSITIVE_INFINITY;
+    let duration = 0;
+    let pixelsUploaded = 0;
+    frame.associatedEvents.forEach(function(event) {
+      const match = uploadRegEx.exec(event.title);
+      if (match) {
+        events.push(event);
+        start = Math.min(start, event.start);
+        duration += event.duration;
+        pixelsUploaded += parseInt(match[1]) * parseInt(match[2]);
+      }
+    });
+    if (events.length === 0 || duration < 3) return undefined;
+
+    const mPixels = (pixelsUploaded / 1000000).toFixed(2) + ' million';
+    const args = { 'Pixels uploaded': mPixels,
+      'Time spent': new Scalar(timeDurationInMs, duration) };
+    events.push(frame);
+    return new Alert(AndroidAuditor.uploadAlertInfo_, start, events, args);
+  };
+
+  //////////////////////////////////////////////////////////////////////////////
+  // UI responsiveness alerts
+  //////////////////////////////////////////////////////////////////////////////
+
+  AndroidAuditor.ListViewInflateAlertInfo_ = new EventInfo(
+      'Inflation during ListView recycling',
+      'ListView item recycling involved inflating views. Ensure your Adapter#getView() recycles the incoming View, instead of constructing a new one.'); // @suppress longLineCheck
+  AndroidAuditor.ListViewBindAlertInfo_ = new EventInfo(
+      'Inefficient ListView recycling/rebinding',
+      'ListView recycling taking too much time per frame. Ensure your Adapter#getView() binds data efficiently.'); // @suppress longLineCheck
+  AndroidAuditor.getListViewAlert_ = function(frame) {
+    const events = frame.associatedEvents.filter(function(event) {
+      return event.title === 'obtainView' || event.title === 'setupListItem';
+    });
+    const duration = Statistics.sum(events, getCpuDuration);
+
+    if (events.length === 0 || duration < 3) return undefined;
+
+    // simplifying assumption - check for *any* inflation.
+    // TODO(ccraik): make 'inflate' slices associated events.
+    let hasInflation = false;
+    for (const event of events) {
+      if (event.findDescendentSlice('inflate')) {
+        hasInflation = true;
+      }
+    }
+
+    const start = Statistics.min(events, getStart);
+    const args = { 'Time spent': new Scalar(timeDurationInMs, duration) };
+    args['ListView items ' + (hasInflation ? 'inflated' : 'rebound')] =
+        events.length / 2;
+    const eventInfo = hasInflation ? AndroidAuditor.ListViewInflateAlertInfo_ :
+      AndroidAuditor.ListViewBindAlertInfo_;
+    events.push(frame);
+    return new Alert(eventInfo, start, events, args);
+  };
+
+
+  AndroidAuditor.measureLayoutAlertInfo_ = new EventInfo(
+      'Expensive measure/layout pass',
+      'Measure/Layout took a significant time, contributing to jank. Avoid triggering layout during animations.', // @suppress longLineCheck
+      new DocLinkBuilder()
+          .addAppVideo('Invalidations, Layouts, and Performance', 'we6poP0kw6E')
+          .build());
+  AndroidAuditor.getMeasureLayoutAlert_ = function(frame) {
+    const events = frame.associatedEvents.filter(function(event) {
+      return event.title === 'measure' || event.title === 'layout';
+    });
+    const duration = Statistics.sum(events, getCpuDuration);
+
+    if (events.length === 0 || duration < 3) return undefined;
+
+    const start = Statistics.min(events, getStart);
+    events.push(frame);
+    return new Alert(AndroidAuditor.measureLayoutAlertInfo_, start, events,
+        { 'Time spent': new Scalar(timeDurationInMs, duration) });
+  };
+
+
+  AndroidAuditor.viewDrawAlertInfo_ = new EventInfo(
+      'Long View#draw()',
+      'Recording the drawing commands of invalidated Views took a long time. Avoid significant work in View or Drawable custom drawing, especially allocations or drawing to Bitmaps.', // @suppress longLineCheck
+      new DocLinkBuilder()
+          .addAppVideo('Invalidations, Layouts, and Performance', 'we6poP0kw6E')
+          .addAppVideo('Avoiding Allocations in onDraw()', 'HAK5acHQ53E')
+          .build());
+  AndroidAuditor.getViewDrawAlert_ = function(frame) {
+    let slice = undefined;
+    for (const event of frame.associatedEvents) {
+      if (event.title === 'getDisplayList' ||
+          event.title === 'Record View#draw()') {
+        slice = event;
+        break;
+      }
+    }
+
+    if (!slice || getCpuDuration(slice) < 3) return undefined;
+    return new Alert(AndroidAuditor.viewDrawAlertInfo_, slice.start,
+        [slice, frame],
+        { 'Time spent': new Scalar(
+            timeDurationInMs, getCpuDuration(slice)) });
+  };
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Runtime alerts
+  //////////////////////////////////////////////////////////////////////////////
+
+  AndroidAuditor.blockingGcAlertInfo_ = new EventInfo(
+      'Blocking Garbage Collection',
+      'Blocking GCs are caused by object churn, and made worse by having large numbers of objects in the heap. Avoid allocating objects during animations/scrolling, and recycle Bitmaps to avoid triggering garbage collection.', // @suppress longLineCheck
+      new DocLinkBuilder()
+          .addAppVideo('Garbage Collection in Android', 'pzfzz50W5Uo')
+          .addAppVideo('Avoiding Allocations in onDraw()', 'HAK5acHQ53E')
+          .build());
+  AndroidAuditor.getBlockingGcAlert_ = function(frame) {
+    const events = frame.associatedEvents.filter(function(event) {
+      return event.title === 'DVM Suspend' ||
+          event.title === 'GC: Wait For Concurrent';
+    });
+    const blockedDuration = Statistics.sum(events, getDuration);
+    if (blockedDuration < 3) return undefined;
+
+    const start = Statistics.min(events, getStart);
+    events.push(frame);
+    return new Alert(AndroidAuditor.blockingGcAlertInfo_, start, events,
+        { 'Blocked duration': new Scalar(
+            timeDurationInMs, blockedDuration) });
+  };
+
+
+  AndroidAuditor.lockContentionAlertInfo_ = new EventInfo(
+      'Lock contention',
+      'UI thread lock contention is caused when another thread holds a lock that the UI thread is trying to use. UI thread progress is blocked until the lock is released. Inspect locking done within the UI thread, and ensure critical sections are short.'); // @suppress longLineCheck
+  AndroidAuditor.getLockContentionAlert_ = function(frame) {
+    const events = frame.associatedEvents.filter(function(event) {
+      return /^Lock Contention on /.test(event.title);
+    });
+
+    const blockedDuration = Statistics.sum(events, getDuration);
+    if (blockedDuration < 1) return undefined;
+
+    const start = Statistics.min(events, getStart);
+    events.push(frame);
+    return new Alert(AndroidAuditor.lockContentionAlertInfo_, start, events,
+        { 'Blocked duration': new Scalar(
+            timeDurationInMs, blockedDuration) });
+  };
+
+  AndroidAuditor.schedulingAlertInfo_ = new EventInfo(
+      'Scheduling delay',
+      'Work to produce this frame was descheduled for several milliseconds, contributing to jank. Ensure that code on the UI thread doesn\'t block on work being done on other threads, and that background threads (doing e.g. network or bitmap loading) are running at android.os.Process#THREAD_PRIORITY_BACKGROUND or lower so they are less likely to interrupt the UI thread. These background threads should show up with a priority number of 130 or higher in the scheduling section under the Kernel process.'); // @suppress longLineCheck
+  AndroidAuditor.getSchedulingAlert_ = function(frame) {
+    let totalDuration = 0;
+    const totalStats = {};
+    for (const ttr of frame.threadTimeRanges) {
+      const stats = ttr.thread.getSchedulingStatsForRange(ttr.start, ttr.end);
+      for (const [key, value] of Object.entries(stats)) {
+        if (!(key in totalStats)) {
+          totalStats[key] = 0;
+        }
+        totalStats[key] += value;
+        totalDuration += value;
+      }
+    }
+
+    // only alert if frame not running for > 3ms. Note that we expect a frame
+    // to never describe intentionally idle time.
+    if (!(SCHEDULING_STATE.RUNNING in totalStats) ||
+        totalDuration === 0 ||
+        totalDuration - totalStats[SCHEDULING_STATE.RUNNING] < 3) {
+      return;
+    }
+
+    const args = {};
+    for (const [key, value] of Object.entries(totalStats)) {
+      let newKey = key;
+      if (key === SCHEDULING_STATE.RUNNABLE) {
+        newKey = 'Not scheduled, but runnable';
+      } else if (key === SCHEDULING_STATE.UNINTR_SLEEP) {
+        newKey = 'Blocking I/O delay';
+      }
+      args[newKey] = new Scalar(timeDurationInMs, value);
+    }
+
+    return new Alert(AndroidAuditor.schedulingAlertInfo_, frame.start, [frame],
+        args);
+  };
+
+  AndroidAuditor.prototype = {
+    __proto__: Auditor.prototype,
+
+    renameAndSort_() {
+      this.model.kernel.important = false;// auto collapse
+      // SurfaceFlinger first, other processes sorted by slice count
+      this.model.getAllProcesses().forEach(function(process) {
+        if (this.helper.surfaceFlinger &&
+            process === this.helper.surfaceFlinger.process) {
+          if (!process.name) {
+            process.name = 'SurfaceFlinger';
+          }
+          process.sortIndex = Number.NEGATIVE_INFINITY;
+          process.important = false; // auto collapse
+          return;
+        }
+
+        const uiThread = process.getThread(process.pid);
+        if (!process.name && uiThread && uiThread.name) {
+          if (/^ndroid\./.test(uiThread.name)) {
+            uiThread.name = 'a' + uiThread.name;
+          }
+          process.name = uiThread.name;
+
+          uiThread.name = 'UI Thread';
+        }
+
+        process.sortIndex = 0;
+        for (const tid in process.threads) {
+          process.sortIndex -= process.threads[tid].sliceGroup.slices.length;
+        }
+      }, this);
+
+      // ensure sequential, relative order for UI/Render/Worker threads
+      this.model.getAllThreads().forEach(function(thread) {
+        if (thread.tid === thread.parent.pid) {
+          thread.sortIndex = -3;
+        }
+        if (thread.name === 'RenderThread') {
+          thread.sortIndex = -2;
+        }
+        if (/^hwuiTask/.test(thread.name)) {
+          thread.sortIndex = -1;
+        }
+      });
+    },
+
+    pushFramesAndJudgeJank_() {
+      let badFramesObserved = 0;
+      let framesObserved = 0;
+      const surfaceFlinger = this.helper.surfaceFlinger;
+
+      this.helper.apps.forEach(function(app) {
+        // override frame list
+        app.process.frames = app.getFrames();
+
+        app.process.frames.forEach(function(frame) {
+          if (frame.totalDuration > EXPECTED_FRAME_TIME_MS * 2) {
+            badFramesObserved += 2;
+            frame.perfClass = FRAME_PERF_CLASS.TERRIBLE;
+          } else if (frame.totalDuration > EXPECTED_FRAME_TIME_MS ||
+              frameMissedDeadline(frame)) {
+            badFramesObserved++;
+            frame.perfClass = FRAME_PERF_CLASS.BAD;
+          } else {
+            frame.perfClass = FRAME_PERF_CLASS.GOOD;
+          }
+        });
+        framesObserved += app.process.frames.length;
+      });
+
+      if (framesObserved) {
+        const portionBad = badFramesObserved / framesObserved;
+        if (portionBad > 0.3) {
+          this.model.faviconHue = 'red';
+        } else if (portionBad > 0.05) {
+          this.model.faviconHue = 'yellow';
+        } else {
+          this.model.faviconHue = 'green';
+        }
+      }
+    },
+
+    pushEventInfo_() {
+      const appAnnotator = new AppAnnotator();
+      this.helper.apps.forEach(function(app) {
+        if (app.uiThread) {
+          appAnnotator.applyEventInfos(app.uiThread.sliceGroup);
+        }
+        if (app.renderThread) {
+          appAnnotator.applyEventInfos(app.renderThread.sliceGroup);
+        }
+      });
+    },
+
+    runAnnotate() {
+      if (!this.helper) return;
+
+      this.renameAndSort_();
+      this.pushFramesAndJudgeJank_();
+      this.pushEventInfo_();
+
+      this.helper.iterateImportantSlices(function(slice) {
+        slice.important = true;
+      });
+    },
+
+    runAudit() {
+      if (!this.helper) return;
+
+      const alerts = this.model.alerts;
+      this.helper.apps.forEach(function(app) {
+        app.getFrames().forEach(function(frame) {
+          alerts.push.apply(alerts, AndroidAuditor.getSaveLayerAlerts_(frame));
+
+          // skip most alerts for neutral or good frames
+          if (frame.perfClass === FRAME_PERF_CLASS.NEUTRAL ||
+              frame.perfClass === FRAME_PERF_CLASS.GOOD) {
+            return;
+          }
+
+          let alert = AndroidAuditor.getPathAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getUploadAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getListViewAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getMeasureLayoutAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getViewDrawAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getBlockingGcAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getLockContentionAlert_(frame);
+          if (alert) alerts.push(alert);
+
+          alert = AndroidAuditor.getSchedulingAlert_(frame);
+          if (alert) alerts.push(alert);
+        });
+      }, this);
+
+      this.addRenderingInteractionRecords();
+      this.addInputInteractionRecords();
+    },
+
+    addRenderingInteractionRecords() {
+      const events = [];
+      this.helper.apps.forEach(function(app) {
+        events.push.apply(events, app.getAnimationAsyncSlices());
+        events.push.apply(events, app.getFrames());
+      });
+
+      const mergerFunction = function(events) {
+        const ir = new tr.model.um.ResponseExpectation(
+            this.model, 'Rendering',
+            events[0].min,
+            events[events.length - 1].max - events[0].min);
+        this.model.userModel.expectations.push(ir);
+      }.bind(this);
+      tr.b.math.mergeRanges(
+          tr.b.math.convertEventsToRanges(events), 30, mergerFunction);
+    },
+
+    addInputInteractionRecords() {
+      const inputSamples = [];
+      this.helper.apps.forEach(function(app) {
+        inputSamples.push.apply(inputSamples, app.getInputSamples());
+      });
+
+      const mergerFunction = function(events) {
+        const ir = new tr.model.um.ResponseExpectation(
+            this.model, 'Input',
+            events[0].min,
+            events[events.length - 1].max - events[0].min);
+        this.model.userModel.expectations.push(ir);
+      }.bind(this);
+      const inputRanges = inputSamples.map(function(sample) {
+        return tr.b.math.Range.fromExplicitRange(
+            sample.timestamp, sample.timestamp);
+      });
+      tr.b.math.mergeRanges(inputRanges, 30, mergerFunction);
+    }
+  };
+
+  Auditor.register(AndroidAuditor);
+
+  function AppAnnotator() {
+    this.titleInfoLookup = new Map();
+    this.titleParentLookup = new Map();
+    this.build_();
+  }
+
+  AppAnnotator.prototype = {
+    build_() {
+      const registerEventInfo = function(dict) {
+        this.titleInfoLookup.set(dict.title, new EventInfo(
+            dict.title, dict.description, dict.docLinks));
+        if (dict.parents) {
+          this.titleParentLookup.set(dict.title, dict.parents);
+        }
+      }.bind(this);
+
+      registerEventInfo({
+        title: 'inflate',
+        description: 'Constructing a View hierarchy from pre-processed XML via LayoutInflater#layout. This includes constructing all of the View objects in the hierarchy, and applying styled attributes.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // Adapter view
+      //////////////////////////////////////////////////////////////////////////
+      registerEventInfo({
+        title: 'obtainView',
+        description: 'Adapter#getView() called to bind content to a recycled View that is being presented.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'setupListItem',
+        description: 'Attached a newly-bound, recycled View to its parent ListView.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'setupGridItem',
+        description: 'Attached a newly-bound, recycled View to its parent GridView.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // Choreographer (tracing enabled on M+)
+      //////////////////////////////////////////////////////////////////////////
+      const choreographerLinks = new DocLinkBuilder()
+          .addDacRef('Choreographer', 'android/view/Choreographer.html') // @suppress longLineCheck
+          .build();
+      registerEventInfo({
+        title: 'Choreographer#doFrame',
+        docLinks: choreographerLinks,
+        description: 'Choreographer executes frame callbacks for inputs, animations, and rendering traversals. When this work is done, a frame will be presented to the user.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'input',
+        parents: ['Choreographer#doFrame'],
+        docLinks: choreographerLinks,
+        description: 'Input callbacks are processed. This generally encompasses dispatching input to Views, as well as any work the Views do to process this input/gesture.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'animation',
+        parents: ['Choreographer#doFrame'],
+        docLinks: choreographerLinks,
+        description: 'Animation callbacks are processed. This is generally minimal work, as animations determine progress for the frame, and push new state to animated objects (such as setting View properties).'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'traversals',
+        parents: ['Choreographer#doFrame'],
+        docLinks: choreographerLinks,
+        description: 'Primary draw traversals. This is the primary traversal of the View hierarchy, including layout and draw passes.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // performTraversals + sub methods
+      //////////////////////////////////////////////////////////////////////////
+      const traversalParents = ['Choreographer#doFrame', 'performTraversals'];
+      const layoutLinks = new DocLinkBuilder()
+          .addDacRef('View#Layout', 'android/view/View.html#Layout')
+          .build();
+      registerEventInfo({
+        title: 'performTraversals',
+        description: 'A drawing traversal of the View hierarchy, comprised of all layout and drawing needed to produce the frame.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'measure',
+        parents: traversalParents,
+        docLinks: layoutLinks,
+        description: 'First of two phases in view hierarchy layout. Views are asked to size themselves according to constraints supplied by their parent. Some ViewGroups may measure a child more than once to help satisfy their own constraints. Nesting ViewGroups that measure children more than once can lead to excessive and repeated work.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'layout',
+        parents: traversalParents,
+        docLinks: layoutLinks,
+        description: 'Second of two phases in view hierarchy layout, repositioning content and child Views into their new locations.'}); // @suppress longLineCheck
+      const drawString = 'Draw pass over the View hierarchy. Every invalidated View will have its drawing commands recorded. On Android versions prior to Lollipop, this would also include the issuing of draw commands to the GPU. Starting with Lollipop, it only includes the recording of commands, and syncing that information to the RenderThread.'; // @suppress longLineCheck
+      registerEventInfo({
+        title: 'draw',
+        parents: traversalParents,
+        description: drawString});
+
+      const recordString = 'Every invalidated View\'s drawing commands are recorded. Each will have View#draw() called, and is passed a Canvas that will record and store its drawing commands until it is next invalidated/rerecorded.'; // @suppress longLineCheck
+      registerEventInfo({
+        title: 'getDisplayList', // Legacy name for compatibility.
+        parents: ['draw'],
+        description: recordString});
+      registerEventInfo({
+        title: 'Record View#draw()',
+        parents: ['draw'],
+        description: recordString});
+
+      registerEventInfo({
+        title: 'drawDisplayList',
+        parents: ['draw'],
+        description: 'Execution of recorded draw commands to generate a frame. This represents the actual formation and issuing of drawing commands to the GPU. On Android L and higher devices, this work is done on a dedicated RenderThread, instead of on the UI Thread.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // RenderThread
+      //////////////////////////////////////////////////////////////////////////
+      registerEventInfo({
+        title: 'DrawFrame',
+        description: 'RenderThread portion of the standard UI/RenderThread split frame. This represents the actual formation and issuing of drawing commands to the GPU.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'doFrame',
+        description: 'RenderThread animation frame. Represents drawing work done by the RenderThread on a frame where the UI thread did not produce new drawing content.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'syncFrameState',
+        description: 'Sync stage between the UI thread and the RenderThread, where the UI thread hands off a frame (including information about modified Views). Time in this method primarily consists of uploading modified Bitmaps to the GPU. After this sync is completed, the UI thread is unblocked, and the RenderThread starts to render the frame.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'flush drawing commands',
+        description: 'Issuing the now complete drawing commands to the GPU.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'eglSwapBuffers',
+        description: 'Complete GPU rendering of the frame.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // RecyclerView
+      //////////////////////////////////////////////////////////////////////////
+      registerEventInfo({
+        title: 'RV Scroll',
+        description: 'RecyclerView is calculating a scroll. If there are too many of these in Systrace, some Views inside RecyclerView might be causing it. Try to avoid using EditText, focusable views or handle them with care.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'RV OnLayout',
+        description: 'OnLayout has been called by the View system. If this shows up too many times in Systrace, make sure the children of RecyclerView do not update themselves directly. This will cause a full re-layout but when it happens via the Adapter notifyItemChanged, RecyclerView can avoid full layout calculation.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'RV FullInvalidate',
+        description: 'NotifyDataSetChanged or equal has been called. If this is taking a long time, try sending granular notify adapter changes instead of just calling notifyDataSetChanged or setAdapter / swapAdapter. Adding stable ids to your adapter might help.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'RV PartialInvalidate',
+        description: 'RecyclerView is rebinding a View. If this is taking a lot of time, consider optimizing your layout or make sure you are not doing extra operations in onBindViewHolder call.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'RV OnBindView',
+        description: 'RecyclerView is rebinding a View. If this is taking a lot of time, consider optimizing your layout or make sure you are not doing extra operations in onBindViewHolder call.'}); // @suppress longLineCheck
+      registerEventInfo({
+        title: 'RV CreateView',
+        description: 'RecyclerView is creating a new View. If too many of these are present: 1) There might be a problem in Recycling (e.g. custom Animations that set transient state and prevent recycling or ItemAnimator not implementing the contract properly. See Adapter#onFailedToRecycleView(ViewHolder). 2) There may be too many item view types. Try merging them. 3) There might be too many itemChange animations and not enough space in RecyclerPool. Try increasing your pool size and item cache size.'}); // @suppress longLineCheck
+
+      //////////////////////////////////////////////////////////////////////////
+      // Graphics + Composition
+      //////////////////////////////////////////////////////////////////////////
+      // TODO(ccraik): SurfaceFlinger work
+      registerEventInfo({
+        title: 'eglSwapBuffers',
+        description: 'The CPU has finished producing drawing commands, and is flushing drawing work to the GPU, and posting that buffer to the consumer (which is often SurfaceFlinger window composition). Once this is completed, the GPU can produce the frame content without any involvement from the CPU.'}); // @suppress longLineCheck
+    },
+
+    applyEventInfosRecursive_(parentNames, slice) {
+      const checkExpectedParentNames = function(expectedParentNames) {
+        if (!expectedParentNames) return true;
+        return expectedParentNames.some(function(name) {
+          return parentNames.has(name);
+        });
+      };
+
+      // Set EventInfo on the slice if it matches title, and parent.
+      if (this.titleInfoLookup.has(slice.title)) {
+        if (checkExpectedParentNames(this.titleParentLookup.get(slice.title))) {
+          slice.info = this.titleInfoLookup.get(slice.title);
+        }
+      }
+
+      // Push slice into parentNames, and recurse over subSlices.
+      if (slice.subSlices.length > 0) {
+        // Increment title in parentName dict.
+        if (!parentNames.has(slice.title)) {
+          parentNames.set(slice.title, 0);
+        }
+        parentNames.set(slice.title, parentNames.get(slice.title) + 1);
+
+        // Recurse over subSlices.
+        slice.subSlices.forEach(function(subSlice) {
+          this.applyEventInfosRecursive_(parentNames, subSlice);
+        }, this);
+
+        // Decrement title in parentName dict.
+        parentNames.set(slice.title, parentNames.get(slice.title) - 1);
+        if (parentNames.get(slice.title) === 0) {
+          delete parentNames[slice.title];
+        }
+      }
+    },
+
+    applyEventInfos(sliceGroup) {
+      sliceGroup.topLevelSlices.forEach(function(slice) {
+        this.applyEventInfosRecursive_(new Map(), slice);
+      }, this);
+    }
+  };
+
+  return {
+    AndroidAuditor,
+  };
+});
+</script>

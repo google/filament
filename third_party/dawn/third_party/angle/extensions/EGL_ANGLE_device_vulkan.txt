@@ -1,0 +1,198 @@
+Name
+
+    ANGLE_device_vulkan
+
+Name Strings
+
+    EGL_ANGLE_device_vulkan
+
+Contributors
+
+    Peng Huang  (penghuang 'at' google.com)
+    Shahbaz Youssefi  (syoussefi 'at' google.com)
+
+Contact
+
+    Peng Huang  (penghuang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Oct 28, 2021
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL device extension
+
+Dependencies
+
+    This extension is written against the language of EGL 1.5 as
+    modified by EGL_EXT_device_query.
+
+    EGL_EXT_device_query is required.
+
+Overview
+
+    ANGLE has the ability to run GPU commands on a native Vulkan device.
+    This extension defines a mapping from an EGL device to a Vulkan
+    device, after it's queried from an EGL display.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    void eglLockVulkanQueueANGLE(EGLDisplay dpy);
+
+    void eglUnlockVulkanQueueANGLE(EGLDisplay dpy);
+
+New Tokens
+
+    Accepted as a queried <attribute> in eglQueryDeviceAttribEXT:
+
+        EGL_VULKAN_VERSION_ANGLE             0x34A8
+        EGL_VULKAN_INSTANCE_ANGLE            0x34A9
+        EGL_VULKAN_INSTANCE_EXTENSIONS_ANGLE 0x34AA
+        EGL_VULKAN_PHYSICAL_DEVICE_ANGLE     0x34AB
+        EGL_VULKAN_DEVICE_ANGLE              0x34AC
+        EGL_VULKAN_DEVICE_EXTENSIONS_ANGLE   0x34AD
+        EGL_VULKAN_FEATURES_ANGLE            0x34AE
+        EGL_VULKAN_QUEUE_ANGLE               0x34AF
+        EGL_VULKAN_QUEUE_FAMILIY_INDEX_ANGLE 0x34D0
+        EGL_VULKAN_GET_INSTANCE_PROC_ADDR    0x34D1
+
+Add a new section 2.1.3 (Vulkan Devices) after 2.1.2 (Devices)
+
+    Somewhat analogous to an EGL device, a Vulkan device establishes a
+    namespace for Vulkan operations. In the Vulkan APIs, such devices are
+    represented by pointers. For more details, see the Vulkan
+    documentation.
+
+Changes to section 3.2 (Devices)
+
+    Replace the paragraph immediately following the prototype for
+    eglQueryDeviceAttribEXT:
+
+    <attribute> may be EGL_VULKAN_VERSION_ANGLE.
+    On success, EGL_TRUE is returned, and the Vulkan versionbcorresponding to
+    the EGL device is returned in <value>. If the EGL device is not currently
+    associated with a Vulkan device and <attribute> is EGL_VULKAN_VERSION_ANGLE,
+    EGL_BAD_ATTRIBUTE is returned, and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_INSTANCE_ANGLE.
+    On success, EGL_TRUE is returned, and a valid Vulkan instance handle
+    VkInstance corresponding to the EGL device is returned in <value>.
+    This handle is compatible with Vulkan API functions. If the EGL device is
+    not currently associated with a Vulkan device and <attribute> is
+    EGL_VULKAN_INSTANCE_ANGLE, EGL_BAD_ATTRIBUTE is returned, and <value> is
+    left unchanged.
+
+    <attribute> may be EGL_VULKAN_INSTANCE_EXTENSIONS_ANGLE.
+    On success, EGL_TRUE is returned, and a pointer to a null terminated static
+    string array is returned in <value>. The array contains enabled Vulkan
+    instance extensions for the Vulkan device used by the display.
+    If the EGL device is not currently associated with a Vulkan device and
+    <attribute> is EGL_VULKAN_INSTANCE_EXTENSIONS_ANGLE, EGL_BAD_ATTRIBUTE is
+    returned, and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_PHYSICAL_DEVICE_ANGLE.
+    On success, EGL_TRUE is returned, and a valid Vulkan physical device handle
+    VkPhysicalDevice corresponding to the EGL device is returned in <value>.
+    This handle is compatible with Vulkan API functions. If the EGL device is
+    not currently associated with a Vulkan device and <attribute> is
+    EGL_VULKAN_PHYSICAL_DEVICE_ANGLE, EGL_BAD_ATTRIBUTE is returned,
+    and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_DEVICE_ANGLE.
+    On success, EGL_TRUE is returned, and a valid Vulkan device handle VkDevice
+    corresponding to the EGL device is returned in <value>. This handle is
+    compatible with Vulkan API functions. If the EGL device is not currently
+    associated with a Vulkan device and <attribute> is EGL_VULKAN_DEVICE_ANGLE,
+    EGL_BAD_ATTRIBUTE is returned, and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_DEVICE_EXTENSIONS_ANGLE.
+    On success, EGL_TRUE is returned, and a pointer to a null terminated static
+    string array is returned in <value>. The array contains enabled Vulkan
+    device extensions for the Vulkan device used by the display. If the EGL
+    device is not currently associated with a Vulkan device and <attribute> is
+    EGL_VULKAN_DEVICE_EXTENSIONS_ANGLE, EGL_BAD_ATTRIBUTE is returned, and
+    <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_FEATURES_ANGLE.
+    On success, EGL_TRUE is returned, and a pointer to a static
+    VkPhysicalDeviceFeatures2KHR struct is returned in <value>. The structure
+    contains enabled Vulkan device features for the Vulkan device used by the
+    display. If the EGL device is not currently associated with a Vulkan device
+    and <attribute> is EGL_VULKAN_FEATURES_ANGLE, EGL_BAD_ATTRIBUTE is returned,
+    and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_QUEUE_ANGLE.
+    On success, EGL_TRUE is returned, and a valid Vulkan device queue handle
+    VkQueue corresponding to the EGL device is returned in <value>. This handle
+    is compatible with Vulkan API functions. If the EGL device is not currently
+    associated with a Vulkan device and <attribute> is EGL_VULKAN_QUEUE_ANGLE,
+    EGL_BAD_ATTRIBUTE is returned, and <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_QUEUE_FAMILIY_INDEX_ANGLE.
+    On success, EGL_TRUE is returned, and the Vulkan queue familiy index
+    corresponding to the EGL device is returned in <value>. If the EGL device
+    is not currently associated with a Vulkan device and <attribute> is
+    EGL_VULKAN_QUEUE_FAMILIY_INDEX_ANGLE, EGL_BAD_ATTRIBUTE is returned, and
+    <value> is left unchanged.
+
+    <attribute> may be EGL_VULKAN_GET_INSTANCE_PROC_ADDR.
+    On success, EGL_TRUE is returned, and the vkGetInstanceProcAddr function
+    pointer corresponding to the EGL device is returned in <value>. If the EGL
+    device is not currently associated with a Vulkan device and <attribute> is
+    EGL_VULKAN_GET_INSTANCE_PROC_ADDR, EGL_BAD_ATTRIBUTE is returned, and
+    <value> is left unchanged.
+
+    Add the following after the eglQueryDeviceAttribEXT entry point:
+
+    The Vulkan queue queried via EGL_VULKAN_QUEUE_ANGLE can be locked using
+
+        void eglLockVulkanQueueANGLE(EGLDisplay dpy);
+
+    This function provides exclusive access to the Vulkan queue to the caller,
+    as if an internal mutex that is used to protect the queue is locked.
+    If 'dpy' is not a valid display an EGL_BAD_DISPLAY error is generated.
+    No error is generated if the EGL device is not currently associated with a
+    Vulkan device, in which case the function does nothing.
+    Each call to eglLockVulkanQueueANGLE must be paired with a following
+    eglUnlockVulkanQueueANGLE on the same thread, otherwise behavior is
+    undefined.
+
+        void eglUnlockVulkanQueueANGLE(EGLDisplay dpy);
+
+    This function releases exclusive access to the Vulkan queue that was
+    previously acquired via eglLockVulkanQueueANGLE, as if an internal mutex
+    that is used to protect the queue is unlocked.
+    If 'dpy' is not a valid display an EGL_BAD_DISPLAY error is generated.
+    No error is generated if the EGL device is not currently associated with a
+    Vulkan device, in which case the function does nothing.
+    Each call to eglUnlockVulkanQueueANGLE must be preceeded by a call to
+    eglLockVulkanQueueANGLE on the same thread, otherwise behavior is
+    undefined.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, Oct 28, 2021 (Peng Huang)
+        - Initial Draft
+    Version 2, Dec 27, 2024 (Shahbaz Youssefi)
+        - Add entry points for Vulkan queue lock/unlock

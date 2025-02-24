@@ -1,0 +1,15 @@
+*.pyc
+build/*
+dist/*
+gsutil.egg-info/*
+gsutil_*.tar.gz
+gsutil_*.zip
+.project
+.pydevproject
+.settings/*
+.coverage*
+.metadata/*
+.idea/*
+.vscode/*
+venv*/*
+.DS_Store

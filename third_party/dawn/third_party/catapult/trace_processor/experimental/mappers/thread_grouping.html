@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pi.m', function() {
+  function ThreadGrouping() {
+    this.groupNameForThreadGUID_ = {};
+  }
+
+  ThreadGrouping.prototype = {
+    autoInitUsingHelpers: function(model) {
+      // Everything is 'other' by default.
+      model.getAllThreads().forEach(function(thread) {
+        this.groupNameForThreadGUID_[thread.guid] = 'Other';
+      }, this);
+      var chromeHelper = model.getOrCreateHelper(
+          tr.model.helpers.ChromeModelHelper);
+
+      if (chromeHelper) {
+        var browserHelper = chromeHelper.browserHelper;
+        this.addThreadsInProcessToGroup_(browserHelper.process, 'Browser');
+
+        var gpuHelper = chromeHelper.gpuHelper;
+        if (gpuHelper) {
+          this.addThreadsInProcessToGroup_(gpuHelper.process, 'GPU');
+        }
+
+        for (var pid in chromeHelper.rendererHelpers) {
+          var rendererHelper = chromeHelper.rendererHelpers[pid];
+          this.addThreadsInProcessToGroup_(rendererHelper.process, 'Renderer');
+        }
+
+        // TODO(nduca): Modify the helpers to detect plugin processes
+        // and include those in separate processes.
+      }
+
+      // It would be very easy to add processes recognized by android helper
+      // here, too.
+    },
+
+    getGroupNameForThread: function(thread) {
+      if (!(thread instanceof tr.model.EventContainer))
+        return 'error';
+
+      var groupName = this.groupNameForThreadGUID_[thread.guid];
+      if (groupName === undefined)
+        return 'Other';
+      return groupName;
+    },
+
+    getGroupNameForEvent: function(event) {
+      var parentContainer = event.parentContainer;
+      if (parentContainer === undefined)
+        return 'Unknown';
+      return this.getGroupNameForThread(parentContainer);
+    },
+
+    addThreadsInProcessToGroup_: function(process, groupName,
+                                          opt_predicate, opt_this) {
+      var predicate = opt_predicate || tr.b.identity;
+
+      for (var tid in process.threads) {
+        var thread = process.threads[tid];
+        if (predicate.call(opt_this, thread))
+          this.groupNameForThreadGUID_[thread.guid] = groupName;
+      }
+    },
+
+    divideEventSetIntoSubGroups: function(eventSet) {
+      var resultingEventSets = {
+        other: new tr.model.EventSet()
+      };
+      tr.b.iterItems(this.groupNameForThreadGUID_, function(guid, groupName) {
+        if (resultingEventSets[groupName] !== undefined)
+          return;
+        resultingEventSets[groupName] = new tr.model.EventSet();
+      });
+
+      eventSet.forEach(function(event) {
+        var parentContainer = event.parentContainer;
+        if (parentContainer === undefined)
+          return;
+
+        if (!(parentContainer instanceof tr.model.EventContainer))
+          return;
+
+        var groupName = this.groupNameForThreadGUID_[parentContainer.guid];
+        if (groupName === undefined)
+          groupName = 'Other';
+        resultingEventSets[groupName].push(event);
+
+      }, this);
+
+      return resultingEventSets;
+    }
+  };
+
+  return {
+    ThreadGrouping: ThreadGrouping
+  };
+});
+</script>

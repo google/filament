@@ -1,0 +1,85 @@
+//===- subzero/src/IceTypes.def - X-macros for ICE types --------*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of ICE primitive types in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETYPES_DEF
+#define SUBZERO_SRC_ICETYPES_DEF
+
+// Attributes of each target architecture.
+// NOTES on is_elf64:
+// 1- At some point NaCl would like to use ELF32 for all ILP32 sandboxes, but
+// for now the 64-bit architectures use ELF64:
+//   https://code.google.com/p/nativeclient/issues/detail?id=349
+//
+// 2- native code is always emitted as ELF32.
+//
+// TODO(jpp): set ABI e_flags for AArch64.
+#define TARGETARCH_TABLE                                                       \
+  /* enum value, printable string, is_elf64,   e_machine, e_flags */           \
+  X(Target_X8632, "x86-32", false, EM_386,     0)                              \
+  X(Target_X8664, "x86-64", true,  EM_X86_64,  0)                              \
+  X(Target_ARM32, "arm32",  false, EM_ARM,     EF_ARM_EABI_VER5)               \
+  X(Target_ARM64, "arm64",  true,  EM_AARCH64, 0)                              \
+  X(Target_MIPS32,"mips32", false, EM_MIPS,    EF_MIPS_ABI_O32|EF_MIPS_ARCH_32)\
+//#define X(tag, str, is_elf64, e_machine, e_flags)
+
+#define ICETYPE_TABLE                                                          \
+  /* enum value, log_2(size), align, # elts, element type, */                  \
+  /*     printable string (size and alignment in bytes), */                    \
+  /*     register class string */                                              \
+  X(void,  -1,  0,  1, void, "void",        "void")                            \
+  X(i1,     0,  1,  1, i1,   "i1",          "i1")                              \
+  X(i8,     0,  1,  1, i8,   "i8",          "i8")                              \
+  X(i16,    1,  1,  1, i16,  "i16",         "i16")                             \
+  X(i32,    2,  1,  1, i32,  "i32",         "i32")                             \
+  X(i64,    3,  1,  1, i64,  "i64",         "i64")                             \
+  X(f32,    2,  4,  1, f32,  "float",       "f32")                             \
+  X(f64,    3,  8,  1, f64,  "double",      "f64")                             \
+  X(v4i1,   4,  1,  4, i1,   "<4 x i1>",    "v4i1")                            \
+  X(v8i1,   4,  1,  8, i1,   "<8 x i1>",    "v8i1")                            \
+  X(v16i1,  4,  1, 16, i1,   "<16 x i1>",   "v16i1")                           \
+  X(v16i8,  4,  1, 16, i8,   "<16 x i8>",   "v16i8")                           \
+  X(v8i16,  4,  2,  8, i16,  "<8 x i16>",   "v8i16")                           \
+  X(v4i32,  4,  4,  4, i32,  "<4 x i32>",   "v4i32")                           \
+  X(v4f32,  4,  4,  4, f32,  "<4 x float>", "v4f32")                           \
+//#define X(tag, sizeLog2, align, elts, elty, str, rcstr)
+
+// Dictionary:
+//   V - Is vector type.
+//   I - Is integer value (scalar or vector).
+//   F - Is floating point value (scalar or vector).
+//   IA - Is integer arithmetic type
+//   B - Is Boolean type (scalar or vector).
+//   P  - true if can be used for parameter of call.
+//   CR - Result type of compare instruction for argument type
+//        (IceType_void if disallowed)
+#define ICETYPE_PROPS_TABLE                                                    \
+  /* Enum Value    V  I  F IA  B  P  CR */                                     \
+  X(void,          0, 0, 0, 0, 0, 0, void)                                     \
+  X(i1,            0, 1, 0, 0, 1, 0, i1)                                       \
+  X(i8,            0, 1, 0, 1, 0, 0, i1)                                       \
+  X(i16,           0, 1, 0, 1, 0, 0, i1)                                       \
+  X(i32,           0, 1, 0, 1, 0, 1, i1)                                       \
+  X(i64,           0, 1, 0, 1, 0, 1, i1)                                       \
+  X(f32,           0, 0, 1, 0, 0, 1, i1)                                       \
+  X(f64,           0, 0, 1, 0, 0, 1, i1)                                       \
+  X(v4i1,          1, 1, 0, 0, 1, 1, v4i1)                                     \
+  X(v8i1,          1, 1, 0, 0, 1, 1, v8i1)                                     \
+  X(v16i1,         1, 1, 0, 0, 1, 1, v16i1)                                    \
+  X(v16i8,         1, 1, 0, 1, 0, 1, v16i1)                                    \
+  X(v8i16,         1, 1, 0, 1, 0, 1, v8i1)                                     \
+  X(v4i32,         1, 1, 0, 1, 0, 1, v4i1)                                     \
+  X(v4f32,         1, 0, 1, 0, 0, 1, v4i1)                                     \
+//#define X(tag, IsVec, IsInt, IsFloat, IsIntArith, IsBoolean, IsParam,
+//          CompareResult)
+
+#endif // SUBZERO_SRC_ICETYPES_DEF

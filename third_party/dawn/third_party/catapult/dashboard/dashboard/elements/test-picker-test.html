@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/test-picker.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/reserved_names.html">
+
+<script>
+'use strict';
+
+const MOCK_RESPONSE = {
+  'select-multiple-add': {
+    'has_rows': true,
+    'sub_tests': {
+      'select-multiple-add.html': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'select-multiple-add.html_ref': {
+        'has_rows': true,
+        'sub_tests': {
+        }
+      },
+      'ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      }
+    }
+  },
+  'textarea-edit': {
+    'has_rows': true,
+    'sub_tests': {
+      'textarea-edit.html_ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'textarea-edit.html': {
+        'has_rows': true,
+        'sub_tests': {}
+      },
+      'ref': {
+        'has_rows': true,
+        'sub_tests': {}
+      }
+    }
+  }
+};
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    setUp() {
+    },
+
+    tearDown() {
+      // Must comment this out to do manual tests; tearDown gets called
+      // immediately after the test method finishes, and this is used to respond
+      // to user input which occurs far later.
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiate', function() {
+    testing_common.addXhrMock('*', JSON.stringify(MOCK_RESPONSE));
+    const testPicker = document.createElement('test-picker');
+    testPicker.testSuites = {
+      'endure': {
+        'mas': {'Chromium': {'mac': false, 'win7': true}},
+        'dep': true
+      },
+      'dromaeo': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}}
+      },
+      'blink_perf': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}},
+      }
+    };
+    this.addHTMLOutput(testPicker);
+  }, testOptions);
+
+  test('getSuiteItems', function() {
+    const testPicker = document.createElement('test-picker');
+    testPicker.testSuites = {
+      'endure': {
+        'mas': {'Chromium': {'mac': false, 'win7': true}},
+        'dep': true
+      },
+      'dromaeo': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}}
+      },
+      'blink_perf': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}},
+      }
+    };
+    const suiteItems = testPicker.getSuiteItems();
+    // Test suites should be in the order of monitored, unmonitored,
+    // and deprecated.
+    const expectedSuites = ['blink_perf', 'dromaeo', 'endure'];
+    const actualSuites = [];
+    for (let i = 0; i < suiteItems.length; i++) {
+      actualSuites.push(suiteItems[i].name);
+    }
+    assert.deepEqual(actualSuites, expectedSuites);
+  }, testOptions);
+
+  test('fullPathRetained', async function() {
+    const testPicker = document.createElement('test-picker');
+    testPicker.testSuites = {
+      'endure': {
+        'mas': {'Chromium': {'mac': false, 'win7': true}},
+        'dep': true
+      },
+      'dromaeo': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}}
+      },
+      'blink_perf': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}},
+      }
+    };
+    testPicker.subtests.populateForTest(new Map([
+      ['Chromium/mac/blink_perf', [{name: 'textarea-edit'}]],
+      ['Chromium/mac/blink_perf/textarea-edit', [
+        {name: 'textarea_edit.html'}]],
+    ]));
+
+    const suiteMenu = testPicker.getSelectionMenu(0);
+    suiteMenu.selectedItem = suiteMenu.items[0];
+
+    const botMenu = testPicker.getSelectionMenu(1);
+    // Pick the second bot menu item because the first is the master.
+    botMenu.selectedItem = botMenu.items[1];
+
+    // We need to do this manually to make sure the next menu is populated.
+    await testPicker.updateSubtestMenus(2);
+
+    const benchmarkMenu = testPicker.getSelectionMenu(2);
+    const expectedBenchmark = benchmarkMenu.items[0].name;
+    benchmarkMenu.selectedItem = benchmarkMenu.items[0];
+
+    await testPicker.updateSubtestMenus(3);
+
+    const metricMenu = testPicker.getSelectionMenu(3);
+    const expectedMetric = metricMenu.items[0].name;
+    metricMenu.selectedItem = metricMenu.items[0];
+
+    // Now pick a new bot
+    botMenu.selectedItem = botMenu.items[1];
+
+    assert.deepEqual(benchmarkMenu.selectedItem.name, expectedBenchmark);
+    assert.deepEqual(metricMenu.selectedItem.name, expectedMetric);
+  }, testOptions);
+
+  test('getCurrentSelectionReturnsUndefinedIfInvalid', async function() {
+    const testPicker = document.createElement('test-picker');
+    testPicker.testSuites = {
+      'endure': {
+        'mas': {'Chromium': {'mac': false, 'win7': true}},
+        'dep': true
+      },
+      'dromaeo': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}}
+      },
+      'blink_perf': {
+        'mas': {'Chromium': {'mac': false, 'win7': false}},
+      }
+    };
+
+    const suiteMenu = testPicker.getSelectionMenu(0);
+    suiteMenu.selectedItem = suiteMenu.items[0];
+
+    const botMenu = testPicker.getSelectionMenu(1);
+    botMenu.selectedItem = botMenu.items[0];
+
+    assert.isUndefined(await testPicker.getCurrentSelection());
+  });
+
+  test('prepopulateSubtests', async function() {
+    const testPicker = document.createElement('test-picker');
+    testPicker.subtests.populateForTest(new Map([['foo', 'bar']]));
+    assert.strictEqual(
+        await testPicker.subtests.get('foo'), 'bar');
+  });
+
+  test('getSubtestsForPath', async function() {
+    testing_common.addXhrMock('*', JSON.stringify(['foo/bar']));
+    const testPicker = document.createElement('test-picker');
+    assert.deepEqual(
+        await testPicker.subtests.get('foo'), [{name: 'bar'}]);
+    testing_common.clearXhrMock();
+  });
+
+  test('subtestsStoresPromises', async function() {
+    testing_common.addXhrMock('*', JSON.stringify(['foo/bar']));
+    const testPicker = document.createElement('test-picker');
+    assert.instanceOf(
+        testPicker.subtests.get('foo'), Promise);
+    testing_common.clearXhrMock();
+  });
+});
+</script>

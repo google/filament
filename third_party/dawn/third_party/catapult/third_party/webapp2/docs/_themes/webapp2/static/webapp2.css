@@ -1,0 +1,258 @@
+@import url("./basic.css");
+@import url("./gcode.css");
+
+/* This stylesheet is stil a mess. :) */
+
+html,body{
+  height:auto;
+  margin:0;
+  padding:0;
+}
+body{
+  font-family:Helvetica,Arial,sans-serif;
+  font-size:small;
+  color:#000;
+  background-color:#fff;
+  margin:0 10px
+}
+a,a:link,
+a tt.literal span.pre, a:link tt.literal span.pre {
+  color:#00c;
+  font-weight:normal;
+}
+a:active,
+a:active tt.literal span.pre {
+  color:red
+}
+a:visited,
+a:visited tt.literal span.pre {
+  color:#551a8b
+}
+p{
+  padding:1em 0 0 0;
+  margin:0;
+  line-height:125%
+}
+img{
+  border:none;
+  padding:0;
+  margin:0
+}
+a img{
+  border:1px solid;
+  padding:1px
+}
+code,pre{
+  font-family:monospace;
+  color:#007000
+}
+code{
+  font-size:10pt
+}
+pre{
+  font-size:9pt;
+  background-color:#fafafa;
+  border:1px solid #bbb;
+  line-height:125%;
+  margin:1em 0 0 0;
+  padding:.99em;
+  overflow:auto;
+  word-wrap:break-word
+}
+.body h1 {
+  line-height: 130%;
+  font-size: 170%;
+  margin: 0 0 0 -10px;
+  padding: .8em 0 0 0;
+  border: none;
+  background: none;
+}
+.body h2, .body h3, .body h4, .body h5, .body h6 {
+  font-size: 130%;
+  font-weight: bold;
+  margin: 2em 0 5px -10px;
+  padding: 1px 3px 1px 3px;
+  position: relative;
+  border-top: 1px solid #36C;
+  background-color: #E5ECF9;
+}
+em {
+  font-style: normal;
+}
+.section {
+  margin: 0 0 0 0;
+  padding: 0 0 0 0;
+}
+.wholepage {
+  padding: 0 10px;
+}
+.body {
+  padding: 0;
+  margin: 0 0 1em 0;
+  margin-left: 203px;
+}
+.body {
+  position: relative;
+}
+code, pre {
+  color: #000;
+}
+span.pre {
+  font-family: monospace;
+  color: #007000;
+}
+div.related {
+  float: none;
+  position: relative;
+  border-top: 1px solid #36C;
+  background-color: #E5ECF9;
+  height: 2.0em;
+  line-height: 1em;
+  width: 100%;
+  font-size: 100%;
+  margin-top: 1em;
+}
+.plusone {
+  position: absolute;
+  top: 0.4em;
+  right: 10px;
+}
+div.related-bottom {
+  margin-top: 2em;
+}
+div.related ul {
+  float: none;
+  position: absolute;
+  right: 5px;
+  top: 0.4em;
+  margin-right: 52px;
+}
+div.related li.right {
+  float: none;
+  margin: 0;
+}
+th.field-name {
+  background: #FFF;
+}
+div.topic {
+  border: 0;
+}
+p.logo a img {
+  border: none;
+}
+div.footer {
+  margin: 1em 0;
+  text-align: center;
+}
+div.admonition {
+  margin: 1em 0 0 0;
+  padding: .2em .5em .2em .9em;
+  background-color: #EFEFEF;
+  border-top: 1px solid #BBB;
+  border-bottom: 1px solid #BBB;
+}
+div.admonition p {
+  margin: 0 0 1em;
+  padding: 0;
+}
+div.admonition p.admonition-title {
+  margin: 0 0 3px;
+  padding: 0;
+}
+div.admonition p.last {
+  margin: 0 0 0;
+}
+div.sphinxsidebar {
+  float: right;
+  width: 170px;
+  margin-right: -173px;
+  border-right:3px solid #E5ECF9;
+  padding-bottom: 50px;
+  font-size: 13px;
+}
+div.sphinxsidebar h2, div.sphinxsidebar h3, div.sphinxsidebar h4,
+div.sphinxsidebar h2 a, div.sphinxsidebar h2 a:link, div.sphinxsidebar h2 a:active, div.sphinxsidebar h2 a:visited,
+div.sphinxsidebar h3 a, div.sphinxsidebar h3 a:link, div.sphinxsidebar h3 a:active, div.sphinxsidebar h3 a:visited,
+div.sphinxsidebar h4 a, div.sphinxsidebar h4 a:link, div.sphinxsidebar h4 a:active, div.sphinxsidebar h4 a:visited {
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  color: #000;
+  margin: 1em 0 .5em;
+  padding: 0;
+}
+div.sphinxsidebar p, div.sphinxsidebar p.topless {
+  margin-top: 0;
+  padding-top: 0;
+}
+div.documentwrapper {
+  width:100%;
+  float:right;
+}
+div.sphinxsidebar ul,
+div.sphinxsidebar ul ul,
+div.sphinxsidebar ul.want-points,
+div.sphinxsidebar ul li {
+    margin-left: 0;
+}
+div.sphinxsidebar ul ul li {
+    margin-left: 1.5em;
+}
+#header {
+  position: relative;
+  min-height: 79px;
+}
+#header #searchbox {
+  position: absolute;
+  top: 15px;
+  left: 272px;
+}
+#header #searchbox .searchtip {
+  color: #AAA;
+  font-size: small;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+}
+a.headerlink {
+  color: #000;
+  text-decoration: none;
+}
+/* API docs */
+dl.docutils {
+  margin-top: 0em;
+}
+dl.class,
+dl.attribute,
+dl.method,
+dl.function {
+  margin-top: 1em;
+  padding-top: 0.8em;
+  border-top: 1px dotted #B3B3B3;
+}
+dl.class, dl.data {
+  margin-top: 2em;
+  padding-top: 1.8em;
+  border-top: 1px solid #999;
+}
+tt, tt.descname, tt.descclassname, dt big, dt em {
+  font-size: 13px;
+}
+blockquote {
+  margin-left: 1em;
+}
+table.indextable, table.genindextable, table.modindextable {
+  border-width: 0 !important;
+  border-color: #FFF !important;
+}
+table.indextable a, table.indextable a:link {
+  color: #000;
+  text-decoration: none;
+}
+table.indextable a:hover, table.indextable a:active {
+  color: #00c;
+  text-decoration: underline;
+}
+table.indextable a:visited {
+  color:#551a8b;
+}

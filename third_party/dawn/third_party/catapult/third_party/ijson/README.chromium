@@ -1,0 +1,17 @@
+Name: ijson
+Short Name: ijson
+URL: https://github.com/isagalaev/ijson
+Version: 0
+Date: March 15, 2019
+Revision: 5c1a4b5e12fe6e7ce758faa15e20fbab682f14ee
+License: BSD
+License File: LICENSE.txt
+Security Critical: No
+Shipped: yes
+License Android Compatible: Yes
+
+Description:
+Ijson is an iterative JSON parser with a standard Python iterator interface.
+
+Local Modifications:
+- README.chromium file.

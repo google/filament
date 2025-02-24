@@ -1,0 +1,20 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file houses the build configuration for the ANGLE NULL back-end.
+
+import("../../../../gni/angle.gni")
+import("null_backend.gni")
+
+assert(angle_enable_null)
+
+config("angle_null_backend_config") {
+  defines = [ "ANGLE_ENABLE_NULL" ]
+}
+
+angle_source_set("angle_null_backend") {
+  sources = null_backend_sources
+
+  public_deps = [ "$angle_root:libANGLE_headers" ]
+}

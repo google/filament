@@ -1,0 +1,5 @@
+_vkGetInstanceProcAddr
+_vkGetDeviceProcAddr
+_vkEnumerateInstanceLayerProperties
+_vkEnumerateInstanceExtensionProperties
+_vkNegotiateLoaderLayerInterfaceVersion

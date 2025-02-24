@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import os
+import sys
+import json
+import ntpath
+import re
+
+
+OUT_DIR = 'v8_callstats_dump'
+
+URL_MAP = dict()
+NAME_MAP = dict()
+
+URL_MAP['https://www.google.de/search?q=v8'] = 'google.de'
+URL_MAP['https://www.youtube.com'] = 'youtube.com'
+URL_MAP['https://www.youtube.com/watch?v=_kZsOISarzg'] = 'youtube.com-polymer-watch'
+URL_MAP['https://www.facebook.com/shakira'] = 'facebook.com'
+URL_MAP['http://www.baidu.com/s?wd=v8'] = 'baidu.com'
+URL_MAP['http://www.yahoo.co.jp'] = 'yahoo.co.jp'
+URL_MAP['http://www.amazon.com/s/?field-keywords=v8'] = 'amazon.com'
+URL_MAP['http://hi.wikipedia.org/wiki/%E0%A4%AE%E0%A5%81%E0%A4%96%E0%A4%AA%E0%A5%83%E0%A4%B7%E0%A5%8D%E0%A4%A0'] = 'wikipedia.org'
+URL_MAP['https://en.wikipedia.org/w/index.php?title=Barack_Obama&veaction=edit'] = 'wikipedia.org-visual-editor'
+URL_MAP['http://www.qq.com'] = 'qq.com'
+URL_MAP['http://www.twitter.com/taylorswift13'] = 'twitter.com'
+URL_MAP['http://www.reddit.com'] = 'reddit.com'
+URL_MAP['http://www.ebay.fr/sch/i.html?_nkw=v8'] = 'ebay.fr'
+URL_MAP['http://edition.cnn.com'] = 'cnn.com'
+URL_MAP['http://world.taobao.com'] = 'taobao.com'
+URL_MAP['http://www.instagram.com/archdigest'] = 'instagram.com'
+URL_MAP['https://www.linkedin.com/m/'] = 'linkedin.com'
+URL_MAP['http://www.msn.com/ar-ae'] = 'msn.com'
+URL_MAP['http://www.bing.com/search?q=v8+engine'] = 'bing.com'
+URL_MAP['http://www.pinterest.com/categories/popular'] = 'pinterest.com'
+URL_MAP['http://www.sina.com.cn'] = 'sina.com.cn'
+URL_MAP['http://weibo.com'] = 'weibo.com'
+URL_MAP['http://yandex.ru/search/?text=v8'] = 'yandex.ru'
+URL_MAP['http://www.wikiwand.com/en/hill'] = 'wikiwand.com'
+URL_MAP['http://meta.discourse.org'] = 'discourse.org'
+URL_MAP['http://reddit.musicplayer.io'] = 'reddit.musicplayer.io'
+URL_MAP['http://inbox.google.com'] = 'inbox.google.com'
+URL_MAP['http://maps.google.co.jp/maps/search/restaurant+tokyo'] = 'maps.google.co.jp'
+URL_MAP['https://adwords.google.com'] = 'adwords.google.com'
+URL_MAP['http://pollouer.muc/Speedometer/CustomRunner.html?angular'] = 'speedometer-angular'
+URL_MAP['http://pollouer.muc/Speedometer/CustomRunner.html?jquery'] = 'speedometer-jquery'
+URL_MAP['http://pollouer.muc/Speedometer/CustomRunner.html?backbone'] = 'speedometer-backbone'
+URL_MAP['http://pollouer.muc/Speedometer/CustomRunner.html?ember'] = 'speedometer-ember'
+URL_MAP['http://pollouer.muc/Speedometer/CustomRunner.html?vanilla'] = 'speedometer-vanilla'
+URL_MAP['https://cdn.ampproject.org/c/www.bbc.co.uk/news/amp/37344292#log=3'] = 'bcc.co.uk-amp'
+
+
+def extractFilename(path):
+  head, tail = ntpath.split(path)
+  name = tail or ntpath.basename(head)
+  candidate_entry = ''
+  for entry in NAME_MAP:
+    if len(entry) > len(candidate_entry) and name.startswith(entry):
+      candidate_entry = entry
+  if candidate_entry != '':
+    return NAME_MAP[candidate_entry]
+  return name
+
+
+def writeDump(name, value):
+  dump_file = open(OUT_DIR + '/' + extractFilename(name) + '.txt', 'w+')
+  runtime_call = value['pairs']
+  for name in runtime_call:
+    dump_file.write(name + '\t' + str(runtime_call[name]['time']) + '\tX\t' + str(runtime_call[name]['count']) + '\n')
+  dump_file.close()
+
+if __name__ == '__main__':
+  with open(sys.argv[1]) as data_file:
+    data = json.load(data_file)
+
+  if not os.path.exists(OUT_DIR):
+    os.makedirs(OUT_DIR)
+
+  for url in URL_MAP:
+    name = re.sub(r'[-.:/?%&+=#]', '_', url)
+    NAME_MAP[name] = URL_MAP[url]
+
+  for entry in data:
+    writeDump(entry, data[entry])
+  sys.exit(0)

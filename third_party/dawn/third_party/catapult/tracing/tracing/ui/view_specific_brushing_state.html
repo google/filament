@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+
+<!--
+This element handles storing and retrieving the brushing state of arbitrary
+views (e.g. analysis sub-views). An element can use it by instantiating it and
+appending it to itself:
+
+  <div id="some-view-with-specific-brushing-state">
+    <tr-ui-b-view-specific-brushing-state view-id="unique-view-identifier">
+    </tr-ui-b-view-specific-brushing-state>
+    ... other child elements ...
+  </div>
+
+The state can then be retrieved from and pushed to the state element as
+follows:
+
+  newStateElement.set(state);
+  state = newStateElement.get();
+
+Under the hood, the state element searches the DOM tree for an ancestor element
+with a brushingStateController field to persist the state (see the
+tr.c.BrushingStateController and tr.ui.b.BrushingState classes for more
+details).
+-->
+<dom-module id='tr-ui-b-view-specific-brushing-state'>
+  <template></template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-view-specific-brushing-state',
+
+  /** Compulsory unique identifier of the associated view. */
+  get viewId() {
+    return this.getAttribute('view-id');
+  },
+
+  set viewId(viewId) {
+    Polymer.dom(this).setAttribute('view-id', viewId);
+  },
+
+  /**
+   * Retrieve the persisted state of the associated view. The returned object
+   * (or any of its fields) must not be modified by the caller (unless the
+   * object/field is treated as a reference).
+   *
+   * If no state has been persisted yet or there is no ancestor element with
+   * a brushingStateController field, this method returns undefined.
+   */
+  get() {
+    const viewId = this.viewId;
+    if (!viewId) {
+      throw new Error('Element must have a view-id attribute!');
+    }
+
+    const brushingStateController =
+        tr.c.BrushingStateController.getControllerForElement(this);
+    if (!brushingStateController) return undefined;
+
+    return brushingStateController.getViewSpecificBrushingState(viewId);
+  },
+
+  /**
+   * Persist the provided state of the associated view. The provided object
+   * (or any of its fields) must not be modified afterwards (unless the
+   * object/field is treated as a reference).
+   *
+   * If there is no ancestor element with a brushingStateController field,
+   * this method does nothing.
+   */
+  set(state) {
+    const viewId = this.viewId;
+    if (!viewId) {
+      throw new Error('Element must have a view-id attribute!');
+    }
+
+    const brushingStateController =
+        tr.c.BrushingStateController.getControllerForElement(this);
+    if (!brushingStateController) return;
+
+    brushingStateController.changeViewSpecificBrushingState(viewId, state);
+  }
+});
+</script>

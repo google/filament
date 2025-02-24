@@ -1,0 +1,101 @@
+===========
+boto v2.6.0
+===========
+
+The 2.6.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can get a comprehensive list of all commits made between the 2.5.2 release
+and the 2.6.0 release at https://github.com/boto/boto/compare/2.5.2...2.6.0.
+
+This release includes:
+
+* Support for Amazon Glacier
+* Support for AWS Elastic Beanstalk
+* CORS support for Amazon S3
+* Support for Reserved Instances Resale in Amazon EC2
+* Support for IAM Roles
+
+SSL Certificate Verification
+============================
+
+In addition, this release of boto changes the default behavior with respect to
+SSL certificate verification.  Our friends at Google contributed code to boto
+well over a year ago that implemented SSL certificate verification.  At the
+time, we felt the most prudent course of action was to make this feature an
+opt-in but we always felt that at some time in the future we would enable cert
+verification as the default behavior.  Well, that time is now!
+
+However, in implementing this change, we came across a bug in Python for all
+versions prior to 2.7.3 (see http://bugs.python.org/issue13034 for details).
+The net result of this bug is that Python is able to check only the commonName
+in the SSL cert for verification purposes.  Any subjectAltNames are ignored in
+large SSL keys.  So, in addition to enabling verification as the default
+behavior we also changed some of the service endpoints in boto to match the
+commonName in the SSL certificate.
+
+If you want to disable verification for any reason (not advised, btw) you can
+still do so by editing your boto config file (see
+https://gist.github.com/3762068) or you can override it by passing
+`validate_certs=False` to the Connection class constructor or the `connect_*`
+function.
+
+Commits
+=======
+
+There were 440 commits in this release from 53 different authors.  The authors are listed below, in alphabetical order:
+
+* acorley
+* acrefoot
+* aedeph
+* allardhoeve
+* almost
+* awatts
+* buzztroll
+* cadams
+* cbednarski
+* cosmin
+* dangra
+* darjus-amzn
+* disruptek
+* djw
+* garnaat
+* gertjanol
+* gimbel0893
+* gochist
+* graphaelli
+* gtaylor
+* gz
+* hardys
+* jamesls
+* jijojv
+* jimbrowne
+* jtlebigot
+* jtriley
+* kopertop
+* kotnik
+* marknca
+* mark_nunnikhoven
+* mfschwartz
+* moliware
+* NeilW
+* nkvoll
+* nsitarz
+* ohe
+* pasieronen
+* patricklucas
+* pfig
+* rajivnavada
+* reversefold
+* robie
+* scott
+* shawnps
+* smoser
+* sopel
+* staer
+* tedder
+* yamatt
+* Yossi
+* yovadia12
+* zachhuff386

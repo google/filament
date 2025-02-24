@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/assert_utils.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view.html">
+
+<script>
+'use strict';
+tr.b.unittest.testSuite(function() {
+  // TODO(#3811) Clean up these tests.
+
+  const TEST_BOUNDARIES = tr.v.HistogramBinBoundaries.createLinear(0, 1e3, 20);
+
+  async function buildTable(test, histograms) {
+    // This should mirror HistogramImporter in order to be as similar to
+    // results.html as possible.
+    const table = document.createElement('tr-v-ui-histogram-set-table');
+
+    table.viewState = new tr.v.ui.HistogramSetViewState();
+    await table.viewState.update({
+      displayStatisticName: 'avg',
+      groupings: [tr.v.HistogramGrouping.HISTOGRAM_NAME],
+    });
+
+    table.style.display = 'none';
+    test.addHTMLOutput(table);
+
+    table.addEventListener('display-ready', () => {
+      table.style.display = '';
+    });
+
+    const collector = new tr.v.HistogramParameterCollector();
+    collector.process(histograms);
+
+    await table.build(
+        histograms,
+        histograms.sourceHistograms,
+        collector.labels,
+        async message => {
+          await tr.b.animationFrame();
+        });
+    return table;
+  }
+
+  function range(start, end) {
+    const result = [];
+    for (let i = start; i < end; ++i) result.push(i);
+    return result;
+  }
+
+  function getBaseTable(table) {
+    return tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.tagName === 'TR-UI-B-TABLE');
+  }
+
+  function getNameCells(table) {
+    return tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-NAME-CELL');
+  }
+
+  function getTableCells(table) {
+    return tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL');
+  }
+
+  test('viewSearchQuery', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2]);
+    const table = await buildTable(this, histograms);
+
+    await table.viewState.update({searchQuery: 'a'});
+    let cells = getTableCells(table);
+    assert.lengthOf(cells, 1);
+
+    await table.viewState.update({searchQuery: '[z-'});
+    cells = getTableCells(table);
+    assert.lengthOf(cells, 2);
+
+    await table.viewState.update({searchQuery: 'x'});
+    cells = getTableCells(table);
+    assert.lengthOf(cells, 0);
+
+    await table.viewState.update({searchQuery: ''});
+    cells = getTableCells(table);
+    assert.lengthOf(cells, 2);
+  });
+
+  test('controlSearchQuery', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('a', tr.b.Unit.byName.count,
+        {value: 1, diagnostics: {r: tr.v.d.Breakdown.fromEntries([['0', 1]])}});
+    const bHist = histograms.createHistogram('b', tr.b.Unit.byName.count, []);
+    const related = new tr.v.d.RelatedNameMap();
+    related.set('0', bHist.name);
+    aHist.diagnostics.set('r', related);
+    const table = await buildTable(this, histograms);
+    await table.viewState.tableRowStates.get('a').cells.get('Value').update(
+        {isOpen: true});
+    const link = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.tagName === 'TR-UI-A-ANALYSIS-LINK');
+    link.click();
+    assert.strictEqual('^(b)$', table.viewState.searchQuery);
+  });
+
+  test('viewReferenceDisplayLabel', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])
+      ]]),
+    });
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2], {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])
+      ]]),
+    });
+    const table = await buildTable(this, histograms);
+    const baseTable = getBaseTable(table);
+    assert.isUndefined(baseTable.selectedTableColumnIndex);
+
+    await table.viewState.update({referenceDisplayLabel: 'A'});
+    assert.strictEqual(1, baseTable.selectedTableColumnIndex);
+
+    await table.viewState.update({referenceDisplayLabel: 'B'});
+    assert.strictEqual(2, baseTable.selectedTableColumnIndex);
+  });
+
+  test('viewDisplayStatisticName', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, range(0, 10), {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])
+      ]]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, range(10, 20), {
+      diagnostics: new Map([[
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])
+      ]]),
+    });
+    const table = await buildTable(this, histograms);
+    let scalarSpans = tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'TR-V-UI-SCALAR-SPAN');
+    assert.lengthOf(scalarSpans, 2);
+    assert.strictEqual('5', scalarSpans[0].unit.format(scalarSpans[0].value));
+    assert.strictEqual('15', scalarSpans[1].unit.format(scalarSpans[1].value));
+
+    await table.viewState.update({displayStatisticName: 'std'});
+    scalarSpans = tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'TR-V-UI-SCALAR-SPAN');
+    assert.lengthOf(scalarSpans, 2);
+    assert.strictEqual('3', scalarSpans[0].unit.format(scalarSpans[0].value));
+    assert.strictEqual('3', scalarSpans[1].unit.format(scalarSpans[1].value));
+  });
+
+  test('autoShowAll', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    const bHist = histograms.createHistogram('b', tr.b.Unit.byName.count, []);
+    const related = new tr.v.d.RelatedNameMap();
+    related.set('0', bHist.name);
+    aHist.diagnostics.set('r', related);
+    const table = await buildTable(this, histograms);
+
+    let cells = getNameCells(table);
+    assert.lengthOf(cells, 2);
+    assert.strictEqual('a', cells[0].row.name);
+
+    await table.viewState.update({searchQuery: 'b'});
+    assert.isTrue(table.viewState.showAll);
+    cells = getNameCells(table);
+    assert.lengthOf(cells, 1);
+    assert.strictEqual('b', cells[0].row.name);
+  });
+
+  test('viewShowAll', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    const bHist = histograms.createHistogram('b', tr.b.Unit.byName.count, []);
+    const related = new tr.v.d.RelatedNameMap();
+    related.set('0', bHist.name);
+    aHist.diagnostics.set('r', related);
+    const table = await buildTable(this, histograms);
+
+    let cells = getNameCells(table);
+    assert.lengthOf(cells, 2);
+    assert.strictEqual('a', cells[0].row.name);
+    assert.strictEqual('b', cells[1].row.name);
+
+    await table.viewState.update({showAll: false});
+    cells = getNameCells(table);
+    assert.lengthOf(cells, 1);
+    assert.strictEqual('a', cells[0].row.name);
+  });
+
+  test('viewSortColumnIndex', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2]);
+    const table = await buildTable(this, histograms);
+    const baseTable = getBaseTable(table);
+    assert.strictEqual(baseTable.sortColumnIndex, 0);
+    assert.isFalse(baseTable.sortDescending);
+
+    await table.viewState.update({sortColumnIndex: 1, sortDescending: true});
+    assert.isTrue(baseTable.sortDescending);
+    assert.strictEqual(baseTable.sortColumnIndex, 1);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('controlSortColumnIndex', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2]);
+    const table = await buildTable(this, histograms);
+
+    assert.strictEqual(0, table.viewState.sortColumnIndex);
+
+    tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => e.tagName === 'TR-UI-B-TABLE-HEADER-CELL')[0].click();
+    assert.strictEqual(0, table.viewState.sortColumnIndex);
+
+    tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => e.tagName === 'TR-UI-B-TABLE-HEADER-CELL')[1].click();
+    assert.strictEqual(1, table.viewState.sortColumnIndex);
+  });
+
+  test('viewSortDescending', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2]);
+    const table = await buildTable(this, histograms);
+
+    await table.viewState.update({sortColumnIndex: 0});
+
+    await table.viewState.update({sortDescending: true});
+
+    await table.viewState.update({sortDescending: false});
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('controlSortDescending', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2]);
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({sortColumnIndex: 0});
+
+    assert.isFalse(table.viewState.sortDescending);
+
+    tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => e.tagName === 'TR-UI-B-TABLE-HEADER-CELL')[0].click();
+    assert.isTrue(table.viewState.sortDescending);
+
+    tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => e.tagName === 'TR-UI-B-TABLE-HEADER-CELL')[0].click();
+    assert.isFalse(table.viewState.sortDescending);
+  });
+
+  test('sortUndefinedStatistics', async function() {
+    // The 'avg' statistic Scalar of an empty histogram is undefined, so
+    // HistogramSetTableRow.compareCells must not throw when it encounters
+    // undefined Scalars.
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    histograms.createHistogram('b', tr.b.Unit.byName.count, []);
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({sortColumnIndex: 1});
+  });
+
+  test('sortByDeltaStatistic', async function() {
+    const histograms0 = new tr.v.HistogramSet();
+    const histograms1 = new tr.v.HistogramSet();
+    const a0Hist = histograms0.createHistogram(
+        'a', tr.b.Unit.byName.count, [0]);
+    const b0Hist = histograms0.createHistogram(
+        'b', tr.b.Unit.byName.count, [0]);
+    const c0Hist = histograms0.createHistogram(
+        'c', tr.b.Unit.byName.count, [3]);
+    const a1Hist = histograms1.createHistogram(
+        'a', tr.b.Unit.byName.count, [1]);
+    const b1Hist = histograms1.createHistogram(
+        'b', tr.b.Unit.byName.count, [2]);
+    const c1Hist = histograms1.createHistogram(
+        'c', tr.b.Unit.byName.count, [3]);
+    histograms0.addSharedDiagnosticToAllHistograms(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['L0']));
+    histograms0.addSharedDiagnosticToAllHistograms(
+        tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(0));
+    histograms1.addSharedDiagnosticToAllHistograms(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['L1']));
+    histograms1.addSharedDiagnosticToAllHistograms(
+        tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(1));
+
+    const table = await buildTable(this, new tr.v.HistogramSet(
+        Array.from(histograms0).concat(Array.from(histograms1))));
+    await table.viewState.update({
+      displayStatisticName: tr.v.DELTA + 'avg',
+      referenceDisplayLabel: 'L0',
+      sortColumnIndex: 2,
+    });
+    const nameCells = getNameCells(table);
+    assert.strictEqual('c', nameCells[0].row.name);
+    assert.strictEqual('a', nameCells[1].row.name);
+    assert.strictEqual('b', nameCells[2].row.name);
+  });
+
+  test('sortMissing', async function() {
+    // Missing cells should be treated as zero for sorting purposes. The
+    // comparator must not return undefined or NaN.
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['x'])],
+      ]),
+    });
+    histograms.createHistogram('b', tr.b.Unit.byName.count, [2], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['x'])],
+      ]),
+    });
+    // 'c','x' intentionally missing
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['y'])],
+      ]),
+    });
+    // 'b','y' intentionally missing
+    histograms.createHistogram('c', tr.b.Unit.byName.count, [-1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['y'])],
+      ]),
+    });
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({sortColumnIndex: 2});
+    let cells = getNameCells(table);
+    assert.lengthOf(cells, 3);
+    assert.strictEqual('c', cells[0].row.name);
+    assert.strictEqual('b', cells[1].row.name);
+    assert.strictEqual('a', cells[2].row.name);
+    await table.viewState.update({sortDescending: true});
+    cells = getNameCells(table);
+    assert.lengthOf(cells, 3);
+    assert.strictEqual('a', cells[0].row.name);
+    assert.strictEqual('b', cells[1].row.name);
+    assert.strictEqual('c', cells[2].row.name);
+    await table.viewState.update({sortColumnIndex: 1});
+    cells = getNameCells(table);
+    assert.lengthOf(cells, 3);
+    assert.strictEqual('b', cells[0].row.name);
+    assert.strictEqual('a', cells[1].row.name);
+    assert.strictEqual('c', cells[2].row.name);
+    await table.viewState.update({sortDescending: false});
+    cells = getNameCells(table);
+    assert.lengthOf(cells, 3);
+    assert.strictEqual('c', cells[0].row.name);
+    assert.strictEqual('a', cells[1].row.name);
+    assert.strictEqual('b', cells[2].row.name);
+  });
+
+  test('viewConstrainNameColumn', async function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a'.repeat(100), tr.b.Unit.byName.count, []);
+    const table = await buildTable(this, histograms);
+    const nameCell = tr.b.getOnlyElement(getNameCells(table));
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+    assert.isTrue(table.viewState.constrainNameColumn);
+    const dots = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS);
+    assert.strictEqual('block', dots.style.display);
+
+    await table.viewState.update({constrainNameColumn: false});
+    assert.isFalse(nameCell.isOverflowing);
+    assert.isBelow(350, nameCell.getBoundingClientRect().width);
+
+    await table.viewState.update({constrainNameColumn: true});
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('controlConstrainNameColumn', async function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a'.repeat(100), tr.b.Unit.byName.count, []);
+    const table = await buildTable(this, histograms);
+    const nameCell = tr.b.getOnlyElement(getNameCells(table));
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+    assert.isTrue(table.viewState.constrainNameColumn);
+    const dots = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS);
+    assert.strictEqual('block', dots.style.display);
+
+    tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS).click();
+    assert.isFalse(table.viewState.constrainNameColumn);
+    await tr.b.animationFrame();
+    assert.isFalse(nameCell.isOverflowing);
+    assert.isBelow(350, nameCell.getBoundingClientRect().width);
+
+    tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS).click();
+    assert.isTrue(table.viewState.constrainNameColumn);
+    await tr.b.animationFrame();
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('viewRowExpanded', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    aHist.diagnostics.set(tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['A']));
+    const bHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    bHist.diagnostics.set(tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+    assert.lengthOf(getTableCells(table), 1);
+
+    await table.viewState.tableRowStates.get('a').update({isExpanded: true});
+    assert.lengthOf(getTableCells(table), 3);
+
+    await table.viewState.tableRowStates.get('a').update({isExpanded: false});
+    assert.lengthOf(getTableCells(table), 1);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('controlRowExpanded', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const aHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    aHist.diagnostics.set(tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['A']));
+    const bHist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    bHist.diagnostics.set(tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+    assert.isFalse(table.viewState.tableRowStates.get('a').isExpanded);
+
+    const nameCell = tr.b.getOnlyElement(getNameCells(table));
+    nameCell.click();
+    assert.isTrue(table.viewState.tableRowStates.get('a').isExpanded);
+
+    nameCell.click();
+    assert.isFalse(table.viewState.tableRowStates.get('a').isExpanded);
+  });
+
+  test('viewIsOverviewed', async function() {
+    const histograms = new tr.v.HistogramSet();
+    let hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+
+    const nameCells = getNameCells(table);
+    const cells = getTableCells(table);
+    assert.isFalse(nameCells[0].isOverviewed);
+
+    await table.viewState.tableRowStates.get('a').update({isOverviewed: true});
+    assert.isTrue(nameCells[0].isOverviewed);
+
+    await table.viewState.tableRowStates.get('a').update({isOverviewed: false});
+    assert.isFalse(nameCells[0].isOverviewed);
+  });
+
+  test('overviewSorted', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [4], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['D'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [2], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [3], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['C'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({
+      groupings: [
+        tr.v.HistogramGrouping.HISTOGRAM_NAME,
+        tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+      ],
+      sortColumnIndex: 0,
+      sortDescending: true,
+    });
+    await table.viewState.tableRowStates.get('a').update({isOverviewed: true});
+
+    let cells = getTableCells(table);
+    let chart = tr.ui.b.findDeepElementMatchingPredicate(cells[0], e =>
+      e.tagName === 'svg' && e.parentNode.id === 'overview_container');
+    assert.strictEqual('D', chart.data[0].x);
+    assert.strictEqual('C', chart.data[1].x);
+    assert.strictEqual('B', chart.data[2].x);
+    assert.strictEqual('A', chart.data[3].x);
+
+    await table.viewState.update({
+      sortDescending: false,
+    });
+    cells = getTableCells(table);
+    chart = tr.ui.b.findDeepElementMatchingPredicate(cells[0], e =>
+      e.tagName === 'svg' && e.parentNode.id === 'overview_container');
+    assert.strictEqual('A', chart.data[0].x);
+    assert.strictEqual('B', chart.data[1].x);
+    assert.strictEqual('C', chart.data[2].x);
+    assert.strictEqual('D', chart.data[3].x);
+  });
+
+  test('controlIsOverviewed', async function() {
+    const histograms = new tr.v.HistogramSet();
+    let hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [2]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B']));
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+
+    assert.isFalse(table.viewState.tableRowStates.get('a').isOverviewed);
+
+    const nameCells = getNameCells(table);
+    tr.ui.b.findDeepElementMatchingPredicate(nameCells[0], e =>
+      e.id === 'show_overview').click();
+    assert.isTrue(table.viewState.tableRowStates.get('a').isOverviewed);
+
+    tr.ui.b.findDeepElementMatchingPredicate(nameCells[0], e =>
+      e.id === 'hide_overview').click();
+    assert.isFalse(table.viewState.tableRowStates.get('a').isOverviewed);
+  });
+
+  test('overviewStatistic', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['X'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1, 1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['Y'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1, 1, 1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['X'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1, 1, 1, 1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['Y'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+      ]),
+    });
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({
+      displayStatisticName: 'count',
+      groupings: [
+        tr.v.HistogramGrouping.HISTOGRAM_NAME,
+        tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+      ],
+    });
+    await table.viewState.tableRowStates.get('a').update({isOverviewed: true});
+
+    let charts = tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'svg' && e.parentNode.id === 'overview_container');
+    assert.lengthOf(charts, 3);
+    assert.lengthOf(charts[0].data, 2);
+    assert.lengthOf(charts[1].data, 2);
+    assert.lengthOf(charts[2].data, 2);
+    assert.strictEqual(charts[0].data[0].y, 3);
+    assert.strictEqual(charts[0].data[1].y, 7);
+    assert.strictEqual(charts[1].data[0].y, 1);
+    assert.strictEqual(charts[1].data[1].y, 2);
+    assert.strictEqual(charts[2].data[0].y, 3);
+    assert.strictEqual(charts[2].data[1].y, 4);
+
+    await table.viewState.update({
+      displayStatisticName: tr.v.DELTA + 'count',
+      referenceDisplayLabel: 'A',
+    });
+    charts = tr.ui.b.findDeepElementsMatchingPredicate(table, e =>
+      e.tagName === 'svg' && e.parentNode.id === 'overview_container');
+    assert.lengthOf(charts, 3);
+    assert.lengthOf(charts[0].data, 2);
+    assert.lengthOf(charts[1].data, 2);
+    assert.lengthOf(charts[2].data, 2);
+    assert.strictEqual(charts[0].data[0].y, 3);
+    assert.strictEqual(charts[0].data[1].y, 7);
+    assert.strictEqual(charts[1].data[0].y, 1);
+    assert.strictEqual(charts[1].data[1].y, 2);
+    assert.strictEqual(charts[2].data[0].y, 2);
+    assert.strictEqual(charts[2].data[1].y, 2);
+  });
+
+  test('overviewUnits', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['X'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1, 1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['Y'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1, 1, 1], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['X'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+      ]),
+    });
+    histograms.createHistogram(
+        'a', tr.b.Unit.byName.unitlessNumber, [1, 1, 1, 1], {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['Y'])],
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+          ]),
+        });
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({
+      displayStatisticName: 'count',
+      groupings: [
+        tr.v.HistogramGrouping.HISTOGRAM_NAME,
+        tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+      ],
+    });
+    await table.viewState.tableRowStates.get('a').update({
+      isExpanded: true,
+      isOverviewed: true,
+    });
+    await table.viewState.tableRowStates.get('a').subRows.get('X').update({
+      isOverviewed: true,
+    });
+
+    const nameCells = getNameCells(table);
+
+    // Check there is no overviewChart in name-cell when column units mismatch.
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(nameCells[0],
+        '#overview_container svg'));
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(nameCells[2],
+        '#overview_container svg'));
+
+    // When column units match, the overview chart should exist and have the
+    // correct unit.
+    const nameOverviewChart = tr.ui.b.findDeepElementMatching(nameCells[1],
+        '#overview_container svg');
+    assert.isDefined(nameOverviewChart);
+    assert.strictEqual(nameOverviewChart.unit, tr.b.Unit.byName.count);
+
+    const cells = getTableCells(table);
+
+    // When subrow units match, the overview chart should exist and have the
+    // correct unit.
+    const overviewChart = tr.ui.b.findDeepElementMatching(cells[0],
+        '#overview_container svg');
+    assert.isDefined(overviewChart);
+    assert.strictEqual(overviewChart.unit, tr.b.Unit.byName.count);
+
+    // Check there is no overviewChart in table-cell when subrow units mismatch.
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(cells[1],
+        '#overview_container svg'));
+
+    // Check there is no overviewChart in table-cell when there are no subrows.
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(cells[2],
+        '#overview_container svg'));
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(cells[3],
+        '#overview_container svg'));
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(cells[4],
+        '#overview_container svg'));
+    assert.isUndefined(tr.ui.b.findDeepElementMatching(cells[5],
+        '#overview_container svg'));
+  });
+
+  test('viewCellOpen', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    const table = await buildTable(this, histograms);
+    const cell = tr.b.getOnlyElement(getTableCells(table));
+    assert.isFalse(cell.isHistogramOpen);
+
+    await table.viewState.tableRowStates.get('a').cells.get('Value').update(
+        {isOpen: true});
+    assert.isTrue(cell.isHistogramOpen);
+
+    await table.viewState.tableRowStates.get('a').cells.get('Value').update(
+        {isOpen: false});
+    assert.isFalse(cell.isHistogramOpen);
+  });
+
+  test('controlCellOpen', async function() {
+    const histograms = new tr.v.HistogramSet();
+    let hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, [1]);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+
+    assert.isFalse(table.viewState.tableRowStates.get('a').cells.get('A')
+        .isOpen);
+    const cells = getTableCells(table);
+
+    tr.ui.b.findDeepElementMatchingPredicate(cells[0], e =>
+      e.tagName === 'TR-V-UI-SCALAR-SPAN').click();
+    assert.isTrue(table.viewState.tableRowStates.get('a').cells.get('A')
+        .isOpen);
+
+    tr.ui.b.findDeepElementMatchingPredicate(cells[0], e =>
+      e.id === 'close_histogram').click();
+    assert.isFalse(table.viewState.tableRowStates.get('a').cells.get('A')
+        .isOpen);
+
+    tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.id === 'open_histograms').click();
+    assert.isTrue(table.viewState.tableRowStates.get('a').cells.get('A')
+        .isOpen);
+    assert.isTrue(table.viewState.tableRowStates.get('a').cells.get('B')
+        .isOpen);
+
+    tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.id === 'close_histograms').click();
+    assert.isFalse(table.viewState.tableRowStates.get('a').cells.get('A')
+        .isOpen);
+    assert.isFalse(table.viewState.tableRowStates.get('a').cells.get('B')
+        .isOpen);
+  });
+
+  test('rebin', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a', tr.b.Unit.byName.count, range(0, 100), {
+      binBoundaries: tr.v.HistogramBinBoundaries.SINGULAR,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+      ]),
+    });
+    histograms.createHistogram('a', tr.b.Unit.byName.count, range(50, 150), {
+      binBoundaries: tr.v.HistogramBinBoundaries.SINGULAR,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+      ]),
+    });
+    const table = await buildTable(this, histograms);
+
+    const cells = getTableCells(table);
+    assert.lengthOf(cells, 2);
+    assert.lengthOf(cells[0].histogram.allBins,
+        2 + tr.v.DEFAULT_REBINNED_COUNT);
+    assert.lengthOf(cells[1].histogram.allBins,
+        2 + tr.v.DEFAULT_REBINNED_COUNT);
+    assert.strictEqual(cells[0].histogram.allBins[0].range.max, 0);
+    assert.strictEqual(cells[1].histogram.allBins[0].range.max, 0);
+    assert.strictEqual(cells[0].histogram.allBins[41].range.min, 200);
+    assert.strictEqual(cells[1].histogram.allBins[41].range.min, 200);
+  });
+
+  test('leafHistograms', async function() {
+    const histograms = new tr.v.HistogramSet();
+    let hist = histograms.createHistogram('a', tr.b.Unit.byName.count, []);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A']));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, []);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B']));
+    const table = await buildTable(this, histograms);
+    assert.lengthOf(table.leafHistograms, 1);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+    assert.lengthOf(table.leafHistograms, 2);
+  });
+
+  test('nameCellOverflow', async function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('a'.repeat(100), tr.b.Unit.byName.count, []);
+    const table = await buildTable(this, histograms);
+    const nameCell = tr.b.getOnlyElement(getNameCells(table));
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+
+    const dots = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS);
+    assert.strictEqual('block', dots.style.display);
+    dots.click();
+
+    await tr.b.animationFrame();
+    assert.isFalse(nameCell.isOverflowing);
+    assert.isBelow(350, nameCell.getBoundingClientRect().width);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('nameCellOverflowOnExpand', async function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const histograms = new tr.v.HistogramSet();
+    let hist = histograms.createHistogram('a', tr.b.Unit.byName.count, []);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['0'.repeat(100)]));
+    hist = histograms.createHistogram('a', tr.b.Unit.byName.count, []);
+    hist.diagnostics.set(
+        tr.v.d.RESERVED_NAMES.STORIES,
+        new tr.v.d.GenericSet(['1'.repeat(100)]));
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+
+    const dots = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === tr.v.ui.MIDLINE_HORIZONTAL_ELLIPSIS);
+    assert.strictEqual('none', dots.style.display);
+
+    const baseTable = getBaseTable(table);
+    await table.viewState.tableRowStates.get('a').update({isExpanded: true});
+
+    const nameCell = tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-NAME-CELL' &&
+        e.row.name === '0'.repeat(100));
+    await tr.b.animationFrame();
+    assert.isTrue(nameCell.isOverflowing);
+    assert.isAbove(350, nameCell.getBoundingClientRect().width);
+
+    assert.strictEqual('block', dots.style.display);
+    dots.click();
+
+    await tr.b.animationFrame();
+    assert.isFalse(nameCell.isOverflowing);
+    assert.isBelow(350, nameCell.getBoundingClientRect().width);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('overviewCharts', async function() {
+    const binBoundaries = tr.v.HistogramBinBoundaries.createLinear(0, 150, 10);
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [0], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story0'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['0'])],
+      ]),
+    });
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [10], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story0'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['1'])],
+      ]),
+    });
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [100], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story1'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['0'])],
+      ]),
+    });
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [110], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story1'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['1'])],
+      ]),
+    });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count, [0], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story0'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['0'])],
+      ]),
+    });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count, [9], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story0'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['1'])],
+      ]),
+    });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count, [90], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story1'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['0'])],
+      ]),
+    });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count, [99], {
+      binBoundaries,
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['story1'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['1'])],
+      ]),
+    });
+    const now = new Date().getTime();
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+    ]});
+
+    for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+        table.viewState.tableRowStates.values())) {
+      await row.update({isOverviewed: true});
+    }
+
+    let charts = tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => ((e.id === 'overview_container') &&
+                     (e.style.display !== 'none')));
+    charts = charts.map(div => div.children[0]);
+    assert.lengthOf(charts, 6);
+
+    assert.deepEqual(JSON.stringify(charts[0].data),
+        JSON.stringify([{x: '0', y: 45}, {x: '1', y: 54}]));
+    tr.b.assertRangeEquals(
+        charts[0].dataRange, tr.b.math.Range.fromExplicitRange(0, 99));
+
+    assert.deepEqual(
+        charts[1].data, [{x: 'story0', y: 0}, {x: 'story1', y: 90}]);
+    tr.b.assertRangeEquals(
+        charts[1].dataRange, tr.b.math.Range.fromExplicitRange(0, 99));
+
+    assert.deepEqual(
+        charts[2].data, [{x: 'story0', y: 9}, {x: 'story1', y: 99}]);
+    tr.b.assertRangeEquals(
+        charts[2].dataRange, tr.b.math.Range.fromExplicitRange(0, 99));
+
+    assert.deepEqual(charts[3].data, [{x: '0', y: 50}, {x: '1', y: 60}]);
+    tr.b.assertRangeEquals(
+        charts[3].dataRange, tr.b.math.Range.fromExplicitRange(0, 110));
+
+    assert.deepEqual(
+        charts[4].data, [{x: 'story0', y: 0}, {x: 'story1', y: 100}]);
+    tr.b.assertRangeEquals(
+        charts[4].dataRange, tr.b.math.Range.fromExplicitRange(0, 110));
+
+    assert.deepEqual(
+        charts[5].data, [{x: 'story0', y: 10}, {x: 'story1', y: 110}]);
+    tr.b.assertRangeEquals(
+        charts[5].dataRange, tr.b.math.Range.fromExplicitRange(0, 110));
+
+    for (const row of tr.v.ui.HistogramSetTableRowState.walkAll(
+        table.viewState.tableRowStates.values())) {
+      await row.update({isOverviewed: false});
+    }
+
+    charts = tr.ui.b.findDeepElementsMatchingPredicate(
+        table, e => ((e.id === 'overview_container') &&
+                     (e.style.display !== 'none')));
+    assert.lengthOf(charts, 0);
+  });
+
+  test('sortByDisplayStatistic', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram(
+        'bar', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [0, 10], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+    histograms.createHistogram(
+        'foo', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [5], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({
+      sortColumnIndex: 1,
+      sortDescending: false,
+      displayStatisticName: 'min',
+    });
+
+    let nameCells = getNameCells(table);
+    assert.strictEqual(nameCells[0].row.name, 'bar');
+    assert.strictEqual(nameCells[1].row.name, 'foo');
+
+    await table.viewState.update({sortDescending: true});
+
+    nameCells = getNameCells(table);
+    assert.strictEqual(nameCells[0].row.name, 'foo');
+    assert.strictEqual(nameCells[1].row.name, 'bar');
+
+    await table.viewState.update({displayStatisticName: 'max'});
+
+    nameCells = getNameCells(table);
+    assert.strictEqual(nameCells[0].row.name, 'bar');
+    assert.strictEqual(nameCells[1].row.name, 'foo');
+
+    await table.viewState.update({sortDescending: false});
+
+    nameCells = getNameCells(table);
+    assert.strictEqual(nameCells[0].row.name, 'foo');
+    assert.strictEqual(nameCells[1].row.name, 'bar');
+  });
+
+  test('displayStatistic', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const now = new Date().getTime();
+    const barHist = histograms.createHistogram(
+        'a', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [1, 2, 3], {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['bar'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+    const fooHist = histograms.createHistogram(
+        'a', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [10, 20, 30], {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['foo'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+
+    // Add a Histogram with another name so that the table displays the scalars.
+    const quxHist = histograms.createHistogram(
+        'qux', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['foo'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+
+    const table = await buildTable(this, histograms);
+
+    function histogramsEqual(a, b) {
+      // This is not an exhaustive equality check. This only tests the fields
+      // that are distinguishing for this test().
+      if (a.name !== b.name) return false;
+      return tr.v.HistogramGrouping.DISPLAY_LABEL.callback(a) ===
+        tr.v.HistogramGrouping.DISPLAY_LABEL.callback(b);
+    }
+
+    let fooCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, fooHist)));
+    assert.isDefined(fooCell);
+
+    let fooContent = tr.ui.b.findDeepElementMatchingPredicate(
+        fooCell, elem => elem.id === 'content');
+    assert.isDefined(fooContent);
+
+    let barCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, barHist)));
+    assert.isDefined(barCell);
+
+    let barContent = tr.ui.b.findDeepElementMatchingPredicate(
+        barCell, elem => elem.id === 'content');
+    assert.isDefined(barContent);
+
+    assert.strictEqual(table.viewState.displayStatisticName, 'avg');
+    assert.strictEqual('20.000 ms', fooContent.textContent);
+    assert.strictEqual('2.000 ms', barContent.textContent);
+
+    await table.viewState.update({referenceDisplayLabel: 'foo'});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, fooHist)));
+    assert.isDefined(fooCell);
+
+    fooContent = tr.ui.b.findDeepElementMatchingPredicate(
+        fooCell, elem => elem.id === 'content');
+    assert.isDefined(fooContent);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, barHist)));
+    assert.isDefined(barCell);
+
+    barContent = tr.ui.b.findDeepElementMatchingPredicate(
+        barCell, elem => elem.id === 'content');
+    assert.isDefined(barContent);
+
+    await table.viewState.update({displayStatisticName: `${tr.v.DELTA}avg`});
+    assert.strictEqual('20.000 ms', fooContent.textContent);
+    assert.strictEqual('-18.000 ms', barContent.textContent);
+
+    await table.viewState.update({displayStatisticName: `%${tr.v.DELTA}avg`});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, fooHist)));
+    assert.isDefined(fooCell);
+
+    fooContent = tr.ui.b.findDeepElementMatchingPredicate(
+        fooCell, elem => elem.id === 'content');
+    assert.isDefined(fooContent);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(table, elem => (
+      (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+      elem.histogram &&
+      histogramsEqual(elem.histogram, barHist)));
+    assert.isDefined(barCell);
+
+    barContent = tr.ui.b.findDeepElementMatchingPredicate(
+        barCell, elem => elem.id === 'content');
+    assert.isDefined(barContent);
+
+    assert.strictEqual(table.viewState.displayStatisticName,
+        `%${tr.v.DELTA}avg`);
+    assert.strictEqual('20.000 ms', fooContent.textContent);
+    assert.strictEqual('-90.0%', barContent.textContent);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('requestSelectionChange', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const barHist = histograms.createHistogram(
+        'bar', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [1], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+
+    const fooHist = histograms.createHistogram(
+        'foo', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, {
+          value: 1,
+          diagnostics: {
+            breakdown: tr.v.d.Breakdown.fromEntries([
+              ['bar', 1],
+              ['qux', 0],
+            ]),
+          },
+        }, {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+
+    const quxHist = histograms.createHistogram(
+        'qux', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+    const breakdown = new tr.v.d.RelatedNameMap();
+    breakdown.set('bar', barHist.name);
+    breakdown.set('qux', quxHist.name);
+    fooHist.diagnostics.set('breakdown', breakdown);
+
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({showAll: false});
+
+    let fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isDefined(fooCell);
+
+    let barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isUndefined(barCell);
+
+    fooCell.isHistogramOpen = true;
+
+    const barLink = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => elem.tagName === 'TR-UI-A-ANALYSIS-LINK');
+    assert.isDefined(barLink);
+    barLink.click();
+
+    await tr.b.animationFrame();
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isDefined(barCell);
+
+    await table.viewState.update({searchQuery: ''});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isDefined(fooCell);
+
+    fooCell.isHistogramOpen = true;
+
+    const selectAllLink = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-UI-A-ANALYSIS-LINK') &&
+          (elem.textContent === 'Select All')));
+    assert.isDefined(selectAllLink);
+    selectAllLink.click();
+
+    assert.strictEqual(table.viewState.searchQuery, '^(bar|qux)$');
+
+    await tr.b.animationFrame();
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isUndefined(fooCell);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isDefined(barCell);
+
+    const quxCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'qux')));
+    assert.isDefined(quxCell);
+  });
+
+  test('search', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram(
+        'bar', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [1], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+    histograms.createHistogram(
+        'foo', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [1], {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+
+    const table = await buildTable(this, histograms);
+
+    let fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isDefined(fooCell);
+
+    let barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isDefined(barCell);
+
+    await table.viewState.update({searchQuery: 'bar'});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isUndefined(fooCell);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isDefined(barCell);
+
+    await table.viewState.update({searchQuery: 'foo'});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isDefined(fooCell);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isUndefined(barCell);
+
+    // As users type in regexes, some intermediate forms may be invalid regexes.
+    // When the search is an invalid regex, just ignore it.
+    await table.viewState.update({searchQuery: '[a-'});
+
+    fooCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'foo')));
+    assert.isDefined(fooCell);
+
+    barCell = tr.ui.b.findDeepElementMatchingPredicate(
+        table, elem => (
+          (elem.tagName === 'TR-V-UI-HISTOGRAM-SET-TABLE-CELL') &&
+          (elem.histogram.name === 'bar')));
+    assert.isDefined(barCell);
+  });
+
+  test('emptyAndMissing', async function() {
+    const now = new Date().getTime();
+    const histograms = new tr.v.HistogramSet();
+
+    const histA = histograms.createHistogram(
+        'histogram A', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS,
+              new tr.v.d.GenericSet(['iteration A'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+
+    const histB = histograms.createHistogram(
+        'histogram B', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS,
+              new tr.v.d.GenericSet(['iteration B'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+
+    const histC = histograms.createHistogram(
+        'histogram A', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: TEST_BOUNDARIES,
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS,
+              new tr.v.d.GenericSet(['iteration B'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START, new tr.v.d.DateRange(now)],
+          ]),
+        });
+
+    const table = await buildTable(this, histograms);
+
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === '(empty)'));
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => e.textContent === '(missing)'));
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_1x1', async function() {
+    const histograms = new tr.v.HistogramSet();
+    const hist = histograms.createHistogram(
+        'foo', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          binBoundaries: TEST_BOUNDARIES,
+        });
+    const table = await buildTable(this, histograms);
+
+    const baseTable = getBaseTable(table);
+    assert.strictEqual(baseTable.tableRows.length, 1);
+
+    const cell = tr.ui.b.findDeepElementMatchingPredicate(table, elem =>
+      elem.tagName === 'TR-V-UI-SCALAR-SPAN');
+    cell.click();
+
+    const yAxisText = tr.ui.b.findDeepElementMatchingPredicate(table, e =>
+      e.tagName === 'text' && e.textContent === '<0.000 ms');
+    assert.isBelow(0, yAxisText.getBBox().width);
+  });
+
+  test('merge_unmergeable', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [], {
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['A'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['Value'])],
+      ]),
+    });
+    histograms.createHistogram('foo', tr.b.Unit.byName.count, [], {
+      binBoundaries: tr.v.HistogramBinBoundaries.createLinear(0, 1e3, 21),
+      diagnostics: new Map([
+        [tr.v.d.RESERVED_NAMES.STORIES, new tr.v.d.GenericSet(['B'])],
+        [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['Value'])],
+      ]),
+    });
+    const table = await buildTable(this, histograms);
+    assert.strictEqual(table.viewState.tableRowStates.size, 1);
+    assert.instanceOf(tr.b.getOnlyElement(getTableCells(table)).histogram,
+        tr.v.HistogramSet);
+  });
+
+  test('instantiate_1x5', async function() {
+    const histograms = new tr.v.HistogramSet();
+
+    for (let i = 0; i < 5; ++i) {
+      histograms.createHistogram(
+          'foo', tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          range(0, 100).map(i => Math.random() * 1e3), {
+            binBoundaries: TEST_BOUNDARIES,
+            diagnostics: new Map([
+              [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['' + i])],
+              [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+                new tr.v.d.DateRange(new Date().getTime())],
+            ]),
+          });
+    }
+    const table = await buildTable(this, histograms);
+  });
+
+  test('instantiate_2x2', async function() {
+    const histograms = new tr.v.HistogramSet();
+    histograms.createHistogram('foo', tr.b.Unit.byName.count,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+              new tr.v.d.DateRange(new Date().getTime())],
+          ]),
+        });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['A'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+              new tr.v.d.DateRange(new Date().getTime())],
+          ]),
+        });
+    histograms.createHistogram('foo', tr.b.Unit.byName.count,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+              new tr.v.d.DateRange(new Date().getTime())],
+          ]),
+        });
+    histograms.createHistogram('bar', tr.b.Unit.byName.count,
+        range(0, 100).map(i => Math.random() * 1e3), {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.LABELS, new tr.v.d.GenericSet(['B'])],
+            [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+              new tr.v.d.DateRange(new Date().getTime())],
+          ]),
+        });
+    const table = await buildTable(this, histograms);
+    const baseTable = getBaseTable(table);
+
+    assert.lengthOf(baseTable.tableColumns, 3);
+    assert.strictEqual('Name',
+        baseTable.tableColumns[0].title.children[0].textContent);
+    assert.strictEqual('A',
+        baseTable.tableColumns[1].title.textContent);
+    assert.strictEqual('B',
+        baseTable.tableColumns[2].title.textContent);
+
+    await table.viewState.update({referenceDisplayLabel: 'A'});
+    baseTable.rebuild();
+    assert.strictEqual(1, baseTable.selectedTableColumnIndex);
+    let cells = getTableCells(table);
+    assert.strictEqual(cells[1].referenceHistogram, cells[0].histogram);
+    assert.strictEqual(cells[3].referenceHistogram, cells[2].histogram);
+
+    await table.viewState.update({referenceDisplayLabel: 'B'});
+    cells = getTableCells(table);
+    assert.strictEqual(2, baseTable.selectedTableColumnIndex);
+    assert.strictEqual(cells[0].referenceHistogram, cells[1].histogram);
+    assert.strictEqual(cells[2].referenceHistogram, cells[3].histogram);
+
+    // Test sorting by the reference column when the displayStatistic is a delta
+    // statistic.
+    await table.viewState.update({sortColumnIndex: 2});
+    let nameCell = getNameCells(table)[0];
+    const originalFirstRow = nameCell.row.name;
+    // This is either 'foo' or 'bar' depending on Math.random() above.
+
+    await table.viewState.update({
+      sortDescending: !table.viewState.sortDescending,
+    });
+    baseTable.rebuild();
+    nameCell = getNameCells(table)[0];
+    assert.notEqual(originalFirstRow, nameCell.row.name);
+  });
+
+  test('merged', async function() {
+    const histograms = new tr.v.HistogramSet();
+    // Add 2^8=256 Histograms, all with the same name, with different metadata.
+    const benchmarkNames = ['bm A', 'bm B'];
+    const storyGroupingKeys0 = ['A', 'B'];
+    const storyGroupingKeys1 = ['C', 'D'];
+    const storyNames = ['story A', 'story B'];
+    const starts = [1439708400000, 1439794800000];
+    const labels = ['label A', 'label B'];
+    const name = 'name '.repeat(20);
+    const unit = tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+
+    for (const benchmarkName of benchmarkNames) {
+      for (const storyGroupingKey0 of storyGroupingKeys0) {
+        for (const storyGroupingKey1 of storyGroupingKeys1) {
+          for (const storyName of storyNames) {
+            for (const startMs of starts) {
+              for (let storysetCounter = 0; storysetCounter < 2;
+                ++storysetCounter) {
+                for (const label of labels) {
+                  const samples = range(0, 100).map(i => {
+                    return {
+                      value: Math.random() * 1e3,
+                      diagnostics: {i: new tr.v.d.GenericSet([i])},
+                    };
+                  });
+                  histograms.createHistogram(name, unit, samples, {
+                    description: 'The best description.',
+                    diagnostics: new Map([
+                      [tr.v.d.RESERVED_NAMES.LABELS,
+                        new tr.v.d.GenericSet([label])],
+                      [tr.v.d.RESERVED_NAMES.STORYSET_REPEATS,
+                        new tr.v.d.GenericSet([storysetCounter])],
+                      [tr.v.d.RESERVED_NAMES.BENCHMARKS,
+                        new tr.v.d.GenericSet([benchmarkName])],
+                      [tr.v.d.RESERVED_NAMES.BENCHMARK_START,
+                        new tr.v.d.DateRange(startMs)],
+                      [tr.v.d.RESERVED_NAMES.STORIES,
+                        new tr.v.d.GenericSet([storyName])],
+                      [tr.v.d.RESERVED_NAMES.STORY_TAGS,
+                        new tr.v.d.GenericSet([
+                          `storyGroupingKey0:${storyGroupingKey0}`,
+                          `storyGroupingKey1:${storyGroupingKey1}`,
+                        ])],
+                    ]),
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    histograms.buildGroupingsFromTags([tr.v.d.RESERVED_NAMES.STORY_TAGS]);
+
+    const table = await buildTable(this, histograms);
+    await table.viewState.update({groupings: [
+      tr.v.HistogramGrouping.HISTOGRAM_NAME,
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.BENCHMARKS),
+      tr.v.HistogramGrouping.BY_KEY.get('storyGroupingKey0Tag'),
+      tr.v.HistogramGrouping.BY_KEY.get('storyGroupingKey1Tag'),
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORIES),
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.BENCHMARK_START),
+      tr.v.HistogramGrouping.BY_KEY.get(tr.v.d.RESERVED_NAMES.STORYSET_REPEATS),
+    ]});
+    const baseTable = getBaseTable(table);
+
+    assert.lengthOf(baseTable.tableColumns, 3);
+    const nameHeaderCell = baseTable.tableColumns[0].title;
+    assert.strictEqual('Name', nameHeaderCell.children[0].textContent);
+    assert.strictEqual('label A', baseTable.tableColumns[1].title.textContent);
+    assert.strictEqual('label B', baseTable.tableColumns[2].title.textContent);
+
+    const nameCell = tr.b.getOnlyElement(getNameCells(table));
+    assert.closeTo(346, nameCell.getBoundingClientRect().width, 1);
+
+    nameHeaderCell.children[1].click();
+    // toggleNameColumnWidth_ does not await viewState.update()
+    await tr.b.animationFrame();
+    assert.isBelow(322, nameCell.getBoundingClientRect().width);
+
+    nameHeaderCell.children[1].click();
+    await tr.b.animationFrame();
+    assert.closeTo(346, nameCell.getBoundingClientRect().width, 1);
+
+    assert.lengthOf(baseTable.tableRows, 1);
+    assert.strictEqual(name, baseTable.tableRows[0].name);
+    assert.lengthOf(baseTable.tableRows[0].subRows, 2);
+
+    // assertions only report their arguments, which is not enough information
+    // to diagnose problems with nested structures like tableRows -- the path to
+    // the particular row is needed. This code would be a bit simpler if each
+    // row were given a named variable, but the path to each subRow would still
+    // need to be tracked in order to provide for diagnosing.
+    const subRowPath = [];
+    function getSubRow() {
+      let row = baseTable.tableRows[0];
+      for (const index of subRowPath) {
+        row = row.subRows[index];
+      }
+      return row;
+    }
+
+    for (let i = 0; i < benchmarkNames.length; ++i) {
+      subRowPath.push(i);
+      assert.lengthOf(getSubRow().subRows, 2, subRowPath);
+      assert.strictEqual(benchmarkNames[i], getSubRow().name, subRowPath);
+
+      for (let s = 0; s < storyGroupingKeys0.length; ++s) {
+        subRowPath.push(s);
+        assert.lengthOf(getSubRow().subRows, 2, subRowPath);
+        assert.strictEqual(storyGroupingKeys0[s], getSubRow().name, subRowPath);
+
+        for (let t = 0; t < storyGroupingKeys1.length; ++t) {
+          subRowPath.push(t);
+          assert.lengthOf(getSubRow().subRows, 2, subRowPath);
+          assert.strictEqual(storyGroupingKeys1[t], getSubRow().name,
+              subRowPath);
+
+          for (let j = 0; j < storyNames.length; ++j) {
+            subRowPath.push(j);
+            assert.lengthOf(getSubRow().subRows, 2, subRowPath);
+            assert.strictEqual(storyNames[j], getSubRow().name, subRowPath);
+
+            for (let k = 0; k < starts.length; ++k) {
+              subRowPath.push(k);
+              assert.lengthOf(getSubRow().subRows, 2, subRowPath);
+              assert.strictEqual(tr.b.formatDate(new Date(starts[k])),
+                  getSubRow().name, subRowPath);
+
+              for (let l = 0; l < 2; ++l) {
+                subRowPath.push(l);
+                assert.lengthOf(getSubRow().subRows, 0, subRowPath);
+                assert.strictEqual('' + l, getSubRow().name, subRowPath);
+                subRowPath.pop();
+              }
+              subRowPath.pop();
+            }
+            subRowPath.pop();
+          }
+          subRowPath.pop();
+        }
+        subRowPath.pop();
+      }
+      subRowPath.pop();
+    }
+  });
+});
+</script>

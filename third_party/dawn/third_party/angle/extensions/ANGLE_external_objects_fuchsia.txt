@@ -1,0 +1,135 @@
+Name
+
+    ANGLE_external_objects_fuchsia
+
+Name Strings
+
+    GL_ANGLE_memory_object_fuchsia
+    GL_ANGLE_semaphore_fuchsia
+
+Contributors
+
+    Michael Spang, Google
+
+Contact
+
+    Michael Spang, Google (spang 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: Feb 19, 2020
+    Revision: 1
+
+Number
+
+    TBD
+
+Dependencies
+
+    Written against the OpenGL 4.5 and OpenGL ES 3.2 specifications
+
+    GL_ANGLE_memory_object_fuchsia requires GL_EXT_memory_object
+
+    GL_ANGLE_semaphore_fuchsia requires GL_EXT_semaphore
+
+Overview
+
+    Building upon the OpenGL memory object and semaphore framework
+    defined in EXT_external_objects, this extension enables an OpenGL
+    application to import a memory object or semaphore from Zircon
+    external handles.
+
+New Procedures and Functions
+
+    If the GL_ANGLE_memory_object_fuchsia string is reported, the following
+    commands are added:
+
+    void ImportMemoryZirconHandleANGLE(uint memory,
+                                       uint64 size,
+                                       enum handleType,
+                                       uint handle);
+
+    If the GL_ANGLE_semaphore_fuchsia string is reported, the following commands
+    are added:
+
+    void ImportSemaphoreZirconHandleANGLE(uint semaphore,
+                                          enum handleType,
+                                          uint handle);
+
+
+New Tokens
+
+    If the GL_ANGLE_memory_object_fuchsia string is reported, the following
+    tokens are added:
+
+    Accepted by the <handleType> parameter of ImportMemoryZirconHandleANGLE().
+
+        HANDLE_TYPE_ZIRCON_VMO_ANGLE               0x93AE
+
+    If the GL_ANGLE_semaphore_fuchsia string is reported, the following
+    tokens are added:
+
+    Accepted by the <handleType> parameter of ImportSemaphoreZirconHandleANGLE().
+
+        HANDLE_TYPE_ZIRCON_EVENT_ANGLE             0x93AF
+
+Additions to Chapter 4 of the OpenGL 4.5 Specification (Event Model)
+
+    Add the following entry to table 4.2 "Commands for importing
+    external semaphore handles."
+
+        | Handle Type                    | Import command                   |
+        +--------------------------------+----------------------------------+
+        | HANDLE_TYPE_ZIRCON_EVENT_ANGLE | ImportSemaphoreZirconHandleANGLE |
+        +--------------------------------+----------------------------------+
+
+    Replace the paragraph in section 4.2.1 beginning "External handles
+    are often defined..." with the following
+
+        The command
+
+            ImportSemaphoreZirconHandleANGLE(uint semaphore,
+                                             enum handleType,
+                                             uint handle);
+
+        imports a semaphore from the zircon handle <handle>.  What type of
+        handle <handle> refers to is determined by <handleType>.  A successful
+        import operation transfers ownership of <handle> to the GL
+        implementation, and performing any operation on <handle> in the
+        application after an import results in undefined behavior.
+
+Additions to Chapter 6 of the OpenGL 4.5 Specification (Memory Objects)
+
+    Add the following entry to table 6.2 "Commands for importing
+    external memory handles."
+
+        | Handle Type                  | Import command                |
+        +------------------------------+-------------------------------+
+        | HANDLE_TYPE_ZIRCON_VMO_ANGLE | ImportMemoryZirconHandleANGLE |
+        +------------------------------+-------------------------------+
+
+    Replace the paragraph in section 6.1 beginning "External handles are
+    often defined..." with the following
+
+        The command
+
+            void ImportMemoryZirconHandleANGLE(uint memory,
+                                               uint64 size,
+                                               enum handleType,
+                                               uint handle);
+
+        imports a memory object of length <size> from the handle
+        <handle>.  What type of object <handle> refers to is determined by
+        <handleType>.  A successful import operation transfers ownership
+        of <handle> to the GL implementation, and performing any operation on
+        <handle> in the application after an import results in undefined
+        behavior.
+
+Revision History
+
+    Revision 1, 2020-02-19 (Michael Spang)
+        - Initial draft based closely on EXT_external_objects_fd.

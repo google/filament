@@ -1,0 +1,69 @@
+import("//build_overrides/clspv.gni")
+
+executable("clspv-tool-llvm-min-tblgen") {
+  # TODO: this should come from top-level
+  include_dirs = [ "$root_gen_dir/$clspv_llvm_dir" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  deps = [
+    "../sources:clspv_llvm_lib_tblgen",
+    "../sources:clspv_llvm_tool_min_tblgen_sources",
+  ]
+}
+
+executable("clspv-tool-llvm-tblgen") {
+  include_dirs = [ "$root_gen_dir/$clspv_llvm_dir" ]
+
+  configs += [ "../../build:llvm_code" ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+
+  deps = [
+    "../config:llvm-config",
+    "../sources:clspv_llvm_lib_codegen_types",
+    "../sources:clspv_llvm_lib_support",
+    "../sources:clspv_llvm_lib_tblgen",
+    "../sources:clspv_llvm_tool_min_tblgen_sources",
+    "../sources:clspv_llvm_tool_tblgen_sources",
+    "../sources:clspv_llvm_utils_lib_tablegen_globalisel",
+    "../tablegen:GenVT",
+  ]
+}
+
+executable("clspv-tool-clang-tblgen") {
+  configs += [
+    "../../build:clang_code",
+    "../../build:llvm_code",
+  ]
+  configs += clspv_configs_to_append
+  configs -= clspv_configs_to_remove
+  include_dirs = [ "$root_gen_dir/$clspv_llvm_dir" ]
+  deps = [
+    "../sources:clspv_clang_lib_support",
+    "../sources:clspv_llvm_lib_support",
+    "../sources:clspv_llvm_lib_tblgen",
+  ]
+  sources = [
+    "//$clspv_llvm_dir/clang/utils/TableGen/ASTTableGen.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangASTNodesEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangASTPropertiesEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangAttrEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangCommentCommandInfoEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangCommentHTMLNamedCharacterReferenceEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangCommentHTMLTagsEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangDataCollectorsEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangDiagnosticsEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangOpcodesEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangOpenCLBuiltinEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangOptionDocEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangSACheckersEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangSyntaxEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/ClangTypeNodesEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/MveEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/NeonEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/RISCVVEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/SveEmitter.cpp",
+    "//$clspv_llvm_dir/clang/utils/TableGen/TableGen.cpp",
+  ]
+}

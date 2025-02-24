@@ -1,0 +1,112 @@
+{
+  "auth":{
+    "oauth2":{
+      "scopes":{
+        "https://www.googleapis.com/auth/userinfo.email":{
+          "description":"https://www.googleapis.com/auth/userinfo.email"
+        }
+      }
+    }
+  },
+  "basePath":"/_ah/api/auth/v1",
+  "baseUrl":"https://chrome-infra-auth.appspot.com/_ah/api/auth/v1",
+  "batchPath":"batch",
+  "description":"Verifies if a given identity is a member of a particular group.",
+  "discoveryVersion":"v1",
+  "icons":{
+    "x16":"https://www.google.com/images/icons/product/search-16.gif",
+    "x32":"https://www.google.com/images/icons/product/search-32.gif"
+  },
+  "id":"auth:v1",
+  "kind":"discovery#restDescription",
+  "methods":{
+    "membership":{
+      "httpMethod":"GET",
+      "id":"auth.membership",
+      "parameterOrder":[
+        "group",
+        "identity"
+      ],
+      "parameters":{
+        "group":{
+          "location":"query",
+          "required":true,
+          "type":"string"
+        },
+        "identity":{
+          "location":"query",
+          "required":true,
+          "type":"string"
+        }
+      },
+      "path":"membership",
+      "response":{
+        "$ref":"ComponentsAuthUiEndpointsApiMembershipResponse"
+      },
+      "scopes":[
+        "https://www.googleapis.com/auth/userinfo.email"
+      ]
+    }
+  },
+  "name":"auth",
+  "parameters":{
+    "alt":{
+      "default":"json",
+      "description":"Data format for the response.",
+      "enum":[
+        "json"
+      ],
+      "enumDescriptions":[
+        "Responses with Content-Type of application/json"
+      ],
+      "location":"query",
+      "type":"string"
+    },
+    "fields":{
+      "description":"Selector specifying which fields to include in a partial response.",
+      "location":"query",
+      "type":"string"
+    },
+    "key":{
+      "description":"API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.",
+      "location":"query",
+      "type":"string"
+    },
+    "oauth_token":{
+      "description":"OAuth 2.0 token for the current user.",
+      "location":"query",
+      "type":"string"
+    },
+    "prettyPrint":{
+      "default":"true",
+      "description":"Returns response with indentations and line breaks.",
+      "location":"query",
+      "type":"boolean"
+    },
+    "quotaUser":{
+      "description":"Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters. Overrides userIp if both are provided.",
+      "location":"query",
+      "type":"string"
+    },
+    "userIp":{
+      "description":"IP address of the site where the request originates. Use this if you want to enforce per-user limits.",
+      "location":"query",
+      "type":"string"
+    }
+  },
+  "protocol":"rest",
+  "rootUrl":"https://chrome-infra-auth.appspot.com/_ah/api/",
+  "schemas":{
+    "ComponentsAuthUiEndpointsApiMembershipResponse":{
+      "id":"ComponentsAuthUiEndpointsApiMembershipResponse",
+      "properties":{
+        "is_member":{
+          "type":"boolean"
+        }
+      },
+      "type":"object"
+    }
+  },
+  "servicePath":"auth/v1/",
+  "version":"v1"
+}

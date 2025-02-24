@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+{% macro link(anomaly) -%}
+<a href="{{anomaly.dashboard_link}}"
+   target="_blank" title="View graph" class="change-table">
+{%- endmacro %}
+
+{% macro anomaly_table(anomalies, show_bugs=true) -%}
+<table>
+  <thead>
+    <tr>
+      <th>Delta</th>
+      <th>Revision Range</th>
+      <th>Bot</th>
+      <th>Test Suite</th>
+      <th>Test</th>
+      {% if show_bugs %}
+        <th>Bug</th>
+      {% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for anomaly in anomalies %}
+    <tr class="{% if anomaly.improvement %}improvement{% else %}regression{% endif %}-{{anomaly.color_class}}">
+      <td>{{link(anomaly)}}{{anomaly.percent_changed}}</a></td>
+      <td>{{link(anomaly)}}{{anomaly.start_revision}}-{{anomaly.end_revision}}</a></td>
+      <td>{{link(anomaly)}}{{anomaly.bot}}</a></td>
+      <td>{{link(anomaly)}}{{anomaly.testsuite}}</a></td>
+      <td>{{link(anomaly)}}{{anomaly.test}}</a></td>
+      {% if show_bugs %}
+        {% if anomaly.bug_id | int > 0 and anomaly.bug_id != '' %}
+          <td><a href="http://crbug.com/{{anomaly.bug_id}}"
+                 target="_blank"
+                 title="View bug"
+                 class="change-table">{{anomaly.bug_id}}</a></td>
+        {% elif anomaly.bug_id | int == -1 %}
+          <td>INVALID</td>
+        {% elif anomaly.bug_id | int == -2 %}
+          <td>IGNORED</td>
+        {% else %}
+          <td>NONE</td>
+        {% endif %}
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{%- endmacro %}
+
+<html>
+<head>
+  <script src="/components/webcomponentsjs/webcomponents-lite.min.js"></script>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/components/polymer/polymer.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Chrome Performance Dashboard</title>
+  <script>
+    /* Placeholder for analytics */
+  </script>
+
+  <style>
+    /* The #content element contains everything after the title. */
+    #content {
+      margin-left: 20px;
+    }
+
+    table {
+      margin-left: 20px;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background-color: #f1f1f1;
+    }
+
+    th, td {
+      border: 1px solid #ebebeb;
+    }
+
+    td {
+      padding: 0 10px 0 10px;
+    }
+
+    /* Bugs in the bugs table that have a closed state. */
+    .row-closed {
+      background-color: #f1f1f1;
+    }
+
+    /*
+     * Different background colors make the magnitudes of the regressions
+     * and improvements more clearly-visible.
+     */
+    .improvement-over-50 {background-color: #3d9400;}
+    .improvement-over-40 {background-color: #57ae1a;}
+    .improvement-over-30 {background-color: #70c733;}
+    .improvement-over-20 {background-color: #8ae14d;}
+    .improvement-over-10 {background-color: #a3fa66;}
+    .improvement-under-10 {background-color: #bcff7f;}
+    .regression-over-50 {background-color: #dd4b39;}
+    .regression-over-40 {background-color: #f76553;}
+    .regression-over-30 {background-color: #ff7e6c;}
+    .regression-over-20 {background-color: #ff9886;}
+    .regression-over-10 {background-color: #ffb19f;}
+    .regression-under-10 {background-color: #ffcab8;}
+
+    /* Link style should match with background color. */
+    a.change-table:link {
+      color: white;
+    }
+
+    a.change-table:visited {
+      color: #f1f1f1;
+    }
+
+    /* For some anomaly table rows, the background color is lighter */
+    .improvement-over-20 a.change-table:link,
+    .improvement-over-10 a.change-table:link,
+    .improvement-under-10 a.change-table:link,
+    .regression-over-20 a.change-table:link,
+    .regression-over-10 a.change-table:link,
+    .regression-under-10 a.change-table:link {
+      color: #222;
+    }
+
+    .improvement-under-10 a.change-table:visited,
+    .regression-under-10 a.change-table:visited {
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <div id="content">
+    <h2>Top {{num_changes}} improvements in the last {{num_days}} days
+    for {{sheriff_name}}</h2>
+    {{anomaly_table(improvements, false)}}
+
+    <h2>Top {{num_changes}} regressions in the last {{num_days}} days
+    for {{sheriff_name}}</h2>
+    {{anomaly_table(regressions)}}
+  </div>
+  </body>
+</html>

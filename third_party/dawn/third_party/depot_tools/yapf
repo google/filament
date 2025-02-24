@@ -1,0 +1,33 @@
+#!/usr/bin/env vpython3
+
+# [VPYTHON:BEGIN]
+# python_version: "3.8"
+# wheel: <
+#   name: "infra/python/wheels/yapf-py3"
+#   version: "version:0.40.2"
+# >
+# wheel: <
+#   name: "infra/python/wheels/platformdirs-py3"
+#   version: "version:4.1.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/importlib-metadata-py3"
+#   version: "version:7.0.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/tomli-py3"
+#   version: "version:2.0.1"
+# >
+# wheel: <
+#  name: "infra/python/wheels/zipp-py3"
+#  version: "version:3.7.0"
+# >
+# [VPYTHON:END]
+
+# -*- coding: utf-8 -*-
+import sys
+
+from yapf import run_main
+
+if __name__ == '__main__':
+    sys.exit(run_main())

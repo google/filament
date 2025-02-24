@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/cpu_slice.html">
+<link rel="import" href="/tracing/model/process_base.html">
+<link rel="import" href="/tracing/model/thread_time_slice.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Cpu class.
+ */
+tr.exportTo('tr.model', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Counter = tr.model.Counter;
+  const CpuSlice = tr.model.CpuSlice;
+
+  /**
+   * The Cpu represents a Cpu from the kernel's point of view.
+   * @constructor
+   */
+  function Cpu(kernel, number) {
+    if (kernel === undefined || number === undefined) {
+      throw new Error('Missing arguments');
+    }
+    this.kernel = kernel;
+    this.cpuNumber = number;
+    this.slices = [];
+    this.counters = {};
+    this.bounds_ = new tr.b.math.Range();
+    this.samples_ = undefined; // Set during createSubSlices
+
+    // Start timestamp of the last active thread.
+    this.lastActiveTimestamp_ = undefined;
+
+    // Identifier of the last active thread. On Linux, it's a pid while on
+    // Windows it's a thread id.
+    this.lastActiveThread_ = undefined;
+
+    // Name and arguments of the last active thread.
+    this.lastActiveName_ = undefined;
+    this.lastActiveArgs_ = undefined;
+  }
+
+  Cpu.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    get samples() {
+      return this.samples_;
+    },
+
+    get userFriendlyName() {
+      return 'CPU ' + this.cpuNumber;
+    },
+
+    * findTopmostSlicesInThisContainer(eventPredicate, opt_this) {
+      // All CpuSlices are toplevel since CpuSlices do not nest.
+      for (const s of this.slices) {
+        yield* s.findTopmostSlicesRelativeToThisSlice(
+            eventPredicate, opt_this);
+      }
+    },
+
+    * childEvents() {
+      yield* this.slices;
+
+      if (this.samples_) {
+        yield* this.samples_;
+      }
+    },
+
+    * childEventContainers() {
+      yield* Object.values(this.counters);
+    },
+
+    /**
+     * @return {Counter} The counter on this CPU with the given category/name
+     * combination, creating it if it doesn't exist.
+     */
+    getOrCreateCounter(cat, name) {
+      const id = cat + '.' + name;
+      if (!this.counters[id]) {
+        this.counters[id] = new Counter(this, id, cat, name);
+      }
+      return this.counters[id];
+    },
+
+    /**
+     * @return {Counter} the counter on this CPU with the given category/name
+     * combination, or undefined if it doesn't exist.
+     */
+    getCounter(cat, name) {
+      const id = cat + '.' + name;
+      if (!this.counters[id]) {
+        return undefined;
+      }
+      return this.counters[id];
+    },
+
+    /**
+     * Shifts all the timestamps inside this CPU forward by the amount
+     * specified.
+     */
+    shiftTimestampsForward(amount) {
+      for (let sI = 0; sI < this.slices.length; sI++) {
+        this.slices[sI].start = (this.slices[sI].start + amount);
+      }
+      for (const id in this.counters) {
+        this.counters[id].shiftTimestampsForward(amount);
+      }
+    },
+
+    /**
+     * Updates the range based on the current slices attached to the cpu.
+     */
+    updateBounds() {
+      this.bounds_.reset();
+      if (this.slices.length) {
+        this.bounds_.addValue(this.slices[0].start);
+        this.bounds_.addValue(this.slices[this.slices.length - 1].end);
+      }
+      for (const id in this.counters) {
+        this.counters[id].updateBounds();
+        this.bounds_.addRange(this.counters[id].bounds);
+      }
+      if (this.samples_ && this.samples_.length) {
+        this.bounds_.addValue(this.samples_[0].start);
+        this.bounds_.addValue(
+            this.samples_[this.samples_.length - 1].end);
+      }
+    },
+
+    createSubSlices() {
+      this.samples_ = this.kernel.model.samples.filter(function(sample) {
+        return sample.cpu === this;
+      }, this);
+    },
+
+    addCategoriesToDict(categoriesDict) {
+      for (let i = 0; i < this.slices.length; i++) {
+        categoriesDict[this.slices[i].category] = true;
+      }
+      for (const id in this.counters) {
+        categoriesDict[this.counters[id].category] = true;
+      }
+      for (let i = 0; i < this.samples_.length; i++) {
+        categoriesDict[this.samples_[i].category] = true;
+      }
+    },
+
+    /*
+     * Returns the index of the slice in the CPU's slices, or undefined.
+     */
+    indexOf(cpuSlice) {
+      const i = tr.b.findLowIndexInSortedArray(
+          this.slices,
+          function(slice) { return slice.start; },
+          cpuSlice.start);
+      if (this.slices[i] !== cpuSlice) return undefined;
+      return i;
+    },
+
+    /**
+     * Closes the thread running on the CPU. |endTimestamp| is the timestamp
+     * at which the thread was unscheduled. |args| is merged with the arguments
+     * specified when the thread was initially scheduled.
+     */
+    closeActiveThread(endTimestamp, args) {
+      // Don't generate a slice if the last active thread is the idle task.
+      if (this.lastActiveThread_ === undefined ||
+          this.lastActiveThread_ === 0) {
+        return;
+      }
+
+      if (endTimestamp < this.lastActiveTimestamp_) {
+        throw new Error('The end timestamp of a thread running on CPU ' +
+                        this.cpuNumber + ' is before its start timestamp.');
+      }
+
+      // Merge |args| with |this.lastActiveArgs_|. If a key is in both
+      // dictionaries, the value from |args| is used.
+      for (const key in args) {
+        this.lastActiveArgs_[key] = args[key];
+      }
+
+      const duration = endTimestamp - this.lastActiveTimestamp_;
+      const slice = new tr.model.CpuSlice(
+          '', this.lastActiveName_,
+          ColorScheme.getColorIdForGeneralPurposeString(this.lastActiveName_),
+          this.lastActiveTimestamp_,
+          this.lastActiveArgs_,
+          duration);
+      slice.cpu = this;
+      this.slices.push(slice);
+
+      // Clear the last state.
+      this.lastActiveTimestamp_ = undefined;
+      this.lastActiveThread_ = undefined;
+      this.lastActiveName_ = undefined;
+      this.lastActiveArgs_ = undefined;
+    },
+
+    switchActiveThread(timestamp, oldThreadArgs, newThreadId,
+        newThreadName, newThreadArgs) {
+      // Close the previous active thread and generate a slice.
+      this.closeActiveThread(timestamp, oldThreadArgs);
+
+      // Keep track of the new thread.
+      this.lastActiveTimestamp_ = timestamp;
+      this.lastActiveThread_ = newThreadId;
+      this.lastActiveName_ = newThreadName;
+      this.lastActiveArgs_ = newThreadArgs;
+    },
+
+    /**
+     * Returns the frequency statistics for this CPU;
+     * the returned object contains the frequencies as keys,
+     * and the duration at this frequency in milliseconds as the value,
+     * for the range that was specified.
+     */
+    getFreqStatsForRange(range) {
+      const stats = {};
+
+      function addStatsForFreq(freqSample, index) {
+        // Counters don't have an explicit end or duration;
+        // calculate the end by looking at the starting point
+        // of the next value in the series, or if that doesn't
+        // exist, assume this frequency is held until the end.
+        const freqEnd = (index < freqSample.series_.length - 1) ?
+          freqSample.series_.samples_[index + 1].timestamp : range.max;
+
+        const freqRange = tr.b.math.Range.fromExplicitRange(
+            freqSample.timestamp, freqEnd);
+        const intersection = freqRange.findIntersection(range);
+        if (!(freqSample.value in stats)) {
+          stats[freqSample.value] = 0;
+        }
+        stats[freqSample.value] += intersection.duration;
+      }
+
+      const freqCounter = this.getCounter('', 'Clock Frequency');
+      if (freqCounter !== undefined) {
+        const freqSeries = freqCounter.getSeries(0);
+        if (!freqSeries) return;
+
+        tr.b.iterateOverIntersectingIntervals(freqSeries.samples_,
+            function(x) { return x.timestamp; },
+            function(x, index) {
+              if (index < freqSeries.length - 1) {
+                return freqSeries.samples_[index + 1].timestamp;
+              }
+              return range.max;
+            },
+            range.min,
+            range.max,
+            addStatsForFreq);
+      }
+
+      return stats;
+    }
+  };
+
+  /**
+   * Comparison between processes that orders by cpuNumber.
+   */
+  Cpu.compare = function(x, y) {
+    return x.cpuNumber - y.cpuNumber;
+  };
+
+
+  return {
+    Cpu,
+  };
+});
+</script>

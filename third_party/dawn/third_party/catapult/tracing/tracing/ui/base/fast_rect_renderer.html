@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides a mechanism for drawing massive numbers of
+ * colored rectangles into a canvas in an efficient manner, provided
+ * they are drawn left to right with fixed y and height throughout.
+ *
+ * The basic idea used here is to fuse subpixel rectangles together so that
+ * we never issue a canvas fillRect for them. It turns out Javascript can
+ * do this quite efficiently, compared to asking Canvas2D to do the same.
+ *
+ * Rather than expending compute cycles trying to figure out an average
+ * color for fused rectangles from css strings, you instead draw using
+ * palettized colors. The fused rect color is chosen from the rectangle with
+ * the higher alpha value, if equal the max palette index encountered.
+ *
+ * Make sure to flush the trackRenderer before finishing drawing in order
+ * to commit any queued drawing operations.
+ */
+tr.exportTo('tr.ui.b', function() {
+  /**
+   * Creates a fast rect renderer with a specific set of culling rules
+   * and color palette.
+   *
+   * Rectangles that are drawn will be clipped horizontally to the range
+   * [xMin, xMax]; this is done because CanvasRenderingContext2D does not draw
+   * rectangles with coordinates of very large magnitude correctly.
+   *
+   * @param {GraphicsContext2D} ctx Canvas2D drawing context.
+   * @param {number} xMin Left border of the viewport (pre-transformation).
+   * @param {number} xMax Right border of the viewport (pre-transformation).
+   * @param {number} minRectSize Only rectangles with width < minRectSize are
+   *    considered for merging.
+   * @param {number} maxMergeDist Only rectangles that are at most this far
+        apart are considered for merging.
+   * @param {Array} palette The color palette for drawing. Palette slots
+   *    should map to valid Canvas fillStyle strings.
+   *
+   * @constructor
+   */
+  function FastRectRenderer(
+      ctx, xMin, xMax, minRectSize, maxMergeDist, palette) {
+    this.ctx_ = ctx;
+    this.xMin_ = xMin;
+    this.xMax_ = xMax;
+    this.minRectSize_ = minRectSize;
+    this.maxMergeDist_ = maxMergeDist;
+    this.palette_ = palette;
+  }
+
+  FastRectRenderer.prototype = {
+    y_: 0,
+    h_: 0,
+    merging_: false,
+    mergeStartX_: 0,
+    mergeCurRight_: 0,
+    mergedColorId_: 0,
+    mergedAlpha_: 0,
+
+    /**
+     * Changes the y position and height for subsequent fillRect
+     * calls. x and width are specified on the fillRect calls.
+     */
+    setYandH(y, h) {
+      if (this.y_ === y &&
+          this.h_ === h) {
+        return;
+      }
+      this.flush();
+      this.y_ = y;
+      this.h_ = h;
+    },
+
+    /**
+     * Fills rectangle at the specified location, if visible. If the
+     * rectangle is subpixel, it will be merged with adjacent rectangles.
+     * The drawing operation may not take effect until flush is called.
+     * @param {number} colorId The color of this rectangle, as an index
+     *     in the renderer's color palette.
+     * @param {number} alpha The opacity of the rectangle as 0.0-1.0 number.
+     */
+    fillRect(x, w, colorId, alpha) {
+      const r = x + w;
+      if (w < this.minRectSize_) {
+        if (r - this.mergeStartX_ > this.maxMergeDist_) {
+          this.flush();
+        }
+        if (!this.merging_) {
+          this.merging_ = true;
+          this.mergeStartX_ = x;
+          this.mergeCurRight_ = r;
+          this.mergedColorId_ = colorId;
+          this.mergedAlpha_ = alpha;
+        } else {
+          this.mergeCurRight_ = r;
+
+          if (this.mergedAlpha_ < alpha ||
+              (this.mergedAlpha_ === alpha && this.mergedColorId_ < colorId)) {
+            this.mergedAlpha_ = alpha;
+            this.mergedColorId_ = colorId;
+          }
+        }
+      } else {
+        if (this.merging_) {
+          this.flush();
+        }
+        this.ctx_.fillStyle = this.palette_[colorId];
+        this.ctx_.globalAlpha = alpha;
+        const xLeft = Math.max(x, this.xMin_);
+        const xRight = Math.min(r, this.xMax_);
+        if (xLeft < xRight) {
+          this.ctx_.fillRect(xLeft, this.y_, xRight - xLeft, this.h_);
+        }
+      }
+    },
+
+    /**
+     * Commits any pending fillRect operations to the underlying graphics
+     * context.
+     */
+    flush() {
+      if (this.merging_) {
+        this.ctx_.fillStyle = this.palette_[this.mergedColorId_];
+        this.ctx_.globalAlpha = this.mergedAlpha_;
+        const xLeft = Math.max(this.mergeStartX_, this.xMin_);
+        const xRight = Math.min(this.mergeCurRight_, this.xMax_);
+        if (xLeft < xRight) {
+          this.ctx_.fillRect(xLeft, this.y_, xRight - xLeft, this.h_);
+        }
+        this.merging_ = false;
+      }
+    }
+  };
+
+  return {
+    FastRectRenderer,
+  };
+});
+</script>

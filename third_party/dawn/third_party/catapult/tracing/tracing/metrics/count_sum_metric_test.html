@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright 2020 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import" href="/tracing/metrics/count_sum_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('countSumMetric_general', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      const mainFrame = { id: '0xdeadbeef', is_main: true };
+      const subframe = { id: '0xdeadb33f', is_main: false };
+      const emitEvent = (time, cat, title, counter, value) => {
+        mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+          cat,
+          title,
+          start: time,
+          duration: 0.0,
+          args: {counter, value}
+        }));
+      };
+      emitEvent(1000, 'benchmark', 'count_sum', 'A', 2.1);
+      emitEvent(3000, 'benchmark', 'count_sum', 'B', null);
+      emitEvent(2000, 'benchmark', 'count_sum', 'A', 19.4);
+      emitEvent(4000, 'benchmark', 'count_sum', 'B', null);
+      emitEvent(4000, 'benchmark', 'count_sum', 'B', null);
+      emitEvent(4000, 'donotcount', 'count_sum', 'C', null);
+      emitEvent(4000, 'benchmark', 'foo', 'D', null);
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.countSumMetric(histograms, model);
+    const histAc = histograms.getHistogramNamed('count_A');
+    assert.strictEqual(histAc.sampleValues.length, 1);
+    assert.strictEqual(histAc.running.count, 1);
+    assert.strictEqual(histAc.running.mean, 2);
+    const histAs = histograms.getHistogramNamed('sum_A');
+    assert.strictEqual(histAs.sampleValues.length, 1);
+    assert.strictEqual(histAs.running.count, 1);
+    assert.strictEqual(histAs.running.mean, 21.5);
+    const histBc = histograms.getHistogramNamed('count_B');
+    assert.strictEqual(histBc.sampleValues.length, 1);
+    assert.strictEqual(histBc.running.count, 1);
+    assert.strictEqual(histBc.running.mean, 3);
+    assert.isUndefined(histograms.getHistogramNamed('sum_B'));
+    assert.isUndefined(histograms.getHistogramNamed('count_C'));
+    assert.isUndefined(histograms.getHistogramNamed('sum_C'));
+    assert.isUndefined(histograms.getHistogramNamed('count_D'));
+    assert.isUndefined(histograms.getHistogramNamed('sum_D'));
+  });
+});

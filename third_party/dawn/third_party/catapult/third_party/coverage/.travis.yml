@@ -1,0 +1,26 @@
+# Tell Travis what to do
+# https://travis-ci.org/nedbat/coveragepy
+
+language: python
+
+sudo: false
+
+python:
+  - 2.7
+
+env:
+  - TOXENV=py26
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  - TOXENV=pypy
+  - TOXENV=py27 COVERAGE_COVERAGE=yes
+
+install:
+  - pip install -r requirements/tox.pip
+
+script:
+  - tox
+  - if [ $COVERAGE_COVERAGE == 'yes' ]; then python igor.py combine_html; fi
+  - if [ $COVERAGE_COVERAGE == 'yes' ]; then pip install codecov; fi
+  - if [ $COVERAGE_COVERAGE == 'yes' ]; then codecov; fi

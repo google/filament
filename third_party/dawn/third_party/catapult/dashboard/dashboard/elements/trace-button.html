@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+Most of this code is duplicated in bisect-form.
+-->
+
+<link rel="import" href="/components/paper-button/paper-button.html">
+
+<link rel="import" href="/dashboard/elements/pinpoint-perf-job-dialog.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+
+<dom-module id="trace-button">
+  <template>
+    <style>
+      /*
+       * FIXME: This style is duplicated from the bisect-form style.
+       * See the comments there.
+       */
+      #button:not([disabled]) {
+        background-color: #4285f4;
+        color: white;
+      }
+
+      :host(.mini) #button {
+        height: 22px;
+        line-height: 0.5em;
+        margin-left: 5px;
+        padding-top: 0;
+      }
+    </style>
+    <paper-button raised
+        id="button"
+        disabled$={{!traceInfo.canBisect}}
+        on-click="onTrace">Request Debug Trace</paper-button>
+    <pinpoint-perf-job-dialog
+        id="pinpoint"
+        xsrf-token="{{xsrfToken}}"
+        start-commit="{{traceInfo.goodRev}}"
+        end-commit="{{traceInfo.badRev}}"
+        start-repository="{{traceInfo.goodRevRepo}}"
+        end-repository="{{traceInfo.badRevRepo}}"
+        test-path="{{traceInfo.testPath}}"></pinpoint-perf-job-dialog>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'trace-button',
+  properties: {
+    bugId: { notify: true },
+    traceInfo: {
+      notify: true
+    },
+    xsrfToken: { notify: true }
+  },
+
+  /**
+    * Displays the trace-form when the trace button is clicked.
+    */
+  onTrace() {
+    this.$.pinpoint.show();
+  }
+});
+</script>

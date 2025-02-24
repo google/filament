@@ -1,0 +1,28 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("subgroups") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/subgroup_common_kernels.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/subhelpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_barrier.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_ifp.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_queries.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_ballot.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_clustered_reduce.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_extended_types.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_non_uniform_arithmetic.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_non_uniform_vote.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_rotate.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_shuffle.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_subgroup_shuffle_relative.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/subgroups/test_workitem.cpp",
+  ]
+}

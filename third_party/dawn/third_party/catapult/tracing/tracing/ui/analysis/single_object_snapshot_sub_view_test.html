@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/single_object_snapshot_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate_snapshotView', function() {
+    const i10 = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'name', 10);
+    const s10 = i10.addSnapshot(10, {foo: 1});
+    i10.updateBounds();
+
+    const selection = new tr.model.EventSet();
+    selection.push(s10);
+
+    const view =
+        document.createElement('tr-ui-a-single-object-snapshot-sub-view');
+    view.selection = selection;
+    this.addHTMLOutput(view);
+  });
+});
+</script>

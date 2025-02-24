@@ -1,0 +1,293 @@
+[submodule "build"]
+	path = build
+	url = https://chromium.googlesource.com/chromium/src/build
+	gclient-condition = not build_with_chromium
+[submodule "buildtools"]
+	path = buildtools
+	url = https://chromium.googlesource.com/chromium/src/buildtools
+	gclient-condition = not build_with_chromium
+[submodule "third_party/clang-format/script"]
+	path = third_party/clang-format/script
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/clang/tools/clang-format
+	gclient-condition = not build_with_chromium
+[submodule "testing"]
+	path = testing
+	url = https://chromium.googlesource.com/chromium/src/testing
+	gclient-condition = not build_with_chromium
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp
+	gclient-condition = not build_with_chromium
+[submodule "third_party/android_build_tools"]
+	path = third_party/android_build_tools
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_build_tools
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/android_deps"]
+	path = third_party/android_deps
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_deps
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/android_platform"]
+	path = third_party/android_platform
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_platform
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/android_sdk"]
+	path = third_party/android_sdk
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_sdk
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/astc-encoder/src"]
+	path = third_party/astc-encoder/src
+	url = https://chromium.googlesource.com/external/github.com/ARM-software/astc-encoder
+	gclient-condition = not build_with_chromium
+[submodule "third_party/catapult"]
+	path = third_party/catapult
+	url = https://chromium.googlesource.com/catapult
+	gclient-condition = not build_with_chromium
+[submodule "third_party/cherry"]
+	path = third_party/cherry
+	url = https://android.googlesource.com/platform/external/cherry
+	gclient-condition = not build_with_chromium
+[submodule "third_party/colorama/src"]
+	path = third_party/colorama/src
+	url = https://chromium.googlesource.com/external/colorama
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/clspv/src"]
+	path = third_party/clspv/src
+	url = https://chromium.googlesource.com/external/github.com/google/clspv
+	gclient-condition = not build_with_chromium
+[submodule "third_party/cpu_features/src"]
+	path = third_party/cpu_features/src
+	url = https://chromium.googlesource.com/external/github.com/google/cpu_features
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/dawn"]
+	path = third_party/dawn
+	url = https://dawn.googlesource.com/dawn
+	gclient-condition = not build_with_chromium
+[submodule "third_party/depot_tools"]
+	path = third_party/depot_tools
+	url = https://chromium.googlesource.com/chromium/tools/depot_tools
+	gclient-condition = not build_with_chromium
+[submodule "third_party/EGL-Registry/src"]
+	path = third_party/EGL-Registry/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/EGL-Registry
+	gclient-condition = not build_with_chromium
+[submodule "third_party/flatbuffers/src"]
+	path = third_party/flatbuffers/src
+	url = https://chromium.googlesource.com/external/github.com/google/flatbuffers
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/gles1_conform"]
+	path = third_party/gles1_conform
+	url = https://chrome-internal.googlesource.com/angle/es-cts
+	gclient-condition = checkout_angle_internal
+[submodule "third_party/glmark2/src"]
+	path = third_party/glmark2/src
+	url = https://chromium.googlesource.com/external/github.com/glmark2/glmark2
+[submodule "third_party/googletest"]
+	path = third_party/googletest
+	url = https://chromium.googlesource.com/chromium/src/third_party/googletest
+	gclient-condition = not build_with_chromium
+[submodule "third_party/ijar"]
+	path = third_party/ijar
+	url = https://chromium.googlesource.com/chromium/src/third_party/ijar
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/libdrm/src"]
+	path = third_party/libdrm/src
+	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
+	gclient-condition = checkout_angle_mesa or not build_with_chromium
+[submodule "third_party/libjpeg_turbo"]
+	path = third_party/libjpeg_turbo
+	url = https://chromium.googlesource.com/chromium/deps/libjpeg_turbo
+	gclient-condition = not build_with_chromium
+[submodule "third_party/libpng/src"]
+	path = third_party/libpng/src
+	url = https://android.googlesource.com/platform/external/libpng
+	gclient-condition = not build_with_chromium
+[submodule "third_party/llvm/src"]
+	path = third_party/llvm/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project
+	gclient-condition = not build_with_chromium
+[submodule "third_party/jinja2"]
+	path = third_party/jinja2
+	url = https://chromium.googlesource.com/chromium/src/third_party/jinja2
+	gclient-condition = not build_with_chromium
+[submodule "third_party/jsoncpp"]
+	path = third_party/jsoncpp
+	url = https://chromium.googlesource.com/chromium/src/third_party/jsoncpp
+	gclient-condition = not build_with_chromium
+[submodule "third_party/libc++/src"]
+	path = third_party/libc++/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx
+	gclient-condition = not build_with_chromium
+[submodule "third_party/libc++abi/src"]
+	path = third_party/libc++abi/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi
+	gclient-condition = not build_with_chromium
+[submodule "third_party/llvm-libc/src"]
+	path = third_party/llvm-libc/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc
+	gclient-condition = not build_with_chromium
+[submodule "third_party/libunwind/src"]
+	path = third_party/libunwind/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libunwind
+	gclient-condition = not build_with_chromium
+[submodule "third_party/markupsafe"]
+	path = third_party/markupsafe
+	url = https://chromium.googlesource.com/chromium/src/third_party/markupsafe
+	gclient-condition = not build_with_chromium
+[submodule "third_party/mesa/src"]
+	path = third_party/mesa/src
+	url = https://chromium.googlesource.com/external/github.com/Mesa3D/mesa
+	gclient-condition = checkout_angle_mesa
+[submodule "third_party/meson"]
+	path = third_party/meson
+	url = https://chromium.googlesource.com/external/github.com/mesonbuild/meson
+	gclient-condition = checkout_angle_mesa
+[submodule "third_party/nasm"]
+	path = third_party/nasm
+	url = https://chromium.googlesource.com/chromium/deps/nasm
+	gclient-condition = not build_with_chromium
+[submodule "third_party/OpenCL-CTS/src"]
+	path = third_party/OpenCL-CTS/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenCL-CTS
+	gclient-condition = not build_with_chromium
+[submodule "third_party/OpenCL-Docs/src"]
+	path = third_party/OpenCL-Docs/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenCL-Docs
+	gclient-condition = not build_with_chromium
+[submodule "third_party/OpenCL-ICD-Loader/src"]
+	path = third_party/OpenCL-ICD-Loader/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenCL-ICD-Loader
+	gclient-condition = not build_with_chromium
+[submodule "third_party/OpenGL-Registry/src"]
+	path = third_party/OpenGL-Registry/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenGL-Registry
+	gclient-condition = not build_with_chromium
+[submodule "third_party/perfetto"]
+	path = third_party/perfetto
+	url = https://android.googlesource.com/platform/external/perfetto
+	gclient-condition = not build_with_chromium and checkout_angle_perfetto
+[submodule "third_party/protobuf"]
+	path = third_party/protobuf
+	url = https://chromium.googlesource.com/chromium/src/third_party/protobuf
+	gclient-condition = not build_with_chromium
+[submodule "third_party/Python-Markdown"]
+	path = third_party/Python-Markdown
+	url = https://chromium.googlesource.com/chromium/src/third_party/Python-Markdown
+	gclient-condition = not build_with_chromium
+[submodule "third_party/rapidjson/src"]
+	path = third_party/rapidjson/src
+	url = https://chromium.googlesource.com/external/github.com/Tencent/rapidjson
+[submodule "third_party/requests/src"]
+	path = third_party/requests/src
+	url = https://chromium.googlesource.com/external/github.com/kennethreitz/requests
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/rust"]
+	path = third_party/rust
+	url = https://chromium.googlesource.com/chromium/src/third_party/rust
+	gclient-condition = not build_with_chromium
+[submodule "third_party/six"]
+	path = third_party/six
+	url = https://chromium.googlesource.com/chromium/src/third_party/six
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "third_party/SwiftShader"]
+	path = third_party/SwiftShader
+	url = https://swiftshader.googlesource.com/SwiftShader
+	gclient-condition = not build_with_chromium
+[submodule "third_party/VK-GL-CTS/src"]
+	path = third_party/VK-GL-CTS/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/VK-GL-CTS
+[submodule "third_party/vulkan-deps"]
+	path = third_party/vulkan-deps
+	url = https://chromium.googlesource.com/vulkan-deps
+	gclient-condition = not build_with_chromium
+[submodule "third_party/glslang/src"]
+	path = third_party/glslang/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/glslang
+	gclient-condition = not build_with_chromium
+[submodule "third_party/lunarg-vulkantools/src"]
+	path = third_party/lunarg-vulkantools/src
+	url = https://chromium.googlesource.com/external/github.com/LunarG/VulkanTools
+	gclient-condition = not build_with_chromium
+[submodule "third_party/spirv-cross/src"]
+	path = third_party/spirv-cross/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross
+	gclient-condition = not build_with_chromium
+[submodule "third_party/spirv-headers/src"]
+	path = third_party/spirv-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers
+	gclient-condition = not build_with_chromium
+[submodule "third_party/spirv-tools/src"]
+	path = third_party/spirv-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Tools
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan-headers/src"]
+	path = third_party/vulkan-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Headers
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan-loader/src"]
+	path = third_party/vulkan-loader/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Loader
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan-tools/src"]
+	path = third_party/vulkan-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Tools
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan-utility-libraries/src"]
+	path = third_party/vulkan-utility-libraries/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Utility-Libraries
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan-validation-layers/src"]
+	path = third_party/vulkan-validation-layers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-ValidationLayers
+	gclient-condition = not build_with_chromium
+[submodule "third_party/vulkan_memory_allocator"]
+	path = third_party/vulkan_memory_allocator
+	url = https://chromium.googlesource.com/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+	gclient-condition = not build_with_chromium
+[submodule "third_party/wayland"]
+	path = third_party/wayland
+	url = https://chromium.googlesource.com/external/anongit.freedesktop.org/git/wayland/wayland
+	gclient-condition = not build_with_chromium and host_os == "linux"
+[submodule "third_party/zlib"]
+	path = third_party/zlib
+	url = https://chromium.googlesource.com/chromium/src/third_party/zlib
+	gclient-condition = not build_with_chromium
+[submodule "tools/android"]
+	path = tools/android
+	url = https://chromium.googlesource.com/chromium/src/tools/android
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "tools/clang"]
+	path = tools/clang
+	url = https://chromium.googlesource.com/chromium/src/tools/clang
+	gclient-condition = not build_with_chromium
+[submodule "tools/mb"]
+	path = tools/mb
+	url = https://chromium.googlesource.com/chromium/src/tools/mb
+	gclient-condition = not build_with_chromium
+[submodule "tools/md_browser"]
+	path = tools/md_browser
+	url = https://chromium.googlesource.com/chromium/src/tools/md_browser
+	gclient-condition = not build_with_chromium
+[submodule "tools/memory"]
+	path = tools/memory
+	url = https://chromium.googlesource.com/chromium/src/tools/memory
+	gclient-condition = not build_with_chromium
+[submodule "tools/perf"]
+	path = tools/perf
+	url = https://chromium.googlesource.com/chromium/src/tools/perf
+	gclient-condition = not build_with_chromium
+[submodule "tools/protoc_wrapper"]
+	path = tools/protoc_wrapper
+	url = https://chromium.googlesource.com/chromium/src/tools/protoc_wrapper
+	gclient-condition = not build_with_chromium
+[submodule "tools/python"]
+	path = tools/python
+	url = https://chromium.googlesource.com/chromium/src/tools/python
+	gclient-condition = checkout_android and not build_with_chromium
+[submodule "tools/rust"]
+	path = tools/rust
+	url = https://chromium.googlesource.com/chromium/src/tools/rust
+	gclient-condition = not build_with_chromium
+[submodule "tools/valgrind"]
+	path = tools/valgrind
+	url = https://chromium.googlesource.com/chromium/src/tools/valgrind
+	gclient-condition = not build_with_chromium

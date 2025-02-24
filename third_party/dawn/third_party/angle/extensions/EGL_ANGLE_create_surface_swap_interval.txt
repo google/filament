@@ -1,0 +1,85 @@
+Name
+
+    ANGLE_create_surface_swap_interval
+
+Name Strings
+
+    EGL_ANGLE_create_surface_swap_interval
+
+Contributors
+
+    Jamie Madill
+
+Contacts
+
+    Jamie Madill (jmadill 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Aug 16, 2021
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    Requires EGL 1.5.
+
+    Written against the EGL 1.5 specification.
+
+Overview
+
+    This extension allows the user to create a surface with a specified
+    swap interval, instead of first creating the surface then using
+    eglSwapInterval to change the default. In some cases this can lead to
+    less reconfiguration during surface initialization.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateWindowSurface:
+
+        EGL_SWAP_INTERVAL_ANGLE 0x322F
+
+Additions to the EGL 1.5 Specification
+
+    Append to section 3.5.1 "Creating On-Screen Rendering Surfaces"
+
+    EGL_SWAP_INTERVAL_ANGLE specifies the initial swap interval used when
+    that will elapse before a buffer swap takes place.
+    The default value of EGL_SWAP_INTERVAL_ANGLE is 1.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Aug 16, 2021   jmadill    Initial version

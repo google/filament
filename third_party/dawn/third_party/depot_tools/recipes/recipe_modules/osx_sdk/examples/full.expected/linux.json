@@ -1,0 +1,21 @@
+[
+  {
+    "cmd": [
+      "gn",
+      "gen",
+      "out/Release"
+    ],
+    "name": "gn"
+  },
+  {
+    "cmd": [
+      "ninja",
+      "-C",
+      "out/Release"
+    ],
+    "name": "ninja"
+  },
+  {
+    "name": "$result"
+  }
+]

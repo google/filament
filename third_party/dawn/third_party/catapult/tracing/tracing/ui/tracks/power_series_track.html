@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/tracks/chart_point.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series.html">
+<link rel="import" href="/tracing/ui/tracks/chart_series_y_axis.html">
+<link rel="import" href="/tracing/ui/tracks/chart_track.html">
+
+<style>
+.power-series-track {
+  height: 90px;
+}
+</style>
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const ChartTrack = tr.ui.tracks.ChartTrack;
+
+  /**
+   * A track that displays a PowerSeries.
+   *
+   * @constructor
+   * @extends {ChartTrack}
+   */
+  const PowerSeriesTrack = tr.ui.b.define('power-series-track', ChartTrack);
+
+  PowerSeriesTrack.prototype = {
+    __proto__: ChartTrack.prototype,
+
+    decorate(viewport) {
+      ChartTrack.prototype.decorate.call(this, viewport);
+      Polymer.dom(this).classList.add('power-series-track');
+      this.heading = 'Power';
+      this.powerSeries_ = undefined;
+    },
+
+    set powerSeries(powerSeries) {
+      this.powerSeries_ = powerSeries;
+
+      this.series = this.buildChartSeries_();
+      this.autoSetAllAxes({expandMax: true});
+    },
+
+    get hasVisibleContent() {
+      return (this.powerSeries_ && this.powerSeries_.samples.length > 0);
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      containerToTrackMap.addContainer(this.powerSeries_, this);
+    },
+
+    buildChartSeries_() {
+      if (!this.hasVisibleContent) return [];
+
+      const seriesYAxis = new tr.ui.tracks.ChartSeriesYAxis(0, undefined);
+      const pts = this.powerSeries_.samples.map(function(smpl) {
+        return new tr.ui.tracks.ChartPoint(smpl, smpl.start, smpl.powerInW);
+      });
+      const renderingConfig = {
+        chartType: tr.ui.tracks.ChartSeriesType.AREA,
+        colorId: ColorScheme.getColorIdForGeneralPurposeString(this.heading)
+      };
+
+      return [new tr.ui.tracks.ChartSeries(pts, seriesYAxis, renderingConfig)];
+    }
+  };
+
+  return {
+    PowerSeriesTrack,
+  };
+});
+</script>

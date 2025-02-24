@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="improt" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/extras/importer/trace2html_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Base64 = tr.b.Base64;
+
+  test('simple', function() {
+    const htmlLines = [
+      '<!DOCTYPE html>',
+      '<script id="viewer-data" type="application/json">',
+      Base64.btoa('hello'),
+      '<\/script>',
+      '<script id="viewer-data" type="text/plain">',
+      Base64.btoa('world'),
+      '<\/script>',
+      '</html>'
+    ];
+    const htmlText = htmlLines.join('\n');
+    assert.isTrue(tr.e.importer.Trace2HTMLImporter.canImport(htmlText));
+
+    const m = new tr.Model();
+    const imp = new tr.e.importer.Trace2HTMLImporter(m, htmlText);
+    const subTracesAsBuffers = imp.extractSubtraces();
+    const subTracesAsStrings = subTracesAsBuffers.map(function(buffer) {
+      let str = '';
+      const ary = new Uint8Array(buffer);
+      for (let i = 0; i < ary.length; i++) {
+        str += String.fromCharCode(ary[i]);
+      }
+      return str;
+    });
+    assert.deepEqual(subTracesAsStrings, ['hello', 'world']);
+  });
+
+  test('windowsLineEndings', function() {
+    const htmlLines = [
+      '<!DOCTYPE html>',
+      '<script id="viewer-data" type="application/json">',
+      Base64.btoa('hello'),
+      '<\/script>',
+      '<script id="viewer-data" type="text/plain">',
+      Base64.btoa('world'),
+      '<\/script>',
+      '</html>'
+    ];
+    const htmlText = htmlLines.join('\r\n');
+    assert.isTrue(tr.e.importer.Trace2HTMLImporter.canImport(htmlText));
+
+    const m = new tr.Model();
+    const imp = new tr.e.importer.Trace2HTMLImporter(m, htmlText);
+    const subTracesAsBuffers = imp.extractSubtraces();
+    const subTracesAsStrings = subTracesAsBuffers.map(function(buffer) {
+      let str = '';
+      const ary = new Uint8Array(buffer);
+      for (let i = 0; i < ary.length; i++) {
+        str += String.fromCharCode(ary[i]);
+      }
+      return str;
+    });
+    assert.deepEqual(subTracesAsStrings, ['hello', 'world']);
+  });
+});
+</script>

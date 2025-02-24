@@ -1,0 +1,118 @@
+'\" t
+.\"     Title: git-freeze
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-FREEZE" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-freeze \- Freeze all changes on a branch (indexed and unindexed)\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit freeze\fR
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+\fBgit freeze\fR works a lot like \fBgit stash\fR, in that it stores the current changes in your working copy and index \fIsomewhere\fR\&. Unlike \fBgit stash\fR, \fBgit freeze\fR stores those changes on your current branch\&. This effectively allows you to \fIpause\fR development of a branch, work on something else, and then come back to exactly the same working state later (by running \fBgit thaw\fR)\&.
+.sp
+\fBgit freeze\fR will make up to 2 commits on your branch\&. A commit with the message \fBFREEZE\&.indexed\fR will contain all changes which you\(cqve added to your index (like with \fIgit add\fR, \fIgit mv\fR, \fIgit rm\fR, etc\&.)\&. A commit with the message \fBFREEZE\&.unindexed\fR will contain all changes which were not in your index at the time you ran git freeze (freshly modified files, new files, etc\&.)\&.
+.sp
+By default \fBgit freeze\fR will only freeze up to 100MB of untracked files\&. See \fICONFIGURATION VARIABLES\fR for more details\&.
+.SH "EXAMPLE"
+.sp
+
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\fB$ git status \-\-short\fR
+A  added_file
+AM added_file_with_unstaged_changes
+D  deleted_file
+ M modified_file
+ D unstaged_deleted_file
+?? unadded_file
+
+\fB$ git freeze\fR
+
+\fB$ git status \-\-short\fR
+
+\fB$ git log \-n 2 \-\-stat\fR
+commit 3eb0e183eb4b1f8d5ce1ff29be3ced2ca85d8951
+Author: local <local@chromium\&.org>
+Date:   Thu Apr 10 08:54:56 2014 +0000
+
+    FREEZE\&.unindexed
+
+ added_file_with_unstaged_changes | 1 +
+ modified_file                    | 1 +
+ unadded_file                     | 0
+ unstaged_deleted_file            | 1 \-
+ 4 files changed, 2 insertions(+), 1 deletion(\-)
+
+commit b57d611f2738de2193ec16f150991a4bc8dbd2fe
+Author: local <local@chromium\&.org>
+Date:   Thu Apr 10 08:54:56 2014 +0000
+
+    FREEZE\&.indexed
+
+ added_file                       | 1 +
+ added_file_with_unstaged_changes | 1 +
+ deleted_file                     | 1 \-
+ 3 files changed, 2 insertions(+), 1 deletion(\-)
+
+\fB$ git thaw\fR
+
+\fB$ git status \-\-short\fR
+A  added_file
+AM added_file_with_unstaged_changes
+D  deleted_file
+ M modified_file
+ D unstaged_deleted_file
+?? unadded_file
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "CONFIGURATION VARIABLES"
+.SS "depot\-tools\&.freeze\-size\-limit"
+.sp
+This sets the size limit as an integer number of megabytes of untracked files that git\-freeze will be willing to put in suspended animation\&. A 0 or negative limit disables the size\-limit check entirely\&. \fB100\fR by default\&.
+.SH "SEE ALSO"
+.sp
+\fBgit-thaw\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

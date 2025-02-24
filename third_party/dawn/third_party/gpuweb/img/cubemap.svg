@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="350px" height="260px" viewBox="0 0 122.74238 92.189209" version="1.1" id="svg1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      svg {
+        background: #ffffff;
+        fill: #000000;
+      }
+      @media (prefers-color-scheme: dark) {
+        svg {
+          background: #000000;
+          fill: #ffffff;
+        }
+      }
+      text {
+        font-family: monospace;
+        font-size: 5.6px;
+      }
+      #facelabels {
+        line-height: 1;
+        text-anchor: middle;
+        text-align: center;
+      }
+    </style>
+  </defs>
+  <g transform="translate(-4.2049111,-25.248071)">
+    <path d="M 34.757568,25.248071 V 55.800728 H 4.2049113 V 86.883069 H 34.757568 V 117.43728 H 65.839909 V 86.883069 h 30.02349 0.529167 30.554724 V 55.800728 H 96.392566 95.863399 65.839909 V 25.248071 Z m 0.529684,0.529167 h 30.02349 v 30.02349 H 35.287252 Z M 4.7345947,56.329895 H 34.757568 v 30.02349 H 4.7345947 Z m 30.5526573,0 h 30.02349 v 30.02349 h -30.02349 z m 30.552657,0 h 30.02349 v 30.02349 h -30.02349 z m 30.552657,0 h 30.025554 v 30.02349 H 96.392566 Z M 35.287252,86.883069 h 30.02349 v 30.025041 h -30.02349 z" />
+    <g id="g81">
+      <path id="path49" d="m 20.326408,57.611471 v 1.365291 H 7.3788778 V 71.921708 H 6.0156535 l 1.6288411,2.818433 1.6288412,-2.818433 H 7.9080444 V 59.505929 H 20.326408 v 1.363224 l 2.816365,-1.628841 z" /><text xml:space="preserve" x="23.093363" y="61.715832"><tspan x="23.093363" y="61.715832">+U</tspan></text><text xml:space="preserve" x="5.4365106" y="79.372673"><tspan x="5.4365106" y="79.372673">+V</tspan></text>
+    </g>
+    <use x="0" y="0" xlink:href="#g81" id="use81" transform="translate(30.55421,-30.553689)" />
+    <use x="0" y="0" xlink:href="#use81" id="use82" transform="translate(-2.2633333e-6,30.552657)" />
+    <use x="0" y="0" xlink:href="#use82" id="use83" transform="translate(30.552659)" />
+    <use x="0" y="0" xlink:href="#use83" id="use84" transform="translate(30.552657)" />
+    <use x="0" y="0" xlink:href="#use84" id="use85" transform="translate(-61.105314,30.553174)" />
+    <g id="facelabels">
+      <text xml:space="preserve" x="90.714462" y="79.064423"><tspan  x="90.714462" y="79.064423">[0]</tspan><tspan  x="90.714462" y="84.766853" >+X</tspan></text>
+      <text xml:space="preserve" x="29.60788" y="79.064423"><tspan  x="29.60788" y="79.064423">[1]</tspan><tspan  x="29.60788" y="84.766853">-X</tspan></text>
+      <text xml:space="preserve" x="60.161171" y="48.511135" ><tspan  x="60.161171" y="48.511135">[2]</tspan><tspan  x="60.161171" y="54.213566" >+Y</tspan></text>
+      <text xml:space="preserve" x="60.161171" y="109.61771" ><tspan  x="60.161171" y="109.61771">[3]</tspan><tspan  x="60.161171" y="115.32014" >-Y</tspan></text>
+      <text xml:space="preserve" x="60.161171" y="79.064423" ><tspan  x="60.161171" y="79.064423">[4]</tspan><tspan  x="60.161171" y="84.766853" >+Z</tspan></text>
+      <text xml:space="preserve" x="121.26776" y="79.064423" ><tspan  x="121.26776" y="79.064423">[5]</tspan><tspan  x="121.26776" y="84.766853" >-Z</tspan></text>
+    </g>
+  </g>
+</svg>

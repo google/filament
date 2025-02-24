@@ -1,0 +1,256 @@
+[
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "-h",
+      "Cache-Control:no-cache",
+      "-h",
+      "x-goog-meta-Remove-Me",
+      "-h",
+      "x-goog-meta-Test-Field:value",
+      "-h",
+      "x-custom-field:custom-value",
+      "cp",
+      "[TMP_BASE]/boom",
+      "gs://example/some/random/path/to/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil upload",
+    "~followup_annotations": [
+      "@@@STEP_LINK@gsutil.upload@https://storage.googleapis.com/example/some/random/path/to/boom@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "-o",
+      "GSUtil:parallel_composite_upload_threshold=50M",
+      "-m",
+      "--",
+      "-h",
+      "Cache-Control:no-cache",
+      "-h",
+      "x-goog-meta-Remove-Me",
+      "-h",
+      "x-goog-meta-Test-Field:value",
+      "-h",
+      "x-custom-field:custom-value",
+      "cp",
+      "[TMP_BASE]/boom",
+      "gs://example/some/random/path/to/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil upload (2)",
+    "~followup_annotations": [
+      "@@@STEP_LINK@gsutil.upload@https://storage.googleapis.com/example/some/random/path/to/boom@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "-r",
+      "[TMP_BASE]",
+      "gs://example/some/random/path"
+    ],
+    "infra_step": true,
+    "name": "gsutil upload -r",
+    "~followup_annotations": [
+      "@@@STEP_LINK@gsutil.upload@https://console.cloud.google.com/storage/browser/example/some/random/path@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "--recursive",
+      "[TMP_BASE]",
+      "gs://example/some/other/random/path"
+    ],
+    "infra_step": true,
+    "name": "gsutil upload --recursive",
+    "~followup_annotations": [
+      "@@@STEP_LINK@gsutil.upload@https://console.cloud.google.com/storage/browser/example/some/other/random/path@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "gs://example/some/random/path/**",
+      "gs://example/staging"
+    ],
+    "infra_step": true,
+    "name": "gsutil cp"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "--force-version",
+      "3.25",
+      "----",
+      "cp",
+      "gs://example/some/random/path/**",
+      "gs://example/staging"
+    ],
+    "infra_step": true,
+    "name": "gsutil cp (2)"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "gs://example/some/random/path/to/boom",
+      "[TMP_BASE]/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil gsutil download url"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "gs://example/staging/to/boom",
+      "[TMP_BASE]/erang"
+    ],
+    "infra_step": true,
+    "name": "gsutil download"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "signurl",
+      "path/to/key",
+      "gs://example/some/random/path/to/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil signed url"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "rm",
+      "gs://example/staging/to/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil remove"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "ls",
+      "gs://example/foo"
+    ],
+    "infra_step": true,
+    "name": "gsutil list"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cp",
+      "gs://example/some/random/path/to/boom",
+      "gs://example/staging/to/boom"
+    ],
+    "infra_step": true,
+    "name": "gsutil copy",
+    "~followup_annotations": [
+      "@@@STEP_LINK@gsutil.copy@https://storage.cloud.google.com/example/staging/to/boom@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "cat",
+      "gs://example/foo"
+    ],
+    "infra_step": true,
+    "name": "gsutil cat"
+  },
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py",
+      "--",
+      "RECIPE_REPO[depot_tools]/gsutil.py",
+      "----",
+      "stat",
+      "gs://example/foo"
+    ],
+    "infra_step": true,
+    "name": "gsutil stat"
+  },
+  {
+    "cmd": [],
+    "name": "gsutil read remote file",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@Pretending to run gsutil command@@@",
+      "@@@STEP_LOG_LINE@command@python3 -u RECIPE_MODULE[depot_tools::gsutil]/resources/gsutil_smart_retry.py -- RECIPE_REPO[depot_tools]/gsutil.py -m ---- cat gs://example/foo@@@",
+      "@@@STEP_LOG_END@command@@@"
+    ]
+  },
+  {
+    "name": "$result"
+  }
+]

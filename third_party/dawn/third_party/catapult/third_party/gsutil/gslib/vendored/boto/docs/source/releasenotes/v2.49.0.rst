@@ -1,0 +1,15 @@
+boto v2.49.0
+============
+
+:date: 2018/07/11
+
+Updated the CA Bundle as well as some bucket encryption fixes.
+
+
+Changes
+-------
+* Import the latest CA Bundle from certifi (:issue:`3818`, :sha:`e4699cba`)
+* Fix to support uploads to KMS-encrypted buckets. (:issue:`3800`, :sha:`0a1d9040`)
+* Support fetching GCS bucket encryption metadata. (:issue:`3799`, :sha:`132b64d2`)
+* Update layer1.py (:issue:`3765`, :sha:`53340159`)
+* Fix tests/unit/glacier/test_writer.py to make work with pypy. (:issue:`3762`, :sha:`8402c5d6`)

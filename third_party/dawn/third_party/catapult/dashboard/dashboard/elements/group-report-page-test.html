@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/group-report-page.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+const GRAPH_JSON = {
+  'data': {
+    '0': {
+      'color': 0,
+      'data': [[348164, 24290], [348167, 22206], [348182, 24170],
+        [348198, 22847], [348224, 25224]],
+      'id': 'line_0'
+    }
+  },
+  'error_bars': {
+    '0': [
+      {
+        'fillBetween': 'line_0',
+        'clickable': false,
+        'hoverable': false,
+        'data': [[348164, 24290], [348167, 22206], [348182, 24170],
+          [348198, 22847], [348224, 25224]],
+        'color': 0,
+        'id': 'bottom_0',
+        'lines': {
+          'fill': 0.2,
+          'lineWidth': 0,
+          'show': true
+        }
+      },
+      {
+        'fillBetween': 'line_0',
+        'clickable': false,
+        'hoverable': false,
+        'data': [[348164, 24290], [348167, 22206], [348182, 24170],
+          [348198, 22847], [348224, 25224]],
+        'color': 0,
+        'id': 'top_0',
+        'lines': {
+          'fill': 0.2,
+          'lineWidth': 0,
+          'show': true
+        }
+      }
+    ]
+  },
+  'annotations': {
+    '0': {
+      '0': {
+        'error': 0,
+        'r_webkit_rev': '202058',
+        'a_stdio_uri': '[Buildbot stdio](//dromaeo/stdio)',
+        'r_commit_pos': '348164',
+        'timestamp': (new Date).getTime(),
+        'r_chromium': '0c554b0e1233639e7428facc13ff674741368fb2'
+      }
+    },
+    'series': {
+      '0': {
+        'name': 'Total',
+        'description': null,
+        'better': 'Higher',
+        'units': 'runs/s',
+        'path': 'Chromium/win/sunspider/Total'
+      }
+    }
+  }
+};
+
+const GRAPH_REVISION_JSON = [
+  [348164, 24290, 1445661677000],
+  [348167, 22206, 1445674668000],
+  [348182, 24170, 1445685601000],
+  [348198, 22847, 1445696455000],
+  [348224, 25224, 1445707715000]
+];
+
+
+tr.b.unittest.testSuite(function() {
+  let originalGetQueryString;
+
+  const testOptions = {
+    setUp() {
+      originalGetQueryString = uri.getQueryString;
+    },
+    tearDown() {
+      uri.getQueryString = originalGetQueryString;
+      // When testing locally, comment this out to make the checkboxes in
+      // the table work correctly. They do an XHR, but the mock has already
+      // been cleared by the time you can click the button.
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const mockResponse = {
+      'alert_list': [
+        {
+          'key': '12345',
+          'group': null,
+          'start_revision': 55555,
+          'end_revision': 55558,
+          'date': '2016-02-27',
+          'master': 'Chromium',
+          'bot': 'win',
+          'testsuite': 'sunspider',
+          'test': 'Total',
+          'bug_id': null,
+          'dashboard_link': 'http://do/not/click/me',
+          'median_after_anomaly': 40,
+          'median_before_anomaly': 20,
+          'percent_changed': '50%',
+          'improvement': true,
+          'bisect_status': null,
+          'recovered': false,
+        }
+      ],
+      'owner_info': [{'email': 'foo@bar.org'}],
+      'subtests': {
+        'Chromium/win': {'sunspider': ['Total', '3d-cube']}
+      },
+      'revision_info': {
+        'r_chromium': {
+          'name': 'Chromium Git Hash',
+          'url': 'https://chromium.googlesource.com/+log/{{R1}}..{{R2}}'
+        }
+      },
+      'test_suites': {},
+      'login_url': 'http://do/not/click/me',
+      'is_internal_user': false,
+      'xsrf_token': '12345'
+    };
+    uri.getQueryString = function() { return '?keys=12345'; };
+    testing_common.addXhrMock('/group_report?keys=12345',
+        JSON.stringify(mockResponse));
+    testing_common.addXhrMock(
+        '/graph_json?graphs=%7B%22rev%22%3A55558%2C%22test_path_dict%22%3A%7B' +
+        '%22Chromium%2Fwin%2Fsunspider%2FTotal%22%3A%5B%22Total%22%5D%7D%2C' +
+        '%22is_selected%22%3Atrue%7D',
+        JSON.stringify(GRAPH_JSON));
+    testing_common.addXhrMock(
+        '/graph_json?graphs=%7B%22rev%22%3A55558%2C%22test_path_dict%22%3A%7B' +
+        '%22Chromium%2Fwin%2Fsunspider%2FTotal%22%3A%5B%22Total%22%5D%7D%7D',
+        JSON.stringify(GRAPH_JSON));
+    testing_common.addXhrMock(
+        '/graph_revisions?test_path=Chromium%2Fwin%2Fsunspider%2FTotal',
+        JSON.stringify(GRAPH_REVISION_JSON));
+    const page = document.createElement('group-report-page');
+    this.addHTMLOutput(page);
+    assert.isFalse(page.$.container.hidden);
+  }, testOptions);
+
+  test('error', function() {
+    const mockResponse = {
+      'error': 'something is wrong!!!'
+    };
+    uri.getQueryString = function() { return '?keys=12345'; };
+    testing_common.addXhrMock('/group_report?keys=12345',
+        JSON.stringify(mockResponse));
+    const page = document.createElement('group-report-page');
+    this.addHTMLOutput(page);
+    assert.isTrue(page.$.container.hidden);
+  }, testOptions);
+});
+</script>

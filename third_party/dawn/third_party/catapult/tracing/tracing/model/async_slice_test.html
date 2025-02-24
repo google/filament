@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+  const Process = tr.model.Process;
+  const Thread = tr.model.Thread;
+  const newAsyncSlice = tr.c.TestUtils.newAsyncSlice;
+  const newAsyncSliceEx = tr.c.TestUtils.newAsyncSliceEx;
+  const newFakeThread = tr.c.TestUtils.newFakeThread;
+
+  test('stableId', function() {
+    const thread = newFakeThread();
+    const group = thread.asyncSliceGroup;
+
+    const sA = group.push(newAsyncSliceEx(
+        { title: 'sA', start: 0.0, duration: 10.0 }));
+    const sB = group.push(newAsyncSliceEx(
+        { title: 'sB', start: 10.0, duration: 20.0 }));
+    const sC = group.push(newAsyncSliceEx(
+        { title: 'sC', start: 20.0, duration: 30.0 }));
+
+    assert.strictEqual(group.stableId + '.0', sA.stableId);
+    assert.strictEqual(group.stableId + '.1', sB.stableId);
+    assert.strictEqual(group.stableId + '.2', sC.stableId);
+  });
+
+  test('setParentContainerForSubSlices', function() {
+    const model = new tr.Model();
+    const p1 = new Process(model, 1);
+    const t1 = new Thread(p1, 1);
+    const asyncSlice = newAsyncSlice(0, 10, t1, t1);
+    const subSlice1 = newAsyncSlice(1, 5, t1, t1);
+    const subSlice2 = newAsyncSlice(6, 9, t1, t1);
+    const subSlice3 = newAsyncSlice(2, 3, t1, t1);
+    subSlice1.subSlices.push(subSlice3);
+    asyncSlice.subSlices.push(subSlice1);
+    asyncSlice.subSlices.push(subSlice2);
+    asyncSlice.parentContainer = t1;
+    assert.strictEqual(asyncSlice.subSlices.length, 2);
+    assert.strictEqual(subSlice1.subSlices.length, 1);
+    assert.deepEqual(asyncSlice.parentContainer, t1);
+    assert.deepEqual(subSlice1.parentContainer, t1);
+    assert.deepEqual(subSlice2.parentContainer, t1);
+    assert.deepEqual(subSlice3.parentContainer, t1);
+  });
+});
+</script>

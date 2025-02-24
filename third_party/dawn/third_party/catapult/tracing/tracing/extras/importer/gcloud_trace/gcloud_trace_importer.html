@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/importer/importer.html">
+
+<script>
+
+'use strict';
+
+/**
+ * @fileoverview GcloudTraceImporter imports JSON data from Google Cloud Trace.
+ */
+tr.exportTo('tr.e.importer.gcloud_trace', function() {
+  function GcloudTraceImporter(model, eventData) {
+    this.importPriority = 2;
+    this.eventData_ = eventData;
+  }
+
+  /**
+   * @return {boolean} Whether obj looks like the JSON output from Cloud Trace.
+   */
+  GcloudTraceImporter.canImport = function(eventData) {
+    if (typeof(eventData) !== 'string' && !(eventData instanceof String)) {
+      return false;
+    }
+
+    // Slice the data so we don't potentially do a replace on a gigantic string.
+    const normalizedEventData = eventData.slice(0, 20).replace(/\s/g, '');
+    if (normalizedEventData.length < 14) return false;
+
+    return normalizedEventData.slice(0, 14) === '{"projectId":"';
+  };
+
+  GcloudTraceImporter.prototype = {
+
+    __proto__: tr.importer.Importer.prototype,
+
+    get importerName() {
+      return 'GcloudTraceImporter';
+    },
+
+    /**
+     * Called by the Model to extract subtraces from the event data. The
+     * subtraces are passed on to other importers that can recognize them.
+     */
+    extractSubtraces() {
+      const traceEvents = this.createEventsForTrace();
+      return traceEvents ? [traceEvents] : [];
+    },
+
+    createEventsForTrace() {
+      const events = [];
+      const trace = JSON.parse(this.eventData_);
+      const spanLength = trace.spans.length;
+      for (let i = 0; i < spanLength; i++) {
+        events.push(this.createEventForSpan(trace.traceId, trace.spans[i]));
+      }
+      return {
+        'traceEvents': events
+      };
+    },
+
+    createEventForSpan(traceId, span) {
+      let newArgs = {};
+      if (span.labels) {
+        newArgs = JSON.parse(JSON.stringify(span.labels));
+      }
+      newArgs['Span ID'] = span.spanId;
+      newArgs['Start Time'] = span.startTime;
+      newArgs['End Time'] = span.endTime;
+      if (span.parentSpanId) {
+        newArgs['Parent Span ID'] = span.parentSpanId;
+      }
+      // The timestamps are ISO-standard strings, which are parsed to millis,
+      // then converted to the micros that the trace viewer expects.
+      return {
+        name: span.name,
+        args: newArgs,
+        pid: traceId,
+        ts: Date.parse(span.startTime) * 1000,
+        dur: (Date.parse(span.endTime) - Date.parse(span.startTime)) * 1000,
+        cat: 'tracespan',
+        tid: traceId,
+        ph: 'X'
+      };
+    }
+  };
+
+  tr.importer.Importer.register(GcloudTraceImporter);
+
+  return {
+    GcloudTraceImporter,
+  };
+});
+</script>

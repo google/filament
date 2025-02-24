@@ -1,0 +1,253 @@
+#
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Test are entered like
+# BUG PLATFORMS : test-name = handling/result
+#
+#  PLATFORMS is optional and lists the platforms the expectation / run disabling happens
+#
+# Valid values for "handling/result" are
+#
+#   SKIP_FOR_CAPTURE : SKIP from capture_replay tests
+#
+#   NOT_RUN (DEPRECATED https://anglebug.com/42265985): already skipped by end2end test suite
+#
+#   FAIL : the test is expected to fail
+#
+#   FLAKY : the tests is flaky, but we still run it
+#
+#   TIMEOUT : the test is expected to time out
+#
+#   COMPILE_FAIL : the compilation of the capture_replay exec is expected to fail
+#
+# For test batches that run more than one test TIMEOUT, COMPILE_FAIL, and CRASH
+# will have to be set for all tests that run a batch, because one test that fails
+# with one of these outcomes will bring down the whole batch.
+#
+
+# We don't support the Capture/Replay on OpenGL yet
+
+42264864 : *OpenGL = SKIP_FOR_CAPTURE
+
+# ES2
+
+42264785 : FramebufferTest.MultiContextNoRenderingFeedbackLoops/* = SKIP_FOR_CAPTURE
+
+42264706 : GLSLTest_ES3.GLVertexIDIntegerTextureDrawElementsU8Line/* = NOT_RUN
+42264706 : GLSLTest_ES3.GLVertexIDIntegerTextureDrawElementsU8LineIds/* = NOT_RUN
+
+42264743 : VulkanExternalImageTest.ShouldClearOpaqueFdWithSemaphores/* = TIMEOUT
+42264743 : VulkanExternalImageTest.ShouldClearOpaqueFdWithSemaphoresMutableNoStorage/* = TIMEOUT
+42264743 : VulkanExternalImageTest.ShouldClearOpaqueFdWithSemaphoresNoStorage/* = TIMEOUT
+42264743 : VulkanExternalImageTest.ShouldClearOpaqueFdWithSemaphoresWithFlags/* = TIMEOUT
+42264743 : VulkanExternalImageTest.ShouldDrawOpaqueFdWithSemaphores/* = TIMEOUT
+42264743 : VulkanExternalImageTest.WaitSemaphoresRetainsContentOpaqueFd/* = TIMEOUT
+
+42264785 : WebGLCompatibilityTest.MultiContextNoRenderingFeedbackLoops/* = SKIP_FOR_CAPTURE
+
+42264706 WIN : WebGLCompatibilityTest.DrawElementsBufferOutOfBoundsInVertexBuffer/* = FLAKY
+
+42265150 : UniformTest.UnusedStructInlineUniform/* = SKIP_FOR_CAPTURE
+42265150 : UniformTest.UnusedStructInlineUniformWithSampler/* = SKIP_FOR_CAPTURE
+
+# Fails because of unsupported combined depth/stencil GetImage.
+42263287 : DepthStencilTest.DepthOnlyEmulatedWithPacked/* = FAIL
+
+# ES3
+42264706 : BlitFramebufferTest.BlitDepthStencilPixelByPixel/* = NOT_RUN
+42264706 : GLSLTest_ES3.UnsuccessfulRelinkWithBindAttribLocation/* = NOT_RUN
+42262531 : ComputeShaderTest.BindImageTexture3D/* = NOT_RUN
+42265912 : DrawBaseInstanceTest.DrawElementsInstancedBaseInstance/ES3_D3D11__DynamicDraw* = NOT_RUN
+
+# This test only exists on Win64
+42264706 WIN : BufferDataOverflowTest.VertexBufferIntegerOverflow/* = NOT_RUN
+
+42264706 WIN : TransformFeedbackTest.DrawWithoutTransformFeedbackThenWith/* = FLAKY
+42264706 : TransformFeedbackTest.TransformFeedbackQueryPausedDrawThenResume/* = FLAKY
+42265013 : TransformFeedbackTest.MultiContext/* = FLAKY
+42264706 WIN : TransformFeedbackTest.BufferOutOfMemory/* = FLAKY
+42264706 WIN : TransformFeedbackTest.EndThenBindNewBufferAndRestart/* = FLAKY
+42264706 : VertexAttributeTestES3.DrawWithUnalignedData/* = FLAKY
+
+# Skip because crashes
+42264830 : CopyTextureTestES3.InvalidateBlitThenBlend1000Layers/* = SKIP_FOR_CAPTURE
+42264830 : CopyTextureTestES3.InvalidateBlitThenBlend3Layers/* = SKIP_FOR_CAPTURE
+42264831 : FramebufferTest_ES3.AttachmentsWithUnequalDimensions/* = SKIP_FOR_CAPTURE
+42264831 : FramebufferTest_ES3.ChangeAttachmentThenInvalidateAndDraw/* = SKIP_FOR_CAPTURE
+42264831 : FramebufferTest_ES3.RenderAndInvalidateImmutableTextureWithBeyondMaxLevel/* = SKIP_FOR_CAPTURE
+
+# The following tests fail with forceRobustResourceInit
+# They were accidentally passing until http://crrev/c/5588816
+42264831 : FramebufferTest_ES3.RenderAndInvalidateImmutableTextureWithBellowBaseLevelLOD/* = SKIP_FOR_CAPTURE
+42264831 : FramebufferTest_ES3.RenderAndInvalidateImmutableTextureWithSubImageWithBeyondMaxLevel/* = SKIP_FOR_CAPTURE
+
+42264913 : Texture2DTestES3.TexStorage2DCycleThroughYuvSourcesNoData/* = SKIP_FOR_CAPTURE
+42264913 : Texture2DTestES3.TexStorage2DSimultaneousUseOfMultipleYuvSourcesNoData/* = SKIP_FOR_CAPTURE
+42264916 : Texture2DTestES3.TextureCompletenessChangesWithBaseLevel/* = SKIP_FOR_CAPTURE
+42264913 : Texture2DTestES3.TexStorage2DLargeYuvTextureCount/* = SKIP_FOR_CAPTURE
+42264854 DEBUG : VulkanExternalImageTest.ShouldImportSemaphoreOpaqueFd/* = SKIP_FOR_CAPTURE
+
+
+# Skip because Timeout
+
+# ES3 Flaky
+42265129 : MultithreadingTest.MultiContextCreateAndDeleteResources/* = SKIP_FOR_CAPTURE
+42265129 : MultithreadingTest.MultiContextDrawWithSwapBuffers/* = SKIP_FOR_CAPTURE
+
+# Uses multiple contexts, don't want to run
+40096804 : OcclusionQueriesNoSurfaceTestES3.SwitchingContextsWithQuery/* = SKIP_FOR_CAPTURE
+
+# ES3_1
+42264706 : ProgramPipelineTest31.VerifyPpoLinkErrorSignalledCorrectly/* = FAIL
+
+# ES3_1 Crashed
+42264706 : EGLMultiContextTest.ComputeShaderOkayWithRendering/* = SKIP_FOR_CAPTURE
+42264706 : EGLMultiContextTest.TestContextDestroySimple/* = SKIP_FOR_CAPTURE
+
+# ES3_1 gtest skips
+42264706 : GLSLTest_ES31.InterpolateAtWithSwizzle/* = NOT_RUN
+
+42265236 : VulkanImageTest.* = SKIP_FOR_CAPTURE
+42265236 : VulkanMemoryTest.* = SKIP_FOR_CAPTURE
+
+42265418 : Texture2DTestES3RobustInit.TextureCOMPRESSEDRGB8A1ETC2/* = NOT_RUN
+42265418 : Texture2DTestES3RobustInit.TextureCOMPRESSEDSRGB8A1ETC2/* = NOT_RUN
+
+42265405 : Texture2DTestES3.TextureRGBUpdateWithPBO/ES3_Vulkan* = NOT_RUN
+
+42266833 : Texture2DTestES3.CopyImageEXTDepthStencil/ES3_Vulkan* = SKIP_FOR_CAPTURE
+42266833 : Texture2DTestES3.CopyImageOESDepthStencil/ES3_Vulkan* = SKIP_FOR_CAPTURE
+
+42265586 : TransformFeedbackTest.BaseInstance/* = NOT_RUN
+
+# GLES 3.2 tests that fail because of missing features
+42263905 : GeometryShaderTestES32.MaxGeometryImageUniforms/* = SKIP_FOR_CAPTURE
+42263905 : ProgramPipelineTest32.MaxGeometryImageUniforms/* = SKIP_FOR_CAPTURE
+
+42265560 : VulkanPerformanceCounterTest* = SKIP_FOR_CAPTURE
+
+42265766 : BlitFramebufferTest.drawBlitAndDrawAgain/* = SKIP_FOR_CAPTURE
+42265766 : BlitFramebufferTest.scissorDrawBlitAndDrawAgain/* = SKIP_FOR_CAPTURE
+
+42265827 : FramebufferTest_ES3.FramebufferConditionalFeedbackLoop/* = SKIP_FOR_CAPTURE
+42265967 : Texture2DTest.TextureMaxSize/* = SKIP_FOR_CAPTURE
+42265844 : FramebufferTest_ES3.SurfaceDimensionsChangeAndFragCoord/* = SKIP_FOR_CAPTURE
+
+42265895 : MultithreadingTest.NoFlushNoContextReturnsTimeout/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBClientWaitBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBClientWaitBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBGetStatusBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBGetStatusBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBServerWaitBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadBServerWaitBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : MultithreadingTestES3.ThreadCWaitBeforeThreadBSyncFinish/* = SKIP_FOR_CAPTURE
+
+# Also multi-threaded
+42265895 : EGLMultiContextTest.RepeatedEglInitAndTerminate/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBClientWaitBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBServerWaitBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBGetStatusBeforeThreadASyncFlush/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBClientWaitBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBServerWaitBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBGetStatusBeforeThreadASyncFinish/* = SKIP_FOR_CAPTURE
+42265895 : EGLMultiContextTest.ThreadBCanSubmitWhileThreadAWaiting/* = SKIP_FOR_CAPTURE
+
+42265890 : MultithreadingTestES3.CreateFramebufferFetchBeforeRenderPass/* = NOT_RUN
+42265890 : MultithreadingTestES3.CreateFramebufferFetchMidRenderPass/* = NOT_RUN
+
+42265860 : Texture2DTest.ManySupersedingTextureUpdates/* = SKIP_FOR_CAPTURE
+
+42265919 : MultisampleTest.ContentPresevedAfterInterruption/* = SKIP_FOR_CAPTURE
+42265919 : MultisampleTest.Line/* = SKIP_FOR_CAPTURE
+42265919 : MultisampleTest.Point/* = SKIP_FOR_CAPTURE
+42265919 : MultisampleTest.Triangle/* = SKIP_FOR_CAPTURE
+42265919 : MultisampleTestES3.RenderPassResolveToFBOThenSwap/* = SKIP_FOR_CAPTURE
+
+42265953 : MultisampleTest.AlphaToSampleCoverage/* = SKIP_FOR_CAPTURE
+42265953 : MultisampleTestES3.ResolveToFBO/* = SKIP_FOR_CAPTURE
+
+42265218 : EGLMultiContextTest.ReuseUnterminatedDisplay/* = SKIP_FOR_CAPTURE
+
+# No support yet for Capture/Replay of External Textures using other attribs
+42266040 : ImageTest.MipLevels/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.Source2DTarget2D_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.Source2DTarget2DArray_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.Source2DTargetExternal_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.SourceCubeTarget2D_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.SourceCubeTargetExternal_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.SourceRenderbufferTargetTexture_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.SourceRenderbufferTargetTextureExternal_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.ValidationGLEGLImage_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTest.ValidationImageBase/* = SKIP_FOR_CAPTURE
+42266040 : ImageTestES3.Source2DTargetExternalESSL3_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTestES3.SourceCubeTargetExternalESSL3/* = SKIP_FOR_CAPTURE
+42266040 : ImageTestES3.SourceCubeTargetExternalESSL3_Colorspace/* = SKIP_FOR_CAPTURE
+42266040 : ImageTestES3.SourceRenderbufferTargetTextureExternalESSL3_Colorspace/* = SKIP_FOR_CAPTURE
+
+353538491 : ImageTest.TargetTexture2DDeletedWhileInUse/* = SKIP_FOR_CAPTURE
+353538491 : ImageTest.TargetTexture2DDeletedWhileInUse2/* = SKIP_FOR_CAPTURE
+353538491 : ImageTest.TargetRenderbufferDeletedWhileInUse/* = SKIP_FOR_CAPTURE
+353538491 : ImageTest.TargetRenderbufferDeletedWhileInUse2/* = SKIP_FOR_CAPTURE
+353538491 : ImageTestES31.TargetTexture2DDeletedWhileInUseAsResolve/* = SKIP_FOR_CAPTURE
+353538491 : ImageTestES31.TargetTexture2DDeletedWhileInUseAsResolve2/* = SKIP_FOR_CAPTURE
+353538491 : ImageTestES31.TargetRenderbufferDeletedWhileInUseAsResolve/* = SKIP_FOR_CAPTURE
+353538491 : ImageTestES31.TargetRenderbufferDeletedWhileInUseAsResolve2/* = SKIP_FOR_CAPTURE
+
+42266048 : FramebufferTest_ES3.BlitWithDifferentPreRotations/* = SKIP_FOR_CAPTURE
+
+42266286 WIN : PBOExtensionTest.PBOWithExistingData/* = FLAKY
+42266286 WIN : PBOExtensionTest.PBOWithOtherTarget/* = FLAKY
+
+# Related to uninitialized memory/buffers when using image suballocation
+42266493 WIN : FramebufferTestWithFormatFallback.R4G4B4A4_OutOfRangeStagedUpdateReformated/* = SKIP_FOR_CAPTURE
+42266493 WIN : ClearTestES3.RepeatedStencilClear/* = SKIP_FOR_CAPTURE
+42266493 WIN : ClearTestES3.RepeatedStencilClearWithBlitAfterClearAndDrawInBetween/* = SKIP_FOR_CAPTURE
+42266493 WIN : StateChangeTestES3.StencilReferenceAndCompareMask/* = SKIP_FOR_CAPTURE
+42266493 WIN : StateChangeTestES3.StencilWriteMask/* = SKIP_FOR_CAPTURE
+
+# Corrupting memory by writing past readBufferSize due to GL_PACK_SKIP_ROWS etc
+42266521 : Texture2DNorm16TestES3.TextureNorm16R16RenderTest/* = SKIP_FOR_CAPTURE
+42266521 : Texture2DNorm16TestES3.TextureNorm16RG16RenderTest/* = SKIP_FOR_CAPTURE
+42266521 : Texture2DNorm16TestES3.TextureNorm16RGBA16RenderTest/* = SKIP_FOR_CAPTURE
+
+# Fails if run after DifferentStencilMasksTest.DrawWithSameEffectiveMask
+42266530 : DiscardFramebufferEXTTest.ClearDepthThenDrawWithoutDepthTestThenDiscard/* = SKIP_FOR_CAPTURE
+
+# No support yet for Capture/Replay of QCOM foveated extensions
+42266906 : Texture2DTestES3Foveation.FoveatedFBDraw/* = SKIP_FOR_CAPTURE
+42266906 : Texture2DTestES3Foveation.FoveatedTextureDraw/* = SKIP_FOR_CAPTURE
+
+42266965 : EGLSyncTest.GlobalFenceSync/* = FAIL
+42264309 : Texture2DTestES3.TexStorage2DMultipleYuvSamplersSwitchSamplerUniformValues/* = SKIP_FOR_CAPTURE
+42264309 : Texture2DTestES3.TexStorage2DMultipleYuvSamplersSwitchBoundTextures/* = SKIP_FOR_CAPTURE
+
+# Capture not supported
+42267114 : EGLMultiContextTest.NonSharedContextsReuseDescritorSetLayoutHandle/* = SKIP_FOR_CAPTURE
+
+# Replay timeout
+42264614 LINUX : VulkanExternalImageTest.PreInitializedOnGLImport/* = SKIP_FOR_CAPTURE
+42264614 LINUX : VulkanExternalImageTest.PreInitializedOnGLImportWithFlags/* = SKIP_FOR_CAPTURE
+
+# Multiple tests, failures and timeout
+42264614 LINUX : VulkanExternalImageTest.UninitializedOnGLImport* = SKIP_FOR_CAPTURE
+
+# error: duplicate case value '1'
+42264614 : EGLSyncTest.GlobalFenceSync/* = COMPILE_FAIL
+
+# VVL error
+42264614 LINUX : VulkanExternalImageTestES31.UninitializedOnGLImportAndStorageWrite/* = SKIP_FOR_CAPTURE
+
+# CoherentBufferTracker deadlocks and flaky crashes
+42266529 LINUX : BufferDataTestES3.* = SKIP_FOR_CAPTURE
+42266529 LINUX : BufferStorageTestES3.* = SKIP_FOR_CAPTURE
+382101118 : CopyImageTestES31.MultisampleRenderbufferCopyImageSubData/* = SKIP_FOR_CAPTURE
+381727390 : MultisampleTexture2DTestES31.CopyMultisampleImageEXT/* = SKIP_FOR_CAPTURE
+381727390 : MultisampleTexture2DTestES31.CopyMultisampleImageOES/* = SKIP_FOR_CAPTURE
+381727390 : MultisampleTexture2DTestES31.CopyMultisampleArrayImageEXT/* = SKIP_FOR_CAPTURE
+381727390 : MultisampleTexture2DTestES31.CopyMultisampleArrayImageOES/* = SKIP_FOR_CAPTURE
+
+
+# Crashes on win and linux trace bots
+372059358 : MultisampleTestES3.CopyTexImage2DFromMsaaDefaultFbo/* = SKIP_FOR_CAPTURE

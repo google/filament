@@ -1,0 +1,14 @@
+===============================
+Major changes for release 2.0b1
+===============================
+
+* Support for versioning in S3
+* Support for MFA Delete in S3
+* Support for Elastic Map Reduce
+* Support for Simple Notification Service
+* Support for Google Storage
+* Support for Consistent Reads and Conditional Puts in SimpleDB
+* Significant updates and improvements to Mechanical Turk (mturk) module
+* Support for Windows Bundle Tasks in EC2
+* Support for Reduced Redundancy Storage (RRS) in S3
+* Support for Cluster Computing instances and Placement Groups in EC2

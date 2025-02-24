@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/unittest/test_suite.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/base/xhr.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.b.unittest', function() {
+  function HTMLImportsModuleLoader() {
+  }
+  HTMLImportsModuleLoader.prototype = {
+    loadModule(testRelpath, moduleName) {
+      return new Promise(function(resolve, reject) {
+        const importEl = document.createElement('link');
+        importEl.moduleName = moduleName;
+        Polymer.dom(importEl).setAttribute('rel', 'import');
+        Polymer.dom(importEl).setAttribute('href', testRelpath);
+
+        importEl.addEventListener('load', function() {
+          resolve({testRelpath,
+            moduleName});
+        });
+        importEl.addEventListener('error', function(e) {
+          reject('Error loading &#60;link rel="import" href="' +
+                 testRelpath + '"');
+        });
+
+        Polymer.dom(tr.doc.head).appendChild(importEl);
+      });
+    },
+
+    getCurrentlyExecutingModuleName() {
+      if (!document.currentScript) {
+        throw new Error('Cannot call testSuite except during load.');
+      }
+      try {
+        throw new Error('');
+      } catch (e) {
+        const stack = e.stack.split('\n');
+        let url = stack[stack.length - 1].slice(7);
+        url = url.slice(0, url.lastIndexOf(':'));
+        url = url.slice(0, url.lastIndexOf(':')); // Yes, again.
+        return this.guessModuleNameFromURL_(url);
+      }
+    },
+
+    guessModuleNameFromURL_(url) {
+      const m = /.+?:\/\/.+?(\/.+)/.exec(url);
+      if (!m) {
+        throw new Error('Guessing module name failed');
+      }
+      const path = m[1];
+      if (path[0] !== '/') {
+        throw new Error('malformed path');
+      }
+      const i = path.indexOf('.html');
+      if (i < 0) {
+        throw new Error('Cannot define testSuites outside html imports');
+      }
+      return path.substring(1, i).split('/').join('.');
+    }
+  };
+
+  function HeadlessModuleLoader() {
+    this.currentlyExecutingModuleInfo_ = undefined;
+  }
+  HeadlessModuleLoader.prototype = {
+    loadModule(testRelpath, moduleName) {
+      return Promise.resolve().then(function() {
+        const moduleInfo = {
+          testRelpath,
+          moduleName
+        };
+        if (this.currentlyExecutingModuleInfo_ !== undefined) {
+          throw new Error('WAT');
+        }
+        this.currentlyExecutingModuleInfo_ = moduleInfo;
+
+        try {
+          loadHTML(testRelpath);
+        } catch (e) {
+          e.message = 'While loading ' + moduleName + ', ' + e.message;
+          e.stack = 'While loading ' + moduleName + ', ' + e.stack;
+          throw e;
+        } finally {
+          this.currentlyExecutingModuleInfo_ = undefined;
+        }
+
+        return moduleInfo;
+      }.bind(this));
+    },
+
+    getCurrentlyExecutingModuleName() {
+      if (this.currentlyExecutingModuleInfo_ === undefined) {
+        throw new Error('No currently loading module');
+      }
+      return this.currentlyExecutingModuleInfo_.moduleName;
+    }
+  };
+
+
+  function SuiteLoader(suiteRelpathsToLoad) {
+    tr.b.EventTarget.call(this);
+
+    this.currentModuleLoader_ = undefined;
+    this.testSuites = [];
+
+    if (tr.isHeadless) {
+      this.currentModuleLoader_ = new HeadlessModuleLoader();
+    } else {
+      this.currentModuleLoader_ = new HTMLImportsModuleLoader();
+    }
+
+    this.allSuitesLoadedPromise = this.beginLoadingModules_(
+        suiteRelpathsToLoad);
+  }
+
+  SuiteLoader.prototype = {
+    __proto__: tr.b.EventTarget.prototype,
+
+    beginLoadingModules_(testRelpaths) {
+      // Hooks!
+      this.bindGlobalHooks_();
+
+      // Load the modules.
+      const modulePromises = [];
+      for (let i = 0; i < testRelpaths.length; i++) {
+        const testRelpath = testRelpaths[i];
+        const moduleName = testRelpath.split('/').slice(-1)[0];
+
+        const p = this.currentModuleLoader_.loadModule(testRelpath, moduleName);
+        modulePromises.push(p);
+      }
+
+      const allModulesLoadedPromise = new Promise(function(resolve, reject) {
+        let remaining = modulePromises.length;
+        let resolved = false;
+        function oneMoreLoaded() {
+          if (resolved) return;
+          remaining--;
+          if (remaining > 0) return;
+          resolved = true;
+          resolve();
+        }
+
+        function oneRejected(e) {
+          if (resolved) return;
+          resolved = true;
+          reject(e);
+        }
+
+        modulePromises.forEach(function(modulePromise) {
+          modulePromise.then(oneMoreLoaded, oneRejected);
+        });
+      });
+
+      // Script errors errors abort load;
+      const scriptErrorPromise = new Promise(function(xresolve, xreject) {
+        this.scriptErrorPromiseResolver_ = {
+          resolve: xresolve,
+          reject: xreject
+        };
+      }.bind(this));
+      const donePromise = Promise.race([
+        allModulesLoadedPromise,
+        scriptErrorPromise
+      ]);
+
+      // Cleanup.
+      return donePromise.then(
+          function() {
+            this.scriptErrorPromiseResolver_ = undefined;
+            this.unbindGlobalHooks_();
+          }.bind(this),
+          function(e) {
+            this.scriptErrorPromiseResolver_ = undefined;
+            this.unbindGlobalHooks_();
+            throw e;
+          }.bind(this));
+    },
+
+    bindGlobalHooks_() {
+      if (global._currentSuiteLoader !== undefined) {
+        throw new Error('A suite loader exists already');
+      }
+      global._currentSuiteLoader = this;
+
+      this.oldGlobalOnError_ = global.onerror;
+      global.onerror = function(errorMsg, url, lineNumber) {
+        this.scriptErrorPromiseResolver_.reject(
+            new Error(errorMsg + '\n' + url + ':' + lineNumber));
+        if (this.oldGlobalOnError_) {
+          return this.oldGlobalOnError_(errorMsg, url, lineNumber);
+        }
+        return false;
+      }.bind(this);
+    },
+
+    unbindGlobalHooks_() {
+      global._currentSuiteLoader = undefined;
+
+      global.onerror = this.oldGlobalOnError_;
+      this.oldGlobalOnError_ = undefined;
+    },
+
+    constructAndRegisterTestSuite(suiteConstructor, opt_options) {
+      const name = this.currentModuleLoader_.getCurrentlyExecutingModuleName();
+
+      const testSuite = new tr.b.unittest.TestSuite(
+          name, suiteConstructor, opt_options);
+
+      this.testSuites.push(testSuite);
+
+      const e = new tr.b.Event('suite-loaded');
+      e.testSuite = testSuite;
+      this.dispatchEvent(e);
+    },
+
+    getAllTests() {
+      const tests = [];
+      this.testSuites.forEach(function(suite) {
+        tests.push.apply(tests, suite.tests);
+      });
+      return tests;
+    },
+
+    findTestWithFullyQualifiedName(fullyQualifiedName) {
+      for (let i = 0; i < this.testSuites.length; i++) {
+        const suite = this.testSuites[i];
+        for (let j = 0; j < suite.tests.length; j++) {
+          const test = suite.tests[j];
+          if (test.fullyQualifiedName === fullyQualifiedName) return test;
+        }
+      }
+      throw new Error('Test ' + fullyQualifiedName +
+                      'not found amongst ' + this.testSuites.length);
+    }
+  };
+
+  return {
+    SuiteLoader,
+  };
+});
+</script>

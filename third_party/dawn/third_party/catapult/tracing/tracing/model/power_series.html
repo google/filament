@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/power_sample.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  const PowerSample = tr.model.PowerSample;
+
+  /**
+   * A container holding a time series of power samples.
+   *
+   * @constructor
+   * @extends {EventContainer}
+   */
+  function PowerSeries(device) {
+    tr.model.EventContainer.call(this);
+
+    this.device_ = device;
+    this.samples_ = [];
+  }
+
+  PowerSeries.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    get device() {
+      return this.device_;
+    },
+
+    get samples() {
+      return this.samples_;
+    },
+
+    get stableId() {
+      return this.device_.stableId + '.PowerSeries';
+    },
+
+    /**
+     * Adds a power sample to the series and returns it.
+     *
+     * Note: Samples must be added in chronological order.
+     */
+    addPowerSample(ts, val) {
+      const sample = new PowerSample(this, ts, val);
+      this.samples_.push(sample);
+      return sample;
+    },
+
+    /**
+     * Returns the total energy (in Joules) consumed between the specified
+     * start and end timestamps (in milliseconds).
+     */
+    getEnergyConsumedInJ(start, end) {
+      const measurementRange = tr.b.math.Range.fromExplicitRange(start, end);
+
+      let energyConsumedInJ = 0;
+      let startIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, start) - 1;
+      const endIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, end);
+
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const sample = this.samples[i];
+        const nextSample = this.samples[i + 1];
+
+        const sampleRange = new tr.b.math.Range();
+        sampleRange.addValue(sample.start);
+        sampleRange.addValue(nextSample ? nextSample.start : sample.start);
+
+        const intersectionRangeInMs = measurementRange.findIntersection(
+            sampleRange);
+
+        const durationInS = tr.b.convertUnit(intersectionRangeInMs.duration,
+            tr.b.UnitPrefixScale.METRIC.MILLI,
+            tr.b.UnitPrefixScale.METRIC.NONE);
+
+        energyConsumedInJ += durationInS * sample.powerInW;
+      }
+
+      return energyConsumedInJ;
+    },
+
+    getSamplesWithinRange(start, end) {
+      const startIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, start);
+      const endIndex = tr.b.findLowIndexInSortedArray(
+          this.samples, x => x.start, end);
+      return this.samples.slice(startIndex, endIndex);
+    },
+
+    shiftTimestampsForward(amount) {
+      for (let i = 0; i < this.samples_.length; ++i) {
+        this.samples_[i].start += amount;
+      }
+    },
+
+    updateBounds() {
+      this.bounds.reset();
+
+      if (this.samples_.length === 0) return;
+
+      this.bounds.addValue(this.samples_[0].start);
+      this.bounds.addValue(this.samples_[this.samples_.length - 1].start);
+    },
+
+    * childEvents() {
+      yield* this.samples_;
+    },
+  };
+
+  return {
+    PowerSeries,
+  };
+});
+</script>

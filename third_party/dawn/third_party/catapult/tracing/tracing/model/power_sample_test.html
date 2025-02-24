@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_sample.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const PowerSample = tr.model.PowerSample;
+
+  test('powerSample', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const sample1 = new PowerSample(series, 0.0, 1000.0);
+    const sample2 = new PowerSample(series, 1.0, 2000.0);
+
+    assert.strictEqual(sample1.series, series);
+    assert.strictEqual(sample1.start, 0.0);
+    assert.strictEqual(sample1.powerInW, 1000.0);
+
+    assert.strictEqual(sample2.series, series);
+    assert.strictEqual(sample2.start, 1.0);
+    assert.strictEqual(sample2.powerInW, 2000.0);
+  });
+
+  test('addBoundsToRange', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const sample1 = new PowerSample(series, 0.0, 1000.0);
+    const sample2 = new PowerSample(series, 1.0, 2000.0);
+
+    const range = new tr.b.math.Range();
+    sample1.addBoundsToRange(range);
+
+    assert.strictEqual(range.min, 0);
+    assert.strictEqual(range.max, 0);
+
+    sample2.addBoundsToRange(range);
+
+    assert.strictEqual(range.min, 0);
+    assert.strictEqual(range.max, 1);
+  });
+});
+</script>

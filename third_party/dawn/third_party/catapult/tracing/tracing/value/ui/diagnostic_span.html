@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic.html">
+<link rel="import" href="/tracing/value/ui/breakdown_span.html">
+<link rel="import" href="/tracing/value/ui/collected_related_event_set_span.html">
+<link rel="import" href="/tracing/value/ui/date_range_span.html">
+<link rel="import" href="/tracing/value/ui/generic_set_span.html">
+<link rel="import" href="/tracing/value/ui/related_event_set_span.html">
+<link rel="import" href="/tracing/value/ui/scalar_diagnostic_span.html">
+<link rel="import" href="/tracing/value/ui/unmergeable_diagnostic_set_span.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  /**
+   * Find the name of a polymer element registered to display |diagnostic|
+   * or one of its base classes.
+   *
+   * @param {!tr.v.d.Diagnostic} diagnostic
+   * @return {string}
+   */
+  function findElementNameForDiagnostic(diagnostic) {
+    let typeInfo = undefined;
+    let curProto = diagnostic.constructor.prototype;
+    while (curProto) {
+      typeInfo = tr.v.d.Diagnostic.findTypeInfo(curProto.constructor);
+      if (typeInfo && typeInfo.metadata.elementName) break;
+      typeInfo = undefined;
+      curProto = curProto.__proto__;
+    }
+
+    if (typeInfo === undefined) {
+      throw new Error(
+          diagnostic.constructor.name +
+          ' or a base class must have a registered elementName');
+    }
+
+    return typeInfo.metadata.elementName;
+  }
+
+  /**
+   * Create a visualization for |diagnostic|.
+   *
+   * @param {!tr.v.d.Diagnostic} diagnostic
+   * @param {string} name
+   * @param {!tr.v.Histogram} histogram
+   * @return {Element}
+   */
+  function createDiagnosticSpan(diagnostic, name, histogram) {
+    const tagName = findElementNameForDiagnostic(diagnostic);
+    const span = document.createElement(tagName);
+    if (span instanceof HTMLUnknownElement) {
+      throw new Error('Element not registered: ' + tagName);
+    }
+    if (span.build === undefined) throw new Error(tagName);
+    span.build(diagnostic, name, histogram);
+    return span;
+  }
+
+  return {
+    createDiagnosticSpan,
+  };
+});
+</script>

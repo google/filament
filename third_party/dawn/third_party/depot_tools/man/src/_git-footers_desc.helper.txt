@@ -1,0 +1,1 @@
+Extract meta-information expressed as footers in a commit message.

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/user_model/segment.html">
+<link rel="import" href="/tracing/model/user_model/user_model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('resegment', function() {
+    const userModel = new tr.model.um.UserModel(undefined);
+    userModel.segments.push(new tr.model.um.Segment(0, 1));
+    userModel.segments.push(new tr.model.um.Segment(1, 1));
+    userModel.segments.push(new tr.model.um.Segment(2, 1));
+    userModel.segments.push(new tr.model.um.Segment(3, 1));
+
+    userModel.segments[0].expectations.push('a');
+    userModel.segments[1].expectations.push('b');
+    userModel.segments[2].expectations.push('c');
+    userModel.segments[3].expectations.push('d');
+
+    const newSegments = userModel.resegment(
+        (segment, index) => Math.floor(index / 2));
+
+    assert.lengthOf(newSegments, 2);
+    assert.strictEqual(0, newSegments[0].start);
+    assert.strictEqual(2, newSegments[0].end);
+    assert.strictEqual(2, newSegments[1].start);
+    assert.strictEqual(4, newSegments[1].end);
+
+    assert.lengthOf(newSegments[0].expectations, 2);
+    assert.lengthOf(newSegments[1].expectations, 2);
+
+    assert.strictEqual('a', newSegments[0].expectations[0]);
+    assert.strictEqual('b', newSegments[0].expectations[1]);
+    assert.strictEqual('c', newSegments[1].expectations[0]);
+    assert.strictEqual('d', newSegments[1].expectations[1]);
+  });
+});
+</script>

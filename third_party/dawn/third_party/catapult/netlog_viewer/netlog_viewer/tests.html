@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+  <title>NetLog Viewer Tests: loading...</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <link rel="shortcut icon" href="data:image/x-icon;base64,"
+        type="image/x-icon">
+
+  <script src="/components/webcomponentsjs/webcomponents.js"></script>
+  <script src="/netlog_viewer/net_constants.js"></script>  
+  <script src="/netlog_viewer/net_internals_test.js"></script>  
+
+  <link rel="import" href="/components/polymer/polymer.html">
+  <link rel="import" href="/netlog_viewer/netlog_viewer.html">
+  <link rel="import" href="/tracing/base/unittest/interactive_test_runner.html">
+  <link rel="import" href="/tracing/core/test_utils.html">
+
+  <style>
+    html, body {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    'use strict';
+
+    var globalNetLogViewerElementForTests = null;
+
+    HTMLImports.whenReady(function() {
+      // TODO(rayraymond): The following creates the custom element that
+      // represents the entire web app. In the future each test file should
+      // import and create its corresponding component to test. For now
+      // this uber component can be created at the beginning and all the test
+      // files can use it.
+      globalNetLogViewerElementForTests =
+          document.createElement('netlog-viewer');
+
+      tr.b.unittest.loadAndRunTests({
+        title: 'All NetLog Viewer Tests',
+        getAllSuiteRelPathsAsync: function() {
+          return tr.b.getAsync('/netlog_viewer/tests').then(function(json) {
+            return JSON.parse(json).test_relpaths;
+          }).catch(function(e) {
+            throw e;
+          });
+        },
+        testLinks: []
+      });
+    });
+
+  </script>
+</body>
+</html>

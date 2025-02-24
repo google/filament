@@ -1,0 +1,161 @@
+//
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// ConvertIndex.comp: Convert UINT_8 indices into UINT_16 using a compute shader.
+//
+// The following defines tweak the functionality, and a different shader is built based on these.
+//
+//  - Flags:
+//    * IsPrimitiveRestartEnabled: enables conversion from 0xFF to 0xFFFF,
+//                                 the restart indices for 8-bit and 16-bit indices.
+//    * IsIndirect: Use indirect buffer for index info
+//
+
+#version 450 core
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout (set = 0, binding = 0) buffer dst
+{
+    // Shader invocations output one packed 32-bit value with up to two 16-bit indices.
+    uint dstIndexBuf[];
+};
+
+layout (set = 0, binding = 1) readonly buffer src
+{
+    // Shader invocations read at most 16 bits of one packed 32-bit value. (Two 8-bit indices.)
+    uint srcIndexBuf[];
+};
+
+#if IsIndirect
+layout (set = 0, binding = 2) readonly buffer srcIndirect
+{
+    // Shader invocations read from the srcIndirectBuf buffer to determine what indices to convert
+    // The command data starts at offset srcIndirectOffsetDiv4 of the srcIndirectBuf buffer.
+    uint srcIndirectBuf[];
+};
+
+layout (set = 0, binding = 3) buffer dstIndirect
+{
+    // output indirect buffer data, data starts at dstIndirectBufOffsetDiv4
+    uint dstIndirectBuf[];
+};
+
+layout (push_constant) uniform PushConstants
+{
+    // Read offset in bytes into the srcIndirectBuf array, divided by four.
+    uint srcIndirectOffsetDiv4;
+    // Read offset in bytes into the srcIndexBuf array.
+    uint srcIndexOffset;
+    // Write offset in bytes into the dstIndexBuf array, divided by four.
+    uint dstIndexBufOffsetDiv4;
+    // Maximum size of the read buffer. The highest index value we will convert.
+    uint maxIndex;
+    // Write offset in bytes/4 of destination indirect buffer
+    uint dstIndirectBufOffsetDiv4;
+};
+
+#else
+
+layout (push_constant) uniform PushConstants
+{
+    // Read offset in bytes into the srcIndexBuf array.
+    uint srcIndexOffset;
+    // Write offset in bytes into the dstIndexBuf array, divided by four.
+    uint dstIndexBufOffsetDiv4;
+    // Maximum size of the read buffer. The highest index value we will convert.
+    uint maxIndex;
+    // Not used in the shader. Kept to pad "PushConstants" to the size of a vec4.
+    uint _padding;
+};
+#endif
+
+uint PullIndex(uint index)
+{
+    uint srcIndex = index + srcIndexOffset;
+    uint srcBlock = srcIndexBuf[srcIndex >> 2];
+    uint srcComponent = (srcIndex & 3);
+
+    uint value = (srcBlock >> (srcComponent << 3)) & 0xFF;
+#if IsPrimitiveRestartEnabled
+    // convert 0xFF (restart value for 8-bit indices)
+    // to 0xFFFF (restart value for 16-bit indices).
+    if (value == 0xFF)
+        value = 0xFFFF;
+#endif
+    return value;
+}
+
+void PackIndexValue(uint srcValue, uint indexIndex, inout uint dstValue)
+{
+    // Pack 16-byte index into the 32-byte destination.
+    dstValue |= srcValue << (indexIndex << 4);
+}
+
+void main()
+{
+#if IsIndirect
+    uint indexCount = srcIndirectBuf[srcIndirectOffsetDiv4];
+    uint firstIndex = srcIndirectBuf[srcIndirectOffsetDiv4 + 2];
+    uint endIndex = firstIndex + indexCount;
+#else
+    uint firstIndex = 0;
+    uint endIndex = firstIndex + maxIndex;
+#endif
+
+    // The element index is invocation ID times two plus
+    // the firstIndex / 2.
+    // This way the first indexCount/2 invocations will transform
+    // the data and any additional invocations will be a no-op
+    uint index = ((gl_GlobalInvocationID.x + (firstIndex >> 1)) << 1);
+
+    // Don't write anything to dst if we're entirely past the end of the buffer.
+    // We assume buffer size is uint-aligned.
+    if (index >= endIndex)
+        return;
+
+    uint dstValue = 0;
+
+    // Skip packing the first index if we're before the first element.
+    if (index >= firstIndex)
+    {
+        uint srcValue = PullIndex(index);
+        PackIndexValue(srcValue, 0, dstValue);
+    }
+
+    // Skip packing the second index if we're after the last element.
+    if (index + 1 < endIndex)
+    {
+        uint srcValue = PullIndex(index + 1);
+        PackIndexValue(srcValue, 1, dstValue);
+    }
+
+    dstIndexBuf[dstIndexBufOffsetDiv4 + gl_GlobalInvocationID.x] = dstValue;
+
+#if IsIndirect
+    // Copy the source indirect draw info (DrawElementsIndirectCommand) to the destination
+    // indirect draw buffer adjusting the firstIndex to account for the offset into dstIndirectBuf
+    // typedef struct {
+    //    uint count;
+    //    uint instanceCount;
+    //    uint firstIndex;
+    //    int baseVertex;
+    //    uint reservedMustBeZero;
+    // } DrawElementsIndirectCommand;
+    if (gl_GlobalInvocationID.x == 0)
+    {
+        dstIndirectBuf[dstIndirectBufOffsetDiv4] = srcIndirectBuf[srcIndirectOffsetDiv4]; // count
+        // instanceCount
+        dstIndirectBuf[dstIndirectBufOffsetDiv4 + 1] = srcIndirectBuf[srcIndirectOffsetDiv4 + 1];
+        // ANGLE will supply dstIndexBufOffset when binding the index buffer so don't
+        // need to worry about that as part of firstIndex for the new indirect buffer command.
+        // firstIndex can be in 2nd half of word so add one if incoming firstIndex is odd
+        dstIndirectBuf[dstIndirectBufOffsetDiv4 + 2] = firstIndex & 1; // firstIndex
+        // baseVertex
+        dstIndirectBuf[dstIndirectBufOffsetDiv4 + 3] = srcIndirectBuf[srcIndirectOffsetDiv4 + 3];
+        dstIndirectBuf[dstIndirectBufOffsetDiv4 + 4] = 0; // reservedMustBeZero
+    }
+#endif
+}

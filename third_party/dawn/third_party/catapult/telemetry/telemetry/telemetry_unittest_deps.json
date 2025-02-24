@@ -1,0 +1,56 @@
+{
+  "config_type": "BaseConfig",
+  "dependencies": {
+    "example_domain_archive": {
+      "cloud_storage_base_folder": "wpr-archives",
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "8178b3e2aeedf03500cfd94ae89793f2d0799e92",
+          "download_path": "internal/testing/test_page_sets/data/example_domain_001.wprgo"
+        },
+        "mac_arm64": {
+          "cloud_storage_hash": "8178b3e2aeedf03500cfd94ae89793f2d0799e92",
+          "download_path": "internal/testing/test_page_sets/data/example_domain_001.wprgo"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "8178b3e2aeedf03500cfd94ae89793f2d0799e92",
+          "download_path": "internal/testing/test_page_sets/data/example_domain_001.wprgo"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "8178b3e2aeedf03500cfd94ae89793f2d0799e92",
+          "download_path": "internal/testing/test_page_sets/data/example_domain_001.wprgo"
+        },
+        "win_x86": {
+          "cloud_storage_hash": "8178b3e2aeedf03500cfd94ae89793f2d0799e92",
+          "download_path": "internal/testing/test_page_sets/data/example_domain_001.wprgo"
+        }
+      }
+    },
+    "example_domain_wpr_go_archive": {
+      "cloud_storage_bucket": "chromium-telemetry",
+      "file_info": {
+        "linux_x86_64": {
+          "cloud_storage_hash": "844172f99779cdf6e886585b474b8f03e1ed0763",
+          "download_path": "internal/testing/test_page_sets/data/example_domain.wprgo"
+        },
+        "mac_arm64": {
+          "cloud_storage_hash": "844172f99779cdf6e886585b474b8f03e1ed0763",
+          "download_path": "internal/testing/test_page_sets/data/example_domain.wprgo"
+        },
+        "mac_x86_64": {
+          "cloud_storage_hash": "844172f99779cdf6e886585b474b8f03e1ed0763",
+          "download_path": "internal/testing/test_page_sets/data/example_domain.wprgo"
+        },
+        "win_AMD64": {
+          "cloud_storage_hash": "844172f99779cdf6e886585b474b8f03e1ed0763",
+          "download_path": "internal/testing/test_page_sets/data/example_domain.wprgo"
+        },
+        "win_x86": {
+          "cloud_storage_hash": "844172f99779cdf6e886585b474b8f03e1ed0763",
+          "download_path": "internal/testing/test_page_sets/data/example_domain.wprgo"
+        }
+      }
+    }
+  }
+}

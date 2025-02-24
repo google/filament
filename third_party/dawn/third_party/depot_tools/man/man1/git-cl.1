@@ -1,0 +1,198 @@
+'\" t
+.\"     Title: git-cl
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/30/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools d6a493e4
+.\"  Language: English
+.\"
+.TH "GIT\-CL" "1" "08/30/2022" "depot_tools d6a493e4" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-cl \- Interact with code reviews on Gerrit and Rietveld
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit cl <subcommand> [options]\fR
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+\fBgit cl\fR is the home of all of the tools for interacting with changelists\&.
+.sp
+Run \fBgit cl help <subcommand>\fR for a more detailed listing of that command and its options\&.
+.SH "SUBCOMMANDS"
+.PP
+archive
+.RS 4
+archives and deletes branches associated with closed changelists
+.RE
+.PP
+baseurl
+.RS 4
+gets or sets base\-url for this branch
+.RE
+.PP
+checkout
+.RS 4
+checks out a branch associated with a given Rietveld or Gerrit issue
+.RE
+.PP
+comments
+.RS 4
+shows or posts review comments for any changelist
+.RE
+.PP
+config
+.RS 4
+edits configuration for this tree
+.RE
+.PP
+dcommit
+.RS 4
+DEPRECATED: Used to commit the current changelist via git\-svn
+.RE
+.PP
+description
+.RS 4
+brings up the editor for the current CL\(cqs description
+.RE
+.PP
+diff
+.RS 4
+shows differences between local tree and last upload
+.RE
+.PP
+format
+.RS 4
+runs auto\-formatting tools (clang\-format etc\&.) on the diff
+.RE
+.PP
+help
+.RS 4
+prints list of commands or help for a specific command
+.RE
+.PP
+issue
+.RS 4
+sets or displays the current code review issue number
+.RE
+.PP
+land
+.RS 4
+commits the current changelist via git
+.RE
+.PP
+lint
+.RS 4
+runs cpplint on the current changelist
+.RE
+.PP
+owners
+.RS 4
+interactively find the owners for reviewing
+.RE
+.PP
+patch
+.RS 4
+applies (cherry-picks) a Gerrit changelist locally
+.RE
+.PP
+presubmit
+.RS 4
+runs presubmit tests on the current changelist
+.RE
+.PP
+set\-close
+.RS 4
+closes the issue
+.RE
+.PP
+set\-commit
+.RS 4
+sets the commit bit to trigger the Commit Queue
+.RE
+.PP
+split
+.RS 4
+splits a branch into smaller branches and uploads CLs
+.RE
+.PP
+status
+.RS 4
+show status of changelists
+.RE
+.PP
+tree
+.RS 4
+shows the status of the tree
+.RE
+.PP
+try
+.RS 4
+triggers try jobs using either BuildBucket or CQ dry run
+.RE
+.PP
+try\-results
+.RS 4
+prints info about try jobs associated with current CL
+.RE
+.PP
+upload
+.RS 4
+uploads the current changelist to codereview
+.RE
+.PP
+upstream
+.RS 4
+prints or sets the name of the upstream branch, if any
+.RE
+.PP
+web
+.RS 4
+opens the current CL in the web browser
+.RE
+.SH "OPTIONS"
+.PP
+\-\-version
+.RS 4
+show program\(cqs version number and exit
+.RE
+.PP
+\-h, \-\-help
+.RS 4
+show this help message and exit
+.RE
+.PP
+\-v, \-\-verbose
+.RS 4
+Use 2 times for more debugging info
+.RE
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

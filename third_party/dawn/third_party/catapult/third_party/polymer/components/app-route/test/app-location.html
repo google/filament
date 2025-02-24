@@ -1,0 +1,168 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <title>app-location</title>
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../../polymer/polymer.html">
+  <link rel="import" href="../../iron-test-helpers/mock-interactions.html">
+  <link rel="import" href="../app-location.html">
+</head>
+<body>
+  <test-fixture id="BasicLocation">
+    <template>
+      <app-location></app-location>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="LocationViaHash">
+    <template>
+      <app-location use-hash-as-path></app-location>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="ClickableLink">
+    <template>
+      <a></a>
+    </template>
+  </test-fixture>
+
+  <script>
+    'use strict';
+
+    function setLocation(url) {
+      window.history.pushState({}, '', url);
+      Polymer.Base.fire('location-changed', {}, { node: window });
+    }
+
+    function assign(a, b) {
+      if (Object.assign) {
+        return Object.assign.apply(Object, arguments);
+      }
+
+      for (var property in b) {
+        a[property] = b[property];
+      }
+
+      return a;
+    }
+
+    suite('<app-location>', function () {
+      var initialUrl;
+
+      setup(function() {
+        initialUrl = window.location.href;
+      });
+
+      teardown(function() {
+        window.history.replaceState({}, '', initialUrl);
+      });
+
+      suite('in the default configuration', function() {
+        var appLocation;
+
+        setup(function() {
+          appLocation = fixture('BasicLocation');
+        });
+
+        test('it automatically exposes the current route', function() {
+          expect(appLocation.route).to.be.ok;
+          expect(appLocation.route.path).to.be.equal(window.location.pathname);
+        });
+
+        suite('manipulating the route', function() {
+          var originalPath;
+          var originalQueryParams;
+
+          setup(function() {
+            originalPath = appLocation.route.path;
+            originalQueryParams = assign({}, appLocation.route.__queryParams);
+          });
+
+          teardown(function() {
+            appLocation.set('route.prefix', '');
+            appLocation.set('route.path', originalPath);
+            appLocation.set('route.__queryParams', originalQueryParams);
+          });
+
+          test('it reflects path to location.pathname', function() {
+            appLocation.set('route.path', '/foo/bar');
+            expect(window.location.pathname).to.be.equal('/foo/bar');
+          });
+
+          test('it reflects queryParams values to location.search', function() {
+            appLocation.set('route.__queryParams.foo', 1);
+            expect(window.location.search).to.match(/foo=1/);
+          });
+
+          test('it reflects completely replaced queryParams', function() {
+            appLocation.set('route.__queryParams', { bar: 1 });
+            expect(window.location.search).to.be.equal('?bar=1');
+          });
+
+          test('it reflects the prefix to location.pathname', function() {
+            appLocation.set('route.prefix', '/fiz');
+            expect(window.location.pathname).to.be.equal('/fiz' + originalPath);
+          });
+        });
+
+        /**
+         * NOTE: For a more thorough spec describing this behavior, please refer
+         * to the `iron-location` component.
+         */
+        suite('manipulating the history state', function() {
+          var originalLocation;
+
+          setup(function() {
+            originalLocation = window.location.toString();
+          });
+
+          teardown(function() {
+            setLocation(originalLocation);
+          });
+
+          test('it reflects location.pathname to route.path', function() {
+            setLocation('/fiz/buz');
+            expect(appLocation.route.path).to.be.equal('/fiz/buz');
+          });
+
+          test('it reflects location.search to route.__queryParams', function() {
+            setLocation('?fiz=buz');
+            expect(appLocation.route.__queryParams).to.be.eql({
+              fiz: 'buz'
+            });
+          });
+        });
+      });
+
+      suite('using the hash as the route path', function() {
+        var appLocation;
+
+        setup(function() {
+          appLocation = fixture('LocationViaHash');
+        });
+
+        test('it reflects location.hash to route.path', function() {
+          setLocation('#/fiz/buz');
+          expect(appLocation.route.path).to.be.equal('/fiz/buz');
+        });
+
+        test('it reflects route.path to location.hash', function() {
+          appLocation.set('route.path', '/foo/bar');
+          expect(window.location.hash).to.be.equal('#/foo/bar');
+        });
+      });
+    });
+  </script>
+</body>

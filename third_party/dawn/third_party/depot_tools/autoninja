@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2017 Google Inc. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# In git bash on Windows, invoke the batch file.
+if [ "$(expr "$(uname -s)" : "^MINGW64_NT")" == "10" ]; then
+    autoninja.bat "$@"
+    exit
+fi
+
+if [ "$NINJA_SUMMARIZE_BUILD" == "1" ]; then
+    export NINJA_STATUS="[%r processes, %f/%t @ %o/s : %es ] "
+fi
+
+# Execute whatever is printed by autoninja.py.
+# Also print it to reassure that the right settings are being used.
+python3 "$(dirname -- "$0")/autoninja.py" "$@"
+retval=$?
+
+if [ "$retval" == "0" ] && [ "$NINJA_SUMMARIZE_BUILD" == "1" ]; then
+  python3 "$(dirname -- "$0")/post_build_ninja_summary.py" "$@"
+fi
+
+# Pass-through autoninja's error code so that if a developer types:
+# "autoninja chrome && chrome" then chrome won't run if the build fails.
+exit $retval

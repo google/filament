@@ -1,0 +1,30 @@
+Name: Test package 1
+Local Modifications:
+
+1. Modified X file
+2. Deleted Y file
+
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Test package 2
+Local Modifications: None
+
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Test package 3
+
+Local Modifications:
+
+None.
+
+Uprev Instructions:
+This section should not be extracted into Local Modifications.
+1. Do X
+2. Do Y
+3. Commit
+
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Test package 4
+Local Modifications: None,
+Except modified file X.

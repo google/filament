@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<!--
+This class tries to (simply) copy the telemetry Results object, but outputs
+directly to an HTML table. It takes things that look like Telemetry values,
+and updates the table internally.
+-->
+<dom-module id='tr-ui-e-deep-reports-html-results'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-e-deep-reports-html-results',
+
+  created() {
+    this.hasColumnNamed_ = {};
+    this.pageToRowMap_ = new WeakMap();
+  },
+
+  ready() {
+    const table = this.$.table;
+    table.tableColumns = [
+      {
+        title: 'Label',
+        value(row) { return row.label; },
+        width: '350px'
+      }
+    ];
+    this.clear();
+  },
+
+  clear() {
+    this.$.table.tableRows = [];
+  },
+
+  addColumnIfNeeded_(columnName) {
+    if (this.hasColumnNamed_[columnName]) return;
+
+    this.hasColumnNamed_[columnName] = true;
+
+    const column = {
+      title: columnName,
+      value(row) {
+        if (row[columnName] === undefined) return '';
+        return row[columnName];
+      }
+    };
+
+    const columns = this.$.table.tableColumns;
+    columns.push(column);
+
+    // Update widths.
+    let colWidthPercentage;
+    if (columns.length === 1) {
+      colWidthPercentage = '100%';
+    } else {
+      colWidthPercentage = (100 / (columns.length - 1)).toFixed(3) + '%';
+    }
+
+    for (let i = 1; i < columns.length; i++) {
+      columns[i].width = colWidthPercentage;
+    }
+
+    this.$.table.tableColumns = columns;
+  },
+
+  getRowForPage_(page) {
+    if (!this.pageToRowMap_.has(page)) {
+      const i = page.url.lastIndexOf('/');
+      const baseName = page.url.substring(i + 1);
+
+      const link = document.createElement('a');
+      link.href = 'trace_viewer.html#' + page.url;
+      Polymer.dom(link).textContent = baseName;
+
+      const row = {
+        label: link,
+        value: '',
+        subRows: [],
+        isExpanded: true
+      };
+      this.$.table.tableRows.push(row);
+      this.pageToRowMap_.set(page, row);
+
+      // Kick table rebuild.
+      this.$.table.tableRows = this.$.table.tableRows;
+    }
+    return this.pageToRowMap_.get(page);
+  },
+
+  addValue(value) {
+    /* Value is expected to be a scalar telemetry-style Value. */
+    if (value.type !== 'scalar') {
+      throw new Error('wat');
+    }
+
+    this.addColumnIfNeeded_(value.name);
+    const rowForPage = this.getRowForPage_(value.page);
+    rowForPage[value.name] = value.value;
+
+    // Kick table rebuild.
+    this.$.table.tableRows = this.$.table.tableRows;
+  }
+});
+</script>

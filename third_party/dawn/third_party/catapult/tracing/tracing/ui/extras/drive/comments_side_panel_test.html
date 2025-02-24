@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/extras/drive/comments_side_panel.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function StubCommentProvider() {
+    this.addDummyComment('Lorem ipsum dolor sit amet');
+    this.addDummyComment('consectetur adipiscing elit');
+    this.addDummyComment('sed do eiusmod tempor incididunt ut labore et ' +
+        'dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ' +
+        'exercitation ullamco laboris nisi ut aliquip ex ea commodo ' +
+        'consequat. Duis aute irure dolor in reprehenderit in voluptate ' +
+        'velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint ' +
+        'occaecat cupidatat non proident, sunt in culpa qui officia deserunt ' +
+        'mollit anim id est laborum.');
+  }
+
+  StubCommentProvider.prototype = {
+    comments_: [],
+
+    attachToElement(attachedElement) {
+      this.attachedElement_ = attachedElement;
+      this.updateComments();
+    },
+
+    detachFromElement() {
+    },
+
+    updateComments() {
+      this.attachedElement_.comments_ = this.comments_;
+    },
+
+    addDummyComment(content) {
+      const newComment = {
+        author: {
+          displayName: 'Casper the Friendly Ghost',
+          picture: {
+            url: 'https://lh3.googleusercontent.com/-XdUIqdMkCWA/' +
+                      'AAAAAAAAAAI/AAAAAAAAAAA/4252rscbv5M/s128/photo.jpg'
+          }
+        },
+        createdDate: Date.now(),
+        anchor: (this.comments_.length) % 2 ? 1 : 0,
+        content
+      };
+
+      this.comments_.push(newComment);
+    },
+
+    addComment(body) {
+      this.addDummyComment(body);
+      this.updateComments();
+    }
+  };
+
+  test('instantiate', function() {
+    const panel = document.createElement('tr-ui-e-drive-comments-side-panel');
+    panel.setCommentProvider(new StubCommentProvider);
+    this.addHTMLOutput(panel);
+  });
+});
+</script>

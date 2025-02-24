@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/name_column_chart.html">
+<link rel="import" href="/tracing/ui/base/name_line_chart.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const BoxChart = tr.ui.b.define('box-chart', tr.ui.b.NameLineChart);
+
+  BoxChart.prototype = {
+    __proto__: tr.ui.b.NameLineChart.prototype,
+
+    get hideLegend() {
+      return true;
+    },
+
+    updateDataRange_() {
+      if (this.overrideDataRange_ !== undefined) {
+        return;
+      }
+
+      this.autoDataRange_.reset();
+      for (const datum of this.data_) {
+        this.autoDataRange_.addValue(datum.percentile_0);
+        this.autoDataRange_.addValue(datum.percentile_100);
+      }
+    },
+
+    updateScales_() {
+      super.updateScales_();
+      this.xScale_.domain([0, this.data_.length]);
+    },
+
+    get xAxisTickOffset() {
+      return 0.5;
+    },
+
+    updateDataRange_() {
+      if (this.overrideDataRange_ !== undefined) return;
+
+      this.autoDataRange_.reset();
+      for (const datum of this.data_) {
+        this.autoDataRange_.addValue(datum.percentile_0);
+        this.autoDataRange_.addValue(datum.percentile_100);
+      }
+    },
+
+    updateXAxis_(xAxis) {
+      xAxis.selectAll('*').remove();
+      if (this.hideXAxis) return;
+
+      tr.ui.b.NameColumnChart.prototype.updateXAxis_.call(this, xAxis);
+
+      const baseline = xAxis.selectAll('path').data([this]);
+      baseline.enter().append('line')
+          .attr('stroke', 'black')
+          .attr('x1', this.xScale_(0))
+          .attr('x2', this.xScale_(this.data_.length))
+          .attr('y1', this.graphHeight)
+          .attr('y2', this.graphHeight);
+      baseline.exit().remove();
+    },
+
+    updateDataContents_(dataSel) {
+      dataSel.selectAll('*').remove();
+      const boxesSel = dataSel.selectAll('path');
+      for (let index = 0; index < this.data_.length; ++index) {
+        const datum = this.data_[index];
+        const color = datum.color || 'black';
+
+        // Draw a box between percentiles 25 and 75:
+        let sel = boxesSel.data([datum]);
+        sel.enter().append('rect')
+            .attr('fill', color)
+            .attr('x', this.xScale_(index + 0.2))
+            .attr('width',
+                this.xScale_(index + 0.8) - this.xScale_(index + 0.2))
+            .attr('y', this.yScale_(datum.percentile_75))
+            .attr('height', this.yScale_(datum.percentile_25) -
+              this.yScale_(datum.percentile_75));
+        sel.exit().remove();
+
+        // Draw a horizontal line for percentile_50:
+        sel = boxesSel.data([datum]);
+        sel.enter().append('line')
+            .attr('stroke', color)
+            .attr('x1', this.xScale_(index))
+            .attr('x2', this.xScale_(index + 1))
+            .attr('y1', this.yScale_(datum.percentile_50))
+            .attr('y2', this.yScale_(datum.percentile_50));
+        sel.exit().remove();
+
+        // Draw two shorter horizontal lines for percentiles 0 and 100:
+        sel = boxesSel.data([datum]);
+        sel.enter().append('line')
+            .attr('stroke', color)
+            .attr('x1', this.xScale_(index + 0.4))
+            .attr('x2', this.xScale_(index + 0.6))
+            .attr('y1', this.yScale_(datum.percentile_0))
+            .attr('y2', this.yScale_(datum.percentile_0));
+        sel.exit().remove();
+        sel = boxesSel.data([datum]);
+        sel.enter().append('line')
+            .attr('stroke', color)
+            .attr('x1', this.xScale_(index + 0.4))
+            .attr('x2', this.xScale_(index + 0.6))
+            .attr('y1', this.yScale_(datum.percentile_100))
+            .attr('y2', this.yScale_(datum.percentile_100));
+        sel.exit().remove();
+
+        // Draw a vertical line between percentiles 0 and 100.
+        sel = boxesSel.data([datum]);
+        sel.enter().append('line')
+            .attr('stroke', color)
+            .attr('x1', this.xScale_(index + 0.5))
+            .attr('x2', this.xScale_(index + 0.5))
+            .attr('y1', this.yScale_(datum.percentile_100))
+            .attr('y2', this.yScale_(datum.percentile_0));
+        sel.exit().remove();
+      }
+    }
+  };
+
+  return {
+    BoxChart,
+  };
+});
+</script>

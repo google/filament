@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_gpu_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ChromeGpuHelper = tr.model.helpers.ChromeGpuHelper;
+
+  test('constructor_doesntThrowIfMultipleMainThreads', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).getOrCreateThread(1).name = 'CrGpuMain';
+      model.getOrCreateProcess(1).getOrCreateThread(2).name = 'CrGpuMain';
+    });
+
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    new ChromeGpuHelper(modelHelper, model.getOrCreateProcess(1));
+  });
+
+  test('constructor_doesntThrowIfNoMainThread', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1);
+    });
+
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    new ChromeGpuHelper(modelHelper, model.getOrCreateProcess(1));
+  });
+
+  test('constructor_namesProcessIfUnnamed', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1);
+    });
+
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    new ChromeGpuHelper(modelHelper, model.getOrCreateProcess(1));
+    assert.strictEqual(model.getOrCreateProcess(1).name, 'GPU Process');
+  });
+
+  test('constructor_doesntNameProcessIfNamed', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).name = 'Example process name';
+    });
+
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    new ChromeGpuHelper(modelHelper, model.getOrCreateProcess(1));
+    assert.strictEqual(
+        model.getOrCreateProcess(1).name, 'Example process name');
+  });
+
+  test('isGpuProcess_falseIfNoMainThread', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1);
+    });
+
+    assert.isFalse(ChromeGpuHelper.isGpuProcess(model.getOrCreateProcess(1)));
+  });
+
+  test('isGpuProcess', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).getOrCreateThread(1).name = 'CrGpuMain';
+    });
+
+    assert.isTrue(ChromeGpuHelper.isGpuProcess(model.getOrCreateProcess(1)));
+  });
+
+  test('isGpuProcess_trueIfMultipleMainThreads', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).getOrCreateThread(1).name = 'CrGpuMain';
+      model.getOrCreateProcess(1).getOrCreateThread(2).name = 'CrGpuMain';
+    });
+
+    assert.isTrue(ChromeGpuHelper.isGpuProcess(model.getOrCreateProcess(1)));
+  });
+
+  test('isGpuProcess_falseIfBrowserProcess', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).getOrCreateThread(1).name = 'CrGpuMain';
+      model.getOrCreateProcess(1).getOrCreateThread(2).name = 'CrBrowserMain';
+    });
+
+    assert.isFalse(ChromeGpuHelper.isGpuProcess(model.getOrCreateProcess(1)));
+  });
+
+  test('isGpuProcess_falseIfRendererProcess', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      model.getOrCreateProcess(1).getOrCreateThread(1).name = 'CrGpuMain';
+      model.getOrCreateProcess(1).getOrCreateThread(2).name = 'CrRendererMain';
+    });
+
+    assert.isFalse(ChromeGpuHelper.isGpuProcess(model.getOrCreateProcess(1)));
+  });
+});
+</script>

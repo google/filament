@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Cpu = tr.model.Cpu;
+  const CpuTrack = tr.ui.tracks.CpuTrack;
+  const ThreadSlice = tr.model.ThreadSlice;
+  const StackFrame = tr.model.StackFrame;
+  const Sample = tr.model.Sample;
+  const Thread = tr.model.Thread;
+  const Viewport = tr.ui.TimelineViewport;
+
+  test('basicCpu', function() {
+    const cpu = new Cpu({}, 7);
+    cpu.slices = [
+      new ThreadSlice('', 'a', 0, 1, {}, 1),
+      new ThreadSlice('', 'b', 1, 2.1, {}, 4.8)
+    ];
+    cpu.updateBounds();
+
+    const testEl = document.createElement('div');
+    const viewport = new Viewport(testEl);
+
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+
+    const track = new CpuTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    track.heading = 'CPU ' + cpu.cpuNumber;
+    track.cpu = cpu;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 11.1, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+
+
+  test('withSamples', function() {
+    let thread;
+    let cpu;
+    const model = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(model) {
+        cpu = model.kernel.getOrCreateCpu(1);
+        thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+
+        const nodeA = tr.c.TestUtils.newProfileNode(model, 'a');
+        const nodeB = tr.c.TestUtils.newProfileNode(model, 'b', nodeA);
+        const nodeC = tr.c.TestUtils.newProfileNode(model, 'c', nodeB);
+        const nodeD = tr.c.TestUtils.newProfileNode(model, 'd', nodeA);
+
+        model.samples.push(new Sample(10, 'instructions_retired', nodeC, thread,
+            undefined, 10));
+        model.samples.push(new Sample(20, 'instructions_retired', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(30, 'instructions_retired', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(40, 'instructions_retired', nodeD, thread,
+            undefined, 10));
+
+        model.samples.push(new Sample(25, 'page_fault', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(35, 'page_fault', nodeD, thread,
+            undefined, 10));
+      }
+    });
+
+    const testEl = document.createElement('div');
+    const viewport = new Viewport(testEl);
+
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+
+    const track = new CpuTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    track.heading = 'CPU ' + cpu.cpuNumber;
+    track.cpu = cpu;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 11.1, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+});
+</script>

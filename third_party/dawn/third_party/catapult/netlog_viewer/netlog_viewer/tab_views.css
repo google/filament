@@ -1,0 +1,113 @@
+/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+ /*
+  * TODO(rayraymond): Temporary placeholder for all the CSS that should
+  * be within the components of the individual views. Ultimately this
+  * CSS should live in its respective component.
+  */
+
+#top-bar-view-content {
+  border-bottom: 1px solid gray;
+  color: #fff;
+  display: -webkit-flex;
+  padding: 2px 2px 4px 7px;
+  align-items: center;
+}
+
+#top-bar-view-content a {
+  color: #fff;
+}
+
+#import-view-command-line,
+#import-view-user-comments {
+  /* Wrap long lines inside of PREs */
+  white-space: pre-wrap;
+}
+
+#import-view-load-status-text {
+  /* Wrap long lines inside of PREs */
+  white-space: pre-wrap;
+}
+
+.import-view-pending-log {
+  color: blue;
+  font-weight: bold;
+}
+
+.import-view-success-log {
+  color: green;
+  font-weight: bold;
+}
+
+.import-view-error-log {
+  color: #e00;
+  padding: 5px;
+  border: 1px solid #e00;
+}
+
+.import-view-warning-log {
+  color: #e00;
+}
+
+#proxy-view-tab-content td,
+#proxy-view-tab-content th {
+  font-size: 85%;
+}
+
+#proxy-view-socks-hints {
+  border: 1px solid orange;
+  padding: 1ex;
+}
+
+#proxy-view-socks-hints-flag {
+  margin: 1ex;
+}
+
+#prerender-view-history-table tr.used {
+  background-color: #F0FFF0;
+}
+
+#prerender-view-history-table tr:not(.used) {
+  background-color: #FFF0F0;
+}
+
+.modules-view-extension-list tr.enabled {
+  background-color: #F0FFF0;
+}
+
+.modules-view-extension-list tr:not(.enabled) {
+  background-color: #FFF0F0;
+}
+
+.data-reduction-proxy-view-events-details {
+  background-color: rgb(220,220,220);
+}
+table.borderless-table,
+.borderless-table th,
+.borderless-table td {
+  border: 0px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+td.reporting-centered {
+  text-align: center;
+}
+td.reporting-right-justified {
+  text-align: right;
+}
+td .reporting-content-summary {
+}
+td .reporting-content-expand-button {
+  color: rgb(0, 0, 255);
+  cursor: pointer;
+  float: right;
+  font-size: 80%;
+  margin-left: 1em;
+  text-decoration: underline;
+}
+td .reporting-content-detail {
+}

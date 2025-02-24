@@ -1,0 +1,18 @@
+Name: Khronos OpenGL, OpenGL ES, and OpenGL ES-SC API and Extension Registry
+Short Name: OpenGL-Registry
+Version: N/A
+URL: https://github.com/KhronosGroup/OpenGL-Registry
+SOURCE CODE: git clone -b OpenGL-Registry https://github.com/KhronosGroup/OpenGL-Registry
+Revision: DEPS
+Security Critical: no
+Shipped: yes
+License: Apache 2.0
+License File: Not Included
+
+Description:
+
+This site contains the API and Extension registries for the OpenGL family
+APIs - OpenGL, OpenGL ES, and OpenGL SC. It includes API specifications;
+specifications of Khronos- and vendor-approved extensions; header files
+corresponding to the specifications; the XML API Registry defining each API;
+and related tools and scripts.

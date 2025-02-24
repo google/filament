@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <style>
+    textarea {
+      height: 20em;
+      width: 40em;
+    }
+  </style>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <p class="error">{{error}}</p>
+  {% if key %}
+    <h2>Key: {{key}}</h2>
+    <p>For configs where there is not a separate value for internal and
+    external users (using <code>stored_object</code>, only the first
+    text area should be used; for configs where there is a separate value
+    (using <code>namespaced_stored_object</code>), the second and third
+    boxes should be filled out.</p>
+    <form action="/edit_site_config" method="post">
+      <div>
+        <label for="value">Non-namespaced value:</label><br>
+        <textarea name="value" id="value">{{value}}</textarea>
+      </div>
+      <div>
+        <label for="external_value">Externally-visible value:</label><br>
+        <textarea name="external_value" id="external_value">{{external_value}}</textarea>
+      </div>
+      <div>
+        <label for="internal_value">Internal-only value:</label><br>
+        <textarea name="internal_value" id="internal_value">{{internal_value}}</textarea>
+      </div>
+      <input type="hidden" name="key" value="{{key}}">
+      {{xsrf_input | safe}}
+      <input type="submit" value="Submit">
+    </form>
+  {% else %}
+    <h2>Keys</h2>
+    <h3>Non-namespaced</h3>
+    <ul>
+      <li><a href="?key=internal_domain_key">internal_domain_key</a>:
+        The domain of users belong to to view internal data.</li>
+      <li><a href="?key=ip_whitelist">ip_whitelist</a>:
+        List of allowed sender IP addresses.</li>
+      <li><a href="?key=project_id">project_id</a>:
+        Project ID used for ticking custom metrics.</li>
+      <li><a href="?key=sheriff_domains_key">sheriff_domains_key</a>:
+        The domains of users who can triage alerts.</li>
+      <li><a href="?key=pinpoint_repo_exclusions">pinpoint_repo_exclusions</a>
+        Pinpoint: Configurations for which repositories to ignore when bisecting.</li>
+      <li><a href="?key=buganizer_projects">projects_migrated_to_buganizer</a>:
+        Perf Issue Service: Projects which have been migrated from Monorail to Buganizer.</li>
+    </ul>
+    <h3>Namespaced</h3>
+    <ul>
+      <li><a href="?key=bisect_bot_map">bisect_bot_map</a>:
+        Association between bot names and bisect bot names.</li>
+      <li><a href="?key=bisect_builder_types">bisect_builder_types</a>:
+        Map of master names to bisect "test types".</li>
+      <li><a href="?key=bot_browser_map">bot_browser_map</a>:
+        Browsers to use for Telemetry. Uses a prefix match.</li>
+      <li><a href="?key=file_bug_bisect_blacklist">file_bug_bisect_blacklist</a>:
+        Pinpoint: Masters that should not have bisects automatically started when bugs are filed.
+      <li><a href="?key=master_try_server_map">master_try_server_map</a>:
+        Try servers to use for bisect jobs.</li>
+      <li><a href="?key=revision_info">revision_info</a>:
+        Repository names and change log viewers.</li>
+      <li><a href="?key=repositories">repositories</a>:
+        Pinpoint: Details about known repositories.</li>
+      <li><a href="?key=repository_urls_to_names">repository_urls_to_names</a>:
+        Pinpoint: Map of repository URLs to their short names. If a repository has moved locations, both the old and new URLs should map to the same name.</li>
+      <li><a href="?key=bot_configurations">bot_configurations</a>:
+        Pinpoint: Details about known bots.</li>
+    </ul>
+  {% endif %}
+</body>
+</html>

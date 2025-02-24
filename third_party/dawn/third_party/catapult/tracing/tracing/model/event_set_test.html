@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newModel = tr.c.TestUtils.newModel;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('eventSetObject', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 5, {}, 1));
+
+    const eventSet = new tr.model.EventSet();
+    eventSet.push(t1.sliceGroup.slices[0]);
+
+    assert.strictEqual(eventSet.bounds.min, 1);
+    assert.strictEqual(eventSet.bounds.max, 4);
+    assert.deepEqual(eventSet.asSet(), new tr.model.EventSet(
+        t1.sliceGroup.slices[0]).asSet());
+
+    eventSet.push(t1.sliceGroup.slices[1]);
+    assert.strictEqual(eventSet.bounds.min, 1);
+    assert.strictEqual(eventSet.bounds.max, 6);
+    assert.deepEqual(eventSet.asSet(), new tr.model.EventSet(
+        [t1.sliceGroup.slices[0], t1.sliceGroup.slices[1]]).asSet());
+
+    eventSet.clear();
+    assert.strictEqual(eventSet.length, 0);
+  });
+
+  test('push_noEvents', function() {
+    const eventSet = new tr.model.EventSet();
+    eventSet.push();
+    assert.strictEqual(eventSet.length, 0);
+  });
+
+  test('push_oneEvent', function() {
+    const eventSet = new tr.model.EventSet();
+    eventSet.push({guid: 1});
+    assert.strictEqual(eventSet.length, 1);
+  });
+
+  test('push_multipleEvents', function() {
+    const eventSet = new tr.model.EventSet();
+    eventSet.push({guid: 1}, {guid: 2}, {guid: 3});
+    assert.strictEqual(eventSet.length, 3);
+  });
+
+  test('push_multiplePushes', function() {
+    const eventSet = new tr.model.EventSet();
+    eventSet.push({guid: 1}, {guid: 2}, {guid: 3});
+    eventSet.push({guid: 4}, {guid: 5}, {guid: 6});
+    assert.strictEqual(eventSet.length, 6);
+  });
+
+  test('push_noGuidThrows', function() {
+    const eventSet = new tr.model.EventSet();
+    assert.throws(() => eventSet.push({guid: 1}, {badItem: 2}, {guid: 3}),
+        'Event must have a GUID');
+  });
+
+  test('iteration', function() {
+    const eventSet = new tr.model.EventSet([{guid: 1}, {guid: 2}, {guid: 3}]);
+
+    let expectedId = 1;
+    for (const event of eventSet) {
+      assert.strictEqual(event.guid, expectedId++);
+    }
+  });
+
+  test('uniqueContents', function() {
+    const sample1 = {guid: 1};
+    const sample2 = {guid: 2};
+
+    const eventSet = new tr.model.EventSet();
+
+    eventSet.push(sample1);
+    eventSet.push(sample2);
+    assert.strictEqual(eventSet.length, 2);
+
+    eventSet.push(sample1);
+    assert.strictEqual(eventSet.length, 2);
+  });
+
+  test('userFriendlyNameSingular', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    const selection = new tr.model.EventSet(t1.sliceGroup.slices[0]);
+    assert.isDefined(selection.userFriendlyName);
+  });
+
+  test('userFriendlyNamePlural', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3));
+    const eventSet = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1]
+    ]);
+    assert.isDefined(eventSet.userFriendlyName);
+  });
+
+  test('userFriendlyNameMixedPlural', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3));
+
+    const i10 = new tr.model.ObjectInstance(
+        {}, '0x1000', 'cat', 'name', 10);
+    const s10 = i10.addSnapshot(10, {foo: 1});
+
+    const eventSet = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      s10
+    ]);
+    assert.isDefined(eventSet.userFriendlyName);
+  });
+
+  test('groupEventsByTitle', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'b', 0, 3, {}, 3));
+    const eventSet = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[2]
+    ]);
+
+    const eventsByTitle = eventSet.getEventsOrganizedByTitle();
+    assert.strictEqual(2, Object.keys(eventsByTitle).length);
+    assert.sameMembers(eventsByTitle.a.toArray(),
+        [t1.sliceGroup.slices[0], t1.sliceGroup.slices[1]]);
+    assert.sameMembers(eventsByTitle.b.toArray(),
+        [t1.sliceGroup.slices[2]]);
+  });
+
+  test('groupEventsByCallback', function() {
+    const a1 = new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3);
+    const a2 = new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3);
+    const b1 = new tr.model.ThreadSlice('', 'b', 0, 1, {}, 3);
+    const eventSet = new tr.model.EventSet([a1, a2, b1]);
+    function getEventKey(event) {
+      return 's' + event.start;
+    }
+    const eventsByCallback = eventSet.getEventsOrganizedByCallback(getEventKey);
+    assert.strictEqual(2, Object.keys(eventsByCallback).length);
+    assert.sameMembers(eventsByCallback.s1.toArray(), [a1, b1]);
+    assert.sameMembers(eventsByCallback.s2.toArray(), [a2]);
+  });
+
+  test('groupEventsByBaseType', function() {
+    const a = new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3);
+    const b = new tr.model.ThreadSlice('', 'b', 0, 1, {}, 3);
+    const c = new tr.model.AsyncSlice('', 'c', 0, 1, {}, 3);
+    const eventSet = new tr.model.EventSet([a, b, c]);
+    let eventsByBaseType = eventSet.getEventsOrganizedByBaseType(true);
+    assert.strictEqual(2, Object.keys(eventsByBaseType).length);
+    assert.sameMembers(eventsByBaseType.slice.toArray(), [a, b]);
+    assert.sameMembers(eventsByBaseType.asyncSlice.toArray(), [c]);
+
+    eventsByBaseType = eventSet.getEventsOrganizedByBaseType(false);
+    assert.isTrue(2 < Object.keys(eventsByBaseType).length);
+    assert.sameMembers(eventsByBaseType.slice.toArray(), [a, b]);
+    assert.sameMembers(eventsByBaseType.asyncSlice.toArray(), [c]);
+    for (const baseType in eventsByBaseType) {
+      if (baseType !== 'slice' && baseType !== 'asyncSlice') {
+        assert.strictEqual(0, eventsByBaseType[baseType].length);
+      }
+    }
+  });
+
+  test('intersectionIsEmpty1', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'b', 0, 3, {}, 3));
+
+    const set1 = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[2]
+    ]);
+    const set2 = new tr.model.EventSet([
+      t1.sliceGroup.slices[2]
+    ]);
+    assert.isFalse(set1.intersectionIsEmpty(set2));
+  });
+
+  test('intersectionIsNonEmpty2', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 2, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'b', 0, 3, {}, 3));
+
+    const set1 = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1]
+    ]);
+    const set2 = new tr.model.EventSet([
+      t1.sliceGroup.slices[2]
+    ]);
+    assert.isTrue(set1.intersectionIsEmpty(set2));
+  });
+
+  test('equals', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'b', 0, 2, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'c', 0, 3, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'd', 0, 4, {}, 5));
+
+    const eventSet1 = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[2]
+    ]);
+    const eventSet2 = new tr.model.EventSet([
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[2]
+    ]);
+    const eventSet3 = new tr.model.EventSet([
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[3]
+    ]);
+    const eventSet4 = new tr.model.EventSet([
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[0]
+    ]);
+    assert.isTrue(eventSet1.equals(eventSet2));
+    assert.isFalse(eventSet1.equals(eventSet3));
+    assert.isFalse(eventSet1.equals(eventSet4));
+  });
+
+  test('filter', function() {
+    const m = newModel(function(m) {
+      const p = m.getOrCreateProcess(1);
+      const t = p.getOrCreateThread(1);
+
+      m.s0 = t.sliceGroup.pushSlice(newSliceEx(
+          { title: 's0', start: 0.0, duration: 1.0 }));
+      m.s1 = t.sliceGroup.pushSlice(newSliceEx(
+          { title: 's1', start: 0.0, duration: 1.0 }));
+      m.s2 = t.sliceGroup.pushSlice(newSliceEx(
+          { title: 's2', start: 0.0, duration: 1.0 }));
+
+      m.eventSet = new tr.model.EventSet([m.s0, m.s1, m.s2]);
+    });
+
+    const res = m.eventSet.filter(function(slice) {
+      return slice.title === 's0';
+    });
+
+    assert.isTrue(res.equals(new tr.model.EventSet([m.s0])));
+  });
+
+  test('toArray', function() {
+    const samples = [
+      {guid: 1},
+      {guid: 2}
+    ];
+    const eventSet = new tr.model.EventSet(samples);
+
+    assert.deepEqual(eventSet.toArray(), samples);
+  });
+
+  test('asDict', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'a', 0, 1, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'b', 0, 2, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'c', 0, 3, {}, 3));
+    t1.sliceGroup.pushSlice(
+        new tr.model.ThreadSlice('', 'd', 0, 4, {}, 5));
+
+    const eventSet = new tr.model.EventSet([
+      t1.sliceGroup.slices[0],
+      t1.sliceGroup.slices[1],
+      t1.sliceGroup.slices[2]
+    ]);
+
+    assert.deepEqual(
+        {'events':
+            ['1.1.SliceGroup.0', '1.1.SliceGroup.1', '1.1.SliceGroup.2']},
+        eventSet.asDict());
+  });
+
+  test('immutableEmptySet', function() {
+    const s = tr.model.EventSet.IMMUTABLE_EMPTY_SET;
+    assert.lengthOf(s, 0);
+    assert.isTrue(s.bounds.isEmpty);
+
+    // Check that the iteration methods still work correctly.
+    function throwOnCall() {
+      throw new Error('This function should never be called!!!');
+    }
+    assert.deepEqual(s.map(throwOnCall), []);
+    s.forEach(throwOnCall);
+
+    // Check that the set is indeed immutable.
+    assert.throws(function() { s[0] = b; });
+    assert.throws(function() { s.push(b); });
+    assert.throws(function() { s.addEventSet(new tr.model.EventSet()); });
+  });
+});
+</script>

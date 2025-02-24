@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/single_async_slice_sub_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newAsyncSliceEx = tr.c.TestUtils.newAsyncSliceEx;
+
+  test('instantiate', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.asyncSliceGroup.push(newAsyncSliceEx({
+      id: 31415,
+      title: 'a',
+      start: 10,
+      duration: 20,
+      startThread: t1,
+      endThread: t1
+    }));
+
+    const selection = new tr.model.EventSet();
+    selection.push(t1.asyncSliceGroup.slices[0]);
+
+    const viewEl = document.createElement(
+        'tr-ui-a-single-async-slice-sub-view');
+    viewEl.selection = selection;
+    this.addHTMLOutput(viewEl);
+  });
+});
+</script>

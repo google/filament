@@ -1,0 +1,31 @@
+===========
+boto v2.2.2
+===========
+
+The 2.2.2 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can view a list of issues that have been closed in this release at
+https://github.com/boto/boto/issues?milestone=8&state=closed.
+
+You can get a comprehensive list of all commits made between the 2.2.1 release
+and the 2.2.2 release at https://github.com/boto/boto/compare/2.2.1...2.2.2.
+
+This is a bugfix release.
+
+There were 71 commits in this release from 11 different authors.  The authors
+are listed below, in no particular order:
+
+* aficionado
+* jimbrowne
+* rdodev
+* milancermak
+* garnaat
+* kopertop
+* samuraisam
+* tpodowd
+* psa
+* mfschwartz
+* gtaylor
+

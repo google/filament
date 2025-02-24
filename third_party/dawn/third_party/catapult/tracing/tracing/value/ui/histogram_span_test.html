@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/assert_utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/ui/histogram_span.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('basic', function() {
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber);
+    h.addSample(-1, {foo: new tr.v.d.GenericSet(['a'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(0, {foo: new tr.v.d.GenericSet(['c'])});
+    h.addSample(500, {foo: new tr.v.d.GenericSet(['c'])});
+    h.addSample(999, {foo: new tr.v.d.GenericSet(['d'])});
+    h.addSample(1000, {foo: new tr.v.d.GenericSet(['d'])});
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+  });
+
+  test('emptyHistogram', function() {
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber);
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+  });
+
+  test('viewBrushedBinRange', async function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(tr.v.Histogram.create('a', tr.b.Unit.byName.count,
+        [0, 1, 2, 3, 4].map(value => {
+          return {value, diagnostics: new Map([
+            ['i', new tr.v.d.GenericSet([value])]])};
+        })));
+    assert.isTrue(span.viewState.brushedBinRange.isEmpty);
+
+    await span.viewState.update({
+      brushedBinRange: tr.b.math.Range.fromExplicitRange(5, 10),
+    });
+    const chart = tr.ui.b.findDeepElementMatchingPredicate(
+        span, e => e.tagName === 'svg');
+    assert.strictEqual(5, chart.brushedRange.min);
+    assert.strictEqual(10, chart.brushedRange.max);
+  });
+
+  test('controlBrushedBinRange', async function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(tr.v.Histogram.create('a', tr.b.Unit.byName.count,
+        [0, 1, 2, 3, 4]));
+    assert.isTrue(span.viewState.brushedBinRange.isEmpty);
+
+    span.onMouseDown_({
+      stopPropagation: () => undefined,
+      y: 21,
+    });
+    span.onMouseUp_({
+      stopPropagation: () => undefined,
+      y: 0,
+    });
+    tr.b.assertRangeEquals(span.viewState.brushedBinRange,
+        tr.b.math.Range.fromExplicitRange(0, 22));
+  });
+
+  test('viewMergeSampleDiagnostics', async function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    const samples = [];
+    for (let i = 0; i < 5; ++i) {
+      samples.push({
+        value: i,
+        diagnostics: {
+          breakdown: tr.v.d.Breakdown.fromDict({
+            values: {
+              a: 5 - i,
+              b: i + 5,
+              c: i,
+            },
+          }),
+        },
+      });
+    }
+    span.build(tr.v.Histogram.create('', tr.b.Unit.byName.count, samples));
+    await span.viewState.update({brushedBinRange:
+      tr.b.math.Range.fromExplicitRange(0, 10)});
+    const merge = tr.ui.b.findDeepElementMatchingPredicate(span, e =>
+      e.id === 'merge_sample_diagnostics');
+    assert.isTrue(merge.checked);
+
+    await span.viewState.update({mergeSampleDiagnostics: false});
+    assert.isFalse(merge.checked);
+
+    await span.viewState.update({mergeSampleDiagnostics: true});
+    assert.isTrue(merge.checked);
+  });
+
+  test('controlMergeSampleDiagnostics', async function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    const samples = [];
+    for (let i = 0; i < 5; ++i) {
+      samples.push({
+        value: i,
+        diagnostics: {
+          breakdown: tr.v.d.Breakdown.fromDict({
+            values: {
+              a: 5 - i,
+              b: i + 5,
+              c: i,
+            },
+          }),
+        },
+      });
+    }
+    span.build(tr.v.Histogram.create('', tr.b.Unit.byName.count, samples));
+    await span.viewState.update({brushedBinRange:
+      tr.b.math.Range.fromExplicitRange(0, 10)});
+    const merge = tr.ui.b.findDeepElementMatchingPredicate(span, e =>
+      e.id === 'merge_sample_diagnostics');
+    assert.isTrue(merge.checked);
+
+    merge.click();
+    assert.isFalse(span.viewState.mergeSampleDiagnostics);
+
+    merge.click();
+    assert.isTrue(span.viewState.mergeSampleDiagnostics);
+  });
+
+  test('mergeSampleDiagnostics', async function() {
+    // Add several samples with sample diagnostics to a Histogram, brush all of
+    // the bins, test that the sample diagnostics are merged.
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.normalizedPercentage);
+    h.addSample(0.1, {foo: tr.v.d.Breakdown.fromDict({values: {a: 1, b: 2}})});
+    h.addSample(0.3, {foo: tr.v.d.Breakdown.fromDict({values: {a: 3, b: 4}})});
+    h.addSample(0.5, {foo: tr.v.d.Breakdown.fromDict({values: {a: 5, b: 6}})});
+    h.addSample(0.7, {foo: tr.v.d.Breakdown.fromDict({values: {a: 7, b: 8}})});
+    h.addSample(0.9, {foo: tr.v.d.Breakdown.fromDict({values: {a: 9, b: 10}})});
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+    await span.viewState.update({
+      brushedBinRange: tr.b.math.Range.fromExplicitRange(0, h.allBins.length)});
+    let breakdowns = tr.ui.b.findDeepElementsMatchingPredicate(
+        span, e => e.tagName === 'TR-V-UI-BREAKDOWN-SPAN');
+    assert.lengthOf(breakdowns, 1);
+
+    const merge = tr.ui.b.findDeepElementMatchingPredicate(
+        span, e => e.id === 'merge_sample_diagnostics');
+    merge.click();
+    breakdowns = tr.ui.b.findDeepElementsMatchingPredicate(
+        span, e => e.tagName === 'TR-V-UI-BREAKDOWN-SPAN');
+    assert.lengthOf(breakdowns, 5);
+  });
+
+  test('cannotMergeSampleDiagnostics', async function() {
+    // Add several samples with sample diagnostics to a Histogram, brush all of
+    // the bins, test that the sample diagnostics are not merged.
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.normalizedPercentage);
+    h.addSample(0.1, {foo: tr.v.d.Breakdown.fromDict({values: {a: 1, b: 2}})});
+    h.addSample(0.3, {foo: tr.v.d.Breakdown.fromDict({values: {a: 3, b: 4}})});
+    h.addSample(0.5, {foo: tr.v.d.Breakdown.fromDict({values: {a: 5, b: 6}})});
+    h.addSample(0.7, {foo: tr.v.d.Breakdown.fromDict({values: {a: 7, b: 8}})});
+    h.addSample(0.9, {foo: tr.v.d.Breakdown.fromDict({values: {a: 9, b: 10}})});
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    span.canMergeSampleDiagnostics = false;
+    this.addHTMLOutput(span);
+    span.build(h);
+    await span.viewState.update({
+      brushedBinRange: tr.b.math.Range.fromExplicitRange(0, h.allBins.length)});
+    const breakdowns = tr.ui.b.findDeepElementsMatchingPredicate(
+        span, e => e.tagName === 'TR-V-UI-BREAKDOWN-SPAN');
+    assert.lengthOf(breakdowns, 5);
+  });
+
+  test('singleSample', function() {
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber);
+    h.addSample(100, {
+      sample_diagnostic_0: new tr.v.d.GenericSet(['foo']),
+      sample_diagnostic_1: new tr.v.d.GenericSet(['bar']),
+    });
+    h.diagnostics.set('histogram diagnostic 0', new tr.v.d.GenericSet(['baz']));
+    h.diagnostics.set('histogram diagnostic 1', new tr.v.d.GenericSet(['qux']));
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+  });
+
+  test('nans', function() {
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber);
+    h.addSample(undefined, {foo: new tr.v.d.GenericSet(['b'])});
+    h.addSample(NaN, {foo: new tr.v.d.GenericSet(['c'])});
+    h.customizeSummaryOptions({nans: true});
+
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+  });
+
+  test('singleBin', function() {
+    const h = new tr.v.Histogram('', tr.b.Unit.byName.unitlessNumber,
+        tr.v.HistogramBinBoundaries.SINGULAR);
+    h.addSample(0);
+    h.addSample(25);
+    h.addSample(100);
+    h.addSample(100);
+    h.addSample(25);
+    h.addSample(50);
+    h.addSample(75);
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(h);
+  });
+
+  test('referenceHistogram', function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    span.build(tr.v.Histogram.create('', tr.b.Unit.byName.count, [1, 10, 100], {
+      binBoundaries: tr.v.HistogramBinBoundaries.SINGULAR,
+    }), tr.v.Histogram.create('', tr.b.Unit.byName.count, [2, 20, 200], {
+      binBoundaries: tr.v.HistogramBinBoundaries.SINGULAR,
+    }));
+    this.addHTMLOutput(span);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('breakdownUnit', async function() {
+    const root = new tr.v.Histogram('root', tr.b.Unit.byName.sizeInBytes);
+    const sampleBreakdown = new tr.v.d.Breakdown();
+    sampleBreakdown.set('x', 30 << 20);
+    sampleBreakdown.set('y', 70 << 20);
+    root.addSample(100 << 20, {sampleBreakdown});
+    const rhb = new tr.v.d.RelatedNameMap();
+    root.diagnostics.set('rhb', rhb);
+    const aHist = new tr.v.Histogram('a', tr.b.Unit.byName.sizeInBytes);
+    rhb.set('a', aHist.name);
+    aHist.addSample(10 << 20);
+    const bHist = new tr.v.Histogram('b', tr.b.Unit.byName.sizeInBytes);
+    rhb.set('b', bHist.name);
+    bHist.addSample(90 << 20);
+    const span = document.createElement('tr-v-ui-histogram-span');
+    this.addHTMLOutput(span);
+    span.build(root);
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        span, e => e.textContent === '100.0 MiB'));
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        span, e => e.textContent === '30.0 MiB'));
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        span, e => e.textContent === '70.0 MiB'));
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('diagnosticsTabs', async function() {
+    const span = document.createElement('tr-v-ui-histogram-span');
+    span.build(tr.v.Histogram.create(
+        '', tr.b.Unit.byName.count, [
+          {value: 1, diagnostics: new Map([
+            ['sample diagnostic', new tr.v.d.GenericSet(['value1'])],
+          ])},
+          {value: 10, diagnostics: new Map([
+            ['sample diagnostic', new tr.v.d.GenericSet(['value10'])],
+          ])},
+        ], {
+          diagnostics: new Map([
+            [tr.v.d.RESERVED_NAMES.BENCHMARKS, new tr.v.d.GenericSet([
+              'system_health.common_desktop'])],
+          ]),
+        }));
+    this.addHTMLOutput(span);
+
+    const sample = tr.ui.b.findDeepElementMatching(
+        span, '#sample_diagnostics_container');
+    assert.strictEqual(span.rowState.diagnosticsTab, sample.tabLabel);
+    const tabs = tr.ui.b.findDeepElementMatching(
+        span, 'TR-UI-B-TAB-VIEW');
+    assert.strictEqual(tabs.selectedSubView, sample);
+
+    const metadata = tr.ui.b.findDeepElementMatching(
+        span, '#metadata_diagnostics');
+    await span.rowState.update({diagnosticsTab: metadata.tabLabel});
+    assert.strictEqual(tabs.selectedSubView, metadata);
+  });
+});
+</script>

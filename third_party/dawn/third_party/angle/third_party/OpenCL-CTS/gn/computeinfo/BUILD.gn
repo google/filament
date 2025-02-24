@@ -1,0 +1,17 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("computeinfo") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo/conforming_version.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo/device_uuid.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo/extended_versioning.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/computeinfo/pci_bus_info.cpp",
+  ]
+}

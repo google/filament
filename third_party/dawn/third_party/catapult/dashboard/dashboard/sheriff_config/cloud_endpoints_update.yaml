@@ -1,0 +1,12 @@
+timeout: 600s  # Wait for 10 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+steps:
+# We check in the target versions to avoid unintended traffic changes.
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Update Cloud Endpoints Configuration'
+  dir: 'dashboard/dashboard/sheriff_config'
+  args: [
+    'endpoints', 'services', 'deploy', 'openapi-appengine.yaml'
+  ]

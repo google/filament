@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.mre', function() {
+  const FunctionRegistry = {
+    allFunctions_: [],
+    allFunctionsByName_: {},
+    get allFunctions() { return this.allFunctions_; },
+    get allFunctionsByName() { return this.allFunctionsByName_; }
+  };
+
+  FunctionRegistry.getFunction = function(name) {
+    return this.allFunctionsByName_[name];
+  };
+
+  FunctionRegistry.register = function(func) {
+    if (func.name === '') {
+      throw new Error('Registered functions must not be anonymous');
+    }
+    if (this.allFunctionsByName[func.name] !== undefined) {
+      throw new Error('Function named ' + func.name + 'is already registered.');
+    }
+    this.allFunctionsByName[func.name] = func;
+    this.allFunctions.push(func);
+  };
+
+  function ModuleToLoad(href, filename) {
+    if ((href !== undefined) ? (filename !== undefined) :
+      (filename === undefined)) {
+      throw new Error('ModuleToLoad must specify exactly one of href or ' +
+                      'filename');
+    }
+    this.href = href;
+    this.filename = filename;
+  }
+
+  ModuleToLoad.prototype = {
+    asDict() {
+      if (this.href !== undefined) {
+        return {'href': this.href};
+      }
+      return {'filename': this.filename};
+    },
+
+    toString() {
+      if (this.href !== undefined) {
+        return 'ModuleToLoad(href="' + this.href + '")';
+      }
+      return 'ModuleToLoad(filename="' + this.filename + '")';
+    }
+  };
+
+  ModuleToLoad.fromDict = function(moduleDict) {
+    return new ModuleToLoad(moduleDict.href, moduleDict.filename);
+  };
+
+  function FunctionHandle(modulesToLoad, functionName, opt_options) {
+    if (!(modulesToLoad instanceof Array)) {
+      throw new Error('modulesToLoad in FunctionHandle must be an array');
+    }
+    if (typeof(functionName) !== 'string') {
+      throw new Error('functionName in FunctionHandle must be a string');
+    }
+    this.modulesToLoad = modulesToLoad;
+    this.functionName = functionName;
+    this.options_ = opt_options;
+  }
+
+  FunctionHandle.prototype = {
+    get options() {
+      return this.options_;
+    },
+
+    asDict() {
+      return {
+        'modules_to_load': this.modulesToLoad.map(
+            function(m) {return m.asDict();}),
+        'function_name': this.functionName,
+        'options': this.options_
+      };
+    },
+
+    asUserFriendlyString() {
+      const parts = this.modulesToLoad.map(mtl => mtl.filename);
+      parts.push(this.functionName);
+      parts.push(JSON.stringify(this.options_));
+      return parts.join(',');
+    },
+
+    hasHrefs() {
+      for (const module in this.modulesToLoad) {
+        if (this.modulesToLoad[module].href !== undefined) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    load() {
+      if (this.hasHrefs()) {
+        const err = new Error(
+            'FunctionHandle named ' + this.functionName +
+            ' specifies hrefs, which cannot be loaded.');
+        err.name = 'FunctionLoadingError';
+        throw err;
+      }
+
+      for (const module in this.modulesToLoad) {
+        const filename = this.modulesToLoad[module].filename;
+        try {
+          HTMLImportsLoader.loadHTMLFile(filename);
+        } catch (err) {
+          err.name = 'FunctionLoadingError';
+          throw err;
+        }
+      }
+
+      const func = FunctionRegistry.getFunction(this.functionName);
+      if (func === undefined) {
+        const err = new Error(
+            'No registered function named ' + this.functionName);
+        err.name = 'FunctionNotDefinedError';
+        throw err;
+      }
+
+      return func;
+    },
+
+    toString() {
+      const modulesToLoadStr = this.modulesToLoad.map(function(module) {
+        return module.toString();
+      });
+      return 'FunctionHandle(modulesToLoad=[' + modulesToLoadStr + '], ' +
+          'functionName="' + this.functionName + '", options="' +
+          JSON.stringify(this.options_) + '")';
+    }
+  };
+
+  FunctionHandle.loadFromFilename_ = function(filename) {
+    try {
+      const numFunctionsBefore = FunctionRegistry.allFunctions.length;
+      HTMLImportsLoader.loadHTMLFile(filename);
+    } catch (err) {
+      err.name = 'FunctionLoadingError';
+      throw err;
+    }
+
+    // Verify a new function was registered.
+    const numFunctionsNow = FunctionRegistry.allFunctions.length;
+    if (numFunctionsNow !== (numFunctionsBefore + 1)) {
+      const err = new Error(
+          filename + ' didn\'t call FunctionRegistry.register');
+      err.name = 'FunctionNotDefinedError';
+      throw err;
+    }
+
+    return FunctionRegistry.allFunctions[numFunctionsNow - 1];
+  };
+
+  FunctionHandle.fromDict = function(handleDict) {
+    const options = handleDict.options;
+    let modulesToLoad;
+    if (handleDict.modules_to_load !== undefined) {
+      modulesToLoad = handleDict.modules_to_load.map(function(module) {
+        return ModuleToLoad.fromDict(module);
+      });
+    }
+    return new FunctionHandle(modulesToLoad, handleDict.function_name, options);
+  };
+
+  return {
+    FunctionHandle,
+    ModuleToLoad,
+    FunctionRegistry,
+  };
+});
+</script>

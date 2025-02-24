@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_link.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_event_sub_view.html">
+
+<dom-module id="tr-ui-a-single-flow-event-sub-view">
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    </style>
+    <tr-ui-a-single-event-sub-view id="singleEventSubView">
+    </tr-ui-a-single-event-sub-view>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+function createAnalysisLinkTo(event) {
+  const linkEl = document.createElement('tr-ui-a-analysis-link');
+  linkEl.setSelectionAndContent(
+      new tr.model.EventSet(event), event.userFriendlyName);
+  return linkEl;
+}
+
+Polymer({
+  is: 'tr-ui-a-single-flow-event-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  listeners: {
+    'singleEventSubView.customize-rows': 'onCustomizeRows_'
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.$.singleEventSubView.setSelectionWithoutErrorChecks(selection);
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  /**
+   * Event handler for an event that's fired after the single event sub view has
+   * finished row construction. This hook gives us the opportunity to customize
+   * the rows present in the sub view.
+   */
+  onCustomizeRows_(e) {
+    const event = tr.b.getOnlyElement(this.currentSelection_);
+    const rows = e.rows;
+
+    rows.unshift({
+      name: 'ID',
+      value: event.id
+    });
+    rows.push({
+      name: 'From',
+      value: createAnalysisLinkTo(event.startSlice)
+    });
+    rows.push({
+      name: 'To',
+      value: createAnalysisLinkTo(event.endSlice)
+    });
+  }
+});
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-flow-event-sub-view',
+    tr.model.FlowEvent,
+    {
+      multi: false,
+      title: 'Flow Event',
+    });
+</script>

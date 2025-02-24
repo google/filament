@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/ui/base/line_chart.html">
+<link rel="import" href="/tracing/ui/base/name_column_chart.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const LineChart = tr.ui.b.LineChart;
+
+  // @constructor
+  const NameLineChart = tr.ui.b.define('name-line-chart', LineChart);
+
+  NameLineChart.prototype = {
+    __proto__: LineChart.prototype,
+
+    getXForDatum_(datum, index) {
+      return index;
+    },
+
+    get xAxisHeight() {
+      // Add 5px for descenders because SVG draws text baselines at the
+      // specified y-coordinate.
+      return 5 + (this.textHeightPx_ * this.data_.length);
+    },
+
+    get xAxisTickOffset() {
+      return 0;
+    },
+
+    updateMargins_() {
+      tr.ui.b.NameColumnChart.prototype.updateMargins_.call(this);
+    },
+
+    updateXAxis_(xAxis) {
+      xAxis.selectAll('*').remove();
+      if (this.hideXAxis) return;
+
+      tr.ui.b.NameColumnChart.prototype.updateXAxis_.call(this, xAxis);
+
+      const baseline = xAxis.selectAll('path').data([this]);
+      baseline.enter().append('line')
+          .attr('stroke', 'black')
+          .attr('x1', this.xScale_(0))
+          .attr('x2', this.xScale_(this.data_.length - 1))
+          .attr('y1', this.graphHeight)
+          .attr('y2', this.graphHeight);
+      baseline.exit().remove();
+    }
+  };
+
+  return {
+    NameLineChart,
+  };
+});
+</script>

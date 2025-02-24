@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel_registry.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SidePanelRegistry = tr.ui.side_panel.SidePanelRegistry;
+
+  const testOptions = {
+    setUp() {
+      SidePanelRegistry.pushCleanStateBeforeTest();
+    },
+
+    tearDown() {
+      SidePanelRegistry.popCleanStateAfterTest();
+    },
+  };
+
+  test('register', function() {
+    SidePanelRegistry.register(function() {
+      return document.createElement('div');
+    });
+    SidePanelRegistry.register(function() {
+      return document.createElement('span');
+    });
+
+    const typeInfos = SidePanelRegistry.getAllRegisteredTypeInfos();
+    assert.strictEqual(typeInfos[0].constructor().tagName, 'DIV');
+    assert.strictEqual(typeInfos[1].constructor().tagName, 'SPAN');
+    assert.lengthOf(typeInfos, 2);
+  }, testOptions);
+});
+</script>

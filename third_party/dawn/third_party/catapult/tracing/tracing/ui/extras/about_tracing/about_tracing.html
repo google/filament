@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/webcomponentsjs_polyfill.html" data-suppress-import-order>
+<link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+<link rel="stylesheet" href="/tracing/ui/extras/about_tracing/common.css">
+<link rel="import" href="/tracing/ui/extras/about_tracing/profiling_view.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  window.profilingView = undefined;  // Made global for debugging purposes only.
+
+  document.addEventListener('DOMContentLoaded', function() {
+    window.profilingView = new tr.ui.e.about_tracing.ProfilingView();
+    profilingView.timelineView.globalMode = true;
+    Polymer.dom(document.body).appendChild(profilingView);
+  });
+
+  return {};
+});
+</script>

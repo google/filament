@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/single_event_sub_view.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const Thread = tr.model.Thread;
+  const EventSet = tr.model.EventSet;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  function createSelection(customizeThreadCallback) {
+    const model = tr.c.TestUtils.newModelWithEvents([], {
+      customizeModelCallback(model) {
+        const t53 = model.getOrCreateProcess(52).getOrCreateThread(53);
+        customizeThreadCallback(t53, model);
+      }
+    });
+
+    const t53 = model.processes[52].threads[53];
+    const t53track = {};
+    t53track.thread = t53;
+
+    const selection = new EventSet();
+    selection.push(t53.sliceGroup.slices[0]);
+    assert.strictEqual(selection.length, 1);
+
+    return selection;
+  }
+
+  function createSelectionWithSingleSlice(opt_options) {
+    const options = opt_options || {};
+    return createSelection(function(t53, model) {
+      let fA;
+      let fB;
+      if (options.withStartStackFrame || options.withEndStackFrame) {
+        fA = tr.c.TestUtils.newStackTrace(model, ['a1', 'a2']);
+        fB = tr.c.TestUtils.newStackTrace(model, ['b1', 'b2']);
+      }
+
+      const slice = newSliceEx({title: 'b', start: 0, duration: 0.002});
+      slice.category = options.withCategory ? 'foo' : '';
+
+      if (options.withStartStackFrame) {
+        slice.startStackFrame = options.withStartStackFrame === 'a' ? fA : fB;
+      }
+
+      if (options.withEndStackFrame) {
+        slice.endStackFrame = options.withEndStackFrame === 'a' ? fA : fB;
+      }
+
+      t53.sliceGroup.pushSlice(slice);
+    });
+  }
+
+  test('instantiate_withSingleSlice', function() {
+    const selection = createSelectionWithSingleSlice();
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+  });
+
+  test('alerts', function() {
+    const slice = newSliceEx({title: 'b', start: 0, duration: 0.002});
+
+    const ALERT_INFO_1 = new tr.model.EventInfo(
+        'Alert 1', 'Critical alert');
+
+    const alert = new tr.model.Alert(ALERT_INFO_1, 5, [slice]);
+
+    const selection = new EventSet();
+    selection.push(slice);
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+  });
+
+  test('instantiate_withSingleSliceWithArg', function() {
+    const selection = createSelection(function(t53) {
+      const slice = newSliceEx({title: 'my_slice', start: 0, duration: 1.0});
+      slice.args = {
+        'complex': {
+          'b': '2 as a string',
+          'c': [3, 4, 5]
+        }
+      };
+      t53.sliceGroup.pushSlice(slice);
+    });
+
+    const subView = document.createElement('tr-ui-a-single-event-sub-view');
+    subView.selection = selection;
+    this.addHTMLOutput(subView);
+
+    const gov = tr.ui.b.findDeepElementMatching(subView,
+        'tr-ui-a-generic-object-view');
+    assert.isDefined(gov);
+  });
+
+
+  test('instantiate_withSingleSliceCategory', function() {
+    const selection = createSelectionWithSingleSlice({withCategory: true});
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+  });
+
+  test('instantiate_withSingleStartStackFrame', function() {
+    const selection = createSelectionWithSingleSlice(
+        {withStartStackFrame: 'a'});
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+
+    const e = tr.ui.b.findDeepElementWithTextContent(
+        analysisEl, /Start Stack Trace/);
+    assert.isDefined(e);
+    assert.isDefined(Polymer.dom(e).nextSibling.children[0].stackFrame);
+  });
+
+  test('instantiate_withSingleEndStackFrame', function() {
+    const selection = createSelectionWithSingleSlice(
+        {withEndStackFrame: 'b'});
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+
+    const e = tr.ui.b.findDeepElementWithTextContent(
+        analysisEl, /End Stack Trace/);
+    assert.isDefined(e);
+    assert.isDefined(Polymer.dom(e).nextSibling.children[0].stackFrame);
+    assert.strictEqual(
+        Polymer.dom(e).nextSibling.children[0].stackFrame.title, 'b2');
+  });
+
+  test('instantiate_withDifferentStartAndEndStackFrames', function() {
+    const selection = createSelectionWithSingleSlice(
+        {withStartStackFrame: 'a',
+          withEndStackFrame: 'b'});
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+
+    const eA = tr.ui.b.findDeepElementWithTextContent(
+        analysisEl, /Start Stack Trace/);
+    assert.isDefined(eA);
+    assert.isDefined(Polymer.dom(eA).nextSibling.children[0].stackFrame);
+    assert.strictEqual(
+        Polymer.dom(eA).nextSibling.children[0].stackFrame.title, 'a2');
+
+    const eB = tr.ui.b.findDeepElementWithTextContent(
+        analysisEl, /End Stack Trace/);
+    assert.isDefined(eB);
+    assert.isDefined(Polymer.dom(eB).nextSibling.children[0].stackFrame);
+    assert.strictEqual(
+        Polymer.dom(eB).nextSibling.children[0].stackFrame.title, 'b2');
+  });
+
+  test('instantiate_withSameStartAndEndStackFrames', function() {
+    const selection = createSelectionWithSingleSlice(
+        {withStartStackFrame: 'a',
+          withEndStackFrame: 'a'});
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+
+    const e = tr.ui.b.findDeepElementWithTextContent(
+        analysisEl, /Start\+End Stack Trace/);
+    assert.isDefined(e);
+    assert.isDefined(Polymer.dom(e).nextSibling.children[0].stackFrame);
+    assert.strictEqual(
+        Polymer.dom(e).nextSibling.children[0].stackFrame.title, 'a2');
+  });
+
+  test('analyzeSelectionWithSingleSlice', function() {
+    const selection = createSelectionWithSingleSlice();
+    const subView = document.createElement('tr-ui-a-single-event-sub-view');
+    subView.selection = selection;
+    this.addHTMLOutput(subView);
+
+    const table = tr.ui.b.findDeepElementMatching(
+        subView, 'tr-ui-b-table');
+    assert.strictEqual(table.tableRows.length, 3);
+    if (tr.isExported('tr-ui-e-chrome-codesearch')) {
+      assert.strictEqual(table.tableRows[0].value.innerText, 'b');
+    } else {
+      assert.strictEqual(table.tableRows[0].value, 'b');
+    }
+    assert.strictEqual(table.tableRows[1].value.value, 0);
+    assert.strictEqual(table.tableRows[1].value.unit,
+        tr.b.Unit.byName.timeStampInMs);
+    assert.strictEqual(table.tableRows[2].value.value, 0.002);
+    assert.strictEqual(table.tableRows[2].value.unit,
+        tr.b.Unit.byName.timeDurationInMs);
+  });
+
+  test('analyzeSelectionWithSingleSliceCategory', function() {
+    const selection = createSelectionWithSingleSlice({withCategory: true});
+
+    const subView = document.createElement('tr-ui-a-single-event-sub-view');
+    subView.selection = selection;
+    this.addHTMLOutput(subView);
+
+    const table = tr.ui.b.findDeepElementMatching(
+        subView, 'tr-ui-b-table');
+    assert.strictEqual(table.tableRows.length, 4);
+    if (tr.isExported('tr-ui-e-chrome-codesearch')) {
+      assert.strictEqual(table.tableRows[0].value.innerText, 'b');
+    } else {
+      assert.strictEqual(table.tableRows[0].value, 'b');
+    }
+    assert.strictEqual(table.tableRows[1].value, 'foo');
+    assert.strictEqual(table.tableRows[2].value.value, 0);
+    assert.strictEqual(table.tableRows[2].value.unit,
+        tr.b.Unit.byName.timeStampInMs);
+    assert.strictEqual(table.tableRows[3].value.value, 0.002);
+    assert.strictEqual(table.tableRows[3].value.unit,
+        tr.b.Unit.byName.timeDurationInMs);
+  });
+
+  test('instantiate_withSingleSliceContainingIDRef', function() {
+    const model = new Model();
+    const p1 = model.getOrCreateProcess(1);
+    const myObjectSlice = p1.objects.addSnapshot(
+        '0x1000', 'cat', 'my_object', 0);
+
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(newSliceEx({title: 'b', start: 0, duration: 2}));
+    t1.sliceGroup.slices[0].args.my_object = myObjectSlice;
+
+    const t1track = {};
+    t1track.thread = t1;
+
+    const selection = new EventSet();
+    selection.push(t1.sliceGroup.slices[0]);
+    assert.strictEqual(selection.length, 1);
+
+    const subView = document.createElement('tr-ui-a-single-event-sub-view');
+    subView.selection = selection;
+    this.addHTMLOutput(subView);
+
+    const analysisLink = tr.ui.b.findDeepElementMatching(subView,
+        'tr-ui-a-analysis-link');
+    assert.isDefined(analysisLink);
+  });
+
+  test('instantiate_withSingleSliceContainingInfo', function() {
+    const slice = newSliceEx({title: 'b', start: 0, duration: 1});
+    slice.info = new tr.model.EventInfo(
+        'Info title', 'Description');
+
+    const selection = new EventSet();
+    selection.push(slice);
+
+    const analysisEl = document.createElement('tr-ui-a-single-event-sub-view');
+    analysisEl.selection = selection;
+    this.addHTMLOutput(analysisEl);
+  });
+});
+</script>

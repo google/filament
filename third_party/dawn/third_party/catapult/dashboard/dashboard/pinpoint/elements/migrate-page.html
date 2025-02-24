@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/components/iron-form/iron-form.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-progress/paper-progress.html">
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/loading-wrapper.html">
+
+<dom-module id="migrate-page">
+  <template>
+    <style include="base-style">
+      h1 {
+        margin-bottom: 0.1em;
+      }
+
+      paper-button {
+        background-color: var(--paper-pink-a200);
+        color: white;
+        margin: 1em 0;
+      }
+
+      paper-progress {
+        --paper-progress-active-color: var(--paper-pink-a200);
+        width: 50%;
+      }
+
+      .paragraph {
+        margin: 1em 0 0.5em 0;
+      }
+
+      .emphasis {
+        color: var(--paper-indigo-500);
+        font-weight: bold;
+      }
+    </style>
+
+    <h1>Migrate jobs</h1>
+    <iron-ajax id="ajax" url="/api/migrate" headers=[[authHeaders]] last-response="{{status}}"></iron-ajax>
+    <loading-wrapper url="/api/migrate" headers=[[authHeaders]] response="{{status}}">
+      <template is="dom-if" if="[[status.started]]">
+        <p class="byline">
+          [[duration(status.started)]]<span class="middle-dot"></span>[[startTime(status.started)]]
+        <p class="paragraph">
+          Completed
+          <span class="emphasis">[[status.count]]</span>
+          out of
+          <span class="emphasis">[[status.total]]</span>
+          jobs.
+        </p>
+        <p class="paragraph">
+          So far, we've encountered
+          <span class="emphasis">[[status.errors]]</span> errors.
+        </p>
+        <paper-progress value="[[status.count]]" max="[[status.total]]"></paper-progress>
+      </template>
+      <template is="dom-if" if="[[!status.started]]">
+        <template is="dom-if" if="[[started]]">
+          <p class="paragraph">Migration completed.
+        </template>
+        <iron-form id="migrate_form" headers="[[authHeaders]]" on-iron-form-response="handleResponse">
+          <form action="/api/migrate" method="POST">
+            <paper-button raised on-tap="submit">Start</paper-button>
+          </form>
+        </iron-form>
+      </template>
+    </loading-wrapper>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'migrate-page',
+
+      properties: {
+        started: Boolean,
+        status: {
+          type: Object,
+          observer: '_statusChanged',
+        },
+      },
+
+      submit() {
+        // TODO: After Polymer 2.0, use:
+        // this.shadowRoot.getElementById('migrate_form').submit();
+        Polymer.dom(this.root).querySelector('#migrate_form').submit();
+      },
+
+      handleResponse(event) {
+        this.status = event.detail.response;
+      },
+
+      duration(startTime) {
+        const created = new Date(startTime + 'Z');
+        const updated = new Date();
+        const durationMs = updated - created;
+
+        const seconds = durationMs / 1000;
+        if (seconds < 60) {
+          return seconds.toFixed(1) + ' seconds';
+        }
+
+        const minutes = durationMs / (1000 * 60);
+        if (minutes < 60) {
+          return minutes.toFixed(1) + ' minutes';
+        }
+
+        const hours = durationMs / (1000 * 60 * 60);
+        return hours.toFixed(1) + ' hours';
+      },
+
+      startTime(startTime) {
+        return new Date(startTime + 'Z').toLocaleString();
+      },
+
+      _statusChanged() {
+        if (this.status && this.status.started) {
+          this.started = true;
+          this.async(() => this.$.ajax.generateRequest(), 5000);
+        }
+      },
+
+      selected() {
+        this.$$('loading-wrapper').$.request.generateRequest();
+      },
+    });
+  </script>
+</dom-module>

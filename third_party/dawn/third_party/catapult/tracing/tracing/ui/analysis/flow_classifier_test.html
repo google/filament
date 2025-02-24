@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/flow_classifier.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const newFlowEventEx = tr.c.TestUtils.newFlowEventEx;
+
+  test('basic', function() {
+    const a = newFlowEventEx({
+      title: 'a', start: 0, end: 10 });
+    const b = newFlowEventEx({
+      title: 'b', start: 10, end: 20 });
+    const c = newFlowEventEx({
+      title: 'c', start: 20, end: 25 });
+    const d = newFlowEventEx({
+      title: 'd', start: 30, end: 35 });
+
+    const fc = new tr.ui.analysis.FlowClassifier();
+    fc.addInFlow(a);
+
+    fc.addInFlow(b);
+    fc.addOutFlow(b);
+
+    fc.addInFlow(c);
+    fc.addOutFlow(c);
+
+    fc.addOutFlow(d);
+
+    function asSortedArray(selection) {
+      const events = Array.from(selection);
+      events.sort(function(a, b) {
+        return a.guid - b.guid;
+      });
+      return events;
+    }
+
+    assert.deepEqual(Array.from(fc.inFlowEvents), [a]);
+    assert.deepEqual(Array.from(fc.outFlowEvents), [d]);
+    assert.deepEqual(Array.from(fc.internalFlowEvents), [b, c]);
+  });
+});
+</script>

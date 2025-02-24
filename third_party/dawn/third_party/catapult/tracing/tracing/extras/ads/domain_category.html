@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.ads', function() {
+  function Rule(expr, category) {
+    this.expr = expr;
+    this.category = category;
+  }
+
+  const CATEGORY_ADS = 'Ads';
+  const CATEGORY_ANALYTICS = 'Analytics';
+  const CATEGORY_CONTENT_RECOMMENDATION = 'Content Recommendation';
+  const CATEGORY_EXTENSIONS = 'Extensions';
+  const CATEGORY_OTHER = 'Other';
+  const CATEGORY_SOCIAL = 'Social';
+  const CATEGORY_TRACING = 'Tracing';
+
+  // Each rule is a tuple of (RegEx, Category). The first match will be used.
+  // For now we only assign 1 category to a domain; it may make sense to
+  // generalize this later to labeling domains with several categories.
+  const CATEGORY_DOMAIN_RULES = [
+    new Rule(/\.googleadservices\.com$/, CATEGORY_ADS),
+    new Rule(/\.moatads\.com$/, CATEGORY_ANALYTICS),
+    // Yahoo-Bing Contextual Ads
+    new Rule(/contextual\.media\.net$/, CATEGORY_ADS),
+    new Rule(/\.postrelease\.com$/, CATEGORY_CONTENT_RECOMMENDATION),
+    new Rule(/\.burt\.io$/, CATEGORY_ANALYTICS),
+    // Google DoubleClick, GPT
+    new Rule(/\.googletagservices\.com$/, CATEGORY_ADS),
+    new Rule(/\.ensighten\.com$/, CATEGORY_ANALYTICS),
+    // Amazon CloudFront
+    new Rule(/\.cloudfront\.net$/, CATEGORY_ADS),
+    new Rule(/\.viafoura\.net$/, CATEGORY_ANALYTICS),
+    // Google Content Ads/DoubleClick
+    new Rule(/\.googlesyndication\.com$/, CATEGORY_ADS),
+    // Google DoubleClick
+    new Rule(/\.doubleclick\.net$/, CATEGORY_ADS),
+    // Adobe Analytics/TagManager
+    new Rule(/\.adobetag\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/\.rubiconproject\.com$/, CATEGORY_ADS),
+    new Rule(/\.sharethrough\.com$/, CATEGORY_ADS),
+    new Rule(/\.facebook\.net$/, CATEGORY_SOCIAL),
+    new Rule(/\.facebook\.com$/, CATEGORY_SOCIAL),
+    new Rule(/\.outbrain\.com$/, CATEGORY_CONTENT_RECOMMENDATION),
+    // Google Content Ads/Others
+    new Rule(/\.gstatic\.com$/, CATEGORY_ADS),
+    new Rule(/\.newrelic\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/\.newsinc\.com$/, CATEGORY_ADS),
+    new Rule(/\.spingo\.com$/, CATEGORY_CONTENT_RECOMMENDATION),
+    new Rule(/\.visualrevenue\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/cdn\.livefyre\.com$/, CATEGORY_SOCIAL),
+    new Rule(/\.dynamicyield\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/cdn\.krxd\.net$/, CATEGORY_ANALYTICS),
+    new Rule(/\.chartbeat\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/\.clicktale\.net$/, CATEGORY_ANALYTICS),
+    new Rule(/\.gravity\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/\.brightcove\.com$/, CATEGORY_ANALYTICS),
+    new Rule(/^chrome:\/\//, CATEGORY_TRACING),
+    new Rule(/^chrome-extension:\/\//, CATEGORY_EXTENSIONS)
+  ];
+
+  function DomainCategory() {
+  }
+
+  DomainCategory.fromDomain = function(domain) {
+    for (let i = 0; i < CATEGORY_DOMAIN_RULES.length; i++) {
+      if (CATEGORY_DOMAIN_RULES[i].expr.test(domain)) {
+        return CATEGORY_DOMAIN_RULES[i].category;
+      }
+    }
+    return CATEGORY_OTHER;
+  };
+
+  return {
+    DomainCategory
+  };
+});
+</script>

@@ -1,0 +1,24 @@
+# CIPD manifest for bootstrapping tools.
+#
+# We must install anything that we want included on PATH to a different
+# subdirectory than Git, as Git's msys bash strips its root directory
+# from PATH, hence the subdirs.
+#
+# If any paths or package layouts change, updates will be required in
+# "win_tools.bat", "bootstrap.py" and "../bootstrap_python3" templates.
+#
+# "win_tools.bat" has a hard requirement that the Python packages contain the
+# string "cpython3/" for Python 3, and ends with the CIPD tag "version:VERSION".
+# It uses this to extract VERSION.
+#
+# "bootstrap_python3" has a hard requirement that the Python package contains
+# the string "cpython3/" and ends with the CIPD tag "version:VERSION".
+# It uses this to extract VERSION.
+
+$VerifiedPlatform windows-amd64 windows-arm64 linux-amd64 mac-amd64 mac-arm64
+
+@Subdir python3
+infra/3pp/tools/cpython3/${platform} version:2@3.11.8.chromium.35
+
+@Subdir git
+infra/3pp/tools/git/${platform} version:2@2.41.0.chromium.11

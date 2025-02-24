@@ -1,0 +1,32 @@
+#!/usr/bin/env vpython3
+# Copyright (c) 2023 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Runs all Python unit tests in catapult_build/."""
+
+import os
+import sys
+
+_CATAPULT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir))
+
+
+if __name__ == '__main__':
+  sys.path.append(_CATAPULT)
+
+  from hooks import install
+  if '--no-install-hooks' in sys.argv:
+    sys.argv.remove('--no-install-hooks')
+  else:
+    install.InstallHooks()
+
+  # For some reason the value of PYTHONPATH on try bot will cause import error
+  # when the test is invoked by vpython3. Removing the value as a workaround.
+  if 'PYTHONPATH' in os.environ:
+    os.environ.pop('PYTHONPATH')
+
+  from catapult_build import run_with_typ
+  sys.exit(run_with_typ.Run(
+      os.path.join(_CATAPULT, 'catapult_build'),
+      path=[_CATAPULT]))

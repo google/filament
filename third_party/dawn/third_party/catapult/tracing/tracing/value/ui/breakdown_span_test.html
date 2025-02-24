@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/fixed_color_scheme.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/breakdown.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+<link rel="import" href="/tracing/value/ui/breakdown_span.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate_Breakdown', function() {
+    let breakdown = new tr.v.d.Breakdown();
+    breakdown.colorScheme =
+      tr.v.d.COLOR_SCHEME_CHROME_USER_FRIENDLY_CATEGORY_DRIVER;
+    breakdown.set('script', 42);
+    breakdown.set('style', 57);
+
+    // Test weird numbers.
+    breakdown.set('ba---a', NaN);
+    breakdown.set('inf', Infinity);
+    breakdown.set('-inf', -Infinity);
+    breakdown.set('goose egg', 0);
+    breakdown.set('<0', -1);
+
+    // Test lots of categories
+    for (let i = 0; i < 10; ++i) {
+      breakdown.set('cat ' + i, i);
+    }
+
+    // Test round-tripping.
+    breakdown = tr.v.d.Diagnostic.fromDict(breakdown.asDict());
+
+    const span = tr.v.ui.createDiagnosticSpan(breakdown);
+    assert.strictEqual('TR-V-UI-BREAKDOWN-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+
+  test('instantiate_BreakdownWithFixedColorScheme', function() {
+    const colorScheme = tr.b.FixedColorScheme.fromNames([
+      'foo',
+      'bar',
+    ]);
+    tr.b.FixedColorSchemeRegistry.register(() => colorScheme, {
+      'name': 'myColorScheme',
+    });
+
+    let breakdown = new tr.v.d.Breakdown();
+    breakdown.colorScheme = 'myColorScheme';
+    breakdown.set('foo', 42);
+    breakdown.set('bar', 57);
+
+    // Test round-tripping.
+    breakdown = tr.v.d.Diagnostic.fromDict(breakdown.asDict());
+
+    const span = tr.v.ui.createDiagnosticSpan(breakdown);
+    span.updateContents_();
+    assert.strictEqual(
+        span.chart_.getDataSeries('foo').color, colorScheme.getColor('foo'));
+    this.addHTMLOutput(span);
+  });
+
+  test('empty', function() {
+    const breakdown = new tr.v.d.Breakdown();
+    const span = tr.v.ui.createDiagnosticSpan(breakdown);
+    assert.strictEqual('TR-V-UI-BREAKDOWN-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+
+  test('emptyExceptForWeirdNumbers', function() {
+    const breakdown = new tr.v.d.Breakdown();
+    breakdown.set('ba---a', NaN);
+    breakdown.set('inf', Infinity);
+    breakdown.set('-inf', -Infinity);
+    breakdown.set('goose egg', 0);
+    breakdown.set('<0', -1);
+
+    const span = tr.v.ui.createDiagnosticSpan(breakdown);
+    assert.strictEqual('TR-V-UI-BREAKDOWN-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('correlate', function() {
+    const histograms = new tr.v.HistogramSet();
+    const sample0Breakdown = new tr.v.d.Breakdown();
+    sample0Breakdown.set('a', 5);
+    sample0Breakdown.set('b', 3);
+    sample0Breakdown.set('c', 2);
+    const sample1Breakdown = new tr.v.d.Breakdown();
+    sample1Breakdown.set('a', 50);
+    sample1Breakdown.set('b', 30);
+    sample1Breakdown.set('c', 20);
+    const related = new tr.v.d.RelatedNameMap();
+    related.set('a', histograms.createHistogram('root:a',
+        tr.b.Unit.byName.timeDurationInMs, [5, 50]).name);
+    related.set('b', tr.v.Histogram.create('root:b',
+        tr.b.Unit.byName.timeDurationInMs, [3, 30]).name);
+    related.set('c', tr.v.Histogram.create('root:c',
+        tr.b.Unit.byName.timeDurationInMs, [2, 20]).name);
+    const hist = histograms.createHistogram('root',
+        tr.b.Unit.byName.timeDurationInMs, [
+          {
+            value: 10,
+            diagnostics: new Map([['breakdown', sample0Breakdown]]),
+          },
+          {
+            value: 100,
+            diagnostics: new Map([['breakdown', sample1Breakdown]]),
+          },
+        ], {
+          diagnostics: new Map([
+            ['breakdown', related],
+          ]),
+        });
+    const span = tr.v.ui.createDiagnosticSpan(sample0Breakdown, 'breakdown',
+        hist);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span,
+        'tr-ui-a-analysis-link');
+    assert.lengthOf(links, 4);
+    assert.strictEqual(links[0].title, '');
+    assert.strictEqual(links[1].title, 'root:a');
+    assert.strictEqual(links[2].title, 'root:b');
+    assert.strictEqual(links[3].title, 'root:c');
+    assert.strictEqual(links[0].textContent, 'Select All');
+    assert.strictEqual(links[1].textContent, 'a');
+    assert.strictEqual(links[2].textContent, 'b');
+    assert.strictEqual(links[3].textContent, 'c');
+    assert.lengthOf(links[0].selection, 3);
+    assert.strictEqual(links[0].selection[0], 'root:a');
+    assert.strictEqual(links[0].selection[1], 'root:b');
+    assert.strictEqual(links[0].selection[2], 'root:c');
+    assert.lengthOf(links[1].selection, 1);
+    assert.strictEqual(links[1].selection[0], 'root:a');
+    assert.lengthOf(links[2].selection, 1);
+    assert.strictEqual(links[2].selection[0], 'root:b');
+    assert.lengthOf(links[3].selection, 1);
+    assert.strictEqual(links[3].selection[0], 'root:c');
+  });
+});
+</script>

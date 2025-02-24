@@ -1,0 +1,56 @@
+# Copyright 2020 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Contains the build rules for confidential trace tests.
+
+import("../../../gni/angle.gni")
+import("../angle_traces.gni")
+
+angle_trace_libs("angle_restricted_traces") {
+  json_path = "restricted_traces.json"
+  if (angle_restricted_traces != []) {
+    trace_list = angle_restricted_traces
+  } else {
+    _trace_json = read_file(json_path, "json")
+    trace_list = _trace_json.traces
+  }
+}
+
+group("goldctl") {
+  data = []
+
+  # Because this links to a CIPD dependency, which is a symlink on Unix
+  # platforms, refer to the actual executable rather than the whole directory;
+  # copying the whole directory doesn't work, at least with "mb.py zip".
+  if (is_win) {
+    data += [ "//tools/skia_goldctl/win/goldctl.exe" ]
+  } else if (is_mac) {
+    data += [
+      "//tools/skia_goldctl/mac_amd64/goldctl",
+      "//tools/skia_goldctl/mac_arm64/goldctl",
+    ]
+  } else {
+    data += [ "//tools/skia_goldctl/linux/goldctl" ]
+  }
+}
+
+group("angle_restricted_trace_gold_tests") {
+  testonly = true
+  data_deps = [
+    ":goldctl",
+    "$angle_root/src/tests:angle_system_info_test",
+    "$angle_root/src/tests:angle_trace_perf_tests",
+  ]
+  data = [
+    "restricted_trace_gold_tests.py",
+    "restricted_traces.json",
+    "../py_utils/android_helper.py",
+    "../py_utils/angle_path_util.py",
+    "../py_utils/angle_test_util.py",
+    "../py_utils/skia_gold/",
+    "//build/skia_gold_common/",
+    "//testing/scripts/common.py",
+    "//testing/xvfb.py",
+  ]
+}

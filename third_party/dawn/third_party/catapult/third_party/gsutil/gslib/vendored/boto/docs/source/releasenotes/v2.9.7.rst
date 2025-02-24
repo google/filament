@@ -1,0 +1,40 @@
+boto v2.9.7
+===========
+
+:date: 2013/07/08
+
+This release is primarily a bugfix release, but also inludes support for
+Elastic Transcoder updates (variable bit rate, max frame rate & watermark
+features).
+
+
+Features
+--------
+
+* Added support for selecting specific attributes in DynamoDB v2.
+  (:issue:`1567`, :sha:`d9e5c2`)
+* Added support for variable bit rate, max frame rate & watermark features in
+  Elastic Transcoder. (:sha:`3791c9`)
+
+
+Bugfixes
+--------
+
+* Altered RDS to now use SigV4. (:sha:`be1633`)
+* Removed parsing check in ``StorageUri``. (:sha:`21bc8f`)
+* More information returned about GS key generation. (:issue:`1571`,
+  :sha:`6d5e3a`)
+* Upload handling headers now case-insensitive. (:issue:`1575`, :sha:`60383d`)
+* Several CloudFormation timestamp updates. (:issue:`1582`, :issue:`1583`,
+  :issue:`1588`, :sha:`0a23d34`, :sha:`6d4209`)
+* Corrected a bug in how limits are handled in DynamoDB v2. (:issue:`1590`,
+  :sha:`710a62`)
+* Several documentation improvements/fixes:
+
+    * Typo in ``boto.connection`` fixed. (:issue:`1569`, :sha:`cf39fd`)
+    * All previous release notes added to the docs. (:sha:`165596`)
+    * Corrected error in ``get_all_tags`` docs. (:sha:`4bca5d`)
+    * Corrected a typo in the S3 tutorial. (:sha:`f0cef8`)
+    * Corrected several import errors in the DDBv2 tutorial. (:sha:`5401a3`)
+    * Fixed an error in the ``get_key_pair`` docstring. (:issue:`1590`,
+      :sha:`a9cb8d`)

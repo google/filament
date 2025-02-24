@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+'use strict';
+/*
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+
+This script strips whitespace and comments from Javascript.
+*/
+const escodegen = require('escodegen');
+const espree = require('espree');
+const fs = require('fs');
+const nopt = require('nopt');
+
+const args = nopt();
+const filename = args.argv.remain[0];
+
+let text = fs.readFileSync(filename).toString('utf8');
+const ast = espree.parse(text, {ecmaVersion: 2018});
+text = escodegen.generate(ast, {format: {indent: {style: ''}}});
+fs.writeFileSync(filename, text);

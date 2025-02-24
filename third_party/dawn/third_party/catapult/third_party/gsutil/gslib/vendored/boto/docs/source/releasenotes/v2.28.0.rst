@@ -1,0 +1,38 @@
+boto v2.28.0
+============
+
+:date: 2014/05/08
+
+This release adds support for Amazon SQS message attributes, Amazon DynamoDB query filters and enhanced conditional operators, adds support for the new Amazon CloudSearch 2013-01-01 API and includes various features and fixes for Amazon Route 53, Amazon EC2, Amazon Elastic Beanstalk, Amazon Glacier, AWS Identity and Access Management (IAM), Amazon S3, Mechanical Turk and MWS.
+
+Changes
+-------
+* Add support for SQS message attributes. (:issue:`2257`, :sha:`a04ca92`)
+* Update DynamoDB to support query filters. (:issue:`2242`, :sha:`141eb71`)
+* Implement new Cloudsearch API 2013-01-01 as cloudsearch2 module (:sha:`b0ababa`)
+* Miscellaneous improvements to the MTurk CLI. (:issue:`2188`, :sha:`c213ff1`)
+* Update MWS to latest API version and adds missing API calls. (:issue:`2203`, :issue:`2201`, :sha:`8adf720`, :sha:`8d0a6a8`)
+* Update EC2 `register_image` to expose an option which sets whether an instance store is deleted on termination. The default value is left as-is. (:sha:`d295ee9`)
+* Correct typo "possile" --> "possible". (:issue:`2196`, :sha:`d228352`)
+* Update Boto configuration tutorial (:issue:`2191`, :sha:`f2a7a08`)
+* Clarify that MTurkConnection.get_assignments attributes are actually strings. (:issue:`2187`, :issue:`2176`, :sha:`075636b`)
+* Fix EC2 documentation typo (:issue:`2178`, :sha:`2627843`)
+* Add support for ELB Connection Draining attribute. (:issue:`2174`, :issue:`2173`, :sha:`78fa43c`)
+* Add support for setting failure threshold for Route53 health checks. (:issue:`2171`, :issue:`2170`, :sha:`15b812f`)
+* Fix specification of Elastic Beanstalk tier parameter. (:issue:`2168`, :sha:`4492e86`)
+* Fixed part of roboto for euca2ools. (:issue:`2166`, :issue:`1730`, :sha:`63b7a34`)
+* Fixed removing policies from listeners. (:issue:`2165`, :issue:`1708`, :sha:`e5a2d9b`)
+* Reintroduced the ``reverse`` fix for DDB. (:issue:`2163`, :sha:`70ec722`)
+* Several fixes to DynamoDB describe calls. (:issue:`2161`, :issue:`1649`, :issue:`1663`, :sha:`84fb748`)
+* Fixed how ``reverse`` works in DynamoDBv2. (:issue:`2160`, :issue:`2070`, :issue:`2115`, :sha:`afdd805`)
+* Update Kinesis exceptions (:issue:`2159`, :issue:`2153`, :sha:`22c6751`)
+* Fix ECS problem using new-style classes (:issue:`2103`, :sha:`dc466c7`)
+* Add support for passing region info from SWF layer2 to layer1 (:issue:`2137`, :sha:`0dc8ce6`)
+* Handle plus signs in S3 metadata (:issue:`2145`, :sha:`c2a0f95`)
+* Fix Glacier vault date parsing (:issue:`2158`, :sha:`9e7b132`)
+* Documentation fix. (:issue:`2156`, :sha:`7592a58`)
+* Fix Route53 evaluate target health bug. (:issue:`2157`, :sha:`398bb62`)
+* Removing obselete core directory. (:issue:`1987`, :sha:`8e83292`)
+* Improve IAM behavior in the cn-north-1 region. (:issue:`2152`, :sha:`4050e70`)
+* Add SetIdentityFeedbackForwardingEnabled and SetIdentityNotificationTopic for SES. (:issue:`2130`, :issue:`2128`, :sha:`83002d5`)
+* Altered Route53 bin script to use UPSERT rather than CREATE. (:issue:`2151`, :sha:`2cd20e7`)

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  /**
+   * This is a placeholder to allow many DiagnosticMaps to contain references to
+   * the same Diagnostic.
+   */
+  class DiagnosticRef {
+    /**
+     * @param {string} guid
+     */
+    constructor(guid) {
+      this.guid = guid;
+    }
+
+    asDict() {
+      return this.guid;
+    }
+
+    asDictOrReference() {
+      return this.asDict();
+    }
+  }
+
+  return {
+    DiagnosticRef,
+  };
+});
+</script>

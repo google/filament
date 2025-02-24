@@ -1,0 +1,214 @@
+Name
+
+    EXT_shared_texture_palette
+
+Name Strings
+
+    GL_EXT_shared_texture_palette
+
+Contact
+
+    Jon Leech, SGI (ljp 'at' sgi.com)
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Version
+
+    Last Modified Date: March 24, 2004
+    Revision: 1.4
+
+Number
+
+    141
+
+Support
+
+    Mesa.
+
+    Selected NVIDIA GPUs: NV1x (GeForce 256, GeForce2, GeForce4 MX,
+    GeForce4 Go, Quadro, Quadro2), NV2x (GeForce3, GeForce4 Ti,
+    Quadro DCC, Quadro4 XGL), and NV3x (GeForce FX 5xxxx, Quadro FX
+    1000/2000/3000).  NV3 (Riva 128) and NV4 (TNT, TNT2) GPUs and NV4x
+    GPUs do NOT support this functionality (no hardware support).
+    Future NVIDIA GPU designs will no longer support paletted textures.
+
+    S3 ProSavage, Savage 2000.
+
+    3Dfx Voodoo3, Voodoo5.
+
+    3Dlabs GLINT.
+
+Dependencies
+
+    EXT_paletted_texture is required.
+
+Overview
+
+    EXT_shared_texture_palette defines a shared texture palette which may be
+    used in place of the texture object palettes provided by
+    EXT_paletted_texture. This is useful for rapidly changing a palette
+    common to many textures, rather than having to reload the new palette
+    for each texture. The extension acts as a switch, causing all lookups
+    that would normally be done on the texture's palette to instead use the
+    shared palette.
+
+IP Status
+
+    None.
+
+Issues
+
+    *  Do we want to use a new <target> to ColorTable to specify the
+       shared palette, or can we just infer the new target from the
+       corresponding Enable?
+
+    *  A future extension of larger scope might define a "texture palette
+       object" and bind these objects to texture objects dynamically, rather
+       than making palettes part of the texture object state as the current
+       EXT_paletted_texture spec does.
+
+    *  Should there be separate shared palettes for 1D, 2D, and 3D
+       textures?
+
+       Probably not; palette lookups have nothing to do with the
+       dimensionality of the texture. If multiple shared palettes
+       are needed, we should define palette objects.
+
+    *  There's no proxy mechanism for checking if a shared palette can
+       be defined with the requested parameters. Will it suffice to
+       assume that if a texture palette can be defined, so can a shared
+       palette with the same parameters?
+
+    *  The changes to the spec are based on changes already made for
+       EXT_paletted_texture, which means that all three documents must
+       be referred to. This is quite difficult to read.
+
+    *  The changes to section 3.8.6, defining how shared palettes are
+       enabled and disabled, might be better placed in section 3.8.1.
+       However, the underlying EXT_paletted_texture does not appear to
+       modify these sections to define exactly how palette lookups are
+       done, and it's not clear where to put the changes.
+
+    *  How does the shared texture palette interact with multitexture
+       support?  There is a single global shared texture palette that
+       all texture units utilize (as opposed to a shared texture palette
+       per texture unit).
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, GetDoublev, IsEnabled, Enable, Disable, ColorTableEXT,
+    ColorSubTableEXT, GetColorTableEXT, GetColorTableParameterivEXT, and
+    GetColorTableParameterfd EXT:
+
+    SHARED_TEXTURE_PALETTE_EXT              0x81FB
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+  Section 3.8, 'Texturing,' subsection 'Texture Image Specification' is
+  modified as follows:
+
+    In the Palette Specification Commands section, the sentence
+    beginning 'target specifies which texture is to' should be changed
+    to:
+
+      target specifies the texture palette or shared palette to be
+      changed, and may be one of TEXTURE_1D, TEXTURE_2D,
+      PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, TEXTURE_3D_EXT,
+      PROXY_TEXTURE_3D_EXT, or SHARED_TEXTURE_PALETTE_EXT.
+
+    In the 'Texture State and Proxy State' section, the sentence
+    beginning 'A texture's palette is initially...' should be changed
+    to:
+
+      There is also a shared palette not associated with any texture,
+      which may override a texture palette. (Even when multiple texture
+      units are available, there is still only a single shared texture
+      palette.) All palettes are initially...
+
+  Section 3.8.6, 'Texture Application' is modified by appending the
+  following:
+
+    Use of the shared texture palette is enabled or disabled using the
+    generic Enable or Disable commands, respectively, with the symbolic
+    constant SHARED_TEXTURE_PALETTE_EXT.
+
+    The required state is one bit indicating whether the shared palette is
+    enabled or disabled. In the initial state, the shared palettes is
+    disabled.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    In the section on GetTexImage, the sentence beginning 'If format is
+    not COLOR_INDEX...' should be changed to:
+
+      If format is not COLOR_INDEX, the texture's indices are passed
+      through the texture's palette, or the shared palette if one is
+      enabled, and the resulting components are assigned among R, G, B,
+      and A according to Table 6.1.
+
+    In the GetColorTable section, the first sentence of the second
+    paragraph should be changed to read:
+
+      GetColorTableEXT retrieves the texture palette or shared palette
+      given by target.
+
+    The first sentence of the third paragraph should be changed to read:
+
+      Palette parameters can be retrieved using
+        void GetColorTableParameterivEXT(enum target, enum pname, int *params);
+        void GetColorTableParameterfvEXT(enum target, enum pname, float *params);
+      target specifies the texture palette or shared palette being
+      queried and pname controls which parameter value is returned.
+
+Additions to the GLX Specification
+
+    None
+
+New State
+
+Get Value                   Type  Get Command                  Initial Value  Description     Sec    Attribute
+--------------------------  ----  ---------------------------  -------------  --------------  -----  --------------
+SHARED_TEXTURE_PALETTE_EXT  B     IsEnabled                    False          shared texture  3.8.6  texture/enable
+                                                                              palette enable
+SHARED_TEXTURE_PALETTE_EXT  I     GetColorTableEXT             empty          shared texture  3.8    -
+                                                                              palette table
+COLOR_TABLE_FORMAT_EXT      Zn    GetColorTableParameterivEXT  RGBA           shared texture  3.8    -
+                                                                              palette format
+COLOR_TABLE_WIDTH_EXT       Z+    GetColorTableParameteriv     0              shared texture  3.8    -
+                                                                              palette width
+COLOR_TABLE_x_SIZE_EXT      6xZ+  GetColorTableParameteriv     0              shared texture  3.8    -
+                                                                              palette
+                                                                              component sizes
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    September 4, 2002 - Add missing IP Status / Contact fields
+    (without bumping the revision) and incorporated Mark's changes
+    into the registry. (Jon Leech)
+
+    July 10, 2002 (version 1.3) - Added "New State" tables entries.
+    Clarify that there is a single global shared texture palette, 
+    rather than a per-texture unit palette when multitexture is
+    available. (Mark Kilgard)
+
+    March 24, 2004 (version 1.4) - Document vendor support for this
+    extension; note that future NVIDIA GPU designs will not support this
+    extension. (Mark Kilgard)
+

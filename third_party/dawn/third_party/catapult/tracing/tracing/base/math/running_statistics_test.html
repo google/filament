@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/running_statistics.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/unit.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const RunningStatistics = tr.b.math.RunningStatistics;
+  const Statistics = tr.b.math.Statistics;
+
+  function run(data) {
+    const running = new RunningStatistics();
+    data.forEach(x => running.add(x));
+    return running;
+  }
+
+  test('truncate', function() {
+    const running = run([50, 60, 70 + (1 / 3)]);
+    assert.closeTo(59.533, running.geometricMean, 1e-3);
+    assert.strictEqual(
+        '[3,70.33333333333333,4.0865378041527345,60.11111111111111,50,' +
+        '180.33333333333331,206.74074074074068]',
+        JSON.stringify(running.asDict()));
+
+    running.truncate(tr.b.Unit.byName.unitlessNumber);
+    assert.closeTo(59.533, running.geometricMean, 1e-3);
+    assert.strictEqual(70.3333, running.max);
+    assert.strictEqual(4.086538, running.meanlogs_);
+    assert.strictEqual(60.1111, running.mean);
+    assert.strictEqual(180.3333, running.sum);
+    assert.strictEqual(206.7407, running.variance_);
+  });
+
+  test('sum', function() {
+    let data;
+    data = [];
+    assert.closeTo(Statistics.sum(data), run(data).sum, 1e-6);
+    data = [1];
+    assert.closeTo(Statistics.sum(data), run(data).sum, 1e-6);
+    data = [1, 2, 3];
+    assert.closeTo(Statistics.sum(data), run(data).sum, 1e-6);
+    data = [2, 4, 4, 2];
+    assert.closeTo(Statistics.sum(data), run(data).sum, 1e-6);
+    data = [Infinity, Infinity, Infinity, 4, 4, Infinity, 1];
+    assert.strictEqual(Statistics.sum(data), run(data).sum, Infinity);
+    data = [-Infinity, -Infinity, 2, -Infinity, 5, -Infinity];
+    assert.strictEqual(Statistics.sum(data), run(data).sum, -Infinity);
+  });
+
+  test('min', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.min(data), run(data).min);
+    data = [1];
+    assert.strictEqual(Statistics.min(data), run(data).min);
+    data = [1, 2, 3];
+    assert.strictEqual(Statistics.min(data), run(data).min);
+    data = [2, 4, 4, 2];
+    assert.strictEqual(Statistics.min(data), run(data).min);
+  });
+
+  test('max', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.max(data), run(data).max);
+    data = [1];
+    assert.strictEqual(Statistics.max(data), run(data).max);
+    data = [1, 2, 3];
+    assert.strictEqual(Statistics.max(data), run(data).max);
+    data = [2, 4, 4, 2];
+    assert.strictEqual(Statistics.max(data), run(data).max);
+  });
+
+  test('mean', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.mean(data), run(data).mean);
+    data = [1];
+    assert.strictEqual(Statistics.mean(data), run(data).mean);
+    data = [1, 2, 3];
+    assert.closeTo(Statistics.mean(data), run(data).mean, 1e-6);
+    data = [2, 4, 4, 2];
+    assert.closeTo(Statistics.mean(data), run(data).mean, 1e-6);
+    data = [Infinity, Infinity, Infinity, 4, 4, Infinity, 1];
+    assert.strictEqual(Statistics.mean(data), run(data).mean, Infinity);
+    data = [-Infinity, -Infinity, 2, -Infinity, 5, -Infinity];
+    assert.strictEqual(Statistics.mean(data), run(data).mean, -Infinity);
+  });
+
+  test('geometricMean', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.geometricMean(data), run(data).geometricMean);
+    data = [-1];
+    assert.strictEqual(Statistics.geometricMean(data), run(data).geometricMean);
+    data = [1];
+    assert.strictEqual(Statistics.geometricMean(data), run(data).geometricMean);
+    data = [1, 2, 3];
+    assert.closeTo(Statistics.geometricMean(data),
+        run(data).geometricMean, 1e-6);
+    data = [2, 4, 4, 2];
+    assert.closeTo(Statistics.geometricMean(data),
+        run(data).geometricMean, 1e-6);
+  });
+
+  test('variance', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.variance(data), run(data).variance);
+    data = [1];
+    assert.strictEqual(Statistics.variance(data), run(data).variance);
+    data = [1, 2, 3];
+    assert.closeTo(Statistics.variance(data), run(data).variance, 1e-6);
+    data = [2, 4, 4, 2];
+    assert.closeTo(Statistics.variance(data), run(data).variance, 1e-6);
+  });
+
+  test('stddev', function() {
+    let data;
+    data = [];
+    assert.strictEqual(Statistics.stddev(data), run(data).stddev);
+    data = [1];
+    assert.strictEqual(Statistics.stddev(data), run(data).stddev);
+    data = [1, 2, 3];
+    assert.closeTo(Statistics.stddev(data), run(data).stddev, 1e-6);
+    data = [2, 4, 4, 2];
+    assert.closeTo(Statistics.stddev(data), run(data).stddev, 1e-6);
+  });
+
+  test('merge', function() {
+    let data1 = [];
+    let data2 = [];
+    let data = data1.concat(data2);
+    let stats = run(data1).merge(run(data2));
+    assert.strictEqual(Statistics.sum(data), stats.sum);
+    assert.strictEqual(Statistics.min(data), stats.min);
+    assert.strictEqual(Statistics.max(data), stats.max);
+    assert.strictEqual(Statistics.mean(data), stats.mean);
+    assert.strictEqual(Statistics.variance(data), stats.variance);
+    assert.strictEqual(Statistics.stddev(data), stats.stddev);
+    assert.strictEqual(Statistics.geometricMean(data), stats.geometricMean);
+
+    data1 = [];
+    data2 = [1, 2, 3];
+    data = data1.concat(data2);
+    stats = run(data1).merge(run(data2));
+    assert.strictEqual(Statistics.sum(data), stats.sum);
+    assert.strictEqual(Statistics.min(data), stats.min);
+    assert.strictEqual(Statistics.max(data), stats.max);
+    assert.strictEqual(Statistics.mean(data), stats.mean);
+    assert.closeTo(Statistics.variance(data), stats.variance, 1e-6);
+    assert.closeTo(Statistics.stddev(data), stats.stddev, 1e-6);
+    assert.closeTo(Statistics.geometricMean(data), stats.geometricMean, 1e-6);
+
+    data1 = [1, 2, 3];
+    data2 = [];
+    data = data1.concat(data2);
+    stats = run(data1).merge(run(data2));
+    assert.strictEqual(Statistics.sum(data), stats.sum);
+    assert.strictEqual(Statistics.min(data), stats.min);
+    assert.strictEqual(Statistics.max(data), stats.max);
+    assert.strictEqual(Statistics.mean(data), stats.mean);
+    assert.closeTo(Statistics.variance(data), stats.variance, 1e-6);
+    assert.closeTo(Statistics.stddev(data), stats.stddev, 1e-6);
+    assert.closeTo(Statistics.geometricMean(data), stats.geometricMean, 1e-6);
+
+    data1 = [1, 2, 3];
+    data2 = [10, 20, 100];
+    data = data1.concat(data2);
+    stats = run(data1).merge(run(data2));
+    assert.strictEqual(Statistics.sum(data), stats.sum);
+    assert.strictEqual(Statistics.min(data), stats.min);
+    assert.strictEqual(Statistics.max(data), stats.max);
+    assert.strictEqual(Statistics.mean(data), stats.mean);
+    assert.closeTo(Statistics.variance(data), stats.variance, 1e-6);
+    assert.closeTo(Statistics.stddev(data), stats.stddev, 1e-6);
+    assert.closeTo(Statistics.geometricMean(data), stats.geometricMean, 1e-6);
+
+    data1 = [1, 1, 1, 1, 1];
+    data2 = [10, 20, 10, 40];
+    data = data1.concat(data2);
+    stats = run(data1).merge(run(data2));
+    assert.strictEqual(Statistics.sum(data), stats.sum);
+    assert.strictEqual(Statistics.min(data), stats.min);
+    assert.strictEqual(Statistics.max(data), stats.max);
+    assert.strictEqual(Statistics.mean(data), stats.mean);
+    assert.closeTo(Statistics.variance(data), stats.variance, 1e-6);
+    assert.closeTo(Statistics.stddev(data), stats.stddev, 1e-6);
+    assert.closeTo(Statistics.geometricMean(data), stats.geometricMean, 1e-6);
+  });
+
+  test('serialization', function() {
+    const data = [1, 2, 3];
+    const dict = run(data).asDict();
+    const cloneDict = RunningStatistics.fromDict(dict).asDict();
+    for (let field = 0; field < dict.length; ++field) {
+      assert.closeTo(dict[field], cloneDict[field], 1e-6);
+    }
+
+    // You can change this number, but when you do, please explain in your CL
+    // description why it changed.
+    assert.strictEqual(32, JSON.stringify(dict).length);
+  });
+});
+</script>

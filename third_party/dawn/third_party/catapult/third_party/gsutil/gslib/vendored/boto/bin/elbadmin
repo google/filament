@@ -1,0 +1,302 @@
+#!/usr/bin/env python
+# Copyright (c) 2009 Chris Moyer http://coredumped.org/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish, dis-
+# tribute, sublicense, and/or sell copies of the Software, and to permit
+# persons to whom the Software is furnished to do so, subject to the fol-
+# lowing conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
+# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+
+#
+# Elastic Load Balancer Tool
+#
+VERSION = "0.2"
+usage = """%prog [options] [command]
+Commands:
+    list|ls                       List all Elastic Load Balancers
+    delete    <name>              Delete ELB <name>
+    get       <name>              Get all instances associated with <name>
+    create    <name>              Create an ELB; -z and -l are required
+    add       <name> <instances>  Add <instances> in ELB <name>
+    remove|rm <name> <instances>  Remove <instances> from ELB <name>
+    reap      <name>              Remove terminated instances from ELB <name>
+    enable|en <name> <zone>       Enable Zone <zone> for ELB <name>
+    disable   <name> <zone>       Disable Zone <zone> for ELB <name>
+    addl      <name>              Add listeners (specified by -l) to the ELB
+                                      <name>
+    rml       <name> <port>       Remove Listener(s) specified by the port on
+                                      the ELB <name>
+"""
+
+
+def find_elb(elb, name):
+    try:
+        elbs = elb.get_all_load_balancers(name)
+    except boto.exception.BotoServerError as se:
+        if se.code == 'LoadBalancerNotFound':
+            elbs = []
+        else:
+            raise
+
+    if len(elbs) < 1:
+        print "No load balancer by the name of %s found" % name
+        return None
+    elif len(elbs) > 1:
+        print "More than one elb matches %s?" % name
+        return None
+
+    # Should not happen
+    if name not in elbs[0].name:
+        print "No load balancer by the name of %s found" % name
+        return None
+
+    return elbs[0]
+
+
+def list(elb):
+    """List all ELBs"""
+    print "%-20s %s" % ("Name", "DNS Name")
+    print "-" * 80
+    for b in elb.get_all_load_balancers():
+        print "%-20s %s" % (b.name, b.dns_name)
+
+def check_valid_region(conn, region):
+    if conn is None:
+        print 'Invalid region (%s)' % region
+        sys.exit(1)
+
+def get(elb, name):
+    """Get details about ELB <name>"""
+
+    b = find_elb(elb, name)
+    if b:
+        print "=" * 80
+        print "Name: %s" % b.name
+        print "DNS Name: %s" % b.dns_name
+        if b.canonical_hosted_zone_name:
+            chzn = b.canonical_hosted_zone_name
+            print "Canonical hosted zone name: %s" % chzn
+        if b.canonical_hosted_zone_name_id:
+            chznid = b.canonical_hosted_zone_name_id
+            print "Canonical hosted zone name id: %s" % chznid
+        print
+
+        print "Health Check: %s" % b.health_check
+        print
+
+        print "Listeners"
+        print "---------"
+        print "%-8s %-8s %s" % ("IN", "OUT", "PROTO")
+        for l in b.listeners:
+            print "%-8s %-8s %s" % (l[0], l[1], l[2])
+
+        print
+
+        print "  Zones  "
+        print "---------"
+        for z in b.availability_zones:
+            print z
+
+        print
+
+        # Make map of all instance Id's to Name tags
+        import boto
+        from boto.compat.six import iteritems
+        if not options.region:
+            ec2 = boto.connect_ec2()
+        else:
+            ec2 = boto.ec2.connect_to_region(options.region)
+            check_valid_region(ec2, options.region)
+
+        instance_health = b.get_instance_health()
+        instances = [state.instance_id for state in instance_health]
+
+        names = dict((k,'') for k in instances)
+        for i in ec2.get_only_instances():
+            if i.id in instances:
+                names[i.id] = i.tags.get('Name', '')
+
+        name_column_width = max([4] + [len(v) for k,v in iteritems(names)]) + 2
+
+        print "Instances"
+        print "---------"
+        print "%-12s %-15s %-*s %s" % ("ID",
+                                       "STATE",
+                                       name_column_width, "NAME",
+                                       "DESCRIPTION")
+        for state in instance_health:
+            print "%-12s %-15s %-*s %s" % (state.instance_id,
+                                           state.state,
+                                           name_column_width, names[state.instance_id],
+                                           state.description)
+
+        print
+
+
+def create(elb, name, zones, listeners):
+    """Create an ELB named <name>"""
+    l_list = []
+    for l in listeners:
+        l = l.split(",")
+        if l[2] == 'HTTPS':
+            l_list.append((int(l[0]), int(l[1]), l[2], l[3]))
+        else:
+            l_list.append((int(l[0]), int(l[1]), l[2]))
+
+    b = elb.create_load_balancer(name, zones, l_list)
+    return get(elb, name)
+
+
+def delete(elb, name):
+    """Delete this ELB"""
+    b = find_elb(elb, name)
+    if b:
+        b.delete()
+        print "Load Balancer %s deleted" % name
+
+
+def add_instances(elb, name, instances):
+    """Add <instance> to ELB <name>"""
+    b = find_elb(elb, name)
+    if b:
+        b.register_instances(instances)
+        return get(elb, name)
+
+
+def remove_instances(elb, name, instances):
+    """Remove instance from elb <name>"""
+    b = find_elb(elb, name)
+    if b:
+        b.deregister_instances(instances)
+        return get(elb, name)
+
+
+def reap_instances(elb, name):
+    """Remove terminated instances from elb <name>"""
+    b = find_elb(elb, name)
+    if b:
+        for state in b.get_instance_health():
+            if (state.state == 'OutOfService' and
+                state.description == 'Instance is in terminated state.'):
+                b.deregister_instances([state.instance_id])
+        return get(elb, name)
+
+
+def enable_zone(elb, name, zone):
+    """Enable <zone> for elb"""
+    b = find_elb(elb, name)
+    if b:
+        b.enable_zones([zone])
+        return get(elb, name)
+
+
+def disable_zone(elb, name, zone):
+    """Disable <zone> for elb"""
+    b = find_elb(elb, name)
+    if b:
+        b.disable_zones([zone])
+        return get(elb, name)
+
+
+def add_listener(elb, name, listeners):
+    """Add listeners to a given load balancer"""
+    l_list = []
+    for l in listeners:
+        l = l.split(",")
+        l_list.append((int(l[0]), int(l[1]), l[2]))
+    b = find_elb(elb, name)
+    if b:
+        b.create_listeners(l_list)
+        return get(elb, name)
+
+
+def rm_listener(elb, name, ports):
+    """Remove listeners from a given load balancer"""
+    b = find_elb(elb, name)
+    if b:
+        b.delete_listeners(ports)
+        return get(elb, name)
+
+
+if __name__ == "__main__":
+    try:
+        import readline
+    except ImportError:
+        pass
+    import boto
+    import sys
+    from optparse import OptionParser
+    from boto.mashups.iobject import IObject
+    parser = OptionParser(version=VERSION, usage=usage)
+    parser.add_option("-z", "--zone",
+                      help="Operate on zone",
+                      action="append", default=[], dest="zones")
+    parser.add_option("-l", "--listener",
+                      help="Specify Listener in,out,proto",
+                      action="append", default=[], dest="listeners")
+    parser.add_option("-r", "--region",
+                      help="Region to connect to",
+                      action="store", dest="region")
+
+    (options, args) = parser.parse_args()
+
+    if len(args) < 1:
+        parser.print_help()
+        sys.exit(1)
+
+    if not options.region:
+        elb = boto.connect_elb()
+    else:
+        import boto.ec2.elb
+        elb = boto.ec2.elb.connect_to_region(options.region)
+        check_valid_region(elb, options.region)
+
+    print "%s" % (elb.region.endpoint)
+
+    command = args[0].lower()
+    if command in ("ls", "list"):
+        list(elb)
+    elif command == "get":
+        get(elb, args[1])
+    elif command == "create":
+        if not options.listeners:
+            print "-l option required for command create"
+            sys.exit(1)
+        if not options.zones:
+            print "-z option required for command create"
+            sys.exit(1)
+        create(elb, args[1], options.zones, options.listeners)
+    elif command == "delete":
+        delete(elb, args[1])
+    elif command in ("add", "put"):
+        add_instances(elb, args[1], args[2:])
+    elif command in ("rm", "remove"):
+        remove_instances(elb, args[1], args[2:])
+    elif command == "reap":
+        reap_instances(elb, args[1])
+    elif command in ("en", "enable"):
+        enable_zone(elb, args[1], args[2])
+    elif command == "disable":
+        disable_zone(elb, args[1], args[2])
+    elif command == "addl":
+        if not options.listeners:
+            print "-l option required for command addl"
+            sys.exit(1)
+        add_listener(elb, args[1], options.listeners)
+    elif command == "rml":
+        if not args[2:]:
+            print "port required"
+            sys.exit(2)
+        rm_listener(elb, args[1], args[2:])

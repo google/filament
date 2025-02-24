@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>rjsmin</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rjsmin/" target="_top">Visit rjsmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        Module&nbsp;rjsmin
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== MODULE DESCRIPTION ==================== -->
+<h1 class="epydoc">Module rjsmin</h1><p class="nomargin-top"><span class="codelink"><a href="rjsmin-pysrc.html">source&nbsp;code</a></span></p>
+<p>rJSmin is a javascript minifier written in python.</p>
+<p>The minifier is based on the semantics of <a class="rst-reference external" href="http://www.crockford.com/javascript/jsmin.c" target="_top">jsmin.c by Douglas Crockford</a>.</p>
+<p>The module is a re-implementation aiming for speed, so it can be used at
+runtime (rather than during a preprocessing step). Usually it produces the
+same results as the original <tt class="rst-docutils literal">jsmin.c</tt>. It differs in the following ways:</p>
+<ul class="rst-simple">
+<li>there is no error detection: unterminated string, regex and comment
+literals are treated as regular javascript code and minified as such.</li>
+<li>Control characters inside string and regex literals are left untouched; they
+are not converted to spaces (nor to n)</li>
+<li>Newline characters are not allowed inside string and regex literals, except
+for line continuations in string literals (ECMA-5).</li>
+<li>&quot;return /regex/&quot; is recognized correctly.</li>
+<li>Line terminators after regex literals are handled more sensibly</li>
+<li>&quot;+ +&quot; and &quot;- -&quot; sequences are not collapsed to '++' or '--'</li>
+<li>Newlines before ! operators are removed more sensibly</li>
+<li>Comments starting with an exclamation mark (<tt class="rst-docutils literal">!</tt>) can be kept optionally</li>
+<li>rJSmin does not handle streams, but only complete strings. (However, the
+module provides a &quot;streamy&quot; interface).</li>
+</ul>
+<p>Since most parts of the logic are handled by the regex engine it's way faster
+than the original python port of <tt class="rst-docutils literal">jsmin.c</tt> by Baruch Even. The speed factor
+varies between about 6 and 55 depending on input and python version (it gets
+faster the more compressed the input already is). Compared to the
+speed-refactored python port by Dave St.Germain the performance gain is less
+dramatic but still between 3 and 50 (for huge inputs). See the docs/BENCHMARKS
+file for details.</p>
+<p>rjsmin.c is a reimplementation of rjsmin.py in C and speeds it up even more.</p>
+<p>Both python 2 and python 3 are supported.</p>
+
+<hr />
+<div class="fields">      <p><strong>Copyright:</strong>
+        Copyright 2011 - 2015
+Andr&#233; Malo or his licensors, as applicable
+      </p>
+      <p><strong>License:</strong>
+        <p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at</p>
+<blockquote>
+<a class="rst-reference external" href="http://www.apache.org/licenses/LICENSE-2.0" target="_top">http://www.apache.org/licenses/LICENSE-2.0</a></blockquote>
+<p>Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</p>
+      </p>
+      <p><strong>Version:</strong>
+        1.0.12
+      </p>
+      <p><strong>Author:</strong>
+        Andr&#233; Malo
+      </p>
+</div><!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td align="left" colspan="2" class="table-header">
+    <span class="table-header">Functions</span></td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type"><tt class="rst-docutils literal">str</tt></span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="rjsmin-module.html#jsmin" class="summary-sig-name">jsmin</a>(<span class="summary-sig-arg">script</span>,
+        <span class="summary-sig-arg">keep_bang_comments</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Minify javascript based on <a class="rst-reference external" href="http://www.crockford.com/javascript/jsmin.c" target="_top">jsmin.c by Douglas Crockford</a>.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="rjsmin-pysrc.html#jsmin">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td align="left" colspan="2" class="table-header">
+    <span class="table-header">Function Details</span></td>
+</tr>
+</table>
+<a name="jsmin"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">jsmin</span>(<span class="sig-arg">script</span>,
+        <span class="sig-arg">keep_bang_comments</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="rjsmin-pysrc.html#jsmin">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Minify javascript based on <a class="rst-reference external" href="http://www.crockford.com/javascript/jsmin.c" target="_top">jsmin.c by Douglas Crockford</a>.</p>
+<p>Instead of parsing the stream char by char, it uses a regular
+expression approach which minifies the whole script with one big
+substitution regex.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>script</code></strong> (<tt class="rst-docutils literal">str</tt>) - Script to minify</li>
+        <li><strong class="pname"><code>keep_bang_comments</code></strong> (<tt class="rst-docutils literal">bool</tt>) - Keep comments starting with an exclamation mark? (<tt class="rst-docutils literal"><span class="pre">/*!...*/</span></tt>)</li>
+    </ul></dd>
+    <dt>Returns: <tt class="rst-docutils literal">str</tt></dt>
+        <dd>Minified script</dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Home&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a href="http://opensource.perlig.de/rjsmin/" target="_top">Visit rjsmin Online</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

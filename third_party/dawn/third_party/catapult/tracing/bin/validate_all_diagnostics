@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import json
+import os
+import sys
+
+sys.path.insert(
+    1,
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+import tracing_project
+tracing_project.UpdateSysPathIfNeeded()
+
+from py_utils import camel_case
+from py_utils import discover
+
+from tracing.value.diagnostics import diagnostic
+from tracing.value.diagnostics import all_diagnostics
+
+import vinn
+
+
+_DISCOVER_CMDLINE = os.path.join(
+    os.path.dirname(__file__), '..', 'tracing', 'value', 'diagnostics',
+    'discover_cmdline.html')
+
+
+def DiscoverJSDiagnostics(project, js_args):
+  res = vinn.RunFile(_DISCOVER_CMDLINE, source_paths=list(project.source_paths),
+      js_args=js_args)
+  if res.returncode != 0:
+    raise RuntimeError('Error running diagnostics/discover_cmdline: ' + res.stdout)
+  else:
+    return set([str(m) for m in json.loads(res.stdout)])
+
+
+def DiscoverPythonDiagnostics():
+  return discover.DiscoverClasses(
+      os.path.join(tracing_project.TracingProject.tracing_src_path,
+                   'value'),
+      tracing_project.TracingProject.tracing_root_path,
+      diagnostic.Diagnostic, index_by_class_name=True)
+
+
+def CheckPythonDiagnostics():
+  discovered_diagnostics = DiscoverPythonDiagnostics()
+
+  registered_diagnostic_names = [
+      camel_case.ToUnderscore(name)
+          for name in all_diagnostics.GetDiagnosticTypenames()]
+
+  unregistered_diagnostics = (set(discovered_diagnostics.keys()) -
+      set(registered_diagnostic_names))
+
+  return_code = 0
+  if unregistered_diagnostics:
+    print('These diagnostics are unregistered: %s. Please add them to '
+          'tracing/tracing/value/diagnostics/all_diagnostics.py.' %
+          ', '.join(unregistered_diagnostics))
+    return_code = 1
+
+  for name in all_diagnostics.GetDiagnosticTypenames():
+    diagnostic = all_diagnostics.GetDiagnosticClassForName(name)
+    if name != diagnostic.__name__:
+      print('This diagnostic refers to the wrong class: %s: %s' % (
+          name, diagnostic.__name__))
+      return_code = 1
+
+  return return_code
+
+
+def CheckJSDiagnostics():
+  project = tracing_project.TracingProject()
+  all_registered_diagnostics = DiscoverJSDiagnostics(
+    project, ['registry', '/tracing/value/diagnostics/all_diagnostics.html'])
+  all_modules = list(
+      '/' + rel_path for rel_path in
+      tracing_project.TracingProject().FindAllDiagnosticsModuleRelPaths())
+  all_possible_diagnostics = DiscoverJSDiagnostics(
+    project, ['namespace'] + all_modules)
+
+  unregistered_diagnostics = (all_possible_diagnostics -
+      all_registered_diagnostics)
+  if unregistered_diagnostics:
+    print('These diagnostics are unregistered: %s. Please import their modules in '
+          'tracing/tracing/value/diagnostics/all_diagnostics.html and '
+          'ensure that they call Diagnostic.register().' %
+          ', '.join(unregistered_diagnostics))
+    return 1
+
+  lowercased_diagnostics = []
+  for m in all_possible_diagnostics:
+    if str.islower(m[0]):
+      lowercased_diagnostics.append(m)
+  if lowercased_diagnostics:
+    print('These diagnostics must be renamed to start with a upper-case: %s' %
+          lowercased_diagnostics)
+    return 1
+
+  return 0
+
+
+def Main():
+  return (CheckJSDiagnostics() or CheckPythonDiagnostics())
+
+
+if __name__ == '__main__':
+  sys.exit(Main())

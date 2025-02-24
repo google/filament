@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id="chart-slider">
+  <template>
+    <style>
+      #revisions_container {
+        height: 60px;
+        width: 100%;
+      }
+    </style>
+    <div id="revisions_container"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'chart-slider',
+  properties: {
+    edgeDist: {
+      type: Number,
+      value: 2
+    },
+    endrev: {
+      notify: true,
+      observer: 'endrevChanged'
+    },
+    startrev: {
+      notify: true,
+      observer: 'startrevChanged'
+    },
+    testpath: {
+      notify: true,
+      observer: 'testpathChanged'
+    }
+  },
+
+  /**
+    * Initializes the element. This is a lifecycle callback method.
+    */
+  ready() {
+    this.data = null;
+    this.dragType = 'none';
+    this.drawable = true;
+
+    // Use addEventListener instead of polymer 'on-' attributes so that we
+    // can catch the mouse events before Flot does.
+    this.$.revisions_container.addEventListener(
+        'mousemove', this.onMouseMove.bind(this), true);
+    this.$.revisions_container.addEventListener(
+        'mousedown', this.onMouseDown.bind(this), true);
+
+    // The mouseup listener is placed on the document instead of the graph
+    // since the user could drag to outside the bounds of the graph.
+    document.addEventListener('mouseup', this.onMouseUp.bind(this), true);
+
+    this.chartOptions = {
+      series: {
+        lines: {
+          show: true,
+          fill: 0.2
+        }
+      },
+      grid: {
+        backgroundColor: '#F1F1F1',
+        borderWidth: 1,
+        borderColor: 'rgba(0, 0, 0, 0.5)'
+      },
+      crosshair: {
+        mode: 'x',
+        color: 'rgba(34, 34, 34, 0.3)',
+        lineWidth: 0.3
+      },
+      selection: {
+        mode: 'x',
+        color: 'green'
+      },
+      yaxis: {
+        show: false,
+        reserveSpace: true,
+        labelWidth: 90
+      },
+      xaxis: {
+        show: true,
+        tickFormatter: this.tickFormatter.bind(this)
+      },
+      colors: ['#4d90fe']
+    };
+
+    this.revisionToIndexMap = {};
+    this.chart = null;
+    this.resizeHandler = this.onResize.bind(this);
+    this.resizeTimer = null;
+    window.addEventListener('resize', this.resizeHandler);
+  },
+
+  /**
+    * Updates the element when it's removed. This is a lifecycle callback.
+    */
+  leftView() {
+    this.drawable = false;
+    window.removeEventListener('resize', this.resizeHandler);
+  },
+
+  /**
+    * Requests new data to update the graph when the test path is set.
+    */
+  testpathChanged() {
+    const postdata = 'test_path=' + encodeURIComponent(this.testpath);
+    const request = new XMLHttpRequest();
+    request.onload = this.onLoadGraph.bind(this, request);
+    request.open('post', '/graph_revisions', true);
+    request.setRequestHeader(
+        'Content-Type', 'application/x-www-form-urlencoded');
+    request.send(postdata);
+  },
+
+  /**
+    * Updates the chart when graph data is received.
+    * @param {XMLHttpRequest} request The request for data.
+    */
+  onLoadGraph(request) {
+    if (!this.drawable) {
+      return;
+    }
+    this.data = JSON.parse(request.responseText);
+    this.selectionMax = this.data.length - 1;
+    this.revisionToIndexMap = {};
+    const chartData = [];
+    for (let i = 0; i < this.data.length; i++) {
+      chartData.push([i, this.data[i][1]]);
+      const rev = this.data[i][0];
+      this.revisionToIndexMap[rev] = i;
+    }
+    this.chart = $.plot(
+        this.$.revisions_container, [{data: chartData}], this.chartOptions);
+    this.updateSelection();
+  },
+
+  /**
+    * Updates the selection state when |this.startrev| is changed.
+    */
+  startrevChanged() {
+    this.updateSelection();
+  },
+
+  /**
+    * Updates the selection state when |this.endrev| is changed.
+    */
+  endrevChanged() {
+    this.updateSelection();
+  },
+
+  /**
+    * Updates the selection state when the startrev attribute is changed.
+    */
+  updateSelection() {
+    if (!this.startrev ||
+        !this.endrev ||
+        !this.revisionToIndexMap ||
+        !this.chart) {
+      return;
+    }
+
+    let startIndex = null;
+    let endIndex = null;
+    if (this.startrev in this.revisionToIndexMap) {
+      startIndex = this.revisionToIndexMap[this.startrev];
+    } else {
+      startIndex = this.getPreviousIndexForRev(this.startrev);
+    }
+
+    if (this.endrev in this.revisionToIndexMap) {
+      endIndex = this.revisionToIndexMap[this.endrev];
+    } else {
+      endIndex = this.getPreviousIndexForRev(this.endrev);
+    }
+
+    // If this ever happens, just expand the selector to a single bar.
+    if (startIndex == endIndex) {
+      if (endIndex == 0) {
+        endIndex = 1;
+      } else {
+        startIndex -= 1;
+      }
+    }
+
+    // If the slider is too small, it doesn't render.
+    const ratio = (endIndex - startIndex) / this.data.length;
+    const MIN_RATIO = 0.01;
+    if (ratio < MIN_RATIO) {
+      startIndex = Math.round(endIndex * (1.0 - MIN_RATIO));
+    }
+
+    this.chart.setSelection({xaxis: {from: startIndex, to: endIndex}},
+        true);
+  },
+
+  /**
+    * Get the previous index for a revision number in data series.
+    * @param {number} revision An X-value.
+    * @return {number} An index number.
+    */
+  getPreviousIndexForRev(revision) {
+    for (let i = this.data.length - 1; i >= 0; i--) {
+      if (revision > this.data[i][0]) {
+        return i;
+      }
+    }
+    return 0;
+  },
+
+  /**
+    * Formats the labels on the X-axis.
+    * @param {string|number} xValue An X-value on the mini-plot.
+    * @param {Object=} opt_axis Not used.
+    * @return {string} A string to display at one point a long the X-axis.
+    */
+  tickFormatter(xValue, opt_axis) {
+    xValue = Math.max(0, Math.round(xValue));
+    xValue = Math.min(xValue, this.data.length - 1);
+    if (this.data[xValue] && this.data[xValue][2]) {
+      const d = new Date(this.data[xValue][2]);
+      return d.toISOString().substring(0, 10);  // yyyy-mm-dd.
+    }
+    return String(xValue);
+  },
+
+
+  /**
+    * Determines what stage of a mouse drag selection action the user is in.
+    * @param {MouseEvent} event Mouse event object.
+    * @return {string} One of "start", "move", "end", or "none".
+    */
+  getMouseDragType(event) {
+    if (!this.chart) {
+      return 'none';
+    }
+    const pos = this.getGraphPosFromMouseEvent(event);
+    const selection = this.chart.getSelection();
+    if (!pos || !selection) {
+      return 'none';
+    }
+    if (pos.startDist && pos.startDist < this.edgeDist) {
+      return 'start';
+    }
+    if (pos.endDist && pos.endDist < this.edgeDist) {
+      return 'end';
+    }
+    if (pos.index > selection.xaxis.from &&
+        pos.index < selection.xaxis.to) {
+      return 'move';
+    }
+    return 'none';
+  },
+
+  /**
+    * Determines what the cursor type should be based on a drag type string.
+    * @param {string} dragType One of "start", "move", "end", or "none".
+    * @return {string} One of "move", "col-resize", or "auto".
+    */
+  getCursorForDragType(dragType) {
+    switch (dragType) {
+      case 'move':
+        return 'move';
+      case 'start':
+      case 'end':
+        return 'col-resize';
+      default:
+        return 'auto';
+    }
+  },
+
+  /**
+    * Gets the position of the mouse selection relative to the chart.
+    * @param {MouseEvent} event Mouse event object.
+    */
+  getGraphPosFromMouseEvent(event) {
+    const boundingRect = this.$.revisions_container.getBoundingClientRect();
+    const plotOffset = this.chart.getPlotOffset();
+    let posX = event.pageX - boundingRect.left - plotOffset.left;
+    posX = Math.max(0, posX);
+    posX = Math.min(posX, this.chart.width());
+    const axes = this.chart.getAxes();
+    const indexX = Math.round(axes.xaxis.c2p(posX));
+    const revisionX = this.data[indexX][0];
+    const pos = {index: indexX, revision: revisionX};
+    const selection = this.chart.getSelection();
+    if (selection) {
+      pos.startDist = Math.abs(axes.xaxis.p2c(selection.xaxis.from) - posX);
+      pos.endDist = Math.abs(axes.xaxis.p2c(selection.xaxis.to) - posX);
+    }
+    return pos;
+  },
+
+  /**
+    * Updates the selected revision range as the user moves the mouse.
+    * @param {MouseEvent} event Mouse event object.
+    */
+  onMouseMove(event) {
+    // Stop Flot from handling the selection.
+    event.stopPropagation();
+    if (!this.data || this.data.length == 0) {
+      return;
+    }
+    if (this.dragType == 'none') {
+      const cursor = this.getCursorForDragType(this.getMouseDragType(event));
+      this.$.revisions_container.style.cursor = cursor;
+      return;
+    }
+
+    const pos = this.getGraphPosFromMouseEvent(event);
+    const diff = this.selectionStart.index - pos.index;
+    const startIndex = Math.max(0, this.selectionStart.from - diff);
+    const endIndex = Math.min(
+        this.selectionStart.to - diff, this.selectionMax);
+
+    // Note: There used to be a constant that determined the max number of
+    // selectable points, and this function would return early here if the
+    // number selected exceeded that number; this could be re-added if we
+    // want to limit the number of selectable points.
+
+    if (this.dragType == 'move' || this.dragType == 'start') {
+      this.startrev = this.data[startIndex][0];
+    }
+    if (this.dragType == 'move' || this.dragType == 'end') {
+      this.endrev = this.data[endIndex][0];
+    }
+  },
+
+  /**
+    * Sets the selection start when the user starts to drag.
+    * @param {MouseEvent} event Mouse event object.
+    */
+  onMouseDown(event) {
+    // Stop Flot from handling the selection.
+    event.stopPropagation();
+
+    this.dragType = this.getMouseDragType(event);
+    if (this.dragType == 'none') {
+      return;
+    }
+
+    const selection = this.chart.getSelection();
+    const from = Math.max(0, Math.round(selection.xaxis.from));
+    const to = Math.min(Math.round(selection.xaxis.to), this.data.length - 1);
+    const pos = this.getGraphPosFromMouseEvent(event);
+    this.selectionStart = {
+      index: pos.index,
+      from,
+      to
+    };
+    document.body.style.cursor = this.getCursorForDragType(this.dragType);
+
+    // Stop text selection (screws up cursor).
+    event.preventDefault();
+  },
+
+  /**
+    * Fires a "revisionrange" event when the user is finished selecting.
+    * @param {MouseEvent} event A "mouseup" event.
+    */
+  onMouseUp(event) {
+    if (this.dragType == 'none') {
+      return;
+    }
+    this.dragType = 'none';
+    const selection = this.chart.getSelection().xaxis;
+    document.body.style.cursor = 'auto';
+    this.$.revisions_container.style.cursor = 'auto';
+    if (selection.from == this.selectionStart.from &&
+        selection.to == this.selectionStart.to) {
+      return;
+    }
+    const detail = {
+      start_rev: this.startrev,
+      end_rev: this.endrev
+    };
+    this.fire('revisionrange', detail);
+  },
+
+  /**
+    * Sets a timer to resize after a certain amount of time.
+    */
+  onResize(event) {
+    // Try not to resize graphs until the user has stopped resizing.
+    clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(this.resizeGraph.bind(this), 100);
+  },
+
+  /**
+    * Resizes the graph.
+    */
+  resizeGraph() {
+    if (!this.chart) {
+      return;
+    }
+    const placeholder = this.chart.getPlaceholder();
+    // somebody might have hidden us and we can't plot
+    // when we don't have the dimensions
+    if (placeholder.width() == 0 || placeholder.height() == 0) {
+      return;
+    }
+    this.chart.resize();
+    this.chart.setupGrid();
+    this.chart.draw();
+    this.updateSelection();
+  }
+});
+</script>

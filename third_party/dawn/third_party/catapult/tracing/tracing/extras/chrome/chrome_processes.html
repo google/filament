@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/fixed_color_scheme.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.chrome.chrome_processes', function() {
+  const CHROME_PROCESS_NAMES = {
+    BROWSER: 'browser_process',
+    RENDERER: 'renderer_processes', // Intentionally plural.
+    ALL: 'all_processes',
+    GPU: 'gpu_process',
+    PPAPI: 'ppapi_process',
+    UNKNOWN: 'unknown_processes',
+  };
+
+  const PROCESS_COLOR_SCHEME_NAME = 'ChromeProcessNames';
+  const PROCESS_COLOR_SCHEME =
+      tr.b.FixedColorScheme.fromNames(Object.values(CHROME_PROCESS_NAMES));
+
+  tr.b.FixedColorSchemeRegistry.register(() => PROCESS_COLOR_SCHEME, {
+    name: PROCESS_COLOR_SCHEME_NAME,
+  });
+
+  /**
+   * Converts name to lower case and replaces spaces with underscores.
+   */
+  function canonicalizeName(name) {
+    return name.toLowerCase().replace(' ', '_');
+  }
+
+  /**
+   * Convert raw process name to canonical process names used in catapult.
+   *
+   * Examples:
+   * browser  -> CHROME_PROCESS_NAME.BROWSER
+   * renderer -> CHROME_PROCESS_NAME.RENDERER
+   */
+  function canonicalizeProcessName(rawProcessName) {
+    if (!rawProcessName) return CHROME_PROCESS_NAMES.UNKNOWN;
+
+    const baseCanonicalName = canonicalizeName(rawProcessName);
+    switch (baseCanonicalName) {
+      case 'renderer': return CHROME_PROCESS_NAMES.RENDERER;
+      case 'browser': return CHROME_PROCESS_NAMES.BROWSER;
+    }
+
+    if (Object.values(CHROME_PROCESS_NAMES).includes(baseCanonicalName)) {
+      return baseCanonicalName;
+    }
+
+    return CHROME_PROCESS_NAMES.UNKNOWN;
+  }
+
+  return {
+    CHROME_PROCESS_NAMES,
+    PROCESS_COLOR_SCHEME,
+    PROCESS_COLOR_SCHEME_NAME,
+    canonicalizeName,
+    canonicalizeProcessName,
+  };
+});
+</script>

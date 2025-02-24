@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/chrome_test_utils.html">
+<link rel="import"
+    href="/tracing/extras/chrome/chrome_user_friendly_category_driver.html">
+<link rel="import" href="/tracing/importer/find_input_expectations.html">
+<link rel="import" href="/tracing/metrics/system_health/power_metric.html">
+<link rel="import" href="/tracing/model/user_model/idle_expectation.html">
+<link rel="import" href="/tracing/model/user_model/load_expectation.html">
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+function containsData(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name) {
+      return (value.running !== undefined);
+    }
+  }
+
+  return undefined;
+}
+
+function getMetricValueCount(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name && value.running !== undefined) {
+      return value.running.count;
+    }
+  }
+
+  return undefined;
+}
+
+function getMetricValueSum(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name && value.running !== undefined) {
+      return value.running.sum;
+    }
+  }
+
+  return undefined;
+}
+
+function getMetricValueMin(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name && value.running !== undefined) {
+      return value.running.min;
+    }
+  }
+
+  return undefined;
+}
+
+function getMetricValueAvg(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name && value.running !== undefined) {
+      return value.running.mean;
+    }
+  }
+
+  return undefined;
+}
+
+function getMetricValueMax(histograms, name) {
+  for (const value of histograms) {
+    if (value.name === name && value.running !== undefined) {
+      return value.running.max;
+    }
+  }
+
+  return undefined;
+}
+
+tr.b.unittest.testSuite(function() {
+  test('powerMetric_computesChromeBoundsCorrectly', function() {
+    // Tests if Chrome bounds are computed correctly when there
+    // are both browser and renderer threads in the trace.
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const rendererThread = model.rendererMain;
+      const browserProcess = model.browserProcess;
+      const browserThread = model.browserMain;
+      rendererThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200.0,
+        duration: 500.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      browserThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000.0,
+        duration: 500.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 2000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 0, 2000));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueMin(histograms, 'idle:power'), 200.0, .01);
+    assert.closeTo(getMetricValueAvg(histograms, 'idle:power'), 849.5, .01);
+    assert.closeTo(getMetricValueMax(histograms, 'idle:power'), 1499.0, .01);
+  });
+
+  test('powerMetric_noPowerSeries', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.lengthOf(histograms, 0);
+  });
+
+  test('powerMetric_emptyPowerSeries', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.lengthOf(histograms, 0);
+  });
+
+  test('powerMetric_noChromeTrace', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    // Only the whole trace power metric should contain data.
+    assert(containsData(histograms, 'story:power'));
+    assert(!containsData(histograms, 'load:energy'));
+    assert(!containsData(histograms, 'after_load:power'));
+  });
+
+  test('powerMetric_emptyChromeTrace', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.LoadExpectation(
+          model, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 500));
+    });
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert(containsData(histograms, 'story:power'));
+    assert(!containsData(histograms, 'load:energy'));
+    assert(!containsData(histograms, 'after_load:power'));
+  });
+
+  test('powerMetric_powerSeriesStartsLate', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 300; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.LoadExpectation(
+          model, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert(containsData(histograms, 'story:power'));
+    assert(!containsData(histograms, 'load:energy'));
+    assert(!containsData(histograms, 'after_load:power'));
+  });
+
+  test('powerMetric_powerSeriesEndsEarly', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 700; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.LoadExpectation(
+          model, tr.model.um.LOAD_SUBTYPE_NAMES.SUCCESSFUL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert(containsData(histograms, 'story:power'));
+    assert(!containsData(histograms, 'load:energy'));
+    assert(!containsData(histograms, 'after_load:power'));
+  });
+
+  test('powerMetric_generic_oneStageEachType_irBeyondChrome', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const rendererProcess = model.getOrCreateProcess(1234);
+      const mainThread = rendererProcess.getOrCreateThread(1);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 1500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueSum(histograms,
+        'scroll_response:energy'), 125, 0.5);
+    assert.closeTo(getMetricValueAvg(histograms,
+        'idle:power'), 750, 0.5);
+    assert.closeTo(getMetricValueAvg(histograms,
+        'story:power'), 500, 0.5);
+  });
+
+  test('powerMetric_story_minAvgMax', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 1500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueMin(histograms, 'story:power'), 0, .01);
+    assert.closeTo(getMetricValueAvg(histograms, 'story:power'), 500, .01);
+    assert.closeTo(getMetricValueMax(histograms, 'story:power'), 1000, .01);
+  });
+
+  test('powerMetric_generic_oneUEBeforeChrome', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const rendererProcess = model.getOrCreateProcess(1234);
+      const mainThread = rendererProcess.getOrCreateThread(1);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 500,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 0, 300));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 300, 1000));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueAvg(histograms,
+        'idle:power'), 750, 0.5);
+  });
+
+  test('powerMetric_generic_multipleStagesEachType', function() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const rendererProcess = model.getOrCreateProcess(1234);
+      const mainThread = rendererProcess.getOrCreateThread(1);
+      mainThread.name = 'CrRendererMain';
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 0, 200));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 200, 300));
+      model.userModel.expectations.push(new tr.model.um.ResponseExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 500, 400));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 900, 100));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueSum(histograms,
+        'scroll_response:energy'), 300, 0.6);
+    assert.closeTo(getMetricValueAvg(histograms,
+        'idle:power'), 500, 0.6);
+    assert.strictEqual(getMetricValueCount(histograms,
+        'scroll_response:energy'), 2);
+    assert.strictEqual(getMetricValueCount(histograms,
+        'idle:power'), 400);
+  });
+
+  test('powerMetric_loading_oneInterval_samplesBeyondChrome', function() {
+    // Interval of load is [200, 15400].
+    // Trace goes until 22150.
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.rendererMain.asyncSliceGroup.push(tr.c.TestUtils.newSliceEx({
+        cat: 'disabled-by-default-network',
+        title: 'ResourceLoad',
+        start: 200,
+        duration: 5.0
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {isLoadingMainFrame: true, frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'});
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'loading',
+        title: 'firstContentfulPaint',
+        start: 9200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'domContentLoadedEventEnd',
+        start: 9200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9350,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 11150,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 12550,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 14900,
+        duration: 500,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 22150,
+        duration: 10,
+      }));
+
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 15400; i++) {
+        model.device.powerSeries.addPowerSample(i, 20);
+      }
+      for (let i = 15401; i <= 22160; i++) {
+        model.device.powerSeries.addPowerSample(i, 10);
+      }
+      for (let i = 22160; i <= 30000; i++) {
+        model.device.powerSeries.addPowerSample(i, 10);
+      }
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+    // Energy for first load is 20 W * 15.2 s
+    // (interval from 0.2 s to 15.4 s)
+    assert.closeTo(
+        getMetricValueAvg(histograms, 'load:energy'), 304, 0.1);
+  });
+
+  test('powerMetric_loading_noMeaningfulPaint', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 200,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      rendererProcess.objects.addSnapshot('ptr', 'loading', 'FrameLoader', 300,
+          {isLoadingMainFrame: true, frame: {id_ref: '0xdeadbeef'},
+            documentLoaderURL: 'http://example.com'});
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 9350,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 11150,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 12550,
+        duration: 100,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 14950,
+        duration: 500,
+      }));
+
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'toplevel',
+        title: tr.e.chrome.SCHEDULER_TOP_LEVEL_TASK_TITLE,
+        start: 22150,
+        duration: 10,
+      }));
+
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 15400; i++) {
+        model.device.powerSeries.addPowerSample(i, 20);
+      }
+      for (let i = 15401; i <= 22160; i++) {
+        model.device.powerSeries.addPowerSample(i, 10);
+      }
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+    // Energy for first load is 20 W * 15.2 s
+    // (interval from 0.2 s to 15.4 s)
+    assert.isUndefined(getMetricValueCount(histograms, 'after_load:power'));
+  });
+
+  test('powerMetric_scroll_oneStageEachType', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueAvg(histograms,
+        'scroll_animation:power'), 250, 0.5);
+  });
+
+  test('powerMetric_scroll_multipleStagesEachType', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 0, 200));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 200, 300));
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.SCROLL, 500, 200));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 700, 300));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueAvg(histograms,
+        'scroll_animation:power'), 350, 0.6);
+  });
+
+  test('powerMetric_video_oneStageEachType', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.VIDEO, 0, 500));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 500, 500));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueAvg(histograms, 'video_animation:power'),
+        250, 0.5);
+  });
+
+  test('powerMetric_video_multipleStagesEachType', function() {
+    const model = tr.e.chrome.ChromeTestUtils.newChromeModel(function(model) {
+      const rendererProcess = model.rendererProcess;
+      const mainThread = model.rendererMain;
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 0,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      mainThread.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+        cat: 'blink.user_timing',
+        title: 'navigationStart',
+        start: 1000,
+        duration: 0.0,
+        args: {frame: '0xdeadbeef'}
+      }));
+      model.device.powerSeries = new tr.model.PowerSeries(model.device);
+      for (let i = 0; i <= 1000; i++) {
+        model.device.powerSeries.addPowerSample(i, i);
+      }
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.VIDEO, 0, 200));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 200, 300));
+      model.userModel.expectations.push(new tr.model.um.AnimationExpectation(
+          model, tr.model.um.INITIATOR_TYPE.VIDEO, 500, 200));
+      model.userModel.expectations.push(new tr.model.um.IdleExpectation(
+          model, 700, 300));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.powerMetric(histograms, model);
+
+    assert.closeTo(getMetricValueAvg(histograms, 'video_animation:power'),
+        350, 0.6);
+  });
+});
+</script>

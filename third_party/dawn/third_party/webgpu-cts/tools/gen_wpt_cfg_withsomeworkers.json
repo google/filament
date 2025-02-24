@@ -1,0 +1,35 @@
+{
+  "suite": "webgpu",
+  "argumentsPrefixes": [
+    {
+      "_comment": "On the main thread, run all tests...",
+      "prefixes": ["?q="]
+    },
+    {
+      "_comment": "... and run a subset of tests on each type of worker.",
+      "prefixes": ["?worker=dedicated&q=", "?worker=shared&q=", "?worker=service&q="],
+      "filters": [
+        "webgpu:print_environment:*",
+        "webgpu:api,operation,buffers,map:*",
+        "webgpu:api,operation,buffers,map_detach:*",
+        "webgpu:api,operation,buffers,map_ArrayBuffer:*",
+        "webgpu:api,operation,buffers,map_oom:*",
+        "webgpu:api,operation,buffers,map_detach:*",
+        "webgpu:api,operation,command_buffer,basic:*",
+        "webgpu:api,operation,command_buffer,copyBufferToBuffer:*",
+        "webgpu:api,operation,compute,basic:*",
+        "webgpu:api,operation,rendering,basic:*",
+        "webgpu:api,operation,render_pass,storeOp:*",
+        "webgpu:api,operation,render_pass,storeop2:*",
+        "webgpu:api,operation,onSubmittedWorkDone:*",
+        "webgpu:api,validation,buffer,destroy:*",
+        "webgpu:api,validation,buffer,mapping:*",
+        "webgpu:idl,*",
+        "webgpu:web_platform,*"
+      ]
+    }
+  ],
+  "out": "../out-wpt/cts-withsomeworkers.https.html",
+  "outVariantList": "../gen/webgpu_variant_list_withsomeworkers.json",
+  "template": "../src/common/templates/cts.https.html"
+}

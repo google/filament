@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.v.d', function() {
+  class Diagnostic {
+    constructor() {
+      this.guid_ = undefined;
+    }
+
+    /**
+     * Returns a new Diagnostic that is like this one but distinct.
+     * This is useful when merging Diagnostics.
+     * @return {!tr.v.d.Diagnostic}
+     */
+    clone() {
+      return new this.constructor();
+    }
+
+    /**
+     * Return true if |this| can be merged with |otherDiagnostic|.
+     *
+     * @param {!tr.v.d.Diagnostic} otherDiagnostic
+     * @return {!boolean}
+     */
+    canAddDiagnostic(otherDiagnostic) {
+      return false;
+    }
+
+    /**
+     * If subclasses override canAddDiagnostic() then they must also override
+     * this method to modify |this| to include information from
+     * |otherDiagnostic|.
+     *
+     * @param {!tr.v.d.Diagnostic} otherDiagnostic
+     */
+    addDiagnostic(otherDiagnostic) {
+      throw new Error('Abstract virtual method: subclasses must override ' +
+          'this method if they override canAddDiagnostic');
+    }
+
+    get guid() {
+      if (this.guid_ === undefined) {
+        this.guid_ = tr.b.GUID.allocateUUID4();
+      }
+
+      return this.guid_;
+    }
+
+    set guid(guid) {
+      if (this.guid_ !== undefined) {
+        throw new Error('Cannot reset guid');
+      }
+
+      this.guid_ = guid;
+    }
+
+    get hasGuid() {
+      return this.guid_ !== undefined;
+    }
+
+    /**
+     * If this Diagnostic is shared between multiple Histograms, then return its
+     * |guid|. Otherwise, serialize this Diagnostic to a dictionary.
+     *
+     * @return {string|!Object}
+     */
+    asDictOrReference() {
+      if (this.guid_ !== undefined) {
+        return this.guid_;
+      }
+      return this.asDict();
+    }
+
+    /**
+     * Serialize all of the information in this Diagnostic to a dictionary,
+     * regardless of whether it is shared between multiple Histograms.
+     *
+     * @return {!Object}
+     */
+    asDict() {
+      const result = {type: this.constructor.name};
+      if (this.guid_ !== undefined) {
+        result.guid = this.guid_;
+      }
+      this.asDictInto_(result);
+      return result;
+    }
+
+    asDictInto_(d) {
+      throw new Error('Abstract virtual method: subclasses must override ' +
+          'this method if they override canAddDiagnostic');
+    }
+
+    static fromDict(d) {
+      const typeInfo = Diagnostic.findTypeInfoWithName(d.type);
+      if (!typeInfo) {
+        throw new Error('Unrecognized diagnostic type: ' + d.type);
+      }
+
+      const diagnostic = typeInfo.constructor.fromDict(d);
+      if (d.guid !== undefined) diagnostic.guid = d.guid;
+      return diagnostic;
+    }
+
+    static deserialize(type, d, deserializer) {
+      const typeInfo = Diagnostic.findTypeInfoWithName(type);
+      if (!typeInfo) {
+        throw new Error('Unrecognized diagnostic type: ' + type);
+      }
+
+      return typeInfo.constructor.deserialize(d, deserializer);
+    }
+  }
+
+  const options = new tr.b.ExtensionRegistryOptions(tr.b.BASIC_REGISTRY_MODE);
+  options.defaultMetadata = {};
+  options.mandatoryBaseClass = Diagnostic;
+  tr.b.decorateExtensionRegistry(Diagnostic, options);
+
+  Diagnostic.addEventListener('will-register', function(e) {
+    const constructor = e.typeInfo.constructor;
+
+    if (!(constructor.deserialize instanceof Function) ||
+        (constructor.deserialize === Diagnostic.deserialize) ||
+        (constructor.deserialize.length !== 2)) {
+      throw new Error(
+          `Please define ${constructor.name}.deserialize(data, deserializer)`);
+    }
+
+    if (!(constructor.fromDict instanceof Function) ||
+        (constructor.fromDict === Diagnostic.fromDict) ||
+        (constructor.fromDict.length !== 1)) {
+      throw new Error(
+          `Please define ${constructor.name}.fromDict(d)`);
+    }
+
+    if (!(constructor.prototype.serialize instanceof Function) ||
+        (constructor.prototype.serialize === Diagnostic.prototype.serialize) ||
+        (constructor.prototype.serialize.length !== 1)) {
+      throw new Error(
+          `Please define ${constructor.name}.serialize(serializer)`);
+    }
+  });
+
+  return {
+    Diagnostic,
+  };
+});
+</script>

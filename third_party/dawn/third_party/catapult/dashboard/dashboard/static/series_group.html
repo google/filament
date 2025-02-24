@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('d', function() {
+  class SeriesGroup {
+    /**
+     * @param {string} mainPath
+     * @param {Array.<string>} selectedPaths
+     * @param {Array.<string>} unselectedPaths
+     */
+    constructor(mainPath, selectedPaths, unselectedPaths, anyMissing) {
+      this.mainPath_ = mainPath;
+      this.selectedPaths_ = selectedPaths;
+      this.unselectedPaths_ = unselectedPaths;
+      this.anyMissing_ = anyMissing;
+    }
+
+    get mainPath() {
+      return this.mainPath_;
+    }
+
+    get selectedPaths() {
+      return this.selectedPaths_;
+    }
+
+    get unselectedPaths() {
+      return this.unselectedPaths_;
+    }
+
+    get anyMissing() {
+      return this.anyMissing_;
+    }
+  }
+
+  /**
+   * Builds a SeriesGroup instance from an element of a legacy chart state.
+   *
+   * The expected structure of the legacy chart state element is described in
+   * the docstring for listTestsRequestParams.
+   *
+   * @param {Array} element
+   * @return {!Promise.<!d.SeriesGroup>}
+   */
+  SeriesGroup.fromLegacyChartStateElement = element => {
+    const mainPath = element[0];
+    const selectedParams = listTestsRequestParams(element, true);
+    const unselectedParams = listTestsRequestParams(element, false);
+    const selectedTests = simple_xhr.asPromise('/list_tests', selectedParams);
+    const unselectedTests = simple_xhr.asPromise(
+        'list_tests', unselectedParams);
+
+    return Promise.all([selectedTests, unselectedTests]).then(
+        tests => new SeriesGroup(
+            mainPath,
+            tests[0].tests,
+            tests[1].tests,
+            tests[0].anyMissing || tests[1].anyMissing));
+  };
+
+  /**
+   * Returns a dict of arguments to pass to /list_tests.
+   *
+   * The legacy chart state element should be a two-element array, where the
+   * first element is the main path, and the second element is another array.
+   * This array will either have a single element that is a magic string ('all',
+   * 'important', or 'none'), or an exact list of test paths.
+   *
+   * @param {Array} legacyChartStateElement
+   */
+  function listTestsRequestParams(legacyChartStateElement, selected) {
+    let selectedStr = '0';
+    if (selected === true) {
+      selectedStr = '1';
+    }
+
+    return {
+      type: 'test_path_dict',
+      test_path_dict: JSON.stringify(testPathDict(...legacyChartStateElement)),
+      return_selected: selectedStr
+    };
+  }
+
+  function testPathDict(mainPath, legacySelection) {
+    let selection = [];
+    if (legacySelection.length === 1 && legacySelection[0] === 'all') {
+      selection = 'all';
+    } else if (
+      legacySelection.length === 1 && legacySelection[0] === 'important') {
+      selection = 'core';
+    } else if (
+      legacySelection.length === 1 && legacySelection[0] === 'none') {
+      // TODO(eakuefner): Analyze existing page states to see if this is used.
+      selection = [];
+    } else {
+      selection = legacySelection;
+    }
+
+    const dict = {};
+    dict[mainPath] = selection;
+    return dict;
+  }
+
+  return {
+    SeriesGroup,
+    listTestsRequestParams
+  };
+});
+
+</script>

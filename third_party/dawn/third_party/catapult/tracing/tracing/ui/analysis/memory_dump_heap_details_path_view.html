@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_heap_details_util.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+<link rel="import" href="/tracing/ui/analysis/rebuildable_behavior.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_context_controller.html">
+
+<dom-module id='tr-ui-a-memory-dump-heap-details-path-view'>
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+    <tr-v-ui-scalar-context-controller></tr-v-ui-scalar-context-controller>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const DOWNWARDS_ARROW_WITH_TIP_RIGHTWARDS = String.fromCharCode(0x21B3);
+
+  function HeapDetailsPathColumn(title) {
+    tr.ui.analysis.HeapDetailsTitleColumn.call(this, title);
+  }
+
+  HeapDetailsPathColumn.prototype = {
+    __proto__: tr.ui.analysis.HeapDetailsTitleColumn.prototype,
+
+    formatTitle(row) {
+      const title = tr.ui.analysis.HeapDetailsTitleColumn.prototype.
+          formatTitle.call(this, row);
+      if (row.dimension === tr.ui.analysis.HeapDetailsRowDimension.ROOT) {
+        return title;
+      }
+
+      const arrowEl = document.createElement('span');
+      Polymer.dom(arrowEl).textContent = DOWNWARDS_ARROW_WITH_TIP_RIGHTWARDS;
+      arrowEl.style.paddingRight = '2px';
+      arrowEl.style.fontWeight = 'bold';
+      arrowEl.style.color = tr.b.ColorScheme.getColorForReservedNameAsString(
+          'heap_dump_child_node_arrow');
+
+      const rowEl = document.createElement('span');
+      Polymer.dom(rowEl).appendChild(arrowEl);
+      Polymer.dom(rowEl).appendChild(tr.ui.b.asHTMLOrTextNode(title));
+      return rowEl;
+    }
+  };
+
+  Polymer({
+    is: 'tr-ui-a-memory-dump-heap-details-path-view',
+    behaviors: [tr.ui.analysis.RebuildableBehavior],
+
+    created() {
+      this.selectedNode_ = undefined;
+      this.aggregationMode_ = undefined;
+    },
+
+    ready() {
+      this.$.table.addEventListener('selection-changed', function(event) {
+        this.selectedNode_ = this.$.table.selectedTableRow;
+        this.didSelectedNodeChange_();
+      }.bind(this));
+    },
+
+    didSelectedNodeChange_() {
+      this.dispatchEvent(new tr.b.Event('selected-node-changed'));
+    },
+
+    get selectedNode() {
+      return this.selectedNode_;
+    },
+
+    set selectedNode(node) {
+      this.selectedNode_ = node;
+      this.didSelectedNodeChange_();
+      this.scheduleRebuild_();
+    },
+
+    get aggregationMode() {
+      return this.aggregationMode_;
+    },
+
+    set aggregationMode(aggregationMode) {
+      this.aggregationMode_ = aggregationMode;
+      this.scheduleRebuild_();
+    },
+
+    onRebuild_() {
+      if (this.selectedNode_ === undefined) {
+        this.$.table.clear();
+        return;
+      }
+
+      if (this.$.table.tableRows.includes(this.selectedNode_)) {
+        this.$.table.selectedTableRow = this.selectedNode_;
+        return;
+      }
+
+      this.$.table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+      this.$.table.userCanModifySortOrder = false;
+      const rows = this.createRows_(this.selectedNode_);
+      this.$.table.tableRows = rows;
+      this.$.table.tableColumns = this.createColumns_(rows);
+      this.$.table.selectedTableRow = rows[rows.length - 1];
+    },
+
+    createRows_(node) {
+      const rows = [];
+      while (node) {
+        rows.push(node);
+        node = node.parentNode;
+      }
+      rows.reverse();
+      return rows;
+    },
+
+    createColumns_(rows) {
+      const titleColumn = new HeapDetailsPathColumn('Current path');
+      titleColumn.width = '200px';
+
+      const numericColumns = tr.ui.analysis.MemoryColumn.fromRows(rows, {
+        cellKey: 'cells',
+        aggregationMode: this.aggregationMode_,
+        rules: tr.ui.analysis.HEAP_DETAILS_COLUMN_RULES,
+        shouldSetContextGroup: true
+      });
+      tr.ui.analysis.MemoryColumn.spaceEqually(numericColumns);
+
+      return [titleColumn].concat(numericColumns);
+    }
+  });
+
+  return {};
+});
+</script>

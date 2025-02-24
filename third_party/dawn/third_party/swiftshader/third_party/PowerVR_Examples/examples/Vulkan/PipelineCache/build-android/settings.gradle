@@ -1,0 +1,27 @@
+rootProject.name='VulkanPipelineCache'
+
+//Copy all the build output stuff into the SDK/bin folder
+gradle.ext.PVR_BINARY_OUTPUT_DIR='bin'
+
+include('PVRCore')
+project(':PVRCore').projectDir=file('../../../../framework/PVRCore/build-android')
+include('glm')
+project(':glm').projectDir=file('../../../../external/glm/build-android')
+include('pugixml')
+project(':pugixml').projectDir=file('../../../../external/pugixml/build-android')
+include('PVRShell')
+project(':PVRShell').projectDir=file('../../../../framework/PVRShell/build-android')
+include('PVRAssets')
+project(':PVRAssets').projectDir=file('../../../../framework/PVRAssets/build-android')
+include('tinygltf')
+project(':tinygltf').projectDir=file('../../../../external/tinygltf/build-android')
+include('PVRVk')
+project(':PVRVk').projectDir=file('../../../../framework/PVRVk/build-android')
+include('glslang')
+project(':glslang').projectDir=file('../../../../external/glslang/build-android')
+include('VulkanMemoryAllocator')
+project(':VulkanMemoryAllocator').projectDir=file('../../../../external/VulkanMemoryAllocator/build-android')
+include('PVRUtilsVk')
+project(':PVRUtilsVk').projectDir=file('../../../../framework/PVRUtils/Vulkan/build-android')
+include('glslangValidator')
+project(':glslangValidator').projectDir=file('../../../../external/glslangValidator/build-android')

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.b', function() {
+  function encodeString(s) {
+    return encodeURIComponent(s).replace(/[(-.)]/, c =>
+      '%' + c.charCodeAt(0).toString(16));
+  }
+
+  function encodeStrings(dict) {
+    if (dict instanceof Array || !(dict instanceof Object)) {
+      throw new Error(
+          'UrlJson only supports dictionaries of strings.');
+    }
+
+    const result = {};
+    for (const [key, value] of Object.entries(dict)) {
+      if ((value instanceof Array || !(value instanceof Object)) &&
+          typeof(value) !== 'string') {
+        throw new Error(
+            'UrlJson only supports strings and dictionaries of strings.');
+      }
+
+      if (value instanceof Object) {
+        result[encodeString(key)] = encodeStrings(value);
+      } else {
+        result[encodeString(key)] = encodeString(value);
+      }
+    }
+    return result;
+  }
+
+  function decodeStrings(dict) {
+    const result = {};
+    for (const [key, value] of Object.entries(dict)) {
+      if (value instanceof Object) {
+        result[decodeURIComponent(key)] = decodeStrings(value);
+      } else if (typeof(value) === 'string') {
+        result[decodeURIComponent(key)] = decodeURIComponent(value);
+      } else {
+        throw new Error(
+            'UrlJson only supports strings and dictionaries of strings.');
+      }
+    }
+    return result;
+  }
+
+  /*
+   * This implements a subset of JSON in a compact URL-safe format.
+   * Only strings and dictionaries of strings are supported.
+   * Numbers, arrays, booleans, and null are not supported.
+   * Instead of using url-unsafe characters {":,}
+   * This format uses url-safe characters (-.)
+   * If strings contain those characters, they will be URI-encoded like other
+   * url-unsafe characters.
+   * For example, the following object would be encoded as the following
+   * UrlJson:
+   * {"abc": {"def": "ghi", "jkl": "mno"}, "pqr": "stu"}
+   * abc-(def-ghi.jkl-mno).pqr-stu
+   */
+  class UrlJson {
+    static stringify(dict) {
+      dict = encodeStrings(dict);
+      const str = JSON.stringify(dict);
+      return str.slice(1, str.length - 1)
+          .replace(/{/g, '(')
+          .replace(/}/g, ')')
+          .replace(/ /g, '')
+          .replace(/"/g, '')
+          .replace(/,/g, '.')
+          .replace(/:/g, '-');
+    }
+
+    static parse(str) {
+      if (str === '') return {};
+      str = ('{"' + str + '"}')
+          .replace(/-\(/g, '": {"')
+          .replace(/-/g, '": "')
+          .replace(/\(/g, '{"')
+          .replace(/\)/g, '"}')
+          .replace(/}"/g, '}')
+          .replace(/\./g, '", "');
+      return decodeStrings(JSON.parse(str));
+    }
+  }
+
+  return {
+    UrlJson,
+  };
+});
+</script>

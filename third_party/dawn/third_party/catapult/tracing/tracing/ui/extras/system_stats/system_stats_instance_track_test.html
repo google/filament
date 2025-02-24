@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/extras/system_stats/system_stats.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SystemStatsInstanceTrack =
+    tr.ui.e.system_stats.SystemStatsInstanceTrack;
+  const Viewport = tr.ui.TimelineViewport;
+
+  const createObjects = function() {
+    const objectInstance = new tr.model.ObjectInstance({});
+    const snapshots = [];
+
+    const stats1 = {};
+    const stats2 = {};
+
+    stats1.committed_memory = 2000000;
+    stats2.committed_memory = 3000000;
+
+    stats1.meminfo = {};
+    stats1.meminfo.free = 10000;
+    stats2.meminfo = {};
+    stats2.meminfo.free = 20000;
+
+    stats1.perfinfo = {};
+    stats1.perfinfo.idle_time = 10;
+    stats1.perfinfo.read_transfer_count = 20;
+    stats1.perfinfo.write_transfer_count = 30;
+    stats1.perfinfo.other_transfer_count = 40;
+    stats1.perfinfo.read_operation_count = 2;
+    stats1.perfinfo.write_operation_count = 3;
+    stats1.perfinfo.other_operation_count = 4;
+    stats1.perfinfo.pagefile_pages_written = 5;
+    stats1.perfinfo.pagefile_pages_write_ios = 6;
+
+    stats2.perfinfo = {};
+    stats2.perfinfo.idle_time = 110;
+    stats2.perfinfo.read_transfer_count = 120;
+    stats2.perfinfo.write_transfer_count = 130;
+    stats2.perfinfo.other_transfer_count = 140;
+    stats2.perfinfo.read_operation_count = 102;
+    stats2.perfinfo.write_operation_count = 103;
+    stats2.perfinfo.other_operation_count = 104;
+    stats2.perfinfo.pagefile_pages_written = 105;
+    stats2.perfinfo.pagefile_pages_write_ios = 106;
+
+    snapshots.push(new tr.e.system_stats.SystemStatsSnapshot(objectInstance,
+        10, stats1));
+    snapshots.push(new tr.e.system_stats.SystemStatsSnapshot(objectInstance,
+        20, stats2));
+
+    objectInstance.snapshots = snapshots;
+
+    return objectInstance;
+  };
+
+  test('instantiate', function() {
+    const objectInstances = [];
+    objectInstances.push(createObjects());
+
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = new SystemStatsInstanceTrack(viewport);
+    track.objectInstances = objectInstances;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    const snapshot1 = track.objectInstance_.snapshots[1];
+    const stats1 = snapshot1.getStats();
+
+    // Raw counters should not move.
+    assert.strictEqual(stats1.perfinfo.idle_time, 110);
+    assert.strictEqual(stats1.perfinfo.read_operation_count, 102);
+    assert.strictEqual(stats1.perfinfo.write_operation_count, 103);
+    assert.strictEqual(stats1.perfinfo.other_operation_count, 104);
+    assert.strictEqual(stats1.perfinfo.read_transfer_count, 120);
+    assert.strictEqual(stats1.perfinfo.write_transfer_count, 130);
+    assert.strictEqual(stats1.perfinfo.other_transfer_count, 140);
+    assert.strictEqual(stats1.perfinfo.pagefile_pages_written, 105);
+    assert.strictEqual(stats1.perfinfo.pagefile_pages_write_ios, 106);
+
+    // Rates should be computed.
+    assert.strictEqual(stats1.perfinfo.idle_time_per_sec, 0.001);
+    assert.strictEqual(stats1.perfinfo.bytes_read_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.bytes_written_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.bytes_other_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.read_operation_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.write_operation_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.other_operation_per_sec, 10000);
+    assert.strictEqual(stats1.perfinfo.pagefile_bytes_written_per_sec,
+        40960000);
+    assert.strictEqual(stats1.perfinfo.pagefile_write_operation_per_sec, 10000);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    track.heading = 'testBasic';
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 50, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+  });
+});
+</script>

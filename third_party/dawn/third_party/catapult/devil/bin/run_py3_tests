@@ -1,0 +1,35 @@
+#!/usr/bin/env vpython3
+# Copyright 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Runs all devil tests under python3."""
+
+import os
+import sys
+
+_CATAPULT_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..'))
+_DEVIL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+sys.path.append(_CATAPULT_PATH)
+import six
+from catapult_build import run_with_typ
+
+
+def main():
+  if six.PY2:
+    print('Somehow running under python2.')
+    return 1
+
+  # Tests mock out internal details of methods, and the ANDROID_SERIAL can
+  # change which internal methods are called. Since tests don't actually use
+  # devices, it should be fine to delete the variable.
+  if 'ANDROID_SERIAL' in os.environ:
+    del os.environ['ANDROID_SERIAL']
+
+  return run_with_typ.Run(top_level_dir=_DEVIL_PATH)
+
+
+if __name__ == '__main__':
+  sys.exit(main())

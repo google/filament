@@ -1,0 +1,28 @@
+# Copyright (c) 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains configs that need to be added or removed to all
+# SwiftShader libraries
+
+import("../swiftshader.gni")
+import("//build_overrides/build.gni")
+
+declare_args() {
+  # Subzero doesn't support ARM64, LOONGARCH64, MIPS64, PPC64, and RISCV64 (only x86 and ARMv7a).
+  supports_subzero = current_cpu != "arm64" && current_cpu != "mips64el" && current_cpu != "ppc64" && current_cpu != "riscv64" && current_cpu != "loong64"
+}
+
+declare_args() {
+  supports_llvm = is_linux || is_chromeos || is_fuchsia || is_win || is_android
+    # LLVM uses C++17 features which require macOS 10.12, while Chrome's minimum platform for x86 is 10.11.
+    # Don't build LLVM on Mac, unless we have to. This only happens on ARM64 devices, which launched with 11.0.
+    # TODO(b/174843857): Remove check for !supports_subzero once Chrome supports macOS 10.12
+    || (is_mac && !supports_subzero)
+}
+
+declare_args() {
+  # Subzero produces much smaller binaries, so always use it when available,
+  # except for MSan builds which only get Reactor code instrumented with LLVM.
+  use_swiftshader_with_subzero = supports_subzero && !is_msan
+}

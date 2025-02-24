@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/cancel-job-dialog-test.html">
+<link rel="import" href="/static/testing_common.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    tearDown() {
+      testing_common.clearXhrMock();
+    }
+  };
+
+  test('instantiation', function() {
+    const fixture = document.createElement('cancel-job-dialog');
+    fixture.job = {job_id: '1', name: 'An example job'};
+    this.addHTMLOutput(fixture);
+  }, testOptions);
+
+  // TODO(dberris): Add more tests here.
+});
+</script>

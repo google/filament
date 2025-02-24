@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The 'autocomplete-box' is a input box with autocomplete drop-down menu.
+The drop-down menu has support for grouping, and tag name.
+
+Example usage:
+
+    <autocomplete-box items={{items}}
+                      placeholder="course"></autocomplete-box>
+
+'items' is a list of object with the following properties:
+
+    [
+        {name: 'Skydiving'},
+        {name: 'Rock Climbing'},
+        ...
+    ]
+
+Tag property adds a label to the right of the list item name.
+
+    [
+        {name: 'Skydiving'},
+        {name: 'Rock Climbing', tag: 'beginner'},
+        ...
+    ]
+
+'autocomplete-box' supports grouping which shows group name and
+group member items indented.  This expects each group header to be an item with
+the property 'head' sets to true and the following group items to have
+property 'group' sets to the header item name.
+
+    [
+        {name: 'Outdoor', head: true},
+        {name: 'Skydiving', tag: '1 spot left', group: 'Outdoor'},
+        ...
+    ]
+-->
+
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/iron-form-element-behavior/iron-form-element-behavior.html">
+<link rel="import" href="/components/iron-validatable-behavior/iron-validatable-behavior.html">
+<link rel="import" href="/components/paper-input/paper-input.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-material/paper-material.html">
+<link rel="import" href="/components/paper-menu/paper-menu.html">
+
+<link rel="import" href="/static/autocomplete.html">
+
+<dom-module id="autocomplete-box">
+  <template>
+    <style include="iron-flex">
+      :host {
+        --paper-input-container-input: {
+          text-overflow: ellipsis;
+        }
+      }
+
+      #dropdown-container {
+        position: absolute;
+        background-color: white;
+        box-sizing: border-box;
+        border-radius: 2px;
+        z-index: var(--layer-menus);
+      }
+
+      paper-menu {
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: 300px;
+      }
+
+      #dropdown paper-item {
+        min-height: 25px;
+        color: #616161;
+        text-indent: 10px;
+      }
+
+      #dropdown paper-item[head] {
+        color: darkblue;
+        text-indent: 0;
+      }
+
+      #size-check {
+        display: inline-block;
+        position: absolute;
+        visibility: hidden;
+      }
+
+      .tag {
+        color: gray;
+        font-size: 90%;
+        padding-left: 5px;
+      }
+
+      paper-input .selected {
+        padding-bottom: 4px;
+        padding-top: 4px;
+        line-height: 16px;
+        font-size: 14px;
+      }
+
+      paper-input .selected span {
+        color: white;
+        border-radius: 100px;
+        background-color: #3E50B4;
+        margin: 0px 3px 0px 0px;
+        padding: 2px 4px;
+      }
+
+      /* From: paper-item/paper-item-shared-styles.html */
+      .locus:before {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: currentColor;
+        content: '';
+        opacity: 0.12;
+        pointer-events: none;
+      }
+
+      /* From: paper-item/paper-item-shared-styles.html */
+      .locus:after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: currentColor;
+        opacity: 0.12;
+        content: '';
+        pointer-events: none;
+      }
+
+      #clear {
+        display: none;
+        border-radius: 50%;
+        background: lightgrey;
+        width: 24px;
+        height: 24px;
+        padding: 0 4px;
+      }
+    </style>
+
+    <div id="container">
+      <paper-input label="{{placeholder}}"
+                   on-click="onClickInput"
+                   on-focus="onFocusInput"
+                   on-blur="onBlurInput"
+                   on-keydown="onInputKeydown"
+                   disabled$="{{disabled}}"
+                   id="textbox"
+                   required$="[[required]]"
+                   value="{{query::input}}">
+        <paper-icon-button suffix on-tap="onClearInput_"
+          id="clear" icon="clear" alt="clear" title="clear">
+        </paper-icon-button>
+      </paper-input>
+      <paper-material
+          id="dropdown-container"
+          hidden$="[[!showDropdown]]">
+        <paper-menu id="dropdown"
+                    tabindex="-1"
+                    on-mousedown="onDropdownMouseDown"
+                    on-iron-select="onDropdownSelect"
+                    on-iron-items-changed="onItemsChanged">
+          <template is="dom-repeat" items="[[suggestedItems]]">
+              <paper-item
+                  item="[[item]]"
+                  head$="[[item.head]]"
+                  hidden$="[[!showDropdown]]"
+                  class$="layout horizontal [[locusClassIfLocus(locusItem, item)]]">
+              <div class="flex">[[item.name]]</div>
+              <div class="tag">[[item.tag]]</div>
+            </paper-item>
+          </template>
+        </paper-menu>
+      </paper-material>
+    </div>
+    <span id="size-check">{{value}}</span>
+
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+const AutocompleteBoxBehavior = {
+  properties: {
+    items: {
+      type: Array,
+      value: () => []
+    },
+
+    query: {
+      type: String,
+      notify: true,
+      value: '',
+      observer: 'onQueryChanged_',
+    },
+
+    /**
+      * The currently 'highlighted' item in the dropdown. This keeps track of
+      * which entry the user is currently on when they are using the arrow
+      * keys.
+      */
+    locusItem: {
+      type: Object,
+      notify: true
+    },
+
+    suggestedItems: {
+      type: Array,
+      computed: 'computeSuggestedItems(query, items.*)'
+    },
+
+    dropdownOpen: {
+      type: Boolean,
+      value: false
+    },
+
+    hasSuggestions: {
+      type: Boolean,
+      computed: 'computeHasSuggestions(suggestedItems.*)'
+    },
+
+    // Not quite the same thing as dropdownOpen since the dropdown can be
+    // logically open but empty in which case we don't want to show it.
+    showDropdown: {
+      type: Boolean,
+      computed: 'computeShowDropdown(hasSuggestions, dropdownOpen)'
+    },
+
+    /**
+      * The selected item otherwise null.
+      */
+    selectedItem: {
+      notify: true,
+      type: Object,
+      value: null
+    },
+
+    /**
+      * The selected items name otherwise null;
+      */
+    selectedName: {
+      type: String,
+      notify: true,
+      readOnly: true,
+      computed: 'computeSelectedName(selectedItem)'
+    },
+
+    value: {
+      type: String,
+      notify: true,
+      readOnly: true,
+      computed: 'computeSelectedName(selectedItem)'
+    },
+  },
+
+  observers: [
+    'itemsChanged(items.*)',
+    'selectedItemChanged(selectedItem)'
+  ],
+
+  itemEquals(itemA, itemB) {
+    return itemA.name == itemB.name && itemA.group == itemB.group;
+  },
+
+  /**
+    * When the underlying list of items changes update the selected items
+    * to ensure we're not selecting things which are no longer in the list.
+    */
+  itemsChanged(_itemsChange) {
+    let preservedSelectedItem = null;
+    const items = this.items || [];
+    if (this.selectedItem) {
+      for (const newItem of items) {
+        if (this.itemEquals(this.selectedItem, newItem)) {
+          preservedSelectedItem = newItem;
+          break;
+        }
+      }
+    }
+    this.set('selectedItem', preservedSelectedItem);
+  },
+
+  selectedItemChanged(_selectedItemsChange) {
+    this.fire('dropdownselect');
+    if (this.selectedItem) this.set('query', this.selectedItem.name);
+    if (!this.$) return;
+  },
+
+  computeSuggestedItems(query, _itemsChange) {
+    const ignoreCase = true;
+    const searcher = new autocomplete.Autocomplete(this.items, ignoreCase);
+    return searcher.search(query);
+  },
+
+  computeHasSuggestions(_suggestedItemsChange) {
+    return this.suggestedItems.length > 0;
+  },
+
+  computeShowDropdown(_hasSuggestions, _dropdownOpen) {
+    return this.hasSuggestions && this.dropdownOpen;
+  },
+
+  clearItem() {
+    this.set('selectedItem', null);
+    this.set('query', '');
+  },
+
+  selectItem(item) {
+    if (item.head) return;
+    this.set('dropdownOpen', false);
+    this.set('selectedItem', item);
+  },
+
+  tryReselectQuery() {
+    if (this.disabled) {
+      return;
+    }
+    if (this.selectedItem && this.selectedItem.name === this.query) {
+      return;
+    }
+    const i = this.findItemByName(this.query);
+    if (!!i) {
+      this.selectItem(i);
+      return;
+    }
+    this.clearItem();
+  },
+
+  findItemByName(name) {
+    for (const i of this.items) {
+      if (i.name === name) {
+        return i;
+      }
+    }
+    return null;
+  },
+
+  maybeSelectLocus() {
+    const suggestions = this.suggestedItems || [];
+    if (suggestions.includes(this.locusItem)) {
+      this.selectItem(this.locusItem);
+      this.set('dropdownOpen', false);
+    }
+  },
+
+  moveLocus(down) {
+    const delta = down ? 1 : -1;
+    const suggestions = this.suggestedItems || [];
+    const n = suggestions.length;
+    let index = suggestions.indexOf(this.locusItem);
+    if (index === -1 && !down) {
+      index = 0;
+    }
+    index = index + delta;
+    if (n > 0) {
+      index = ((index % n) + n) % n;
+    }
+    if (index < 0 || index >= suggestions.length) {
+      this.set('locusItem', null);
+    } else {
+      this.set('locusItem', suggestions[index]);
+    }
+  },
+
+  computeSelectedName(selectedItem) {
+    if (!selectedItem) return '';
+    return selectedItem.name;
+  },
+};
+
+Polymer({
+  is: 'autocomplete-box',
+  behaviors: [
+    AutocompleteBoxBehavior,
+    Polymer.IronFormElementBehavior,
+    Polymer.IronValidatableBehavior,
+  ],
+
+  properties: {
+    disabled: {
+      notify: true,
+      type: Boolean,
+      value: false
+    },
+    placeholder: { notify: true },
+    required: {
+      type: Boolean,
+      value: false
+    },
+  },
+
+  observers: [
+    'updateSelected(selectedItem)',
+    'updateSelected(locusItem)',
+  ],
+
+  _getValidity(values) {
+    return this.$.textbox.validate(values);
+  },
+
+  shouldIgnoreSelectionEvents() {
+    if (this.muffleSelection === undefined) this.muffleSelection = false;
+    return this.muffleSelection;
+  },
+
+  focus() {
+    this.querySelector('input').focus();
+  },
+
+  onClickInput() {
+    // Sometimes the dropbox is closed even when the input has focus
+    // tries to click on the input to re-open it so we support that:
+    this.set('dropdownOpen', true);
+    this.$.textbox.readonly = false;
+  },
+
+  onFocusInput() {
+    if (this.id === 'selection-0' && !this.selectedItem && window.METRICS) {
+      METRICS.startChartAction();
+    }
+    this.set('dropdownOpen', true);
+    this.$.textbox.readonly = false;
+  },
+
+  onBlurInput() {
+    this.set('dropdownOpen', false);
+    const item = this.suggestedItems.find(i => i.name == this.query, this);
+    this.set('selectedItem', item || {name: this.query});
+    this.$.textbox.readonly = true;
+  },
+
+  onClearInput_() {
+    this.set('query', '');
+    this.focus();
+  },
+
+  onInputKeydown(event) {
+    this.set('dropdownOpen', true);
+    const key = event.keyCode || event.charCode;
+    if (key === 40) {
+      this.moveLocus(true /* down */);
+      this.scrollLocusIntoView();
+    } else if (key === 38) {
+      this.moveLocus(false /* down */);
+      this.scrollLocusIntoView();
+    } else if (key === 13) { // Enter.
+      this.maybeSelectLocus();
+    }
+  },
+
+  onQueryChanged_() {
+    this.$.clear.style.display = this.query ? 'inline' : '';
+    // The selectedItem should reflect the query.
+    // When the query is changed, the selectedItem needs to be manually
+    // cleared.
+    if (this.selectedItem && this.selectedItem.name != this.query) {
+      this.selectedItem = undefined;
+    }
+  },
+
+  scrollLocusIntoView() {
+    const elements = this.$.dropdown.items || [];
+    for (const element of elements) {
+      if (element.item === this.locusItem) {
+        element.scrollIntoView(false);
+        return;
+      }
+    }
+  },
+
+  onItemsChanged() {
+    this.updateSelected();
+  },
+
+  updateSelected() {
+    this.muffleSelection = true;
+    (() => {
+      this.$.dropdown.selected = undefined;
+      if (this.selectedItem === null) return;
+      const selectedItem = this.selectedItem;
+      const menuItemsArray = this.$.dropdown.items || [];
+      for (let i = 0; i < menuItemsArray.length; i++) {
+        if (menuItemsArray[i].item === selectedItem) {
+          this.$.dropdown.selected = i;
+          return;
+        }
+      }
+    })();
+    this.muffleSelection = false;
+  },
+
+  locusClassIfLocus(locusItem, anItem) {
+    return locusItem === anItem ? 'locus' : '';
+  },
+
+  onDropdownMouseDown(event) {
+    // Prevent focus moving to the drop down.
+    event.preventDefault();
+  },
+
+  /**
+    * Handles item selected on drop-down menu.
+    */
+  onDropdownSelect(event, detail) {
+    if (this.shouldIgnoreSelectionEvents()) return;
+    this.$.textbox.focus();
+    const index = this.$.dropdown.indexOf(detail.item);
+    const item = this.suggestedItems[index];
+    this.selectItem(item);
+    this.$.textbox.readonly = true;
+  },
+});
+</script>

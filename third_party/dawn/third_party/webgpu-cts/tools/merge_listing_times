@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+
+// See `docs/adding_timing_metadata.md` for an explanation of listing times, and
+// a walkthrough on adding entries for new tests.
+
+require('../src/common/tools/setup-ts-in-node.js');
+
+// See the help message in this file for info on how to use the tool.
+require('../src/common/tools/merge_listing_times.ts');

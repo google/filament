@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The bug-info-span is a in-line element showing a bug ID with link, etc.
+-->
+
+<link rel="import" href="/dashboard/elements/alert-remove-box.html">
+
+<dom-module id="bug-info-span">
+  <template>
+    <a href="/group_report?bug_id={{bugId}}&project_id={{projectId}}"
+       hidden$="{{!computeIsPositive(bugId)}}">{{projectId}}:{{bugId}}</a>
+     <span hidden$="{{computeIsPositive(bugId)}}">{{statusString()}}</span>
+    <alert-remove-box hidden$="{{!bugId}}"
+                      key="{{key}}"
+                      xsrf-token="{{xsrfToken}}">
+    </alert-remove-box>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'bug-info-span',
+  properties: {
+    bugId: {
+      type: Number,
+      value: 0
+    },
+    projectId: {
+      type: String,
+      value: ''
+    },
+    xsrfToken: {
+      value: null,
+      notify: true
+    },
+    recovered: {
+      type: Boolean,
+      value: false
+    },
+    key: {
+      value: null,
+      notify: true
+    }
+  },
+
+  computeIsPositive: n => n > 0,
+
+  statusString() {
+    if (this.bugId == -1) return 'Invalid';
+    if (this.bugId == -2) return 'Ignored';
+    if (this.recovered) return 'Recovered';
+    return '';
+  }
+});
+</script>

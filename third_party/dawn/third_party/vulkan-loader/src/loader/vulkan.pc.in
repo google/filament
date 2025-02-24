@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR_PC@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR_PC@
+
+Name: Vulkan-Loader
+Description: Vulkan Loader
+Version: @VULKAN_LOADER_VERSION@
+Libs: -L${libdir} -lvulkan@VULKAN_LIB_SUFFIX@
+Cflags: -I${includedir}

@@ -1,0 +1,226 @@
+Name
+
+    ANGLE_base_vertex_base_instance
+
+Name Strings
+
+    GL_ANGLE_base_vertex_base_instance
+
+Contributors
+
+    Shrek Shao, Google Inc.
+    Contributors to the OES_draw_elements_base_vertex specification
+    Contributors to the EXT_draw_elements_base_vertex specification
+    Contributors to the EXT_multi_draw_arrays specification
+    Contributors to the ARB_shader_draw_parameters specification
+
+Contact
+
+    Shrek Shao (shrekshao 'at' google.com)
+
+Status
+
+    Incomplete
+
+Version
+
+    Last Modified Date: Nov 19, 2021
+    Author Revision: 3
+
+Number
+
+    OpenGL ES Extension XX
+
+Dependencies
+
+    OpenGL ES 3.1 is required.
+
+    This extension is written against the OpenGL ES 3.1 specification, the
+    OpenGL ES 3.2 specification, and the OpenGL ES Shading Language 3.0
+    specification.
+
+    GL_ANGLE_multi_draw is required.
+
+Overview
+
+    This extension exposes the *BaseVertex* draw call in
+    OES_draw_elements_base_vertex/EXT_draw_elements_base_vertex together with
+    their newly added *BaseInstance and MultiDraw* variants in addition to the
+    vertex shader builtins <gl_BaseVertex> and <gl_BaseInstance> exposed by
+    ARB_shader_draw_parameters for OpenGL.
+
+    *BaseInstance behaves identically to its counterpart draw calls except that
+    <instanceCount> instances of the range of elements are executed and the
+    value of <instance> advances for each iteration. Those attributes that have
+    non-zero values for <divisor>, as specified by VertexAttribDivisor, advance
+    once per <divisor> instances of the set(s) of vertices being rendered.
+    Additionally, <baseInstance> specifies the first element within the
+    instanced vertex attributes.
+
+    *BaseVertex* is equivalent to its counterpart draw calls except that
+    the value of the base vertex passed into the driver is <baseVertex> instead
+    of zero, and that <instances> of the set of elements are executed and the
+    value of <instance> advances between each set.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void DrawArraysInstancedBaseInstanceANGLE(enum mode,
+                                              int first,
+                                              sizei count,
+                                              sizei instanceCount,
+                                              uint baseInstance);
+
+    void DrawElementsInstancedBaseVertexBaseInstanceANGLE(enum mode,
+                                                          sizei count,
+                                                          enum type,
+                                                          const void *indices,
+                                                          sizei instanceCount,
+                                                          int baseVertex,
+                                                          uint baseInstance);
+
+    void MultiDrawArraysInstancedBaseInstanceANGLE(enum mode,
+                                                   const int *firsts,
+                                                   const sizei *counts,
+                                                   const sizei *instanceCounts,
+                                                   const uint *baseInstances,
+                                                   sizei drawcount);
+
+    void MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(enum mode,
+                                                               const sizei *counts,
+                                                               enum type,
+                                                               const void *const *indices,
+                                                               const sizei *instanceCounts,
+                                                               const int *baseVertices,
+                                                               const uint *baseInstances,
+                                                               sizei drawcount);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 10 of the OpenGL ES 3.2 Specification
+
+    Section 10.5 Drawing Commands Using Vertex Arrays:
+
+    The command
+
+    void DrawArraysInstancedBaseInstanceANGLE(
+        enum mode,
+        int first,
+        sizei count,
+        sizei instanceCount,
+        uint baseInstance);
+
+    Behaves identically to DrawArraysInstanced except that <baseInstance> is
+    passed down to DrawArraysOneInstance instead of zero.
+
+    The command
+
+    void MultiDrawArraysInstancedBaseInstanceANGLE(
+        enum mode,
+        const int *firsts,
+        const sizei *counts,
+        const sizei *instanceCounts,
+        const uint *baseInstances,
+        sizei drawcount);
+
+    Behaves identically to DrawArraysInstancedBaseInstanceANGLE except that a
+    list of arrays is specified instead. The number of lists is specified in
+    the <drawcount> parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+        if (*(counts+i)>0) DrawArraysInstancedBaseInstance(
+                mode,
+                *(counts+i),
+                *(instanceCounts+i),
+                *(firsts+i),
+                *(baseInstance+i)
+            );
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID> which is defined in GL_ANGLE_multi_draw.
+
+    The command
+
+    void DrawElementsInstancedBaseVertexBaseInstanceANGLE(
+        enum mode,
+        sizei count,
+        enum type,
+        const void *indices,
+        sizei instanceCount,
+        int baseVertex,
+        uint baseInstance);
+
+    Behaves identically to DrawElementsInstanced except that <baseVertex> and
+    <baseInstance> are passed down to DrawElementsOneInstance instead of zero.
+
+    The command
+
+    void MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(
+        enum mode,
+        const sizei *counts,
+        enum type,
+        const void *const *indices,
+        const sizei *instanceCounts,
+        const int *baseVertices,
+        const uint *baseInstances,
+        sizei drawcount);
+
+    Behaves identically to DrawElementsInstancedBaseVertexBaseInstanceANGLE
+    except that a list of arrays is specified instead. The number of lists is
+    specified in the <drawcount> parameter. It has the same effect as:
+
+      for(i=0; i<drawcount; i++) {
+        if (*(counts+i)>0) DrawElementsInstancedBaseVertexBaseInstanceANGLE(
+                mode,
+                *(counts+i),
+                type,
+                *(instanceCounts+i),
+                *(indices+i),
+                *(baseVertices+i),
+                *(baseInstances+i)
+            );
+      }
+
+    The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawID> which is defined in GL_ANGLE_multi_draw.
+
+Errors
+
+    DrawArraysInstancedBaseInstanceANGLE and
+    DrawElementsInstancedBaseVertexBaseInstanceANGLE
+    generate the same errors as DrawArraysInstanced and DrawElementsInstanced.
+
+    MultiDrawArraysInstancedBaseInstanceANGLE and
+    MultiDrawElementsInstancedBaseVertexBaseInstanceANGLE
+    generate the same errors as DrawArraysInstanced and DrawElementsInstanced,
+    respectively, for any draw <i> where an error is generated. If any call
+    would produce an error, no drawing is performed.
+
+    The error INVALID_VALUE is generated by the MultiDraw* functions if
+    <drawcount> is less than zero.
+
+Dependencies on GL_OES_draw_elements_base_vertex and
+GL_EXT_draw_elements_base_vertex
+
+    If the OpenGL ES context version is less than 3.2, this extension is only
+    available when GL_OES_draw_elements_base_vertex or
+    GL_EXT_draw_elements_base_vertex are available.
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date    Author            Changes
+    ----  --------  ----------------  --------------------------------------------
+    1     08/13/19   Shrek Shao       First revision.
+    2     07/14/20   Shrek Shao       Fix baseInstance type from GLint to GLuint.
+    3     11/19/21   Shrek Shao       Decouple gl_BaseVertex/gl_BaseInstance.
+    4     06/21/22   Alexey Knyazev   Fixed typos and type usage.

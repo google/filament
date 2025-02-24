@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  function StubAnalysisTable() {
+    this.ownerDocument_ = document;
+    this.nodes_ = [];
+  }
+
+  StubAnalysisTable.prototype = {
+    __proto__: Object.protoype,
+
+    get ownerDocument() {
+      return this.ownerDocument_;
+    },
+
+    appendChild(node) {
+      if (node.tagName === 'TFOOT' || node.tagName === 'THEAD' ||
+              node.tagName === 'TBODY') {
+        node.__proto__ = StubAnalysisTable.prototype;
+        node.nodes_ = [];
+        node.ownerDocument_ = document;
+      }
+      this.nodes_.push(node);
+    },
+
+    get lastNode() {
+      return this.nodes_.pop();
+    },
+
+    get nodeCount() {
+      return this.nodes_.length;
+    }
+  };
+
+  return {
+    StubAnalysisTable,
+  };
+});
+</script>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/stack_frame.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-a-single-sample-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="content"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-sample-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  created() {
+    this.currentSelection_ = undefined;
+  },
+
+  ready() {
+    this.$.content.tableColumns = [
+      {
+        title: '',
+        value: row => row.title,
+        width: '100px'
+      },
+      {
+        title: '',
+        value: row => row.value,
+        width: '100%'
+      }
+    ];
+    this.$.content.showHeader = false;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+
+    if (this.currentSelection_ === undefined) {
+      this.$.content.tableRows = [];
+      return;
+    }
+
+    const sample = tr.b.getOnlyElement(this.currentSelection_);
+    const table = this.$.content;
+    const rows = [];
+
+    rows.push({
+      title: 'Title',
+      value: sample.title
+    });
+
+    rows.push({
+      title: 'Sample time',
+      value: tr.v.ui.createScalarSpan(sample.start, {
+        unit: tr.b.Unit.byName.timeStampInMs,
+        ownerDocument: this.ownerDocument
+      })
+    });
+
+    const callStackTableEl = document.createElement('tr-ui-b-table');
+    callStackTableEl.tableRows = sample.getNodesAsArray().reverse();
+    callStackTableEl.tableColumns = [
+      {
+        title: 'function name',
+        value: row => row.functionName || '(anonymous function)'
+      },
+      {
+        title: 'location',
+        value: row => row.url
+      }
+    ];
+    callStackTableEl.rebuild();
+    rows.push({
+      title: 'Call stack',
+      value: callStackTableEl
+    });
+    table.tableRows = rows;
+    table.rebuild();
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-sample-sub-view',
+    tr.model.Sample,
+    {
+      multi: false,
+      title: 'Sample',
+    });
+</script>

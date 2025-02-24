@@ -1,0 +1,96 @@
+[
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 826, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 827, "ph": "B", "name": "Asub",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 828, "ph": "E", "name": "Asub",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 829, "ph": "B", "name": "Asub",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 832, "ph": "E", "name": "Asub",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 30, "ts": 833, "ph": "E", "name": "",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 31, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 31, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 32, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 32, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 33, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 33, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 34, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 34, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 35, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 35, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 36, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 36, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 37, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 37, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 38, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 38, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 39, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 39, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 10, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 10, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 31, "tid": 11, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 31, "tid": 11, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 12, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 12, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 13, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 13, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 14, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 14, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "X", "pid": 30, "tid": 15, "ts": 840, "ph": "B", "name": "A",
+      "args": {}},
+  {"cat": "X", "pid": 30, "tid": 15, "ts": 848, "ph": "E", "name": "A",
+      "args": {}},
+
+  {"cat": "__metadata", "pid": 30, "tid": 14, "ts": 0, "ph": "M",
+    "name": "process_name", "args": {"name": "processA"}},
+  {"cat": "__metadata", "pid": 30, "tid": 14, "ts": 0, "ph": "M",
+    "name": "thread_name", "args": {"name": "thread12345678B"}},
+  {"cat": "__metadata", "pid": 30, "tid": 15, "ts": 0, "ph": "M",
+    "name": "thread_name", "args": {"name": "threadA"}}
+]

@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# Copyright (c) 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import os
+import sys
+
+TELEMETRY_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+sys.path.append(TELEMETRY_DIR)
+
+from telemetry.util import wpr_modes
+from telemetry.internal import snap_page_util
+from telemetry.internal.browser import browser_options
+from telemetry.internal.util import binary_manager
+
+
+def main(args):
+  options = browser_options.BrowserFinderOptions()
+  parser = options.CreateParser(
+      usage='Create a static HTML snapshot of the page')
+  parser.add_argument('--url', help='URL of the web page to record')
+  parser.add_argument('--enable-browser-log', help='Enable browser log',
+      action='store_true')
+  parser.add_argument('--interactive', action='store_true',
+      help='Activate interactive mode after loading the page')
+  parser.add_argument('--snapshot-path', help='Where to save the snapshot',
+      default='snapshot.html')
+  parser.parse_args(args)
+
+  binary_manager.InitDependencyManager([])
+  snap_page_util.SnapPage(options, options.url, options.interactive,
+      options.snapshot_path, options.enable_browser_log)
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv[1:]))

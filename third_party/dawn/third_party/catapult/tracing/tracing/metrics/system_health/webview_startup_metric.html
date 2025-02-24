@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  function webviewStartupMetric(histograms, model) {
+    const startupWallHist = new tr.v.Histogram('webview_startup_wall_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    startupWallHist.description = 'WebView startup wall time';
+    const startupCPUHist = new tr.v.Histogram('webview_startup_cpu_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    startupCPUHist.description = 'WebView startup CPU time';
+    const loadWallHist = new tr.v.Histogram('webview_url_load_wall_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    loadWallHist.description = 'WebView blank URL load wall time';
+    const loadCPUHist = new tr.v.Histogram('webview_url_load_cpu_time',
+        tr.b.Unit.byName.timeDurationInMs_smallerIsBetter);
+    loadCPUHist.description = 'WebView blank URL load CPU time';
+
+    // TODO(alexandermont): Only iterate over the processes and threads that
+    // could contain these events.
+    for (const slice of model.getDescendantEvents()) {
+      if (!(slice instanceof tr.model.ThreadSlice)) continue;
+
+      // WebViewStartupInterval is the title of the section of code that is
+      // entered (via android.os.Trace.beginSection) when WebView is started
+      // up. This value is defined in TelemetryActivity.java.
+      if (slice.title === 'WebViewStartupInterval') {
+        startupWallHist.addSample(slice.duration);
+        startupCPUHist.addSample(slice.cpuDuration);
+      }
+
+      // WebViewBlankUrlLoadInterval is the title of the section of code
+      // that is entered (via android.os.Trace.beginSection) when WebView
+      // is started up. This value is defined in TelemetryActivity.java.
+      if (slice.title === 'WebViewBlankUrlLoadInterval') {
+        loadWallHist.addSample(slice.duration);
+        loadCPUHist.addSample(slice.cpuDuration);
+      }
+    }
+
+    histograms.addHistogram(startupWallHist);
+    histograms.addHistogram(startupCPUHist);
+    histograms.addHistogram(loadWallHist);
+    histograms.addHistogram(loadCPUHist);
+  }
+
+  tr.metrics.MetricRegistry.register(webviewStartupMetric);
+
+  return {
+    webviewStartupMetric,
+  };
+});
+</script>

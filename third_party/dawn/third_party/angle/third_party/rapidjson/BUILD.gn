@@ -1,0 +1,55 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Custom GN integration for rapidjson.
+
+config("rapidjson_config") {
+  include_dirs = [ "src/include" ]
+
+  # Enable std::string functionality.
+  defines = [ "RAPIDJSON_HAS_STDSTRING" ]
+}
+
+source_set("rapidjson") {
+  sources = [
+    "src/include/rapidjson/allocators.h",
+    "src/include/rapidjson/cursorstreamwrapper.h",
+    "src/include/rapidjson/document.h",
+    "src/include/rapidjson/encodedstream.h",
+    "src/include/rapidjson/encodings.h",
+    "src/include/rapidjson/error/en.h",
+    "src/include/rapidjson/error/error.h",
+    "src/include/rapidjson/filereadstream.h",
+    "src/include/rapidjson/filewritestream.h",
+    "src/include/rapidjson/fwd.h",
+    "src/include/rapidjson/internal/biginteger.h",
+    "src/include/rapidjson/internal/diyfp.h",
+    "src/include/rapidjson/internal/dtoa.h",
+    "src/include/rapidjson/internal/ieee754.h",
+    "src/include/rapidjson/internal/itoa.h",
+    "src/include/rapidjson/internal/meta.h",
+    "src/include/rapidjson/internal/pow10.h",
+    "src/include/rapidjson/internal/regex.h",
+    "src/include/rapidjson/internal/stack.h",
+    "src/include/rapidjson/internal/strfunc.h",
+    "src/include/rapidjson/internal/strtod.h",
+    "src/include/rapidjson/internal/swap.h",
+    "src/include/rapidjson/istreamwrapper.h",
+    "src/include/rapidjson/memorybuffer.h",
+    "src/include/rapidjson/memorystream.h",
+    "src/include/rapidjson/msinttypes/inttypes.h",
+    "src/include/rapidjson/msinttypes/stdint.h",
+    "src/include/rapidjson/ostreamwrapper.h",
+    "src/include/rapidjson/pointer.h",
+    "src/include/rapidjson/prettywriter.h",
+    "src/include/rapidjson/rapidjson.h",
+    "src/include/rapidjson/reader.h",
+    "src/include/rapidjson/schema.h",
+    "src/include/rapidjson/stream.h",
+    "src/include/rapidjson/stringbuffer.h",
+    "src/include/rapidjson/writer.h",
+  ]
+
+  public_configs = [ ":rapidjson_config" ]
+}

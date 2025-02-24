@@ -1,0 +1,26 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("cl_khr_command_buffer") {
+  include_dirs = [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/basic_command_buffer.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_event_sync.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_finalize.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_get_command_buffer_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_out_of_order.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_printf.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_profiling.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_queue_substitution.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_set_kernel_arg.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_test_barrier.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_test_copy.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_test_event_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/command_buffer_test_fill.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/extensions/cl_khr_command_buffer/svm_command_basic.cpp",
+  ]
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/selection_summary_table.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const EventSet = tr.model.EventSet;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('noSelection', function() {
+    const summaryTable =
+        document.createElement('tr-ui-a-selection-summary-table');
+    summaryTable.selection = undefined;
+    this.addHTMLOutput(summaryTable);
+
+    const tableEl = tr.ui.b.findDeepElementMatching(
+        summaryTable, 'tr-ui-b-table');
+    assert.strictEqual(tableEl.tableRows[0].value, '<empty>');
+    assert.strictEqual(tableEl.tableRows[1].value, '<empty>');
+  });
+
+  test('emptySelection', function() {
+    const summaryTable =
+        document.createElement('tr-ui-a-selection-summary-table');
+    const selection = new EventSet();
+    summaryTable.selection = selection;
+    this.addHTMLOutput(summaryTable);
+
+    const tableEl = tr.ui.b.findDeepElementMatching(
+        summaryTable, 'tr-ui-b-table');
+    assert.strictEqual(tableEl.tableRows[0].value, '<empty>');
+    assert.strictEqual(tableEl.tableRows[1].value, '<empty>');
+  });
+
+  test('selection', function() {
+    const model = new Model();
+    const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+    const tsg = thread.sliceGroup;
+
+    tsg.pushSlice(newSliceEx({title: 'a', start: 0, end: 3}));
+    tsg.pushSlice(newSliceEx({title: 'b', start: 1, end: 2}));
+
+    const selection = new EventSet();
+    selection.push(tsg.slices[0]);
+    selection.push(tsg.slices[1]);
+
+    const summaryTable =
+        document.createElement('tr-ui-a-selection-summary-table');
+    summaryTable.selection = selection;
+    this.addHTMLOutput(summaryTable);
+
+    const tableEl = tr.ui.b.findDeepElementMatching(
+        summaryTable, 'tr-ui-b-table');
+    assert.strictEqual(tableEl.tableRows[0].value.value, 0);
+    assert.strictEqual(tableEl.tableRows[0].value.unit,
+        tr.b.Unit.byName.timeStampInMs);
+    assert.strictEqual(tableEl.tableRows[1].value.value, 3);
+    assert.strictEqual(tableEl.tableRows[1].value.unit,
+        tr.b.Unit.byName.timeDurationInMs);
+  });
+});
+</script>

@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<script src="./test-flags.js"></script>
+<script src="../node_modules/wct-browser-legacy/browser.js"></script>
+<script src="../node_modules/@webcomponents/webcomponents-platform/webcomponents-platform.js"></script>
+<script src="../node_modules/es6-promise/dist/es6-promise.auto.min.js"></script>
+<script src="../node_modules/@webcomponents/shadydom/shadydom.min.js"></script>
+<script>
+  suite('Settings', () => {
+    window.ShadyCSS = { cssBuild: 'shady' }
+    let origCss;
+    let origShady;
+    let origCssBuild;
+    test(`settings remain correct no matter the order of components loaded ${JSON.stringify(window.WebComponents.flags)}`, (done) => {
+      let script = document.createElement('script');
+      script.src = '../custom-style-interface.min.js';
+      script.onerror = (err) => done(err);
+      script.onload = () => {
+        origCss = window.ShadyCSS.nativeCss;
+        origShady = window.ShadyCSS.nativeShadow;
+        origCssBuild = window.ShadyCSS.cssBuild;
+        assert.notEqual(origCss, undefined, 'nativeCss should be defined');
+        assert.notEqual(origShady, undefined, 'nativeShadow should be defined');
+        assert.equal(origCssBuild, 'shady', 'cssBuild should be defined');
+        let script = document.createElement('script');
+        script.src = '../apply-shim.min.js';
+        script.onerror = (err) => done(err);
+        script.onload = () => {
+          assert.equal(origCss, window.ShadyCSS.nativeCss);
+          assert.equal(origShady, window.ShadyCSS.nativeShadow);
+          assert.equal(origCssBuild, window.ShadyCSS.cssBuild);
+          let script = document.createElement('script');
+          script.src = '../scoping-shim.min.js';
+          script.onerrer = (err) => done(err);
+          script.onload = () => {
+            assert.equal(origCss, window.ShadyCSS.nativeCss);
+            assert.equal(origShady, window.ShadyCSS.nativeShadow);
+            assert.equal(origCssBuild, window.ShadyCSS.cssBuild);
+            done();
+          };
+          document.head.appendChild(script);
+        }
+        document.head.appendChild(script);
+      }
+      document.head.appendChild(script);
+    });
+    test('Native CSS Custom Properties disabled if ShadyDOM is in use', () => {
+      if (!window.ShadyDOM || !window.ShadyDOM.inUse) {
+        assert.isTrue(window.ShadyCSS.nativeCss, 'nativeCss should be enabled if not using ShadyDOM');
+      }
+    })
+  });
+</script>

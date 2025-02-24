@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/app-route/app-location.html">
+<link rel="import" href="/components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/components/iron-form/iron-form.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="/components/paper-dialog/paper-dialog.html">
+<link rel="import" href="/components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="/components/paper-fab/paper-fab.html">
+<link rel="import" href="/components/paper-input/paper-input.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-listbox/paper-listbox.html">
+<link rel="import" href="/components/paper-progress/paper-progress.html">
+<link rel="import" href="/components/paper-radio-button/paper-radio-button.html">
+<link rel="import" href="/components/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="/components/paper-tooltip/paper-tooltip.html">
+<link rel="import" href="/elements/autocomplete-box.html">
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/jobs-page/attempt-count-help.html">
+<link rel="import" href="/elements/jobs-page/commit-details.html">
+
+<dom-module id="new-job-fab">
+  <template>
+    <style include="base-style">
+      .submenu {
+        color: var(--paper-grey-700);
+        --paper-fab-background: white;
+      }
+
+      .radio[disabled] {
+        pointer-events: none;
+      }
+
+      h2.title {
+        display: inline;
+      }
+
+      paper-radio-group {
+        display: block;
+      }
+
+      paper-progress {
+        display: block;
+        width: 100%;
+      }
+
+      paper-dropdown-menu {
+        width: 100%;
+      }
+
+      paper-dialog {
+        width: 50em;
+        overflow: auto;
+      }
+
+      .divider {
+       width: 100%;
+       border-bottom: 1px dashed black;
+       line-height: 0.1em;
+       margin: 2em 0em;
+       text-align: center;
+       font-size: 1.5em;
+       font-weight: lighter;
+      }
+
+      .divider span {
+        background: white;
+        padding: 0 1em;
+      }
+
+      .horizontal {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      .column {
+        width: 50%;
+      }
+
+      .rightPad {
+        margin-right: 0.25em;
+      }
+
+      #chartDropdown {
+        width: 75%;
+        margin-right: 0.5em;
+      }
+
+      #initial_attempt_count {
+        float: right;
+        width: 10%;
+        margin-top: -1.5em;
+      }
+
+      #initial_attempt_count_label {
+        float: right;
+      }
+
+      #statisticDropdown {
+        width: 25%;
+      }
+
+      .error {
+        color: var(--paper-red-500);
+      }
+
+      .columnLabel {
+        text-align: center;
+        font-weight: bold;
+      }
+    </style>
+
+    <app-location route="{{route}}"></app-location>
+    <template is="dom-if" if="[[submenu]]">
+      <paper-fab class="submenu" mini id="job-fab" icon="refresh" on-tap="openDialog"></paper-fab>
+    </template>
+    <template is="dom-if" if="[[!submenu]]">
+      <paper-fab id="try-fab" icon="add" on-tap="openDialog"></paper-fab>
+    </template>
+    <paper-tooltip for="try-fab" position="left">Try job</paper-tooltip>
+    <paper-dialog id="try_dialog" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
+      <template is="dom-if" if="[[isBisectJob(comparisonMode)]]">
+        <div style="display: flex; flex-direction: row; align-items: center">
+          <h2 class="title" style="width: 40%; flex: 1 1 auto;">Run a bisect job</h2>
+          <p>
+            Narrow down a regression to a cl or set of cl's. A bisect job bisects the commit range, and looks for changes in the specified metric.
+          </p>
+        </div>
+      </template>
+      <template is="dom-if" if="[[!isBisectJob(comparisonMode)]]">
+        <div style="margin-top: 20px;">
+          <h2 class="title" style="margin-right: 20px;">Run a try job</h2>
+          <p style="display: inline;">
+            Run an A/B experiment.
+          </p>
+        </div>
+      </template>
+      <div>
+        <template is="dom-if" if="[[error]]">
+          <p class="error">Base and Experiment Git hashes must both be populated! If they are, this error may help: [[error]]
+        </template>
+        <iron-ajax method="post" headers="[[client.authHeaders]]" auto url="/api/config" loading="{{configLoading}}" last-response="{{config}}"></iron-ajax>
+        <iron-ajax method="post" headers="[[client.authHeaders]]" auto url="{{generateChromeperfUrl('/api/test_suites')}}" loading="{{suitesLoading}}" last-response="{{testSuites}}"></iron-ajax>
+        <template is="dom-if" if="[[validConfiguration(configuration)]]">
+          <iron-ajax method="get" headers="[[client.authHeaders]]" auto url="/api/builds/{{configuration}}" last-response="{{buildCommits}}"></iron-ajax>
+        </template>
+        <template is="dom-if" if="{{validBenchmark(benchmark)}}">
+          <iron-ajax method="post" headers="[[client.authHeaders]]" auto url="{{generateChromeperfUrl('/api/describe')}}" params="{{describeParams(benchmark)}}" loading="{{benchmarkConfigLoading}}" last-response="{{benchmarkConfig}}"></iron-ajax>
+        </template>
+        <template is="dom-if" if="[[hasJob(job)]]">
+          <iron-ajax method="post" headers="[[client.authHeaders]]" auto url="/api/commits" params="{{commitsParams(job)}}" loading="{{commitRangeLoading}}" last-response="{{commitsList}}"></iron-ajax>
+        </template>
+
+        <iron-form id="try_form" headers="[[client.authHeaders]]"  on-iron-form-presubmit="preSubmit" on-iron-form-error="handleError" on-iron-form-response="handleResponse">
+          <form action="/api/new" method="POST">
+
+            <input type="hidden" name="comparison_mode" value="[[comparisonMode]]">
+            <input type="hidden" name="target" value="[[telemetryIsolate(configuration, benchmark)]]">
+            <!--Prevent uploading unused git_hash because raw request will be displayed on job page.
+              It won't change the result, but display unused (and wrong) parameters are confusing-->
+            <input type="hidden" disabled="[[isBisectJob(comparisonMode)]]" name="base_git_hash" value="[[base_git_hash]]">
+            <input type="hidden" disabled="[[!isBisectJob(comparisonMode)]]" name="start_git_hash" value="[[start_git_hash]]">
+            <input type="hidden" name="end_git_hash" value="[[end_git_hash]]">
+
+            <template is="dom-if" if="[[hasJob(job)]]">
+              <input type="hidden" name="grouping_label" disabled$="[[!job.arguments.grouping_label]]" value="[[job.arguments.grouping_label]]">
+              <input type="hidden" name="trace" disabled$="[[!job.arguments.trace]]" value="[[job.arguments.trace]]">
+              <input type="hidden" name="tags" disabled$="[[!job.arguments.tags]]" value="[[job.arguments.tags]]">
+            </template>
+
+            <div class="divider">
+              <span>Benchmark Configuration</span>
+            </div>
+
+            <paper-radio-group id="comparison_mode" selected="{{comparisonMode}}">
+              <paper-radio-button class="radio" name="try" disabled="[[hasJob(job)]]">Try Job</paper-radio-button>
+              <paper-radio-button class="radio" name="performance" disabled="[[hasJob(job)]]">Bisect</paper-radio-button>
+              <paper-input
+                     id="initial_attempt_count"
+                     name="initial_attempt_count"
+                     placeholder="[[defaultAttemptCount(job, configuration, benchmark)]]"
+                     value="{{initial_attempt_count}}"></paper-input>
+              <label
+                     id="initial_attempt_count_label"
+                     for="initial_attempt_count">Attempt Count: <attempt-count-help></attempt-count-help></label>
+            </paper-radio-group>
+
+            <div class="horizontal">
+              <div class="column rightPad">
+                <autocomplete-box id="botDropdown"
+                                  name="configuration"
+                                  items="{{arrayToAutocompleteList(config.configurations)}}"
+                                  disabled="[[!validConfig(config)]]"
+                                  placeholder="Bot"
+                                  selected-name="{{configuration}}"
+                                  required></autocomplete-box>
+                <template is="dom-if" if="[[configLoading]]">
+                  <paper-progress indeterminate></paper-progress>
+                </template>
+              </div>
+              <div class="column">
+                <autocomplete-box id="benchmarkDropdown"
+                                  name="benchmark"
+                                  items="{{arrayToAutocompleteList(testSuites)}}"
+                                  disabled="[[!validTestSuites(testSuites)]]"
+                                  placeholder="Benchmark"
+                                  selected-name="{{benchmark}}"
+                                  required></autocomplete-box>
+                <template is="dom-if" if="[[suitesLoading]]">
+                  <paper-progress indeterminate></paper-progress>
+                </template>
+              </div>
+            </div>
+
+            <div class="horizontal">
+              <div class="column rightPad">
+                <autocomplete-box id="storyCasesDropdown"
+                                  name="story"
+                                  items="{{storyCases(benchmarkConfig)}}"
+                                  placeholder="Story"
+                                  selected-name="{{story}}"
+                                  required$="[[!isStoryOrTagsSet(story, storyTags)]]"></autocomplete-box>
+                <template is="dom-if" if="[[benchmarkConfigLoading]]">
+                  <paper-progress indeterminate></paper-progress>
+                </template>
+              </div>
+              <div class="column">
+                <autocomplete-box id="storyTagsDropdown"
+                                  name="story_tags"
+                                  items="{{storyTagsFromConfig(benchmarkConfig)}}"
+                                  placeholder="Story Tags (optional, comma-separated)"
+                                  selected-name="{{storyTags}}"
+                                  required$="[[!isStoryOrTagsSet(story, storyTags)]]"></autocomplete-box>
+                <template is="dom-if" if="[[benchmarkConfigLoading]]">
+                  <paper-progress indeterminate></paper-progress>
+                </template>
+              </div>
+            </div>
+
+            <div class="horizontal" hidden="[[!isBisectJob(comparisonMode)]]">
+              <div class="column rightPad">
+                <div class="horizontal">
+                  <autocomplete-box id="chartDropdown"
+                                    name="chart"
+                                    items="{{measurements(benchmarkConfig)}}"
+                                    required$="[[isBisectJob(comparisonMode)]]"
+                                    placeholder="Measurement"
+                                    selected-name="{{chart}}"></autocomplete-box>
+                  <autocomplete-box id="statisticDropdown"
+                                    name="statistic"
+                                    items="{{statistics(benchmarkConfig)}}"
+                                    selected-name="{{statistic}}"
+                                    placeholder="Statistic"></autocomplete-box>
+                </div>
+                <template is="dom-if" if="[[benchmarkConfigLoading]]">
+                  <paper-progress indeterminate></paper-progress>
+                </template>
+              </div>
+              <div class="column">
+                <paper-input name="comparison_magnitude"
+                             value="{{comparison_magnitude}}"
+                             label="Comparison Magnitude"></paper-input>
+              </div>
+            </div>
+
+            <paper-input hidden="[[!isBisectJob(comparisonMode)]]"
+                         name="extra_test_args"
+                         value="{{extra_test_args}}"
+                         label="Extra Test Arguments (optional)"></paper-input>
+            <div class="divider">
+              <span>Job Configuration</span>
+            </div>
+
+            <template is="dom-if" if="[[!isBisectJob(comparisonMode)]]">
+              <div class="horizontal">
+                <span class="column columnLabel">Base</span>
+                <span class="column columnLabel">Experiment</span>
+              </div>
+              <div class="horizontal">
+                <paper-radio-group id="commit_source" class="column" selected="{{commitSourceBase}}">
+                  <paper-radio-button class="radio" name="commit">Specific Commit</paper-radio-button>
+                  <paper-radio-button class="radio" name="builds">Recent Builds</paper-radio-button>
+                </paper-radio-group>
+                <paper-radio-group id="exp_radio_buttons" class="column" name="exp_radio_buttons" selected="{{commitSourceExp}}">
+                  <paper-radio-button class="radio" name="commit">Specific Commit</paper-radio-button>
+                  <paper-radio-button class="radio" name="builds">Recent Builds</paper-radio-button>
+                </paper-radio-group>
+              </div>
+              <div class="horizontal">
+                <template is="dom-if" if="[[shouldDisplayRecentBuildsError(commitSourceBase, commitSourceExp, comparisonMode, configuration)]]">
+                  <p class="error">Please select a bot config to load the corresponding recent builds</p>
+                </template>
+              </div>
+              <div class="horizontal">
+                <template is="dom-if" if="[[shouldGetBuilds(commitSourceBase, comparisonMode)]]">
+                  <commit-details class="column rightPad"
+                                  project="{{project}}"
+                                  value="{{base_git_hash}}"
+                                  label="Base Build"
+                                  items="[[latestBuildCommits(buildCommits)]]"
+                                  headers="[[client.authHeaders]]"
+                                  required disabled="[[isBisectJob(comparisonMode)]]"></commit-details>
+                </template>
+                <template is="dom-if" if="[[!shouldGetBuilds(commitSourceBase, comparisonMode)]]">
+                  <commit-details class="column rightPad"
+                                project="{{project}}"
+                                value="{{base_git_hash}}"
+                                label="Base Git Hash/Commit Position/-REF for cached REF"
+                                items="[[commitsListItems(commitsList)]]"
+                                headers="[[client.authHeaders]]"
+                                required disabled="[[isBisectJob(comparisonMode)]]"></commit-details>
+                </template>
+                <template is="dom-if" if="[[shouldGetBuilds(commitSourceExp, comparisonMode)]]">
+                  <commit-details class="column rightPad"
+                                  project="{{project}}"
+                                  value="{{end_git_hash}}"
+                                  label="Exp Build"
+                                  items="[[latestBuildCommits(buildCommits)]]"
+                                  headers="[[client.authHeaders]]"
+                                  required disabled="[[isBisectJob(comparisonMode)]]"></commit-details>
+                </template>
+                <template is="dom-if" if="[[!shouldGetBuilds(commitSourceExp, comparisonMode)]]">
+                  <commit-details class="column rightPad"
+                                project="{{project}}"
+                                value="{{end_git_hash}}"
+                                label="Exp Git Hash/Commit Position/-REF for cached REF"
+                                items="[[commitsListItems(commitsList)]]"
+                                headers="[[client.authHeaders]]"
+                                required disabled="[[isBisectJob(comparisonMode)]]"></commit-details>
+                </template>
+              </div>
+              <div class="horizontal">
+                <paper-input class="column" name="base_patch" value="{{base_patch}}" label="Base Patch (optional, Gerrit URL)" disabled="[[isBisectJob(comparisonMode)]]"></paper-input>
+                <paper-input class="column" name="experiment_patch" value="{{experiment_patch}}" label="Exp Patch (optional, Gerrit URL)" disabled="[[isBisectJob(comparisonMode)]]"></paper-input>
+              </div>
+              <div class="horizontal">
+                <paper-input always-float-label
+                             class="column"
+                             disabled="[[isBisectJob(comparisonMode)]]"
+                             label="Example: --enable-features=ignore-gpu-blocklist,enable-quic"
+                             name="base_extra_args"
+                             placeholder="Extra arguments on base commit (optional)"
+                             value="{{base_extra_args}}"></paper-input>
+                <paper-input always-float-label
+                             class="column"
+                             disabled="[[isBisectJob(comparisonMode)]]"
+                             label="Example: --enable-features=ignore-gpu-blocklist,enable-quic"
+                             name="experiment_extra_args"
+                             placeholder="Extra arguments on experiment commit (optional)"
+                             value="{{experiment_extra_args}}" ></paper-input>
+              </div>
+            </template>
+            <template is="dom-if" if="[[isBisectJob(comparisonMode)]]">
+              <div class="horizontal">
+                  <commit-details class="column rightPad"
+                                  project="{{project}}"
+                                  value="{{start_git_hash}}"
+                                  label="Start Git Hash"
+                                  items="[[commitsListItems(commitsList)]]"
+                                  headers="[[client.authHeaders]]"
+                                  required disabled="[[!isBisectJob(comparisonMode)]]"></commit-details>
+                  <commit-details class="column"
+                                  project="{{project}}"
+                                  value="{{end_git_hash}}"
+                                  label="End Git Hash"
+                                  items="[[commitsListItems(commitsList)]]"
+                                  headers="[[client.authHeaders]]"
+                                  required disabled="[[!isBisectJob(comparisonMode)]]"></commit-details>
+              </div>
+            </template>
+
+            <!-- If we're showing a bisection, we should allow setting
+              the "pin" field to allow re-running the job with a provided
+              patch. -->
+            <template is="dom-if" if="[[isBisectJob(comparisonMode)]]">
+              <paper-input name="pin" value="[[job.arguments.pin]]" label="Patch to apply (Gerrit URL)"></paper-input>
+            </template>
+            <paper-input name="project" value="{{project::input}}" label="Monorail Project"></paper-input>
+            <paper-input name="bug_id" value="{{bug_id}}" label="Bug ID"></paper-input>
+
+            <paper-input name="batch_id" value="{{batch_id}}" label="Batch ID"></paper-input>
+          </form>
+        </iron-form>
+      </div>
+      <div class="buttons">
+        <paper-button on-tap="submit">Start</paper-button>
+      </div>
+    </paper-dialog>
+  </template>
+
+  <script>
+    'use strict';
+
+    const _NON_TELEMETRY_TARGETS = ['vr_common_perftests', 'webrtc_perf_tests'];
+
+    const _STATISTICS = ['avg', 'count', 'max', 'min', 'std', 'sum'];
+
+    const _DEFAULT_ATTEMPT_COUNT = 10
+
+    Polymer({
+      is: 'new-job-fab',
+
+      properties: {
+        benchmark: String,
+        benchmarkConfig: Object,
+        benchmarkConfigLoading: {
+          type: Boolean,
+          value: false
+        },
+        project: {
+          type: String,
+          value: 'chromium'
+        },
+        batch_id: String,
+        bug_id: String,
+        chart: String,
+        commitsList: Object,
+        buildCommits: Object,
+        commitRangeLoading: {
+          type: Boolean,
+          value: false
+        },
+        comparisonMode: {
+          type: String,
+          value: 'try'
+        },
+        commitSourceBase: {
+          type: String,
+          value: 'commit'
+        },
+        commitSourceExp: {
+          type: String,
+          value: 'commit'
+        },
+        config: Object,
+        configuration: String,
+        configLoading: {
+          type: Boolean,
+          value: false
+        },
+        comparison_magnitude: Number,
+        extra_test_args: String,
+        initial_attempt_count: {
+          type: Number,
+          value: null
+        },
+        base_patch: String,
+        experiment_patch: String,
+        statistic: String,
+        base_git_hash_backup: String,
+        end_git_hash_backup: String,
+        base_git_hash: {
+          type: String,
+          value: '-HEAD'
+        },
+        start_git_hash: {
+          type: String,
+          value: '-HEAD'
+        },
+        end_git_hash: {
+          type: String,
+          value: '-HEAD'
+        },
+        submenu: {
+          type: Boolean,
+          value: false
+        },
+        job: {
+          type: Object,
+          value: null
+        },
+        error: Object,
+        testSuites: Object,
+        suitesLoading: {
+          type: Boolean,
+          value: false
+        },
+        client: {
+          type: Object,
+          notify: true
+        },
+        user: {
+          type: String,
+          value: ''
+        }
+      },
+
+      observers: [
+        'configChanged(config)',
+        'testSuitesChanged(testSuites)',
+        'benchmarkConfigChanged(benchmarkConfig)',
+        'benchmarkChanged(benchmark)',
+        'jobChanged(job)',
+        'commitSourceChangedBase(commitSourceBase)',
+        'commitSourceChangedExp(commitSourceExp)'
+      ],
+
+      openDialog() {
+        this.client.open_dialog = () => {
+          this.$.try_dialog.open();
+        }
+        this.client.requestAccessToken({hint: this.user});
+      },
+
+      validTestSuite() {
+        return config.configurations.includes(this.configuration);
+      },
+
+      shouldGetBuilds(commitSource, comparisonMode) {
+        return commitSource == 'builds' && comparisonMode == 'try'
+      },
+
+      validConfiguration(configuration) {
+        if (configuration.length > 0) {
+          return true;
+        }
+
+        return false;
+      },
+
+      preSubmit(event) {
+        const invalidBenchmark = !this.validBenchmark(this.benchmark);
+        const invalidStory = !this.validStoryAndStoryTag(
+            this.story, this.storyTags);
+        const invalidBot = !this.validBot(this.configuration);
+        // workaround for crbug/1466719. Benchmark and story data is
+        // not properly uploaded to Datastore for Pinpoint staging.
+        if (!window.location.href.includes('-stage')) {
+          if (invalidBenchmark) {
+            event.preventDefault();
+            this.error = "Benchmark input param is invalid";
+          }
+          else if (invalidStory) {
+            event.preventDefault();
+            this.error = "Story and story tag should be valid or empty";
+          }
+          else if (invalidBot) {
+            event.preventDefault();
+            this.error = "Bot invalid. Mac-m1-pro-perf does not support on-demand jobs due to few devices.";
+          }
+        }
+      },
+
+      submit() {
+        if (this.initial_attempt_count === null || this.initial_attempt_count === "") {
+          this.initial_attempt_count = this.defaultAttemptCount(this.job, this.configuration, this.benchmark)
+        }
+        this.$.try_form.submit();
+      },
+
+      handleError(event) {
+        this.error = event.detail.request.response.error;
+      },
+
+      handleResponse(event) {
+        this.set('route.path', '/job/' + event.detail.response.jobId);
+        this.$.try_dialog.close();
+      },
+
+      isStoryOrTagsSet(story, storyTags) {
+        return story !== '' || storyTags !== '';
+      },
+
+      isBisectJob(comparisonMode) {
+        return comparisonMode == 'performance';
+      },
+
+      hasJob(job) {
+        return job !== null;
+      },
+
+      commitsListItems(commitsList) {
+        if (!commitsList) {
+          return [];
+        }
+
+        const vals = [];
+        for (const cur of commitsList) {
+          vals.push({
+            message: cur.subject,
+            name: cur.git_hash,
+            author: cur.author,
+            date: cur.created,
+            commit_position: cur.commit_position,
+          });
+        }
+        return vals;
+      },
+
+      shouldDisplayRecentBuildsError(commitSourceBase, commitSourceExp, comparisonMode, configuration) {
+        // This error should be displayed if the user has selected "Recent Builds" for either base or experiment
+        // and the bot configuration is not selected.
+        return (this.shouldGetBuilds(commitSourceBase, comparisonMode) || this.shouldGetBuilds(commitSourceExp, comparisonMode))
+                && (configuration == null || configuration == undefined || configuration == '');
+      },
+
+      latestBuildCommits(buildCommits) {
+        if (!buildCommits) {
+          return [];
+        }
+
+        const vals = [];
+        for (const cur of buildCommits.builds) {
+          let change = ''
+          if (cur.input.gerritChanges && cur.input.gerritChanges.length > 0) {
+            change = cur.input.gerritChanges[0].change
+          }
+          let date = new Date(Date.parse(cur.endTime))
+          vals.push({
+            message: 'Build ' + cur.number,
+            name: cur.input.gitilesCommit.id,
+            author: date.toString(),
+            date: cur.endTime,
+            commit_position: cur.number,
+          });
+        }
+        return vals;
+      },
+
+      configChanged(config) {
+        this.$.botDropdown.tryReselectQuery();
+      },
+
+      testSuitesChanged(testSuites) {
+        this.$.benchmarkDropdown.tryReselectQuery();
+      },
+
+      benchmarkConfigChanged(benchmarkConfig) {
+        if (!this.$.storyCasesDropdown.disabled) {
+          this.$.storyCasesDropdown.tryReselectQuery();
+        }
+        if (!this.$.storyTagsDropdown.disabled) {
+          this.$.storyTagsDropdown.tryReselectQuery();
+        }
+        if (!this.$.chartDropdown.disabled) {
+          this.$.chartDropdown.tryReselectQuery();
+        }
+        if (!this.$.statisticDropdown.disabled) {
+          this.$.statisticDropdown.tryReselectQuery();
+        }
+      },
+
+      commitSourceChangedBase(commitSource) {
+        if (commitSource == 'builds') {
+          // Clear the value in the base_git_hash and assign it to backup
+          this.base_git_hash_backup = this.base_git_hash;
+          this.base_git_hash = '';
+        } else {
+          // Restore the value in base_git_hash from backup
+          this.base_git_hash = this.base_git_hash_backup;
+          this.base_git_hash_backup = ''
+        }
+      },
+
+      commitSourceChangedExp(commitSource) {
+        if (commitSource == 'builds') {
+          // Clear the value in the end_git_hash and assign it to backup
+          this.end_git_hash_backup = this.end_git_hash;
+          this.end_git_hash = '';
+        } else {
+          // Restore the value in end_git_hash from backup
+          this.end_git_hash = this.end_git_hash_backup;
+          this.end_git_hash_backup = ''
+        }
+      },
+
+      jobChanged(job) {
+        if (job === null) {
+          return;
+        }
+        this.batch_id = null
+        this.bug_id = job.bug_id;
+        this.project = job.arguments.project;
+        this.base_patch = job.arguments.base_patch;
+        this.experiment_patch = job.arguments.experiment_patch;
+        // Legacy try job doesn't have base_git_hash, use end_git_hash instead
+        this.base_git_hash = job.arguments.base_git_hash ||
+                             job.arguments.end_git_hash;
+        this.start_git_hash = job.arguments.start_git_hash;
+        this.end_git_hash = job.arguments.end_git_hash;
+        this.comparisonMode = job.arguments.comparison_mode;
+        this.comparison_magnitude = job.arguments.comparison_magnitude;
+        this.extra_test_args = job.arguments.extra_test_args;
+        this.base_extra_args = job.arguments.base_extra_args;
+        this.experiment_extra_args = job.arguments.experiment_extra_args;
+        this.initial_attempt_count = job.arguments.initial_attempt_count;
+        this.$.botDropdown.query = job.arguments.configuration;
+        this.$.benchmarkDropdown.query = job.arguments.benchmark;
+        this.$.storyCasesDropdown.query = job.arguments.story;
+        this.$.storyTagsDropdown.query = job.arguments.story_tags;
+        this.$.chartDropdown.query = job.arguments.chart;
+        this.$.statisticDropdown.query = job.arguments.statistic;
+        if (this.config) {
+          this.$.botDropdown.tryReselectQuery();
+        }
+        if (this.testSuites) {
+          this.$.benchmarkDropdown.tryReselectQuery();
+        }
+        if (this.benchmarkConfig) {
+          this.$.storyCasesDropdown.tryReselectQuery();
+          this.$.storyTagsDropdown.tryReselectQuery();
+          this.$.chartDropdown.tryReselectQuery();
+          this.$.statisticDropdown.tryReselectQuery();
+        }
+      },
+
+      benchmarkChanged(benchmark) {
+        this.benchmarkConfig = null;
+      },
+
+      commitsParams(job) {
+        return {
+          repository: job.arguments.project ? job.arguments.project : 'chromium',
+          start_git_hash: job.arguments.start_git_hash,
+          end_git_hash: job.arguments.end_git_hash
+        };
+      },
+
+      generateChromeperfUrl(api) {
+        if (window.location.href.includes('-stage')) {
+          return "https://chromeperf-stage.uc.r.appspot.com" + api;
+        }
+        else {
+          return "https://chromeperf.appspot.com" + api;
+        }
+      },
+
+      defaultAttemptCount(job, configuration, benchmark) {
+        // restarting jobs should default to what they were run on
+        if (job != null &&
+              configuration == job.arguments.configuration &&
+              benchmark == job.arguments.benchmark) {
+            return job.arguments.initial_attempt_count;
+        }
+        // return default for all bisections
+        if (this.isBisectJob(this.comparisonMode)) {
+          return _DEFAULT_ATTEMPT_COUNT;
+        }
+        // press benchmark on mac m1 iteration defaults
+        if (configuration.startsWith('mac-m1_mini_2020') ||
+            configuration == 'mac-14-m1-pro-perf') {
+          if (benchmark.toLowerCase() == 'jetstream2') {
+            return 64;
+          } else if (benchmark.toLowerCase() == 'speedometer2' ||
+              benchmark.toLowerCase() == 'speedometer3') {
+            return 128;
+          // MotionMark
+          } else if (benchmark.toLowerCase().startsWith('rendering.desktop')) {
+            return 96;
+          }
+        }
+        // otherwise return default for all other configurations + benchmarks
+        return _DEFAULT_ATTEMPT_COUNT
+      },
+
+      describeParams(benchmark) {
+        return {test_suite: benchmark, master: 'ChromiumPerf'};
+      },
+
+      validTestSuites(testSuites) {
+        return testSuites !== null && testSuites.length > 0;
+      },
+
+      validBenchmark(benchmark) {
+        if (!benchmark) {
+          return false;
+        }
+        if (this.testSuites) {
+          return this.testSuites.includes(benchmark);
+        }
+        return false;
+      },
+
+      validBot(configuration) {
+        return !configuration.startsWith('mac-m1-pro-perf');
+      },
+
+      validConfig(config) {
+        return config !== null && config.configurations.length > 0;
+      },
+
+      arrayToAutocompleteList(arr) {
+        if (!arr) {
+          return [];
+        }
+
+        const vals = [];
+        for (const cur of arr) {
+          vals.push({name: cur});
+        }
+        return vals;
+      },
+
+      measurements(benchmarkConfig) {
+        if (!benchmarkConfig) {
+          return [];
+        }
+
+        const hasStatName = function(m) {
+          for (const s of _STATISTICS) {
+            if (m.endsWith(s)) {
+              return true;
+            }
+          }
+          return false;
+        };
+
+        return this.arrayToAutocompleteList(
+            benchmarkConfig.measurements.filter(m => !hasStatName(m)));
+      },
+
+      statistics(benchmarkConfig) {
+        const s = [''];
+        return this.arrayToAutocompleteList(s.concat(_STATISTICS));
+      },
+
+      validStoryAndStoryTag(story, storyTag) {
+        if (!story) {
+          return this.validStoryTag(storyTag);
+        }
+        if (!storyTag) {
+          return this.validStory(story);
+        }
+        return this.validStory(story) && this.validStoryTag(storyTag);
+      },
+
+      validStory(story) {
+        if (this.benchmarkConfig) {
+          return this.benchmarkConfig.cases.includes(story);
+        }
+        return false;
+      },
+
+      validStoryTag(storyTag) {
+        if (this.benchmarkConfig) {
+          if (storyTag.includes(",")){
+            tagList = storyTag.split(",")
+            return tagList.every((tag) => (tag.trim()==="" | tag.trim() in this.benchmarkConfig.caseTags))
+          }
+          else {
+            return (storyTag in this.benchmarkConfig.caseTags);
+          }
+        }
+        return false;
+      },
+
+      storyCases(benchmarkConfig) {
+        if (!benchmarkConfig) {
+          return [];
+        }
+
+        return this.arrayToAutocompleteList(benchmarkConfig.cases);
+      },
+
+      validCases(benchmark, benchmarkConfig) {
+        return (
+          this.validBenchmark(benchmark) &&
+          this.storyCases(benchmarkConfig).length > 0);
+      },
+
+      storyTagsFromConfig(benchmarkConfig) {
+        if (!benchmarkConfig) {
+          return [];
+        }
+
+        return this.arrayToAutocompleteList(
+            Object.keys(benchmarkConfig.caseTags));
+      },
+
+      validTags(benchmark, benchmarkConfig) {
+        return (
+          this.validBenchmark(benchmark) &&
+          this.storyTagsFromConfig(benchmarkConfig).length > 0);
+      },
+
+      telemetryIsolate(configuration, benchmark) {
+        if (_NON_TELEMETRY_TARGETS.indexOf(benchmark) != -1) {
+          return benchmark;
+        }
+        // TODO(dtu): Figure out the proper place for this lookup.
+        if (configuration.toLowerCase().includes('webview')) {
+          return 'performance_webview_test_suite';
+        }
+        if (configuration.toLowerCase().includes('fuchsia')) {
+          return 'performance_web_engine_test_suite';
+        }
+        if (configuration.toLowerCase().includes('eve')) {
+          return 'performance_test_suite_eve';
+        }
+        if(configuration === 'lacros-x86-perf') {
+          return 'performance_test_suite_octopus';
+        }
+        if (configuration.toLowerCase().includes('web_engine')) {
+          return 'performance_web_engine_test_suite';
+        }
+        if (benchmark.startsWith('xr')) {
+          return 'vr_perf_tests';
+        }
+        if (configuration === 'android-pixel2-perf-calibration') {
+          return 'performance_test_suite_android_clank_monochrome_64_32_bundle';
+        } else if (configuration === 'android-pixel2-perf-fyi') {
+          return 'performance_test_suite_android_clank_monochrome';
+        } else if (configuration === 'android-pixel2-perf-aab-fyi') {
+          return 'performance_test_suite_android_clank_monochrome_bundle';
+        } else if (configuration === 'android-go-perf') {
+          return 'performance_test_suite_android_clank_monochrome';
+        } else if (configuration === 'android-go-perf-pgo') {
+          return 'performance_test_suite_android_clank_monochrome';
+        } else if (configuration === 'android-go-wembley-perf') {
+          return 'performance_test_suite_android_clank_trichrome_bundle';
+        } else if (configuration === 'Android Nexus5 Perf') {
+          return 'performance_test_suite_android_chrome';
+        } else if (configuration === 'android-pixel2-perf') {
+          return 'performance_test_suite_android_clank_monochrome_64_32_bundle';
+        } else if (configuration === 'android-pixel2-perf-pgo') {
+          return 'performance_test_suite_android_clank_monochrome_64_32_bundle';
+        } else if (configuration === 'android-pixel4-perf') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-pixel4-perf-pgo') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-pixel4a_power-perf') {
+          return 'performance_test_suite_android_clank_trichrome_bundle';
+        } else if (configuration === 'android-pixel4a_power-perf-pgo') {
+          return 'performance_test_suite_android_clank_trichrome_bundle';
+        } else if (configuration.startsWith('android-pixel6')) {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-new-pixel-perf') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-new-pixel-pro-perf') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-new-pixel-perf-pgo') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-new-pixel-pro-perf-pgo') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle';
+        } else if (configuration === 'android-samsung-foldable-perf') {
+          return 'performance_test_suite_android_clank_trichrome_bundle';
+        } else if (configuration === 'android-pixel-fold-perf') {
+          return 'performance_test_suite_android_clank_trichrome_chrome_google_64_32_bundle'
+        } else if (configuration.toLowerCase().includes('android')) {
+          throw Error(
+              'Given Android configuration ' + configuration + ' does not ' +
+              'have an isolate mapped to it');
+        }
+
+        return 'performance_test_suite';
+      }
+    });
+  </script>
+</dom-module>

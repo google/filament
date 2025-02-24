@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/ui/base/hotkey_controller.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  const KeyEventManager = tr.b.KeyEventManager;
+
+  function newKeyEvent(eventType, dict) {
+    const e = new tr.b.Event(eventType, true, true);
+    if (dict.keyCode === undefined) {
+      throw new Error('keyCode required');
+    }
+    e.keyCode = dict.keyCode;
+    return e;
+  }
+
+  test('simpleHotkeyManager', function() {
+    const rootElement = document.createElement('div');
+    Polymer.dom(document.body).appendChild(rootElement);
+    try {
+      const elementShadow = rootElement.createShadowRoot();
+
+      const hkc = document.createElement('tv-ui-b-hotkey-controller');
+      Polymer.dom(elementShadow).appendChild(hkc);
+
+      const subElement = document.createElement('div');
+      Polymer.dom(elementShadow).appendChild(subElement);
+
+      assert.strictEqual(tr.b.getHotkeyControllerForElement(subElement), hkc);
+
+      let didGetCalled = false;
+      hkc.addHotKey(new tr.ui.b.HotKey({
+        eventType: 'keydown',
+        keyCode: 73, useCapture: true,
+        callback() {
+          didGetCalled = true;
+        }
+      }));
+
+      // Ensure it is called when events target the root element.
+      let e = newKeyEvent('keydown', {keyCode: 73});
+      rootElement.dispatchEvent(e);
+      assert.isTrue(didGetCalled);
+
+      // Ensure it is still called when we target the sub element.
+      didGetCalled = false;
+      e = newKeyEvent('keydown', {keyCode: 73});
+      subElement.dispatchEvent(e);
+      assert.isTrue(didGetCalled);
+    } finally {
+      Polymer.dom(document.body).removeChild(rootElement);
+    }
+  });
+
+  test('nestedHotkeyController', function() {
+    const rootElement = document.createElement('div');
+    Polymer.dom(document.body).appendChild(rootElement);
+    try {
+      const elementShadow = rootElement.createShadowRoot();
+
+      const hkc = document.createElement('tv-ui-b-hotkey-controller');
+      Polymer.dom(elementShadow).appendChild(hkc);
+
+      const subElement = document.createElement('div');
+      Polymer.dom(elementShadow).appendChild(subElement);
+      assert.strictEqual(
+          tr.b.getHotkeyControllerForElement(elementShadow), hkc);
+
+      const subHKC = document.createElement('tv-ui-b-hotkey-controller');
+      Polymer.dom(subElement).appendChild(subHKC);
+
+      assert.strictEqual(
+          tr.b.getHotkeyControllerForElement(subElement), subHKC);
+
+      let didGetCalled = false;
+      subHKC.addHotKey(new tr.ui.b.HotKey({
+        eventType: 'keydown',
+        keyCode: 73, useCapture: true,
+        callback() {
+          didGetCalled = true;
+        }
+      }));
+
+      // Ensure it is called when events target the root element.
+      const e = newKeyEvent('keydown', {keyCode: 73});
+      rootElement.dispatchEvent(e);
+      assert.isTrue(didGetCalled);
+    } finally {
+      Polymer.dom(document.body).removeChild(rootElement);
+    }
+  });
+
+  test('inputInsideHKC', function() {
+    const rootElement = document.createElement('div');
+    Polymer.dom(document.body).appendChild(rootElement);
+    try {
+      const elementShadow = rootElement.createShadowRoot();
+
+      const hkc = document.createElement('tv-ui-b-hotkey-controller');
+      Polymer.dom(elementShadow).appendChild(hkc);
+
+      const inputEl = document.createElement('input');
+      Polymer.dom(elementShadow).appendChild(inputEl);
+
+      let didGetCalled = false;
+      hkc.addHotKey(new tr.ui.b.HotKey({
+        eventType: 'keypress',
+        keyCode: 'a'.charCodeAt(0), useCapture: false,
+        callback() {
+          didGetCalled = true;
+        }
+      }));
+
+      // Ensure it is called when events target the root element.
+      didGetCalled = false;
+      let e = newKeyEvent('keypress', {keyCode: 'a'.charCodeAt(0)});
+      rootElement.dispatchEvent(e);
+      assert.isTrue(didGetCalled);
+
+      // Handler should NOT be called when events target the input element.
+      didGetCalled = false;
+      e = newKeyEvent('keypress', {keyCode: 'a'.charCodeAt(0)});
+      inputEl.dispatchEvent(e);
+      assert.isFalse(didGetCalled);
+    } finally {
+      Polymer.dom(document.body).removeChild(rootElement);
+    }
+  });
+});
+</script>

@@ -1,0 +1,12 @@
+// Copyright 2024 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See README.md for format.
+
+380712808 VULKAN : events.event_enqueue_barrier_with_event_list = SKIP
+380712808 VULKAN : events.event_enqueue_marker_with_event_list = SKIP
+
+42267085 LINUX NVIDIA VULKAN : non_uniform_work_group.non_uniform_1d_basic = FAIL
+42267085 LINUX NVIDIA VULKAN : non_uniform_work_group.non_uniform_other_basic = FAIL
+

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<html>
+<head>
+  <link rel="import" href="/dashboard/static/base.html">
+  <link rel="import" href="/dashboard/elements/nav-bar.html">
+  <title>Delete Test Data</title>
+  <script>
+    'use strict';
+    const XSRF_TOKEN = '{{xsrf_token}}';
+
+    /**
+     * Loads and displays tests that match the deletion pattern.
+     * @return {boolean} false (to prevent default click handler behavior).
+     */
+    function listTests() {
+      function showPatternMatch() {
+        const arr = JSON.parse(xhr.responseText);
+        document.getElementById('test-list').innerHTML = arr.join('<br>');
+        if (arr.length > 0) {
+          document.getElementById('form-submit').disabled = false;
+        }
+      }
+
+      const pattern = document.getElementById('pattern').value;
+      const xhr = new XMLHttpRequest();
+      xhr.onload = showPatternMatch;
+      xhr.open('POST', '/list_tests');
+      xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+      xhr.send('type=pattern&has_rows=0&p=' + encodeURIComponent(pattern) +
+               '&xsrf_token=' + encodeURIComponent(window.XSRF_TOKEN));
+      document.getElementById('test-list').innerHTML =
+          '<img src="//www.google.com/images/loading.gif">';
+      return false;
+    }
+  </script>
+</head>
+<body>
+  <nav-bar></nav-bar>
+  <h1>Delete Test Data</h1>
+
+  <p>This page is a tool for deleting test data which is confusing or
+  misleading. Please only use it as a <b>last resort</b>; in most cases
+  tests should be <a href="migrate_test_names">migrated</a> instead.</p>
+
+  <p>The input field below should be filled in with a "test path pattern". A
+  test path is a slash-separated list of names of the
+  form "MasterName/bot-name/test_name/sub_test_name/...". A test path pattern
+  is a test path where any of the names can be replaced by the wildcard
+  character "*" After you fill in test path pattern, you can list the tests
+  that match the pattern to confirm. When you submit, test deletion tasks
+  will be added to a task queue.</p>
+
+  <form method="POST">
+    <table>
+      <tr>
+        <td>Pattern:</td>
+        <td>
+          <input type="text" size="125"
+                 name="pattern" id="pattern"
+                 style="font-family: monospace;" required>
+        </td>
+      </tr>
+    </table>
+    <input type="button" onclick="listTests();" value="List tests">
+    <input type="submit" disabled value="Delete data" id="form-submit">
+    <div id="test-list"></div>
+  </form>
+</body>
+</html>

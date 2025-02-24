@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/ui/side_panel/metrics_side_panel.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel() {
+    const m = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(m) {
+        const browserProcess = m.getOrCreateProcess(1);
+        const browserMain = browserProcess.getOrCreateThread(2);
+        browserMain.sliceGroup.beginSlice('cat', 'Task', 0);
+        browserMain.sliceGroup.endSlice(10);
+        browserMain.sliceGroup.beginSlice('cat', 'Task', 20);
+        browserMain.sliceGroup.endSlice(30);
+      }
+    });
+    return m;
+  }
+
+  function testMetric(values, model) {
+    const hist = new tr.v.Histogram('test histogram', tr.b.Unit.byName.count);
+    hist.addSample(1);
+    values.addHistogram(hist);
+  }
+
+  tr.metrics.MetricRegistry.register(testMetric);
+
+  test('instantiateCollapsed', async function() {
+    const metricsPanel = document.createElement('tr-ui-sp-metrics-side-panel');
+    this.addHTMLOutput(metricsPanel);
+    metricsPanel.currentMetricName_ = 'testMetric';
+    await metricsPanel.build(createModel());
+
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(
+        metricsPanel, elem => elem.textContent === 'test histogram'));
+  });
+});
+</script>

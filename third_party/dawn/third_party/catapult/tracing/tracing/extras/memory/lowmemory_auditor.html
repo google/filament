@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+  Copyright 2017 The Chromium Authors. All rights reserved.
+  Use of this source code is governed by a BSD-style license that can be
+  found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/model/alert.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.e.audits', function() {
+  /**
+   * Auditor that analyzes the model and annotates low memory events.
+   */
+  class LowMemoryAuditor extends tr.c.Auditor {
+    constructor(model) {
+      super();
+      this.model_ = model;
+    }
+
+    runAnnotate() {
+      this.model_.device.lowMemoryEvents = this.getLowMemoryEvents_();
+    }
+
+    /**
+     * Returns a list of low memory killer events.
+     */
+    getLowMemoryEvents_() {
+      const model = this.model_;
+      const result = [];
+      for (const process of model.getAllProcesses()) {
+        for (const e of process.getDescendantEvents()) {
+          // low memory killer events are 0-duration events.
+          if (!(e instanceof tr.model.ThreadSlice) || e.duration !== 0) {
+            continue;
+          }
+
+          if (e.category !== 'lowmemory') {
+            continue;
+          }
+
+          result.push(e);
+        }
+      }
+      return result;
+    }
+  }
+
+  tr.c.Auditor.register(LowMemoryAuditor);
+
+  return {
+    LowMemoryAuditor
+  };
+});
+</script>

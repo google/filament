@@ -1,0 +1,65 @@
+{
+  "name": "iron-ajax",
+  "version": "2.0.5",
+  "description": "Makes it easy to make ajax calls and parse the response",
+  "private": true,
+  "authors": [
+    "The Polymer Authors"
+  ],
+  "keywords": [
+    "web-components",
+    "polymer",
+    "ajax"
+  ],
+  "main": "iron-ajax.html",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/PolymerElements/iron-ajax.git"
+  },
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/PolymerElements/iron-ajax",
+  "ignore": [],
+  "dependencies": {
+    "polymer": "Polymer/polymer#1.9 - 2"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#1 - 2",
+    "iron-image": "PolymerElements/iron-image#1 - 2",
+    "promise-polyfill": "PolymerLabs/promise-polyfill#1 - 2",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^1.0.0",
+    "test-fixture": "PolymerElements/test-fixture#^3.0.0-rc.1",
+    "web-component-tester": "^6.0.0"
+  },
+  "variants": {
+    "1.x": {
+      "dependencies": {
+        "promise-polyfill": "PolymerLabs/promise-polyfill#^1.0.0",
+        "polymer": "Polymer/polymer#^1.9"
+      },
+      "devDependencies": {
+        "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+        "iron-image": "PolymerElements/iron-image#^1.0.0",
+        "paper-styles": "PolymerElements/paper-styles#^1.0.0",
+        "test-fixture": "PolymerElements/test-fixture#^1.0.0",
+        "web-component-tester": "^4.0.0",
+        "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0"
+      },
+      "resolutions": {
+        "promise-polyfill": "^1.0.0",
+        "webcomponentsjs": "^0.7"
+      }
+    }
+  },
+  "resolutions": {
+    "webcomponentsjs": "^1.0.0"
+  },
+  "_release": "2.0.5",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.0.5",
+    "commit": "536c76a4206e08a16b364930855e46f58ce3565d"
+  },
+  "_source": "https://github.com/PolymerElements/iron-ajax.git",
+  "_target": "^2.0.0",
+  "_originalSource": "PolymerElements/iron-ajax"
+}

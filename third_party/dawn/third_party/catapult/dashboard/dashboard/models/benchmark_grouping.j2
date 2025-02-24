@@ -1,0 +1,13 @@
+{# This groups anomalies by benchmark, in case we do end up supporting that case. #}
+{%- if benchmarks|length > 1 -%}
+{% for benchmark in benchmarks|sort %}
+{%- set top_regressions = benchmark.regressions[:3] -%}
+Top {{ top_regressions|length }} affected measurements in {{ benchmark.name }}:
+{%- for regression in top_regressions %}
+  - {{ regression.test.string_id() }}
+    {%- set before = regression.median_before_anomaly %}
+    {%- set after = regression.median_after_anomaly %}
+    {{ '%8.2f'|format(regression.relative_delta*100.0) }}%: {{ before }} -> {{ after }} {{ parse_unit(regression.units) }}
+{%- endfor %}
+{% endfor %}
+{%- endif -%}

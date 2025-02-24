@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/rendering/cpu_utilization.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('cpuPerFrame', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserMain = model.getOrCreateProcess(0).getOrCreateThread(0);
+      browserMain.name = 'CrBrowserMain';
+      // A slice during the animation with CPU duration 2.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 1, end: 4, cpuStart: 0, cpuEnd: 2 }));
+      // A slice after the animation.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 10, end: 12, cpuStart: 2, cpuEnd: 3 }));
+
+
+      const rendererMain = model.getOrCreateProcess(1).getOrCreateThread(0);
+      rendererMain.name = 'CrRendererMain';
+      // A slice half of which intersects with the animation.
+      rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 15, cpuStart: 0, cpuEnd: 8 }));
+
+      const rendererIO = model.getOrCreateProcess(1).getOrCreateThread(1);
+      rendererIO.name = 'Chrome_ChildIOThread';
+      rendererIO.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 6, cpuStart: 1, cpuEnd: 2 }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.addCpuSegmentCostHistograms(
+        histograms, model, [new tr.model.um.Segment(0, 10)],
+        (thread, segment) => thread.getCpuTimeForRange(segment.boundsRange),
+        category => `thread_${category}_cpu_time_per_frame`, 'description');
+
+    // Verify the browser and renderer main threads and IO threads CPU usage.
+    let hist = histograms.getHistogramNamed(
+        'thread_browser_cpu_time_per_frame');
+    assert.closeTo(2, hist.min, 1e-6);
+    assert.closeTo(2, hist.max, 1e-6);
+    assert.closeTo(2, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed(
+        'thread_renderer_main_cpu_time_per_frame');
+    assert.closeTo(4, hist.min, 1e-6);
+    assert.closeTo(4, hist.max, 1e-6);
+    assert.closeTo(4, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed('thread_IO_cpu_time_per_frame');
+    assert.closeTo(1, hist.min, 1e-6);
+    assert.closeTo(1, hist.max, 1e-6);
+    assert.closeTo(1, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed(
+        'thread_total_rendering_cpu_time_per_frame');
+    assert.closeTo(7, hist.min, 1e-6);
+    assert.closeTo(7, hist.max, 1e-6);
+    assert.closeTo(7, hist.average, 1e-6);
+
+    // Verify sum of all threads.
+    hist = histograms.getHistogramNamed('thread_total_all_cpu_time_per_frame');
+    assert.closeTo(7, hist.min, 1e-6);
+    assert.closeTo(7, hist.max, 1e-6);
+    assert.closeTo(7, hist.average, 1e-6);
+  });
+
+  test('multipleSegments', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserMain = model.getOrCreateProcess(0).getOrCreateThread(0);
+      browserMain.name = 'CrBrowserMain';
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 1, end: 4, cpuStart: 0, cpuEnd: 2 }));
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 8, end: 12, cpuStart: 2, cpuEnd: 4 }));
+
+
+      const rendererMain = model.getOrCreateProcess(1).getOrCreateThread(0);
+      rendererMain.name = 'CrRendererMain';
+      rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 15, cpuStart: 0, cpuEnd: 8 }));
+
+      const rendererIO = model.getOrCreateProcess(1).getOrCreateThread(1);
+      rendererIO.name = 'Chrome_ChildIOThread';
+      rendererIO.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 6, cpuStart: 1, cpuEnd: 2 }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.addCpuSegmentCostHistograms(
+        histograms, model,
+        [new tr.model.um.Segment(0, 5), new tr.model.um.Segment(5, 5)],
+        (thread, segment) => thread.getCpuTimeForRange(segment.boundsRange),
+        category => `thread_${category}_cpu_time_per_frame`, 'description');
+
+    // The first slice is in the first segment, using 2ms of CPU. The rest are
+    // in the second segment, using 1 + 4 + 1 = 6ms of CPU.
+    const hist = histograms.getHistogramNamed(
+        'thread_total_all_cpu_time_per_frame');
+    assert.closeTo(4, hist.min, 1e-6);
+    assert.closeTo(4, hist.max, 1e-6);
+    assert.closeTo(4, hist.average, 1e-6);
+  });
+
+  test('otherThreads', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserMain = model.getOrCreateProcess(0).getOrCreateThread(0);
+      browserMain.name = 'CrBrowserMain';
+      // A slice during the animation with CPU duration 2.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 1, end: 4, cpuStart: 0, cpuEnd: 2 }));
+      // A slice after the animation.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 10, end: 12, cpuStart: 2, cpuEnd: 3 }));
+
+
+      const thread1 = model.getOrCreateProcess(1).getOrCreateThread(0);
+      thread1.name = 'Thread1';
+      // A slice half of which intersects with the animation.
+      thread1.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 15, cpuStart: 0, cpuEnd: 8 }));
+
+      const thread2 = model.getOrCreateProcess(1).getOrCreateThread(1);
+      thread2.name = 'Thread2';
+      thread2.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 6, cpuStart: 1, cpuEnd: 2 }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.addCpuSegmentCostHistograms(
+        histograms, model, [new tr.model.um.Segment(0, 10)],
+        (thread, segment) => thread.getCpuTimeForRange(segment.boundsRange),
+        category => `thread_${category}_cpu_time_per_frame`, 'description');
+
+    // Verify the browser and renderer main threads and IO threads CPU usage.
+    let hist = histograms.getHistogramNamed(
+        'thread_browser_cpu_time_per_frame');
+    assert.closeTo(2, hist.min, 1e-6);
+    assert.closeTo(2, hist.max, 1e-6);
+    assert.closeTo(2, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed('thread_other_cpu_time_per_frame');
+    assert.closeTo(5, hist.min, 1e-6);
+    assert.closeTo(5, hist.max, 1e-6);
+    assert.closeTo(5, hist.average, 1e-6);
+  });
+
+  test('tasksPerFrame', function() {
+    const model = tr.c.TestUtils.newModel((model) => {
+      const browserMain = model.getOrCreateProcess(0).getOrCreateThread(0);
+      browserMain.name = 'CrBrowserMain';
+      // A slice during the animation with CPU duration 2.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 1, end: 4, cpuStart: 0, cpuEnd: 2 }));
+      // A slice after the animation.
+      browserMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 10, end: 12, cpuStart: 2, cpuEnd: 3 }));
+
+
+      const rendererMain = model.getOrCreateProcess(1).getOrCreateThread(0);
+      rendererMain.name = 'CrRendererMain';
+      // A slice half of which intersects with the animation.
+      rendererMain.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 15, cpuStart: 0, cpuEnd: 8 }));
+
+      const rendererIO = model.getOrCreateProcess(1).getOrCreateThread(1);
+      rendererIO.name = 'Chrome_ChildIOThread';
+      rendererIO.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx(
+          { start: 5, end: 6, cpuStart: 1, cpuEnd: 2 }));
+    });
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.rendering.addCpuSegmentCostHistograms(
+        histograms, model, [new tr.model.um.Segment(0, 10)],
+        (thread, segment) =>
+          thread.getNumToplevelSlicesForRange(segment.boundsRange),
+        category => `tasks_per_frame_${category}`, 'description');
+
+    // Verify the browser and renderer main threads and IO threads number of
+    // tasks.
+    let hist = histograms.getHistogramNamed('tasks_per_frame_browser');
+    assert.closeTo(1, hist.min, 1e-6);
+    assert.closeTo(1, hist.max, 1e-6);
+    assert.closeTo(1, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed('tasks_per_frame_renderer_main');
+    assert.closeTo(0.5, hist.min, 1e-6);
+    assert.closeTo(0.5, hist.max, 1e-6);
+    assert.closeTo(0.5, hist.average, 1e-6);
+
+    hist = histograms.getHistogramNamed('tasks_per_frame_IO');
+    assert.closeTo(1, hist.min, 1e-6);
+    assert.closeTo(1, hist.max, 1e-6);
+    assert.closeTo(1, hist.average, 1e-6);
+
+    // Verify sum of all threads.
+    hist = histograms.getHistogramNamed('tasks_per_frame_total_all');
+    assert.closeTo(2.5, hist.min, 1e-6);
+    assert.closeTo(2.5, hist.max, 1e-6);
+    assert.closeTo(2.5, hist.average, 1e-6);
+  });
+});
+</script>

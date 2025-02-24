@@ -1,0 +1,90 @@
+Name
+
+    ANGLE_platform_angle_device_context_volatile_eagl
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_device_context_volatile_eagl
+
+Contributors
+    Kimmo Kinnunen, Apple
+    Kenneth Russell, Google
+
+Contacts
+    Kimmo Kinnunen, Apple (kkinnunen 'at' apple 'dot' org)
+    Kenneth Russell, Google (kbr 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2020-09-30
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension allows the client to request a Display that internally
+    is able to function even if client changes current EAGL context of the
+    thread. Requesting a volatile device context contexts may impact performance.
+    The extension is useful for using EGL in a library that cannot guarantee
+    which platform APIs its clients will use.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_EAGL_ANGLE    0x34A2
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that internally supports the feature,
+    use the attribute EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_EAGL_ANGLE.
+    EGL_TRUE enables volatile EAGL device context and EGL_FALSE disables it.
+    Any value other than these will result in an error.
+    The default value for EGL_PLATFORM_ANGLE_DEVICE_CONTEXT_VOLATILE_EAGL_ANGLE
+    is EGL_FALSE.
+
+    When the device context of the display is set as volatile EAGL, then
+    each EGL function will change the current EAGL context state accordingly
+    to use the internal device context, if needed. If the internal device context
+    is not using EAGL, the property has no effect.
+
+    Calls to OpenGL or OpenGL ES functions will not ensure the underlying device
+    context is correct. If the state of the current EAGL context is unknown,
+    clients should call MakeCurrent to ensure that the internal device
+    context is made current.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2020-09-30 (Kimmo Kinnunen)
+      - Initial draft

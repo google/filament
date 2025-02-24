@@ -1,0 +1,20 @@
+{
+    "Description": [
+        "Copyright 2020 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "GenerateMipmap.comp.json: Build parameters for GenerateMipmap.comp."
+    ],
+    "MaxSupportedDest": [
+        [ "DestSize4", "--target-env", "vulkan1.1" ],
+        [ "DestSize6", "--target-env", "vulkan1.1" ]
+    ],
+    "Format": [
+        "IsRGBA8",
+        "IsRGBA8_UseHalf",
+        "IsRGBA16",
+        "IsRGBA16_UseHalf",
+        "IsRGBA32F"
+    ]
+}

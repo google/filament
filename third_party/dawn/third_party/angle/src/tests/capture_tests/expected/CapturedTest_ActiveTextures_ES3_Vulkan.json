@@ -1,0 +1,32 @@
+{
+    "TraceMetadata": {
+        "AreClientArraysEnabled": true,
+        "CaptureRevision": 23504,
+        "ConfigAlphaBits": 8,
+        "ConfigBlueBits": 8,
+        "ConfigDepthBits": 24,
+        "ConfigGreenBits": 8,
+        "ConfigRedBits": 8,
+        "ConfigStencilBits": 8,
+        "ContextClientMajorVersion": 3,
+        "ContextClientMinorVersion": 0,
+        "DisplayDeviceType": "0x320A",
+        "DisplayPlatformType": "0x3450",
+        "DrawSurfaceColorSpace": "0x308A",
+        "DrawSurfaceHeight": 128,
+        "DrawSurfaceWidth": 128,
+        "FrameEnd": 4,
+        "FrameStart": 1,
+        "IsBinaryDataCompressed": false,
+        "IsBindGeneratesResourcesEnabled": true,
+        "IsRobustResourceInitEnabled": false,
+        "IsWebGLCompatibilityEnabled": false
+    },
+    "TraceFiles": [
+        "CapturedTest_ActiveTextures_ES3_Vulkan.cpp",
+        "CapturedTest_ActiveTextures_ES3_Vulkan.h",
+        "CapturedTest_ActiveTextures_ES3_Vulkan_001.cpp",
+        "CapturedTest_ActiveTextures_ES3_Vulkan_shared.cpp"
+    ],
+    "WindowSurfaceContextID": 3
+}

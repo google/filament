@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/base/serializable.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.b', function() {
+  /*
+   * This is a base class for MVC Model classes.
+   * Subclasses must call super() and define() in their constructors to define
+   * managed properties.
+   * Call addUpdateListener(listener) to listen for update events.
+   *
+   * When clients set fields on an instance of a subclass of ViewState,
+   * an update event will be dispatched containing the delta.
+   *
+   * Defined properties can optionally contain instances of any ViewState
+   * subclass in Arrays, Maps, or Sets, recursively. Update events do not bubble
+   * up through parent ViewStateModels. This allows clients to choose whether to
+   * listen to every sub-ViewState or select instances. This also allows
+   * ViewState subclasses to define circular references if necessary, though
+   * that is not supported for serialization.
+   */
+  class ViewState extends tr.b.Serializable {
+    constructor() {
+      super();
+      tr.b.EventTarget.decorate(this);
+    }
+
+    setProperty_(name, value) {
+      this.update(new Map([[name, value]]));
+    }
+
+    async updateFromViewState(other) {
+      await this.update(other.properties_);
+    }
+
+    /**
+     * Updates properties, and, if any of them actually changed, dispatches
+     * an event with delta = {propertyName: {previous, current}}.
+     *
+     * @param {!(Object|Map)} delta
+     */
+    async update(delta) {
+      // This method only wants to iterate over delta, so convert it to a map.
+      if (!(delta instanceof Map)) delta = new Map(Object.entries(delta));
+
+      // Clients presumably want to test for changes to specific fields by name,
+      // which is easier with dictionaries, so the actualDelta is a dictionary.
+      const actualDelta = {};
+      for (const [name, current] of delta) {
+        const previous = this[name];
+        if (previous === current) continue;
+
+        actualDelta[name] = {previous, current};
+        tr.b.Serializable.prototype.setProperty_.call(this, name, current);
+      }
+
+      if (Object.keys(actualDelta).length === 0) return;
+
+      await tr.b.dispatchSimpleEventAsync(
+          this, this.updateEventName_, {delta: actualDelta});
+    }
+
+    get updateEventName_() {
+      return this.constructor.name + '.update';
+    }
+
+    /**
+     * @param {!function(!tr.b.Event)} listener
+     */
+    addUpdateListener(listener) {
+      this.addEventListener(this.updateEventName_, listener);
+    }
+
+    /**
+     * @param {!function(!tr.b.Event)} listener
+     */
+    removeUpdateListener(listener) {
+      this.removeEventListener(this.updateEventName_, listener);
+    }
+  }
+
+  return {
+    ViewState,
+  };
+});
+</script>

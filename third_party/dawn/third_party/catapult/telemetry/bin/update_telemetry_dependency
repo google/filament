@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# Copyright 2018 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+
+import os
+import sys
+import argparse
+
+TELEMETRY_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+sys.path.insert(1, TELEMETRY_DIR)
+
+from telemetry.internal.util import binary_manager
+
+from dependency_manager import base_config
+
+
+def AddBinaryDepdendency(binary_local_path, dependency_name, platform,
+    download_path):
+  config = base_config.BaseConfig(
+      binary_manager.TELEMETRY_PROJECT_CONFIG, writable=True)
+
+  if not dependency_name in config:
+    print ('%s is a new dependency. '
+           'Do you want to add it to Telemetry binary dependencies?')
+    answer = raw_input("Enter 'y' to answer yes: ")
+    if answer == 'y':
+      config.AddNewDependency(
+          dependency_name,
+          binary_manager.TELEMETRY_BINARY_BASE_CS_FOLDER,
+          binary_manager.TELEMETRY_BINARY_CS_BUCKET)
+    else:
+      print 'Did not update binary for %s' % dependency_name
+      return
+
+  if not download_path:
+    download_path = '%s/%s' % (
+        binary_manager.PLATFORMS_TO_DOWNLOAD_FOLDER_MAP[platform],
+        os.path.basename(binary_local_path))
+    if platform.startswith('win'):
+      download_path += '.exe'
+    print "Download path wasn't specified. Using default download path: %s" % (
+        download_path)
+    print 'Do you want to continue the binary update job?'
+    answer = raw_input("Enter 'y' to answer yes: ")
+    if answer != 'y':
+      print 'Did not update binary for %s' % dependency_name
+      return
+  config.SetDownloadPath(dependency_name, platform,
+      download_path=download_path)
+
+  config.AddCloudStorageDependencyUpdateJob(
+      dependency_name, platform, binary_local_path, execute_job=False)
+
+  config.ExecuteUpdateJobs()
+
+
+def main(args):
+  parser = argparse.ArgumentParser(
+      description='Add binary to Telemetry dependencies to store on cloud'
+      ' storage.')
+  parser.add_argument('binary_path', type=str,
+      help='Path to binary to be added to dependencies')
+  parser.add_argument('dependency_name', type=str, help='Dependency name')
+  parser.add_argument('platform',
+      choices=binary_manager.SUPPORTED_DEP_PLATFORMS,
+      help='Platform which this binary dep belong to')
+  parser.add_argument('--download-path',
+      help=(
+          'Download path of the binary dependency (relative to '
+          'telemetry/telemetry/internal/ directory)'))
+
+  options = parser.parse_args(args)
+
+  binary_local_path = os.path.abspath(options.binary_path)
+  if not os.path.exists(binary_local_path):
+    raise ValueError('Path %s does not exist' % binary_local_path)
+
+  AddBinaryDepdendency(
+      binary_local_path, options.dependency_name, options.platform,
+      options.download_path)
+
+
+if __name__ == "__main__":
+  main(sys.argv[1:])

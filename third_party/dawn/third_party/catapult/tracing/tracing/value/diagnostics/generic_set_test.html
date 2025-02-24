@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+<link rel="import" href="/tracing/value/histogram_deserializer.html">
+<link rel="import" href="/tracing/value/histogram_serializer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('merge', function() {
+    const a = new tr.v.d.GenericSet(['a']);
+    const b = new tr.v.d.GenericSet(['b']);
+
+    assert.isTrue(a.canAddDiagnostic(b));
+    assert.isTrue(b.canAddDiagnostic(a));
+
+    const ab = a.clone();
+    ab.addDiagnostic(b);
+    assert.deepEqual(Array.from(ab), ['a', 'b']);
+
+    const bab = b.clone();
+    bab.addDiagnostic(ab);
+    assert.deepEqual(Array.from(bab), ['b', 'a']);
+  });
+
+  test('mergeDictionaries', function() {
+    const a = new tr.v.d.GenericSet([{a: 1, b: 2}]);
+    const b = new tr.v.d.GenericSet([{b: 2, a: 1}]);
+    const ab = a.clone();
+    assert.strictEqual(tr.b.getOnlyElement(a), tr.b.getOnlyElement(ab));
+    ab.addDiagnostic(b);
+    assert.lengthOf(ab, 1);
+    assert.strictEqual(tr.b.getOnlyElement(a), tr.b.getOnlyElement(ab));
+  });
+
+  test('addDiagnosticWithNull', function() {
+    const a = new tr.v.d.GenericSet([]);
+    const b = new tr.v.d.GenericSet([null]);
+    a.addDiagnostic(b);
+    assert.lengthOf(a, 1);
+    assert.isTrue(a.has(null));
+  });
+
+  test('hashKey', function() {
+    const a = new tr.v.d.GenericSet(['a', 'b']);
+    assert.strictEqual(a.hashKey, 'ab');
+  });
+
+  test('setsWithoutObjectsSupportFastPath', function() {
+    const a = new tr.v.d.GenericSet(['a', 'b']);
+    assert.isDefined(a.hashKey);
+  });
+
+  test('setsWithObjectsDoNotSupportFastPath', function() {
+    const a = new tr.v.d.GenericSet([{foo: 'bar'}]);
+    assert.isUndefined(a.hashKey);
+  });
+
+  test('deserialize', function() {
+    const d = new tr.v.HistogramDeserializer(['aaa', 'bbb']);
+    const a = tr.v.d.GenericSet.deserialize(0, d);
+    assert.strictEqual(tr.b.getOnlyElement(a), 'aaa');
+    const b = tr.v.d.GenericSet.deserialize([0, 1], d);
+    assert.lengthOf(b, 2);
+    assert.isTrue(b.has('aaa'));
+    assert.isTrue(b.has('bbb'));
+  });
+
+  test('serialize', function() {
+    const s = new tr.v.HistogramSerializer();
+    let g = new tr.v.d.GenericSet(['a']);
+    assert.strictEqual(g.serialize(s), 0);
+    assert.strictEqual(s.getOrAllocateId('a'), 0);
+    g = new tr.v.d.GenericSet(['a', 'b']);
+    assert.deepEqual(g.serialize(s), [0, 1]);
+    assert.strictEqual(s.getOrAllocateId('b'), 1);
+  });
+});
+</script>

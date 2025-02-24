@@ -1,0 +1,126 @@
+//===- subzero/src/IceInstARM32.def - X-Macros for ARM32 insts --*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines properties of ARM32 instructions in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICEINSTARM32_DEF
+#define SUBZERO_SRC_ICEINSTARM32_DEF
+
+#include "IceRegList.h"
+
+// NOTE: PC and SP are not considered isInt, to avoid register allocating.
+//
+// For the NaCl sandbox we also need to r9 (and the r8-r9 pair) for TLS, so
+// just reserve always.
+// TODO(jpp): Allow r9 to be isInt when sandboxing is turned off (native mode).
+//
+// IP is not considered isInt to reserve it as a scratch register. A scratch
+// register is useful for expanding instructions post-register allocation.
+//
+// LR is not considered isInt to avoid being allocated as a register. It is
+// technically preserved, but save/restore is handled separately, based on
+// whether or not the function MaybeLeafFunc.
+//
+// The register tables can be generated using the gen_arm32_reg_tables.py
+// script.
+
+#include "IceRegistersARM32.def"
+// The register tables defined in IceRegistersARM32 use the following x-macro:
+//#define X(val, encode, name, cc_arg, scratch, preserved, stackptr, frameptr,
+//          isGPR, isInt, isI64Pair, isFP32, isFP64, isVec128, alias_init)
+
+// We also provide a combined table, so that there is a namespace where all of
+// the registers are considered and have distinct numberings. This is in
+// contrast to the above, where the "encode" is based on how the register
+// numbers will be encoded in binaries and values can overlap.
+#define REGARM32_TABLE                                                         \
+  /* val, encode, name, cc_arg, scratch, preserved, stackptr, frameptr,        \
+     isGPR, isInt, isI64Pair, isFP32, isFP64, isVec128, alias_init */          \
+  REGARM32_GPR_TABLE                                                           \
+  REGARM32_I64PAIR_TABLE                                                       \
+  REGARM32_FP32_TABLE                                                          \
+  REGARM32_FP64_TABLE                                                          \
+  REGARM32_VEC128_TABLE
+//#define X(val, encode, name, cc_arg, scratch, preserved, stackptr, frameptr,
+//          isGPR, isInt, isFP32, isFP64, isVec128, alias_init)
+
+#define REGARM32_TABLE_BOUNDS                                                  \
+  /* val, init */                                                              \
+  X(Reg_GPR_First, = Reg_r0)                                                   \
+  X(Reg_GPR_Last, = Reg_pc)                                                    \
+  X(Reg_I64PAIR_First, = Reg_r0r1)                                             \
+  X(Reg_I64PAIR_Last, = Reg_r10fp)                                             \
+  X(Reg_SREG_First, = Reg_s0)                                                  \
+  X(Reg_SREG_Last, = Reg_s31)                                                  \
+  X(Reg_DREG_First, = Reg_d0)                                                  \
+  X(Reg_DREG_Last, = Reg_d31)                                                  \
+  X(Reg_QREG_First, = Reg_q0)                                                  \
+  X(Reg_QREG_Last, = Reg_q15)
+// define X(val, init)
+
+// Load/Store instruction width suffixes and FP/Vector element size suffixes
+// the # of offset bits allowed as part of an addressing mode (for sign or zero
+// extending load/stores).
+#define ICETYPEARM32_TABLE                                                     \
+  /* tag,          element type, int_width, fp_width, uvec_width, svec_width,  \
+     addr bits sext, zext, reg-reg addr allowed, shift allowed, */             \
+  X(IceType_void,  IceType_void, "" , ""    , ""    , ""    , 0 , 0 , 0, 0)    \
+  X(IceType_i1,    IceType_void, "b", ""    , ""    , ""    , 8 , 12, 1, 1)    \
+  X(IceType_i8,    IceType_void, "b", ""    , ""    , ""    , 8 , 12, 1, 1)    \
+  X(IceType_i16,   IceType_void, "h", ""    , ""    , ""    , 8 , 8 , 1, 0)    \
+  X(IceType_i32,   IceType_void, "" , ""    , ""    , ""    , 12, 12, 1, 1)    \
+  X(IceType_i64,   IceType_void, "d", ""    , ""    , ""    , 12, 12, 1, 1)    \
+  X(IceType_f32,   IceType_void, "" , ".f32", ""    , ""    , 8,  8 , 0, 0)    \
+  X(IceType_f64,   IceType_void, "" , ".f64", ""    , ""    , 8,  8 , 0, 0)    \
+  X(IceType_v4i1,  IceType_i32 , "" , ".i32", ".u32", ".s32", 0 , 0 , 1, 0)    \
+  X(IceType_v8i1,  IceType_i16 , "" , ".i16", ".u16", ".s16", 0 , 0 , 1, 0)    \
+  X(IceType_v16i1, IceType_i8  , "" , ".i8" , ".u8" , ".s8" , 0 , 0 , 1, 0)    \
+  X(IceType_v16i8, IceType_i8  , "" , ".i8" , ".u8" , ".s8" , 0 , 0 , 1, 0)    \
+  X(IceType_v8i16, IceType_i16 , "" , ".i16", ".u16", ".s16", 0 , 0 , 1, 0)    \
+  X(IceType_v4i32, IceType_i32 , "" , ".i32", ".u32", ".s32", 0 , 0 , 1, 0)    \
+  X(IceType_v4f32, IceType_f32 , "" , ".f32", ".f32", ".f32", 0 , 0 , 1, 0)
+//#define X(tag, elementty, int_width, fp_width, uvec_width, svec_width, sbits,
+//          ubits, rraddr, shaddr)
+
+// Shifter types for Data-processing operands as defined in section A5.1.2.
+#define ICEINSTARM32SHIFT_TABLE                                                \
+  /* enum value, emit */                                                       \
+  X(LSL, "lsl")                                                                \
+  X(LSR, "lsr")                                                                \
+  X(ASR, "asr")                                                                \
+  X(ROR, "ror")                                                                \
+  X(RRX, "rrx")
+//#define X(tag, emit)
+
+// Attributes for the condition code 4-bit encoding (that is independent of the
+// APSR's NZCV fields). For example, EQ is 0, but corresponds to Z = 1, and NE
+// is 1, but corresponds to Z = 0.
+#define ICEINSTARM32COND_TABLE                                                 \
+  /* enum value, encoding, opposite, emit */                                   \
+  X(EQ, 0, NE, "eq")        /* equal */                                        \
+  X(NE, 1, EQ, "ne")        /* not equal */                                    \
+  X(CS, 2, CC, "cs")        /* carry set/unsigned (AKA hs: higher or same) */  \
+  X(CC, 3, CS, "cc")        /* carry clear/unsigned (AKA lo: lower) */         \
+  X(MI, 4, PL, "mi")        /* minus/negative */                               \
+  X(PL, 5, MI, "pl")        /* plus/positive or zero */                        \
+  X(VS, 6, VC, "vs")        /* overflow (float unordered) */                   \
+  X(VC, 7, VS, "vc")        /* no overflow (float not unordered) */            \
+  X(HI, 8, LS, "hi")        /* unsigned higher */                              \
+  X(LS, 9, HI, "ls")        /* unsigned lower or same */                       \
+  X(GE, 10, LT, "ge")       /* signed greater than or equal */                 \
+  X(LT, 11, GE, "lt")       /* signed less than */                             \
+  X(GT, 12, LE, "gt")       /* signed greater than */                          \
+  X(LE, 13, GT, "le")       /* signed less than or equal */                    \
+  X(AL, 14, kNone, "")      /* always (unconditional) */                       \
+  X(kNone, 15, kNone, "??") /* special condition / none */
+//#define X(tag, encode, opp, emit)
+
+#endif // SUBZERO_SRC_ICEINSTARM32_DEF

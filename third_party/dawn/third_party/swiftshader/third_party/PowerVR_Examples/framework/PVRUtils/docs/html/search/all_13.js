@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['uirenderer',['UIRenderer',['../classpvr_1_1ui_1_1_u_i_renderer.html',1,'pvr::ui::UIRenderer'],['../classpvr_1_1ui_1_1_u_i_renderer.html#ab299f307c02ca5625f130394cdfaaf05',1,'pvr::ui::UIRenderer::UIRenderer()'],['../classpvr_1_1ui_1_1_u_i_renderer.html#a250a5492ac864d8e129a0c5f64c9b6a0',1,'pvr::ui::UIRenderer::UIRenderer(UIRenderer &amp;&amp;rhs)'],['../classpvr_1_1ui_1_1_u_i_renderer.html#ab299f307c02ca5625f130394cdfaaf05',1,'pvr::ui::UIRenderer::UIRenderer()'],['../classpvr_1_1ui_1_1_u_i_renderer.html#a250a5492ac864d8e129a0c5f64c9b6a0',1,'pvr::ui::UIRenderer::UIRenderer(UIRenderer &amp;&amp;rhs)']]],
+  ['uirenderererror',['UIRendererError',['../classpvr_1_1ui_1_1_u_i_renderer_error.html',1,'pvr::ui::UIRendererError'],['../classpvr_1_1ui_1_1_u_i_renderer_error.html#ad77bb52e1d5302645fe8281d2adaf97a',1,'pvr::ui::UIRendererError::UIRendererError()']]],
+  ['uirenderergles_2ecpp',['UIRendererGles.cpp',['../_u_i_renderer_gles_8cpp.html',1,'']]],
+  ['uirenderergles_2eh',['UIRendererGles.h',['../_u_i_renderer_gles_8h.html',1,'']]],
+  ['uirendererinstancemaxerror',['UIRendererInstanceMaxError',['../classpvr_1_1ui_1_1_u_i_renderer_instance_max_error.html',1,'pvr::ui::UIRendererInstanceMaxError'],['../classpvr_1_1ui_1_1_u_i_renderer_instance_max_error.html#a5bbb57184b608bb1c8f78bcff71b10e2',1,'pvr::ui::UIRendererInstanceMaxError::UIRendererInstanceMaxError()']]],
+  ['uirenderershaders_5fes_2eh',['UIRendererShaders_ES.h',['../_u_i_renderer_shaders___e_s_8h.html',1,'']]],
+  ['uirenderervk_2ecpp',['UIRendererVk.cpp',['../_u_i_renderer_vk_8cpp.html',1,'']]],
+  ['uirenderervk_2eh',['UIRendererVk.h',['../_u_i_renderer_vk_8h.html',1,'']]],
+  ['ul',['ul',['../structpvr_1_1ui_1_1impl_1_1_font___1_1_character_u_v.html#a479520cba15dc4e8a9e9218ff2cc03a4',1,'pvr::ui::impl::Font_::CharacterUV']]],
+  ['uniform',['Uniform',['../structpvr_1_1ui_1_1_u_i_renderer_1_1_program_data.html#adf2fe6cdca6a99f43e91e0cdd9333f36',1,'pvr::ui::UIRenderer::ProgramData::Uniform()'],['../structpvr_1_1ui_1_1_u_i_renderer_1_1_program_data.html#adf2fe6cdca6a99f43e91e0cdd9333f36',1,'pvr::ui::UIRenderer::ProgramData::Uniform()']]],
+  ['uniforms',['uniforms',['../structpvr_1_1ui_1_1_u_i_renderer_1_1_program_data.html#aec512ff2c1eda37a456f4e02c3ad01cc',1,'pvr::ui::UIRenderer::ProgramData']]],
+  ['unmap',['unmap',['../classpvr_1_1utils_1_1vma_1_1impl_1_1_allocation__.html#adf908ca7ff1a9566b2cfaede45ea5fdd',1,'pvr::utils::vma::impl::Allocation_']]],
+  ['unpacksamplerfilter',['unpackSamplerFilter',['../namespacepvr_1_1utils.html#abf553ba402ff80bc721c72d3a831a703',1,'pvr::utils']]],
+  ['unsupported_5fformat',['UNSUPPORTED_FORMAT',['../_convert_to_p_v_r_vk_types_8h.html#a493f8922ffa17ba6920641f427cbd840',1,'ConvertToPVRVkTypes.h']]],
+  ['updatebufferusingstagingbuffer',['updateBufferUsingStagingBuffer',['../namespacepvr_1_1utils.html#ac4a791a9c8914a9bf3b74db574b0c842',1,'pvr::utils']]],
+  ['updatehostvisiblebuffer',['updateHostVisibleBuffer',['../namespacepvr_1_1utils.html#a618e4160bd8c24d9e0d394dc9511f4a3',1,'pvr::utils']]],
+  ['updateimage',['updateImage',['../namespacepvr_1_1utils.html#a0f4a3a0c8eb6662f51128ce8a3b78a9f',1,'pvr::utils']]],
+  ['uploadimage',['uploadImage',['../namespacepvr_1_1utils.html#aff24a1e7c47775943d761eaa3f7f555e',1,'pvr::utils']]],
+  ['uploadimageandview',['uploadImageAndView',['../namespacepvr_1_1utils.html#a7fbafa4f264dcddf481f21ad03027d97',1,'pvr::utils::uploadImageAndView(pvrvk::Device &amp;device, const Texture &amp;texture, bool allowDecompress, pvrvk::SecondaryCommandBuffer &amp;commandBuffer, pvrvk::ImageUsageFlags usageFlags=pvrvk::ImageUsageFlags::e_SAMPLED_BIT, pvrvk::ImageLayout finalLayout=pvrvk::ImageLayout::e_SHADER_READ_ONLY_OPTIMAL, vma::Allocator stagingBufferAllocator=nullptr, vma::Allocator imageAllocator=nullptr, vma::AllocationCreateFlags imageAllocationCreateFlags=vma::AllocationCreateFlags::e_NONE)'],['../namespacepvr_1_1utils.html#ac4d35fcf1b7758225738b98830816d4e',1,'pvr::utils::uploadImageAndView(pvrvk::Device &amp;device, const Texture &amp;texture, bool allowDecompress, pvrvk::CommandBuffer &amp;commandBuffer, pvrvk::ImageUsageFlags usageFlags=pvrvk::ImageUsageFlags::e_SAMPLED_BIT, pvrvk::ImageLayout finalLayout=pvrvk::ImageLayout::e_SHADER_READ_ONLY_OPTIMAL, vma::Allocator stagingBufferAllocator=nullptr, vma::Allocator imageAllocator=nullptr, vma::AllocationCreateFlags imageAllocationCreateFlags=vma::AllocationCreateFlags::e_NONE)']]],
+  ['uploadimageandviewsubmit',['uploadImageAndViewSubmit',['../namespacepvr_1_1utils.html#ac3d376caf410d6a539eb713d8886ebee',1,'pvr::utils']]],
+  ['uploadtextureasync',['uploadTextureAsync',['../classpvr_1_1utils_1_1_image_api_async_uploader.html#ab59b87478ce58a1ae71a4f22c92dfb22',1,'pvr::utils::ImageApiAsyncUploader']]],
+  ['ur',['ur',['../structpvr_1_1ui_1_1impl_1_1_font___1_1_character_u_v.html#a7a2deef545d68ee455947a4402f980f2',1,'pvr::ui::impl::Font_::CharacterUV']]],
+  ['usage',['usage',['../structpvr_1_1utils_1_1vma_1_1_allocation_create_info.html#ab25cfd70aa08b35872e7c6e6f0295986',1,'pvr::utils::vma::AllocationCreateInfo']]]
+];

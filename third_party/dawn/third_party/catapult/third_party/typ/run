@@ -1,0 +1,101 @@
+#!/usr/bin/env vpython3
+
+from __future__ import print_function
+
+import argparse
+import os
+import subprocess
+import sys
+
+from tools import cov
+
+
+class Runner(object):
+
+    def __init__(self):
+        self._verbose = False
+        self._top_dir = os.path.abspath(os.path.dirname(__file__))
+        self._path_to_cov = os.path.join(self._top_dir, 'tools', 'cov.py')
+        self._path_to_runner = os.path.join(self._top_dir, 'typ', 'runner.py')
+        self._python = sys.executable
+
+    def main(self, argv):
+        parser = argparse.ArgumentParser(prog='run')
+        parser.add_argument('-v', '--verbose', action='store_true')
+        subps = parser.add_subparsers()
+
+        subp = subps.add_parser('clean', help='Remove any local files.')
+        subp.set_defaults(func=self.run_clean)
+
+        subp = subps.add_parser('coverage',
+                                help='Run the tests and report code coverage.')
+        subp.set_defaults(func=self.run_coverage)
+        cov.add_arguments(subp)
+
+        subp = subps.add_parser('help',
+                                help='Get help on a subcommand.')
+        subp.add_argument(nargs='?', action='store', dest='subcommand',
+                        help='The command to get help for.')
+        subp.set_defaults(func=self.run_help)
+
+        subp = subps.add_parser('lint',
+                                help='run lint over the source')
+        subp.set_defaults(func=self.run_lint)
+
+        subp = subps.add_parser('tests',
+                                help='run the tests')
+        subp.set_defaults(func=self.run_tests)
+
+        args = parser.parse_args(argv)
+
+        self._verbose = args.verbose
+        args.func(args)
+
+    def call(self, *args, **kwargs):
+        kwargs.setdefault('cwd', self._top_dir)
+        if self._verbose:
+            print(' '.join(args[0]))
+        ret = subprocess.call(*args, **kwargs)
+        if ret != 0:
+            sys.exit(ret)
+
+    def run_clean(self, _args):
+        self.call(['git', 'clean', '-fxd'])
+
+    def run_coverage(self, args):
+        if not args.path:
+            args.path = [self._top_dir]
+        if not args.source:
+            args.source = [os.path.join(self._top_dir, 'typ')]
+        argv = cov.argv_from_args(args)
+        cov_args = [self._path_to_runner, '-j', '1']
+        self.call([self._python, self._path_to_cov] + argv + cov_args)
+
+    def run_help(self, args):
+        if args.subcommand:
+            self.main([args.subcommand, '--help'])
+        self.main(['--help'])
+
+    def run_lint(self, _args):
+        self.call('pylint --rcfile=pylintrc */*.py */*/*.py', shell=True)
+
+    def run_tests(self, _args):
+        # Test running the typ module directly if it is in sys.path.
+        args = []
+
+        self.call([
+            self._python, '-m', 'typ',
+            'typ.tests.main_test.TestMain.test_basic',
+        ] + args)
+
+        # Testing running the runner directly if nothing is in sys.path.
+        home_dir = os.path.expanduser('~')
+        self.call([self._python, self._path_to_runner,
+                   'typ.tests.main_test.TestMain.test_basic'] + args, cwd=home_dir)
+
+        # Run the remaining tests.
+        self.call([self._python, self._path_to_runner] + args)
+
+
+if __name__ == '__main__':
+    sys.exit(Runner().main(sys.argv[1:]))

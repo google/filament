@@ -1,0 +1,44 @@
+// Copyright (c) 2021-2024 The Khronos Group Inc.
+// Copyright (c) 2021-2024 Valve Corporation
+// Copyright (c) 2021-2024 LunarG, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.h"
+#include "draw_push_data.h"
+
+layout(push_constant)
+uniform PushConstants {
+    CountBufferPushData pc;
+};
+
+layout(set = kDiagPerCmdDescriptorSet, binding = kPreDrawBinding_CountBuffer) 
+readonly buffer CountBuffer {
+    uint count_buffer[];
+};
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main() {
+    const uint draw_count = count_buffer[ pc.count_buffer_dwords_offset ];
+    if (draw_count == 0) return;
+
+    const uint64_t draw_buffer_max_read_offset = pc.draw_cmds_byte_stride * (draw_count - 1) + pc.draw_buffer_offset + pc.draw_cmd_byte_size;
+    if (draw_buffer_max_read_offset > pc.draw_buffer_size) {
+        GpuavLogError2(kErrorGroupGpuPreDraw, kErrorSubCodePreDraw_DrawBufferSize, draw_count, 0);
+    } else if (draw_count > pc.device_limit_max_draw_indirect_count) {
+        GpuavLogError2(kErrorGroupGpuPreDraw, kErrorSubCodePreDraw_DrawCountLimit, draw_count, 0);
+    }
+}

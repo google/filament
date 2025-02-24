@@ -1,0 +1,11 @@
+[
+    "glslang",
+    "lunarg-vulkantools",
+    "spirv-cross",
+    "spirv-headers",
+    "spirv-tools",
+    "vulkan-headers",
+    "vulkan-loader",
+    "vulkan-tools",
+    "vulkan-validation-layers"
+]

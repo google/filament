@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/etw/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses processes events in the Windows event trace format.
+ *
+ * The Windows process events are:
+ *
+ * - DCStart: Describes a process that was already running when the trace
+ *    started. ETW automatically generates these events for all running
+ *    processes at the beginning of the trace.
+ * - Start: Describes a process launched during the tracing session.
+ * - End: Describes a process that ended during the tracing session.
+ * - DCEnd: Describes a process that was still running when the trace ended.
+ *
+ * See http://msdn.microsoft.com/library/windows/desktop/aa364092.aspx
+ */
+tr.exportTo('tr.e.importer.etw', function() {
+  const Parser = tr.e.importer.etw.Parser;
+
+  // Constants for Process events.
+  const guid = '3D6FA8D0-FE05-11D0-9DDA-00C04FD7BA7C';
+  const kProcessStartOpcode = 1;
+  const kProcessEndOpcode = 2;
+  const kProcessDCStartOpcode = 3;
+  const kProcessDCEndOpcode = 4;
+  const kProcessDefunctOpcode = 39;
+
+  /**
+   * Parses Windows process trace events.
+   * @constructor
+   */
+  function ProcessParser(importer) {
+    Parser.call(this, importer);
+
+    // Register handlers.
+    importer.registerEventHandler(guid, kProcessStartOpcode,
+        ProcessParser.prototype.decodeStart.bind(this));
+    importer.registerEventHandler(guid, kProcessEndOpcode,
+        ProcessParser.prototype.decodeEnd.bind(this));
+    importer.registerEventHandler(guid, kProcessDCStartOpcode,
+        ProcessParser.prototype.decodeDCStart.bind(this));
+    importer.registerEventHandler(guid, kProcessDCEndOpcode,
+        ProcessParser.prototype.decodeDCEnd.bind(this));
+    importer.registerEventHandler(guid, kProcessDefunctOpcode,
+        ProcessParser.prototype.decodeDefunct.bind(this));
+  }
+
+  ProcessParser.prototype = {
+    __proto__: Parser.prototype,
+
+    decodeFields(header, decoder) {
+      if (header.version > 5) {
+        throw new Error('Incompatible Process event version.');
+      }
+
+      let pageDirectoryBase;
+      if (header.version === 1) {
+        pageDirectoryBase = decoder.decodeUInteger(header.is64);
+      }
+
+      let uniqueProcessKey;
+      if (header.version >= 2) {
+        uniqueProcessKey = decoder.decodeUInteger(header.is64);
+      }
+
+      const processId = decoder.decodeUInt32();
+      const parentId = decoder.decodeUInt32();
+
+      let sessionId;
+      let exitStatus;
+      if (header.version >= 1) {
+        sessionId = decoder.decodeUInt32();
+        exitStatus = decoder.decodeInt32();
+      }
+
+      let directoryTableBase;
+      if (header.version >= 3) {
+        directoryTableBase = decoder.decodeUInteger(header.is64);
+      }
+
+      let flags;
+      if (header.version >= 4) {
+        flags = decoder.decodeUInt32();
+      }
+
+      const userSID = decoder.decodeSID(header.is64);
+
+      let imageFileName;
+      if (header.version >= 1) {
+        imageFileName = decoder.decodeString();
+      }
+
+      let commandLine;
+      if (header.version >= 2) {
+        commandLine = decoder.decodeW16String();
+      }
+
+      let packageFullName;
+      let applicationId;
+      if (header.version >= 4) {
+        packageFullName = decoder.decodeW16String();
+        applicationId = decoder.decodeW16String();
+      }
+
+      let exitTime;
+      if (header.version === 5 && header.opcode === kProcessDefunctOpcode) {
+        exitTime = decoder.decodeUInt64ToString();
+      }
+
+      return {
+        pageDirectoryBase,
+        uniqueProcessKey,
+        processId,
+        parentId,
+        sessionId,
+        exitStatus,
+        directoryTableBase,
+        flags,
+        userSID,
+        imageFileName,
+        commandLine,
+        packageFullName,
+        applicationId,
+        exitTime
+      };
+    },
+
+    decodeStart(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      const process = this.model.getOrCreateProcess(fields.processId);
+      if (process.hasOwnProperty('has_ended')) {
+        // On Windows, a process ID used by a process could be reused as soon as
+        // the process ends (there is no pid cycling like on Linux). However, in
+        // a short trace, this is unlikely to happen.
+        throw new Error('Process clash detected.');
+      }
+      process.name = fields.imageFileName;
+      return true;
+    },
+
+    decodeEnd(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      const process = this.model.getOrCreateProcess(fields.processId);
+      process.has_ended = true;
+      return true;
+    },
+
+    decodeDCStart(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      const process = this.model.getOrCreateProcess(fields.processId);
+      if (process.hasOwnProperty('has_ended')) {
+        throw new Error('Process clash detected.');
+      }
+      process.name = fields.imageFileName;
+      return true;
+    },
+
+    decodeDCEnd(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      const process = this.model.getOrCreateProcess(fields.processId);
+      process.has_ended = true;
+      return true;
+    },
+
+    decodeDefunct(header, decoder) {
+      const fields = this.decodeFields(header, decoder);
+      // TODO(etienneb): Update the Model with |fields|.
+      return true;
+    }
+
+  };
+
+  Parser.register(ProcessParser);
+
+  return {
+    ProcessParser,
+  };
+});
+</script>
+

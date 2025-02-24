@@ -1,0 +1,32 @@
+<!--
+    This test suite is built from the TypeScript sources at:
+    https://github.com/gpuweb/cts
+
+    If you are debugging WebGPU conformance tests, it's highly recommended that
+    you use the standalone interactive runner in that repository, which
+    provides tools for easier debugging and editing (source maps, debug
+    logging, warn/skip functionality, etc.)
+
+    NOTE:
+    The WPT version of this file is generated with *one variant per test spec
+    file*. If your harness needs more fine-grained suppressions, you'll need to
+    generate your own variants list from your suppression list.
+    See `tools/gen_wpt_cts_html` to do this.
+
+    When run under browser CI, the original cts.https.html should be skipped, and
+    this alternate version should be run instead, under a non-exported WPT test
+    directory (e.g. Chromium's wpt_internal).
+-->
+
+<!doctype html>
+<title>WebGPU CTS</title>
+<meta charset=utf-8>
+<link rel=help href='https://gpuweb.github.io/gpuweb/'>
+
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+<script>
+    const loadWebGPUExpectations = undefined;
+    const shouldWebGPUCTSFailOnWarnings = undefined;
+</script>
+<script type=module src=/webgpu/common/runtime/wpt.js></script>

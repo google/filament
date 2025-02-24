@@ -1,0 +1,120 @@
+Name
+
+    ANGLE_device_creation
+
+Name Strings
+
+    EGL_ANGLE_device_creation
+
+Contributors
+
+    Austin Kinross  (aukinros 'at' microsoft.com)
+
+Contact
+
+    Austin Kinross  (aukinros 'at' microsoft.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, Nov 02, 2015
+
+Number
+
+    EGL Extension #XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_EXT_device_query.
+
+    Written against the wording of EGL 1.5 as modified by EGL_EXT_device_query.
+
+Overview
+
+    Increasingly, EGL and its client APIs are being used in place of "native"
+    rendering APIs to implement the basic graphics functionality of native
+    windowing systems. This extension defines a way to create an EGL device
+    which maps to an inputted "native" rendering API device.
+
+    This extension is intended to be used with EGL_EXT_platform_device to
+    initialize a display using an existing "native" rendering device, but
+    EGL_EXT_platform_device is not required.
+
+IP Status
+
+    No known claims.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    EGLDeviceEXT eglCreateDeviceANGLE(EGLint device_type,
+                                      void *native_device,
+                                      cost EGLAttrib *attrib_list)
+
+    EGLBoolean eglReleaseDeviceANGLE(EGLDeviceEXT device)
+
+New Tokens
+
+    None.
+
+Changes to section 3.2 (Devices)
+
+    Add the following after the final paragraph to section 3.2 (Devices):
+
+    To create an EGL device wrapping an existing native rendering device, use:
+
+        EGLDeviceEXT eglCreateDeviceANGLE(EGLint device_type,
+                                          void *native_device,
+                                          cost EGLAttrib *attrib_list);
+
+    On success, a valid EGLDeviceEXT is returned. On failure, EGL_NO_DEVICE_EXT
+    is returned.
+
+    An EGL_BAD_ATTRIBUTE error is generated if <device_type> is not a valid
+    device type. This extension defines no valid values for <device_type>.
+
+    All attribute names in <attrib_list> are immediately followed by the
+    corresponding desired value. The list is terminated with EGL_NONE. The
+    <attrib_list> is considered empty if either <attrib_list> is NULL or if its
+    first element is EGL_NONE. This specification defines no valid attribute
+    names for inclusion in <attrib_list>. If <attrib_list> is not empty then
+    an EGL_BAD_ATTRIBUTE error is generated.
+
+    If a device is created using eglCreateDeviceANGLE then it is the
+    caller's responsibility to manage the lifetime of the device, and to call
+    eglReleaseDeviceANGLE at an appropriate time.
+
+    To release a device, use:
+
+        EGLBoolean eglReleaseDeviceANGLE(EGLDeviceEXT device);
+
+    On success, EGL_TRUE is returned. On failure, EGL_FALSE is returned.
+
+    If <device> equals EGL_NO_DEVICE_EXT then an EGL_BAD_DEVICE_EXT error is
+    generated. If <device> is not a valid device then the behavior is undefined.
+
+    <device> must have been created using eglGetDeviceANGLE. If <device> was
+    obtained by other means, such as through eglQueryDisplayAttribEXT, then an
+    EGL_BAD_DEVICE_EXT error is generated.
+
+    If eglReleaseDeviceANGLE is called on a device that is still in use by other
+    EGL objects, then the resulting behavior of those objects is undefined.
+
+Issues
+
+    None.
+
+Revision History
+
+    Version 1, Nov 2, 2015 (Austin Kinross)
+        - Initial Draft

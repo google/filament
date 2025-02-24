@@ -1,0 +1,621 @@
+Name
+
+    ARB_sparse_texture_clamp
+
+Name Strings
+
+    GL_ARB_sparse_texture_clamp
+
+Contact
+
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA Corporation
+    Piers Daniell, NVIDIA Corporation
+    Jeff Bolz, NVIDIA Corporation
+    Mathias Heyer, NVIDIA Corporation
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date:         April 30, 2015
+    Revision:                   2
+
+Number
+
+    ARB Extension #187
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 Specification
+    (Compatibility Profile), dated February 2, 2015.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, version 4.50, revision 5.
+
+    This extension requires and extends ARB_sparse_texture2.
+
+    This extension interacts with NV_gpu_program4 and NV_gpu_program5.
+
+Overview
+
+    This extension builds on the ARB_sparse_texture2 extension, providing the
+    following new functionality:
+
+      * New built-in GLSL texture lookup functions are provided that specify a
+        minimum level of detail to use for lookups where the level of detail
+        is computed automatically.  This allows shaders to avoid accessing
+        unpopulated portions of high-resolution levels of detail when it knows
+        that the memory accessed is unpopulated, either from a priori
+        knowledge or from feedback provided by the return value of previously
+        executed "sparse" texture lookup functions.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL 4.5 Specification (Compatibility Profile)
+
+    Modify Section 8.14.1, Scale Factor and Level of Detail, p. 280
+
+    (move the third paragraph, p. 281, describing lod_min and lod_max
+     in equation 8.6, up one paragraph and modify it to read as follows)
+
+    lod_min and lod_max indicate minimum and maximum clamps on the computed
+    level of detail.  lod_max is taken directly from the TEXTURE_MAX_LOD
+    texture or sampler parameter.  If a texture access is performed in a
+    fragment shader with a minimum level of detail clamp specified in the
+    built-in texture lookup function, lod_min is the larger of the
+    TEXTURE_MIN_LOD texture or sampler parameter and the minimum level of
+    detail provided by the shader.  Otherwise, lod_min is taken directly from
+    the TEXTURE_MIN_LOD texture or sampler parameter.  The initial values of
+    the TEXTURE_MIN_LOD and TEXTURE_MAX_LOD texture and sampler parameters are
+    chosen so as to never clamp the range of lambda values.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_sparse_texture_clamp : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_sparse_texture_clamp            1
+
+    Modify Section 8.9, Texture Functions, p. 158
+
+    (insert after first paragraph, p. 159)
+
+    The texture lookup functions with an <lodClamp> parameter specify a
+    minimum clamp applied to the automatic level of detail computations.
+    Since automatic level of detail calculations are only supported by
+    fragment shaders, these lookup functions are also only available in
+    fragment shaders.  No functions with the <lodClamp> parameter are provided
+    for rectangle textures, multisample textures, and texture buffers because
+    mipmaps are not allowed for these types of textures.
+
+
+    Modify Section 8.9.2, Texel Lookup Functions, p. 162
+
+    (The combination of this extension and ARB_sparse_texture2 adds two new
+    variants of texture lookup functions.  The "sparse" functions are like
+    normal texture lookup functions, except that they return a sparse texture
+    residency status to the caller and return the actual filtered texel value in
+    an "out" parameter.  The "Clamp" variants are functions adding a new
+    parameter specifying a minimum LOD to use for texture lookup functions where
+    level of detail is computed automatically.
+
+    For each set of texture functions, we provide one to three new variants
+    based on whether sparse and LOD clamping functionality are desired.  These
+    new variants copy the existing functions, add suffixes to the function
+    names, and add one or more new parameters.
+
+    We create new variants only for the targets for which sparse storage is
+    supported -- no new functions are added for the following sampler types:
+    gsampler1D, sampler1DShadow, gsampler1DArray, sampler1DArrayShadow.
+    Additionally, to reduce the number of new functions added, we are not
+    including any new variants for textureProj*() built-ins.  To use the new
+    features with projective texture lookups, shaders can divide through by q
+    and use non-projective variants.  We also chose not to provide "Clamp"
+    variants of functions like textureLod() expecting an explicit
+    level-of-detail.)
+
+    (insert new lookup function table cells, at the end of the section,
+    p. 168)
+
+    Syntax:
+
+      int sparseTextureClampARB(gsampler2D sampler, vec2 P,
+                                float lodClamp, out gvec4 texel
+                                [, float bias]);
+      int sparseTextureClampARB(gsampler3D sampler, vec3 P,
+                                float lodClamp, out gvec4 texel
+                                [, float bias]);
+      int sparseTextureClampARB(gsamplerCube sampler, vec3 P,
+                                float lodClamp, out gvec4 texel
+                                [, float bias]);
+      int sparseTextureClampARB(sampler2DShadow sampler, vec3 P,
+                                float lodClamp, out float texel
+                                [, float bias]);
+      int sparseTextureClampARB(samplerCubeShadow sampler, vec4 P,
+                                float lodClamp, out float texel
+                                [, float bias]);
+      int sparseTextureClampARB(gsampler2DArray sampler, vec3 P,
+                                float lodClamp, out gvec4 texel
+                                [, float bias]);
+      int sparseTextureClampARB(gsamplerCubeArray sampler, vec4 P,
+                                float lodClamp, out gvec4 texel
+                                [, float bias]);
+      int sparseTextureClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                float lodClamp, out float texel);
+      int sparseTextureClampARB(samplerCubeArrayShadow sampler, vec4 P,
+                                float compare, float lodClamp,
+                                out float texel);
+
+    Description:
+
+    Do a filtered texture lookup as in texture(), but return texture access
+    residency information from the function and the filtered lookup result in
+    the out parameter <texel>.  Additionally, clamp the automatically computed
+    level of detail to be greater than or equal to <lodClamp>.
+
+    --
+
+    Syntax:
+
+      gvec4 textureClampARB(gsampler1D sampler, float P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsampler2D sampler, vec2 P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsampler3D sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsamplerCube sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      float textureClampARB(sampler1DShadow sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      float textureClampARB(sampler2DShadow sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      float textureClampARB(samplerCubeShadow sampler, vec4 P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsampler1DArray sampler, vec2 P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsampler2DArray sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      gvec4 textureClampARB(gsamplerCubeArray sampler, vec4 P,
+                            float lodClamp [, float bias]);
+      float textureClampARB(sampler1DArrayShadow sampler, vec3 P,
+                            float lodClamp [, float bias]);
+      float textureClampARB(sampler2DArrayShadow sampler, vec4 P,
+                            float lodClamp);
+      float textureClampARB(samplerCubeArrayShadow sampler, vec4 P,
+                            float compare, float lodClamp);
+
+    Description:
+
+    Do a filtered texture lookup as in texture(), but clamp the automatically
+    computed level of detail to be greater than or equal to <lodClamp>.
+
+    --
+
+    Syntax:
+
+      int sparseTextureOffsetClampARB(gsampler2D sampler, vec2 P,
+                                      ivec2 offset, float lodClamp,
+                                      out gvec4 texel [, float bias]);
+      int sparseTextureOffsetClampARB(gsampler3D sampler, vec3 P,
+                                      ivec3 offset, float lodClamp,
+                                      out gvec4 texel [, float bias]);
+      int sparseTextureOffsetClampARB(sampler2DShadow sampler, vec3 P,
+                                      ivec2 offset, float lodClamp,
+                                      out float texel [, float bias]);
+      int sparseTextureOffsetClampARB(gsampler2DArray sampler, vec3 P,
+                                      ivec2 offset, float lodClamp,
+                                      out gvec4 texel [, float bias]);
+      int sparseTextureOffsetClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                      ivec2 offset, float lodClamp,
+                                      out float texel);
+
+    Description:
+
+    Do a filtered texture lookup as in textureOffset(), but return texture
+    access residency information from the function and the filtered lookup
+    result in the out parameter <texel>.  Additionally, clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+    --
+
+    Syntax:
+
+      gvec4 textureOffsetClampARB(gsampler1D sampler, float P,
+                                  int offset, float lodClamp [, float bias]);
+      gvec4 textureOffsetClampARB(gsampler2D sampler, vec2 P,
+                                  ivec2 offset, float lodClamp [, float bias]);
+      gvec4 textureOffsetClampARB(gsampler3D sampler, vec3 P,
+                                  ivec3 offset, float lodClamp [, float bias]);
+      float textureOffsetClampARB(sampler1DShadow sampler, vec3 P,
+                                  int offset, float lodClamp [, float bias]);
+      float textureOffsetClampARB(sampler2DShadow sampler, vec3 P,
+                                  ivec2 offset, float lodClamp [, float bias]);
+      gvec4 textureOffsetClampARB(gsampler1DArray sampler, vec2 P,
+                                  int offset, float lodClamp [, float bias]);
+      gvec4 textureOffsetClampARB(gsampler2DArray sampler, vec3 P,
+                                  ivec2 offset, float lodClamp [, float bias]);
+      float textureOffsetClampARB(sampler1DArrayShadow sampler, vec3 P,
+                                  int offset, float lodClamp [, float bias]);
+      float textureOffsetClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                  ivec2 offset, float lodClamp);
+
+    Description:
+
+    Do a filtered texture lookup as in textureOffset(), but clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+    --
+
+    Syntax:
+
+      int sparseTextureGradClampARB(gsampler2D sampler, vec2 P,
+                                    vec2 dPdx, vec2 dPdy, float lodClamp,
+                                    out gvec4 texel);
+      int sparseTextureGradClampARB(gsampler3D sampler, vec3 P,
+                                    vec3 dPdx, vec3 dPdy, float lodClamp,
+                                    out gvec4 texel);
+      int sparseTextureGradClampARB(gsamplerCube sampler, vec3 P,
+                                    vec3 dPdx, vec3 dPdy, float lodClamp,
+                                    out gvec4 texel);
+      int sparseTextureGradClampARB(sampler2DShadow sampler, vec3 P,
+                                    vec2 dPdx, vec2 dPdy, float lodClamp,
+                                    out float texel);
+      int sparseTextureGradClampARB(samplerCubeShadow sampler, vec4 P,
+                                    vec3 dPdx, vec3 dPdy, float lodClamp,
+                                    out float texel);
+      int sparseTextureGradClampARB(gsampler2DArray sampler, vec3 P,
+                                    vec2 dPdx, vec2 dPdy, float lodClamp,
+                                    out gvec4 texel);
+      int sparseTextureGradClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                    vec2 dPdx, vec2 dPdy, float lodClamp,
+                                    out float texel);
+      int sparseTextureGradClampARB(gsamplerCubeArray sampler, vec4 P,
+                                    vec3 dPdx, vec3 dPdy, float lodClamp,
+                                    out gvec4 texel);
+
+    Description:
+
+    Do a filtered texture lookup as in textureGrad(), but return texture
+    access residency information from the function and the filtered lookup
+    result in the out parameter <texel>.  Additionally, clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+    --
+
+    Syntax:
+
+      gvec4 textureGradClampARB(gsampler1D sampler, float P,
+                                float dPdx, float dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsampler2D sampler, vec2 P,
+                                vec2 dPdx, vec2 dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsampler3D sampler, vec3 P,
+                                vec3 dPdx, vec3 dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsamplerCube sampler, vec3 P,
+                                vec3 dPdx, vec3 dPdy, float lodClamp);
+      float textureGradClampARB(sampler1DShadow sampler, vec3 P,
+                                float dPdx, float dPdy, float lodClamp);
+      float textureGradClampARB(sampler2DShadow sampler, vec3 P,
+                                vec2 dPdx, vec2 dPdy, float lodClamp);
+      float textureGradClampARB(samplerCubeShadow sampler, vec4 P,
+                                vec3 dPdx, vec3 dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsampler1DArray sampler, vec2 P,
+                                float dPdx, float dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsampler2DArray sampler, vec3 P,
+                                vec2 dPdx, vec2 dPdy, float lodClamp);
+      float textureGradClampARB(sampler1DArrayShadow sampler, vec3 P,
+                                float dPdx, float dPdy, float lodClamp);
+      float textureGradClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                vec2 dPdx, vec2 dPdy, float lodClamp);
+      gvec4 textureGradClampARB(gsamplerCubeArray sampler, vec4 P,
+                                vec3 dPdx, vec3 dPdy, float lodClamp);
+
+    Description:
+
+    Do a filtered texture lookup as in textureGrad(), but clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+    --
+
+    Syntax:
+
+      int sparseTextureGradOffsetClampARB(gsampler2D sampler, vec2 P,
+                                          vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                          float lodClamp, out gvec4 texel);
+      int sparseTextureGradOffsetClampARB(gsampler3D sampler, vec3 P,
+                                          vec3 dPdx, vec3 dPdy, ivec3 offset,
+                                          float lodClamp, out gvec4 texel);
+      int sparseTextureGradOffsetClampARB(sampler2DShadow sampler, vec3 P,
+                                          vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                          float lodClamp, out float texel);
+      int sparseTextureGradOffsetClampARB(gsampler2DArray sampler, vec3 P,
+                                          vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                          float lodClamp, out gvec4 texel);
+      int sparseTextureGradOffsetClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                          vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                          float lodClamp, out float texel);
+
+    Description:
+
+    Do a filtered texture lookup as in textureGradOffset(), but return texture
+    access residency information from the function and the filtered lookup
+    result in the out parameter <texel>.  Additionally, clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+    --
+
+    Syntax:
+
+      gvec4 textureGradOffsetClampARB(gsampler1D sampler, float P,
+                                      float dPdx, float dPdy, int offset,
+                                      float lodClamp);
+      gvec4 textureGradOffsetClampARB(gsampler2D sampler, vec2 P,
+                                      vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                      float lodClamp);
+      gvec4 textureGradOffsetClampARB(gsampler3D sampler, vec3 P,
+                                      vec3 dPdx, vec3 dPdy, ivec3 offset,
+                                      float lodClamp);
+      float textureGradOffsetClampARB(sampler1DShadow sampler, vec3 P,
+                                      float dPdx, float dPdy, int offset,
+                                      float lodClamp);
+      float textureGradOffsetClampARB(sampler2DShadow sampler, vec3 P,
+                                      vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                      float lodClamp);
+      gvec4 textureGradOffsetClampARB(gsampler1DArray sampler, vec2 P,
+                                      float dPdx, float dPdy, int offset,
+                                      float lodClamp);
+      gvec4 textureGradOffsetClampARB(gsampler2DArray sampler, vec3 P,
+                                      vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                      float lodClamp);
+      float textureGradOffsetClampARB(sampler1DArrayShadow sampler, vec3 P,
+                                      float dPdx, float dPdy, int offset,
+                                      float lodClamp);
+      float textureGradOffsetClampARB(sampler2DArrayShadow sampler, vec4 P,
+                                      vec2 dPdx, vec2 dPdy, ivec2 offset,
+                                      float lodClamp);
+
+    Description:
+
+    Do a filtered texture lookup as in textureGrad(), but clamp the
+    automatically computed level of detail to be greater than or equal to
+    <lodClamp>.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Dependencies on NV_gpu_program4 and NV_gpu_program5
+
+    Modify Section 2.X.2, Program Grammar
+
+    <opModifier>            ::= "LODCLAMP"
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (Update the discussion of instruction precision modifiers.  If
+     GL_NV_gpu_program_fp64 is not found in the extension string, the "F64"
+     instruction modifier described below is not supported.)
+
+    (add to Table X.14 of the NV_gpu_program4 specification.)
+
+      Modifier  Description
+      --------  ------------------------------------------------------
+      LODCLAMP  Clamp the LOD used by texture lookups to a specified
+                value
+
+    For texture fetch instructions with implicit LOD calcuations (TEX, TXB,
+    TXD), the "LODCLAMP" modifier specifies that the instruction includes an
+    extra floating-point component indicating a minimum level of detail to be
+    used for the texture lookup.  If the implicitly computed level of detail
+    is less than the level of detail provided in the instruction data, that
+    level should be used instead.
+
+    Modify Section 2.X.4.4, Program Texture Access
+
+    (modify the prototype of the TextureSample utility function, adding
+     <coord2> and removing <lod>)
+
+      result_t_vec
+        TextureSample(float_vec coord, float_vec coord2,
+                      float_vec ddx, float_vec ddy, int_vec offset);
+
+    (modify the description of <coord> to add <coord2>)
+
+    <coord> and <coord2> are two four-component floating-point vectors from
+    which the (s,t,r) texture coordinates used for the texture access, the
+    layer used for array textures, and the reference value used for depth
+    comparisons (section 3.8.14) are extracted according to Table X.17. ...
+
+    (replace the paragraph discussing <lod>)
+
+    <ddx> and <ddy> specify partial derivatives (ds/dx, dt/dx, dr/dx, ds/dy,
+    dt/dy, and dr/dy) for the texture coordinates, and may be used for level
+    of detail calculations and to derive footprint shapes for anisotropic
+    texture filtering.
+
+    The level of detail used for the texture lookup is a function of the
+    texture instruction type, texture target, LODCLAMP qualifier, and the
+    inputs <ddx> and <ddy>.  For TEX, TXB, TXD, and TXP instructions in a base
+    level of detail is computed based on the partial derivatives <ddx> and
+    <ddy>.  For the TXB and TXL instruction, an additional level of detail
+    value is taken from the component in <coord> or <coord2> identified by the
+    first entry in the "lod" column of Table X.17.  For TXB, this value is
+    added to the computed base level of detail; for TXL, it specifies the base
+    level of detail.  After that, per-texture and per-texture unit LOD biases
+    are added to the level of detail.  Finally, if the LODCLAMP opcode
+    modifier is specified, an LOD clamp value is extracted from <coord> or
+    <coord2> according to the second entry in the "lod" column of Table X.17.
+    The computed level of detail is clamped to be greater than or equal to
+    this LOD clamp value.
+
+                                                     coordinates used
+      texTarget          Texture Type               s t r lay shd  lod
+      ----------------   ---------------------      ----- --- ---  -----
+      1D                 TEXTURE_1D                 x - -  -   -   w,x2
+      2D                 TEXTURE_2D                 x y -  -   -   w,x2
+      3D                 TEXTURE_3D                 x y z  -   -   w,x2
+      CUBE               TEXTURE_CUBE_MAP           x y z  -   -   w,x2
+      RECT               TEXTURE_RECTANGLE_ARB      x y -  -   -   -,-
+      ARRAY1D            TEXTURE_1D_ARRAY_EXT       x - -  y   -   w,x2
+      ARRAY2D            TEXTURE_2D_ARRAY_EXT       x y -  z   -   w,x2
+      ARRAYCUBE          TEXTURE_CUBE_MAP_ARRAY     x y z  w   -   x2,y2
+      SHADOW1D           TEXTURE_1D                 x - -  -   z   w,x2
+      SHADOW2D           TEXTURE_2D                 x y -  -   z   w,x2
+      SHADOWRECT         TEXTURE_RECTANGLE_ARB      x y -  -   z   -,-
+      SHADOWCUBE         TEXTURE_CUBE_MAP           x y z  -   w   x2,y2
+      SHADOWARRAY1D      TEXTURE_1D_ARRAY_EXT       x - -  y   z   w,x2
+      SHADOWARRAY2D      TEXTURE_2D_ARRAY_EXT       x y -  z   w   -,x2
+      SHADOWARRAYCUBE    TEXTURE_CUBE_MAP_ARRAY     x y z  w   x2  -,y2
+      BUFFER             TEXTURE_BUFFER_EXT           <not supported>
+      RENDERBUFFER       TEXTURE_RENDERBUFFER         <not supported>
+      2DMS               TEXTURE_2D_MULTISAMPLE       <not supported>
+      ARRAY2DMS          TEXTURE_2D_MULTISAMPLE_      <not supported>
+                           ARRAY
+
+      Table X.17:  Texture types accessed for each of the <texTarget>, and
+      coordinate mappings.  Components "x", "y", "z", and "w" are taken from
+      the first coordinate vector <coord>; "x2" and "y2" are taken from the
+      second vector <coord2>.  The "SHADOW" and "ARRAY" targets are special
+      pseudo-targets described below.  The "coordinates used" column indicate
+      the input values used for each coordinate of the texture lookup, the
+      layer selector for array textures, the reference value for texture
+      comparisons, and up to two components of level-of-detail information.
+      Buffer textures are not supported by normal texture lookup functions,
+      but are supported by TXF and TXQ, described below.  Renderbuffer and
+      multisample textures are not supported by normal texture lookup
+      functions, but are supported by TXFMS.  The TXB and TXL instructions are
+      not supported for the targets SHADOWARRAY2D and SHADOWARRAYCUBE, so the
+      first column of "lod" is ignored.
+
+    Modify Section 2.X.8.Z, TXD:  Texture Sample with Partials
+
+    ... The partial derivatives of the texture coordinates with respect to X
+    and Y are specified by the second and third floating-point source vectors.
+    If the LODCLAMP instruction modifier is specified, floating-point
+    level-of-detail clamp value is specified in the <w> component of the third
+    floating-point source vector.  The level of detail is computed
+    automatically using the provided partial derivatives.
+
+
+Issues
+
+    (1) How does this extension compare to the ARB_sparse_texture2 extension?
+
+      RESOLVED: We extend the mechanisms provided by ARB_sparse_texture2 in
+      adding built-in texture and image lookup functions clamping the final
+      level of detail computed based on texture coordinates, derivatives, and
+      LOD bias to a minimum LOD specified in the shader.
+
+    (2) The combination of this extension and GL_ARB_sparse_texture2 add a
+        *large* number of new built-in functions.
+        What can we do to control this?
+
+      RESOLVED:  We chose not to add any "sparse" or "LOD clamp" variants of
+      projective texture lookups (e.g., textureProj).  If required, you can
+      divide through by the "q" texture coordinate and use an equivalent
+      non-projective lookup.
+
+      We obviously don't support features that make no sense -- for example,
+      LOD clamp on single-level rectangle textures.
+
+      We considered the possibility of more significant GLSL syntax changes to
+      reduce the cross-product of different features.  For example, the AMD
+      extension has a function:
+
+        int sparseTextureProjGradOffset(...);
+
+      that combines four separate "optional" features (sparse, projection,
+      explicitly specified gradients, and texel offsets) and is supported for
+      six separate texture targets.  One might consider an approach like:
+
+        #define TEX_IS_PROJECTIVE       0x1
+        #define TEX_HAS_GRADIENTS       0x2
+        #define TEX_HAS_TEXEL_OFFSET    0x4
+        #define TEX_WANTS_SPARSE_STATUS 0x8
+        struct TexLookup3D {
+          uint          flags;          /* in */
+          float         q;              /* in */
+          vec3          ddx, ddy;       /* in */
+          ivec3         texelOffset;    /* in */
+          int           sparseStatus;   /* out */
+        };
+        ...
+        TexLookup3D lookup;
+        lookup.flags = (TEX_IS_PROJECTIVE | TEX_HAS_GRADIENTS |
+                        TEX_HAS_TEXEL_OFFSET | TEX_WANTS_SPARSE_STATUS);
+        lookup.q = coords.w;
+        lookup.ddx = ddx;
+        lookup.ddy = ddy;
+        lookup.texelOffset = ivec3(-1,+1,+2);
+        texture(sampler, lookup);
+
+      to handle all possible cases in one interface.  Alternately, a
+      "prettier" C++-style approach with methods on sampler classes could be
+      used.
+
+      Given that either such feature might involve a large change to the
+      shading language, it seems more appropriate to address this issue in a
+      future core version of a shading language rather than an extension.
+
+    (3) For new "LOD clamp" functions, how does the LOD clamp interact with
+        the LOD bias?
+
+      RESOLVED:  The LOD clamp is applied after the LOD bias.  Clamping to the
+      LOD provided in the shader is logically applied at the same point in the
+      pipeline where the LOD clamps based on the texture/sampler parameters
+      TEXTURE_{MIN,MAX}_LOD are applied.
+
+Revision History
+
+    Revision 1
+      - Split clamp functions from ARB_sparse_texture2

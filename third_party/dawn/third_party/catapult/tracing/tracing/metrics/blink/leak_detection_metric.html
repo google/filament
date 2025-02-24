@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.blink', function() {
+  function leakDetectionMetric(histograms, model) {
+    // Extract renderer pids.
+    const modelHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (modelHelper === undefined) {
+      throw new Error('Chrome is not present.');
+    }
+    const rendererHelpers = modelHelper.rendererHelpers;
+    if (Object.keys(rendererHelpers).length === 0) {
+      throw new Error('Renderer process is not present.');
+    }
+    const pids = Object.keys(rendererHelpers);
+
+    // Get the dumps.
+    const chromeDumps = tr.metrics.sh
+        .splitGlobalDumpsByBrowserName(model, undefined).get('chrome');
+
+    const sumCounter = new Map();
+    // Add up counters for all the renderer processes.
+
+    for (const pid of pids) {
+      for (const [key, count] of countLeakedBlinkObjects(chromeDumps, pid)) {
+        sumCounter.set(key, (sumCounter.get(key) || 0) + count);
+      }
+    }
+
+    for (const [key, count] of sumCounter) {
+      histograms.createHistogram('Leaked ' + key,
+          tr.b.Unit.byName.count_smallerIsBetter, count);
+    }
+
+    for (const [key, count] of sumCounter) {
+      if (count > 0) {
+        throw new Error('Memory leak is found.');
+      }
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(leakDetectionMetric);
+
+  function countLeakedBlinkObjects(dumps, pid) {
+    if (dumps === undefined || dumps.length < 2) {
+      throw new Error('Expected at least two memory dumps.');
+    }
+    const firstCounter = countBlinkObjects(dumps[0], pid);
+    const lastCounter = countBlinkObjects(dumps[dumps.length - 1], pid);
+    const diffCounter = new Map();
+    for (const [key, lastCount] of lastCounter) {
+      diffCounter.set(key, lastCount - firstCounter.get(key));
+    }
+    return diffCounter;
+  }
+
+  function countBlinkObjects(dump, pid) {
+    const counter = new Map();
+    const processesMemoryDumps = dump.processMemoryDumps;
+    if (processesMemoryDumps[pid] === undefined) return counter;
+    const blinkObjectsDump = processesMemoryDumps[pid].memoryAllocatorDumps
+        .find(dump => dump.fullName === 'blink_objects');
+    for (const v of blinkObjectsDump.children) {
+      counter.set(v.name, v.numerics.object_count.value);
+    }
+    return counter;
+  }
+
+  return {
+    leakDetectionMetric,
+  };
+});
+</script>

@@ -1,0 +1,47 @@
+# Ignored folders #
+/cache/
+/lib/
+/obj/
+/bin/
+/out/
+.vs
+.vscode/ipch
+CMakeFiles/
+.idea/
+cmake-build-debug/
+
+# Per user vscode config files.
+.vscode/launch.json
+.vscode/settings.json
+
+# The /build/ directory is recommended for CMake build output
+!/build
+/build/*
+
+
+# Ignored files #
+*.obj
+*.lib
+*.log
+*.tlog
+*.exe
+*.ilk
+*.pdb
+*.sbr
+*.bsc
+*.dll
+*.res
+*.idb
+*.sdf
+*.suo
+*.o
+*.depend
+*.layout
+*.opensdf
+*.aps
+*.opendb
+*.db
+*~
+.*.sw*
+.sw*
+CMakeCache.txt

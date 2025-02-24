@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/paper-input/paper-input.html">
+<link rel="import" href="/components/paper-item/paper-item.html">
+<link rel="import" href="/components/paper-material/paper-material.html">
+<link rel="import" href="/components/paper-menu/paper-menu.html">
+
+<link rel="import" href="/elements/autocomplete-box.html">
+
+<dom-module id="commit-input">
+  <template>
+    <style include="iron-flex base-style">
+      :host {
+        --paper-input-container-input: {
+          text-overflow: ellipsis;
+        }
+      }
+
+      p {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin: 0;
+      }
+
+      #dropdown-container {
+        position: absolute;
+        background-color: white;
+        box-sizing: border-box;
+        border-radius: 2px;
+        z-index: var(--layer-menus);
+      }
+
+      paper-menu {
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: 300px;
+      }
+
+      #dropdown paper-item {
+        min-height: 25px;
+        color: #616161;
+        text-indent: 10px;
+      }
+
+      #dropdown paper-item[head] {
+        color: darkblue;
+        text-indent: 0;
+      }
+
+      #size-check {
+        display: inline-block;
+        position: absolute;
+        visibility: hidden;
+      }
+
+      paper-input .selected {
+        padding-bottom: 4px;
+        padding-top: 4px;
+        line-height: 16px;
+        font-size: 14px;
+      }
+
+      paper-input .selected span {
+        color: white;
+        border-radius: 100px;
+        background-color: #3E50B4;
+        margin: 0px 3px 0px 0px;
+        padding: 2px 4px;
+      }
+
+      /* From: paper-item/paper-item-shared-styles.html */
+      .locus:before {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: currentColor;
+        content: '';
+        opacity: 0.12;
+        pointer-events: none;
+      }
+
+      /* From: paper-item/paper-item-shared-styles.html */
+      .locus:after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: currentColor;
+        opacity: 0.12;
+        content: '';
+        pointer-events: none;
+      }
+
+      #clear {
+        display: none;
+        border-radius: 50%;
+        background: lightgrey;
+        width: 24px;
+        height: 24px;
+        padding: 0 4px;
+      }
+    </style>
+
+    <div id="container">
+      <paper-input label="{{placeholder}}"
+                   on-click="onClickInput"
+                   on-focus="onFocusInput"
+                   on-blur="onBlurInput"
+                   on-keydown="onInputKeydown"
+                   disabled$="{{disabled}}"
+                   id="textbox"
+                   required$="[[required]]"
+                   value="{{query::input}}">
+        <paper-icon-button suffix on-tap="onClearInput_"
+          id="clear" icon="clear" alt="clear" title="clear">
+        </paper-icon-button>
+      </paper-input>
+      <paper-material
+          id="dropdown-container"
+          hidden$="[[!showDropdown]]">
+        <paper-menu id="dropdown"
+                    tabindex="-1"
+                    on-mousedown="onDropdownMouseDown"
+                    on-iron-select="onDropdownSelect"
+                    on-iron-items-changed="onItemsChanged">
+          <template is="dom-repeat" items="[[suggestedItems]]" sort="_CommitSort">
+              <paper-item
+                  item="[[item]]"
+                  head$="[[item.head]]"
+                  hidden$="[[!showDropdown]]"
+                  class$="layout horizontal [[locusClassIfLocus(locusItem, item)]]">
+              <div vertical layout class="commit-box">
+                <p><span class="commit-hash">[[_FormatHash(item.name)]]</span><span class="commit-message">[[item.message]]</span></p>
+                <p><span class="commit-position">[[item.commit_position]]</span><span class="commit-author">[[item.author]]</span></p>
+              </div>
+            </paper-item>
+          </template>
+        </paper-menu>
+      </paper-material>
+    </div>
+    <span id="size-check">{{value}}</span>
+
+  </template>
+  <script>
+    'use strict';
+
+    Polymer({
+      is: 'commit-input',
+      behaviors: [
+        AutocompleteBoxBehavior,
+        Polymer.IronFormElementBehavior,
+        Polymer.IronValidatableBehavior,
+      ],
+
+      properties: {
+        disabled: {
+          notify: true,
+          type: Boolean,
+          value: false
+        },
+        placeholder: { notify: true },
+        required: {
+          type: Boolean,
+          value: false
+        },
+      },
+
+      observers: [
+        'updateSelected(selectedItem)',
+        'updateSelected(locusItem)',
+      ],
+
+      _CommitSort(a, b) {
+        if (a.commit_position < b.commit_position) {
+          return 1;
+        } else if (a.commit_position > b.commit_position) {
+          return -1;
+        }
+        return 0;
+      },
+
+      _FormatHash(hash) {
+        return hash.slice(0, 8);
+      },
+
+      _getValidity(values) {
+        return this.$.textbox.validate(values);
+      },
+
+      shouldIgnoreSelectionEvents() {
+        if (this.muffleSelection === undefined) this.muffleSelection = false;
+        return this.muffleSelection;
+      },
+
+      focus() {
+        this.querySelector('input').focus();
+      },
+
+      onClickInput() {
+        // Sometimes the dropbox is closed even when the input has focus
+        // tries to click on the input to re-open it so we support that:
+        this.set('dropdownOpen', true);
+        this.$.textbox.readonly = false;
+      },
+
+      onFocusInput() {
+        if (this.id === 'selection-0' && !this.selectedItem && window.METRICS) {
+          METRICS.startChartAction();
+        }
+        this.set('dropdownOpen', true);
+        this.$.textbox.readonly = false;
+      },
+
+      onBlurInput() {
+        this.set('dropdownOpen', false);
+        this.$.textbox.readonly = true;
+      },
+
+      onClearInput_() {
+        this.set('query', '');
+        this.focus();
+      },
+
+      onInputKeydown(event) {
+        this.set('dropdownOpen', true);
+        const key = event.keyCode || event.charCode;
+        if (key === 8 || key === 46) {  // Backspace and Delete.
+          this.maybeBackspaceSelection();
+        } else if (key === 40) {
+          this.moveLocus(true /* down */);
+          this.scrollLocusIntoView();
+        } else if (key === 38) {
+          this.moveLocus(false /* up */);
+          this.scrollLocusIntoView();
+        } else if (key === 13) { // Enter.
+          this.maybeSelectLocus();
+        }
+      },
+
+      onQueryChanged_() {
+        this.$.clear.style.display = this.query ? 'inline' : '';
+
+        // The selectedItem should reflect the query.
+        // When the query is cleared, the selectedItem needs to be manually
+        // cleared.
+        if (!this.query) this.selectedItem = undefined;
+      },
+
+      scrollLocusIntoView() {
+        const elements = this.$.dropdown.items || [];
+        for (const element of elements) {
+          if (element.item === this.locusItem) {
+            element.scrollIntoView(false);
+            return;
+          }
+        }
+      },
+
+      onItemsChanged() {
+        this.updateSelected();
+      },
+
+      updateSelected() {
+        this.muffleSelection = true;
+        (() => {
+          this.$.dropdown.selected = undefined;
+          if (this.selectedItem === null) return;
+          const selectedItem = this.selectedItem;
+          const menuItemsArray = this.$.dropdown.items || [];
+          for (let i = 0; i < menuItemsArray.length; i++) {
+            if (menuItemsArray[i].item === selectedItem) {
+              this.$.dropdown.selected = i;
+              return;
+            }
+          }
+        })();
+        this.muffleSelection = false;
+      },
+
+      locusClassIfLocus(locusItem, anItem) {
+        return locusItem === anItem ? 'locus' : '';
+      },
+
+      onDropdownMouseDown(event) {
+        // Prevent focus moving to the drop down.
+        event.preventDefault();
+      },
+
+      /**
+        * Handles item selected on drop-down menu.
+        */
+      onDropdownSelect(event, detail) {
+        if (this.shouldIgnoreSelectionEvents()) return;
+        this.$.textbox.focus();
+        const index = this.$.dropdown.indexOf(detail.item);
+        const item = this.suggestedItems[index];
+        this.selectItem(item);
+      },
+    });
+  </script>
+</dom-module>

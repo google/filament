@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.helpers', function() {
+  const NET_CATEGORIES = new Set(['net', 'netlog',
+    'disabled-by-default-netlog', 'disabled-by-default-network']);
+
+  class ChromeThreadHelper {
+    constructor(thread) {
+      this.thread = thread;
+    }
+
+    getNetworkEvents() {
+      const networkEvents = [];
+      for (const slice of this.thread.asyncSliceGroup.slices) {
+        const categories = tr.b.getCategoryParts(slice.category);
+        const isNetEvent = category => NET_CATEGORIES.has(category);
+        if (categories.filter(isNetEvent).length === 0) continue;
+        networkEvents.push(slice);
+      }
+      return networkEvents;
+    }
+  }
+
+  return {
+    ChromeThreadHelper,
+  };
+});
+</script>

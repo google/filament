@@ -1,0 +1,57 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This file is used when gn runs in this directory (or a lower directory
+# and searching upward ends here).  See "gn help dotfile."
+# As a result this file will only affect stand-alone ANGLE builds,
+# not chromium builds.
+
+import("//build/dotfile_settings.gni")
+import("//dotfile_settings.gni")
+
+# Location of the build configuration file.
+buildconfig = "//build/config/BUILDCONFIG.gn"
+
+# The python interpreter to use by default. On Windows, this will look
+# for python3.exe and python3.bat.
+script_executable = "python3"
+
+# These are the targets to check headers for by default. The files in targets
+# matching these patterns (see "gn help label_pattern" for format) will have
+# their includes checked for proper dependencies when you run either
+# "gn check" or "gn gen --check".
+# check_targets = [ "*" ]
+
+# These are the list of GN files that run exec_script. This allowlist exists
+# to force additional review for new uses of exec_script, which is strongly
+# discouraged except for gypi_to_gn calls.
+exec_script_allowlist = angle_dotfile_settings.exec_script_allowlist +
+                        build_dotfile_settings.exec_script_allowlist +
+                        [
+                          "//build/config/sysroot.gni",
+                          "//build/config/win/BUILD.gn",
+                          "//build/config/win/visual_studio_version.gni",
+                          "//build/gn_helpers.py",
+                          "//build_overrides/build.gni",
+                        ]
+
+default_args = {
+  clang_use_chrome_plugins = false
+  build_angle_deqp_tests = true
+  use_sysroot = true
+
+  # Saves on importing extra dependencies and ANGLE doesn't use JS.
+  enable_js_protobuf = false
+
+  # Disable location tags in isolates.
+  tests_have_location_tags = false
+
+  # Use base level API level 29 support for AHardwareBuffer ANGLE tests.
+  android32_ndk_api_level = 29
+  android64_ndk_api_level = 29
+
+  vma_vulkan_headers_dir = "//third_party/vulkan-headers/src"
+}
+
+no_check_targets = [ "third_party/dawn/*" ]

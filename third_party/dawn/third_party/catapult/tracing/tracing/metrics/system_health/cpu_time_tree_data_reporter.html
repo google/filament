@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const CPU_PERCENTAGE_UNIT =
+      tr.b.Unit.byName.normalizedPercentage_smallerIsBetter;
+  const CPU_TIME_UNIT = tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+
+  /**
+   * Returns a deep clone of CPU time multidimensional view path object.
+   *
+   * @param {!Array.<!Array.<string>>} previousPath
+   * @returns {!Array.<!Array.<string>>}
+   */
+  function clonePath_(previousPath) {
+    return previousPath.map(subPath => subPath.map(x => x));
+  }
+
+
+  /**
+   * Returns an object containing the processType, threadType, railStage, and
+   * initiatorType encoded in the provided CPU time multidimensional view path
+   * object. Decoding the path into this object can make code easier to
+   * understand than indexing directly into the path array.
+   *
+   * @param {!Array.<!Array.<string>>} path - A path in a CPU time
+   * multidimensional tree view.
+   * @returns {Object.<string, string>}
+   */
+  function decodePath_(path) {
+    return {
+      processType: path[0][0],
+      threadType: path[1][0],
+      railStage: path[2][0],
+      initiatorType: path[2][1]
+    };
+  }
+
+  /**
+   * Returns a unique string representation of |path|.
+   *
+   * Paths are of the following form in CPU time multidimensional trees:
+   *   [[processType], [threadType], [railStage, initiatorType]]
+   *
+   * The returned string is of the form
+   *   "$processtype:$threadType:$railStage:$initiatorType".
+   *
+   * @param {Array.<!Array.<string>>} path
+   * @returns {string}
+   */
+  function stringifyPathName_(path) {
+    const decodedPath = decodePath_(path);
+    return [
+      decodedPath.processType,
+      decodedPath.threadType,
+      decodedPath.railStage,
+      decodedPath.initiatorType
+    ].join(':');
+  }
+
+  /**
+   * This class is used to traverse a multidimensional tree view and report CPU
+   * percentage and CPU time from the tree as histograms.
+   */
+  class CpuTimeTreeDataReporter {
+    constructor() {
+      this.visitedSet_ = new Set();
+    }
+
+    /**
+     * Extracts CPU percentage and CPU time values from |node| located at |path|
+     * and adds values as histograms to |this.histogramSet_|. Each value is
+     * added as a single sample histogram.
+     *
+     * @param {!tr.b.MultiDimensionalViewNode} node
+     * @param {!Array.<!Array.<string>>} path
+     */
+    reportValuesFromNode_(node, path) {
+      const decodedPath = decodePath_(path);
+      const processType = decodedPath.processType || 'all_processes';
+      const threadType = decodedPath.threadType || 'all_threads';
+
+      // We need some RAIL stage and some initiator type to process a node.
+      // All RAIL stages and all initiator types are handled by the special
+      // 'all_stages' and 'all_initiators' nodes respectively.
+      if (!decodedPath.railStage || !decodedPath.initiatorType) return;
+      const {railStage, initiatorType} = decodedPath;
+
+      const serializedPathName =
+          [processType, threadType, railStage, initiatorType].join(':');
+
+      // node.values is a two element array. The first element holds
+      // cpuPercentage data and the second holds cpuTime data. The final
+      // '.total' (as opposed to '.self') signifies we're including all the data
+      // from children nodes. This is an artifact of how the multidimensional
+      // view data structure works and is not very relevant - we exclusively use
+      // '.total' for CPU time.
+      const cpuPercentageValue = node.values[0].total;
+      const cpuTimeValue = node.values[1].total;
+
+      this.histogramSet_.createHistogram(`cpuPercentage:${serializedPathName}`,
+          CPU_PERCENTAGE_UNIT, cpuPercentageValue);
+      this.histogramSet_.createHistogram(`cpuTime:${serializedPathName}`,
+          CPU_TIME_UNIT, cpuTimeValue);
+    }
+
+
+    /**
+     * Traverses all the paths of a multidimensional view subtree and reports
+     * node data to |this.histogramSet_|.
+     *
+     * @param {!tr.b.MultiDimensionalViewNode} root - Root of the subtree.
+     * @param {!Array.<!Array.<string>>} rootPath - Path of the subtree root
+     * node with respect to |this.rootNode_|.
+     */
+    reportDataFromTree_(root, rootPath) {
+      const rootPathString = stringifyPathName_(rootPath);
+      if (this.visitedSet_.has(rootPathString)) return;
+      this.visitedSet_.add(rootPathString);
+
+      this.reportValuesFromNode_(root, rootPath);
+
+      for (let dimension = 0; dimension < root.children.length; dimension++) {
+        const children = root.children[dimension];
+        for (const [name, node] of children) {
+          const childPath = clonePath_(rootPath);
+          childPath[dimension].push(name);
+          this.reportDataFromTree_(node, childPath);
+        }
+      }
+    }
+
+    /**
+     * Adds values from the multidimensional tree view rooted at |rootNode| as
+     * single value histograms in |histogramSet|.
+     *
+     * @param {!tr.b.MultiDimensionalViewNode} rootNode
+     * @param {!tr.v.HistogramSet} histogramSet
+     */
+    addTreeValuesToHistogramSet(rootNode, histogramSet) {
+      const rootPath = [[], [], []];
+      this.rootNode_ = rootNode;
+      this.histogramSet_ = histogramSet;
+      this.reportDataFromTree_(this.rootNode_, rootPath);
+    }
+
+    /**
+     * Reports values from the multidimensional tree view rooted at |rootNode|
+     * as single value histograms in |histogramSet|.
+     *
+     * The histograms are dynamically generated from the tree. The histogram
+     * names are of the form
+     *   "${cpuTime|cpuPercentage}:${processType}:${threadType}:" +
+     *   "${railStage}:${railStageInitiator}"
+     *
+     * cpuTime histograms contain total consumed cpu time, while cpuPercentage
+     * histograms contain cpu time as a percentage of wall time. In multicore
+     * situations, this percentage can be larger than 100.
+     *
+     * @param {!tr.b.MultiDimensionalViewNode} rootNode
+     * @param {!tr.v.HistogramSet} histogramSet
+     */
+    static reportToHistogramSet(rootNode, histogramSet) {
+      const reporter = new CpuTimeTreeDataReporter();
+      reporter.addTreeValuesToHistogramSet(rootNode, histogramSet);
+    }
+  }
+
+  return {
+    CpuTimeTreeDataReporter,
+  };
+});
+</script>

@@ -1,0 +1,3 @@
+# This file is used by git cl to get repository specific information.
+GERRIT_HOST: True
+GERRIT_SQUASH_UPLOADS: False

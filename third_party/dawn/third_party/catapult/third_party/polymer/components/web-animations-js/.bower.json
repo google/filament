@@ -1,0 +1,40 @@
+{
+  "name": "web-animations-js",
+  "description": "JavaScript implementation of the Web Animations API",
+  "homepage": "https://github.com/web-animations/web-animations-js",
+  "main": "web-animations.min.js",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "animations",
+    "polyfill"
+  ],
+  "license": "Apache-2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "templates",
+    "test",
+    "Gruntfile.js",
+    "package.json",
+    "target-config.js",
+    "target-loader.js",
+    "web-animations.dev.html",
+    "web-animations.dev.js",
+    "web-animations-next.dev.html",
+    "web-animations-next.dev.js",
+    "web-animations-next-lite.dev.html",
+    "web-animations-next-lite.dev.js"
+  ],
+  "version": "2.3.1",
+  "_release": "2.3.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "2.3.1",
+    "commit": "a2dddad1c210c8abe5bc1c5a5e126e9946d44252"
+  },
+  "_source": "https://github.com/web-animations/web-animations-js.git",
+  "_target": "^2.2.0",
+  "_originalSource": "web-animations/web-animations-js"
+}

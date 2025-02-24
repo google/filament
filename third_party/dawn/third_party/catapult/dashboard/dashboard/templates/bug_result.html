@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+This template contains HTML for the following things:
+ - A form for creating a new bug for an alert.
+ - A form for choosing an existing bug number for an alert.
+ - A message with a link after creating a new bug.
+ - A "bug created" message with a link after creating a new bug.
+ - Error messages related to the above.
+-->
+<html>
+  <head>
+    <style>
+      body {
+        color: #222;
+        font: normal 13px arial, sans-serif;
+        line-height: 1.4;
+      }
+
+      b {
+        color: #000;
+      }
+
+      a:visited {
+        color: #61c;
+      }
+
+      a:link {
+        color: #15c;
+      }
+
+      .bug-list {
+        /* Note: pop-up window size 600x480 is set in triage-dialog.html. */
+        box-sizing: border-box;
+        max-width: 550px;
+        overflow-x: visible;
+      }
+
+      /* Style of the bug list table should fit with the style of the
+         alerts table. See the CSS in alerts-table.html. */
+      .bug-list td {
+        border: 1px solid #eee;
+        border-bottom: 2px solid #ccc;
+        padding-left: 7px;
+        padding-right: 7px;
+      }
+
+      .bug-list tr:first-child td {
+        border-top: 0px;
+      }
+
+      .bug-list tr:last-child td {
+        border-bottom: 0px;
+      }
+
+      .bug-list td:first-child {
+        border-left: 0px;
+      }
+
+      .bug-list td:last-child {
+        border-right: 0px;
+      }
+
+      .bug-list .bug-author {
+        max-width: 60px;
+        overflow: hidden;
+      }
+
+      .bug-list .bug-summary {
+        max-width: 350px;
+      }
+
+      /* Color matches that of the color in the alerts table. */
+      .highlighted {
+        background-color: #f6ebae;
+        border-color: #ebdb84 transparent;
+        z-index: 2;
+      }
+
+      .bug-closed {
+        text-decoration: line-through;
+      }
+
+      input[type=text] {
+        background-color: #fff;
+        border: 1px solid #d9d9d9;
+        border-top: 1px solid #c0c0c0;
+        border-radius: 1px;
+        border-radius: 1px;
+        box-sizing: border-box;
+        color: #333;
+        height: 29px;
+        line-height: 27px;
+        padding-left: 8px;
+        vertical-align: top;
+      }
+
+      input[type=checkbox], input[type=radio], .fakecheckbox, .fakeradio {
+        border: 1px solid #c6c6c6;
+        border-radius: 1px;
+        bottom: -1px;
+        box-sizing: border-box;
+        cursor: default;
+        height: 13px;
+        margin: 0;
+        margin-right: 5px;
+        position: relative;
+        width: 13px;
+        -webkit-appearance: none;
+      }
+
+      input[type=checkbox]:checked::after, .fakecheckbox.checked::after {
+        font-size: 1.3em;
+        content: "✓";
+        position: absolute;
+        top: -5px;
+        left: -1px;
+      }
+
+      input[type=submit] {
+        background-color: #4d90fe;
+        background-image: -webkit-linear-gradient(top, #4d90fe, #4787ed);
+        background-image: linear-gradient(to bottom, #4d90fe, #4787ed);
+        border: 1px solid #3079ed;
+        color: #fff;
+      }
+
+      button {
+        background-color: #f5f5f5;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #444;
+        background-image: -webkit-linear-gradient(top, #f5f5f5, #f1f1f1);
+        background-image: linear-gradient(to bottom, #f5f5f5, #f1f1f1);
+      }
+
+      button, input[type=submit] {
+        border-radius: 2px;
+        font-size: 11px;
+        font-weight: bold;
+        height: 27px;
+        line-height: 27px;
+        min-width: 54px;
+        padding: 0px 8px;
+        user-select: none;
+      }
+
+      popup-tooltip {
+        white-space: normal;
+      }
+
+    </style>
+  </head>
+  <body>
+    {% if error %}
+      <div class="error">{{error}}</div><br><br>
+      <button onclick="window.close()">Close</button>
+    {% elif bug_associate_form %}
+      <form action="/associate_alerts" method="POST">
+        <input type="hidden" name="keys" value="{{keys}}">
+        <select name="project_id" id="project_id">
+          {% for project in projects %}
+            <option {% if project == 'chromium' %}selected{% endif %}>
+              {{project}}
+            </option>
+          {% endfor %}
+        </select>
+        <input type="text" name="bug_id" id="bug_id"
+               required placeholder="Bug ID" pattern="[0-9]+">
+        <br><br>
+        <input type="submit">
+      </form>
+      <p>Recent bugs shown below. Click on a bug ID to copy into the form field.
+      Highlighting indicates overlapping revision range.</p>
+      <div class="bug-list">
+        <table>
+          <thead>
+            <tr>
+              <th class="bug-link">Bug ID</th>
+              <th class="bug-status">Status</th>
+              <th class="bug-author">Author</th>
+              <th class="bug-summary">Summary</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bug in bugs %}
+              <tr {% if bug.relevant %} class="highlighted" {% endif %}>
+                <td>
+                  <a href="http://crbug.com/{{bug.projectId}}/{{bug.id}}"
+                     data-bugid="{{bug.id}}"
+                     data-projectid="{{bug.projectId}}"
+                     target="_blank"
+                     class="bug-link bug-{{bug.state}} bug-{{bug.status}}">
+                     {{bug.projectId}}:{{bug.id}}
+                  </a>
+                </td>
+                <td class="bug-status">{{bug.status}}</td>
+                <td class="bug-author">{{bug.author.name}}</td>
+                <td class="bug-summary">{{bug.summary}}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <script>
+        function init() {
+          var bugLinks = document.getElementsByClassName('bug-link');
+          for (var i = 0; i < bugLinks.length; i++) {
+            bugLinks[i].addEventListener('click', function(e) {
+              var bugId = e.target.getAttribute('data-bugid');
+              var projectId = e.target.getAttribute('data-projectid');
+              document.getElementById('bug_id').value = bugId;
+              document.getElementById('project_id').value = projectId;
+              e.preventDefault();
+            }, true);
+          }
+        }
+        document.addEventListener('DOMContentLoaded', init);
+      </script>
+    {% elif bug_create_form %}
+    <form action="/file_bug" method="POST">
+      <input type="hidden" name="finish" value="true">
+      <input type="hidden" name="keys" value="{{keys}}">
+      <b>Summary:</b><br>
+      <input name="summary" value="{{summary}}" size=83>
+      <br><br>
+      <b>Description:</b><br>
+      <textarea rows=10 cols=60 name="description">{{description}}</textarea>
+      <br><br>
+      <b>Monorail project</b><br>
+      <select name="project_id" id="project_id">
+        {% for project in projects %}
+          <option {% if project == 'chromium' %}selected{% endif %}>
+            {{project}}
+          </option>
+        {% endfor %}
+      </select>
+      <br><br>
+      <b>Labels:</b><br>
+      {% for label in labels %}
+      <label>
+        <input type="checkbox" checked name="label" value="{{label}}">
+        {{label}}
+      </label><br>
+      {% endfor %}
+      <br>
+      <b>Components:</b><br>
+      {% for component in components %}
+      <label>
+        <input type="checkbox" checked name="component" value="{{component}}">
+        {{component}}
+      </label><br>
+      {% endfor %}
+      <b>Owner:</b><br>
+      <input type="text" name="owner" value="{{owner}}"><br><br>
+      <b>cc:</b><br>
+      <input type="text" name="cc" value="{{cc}}"><br><br>
+      <input type="submit" id="submit_bug_button">
+    </form>
+    {% elif confirmation_required %}
+      <p>{{message}}</p>
+      <p>Do you want to continue?</p>
+      <form action="/{{handler}}" method="POST">
+        <input type="hidden" name="confirm" value="true">
+        {% for key, value in parameters.items() %}
+          <input type="hidden" name="{{key}}" value="{{value}}">
+        {% endfor %}
+        <button onclick="window.history.go(-1); return false;">Back</button>
+        <input type="submit" value="Confirm">
+      </form>
+    {% else %}
+      <script>
+        function postClose() {
+          var data = {
+            'action': 'bug_create_result',
+            'bug_id': {{bug_id}},
+            'project_id': '{{project_id}}',
+            'bisect_error': '{{bisect_error}}',
+            'issue_url': '{{issue_url}}',
+            'issue_id': '{{issue_id}}',
+          };
+          window.opener.postMessage(JSON.stringify(data), '*');
+          window.close();
+        }
+        window.addEventListener('DOMContentLoaded', postClose, false);
+        var submit_bug_button = document.getElementById('submit_bug_button');
+        if (submit_bug_button) {
+          submit_bug_button.addEventListener('click', (E) => {
+            E.target.disabled = true;
+          });
+        }
+      </script>
+    {% endif %}
+  </body>
+</html>

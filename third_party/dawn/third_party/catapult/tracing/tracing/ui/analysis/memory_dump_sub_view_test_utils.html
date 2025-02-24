@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color.html">
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/heap_dump.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/vm_region.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Helper functions for memory dump analysis sub-view tests.
+ */
+tr.exportTo('tr.ui.analysis', function() {
+  const Color = tr.b.Color;
+  const ColorScheme = tr.b.ColorScheme;
+  const GlobalMemoryDump = tr.model.GlobalMemoryDump;
+  const ProcessMemoryDump = tr.model.ProcessMemoryDump;
+  const VMRegion = tr.model.VMRegion;
+  const VMRegionClassificationNode = tr.model.VMRegionClassificationNode;
+  const Scalar = tr.b.Scalar;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const HeapDump = tr.model.HeapDump;
+  const addGlobalMemoryDump = tr.model.MemoryDumpTestUtils.addGlobalMemoryDump;
+  const addProcessMemoryDump =
+    tr.model.MemoryDumpTestUtils.addProcessMemoryDump;
+  const newAllocatorDump = tr.model.MemoryDumpTestUtils.newAllocatorDump;
+  const addOwnershipLink = tr.model.MemoryDumpTestUtils.addOwnershipLink;
+
+  function createMultipleTestGlobalMemoryDumps() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const pA = model.getOrCreateProcess(1);
+      const pB = model.getOrCreateProcess(2);
+      const pC = model.getOrCreateProcess(3);
+      const pD = model.getOrCreateProcess(4);
+
+      // ======================================================================
+      //   First timestamp.
+      // ======================================================================
+      const gmd1 = addGlobalMemoryDump(model, {ts: 42});
+
+      // Totals and VM regions.
+      const pmd1A = addProcessMemoryDump(gmd1, pA, {ts: 41});
+      pmd1A.totals = {residentBytes: 31457280 /* 30 MiB */};
+      pmd1A.vmRegions = VMRegionClassificationNode.fromRegions([
+        VMRegion.fromDict({
+          startAddress: 1024,
+          sizeInBytes: 20971520, /* 20 MiB */
+          protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+          mappedFile: '[stack]',
+          byteStats: {
+            privateDirtyResident: 8388608, /* 8 MiB */
+            sharedCleanResident: 12582912, /* 12 MiB */
+            proportionalResident: 10485760 /* 10 MiB */
+          }
+        })
+      ]);
+
+      // Everything.
+      const pmd1B = addProcessMemoryDump(gmd1, pB, {ts: 42});
+      pmd1B.totals = {
+        residentBytes: 20971520, /* 20 MiB */
+        peakResidentBytes: 41943040, /* 40 MiB */
+        arePeakResidentBytesResettable: false,
+        privateFootprintBytes: 15728640, /* 15 MiB */
+        platformSpecific: {
+          private_bytes: 10485760 /* 10 MiB */
+        }
+      };
+      pmd1B.vmRegions = VMRegionClassificationNode.fromRegions([
+        VMRegion.fromDict({
+          startAddress: 256,
+          sizeInBytes: 6000,
+          protectionFlags: VMRegion.PROTECTION_FLAG_READ |
+              VMRegion.PROTECTION_FLAG_WRITE,
+          mappedFile: '[stack:20310]',
+          byteStats: {
+            proportionalResident: 15728640, /* 15 MiB */
+            privateDirtyResident: 1572864, /* 1.5 MiB */
+            swapped: 32 /* 32 B */
+          }
+        }),
+        VMRegion.fromDict({
+          startAddress: 100000,
+          sizeInBytes: 4096,
+          protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+          mappedFile: '/usr/lib/libwtf.so',
+          byteStats: {
+            proportionalResident: 4194304, /* 4 MiB */
+            privateDirtyResident: 0,
+            swapped: 0 /* 32 B */
+          }
+        })
+      ]);
+      pmd1B.memoryAllocatorDumps = [
+        newAllocatorDump(pmd1B, 'malloc',
+            {numerics: {size: 3145728 /* 3 MiB */}}),
+        newAllocatorDump(pmd1B, 'v8', {numerics: {size: 5242880 /* 5 MiB */}}),
+        newAllocatorDump(pmd1B, 'tracing', {numerics: {
+          size: 1048576 /* 1 MiB */,
+          resident_size: 1572864 /* 1.5 MiB */
+        }})
+      ];
+
+      // Allocator dumps only.
+      const pmd1C = addProcessMemoryDump(gmd1, pC, {ts: 43});
+      pmd1C.memoryAllocatorDumps = (function() {
+        const oilpanDump = newAllocatorDump(pmd1C, 'oilpan', {numerics: {
+          size: 3221225472 /* 3 GiB */,
+          inner_size: 5242880 /* 5 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 2015)
+        }});
+        const v8Dump = newAllocatorDump(pmd1C, 'v8', {numerics: {
+          size: 1073741824 /* 1 GiB */,
+          inner_size: 2097152 /* 2 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 204)
+        }});
+
+        addOwnershipLink(v8Dump, oilpanDump);
+
+        return [oilpanDump, v8Dump];
+      })();
+      pmd1C.heapDumps = {
+        'v8': (function() {
+          const v8HeapDump = new HeapDump(pmd1C, 'v8');
+          v8HeapDump.addEntry(
+              tr.c.TestUtils.newStackTrace(model,
+                  ['V8.Execute', 'UpdateLayoutTree']),
+              undefined /* sum over all object types */,
+              536870912 /* 512 MiB */);
+          return v8HeapDump;
+        })()
+      };
+
+      // ======================================================================
+      //   Second timestamp.
+      // ======================================================================
+      const gmd2 = addGlobalMemoryDump(model, {ts: 68});
+
+      // Everything.
+      const pmd2A = addProcessMemoryDump(gmd2, pA, {ts: 67});
+      pmd2A.totals = {residentBytes: 32505856 /* 31 MiB */};
+      pmd2A.vmRegions = VMRegionClassificationNode.fromRegions([
+        VMRegion.fromDict({
+          startAddress: 1024,
+          sizeInBytes: 20971520, /* 20 MiB */
+          protectionFlags: VMRegion.PROTECTION_FLAG_READ,
+          mappedFile: '[stack]',
+          byteStats: {
+            privateDirtyResident: 8388608, /* 8 MiB */
+            sharedCleanResident: 11534336, /* 11 MiB */
+            proportionalResident: 11534336 /* 11 MiB */
+          }
+        }),
+        VMRegion.fromDict({
+          startAddress: 104857600,
+          sizeInBytes: 5242880, /* 5 MiB */
+          protectionFlags: VMRegion.PROTECTION_FLAG_EXECUTE,
+          mappedFile: '/usr/bin/google-chrome',
+          byteStats: {
+            privateDirtyResident: 0,
+            sharedCleanResident: 4194304, /* 4 MiB */
+            proportionalResident: 524288 /* 512 KiB */
+          }
+        })
+      ]);
+      pmd2A.memoryAllocatorDumps = [
+        newAllocatorDump(pmd2A, 'malloc', {numerics: {
+          size: 9437184 /* 9 MiB */
+        }}),
+        newAllocatorDump(pmd2A, 'tracing', {numerics: {
+          size: 2097152 /* 2 MiB */,
+          resident_size: 2621440 /* 2.5 MiB */
+        }})
+      ];
+
+      // Totals and allocator dumps only.
+      const pmd2B = addProcessMemoryDump(gmd2, pB, {ts: 69});
+      pmd2B.totals = {
+        residentBytes: 19922944, /* 19 MiB */
+        peakResidentBytes: 41943040, /* 40 MiB */
+        arePeakResidentBytesResettable: false,
+        privateFootprintBytes: 15728640, /* 15 MiB */
+        platformSpecific: {
+          private_bytes: 8912896 /* 8.5 MiB */
+        }
+      };
+      pmd2B.memoryAllocatorDumps = [
+        newAllocatorDump(pmd2B, 'malloc', {numerics: {
+          size: 2621440 /* 2.5 MiB */
+        }}),
+        newAllocatorDump(pmd2B, 'v8', {numerics: {
+          size: 5242880 /* 5 MiB */
+        }}),
+        newAllocatorDump(pmd2B, 'blink', {numerics: {
+          size: 7340032 /* 7 MiB */
+        }}),
+        newAllocatorDump(pmd2B, 'oilpan', {numerics: {size: 1}}),
+        newAllocatorDump(pmd2B, 'tracing', {numerics: {
+          size: 1572864 /* 1.5 MiB */,
+          resident_size: 2097152 /* 2 MiB */
+        }}),
+        newAllocatorDump(pmd2B, 'gpu', {numerics: {
+          memtrack_pss: 524288 /* 512 KiB */
+        }})
+      ];
+
+      // Resettable peak total size only.
+      const pmd2D = addProcessMemoryDump(gmd2, pD, {ts: 71});
+      pmd2D.totals = {
+        peakResidentBytes: 17825792, /* 17 MiB */
+        arePeakResidentBytesResettable: true
+      };
+
+      // ======================================================================
+      //   Third timestamp.
+      // ======================================================================
+      const gmd3 = addGlobalMemoryDump(model, {ts: 100});
+
+      // Everything.
+      const pmd3B = addProcessMemoryDump(gmd3, pB, {ts: 102});
+      pmd3B.totals = {
+        residentBytes: 18874368, /* 18 MiB */
+        peakResidentBytes: 44040192, /* 42 MiB */
+        privateFootprintBytes: 15728640, /* 16 MiB */
+        arePeakResidentBytesResettable: false,
+        platformSpecific: {
+          private_bytes: 7340032 /* 7 MiB */
+        }
+      };
+      pmd3B.vmRegions = VMRegionClassificationNode.fromRegions([
+        VMRegion.fromDict({
+          startAddress: 256,
+          sizeInBytes: 6000,
+          protectionFlags: VMRegion.PROTECTION_FLAG_READ |
+              VMRegion.PROTECTION_FLAG_WRITE,
+          mappedFile: '[stack:20310]',
+          byteStats: {
+            proportionalResident: 21495808, /* 20.5 MiB */
+            privateDirtyResident: 524288, /* 0.5 MiB */
+            swapped: 64 /* 32 B */
+          }
+        })
+      ]);
+      pmd3B.memoryAllocatorDumps = [
+        newAllocatorDump(pmd3B, 'malloc', {numerics: {
+          size: 2883584 /* 2.75 MiB */
+        }}),
+        newAllocatorDump(pmd3B, 'v8', {numerics: {
+          size: 5767168 /* 5.5 MiB */
+        }}),
+        newAllocatorDump(pmd3B, 'blink', {numerics: {
+          size: 6291456 /* 7 MiB */
+        }}),
+        newAllocatorDump(pmd3B, 'tracing', {numerics: {
+          size: 2097152 /* 2 MiB */,
+          resident_size: 3145728 /* 3 MiB */
+        }}),
+        newAllocatorDump(pmd3B, 'gpu', {numerics: {
+          size: 1048576 /* 1 MiB */,
+          memtrack_pss: 786432 /* 768 KiB */
+        }})
+      ];
+
+      // Allocator dumps only.
+      const pmd3C = addProcessMemoryDump(gmd3, pC, {ts: 100});
+      pmd3C.memoryAllocatorDumps = (function() {
+        const oilpanDump = newAllocatorDump(pmd3C, 'oilpan', {numerics: {
+          size: 3221225472 /* 3 GiB */,
+          inner_size: 5242880 /* 5 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 2015)
+        }});
+        const v8Dump = newAllocatorDump(pmd3C, 'v8', {numerics: {
+          size: 2147483648 /* 2 GiB */,
+          inner_size: 2097152 /* 2 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 204)
+        }});
+
+        addOwnershipLink(v8Dump, oilpanDump);
+
+        return [oilpanDump, v8Dump];
+      })();
+      pmd3C.heapDumps = {
+        'v8': (function() {
+          const v8HeapDump = new HeapDump(pmd1C, 'v8');
+          v8HeapDump.addEntry(
+              tr.c.TestUtils.newStackTrace(model,
+                  ['V8.Execute', 'UpdateLayoutTree']),
+              undefined /* sum over all object types */,
+              268435456 /* 256 MiB */);
+          v8HeapDump.addEntry(
+              tr.c.TestUtils.newStackTrace(model,
+                  ['V8.Execute', 'FrameView::layout']),
+              undefined /* sum over all object types */,
+              134217728 /* 128 MiB */);
+          return v8HeapDump;
+        })()
+      };
+
+      // Resettable peak total size only.
+      const pmd3D = addProcessMemoryDump(gmd3, pD, {ts: 99});
+      pmd3D.totals = {
+        peakResidentBytes: 17825792, /* 17 MiB */
+        arePeakResidentBytesResettable: true
+      };
+    });
+
+    return model.globalMemoryDumps;
+  }
+
+  function createSingleTestGlobalMemoryDump() {
+    return createMultipleTestGlobalMemoryDumps()[1];
+  }
+
+  function createMultipleTestProcessMemoryDumps() {
+    return createMultipleTestGlobalMemoryDumps().map(function(gmd) {
+      return gmd.processMemoryDumps[2];
+    });
+  }
+
+  function createSingleTestProcessMemoryDump() {
+    return createMultipleTestProcessMemoryDumps()[1];
+  }
+
+  function checkNumericFields(row, column, expectedValues, expectedUnit) {
+    let fields;
+    if (column === undefined) {
+      fields = row;
+    } else {
+      fields = column.fields(row);
+    }
+
+    if (expectedValues === undefined) {
+      assert.isUndefined(fields);
+      return;
+    }
+
+    assert.lengthOf(fields, expectedValues.length);
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
+      const expectedValue = expectedValues[i];
+      if (expectedValue === undefined) {
+        assert.isUndefined(field);
+      } else {
+        assert.isDefined(expectedUnit);  // Test sanity check.
+        assert.instanceOf(field, Scalar);
+        assert.strictEqual(field.value, expectedValue);
+        assert.strictEqual(field.unit, expectedUnit);
+      }
+    }
+  }
+
+  function checkSizeNumericFields(row, column, expectedValues) {
+    checkNumericFields(row, column, expectedValues,
+        sizeInBytes_smallerIsBetter);
+  }
+
+  function checkStringFields(row, column, expectedStrings) {
+    const fields = column.fields(row);
+
+    if (expectedStrings === undefined) {
+      assert.isUndefined(fields);
+      return;
+    }
+
+    assert.deepEqual(Array.from(fields), expectedStrings);
+  }
+
+  /**
+   * Check the titles, types and aggregation modes of a list of columns.
+   * expectedColumns is a list of dictionaries with the following fields:
+   *
+   *   - title: Either the expected title (string), or a matcher for it
+   *     (function that accepts the actual title as its argument).
+   *   - type: The expected class of the column.
+   *   - noAggregation: If true, the column is expected to have no aggregation
+   *     mode (regardless of expectedAggregationMode).
+   */
+  function checkColumns(columns, expectedColumns, expectedAggregationMode) {
+    assert.lengthOf(columns, expectedColumns.length);
+    for (let i = 0; i < expectedColumns.length; i++) {
+      const actualColumn = columns[i];
+      const expectedColumn = expectedColumns[i];
+      const expectedTitle = expectedColumn.title;
+      if (typeof expectedTitle === 'function') {
+        expectedTitle(actualColumn.title);  // Custom title matcher.
+      } else if (actualColumn.title.innerText) {
+        // HTML title.
+        assert.strictEqual(actualColumn.title.innerText, expectedTitle);
+      } else {
+        assert.strictEqual(actualColumn.title, expectedTitle);  // String title.
+      }
+      assert.instanceOf(actualColumn, expectedColumn.type);
+      assert.strictEqual(actualColumn.aggregationMode,
+          expectedColumn.noAggregation ? undefined : expectedAggregationMode);
+    }
+  }
+
+  function checkColumnInfosAndColor(
+      column, fields, contexts, expectedInfos, expectedColorReservedName) {
+    // Test sanity checks.
+    assert.isDefined(fields);
+    if (contexts !== undefined) {
+      assert.lengthOf(contexts, fields.length);
+    }
+
+    // Check infos.
+    const infos = [];
+    column.addInfos(fields, contexts, infos);
+    assert.lengthOf(infos, expectedInfos.length);
+    for (let i = 0; i < expectedInfos.length; i++) {
+      assert.deepEqual(infos[i], expectedInfos[i]);
+    }
+
+    // Check color.
+    const actualColor = typeof column.color === 'function' ?
+      column.color(fields, contexts) :
+      column.color;
+    checkColor(actualColor, expectedColorReservedName);
+  }
+
+  function checkColor(actualColorString, expectedColorString) {
+    if (actualColorString === undefined) {
+      assert.isUndefined(expectedColorString);
+      return;
+    }
+    const actualColor = Color.fromString(actualColorString);
+    const expectedColor = Color.fromString(expectedColorString);
+    assert.deepEqual(actualColor, expectedColor);
+  }
+
+  function createAndCheckEmptyPanes(
+      test, paneTagName, propertyName, opt_callback) {
+    // Unset property.
+    const unsetViewEl = createTestPane(paneTagName);
+    unsetViewEl.rebuild();
+    assert.isUndefined(unsetViewEl.createChildPane());
+    test.addHTMLOutput(unsetViewEl);
+
+    // Undefined property.
+    const undefinedViewEl = createTestPane(paneTagName);
+    undefinedViewEl[propertyName] = undefined;
+    undefinedViewEl.rebuild();
+    assert.isUndefined(undefinedViewEl.createChildPane());
+    test.addHTMLOutput(undefinedViewEl);
+
+    // Empty property.
+    const emptyViewEl = createTestPane(paneTagName);
+    emptyViewEl[propertyName] = [];
+    emptyViewEl.rebuild();
+    assert.isUndefined(undefinedViewEl.createChildPane());
+    test.addHTMLOutput(emptyViewEl);
+
+    // Check that all the panes have the same dimensions.
+    const unsetBounds = unsetViewEl.getBoundingClientRect();
+    const undefinedBounds = undefinedViewEl.getBoundingClientRect();
+    const emptyBounds = emptyViewEl.getBoundingClientRect();
+    assert.strictEqual(undefinedBounds.width, unsetBounds.width);
+    assert.strictEqual(emptyBounds.width, unsetBounds.width);
+    assert.strictEqual(undefinedBounds.height, unsetBounds.height);
+    assert.strictEqual(emptyBounds.height, unsetBounds.height);
+
+    // Custom checks (if provided).
+    if (opt_callback) {
+      opt_callback(unsetViewEl);
+      opt_callback(undefinedViewEl);
+      opt_callback(emptyViewEl);
+    }
+  }
+
+  function createTestPane(tagName) {
+    const paneEl = document.createElement(tagName);
+
+    // Store a list of requested child panes (for inspection in tests).
+    paneEl.requestedChildPanes = [];
+    paneEl.addEventListener('request-child-pane-change', function() {
+      paneEl.requestedChildPanes.push(paneEl.createChildPane());
+    });
+
+    paneEl.createChildPane = function() {
+      const childPaneBuilder = this.childPaneBuilder;
+      if (childPaneBuilder === undefined) return undefined;
+      return childPaneBuilder();
+    };
+
+    return paneEl;
+  }
+
+  // TODO(petrcermak): Consider moving this to tracing/ui/base/dom_helpers.html.
+  function isElementDisplayed(element) {
+    const style = getComputedStyle(element);
+    const displayed = style.display;
+    if (displayed === undefined) return true;
+    return displayed.indexOf('none') === -1;
+  }
+
+  /**
+   * Convert a list of ContainerMemoryDump(s) to a list of dictionaries of the
+   * underlying ProcessMemoryDump(s).
+   */
+  function convertToProcessMemoryDumps(containerMemoryDumps) {
+    return containerMemoryDumps.map(function(containerMemoryDump) {
+      return containerMemoryDump.processMemoryDumps;
+    });
+  }
+
+  /**
+   * Extract a chronological list of ProcessMemoryDump(s) (for a given process)
+   * from a chronological list of dictionaries of ProcessMemoryDump(s).
+   */
+  function extractProcessMemoryDumps(processMemoryDumps, pid) {
+    return processMemoryDumps.map(function(memoryDumps) {
+      return memoryDumps[pid];
+    });
+  }
+
+  /**
+   * Extract a chronological list of lists of VMRegion(s) (for a given process)
+   * from a chronological list of dictionaries of ProcessMemoryDump(s).
+   */
+  function extractVmRegions(processMemoryDumps, pid) {
+    return processMemoryDumps.map(function(memoryDumps) {
+      const processMemoryDump = memoryDumps[pid];
+      if (processMemoryDump === undefined) return undefined;
+      return processMemoryDump.mostRecentVmRegions;
+    });
+  }
+
+  /**
+   * Extract a chronological list of MemoryAllocatorDump(s) (for a given
+   * process and allocator name) from a chronological list of dictionaries of
+   * ProcessMemoryDump(s).
+   */
+  function extractMemoryAllocatorDumps(processMemoryDumps, pid, allocatorName) {
+    return processMemoryDumps.map(function(memoryDumps) {
+      const processMemoryDump = memoryDumps[pid];
+      if (processMemoryDump === undefined) return undefined;
+      return processMemoryDump.getMemoryAllocatorDumpByFullName(allocatorName);
+    });
+  }
+
+  /**
+   * Extract a chronological list of HeapDump(s) (for a given process and
+   * allocator name) from a chronological list of dictionaries of
+   * ProcessMemoryDump(s).
+   */
+  function extractHeapDumps(processMemoryDumps, pid, allocatorName) {
+    return processMemoryDumps.map(function(memoryDumps) {
+      const processMemoryDump = memoryDumps[pid];
+      if (processMemoryDump === undefined ||
+          processMemoryDump.heapDumps === undefined) {
+        return undefined;
+      }
+      return processMemoryDump.heapDumps[allocatorName];
+    });
+  }
+
+  return {
+    createSingleTestGlobalMemoryDump,
+    createMultipleTestGlobalMemoryDumps,
+    createSingleTestProcessMemoryDump,
+    createMultipleTestProcessMemoryDumps,
+    checkNumericFields,
+    checkSizeNumericFields,
+    checkStringFields,
+    checkColumns,
+    checkColumnInfosAndColor,
+    checkColor,
+    createAndCheckEmptyPanes,
+    createTestPane,
+    isElementDisplayed,
+    convertToProcessMemoryDumps,
+    extractProcessMemoryDumps,
+    extractVmRegions,
+    extractMemoryAllocatorDumps,
+    extractHeapDumps,
+  };
+});
+</script>

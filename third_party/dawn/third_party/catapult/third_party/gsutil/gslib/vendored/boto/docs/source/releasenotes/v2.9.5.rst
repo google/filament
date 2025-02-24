@@ -1,0 +1,32 @@
+boto v2.9.5
+===========
+
+:date: 2013/05/28
+
+This release adds support for `web identity federation`_ within the Secure
+Token Service (STS) & fixes several bugs.
+
+.. _`web identity federation`: http://docs.aws.amazon.com/STS/latest/UsingSTS/CreatingWIF.html
+
+Features
+--------
+
+* Added support for web identity federation - You can now delegate token access
+  via either an Oauth 2.0 or OpenID provider. (:sha:`9bd0a3`)
+
+
+Bugfixes
+--------
+
+* Altered the S3 key buffer to be a configurable value. (:issue:`1506`,
+  :sha:`8e3e36`)
+* Added Sphinx extension for better release notes. (:issue:`1511`,
+  :sha:`e2e32d` & :sha:`3d998b`)
+* Fixed a bug where DynamoDB v2 would only ever connect to the default endpoint.
+  (:issue:`1508`, :sha:`139912`)
+* Fixed a iteration/empty results bug & a ``between`` bug in DynamoDB v2.
+  (:issue:`1512`, :sha:`d109b6`)
+* Fixed an issue with ``EbsOptimized`` in EC2 Autoscale. (:issue:`1513`,
+  :sha:`424c41`)
+* Fixed a missing instance variable bug in DynamoDB v2. (:issue:`1516`,
+  :sha:`6fa8bf`)

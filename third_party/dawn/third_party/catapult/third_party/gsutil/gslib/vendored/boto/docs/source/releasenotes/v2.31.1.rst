@@ -1,0 +1,6 @@
+boto v2.31.1
+============
+
+:date: 2014/07/10
+
+This release fixes an installation bug in the 2.31.0 release.

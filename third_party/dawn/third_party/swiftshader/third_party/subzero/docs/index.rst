@@ -1,0 +1,5 @@
+.. toctree::
+   README
+   DESIGN
+   LOWERING
+   ALLOCATION

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+  <title>Trace-Viewer Tests: loading...</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <!-- WebComponents V0 origin trial token for localhost:8003. Expires 5 Nov 2020.
+     See https://crbug.com/1021137. -->
+  <meta http-equiv="origin-trial" content="AmIXlLSm/iI9w4skkaEKFRo+EW9D0lDg4u4GZIp70Ggf4bHfY5U5Jwh2lv793zDl7SHbRMgrhPjAy6NcE6VDvwsAAABSeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDMiLCJmZWF0dXJlIjoiV2ViQ29tcG9uZW50c1YwIiwiZXhwaXJ5IjoxNjA0NjEzNzYwfQ==">
+  <!-- WebComponents V0 origin trial token for 127.0.0.1:8003. Expires 1 Feb 2020.
+     See https://crbug.com/1021137. -->
+  <meta http-equiv="origin-trial" content="AuwWuUBIJgUHKi5rgEkqYaWR/Rbl/WrQPklxP3Lb9JBLQwdU4ykouPn0hTva5pHumlKNc1TqeZD1GEWo3YXTtQUAAABSeyJvcmlnaW4iOiJodHRwOi8vMTI3LjAuMC4xOjgwMDMiLCJmZWF0dXJlIjoiV2ViQ29tcG9uZW50c1YwIiwiZXhwaXJ5IjoxNjEyMjIzOTk5fQ==">
+  <link rel="shortcut icon" href="data:image/x-icon;base64,"
+        type="image/x-icon">
+
+  <script src="/components/webcomponentsjs/webcomponents.min.js"></script>
+  <link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+  <link rel="import" href="/tracing/base/unittest/interactive_test_runner.html">
+  <style>
+    html, body {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    'use strict';
+    window.addEventListener('load', function() {
+      HTMLImports.whenReady(function loadAndRunTests(e) {
+        tr.b.unittest.loadAndRunTests({
+          title: 'All Trace-Viewer Tests',
+          getAllSuiteRelPathsAsync() {
+            return tr.b.getAsync('/tracing/tests').then(function(json) {
+              return JSON.parse(json).test_relpaths;
+            }).catch(function(e) {
+              throw e;
+            });
+          },
+          testLinks: [
+            {linkPath: '/tracing_examples/skia_debugger.html',
+              title: 'Skia Debugger'},
+            {linkPath: '/tracing_examples/trace_viewer.html',
+              title: 'Trace File Viewer'}
+          ]
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "src/libANGLE/renderer/d3d/d3d11/Blit11Helper_autogen.inc":
+    "95a32e95912685d8edc029a3318e0392",
+  "src/libANGLE/renderer/d3d/d3d11/d3d11_blit_shaders_autogen.gni":
+    "1fd337e97abc0934c8ba78baf8a8621b",
+  "src/libANGLE/renderer/d3d/d3d11/gen_blit11helper.py":
+    "f376f86bbdf404ffbdc7e45a893a74b8"
+}

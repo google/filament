@@ -1,0 +1,6 @@
+<map id="pvrvk::impl::Image_" name="pvrvk::impl::Image_">
+<area shape="rect" id="node5" href="$classpvrvk_1_1impl_1_1_swapchain_image__.html" title="The Specialized image for swapchain" alt="" coords="815,57,1037,84"/>
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkImage, ObjectType\l::e_IMAGE \&gt;" alt="" coords="317,5,567,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkImage, PVRVkObjectType \&gt;" alt="" coords="5,13,269,54"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; Image_ \&gt;" alt="" coords="347,86,537,127"/>
+</map>

@@ -1,0 +1,83 @@
+{
+  "traceEvents": [
+    {
+      "name": "Thread size event",
+      "args": {
+        "state": {
+          "tile_count": 151,
+          "global_state": {
+            "memory_limit_in_bytes": 454557696,
+            "memory_limit_policy": "ALLOW_PREPAINT_ONLY",
+            "tree_priority": "SAME_PRIORITY_FOR_BOTH_TREES"
+          },
+          "memory_requirements": {
+            "memory_required_bytes": 16777216,
+            "memory_used_bytes": 17760256,
+            "memory_nice_to_have_bytes": 34078720
+          }
+        }
+      },
+      "pid": 36092,
+      "ts": 510075891653,
+      "cat": "cc",
+      "s": "t",
+      "tid": 28163,
+      "ph": "i"
+    },
+    {
+      "name": "Process size event",
+      "args": {
+        "state": {
+          "tile_count": 146,
+          "global_state": {
+            "memory_limit_in_bytes": 454557696,
+            "memory_limit_policy": "ALLOW_PREPAINT_ONLY",
+            "tree_priority": "SAME_PRIORITY_FOR_BOTH_TREES"
+          },
+          "memory_requirements": {
+            "memory_required_bytes": 16187392,
+            "memory_used_bytes": 17760256,
+            "memory_nice_to_have_bytes": 33488896
+          }
+        }
+      },
+      "pid": 36092,
+      "ts": 510075907469,
+      "cat": "cc",
+      "s": "p",
+      "tid": 28163,
+      "ph": "i"
+    },
+    {
+      "name": "Thread size event",
+      "args": {},
+      "pid": 36092,
+      "ts": 510075964350,
+      "cat": "cc",
+      "s": "t",
+      "tid": 28164,
+      "ph": "i"
+    },
+    {
+      "name": "Thread size event",
+      "args": {},
+      "pid": 36091,
+      "ts": 510075960350,
+      "cat": "cc",
+      "s": "t",
+      "tid": 28160,
+      "ph": "i"
+    },
+    {
+      "name": "Global size event",
+      "args": {},
+      "pid": 36091,
+      "ts": 510075958350,
+      "cat": "cc",
+      "s": "g",
+      "tid": 28160,
+      "ph": "i"
+    }
+  ]
+}
+

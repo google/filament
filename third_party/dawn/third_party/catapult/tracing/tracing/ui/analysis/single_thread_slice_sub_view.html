@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/related_events.html">
+<link rel="import" href="/tracing/ui/analysis/single_event_sub_view.html">
+
+<dom-module id='tr-ui-a-single-thread-slice-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: row;
+    }
+    #events {
+      display: flex;
+      flex-direction: column;
+    }
+
+    </style>
+    <tr-ui-a-single-event-sub-view id="content"></tr-ui-a-single-event-sub-view>
+    <div id="events">
+      <tr-ui-a-related-events id="relatedEvents">
+      </tr-ui-a-related-events>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-thread-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  get selection() {
+    return this.$.content.selection;
+  },
+
+  set selection(selection) {
+    this.$.content.selection = selection;
+    this.$.relatedEvents.setRelatedEvents(selection);
+    if (this.$.relatedEvents.hasRelatedEvents()) {
+      this.$.relatedEvents.style.display = '';
+    } else {
+      this.$.relatedEvents.style.display = 'none';
+    }
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-thread-slice-sub-view',
+    tr.model.ThreadSlice,
+    {
+      multi: false,
+      title: 'Slice',
+    });
+</script>

@@ -1,0 +1,7 @@
+{
+  // Overrides for the root eslintrc (all other rules still take effect)
+  "rules": {
+    // This rule is only used to enforce trackForCleanup() which we don't use in reftests.
+    "no-restricted-syntax": "off"
+  }
+}

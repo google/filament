@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.vr', function() {
+  function webvrMetric(histograms, model, opt_options) {
+    // Maps VR trace counters to histogram.
+    const WEBVR_COUNTERS = new Map([
+      ['gpu.WebVR FPS', {
+        name: 'webvr_fps',
+        unit: tr.b.Unit.byName.count_biggerIsBetter,
+        samples: {},
+        options: {
+          description: 'WebVR frame per second',
+          binBoundaries: tr.v.HistogramBinBoundaries.createLinear(20, 120, 25),
+        },
+      }],
+      ['gpu.WebVR frame time (ms)', {
+        name: 'webvr_frame_time',
+        unit: tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        samples: {},
+        options: {
+          description: 'WebVR frame time in ms',
+          binBoundaries: tr.v.HistogramBinBoundaries.createLinear(20, 120, 25),
+        },
+      }],
+      ['gpu.WebVR pose prediction (ms)', {
+        name: 'webvr_pose_prediction',
+        unit: tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        samples: {},
+        options: {
+          description: 'WebVR pose prediction in ms',
+          binBoundaries: tr.v.HistogramBinBoundaries.createLinear(20, 120, 25),
+        },
+      }],
+    ]);
+
+    for (const ue of model.userModel.expectations) {
+      const rangeOfInterestEnabled = opt_options && opt_options.rangeOfInterest;
+      if (rangeOfInterestEnabled &&
+          !opt_options.rangeOfInterest.intersectsExplicitRangeInclusive(
+              ue.start, ue.end)) {
+        continue;
+      }
+
+      // By default, only do calculations in the VR animation expectation, i.e.
+      // some time after we've entered VR, in order to avoid skewed results
+      // caused by VR entry, but allow calculation on the response expectation
+      // if we've manually selected it as a range of interest
+      if (ue.initiatorType !== tr.model.um.INITIATOR_TYPE.VR) continue;
+      if (!rangeOfInterestEnabled) {
+        if (!(ue instanceof tr.model.um.AnimationExpectation)) continue;
+      } else {
+        if (!(ue instanceof tr.model.um.AnimationExpectation ||
+              ue instanceof tr.model.um.ResponseExpectation)) continue;
+      }
+
+      for (const counter of model.getAllCounters()) {
+        if (!(WEBVR_COUNTERS.has(counter.id))) continue;
+
+        for (const series of counter.series) {
+          if (!(series.name in WEBVR_COUNTERS.get(counter.id).samples)) {
+            WEBVR_COUNTERS.get(counter.id).samples[series.name] = [];
+          }
+          for (const sample of series.samples) {
+            if (sample.timestamp < ue.start || sample.timestamp >= ue.end) {
+              continue;
+            }
+            if (rangeOfInterestEnabled &&
+                !opt_options.rangeOfInterest.intersectsExplicitRangeInclusive(
+                    sample.timestamp, sample.timestamp)) {
+              continue;
+            }
+
+            WEBVR_COUNTERS.get(counter.id).samples[series.name].push(
+                sample.value);
+          }
+        }
+      }
+    }
+
+    // Make sure we always report a value for WebVR FPS so that failing to
+    // submit frames will show up as a regression
+    if (!('value' in WEBVR_COUNTERS.get('gpu.WebVR FPS').samples)) {
+      WEBVR_COUNTERS.get('gpu.WebVR FPS').samples.value = [0];
+    }
+
+    for (const [key, value] of WEBVR_COUNTERS) {
+      for (const [seriesName, samples] of Object.entries(value.samples)) {
+        let histogramName = value.name;
+        if (seriesName !== 'value') {
+          histogramName = `${histogramName}_${seriesName}`;
+        }
+        histograms.createHistogram(histogramName, value.unit,
+            samples, value.options);
+      }
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(webvrMetric, {
+    supportsRangeOfInterest: true,
+  });
+
+  return {
+    webvrMetric,
+  };
+});
+</script>

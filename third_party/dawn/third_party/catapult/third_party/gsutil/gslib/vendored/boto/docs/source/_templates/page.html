@@ -1,0 +1,15 @@
+{% extends '!page.html' %}
+{% block body %}
+<!--REGION_DISCLAIMER_DO_NOT_REMOVE-->
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>You are viewing the documentation for an older version of boto (boto2).<p>
+<p class="last"><a class="reference external" href="https://github.com/boto/boto3">Boto3</a>, the next version of Boto, is now
+stable and recommended for general use.  It can be used side-by-side with
+Boto in the same project, so it is easy to start using Boto3 in your existing
+projects as well as new projects. Going forward, API updates and all new
+feature work will be focused on Boto3.</p>
+<p>For more information, see the <a href="http://boto3.readthedocs.org/">documentation for boto3.</a></p>
+</div>
+{{ super() }}
+{% endblock %}

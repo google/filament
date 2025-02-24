@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/heap_dump.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_allocator_details_pane.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_test_utils.html">
+<link rel="import" href="/tracing/ui/analysis/memory_dump_sub_view_util.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const MemoryAllocatorDump = tr.model.MemoryAllocatorDump;
+  const Scalar = tr.b.Scalar;
+  const unitlessNumber_smallerIsBetter =
+      tr.b.Unit.byName.unitlessNumber_smallerIsBetter;
+  const sizeInBytes_smallerIsBetter =
+      tr.b.Unit.byName.sizeInBytes_smallerIsBetter;
+  const HeapDump = tr.model.HeapDump;
+  const AggregationMode = tr.ui.analysis.MemoryColumn.AggregationMode;
+  const checkNumericFields = tr.ui.analysis.checkNumericFields;
+  const checkSizeNumericFields = tr.ui.analysis.checkSizeNumericFields;
+  const checkStringFields = tr.ui.analysis.checkStringFields;
+  const checkColumnInfosAndColor = tr.ui.analysis.checkColumnInfosAndColor;
+  const checkColumns = tr.ui.analysis.checkColumns;
+  const isElementDisplayed = tr.ui.analysis.isElementDisplayed;
+  const AllocatorDumpNameColumn = tr.ui.analysis.AllocatorDumpNameColumn;
+  const EffectiveSizeColumn = tr.ui.analysis.EffectiveSizeColumn;
+  const SizeColumn = tr.ui.analysis.SizeColumn;
+  const StringMemoryColumn = tr.ui.analysis.StringMemoryColumn;
+  const NumericMemoryColumn = tr.ui.analysis.NumericMemoryColumn;
+  const addGlobalMemoryDump = tr.model.MemoryDumpTestUtils.addGlobalMemoryDump;
+  const addProcessMemoryDump =
+    tr.model.MemoryDumpTestUtils.addProcessMemoryDump;
+  const newAllocatorDump = tr.model.MemoryDumpTestUtils.newAllocatorDump;
+  const addChildDump = tr.model.MemoryDumpTestUtils.addChildDump;
+  const addOwnershipLink = tr.model.MemoryDumpTestUtils.addOwnershipLink;
+
+  const SUBALLOCATION_CONTEXT = tr.ui.analysis.SUBALLOCATION_CONTEXT;
+  const MemoryAllocatorDumpInfoType = tr.model.MemoryAllocatorDumpInfoType;
+  const PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN;
+  const PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER;
+
+  function addRootDumps(containerMemoryDump, rootNames, addedCallback) {
+    // Test sanity check.
+    assert.isUndefined(containerMemoryDump.memoryAllocatorDumps);
+
+    const rootDumps = rootNames.map(function(rootName) {
+      return new MemoryAllocatorDump(containerMemoryDump, rootName);
+    });
+    addedCallback.apply(null, rootDumps);
+    containerMemoryDump.memoryAllocatorDumps = rootDumps;
+  }
+
+  function newSuballocationDump(ownerDump, parentDump, name, size) {
+    const suballocationDump = addChildDump(parentDump, name,
+        {numerics: {size}});
+    if (ownerDump !== undefined) {
+      addOwnershipLink(ownerDump, suballocationDump);
+    }
+    return suballocationDump;
+  }
+
+  function createProcessMemoryDumps() {
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+
+      // First timestamp.
+      const gmd1 = addGlobalMemoryDump(model, {ts: -10});
+      const pmd1 = addProcessMemoryDump(gmd1, process, {ts: -11});
+      pmd1.memoryAllocatorDumps = (function() {
+        const v8Dump = newAllocatorDump(pmd1, 'v8', {numerics: {
+          size: 1073741824 /* 1 GiB */,
+          inner_size: 2097152 /* 2 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 204)
+        }});
+
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 805306368 /* 768 MiB */}});
+        addChildDump(v8HeapsDump, 'heap42',
+            {numerics: {size: 804782080 /* 767.5 MiB */}});
+
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects');
+        v8ObjectsDump.addDiagnostic('url', 'http://example.com');
+        addChildDump(v8ObjectsDump, 'foo',
+            {numerics: {size: 1022976 /* 999 KiB */}});
+        addChildDump(v8ObjectsDump, 'bar',
+            {numerics: {size: 1024000 /* 1000 KiB */}});
+
+        const oilpanDump = newAllocatorDump(pmd1, 'oilpan',
+            {numerics: {size: 125829120 /* 120 MiB */}});
+        newSuballocationDump(
+            oilpanDump, v8Dump, '__99BEAD', 150994944 /* 144 MiB */);
+
+        const oilpanSubDump = addChildDump(oilpanDump, 'animals');
+
+        const oilpanSubDump1 = addChildDump(oilpanSubDump, 'cow',
+            {numerics: {size: 33554432 /* 32 MiB */}});
+        newSuballocationDump(
+            oilpanSubDump1, v8Dump, '__42BEEF', 67108864 /* 64 MiB */);
+
+        const oilpanSubDump2 = addChildDump(oilpanSubDump, 'chicken',
+            {numerics: {size: 16777216 /* 16 MiB */}});
+        newSuballocationDump(
+            oilpanSubDump2, v8Dump, '__68DEAD', 33554432 /* 32 MiB */);
+
+        const skiaDump = newAllocatorDump(pmd1, 'skia',
+            {numerics: {size: 8388608 /* 8 MiB */}});
+        const suballocationDump = newSuballocationDump(
+            skiaDump, v8Dump, '__15FADE', 16777216 /* 16 MiB */);
+
+        const ccDump = newAllocatorDump(pmd1, 'cc',
+            {numerics: {size: 4194304 /* 4 MiB */}});
+        newSuballocationDump(
+            ccDump, v8Dump, '__12FEED', 5242880 /* 5 MiB */).addDiagnostic(
+            'url', 'localhost:1234');
+
+        return [v8Dump, oilpanDump, skiaDump, ccDump];
+      })();
+
+      // Second timestamp.
+      const gmd2 = addGlobalMemoryDump(model, {ts: 10});
+      const pmd2 = addProcessMemoryDump(gmd2, process, {ts: 11});
+      pmd2.memoryAllocatorDumps = (function() {
+        const v8Dump = newAllocatorDump(pmd2, 'v8', {numerics: {
+          size: 1073741824 /* 1 GiB */,
+          inner_size: 2097152 /* 2 MiB */,
+          objects_count: new Scalar(unitlessNumber_smallerIsBetter, 204)
+        }});
+
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects');
+        v8ObjectsDump.addDiagnostic('url', 'http://sample.net');
+        addChildDump(v8ObjectsDump, 'foo',
+            {numerics: {size: 1020928 /* 997 KiB */}});
+        addChildDump(v8ObjectsDump, 'bar',
+            {numerics: {size: 1026048 /* 1002 KiB */}});
+
+        newSuballocationDump(
+            undefined, v8Dump, '__99BEAD', 268435456 /* 256 MiB */);
+
+        const ccDump = newAllocatorDump(pmd2, 'cc',
+            {numerics: {size: 7340032 /* 7 MiB */}});
+        newSuballocationDump(
+            ccDump, v8Dump, '__13DEED', 11534336 /* 11 MiB */).addDiagnostic(
+            'url', 'localhost:5678');
+
+        return [v8Dump, ccDump];
+      })();
+    });
+
+    return model.processes[1].memoryDumps;
+  }
+
+  function createSizeFields(values) {
+    return values.map(function(value) {
+      if (value === undefined) return undefined;
+      return new Scalar(sizeInBytes_smallerIsBetter, value);
+    });
+  }
+
+  const EXPECTED_COLUMNS = [
+    { title: 'Component', type: AllocatorDumpNameColumn, noAggregation: true },
+    { title: 'effective_size', type: EffectiveSizeColumn },
+    { title: 'size', type: SizeColumn },
+    { title: 'inner_size', type: NumericMemoryColumn },
+    { title: 'objects_count', type: NumericMemoryColumn },
+    { title: 'url', type: StringMemoryColumn }
+  ];
+
+  function checkRow(columns, row, expectations) {
+    const formattedTitle = columns[0].formatTitle(row);
+    const expectedTitle = expectations.title;
+    if (typeof expectedTitle === 'function') {
+      expectedTitle(formattedTitle);
+    } else {
+      assert.strictEqual(formattedTitle, expectedTitle);
+    }
+
+    checkSizeNumericFields(row, columns[1], expectations.size);
+    checkSizeNumericFields(row, columns[2], expectations.effective_size);
+    checkSizeNumericFields(row, columns[3], expectations.inner_size);
+    checkNumericFields(row, columns[4], expectations.objects_count,
+        unitlessNumber_smallerIsBetter);
+    checkStringFields(row, columns[5], expectations.url);
+
+    const expectedSubRowCount = expectations.sub_row_count;
+    if (expectedSubRowCount === undefined) {
+      assert.isUndefined(row.subRows);
+    } else {
+      assert.lengthOf(row.subRows, expectedSubRowCount);
+    }
+
+    const expectedContexts = expectations.contexts;
+    if (expectedContexts === undefined) {
+      assert.isUndefined(row.contexts);
+    } else {
+      assert.deepEqual(Array.from(row.contexts), expectedContexts);
+    }
+  }
+
+  function buildProcessMemoryDumps(count, preFinalizeDumpsCallback) {
+    const pmds = new Array(count);
+    tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      for (let i = 0; i < count; i++) {
+        const timestamp = 10 + i;
+        const gmd = addGlobalMemoryDump(model, {ts: timestamp});
+        pmds[i] = addProcessMemoryDump(gmd, process, {ts: timestamp});
+      }
+      preFinalizeDumpsCallback(pmds);
+    });
+    return pmds;
+  }
+
+  function getAllocatorDumps(pmds, fullName) {
+    return pmds.map(function(pmd) {
+      if (pmd === undefined) return undefined;
+      return pmd.getMemoryAllocatorDumpByFullName(fullName);
+    });
+  }
+
+  function checkAllocatorPaneColumnInfosAndColor(
+      column, dumps, numericName, expectedInfos) {
+    const numerics = dumps.map(function(dump) {
+      if (dump === undefined) return undefined;
+      return dump.numerics[numericName];
+    });
+    checkColumnInfosAndColor(
+        column, numerics, dumps, expectedInfos, undefined /* no color */);
+  }
+
+  test('instantiate_empty', function() {
+    tr.ui.analysis.createAndCheckEmptyPanes(this,
+        'tr-ui-a-memory-dump-allocator-details-pane', 'memoryAllocatorDumps',
+        function(viewEl) {
+          // Check that the info text is shown.
+          assert.isTrue(isElementDisplayed(viewEl.$.info_text));
+          assert.isFalse(isElementDisplayed(viewEl.$.table));
+        });
+  });
+
+  test('instantiate_single', function() {
+    const processMemoryDumps = createProcessMemoryDumps().slice(0, 1);
+
+    const viewEl = tr.ui.analysis.createTestPane(
+        'tr-ui-a-memory-dump-allocator-details-pane');
+    viewEl.memoryAllocatorDumps = getAllocatorDumps(processMemoryDumps, 'v8');
+    viewEl.rebuild();
+    assert.deepEqual(viewEl.requestedChildPanes, [undefined]);
+    this.addHTMLOutput(viewEl);
+
+    // Check that the table is shown.
+    assert.isTrue(isElementDisplayed(viewEl.$.table));
+    assert.isFalse(isElementDisplayed(viewEl.$.info_text));
+
+    const table = viewEl.$.table;
+    const columns = table.tableColumns;
+    checkColumns(columns, EXPECTED_COLUMNS, undefined /* no aggregation */);
+    const rows = table.tableRows;
+    assert.lengthOf(rows, 1);
+
+    // Check the rows of the table.
+    const rootRow = rows[0];
+    checkRow(columns, rootRow, {
+      title: 'v8',
+      size: [942619648],
+      effective_size: [1081031680],
+      inner_size: [2097152],
+      objects_count: [204],
+      sub_row_count: 3,
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8'),
+    });
+
+    const heapsSubRow = rootRow.subRows[0];
+    checkRow(columns, heapsSubRow, {
+      title: 'heaps',
+      size: [805306368],
+      effective_size: [805306368],
+      sub_row_count: 2,
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/heaps'),
+    });
+
+    const heapsUnspecifiedSubRow = heapsSubRow.subRows[0];
+    checkRow(columns, heapsUnspecifiedSubRow, {
+      title: '<unspecified>',
+      size: [524288],
+      effective_size: [524288],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/heaps/<unspecified>'),
+    });
+
+    const suballocationsSubRow = rootRow.subRows[2];
+    checkRow(columns, suballocationsSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(
+            Polymer.dom(formattedTitle).textContent, 'suballocations');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [135266304],
+      effective_size: [273678336],
+      sub_row_count: 3,
+      contexts: [SUBALLOCATION_CONTEXT],
+    });
+
+    const oilpanSuballocationSubRow = suballocationsSubRow.subRows[0];
+    checkRow(columns, oilpanSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'oilpan');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [125829120],
+      effective_size: [251658240],
+      sub_row_count: 2,
+      contexts: [SUBALLOCATION_CONTEXT],
+    });
+
+    const oilpanUnspecifiedSuballocationSubRow =
+        oilpanSuballocationSubRow.subRows[0];
+    checkRow(columns, oilpanUnspecifiedSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(
+            Polymer.dom(formattedTitle).textContent, '<unspecified>');
+        assert.strictEqual(formattedTitle.title, 'v8/__99BEAD');
+      },
+      size: [75497472],
+      effective_size: [150994944],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__99BEAD'),
+    });
+
+    const oilpanAnimalsSuballocationSubRow =
+      oilpanSuballocationSubRow.subRows[1];
+    checkRow(columns, oilpanAnimalsSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'animals');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [50331648],
+      effective_size: [100663296],
+      sub_row_count: 2,
+      contexts: [SUBALLOCATION_CONTEXT],
+    });
+
+    const oilpanCowSuballocationSubRow =
+        oilpanAnimalsSuballocationSubRow.subRows[0];
+    checkRow(columns, oilpanCowSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'cow');
+        assert.strictEqual(formattedTitle.title, 'v8/__42BEEF');
+      },
+      size: [33554432],
+      effective_size: [67108864],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__42BEEF'),
+    });
+
+    const skiaSuballocationSubRow = suballocationsSubRow.subRows[1];
+    checkRow(columns, skiaSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'skia');
+        assert.strictEqual(formattedTitle.title, 'v8/__15FADE');
+      },
+      size: [8388608],
+      effective_size: [16777216],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__15FADE'),
+    });
+
+    const ccSuballocationSubRow = suballocationsSubRow.subRows[2];
+    checkRow(columns, ccSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'cc');
+        assert.strictEqual(formattedTitle.title, 'v8/__12FEED');
+      },
+      size: [1048576],
+      effective_size: [5242880],
+      url: ['localhost:1234'],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__12FEED')
+    });
+  });
+
+  test('instantiate_multipleDiff', function() {
+    const processMemoryDumps = createProcessMemoryDumps();
+
+    const viewEl = tr.ui.analysis.createTestPane(
+        'tr-ui-a-memory-dump-allocator-details-pane');
+    viewEl.memoryAllocatorDumps = getAllocatorDumps(processMemoryDumps, 'v8');
+    viewEl.aggregationMode = AggregationMode.DIFF;
+    viewEl.rebuild();
+    assert.deepEqual(viewEl.requestedChildPanes, [undefined]);
+    this.addHTMLOutput(viewEl);
+
+    // Check that the table is shown.
+    assert.isTrue(isElementDisplayed(viewEl.$.table));
+    assert.isFalse(isElementDisplayed(viewEl.$.info_text));
+
+    const table = viewEl.$.table;
+    const columns = table.tableColumns;
+    checkColumns(columns, EXPECTED_COLUMNS, AggregationMode.DIFF);
+    const rows = table.tableRows;
+    assert.lengthOf(rows, 1);
+
+    // Check the rows of the table.
+    const rootRow = rows[0];
+    checkRow(columns, rootRow, {
+      title: 'v8',
+      size: [942619648, 1066401792],
+      effective_size: [1081031680, 1073741824],
+      inner_size: [2097152, 2097152],
+      objects_count: [204, 204],
+      sub_row_count: 4,
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8'),
+    });
+
+    const heapsSubRow = rootRow.subRows[0];
+    checkRow(columns, heapsSubRow, {
+      title: 'heaps',
+      size: [805306368, undefined],
+      effective_size: [805306368, undefined],
+      sub_row_count: 2,
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/heaps'),
+    });
+
+    const heapsUnspecifiedSubRow = heapsSubRow.subRows[0];
+    checkRow(columns, heapsUnspecifiedSubRow, {
+      title: '<unspecified>',
+      size: [524288, undefined],
+      effective_size: [524288, undefined],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/heaps/<unspecified>'),
+    });
+
+    const unspecifiedSubRow = rootRow.subRows[2];
+    checkRow(columns, unspecifiedSubRow, {
+      title: '<unspecified>',
+      size: [undefined, 791725056],
+      effective_size: [undefined, 791725056],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/<unspecified>'),
+    });
+
+    const suballocationsSubRow = rootRow.subRows[3];
+    checkRow(columns, suballocationsSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(
+            Polymer.dom(formattedTitle).textContent, 'suballocations');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [135266304, 272629760],
+      effective_size: [273678336, 279969792],
+      sub_row_count: 3,
+      contexts: [SUBALLOCATION_CONTEXT, SUBALLOCATION_CONTEXT],
+    });
+
+    const oilpanSuballocationSubRow = suballocationsSubRow.subRows[0];
+    checkRow(columns, oilpanSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'oilpan');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [125829120, 268435456],
+      effective_size: [251658240, 268435456],
+      sub_row_count: 2,
+      contexts: [SUBALLOCATION_CONTEXT, SUBALLOCATION_CONTEXT],
+    });
+
+    const oilpanUnspecifiedSuballocationSubRow =
+        oilpanSuballocationSubRow.subRows[0];
+    checkRow(columns, oilpanUnspecifiedSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(
+            Polymer.dom(formattedTitle).textContent, '<unspecified>');
+        assert.strictEqual(formattedTitle.title, 'v8/__99BEAD');
+      },
+      size: [75497472, 268435456],
+      effective_size: [150994944, 268435456],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__99BEAD'),
+    });
+
+    const oilpanAnimalsSuballocationSubRow =
+      oilpanSuballocationSubRow.subRows[1];
+    checkRow(columns, oilpanAnimalsSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'animals');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [50331648, undefined],
+      effective_size: [100663296, undefined],
+      sub_row_count: 2,
+      contexts: [SUBALLOCATION_CONTEXT, undefined],
+    });
+
+    const oilpanCowSuballocationSubRow =
+        oilpanAnimalsSuballocationSubRow.subRows[0];
+    checkRow(columns, oilpanCowSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'cow');
+        assert.strictEqual(formattedTitle.title, 'v8/__42BEEF');
+      },
+      size: [33554432, undefined],
+      effective_size: [67108864, undefined],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__42BEEF'),
+    });
+
+    const skiaSuballocationSubRow = suballocationsSubRow.subRows[1];
+    checkRow(columns, skiaSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'skia');
+        assert.strictEqual(formattedTitle.title, 'v8/__15FADE');
+      },
+      size: [8388608, undefined],
+      effective_size: [16777216, undefined],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/__15FADE'),
+    });
+
+    const ccSuballocationSubRow = suballocationsSubRow.subRows[2];
+    checkRow(columns, ccSuballocationSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(Polymer.dom(formattedTitle).textContent, 'cc');
+        assert.strictEqual(formattedTitle.title, 'v8/__12FEED, v8/__13DEED');
+      },
+      size: [1048576, 4194304],
+      effective_size: [5242880, 11534336],
+      url: ['localhost:1234', 'localhost:5678'],
+      contexts: [
+        processMemoryDumps[0].getMemoryAllocatorDumpByFullName('v8/__12FEED'),
+        processMemoryDumps[1].getMemoryAllocatorDumpByFullName('v8/__13DEED')
+      ]
+    });
+  });
+
+  test('instantiate_multipleMax', function() {
+    const processMemoryDumps = createProcessMemoryDumps();
+
+    const viewEl = tr.ui.analysis.createTestPane(
+        'tr-ui-a-memory-dump-allocator-details-pane');
+    viewEl.memoryAllocatorDumps = getAllocatorDumps(processMemoryDumps, 'v8');
+    viewEl.aggregationMode = AggregationMode.MAX;
+    viewEl.rebuild();
+    assert.deepEqual(viewEl.requestedChildPanes, [undefined]);
+    this.addHTMLOutput(viewEl);
+
+    // Check that the table is shown.
+    assert.isTrue(isElementDisplayed(viewEl.$.table));
+    assert.isFalse(isElementDisplayed(viewEl.$.info_text));
+
+    // Just check that the aggregation mode was propagated to the columns.
+    const table = viewEl.$.table;
+    const columns = table.tableColumns;
+    checkColumns(columns, EXPECTED_COLUMNS, AggregationMode.MAX);
+    const rows = table.tableRows;
+    assert.lengthOf(rows, 1);
+  });
+
+  test('instantiate_multipleWithUndefined', function() {
+    const processMemoryDumps = createProcessMemoryDumps();
+    processMemoryDumps.splice(1, 0, undefined);
+
+    const viewEl = tr.ui.analysis.createTestPane(
+        'tr-ui-a-memory-dump-allocator-details-pane');
+    viewEl.memoryAllocatorDumps = getAllocatorDumps(processMemoryDumps, 'v8');
+    viewEl.aggregationMode = AggregationMode.DIFF;
+    viewEl.rebuild();
+    assert.deepEqual(viewEl.requestedChildPanes, [undefined]);
+    this.addHTMLOutput(viewEl);
+
+    // Check that the table is shown.
+    assert.isTrue(isElementDisplayed(viewEl.$.table));
+    assert.isFalse(isElementDisplayed(viewEl.$.info_text));
+
+    const table = viewEl.$.table;
+    const columns = table.tableColumns;
+    checkColumns(columns, EXPECTED_COLUMNS, AggregationMode.DIFF);
+    const rows = table.tableRows;
+    assert.lengthOf(rows, 1);
+
+    // Check only a few rows of the table.
+    const rootRow = rows[0];
+    checkRow(columns, rootRow, {
+      title: 'v8',
+      size: [942619648, undefined, 1066401792],
+      effective_size: [1081031680, undefined, 1073741824],
+      inner_size: [2097152, undefined, 2097152],
+      objects_count: [204, undefined, 204],
+      sub_row_count: 4,
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8'),
+    });
+
+    const unspecifiedSubRow = rootRow.subRows[2];
+    checkRow(columns, unspecifiedSubRow, {
+      title: '<unspecified>',
+      size: [undefined, undefined, 791725056],
+      effective_size: [undefined, undefined, 791725056],
+      contexts: getAllocatorDumps(processMemoryDumps, 'v8/<unspecified>'),
+    });
+
+    const suballocationsSubRow = rootRow.subRows[3];
+    checkRow(columns, suballocationsSubRow, {
+      title(formattedTitle) {
+        assert.strictEqual(
+            Polymer.dom(formattedTitle).textContent, 'suballocations');
+        assert.strictEqual(formattedTitle.title, '');
+      },
+      size: [135266304, undefined, 272629760],
+      effective_size: [273678336, undefined, 279969792],
+      sub_row_count: 3,
+      contexts: [SUBALLOCATION_CONTEXT, undefined, SUBALLOCATION_CONTEXT],
+    });
+  });
+
+  test('heapDumpsPassThrough', function() {
+    const processMemoryDumps = createProcessMemoryDumps();
+    const heapDumps = processMemoryDumps.map(function(dump) {
+      if (dump === undefined) return undefined;
+      return new HeapDump(dump, 'v8');
+    });
+
+    // Start by creating a component details pane without any heap dumps.
+    const viewEl = tr.ui.analysis.createTestPane(
+        'tr-ui-a-memory-dump-allocator-details-pane');
+    viewEl.memoryAllocatorDumps = getAllocatorDumps(processMemoryDumps, 'v8');
+    viewEl.aggregationMode = AggregationMode.MAX;
+    viewEl.rebuild();
+
+    assert.lengthOf(viewEl.requestedChildPanes, 1);
+    assert.isUndefined(viewEl.requestedChildPanes[0]);
+
+    // Set the heap dumps. This should trigger creating a heap details pane.
+    viewEl.heapDumps = heapDumps;
+    viewEl.aggregationMode = AggregationMode.DIFF;
+    viewEl.rebuild();
+
+    assert.lengthOf(viewEl.requestedChildPanes, 2);
+    assert.strictEqual(viewEl.requestedChildPanes[1].tagName,
+        'TR-UI-A-MEMORY-DUMP-HEAP-DETAILS-PANE');
+    assert.strictEqual(viewEl.requestedChildPanes[1].heapDumps, heapDumps);
+    assert.strictEqual(viewEl.requestedChildPanes[1].aggregationMode,
+        AggregationMode.DIFF);
+
+    // Unset the heap dumps. This should trigger removing the heap details pane.
+    viewEl.heapDumps = undefined;
+    viewEl.rebuild();
+
+    assert.lengthOf(viewEl.requestedChildPanes, 3);
+    assert.isUndefined(viewEl.requestedChildPanes[2]);
+  });
+
+  test('allocatorDumpNameColumn', function() {
+    const c = new AllocatorDumpNameColumn();
+
+    // Regular row.
+    assert.strictEqual(c.formatTitle({title: 'Regular row'}), 'Regular row');
+
+    // Sub-allocation row.
+    const row = c.formatTitle({
+      title: 'Suballocation row',
+      suballocation: true,
+    });
+    assert.strictEqual(Polymer.dom(row).textContent, 'Suballocation row');
+    assert.strictEqual(row.style.fontStyle, 'italic');
+  });
+
+  test('effectiveSizeColumn_noContext', function() {
+    const c = new EffectiveSizeColumn('Effective Size', 'bytes', (x => x),
+        AggregationMode.DIFF);
+
+    // Single selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128]),
+        undefined /* no context */,
+        [] /* no infos */,
+        undefined /* no color */);
+
+    // Multi-selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128, 256, undefined, 64]),
+        undefined /* no context */,
+        [] /* no infos */,
+        undefined /* no color */);
+  });
+
+  test('effectiveSizeColumn_suballocationContext', function() {
+    const c = new EffectiveSizeColumn('Effective Size', 'bytes', (x => x),
+        AggregationMode.MAX);
+
+    // Single selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128]),
+        [SUBALLOCATION_CONTEXT],
+        [] /* no infos */,
+        undefined /* no color */);
+
+    // Multi-selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([undefined, 256, undefined, 64]),
+        [undefined, SUBALLOCATION_CONTEXT, SUBALLOCATION_CONTEXT,
+          SUBALLOCATION_CONTEXT],
+        [] /* no infos */,
+        undefined /* no color */);
+  });
+
+  test('effectiveSizeColumn_dumpContext_noOwnership', function() {
+    const c = new EffectiveSizeColumn('Effective Size', 'bytes', (x => x),
+        AggregationMode.DIFF);
+    const pmds = buildProcessMemoryDumps(4 /* count */, function(pmds) {
+      addRootDumps(pmds[0], ['v8'], function(v8Dump) {
+        addChildDump(v8Dump, 'heaps', {numerics: {size: 64}});
+      });
+      addRootDumps(pmds[2], ['v8'], function(v8Dump) {
+        addChildDump(v8Dump, 'heaps', {numerics: {size: 128}});
+      });
+      addRootDumps(pmds[3], ['v8'], function(v8Dump) {});
+    });
+    const v8HeapsDumps = getAllocatorDumps(pmds, 'v8/heaps');
+
+    // Single selection.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDumps[0]],
+        'effective_size',
+        [] /* no infos */);
+
+    // Multi-selection, all dumps defined.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDumps[0], v8HeapsDumps[2]],
+        'effective_size',
+        [] /* no infos */);
+
+    // Multi-selection, some dumps missing.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        v8HeapsDumps,
+        'effective_size',
+        [] /* no infos */);
+  });
+
+  test('effectiveSizeColumn_dumpContext_singleOwnership', function() {
+    const c = new EffectiveSizeColumn('Effective Size', 'bytes', (x => x),
+        AggregationMode.MAX);
+    const pmds = buildProcessMemoryDumps(5 /* count */, function(pmds) {
+      addRootDumps(pmds[0], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 32}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        addOwnershipLink(v8HeapsDump, oilpanObjectsDump);
+      });
+      addRootDumps(pmds[1], ['v8'], function(v8Dump) {
+        addChildDump(v8Dump, 'heaps', {numerics: {size: 32}});
+        // Missing oilpan/objects dump.
+      });
+      addRootDumps(pmds[2], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        // Missing v8/heaps dump.
+      });
+      addRootDumps(pmds[3], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        addChildDump(v8Dump, 'heaps', {numerics: {size: 32}});
+        addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        // Missing ownership link.
+      });
+      addRootDumps(pmds[4], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 32}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        addOwnershipLink(v8HeapsDump, oilpanObjectsDump, 2);
+      });
+    });
+    const v8HeapsDump = getAllocatorDumps(pmds, 'v8/heaps');
+    const oilpanObjectsDump = getAllocatorDumps(pmds, 'oilpan/objects');
+
+    // Single selection.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDump[0]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FE',
+            message: 'shares \'oilpan/objects\' in Process 1 (importance: 0) ' +
+                'with no other dumps',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [oilpanObjectsDump[4]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by \'v8/heaps\' in Process 1 (importance: 2)',
+            color: 'green'
+          }
+        ]);
+
+    // Multi-selection, all dumps defined.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDump[0], v8HeapsDump[4]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FE',
+            message: 'shares \'oilpan/objects\' in Process 1 (importance: ' +
+                '0\u20132) with no other dumps',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [oilpanObjectsDump[0], oilpanObjectsDump[4]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by \'v8/heaps\' in Process 1 (importance: ' +
+                '0\u20132)',
+            color: 'green'
+          }
+        ]);
+
+    // Multi-selection, some dumps missing.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        v8HeapsDump,
+        'effective_size',
+        [
+          {
+            icon: '\u21FE',
+            message: 'shares \'oilpan/objects\' in Process 1 at some ' +
+                'selected timestamps (importance: 0\u20132) with no other ' +
+                'dumps',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        oilpanObjectsDump,
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by \'v8/heaps\' in Process 1 at some selected ' +
+                'timestamps (importance: 0\u20132)',
+            color: 'green'
+          }
+        ]);
+  });
+
+  test('effectiveSizeColumn_dumpContext_multipleOwnerships', function() {
+    const c = new EffectiveSizeColumn('Effective Size', 'bytes', (x => x),
+        AggregationMode.DIFF);
+    const pmds = buildProcessMemoryDumps(6 /* count */, function(pmds) {
+      addRootDumps(pmds[0], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 32}});
+        const v8QueuesDump = addChildDump(v8Dump, 'queues',
+            {numerics: {size: 8}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        addOwnershipLink(v8HeapsDump, oilpanObjectsDump);
+        addOwnershipLink(v8QueuesDump, oilpanObjectsDump, 1);
+      });
+      addRootDumps(pmds[1], ['v8'], function(v8Dump) {});
+      addRootDumps(pmds[2], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 32}});
+        const v8QueuesDump = addChildDump(v8Dump, 'queues',
+            {numerics: {size: 8}});
+        const v8PilesDump = addChildDump(v8Dump, 'piles',
+            {numerics: {size: 48}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        addOwnershipLink(v8HeapsDump, oilpanObjectsDump, 2);
+        addOwnershipLink(v8QueuesDump, oilpanObjectsDump, 1);
+        addOwnershipLink(v8PilesDump, oilpanObjectsDump);
+      });
+      addRootDumps(pmds[3], ['v8', 'blink'], function(v8Dump, blinkDump) {
+        const blinkHandlesDump = addChildDump(blinkDump, 'handles',
+            {numerics: {size: 32}});
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 64}});
+        const blinkObjectsDump = addChildDump(blinkDump, 'objects',
+            {numerics: {size: 32}});
+        addOwnershipLink(blinkHandlesDump, v8HeapsDump, -273);
+        addOwnershipLink(v8HeapsDump, blinkObjectsDump, 3);
+      });
+      addRootDumps(pmds[4], ['v8', 'gpu'], function(v8Dump, gpuDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 64}});
+        const gpuTile1Dump = addChildDump(gpuDump, 'tile1',
+            {numerics: {size: 100}});
+        const gpuTile2Dump = addChildDump(gpuDump, 'tile2',
+            {numerics: {size: 99}});
+        addOwnershipLink(v8HeapsDump, gpuTile1Dump, 3);
+        addOwnershipLink(gpuTile2Dump, gpuTile1Dump, -1);
+      });
+      addRootDumps(pmds[5], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 32}});
+        const v8QueuesDump = addChildDump(v8Dump, 'queues',
+            {numerics: {size: 8}});
+        const v8PilesDump = addChildDump(v8Dump, 'piles',
+            {numerics: {size: 48}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 64}});
+        addOwnershipLink(v8HeapsDump, oilpanObjectsDump, 1);
+        addOwnershipLink(v8QueuesDump, oilpanObjectsDump, 1);
+        addOwnershipLink(v8PilesDump, oilpanObjectsDump, 7);
+      });
+    });
+    const v8HeapsDump = getAllocatorDumps(pmds, 'v8/heaps');
+    const oilpanObjectsDump = getAllocatorDumps(pmds, 'oilpan/objects');
+    const gpuTile1Dump = getAllocatorDumps(pmds, 'gpu/tile1');
+
+    // Single selection.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDump[4]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FE',
+            message: 'shares \'gpu/tile1\' in Process 1 (importance: 3) with ' +
+                '\'gpu/tile2\' in Process 1 (importance: -1)',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [gpuTile1Dump[4]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by:\n' +
+                ' - \'v8/heaps\' in Process 1 (importance: 3)\n' +
+                ' - \'gpu/tile2\' in Process 1 (importance: -1)',
+            color: 'green'
+          }
+        ]);
+
+    // Multi-selection, all dumps defined.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapsDump[2], v8HeapsDump[5]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FE',
+            message: 'shares \'oilpan/objects\' in Process 1 (importance: ' +
+                '1\u20132) with:\n' +
+                ' - \'v8/queues\' in Process 1 (importance: 1)\n' +
+                ' - \'v8/piles\' in Process 1 (importance: 0\u20137)',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [oilpanObjectsDump[2], oilpanObjectsDump[5]],
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by:\n' +
+                ' - \'v8/heaps\' in Process 1 (importance: 1\u20132)\n' +
+                ' - \'v8/queues\' in Process 1 (importance: 1)\n' +
+                ' - \'v8/piles\' in Process 1 (importance: 0\u20137)',
+            color: 'green'
+          }
+        ]);
+
+    // Multi-selection, some dumps missing.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        v8HeapsDump,
+        'effective_size',
+        [ // v8/objects is both owned (first info) and an owner (second info).
+          {
+            icon: '\u21FD',
+            message: 'shared by \'blink/handles\' in Process 1 at some ' +
+                'selected timestamps (importance: -273)',
+            color: 'green'
+          },
+          {
+            icon: '\u21FE',
+            message: 'shares:\n' +
+                ' - \'oilpan/objects\' in Process 1 at some selected ' +
+                'timestamps (importance: 0\u20132) with:\n' +
+                '    - \'v8/queues\' in Process 1 (importance: 1)\n' +
+                '    - \'v8/piles\' in Process 1 at some selected ' +
+                'timestamps (importance: 0\u20137)\n' +
+                ' - \'blink/objects\' in Process 1 at some selected ' +
+                'timestamps (importance: 3) with no other dumps\n' +
+                ' - \'gpu/tile1\' in Process 1 at some selected timestamps ' +
+                '(importance: 3) with \'gpu/tile2\' in Process 1 ' +
+                '(importance: -1)',
+            color: 'green'
+          }
+        ]);
+    checkAllocatorPaneColumnInfosAndColor(c,
+        oilpanObjectsDump,
+        'effective_size',
+        [
+          {
+            icon: '\u21FD',
+            message: 'shared by:\n' +
+                ' - \'v8/heaps\' in Process 1 at some selected timestamps ' +
+                '(importance: 0\u20132)\n' +
+                ' - \'v8/queues\' in Process 1 at some selected timestamps ' +
+                '(importance: 1)\n' +
+                ' - \'v8/piles\' in Process 1 at some selected timestamps ' +
+                '(importance: 0\u20137)',
+            color: 'green'
+          }
+        ]);
+  });
+
+  test('sizeColumn_noContext', function() {
+    const c = new SizeColumn('Size', 'bytes', (x => x),
+        AggregationMode.DIFF);
+
+    // Single selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128]),
+        undefined /* no context */,
+        [] /* no infos */,
+        undefined /* no color */);
+
+    // Multi-selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128, 256, undefined, 64]),
+        undefined /* no context */,
+        [] /* no infos */,
+        undefined /* no color */);
+  });
+
+  test('sizeColumn_suballocationContext', function() {
+    const c = new SizeColumn('Size', 'bytes', (x => x),
+        AggregationMode.MAX);
+
+    // Single selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([128]),
+        [SUBALLOCATION_CONTEXT],
+        [] /* no infos */,
+        undefined /* no color */);
+
+    // Multi-selection.
+    checkColumnInfosAndColor(c,
+        createSizeFields([undefined, 256, undefined, 64]),
+        [undefined, SUBALLOCATION_CONTEXT, undefined, SUBALLOCATION_CONTEXT],
+        [] /* no infos */,
+        undefined /* no color */);
+  });
+
+  test('sizeColumn_dumpContext', function() {
+    const c = new SizeColumn('Size', 'bytes', (x => x), AggregationMode.DIFF);
+    const pmds = buildProcessMemoryDumps(7 /* count */, function(pmds) {
+      addRootDumps(pmds[0], ['v8'], function(v8Dump) {
+        // Single direct overlap (v8/objects -> v8/heaps).
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects',
+            {numerics: {size: 1536}});
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+        addOwnershipLink(v8ObjectsDump, v8HeapsDump);
+      });
+      // pmd[1] intentionally skipped.
+      addRootDumps(pmds[2], ['v8'], function(v8Dump, oilpanDump) {
+        // Single direct overlap with inconsistent owned dump size.
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects',
+            {numerics: {size: 3072}});
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+        addOwnershipLink(v8ObjectsDump, v8HeapsDump);
+      });
+      addRootDumps(pmds[3], ['v8'], function(v8Dump) {
+        // Single indirect overlap (v8/objects/X -> v8/heaps/42).
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects',
+            {numerics: {size: 1536}});
+        const v8ObjectsXDump = addChildDump(v8ObjectsDump, 'X',
+            {numerics: {size: 512}});
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+        const v8Heaps42Dump = addChildDump(v8HeapsDump, '42',
+            {numerics: {size: 1024}});
+        addOwnershipLink(v8ObjectsXDump, v8Heaps42Dump);
+      });
+      addRootDumps(pmds[4], ['v8'], function(v8Dump) {
+        // Multiple overlaps.
+        const v8ObjectsDump = addChildDump(v8Dump, 'objects',
+            {numerics: {size: 1024}});
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+
+        const v8ObjectsXDump = addChildDump(v8ObjectsDump, 'X',
+            {numerics: {size: 512}});
+        const v8Heaps42Dump = addChildDump(v8HeapsDump, '42',
+            {numerics: {size: 1280}});
+        addOwnershipLink(v8ObjectsXDump, v8Heaps42Dump);
+
+        const v8ObjectsYDump = addChildDump(v8ObjectsDump, 'Y',
+            {numerics: {size: 128}});
+        const v8Heaps90Dump = addChildDump(v8HeapsDump, '90',
+            {numerics: {size: 256}});
+        addOwnershipLink(v8ObjectsYDump, v8Heaps90Dump);
+
+        const v8BlocksDump = addChildDump(v8Dump, 'blocks',
+            {numerics: {size: 768}});
+        addOwnershipLink(v8BlocksDump, v8Heaps42Dump);
+      });
+      addRootDumps(pmds[5], ['v8'], function(v8Dump) {
+        // No overlaps, inconsistent parent size.
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+        addChildDump(v8HeapsDump, '42', {numerics: {size: 1536}});
+        addChildDump(v8HeapsDump, '90', {numerics: {size: 615}});
+      });
+      addRootDumps(pmds[6], ['v8', 'oilpan'], function(v8Dump, oilpanDump) {
+        // No overlaps, inconsistent parent and owned dump size.
+        const v8HeapsDump = addChildDump(v8Dump, 'heaps',
+            {numerics: {size: 2048}});
+        addChildDump(v8HeapsDump, '42', {numerics: {size: 1536}});
+        addChildDump(v8HeapsDump, '90', {numerics: {size: 615}});
+        const oilpanObjectsDump =
+            addChildDump(oilpanDump, 'objects', {numerics: {size: 3072}});
+        addOwnershipLink(oilpanObjectsDump, v8HeapsDump);
+      });
+    });
+    const v8HeapDumps = getAllocatorDumps(pmds, 'v8/heaps');
+
+    // Single selection, single overlap.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[0]],
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its sibling \'objects\' (1.5 KiB)',
+            color: 'blue'
+          }
+        ]);
+
+    // Single selection, multiple overlaps.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[4]],
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its siblings:\n' +
+                ' - \'objects\' (640.0 B)\n' +
+                ' - \'blocks\' (768.0 B)',
+            color: 'blue'
+          }
+        ]);
+
+    // Single selection, warnings with no overlaps.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[6]],
+        'size',
+        [
+          {
+            icon: '\u26A0',
+            message: 'provided size (2.0 KiB) was less than the aggregated ' +
+                'size of the children (2.1 KiB)',
+            color: 'red'
+          },
+          {
+            icon: '\u26A0',
+            message: 'provided size (2.0 KiB) was less than the size of the ' +
+                'largest owner (3.0 KiB)',
+            color: 'red'
+          }
+        ]);
+
+    // Single selection, single overlap with a warning.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[2]],
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its sibling \'objects\' (3.0 KiB)',
+            color: 'blue'
+          },
+          {
+            icon: '\u26A0',
+            message: 'provided size (2.0 KiB) was less than the size of the ' +
+                'largest owner (3.0 KiB)',
+            color: 'red'
+          }
+        ]);
+
+    // Multi-selection, single overlap.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[0], v8HeapDumps[3]],
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its sibling \'objects\'',
+            color: 'blue'
+          }
+        ]);
+
+    // Multi-selection, multiple overlaps.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[0], v8HeapDumps[4]],
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its siblings:\n' +
+                ' - \'objects\'\n' +
+                ' - \'blocks\' at some selected timestamps',
+            color: 'blue'
+          }
+        ]);
+
+    // Multi-selection, warnings with no overlaps.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        [v8HeapDumps[5], v8HeapDumps[6]],
+        'size',
+        [
+          {
+            icon: '\u26A0',
+            message: 'provided size was less than the aggregated ' +
+                'size of the children',
+            color: 'red'
+          },
+          {
+            icon: '\u26A0',
+            message: 'provided size was less than the size of the largest ' +
+                'owner at some selected timestamps',
+            color: 'red'
+          }
+        ]);
+
+    // Multi-selection, multiple overlaps with warnings.
+    checkAllocatorPaneColumnInfosAndColor(c,
+        v8HeapDumps,
+        'size',
+        [
+          {
+            icon: '\u24D8',
+            message: 'overlaps with its siblings:\n' +
+                ' - \'objects\' at some selected timestamps\n' +
+                ' - \'blocks\' at some selected timestamps',
+            color: 'blue'
+          },
+          {
+            icon: '\u26A0',
+            message: 'provided size was less than the size of the largest ' +
+                'owner at some selected timestamps',
+            color: 'red'
+          },
+          {
+            icon: '\u26A0',
+            message: 'provided size was less than the aggregated size of ' +
+                'the children at some selected timestamps',
+            color: 'red'
+          }
+        ]);
+  });
+});
+</script>

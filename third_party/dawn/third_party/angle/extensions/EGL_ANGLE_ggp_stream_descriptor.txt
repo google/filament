@@ -1,0 +1,73 @@
+Name
+
+    ANGLE_ggp_stream_descriptor
+
+Name Strings
+
+    EGL_ANGLE_ggp_stream_descriptor
+
+Contributors
+
+    Jamie Madill
+
+Contacts
+
+    Jamie Madill, Google Inc. (jmadill 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, November 3, 2019
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension allows initializing an EGL Window surface backed by a
+    VkSurfaceKHR with a Google Games Platform GgpStreamDescriptor.
+
+    It is based on the Vulkan extension VK_GGP_stream_descriptor_surface.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument to
+    eglCreateSurfaceKHR:
+
+        EGL_GGP_STREAM_DESCRIPTOR_ANGLE  0x348B
+
+Additions to the EGL 1.5 Specification
+
+    Add the following to section 3.5.1 "Creating On-Screen Rendering Surfaces":
+
+    EGL_GGP_STREAM_DESCRIPTOR_ANGLE indicates a GgpStreamDescriptor referring
+    to the GGP stream descriptor to associate with the surface. If
+    EGL_GGP_STREAM_DESCRIPTOR_ANGLE is not specified a default stream
+    descriptor will be used.
+
+Issues
+
+    None yet.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Nov 3, 2019    jmadill    Initial version

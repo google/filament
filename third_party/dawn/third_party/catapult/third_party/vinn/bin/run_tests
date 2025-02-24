@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# Copyright (c) 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import argparse
+import os
+import sys
+import unittest
+
+
+def _IterateTestCase(test):
+  if isinstance(test, unittest.TestCase):
+    yield test
+  else:
+    for t in test:
+      for u in _IterateTestCase(t):
+        yield u
+
+
+def main(args):
+  parser = argparse.ArgumentParser(description='Run all vinn tests')
+  parser.add_argument('test_name', type=str, nargs='?',
+                      help=('Specify a specific test to run. If this is empty, '
+                            'all tests are run. (the name can be a substring '
+                            ' of test names)'))
+  options = parser.parse_args(args)
+  def _IsTestMatched(test):
+    if not options.test_name:
+      return True
+    return options.test_name in test.id()
+
+  suite = unittest.TestSuite()
+  vinn_dir = os.path.join(os.path.abspath(__file__), '..', '..')
+  discover_tests = unittest.TestLoader().discover(
+    start_dir=vinn_dir, pattern='*test.py')
+  for t in _IterateTestCase(discover_tests):
+    if _IsTestMatched(t):
+      suite.addTest(t)
+  results = unittest.TextTestRunner(verbosity=2).run(suite)
+  return len(results.failures) + len(results.errors)
+
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv[1:]))

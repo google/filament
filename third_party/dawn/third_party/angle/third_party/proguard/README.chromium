@@ -1,0 +1,13 @@
+Name: Proguard
+URL: http://proguard.sourceforge.net/
+Version: 6.0.3
+Date: 2016-06-22
+License: GPL-2.0
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+This directory includes proguard.jar to allow Chromium to shrink, optimize java
+classes for Android, as well as retrace.jar, to allow for deobfuscation of stack
+traces.

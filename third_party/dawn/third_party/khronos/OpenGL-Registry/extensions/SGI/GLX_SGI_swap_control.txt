@@ -1,0 +1,92 @@
+Name
+
+    SGI_swap_control
+
+Name Strings
+
+    GLX_SGI_swap_control
+
+Version
+
+    $Date: 1995/09/15 01:28:06 $ $Revision: 1.9 $
+
+Number
+
+    40
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows an application to specify a minimum periodicity
+    of color buffer swaps, measured in video frame periods.
+
+New Procedures and Functions
+
+    int glXSwapIntervalSGI(int interval)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    [Add the following to Section 3.2.6 of the GLX Specification (Double
+     Buffering)]
+
+    glXSwapIntervalSGI specifies the minimum number of video frame periods
+    per buffer swap.  (e.g. a value of two means that the color buffers
+    will be swapped at most every other video frame.)  A return value
+    of zero indicates success; otherwise an error occurred.  The interval
+    takes effect when glXSwapBuffers is first called subsequent to the
+    glXSwapIntervalSGI call.
+
+    A video frame period is the time required by the monitor to display a 
+    full frame of video data.  In the case of an interlaced monitor,
+    this is typically the time required to display both the even and odd 
+    fields of a frame of video data.
+
+Errors
+
+    glXSwapIntervalSGI returns GLX_BAD_VALUE if parameter <interval> is
+    less than or equal to zero.
+
+    glXSwapIntervalSGI returns GLX_BAD_CONTEXT if there is no current
+    GLXContext.
+
+New State
+
+    None
+
+    Get Value		Get Command	Type	    Initial Value
+    ---------		-----------	----	    -------------
+    [swap interval]	[none]		Z+	    1
+
+New Implementation Dependent State
+
+    None
+
+

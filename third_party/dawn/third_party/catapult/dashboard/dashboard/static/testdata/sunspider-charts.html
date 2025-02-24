@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+const sunspiderCharts = (function() {
+  const graphSelectedJson = {
+    'data': {
+      '0': {
+        'color': 0,
+        'data': [
+          [405954, 821.5],
+          [405955, 817.4],
+          [405956, 809.1],
+          [405957, 795.4],
+          [405958, 809.8],
+          [405959, 812.2],
+          [405961, 794.3],
+          [405970, 805.9],
+          [405978, 819],
+          [405981, 824],
+          [405998, 813.9],
+          [406029, 817.4],
+          [406059, 826.2],
+          [406100, 815.2],
+          [406127, 800.2],
+          [406169, 828.5],
+          [406206, 819.3],
+          [406219, 801.9],
+          [406231, 825.3],
+          [406249, 817.4],
+          [406264, 822.6],
+          [406278, 827.1],
+          [406300, 820.9],
+          [406333, 933.3],
+          [406403, 920.7]
+        ],
+        'id': 'line_0'
+      }
+    },
+    'annotations': {
+      '0': {
+        '0': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468757133000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.926210134061,
+          'r_webkit_rev': '405954'
+        },
+        '1': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468772920000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 23.386605853209,
+          'r_webkit_rev': '405955'
+        },
+        '2': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468779571000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 28.849995185827,
+          'r_webkit_rev': '405956'
+        },
+        '3': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468787551000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 11.805836597962,
+          'r_webkit_rev': '405957'
+        },
+        '4': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468811346000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 38.487516013493,
+          'r_webkit_rev': '405958'
+        },
+        '5': {
+          'r_commit_pos': '405959',
+          'timestamp': 1468817990000,
+          'r_chromium': 'e2de489d91694a4c8b677b89112aae0c433da74b',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 36.934777348426,
+          'r_webkit_rev': '405959'
+        },
+        '6': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468835801000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.720886355918,
+          'r_webkit_rev': '405961'
+        },
+        '7': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468843172000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 25.418497201841,
+          'r_webkit_rev': '405970'
+        },
+        '8': {
+          'r_commit_pos': '405978',
+          'timestamp': 1468849809000,
+          'r_chromium': '3049b971f57ee97b1a602605e90ca18223a30653',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.239676943752,
+          'r_webkit_rev': '405978'
+        },
+        '9': {
+          'r_commit_pos': '405981',
+          'timestamp': 1468856461000,
+          'r_chromium': 'c451c080637ae63b1335b610122ca78697ed2bf3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.890872936793,
+          'r_webkit_rev': '405981'
+        },
+        '10': {
+          'r_commit_pos': '405998',
+          'timestamp': 1468864045000,
+          'r_chromium': 'd7cfe1197875c332ba6116a0bd2d6c08c2235d84',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.183138206087,
+          'r_webkit_rev': '405998'
+        },
+        '11': {
+          'r_commit_pos': '406029',
+          'timestamp': 1468870676000,
+          'r_chromium': '4c9170cc23e2549d12184073a1951d196b1eb68f',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.345452042106,
+          'r_webkit_rev': '406029'
+        },
+        '12': {
+          'r_commit_pos': '406059',
+          'timestamp': 1468877335000,
+          'r_chromium': 'e5b5786ad5d329fbfc39a32896ad4686a8eda112',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.478876139818,
+          'r_webkit_rev': '406059'
+        },
+        '13': {
+          'r_commit_pos': '406100',
+          'timestamp': 1468883922000,
+          'r_chromium': '3f0f0534e9be73b50afde189218160cf45648884',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 28.630985545966,
+          'r_webkit_rev': '406100'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468892970000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.632280405809,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468899920000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.06316079145,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406206',
+          'timestamp': 1468907103000,
+          'r_chromium': '49369a332004368954aee5534579ad6add2c9c48',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 25.060149862104,
+          'r_webkit_rev': '406206'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468913728000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.784041049457,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468928924000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.801685313475,
+          'r_webkit_rev': '406231'
+        },
+        '19': {
+          'r_commit_pos': '406249',
+          'timestamp': 1468935545000,
+          'r_chromium': '2eb44e80e1216124ced411b369a254d103d00cc3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 26.17972073529,
+          'r_webkit_rev': '406249'
+        },
+        '20': {
+          'r_commit_pos': '406264',
+          'timestamp': 1468942210000,
+          'r_chromium': 'cac088acd2bfd7e76d87db1778a925f8861ab0f7',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.377451481786,
+          'r_webkit_rev': '406264'
+        },
+        '21': {
+          'r_commit_pos': '406278',
+          'timestamp': 1468948900000,
+          'r_chromium': 'e2b49518cbcce5723fc77bfc052373e87016bd04',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.02447450409,
+          'r_webkit_rev': '406278'
+        },
+        '22': {
+          'r_commit_pos': '406300',
+          'timestamp': 1468955507000,
+          'r_chromium': '7faeddb12e9ed9b5b72d6a6cfbfe657e5646142c',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.288755508745,
+          'r_webkit_rev': '406300'
+        },
+        '23': {
+          'r_commit_pos': '406333',
+          'timestamp': 1468968522000,
+          'r_chromium': '7d1f9d52e374d32549ace497895d3d2c7b5667b4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.48975075204,
+          'r_webkit_rev': '406333'
+        },
+        '24': {
+          'r_commit_pos': '406403',
+          'timestamp': 1468977937000,
+          'r_chromium': '52c55bd8b84076cccdc877538787da279a8a1bf4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 15.304683379062,
+          'r_webkit_rev': '406403'
+        }
+      },
+      'series': {
+        '0': {
+          'units': 'ms',
+          'path': 'ChromiumPerf\/android-nexus6\/sunspider\/Total',
+          'description': '',
+          'name': 'Total',
+          'better': 'Lower'
+        }
+      }
+    },
+    'error_bars': {
+      '0': [
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 798.57378986594],
+            [405955, 794.01339414679],
+            [405956, 780.25000481417],
+            [405957, 783.59416340204],
+            [405958, 771.31248398651],
+            [405959, 775.26522265157],
+            [405961, 769.57911364408],
+            [405970, 780.48150279816],
+            [405978, 791.76032305625],
+            [405981, 799.10912706321],
+            [405998, 784.71686179391],
+            [406029, 788.05454795789],
+            [406059, 808.72112386018],
+            [406100, 786.56901445403],
+            [406127, 778.56771959419],
+            [406169, 810.43683920855],
+            [406206, 794.2398501379],
+            [406219, 780.11595895054],
+            [406231, 807.49831468652],
+            [406249, 791.22027926471],
+            [406264, 808.22254851821],
+            [406278, 800.07552549591],
+            [406300, 799.61124449126],
+            [406333, 910.81024924796],
+            [406403, 905.39531662094]
+          ],
+          'id': 'bottom_0'
+        },
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 844.42621013406],
+            [405955, 840.78660585321],
+            [405956, 837.94999518583],
+            [405957, 807.20583659796],
+            [405958, 848.28751601349],
+            [405959, 849.13477734843],
+            [405961, 819.02088635592],
+            [405970, 831.31849720184],
+            [405978, 846.23967694375],
+            [405981, 848.89087293679],
+            [405998, 843.08313820609],
+            [406029, 846.74545204211],
+            [406059, 843.67887613982],
+            [406100, 843.83098554597],
+            [406127, 821.83228040581],
+            [406169, 846.56316079145],
+            [406206, 844.3601498621],
+            [406219, 823.68404104946],
+            [406231, 843.10168531348],
+            [406249, 843.57972073529],
+            [406264, 836.97745148179],
+            [406278, 854.12447450409],
+            [406300, 842.18875550874],
+            [406333, 955.78975075204],
+            [406403, 936.00468337906]
+          ],
+          'id': 'top_0'
+        }
+      ]
+    }
+  };
+
+  const graphUnselectedJson = {
+    'data': {
+      '0': {
+        'color': 0,
+        'data': [
+          [405954, 821.5],
+          [405955, 817.4],
+          [405956, 809.1],
+          [405957, 795.4],
+          [405958, 809.8],
+          [405959, 812.2],
+          [405961, 794.3],
+          [405970, 805.9],
+          [405978, 819],
+          [405981, 824],
+          [405998, 813.9],
+          [406029, 817.4],
+          [406059, 826.2],
+          [406100, 815.2],
+          [406127, 800.2],
+          [406169, 828.5],
+          [406206, 819.3],
+          [406219, 801.9],
+          [406231, 825.3],
+          [406249, 817.4],
+          [406264, 822.6],
+          [406278, 827.1],
+          [406300, 820.9],
+          [406333, 933.3],
+          [406403, 920.7]
+        ],
+        'id': 'line_0'
+      },
+      '1': {
+        'color': 1,
+        'data': [
+          [405954, 929.3],
+          [405955, 923.5],
+          [405956, 925.6],
+          [405957, 913.7],
+          [405958, 908.9],
+          [405959, 921.8],
+          [405961, 921.5],
+          [405970, 919.8],
+          [405978, 932],
+          [405981, 920.5],
+          [405998, 929.9],
+          [406029, 931.8],
+          [406059, 920.7],
+          [406100, 918.9],
+          [406127, 917.3],
+          [406169, 914],
+          [406206, 923.2],
+          [406219, 926.9],
+          [406231, 918],
+          [406249, 919.8],
+          [406264, 916.2],
+          [406278, 925.1],
+          [406300, 924.8],
+          [406333, 916.9],
+          [406403, 926.2]
+        ],
+        'id': 'line_1'
+      },
+      '2': {
+        'color': 2,
+        'data': [
+          [405954, 929.3],
+          [405955, 923.5],
+          [405956, 925.6],
+          [405957, 913.7],
+          [405958, 908.9],
+          [405959, 921.8],
+          [405961, 921.5],
+          [405970, 919.8],
+          [405978, 932],
+          [405981, 920.5],
+          [405998, 929.9],
+          [406029, 931.8],
+          [406059, 920.7],
+          [406100, 918.9],
+          [406127, 917.3],
+          [406169, 914],
+          [406206, 923.2],
+          [406219, 926.9],
+          [406231, 918],
+          [406249, 919.8],
+          [406264, 916.2],
+          [406278, 925.1],
+          [406300, 924.8],
+          [406333, 916.9],
+          [406403, 926.2]
+        ],
+        'id': 'line_2'
+      }
+    },
+    'annotations': {
+      '0': {
+        '0': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468757133000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.926210134061,
+          'r_webkit_rev': '405954'
+        },
+        '1': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468772920000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 23.386605853209,
+          'r_webkit_rev': '405955'
+        },
+        '2': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468779571000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 28.849995185827,
+          'r_webkit_rev': '405956'
+        },
+        '3': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468787551000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 11.805836597962,
+          'r_webkit_rev': '405957'
+        },
+        '4': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468811346000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 38.487516013493,
+          'r_webkit_rev': '405958'
+        },
+        '5': {
+          'r_commit_pos': '405959',
+          'timestamp': 1468817990000,
+          'r_chromium': 'e2de489d91694a4c8b677b89112aae0c433da74b',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 36.934777348426,
+          'r_webkit_rev': '405959'
+        },
+        '6': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468835801000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.720886355918,
+          'r_webkit_rev': '405961'
+        },
+        '7': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468843172000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 25.418497201841,
+          'r_webkit_rev': '405970'
+        },
+        '8': {
+          'r_commit_pos': '405978',
+          'timestamp': 1468849809000,
+          'r_chromium': '3049b971f57ee97b1a602605e90ca18223a30653',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.239676943752,
+          'r_webkit_rev': '405978'
+        },
+        '9': {
+          'r_commit_pos': '405981',
+          'timestamp': 1468856461000,
+          'r_chromium': 'c451c080637ae63b1335b610122ca78697ed2bf3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.890872936793,
+          'r_webkit_rev': '405981'
+        },
+        '10': {
+          'r_commit_pos': '405998',
+          'timestamp': 1468864045000,
+          'r_chromium': 'd7cfe1197875c332ba6116a0bd2d6c08c2235d84',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.183138206087,
+          'r_webkit_rev': '405998'
+        },
+        '11': {
+          'r_commit_pos': '406029',
+          'timestamp': 1468870676000,
+          'r_chromium': '4c9170cc23e2549d12184073a1951d196b1eb68f',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.345452042106,
+          'r_webkit_rev': '406029'
+        },
+        '12': {
+          'r_commit_pos': '406059',
+          'timestamp': 1468877335000,
+          'r_chromium': 'e5b5786ad5d329fbfc39a32896ad4686a8eda112',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.478876139818,
+          'r_webkit_rev': '406059'
+        },
+        '13': {
+          'r_commit_pos': '406100',
+          'timestamp': 1468883922000,
+          'r_chromium': '3f0f0534e9be73b50afde189218160cf45648884',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 28.630985545966,
+          'r_webkit_rev': '406100'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468892970000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.632280405809,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468899920000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.06316079145,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406206',
+          'timestamp': 1468907103000,
+          'r_chromium': '49369a332004368954aee5534579ad6add2c9c48',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 25.060149862104,
+          'r_webkit_rev': '406206'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468913728000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.784041049457,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468928924000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.801685313475,
+          'r_webkit_rev': '406231'
+        },
+        '19': {
+          'r_commit_pos': '406249',
+          'timestamp': 1468935545000,
+          'r_chromium': '2eb44e80e1216124ced411b369a254d103d00cc3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 26.17972073529,
+          'r_webkit_rev': '406249'
+        },
+        '20': {
+          'r_commit_pos': '406264',
+          'timestamp': 1468942210000,
+          'r_chromium': 'cac088acd2bfd7e76d87db1778a925f8861ab0f7',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.377451481786,
+          'r_webkit_rev': '406264'
+        },
+        '21': {
+          'r_commit_pos': '406278',
+          'timestamp': 1468948900000,
+          'r_chromium': 'e2b49518cbcce5723fc77bfc052373e87016bd04',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.02447450409,
+          'r_webkit_rev': '406278'
+        },
+        '22': {
+          'r_commit_pos': '406300',
+          'timestamp': 1468955507000,
+          'r_chromium': '7faeddb12e9ed9b5b72d6a6cfbfe657e5646142c',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.288755508745,
+          'r_webkit_rev': '406300'
+        },
+        '23': {
+          'r_commit_pos': '406333',
+          'timestamp': 1468968522000,
+          'r_chromium': '7d1f9d52e374d32549ace497895d3d2c7b5667b4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.48975075204,
+          'r_webkit_rev': '406333'
+        },
+        '24': {
+          'r_commit_pos': '406403',
+          'timestamp': 1468977937000,
+          'r_chromium': '52c55bd8b84076cccdc877538787da279a8a1bf4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 15.304683379062,
+          'r_webkit_rev': '406403'
+        }
+      },
+      'series': {
+        '0': {
+          'units': 'ms',
+          'path': 'ChromiumPerf/android-nexus6/sunspider/Total/' +
+                  'http___www.webkit.org_perf_sunspider-1.0.2_sunspider' +
+                  '-1.0.2_driver.html',
+          'description': '',
+          'name': 'http___www.webkit.org_perf_sunspider-1.0.2_sunspider-' +
+                  '1.0.2_driver.html',
+          'better': 'Lower'
+        },
+        '1': {
+          'units': 'ms',
+          'path': 'ChromiumPerf/android-nexus6/sunspider/Total/' +
+                  'http___www.webkit.org_perf_sunspider-1.0.2_sunspider-' +
+                  '1.0.2_driver.html_ref',
+          'description': '',
+          'name': 'http___www.webkit.org_perf_sunspider-1.0.2_sunspider' +
+                  '-1.0.2_driver.html_ref',
+          'better': 'Lower'
+        },
+        '2': {
+          'units': 'ms',
+          'path': 'ChromiumPerf\/android-nexus6\/sunspider\/Total\/ref',
+          'description': '',
+          'name': 'ref',
+          'better': 'Lower'
+        }
+      },
+      '2': {
+        '0': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468757133000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.596497362286,
+          'r_webkit_rev': '405954'
+        },
+        '1': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468772922000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.614510468986,
+          'r_webkit_rev': '405955'
+        },
+        '2': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468779574000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.331007563245,
+          'r_webkit_rev': '405956'
+        },
+        '3': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468787553000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 8.3672642548871,
+          'r_webkit_rev': '405957'
+        },
+        '4': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468811348000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.444833682848,
+          'r_webkit_rev': '405958'
+        },
+        '5': {
+          'r_commit_pos': '405959',
+          'timestamp': 1468817992000,
+          'r_chromium': 'e2de489d91694a4c8b677b89112aae0c433da74b',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 16.524728943818,
+          'r_webkit_rev': '405959'
+        },
+        '6': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468835819000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 19.732939185253,
+          'r_webkit_rev': '405961'
+        },
+        '7': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468843173000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 20.405881505096,
+          'r_webkit_rev': '405970'
+        },
+        '8': {
+          'r_commit_pos': '405978',
+          'timestamp': 1468849811000,
+          'r_chromium': '3049b971f57ee97b1a602605e90ca18223a30653',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 35.736691384502,
+          'r_webkit_rev': '405978'
+        },
+        '9': {
+          'r_commit_pos': '405981',
+          'timestamp': 1468856463000,
+          'r_chromium': 'c451c080637ae63b1335b610122ca78697ed2bf3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.994443827023,
+          'r_webkit_rev': '405981'
+        },
+        '10': {
+          'r_commit_pos': '405998',
+          'timestamp': 1468864047000,
+          'r_chromium': 'd7cfe1197875c332ba6116a0bd2d6c08c2235d84',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 13.916017948952,
+          'r_webkit_rev': '405998'
+        },
+        '11': {
+          'r_commit_pos': '406029',
+          'timestamp': 1468870678000,
+          'r_chromium': '4c9170cc23e2549d12184073a1951d196b1eb68f',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.9989898758,
+          'r_webkit_rev': '406029'
+        },
+        '12': {
+          'r_commit_pos': '406059',
+          'timestamp': 1468877337000,
+          'r_chromium': 'e5b5786ad5d329fbfc39a32896ad4686a8eda112',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.499523803045,
+          'r_webkit_rev': '406059'
+        },
+        '13': {
+          'r_commit_pos': '406100',
+          'timestamp': 1468883924000,
+          'r_chromium': '3f0f0534e9be73b50afde189218160cf45648884',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.201098156158,
+          'r_webkit_rev': '406100'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468892972000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 10.975224624378,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468899922000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.537308324904,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406206',
+          'timestamp': 1468907105000,
+          'r_chromium': '49369a332004368954aee5534579ad6add2c9c48',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.483574251242,
+          'r_webkit_rev': '406206'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468913730000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.470292244582,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468928926000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 19.877402021167,
+          'r_webkit_rev': '406231'
+        },
+        '19': {
+          'r_commit_pos': '406249',
+          'timestamp': 1468935547000,
+          'r_chromium': '2eb44e80e1216124ced411b369a254d103d00cc3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 12.514880032274,
+          'r_webkit_rev': '406249'
+        },
+        '20': {
+          'r_commit_pos': '406264',
+          'timestamp': 1468942212000,
+          'r_chromium': 'cac088acd2bfd7e76d87db1778a925f8861ab0f7',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.913839730032,
+          'r_webkit_rev': '406264'
+        },
+        '21': {
+          'r_commit_pos': '406278',
+          'timestamp': 1468948902000,
+          'r_chromium': 'e2b49518cbcce5723fc77bfc052373e87016bd04',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.103073529936,
+          'r_webkit_rev': '406278'
+        },
+        '22': {
+          'r_commit_pos': '406300',
+          'timestamp': 1468955509000,
+          'r_chromium': '7faeddb12e9ed9b5b72d6a6cfbfe657e5646142c',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.758636944148,
+          'r_webkit_rev': '406300'
+        },
+        '23': {
+          'r_commit_pos': '406333',
+          'timestamp': 1468968524000,
+          'r_chromium': '7d1f9d52e374d32549ace497895d3d2c7b5667b4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 13.403565031571,
+          'r_webkit_rev': '406333'
+        },
+        '24': {
+          'r_commit_pos': '406403',
+          'timestamp': 1468977939000,
+          'r_chromium': '52c55bd8b84076cccdc877538787da279a8a1bf4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.520483616066,
+          'r_webkit_rev': '406403'
+        }
+      },
+      '1': {
+        '0': {
+          'r_commit_pos': '405954',
+          'timestamp': 1468757133000,
+          'r_chromium': 'd1a7457666ee116f4500cc7c1e69bff2831126b1',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 27.596497362286,
+          'r_webkit_rev': '405954'
+        },
+        '1': {
+          'r_commit_pos': '405955',
+          'timestamp': 1468772922000,
+          'r_chromium': 'fcae1580878f40181234bebeacbe5035c9501167',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.614510468986,
+          'r_webkit_rev': '405955'
+        },
+        '2': {
+          'r_commit_pos': '405956',
+          'timestamp': 1468779574000,
+          'r_chromium': '48dcde03af18a3065e0e89b2de1e40df3e78af67',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.331007563245,
+          'r_webkit_rev': '405956'
+        },
+        '3': {
+          'r_commit_pos': '405957',
+          'timestamp': 1468787553000,
+          'r_chromium': 'ee06edf73261ca3c1682abad694a8a357e717a1a',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 8.3672642548871,
+          'r_webkit_rev': '405957'
+        },
+        '4': {
+          'r_commit_pos': '405958',
+          'timestamp': 1468811348000,
+          'r_chromium': '3130e0a9253660111cd0af1c52563325de5436fb',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.444833682848,
+          'r_webkit_rev': '405958'
+        },
+        '5': {
+          'r_commit_pos': '405959',
+          'timestamp': 1468817992000,
+          'r_chromium': 'e2de489d91694a4c8b677b89112aae0c433da74b',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 16.524728943818,
+          'r_webkit_rev': '405959'
+        },
+        '6': {
+          'r_commit_pos': '405961',
+          'timestamp': 1468835819000,
+          'r_chromium': 'd661eb39401a0ff9238c5d97d555c1f78f431edf',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 19.732939185253,
+          'r_webkit_rev': '405961'
+        },
+        '7': {
+          'r_commit_pos': '405970',
+          'timestamp': 1468843173000,
+          'r_chromium': '43b9c63e834916b79837e5c57e52e31adc23d431',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 20.405881505096,
+          'r_webkit_rev': '405970'
+        },
+        '8': {
+          'r_commit_pos': '405978',
+          'timestamp': 1468849811000,
+          'r_chromium': '3049b971f57ee97b1a602605e90ca18223a30653',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 35.736691384502,
+          'r_webkit_rev': '405978'
+        },
+        '9': {
+          'r_commit_pos': '405981',
+          'timestamp': 1468856463000,
+          'r_chromium': 'c451c080637ae63b1335b610122ca78697ed2bf3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 24.994443827023,
+          'r_webkit_rev': '405981'
+        },
+        '10': {
+          'r_commit_pos': '405998',
+          'timestamp': 1468864047000,
+          'r_chromium': 'd7cfe1197875c332ba6116a0bd2d6c08c2235d84',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 13.916017948952,
+          'r_webkit_rev': '405998'
+        },
+        '11': {
+          'r_commit_pos': '406029',
+          'timestamp': 1468870678000,
+          'r_chromium': '4c9170cc23e2549d12184073a1951d196b1eb68f',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 21.9989898758,
+          'r_webkit_rev': '406029'
+        },
+        '12': {
+          'r_commit_pos': '406059',
+          'timestamp': 1468877337000,
+          'r_chromium': 'e5b5786ad5d329fbfc39a32896ad4686a8eda112',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.499523803045,
+          'r_webkit_rev': '406059'
+        },
+        '13': {
+          'r_commit_pos': '406100',
+          'timestamp': 1468883924000,
+          'r_chromium': '3f0f0534e9be73b50afde189218160cf45648884',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.201098156158,
+          'r_webkit_rev': '406100'
+        },
+        '14': {
+          'r_commit_pos': '406127',
+          'timestamp': 1468892972000,
+          'r_chromium': 'e49ea0da33c0e6300ed45386a2b9acbd59b354e8',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 10.975224624378,
+          'r_webkit_rev': '406127'
+        },
+        '15': {
+          'r_commit_pos': '406169',
+          'timestamp': 1468899922000,
+          'r_chromium': 'ef3e334a185b82752f606768ecd3f4c8083b7275',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.537308324904,
+          'r_webkit_rev': '406169'
+        },
+        '16': {
+          'r_commit_pos': '406206',
+          'timestamp': 1468907106000,
+          'r_chromium': '49369a332004368954aee5534579ad6add2c9c48',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.483574251242,
+          'r_webkit_rev': '406206'
+        },
+        '17': {
+          'r_commit_pos': '406219',
+          'timestamp': 1468913730000,
+          'r_chromium': '48661fbb13fcf93720cf21927ce1376ab9f861ba',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 17.470292244582,
+          'r_webkit_rev': '406219'
+        },
+        '18': {
+          'r_commit_pos': '406231',
+          'timestamp': 1468928926000,
+          'r_chromium': 'd0be3b9013f92de2df440e4e7e99d0286fab2df2',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 19.877402021167,
+          'r_webkit_rev': '406231'
+        },
+        '19': {
+          'r_commit_pos': '406249',
+          'timestamp': 1468935547000,
+          'r_chromium': '2eb44e80e1216124ced411b369a254d103d00cc3',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 12.514880032274,
+          'r_webkit_rev': '406249'
+        },
+        '20': {
+          'r_commit_pos': '406264',
+          'timestamp': 1468942212000,
+          'r_chromium': 'cac088acd2bfd7e76d87db1778a925f8861ab0f7',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 18.913839730032,
+          'r_webkit_rev': '406264'
+        },
+        '21': {
+          'r_commit_pos': '406278',
+          'timestamp': 1468948902000,
+          'r_chromium': 'e2b49518cbcce5723fc77bfc052373e87016bd04',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 29.103073529936,
+          'r_webkit_rev': '406278'
+        },
+        '22': {
+          'r_commit_pos': '406300',
+          'timestamp': 1468955509000,
+          'r_chromium': '7faeddb12e9ed9b5b72d6a6cfbfe657e5646142c',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 22.758636944148,
+          'r_webkit_rev': '406300'
+        },
+        '23': {
+          'r_commit_pos': '406333',
+          'timestamp': 1468968524000,
+          'r_chromium': '7d1f9d52e374d32549ace497895d3d2c7b5667b4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 13.403565031571,
+          'r_webkit_rev': '406333'
+        },
+        '24': {
+          'r_commit_pos': '406403',
+          'timestamp': 1468977939000,
+          'r_chromium': '52c55bd8b84076cccdc877538787da279a8a1bf4',
+          'a_a_stdio_uri': '[Buildbot stdio]http://do/not/click',
+          'error': 14.520483616066,
+          'r_webkit_rev': '406403'
+        }
+      }
+    },
+    'error_bars': {
+      '0': [
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 798.57378986594],
+            [405955, 794.01339414679],
+            [405956, 780.25000481417],
+            [405957, 783.59416340204],
+            [405958, 771.31248398651],
+            [405959, 775.26522265157],
+            [405961, 769.57911364408],
+            [405970, 780.48150279816],
+            [405978, 791.76032305625],
+            [405981, 799.10912706321],
+            [405998, 784.71686179391],
+            [406029, 788.05454795789],
+            [406059, 808.72112386018],
+            [406100, 786.56901445403],
+            [406127, 778.56771959419],
+            [406169, 810.43683920855],
+            [406206, 794.2398501379],
+            [406219, 780.11595895054],
+            [406231, 807.49831468652],
+            [406249, 791.22027926471],
+            [406264, 808.22254851821],
+            [406278, 800.07552549591],
+            [406300, 799.61124449126],
+            [406333, 910.81024924796],
+            [406403, 905.39531662094]
+          ],
+          'id': 'bottom_0'
+        },
+        {
+          'color': 0,
+          'fillBetween': 'line_0',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 844.42621013406],
+            [405955, 840.78660585321],
+            [405956, 837.94999518583],
+            [405957, 807.20583659796],
+            [405958, 848.28751601349],
+            [405959, 849.13477734843],
+            [405961, 819.02088635592],
+            [405970, 831.31849720184],
+            [405978, 846.23967694375],
+            [405981, 848.89087293679],
+            [405998, 843.08313820609],
+            [406029, 846.74545204211],
+            [406059, 843.67887613982],
+            [406100, 843.83098554597],
+            [406127, 821.83228040581],
+            [406169, 846.56316079145],
+            [406206, 844.3601498621],
+            [406219, 823.68404104946],
+            [406231, 843.10168531348],
+            [406249, 843.57972073529],
+            [406264, 836.97745148179],
+            [406278, 854.12447450409],
+            [406300, 842.18875550874],
+            [406333, 955.78975075204],
+            [406403, 936.00468337906]
+          ],
+          'id': 'top_0'
+        }
+      ],
+      '1': [
+        {
+          'color': 1,
+          'fillBetween': 'line_1',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 901.70350263771],
+            [405955, 904.88548953101],
+            [405956, 911.26899243676],
+            [405957, 905.33273574511],
+            [405958, 891.45516631715],
+            [405959, 905.27527105618],
+            [405961, 901.76706081475],
+            [405970, 899.3941184949],
+            [405978, 896.2633086155],
+            [405981, 895.50555617298],
+            [405998, 915.98398205105],
+            [406029, 909.8010101242],
+            [406059, 903.20047619696],
+            [406100, 901.69890184384],
+            [406127, 906.32477537562],
+            [406169, 899.4626916751],
+            [406206, 900.71642574876],
+            [406219, 909.42970775542],
+            [406231, 898.12259797883],
+            [406249, 907.28511996773],
+            [406264, 897.28616026997],
+            [406278, 895.99692647006],
+            [406300, 902.04136305585],
+            [406333, 903.49643496843],
+            [406403, 911.67951638393]
+          ],
+          'id': 'bottom_1'
+        },
+        {
+          'color': 1,
+          'fillBetween': 'line_1',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 956.89649736229],
+            [405955, 942.11451046899],
+            [405956, 939.93100756324],
+            [405957, 922.06726425489],
+            [405958, 926.34483368285],
+            [405959, 938.32472894382],
+            [405961, 941.23293918525],
+            [405970, 940.2058815051],
+            [405978, 967.7366913845],
+            [405981, 945.49444382702],
+            [405998, 943.81601794895],
+            [406029, 953.7989898758],
+            [406059, 938.19952380304],
+            [406100, 936.10109815616],
+            [406127, 928.27522462438],
+            [406169, 928.5373083249],
+            [406206, 945.68357425124],
+            [406219, 944.37029224458],
+            [406231, 937.87740202117],
+            [406249, 932.31488003227],
+            [406264, 935.11383973003],
+            [406278, 954.20307352994],
+            [406300, 947.55863694415],
+            [406333, 930.30356503157],
+            [406403, 940.72048361607]
+          ],
+          'id': 'top_1'
+        }
+      ],
+      '2': [
+        {
+          'color': 2,
+          'fillBetween': 'line_2',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 901.70350263771],
+            [405955, 904.88548953101],
+            [405956, 911.26899243676],
+            [405957, 905.33273574511],
+            [405958, 891.45516631715],
+            [405959, 905.27527105618],
+            [405961, 901.76706081475],
+            [405970, 899.3941184949],
+            [405978, 896.2633086155],
+            [405981, 895.50555617298],
+            [405998, 915.98398205105],
+            [406029, 909.8010101242],
+            [406059, 903.20047619696],
+            [406100, 901.69890184384],
+            [406127, 906.32477537562],
+            [406169, 899.4626916751],
+            [406206, 900.71642574876],
+            [406219, 909.42970775542],
+            [406231, 898.12259797883],
+            [406249, 907.28511996773],
+            [406264, 897.28616026997],
+            [406278, 895.99692647006],
+            [406300, 902.04136305585],
+            [406333, 903.49643496843],
+            [406403, 911.67951638393]
+          ],
+          'id': 'bottom_2'
+        },
+        {
+          'color': 2,
+          'fillBetween': 'line_2',
+          'lines': {
+            'lineWidth': 0,
+            'fill': 0.2,
+            'show': true
+          },
+          'clickable': false,
+          'hoverable': false,
+          'data': [
+            [405954, 956.89649736229],
+            [405955, 942.11451046899],
+            [405956, 939.93100756324],
+            [405957, 922.06726425489],
+            [405958, 926.34483368285],
+            [405959, 938.32472894382],
+            [405961, 941.23293918525],
+            [405970, 940.2058815051],
+            [405978, 967.7366913845],
+            [405981, 945.49444382702],
+            [405998, 943.81601794895],
+            [406029, 953.7989898758],
+            [406059, 938.19952380304],
+            [406100, 936.10109815616],
+            [406127, 928.27522462438],
+            [406169, 928.5373083249],
+            [406206, 945.68357425124],
+            [406219, 944.37029224458],
+            [406231, 937.87740202117],
+            [406249, 932.31488003227],
+            [406264, 935.11383973003],
+            [406278, 954.20307352994],
+            [406300, 947.55863694415],
+            [406333, 930.30356503157],
+            [406403, 940.72048361607]
+          ],
+          'id': 'top_2'
+        }
+      ]
+    }
+  };
+
+  const graphRevisionJson = [
+    [405448, 819.9, 1468490643000],
+    [405461, 799.1, 1468497262000],
+    [405472, 816.5, 1468503776000],
+    [405483, 803.9, 1468510420000],
+    [405498, 825.5, 1468517031000],
+    [405510, 819.7, 1468525010000],
+    [405534, 826.8, 1468531184000],
+    [405568, 812.6, 1468537511000],
+    [405613, 817.3, 1468544157000],
+    [405651, 803, 1468550841000],
+    [405683, 822.2, 1468557503000],
+    [405700, 818.2, 1468564152000],
+    [405708, 816.7, 1468571403000],
+    [405723, 811.4, 1468578219000],
+    [405736, 812, 1468584839000],
+    [405745, 807.1, 1468592174000],
+    [405758, 798.9, 1468604726000],
+    [405783, 811.7, 1468611357000],
+    [405822, 823.3, 1468617977000],
+    [405859, 808.2, 1468624585000],
+    [405893, 828.6, 1468631241000],
+    [405913, 804.3, 1468637937000],
+    [405925, 812.2, 1468644530000],
+    [405934, 808.3, 1468651140000],
+    [405937, 803.4, 1468657790000],
+    [405940, 808.1, 1468665191000],
+    [405942, 822, 1468671889000],
+    [405943, 815.6, 1468691948000],
+    [405944, 823.9, 1468698682000],
+    [405947, 798.8, 1468706119000],
+    [405948, 821.2, 1468713308000],
+    [405950, 807.8, 1468719872000],
+    [405951, 808, 1468733824000],
+    [405952, 801.1, 1468741110000],
+    [405953, 801.7, 1468747733000],
+    [405954, 821.5, 1468757133000],
+    [405955, 817.4, 1468772920000],
+    [405956, 809.1, 1468779571000],
+    [405957, 795.4, 1468787551000],
+    [405958, 809.8, 1468811346000],
+    [405959, 812.2, 1468817990000],
+    [405961, 794.3, 1468835801000],
+    [405970, 805.9, 1468843172000],
+    [405978, 819, 1468849809000],
+    [405981, 824, 1468856461000],
+    [405998, 813.9, 1468864045000],
+    [406029, 817.4, 1468870676000],
+    [406059, 826.2, 1468877335000],
+    [406100, 815.2, 1468883922000],
+    [406127, 800.2, 1468892970000],
+    [406169, 828.5, 1468899920000],
+    [406206, 819.3, 1468907103000],
+    [406219, 801.9, 1468913728000],
+    [406231, 825.3, 1468928924000],
+    [406249, 817.4, 1468935545000],
+    [406264, 822.6, 1468942210000],
+    [406278, 827.1, 1468948900000],
+    [406300, 820.9, 1468955507000],
+    [406333, 933.3, 1468968522000],
+    [406403, 920.7, 1468977937000]
+  ];
+
+  const graphParams = [
+    [
+      'ChromiumPerf/android-nexus6/sunspider/Total',
+      ['Total']
+    ]
+  ];
+
+  const testPath = 'ChromiumPerf/android-nexus6/sunspider/Total';
+
+  const testPathDict = {
+    'ChromiumPerf/android-nexus6/sunspider/Total': ['Total']
+  };
+
+  return {
+    graphSelectedJson,
+    graphUnselectedJson,
+    graphRevisionJson,
+    graphParams,
+    testPath,
+    testPathDict
+  };
+})();
+
+</script>

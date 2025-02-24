@@ -1,0 +1,22 @@
+{
+  "name": "SnapIt",
+  "description": "Download exact visualization of a webpage",
+  "version": "1.0",
+
+  "manifest_version": 2,
+
+  "browser_action": {
+    "default_icon": "assets/camera48.png",
+    "default_popup": "popup.html"
+  },
+
+  "icons": {
+    "16": "assets/camera16.png",
+    "48": "assets/camera48.png",
+    "128": "assets/camera128.png"
+  },
+
+  "permissions": [
+    "activeTab", "http://*/*", "https://*/*"
+  ]
+}

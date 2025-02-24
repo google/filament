@@ -1,0 +1,74 @@
+# Python Application Configuration
+# https://developers.google.com/appengine/docs/python/config/appconfig
+
+runtime: python38
+
+entrypoint: gunicorn -b:$PORT dashboard.dispatcher:APP --worker-class gthread --threads 10 --timeout 60
+app_engine_apis: true
+# 2048MB Memory, 2.4GHz CPU limit, support auto scaling.
+instance_class: F4_1G
+
+automatic_scaling:
+  max_concurrent_requests: 80
+  max_instances: 150
+  max_pending_latency: automatic
+  min_instances: 1
+  target_cpu_utilization: 0.8
+
+env_variables:
+  GAE_USE_SOCKETS_HTTPLIB: 'true'
+
+inbound_services:
+- warmup
+
+handlers:
+- url: /favicon.ico
+  static_files: dashboard/static/favicon.ico
+  upload: dashboard/static/favicon.ico
+  secure: always
+
+- url: /dashboard/static/
+  static_dir: dashboard/static/
+  secure: always
+
+- url: /dashboard/elements/(.*\.html)$
+  static_files: dashboard/elements/\1
+  upload: dashboard/elements/.*\.html$
+  secure: always
+
+- url: /components/(.*)/(.*\.(html|js|css))$
+  static_files: polymer/components/\1/\2
+  upload: polymer/components/.*/.*\.(html|js|css)$
+  secure: always
+
+- url: /tracing/(.*)/(.*\.(html|js|css))$
+  static_files: tracing/\1/\2
+  upload: tracing/.*/.*\.(html|js|css)$
+  secure: always
+
+- url: /flot/(.*\.js)$
+  static_files: flot/\1
+  upload: flot/.*\.js$
+  secure: always
+
+- url: /jquery/(.*\.js)$
+  static_files: jquery/\1
+  upload: jquery/.*\.js$
+  secure: always
+
+- url: /gl-matrix-min.js
+  static_files: gl-matrix-min.js
+  upload: gl-matrix-min.js
+  secure: always
+
+# We need admin so only cron can trigger it.
+- url: /alert_groups_update
+  script: dashboard.dispatcher.APP
+  secure: always
+  login: admin
+
+- url: /.*
+  script: dashboard.dispatcher.APP
+  secure: always
+
+# Need to check how we want to add the scripts.yaml

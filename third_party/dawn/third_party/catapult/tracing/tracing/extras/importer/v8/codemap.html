@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/v8/splaytree.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Map addresses to dynamically created functions.
+ */
+tr.exportTo('tr.e.importer.v8', function() {
+  /**
+   * Constructs a mapper that maps addresses into code entries.
+   *
+   * @constructor
+   */
+  function CodeMap() {
+    /**
+     * Dynamic code entries. Used for JIT compiled code.
+     */
+    this.dynamics_ = new tr.e.importer.v8.SplayTree();
+
+    /**
+     * Name generator for entries having duplicate names.
+     */
+    this.dynamicsNameGen_ = new tr.e.importer.v8.CodeMap.NameGenerator();
+
+    /**
+     * Static code entries. Used for statically compiled code.
+     */
+    this.statics_ = new tr.e.importer.v8.SplayTree();
+
+    /**
+     * Libraries entries. Used for the whole static code libraries.
+     */
+    this.libraries_ = new tr.e.importer.v8.SplayTree();
+
+    /**
+     * Map of memory pages occupied with static code.
+     */
+    this.pages_ = [];
+  }
+
+  /**
+   * The number of alignment bits in a page address.
+   */
+  CodeMap.PAGE_ALIGNMENT = 12;
+
+  /**
+   * Page size in bytes.
+   */
+  CodeMap.PAGE_SIZE = 1 << CodeMap.PAGE_ALIGNMENT;
+
+  /**
+   * Adds a dynamic (i.e. moveable and discardable) code entry.
+   *
+   * @param {number} start The starting address.
+   * @param {CodeMap.CodeEntry} codeEntry Code entry object.
+   */
+  CodeMap.prototype.addCode = function(start, codeEntry) {
+    this.deleteAllCoveredNodes_(this.dynamics_, start, start + codeEntry.size);
+    this.dynamics_.insert(start, codeEntry);
+  };
+
+  /**
+   * Moves a dynamic code entry. Throws an exception if there is no dynamic
+   * code entry with the specified starting address.
+   *
+   * @param {number} from The starting address of the entry being moved.
+   * @param {number} to The destination address.
+   */
+  CodeMap.prototype.moveCode = function(from, to) {
+    const removedNode = this.dynamics_.remove(from);
+    this.deleteAllCoveredNodes_(this.dynamics_, to,
+        to + removedNode.value.size);
+    this.dynamics_.insert(to, removedNode.value);
+  };
+
+  /**
+   * Discards a dynamic code entry. Throws an exception if there is no dynamic
+   * code entry with the specified starting address.
+   *
+   * @param {number} start The starting address of the entry being deleted.
+   */
+  CodeMap.prototype.deleteCode = function(start) {
+    const removedNode = this.dynamics_.remove(start);
+  };
+
+  /**
+   * Adds a library entry.
+   *
+   * @param {number} start The starting address.
+   * @param {CodeMap.CodeEntry} codeEntry Code entry object.
+   */
+  CodeMap.prototype.addLibrary = function(
+      start, codeEntry) {
+    this.markPages_(start, start + codeEntry.size);
+    this.libraries_.insert(start, codeEntry);
+  };
+
+  /**
+   * Adds a static code entry.
+   *
+   * @param {number} start The starting address.
+   * @param {CodeMap.CodeEntry} codeEntry Code entry object.
+   */
+  CodeMap.prototype.addStaticCode = function(
+      start, codeEntry) {
+    this.statics_.insert(start, codeEntry);
+  };
+
+  /**
+   * @private
+   */
+  CodeMap.prototype.markPages_ = function(start, end) {
+    for (let addr = start; addr <= end;
+      addr += CodeMap.PAGE_SIZE) {
+      this.pages_[addr >>> CodeMap.PAGE_ALIGNMENT] = 1;
+    }
+  };
+
+  /**
+   * @private
+   */
+  CodeMap.prototype.deleteAllCoveredNodes_ = function(tree, start, end) {
+    const toDelete = [];
+    let addr = end - 1;
+    while (addr >= start) {
+      const node = tree.findGreatestLessThan(addr);
+      if (!node) break;
+      const start2 = node.key;
+      const end2 = start2 + node.value.size;
+      if (start2 < end && start < end2) toDelete.push(start2);
+      addr = start2 - 1;
+    }
+    for (let i = 0, l = toDelete.length; i < l; ++i) tree.remove(toDelete[i]);
+  };
+
+  /**
+   * @private
+   */
+  CodeMap.prototype.isAddressBelongsTo_ = function(addr, node) {
+    return addr >= node.key && addr < (node.key + node.value.size);
+  };
+
+  /**
+   * @private
+   */
+  CodeMap.prototype.findInTree_ = function(tree, addr) {
+    const node = tree.findGreatestLessThan(addr);
+    return node && this.isAddressBelongsTo_(addr, node) ? node.value : null;
+  };
+
+  /**
+   * Finds a code entry that contains the specified address in static libraries.
+   *
+   * @param {number} addr Address.
+   */
+  CodeMap.prototype.findEntryInLibraries = function(addr) {
+    const pageAddr = addr >>> CodeMap.PAGE_ALIGNMENT;
+    if (pageAddr in this.pages_) {
+      return this.findInTree_(this.libraries_, addr);
+    }
+    return undefined;
+  };
+
+  /**
+   * Finds a code entry that contains the specified address. Both static and
+   * dynamic code entries are considered.
+   *
+   * @param {number} addr Address.
+   */
+  CodeMap.prototype.findEntry = function(addr) {
+    const pageAddr = addr >>> CodeMap.PAGE_ALIGNMENT;
+    if (pageAddr in this.pages_) {
+      // Static code entries can contain "holes" of unnamed code.
+      // In this case, the whole library is assigned to this address.
+      return this.findInTree_(this.statics_, addr) ||
+          this.findInTree_(this.libraries_, addr);
+    }
+    const min = this.dynamics_.findMin();
+    const max = this.dynamics_.findMax();
+    if (max !== null && addr < (max.key + max.value.size) && addr >= min.key) {
+      const dynaEntry = this.findInTree_(this.dynamics_, addr);
+      if (dynaEntry === null) return null;
+      // Dedupe entry name.
+      if (!dynaEntry.nameUpdated_) {
+        dynaEntry.name = this.dynamicsNameGen_.getName(dynaEntry.name);
+        dynaEntry.nameUpdated_ = true;
+      }
+      return dynaEntry;
+    }
+    return null;
+  };
+
+  /**
+   * Returns a dynamic code entry using its starting address.
+   *
+   * @param {number} addr Address.
+   */
+  CodeMap.prototype.findDynamicEntryByStartAddress =
+      function(addr) {
+        const node = this.dynamics_.find(addr);
+        return node ? node.value : null;
+      };
+
+  /**
+   * Returns an array of all dynamic code entries.
+   */
+  CodeMap.prototype.getAllDynamicEntries = function() {
+    return this.dynamics_.exportValues();
+  };
+
+  /**
+   * Returns an array of pairs of all dynamic code entries and their addresses.
+   */
+  CodeMap.prototype.getAllDynamicEntriesWithAddresses = function() {
+    return this.dynamics_.exportKeysAndValues();
+  };
+
+  /**
+   * Returns an array of all static code entries.
+   */
+  CodeMap.prototype.getAllStaticEntries = function() {
+    return this.statics_.exportValues();
+  };
+
+  /**
+   * Returns an array of all libraries entries.
+   */
+  CodeMap.prototype.getAllLibrariesEntries = function() {
+    return this.libraries_.exportValues();
+  };
+
+  /**
+   * Enum for code state regarding its dynamic optimization.
+   *
+   * @enum {number}
+   */
+  CodeMap.CodeState = {
+    COMPILED: 0,
+    OPTIMIZABLE: 1,
+    OPTIMIZED: 2
+  };
+
+  /**
+   * Creates a code entry object.
+   *
+   * @param {number} size Code entry size in bytes.
+   * @param {string=} opt_name Code entry name.
+   * @constructor
+   */
+  CodeMap.CodeEntry = function(size, opt_name, opt_type) {
+    this.id = tr.b.GUID.allocateSimple();
+    this.size = size;
+    this.name_ = opt_name || '';
+    this.type = opt_type || '';
+    this.nameUpdated_ = false;
+  };
+
+  CodeMap.CodeEntry.prototype = {
+    __proto__: Object.prototype,
+
+    get name() {
+      return this.name_;
+    },
+
+    set name(value) {
+      this.name_ = value;
+    },
+
+    toString() {
+      this.name_ + ': ' + this.size.toString(16);
+    }
+  };
+
+  CodeMap.CodeEntry.TYPE = {
+    SHARED_LIB: 'SHARED_LIB',
+    CPP: 'CPP'
+  };
+
+  /**
+   * Creates a dynamic code entry.
+   *
+   * @param {number} size Code size.
+   * @param {string} type Code type.
+   * @param {CodeMap.FunctionEntry} func Shared function entry.
+   * @param {CodeMap.CodeState} state Code optimization state.
+   * @constructor
+   */
+  CodeMap.DynamicFuncCodeEntry = function(size, type, func, state) {
+    CodeMap.CodeEntry.call(this, size, '', type);
+    this.func = func;
+    this.state = state;
+  };
+
+  CodeMap.DynamicFuncCodeEntry.STATE_PREFIX = ['', '~', '*'];
+
+  CodeMap.DynamicFuncCodeEntry.prototype = {
+    __proto__: CodeMap.CodeEntry.prototype,
+
+    /**
+     * Returns node name.
+     */
+    get name() {
+      return CodeMap.DynamicFuncCodeEntry.STATE_PREFIX[this.state] +
+        this.func.name;
+    },
+
+    set name(value) {
+      this.name_ = value;
+    },
+
+    /**
+     * Returns raw node name (without type decoration).
+     */
+    getRawName() {
+      return this.func.getName();
+    },
+
+    isJSFunction() {
+      return true;
+    },
+
+    toString() {
+      return this.type + ': ' + this.name + ': ' + this.size.toString(16);
+    }
+  };
+
+  /**
+   * Creates a shared function object entry.
+   *
+   * @param {string} name Function name.
+   * @constructor
+   */
+  CodeMap.FunctionEntry = function(name) {
+    CodeMap.CodeEntry.call(this, 0, name);
+  };
+
+  CodeMap.FunctionEntry.prototype = {
+    __proto__: CodeMap.CodeEntry.prototype,
+
+    /**
+     * Returns node name.
+     */
+    get name() {
+      let name = this.name_;
+      if (name.length === 0) {
+        name = '<anonymous>';
+      } else if (name.charAt(0) === ' ') {
+        // An anonymous function with location: " aaa.js:10".
+        name = '<anonymous>' + name;
+      }
+      return name;
+    },
+
+    set name(value) {
+      this.name_ = value;
+    }
+  };
+
+  CodeMap.NameGenerator = function() {
+    this.knownNames_ = {};
+  };
+
+  CodeMap.NameGenerator.prototype.getName = function(name) {
+    if (!(name in this.knownNames_)) {
+      this.knownNames_[name] = 0;
+      return name;
+    }
+    const count = ++this.knownNames_[name];
+    return name + ' {' + count + '}';
+  };
+  return {
+    CodeMap,
+  };
+});
+</script>

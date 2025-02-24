@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/info_bar.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const infoBar = document.createElement('tr-ui-b-info-bar');
+    infoBar.message = 'This is an info';
+    infoBar.visible = true;
+    this.addHTMLOutput(infoBar);
+  });
+
+  test('buttons', function() {
+    const infoBar = document.createElement('tr-ui-b-info-bar');
+    infoBar.visible = true;
+    infoBar.message = 'This is an info bar with buttons';
+    let didClick = false;
+    const button = infoBar.addButton('More info...', function() {
+      didClick = true;
+    });
+    button.click();
+    assert.isTrue(didClick);
+    this.addHTMLOutput(infoBar);
+  });
+
+  test('hiding', function() {
+    const infoBar = document.createElement('tr-ui-b-info-bar');
+    infoBar.message = 'This is an info bar';
+    infoBar.visible = true;
+    this.addHTMLOutput(infoBar);
+
+    assert.strictEqual(getComputedStyle(infoBar).display, 'flex');
+
+    infoBar.visible = false;
+    assert.strictEqual(getComputedStyle(infoBar).display, 'none');
+
+    infoBar.visible = true;
+    assert.strictEqual(getComputedStyle(infoBar).display, 'flex');
+  });
+});
+</script>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/base/xhr.html">
+<link rel="import" href="/tracing/extras/full_config.html">
+<link rel="import" href="/tracing/importer/import.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/mre/failure.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.mre', function() {
+  const Failure = tr.mre.Failure;
+
+  function runAndConvertErrorsToFailures(result, job,
+      traceHandle, cb, opt_this) {
+    try {
+      cb.call(opt_this);
+    } catch (e) {
+      const err = tr.b.normalizeException(e);
+      // TODO(eakuefner): Set job once reduction is implemented.
+      result.addFailure(new Failure(
+          job, job.mapFunctionHandle.asUserFriendlyString(),
+          traceHandle.canonicalUrl, err.typeName, err.message, err.stack));
+    }
+  }
+
+  function mapSingleTrace(result, model, options, mapFunction) {
+    // Map the function.
+    const numPairsBeforeMapping = Object.keys(result.pairs).length;
+    const numFailuresBeforeMapping = result.failures.length;
+    try {
+      mapFunction(result, model, options);
+    } catch (ex) {
+      ex.name = 'MapFunctionError';
+      throw ex;
+    }
+
+    const addedPairs = (Object.keys(result.pairs).length >
+        numPairsBeforeMapping);
+    const addedFailures = result.failures.length > numFailuresBeforeMapping;
+    if (!(addedPairs || addedFailures)) {
+      const err = new Error('Mapper did not add any results!');
+      err.name = 'NoResultsAddedError';
+      throw err;
+    }
+  }
+
+  return {
+    mapSingleTrace,
+    runAndConvertErrorsToFailures
+  };
+});
+</script>
+

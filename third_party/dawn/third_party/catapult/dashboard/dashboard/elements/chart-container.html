@@ -1,0 +1,2995 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The chart-container element represents one chart and all related functionality,
+including a legend listing different traces that can be plotted on the same
+chart, a revision range selecting mini-chart at the bottom, and all of the alert
+triaging functionality in the chart.
+-->
+
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/iron-icon/iron-icon.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-tabs/paper-tabs.html">
+
+<link rel="import" href="/dashboard/elements/alert-icon.html">
+<link rel="import" href="/dashboard/elements/chart-legend.html">
+<link rel="import" href="/dashboard/elements/chart-slider.html">
+<link rel="import" href="/dashboard/elements/chart-sparkline.html">
+<link rel="import" href="/dashboard/elements/chart-title.html">
+<link rel="import" href="/dashboard/elements/chart-tooltip.html">
+<link rel="import" href="/dashboard/static/events.html">
+<link rel="import" href="/dashboard/static/related_timeseries.html">
+<link rel="import" href="/dashboard/static/series_group.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/dashboard/static/uri.html">
+
+<link rel="import" href="/tracing/base/sinebow_color_generator.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<dom-module id="chart-container">
+
+  <template>
+    <style include="iron-flex iron-flex-alignment iron-flex-factors">
+    #container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      min-width: 845px;  /* Minimum width of plot plus width of chart-legend. */
+    }
+
+    #container[compact] {
+      min-width: 670px;  /* Minimum width of plot plus width of compacted chart-legend. */
+    }
+
+    #horizontal {
+      display: flex;
+      width: 100%;
+      position: relative;
+    }
+
+    #chart-yaxis-label {
+      transform: rotate(-90deg) translate(-50%);
+      -webkit-transform: rotate(-90deg) translate(-50%);
+      transform-origin: 0 0;
+      -webkit-transform-origin: 0 0;
+      top: 50%;
+      position: absolute;
+      padding-top: 5px;
+      background-color: white;
+      z-index: var(--layer-highlights);
+    }
+
+    #vline-container {
+      display: flex;
+      width: 100%;
+    }
+    #plots-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #plot {
+      flex-grow: 1;
+      height: 240px;
+      min-width: 500px;
+    }
+
+    #slider {
+      width: 100%;
+      height: 60px;
+    }
+
+    #warning {
+      position: absolute;
+      left: 80px;
+      top: 15px;
+      z-index: var(--layer-dialogs);
+      font-size: 16px;
+      font-weight: bold;
+      color: #dd4b39;
+    }
+
+    #original {
+      position: absolute;
+      top: 10px;
+      margin-left: -15px;
+    }
+
+    #loading-div {
+      position: relative;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #alert-icon-container {
+      width: 0px;
+      height: 0px;
+      left: 0px;
+      top: 0px;
+      position: relative;
+    }
+
+    alert-icon {
+      position: absolute;
+      margin-top: -5px;
+      margin-left: -6px;
+      z-index: var(--layer-highlights);
+    }
+
+    #close-chart {
+      color: #e91e63;
+    }
+
+    #close-chart > iron-icon {
+      margin-right: 4px;
+    }
+
+    #top-bar {
+      width: 100%;
+    }
+
+    #related-tabs-container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    #related-tabs {
+      margin-left: 1em;
+      flex-grow: 1;
+      --paper-tabs-selection-bar-color: black;
+      --paper-tabs: {
+        background-color: #ccc;
+        height: 2em;
+      };
+    }
+    #related-sparkline-container {
+      width: 100%;
+      max-height: 290px;
+      overflow-y: scroll;
+    }
+    #related-sparkline-container chart-sparkline {
+      margin-top: 0.5em;
+    }
+    paper-tab {
+      flex-grow: 0;
+      color: #555;
+    }
+    paper-tab:last-of-type {
+      flex-grow: 1;
+    }
+    paper-tab:last-of-type {
+      --paper-tab-content: {
+        justify-content: flex-end;
+      };
+    }
+    paper-tab.iron-selected {
+      color: black;
+    }
+
+    #vline {
+      width: 0;
+      height: 214px;
+      position: relative;
+      top: 8px;
+      border-left: 1px solid black;
+      display: none;
+    }
+    </style>
+
+    <div id="container" compact$="{{showCompact}}">
+      <div id="top-bar" class="layout horizontal">
+        <div class="layout horizontal center-justified flex">
+          <chart-title id="title" series-group-list="{{seriesGroupList}}"
+                       test-suites="{{testSuites}}"></chart-title>
+        </div>
+        <div class="layout horizontal center">
+          <paper-button id="close-chart" on-click="closeChartClicked">
+            Close
+          </paper-button>
+        </div>
+      </div>
+      <div id="horizontal">
+        <div id="chart-yaxis-container">
+          <div id="chart-yaxis-label">{{chartYAxisLabel}}</div>
+        </div>
+        <div id="alert-icon-container"></div>
+        <chart-tooltip id="tooltip"
+                       xsrf-token="{{xsrfToken}}"></chart-tooltip>
+
+        <div id="vline-container">
+          <div id="vline">&nbsp;</div>
+          <div id="plots-container" on-mouseleave="onMouseLeave">
+            <div id="plot">
+              <div id="loading-div">
+                <!-- TODO(#3803): Use paper spinner. -->
+                <img src="//www.google.com/images/loading.gif">
+              </div>
+            </div>
+            <chart-slider id="slider" on-revisionrange="onRevisionRange"></chart-slider>
+          </div>
+        </div>
+
+        <div id="warning">
+          <template is="dom-repeat" items="{{warnings}}">
+            <span>{{item.value}}</span><br>
+          </template>
+        </div>
+
+        <a hidden id="original"
+           on-click="onViewOriginal"
+           href="javascript:void(0);">View original graph</a>
+
+        <chart-legend id="legend"
+                      series-group-list="{{seriesGroupList}}"
+                      indices-to-graph="{{indicesToGraph}}"
+                      collapse-legend="{{collapseLegend}}"
+                      on-dragstart="legendSeriesDragStart"
+                      on-dragend="legendSeriesDragEnd"
+                      delta-absolute="{{deltaAbsolute}}"
+                      delta-percent="{{deltaPercent}}"
+                      show-delta="{{showDelta}}">
+      </div>
+
+      <canvas hidden id="text_measurement"></canvas>
+
+      <div hidden$="[[!showRelatedTabs_(relatedTabs)]]" style="width: 100%">
+        <div id="related-tabs-container">
+          <div>Related</div>
+          <paper-tabs id="related-tabs" selected="{{selectedRelatedTabIndex}}">
+            <template is="dom-repeat" items="[[relatedTabs]]">
+              <paper-tab>[[item.name]]</paper-tab>
+            </template>
+          </paper-tabs>
+        </div>
+        <div id="related-sparkline-container">
+          <template is="dom-repeat" items="[[selectedRelatedTab]]">
+            <chart-sparkline name="[[item.name]]"
+                        chart-options="[[getSparklineChartOptions()]]"
+                        revision-map="[[revisionMap]]"
+                        start-rev="[[sliderStartRev]]"
+                        end-rev="[[sliderEndRev]]"
+                        vline-point-id="[[vlinePointId]]"
+                        testpaths="[[item.testpaths]]">
+            </chart-sparkline>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</dom-module>
+<script>
+'use strict';
+(function() {
+  // Regex for links in series annotation which are shown in tooltip.
+  const TOOLTIP_LINK_REGEX = /\[(.+?)\]\((.+?)\)/;
+
+  // Sinebow generator for graph color picking.
+  const GENERATOR = new tr.b.SinebowColorGenerator();
+
+  /**
+    * Returns a date corresponding to the given timestamp, or null.
+    * @param {string} rev A string that may contain a timestamp.
+    * @return {?Date} A date object if a timestamp was given, or
+    *     null.
+    */
+  function getDateDisplay(rev) {
+    const timestampSecondsRegex = /^[\d]{10}$/;
+    const timestampMillisecondsRegex = /^[\d]{13}$/;
+    let d = null;
+    if (timestampSecondsRegex.test(rev)) {
+      d = new Date(rev * 1000);
+    } else if (timestampMillisecondsRegex.test(rev)) {
+      d = new Date(rev);
+    }
+    if (d) {
+      return d.toLocaleString();
+    }
+    return null;
+  }
+
+  /**
+    * Returns a string to display, given a string that contains a
+    * revision. This will be different depending on whether the given
+    * revision is a git hash, a timestamp, or other.
+    * Note: this is similar to the getDisplayRevision function for the
+    * embed page (defined in static/embed.js)
+    * @param {string|boolean} rev A string containing a "revision".
+    *     False may also be passed, in which case it doesn't matter what
+    * @return {string} A string to display for the given revision.
+    */
+  function getDisplayRevision(rev) {
+    // Truncate git sha1 to 7 chars.
+    const gitRegex = /^[a-f0-9]{40}$/;
+    if (gitRegex.test(rev)) {
+      return rev.substring(0, 7);
+    }
+    const d = getDateDisplay(rev);
+    if (d) {
+      return d;
+    }
+    return rev;
+  }
+
+  /**
+    * Formats numbers in a human-readable way.
+    * @param {number|string} val A number or string.
+    * @return {string} A string.
+    */
+  function formatNumber(val) {
+    const num = Number(val);
+    const options = {
+      minimumSignificantDigits: 2,
+      maximumSignificantDigits: 6
+    };
+    return num.toLocaleString('en-US', options);
+  }
+
+  /**
+    * Deep compares two dictionary parameters.
+    * This function converts dictionary parameters to sorted list of pairs
+    * of key and values and compares their JSON string.
+    * @param {Object} param1 An object.
+    * @param {Object} param2 An object.
+    * @return {boolean} True if equal, otherwise false.
+    */
+  function graphParamEquals(param1, param2) {
+    if (!param1 || !param2) {
+      return param1 == param2;
+    }
+    param1 = Object.keys(param1).sort().map(function(k) {
+      return [k, param1[k]];
+    });
+    param2 = Object.keys(param2).sort().map(function(k) {
+      return [k, param2[k]];
+    });
+    return JSON.stringify(param1) == JSON.stringify(param2);
+  }
+
+  function arrayUnique(array) {
+    const dict = {};
+    array.forEach(function(item) {
+      dict[item] = true;
+    });
+    return Object.keys(dict);
+  }
+
+  Polymer({
+
+    is: 'chart-container',
+    properties: {
+      SERIES_SELECTION_OPTIONS: {
+        type: Array,
+        value: () => ['all', 'none']
+      },
+
+      // Default values for reverting series highlighting.
+      DEFAULT_SERIES_PROPERTIES: {
+        type: Object,
+        value: () => {
+          return {
+            lineWidth: 2,
+            opacity: 1,
+            fill: 0.2,
+            shadowSize: 3
+          };
+        }
+      },
+
+      DEFAULT_JSON_PROPERTIES: {
+        type: Object,
+        value: () => {
+          return {
+            annotations: {
+              series: {}
+            },
+            data: {},
+            error_bars: {},
+            warning: null,
+          };
+        }
+      },
+
+      // Amount of time before a warning is shown for tests with no new
+      // data.
+      STALE_DATA_DELTA_MS: {
+        type: Number,
+        value: 7 * 86400000
+      },
+
+      alertKey: { notify: true },
+      collapseLegend: {
+        type: Boolean,
+        value: false,
+        notify: true,
+        observer: 'collapseLegendChanged'
+      },
+      indicesToGraph: {
+        type: Array,
+        value: () => [],
+      },
+
+      // A list of series group dictionary. A series group contains test
+      // path and list of test information. This is displayed in
+      // chart-legend, where each test is a checkable series.
+      // seriesGroupList has the form:
+      //   [{
+      //         'path': 'ChromiumPerf/linux/dromaeo/Total',
+      //         'tests': [{
+      //              name: 'Total',
+      //              displayName: 'Total',
+      //              direction: 'Lower is better',
+      //              units: 'm/s',
+      //              description: 'Total time',
+      //              etc.
+      //         }]
+      //   }]
+      seriesGroupList: {
+        notify: true,
+        type: Array,
+        value: () => [],
+      },
+
+      // Data series index of the point that was most recently clicked.
+      currentItem: {
+        value: null
+      },
+
+      // Meta-data about tests, which will be displayed in the legend.
+      legendTests: {
+        type: Array,
+        value: () => []
+      },
+
+      // Text to display next to the y-axis.
+      chartYAxisLabel: {
+        value: '',
+        type: String
+      },
+
+      // Y-axis delta of current zoom selection, as an absolute number
+      // and as a percentage of the original selection.
+      deltaAbsolute: {
+        value: 0,
+        type: Number
+      },
+      deltaPercent: {
+        value: 0,
+        type: Number
+      },
+
+      // Information about the last selection range.
+      lastSelectedDelta: { value: null },
+
+      // Whether or not the user is currently selecting a range.
+      selecting: {
+        type: Boolean,
+        value: false
+      },
+
+      // Y-axis start value in the last selection range.
+      firstSelectedValue: {
+        type: Number,
+        value: 0
+      },
+
+      // Whether or not the tooltip is "sticky". Sticky means that it will
+      // stay visible when the user is no longer hovering over the point.
+      stickyTooltip: {
+        type: Boolean,
+        value: false
+      },
+
+      // Map of series indexes to arrays with revision information.
+      revisionMap: {
+        type: Object,
+        value: null
+      },
+
+      // Whether or not the chart can currently be drawn.
+      drawable: {
+        type: Boolean,
+        value: false
+      },
+
+      // The Flot Plot object, returned by $.plot.
+      chart: {
+        value: null
+      },
+
+      // Timeout ID of the timer used by this.resizeHandler.
+      resizeTimer: { value: null },
+
+      // Maintain the next series index as new graph json comes in.
+      nextSeriesIndex: { value: null },
+
+      // Whether this chart-container allows a series group to be dropped
+      // on-to it.
+      droppable: {
+        type: Boolean,
+        value: true
+      },
+
+      // Whether to show delta in chart-legend.
+      showDelta: {
+        type: Boolean,
+        value: false
+      },
+
+      // Chart options to be given when initializing the Flot chart.
+      // See: https://github.com/flot/flot/blob/master/API.md#plot-options
+      chartOptions: {
+        type: Object,
+        value: () => {
+          return {
+            grid: {
+              hoverable: true,
+              clickable: true,
+              borderWidth: 1,
+              borderColor: 'rgba(0, 0, 0, 0.5)'
+            },
+            crosshair: {
+              mode: 'xy',
+              color: 'rgba(34, 34, 34, 0.3)',
+              lineWidth: 0.3
+            },
+            xaxis: {},
+            yaxis: {},
+            selection: {
+              mode: 'y'
+            }
+          };
+        }
+      },
+
+      // Warning text to be shown over the chart, if any.
+      warnings: {
+        type: Array,
+        notify: true,
+        value: () => [],
+        observer: 'warningsChanged'
+      },
+
+      graphParams: {
+        type: Object,
+        value: () => { return {}; }
+      },
+
+      // List of XMLHttpRequests sent for graph json.
+      graphJsonRequests: {
+        type: Array,
+        value: () => []
+      },
+
+      isInternalUser: { notify: true },
+      onUri: { observer: 'onUriChanged' },
+      revisionInfo: { notify: true },
+      showCompact: { notify: true },
+      testSuites: { notify: true },
+      xsrfToken: { notify: true },
+
+      relatedTabs: {
+        type: Array,
+        value: () => [],
+      },
+
+      selectedRelatedTab: {
+        type: Array,
+        value: () => [],
+      },
+
+      selectedRelatedTabIndex: {
+        type: Number,
+        value: -1,
+        observer: 'onSelectedRelatedTabIndexChange_',
+      },
+
+      vlinePointId: {
+        type: Number,
+      },
+
+      sliderStartRev: {
+        type: String,
+      },
+
+      sliderEndRev: {
+        type: String,
+      },
+    },
+
+    observers: [
+      'indicesToGraphChanged(indicesToGraph.splices)'
+    ],
+
+    /**
+      * Initializes the chart-container element and all of its properties.
+      *
+      * This is a custom element lifecycle callback that's called when an
+      * instance of the element is ready.
+      * http://www.polymer-project.org/polymer.html#lifecyclemethods
+      *
+      * We use 'ready' instead of 'created' to know when the element has its
+      * bindings, Shadow DOM has been created, and its on-* handlers and
+      * property observers have been set up.
+      * See https://github.com/Polymer/polymer/releases/tag/v0.0.20131025
+      */
+    ready() {
+      // Handler for the 'resize' event.
+      this.resizeHandler = this.onResize.bind(this);
+
+      // The data fetched from the graph_json handler for this chart.
+      this.json = tr.b.deepCopy(this.DEFAULT_JSON_PROPERTIES);
+
+      this.chartOptions.xaxis.tickFormatter = this.formatXAxis.bind(this);
+      this.chartOptions.yaxis.tickFormatter = this.formatYAxis.bind(this);
+
+      this.$.legend.addEventListener(
+          'seriesmouseover', this.seriesMouseover.bind(this), true);
+      this.$.legend.addEventListener(
+          'seriesmouseout', this.seriesMouseout.bind(this), true);
+
+      this.$.tooltip.addEventListener(
+          'triaged', this.onBugTriaged.bind(this), true);
+      this.$.tooltip.addEventListener(
+          'alertChangedRevisions', this.onAlertChangedRevisions.bind(this),
+          true);
+
+      this.$.legend.addEventListener(
+          'seriesgroupclosed', this.onSeriesGroupClosed.bind(this), true);
+
+      this.$.title.addEventListener(
+          'titleclicked', this.onTitleClicked.bind(this), true);
+
+      events.addEventListener(window, 'resize', this.resizeHandler);
+
+      this.initializePlotEventListeners();
+
+      events.addEventListener(
+          window, 'urichange', this.onUriChanged.bind(this));
+
+      // This flag is used by onSelectedRelatedTabIndexChange_ to fire the
+      // chartstatechanged event without causing infinite recursion.
+      // Listeners such as the report-page listen for that event to
+      // serialize the page state, but this chart-container also listens for
+      // that event to rebuild related sparklines whenever any seriesGroups
+      // or revisions change.
+      // TODO(benjhayden) Refactor and clarify events.
+      this.ignoreChartStateChangedEvent_ = false;
+
+      // This Promise is resolved when relatedTabs is ready to allow
+      // build() to restore state.selectedRelatedTab.
+      // TODO(benjhayden) Refactor addSeriesGroup2 and other methods in its
+      // stack to be async so that build() can await
+      // Promise.all(addSeriesGroup2(...) for each seriesGroup) before
+      // restoring selectedRelatedTab. sendGraphJsonRequest() will need to
+      // be careful to wait to resolve until after its callback returns.
+      this.relatedTabsReadyPromise_ = new Promise(resolve => {
+        this.resolveRelatedTabsReady_ = resolve;
+      });
+    },
+
+    async build(state) {
+      for (const seriesGroup of state.seriesGroups) {
+        this.addSeriesGroup2(seriesGroup, true);
+      }
+      if (state.selectedRelatedTab) {
+        await this.relatedTabsReadyPromise_;
+        for (let i = 0; i < this.relatedTabs.length; ++i) {
+          if (this.relatedTabs[i].name === state.selectedRelatedTab) {
+            this.selectedRelatedTabIndex = i;
+            break;
+          }
+        }
+      }
+    },
+
+    /**
+      * Binds event handlers for events that are fired by Flot.
+      */
+    initializePlotEventListeners() {
+      const plot = $(this.$.plot);
+      plot.bind('plotselected', this.onPlotSelected.bind(this));
+      plot.bind('plotselecting', this.onPlotSelecting.bind(this));
+      plot.bind('plotunselected', this.onPlotUnselected.bind(this));
+      plot.bind('plotclick', this.onPlotClick.bind(this));
+      plot.bind('plothover', this.onPlotHover.bind(this));
+    },
+
+    /**
+      * Updates the display names for series groups.
+      *
+      * If there are multiple series groups, it's difficult to distinguish
+      * between them, so we use part of the path and prefix it to the metric
+      * in the legend.
+      *
+      **/
+    updateSeriesGroupDisplayNames() {
+      if (this.seriesGroupList.length > 1) {
+        const pathLengths = this.seriesGroupList.map(
+            p => p.path.split('/').length);
+        const minPathLength = Math.min.apply(null, pathLengths) - 1;
+
+        // This just scans the paths to find the last point at which all the
+        // paths were identical.
+        let commonIndex = 0;
+        for (; commonIndex < minPathLength; commonIndex++) {
+          const parts = this.seriesGroupList.map(
+              p => p.path.split('/')[commonIndex]);
+          if (!parts.every(p => p == parts[0])) {
+            break;
+          }
+        }
+
+        if (commonIndex < minPathLength) {
+          // Once it has an index where they differ, we create a prefix
+          // for the display name starting there.
+          for (let i = 0; i < this.seriesGroupList.length; i++) {
+            const prefix = this.seriesGroupList[i].path.split(
+                '/').slice(commonIndex, minPathLength).join('/');
+            for (let j = 0; j < this.seriesGroupList[i].tests.length; j++) {
+              const displayName = prefix + '/' + (
+                this.seriesGroupList[i].tests[j].name);
+              this.set(
+                  'seriesGroupList.' + i + '.tests.' + j + '.displayName',
+                  displayName);
+            }
+          }
+        }
+      }
+    },
+
+    /**
+      * Adds series group to graph.
+      *
+      * If test path already exist, it will be ignored.
+      *
+      * @param {Array.<Array>} testPathAndSelected A list of
+      *     pair of test path and a list of selected series.
+      * @param {boolean} collapse Whether unchecked and unimportant
+      *     series should start off hidden.
+      */
+    addSeriesGroup(testPathAndSelected, collapse) {
+      // Checks if test path already exists.
+      const testPathSet = {};
+      this.seriesGroupList.forEach(function(group) {
+        testPathSet[group.path] = true;
+      });
+
+      testPathAndSelected = testPathAndSelected.filter(function(value) {
+        return !(value[0] in testPathSet);
+      });
+      if (testPathAndSelected.length == 0) {
+        return;
+      }
+
+      // We want to send two requests, one for selected and unselected
+      // series, so there would be a quicker response for the selected
+      // series. But, if the selected series is unknown, we default to
+      // send an unselected series.
+      const selectedTestPathDict = {};
+      const unSelectedTestPathDict = {};
+      for (let i = 0; i < testPathAndSelected.length; i++) {
+        const testPath = testPathAndSelected[i][0];
+        let selectedTraces = testPathAndSelected[i][1];
+        selectedTraces = arrayUnique(selectedTraces);
+        const seriesGroup = {
+          path: testPath,
+          tests: [],
+          collapse,
+          numPendingRequests: 0
+        };
+        if (selectedTraces.length > 0) {
+          const selected = selectedTraces[0];
+          if (this.SERIES_SELECTION_OPTIONS.indexOf(selected) != -1) {
+            seriesGroup.selection = selectedTraces[0];
+            selectedTestPathDict[testPath] = [];
+          } else {
+            // Create test data here for selected traces so they can
+            // be initially shown in chart legend.
+            for (let j = 0; j < selectedTraces.length; j++) {
+              const testData = {
+                name: selectedTraces[j],
+                displayName: selectedTraces[j],
+                selected: true
+              };
+              seriesGroup.tests.push(testData);
+            }
+            selectedTestPathDict[testPath] = selectedTraces;
+            unSelectedTestPathDict[testPath] = selectedTraces;
+          }
+        } else {
+          unSelectedTestPathDict[testPath] = [];
+        }
+        this.push('seriesGroupList', seriesGroup);
+      }
+
+      this.updateSeriesGroupDisplayNames();
+      this.buildRelatedTabs_();
+
+      if (Object.keys(selectedTestPathDict).length > 0) {
+        this.sendGraphJsonRequest(selectedTestPathDict, true);
+      }
+      if (Object.keys(unSelectedTestPathDict).length > 0) {
+        this.sendGraphJsonRequest(unSelectedTestPathDict, false);
+      }
+      this.updateSlider();
+      this.$.title.update();
+    },
+
+    /**
+      * Adds series group to graph explicitly.
+      *
+      * Since adding the test_path_dict mode for /list_tests, the preferred
+      * flow for resolving a test path into lists of selected and unselected
+      * tests is to use this endpoint to resolve them directly. This function
+      * should be functionally equivalent to addSeriesGroup except for this
+      * resolution step, and the goal is to replace it
+      * (https://github.com/catapult-project/catapult/issues/3385).
+      *
+      * @param {d.SeriesGroup} seriesGroup The series group to be added.
+      * @param {boolean} collapse Whether unchecked and unimportant
+      *     series should start off hidden.
+      */
+    addSeriesGroup2(seriesGroup, collapse) {
+      const mainPath = seriesGroup.mainPath;
+      const selectedPaths = seriesGroup.selectedPaths;
+      const unselectedPaths = seriesGroup.unselectedPaths;
+
+      const testPaths = selectedPaths.concat(unselectedPaths);
+      testPaths.sort();
+      for (const testPath of testPaths) {
+        // XHRs are asynchronous, so the data can arrive in any order.
+        // Pre-compute colors for testPaths in a deterministic order.
+        GENERATOR.colorForKey(testPath);
+      }
+
+      // Checks if test path already exists.
+      const testPathSet = new Set(
+          this.seriesGroupList.map(group => group.path));
+
+      if (testPathSet.has(mainPath)) {
+        return;
+      }
+
+      const tests = [];
+      for (const selectedPath of selectedPaths) {
+        tests.push({
+          name: selectedPath.split('/').slice(-1)[0],
+          selected: true
+        });
+      }
+
+      const legacySeriesGroup = {
+        path: mainPath,
+        tests,
+        collapse,
+        numPendingRequests: 0
+      };
+
+      this.push('seriesGroupList', legacySeriesGroup);
+
+      if (selectedPaths.length > 0) {
+        this.sendGraphJsonRequest(selectedPaths, true, mainPath);
+      }
+
+      if (unselectedPaths.length > 0) {
+        this.sendGraphJsonRequest(unselectedPaths, false, mainPath);
+      }
+
+      this.updateSlider();
+      this.$.title.update();
+    },
+
+
+    /**
+      * Sends a request for graph JSON.
+      *
+      * @param {Object} testPathDictOrList Dictionary of test path to list of
+      *     selected series, or flat list of test paths.
+      * @param {boolean} isSelected Whether this request is for selected
+      *     or unselected series.
+      * @param {String} mainPath If a list of tests is supplied, the main
+      *     path to which they belong, for updating the counter.
+      */
+    sendGraphJsonRequest(
+        testPathDictOrList, isSelected, mainPath) {
+      // TODO(eakuefner): Get rid of mainPath once loading counter is
+      // cleaned up
+      const params = JSON.parse(JSON.stringify(this.graphParams));
+
+      let pathsForUpdate;
+      if (testPathDictOrList instanceof Array) {
+        const testPaths = testPathDictOrList;
+        params.test_path_list = testPathDictOrList;
+        pathsForUpdate = [mainPath];
+      } else {
+        const testPaths = Object.keys(testPathDictOrList);
+        params.test_path_dict = testPathDictOrList;
+        pathsForUpdate = testPaths;
+      }
+
+      // TODO(eakuefner): Figure out how to remove this parameter since in
+      // list mode we only need it for the _MAX_UNSELECTED_TESTS hack.
+      if (isSelected) {
+        params.is_selected = true;
+      }
+
+      this.updateSeriesGroupLoadingCounter(pathsForUpdate, true);
+
+      if (window.METRICS) METRICS.startLoadChart();
+      const req = simple_xhr.send(
+          '/graph_json',
+          {'graphs': JSON.stringify(params)},
+          function(json) {
+            if (this.jsonHasData(json)) {
+              this.updateJson(json, isSelected);
+            } else if (isSelected) {
+              this.addWarnings('No data available.');
+              this.checkForInternalUser();
+              this.updateChart();
+            }
+
+            this.updateSeriesGroupLoadingCounter(
+                pathsForUpdate, false);
+            this.$['loading-div'].style.display = 'none';
+            if (window.METRICS) METRICS.endLoadChart();
+          }.bind(this),
+          function(error) {
+            if (error) {
+              this.addWarnings('Failed to fetch graph data.');
+              this.checkForInternalUser();
+            }
+            this.updateSeriesGroupLoadingCounter(
+                pathsForUpdate, false);
+            this.$['loading-div'].style.display = 'none';
+          }.bind(this)
+      );
+      this.graphJsonRequests.push(req);
+    },
+
+    jsonHasData(json) {
+      if (!('data' in json)) {
+        return;
+      }
+      const seriesIndices = Object.keys(json.data);
+      return (seriesIndices.length > 0 &&
+              json.data[seriesIndices[0]].data.length > 0);
+    },
+
+    /**
+      * Update loading counter for all series groups in a testPaths.
+      *
+      * @param {Array} testPaths List of test paths.
+      * @param {boolean} increment True to add one, False to subtract one.
+      */
+    updateSeriesGroupLoadingCounter(testPaths, increment) {
+      const testPathToGroupIndex = {};
+      for (let i = 0; i < this.seriesGroupList.length; i++) {
+        testPathToGroupIndex[this.seriesGroupList[i].path] = i;
+      }
+
+      const delta = (increment) ? 1 : -1;
+      testPaths.forEach(function(testPath) {
+        const index = testPathToGroupIndex[testPath];
+        this.set('seriesGroupList.' + index + '.numPendingRequests',
+            this.seriesGroupList[index].numPendingRequests + delta);
+      }.bind(this));
+    },
+
+    checkForInternalUser() {
+      if (!this.isInternalUser) {
+        this.addWarnings(
+            'Note that some data is only available when logged in.');
+      }
+    },
+
+    /**
+      * Adds a warning message if it doesn't exist.
+      */
+    addWarnings(warning) {
+      for (let i = 0; i < this.warnings.length; i++) {
+        if (this.warnings[i].value.indexOf(warning) == 0) {
+          return;
+        }
+      }
+      this.push('warnings', {value: warning});
+    },
+
+    /**
+      * Adds warnings for selected series that are stale or have no data.
+      */
+    updateWarningsForSelectedSeries() {
+      this.warnings = this.warnings.filter(function(value) {
+        return (value.value.indexOf('Graph out of date!') == -1 &&
+                value.value.indexOf('No data available.') == -1);
+      });
+
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const index = this.indicesToGraph[i];
+        const series = this.json.annotations[index];
+        if (!series) {
+          this.warnings.push({value: 'No data available.'});
+        }
+      }
+
+      const hasRevParams = ('rev' in this.graphParams ||
+                          'start_rev' in this.graphParams ||
+                          'end_rev' in this.graphParams);
+      if (hasRevParams) {
+        return;
+      }
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const index = this.indicesToGraph[i];
+        const timestamp = this.getSeriesLatestTimestamp(index);
+        if (timestamp != null) {
+          const currentTime = new Date().getTime();
+          if (timestamp < currentTime - this.STALE_DATA_DELTA_MS) {
+            this.warnings.push({value:
+              'Graph out of date! Last data received: ' +
+              new Date(timestamp).toISOString(),
+            });
+            break;
+          }
+        }
+      }
+    },
+
+    getSeriesLatestTimestamp(seriesIndex) {
+      const series = this.json.annotations[seriesIndex];
+      if (series) {
+        const lastIndex = Math.max.apply(Math, Object.keys(series));
+        if ('timestamp' in series[lastIndex]) {
+          return series[lastIndex].timestamp;
+        }
+      }
+      return null;
+    },
+
+    /**
+      * Updates graph data for newJson.
+      *
+      * Merge newJson with this.json and update this.seriesGroupList.
+      *
+      * @param {Object} newJson JSON data from /graph_json request.
+      * @param {boolean} isSelected Whether this should be selected or
+      *     unselected set of series.
+      */
+    updateJson(newJson, isSelected) {
+      if (!this.nextSeriesIndex) {
+        this.nextSeriesIndex = Object.keys(this.json.data).length;
+      }
+
+      const testPathToSeriesIndex = {};
+      const series = this.json.annotations.series;
+      for (const i in series) {
+        testPathToSeriesIndex[series[i].path] = parseInt(i);
+      }
+
+      const newSeries = {};
+      for (const index in newJson.data) {
+        const testPath = newJson.annotations.series[index].path;
+        let nextIndex = null;
+        if (testPath in testPathToSeriesIndex) {
+          nextIndex = testPathToSeriesIndex[testPath];
+        } else {
+          nextIndex = this.nextSeriesIndex;
+          this.nextSeriesIndex++;
+        }
+
+        const color = GENERATOR.colorForKey(testPath).toString();
+        newJson.data[index].color = color;
+        this.updateJsonDataIndex(newJson.data[index], nextIndex);
+        this.json.data[nextIndex] = newJson.data[index];
+
+        // Flot's getData() method can return the data series out of order,
+        // so maintain an index so that we can get back to the original
+        // data series on click and hover events.
+        this.json.data[nextIndex].index = nextIndex;
+
+        this.json.annotations.series[nextIndex] =
+            newJson.annotations.series[index];
+        this.json.annotations[nextIndex] = newJson.annotations[index];
+        newSeries[nextIndex] = newJson.annotations.series[index];
+
+        this.updateErrorBarsIndex(newJson.error_bars[index], nextIndex,
+            color);
+        this.json.error_bars[nextIndex] = newJson.error_bars[index];
+      }
+
+      this.updateForNewSeries(newSeries, isSelected);
+    },
+
+    /**
+      * Updates chart for new list of series.
+      *
+      * @param {Array} series A list of series data.
+      * @param {boolean} isSelected Whether this should be selected or
+      *     unselected set of series.
+      */
+    updateForNewSeries(series, isSelected) {
+      if (!this.drawable) {
+        // Cache the new series until the chart is drawable.
+        this.newDrawableSeries = this.newDrawableSeries || [];
+        this.newDrawableSeries.push([series, isSelected]);
+        return;
+      }
+
+      this.$['loading-div'].style.display = 'none';
+
+      if (Object.keys(series).length == 0) {
+        return;
+      }
+
+      const testList = [];
+      for (let i in series) {
+        i = parseInt(i);
+        const test = {
+          name: series[i].name,
+          displayName: series[i].name,
+          path: series[i].path,
+          direction: series[i].better,
+          units: series[i].units,
+          description: series[i].description,
+          color: this.json.data[i].color,
+          index: i,
+        };
+
+        testList.push(test);
+      }
+
+      this.updateSeriesGroupList(testList);
+      this.updateSlider();
+      this.updateYAxisLabel();
+      this.updateSmartAutoscaleMap();
+      this.buildRelatedTabs_();
+
+      if (isSelected) {
+        this.updateIndicesToGraph();
+      }
+    },
+
+    /**
+      * Updates this.seriesGroupList for a list of series object.
+      *
+      * @param {Array} testList List of test object.
+      */
+    updateSeriesGroupList(testList) {
+      const testPathToGroupIndex = {};
+      for (let i = 0; i < this.seriesGroupList.length; i++) {
+        testPathToGroupIndex[this.seriesGroupList[i].path] = i;
+      }
+
+      for (let i = 0; i < testList.length; i++) {
+        const test = testList[i];
+        let seriesGroupIndex = null;
+        if (test.path in testPathToGroupIndex) {
+          seriesGroupIndex = testPathToGroupIndex[test.path];
+        } else {
+          const parentPath = test.path.substring(0,
+              test.path.lastIndexOf('/'));
+          if (parentPath in testPathToGroupIndex) {
+            seriesGroupIndex = testPathToGroupIndex[parentPath];
+          }
+        }
+        if (seriesGroupIndex != null) {
+          this.updateSeriesGroup(seriesGroupIndex, test);
+        }
+      }
+      this.updateSeriesGroupDisplayNames();
+    },
+
+    /**
+      * Updates a given test in seriesGroup or adds test if not found.
+      *
+      * At the time that this function is called, tests in a series
+      * group are either partially created or not yet added. This
+      * function replaces the existing test in its series group
+      * with passed |test|, or inserts if it doesn't exist.
+      *
+      * @param {Number} seriesGroupIndex An index in the series group object.
+      * @param {Object} newTest Contains information about a series
+      * displayed in chart-legend.
+      */
+    updateSeriesGroup(seriesGroupIndex, newTest) {
+      // Update series if its data has not been loaded.
+      let testIndex = this.getTestIndexInSeriesGroup(
+          seriesGroupIndex, newTest.name);
+      if (testIndex != null) {
+        for (const key in newTest) {
+          this.set('seriesGroupList.' + seriesGroupIndex + '.tests.' +
+                    testIndex + '.' + key,
+          newTest[key]);
+        }
+      } else {
+        this.addTestToSeriesGroup(seriesGroupIndex, newTest);
+        testIndex = this.getTestIndexInSeriesGroup(
+            seriesGroupIndex, newTest.name);
+      }
+
+      if (this.seriesGroupList[seriesGroupIndex].selection == 'all') {
+        this.set('seriesGroupList.' + seriesGroupIndex + '.tests.' +
+                  testIndex + '.selected', true);
+      }
+    },
+
+    /**
+      * Adds a test to seriesGroup and determines if it should be hidden.
+      */
+    addTestToSeriesGroup(seriesGroupIndex, test) {
+      const seriesGroup = this.seriesGroupList[seriesGroupIndex];
+      if (seriesGroup.collapse && !test.selected) {
+        test.hidden = true;
+        if (seriesGroup.numHidden == undefined) {
+          this.set('seriesGroupList.' + seriesGroupIndex + '.numHidden', 0);
+        }
+        this.set('seriesGroupList.' + seriesGroupIndex + '.numHidden',
+            seriesGroup.numHidden + 1);
+      }
+      this.push('seriesGroupList.' + seriesGroupIndex + '.tests', test);
+      this.set('seriesGroupList.' + seriesGroupIndex + '.tests',
+          seriesGroup.tests.sort(this.compareTest));
+    },
+
+    getTestIndexInSeriesGroup(seriesGroupIndex, name) {
+      const tests = this.seriesGroupList[seriesGroupIndex].tests;
+      for (let i = 0; i < tests.length; i++) {
+        if (name == tests[i].name) {
+          return i;
+        }
+      }
+      return null;
+    },
+
+    /**
+      * Reloads chart with current graph parameters and seriesGroupList.
+      *
+      * This is called on graph revision range changed.
+      */
+    reloadChart() {
+      this.graphJsonRequests.forEach(function(request) {
+        request.abort();
+      });
+      this.hideTooltipEvenIfSticky();
+      this.clearAlertIcons();
+      this.$['loading-div'].style.display = '';
+      this.set('indicesToGraph', []);
+      this.json.warnings = [];
+      this.warnings = [];
+
+      // Create params out of seriesGroupList to make /graph_json request.
+      const selectedTestPathDict = {};
+      const unSelectedTestPathDict = {};
+      for (let i = 0; i < this.seriesGroupList.length; i++) {
+        const testPath = this.seriesGroupList[i].path;
+        const tests = this.seriesGroupList[i].tests;
+        const selectedTraces = [];
+        for (let j = 0; j < tests.length; j++) {
+          const test = tests[j];
+          if (test.selected) {
+            selectedTraces.push(test.name);
+          } else {
+            // Disable unselected series in chart-legend during loading.
+            test.index = undefined;
+          }
+        }
+        if (selectedTraces.length > 0) {
+          selectedTestPathDict[testPath] = selectedTraces;
+          unSelectedTestPathDict[testPath] = selectedTraces;
+        } else {
+          unSelectedTestPathDict[testPath] = [];
+        }
+      }
+
+      if (Object.keys(selectedTestPathDict).length > 0) {
+        this.sendGraphJsonRequest(selectedTestPathDict, true);
+      }
+      if (Object.keys(unSelectedTestPathDict).length > 0) {
+        this.sendGraphJsonRequest(unSelectedTestPathDict, false);
+      }
+    },
+
+    updateJsonDataIndex(jsonData, index) {
+      jsonData.index = 'line_' + index;
+      jsonData.id = 'line_' + index;
+    },
+
+    updateErrorBarsIndex(errorBarsData, index, color) {
+      const top = errorBarsData[0];
+      const bottom = errorBarsData[1];
+      top.id = 'top_' + index;
+      top.fillBetween = 'line_' + index;
+      top.color = color;
+      bottom.fillBetween = 'bottom_' + index;
+      bottom.fillBetween = 'line_' + index;
+      bottom.color = color;
+    },
+
+    /**
+      * Updates the list of indices of traces to plot with seriesGroupList.
+      */
+    updateIndicesToGraph() {
+      this.set('indicesToGraph', []);
+      for (let i = 0; i < this.seriesGroupList.length; i++) {
+        const tests = this.seriesGroupList[i].tests;
+        for (let j = 0; j < tests.length; j++) {
+          if (tests[j].selected && tests[j].index != undefined) {
+            this.push('indicesToGraph', tests[j].index);
+          }
+        }
+      }
+    },
+
+    /**
+      * Sorts by tests by important and then by name.
+      */
+    compareTest(testA, testB) {
+      if (testA.name > testB.name) {
+        return 1;
+      }
+      if (testA.name < testB.name) {
+        return -1;
+      }
+      return 0;
+    },
+
+    updateSlider() {
+      if (this.seriesGroupList.length == 0 ||
+          this.seriesGroupList[0].tests.length == 0) {
+        return;
+      }
+      const firstTestPath = this.seriesGroupList[0].tests[0].path;
+      if (firstTestPath && firstTestPath != this.$.slider.testpath) {
+        this.$.slider.testpath = firstTestPath;
+      }
+    },
+
+    /**
+      * A custom element lifecycle callback, called when an instance of the
+      * element is removed from the DOM.
+      * See: http://www.polymer-project.org/polymer.html#lifecyclemethods
+      */
+    detached() {
+      this.drawable = false;
+      window.removeEventListener('resize', this.resizeHandler);
+    },
+
+    attached() {
+      this.drawable = true;
+      // This likely only happens in the unit test, but if series have
+      // been added before the element became drawable, update now.
+      if (this.newDrawableSeries) {
+        for (const drawableSeries of this.newDrawableSeries) {
+          this.updateForNewSeries(drawableSeries[0], drawableSeries[1]);
+        }
+      }
+    },
+
+    /**
+      * Handler for the click event of X button on the top-right corner.
+      */
+    closeChartClicked() {
+      Polymer.dom(Polymer.dom(this).parentNode).removeChild(this);
+      this.fire('chartclosed', {
+        target: this,
+        stateName: 'chartclosed',
+        params: {
+          seriesGroupList: this.seriesGroupList
+        }
+      });
+    },
+
+    /**
+      * Handler for 'revisionrange' event, fired when revision range
+      * changes.
+      *
+      * This event is fired by the chart-revision-range element. When this
+      * event is fired, it indicates that a new start and end revision have
+      * been selected.
+      *
+      * @param {Event} event The revisionrange event.
+      * @param {Object} detail The detail object given when firing the
+      *     event. This is set in graph.js and it contains 'start_rev' and
+      *     'end_rev'.
+      */
+    onRevisionRange(event, detail) {
+      const newGraphParams = tr.b.deepCopy(this.graphParams);
+      newGraphParams.rev = null;
+      newGraphParams.num_points = null;
+      newGraphParams.start_rev = detail.start_rev;
+      newGraphParams.end_rev = detail.end_rev;
+      this.graphParams = newGraphParams;
+      this.reloadChart();
+      this.fireChartStateChangedEvent(null);
+      this.set('sliderStartRev', detail.start_rev);
+      this.set('sliderEndRev', detail.end_rev);
+    },
+
+    /**
+      * Sets the Y-axis label based on the units of the data.
+      */
+    updateYAxisLabel() {
+      // If the series annotations are properly populated, then there will
+      // be at least one entry and it will have the properties 'units' and
+      // 'better'. All traces in one chart should have the same units.
+      const series = this.json.annotations.series;
+      const seriesIndices = Object.keys(series);
+      if (seriesIndices.length == 0) {
+        return;
+      }
+      // For now get the first series sorted by index.
+      seriesIndices.sort(function(a, b) {
+        return a - b;
+      });
+      const seriesData = series[seriesIndices[0]];
+
+      if (seriesData.units) {
+        this.chartYAxisLabel = seriesData.units;
+        // Some unit names have improvement direction information in them.
+        if (seriesData.units.indexOf('is better') == -1 &&
+            seriesData.better) {
+          this.chartYAxisLabel += ' (' + seriesData.better.toLowerCase();
+          this.chartYAxisLabel += ' is better)';
+        }
+      }
+    },
+
+    /**
+      * Updates the map of series index to the adjusted scale.
+      *
+      * This map is used to update y-axis scale base on selected traces.
+      */
+    updateSmartAutoscaleMap() {
+      this.yAxisScaleMap = {};
+      for (const seriesIndex in this.json.data) {
+        const data = this.json.data[seriesIndex].data;
+        const values = [];
+        for (let dataIndex = 0; dataIndex < data.length; dataIndex++) {
+          values.push(data[dataIndex][1]);
+        }
+        if (values.length > 0) {
+          const scale = this.determineMinMax(seriesIndex, values);
+          this.yAxisScaleMap[seriesIndex] = scale;
+        }
+      }
+    },
+
+    /**
+      * Determines a min and a max from a list of numbers.
+      *
+      * @param {number} seriesIndex Index into the data series list
+      *     (this.json.data).
+      * @param {Array.<number>} values List of series data values.
+      * @return {Object} An object containing min and max number.
+      */
+    determineMinMax(seriesIndex, values) {
+      values = values.filter(function(v) {
+        return v != null;
+      });
+
+      // We used to discard outliers, but there are cases in which users
+      // want to be able to examine them. Since you can zoom, we're
+      // just going to remove that feature.
+      // See https://github.com/catapult-project/catapult/issues/3213 for
+      // more context.
+      return {'min': Math.min.apply(Math, values),
+        'max': Math.max.apply(Math, values)};
+    },
+
+    /**
+      * Checks whether a series at a point has an anomaly.
+      */
+    hasAnomaly(seriesIndex, dataIndex) {
+      const annotations = this.json.annotations;
+      if (!annotations[seriesIndex] ||
+          !annotations[seriesIndex][dataIndex] ||
+          !annotations[seriesIndex][dataIndex].g_anomaly) {
+        return false;
+      }
+      return true;
+    },
+
+    /**
+      * Sets scale for chart's y-axis for graphs in indicesToGraph.
+      * This function sets values in this.chartOptions based on the
+      * contents of this.yAxisScaleMap.
+      */
+    setSmartAutoscale() {
+      if (!this.indicesToGraph.length || this.indicesToGraph.length <= 0 ||
+          !this.yAxisScaleMap) {
+        return;
+      }
+
+      // Get the min/max of the min/max of all graphs in indicesToGraph.
+      const firstIndex = this.indicesToGraph[0];
+      if (!(firstIndex in this.yAxisScaleMap)) {
+        return;
+      }
+      let min = this.yAxisScaleMap[firstIndex].min;
+      let max = this.yAxisScaleMap[firstIndex].max;
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const scale = this.yAxisScaleMap[this.indicesToGraph[i]];
+        if (scale && scale.min < min) {
+          min = scale.min;
+        }
+        if (scale && scale.max > max) {
+          max = scale.max;
+        }
+      }
+      this.chartOptions.yaxis.min = min;
+      this.chartOptions.yaxis.max = max;
+      this.addAxisMargin(this.chartOptions.yaxis);
+    },
+
+    /**
+      * Adds margins to axis so lines don't touch the chart's borders.
+      * Same as how flot does it.
+      *
+      * @param {Object} axis An object containing min and max number.
+      */
+    addAxisMargin(axis) {
+      const margin = 0.2; // Flot's default for autoscaleMargin.
+      let min = axis.min;
+      let max = axis.max;
+      const delta = max - min;
+      if (delta == 0.0) {
+        min -= axis.min == 0 ? 1 : margin;
+        max += axis.max == 0 ? 1 : margin;
+      } else {
+        min -= delta * margin;
+        if (min < 0 && axis.min >= 0) {
+          min = 0;
+        }
+        max += delta * margin;
+        if (max > 0 && axis.max <= 0) {
+          max = 0;
+        }
+      }
+      axis.min = min;
+      axis.max = max;
+    },
+
+    /**
+      * This method is called when the property 'indicesToGraph' changes.
+      * @param {?Array.<number>} oldValue Old value of indicesToGraph.
+      */
+    indicesToGraphChanged() {
+      this.updateChart();
+      this.$.title.update();
+    },
+
+    /**
+      * This method is called when the property 'warning' changes.
+      * If there's a warning, we want to update the background color of the
+      * chart.
+      */
+    warningsChanged() {
+      const backgroundColor = ((this.warnings.length) ? '#e6e6e6' : null);
+      this.chartOptions.grid.backgroundColor = backgroundColor;
+      if (this.chart) {
+        this.chart.getOptions().grid.backgroundColor = backgroundColor;
+        this.chart.setupGrid();
+        this.chart.draw();
+      }
+    },
+
+    getYAxisLabelWidth_() {
+      // Measure the width of the yaxis tick labels so that they don't
+      // overlap the yaxis-label. (Flot should support yaxis-labels, and it
+      // should automatically size the labelWidth correctly...)
+      // If we don't specify a tickGenerator, flot will use a default
+      // generator. However, flot doesn't provide any way to access that
+      // generator before building the chart, so we copy-paste it from
+      // flot's source. The tickGenerator requires tickSize, which defaults
+      // using another inaccessible algorithm. AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+      const opts = this.chartOptions.yaxis;
+
+      const delta = (opts.max - opts.min) / 5;
+      const decimals = Math.floor(Math.log(delta) / Math.LN10);
+      const orderOfMagnitude = Math.pow(10, decimals);
+      const norm = delta / orderOfMagnitude;  // between 1.0 and 10.0
+
+      // Use the 1-2-5 series of preferred numbers.
+      let tickSize;
+      if (norm < 1.5) {
+        tickSize = 1;
+      } else if (norm < 3) {
+        tickSize = 2;
+      } else if (norm < 7.5) {
+        tickSize = 5;
+      } else {
+        tickSize = 10;
+      }
+      tickSize *= orderOfMagnitude;
+
+      if (opts.minTickSize && tickSize < opts.minTickSize) {
+        tickSize = opts.minTickSize;
+      }
+      opts.tickSize = tickSize;
+
+      const tickValues = [];
+      const start = tickSize * Math.floor(opts.min / tickSize);
+      let i = 0;
+      let v = Number.NaN;
+      let prev;
+      do {
+        prev = v;
+        v = start + i * tickSize;
+        tickValues.push(v);
+        ++i;
+      } while (v < opts.max && v != prev);
+
+      opts.ticks = tickValues;
+
+      const scratchCanvasContext = this.$.text_measurement.getContext('2d');
+      let maxTickLabelWidth = 0;
+      for (const tickValue of tickValues) {
+        const formattedValue = opts.tickFormatter(tickValue);
+        const valueWidth = Math.ceil(scratchCanvasContext.measureText(
+            formattedValue).width);
+        maxTickLabelWidth = Math.max(maxTickLabelWidth, valueWidth);
+      }
+
+      const axisLabelWidth =
+        this.querySelector('#chart-yaxis-label').offsetHeight;
+
+      const padding = 5;
+
+      return axisLabelWidth + maxTickLabelWidth + padding;
+    },
+
+    /**
+      * Updates the currently displayed chart.
+      */
+    updateChart() {
+      if (!this.drawable) {
+        return;
+      }
+
+      let data = this.getDataForFlot();
+      if (data.length == 0) {
+        data = [[]];
+        this.chart = $.plot(this.$.plot, data, this.chartOptions);
+        this.clearAlertIcons();
+        return;
+      }
+
+      const startRev = uri.getParameter('start_rev');
+      const endRev = uri.getParameter('end_rev');
+      const firstSeriesIsEmpty = data[0].data.length == 0;
+      if (startRev && endRev && firstSeriesIsEmpty) {
+        this.warnings.push({value: 'Data not available for revision range ' +
+          startRev + ':' + endRev + '.'});
+      }
+
+      const isNotZoomedIn = this.$.original.hidden;
+      if (isNotZoomedIn) {
+        this.setSmartAutoscale();
+      }
+
+      this.createFixedXAxis(data);
+
+      this.chartOptions.yaxis.labelWidth = this.getYAxisLabelWidth_();
+
+      this.chart = $.plot(this.$.plot, data, this.chartOptions);
+      this.showAlerts();
+      this.updateWarningsForSelectedSeries();
+    },
+
+    /**
+      * Puts together the array of series to pass to Flot's $.plot function.
+      * The data to plot is based on this.json and this.indicesToGraph.
+      * @return {Array.<Object>} Data to plot. This could be an empty array.
+      */
+    getDataForFlot() {
+      if (!this.jsonHasData(this.json)) {
+        return [];
+      }
+      if (!this.json.error_bars) {
+        return [];
+      }
+
+      const data = [];
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const index = this.indicesToGraph[i];
+        if (index >= 0 && this.json.data[index]) {
+          data.push(tr.b.deepCopy(this.json.data[index]));
+        } else {
+          return [];
+        }
+      }
+
+      // Add in error bars after data.
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const index = this.indicesToGraph[i];
+        if (index >= 0 && this.json.error_bars[index]) {
+          data.push(tr.b.deepCopy(this.json.error_bars[index][0]));
+          data.push(tr.b.deepCopy(this.json.error_bars[index][1]));
+        } else {
+          return [];
+        }
+      }
+      return data;
+    },
+
+    /**
+      * Modifies the given series data so that the X-values are indexes
+      * instead of revision numbers. This is called before plotting.
+      *
+      * We want a fixed x-axis, with points evenly spaced. Flot has
+      * functions to scale the x-axis, but they break vertical zooming.
+      * So we plot a copy of the JSON we get from the server, with the
+      * revisions reordered starting from 0 and incrementing once for each
+      * rev.
+      *
+      * We start by getting a list of all the revisions, and ordering them
+      * from 0-N. Because there can be gaps in the graphs, we want to look
+      * at all the charts, even ones that are not plotted, so that the gaps
+      * are accounted for accurately.
+      *
+      * This function has at least two separate
+      * responsibilities: constructing this.revisionMap and actually
+      * changing the X-values. These could be separated out.
+      *
+      * @param {Array.<Object>} data Flot graph data.
+      */
+    createFixedXAxis(data) {
+      // Make a map of all revisions for all data series to a series index
+      // and data index.
+      const allRevisions = {};
+      if (!this.json ||
+          !this.json.data ||
+          this.indicesToGraph.length == 0) {
+        return;
+      }
+
+      // Only create axis for selected series.
+      for (let i = 0; i < this.indicesToGraph.length; i++) {
+        const index = this.indicesToGraph[i];
+        const series = this.json.data[index];
+        const numPoints = series.data.length;
+        for (let dataIndex = 0; dataIndex < numPoints; dataIndex++) {
+          const revision = series.data[dataIndex][0];
+          allRevisions[revision] = [series.index, dataIndex];
+        }
+      }
+
+      // Make an ordered list of all revision numbers for any series.
+      // Object.keys() turns the revisions from numbers to strings, so
+      // change them back to numbers.
+      const orderedRevisions = Object.keys(allRevisions).map(r =>
+        parseInt(r)).sort((a, b) => a - b);
+      if (orderedRevisions.length == 0) {
+        // If there's no data to plot, then this array will be empty.
+        return;
+      }
+      this.$.slider.startrev = orderedRevisions[0];
+      this.$.slider.endrev = orderedRevisions[orderedRevisions.length - 1];
+      this.set('sliderStartRev', this.$.slider.startrev);
+      this.set('sliderEndRev', this.$.slider.endrev);
+
+      // We keep a map of the ordered revision index to the [revision,
+      // series index, data index] so that it's easy to show the right
+      // label on the X-axis. This is updated here but used in formatXAxis.
+      this.revisionMap = {};
+
+      // We also want to make a reverse-lookup object which maps values in
+      // in |orderedRevisions| to their indexes. This will be used below.
+      const revisionToIndexMap = {};
+
+      for (let i = 0; i < orderedRevisions.length; i++) {
+        const rev = orderedRevisions[i];
+        this.revisionMap[i] =
+            [rev, allRevisions[rev][0], allRevisions[rev][1]];
+        revisionToIndexMap[rev] = i;
+      }
+
+      // Now that we have all the data we need cached, update the revisions
+      // for each of the data points that will be shown on the graph.
+      for (let seriesIndex = 0; seriesIndex < data.length; seriesIndex++) {
+        const series = data[seriesIndex];
+        const numPoints = series.data.length;
+        for (let dataIndex = 0; dataIndex < numPoints; dataIndex++) {
+          const revision = series.data[dataIndex][0];
+          series.data[dataIndex][0] = revisionToIndexMap[revision];
+        }
+      }
+      this.chartOptions.xaxis.minTickSize = orderedRevisions.length / 10;
+    },
+
+    /**
+      * Formats numbers that are displayed at ticks on the X-axis.
+      *
+      * If there are annotations for the first data series and for this point
+      * there is a revision type specified by "a_default_rev", then we can
+      * display that on the x-axis. Otherwise, we can just use the revision
+      * (point ID) as-is.
+      *
+      * Note: This is similar to xAxisTickFormatter in embed.js.
+      *
+      * @param {number} val An X-value.
+      * @param {Object} axis Not used.
+      * @return {string} A string that should be shown on the X-axis.
+      */
+    formatXAxis(val, axis) {
+      const lookupIndex = Math.round(Math.max(val, 0));
+      if (!this.revisionMap) {
+        // this.revisionMap may not yet be set by this.createFixedXAxis.
+        return '';
+      }
+      const lookup = this.revisionMap[lookupIndex];
+      if (!lookup) {
+        return '';
+      }
+      const rev = lookup[0];
+      const seriesIndex = lookup[1];
+      const dataIndex = lookup[2];
+
+      const annotations = this.json.annotations;
+      if (annotations[seriesIndex] && annotations[seriesIndex][dataIndex]) {
+        const annotation = annotations[seriesIndex][dataIndex];
+        const defaultRev = annotation.a_default_rev;
+        if (defaultRev && annotation[defaultRev]) {
+          return getDisplayRevision(annotation[defaultRev]);
+        }
+      }
+      return getDisplayRevision(rev);
+    },
+
+    /**
+      * Formats numbers that are displayed at ticks on the Y-axis.
+      * @param {(number|string)} val A Y-value.
+      * @return {string} A string.
+      */
+    formatYAxis(val) {
+      return formatNumber(val);
+    },
+
+    /**
+      * Adds all of the alert icons to the chart and sets their positions.
+      */
+    showAlerts() {
+      this.clearAlertIcons();
+      const minHeight = this.chart.getAxes().yaxis.min;
+      const maxHeight = this.chart.getAxes().yaxis.max;
+      const xOffset = this.chartOptions.yaxis.labelWidth;
+      const flotData = this.chart.getData();
+      const annotations = this.json.annotations;
+      for (let flotIndex = 0; flotIndex < flotData.length; flotIndex++) {
+        const jsonSeriesIndex = flotData[flotIndex].index;
+        if (jsonSeriesIndex == null || !annotations[jsonSeriesIndex]) {
+          continue;
+        }
+        const dataLength = flotData[flotIndex].data.length;
+        for (let dataIndex = 0; dataIndex < dataLength; dataIndex++) {
+          const a = annotations[jsonSeriesIndex][dataIndex];
+          if (!annotations[jsonSeriesIndex][dataIndex] ||
+              !annotations[jsonSeriesIndex][dataIndex].g_anomaly ||
+              flotData[flotIndex].data[dataIndex][1] < minHeight ||
+              flotData[flotIndex].data[dataIndex][1] > maxHeight) {
+            continue;
+          }
+
+          const flotPoint = flotData[flotIndex].data[dataIndex];
+          const left = xOffset + Math.round(
+              flotData[flotIndex].xaxis.p2c(flotPoint[0]));
+          const top = Math.round(
+              flotData[flotIndex].yaxis.p2c(flotPoint[1]));
+
+          const alertIcon = document.createElement('alert-icon');
+          alertIcon.initialize(
+              annotations[jsonSeriesIndex][dataIndex].g_anomaly,
+              this.alertKey);
+          Polymer.dom(
+              this.$['alert-icon-container']).appendChild(alertIcon);
+          alertIcon.setPosition(top, left);
+
+          alertIcon.onmouseover = this.onAlertMouseOver.bind(
+              this, flotIndex, dataIndex);
+          alertIcon.onclick = this.onAlertClick.bind(
+              this, flotIndex, dataIndex);
+        }
+      }
+    },
+
+    clearAlertIcons() {
+      Polymer.dom(this.$['alert-icon-container']).innerHTML = '';
+    },
+
+    /**
+      * Handler for 'onSeriesGroupClosed' event.
+      */
+    onSeriesGroupClosed(event) {
+      const groupIndex = event.detail.groupIndex;
+      const seriesGroup = this.splice('seriesGroupList', groupIndex, 1)[0];
+
+      const tests = seriesGroup.tests;
+      for (let i = 0; i < tests.length; i++) {
+        const indexToRemove = tests[i].index;
+        delete this.json.data[indexToRemove];
+        delete this.json.annotations.series[indexToRemove];
+        delete this.json.annotations[indexToRemove];
+        delete this.json.error_bars[indexToRemove];
+        if (this.indicesToGraph.indexOf(indexToRemove) != -1) {
+          this.splice('indicesToGraph',
+              this.indicesToGraph.indexOf(indexToRemove), 1);
+        }
+      }
+      this.updateSlider();
+      this.updateYAxisLabel();
+      this.updateSmartAutoscaleMap();
+      this.updateChart();
+      this.fireChartStateChangedEvent(this.seriesGroupList);
+    },
+
+    /**
+      * Handler for 'titleclicked' event fired from chart-title.
+      * This function clears out current chart data and re-adds a
+      * series group from the test path created from clicked title
+      * parts.
+      */
+    onTitleClicked(event, detail) {
+      const titleParts = event.detail.titleParts;
+      const partIndex = event.detail.partIndex;
+      const testPath = titleParts.slice(0, partIndex + 1).join('/');
+      this.json = tr.b.deepCopy(this.DEFAULT_JSON_PROPERTIES);
+      this.set('seriesGroupList', []);
+      this.set('indicesToGraph', []);
+      this.addSeriesGroup([[testPath, []]], true);
+      this.fireChartStateChangedEvent(this.seriesGroupList);
+    },
+
+    /**
+      * Handler for 'mouseleave' event, hides the tooltip.
+      */
+    onMouseLeave(event) {
+      this.hideTooltip();
+    },
+
+    /**
+      * Handler for 'plotselected' event, fired when a plot selection is
+      * made.
+      * For more information about selection in flot, see:
+      * http://www.flotcharts.org/flot/jquery.flot.selection.js
+      * @param {Event} event Event object.
+      * @param {Object} ranges Object containing the selected range.
+      */
+    onPlotSelected(event, ranges) {
+      this.selecting = false;
+      this.lastSelectedDelta = ranges;
+    },
+
+    /**
+      * Handler for 'plotselecting' event, fired repeatedly when selecting.
+      * @param {Event} event Event object.
+      * @param {Object} ranges An object containing the selected range.
+      */
+    onPlotSelecting(event, ranges) {
+      if (!ranges) {
+        return;
+      }
+      if (!this.selecting) {
+        this.firstSelectedValue = ranges.yaxis.from;
+        this.selecting = true;
+      }
+
+      this.showDelta = true;
+
+      const delta = Math.abs(ranges.yaxis.to - ranges.yaxis.from);
+      this.deltaAbsolute = delta.toFixed(2);
+      this.deltaPercent =
+          (delta * 100 / this.firstSelectedValue).toFixed(2);
+    },
+
+    /**
+      * Handler for 'plotunselected' event, fired when selection is
+      * cancelled.
+      */
+    onPlotUnselected() {
+      this.selecting = false;
+      this.showDelta = false;
+    },
+
+    /**
+      * Handler for the 'plotclick' event, fired when the chart is clicked.
+      * @param {Event} event Event object.
+      * @param {Object} pos An object which contains the keys "x" and "y".
+      * @param {Object} item An object of the item clicked, null otherwise.
+      */
+    onPlotClick(event, pos, item) {
+      if (this.lastSelectedDelta) {
+        const from = this.lastSelectedDelta.yaxis.from;
+        const to = this.lastSelectedDelta.yaxis.to;
+        if (pos.y == from || pos.y == to) {
+          // Flot sends a spurious click event at the end of the selection.
+          return;
+        }
+        const min = Math.min(from, to);
+        const max = Math.max(from, to);
+        if (pos.y > min && pos.y < max) {
+          this.chartOptions.yaxis.min = min;
+          this.chartOptions.yaxis.max = max;
+          this.$.original.hidden = false;
+          this.updateChart();
+          this.$.original.style.left =
+              (this.$.plot.offsetWidth - 120) + 'px';
+        }
+        this.lastSelectedDelta = null;
+      } else if (item && item.dataIndex != this.currentItem) {
+        // Clicked on a new data point.
+        // Show revision history and sticky tooltip.
+        this.stickyTooltip = true;
+        this.currentItem = item.dataIndex;
+        this.showTooltip(item.seriesIndex, item.dataIndex);
+      } else {
+        // Hide the tooltip if the user clicked the same point again
+        // or clicked an empty place on the graph.
+        this.hideTooltipEvenIfSticky();
+      }
+    },
+
+    /**
+      * Brings up the triage dialog when an alert circle is clicked.
+      * @param {number} flotSeriesIndex Index into the flot data series
+      *     array `this.chart.getData()`.
+      * @param {number} dataIndex Index into an array of points.
+      * @param {Event} The click event.
+      */
+    onAlertClick(flotSeriesIndex, dataIndex, event) {
+      // Note: this.chart.getData() returns a list of series objects
+      // (including series objects for error regions).
+      const jsonSeriesIndex = this.chart.getData()[flotSeriesIndex].index;
+      if (jsonSeriesIndex == null) {
+        return;
+      }
+      const data = this.json.data[jsonSeriesIndex].data;
+
+      // Populate the nudgeList array with information about nearby
+      // revisions. Each entry in the nudgeList is an object with basic
+      // information about a point.
+      const nudgeList = [];
+      for (let i = Math.max(1, dataIndex - 5);
+        i < Math.min(dataIndex + 5, data.length - 1);
+        i++) {
+        // Get annotation information about this nearby point.
+        // This might be null if there are gaps in the data series.
+        // In that case, we can just not add the point to the nudge list.
+        const annotation = this.json.annotations[jsonSeriesIndex][i];
+        if (!annotation) {
+          continue;
+        }
+        let displayRevision = data[i][0];
+        if (annotation.a_default_rev) {
+          displayRevision = annotation[annotation.a_default_rev];
+        }
+        displayRevision = getDisplayRevision(displayRevision);
+        let amount = ' 0: ';
+        if (i < dataIndex) {
+          amount = '-' + (dataIndex - i) + ': ';
+        } else if (i > dataIndex) {
+          amount = '+' + (i - dataIndex) + ': ';
+        }
+        nudgeList.push({
+          startRevision: data[i - 1][0] + 1,
+          endRevision: data[i][0],
+          displayEndRevision: displayRevision,
+          value: Math.round(data[i][1] * 100) / 100,
+          selected: i == dataIndex,
+          dataIndex: i,
+          amount
+        });
+      }
+
+      // Get the anomaly info object, and add a few fields.
+      const annotation = this.json.annotations[jsonSeriesIndex][dataIndex];
+      const anomalyInfo = annotation.g_anomaly;
+      anomalyInfo.nudgeList = nudgeList;
+      anomalyInfo.seriesIndex = jsonSeriesIndex;
+      anomalyInfo.dataIndex = dataIndex;
+
+      // The alerts and triaged lists are attributes of chart-tooltip
+      // which are used for showing information about anomalies. The alerts
+      // list is also used for showing the triage dialog.
+      let alerts = null;
+      let triaged = null;
+      if (anomalyInfo.bug_id) {
+        triaged = [anomalyInfo];
+      } else {
+        alerts = [anomalyInfo];
+      }
+
+      this.stickyTooltip = true;
+      this.showTooltip(flotSeriesIndex, dataIndex, alerts, triaged);
+    },
+
+    /**
+      * Brings up the tooltip when an alert circle is moused over.
+      * @param {number} flotSeriesIndex Index into the flot data series
+      *     array `this.chart.getData()`.
+      * @param {number} dataIndex Index into an array of points.
+      * @param {Event} The click event.
+      */
+    onAlertMouseOver(flotSeriesIndex, dataIndex, event) {
+      if (!this.stickyTooltip) {
+        this.showTooltip(flotSeriesIndex, dataIndex);
+      }
+    },
+    /**
+      * Updates the interface when a bug is triaged.
+      * This is the event handler for a 'triaged' event on the
+      * chart-tooltip.
+      */
+    onBugTriaged(event) {
+      const bugId = event.detail.bugid;
+      const projectId = event.detail.projectid;
+      // Update the impacted alert.
+      if (event.detail.alerts && event.detail.alerts.length) {
+        const jsonSeriesIndex = event.detail.alerts[0].seriesIndex;
+        const dataIndex = event.detail.alerts[0].dataIndex;
+        const annotation = this.json.annotations[jsonSeriesIndex][dataIndex];
+        annotation.g_anomaly.bug_id = bugId;
+        annotation.g_anomaly.project_id = projectId;
+        if (bugId) {
+          const data = this.json.annotations[jsonSeriesIndex][dataIndex];
+          this.$.tooltip.alertKey = data.g_anomaly.key;
+        }
+      }
+      // Update the bug id locally.
+      this.$.tooltip.bugId = bugId;
+      this.$.tooltip.projectId = projectId;
+      if (!bugId) {
+        this.$.tooltip.alerts = this.$.tooltip.triagedAlerts;
+        this.$.tooltip.triagedAlerts = null;
+      } else {
+        this.$.tooltip.alertInvalidOrIgnored = bugId < 0;
+        this.$.tooltip.triagedAlerts = this.$.tooltip.alerts;
+        this.$.tooltip.alerts = null;
+      }
+      // Refresh the anomalies to make the one with the new bug id black.
+      this.showAlerts();
+    },
+
+    /**
+      * Handler for the alertChangedRevisions event.
+      *
+      * The alertChangedRevisions event is fired from the triage dialog when
+      * an alert is nudged.
+      */
+    onAlertChangedRevisions(event) {
+      const jsonSeriesIndex = event.detail.alerts[0].seriesIndex;
+      const dataIndex = event.detail.alerts[0].dataIndex;
+      const newDataIndex = event.detail.newDataIndex;
+      const seriesAnnotations = this.json.annotations[jsonSeriesIndex];
+      const alertInfo = seriesAnnotations[dataIndex].g_anomaly;
+      alertInfo.start_revision = event.detail.startRev;
+      alertInfo.end_revision = event.detail.endRev;
+      seriesAnnotations[dataIndex].g_anomaly = null;
+      seriesAnnotations[newDataIndex].g_anomaly = alertInfo;
+      event.detail.alerts[0].dataIndex = newDataIndex;
+      this.showAlerts();
+    },
+
+    /**
+      * Handler for the 'plothover' event, fired when the mouse is hovering
+      * over the plot area. If the user is hovering over a point, we want to
+      * show the tooltip for that point.
+      * @param {Event} event Event object.
+      * @param {Object} pos Position object.
+      * @param {Object} item Item being hovered over.
+      */
+    onPlotHover(event, pos, item) {
+      // If the current tooltip is sticky, just leave it.
+      if (this.stickyTooltip) {
+        return;
+      }
+      // If the current tooltip isn't sticky but we're hovering over
+      // nothing, hide the tooltip.
+      if (!item) {
+        this.hideTooltip();
+        return;
+      }
+      // If the current tooltip isn't sticky and we're over a data point,
+      // show the tooltip.
+      this.showTooltip(item.seriesIndex, item.dataIndex);
+    },
+
+    /**
+      * Displays a tooltip for the given point on the graph.
+      *
+      * NOTE: Instead of taking lists of alerts and triaged alerts, it
+      * would be possible for this function to just take one alert, since
+      * there should never generally be more than one alert at one point.
+      *
+      * @param {number} flotSeriesIndex The index of the series in
+      *     `this.chart.getData()`.
+      * @param {number} dataIndex The index of the data in the series.
+      * @param {Array=} opt_alerts Array of alerts.
+      * @param {Array=} opt_triaged A boolean.
+      */
+    showTooltip(
+        flotSeriesIndex, dataIndex, opt_alerts, opt_triaged) {
+      // Reset the properties of the tooltip so that nothing is left over
+      // from the last time that showTooltip was called on another point.
+      this.resetTooltip();
+
+      // Don't show the tooltip if we're selecting a range on the y axis.
+      if (this.selecting) {
+        return;
+      }
+
+      const flotData = this.chart.getData();
+      const jsonSeriesIndex = this.chart.getData()[flotSeriesIndex].index;
+      if (jsonSeriesIndex == null) {
+        // TODO: Display error.
+        return;
+      }
+
+      // Set the main properties of the tooltip.
+      const series = this.json.annotations.series[jsonSeriesIndex];
+      const annotation = this.json.annotations[jsonSeriesIndex][dataIndex];
+
+      // In the data from this.chart.getData(), the series indexes are
+      // different, and the point x-values are all converted to indexes.
+      const pointFromChart = flotData[flotSeriesIndex].data[dataIndex];
+
+      // The data from /graph_json is the data as it originally came,
+      // and the x-values are the original Row IDs.
+      const seriesFromJson = this.json.data[jsonSeriesIndex];
+      const pointFromJson = seriesFromJson.data[dataIndex];
+
+      const xValue = pointFromChart[0];
+      const pointId = pointFromJson[0];
+      const yValue = pointFromJson[1];
+
+      this.$.tooltip.testPath = series.path;
+      this.$.tooltip.isLastPoint =
+          dataIndex === seriesFromJson.data.length - 1;
+      this.$.tooltip.value = formatNumber(yValue);
+      if (annotation.error > 0) {
+        this.$.tooltip.stddev = formatNumber(annotation.error);
+      }
+      this.$.tooltip.pointId = pointId;
+      this.$.tooltip.revisions = this.getRevisions(
+          jsonSeriesIndex, dataIndex);
+      if ('a_bot_id' in annotation) {
+        const botId = annotation.a_bot_id.sort().slice(0, 3)
+        if (annotation.a_bot_id.length > 3) {
+          botId.push(` and ${annotation.a_bot_id.length - 3} more bots`)
+        }
+        this.$.tooltip.botId = botId
+      }
+      if ('a_os_detail_vers' in annotation) {
+        this.$.tooltip.osDetailVers = annotation.a_os_detail_vers
+      }
+      this.$.tooltip.links = this.getTooltipLinks(annotation, series.path,
+          pointId);
+      if (annotation.timestamp) {
+        const d = new Date(annotation.timestamp);
+        this.$.tooltip.timestamp = d.toISOString();
+      }
+
+      // Set the alert-related properties of the tooltip.
+      if (opt_alerts === undefined) {
+        opt_alerts = null;
+      }
+      this.$.tooltip.alerts = opt_alerts;
+      if (opt_triaged === undefined) {
+        opt_triaged = null;
+      }
+      this.$.tooltip.triagedAlerts = opt_triaged;
+
+      const uriBugId = uri.getParameter('bug_id');
+
+      if (annotation.g_anomaly) {
+        if (annotation.g_anomaly.bug_id) {
+          this.$.tooltip.bugId = annotation.g_anomaly.bug_id;
+          this.$.tooltip.projectId = annotation.g_anomaly.project_id;
+          this.$.tooltip.alertInvalidOrIgnored =
+              annotation.g_anomaly.bug_id < 0;
+          this.$.tooltip.alertKey = annotation.g_anomaly.key;
+        }
+        this.$.tooltip.recovered = annotation.g_anomaly.recovered;
+      } else if (uriBugId !== null) {
+        this.$.tooltip.bugId = uriBugId;
+        this.$.tooltip.projectId = uri.getParameter('project_id', 'chromium');
+      }
+
+      this.$.tooltip.bisectInfo = {
+        canBisect: series.can_bisect,
+        badRev: this.getRevisionForBisect(jsonSeriesIndex, dataIndex),
+        goodRev: this.getRevisionForBisect(jsonSeriesIndex, dataIndex - 1),
+        badRevRepo: this.getDefaultRevisionRepository(
+            jsonSeriesIndex, dataIndex),
+        goodRevRepo: this.getDefaultRevisionRepository(
+            jsonSeriesIndex, dataIndex - 1),
+        testPath: series.path
+      };
+
+      // Un-hide and position the tooltip box.
+      const top = flotData[flotSeriesIndex].yaxis.p2c(yValue);
+      let left = flotData[flotSeriesIndex].xaxis.p2c(xValue) +
+          this.chartOptions.yaxis.labelWidth;
+      this.$.tooltip.openAtPosition(top, left);
+
+      // The tooltip doesn't need to be positioned exactly on the point, but
+      // the vertical line does. Flot's xaxis.p2c() above seems to be off by
+      // a few pixels for some reason.
+      left += 6.5;
+      this.$.vline.style.display = 'block';
+      this.$.vline.style.left = left + 'px';
+      this.set('vlinePointId', pointId);
+    },
+
+    /**
+      * Reset the chart-tooltip's properties.
+      */
+    resetTooltip() {
+      this.$.tooltip.testPath = null;
+      this.$.tooltip.value = null;
+      this.$.tooltip.stddev = null;
+      this.$.tooltip.pointId = null;
+      this.$.tooltip.revisions = null;
+      this.$.tooltip.links = null;
+      this.$.tooltip.alerts = null;
+      this.$.tooltip.triagedAlerts = null;
+      this.$.tooltip.bugId = null;
+      this.$.tooltip.botId = null;
+      this.$.tooltip.osDetailVers = null;
+      this.$.tooltip.projectId = null;
+      this.$.tooltip.alertKey = null;
+      this.$.tooltip.recovered = null;
+      this.$.tooltip.timestamp = null;
+      this.$.tooltip.bisectInfo = null;
+    },
+
+    getDefaultRevisionRepository(jsonSeriesIndex, dataIndex) {
+      // If the data point contains a default revision type, use that.
+      const annotation = this.json.annotations[jsonSeriesIndex][dataIndex];
+      if (!annotation) {
+        return null;
+      }
+
+      let defaultRevType = 'r_chromium';
+      if ('a_default_rev' in annotation) {
+        defaultRevType = annotation.a_default_rev;
+      }
+
+      return defaultRevType.split('r_')[1];
+    },
+
+    /**
+      * Gets a revision value to use when populating the bisect form.
+      *
+      * @param {number} jsonSeriesIndex An index in this.json.data.
+      * @param {number} dataIndex The index of the point in the series.
+      * @return {?(number|string)} A revision to put in the bisect form.
+      */
+    getRevisionForBisect(jsonSeriesIndex, dataIndex) {
+      // If the data point contains a default revision type, use that.
+      const annotation = this.json.annotations[jsonSeriesIndex][dataIndex];
+      if (!annotation) {
+        return null;
+      }
+      const defaultRevType = annotation.a_default_rev;
+      if (defaultRevType && annotation[defaultRevType]) {
+        return annotation[defaultRevType];
+      }
+
+      // Otherwise, use the x-value of the point (aka the point ID).
+      const point = this.json.data[jsonSeriesIndex].data[dataIndex];
+      if (point && point[0]) {
+        return point[0];
+      }
+      return null;
+    },
+
+    /**
+      * Hides the tooltip only if it's not sticky.
+      */
+    hideTooltip() {
+      if (this.stickyTooltip) {
+        return;
+      }
+      this.$.tooltip.close();
+    },
+
+    /**
+      * Force-hides the tooltip.
+      */
+    hideTooltipEvenIfSticky() {
+      this.stickyTooltip = false;
+      this.currentItem = null;
+      this.hideTooltip();
+    },
+
+    /**
+      * Gets a list of obj about links to put in the tooltip.
+      * @param {Object} annotation Annotation object for this point.
+      * @param {string} testPath Test path.
+      * @param {number} pointId Main revision at the given point.
+      * @return {Array.<Object>} List of objects with properties text and
+      *     url.
+      */
+    getTooltipLinks(annotation, testPath, pointId) {
+      const links = [];
+      for (const key in annotation) {
+        if (key == 'g_anomaly') {
+          const debugUrl = '/debug_alert?test_path=' + testPath +
+                          '&rev=' + pointId;
+          links.push({
+            'text': 'Debug alert',
+            'url': debugUrl
+          });
+        } else if (key == 'a_tracing_uri') {
+          links.push({
+            'text': 'View trace from this run',
+            'url': annotation.a_tracing_uri
+          });
+        } else if (key.indexOf('a_') === 0) {
+          const match = TOOLTIP_LINK_REGEX.exec(annotation[key]);
+          if (match) {
+            links.push({
+              'text': match[1],
+              'url': match[2]
+            });
+          }
+        }
+      }
+      return links;
+    },
+
+    /**
+      * Returns an array of revision range info objects for the given point.
+      *
+      * This array is used to show revision ranges and change log links in
+      * the tooltip.
+      * Example format for the returned array:
+      *   [
+      *     {
+      *       name: "Chrome Revision",
+      *       start: 216441,
+      *       end: 216538,
+      *       displayStart: 216441,
+      *       displayEnd: 216538,
+      *       url: "http://x.foo.org/changelog.html?range=216441:216538",
+      *     },
+      *     ...
+      *   ]
+      *
+      * @param {number} seriesIndex An index in this.json.data.
+      * @param {number} dataIndex The index of the point within the series.
+      * @return {Array.<Object>} An array of information needed for showing
+      *     change log links for different types of revisions.
+      */
+    getRevisions(seriesIndex, dataIndex) {
+      const annotationSeries = this.json.annotations[seriesIndex];
+      const annotation = annotationSeries[dataIndex];
+      const previousAnnotation = annotationSeries[dataIndex - 1];
+      let defaultRevisionRangeInfo = null;
+      const revisionRangeInfoObjects = [];
+      for (const revisionTypeKey in annotation) {
+        if (revisionTypeKey.indexOf('r_') != 0) {
+          continue;  // Not a revision.
+        }
+        if (!this.revisionInfo[revisionTypeKey]) {
+          // TODO: Display error.
+          continue;
+        }
+        const end = annotation[revisionTypeKey];
+        let start = -1;
+        if (dataIndex > 0 && previousAnnotation &&
+            previousAnnotation[revisionTypeKey]) {
+          start = previousAnnotation[revisionTypeKey];
+        }
+        const revisionRangeInfo = this.getRevisionRangeInfo(
+            revisionTypeKey, start, end);
+        if (revisionTypeKey == annotation.a_default_rev) {
+          // The default revision type will be inserted afterwards.
+          defaultRevisionRangeInfo = revisionRangeInfo;
+        } else {
+          revisionRangeInfoObjects.push(revisionRangeInfo);
+        }
+      }
+      // Revisions are sorted by name, with the default first.
+      revisionRangeInfoObjects.sort(function(a, b) {
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        return aName.localeCompare(bName);
+      });
+      if (defaultRevisionRangeInfo) {
+        revisionRangeInfoObjects.unshift(defaultRevisionRangeInfo);
+      }
+      return revisionRangeInfoObjects;
+    },
+
+    /**
+      * Returns an object with revision-related information for one type
+      * of revision, for two revision numbers.
+      *
+      * @param {string} revisionTypeKey A key in this.revisionInfo.
+      *     This will be a string starting with "r_".
+      * @param {(number|string|boolean)} start Optional start revision.
+      *     False may be given if the start and end revision are the same.
+      * @param {(number|string)} end End revision or only revision.
+      * @return {Object} The information necessary for showing a link for
+      *     a change log for a particular revision range.
+      */
+    getRevisionRangeInfo(revisionTypeKey, start, end) {
+      const revisionInfo = this.revisionInfo[revisionTypeKey];
+      revisionTypeKey = revisionInfo.name;
+      const urlTemplate = revisionInfo.url;
+
+      if (!isNaN(start) && !isNaN(end) && Number(start) > Number(end)) {
+        const temp = start;
+        start = end;
+        end = temp;
+      }
+
+      // For a regression range, start is the "last known good" revision.
+      // We want the "first possible bad" revision.
+      if (!isNaN(start) && (start != end)) {
+        start = Number(start) + 1;
+      }
+
+      // If the substring R1_trim is found in the URL template, we assume
+      // that it's the URL template for Chrome OS versions.
+      let url = '';
+      if (urlTemplate.indexOf('{{R1_trim}}') != -1) {
+        url = this.fillInChromeOSChangeLogURL(urlTemplate, start, end);
+      } else {
+        url = urlTemplate.replace('{{R1}}', start).replace('{{R2}}', end);
+      }
+
+      if (urlTemplate.indexOf('{{n}}') != -1) {
+        url = url.replace('{{n}}', '1000');
+      }
+
+      if (start == end || !start) {
+        start = false;
+      }
+
+      return {
+        'name': revisionTypeKey,
+        url,
+        start,
+        end,
+        'displayStart': getDisplayRevision(start),
+        'displayEnd': getDisplayRevision(end)
+      };
+    },
+
+    /**
+      * Fills in a Chrome OS or Chrome version change log URL.
+      * The chromeOS diff tool expects version numbers to be composed of
+      * only the right-most 3 components of the number (i.e., we need to
+      * drop the  left-most component when constructing the URL below).
+      * The format of the specified version number should be "X.Y.Z",
+      * not "W.X.Y.Z".
+      * @param {string} urlTemplate A string with the template fields
+      *     R1_trim and R2_trim.
+      * @param {string} start Start version string.
+      * @param {string} end End version string.
+      */
+    fillInChromeOSChangeLogURL(urlTemplate, start, end) {
+      const urlEndVersion = end.substring(end.indexOf('.') + 1);
+      let urlStartVersion = '';
+      if (start) {
+        urlStartVersion = start.substring(start.indexOf('.') + 1);
+      } else {
+        urlStartVersion = urlEndVersion;
+      }
+      let url = urlTemplate.replace('{{R1_trim}}', urlStartVersion);
+      url = url.replace('{{R2_trim}}', urlEndVersion);
+      return url;
+    },
+
+    /**
+      * Handler for the click event for the 'View original graph' link.
+      *
+      * This link only appears after zooming in on a smaller Y-axis range
+      * (by clicking and dragging and then clicking). When the 'view
+      * original graph' link has been clicked, the original Y-axis range
+      * should be restored.
+      */
+    onViewOriginal() {
+      this.chartOptions.yaxis.min = null;
+      this.chartOptions.yaxis.max = null;
+      this.$.original.hidden = true;
+      this.updateChart();
+    },
+
+    /**
+      * Handler for resize event.
+      * @param {Event} event Event object.
+      */
+    onResize(event) {
+      // Try not to resize graphs until the user has stopped resizing
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = setTimeout(this.resizeGraph.bind(this), 100);
+    },
+
+    /**
+      * Resizes the chart if it's present.
+      */
+    resizeGraph() {
+      if (!this.chart || this.$.plot.offsetWidth == 0) {
+        return;
+      }
+      // The chart is resized when it's updated.
+      this.updateChart();
+    },
+
+    /**
+      * On collapseLegend change, updates graph and chart-revision sizes.
+      */
+    collapseLegendChanged() {
+      this.onResize();
+      this.$.slider.onResize();
+    },
+
+    seriesMouseover(event) {
+      const index = event.detail.index;
+      if (this.indicesToGraph.indexOf(index) != -1) {
+        this.highlightSeries([index]);
+      }
+    },
+
+    seriesMouseout(event) {
+      this.undoSeriesHighlighting();
+    },
+
+    /**
+      * Highlights each series in |targetIndices|.
+      * Highlighting makes a series line width and shadow thicker and lowers
+      * the opacity of unhighlighted series.
+      *
+      * @param {Array.<number>} targetIndices List of series indices to
+      *     highlight.
+      */
+    highlightSeries(targetIndices) {
+      const flotData = this.chart.getData();
+      if (!flotData) {
+        return;
+      }
+
+      for (let i = 0; i < flotData.length; i++) {
+        const series = flotData[i];
+        if (targetIndices.indexOf(this.getSeriesFillIndex(series)) != -1) {
+          continue;
+        }
+        if (targetIndices.indexOf(series.index) != -1) {
+          this.updateSeriesHighlighting(series, 2.5, 1, 0.2, 4);
+        } else {
+          this.updateSeriesHighlighting(series, 2, 0.25, 0, 0);
+        }
+      }
+
+      this.chart.setData(flotData);
+      this.chart.draw();
+    },
+
+    undoSeriesHighlighting() {
+      if (!this.chart) {
+        return;
+      }
+      const flotData = this.chart.getData();
+      if (!flotData) {
+        return;
+      }
+      for (let i = 0; i < flotData.length; i++) {
+        this.updateSeriesHighlighting(
+            flotData[i],
+            this.DEFAULT_SERIES_PROPERTIES.lineWidth,
+            this.DEFAULT_SERIES_PROPERTIES.opacity,
+            this.DEFAULT_SERIES_PROPERTIES.fill,
+            this.DEFAULT_SERIES_PROPERTIES.shadowSize);
+      }
+      this.chart.setData(flotData);
+      this.chart.draw();
+    },
+
+    /**
+      * Gets series's target index if series is a filled line.
+      * Filled lines are series that shade the upper and lower bounds
+      * (e.g. error bar regions).
+      *
+      * @param {Object} series The data series
+      * @return {?number} The index of the series that filled line
+      * correspond to, null if series is not a filled line.
+      */
+    getSeriesFillIndex(series) {
+      if (!series.fillBetween) {
+        return null;
+      }
+      // fillBetween is a string 'line_X' (labeled by graph_json.py),
+      // where X is a series index that filled line correspond to.
+      const index = series.fillBetween.replace(/[^0-9]/g, '');
+      return parseInt(index);
+    },
+
+    updateSeriesHighlighting(series, lineWidth, opacity,
+        fill, shadowSize) {
+      if (series.fillBetween) {
+        series.lines.fill = fill;
+      } else {
+        series.shadowSize = shadowSize;
+        series.lines.lineWidth = lineWidth;
+      }
+      let rgb = series.color.split(/[\(\)]/g)[1];
+      rgb = rgb.split(',');
+      rgb[3] = opacity;
+      series.color = 'rgba(' + rgb.join(',') + ')';
+    },
+
+    /**
+      * Allows onDrop to be triggered.
+      */
+    allowDrop(event) {
+      if (this.droppable) {
+        event.preventDefault();
+      }
+    },
+
+    /**
+      * Handler for on-drop event, fired when a series group is dropped
+      * onto this chart-container.
+      */
+    onDrop(event) {
+      event.preventDefault();
+      const dataTransfer = event.dataTransfer;
+      if (dataTransfer.getData('type') != 'seriesdnd') {
+        return;
+      }
+      const data = JSON.parse(dataTransfer.getData('data'));
+      if (data) {
+        const seriesGroup = new d.SeriesGroup(
+            data.mainPath, data.selectedPaths, data.unselectedPaths);
+        this.addSeriesGroup2(seriesGroup, true);
+      }
+      this.fireChartStateChangedEvent(this.seriesGroupList);
+    },
+
+    legendSeriesDragStart(event) {
+      this.droppable = false;
+    },
+
+    legendSeriesDragEnd(event) {
+      this.droppable = true;
+    },
+
+    /**
+      * Gets series's target index if series is a filled line.
+      * Filled lines are series that shade the upper and lower bounds
+      * (e.g. error bar regions).
+      *
+      * @param {?Object} state Chart state to send to URI controller which
+      *    is used to generate state ID.  If none is specified, only
+      *    'this.graphParams' is sent.
+      */
+    fireChartStateChangedEvent(state) {
+      this.fire('chartstatechanged', {
+        target: this,
+        stateName: 'chartstatechanged',
+        params: this.graphParams,
+        state
+      });
+    },
+
+    onUriChanged(event) {
+      const detail = event.detail;
+      if (detail.stateName != 'chartstatechanged') {
+        return;
+      }
+
+      const isSameTarget = (detail.id == this.getAttribute('uniqueid') ||
+          detail.id == this.$.legend.getAttribute('uniqueid'));
+      let shouldReload = false;
+      if (isSameTarget) {
+        this.set('seriesGroupList', detail.state);
+        shouldReload = true;
+      }
+
+      if (!graphParamEquals(this.graphParams, detail.params)) {
+        this.graphParams = detail.params;
+        shouldReload = true;
+      }
+      if (shouldReload) {
+        this.reloadChart();
+      }
+    },
+
+    /**
+      * Gets the current state of the chart.
+      * This is called by 'report-page.html' to create page state.
+      *
+      * @return {Array} List of pair of test path and selected series.
+      */
+    getState() {
+      const state = {seriesGroups: []};
+
+      if (this.selectedRelatedTabIndex >= 0) {
+        state.selectedRelatedTab =
+          this.relatedTabs[this.selectedRelatedTabIndex].name;
+      }
+
+      this.seriesGroupList.forEach(function(seriesGroup) {
+        let selected = [];
+        const unselected = [];
+        const tests = seriesGroup.tests;
+        for (let i = 0; i < tests.length; i++) {
+          if (tests[i].selected) {
+            selected.push(tests[i].name);
+          } else {
+            unselected.push(tests[i].name);
+          }
+        }
+
+        if (selected.length == 0 && unselected.length == 0) {
+          selected = ['none'];
+        } else if (seriesGroup.selection) {
+          selected = [seriesGroup.selection];
+        }
+        selected = arrayUnique(selected);
+        state.seriesGroups.push([seriesGroup.path, selected]);
+      });
+      return state;
+    },
+
+    listeners: {
+      drop: 'onDrop',
+      dragover: 'allowDrop',
+      populateTestPicker: 'populateTestPicker_',
+      chartstatechanged: 'onChartStateChanged_',
+    },
+
+    onChartStateChanged_(event) {
+      if (this.ignoreChartStateChangedEvent_) return;
+      this.buildRelatedTabs_();
+      this.onSelectedRelatedTabIndexChange_();
+    },
+
+    populateTestPicker_(event) {
+      // chart-container is contained in both report-page, which has a
+      // test-picker, and group-report-page, which does not.
+      // Allow this event to bubble up to report-page to populate its
+      // test-picker.
+      // Also fire openReportPage to allow group-report-page to open /report
+      // in a new window.
+
+      const query = {
+        masters: new Set(),
+        bots: new Set(),
+        tests: new Set(),
+        checked: new Set(),
+      };
+
+      for (const testPath of event.srcElement.getTestPaths()) {
+        const parts = testPath.split('/');
+        query.masters.add(parts[0]);
+        query.bots.add(parts[1]);
+        query.tests.add(parts.slice(2).join('/'));
+      }
+
+      for (const seriesGroup of this.seriesGroupList) {
+        for (const test of seriesGroup.tests) {
+          if (!test.selected) continue;
+          query.checked.add(test.name);
+        }
+      }
+
+      query.start_rev = [this.$.slider.startrev];
+      query.end_rev = [this.$.slider.endrev];
+
+      const queryParts = [];
+      for (const [name, value] of Object.entries(query)) {
+        const encodedValue = window.encodeURIComponent(
+            Array.from(value).join(','));
+        queryParts.push(name + '=' + encodedValue);
+      }
+
+      const url = window.location.origin + '/report?' + queryParts.join('&');
+      this.fire('openReportPage', {url});
+    },
+
+    buildRelatedTabs_() {
+      if (uri.getParameter('3405') === null) return;
+
+      const sourceTestPaths = [];
+      for (const seriesGroup of this.seriesGroupList) {
+        for (const test of seriesGroup.tests) {
+          if (!test.selected) continue;
+          // `test.path` is set in the addSeriesGroup2() path.
+          // This method needs to handle the old SeriesGroup.path/test.name
+          // form for the addSeriesGroup() path.
+          const testpath = test.path || seriesGroup.path + '/' + test.name;
+          sourceTestPaths.push({
+            testpath,
+            color: GENERATOR.colorForKey(testpath).toString(),
+          });
+        }
+      }
+
+      const relatedTabs = d.buildRelatedTimeseries(sourceTestPaths);
+
+      // The last tab is actually a button to unset the tab to hide the
+      // sparklines.
+      relatedTabs.push({
+        name: String.fromCharCode(8212),
+        sparklines: [],
+      });
+
+      this.set('relatedTabs', relatedTabs);
+      this.resolveRelatedTabsReady_();
+    },
+
+    getSparklineChartOptions() {
+      return {
+        crosshair: {
+        },
+        grid: {
+          borderWidth: 0,
+        },
+        xaxis: {
+          ticks: [],
+        },
+        yaxis: {
+          ticks: [],
+          max: parseFloat(uri.getParameter('slyamax') || 0) ||
+            this.chartOptions.yaxis.max,
+          min: Number.MAX_VALUE,
+        },
+        selection: {
+        },
+      };
+    },
+
+    showRelatedTabs_(relatedTabs) {
+      return relatedTabs.length > 1;
+    },
+
+    onSelectedRelatedTabIndexChange_() {
+      this.ignoreChartStateChangedEvent_ = true;
+      this.fireChartStateChangedEvent(this.seriesGroupList);
+      this.ignoreChartStateChangedEvent_ = false;
+
+      // The last tab is actually a button to unset the tab to hide the
+      // sparklines.
+      if (this.selectedRelatedTabIndex === this.relatedTabs.length - 1) {
+        this.set('selectedRelatedTabIndex', -1);
+      }
+
+      // It seems that setting this from one Array directly to another
+      // doesn't always make Polymer clear the old chart-sparklines and
+      // build new ones, so explicitly clear this to force it to clear the
+      // old chart-sparklines.
+      this.set('selectedRelatedTab', []);
+
+      if (this.selectedRelatedTabIndex < 0 ||
+          this.selectedRelatedTabIndex >= this.relatedTabs.length) {
+        return;
+      }
+
+      // Wait for Polymer to clear out the sparklines in response to
+      // clearing the selectedRelatedTab.
+      // TODO(#3841): Use dom-change or observeNodes instead of async().
+      this.async(() => {
+        this.set('selectedRelatedTab',
+            this.relatedTabs[this.selectedRelatedTabIndex].sparklines);
+      });
+    },
+  });
+})();
+</script>

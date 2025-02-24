@@ -1,0 +1,4 @@
+# Exclude the HTML files from GitHub's language statistics
+# https://github.com/github/linguist#using-gitattributes
+test/data/* linguist-vendored
+benchmark/spec.html linguist-vendored

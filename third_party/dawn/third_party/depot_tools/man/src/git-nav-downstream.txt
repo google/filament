@@ -1,0 +1,40 @@
+git-nav-downstream(1)
+=====================
+
+NAME
+----
+git-nav-downstream -
+include::_git-nav-downstream_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git nav-downstream'
+
+DESCRIPTION
+-----------
+
+'git-nav-downstream' takes the current branch and discovers all branches
+downstream of it. If there is only one branch downstream of the current branch,
+the command will check that out. If there\'s more than one downstream branch, the
+command will prompt you with a selection of the branches.
+
+EXAMPLE
+-------
+demo:1[]
+
+include::_aliases.txt[]
+
+----
+[alias]
+  down = nav-downstream
+----
+
+
+SEE ALSO
+--------
+linkgit:git-map-branches[1], linkgit:git-nav-upstream[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

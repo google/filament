@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/math/bbox2.html">
+<script>
+// Copyright (c) 2013 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('addVec2', function() {
+    const bbox = new tr.b.math.BBox2();
+    const x = vec2.create();
+    vec2.set(x, 10, 10);
+    bbox.addVec2(x);
+    assert.strictEqual(bbox.minVec2[0], 10);
+    assert.strictEqual(bbox.minVec2[1], 10);
+    assert.strictEqual(bbox.maxVec2[0], 10);
+    assert.strictEqual(bbox.maxVec2[1], 10);
+
+    // Mutate x.
+    vec2.set(x, 11, 11);
+
+    // Bbox shouldn't have changed.
+    assert.strictEqual(bbox.minVec2[0], 10);
+    assert.strictEqual(bbox.minVec2[1], 10);
+    assert.strictEqual(bbox.maxVec2[0], 10);
+    assert.strictEqual(bbox.maxVec2[1], 10);
+  });
+});
+</script>

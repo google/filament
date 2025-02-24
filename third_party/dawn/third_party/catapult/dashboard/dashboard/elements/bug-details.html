@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/polymer/polymer.html">
+<link rel="import" href="/dashboard/static/async_map.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/tracing/base/base.html">
+
+<dom-module id="bug-details">
+  <style>
+    .error {
+      color: #dd4b39;
+      font-weight: bold;
+    }
+
+    #loading-spinner {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      padding: 20px;
+      background-color: #eaeaea;
+      border-radius: 4px;
+      margin: 20px;
+      width: 600px;
+    }
+
+    .bordered-cell {
+      border: 1px solid #a8a8a8;
+      border-radius: 4px;
+    }
+
+    td {
+      padding-left, padding-right: 10px;
+    }
+  </style>
+  <template>
+    <template is="dom-if" if="{{loading}}">
+      <div id="loading-spinner"><img src="//www.google.com/images/loading.gif"></div>
+    </template>
+    <template is="dom-if" if="{{!loading}}">
+      <template is="dom-if" if={{!compactView}}>
+        <table class="container">
+          <tr><th colspan="2">Bug <a href="https://crbug.com/{{bugId}}" target="_blank">{{bugId}}</a></th></tr>
+          <template is="dom-if" if="{{error}}">
+            <tr><td colspan="2" class="error">
+              Could not load bug {{bugId}}. {{error}}</td></tr>
+          </template>
+          <template is="dom-if" if="{{isValidBug}}">
+            <tr><td colspan="2">{{summary}}</td></tr>
+            <tr><td>Filed</td><td>{{formatDate(published)}}</td></tr>
+            <tr><td>Owner</td><td>{{owner}}</td></tr>
+            <tr><td>State</td><td>{{state}}</td></tr>
+            <tr><td>Status</td><td>{{status}}</td></tr>
+            <tr><td>Comments</td><td>{{comments.length}}</td></tr>
+            <template is="dom-if" if="{{bisects.length}}">
+              <tr>
+                <td class="bordered-cell">Bisects</td>
+                <td class="bordered-cell"><ul>
+                <template is="dom-repeat" items="{{bisects}}">
+                  <li><a href="{{item.buildbucket_link}}">
+                  {{item.metric}} on {{item.bot}}</a>: {{item.status}}
+                </template></ul></td>
+              </tr>
+            </template>
+            <template is="dom-if" if="{{reviewUrls.length}}">
+              <tr>
+                <td class="bordered-cell">Changelists</td>
+                <td class="bordered-cell"><ul>
+                <template is="dom-repeat" items="{{reviewUrls}}">
+                  <li><a href="{{item}}">{{item}}</a>
+                </template></ul></td>
+              </tr>
+            </template>
+          </template>
+        </table>
+        
+      </template>
+        <template is="dom-if" if={{compactView}}>
+          <template is="dom-if" if="{{error}}">
+            <p class="error">Could not load bug {{bugId}}. {{error}}</p>
+          </template>
+          <template is="dom-if" if={{isValidBug}}>
+            <br>
+            <a href="https://crbug.com/{{bugId}}" target="_blank">
+              {{summary}}</a>: <br>
+            Filed on {{formatDate(published)}} <br>
+            Owner: {{owner}} <br>
+            State: {{state}} <br>
+            Status: {{status}} with 
+            {{comments.length}} comments <br>
+            <template is="dom-if" if="{{bisects.length}}">
+              <template is="dom-repeat" items="{{bisects}}">
+                  <a href="{{item.buildbucket_link}}">
+                    bisect</a>: {{item.status}} <br>
+                </template>
+            </template>
+            <template is="dom-if" if="{{reviewUrls.length}}">
+              <template is="dom-repeat" items="{{reviewUrls}}">
+                  <a href="{{item}}">{{item}}</a><br>
+              </template>
+            </template>
+        </template>
+      </template>
+    </template>
+  </template>
+</dom-module>
+<script>
+'use strict';
+tr.exportTo('d', function() {
+  const BUG_DETAILS = new d.AsyncMap(async bugId =>
+    await simple_xhr.asPromise('/bug_details', {bug_id: bugId}));
+  return {
+    BUG_DETAILS,
+  };
+});
+
+Polymer({
+  is: 'bug-details',
+  properties: {
+    bisects: {
+      notify: true,
+      type: Array
+    },
+    bugId: {
+      notify: true,
+      type: Number,
+      observer: 'ready'
+    },
+    comments: {
+      notify: true,
+      type: Array
+    },
+    compactView: {
+      type: Boolean,
+      value: false
+    },
+    error: {
+      notify: true,
+      type: Boolean,
+      value: false
+    },
+    isValidBug: {
+      value: false,
+      type: Boolean
+    },
+    loading: {
+      notify: true,
+      type: Boolean,
+      value: true
+    },
+    owner: {
+      notify: true,
+      type: String
+    },
+    published: {
+      notify: true
+    },
+    reviewUrls: {
+      notify: true,
+      type: Array
+    },
+    state: {
+      notify: true,
+      type: String
+    },
+    status: {
+      notify: true,
+      type: String
+    },
+    summary: {
+      notify: true,
+      type: String
+    }
+  },
+
+  formatDate: d => d.getFullYear() + '-' + (d.getMonth() + 1) +
+                  '-' + d.getDate(),
+
+  async ready() {
+    if (this.bugId > 0) {
+      this.isValidBug = true;
+      try {
+        const details = await d.BUG_DETAILS.get(this.bugId);
+        this.bisects = details.bisects;
+        this.comments = details.comments;
+        this.owner = details.owner;
+        this.published = new Date(details.published);
+        this.reviewUrls = details.review_urls;
+        this.state = details.state;
+        this.status = details.status;
+        this.summary = details.summary;
+        this.loading = false;
+        this.error = undefined;
+      } catch (e) {
+        this.error = e;
+        this.loading = false;
+        this.isValidBug = false;
+      }
+    } else {
+      this.loading = false;
+      this.isValidBug = false;
+    }
+  }
+});
+</script>

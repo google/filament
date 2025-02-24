@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mappers/scheduling/map_wake_ups.html">
+<link rel="import" href="/perf_insights/mre/mre_result.html">
+<link rel="import" href="/tracing/base/iteration_helpers.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  var TestUtils = tr.c.TestUtils;
+
+  test('mapperTest', function() {
+    var m = TestUtils.newModel(function(m) {
+      var p1 = m.getOrCreateProcess(1);
+      var t2 = p1.getOrCreateThread(2);
+      t2.name = 'mainThread';
+      t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'goingToSleep',
+        start: 0, duration: 10
+      }));
+
+      // This slice doesn't count as a wake-up because it occurs too soon after
+      // the previous one.
+      t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'notAWakeUp',
+        start: 10, duration: 1
+      }));
+
+      t2.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'wakeUp1',
+        start: 20, duration: 10
+      }));
+
+      var p3 = m.getOrCreateProcess(3);
+      var t4 = p1.getOrCreateThread(4);
+      t4.name = 'mainThread';
+      t4.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'goingToSleep',
+        start: 0, duration: 10
+      }));
+
+      // This wake-up gets merged with the one above because it has the same
+      // title.
+      t4.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'wakeUp1',
+        start: 25, duration: 1
+      }));
+
+      // The name of this wake-up gets sanitized.
+      t4.sliceGroup.pushSlice(TestUtils.newSliceEx({
+        title: 'MessageLoop::RunTask',
+        args: {src_file: 'c:\\foo\\file', src_func: 'func'},
+        start: 29, duration: 1
+      }));
+    });
+
+    var result = new pi.mre.MreResult();
+    pie.mapWakeUpsForTest(result, m);
+
+    assert.equal(tr.b.dictionaryLength(result.pairs), 1);
+
+    var wakeUps = result.pairs.wakeUps;
+    assert.equal(Object.keys(wakeUps.mainThread).length, 2);
+    assert.equal(wakeUps.mainThread.wakeUp1.frequency, 200 / 3);
+    assert.deepEqual(wakeUps.mainThread.wakeUp1.sleepTimes, [9, 15]);
+    assert.deepEqual(wakeUps.mainThread['file:func'].sleepTimes, [3]);
+  });
+});
+
+</script>

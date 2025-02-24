@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/unit_scale.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<dom-module id='tr-ui-a-power-sample-summary-table'>
+  <template>
+    <style>
+    tr-ui-b-table {
+      font-size: 12px;
+    }
+    </style>
+    <tr-ui-b-table id="table"></tr-ui-b-table>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-power-sample-summary-table',
+
+  ready() {
+    this.$.table.tableColumns = [
+      {
+        title: 'Min power',
+        width: '100px',
+        value(row) {
+          return tr.b.Unit.byName.powerInWatts.format(row.min);
+        }
+      },
+      {
+        title: 'Max power',
+        width: '100px',
+        value(row) {
+          return tr.b.Unit.byName.powerInWatts.format(row.max);
+        }
+      },
+      {
+        title: 'Time-weighted average',
+        width: '100px',
+        value(row) {
+          return tr.b.Unit.byName.powerInWatts.format(
+              row.timeWeightedAverageInW);
+        }
+      },
+      {
+        title: 'Energy consumed',
+        width: '100px',
+        value(row) {
+          return tr.b.Unit.byName.energyInJoules.format(row.energyConsumedInJ);
+        }
+      },
+      {
+        title: 'Sample count',
+        width: '100%',
+        value(row) { return row.sampleCount; }
+      }
+    ];
+    this.samples = new tr.model.EventSet();
+  },
+
+  get samples() {
+    return this.samples_;
+  },
+
+  set samples(samples) {
+    if (samples === this.samples) return;
+
+    this.samples_ =
+        (samples === undefined) ? new tr.model.EventSet() : samples;
+    this.updateContents_();
+  },
+
+  updateContents_() {
+    if (this.samples.length === 0) {
+      this.$.table.tableRows = [];
+    } else {
+      this.$.table.tableRows = [{
+        min: this.getMin(),
+        max: this.getMax(),
+        timeWeightedAverageInW: this.getTimeWeightedAverageInW(),
+        energyConsumedInJ: this.getEnergyConsumedInJ(),
+        sampleCount: this.samples.length
+      }];
+    }
+
+    this.$.table.rebuild();
+  },
+
+  getMin() {
+    return Math.min.apply(null, this.samples.map(function(sample) {
+      return sample.powerInW;
+    }));
+  },
+
+  getMax() {
+    return Math.max.apply(null, this.samples.map(function(sample) {
+      return sample.powerInW;
+    }));
+  },
+
+  /**
+   * Returns a time-weighted average of the power consumption (Watts)
+   * in between the first sample (inclusive) and last sample (exclusive).
+   */
+  getTimeWeightedAverageInW() {
+    const energyConsumedInJ = this.getEnergyConsumedInJ();
+
+    if (energyConsumedInJ === 'N/A') return 'N/A';
+
+    const durationInS = tr.b.convertUnit(this.samples.bounds.duration,
+        tr.b.UnitPrefixScale.METRIC.MILLI,
+        tr.b.UnitPrefixScale.METRIC.NONE);
+
+    return energyConsumedInJ / durationInS;
+  },
+
+
+  getEnergyConsumedInJ() {
+    if (this.samples.length < 2) return 'N/A';
+
+    const bounds = this.samples.bounds;
+    const series = tr.b.getFirstElement(this.samples).series;
+    return series.getEnergyConsumedInJ(bounds.min, bounds.max);
+  }
+});
+</script>

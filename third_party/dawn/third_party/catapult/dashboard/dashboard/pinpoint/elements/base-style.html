@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<dom-module id="base-style">
+  <template>
+    <style>
+      :root {
+        /* Dropdown menus should always be on top of dialogs. */
+        --layer-menus: 300;
+
+        /* Dialogs like chart-tooltip and triage-dialog */
+        --layer-dialogs: 200;
+
+        /* Misc information that might be positioned over inline DOM, but shouldn't
+           overshadow dialogs. E.g. alert-icons.
+         */
+        --layer-highlights: 100;
+      }
+
+      a {
+        color: var(--paper-indigo-500);
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: var(--paper-pink-a200);
+      }
+
+      copy {
+        cursor: pointer;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-weight: lighter;
+      }
+
+      h2,
+      h3 {
+        margin: 1em 0 0.5em 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 0.5em;
+      }
+
+      .badge {
+        border-radius: 1em;
+        font-size: 0.5em;
+        padding: 0.25em 0.5em;
+        vertical-align: middle;
+      }
+
+      .byline {
+        color: var(--paper-grey-500);
+      }
+
+      .middle-dot::after {
+        content: "·";
+        padding: 0 0.8em;
+      }
+
+      .commit-box {
+        height: 60px;
+      }
+
+      /* Make the rendering of all commits look consistent. */
+      .commit {
+        color: var(--paper-grey-700);
+      }
+
+      .commit-hash {
+        color: gray;
+        font-size: 90%;
+        padding: 4px;
+        margin-right: 4px;
+        border-radius: 3px;
+        background-color: var(--paper-light-blue-100);
+      }
+
+      .commit-position {
+        color: gray;
+        font-size: 90%;
+        padding: 4px;
+        margin-right: 4px;
+        border-radius: 3px;
+        background-color: var(--paper-grey-100);
+      }
+
+      .commit-message {
+        color: black;
+      }
+
+      .commit-author {
+        color: gray;
+        font-size: 90%;
+      }
+
+    </style>
+  </template>
+</dom-module>

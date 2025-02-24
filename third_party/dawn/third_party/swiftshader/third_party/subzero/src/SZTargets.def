@@ -1,0 +1,42 @@
+//===- subzero/src/SZTargets.def - Target enumeration x-macro ---*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides an alternate implementation of llvm/Config/SZTargets.def,
+// such that when SZTARGET is defined, it enumerates the single SZTARGET instead
+// of the complete list.  This can be used to model a proper minimal build for
+// the browser.
+//
+//===----------------------------------------------------------------------===//
+
+#ifdef SZTARGET
+
+#ifndef SUBZERO_TARGET
+#error Please define the macro SUBZERO_TARGET(TargetName)
+#endif
+
+SUBZERO_TARGET(SZTARGET)
+
+#undef SUBZERO_TARGET
+
+#else // !SZTARGET
+
+#ifdef PNACL_LLVM
+
+#include "llvm/Config/SZTargets.def"
+
+#else // !PNACL_LLVM
+
+SUBZERO_TARGET(ARM32)
+SUBZERO_TARGET(MIPS32)
+SUBZERO_TARGET(X8632)
+SUBZERO_TARGET(X8664)
+
+#endif // !PNACL_LLVM
+
+#endif // !SZTARGET

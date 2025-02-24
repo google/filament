@@ -1,0 +1,85 @@
+git-hyper-blame(1)
+==================
+
+NAME
+----
+git-hyper-blame -
+include::_git-hyper-blame_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git hyper-blame' [-i <rev> [-i <rev> ...]] [--ignore-file=<file>]
+                [--no-default-ignores] [<rev>] [--] <file>
+
+DESCRIPTION
+-----------
+
+`git hyper-blame` is like `git blame` but it can ignore or "look through" a
+given set of commits, to find the real culprit.
+
+This is useful if you have a commit that makes sweeping changes that are
+unlikely to be what you are looking for in a blame, such as mass reformatting or
+renaming. By adding these commits to the hyper-blame ignore list, `git
+hyper-blame` will look past these commits to find the previous commit that
+touched a given line.
+
+Follows the normal `blame` syntax: annotates `<file>` with the revision that
+last modified each line. Optional `<rev>` specifies the revision of `<file>` to
+start from.
+
+Automatically looks for a file called `.git-blame-ignore-revs` in the repository
+root directory. This file has the same syntax as the `--ignore-file` argument,
+and any commits mentioned in this file are added to the ignore list.
+
+OPTIONS
+-------
+
+-i <rev>::
+  A revision to ignore. Can be specified as many times as needed.
+
+--ignore-file=<file>::
+  A file containing a list of revisions to ignore. Can have comments beginning
+  with `#`.
+
+--no-default-ignores::
+  Do not ignore commits from the `.git-blame-ignore-revs` file.
+
+EXAMPLE
+-------
+
+Let's run `git blame` on a file:
+
+demo:1[]
+
+Notice that almost the entire file has been blamed on a formatting change? You
+aren't interested in the uppercasing of the file. You want to know who
+wrote/modified those lines in the first place. Just tell `hyper-blame` to ignore
+that commit:
+
+demo:2[]
+
+`hyper-blame` places a `*` next to any line where it has skipped over an ignored
+commit, so you know that the line in question has been changed (by an ignored
+commit) since the given person wrote it.
+
+CAVEATS
+-------
+
+When a line skips over an ignored commit, a guess is made as to which commit
+previously modified that line, but it is not always clear where the line came
+from. If the ignored commit makes lots of changes in close proximity, in
+particular adding/removing/reordering lines, then the wrong authors may be
+blamed for nearby edits.
+
+For this reason, `hyper-blame` works best when the ignored commits are be
+limited to minor changes such as formatting and renaming, not refactoring or
+other more invasive changes.
+
+SEE ALSO
+--------
+linkgit:git-blame[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

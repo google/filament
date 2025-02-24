@@ -1,0 +1,14 @@
+{
+  "name": "websocket-logger",
+  "version": "0.0.0",
+  "author": "WebGPU CTS Contributors",
+  "private": true,
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}

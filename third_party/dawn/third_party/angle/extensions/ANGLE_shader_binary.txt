@@ -1,0 +1,74 @@
+Name
+
+    ANGLE_shader_binary
+
+Name Strings
+
+    GL_ANGLE_shader_binary
+
+Contributors
+
+    Jonah Taylor, Samsung
+    Mahmoud Kharsa, Samsung
+
+Contacts
+
+    Mahmoud Kharsa, Samsung (m.kharsa 'at' samsung 'dot' com)
+
+Notice
+
+    Copyright (c) 2023 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft.
+
+Version
+
+    Version 1, January 03, 2023
+
+Number
+
+    OpenGL ES Extension ###
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+Overview
+
+    This extension makes available a shader binary format, SHADER_BINARY_ANGLE.
+    It enables the loading of shader binaries pre-compiled with ANGLE.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <binaryFormat> parameter of ShaderBinary:
+
+        GL_SHADER_BINARY_ANGLE                              0x96BB
+
+Errors
+
+    An INVALID_VALUE is generated if the binary points to an incompatible
+    shader binary that was generated using a different version of ANGLE.
+
+New State
+
+    None.
+
+Issues
+
+    None.
+
+Revision History
+
+    #1 - (January 03, 2023) Mahmoud Kharsa
+         Original draft

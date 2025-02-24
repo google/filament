@@ -1,0 +1,59 @@
+//===- subzero/src/IceTargetLowering.def - Target X-macros ------*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines certain platform independent patterns for lowering target
+// instructions, in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETARGETLOWERING_DEF
+#define SUBZERO_SRC_ICETARGETLOWERING_DEF
+
+// Pattern for runtime helper functions
+#define RUNTIME_HELPER_FUNCTIONS_TABLE                                         \
+  /* tag ,              name */                                                \
+  X(bitcast_16xi1_i16,  "__Sz_bitcast_16xi1_i16")                              \
+  X(bitcast_8xi1_i8,    "__Sz_bitcast_8xi1_i8")                                \
+  X(bitcast_i16_16xi1,  "__Sz_bitcast_i16_16xi1")                              \
+  X(bitcast_i8_8xi1,    "__Sz_bitcast_i8_8xi1")                                \
+  X(call_ctpop_i32,     "__popcountsi2")                                       \
+  X(call_ctpop_i64,     "__popcountdi2")                                       \
+  X(call_longjmp,       "longjmp")                                             \
+  X(call_memcpy,        "memcpy")                                              \
+  X(call_memmove,       "memmove")                                             \
+  X(call_memset,        "memset")                                              \
+  X(call_read_tp,       "__nacl_read_tp")                                      \
+  X(call_setjmp,        "setjmp")                                              \
+  X(fptosi_f32_i64,     "__Sz_fptosi_f32_i64")                                 \
+  X(fptosi_f64_i64,     "__Sz_fptosi_f64_i64")                                 \
+  X(fptoui_4xi32_f32,   "__Sz_fptoui_4xi32_f32")                               \
+  X(fptoui_f32_i32,     "__Sz_fptoui_f32_i32")                                 \
+  X(fptoui_f32_i64,     "__Sz_fptoui_f32_i64")                                 \
+  X(fptoui_f64_i32,     "__Sz_fptoui_f64_i32")                                 \
+  X(fptoui_f64_i64,     "__Sz_fptoui_f64_i64")                                 \
+  X(frem_f32,           "fmodf")                                               \
+  X(frem_f64,           "fmod")                                                \
+  X(sdiv_i32,           "__divsi3")                                            \
+  X(sdiv_i64,           "__divdi3")                                            \
+  X(sitofp_i64_f32,     "__Sz_sitofp_i64_f32")                                 \
+  X(sitofp_i64_f64,     "__Sz_sitofp_i64_f64")                                 \
+  X(srem_i32,           "__modsi3")                                            \
+  X(srem_i64,           "__moddi3")                                            \
+  X(udiv_i32,           "__udivsi3")                                           \
+  X(udiv_i64,           "__udivdi3")                                           \
+  X(uitofp_4xi32_4xf32, "__Sz_uitofp_4xi32_4xf32")                             \
+  X(uitofp_i32_f32,     "__Sz_uitofp_i32_f32")                                 \
+  X(uitofp_i32_f64,     "__Sz_uitofp_i32_f64")                                 \
+  X(uitofp_i64_f32,     "__Sz_uitofp_i64_f32")                                 \
+  X(uitofp_i64_f64,     "__Sz_uitofp_i64_f64")                                 \
+  X(urem_i32,           "__umodsi3")                                           \
+  X(urem_i64,           "__umoddi3")
+//#define X(Tag, Name)
+
+#endif // SUBZERO_SRC_ICETARGETLOWERING_DEF

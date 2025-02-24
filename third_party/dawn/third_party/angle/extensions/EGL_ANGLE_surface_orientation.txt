@@ -1,0 +1,133 @@
+Name
+
+    ANGLE_surface_orientation
+
+Name Strings
+
+    EGL_ANGLE_surface_orientation
+
+Contributors
+
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' google 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2015-12-15
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    Written based on the wording of the EGL 1.5 Specification
+    (August 7 2014).
+
+Overview
+
+    This extension provides a mechanism for querying the most optimal
+    orientation of a window surface and creating window sufraces with
+    non-default orientations for the most performant rendering.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    New EGLConfig bitmask attribute name:
+
+        EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE 0x33A7
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglCreateWindowSurface and attribute name in the <attribute>
+    argument of eglQuerySurface:
+
+        EGL_SURFACE_ORIENTATION_ANGLE 0x33A8
+
+    Valid bitfields in the EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE bitmask
+    attribute of EGLConfig and EGL_SURFACE_ORIENTATION_ANGLE bitmask attribute
+    of eglCreateWindowSurface:
+
+        EGL_SURFACE_ORIENTATION_INVERT_X_ANGLE 0x0001
+        EGL_SURFACE_ORIENTATION_INVERT_Y_ANGLE 0x0002
+
+Additions to the EGL Specification
+
+    Additions to Chapter 3 of the EGL 1.5 Specification (EGL Functions and Errors)
+
+    Add to table 3.1 (EGLConfig Attributes)
+
+    Attribute                              Type     Notes
+    -------------------------------------  -------  ----------------------
+    EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE  bitmask  Optimal window surface
+                                                    orientation.
+
+
+    Add a paragraph to section 3.4, section Other EGLConfig Attribute
+    Descriptions.
+
+    "EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE is a mask indicating which
+    window surface orientation will provide the best performance."
+
+    Add to table 3.4 (Default values and match criteria for EGLConfig
+    attributes):
+
+    Attribute                              Default  Selection  Sort     Sort
+                                                    Criteria   Order    Priority
+    -------------------------------------  -------  ---------  -------  --------
+    EGL_OPTIMAL_SURFACE_ORIENTATION_ANGLE  0        Exact      None
+
+    Add a paragraph to section 3.5.1, section Creating On-Screen Rendering
+    Surfaces.
+
+    EGL_SURFACE_ORIENTATION_ANGLE attribute specifies how the surface's content
+    will appear on the screen. If its value contains
+    EGL_SURFACE_ORIENTATION_INVERT_X_ANGLE then all displayed content will be
+    inverted along the vertical axis. Similarly, if its value contains
+    EGL_SURFACE_ORIENTATION_INVERT_Y_ANGLE then all displayed content will be
+    inverted along the horizontal axis.
+
+    Add to table 3.5 (Queryable surface attributes and types):
+
+    Attribute                      Type     Description
+    -----------------------------  -------  ----------------------
+    EGL_SURFACE_ORIENTATION_ANGLE  bitmask  Orientation of surface
+
+    Add a paragraph to section 3.5.6, Surface Attributes:
+
+    "Querying EGL_SURFACE_ORIENTATION_ANGLE returns the orientation of the
+    surface.  For a window surface, this is the same attribute value specified
+    when the surface was created.  For other types of surfaces, it is always
+    0."
+
+Issues
+
+    1) What about dirty regions and sub regions specified by extensions such as
+       NV_post_sub_buffer?
+
+       These regions will be applied to the same region of the window as
+       before because they are often specified based on events from the
+       operating system.  The content in these regions will be displayed
+       according to the value of EGL_SURFACE_ORIENTATION_ANGLE.
+
+Revision History
+
+    Version 1, 2015-12-15 (Geoff Lang)
+      - Initial draft

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/frame.html">
+<link rel="import" href="/tracing/ui/timeline_viewport.html">
+<link rel="import" href="/tracing/ui/tracks/drawing_container.html">
+<link rel="import" href="/tracing/ui/tracks/frame_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Frame = tr.model.Frame;
+  const FrameTrack = tr.ui.tracks.FrameTrack;
+  const EventSet = tr.model.EventSet;
+  const SelectionState = tr.model.SelectionState;
+  const Viewport = tr.ui.TimelineViewport;
+
+  const createFrames = function() {
+    let frames = undefined;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      const process = model.getOrCreateProcess(1);
+      const thread = process.getOrCreateThread(1);
+      for (let i = 1; i < 5; i++) {
+        const slice = tr.c.TestUtils.newSliceEx(
+            {title: 'work for frame', start: i * 20, duration: 10});
+        thread.sliceGroup.pushSlice(slice);
+        const events = [slice];
+        const threadTimeRanges =
+            [{thread, start: slice.start, end: slice.end}];
+        process.frames.push(new Frame(events, threadTimeRanges));
+      }
+      frames = process.frames;
+    });
+    return frames;
+  };
+
+  test('instantiate', function() {
+    const frames = createFrames();
+    frames[1].selectionState = SelectionState.SELECTED;
+
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    const track = FrameTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(div);
+    drawingContainer.invalidate();
+
+    track.frames = frames;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, 50, track.clientWidth);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    assert.strictEqual(track.items[0].start, 20);
+  });
+
+  test('modelMapping', function() {
+    const frames = createFrames();
+
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const track = FrameTrack(viewport);
+    track.frames = frames;
+
+    const a0 = track.items[0].modelItem;
+    assert.strictEqual(a0, frames[0]);
+  });
+
+  test('selectionMapping', function() {
+    const frames = createFrames();
+
+    const div = document.createElement('div');
+    const viewport = new Viewport(div);
+    const track = FrameTrack(viewport);
+    track.frames = frames;
+
+    const selection = new EventSet();
+    track.items[0].addToSelection(selection);
+
+    // select both frame, but not its component slice
+    assert.strictEqual(selection.length, 1);
+
+    let frameCount = 0;
+    let eventCount = 0;
+    selection.forEach(function(event) {
+      if (event instanceof Frame) {
+        assert.strictEqual(event, frames[0]);
+        frameCount++;
+      } else {
+        eventCount++;
+      }
+    });
+    assert.strictEqual(frameCount, 1);
+    assert.strictEqual(eventCount, 0);
+  });
+});
+</script>

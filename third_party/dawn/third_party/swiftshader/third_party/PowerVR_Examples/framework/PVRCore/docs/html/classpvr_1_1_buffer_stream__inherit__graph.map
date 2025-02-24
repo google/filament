@@ -1,0 +1,4 @@
+<map id="pvr::BufferStream" name="pvr::BufferStream">
+<area shape="rect" id="node3" href="$classpvr_1_1_windows_resource_stream.html" title="A Stream implementation that is used to access resources built in a MS Windows executable." alt="" coords="5,155,221,181"/>
+<area shape="rect" id="node2" href="$classpvr_1_1_stream.html" title="This class is used to abstract streams of data (files, blocks of memory, resources etc..." alt="" coords="64,5,163,32"/>
+</map>

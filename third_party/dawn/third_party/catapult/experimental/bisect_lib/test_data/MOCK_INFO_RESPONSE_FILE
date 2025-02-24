@@ -1,0 +1,48 @@
+ ]}'
+ {
+   "commit": "c89130e28fd01062104e1be7f3a6fc3abbb80ca9",
+   "tree": "b6c8947321df51bd03ce118285e243ca4b14a751",
+   "parents": [
+     "2e93263dc74f0496100435e1fd7232e9e8323af0"
+   ],
+   "author": {
+     "name": "rdevlin.cronin",
+     "email": "rdevlin.cronin@chromium.org",
+     "time": "Tue Oct 27 21:24:54 2015"
+   },
+   "committer": {
+     "name": "Commit bot",
+     "email": "commit-bot@chromium.org",
+     "time": "Tue Oct 27 21:26:30 2015"
+   },
+   "message": "[Extensions] Fix hiding browser actions without the toolbar redesign\n\nHiding actions without the toolbar redesign means removing them entirely, so if\nthey exist in the toolbar, they are considered \u0027visible\u0027 (even if they are in\nthe chevron).\n\nBUG\u003d544859\nBUG\u003d548160\n\nReview URL: https://codereview.chromium.org/1414343003\n\nCr-Commit-Position: refs/heads/master@{#356400}\n",
+   "tree_diff": [
+     {
+       "type": "modify",
+       "old_id": "d97ee3abdf40b1ed6217780c38ac7122d4b3caac",
+       "old_mode": 33188,
+       "old_path": "chrome/browser/extensions/extension_context_menu_model.cc",
+       "new_id": "27ef17bab7ebfb1796fdecb8ce0c35199442cf2f",
+       "new_mode": 33188,
+       "new_path": "chrome/browser/extensions/extension_context_menu_model.cc"
+     },
+     {
+       "type": "modify",
+       "old_id": "2150b00ab82755323c069757ae5d05a4a32b91f6",
+       "old_mode": 33188,
+       "old_path": "chrome/browser/extensions/extension_context_menu_model_unittest.cc",
+       "new_id": "ecdd3ba5b65102b7c54f35bb3a6b5bc1510bf442",
+       "new_mode": 33188,
+       "new_path": "chrome/browser/extensions/extension_context_menu_model_unittest.cc"
+     },
+     {
+       "type": "modify",
+       "old_id": "963f4629354c504b34321029a2e63f87355672e0",
+       "old_mode": 33188,
+       "old_path": "chrome/browser/ui/views/toolbar/chevron_menu_button.cc",
+       "new_id": "69b207a671aa2c80f4a9b3a6873c9db727f2e355",
+       "new_mode": 33188,
+       "new_path": "chrome/browser/ui/views/toolbar/chevron_menu_button.cc"
+     }
+   ]
+ }

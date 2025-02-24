@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/brushing_state_controller.html">
+
+<dom-module id='tr-ui-a-analysis-link'>
+  <template>
+    <style>
+    :host {
+      display: inline;
+      cursor: pointer;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    a {
+      text-decoration: underline;
+    }
+    </style>
+    <a href="{{href}}" on-click="onClicked_" on-mouseenter="onMouseEnter_" on-mouseleave="onMouseLeave_"><slot></slot></a>
+
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-analysis-link',
+
+  properties: {
+    href: {
+      type: String
+    }
+  },
+
+  listeners: {
+    'click': 'onClicked_',
+    'mouseenter': 'onMouseEnter_',
+    'mouseleave': 'onMouseLeave_'
+  },
+
+  ready() {
+    this.selection_ = undefined;
+  },
+
+  attached() {
+    // Save an instance of the controller since it's going to be used in
+    // detached() where it can no longer be obtained.
+    this.controller_ =
+        tr.c.BrushingStateController.getControllerForElement(this);
+  },
+
+  detached() {
+    // Reset highlights.
+    this.clearHighlight_();
+    this.controller_ = undefined;
+  },
+
+  set color(c) {
+    this.style.color = c;
+  },
+
+  /**
+   * @return {*|function():*}
+   */
+  get selection() {
+    return this.selection_;
+  },
+
+  /**
+   * |selection| can be anything except a function, or else a function that
+   * can return anything.
+   *
+   * In the context of trace_viewer, |selection| is typically an EventSet,
+   * whose events will be highlighted by trace_viewer when this link is
+   * clicked or mouse-entered.
+   *
+   * If |selection| is not a function, then it will be dispatched to this
+   * link's embedder via a RequestSelectionChangeEvent when this link is
+   * clicked or mouse-entered.
+   *
+   * If |selection| is a function, then it will be called when this link is
+   * clicked or mouse-entered, and its result will be dispatched to this
+   * link's embedder via a RequestSelectionChangeEvent.
+   *
+   * @param {*|function():*} selection
+   */
+  set selection(selection) {
+    this.selection_ = selection;
+    Polymer.dom(this).textContent = selection.userFriendlyName;
+  },
+
+  setSelectionAndContent(selection, opt_textContent) {
+    this.selection_ = selection;
+    if (opt_textContent) {
+      Polymer.dom(this).textContent = opt_textContent;
+    }
+  },
+
+  /**
+   * If |selection| is a function, call it and return the result.
+   * Otherwise return |selection| directly.
+   *
+   * @return {*}
+   */
+  getCurrentSelection_() {
+    // Gets the current selection, invoking the selection function if needed.
+    if (typeof this.selection_ === 'function') {
+      return this.selection_();
+    }
+    return this.selection_;
+  },
+
+  setHighlight_(opt_eventSet) {
+    if (this.controller_) {
+      this.controller_.changeAnalysisLinkHoveredEvents(opt_eventSet);
+    }
+  },
+
+  clearHighlight_(opt_eventSet) {
+    this.setHighlight_();
+  },
+
+  onClicked_(clickEvent) {
+    if (!this.selection_) return;
+
+    clickEvent.stopPropagation();
+
+    const event = new tr.model.RequestSelectionChangeEvent();
+    event.selection = this.getCurrentSelection_();
+    this.dispatchEvent(event);
+  },
+
+  onMouseEnter_() {
+    this.setHighlight_(this.getCurrentSelection_());
+  },
+
+  onMouseLeave_() {
+    this.clearHighlight_();
+  }
+});
+</script>

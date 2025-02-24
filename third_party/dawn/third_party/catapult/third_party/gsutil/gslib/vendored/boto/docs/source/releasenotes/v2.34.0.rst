@@ -1,0 +1,21 @@
+boto v2.34.0
+============
+
+:date: 2014/10/23
+
+This release adds region support for ``eu-central-1`` , support to create
+virtual mfa devices for Identity and Access Management, and fixes several
+sigv4 issues.
+
+
+Changes
+-------
+* Calculate sha_256 correctly for s3 (:issue:`2691`, :sha:`c0a001f`)
+* Fix MTurk typo. (:issue:`2429`, :issue:`2428`, :sha:`9bfff19`)
+* Fix Amazon Cognito links in docs (:issue:`2674`, :sha:`7c28577`)
+* Add the ability to IAM to create a virtual mfa device. (:issue:`2675`, :sha:`075d402`)
+* PEP8 tidy up for several modules. (:issue:`2673`, :sha:`38abbd9`)
+* Fix s3 create multipart upload for sigv4 (:issue:`2684`, :sha:`fc73641`)
+* Updated endpoints.json for cloudwatch logs to support more regions. (:issue:`2685`, :sha:`5db2ea8`)
+
+

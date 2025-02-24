@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/base/settings.html">
+<link rel="import" href="/tracing/extras/chrome/cc/constants.html">
+<link rel="import" href="/tracing/extras/chrome/cc/picture.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/base/drag_handle.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/layer_tree_quad_stack_view.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview LayerView coordinates graphical and analysis views of layers.
+ */
+
+tr.exportTo('tr.ui.e.chrome.cc', function() {
+  const constants = tr.e.cc.constants;
+
+  /**
+   * @constructor
+   */
+  const LayerView = tr.ui.b.define('tr-ui-e-chrome-cc-layer-view');
+
+  LayerView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.style.flexDirection = 'column';
+      this.style.display = 'flex';
+
+      this.layerTreeQuadStackView_ =
+          new tr.ui.e.chrome.cc.LayerTreeQuadStackView();
+      this.dragBar_ = document.createElement('tr-ui-b-drag-handle');
+      this.analysisEl_ =
+          document.createElement('tr-ui-e-chrome-cc-layer-view-analysis');
+      this.analysisEl_.style.flexGrow = 0;
+      this.analysisEl_.style.flexShrink = 0;
+      this.analysisEl_.style.flexBasis = 'auto';
+      this.analysisEl_.style.height = '150px';
+      this.analysisEl_.style.overflow = 'auto';
+      this.analysisEl_.addEventListener('requestSelectionChange',
+          this.onRequestSelectionChangeFromAnalysisEl_.bind(this));
+
+      this.dragBar_.target = this.analysisEl_;
+
+      Polymer.dom(this).appendChild(this.layerTreeQuadStackView_);
+      Polymer.dom(this).appendChild(this.dragBar_);
+      Polymer.dom(this).appendChild(this.analysisEl_);
+
+      this.layerTreeQuadStackView_.addEventListener('selection-change',
+          function() {
+            this.layerTreeQuadStackViewSelectionChanged_();
+          }.bind(this));
+      this.layerTreeQuadStackViewSelectionChanged_();
+    },
+
+    get layerTreeImpl() {
+      return this.layerTreeQuadStackView_.layerTreeImpl;
+    },
+
+    set layerTreeImpl(newValue) {
+      return this.layerTreeQuadStackView_.layerTreeImpl = newValue;
+    },
+
+    set isRenderPassQuads(newValue) {
+      return this.layerTreeQuadStackView_.isRenderPassQuads = newValue;
+    },
+
+    get selection() {
+      return this.layerTreeQuadStackView_.selection;
+    },
+
+    set selection(newValue) {
+      this.layerTreeQuadStackView_.selection = newValue;
+    },
+
+    regenerateContent() {
+      this.layerTreeQuadStackView_.regenerateContent();
+    },
+
+    layerTreeQuadStackViewSelectionChanged_() {
+      const selection = this.layerTreeQuadStackView_.selection;
+      if (selection) {
+        this.dragBar_.style.display = '';
+        this.analysisEl_.style.display = '';
+        Polymer.dom(this.analysisEl_).textContent = '';
+
+        const layer = selection.layer;
+        if (tr.e.cc.PictureSnapshot.CanDebugPicture() &&
+            layer &&
+            layer.args &&
+            layer.args.pictures &&
+            layer.args.pictures.length) {
+          Polymer.dom(this.analysisEl_).appendChild(
+              this.createPictureBtn_(layer.args.pictures));
+        }
+
+        const analysis = selection.createAnalysis();
+        Polymer.dom(this.analysisEl_).appendChild(analysis);
+        for (const child of this.analysisEl_.children) {
+          child.style.userSelect = 'text';
+        }
+      } else {
+        this.dragBar_.style.display = 'none';
+        this.analysisEl_.style.display = 'none';
+        const analysis = Polymer.dom(this.analysisEl_).firstChild;
+        if (analysis) {
+          Polymer.dom(this.analysisEl_).removeChild(analysis);
+        }
+        this.layerTreeQuadStackView_.style.height =
+            window.getComputedStyle(this).height;
+      }
+      tr.b.dispatchSimpleEvent(this, 'selection-change');
+    },
+
+    createPictureBtn_(pictures) {
+      if (!(pictures instanceof Array)) {
+        pictures = [pictures];
+      }
+
+      const link = document.createElement('tr-ui-a-analysis-link');
+      link.selection = function() {
+        const layeredPicture = new tr.e.cc.LayeredPicture(pictures);
+        const snapshot = new tr.e.cc.PictureSnapshot(layeredPicture);
+        snapshot.picture = layeredPicture;
+
+        const selection = new tr.model.EventSet();
+        selection.push(snapshot);
+        return selection;
+      };
+      Polymer.dom(link).textContent = 'View in Picture Debugger';
+      return link;
+    },
+
+    onRequestSelectionChangeFromAnalysisEl_(e) {
+      if (!(e.selection instanceof tr.ui.e.chrome.cc.Selection)) {
+        return;
+      }
+
+      e.stopPropagation();
+      this.selection = e.selection;
+    },
+
+    get extraHighlightsByLayerId() {
+      return this.layerTreeQuadStackView_.extraHighlightsByLayerId;
+    },
+
+    set extraHighlightsByLayerId(extraHighlightsByLayerId) {
+      this.layerTreeQuadStackView_.extraHighlightsByLayerId =
+          extraHighlightsByLayerId;
+    }
+  };
+
+  return {
+    LayerView,
+  };
+});
+</script>

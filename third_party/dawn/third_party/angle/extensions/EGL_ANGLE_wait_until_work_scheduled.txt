@@ -1,0 +1,63 @@
+﻿Name
+
+   ANGLE_wait_until_work_scheduled
+
+Name Strings
+
+   EGL_ANGLE_wait_until_work_scheduled
+
+Contact
+
+   Gregg Tavares, Google (gman 'at' google.com)
+
+Status
+
+   Draft.
+
+Version
+
+   Version 1, 2022-12-15
+
+Number
+
+   ???
+
+Dependencies
+
+   The extension is written against the EGL 1.3 Specification, although it
+   should work on other versions of these specifications.
+
+Overview
+
+   This extension provides a function that given a EGLDisplay will wait
+   until all contexts from that display have their work scheduled.
+
+Issues
+
+   None.
+
+IP Status
+
+   No known issues.
+
+New Procedures and Functions
+
+   void eglWaitUntilWorkScheduledANGLE(EGLDisplay* dpy)
+
+New Tokens
+
+   None
+
+Additions to the EGL 1.3 Specification
+
+   Calling eglWaitUntilWorkScheduledANGLE will wait until all contexts
+   for the given display have their work scheduled.
+
+New Implementation Dependent State
+
+   None
+
+Revision History
+
+    Version 1, 2022-12-15 (Gregg Tavares)
+       - Initial draft

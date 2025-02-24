@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if [[ $VPYTHON_BYPASS == "manually managed python not supported by chrome operations" ]]
+then
+  NEWARGS=()
+  while [[ $# -gt 0 ]]
+  do
+    case "$1" in
+      -vpython-tool*) # these tools all do something vpython related and quit
+        exit 0
+        ;;
+      -vpython*=*) # delete any vpython-specific flag (w/ attached argument)
+        shift
+        ;;
+      -vpython*) # delete any vpython-specific flag (w/ separate argument)
+        shift
+        shift
+        ;;
+      --)     # stop parsing
+        NEWARGS+=( "$@" )
+        break
+        ;;
+      *)      # regular arg
+        NEWARGS+=( "$1" )
+        shift
+        ;;
+    esac
+  done
+  exec "python3" "${NEWARGS[@]}"
+fi
+
+# Export for other depot_tools scripts to re-use.
+export DEPOT_TOOLS_DIR="${DEPOT_TOOLS_DIR:-$(dirname "$0")}"
+export DEPOT_TOOLS_UNAME_S="${DEPOT_TOOLS_UNAME_S:-$(uname -s | tr '[:upper:]' '[:lower:]')}"
+
+# Don't write pyc files if running from a Cog workspace.
+if [[ "$(pwd)" == "/google/cog/"* ]]; then
+  export PYTHONDONTWRITEBYTECODE=1
+fi
+
+source "${DEPOT_TOOLS_DIR}/cipd_bin_setup.sh"
+CIPD_ROOT=$(cipd_bin_setup) &> /dev/null
+
+# Don't pass this to the Python script as it might turn around and run commands
+# in other depot_tools dirs.
+base_dir="${DEPOT_TOOLS_DIR}"
+unset DEPOT_TOOLS_DIR
+case "${DEPOT_TOOLS_UNAME_S}" in
+mingw*|cygwin*)
+  cmd.exe //c $0.bat "$@"
+  ;;
+*)
+  exec "$CIPD_ROOT/vpython3" "$@"
+  ;;
+esac

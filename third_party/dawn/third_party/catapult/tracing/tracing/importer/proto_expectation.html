@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/model/event_info.html">
+<link rel="import" href="/tracing/model/user_model/animation_expectation.html">
+<link rel="import" href="/tracing/model/user_model/response_expectation.html">
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.importer', function() {
+  // This is an intermediate data format between InputLatencyAsyncSlices and
+  // Responses and Animations.
+  function ProtoExpectation(type, initiatorType) {
+    this.type = type;
+    this.initiatorType = initiatorType;
+    this.start = Infinity;
+    this.end = -Infinity;
+    this.associatedEvents = new tr.model.EventSet();
+    this.isAnimationBegin = false;
+  }
+
+  ProtoExpectation.RESPONSE_TYPE = 'r';
+  ProtoExpectation.ANIMATION_TYPE = 'a';
+
+  // Explicitly ignore some input events to allow
+  // UserModelBuilder.checkAllInputEventsHandled() to determine which events
+  // were unintentionally ignored due to a bug.
+  ProtoExpectation.IGNORED_TYPE = 'ignored';
+
+  /**
+   * Combine initiator titles by selecting the initiator title first in a
+   * hard-coded hierarchy. Higher up in the hierarchy are more "specific"
+   * initiator titles (e.g. a scroll is higher than a touch, because a
+   * touch could mean many different things, of which a scroll is one)
+   */
+  const INITIATOR_HIERARCHY = [
+    tr.model.um.INITIATOR_TYPE.PINCH,
+    tr.model.um.INITIATOR_TYPE.FLING,
+    tr.model.um.INITIATOR_TYPE.MOUSE_WHEEL,
+    tr.model.um.INITIATOR_TYPE.SCROLL,
+    tr.model.um.INITIATOR_TYPE.VR,
+    tr.model.um.INITIATOR_TYPE.VIDEO,
+    tr.model.um.INITIATOR_TYPE.WEBGL,
+    tr.model.um.INITIATOR_TYPE.CSS,
+    tr.model.um.INITIATOR_TYPE.MOUSE,
+    tr.model.um.INITIATOR_TYPE.KEYBOARD,
+    tr.model.um.INITIATOR_TYPE.TAP,
+    tr.model.um.INITIATOR_TYPE.TOUCH
+  ];
+
+  function combineInitiatorTypes(title1, title2) {
+    for (const item of INITIATOR_HIERARCHY) {
+      if (title1 === item || title2 === item) return item;
+    }
+    throw new Error('Invalid titles in combineInitiatorTypes');
+  }
+
+  ProtoExpectation.prototype = {
+    get isValid() {
+      return this.end > this.start;
+    },
+
+    // Return true if any associatedEvent's typeName is in typeNames.
+    containsTypeNames(typeNames) {
+      return this.associatedEvents.some(
+          x => typeNames.indexOf(x.typeName) >= 0);
+    },
+
+    containsSliceTitle(title) {
+      return this.associatedEvents.some(x => title === x.title);
+    },
+
+    createInteractionRecord(model) {
+      if (this.type !== ProtoExpectation.IGNORED_TYPE && !this.isValid) {
+        model.importWarning({
+          type: 'ProtoExpectation',
+          message: this.debug(),
+          showToUser: false
+        });
+        return undefined;
+      }
+
+      const duration = this.end - this.start;
+
+      let ir = undefined;
+      switch (this.type) {
+        case ProtoExpectation.RESPONSE_TYPE:
+          ir = new tr.model.um.ResponseExpectation(
+              model, this.initiatorType, this.start, duration,
+              this.isAnimationBegin);
+          break;
+        case ProtoExpectation.ANIMATION_TYPE:
+          ir = new tr.model.um.AnimationExpectation(
+              model, this.initiatorType, this.start, duration);
+          break;
+      }
+      if (!ir) return undefined;
+
+      ir.sourceEvents.addEventSet(this.associatedEvents);
+
+      function pushAssociatedEvents(event) {
+        ir.associatedEvents.push(event);
+
+        // |event| is either an InputLatencyAsyncSlice (which collects all of
+        // its associated events transitively) or a CSS Animation (which doesn't
+        // have any associated events). So this does not need to recurse.
+        if (event.associatedEvents) {
+          ir.associatedEvents.addEventSet(event.associatedEvents);
+        }
+      }
+
+      this.associatedEvents.forEach(function(event) {
+        pushAssociatedEvents(event);
+
+        // Old-style InputLatencyAsyncSlices have subSlices.
+        if (event.subSlices) {
+          event.subSlices.forEach(pushAssociatedEvents);
+        }
+      });
+
+      return ir;
+    },
+
+    // Merge the other ProtoExpectation into this one.
+    // The types need not match: ignored ProtoExpectations might be merged
+    // into overlapping ProtoExpectations, and Touch-only Animations are merged
+    // into Tap Responses.
+    merge(other) {
+      this.initiatorType = combineInitiatorTypes(
+          this.initiatorType, other.initiatorType);
+
+      // Don't use pushEvent(), which would lose special start, end.
+      this.associatedEvents.addEventSet(other.associatedEvents);
+      this.start = Math.min(this.start, other.start);
+      this.end = Math.max(this.end, other.end);
+      if (other.isAnimationBegin) {
+        this.isAnimationBegin = true;
+      }
+    },
+
+    // Include |event| in this ProtoExpectation, expanding start/end to include
+    // it.
+    pushEvent(event) {
+      // Usually, this method will be called while iterating over a list of
+      // events sorted by start time, so this method won't usually change
+      // this.start. However, this will sometimes be called for
+      // ProtoExpectations created by previous handlers, in which case
+      // event.start could possibly be before this.start.
+      this.start = Math.min(this.start, event.start);
+      this.end = Math.max(this.end, event.end);
+      this.associatedEvents.push(event);
+    },
+
+    // Include |sample| in this ProtoExpectation, expanding start/end to
+    // include it.
+    pushSample(sample) {
+      this.start = Math.min(this.start, sample.timestamp);
+      this.end = Math.max(this.end, sample.timestamp);
+      this.associatedEvents.push(sample);
+    },
+
+    // Returns true if timestamp is contained in this ProtoExpectation.
+    containsTimestampInclusive(timestamp) {
+      return (this.start <= timestamp) && (timestamp <= this.end);
+    },
+
+    // Return true if the other event intersects this ProtoExpectation.
+    intersects(other) {
+      // http://stackoverflow.com/questions/325933
+      return (other.start < this.end) && (other.end > this.start);
+    },
+
+    isNear(event, threshold) {
+      return (this.end + threshold) > event.start;
+    },
+
+    // Return a string describing this ProtoExpectation for debugging.
+    debug() {
+      let debugString = this.type + '(';
+      debugString += parseInt(this.start) + ' ';
+      debugString += parseInt(this.end);
+      this.associatedEvents.forEach(function(event) {
+        debugString += ' ' + event.typeName;
+      });
+      return debugString + ')';
+    }
+  };
+
+  return {
+    ProtoExpectation,
+  };
+});
+</script>

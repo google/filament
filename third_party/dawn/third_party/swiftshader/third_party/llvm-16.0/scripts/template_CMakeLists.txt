@@ -1,0 +1,209 @@
+# Copyright 2023 The SwiftShader Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+%$%generated_file_comment
+
+set(LLVM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/llvm)
+set(LLVM_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/configs)
+
+set(LLVM_LIST
+%$%files_llvm
+)
+
+if(ARCH STREQUAL "x86" OR ARCH STREQUAL "x86_64")
+    list(APPEND LLVM_LIST
+%$%files_x86
+    )
+elseif(ARCH STREQUAL "mipsel" OR ARCH STREQUAL "mips64el")
+    list(APPEND LLVM_LIST
+%$%files_Mips
+    )
+elseif(ARCH STREQUAL "aarch64")
+    list(APPEND LLVM_LIST
+%$%files_AArch64
+    )
+elseif(ARCH STREQUAL "arm")
+    list(APPEND LLVM_LIST
+%$%files_ARM
+    )
+elseif(ARCH STREQUAL "loongarch64")
+    list(APPEND LLVM_LIST
+%$%files_LoongArch
+    )
+elseif(ARCH STREQUAL "ppc64le")
+    list(APPEND LLVM_LIST
+%$%files_PowerPC
+    )
+elseif(ARCH STREQUAL "riscv64")
+    list(APPEND LLVM_LIST
+%$%files_RISCV
+    )
+endif()
+
+if(REACTOR_EMIT_DEBUG_INFO)
+    list(APPEND LLVM_LIST
+        ${LLVM_DIR}/lib/Demangle/ItaniumDemangle.cpp
+    )
+endif()
+
+set(LLVM_INCLUDE_DIR "")
+
+if(WIN32)
+    list(APPEND LLVM_INCLUDE_DIR ${LLVM_CONFIG_DIR}/windows/include)
+elseif(LINUX)
+    list(APPEND LLVM_INCLUDE_DIR ${LLVM_CONFIG_DIR}/linux/include)
+    list(APPEND LIBBACKTRACE_INCLUDE_DIR ${LIBBACKTRACE_CONFIG_DIR}/linux/include)
+elseif(APPLE)
+    list(APPEND LLVM_INCLUDE_DIR ${LLVM_CONFIG_DIR}/darwin/include)
+    list(APPEND LIBBACKTRACE_INCLUDE_DIR ${LIBBACKTRACE_CONFIG_DIR}/darwin/include)
+elseif(ANDROID)
+    list(APPEND LLVM_INCLUDE_DIR ${LLVM_CONFIG_DIR}/android/include)
+    list(APPEND LIBBACKTRACE_INCLUDE_DIR ${LIBBACKTRACE_CONFIG_DIR}/android/include)
+elseif(FUCHSIA)
+    list(APPEND LLVM_INCLUDE_DIR ${LLVM_CONFIG_DIR}/fuchsia/include)
+endif()
+
+list(APPEND LLVM_INCLUDE_DIR
+    ${LLVM_DIR}/include
+    ${LLVM_DIR}/lib/Target/AArch64
+    ${LLVM_DIR}/lib/Target/ARM
+    ${LLVM_DIR}/lib/Target/LoongArch
+    ${LLVM_DIR}/lib/Target/Mips
+    ${LLVM_DIR}/lib/Target/PowerPC
+    ${LLVM_DIR}/lib/Target/RISCV
+    ${LLVM_DIR}/lib/Target/X86
+    ${LLVM_CONFIG_DIR}/common/include
+    ${LLVM_CONFIG_DIR}/common/lib/IR
+    ${LLVM_CONFIG_DIR}/common/lib/Target/AArch64
+    ${LLVM_CONFIG_DIR}/common/lib/Target/ARM
+    ${LLVM_CONFIG_DIR}/common/lib/Target/LoongArch
+    ${LLVM_CONFIG_DIR}/common/lib/Target/Mips
+    ${LLVM_CONFIG_DIR}/common/lib/Target/PowerPC
+    ${LLVM_CONFIG_DIR}/common/lib/Target/RISCV
+    ${LLVM_CONFIG_DIR}/common/lib/Target/X86
+    ${LLVM_CONFIG_DIR}/common/lib/Transforms/InstCombine
+    ${LLVM_CONFIG_DIR}/common/lib/ExecutionEngine/JITLink
+)
+
+# Suppress known LLVM warnings
+set(LLVM_COMPILE_OPTIONS "")
+
+if(FUCHSIA)
+    list(APPEND LLVM_COMPILE_OPTIONS
+         "-Wno-cpp"   # Ignore #warning for unimplemented features in Process.inc.
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND LLVM_COMPILE_OPTIONS
+         "-Wno-deprecated-declarations"
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    list(APPEND LLVM_COMPILE_OPTIONS
+        "-Wno-noexcept-type"           # mangled name for ‘X’ will change in C++17 because the exception specification is part of a function type
+        "-Wno-maybe-uninitialized"     # ‘X’ may be used uninitialized in this function
+        "-Wno-deprecated-declarations"
+        "-Wno-missing-template-keyword"
+        "-Wno-missing-braces"
+    )
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8)
+        list(APPEND LLVM_COMPILE_OPTIONS
+            "-Wno-class-memaccess"  # memset/memcmp used on non-trivial class object
+            "-Wno-attributes"	# declared inline but not inline
+        )
+    endif()
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9)
+        list(APPEND LLVM_COMPILE_OPTIONS
+            "-Wno-init-list-lifetime"  # assignment from temporary initializer_list does not extend the lifetime of the underlying array
+        )
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    list(APPEND LLVM_COMPILE_OPTIONS
+        "/wd4141" # 'inline': used more than once
+        "/wd4146" # unary minus operator applied to unsigned type, result still unsigned
+        "/wd4244" # 'X': conversion from 'uint64_t' to 'const unsigned int', possible loss of data
+        "/wd4267" # 'X': conversion from 'size_t' to 'unsigned int', possible loss of data
+        "/wd4291" # 'void X new(size_t,unsigned int,unsigned int)': no matching operator delete found; memory will not be freed if initialization throws an exception
+        "/wd4319" # 'X': zero extending 'unsigned int' to 'uint64_t' of greater size
+        "/wd4624" # 'X': destructor was implicitly defined as deleted
+        "/wd4805" # 'X': unsafe mix of type 'unsigned int' and type 'bool' in operation
+        "/wd4996" # 'X': Call to 'Y' with parameters that may be unsafe - this call relies on the caller to check that the passed values are correct.
+    )
+endif()
+
+# Disable SIMD in Blake3
+list(APPEND LLVM_COMPILE_OPTIONS
+    "-DBLAKE3_NO_AVX512"
+    "-DBLAKE3_NO_AVX2"
+    "-DBLAKE3_NO_SSE41"
+    "-DBLAKE3_NO_SSE2"
+    "-DBLAKE3_USE_NEON=0"
+)
+
+add_library(llvm STATIC EXCLUDE_FROM_ALL ${LLVM_LIST})
+
+set_target_properties(llvm PROPERTIES
+    POSITION_INDEPENDENT_CODE 1
+)
+
+target_include_directories(llvm
+    PUBLIC
+        "${LLVM_INCLUDE_DIR}"
+)
+
+target_compile_options(llvm
+    PUBLIC
+        "${LLVM_COMPILE_OPTIONS}"
+)
+
+target_compile_definitions(llvm
+    PUBLIC
+        "__STDC_CONSTANT_MACROS"
+        "__STDC_LIMIT_MACROS"
+)
+
+# Add required libraries for LLVM
+if(LINUX OR APPLE)
+    target_link_libraries(llvm dl)
+endif()
+
+if(SWIFTSHADER_EMIT_COVERAGE)
+    # llvm-with-cov is an llvm target with additional coverage library
+    # functionality. This is used to build 'turbo-cov', a custom and faster
+    # reimplementation of llvm-cov.
+    add_library(llvm-with-cov STATIC EXCLUDE_FROM_ALL
+        ${LLVM_DIR}/lib/ProfileData/InstrProfReader.cpp
+        ${LLVM_DIR}/lib/ProfileData/ProfileSummaryBuilder.cpp
+        ${LLVM_DIR}/lib/ProfileData/Coverage/CoverageMapping.cpp
+        ${LLVM_DIR}/lib/ProfileData/Coverage/CoverageMappingReader.cpp
+        ${LLVM_DIR}/lib/Support/Compression.cpp
+    )
+    set_target_properties(llvm-with-cov PROPERTIES
+        POSITION_INDEPENDENT_CODE 1
+        FOLDER "LLVM"
+    )
+
+    target_include_directories(llvm-with-cov
+        PUBLIC
+            ${LLVM_INCLUDE_DIR}
+    )
+
+    target_compile_definitions(llvm-with-cov
+        PUBLIC
+            "__STDC_CONSTANT_MACROS"
+            "__STDC_LIMIT_MACROS"
+    )
+
+    if(LINUX OR APPLE)
+        target_link_libraries(llvm-with-cov llvm pthread)
+    endif()
+endif()

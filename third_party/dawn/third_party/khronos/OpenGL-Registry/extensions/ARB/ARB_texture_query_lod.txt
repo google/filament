@@ -1,0 +1,268 @@
+Name
+
+    ARB_texture_query_lod
+
+Name Strings
+
+    GL_ARB_texture_query_lod
+
+Contact
+
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Greg Roth, NVIDIA
+    Eric Werness, NVIDIA
+    Alejandro Piñeiro, Igalia, SL
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:         04/22/2020
+    Revision:                   8
+
+Number
+
+    ARB Extension #73
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    OpenGL Shading Language 1.30 is required
+
+    EXT_gpu_shader4 is required.
+
+    EXT_texture_array is required.
+
+    This extension interacts trivially with ARB_texture_cube_map_array
+
+    This extension is written against the OpenGL 2.0 specification and
+    version 1.30 of the OpenGL Shading Language Specification.
+
+Overview
+
+    This extension provides a new set of fragment shader texture
+    functions (textureLOD) that return the results of automatic
+    level-of-detail computations that would be performed if a texture
+    lookup were performed.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 1.10.59
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_texture_query_lod
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_texture_query_lod 1
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    Syntax:
+
+      vec2 textureQueryLOD(gsampler1D sampler, float coord)
+      vec2 textureQueryLOD(gsampler2D sampler, vec2 coord)
+      vec2 textureQueryLOD(gsampler3D sampler, vec3 coord)
+      vec2 textureQueryLOD(gsamplerCube sampler, vec3 coord)
+      vec2 textureQueryLOD(gsampler1DArray sampler, float coord)
+      vec2 textureQueryLOD(gsampler2DArray sampler, vec2 coord)
+      vec2 textureQueryLOD(gsamplerCubeArray sampler, vec3 coord)
+      vec2 textureQueryLOD(sampler1DShadow sampler, float coord)
+      vec2 textureQueryLOD(sampler2DShadow sampler, vec2 coord)
+      vec2 textureQueryLOD(samplerCubeShadow sampler, vec3 coord)
+      vec2 textureQueryLOD(sampler1DArrayShadow sampler, float coord)
+      vec2 textureQueryLOD(sampler2DArrayShadow sampler, vec2 coord)
+      vec2 textureQueryLOD(samplerCubeArrayShadow sampler, vec3 coord)
+
+    Description:
+
+      The textureQueryLOD function takes the components of <coord> and
+      computes the LOD information that the texture pipe would use to
+      make an access of that texture. The computed level of detail
+      lambda_prime (equation 3.19), relative to the base level, is
+      returned in the y component of the result vector. The level of
+      detail is obtained after any LOD bias, but prior to clamping to
+      [TEXTURE_MIN_LOD, TEXTURE_MAX_LOD]. The x component of the result
+      vector contains information on the mipmap array(s) that would be
+      accessed by a normal texture lookup using the same coordinates. If
+      a single level of detail would be accessed, the level-of-detail
+      number relative to the base level is returned. If multiple levels
+      of detail are accessed, a floating-point number between the two
+      levels is returned, with the fractional part equal to the
+      fractional part of the computed and clamped level of detail. The
+      algorithm used is given by the following pseudo-code:
+
+      float ComputeAccessedLod(float computedLod)
+      {
+        // Clamp the computed LOD according to the texture LOD clamps.
+        if (computedLod < TEXTURE_MIN_LOD) computedLod = TEXTURE_MIN_LOD;
+        if (computedLod > TEXTURE_MAX_LOD) computedLod = TEXTURE_MAX_LOD;
+
+        // Clamp the computed LOD to the range of accessible levels.
+        if (computedLod < 0)
+            computedLod = 0.0;
+        if (computedLod > (float)
+            maxAccessibleLevel) computedLod = (float) maxAccessibleLevel;
+
+        // Return a value according to the min filter.
+        if (TEXTURE_MIN_FILTER is LINEAR or NEAREST) {
+          return 0.0;
+        } else if (TEXTURE_MIN_FILTER is NEAREST_MIPMAP_NEAREST
+                   or LINEAR_MIPMAP_NEAREST) {
+          return ceil(computedLod + 0.5) - 1.0;
+        } else {
+          return computedLod;
+        }
+      }
+
+      The value <maxAccessibleLevel> is the level number of the smallest
+      accessible level of the mipmap array (the value q in section
+      3.8.8) minus the base level.
+
+      The returned value is then:
+
+        vec2(ComputeAccessedLod(lambda_prime), lambda_prime);
+
+      If textureQueryLOD is called on an incomplete texture, the results
+      are undefined. textureQueryLOD is only available fragment shaders.
+
+Dependencies on ARB_texture_cube_map_array
+
+      If ARB_texture_cube_map_array is not supported, remove the
+      textureQueryLOD lookup functions taking cube map array samplers.
+
+Issues
+
+    (1) Should we provide texture LOD functions for shadow sampler
+        targets?
+
+      RESOLVED: Yes. The level of detail computations for a texture used
+      as a shadow map are completely identical to that for other
+      textures.
+
+      However, we provide separate data types for the two textures
+      (e.g., sampler2D vs. sampler2DShadow), and there is no mechanism
+      to cast from one to the other. If we didn't provide these
+      functions, the only way to perform an LOD computation for a
+      texture used as a shadow map would be to bind the same texture
+      object to two different texture image units, one associated with a
+      shadow sampler and the other associated with a normal sampler.
+
+      Unlike regular shadow texture lookups, the reference depth value
+      is not used for LOD calculations and is not accepted by the
+      corresponding textureQueryLOD() built-infunctions.
+
+    (2) Should LOD queries for array textures take a layer?
+
+      RESOLVED: No. The layer number has no effect on the LOD
+      calcuations, so can be safely ignored. As a result, LOD queries
+      for sampler1DArray, sampler2DArray, and samplerCubeArray samplers
+      take one, two, and three coordinates, respectively.
+
+    (3) The core specification uses the "Lod" spelling, not "LOD". Should
+        this extension be modified to use "Lod"?
+
+      RESOLVED: The "Lod" spelling is the correct spelling for the core
+      specification and the preferred spelling for use. However, use of
+      "LOD" also exists, as the extension predated the core specification,
+      so this extension won't remove use of "LOD".
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+    8     04/22/2020  apinheiro Update OpenGL version required, to be
+                                consistent with GLSL version required (internal API
+                                issue 124)
+
+    7     04/10/2013  Jon Leech Add issue 3 regarding different spelling
+                                of "LOD" vs. "Lod" in extension & core.
+
+    6     08/02/2009  Jon Leech Reformat to 80 columns and assign ARB
+                                extension number.
+
+    5     07/14/2009  istewart  Fixed preprocessor define and pseudocode for
+                                ComputeAccessedLod.
+
+    4     06/26/2009  pbrown    Change prototype for textureQueryLOD for
+                                1D and 2D arrays to not take a layer.
+                                Cube map arrays already didn't take a layer.
+
+    3     06/25/2009  groth     Rename extension to ARB_texture_query_lod.
+
+    2     06/23/2009  groth     correct filtering mode conditional in psuedocode
+
+    1     05/13/2009  groth     Split off of gpu_shader4_1

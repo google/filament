@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/trace_stream.html">
+<link rel="import" href="/tracing/importer/importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.importer.fuchsia', function() {
+  const IMPORT_PRIORITY = 0;
+
+  // Zircon thread state constants from:
+  // https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_get_info.md
+  const ZX_THREAD_STATE_NEW = 0;
+  const ZX_THREAD_STATE_RUNNING = 1;
+  const ZX_THREAD_STATE_SUSPENDED = 2;
+  const ZX_THREAD_STATE_BLOCKED = 3;
+  const ZX_THREAD_STATE_DYING = 4;
+  const ZX_THREAD_STATE_DEAD = 5;
+
+  class FuchsiaImporter extends tr.importer.Importer {
+    constructor(model, eventData) {
+      super(model, eventData);
+      this.importPriority = IMPORT_PRIORITY;
+      this.model_ = model;
+      this.events_ = eventData.events;
+      this.parsers_ = [];
+      this.threadInfo_ = new Map();
+      this.processNames_ = new Map();
+      this.threadStates_ = new Map();
+    }
+
+    static canImport(eventData) {
+      if (eventData instanceof tr.b.TraceStream) {
+        if (eventData.isBinary) return false;
+        eventData = eventData.header;
+      }
+
+      if (eventData instanceof Object && eventData.type === 'fuchsia') {
+        return true;
+      }
+
+      return false;
+    }
+
+    get importerName() {
+      return 'FuchsiaImporter';
+    }
+
+    get model() {
+      return this.model_;
+    }
+
+    importClockSyncMarkers() {
+    }
+
+    finalizeImport() {
+    }
+
+    isIdleThread(pid, prio) {
+      return (pid === 0 && prio === 0) || (pid == undefined && prio <= -2147483648);
+    }
+
+    recordThreadState_(pid, tid, timestamp, state, prio) {
+      if (this.isIdleThread(pid, prio)) {
+        return;
+      }
+      const states =
+        this.threadStates_.has(tid) ? this.threadStates_.get(tid) : [];
+      states.push({'ts': timestamp, state});
+      this.threadStates_.set(tid, states);
+    }
+
+    // Context switch events take the form:
+    // {
+    //     "ph": "k",
+    //     "ts": 151981130.88743783,
+    //     "cpu": 1,
+    //     "out": {
+    //       "pid": 25977, // Optional.
+    //       "tid": 28909,
+    //       "state": 3,
+    //       "prio": 20
+    //     },
+    //     "in": {
+    //       "pid": 0,     // Optional.
+    //       "tid": 6444931392,
+    //       "prio": 0
+    //     }
+    //   },
+    processContextSwitchEvent_(event) {
+      let tid = event.in.tid;
+      let pid = event.in.pid;
+      let threadName = tid.toString();
+      let procName = '';
+      const prio = event.in.prio;
+
+      if (this.threadInfo_.has(tid)) {
+        const threadInfo = this.threadInfo_.get(tid);
+        threadName = threadInfo.name;
+        const pid = threadInfo.pid;
+        if (this.processNames_.has(pid)) {
+          procName = this.processNames_.get(pid) + ':';
+        }
+      }
+
+      const name = procName + threadName;
+
+      if (this.isIdleThread(pid, prio)) {
+        tid = undefined; // Fake kernel idle task
+      }
+
+      const cpu = this.model_.kernel.getOrCreateCpu(event.cpu);
+      const timestamp = tr.b.Unit.timestampFromUs(event.ts);
+      cpu.switchActiveThread(timestamp, {}, tid, name, tid);
+
+      const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+      this.recordThreadState_(pid, tid, timestamp, SCHEDULING_STATE.RUNNING, prio);
+
+      let outState = SCHEDULING_STATE.UNKNOWN;
+
+      switch (event.out.state) {
+        case ZX_THREAD_STATE_NEW:
+          outState = SCHEDULING_STATE.RUNNABLE;
+          break;
+
+        case ZX_THREAD_STATE_RUNNING:
+          outState = SCHEDULING_STATE.RUNNABLE;
+          break;
+
+        case ZX_THREAD_STATE_BLOCKED:
+          outState = SCHEDULING_STATE.SLEEPING;
+          break;
+
+        case ZX_THREAD_STATE_SUSPENDED:
+          outState = SCHEDULING_STATE.STOPPED;
+          break;
+
+        case ZX_THREAD_STATE_DEAD:
+          outState = SCHEDULING_STATE.TASK_DEAD;
+          break;
+      }
+      this.recordThreadState_(event.out.pid, event.out.tid, timestamp, outState,
+          event.out.prio);
+    }
+
+    // Thread wakeup events take the form:
+    // {
+    //     "ph": "w",
+    //     "ts": 151981130.88743783,
+    //     "cpu": 1,
+    //     "tid": 28909,
+    //     "prio": 20
+    //   },
+    processThreadWakeupEvent_(event) {
+      let tid = event.tid;
+      let threadName = tid.toString();
+      let procName = '';
+      const prio = event.prio;
+
+      if (this.threadInfo_.has(tid)) {
+        const threadInfo = this.threadInfo_.get(tid);
+        threadName = threadInfo.name;
+        const pid = threadInfo.pid;
+        if (this.processNames_.has(pid)) {
+          procName = this.processNames_.get(pid) + ':';
+        }
+
+        const name = procName + threadName;
+
+        const timestamp = tr.b.Unit.timestampFromUs(event.ts);
+        const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+        this.recordThreadState_(pid, tid, timestamp, SCHEDULING_STATE.WAKING, prio);
+      }
+    }
+
+    processProcessInfoEvent_(event) {
+      const process = this.model_.getOrCreateProcess(event.pid);
+      process.name = event.name;
+      this.processNames_.set(event.pid, event.name);
+
+      if ('sort_index' in event) {
+        process.sortIndex = event.sort_index;
+      }
+    }
+
+    processThreadInfoEvent_(event) {
+      const thread = this.model_.getOrCreateProcess(event.pid).
+          getOrCreateThread(event.tid);
+      thread.name = event.name;
+      this.threadInfo_.set(event.tid, {'name': event.name, 'pid': event.pid});
+
+      if ('sort_index' in event) {
+        const thread = this.model_.getOrCreateProcess(event.pid).
+            getOrCreateThread(event.tid);
+        thread.sortIndex = event.sort_index;
+      }
+    }
+
+    processEvent_(event) {
+      switch (event.ph) {
+        case 'k':
+          this.processContextSwitchEvent_(event);
+          break;
+        case 'w':
+          this.processThreadWakeupEvent_(event);
+          break;
+        case 'p':
+          this.processProcessInfoEvent_(event);
+          break;
+        case 't':
+          this.processThreadInfoEvent_(event);
+          break;
+      }
+    }
+
+    postProcessStates_() {
+      for (const [tid, states] of this.threadStates_) {
+        if (!this.threadInfo_.has(tid)) {
+          continue;
+        }
+        const pid = this.threadInfo_.get(tid).pid;
+        const thread = this.model_.getOrCreateProcess(
+            pid).getOrCreateThread(tid);
+        const slices = [];
+        for (let i = 0; i < states.length - 1; i++) {
+          slices.push(new tr.model.ThreadTimeSlice(
+              thread, states[i].state, '',
+              states[i].ts, {}, states[i + 1].ts - states[i].ts));
+        }
+
+        thread.timeSlices = slices;
+      }
+    }
+
+    /**
+     * Imports the data in this.events_ into model_.
+     */
+    importEvents() {
+      for (const event of this.events_) {
+        this.processEvent_(event);
+      }
+      this.postProcessStates_();
+    }
+  }
+
+  tr.importer.Importer.register(FuchsiaImporter);
+
+  return {
+    FuchsiaImporter,
+    IMPORT_PRIORITY,
+  };
+});
+</script>

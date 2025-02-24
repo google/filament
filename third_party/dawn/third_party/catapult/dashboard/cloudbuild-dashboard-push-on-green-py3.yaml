@@ -1,0 +1,61 @@
+# These are the testing and deploy steps for the performance dashboard
+# services. We re-use the docker-compose files in the dev_dockerfiles directory
+# to ensure we're runing the same test and deploy cycle everytime.
+timeout: 1800s  # Wait for 30 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    docker pull gcr.io/$PROJECT_ID/dashboard-base:latest || exit 0
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'dashboard/dev_dockerfiles'
+  args: [
+    'build',
+    '-t', 'dashboard-base:latest',
+    '-t', 'gcr.io/$PROJECT_ID/dashboard-base:latest',
+    '--cache-from', 'gcr.io/$PROJECT_ID/dashboard-base:latest',
+    '.'
+  ]
+- name: 'gcr.io/$PROJECT_ID/docker-compose'
+  dir: 'dashboard/dev_dockerfiles'
+  args: [
+    'run', 'python-unittest-dashboard'
+  ]
+# We need to provide the auth token that the service account is using to the
+# container from which we're going to deploy the Dashboard services.
+- name: 'gcr.io/$PROJECT_ID/docker-compose'
+  dir: 'dashboard/dev_dockerfiles'
+  args: [
+    'run', 'cloudbuild-prepare-deployment'
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  dir: 'deploy-dashboard'
+  args: [
+    app, deploy, '--no-promote', '--version', 'cloud-build-${SHORT_SHA}',
+    # We enumerate the files we need to deploy just for the dashboard.
+    # TODO(dberris): Figure out how we can include cron.yaml and dispatch.yaml
+    # from this automation. This fails in production with the service account
+    # used by cloud-build, so we've left it out for now.
+    api.yaml,
+    app.yaml,
+    upload-processing.yaml,
+    upload.yaml,
+    pinpoint.yaml,
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  dir: 'deploy-dashboard'
+  args: [
+    'app', 'deploy', 'queue.yaml',
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args: [
+    '-x', '-e', 'dashboard/dev_dockerfiles/cleanup_versions.sh',
+    '21', 'api', 'default', 'pinpoint', 'upload-processing', 'upload'
+  ]
+images: ['gcr.io/$PROJECT_ID/dashboard-base:latest']

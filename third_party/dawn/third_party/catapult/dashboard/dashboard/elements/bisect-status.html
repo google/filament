@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!--
+The bisect-status elements indicate whether the last bisect job
+for a bug succeeded or failed, or is currently in progress. */
+-->
+
+<dom-module id="bisect-status">
+  <template>
+    <style>
+      .bisect-status {
+        font-size: 25px;
+        display: none;
+        margin: 0;
+        padding-bottom: 1px;
+        vertical-align: middle;
+      }
+
+      .bisect-status.started {
+        color: grey;
+        display: inline-block;
+      }
+
+      .bisect-status.completed {
+        color: green;
+        display: inline-block;
+      }
+
+      .bisect-status.failed {
+        color: red;
+        display: inline-block;
+      }
+    </style>
+    <span class$="bisect-status {{status}}" title="{{status}}">&#8226;</span>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+  is: 'bisect-status',
+  properties: {
+    status: {
+      type: String,
+      value: null
+    }
+  }
+});
+</script>

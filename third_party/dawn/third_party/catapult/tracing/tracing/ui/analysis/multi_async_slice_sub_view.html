@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_event_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/related_events.html">
+
+<dom-module id='tr-ui-a-multi-async-slice-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+    }
+    #container {
+      display: flex;
+      flex: 1 1 auto;
+    }
+    #events {
+      margin-left: 8px;
+      flex: 0 1 200px;
+    }
+    </style>
+    <div id="container">
+      <tr-ui-a-multi-event-sub-view id="content"></tr-ui-a-multi-event-sub-view>
+      <div id="events">
+        <tr-ui-a-related-events id="relatedEvents"></tr-ui-a-related-events>
+      </div>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-multi-async-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  get selection() {
+    return this.$.content.selection;
+  },
+
+  set selection(selection) {
+    this.$.content.selection = selection;
+    this.$.relatedEvents.setRelatedEvents(selection);
+    if (this.$.relatedEvents.hasRelatedEvents()) {
+      this.$.relatedEvents.style.display = '';
+    } else {
+      this.$.relatedEvents.style.display = 'none';
+    }
+  },
+
+  get relatedEventsToHighlight() {
+    if (!this.$.content.selection) return undefined;
+
+    const selection = new tr.model.EventSet();
+    this.$.content.selection.forEach(function(asyncEvent) {
+      if (!asyncEvent.associatedEvents) return;
+
+      asyncEvent.associatedEvents.forEach(function(event) {
+        selection.push(event);
+      });
+    });
+    if (selection.length) return selection;
+    return undefined;
+  }
+});
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-multi-async-slice-sub-view',
+    tr.model.AsyncSlice,
+    {
+      multi: true,
+      title: 'Async Slices',
+    });
+</script>

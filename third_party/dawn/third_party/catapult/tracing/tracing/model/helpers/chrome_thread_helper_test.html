@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_thread_helper.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Process = tr.model.Process;
+  const Thread = tr.model.Thread;
+  const ChromeThreadHelper = tr.model.helpers.ChromeThreadHelper;
+
+  test('getNetworkEvents_empty', function() {
+    const model = new tr.Model();
+    const t = new Thread(new tr.model.Process(model, 7), 1);
+    const threadHelper = new ChromeThreadHelper(t);
+    assert.sameDeepMembers([],
+        threadHelper.getNetworkEvents());
+  });
+
+  test('getNetworkEvents_withIrrelevantEvents', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    const netEvent1 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'netlog',
+      title: 'Generic Network event',
+      start: 100,
+      duration: 200,
+    });
+    t.asyncSliceGroup.push(netEvent1);
+    const netEvent2 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'net',
+      title: 'Generic Network event',
+      start: 101,
+      duration: 201,
+    });
+    t.asyncSliceGroup.push(netEvent2);
+    t.asyncSliceGroup.push(tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'irrelevant async event',
+      title: 'irrelevant async event',
+      start: 100,
+      duration: 200,
+    }));
+    t.sliceGroup.pushSlice(tr.c.TestUtils.newSliceEx({
+      cat: 'irrelevant sync event',
+      title: 'irrelevant sync event',
+      start: 100,
+      duration: 200,
+    }));
+    const threadHelper = new ChromeThreadHelper(t);
+    assert.sameDeepMembers([netEvent1, netEvent2],
+        threadHelper.getNetworkEvents());
+  });
+
+  test('getNetworkEvents_allTypes', function() {
+    const model = new tr.Model();
+    const t = new Thread(new Process(model, 7), 1);
+    const netEvent1 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'netlog',
+      title: 'Generic Network event',
+      start: 100,
+      duration: 200,
+    });
+    t.asyncSliceGroup.push(netEvent1);
+    const netEvent2 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'net',
+      title: 'Generic Network event',
+      start: 101,
+      duration: 201,
+    });
+    t.asyncSliceGroup.push(netEvent2);
+    const netEvent3 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'disabled-by-default-netlog',
+      title: 'Generic Network event',
+      start: 101,
+      duration: 201,
+    });
+    t.asyncSliceGroup.push(netEvent3);
+    const netEvent4 = tr.c.TestUtils.newAsyncSliceEx({
+      cat: 'disabled-by-default-network',
+      title: 'Generic Network event',
+      start: 101,
+      duration: 201,
+    });
+    t.asyncSliceGroup.push(netEvent4);
+    const threadHelper = new ChromeThreadHelper(t);
+    assert.sameDeepMembers([netEvent1, netEvent2, netEvent3, netEvent4],
+        threadHelper.getNetworkEvents());
+  });
+});
+</script>

@@ -1,0 +1,62 @@
+boto v2.11.0
+============
+
+:date: 2013/08/29
+
+This release adds Public IP address support for VPCs created by EC2. It also
+makes the GovCloud region available for all services. Finally, this release
+also fixes a number of bugs.
+
+
+Features
+--------
+
+* Added Public IP address support within VPCs created by EC2. (:sha:`be132d1`)
+* All services can now easily use GovCloud. (:issue:`1651`, :sha:`542a301`,
+  :sha:`3c56121`, :sha:`9167d89`)
+* Added ``db_subnet_group`` to
+  ``RDSConnection.restore_dbinstance_from_point_in_time``. (:issue:`1640`,
+  :sha:`06592b9`)
+* Added ``monthly_backups`` to EC2's ``trim_snapshots``. (:issue:`1688`,
+  :sha:`a2ad606`, :sha:`2998c11`, :sha:`e32d033`)
+* Added ``get_all_reservations`` & ``get_only_instances`` methods to EC2.
+  (:issue:`1572`, :sha:`ffc6cc0`)
+
+
+Bugfixes
+--------
+
+* Fixed the parsing of CloudFormation's ``LastUpdatedTime``. (:issue:`1667`,
+  :sha:` 70f363a`)
+* Fixed STS' ``assume_role_with_web_identity`` to work correctly.
+  (:issue:`1671`, :sha:`ed1f403`, :sha:`ca794d5`, :sha:`ed7e563`,
+  :sha:`859762d`)
+* Fixed how VPC security group filtering is done in EC2. (:issue:`1665`,
+  :issue:`1677`, :sha:`be00956`, :sha:`5e85dd1`, :sha:`e63aae8`)
+* Fixed fetching more than 100 records with ``ResourceRecordSet``.
+  (:issue:`1647`, :issue:`1648`, :issue:`1680`, :sha:`b64dd4f`, :sha:`276df7e`,
+  :sha:`e57cab0`, :sha:`e62a58b`, :sha:`4c81bea`, :sha:`a3c635b`)
+* Fixed how VPC Security Groups are referred to when working with RDS.
+  (:issue:`1602`, :issue:`1683`, :issue:`1685`, :issue:`1694`, :sha:`012aa0c`,
+  :sha:`d5c6dfa`, :sha:`7841230`, :sha:`0a90627`, :sha:`ed4fd8c`,
+  :sha:`61d394b`, :sha:`ebe84c9`, :sha:`a6b0f7e`)
+* Google Storage ``Key`` now uses transcoding-invariant headers where possible.
+  (:sha:`d36eac3`)
+* Doing non-multipart uploads when using ``s3put`` no longer requires having
+  the ``ListBucket`` permission. (:issue:`1642`, :issue:`1693`, :sha:`f35e914`)
+* Fixed the serialization of ``attributes`` in a variety of SNS methods.
+  (:issue:`1686`, :sha:`4afb3dd`, :sha:`a58af54`)
+* Fixed SNS to be better behaved when constructing an mobile push notification.
+  (:issue:`1692`, :sha:`62fdf34`)
+* Moved SWF to SigV4. (:sha:`ef7d255`)
+* Several documentation improvements/fixes:
+
+    * Updated the DynamoDB v2 docs to correct how the connection is built.
+      (:issue:`1662`, :sha:`047962d`)
+    * Fixed a typo in the DynamoDB v2 docstring for ``Table.create``.
+      (:sha:`be00956`)
+    * Fixed a typo in the DynamoDB v2 docstring for ``Table`` for custom
+      connections. (:issue:`1681`, :sha:`6a53020`)
+    * Fixed incorrect parameter names for ``DBParameterGroup`` in RDS.
+      (:issue:`1682`, :sha:`0d46aed`)
+    * Fixed a typo in the SQS tutorial. (:issue:`1684`, :sha:`38b7889`)

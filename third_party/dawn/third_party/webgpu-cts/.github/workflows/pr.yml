@@ -1,0 +1,34 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+      - run: npm ci
+      - name: validating cache
+        run: npx grunt run:validate-cache
+      - run: npm test
+      - name: copy out-wpt to wpt tree
+        run: |
+          git clone --depth 2 https://github.com/web-platform-tests/wpt.git
+          rsync -av  out-wpt/ wpt/webgpu
+      - name: adding wpt lint ignore rule for *.bin
+        run: 'echo "TRAILING WHITESPACE, INDENT TABS, CR AT EOL: *.bin" >> wpt/lint.ignore'
+      - name: test wpt lint
+        run: ./wpt lint
+        working-directory: ./wpt

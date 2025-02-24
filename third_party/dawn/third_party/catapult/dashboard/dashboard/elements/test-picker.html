@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/paper-button/paper-button.html">
+<link rel="import" href="/components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+<link rel="import" href="/dashboard/elements/autocomplete-box.html">
+<link rel="import" href="/dashboard/static/async_map.html">
+<link rel="import" href="/dashboard/static/simple_xhr.html">
+<link rel="import" href="/tracing/value/diagnostics/reserved_names.html">
+
+<dom-module id="test-picker">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+      #container * {
+        margin-right: 1em;
+      }
+
+      #dnd-btn {
+        padding: 1px 2px;
+        margin: 2px 4px 2px 2px;
+        font-size: 11px;
+        cursor:grabbing;
+        cursor:-moz-grabbing;
+        cursor:-webkit-grabbing;
+      }
+
+      paper-button {
+        height: 35px;
+      }
+
+      paper-button:not([disabled]) {
+        color: #4285f4;
+      }
+
+      paper-button[raised]:not([disabled]) {
+        background: #4285f4;
+        color: #fff;
+      }
+
+      iron-icon {
+        height: 25px;
+      }
+
+      #suite-description {
+        padding: 10px;
+      }
+    </style>
+
+    <div id="container" class="layout horizontal center wrap">
+      <template is="dom-repeat" items="{{selectionModels}}">
+        <autocomplete-box items="{{item.datalist}}"
+                          placeholder="{{item.placeholder}}"
+                          disabled="{{item.disabled}}"
+                          on-dropdownselect="onDropdownSelect"
+                          id$="selection-{{index}}"></autocomplete-box>
+      </template>
+
+      <paper-spinner active$={{loading}}></paper-spinner>
+
+      <paper-icon-button id="dnd-btn"
+                         icon="open-with"
+                         disabled$="{{!computeAnd(enableAddSeries, hasChart)}}"
+                         draggable="{{computeAnd(enableAddSeries, hasChart)}}"
+                         on-dragstart="onSeriesButtonDragStart">
+        Drag me
+      </paper-icon-button>
+
+      <paper-button raised
+                    id="add-graph-btn"
+                    on-click="onAddButtonClicked"
+                    disabled$="{{!enableAddSeries}}">Add</paper-button>
+    </div>
+
+    <div id="suite-description"></div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+// TODO(eakuefner): generalize this request memoization pattern. See
+// https://github.com/catapult-project/catapult/issues/3441.
+tr.exportTo('d', function() {
+  class Subtests extends d.AsyncMap {
+    async process_(path) {
+      const params = {
+        type: 'pattern',
+        p: path + '/*',
+      };
+      const fullSubtests = await simple_xhr.asPromise(
+          '/list_tests', params);
+
+      // TODO(eakuefner): Standardize logic for dealing with test paths on
+      // the client side. See
+      // https://github.com/catapult-project/catapult/issues/3443.
+      const subtests = [];
+      for (const fullSubtest of fullSubtests) {
+        subtests.push({
+          name: fullSubtest.substring(fullSubtest.lastIndexOf('/') + 1)});
+      }
+      return subtests;
+    }
+  }
+
+  return {
+    Subtests,
+  };
+});
+
+Polymer({
+
+  is: 'test-picker',
+  properties: {
+    SUBTEST_LABEL: {
+      type: String,
+      value: 'Subtest',
+    },
+    DEPRECATED_TAG: {
+      type: String,
+      value: 'no new data',
+    },
+    hasChart: { notify: true },
+    testSuites: {
+      notify: true,
+      observer: 'testSuitesChanged'
+    },
+
+    pageStateLoading: {
+      type: Boolean,
+      value: true
+    },
+
+    hasChart: {
+      type: Boolean,
+      value: false
+    },
+
+    enableAddSeries: {
+      type: Boolean,
+      value: false
+    },
+
+    selectionModels: {
+      type: Array,
+      value: () => ([
+        {
+          datalist: [],
+          placeholder: 'Test suite',
+          disabled: false,
+        },
+        {
+          datalist: [],
+          placeholder: 'Bot',
+          disabled: true,
+        }
+      ])
+    },
+
+    subtests: {
+      type: Object,
+      value: () => new d.Subtests()
+    },
+
+    xsrfToken: { notify: true },
+
+    storySet: {
+      type: Set,
+      value: undefined
+    },
+  },
+
+  computeAnd: (x, y) => x && y,
+
+  ready() {
+    this.pageStateLoading = true;
+    this.hasChart = false;
+    this.enableAddSeries = false;
+    this.selectedSuite = null;
+    this.suiteDescription = null;
+    this.updatingSubtestMenus = false;
+    this.set('selectionModels.0.datalist', this.getSuiteItems());
+  },
+
+  testSuitesChanged() {
+    this.set('selectionModels.0.datalist', this.getSuiteItems());
+    this.getSelectionMenu(0).items = this.selectionModels[0].datalist;
+  },
+
+  /**
+    * Gets a list of menu items for test suites.
+    */
+  getSuiteItems() {
+    const getSuiteItemsMark = tr.b.Timing.mark('test-picker', 'getSuiteItems');
+    const suiteMenuItems = [];
+
+    for (const suite in this.testSuites) {
+      const suiteItem = {
+        name: suite
+      };
+
+      const tags = [];
+      if (this.testSuites[suite].dep) {
+        suiteItem.deprecated = true;
+        tags.push(this.DEPRECATED_TAG);
+      }
+      suiteItem.tag = tags.join(' ');
+
+      suiteMenuItems.push(suiteItem);
+    }
+    suiteMenuItems.sort(this.compareTestSuiteItem);
+    getSuiteItemsMark.end();
+    return suiteMenuItems;
+  },
+
+  /**
+    * Gets a list of bot menu items base on the selected test suite.
+    */
+  getBotItems() {
+    const getBotItemsMark = tr.b.Timing.mark('test-picker', 'getBotItems');
+    const suite = this.getSelectionMenu(0).selectedName;
+    if (!this.testSuites[suite]) {
+      getBotItemsMark.end();
+      return [];
+    }
+    const dict = this.testSuites[suite].mas;
+    const botMenuItems = [];
+    const masters = Object.keys(dict).sort();
+    for (let i = 0; i < masters.length; i++) {
+      const groupItem = {
+        name: masters[i],
+        suite,
+        head: true
+      };
+      botMenuItems.push(groupItem);
+      const bots = dict[masters[i]];
+      const botNames = Object.keys(dict[masters[i]]).sort();
+      for (let j = 0; j < botNames.length; j++) {
+        const name = botNames[j];
+        const botItem = {
+          name,
+          group: masters[i],
+          tag: (bots[name] ? this.DEPRECATED_TAG : '')
+        };
+        botMenuItems.push(botItem);
+      }
+    }
+    getBotItemsMark.end();
+    return botMenuItems;
+  },
+
+  /**
+    * Handles dropdown menu select; updates the subsequent menu accordingly.
+    */
+  async onDropdownSelect(event) {
+    const onDropdownSelectMark = tr.b.Timing.mark(
+        'test-picker', 'onDropdownSelect');
+    const model = event.model;
+    const boxIndex = model.index;
+    if (this.updatingSubtestMenus) return;
+    if (boxIndex === undefined) return;
+
+    const box = this.getSelectionMenu(boxIndex);
+    if (box === undefined) return;
+
+    if (window.METRICS) METRICS.startLoadMenu();
+
+    if (boxIndex == 0) {
+      this.updateTestSuiteDescription();
+      if (box.selectedItem) {
+        // Only update the Bot menu if a Test Suite is selected.
+        const updateBotMenuMark = tr.b.Timing.mark(
+            'testPicker', 'updateBotMenu');
+        await this.updateBotMenu();
+        updateBotMenuMark.end();
+      }
+    } else {
+      if (box.selectedItem) {
+        await this.updateSubtestMenus(boxIndex + 1);
+      }
+    }
+
+    if (box.selectedItem) {
+      // Focus the next menu so the user can go ahead and start typing in it.
+      const nextMenu = this.getSelectionMenu(boxIndex + 1);
+      if (nextMenu) nextMenu.focus();
+      onDropdownSelectMark.end();
+    }
+    if (window.METRICS) METRICS.endLoadMenu();
+  },
+
+  updateTestSuiteDescription() {
+    // Display the test suite description if there is one.
+    const updateTestSuiteDescriptionMark = tr.b.Timing.mark(
+        'test-picker', 'updateTestSuiteDescription');
+    const descriptionElement = this.$['suite-description'];
+    const suite = this.getSelectionMenu(0).selectedName;
+    if (!this.testSuites[suite]) {
+      Polymer.dom(descriptionElement).innerHTML = '';
+      updateTestSuiteDescriptionMark.end();
+      return;
+    }
+
+    const description = this.testSuites[suite].des;
+    if (description) {
+      let descriptionHTML = '<b>' + suite + '</b>: ';
+      descriptionHTML += this.convertMarkdownLinks(description);
+      Polymer.dom(descriptionElement).innerHTML = descriptionHTML;
+    } else {
+      Polymer.dom(descriptionElement).innerHTML = '';
+    }
+    updateTestSuiteDescriptionMark.end();
+  },
+
+  /**
+    * Updates bot dropdown menu with bot items.
+    */
+  async updateBotMenu() {
+    const updateBotMenuMark = tr.b.Timing.mark(
+        'test-picker', 'updateBotMenu');
+    const menu = this.getSelectionMenu(1);
+    const botItems = this.getBotItems();
+    menu.set('items', botItems);
+    menu.set('disabled', botItems.length === 0);
+    this.subtestDict = null;
+    // If there's a selection, update the subtest menus.
+    if (menu.selectedItem) {
+      this.updatingSubtestMenus = true;
+      await this.updateSubtestMenus(2);
+      this.updatingSubtestMenus = false;
+    }
+    this.updateAddButtonState();
+    updateBotMenuMark.end();
+  },
+
+  /**
+    * Checks to see if the current stories filtered by the tag filter match
+    * the contents of a subtest autocomplete box.
+    */
+  subtestsAreStories(subtests) {
+    const subtestSet = new Set(subtests.map(x => x.name));
+    if (!subtestSet || !this.storySet) return false;
+    for (const story of this.storySet) {
+      if (!subtestSet.has(story)) {
+        return false;
+      }
+    }
+    return true;
+  },
+
+  /**
+    * Updates the stories in the story autocomplete box when selected stories
+    * are changed.
+    */
+  onSelectedStoriesChanged(event) {
+    const tagFilter = event.target;
+    const selectedStories = [];
+
+    for (const story of tagFilter.selectedStoryNames) {
+      selectedStories.push({name: story});
+    }
+
+    tagFilter.nextSibling.items = selectedStories;
+  },
+
+  /**
+    * Updates all subtest menus starting at 'startIndex'.
+    */
+  async updateSubtestMenus(startIndex) {
+    const updateSubtestMenusMark = tr.b.Timing.mark(
+        'test-picker', 'updateSubtestMenus');
+    let subtests = await this.subtests.get(
+        this.getCurrentSelectedPathUpTo(startIndex));
+
+    // Update existing subtest menu.
+    for (let i = startIndex; i < this.selectionModels.length; i++) {
+      // Remove the rest of the menu if no subtests.
+      if (subtests.length === 0) {
+        this.splice('selectionModels', i);
+        this.updateAddButtonState();
+        updateSubtestMenusMark.end();
+        return;
+      }
+      const menu = this.getSelectionMenu(i);
+      this.updatingSubtestMenus = true;
+      menu.set('items', subtests);
+      this.updatingSubtestMenus = false;
+
+      // If there is a selected item, update the next menu.
+      if (menu.selectedItem) {
+        const selectedPath = this.getCurrentSelectedPathUpTo(i + 1, false);
+        if (selectedPath !== undefined) {
+          subtests = await this.subtests.get(selectedPath);
+        } else {
+          subtests = [];
+        }
+      } else {
+        subtests = [];
+      }
+    }
+
+    // If we reached the last iteration but still have subtests, that means
+    // that the last extant subtest selection still has subtests and we need
+    // to put those in a new menu.
+    if (subtests.length > 0) {
+      this.push('selectionModels', {
+        placeholder: this.SUBTEST_LABEL,
+        datalist: subtests,
+        disabled: false,
+      });
+      this.updatingSubtestMenus = true;
+      Polymer.dom.flush();
+      const menu = this.getSelectionMenu(this.selectionModels.length - 1);
+      menu.set('items', subtests);
+      this.updatingSubtestMenus = false;
+    }
+
+    this.updateAddButtonState();
+  },
+
+  async updateAddButtonState() {
+    const updateAddButtonStateMark = tr.b.Timing.mark(
+        'test-picker', 'updateAddButtonState');
+    this.enableAddSeries = (
+      (await this.getCurrentSelection()) instanceof Array);
+    updateAddButtonStateMark.end();
+  },
+
+  getCheckedBot() {
+    const botMenu = this.getSelectionMenu(1);
+    if (botMenu.selectedItem) {
+      const item = botMenu.selectedItem;
+      return item.group + '/' + item.name;
+    }
+    return null;
+  },
+
+  getCheckedSuite() {
+    const suiteMenu = this.getSelectionMenu(0);
+    return suiteMenu.selectedName;
+  },
+
+  getSelectionMenu(index) {
+    Polymer.dom.flush();
+    return Polymer.dom(this.$.container).children[index];
+  },
+
+  /**
+    * Handler for drag start event for series drag button.
+    */
+  async onSeriesButtonDragStart(event, detail) {
+    event.dataTransfer.setData('type', 'seriesdnd');
+    event.dataTransfer.setData(
+        'data', JSON.stringify({
+          mainPath: this.getCurrentSelectedPath(),
+          selectedPaths: await this.getCurrentSelection(),
+          unselectedPaths: this.getCurrentUnselected()
+        }));
+    event.dataTransfer.effectAllowed = 'copy';
+  },
+
+  /**
+    * Fires add event on 'Add' button clicked.
+    */
+  onAddButtonClicked(event, detail) {
+    if (window.METRICS) METRICS.endChartAction();
+    this.fire('add');
+  },
+
+  /**
+    * Gets the current selection from the menus.
+    */
+  async getCurrentSelection() {
+    const path = this.getCurrentSelectedPathUpTo(-1, true);
+
+    // If the paths are the same, this means that the selected path has
+    // already been confirmed as valid by the previous request to
+    // /list_tests.
+    // TODO(eakuefner): Update the naming of these variables to make this
+    // possible to understand without the comment.
+    if (this.currentSelectedPath_ === path) {
+      return this.currentSelectedTests_;
+    }
+
+    this.loading = true;
+    let selectedTests;
+    let unselectedTests;
+    try {
+      [selectedTests, unselectedTests] = await Promise.all([
+        this.getSubtestsForPath(path, true),
+        this.getSubtestsForPath(path, false)]);
+    } catch (e) {
+      this.loading = false;
+      return null;
+    }
+    this.loading = false;
+    this.currentSelectedPath_ = path;
+    this.currentSelectedTests_ = selectedTests;
+    this.currentUnselectedTests_ = unselectedTests;
+    this.updatingSubtestMenus = true;
+    await this.updateSubtestMenus(2);
+    this.updatingSubtestMenus = false;
+    return selectedTests;
+  },
+
+  getCurrentSelectedPathUpTo(maxLevel, onlyValid) {
+    const getCurrentSelectedPathUpToMark = tr.b.Timing.mark(
+        'test-picker', 'getCurrentSelectedPathUpTo');
+    let level = 0;
+    const parts = [];
+    while (true) {
+      if (maxLevel !== -1 && level >= maxLevel) {
+        break;
+      }
+      const menu = this.getSelectionMenu(level);
+      if (onlyValid && (!menu || !menu.selectedItem)) {
+        // A selection is only valid if it specifies at least one subtest
+        // component, which is the third level.
+        if (level <= 2) {
+          getCurrentSelectedPathUpToMark.end();
+          return undefined;
+        }
+        break;
+      } else {
+        // We want to collect all the subtest components so we can form
+        // the full test path after this loop is done.
+        if (level >= 2) parts.push(menu.selectedItem.name);
+      }
+      level += 1;
+    }
+
+    const suiteItem = this.getSelectionMenu(0).selectedItem;
+    if (!suiteItem) return undefined;
+    const suite = suiteItem.name;
+    const bot = this.getCheckedBot();
+    parts.unshift(suite);
+    parts.unshift(bot);
+
+    // If the last part is empty, drop it.  A test path can have subtests while
+    // also being a test.  E.g. if both Foo/Bar/Baz and Foo/Bar/Baz/ref are
+    // tests, then this happens when the user picks the former.
+    if (parts[parts.length - 1] == '') parts.pop();
+
+    if (parts.length < maxLevel) {
+      getCurrentSelectedPathUpToMark.end();
+      return undefined;
+    }
+    getCurrentSelectedPathUpToMark.end();
+    return parts.join('/');
+  },
+
+  getCurrentSelectedPath() {
+    return this.currentSelectedPath_;
+  },
+
+  async setCurrentSelectedPath(testPath) {
+    this.updatingSubtestMenus = true;
+    for (let boxIndex = 0; boxIndex < testPath.length; ++boxIndex) {
+      const menu = this.getSelectionMenu(boxIndex);
+      const name = testPath[boxIndex];
+      let found = false;
+
+      for (const menuItem of menu.items) {
+        if (menuItem.name === name) {
+          found = true;
+          menu.selectedItem = menuItem;
+          break;
+        }
+      }
+
+      if (!found) {
+        this.updatingSubtestMenus = false;
+        throw new Error(`Invalid testPath ${testPath} @ ${boxIndex}`);
+      }
+
+      if (boxIndex == 0) {
+        this.updateTestSuiteDescription();
+        await this.updateBotMenu();
+      } else {
+        await this.updateSubtestMenus(boxIndex + 1);
+      }
+    }
+    this.updatingSubtestMenus = false;
+  },
+
+  getCurrentUnselected() {
+    return this.currentUnselectedTests_;
+  },
+
+  async getSubtestsForPath(path, returnSelected) {
+    // TODO(eakuefner): Reimplement cancellation and memoize.
+    // TODO(eakuefner): Fix error handling.
+    const params = {
+      type: 'test_path_dict'
+    };
+
+    params.test_path_dict = {};
+    params.test_path_dict[path] = 'core';
+    params.test_path_dict = JSON.stringify(params.test_path_dict);
+
+    if (returnSelected) {
+      params.return_selected = '1';
+    } else {
+      params.return_selected = '0';
+    }
+
+    const xhrMark = tr.b.Timing.mark('testPicker', 'xhr');
+    const result = await simple_xhr.asPromise('/list_tests', params);
+    xhrMark.end();
+
+    return result.tests;
+  },
+
+  /**
+    * Sorts by suite items by deprecated, monitored and then by name.
+    * @return {number} negative if suiteA should be before suiteB,
+    *     positive if suiteA should be after suiteB, zero if they're equal.
+    */
+  compareTestSuiteItem(suiteA, suiteB) {
+    if (!suiteA.deprecated && suiteB.deprecated) {
+      return -1;
+    }
+    if (!suiteB.deprecated && suiteA.deprecated) {
+      return 1;
+    }
+    const nameALower = suiteA.name.toLowerCase();
+    const nameBLower = suiteB.name.toLowerCase();
+    if (nameALower > nameBLower) {
+      return 1;
+    }
+    if (nameALower < nameBLower) {
+      return -1;
+    }
+    return 0;
+  },
+
+  /**
+    * Converts a link in markdown format to a HTML link (anchor elements).
+    * @param {string} text A link in markdown format.
+    * @return {string} A hyperlink string.
+    */
+  convertMarkdownLinks(text) {
+    return text.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+  }
+});
+</script>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/alerts-page.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {};
+
+  test('instantiate', function() {
+    const table = document.createElement('alerts-table');
+    table.extraColumns = [
+      {
+        'key': 'change_direction',
+        'label': 'Change Direction'
+      },
+      {
+        'key': 'percent_changed',
+        'label': 'Delta %'
+      },
+      {
+        'key': 'absolute_delta',
+        'label': 'Abs Delta'
+      },
+      {
+        'key': 'units',
+        'label': 'Units'
+      }
+    ];
+    table.alertList = [{
+      'end_revision': 395930,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICg7IDjvgkM',
+      'date': '2016-05-26',
+      'median_before_anomaly': 0.0013427734375,
+      'bisect_status': null,
+      'testsuite': 'browser_tests_andanotherreallylongnamejustforfunbecausefun',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICg7PLrvgsM',
+      'start_revision': 395893,
+      'bot': 'win10',
+      'improvement': false,
+      'median_after_anomaly': 0.007778930664065,
+      'master': 'ChromiumPerf',
+      'percent_changed': '479.3%',
+      'absolute_delta': '1234.56789',
+      'units': 'kb',
+      'test': 'audio_rates_recvonly\/expand_rate',
+      'recovered': false
+    },
+    {
+      'end_revision': 395900,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgrP-CtAkM',
+      'date': '2016-05-26',
+      'median_before_anomaly': 0.000518798828125,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICg7PLrvgsM',
+      'start_revision': 395893,
+      'bot': 'win10',
+      'improvement': false,
+      'median_after_anomaly': 0.0044677734375,
+      'master': 'ChromiumPerf',
+      'percent_changed': '761.2%',
+      'absolute_delta': '4321000.01234',
+      'units': 'kb',
+      'test': 'audio_rates\/expand_rate\/' +
+        'ienjoynamesthataretoolongandpushtheboundariesoftablecolumnwidths' +
+        'longeryet\/butonlysometimesbecauseothertimesitsunescessary',
+      'recovered': false
+    },
+    {
+      'end_revision': 395895,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICg7IqyqAoM',
+      'date': '2016-05-25',
+      'median_before_anomaly': 0.00159301757813,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICg7PLrvgsM',
+      'start_revision': 395894,
+      'bot': 'linux',
+      'improvement': false,
+      'median_after_anomaly': 0.00677490234375,
+      'master': 'ChromiumPerf',
+      'percent_changed': '325.3%',
+      'absolute_delta': '12.00034',
+      'units': 'count',
+      'test': 'audio_rates_recvonly\/expand_rate',
+      'recovered': false
+    },
+    {
+      'end_revision': 395895,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICg7KzCrAoM',
+      'date': '2016-05-25',
+      'median_before_anomaly': 0.0007232666015625,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICg7PLrvgsM',
+      'start_revision': 395894,
+      'bot': 'linux',
+      'improvement': false,
+      'median_after_anomaly': 0.00344543457031,
+      'master': 'ChromiumPerf',
+      'percent_changed': '376.4%',
+      'absolute_delta': '1.21578',
+      'units': 'runs/s',
+      'test': 'audio_rates\/expand_rate',
+      'recovered': false
+    },
+    {
+      'end_revision': 395237,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': 12345,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgzOSBpgoM',
+      'date': '2016-05-21',
+      'median_before_anomaly': 9046443.9,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgrKCEsQoM',
+      'start_revision': 395226,
+      'bot': 'mac',
+      'improvement': false,
+      'median_after_anomaly': 13144744.3,
+      'master': 'ChromiumPerf',
+      'percent_changed': '45.3%',
+      'absolute_delta': '1.22448',
+      'units': 'ms',
+      'test': 'video_total_bytes_H264\/bytes_sent',
+      'recovered': false
+    },
+    {
+      'end_revision': 395213,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgjLewuwoM',
+      'date': '2016-05-21',
+      'median_before_anomaly': 8959675.6,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgzND5sAoM',
+      'start_revision': 395207,
+      'bot': 'mac',
+      'improvement': false,
+      'median_after_anomaly': 12987079.75,
+      'master': 'ChromiumPerf',
+      'percent_changed': '45.0%',
+      'absolute_delta': '16789.11125',
+      'units': 'minutes',
+      'test': 'video_total_bytes_H264\/bytes_sent',
+      'recovered': false
+    },
+    {
+      'end_revision': 395213,
+      'dashboard_link': '\/do-not-click',
+      'bug_id': null,
+      'key': 'agxzfmNocm9tZXBlcmZyFAsSB0Fub21hbHkYgICgzPy7tgoM',
+      'date': '2016-05-21',
+      'median_before_anomaly': 8823510.6,
+      'bisect_status': null,
+      'testsuite': 'browser_tests',
+      'group': 'agxzfmNocm9tZXBlcmZyFwsSCkFsZXJ0R3JvdXAYgICgzND5sAoM',
+      'start_revision': 395207,
+      'bot': 'mac',
+      'improvement': false,
+      'median_after_anomaly': 13323686.35,
+      'master': 'ChromiumPerf',
+      'percent_changed': '51.0%',
+      'absolute_delta': '12345654545789.21548',
+      'units': 'kb',
+      'test': 'video_total_bytes_H264\/bytes_recv',
+      'recovered': false
+    }];
+    this.addHTMLOutput(table);
+  }, testOptions);
+
+  test('test xsrf token set in alert list', function() {
+    const table = document.createElement('alerts-table');
+    table.xsrfToken = 'abcdef012345';
+    table.alertList = [
+      {
+        'key': '54321',
+        'group': null,
+        'start_revision': 55555,
+        'end_revision': 55558,
+        'date': '2016-02-27',
+        'master': 'Chromium',
+        'bot': 'win',
+        'testsuite': 'sunspider',
+        'test': 'Total',
+        'bug_id': null,
+        'dashboard_link': 'http://do/not/click/me',
+        'median_after_anomaly': 10,
+        'median_before_anomaly': 20,
+        'percent_changed': '100%',
+        'improvement': false,
+        'bisect_status': null,
+        'recovered': false,
+      }
+    ];
+    return new Promise(function(resolve) {
+      function check() {
+        assert.strictEqual(table.alertList[0].xsrfToken, 'abcdef012345');
+        resolve();
+      }
+      setTimeout(check, 10);
+    });
+  }, testOptions);
+});
+</script>

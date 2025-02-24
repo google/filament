@@ -1,0 +1,164 @@
+[
+  {
+    "cmd": [
+      "python3",
+      "-u",
+      "RECIPE_MODULE[depot_tools::git]/resources/git_setup.py",
+      "--path",
+      "[START_DIR]/src",
+      "--url",
+      "https://chromium.googlesource.com/chromium/src.git"
+    ],
+    "name": "git setup"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "main",
+      "--recurse-submodules",
+      "--progress"
+    ],
+    "cwd": "[START_DIR]/src",
+    "env": {
+      "PATH": "RECIPE_REPO[depot_tools]:<PATH>"
+    },
+    "infra_step": true,
+    "name": "git fetch"
+  },
+  {
+    "cmd": [
+      "git",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git checkout"
+  },
+  {
+    "cmd": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "read revision",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@<br/>checked out 'deadbeef'<br/>@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git clean"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "sync"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "submodule sync"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "update",
+      "--init",
+      "--recursive"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "submodule update"
+  },
+  {
+    "cmd": [
+      "git",
+      "-c",
+      "foo=bar",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "count-objects"
+  },
+  {
+    "cmd": [
+      "git",
+      "config",
+      "--get",
+      "remote.origin.url"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git config remote.origin.url",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@foo@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "show",
+      "HEAD",
+      "--format=%at",
+      "-s"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git show"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "--tags"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git fetch tags"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git status"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[START_DIR]/src",
+    "infra_step": true,
+    "name": "git status can_fail_build",
+    "~followup_annotations": [
+      "@@@STEP_EXCEPTION@@@"
+    ]
+  },
+  {
+    "failure": {
+      "humanReason": "Infra Failure: Step('git status can_fail_build') (retcode: 1)"
+    },
+    "name": "$result"
+  }
+]

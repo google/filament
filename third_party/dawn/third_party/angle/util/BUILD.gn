@@ -1,0 +1,444 @@
+# Copyright 2019 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../gni/angle.gni")
+
+_util_sources = [
+  "EGLPlatformParameters.h",
+  "EGLWindow.cpp",
+  "EGLWindow.h",
+  "Event.h",
+  "Matrix.cpp",
+  "Matrix.h",
+  "OSPixmap.h",
+  "OSWindow.cpp",
+  "OSWindow.h",
+  "autogen/angle_features_autogen.cpp",
+  "autogen/angle_features_autogen.h",
+  "com_utils.h",
+  "geometry_utils.cpp",
+  "geometry_utils.h",
+  "keyboard.h",
+  "mouse.h",
+  "random_utils.cpp",
+  "random_utils.h",
+  "shader_utils.cpp",
+  "shader_utils.h",
+  "util_export.h",
+  "util_gl.h",
+]
+
+if (is_win) {
+  _util_sources += [ "windows/WGLWindow.h" ]
+  if (!angle_is_winuwp) {
+    _util_sources += [
+      "windows/win32/Win32Pixmap.cpp",
+      "windows/win32/Win32Pixmap.h",
+      "windows/win32/Win32Window.cpp",
+      "windows/win32/Win32Window.h",
+    ]
+  }
+}
+
+if (is_linux) {
+  _util_sources += [
+    "display/DisplayPixmap.cpp",
+    "display/DisplayWindow.cpp",
+    "display/DisplayWindow.h",
+  ]
+}
+
+if (angle_use_x11) {
+  _util_sources += [
+    "linux/x11/X11Pixmap.cpp",
+    "linux/x11/X11Pixmap.h",
+    "linux/x11/X11Window.cpp",
+    "linux/x11/X11Window.h",
+  ]
+}
+
+if (angle_use_wayland) {
+  _util_sources += [
+    "linux/wayland/WaylandWindow.cpp",
+    "linux/wayland/WaylandWindow.h",
+  ]
+}
+
+if (angle_use_x11 || angle_use_wayland) {
+  _util_sources += [ "linux/LinuxWindow.cpp" ]
+}
+
+if (is_fuchsia) {
+  _util_sources += [
+    "fuchsia/FuchsiaPixmap.cpp",
+    "fuchsia/FuchsiaPixmap.h",
+    "fuchsia/ScenicWindow.cpp",
+    "fuchsia/ScenicWindow.h",
+  ]
+} else if (use_ozone && !(angle_use_x11 || angle_use_wayland)) {
+  # Use X11 impl by default otherwise switch to fake Ozone impl that does not
+  # seem to do anything real.
+  # TODO(msisov): probably, we need to have a proper support for different
+  # Ozone backends, and be able to switch between them for proper tests.
+  # For example, Wayland, X11, etc.
+  _util_sources += [
+    "ozone/OzonePixmap.cpp",
+    "ozone/OzoneWindow.cpp",
+    "ozone/OzoneWindow.h",
+  ]
+}
+
+if (is_mac) {
+  _util_sources += [
+    "osx/OSXPixmap.h",
+    "osx/OSXPixmap.mm",
+    "osx/OSXWindow.h",
+    "osx/OSXWindow.mm",
+  ]
+}
+
+if (is_ios) {
+  _util_sources += [
+    "ios/IOSPixmap.h",
+    "ios/IOSPixmap.mm",
+    "ios/IOSWindow.h",
+    "ios/IOSWindow.mm",
+  ]
+}
+
+if (is_android) {
+  _util_sources += [
+    "android/AndroidPixmap.cpp",
+    "android/AndroidWindow.cpp",
+    "android/AndroidWindow.h",
+    "android/third_party/android_native_app_glue.c",
+    "android/third_party/android_native_app_glue.h",
+  ]
+}
+
+# Backtrace utils
+if (is_linux) {
+  _util_sources += [ "linux/linux_backtrace.cpp" ]
+}
+
+if (is_fuchsia) {
+  _util_sources += [ "fuchsia/fuchsia_backtrace.cpp" ]
+}
+
+if (is_ios) {
+  _util_sources += [ "ios/ios_backtrace.cpp" ]
+}
+
+if (is_mac) {
+  _util_sources += [ "osx/osx_backtrace.cpp" ]
+}
+
+if (is_android) {
+  _util_sources += [ "android/android_backtrace.cpp" ]
+}
+
+config("angle_util_loader_config") {
+  defines = [ "ANGLE_USE_UTIL_LOADER" ]
+}
+
+config("angle_util_loader_headers_config") {
+  # Force users to include "util/header.h" instead of just "header.h".
+  include_dirs = [ ".." ]
+}
+
+angle_source_set("angle_util_loader_headers") {
+  testonly = true
+  sources = [
+    "egl_loader_autogen.h",
+    "gles_loader_autogen.h",
+    "util_export.h",
+  ]
+
+  if (is_win && !angle_is_winuwp) {
+    sources += [ "windows/wgl_loader_autogen.h" ]
+  }
+
+  public_deps = [ "$angle_root:includes" ]
+
+  public_configs = [ ":angle_util_loader_headers_config" ]
+}
+
+angle_source_set("angle_util_loader") {
+  testonly = true
+  defines = [ "LIBANGLE_UTIL_IMPLEMENTATION" ]
+
+  sources = [
+    "egl_loader_autogen.cpp",
+    "gles_loader_autogen.cpp",
+  ]
+
+  if (is_win && !angle_is_winuwp) {
+    sources += [ "windows/wgl_loader_autogen.cpp" ]
+  }
+
+  deps = [ ":angle_util_loader_headers" ]
+
+  public_configs += [
+    "$angle_root:no_gl_prototypes",
+    ":angle_util_config",
+    ":angle_util_loader_config",
+    ":angle_util_loader_headers_config",
+  ]
+}
+
+config("angle_trace_loader_config") {
+  include_dirs = [ "$angle_root/util/capture" ]
+}
+
+angle_shared_library("angle_trace_loader") {
+  defines = [ "ANGLE_TRACE_LOADER_IMPLEMENTATION" ]
+
+  sources = [
+    "capture/trace_egl_loader_autogen.cpp",
+    "capture/trace_egl_loader_autogen.h",
+    "capture/trace_gles_loader_autogen.cpp",
+    "capture/trace_gles_loader_autogen.h",
+    "capture/traces_export.h",
+  ]
+  deps = [
+    "$angle_root:angle_common",
+    "$angle_root:angle_compression",
+  ]
+
+  public_configs += [
+    "$angle_root:no_gl_prototypes",
+    ":angle_trace_loader_config",
+  ]
+}
+
+angle_source_set("angle_trace_fixture") {
+  testonly = true
+  defines = [ "ANGLE_REPLAY_IMPLEMENTATION" ]
+  suppressed_configs += [ "$angle_root:constructor_and_destructor_warnings" ]
+  sources = [
+    "capture/angle_trace_gl.h",
+    "capture/trace_fixture.cpp",
+    "capture/trace_fixture.h",
+    "capture/trace_interface.h",
+  ]
+  public_deps = [
+    ":angle_trace_loader",
+    "$angle_root:includes",
+  ]
+  if (is_ios) {
+    # shared libraries are hidden inside ios_framework_bundle, but we include headers from them
+    check_includes = false
+  }
+}
+
+if (angle_has_frame_capture) {
+  config("angle_frame_capture_test_utils_config") {
+    include_dirs = [ "$angle_root/util/capture" ]
+  }
+
+  angle_source_set("angle_frame_capture_test_utils") {
+    testonly = true
+
+    if (restricted_traces_outside_of_apk) {
+      # On Android, if we are building the entire trace library,
+      # we need to load the libraries from outside the APK
+      defines = [ "ANGLE_TRACE_EXTERNAL_BINARIES" ]
+    }
+
+    sources = [
+      "capture/frame_capture_test_utils.cpp",
+      "capture/frame_capture_test_utils.h",
+      "capture/trace_interface.h",
+    ]
+    deps = [ "$angle_root/third_party/rapidjson" ]
+
+    public_configs += [ ":angle_frame_capture_test_utils_config" ]
+    public_deps = [
+      "$angle_root:angle_capture_common",
+      "$angle_root:angle_common",
+      "$angle_root:angle_compression",
+    ]
+  }
+
+  angle_shared_library("angle_trace_interpreter") {
+    testonly = true
+    sources = [
+      "capture/frame_capture_replay_autogen.cpp",
+      "capture/trace_interpreter.cpp",
+      "capture/trace_interpreter.h",
+      "capture/trace_interpreter_autogen.cpp",
+    ]
+    deps = [
+      ":angle_frame_capture_test_utils",
+      ":angle_trace_fixture",
+      ":angle_trace_loader",
+    ]
+    defines = [ "ANGLE_REPLAY_IMPLEMENTATION" ]
+  }
+}
+
+config("angle_util_config") {
+  # Force users to include "util/header.h" instead of just "header.h".
+  include_dirs = [ ".." ]
+  if ((is_linux || is_chromeos) && angle_use_x11) {
+    libs = [ "X11" ]
+  }
+  configs = [ "$angle_root:angle_vulkan_wayland_config" ]
+}
+
+foreach(is_shared_library,
+        [
+          true,
+          false,
+        ]) {
+  if (is_shared_library) {
+    library_type = "angle_shared_library"
+    library_name = "angle_util"
+    dep_suffix = "${angle_libs_suffix}"
+  } else {
+    library_type = "angle_static_library"
+    library_name = "angle_util_static"
+    dep_suffix = "_static"
+  }
+
+  target(library_type, library_name) {
+    testonly = true
+    sources = _util_sources
+    public_deps = [
+      ":angle_test_utils",
+      ":angle_util_loader_headers",
+    ]
+    libs = []
+
+    if (is_linux || is_chromeos) {
+      libs += [
+        "rt",
+        "dl",
+      ]
+    }
+
+    if (is_apple) {
+      frameworks = [ "QuartzCore.framework" ]
+      if (is_mac) {
+        frameworks += [ "AppKit.framework" ]
+      }
+      if (is_ios) {
+        frameworks += [ "UIKit.framework" ]
+      }
+    }
+
+    if (is_android) {
+      libs += [
+        "android",
+        "log",
+      ]
+    }
+
+    configs += [ "$angle_root:debug_annotations_config" ]
+
+    public_configs += [ ":angle_util_config" ]
+
+    if (is_fuchsia) {
+      public_deps += [
+        "$angle_root/src/common/fuchsia_egl",
+        "//third_party/fuchsia-sdk/sdk/fidl/fuchsia.element",
+        "//third_party/fuchsia-sdk/sdk/pkg/async-loop-cpp",
+        "//third_party/fuchsia-sdk/sdk/pkg/async-loop-default",
+        "//third_party/fuchsia-sdk/sdk/pkg/fdio",
+      ]
+    }
+
+    if (is_shared_library) {
+      defines = [ "LIBANGLE_UTIL_IMPLEMENTATION" ]
+
+      public_deps += [ ":angle_util_loader" ]
+
+      if ((is_mac || is_ios) && !is_component_build) {
+        ldflags = [
+          "-install_name",
+          "@rpath/libangle_util.dylib",
+        ]
+      }
+
+      # Currently excluded from the static build because of build issues.
+      # Would be nice if could be included.
+      if (is_win && !angle_is_winuwp) {
+        sources += [ "windows/WGLWindow.cpp" ]
+      }
+    } else {
+      public_configs += [
+        "$angle_root:angle_static_config",
+        "$angle_root:gl_prototypes",
+      ]
+    }
+  }
+}
+
+if (is_win && !angle_is_winuwp) {
+  angle_source_set("angle_stack_walker") {
+    sources = [
+      "windows/third_party/StackWalker/src/StackWalker.cpp",
+      "windows/third_party/StackWalker/src/StackWalker.h",
+    ]
+
+    if (is_clang) {
+      cflags_cc = [
+        "-Wno-c++98-compat-extra-semi",
+        "-Wno-missing-declarations",
+        "-Wno-switch",
+      ]
+    } else {
+      cflags_cc = [ "/wd4740" ]
+    }
+  }
+}
+
+config("angle_png_utils_config") {
+  include_dirs = [ ".." ]
+}
+
+angle_source_set("angle_png_utils") {
+  deps = [ "$angle_libpng_dir" ]
+  sources = [
+    "png_utils.cpp",
+    "png_utils.h",
+  ]
+  public_configs = [ ":angle_png_utils_config" ]
+}
+
+config("angle_test_util_config") {
+  include_dirs = [ ".." ]
+}
+
+angle_source_set("angle_test_utils") {
+  public_configs = [ ":angle_test_util_config" ]
+
+  public_deps = [ "$angle_root:angle_common" ]
+  if (angle_use_wayland) {
+    public_deps += [ "$angle_root:angle_wayland" ]
+  }
+
+  deps = []
+  sources = [
+    "Timer.cpp",
+    "Timer.h",
+    "test_utils.cpp",
+    "test_utils.h",
+  ]
+
+  if (is_win) {
+    sources += [ "windows/test_utils_win.cpp" ]
+    if (angle_is_winuwp) {
+      sources += [ "windows/test_utils_winuwp.cpp" ]
+    } else {
+      deps += [ ":angle_stack_walker" ]
+      sources += [ "windows/win32/test_utils_win32.cpp" ]
+    }
+  } else {
+    sources += [
+      "posix/crash_handler_posix.cpp",
+      "posix/test_utils_posix.cpp",
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+name: Header Sync
+
+on:
+  workflow_dispatch: null
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Update headers from nodejs/node
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - shell: bash
+        id: check-changes
+        name: Check Changes
+        run: |
+          COMMIT_MESSAGE=$(npm run --silent update-headers)
+          VERSION=${COMMIT_MESSAGE##* }
+          echo $COMMIT_MESSAGE
+          npm run --silent write-symbols
+          npm run --silent write-win32-def
+          CHANGED_FILES=$(git status -s)
+          BRANCH_NAME="update-headers/${VERSION}"
+          if [ -z "$CHANGED_FILES" ]; then
+              echo "No changes exist. Nothing to do."
+          else
+              echo "Changes exist. Checking if branch exists: $BRANCH_NAME"
+              if git ls-remote --exit-code --heads $GITHUB_SERVER_URL/$GITHUB_REPOSITORY $BRANCH_NAME >/dev/null; then
+                  echo "Branch exists. Nothing to do."
+              else
+                  echo "Branch does not exists."
+                  echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+                  echo "COMMIT_MESSAGE=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+              fi
+          fi
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        if: ${{ steps.check-changes.outputs.BRANCH_NAME }}
+        with:
+          branch: ${{ steps.check-changes.outputs.BRANCH_NAME }}
+          commit-message: ${{ steps.check-changes.outputs.COMMIT_MESSAGE }}
+          title: ${{ steps.check-changes.outputs.COMMIT_MESSAGE }}
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          body: null
+          delete-branch: true

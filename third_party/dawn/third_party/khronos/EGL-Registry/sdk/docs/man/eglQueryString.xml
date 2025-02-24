@@ -1,0 +1,179 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglQueryString">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglQueryString</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglQueryString</refname>
+        <refpurpose>
+            return a string describing properties of the EGL client or of an
+            <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>char const * <function>eglQueryString</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLint <parameter>name</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>name</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies a symbolic constant, one of
+                        <constant>EGL_CLIENT_APIS</constant>,
+                        <constant>EGL_VENDOR</constant>,
+                        <constant>EGL_VERSION</constant>, or
+                        <constant>EGL_EXTENSIONS</constant>.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglQueryString</function> returns a pointer to a
+            static, zero-terminated string describing properties of the EGL
+            client or of an EGL display connection.
+            <parameter>name</parameter> may be one of the following:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_CLIENT_APIS</constant></term>
+                <listitem><para>
+                    Returns a string describing which client rendering
+                    APIs are supported. The string contains a
+                    space-separated list of API names. The list must
+                    include at least one of <code>OpenGL</code>,
+                    <code>OpenGL_ES</code>, or <code>OpenVG</code>.
+                    These strings correspond respectively to values
+                    <constant>EGL_OPENGL_API</constant>,
+                    <constant>EGL_OPENGL_ES_API</constant>, and
+                    <constant>EGL_OPENVG_API</constant> of the
+                    <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+                    <parameter>api</parameter> argument.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VENDOR</constant></term>
+                <listitem><para>
+                    Returns the name of the vendor responsible for this EGL
+                    implementation. The format and contents of the string
+                    are implementation-dependent.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VERSION</constant></term>
+                <listitem>
+                    <para>
+                        Returns a version or release number. The
+                        <constant>EGL_VERSION</constant> string is laid out
+                        as follows:
+                    </para>
+                    <para>
+                        <replaceable>major_version</replaceable>.<replaceable>minor_version</replaceable>
+                        space
+                        <replaceable>vendor_specific_info</replaceable>
+                    </para>
+                    <para>
+                        Both the major and minor portions of the version
+                        number are numeric. Their values must match the
+                        <parameter>major</parameter> and
+                        <parameter>minor</parameter> values returned by
+                        <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>.
+                    </para>
+                    <para>
+                        The vendor-specific information is optional; if
+                        present, its format and contents are
+                        implementation-specific.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_EXTENSIONS</constant></term>
+                <listitem>
+                    <para>
+                        Returns a space separated list of supported
+                        extensions to EGL. If there are no extensions, then
+                        the empty string is returned.
+                    </para>
+                    <para>
+                        If <parameter>display</parameter> is
+                        <constant>EGL_NO_DISPLAY</constant>, then the
+                        <constant>EGL_EXTENSIONS</constant> string describes
+                        the set of supported <firstterm>client
+                        extensions</firstterm>. If
+                        <parameter>display</parameter> is a valid,
+                        initialized display, then the
+                        <constant>EGL_EXTENSIONS</constant> string describes
+                        the set of <firstterm>display extensions</firstterm>
+                        supported by that display. The set of supported
+                        client extensions is disjoint from the set of
+                        extensions supported by any given display.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <constant>EGL_CLIENT_APIS</constant> is supported only if
+            the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            A <parameter>display</parameter> of
+            <constant>EGL_NO_DISPLAY</constant> is supported only if the EGL
+            version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>NULL</constant> is returned on failure.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection,
+            unless <parameter>display</parameter> is
+            <constant>EGL_NO_DISPLAY</constant> and
+            <parameter>name</parameter> is
+            <constant>EGL_EXTENSIONS</constant>.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> is a valid but uninitialized
+            EGLDisplay.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>name</parameter> is not an accepted value.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

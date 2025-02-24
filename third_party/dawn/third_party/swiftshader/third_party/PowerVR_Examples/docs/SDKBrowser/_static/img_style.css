@@ -1,0 +1,592 @@
+/*
+ * bizstyle.css_t
+ * ~~~~~~~~~~~~~~
+ *
+ * Sphinx stylesheet -- business style theme.
+ *
+ * :copyright: Copyright 2011 by Sphinx-users.jp, see AUTHORS.
+ * :license: MIT, see LICENSE for details.
+ *
+ */
+
+@import url("basic.css");
+
+/* -- page layout ----------------------------------------------------------- */
+
+body {
+    font-family: Roboto, sans-serif;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+    line-height: 150%;
+    text-align: center;
+    background-color: white;
+    color: black;
+    padding: 0;
+    margin: 0px;
+}
+
+div.document {
+    background-color: white;
+    text-align: left;
+    background-repeat: repeat-x;
+}
+
+div.bodywrapper {
+    margin: 0 0 0 270px;
+    border-left: 1px solid #ccc;
+    max-width: 980px;
+}
+
+div.body {
+    margin: 0;
+    padding: 0.5em 20px 20px 20px;
+}
+
+div.related {
+    display: none;
+}
+
+div.related ul {
+   display: none;
+}
+
+div.related ul li {
+  display: none;
+}
+
+div.related ul li.right {
+  display: none;
+}
+
+div.related ul li a {
+display: none;
+}
+
+div.related ul li a:hover {
+    display: none;
+}
+
+div.sphinxsidebarwrapper {
+    left: 0;
+    margin-top: 10px;
+	padding-top: 1px;
+    padding-right: 0px;
+    padding-bottom: 0px;
+    padding-left: 0px;
+    background-color: #f4f4f4;
+}
+
+div.sphinxsidebar {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    margin: 0px; 
+    padding: 0.5em 12px 12px 12px;
+    width: 250px;
+    font-size: 1em;
+    text-align: left;
+}
+
+div.sphinxsidebar h3, div.sphinxsidebar h4 {
+    margin-bottom: 0px;
+    font-size: 16px;
+    color: #808080;
+    border: 1px solid #f4f4f4;
+    background-color: #f4f4f4;
+	    font-weight: 400;
+    letter-spacing: 0.2px;
+	margin-left: 10px;
+	margin-top: 10px;
+}
+
+div.sphinxsidebar h3 a {
+	margin-bottom: 0px;
+	margin-left: 2px;
+    color: #808080;
+}
+
+div.sphinxsidebar ul {
+    padding-left: 1.5em;
+    margin-top: 7px;
+	margin-left: 10px;
+    padding: 0;
+    line-height: 130%;
+}
+
+div.sphinxsidebar ul ul {
+    margin-left: 20px;
+}
+
+div.sphinxsidebar input {
+    border: 1px solid #cccccc !important;
+	color: #808080; 
+	
+}
+
+div.sphinxsidebar li {
+    color: #808080;
+	padding-left: 10px;
+}
+
+div.footer {
+}
+
+div.footer a {
+}
+
+/* -- body styles ----------------------------------------------------------- */
+
+p {
+    margin: 0.8em 0 0.5em 0;
+}
+
+a {
+    color: #808080;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #400863;
+    text-decoration: none;
+}
+
+div.body a {
+    text-decoration: none;
+}
+
+h1 {
+    color: #000000;
+	font-size: 2.3em;
+    margin-bottom: 1em;
+    font-weight: 500;
+    font-family: 'Roboto', sans-serif !important;
+} 
+
+h2 {
+    color: #000000;
+	margin: 1.5em 0 .5em 0;
+    font-size: 1.7em;
+	font-weight: 400;
+    font-style: normal;
+    font-family: 'Roboto', sans-serif !important;
+	padding-bottom: 5px;
+	border-bottom: 1px solid #d0d0d0;
+}
+h3 {
+	color: #000000;
+    font-size: 1.5em;
+    line-height: 1.3;
+    font-weight: 300;
+    margin-bottom: 0;
+    margin-top: 1em;
+	font-family: 'Roboto', sans-serif !important;
+}
+
+
+div.body h1 a, div.body h2 a, div.body h3 a,
+div.body h4 a, div.body h5 a, div.body h6 a {
+    color: black!important;
+}
+
+h1 a.anchor, h2 a.anchor, h3 a.anchor,
+h4 a.anchor, h5 a.anchor, h6 a.anchor {
+    display: none;
+    margin: 0 0 0 0.3em;
+    padding: 0 0.2em 0 0.2em;
+    color: #aaa!important;
+}
+
+h1:hover a.anchor, h2:hover a.anchor, h3:hover a.anchor, h4:hover a.anchor,
+h5:hover a.anchor, h6:hover a.anchor {
+    display: inline;
+}
+
+h1 a.anchor:hover, h2 a.anchor:hover, h3 a.anchor:hover, h4 a.anchor:hover,
+h5 a.anchor:hover, h6 a.anchor:hover {
+    color: #777;
+    background-color: #eee;
+}
+
+a.headerlink {
+    color: #c60f0f!important;
+    font-size: 1em;
+    margin-left: 6px;
+    padding: 0 4px 0 4px;
+    text-decoration: none!important;
+}
+
+a.headerlink:hover {
+    background-color: #ccc;
+    color: white!important;
+}
+
+cite, code, tt {
+    font-family: 'Consolas', 'Deja Vu Sans Mono',
+                 'Bitstream Vera Sans Mono', monospace;
+    font-size: 0.95em;
+    letter-spacing: 0.01em;
+}
+
+tt {
+    background-color: #F2F2F2;
+    border-bottom: 1px solid #ddd;
+    color: #333;
+}
+
+tt.descname, tt.descclassname, tt.xref {
+    border: 0;
+}
+
+hr {
+    border: 1px solid #abc;
+    margin: 2em;
+}
+
+a tt {
+    border: 0;
+    color: #CA7900;
+}
+
+a tt:hover {
+    color: #2491CF;
+}
+
+pre {
+    font-family: 'Consolas', 'Deja Vu Sans Mono',
+                 'Bitstream Vera Sans Mono', monospace;
+    font-size: 0.95em;
+    letter-spacing: 0.015em;
+    line-height: 120%;
+    padding: 0.5em;
+    border-right: 5px solid #ccc;
+    border-left: 5px solid #ccc;
+}
+
+pre a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+td.linenos pre {
+    padding: 0.5em 0;
+}
+
+div.quotebar {
+    background-color: #f8f8f8;
+    max-width: 250px;
+    float: right;
+    padding: 2px 7px;
+    border: 1px solid #ccc;
+}
+
+div.topic {
+    background-color: #f8f8f8;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 0 -0.5em 0 -0.5em;
+}
+
+table td, table th {
+    padding: 0.2em 0.5em 0.2em 0.5em;
+}
+
+div.admonition {
+    font-size: 0.9em;
+    margin: 1em 0 1em 0;
+    border: 3px solid #cccccc;
+    background-color: #f7f7f7;
+    padding: 0;
+}
+
+div.admonition p {
+    margin: 0.5em 1em 0.5em 1em;
+    padding: 0;
+}
+
+div.admonition li p {
+    margin-left: 0;
+}
+
+div.admonition pre, div.warning pre {
+    margin: 0.4em 1em 0.4em 1em;
+}
+
+div.admonition p.admonition-title {
+    margin: 0;
+    padding: 0.1em 0 0.1em 0.5em;
+    color: white;
+    border-bottom: 3px solid #cccccc;
+    font-weight: bold;
+    background-color: #165e83;
+}
+
+div.danger    { border: 3px solid #f0908d; background-color: #f0cfa0; }
+div.error     { border: 3px solid #f0908d; background-color: #ede4cd; }
+div.warning   { border: 3px solid #fff0e7; background-color: #fff0e7; font-style: italic; display: inline-block;width:100%;}
+div.caution   { border: 3px solid #f8b862; background-color: #ede4cd; }
+div.attention { border: 3px solid #f8b862; background-color: #f3f3f3; }
+div.important { border: 3px solid #f0cfa0; background-color: #ede4cd; }
+div.note      { border: 0px solid #f3f7ff; background-color: #f3f7ff; font-style: italic; display: inline-block;width:100%;}
+div.hint      { border: 3px solid #bed2c3; background-color: #f3f3f3; }
+div.tip       { border: 3px solid #bed2c3; background-color: #f3f3f3; }
+
+div.danger p.admonition-title, div.error p.admonition-title {
+    background-color: #b7282e;
+    border-bottom: 3px solid #f0908d;
+}
+
+div.caution p.admonition-title,
+div.warning p.admonition-title,
+div.attention p.admonition-title {
+    background-color: #f19072;
+    border-bottom: 3px solid #f8b862;
+}
+
+div.note p.admonition-title, div.important p.admonition-title {
+    color: #000000;
+    background-color: #f3f7ff;
+    border-bottom: 0px solid #f3f7ff;
+}
+
+div.warning p.admonition-title, div.important p.admonition-title {
+    color: #000000;
+    background-color: #fff0e7;
+    border-bottom: 0px solid #fff0e7;
+}
+
+div.hint p.admonition-title, div.tip p.admonition-title {
+    background-color: #7ebea5;
+    border-bottom: 3px solid #bed2c3;
+}
+
+div.admonition ul, div.admonition ol,
+div.warning ul, div.warning ol {
+    margin: 0.1em 0.5em 0.5em 3em;
+    padding: 0;
+}
+
+div.versioninfo {
+    margin: 1em 0 0 0;
+    border: 1px solid #ccc;
+    background-color: #DDEAF0;
+    padding: 8px;
+    line-height: 1.3em;
+    font-size: 0.9em;
+}
+
+.viewcode-back {
+    font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Geneva',
+                 'Verdana', sans-serif;
+}
+
+div.viewcode-block:target {
+    background-color: #f4debf;
+    border-top: 1px solid #ac9;
+    border-bottom: 1px solid #ac9;
+}
+
+p.versionchanged span.versionmodified {
+    font-size: 0.9em;
+    margin-right: 0.2em;
+    padding: 0.1em;
+    background-color: #DCE6A0;
+}
+
+/* -- table styles ---------------------------------------------------------- */
+
+table.docutils {
+    margin: 1em 0;
+    padding: 0;
+    border: 1px solid white;
+    background-color: #f7f7f7;
+}
+
+table.docutils td, table.docutils th {
+    padding: 1px 8px 1px 5px;
+    border-top: 0;
+    border-left: 0;
+    border-right: 1px solid white;
+    border-bottom: 1px solid white;
+}
+
+table.docutils td p {
+    margin-top: 0;
+    margin-bottom: 0.3em;
+}
+
+.row-odd {
+    background-color: #f0f0f0;
+}
+
+.row-even {
+    background-color: #f7f7f7;
+}
+
+table.field-list td, table.field-list th {
+    border: 0 !important;
+    word-break: break-word;
+}
+
+table.footnote td, table.footnote th {
+    border: 0 !important;
+}
+
+th {
+    color: white;
+    text-align: left;
+    padding-right: 5px;
+    background-color: #82A0BE;
+}
+
+/* WIDE DESKTOP STYLE */
+@media only screen and (min-width: 1176px) {
+body {
+    margin: 0 40px 0 40px;
+}
+}
+
+/* TABLET STYLE */
+@media only screen and (min-width: 768px) and (max-width: 991px) {
+body {
+    margin: 0 40px 0 40px;
+}
+}
+
+/* MOBILE LAYOUT (PORTRAIT/320px) */
+@media only screen and (max-width: 767px) {
+body {
+    margin: 0;
+}
+div.bodywrapper {
+    margin: 0;
+    width: 100%;
+    border: none;
+}
+div.sphinxsidebar {
+    display: none;
+}
+}
+
+/* MOBILE LAYOUT (LANDSCAPE/480px) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+body {
+    margin: 0 20px 0 20px;
+}
+}
+
+/* RETINA OVERRIDES */
+@media
+only screen and (-webkit-min-device-pixel-ratio: 2),
+only screen and (min-device-pixel-ratio: 2) {
+}
+/*---------------------------------------------------------------*/
+/* Header
+/*---------------------------------------------------------------*/
+#GlobalHeaderContainer {
+	background-color: #000000;
+}
+
+#GlobalHeader {
+	min-height: 105px;
+	margin-left:20px;
+	display: block;
+	overflow: hidden;
+	max-width: 1200px;
+}
+
+#GlobalHeader .logo {
+	float: left;
+    margin-left:40px;
+	margin-top: 28px;
+	width: 150px;
+}
+
+#GlobalHeader .sitetitle {
+	font-family: Roboto, sans-serif;
+	font-weight: 200;
+	letter-spacing: -0.01em;
+	margin-left: 100px;
+	margin-top: 40px;
+	color: white;
+	float: left;
+
+}
+
+@media screen and (min-width: 500px) {
+   #GlobalHeader .sitetitle  {font-size: 25px;}
+}
+
+@media screen and (min-width: 800px) {
+   #GlobalHeader .sitetitle  {font-size: 34px;}
+}
+
+/*---------------------------------------------------------------*/
+/* Search box
+/*---------------------------------------------------------------*/
+
+div.sphinxsidebar form {
+    margin-top: 0px;
+	width: 100%;
+}
+
+div.sphinxsidebar #searchbox input[type="text"] {
+	float: left;
+    width: 68%;
+	margin-bottom: 10px;
+    margin-left: 10px;
+}
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    float: right;
+    width: 20%;
+	margin-right: 10px;
+	border-left: 1px;
+}
+
+
+div.sphinxsidebar #searchbox p {
+display: none
+}
+
+
+/*---------------------------------------------------------------*/
+/* Footer
+/*---------------------------------------------------------------*/
+
+#FooterMainContainer {
+	width: 100%;
+	background-color: #F9F9F9;
+	border-top: 1px solid #e4e4e4;
+}
+
+#FooterContainer {
+	max-width: 1200px;
+	height: 100px;
+	margin-left:20px;
+	padding-bottom: 20px;
+	margin: auto;
+}
+
+#FooterContainer .footerlogo {
+	margin-top: 20px;
+}
+
+#FooterContainer .copyright {
+	font-family: HelvNeuMed, Arial, Gotham, "Helvetica Neue", Helvetica, sans-serif;
+	font-weight: normal;
+	letter-spacing: -0.01em;
+	color: #999;
+	/* float: right; */
+	/* margin-top: 60px; */
+	/* margin-right: -210px; */
+}
+/*---------------------------------------------------------------*/
+/* Images
+/*---------------------------------------------------------------*/
+.figure { 
+   display: inline-block;
+   margin: 0 auto;
+}
+/* -- end ------------------------------------------------------------------- */

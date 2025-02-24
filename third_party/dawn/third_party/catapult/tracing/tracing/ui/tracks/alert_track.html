@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/letter_dot_track.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A track that displays an array of alert objects.
+   * @constructor
+   * @extends {LetterDotTrack}
+   */
+  const AlertTrack = tr.ui.b.define(
+      'alert-track', tr.ui.tracks.LetterDotTrack);
+
+  AlertTrack.prototype = {
+    __proto__: tr.ui.tracks.LetterDotTrack.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.LetterDotTrack.prototype.decorate.call(this, viewport);
+      this.heading = 'Alerts';
+      this.alerts_ = undefined;
+    },
+
+    get alerts() {
+      return this.alerts_;
+    },
+
+    set alerts(alerts) {
+      this.alerts_ = alerts;
+      if (alerts === undefined) {
+        this.items = undefined;
+        return;
+      }
+      this.items = this.alerts_.map(function(alert) {
+        return new tr.ui.tracks.LetterDot(
+            alert, String.fromCharCode(9888), alert.colorId, alert.start);
+      });
+    }
+  };
+
+  return {
+    AlertTrack,
+  };
+});
+</script>

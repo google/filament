@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/mock_tracing_controller_client.html">
+<link rel="import" href="/tracing/ui/extras/about_tracing/profiling_view.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  const Base64 = tr.b.Base64;
+  const testData = [
+    {name: 'a', args: {}, pid: 52, ts: 15000, cat: 'foo', tid: 53, ph: 'B'},
+    {name: 'a', args: {}, pid: 52, ts: 19000, cat: 'foo', tid: 53, ph: 'E'},
+    {name: 'b', args: {}, pid: 52, ts: 32000, cat: 'foo', tid: 53, ph: 'B'},
+    {name: 'b', args: {}, pid: 52, ts: 54000, cat: 'foo', tid: 53, ph: 'E'}
+  ];
+
+  const monitoringOptions = {
+    isMonitoring: false,
+    categoryFilter: '*',
+    useSystemTracing: false,
+    useContinuousTracing: false,
+    useSampling: false
+  };
+
+  const ProfilingView = tr.ui.e.about_tracing.ProfilingView;
+
+  test('recording', function() {
+    const mock = new tr.ui.e.about_tracing.MockTracingControllerClient();
+    mock.allowLooping = true;
+    mock.expectRequest('endRecording', function() {
+      return '';
+    });
+    mock.expectRequest('getCategories', function() {
+      return ['a', 'b', 'c'];
+    });
+    mock.expectRequest('beginRecording', function(data) {
+      return '';
+    });
+    mock.expectRequest('endRecording', function(data) {
+      return JSON.stringify(testData);
+    });
+
+    const view = new ProfilingView(mock);
+    view.style.height = '400px';
+    view.style.border = '1px solid black';
+    this.addHTMLOutput(view);
+
+    const recordingPromise = view.beginRecording();
+
+    let didAbort = false;
+
+    tr.b.timeout(60).then(() => {
+      if (didAbort) return;
+      recordingPromise.selectionDlg.clickRecordButton();
+    }).then(() => tr.b.timeout(60)).then(() => {
+      recordingPromise.progressDlg.clickStopButton();
+    });
+
+    return recordingPromise.then(null, err => {
+      didAbort = true;
+      assert.fail(err);
+    });
+  });
+
+  test('protobufTraceDetection', function() {
+    const protobufTrace = new Uint8Array([
+      // Arbitrary data.
+      0xda, 0xda, 0xca, 0xfe,
+      // Sync marker.
+      0x82, 0x47, 0x7a, 0x76, 0xb2, 0x8d, 0x42, 0xba, 0x81, 0xdc, 0x33, 0x32,
+      0x6d, 0x57, 0xa0, 0x79,
+      // More data
+      0x0b, 0x0a, 0x0d, 0x0c, 0x00, 0x0d, 0x0e]);
+    const view = new ProfilingView(null);
+    view.setActiveTrace('trace.json', protobufTrace);
+    assert.strictEqual('trace.pftrace', view.activeTrace_.filename);
+  });
+});
+</script>
+

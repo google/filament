@@ -1,0 +1,13 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//gni/angle.gni")
+
+vulkan_headers_dir = angle_vulkan_headers_dir
+
+vulkan_data_subdir = angle_data_dir
+vulkan_gen_subdir = "angle/vulkan"
+
+vulkan_use_x11 = angle_use_x11
+vulkan_use_wayland = angle_use_wayland

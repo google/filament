@@ -1,0 +1,14 @@
+Name: RapidJSON
+URL: https://github.com/TenCent/rapidjson
+Version: N/A
+Revision: DEPS
+License: MIT, BSD-3-Clause, JSON
+License File: src/license.txt
+Shipped: no
+Security Critical: no
+CPEPrefix: cpe:/a:tencent:rapidjson:1.1.0
+
+Description:
+A fast JSON parser/generator for C++ with both SAX/DOM style API.
+
+Only used in capture-enabled builds of ANGLE. It isn't compiled into Chromium.

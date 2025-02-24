@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+media_metric uses Chrome trace events to calculate metrics about video
+and audio playback. It is meant to be used for pages with <video> and/or
+<audio> elements. It is used by videostack-eng@google.com team for
+regression testing.
+
+See class PerPlaybackData for details on each of the values that are measured.
+
+This metric supports media playbacks happening simultaneously over multiple
+pages, supports multiple media elements on a page, and supports multiple
+playbacks with each element. It does not support media playback using
+flash or any other technology not provided by Chrome videostack team.
+
+Please inform johnchen@chromium.org about
+changes to this file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  function mediaMetric(histograms, model) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    if (chromeHelper === undefined) return;
+
+    for (const rendererHelper of Object.values(chromeHelper.rendererHelpers)) {
+      // Find the threads we're interested in, and if a needed thread
+      // is missing, no need to look further in this process.
+      const mainThread = rendererHelper.mainThread;
+      if (mainThread === undefined) continue;
+
+      const videoThreads = rendererHelper.process.findAllThreadsMatching(
+          thread => (thread.name ? thread.name.startsWith(
+              'ThreadPoolSingleThreadSharedForegroundBlocking') : false));
+
+      const compositorThread = rendererHelper.compositorThread;
+      if (compositorThread !== undefined) {
+        videoThreads.push(compositorThread);
+      }
+      const audioThreads =
+        rendererHelper.process.findAllThreadsNamed('AudioOutputDevice');
+
+      if (audioThreads.length === 0 && videoThreads.length === 0) continue;
+
+      const processData = new PerProcessData();
+
+      processData.recordPlayStarts(mainThread);
+      if (!processData.hasPlaybacks) continue;
+
+      if (videoThreads.length !== 0) {
+        processData.calculateTimeToVideoPlays(videoThreads);
+        processData.calculateDroppedFrameCounts(videoThreads);
+      }
+
+      if (audioThreads.length !== 0) {
+        processData.calculateTimeToAudioPlays(audioThreads);
+      }
+
+      processData.calculateSeekTimes(mainThread);
+      processData.calculateBufferingTimes(mainThread);
+
+      // Roughness metrics are output from a thread pool worker, so we don't
+      // have a convenient name for the thread.  Check all threads.
+      const allThreads =
+        rendererHelper.process.findAllThreadsMatching(function() {
+          return true;
+        });
+      processData.calculateVideoPlaybackQuality(allThreads);
+
+      processData.addMetricToHistograms(histograms);
+    }
+  }
+
+  // PerProcessData manages all metric values associated with a renderer
+  // process. The process can have multiple media playbacks.
+  class PerProcessData {
+    constructor() {
+      // All the perf data we collect for a process are stored in a Map.
+      // Each key of the map is an ID of a media playback, and the value
+      // associated with each key is a PerPlaybackData object containing
+      // all the perf data for that playback.
+      this.playbackIdToDataMap_ = new Map();
+    }
+
+    recordPlayStarts(mainThread) {
+      for (const event of mainThread.sliceGroup.getDescendantEvents()) {
+        if (event.title === 'WebMediaPlayerImpl::DoLoad') {
+          const id = event.args.id;
+          if (this.playbackIdToDataMap_.has(id)) {
+            throw new Error(
+                'Unexpected multiple initialization of a media playback');
+          }
+          this.playbackIdToDataMap_.set(id, new PerPlaybackData(event.start));
+        }
+      }
+    }
+
+    get hasPlaybacks() {
+      return this.playbackIdToDataMap_.size > 0;
+    }
+
+    calculateTimeToVideoPlays(videoThreads) {
+      for (const thread of videoThreads) {
+        for (const event of thread.sliceGroup.getDescendantEvents()) {
+          if (event.title === 'VideoRendererImpl::Render') {
+            this.getPerPlaybackObject_(event.args.id)
+                .processVideoRenderTime(event.start);
+          }
+        }
+      }
+    }
+
+    calculateTimeToAudioPlays(audioThreads) {
+      for (const audioThread of audioThreads) {
+        for (const event of audioThread.sliceGroup.getDescendantEvents()) {
+          if (event.title === 'AudioRendererImpl::Render') {
+            this.getPerPlaybackObject_(event.args.id)
+                .processAudioRenderTime(event.start);
+          }
+        }
+      }
+    }
+
+    calculateSeekTimes(mainThread) {
+      for (const event of mainThread.sliceGroup.getDescendantEvents()) {
+        if (event.title === 'WebMediaPlayerImpl::DoSeek') {
+          this.getPerPlaybackObject_(event.args.id)
+              .processDoSeek(event.args.target, event.start);
+        } else if (event.title === 'WebMediaPlayerImpl::OnPipelineSeeked') {
+          this.getPerPlaybackObject_(event.args.id)
+              .processOnPipelineSeeked(event.args.target, event.start);
+        } else if (event.title === 'WebMediaPlayerImpl::BufferingHaveEnough') {
+          this.getPerPlaybackObject_(event.args.id)
+              .processBufferingHaveEnough(event.start);
+        }
+      }
+    }
+
+    calculateBufferingTimes(mainThread) {
+      for (const event of mainThread.sliceGroup.getDescendantEvents()) {
+        if (event.title === 'WebMediaPlayerImpl::OnEnded') {
+          this.getPerPlaybackObject_(event.args.id)
+              .processOnEnded(event.start, event.args.duration);
+        }
+      }
+    }
+
+    calculateDroppedFrameCounts(videoThreads) {
+      for (const thread of videoThreads) {
+        for (const event of thread.sliceGroup.getDescendantEvents()) {
+          if (event.title === 'VideoFramesDropped') {
+            this.getPerPlaybackObject_(event.args.id)
+                .processVideoFramesDropped(event.args.count);
+          }
+        }
+      }
+    }
+
+    calculateVideoPlaybackQuality(threads) {
+      for (const thread of threads) {
+        for (const event of thread.sliceGroup.getDescendantEvents()) {
+          if (event.title === 'VideoPlaybackRoughness') {
+            this.getPerPlaybackObject_(event.args.id)
+                .processVideoRoughness(event.args.roughness);
+          } else if (event.title === 'VideoPlaybackFreezing') {
+            this.getPerPlaybackObject_(event.args.id)
+                .processVideoFreezing(event.args.freezing);
+          }
+        }
+      }
+    }
+
+    addMetricToHistograms(histograms) {
+      for (const [id, playbackData] of this.playbackIdToDataMap_) {
+        playbackData.addMetricToHistograms(histograms);
+      }
+    }
+
+    // @private
+    getPerPlaybackObject_(playbackId) {
+      let perPlaybackObject = this.playbackIdToDataMap_.get(playbackId);
+      if (perPlaybackObject === undefined) {
+        // The trace isn't complete, and didn't contain the DoLoad event for
+        // this playback. Create a new PerPlaybackData object for this playback.
+        perPlaybackObject = new PerPlaybackData(undefined);
+        this.playbackIdToDataMap_.set(playbackId, perPlaybackObject);
+      }
+      return perPlaybackObject;
+    }
+  }
+
+  // PerPlaybackData contains all metric values associated with a single
+  // media playback.
+  class PerPlaybackData {
+    constructor(playStartTime) {
+      this.playStart_ = playStartTime;
+      this.timeToVideoPlay_ = undefined;
+      this.timeToAudioPlay_ = undefined;
+      this.bufferingTime_ = undefined;
+      this.droppedFrameCount_ = 0;
+      this.seekError_ = false;
+      this.seekTimes_ = new Map();
+      this.currentSeek_ = undefined;
+      this.roughness_ = undefined;
+      this.freezing_ = undefined;
+    }
+
+    // API methods for retrieving metric values. Each method returns undefined
+    // if no value is available (e.g., timeToVideoPlay() returns undefined for
+    // an audio-only playback).
+
+    // Returns how long after a video is requested to start playing before
+    // the video actually starts. If time_to_video_play regresses, then users
+    // will click to play videos and then have to wait longer before the videos
+    // start actually playing.
+    get timeToVideoPlay() {
+      return this.timeToVideoPlay_;
+    }
+
+    // Similar to timeToVideoPlay, but measures the time delay before audio
+    // starts playing.
+    get timeToAudioPlay() {
+      return this.timeToAudioPlay_;
+    }
+
+    // Returns the difference between the actual play time of media vs its
+    // expected play time. Ideally the two should be the same. If actual play
+    // time is significantly longer than expected play time, it indicates that
+    // there were stalls during the play for buffering or some other reasons.
+    // Current limitation: Buffering time isn't calculated if seek occurred
+    // during playback, and it gives incorrect value if the playback isn't
+    // from beginning to end without pauses.
+    get bufferingTime() {
+      return this.bufferingTime_;
+    }
+
+    // Reports the number of video frames that were dropped. Ideally this
+    // should be 0. If a large number of frames are dropped, the video playback
+    // will not be smooth.
+    get droppedFrameCount() {
+      // We should report dropped frame count as long as video was played.
+      return (this.timeToVideoPlay_ !== undefined) ?
+        this.droppedFrameCount_ : undefined;
+    }
+
+    // Returns a Map containing seek times. The keys of the map are numerical
+    // values indicating the target location of the seek, in unit of seconds.
+    // The values of the map are objects with the following public properties:
+    // * pipelineSeekTime: amount of time taken by media pipeline to process
+    //   this seek operation, from when the seek request is received, to when
+    //   the pipeline starts processing at the new location, in milliseconds.
+    // * seekTime: how long after a user requests a seek operation before the
+    //   seek completes and the media starts playing at the new location, as
+    //   perceived by the user, in milliseconds.
+    get seekTimes() {
+      if (this.seekError_ || this.currentSeek_ !== undefined) return new Map();
+      return this.seekTimes_;
+    }
+
+    // Reports aggregate roughness.
+    get roughness() {
+      return this.roughness_;
+    }
+
+    // Reports aggregate freezing.
+    get freezing() {
+      return this.freezing_;
+    }
+
+    // API methods for processing data from trace events.
+
+    processVideoRenderTime(videoRenderTime) {
+      // Each video playback can generate multiple Render events, one for
+      // each frame. For calculating time to video play, we only use the
+      // first Render event.
+      if (this.playStart_ !== undefined &&
+          this.timeToVideoPlay_ === undefined) {
+        this.timeToVideoPlay_ = videoRenderTime - this.playStart_;
+      }
+    }
+
+    processAudioRenderTime(audioRenderTime) {
+      if (this.playStart_ !== undefined &&
+          this.timeToAudioPlay_ === undefined) {
+        this.timeToAudioPlay_ = audioRenderTime - this.playStart_;
+      }
+    }
+
+    processVideoFramesDropped(count) {
+      this.droppedFrameCount_ += count;
+    }
+
+    // We support multiple seeks per element, as long as they seek to different
+    // target time. Thus the seek times are stored in a Map instead of a scalar
+    // property. The key of the map is event.args.target, which is a numerical
+    // value indicating the target location of the seek, in unit of seconds.
+    // For example, with a seek to 5 seconds mark, event.args.target === 5.
+    // The value of the map is an object with 4 properties (the first two are
+    // added during object creation, the latter two are added as the data
+    // become available):
+    // * target: seek target time (same as the map key)
+    // * startTime: timestamp of the event marking start of seek
+    // * pipelineSeekTime: amount of time taken by media pipeline to process
+    //   this seek (milliseconds)
+    // * seekTime: amount of seek time perceived by the user (milliseconds)
+    // If any unexpected conditions occur, we stop processing and set an error
+    // flag this.seekError_.
+    // TODO(https://github.com/catapult-project/catapult/issues/3976):
+    // Emit detailed warnings.
+    processDoSeek(target, startTime) {
+      // currentSeek_ refers to the object associated with the
+      // seek that is currently being processed for this media element.
+      // It is used to match seek end events against seek start events.
+      if (this.currentSeek_ !== undefined) {
+        // TODO(https://github.com/catapult-project/catapult/issues/3976):
+        // Warning 'Overlapping seek not supported'.
+        this.seekError_ = true;
+        return;
+      }
+      this.currentSeek_ = { target, startTime };
+      this.seekTimes_.set(target, this.currentSeek_);
+    }
+
+    processOnPipelineSeeked(target, time) {
+      if (this.seekError_) return;
+      const currentSeek = this.currentSeek_;
+      if (currentSeek === undefined) {
+        // OK to have this event when there is no active seek, as this event
+        // can be generated for other reasons, e.g., initial loading of media
+        // generates this event with target of 0 seconds.
+        return;
+      }
+      if (currentSeek.target !== target) {
+        // TODO(https://github.com/catapult-project/catapult/issues/3976):
+        // Warning 'WebMediaPlayerImpl::OnPipelineSeeked to unexpected target'.
+        this.seekError_ = true;
+        return;
+      }
+      if (currentSeek.pipelineSeekTime !== undefined) {
+        // TODO(https://github.com/catapult-project/catapult/issues/3976):
+        // Warning 'Multiple WebMediaPlayerImpl::OnPipelineSeeked events'.
+        this.seekError_ = true;
+        return;
+      }
+      currentSeek.pipelineSeekTime = time - currentSeek.startTime;
+    }
+
+    processBufferingHaveEnough(time) {
+      if (this.seekError_) return;
+      const currentSeek = this.currentSeek_;
+      if (currentSeek === undefined) {
+        // No current seek means this event is generated by non-seek related
+        // events, e.g., initial loading of media.
+        return;
+      }
+      if (currentSeek.pipelineSeekTime === undefined) {
+        // Since we haven't seen WebMediaPlayerImpl::OnPipelineSeeked event
+        // event yet, this event is triggered by something else, e.g., a
+        // have_nothing->have_enough cycle due to underflow from decoders.
+        return;
+      }
+      currentSeek.seekTime = time - currentSeek.startTime;
+      // Finished processing current seek.
+      this.currentSeek_ = undefined;
+    }
+
+    processOnEnded(playEndTime, duration) {
+      if (this.playStart_ === undefined) return;
+      // Can't calculate buffering time if there were any seeks.
+      if (this.seekTimes_.size !== 0 || this.seekError_) return;
+      // Play was resumed after it ended previously.
+      if (this.bufferingTime_ !== undefined) return;
+      // Convert duration from seconds to milliseconds.
+      duration = tr.b.convertUnit(duration, tr.b.UnitPrefixScale.METRIC.NONE,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      const playTime = playEndTime - this.playStart_;
+      if (this.timeToVideoPlay_ !== undefined) {
+        this.bufferingTime_ = playTime - duration - this.timeToVideoPlay_;
+      } else if (this.timeToAudioPlay !== undefined) {
+        this.bufferingTime_ = playTime - duration - this.timeToAudioPlay_;
+      }
+    }
+
+    processVideoRoughness(roughness) {
+      // Record the worst roughness.
+      if (this.roughness_ === undefined || this.roughness_ > roughness) {
+        this.roughness_ = roughness;
+      }
+    }
+
+    processVideoFreezing(freezing) {
+      // Record the worst freezing.
+      if (this.freezing_ === undefined || this.freezing_ > freezing) {
+        this.freezing_ = freezing;
+      }
+    }
+
+    addMetricToHistograms(histograms) {
+      this.addSample_(histograms, 'time_to_video_play',
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          this.timeToVideoPlay);
+      this.addSample_(histograms, 'time_to_audio_play',
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          this.timeToAudioPlay);
+      this.addSample_(histograms, 'dropped_frame_count',
+          tr.b.Unit.byName.count_smallerIsBetter,
+          this.droppedFrameCount);
+      for (const [key, value] of this.seekTimes.entries()) {
+        // key is a numerical value that can have '.' when converted to
+        // string. However, '.' causes problems in histogram names, so
+        // replace with '_'.
+        const keyString = key.toString().replace('.', '_');
+        this.addSample_(histograms, 'pipeline_seek_time_' + keyString,
+            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            value.pipelineSeekTime);
+        this.addSample_(histograms, 'seek_time_' + keyString,
+            tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+            value.seekTime);
+      }
+      this.addSample_(histograms, 'buffering_time',
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          this.bufferingTime);
+      this.addSample_(histograms, 'roughness',
+          tr.b.Unit.byName.count_smallerIsBetter,
+          this.roughness);
+      this.addSample_(histograms, 'freezing',
+          tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+          this.freezing);
+    }
+
+    // @private
+    addSample_(histograms, name, unit, sample) {
+      if (sample === undefined) return;
+      const histogram = histograms.getHistogramNamed(name);
+      if (histogram === undefined) {
+        histograms.createHistogram(name, unit, sample);
+      } else {
+        histogram.addSample(sample);
+      }
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(mediaMetric);
+
+  return {
+    mediaMetric,
+  };
+});
+</script>

@@ -1,0 +1,20 @@
+//===- subzero/src/IceTargetLoweringMIPS32.def -MIPS32 X-macros -*- C++ -*-===//
+//
+//                        The Subzero Code Generator
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines certain patterns for lowering to MIPS32 target
+// instructions, in the form of x-macros.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUBZERO_SRC_ICETARGETLOWERINGMIPS32_DEF
+#define SUBZERO_SRC_ICETARGETLOWERINGMIPS32_DEF
+
+// TODO(reed kotler): Fill out comparison tables, etc. for 32/64-bit compares.
+
+#endif // SUBZERO_SRC_ICETARGETLOWERINGMIPS32_DEF

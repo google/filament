@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/ui/analysis/alert_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import"
+    href="/tracing/ui/analysis/container_memory_dump_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/counter_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_async_slice_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_cpu_slice_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_flow_event_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_frame_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/multi_instant_event_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_object_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_power_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/multi_thread_slice_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/multi_thread_time_slice_sub_view.html">
+<link rel="import"
+    href="/tracing/ui/analysis/multi_user_expectation_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_async_slice_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_cpu_slice_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_flow_event_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_frame_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_instant_event_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_object_instance_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_object_snapshot_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_power_sample_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/single_sample_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_thread_slice_sub_view.html">
+<link rel="import"
+      href="/tracing/ui/analysis/single_thread_time_slice_sub_view.html">
+<link rel="import"
+    href="/tracing/ui/analysis/single_user_expectation_sub_view.html">
+<link rel="import" href="/tracing/ui/base/tab_view.html">
+
+<!--
+@fileoverview A component used to display an analysis of a selection,
+using custom elements specialized for different event types.
+-->
+<dom-module id='tr-ui-a-analysis-view'>
+  <template>
+    <style>
+      :host {
+        background-color: white;
+        display: flex;
+        flex-direction: column;
+        height: 275px;
+        overflow: auto;
+      }
+
+      :host(.tall-mode) {
+        height: 525px;
+      }
+    </style>
+    <slot></slot>
+  </template>
+</dom-module>
+<script>
+'use strict';
+(function() {
+  const EventRegistry = tr.model.EventRegistry;
+
+  /** Returns the label that goes next to the list of tabs. */
+  function getTabStripLabel(numEvents) {
+    if (numEvents === 0) {
+      return 'Nothing selected. Tap stuff.';
+    } else if (numEvents === 1) {
+      return '1 item selected.';
+    }
+    return numEvents + ' items selected.';
+  }
+
+  function createSubView(subViewTypeInfo, selection) {
+    let tagName;
+    if (selection.length === 1) {
+      tagName = subViewTypeInfo.singleTagName;
+    } else {
+      tagName = subViewTypeInfo.multiTagName;
+    }
+
+    if (tagName === undefined) {
+      throw new Error('No view registered for ' +
+                      subViewTypeInfo.eventConstructor.name);
+    }
+    const subView = document.createElement(tagName);
+
+    let title;
+    if (selection.length === 1) {
+      title = subViewTypeInfo.singleTitle;
+    } else {
+      title = subViewTypeInfo.multiTitle;
+    }
+    title += ' (' + selection.length + ')';
+    subView.tabLabel = title;
+
+    subView.selection = selection;
+    return subView;
+  }
+
+  Polymer({
+    is: 'tr-ui-a-analysis-view',
+
+    ready() {
+      this.brushingStateController_ = undefined;
+      this.lastSelection_ = undefined;
+      this.tabView_ = document.createElement('tr-ui-b-tab-view');
+      this.tabView_.addEventListener(
+          'selected-tab-change', this.onSelectedSubViewChanged_.bind(this));
+
+      Polymer.dom(this).appendChild(this.tabView_);
+    },
+
+    set tallMode(value) {
+      Polymer.dom(this).classList.toggle('tall-mode', value);
+    },
+
+    get tallMode() {
+      return Polymer.dom(this).classList.contains('tall-mode');
+    },
+
+    get tabView() {
+      return this.tabView_;
+    },
+
+    get brushingStateController() {
+      return this.brushingStateController_;
+    },
+
+    set brushingStateController(brushingStateController) {
+      if (this.brushingStateController_) {
+        this.brushingStateController_.removeEventListener(
+            'change', this.onSelectionChanged_.bind(this));
+      }
+
+      this.brushingStateController_ = brushingStateController;
+      if (this.brushingStateController) {
+        this.brushingStateController_.addEventListener(
+            'change', this.onSelectionChanged_.bind(this));
+      }
+
+      // The new brushing controller may have a different selection than the
+      // last one, so we have to refresh the subview.
+      this.onSelectionChanged_();
+    },
+
+    get selection() {
+      return this.brushingStateController_.selection;
+    },
+
+    onSelectionChanged_(e) {
+      if (this.lastSelection_ && this.selection.equals(this.lastSelection_)) {
+        return;
+      }
+      this.lastSelection_ = this.selection;
+
+      this.tallMode = false;
+
+      this.tabView_.label = getTabStripLabel(this.selection.length);
+      const eventsByBaseTypeName =
+          this.selection.getEventsOrganizedByBaseType(true);
+
+      const ASV = tr.ui.analysis.AnalysisSubView;
+      const eventsByTagName = ASV.getEventsOrganizedByTypeInfo(this.selection);
+      const newSubViews = [];
+      eventsByTagName.forEach(function(events, typeInfo) {
+        newSubViews.push(createSubView(typeInfo, events));
+      });
+
+      this.tabView_.resetSubViews(newSubViews);
+    },
+
+    onSelectedSubViewChanged_() {
+      const selectedSubView = this.tabView_.selectedSubView;
+
+      if (!selectedSubView) {
+        this.tallMode = false;
+        this.maybeChangeRelatedEvents_(undefined);
+        return;
+      }
+
+      this.tallMode = selectedSubView.requiresTallView;
+      this.maybeChangeRelatedEvents_(selectedSubView.relatedEventsToHighlight);
+    },
+
+    /** Changes the highlighted related events if possible. */
+    maybeChangeRelatedEvents_(events) {
+      if (this.brushingStateController) {
+        this.brushingStateController.changeAnalysisViewRelatedEvents(events);
+      }
+    }
+  });
+})();
+</script>

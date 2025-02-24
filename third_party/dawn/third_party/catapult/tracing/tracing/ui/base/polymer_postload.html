@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<script>
+'use strict';
+
+if (!window.CustomElements || window.CustomElements.hasNative) {
+  if (!Polymer.Settings.useNativeShadow) {
+    tr.showPanic(
+        'Polymer error',
+        'base should use native shadow when possible.');
+  }
+}
+</script>

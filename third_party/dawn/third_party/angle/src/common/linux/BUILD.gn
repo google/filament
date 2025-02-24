@@ -1,0 +1,19 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gni/angle.gni")
+
+angle_source_set("angle_dma_buf") {
+  sources = [
+    "dma_buf_utils.cpp",
+    "dma_buf_utils.h",
+  ]
+
+  deps = [ "$angle_root:angle_common" ]
+
+  if (angle_enable_vulkan) {
+    defines = [ "ANGLE_ENABLE_VULKAN" ]
+    public_deps = [ "$angle_vulkan_headers_dir:vulkan_headers" ]
+  }
+}

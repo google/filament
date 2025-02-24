@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/value/chart_json_converter.html">
+<link rel="import" href="/tracing/value/histogram_grouping.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('emptyListOfScalarValues', function() {
+    const charts = {
+      benchmark_name: 'the.benchmark',
+      label: 'the_label',
+      charts: {
+        mean_frame_time: {
+          'http://games.yahoo.com': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            type: 'list_of_scalar_values',
+            improvement_direction: 'down',
+            units: 'ms',
+            page_id: 16,
+            description: 'Arithmetic mean of frame times.'
+          },
+          'summary': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            improvement_direction: 'down',
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            description: 'Arithmetic mean of frame times.'
+          },
+        }
+      }
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    assert.lengthOf(histograms, 1);
+    const hist = [...histograms][0];
+    assert.strictEqual('mean_frame_time', hist.name);
+    assert.strictEqual('http://games.yahoo.com',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual('the.benchmark',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.BENCHMARKS).callback(hist));
+    assert.strictEqual('the_label',
+        tr.v.HistogramGrouping.DISPLAY_LABEL.callback(hist));
+    assert.strictEqual(0, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+
+    const stories = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES);
+    assert.isTrue(stories.hasGuid);
+    assert.strictEqual(stories, histograms.lookupDiagnostic(stories.guid));
+
+    const benchmarks = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.BENCHMARKS);
+    assert.isTrue(benchmarks.hasGuid);
+    assert.strictEqual(benchmarks, histograms.lookupDiagnostic(
+        benchmarks.guid));
+
+    const labels = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.LABELS);
+    assert.isTrue(labels.hasGuid);
+    assert.strictEqual(labels, histograms.lookupDiagnostic(labels.guid));
+  });
+
+  test('convertWithoutName', function() {
+    const charts = {
+      benchmark_name: 'the.benchmark',
+      label: 'the_label',
+      charts: {
+        mean_frame_time: {
+          'http://games.yahoo.com': {
+            std: 0.0,
+            type: 'list_of_scalar_values',
+            improvement_direction: 'down',
+            units: 'ms',
+            page_id: 16,
+            description: 'Arithmetic mean of frame times.'
+          },
+          'summary': {
+            std: 0.0,
+            improvement_direction: 'down',
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            description: 'Arithmetic mean of frame times.'
+          },
+        }
+      }
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    assert.lengthOf(histograms, 1);
+    const hist = [...histograms][0];
+    assert.strictEqual('mean_frame_time', hist.name);
+    assert.strictEqual('http://games.yahoo.com',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual('the.benchmark',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.BENCHMARKS).callback(hist));
+    assert.strictEqual('the_label',
+        tr.v.HistogramGrouping.DISPLAY_LABEL.callback(hist));
+    assert.strictEqual(0, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+
+    const stories = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES);
+    assert.isTrue(stories.hasGuid);
+    assert.strictEqual(stories, histograms.lookupDiagnostic(stories.guid));
+
+    const benchmarks = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.BENCHMARKS);
+    assert.isTrue(benchmarks.hasGuid);
+    assert.strictEqual(benchmarks, histograms.lookupDiagnostic(
+        benchmarks.guid));
+
+    const labels = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.LABELS);
+    assert.isTrue(labels.hasGuid);
+    assert.strictEqual(labels, histograms.lookupDiagnostic(labels.guid));
+  });
+  test('convertWithoutGroupingLabel', function() {
+    const charts = {
+      charts: {
+        mean_frame_time: {
+          'http://games.yahoo.com': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            type: 'list_of_scalar_values',
+            improvement_direction: 'down',
+            values: [42],
+            units: 'ms',
+            page_id: 16,
+            description: 'Arithmetic mean of frame times.'
+          },
+          'summary': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            improvement_direction: 'down',
+            values: [
+              16.693,
+              16.646,
+              16.918,
+              16.681
+            ],
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            description: 'Arithmetic mean of frame times.'
+          },
+        }
+      }
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    assert.lengthOf(histograms, 1);
+    const hist = [...histograms][0];
+    assert.strictEqual('mean_frame_time', hist.name);
+    assert.strictEqual('http://games.yahoo.com',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual(42, hist.average);
+    assert.strictEqual(1, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+
+    const stories = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES);
+    assert.isTrue(stories.hasGuid);
+    assert.strictEqual(stories, histograms.lookupDiagnostic(stories.guid));
+  });
+
+  test('convertWithoutType', function() {
+    const charts = {
+      charts: {
+        mean_frame_time: {
+          'http://games.yahoo.com': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            improvement_direction: 'down',
+            value: 42,
+            units: 'ms',
+            page_id: 16,
+            description: 'Arithmetic mean of frame times.'
+          },
+          'summary': {
+            std: 0.0,
+            name: 'mean_frame_time',
+            improvement_direction: 'down',
+            values: [
+              16.693,
+              16.646,
+              16.918,
+              16.681
+            ],
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            description: 'Arithmetic mean of frame times.'
+          },
+        }
+      }
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    assert.lengthOf(histograms, 1);
+    const hist = [...histograms][0];
+    assert.strictEqual('mean_frame_time', hist.name);
+    assert.strictEqual('http://games.yahoo.com',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual(42, hist.average);
+    assert.strictEqual(1, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+
+    const stories = hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES);
+    assert.isTrue(stories.hasGuid);
+    assert.strictEqual(stories, histograms.lookupDiagnostic(stories.guid));
+  });
+
+  test('convertWithGroupingLabel', function() {
+    const charts = {
+      charts: {
+        'GROUP-A@@value-name': {
+          'story-name': {
+            name: 'value-name',
+            page_id: 7,
+            improvement_direction: 'down',
+            values: [42],
+            units: 'ms',
+            grouping_label: 'GROUP-A',
+            type: 'list_of_scalar_values',
+          },
+          'summary': {
+            name: 'value-name',
+            improvement_direction: 'down',
+            values: [42],
+            units: 'ms',
+            grouping_label: 'GROUP-A',
+            type: 'list_of_scalar_values',
+          },
+        },
+      },
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    const hist = tr.b.getOnlyElement(histograms);
+    assert.strictEqual('value-name', hist.name);
+    assert.strictEqual(tr.b.getOnlyElement(hist.diagnostics.get(
+        tr.v.d.RESERVED_NAMES.STORY_TAGS)), 'grouping_label:GROUP-A');
+    assert.strictEqual('story-name',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual(42, hist.average);
+    assert.strictEqual(1, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+    assert.isTrue(hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES).hasGuid);
+    assert.isTrue(hist.diagnostics.get(
+        tr.v.d.RESERVED_NAMES.STORY_TAGS).hasGuid);
+  });
+
+  test('convertWithStoryTags', function() {
+    const charts = {
+      charts: {
+        'GROUP-A@@value-name': {
+          'story-name': {
+            name: 'value-name',
+            page_id: 7,
+            improvement_direction: 'down',
+            values: [42],
+            units: 'ms',
+            story_tags: ['foo', 'bar'],
+            type: 'list_of_scalar_values',
+          },
+          'summary': {
+            name: 'value-name',
+            improvement_direction: 'down',
+            values: [42],
+            units: 'ms',
+            story_tags: ['foo', 'bar'],
+            type: 'list_of_scalar_values',
+          },
+        },
+      },
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    const hist = tr.b.getOnlyElement(histograms);
+    assert.strictEqual('value-name', hist.name);
+    const tags = [...hist.diagnostics.get(
+        tr.v.d.RESERVED_NAMES.STORY_TAGS)];
+    assert.lengthOf(tags, 2);
+    assert.strictEqual(tags[0], 'foo');
+    assert.strictEqual(tags[1], 'bar');
+    assert.strictEqual('story-name',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual(42, hist.average);
+    assert.strictEqual(1, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+    assert.isTrue(hist.diagnostics.get(tr.v.d.RESERVED_NAMES.STORIES).hasGuid);
+    assert.isTrue(hist.diagnostics.get(
+        tr.v.d.RESERVED_NAMES.STORY_TAGS).hasGuid);
+  });
+
+  test('convertHistogram', function() {
+    const charts = {
+      charts: {
+        MPArch_RWH_TabSwitchPaintDuration: {
+          summary: {
+            units: 'ms',
+            buckets: [
+              {
+                high: 20,
+                count: 2,
+                low: 16,
+              },
+              {
+                high: 24,
+                count: 2,
+                low: 20,
+              }
+            ],
+            important: false,
+            type: 'histogram',
+            name: 'MPArch_RWH_TabSwitchPaintDuration',
+          }
+        }
+      }
+    };
+    const histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    assert.lengthOf(histograms, 1);
+    const hist = [...histograms][0];
+    assert.strictEqual('MPArch_RWH_TabSwitchPaintDuration', hist.name);
+    assert.strictEqual('',
+        tr.v.HistogramGrouping.BY_KEY.get(
+            tr.v.d.RESERVED_NAMES.STORIES).callback(hist));
+    assert.strictEqual(20, hist.average);
+    assert.strictEqual(4, hist.numValues);
+    assert.strictEqual(tr.b.Unit.byName.timeDurationInMs_smallerIsBetter,
+        hist.unit);
+  });
+
+  test('traceUrls', function() {
+    const charts = {
+      charts: {
+        measurementA: {
+          storyA: {
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            values: [100],
+            name: 'measurementA',
+          },
+          storyB: {
+            units: 'ms',
+            type: 'list_of_scalar_values',
+            values: [200],
+            name: 'measurementA',
+          },
+        },
+        trace: {
+          storyA: {
+            name: 'trace',
+            type: 'trace',
+            file_path: '/home/user/storyA_1900-01-01_00-00-00.html',
+          },
+          storyB: {
+            name: 'trace',
+            type: 'trace',
+            cloud_url: 'https://console.developers.google.com/m/cloudstorage/chromium-telemetry/o/storyB_1900-01-01_00-00-00.html',
+          },
+        },
+      },
+    };
+    let histograms = new tr.v.HistogramSet();
+    tr.v.ChartJsonConverter.convertChartJson(charts, histograms);
+    histograms = [...histograms];
+    assert.lengthOf(histograms, 2);
+    assert.strictEqual(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.STORIES).callback(histograms[0]), 'storyA');
+    assert.strictEqual(tr.v.HistogramGrouping.BY_KEY.get(
+        tr.v.d.RESERVED_NAMES.STORIES).callback(histograms[1]), 'storyB');
+    assert.strictEqual(tr.b.getOnlyElement(histograms[0].diagnostics.get(
+        tr.v.d.RESERVED_NAMES.TRACE_URLS)),
+    'file:///home/user/storyA_1900-01-01_00-00-00.html');
+    assert.strictEqual(tr.b.getOnlyElement(histograms[1].diagnostics.get(
+        tr.v.d.RESERVED_NAMES.TRACE_URLS)),
+    'https://console.developers.google.com/m/cloudstorage/chromium-telemetry/o/storyB_1900-01-01_00-00-00.html');
+    assert.isTrue(histograms[0].diagnostics.get(
+        tr.v.d.RESERVED_NAMES.TRACE_URLS).hasGuid);
+    assert.isTrue(histograms[1].diagnostics.get(
+        tr.v.d.RESERVED_NAMES.TRACE_URLS).hasGuid);
+  });
+});
+</script>

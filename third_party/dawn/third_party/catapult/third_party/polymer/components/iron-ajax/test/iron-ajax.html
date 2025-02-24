@@ -1,0 +1,968 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+<head>
+  <title>iron-ajax</title>
+
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../../polymer/polymer.html">
+  <link rel="import" href="../../promise-polyfill/promise-polyfill.html">
+  <link rel="import" href="../iron-ajax.html">
+</head>
+<body>
+  <test-fixture id="TrivialGet">
+    <template>
+      <iron-ajax url="/responds_to_get_with_json"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="ParamsGet">
+    <template>
+      <iron-ajax url="/responds_to_get_with_json"
+                 params='{"a": "a"}'></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="AutoGet">
+    <template>
+      <iron-ajax auto url="/responds_to_get_with_json"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="GetEcho">
+    <template>
+      <iron-ajax handle-as="json" url="/echoes_request_url"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="TrivialPost">
+    <template>
+      <iron-ajax method="POST"
+                 url="/responds_to_post_with_json"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="DebouncedGet">
+    <template>
+      <iron-ajax auto
+                 url="/responds_to_debounced_get_with_json"
+                 debounce-duration="150"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id='BlankUrl'>
+    <template>
+      <iron-ajax auto handle-as='text'></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="RealPost">
+    <template>
+      <iron-ajax method="POST" url="http://httpbin.org/post"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="Delay">
+    <template>
+      <iron-ajax url="http://httpbin.org/delay/1"></iron-ajax>
+    </template>
+  </test-fixture>
+  <test-fixture id="Bubbles">
+    <template>
+      <iron-ajax url="http://httpbin.org/post" method="POST" bubbles></iron-ajax>
+      <iron-ajax url="/responds_to_get_with_502_error_json" bubbles></iron-ajax>
+    </template>
+  </test-fixture>
+  <script>
+    'use strict';
+    suite('<iron-ajax>', function() {
+      var responseHeaders = {
+        json: { 'Content-Type': 'application/json' },
+        plain: { 'Content-Type': 'text/plain' }
+      };
+      var ajax;
+      var request;
+      var server;
+
+      function timePasses(ms) {
+        return new Promise(function(resolve) {
+          window.setTimeout(function() {
+            resolve();
+          }, ms);
+        });
+      }
+
+      setup(function() {
+        server = sinon.fakeServer.create();
+        server.respondWith(
+          'GET',
+          /\/responds_to_get_with_json.*/,
+          [
+            200,
+            responseHeaders.json,
+            '{"success":true}'
+          ]
+        );
+
+        server.respondWith(
+          'POST',
+          '/responds_to_post_with_json',
+          [
+            200,
+            responseHeaders.json,
+            '{"post_success":true}'
+          ]
+        );
+
+        server.respondWith(
+          'GET',
+          '/responds_to_get_with_text',
+          [
+            200,
+            responseHeaders.plain,
+            'Hello World'
+          ]
+        );
+
+        server.respondWith(
+          'GET',
+          '/responds_to_debounced_get_with_json',
+          [
+            200,
+            responseHeaders.json,
+            '{"success": "true"}'
+          ]
+        );
+
+        server.respondWith(
+          'GET',
+          '/responds_to_get_with_502_error_json',
+          [
+            502,
+            responseHeaders.json,
+            '{"message": "an error has occurred"}'
+          ]
+        );
+
+        ajax = fixture('TrivialGet');
+      });
+
+      teardown(function() {
+        server.restore();
+      });
+
+      // Echo requests are responded to individually and on demand, unlike the
+      // others in this file which are responded to with server.respond(),
+      // which responds to all open requests.
+      // We don't use server.respondWith here because there's no way to use it
+      // and only respond to a subset of requests.
+      // This way we can test for delayed and out of order responses and
+      // distinquish them by their responses.
+      function respondToEchoRequest(request) {
+        request.respond(200, responseHeaders.json, JSON.stringify({
+          url: request.url
+        }));
+      }
+
+      suite('when making simple GET requests for JSON', function() {
+        test('has sane defaults that love you', function() {
+          request = ajax.generateRequest();
+
+          server.respond();
+
+          expect(request.response).to.be.ok;
+          expect(request.response).to.be.an('object');
+          expect(request.response.success).to.be.equal(true);
+        });
+
+        test('will be asynchronous by default', function() {
+          expect(ajax.toRequestOptions().async).to.be.eql(true);
+        });
+      });
+
+      suite('when setting custom headers', function() {
+        test('are present in the request headers', function() {
+          ajax.headers['custom-header'] = 'valid';
+          var options = ajax.toRequestOptions();
+
+          expect(options.headers).to.be.ok;
+          expect(options.headers['custom-header']).to.be.an('string');
+          expect(options.headers.hasOwnProperty('custom-header')).to.be.equal(
+              true);
+        });
+
+        test('non-objects in headers are not applied', function() {
+          ajax.headers = 'invalid';
+          var options = ajax.toRequestOptions();
+
+          expect(Object.keys(options.headers).length).to.be.equal(0);
+        });
+      });
+
+      suite('when url isn\'t set yet', function() {
+        test('we don\'t fire any automatic requests', function() {
+          expect(server.requests.length).to.be.equal(0);
+          ajax = fixture('BlankUrl');
+
+          return timePasses(1).then(function() {
+            // We don't make any requests.
+            expect(server.requests.length).to.be.equal(0);
+
+            // Explicitly asking for the request to fire works.
+            ajax.generateRequest();
+            expect(server.requests.length).to.be.equal(1);
+            server.requests = [];
+
+            // Explicitly setting url to '' works too.
+            ajax = fixture('BlankUrl');
+            ajax.url = '';
+            return timePasses(1);
+          }).then(function() {
+            expect(server.requests.length).to.be.equal(1);
+          });
+        });
+
+        test('requestUrl remains empty despite valid queryString', function() {
+          ajax = fixture('BlankUrl');
+          expect(ajax.url).to.be.equal(undefined);
+          expect(ajax.queryString).to.be.equal('');
+          expect(ajax.requestUrl).to.be.equal('');
+
+          ajax.params = {'a':'b', 'c':'d'};
+
+          expect(ajax.queryString).to.be.equal('a=b&c=d');
+          expect(ajax.requestUrl).to.be.equal('?a=b&c=d');
+        });
+
+        test('generateRequest works with empty URL and valid queryString', function() {
+          ajax = fixture('BlankUrl');
+          expect(ajax.url).to.be.equal(undefined);
+
+          ajax.generateRequest();
+          expect(server.requests[0].url).to.be.eql('');
+
+          ajax.params = {'a':'b', 'c':'d'};
+
+          ajax.generateRequest();
+          expect(server.requests[1].url).to.be.eql('?a=b&c=d');
+        });
+      });
+
+      suite('when properties are changed', function() {
+        test('generates simple-request elements that reflect the change', function() {
+          request = ajax.generateRequest();
+
+          expect(request.xhr.method).to.be.equal('GET');
+
+          ajax.method = 'POST';
+          ajax.url = '/responds_to_post_with_json';
+
+          request = ajax.generateRequest();
+
+          expect(request.xhr.method).to.be.equal('POST');
+        });
+      });
+
+      suite('when generating a request', function() {
+        test('yields an iron-request instance', function() {
+          var IronRequest = document.createElement('iron-request').constructor;
+
+          expect(ajax.generateRequest()).to.be.instanceOf(IronRequest);
+        });
+
+        test('correctly adds params to a URL that already has some', function() {
+          ajax.url += '?a=b';
+          ajax.params = {'c': 'd'};
+
+          expect(ajax.requestUrl).to.be.equal('/responds_to_get_with_json?a=b&c=d')
+        })
+
+        test('encodes params properly', function() {
+          ajax.params = {'a b,c': 'd e f'};
+
+          expect(ajax.queryString).to.be.equal('a%20b%2Cc=d%20e%20f');
+        });
+
+        test('encodes array params properly', function() {
+          ajax.params = {'a b': ['c','d e', 'f']};
+
+          expect(ajax.queryString).to.be.equal('a%20b=c&a%20b=d%20e&a%20b=f');
+        });
+
+        test('reflects the loading state in the `loading` property', function() {
+          var request = ajax.generateRequest();
+
+          expect(ajax.loading).to.be.equal(true);
+
+          server.respond();
+
+          return request.completes.then(function() {
+            return timePasses(1);
+          }).then(function() {
+            expect(ajax.loading).to.be.equal(false);
+          });
+        });
+
+        test('the `iron-ajax-presend` event gets fired', function() {
+          var spy = sinon.spy();
+          var windowSpy = sinon.spy();
+          ajax.addEventListener('iron-ajax-presend', spy);
+          window.addEventListener('iron-ajax-presend', windowSpy);
+
+          var request = ajax.generateRequest();
+
+          server.respond()
+
+          return request.completes.then(function() {
+            expect(spy).to.be.calledOnce;
+            expect(windowSpy).not.to.be.called;
+          });
+        });
+
+        test('the loading-changed event gets fired twice', function() {
+          var count = 0;
+          ajax.addEventListener('loading-changed', function() {
+            count++;
+          });
+
+          var request = ajax.generateRequest();
+
+          server.respond();
+
+          return request.completes.then(function() {
+            return timePasses(1);
+          }).then(function() {
+            expect(count).to.be.equal(2);
+          });
+        });
+      });
+
+      suite('when there are multiple requests', function() {
+        var requests;
+        var echoAjax;
+        var promiseAllComplete;
+
+        setup(function() {
+          echoAjax = fixture('GetEcho');
+          requests = [];
+
+          for (var i = 0; i < 3; ++i) {
+            echoAjax.params = {'order': i + 1};
+            requests.push(echoAjax.generateRequest());
+          }
+          var allPromises = requests.map(function(r){return r.completes});
+          promiseAllComplete = Promise.all(allPromises);
+        });
+
+        test('holds all requests in the `activeRequests` Array', function() {
+          expect(requests).to.deep.eql(echoAjax.activeRequests);
+        });
+
+        test('empties `activeRequests` when requests are completed', function() {
+          expect(echoAjax.activeRequests.length).to.be.equal(3);
+          for (var i = 0; i < 3; i++) {
+            respondToEchoRequest(server.requests[i]);
+          }
+          return promiseAllComplete.then(function() {
+            return timePasses(1);
+          }).then(function() {
+            expect(echoAjax.activeRequests.length).to.be.equal(0);
+          });
+        });
+
+        test('avoids race conditions with last response', function() {
+          expect(echoAjax.lastResponse).to.be.equal(undefined);
+
+          // Resolving the oldest request doesn't update lastResponse.
+          respondToEchoRequest(server.requests[0]);
+          return requests[0].completes.then(function() {
+            expect(echoAjax.lastResponse).to.be.equal(undefined);
+
+            // Resolving the most recent request does!
+            respondToEchoRequest(server.requests[2]);
+            return requests[2].completes;
+          }).then(function() {
+            expect(echoAjax.lastResponse).to.be.deep.eql(
+                {url: '/echoes_request_url?order=3'});
+
+
+            // Resolving an out of order stale request after does nothing!
+            respondToEchoRequest(server.requests[1]);
+            return requests[1].completes;
+          }).then(function() {
+            expect(echoAjax.lastResponse).to.be.deep.eql(
+                {url: '/echoes_request_url?order=3'});
+          });
+        });
+
+        test('`loading` is true while the last one is loading', function() {
+          expect(echoAjax.loading).to.be.equal(true);
+
+          respondToEchoRequest(server.requests[0]);
+          return requests[0].completes.then(function() {
+            // We're still loading because requests[2] is the most recently
+            // made request.
+            expect(echoAjax.loading).to.be.equal(true);
+
+            respondToEchoRequest(server.requests[2]);
+            return requests[2].completes;
+          }).then(function() {
+            // Now we're done loading.
+            expect(echoAjax.loading).to.be.eql(false);
+
+            // Resolving an out of order stale request after should have
+            // no effect.
+            respondToEchoRequest(server.requests[1]);
+            return requests[1].completes;
+          }).then(function() {
+            expect(echoAjax.loading).to.be.eql(false);
+          });
+        });
+      });
+
+      suite('when params are changed', function() {
+        test('generates a request that reflects the change', function() {
+          ajax = fixture('ParamsGet');
+          request = ajax.generateRequest();
+
+          expect(request.xhr.url).to.be.equal('/responds_to_get_with_json?a=a');
+
+          ajax.params = {b: 'b'};
+          request = ajax.generateRequest();
+
+          expect(request.xhr.url).to.be.equal('/responds_to_get_with_json?b=b');
+        });
+      });
+
+      suite('when `auto` is enabled', function() {
+        setup(function() {
+          ajax = fixture('AutoGet');
+        });
+
+        test('automatically generates new requests', function() {
+          return new Promise(function(resolve) {
+            ajax.addEventListener('request', function() {
+              resolve();
+            });
+          });
+        });
+
+        test('does not send requests if url is not a string', function() {
+          return new Promise(function(resolve, reject) {
+            ajax.addEventListener('request', function() {
+              reject('A request was generated but url is null!');
+            });
+
+            ajax.url = null;
+            ajax.handleAs = 'text';
+
+            Polymer.Base.async(function() {
+              resolve();
+            }, 1);
+          });
+        });
+
+        test('deduplicates multiple changes to a single request', function() {
+          return new Promise(function(resolve, reject) {
+            ajax.addEventListener('request', function() {
+              server.respond();
+            });
+
+            ajax.addEventListener('response', function() {
+              try {
+                expect(ajax.activeRequests.length).to.be.eql(1);
+                resolve()
+              } catch (e) {
+                reject(e);
+              }
+            });
+
+            ajax.handleas = 'text';
+            ajax.params = { foo: 'bar' };
+            ajax.headers = { 'X-Foo': 'Bar' };
+          });
+        });
+
+        test('automatically generates new request when a sub-property of params is changed', function(done) {
+          ajax.addEventListener('request', function() {
+            server.respond();
+          });
+
+          ajax.params = { foo: 'bar' };
+          ajax.addEventListener('response', function() {
+            ajax.addEventListener('request', function() {
+              done();
+            });
+
+            ajax.set('params.foo', 'xyz');
+          });
+        });
+      });
+
+      suite('the last response', function() {
+        setup(function() {
+          request = ajax.generateRequest();
+          server.respond();
+        });
+
+        test('is accessible as a readonly property', function() {
+          return request.completes.then(function(request) {
+            expect(ajax.lastResponse).to.be.equal(request.response);
+          });
+        });
+
+
+        test('updates with each new response', function() {
+          return request.completes.then(function(request) {
+
+            expect(request.response).to.be.an('object');
+            expect(ajax.lastResponse).to.be.equal(request.response);
+
+            ajax.handleAs = 'text';
+            request = ajax.generateRequest();
+            server.respond();
+
+            return request.completes;
+          }).then(function(request) {
+            expect(request.response).to.be.a('string');
+            expect(ajax.lastResponse).to.be.equal(request.response);
+          });
+        });
+      });
+
+      suite('when making POST requests', function() {
+        setup(function() {
+          ajax = fixture('TrivialPost');
+        });
+
+        test('POSTs the value of the `body` attribute', function() {
+          var requestBody = JSON.stringify({foo: 'bar'});
+
+          ajax.body = requestBody;
+          ajax.generateRequest();
+
+          expect(server.requests[0]).to.be.ok;
+          expect(server.requests[0].requestBody).to.be.equal(requestBody);
+        });
+
+        test('if `contentType` is set to form encode, the body is encoded',function() {
+          ajax.body = {foo: 'bar\nbip', 'biz bo': 'baz blar'};
+          ajax.contentType = 'application/x-www-form-urlencoded';
+          ajax.generateRequest();
+
+          expect(server.requests[0]).to.be.ok;
+          expect(server.requests[0].requestBody).to.be.equal(
+              'foo=bar%0D%0Abip&biz+bo=baz+blar');
+        });
+
+        test('if `contentType` is json, the body is json encoded', function() {
+          var requestObj = {foo: 'bar', baz: [1,2,3]}
+          ajax.body = requestObj;
+          ajax.contentType = 'application/json';
+          ajax.generateRequest();
+
+          expect(server.requests[0]).to.be.ok;
+          expect(server.requests[0].requestBody).to.be.equal(
+              JSON.stringify(requestObj));
+        });
+
+        suite('the examples in the documentation work', function() {
+          test('json content, body attribute is an object', function() {
+            ajax.setAttribute('body', '{"foo": "bar baz", "x": 1}');
+            ajax.contentType = 'application/json';
+            ajax.generateRequest();
+
+            expect(server.requests[0]).to.be.ok;
+            expect(server.requests[0].requestBody).to.be.equal(
+                '{"foo":"bar baz","x":1}');
+          });
+
+          test('form content, body attribute is an object', function() {
+            ajax.setAttribute('body', '{"foo": "bar baz", "x": 1}');
+            ajax.contentType = 'application/x-www-form-urlencoded';
+            ajax.generateRequest();
+
+            expect(server.requests[0]).to.be.ok;
+            expect(server.requests[0].requestBody).to.be.equal(
+                'foo=bar+baz&x=1');
+          });
+        });
+
+        suite('and `contentType` is explicitly set to form encode', function() {
+          test('we encode a custom object', function() {
+            function Foo(bar) { this.bar = bar };
+            var requestObj = new Foo('baz');
+            ajax.body = requestObj;
+            ajax.contentType = 'application/x-www-form-urlencoded';
+            ajax.generateRequest();
+
+            expect(server.requests[0]).to.be.ok;
+            expect(server.requests[0].requestBody).to.be.equal('bar=baz');
+          });
+        })
+
+        suite('and `contentType` isn\'t set', function() {
+          test('we don\'t try to encode an ArrayBuffer', function() {
+            var requestObj = new ArrayBuffer()
+            ajax.body = requestObj;
+            ajax.generateRequest();
+
+            expect(server.requests[0]).to.be.ok;
+            // We give the browser the ArrayBuffer directly, without trying
+            // to encode it.
+            expect(server.requests[0].requestBody).to.be.equal(requestObj);
+          });
+        })
+      });
+
+      suite('when debouncing requests', function() {
+        setup(function() {
+          ajax = fixture('DebouncedGet');
+        });
+
+        test('only requests a single resource', function() {
+          ajax._requestOptionsChanged();
+          expect(server.requests[0]).to.be.equal(undefined);
+          ajax._requestOptionsChanged();
+          return timePasses(200).then(function() {
+            expect(server.requests[0]).to.be.ok;
+          });
+        });
+      });
+
+      suite('when a response handler is bound', function() {
+        var responseHandler;
+
+        setup(function() {
+          responseHandler = sinon.spy();
+          ajax.addEventListener('response', responseHandler);
+        });
+
+        test('calls the handler after every response', function() {
+          ajax.generateRequest();
+          ajax.generateRequest();
+
+          server.respond();
+
+          return ajax.lastRequest.completes.then(function() {
+            expect(responseHandler.callCount).to.be.equal(2);
+          });
+        });
+      });
+
+      suite('when the response type is `json`', function() {
+        setup(function() {
+          server.restore();
+        });
+
+        test('finds the JSON on any platform', function() {
+          ajax.url = '../bower.json';
+          request = ajax.generateRequest();
+          return request.completes.then(function() {
+            expect(ajax.lastResponse).to.be.instanceOf(Object);
+          });
+        });
+      });
+
+      suite('when handleAs parameter is `text`', function() {
+
+        test('response type is string', function() {
+          ajax.url = '/responds_to_get_with_json';
+          ajax.handleAs = 'text';
+
+          request = ajax.generateRequest();
+          var promise = request.completes.then(function() {
+            expect(typeof(ajax.lastResponse)).to.be.equal('string');
+          });
+
+          expect(server.requests.length).to.be.equal(1);
+          expect(server.requests[0].requestHeaders['accept']).to.be.equal(
+            'text/plain');
+          server.respond();
+
+          return promise;
+        });
+
+      });
+
+      suite('when a request fails', function() {
+        test('we give an error with useful details', function() {
+          ajax.url = '/responds_to_get_with_502_error_json';
+          ajax.handleAs = 'json';
+          var eventFired = false;
+          ajax.addEventListener('error', function(event) {
+            expect(event.detail.request).to.be.ok;
+            expect(event.detail.error).to.be.ok;
+            eventFired = true;
+          });
+          var request = ajax.generateRequest();
+          var promise = request.completes.then(function() {
+            throw new Error('Expected the request to fail!');
+          }, function(error) {
+            expect(error).to.be.instanceof(Error);
+            expect(request.succeeded).to.be.eq(false);
+            return timePasses(100);
+          }).then(function() {
+            expect(eventFired).to.be.eq(true);
+            expect(ajax.lastError).to.not.be.eq(null);
+            expect(ajax.lastError.status).to.be.eq(502);
+            expect(ajax.lastError.statusText).to.be.eq("Bad Gateway");
+            expect(ajax.lastError.response).to.be.ok;
+          });
+
+          server.respond();
+
+          return promise;
+        });
+
+        test('with rejectWithRequest the promise chain contains the request and error', function() {
+          ajax.url = '/responds_to_get_with_502_error_json';
+          ajax.handleAs = 'json';
+          ajax.rejectWithRequest = true;
+
+          var request = ajax.generateRequest();
+          var promise = request.completes.then(function() {
+            throw new Error('Expected the request to fail!');
+          }, function(resp) {
+            expect(resp.error).to.be.instanceof(Error);
+            expect(resp.request).to.deep.equal(request);
+          });
+
+          server.respond();
+
+          return promise;
+        });
+
+        test('we give a useful error even when the domain doesn\'t resolve', function() {
+          ajax.url = 'http://nonexistant.example.com/';
+          server.restore();
+          var eventFired = false;
+          ajax.addEventListener('error', function(event) {
+            expect(event.detail.request).to.be.ok;
+            expect(event.detail.error).to.be.ok;
+            eventFired = true;
+          });
+          var request = ajax.generateRequest();
+          var promise = request.completes.then(function() {
+            throw new Error('Expected the request to fail!');
+          }, function(error) {
+            expect(request.succeeded).to.be.eq(false);
+            expect(error).to.not.be.eq(null);
+            return timePasses(100);
+          }).then(function() {
+            expect(eventFired).to.be.eq(true);
+            expect(ajax.lastError).to.not.be.eq(null);
+          });
+
+          server.respond();
+
+          return promise;
+        });
+      });
+
+      suite('when handleAs parameter is `json`', function() {
+
+        test('response type is string', function() {
+          ajax.url = '/responds_to_get_with_json';
+          ajax.handleAs = 'json';
+
+          request = ajax.generateRequest();
+          var promise = request.completes.then(function() {
+            expect(typeof(ajax.lastResponse)).to.be.equal('object');
+          });
+
+          expect(server.requests.length).to.be.equal(1);
+          expect(server.requests[0].requestHeaders['accept']).to.be.equal(
+            'application/json');
+
+          server.respond();
+
+          return promise;
+        });
+
+      });
+
+      suite('when making a POST over the wire', function() {
+        test('FormData is handled correctly', function() {
+          server.restore();
+          var requestBody = new FormData();
+          requestBody.append('a', 'foo');
+          requestBody.append('b', 'bar');
+
+          var ajax = fixture('RealPost');
+          ajax.body = requestBody;
+          return ajax.generateRequest().completes.then(function() {
+            expect(ajax.lastResponse.headers['Content-Type']).to.match(
+                /^multipart\/form-data; boundary=.*$/);
+
+            expect(ajax.lastResponse.form.a).to.be.equal('foo');
+            expect(ajax.lastResponse.form.b).to.be.equal('bar');
+          });
+        });
+
+        test('json is handled correctly', function() {
+          server.restore();
+          var ajax = fixture('RealPost');
+          ajax.body = JSON.stringify({a: 'foo', b: 'bar'});
+          ajax.contentType = 'application/json';
+          return ajax.generateRequest().completes.then(function() {
+            expect(ajax.lastResponse.headers['Content-Type']).to.match(
+                /^application\/json(;.*)?$/);
+            expect(ajax.lastResponse.json.a).to.be.equal('foo');
+            expect(ajax.lastResponse.json.b).to.be.equal('bar');
+          });
+        });
+
+        test('urlencoded data is handled correctly', function() {
+          server.restore();
+          var ajax = fixture('RealPost');
+          ajax.body = 'a=foo&b=bar';
+          return ajax.generateRequest().completes.then(function() {
+            expect(ajax.lastResponse.headers['Content-Type']).to.match(
+                /^application\/x-www-form-urlencoded(;.*)?$/);
+
+            expect(ajax.lastResponse.form.a).to.be.equal('foo');
+            expect(ajax.lastResponse.form.b).to.be.equal('bar');
+          });
+        });
+
+        test('xml is handled correctly', function() {
+          server.restore();
+          var ajax = fixture('RealPost');
+
+          var xmlDoc = document.implementation.createDocument(
+              null, "foo", null);
+          var node = xmlDoc.createElement("bar");
+          node.setAttribute("name" , "baz");
+          xmlDoc.documentElement.appendChild(node);
+          ajax.body = xmlDoc;
+          return ajax.generateRequest().completes.then(function() {
+            expect(ajax.lastResponse.headers['Content-Type']).to.match(
+                /^application\/xml(;.*)?$/);
+            expect(ajax.lastResponse.data).to.match(
+                /<foo\s*><bar\s+name="baz"\s*\/><\/foo\s*>/);
+          });
+        });
+      });
+
+      suite('when setting timeout', function() {
+        setup(function() {
+          server.restore();
+        });
+
+        test('it is present in the request xhr object', function() {
+          ajax.url = '/responds_to_get_with_json';
+          ajax.timeout = 5000; // 5 Seconds
+
+          request = ajax.generateRequest();
+          expect(request.xhr.timeout).to.be.equal(5000); // 5 Seconds
+        });
+
+        test('it fails once that timeout is reached', function() {
+          var ajax = fixture('Delay');
+          ajax.timeout = 1; // 1 Millisecond
+
+          request = ajax.generateRequest();
+          return request.completes.then(function() {
+            throw new Error('Expected the request to throw an error.');
+          }, function() {
+            expect(request.succeeded).to.be.equal(false);
+            expect(request.xhr.status).to.be.equal(0);
+            expect(request.timedOut).to.be.equal(true);
+            return timePasses(1);
+          }).then(function() {
+            expect(ajax.loading).to.be.equal(false);
+            expect(ajax.lastResponse).to.be.equal(null);
+            expect(ajax.lastError).to.not.be.equal(null);
+          });
+        });
+      });
+
+      suite('when using the bubbles attribute', function() {
+        test('the request and response events should bubble to window', function(done) {
+          server.restore();
+          var total = 0;
+          function incrementTotal() {
+            total++;
+            if (total === 5) {
+              done();
+            }
+          }
+          window.addEventListener('iron-ajax-presend', incrementTotal);
+          window.addEventListener('request', incrementTotal);
+          window.addEventListener('iron-ajax-request', incrementTotal);
+          window.addEventListener('response', incrementTotal);
+          window.addEventListener('iron-ajax-response', incrementTotal);
+          var ajax = fixture('Bubbles')[0];
+          ajax.generateRequest();
+          server.respond();
+        });
+
+        test('the request and error events should bubble to window', function(done) {
+          var total = 0;
+          function incrementTotal() {
+            total++;
+            if (total === 5) {
+              done();
+            }
+          }
+          window.addEventListener('iron-ajax-presend', incrementTotal);
+          window.addEventListener('request', incrementTotal);
+          window.addEventListener('iron-ajax-request', incrementTotal);
+          // NOTE(cdata): This needs to be capturing because Mocha + Firefox
+          // results in the error event being observed too early by the test
+          // runner and failing the test:
+          window.addEventListener('error', incrementTotal, true);
+          window.addEventListener('iron-ajax-error', incrementTotal);
+          var ajax = fixture('Bubbles')[1];
+          ajax.generateRequest();
+          server.respond();
+        });
+      });
+
+      suite('when handling the `iron-ajax-presend` event', function() {
+        setup(function() {
+          server.restore();
+        });
+
+        test('ability to cancel request', function() {
+          var requestSpy = sinon.spy();
+          var promiseSpy = sinon.spy();
+
+          ajax.addEventListener('iron-ajax-presend', function(e) {
+            e.preventDefault();
+          });
+          ajax.addEventListener('iron-ajax-request', requestSpy);
+
+          var request = ajax.generateRequest();
+
+          return request.completes.catch(function(request) {
+            expect(request.aborted).to.be.true;
+            promiseSpy();
+          }).then(function() {
+            expect(promiseSpy).to.be.calledOnce;
+            expect(requestSpy).not.to.be.called;
+          });
+        });
+
+        test('ability to modify the request options', function(done) {
+          ajax.addEventListener('iron-ajax-presend', function(e) {
+            e.detail.options.url += '/test';
+            e.detail.options.headers.authToken = 'a.b.c';
+          });
+          ajax.addEventListener('iron-ajax-request', function(e) {
+            expect(e.detail.options.url).to.equal('/responds_to_get_with_json/test');
+            expect(e.detail.options.headers.authToken).to.equal('a.b.c');
+            done();
+          });
+
+          ajax.generateRequest();
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

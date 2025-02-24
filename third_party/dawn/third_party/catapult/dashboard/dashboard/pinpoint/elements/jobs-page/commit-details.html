@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-ajax/iron-ajax.html">
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/jobs-page/commit-input.html">
+
+<dom-module id="commit-details">
+  <template>
+    <style include="base-style">
+      p {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      paper-progress {
+        display: block;
+        width: 100%;
+      }
+
+      .details {
+        margin: 0.25em 0 0.5em 0;
+      }
+
+      .commit {
+        padding: 4px;
+        border-radius: 3px;
+        background-color: background-color: var(--paper-grey-100);
+      }
+
+      .error {
+        color: var(--paper-red-500);
+      }
+    </style>
+
+    <div>
+      <commit-input class="hash"
+                    name="[[name]]"
+                    items="[[items]]"
+                    placeholder="[[label]]"
+                    query="{{value}}"
+                    required disabled$="[[disabled]]"></commit-input>
+    </div>
+    <div class="details">
+      <iron-ajax id="loading" method="post" headers="[[headers]]" url="/api/commit" params="{{commitParams(project, value)}}" loading="{{loading}}" last-error="{{error}}" last-response="{{commitDetails}}"></iron-ajax>
+      <template is="dom-if" if="[[loading]]">
+        <paper-progress indeterminate></paper-progress>
+      </template>
+      <template is="dom-if" if="[[hasCommitDetails(commitDetails)]]">
+        <p><span class="commit-hash">[[_FormatHash(commitDetails.git_hash)]]</span><span class="conmit-message">[[commitDetails.message]]</span></p>
+        <p><span class="commit-position">[[commitDetails.commit_position]]</span><span class="commit-author">[[commitDetails.author]]</span></p>
+      </template>
+      <template is="dom-if" if="[[hasError(error.response.error, value)]]">
+        <p class="error">[[error.response.error]]</p>
+      </template>
+    </div>
+    </paper-dialog>
+  </template>
+
+  <script>
+    'use strict';
+
+    Polymer({
+      is: 'commit-details',
+
+      properties: {
+        disabled: {
+          notify: true,
+          type: Boolean,
+          value: false
+        },
+        project: {
+          notify: true,
+          type: String,
+          value: 'chromium'
+        },
+        value: {
+          notify: true,
+          type: String,
+          value: ''
+        },
+        loading: {
+          type: Boolean,
+          value: false
+        },
+        commitDetails: {
+          type: Object,
+          value: null
+        }
+      },
+
+      observers: [
+        'loadingChanged(loading)',
+        'valueChanged(value)',
+      ],
+
+      _FormatHash(hash) {
+        // Using == for both null/undefined
+        if (hash == null) {
+          return '';
+        }
+        return hash.slice(0, 8);
+      },
+
+      commitParams(project, value) {
+        return {repository: project, git_hash: value};
+      },
+
+      hasError(error, value) {
+        return this.hasGitHash(value) && !!error;
+      },
+
+      hasGitHash(value) {
+        return value.length > 3;
+      },
+
+      hasCommitDetails(commitDetails) {
+        return commitDetails !== null;
+      },
+
+      loadingChanged(loading) {
+        if (loading) {
+          this.error = null;
+        }
+      },
+
+      valueChanged(value) {
+        this.set('commitDetails', null);
+
+        if (this.hasGitHash(value)) {
+          this.$.loading.generateRequest();
+        }
+      }
+    });
+  </script>
+</dom-module>

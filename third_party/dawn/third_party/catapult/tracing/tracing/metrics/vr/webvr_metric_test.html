@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/metrics/vr/webvr_metric.html">
+<link rel="import" href="/tracing/model/counter.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function createModel() {
+    const model = tr.c.TestUtils.newModel(
+        function(model) {
+          model.userModel.expectations.push(
+              new tr.model.um.AnimationExpectation(model,
+                  tr.model.um.INITIATOR_TYPE.VR, 0, 5));
+          const process = model.getOrCreateProcess(1);
+          const fpsCounter = process.getOrCreateCounter('gpu', 'WebVR FPS');
+          const fpsSeries = new tr.model.CounterSeries('value', 0);
+          fpsSeries.addCounterSample(1, 59);
+          fpsSeries.addCounterSample(3, 60);
+          fpsCounter.addSeries(fpsSeries);
+
+          const frameTimeCounter = process.getOrCreateCounter(
+              'gpu', 'WebVR frame time (ms)');
+          const renderingSeries = new tr.model.CounterSeries('rendering', 0);
+          renderingSeries.addCounterSample(1, 3);
+          renderingSeries.addCounterSample(2, 4);
+          frameTimeCounter.addSeries(renderingSeries);
+          const javascriptSeries = new tr.model.CounterSeries('javascript', 0);
+          javascriptSeries.addCounterSample(1, 5);
+          javascriptSeries.addCounterSample(2, 6);
+          frameTimeCounter.addSeries(javascriptSeries);
+        });
+    return model;
+  }
+
+  test('webvrMetric', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = createModel();
+    tr.metrics.vr.webvrMetric(histograms, model);
+
+    const fpsValue = histograms.getHistogramNamed('webvr_fps');
+    assert.strictEqual(fpsValue.max, 60);
+    assert.strictEqual(fpsValue.min, 59);
+    assert.strictEqual(fpsValue.average, 59.5);
+
+    const renderingValue = histograms.getHistogramNamed(
+        'webvr_frame_time_rendering');
+    assert.strictEqual(renderingValue.max, 4);
+    assert.strictEqual(renderingValue.min, 3);
+    assert.strictEqual(renderingValue.average, 3.5);
+
+    const javascriptValue = histograms.getHistogramNamed(
+        'webvr_frame_time_javascript');
+    assert.strictEqual(javascriptValue.max, 6);
+    assert.strictEqual(javascriptValue.min, 5);
+    assert.strictEqual(javascriptValue.average, 5.5);
+  });
+
+  test('webvrMetric_alwaysReportFps', function() {
+    const histograms = new tr.v.HistogramSet();
+    const model = tr.c.TestUtils.newModel();
+    tr.metrics.vr.webvrMetric(histograms, model);
+
+    const fpsValue = histograms.getHistogramNamed('webvr_fps');
+    assert.strictEqual(fpsValue.max, 0);
+    assert.strictEqual(fpsValue.min, 0);
+
+    const renderingValue = histograms.getHistogramNamed(
+        'webvr_frame_time_rendering');
+    assert.strictEqual(renderingValue, undefined);
+
+    const javascriptValue = histograms.getHistogramNamed(
+        'webvr_frame_time_javascript');
+    assert.strictEqual(javascriptValue, undefined);
+  });
+});
+</script>

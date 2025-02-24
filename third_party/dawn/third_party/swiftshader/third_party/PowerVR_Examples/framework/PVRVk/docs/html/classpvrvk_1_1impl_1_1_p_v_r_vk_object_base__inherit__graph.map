@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::PVRVkObjectBase&lt; VkHandleType, PVRVkObjectType &gt;" name="pvrvk::impl::PVRVkObjectBase&lt; VkHandleType, PVRVkObjectType &gt;">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="Defines a simple interface for a Vulkan object which holds a reference to a particular device..." alt="" coords="331,5,539,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_instance_object_base.html" title="Defines a simple interface for a Vulkan which holds a reference to a Vulkan instance." alt="" coords="331,85,539,141"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_physical_device_object_base.html" title="Defines a simple interface for a Vulkan which holds a reference to a Vulkan Physical Device..." alt="" coords="308,165,561,221"/>
+</map>

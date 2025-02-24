@@ -1,0 +1,27 @@
+[submodule "third_party/cppdap"]
+	path = third_party/cppdap
+	url = https://github.com/google/cppdap
+[submodule "third_party/googletest"]
+	path = third_party/googletest
+	url = https://github.com/google/googletest.git
+[submodule "third_party/json"]
+	path = third_party/json
+	url = https://github.com/nlohmann/json.git
+[submodule "third_party/libbacktrace/src"]
+	path = third_party/libbacktrace/src
+	url = https://github.com/ianlancetaylor/libbacktrace.git
+[submodule "third_party/PowerVR_Examples"]
+	path = third_party/PowerVR_Examples
+	url = https://github.com/powervr-graphics/Native_SDK.git
+[submodule "third_party/benchmark"]
+	path = third_party/benchmark
+	url = https://github.com/google/benchmark.git
+[submodule "third_party/glslang"]
+	path = third_party/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "third_party/git-hooks"]
+	path = third_party/git-hooks
+	url = https://swiftshader.googlesource.com/git-hooks
+[submodule "third_party/llvm-project"]
+	path = third_party/llvm-project
+	url = https://github.com/llvm/llvm-project.git

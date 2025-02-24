@@ -1,0 +1,285 @@
+{
+    "$schema": "https://schema.khronos.org/vulkan/profiles-0.8.0-latest.json#",
+    "profiles": {
+        "MIN_CORE": {
+            "version": 1,
+            "api-version": "1.0.266",
+            "label": "Min Vulkan Core",
+            "description": "Min Vulkan Core profile",
+            "contributors": {},
+            "history": [
+                {
+                    "revision": 1,
+                    "date": "2023-10-03",
+                    "author": "Daniel Rakos @ RasterGrid",
+                    "comment": "Min Vulkan Core profile"
+                }
+            ],
+            "capabilities": [
+                "device"
+            ]
+        }
+    },
+    "capabilities": {
+        "device": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "robustBufferAccess": false,
+                    "fullDrawIndexUint32": false,
+                    "imageCubeArray": false,
+                    "independentBlend": false,
+                    "geometryShader": false,
+                    "tessellationShader": false,
+                    "sampleRateShading": false,
+                    "dualSrcBlend": false,
+                    "logicOp": false,
+                    "multiDrawIndirect": false,
+                    "drawIndirectFirstInstance": false,
+                    "depthClamp": false,
+                    "depthBiasClamp": false,
+                    "fillModeNonSolid": false,
+                    "depthBounds": false,
+                    "wideLines": false,
+                    "largePoints": false,
+                    "alphaToOne": false,
+                    "multiViewport": false,
+                    "samplerAnisotropy": false,
+                    "textureCompressionETC2": false,
+                    "textureCompressionASTC_LDR": false,
+                    "textureCompressionBC": false,
+                    "occlusionQueryPrecise": false,
+                    "pipelineStatisticsQuery": false,
+                    "vertexPipelineStoresAndAtomics": false,
+                    "fragmentStoresAndAtomics": false,
+                    "shaderTessellationAndGeometryPointSize": false,
+                    "shaderImageGatherExtended": false,
+                    "shaderStorageImageExtendedFormats": false,
+                    "shaderStorageImageMultisample": false,
+                    "shaderStorageImageReadWithoutFormat": false,
+                    "shaderStorageImageWriteWithoutFormat": false,
+                    "shaderUniformBufferArrayDynamicIndexing": false,
+                    "shaderSampledImageArrayDynamicIndexing": false,
+                    "shaderStorageBufferArrayDynamicIndexing": false,
+                    "shaderStorageImageArrayDynamicIndexing": false,
+                    "shaderClipDistance": false,
+                    "shaderCullDistance": false,
+                    "shaderFloat64": false,
+                    "shaderInt64": false,
+                    "shaderInt16": false,
+                    "shaderResourceResidency": false,
+                    "shaderResourceMinLod": false,
+                    "sparseBinding": false,
+                    "sparseResidencyBuffer": false,
+                    "sparseResidencyImage2D": false,
+                    "sparseResidencyImage3D": false,
+                    "sparseResidency2Samples": false,
+                    "sparseResidency4Samples": false,
+                    "sparseResidency8Samples": false,
+                    "sparseResidency16Samples": false,
+                    "sparseResidencyAliased": false,
+                    "variableMultisampleRate": false,
+                    "inheritedQueries": false
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceProperties": {
+                    "vendorID": 1,
+                    "apiVersion": 4194570,
+                    "pipelineCacheUUID": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "sparseProperties": {
+                        "residencyAlignedMipSize": false,
+                        "residencyNonResidentStrict": false,
+                        "residencyStandard2DBlockShape": false,
+                        "residencyStandard2DMultisampleBlockShape": false,
+                        "residencyStandard3DBlockShape": false
+                    },
+                    "limits": {
+                        "bufferImageGranularity": 131072,
+                        "discreteQueuePriorities": 2,
+                        "framebufferColorSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "framebufferDepthSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "framebufferNoAttachmentsSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "framebufferStencilSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "lineWidthGranularity": 1.0,
+                        "maxBoundDescriptorSets": 4,
+                        "maxClipDistances": 0,
+                        "maxColorAttachments": 4,
+                        "maxCombinedClipAndCullDistances": 0,
+                        "maxComputeSharedMemorySize": 16384,
+                        "maxComputeWorkGroupInvocations": 128,
+                        "maxCullDistances": 0,
+                        "maxDescriptorSetInputAttachments": 4,
+                        "maxDescriptorSetSampledImages": 96,
+                        "maxDescriptorSetSamplers": 96,
+                        "maxDescriptorSetStorageBuffers": 24,
+                        "maxDescriptorSetStorageBuffersDynamic": 4,
+                        "maxDescriptorSetStorageImages": 24,
+                        "maxDescriptorSetUniformBuffers": 72,
+                        "maxDescriptorSetUniformBuffersDynamic": 8,
+                        "maxDrawIndexedIndexValue": 16777215,
+                        "maxDrawIndirectCount": 1,
+                        "maxFragmentCombinedOutputResources": 16,
+                        "maxFragmentDualSrcAttachments": 0,
+                        "maxFragmentInputComponents": 64,
+                        "maxFragmentOutputAttachments": 4,
+                        "maxFramebufferHeight": 4096,
+                        "maxFramebufferLayers": 256,
+                        "maxFramebufferWidth": 4096,
+                        "maxGeometryInputComponents": 0,
+                        "maxGeometryOutputComponents": 0,
+                        "maxGeometryOutputVertices": 0,
+                        "maxGeometryShaderInvocations": 0,
+                        "maxGeometryTotalOutputComponents": 0,
+                        "maxImageArrayLayers": 256,
+                        "maxImageDimension1D": 4096,
+                        "maxImageDimension2D": 4096,
+                        "maxImageDimension3D": 256,
+                        "maxImageDimensionCube": 4096,
+                        "maxInterpolationOffset": 0.0,
+                        "maxMemoryAllocationCount": 4096,
+                        "maxPerStageDescriptorInputAttachments": 4,
+                        "maxPerStageDescriptorSampledImages": 16,
+                        "maxPerStageDescriptorSamplers": 16,
+                        "maxPerStageDescriptorStorageBuffers": 4,
+                        "maxPerStageDescriptorStorageImages": 4,
+                        "maxPerStageDescriptorUniformBuffers": 12,
+                        "maxPerStageResources": 128,
+                        "maxPushConstantsSize": 128,
+                        "maxSampleMaskWords": 1,
+                        "maxSamplerAllocationCount": 4000,
+                        "maxSamplerAnisotropy": 1,
+                        "maxSamplerLodBias": 2,
+                        "maxStorageBufferRange": 134217728,
+                        "maxTessellationControlPerPatchOutputComponents": 0,
+                        "maxTessellationControlPerVertexInputComponents": 0,
+                        "maxTessellationControlPerVertexOutputComponents": 0,
+                        "maxTessellationControlTotalOutputComponents": 0,
+                        "maxTessellationEvaluationInputComponents": 0,
+                        "maxTessellationEvaluationOutputComponents": 0,
+                        "maxTessellationGenerationLevel": 0,
+                        "maxTessellationPatchSize": 0,
+                        "maxTexelBufferElements": 65536,
+                        "maxTexelGatherOffset": 7,
+                        "maxTexelOffset": 7,
+                        "maxUniformBufferRange": 16384,
+                        "maxVertexInputAttributeOffset": 2047,
+                        "maxVertexInputAttributes": 16,
+                        "maxVertexInputBindingStride": 2048,
+                        "maxVertexInputBindings": 16,
+                        "maxVertexOutputComponents": 64,
+                        "maxViewports": 1,
+                        "minInterpolationOffset": 0.0,
+                        "minMemoryMapAlignment": 64,
+                        "minStorageBufferOffsetAlignment": 256,
+                        "minTexelBufferOffsetAlignment": 256,
+                        "minTexelGatherOffset": -8,
+                        "minTexelOffset": -8,
+                        "minUniformBufferOffsetAlignment": 256,
+                        "mipmapPrecisionBits": 4,
+                        "nonCoherentAtomSize": 256,
+                        "optimalBufferCopyOffsetAlignment": 4,
+                        "optimalBufferCopyRowPitchAlignment": 4,
+                        "pointSizeGranularity": 1.0,
+                        "sampledImageColorSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "sampledImageDepthSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "sampledImageIntegerSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT"
+                        ],
+                        "sampledImageStencilSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT",
+                            "VK_SAMPLE_COUNT_4_BIT"
+                        ],
+                        "sparseAddressSpaceSize": 0,
+                        "standardSampleLocations": false,
+                        "storageImageSampleCounts": [
+                            "VK_SAMPLE_COUNT_1_BIT"
+                        ],
+                        "strictLines": false,
+                        "subPixelInterpolationOffsetBits": 4,
+                        "subPixelPrecisionBits": 8,
+                        "subTexelPrecisionBits": 8,
+                        "timestampComputeAndGraphics": false,
+                        "timestampPeriod": 1,
+                        "viewportSubPixelBits": 0,
+                        "maxComputeWorkGroupCount": [
+                            65535,
+                            65535,
+                            65535
+                        ],
+                        "maxViewportDimensions": [
+                            4096,
+                            4096
+                        ],
+                        "pointSizeRange": [
+                            1,
+                            1
+                        ],
+                        "viewportBoundsRange": [
+                            -8192,
+                            8191
+                        ],
+                        "lineWidthRange": [
+                            1,
+                            1
+                        ]
+                    }
+                }
+            },
+            "extensions": {},
+            "formats": {},
+            "queueFamiliesProperties": [
+                {
+                    "VkQueueFamilyProperties": {
+                        "queueFlags": [
+                            "VK_QUEUE_GRAPHICS_BIT",
+                            "VK_QUEUE_COMPUTE_BIT",
+                            "VK_QUEUE_TRANSFER_BIT"
+                        ],
+                        "queueCount": 1,
+                        "timestampValidBits": 16,
+                        "minImageTransferGranularity": {
+                            "width": 1,
+                            "height": 1,
+                            "depth": 1
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

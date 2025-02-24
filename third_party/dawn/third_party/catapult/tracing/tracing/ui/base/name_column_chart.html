@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/column_chart.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.b', function() {
+  const MIN_GUIDELINE_HEIGHT_PX = 3;
+
+  const CHECKBOX_WIDTH_PX = 18;
+
+  const NameColumnChart = tr.ui.b.define(
+      'name-column-chart', tr.ui.b.ColumnChart);
+
+  NameColumnChart.prototype = {
+    __proto__: tr.ui.b.ColumnChart.prototype,
+
+    get xAxisHeight() {
+      // Add 5px for descenders because SVG draws text baselines at the
+      // specified y-coordinate.
+      return 5 + (this.textHeightPx_ * this.data_.length);
+    },
+
+    updateMargins_() {
+      super.updateMargins_();
+      let xAxisTickOverhangPx = 0;
+      for (let i = 0; i < this.data_.length; ++i) {
+        const datum = this.data_[i];
+        xAxisTickOverhangPx = Math.max(xAxisTickOverhangPx,
+            this.xScale_(i) + tr.ui.b.getSVGTextSize(this, datum.x).width -
+            this.graphWidth);
+      }
+      this.margin.right = Math.max(this.margin.right, xAxisTickOverhangPx);
+    },
+
+    getXForDatum_(datum, index) {
+      return index;
+    },
+
+    get xAxisTickOffset() {
+      return 0.5;
+    },
+
+    updateXAxis_(xAxis) {
+      xAxis.selectAll('*').remove();
+      if (this.hideXAxis) return;
+
+      // Draw the tick labels from |this.data_[*].x|.
+      // Lay them out so that the text doesn't overlap.
+      // They may overhang into |this.margin.right|.
+      const nameTexts = xAxis.selectAll('text')
+          .data(this.data_);
+      nameTexts
+          .enter()
+          .append('text')
+          .attr('transform', (d, index) => 'translate(0, ' +
+            this.textHeightPx_ * (this.data_.length - index) + ')')
+          .attr('x', (d, index) => this.xScale_(index))
+          .attr('y', d => this.graphHeight)
+          .text(d => d.x);
+      nameTexts.exit().remove();
+
+      // Draw lines to guide the eye from bottom center of the column to the
+      // tick label.
+      const guideLines = xAxis.selectAll('line.guide').data(this.data_);
+      guideLines.enter()
+          .append('line')
+          .attr('x1', (d, index) => this.xScale_(index + this.xAxisTickOffset))
+          .attr('x2', (d, index) => this.xScale_(index + this.xAxisTickOffset))
+          .attr('y1', () => this.graphHeight)
+          .attr('y2', (d, index) => this.graphHeight + Math.max(
+              MIN_GUIDELINE_HEIGHT_PX,
+              (this.textHeightPx_ * (this.data_.length - index - 1))));
+    }
+  };
+
+  return {
+    NameColumnChart,
+  };
+});
+</script>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+The chrome config is heavily used:
+  - chrome://tracing,
+  - trace2html, which in turn implies
+    - adb_profile_chrome
+    - telemetry
+-->
+
+<!--
+TODO(charliea): Make all UI files depend on tracing/ui/base/base.html in the
+same way that all non-UI files depend on tracing/base/base.html. Enforce this
+dependency with a presubmit.
+-->
+<link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+
+<link rel="import" href="/tracing/extras/chrome_config.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<link rel="import" href="/tracing/ui/extras/chrome/cc/cc.html">
+<link rel="import" href="/tracing/ui/extras/chrome/codesearch.html">
+<link rel="import" href="/tracing/ui/extras/chrome/gpu/gpu.html">
+<link rel="import" href="/tracing/ui/extras/chrome/layout_tree_sub_view.html">
+<link rel="import" href="/tracing/ui/extras/image_viewing/image_view.html">
+<link rel="import" href="/tracing/ui/extras/side_panel/frame_data_side_panel.html">
+<link rel="import" href="/tracing/ui/extras/side_panel/input_latency_side_panel.html">
+<link rel="import" href="/tracing/ui/extras/system_stats/system_stats.html">
+<link rel="import" href="/tracing/ui/extras/v8_config.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">

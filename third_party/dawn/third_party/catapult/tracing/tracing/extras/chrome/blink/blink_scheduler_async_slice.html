@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/async_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.blink', function() {
+  class BlinkSchedulerAsyncSlice extends tr.model.AsyncSlice {
+    get viewSubGroupGroupingKey() {
+      if (this.title.startsWith('FrameScheduler.')) {
+        return 'Frame' + this.id;
+      }
+      if (this.title.startsWith('Scheduler.')) {
+        return 'Renderer Scheduler';
+      }
+      return undefined;
+    }
+
+    get viewSubGroupTitle() {
+      // NOTE: Be careful with hardcoded (for performance) string length.
+      if (this.title.startsWith('FrameScheduler.')) {
+        return this.title.substring(15);
+      }
+      if (this.title.startsWith('Scheduler.')) {
+        return this.title.substring(10);
+      }
+      return this.title;
+    }
+  }
+
+  tr.model.AsyncSlice.subTypes.register(BlinkSchedulerAsyncSlice, {
+    categoryParts: [
+      'renderer.scheduler',
+      'disabled-by-default-renderer.scheduler',
+      'disabled-by-default-renderer.scheduler.debug',
+    ]
+  });
+
+  return {
+    BlinkSchedulerAsyncSlice,
+  };
+});
+</script>

@@ -1,0 +1,50 @@
+boto v2.9.9
+===========
+
+:date: 2013/07/24
+
+This release updates Opsworks to add AMI & Chef 11 support, DBSubnetGroup
+support in RDS & many other bugfixes.
+
+
+Features
+--------
+
+* Added AMI, configuration manager & Chef 11 support to Opsworks.
+  (:sha:`55725fc`).
+* Added ``in`` support for SQS messages. (:issue:`1593`, :sha:`e5fe1ed`)
+* Added support for the ``ap-southeast-2`` region in Elasticache.
+  (:issue:`1607`, :sha:`9986b61`)
+* Added support for block device mappings in ELB. (:issue:`1343`, :issue:`753`,
+  :issue:`1357`, :sha:`974a23a`)
+* Added support for DBSubnetGroup in RDS. (:issue:`1500`, :sha:`01eef87`,
+  :sha:`45c60a0`, :sha:`c4c859e`)
+
+
+Bugfixes
+--------
+
+* Fixed the canonicalization of paths on Windows. (:issue:`1609`,
+  :sha:`a1fa98c`)
+* Fixed how ``BotoServerException`` uses ``message``. (:issue:`1353`,
+  :sha:`b944f4b`)
+* Fixed ``DisableRollback`` always being ``True`` in a CloudFormation ``Stack``.
+  (:issue:`1379`, :sha:`32b3150`)
+* Changed EMR instance groups to no longer require a string price (can now be
+  a ``Decimal``). (:issue:`1396`, :sha:`dfc39ff`)
+* Altered ``Distribution._sign_string`` to accept any file-like object as well
+  within CloudFront. (:issue:`1349`, :sha:`8df6c14`)
+* Fixed the ``detach_lb_from_subnets`` call within ELB. (:issue:`1417`,
+  :issue:`1418` :sha:`4a397bd`, :sha:`c11d72b`, :sha:`9e595b5`, :sha:`634469d`,
+  :sha:`586dd54`)
+* Altered boto to obey ``no_proxy`` environment variables. (:issue:`1600`,
+  :issue:`1603`, :sha:`aaef5a9`)
+* Fixed ELB connections to use HTTPS by default. (:issue:`1587`, :sha:`fe158c4`)
+* Updated S3 to be Python 2.5 compatible again. (:issue:`1598`, :sha:`066009f`)
+* All calls within SES will now return *all* DKIMTokens, instead of just one.
+  (:issue:`1550`, :issue:`1610`, :sha:`1a079da`, :sha:`1e82f85`, :sha:`5c8b6b8`)
+* Fixed the ``logging`` parameter within ``DistributionConfig`` in CloudFront
+  to respect whatever is provided to the constructor. (:issue:`1457`,
+  :sha:`e76180d`)
+* Fixed CloudSearch to no longer raise an error if a non-JSON response is received.
+  (:issue:`1555`, :issue:`1614`, :sha:`5e2c292`, :sha:`6510e1f`)

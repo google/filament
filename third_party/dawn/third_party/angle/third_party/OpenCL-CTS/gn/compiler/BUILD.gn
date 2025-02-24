@@ -1,0 +1,24 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("compiler") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_async_build.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_build_helpers.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_build_options.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_compile.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_compiler_defines_for_extensions.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_feature_macro.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_image_macro.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_opencl_c_versions.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_pragma_unroll.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_preprocessor.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/compiler/test_unload_platform_compiler.cpp",
+  ]
+}

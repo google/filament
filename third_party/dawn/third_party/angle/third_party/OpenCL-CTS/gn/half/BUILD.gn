@@ -1,0 +1,17 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("half") {
+  include_dirs =
+      [ "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half" ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half/Test_roundTrip.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half/Test_vLoadHalf.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half/Test_vStoreHalf.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half/cl_utils.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/half/main.cpp",
+  ]
+}

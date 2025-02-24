@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/instant_event.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+<link rel="import" href="/tracing/ui/tracks/thread_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const HighlightInstantEvent = tr.model.ThreadHighlightInstantEvent;
+  const Process = tr.model.Process;
+  const EventSet = tr.model.EventSet;
+  const StackFrame = tr.model.StackFrame;
+  const Sample = tr.model.Sample;
+  const Thread = tr.model.Thread;
+  const ThreadSlice = tr.model.ThreadSlice;
+  const ThreadTrack = tr.ui.tracks.ThreadTrack;
+  const Viewport = tr.ui.TimelineViewport;
+  const newAsyncSlice = tr.c.TestUtils.newAsyncSlice;
+  const newAsyncSliceNamed = tr.c.TestUtils.newAsyncSliceNamed;
+  const newSliceEx = tr.c.TestUtils.newSliceEx;
+
+  test('selectionHitTestingWithThreadTrack', function() {
+    const model = new tr.Model();
+    const p1 = model.getOrCreateProcess(1);
+    const t1 = p1.getOrCreateThread(1);
+    t1.sliceGroup.pushSlice(new ThreadSlice('', 'a', 0, 1, {}, 4));
+    t1.sliceGroup.pushSlice(new ThreadSlice('', 'b', 0, 5.1, {}, 4));
+
+    const testEl = document.createElement('div');
+    Polymer.dom(testEl).appendChild(
+        tr.ui.b.createScopedStyle('heading { width: 100px; }'));
+    testEl.style.width = '600px';
+
+    const viewport = new Viewport(testEl);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(testEl).appendChild(drawingContainer);
+
+    const track = new ThreadTrack(viewport);
+    Polymer.dom(drawingContainer).appendChild(track);
+    drawingContainer.updateCanvasSizeIfNeeded_();
+    track.thread = t1;
+
+    const y = track.getBoundingClientRect().top;
+    const h = track.getBoundingClientRect().height;
+    const wW = 10;
+    const vW = drawingContainer.canvas.getBoundingClientRect().width;
+    const dt = new tr.ui.TimelineDisplayTransform();
+    dt.xSetWorldBounds(0, wW, vW);
+    track.viewport.setDisplayTransformImmediately(dt);
+
+    let selection = new EventSet();
+    const x = (1.5 / wW) * vW;
+    track.addIntersectingEventsInRangeToSelection(
+        x, x + 1, y, y + 1, selection);
+    assert.isTrue(selection.equals(
+        new EventSet([t1.sliceGroup.slices[0], t1.sliceGroup.slices[1]])));
+
+    selection = new EventSet();
+    track.addIntersectingEventsInRangeToSelection(
+        (1.5 / wW) * vW, (1.8 / wW) * vW,
+        y, y + h, selection);
+    assert.isTrue(selection.equals(
+        new EventSet([t1.sliceGroup.slices[0], t1.sliceGroup.slices[1]])));
+  });
+
+  test('filterThreadSlices', function() {
+    const model = new tr.Model();
+    const thread = new Thread(new Process(model, 7), 1);
+    thread.sliceGroup.pushSlice(newSliceEx(
+        {title: 'a', start: 0, duration: 0}));
+    thread.asyncSliceGroup.push(newAsyncSliceNamed('a', 0, 5, thread, thread));
+    const t = new ThreadTrack(new tr.ui.TimelineViewport());
+    t.thread = thread;
+
+    assert.strictEqual(t.tracks_.length, 2);
+    assert.instanceOf(t.tracks_[0], tr.ui.tracks.AsyncSliceGroupTrack);
+    assert.instanceOf(t.tracks_[1], tr.ui.tracks.SliceGroupTrack);
+  });
+
+  test('sampleThreadSlices', function() {
+    let thread;
+    let cpu;
+    const model = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(model) {
+        cpu = model.kernel.getOrCreateCpu(1);
+        thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+
+        const nodeA = tr.c.TestUtils.newProfileNode(model, 'a');
+        const nodeB = tr.c.TestUtils.newProfileNode(model, 'b', nodeA);
+        const nodeC = tr.c.TestUtils.newProfileNode(model, 'c', nodeB);
+        const nodeD = tr.c.TestUtils.newProfileNode(model, 'd', nodeA);
+
+        model.samples.push(new Sample(10, 'instructions_retired', nodeC, thread,
+            undefined, 10));
+        model.samples.push(new Sample(20, 'instructions_retired', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(30, 'instructions_retired', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(40, 'instructions_retired', nodeD, thread,
+            undefined, 10));
+
+        model.samples.push(new Sample(25, 'page_fault', nodeB, thread,
+            undefined, 10));
+        model.samples.push(new Sample(35, 'page_fault', nodeD, thread,
+            undefined, 10));
+      }
+    });
+
+    const t = new ThreadTrack(new tr.ui.TimelineViewport());
+    t.thread = thread;
+    assert.strictEqual(t.tracks_.length, 2);
+
+    // Instructions retired
+    const t0 = t.tracks_[0];
+    assert.notEqual(t0.heading.indexOf('instructions_retired'), -1);
+    assert.instanceOf(t0, tr.ui.tracks.SampleTrack);
+    assert.strictEqual(t0.samples.length, 4);
+    t0.samples.forEach(function(s) {
+      assert.instanceOf(s, tr.model.Sample);
+    });
+
+    // page_fault
+    const t1 = t.tracks_[1];
+    assert.notEqual(t1.heading.indexOf('page_fault'), -1);
+    assert.instanceOf(t1, tr.ui.tracks.SampleTrack);
+    assert.strictEqual(t1.samples.length, 2);
+  });
+});
+</script>

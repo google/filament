@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/tracks/cpu_track.html">
+<link rel="import" href="/tracing/ui/tracks/process_track_base.html">
+<link rel="import" href="/tracing/ui/tracks/spacing_track.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const Cpu = tr.model.Cpu;
+  const CpuTrack = tr.ui.tracks.cpu_track;
+  const ProcessTrackBase = tr.ui.tracks.ProcessTrackBase;
+  const SpacingTrack = tr.ui.tracks.SpacingTrack;
+
+  /**
+   * @constructor
+   */
+  const KernelTrack = tr.ui.b.define('kernel-track', ProcessTrackBase);
+
+  KernelTrack.prototype = {
+    __proto__: ProcessTrackBase.prototype,
+
+    decorate(viewport) {
+      ProcessTrackBase.prototype.decorate.call(this, viewport);
+    },
+
+
+    // Kernel maps to processBase because we derive from ProcessTrackBase.
+    set kernel(kernel) {
+      this.processBase = kernel;
+    },
+
+    get kernel() {
+      return this.processBase;
+    },
+
+    get eventContainer() {
+      return this.kernel;
+    },
+
+    get hasVisibleContent() {
+      return this.children.length > 1;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.ProcessTrackBase.prototype.addContainersToTrackMap.call(
+          this, containerToTrackMap);
+      containerToTrackMap.addContainer(this.kernel, this);
+    },
+
+    willAppendTracks_() {
+      const cpus = Object.values(this.kernel.cpus);
+      cpus.sort(tr.model.Cpu.compare);
+
+      let didAppendAtLeastOneTrack = false;
+      for (let i = 0; i < cpus.length; ++i) {
+        const cpu = cpus[i];
+        const track = new tr.ui.tracks.CpuTrack(this.viewport);
+        track.detailedMode = this.expanded;
+        track.cpu = cpu;
+        if (!track.hasVisibleContent) continue;
+        Polymer.dom(this).appendChild(track);
+        didAppendAtLeastOneTrack = true;
+      }
+      if (didAppendAtLeastOneTrack) {
+        Polymer.dom(this).appendChild(new SpacingTrack(this.viewport));
+      }
+    }
+  };
+
+
+  return {
+    KernelTrack,
+  };
+});
+</script>

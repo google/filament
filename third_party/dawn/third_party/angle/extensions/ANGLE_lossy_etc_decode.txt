@@ -1,0 +1,159 @@
+Name
+
+    ANGLE_lossy_etc_decode
+
+Name Strings
+
+    GL_ANGLE_lossy_etc_decode
+
+Contributors
+
+    Minmin Gong  (mgong 'at' microsoft.com)
+
+Contacts
+
+    Minmin Gong  (mgong 'at' microsoft.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: Nov 25, 2015
+    Author Revision: 1
+
+Number
+
+    TBD
+
+Dependencies
+
+    Requires OpenGL ES 3.0 for ETC2 and EAC formats, or OpenGL ES 2.0 and
+    OES_compressed_ETC1_RGB8_texture for ETC1 format.
+    The extension is written against the OpenGL ES 2.0 specification.
+
+Overview
+
+    Both the OpenGL ES 3.0 specification and OES_compressed_ETC1_RGB8_texture
+    specify that Ericsson Texture Compression (ETC) decoding must not be lossy.
+    The goal of this extension is to allow a lossy decode of
+    compressed textures in the ETC formats in OpenGL ES, for lower memory
+    and bandwidth consumption.
+
+    This extension uses the same ETC compression format as OpenGL ES 3.0
+    and OES_compressed_ETC1_RGB8_texture, with the restriction that the texture
+    dimensions must be a multiple of four (except for mip levels where the
+    dimensions are either 2 or 1). And the requirement that ETC decoding must
+    not be lossy is relaxed.
+
+    See OES_compressed_ETC1_RGB8_texture for a description of the ETC1 format.
+    Also see OpenGL ES 3.0 specification appendix C.2 (ETC Compressed Texture
+    ImageFormats) for a description of ETC2 and EAC formats.
+
+IP Status
+
+    See Ericsson's "IP Statement"
+
+New Procedures and Functions
+
+    None.
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of CompressedTexImage2D
+    and the <format> parameter of CompressedTexSubImage2D:
+
+    ETC1_RGB8_LOSSY_DECODE_ANGLE                                  0x9690
+    COMPRESSED_R11_LOSSY_DECODE_EAC_ANGLE                         0x9691
+    COMPRESSED_SIGNED_R11_LOSSY_DECODE_EAC_ANGLE                  0x9692
+    COMPRESSED_RG11_LOSSY_DECODE_EAC_ANGLE                        0x9693
+    COMPRESSED_SIGNED_RG11_LOSSY_DECODE_EAC_ANGLE                 0x9694
+    COMPRESSED_RGB8_LOSSY_DECODE_ETC2_ANGLE                       0x9695
+    COMPRESSED_SRGB8_LOSSY_DECODE_ETC2_ANGLE                      0x9696
+    COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE   0x9697
+    COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE  0x9698
+    COMPRESSED_RGBA8_LOSSY_DECODE_ETC2_EAC_ANGLE                  0x9699
+    COMPRESSED_SRGB8_ALPHA8_LOSSY_DECODE_ETC2_EAC_ANGLE           0x969A
+
+Additions to Chapter 3 of the OpenGL ES 2.0 Specification (Rasterization)
+
+    Add the following to Section 3.7.3 (Compressed Texture Images)
+    (at the end of the description of the CompressedTexImage2D command):
+
+    Compressed Internal Format                                    Base Internal Format
+    ==========================                                    ====================
+    ETC1_RGB8_LOSSY_DECODE_ANGLE                                  RGB
+    COMPRESSED_R11_LOSSY_DECODE_EAC_ANGLE                         R
+    COMPRESSED_SIGNED_R11_LOSSY_DECODE_EAC_ANGLE                  R
+    COMPRESSED_RG11_LOSSY_DECODE_EAC_ANGLE                        RG
+    COMPRESSED_SIGNED_RG11_LOSSY_DECODE_EAC_ANGLE                 RG
+    COMPRESSED_RGB8_LOSSY_DECODE_ETC2_ANGLE                       RGB
+    COMPRESSED_SRGB8_LOSSY_DECODE_ETC2_ANGLE                      RGB
+    COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE   RGBA
+    COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_LOSSY_DECODE_ETC2_ANGLE  RGBA
+    COMPRESSED_RGBA8_LOSSY_DECODE_ETC2_EAC_ANGLE                  RGBA
+    COMPRESSED_SRGB8_ALPHA8_LOSSY_DECODE_ETC2_EAC_ANGLE           RGBA
+
+    Table 3.x: Specific Compressed Internal Formats
+
+    If <internalformat> is one of the ETC lossy decode formats listed in
+    Table 3.x, the compressed texture is stored in an unspecified compressed
+    texture format, that may introduce losses of precision in the texture data.
+    The GL and the ETC texture compression algorithm support only 2D images
+    without borders.
+
+    CompressedTexImage2D will produce the INVALID_OPERATION error when
+    <internalformat> is one of the lossy decode ETC-format values from
+    Table 3.x under the following conditions:
+
+      * <border> is non-zero.
+      * <width> is not one, two, nor a multiple of four.
+      * <height> is not one, two, nor a multiple of four.
+
+    Add the following to Section 3.7.3 (Compressed Texture Images)
+    (at the end of the description of the CompressedTexSubImage2D command):
+
+    If the internal format of the texture image being modified is an ETC-format
+    listed in Table 3.x, the compressed texture is stored in an unspecified
+    compressed texture format. The xoffset and yoffset must also be aligned to
+    4x4 texel block boundaries, since ETC encoding makes it difficult to modify
+    non-aligned regions. CompressedTexSubImage2D will result in an
+    INVALID_OPERATION error only if one of the following conditions occurs:
+
+      * <width> is not a multiple of four nor equal to TEXTURE_WIDTH.
+      * <height> is not a multiple of four nor equal to TEXTURE_HEIGHT.
+      * <xoffset> or <yoffset> is not a multiple of four.
+      * <format> does not match the internal format of the texture image
+        being modified.
+
+Errors
+
+    INVALID_OPERATION is generated by CompressedTexImage2D if
+    lossy decode ETC-format is used and <internalformat> is one of the
+    compressed internal formats from Table 3.x and any of the following apply:
+      - <border> is not equal to zero.
+      - <width> is not one, two, nor a multiple of four.
+      - <height> is not one, two, nor a multiple of four.
+
+    INVALID_OPERATION is generated by CompressedTexSubImage2D if
+    lossy decode ETC-format is used and <format> is one of the compressed
+    interal formats from Table 3.x and any of the following apply:
+      - <width> is not a multiple of four nor equal to TEXTURE_WIDTH;
+      - <height> is not a multiple of four nor equal to TEXTURE_HEIGHT;
+      - <xoffset> or <yoffset> is not a multiple of four;
+      - <format> does not match the internal format of the texture image
+      being modified.
+
+New State
+
+    None.
+
+Revision History
+
+    Revision 1, 2015/11/25 - mgong
+      - Initial revision

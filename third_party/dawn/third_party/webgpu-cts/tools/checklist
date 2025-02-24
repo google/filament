@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+
+// Takes a list of queries and checks that:
+//   - Every query matches something in the repository
+//   - Every case in the repository matches exactly one query
+// This is used to ensure that tracking spreadsheet is complete (not missing any tests)
+// and every query in it is valid (e.g. renames have been applied, and new tests added
+// to the spreadsheet have also been added to the CTS).
+
+require('../src/common/tools/setup-ts-in-node.js');
+require('../src/common/tools/checklist.ts');

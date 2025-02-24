@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/comment_box_annotation.html">
+
+<link rel="import" href="/tracing/ui/extras/drive/comments_side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel.html">
+
+<script>
+'use strict';
+
+(function() {
+  function addDriveCommentWithUIState_(text, uiState) {
+    gapi.client.load('drive', 'v2', function() {
+      const request = gapi.client.drive.revisions.get({
+        'fileId': tr.ui.e.drive.getDriveFileId(),
+        'revisionId': 'head'
+      });
+      request.execute(function(resp) {
+        const anchorObject = {};
+        anchorObject[tr.ui.e.drive.constants.ANCHOR_NAME] = uiState;
+        let anchor = {
+          'r': resp.id,
+          'a': [anchorObject]
+        };
+        anchor = JSON.stringify(anchor);
+        gapi.client.load('drive', 'v2', function() {
+          const request = gapi.client.drive.comments.insert({
+            'fileId': tr.ui.e.drive.getDriveFileId(),
+            'resource': {'content': text, anchor}
+          });
+          request.execute();
+        });
+      });
+    });
+  }
+
+  function onCommentWithUIState(e) {
+    addDriveCommentWithUIState_(e.detail.name, e.detail.location);
+  }
+
+  document.addEventListener('commentWithUIState',
+      onCommentWithUIState.bind(this));
+}());
+
+tr.exportTo('tr.ui.e.drive.analysis', function() {
+  function DefaultCommentProvider() { }
+
+  DefaultCommentProvider.prototype = {
+    attachToElement(attachedElement) {
+      this.attachedElement_ = attachedElement;
+      this.commentsCheckTimer_ = setTimeout(this.checkForComments_.bind(this),
+          5000);
+    },
+
+    detachFromElement() {
+      clearTimeout(this.commentsCheckTimer_);
+    },
+
+    checkForComments_() {
+      this.updateComments();
+      this.commentsCheckTimer_ = setTimeout(this.checkForComments_.bind(this),
+          5000);
+    },
+
+    updateComments() {
+      gapi.client.load('drive', 'v2', () => {
+        const request = gapi.client.drive.comments.list({
+          'fileId': tr.ui.e.drive.getDriveFileId()
+        });
+        request.execute(results => {
+          this.attachedElement_.comments_ = results.items;
+        });
+      });
+    },
+
+    addComment(body) {
+      gapi.client.load('drive', 'v2', () => {
+        const request = gapi.client.drive.comments.insert({
+          'fileId': tr.ui.e.drive.getDriveFileId(),
+          'resource': {'content': body}
+        });
+        request.execute(resp => {
+          this.updateComments();
+        });
+      });
+    }
+  };
+
+  return {
+    DefaultCommentProvider,
+  };
+});
+
+</script>

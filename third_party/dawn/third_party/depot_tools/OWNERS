@@ -1,0 +1,64 @@
+set noparent
+
+ajp@google.com
+bryner@google.com
+ddoman@chromium.org
+gavinmak@google.com
+jojwang@google.com
+sokcevic@google.com
+yiwzhang@google.com
+
+# Allow teams to self-manage who belongs to them.
+per-file BUILD_OWNERS=file://BUILD_OWNERS
+per-file CROS_OWNERS=file://CROS_OWNERS
+per-file LUCI_OWNERS=file://LUCI_OWNERS
+per-file RECLIENT_OWNERS=file://RECLIENT_OWNERS
+
+# Ninja
+per-file autoninja*=dpranke@google.com
+per-file autoninja*=file://BUILD_OWNERS
+per-file ninja*=dpranke@google.com
+per-file ninja*=thakis@chromium.org
+per-file ninja*=file://BUILD_OWNERS
+per-file post_build_ninja_summary.py=file://BUILD_OWNERS
+per-file android_build_server_helper.py=mheikal@chromium.org
+per-file android_build_server_helper.py=agrieve@chromium.org
+
+# GN
+per-file gn*=dpranke@google.com
+per-file gn*=file://BUILD_OWNERS
+
+# Siso
+per-file autosiso*=file://BUILD_OWNERS
+per-file siso*=file://BUILD_OWNERS
+
+# reclient
+per-file reclient*=file://BUILD_OWNERS
+per-file reclient*=file://RECLIENT_OWNERS
+
+# Build telemetry
+per-file build_telemetry*=file://BUILD_OWNERS
+
+# Bazel
+per-file bazel*=file://CROS_OWNERS
+per-file bazel*=file://BUILD_OWNERS
+
+per-file pylint*=vapier@chromium.org
+
+# ChromeOS related tooling
+per-file cbuildbot=file://CROS_OWNERS
+per-file cros=file://CROS_OWNERS
+per-file *cros_python2*=file://CROS_OWNERS
+per-file cros_sdk=file://CROS_OWNERS
+per-file gerrit=file://CROS_OWNERS
+per-file repo=file://CROS_OWNERS
+per-file repo_launcher=file://CROS_OWNERS
+
+# LUCI related tooling
+per-file bb*=file://LUCI_OWNERS
+per-file .cipd_impl.ps1=file://LUCI_OWNERS
+per-file cipd*=file://LUCI_OWNERS
+per-file cit*=file://LUCI_OWNERS
+per-file led*=file://LUCI_OWNERS
+per-file luci*=file://LUCI_OWNERS
+per-file vpython*=file://LUCI_OWNERS

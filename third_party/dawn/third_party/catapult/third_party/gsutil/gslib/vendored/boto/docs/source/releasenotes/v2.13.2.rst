@@ -1,0 +1,39 @@
+boto v2.13.2
+============
+
+:date: 2013/09/16
+
+This release is a bugfix-only release, correcting several problems in EC2 as
+well as S3, DynamoDB v2 & SWF.
+
+.. note::
+
+    There was no v2.13.1 release made public. There was a packaging error that
+    was discovered before it was published to PyPI.
+
+    We apologise for the fault in the releases. Those responsible have been
+    sacked.
+
+
+Bugfixes
+--------
+
+* Fixed test fallout from the EC2 dry-run change. (:sha:`2159456`)
+* Added tests for more of SWF's ``layer2``. (:issue:`1718`, :sha:`35fb741`,
+  :sha:`a84d401`, :sha:`1cf1641`, :sha:`a36429c`)
+* Changed EC2 to allow ``name`` to be optional in calls to ``copy_image``.
+  (:issue:`1672`, :sha:` 26285aa`)
+* Added ``billingProducts`` support to EC2 ``Image``. (:issue:`1703`,
+  :sha:`cccadaf`, :sha:`3914e91`)
+* Fixed a place where ``dry_run`` was handled in EC2. (:issue:`1722`,
+  :sha:`0a52c82`)
+* Fixed ``run_instances`` with a block device mapping. (:issue:`1723`,
+  :sha:`974743f`, :sha:`9049f05`, :sha:`d7edafc`)
+* Fixed ``s3put`` to accept headers with a ``=`` in them. (:issue:`1700`,
+  :sha:`7958c70`)
+* Fixed a bug in DynamoDB v2 where scans with filters over large sets may not
+  return all values. (:issue:`1713`, :sha:`02893e1`)
+* Cloudsearch now uses SigV4. (:sha:`b2bdbf5`)
+* Several documentation improvements/fixes:
+
+    * Added the "Apps Built On Boto" doc. (:sha:`3bd628c`)

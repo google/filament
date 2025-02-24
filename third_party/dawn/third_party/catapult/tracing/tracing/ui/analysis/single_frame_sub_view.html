@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/analysis/alert_sub_view.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+
+<dom-module id='tr-ui-a-single-frame-sub-view'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #asv {
+      flex: 0 0 auto;
+      align-self: stretch;
+    }
+    </style>
+    <tr-ui-a-alert-sub-view id="asv">
+    </tr-ui-a-alert-sub-view>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-a-single-frame-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  ready() {
+    this.currentSelection_ = undefined;
+  },
+
+  get selection() {
+    return this.currentSelection_;
+  },
+
+  set selection(selection) {
+    this.currentSelection_ = selection;
+    this.$.asv.selection = tr.b.getOnlyElement(selection).associatedAlerts;
+  },
+
+  get relatedEventsToHighlight() {
+    if (!this.currentSelection_) return undefined;
+    return tr.b.getOnlyElement(this.currentSelection_).associatedEvents;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-a-single-frame-sub-view',
+    tr.model.Frame,
+    {
+      multi: false,
+      title: 'Frame',
+    });
+</script>

@@ -1,0 +1,49 @@
+{
+  "projectId": "My Google Cloud Project",
+  "traceId": "6ef9eae4acda422912f705b69539cec8",
+  "spans": [
+    {
+      "spanId": "13616474711799465301",
+      "kind": "RPC_CLIENT",
+      "name": "/endpoint",
+      "startTime": "2015-09-03T16:40:00.841654024Z",
+      "endTime": "2015-09-03T16:40:00.856599389Z",
+      "labels": {
+        "key1": "value1",
+        "key2": "value2"
+      }
+    },
+    {
+      "spanId": "1006609995974696303",
+      "kind": "RPC_SERVER",
+      "name": "/action1",
+      "startTime": "2015-09-03T16:40:00.842880028Z",
+      "endTime": "2015-09-03T16:40:00.851729538Z",
+      "parentSpanId": "13616474711799465301",
+      "labels": {
+        "key1": "testing",
+        "key2": "more testing"
+      }
+    },
+    {
+      "spanId": "8529136369770133851",
+      "kind": "RPC_SERVER",
+      "name": "/action2",
+      "startTime": "2015-09-03T16:40:00.852484163Z",
+      "endTime": "2015-09-03T16:40:00.853738268Z",
+      "parentSpanId": "13616474711799465301",
+      "labels": {
+      }
+    },
+    {
+      "spanId": "323284134707432301",
+      "kind": "RPC_SERVER",
+      "name": "/action3",
+      "startTime": "2015-09-03T16:40:00.854112894Z",
+      "endTime": "2015-09-03T16:40:00.855115940Z",
+      "parentSpanId": "13616474711799465301",
+      "labels": {
+      }
+    }
+  ]
+}

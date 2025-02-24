@@ -1,0 +1,87 @@
+licenses(["notice"])
+
+config_setting(
+    name = "qnx",
+    constraint_values = ["@platforms//os:qnx"],
+    values = {
+        "cpu": "x64_qnx",
+    },
+    visibility = [":__subpackages__"],
+)
+
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+    values = {
+        "cpu": "x64_windows",
+    },
+    visibility = [":__subpackages__"],
+)
+
+config_setting(
+    name = "macos",
+    constraint_values = ["@platforms//os:macos"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "perfcounters",
+    define_values = {
+        "pfm": "1",
+    },
+    visibility = [":__subpackages__"],
+)
+
+cc_library(
+    name = "benchmark",
+    srcs = glob(
+        [
+            "src/*.cc",
+            "src/*.h",
+        ],
+        exclude = ["src/benchmark_main.cc"],
+    ),
+    hdrs = [
+        "include/benchmark/benchmark.h",
+        "include/benchmark/export.h",
+    ],
+    linkopts = select({
+        ":windows": ["-DEFAULTLIB:shlwapi.lib"],
+        "//conditions:default": ["-pthread"],
+    }),
+    copts = select({
+        ":windows": [],
+        "//conditions:default": ["-Werror=old-style-cast"],
+    }),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    # Only static linking is allowed; no .so will be produced.
+    # Using `defines` (i.e. not `local_defines`) means that no
+    # dependent rules need to bother about defining the macro.
+    linkstatic = True,
+    defines = [
+        "BENCHMARK_STATIC_DEFINE",
+    ] + select({
+        ":perfcounters": ["HAVE_LIBPFM"],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":perfcounters": ["@libpfm//:libpfm"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "benchmark_main",
+    srcs = ["src/benchmark_main.cc"],
+    hdrs = ["include/benchmark/benchmark.h", "include/benchmark/export.h"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    deps = [":benchmark"],
+)
+
+cc_library(
+    name = "benchmark_internal_headers",
+    hdrs = glob(["src/*.h"]),
+    visibility = ["//test:__pkg__"],
+)

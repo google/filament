@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/model/container_memory_dump.html">
+<link rel="import" href="/tracing/model/event_registry.html">
+<link rel="import" href="/tracing/model/memory_allocator_dump.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the GlobalMemoryDump class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * The GlobalMemoryDump represents a simultaneous memory dump of all
+   * processes.
+   * @constructor
+   */
+  function GlobalMemoryDump(model, start) {
+    tr.model.ContainerMemoryDump.call(this, start);
+    this.model = model;
+    this.processMemoryDumps = {};
+  }
+
+  // Size numeric names.
+  const SIZE_NUMERIC_NAME = tr.model.MemoryAllocatorDump.SIZE_NUMERIC_NAME;
+  const EFFECTIVE_SIZE_NUMERIC_NAME =
+      tr.model.MemoryAllocatorDump.EFFECTIVE_SIZE_NUMERIC_NAME;
+
+  // Size numeric info types.
+  const MemoryAllocatorDumpInfoType = tr.model.MemoryAllocatorDumpInfoType;
+  const PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN;
+  const PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER =
+      MemoryAllocatorDumpInfoType.PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER;
+
+  function getSize(dump) {
+    const numeric = dump.numerics[SIZE_NUMERIC_NAME];
+    if (numeric === undefined) return 0;
+    return numeric.value;
+  }
+
+  function hasSize(dump) {
+    return dump.numerics[SIZE_NUMERIC_NAME] !== undefined;
+  }
+
+  function optional(value, defaultValue) {
+    if (value === undefined) return defaultValue;
+    return value;
+  }
+
+  GlobalMemoryDump.prototype = {
+    __proto__: tr.model.ContainerMemoryDump.prototype,
+
+    get stableId() {
+      return 'memory.' + this.model.globalMemoryDumps.indexOf(this);
+    },
+
+    get userFriendlyName() {
+      return 'Global memory dump at ' +
+          tr.b.Unit.byName.timeStampInMs.format(this.start);
+    },
+
+    get containerName() {
+      return 'global space';
+    },
+
+    finalizeGraph() {
+      // 1. Transitively remove weak memory allocator dumps and all their
+      // owners and descendants from the model. This must be performed before
+      // any other steps.
+      this.removeWeakDumps();
+
+      // 2. Add ownership links from tracing MADs to descendants of malloc or
+      // winheap MADs so that tracing would be automatically discounted from
+      // them later (step 3).
+      this.setUpTracingOverheadOwnership();
+
+      // 3. Aggregate all other numerics of all MADs (*excluding* sizes and
+      // effective sizes) and propagate numerics from global MADs to their
+      // owners (*including* sizes and effective sizes). This step must be
+      // carried out before the sizes of all MADs are calculated (step 3).
+      // Otherwise, the propagated sizes of all MADs would not be aggregated.
+      this.aggregateNumerics();
+
+      // 4. Calculate the sizes of all memory allocator dumps (MADs). This step
+      // requires that the memory allocator dump graph has been finalized (step
+      // 1) and numerics were propagated from global MADs (step 2). Subsequent
+      // modifications of the graph will most likely break the calculation
+      // invariants.
+      this.calculateSizes();
+
+      // 5. Calculate the effective sizes of all MADs. This step requires that
+      // the sizes of all MADs have already been calculated (step 3).
+      this.calculateEffectiveSizes();
+
+      // 6. Discount tracing from VM regions stats. This steps requires that
+      // resident sizes (step 2) and sizes (step 3) of the tracing MADs have
+      // already been calculated.
+      this.discountTracingOverheadFromVmRegions();
+
+      // 7. The above steps (especially steps 1 and 3) can create new memory
+      // allocator dumps, so we force rebuilding the memory allocator dump
+      // indices of all container memory dumps.
+      this.forceRebuildingMemoryAllocatorDumpByFullNameIndices();
+    },
+
+    removeWeakDumps() {
+      // Mark all transitive owners and children of weak memory allocator dumps
+      // as weak.
+      this.traverseAllocatorDumpsInDepthFirstPreOrder(function(dump) {
+        if (dump.weak) return;
+        if ((dump.owns !== undefined && dump.owns.target.weak) ||
+            (dump.parent !== undefined && dump.parent.weak)) {
+          dump.weak = true;
+        }
+      });
+
+      function removeWeakDumpsFromListRecursively(dumps) {
+        tr.b.inPlaceFilter(dumps, function(dump) {
+          if (dump.weak) {
+            // The dump is weak, so remove it. This will implicitly remove all
+            // its descendants, which are also weak due to the initial marking
+            // step.
+            return false;
+          }
+
+          // This dump is non-weak, so keep it. Recursively remove its weak
+          // descendants and ownership links from weak dumps instead.
+          removeWeakDumpsFromListRecursively(dump.children);
+          tr.b.inPlaceFilter(dump.ownedBy, function(ownershipLink) {
+            return !ownershipLink.source.weak;
+          });
+
+          return true;
+        });
+      }
+
+      this.iterateContainerDumps(function(containerDump) {
+        const memoryAllocatorDumps = containerDump.memoryAllocatorDumps;
+        if (memoryAllocatorDumps !== undefined) {
+          removeWeakDumpsFromListRecursively(memoryAllocatorDumps);
+        }
+      });
+    },
+
+    /**
+     * Calculate the size of all memory allocator dumps in the dump graph.
+     *
+     * The size refers to the allocated size of a (sub)component. It is a
+     * natural extension of the optional size numeric provided by
+     * MemoryAllocatorDump(s):
+     *
+     *   - If a MAD provides a size numeric, then its size is assumed to be
+     *     equal to it.
+     *   - If a MAD does not provide a size numeric, then its size is assumed
+     *     to be the maximum of (1) the size of the largest owner of the MAD
+     *     and (2) the aggregated size of the MAD's children.
+     *
+     * Metric motivation: "How big is a (sub)system?"
+     *
+     * Please refer to the Memory Dump Graph Metric Calculation design document
+     * for more details (https://goo.gl/fKg0dt).
+     */
+    calculateSizes() {
+      this.traverseAllocatorDumpsInDepthFirstPostOrder(
+          this.calculateMemoryAllocatorDumpSize_.bind(this));
+    },
+
+    /**
+     * Calculate the size of the given MemoryAllocatorDump. This method assumes
+     * that the size of both the children and owners of the dump has already
+     * been calculated.
+     */
+    calculateMemoryAllocatorDumpSize_(dump) {
+      // This flag becomes true if the size numeric of the current dump should
+      // be defined, i.e. if (1) the current dump's size numeric is defined,
+      // (2) the size of at least one of its children is defined or (3) the
+      // size of at least one of its owners is defined.
+      let shouldDefineSize = false;
+
+      // This helper function returns the value of the size numeric of the
+      // given dependent memory allocator dump. If the numeric is defined, the
+      // shouldDefineSize flag above is also set to true (because condition
+      // (2) or (3) is satisfied). Otherwise, zero is returned (and the flag is
+      // left unchanged).
+      function getDependencySize(dependencyDump) {
+        const numeric = dependencyDump.numerics[SIZE_NUMERIC_NAME];
+        if (numeric === undefined) return 0;
+        shouldDefineSize = true;
+        return numeric.value;
+      }
+
+      // 1. Get the size provided by the dump. If present, define a function
+      // for checking dependent size consistency (a dump must always be bigger
+      // than all its children aggregated together and/or its largest owner).
+      const sizeNumeric = dump.numerics[SIZE_NUMERIC_NAME];
+      let size = 0;
+      let checkDependencySizeIsConsistent = function() { /* no-op */ };
+      if (sizeNumeric !== undefined) {
+        size = sizeNumeric.value;
+        shouldDefineSize = true;
+        if (sizeNumeric.unit !== tr.b.Unit.byName.sizeInBytes_smallerIsBetter) {
+          this.model.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'Invalid unit of \'size\' numeric of memory allocator ' +
+                'dump ' + dump.quantifiedName + ': ' +
+                sizeNumeric.unit.unitName + '.'
+          });
+        }
+        checkDependencySizeIsConsistent = function(
+            dependencySize, dependencyInfoType, dependencyName) {
+          if (size >= dependencySize) return;
+          this.model.importWarning({
+            type: 'memory_dump_parse_error',
+            message: 'Size provided by memory allocator dump \'' +
+                dump.fullName + '\'' +
+                tr.b.Unit.byName.sizeInBytes.format(size) +
+                ') is less than ' + dependencyName + ' (' +
+                tr.b.Unit.byName.sizeInBytes.format(dependencySize) + ').'
+          });
+          dump.infos.push({
+            type: dependencyInfoType,
+            providedSize: size,
+            dependencySize
+          });
+        }.bind(this);
+      }
+
+      // 2. Aggregate size of children. The recursive function traverses all
+      // descendants and ensures that double-counting due to ownership within a
+      // subsystem is avoided.
+      let aggregatedChildrenSize = 0;
+      // Owned child dump name -> (Owner child dump name -> overlapping size).
+      const allOverlaps = {};
+      dump.children.forEach(function(childDump) {
+        function aggregateDescendantDump(descendantDump) {
+          // Don't count this descendant dump if it owns another descendant of
+          // the current dump (would cause double-counting).
+          const ownedDumpLink = descendantDump.owns;
+          if (ownedDumpLink !== undefined &&
+              ownedDumpLink.target.isDescendantOf(dump)) {
+            // If the target owned dump is a descendant of a *different* child
+            // of the the current dump (i.e. not childDump), then we remember
+            // the ownership so that we could explain why the size of the
+            // current dump is not equal to the sum of its children.
+            let ownedChildDump = ownedDumpLink.target;
+            while (ownedChildDump.parent !== dump) {
+              ownedChildDump = ownedChildDump.parent;
+            }
+            if (childDump !== ownedChildDump) {
+              const ownedBySiblingSize = getDependencySize(descendantDump);
+              if (ownedBySiblingSize > 0) {
+                const previousTotalOwnedBySiblingSize =
+                    ownedChildDump.ownedBySiblingSizes.get(childDump) || 0;
+                const updatedTotalOwnedBySiblingSize =
+                    previousTotalOwnedBySiblingSize + ownedBySiblingSize;
+                ownedChildDump.ownedBySiblingSizes.set(
+                    childDump, updatedTotalOwnedBySiblingSize);
+              }
+            }
+            return;
+          }
+
+          // If this descendant dump is a leaf node, add its size to the
+          // aggregated size.
+          if (descendantDump.children.length === 0) {
+            aggregatedChildrenSize += getDependencySize(descendantDump);
+            return;
+          }
+
+          // If this descendant dump is an intermediate node, recurse down into
+          // its children. Note that the dump's size is NOT added because it is
+          // an aggregate of its children (would cause double-counting).
+          descendantDump.children.forEach(aggregateDescendantDump);
+        }
+        aggregateDescendantDump(childDump);
+      });
+      checkDependencySizeIsConsistent(
+          aggregatedChildrenSize,
+          PROVIDED_SIZE_LESS_THAN_AGGREGATED_CHILDREN,
+          'the aggregated size of its children');
+
+      // 3. Calculate the largest owner size.
+      let largestOwnerSize = 0;
+      dump.ownedBy.forEach(function(ownershipLink) {
+        const owner = ownershipLink.source;
+        const ownerSize = getDependencySize(owner);
+        largestOwnerSize = Math.max(largestOwnerSize, ownerSize);
+      });
+      checkDependencySizeIsConsistent(
+          largestOwnerSize,
+          PROVIDED_SIZE_LESS_THAN_LARGEST_OWNER,
+          'the size of its largest owner');
+
+      // If neither the dump nor any of its dependencies (children and owners)
+      // provide a size, do NOT add a zero size numeric.
+      if (!shouldDefineSize) {
+        // The rest of the pipeline relies on size being either a valid
+        // Scalar, or undefined.
+        delete dump.numerics[SIZE_NUMERIC_NAME];
+        return;
+      }
+
+      // A dump must always be bigger than all its children aggregated
+      // together and/or its largest owner.
+      size = Math.max(size, aggregatedChildrenSize, largestOwnerSize);
+
+      dump.numerics[SIZE_NUMERIC_NAME] = new tr.b.Scalar(
+          tr.b.Unit.byName.sizeInBytes_smallerIsBetter, size);
+
+      // Add a virtual child to make up for extra size of the dump with
+      // respect to its children (if applicable).
+      if (aggregatedChildrenSize < size &&
+          dump.children !== undefined && dump.children.length > 0) {
+        const virtualChild = new tr.model.MemoryAllocatorDump(
+            dump.containerMemoryDump, dump.fullName + '/<unspecified>');
+        virtualChild.parent = dump;
+        dump.children.unshift(virtualChild);
+        virtualChild.numerics[SIZE_NUMERIC_NAME] = new tr.b.Scalar(
+            tr.b.Unit.byName.sizeInBytes_smallerIsBetter,
+            size - aggregatedChildrenSize);
+      }
+    },
+
+    /**
+     * Calculate the effective size of all memory allocator dumps in the dump
+     * graph.
+     *
+     * The effective size refers to the amount of memory a particular component
+     * is using/consuming. In other words, every (reported) byte of used memory
+     * is uniquely attributed to exactly one component. Consequently, unlike
+     * size, effective size is cumulative, i.e. the sum of the effective sizes
+     * of (top-level) components is equal to the total amount of (reported)
+     * used memory.
+     *
+     * Metric motivation: "How much memory does a (sub)system use?" or "For how
+     * much memory should a (sub)system be 'charged'?"
+     *
+     * Please refer to the Memory Dump Graph Metric Calculation design document
+     * for more details (https://goo.gl/fKg0dt).
+     *
+     * This method assumes that the size of all contained memory allocator
+     * dumps has already been calculated [see calculateSizes()].
+     */
+    calculateEffectiveSizes() {
+      // 1. Calculate not-owned and not-owning sub-sizes of all MADs
+      // (depth-first post-order traversal).
+      this.traverseAllocatorDumpsInDepthFirstPostOrder(
+          this.calculateDumpSubSizes_.bind(this));
+
+      // 2. Calculate owned and owning coefficients of owned and owner MADs
+      // respectively (arbitrary traversal).
+      this.traverseAllocatorDumpsInDepthFirstPostOrder(
+          this.calculateDumpOwnershipCoefficient_.bind(this));
+
+      // 3. Calculate cumulative owned and owning coefficients of all MADs
+      // (depth-first pre-order traversal).
+      this.traverseAllocatorDumpsInDepthFirstPreOrder(
+          this.calculateDumpCumulativeOwnershipCoefficient_.bind(this));
+
+      // 4. Calculate the effective sizes of all MADs (depth-first post-order
+      // traversal).
+      this.traverseAllocatorDumpsInDepthFirstPostOrder(
+          this.calculateDumpEffectiveSize_.bind(this));
+    },
+
+    /**
+     * Calculate not-owned and not-owning sub-sizes of a memory allocator dump
+     * from its children's (sub-)sizes.
+     *
+     * Not-owned sub-size refers to the aggregated memory of all children which
+     * is not owned by other MADs. Conversely, not-owning sub-size is the
+     * aggregated memory of all children which do not own another MAD. The
+     * diagram below illustrates these two concepts:
+     *
+     *     ROOT 1                         ROOT 2
+     *     size: 4                        size: 5
+     *     not-owned sub-size: 4          not-owned sub-size: 1 (!)
+     *     not-owning sub-size: 0 (!)     not-owning sub-size: 5
+     *
+     *      ^                              ^
+     *      |                              |
+     *
+     *     PARENT 1   ===== owns =====>   PARENT 2
+     *     size: 4                        size: 5
+     *     not-owned sub-size: 4          not-owned sub-size: 5
+     *     not-owning sub-size: 4         not-owning sub-size: 5
+     *
+     *      ^                              ^
+     *      |                              |
+     *
+     *     CHILD 1                        CHILD 2
+     *     size [given]: 4                size [given]: 5
+     *     not-owned sub-size: 4          not-owned sub-size: 5
+     *     not-owning sub-size: 4         not-owning sub-size: 5
+     *
+     * This method assumes that (1) the size of the dump, its children, and its
+     * owners [see calculateSizes()] and (2) the not-owned and not-owning
+     * sub-sizes of both the children and owners of the dump have already been
+     * calculated [depth-first post-order traversal].
+     */
+    calculateDumpSubSizes_(dump) {
+      // Completely skip dumps with undefined size.
+      if (!hasSize(dump)) return;
+
+      // If the dump is a leaf node, then both sub-sizes are equal to the size.
+      if (dump.children === undefined || dump.children.length === 0) {
+        const size = getSize(dump);
+        dump.notOwningSubSize_ = size;
+        dump.notOwnedSubSize_ = size;
+        return;
+      }
+
+      // Calculate this dump's not-owning sub-size by summing up the not-owning
+      // sub-sizes of children MADs which do not own another MAD.
+      let notOwningSubSize = 0;
+      dump.children.forEach(function(childDump) {
+        if (childDump.owns !== undefined) return;
+        notOwningSubSize += optional(childDump.notOwningSubSize_, 0);
+      });
+      dump.notOwningSubSize_ = notOwningSubSize;
+
+      // Calculate this dump's not-owned sub-size.
+      let notOwnedSubSize = 0;
+      dump.children.forEach(function(childDump) {
+        // If the child dump is not owned, then add its not-owned sub-size.
+        if (childDump.ownedBy.length === 0) {
+          notOwnedSubSize += optional(childDump.notOwnedSubSize_, 0);
+          return;
+        }
+        // If the child dump is owned, then add the difference between its size
+        // and the largest owner.
+        let largestChildOwnerSize = 0;
+        childDump.ownedBy.forEach(function(ownershipLink) {
+          largestChildOwnerSize = Math.max(
+              largestChildOwnerSize, getSize(ownershipLink.source));
+        });
+        notOwnedSubSize += getSize(childDump) - largestChildOwnerSize;
+      });
+      dump.notOwnedSubSize_ = notOwnedSubSize;
+    },
+
+    /**
+     * Calculate owned and owning coefficients of a memory allocator dump and
+     * its owners.
+     *
+     * The owning coefficient refers to the proportion of a dump's not-owning
+     * sub-size which is attributed to the dump (only relevant to owning MADs).
+     * Conversely, the owned coefficient is the proportion of a dump's
+     * not-owned sub-size, which is attributed to it (only relevant to owned
+     * MADs).
+     *
+     * The not-owned size of the owned dump is split among its owners in the
+     * order of the ownership importance as demonstrated by the following
+     * example:
+     *
+     *                                          memory allocator dumps
+     *                                   OWNED  OWNER1  OWNER2  OWNER3  OWNER4
+     *       not-owned sub-size [given]     10       -       -       -       -
+     *      not-owning sub-size [given]      -       6       7       5       8
+     *               importance [given]      -       2       2       1       0
+     *    attributed not-owned sub-size      2       -       -       -       -
+     *   attributed not-owning sub-size      -       3       4       0       1
+     *                owned coefficient   2/10       -       -       -       -
+     *               owning coefficient      -     3/6     4/7     0/5     1/8
+     *
+     * Explanation: Firstly, 6 bytes are split equally among OWNER1 and OWNER2
+     * (highest importance). OWNER2 owns one more byte, so its attributed
+     * not-owning sub-size is 6/2 + 1 = 4 bytes. OWNER3 is attributed no size
+     * because it is smaller than the owners with higher priority. However,
+     * OWNER4 is larger, so it's attributed the difference 8 - 7 = 1 byte.
+     * Finally, 2 bytes remain unattributed and are hence kept in the OWNED
+     * dump as attributed not-owned sub-size. The coefficients are then
+     * directly calculated as fractions of the sub-sizes and corresponding
+     * attributed sub-sizes.
+     *
+     * Note that we always assume that all ownerships of a dump overlap (e.g.
+     * OWNER3 is subsumed by both OWNER1 and OWNER2). Hence, the table could
+     * be alternatively represented as follows:
+     *
+     *                                 owned memory range
+     *              0   1   2    3    4    5    6        7        8   9  10
+     *   Priority 2 |  OWNER1 + OWNER2 (split)  | OWNER2 |
+     *   Priority 1 | (already attributed) |
+     *   Priority 0 | - - -  (already attributed)  - - - | OWNER4 |
+     *    Remainder | - - - - - (already attributed) - - - - - -  | OWNED |
+     *
+     * This method assumes that (1) the size of the dump [see calculateSizes()]
+     * and (2) the not-owned size of the dump and not-owning sub-sizes of its
+     * owners [see the first step of calculateEffectiveSizes()] have already
+     * been calculated. Note that the method doesn't make any assumptions about
+     * the order in which dumps are visited.
+     */
+    calculateDumpOwnershipCoefficient_(dump) {
+      // Completely skip dumps with undefined size.
+      if (!hasSize(dump)) return;
+
+      // We only need to consider owned dumps.
+      if (dump.ownedBy.length === 0) return;
+
+      // Sort the owners in decreasing order of ownership importance and
+      // increasing order of not-owning sub-size (in case of equal importance).
+      const owners = dump.ownedBy.map(function(ownershipLink) {
+        return {
+          dump: ownershipLink.source,
+          importance: optional(ownershipLink.importance, 0),
+          notOwningSubSize: optional(ownershipLink.source.notOwningSubSize_, 0)
+        };
+      });
+      owners.sort(function(a, b) {
+        if (a.importance === b.importance) {
+          return a.notOwningSubSize - b.notOwningSubSize;
+        }
+        return b.importance - a.importance;
+      });
+
+      // Loop over the list of owners and distribute the owned dump's not-owned
+      // sub-size among them according to their ownership importance and
+      // not-owning sub-size.
+      let currentImportanceStartPos = 0;
+      let alreadyAttributedSubSize = 0;
+      while (currentImportanceStartPos < owners.length) {
+        const currentImportance = owners[currentImportanceStartPos].importance;
+
+        // Find the position of the first owner with lower priority.
+        let nextImportanceStartPos = currentImportanceStartPos + 1;
+        while (nextImportanceStartPos < owners.length &&
+               owners[nextImportanceStartPos].importance ===
+                  currentImportance) {
+          nextImportanceStartPos++;
+        }
+
+        // Visit the owners with the same importance in increasing order of
+        // not-owned sub-size, split the owned memory among them appropriately,
+        // and calculate their owning coefficients.
+        let attributedNotOwningSubSize = 0;
+        for (let pos = currentImportanceStartPos; pos < nextImportanceStartPos;
+          pos++) {
+          const owner = owners[pos];
+          const notOwningSubSize = owner.notOwningSubSize;
+          if (notOwningSubSize > alreadyAttributedSubSize) {
+            attributedNotOwningSubSize +=
+                (notOwningSubSize - alreadyAttributedSubSize) /
+                (nextImportanceStartPos - pos);
+            alreadyAttributedSubSize = notOwningSubSize;
+          }
+
+          let owningCoefficient = 0;
+          if (notOwningSubSize !== 0) {
+            owningCoefficient = attributedNotOwningSubSize / notOwningSubSize;
+          }
+          owner.dump.owningCoefficient_ = owningCoefficient;
+        }
+
+        currentImportanceStartPos = nextImportanceStartPos;
+      }
+
+      // Attribute the remainder of the owned dump's not-owned sub-size to
+      // the dump itself and calculate its owned coefficient.
+      const notOwnedSubSize = optional(dump.notOwnedSubSize_, 0);
+      const remainderSubSize = notOwnedSubSize - alreadyAttributedSubSize;
+      let ownedCoefficient = 0;
+      if (notOwnedSubSize !== 0) {
+        ownedCoefficient = remainderSubSize / notOwnedSubSize;
+      }
+      dump.ownedCoefficient_ = ownedCoefficient;
+    },
+
+    /**
+     * Calculate cumulative owned and owning coefficients of a memory allocator
+     * dump from its (non-cumulative) owned and owning coefficients and the
+     * cumulative coefficients of its parent and/or owned dump.
+     *
+     * The cumulative coefficients represent the total effect of all
+     * (non-strict) ancestor ownerships on a memory allocator dump. The
+     * cumulative owned coefficient of a MAD can be calculated simply as:
+     *
+     *   cumulativeOwnedC(M) = ownedC(M) * cumulativeOwnedC(parent(M))
+     *
+     * This reflects the assumption that if a parent of a child MAD is
+     * (partially) owned, then the parent's owner also indirectly owns (a part
+     * of) the child MAD.
+     *
+     * The cumulative owning coefficient of a MAD depends on whether the MAD
+     * owns another dump:
+     *
+     *                           [if M doesn't own another MAD]
+     *                         / cumulativeOwningC(parent(M))
+     *   cumulativeOwningC(M) =
+     *                         \ [if M owns another MAD]
+     *                           owningC(M) * cumulativeOwningC(owned(M))
+     *
+     * The reasoning behind the first case is similar to the one for cumulative
+     * owned coefficient above. The only difference is that we don't need to
+     * include the dump's (non-cumulative) owning coefficient because it is
+     * implicitly 1.
+     *
+     * The formula for the second case is derived as follows: Since the MAD
+     * owns another dump, its memory is not included in its parent's not-owning
+     * sub-size and hence shouldn't be affected by the parent's corresponding
+     * cumulative coefficient. Instead, the MAD indirectly owns everything
+     * owned by its owned dump (and so it should be affected by the
+     * corresponding coefficient).
+     *
+     * Note that undefined coefficients (and coefficients of non-existent
+     * dumps) are implicitly assumed to be 1.
+     *
+     * This method assumes that (1) the size of the dump [see calculateSizes()],
+     * (2) the (non-cumulative) owned and owning coefficients of the dump [see
+     * the second step of calculateEffectiveSizes()], and (3) the cumulative
+     * coefficients of the dump's parent and owned MADs (if present)
+     * [depth-first pre-order traversal] have already been calculated.
+     */
+    calculateDumpCumulativeOwnershipCoefficient_(dump) {
+      // Completely skip dumps with undefined size.
+      if (!hasSize(dump)) return;
+
+      let cumulativeOwnedCoefficient = optional(dump.ownedCoefficient_, 1);
+      const parent = dump.parent;
+      if (dump.parent !== undefined) {
+        cumulativeOwnedCoefficient *= dump.parent.cumulativeOwnedCoefficient_;
+      }
+      dump.cumulativeOwnedCoefficient_ = cumulativeOwnedCoefficient;
+
+      let cumulativeOwningCoefficient;
+      if (dump.owns !== undefined) {
+        cumulativeOwningCoefficient = dump.owningCoefficient_ *
+            dump.owns.target.cumulativeOwningCoefficient_;
+      } else if (dump.parent !== undefined) {
+        cumulativeOwningCoefficient = dump.parent.cumulativeOwningCoefficient_;
+      } else {
+        cumulativeOwningCoefficient = 1;
+      }
+      dump.cumulativeOwningCoefficient_ = cumulativeOwningCoefficient;
+    },
+
+    /**
+     * Calculate the effective size of a memory allocator dump.
+     *
+     * In order to simplify the (already complex) calculation, we use the fact
+     * that effective size is cumulative (unlike regular size), i.e. the
+     * effective size of a non-leaf node is equal to the sum of effective sizes
+     * of its children. The effective size of a leaf MAD is calculated as:
+     *
+     *   effectiveSize(M) = size(M) * cumulativeOwningC(M) * cumulativeOwnedC(M)
+     *
+     * This method assumes that (1) the size of the dump and its children [see
+     * calculateSizes()] and (2) the cumulative owning and owned coefficients
+     * of the dump (if it's a leaf node) [see the third step of
+     * calculateEffectiveSizes()] or the effective sizes of its children (if
+     * it's a non-leaf node) [depth-first post-order traversal] have already
+     * been calculated.
+     */
+    calculateDumpEffectiveSize_(dump) {
+      // Completely skip dumps with undefined size. As a result, each dump will
+      // have defined effective size if and only if it has defined size.
+      if (!hasSize(dump)) {
+        // The rest of the pipeline relies on effective size being either a
+        // valid Scalar, or undefined.
+        delete dump.numerics[EFFECTIVE_SIZE_NUMERIC_NAME];
+        return;
+      }
+
+      let effectiveSize;
+      if (dump.children === undefined || dump.children.length === 0) {
+        // Leaf dump.
+        effectiveSize = getSize(dump) * dump.cumulativeOwningCoefficient_ *
+            dump.cumulativeOwnedCoefficient_;
+      } else {
+        // Non-leaf dump.
+        effectiveSize = 0;
+        dump.children.forEach(function(childDump) {
+          if (!hasSize(childDump)) return;
+          effectiveSize +=
+              childDump.numerics[EFFECTIVE_SIZE_NUMERIC_NAME].value;
+        });
+      }
+      dump.numerics[EFFECTIVE_SIZE_NUMERIC_NAME] = new tr.b.Scalar(
+          tr.b.Unit.byName.sizeInBytes_smallerIsBetter, effectiveSize);
+    },
+
+    aggregateNumerics() {
+      // 1. Aggregate numerics in this global memory dump.
+      this.iterateRootAllocatorDumps(function(dump) {
+        dump.aggregateNumericsRecursively(this.model);
+      });
+
+      // 2. Propagate numerics and diagnostics from global memory allocator
+      // dumps to their owners.
+      this.iterateRootAllocatorDumps(
+          this.propagateNumericsAndDiagnosticsRecursively);
+
+      // 3. Aggregate numerics in the associated process memory dumps.
+      for (const processMemoryDump of Object.values(this.processMemoryDumps)) {
+        processMemoryDump.iterateRootAllocatorDumps(function(dump) {
+          dump.aggregateNumericsRecursively(this.model);
+        }, this);
+      }
+    },
+
+    propagateNumericsAndDiagnosticsRecursively(globalAllocatorDump) {
+      ['numerics', 'diagnostics'].forEach(function(field) {
+        for (const [name, value] of
+          Object.entries(globalAllocatorDump[field])) {
+          globalAllocatorDump.ownedBy.forEach(function(ownershipLink) {
+            const processAllocatorDump = ownershipLink.source;
+            if (processAllocatorDump[field][name] !== undefined) {
+              // Numerics and diagnostics provided by process memory allocator
+              // dumps themselves have precedence over numerics and diagnostics
+              // propagated from global memory allocator dumps.
+              return;
+            }
+            processAllocatorDump[field][name] = value;
+          });
+        }
+      });
+
+      // Recursively propagate numerics from all child memory allocator dumps.
+      globalAllocatorDump.children.forEach(
+          this.propagateNumericsAndDiagnosticsRecursively, this);
+    },
+
+    setUpTracingOverheadOwnership() {
+      for (const dump of Object.values(this.processMemoryDumps)) {
+        dump.setUpTracingOverheadOwnership(this.model);
+      }
+    },
+
+    discountTracingOverheadFromVmRegions() {
+      // TODO(petrcermak): Consider factoring out all the finalization code and
+      // constants to a single file.
+      for (const dump of Object.values(this.processMemoryDumps)) {
+        dump.discountTracingOverheadFromVmRegions(this.model);
+      }
+    },
+
+    forceRebuildingMemoryAllocatorDumpByFullNameIndices() {
+      this.iterateContainerDumps(function(containerDump) {
+        containerDump.forceRebuildingMemoryAllocatorDumpByFullNameIndex();
+      });
+    },
+
+    iterateContainerDumps(fn) {
+      fn.call(this, this);
+      for (const processDump of Object.values(this.processMemoryDumps)) {
+        fn.call(this, processDump);
+      }
+    },
+
+    iterateAllRootAllocatorDumps(fn) {
+      this.iterateContainerDumps(function(containerDump) {
+        containerDump.iterateRootAllocatorDumps(fn, this);
+      });
+    },
+
+    /**
+     * Traverse the memory dump graph in a depth first post-order, i.e.
+     * children and owners of a memory allocator dump are visited before the
+     * dump itself. This method will throw an exception if the graph contains
+     * a cycle.
+     */
+    traverseAllocatorDumpsInDepthFirstPostOrder(fn) {
+      const visitedDumps = new WeakSet();
+      const openDumps = new WeakSet();
+
+      function visit(dump) {
+        if (visitedDumps.has(dump)) return;
+
+        if (openDumps.has(dump)) {
+          throw new Error(dump.userFriendlyName + ' contains a cycle');
+        }
+        openDumps.add(dump);
+
+        // Visit owners before the dumps they own.
+        dump.ownedBy.forEach(function(ownershipLink) {
+          visit.call(this, ownershipLink.source);
+        }, this);
+
+        // Visit children before parents.
+        dump.children.forEach(visit, this);
+
+        // Actually visit the current memory allocator dump.
+        fn.call(this, dump);
+        visitedDumps.add(dump);
+
+        openDumps.delete(dump);
+      }
+
+      this.iterateAllRootAllocatorDumps(visit);
+    },
+
+    /**
+     * Traverse the memory dump graph in a depth first pre-order, i.e.
+     * children and owners of a memory allocator dump are visited after the
+     * dump itself. This method will not visit some dumps if the graph contains
+     * a cycle.
+     */
+    traverseAllocatorDumpsInDepthFirstPreOrder(fn) {
+      const visitedDumps = new WeakSet();
+
+      function visit(dump) {
+        if (visitedDumps.has(dump)) return;
+
+        // If this dumps owns another dump which hasn't been visited yet, then
+        // wait for this dump to be visited later.
+        if (dump.owns !== undefined && !visitedDumps.has(dump.owns.target)) {
+          return;
+        }
+
+        // If this dump's parent hasn't been visited yet, then wait for this
+        // dump to be visited later.
+        if (dump.parent !== undefined && !visitedDumps.has(dump.parent)) {
+          return;
+        }
+
+        // Actually visit the current memory allocator dump.
+        fn.call(this, dump);
+        visitedDumps.add(dump);
+
+        // Visit owners after the dumps they own.
+        dump.ownedBy.forEach(function(ownershipLink) {
+          visit.call(this, ownershipLink.source);
+        }, this);
+
+        // Visit children after parents.
+        dump.children.forEach(visit, this);
+      }
+
+      this.iterateAllRootAllocatorDumps(visit);
+    }
+  };
+
+  tr.model.EventRegistry.register(
+      GlobalMemoryDump,
+      {
+        name: 'globalMemoryDump',
+        pluralName: 'globalMemoryDumps'
+      });
+
+  return {
+    GlobalMemoryDump,
+  };
+});
+</script>

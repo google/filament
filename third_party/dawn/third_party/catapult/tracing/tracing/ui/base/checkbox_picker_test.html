@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/checkbox_picker.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('basicAllCheckboxUnchecked', function() {
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    cp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Boeing', label: 'I want to fly'}
+    ];
+    this.addHTMLOutput(cp);
+    assert.deepEqual(cp.checkedKeys, []);
+  });
+
+  test('basicSomeCheckboxChecked', function() {
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    cp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+      {key: 'Tesla', label: 'I want to drive electric car'},
+    ];
+
+    cp.selectCheckbox('Toyota');
+    cp.selectCheckbox('Tesla');
+    this.addHTMLOutput(cp);
+    assert.deepEqual(cp.checkedKeys.sort(), ['Tesla', 'Toyota']);
+    cp.unselectCheckbox('Toyota');
+    assert.deepEqual(cp.checkedKeys, ['Tesla']);
+  });
+
+  test('duplicateKeys', function() {
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    assert.throws(function() {
+      cp.items = [
+        {key: 'Toyota', label: 'I want to drive Toyota'},
+        {key: 'Honda', label: 'I want to drive Honda'},
+        {key: 'Toyota', label: 'I want to drive electric car'},
+      ];
+    });
+  });
+
+  test('selectAndUnselectNonExistingKey', function() {
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    cp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+    ];
+    assert.throws(function() {
+      cp.selectCheckbox('Lamborghini');
+    });
+    assert.throws(function() {
+      cp.unselectCheckbox('Roll Royce');
+    });
+  });
+
+  test('testPersistentStateOneSetSettingsKeyBeforeSettingItems', function() {
+    const container1 = tr.ui.b.createDiv({textContent: 'Checkbox Picker One'});
+    container1.style.border = 'solid';
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    cp.settingsKey = 'checkbox-picker-test-one';
+    cp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+      {key: 'Tesla', label: 'I want to drive electric car'},
+    ];
+    cp.selectCheckbox('Toyota');
+    cp.selectCheckbox('Tesla');
+    Polymer.dom(container1).appendChild(cp);
+    this.addHTMLOutput(container1);
+    cp.unselectCheckbox('Tesla');
+    assert.deepEqual(cp.checkedKeys, ['Toyota']);
+
+    this.addHTMLOutput(document.createElement('br'));
+
+    const container2 = tr.ui.b.createDiv(
+        {textContent:
+            'Checkbox Picker Two (Same settingsKey as Checkbox Picker One)'});
+    container2.style.border = 'solid #0000FF';
+    const cp2 = document.createElement('tr-ui-b-checkbox-picker');
+    cp2.settingsKey = 'checkbox-picker-test-one';
+    cp2.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+      {key: 'Tesla', label: 'I want to drive electric car'},
+    ];
+    Polymer.dom(container2).appendChild(cp2);
+    this.addHTMLOutput(container2);
+    assert.deepEqual(cp2.checkedKeys, ['Toyota']);
+  });
+
+  test('testPersistentStateTwoSetSettingsKeyAfterSettingItems', function() {
+    const container1 = tr.ui.b.createDiv({textContent: 'Checkbox Picker One'});
+    container1.style.border = 'solid';
+    const cp = document.createElement('tr-ui-b-checkbox-picker');
+    cp.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+      {key: 'Tesla', label: 'I want to drive electric car'},
+    ];
+    cp.settingsKey = 'checkbox-picker-test-one';
+    cp.selectCheckbox('Toyota');
+    cp.selectCheckbox('Tesla');
+    Polymer.dom(container1).appendChild(cp);
+    this.addHTMLOutput(container1);
+    assert.deepEqual(cp.checkedKeys.sort(), ['Tesla', 'Toyota']);
+
+    this.addHTMLOutput(document.createElement('br'));
+
+    const container2 = tr.ui.b.createDiv(
+        {textContent:
+            'Checkbox Picker Two (Same settingsKey as Checkbox Picker One)'});
+    container2.style.border = 'solid #0000FF';
+    const cp2 = document.createElement('tr-ui-b-checkbox-picker');
+    cp2.items = [
+      {key: 'Toyota', label: 'I want to drive Toyota'},
+      {key: 'Honda', label: 'I want to drive Honda'},
+      {key: 'Tesla', label: 'I want to drive electric car'},
+    ];
+    Polymer.dom(container2).appendChild(cp2);
+    this.addHTMLOutput(container2);
+    cp2.settingsKey = 'checkbox-picker-test-one';
+    assert.deepEqual(cp2.checkedKeys.sort(), ['Tesla', 'Toyota']);
+  });
+});
+</script>

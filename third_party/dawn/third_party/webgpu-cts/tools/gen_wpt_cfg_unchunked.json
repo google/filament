@@ -1,0 +1,6 @@
+{
+  "suite": "webgpu",
+  "out": "../out-wpt/cts.https.html",
+  "outVariantList": "../gen/webgpu_variant_list.json",
+  "template": "../src/common/templates/cts.https.html"
+}

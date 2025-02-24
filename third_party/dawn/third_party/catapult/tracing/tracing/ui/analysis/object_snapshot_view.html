@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/extension_registry.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const ObjectSnapshotView = tr.ui.b.define('object-snapshot-view');
+
+  ObjectSnapshotView.prototype = {
+    __proto__: HTMLDivElement.prototype,
+
+    decorate() {
+      this.objectSnapshot_ = undefined;
+    },
+
+    get requiresTallView() {
+      return true;
+    },
+
+    set modelEvent(obj) {
+      this.objectSnapshot = obj;
+    },
+
+    get modelEvent() {
+      return this.objectSnapshot;
+    },
+
+    get objectSnapshot() {
+      return this.objectSnapshot_;
+    },
+
+    set objectSnapshot(i) {
+      this.objectSnapshot_ = i;
+      this.updateContents();
+    },
+
+    updateContents() {
+      throw new Error('Not implemented');
+    }
+  };
+
+  const options = new tr.b.ExtensionRegistryOptions(
+      tr.b.TYPE_BASED_REGISTRY_MODE);
+  options.mandatoryBaseClass = ObjectSnapshotView;
+  options.defaultMetadata = {
+    showInstances: true,
+    showInTrackView: true
+  };
+  tr.b.decorateExtensionRegistry(ObjectSnapshotView, options);
+
+  return {
+    ObjectSnapshotView,
+  };
+});
+</script>

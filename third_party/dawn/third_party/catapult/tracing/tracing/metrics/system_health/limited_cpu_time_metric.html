@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/new_cpu_time_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.sh', function() {
+  const includeHistogramNames = [
+    'cpuTime:all_processes:all_threads:all_stages:all_initiators',
+    'cpuPercentage:all_processes:all_threads:all_stages:all_initiators',
+    'cpuTime:browser_process:all_threads:all_stages:all_initiators',
+    'cpuPercentage:browser_process:all_threads:all_stages:all_initiators',
+    'cpuTime:renderer_processes:all_threads:all_stages:all_initiators',
+    'cpuPercentage:renderer_processes:all_threads:all_stages:all_initiators',
+    'cpuTime:gpu_process:all_threads:all_stages:all_initiators',
+    'cpuPercentage:gpu_process:all_threads:all_stages:all_initiators',
+    'cpuTime:renderer_processes:CrRendererMain:all_stages:all_initiators',
+    'cpuPercentage:renderer_processes:CrRendererMain:all_stages:all_initiators',
+    'cpuTime:browser_process:CrBrowserMain:all_stages:all_initiators',
+    'cpuPercentage:browser_process:CrBrowserMain:all_stages:all_initiators',
+    'cpuTime:all_processes:all_threads:Load:Successful',
+    'cpuPercentage:all_processes:all_threads:Load:Successful',
+  ];
+
+  /**
+   * This metric is a limited version of new CPU Time metric. The new cpu time
+   * metric produces 300-500 histograms for a trace, which is overwhelming for
+   * some systems. This file exposes a subset of those histograms.
+   *
+   * TODO(#4044): Remove this metric once histogram pipeline is ready.
+   *
+   * @param {!tr.v.HistogramSet} histograms
+   * @param {!tr.model.Model} model
+   * @param {!Object=} opt_options
+   */
+  function limitedCpuTimeMetric(histograms, model, opt_options) {
+    const allCpuHistograms = new tr.v.HistogramSet();
+    tr.metrics.sh.newCpuTimeMetric(allCpuHistograms, model, opt_options);
+
+    for (const histogramName of includeHistogramNames) {
+      const histogram = allCpuHistograms.getHistogramNamed(histogramName);
+      if (histogram) histograms.addHistogram(histogram);
+    }
+  }
+
+  tr.metrics.MetricRegistry.register(limitedCpuTimeMetric, {
+    supportsRangeOfInterest: true
+  });
+
+  return {
+    limitedCpuTimeMetric,
+  };
+});
+</script>

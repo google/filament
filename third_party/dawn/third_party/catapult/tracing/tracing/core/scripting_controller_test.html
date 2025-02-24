@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/event_target.html">
+<link rel="import" href="/tracing/core/scripting_controller.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function FakeBrushingStateController() {
+    tr.b.EventTarget.call(this);
+
+    this.addAllEventsMatchingFilterToSelectionReturnValue = [];
+
+    this.viewport = undefined;
+    this.model = undefined;
+    this.selection = new tr.model.EventSet();
+    this.highlight = new tr.model.EventSet();
+  }
+  FakeBrushingStateController.prototype = {
+    __proto__: tr.b.EventTarget.prototype
+  };
+
+  test('scriptingControllerBasicArithmetic', function() {
+    const brushingStateController = new FakeBrushingStateController();
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    const result = controller.executeCommand('1 + 1');
+    assert.strictEqual(result, 2);
+  });
+
+  test('scriptingControllerNonLocalContext', function() {
+    const brushingStateController = new FakeBrushingStateController();
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    const x = 1;
+    controller.executeCommand('x = 2');
+    assert.strictEqual(x, 1);
+  });
+
+  test('scriptingControllerModifyGlobalContext', function() {
+    const brushingStateController = new FakeBrushingStateController();
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    global._x = 1;
+    controller.executeCommand('_x = 2');
+    assert.strictEqual(global._x, 2);
+    delete global._x;
+  });
+
+  test('scriptingControllerPersistentContext', function() {
+    const brushingStateController = new FakeBrushingStateController();
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    controller.executeCommand('a = 42');
+    const result = controller.executeCommand('a');
+    assert.strictEqual(result, 42);
+  });
+
+  test('scriptingControllerAddScriptObject', function() {
+    const brushingStateController = new FakeBrushingStateController();
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    controller.addScriptObject('z', 123);
+    const result = controller.executeCommand('z');
+    assert.strictEqual(result, 123);
+  });
+
+  test('scriptingControllerObjectRegistry', function() {
+    const brushingStateController = new FakeBrushingStateController();
+
+    tr.c.ScriptingObjectRegistry.register(
+        function() { return 123; },
+        {
+          name: 'testFunctionName'
+        }
+    );
+    const controller = new tr.c.ScriptingController(brushingStateController);
+    const result = controller.executeCommand('testFunctionName()');
+    assert.strictEqual(result, 123);
+  });
+});
+</script>
+

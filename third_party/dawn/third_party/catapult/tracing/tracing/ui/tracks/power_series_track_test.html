@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel='import' href='/tracing/model/device.html'>
+<link rel='import' href='/tracing/model/model.html'>
+<link rel='import' href='/tracing/model/power_series.html'>
+<link rel='import' href='/tracing/ui/base/constants.html'>
+<link rel='import' href='/tracing/ui/timeline_viewport.html'>
+<link rel='import' href='/tracing/ui/tracks/container_to_track_map.html'>
+<link rel='import' href='/tracing/ui/tracks/drawing_container.html'>
+<link rel="import" href="/tracing/ui/tracks/power_series_track.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Device = tr.model.Device;
+  const Model = tr.Model;
+  const PowerSeries = tr.model.PowerSeries;
+  const PowerSeriesTrack = tr.ui.tracks.PowerSeriesTrack;
+
+  const createDrawingContainer = function(series) {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+    const drawingContainer = new tr.ui.tracks.DrawingContainer(viewport);
+    Polymer.dom(div).appendChild(drawingContainer);
+
+    if (series) {
+      series.updateBounds();
+      setDisplayTransformFromBounds(viewport, series.bounds);
+    }
+
+    return drawingContainer;
+  };
+
+  /**
+   * Sets the mapping between the input range of timestamps and the output range
+   * of horizontal pixels.
+   */
+  const setDisplayTransformFromBounds = function(viewport, bounds) {
+    const dt = new tr.ui.TimelineDisplayTransform();
+    const pixelRatio = window.devicePixelRatio || 1;
+    const chartPixelWidth =
+        (window.innerWidth - tr.ui.b.constants.HEADING_WIDTH) * pixelRatio;
+    dt.xSetWorldBounds(bounds.min, bounds.max, chartPixelWidth);
+    viewport.setDisplayTransformImmediately(dt);
+  };
+
+  test('instantiate', function() {
+    const series = new PowerSeries(new Model().device);
+    series.addPowerSample(0, 1);
+    series.addPowerSample(0.5, 2);
+    series.addPowerSample(1, 3);
+    series.addPowerSample(1.5, 4);
+
+    const drawingContainer = createDrawingContainer(series);
+    const track = new PowerSeriesTrack(drawingContainer.viewport);
+    track.powerSeries = series;
+    Polymer.dom(drawingContainer).appendChild(track);
+
+    this.addHTMLOutput(drawingContainer);
+  });
+
+  test('hasVisibleContent_trueWithPowerSamplesPresent', function() {
+    const series = new PowerSeries(new Model().device);
+    series.addPowerSample(0, 1);
+    series.addPowerSample(0.5, 2);
+    series.addPowerSample(1, 3);
+    series.addPowerSample(1.5, 4);
+
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+
+    const track = new PowerSeriesTrack(viewport);
+    track.powerSeries = series;
+
+    assert.isTrue(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithUndefinedPowerSeries', function() {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+
+    const track = new PowerSeriesTrack(viewport);
+    track.powerSeries = undefined;
+
+    assert.notOk(track.hasVisibleContent);
+  });
+
+  test('hasVisibleContent_falseWithEmptyPowerSeries', function() {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+
+    const track = new PowerSeriesTrack(viewport);
+    const series = new PowerSeries(new Model().device);
+    track.powerSeries = series;
+
+    assert.notOk(track.hasVisibleContent);
+  });
+
+  test('addContainersToTrackMap', function() {
+    const div = document.createElement('div');
+    const viewport = new tr.ui.TimelineViewport(div);
+
+    const powerSeriesTrack = new PowerSeriesTrack(viewport);
+    const series = new PowerSeries(new Model().device);
+    powerSeriesTrack.powerSeries = series;
+
+    const containerToTrackMap = new tr.ui.tracks.ContainerToTrackMap();
+    powerSeriesTrack.addContainersToTrackMap(containerToTrackMap);
+
+    assert.strictEqual(
+        containerToTrackMap.getTrackByStableId('Device.PowerSeries'),
+        powerSeriesTrack);
+  });
+});
+</script>

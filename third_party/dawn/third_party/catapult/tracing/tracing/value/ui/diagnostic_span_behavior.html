@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.v.ui', function() {
+  const DIAGNOSTIC_SPAN_BEHAVIOR = {
+    created() {
+      this.diagnostic_ = undefined;
+      this.name_ = undefined;
+      this.histogram_ = undefined;
+    },
+
+    attached() {
+      if (this.diagnostic_) this.updateContents_();
+    },
+
+    get diagnostic() {
+      return this.diagnostic_;
+    },
+
+    build(diagnostic, name, histogram) {
+      this.diagnostic_ = diagnostic;
+      this.name_ = name;
+      this.histogram_ = histogram;
+      if (this.isAttached) this.updateContents_();
+    },
+
+    updateContents_() {
+      throw new Error('dom-modules must override updateContents_()');
+    }
+  };
+
+  return {
+    DIAGNOSTIC_SPAN_BEHAVIOR,
+  };
+});
+</script>

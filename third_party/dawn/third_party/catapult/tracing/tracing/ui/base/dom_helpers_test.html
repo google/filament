@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const THIS_DOC = document._currentScript.ownerDocument;
+
+  test('simpleSpanAndDiv', function() {
+    const divEl = tr.ui.b.createDiv({
+      className: 'a-div-class', parent: document.body
+    });
+    const testText = 'some span text';
+    const spanEl = tr.ui.b.createSpan({
+      className: 'a-span-class',
+      textContent: testText,
+      parent: divEl
+    });
+    const eltInDocument = Polymer.dom(document)
+        .querySelector('.a-div-class>.a-span-class');
+    assert.strictEqual(Polymer.dom(eltInDocument).textContent, testText);
+    Polymer.dom(eltInDocument.parentElement).removeChild(eltInDocument);
+  });
+
+  test('createSpan_ownerDocument', function() {
+    const spanEl = tr.ui.b.createSpan({
+      className: 'a-span-class',
+      bold: true,
+      ownerDocument: THIS_DOC
+    });
+    assert.strictEqual(spanEl.ownerDocument, THIS_DOC);
+  });
+
+  test('createLink', function() {
+    const linkEl = tr.ui.b.createLink({
+      parent: document.body,
+      className: 'a-link-class',
+      textContent: 'Google',
+      href: 'http://www.google.com/'
+    });
+    const eltInDocument = Polymer.dom(document)
+        .querySelector('.a-link-class');
+    assert.strictEqual(Polymer.dom(eltInDocument).textContent, 'Google');
+    assert.strictEqual(eltInDocument.href, 'http://www.google.com/');
+    Polymer.dom(eltInDocument.parentElement).removeChild(eltInDocument);
+  });
+
+  test('checkboxFromDefaults', function() {
+    const target = {foo: undefined};
+    const cb = tr.ui.b.createCheckBox(
+        target, 'foo', 'myCheckBox', false, 'Foo');
+    assert.isFalse(target.foo);
+  });
+
+  test('checkboxFromSettings', function() {
+    tr.b.Settings.set('myCheckBox', true);
+    const target = {foo: undefined};
+    const cb = tr.ui.b.createCheckBox(
+        target, 'foo', 'myCheckBox', false, 'Foo');
+    assert.isTrue(target.foo);
+  });
+
+  test('checkboxChanged', function() {
+    const target = {foo: undefined};
+    const cb = tr.ui.b.createCheckBox(
+        target, 'foo', 'myCheckBox', false, 'Foo');
+    cb.checked = true;
+
+    assert.isTrue(tr.b.Settings.get('myCheckBox', undefined));
+    assert.isTrue(target.foo);
+  });
+
+  test('selectorSettingsAlreaySet', function() {
+    tr.b.Settings.set('myScale', 0.25);
+
+    const target = {
+      scale: 314
+    };
+    const sel = tr.ui.b.createSelector(
+        target, 'scale',
+        'myScale', 0.375,
+        [{label: '6.25%', value: 0.0625},
+          {label: '12.5%', value: 0.125},
+          {label: '25%', value: 0.25},
+          {label: '37.5%', value: 0.375},
+          {label: '50%', value: 0.5},
+          {label: '75%', value: 0.75},
+          {label: '100%', value: 1},
+          {label: '200%', value: 2}
+        ]);
+    assert.strictEqual(target.scale, 0.25);
+    assert.strictEqual(sel.selectedIndex, 2);
+  });
+
+  test('selectorSettingsDefault', function() {
+    const target = {
+      scale: 314
+    };
+    const sel = tr.ui.b.createSelector(
+        target, 'scale',
+        'myScale', 0.375,
+        [{label: '6.25%', value: 0.0625},
+          {label: '12.5%', value: 0.125},
+          {label: '25%', value: 0.25},
+          {label: '37.5%', value: 0.375},
+          {label: '50%', value: 0.5},
+          {label: '75%', value: 0.75},
+          {label: '100%', value: 1},
+          {label: '200%', value: 2}
+        ]);
+    assert.strictEqual(target.scale, 0.375);
+    assert.strictEqual(sel.selectedIndex, 3);
+  });
+
+  test('selectorSettingsChanged', function() {
+    const target = {
+      scale: 314
+    };
+    const sel = tr.ui.b.createSelector(
+        target, 'scale',
+        'myScale', 0.375,
+        [{label: '6.25%', value: 0.0625},
+          {label: '12.5%', value: 0.125},
+          {label: '25%', value: 0.25},
+          {label: '37.5%', value: 0.375},
+          {label: '50%', value: 0.5},
+          {label: '75%', value: 0.75},
+          {label: '100%', value: 1},
+          {label: '200%', value: 2}
+        ]);
+    assert.strictEqual(sel.selectedValue, 0.375);
+    sel.selectedValue = 0.75;
+    assert.strictEqual(target.scale, 0.75);
+    assert.strictEqual(sel.selectedValue, 0.75);
+    assert.strictEqual(undefined), 0.75, tr.b.Settings.get('myScale');
+  });
+
+  test('asHTMLOrTextNode_string', function() {
+    // Default owner document.
+    let node = tr.ui.b.asHTMLOrTextNode('Hello, World!');
+    assert.instanceOf(node, Node);
+    assert.strictEqual(Polymer.dom(node).textContent, 'Hello, World!');
+    assert.strictEqual(unwrap(node.ownerDocument), document);
+
+    // Custom owner document.
+    node = tr.ui.b.asHTMLOrTextNode('Bye, World!', THIS_DOC);
+    assert.instanceOf(node, Node);
+    assert.strictEqual(Polymer.dom(node).textContent, 'Bye, World!');
+    assert.strictEqual(unwrap(node.ownerDocument), unwrap(THIS_DOC));
+  });
+
+  test('asHTMLOrTextNode_node', function() {
+    // Node object. Owner document should NOT be modified.
+    let node = document.createTextNode('Hi', THIS_DOC);
+    assert.strictEqual(tr.ui.b.asHTMLOrTextNode(node), node);
+    assert.strictEqual(unwrap(node.ownerDocument), unwrap(document));
+
+    // HTMLElement object. Owner document should NOT be modified.
+    node = THIS_DOC.createElement('div');
+    assert.strictEqual(tr.ui.b.asHTMLOrTextNode(node), node);
+    assert.strictEqual(unwrap(node.ownerDocument), unwrap(THIS_DOC));
+  });
+});
+</script>

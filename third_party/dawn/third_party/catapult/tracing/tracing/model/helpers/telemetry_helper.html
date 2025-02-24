@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/model/helpers/chrome_renderer_helper.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model.helpers', function() {
+  const GESTURE_EVENT = 'SyntheticGestureController::running';
+  const IR_REG_EXP = /Interaction\.([^/]+)(\/[^/]*)?$/;
+  const ChromeRendererHelper = tr.model.helpers.ChromeRendererHelper;
+
+  class TelemetryHelper {
+    constructor(modelHelper) {
+      this.modelHelper = modelHelper;
+
+      this.renderersWithIR_ = undefined;
+      this.irSegments_ = undefined;
+      this.uiSegments_ = undefined;
+      this.animationSegments_ = undefined;
+    }
+
+    get renderersWithIR() {
+      this.findIRs_();
+      return this.renderersWithIR_;
+    }
+
+    get irSegments() {
+      this.findIRs_();
+      return this.irSegments_;
+    }
+
+    get uiSegments() {
+      this.findIRs_();
+      return this.uiSegments_;
+    }
+
+    get animationSegments() {
+      if (this.animationSegments_ === undefined) {
+        const model = this.modelHelper.model;
+        this.animationSegments_ = model.userModel.segments.filter(
+            segment => segment.expectations.find(
+                ue => ue instanceof tr.model.um.AnimationExpectation));
+        this.animationSegments_.sort((x, y) => x.start - y.start);
+      }
+      return this.animationSegments_;
+    }
+
+    /**
+     * Finds interesting segments we want to compute metrics in. We use trace
+     * events produced by Telemetry. One drawback of this method is that we
+     * cannot compute the metric from Chrome traces that are not produced by
+     * Telemetry. Alternatively, we could use the user model to detect
+     * interesting segments, like animation segments in the following way:
+     *
+     * const animationSegments = model.userModel.segments.filter(
+     *     segment => segment.expectations.find(
+     *         ue => ue instanceof tr.model.um.AnimationExpectation));
+     *
+     * However, the user model cannot detect all types of animations, yet. For
+     * more discussion about using test generated interaction records vs the
+     * user model please refer to http://bit.ly/ir-tbmv2. TODO(chiniforooshan):
+     * Improve the user model detection of animations.
+     *
+     * Also, some of the metrics we compute here are not animations specific.
+     */
+    findIRs_() {
+      if (this.irSegments_ !== undefined) return;
+
+      this.renderersWithIR_ = [];
+      const gestureEvents = [];
+      const interactionRecords = [];
+      const processes = Object.values(this.modelHelper.rendererHelpers)
+          .concat(this.modelHelper.browserHelpers)
+          .map(processHelper => processHelper.process);
+      for (const process of processes) {
+        let foundIR = false;
+        for (const thread of Object.values(process.threads)) {
+          for (const slice of thread.asyncSliceGroup.slices) {
+            if (slice.title === GESTURE_EVENT) {
+              gestureEvents.push(slice);
+            } else if (IR_REG_EXP.test(slice.title)) {
+              interactionRecords.push(slice);
+              foundIR = true;
+            }
+          }
+        }
+        if (foundIR && ChromeRendererHelper.isRenderProcess(process) &&
+            !ChromeRendererHelper.isTracingProcess(process)) {
+          this.renderersWithIR_.push(
+              new ChromeRendererHelper(this.modelHelper, process));
+        }
+      }
+
+      // Convert interaction record slices to segments. If an interaction record
+      // contains a gesture whose time range overlaps with the interaction
+      // record's range, use the gesture's time range.
+      //
+      // The synthetic gesture controller inserts a trace marker to precisely
+      // demarcate when the gesture was running. We check for overlap, not
+      // inclusion, because gesture actions can start/end slightly outside the
+      // telemetry markers on Windows.
+      this.irSegments_ = [];
+      this.uiSegments_ = [];
+      for (const ir of interactionRecords) {
+        const parts = IR_REG_EXP.exec(ir.title);
+        let gestureEventFound = false;
+        if (parts[1].startsWith('Gesture_')) {
+          for (const gestureEvent of gestureEvents) {
+            if (ir.boundsRange.intersectsRangeInclusive(
+                gestureEvent.boundsRange)) {
+              this.irSegments_.push(new tr.model.um.Segment(
+                  gestureEvent.start, gestureEvent.duration));
+              gestureEventFound = true;
+            }
+          }
+        } else if (parts[1].startsWith('ui_')) {
+          this.uiSegments_.push(new tr.model.um.Segment(ir.start, ir.duration));
+        }
+        if (!gestureEventFound) {
+          this.irSegments_.push(new tr.model.um.Segment(ir.start, ir.duration));
+        }
+      }
+
+      this.irSegments_.sort((x, y) => x.start - y.start);
+      this.uiSegments_.sort((x, y) => x.start - y.start);
+    }
+  }
+
+  return {
+    TelemetryHelper,
+  };
+});
+</script>

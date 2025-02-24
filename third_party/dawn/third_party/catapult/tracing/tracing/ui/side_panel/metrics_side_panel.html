@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/metrics/metric_map_function.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/mre/mre_result.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel_registry.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view.html">
+
+<dom-module id="tr-ui-sp-metrics-side-panel">
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    div#error {
+      color: red;
+    }
+    #results {
+      font-size: 12px;
+    }
+    </style>
+
+    <top-left-controls id="top_left_controls"></top-left-controls>
+
+    <tr-v-ui-histogram-set-view id="results"></tr-v-ui-histogram-set-view>
+
+    <div id="error"></div>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+tr.exportTo('tr.ui', function() {
+  Polymer({
+    is: 'tr-ui-sp-metrics-side-panel',
+    behaviors: [tr.ui.behaviors.SidePanel],
+
+    ready() {
+      this.model_ = undefined;
+
+      this.rangeOfInterest_ = undefined;
+      this.metricLatenciesMs_ = [];
+
+      this.metrics_ = [];
+      tr.metrics.MetricRegistry.getAllRegisteredTypeInfos().forEach(
+          function(m) {
+            if (m.constructor.name === 'sampleMetric') return;
+
+            this.metrics_.push({
+              label: m.constructor.name,
+              value: m.constructor.name
+            });
+          }, this);
+
+      this.metrics_.sort((x, y) => x.label.localeCompare(y.label));
+
+      this.settingsKey_ = 'metrics-side-panel-metric-name';
+      this.currentMetricName_ = 'responsivenessMetric';
+      const metricSelector = tr.ui.b.createSelector(
+          this, 'currentMetricName_',
+          this.settingsKey_,
+          this.currentMetricName_,
+          this.metrics_);
+      Polymer.dom(this.$.top_left_controls).appendChild(metricSelector);
+      metricSelector.addEventListener('change',
+          this.onMetricChange_.bind(this));
+      this.currentMetricTypeInfo_ =
+        tr.metrics.MetricRegistry.findTypeInfoWithName(
+            this.currentMetricName_);
+
+      this.recomputeButton_ = tr.ui.b.createButton(
+          'Recompute', this.onRecompute_, this);
+      Polymer.dom(this.$.top_left_controls).appendChild(this.recomputeButton_);
+
+      this.$.results.addEventListener('display-ready', () => {
+        this.$.results.style.display = '';
+      });
+    },
+
+    async build(model) {
+      this.model_ = model;
+      await this.updateContents_();
+    },
+
+    /**
+     * Return an estimate of how many milliseconds it would take to re-run the
+     * metric. If the metric has not been run, return undefined.
+     *
+     * @return {undefined|number}
+     */
+    get metricLatencyMs() {
+      return tr.b.math.Statistics.mean(this.metricLatenciesMs_);
+    },
+
+    onMetricChange_() {
+      this.currentMetricTypeInfo_ =
+        tr.metrics.MetricRegistry.findTypeInfoWithName(
+            this.currentMetricName_);
+      this.metricLatenciesMs_ = [];
+      this.updateContents_();
+    },
+
+    onRecompute_() {
+      this.updateContents_();
+    },
+
+    get textLabel() {
+      return 'Metrics';
+    },
+
+    supportsModel(m) {
+      if (!m) {
+        return {
+          supported: false,
+          reason: 'No model available'
+        };
+      }
+
+      return {
+        supported: true
+      };
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    set model(model) {
+      this.build(model);
+    },
+
+    get selection() {
+      // Not applicable to metrics.
+    },
+
+    set selection(_) {
+      // Not applicable to metrics.
+    },
+
+    /**
+     * @return {undefined|!tr.b.math.Range}
+     */
+    get rangeOfInterest() {
+      return this.rangeOfInterest_;
+    },
+
+    /**
+     * This may be called rapidly as the mouse is moved.
+     * If the metric supportsRangeOfInterest and takes less than 100ms, then it
+     * will be re-run immediately; otherwise, the Recompute button will be
+     * enabled.
+     *
+     * @param {!tr.b.math.Range} range
+     */
+    set rangeOfInterest(range) {
+      this.rangeOfInterest_ = range;
+
+      if (this.currentMetricTypeInfo_ &&
+          this.currentMetricTypeInfo_.metadata.supportsRangeOfInterest) {
+        if ((this.metricLatencyMs === undefined) ||
+            (this.metricLatencyMs < 100)) {
+          this.updateContents_();
+        } else {
+          this.recomputeButton_.style.background = 'red';
+        }
+      }
+    },
+
+    async updateContents_() {
+      Polymer.dom(this.$.error).textContent = '';
+      this.$.results.style.display = 'none';
+
+      if (!this.model_) {
+        Polymer.dom(this.$.error).textContent = 'Missing model';
+        return;
+      }
+
+      const options = {metrics: [this.currentMetricName_]};
+
+      if (this.currentMetricTypeInfo_ &&
+          this.currentMetricTypeInfo_.metadata.supportsRangeOfInterest &&
+          this.rangeOfInterest &&
+          !this.rangeOfInterest.isEmpty) {
+        options.rangeOfInterest = this.rangeOfInterest;
+      }
+
+      const startDate = new Date();
+      const addFailureCb = failure => {
+        Polymer.dom(this.$.error).textContent = failure.description;
+      };
+      const histograms = tr.metrics.runMetrics(
+          this.model_, options, addFailureCb);
+
+      this.metricLatenciesMs_.push(new Date() - startDate);
+      while (this.metricLatenciesMs_.length > 20) {
+        this.metricLatenciesMs_.shift();
+      }
+
+      this.recomputeButton_.style.background = '';
+
+      await this.$.results.build(histograms);
+    }
+  });
+
+  tr.ui.side_panel.SidePanelRegistry.register(function() {
+    return document.createElement('tr-ui-sp-metrics-side-panel');
+  });
+
+  return {};
+});
+</script>

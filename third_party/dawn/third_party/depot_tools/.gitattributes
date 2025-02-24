@@ -1,0 +1,65 @@
+# The `recipes` attribute controls which additional files are included in the
+# recipes bundle when running the `//recipes/recipes.py bundle` command. These
+# files will also be available to other repos' recipes when they pull in
+# depot_tools as a recipe dependency.
+
+# Tools
+/*.bat recipes
+/*.exe recipes
+/*.py  recipes
+/*.sh  recipes
+
+# vpython specs
+/.vpython*       recipes
+/gsutil.vpython3 recipes
+
+# Extensionless tools we want and support scripts.
+/autoninja*                   recipes
+/clang*                       recipes
+/download_from_google_storage recipes
+/fetch                        recipes
+/gclient                      recipes
+/git*                         recipes
+/git-credential-luci          -recipes
+/gn                           recipes
+/ninja*                       recipes
+/pylint*                      recipes
+/repo                         recipes
+/repo_launcher                recipes
+/roll-dep*                    recipes
+/yapf*                        recipes
+
+# Ensure depot_tools/.cipd_bin in a recipe step.
+/cipd_manifest* recipes
+
+# Symlinks
+/cbuildbot recipes
+/cros*     recipes
+
+/lib/*     recipes
+
+# Metadata validation package, without its tests.
+/metadata/**       recipes
+/metadata/tests/** -recipes
+
+# Libraries for reuse between depot_tools and dependent repos
+/infra_lib                         recipes
+
+# TODO: There are some really junky dependencies in here that we should probably
+# move to vpython/cipd.
+/third_party/**     recipes
+
+/win_toolchain/**   recipes
+
+/fetch_configs/*.py recipes
+
+# Some things we never need to include in the bundle
+*.diff         -recipes
+*LICENSE*      -recipes
+*README*       -recipes
+.gitattributes -recipes
+.gitignore     -recipes
+COPYING        -recipes
+MANIFEST.in    -recipes
+OWNERS         -recipes
+PKG-INFO       -recipes

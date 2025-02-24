@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview A tiny shim version of addEventListener/removeEventListener
+ * which lets tests unregister listeners in-between tests.
+ *
+ * Tests can add listeners to |window| and then then events fired by later test
+ * cases can cause these listeners to be called unexpectedly. This shim allows
+ * a test's tearDown method to remove all listeners added by a test case.
+ * The code under test must use |events.addEventListener| and
+ * |events.removeEventListener| to support this.
+ */
+const events = (function() {
+  let shouldIntercept = false;
+  const added = [];
+
+  function startSiloingListeners() {
+    if (shouldIntercept) {
+      throw new Error('Already intercepting new listeners.');
+    }
+    shouldIntercept = true;
+  }
+
+  function stopSiloingListeners() {
+    if (!shouldIntercept) {
+      throw new Error('Not currently intercepting new listeners.');
+    }
+    shouldIntercept = false;
+    let args;
+    while (args = added.pop()) {
+      const target = args.shift();
+      target.removeEventListener.apply(target, args);
+    }
+  }
+
+  /**
+   * Adds an event listener to |target| and (if |events.startSiloingListeners|
+   * has been called) remembers that event listener so later we can unregister
+   * when |stopSiloingListeners| is called.
+   */
+  function addEventListener(target, type, listener, options) {
+    if (shouldIntercept) added.push([target, type, listener, options]);
+    return target.addEventListener(type, listener, options);
+  }
+
+  // Provided for symmetry with events.addEventListener, doesn't do anything
+  // special.
+  function removeEventListener(target, type, listener, options) {
+    return target.removeEventListener(type, listener, options);
+  }
+
+  return {
+    startSiloingListeners, startSiloingListeners,
+    stopSiloingListeners, stopSiloingListeners,
+    addEventListener,
+    removeEventListener,
+  };
+})();
+</script>
+

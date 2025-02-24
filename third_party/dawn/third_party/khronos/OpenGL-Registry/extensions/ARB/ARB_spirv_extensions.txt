@@ -1,0 +1,507 @@
+Name
+
+    ARB_spirv_extensions
+
+Name String
+
+    GL_ARB_spirv_extensions
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch at nvidia.com)
+
+Contributors
+
+    Daniel Rakos, AMD
+    John Kessenich, Google
+    Members of the OpenGL Working Group
+
+Notice
+
+    Copyright (c) 2017-2018 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: February 20, 2018
+    Revision: 9
+
+Number
+
+    ARB Extension #194
+
+Dependencies
+
+    This extensions is written against the OpenGL 4.5 Specification
+    (Core Profile - July 7, 2016)
+
+    This extension requires ARB_gl_spirv.
+
+    This extension interacts with ARB_shader_ballot and
+    SPV_KHR_shader_ballot.
+
+    This extension interacts with ARB_shader_draw_parameters and
+    SPV_KHR_shader_draw_parameters.
+
+    This extension interacts with ARB_shader_group_vote and
+    SPV_KHR_subgroup_vote.
+
+    This extension interacts with NV_stereo_view_rendering and
+    SPV_NV_stereo_view_rendering.
+
+    This extension interacts with NV_viewport_array2 and
+    SPV_NV_viewport_array2.
+
+    This extension interacts with ARB_shader_viewport_layer_array
+    and SPV_NV_viewport_array2.
+
+    This extension interacts with NV_geometry_shader_passthrough
+    and SPV_NV_geometry_shader_passthrough.
+
+    This extension interacts with NV_sample_mask_override_coverage
+    and SPV_NV_sample_mask_override_coverage.
+
+    This extension interacts with AMD_shader_explicit_vertex_parameter
+    and SPV_AMD_shader_explicit_vertex_parameter.
+
+    This extension interacts with AMD_gpu_shader_half_float
+    and SPV_AMD_gpu_shader_half_float.
+
+    This extension interacts with ARB_shader_atomic_counter_ops and
+    SPV_KHR_shader_atomic_counter_ops.
+
+    This extension interacts with ARB_post_depth_coverage,
+    EXT_post_depth_coverage and SPV_KHR_post_depth_coverage.
+
+    This extension interacts with SPV_KHR_storage_buffer_storage_class.
+
+Overview
+
+    ARB_gl_spirv added support for using SPIR-V modules in OpenGL.
+    However it only added support for SPIR-V 1.0 concepts that were part of
+    the OpenGL 4.5 Core Profile.
+
+    There are a great number of additional OpenGL ARB and vendor extensions
+    which add shading language concepts and since they were defined prior
+    to the existence of SPIR-V support in OpenGL they don't add SPIR-V support
+    for their additional features.  Ideally GL_ARB_gl_spirv would have added
+    support for them, but as noted in Issue 27 of that extension, support for
+    them was left as a future exercise.
+
+    Now that at least some of that functionality has been defined via SPIR-V
+    extensions, there is currently no way for an OpenGL implementation to
+    advertise that is supports additional SPIR-V extensions.
+
+    This extension provides a mechanism for an implementation to advertise
+    which SPIR-V extensions it supports, and further provides a place where
+    the SPIR-V environment for those extensions can be documented for OpenGL.
+
+    It is expected that this document can be extended over time as SPIR-V
+    support for additional extensions is added. The mapping between GLSL and
+    SPIR-V concepts and any other pertinent information can be provided here
+    as interactions with the corresponding OpenGL and SPIR-V extensions.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <name> parameter of GetStringi:
+
+        SPIR_V_EXTENSIONS           0x9553
+
+    Accepted by the <pname> parameter of GetIntegerv:
+
+        NUM_SPIR_V_EXTENSIONS       0x9554
+
+Modifications to Chapter 7 of the OpenGL 4.5 (Core Profile) Specification
+(Programs and Shaders)
+
+    [[Modifications when SPV_KHR_storage_buffer_storage_class is supported]]
+
+    (replace section "7.6.2.spv SPIR-V Uniform Offsets and Strides" added by
+     ARB_gl_spirv with the following:)
+
+        "The SPIR-V decorations *GLSLShared* or *GLSLPacked* must not be used.
+        A variable in the *Uniform* or *StorageBuffer* Storage Class decorated
+        as a *Block* must be explicitly laid out using the *Offset*,
+        *ArrayStride*, and *MatrixStride* decorations. If the variable is in
+        the *Uniform* storage class decorated as a *BufferBlock* or in the
+        *StorageBuffer* storage class decorated as a *Block*, its offsets and
+        strides must not contradict std430 alignment and minimum offset
+        requirements. Otherwise, its offsets and strides must not contradict
+        std140 alignment and minimum offset requirements."
+
+
+Modifications to Chapter 22 of the OpenGL 4.5 (Core Profile) Specification
+(Context State Queries)
+
+    Additions to section 22.2 (Pointer, String, and Related Context Queries)
+
+        Add the following to the description of tokens accepted by
+        GetStringi:
+
+        "If <name> is SPIR_V_EXTENSIONS, the SPIR-V extension name
+        corresponding to the <index>th supported SPIR-V extension
+        (specified as the Name String in the corresponding SPIR-V
+        extension document) will be returned. <index> may range from zero
+        to the value of NUM_SPIR_V_EXTENSIONS minus one. The value of
+        NUM_SPIR_V_EXTENSIONS can be queried using the GetInteger
+        command. There is no defined relationship between any particular
+        extension name and the <index> values and a SPIR-V extension name
+        may correspond to a different <index> in different GL contexts
+        and/or implementations."
+
+        Modify the INVALID_ENUM error for the GetStringi command to be:
+
+        "An INVALID_ENUM error is generated if <name> is not EXTENSIONS,
+        SHADING_LANGUAGE_VERSION, or SPIR_V_EXTENSIONS."
+
+
+Modifications to Appendix A.spv of the OpenGL 4.5 (Core Profile) Specification
+(The OpenGL SPIR-V Execution Environment) [as added by GL_ARB_gl_spirv]
+
+    Additions to section A.spv.2 (Valid SPIR-V Built-In Variable Decorations)
+
+        Built-in Variable Decoration    Minimum GL version (Extension)
+        ----------------------------    -----------------------------
+        SubgroupEqMaskKHR               (ARB_shader_ballot)
+        SubgroupGeMaskKHR               (ARB_shader_ballot)
+        SubgroupGtMaskKHR               (ARB_shader_ballot)
+        SubgroupLeMaskKHR               (ARB_shader_ballot)
+        SubgroupLtMaskKHR               (ARB_shader_ballot)
+        BaseVertex                      (ARB_shader_draw_parameters)
+        BaseInstance                    (ARB_shader_draw_parameters)
+        DrawIndex                       (ARB_shader_draw_parameters)
+        SecondaryPositionNV             (NV_stereo_view_rendering)
+        SecondaryViewportMaskNV         (NV_stereo_view_rendering)
+        ViewportMaskNV                  (NV_viewport_array2)
+        BaryCoordNoPerspAMD             (AMD_shader_explicit_vertex_parameter)
+        BaryCoordNoPerspCentroidAMD     (AMD_shader_explicit_vertex_parameter)
+        BaryCoordNoPerspSampleAMD       (AMD_shader_explicit_vertex_parameter)
+        BaryCoordSmoothAMD              (AMD_shader_explicit_vertex_parameter)
+        BaryCoordSmoothCentroidAMD      (AMD_shader_explicit_vertex_parameter)
+        BaryCoordSmoothSampleAMD        (AMD_shader_explicit_vertex_parameter)
+        BaryCoordPullModelAMD           (AMD_shader_explicit_vertex_parameter)
+
+    Additions to section A.spv.3 (Valid SPIR-V Capabilities)
+
+        Implementations supporting ARB_shader_ballot and
+        SPV_KHR_shader_ballot must support the following operand declared
+        by OpCapability:
+
+            SubgroupBallotKHR
+
+        Implementations supporting ARB_shader_draw_parameters and
+        SPV_KHR_shader_draw_parameters must support the following operand
+        declared by OpCapability:
+
+            DrawParameters
+
+        Implementations supporting ARB_shader_group_vote and
+        SPV_KHR_subgroup_vote must support the following operand declared
+        by OpCapability:
+
+            SubgroupVoteKHR
+
+        Implementations supporting NV_stereo_view_rendering and
+        SPV_NV_stereo_view_rendering must support the following operand
+        declared by OpCapability:
+
+            ShaderStereoViewNV
+
+        Implementations supporting NV_viewport_array2 and
+        SPV_NV_viewport_array2 must support the following operands
+        declared by OpCapability:
+
+            ShaderViewportIndexLayerNV
+            ShaderViewportMaskNV
+
+        Implementations supporting ARB_shader_viewport_layer_array and
+        SPV_NV_viewport_array2 must support the following operands
+        declared by OpCapability:
+
+            ShaderViewportIndexLayerNV
+
+        Implementations supporting NV_geometry_shader_passthrough and
+        SPV_NV_geometry_shader_passthrough must support the following
+        operand declared by OpCapability:
+
+            GeometryShaderPassthroughNV
+
+        Implementations supporting NV_sample_mask_override_coverage and
+        SPV_NV_sample_mask_override_coverage must suport the following
+        operand declared by OpCapability:
+
+            SampleMaskOverrideCoverageNV
+
+        Implementations supporting AMD_gpu_shader_half_float and
+        SPV_AMD_gpu_shader_half_float must support the following operand
+        declared by OpCapability:
+
+            Float16
+
+        Implementations supporting ARB_shader_atomic_counter_ops and
+        SPV_KHR_shader_atomic_counter_ops must support the following
+        operand declared by OpCapability:
+
+            AtomicStorageOps
+
+        Implementations supporting ARB_post_depth_coverage
+        (or EXT_post_depth_coverage) and SPV_KHR_post_depth_coverage
+        must support the following operand declared by OpCapability:
+
+            SampleMaskPostDepthCoverage
+
+    Additions to section A.spv.4 (Validation rules)
+
+    [[Additions for SPV_NV_viewport_array2]]
+
+     * The code:ViewportRelativeNV decoration must: only be used on a variable
+       decorated with code:Layer in the vertex, tessellation evaluation, or
+       geometry shader stages.
+     * The code:ViewportRelativeNV decoration must: not be used unless a
+       variable decorated with one of code:ViewportIndex or
+       code:ViewportMaskNV is also statically used by the same
+        code:OpEntryPoint.
+     * The code:ViewportMaskNV and code:ViewportIndex decorations must: not
+       both be statically used by one or more code:OpEntryPoint's that form
+       the vertex processing stages of a graphics pipeline.
+
+    [[Additions for SPV_AMD_shader_explicit_vertex_parameter]]
+
+     * The code:CustomInterpAMD decoration must not be used on variables with
+       Storage Class other than *Input* or on variables used in the interface
+       of non-fragment shader entry points.
+
+    [[Modifications if SPV_KHR_storage_buffer_storage_class is supported]]
+
+      - Add *StorageBuffer* to the list of Storage Classes that are accepted.
+
+    (replace the following statement from ARB_gl_spirv)
+
+      - OpTypeRuntimeArray must only be used for the last member of an
+        OpTypeStruct in the Uniform Storage Class and is decorated as
+        BufferBlock.
+
+    (with the following:)
+
+      - OpTypeRuntimeArray must: only be used for the last member of an
+        OpTypeStruct that is in the StorageBuffer storage class
+        decorated as Block, or that is in the Uniform storage
+        class decorated as BufferBlock.
+
+
+New State
+
+Add the following rows to Table 23.56 (Implementation Dependent Version
+and Extensions support)
+
+Get Value             Type  Get         Minimum Description      Sec.
+                            Command     Value
+--------------------- ----- ----------- ------- ---------------- ----
+SPIR_V_EXTENSIONS     n x S GetStringi     -    Supported SPIR-V 22.2
+                                                extension names
+NUM_SPIR_V_EXTENSIONS  Z+   GetIntegerv    0    No. of supported 22.2
+                                                SPIR-V extension
+                                                names
+
+
+Interactions with ARB_shader_ballot and SPV_KHR_shader_ballot:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * in uint64_t gl_SubGroupEqMaskARB; -> SubgroupEqMaskKHR,
+    * in uint64_t gl_SubGroupGeMaskARB; -> SubgroupGeMaskKHR,
+    * in uint64_t gl_SubGroupGtMaskARB; -> SubgroupGtMaskKHR,
+    * in uint64_t gl_SubGroupLeMaskARB; -> SubgroupLeMaskKHR,
+    * in uint64_t gl_SubGroupLtMaskARB; -> SubgroupLtMaskKHR,
+    * in uint gl_SubGroupInvocationARB; -> SubgroupLocalInvocationId,
+    * uniform uint gl_SubGroupSizeARB;  -> SubgroupSize,
+    * ballotARB()                       -> OpSubgroupBallotKHR,
+    * readFirstInvocationARB()          -> OpSubgroupFirstInvocationKHR, and
+    * readInvocationARB()               -> OpSubgroupReadInvocationKHR.
+
+Interactions with ARB_shader_draw_parameters and
+SPV_KHR_shader_draw_parameters:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * in int gl_BaseInstanceARB; -> BaseInstance,
+    * in int gl_BaseVertexARB;   -> BaseVertex, and
+    * in int gl_DrawIDARB;       -> DrawIndex.
+
+Interactions with ARB_shader_group_vote and SPV_KHR_subgroup_vote:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * anyInvocationARB()        -> OpSubgroupAnyKHR,
+    * allInvocationsARB()       -> OpSubgroupAllKHR, and
+    * allInvocationsEqualARB()  -> OpSubgroupAllEqualKHR.
+
+Interactions with NV_stereo_view_rendering and SPV_NV_stereo_view_rendering:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * highp vec4 gl_SecondaryPositionNV;        -> SecondaryPositionNV,
+    * highp int  gl_SecondaryViewportMaskNV[];  -> SecondaryViewportMaskNV, and
+    * layout (secondary_view_offset = n)        -> SecondaryViewportRelativeNV.
+
+Interactions with NV_viewport_array2 and SPV_NV_viewport_array2:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * highp int gl_ViewportMask[] -> ViewportMaskNV, and
+    * layout (viewport_relative)  -> ViewportRelativeNV.
+
+Interactions with ARB_shader_viewport_layer_array and SPV_NV_viewport_array2:
+
+    When using these extensions, gl_Layer and gl_ViewportIndex can be written
+    from Vertex or Tessellation shaders.
+
+Interactions with NV_geometry_shader_passthrough and
+SPV_NV_geometry_shader_passthrough:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * layout(passthrough) -> PassthroughNV.
+
+Interactions with NV_sample_mask_override_coverage and
+SPV_NV_sample_mask_override_coverage:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * layout(override_coverage) -> OverrideCoverageNV.
+
+Interactions with AMD_shader_explicit_vertex_parameter and
+SPV_AMD_shader_explicit_vertex_parameter:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * explicitInterpAMD                       -> ExplicitInterpAMD
+    * in vec2 gl_BaryCoordNoPerspAMD;         -> BaryCoordNoPerspAMD
+    * in vec2 gl_BaryCoordNoPerspCentroidAMD; -> BaryCoordNoPerspCentroidAMD
+    * in vec2 gl_BaryCoordNoPerspSampleAMD;   -> BaryCoordNoPerspSampleAMD
+    * in vec2 gl_BaryCoordSmoothAMD;          -> BaryCoordSmoothAMD
+    * in vec2 gl_BaryCoordSmoothCentroidAMD;  -> BaryCoordSmoothCentroidAMD
+    * in vec2 gl_BaryCoordSmoothSampleAMD;    -> BaryCoordSmoothSampleAMD
+    * in vec3 gl_BaryCoordPullModelAMD;       -> BaryCoordPullModelAMD
+
+Interactions with AMD_gpu_shader_half_float and SPV_AMD_gpu_shader_half_float:
+
+    When using these extensions, 16-bit floating-point types are permitted
+    for a number of additional data-types and built-in functions.
+
+Interactions with ARB_shader_atomic_counter_ops and
+SPV_KHR_shader_atomic_counter_ops:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * uint atomicCounterAddARB()      -> OpAtomicIAdd
+    * uint atomicCounterSubtractARB() -> OpAtomicISub
+    * uint atomicCounterMinARB()      -> OpAtomicUMin
+    * uint atomicCounterMaxARB()      -> OpAtomicUMax
+    * uint atomicCounterAndARB()      -> OpAtomicAnd
+    * uint atomicCounterOrARB()       -> OpAtomicOr
+    * uint atomicCounterXorARB()      -> OpAtomicXor
+    * uint atomicCounterExchangeARB() -> OpAtomicExchange
+    * uint atomicCounterCompSwapARB() -> OpAtomicCompareExchange
+
+Interactions with ARB_post_depth_coverage or EXT_post_depth_coverage and
+SPV_KHR_post_depth_coverage:
+
+    When using these extensions the following GLSL -> SPIR-V mapping is used:
+
+    * layout(post_depth_coverage) -> PostDepthCoverage.
+
+Interactions with SPV_KHR_storage_buffer_storage_class:
+
+    When SPV_KHR_storage_buffer_storage class is supported, shader storage
+    buffer objects can be mapped to SPIR-V using the *StorageBuffer* storage
+    class and decorated as *Block*, which is considered equivalent (and
+    preferred to) declaring them with the *Uniform* storage class and
+    decorating them with the *BufferBlock* decoration:
+
+      buffer  blockN { ... } ...;  -> Uniform, with BufferBlock decoration
+      buffer  blockN { ... } ...;  -> StorageBuffer, with Block decoration (preferred)
+
+    If SPV_KHR_storage_buffer_storage_class is not supported, ignore all
+    references to the StorageBuffer storage class.
+
+Issues
+
+1. Where should we document environment interactions for new SPIR-V
+   extensions?
+
+   DISCUSSION. The environment interactions could be:
+   a) added to the corresponding (existing) GL extension? This means they
+      would be spread across all manner of documents and hard to find.
+      We would prefer to have them documented in few locations.
+   b) added to ARB_gl_spirv? This means ARB_gl_spirv would be an ever
+      growing document which is a bit strange as it gives no way to
+      advertise or enable the new functionality. Also that document effectively
+      corresponds go GL 4.5 level functionality and is going to be rolled
+      into OpenGL 4.6.
+   c) added to this extension? This document becomes the ever growing version
+      instead, and it does provide a query to be able to tell if new
+      functionality is supported by an implementation.
+
+   RESOLVED. Pick (c). New GL extensions should add their SPIR-V environment
+   restrictions for OpenGL to this document. It it is recommended to include a
+   pointer to this extension from the new GL extension.
+
+2. Does that mean we can add brand new SPIR-V functionality to GL just by
+   editing this extension?
+
+   RESOLVED. Only for shader functionality that already exists in OpenGL
+   by a previous extension.  For completely new functionality it should be
+   done via a new API extension that adds any necessary API support as
+   well as defining the GLSL-version of the functionality.
+
+3. If a new GL extension is added that includes SPIR-V support via a
+   new SPIR-V extension does it's SPIR-V extension also get enumerated by
+   the SPIR_V_EXTENSIONS_ARB query?.
+
+   RESOLVED. Yes. It's good to include it for consistency. Any SPIR-V
+   functionality supported beyond the SPIR-V version that is required
+   for the GL API version should be enumerated.
+
+4. Does (3) mean that we should have a query for the version of SPIR-V
+   that is supported as well?
+
+   RESOLVED. No. With ARB_gl_spirv (and in OpenGL 4.6) OpenGL only supports
+   SPIR-V 1.0. If we want to support additional versions of SPIR-V we'll need
+   to update the SPIR-V environment which will require a new GL extension to
+   to do this.
+
+Revision History
+
+    Rev.    Date         Author         Changes
+    ----  -----------    ------------   ---------------------------------
+     1    2017-01-22     dgkoch         Initial revision
+     2    2017-04-08     dgkoch         Add additional extensions and issues.
+     3    2017-04-21     dgkoch         Assign tokens
+     4    2017-04-22     dgkoch         Add SPV_KHR_shader_atomic_counter_ops
+                                        and add GLSL->SPIR-V mappings.
+     5    2017-04-24     dgkoch         remove ARB suffixes and resolve issue 4.
+     6    2017-04-25     dgkoch         Add SPV_KHR_post_depth_coverage.
+     7    2017-05-09     dgkoch         fix typos.
+     8    2017-07-14     dgkoch         Add SPV_KHR_storage_buffer_storage_class.
+     9    2018-02-20     dgkoch         Update storage class whitelist to include
+                                        storage buffers (SPIR-V/issues/166)
+

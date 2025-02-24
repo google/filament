@@ -1,0 +1,560 @@
+Name
+
+    KHR_stream_cross_process_fd
+
+Name Strings
+
+    EGL_KHR_stream_cross_process_fd
+
+Contributors
+
+    Acorn Pooley
+    Ian Stewart
+
+Contacts
+
+    Acorn Pooley, NVIDIA  (apooley 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete.
+    Approved by the EGL Working Group on June 6, 2012.
+    Approved by the Khronos Board of Promoters on July 27, 2012.
+
+Version
+
+    Version 8 - June 5, 2012
+
+Number
+
+    EGL Extension #41
+
+Dependencies
+
+    Requires EGL 1.2.
+    Requires EGL_KHR_stream
+
+    This extension is written based on the wording of the EGL 1.2
+    specification.
+
+    This extension interacts with the following extensions if they are
+    also present:
+        EGL_KHR_stream_producer_eglsurface
+        EGL_KHR_stream_consumer_gltexture
+        EGL_KHR_stream_producer_aldatalocator
+        EGL_KHR_stream_fifo
+
+Overview
+
+    This extension allows an EGLStreamKHR object handle to be
+    duplicated into another process so that the EGLStream producer can
+    be in one process while the EGLStream consumer can be in another
+    process.
+
+    Duplicating the EGLStreamKHR object handle into another process is
+    peformed in 3 steps
+
+        1) Get a file descriptor associated with the EGLStream.
+        2) Duplicate the file descriptor into another process.
+        3) Create an EGLStreamKHR from the duplicated file descriptor in
+            the other process.
+
+    The file descriptor is obtained by calling
+    eglGetStreamFileDescriptorKHR().
+
+    Duplicating the file descriptor into another process is outside
+    the scope of this extension.  See issue #1 for an example of how
+    to do this on a Linux system.
+
+    The EGLStreamKHR object handle is created in the second process by
+    passing the file descriptor to the
+    eglCreateStreamFromFileDescriptorKHR() function.  This must be
+    done while the EGLStream is in the EGL_STREAM_STATE_CREATED_KHR
+    state.
+
+    Once the EGLStreamKHR object handle is created in the second
+    process, it refers to the same EGLStream as the EGLStreamKHR
+    object handle in the original process.  A consumer can be
+    associated with the EGLStream from either process.  A producer can
+    be associated with the EGLStream from either process.
+
+New Types
+
+    Represents a native OS file descriptor.
+
+    typedef int EGLNativeFileDescriptorKHR
+
+New Procedures and Functions
+
+    EGLNativeFileDescriptorKHR eglGetStreamFileDescriptorKHR(
+        EGLDisplay dpy,
+        EGLStreamKHR stream);
+
+    EGLStreamKHR eglCreateStreamFromFileDescriptorKHR(
+        EGLDisplay dpy,
+        EGLNativeFileDescriptorKHR file_descriptor);
+
+New Tokens
+
+    Returned from eglGetStreamFileDescriptorKHR on error.
+
+    #define EGL_NO_FILE_DESCRIPTOR_KHR  ((EGLNativeFileDescriptorKHR)(-1))
+
+Add a new section just after section "3.10.1 Creating an EGLStream" in
+the EGL_KHR_stream extension
+
+    3.10.1.1 Duplicating an EGLStream from a file descriptor
+
+    Call
+
+        EGLNativeFileDescriptorKHR eglGetStreamFileDescriptorKHR(
+            EGLDisplay dpy,
+            EGLStreamKHR stream);
+
+    to create a file descriptor that refers to the EGLStream.
+    <stream> must be an EGLStream in the EGL_STREAM_STATE_CREATED_KHR
+    state.  eglGetStreamFileDescriptorKHR may be called at most once
+    for any <stream>.
+
+    On success a file descriptor is returned which can be used
+    to create a duplicate EGLStreamKHR handle which refers to the same
+    underlying EGLStream as <stream>.  This file descriptor and file
+    descriptors duplicated from it should only be used in a call to
+    eglCreateStreamFromFileDescriptorKHR() and/or a call to close().
+    In particular reads, writes, and other operations on the file
+    descriptor result in undefined behavior.
+
+    On failure the functions returns EGL_NO_FILE_DESCRIPTOR_KHR and
+    generates an error
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid
+          initialized EGLDisplay
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStreamKHR handle created for <dpy>.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> is not in the
+          EGL_STREAM_STATE_CREATED_KHR state or if
+          eglGetStreamFileDescriptorKHR() has previously been called
+          on this <stream>.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> was not created
+          by eglCreateStreamKHR (e.g. if it was created by
+          eglCreateStreamFromFileDescriptorKHR).
+
+    The file descriptor returned by eglGetStreamFileDescriptorKHR can
+    be duplicated into a different process address space using system
+    specific mechanisms outside the scope of this specification.  (For
+    example, on a Linux system it can be sent over a UNIX domain
+    socket using sendmsg/recvmsg.)
+
+    Call
+
+        EGLStreamKHR eglCreateStreamFromFileDescriptorKHR(
+            EGLDisplay dpy,
+            EGLNativeFileDescriptorKHR file_descriptor);
+
+    to create an EGLStreamKHR handle.  <file_descriptor> must be a
+    file descriptor returned by eglGetStreamFileDescriptorKHR or a
+    file descriptor duplicated from such a file descriptor (possibly
+    in a different process).  The EGLStream must be in the
+    EGL_STREAM_STATE_CREATED_KHR or EGL_STREAM_STATE_CONNECTING_KHR
+    state.
+
+    On success an EGLStreamKHR handle is returned.  This EGLStreamKHR
+    handle refers to the same EGLStream which was used to create the
+    <file_descriptor> or the file descriptor from which
+    <file_descriptor> was duplicated.
+
+    After the file descriptor is passed to
+    eglCreateStreamFromFileDescriptorKHR it may no longer be used to
+    create a new EGLStream.
+
+    On failure EGL_NO_STREAM_KHR is returned and an error is
+    generated.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid
+          initialized EGLDisplay
+
+        - EGL_BAD_ATTRIBUTE is generated if <file_descriptor> is
+          EGL_NO_FILE_DESCRIPTOR_KHR.
+
+        - EGL_BAD_ATTRIBUTE is generated if <file_descriptor> is
+          not an open file descriptor referring to an EGLStream
+          created on the same Native Display as <dpy>.
+
+        - EGL_BAD_ATTRIBUTE is generated if <file_descriptor> has
+          already been used to create a stream handle via a previous
+          call to eglCreateStreamFromFileDescriptorKHR.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> is not in the
+          EGL_STREAM_STATE_CREATED_KHR or
+          EGL_STREAM_STATE_CONNECTING_KHR state.
+
+    The application should close the file descriptor and any file
+    descriptors duplicated from it once
+    eglCreateStreamFromFileDescriptorKHR has returned.  Open file
+    descriptors will consume resources until they are closed or until
+    all processes that hold them open have terminated.  Closing the
+    file descriptors after calling
+    eglCreateStreamFromFileDescriptorKHR will not affect the
+    associated EGLStream.  If an application calls
+    eglGetStreamFileDescriptorKHR and then determines that the file
+    descriptor and/or the EGLStream is no longer needed then it may
+    (and should) close the file descriptor and destroy the EGLStream
+    (this is not considered an error).
+
+    If a process which has successfully connected a consumer or
+    producer to the EGLStream terminates (normally or abnormally) then
+    the EGLStream state becomes EGL_STREAM_STATE_DISCONNECTED_KHR.
+
+    If a process has created an EGLStreamKHR handle either with
+    eglCreateStreamKHR or eglCreateStreamFromFileDescriptorKHR but has
+    not connected a producer or consumer to the stream, and this
+    process terminates (normally or abnormally) then this has no
+    effect on the EGLStream.
+
+Interactions with the EGL_KHR_stream_producer_eglsurface extension.
+
+    The eglCreateStreamProducerSurfaceKHR() function can be called
+    from either the process that created the original EGLStreamKHR, or
+    from the process which called eglCreateStreamFromFileDescriptorKHR.
+
+Interactions with the EGL_KHR_stream_consumer_gltexture extension.
+
+    The eglStreamConsumerGLTextureExternalKHR() function can be called
+    from either the process that created the original EGLStreamKHR, or
+    from the process which called
+    eglCreateStreamFromFileDescriptorKHR.  The
+    eglStreamConsumerAcquireKHR() and eglStreamConsumerReleaseKHR()
+    functions must be called from the same process that calls
+    eglStreamConsumerGLTextureExternalKHR() (or else they will fail
+    and generate an EGL_BAD_ACCESS error).
+
+Interactions with the EGL_KHR_stream_producer_aldatalocator extension.
+
+    The CreateMediaPlayer() method can be called from either the
+    process that created the original EGLStreamKHR, or from the
+    process which called eglCreateStreamFromFileDescriptorKHR.
+
+Interactions with the EGL_KHR_stream_fifo extension.
+
+    The queries for EGL_STREAM_FIFO_LENGTH_KHR,
+    EGL_STREAM_TIME_NOW_KHR, EGL_STREAM_TIME_CONSUMER_KHR, and
+    EGL_STREAM_TIME_PRODUCER_KHR can be made from either process.  The
+    time values returned by the EGL_STREAM_TIME_NOW_KHR query will be
+    consistent between the two processes (i.e. if queried at the same
+    time from both processes, the same value (plus or minus some
+    margin of error) will be returned).
+
+Interactions with the EGL_NV_stream_cross_process_fd extension.
+
+    These extensions may both exist on the same implementation and
+    are functionally equivalent. Mixing and matching file descriptors
+    from one extension with functions from the other is allowed.
+
+Interactions with the EGL_NV_stream_sync extension.
+
+    The eglCreateStreamSyncNV() function may only be called from a
+    process which has successfully connected a consumer to the
+    EGLStream.  Otherwise eglCreateStreamSyncNV generates a
+    EGL_BAD_ACCESS error.
+
+Issues
+    1.  How does the application transfer the file descriptor to
+        another process?
+
+        RESOLVED: This is outside the scope of this extension.  The
+        application can use existing operating system mechanisms for
+        duplicating the file descriptor into another process.  For
+        example on Linux a file descriptor can be sent over a UNIX
+        domain socket using the following code (call send_fd() to
+        send the file descriptor, and receive_fd() in the other
+        process to receive the file descriptor).  (The following code
+        is placed into the public domain by its author, Acorn Pooley)
+
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <unistd.h>
+            #include <sys/types.h>
+            #include <sys/socket.h>
+            #include <sys/un.h>
+
+            #define FATAL_ERROR() exit(1)
+            #define SOCKET_NAME "/tmp/example_socket"
+
+            /* Send <fd_to_send> (a file descriptor) to another process */
+            /* over a unix domain socket named <socket_name>.           */
+            /* <socket_name> can be any nonexistant filename.           */
+            void send_fd(const char *socket_name, int fd_to_send)
+            {
+                int sock_fd;
+                struct sockaddr_un sock_addr;
+                struct msghdr msg;
+                struct iovec iov[1];
+                char ctrl_buf[CMSG_SPACE(sizeof(int))];
+                struct cmsghdr *cmsg = NULL;
+
+                sock_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+                if (sock_fd < 0) FATAL_ERROR();
+
+                memset(&sock_addr, 0, sizeof(struct sockaddr_un));
+                sock_addr.sun_family = AF_UNIX;
+                strncpy(sock_addr.sun_path,
+                        socket_name,
+                        sizeof(sock_addr.sun_path)-1);
+
+                while (connect(sock_fd,
+                            (const struct sockaddr*)&sock_addr,
+                            sizeof(struct sockaddr_un))) {
+                    printf("Waiting for reciever\n");
+                    sleep(1);
+                }
+
+                memset(&msg, 0, sizeof(msg));
+
+                iov[0].iov_len  = 1;    // must send at least 1 byte
+                iov[0].iov_base = "x";  // any byte value (value ignored)
+                msg.msg_iov = iov;
+                msg.msg_iovlen = 1;
+
+                memset(ctrl_buf, 0, sizeof(ctrl_buf));
+                msg.msg_control = ctrl_buf;
+                msg.msg_controllen = sizeof(ctrl_buf);
+
+                cmsg = CMSG_FIRSTHDR(&msg);
+                cmsg->cmsg_level = SOL_SOCKET;
+                cmsg->cmsg_type = SCM_RIGHTS;
+                cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+                *((int *) CMSG_DATA(cmsg)) = fd_to_send;
+
+                msg.msg_controllen = cmsg->cmsg_len;
+
+                if (sendmsg(sock_fd, &msg, 0) <= 0) FATAL_ERROR();
+
+                close(sock_fd);
+            }
+
+            /* Listen on a unix domain socket named <socket_name> and  */
+            /* receive a file descriptor from another process.         */
+            /* Returns the file descriptor.  Note: the integer value   */
+            /* of the file descriptor may be different from the        */
+            /* integer value in the other process, but the file        */
+            /* descriptors in each process will refer to the same file */
+            /* object in the kernel.                                   */
+            int receive_fd(const char *socket_name)
+            {
+                int listen_fd;
+                struct sockaddr_un sock_addr;
+                int connect_fd;
+                struct sockaddr_un connect_addr;
+                socklen_t connect_addr_len = 0;
+                struct msghdr msg;
+                struct iovec iov[1];
+                char msg_buf[1];
+                char ctrl_buf[CMSG_SPACE(sizeof(int))];
+                struct cmsghdr *cmsg;
+
+                listen_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+                if (listen_fd < 0) FATAL_ERROR();
+
+                unlink(socket_name);
+
+                memset(&sock_addr, 0, sizeof(struct sockaddr_un));
+                sock_addr.sun_family = AF_UNIX;
+                strncpy(sock_addr.sun_path,
+                        socket_name,
+                        sizeof(sock_addr.sun_path)-1);
+
+                if (bind(listen_fd,
+                         (const struct sockaddr*)&sock_addr,
+                         sizeof(struct sockaddr_un)))
+                    FATAL_ERROR();
+
+                if (listen(listen_fd, 1)) FATAL_ERROR();
+
+                connect_fd = accept(
+                                listen_fd,
+                                (struct sockaddr *)&connect_addr,
+                                &connect_addr_len);
+                close(listen_fd);
+                unlink(socket_name);
+                if (connect_fd < 0) FATAL_ERROR();
+
+                memset(&msg, 0, sizeof(msg));
+
+                iov[0].iov_base = msg_buf;
+                iov[0].iov_len  = sizeof(msg_buf);
+                msg.msg_iov = iov;
+                msg.msg_iovlen = 1;
+
+                msg.msg_control = ctrl_buf;
+                msg.msg_controllen = sizeof(ctrl_buf);
+
+                if (recvmsg(connect_fd, &msg, 0) <= 0) FATAL_ERROR();
+
+                cmsg = CMSG_FIRSTHDR(&msg);
+                if (!cmsg) FATAL_ERROR();
+                if (cmsg->cmsg_level != SOL_SOCKET) FATAL_ERROR();
+                if (cmsg->cmsg_type != SCM_RIGHTS) FATAL_ERROR();
+
+                return *(int *) CMSG_DATA(cmsg);
+            }
+
+    2.  Does this extension work with all consumers and all producers?
+
+        RESOLVED: This extension is compatible with
+            EGL_KHR_stream_producer_eglsurface
+            EGL_KHR_stream_consumer_gltexture
+            EGL_KHR_stream_producer_aldatalocator
+            EGL_KHR_stream_fifo
+        as described in the Interactions sections.  Whether an
+        EGLStream that has been duplicated into another process will
+        work with other types of consumers and producers should be
+        mentioned in the description of those consumers and producers.
+
+    3.  Does EGL create a file descriptor for every EGLStream when the
+        EGLStream is created, or is the file descriptor be created
+        when eglGetStreamFileDescriptorKHR is called?
+
+        RESOLVED: This is implementation dependent.  However,
+        recommended behavior is to create the file descriptor when
+        eglGetStreamFileDescriptorKHR is called.  This avoids
+        polluting the file descriptor namespace (which may have a
+        limited size on some systems) with descriptors for EGLStreams
+        which will only be used inside a single process.  The
+        eglGetStreamFileDescriptorKHR function will fail and generate
+        an EGL_BAD_ALLOC error if it is unable to allocate a file
+        descriptor for the EGLStream.
+
+    4.  Should the EGLStream be created from the file descriptor with
+        the existing eglCreateStreamKHR function or with a new
+        function dedicated to that purpose?
+
+        The advantage of creating a new function is that a new
+        parameter can be added with a specific type.  This is not
+        really necessary for this extension since a file descriptor is
+        a small integer which can fit into the EGLint in the
+        eglCreateStreamKHR attrib_list.  However, other similar
+        extensions may be invented that use other types of handles
+        (not file descriptors) which may not fit into an EGLint.
+        Creating a dedicated function allows these other extensions to
+        use a similar function.
+
+        RESOLVED: Use a different function.
+
+    5.  How does this extension interact with the
+        EGL_NV_stream_cross_process_fd extension?
+
+        RESOLVED: These extensions may both exist on the same
+        implementation and are functionally equivalent. Mixing and
+        matching file descriptors from one extension with functions
+        from the other is allowed.
+
+    6.  Who should close the file descriptors and when?
+
+        There is no way for the EGL implementation to safely close all
+        the file descriptors associated with an EGLStream because some
+        of them may have been created using OS specific duping
+        mechanisms.  Also, the app may need to close a descriptor if
+        it runs into an error before it is able to call
+        eglCreateStreamFromFileDescriptorKHR.  Therefore the
+        application will need to close at least some of the created
+        file descriptors.  To make things simple and clear it is
+        therefore left up to the app to close all the file
+        descriptors.  The app is not *required* to do this, but not
+        doing so will "leak" file descriptors which will consume
+        resources until the process terminates.
+
+        Allowing the app to close all file descriptors as soon as
+        eglCreateStreamFromFileDescriptorKHR returns simplifies the
+        app (no need to keep track of open file descriptors).
+
+        RESOLVED: Application is responsible for closing all file
+        descriptors.  They can be safely closed as soon as
+        eglCreateStreamFromFileDescriptorKHR returns.
+
+    7.  What happens when an invalid file descriptor is passed to
+        eglCreateStreamFromFileDescriptorKHR()?
+
+        RESOLVED: The implementation must detect this and generate an
+        error.  If the file descriptor refers to a file then the
+        implementation may not modify the file, change the seek
+        location, or otherwise modify the file descriptor.
+
+    8.  What happens if one process hangs or crashes?
+
+        RESOLVED: If either the consumer's or producer's process
+        terminates (normally or abnormally) the EGL implementation
+        must notice this and place the EGLStream in
+        EGL_STREAM_STATE_DISCONNECTED_KHR state.  If the consumer is
+        blocked in a eglStreamConsumerAcquireKHR() call, the call will
+        generate an EGL_BAD_STATE_KHR message and return EGL_FALSE.
+        If the consumer process has created a reusable sync object with
+        eglCreateStreamSyncNV() and is blocking in a
+        eglClientWaitSyncKHR() call, the call will block until the
+        timeout runs out.
+
+        If the producer process "hangs" (e.g. enters an infinite loop,
+        blocks in a kernel call, etc) then the consumer process will
+        continue to function.  The consumer will continue to use the
+        last frame that the producer produced.  If the producer has
+        not yet produced a frame then the EGLStream will be in
+        EGL_STREAM_STATE_EMPTY_KHR state and no frame will be
+        available.  The consumer process can block in some situations:
+            - If a EGL_CONSUMER_ACQUIRE_TIMEOUT_USEC_KHR is set then
+                eglStreamConsumerAcquireKHR() will block until the
+                timeout runs out (or indefinitely if timeout is
+                negative).
+            - eglClientWaitSyncKHR() will block until the timeout runs
+                out.
+
+        If the consumer process "hangs" then the producer process will
+        continue to function.  If the EGLStream has had
+        EGL_STREAM_FIFO_LENGTH_KHR set to a nonzero value then the
+        producer will block indefinitely when it fills the fifo and
+        tries to insert another frame.  Otherwise the producer will
+        not block (as new frames are inserted into the EGLStream old
+        ones will be discarded).
+
+Revision History
+
+    #8  (June 5, 2012) Acorn Pooley
+        - rename from XXX to KHR
+
+    #7  (June 5, 2012) Acorn Pooley
+        - Add issue 8.
+        - Better define EGLStream behavior when a process terminates.
+        - Add Interactions with the EGL_NV_stream_sync extension.
+
+    #6  (April 20, 2012) Ian Stewart
+        - Fix extension/function names in interactions
+        - Removed references to NV_stream_sync.
+        - Changed interactions with NV_stream_cross_process_fd such
+          that they are interchangeable.
+
+    #5  (April 18, 2012) Acorn Pooley
+        - Add issue 7
+        - define errors generated when passing invalid file descriptors
+
+    #4  (January 29, 2012) Acorn Pooley
+        - Fork EGL_XXX_stream_cross_process_fd.txt from
+          EGL_NV_stream_cross_process_fd.txt to make changes suggested
+          by working group.
+        - add issues 4, 5, and 6.
+
+    #3  (January 6, 2012) Acorn Pooley
+        - fix typos (EGLImage -> EGLStream)
+
+    #2  (December 7, 2011) Acorn Pooley
+        - Upload to Khronos for review
+
+    #1  (September 27, 2011) Acorn Pooley
+        - Initial draft
+
+# vim:ai:ts=4:sts=4:expandtab:textwidth=70

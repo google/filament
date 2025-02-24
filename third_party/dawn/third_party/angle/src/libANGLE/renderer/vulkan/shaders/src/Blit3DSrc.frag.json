@@ -1,0 +1,14 @@
+{
+    "Description": [
+        "Copyright 2023 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "Blit3DSrc.frag.json: Build parameters for Blit3DSrc.frag."
+    ],
+    "Blit": [
+        "BlitFloat",
+        "BlitInt",
+        "BlitUint"
+    ]
+}

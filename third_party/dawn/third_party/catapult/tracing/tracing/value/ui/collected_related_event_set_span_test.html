@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('merge', function() {
+    let aSlice;
+    let bSlice;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      aSlice = tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        title: 'a',
+        start: 0,
+        duration: 10
+      });
+      bSlice = tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        title: 'b',
+        start: 1,
+        duration: 10
+      });
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+      thread.sliceGroup.pushSlice(aSlice);
+      thread.sliceGroup.pushSlice(bSlice);
+    });
+    assert.notEqual(aSlice.stableId, bSlice.stableId);
+
+    const aHist = new tr.v.Histogram('a', tr.b.Unit.byName.count);
+    const bHist = new tr.v.Histogram('b', tr.b.Unit.byName.count);
+
+    aHist.diagnostics.set('events', new tr.v.d.RelatedEventSet(aSlice));
+    bHist.diagnostics.set('events', new tr.v.d.RelatedEventSet(bSlice));
+
+    let mergedHist = aHist.clone();
+    mergedHist.addHistogram(bHist);
+    mergedHist = tr.v.Histogram.fromDict(mergedHist.asDict());
+
+    const mergedEvents = mergedHist.diagnostics.get('events');
+    const span = tr.v.ui.createDiagnosticSpan(mergedEvents);
+    assert.strictEqual(
+        'TR-V-UI-COLLECTED-RELATED-EVENT-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+});
+</script>

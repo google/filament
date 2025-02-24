@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/components/iron-collapse/iron-collapse.html">
+<link rel="import" href="/components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="/components/iron-selector/iron-selector.html">
+<link rel="import" href="/components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/components/paper-material/paper-material.html">
+<link rel="import" href="/components/paper-spinner/paper-spinner.html">
+
+<link rel="import" href="/dashboard/elements/chart-legend-tooltip.html">
+
+<link rel="import" href="/tracing/base/timing.html">
+
+<dom-module id="chart-legend">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+      .row {
+        margin-bottom: 2px;
+        opacity: 1;
+      }
+
+      .row[loading] {
+        opacity: 0.5;
+      }
+
+      .series-set {
+        background: #f5f5f5;
+        box-sizing: border-box;
+        margin: 1px 1px 5px 1px;
+        padding: 3px;
+        width: 293px;
+      }
+
+      iron-icon.info {
+        height: 15px;
+        width: 15px;
+        opacity: .75;
+        margin-left: 5px;
+        cursor: pointer;
+      }
+
+      .close-icon {
+        cursor: pointer;
+      }
+
+      .test-name {
+        font-weight: normal;
+        word-break: break-all;
+        width: 100%;
+        margin-right: 2px;
+      }
+
+      /* Checkboxes */
+      input[type=checkbox]:checked::after {
+        font-size: 1.3em;
+        content: "✓";
+        position: absolute;
+        top: -5px;
+        left: -1px;
+      }
+
+      input[type=checkbox]:focus {
+        outline: none;
+        border-color: #4d90fe;
+      }
+
+      input[type=checkbox] {
+        -webkit-appearance: none;
+        width: 13px;
+        height: 13px;
+        border: 1px solid #c6c6c6;
+        border-radius: 1px;
+        box-sizing: border-box;
+        cursor: default;
+        position: relative;
+        padding: 0 10px 0 0;
+        margin-right: 10px;
+      }
+
+      .checkbox-container {
+        display: inline-table;
+      }
+
+      .bottom-more-btn {
+        color: blue;
+      }
+
+      .expand-link {
+        text-decoration: none;
+      }
+
+      #rhs {
+        margin: 8px 10px 20px 5px;
+        padding: 16px 2px 0 16px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        outline: 1px solid rgba(0,0,0,0.2);
+        font-size: 11px;
+        height: 246px;
+        width: 312px;
+        overflow-y: hidden;
+      }
+
+      #rhs[compact] {
+        width: 125px;
+      }
+
+      #rhs[collapse-legend] {
+        margin-top: 8px;
+        height: 25px;
+        width: 25px;
+        padding: 0;
+      }
+
+      #expand-legend-btn {
+        position: absolute;
+        right: 2px;
+        top: 1px;
+        opacity: .75;
+      }
+
+      #delta-off, #delta-drag {
+        margin-bottom: 5px;
+      }
+
+      #traces {
+        margin-bottom: 10px;
+      }
+
+      .trace-link {
+        text-decoration: none;
+      }
+
+      #sg-container {
+        width: 312px;
+        height: 205px;
+        overflow: auto;
+      }
+
+      #expand {
+        display: inline;
+      }
+
+      paper-spinner {
+         width: 18px;
+         height: 18px;
+      }
+
+      .sg-loading {
+        text-align:center;
+        padding-bottom: 2px;
+      }
+    </style>
+
+    <div id="rhs" compact$="{{showCompact}}" collapse-legend$="{{collapseLegend}}">
+      <paper-icon-button id="expand-legend-btn" icon="arrow-drop-down"
+                         title="legend" role="button"
+                         on-click="toggleLegend"></paper-icon-button>
+
+      <iron-collapse id="collapsible-legend" opened$="{{!collapseLegend}}">
+
+        <template is="dom-if" if="{{!showDelta}}">
+          <div id="delta-off">Click and drag graph to measure or zoom.</div>
+        </template>
+        <template is="dom-if" if="{{showDelta}}">
+          Delta: {{deltaAbsolute}} or {{deltaPercent}}%.<br>
+          Click selected range to zoom.
+        </template>
+
+        <div id="traces">Traces:
+          <a href="javascript:void(0);"
+             class="trace-link"
+             on-click="onSelectAll">select all</a>
+          &#124;
+          <a href="javascript:void(0);"
+             class="trace-link"
+             on-click="onDeselectAll">deselect all</a>
+        </div>
+
+        <!-- List of series group boxes starts here. -->
+        <div id="sg-container">
+          <template is="dom-repeat" items="{{seriesGroupList}}" as="seriesGroup" index-as="groupIndex" id="grouplist">
+
+            <paper-material elevation="1"
+                            class="series-set">
+
+              <div class="layout horizontal">
+                <input type="checkbox"
+                       on-change="onCheckAllCheckboxClicked"
+                       checked="{{computeSelectionIsAll(seriesGroup)}}"
+                       hidden?="{{!seriesGroup.tests.length}}">
+                <span class="flex"></span>
+                <div class="close-icon" on-click="onCloseSeriesGroupClicked">
+                  ❌ <!-- cross mark U+274C -->
+                </div>
+              </div>
+
+              <iron-selector class="list" selected="{{multiSelected}}" multi>
+
+                <template is="dom-repeat" items="{{seriesGroup.tests}}" as="test">
+                  <div class="row layout horizontal" id="{{test.index}}"
+                       loading$="{{computeIsUndefined(test.index)}}"
+                       hidden$="{{test.hidden}}">
+                    <label class="layout horizontal center">
+                      <input type="checkbox"
+                             checked="{{test.selected}}"
+                             on-change="onCheckboxClicked"
+                             disabled$="{{computeIsUndefined(test.index)}}">
+                      <span class="test-name"
+                            style="color:{{test.color}};"
+                            on-mouseover="seriesMouseover"
+                            on-mouseout="seriesMouseout">
+                        {{test.displayName}}
+                      </span>
+                    </label>
+                    <chart-legend-tooltip description={{test.description}}
+                                          direction={{test.direction}}
+                                          path={{test.path}}
+                                          units={{test.units}}></chart-legend>
+                  </div>
+                </template>
+              </iron-selector>
+
+              <div class="layout horizontal end-justified">
+                <template is="dom-if" if="{{computeIsPositive(seriesGroup.*, 'numHidden')}}">
+                  <a href="javascript:void(0);" class="expand-link"
+                     on-click="onExpandSeriesClicked">{{seriesGroup.numHidden}} more</a>
+                </template>
+                <template is="dom-if" if="{{!seriesGroup.numHidden}}">
+                  <a href="javascript:void(0);" class="expand-link"
+                     on-click="onExpandSeriesClicked">less</a>
+                </template>
+              </div>
+
+              <template is="dom-if" if="{{computeIsPositive(seriesGroup.*, 'numPendingRequests')}}">
+                <div class="sg-loading">
+                  <paper-spinner active></paper-spinner>
+                </div>
+              </template>
+            </paper-material>
+          </template>
+        </div>
+      </iron-collapse>
+    </div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+Polymer({
+
+  is: 'chart-legend',
+  properties: {
+    collapseLegend: { notify: true },
+    deltaAbsolute: { notify: true },
+    deltaPercent: { notify: true },
+    indicesToGraph: { notify: true },
+    seriesGroupList: {
+      notify: true,
+      type: Array,
+      value: () => []
+    },
+    showCompact: { notify: true },
+    showDelta: { notify: true }
+  },
+
+  computeIsPositive(iterInfo, prop) {
+    return iterInfo.base[prop] > 0;
+  },
+  computeIsUndefined: x => x === undefined,
+  computeSelectionIsAll: seriesGroup => seriesGroup.selection == 'all',
+
+  getTestIndexInSeriesGroup(seriesGroupIndex, name) {
+    const tests = this.seriesGroupList[seriesGroupIndex].tests;
+    for (let i = 0; i < tests.length; i++) {
+      if (name == tests[i].name) {
+        return i;
+      }
+    }
+    return null;
+  },
+
+  /**
+    * Event handler for the change event of any of the checkboxes.
+    */
+  onCheckboxClicked(event, detail) {
+    const onCheckboxClickedMark = tr.b.Timing.mark(
+        'chart-legend', 'onCheckboxClicked');
+    const test = event.model.test;
+    const seriesGroupIndex = this.$.grouplist.indexForElement(event.target);
+    const testIndex = this.getTestIndexInSeriesGroup(
+        seriesGroupIndex, test.name);
+    if (testIndex !== null) {
+      this.set('seriesGroupList.' + seriesGroupIndex + '.tests.' +
+          testIndex + '.selected', event.currentTarget.checked);
+    }
+    this.updateIndicesToGraph(
+        test.index, event.currentTarget.checked);
+    this.updateSeriesGroupCheckedState(seriesGroupIndex);
+    this.updateNumHidden(seriesGroupIndex);
+    this.fireChartStateChangedEvent();
+    onCheckboxClickedMark.end();
+  },
+
+  /**
+    * Updates seriesGroup based on its tests selection state.
+    * A series group is a dictionary that describe the selection state
+    * for a set of series within a test path.
+    *
+    * seriesGroup has the following properties:
+    *   {
+    *        'path': 'ChromiumPerf/linux/dromaeo/Total',
+    *        'tests': [{
+    *             name: 'Total',
+    *             direction: 'Lower is better',
+    *             units: 'm/s',
+    *             etc...
+    *        }],
+    *        'selection': 'all',
+    *        'numHidden': null
+    *   }
+    *
+    * @param {Object} seriesGroup A group of series.
+    */
+  updateSeriesGroupCheckedState(seriesGroupIndex) {
+    const allSelected = [];
+    const allUnselected = [];
+    const seriesGroup = this.seriesGroupList[seriesGroupIndex];
+    seriesGroup.tests.forEach(function(test) {
+      if (test.selected) {
+        allSelected.push(test);
+      } else {
+        allUnselected.push(test);
+      }
+    }.bind(this));
+
+    if (allSelected.length == seriesGroup.tests.length) {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.selection', 'all');
+    } else if (allUnselected.length == seriesGroup.tests.length) {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.selection', 'none');
+    } else {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.selection', null);
+    }
+  },
+
+  /**
+    * Updates numHidden properties for a seriesGroup.  This is to show the
+    * number of hidden series link.
+    */
+  updateNumHidden(seriesGroupIndex) {
+    let numHidden = 0;
+    let numCanHide = 0;
+    const seriesGroup = this.seriesGroupList[seriesGroupIndex];
+    seriesGroup.tests.forEach(function(test) {
+      if (test.hidden) {
+        numHidden++;
+      } else if (!test.checked) {
+        numCanHide++;
+      }
+    });
+
+    // Don't show more/less link if the only series shown are the important.
+    if (numHidden > 0) {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.numHidden', numHidden);
+    } else if (numCanHide > 0) {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.numHidden', 0);
+    } else {
+      this.set(
+          'seriesGroupList.' + seriesGroupIndex + '.numHidden', null);
+    }
+  },
+
+  /**
+    * Event handler for the change event of check all checkboxes.
+    */
+  onCheckAllCheckboxClicked(event, detail) {
+    const sender = event.currentTarget;
+    const groupIndex = event.model.groupIndex;
+
+    this.set(
+        'seriesGroupList.' + groupIndex + '.selection', (
+          sender.checked ? 'all' : 'none'));
+    const tests = this.seriesGroupList[groupIndex].tests;
+    for (let i = 0; i < tests.length; i++) {
+      if (tests[i].index != undefined) {
+        this.set(
+            'seriesGroupList.' + groupIndex + '.tests.' + i + '.selected',
+            sender.checked);
+        this.updateIndicesToGraph(tests[i].index, sender.checked);
+      }
+    }
+
+    this.fireChartStateChangedEvent();
+  },
+
+  /**
+    * Event handler for series group close button clicked.
+    */
+  onCloseSeriesGroupClicked(event, detail) {
+    const model = event.model;
+    this.fire('seriesgroupclosed', {'groupIndex': model.groupIndex});
+  },
+
+  /**
+    * Event handler for click event of expand link.
+    */
+  onExpandSeriesClicked(event, detail) {
+    const groupIndex = this.$.grouplist.modelForElement(
+        event.target).groupIndex;
+    const isCollapse = event.currentTarget.text == 'less' ? true : false;
+    const seriesGroup = this.seriesGroupList[groupIndex];
+    seriesGroup.tests.forEach(function(test, index) {
+      if (isCollapse) {
+        if (!test.selected) {
+          this.set(
+              'seriesGroupList.' + groupIndex + '.tests.' + index +
+              '.hidden',
+              true);
+        }
+      } else {
+        this.set(
+            'seriesGroupList.' + groupIndex + '.tests.' + index +
+              '.hidden',
+            false);
+      }
+    }.bind(this));
+    this.updateNumHidden(groupIndex);
+  },
+
+  fireChartStateChangedEvent() {
+    this.fire('chartstatechanged', {
+      target: this,
+      stateName: 'chartstatechanged',
+      state: this.seriesGroupList
+    });
+  },
+
+  /**
+    * Handler for the click event of the select all traces button.
+    * Updates this.indicesToGraph to contain all traces.
+    * @param {Event=} opt_noEvent The click event, not used.
+    */
+  onSelectAll(opt_noEvent) {
+    this.set('indicesToGraph', []);
+    for (let i = 0; i < this.seriesGroupList.length; i++) {
+      const group = this.seriesGroupList[i];
+      for (let j = 0; j < group.tests.length; j++) {
+        this.set('seriesGroupList.' + i + '.tests.' + j + '.selected',
+            true);
+        this.push('indicesToGraph', group.tests[j].index);
+      }
+      this.updateSeriesGroupCheckedState(i);
+      this.updateNumHidden(i);
+    }
+    this.fireChartStateChangedEvent();
+  },
+
+  /**
+    * Handler for the click event of the deselect all traces button.
+    * @param {Event=} opt_noEvent The click event, not used.
+    */
+  onDeselectAll(opt_noEvent) {
+    this.set('indicesToGraph', []);
+    for (let i = 0; i < this.seriesGroupList.length; i++) {
+      const group = this.seriesGroupList[i];
+      for (let j = 0; j < group.tests.length; j++) {
+        this.set('seriesGroupList.' + i + '.tests.' + j + '.selected',
+            false);
+      }
+      this.updateSeriesGroupCheckedState(i);
+      this.updateNumHidden(i);
+    }
+    this.fireChartStateChangedEvent();
+  },
+
+  seriesMouseover(event, detail) {
+    this.fire('seriesmouseover', {
+      'index': event.model.index
+    });
+  },
+
+  seriesMouseout(event, detail) {
+    this.fire('seriesmouseout', {
+      'index': event.model.index
+    });
+  },
+
+  /**
+    * Adds or removes a series index from |this.indicesToGraph|.
+    * @param {number} index The index to add or remove.
+    * @param {boolean} selected Whether to add the index.
+    */
+  updateIndicesToGraph(index, selected) {
+    if (selected) {
+      if (this.indicesToGraph.indexOf(index) == -1) {
+        this.push('indicesToGraph', index);
+      }
+    } else {
+      if (this.indicesToGraph.indexOf(index) != -1) {
+        this.splice('indicesToGraph',
+            this.indicesToGraph.indexOf(index), 1);
+      }
+    }
+  },
+
+  /**
+    * Toggles legend window to collapse or expand.
+    */
+  toggleLegend() {
+    this.$['collapsible-legend'].toggle();
+    this.collapseLegend = !this.collapseLegend;
+  }
+});
+</script>

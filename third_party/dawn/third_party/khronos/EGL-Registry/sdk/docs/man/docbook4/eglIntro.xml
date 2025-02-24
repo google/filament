@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglIntro">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglIntro</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglIntro</refname>
+        <refpurpose>
+            introduction to managing client API rendering through the
+            <acronym>EGL</acronym> API.
+        </refpurpose>
+    </refnamediv>
+    <refsect1 id="overview"><title>Overview</title>
+        <para>
+            The <firstterm>Khronos Native Platform Graphics
+            Interface</firstterm> (EGL) provides a means for rendering
+            using a <firstterm>client API</firstterm> such as OpenGL ES
+            (a 3D renderer for embedded systems), OpenGL (a functional
+            superset of OpenGL ES for desktop systems), and OpenVG (a 2D
+            vector graphics renderer) together with a native window
+            system, such as Microsoft Windows or the X Window System.
+        </para>
+        <para>
+            Depending on its implementation EGL might be more or less
+            tightly integrated into the native window system. Most EGL
+            functions require an EGL display connection, which can be
+            obtained by calling
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>
+            and passing in a native display handle or
+            <constant>EGL_DEFAULT_DISPLAY</constant>. To initialize and
+            query what EGL version is supported on the display
+            connection, call
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            Native window systems supporting EGL make a subset of their
+            visuals (which may also referred to as pixel formats, frame
+            buffer configurations, or other similar terms) available for
+            client API rendering. Windows and pixmaps created with these
+            visuals may also be rendered into using the native window
+            system API.
+        </para>
+        <para>
+            An EGL <firstterm>surface</firstterm> extends a native
+            window or pixmap with additional <firstterm>auxillary
+            buffers</firstterm>. These buffers include a color buffer, a
+            depth buffer, a stencil buffer, and an alpha mask buffer.
+            Some or all of the buffers listed are included in each EGL
+            frame buffer configuration.
+        </para>
+        <para>
+            EGL supports rendering into three types of surfaces:
+            windows, pixmaps and pixel buffers (pbuffers). EGL window
+            and pixmap surfaces are associated with corresponding
+            resources of the native window system. EGL pixel buffers are
+            EGL only resources, and do not accept rendering through the
+            native window system.
+        </para>
+        <para>
+            To render using a client API into an EGL surface, you must
+            determine the appropriate EGL frame buffer configuration,
+            which supports the rendering features the application
+            requires.
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>
+            returns an <type>EGLConfig</type> matching the required
+            attributes, if any. A complete list of EGL frame buffer
+            configurations can be obtained by calling
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>.
+            Attributes of a particular EGL frame buffer configuration
+            can be queried by calling
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            For EGL window and pixmap surfaces, a suitable native window
+            or pixmap with a matching native visual must be created
+            first. For a given EGL frame buffer configuration, the
+            native visual type and ID can be retrieved with a call to
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>.
+            For pixel buffers, no underlying native resource is
+            required.
+        </para>
+        <para>
+            To create an EGL window surface from a native window, call
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>.
+            To create an EGL pixmap surface from a native pixmap, call
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>.
+            To create a pixel buffer (pbuffer) surface (which has no
+            associated native buffer), call
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>
+            To create a pixel buffer (pbuffer) surface whose color
+            buffer is provided by an OpenVG <type>VGImage</type>, call
+            <citerefentry><refentrytitle>eglCreatePbufferFromClientBuffer</refentrytitle></citerefentry>.
+            Use
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>
+            to release previously allocated resources.
+        </para>
+        <para>
+            An EGL rendering context is required to bind client API
+            rendering to an EGL surface. An EGL surface and an EGL
+            rendering context must have compatible EGL frame buffer
+            configurations. To create an EGL rendering context, call
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>.
+            The type of client API context created (OpenGL ES, OpenVG,
+            etc.) can be changed by first calling
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            An EGL rendering context may be bound to one or two EGL
+            surfaces by calling
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+            This context/surface(s) association specifies the
+            <firstterm>current context</firstterm> and
+            <firstterm>current surface</firstterm>, and is used by all
+            client API rendering commands for the bound context until
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+            is called with different arguments.
+        </para>
+        <para>
+            Both native and client API commands may be used to operate
+            on certain surfaces, however, the two command streams are
+            not synchronized. Synchronization can be explicitly
+            specified using by calling
+            <citerefentry><refentrytitle>eglWaitCLient</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>,
+            and possibly by calling other native window system commands.
+        </para>
+    </refsect1>
+    <refsect1 id="examples"><title>Examples</title>
+        <para>
+            Below is a minimal example of creating an RGBA-format window that
+            allows rendering with OpenGL ES.
+            The window is cleared to yellow when the program runs. For simplicity,
+            the program does not check for any errors.
+        </para>
+<programlisting>
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;EGL/egl.h&gt;
+#include &lt;GLES/gl.h&gt;
+typedef ... NativeWindowType;
+extern NativeWindowType createNativeWindow(void);
+static EGLint const attribute_list[] = {
+        EGL_RED_SIZE, 1,
+        EGL_GREEN_SIZE, 1,
+        EGL_BLUE_SIZE, 1,
+        EGL_NONE
+};
+int main(int argc, char ** argv)
+{
+        EGLDisplay display;
+        EGLConfig config;
+        EGLContext context;
+        EGLSurface surface;
+        NativeWindowType native_window;
+        EGLint num_config;
+
+        /* get an EGL display connection */
+        display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+        /* initialize the EGL display connection */
+        eglInitialize(display, NULL, NULL);
+
+        /* get an appropriate EGL frame buffer configuration */
+        eglChooseConfig(display, attribute_list, &amp;config, 1, &amp;num_config);
+
+        /* create an EGL rendering context */
+        context = eglCreateContext(display, config, EGL_NO_CONTEXT, NULL);
+
+        /* create a native window */
+        native_window = createNativeWindow();
+
+        /* create an EGL window surface */
+        surface = eglCreateWindowSurface(display, config, native_window, NULL);
+
+        /* connect the context to the surface */
+        eglMakeCurrent(display, surface, surface, context);
+
+        /* clear the color buffer */
+        glClearColor(1.0, 1.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glFlush();
+
+        eglSwapBuffers(display, surface);
+
+        sleep(10);
+        return EXIT_SUCCESS;
+}
+</programlisting>
+    </refsect1>
+    <refsect1 id="usingeglextensions"><title>Using EGL Extensions</title>
+        <para>
+            All supported EGL extensions will have a corresponding definition in
+            <filename>egl.h</filename> and a token in the extensions string returned
+            by
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>.
+        </para>
+    </refsect1>
+    <refsect1 id="futureeglversions"><title>Future EGL Versions</title>
+        <para>
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+            and
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>
+            can be used to determine at run-time what version of EGL is available.
+            To check the EGL version at compile-time, test whether
+            <constant>EGL_VERSION_<replaceable>x</replaceable>_<replaceable>y</replaceable></constant>
+            is defined, where <replaceable>x</replaceable> and
+            <replaceable>y</replaceable> are the major and minor version
+            numbers.
+        </para>
+    </refsect1>
+    <refsect1 id="files"><title>Files</title>
+        <variablelist>
+            <varlistentry>
+                <term><filename>GLES/egl.h</filename></term>
+                <listitem><para>
+                    EGL header file
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+<!--
+            <citerefentry><refentrytitle>glIntro</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>,
+-->
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferFromClientBuffer</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglDestroyContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglTerminate</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitGL</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

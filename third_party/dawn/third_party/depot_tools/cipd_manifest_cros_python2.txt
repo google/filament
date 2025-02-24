@@ -1,0 +1,27 @@
+# Copyright 2022 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains version pins of a few infrastructure tools for cros.
+# If a tool is broken, revert a recent CL touching this file.
+# Note that Chromium has its own depot_tools pin, so if in a rush, revert the
+# depot_tools roll as well: https://chromium-review.googlesource.com/q/project:chromium/src+file:DEPS+depot_tools
+# or just wait for the autoroller to auto-roll your revert to Chromium.
+
+# Pin resolved versions in the repo, to reduce trust in the CIPD backend.
+#
+# Most of these tools are generated via builders at
+# https://ci.chromium.org/p/infra/g/infra/console
+#
+# For these, the git revision is the one of
+# https://chromium.googlesource.com/infra/infra.git.
+#
+# To regenerate them (after modifying this file):
+#   cipd ensure-file-resolve -ensure-file cipd_manifest_cros_python2.txt
+$ResolvedVersions cipd_manifest_cros_python2.versions
+
+# Fully supported platforms.
+$VerifiedPlatform linux-amd64
+
+# vpython2.7
+infra/tools/luci/vpython2.7/${platform} git_revision:cc21a500756c924a48f46f4755d3857133d8caa0

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base64.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/extras/importer/v8/v8_log_importer.html">
+<link rel="import" href="/tracing/extras/importer/zip_importer.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Base64 = tr.b.Base64;
+
+  test('canImportEmpty', function() {
+    let m = tr.c.TestUtils.newModelWithEvents([]);
+    assert.isDefined(m.modelIndices);
+    m = new tr.Model('');
+  });
+
+  test('canImportSubtraces', function() {
+    const systraceLines = [
+      'SurfaceFlinger-2  [001] ...1 1000.0: 0: B|1|taskA',
+      'SurfaceFlinger-2  [001] ...1 2000.0: 0: E',
+      '        chrome-3  [001] ...1 2000.0: 0: trace_event_clock_sync: ' +
+          'parent_ts=0'
+    ];
+    const traceEvents = [
+      {ts: 1000, pid: 1, tid: 3, ph: 'B', cat: 'c', name: 'taskB', args: {
+        my_object: {id_ref: '0x1000'}
+      }},
+      {ts: 2000, pid: 1, tid: 3, ph: 'E', cat: 'c', name: 'taskB', args: {}}
+    ];
+
+    const combined = JSON.stringify({
+      traceEvents,
+      systemTraceEvents: systraceLines.join('\n')
+    });
+
+    const m = tr.c.TestUtils.newModelWithEvents([combined]);
+    assert.strictEqual(Object.values(m.processes).length, 1);
+
+    const p1 = m.processes[1];
+    assert.isDefined(p1);
+
+    const t2 = p1.threads[2];
+    const t3 = p1.threads[3];
+    assert.isDefined(t2);
+    assert.isDefined(t3);
+
+    assert.strictEqual(1, 1, t2.sliceGroup.length);
+    assert.strictEqual(t2.sliceGroup.slices[0].title, 'taskA');
+
+    assert.strictEqual(t3.sliceGroup.length, 1);
+    assert.strictEqual(t3.sliceGroup.slices[0].title, 'taskB');
+  });
+
+  test('canImportCompressedSingleSubtrace', function() {
+    const compressedTrace = Base64.atob(
+        'H4sIACKfFVUC/wsuLUpLTE51y8nMS08t0jVSUIg2MDCMV' +
+        'dDT0zNUMDQwMNAzsFIAIqcaw5qSxOJsR65gfDqMEDpcATiC61ZbAAAA');
+    const m = tr.c.TestUtils.newModelWithEvents([compressedTrace]);
+    assert.strictEqual(1, Object.values(m.processes).length);
+
+    const p1 = m.processes[1];
+    assert.isDefined(p1);
+
+    const t2 = p1.threads[2];
+    assert.isDefined(t2);
+
+    assert.strictEqual(1, t2.sliceGroup.length, 1);
+    assert.strictEqual('taskA', t2.sliceGroup.slices[0].title);
+  });
+
+  test('canImportSubtracesRecursively', function() {
+    const systraceLines = [
+      'SurfaceFlinger-2  [001] ...1 1000.0: 0: B|1|taskA',
+      'SurfaceFlinger-2  [001] ...1 2000.0: 0: E',
+      '        chrome-3  [001] ...1 2000.0: 0: trace_event_clock_sync: ' +
+          'parent_ts=0'
+    ];
+    const outerTraceEvents = [
+      {ts: 1000, pid: 1, tid: 3, ph: 'B', cat: 'c', name: 'taskB', args: {
+        my_object: {id_ref: '0x1000'}
+      }}
+    ];
+
+    const innerTraceEvents = [
+      {ts: 2000, pid: 1, tid: 3, ph: 'E', cat: 'c', name: 'taskB', args: {}}
+    ];
+
+    const innerTrace = JSON.stringify({
+      traceEvents: innerTraceEvents,
+      systemTraceEvents: systraceLines.join('\n')
+    });
+
+    const outerTrace = JSON.stringify({
+      traceEvents: outerTraceEvents,
+      systemTraceEvents: innerTrace
+    });
+
+    const m = tr.c.TestUtils.newModelWithEvents([outerTrace]);
+    assert.strictEqual(Object.values(m.processes).length, 1);
+
+    const p1 = m.processes[1];
+    assert.isDefined(p1);
+
+    const t2 = p1.threads[2];
+    const t3 = p1.threads[3];
+    assert.isDefined(t2);
+    assert.isDefined(t3);
+
+    assert.strictEqual(1, 1, t2.sliceGroup.length);
+    assert.strictEqual(t2.sliceGroup.slices[0].title, 'taskA');
+
+    assert.strictEqual(t3.sliceGroup.length, 1);
+    assert.strictEqual(t3.sliceGroup.slices[0].title, 'taskB');
+  });
+
+  test('withImportFailure', function() {
+    assert.throw(function() {
+      tr.c.TestUtils.newModelWithEvents([malformed]);
+    });
+  });
+
+  test('customizeCallback', function() {
+    const m = tr.c.TestUtils.newModelWithEvents([], {
+      shiftWorldToZero: false,
+      pruneContainers: false,
+      customizeModelCallback(m) {
+        const browserProcess = m.getOrCreateProcess(1);
+        const browserMain = browserProcess.getOrCreateThread(2);
+        browserMain.sliceGroup.beginSlice('cat', 'Task', 0);
+        browserMain.sliceGroup.beginSlice('cat', 'SubTask', 1);
+        browserMain.sliceGroup.endSlice(9);
+        browserMain.sliceGroup.endSlice(10);
+        browserMain.sliceGroup.beginSlice('cat', 'Task', 20);
+        browserMain.sliceGroup.endSlice(30);
+      }
+    });
+    const t2 = m.processes[1].threads[2];
+    assert.strictEqual(t2.sliceGroup.length, 3);
+    assert.strictEqual(t2.sliceGroup.topLevelSlices.length, 2);
+  });
+
+  test('sortsSamples', function() {
+    // The 184, 0 and 185 are the tick-times
+    // and irrespective of the order
+    // in which the lines appear in the trace,
+    // the samples should always be sorted by sampling time.
+    const m = tr.c.TestUtils.newModelWithEvents([
+      'tick,0x9a,184,0,0x0,5',
+      'tick,0x9b,0,0,0x0,5',
+      'tick,0x9c,185,0,0x0,5']);
+    assert.strictEqual(m.samples[0].start, 0);
+    assert.strictEqual(m.samples[1].start, 0.184);
+    assert.strictEqual(m.samples[2].start, 0.185);
+  });
+
+  test('sortsGlobalMemoryDumps', function() {
+    const m = tr.c.TestUtils.newModelWithEvents([], {
+      pruneContainers: false,
+      customizeModelCallback(m) {
+        m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 1));
+        m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 5));
+        m.globalMemoryDumps.push(new tr.model.GlobalMemoryDump(m, 3));
+      }
+    });
+    assert.strictEqual(m.globalMemoryDumps[0].start, 0);
+    assert.strictEqual(m.globalMemoryDumps[1].start, 2);
+    assert.strictEqual(m.globalMemoryDumps[2].start, 4);
+  });
+
+  test('finalizesProcessMemoryDumps', function() {
+    let p;
+    const m = tr.c.TestUtils.newModelWithEvents([], {
+      pruneContainers: false,
+      customizeModelCallback(m) {
+        p = m.getOrCreateProcess(1);
+
+        const g = new tr.model.GlobalMemoryDump(m, -1);
+        m.globalMemoryDumps.push(g);
+
+        const pmd1 = new tr.model.ProcessMemoryDump(g, p, 1);
+        p.memoryDumps.push(pmd1);
+
+        const pmd2 = new tr.model.ProcessMemoryDump(g, p, 5);
+        p.memoryDumps.push(pmd2);
+
+        const pmd3 = new tr.model.ProcessMemoryDump(g, p, 3);
+        p.memoryDumps.push(pmd3);
+        pmd3.vmRegions = [];
+      }
+    });
+
+    // Check the sort order.
+    assert.strictEqual(p.memoryDumps[0].start, 2);
+    assert.strictEqual(p.memoryDumps[1].start, 4);
+    assert.strictEqual(p.memoryDumps[2].start, 6);
+
+    // Check that the most recent VM regions are linked correctly.
+    assert.isUndefined(p.memoryDumps[0].mostRecentVmRegions);
+    assert.lengthOf(p.memoryDumps[1].mostRecentVmRegions, 0);
+    assert.strictEqual(
+        p.memoryDumps[1].mostRecentVmRegions,
+        p.memoryDumps[2].mostRecentVmRegions);
+  });
+
+// TODO(crbug.com/1315423): Fix and re-enable test to pass on all trybots.
+  skipTest('setsModelStatsTraceImportDurationMs', function() {
+    const traceEvents = [
+      {ts: 1000, pid: 1, tid: 3, ph: 'B', cat: 'c', name: 'taskB', args: {
+        my_object: {id_ref: '0x1000'}
+      }},
+      {ts: 2000, pid: 1, tid: 3, ph: 'E', cat: 'c', name: 'taskB', args: {}}
+    ];
+    const m = tr.c.TestUtils.newModelWithEvents(JSON.stringify({traceEvents}));
+
+    assert.isAbove(m.stats.traceImportDurationMs, 0);
+  });
+});
+</script>

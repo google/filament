@@ -1,0 +1,27 @@
+# Copyright 2024 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/OpenCL-CTS/gn/angle_ocl_cts.gni")
+
+ocl_cts_source_set("device_execution") {
+  include_dirs = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution",
+  ]
+  sources = [
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/device_info.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/device_queue.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_block.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_flags.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_multi_queue.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_ndrange.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_profiling.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/enqueue_wg_size.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/execute_block.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/host_multi_queue.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/host_queue_order.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/main.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/nested_blocks.cpp",
+    "$angle_root/third_party/OpenCL-CTS/src/test_conformance/device_execution/utils.cpp",
+  ]
+}

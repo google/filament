@@ -1,0 +1,28 @@
+webapp2 is maintained by Rodrigo Moraes <rodrigo.moraes@gmail.com>.
+
+Contributors:
+
+- Yesudeep Mangalapilly <yesudeep@gmail.com>
+- Kyle Finley <kylefinley@gmail.com>
+
+webapp2 includes code or ideas ported or adapted from the following projects:
+
+- `Google App Engine SDK <http://code.google.com/appengine/>`_:
+  - Copyright (c) 2008 Google Inc.
+  - Apache 2.0 License.
+
+- `WebOb <http://pythonpaste.org/webob/>`_:
+  - Copyright (c) 2007 Ian Bicking and Contributors.
+  - MIT License.
+
+- `Werkzeug <http://werkzeug.pocoo.org/>`_:
+  - Copyright (c) 2011 Werkzeug Team.
+  - BSD License.
+
+- `Tornado <http://www.tornadoweb.org/>`_:
+  - Copyright (c) 2009 Facebook.
+  - Apache 2.0 License.
+
+- `Flask <http://flask.pocoo.org/>`_:
+  - Copyright (c) 2010 Armin Ronacher and Contributors.
+  - BSD License.

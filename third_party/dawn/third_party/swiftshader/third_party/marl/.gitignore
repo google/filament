@@ -1,0 +1,8 @@
+/.vs/
+/.vscode/
+/build/
+/cmake-build-*/
+/out/
+bazel-*
+CMakeSettings.json
+/.idea/

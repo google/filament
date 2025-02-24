@@ -1,0 +1,150 @@
+# Copyright 2023 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("../../gni/angle.gni")
+
+declare_args() {
+  angle_enable_tracegz = false
+}
+
+template("angle_trace") {
+  angle_shared_library(target_name) {
+    testonly = true
+
+    # Similar to capture replay sample, use the file index for sources
+    sources = invoker.sources
+
+    data = invoker.data
+    defines = [ "ANGLE_REPLAY_IMPLEMENTATION" ]
+    suppressed_configs += [ "$angle_root:constructor_and_destructor_warnings" ]
+
+    deps = [
+      "$angle_root/util:angle_trace_fixture",
+      "$angle_root/util:angle_trace_loader",
+    ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    if (is_android) {
+      libs = [ "log" ]
+    }
+
+    # Disable optimization in the trace perf tests to avoid optimizing huge files.
+    if (!is_debug && !is_ubsan) {
+      suppressed_configs += [
+        "//build/config/compiler:afdo",
+        "//build/config/compiler:afdo_optimize_size",
+        "//build/config/compiler:optimize_max",
+        "//build/config/compiler/pgo:default_pgo_flags",
+      ]
+      configs += [ "//build/config/compiler:no_optimize" ]
+    }
+
+    include_dirs = [ "." ]
+
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    }
+  }
+}
+
+set_defaults("angle_trace_libs") {
+  # Uses a short name to work around file path limits on Windows.
+  short_names = false
+}
+
+template("angle_trace_libs") {
+  _trace_list = []
+  _trace_targets = []
+  _trace_lib_files = []
+
+  if (invoker.short_names) {
+    _trace_counter = 1
+  }
+
+  foreach(_trace_and_version, invoker.trace_list) {
+    _trace_and_version_arr = []
+    _trace_and_version_arr = string_split(_trace_and_version)
+    _trace = _trace_and_version_arr[0]
+    _trace_list += [ _trace ]
+    if (defined(invoker.trace_dir)) {
+      _trace_dir = invoker.trace_dir
+    } else {
+      _trace_dir = _trace
+    }
+    _trace_json_path = "$_trace_dir/$_trace.json"
+    _trace_data = []
+    _trace_data = read_file(_trace_json_path, "json")
+
+    if (invoker.short_names) {
+      _target = "cr_trace_${_trace_counter}"
+      _trace_counter += 1
+    } else {
+      _target = "${target_name}_$_trace"
+    }
+
+    if (angle_enable_tracegz) {
+      _gen_tracegz_target = "gen${target_name}_$_trace"
+      action(_gen_tracegz_target) {
+        script = "//scripts/tracegz.py"
+        args = [
+          _trace,
+          rebase_path(_trace_dir, root_build_dir),
+        ]
+        outputs = [ "$root_gen_dir/tracegz_$_trace.gz" ]
+      }
+    }
+
+    angle_trace(_target) {
+      sources = rebase_path(_trace_data.TraceFiles, ".", _trace_dir)
+
+      data = [
+        "$_trace_dir/$_trace.json",
+        "$_trace_dir/$_trace.angledata.gz",
+      ]
+
+      if (angle_enable_tracegz) {
+        deps = [ ":$_gen_tracegz_target" ]
+        data += [ "$root_gen_dir/tracegz_$_trace.gz" ]
+      }
+
+      if (invoker.short_names) {
+        output_name = _trace
+      }
+    }
+
+    _trace_targets += [ ":$_target" ]
+    _trace_lib_files += [ "${root_out_dir}/lib${_target}.so" ]
+  }
+
+  angle_shared_library(target_name) {
+    testonly = true
+    data = [ invoker.json_path ]
+    data_deps = _trace_targets
+    deps = [ "$angle_root:angle_common" ]
+    public_deps = [ "$angle_root/util:angle_trace_loader" ]
+  }
+
+  if (restricted_traces_outside_of_apk) {
+    group("${target_name}__unpacked_libs") {
+      testonly = true
+      deps = [
+        ":angle_restricted_traces",
+        "$angle_root/util:angle_trace_interpreter",
+      ]
+
+      # Also need files listed as data to be picked up by isolate
+      data =
+          _trace_lib_files + [ "${root_out_dir}/libangle_trace_interpreter.so" ]
+    }
+  }
+
+  group("gen_trace_list_json") {
+    _output_json_path = "$root_gen_dir/trace_list.json"
+    write_file(_output_json_path, _trace_list, "json")
+
+    data = [ _output_json_path ]
+  }
+}

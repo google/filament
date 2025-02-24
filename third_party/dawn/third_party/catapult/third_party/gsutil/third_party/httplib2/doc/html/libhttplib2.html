@@ -1,0 +1,490 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <title>httplib2 A comprehensive HTTP client library. &mdash; httplib2 v0.4 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '#',
+        VERSION:     '0.4',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="httplib2 v0.4 documentation" href="index.html" />
+    <link rel="prev" title="The httplib2 Library" href="index.html" />
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             accesskey="M">modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="The httplib2 Library"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">httplib2 v0.4 documentation</a> &raquo;</li>
+      </ul>
+    </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+
+  <div class="section" id="module-httplib2">
+<h1><tt class="xref docutils literal"><span class="pre">httplib2</span></tt>  A comprehensive HTTP client library.<a class="headerlink" href="#module-httplib2" title="Permalink to this headline">¶</a></h1>
+<p>The <tt class="xref docutils literal"><span class="pre">httplib2</span></tt> module is a comprehensive HTTP client library with the
+following features:</p>
+<dl class="describe">
+<dt>
+<tt class="descname">HTTP and HTTPS</tt></dt>
+<dd>HTTPS support is only available if the socket module was compiled with SSL
+support.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Keep-Alive</tt></dt>
+<dd>Supports HTTP 1.1 Keep-Alive, keeping the socket open and performing multiple
+requests over the same connection if possible.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Authentication</tt></dt>
+<dd><p>The following three types of HTTP Authentication are supported. These can be
+used over both HTTP and HTTPS.</p>
+<blockquote>
+<ul class="simple">
+<li>Digest</li>
+<li>Basic</li>
+<li>WSSE</li>
+</ul>
+</blockquote>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Caching</tt></dt>
+<dd>The module can optionally operate with a private cache that understands the
+Cache-Control: header and uses both the ETag and Last-Modified cache validators.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">All Methods</tt></dt>
+<dd>The module can handle any HTTP request method, not just GET and POST.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Redirects</tt></dt>
+<dd>Automatically follows 3XX redirects on GETs.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Compression</tt></dt>
+<dd>Handles both <tt class="docutils literal"><span class="pre">deflate</span></tt> and <tt class="docutils literal"><span class="pre">gzip</span></tt> types of compression.</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Lost update support</tt></dt>
+<dd>Automatically adds back ETags into PUT requests to resources we have already
+cached. This implements Section 3.2 of Detecting the Lost Update Problem Using
+Unreserved Checkout</dd></dl>
+
+<p>The <tt class="xref docutils literal"><span class="pre">httplib2</span></tt> module defines the following variables:</p>
+<dl class="data">
+<dt id="httplib2.debuglevel">
+<tt class="descclassname">httplib2.</tt><tt class="descname">debuglevel</tt><a class="headerlink" href="#httplib2.debuglevel" title="Permalink to this definition">¶</a></dt>
+<dd>The amount of debugging information to print. The default is 0.</dd></dl>
+
+<dl class="data">
+<dt id="httplib2.RETRIES">
+<tt class="descclassname">httplib2.</tt><tt class="descname">RETRIES</tt><a class="headerlink" href="#httplib2.RETRIES" title="Permalink to this definition">¶</a></dt>
+<dd>A request will be tried &#8216;RETRIES&#8217; times if it fails at the socket/connection level.
+The default is 2.</dd></dl>
+
+<p>The <tt class="xref docutils literal"><span class="pre">httplib2</span></tt> module may raise the following Exceptions. Note that  there
+is an option that turns exceptions into  normal responses with an HTTP status
+code indicating an error occured. See
+<a title="httplib2.Http.force_exception_to_status_code" class="reference internal" href="#httplib2.Http.force_exception_to_status_code"><tt class="xref docutils literal"><span class="pre">Http.force_exception_to_status_code</span></tt></a></p>
+<dl class="exception">
+<dt id="httplib2.HttpLib2Error">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">HttpLib2Error</tt><a class="headerlink" href="#httplib2.HttpLib2Error" title="Permalink to this definition">¶</a></dt>
+<dd>The Base Exception for all exceptions raised by httplib2.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.RedirectMissingLocation">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">RedirectMissingLocation</tt><a class="headerlink" href="#httplib2.RedirectMissingLocation" title="Permalink to this definition">¶</a></dt>
+<dd>A 3xx redirect response code was provided but no Location: header  was provided
+to point to the new location.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.RedirectLimit">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">RedirectLimit</tt><a class="headerlink" href="#httplib2.RedirectLimit" title="Permalink to this definition">¶</a></dt>
+<dd>The maximum number of redirections was reached without coming to a final URI.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.ServerNotFoundError">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">ServerNotFoundError</tt><a class="headerlink" href="#httplib2.ServerNotFoundError" title="Permalink to this definition">¶</a></dt>
+<dd>Unable to resolve the host name given.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.RelativeURIError">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">RelativeURIError</tt><a class="headerlink" href="#httplib2.RelativeURIError" title="Permalink to this definition">¶</a></dt>
+<dd>A relative, as opposed to an absolute URI, was passed into request().</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.FailedToDecompressContent">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">FailedToDecompressContent</tt><a class="headerlink" href="#httplib2.FailedToDecompressContent" title="Permalink to this definition">¶</a></dt>
+<dd>The headers claimed that the content of the response was compressed but the
+decompression algorithm applied to the content failed.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.UnimplementedDigestAuthOptionError">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">UnimplementedDigestAuthOptionError</tt><a class="headerlink" href="#httplib2.UnimplementedDigestAuthOptionError" title="Permalink to this definition">¶</a></dt>
+<dd>The server requested a type of Digest authentication that we are unfamiliar
+with.</dd></dl>
+
+<dl class="exception">
+<dt id="httplib2.UnimplementedHmacDigestAuthOptionError">
+<em class="property">exception </em><tt class="descclassname">httplib2.</tt><tt class="descname">UnimplementedHmacDigestAuthOptionError</tt><a class="headerlink" href="#httplib2.UnimplementedHmacDigestAuthOptionError" title="Permalink to this definition">¶</a></dt>
+<dd>The server requested a type of HMACDigest authentication that we are unfamiliar
+with.</dd></dl>
+
+<dl class="class">
+<dt id="httplib2.Http">
+<em class="property">class </em><tt class="descclassname">httplib2.</tt><tt class="descname">Http</tt><big>(</big><span class="optional">[</span><em>cache=None</em><span class="optional">]</span><span class="optional">[</span>, <em>timeout=None</em><span class="optional">]</span><span class="optional">[</span>, <em>proxy_info==ProxyInfo.from_environment</em><span class="optional">]</span><span class="optional">[</span>, <em>ca_certs=None</em><span class="optional">]</span><span class="optional">[</span>, <em>disable_ssl_certificate_validation=False</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#httplib2.Http" title="Permalink to this definition">¶</a></dt>
+<dd>The class that represents a client HTTP interface. The <em>cache</em> parameter is
+either the name of a directory to be used as a flat file cache, or it must an
+object that  implements the required caching interface. The <em>timeout</em> parameter
+is the socket level timeout. The <em>ca_certs</em> parameter is the filename of the
+CA certificates to use. If none is given a default set is used. The
+<em>disable_ssl_certificate_validation</em> boolean flag determines if ssl certificate validation
+is done. The <em>proxy_info</em> parameter is an object of type :class:ProxyInfo.</dd></dl>
+
+<dl class="class">
+<dt id="httplib2.ProxyInfo">
+<em class="property">class </em><tt class="descclassname">httplib2.</tt><tt class="descname">ProxyInfo</tt><big>(</big><em>proxy_type</em>, <em>proxy_host</em>, <em>proxy_port</em><span class="optional">[</span>, <em>proxy_rdns=None</em><span class="optional">]</span><span class="optional">[</span>, <em>proxy_user=None</em><span class="optional">]</span><span class="optional">[</span>, <em>proxy_pass=None</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#httplib2.ProxyInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collect information required to use a proxy.
+The parameter proxy_type must be set to one of socks.PROXY_TYPE_XXX
+constants. For example:</p>
+<p>p = ProxyInfo(proxy_type=socks.PROXY_TYPE_HTTP, proxy_host=&#8217;localhost&#8217;, proxy_port=8000)</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="httplib2.Response">
+<em class="property">class </em><tt class="descclassname">httplib2.</tt><tt class="descname">Response</tt><big>(</big><em>info</em><big>)</big><a class="headerlink" href="#httplib2.Response" title="Permalink to this definition">¶</a></dt>
+<dd>Response is a subclass of <tt class="xref docutils literal"><span class="pre">dict</span></tt> and instances of this  class are
+returned from calls to Http.request. The <em>info</em> parameter is either  an
+<tt class="xref docutils literal"><span class="pre">rfc822.Message</span></tt> or an <tt class="xref docutils literal"><span class="pre">httplib.HTTPResponse</span></tt> object.</dd></dl>
+
+<dl class="class">
+<dt id="httplib2.FileCache">
+<em class="property">class </em><tt class="descclassname">httplib2.</tt><tt class="descname">FileCache</tt><big>(</big><em>dir_name</em><span class="optional">[</span>, <em>safe=safename</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#httplib2.FileCache" title="Permalink to this definition">¶</a></dt>
+<dd>FileCache implements a Cache as a directory of files. The <em>dir_name</em> parameter
+is the name of the directory to use. If the directory does not exist then
+FileCache attempts to create the directory. The optional <em>safe</em> parameter is a
+funtion which generates the cache filename for each URI. A FileCache object is
+constructed and used for caching when you pass a directory name into the
+constructor of <a title="httplib2.Http" class="reference internal" href="#httplib2.Http"><tt class="xref docutils literal"><span class="pre">Http</span></tt></a>.</dd></dl>
+
+<p>Http objects have the following methods:</p>
+<div class="section" id="http-objects">
+<span id="id1"></span><h2>Http Objects<a class="headerlink" href="#http-objects" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt id="httplib2.Http.request">
+<tt class="descclassname">Http.</tt><tt class="descname">request</tt><big>(</big><em>uri</em><span class="optional">[</span>, <em>method=&quot;GET&quot;</em>, <em>body=None</em>, <em>headers=None</em>, <em>redirections=DEFAULT_MAX_REDIRECTS</em>, <em>connection_type=None</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#httplib2.Http.request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a single HTTP request. The <em>uri</em> is the URI of the HTTP resource and
+can begin with either <tt class="docutils literal"><span class="pre">http</span></tt> or <tt class="docutils literal"><span class="pre">https</span></tt>. The value of <em>uri</em> must be an
+absolute URI.</p>
+<p>The <em>method</em> is the HTTP method to perform, such as <tt class="docutils literal"><span class="pre">GET</span></tt>, <tt class="docutils literal"><span class="pre">POST</span></tt>,
+<tt class="docutils literal"><span class="pre">DELETE</span></tt>, etc. There is no restriction on the methods allowed.</p>
+<p>The <em>body</em> is the entity body to be sent with the request. It is a string
+object.</p>
+<p>Any extra headers that are to be sent with the request should be provided in the
+<em>headers</em> dictionary.</p>
+<p>The maximum number of redirect to follow before raising an exception is
+<em>redirections</em>. The default is 5.</p>
+<p>The <em>connection_type</em> is the type of connection object to use. The supplied
+class should implement the interface of httplib.HTTPConnection.</p>
+<p>The return value is a tuple of (response, content), the first being and instance
+of the <a title="httplib2.Response" class="reference internal" href="#httplib2.Response"><tt class="xref docutils literal"><span class="pre">Response</span></tt></a> class, the second being a string that contains the
+response entity body.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="httplib2.Http.add_credentials">
+<tt class="descclassname">Http.</tt><tt class="descname">add_credentials</tt><big>(</big><em>name</em>, <em>password</em><span class="optional">[</span>, <em>domain=None</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#httplib2.Http.add_credentials" title="Permalink to this definition">¶</a></dt>
+<dd>Adds a name and password that will be used when a request  requires
+authentication. Supplying the optional <em>domain</em> name will restrict these
+credentials to only be sent to the specified domain. If <em>domain</em> is not
+specified then the given credentials will be used to try to satisfy every HTTP
+401 challenge.</dd></dl>
+
+<dl class="method">
+<dt id="httplib2.Http.add_certificate">
+<tt class="descclassname">Http.</tt><tt class="descname">add_certificate</tt><big>(</big><em>key</em>, <em>cert</em>, <em>domain</em><big>)</big><a class="headerlink" href="#httplib2.Http.add_certificate" title="Permalink to this definition">¶</a></dt>
+<dd>Add a <em>key</em> and <em>cert</em> that will be used for an SSL connection to the specified
+domain. <em>keyfile</em> is the name of a PEM formatted  file that contains your
+private key. <em>certfile</em> is a PEM formatted certificate chain file.</dd></dl>
+
+<dl class="method">
+<dt id="httplib2.Http.clear_credentials">
+<tt class="descclassname">Http.</tt><tt class="descname">clear_credentials</tt><big>(</big><big>)</big><a class="headerlink" href="#httplib2.Http.clear_credentials" title="Permalink to this definition">¶</a></dt>
+<dd>Remove all the names and passwords used for authentication.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.follow_redirects">
+<tt class="descclassname">Http.</tt><tt class="descname">follow_redirects</tt><a class="headerlink" href="#httplib2.Http.follow_redirects" title="Permalink to this definition">¶</a></dt>
+<dd>If <tt class="xref docutils literal"><span class="pre">True</span></tt>, which is the default, safe redirects are followed, where safe means
+that the client is only doing a <tt class="docutils literal"><span class="pre">GET</span></tt> or <tt class="docutils literal"><span class="pre">HEAD</span></tt> on the URI to which it is
+being redirected. If <tt class="xref docutils literal"><span class="pre">False</span></tt> then no redirects are followed. Note that a False
+&#8216;follow_redirects&#8217; takes precedence over a True &#8216;follow_all_redirects&#8217;. Another
+way of saying that is for &#8216;follow_all_redirects&#8217; to have any affect,
+&#8216;follow_redirects&#8217; must be True.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.follow_all_redirects">
+<tt class="descclassname">Http.</tt><tt class="descname">follow_all_redirects</tt><a class="headerlink" href="#httplib2.Http.follow_all_redirects" title="Permalink to this definition">¶</a></dt>
+<dd>If <tt class="xref docutils literal"><span class="pre">False</span></tt>, which is the default, only safe redirects are followed, where safe
+means that the client is only doing a <tt class="docutils literal"><span class="pre">GET</span></tt> or <tt class="docutils literal"><span class="pre">HEAD</span></tt> on the URI to which it
+is being redirected. If <tt class="xref docutils literal"><span class="pre">True</span></tt> then all redirects are followed. Note that a
+False &#8216;follow_redirects&#8217; takes precedence over a True &#8216;follow_all_redirects&#8217;.
+Another way of saying that is for &#8216;follow_all_redirects&#8217; to have any affect,
+&#8216;follow_redirects&#8217; must be True.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.forward_authorization_headers">
+<tt class="descclassname">Http.</tt><tt class="descname">forward_authorization_headers</tt><a class="headerlink" href="#httplib2.Http.forward_authorization_headers" title="Permalink to this definition">¶</a></dt>
+<dd>If <tt class="xref docutils literal"><span class="pre">False</span></tt>, which is the default, then Authorization: headers are
+stripped from redirects. If <tt class="xref docutils literal"><span class="pre">True</span></tt> then Authorization: headers are left
+in place when following redirects. This parameter only applies if following
+redirects is turned on. Note that turning this on could cause your credentials
+to leak, so carefully consider the consequences.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.force_exception_to_status_code">
+<tt class="descclassname">Http.</tt><tt class="descname">force_exception_to_status_code</tt><a class="headerlink" href="#httplib2.Http.force_exception_to_status_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>If <tt class="xref docutils literal"><span class="pre">True</span></tt> then no <tt class="xref docutils literal"><span class="pre">httplib2</span></tt> exceptions will be
+thrown. Instead, those error conditions will be turned into <a title="httplib2.Response" class="reference internal" href="#httplib2.Response"><tt class="xref docutils literal"><span class="pre">Response</span></tt></a>
+objects that will be returned normally.</p>
+<p>If <tt class="xref docutils literal"><span class="pre">False</span></tt>, which is the default, then exceptions will be thrown.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.optimistic_concurrency_methods">
+<tt class="descclassname">Http.</tt><tt class="descname">optimistic_concurrency_methods</tt><a class="headerlink" href="#httplib2.Http.optimistic_concurrency_methods" title="Permalink to this definition">¶</a></dt>
+<dd>By default a list that only contains &#8220;PUT&#8221;, this attribute
+controls which methods will get &#8216;if-match&#8217; headers attached
+to them from cached responses with etags. You can append
+new items to this list to add new methods that should
+get this support, such as &#8220;PATCH&#8221;.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Http.ignore_etag">
+<tt class="descclassname">Http.</tt><tt class="descname">ignore_etag</tt><a class="headerlink" href="#httplib2.Http.ignore_etag" title="Permalink to this definition">¶</a></dt>
+<dd>Defaults to <tt class="xref docutils literal"><span class="pre">False</span></tt>. If <tt class="xref docutils literal"><span class="pre">True</span></tt>, then any etags present in the cached
+response are ignored when processing the current request, i.e. httplib2 does
+<strong>not</strong> use &#8216;if-match&#8217; for PUT or &#8216;if-none-match&#8217; when GET or HEAD requests are
+made. This is mainly to deal with broken servers which supply an etag, but
+change it capriciously.</dd></dl>
+
+<p>If you wish to supply your own caching implementation then you will need to pass
+in an object that supports the  following methods. Note that the <tt class="xref docutils literal"><span class="pre">memcache</span></tt>
+module supports this interface natively.</p>
+</div>
+<div class="section" id="cache-objects">
+<span id="id2"></span><h2>Cache Objects<a class="headerlink" href="#cache-objects" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt id="httplib2.Cache.get">
+<tt class="descclassname">Cache.</tt><tt class="descname">get</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#httplib2.Cache.get" title="Permalink to this definition">¶</a></dt>
+<dd>Takes a string <em>key</em> and returns the value as a string.</dd></dl>
+
+<dl class="method">
+<dt id="httplib2.Cache.set">
+<tt class="descclassname">Cache.</tt><tt class="descname">set</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#httplib2.Cache.set" title="Permalink to this definition">¶</a></dt>
+<dd>Takes a string <em>key</em> and <em>value</em> and stores it in the cache.</dd></dl>
+
+<dl class="method">
+<dt id="httplib2.Cache.delete">
+<tt class="descclassname">Cache.</tt><tt class="descname">delete</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#httplib2.Cache.delete" title="Permalink to this definition">¶</a></dt>
+<dd>Deletes the cached value stored at <em>key</em>. The value of <em>key</em> is a string.</dd></dl>
+
+<p>Response objects are derived from <tt class="xref docutils literal"><span class="pre">dict</span></tt> and map header names (lower case
+with the trailing colon removed) to header values. In addition to the dict
+methods a Response object also has:</p>
+</div>
+<div class="section" id="response-objects">
+<span id="id3"></span><h2>Response Objects<a class="headerlink" href="#response-objects" title="Permalink to this headline">¶</a></h2>
+<dl class="attribute">
+<dt id="httplib2.Response.fromcache">
+<tt class="descclassname">Response.</tt><tt class="descname">fromcache</tt><a class="headerlink" href="#httplib2.Response.fromcache" title="Permalink to this definition">¶</a></dt>
+<dd>If <tt class="docutils literal"><span class="pre">true</span></tt> the the response was returned from the cache.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Response.version">
+<tt class="descclassname">Response.</tt><tt class="descname">version</tt><a class="headerlink" href="#httplib2.Response.version" title="Permalink to this definition">¶</a></dt>
+<dd>The version of HTTP that the server supports. A value of 11 means &#8216;1.1&#8217;.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Response.status">
+<tt class="descclassname">Response.</tt><tt class="descname">status</tt><a class="headerlink" href="#httplib2.Response.status" title="Permalink to this definition">¶</a></dt>
+<dd>The numerical HTTP status code returned in the response.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Response.reason">
+<tt class="descclassname">Response.</tt><tt class="descname">reason</tt><a class="headerlink" href="#httplib2.Response.reason" title="Permalink to this definition">¶</a></dt>
+<dd>The human readable component of the HTTP response status code.</dd></dl>
+
+<dl class="attribute">
+<dt id="httplib2.Response.previous">
+<tt class="descclassname">Response.</tt><tt class="descname">previous</tt><a class="headerlink" href="#httplib2.Response.previous" title="Permalink to this definition">¶</a></dt>
+<dd>If redirects are followed then the <a title="httplib2.Response" class="reference internal" href="#httplib2.Response"><tt class="xref docutils literal"><span class="pre">Response</span></tt></a> object returned is just for
+the very last HTTP request and <em>previous</em> points to the previous
+<a title="httplib2.Response" class="reference internal" href="#httplib2.Response"><tt class="xref docutils literal"><span class="pre">Response</span></tt></a> object. In this manner they form a chain going back through
+the responses to the very first response. Will be <tt class="xref docutils literal"><span class="pre">None</span></tt> if there are no
+previous respones.</dd></dl>
+
+<p>The Response object also populates the header <tt class="docutils literal"><span class="pre">content-location</span></tt>, that
+contains the URI that was ultimately requested. This is useful if redirects were
+encountered, you can determine the ultimate URI that the request was sent to.
+All Response objects contain this key value, including <tt class="docutils literal"><span class="pre">previous</span></tt> responses so
+you can determine the entire chain of redirects. If
+<a title="httplib2.Http.force_exception_to_status_code" class="reference internal" href="#httplib2.Http.force_exception_to_status_code"><tt class="xref docutils literal"><span class="pre">Http.force_exception_to_status_code</span></tt></a> is <tt class="xref docutils literal"><span class="pre">True</span></tt> and the number of
+redirects has exceeded the number of allowed number  of redirects then the
+<a title="httplib2.Response" class="reference internal" href="#httplib2.Response"><tt class="xref docutils literal"><span class="pre">Response</span></tt></a> object will report the error in the status code, but the
+complete chain of previous responses will still be in tact.</p>
+<p>To do a simple <tt class="docutils literal"><span class="pre">GET</span></tt> request just supply the absolute URI of the resource:</p>
+</div>
+<div class="section" id="examples">
+<span id="httplib2-example"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">httplib2</span>
+<span class="n">h</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">()</span>
+<span class="n">resp</span><span class="p">,</span> <span class="n">content</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;http://bitworking.org/&quot;</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span>
+<span class="k">assert</span> <span class="n">resp</span><span class="p">[</span><span class="s">&#39;content-type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;text/html&#39;</span>
+</pre></div>
+</div>
+<p>Here is more complex example that does a PUT  of some text to a resource that
+requires authentication. The Http instance also uses a file cache in the
+directory <tt class="docutils literal"><span class="pre">.cache</span></tt>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">httplib2</span>
+<span class="n">h</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">(</span><span class="s">&quot;.cache&quot;</span><span class="p">)</span>
+<span class="n">h</span><span class="o">.</span><span class="n">add_credentials</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;password&#39;</span><span class="p">)</span>
+<span class="n">resp</span><span class="p">,</span> <span class="n">content</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;https://example.org/chap/2&quot;</span><span class="p">,</span>
+    <span class="s">&quot;PUT&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s">&quot;This is text&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;content-type&#39;</span><span class="p">:</span><span class="s">&#39;text/plain&#39;</span><span class="p">}</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>Here is an example that connects to a server that  supports the Atom Publishing
+Protocol.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">httplib2</span>
+<span class="n">h</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">()</span>
+<span class="n">h</span><span class="o">.</span><span class="n">add_credentials</span><span class="p">(</span><span class="n">myname</span><span class="p">,</span> <span class="n">mypasswd</span><span class="p">)</span>
+<span class="n">h</span><span class="o">.</span><span class="n">follow_all_redirects</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s">&#39;application/atom+xml&#39;</span><span class="p">}</span>
+<span class="n">body</span>    <span class="o">=</span> <span class="s">&quot;&quot;&quot;&lt;?xml version=&quot;1.0&quot; ?&gt;</span>
+<span class="s">    &lt;entry xmlns=&quot;http://www.w3.org/2005/Atom&quot;&gt;</span>
+<span class="s">      &lt;title&gt;Atom-Powered Robots Run Amok&lt;/title&gt;</span>
+<span class="s">      &lt;id&gt;urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a&lt;/id&gt;</span>
+<span class="s">      &lt;updated&gt;2003-12-13T18:30:02Z&lt;/updated&gt;</span>
+<span class="s">      &lt;author&gt;&lt;name&gt;John Doe&lt;/name&gt;&lt;/author&gt;</span>
+<span class="s">      &lt;content&gt;Some text.&lt;/content&gt;</span>
+<span class="s">&lt;/entry&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>
+<span class="n">uri</span>     <span class="o">=</span> <span class="s">&quot;http://www.example.com/collection/&quot;</span>
+<span class="n">resp</span><span class="p">,</span> <span class="n">content</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="n">uri</span><span class="p">,</span> <span class="s">&quot;POST&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here is an example of providing data to an HTML form processor. In this case we
+presume this is a POST form. We need to take our  data and format it as
+&#8220;application/x-www-form-urlencoded&#8221; data and use that as a  body for a POST
+request.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">httplib2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">urllib</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;fred&#39;</span><span class="p">,</span> <span class="s">&#39;address&#39;</span><span class="p">:</span> <span class="s">&#39;123 shady lane&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">body</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">body</span>
+<span class="go">&#39;name=fred&amp;address=123+shady+lane&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">h</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">resp</span><span class="p">,</span> <span class="n">content</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;http://example.com&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s">&quot;POST&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="#"><tt class="docutils literal"><span class="pre">httplib2</span></tt>  A comprehensive HTTP client library.</a><ul>
+<li><a class="reference external" href="#http-objects">Http Objects</a></li>
+<li><a class="reference external" href="#cache-objects">Cache Objects</a></li>
+<li><a class="reference external" href="#response-objects">Response Objects</a></li>
+<li><a class="reference external" href="#examples">Examples</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="index.html"
+                                  title="previous chapter">The httplib2 Library</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/libhttplib2.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="The httplib2 Library"
+             >previous</a> |</li>
+        <li><a href="index.html">httplib2 v0.4 documentation</a> &raquo;</li>
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2008, Joe Gregorio.
+      Last updated on Aug 28, 2012.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.4.
+    </div>
+  </body>
+</html>

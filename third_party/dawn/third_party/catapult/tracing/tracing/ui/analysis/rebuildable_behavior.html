@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.analysis', function() {
+  const RebuildableBehavior = {
+    rebuild() {
+      /**
+       * Rebuild the pane if necessary.
+       *
+       * This method is not intended to be overriden by subclasses. Please
+       * override scheduleRebuild_() instead.
+       */
+      if (!this.paneDirty_) {
+        // Avoid rebuilding unnecessarily as it breaks things like table
+        // selection.
+        return;
+      }
+
+      this.paneDirty_ = false;
+      this.onRebuild_();
+    },
+
+    /**
+     * Mark the UI state of the pane as dirty and schedule a rebuild.
+     *
+     * This method is intended to be called by subclasses.
+     */
+    scheduleRebuild_() {
+      if (this.paneDirty_) return;
+      this.paneDirty_ = true;
+      tr.b.requestAnimationFrame(this.rebuild.bind(this));
+    },
+
+    /**
+     * Called when the pane is dirty and a rebuild is triggered.
+     *
+     * This method is intended to be overriden by subclasses (instead of
+     * directly overriding rebuild()).
+     */
+    onRebuild_() {
+    }
+  };
+
+  return {
+    RebuildableBehavior,
+  };
+});
+</script>

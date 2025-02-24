@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import os
+import sys
+
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from telemetry import project_config
+from telemetry import record_wpr
+
+def main():
+  top_level_dir = os.path.dirname(__file__)
+  config = project_config.ProjectConfig(
+      benchmark_dirs=[os.path.join(top_level_dir, 'benchmarks')],
+      top_level_dir=top_level_dir)
+  return record_wpr.Main(environment=config)
+
+if __name__ == '__main__':
+  sys.exit(main())

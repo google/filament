@@ -1,0 +1,22 @@
+boto v2.22.1
+============
+
+:date: 2014/01/06
+
+This release fixes working with keys with special characters in them while using
+Signature V4 with Amazon Simple Storage Service (S3). It also fixes a regression
+in the ``ResultSet`` object, re-adding the ``nextToken`` attribute. This was
+most visible from within Amazon Elastic Compute Cloud (EC2) when calling the
+``get_spot_price_history`` method.
+
+Users in the cn-north-1 region or who make active use of
+``get_spot_price_history`` are recommended to upgrade.
+
+
+Bugfixes
+--------
+
+* Fixed key names with special characters in S3 when using SigV4.
+  (:sha:`8b37180`)
+* Re-added the ``nextToken`` attribute to the EC2 result set object.
+  (:issue:`1968`, :sha:`6928928`)

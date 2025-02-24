@@ -1,0 +1,11 @@
+boto v2.20.1
+============
+
+:date: 2013/12/13
+
+This release fixes an important Amazon EC2 bug related to fetching security credentials via the meta-data service. It is recommended that users of boto-2.20.0 upgrade to boto-2.20.1.
+
+
+Bugfixes
+--------
+* Bug fix for IAM security credentials metadata URL. (:issue:`1912`, :issue:`1908`, :issue:`1907`, :sha:`f82e7a5`)

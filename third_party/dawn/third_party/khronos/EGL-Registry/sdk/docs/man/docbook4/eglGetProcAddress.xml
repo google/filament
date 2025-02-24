@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglGetProcAddress">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglGetProcAddress</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetProcAddress</refname>
+        <refpurpose>
+            return a <acronym>GL</acronym> or an <acronym>EGL</acronym>
+            extension function
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>void (* <function>eglGetProcAddress</function>)()</funcdef>
+                <paramdef>char const * <parameter>procname</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>procname</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the name of the function to return.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglGetProcAddress</function> returns the address of
+            the extension function named by <parameter>procname</parameter>.
+            <parameter>procname</parameter>
+            must be a null-terminated string. The pointer returned
+            should be cast to a function pointer type matching the extension
+            function's definition in that extension specification. A return value
+            of <constant>NULL</constant> indicates that the specific
+            function does not exist for the <acronym>EGL</acronym> implementation.
+        </para>
+        <para>
+            A non-<constant>NULL</constant> return value does not guarantee
+            that an extension function is actually supported at runtime. The client
+            must also query
+            <citerefentry><refentrytitle>glGetString</refentrytitle></citerefentry>(<constant>GL_EXTENSIONS</constant>) or
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>(<parameter>display</parameter>,
+            <constant>EGL_EXTENSIONS</constant>) to determine if an
+            extension is supported by a particular context or display.
+        </para>
+        <para>
+            Function pointers returned by
+            <function>eglGetProcAddress</function> are independent of the
+            display and the currently bound context and may be used by any context
+            which supports the extension.
+        </para>
+        <para>
+            <function>eglGetProcAddress</function> may be queried for all
+            <acronym>GL</acronym> and <acronym>EGL</acronym> extension functions.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glGetString</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>    </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

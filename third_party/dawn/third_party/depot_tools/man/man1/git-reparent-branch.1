@@ -1,0 +1,93 @@
+'\" t
+.\"     Title: git-reparent-branch
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-REPARENT\-BRANC" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-reparent-branch \- Alter the parentage (upstream) for the current branch\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit reparent\-branch\fR <new_parent>
+\fIgit reparent\-branch\fR \-\-lkgr
+\fIgit reparent\-branch\fR \-\-root
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Change the \fIupstream\fR of the current branch, and then run \fBgit-rebase-update\fR(1) to move the commits in the current branch, as well as the commits in all descendant branches, onto the new parent\&.
+.sp
+\fB<new_parent>\fR may be either a local branch, remote branch, OR a tag (such as \fBlkgr\fR)\&.
+.sp
+This is particularly useful to reparent an independent CL to become dependent on another CL, or vice versa\&. This could happen if you started both on the assumption that they were independent, but later realized that this was not the case\&.
+.SH "OPTIONS"
+.PP
+<new_parent>
+.RS 4
+The new parent to set as the upstream for this branch\&. May be a branch ref or a tag\&.
+.RE
+.PP
+\-\-lkgr
+.RS 4
+Reparent to track lkgr\&.
+.RE
+.PP
+\-\-root
+.RS 4
+Reparent to track the
+\fIroot\fR
+branch\&. Defaults to
+\fIorigin/main\fR\&. See
+\fBgit-new-branch\fR(1)\*(Aqs CONFIGURATION VARIABLES section\&.\&.
+.RE
+.SH "SUGGESTED ALIASES"
+.sp
+Some common short\-hand aliases\&. Feel free to add these to your \fI~/\&.gitconfig\fR file\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[alias]
+  rp = reparent\-branch
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "SEE ALSO"
+.sp
+\fBgit-rebase-update\fR(1), \fBgit-rename-branch\fR(1), \fBgit-new-branch\fR(1), \fBgit-upstream-diff\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

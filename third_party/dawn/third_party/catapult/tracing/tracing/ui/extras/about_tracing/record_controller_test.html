@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/mock_tracing_controller_client.html">
+<link rel="import"
+      href="/tracing/ui/extras/about_tracing/record_controller.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  const testData = [
+    {name: 'a', args: {}, pid: 52, ts: 15000, cat: 'foo', tid: 53, ph: 'B'},
+    {name: 'a', args: {}, pid: 52, ts: 19000, cat: 'foo', tid: 53, ph: 'E'},
+    {name: 'b', args: {}, pid: 52, ts: 32000, cat: 'foo', tid: 53, ph: 'B'},
+    {name: 'b', args: {}, pid: 52, ts: 54000, cat: 'foo', tid: 53, ph: 'E'}
+  ];
+
+  test('fullRecording', function() {
+    const mock = new tr.ui.e.about_tracing.MockTracingControllerClient();
+    mock.expectRequest('endRecording', function() {
+      return '';
+    });
+    mock.expectRequest('getCategories', function() {
+      tr.b.timeout(20).then(() =>
+        recordingPromise.selectionDlg.clickRecordButton());
+      return ['a', 'b', 'c'];
+    });
+    mock.expectRequest('beginRecording', function(recordingOptions) {
+      assert.typeOf(recordingOptions.included_categories, 'array');
+      assert.typeOf(recordingOptions.excluded_categories, 'array');
+      assert.typeOf(recordingOptions.enable_systrace, 'boolean');
+      assert.typeOf(recordingOptions.record_mode, 'string');
+      tr.b.timeout(10).then(() =>
+        recordingPromise.progressDlg.clickStopButton());
+      return '';
+    });
+    mock.expectRequest('endRecording', function(data) {
+      return JSON.stringify(testData);
+    });
+
+    const recordingPromise = tr.ui.e.about_tracing.beginRecording(mock);
+
+    return recordingPromise.then(function(data) {
+      mock.assertAllRequestsHandled();
+      assert.strictEqual(data, JSON.stringify(testData));
+    }, function(error) {
+      assert.fail(error);
+    });
+  });
+});
+</script>

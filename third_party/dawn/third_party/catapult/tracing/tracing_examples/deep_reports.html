@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<head>
+<title>Deep insights via Bulk Trace Analysis</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+<link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+
+<link rel="import" href="/tracing/ui/extras/deep_reports/html_results.html">
+<link rel="import" href="/tracing/ui/extras/deep_reports/main.html">
+<link rel="import" href="/tracing/ui/extras/full_config.html">
+<link rel="import" href="/tracing/ui/timeline_view.html">
+
+<style>
+  body {
+    font-family: sans-serif;
+  }
+</style>
+</head>
+<body>
+  <select id="trace-dir"></select>
+  <tr-ui-e-deep-reports-html-results id="results">
+  </tr-ui-e-deep-reports-html-results>
+
+  <script>
+  'use strict';
+
+  function onLoad() {
+    tr.b.getAsync('/test_data/__file_list__').then(function(data) {
+      var select = document.querySelector('#trace-file');
+      var allFiles = JSON.parse(data);
+      var filenames = allFiles.filter(function(file) {
+        if (!file.startsWith('measurmt-traces/'))
+          return false;
+        if (file === 'measurmt-traces/README.md')
+          return false;
+        return true;
+      });
+
+      initUI(filenames);
+    });
+  }
+  window.addEventListener('load', onLoad);
+
+  function initUI(files) {
+    // Groups.
+    var filesByDirName = {};
+    files.forEach(function(file) {
+      var rest = /measurmt-traces\/(.+)/.exec(file)[1];
+
+      // Find subdirectories.
+      var m = /(.+?)\/(.*)/.exec(rest);
+      var dirName = m[1];
+      var baseName = m[2];
+      if (baseName === 'rail_expectations.json') {
+        // TODO(nduca): Stash this somewhere else.
+        return;
+      }
+      if (baseName.endsWith('.mp4')) {
+        // TODO(nduca): Stash this somewhere else.
+        return;
+      }
+      if (filesByDirName[dirName] === undefined)
+        filesByDirName[dirName] = [];
+      filesByDirName[dirName].push(file);
+    });
+
+    var selectEl = document.body.querySelector('#trace-dir');
+    selectEl.filesByDirName = filesByDirName;
+
+    for (var [dirName, filesInDir] of Object.entries(filesByDirName)) {
+      var runEl = document.createElement('option');
+      runEl.textContent = dirName + ': ' + filesInDir.length + ' traces';
+      runEl.value = dirName;
+      selectEl.appendChild(runEl);
+    }
+
+    selectEl.selectedIndex = 0;
+    selectEl.addEventListener('change', onSelectionChange);
+    if (!window.location.hash) {
+      // This will trigger an onHashChange so no need to reload directly.
+      window.location.hash = '#' + selectEl[selectEl.selectedIndex].value;
+    } else {
+      onHashChange();
+    }
+  }
+
+  function onSelectionChange() {
+    var selectEl = document.body.querySelector('#trace-dir');
+    window.location.hash = '#' + selectEl[selectEl.selectedIndex].value;
+  }
+
+  function onHashChange() {
+    var file = window.location.hash.substr(1);
+    var selectEl = document.querySelector('#trace-dir');
+    if (selectEl[selectEl.selectedIndex].value !== file) {
+      for (var i = 0; i < selectEl.children.length; i++) {
+        if (selectEl.children[i].value === file) {
+          selectEl.selectedIndex = i;
+          break;
+        }
+      }
+    }
+    reload();
+  }
+  window.addEventListener('hashchange', onHashChange);
+
+  function reload() {
+    var dirName = window.location.hash.substr(1);
+    var selectEl = document.body.querySelector('#trace-dir');
+    var filesInDir = selectEl.filesByDirName[dirName];
+    var results = document.querySelector('#results');
+    results.clear();
+    tr.ui.e.deep_reports.main(results, filesInDir).then(
+        function success() {
+        },
+        function error(err) {
+          tr.showPanic('Error', err);
+        });
+  }
+  </script>
+</body>
+</html>

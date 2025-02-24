@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the Sample class.
+ */
+tr.exportTo('tr.model', function() {
+  /**
+   * A Sample represents a sample taken at an instant in time,
+   * plus its call stack and parameters associated with that sample.
+   *
+   * @constructor
+   */
+  function Sample(start, title, leafNode, thread, opt_cpu, opt_weight,
+      opt_args) {
+    tr.model.TimedEvent.call(this, start);
+
+    this.start_ = start;
+    this.title_ = title;
+    this.leafNode_ = leafNode;
+    this.thread_ = thread;
+    this.colorId_ = leafNode.colorId;
+
+    this.cpu_ = opt_cpu;
+    this.weight_ = opt_weight;
+    this.args = opt_args || {};
+  }
+
+  Sample.prototype = {
+    __proto__: tr.model.TimedEvent.prototype,
+
+    get title() {
+      return this.title_;
+    },
+
+    get colorId() {
+      return this.colorId_;
+    },
+
+    get thread() {
+      return this.thread_;
+    },
+
+    get leafNode() {
+      return this.leafNode_;
+    },
+
+    get userFriendlyName() {
+      return 'Sample at ' +
+        tr.b.Unit.byName.timeStampInMs.format(this.start);
+    },
+
+    get userFriendlyStack() {
+      return this.leafNode_.userFriendlyStack;
+    },
+
+    getNodesAsArray() {
+      const nodes = [];
+      let node = this.leafNode_;
+      while (node !== undefined) {
+        nodes.push(node);
+        node = node.parentNode;
+      }
+      return nodes;
+    },
+
+    get cpu() {
+      return this.cpu_;
+    },
+
+    get weight() {
+      return this.weight_;
+    },
+  };
+
+  tr.model.EventRegistry.register(
+      Sample,
+      {
+        name: 'Sample',
+        pluralName: 'Samples'
+      });
+
+  return {
+    Sample,
+  };
+});
+</script>

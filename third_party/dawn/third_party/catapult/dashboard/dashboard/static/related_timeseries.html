@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/memory_related_names.html">
+
+<script>
+'use strict';
+tr.exportTo('d', function() {
+  /**
+   * @param {Array.<{color: string, testpath: string}>} sources
+   * @return {Array.<{
+   *    name: string like 'Process' or 'Component' or 'Bot',
+   *    sparklines: Array.<{
+   *      name: string like 'renderer_processes' or 'v8:heap',
+   *      testpaths: Array.<{color: string, testpath: string}>
+   *    }>
+   * }>}
+   */
+  function buildRelatedTimeseries(sources) {
+    const tabs = new Map();
+    const memoryRelatedNames = d.getMemoryRelatedNames();
+    for (const source of sources) {
+      const parts = source.testpath.split('/');
+      const measurementName = parts[3];
+      const prefix = parts.slice(0, 3).join('/') + '/';
+      let suffix = parts.slice(4).join('/');
+      if (suffix) suffix = '/' + suffix;
+
+      if (memoryRelatedNames.process.has(measurementName)) {
+        const sparklines = tabs.get('Process') || [];
+        for (const relatedName of memoryRelatedNames.process.get(
+            measurementName)) {
+          if (relatedName === measurementName) continue;
+          const relatedParts = relatedName.split(':');
+          const relatedProcessName = relatedParts[2];
+          const relatedTestPath = {
+            testpath: prefix + relatedName + suffix,
+            color: source.color,
+          };
+          let found = false;
+          for (const sparkline of sparklines) {
+            if (sparkline.name === relatedProcessName) {
+              found = true;
+              sparkline.testpaths.push(relatedTestPath);
+            }
+          }
+          if (!found) {
+            sparklines.push({
+              name: relatedProcessName,
+              testpaths: [relatedTestPath],
+            });
+          }
+        }
+        if (sparklines.length) {
+          tabs.set('Process', sparklines);
+        }
+      }
+
+      if (memoryRelatedNames.component.has(measurementName)) {
+        const sparklines = tabs.get('Component') || [];
+        for (const relatedName of memoryRelatedNames.component.get(
+            measurementName)) {
+          if (relatedName === measurementName) continue;
+          const relatedParts = relatedName.split(':');
+          const componentName = relatedParts.slice(
+              4, relatedParts.length - 1).join(':');
+          const relatedTestPath = {
+            testpath: prefix + relatedName + suffix,
+            color: source.color,
+          };
+          let found = false;
+          for (const sparkline of sparklines) {
+            if (sparkline.name === componentName) {
+              found = true;
+              sparkline.testpaths.push(relatedTestPath);
+            }
+          }
+          if (!found) {
+            sparklines.push({
+              name: componentName,
+              testpaths: [relatedTestPath],
+            });
+          }
+        }
+        if (sparklines.length) {
+          tabs.set('Component', sparklines);
+        }
+      }
+    }
+
+    const relatedTabs = [];
+    for (const [name, sparklines] of tabs) {
+      relatedTabs.push({name, sparklines});
+    }
+    return relatedTabs;
+  }
+
+  return {
+    buildRelatedTimeseries,
+  };
+});
+</script>

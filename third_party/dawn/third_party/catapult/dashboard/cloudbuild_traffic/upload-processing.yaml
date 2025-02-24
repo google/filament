@@ -1,0 +1,18 @@
+# These are the testing and deploy steps for the performance dashboard
+# services. We re-use the docker-compose files in the dev_dockerfiles directory
+# to ensure we're runing the same test and deploy cycle everytime.
+timeout: 600s  # Wait for 10 minutes for the whole process to finish.
+options:
+  diskSizeGb: 100
+  machineType: 'N1_HIGHCPU_8'
+steps:
+# We check in the target versions to avoid unintended traffic changes.
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Set traffic for upload-processing service'
+  dir: 'deploy-dashboard'
+  args: [
+    'app', 'services', 'set-traffic', 'upload-processing',
+    '--splits=${_SERVICE_VERSION}=1'
+  ]
+substitutions:
+    _SERVICE_VERSION: 'cloud-build-0fe4d61'

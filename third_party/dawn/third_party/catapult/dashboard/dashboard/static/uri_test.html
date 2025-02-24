@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/uri.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {
+    setUp() {
+      window.originalGetQueryString_ = uri.getQueryString;
+    },
+
+    tearDown() {
+      uri.getQueryString = window.originalGetQueryString_;
+    }
+  };
+
+  test('getCurrentPathWithParams encodes value', function() {
+    assert.strictEqual(
+        window.location.pathname + '?key=some%20value',
+        uri.getCurrentPathWithParams({'key': 'some value'}));
+  }, testOptions);
+
+  test('getParameter at start', function() {
+    uri.getQueryString = function() {
+      return '?foo=bar&x=y';
+    };
+    assert.strictEqual('bar', uri.getParameter('foo'));
+  }, testOptions);
+
+  test('getParameter not at start', function() {
+    uri.getQueryString = function() {
+      return '?foo=bar&x=y';
+    };
+    assert.strictEqual('y', uri.getParameter('x'));
+  }, testOptions);
+
+  test('getParameter decodes hex sequences and plus signs', function() {
+    uri.getQueryString = function() {
+      return '?foo=bar%2C+baz';
+    };
+    assert.strictEqual('bar, baz', uri.getParameter('foo'));
+  }, testOptions);
+
+  test('getAllParameters basic', function() {
+    uri.getQueryString = function() {
+      return '?a=1&b=2';
+    };
+    assert.deepEqual({'a': '1', 'b': '2'}, uri.getAllParameters());
+  }, testOptions);
+
+  test('getAllParameters decodes hex sequences and plus signs', function() {
+    uri.getQueryString = function() {
+      return '?a=%3A%3A&b=x+y';
+    };
+    assert.deepEqual({'a': '::', 'b': 'x y'}, uri.getAllParameters());
+  }, testOptions);
+});
+</script>

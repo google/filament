@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/draw_helpers.html">
+<link rel="import" href="/tracing/ui/tracks/process_memory_dump_track.html">
+<link rel="import" href="/tracing/ui/tracks/process_track_base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  const ProcessTrackBase = tr.ui.tracks.ProcessTrackBase;
+
+  /**
+   * @constructor
+   */
+  const ProcessTrack = tr.ui.b.define('process-track', ProcessTrackBase);
+
+  ProcessTrack.prototype = {
+    __proto__: ProcessTrackBase.prototype,
+
+    decorate(viewport) {
+      tr.ui.tracks.ProcessTrackBase.prototype.decorate.call(this, viewport);
+    },
+
+    drawTrack(type) {
+      switch (type) {
+        case tr.ui.tracks.DrawType.INSTANT_EVENT: {
+          if (!this.processBase.instantEvents ||
+              this.processBase.instantEvents.length === 0) {
+            break;
+          }
+
+          const ctx = this.context();
+
+          const pixelRatio = window.devicePixelRatio || 1;
+          const bounds = this.getBoundingClientRect();
+          const canvasBounds = ctx.canvas.getBoundingClientRect();
+
+          ctx.save();
+          ctx.translate(0, pixelRatio * (bounds.top - canvasBounds.top));
+
+          const dt = this.viewport.currentDisplayTransform;
+          const viewLWorld = dt.xViewToWorld(0);
+          const viewRWorld = dt.xViewToWorld(canvasBounds.width * pixelRatio);
+
+          tr.ui.b.drawInstantSlicesAsLines(
+              ctx,
+              this.viewport.currentDisplayTransform,
+              viewLWorld,
+              viewRWorld,
+              bounds.height,
+              this.processBase.instantEvents,
+              2);
+
+          ctx.restore();
+
+          break;
+        }
+
+        case tr.ui.tracks.DrawType.BACKGROUND:
+          this.drawBackground_();
+          // Don't bother recursing further, Process is the only level that
+          // draws backgrounds.
+          return;
+      }
+
+      tr.ui.tracks.ContainerTrack.prototype.drawTrack.call(this, type);
+    },
+
+    drawBackground_() {
+      const ctx = this.context();
+      const canvasBounds = ctx.canvas.getBoundingClientRect();
+      const pixelRatio = window.devicePixelRatio || 1;
+      const children = this.children;
+
+      let draw = false;
+      ctx.fillStyle = '#eee';
+      for (let i = 0; i < children.length; ++i) {
+        if (!(children[i] instanceof tr.ui.tracks.Track) ||
+            (children[i] instanceof tr.ui.tracks.SpacingTrack)) {
+          continue;
+        }
+
+        draw = !draw;
+        if (!draw) continue;
+
+        const bounds = children[i].getBoundingClientRect();
+        ctx.fillRect(0, pixelRatio * (bounds.top - canvasBounds.top),
+            ctx.canvas.width, pixelRatio * bounds.height);
+      }
+    },
+
+    // Process maps to processBase because we derive from ProcessTrackBase.
+    set process(process) {
+      this.processBase = process;
+    },
+
+    get process() {
+      return this.processBase;
+    },
+
+    get eventContainer() {
+      return this.process;
+    },
+
+    addContainersToTrackMap(containerToTrackMap) {
+      tr.ui.tracks.ProcessTrackBase.prototype.addContainersToTrackMap.apply(
+          this, arguments);
+      containerToTrackMap.addContainer(this.process, this);
+    },
+
+    appendMemoryDumpTrack_() {
+      const processMemoryDumps = this.process.memoryDumps;
+      if (processMemoryDumps.length) {
+        const pmdt = new tr.ui.tracks.ProcessMemoryDumpTrack(this.viewport_);
+        pmdt.memoryDumps = processMemoryDumps;
+        Polymer.dom(this).appendChild(pmdt);
+      }
+    },
+
+    addIntersectingEventsInRangeToSelectionInWorldSpace(
+        loWX, hiWX, viewPixWidthWorld, selection) {
+      function onPickHit(instantEvent) {
+        selection.push(instantEvent);
+      }
+      const instantEventWidth = 2 * viewPixWidthWorld;
+      tr.b.iterateOverIntersectingIntervals(this.processBase.instantEvents,
+          function(x) { return x.start; },
+          function(x) { return x.duration + instantEventWidth; },
+          loWX, hiWX,
+          onPickHit.bind(this));
+
+      tr.ui.tracks.ContainerTrack.prototype.
+          addIntersectingEventsInRangeToSelectionInWorldSpace.
+          apply(this, arguments);
+    },
+
+    addClosestEventToSelection(worldX, worldMaxDist, loY, hiY,
+        selection) {
+      this.addClosestInstantEventToSelection(this.processBase.instantEvents,
+          worldX, worldMaxDist, selection);
+      tr.ui.tracks.ContainerTrack.prototype.addClosestEventToSelection.
+          apply(this, arguments);
+    }
+  };
+
+  return {
+    ProcessTrack,
+  };
+});
+</script>

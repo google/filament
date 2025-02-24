@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classpvr_1_1_free_value_view.html" title="Represents a runtime&#45;known number of elements of a runtime&#45;known type, with functions to handle and c..." alt="" coords="5,31,152,57"/>
+<area shape="rect" id="node2" href="$structpvr_1_1_free_value.html" title="A Free Value View that is backed by a 64&#45;byte statically allocated array: Enough to hold one item of ..." alt="" coords="203,5,318,32"/>
+<area shape="rect" id="node3" href="$structpvr_1_1_typed_mem.html" title="Represents Free Value View that is backed by a (usually small) dynamically allocated block..." alt="" coords="200,56,321,83"/>
+</map>

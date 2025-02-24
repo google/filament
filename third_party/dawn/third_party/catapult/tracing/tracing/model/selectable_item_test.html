@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event.html">
+<link rel="import" href="/tracing/model/selectable_item.html">
+<link rel="import" href="/tracing/model/selection_state.html">
+<link rel="import" href="/tracing/ui/tracks/event_to_track_map.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Event = tr.model.Event;
+  const EventToTrackMap = tr.ui.tracks.EventToTrackMap;
+  const SelectableItem = tr.model.SelectableItem;
+  const SelectionState = tr.model.SelectionState;
+
+  test('checkModelItem', function() {
+    const selectableItem1 = new SelectableItem(undefined);
+    assert.isUndefined(selectableItem1.modelItem);
+
+    const event = new Event();
+    const selectableItem2 = new SelectableItem(event);
+    assert.strictEqual(selectableItem2.modelItem, event);
+  });
+
+  test('checkSelected', function() {
+    const selectableItem = new SelectableItem(undefined);
+
+    selectableItem.selectionState = SelectionState.NONE;
+    assert.isFalse(selectableItem.selected);
+
+    selectableItem.selectionState = SelectionState.SELECTED;
+    assert.isTrue(selectableItem.selected);
+
+    selectableItem.selectionState = SelectionState.HIGHLIGHTED;
+    assert.isFalse(selectableItem.selected);
+  });
+
+  test('checkAddToSelection_undefinedModelItem', function() {
+    const selectableItem = new SelectableItem(undefined);
+    const selection = [];
+    selectableItem.addToSelection(selection);
+    assert.lengthOf(selection, 0);
+  });
+
+  test('checkAddToSelection_definedModelItem', function() {
+    const event = new Event();
+    const selectableItem = new SelectableItem(event);
+    const selection = [];
+    selectableItem.addToSelection(selection);
+    assert.lengthOf(selection, 1);
+    assert.strictEqual(selection[0], event);
+  });
+
+  test('checkAddToTrackMap_undefinedModelItem', function() {
+    const selectableItem = new SelectableItem(undefined);
+    const eventToTrackMap = new EventToTrackMap();
+    const track = {};
+    selectableItem.addToTrackMap(eventToTrackMap, track);
+    assert.lengthOf(Object.keys(eventToTrackMap), 0);
+  });
+
+  test('checkAddToTrackMap_definedModelItem', function() {
+    const event = new Event();
+    const selectableItem = new SelectableItem(event);
+    const eventToTrackMap = new EventToTrackMap();
+    const track = {};
+    selectableItem.addToTrackMap(eventToTrackMap, track);
+    assert.lengthOf(Object.keys(eventToTrackMap), 1);
+    assert.strictEqual(eventToTrackMap[event.guid], track);
+  });
+});
+</script>
+

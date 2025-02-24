@@ -1,0 +1,165 @@
+Name
+
+    ANGLE_stream_producer_d3d_texture
+
+Name Strings
+
+    EGL_ANGLE_stream_producer_d3d_texture
+
+Contributors
+
+    Ian Ewell
+    Geoff Lang
+    John Bauman
+    Kelsey Gilbert
+
+Contacts
+
+    Geoff Lang, Google (geofflang ‘at’ google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2, November 15, 2017
+
+Number
+
+    EGL Extension #XXX
+
+Dependencies
+
+    Requires EGL 1.4.
+    Requires OpenGL ES 2.0.
+
+    Requires the EGL_KHR_stream extension.
+    Requires the EGL_NV_stream_consumer_gltexture_yuv extension.
+    Requires the EGL_KHR_stream_consumer_gltexture extension.
+    Requires the EGL_ANGLE_device_d3d extension.
+
+Overview
+
+    This extension allows D3D11 textures to be inserted into an EGL stream
+    with the expectation that the stream consumer will be either an RGB GL
+    texture consumer, or a YUV GL texture consumer using a two plane
+    configuration (i.e. a Y plane and a UV plane).
+    This will act as the producer of the stream.
+
+New procedures and functions
+
+    EGLBoolean eglCreateStreamProducerD3DTextureANGLE(
+                EGLDisplay dpy,
+                EGLStreamKHR stream,
+                const EGLAttrib *attrib_list)
+    EGLBoolean eglStreamPostD3DTextureANGLE(EGLDisplay dpy,
+                EGLStreamKHR stream,
+                void *texture,
+                const EGLAttrib *attrib_list)
+
+New Tokens
+
+    Accepted as an <attribute> in eglStreamPostD3DTextureANGLE:
+
+        EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE 0x33AB
+
+Replace section "3.10.3.1 No way to connect producer to EGLStream" in the
+EGL_KHR_stream extension with this:
+
+    3.10.3.1 Stream Surface Producer
+
+    Call
+
+        EGLBoolean eglCreateStreamProducerD3DTextureANGLE(
+                    EGLDisplay dpy,
+                    EGLStreamKHR stream,
+                    const EGLAttrib *attrib_list)
+
+    to create a producer that accepts D3D11 textures and connect it as the
+    producer of <stream>. <attrib_list> is used to specify attributes for the
+    stream producer. Currently there are no attributes to specify, and the
+    attribute list is used as a placeholder for future additions.
+
+    On failure, eglCreateStreamProducerD3DTextureANGLE returns EGL_FALSE and
+    generates an error.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> is not in the state
+          EGL_STREAM_STATE_CONNECTING_KHR.
+
+        - EGL_BAD_MATCH is generated if <stream> does not have a connected GL
+          texture consumer.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid EGLStream
+          generated for <dpy>.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid, initialized
+          display.
+
+Add a section preceding "3.9.3 Posting Semantics" in the EGL specification:
+
+    3.9.x Posting to a Stream
+
+    To post a D3D11 texture to a stream, call
+
+        EGLBoolean eglStreamPostD3DTextureANGLE(
+                    EGLDisplay dpy,
+                    EGLStreamKHR stream,
+                    void *texture,
+                    const EGLAttrib *attrib_list);
+
+    If <stream> is an appropriately configured stream and <texture> points to a
+    valid ID3D11Texture2D object of a supported format that is owned
+    by the same ID3D11Device that is queried with the EGL_ANGLE_device_d3d
+    extension, the texture will be posted to the stream and can be bound as one
+    or more OpenGL texture objects.
+
+    The parameter <attrib_list> allows for per-frame attributes to be specified
+    along with the texture. The only parameter currently available is
+    EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE, which allows the subresource id of
+    the texture that will be used to be specified. If this attribute is not
+    explicitly specified, it will default to the value of 0.
+
+    It is the responsibility of the application to perform any synchronization
+    between the insertion of the frame into the stream and the use of the
+    consumer textures output by the stream. The EGL_CONSUMER_LATENCY_USEC_KHR
+    attribute will have no effect on the function of the implementation of this
+    extension, but can still be used for communication between components of
+    the application.
+
+    The implementation will hold a reference to the D3D11 texture object if the
+    insertion is successful and will release the texture object when a new frame
+    is inserted or when the stream is destroyed.
+
+    On failure, eglStreamInsertD3DTexture returns EGL_FALSE and generates an
+    error.
+
+        - EGL_BAD_STATE is generated if <stream> is not in the state
+          EGL_STREAM_STATE_EMPTY_KHR, EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR,
+          or EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR.
+
+        - EGL_BAD_MATCH is generated if the stream is not associated with a
+          D3D11 texture producer.
+
+        - EGL_BAD_PARAMETER is generated if <texture> is not owned by the
+          queried device, is not a supported format, is not compatible with the
+          implementation, or if the specified value for
+          EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE is not a valid subresource id for
+          the texture.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid EGLStream.
+
+        - EGL_BAD_ATTRIBUTE is generated if an attribute other than
+          EGL_D3D_TEXTURE_SUBRESOURCE_ID_ANGLE is specified in <attrib_list>.
+
+Revision History
+
+    #1 (April 6, 2016) Ian Ewell
+        - initial draft
+
+    #2 (November 15, 2017) Kelsey Gilbert
+        - Rename from EGL_ANGLE_stream_producer_d3d_texture_nv12 to
+          EGL_ANGLE_stream_producer_d3d_texture
+        - Remove NV12 suffix from function names
+        - add RGB GL texture consumer support
+        - reduce required EGL version to 1.4 (from 1.5)

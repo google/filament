@@ -1,0 +1,5 @@
+SUGGESTED ALIASES
+-----------------
+
+Some common short-hand aliases. Feel free to add these to your '~/.gitconfig'
+file.

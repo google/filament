@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html><head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# object: http://ogp.me/ns/object# article: http://ogp.me/ns/article# profile: http://ogp.me/ns/profile#">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>inikulin/parse5</title>
+<link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub">
+<link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
+<link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-114.png">
+<link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114.png">
+<link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-144.png">
+<link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144.png">
+<meta property="fb:app_id" content="1401488693436528">
+<meta content="@github" name="twitter:site"><meta content="summary" name="twitter:card"><meta content="inikulin/parse5" name="twitter:title"><meta content="parse5 - Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification." name="twitter:description"><meta content="https://0.gravatar.com/avatar/64ee497c4a533144a9bf9ce2a6c010c5?d=https%3A%2F%2Fidenticons.github.com%2F9dd4dc5634e3d3d97c7d5a34ba28b850.png&amp;r=x&amp;s=400" name="twitter:image:src">
+<meta content="GitHub" property="og:site_name"><meta content="object" property="og:type"><meta content="https://0.gravatar.com/avatar/64ee497c4a533144a9bf9ce2a6c010c5?d=https%3A%2F%2Fidenticons.github.com%2F9dd4dc5634e3d3d97c7d5a34ba28b850.png&amp;r=x&amp;s=400" property="og:image"><meta content="inikulin/parse5" property="og:title"><meta content="https://github.com/inikulin/parse5" property="og:url"><meta content="parse5 - Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification." property="og:description">
+
+<meta name="hostname" content="github-fe139-cp1-prd.iad.github.net">
+<meta name="ruby" content="ruby 2.1.0p0-github-tcmalloc (60139581e1) [x86_64-linux]">
+<link rel="assets" href="https://github.global.ssl.fastly.net/">
+<link rel="conduit-xhr" href="https://ghconduit.com:25035/">
+<link rel="xhr-socket" href="/_sockets">
+
+
+
+<meta name="msapplication-TileImage" content="/windows-tile.png">
+<meta name="msapplication-TileColor" content="#ffffff">
+<meta name="selected-link" value="repo_source" data-pjax-transient="">
+<meta content="collector.githubapp.com" name="octolytics-host"><meta content="collector-cdn.github.com" name="octolytics-script-host"><meta content="github" name="octolytics-app-id"><meta content="BC802450:77B8:1BEFBBB:52E7B0AD" name="octolytics-dimension-request_id"><meta content="453071" name="octolytics-actor-id"><meta content="inikulin" name="octolytics-actor-login"><meta content="dcd292e4f5a14fcca9047ec5928186bef2925b78f574ae89c6be99c099695093" name="octolytics-actor-hash">
+
+
+
+
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+<meta content="authenticity_token" name="csrf-param">
+<meta content="QCjdZSQ/aWGKiOknksU3UAanpjr415E/Uf5HPq07DzE=" name="csrf-token">
+
+<link href="https://github.global.ssl.fastly.net/assets/github-894b05c38c2dcc924115c5a685b514f0ed11ecbe.css" media="all" rel="stylesheet" type="text/css">
+<link href="https://github.global.ssl.fastly.net/assets/github2-10f7b6999ba0543eaa86b9fe582445f0ee747741.css" media="all" rel="stylesheet" type="text/css">
+
+
+
+<script src="https://github.global.ssl.fastly.net/assets/frameworks-2086b76396d7018acf390457357b14121f3e16f3.js" type="text/javascript"></script>
+<script async="async" defer="defer" src="https://github.global.ssl.fastly.net/assets/github-4f3fea02ac13c7f75f0e8530e0996e90c6e78194.js" type="text/javascript"></script>
+
+<meta http-equiv="x-pjax-version" content="c360d73a08ef99ad12374a4c17689461">
+
+
+<meta name="description" content="parse5 - Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification.">
+
+<meta content="453071" name="octolytics-dimension-user_id"><meta content="inikulin" name="octolytics-dimension-user_login"><meta content="8862593" name="octolytics-dimension-repository_id"><meta content="inikulin/parse5" name="octolytics-dimension-repository_nwo"><meta content="true" name="octolytics-dimension-repository_public"><meta content="false" name="octolytics-dimension-repository_is_fork"><meta content="8862593" name="octolytics-dimension-repository_network_root_id"><meta content="inikulin/parse5" name="octolytics-dimension-repository_network_root_nwo">
+<link href="https://github.com/inikulin/parse5/commits/master.atom" rel="alternate" title="Recent Commits to parse5:master" type="application/atom+xml">
+
+</head>
+
+
+<body class="logged_in  env-production windows vis-public">
+<div class="wrapper">
+
+
+
+
+
+
+<div class="header header-logged-in true">
+<div class="container clearfix">
+
+<a class="header-logo-invertocat" href="https://github.com/">
+<span class="mega-octicon octicon-mark-github"></span>
+</a>
+
+
+<a href="/notifications" class="notification-indicator tooltipped downwards" data-gotokey="n" title="You have no unread notifications">
+<span class="mail-status all-read"></span>
+</a>
+
+<div class="command-bar js-command-bar  in-repository">
+<form accept-charset="UTF-8" action="/search" class="command-bar-form" id="top_search_form" method="get">
+
+<input type="text" data-hotkey="/ s" name="q" id="js-command-bar-field" placeholder="Search or type a command" tabindex="1" autocapitalize="off" data-username="inikulin" data-repo="inikulin/parse5" data-branch="master" data-sha="805df99e28e1373996c56faa90a96fa366e1fc12">
+
+<input type="hidden" name="nwo" value="inikulin/parse5">
+
+<div class="select-menu js-menu-container js-select-menu search-context-select-menu">
+<span class="minibutton select-menu-button js-menu-target">
+<span class="js-select-button">This repository</span>
+</span>
+
+<div class="select-menu-modal-holder js-menu-content js-navigation-container">
+<div class="select-menu-modal">
+
+<div class="select-menu-item js-navigation-item js-this-repository-navigation-item selected">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<input type="radio" class="js-search-this-repository" name="search_target" value="repository" checked="checked">
+<div class="select-menu-item-text js-select-button-text">This repository</div>
+</div> <!-- /.select-menu-item -->
+
+<div class="select-menu-item js-navigation-item js-all-repositories-navigation-item">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<input type="radio" name="search_target" value="global">
+<div class="select-menu-item-text js-select-button-text">All repositories</div>
+</div> <!-- /.select-menu-item -->
+
+</div>
+</div>
+</div>
+
+<span class="octicon help tooltipped downwards" title="Show command bar help">
+<span class="octicon octicon-question"></span>
+</span>
+
+
+<input type="hidden" name="ref" value="cmdform">
+
+</form>
+<ul class="top-nav">
+<li class="explore"><a href="/explore">Explore</a></li>
+<li><a href="https://gist.github.com">Gist</a></li>
+<li><a href="/blog">Blog</a></li>
+<li><a href="https://help.github.com">Help</a></li>
+</ul>
+</div>
+
+
+
+
+<ul id="user-links">
+<li>
+<a href="/inikulin" class="name">
+<img alt="Ivan Nikulin" height="20" src="https://2.gravatar.com/avatar/64ee497c4a533144a9bf9ce2a6c010c5?d=https%3A%2F%2Fidenticons.github.com%2F9dd4dc5634e3d3d97c7d5a34ba28b850.png&amp;r=x&amp;s=140" width="20"> inikulin
+</a>
+</li>
+
+<li class="new-menu dropdown-toggle js-menu-container">
+<a href="#" class="js-menu-target tooltipped downwards" title="Create new..." aria-label="Create new...">
+<span class="octicon octicon-plus"></span>
+<span class="dropdown-arrow"></span>
+</a>
+
+<div class="js-menu-content">
+</div>
+</li>
+
+<li>
+<a href="/settings/profile" id="account_settings" class="tooltipped downwards" aria-label="Account settings " title="Account settings ">
+<span class="octicon octicon-tools"></span>
+</a>
+</li>
+<li>
+<a class="tooltipped downwards" href="/logout" data-method="post" id="logout" title="Sign out" aria-label="Sign out">
+<span class="octicon octicon-log-out"></span>
+</a>
+</li>
+
+</ul>
+
+<div class="js-new-dropdown-contents hidden">
+
+
+<ul class="dropdown-menu">
+<li>
+<a href="/new"><span class="octicon octicon-repo-create"></span> New repository</a>
+</li>
+<li>
+<a href="/organizations/new"><span class="octicon octicon-organization"></span> New organization</a>
+</li>
+
+
+
+<li class="section-title">
+<span title="inikulin/parse5">This repository</span>
+</li>
+<li>
+<a href="/inikulin/parse5/issues/new"><span class="octicon octicon-issue-opened"></span> New issue</a>
+</li>
+<li>
+<a href="/inikulin/parse5/settings/collaboration"><span class="octicon octicon-person-add"></span> New collaborator</a>
+</li>
+</ul>
+
+</div>
+
+
+
+</div>
+</div>
+
+
+
+
+
+
+
+
+<div class="site" itemscope="" itemtype="http://schema.org/WebPage">
+
+<div class="pagehead repohead instapaper_ignore readability-menu">
+<div class="container">
+
+
+<ul class="pagehead-actions">
+
+<li class="subscription">
+<form accept-charset="UTF-8" action="/notifications/subscribe" class="js-social-container" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="QCjdZSQ/aWGKiOknksU3UAanpjr415E/Uf5HPq07DzE="></div>  <input id="repository_id" name="repository_id" type="hidden" value="8862593">
+
+<div class="select-menu js-menu-container js-select-menu">
+<a class="social-count js-social-count" href="/inikulin/parse5/watchers">
+22
+</a>
+<span class="minibutton select-menu-button with-count js-menu-target" role="button" tabindex="0">
+<span class="js-select-button">
+<span class="octicon octicon-eye-unwatch"></span>
+Unwatch
+</span>
+</span>
+
+<div class="select-menu-modal-holder">
+<div class="select-menu-modal subscription-menu-modal js-menu-content">
+<div class="select-menu-header">
+<span class="select-menu-title">Notification status</span>
+<span class="octicon octicon-remove-close js-menu-close"></span>
+</div> <!-- /.select-menu-header -->
+
+<div class="select-menu-list js-navigation-container" role="menu">
+
+<div class="select-menu-item js-navigation-item " role="menuitem" tabindex="0">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<div class="select-menu-item-text">
+<input id="do_included" name="do" type="radio" value="included">
+<h4>Not watching</h4>
+<span class="description">You only receive notifications for conversations in which you participate or are @mentioned.</span>
+<span class="js-select-button-text hidden-select-button-text">
+<span class="octicon octicon-eye-watch"></span>
+Watch
+</span>
+</div>
+</div> <!-- /.select-menu-item -->
+
+<div class="select-menu-item js-navigation-item selected" role="menuitem" tabindex="0">
+<span class="select-menu-item-icon octicon octicon octicon-check"></span>
+<div class="select-menu-item-text">
+<input checked="checked" id="do_subscribed" name="do" type="radio" value="subscribed">
+<h4>Watching</h4>
+<span class="description">You receive notifications for all conversations in this repository.</span>
+<span class="js-select-button-text hidden-select-button-text">
+<span class="octicon octicon-eye-unwatch"></span>
+Unwatch
+</span>
+</div>
+</div> <!-- /.select-menu-item -->
+
+<div class="select-menu-item js-navigation-item " role="menuitem" tabindex="0">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<div class="select-menu-item-text">
+<input id="do_ignore" name="do" type="radio" value="ignore">
+<h4>Ignoring</h4>
+<span class="description">You do not receive any notifications for conversations in this repository.</span>
+<span class="js-select-button-text hidden-select-button-text">
+<span class="octicon octicon-mute"></span>
+Stop ignoring
+</span>
+</div>
+</div> <!-- /.select-menu-item -->
+
+</div> <!-- /.select-menu-list -->
+
+</div> <!-- /.select-menu-modal -->
+</div> <!-- /.select-menu-modal-holder -->
+</div> <!-- /.select-menu -->
+
+</form>
+</li>
+
+<li>
+
+
+<div class="js-toggler-container js-social-container starring-container on">
+<a href="/inikulin/parse5/unstar" class="minibutton with-count js-toggler-target star-button starred upwards" title="Unstar this repository" data-remote="true" data-method="post" rel="nofollow">
+<span class="octicon octicon-star-delete"></span><span class="text">Unstar</span>
+</a>
+
+<a href="/inikulin/parse5/star" class="minibutton with-count js-toggler-target star-button unstarred upwards" title="Star this repository" data-remote="true" data-method="post" rel="nofollow">
+<span class="octicon octicon-star"></span><span class="text">Star</span>
+</a>
+
+<a class="social-count js-social-count" href="/inikulin/parse5/stargazers">
+406
+</a>
+</div>
+
+</li>
+
+
+<li>
+<a href="/inikulin/parse5/fork" class="minibutton with-count js-toggler-target fork-button lighter upwards" title="Fork this repo" rel="facebox nofollow">
+<span class="octicon octicon-git-branch-create"></span><span class="text">Fork</span>
+</a>
+<a href="/inikulin/parse5/network" class="social-count">14</a>
+</li>
+
+
+</ul>
+
+<h1 itemscope="" itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+<span class="repo-label"><span>public</span></span>
+<span class="mega-octicon octicon-repo"></span>
+<span class="author">
+<a href="/inikulin" class="url fn" itemprop="url" rel="author"><span itemprop="title">inikulin</span></a>
+</span>
+<span class="repohead-name-divider">/</span>
+<strong><a href="/inikulin/parse5" class="js-current-repository js-repo-home-link">parse5</a></strong>
+
+<span class="page-context-loader">
+<img alt="Octocat-spinner-32" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</span>
+
+</h1>
+</div><!-- /.container -->
+</div><!-- /.repohead -->
+
+<div class="container">
+
+
+<div class="repository-with-sidebar repo-container with-full-navigation ">
+
+<div class="repository-sidebar">
+
+
+<div class="sunken-menu vertical-right repo-nav js-repo-nav js-repository-container-pjax js-octicon-loaders">
+<div class="sunken-menu-contents">
+<ul class="sunken-menu-group">
+<li class="tooltipped leftwards" title="Code">
+<a href="/inikulin/parse5" aria-label="Code" class="selected js-selected-navigation-item sunken-menu-item" data-gotokey="c" data-pjax="true" data-selected-links="repo_source repo_downloads repo_commits repo_tags repo_branches /inikulin/parse5">
+<span class="octicon octicon-code"></span> <span class="full-word">Code</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>      </li>
+
+<li class="tooltipped leftwards" title="Issues">
+<a href="/inikulin/parse5/issues" aria-label="Issues" class="js-selected-navigation-item sunken-menu-item js-disable-pjax" data-gotokey="i" data-selected-links="repo_issues /inikulin/parse5/issues">
+<span class="octicon octicon-issue-opened"></span> <span class="full-word">Issues</span>
+<span class="counter">0</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>        </li>
+
+<li class="tooltipped leftwards" title="Pull Requests">
+<a href="/inikulin/parse5/pulls" aria-label="Pull Requests" class="js-selected-navigation-item sunken-menu-item js-disable-pjax" data-gotokey="p" data-selected-links="repo_pulls /inikulin/parse5/pulls">
+<span class="octicon octicon-git-pull-request"></span> <span class="full-word">Pull Requests</span>
+<span class="counter">0</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>      </li>
+
+
+<li class="tooltipped leftwards" title="Wiki">
+<a href="/inikulin/parse5/wiki" aria-label="Wiki" class="js-selected-navigation-item sunken-menu-item" data-pjax="true" data-selected-links="repo_wiki /inikulin/parse5/wiki">
+<span class="octicon octicon-book"></span> <span class="full-word">Wiki</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>        </li>
+</ul>
+<div class="sunken-menu-separator"></div>
+<ul class="sunken-menu-group">
+
+<li class="tooltipped leftwards" title="Pulse">
+<a href="/inikulin/parse5/pulse" aria-label="Pulse" class="js-selected-navigation-item sunken-menu-item" data-pjax="true" data-selected-links="pulse /inikulin/parse5/pulse">
+<span class="octicon octicon-pulse"></span> <span class="full-word">Pulse</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>      </li>
+
+<li class="tooltipped leftwards" title="Graphs">
+<a href="/inikulin/parse5/graphs" aria-label="Graphs" class="js-selected-navigation-item sunken-menu-item" data-pjax="true" data-selected-links="repo_graphs repo_contributors /inikulin/parse5/graphs">
+<span class="octicon octicon-graph"></span> <span class="full-word">Graphs</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>      </li>
+
+<li class="tooltipped leftwards" title="Network">
+<a href="/inikulin/parse5/network" aria-label="Network" class="js-selected-navigation-item sunken-menu-item js-disable-pjax" data-selected-links="repo_network /inikulin/parse5/network">
+<span class="octicon octicon-git-branch"></span> <span class="full-word">Network</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>      </li>
+</ul>
+
+
+<div class="sunken-menu-separator"></div>
+<ul class="sunken-menu-group">
+<li class="tooltipped leftwards" title="Settings">
+<a href="/inikulin/parse5/settings" class="sunken-menu-item" data-pjax="" aria-label="Settings">
+<span class="octicon octicon-tools"></span> <span class="full-word">Settings</span>
+<img alt="Octocat-spinner-32" class="mini-loader" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</a>
+</li>
+</ul>
+</div>
+</div>
+
+<div class="only-with-full-nav">
+
+
+
+
+<div class="clone-url " data-protocol-type="http" data-url="/users/set_protocol?protocol_selector=http&amp;protocol_type=push">
+<h3><strong>HTTPS</strong> clone URL</h3>
+<div class="clone-url-box">
+<input type="text" class="clone js-url-field" value="https://github.com/inikulin/parse5.git" readonly="readonly">
+
+<span class="js-zeroclipboard url-box-clippy minibutton zeroclipboard-button" data-clipboard-text="https://github.com/inikulin/parse5.git" data-copied-hint="copied!" title="copy to clipboard"><span class="octicon octicon-clippy"></span></span>
+</div>
+</div>
+
+
+
+<div class="clone-url " data-protocol-type="ssh" data-url="/users/set_protocol?protocol_selector=ssh&amp;protocol_type=push">
+<h3><strong>SSH</strong> clone URL</h3>
+<div class="clone-url-box">
+<input type="text" class="clone js-url-field" value="git@github.com:inikulin/parse5.git" readonly="readonly">
+
+<span class="js-zeroclipboard url-box-clippy minibutton zeroclipboard-button" data-clipboard-text="git@github.com:inikulin/parse5.git" data-copied-hint="copied!" title="copy to clipboard"><span class="octicon octicon-clippy"></span></span>
+</div>
+</div>
+
+
+
+<div class="clone-url open" data-protocol-type="subversion" data-url="/users/set_protocol?protocol_selector=subversion&amp;protocol_type=push">
+<h3><strong>Subversion</strong> checkout URL</h3>
+<div class="clone-url-box">
+<input type="text" class="clone js-url-field" value="https://github.com/inikulin/parse5" readonly="readonly">
+
+<span class="js-zeroclipboard url-box-clippy minibutton zeroclipboard-button" data-clipboard-text="https://github.com/inikulin/parse5" data-copied-hint="copied!" title="copy to clipboard"><span class="octicon octicon-clippy"></span></span>
+</div>
+</div>
+
+
+<p class="clone-options">You can clone with
+<a href="#" class="js-clone-selector" data-protocol="http">HTTPS</a>,
+<a href="#" class="js-clone-selector" data-protocol="ssh">SSH</a>,
+or <a href="#" class="js-clone-selector" data-protocol="subversion">Subversion</a>.
+<span class="octicon help tooltipped upwards" title="Get help on which URL is right for you.">
+<a href="https://help.github.com/articles/which-remote-url-should-i-use">
+<span class="octicon octicon-question"></span>
+</a>
+</span>
+</p>
+
+
+<a href="http://windows.github.com" class="minibutton sidebar-button">
+<span class="octicon octicon-device-desktop"></span>
+Clone in Desktop
+</a>
+
+<a href="/inikulin/parse5/archive/master.zip" class="minibutton sidebar-button" title="Download this repository as a zip file" rel="nofollow">
+<span class="octicon octicon-cloud-download"></span>
+Download ZIP
+</a>
+</div>
+</div><!-- /.repository-sidebar -->
+
+<div id="js-repo-pjax-container" class="repository-content context-loader-container" data-pjax-container="">
+
+
+<span id="js-show-full-navigation"></span>
+
+<div class="repository-meta js-details-container ">
+<div class="repository-description js-details-show">
+<p>Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification.</p>
+</div>
+
+
+<span class="edit-link js-details-show js-details-target">— <a href="#">Edit</a></span>
+<form accept-charset="UTF-8" action="/inikulin/parse5/settings/update_meta" class="edit-repository-meta js-details-edit" method="post"><div style="margin:0;padding:0;display:inline"><input name="_method" type="hidden" value="put"><input name="authenticity_token" type="hidden" value="QCjdZSQ/aWGKiOknksU3UAanpjr415E/Uf5HPq07DzE="></div>
+
+<div class="field description-field">
+<label for="repo_description">Description</label>
+<input type="text" name="repo_description" value="Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification." placeholder="Short description of this repository">
+</div>
+
+<div class="field website-field">
+<label for="repo_homepage">Website</label>
+<input type="text" name="repo_homepage" value="" placeholder="Website for this repository (optional)">
+</div>
+
+<button class="button classy">Save</button>
+<span class="cancel">or <a href="#" class="js-details-target">cancel</a></span>
+</form>
+</div>
+
+<div class="capped-box overall-summary ">
+
+<div class="stats-switcher-viewport js-stats-switcher-viewport">
+
+<ul class="numbers-summary">
+<li class="commits">
+<a data-pjax="" href="/inikulin/parse5/commits/master">
+<span class="num">
+<span class="octicon octicon-history"></span>
+149
+</span>
+commits
+</a>
+</li>
+<li>
+<a data-pjax="" href="/inikulin/parse5/branches">
+<span class="num">
+<span class="octicon octicon-git-branch"></span>
+1
+</span>
+branch
+</a>
+</li>
+
+<li>
+<a data-pjax="" href="/inikulin/parse5/releases">
+<span class="num">
+<span class="octicon octicon-tag"></span>
+2
+</span>
+releases
+</a>
+</li>
+
+<li>
+
+<a href="/inikulin/parse5/graphs/contributors">
+<span class="num">
+<span class="octicon octicon-organization"></span>
+2
+</span>
+contributors
+</a>
+</li>
+</ul>
+
+<div class="repository-lang-stats">
+<ol class="repository-lang-stats-numbers">
+<li>
+<a href="/inikulin/parse5/search?l=javascript">
+<span class="color-block language-color" style="background-color:#f15501;"></span>
+<span class="lang">JavaScript</span>
+<span class="percent">100%</span>
+</a>
+</li>
+</ol>
+</div>
+</div>
+
+</div>
+
+<a href="#" class="repository-lang-stats-graph js-toggle-lang-stats tooltipped downwards" title="Show language statistics" style="background-color:#f15501">
+<span class="language-color" style="width:100%; background-color:#f15501;" itemprop="keywords">JavaScript</span>
+</a>
+
+
+<div>
+</div>
+
+
+<div class="file-navigation in-mid-page">
+<a href="/inikulin/parse5/compare" aria-label="Compare, review, create a pull request" class="minibutton compact primary tooltipped downwards" title="Compare &amp; review" data-pjax="">
+<span class="octicon octicon-git-compare"></span>
+</a>
+
+
+
+<div class="select-menu js-menu-container js-select-menu">
+<span class="minibutton select-menu-button js-menu-target" data-hotkey="w" data-master-branch="master" data-ref="master" role="button" aria-label="Switch branches or tags" tabindex="0">
+<span class="octicon octicon-git-branch"></span>
+<i>branch:</i>
+<span class="js-select-button">master</span>
+</span>
+
+<div class="select-menu-modal-holder js-menu-content js-navigation-container" data-pjax="">
+
+<div class="select-menu-modal">
+<div class="select-menu-header">
+<span class="select-menu-title">Switch branches/tags</span>
+<span class="octicon octicon-remove-close js-menu-close"></span>
+</div> <!-- /.select-menu-header -->
+
+<div class="select-menu-filters">
+<div class="select-menu-text-filter">
+<input type="text" aria-label="Find or create a branch…" id="context-commitish-filter-field" class="js-filterable-field js-navigation-enable" placeholder="Find or create a branch…">
+</div>
+<div class="select-menu-tabs">
+<ul>
+<li class="select-menu-tab">
+<a href="#" data-tab-filter="branches" class="js-select-menu-tab">Branches</a>
+</li>
+<li class="select-menu-tab">
+<a href="#" data-tab-filter="tags" class="js-select-menu-tab">Tags</a>
+</li>
+</ul>
+</div><!-- /.select-menu-tabs -->
+</div><!-- /.select-menu-filters -->
+
+<div class="select-menu-list select-menu-tab-bucket js-select-menu-tab-bucket" data-tab-filter="branches">
+
+<div data-filterable-for="context-commitish-filter-field" data-filterable-type="substring">
+
+
+<div class="select-menu-item js-navigation-item selected">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<a href="/inikulin/parse5/tree/master" data-name="master" data-skip-pjax="true" rel="nofollow" class="js-navigation-open select-menu-item-text js-select-button-text css-truncate-target" title="master">master</a>
+</div> <!-- /.select-menu-item -->
+</div>
+
+<form accept-charset="UTF-8" action="/inikulin/parse5/branches" class="js-create-branch select-menu-item select-menu-new-item-form js-navigation-item js-new-item-form" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="QCjdZSQ/aWGKiOknksU3UAanpjr415E/Uf5HPq07DzE="></div>
+<span class="octicon octicon-git-branch-create select-menu-item-icon"></span>
+<div class="select-menu-item-text">
+<h4>Create branch: <span class="js-new-item-name"></span></h4>
+<span class="description">from ‘master’</span>
+</div>
+<input type="hidden" name="name" id="name" class="js-new-item-value">
+<input type="hidden" name="branch" id="branch" value="master">
+<input type="hidden" name="path" id="path" value="">
+</form> <!-- /.select-menu-item -->
+
+</div> <!-- /.select-menu-list -->
+
+<div class="select-menu-list select-menu-tab-bucket js-select-menu-tab-bucket" data-tab-filter="tags">
+<div data-filterable-for="context-commitish-filter-field" data-filterable-type="substring">
+
+
+<div class="select-menu-item js-navigation-item ">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<a href="/inikulin/parse5/tree/v0.6.0" data-name="v0.6.0" data-skip-pjax="true" rel="nofollow" class="js-navigation-open select-menu-item-text js-select-button-text css-truncate-target" title="v0.6.0">v0.6.0</a>
+</div> <!-- /.select-menu-item -->
+<div class="select-menu-item js-navigation-item ">
+<span class="select-menu-item-icon octicon octicon-check"></span>
+<a href="/inikulin/parse5/tree/0.6.1" data-name="0.6.1" data-skip-pjax="true" rel="nofollow" class="js-navigation-open select-menu-item-text js-select-button-text css-truncate-target" title="0.6.1">0.6.1</a>
+</div> <!-- /.select-menu-item -->
+</div>
+
+<div class="select-menu-no-results">Nothing to show</div>
+</div> <!-- /.select-menu-list -->
+
+</div> <!-- /.select-menu-modal -->
+</div> <!-- /.select-menu-modal-holder -->
+</div> <!-- /.select-menu -->
+
+
+<div class="breadcrumb"><span class="repo-root js-repo-root"><span itemscope="" itemtype="http://data-vocabulary.org/Breadcrumb"><a href="/inikulin/parse5" data-branch="master" data-direction="back" data-pjax="true" itemscope="url"><span itemprop="title">parse5</span></a></span></span><span class="separator"> / </span><form action="/inikulin/parse5/new/master" class="js-new-blob-form tooltipped rightwards new-file-link" method="post" title="Create a new file here"><span aria-label="Create a new file here" class="js-new-blob-submit octicon octicon-file-add" data-test-id="create-new-git-file" role="button"></span></form></div>
+</div>
+
+
+
+<a href="/inikulin/parse5/find/master" data-hotkey="t" class="js-show-file-finder" style="display:none" data-pjax="">Show File Finder</a>
+<div class="bubble files-bubble">
+
+
+<div class="commit commit-tease js-details-container">
+<p class="commit-title ">
+<a href="/inikulin/parse5/commit/33972193530003cbaf24c3cdde4ab2d3c94ede67" class="message" data-pjax="true" title="htmlparser2 tree adapter tested">htmlparser2 tree adapter tested</a>
+
+</p>
+<div class="commit-meta">
+<span class="js-zeroclipboard zeroclipboard-link" data-clipboard-text="33972193530003cbaf24c3cdde4ab2d3c94ede67" data-copied-hint="copied!" title="Copy SHA"><span class="octicon octicon-clippy"></span></span>
+<a href="/inikulin/parse5/commit/33972193530003cbaf24c3cdde4ab2d3c94ede67" class="sha-block" data-pjax="">latest commit <span class="sha">3397219353</span></a>
+
+<div class="authorship">
+<img alt="Ivan Nikulin" class="gravatar" height="20" src="https://2.gravatar.com/avatar/64ee497c4a533144a9bf9ce2a6c010c5?d=https%3A%2F%2Fidenticons.github.com%2F9dd4dc5634e3d3d97c7d5a34ba28b850.png&amp;r=x&amp;s=140" width="20">
+<span class="author-name"><a href="/inikulin" data-skip-pjax="true" rel="author">inikulin</a></span>
+authored <time class="js-relative-date updated" datetime="2014-01-27T02:02:50-08:00" title="2014-01-27 02:02:50">January 27, 2014</time>
+
+</div>
+</div>
+</div>
+
+<table class="files" data-pjax="">
+
+
+<tbody class="" data-url="/inikulin/parse5/file-list/master">
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-directory"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/tree/master/lib" class="js-directory-link" id="e8acc63b1e238f3255c900eed37254b8-9c0e11982fee8ec9905328a0f1255880895ebce8" title="lib">lib</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/33972193530003cbaf24c3cdde4ab2d3c94ede67" class="message" data-pjax="true" title="htmlparser2 tree adapter tested">htmlparser2 tree adapter tested</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2014-01-27T02:02:50-08:00" title="2014-01-27 02:02:50">January 27, 2014</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-directory"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/tree/master/test" class="js-directory-link" id="098f6bcd4621d373cade4e832627b4f6-e8d4326833c08a6731851e4f79dc8b3a172ed1fc" title="test">test</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/33972193530003cbaf24c3cdde4ab2d3c94ede67" class="message" data-pjax="true" title="htmlparser2 tree adapter tested">htmlparser2 tree adapter tested</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2014-01-27T02:02:50-08:00" title="2014-01-27 02:02:50">January 27, 2014</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-text"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/blob/master/.gitignore" class="js-directory-link" id="a084b794bc0759e7a6b77810e01874f2-00943223614db1f9c2386227950a3d84120819f4" title=".gitignore">.gitignore</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/33c5522146f1b48054259848cf711aebbe133337" class="message" data-pjax="true" title="Merge">Merge</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2013-07-15T09:33:17-07:00" title="2013-07-15 09:33:17">July 15, 2013</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-text"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/blob/master/LICENSE" class="js-directory-link" id="9879d6db96fd29134fc802214163b95a-6c630a0871e8239761813ac074c17882060b73a6" title="LICENSE">LICENSE</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/33c5522146f1b48054259848cf711aebbe133337" class="message" data-pjax="true" title="Merge">Merge</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2013-07-15T09:33:17-07:00" title="2013-07-15 09:33:17">July 15, 2013</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-text"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/blob/master/README.md" class="js-directory-link" id="04c6e90faac2675aa89e2176d2eec7d8-414202e1799908d7727efbcbb9fe2e58ef42d114" title="README.md">README.md</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/6c541498d323cc6130d098f242ebc10132ad1eaa" class="message" data-pjax="true" title="Add a Bitdeli badge to README">Add a Bitdeli badge to README</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2013-12-10T07:33:31-08:00" title="2013-12-10 07:33:31">December 10, 2013</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-text"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/blob/master/index.js" class="js-directory-link" id="168726dbe96b3ce427e7fedce31bb0bc-423b9a1511e0e8d8e43434febcbccca62671df19" title="index.js">index.js</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/e7af4374108276796a9991d49278429eb33293ab" class="message" data-pjax="true" title="Implementation of the htmlparser2 tree support started">Implementation of the htmlparser2 tree support started</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2014-01-24T04:11:52-08:00" title="2014-01-24 04:11:52">January 24, 2014</time></span></td>
+</tr>
+<tr>
+<td class="icon">
+<span class="octicon octicon-file-text"></span>
+<img alt="Octocat-spinner-32" class="spinner" height="16" src="https://github.global.ssl.fastly.net/images/spinners/octocat-spinner-32.gif" width="16">
+</td>
+<td class="content">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/blob/master/package.json" class="js-directory-link" id="b9cfc7f2cdf78a7f4b91a753d10865a2-99397a1dd31332b9a64d9af9cf32b7340a600f92" title="package.json">package.json</a></span>
+</td>
+<td class="message">
+<span class="css-truncate css-truncate-target"><a href="/inikulin/parse5/commit/b8d56257897357e655a71ba21d4bd40e12b33230" class="message" data-pjax="true" title="Expose Tokenizer">Expose Tokenizer</a></span>
+</td>
+<td class="age"><span class="css-truncate css-truncate-target"><time class="js-relative-date" datetime="2014-01-24T01:27:43-08:00" title="2014-01-24 01:27:43">January 24, 2014</time></span></td>
+</tr>
+</tbody>
+
+</table>
+</div>
+
+<div id="readme" class="clearfix announce instapaper_body md">
+<span class="name">
+<span class="octicon octicon-book"></span>
+README.md
+</span>
+
+<article class="markdown-body entry-content" itemprop="mainContentOfPage"><h1>
+<a name="parse5" class="anchor" href="#parse5"><span class="octicon octicon-link"></span></a>parse5</h1>
+
+<p>Fast full-featured HTML parser for Node. Based on WHATWG HTML5 specification.<br>
+To build <a href="http://testcafe.devexpress.com/">TestCafé</a> we needed fast and ready for production HTML parser for node.js, which will parse HTML as a modern browser's parser.
+Existing solutions were either too slow or their output was too inaccurate. So, this is how parse5 was born.</p>
+
+<h2>
+<a name="install" class="anchor" href="#install"><span class="octicon octicon-link"></span></a>Install</h2>
+
+<pre><code>$ npm install parse5
+</code></pre>
+
+<h2>
+<a name="usage-and-api" class="anchor" href="#usage-and-api"><span class="octicon octicon-link"></span></a>Usage and API</h2>
+
+<div class="highlight highlight-js"><pre><span class="kd">var</span> <span class="nx">Parser</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'parse5'</span><span class="p">).</span><span class="nx">Parser</span><span class="p">;</span>
+
+<span class="c1">//Instantiate parser</span>
+<span class="kd">var</span> <span class="nx">parser</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Parser</span><span class="p">();</span>
+
+<span class="c1">//Then feed it with an HTML document</span>
+<span class="kd">var</span> <span class="nb">document</span> <span class="o">=</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s1">'&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;Hi there!&lt;/body&gt;&lt;/html&gt;'</span><span class="p">)</span>
+
+<span class="c1">//Now let's parse HTML-snippet</span>
+<span class="kd">var</span> <span class="nx">fragment</span> <span class="o">=</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">parseFragment</span><span class="p">(</span><span class="s1">'&lt;title&gt;Parse5 is &amp;#102;&amp;#117;&amp;#99;&amp;#107;ing awesome!&lt;/title&gt;&lt;h1&gt;42&lt;/h1&gt;'</span><span class="p">);</span>
+
+</pre></div>
+
+<h2>
+<a name="is-it-fast" class="anchor" href="#is-it-fast"><span class="octicon octicon-link"></span></a>Is it fast?</h2>
+
+<p>Check out <a href="https://github.com/inikulin/node-html-parser-bench">this benchmark</a>.</p>
+
+<pre><code>Starting benchmark. Fasten your seatbelts...
+html5 (https://github.com/aredridel/html5) x 0.18 ops/sec ±5.92% (5 runs sampled)
+htmlparser (https://github.com/tautologistics/node-htmlparser/) x 3.83 ops/sec ±42.43% (14 runs sampled)
+htmlparser2 (https://github.com/fb55/htmlparser2) x 4.05 ops/sec ±39.27% (15 runs sampled)
+parse5 (https://github.com/inikulin/parse5) x 3.04 ops/sec ±51.81% (13 runs sampled)
+Fastest is htmlparser2 (https://github.com/fb55/htmlparser2),parse5 (https://github.com/inikulin/parse5)
+</code></pre>
+
+<p>So, parse5 is as fast as simple specification incompatible parsers and ~15-times(!) faster than the current specification compatible parser available for the node.</p>
+
+<h2>
+<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h2>
+
+<p>Test data is adopted from <a href="https://github.com/html5lib">html5lib project</a>. Parser is covered by more than 8000 test cases.
+To run tests:</p>
+
+<pre><code>$ node test/run_tests.js
+</code></pre>
+
+<h2>
+<a name="custom-tree-adapter" class="anchor" href="#custom-tree-adapter"><span class="octicon octicon-link"></span></a>Custom tree adapter</h2>
+
+<p>You can create a custom tree adapter so parse5 can work with your own DOM-tree implementation.
+Just pass your adapter implementation to the parser's constructor as an argument:</p>
+
+<div class="highlight highlight-js"><pre><span class="kd">var</span> <span class="nx">Parser</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'parse5'</span><span class="p">).</span><span class="nx">Parser</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">myTreeAdapter</span> <span class="o">=</span> <span class="p">{</span>
+<span class="c1">//Adapter methods...</span>
+<span class="p">};</span>
+
+<span class="c1">//Instantiate parser</span>
+<span class="kd">var</span> <span class="nx">parser</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Parser</span><span class="p">(</span><span class="nx">myTreeAdapter</span><span class="p">);</span>
+</pre></div>
+
+<p>Sample implementation can be found <a href="https://github.com/inikulin/parse5/blob/master/lib/default_tree_adapter.js">here</a>.
+The custom tree adapter should implement all methods exposed via <code>exports</code> in the sample implementation.</p>
+
+<h2>
+<a name="questions-or-suggestions" class="anchor" href="#questions-or-suggestions"><span class="octicon octicon-link"></span></a>Questions or suggestions?</h2>
+
+<p>If you have any questions, please feel free to create an issue <a href="https://github.com/inikulin/parse5/issues">here on github</a>.</p>
+
+<h2>
+<a name="author" class="anchor" href="#author"><span class="octicon octicon-link"></span></a>Author</h2>
+
+<p><a href="https://github.com/inikulin">Ivan Nikulin</a> (<a href="mailto:ifaaan@gmail.com">ifaaan@gmail.com</a>)</p>
+
+<p><a href="https://bitdeli.com/free" title="Bitdeli Badge"><img src="https://d2weczhvl823v0.cloudfront.net/inikulin/parse5/trend.png" alt="Bitdeli Badge" style="max-width:100%;"></a></p></article>
+</div>
+
+
+</div>
+
+</div><!-- /.repo-container -->
+<div class="modal-backdrop"></div>
+</div><!-- /.container -->
+</div><!-- /.site -->
+
+
+</div><!-- /.wrapper -->
+
+<div class="container">
+<div class="site-footer">
+<ul class="site-footer-links right">
+<li><a href="https://status.github.com/">Status</a></li>
+<li><a href="http://developer.github.com">API</a></li>
+<li><a href="http://training.github.com">Training</a></li>
+<li><a href="http://shop.github.com">Shop</a></li>
+<li><a href="/blog">Blog</a></li>
+<li><a href="/about">About</a></li>
+
+</ul>
+
+<a href="/">
+<span class="mega-octicon octicon-mark-github" title="GitHub"></span>
+</a>
+
+<ul class="site-footer-links">
+<li>© 2014 <span title="0.04649s from github-fe139-cp1-prd.iad.github.net">GitHub</span>, Inc.</li>
+<li><a href="/site/terms">Terms</a></li>
+<li><a href="/site/privacy">Privacy</a></li>
+<li><a href="/security">Security</a></li>
+<li><a href="/contact">Contact</a></li>
+</ul>
+</div><!-- /.site-footer -->
+</div><!-- /.container -->
+
+
+<div class="fullscreen-overlay js-fullscreen-overlay" id="fullscreen_overlay">
+<div class="fullscreen-container js-fullscreen-container">
+<div class="textarea-wrap">
+<textarea name="fullscreen-contents" id="fullscreen-contents" class="js-fullscreen-contents" placeholder="" data-suggester="fullscreen_suggester"></textarea>
+<div class="suggester-container">
+<div class="suggester fullscreen-suggester js-navigation-container" id="fullscreen_suggester" data-url="/inikulin/parse5/suggestions/commit">
+</div>
+</div>
+</div>
+</div>
+<div class="fullscreen-sidebar">
+<a href="#" class="exit-fullscreen js-exit-fullscreen tooltipped leftwards" title="Exit Zen Mode">
+<span class="mega-octicon octicon-screen-normal"></span>
+</a>
+<a href="#" class="theme-switcher js-theme-switcher tooltipped leftwards" title="Switch themes">
+<span class="octicon octicon-color-mode"></span>
+</a>
+</div>
+</div>
+
+
+
+<div id="ajax-error-message" class="flash flash-error">
+<span class="octicon octicon-alert"></span>
+<a href="#" class="octicon octicon-remove-close close js-ajax-error-dismiss"></a>
+Something went wrong with that request. Please try again.
+</div>
+
+
+
+
+</body></html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/hotkey_controller.html">
+<link rel="import" href="/tracing/ui/find_controller.html">
+<link rel="import" href="/tracing/ui/timeline_track_view.html">
+
+<dom-module id='tr-ui-find-control'>
+  <template>
+    <style>
+      :host {
+        -webkit-user-select: none;
+        display: flex;
+        position: relative;
+      }
+      input {
+        -webkit-user-select: auto;
+        background-color: #f8f8f8;
+        border: 1px solid rgba(0, 0, 0, 0.5);
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        width: 170px;
+      }
+      input:focus {
+        background-color: white;
+      }
+      tr-ui-b-toolbar-button {
+        border-left: none;
+        margin: 0;
+      }
+      #hitCount {
+        left: 0;
+        opacity: 0.25;
+        pointer-events: none;
+        position: absolute;
+        text-align: right;
+        top: 2px;
+        width: 167px;
+        z-index: 1;
+      }
+      #spinner {
+        visibility: hidden;
+        width: 8px;
+        height: 8px;
+        left: 154px;
+        pointer-events: none;
+        position: absolute;
+        top: 4px;
+        z-index: 1;
+
+        border: 2px solid transparent;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.5);
+        border-right: 2px solid rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+      }
+      @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+
+    <input type='text' id='filter'
+        on-input="filterTextChanged"
+        on-keydown="filterKeyDown"
+        on-blur="filterBlur"
+        on-focus="filterFocus"
+        on-mouseup="filterMouseUp" />
+    <div id="spinner"></div>
+    <tr-ui-b-toolbar-button on-click="findPrevious">
+      &larr;
+    </tr-ui-b-toolbar-button>
+    <tr-ui-b-toolbar-button on-click="findNext">
+      &rarr;
+    </tr-ui-b-toolbar-button>
+    <div id="hitCount">0 of 0</div>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-find-control',
+
+  filterKeyDown(e) {
+    if (e.keyCode === 27) {
+      const hkc = tr.b.getHotkeyControllerForElement(this);
+      if (hkc) {
+        hkc.childRequestsBlur(this);
+      } else {
+        this.blur();
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    } else if (e.keyCode === 13) {
+      if (e.shiftKey) {
+        this.findPrevious();
+      } else {
+        this.findNext();
+      }
+    }
+  },
+
+  filterBlur(e) {
+    this.updateHitCountEl();
+  },
+
+  filterFocus(e) {
+    this.$.filter.select();
+  },
+
+  // Prevent that the input text is deselected after focusing the find
+  // control with the mouse.
+  filterMouseUp(e) {
+    e.preventDefault();
+  },
+
+  get controller() {
+    return this.controller_;
+  },
+
+  set controller(c) {
+    this.controller_ = c;
+    this.updateHitCountEl();
+  },
+
+  focus() {
+    this.$.filter.focus();
+  },
+
+  get hasFocus() {
+    return this === document.activeElement;
+  },
+
+  filterTextChanged() {
+    Polymer.dom(this.$.hitCount).textContent = '';
+    this.$.spinner.style.visibility = 'visible';
+    this.$.spinner.style.animation = 'spin 1s linear infinite';
+    this.controller.startFiltering(this.$.filter.value).then(function() {
+      this.$.spinner.style.visibility = 'hidden';
+      this.$.spinner.style.animation = '';
+      this.updateHitCountEl();
+    }.bind(this));
+  },
+
+  findNext() {
+    if (this.controller) {
+      this.controller.findNext();
+    }
+    this.updateHitCountEl();
+  },
+
+  findPrevious() {
+    if (this.controller) {
+      this.controller.findPrevious();
+    }
+    this.updateHitCountEl();
+  },
+
+  updateHitCountEl() {
+    if (!this.controller || this.$.filter.value.length === 0) {
+      Polymer.dom(this.$.hitCount).textContent = '';
+      return;
+    }
+
+    const n = this.controller.filterHits.length;
+    const i = n === 0 ? -1 : this.controller.currentHitIndex;
+    Polymer.dom(this.$.hitCount).textContent = (i + 1) + ' of ' + n;
+  },
+
+  setText(string) {
+    this.$.filter.value = string;
+  }
+});
+</script>

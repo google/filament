@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglInitialize - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglInitialize">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglInitialize — 
+            initialize an <abbr class="acronym">EGL</abbr> display connection
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglInitialize</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint * <var class="pdparam">major</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint * <var class="pdparam">minor</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection to initialize.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>major</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Returns the major version number of the EGL implementation.
+                        May be <code class="constant">NULL</code>.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>minor</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Returns the minor version number of the EGL implementation.
+                        May be <code class="constant">NULL</code>.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglInitialize</code> initialized the EGL display
+            connection obtained with
+            <a class="citerefentry" href="eglGetDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetDisplay</span></span></a>.
+            Initializing an already initialized EGL display connection has no
+            effect besides returning the version numbers.
+        </p>
+        <p>
+            <em class="parameter"><code>major</code></em> and <em class="parameter"><code>minor</code></em>
+            do not return values if they are specified as <code class="constant">NULL</code>.
+        </p>
+        <p>
+            Use <a class="citerefentry" href="eglTerminate.xhtml"><span class="citerefentry"><span class="refentrytitle">eglTerminate</span></span></a>
+            to release resources associated with an EGL display connection.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned if
+            <code class="function">eglInitialize</code> fails,
+            <code class="constant">EGL_TRUE</code> otherwise.
+            <em class="parameter"><code>major</code></em> and <em class="parameter"><code>minor</code></em> are not
+            modified when <code class="constant">EGL_FALSE</code> is returned.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> cannot be initialized.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglGetDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetDisplay</span></span></a>,
+            <a class="citerefentry" href="eglTerminate.xhtml"><span class="citerefentry"><span class="refentrytitle">eglTerminate</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

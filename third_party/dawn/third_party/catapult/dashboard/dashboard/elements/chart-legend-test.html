@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/elements/chart-legend.html">
+<link rel="import" href="/dashboard/static/testing_common.html">
+
+<link rel="import" href="/tracing/core/test_utils.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const testOptions = {};
+
+  function createBasicLegend() {
+    const legend = document.createElement('chart-legend');
+    legend.seriesGroupList = [
+      {
+        'path': 'mymaster/linux/mybenchmark/foo',
+        'tests': [
+          {
+            'name': 'foo',
+            'path': 'mymaster/linux/mybenchmark/foo',
+            'direction': 'Lower',
+            'units': 'ms',
+            'description': 'Foo',
+            'color': 'rgb(200,200,0)',
+            'index': 0,
+            'important': true,
+            'selected': true,
+            'hidden': false
+          },
+          {
+            'name': 'sub-foo',
+            'path': 'mymaster/linux/mybenchmark/foo/sub-foo',
+            'direction': 'Lower',
+            'units': 'ms',
+            'description': 'A subtest of foo',
+            'color': 'rgb(0,200,200)',
+            'index': 1,
+            'important': false,
+            'selected': false,
+            'hidden': true
+          }
+        ],
+        'collapse': true,
+        'numHidden': 1
+      }
+    ];
+    legend.indicesToGraph = [0];
+    return legend;
+  }
+
+  test('instantiate basic', function() {
+    const legend = createBasicLegend();
+    this.addHTMLOutput(legend);
+  }, testOptions);
+});
+</script>

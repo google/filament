@@ -1,0 +1,4 @@
+# This file is used by git cl to get repository specific information.
+PROJECT: swiftshader
+GERRIT_HOST: True
+GERRIT_SQUASH_UPLOADS: False

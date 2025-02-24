@@ -1,0 +1,70 @@
+//
+// Copyright (C) 2019 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package {
+    default_applicable_licenses: [
+        "external_swiftshader_third_party_marl_license",
+    ],
+}
+
+// Added automatically by a large-scale-change
+// http://go/android-license-faq
+license {
+    name: "external_swiftshader_third_party_marl_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+    ],
+    license_text: [
+        "LICENSE",
+    ],
+}
+
+cc_library_static {
+    name: "swiftshader_marl",
+    host_supported: true,
+    vendor_available: true,
+    srcs: [
+        "src/debug.cpp",
+        "src/memory.cpp",
+        "src/scheduler.cpp",
+        "src/thread.cpp",
+        "src/trace.cpp",
+    ],
+    local_include_dirs: [
+        "src",
+    ],
+    export_include_dirs: [
+        "include",
+    ],
+    include_dirs: [
+        "external/swiftshader/third_party/marl/include"
+    ],
+    arch: {
+        arm: {
+            instruction_set: "arm",
+            srcs: ["src/osfiber_arm.c", "src/osfiber_asm_arm.S"],
+        },
+        arm64: { srcs: ["src/osfiber_aarch64.c", "src/osfiber_asm_aarch64.S"], },
+        x86: { srcs: ["src/osfiber_x86.c", "src/osfiber_asm_x86.S"], },
+        x86_64: { srcs: ["src/osfiber_x64.c", "src/osfiber_asm_x64.S"], },
+        riscv64: { srcs: ["src/osfiber_rv64.c", "src/osfiber_asm_rv64.S"], },
+    },
+    cflags: [
+        "-Wno-unused-parameter",
+    ],
+    stl: "libc++_static",
+}

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/value/histogram.html">
+<link rel="import" href="/tracing/value/histogram_deserializer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('eventSet', function() {
+    let slice = undefined;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      slice = tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        title: 'foo',
+        start: 0,
+        duration: 10
+      });
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+      thread.sliceGroup.pushSlice(slice);
+    });
+
+    let d = new tr.v.d.RelatedEventSet(slice);
+    assert.strictEqual(tr.b.getOnlyElement([...d]), slice);
+
+    d = new tr.v.d.RelatedEventSet([slice]);
+    assert.strictEqual(tr.b.getOnlyElement([...d]), slice);
+
+    d = new tr.v.d.RelatedEventSet(new tr.model.EventSet([slice]));
+    assert.strictEqual(tr.b.getOnlyElement([...d]), slice);
+
+    const d2 = tr.v.d.Diagnostic.fromDict(d.asDict());
+    assert.instanceOf(d2, tr.v.d.RelatedEventSet);
+
+    assert.instanceOf(tr.b.getOnlyElement([...d2]), tr.v.d.EventRef);
+
+    d2.resolve(model, true);
+
+    assert.strictEqual(tr.b.getOnlyElement([...d2]), slice);
+  });
+
+  test('merge', function() {
+    let aSlice;
+    let bSlice;
+    const model = tr.c.TestUtils.newModel(function(model) {
+      aSlice = tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        title: 'a',
+        start: 0,
+        duration: 10
+      });
+      bSlice = tr.c.TestUtils.newSliceEx({
+        type: tr.model.ThreadSlice,
+        title: 'b',
+        start: 1,
+        duration: 10
+      });
+      const thread = model.getOrCreateProcess(1).getOrCreateThread(2);
+      thread.sliceGroup.pushSlice(aSlice);
+      thread.sliceGroup.pushSlice(bSlice);
+    });
+    assert.notEqual(aSlice.stableId, bSlice.stableId);
+
+    const aHist = new tr.v.Histogram('a', tr.b.Unit.byName.count);
+    const bHist = new tr.v.Histogram('b', tr.b.Unit.byName.count);
+
+    const aEvents = new tr.v.d.RelatedEventSet(aSlice);
+    const bEvents = new tr.v.d.RelatedEventSet(bSlice);
+    aEvents.canonicalUrl_ = 'http://a';
+    bEvents.canonicalUrl_ = 'http://b';
+
+    aHist.diagnostics.set('events', aEvents);
+    bHist.diagnostics.set('events', bEvents);
+
+    let mergedHist = aHist.clone();
+    mergedHist.addHistogram(bHist);
+    mergedHist = tr.v.Histogram.fromDict(mergedHist.asDict());
+
+    const mergedEvents = mergedHist.diagnostics.get('events');
+    const aSlice2 = tr.b.getOnlyElement(mergedEvents.get('http://a'));
+    assert.strictEqual(aSlice.stableId, aSlice2.stableId);
+    const bSlice2 = tr.b.getOnlyElement(mergedEvents.get('http://b'));
+    assert.strictEqual(bSlice.stableId, bSlice2.stableId);
+  });
+
+  test('deserialize', function() {
+    const d = new tr.v.HistogramDeserializer(['aaa']);
+    const events = tr.v.d.RelatedEventSet.deserialize([[42, 0, 10, 20]], d);
+    assert.lengthOf(events, 1);
+    const event = [...events][0];
+    assert.strictEqual(event.stableId, 42);
+    assert.strictEqual(event.title, 'aaa');
+    assert.strictEqual(event.start, 10);
+    assert.strictEqual(event.duration, 20);
+  });
+});
+</script>

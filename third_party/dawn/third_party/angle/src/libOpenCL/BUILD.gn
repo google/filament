@@ -1,0 +1,51 @@
+# Copyright 2021 The ANGLE Project Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Build configuration for OpenCL-related targets.
+
+import("../../gni/angle.gni")
+
+assert(angle_enable_cl)
+
+if (is_win || is_linux) {
+  glesv2_path =
+      rebase_path(get_label_info("$angle_root:libGLESv2", "root_out_dir"))
+}
+
+angle_shared_library("OpenCL_ANGLE") {
+  defines = [ "LIBCL_IMPLEMENTATION" ]
+  if (is_win) {
+    defines += [ "ANGLE_GLESV2_LIBRARY_PATH=\"" +
+                 string_replace(glesv2_path, "/", "\\\\") + "\"" ]
+  }
+
+  sources = [
+    "dispatch.cpp",
+    "dispatch.h",
+    "libOpenCL_autogen.cpp",
+  ]
+
+  configs += [
+    "$angle_root:debug_annotations_config",
+    "$angle_root:library_name_config",
+  ]
+
+  deps = [
+    "$angle_root:angle_common",
+    "$angle_root:cl_includes",
+  ]
+
+  if (is_linux) {
+    inputs = [ "libOpenCL_autogen.map" ]
+    ldflags = [
+      "-Wl,--version-script=" +
+          rebase_path("libOpenCL_autogen.map", root_build_dir),
+      "-Wl,-rpath=" + glesv2_path,
+    ]
+  }
+}
+
+group("angle_cl") {
+  data_deps = [ ":OpenCL_ANGLE" ]
+}

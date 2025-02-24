@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+import argparse
+import codecs
+import sys
+import os
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+from tracing_build import html2trace
+
+
+def main():
+  parser = argparse.ArgumentParser(description='Extract trace data from an '
+                                   'HTML trace.', add_help=False)
+  parser.add_argument('html_path', metavar='HTML_PATH',
+                      help='HTML file path (input).')
+  parser.add_argument('trace_path', metavar='TRACE_PATH',
+                      help='Trace file path (output). If the HTML file '
+                      'contains more than one trace data block, the first '
+                      'block will be extracted into %(metavar)s and the rest '
+                      'will be extracted into separate files %(metavar)s.1, '
+                      '%(metavar)s.2, etc.')
+  parser.add_argument('--gzipped_output', choices=['true', 'false', 'auto'],
+                      default='auto', help='Flag whether the output trace '
+                      'file should be gzipped.')
+  parser.add_argument('-q', '--quiet', action='store_true',
+                      help='Don\'t print the saved file name(s).')
+  parser.add_argument('-h', '--help', action='help',
+                      help='Show this help message and exit.')
+  args = parser.parse_args()
+
+  if args.gzipped_output == 'true':
+    gzipped_output = True
+  elif args.gzipped_output == 'false':
+    gzipped_output = False
+  else:
+    gzipped_output = args.trace_path.endswith('.gz')
+
+  with codecs.open(args.html_path, mode='r', encoding='utf-8') as html_file:
+    saved_paths = html2trace.CopyTraceDataFromHTMLFilePath(
+        html_file, args.trace_path, gzipped_output)
+
+  if not args.quiet:
+    print('\n'.join(saved_paths))
+
+
+if __name__ == '__main__':
+  sys.exit(main())

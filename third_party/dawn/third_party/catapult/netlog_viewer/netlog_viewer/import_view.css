@@ -1,0 +1,8 @@
+/* Copyright 2020 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+ #import-view-load-log-file {
+  /* Used to hide the unwanted status text next to the file picker button. */
+  color: transparent;
+}

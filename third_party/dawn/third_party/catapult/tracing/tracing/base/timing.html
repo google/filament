@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+tr.exportTo('tr.b', function() {
+  class Mark {
+    constructor(groupName, functionName, opt_timestamp) {
+      if (tr.isHeadless) return;
+
+      this.groupName_ = groupName;
+      this.functionName_ = functionName;
+      const guid = tr.b.GUID.allocateSimple();
+      this.measureName_ = `${groupName} ${functionName}`;
+      if (opt_timestamp) {
+        this.startMark_ = {startTime: opt_timestamp};
+      } else {
+        this.startMarkName_ = `${this.measureName} ${guid} start`;
+      }
+      this.endMark_ = undefined;
+      this.endMarkName_ = `${this.measureName} ${guid} end`;
+
+      window.performance.mark(this.startMarkName_);
+    }
+
+    get groupName() {
+      return this.groupName_;
+    }
+
+    get functionName() {
+      return this.functionName_;
+    }
+
+    get measureName() {
+      return this.measureName_;
+    }
+
+    get startMark() {
+      return this.startMark_ || tr.b.getOnlyElement(
+          window.performance.getEntriesByName(this.startMarkName_));
+    }
+
+    get endMark() {
+      return this.endMark_ || tr.b.getOnlyElement(
+          window.performance.getEntriesByName(this.endMarkName_));
+    }
+
+    get durationMs() {
+      // There may be many measures named `this.measureName`, but the start and
+      // end mark names contain a GUID so they are unique.
+      return this.endMark.startTime - this.startMark.startTime;
+    }
+
+    end(opt_timestamp) {
+      if (tr.isHeadless) return;
+
+      if (opt_timestamp) {
+        this.endMark_ = {startTime: opt_timestamp};
+      } else {
+        window.performance.mark(this.endMarkName_);
+      }
+
+      if (!this.startMark_ && !this.endMark_) {
+        window.performance.measure(
+            this.measureName_, this.startMarkName_, this.endMarkName_);
+      } else if (Timing.logVoidMarks && !(window.ga instanceof Function)) {
+        // eslint-disable-next-line no-console
+        console.log('void mark',
+            this.groupName, this.functionName, this.durationMs);
+      }
+
+      if (!(window.ga instanceof Function)) return;
+      // Google Analytics
+      ga('send', {
+        hitType: 'event',
+        eventCategory: this.groupName,
+        eventAction: this.functionName,
+        eventValue: this.durationMs,
+      });
+    }
+  }
+
+  class Timing {
+    static mark(groupName, functionName, opt_timestamp) {
+      return new Mark(groupName, functionName, opt_timestamp);
+    }
+
+    static instant(groupName, functionName, opt_value) {
+      const valueString = opt_value === undefined ? '' : ' ' + opt_value;
+
+      /* eslint-disable no-console */
+      if (console && console.timeStamp) {
+        console.timeStamp(`${groupName} ${functionName}${valueString}`);
+      }
+      /* eslint-enable no-console */
+
+      // Google Analytics
+      if (window && window.ga instanceof Function) {
+        ga('send', {
+          hitType: 'event',
+          eventCategory: groupName,
+          eventAction: functionName,
+          eventValue: opt_value,
+        });
+      }
+    }
+
+    static getCurrentTimeMs() {
+      try {
+        return performance.now();
+      } catch (error) {}
+      return 0;
+    }
+  }
+
+  Timing.logVoidMarks = false;
+
+  return {
+    Timing,
+  };
+});
+</script>

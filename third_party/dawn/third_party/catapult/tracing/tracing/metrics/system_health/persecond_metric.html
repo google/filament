@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/category_util.html">
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/extras/chrome/time_to_interactive.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/breakdown_tree_helpers.html">
+<link rel="import" href="/tracing/metrics/system_health/loading_metric.html">
+<link rel="import" href="/tracing/metrics/system_health/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/model/helpers/chrome_thread_helper.html">
+<link rel="import" href="/tracing/model/timed_event.html">
+<link rel="import" href="/tracing/value/diagnostics/diagnostic_map.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * Per-second metric is a set of page load metrics to show the different
+ * activities happening in each second since navigation start. It categorizes
+ * trace events into different categories (e.g., layout, style, gc) of
+ * activities. For each kind of activities, this metric outputs a
+ * single-value histogram to show how long each kind of activities run for
+ * during each second.
+ *
+ * It also has the following characteristics:
+ * - The unit is ms.
+ * - Produces wall-clock-time and CPU-time outcome.
+ * - The last incomplete second is curtailed
+ */
+tr.exportTo('tr.metrics.sh', function() {
+  const timeDurationInMs_smallerIsBetter =
+      tr.b.Unit.byName.timeDurationInMs_smallerIsBetter;
+  const EventFinderUtils = tr.e.chrome.EventFinderUtils;
+
+  const LOADING_METRIC_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createLinear(0, 1e3, 20)  // 50ms step to 1s
+      .addLinearBins(3e3, 20) // 100ms step to 3s
+      .addExponentialBins(20e3, 20);
+
+  const SUMMARY_OPTIONS = {
+    avg: true,
+    count: false,
+    max: false,
+    min: false,
+    std: false,
+    sum: false,
+  };
+
+  function addSamplesToHistogram(pairInfo, breakdownTree, histogram, histograms,
+      diagnostics) {
+    histogram.addSample(pairInfo.end - pairInfo.start, diagnostics);
+    if (!breakdownTree) {
+      return;
+    }
+    for (const [category, breakdown] of Object.entries(breakdownTree)) {
+      const relatedName = `${histogram.name}:${category}`;
+      if (!histograms.getHistogramNamed(relatedName)) {
+        const relatedHist = histograms.createHistogram(
+            relatedName, histogram.unit, [], {
+              binBoundaries: LOADING_METRIC_BOUNDARIES,
+              summaryOptions: {
+                count: false,
+                max: false,
+                min: false,
+                sum: false,
+              },
+            });
+      }
+      const relatedHist = histograms.getHistogramNamed(relatedName);
+      let relatedNames = histogram.diagnostics.get('breakdown');
+      if (!relatedNames) {
+        relatedNames = new tr.v.d.RelatedNameMap();
+        histogram.diagnostics.set('breakdown', relatedNames);
+      }
+      relatedNames.set(category, relatedName);
+      relatedHist.addSample(breakdown.total, {
+        breakdown: tr.v.d.Breakdown.fromEntries(
+            Object.entries(breakdown.events)),
+      });
+    }
+  }
+
+  function splitOneRangeIntoPerSecondRanges(startTime, endTime) {
+    const results = [];
+    for (let i = 0; startTime + (i + 1) * 1000 <= endTime; i += 1) {
+      const start = i * 1000;
+      const end = (i + 1) * 1000;
+      results.push({
+        start,
+        end,
+      });
+    }
+    return results;
+  }
+
+  function getNavigationInfos(model) {
+    const navigationInfos = [];
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    for (const expectation of model.userModel.expectations) {
+      if (!(expectation instanceof tr.model.um.LoadExpectation)) continue;
+      if (tr.e.chrome.CHROME_INTERNAL_URLS.includes(expectation.url)) {
+        continue;
+      }
+      const rendererHelper = chromeHelper.rendererHelpers[
+          expectation.renderProcess.pid];
+      // Main thread may be missing. See crbug.com/1059726 for an example.
+      if (rendererHelper.mainThread === undefined) continue;
+      navigationInfos.push({
+        navigationStart: expectation.navigationStart,
+        rendererHelper,
+        url: expectation.url
+      });
+    }
+    navigationInfos.forEach((navInfo, i) => {
+      if (i === navigationInfos.length - 1) {
+        navInfo.navigationEndTime = model.bounds.max; // end of trace
+      } else {
+        navInfo.navigationEndTime =
+            navigationInfos[i + 1].navigationStart.start;
+      }
+    });
+    return navigationInfos;
+  }
+
+  function getWallTimeBreakdownTree(rendererHelper, start, end) {
+    const startEndRange = tr.b.math.Range.fromExplicitRange(start, end);
+    const networkEvents = EventFinderUtils.getNetworkEventsInRange(
+        rendererHelper.process, startEndRange);
+    const breakdownTree = tr.metrics.sh.generateWallClockTimeBreakdownTree(
+        rendererHelper.mainThread, networkEvents, startEndRange);
+    return breakdownTree;
+  }
+
+  function getCpuTimeBreakdownTree(rendererHelper, start, end) {
+    const startEndRange = tr.b.math.Range.fromExplicitRange(start, end);
+    const breakdownTree = tr.metrics.sh.generateCpuTimeBreakdownTree(
+        rendererHelper.mainThread, startEndRange);
+    return breakdownTree;
+  }
+
+  function persecondMetric(histograms, model) {
+    const navigationInfos = getNavigationInfos(model);
+    if (navigationInfos.length === 0) {
+      return;
+    }
+    navigationInfos.forEach(navInfo => {
+      const navigationStart = navInfo.navigationStart.start;
+      const navigationEnd = navInfo.navigationEndTime;
+      // Produce a list of { start, end }, relative to navigation-start.
+      const startEndPairs =
+          splitOneRangeIntoPerSecondRanges(navigationStart, navigationEnd);
+      const breakdownList = startEndPairs.map(p => {
+        const wallHistogramName = `wall_${p.start}_to_${p.end}`;
+        const wallHistogramDescription =
+            `Wall-clock time ${p.start} to ${p.end} breakdown`;
+        const cpuHistogramName = `cpu_${p.start}_to_${p.end}`;
+        const cpuHistogramDescription =
+            `CPU time ${p.start} to ${p.end} breakdown`;
+        const pid = navInfo.rendererHelper.pid;
+        const breakdownTree = getWallTimeBreakdownTree(
+            navInfo.rendererHelper, navigationStart + p.start,
+            navigationStart + p.end);
+        const cpuBreakdownTree = getCpuTimeBreakdownTree(
+            navInfo.rendererHelper, navigationStart + p.start,
+            navigationStart + p.end);
+        const diagnostics = {
+          'Navigation infos': new tr.v.d.GenericSet([{
+            url: navInfo.url,
+            pid: navInfo.rendererHelper.pid,
+            navStart: navigationStart,
+            frameIdRef: navInfo.navigationStart.args.frame
+          }]),
+          'breakdown': tr.metrics.sh.createBreakdownDiagnostic(breakdownTree),
+        };
+        return Object.assign(p,
+            {
+              breakdownTree,
+              cpuBreakdownTree,
+              wallHistogramName,
+              wallHistogramDescription,
+              cpuHistogramName,
+              cpuHistogramDescription,
+              diagnostics,
+            });
+      });
+      breakdownList.forEach(p => {
+        // entry === {start:0, end:1, breakdownTree, cpuBreakdownTree}
+        if (!histograms.getHistogramNamed(p.wallHistogramName)) {
+          histograms.createHistogram(
+              p.wallHistogramName, timeDurationInMs_smallerIsBetter,
+              [], {
+                binBoundaries: LOADING_METRIC_BOUNDARIES,
+                description: p.wallHistogramDescription,
+                summaryOptions: SUMMARY_OPTIONS,
+              });
+        }
+        const wallHistogram = histograms.getHistogramNamed(p.wallHistogramName);
+        addSamplesToHistogram(p, p.breakdownTree, wallHistogram, histograms,
+            p.diagnostics);
+
+        if (!histograms.getHistogramNamed(p.cpuHistogramName)) {
+          histograms.createHistogram(
+              p.cpuHistogramName, timeDurationInMs_smallerIsBetter, [],
+              { binBoundaries: LOADING_METRIC_BOUNDARIES,
+                description: p.cpuHistogramDescription,
+                summaryOptions: SUMMARY_OPTIONS,
+              });
+        }
+        const cpuHistogram = histograms.getHistogramNamed(p.cpuHistogramName);
+        addSamplesToHistogram(p, p.cpuBreakdownTree, cpuHistogram, histograms,
+            p.diagnostics);
+      });
+    });
+  }
+
+  tr.metrics.MetricRegistry.register(persecondMetric);
+
+  return {
+    persecondMetric,
+    splitOneRangeIntoPerSecondRanges
+  };
+});
+</script>

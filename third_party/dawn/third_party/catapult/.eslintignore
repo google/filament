@@ -1,0 +1,12 @@
+# Ignore files containing Jinja templates (which eslint can't parse)
+
+/dashboard/dashboard/templates/edit_anomaly_configs.html
+/dashboard/dashboard/templates/bisect_stats.html
+/dashboard/dashboard/templates/debug_alert.html
+/dashboard/dashboard/templates/bug_result.html
+/dashboard/dashboard/templates/edit_sheriffs.html
+
+# Ignore apps scripts (which cannot use many modern JS features)
+/experimental/perf_sheriffing_emailer/api_access.js
+/experimental/perf_sheriffing_emailer/benchmark_owner_emailer.js
+/experimental/perf_sheriffing_emailer/perf_bug_emailer.js

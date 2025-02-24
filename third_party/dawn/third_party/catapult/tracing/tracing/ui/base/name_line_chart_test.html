@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/name_line_chart.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiation_singleSeries', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 'apple', value: 100},
+      {x: 'ball', value: 110},
+      {x: 'cat', value: 100},
+      {x: 'dog', value: 50}
+    ];
+  });
+
+  test('undefined', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    assert.throws(function() {
+      chart.data = undefined;
+    });
+  });
+
+  test('instantiation_twoSeries', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 'apple', alpha: 100, beta: 50},
+      {x: 'ball', alpha: 110, beta: 75},
+      {x: 'cat', alpha: 100, beta: 125},
+      {x: 'dog', alpha: 50, beta: 125}
+    ];
+
+    const r = new tr.b.math.Range();
+    r.addValue(20);
+    r.addValue(40);
+    chart.brushedRange = r;
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueSparse', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 'apple', alpha: 20, beta: undefined},
+      {x: 'ball', alpha: undefined, beta: 10},
+      {x: 'cat', alpha: 10, beta: undefined},
+      {x: 'dog', alpha: undefined, beta: 20},
+      {x: 'echo', alpha: 30, beta: 30}
+    ];
+  });
+
+  test('instantiation_twoSparseSeriesWithFirstValueNotSparse', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 'apple', alpha: 20, beta: 40},
+      {x: 'ball', alpha: undefined, beta: 10},
+      {x: 'cat', alpha: 10, beta: undefined},
+      {x: 'dog', alpha: undefined, beta: 20},
+      {x: 'echo', alpha: 30, beta: undefined}
+    ];
+  });
+
+  test('instantiation_interactiveBrushing', function() {
+    const chart = new tr.ui.b.NameLineChart();
+    this.addHTMLOutput(chart);
+    chart.data = [
+      {x: 'apple', value: 50},
+      {x: 'ball', value: 60},
+      {x: 'cat', value: 80},
+      {x: 'dog', value: 20},
+      {x: 'echo', value: 30},
+      {x: 'fortune', value: 20},
+      {x: 'gpu', value: 15},
+      {x: 'happy', value: 20}
+    ];
+
+    let mouseDownIndex = undefined;
+    let currentMouseIndex = undefined;
+
+    function updateBrushedRange() {
+      const r = new tr.b.math.Range();
+      r.min = Math.max(0, Math.min(mouseDownIndex, currentMouseIndex));
+      r.max = Math.min(chart.data.length, Math.max(mouseDownIndex,
+          currentMouseIndex) + 1);
+      chart.brushedRange = r;
+    }
+
+    chart.addEventListener('item-mousedown', function(e) {
+      mouseDownIndex = e.index;
+      currentMouseIndex = e.index;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mousemove', function(e) {
+      if (e.button === undefined) return;
+      currentMouseIndex = e.index;
+      updateBrushedRange();
+    });
+    chart.addEventListener('item-mouseup', function(e) {
+      currentMouseIndex = e.index;
+      updateBrushedRange();
+    });
+  });
+});
+</script>

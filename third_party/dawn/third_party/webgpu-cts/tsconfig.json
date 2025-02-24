@@ -1,0 +1,74 @@
+{
+  "extends": "./node_modules/gts/tsconfig-google.json",
+  "compilerOptions": {
+    "lib": ["dom", "es2020"],
+    "module": "esnext",
+    // Use types only from these packages (not everything in package.json, which is the default).
+    // Note that TypeScript's `/// <reference />` is the same as adding an entry here - it's global
+    // to the whole project.
+    "types": [
+      "@types/dom-mediacapture-transform",
+      "@webgpu/types",
+      // Required for standalone.ts
+      "@types/jquery",
+      "@types/w3c-image-capture",
+    ],
+    /* Output options */
+    "noEmit": true,
+    /* Strict type-checking options */
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    /* tsc lint options */
+    "allowUnusedLabels": false,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    /* These should be caught by eslint instead */
+    "noFallthroughCasesInSwitch": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowUnreachableCode": true,
+    /* Compiler warnings we intentionally don't use */
+    // - Would be nice, but produces lots of errors that probably aren't worth fixing
+    "noUncheckedIndexedAccess": false,
+    // - We could make our code pass this, but it doesn't seem to provide much value to us
+    "noPropertyAccessFromIndexSignature": false,
+    // - Doesn't work with @webgpu/types right now, also has annoying interactions and limited value
+    "exactOptionalPropertyTypes": false,
+    /* Module Options */
+    "moduleResolution": "node",
+    "esModuleInterop": false,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "target": "es2020"
+    // @tsconfig/strictest is a useful reference for new options:
+    // https://github.com/tsconfig/bases/blob/main/bases/strictest.json
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/external/**/*.js",
+  ],
+  "typedocOptions": {
+    "entryPointStrategy": "expand",
+    "entryPoints": [
+      "src/common/framework/",
+      "src/common/util/",
+      "src/webgpu/",
+    ],
+    "exclude": [
+      "**/*.spec.ts",
+      "**/*.html.ts",
+      "src/*/listing.ts",
+      "src/webgpu/util/device_pool.ts",
+    ],
+    "excludeInternal": true,
+    "excludeProtected": true,
+    "excludePrivate": true,
+    "validation": {
+      "invalidLink": true,
+      "notExported": false,
+    },
+    "readme": "./docs/helper_index.txt",
+    "out": "docs/tsdoc/"
+  }
+}

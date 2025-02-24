@@ -1,0 +1,20 @@
+Name: chai
+Short Name: chai
+URL: https://github.com/chaijs/chai
+Version: 2.1.2
+Revision: 1abc3845e3ef96afa003d62478692a1cb9a435b0
+Date: Fri Mar 20 09:46:02 2015 +0000
+License: MIT
+License File: LICENSE
+Security Critical: no
+Shipped: no
+
+Description:
+BDD / TDD assertion framework for node.js and the browser that can be
+paired with any testing framework.
+
+Local Modifications:
+Copied license text out of README.md. Unminified chai.js and ripped out
+parts pertaining to Buffer because we're not using node and don't want
+could-not-require exceptions to be thrown. Reminified to prevent jslint
+from complaining.

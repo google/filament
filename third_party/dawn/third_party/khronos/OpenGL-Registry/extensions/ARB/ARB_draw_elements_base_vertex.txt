@@ -1,0 +1,471 @@
+Name
+
+    ARB_draw_elements_base_vertex
+
+Name Strings
+
+    GL_ARB_draw_elements_base_vertex
+
+Contributors
+
+    Daniel Koch, TransGaming
+    James Helferty, TransGaming
+    Jeff Bolz, NVIDIA
+    Bruce Merry, ARM
+    Ian Romanick, Intel
+    Jon Leech, Khronos
+
+Contact
+
+    Daniel Koch, TransGaming (daniel 'at' transgaming.com)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:  August 22, 2019
+    Version:             4
+
+Number
+
+    ARB Extension #62
+
+Dependencies
+
+    This extension is written against the OpenGL 3.1 Specification but
+    can apply to prior specifications.
+
+    This extension interacts with ARB_draw_instanced.
+
+    This extension interacts with EXT_draw_instanced.
+
+    This extension interacts with ARB_instanced_arrays.
+
+    This extension interacts with ARB_compatibility.
+
+Overview
+
+    This extension provides a method to specify a "base vertex offset"
+    value which is effectively added to every vertex index that is
+    transferred through DrawElements.
+
+    This mechanism can be used to decouple a set of indices from the
+    actual vertex array that it is referencing. This is useful if an
+    application stores multiple indexed models in a single vertex array.
+    The same index array can be used to draw the model no matter where
+    it ends up in a larger vertex array simply by changing the base
+    vertex value. Without this functionality, it would be necessary to
+    rebind all the vertex attributes every time geometry is switched and
+    this can have larger performance penalty.
+
+    For example consider the (very contrived and simple) example of
+    drawing two triangles to form a quad. In the typical example you
+    have the following setup:
+
+          vertices                indices
+         ----------                -----
+      0 | (-1,  1) |            0 |  0  |
+      1 | (-1, -1) |            1 |  1  |
+      2 | ( 1, -1) |            2 |  2  |
+      3 | ( 1,  1) |            3 |  3  |
+         ----------             4 |  0  |
+                                5 |  2  |
+                                   -----
+    which is normally rendered with the call
+
+       DrawElements(TRIANGLES, 6, UNSIGNED_BYTE, &indices).
+
+    Now consider the case where the vertices you want to draw are not at
+    the start of a vertex array but are instead located at offset 100
+    into a larger array:
+
+           vertices2             indices2
+           ----------             -----
+              ....             0 | 100 |
+      100 | (-1,  1) |         1 | 101 |
+      101 | (-1, -1) |         2 | 102 |
+      102 | ( 1, -1) |         3 | 103 |
+      103 | ( 1,  1) |         4 | 100 |
+              ....             5 | 102 |
+           ----------             -----
+
+    The typical choices for rendering this are to rebind your vertex
+    attributes with an additional offset of 100*stride, or to create an
+    new array of indices (as indices2 in the example). However both
+    rebinding vertex attributes and rebuilding index arrays can be quite
+    costly activities.
+
+    With the new drawing commands introduced by this extension you can
+    instead draw using vertices2 and the new draw call:
+
+       DrawElementsBaseVertex(TRIANGLES, 6, UNSIGNED_BYTE, &indices, 100)
+
+New Procedures and Functions
+
+    void DrawElementsBaseVertex(enum mode, sizei count, enum type,
+         const void *indices, int basevertex);
+
+    void DrawRangeElementsBaseVertex(enum mode, uint start, uint end,
+         sizei count, enum type, const void *indices, int basevertex);
+
+    void DrawElementsInstancedBaseVertex(enum mode, sizei count,
+         enum type, const void *indices, sizei instancecount, int basevertex);
+
+    void MultiDrawElementsBaseVertex(enum mode, const sizei *count, enum type,
+         const void *const *indices, sizei drawcount, const int *basevertex)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 3.1 Specification (OpenGL Operation)
+
+    Add the following to the end of Section 2.8.1 "Transferring Array Elements"
+
+    "When one of the *BaseVertex drawing commands specified in section
+    2.8.2 is used, the primitive restart comparison occurs before the
+    <basevertex> offset is added to the array index."
+
+    Add the following to Section 2.8.2 "Drawing Commands"
+
+    "The commands
+      void DrawElementsBaseVertex(enum mode, sizei count, enum type,
+           const void *indices, int basevertex);
+
+      void DrawRangeElementsBaseVertex(enum mode, uint start, uint end,
+           sizei count, enum type, const void *indices, int basevertex);
+
+      void DrawElementsInstancedBaseVertex(enum mode, sizei count,
+           enum type, const void *indices, sizei instancecount, int basevertex);
+
+    are equivalent to the commands with the same base name (without the
+    "BaseVertex" suffix) except that the <i>th element transferred by
+    the corresponding draw call will be taken from element
+       <indices>[<i>] + <basevertex>
+    of each enabled array. If the resulting value is larger than the
+    maximum value representable by <type> it should behave as if the
+    calculation were upconverted to 32-bit unsigned integers (with
+    wrapping on overflow conditions). The operation is undefined if the
+    sum would be negative and should be handled as described in Section
+    2.9.2. For DrawRangeElementsBaseVertex, the index values must lie
+    between <start> and <end> inclusive, prior to adding the
+    <basevertex> offset. Index values lying outside the range
+    [<start>,<end>] are treated in the same way as DrawRangeElements.
+
+    The command
+
+      void MultiDrawElementsBaseVertex(enum mode, const sizei *count,
+           enum type, const void *const *indices, sizei drawcount, const int *basevertex);
+
+    behaves identically to DrawElementsBaseVertex except that
+    <drawcount> separate lists of elements are specified instead. It has
+    the same effect as:
+
+      for (i = 0; i < drawcount; i++) {
+        if (count[i] > 0)
+          DrawElementsBaseVertex(mode, count[i], type, indices[i],
+                                 basevertex[i]);
+      }"
+
+
+    In Section 2.9.5 "Array Indices in Buffer Offer Objects" add
+    references to the new drawing commands.
+
+    In the third paragraph, replace the second sentence (which begins
+    with "MultiDrawElements also sources...") with the following
+    sentences:
+
+    "DrawElementsBaseVertex, DrawRangeElementsBaseVertex, and
+    DrawElementsInstancedBaseVertex also source their vertices from that
+    buffer object, adding the <basevertex> offset to the appropriate
+    vertex index as a final step before indexing into the vertex buffer;
+    this does not affect the calculation of the base pointer for the
+    index array. Finally, MultiDrawElements and
+    MultiDrawElementsBaseVertex also source their indices from that
+    buffer object, using its <indices> parameter as a pointer to an
+    array of pointers that represet offsets into the buffer object."
+
+Additions to Chapter 3 of the OpenGL 3.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 3.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.1 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on OpenGL 3.1
+
+    If OpenGL 3.1 is not supported, ignore all references to
+    DrawElementsInstanced and DrawElementsInstancedBaseVertex
+
+Dependencies on the ARB_draw_instanced extension
+
+    If ARB_draw_instanced is supported, the functionality provided by
+    DrawElementsInstancedBaseVertex can also be described in terms of
+    DrawElementsInstancedARB instead of DrawElementsInstanced.
+
+Dependencies on the EXT_draw_instanced extension
+
+    If EXT_draw_instanced is supported, the functionality provided by
+    DrawElementsInstancedBaseVertex can also be described in terms of
+    DrawElementsInstancedEXT instead of DrawElementsInstanced.
+
+Dependencies on the ARB_instanced_arrays extension
+
+    If ARB_instanced_arrays is supported, the functionality provided by
+    DrawElementsInstancedBaseVertex can also be described in
+    terms of DrawElementsInstancedARB instead of DrawElementsInstanced.
+
+Dependencies on the ARB_compatibility extension
+
+    When the ARB_compatibility extension is supported, the base vertex
+    functionality applies to both buffer objects and client-side vertex
+    arrays. Additionally there may be some textual differences in the
+    specification because the behaviour of DrawElements is defined in
+    terms of ArrayElement, but the functionality remains the same. Note
+    in particular the interaction with the primitive restart index as
+    identified in Issue 5.
+
+    When ARB_compatibility is supported edit the first bullet point of
+    the "Shader Inputs" subsection of Section 2.14.7 "Shader Execution"
+    and replace the language enumerating the drawing commands which
+    specify a complete primitive for the purposes of defining
+    gl_VertexID to be more general purpose:
+        "(a vertex array drawing command other than ArrayElement)."
+
+Errors
+
+    The *BaseVertex commands have identical error conditions to the
+    non-*BaseVertex functions, and all values of <basevertex> are legal
+    (with the exception of ones which cause accesses outside of vertex
+    arrays or bound buffers as described in Section 2.9.2).
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1. What should this extension be called?
+
+       RESOLVED: Using ARB_draw_elements_base_vertex.
+
+       DISCUSSION: Using the base "draw_elements" since this extension
+       adds a new variant to the DrawElements family of commands which
+       takes an additional parameter. Since the new suffix on the
+       drawing commands is "BaseVertex" it makes sense to call this
+       "draw_elements_base_vertex" (and it is more aesthetically
+       pleasing then "draw_elements_basevertex".
+
+       Initial versions of this extension were called
+       "draw_elements_offset" (see Issue 9).
+
+       Other alternatives considered: index_offset or element_offset.
+       These variants might have been more suitable if we had used a
+       different mechanism for specifying the base vertex offset (see
+       Issue 2).
+
+    2. Should we have a per-draw call parameter or should this be
+       specified via some other mechanism (ELEMENT_ARRAY bind parameter,
+       global state, etc).
+
+       RESOLVED. Using per-draw call.
+
+       DISCUSSION: If per-draw call we need entry points to specify the
+       equivalent of DrawElements, DrawRangeElements,
+       DrawElementsInstanced and possibly MultiDrawElements, but with an
+       additional parameter.
+
+       Per binding point, such as
+       glBindBufferBaseVertex(ELEMENT_ARRAY_BUFFER, id, 1234)? If
+       per-ELEMENT_ARRAY binding point, the application will need to
+       rebind the index buffer every time they wish to adjust the
+       basevertex, which partially defeats the purpose of this
+       extension. As well this would make it more difficult to support
+       client arrays in an implementation which supports
+       ARB_compatibility.
+
+       If this is a global state, should it be server or client state?
+       Is it per-gc? We could have a separate API call, e.g.
+       glIndexOffset(1234), that would be per-VAO. This method doesn't
+       require rebinding buffers and would work fine for client vertex
+       arrays. In many ways though having a global state doesn't make
+       much sense, since it is may only relevant for a single draw call,
+       and encapsulating this in the VAO-state may mean that additional
+       VAO must be created.
+
+    3. This functionality seems vaguely familiar. Do any other APIs have
+       this functionality?
+
+       YES. This is equivalent to the BaseVertexIndex (d3d9) or
+       BaseVertexLocation (d3d10) indexed drawing parameters in
+       Direct3D.
+
+    4. Should there be a MultiDrawElementsBaseVertex? If so, should it
+       take a single basevertex or an array of them?
+
+       RESOLVED: YES. Let's add it for completeness. It seems to make
+       the most sense to pass in an array of basevertex parameters for
+       this command, as this provides the most flexibility, and it works
+       well to define it in terms of DrawElementsBaseVertex.
+
+    5. What are the interactions with primitive restart?
+
+       RESOLVED. The primitive restart comparison occurs before adding
+       the basevertex.
+
+       DISCUSSION:
+       DX10 and existing hardware do the primitive restart comparison
+       before adding the basevertex. It's really the only sane thing to
+       do, otherwise the app would have to change the restartindex to
+       depend on the basevertex.
+
+       This is counterintuitively not the result you would get if
+       DrawElements were still defined in terms of ArrayElement and you
+       defined these in the natural way
+       (ArrayElement(indices[i]+basevertex)), but this is likely what
+       developers want and also what the hardware does.
+
+    6. What happens if indices[i]+basevertex is larger than the max
+       value representable by <type>.
+
+       RESOLVED. Behave as if everything is upconverted to 32-bit
+       unsigned integers. If the addition over/underflows 32-bits, it
+       wraps. This is the behaviour D3D10 uses and likely how it is
+       implemented in hardware.
+
+    7. What happens if the sum is negative (ie indices[i]+basevertex < 0)?
+
+       RESOLVED: Undefined. This should be handled the same way as a
+       buffer that accesses out of bounds data. This is defined in
+       Section 2.9.2 "Effects of Accessing Outside of Buffer Bounds". If
+       detected this results in a GL error, otherwise it has undefined
+       results and may result in GL interruption or termination. This is
+       also undefined under Direct3D.
+
+    8. For DrawRangeElementsBaseVertex, is the intent that indices[i]
+       are all in [start,end] and not indices[i]+basevertex?
+
+       RESOLVED: YES, indices[i] must be in the range [start,end].
+
+       DISCUSSION: There doesn't appear to be a hardware or driver
+       reason to prefer one interpretation over the other. D3D9 treats
+       the MinIndex parameter to the DrawIndexedPrimitive call as
+       relative to the index buffer, so in the interests of
+       compatibility we will make the same choice.
+
+    9. The word "offset" sounds like it should be measured in bytes. Is
+       there a better term we could use for this?
+
+       RESOLVED: Use "BaseVertex" and call the parameter <basevertex>.
+
+       BACKGROUND:
+       Initial drafts of this extension used the suffix "Offset" on the
+       DrawElement calls, and the new parameter was named
+       "vertexoffset".
+
+       DISCUSSION: What other term could we use?
+
+       Possibly something with "base" in it, partly because DX has that
+       in the name and partly because it reminds one of ListBase and
+       texture base level. However it does conflict with the meaning of
+       "base" in BindBufferBase...
+
+   10. Clarification is needed when using an ELEMENT_ARRAY_BUFFER, since
+       <indices> is actually an offset into a VBO rather than an array
+       itself.
+
+       DISCUSSION: When ELEMENT_ARRAY_BUFFERS are used to provide the
+       index data (as they must be in GL 3.1 without the
+       ARB_compatibility extension) the <indices> parameters to the
+       DrawElements calls are treated as offsets into the buffer objects
+       as described in Sections 2.9.4 and 2.9.5.
+
+       Logically this is as if a <realindices> array were computed as
+       follows: <type> realindices = (<type>)((byte)bufferptr +
+       ((byte)indices - (byte)NULL))
+
+       Then base vertex offset is then computed as "realindices[i] +
+       basevertex"
+
+   11. Why do the new function entry points in this extension not have
+       the "ARB" suffixes like other ARB extensions?
+
+       RESOLVED: This extension is a strict subset of the functionality
+       already in OpenGL 3.2. This extension exists only to support that
+       functionality on older versions of OpenGL and on hardware which
+       is not OpenGL 3.x capable. Since there are no possible behavior
+       changes between the ARB extension and core features, source code
+       compatibility is improved by not using suffixes on the extension.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------
+     0.1   4/29/09  dgkoch     initial skeleton
+     0.2   4/30/09  dgkoch     first cut at per-draw call spec
+     0.3   4/30/09  dgkoch     add issues 4-10, fix some typos and error in the example
+                               based on comments from JB, BM
+     0.4   5/06/09  dgkoch     resolved issue 2, sticking with per-draw call
+                               resolved issue 4, add MultiDrawElementsBaseVertex w/ array
+                               resolved issue 5, primitive restart compare happens first
+                               resolved issue 6, behave as if 32-bit, including wrapping
+                               resolved issue 7, undefined behaviour
+                               resolved issue 8, indices[i] lies in the range [start,end]
+                               sugggested resolution for issue 9: "BaseVertex"
+                               clarified issue 10
+                               misc formatting and typo fixes
+     0.5   5/07/09  dgkoch     flipped y-coord in example
+                               fixed spacing and typos
+                               added more disscussion to Issue 2
+                               removed clause from Issue 7 which contradicted Issue 6
+     0.6   5/15/09  dgkoch     add resolution to issue 9, and rename appropriately
+                               resolve issue 1
+                               add interactions/dependencies
+                               minor updates to the overview
+                               update textual edits to reflect issues 5-8, 10
+                               add issue 11
+     0.7   5/18/09  dgkoch     minor grammer, spelling and typographical errors
+                               Add interaction with ARB_compatibility
+     1     6/26/09  dgkoch     resync language with GL3.2 spec
+                               Add more interactions with ARB_compatibility
+     2     7/21/09  dgkoch     resync language with 20090630 3.2 spec
+     3     8/02/09  Jon Leech  Reformat to 80 columns and assign ARB
+                               extension number.
+     4     8/22/19  N Stewart  Parameter naming and const aligned to 4.6 core spec.

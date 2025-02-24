@@ -1,0 +1,782 @@
+<!doctype html><html lang="en">
+ <head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+  <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
+  <title>WebGPU Correspondence Reference</title>
+  <meta content="UD" name="w3c-status">
+  <link href="https://www.w3.org/StyleSheets/TR/2021/W3C-UD" rel="stylesheet">
+  <meta content="Bikeshed version ac5ea272d, updated Fri Dec 6 15:45:15 2024 -0800" name="generator">
+  <link href="https://gpuweb.github.io/gpuweb/correspondence/" rel="canonical">
+  <link href="https://www.w3.org/2008/site/images/favicon.ico" rel="icon">
+  <meta content="dark light" name="color-scheme">
+  <link href="https://www.w3.org/StyleSheets/TR/2021/dark.css" media="(prefers-color-scheme: dark)" rel="stylesheet" type="text/css">
+<style>
+code {
+    background: rgba(186, 186, 186, 30%);
+    padding: 0 3px;
+    border-radius: 4px;
+}
+
+.overlarge {
+    overflow-x: unset;
+}
+</style>
+<style>/* Boilerplate: style-autolinks */
+.css.css, .property.property, .descriptor.descriptor {
+    color: var(--a-normal-text);
+    font-size: inherit;
+    font-family: inherit;
+}
+.css::before, .property::before, .descriptor::before {
+    content: "‘";
+}
+.css::after, .property::after, .descriptor::after {
+    content: "’";
+}
+.property, .descriptor {
+    /* Don't wrap property and descriptor names */
+    white-space: nowrap;
+}
+.type { /* CSS value <type> */
+    font-style: italic;
+}
+pre .property::before, pre .property::after {
+    content: "";
+}
+[data-link-type="property"]::before,
+[data-link-type="propdesc"]::before,
+[data-link-type="descriptor"]::before,
+[data-link-type="value"]::before,
+[data-link-type="function"]::before,
+[data-link-type="at-rule"]::before,
+[data-link-type="selector"]::before,
+[data-link-type="maybe"]::before {
+    content: "‘";
+}
+[data-link-type="property"]::after,
+[data-link-type="propdesc"]::after,
+[data-link-type="descriptor"]::after,
+[data-link-type="value"]::after,
+[data-link-type="function"]::after,
+[data-link-type="at-rule"]::after,
+[data-link-type="selector"]::after,
+[data-link-type="maybe"]::after {
+    content: "’";
+}
+
+[data-link-type].production::before,
+[data-link-type].production::after,
+.prod [data-link-type]::before,
+.prod [data-link-type]::after {
+    content: "";
+}
+
+[data-link-type=element],
+[data-link-type=element-attr] {
+    font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    font-size: .9em;
+}
+[data-link-type=element]::before { content: "<" }
+[data-link-type=element]::after  { content: ">" }
+
+[data-link-type=biblio] {
+    white-space: pre;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --selflink-text: black;
+        --selflink-bg: silver;
+        --selflink-hover-text: white;
+    }
+}
+</style>
+<style>/* Boilerplate: style-colors */
+/* Any --*-text not paired with a --*-bg is assumed to have a transparent bg */
+:root {
+    color-scheme: light dark;
+
+    --text: black;
+    --bg: white;
+
+    --unofficial-watermark: url(https://www.w3.org/StyleSheets/TR/2016/logos/UD-watermark);
+
+    --logo-bg: #1a5e9a;
+    --logo-active-bg: #c00;
+    --logo-text: white;
+
+    --tocnav-normal-text: #707070;
+    --tocnav-normal-bg: var(--bg);
+    --tocnav-hover-text: var(--tocnav-normal-text);
+    --tocnav-hover-bg: #f8f8f8;
+    --tocnav-active-text: #c00;
+    --tocnav-active-bg: var(--tocnav-normal-bg);
+
+    --tocsidebar-text: var(--text);
+    --tocsidebar-bg: #f7f8f9;
+    --tocsidebar-shadow: rgba(0,0,0,.1);
+    --tocsidebar-heading-text: hsla(203,20%,40%,.7);
+
+    --toclink-text: var(--text);
+    --toclink-underline: #3980b5;
+    --toclink-visited-text: var(--toclink-text);
+    --toclink-visited-underline: #054572;
+
+    --heading-text: #005a9c;
+
+    --hr-text: var(--text);
+
+    --algo-border: #def;
+
+    --del-text: red;
+    --del-bg: transparent;
+    --ins-text: #080;
+    --ins-bg: transparent;
+
+    --a-normal-text: #034575;
+    --a-normal-underline: #bbb;
+    --a-visited-text: var(--a-normal-text);
+    --a-visited-underline: #707070;
+    --a-hover-bg: rgba(75%, 75%, 75%, .25);
+    --a-active-text: #c00;
+    --a-active-underline: #c00;
+
+    --blockquote-border: silver;
+    --blockquote-bg: transparent;
+    --blockquote-text: currentcolor;
+
+    --issue-border: #e05252;
+    --issue-bg: #fbe9e9;
+    --issue-text: var(--text);
+    --issueheading-text: #831616;
+
+    --example-border: #e0cb52;
+    --example-bg: #fcfaee;
+    --example-text: var(--text);
+    --exampleheading-text: #574b0f;
+
+    --note-border: #52e052;
+    --note-bg: #e9fbe9;
+    --note-text: var(--text);
+    --noteheading-text: hsl(120, 70%, 30%);
+    --notesummary-underline: silver;
+
+    --assertion-border: #aaa;
+    --assertion-bg: #eee;
+    --assertion-text: black;
+
+    --advisement-border: orange;
+    --advisement-bg: #fec;
+    --advisement-text: var(--text);
+    --advisementheading-text: #b35f00;
+
+    --warning-border: red;
+    --warning-bg: hsla(40,100%,50%,0.95);
+    --warning-text: var(--text);
+
+    --amendment-border: #330099;
+    --amendment-bg: #F5F0FF;
+    --amendment-text: var(--text);
+    --amendmentheading-text: #220066;
+
+    --def-border: #8ccbf2;
+    --def-bg: #def;
+    --def-text: var(--text);
+    --defrow-border: #bbd7e9;
+
+    --datacell-border: silver;
+
+    --indexinfo-text: #707070;
+
+    --indextable-hover-text: black;
+    --indextable-hover-bg: #f7f8f9;
+
+    --outdatedspec-bg: rgba(0, 0, 0, .5);
+    --outdatedspec-text: black;
+    --outdated-bg: maroon;
+    --outdated-text: white;
+    --outdated-shadow: red;
+
+    --editedrec-bg: darkorange;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text: #ddd;
+        --bg: black;
+
+        --unofficial-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='%23100808' transform='translate(200 200) rotate(-45) translate(-200 -200)' stroke='%23100808' stroke-width='3'%3E%3Ctext x='50%25' y='220' style='font: bold 70px sans-serif; text-anchor: middle; letter-spacing: 6px;'%3EUNOFFICIAL%3C/text%3E%3Ctext x='50%25' y='305' style='font: bold 70px sans-serif; text-anchor: middle; letter-spacing: 6px;'%3EDRAFT%3C/text%3E%3C/g%3E%3C/svg%3E");
+
+        --logo-bg: #1a5e9a;
+        --logo-active-bg: #c00;
+        --logo-text: white;
+
+        --tocnav-normal-text: #999;
+        --tocnav-normal-bg: var(--bg);
+        --tocnav-hover-text: var(--tocnav-normal-text);
+        --tocnav-hover-bg: #080808;
+        --tocnav-active-text: #f44;
+        --tocnav-active-bg: var(--tocnav-normal-bg);
+
+        --tocsidebar-text: var(--text);
+        --tocsidebar-bg: #080808;
+        --tocsidebar-shadow: rgba(255,255,255,.1);
+        --tocsidebar-heading-text: hsla(203,20%,40%,.7);
+
+        --toclink-text: var(--text);
+        --toclink-underline: #6af;
+        --toclink-visited-text: var(--toclink-text);
+        --toclink-visited-underline: #054572;
+
+        --heading-text: #8af;
+
+        --hr-text: var(--text);
+
+        --algo-border: #456;
+
+        --del-text: #f44;
+        --del-bg: transparent;
+        --ins-text: #4a4;
+        --ins-bg: transparent;
+
+        --a-normal-text: #6af;
+        --a-normal-underline: #555;
+        --a-visited-text: var(--a-normal-text);
+        --a-visited-underline: var(--a-normal-underline);
+        --a-hover-bg: rgba(25%, 25%, 25%, .2);
+        --a-active-text: #f44;
+        --a-active-underline: var(--a-active-text);
+
+        --borderedblock-bg: rgba(255, 255, 255, .05);
+
+        --blockquote-border: silver;
+        --blockquote-bg: var(--borderedblock-bg);
+        --blockquote-text: currentcolor;
+
+        --issue-border: #e05252;
+        --issue-bg: var(--borderedblock-bg);
+        --issue-text: var(--text);
+        --issueheading-text: hsl(0deg, 70%, 70%);
+
+        --example-border: hsl(50deg, 90%, 60%);
+        --example-bg: var(--borderedblock-bg);
+        --example-text: var(--text);
+        --exampleheading-text: hsl(50deg, 70%, 70%);
+
+        --note-border: hsl(120deg, 100%, 35%);
+        --note-bg: var(--borderedblock-bg);
+        --note-text: var(--text);
+        --noteheading-text: hsl(120, 70%, 70%);
+        --notesummary-underline: silver;
+
+        --assertion-border: #444;
+        --assertion-bg: var(--borderedblock-bg);
+        --assertion-text: var(--text);
+
+        --advisement-border: orange;
+        --advisement-bg: #222218;
+        --advisement-text: var(--text);
+        --advisementheading-text: #f84;
+
+        --warning-border: red;
+        --warning-bg: hsla(40,100%,20%,0.95);
+        --warning-text: var(--text);
+
+        --amendment-border: #330099;
+        --amendment-bg: #080010;
+        --amendment-text: var(--text);
+        --amendmentheading-text: #cc00ff;
+
+        --def-border: #8ccbf2;
+        --def-bg: #080818;
+        --def-text: var(--text);
+        --defrow-border: #136;
+
+        --datacell-border: silver;
+
+        --indexinfo-text: #aaa;
+
+        --indextable-hover-text: var(--text);
+        --indextable-hover-bg: #181818;
+
+        --outdatedspec-bg: rgba(255, 255, 255, .5);
+        --outdatedspec-text: black;
+        --outdated-bg: maroon;
+        --outdated-text: white;
+        --outdated-shadow: red;
+
+        --editedrec-bg: darkorange;
+    }
+    /* In case a transparent-bg image doesn't expect to be on a dark bg,
+       which is quite common in practice... */
+    img { background: white; }
+}
+</style>
+<style>/* Boilerplate: style-counters */
+body {
+    counter-reset: example figure issue;
+}
+.issue {
+    counter-increment: issue;
+}
+.issue:not(.no-marker)::before {
+    content: "Issue " counter(issue);
+}
+
+.example {
+    counter-increment: example;
+}
+.example:not(.no-marker)::before {
+    content: "Example " counter(example);
+}
+.invalid.example:not(.no-marker)::before,
+.illegal.example:not(.no-marker)::before {
+    content: "Invalid Example" counter(example);
+}
+
+figcaption {
+    counter-increment: figure;
+}
+figcaption:not(.no-marker)::before {
+    content: "Figure " counter(figure) " ";
+}
+</style>
+<style>/* Boilerplate: style-issues */
+a[href].issue-return {
+    float: right;
+    float: inline-end;
+    color: var(--issueheading-text);
+    font-weight: bold;
+    text-decoration: none;
+}
+</style>
+<style>/* Boilerplate: style-md-lists */
+/* This is a weird hack for me not yet following the commonmark spec
+   regarding paragraph and lists. */
+[data-md] > :first-child {
+    margin-top: 0;
+}
+[data-md] > :last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>/* Boilerplate: style-selflinks */
+:root {
+    --selflink-text: white;
+    --selflink-bg: gray;
+    --selflink-hover-text: black;
+}
+.heading, .issue, .note, .example, li, dt {
+    position: relative;
+}
+a.self-link {
+    position: absolute;
+    top: 0;
+    left: calc(-1 * (3.5rem - 26px));
+    width: calc(3.5rem - 26px);
+    height: 2em;
+    text-align: center;
+    border: none;
+    transition: opacity .2s;
+    opacity: .5;
+}
+a.self-link:hover {
+    opacity: 1;
+}
+.heading > a.self-link {
+    font-size: 83%;
+}
+.example > a.self-link,
+.note > a.self-link,
+.issue > a.self-link {
+    /* These blocks are overflow:auto, so positioning outside
+       doesn't work. */
+    left: auto;
+    right: 0;
+}
+li > a.self-link {
+    left: calc(-1 * (3.5rem - 26px) - 2em);
+}
+dfn > a.self-link {
+    top: auto;
+    left: auto;
+    opacity: 0;
+    width: 1.5em;
+    height: 1.5em;
+    background: var(--selflink-bg);
+    color: var(--selflink-text);
+    font-style: normal;
+    transition: opacity .2s, background-color .2s, color .2s;
+}
+dfn:hover > a.self-link {
+    opacity: 1;
+}
+dfn > a.self-link:hover {
+    color: var(--selflink-hover-text);
+}
+
+a.self-link::before            { content: "¶"; }
+.heading > a.self-link::before { content: "§"; }
+dfn > a.self-link::before      { content: "#"; }
+</style>
+ <body class="h-entry">
+  <div class="head">
+   <p data-fill-with="logo"><a class="logo" href="https://www.w3.org/"> <img alt="W3C" height="48" src="https://www.w3.org/StyleSheets/TR/2021/logos/W3C" width="72"> </a> </p>
+   <h1 class="p-name no-ref" id="title">WebGPU Correspondence Reference</h1>
+   <p id="w3c-state"><a href="https://www.w3.org/standards/types/#UD">Unofficial Proposal Draft</a>, <time class="dt-updated" datetime="2025-01-27">27 January 2025</time></p>
+   <details open>
+    <summary>More details about this document</summary>
+    <div data-fill-with="spec-metadata">
+     <dl>
+      <dt>This version:
+      <dd><a class="u-url" href="https://gpuweb.github.io/gpuweb/correspondence/">https://gpuweb.github.io/gpuweb/correspondence/</a>
+      <dt>Issue Tracking:
+      <dd><a href="#issues-index">Inline In Spec</a>
+      <dt class="editor">Editors:
+      <dd class="editor p-author h-card vcard" data-editor-id="99487"><a class="p-name fn u-email email" href="mailto:kainino@google.com">Kai Ninomiya</a> (<a class="p-org org" href="https://www.google.com">Google</a>)
+      <dd class="editor p-author h-card vcard" data-editor-id="87824"><a class="p-name fn u-email email" href="mailto:bajones@google.com">Brandon Jones</a> (<a class="p-org org" href="https://www.google.com">Google</a>)
+      <dt>Participate:
+      <dd><a href="https://github.com/gpuweb/gpuweb/issues/new">File an issue</a> (<a href="https://github.com/gpuweb/gpuweb/issues">open issues</a>)
+     </dl>
+    </div>
+   </details>
+   <div data-fill-with="warning"></div>
+   <p class="copyright" data-fill-with="copyright"><a href="https://www.w3.org/policies/#copyright">Copyright</a> © 2025 the Contributors to the WebGPU Correspondence Reference Specification, published by the <a href="http://www.w3.org/community/gpu/">GPU for the Web Community Group</a> under the <a href="https://www.w3.org/community/about/agreements/cla/">W3C Community Contributor License Agreement (CLA)</a>.
+A human-readable <a href="http://www.w3.org/community/about/agreements/cla-deed/">summary</a> is available. </p>
+   <hr title="Separator for header">
+  </div>
+  <h2 class="no-num no-toc no-ref heading settled" id="sotd"><span class="content">Status of this document</span></h2>
+  <div data-fill-with="status">This specification was published by the <a href="https://www.w3.org/community/gpu/">GPU for the Web Community Group</a>.
+It is not a W3C Standard nor is it on the W3C Standards Track.
+
+Please note that under the <a href="https://www.w3.org/community/about/agreements/cla/">W3C Community Contributor License Agreement (CLA)</a> there is a limited opt-out and other conditions apply.
+
+Learn more about <a href="http://www.w3.org/community/">W3C Community and Business Groups</a>. </div>
+  <div data-fill-with="at-risk"></div>
+  <nav data-fill-with="table-of-contents" id="toc">
+   <h2 class="no-num no-toc no-ref" id="contents">Table of Contents</h2>
+   <ol class="toc" role="directory">
+    <li>
+     <a href="#Terminology"><span class="secno">1</span> <span class="content">Terminology</span></a>
+     <ol class="toc">
+      <li><a href="#resources"><span class="secno">1.1</span> <span class="content">Resources</span></a>
+     </ol>
+    <li>
+     <a href="#limits"><span class="secno">2</span> <span class="content">Limits</span></a>
+     <ol class="toc">
+      <li><a href="#vulkan-maxFragmentCombinedOutputResources"><span class="secno">2.1</span> <span class="content">Vulkan <code>maxFragmentCombinedOutputResources</code></span></a>
+     </ol>
+    <li>
+     <a href="#w3c-conformance"><span class="secno"></span> <span class="content">Conformance</span></a>
+     <ol class="toc">
+      <li><a href="#w3c-conventions"><span class="secno"></span> <span class="content">Document conventions</span></a>
+     </ol>
+    <li>
+     <a href="#references"><span class="secno"></span> <span class="content">References</span></a>
+     <ol class="toc">
+      <li><a href="#normative"><span class="secno"></span> <span class="content">Normative References</span></a>
+     </ol>
+    <li><a href="#issues-index"><span class="secno"></span> <span class="content">Issues Index</span></a>
+   </ol>
+  </nav>
+  <main>
+   <p>This non-normative document provides an unofficial reference for how WebGPU names correspond
+to names in other APIs. It also provides references for how to implement some parts of WebGPU
+on various backend APIs. <strong>It is not guaranteed to be correct or up-to-date.</strong></p>
+   <p>Correspondence or implementation strategy information not covered by this document can generally be
+found in GitHub issue discussions.</p>
+   <h2 class="heading settled" data-level="1" id="Terminology"><span class="secno">1. </span><span class="content">Terminology</span><a class="self-link" href="#Terminology"></a></h2>
+   <h3 class="heading settled" data-level="1.1" id="resources"><span class="secno">1.1. </span><span class="content">Resources</span><a class="self-link" href="#resources"></a></h3>
+   <table class="data">
+    <thead>
+     <tr>
+      <th>WebGPU 
+      <th>OpenGL/Vulkan 
+      <th>Metal 
+      <th>D3D12 
+    <tbody>
+     <tr>
+      <th>uniform buffer 
+      <td>uniform buffer 
+      <td>constant memory buffer 
+      <td>CBV (constant buffer view) 
+     <tr>
+      <th>storage buffer 
+      <td>storage buffer 
+      <td>device memory buffer 
+      <td>UAV (unordered access view) of a buffer 
+     <tr>
+      <th>sampled texture 
+      <td>sampled texture/image 
+      <td>texture binding (texture views are also represented as textures) 
+      <td>SRV (shader resource view) 
+     <tr>
+      <th>storage texture 
+      <td>storage texture/storage image, or storage texel buffer 
+      <td>device texture with read/write access 
+      <td>UAV (unordered access view) of a texture 
+     <tr>
+      <th>(array or cube) layer index 
+      <td>cube-face and layer index 
+      <td>cube-face and array element 
+      <td>sub-resource index 
+   </table>
+   <h2 class="heading settled" data-level="2" id="limits"><span class="secno">2. </span><span class="content">Limits</span><a class="self-link" href="#limits"></a></h2>
+   <p>This section provides references for computing WebGPU’s limit values in each of the three backend APIs.
+These references inform the base values of these limits, as well as how implementations compute adapter limits.
+User agents are not required to use these formulas and may expose whatever they want
+(e.g. always choosing the base value of a limit, or bucketing devices as a fingerprinting protection).</p>
+   <table class="data" style="font-size: 90%">
+    <thead>
+     <tr>
+      <th>Limit 
+      <th>Issue 
+      <th>Vulkan 
+      <th>Metal 
+      <th>D3D12 
+     <tr>
+      <td>
+      <td>
+      <td><a href="https://www.khronos.org/registry/vulkan/specs/1.3/html/vkspec.html#limits-required">Required Limits</a> 
+      <td><a href="https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf">Feature Set Tables</a> 
+      <td><a href="https://docs.microsoft.com/en-us/windows/win32/direct3d12/constants">Constants</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-support">Hardware Tiers</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/direct3d12/root-signature-limits">Root Signature Limits</a> 
+    <tbody>
+     <tr>
+      <th><code>maxBufferSize</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1371">#1371</a> 
+      <td><code>min(maxMemoryAllocationSize, maxBufferSize)</code> 
+      <td><code>MTLDevice.maxBufferLength</code> 
+      <td><em>No documented limit.</em> Implementations could use a constant, or determine this based on the amount of VRAM on the system as D3D11 FL11’s <a href="https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-resources-limits">soft resource size limit</a> does. 
+     <tr>
+      <th><code>maxTextureDimension1D</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1327">#1327</a> 
+      <td><code>maxImageDimension1D</code> 
+      <td><code>Maximum 1D texture width</code> 
+      <td>16384 = <code>D3D12_REQ_TEXTURE1D_U_DIMENSION</code> 
+     <tr>
+      <th><code>maxTextureDimension2D</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1327">#1327</a> 
+      <td><code>min(maxImageDimension2D, maxImageDimensionCube, maxFramebufferWidth, maxFramebufferHeight, maxViewportDimensions[0], maxViewportDimensions[1], viewportBoundsRange[0], -viewportBoundsRange[1])</code> 
+      <td>min(<code>Maximum 2D texture width and height</code>, <code>Maximum cube map texture width and height</code>) 
+      <td>16384 = <code>min(D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, D3D12_REQ_TEXTURECUBE_DIMENSION)</code> 
+     <tr>
+      <th><code>maxTextureDimension3D</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1327">#1327</a> 
+      <td><code>maxImageDimension3D</code> 
+      <td><code>Maximum 3D texture width, height, and depth</code> 
+      <td>2048 = <code>D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION</code> 
+     <tr>
+      <th><code>maxTextureArrayLayers</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1327">#1327</a> 
+      <td><code>maxImageArrayLayers</code> 
+      <td><code>Maximum number of layers per 1D texture array, 2D texture array, or 3D texture</code> 
+      <td>2048 = <code>D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION</code> 
+     <tr>
+      <th><code>maxBindGroups</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/47">#47</a> 
+      <td><code>maxBoundDescriptorSets</code> 
+      <td>
+       <p class="issue" id="issue-e10d2e76"><a class="self-link" href="#issue-e10d2e76"></a>It’s complicated. </p>
+      <td rowspan="3"><em>Strategy-dependent.</em> Allocate the <code>D3D12_MAX_ROOT_COST</code>, minus reserved slots, across these three limits. 
+     <tr>
+      <th><code>maxDynamicUniformBuffersPerPipelineLayout</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/406">#406</a> 
+      <td><code>maxDescriptorSetUniformBuffersDynamic</code> 
+      <td>
+       When not using argument buffers: <code>maxUniformBuffersPerShaderStage</code> 
+       <p class="issue" id="issue-24db5686"><a class="self-link" href="#issue-24db5686"></a> When using argument buffers: ?</p>
+     <tr>
+      <th><code>maxDynamicStorageBuffersPerPipelineLayout</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/406">#406</a> 
+      <td><code>maxDescriptorSetStorageBuffersDynamic</code> 
+      <td>
+       When not using argument buffers, <code>maxStorageBuffersPerShaderStage</code> 
+       <p class="issue" id="issue-24db5686①"><a class="self-link" href="#issue-24db5686①"></a> When using argument buffers: ?</p>
+     <tr>
+      <th><code>maxBindGroupsPlusVertexBuffers</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/2749">#2749</a> 
+      <td>No limit. Choose e.g. <code>max(default, maxBindGroups + maxVertexBuffers)</code>. 
+      <td><em>Strategy-dependent.</em> When using argument buffers, <code>Maximum number of _____ you can access, per stage, from an argument buffer</code> 
+      <td>No limit. Choose e.g. <code>max(default, maxBindGroups + maxVertexBuffers)</code>. 
+     <tr>
+      <th><code>maxBindingsPerBindGroup</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/3279">#3279</a>, <a href="https://github.com/gpuweb/gpuweb/issues/3864">#3864</a> 
+      <td colspan="3">Limit is arbitrary to allow implementations to treat binding space as an array. 
+     <tr>
+      <th><code>maxSamplersPerShaderStage</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/409">#409</a> 
+      <td><code>maxPerStageDescriptorSamplers</code> 
+      <td><code>Maximum number of entries in the sampler state argument table, per graphics or kernel function</code> 
+      <td><code>Maximum number of Samplers in all descriptor tables per shader stage</code> 
+     <tr>
+      <th><code>maxSampledTexturesPerShaderStage</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/409">#409</a> 
+      <td><code>maxPerStageDescriptorSampledImages</code> 
+      <td rowspan="2"><em>Strategy-dependent.</em> Allocate <code>Maximum number of entries in the texture argument table, per graphics or kernel function</code> across these two limits. 
+      <td><code>Maximum number of Shader Resource Views in all descriptor tables per shader stage</code> 
+     <tr>
+      <th><code>maxStorageTexturesPerShaderStage</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/409">#409</a> 
+      <td><em>Strategy-dependent.</em> Choose a value ≤ <code>maxPerStageDescriptorStorageImages</code> while adhering to <a href="#vulkan-maxFragmentCombinedOutputResources">§ 2.1 Vulkan maxFragmentCombinedOutputResources</a>. 
+      <td rowspan="2"><em>Strategy-dependent.</em> Allocate <code>Maximum number of Unordered Access Views in all descriptor tables across all stages</code> (guaranteed to be 64) across stages across these two limits. For example, 32 for each shader stage, split as 16 textures and 16 buffers per shader stage. 
+     <tr>
+      <th><code>maxStorageBuffersPerShaderStage</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/409">#409</a> 
+      <td><em>Strategy-dependent.</em> Choose a value ≤ <code>maxPerStageDescriptorStorageBuffers</code> while adhering to <a href="#vulkan-maxFragmentCombinedOutputResources">§ 2.1 Vulkan maxFragmentCombinedOutputResources</a>. 
+      <td rowspan="3"><em>Strategy-dependent.</em> Allocate <code>Maximum number of entries in the buffer argument table, per graphics or kernel function</code> across these three limits. 
+     <tr>
+      <th><code>maxUniformBuffersPerShaderStage</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/409">#409</a> 
+      <td><code>maxPerStageDescriptorUniformBuffers</code> 
+      <td><code>Maximum number of Constant Buffer Views in all descriptor tables per shader stage</code> 
+     <tr>
+      <th><code>maxVertexBuffers</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/693">#693</a> 
+      <td><code>maxVertexInputBindings</code> 
+      <td><a href="https://docs.microsoft.com/en-ca/windows/win32/api/d3d12/ns-d3d12-d3d12_input_element_desc">16</a> 
+     <tr>
+      <th><code>maxUniformBufferBindingSize</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/803">#803</a> 
+      <td><code>maxUniformBufferRange</code> 
+      <td><em>No documented limit.</em> Use <code>maxBufferSize</code> or choose a constant. 
+      <td>65536 = <code>D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * sizeof(float4)</code> 
+     <tr>
+      <th><code>maxStorageBufferBindingSize</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1163">#1163</a> 
+      <td><code>maxStorageBufferRange</code> 
+      <td colspan="2"><em>No documented limit.</em> Use <code>maxBufferSize</code> or choose a constant. 
+     <tr>
+      <th><code>minUniformBufferOffsetAlignment</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1863">#1863</a> 
+      <td><code>minUniformBufferOffsetAlignment</code> 
+      <td><code>Minimum constant buffer offset alignment</code> 
+      <td>256 = <code>D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT</code> 
+     <tr>
+      <th><code>minStorageBufferOffsetAlignment</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1863">#1863</a> 
+      <td><code>minStorageBufferOffsetAlignment</code> 
+      <td><em>No documented limit.</em> Use 32, which is the lowest allowed value. 
+      <td>32 = <code>max(32, D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT (16))</code> 
+     <tr>
+      <th><code>maxVertexAttributes</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/693">#693</a> 
+      <td><code>maxVertexInputAttributes</code> 
+      <td><em>No limit.</em> Use <code>maxVertexBuffers * Maximum number of vertex attributes, per vertex descriptor</code> 
+      <td>32 = <code>D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT</code> 
+     <tr>
+      <th><code>maxVertexBufferArrayStride</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/693">#693</a> 
+      <td><code>maxVertexInputBindingStride</code> 
+      <td><em>No documented limit?</em> 
+      <td>2048 B = <code>D3D12_SO_BUFFER_MAX_STRIDE_IN_BYTES</code> 
+     <tr>
+      <th><code>maxInterStageShaderVariables</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1962#issuecomment-1136316791">#1962</a> 
+      <td><code>min(maxVertexOutputComponents // 4, maxFragmentInputComponents // 4)</code> 
+      <td>
+       Min of: 
+       <ul>
+        <li data-md>
+         <p><code>Maximum scalar or vector inputs to a fragment function</code>, subtract 2 for non-Apple GPUs</p>
+        <li data-md>
+         <p><code>(Maximum number of input components to a fragment function) / 4</code>, subtract 1 for non-Apple GPUs</p>
+       </ul>
+      <td>30 = <code>min(D3D12_VS_OUTPUT_REGISTER_COUNT - 1, D3D12_PS_INPUT_REGISTER_COUNT - 2)</code> 
+     <tr>
+      <th><code>maxColorAttachments</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/2820">#2820</a> 
+      <td><em>Strategy-dependent.</em> Choose a value ≤ <code>min(maxColorAttachments, maxFragmentOutputAttachments)</code> while adhering to <a href="#vulkan-maxFragmentCombinedOutputResources">§ 2.1 Vulkan maxFragmentCombinedOutputResources</a>. 
+      <td><code>Maximum number of color render targets per render pass descriptor</code> 
+      <td>8 = <code>D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT</code> 
+     <tr>
+      <th><code>maxColorAttachmentBytesPerSample</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/2965">#2965</a> 
+      <td>
+       <p class="issue" id="issue-81390f61"><a class="self-link" href="#issue-81390f61"></a><em>No documented limit?</em> </p>
+      <td>Mostly <code>Maximum total render target size, per pixel, when using multiple color render targets</code>,
+            but it’s <a href="https://github.com/gpuweb/gpuweb/issues/2965#issuecomment-1223792432">a bit more complicated than that</a> 
+      <td>
+       <p class="issue" id="issue-81390f61①"><a class="self-link" href="#issue-81390f61①"></a><em>No documented limit?</em> </p>
+     <tr>
+      <th><code>maxComputeWorkgroupStorageSize</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1863">#1863</a> 
+      <td><code>maxComputeSharedMemorySize</code> 
+      <td><code>Maximum total threadgroup memory allocation</code> 
+      <td><a href="https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#18.6.6%20Inter-Thread%20Data%20Sharing">32 KiB</a> 
+     <tr>
+      <th><code>maxComputeInvocationsPerWorkgroup</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1863">#1863</a> 
+      <td><code>min(maxComputeWorkGroupInvocations, product(maxComputeWorkGroupSize[0..2]))</code> 
+      <td rowspan="4"><code>Maximum threads per threadgroup</code> (but actually <code>maxTotalThreadsPerThreadgroup</code> for a given pipeline) 
+      <td>1024 = <code>D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP</code> 
+     <tr>
+      <th><code>maxComputeWorkgroupSizeX</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1898">#1898</a> 
+      <td><code>min(maxComputeWorkGroupSize[0], maxComputeWorkGroupInvocations)</code> 
+      <td>1024 = <code>D3D12_CS_THREAD_GROUP_MAX_X</code> 
+     <tr>
+      <th><code>maxComputeWorkgroupSizeY</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1898">#1898</a> 
+      <td><code>min(maxComputeWorkGroupSize[1], maxComputeWorkGroupInvocations)</code> 
+      <td>1024 = <code>D3D12_CS_THREAD_GROUP_MAX_Y</code> 
+     <tr>
+      <th><code>maxComputeWorkgroupSizeZ</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1898">#1898</a> 
+      <td><code>min(maxComputeWorkGroupSize[2], maxComputeWorkGroupInvocations)</code> 
+      <td>64 = <code>D3D12_CS_THREAD_GROUP_MAX_Z</code> 
+     <tr>
+      <th><code>maxComputeWorkgroupsPerDimension</code> 
+      <td><a href="https://github.com/gpuweb/gpuweb/issues/1863">#1863</a> 
+      <td><code>min(maxComputeWorkGroupCount[0..2])</code> 
+      <td>
+       <p class="issue" id="issue-81390f61②"><a class="self-link" href="#issue-81390f61②"></a><em>No documented limit?</em> </p>
+      <td>65535 = <code>D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION</code> 
+   </table>
+   <h3 class="heading settled" data-level="2.1" id="vulkan-maxFragmentCombinedOutputResources"><span class="secno">2.1. </span><span class="content">Vulkan <code>maxFragmentCombinedOutputResources</code></span><a class="self-link" href="#vulkan-maxFragmentCombinedOutputResources"></a></h3>
+   <p>Choose <code>maxStorageBuffersPerShaderStage</code>, <code>maxStorageTexturesPerShaderStage</code>, and <code>maxColorAttachments</code> such that their sum is ≤ Vulkan’s <code>maxFragmentCombinedOutputResources</code>.</p>
+   <p class="advisement"> Warning: <code>maxFragmentCombinedOutputResources</code> is incorrectly reported on many <a href="https://github.com/gpuweb/gpuweb/issues/4018#issuecomment-1499725189">Intel, AMD, NVIDIA</a>, and <a href="https://github.com/gpuweb/gpuweb/issues/3631#issuecomment-1498747606">Imagination</a> drivers.
+On these drivers, the combined limit may need to be ignored. </p>
+  </main>
+  <div data-fill-with="conformance">
+   <h2 class="no-ref no-num heading settled" id="w3c-conformance"><span class="content">Conformance</span><a class="self-link" href="#w3c-conformance"></a></h2>
+   <h3 class="no-ref no-num heading settled" id="w3c-conventions"><span class="content">Document conventions</span><a class="self-link" href="#w3c-conventions"></a></h3>
+   <p>Conformance requirements are expressed
+    with a combination of descriptive assertions
+    and RFC 2119 terminology.
+    The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL”
+    in the normative parts of this document
+    are to be interpreted as described in RFC 2119.
+    However, for readability,
+    these words do not appear in all uppercase letters in this specification. </p>
+   <p>All of the text of this specification is normative
+    except sections explicitly marked as non-normative, examples, and notes. <a data-link-type="biblio" href="#biblio-rfc2119" title="Key words for use in RFCs to Indicate Requirement Levels">[RFC2119]</a> </p>
+   <p>Examples in this specification are introduced with the words “for example”
+    or are set apart from the normative text
+    with <code>class="example"</code>,
+    like this: </p>
+   <div class="example" id="w3c-example">
+    <a class="self-link" href="#w3c-example"></a> 
+    <p>This is an example of an informative example. </p>
+   </div>
+   <p>Informative notes begin with the word “Note”
+    and are set apart from the normative text
+    with <code>class="note"</code>,
+    like this: </p>
+   <p class="note" role="note">Note, this is an informative note.</p>
+  </div>
+  <script src="https://www.w3.org/scripts/TR/2021/fixup.js"></script>
+  <h2 class="no-num no-ref heading settled" id="references"><span class="content">References</span><a class="self-link" href="#references"></a></h2>
+  <h3 class="no-num no-ref heading settled" id="normative"><span class="content">Normative References</span><a class="self-link" href="#normative"></a></h3>
+  <dl>
+   <dt id="biblio-rfc2119">[RFC2119]
+   <dd>S. Bradner. <a href="https://datatracker.ietf.org/doc/html/rfc2119"><cite>Key words for use in RFCs to Indicate Requirement Levels</cite></a>. March 1997. Best Current Practice. URL: <a href="https://datatracker.ietf.org/doc/html/rfc2119">https://datatracker.ietf.org/doc/html/rfc2119</a>
+  </dl>
+  <h2 class="no-num no-ref heading settled" id="issues-index"><span class="content">Issues Index</span><a class="self-link" href="#issues-index"></a></h2>
+  <div style="counter-reset:issue">
+   <div class="issue">It’s complicated. <a class="issue-return" href="#issue-e10d2e76" title="Jump to section">↵</a></div>
+   <div class="issue"> When using argument buffers: ? <a class="issue-return" href="#issue-24db5686" title="Jump to section">↵</a></div>
+   <div class="issue"> When using argument buffers: ? <a class="issue-return" href="#issue-24db5686①" title="Jump to section">↵</a></div>
+   <div class="issue"><em>No documented limit?</em> <a class="issue-return" href="#issue-81390f61" title="Jump to section">↵</a></div>
+   <div class="issue"><em>No documented limit?</em> <a class="issue-return" href="#issue-81390f61①" title="Jump to section">↵</a></div>
+   <div class="issue"><em>No documented limit?</em> <a class="issue-return" href="#issue-81390f61②" title="Jump to section">↵</a></div>
+  </div>

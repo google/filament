@@ -1,0 +1,36 @@
+boto v2.24.0
+============
+
+:date: 2014/01/29
+
+This release adds M3 instance types to Amazon EC2, adds support for dead letter queues to Amazon Simple Queue Service (SQS), adds a single JSON file for all region and endpoint information and provides several fixes to a handful of services and documentation. Additionally, the SDK now supports using AWS Signature Version 4 with Amazon S3.
+
+Features
+--------
+* Load region and endpoint information from a JSON file (:sha:`b9dbaad`)
+* Return the x-amz-restore header with GET KEY and fix provider prefix. (:issue:`1990`, :sha:`43e8e0a`)
+* Make S3 key validation optional with the ``validate`` parameter (:issue:`2013`, :issue:`1996`, :sha:`fd6b632`)
+* Adding new eu-west-1 and eu-west-2 endpoints for SES. (:issue:`2015`, :sha:`d5ef862`, :sha:`56ba3e5`)
+* Google Storage now uses new-style Python classes (:issue:`1927`, :sha:`86c9f77`)
+* Add support for step summary list to Elastic MapReduce (:issue:`2011`, :sha:`d3af158`)
+* Added the M3 instance types. (:issue:`2012`, :sha:`7c82f57`)
+* Add credential profile configuration (:issue:`1979`, :sha:`e3ab708`)
+* Add support for dead letter queues to SQS (:sha:`93c7d05`)
+
+Bugfixes
+--------
+* Make the Lifecycle Id optional and fix prefix=None in XML generation. (:issue:`2021`, :sha:`362a04a`)
+* Fix DynamoDB query limit bug (:issue:`2014`, :sha:`7ecb3f7`)
+* Add documentation about the version_id behavior of Key objects. (:issue:`2026`, :sha:`b6b242c`)
+* Fixed typo in Table.create example (:issue:`2023`, :sha:`d81a660`)
+* Adding a license/copyright header. (:issue:`2025`, :sha:`26ded39`)
+* Update the docstring for the SNS subscribe method (:issue:`2017`, :sha:`4c806de`)
+* Renamed unit test with duplicate name (:issue:`2016`, :sha:`c7bd0bd`)
+* Use UTC instead of local time in ``test_refresh_credentials`` (:issue:`2020`, :sha:`b5a2eaf`)
+* Fix missing ``security_token`` option in some connection classes (:issue:`1989`, :issue:`1942`, :sha:`2b72f32`)
+* Fix listing S3 multipart uploads with some parameter combinations (:issue:`2000`, :sha:`49045bc`)
+* Fix ``elbadmin`` crash because of non-extant instances in load balancer (:issue:`2001`, :sha:`d47cc14`)
+* Fix anonymous S3 fetch test case (:issue:`1988`, :issue:`1992`, :sha:`8fb1666`)
+* Fix ``elbadmin`` boto import (:issue:`2002`, :sha:`674c3a6`)
+* Fixing SQS tutorial to correctly describe behavior of the write operation (:issue:`1986`, :sha:`6147d86`)
+* Fix various grammar mistakes (:issue:`1980`, :sha:`ada40b5`)

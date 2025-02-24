@@ -1,0 +1,83 @@
+[
+  {
+    "cmd": [
+      "cipd",
+      "ensure",
+      "-root",
+      "[CACHE]/osx_sdk",
+      "-ensure-file",
+      "infra/tools/mac_toolchain/${platform} git_revision:26bb3effce1bc1896a3776c21b84e76ae82c3917",
+      "-max-threads",
+      "0",
+      "-json-output",
+      "/path/to/tmp/json"
+    ],
+    "infra_step": true,
+    "name": "ensure_installed",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@json.output@{@@@",
+      "@@@STEP_LOG_LINE@json.output@  \"result\": {@@@",
+      "@@@STEP_LOG_LINE@json.output@    \"\": [@@@",
+      "@@@STEP_LOG_LINE@json.output@      {@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"instance_id\": \"resolved-instance_id-of-git_revision:26b\",@@@",
+      "@@@STEP_LOG_LINE@json.output@        \"package\": \"infra/tools/mac_toolchain/resolved-platform\"@@@",
+      "@@@STEP_LOG_LINE@json.output@      }@@@",
+      "@@@STEP_LOG_LINE@json.output@    ]@@@",
+      "@@@STEP_LOG_LINE@json.output@  }@@@",
+      "@@@STEP_LOG_LINE@json.output@}@@@",
+      "@@@STEP_LOG_END@json.output@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "[CACHE]/osx_sdk/mac_toolchain",
+      "install",
+      "-kind",
+      "mac",
+      "-xcode-version",
+      "deadbeef",
+      "-output-dir",
+      "[CACHE]/osx_sdk/XCode.app"
+    ],
+    "infra_step": true,
+    "name": "install xcode"
+  },
+  {
+    "cmd": [
+      "sudo",
+      "xcode-select",
+      "--switch",
+      "[CACHE]/osx_sdk/XCode.app"
+    ],
+    "infra_step": true,
+    "name": "select XCode"
+  },
+  {
+    "cmd": [
+      "gn",
+      "gen",
+      "out/Release"
+    ],
+    "name": "gn"
+  },
+  {
+    "cmd": [
+      "ninja",
+      "-C",
+      "out/Release"
+    ],
+    "name": "ninja"
+  },
+  {
+    "cmd": [
+      "sudo",
+      "xcode-select",
+      "--reset"
+    ],
+    "infra_step": true,
+    "name": "reset XCode"
+  },
+  {
+    "name": "$result"
+  }
+]

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/ui/base/list_view.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ListView = tr.ui.b.ListView;
+
+  test('instantiate', function() {
+    const view = new ListView();
+    const i1 = view.addItem('item 1');
+    const i2 = view.addItem('item 2');
+    const i3 = view.addItem('item 3');
+    this.addHTMLOutput(view);
+  });
+
+  test('programmaticSelection', function() {
+    const view = new ListView();
+    const i1 = view.addItem('item 1');
+    const i2 = view.addItem('item 2');
+    const i3 = view.addItem('item 3');
+
+    i2.selected = true;
+    assert.isTrue(i2.hasAttribute('selected'));
+    i3.selected = true;
+    assert.isFalse(i2.hasAttribute('selected'));
+    assert.isTrue(i3.hasAttribute('selected'));
+  });
+
+  test('clickSelection', function() {
+    const view = new ListView();
+    let didFireSelectionChange = false;
+    view.addEventListener('selection-changed', function() {
+      didFireSelectionChange = true;
+    });
+    const i1 = view.addItem('item 1');
+    const i2 = view.addItem('item 2');
+    const i3 = view.addItem('item 3');
+
+    didFireSelectionChange = false;
+    i2.click();
+    assert.isTrue(didFireSelectionChange);
+    assert.strictEqual(view.selectedElement, i2);
+
+    didFireSelectionChange = false;
+    i3.click();
+    assert.isTrue(didFireSelectionChange);
+    assert.strictEqual(view.selectedElement, i3);
+
+    // Click the same target again.
+    didFireSelectionChange = false;
+    i3.click();
+    assert.isTrue(didFireSelectionChange);
+    assert.isUndefined(view.selectedElement);
+
+    didFireSelectionChange = false;
+    i1.click();
+    assert.isTrue(didFireSelectionChange);
+    assert.strictEqual(view.selectedElement, i1);
+  });
+});
+</script>

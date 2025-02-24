@@ -1,0 +1,7 @@
+rjsmin	rjsmin-module.html
+rjsmin.__license__	rjsmin-module.html#__license__
+rjsmin.jsmin	rjsmin-module.html#jsmin
+rjsmin.__package__	rjsmin-module.html#__package__
+rjsmin._make_jsmin	rjsmin-module.html#_make_jsmin
+rjsmin.jsmin_for_posers	rjsmin-module.html#jsmin_for_posers
+rjsmin.__doc__	rjsmin-module.html#__doc__

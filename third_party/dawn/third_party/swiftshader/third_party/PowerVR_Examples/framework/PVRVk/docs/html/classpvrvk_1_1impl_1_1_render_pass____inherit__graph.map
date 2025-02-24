@@ -1,0 +1,5 @@
+<map id="pvrvk::impl::RenderPass_" name="pvrvk::impl::RenderPass_">
+<area shape="rect" id="node2" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_device_object_base.html" title="pvrvk::impl::PVRVkDevice\lObjectBase\&lt; VkRenderPass,\l ObjectType::e_RENDER_PASS \&gt;" alt="" coords="305,5,535,61"/>
+<area shape="rect" id="node3" href="$classpvrvk_1_1impl_1_1_p_v_r_vk_object_base.html" title="pvrvk::impl::PVRVkObject\lBase\&lt; VkRenderPass, PVRVkObject\lType \&gt;" alt="" coords="5,5,257,61"/>
+<area shape="rect" id="node4" href="$classpvrvk_1_1impl_1_1_device_object_debug_utils.html" title="pvrvk::impl::DeviceObject\lDebugUtils\&lt; RenderPass_ \&gt;" alt="" coords="317,86,523,127"/>
+</map>

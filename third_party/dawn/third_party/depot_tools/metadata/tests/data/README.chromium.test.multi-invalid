@@ -1,0 +1,76 @@
+Name: Test-A README for Chromium metadata (0 errors, 0 warnings)
+Short Name: metadata-test-valid
+URL: https://www.example.com/metadata,
+     https://www.example.com/parser
+Version: 1.0.12
+Date: 2020-12-03
+License: Apache-2.0, MIT
+License File: LICENSE
+Security Critical: yes
+Shipped: yes
+CPEPrefix: unknown
+This line should be ignored because CPEPrefix is a one-liner field.
+Description:
+A test metadata file, with a
+ multi-line description.
+
+Local Modifications:
+None,
+EXCEPT:
+* nothing.
+
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Test-B README for Chromium metadata (3 errors, 1 warning)
+SHORT NAME: metadata-test-invalid
+URL: file://home/drive/chromium/src/metadata
+Version:0
+Date: 2020-12-03
+License: MIT
+Security critical: yes
+Shipped:    Yes
+
+Description:
+
+Local Modifications:     None.
+
+These are the expected errors (here for reference only):
+1. Description is empty.
+
+2. Required field 'License File' is missing.
+
+3. URL is invalid.
+
+warnings:
+
+1. Version is '0'.
+
+-------------------- DEPENDENCY DIVIDER --------------------
+-------------------- DEPENDENCY DIVIDER --------------------
+
+Name: Test-C README for Chromium metadata (4 errors, 1 warning)
+URL: https://www.example.com/first
+URL: https://www.example.com/second
+Version: N/A
+Date: 2020-12-03
+License: Custom license
+Security Critical: yes
+
+Description:
+Test metadata with multiple entries for one field, and
+missing a mandatory field.
+These are the expected errors (here for reference only):
+
+1. Required field 'License Android Compatible' is missing.
+
+2. Required field 'License File' is missing.
+
+3. Required field 'Shipped' is missing.
+
+4. Repeated fields: URL (2)
+
+warnings:
+1. License has a license not in the allowlist.
+(see https://source.chromium.org/chromium/chromiu
+m/tools/depot_tools/+/main:metadata/fields/custom/license_al
+lowlist.py). Licenses not allowlisted: 'Custom license'.

@@ -1,0 +1,75 @@
+{
+    "description": [
+        "Copyright 2020 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "entry_point_packed_egl_enums.json: Metadata for packing entry point params.",
+        "",
+        "Note that all entry points have their suffixes stripped in this file.",
+        "These enums are used by generate_entry_points.py."
+    ],
+    "eglChooseConfig": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateContext": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateImage": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateNativeClientBuffer": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreatePbufferSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreatePixmapSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreatePbufferFromClientBuffer": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreatePlatformPixmapSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreatePlatformWindowSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateStream": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateStreamProducerD3DTexture": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateSync": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglCreateWindowSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglDebugMessageControl": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglGetCompositorTimingSupported": {
+        "name": "CompositorTiming"
+    },
+    "eglGetFrameTimestampSupported": {
+        "timestamp": "Timestamp"
+    },
+    "eglGetPlatformDisplay": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglLabelObject": {
+        "objectType": "ObjectType"
+    },
+    "eglLockSurface": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglStreamConsumerGLTextureExternalAttribsNV": {
+        "attrib_list": "const AttributeMap &"
+    },
+    "eglStreamPostD3DTexture": {
+        "attrib_list": "const AttributeMap &"
+    }
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/dashboard/static/events.html">
+
+<script>
+'use strict';
+
+/**
+ * Utility functions for dealing with URIs.
+ */
+const uri = (function() {
+  /**
+   * URI controller.
+   * @param {function()} pageStateCallback callback for getting the page state.
+   */
+  const Controller = function(pageStateCallback) {
+    this.pageStateCallback_ = pageStateCallback;
+    this.stateRequest_ = null;
+    this.stateRequestStatus_ = null;
+    events.addEventListener(window, 'popstate', this.onPopstate_, true);
+  };
+
+  /**
+   * Unique integer that gets assigned to the source element that fires a page
+   * state change event.  This id can be used in handling 'urichange' event
+   * to identify the source element that the event originated from.
+   */
+  Controller.uniqueIdCounter_ = 0;
+
+  /**
+   * Gets a incremented integer id.
+   * @return {number} id number.
+   */
+  Controller.uniqueId = function() {
+    return Controller.uniqueIdCounter_++;
+  };
+
+  /**
+   * Sends a request for page state and dispatches 'uriload' event which can be
+   * caught to handle initializing the page. The URI parameters are attached to
+   * the event detail object.
+   */
+  Controller.prototype.load = function() {
+    const params = uri.getAllParameters();
+    const sid = uri.getParameter('sid');
+    if (!params || !sid) {
+      return;
+    }
+
+    const request = new XMLHttpRequest();
+    request.onload = function() {
+      const pageState = JSON.parse(request.responseText);
+      const params = uri.getAllParameters();
+      const uriLoadEvent = new CustomEvent('uriload', {
+        'detail': {
+          params,
+          'state': pageState
+        },
+        'bubbles': true,
+        'cancelable': true
+      });
+      window.dispatchEvent(uriLoadEvent);
+    };
+    request.onerror = function() {
+      this.firePageStateRequestEvent_('failed');
+    };
+    request.open('get', '/short_uri?sid=' + sid);
+    request.send();
+  };
+
+  /**
+   * Updates URI on page state changes.
+   *
+   * The event passed is expected to have a detail property containing
+   * a dictionary 'params' which is used to update the URI.  A request
+   * is made to /short_uri to save the current page state and URI is
+   * updated with the new state ID.  Also, target element gets assigned a
+   * 'uniqueid' which can be used in handling 'urichange' event to identify
+   * the source that fired the event.
+   */
+  Controller.prototype.onPageStateChanged = function(event) {
+    const detail = event.detail;
+    const state = {
+      'stateName': detail.stateName,
+      'params': detail.params,
+      'state': detail.state
+    };
+
+    if (detail.id && detail.id.length > 0) {
+      state.id = detail.id;
+    } else if (detail.target) {
+      if (!detail.target.getAttribute('uniqueid')) {
+        Polymer.dom(detail.target).setAttribute(
+            'uniqueid', Controller.uniqueId());
+      }
+      state.id = detail.target.getAttribute('uniqueid');
+    }
+    if (state.state) {
+      this.sendShortURIRequest_(state);
+    } else {
+      this.updateUri_(state);
+    }
+  };
+
+  /**
+   * Updates URI based on passed state data.
+   * @param {Object} state Dictionary containing state data.
+   */
+  Controller.prototype.updateUri_ = function(state) {
+    let params = uri.getAllParameters();
+    if (!state || !state.params) {
+      params = {};
+    } else {
+      for (const k in state.params) {
+        const value = state.params[k];
+        if (value) {
+          params[k] = value;
+        } else {
+          delete params[k];
+        }
+      }
+    }
+    const URIStr = getCurrentPathWithParams(params);
+    if (URIStr == window.location.pathname + uri.getQueryString()) {
+      return;
+    }
+    window.history.pushState(state, '', URIStr);
+  };
+
+  /**
+   * Dispatches 'urichange' event on 'popstate' event.
+   * @param {Event} event 'popstate' event, which has a 'state' property set
+   *     by a previous call to history.pushState.
+   */
+  Controller.prototype.onPopstate_ = function(event) {
+    if (!event.state) {
+      return;
+    }
+    const state = event.state;
+    const uriChangeEvent = new CustomEvent('urichange', {
+      'detail': {
+        'id': state.id,
+        'stateName': state.stateName,
+        'params': state.params,
+        'state': state.state
+      },
+      'bubbles': true,
+      'cancelable': true
+    });
+    window.dispatchEvent(uriChangeEvent);
+  };
+
+  /**
+   * Sends a request to save current page state and update the URI with
+   * the new SID.
+   * @param {Object} state Dictionary containing state data.
+   */
+  Controller.prototype.sendShortURIRequest_ = function(state) {
+    if (this.stateRequest_) {
+      this.stateRequest_.abort();
+    }
+    const pageState = this.pageStateCallback_();
+    if (!pageState) {
+      this.updateUri_(null);
+      return;
+    }
+
+    const postData = 'page_state=' +
+        encodeURIComponent(JSON.stringify(pageState));
+
+    this.firePageStateRequestEvent_('loading');
+    const request = new XMLHttpRequest();
+    request.onload = () => {
+      const response = JSON.parse(request.responseText);
+      const stateId = response.sid;
+      state.params = state.params || {};
+      state.params.sid = stateId;
+      this.updateUri_(state);
+      this.firePageStateRequestEvent_('complete');
+    };
+    request.onerror = () => {
+      this.firePageStateRequestEvent_('failed');
+    };
+    request.open('post', '/short_uri', true);
+    request.setRequestHeader('Content-type',
+        'application/x-www-form-urlencoded');
+    request.send(postData);
+    this.stateRequest_ = request;
+  };
+
+  /**
+   * Dispatches an event for the status of page state request.
+   * @param {string} status Status name.
+   */
+  Controller.prototype.firePageStateRequestEvent_ = function(status) {
+    const event = new CustomEvent('pagestaterequest', {
+      'detail': {status}
+    });
+    window.dispatchEvent(event);
+  };
+
+  /**
+   * Gets the named parameter from the URI query string.
+   * @param {string} name The name of the parameter to get.
+   * @param {?string=} opt_default The default to return.
+   * @return {?string} The value of the parameter.
+   */
+  const getParameter = function(name, opt_default) {
+    name = name.replace(/[\[]/, '\\\[').replace(/[\]]/, '\\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(uri.getQueryString());
+    if (results != null) {
+      return decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+    return opt_default || null;
+  };
+
+  /**
+   * Gets all the URI parameters. Does not support multiple parameters with the
+   * same name.
+   * @return {!Object} Mapping of name->value for URI parameters.
+   */
+  const getAllParameters = function() {
+    const params = {};
+    const queryString = uri.getQueryString().replace(/^\?/, '');
+    if (!queryString) {
+      return {};
+    }
+    const parts = queryString.split('&');
+    for (let i = 0; i < parts.length; i++) {
+      const pair = parts[i].split('=');
+      if (pair.length == 1) {
+        params[pair[0]] = '';
+      } else {
+        params[pair[0]] = decodeURIComponent(pair[1].replace(/\+/g, ' '));
+      }
+    }
+    return params;
+  };
+
+  /** Gets the query string, including "?", in a mockable way. */
+  const getQueryString = function() {
+    return window.location.search;
+  };
+
+  /**
+   * Returns a string which is the current path of the URI with the query
+   * parameters from the given Object. This is suitable for usage with
+   * history.pushState().
+   * @param {!Object} params Key/value pairs for new query string.
+   * @return {string} New URI which can be passed into history.pushState().
+   */
+  const getCurrentPathWithParams = function(params) {
+    const pairs = Object.keys(params).map(function(k) {
+      return k + '=' + encodeURIComponent(params[k]);
+    });
+    return window.location.pathname + '?' + pairs.join('&');
+  };
+
+  /**
+   * Gets the second argument after the .com/.
+   * @return {string} second path element.
+   */
+  const getPathName = function() {
+    return window.location.pathname.split('/')[2];
+  };
+
+
+  return {
+    Controller,
+    getParameter,
+    getAllParameters,
+    getCurrentPathWithParams,
+    getQueryString,
+    getPathName,
+  };
+})();
+
+</script>

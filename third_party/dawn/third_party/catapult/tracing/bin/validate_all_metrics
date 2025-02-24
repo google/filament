@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+from __future__ import print_function
+import os
+import sys
+
+sys.path.insert(
+    1,
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+from tracing.metrics import discover
+import tracing_project
+
+
+def Main():
+  all_registered_metrics = set(discover.DiscoverMetrics(
+      ['/tracing/metrics/all_metrics.html']))
+  all_modules = list(
+      '/' + rel_path for rel_path in
+      tracing_project.TracingProject().FindAllMetricsModuleRelPaths())
+  all_possible_metrics = set(discover.DiscoverMetrics(all_modules))
+  unregistered_metrics = all_possible_metrics - all_registered_metrics
+  if unregistered_metrics:
+    print('These metrics are unregistered: %s. Please import their modules in '
+          'tracing/tracing/metrics/all_metrics.html' %
+          ', '.join(unregistered_metrics))
+    return 1
+  uppercased_metrics = []
+  for m in all_possible_metrics:
+    if str.isupper(m[0]):
+      uppercased_metrics.append(m)
+  if uppercased_metrics:
+    print('These metrics must be renamed to start with a lower-case: %s' %
+           uppercased_metrics)
+    return 1
+  return 0
+
+if __name__ == '__main__':
+  sys.exit(Main())

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/clock_sync_manager.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const ClockDomainId = tr.model.ClockDomainId;
+  const ClockSyncManager = tr.model.ClockSyncManager;
+
+  const testOptions = {
+    setUp() {
+      // Add a few testing clock domains to the list of permissible domains.
+      ClockDomainId.DOMAIN_1 = 'DOMAIN1';
+      ClockDomainId.DOMAIN_2 = 'DOMAIN2';
+      ClockDomainId.DOMAIN_3 = 'DOMAIN3';
+      ClockDomainId.DOMAIN_4 = 'DOMAIN4';
+      ClockDomainId.DOMAIN_5 = 'DOMAIN5';
+    },
+
+    tearDown() {
+      delete ClockDomainId.DOMAIN_1;
+      delete ClockDomainId.DOMAIN_2;
+      delete ClockDomainId.DOMAIN_3;
+      delete ClockDomainId.DOMAIN_4;
+      delete ClockDomainId.DOMAIN_5;
+    }
+  };
+
+  test('addClockSyncMarker_throwsWithUnknownDomain', function() {
+    const mgr = new ClockSyncManager();
+
+    assert.throws(function() {
+      mgr.addClockSyncMarker('unknown', 'sync1', 100, 200);
+    }, '"unknown" is not in the list of known clock domain IDs.');
+  }, testOptions);
+
+
+  test('addClockSyncMarker_throwsWhenSelfSyncing', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 200);
+
+    assert.throws(function() {
+      mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 200, 300);
+    }, 'A clock domain cannot sync with itself.');
+  }, testOptions);
+
+  test('addClockSyncMarker_throwsWhenAddingThirdSyncMarkerToSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 100);
+
+    assert.throws(function() {
+      mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync1', 100);
+    }, 'Clock sync with ID "sync1" is already complete - cannot add a third ' +
+        'clock sync marker to it.');
+  }, testOptions);
+
+  test('addClockSyncMarker_throwsAfterGetModelTimeTransformer', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 100);
+
+    mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1);
+
+    assert.throws(function() {
+      mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 100);
+    }, 'Cannot add new clock sync markers after getting a model time ' +
+        'transformer.');
+  }, testOptions);
+
+  test('getModelTimeTransformer_noMarkers', function() {
+    const mgr = new ClockSyncManager();
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 100);
+  }, testOptions);
+
+  test('getModelTimeTransformer_noMarkersSecondDomainThrows', function() {
+    const mgr = new ClockSyncManager();
+
+    mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1);
+
+    assert.throws(function() {
+      mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2);
+    }, 'No clock sync markers exist pairing clock domain "DOMAIN2" with' +
+        ' target clock domain "DOMAIN1".');
+  }, testOptions);
+
+  test('getModelTimeTransformer_noMarkersChromeLegacyFirst', function() {
+    const mgr = new ClockSyncManager();
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.UNKNOWN_CHROME_LEGACY)(100),
+        100);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.LINUX_CLOCK_MONOTONIC)(100),
+        100);
+  }, testOptions);
+
+  test('getModelTimeTransformer_noMarkersChromeLegacySecond', function() {
+    const mgr = new ClockSyncManager();
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.LINUX_CLOCK_MONOTONIC)(100),
+        100);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.UNKNOWN_CHROME_LEGACY)(100),
+        100);
+  }, testOptions);
+
+  test('getModelTimeTransformer_oneMarker', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 100);
+  }, testOptions);
+
+  test('getModelTimeTransformer_oneCompleteSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(350), 100);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 100);
+  }, testOptions);
+
+  test('getModelTimeTransformer_oneCompleteSyncWithChromeLegacyBefore',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.LINUX_CLOCK_MONOTONIC)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_oneCompleteSyncWithChromeLegacyAfter',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.LINUX_CLOCK_MONOTONIC, 'sync1', 350);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.LINUX_CLOCK_MONOTONIC)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_twoCompleteSyncs', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    const tx = mgr.getTransformerBetween_('DOMAIN1', 'DOMAIN3');
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync2', 200);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync2', 250);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(350), 100);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 100);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_3)(250), 200);
+  }, testOptions);
+
+  test('getModelTimeTransformer_twoSyncMarkersWithEndTs', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 200);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(350), 150);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(150), 150);
+  }, testOptions);
+
+  test('getModelTimeTransformer_indirectlyConnectedGraph',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 200);
+
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 200);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync2', 300);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 100);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_3)(300), 100);
+      }, testOptions);
+
+  test('getModelTimeTransformer_usesPathWithLeastError', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync2', 100, 150);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 100);
+
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 200);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 100);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(125), 125);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(100), 125);
+  }, testOptions);
+
+  // NOTE: This is the same test as the above, but reversed to ensure that
+  // the result didn't stem from some ordering coincidence.
+  test('getModelTimeTransformer_usesPathWithLeastErrorReverse', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 150);
+
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync2', 100, 200);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(125), 125);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(100), 125);
+  }, testOptions);
+
+  test('getModelTimeTransformer_battorSyncUsesNormalTimestampWhenFast',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 102);
+        mgr.addClockSyncMarker(ClockDomainId.BATTOR, 'sync1', 350);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(101),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_battorSyncUsesChromeLegacyStartTsWhenTooSlow',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100, 200);
+        mgr.addClockSyncMarker(ClockDomainId.BATTOR, 'sync1', 350);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_prefersChromeLegacyDomain', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100),
+        350);
+    assert.strictEqual(
+        mgr.getModelTimeTransformer(ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+        350);
+  }, testOptions);
+
+  test('getModelTimeTransformer_collapsesUnknownChromeLegacyDomainLinux',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+        mgr.addClockSyncMarker(
+            ClockDomainId.LINUX_CLOCK_MONOTONIC, 'sync2', 350);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 450);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(450), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.LINUX_CLOCK_MONOTONIC)(350),
+            350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_collapsesUnknownChromeLegacyDomainMac',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+        mgr.addClockSyncMarker(
+            ClockDomainId.MAC_MACH_ABSOLUTE_TIME, 'sync2', 350);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 450);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(450), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.MAC_MACH_ABSOLUTE_TIME)(350),
+            350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_collapsesUnknownChromeLegacyDomainWinLoRes',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+        mgr.addClockSyncMarker(
+            ClockDomainId.WIN_ROLLOVER_PROTECTED_TIME_GET_TIME, 'sync2', 350);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 450);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(450), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.WIN_ROLLOVER_PROTECTED_TIME_GET_TIME)(350),
+            350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_collapsesChromeLegacyDomainWinHiRes',
+      function() {
+        const mgr = new ClockSyncManager();
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+        mgr.addClockSyncMarker(
+            ClockDomainId.UNKNOWN_CHROME_LEGACY, 'sync1', 350);
+
+        mgr.addClockSyncMarker(ClockDomainId.WIN_QPC, 'sync2', 350);
+        mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 450);
+
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_1)(100), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_2)(450), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(ClockDomainId.WIN_QPC)(350), 350);
+        assert.strictEqual(
+            mgr.getModelTimeTransformer(
+                ClockDomainId.UNKNOWN_CHROME_LEGACY)(350),
+            350);
+      }, testOptions);
+
+  test('getModelTimeTransformer_throwsWithTwoDistinctGraphs', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 100);
+
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync2', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync2', 100);
+
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_4, 'sync3', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_5, 'sync3', 100);
+
+    assert.throws(function() {
+      mgr.getModelTimeTransformer(ClockDomainId.DOMAIN_5);
+    }, 'Unable to select a master clock domain because no path can be found ' +
+        'from "DOMAIN1" to "DOMAIN4"');
+  }, testOptions);
+
+  test('computeDotGraph_noMarkers', function() {
+    const mgr = new ClockSyncManager();
+
+    assert.strictEqual(mgr.computeDotGraph(), [
+      'graph {',
+      '}'
+    ].join('\n'));
+  }, testOptions);
+
+  test('computeDotGraph_oneMarker', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+
+    assert.strictEqual(mgr.computeDotGraph(), [
+      'graph {',
+      '  DOMAIN1[shape=box]',
+      '  "sync1" -- DOMAIN1 [label="[100, 100]"]',
+      '}'
+    ].join('\n'));
+  }, testOptions);
+
+  test('computeDotGraph_oneCompleteSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    assert.strictEqual(mgr.computeDotGraph(), [
+      'graph {',
+      '  DOMAIN1[shape=box]',
+      '  DOMAIN2[shape=box]',
+      '  "sync1" -- DOMAIN1 [label="[100, 100]"]',
+      '  "sync1" -- DOMAIN2 [label="[350, 350]"]',
+      '}'
+    ].join('\n'));
+  }, testOptions);
+
+  test('computeDotGraph_twoCompleteSyncs', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync2', 0, 50);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync2', 400);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    assert.strictEqual(mgr.computeDotGraph(), [
+      'graph {',
+      '  DOMAIN1[shape=box]',
+      '  DOMAIN2[shape=box]',
+      '  DOMAIN3[shape=box]',
+      '  "sync1" -- DOMAIN1 [label="[100, 100]"]',
+      '  "sync1" -- DOMAIN2 [label="[350, 350]"]',
+      '  "sync2" -- DOMAIN2 [label="[0, 50]"]',
+      '  "sync2" -- DOMAIN3 [label="[400, 400]"]',
+      '}'
+    ].join('\n'));
+  }, testOptions);
+
+  test('computeDotGraph_oneCompleteSyncOneIncompleteSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_3, 'sync2', 450);
+
+    assert.strictEqual(mgr.computeDotGraph(), [
+      'graph {',
+      '  DOMAIN1[shape=box]',
+      '  DOMAIN2[shape=box]',
+      '  DOMAIN3[shape=box]',
+      '  "sync1" -- DOMAIN1 [label="[100, 100]"]',
+      '  "sync1" -- DOMAIN2 [label="[350, 350]"]',
+      '  "sync2" -- DOMAIN3 [label="[450, 450]"]',
+      '}'
+    ].join('\n'));
+  }, testOptions);
+
+  test('completeSyncIds_incompleteSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+
+    assert.deepEqual(mgr.completeSyncIds, []);
+  }, testOptions);
+
+  test('completeSyncIds_oneCompleteSync', function() {
+    const mgr = new ClockSyncManager();
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_1, 'sync1', 100);
+    mgr.addClockSyncMarker(ClockDomainId.DOMAIN_2, 'sync1', 350);
+
+    assert.deepEqual(mgr.completeSyncIds, ['sync1']);
+  }, testOptions);
+});
+</script>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/model/power_sample.html">
+<link rel="import" href="/tracing/model/power_series.html">
+<link rel="import" href="/tracing/ui/analysis/frame_power_usage_chart.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate_noSamples', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(undefined, [0]);
+
+    assert.isUndefined(chart.chart);
+  });
+
+  test('instantiate_noVSyncs', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), []);
+
+    assert.isUndefined(chart.chart);
+  });
+
+  test('instantiate_noSamplesOrVSyncs', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(undefined, []);
+
+    assert.isUndefined(chart.chart);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_oneFrame', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [0];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 1 },
+      { x: 1, f1: 2 },
+      { x: 2, f1: 3 },
+      { x: 3, f1: 2 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_twoFrames', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [0, 4];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+    series.addPowerSample(4, 2);
+    series.addPowerSample(5, 3);
+    series.addPowerSample(6, 4);
+    series.addPowerSample(7, 3);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 1 },
+      { x: 1, f1: 2 },
+      { x: 2, f1: 3 },
+      { x: 3, f1: 2 },
+      { x: 0, f2: 2 },
+      { x: 1, f2: 3 },
+      { x: 2, f2: 4 },
+      { x: 3, f2: 3 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_twoFramesDifferentXValues', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    // Power samples taken at 0, 1, 2, and 3s after frame start.
+    const vSyncTimestamps = [0, 4];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+    // Power samples taken at 0.5, 1.5, 2.5, and 3.5s after frame start.
+    series.addPowerSample(4.5, 2);
+    series.addPowerSample(5.5, 3);
+    series.addPowerSample(6.5, 4);
+    series.addPowerSample(7.5, 3);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 1 },
+      { x: 1, f1: 2 },
+      { x: 2, f1: 3 },
+      { x: 3, f1: 2 },
+      { x: 0.5, f2: 2 },
+      { x: 1.5, f2: 3 },
+      { x: 2.5, f2: 4 },
+      { x: 3.5, f2: 3 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_samplesBeforeFirstVSync', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [4];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+    series.addPowerSample(4, 2);
+    series.addPowerSample(5, 3);
+    series.addPowerSample(6, 4);
+    series.addPowerSample(7, 3);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 2 },
+      { x: 1, f1: 3 },
+      { x: 2, f1: 4 },
+      { x: 3, f1: 3 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+
+  test('instantiate_allSamplesBeforeFirstVSync', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [4];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    const expectedChartData = [
+      { x: 0, f1: 2 },
+      { x: 1, f1: 3 },
+      { x: 2, f1: 4 },
+      { x: 3, f1: 3 }
+    ];
+    assert.isUndefined(chart.chart);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_vSyncsAfterLastPowerSample', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [0, 4, 8, 12];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+    series.addPowerSample(4, 2);
+    series.addPowerSample(5, 3);
+    series.addPowerSample(6, 4);
+    series.addPowerSample(7, 3);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 1 },
+      { x: 1, f1: 2 },
+      { x: 2, f1: 3 },
+      { x: 3, f1: 2 },
+      { x: 0, f2: 2 },
+      { x: 1, f2: 3 },
+      { x: 2, f2: 4 },
+      { x: 3, f2: 3 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+
+  test('instantiate_onlyVSyncAfterLastPowerSample', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [8];
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+    series.addPowerSample(4, 2);
+    series.addPowerSample(5, 3);
+    series.addPowerSample(6, 4);
+    series.addPowerSample(7, 3);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    assert.isUndefined(chart.chart);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('instantiate_samplesNotInChronologicalOrder', function() {
+    const series = new tr.model.PowerSeries(new tr.Model().device);
+
+    const vSyncTimestamps = [0, 4];
+    series.addPowerSample(4, 2);
+    series.addPowerSample(5, 3);
+    series.addPowerSample(6, 4);
+    series.addPowerSample(7, 3);
+    series.addPowerSample(0, 1);
+    series.addPowerSample(1, 2);
+    series.addPowerSample(2, 3);
+    series.addPowerSample(3, 2);
+
+    const chart = document.createElement('tr-ui-a-frame-power-usage-chart');
+    chart.setData(new tr.model.EventSet(series.samples), vSyncTimestamps);
+
+    this.addHTMLOutput(chart);
+
+    const expectedChartData = [
+      { x: 0, f1: 1 },
+      { x: 1, f1: 2 },
+      { x: 2, f1: 3 },
+      { x: 3, f1: 2 },
+      { x: 0, f2: 2 },
+      { x: 1, f2: 3 },
+      { x: 2, f2: 4 },
+      { x: 3, f2: 3 }
+    ];
+    assert.sameDeepMembers(chart.chart.data, expectedChartData);
+  });
+});
+</script>

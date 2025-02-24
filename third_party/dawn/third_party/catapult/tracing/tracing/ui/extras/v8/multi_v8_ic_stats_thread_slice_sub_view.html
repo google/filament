@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/analysis/analysis_sub_view.html">
+<link rel="import" href="/tracing/ui/extras/v8/ic_stats_table.html">
+
+<dom-module id='tr-ui-e-multi-v8-ic-stats-thread-slice-sub-view'>
+  <template>
+    <tr-ui-e-v8-ic-stats-table id="table">
+    </tr-ui-e-v8-ic-stats-table>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-e-multi-v8-ic-stats-thread-slice-sub-view',
+  behaviors: [tr.ui.analysis.AnalysisSubView],
+
+  get selection() {
+    return this.$.content.selection;
+  },
+
+  set selection(selection) {
+    this.$.table.selection = selection;
+  }
+});
+
+tr.ui.analysis.AnalysisSubView.register(
+    'tr-ui-e-multi-v8-ic-stats-thread-slice-sub-view',
+    tr.e.v8.V8ICStatsThreadSlice,
+    {
+      multi: true,
+      title: 'V8 IC stats slices'
+    }
+);
+
+</script>

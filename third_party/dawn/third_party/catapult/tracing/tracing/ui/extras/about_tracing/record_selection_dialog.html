@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+<link rel="import" href="/tracing/ui/base/info_bar_group.html">
+<link rel="import" href="/tracing/ui/base/overlay.html">
+<link rel="import" href="/tracing/ui/base/utils.html">
+
+<template id="record-selection-dialog-template">
+  <style>
+  .categories-column-view {
+    display: flex;
+    flex-direction: column;
+    font-family: sans-serif;
+    max-width: 640px;
+    min-height: 0;
+    min-width: 0;
+    opacity: 1;
+    transition: max-height 1s ease, max-width 1s ease, opacity 1s ease;
+    will-change: opacity;
+  }
+
+  .categories-column-view-hidden {
+    max-height: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: none;
+  }
+
+  .categories-selection {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .category-presets {
+    padding: 4px;
+  }
+
+  .category-description {
+    color: #aaa;
+    font-size: small;
+    max-height: 1em;
+    opacity: 1;
+    padding-left: 4px;
+    padding-right: 4px;
+    text-align: right;
+    transition: max-height 1s ease, opacity 1s ease;
+    will-change: opacity;
+  }
+
+  .category-description-hidden {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .default-enabled-categories,
+  .default-disabled-categories {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    width: 300px;
+  }
+
+  .default-enabled-categories > div,
+  .default-disabled-categories > div {
+    padding: 4px;
+  }
+
+  .tracing-modes {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: reverse;
+    padding: 4px;
+    border-bottom: 2px solid #ddd;
+    border-top: 2px solid #ddd;
+  }
+
+  .default-disabled-categories {
+    border-left: 2px solid #ddd;
+  }
+
+  .warning-default-disabled-categories {
+    display: inline-block;
+    font-weight: bold;
+    text-align: center;
+    color: #BD2E2E;
+    width: 2.0ex;
+    height: 2.0ex;
+    border-radius: 2.0ex;
+    border: 1px solid #BD2E2E;
+  }
+
+  .categories {
+    font-size: 80%;
+    padding: 10px;
+    flex: 1 1 auto;
+  }
+
+  .group-selectors {
+    font-size: 80%;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 6px;
+    flex: 0 0 auto;
+  }
+
+  .group-selectors button {
+    padding: 1px;
+  }
+
+  .record-selection-dialog .labeled-option-group {
+    flex: 0 0 auto;
+    flex-direction: column;
+    display: flex;
+  }
+
+  .record-selection-dialog .labeled-option {
+    border-top: 5px solid white;
+    border-bottom: 5px solid white;
+  }
+
+  .record-selection-dialog .edit-categories {
+    padding-left: 6px;
+  }
+
+  .record-selection-dialog .edit-categories:after {
+    padding-left: 15px;
+    font-size: 125%;
+  }
+
+  .record-selection-dialog .labeled-option-group:not(.categories-expanded)
+      .edit-categories:after {
+    content: '\25B8'; /* Right triangle */
+  }
+
+  .record-selection-dialog .labeled-option-group.categories-expanded
+      .edit-categories:after {
+    content: '\25BE'; /* Down triangle */
+  }
+
+  </style>
+
+  <div class="record-selection-dialog">
+    <tr-ui-b-info-bar-group></tr-ui-b-info-bar-group>
+    <div class="category-presets">
+    </div>
+    <div class="category-description"></div>
+    <div class="categories-column-view">
+      <div class="tracing-modes"></div>
+      <div class="categories-selection">
+        <div class="default-enabled-categories">
+          <div>Record&nbsp;Categories</div>
+          <div class="group-selectors">
+            Select
+            <button class="all-btn">All</button>
+            <button class="none-btn">None</button>
+          </div>
+          <div class="categories"></div>
+        </div>
+        <div class="default-disabled-categories">
+          <div>Disabled&nbsp;by&nbsp;Default&nbsp;Categories
+            <a class="warning-default-disabled-categories">!</a>
+          </div>
+          <div class="group-selectors">
+            Select
+            <button class="all-btn">All</button>
+            <button class="none-btn">None</button>
+          </div>
+          <div class="categories"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview RecordSelectionDialog presents the available categories
+ * to be enabled/disabled during tr.c.
+ */
+tr.exportTo('tr.ui.e.about_tracing', function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+  const RecordSelectionDialog = tr.ui.b.define('div');
+
+  const DEFAULT_PRESETS = [
+    {title: 'Web developer',
+      categoryFilter: ['blink', 'cc', 'netlog', 'renderer.scheduler',
+        'sequence_manager', 'toplevel', 'v8']},
+    {title: 'Input latency',
+      categoryFilter: ['benchmark', 'input', 'evdev', 'renderer.scheduler',
+        'sequence_manager', 'toplevel']},
+    {title: 'Rendering',
+      categoryFilter: ['benchmark', 'blink', 'cc', 'gpu', 'toplevel', 'viz']},
+    {title: 'UI Rendering',
+      categoryFilter: ['benchmark', 'cc', 'gpu', 'input', 'toplevel', 'ui',
+        'views', 'viz']},
+    {title: 'Javascript and rendering',
+      categoryFilter: ['blink', 'cc', 'gpu', 'renderer.scheduler',
+        'sequence_manager', 'v8', 'toplevel', 'viz']},
+    {title: 'Frame Viewer',
+      categoryFilter: ['blink', 'cc', 'gpu', 'renderer.scheduler',
+        'sequence_manager', 'v8', 'toplevel',
+        'disabled-by-default-blink.invalidation',
+        'disabled-by-default-cc.debug',
+        'disabled-by-default-cc.debug.picture',
+        'disabled-by-default-cc.debug.display_items']},
+    {title: 'Chrome developer (overall)',
+      categoryFilter: ['benchmark', 'toplevel', 'ipc', 'base', 'ui', 'v8',
+        'renderer', 'blink', 'blink_gc', 'mojom', 'latency', 'latencyInfo',
+        'renderer_host', 'cc', 'memory', 'dwrite', 'fonts', 'browser',
+        'ServiceWorker', 'disabled-by-default-v8.gc',
+        'disabled-by-default-file', 'disabled-by-default-blink_gc',
+        'disabled-by-default-lifecycles',
+        'disabled-by-default-renderer.scheduler',
+        'disabled-by-default-system_stats', 'disabled-by-default-cpu_profiler',
+        'passwords', 'sql', 'disabled-by-default-user_action_samples',
+        'startup', 'disk_cache']},
+    {title: 'Chrome developer (navigation)',
+      categoryFilter: ['benchmark', 'toplevel', 'ipc', 'base', 'browser',
+        'navigation', 'omnibox', 'ui', 'shutdown', 'safe_browsing', 'Java',
+        'EarlyJava', 'loading', 'startup', 'mojom', 'renderer_host',
+        'disabled-by-default-system_stats', 'disabled-by-default-cpu_profiler',
+        'dwrite', 'fonts', 'ServiceWorker', 'passwords',
+        'disabled-by-default-file', 'sql',
+        'disabled-by-default-user_action_samples', 'disk_cache']},
+    {title: 'Manually select settings',
+      categoryFilter: []}
+  ];
+  const RECORDING_MODES = [
+    {'label': 'Record until full',
+      'value': 'record-until-full'},
+    {'label': 'Record continuously',
+      'value': 'record-continuously'},
+    {'label': 'Record as much as possible',
+      'value': 'record-as-much-as-possible'}];
+  const DEFAULT_RECORD_MODE = 'record-until-full';
+  const DEFAULT_CONTINUOUS_TRACING = true;
+  const DEFAULT_SYSTEM_TRACING = true;
+  const DEFAULT_SAMPLING_TRACING = false;
+  const DEFAULT_USE_PROTOBUF = false;
+
+  RecordSelectionDialog.prototype = {
+    __proto__: tr.ui.b.Overlay.prototype,
+
+    decorate() {
+      tr.ui.b.Overlay.prototype.decorate.call(this);
+      this.title = 'Record a new trace...';
+
+      Polymer.dom(this).classList.add('record-dialog-overlay');
+
+      const node =
+          tr.ui.b.instantiateTemplate('#record-selection-dialog-template',
+              THIS_DOC);
+      Polymer.dom(this).appendChild(node);
+
+      this.recordButtonEl_ = document.createElement('button');
+      Polymer.dom(this.recordButtonEl_).textContent = 'Record';
+      this.recordButtonEl_.addEventListener(
+          'click',
+          this.onRecordButtonClicked_.bind(this));
+      this.recordButtonEl_.style.fontSize = '110%';
+      Polymer.dom(this.buttons).appendChild(this.recordButtonEl_);
+
+      this.categoriesView_ = Polymer.dom(this).querySelector(
+          '.categories-column-view');
+      this.presetsEl_ = Polymer.dom(this).querySelector('.category-presets');
+      Polymer.dom(this.presetsEl_).appendChild(tr.ui.b.createOptionGroup(
+          this, 'currentlyChosenPreset',
+          'about_tracing.record_selection_dialog_preset',
+          DEFAULT_PRESETS[0].categoryFilter,
+          DEFAULT_PRESETS.map(function(p) {
+            return { label: p.title, value: p.categoryFilter };
+          })));
+
+      this.tracingRecordModeSltr_ = tr.ui.b.createSelector(
+          this, 'tracingRecordMode',
+          'recordSelectionDialog.tracingRecordMode',
+          DEFAULT_RECORD_MODE, RECORDING_MODES);
+
+      this.systemTracingBn_ = tr.ui.b.createCheckBox(
+          undefined, undefined,
+          'recordSelectionDialog.useSystemTracing', DEFAULT_SYSTEM_TRACING,
+          'System tracing');
+      this.samplingTracingBn_ = tr.ui.b.createCheckBox(
+          undefined, undefined,
+          'recordSelectionDialog.useSampling', DEFAULT_SAMPLING_TRACING,
+          'State sampling');
+      this.useProtobufBn_ = tr.ui.b.createCheckBox(
+          undefined, undefined,
+          'recordSelectionDialog.useProtobuf', DEFAULT_USE_PROTOBUF,
+          'Use protobuf');
+      this.tracingModesContainerEl_ = Polymer.dom(this).querySelector(
+          '.tracing-modes');
+      Polymer.dom(this.tracingModesContainerEl_).appendChild(
+          this.tracingRecordModeSltr_);
+      Polymer.dom(this.tracingModesContainerEl_).appendChild(
+          this.systemTracingBn_);
+      Polymer.dom(this.tracingModesContainerEl_).appendChild(
+          this.samplingTracingBn_);
+      Polymer.dom(this.tracingModesContainerEl_).appendChild(
+          this.useProtobufBn_);
+
+      this.enabledCategoriesContainerEl_ =
+          Polymer.dom(this).querySelector(
+              '.default-enabled-categories .categories');
+
+      this.disabledCategoriesContainerEl_ =
+          Polymer.dom(this).querySelector(
+              '.default-disabled-categories .categories');
+
+      this.createGroupSelectButtons_(
+          Polymer.dom(this).querySelector('.default-enabled-categories'));
+      this.createGroupSelectButtons_(
+          Polymer.dom(this).querySelector('.default-disabled-categories'));
+      this.createDefaultDisabledWarningDialog_(
+          Polymer.dom(this).querySelector(
+              '.warning-default-disabled-categories'));
+      this.editCategoriesOpened_ = false;
+
+      // TODO(chrishenry): When used with tr.ui.b.Overlay (such as in
+      // chrome://tracing, this does not yet look quite right due to
+      // the 10px overlay content padding (but it's good enough).
+      this.infoBarGroup_ = Polymer.dom(this).querySelector(
+          'tr-ui-b-info-bar-group');
+
+      this.addEventListener('visible-change', this.onVisibleChange_.bind(this));
+    },
+
+    set supportsSystemTracing(s) {
+      if (s) {
+        this.systemTracingBn_.style.display = undefined;
+      } else {
+        this.systemTracingBn_.style.display = 'none';
+        this.useSystemTracing = false;
+      }
+    },
+
+    get tracingRecordMode() {
+      return this.tracingRecordModeSltr_.selectedValue;
+    },
+    set tracingRecordMode(value) {
+      this.tracingRecordMode_ = value;
+    },
+
+    get useSystemTracing() {
+      return this.systemTracingBn_.checked;
+    },
+    set useSystemTracing(value) {
+      this.systemTracingBn_.checked = !!value;
+    },
+
+    get useSampling() {
+      return this.samplingTracingBn_.checked;
+    },
+    set useSampling(value) {
+      this.samplingTracingBn_.checked = !!value;
+    },
+
+    get useProtobuf() {
+      return this.useProtobufBn_.checked;
+    },
+    set useProtobuf(value) {
+      this.useProtobufBn_.checked = !!value;
+    },
+
+    set categories(c) {
+      if (!(c instanceof Array)) {
+        throw new Error('categories must be an array');
+      }
+      this.categories_ = c;
+
+      for (let i = 0; i < this.categories_.length; i++) {
+        const split = this.categories_[i].split(',');
+        this.categories_[i] = split.shift();
+        if (split.length > 0) {
+          this.categories_ = this.categories_.concat(split);
+        }
+      }
+    },
+
+    set settings_key(k) {
+      this.settings_key_ = k;
+    },
+
+    set settings(s) {
+      throw new Error('Dont use this!');
+    },
+
+    usingPreset_() {
+      return this.currentlyChosenPreset_.length > 0;
+    },
+
+    get currentlyChosenPreset() {
+      return this.currentlyChosenPreset_;
+    },
+
+    set currentlyChosenPreset(preset) {
+      if (!(preset instanceof Array)) {
+        throw new Error('RecordSelectionDialog.currentlyChosenPreset:' +
+            ' preset must be an array.');
+      }
+      this.currentlyChosenPreset_ = preset;
+
+      if (this.usingPreset_()) {
+        this.changeEditCategoriesState_(false);
+      } else {
+        this.updateCategoryColumnView_(true);
+        this.changeEditCategoriesState_(true);
+      }
+      this.updateManualSelectionView_();
+      this.updatePresetDescription_();
+    },
+
+    updateManualSelectionView_() {
+      const classList = Polymer.dom(this.categoriesView_).classList;
+      if (!this.usingPreset_()) {
+        classList.remove('categories-column-view-hidden');
+      } else {
+        if (this.editCategoriesOpened_) {
+          classList.remove('categories-column-view-hidden');
+        } else {
+          classList.add('categories-column-view-hidden');
+        }
+      }
+    },
+
+    updateCategoryColumnView_(shouldReadFromSettings) {
+      const categorySet = Polymer.dom(this).querySelectorAll('.categories');
+      for (let i = 0; i < categorySet.length; ++i) {
+        const categoryGroup = categorySet[i].children;
+        for (let j = 0; j < categoryGroup.length; ++j) {
+          const categoryEl = categoryGroup[j].children[0];
+          const category = categoryEl.value;
+          const enabledByDefault = !category.startsWith('disabled-by-default-');
+          categoryEl.checked = shouldReadFromSettings ?
+            tr.b.Settings.get(category, enabledByDefault, this.settings_key_) :
+            false;
+        }
+      }
+    },
+
+    onClickEditCategories() {
+      if (!this.usingPreset_()) return;
+
+      if (!this.editCategoriesOpened_) {
+        this.updateCategoryColumnView_(false);
+        for (let i = 0; i < this.currentlyChosenPreset_.length; ++i) {
+          const categoryEl = this.querySelector('#' +
+              this.currentlyChosenPreset_[i]);
+          if (!categoryEl) continue;
+          categoryEl.checked = true;
+        }
+      }
+
+      this.changeEditCategoriesState_(!this.editCategoriesOpened_);
+      this.updateManualSelectionView_();
+      this.recordButtonEl_.focus();
+    },
+
+    changeEditCategoriesState_(editCategoriesState) {
+      const presetOptionsGroup = Polymer.dom(this).querySelector(
+          '.labeled-option-group');
+      if (!presetOptionsGroup) return;
+
+      this.editCategoriesOpened_ = editCategoriesState;
+      if (this.editCategoriesOpened_) {
+        Polymer.dom(presetOptionsGroup).classList.add('categories-expanded');
+      } else {
+        Polymer.dom(presetOptionsGroup).classList.remove(
+            'categories-expanded');
+      }
+    },
+
+    updatePresetDescription_() {
+      const description = Polymer.dom(this).querySelector(
+          '.category-description');
+      if (this.usingPreset_()) {
+        description.innerText = this.currentlyChosenPreset_;
+        Polymer.dom(description).classList.remove(
+            'category-description-hidden');
+      } else {
+        description.innerText = '';
+        if (!Polymer.dom(description).classList.contains(
+            'category-description-hidden')) {
+          Polymer.dom(description).classList.add('category-description-hidden');
+        }
+      }
+    },
+
+    includedAndExcludedCategories() {
+      let includedCategories = [];
+      let excludedCategories = [];
+      if (this.usingPreset_()) {
+        const allCategories = this.allCategories_();
+        for (const category in allCategories) {
+          const disabledByDefault =
+              category.indexOf('disabled-by-default-') === 0;
+          if (this.currentlyChosenPreset_.indexOf(category) >= 0) {
+            if (disabledByDefault) {
+              includedCategories.push(category);
+            }
+          } else {
+            if (!disabledByDefault) {
+              excludedCategories.push(category);
+            }
+          }
+        }
+        return {
+          included: includedCategories,
+          excluded: excludedCategories
+        };
+      }
+
+      excludedCategories = this.unselectedCategories_();
+      includedCategories = this.enabledDisabledByDefaultCategories_();
+      return {
+        included: includedCategories,
+        excluded: excludedCategories
+      };
+    },
+
+    clickRecordButton() {
+      this.recordButtonEl_.click();
+    },
+
+    onRecordButtonClicked_() {
+      this.visible = false;
+      tr.b.dispatchSimpleEvent(this, 'recordclick');
+      return false;
+    },
+
+    collectInputs_(inputs, isChecked) {
+      const inputsLength = inputs.length;
+      const categories = [];
+      for (let i = 0; i < inputsLength; ++i) {
+        const input = inputs[i];
+        if (input.checked === isChecked) {
+          categories.push(input.value);
+        }
+      }
+      return categories;
+    },
+
+    unselectedCategories_() {
+      const inputs =
+          Polymer.dom(this.enabledCategoriesContainerEl_).querySelectorAll(
+              'input');
+      return this.collectInputs_(inputs, false);
+    },
+
+    enabledDisabledByDefaultCategories_() {
+      const inputs =
+          Polymer.dom(this.disabledCategoriesContainerEl_).querySelectorAll(
+              'input');
+      return this.collectInputs_(inputs, true);
+    },
+
+    onVisibleChange_() {
+      if (this.visible) {
+        this.updateForm_();
+      }
+    },
+
+    buildInputs_(inputs, checkedDefault, parent) {
+      const inputsLength = inputs.length;
+      for (let i = 0; i < inputsLength; i++) {
+        const category = inputs[i];
+
+        const inputEl = document.createElement('input');
+        inputEl.type = 'checkbox';
+        inputEl.id = category;
+        inputEl.value = category;
+
+        inputEl.checked = tr.b.Settings.get(
+            category, checkedDefault, this.settings_key_);
+        inputEl.onclick = this.updateSetting_.bind(this);
+
+        const labelEl = document.createElement('label');
+        Polymer.dom(labelEl).textContent =
+            category.replace('disabled-by-default-', '');
+        Polymer.dom(labelEl).setAttribute('for', category);
+
+        const divEl = document.createElement('div');
+        Polymer.dom(divEl).appendChild(inputEl);
+        Polymer.dom(divEl).appendChild(labelEl);
+
+        Polymer.dom(parent).appendChild(divEl);
+      }
+    },
+
+    allCategories_() {
+      // Dedup the categories. We may have things in settings that are also
+      // returned when we query the category list.
+      const categorySet = {};
+      const allCategories =
+          this.categories_.concat(tr.b.Settings.keys(this.settings_key_));
+      const allCategoriesLength = allCategories.length;
+      for (let i = 0; i < allCategoriesLength; ++i) {
+        categorySet[allCategories[i]] = true;
+      }
+      return categorySet;
+    },
+
+    updateForm_() {
+      function ignoreCaseCompare(a, b) {
+        return a.toLowerCase().localeCompare(b.toLowerCase());
+      }
+
+      // Clear old categories
+      Polymer.dom(this.enabledCategoriesContainerEl_).innerHTML = '';
+      Polymer.dom(this.disabledCategoriesContainerEl_).innerHTML = '';
+
+      this.recordButtonEl_.focus();
+
+      const allCategories = this.allCategories_();
+      let categories = [];
+      let disabledCategories = [];
+      for (const category in allCategories) {
+        if (category.indexOf('disabled-by-default-') === 0) {
+          disabledCategories.push(category);
+        } else {
+          categories.push(category);
+        }
+      }
+      disabledCategories = disabledCategories.sort(ignoreCaseCompare);
+      categories = categories.sort(ignoreCaseCompare);
+
+      if (this.categories_.length === 0) {
+        this.infoBarGroup_.addMessage(
+            'No categories found; recording will use default categories.');
+      }
+
+      this.buildInputs_(categories, true, this.enabledCategoriesContainerEl_);
+
+      if (disabledCategories.length > 0) {
+        this.disabledCategoriesContainerEl_.hidden = false;
+        this.buildInputs_(disabledCategories, false,
+            this.disabledCategoriesContainerEl_);
+      }
+    },
+
+    updateSetting_(e) {
+      const checkbox = e.target;
+      tr.b.Settings.set(checkbox.value, checkbox.checked, this.settings_key_);
+
+      // Change the current record mode to 'Manually select settings' from
+      // preset mode if and only if currently user is in preset record mode
+      // and user selects/deselects any category in 'Edit Categories' mode.
+      if (this.usingPreset_()) {
+        this.currentlyChosenPreset_ = []; /* manually select settings */
+        const categoryEl = this.querySelector(
+            '#category-preset-Manually-select-settings');
+        categoryEl.checked = true;
+        const description = Polymer.dom(this).querySelector(
+            '.category-description');
+        description.innerText = '';
+        Polymer.dom(description).classList.add('category-description-hidden');
+      }
+    },
+
+    createGroupSelectButtons_(parent) {
+      const flipInputs = function(dir) {
+        const inputs = Polymer.dom(parent).querySelectorAll('input');
+        for (let i = 0; i < inputs.length; i++) {
+          if (inputs[i].checked === dir) continue;
+          // click() is used so the settings will be correclty stored. Setting
+          // checked does not trigger the onclick (or onchange) callback.
+          inputs[i].click();
+        }
+      };
+
+      const allBtn = Polymer.dom(parent).querySelector('.all-btn');
+      allBtn.onclick = function(evt) {
+        flipInputs(true);
+        evt.preventDefault();
+      };
+
+      const noneBtn = Polymer.dom(parent).querySelector('.none-btn');
+      noneBtn.onclick = function(evt) {
+        flipInputs(false);
+        evt.preventDefault();
+      };
+    },
+
+    setWarningDialogOverlayText_(messages) {
+      const contentDiv = document.createElement('div');
+
+      for (let i = 0; i < messages.length; ++i) {
+        const messageDiv = document.createElement('div');
+        Polymer.dom(messageDiv).textContent = messages[i];
+        Polymer.dom(contentDiv).appendChild(messageDiv);
+      }
+      Polymer.dom(this.warningOverlay_).textContent = '';
+      Polymer.dom(this.warningOverlay_).appendChild(contentDiv);
+    },
+
+    createDefaultDisabledWarningDialog_(warningLink) {
+      function onClickHandler(evt) {
+        this.warningOverlay_ = tr.ui.b.Overlay();
+        this.warningOverlay_.parentEl_ = this;
+        this.warningOverlay_.title = 'Warning...';
+        this.warningOverlay_.userCanClose = true;
+        this.warningOverlay_.visible = true;
+
+        this.setWarningDialogOverlayText_([
+          'Enabling the default disabled categories may have',
+          'performance and memory impact while tr.c.'
+        ]);
+
+        evt.preventDefault();
+      }
+      warningLink.onclick = onClickHandler.bind(this);
+    }
+  };
+
+  return {
+    RecordSelectionDialog,
+  };
+});
+</script>

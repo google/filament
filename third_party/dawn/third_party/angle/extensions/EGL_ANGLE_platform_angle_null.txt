@@ -1,0 +1,73 @@
+Name
+
+    ANGLE_platform_angle_null
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_null
+
+Contributors
+
+    Geoff Lang, Google
+
+Contacts
+
+    Geoff Lang, Google (geofflang 'at' google 'dot' com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, September 23, 2016
+
+Number
+
+    EGL Extension #??
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of null display types which perform state
+    tracking and validation but do not render any content.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE               0x33AE
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that performs no rendering and has no platform
+    dependencies, the value of EGL_PLATFORM_ANGLE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2016-09-23 (Geoff Lang)
+      - Initial draft

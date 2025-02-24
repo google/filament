@@ -1,0 +1,72 @@
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+syntax = "proto3";
+
+package dashboard;
+import "dashboard/protobuf/sheriff.proto";
+
+// A MatchRequest proto defines the message we expect to get for matching
+// subscriptions to the sheriff-config service.
+message MatchRequest {
+  // Full path identifier for the test.
+  string path = 1;
+
+  // A set of stats to match against.
+  repeated Pattern.StatType stats = 2;
+
+  // A TestMetadata message represents information about a specific timeseries.
+  // It is called a `TestMetadata` to reflect the model being referred to in the
+  // dashboard code, which is an identifier for a timeseries. Currently, we do
+  // not match against these constituent parts of the timeseries metadata, but
+  // in the future we may be able to do so.
+  message TestMetadata {
+    string units = 1;
+    string master = 2;
+    string bot = 3;
+    string benchmark = 4;
+    repeated string metric_parts = 5;
+  }
+
+  TestMetadata metadata = 3;
+}
+
+// A MatchResponse proto defines the message we respond to matching
+// subscriptions.
+message MatchResponse {
+  // We wrap each Subscription that matches with an identifier, which allows us
+  // to look up the specific configuration version that defines the particular
+  // Subscription. Because in the sheriff-config service we're able to refer
+  // to specific configuration sets with the combination of a config_set and the
+  // revision, clients can look up the particular state of the configuration
+  // from luci-config provided those two pieces of information as well.
+  message SubscriptionMetadata {
+    string config_set = 1;
+    string revision = 2;
+    Subscription subscription = 3;
+  }
+  repeated SubscriptionMetadata subscriptions = 1;
+}
+
+// A ListRequest proto defines the message we expect to get for listing
+// subscriptions to the sheriff-config service.
+message ListRequest {
+  // Identity used for checking subscriptions' visibility
+  string identity_email = 1;
+}
+
+// A ListResponse proto defines the message we respond to listing subscriptions.
+message ListResponse {
+  // We wrap each Subscription that matches with an identifier, which allows us
+  // to look up the specific configuration version that defines the particular
+  // Subscription. Because in the sheriff-config service we're able to refer
+  // to specific configuration sets with the combination of a config_set and the
+  // revision, clients can look up the particular state of the configuration
+  // from luci-config provided those two pieces of information as well.
+  message SubscriptionMetadata {
+    string config_set = 1;
+    string revision = 2;
+    Subscription subscription = 3;
+  }
+  repeated SubscriptionMetadata subscriptions = 1;
+}

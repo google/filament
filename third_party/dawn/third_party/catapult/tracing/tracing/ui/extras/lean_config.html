@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+TODO(charliea): Make all UI files depend on tracing/ui/base/base.html in the same way that
+all non-UI files depend on tracing/base/base.html. Enforce this dependency with a presubmit.
+-->
+<link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+
+<link rel="import" href="/tracing/extras/lean_config.html" data-suppress-import-order>
+
+<!--
+The lean config is just enough to import uncompressed, trace-event-formatted
+json blobs.
+-->
+<link rel="import" href="/tracing/ui/side_panel/file_size_stats_side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/metrics_side_panel.html">

@@ -1,0 +1,194 @@
+XXX - Not complete yet!!!
+Name
+
+    SGIX_fog_layers
+
+Name Strings
+
+    GL_SGIX_fog_layers
+
+Version
+
+    $Date: 1999/03/30 23:13:43 $ $Revision: 1.14 $
+
+Number
+
+    ??
+
+Dependencies
+
+    OpenGL 1.2 is required
+
+Overview
+
+    This extension adds support for layered fog. The layers are
+    specified using a density profile of the fog with respect to the
+    elevation using "control" points to represent (elevation, density)
+    tuples. The density is assumed to vary linearly between successive
+    control point elevations. The maximum number of such points is
+    implementation dependent.
+
+
+New Procedures and Functions
+
+    void FogLayersSGIX(sizei n, const float *points);
+
+    void GetFogLayersSGIX(float *points);
+
+Issues
+
+    * Should the API present the abstraction of layers to the user ? Or
+      is this density profile specification good enough ? The problem
+      with abstracting layers is to guarantee consistency of densities
+      and elevations when each layer can be manipulated independently of
+      others!
+
+New Tokens
+
+    Accepted by the <pname> parameter of Fogf, Fogi, Fogiv, Fogfv,
+    GetBooleanv, GetDoublev, GetIntegerv, and GetFloatv:
+
+	FOG_TYPE_SGIX			0x8323
+
+    Accepted by the <param> parameter of Fogf and Fogi, and by the
+    <params> parameter of Fogiv and Fogfv, when their <pname>
+    parameter is FOG_TYPE_SGIX:
+
+	UNIFORM_SGIX			0x8324
+	LAYERED_SGIX			0x8325
+
+    Accepted by the <pname> parameter of Fogfv, Fogiv, GetBooleanv,
+    GetDoublev, GetIntegerv, and GetFloatv:
+
+	FOG_GROUND_PLANE_SGIX		0x8326
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+	FOG_LAYERS_POINTS_SGIX		0x8327
+	MAX_FOG_LAYERS_POINTS_SGIX	0x8328
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    3.10 Fog
+
+    In addition to uniform fog density, fog layers can be specified.
+    The implementation  technique that is used to interpolate the
+    density between successive fog layers is implementation dependent.
+    The density profile of the fog with respect to elevation is
+    specified by calling FogLayersSGIX with <points>
+    pointing at an array of pairs of floating point values, and <n> set
+    to the number of value pairs in <points>.  The first value of each
+    value pair in <points> specifies the elevation (should not be
+    negative), and the second value specifies the fog density at that
+    elevation. The fog density values are clamped to the range [0.0,
+    1.0]. The elevations in the specification of the density profile
+    must  be monotonically increasing. At least one point must be
+    specified. The first point in the distribution must have an 
+    elevation of zero. The maximum number of points is implementation
+    dependent and may be enquired using Get commands. The initial
+    state of the fog layer specification is defined by the single 
+    point (0.0, 0.0). The fog density above the maximum user-specified
+    elevation is the density value in the last point in the profile.
+    Layered fog computations are defined only for positive elevations;
+    negative elevations result in switching back to uniform range fog model.
+
+    The elevation of any eye-space point A = (x, y, z, w) is defined
+    as the distance from the ground plane specified using glFog and
+    FOG_GROUND_PLANE_SGIX. Let the ground plane be defined by a
+    four-component plane equation in object-coordinates
+
+	G = (a, b, c, d).
+
+	where a, b, c and d are specified in order in the <params>
+    argument for Fogfv or Fogiv.
+
+    The ground plane is transformed into eye-coordinate space usi
+    the inverse transpose of the model-view matrix. Then the elevation 
+    of point A (in eye-coordinate space) is the dot product A . G'
+    (G' - ground plane in eye-coordinate space):
+
+	elevation = a*x + b*y + c*z + d*w
+
+    Since the eye-point is defined to be at (0,0,0,1) in camera-space,
+    the elevation of the eye-point is the same as 'd' (the fourth
+    component of the ground plane).
+
+
+		    ___________
+		    |         |	 S  |\
+	elevation --| Layered |-----| \	      _____
+		    |   Fog   |	    |  \     | 	   |	   To fog equation
+		    |_________|	    |  |_____|  *  |-------
+	    	 		    |  |   __|     |	   (r*S)
+	    	 		    |  /  |  |_____|
+    		 uniform density ---| /	  |
+		        	    |/	  |
+		        		  |
+		   range   _______________|
+
+
+
+    The effective density 'S' from the eye-point is computed for every
+    fragment using the fog layer specification (XXX: how?). This
+    density is used in the fog equation to compute the fog blending
+    factor 'f' depending on the selected FOG_MODE.
+
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    The max allowed number of points in the fog layer specification
+    is queried by calling GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev with <pname> set to MAX_FOG_LAYERS_POINTS_SGIX. The
+    number of points in the current fog layers specification is queried
+    by calling GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev with
+    <pname> set to FOG_LAYERS_POINTS_SGIX.  All the points of the
+    current fog layer specification are queried by calling
+    GetFogLayersSGIX. Points are returned in the same format as they
+    are specified in the FogLayersSGIX function.
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if FogLayersSGIX parameter <n> is
+    less than 1.
+
+    INVALID_VALUE is generated if any elevation is less than zero.
+
+    INVALID_OPERATION is generated if FogLayersSGIX is executed
+    between execution of Begin and the corresponding execution to
+    End. 
+
+    INVALID_OPERATION is generated if GetFogLayersSGIX is executed
+    between execution of Begin and the corresponding execution to
+    End. 
+
+New State
+
+    Get Value			Get Command		Type		Initial Value	Attribute
+    ---------			-----------		----		-------------	---------
+    MAX_FOG_LAYERS_POINTS_SGIX	GetIntegerv		Z+		XXX
+    FOG_LAYERS_POINTS_SGIX	GetIntegerv		Z+		1		fog
+    FOG_GROUND_PLANE_SGIX	GetFloatv		V		(0,0,0,0)	fog
+    FOG_TYPE_SGIX		GetIntegerv		Z+		UNIFORM_SGIX    fog
+
+
+New Implementation Dependent State
+
+    None

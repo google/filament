@@ -1,0 +1,69 @@
+service: pinpoint
+
+runtime: python38
+entrypoint: gunicorn -b:$PORT dashboard.pinpoint.main:APP --worker-class gthread --threads 10 --timeout 300
+app_engine_apis: true
+# 2048MB Memory, 2.4GHz CPU limit, support auto scaling.
+instance_class: F4_1G
+
+automatic_scaling:
+  min_instances: 10
+
+builtins:
+- deferred: on
+
+handlers:
+
+- url: /api/migrate
+  script: auto
+  secure: always
+
+- url: /api/generate-results2/.*
+  script: auto
+  login: admin
+  secure: always
+
+- url: /api/run/.*
+  script: auto
+  login: admin
+  secure: always
+
+- url: /api/.*
+  script: auto
+  secure: always
+
+- url: /cron/.*
+  script: auto
+  secure: always
+
+- url: /dashboard/static/
+  static_dir: dashboard/static/
+  secure: always
+
+- url: /static
+  static_dir: dashboard/pinpoint/static
+  secure: always
+
+- url: /vulcanized_histograms_viewer/
+  static_dir: vulcanized_histograms_viewer/
+  secure: always
+
+# Require auth for receiving push messages from Cloud Pub/Sub.
+- url: /_ah/push-handlers/.*
+  secure: always
+  script: auto
+  login: admin
+
+- url: /dashboard/elements/(.*\.html)$
+  static_files: bundled/dashboard/elements/\1
+  upload: bundled/dashboard/elements/.*
+
+- url: /(.*\.html)$
+  static_files: bundled/\1
+  upload: bundled/.*
+  secure: always
+
+- url: /.*
+  static_files: bundled/dashboard/pinpoint/index/index.html
+  upload: bundled/dashboard/pinpoint/index/index.html
+  secure: always

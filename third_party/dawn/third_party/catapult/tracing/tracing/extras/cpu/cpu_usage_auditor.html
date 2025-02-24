@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/math.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/model/resource_usage_series.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.audits', function() {
+  /**
+   * Auditor that analyzes the model and, if possible, adds data to it
+   * showing CPU usage.
+   */
+  class CpuUsageAuditor extends tr.c.Auditor {
+    constructor(model) {
+      super();
+      this.model_ = model;
+    }
+
+    runAnnotate() {
+      this.model_.device.cpuUsageSeries = this.computeCpuUsageSeries_(
+          this.model_.bounds.min, this.model_.bounds.max,
+          this.computeCpuUsage_());
+    }
+
+    /**
+     * Compute the bin size given the start and end times of the trace.
+     */
+    computeBinSize_(start, end) {
+      const MIN_BIN_SIZE_MS = 1.0;
+      const MAX_NUM_BINS = 100000;
+      const interval = end - start;
+      let binSize = MIN_BIN_SIZE_MS;
+      while (binSize * MAX_NUM_BINS < interval) binSize *= 2;
+      return binSize;
+    }
+
+    /**
+     * Returns a CPU usage series from a given set of CPU usage slices.
+     * Slices are in the format created by getCpuUsage below.
+     */
+    computeCpuUsageSeries_(start, end, usageRecords) {
+      const series = new tr.model.ResourceUsageSeries();
+      if (start === undefined || usageRecords.length === 0) return series;
+      const binSize = this.computeBinSize_(start, end);
+      const numBins = Math.ceil((end - start) / binSize);
+      const arr = new Array(numBins).fill(0);
+      for (const record of usageRecords) {
+        const firstIndex = Math.ceil((record.start - start) / binSize);
+        const lastIndex = Math.floor((record.end - start) / binSize);
+        for (let i = firstIndex; i <= lastIndex; i++) arr[i] += record.usage;
+      }
+      for (let i = 0; i < numBins; i++) {
+        series.addUsageSample(start + (i * binSize), arr[i]);
+      }
+      return series;
+    }
+
+    /**
+     * Returns a list of CPU usage slices based on tracing data. Thus, this
+     * effectively counts only processes that are traced (will not count
+     * e.g. background processes)
+     */
+    computeCpuUsage_() {
+      const model = this.model_;
+      const result = [];
+      for (const pid in model.processes) {
+        for (const e of model.processes[pid].getDescendantEvents()) {
+          if (!(e instanceof tr.model.ThreadSlice) || e.duration === 0 ||
+              e.cpuDuration === undefined) {
+            continue;
+          }
+
+          // This slice contains the most fine-grained CPU usage information
+          // for the area of the trace that it covers but that is not covered
+          // by its subslices.
+          // The math goes this way:
+          //   s.selfTime    : duration of slice s not spent in its subslices.
+          //   s.cpuSelfTime : cpuDuration over slice s but not its subslices.
+          //
+          // We're looking for
+          //   s.cpuSelfTimeRatio: average CPU usage over the area covered by
+          //                       s but not any of its subslices.
+          //                       = s.cpuSelfTime / s.selfTime
+          if (e.selfTime === 0 || e.selfTime === undefined ||
+              e.cpuSelfTime === undefined) {
+            continue;
+          }
+          const usage = tr.b.math.clamp(e.cpuSelfTime / e.selfTime, 0, 1);
+
+          // Go through the area covered by this slice but not its subslices
+          // and add the cpuSelfTimeRatio contribution over this area.
+          let lastTime = e.start;
+          for (const subslice of e.subSlices) {
+            result.push({usage, start: lastTime, end: subslice.start});
+            lastTime = subslice.end;
+          }
+          result.push({usage, start: lastTime, end: e.end});
+        }
+      }
+      return result;
+    }
+  }
+
+  tr.c.Auditor.register(CpuUsageAuditor);
+
+  return {
+    CpuUsageAuditor
+  };
+});
+</script>

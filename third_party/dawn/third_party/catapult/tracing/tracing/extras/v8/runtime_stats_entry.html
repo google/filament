@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/v8/v8_thread_slice.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.v8', function() {
+  class RuntimeStatsEntry {
+    /**
+     * @param time is in microseconds.
+     */
+    constructor(name, count, time) {
+      this.name_ = name;
+      this.count_ = count;
+      this.time_ = time;
+    }
+
+    get name() {
+      return this.name_;
+    }
+
+    get count() {
+      return this.count_;
+    }
+
+    get time() {
+      return this.time_;
+    }
+
+    addSample(count, time) {
+      this.count_ += count;
+      this.time_ += time;
+    }
+  }
+
+  class RuntimeStatsGroup extends RuntimeStatsEntry {
+    constructor(name, matchRegex) {
+      super(name, 0, 0);
+      this.regex_ = matchRegex;
+      this.entries_ = new Map();
+    }
+
+    match(name) {
+      return this.regex_ && name.match(this.regex_);
+    }
+
+    add(entry) {
+      const value = this.entries_.get(entry.name);
+      if (value !== undefined) {
+        value.addSample(entry.count, entry.time);
+      } else {
+        this.entries_.set(entry.name, entry);
+      }
+      this.count_ += entry.count;
+      this.time_ += entry.time;
+    }
+
+    get values() {
+      return Array.from(this.entries_.values());
+    }
+  }
+
+  class RuntimeStatsGroupCollection {
+    constructor() {
+      this.blink_cpp_group_ =
+        new RuntimeStatsGroup('Blink C++', /.*Callback.*/);
+      this.api_group_ = new RuntimeStatsGroup('API', /.*API.*/);
+
+      this.groups_ = [
+        new RuntimeStatsGroup('Total'),
+        new RuntimeStatsGroup('IC', /.*IC_.*/),
+        new RuntimeStatsGroup('Optimize-Background',
+            /(.*OptimizeBackground.*)|RecompileConcurrent.*/),
+        new RuntimeStatsGroup('Optimize',
+            /StackGuard|.*Optimize.*|.*Deoptimize.*|Recompile.*/),
+        new RuntimeStatsGroup('Compile-Background',
+            /(.*CompileBackground.*)/),
+        new RuntimeStatsGroup('Compile', /(^Compile.*)|(.*_Compile.*)/),
+        new RuntimeStatsGroup('Parse-Background', /.*ParseBackground.*/),
+        new RuntimeStatsGroup('Parse', /.*Parse.*/),
+        this.blink_cpp_group_,
+        this.api_group_,
+        new RuntimeStatsGroup('GC-Background-Marking',
+            /.*GC.MC.BACKGROUND.*MARKING.*/),
+        new RuntimeStatsGroup('GC-Background-Sweeping',
+            /.*GC.MC.BACKGROUND.*SWEEPING.*/),
+        new RuntimeStatsGroup('GC-Background-Scavenger',
+            /.*GC.SCAVENGER.BACKGROUND.*/),
+        new RuntimeStatsGroup('GC-Background-MinorMC',
+            /.*GC.MINOR_MC.BACKGROUND.*/),
+        new RuntimeStatsGroup('GC-Background-MajorMC',
+            /.*GC.MC.BACKGROUND.*/),
+        new RuntimeStatsGroup('GC-Background-Other', /.*GC.*BACKGROUND.*/),
+        new RuntimeStatsGroup('GC', /GC|AllocateInTargetSpace/),
+        new RuntimeStatsGroup('JavaScript', /JS_Execution/),
+        new RuntimeStatsGroup('V8 C++', /.*/)
+      ];
+
+      this.blink_group_collection_ = null;
+    }
+
+    addSlices(slices) {
+      const blinkEntries = [];
+      for (const slice of slices) {
+        if (!(slice instanceof tr.e.v8.V8ThreadSlice)) return;
+        let runtimeCallStats;
+        try {
+          runtimeCallStats = JSON.parse(slice.runtimeCallStats);
+        } catch (e) {
+          runtimeCallStats = slice.runtimeCallStats;
+        }
+        if (runtimeCallStats === undefined) continue;
+        for (const [name, stat] of Object.entries(runtimeCallStats)) {
+          // Blink RCS stats go to a separate table
+          if (name.match(/Blink_.*/)) {
+            // This counter is used to avoid counting time spent in V8 as time
+            // spent doing Blink C++, and interferes with total and percentage
+            // calculations, so we skip this counter.
+            if (name === 'Blink_V8') continue;
+            const entry = new RuntimeStatsEntry(name, stat[0], stat[1]);
+            blinkEntries.push(entry);
+            continue;
+          }
+
+          // Skip the 'Total' group
+          for (let i = 1; i < this.groups_.length; ++i) {
+            if (this.groups_[i].match(name)) {
+              if (stat.length !== 2) break;
+              const entry = new RuntimeStatsEntry(name, stat[0], stat[1]);
+              this.groups_[0].addSample(stat[0], stat[1]);
+              this.groups_[i].add(entry);
+              break;
+            }
+          }
+        }
+      }
+
+      this.blink_group_collection_ =
+        new BlinkRuntimeStatsGroupCollection(blinkEntries);
+    }
+
+    get totalTime() {
+      return this.groups_[0].time;
+    }
+
+    get totalCount() {
+      return this.groups_[0].count;
+    }
+
+    get runtimeGroups() {
+      return this.groups_;
+    }
+
+    get blinkRCSGroupCollection() {
+      return this.blink_group_collection_;
+    }
+
+    get blinkCppTotalTime() {
+      // Include API time because Blink RCS times also include V8 API times
+      return this.blink_cpp_group_.time + this.api_group_.time;
+    }
+  }
+
+  class BlinkRuntimeStatsGroupCollection {
+    constructor(entries) {
+      this.groups_ = [
+        new RuntimeStatsGroup('Blink_Bindings', /^Blink_Bindings_(.*)/),
+        new RuntimeStatsGroup('Blink_GC', /^Blink_GC_(.*)/),
+        new RuntimeStatsGroup('Blink_Layout', /^Blink_Layout_(.*)/),
+        new RuntimeStatsGroup('Blink_Parsing', /^Blink_Parsing_(.*)/),
+        new RuntimeStatsGroup('Blink_Style', /^Blink_Style_(.*)/),
+        new RuntimeStatsGroup('Blink_Callbacks', /^Blink_(.*)/)
+      ];
+      this.total_group_ = new RuntimeStatsGroup('Blink_Total', /.*/);
+
+      for (const entry of entries) {
+        for (const group of this.groups_) {
+          if (group.match(entry.name)) {
+            // Strip out category prefix
+            const newEntry = new RuntimeStatsEntry(
+                'Blink_' + group.match(entry.name)[1], entry.count, entry.time);
+            group.add(newEntry);
+            this.total_group_.addSample(entry.count, entry.time);
+            break;
+          }
+        }
+      }
+    }
+
+    get runtimeGroups() {
+      return this.groups_.concat(this.total_group_);
+    }
+
+    get values() {
+      return this.groups_.reduce(
+          (values, group) => values.concat(group.values), []);
+    }
+
+    get totalTime() {
+      return this.total_group_.time;
+    }
+
+    get totalCount() {
+      return this.total_group_.count;
+    }
+  }
+
+  return {
+    BlinkRuntimeStatsGroupCollection,
+    RuntimeStatsEntry,
+    RuntimeStatsGroup,
+    RuntimeStatsGroupCollection,
+  };
+});
+</script>

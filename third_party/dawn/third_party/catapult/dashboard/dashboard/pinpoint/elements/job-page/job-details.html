@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/elements/base-style.html">
+<link rel="import" href="/elements/job-page/change-info.html">
+
+<dom-module id="job-details">
+  <template>
+    <style include="base-style">
+      ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      dt {
+        margin-top: 12px;
+      }
+
+      dd {
+        color: var(--paper-grey-500);
+        margin: 0;
+        word-break: break-all;
+      }
+
+      .section {
+        margin: 24px 0;
+      }
+    </style>
+
+    <ul>
+      <template is="dom-if" if="[[getCABELink(user, job)]]">
+        <li>
+          <a href="https://colab.corp.google.com/google_src/files/head/depot/google3/chrome/engprod/perf/pinpoint/cabe-pinpoint-tryjob-results.ipynb#templateParams=%7B%22pinpoint_job_id%22%3A%22[[job.job_id]]%22%7D&sandboxMode=true" target="_blank">
+            CABE's analysis, including Cls
+          </a>
+      </template>
+      <template is="dom-if" if="[[job.bug_id]]">
+        <li>
+          <a href="[[getJobIssueLink(job)]]" target="_blank">
+            [[getJobIssueText(job)]]
+          </a>
+      </template>
+      <li>
+        <a href="[[job.results_url]]" target="_blank">
+          Analyze benchmark results
+        </a>
+    </ul>
+
+    <div class="section">
+      <h2>Arguments</h2>
+      <dl>
+        <template is="dom-repeat" items="[[getArguments(job)]]">
+          <dt>[[item.key]]
+          <template is="dom-if" if="[[item.url]]" restamp>
+              <dd><a href="[[item.url]]" target="_blank">[[item.value]]</a>
+          </template>
+          <template is="dom-if" if="[[!item.url]]" restamp>
+              <dd>[[item.value]]
+          </template>
+        </template>
+      </dl>
+    </div>
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'job-details',
+
+      properties: {
+        job: {
+          type: Object,
+        },
+      },
+
+      isTryJob(job) {
+        if (!job) {
+          return false;
+        }
+        return !job.comparison_mode || job.comparison_mode === 'try';
+      },
+
+      getJobIssueLink(job) {
+        let link = ''
+        if (!job || !job.arguments || !job.arguments.bug_id) {
+          return link;
+        }
+        let bug_id = parseInt(job.arguments.bug_id);
+        if (bug_id > 2000000) {
+          link='https://b.corp.google.com/issues/'+bug_id;
+        }
+        else {
+          let project = this.getProject(job);
+          link='https://crbug.com/'+project+'/'+bug_id;
+        }
+        return link
+      },
+
+      getJobIssueText(job) {
+        let text = ''
+        if (!job || !job.arguments || !job.arguments.bug_id) {
+          return text;
+        }
+        let bug_id = parseInt(job.arguments.bug_id);
+        if (bug_id > 2000000) {
+          text='Issue '+bug_id;
+        }
+        else {
+          let project = this.getProject(job);
+          text='Issue '+project+':'+bug_id;
+        }
+        return text;
+      },
+
+      getCABELink(user, job) {
+        return user.endsWith("@google.com") && this.isTryJob(job);
+      },
+
+      getProject(job) {
+        if (!job || !job.arguments || !job.arguments.project) {
+          return 'chromium';
+        }
+        return job.arguments.project;
+      },
+
+      getArguments(job) {
+        if (!job) {
+          return [];
+        }
+        const tuples = [];
+        for (const key in job.arguments) {
+          if (['bug_id', 'name', 'user'].includes(key)) {
+            continue;
+          }
+          if (['base_git_hash', 'end_git_hash'].includes(key)) {
+            tuples.push({
+              key: key+'/commit_position',
+              value: job.arguments[key],
+            });
+            continue;
+          }
+          if (job.arguments[key].startsWith('http')) {
+              tuples.push({
+                key,
+                value: job.arguments[key],
+                url: job.arguments[key],
+              });
+          } else {
+            tuples.push({
+                key,
+                value: job.arguments[key],
+              });
+          }
+        }
+        tuples.sort(function(a, b) {
+          if (a.key < b.key) return -1;
+          if (a.key > b.key) return 1;
+          return 0;
+        });
+        return tuples;
+      }
+    });
+  </script>
+</dom-module>

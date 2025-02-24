@@ -1,0 +1,204 @@
+{
+    "description": [
+        "Copyright 2022 The ANGLE Project Authors. All rights reserved.",
+        "Use of this source code is governed by a BSD-style license that can be",
+        "found in the LICENSE file.",
+        "",
+        "d3d_features.json: Features and workarounds for D3D driver bugs and other issues."
+    ],
+    "features": [
+        {
+            "name": "border_color_srgb",
+            "category": "Workarounds",
+            "description": [
+                "Some drivers expect sRGB border color for sRGB texture formats"
+            ]
+        },
+        {
+            "name": "mrt_perf_workaround",
+            "category": "Workarounds",
+            "description": [
+                "Some drivers have a bug where they ignore null render targets"
+            ]
+        },
+        {
+            "name": "set_data_faster_than_image_upload",
+            "category": "Workarounds",
+            "description": [
+                "Set data faster than image upload"
+            ]
+        },
+        {
+            "name": "zero_max_lod_workaround",
+            "category": "Workarounds",
+            "description": [
+                "Missing an option to disable mipmaps on a mipmapped texture"
+            ]
+        },
+        {
+            "name": "depth_stencil_blit_extra_copy",
+            "category": "Workarounds",
+            "description": [
+                "Bug in some drivers triggers a TDR when using CopySubresourceRegion from a staging ",
+                "texture to a depth/stencil"
+            ],
+            "issue": "http://anglebug.com/40096371"
+        },
+        {
+            "name": "expand_integer_pow_expressions",
+            "category": "Workarounds",
+            "description": [
+                "The HLSL optimizer has a bug with optimizing 'pow' in certain integer-valued expressions"
+            ]
+        },
+        {
+            "name": "flush_after_ending_transform_feedback",
+            "category": "Workarounds",
+            "description": [
+                "Some drivers sometimes write out-of-order results to StreamOut buffers when transform ",
+                "feedback is used to repeatedly write to the same buffer positions"
+            ]
+        },
+        {
+            "name": "get_dimensions_ignores_base_level",
+            "category": "Workarounds",
+            "description": [
+                "Some drivers do not take into account the base level of the ",
+                "texture in the results of the HLSL GetDimensions builtin"
+            ]
+        },
+        {
+            "name": "pre_add_texel_fetch_offsets",
+            "category": "Workarounds",
+            "description": [
+                "HLSL's function texture.Load returns 0 when the parameter Location is negative, even if ",
+                "the sum of Offset and Location is in range"
+            ]
+        },
+        {
+            "name": "emulate_tiny_stencil_textures",
+            "category": "Workarounds",
+            "description": [
+                "1x1 and 2x2 mips of depth/stencil textures aren't sampled correctly"
+            ]
+        },
+        {
+            "name": "disable_B5G6R5_support",
+            "category": "Workarounds",
+            "description": [
+                "Textures with the format ",
+                "DXGI_FORMAT_B5G6R5_UNORM have incorrect data"
+            ]
+        },
+        {
+            "name": "rewrite_unary_minus_operator",
+            "category": "Workarounds",
+            "description": [
+                "Evaluating unary minus operator on integer may get wrong answer in vertex shaders"
+            ]
+        },
+        {
+            "name": "emulate_isnan_float",
+            "category": "Workarounds",
+            "description": [
+                "Using isnan() on highp float will get wrong answer"
+            ],
+            "issue": "https://crbug.com/650547"
+        },
+        {
+            "name": "call_clear_twice",
+            "category": "Workarounds",
+            "description": [
+                "Using clear() may not take effect"
+            ],
+            "issue": "https://crbug.com/655534"
+        },
+        {
+            "name": "use_system_memory_for_constant_buffers",
+            "category": "Workarounds",
+            "description": [
+                "Copying from staging storage to constant buffer ",
+                "storage does not work"
+            ],
+            "issue": "https://crbug.com/593024"
+        },
+        {
+            "name": "select_view_in_geometry_shader",
+            "category": "Workarounds",
+            "description": [
+                "The viewport or render target slice will be selected in the geometry shader stage for ",
+                "the ANGLE_multiview extension"
+            ]
+        },
+        {
+            "name": "add_mock_texture_no_render_target",
+            "category": "Workarounds",
+            "description": [
+                "On some drivers when rendering with no render target, two bugs lead to incorrect behavior"
+            ],
+            "issue": "http://anglebug.com/40644627"
+        },
+        {
+            "name": "skip_VS_constant_register_zero",
+            "category": "Workarounds",
+            "description": [
+                "In specific cases the driver doesn't handle constant register zero correctly"
+            ]
+        },
+        {
+            "name": "force_atomic_value_resolution",
+            "category": "Workarounds",
+            "description": [
+                "On some drivers the return value from RWByteAddressBuffer.InterlockedAdd does not resolve ",
+                "when used in the .yzw components of a RWByteAddressBuffer.Store operation"
+            ],
+            "issue": "http://anglebug.com/42261924"
+        },
+        {
+            "name": "allow_clear_for_robust_resource_init",
+            "category": "Workarounds",
+            "description": [
+                "Some drivers corrupt texture data when clearing for robust resource initialization."
+            ],
+            "issue": "http://crbug.com/941620"
+        },
+        {
+            "name": "allow_translate_uniform_block_to_structured_buffer",
+            "category": "Workarounds",
+            "description": [
+                "There is a slow fxc compile performance issue with dynamic uniform indexing if ",
+                "translating a uniform block with a large array member to cbuffer."
+            ],
+            "issue": "http://anglebug.com/40096608"
+        },
+        {
+            "name": "allow_ES3_on_FL10_0",
+            "category": "Workarounds",
+            "description": [
+                "Allow ES3 on 10.0 devices"
+            ]
+        },
+        {
+            "name": "disable_rasterizer_order_views",
+            "category": "Workarounds",
+            "description": [
+                "Disable ROVs for testing"
+            ],
+            "issue": "http://anglebug.com/40096838"
+        },
+        {
+            "name": "enable_timestamp_queries",
+            "category": "Workarounds",
+            "description": [
+                "Enable timestamp on GL_EXT_disjoint_timer_query extension"
+            ]
+        },
+        {
+            "name": "supports_non_constant_loop_indexing",
+            "category": "Workarounds",
+            "description": [
+                "Whether the API supports non-constant loop indexing"
+            ]
+        }
+    ]
+}

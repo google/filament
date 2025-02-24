@@ -1,0 +1,11 @@
+Name: cachetools
+URL: https://github.com/tkem/cachetools
+Version: 3.1.1
+License: MIT
+License File: LICENSE
+Shipped: yes
+
+Description:
+This module provides various memoizing collections and decorators, including variants of the Python 3 Standard Library @lru_cache function decorator.
+
+This was installed as a dependency of google-auth via pip.

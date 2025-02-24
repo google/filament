@@ -1,0 +1,59 @@
+git-squash-branch(1)
+====================
+
+NAME
+----
+git-squash-branch -
+include::_git-squash-branch_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git squash-branch' [-m <message>]
+
+DESCRIPTION
+-----------
+
+`git squash-branch` is a simple helper command. It takes all the commits on the
+current branch from the 'merge_base' to HEAD, and reduces them to a single
+commit. The new commit will contain a summary of all the commits which were
+squashed, preceded by a header message indicating that it's the result of a
+squash (or the message you pass on the command line.).
+
+Squashing branches is useful when trying to rebase-update over branches which
+were pushed to their upstream (or committed by the 'Commit Queue'), and then
+conflicting changes landed in upstream on top of the push/commit. If you know
+that your branch was committed but linkgit:git-rebase-update[1] isn't able to
+automatically clean it, you can squash the troublesome branch before `git
+rebase-update`, and then when `git rebase-update` presents the conflict, you can
+verify that the conflict diff is what you expected (and then skip it with
+`git rebase --skip`).
+
+OPTIONS
+-------
+
+-m <message>::
+--message=<message>::
+  Optional message to use for the first line of the squashed commit. If omitted,
+  it defaults to "git squash commit for <branch>.".
+
+EXAMPLE
+-------
+demo:1[]
+
+
+include::_aliases.txt[]
+
+----
+[alias]
+  squash = squash-branch
+----
+
+
+SEE ALSO
+--------
+linkgit:git-rebase-update[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

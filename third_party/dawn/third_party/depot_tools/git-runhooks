@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+while test "$PWD" != "/"; do
+  if test -f "$PWD/src/.gitmodules"; then
+    break
+  fi
+  cd ..
+done
+if ! test -f "$PWD/src/.gitmodules"; then
+  echo "Could not find the root of your checkout; aborting." 1>&2
+  exit 1
+fi
+
+gclient_spec="solutions=[{'name':'src','url':None,'deps_file':'.DEPS.git'}]"
+kernel_name=$(uname -s)
+if [ "${kernel_name:0:5}" = "MINGW" ]; then
+  dir="${0%\\*}"
+  cmd "/C ${dir}\\python3.bat ${dir}\\gclient.py runhooks --spec=$gclient_spec"
+else
+  dir="$(dirname $0)"
+  PYTHONDONTWRITEBYTECODE=1 exec python3 "$dir/gclient.py" runhooks --spec="$gclient_spec"
+fi
+exit $?

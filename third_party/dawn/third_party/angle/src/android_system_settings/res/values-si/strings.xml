@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Copyright 2019 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="angle_preferences" msgid="6277781974712663825">"ANGLE මනාප"</string>
+    <string name="angle_preferences_summary" msgid="2072062114797067545">"ANGLE සැකසීම් විකරණය"</string>
+    <string name="angle_general_title" msgid="3851397617183360026">"පොදු"</string>
+    <string name="use_angle_for_all_apps" msgid="2562678044041239694">"සියලු යෙදුම් සඳහා ANGLE භාවිතා කරන්න"</string>
+    <string name="show_angle_in_use_dialog_box" msgid="3443250434026000754">"ANGLE පූරණය වූ විට සංවාද කොටුව පෙන්වන්න"</string>
+    <string name="select_opengl_driver_title" msgid="3474220741139386304">"OpenGL ධාවකය තෝරන්න"</string>
+    <string name="keywords" msgid="6388635548060461395">"කෝණය, opengl, චිත්‍රක"</string>
+    <string name="angle_in_use_toast_message" msgid="2259434197861979558">"ANGLE භාවිතය"</string>
+    <string name="no_apps_installed_title" msgid="1651834541419890603">"ලබා ගත හැකි යෙදුම් නොමැත"</string>
+    <string name="no_apps_installed_summary" msgid="1922829522692497596">"ANGLE භාවිත කළ හැකි යෙදුම් කිසිවක් ස්ථාපන කර නැත"</string>
+</resources>

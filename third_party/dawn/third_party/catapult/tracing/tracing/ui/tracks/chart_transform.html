@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.ui.tracks', function() {
+  /**
+   * A helper object encapsulating all parameters necessary to draw a chart
+   * series and provides conversion between world coordinates and physical
+   * pixels.
+   *
+   * All parameters (except for pixelRatio) are assumed to be in physical pixels
+   * (i.e. already pre-multiplied with pixelRatio).
+   *
+   * The diagram below explains the meaning of the resulting fields with
+   * respect to a chart track:
+   *
+   *      outerTopViewY -> +--------------------/-\------+ <- Top padding
+   *      innerTopViewY -> + - - - - - - - - - -| |- - - + <- Axis max
+   *                       |  ..              ==\-/==    |
+   *                       |  ===      Series       ===  |
+   *                       |     ==/-\==              .. |
+   *   innerBottomViewY -> + - - -Point- - - - - - - - - + <- Axis min
+   *   outerBottomViewY -> +-------\-/-------------------+ <- Bottom padding
+   *                       ^                             ^
+   *                    leftViewX                    rightViewX
+   *                  leftTimeStamp                rightTimestamp
+   *
+   * Labels starting with a lower case letter are the resulting fields of the
+   * transform object. Labels starting with an upper case letter correspond
+   * to the relevant chart track concepts.
+   *
+   * @constructor
+   */
+  function ChartTransform(displayTransform, axis, trackWidth,
+      trackHeight, topPadding, bottomPadding, pixelRatio) {
+    this.pixelRatio = pixelRatio;
+
+    // X axis.
+    this.leftViewX = 0;
+    this.rightViewX = trackWidth;
+    this.leftTimestamp = displayTransform.xViewToWorld(this.leftViewX);
+    this.rightTimestamp = displayTransform.xViewToWorld(this.rightViewX);
+
+    this.displayTransform_ = displayTransform;
+
+    // Y axis.
+    this.outerTopViewY = 0;
+    this.innerTopViewY = topPadding;
+    this.innerBottomViewY = trackHeight - bottomPadding;
+    this.outerBottomViewY = trackHeight;
+
+    this.axis_ = axis;
+    this.innerHeight_ = this.innerBottomViewY - this.innerTopViewY;
+  }
+
+  ChartTransform.prototype = {
+    worldXToViewX(worldX) {
+      return this.displayTransform_.xWorldToView(worldX);
+    },
+
+    viewXToWorldX(viewX) {
+      return this.displayTransform_.xViewToWorld(viewX);
+    },
+
+    vectorToWorldDistance(viewY) {
+      return this.axis_.bounds.range * Math.abs(viewY / this.innerHeight_);
+    },
+
+    viewYToWorldY(viewY) {
+      return this.axis_.unitRangeToValue(
+          1 - (viewY - this.innerTopViewY) / this.innerHeight_);
+    },
+
+    worldYToViewY(worldY) {
+      const innerHeightCoefficient = 1 - this.axis_.valueToUnitRange(worldY);
+      return innerHeightCoefficient * this.innerHeight_ + this.innerTopViewY;
+    }
+  };
+
+  return {
+    ChartTransform,
+  };
+});
+</script>

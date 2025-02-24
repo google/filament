@@ -1,0 +1,65 @@
+Name
+
+    ANGLE_software_display
+
+Name Strings
+
+    EGL_ANGLE_software_display
+
+Contributors
+
+    John Bauman
+    Daniel Koch
+
+Contacts
+
+    John Bauman, Google Inc. (jbauman 'at' chromium.org)
+
+Status
+
+    In progress
+
+Version
+
+    Version 2, October 19, 2011
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification. 
+
+Overview
+
+    This extension allows for receiving a device that uses software rendering.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    EGL_SOFTWARE_DISPLAY_ANGLE         (EGLNativeDisplayType)-1
+
+Additions to Chapter 3 of the EGL 1.4 Specification (EGL Functions and Errors)
+
+    Add before the last sentence of the first paragraph of section 3.2,
+    "Initialization":
+
+    "If <display_id> is EGL_SOFTWARE_DISPLAY_ANGLE, a display that will render
+    everything in software will be returned."
+
+Issues
+
+Revision History
+
+    Version 1, 2011/07/12 - first draft.
+    Version 2, 2011/10/18 - add token definition
+

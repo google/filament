@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+
+<!--
+@fileoverview A view that allows the user to control which single tab is
+displayed.
+
+We follow a fairly standard web convention of backing our tabs with hidden radio
+buttons but visible radio button labels (the tabs themselves) which toggle the
+input element when clicked. Using hidden radio buttons makes sense, as both tabs
+and radio buttons are input elements that allow user selection through clicking
+and limit users to having one option selected at a time.
+-->
+<dom-module id='tr-ui-b-tab-view'>
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #selection_description, #tabs {
+        font-size: 12px;
+      }
+
+      #selection_description {
+        display: inline-block;
+        font-weight: bold;
+        margin: 9px 0px 4px 20px;
+      }
+
+      #tabs {
+        flex: 0 0 auto;
+        border-top: 1px solid #8e8e8e;
+        border-bottom: 1px solid #8e8e8e;
+        background-color: #ececec;
+        overflow: hidden;
+        margin: 0;
+      }
+
+      #tabs input[type=radio] {
+        display: none;
+      }
+
+      #tabs tab label {
+        cursor: pointer;
+        display: inline-block;
+        border: 1px solid #ececec;
+        margin: 5px 0px 0px 15px;
+        padding: 3px 10px 3px 10px;
+      }
+
+      #tabs tab label span {
+        font-weight: bold;
+      }
+
+      #tabs:focus input[type=radio]:checked ~ label {
+        outline: dotted 1px #8e8e8e;
+        outline-offset: -2px;
+      }
+
+      #tabs input[type=radio]:checked ~ label {
+        background-color: white;
+        border: 1px solid #8e8e8e;
+        border-bottom: 1px solid white;
+      }
+
+      #subView {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+      }
+
+      #subView > * {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    </style>
+    <div id='tabs' hidden="[[tabsHidden]]">
+      <label id=selection_description>[[label_]]</label>
+      <template is=dom-repeat items=[[subViews_]]>
+        <tab>
+          <input type=radio name=tabs id$=[[computeRadioId_(item)]]
+              on-change='onTabChanged_'
+              checked='[[isChecked_(item)]]'/>
+          <label for$=[[computeRadioId_(item)]]>
+            <template is=dom-if if=[[item.tabIcon]]>
+              <span style$='[[item.tabIcon.style]]'>[[item.tabIcon.text]]</span>
+            </template>
+            [[item.tabLabel]]
+          </label>
+        </tab>
+      </template>
+    </div>
+    <div id='subView'></div>
+    <slot>
+    </slot>
+  </template>
+</dom-module>
+<script>
+'use strict';
+
+Polymer({
+  is: 'tr-ui-b-tab-view',
+
+  properties: {
+    label_: {
+      type: String,
+      value: () => ''
+    },
+    selectedSubView_: Object,
+    subViews_: {
+      type: Array,
+      value: () => []
+    },
+    tabsHidden: {
+      type: Boolean,
+      value: false,
+      observer: 'tabsHiddenChanged_'
+    }
+  },
+
+  ready() {
+    this.$.tabs.addEventListener('keydown', this.onKeyDown_.bind(this), true);
+    this.updateFocusability_();
+  },
+
+  set label(newLabel) {
+    this.set('label_', newLabel);
+  },
+
+  get tabs() {
+    return this.get('subViews_');
+  },
+
+  get selectedSubView() {
+    return this.selectedSubView_;
+  },
+
+  set selectedSubView(subView) {
+    if (subView === this.selectedSubView_) return;
+
+    if (this.selectedSubView_) {
+      Polymer.dom(this.$.subView).removeChild(this.selectedSubView_);
+      const oldInput = this.root.getElementById(this.computeRadioId_(
+          this.selectedSubView_));
+      if (oldInput) {
+        oldInput.checked = false;
+      }
+    }
+
+    this.set('selectedSubView_', subView);
+
+    if (subView) {
+      Polymer.dom(this.$.subView).appendChild(subView);
+      const newInput = this.root.getElementById(this.computeRadioId_(subView));
+      if (newInput) {
+        newInput.checked = true;
+      }
+    }
+
+    this.fire('selected-tab-change');
+  },
+
+  clearSubViews() {
+    this.splice('subViews_', 0, this.subViews_.length);
+    this.selectedSubView = undefined;
+    this.updateFocusability_();
+  },
+
+  addSubView(subView) {
+    this.push('subViews_', subView);
+    if (!this.selectedSubView_) this.selectedSubView = subView;
+
+    this.updateFocusability_();
+  },
+
+  get subViews() {
+    return this.subViews_;
+  },
+
+  resetSubViews(subViews) {
+    this.splice('subViews_', 0, this.subViews_.length);
+    if (subViews.length) {
+      for (const subView of subViews) {
+        this.push('subViews_', subView);
+      }
+      this.selectedSubView = subViews[0];
+    } else {
+      this.selectedSubView = undefined;
+    }
+    this.updateFocusability_();
+  },
+
+  onTabChanged_(event) {
+    this.selectedSubView = event.model.item;
+  },
+
+  isChecked_(subView) {
+    return this.selectedSubView_ === subView;
+  },
+
+  tabsHiddenChanged_() {
+    this.updateFocusability_();
+  },
+
+  onKeyDown_(e) {
+    if (this.tabsHidden) return;
+
+    let keyHandled = false;
+    switch (e.keyCode) {
+      // Arrow left.
+      case 37:
+        keyHandled = this.selectPreviousTabIfPossible();
+        break;
+
+      // Arrow right.
+      case 39:
+        keyHandled = this.selectNextTabIfPossible();
+        break;
+    }
+
+    if (!keyHandled) return;
+    e.stopPropagation();
+    e.preventDefault();
+  },
+
+  selectNextTabIfPossible() {
+    return this.selectTabByOffsetIfPossible_(1);
+  },
+
+  selectPreviousTabIfPossible() {
+    return this.selectTabByOffsetIfPossible_(-1);
+  },
+
+  selectTabByOffsetIfPossible_(offset) {
+    if (!this.selectedSubView_) return false;
+    const currentIndex = this.subViews_.indexOf(this.selectedSubView_);
+    const newSubView = this.tabs[currentIndex + offset];
+    if (!newSubView) return false;
+    this.selectedSubView = newSubView;
+    return true;
+  },
+
+  shouldBeFocusable_() {
+    return !this.tabsHidden && this.subViews_.length > 0;
+  },
+
+  updateFocusability_() {
+    if (this.shouldBeFocusable_()) {
+      Polymer.dom(this.$.tabs).setAttribute('tabindex', 0);
+    } else {
+      Polymer.dom(this.$.tabs).removeAttribute('tabindex');
+    }
+  },
+
+  computeRadioId_(subView) {
+    // We can't just use the tagName as the radio's ID because there are
+    // instances where a single subview type can handle multiple event types,
+    // and thus might be present multiple times in a single tab view. In order
+    // to avoid the case where we might have two tabs with the same ID, we
+    // uniquify this ID by appending the tab's label with all spaces replaced
+    // by dashes (because spaces aren't allowed in HTML IDs).
+    return subView.tagName + '-' + subView.tabLabel.replace(/ /g, '-');
+  }
+});
+</script>

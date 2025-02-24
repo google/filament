@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/tracing_metric.html">
+<link rel="import" href="/tracing/model/memory_dump_test_utils.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function makeModel(events, opt_track) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      trackDetailedModelStats: opt_track
+    });
+  }
+
+  function getEventStringSize(events, indices) {
+    return indices.reduce(function(sum, index) {
+      return sum + JSON.stringify(events[index]).length;
+    }, 0);
+  }
+
+  function checkDurationHistogram(histograms, metricName, expected) {
+    const histogram = histograms.getHistogramNamed(metricName);
+    assert.closeTo(1000 * histogram.average, expected, 0.1);
+  }
+
+  test('tracingMetric_hasEventSizesInBytes', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'B'}
+    ];
+
+    const model = makeModel(JSON.stringify(events), true);
+    assert.isTrue(model.importOptions.trackDetailedModelStats);
+    tr.metrics.tracingMetric(histograms, model);
+  });
+
+  test('tracingMetric_totalTraceSize', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'B'}
+    ];
+    const model = makeModel(JSON.stringify(events), true);
+    tr.metrics.tracingMetric(histograms, model);
+
+    const eventStringSize = getEventStringSize(events, [0, 1]);
+    const histogram = histograms.getHistogramNamed('trace_size');
+    assert.strictEqual(histogram.average, eventStringSize);
+  });
+
+  test('tracingMetric_maxValuePerSec', function() {
+    const ONE_SEC_IN_US = 1000000;
+    const events = [
+      {name: 'a', pid: 52, ts: 1, cat: 'foo', ph: 'B'},
+      {name: 'a', pid: 52, ts: ONE_SEC_IN_US + 1, cat: 'foo', ph: 'B'},
+      {name: 'a', pid: 52, ts: 2 * ONE_SEC_IN_US + 1, cat: 'foo', ph: 'B'},
+      {name: 'a', pid: 52, ts: 2 * ONE_SEC_IN_US + 3, cat: 'foo', ph: 'B'},
+      {name: 'a', pid: 52, ts: ONE_SEC_IN_US + 2, cat: 'foo', ph: 'B'},
+      {name: 'a', pid: 52, ts: 2 * ONE_SEC_IN_US + 2, cat: 'foo', ph: 'B'}
+    ];
+    const model = makeModel(JSON.stringify(events), true);
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.tracingMetric(histograms, model);
+
+    const maxEventCountPerSec = 3;
+    let histogram = histograms.getHistogramNamed('peak_event_rate');
+    assert.strictEqual(histogram.average, maxEventCountPerSec);
+
+    const maxEventBytesPerSec = getEventStringSize(events, [2, 3, 5]);
+    histogram = histograms.getHistogramNamed('peak_event_size_rate');
+    assert.strictEqual(histogram.average, maxEventBytesPerSec);
+  });
+
+  test('tracingMetric_diagnostics', function() {
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'a', args: {}, pid: 52, ts: 535, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'bb', args: {}, pid: 52, ts: 546, cat: 'bar', tid: 53, ph: 'E'},
+      {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'B'},
+      {name: 'bb', args: {}, pid: 52, ts: 578, cat: 'bar', tid: 53, ph: 'E'}
+    ];
+    const model = makeModel(JSON.stringify(events), true);
+    tr.metrics.tracingMetric(histograms, model);
+
+    const DIAGNOSTIC_HISTOGRAMS = [
+      'Max number of events per second',
+      'Max event size in bytes per second',
+      'Total trace size in bytes'
+    ];
+    for (const histogram of histograms) {
+      if (!DIAGNOSTIC_HISTOGRAMS.includes(histogram.name)) continue;
+
+      const d = histogram.diagnostics.get('category_with_max_event_size').value;
+      assert.strictEqual(d.name, 'foo');
+      assert.strictEqual(d.size_in_bytes, getEventStringSize(
+          events, [0, 1, 3]));
+    }
+  });
+
+  test('tracingMetric_memoryInfraTracingMetrics', function() {
+    const MEMORY_INFRA_TRACING_CATEGORY =
+        tr.metrics.MEMORY_INFRA_TRACING_CATEGORY;
+    const histograms = new tr.v.HistogramSet();
+    const events = [
+      {name: 'OnMemoryDump', pid: 1, ts: 510, tid: 1, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp1'}, dur: 4}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 1, ts: 520, tid: 7, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp2'}, dur: 15}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 1, ts: 530, tid: 7, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp3'}, dur: 5}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 2, ts: 510, tid: 2, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp1'}, dur: 9}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 2, ts: 520, tid: 8, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp2'}, dur: 17}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 2, ts: 530, tid: 8, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp3'}, dur: 7}, // @suppress longLineCheck
+      {name: 'OnMemoryDump', pid: 2, ts: 540, tid: 3, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {'dump_provider.name': 'mdp4'}, dur: 8}, // @suppress longLineCheck
+      {name: 'ProcessDumps', pid: 1, ts: 550, tid: 1, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {guid: 4}, dur: 8}, // @suppress longLineCheck
+      {name: 'ProcessDumps', pid: 2, ts: 540, tid: 2, ph: 'X', cat: MEMORY_INFRA_TRACING_CATEGORY, args: {guid: 4}, dur: 18}, // @suppress longLineCheck
+      {name: 'thread_name', pid: 1, ts: 0, tid: 1, ph: 'M', cat: '__metadata', args: {name: 'CrBrowsermain'}}, // @suppress longLineCheck
+      {name: 'thread_name', pid: 1, ts: 0, tid: 7, ph: 'M', cat: '__metadata', args: {name: 'MemoryInfra'}}, // @suppress longLineCheck
+      {name: 'thread_name', pid: 2, ts: 0, tid: 2, ph: 'M', cat: '__metadata', args: {name: 'CrRendererMain'}}, // @suppress longLineCheck
+      {name: 'thread_name', pid: 2, ts: 0, tid: 8, ph: 'M', cat: '__metadata', args: {name: 'MemoryInfra'}}, // @suppress longLineCheck
+      {name: 'thread_name', pid: 2, ts: 0, tid: 3, ph: 'M', cat: '__metadata', args: {name: 'Compositor'}} // @suppress longLineCheck
+    ];
+
+    const model = makeModel(JSON.stringify(events), true);
+    tr.model.MemoryDumpTestUtils.addGlobalMemoryDump(model, {ts: 550});
+    tr.metrics.tracingMetric(histograms, model);
+
+    const memoryCategorySize = events.filter(
+        slice => slice.cat === MEMORY_INFRA_TRACING_CATEGORY).reduce(
+        (acc, slice) => acc + JSON.stringify(slice).length, 0);
+    const totalSizeHistogram = histograms.getHistogramNamed(
+        'total_memory_dump_size');
+    assert.strictEqual(totalSizeHistogram.average, memoryCategorySize);
+    const sizePerDumpHistogram = histograms.getHistogramNamed(
+        'memory_dump_size');
+    assert.strictEqual(sizePerDumpHistogram.average, memoryCategorySize);
+
+    checkDurationHistogram(histograms, 'mdp1_memory_dump_cpu_overhead', 6.5);
+    checkDurationHistogram(histograms, 'mdp2_memory_dump_cpu_overhead', 16);
+    checkDurationHistogram(histograms, 'mdp3_memory_dump_cpu_overhead', 6);
+    checkDurationHistogram(histograms, 'mdp4_memory_dump_cpu_overhead', 8);
+    checkDurationHistogram(
+        histograms, 'nonmemory_thread_memory_dump_cpu_overhead', 47);
+    checkDurationHistogram(histograms, 'memory_dump_cpu_overhead', 91);
+  });
+
+  test('tracingMetric_traceImportDurationMetricWithoutTrackDetailedModelStats',
+      function() {
+        const histograms = new tr.v.HistogramSet();
+        const events = [
+          {name: 'a', args: {}, pid: 52, ts: 524, cat: 'foo', tid: 53, ph: 'B'},
+          {name: 'a', args: {}, pid: 52, ts: 560, cat: 'foo', tid: 53, ph: 'B'}
+        ];
+
+        const model = makeModel(JSON.stringify(events), false);
+        assert.isFalse(model.importOptions.trackDetailedModelStats);
+        tr.metrics.tracingMetric(histograms, model);
+      });
+});
+</script>

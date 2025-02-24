@@ -1,0 +1,10 @@
+_vkGetInstanceProcAddr
+
+# Loader-ICD interface functions
+_vk_icdGetInstanceProcAddr
+_vk_icdNegotiateLoaderICDInterfaceVersion
+_vk_icdGetPhysicalDeviceProcAddr
+
+# Type-strings and type-infos required by sanitizers
+_ZTS*
+_ZTI*

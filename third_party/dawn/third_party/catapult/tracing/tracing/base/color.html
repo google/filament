@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function Color(opt_r, opt_g, opt_b, opt_a) {
+    this.r = Math.floor(opt_r) || 0;
+    this.g = Math.floor(opt_g) || 0;
+    this.b = Math.floor(opt_b) || 0;
+    this.a = opt_a;
+  }
+
+  Color.fromString = function(str) {
+    let tmp;
+    let values;
+    if (str.substr(0, 4) === 'rgb(') {
+      tmp = str.substr(4, str.length - 5);
+      values = tmp.split(',').map(function(v) {
+        return v.replace(/^\s+/, '', 'g');
+      });
+      if (values.length !== 3) {
+        throw new Error('Malformatted rgb-expression');
+      }
+      return new Color(
+          parseInt(values[0]),
+          parseInt(values[1]),
+          parseInt(values[2]));
+    }
+    if (str.substr(0, 5) === 'rgba(') {
+      tmp = str.substr(5, str.length - 6);
+      values = tmp.split(',').map(function(v) {
+        return v.replace(/^\s+/, '', 'g');
+      });
+      if (values.length !== 4) {
+        throw new Error('Malformatted rgb-expression');
+      }
+      return new Color(
+          parseInt(values[0]),
+          parseInt(values[1]),
+          parseInt(values[2]),
+          parseFloat(values[3]));
+    }
+    if (str[0] === '#' && str.length === 7) {
+      return new Color(
+          parseInt(str.substr(1, 2), 16),
+          parseInt(str.substr(3, 2), 16),
+          parseInt(str.substr(5, 2), 16));
+    }
+    throw new Error('Unrecognized string format.');
+  };
+
+  Color.lerp = function(a, b, percent) {
+    if (a.a !== undefined && b.a !== undefined) {
+      return Color.lerpRGBA(a, b, percent);
+    }
+    return Color.lerpRGB(a, b, percent);
+  };
+
+  Color.lerpRGB = function(a, b, percent) {
+    return new Color(
+        ((b.r - a.r) * percent) + a.r,
+        ((b.g - a.g) * percent) + a.g,
+        ((b.b - a.b) * percent) + a.b);
+  };
+
+  Color.lerpRGBA = function(a, b, percent) {
+    return new Color(
+        ((b.r - a.r) * percent) + a.r,
+        ((b.g - a.g) * percent) + a.g,
+        ((b.b - a.b) * percent) + a.b,
+        ((b.a - a.a) * percent) + a.a);
+  };
+
+  Color.fromDict = function(dict) {
+    return new Color(dict.r, dict.g, dict.b, dict.a);
+  };
+
+  /**
+   * Converts an HSL triplet with alpha to an RGB color.
+   * |h| Hue value in [0, 1].
+   * |s| Saturation value in [0, 1].
+   * |l| Lightness in [0, 1].
+   * |a| Alpha in [0, 1]
+   */
+  Color.fromHSLExplicit = function(h, s, l, a) {
+    let r;
+    let g;
+    let b;
+    function hue2rgb(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    }
+
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    return new Color(Math.floor(r * 255),
+        Math.floor(g * 255),
+        Math.floor(b * 255), a);
+  };
+
+  Color.fromHSL = function(hsl) {
+    return Color.fromHSLExplicit(hsl.h, hsl.s, hsl.l, hsl.a);
+  };
+
+  Color.prototype = {
+    clone() {
+      const c = new Color();
+      c.r = this.r;
+      c.g = this.g;
+      c.b = this.b;
+      c.a = this.a;
+      return c;
+    },
+
+    blendOver(bgColor) {
+      const oneMinusThisAlpha = 1 - this.a;
+      const outA = this.a + bgColor.a * oneMinusThisAlpha;
+      const bgBlend = (bgColor.a * oneMinusThisAlpha) / bgColor.a;
+      return new Color(
+          this.r * this.a + bgColor.r * bgBlend,
+          this.g * this.a + bgColor.g * bgBlend,
+          this.b * this.a + bgColor.b * bgBlend,
+          outA);
+    },
+
+    brighten(opt_k) {
+      const k = opt_k || 0.45;
+
+      return new Color(
+          Math.min(255, this.r + Math.floor(this.r * k)),
+          Math.min(255, this.g + Math.floor(this.g * k)),
+          Math.min(255, this.b + Math.floor(this.b * k)),
+          this.a);
+    },
+
+    lighten(k, opt_maxL) {
+      const maxL = opt_maxL !== undefined ? opt_maxL : 1.0;
+      const hsl = this.toHSL();
+      hsl.l = Math.min(hsl.l + k, maxL);
+      return Color.fromHSL(hsl);
+    },
+
+    darken(opt_k) {
+      let k;
+      if (opt_k !== undefined) {
+        k = opt_k;
+      } else {
+        k = 0.45;
+      }
+
+      return new Color(
+          Math.min(255, this.r - Math.floor(this.r * k)),
+          Math.min(255, this.g - Math.floor(this.g * k)),
+          Math.min(255, this.b - Math.floor(this.b * k)),
+          this.a);
+    },
+
+    desaturate(opt_desaturateFactor) {
+      let desaturateFactor;
+      if (opt_desaturateFactor !== undefined) {
+        desaturateFactor = opt_desaturateFactor;
+      } else {
+        desaturateFactor = 1;
+      }
+
+      const hsl = this.toHSL();
+      hsl.s = clamp01(hsl.s * (1 - desaturateFactor));
+      return Color.fromHSL(hsl);
+    },
+
+    withAlpha(a) {
+      return new Color(this.r, this.g, this.b, a);
+    },
+
+    toString() {
+      if (this.a !== undefined) {
+        return 'rgba(' +
+            this.r + ',' + this.g + ',' +
+            this.b + ',' + this.a + ')';
+      }
+      return 'rgb(' + this.r + ',' + this.g + ',' + this.b + ')';
+    },
+
+    /**
+     * Returns a dict {h, s, l, a} with:
+     * |h| Hue value in [0, 1].
+     * |s| Saturation value in [0, 1].
+     * |l| Lightness in [0, 1].
+     * |a| Alpha in [0, 1]
+     */
+    toHSL() {
+      const r = this.r / 255;
+      const g = this.g / 255;
+      const b = this.b / 255;
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+
+      let h;
+      let s;
+      const l = (max + min) / 2;
+      if (min === max) {
+        h = 0;
+        s = 0;
+      } else {
+        const delta = max - min;
+        if (l > 0.5) {
+          s = delta / (2 - max - min);
+        } else {
+          s = delta / (max + min);
+        }
+
+        if (r === max) {
+          h = (g - b) / delta;
+          if (g < b) h += 6;
+        } else if (g === max) {
+          h = 2 + ((b - r) / delta);
+        } else {
+          h = 4 + ((r - g) / delta);
+        }
+        h /= 6;
+      }
+
+      return {h, s, l, a: this.a};
+    },
+
+    toStringWithAlphaOverride(alpha) {
+      return 'rgba(' +
+          this.r + ',' + this.g + ',' +
+          this.b + ',' + alpha + ')';
+    }
+  };
+
+  return {
+    Color,
+  };
+});
+</script>

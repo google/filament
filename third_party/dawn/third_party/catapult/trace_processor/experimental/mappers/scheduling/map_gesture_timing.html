@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/perf_insights/mre/function_handle.html">
+
+<script>
+'use strict';
+
+tr.exportTo('pie', function() {
+  // Reports the delay and length of scroll gestures relative to first paint.
+  // See https://goo.gl/l7V5xg.
+  function mapGestureTiming(result, model) {
+    var loadIRs = model.userModel.expectations.filter(function(ir) {
+      return ir instanceof tr.model.um.LoadExpectation;
+    });
+    var responseIRs = model.userModel.expectations.filter(function(ir) {
+      return ir.stageTitle === 'Response' &&
+          ir.initiatorTitle.indexOf('Scroll') >= 0;
+    });
+    var animationIRs = model.userModel.expectations.filter(function(ir) {
+      return ir.stageTitle === 'Animation' &&
+          ir.initiatorTitle.indexOf('Scroll') >= 0;
+    });
+
+    var firstGestureAfterLoadTimes = [];
+    var gestureDurations = new Array(responseIRs.length);
+    var intervalBetweenGestures = [];
+
+    // This loop is quadratic, but typically we only expect a low number (~tens
+    // per minute of tracing) of both load and response IRs.
+    loadIRs.forEach(function(loadIR) {
+      var loadEnd = loadIR.start + loadIR.duration;
+      for (var i = 0; i < responseIRs.length; i++) {
+        var responseIR = responseIRs[i];
+        if (responseIR.start < loadEnd)
+          continue;
+        firstGestureAfterLoadTimes.push(responseIR.start - loadEnd);
+        break;
+      }
+    });
+
+    // Compute the interval between responses and the duration of each gesture
+    // and any gesture animation that follows. This loop is also quadratic, but
+    // again the expected number of IRs is small (~tens per minute).
+    var prevGestureStart = undefined;
+    responseIRs.forEach(function(responseIR, index) {
+      if (prevGestureStart !== undefined)
+        intervalBetweenGestures.push(responseIR.start - prevGestureStart);
+      prevGestureStart = responseIR.start;
+      var gestureDuration = responseIR.duration;
+      for (var i = 0; i < animationIRs.length; i++) {
+        if (animationIRs[i].start !== responseIR.start + responseIR.duration)
+          continue;
+        gestureDuration += animationIRs[i].duration;
+        break;
+      }
+      gestureDurations[index] = gestureDuration;
+    });
+
+    result.addPair(
+        'gestureTiming', {
+          firstGestureAfterLoadTime: firstGestureAfterLoadTimes,
+          gestureDuration: gestureDurations,
+          intervalBetweenGestures: intervalBetweenGestures
+        });
+  }
+
+  pi.FunctionRegistry.register(mapGestureTiming);
+
+  return {
+    mapGestureTimingForTest: mapGestureTiming
+  };
+});
+</script>

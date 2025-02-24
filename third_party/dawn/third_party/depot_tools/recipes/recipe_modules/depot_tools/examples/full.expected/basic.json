@@ -1,0 +1,76 @@
+[
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]"
+    ],
+    "name": "root"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/download_from_google_storage.py"
+    ],
+    "name": "download_from_google_storage"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/upload_to_google_storage.py"
+    ],
+    "name": "upload_to_google_storage"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/roll_downstream_gcs_deps.py"
+    ],
+    "name": "roll_downstream_gcs_deps_path"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/cros"
+    ],
+    "name": "cros"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/gn.py"
+    ],
+    "name": "gn_py_path"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/gsutil.py"
+    ],
+    "name": "gsutil_py_path"
+  },
+  {
+    "cmd": [
+      "ls",
+      "RECIPE_REPO[depot_tools]/presubmit_support.py"
+    ],
+    "name": "presubmit_support_py_path"
+  },
+  {
+    "cmd": [
+      "echo",
+      "$PATH"
+    ],
+    "env_suffixes": {
+      "DEPOT_TOOLS_UPDATE": [
+        "0"
+      ],
+      "PATH": [
+        "RECIPE_REPO[depot_tools]"
+      ]
+    },
+    "name": "on_path"
+  },
+  {
+    "name": "$result"
+  }
+]

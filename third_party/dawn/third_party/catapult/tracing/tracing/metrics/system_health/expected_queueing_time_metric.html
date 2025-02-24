@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/extras/chrome/estimated_input_latency.html">
+<link rel="import" href="/tracing/extras/chrome/event_finder_utils.html">
+<link rel="import" href="/tracing/extras/v8/runtime_stats_entry.html">
+<link rel="import" href="/tracing/metrics/v8/utils.html">
+<link rel="import" href="/tracing/model/helpers/chrome_model_helper.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview
+ * This file defines the input latency metric estimated as the maximum
+ * expected queueing time (EQT) in sliding window of size 500ms.
+ *
+ * The EQT is defined as the average queueing time of a hypothetical input
+ * event arriving at a random time in the given time window.
+ * For more information see:
+ * - https://goo.gl/OQ2bX6
+ * - https://goo.gl/jmWpMl
+ * - https://goo.gl/lga4iO
+ */
+tr.exportTo('tr.metrics.sh', function() {
+  // The size of the sliding window is chosen arbitrarily (see
+  // https://goo.gl/lga4iO).
+  const WINDOW_SIZE_MS = 500;
+  const EQT_BOUNDARIES = tr.v.HistogramBinBoundaries
+      .createExponential(0.01, WINDOW_SIZE_MS, 50);
+
+  /**
+   * Returns true if the slice contains a forced GC event. Some stories force
+   * garbage collection before sampling memory usage. Since a forced GC takes
+   * long time we need to ignore it to avoid biasing the input latency results.
+   */
+  function containsForcedGC_(slice) {
+    return slice.findTopmostSlicesRelativeToThisSlice(
+        tr.metrics.v8.utils.isForcedGarbageCollectionEvent).length > 0;
+  }
+
+  /**
+   * @param {!string} name Name of the histogram.
+   * @param {!string} description Description of the histogram.
+   * @returns {!tr.v.Histogram}
+   */
+  function getOrCreateHistogram_(histograms, name, description) {
+    return histograms.getHistogramNamed(name) || histograms.createHistogram(
+        name, tr.b.Unit.byName.timeDurationInMs_smallerIsBetter, [], {
+          binBoundaries: EQT_BOUNDARIES,
+          description,
+          summaryOptions: {
+            avg: false,
+            count: false,
+            max: true,
+            min: false,
+            std: false,
+            sum: false,
+          },
+        });
+  }
+
+  /**
+   * Computes the maximum expected queueing time in the sliding time window
+   * of size 500ms (WINDOW_SIZE_MS). The function produces four Histograms:
+   * - total:500ms_window:renderer_eqt,
+   * - total:500ms_window:renderer_eqt_cpu,
+   * The 'cpu' histograms use the CPU time of the events instead of the wall-
+   * clock times. Each renderer process adds one sample to the histograms.
+   */
+  function expectedQueueingTimeMetric(histograms, model) {
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+    const rendererHelpers = Object.values(chromeHelper.rendererHelpers);
+    addExpectedQueueingTimeMetric_(
+        'renderer_eqt',
+        event => {return {start: event.start, duration: event.duration};},
+        false, rendererHelpers, histograms,
+        model);
+  }
+
+  /**
+  * @callback EventTimesCallback
+  * @param {!tr.b.Event} event
+  * @return {{start: !number, duration: !number}} event start time and duration.
+  */
+
+  /**
+   * The actual implementation of the EQT metric.
+   * @param {!string} eqtName the metric name part of the histogram name.
+   * @param {!EventTimesCallback} getEventTimes.
+   * @param {!Array.<tr.model.helpers.ChromeRendererHelper>} rendererHelpers.
+   * @param {!Map.<number, Array.<number>>} rendererToInteractiveTimestamps
+   *     a map from renderer pid to an array of interactive timestamps.
+   */
+  function addExpectedQueueingTimeMetric_(eqtName, getEventTimes, isCpuTime,
+      rendererHelpers, histograms, model) {
+    /**
+     * Extracts tasks for EQT computation from the given renderer.
+     * A task is a pair of {start, end} times.
+     */
+    function getTasks(rendererHelper) {
+      const tasks = [];
+      for (const slice of
+        tr.e.chrome.EventFinderUtils.findToplevelSchedulerTasks(
+            rendererHelper.mainThread)) {
+        const times = getEventTimes(slice);
+        if (times.duration > 0 && !containsForcedGC_(slice)) {
+          tasks.push({start: times.start, end: times.start + times.duration});
+        }
+      }
+      return tasks;
+    }
+    const totalHistogram = getOrCreateHistogram_(
+        histograms,
+        `total:${WINDOW_SIZE_MS}ms_window:${eqtName}`,
+        `The maximum EQT in a ${WINDOW_SIZE_MS}ms sliding window` +
+        ' for a given renderer');
+    for (const rendererHelper of rendererHelpers) {
+      if (rendererHelper.isChromeTracingUI) continue;
+      // Main thread may be missing. See crbug.com/1059726 for an example.
+      if (rendererHelper.mainThread === undefined) continue;
+      // Renderers with lifetime smaller than WINDOW_SIZE_MS do not have
+      // meaningful EQT.
+      if (rendererHelper.mainThread.bounds.duration < WINDOW_SIZE_MS) continue;
+
+      const tasks = getTasks(rendererHelper);
+      const totalBreakdown = getV8Contribution_(
+          eqtName,
+          getEventTimes,
+          isCpuTime,
+          totalHistogram,
+          histograms,
+          rendererHelper,
+          model);
+      totalHistogram.addSample(
+          tr.e.chrome.maxExpectedQueueingTimeInSlidingWindow(
+              rendererHelper.mainThread.bounds.min,
+              rendererHelper.mainThread.bounds.max,
+              WINDOW_SIZE_MS, tasks), {v8: totalBreakdown});
+    }
+  }
+
+  /**
+   * Computes the contribution of the selected events to the expected queueing
+   * time. We define the contribution as the maximum expected queueing time in
+   * the sliding time window of size 500ms (WINDOW_SIZE_MS) for the trace that
+   * is modified as follows:
+   * - from each top-level task remove all subevents except the selected events.
+   * - removing subevents shrinks a task by shifting its end time closer to
+   *   the start time. The start time does not change.
+   *
+   * Example of an added histogram:
+   * - total:500ms_window:renderer_eqt:v8
+   * Each renderer process adds one sample to the histogram.
+   *
+   * @param {!string} eqtName the metric name part of the histogram name.
+   * @param {!EventTimesCallback} getEventTimes.
+   * @param {boolean} isCpuTime
+   * @param {!tr.v.Histogram} totalEqtHistogram
+   * @param {!tr.v.HistogramSet} histograms
+   * @param {!tr.model.helpers.ChromeRendererHelper} rendererHelper
+   * @param {!tr.model.Model} model
+   * @return {!tr.v.d.Breakdown}
+   */
+  function getV8Contribution_(
+      eqtName, getEventTimes, isCpuTime, totalEqtHistogram, histograms,
+      rendererHelper, model) {
+    if (!model.categories.includes('v8')) return null;
+
+    const totalBreakdown = new tr.v.d.Breakdown();
+    // Include task extractors that use tracing.
+    const eventNamesWithTaskExtractors =
+        getV8EventNamesWithTaskExtractors_(getEventTimes);
+    if (!isCpuTime) {
+      // Include task extractors that use RCS. RCS does not provide cpu time
+      // so include these only for wall clock time.
+      const taskExtractorsUsingRCS =
+          getV8EventNamesWithTaskExtractorsUsingRCS_(getEventTimes);
+      for (const [eventName, getTasks] of taskExtractorsUsingRCS) {
+        eventNamesWithTaskExtractors.set(eventName, getTasks);
+      }
+    }
+
+    let totalNames = totalEqtHistogram.diagnostics.get('v8');
+    if (!totalNames) {
+      totalNames = new tr.v.d.RelatedNameMap();
+      totalEqtHistogram.diagnostics.set('v8', totalNames);
+    }
+    for (const [eventName, getTasks] of eventNamesWithTaskExtractors) {
+      const totalHistogram = getOrCreateHistogram_(histograms,
+          `total:${WINDOW_SIZE_MS}ms_window:${eqtName}:${eventName}`,
+          `Contribution to the expected queueing time by ${eventName}` +
+          ' for a given renderer. It is computed as the maximum EQT in' +
+          ` a ${WINDOW_SIZE_MS}ms sliding window after shrinking top-level` +
+          ` tasks to contain only ${eventName} subevents`);
+      const tasks = getTasks(rendererHelper);
+      const totalSample = tr.e.chrome.maxExpectedQueueingTimeInSlidingWindow(
+          rendererHelper.mainThread.bounds.min,
+          rendererHelper.mainThread.bounds.max,
+          WINDOW_SIZE_MS, tasks);
+      totalHistogram.addSample(totalSample);
+      totalBreakdown.set(eventName, totalSample);
+      totalNames.set(eventName, totalHistogram.name);
+    }
+    return totalBreakdown;
+  }
+
+  /**
+  * @callback TaskExtractor
+  * @param {!tr.model.helpers.ChromeRendererHelper} rendererHelper
+  * @return {Array.<{start: !number, end: !number}>}
+  */
+
+  /**
+   * @param {!EventTimesCallback} getEventTimes.
+   * @returns {!Map.<string, TaskExtractor>} a map from V8 event names to
+   *     the corresponding task extractor functions.
+   */
+  function getV8EventNamesWithTaskExtractors_(getEventTimes, cpuMetrics) {
+    /**
+     * @param {!tr.b.Event} slice.
+     * @param {!function(tr.b.Event): boolean} predicate that selects V8 events.
+     * @param {function(tr.b.Event): boolean} excludePredicate that excludes
+     *     V8 events.
+     * @returns {!number} the total duration of topmost subslices of the given
+     *     slice that satisfy the given |predicate| after filtering out any
+     *     events that satisfy the |excludePredicate| in the subslices.
+     */
+    function durationOfTopmostSubSlices(slice, predicate, excludePredicate) {
+      let duration = 0;
+      for (const sub of slice.findTopmostSlicesRelativeToThisSlice(predicate)) {
+        duration += getEventTimes(sub).duration;
+        if (excludePredicate !== null && excludePredicate !== undefined) {
+          duration -= durationOfTopmostSubSlices(sub, excludePredicate);
+        }
+      }
+      return duration;
+    }
+
+    /**
+     * @param {!function(tr.b.Event): boolean} predicate that selects V8 events.
+     * @param {function(tr.b.Event): boolean} excludePredicate that excludes
+     *     V8 events.
+     * @returns {!TaskExtractor} a function that extracts tasks from the given
+     *     renderer. Each task is a pair of {start, end} times and its duration
+     *     represents the contribution of the events selected by the
+     *     given |predicate| and |excludePredicate|.
+     */
+    function taskExtractor(predicate, excludePredicate) {
+      return function(rendererHelper) {
+        const slices = tr.e.chrome.EventFinderUtils.findToplevelSchedulerTasks(
+            rendererHelper.mainThread);
+        const result = [];
+        for (const slice of slices) {
+          const times = getEventTimes(slice);
+          if (times.duration > 0 && !containsForcedGC_(slice)) {
+            const duration = durationOfTopmostSubSlices(
+                slice, predicate, excludePredicate);
+            result.push({start: times.start, end: times.start + duration});
+          }
+        }
+        return result;
+      };
+    }
+
+    return new Map([
+      [
+        'v8',
+        taskExtractor(tr.metrics.v8.utils.isV8Event)
+      ],
+      [
+        'v8:execute',
+        taskExtractor(tr.metrics.v8.utils.isV8ExecuteEvent)
+      ],
+      [
+        'v8:gc',
+        taskExtractor(tr.metrics.v8.utils.isGarbageCollectionEvent)
+      ]
+    ]);
+  }
+
+  /**
+    * @param {!EventTimesCallback} getEventTimes.
+    * @param {!function(!string): boolean} predicate that selects RCS category.
+    * @param {!tr.model.helpers.ChromeRendererHelper} rendererHelper
+    * @returns {Array.<{start: !number, end: !number}>} a list of tasks. Each
+    *     task is a pair of {start, end} times and its duration represents the
+    *     the contribution of the events selected by the given |predicate|.
+    */
+  function extractTaskRCS(getEventTimes, predicate, rendererHelper) {
+    const result = [];
+    for (const topSlice of
+      rendererHelper.mainThread.sliceGroup.topLevelSlices) {
+      const times = getEventTimes(topSlice);
+      if (times.duration <= 0 || containsForcedGC_(topSlice)) {
+        continue;
+      }
+      // Find all V8ThreadSlices in the top level slice.
+      const v8ThreadSlices = [];
+      for (const slice of topSlice.descendentSlices) {
+        if (tr.metrics.v8.utils.isV8RCSEvent(slice)) {
+          v8ThreadSlices.push(slice);
+        }
+      }
+
+      // Find the event specified by predicate.
+      const runtimeGroupCollection =
+        new tr.e.v8.RuntimeStatsGroupCollection();
+      runtimeGroupCollection.addSlices(v8ThreadSlices);
+      let duration = 0;
+      for (const runtimeGroup of runtimeGroupCollection.runtimeGroups) {
+        if (predicate(runtimeGroup.name)) {
+          duration += runtimeGroup.time;
+        }
+      }
+
+      duration = tr.b.convertUnit(
+          duration,
+          tr.b.UnitPrefixScale.METRIC.MICRO,
+          tr.b.UnitPrefixScale.METRIC.MILLI);
+      result.push({start: times.start, end: times.start + duration});
+    }
+    return result;
+  }
+
+  /**
+   * @param {!EventTimesCallback} getEventTimes.
+   * @returns {!Map.<string, TaskExtractor>} a map from V8 event names to
+   *     the corresponding task extractor functions.
+   */
+  function getV8EventNamesWithTaskExtractorsUsingRCS_(getEventTimes) {
+    const extractors = new Map();
+    extractors.set('v8:compile_rcs',
+        rendererHelper => extractTaskRCS(
+            getEventTimes,
+            tr.metrics.v8.utils.isCompileRCSCategory,
+            rendererHelper));
+    extractors.set('v8:compile:optimize_rcs',
+        rendererHelper => extractTaskRCS(
+            getEventTimes,
+            tr.metrics.v8.utils.isCompileOptimizeRCSCategory,
+            rendererHelper));
+    return extractors;
+  }
+
+  tr.metrics.MetricRegistry.register(expectedQueueingTimeMetric);
+
+  return {
+    expectedQueueingTimeMetric,
+  };
+});
+</script>

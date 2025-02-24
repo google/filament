@@ -1,0 +1,28 @@
+Name: gsutil
+Short Name: gsutil
+URL: https://github.com/GoogleCloudPlatform/gsutil
+Version: 5.29
+Revision: 63ae7eeb2cac04cfc5f989b1a6f86172e561c2c7
+Date: 2024-05-08
+License: Apache 2.0
+License File: LICENSE
+Security Critical: no
+Shipped: yes
+
+Description:
+gsutil is a Python application that allow access Google Cloud Storage from
+the command line. gsutil can do a wide range of bucket and object
+management tasks, including:
+* Creating and deleting buckets.
+* Uploading, downloading, and deleting objects.
+* Listing buckets and objects.
+* Moving, copying, and renaming objects.
+* Editing object and bucket ACLs.
+
+Local Modifications:
+_ Added this file.
+_ Added BUILD.gn
+_ Removed requirements.txt from google-auth-library-python and
+  google-auth-library-python-httlib2's .kokoro dependency. The
+  requirements listed there are not used by Catapult and were causing false
+  positives when checking Python dependency versions.

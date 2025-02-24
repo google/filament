@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/annotation.html">
+<link rel="import" href="/tracing/model/location.html">
+<link rel="import" href="/tracing/ui/annotations/rect_annotation_view.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.model', function() {
+  function RectAnnotation(start, end) {
+    tr.model.Annotation.apply(this, arguments);
+
+    this.startLocation_ = start; // Location of top-left corner.
+    this.endLocation_ = end; // Location of bottom-right corner.
+    this.fillStyle = 'rgba(255, 180, 0, 0.3)';
+  }
+
+  RectAnnotation.fromDict = function(dict) {
+    const args = dict.args;
+    const startLoc =
+        new tr.model.Location(args.start.xWorld, args.start.yComponents);
+    const endLoc =
+        new tr.model.Location(args.end.xWorld, args.end.yComponents);
+    return new tr.model.RectAnnotation(startLoc, endLoc);
+  };
+
+  RectAnnotation.prototype = {
+    __proto__: tr.model.Annotation.prototype,
+
+    get startLocation() {
+      return this.startLocation_;
+    },
+
+    get endLocation() {
+      return this.endLocation_;
+    },
+
+    toDict() {
+      return {
+        typeName: 'rect',
+        args: {
+          start: this.startLocation.toDict(),
+          end: this.endLocation.toDict()
+        }
+      };
+    },
+
+    createView_(viewport) {
+      return new tr.ui.annotations.RectAnnotationView(viewport, this);
+    }
+  };
+
+  tr.model.Annotation.register(RectAnnotation, {typeName: 'rect'});
+
+  return {
+    RectAnnotation,
+  };
+});
+</script>

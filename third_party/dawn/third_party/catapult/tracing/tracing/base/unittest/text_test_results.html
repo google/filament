@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/unittest/constants.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/ui/base/ui.html">
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+tr.exportTo('tr.b.unittest', function() {
+  /**
+   * @constructor
+   */
+  function TextTestResults() {
+    this.numTestsThatPassed_ = 0;
+    this.numTestsThatFailed_ = 0;
+    this.numFlakyTests_ = 0;
+    this.numSkippedTests_ = 0;
+    this.currentTestCaseHadErrors_ = false;
+    this.currentTestIsFlaky_ = false;
+    this.currentTestIsSkipped_ = false;
+  }
+
+  TextTestResults.prototype = {
+    get numTestsThatRan() {
+      return this.numTestsThatPassed_ + this.numTestsThatFailed_ +
+          this.numFlakyTests_ + this.numSkippedTests_;
+    },
+
+    get numTestsThatFailed() {
+      return this.numTestsThatFailed_;
+    },
+
+    get numTestsThatPassed() {
+      return this.numTestsThatPassed_;
+    },
+
+    get numFlakyTests() {
+      return this.numFlakyTests_;
+    },
+
+    get numSkippedTests() {
+      return this.numSkippedTests_;
+    },
+
+    willRunTests(testCases) {
+    },
+
+    willRunTest(testCase) {
+      this.write_(testCase.name + ' (' + testCase.suite.name + ') ... ');
+      this.currentTestCaseHadErrors_ = false;
+      this.currentTestIsFlaky_ = false;
+      this.currentTestIsSkipped_ = false;
+    },
+
+    addErrorForCurrentTest(error) {
+      if (!this.currentTestCaseHadErrors_) this.write_('FAIL\n');
+      const normalizedException = tr.b.normalizeException(error);
+      this.write_(normalizedException.stack + '\n');
+      this.currentTestCaseHadErrors_ = true;
+    },
+
+    addHTMLOutputForCurrentTest(element) {
+      this.curHTMLOutput_.push(element);
+    },
+
+    setCurrentTestFlaky() {
+      if (!this.currentTestIsFlaky_) this.write_('FLAKY\n');
+      this.currentTestIsFlaky_ = true;
+    },
+
+    setCurrentTestSkipped() {
+      if (!this.currentTestIsSkipped_) this.write_('SKIPPED\n');
+      this.currentTestIsSkipped_ = true;
+    },
+
+    setReturnValueFromCurrentTest(returnValue) {
+      this.write_('[RESULT] ' + JSON.stringify(returnValue) + '\n');
+    },
+
+    didCurrentTestEnd() {
+      if (this.currentTestCaseHadErrors_) {
+        this.numTestsThatFailed_ += 1;
+      } else if (this.currentTestIsFlaky_) {
+        this.numFlakyTests_ += 1;
+      } else if (this.currentTestIsSkipped_) {
+        this.numSkippedTests_ += 1;
+      } else {
+        this.numTestsThatPassed_ += 1;
+        this.write_('ok\n');
+      }
+    },
+
+    didRunTests() {
+      this.write_('\n------------------------------------------------------' +
+               '----------------\n');
+      if (this.numTestsThatRan === 1) {
+        this.write_('Ran 1 test\n');
+      } else {
+        this.write_('Ran ' + this.numTestsThatRan + ' tests\n');
+      }
+
+      const errorString = 'errors=' + this.numTestsThatFailed;
+      const flakyString = 'flaky=' + this.numFlakyTests;
+      const skippedString = 'skipped=' + this.numSkippedTests;
+      const messages = [];
+      if (this.numTestsThatFailed > 0) messages.push(errorString);
+      if (this.numFlakyTests > 0) messages.push(flakyString);
+      if (this.numSkippedTests > 0) messages.push(skippedString);
+      let details = '';
+      if (messages.length > 0) {
+        details += ' (' + messages.join(' ') + ')';
+      }
+
+      if (this.numTestsThatFailed > 0) {
+        this.write_('\nFAILED' + details);
+      } else {
+        this.write_('\nOK' + details);
+      }
+    },
+
+    write_(msg) {
+      if (tr.isVinn) {
+        global.write(msg);
+      } else {
+        console.log(msg);
+      }
+    }
+  };
+
+  return {
+    TextTestResults,
+  };
+});
+</script>

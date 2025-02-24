@@ -1,0 +1,40 @@
+#!/usr/bin/env vpython3
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Runs the Perf Dashboard Python unit test suite."""
+
+import os
+import sys
+
+_CATAPULT_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..'))
+_DASHBOARD_PATH = os.path.join(_CATAPULT_PATH, 'dashboard')
+
+
+def _AddToPathIfNeeded(path):
+  if path not in sys.path:
+    sys.path.insert(0, path)
+
+
+if __name__ == '__main__':
+  _AddToPathIfNeeded(_CATAPULT_PATH)
+  _AddToPathIfNeeded(_DASHBOARD_PATH)
+
+  from hooks import install
+  if '--no-install-hooks' in sys.argv:
+    sys.argv.remove('--no-install-hooks')
+  else:
+    install.InstallHooks()
+
+  # PYTHONPATH points to a out-of-date cipd package.
+  if 'PYTHONPATH' in os.environ:
+    os.environ.pop('PYTHONPATH')
+
+  from catapult_build import run_with_typ
+  import dashboard
+  root = 'dashboard'
+  return_code = run_with_typ.Run(
+    os.path.join(_DASHBOARD_PATH, root),
+    path=dashboard.PathsForTesting())
+  sys.exit(return_code)

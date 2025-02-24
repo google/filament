@@ -1,0 +1,13 @@
+boto v2.21.2
+============
+
+:date: 2013/12/24
+
+This release is a bugfix release which corrects one more bug in the Mechanical
+Turk objects.
+
+
+Bugfixes
+--------
+
+* Fixed a missed inheritance bug in mturk. (:issue:`1936`, :sha:`0137f29`)

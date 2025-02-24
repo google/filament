@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<script>
+'use strict';
+window.ga = window.ga || function() {
+  ga.q = ga.q || [];
+  ga.q.push(arguments);
+};
+ga.l = new Date();
+ga('create', 'UA-98760012-1', 'auto');
+
+// Supporting file: URIs requires disabling protocol checking, cookie storage
+// checking, and history checking.
+ga('set', 'checkProtocolTask', null);
+ga('set', 'checkStorageTask', null);
+ga('set', 'historyImportTask', null);
+
+(function() {
+  // Write this script tag at runtime instead of in HTML in order to bypass the
+  // vulcanizer.
+  const script = document.createElement('script');
+  script.src = 'https://www.google-analytics.com/analytics.js';
+  script.type = 'text/javascript';
+  script.async = true;
+  document.head.appendChild(script);
+})();
+</script>
+
+<link rel="import" href="/tracing/ui/base/webcomponentsjs_polyfill.html" data-suppress-import-order>
+<link rel="import" href="/tracing/ui/base/base.html" data-suppress-import-order>
+
+<div id="loading">Loading framework...</div>
+
+<link rel="import" href="/tracing/base/timing.html">
+<link rel="import" href="/tracing/value/histogram_importer.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_location.html">
+<link rel="import" href="/tracing/value/ui/histogram_set_view.html">
+
+<script>
+'use strict';
+(function() {
+  ga('send', {
+    hitType: 'pageview',
+    page: '/results.html',
+  });
+
+  const domContentLoadedMark = tr.b.Timing.mark('results2', 'domContentLoaded');
+  let importer = new tr.v.HistogramImporter(document.getElementById('loading'));
+
+  document.addEventListener('DOMContentLoaded', async() => {
+    domContentLoadedMark.end();
+
+    const jsonData = document.getElementById('histogram-json-data');
+    const view = document.getElementById('histograms');
+    const locus = new tr.v.ui.HistogramSetLocation();
+
+    // Extract all comment nodes inside jsonData.
+    const strings = Array.prototype.map.call(
+        jsonData.childNodes, each => each.textContent);
+    await importer.importHistograms(strings, view);
+    await locus.build(view.viewState);
+
+    // Free the objects and DOM referenced by the importer.
+    document.body.removeChild(jsonData);
+    importer = undefined;
+  });
+})();
+</script>
+
+<tr-v-ui-histogram-set-view id="histograms" style="display: none;"></tr-v-ui-histogram-set-view>

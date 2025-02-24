@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/metrics/system_health/memory_metric.html">
+<link rel="import" href="/tracing/metrics/v8/execution_metric.html">
+<link rel="import" href="/tracing/metrics/v8/gc_metric.html">
+<link rel="import" href="/tracing/metrics/v8/runtime_stats_metric.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics.v8', function() {
+  function v8AndMemoryMetrics(histograms, model) {
+    tr.metrics.v8.executionMetric(histograms, model);
+    tr.metrics.v8.gcMetric(histograms, model);
+    tr.metrics.v8.runtimeStatsTotalMetric(histograms, model);
+    tr.metrics.sh.memoryMetric(histograms, model,
+        {rangeOfInterest: tr.metrics.v8.utils.rangeForMemoryDumps(model)});
+  }
+
+  tr.metrics.MetricRegistry.register(v8AndMemoryMetrics);
+
+  return {
+    v8AndMemoryMetrics,
+  };
+});
+</script>

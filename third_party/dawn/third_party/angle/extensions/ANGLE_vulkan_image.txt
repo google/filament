@@ -1,0 +1,85 @@
+Name
+
+    ANGLE_vulkane_image
+
+Name Strings
+
+    GL_ANGLE_vulkane_image
+
+Contributors
+
+    Peng Huang, Google
+
+Contact
+
+    Peng Huang, Google (penghuang 'at' chromium.com)
+
+Status
+
+    Draft
+
+Version
+
+    Last Modified Date: Nov 19, 2021
+    Revision: 1
+
+Number
+
+    TBD
+
+Dependencies
+
+    Written against the OpenGL 4.5 and OpenGL ES 3.2 specifications
+
+    GL_ANGLE_vulkane_image requires GL_EXT_external_objects
+
+Overview
+
+    Building upon the OpenGL memory object and semaphore framework
+    defined in EXT_external_objects, this extension enables an OpenGL
+    application to share textures with an external API.
+
+New Procedures and Functions
+
+    If the GL_ANGLE_vulkane_image string is reported, the following commands
+    are added:
+
+    void AcquireTexturesANGLE(uint numTextures,
+                              const uint *textures,
+                              const GLenum *layouts);
+
+    void ReleaseTexturesANGLE(uint numTextures,
+                              const uint *textures,
+                              GLenum *layouts);
+
+New Tokens
+
+    None
+
+Additions to Chapter 4 of the OpenGL 4.5 Specification (Event Model)
+
+    The command
+        void AcquireTexturesANGLE(uint numTextures,
+                                  const uint *textures,
+                                  const GLenum *layouts);
+    will acquire ownership of textures. Since the texture layout state is
+    managed internally by the GL, but may have been modified by an external API,
+    the current layout of the textures must be specified to initialize internal
+    GL state prior to correspond to those specified by the Vulkan API as
+    described in table 4.4. However, the layouts do not necessarily correspond
+    to an optimal state for any particular GL operation. The GL will simply
+    perform appropriate transitions internally as necessary based on the
+    specified current layout of the texture.
+
+    The command
+        void ReleaseTexturesANGLE(uint numTextures,
+                                  const uint *textures,
+                                  GLenum *layouts);
+    will release ownership of textures. The current texture layouts will be
+    returned, so an external API can perform appropriate transitions as
+    necessary based on the returned current layout of the textures.
+
+Revision History
+
+    Revision 1, 2021-11-19 (Peng Huang)
+        - Initial draft based closely on EXT_external_objects_fd.

@@ -1,0 +1,89 @@
+# This sets up the GN configs that are used by default in GN targets in
+# BUILDCONFIG.gn.
+#
+# This is based on LLVM `utils/gn/build/BUILD.gn`. Only the LLVM and Clang
+# related options are retained
+
+import("//build_overrides/clspv.gni")
+
+declare_args() {
+  # Whether to build everything with test coverage information.
+  # After building with this, run tests and then run
+  #    llvm/utils/prepare-code-coverage-artifact.py \
+  #        --compilation-dir=out/gn \
+  #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
+  #        out/gn/bin/llvm-undname ...
+  # to generate a HTML report for the binaries passed in the last line.
+  llvm_build_instrumented_coverage = false
+
+  # Whether to build everything with instrumentation for PGO
+  # After building with this:
+  # 1. Remove old profile data with `rm *.profraw`
+  # 2. Run the built instrumented binaries.
+  #    This will produce *.profraw files in the current working directory.
+  # 3. Run `llvm-profdata merge *.profraw -o llvm.profdata` to merge them.
+  # 4. Then build again, with this set to false, and with
+  #    `llvm_pgo_use = "//llvm.profdata"` set to use the created profile.
+  llvm_pgo_instrument = false
+
+  # If non-empty, path to merged profiling data used for optimization
+  # See documentation for llvm_pgo_instrument for how to create profile data.
+  llvm_pgo_use = ""
+
+  # If set, puts relative paths in debug info.
+  # Makes the build output independent of the build directory, but makes
+  # most debuggers harder to use. See "Getting to local determinism" and
+  # "Getting debuggers to work well with locally deterministic builds" in
+  # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
+  # for more information.
+  use_relative_paths_in_debug_info = false
+
+  # The version of host gcc. Ignored if is_clang is true.
+  gcc_version = 9
+}
+
+assert(!llvm_build_instrumented_coverage || is_clang,
+       "llvm_build_instrumented_coverage requires clang as host compiler")
+assert(!llvm_pgo_instrument || is_clang,
+       "llvm_pgo_instrument requires clang as host compiler")
+assert(llvm_pgo_use == "" || is_clang,
+       "llvm_pgo_use requires clang as host compiler")
+assert(!llvm_pgo_instrument || llvm_pgo_use == "",
+       "set at most one of llvm_pgo_instrument and llvm_pgo_use")
+
+config("llvm_code") {
+  include_dirs = [
+    "//$clspv_llvm_dir/llvm/include",
+    "$root_gen_dir/$clspv_llvm_dir//llvm/include",
+  ]
+  if (current_os != "win") {
+    cflags = [ "-fPIC" ]
+    if (is_clang) {
+      cflags += [
+        "-Wno-deprecated-declarations",
+        "-Wno-deprecated-this-capture",
+        "-Wno-deprecated-enum-enum-conversion",
+        "-Wno-deprecated-anon-enum-enum-conversion",
+      ]
+    }
+  }
+}
+
+config("clang_code") {
+  if (current_os != "win") {
+    cflags = [
+      "-fno-strict-aliasing",
+      "-Wno-deprecated-declarations",
+    ]
+  }
+  include_dirs = [
+    "//$clspv_llvm_dir/clang/include",
+    "$root_gen_dir/$clspv_llvm_dir//clang/include",
+  ]
+}
+
+config("warn_covered_switch_default") {
+  if (is_clang) {
+    cflags = [ "-Wcovered-switch-default" ]
+  }
+}

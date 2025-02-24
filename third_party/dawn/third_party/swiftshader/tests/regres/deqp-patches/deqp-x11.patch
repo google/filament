@@ -1,0 +1,25 @@
+diff --git a/framework/platform/lnx/X11/tcuLnxX11.cpp b/framework/platform/lnx/X11/tcuLnxX11.cpp
+index 10c875869..1d1f9f577 100644
+--- a/framework/platform/lnx/X11/tcuLnxX11.cpp
++++ b/framework/platform/lnx/X11/tcuLnxX11.cpp
+@@ -24,6 +24,7 @@
+ #include "tcuLnxX11.hpp"
+ #include "gluRenderConfig.hpp"
+ #include "deMemory.h"
++#include "deThread.hpp"
+ 
+ #include <X11/Xutil.h>
+ 
+@@ -79,6 +80,12 @@ XlibDisplay::XlibDisplay(EventState &eventState, const char *name) : DisplayBase
+     //     Xlib call is made.
+     DE_CHECK_RUNTIME_ERR(XInitThreads() != 0);
+     m_display = XOpenDisplay((char *)name); // Won't modify argument string.
++    for (int i = 0; i < 10; i++) {
++        m_display = XOpenDisplay((char*)name); // Won't modify argument string.
++        if (m_display)
++            break;
++        deSleep(100*(1<<i));
++    }
+     if (!m_display)
+         throw ResourceError("Failed to open display", name, __FILE__, __LINE__);
+ 

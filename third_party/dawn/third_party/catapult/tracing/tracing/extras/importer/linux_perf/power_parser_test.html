@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('powerFrequencyImport', function() {
+    const lines = [
+      ' kworker/0:3-6880  [000]  2784.783015: power_frequency: ' +
+                 'type=2 state=1000000 cpu_id=0',
+      ' kworker/1:2-7269  [001]  2784.788993: power_frequency: ' +
+                 'type=2 state=800000 cpu_id=1',
+      ' kworker/1:2-7269  [001]  2784.993120: power_frequency: ' +
+                 'type=2 state=1300000 cpu_id=1'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const c0 = m.kernel.cpus[0];
+    assert.strictEqual(c0.slices.length, 0);
+    assert.strictEqual(
+        c0.counters['.Clock Frequency'].series[0].samples.length, 1);
+
+    const c1 = m.kernel.cpus[1];
+    assert.strictEqual(c1.slices.length, 0);
+    assert.strictEqual(
+        c1.counters['.Clock Frequency'].series[0].samples.length, 2);
+  });
+
+  test('cpuFrequencyImport', function() {
+    const lines = [
+      '     kworker/1:0-9665  [001] 15051.007301: cpu_frequency: ' +
+                     'state=800000 cpu_id=1',
+      '     kworker/1:0-9665  [001] 15051.010278: cpu_frequency: ' +
+                     'state=1300000 cpu_id=1',
+      '     kworker/0:2-7972  [000] 15051.010278: cpu_frequency: ' +
+                     'state=1000000 cpu_id=0',
+      '     kworker/0:2-7972  [000] 15051.020304: cpu_frequency: ' +
+                     'state=800000 cpu_id=0'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const c0 = m.kernel.cpus[0];
+    assert.strictEqual(c0.slices.length, 0);
+    assert.strictEqual(
+        c0.counters['.Clock Frequency'].series[0].samples.length, 2);
+
+    const c1 = m.kernel.cpus[1];
+    assert.strictEqual(c1.slices.length, 0);
+    assert.strictEqual(
+        c1.counters['.Clock Frequency'].series[0].samples.length, 2);
+  });
+
+  test('cpuIdleImport', function() {
+    const lines = [
+      '          <idle>-0     [000] 15050.992883: cpu_idle: ' +
+          'state=1 cpu_id=0',
+      '          <idle>-0     [000] 15050.993027: cpu_idle: ' +
+          'state=4294967295 cpu_id=0',
+      '          <idle>-0     [001] 15050.993132: cpu_idle: ' +
+          'state=1 cpu_id=1',
+      '          <idle>-0     [001] 15050.993276: cpu_idle: ' +
+          'state=4294967295 cpu_id=1',
+      '          <idle>-0     [001] 15050.993279: cpu_idle: ' +
+          'state=3 cpu_id=1',
+      '          <idle>-0     [001] 15050.993457: cpu_idle: ' +
+          'state=4294967295 cpu_id=1'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const c0 = m.kernel.cpus[0];
+    assert.strictEqual(c0.slices.length, 0);
+    assert.strictEqual(c0.counters['.C-State'].series[0].samples.length, 2);
+
+    const c1 = m.kernel.cpus[1];
+    assert.strictEqual(c1.slices.length, 0);
+    assert.strictEqual(c1.counters['.C-State'].series[0].samples.length, 4);
+  });
+});
+</script>
+

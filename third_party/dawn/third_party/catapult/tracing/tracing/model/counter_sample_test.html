@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/model/counter.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Counter = tr.model.Counter;
+  const CounterSeries = tr.model.CounterSeries;
+  const CounterSample = tr.model.CounterSample;
+
+  test('groupByTimestamp', function() {
+    const counter = new Counter();
+    const slice0 = counter.addSeries(new CounterSeries('x', 0));
+    const slice1 = counter.addSeries(new CounterSeries('y', 1));
+
+    const slice0Sample0 = slice0.addCounterSample(0, 100);
+    const slice0Sample1 = slice1.addCounterSample(0, 200);
+    const slice1Sample0 = slice0.addCounterSample(1, 100);
+    const slice1Sample1 = slice1.addCounterSample(1, 200);
+
+    const groups = CounterSample.groupByTimestamp([slice0Sample1, slice0Sample0,
+      slice1Sample1, slice1Sample0]);
+    assert.strictEqual(groups.length, 2);
+    assert.deepEqual(groups[0], [slice0Sample0, slice0Sample1]);
+    assert.deepEqual(groups[1], [slice1Sample0, slice1Sample1]);
+  });
+
+  test('getSampleIndex', function() {
+    const ctr = new Counter(null, 0, '', 'myCounter');
+    const slice0 = new CounterSeries('a', 0);
+    ctr.addSeries(slice0);
+
+    const slice0Sample0 = slice0.addCounterSample(0, 0);
+    const slice0Sample1 = slice0.addCounterSample(1, 100);
+    assert.strictEqual(slice0Sample0.getSampleIndex(), 0);
+    assert.strictEqual(slice0Sample1.getSampleIndex(), 1);
+  });
+});
+</script>

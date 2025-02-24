@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/extras/importer/linux_perf/parser.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Parses dma-fence events in the Linux event trace format.
+ */
+tr.exportTo('tr.e.importer.linux_perf', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const Parser = tr.e.importer.linux_perf.Parser;
+
+  /**
+   * Parses linux dma-fence trace events.
+   * @constructor
+   */
+  function DmaFenceParser(importer) {
+    Parser.call(this, importer);
+
+    this.model_ = importer.model_;
+    importer.registerEventHandler(
+        'dma_fence_init',
+        DmaFenceParser.prototype.initEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_emit',
+        DmaFenceParser.prototype.initEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_destroy',
+        DmaFenceParser.prototype.fenceDestroyEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_enable_signal',
+        DmaFenceParser.prototype.fenceEnableSignalEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_signaled',
+        DmaFenceParser.prototype.fenceSignaledEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_wait_start',
+        DmaFenceParser.prototype.fenceWaitEvent.bind(this));
+    importer.registerEventHandler(
+        'dma_fence_wait_end',
+        DmaFenceParser.prototype.fenceWaitEvent.bind(this));
+
+    // support legacy event names
+    importer.registerEventHandler(
+        'fence_init',
+        DmaFenceParser.prototype.initEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_emit',
+        DmaFenceParser.prototype.initEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_destroy',
+        DmaFenceParser.prototype.fenceDestroyEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_enable_signal',
+        DmaFenceParser.prototype.fenceEnableSignalEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_signaled',
+        DmaFenceParser.prototype.fenceSignaledEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_wait_start',
+        DmaFenceParser.prototype.fenceWaitEvent.bind(this));
+    importer.registerEventHandler(
+        'fence_wait_end',
+        DmaFenceParser.prototype.fenceWaitEvent.bind(this));
+
+    this.model_ = importer.model_;
+  }
+
+  const fenceRE = /driver=(\S+) timeline=(\S+) context=(\d+) seqno=(\d+)/;
+
+  DmaFenceParser.prototype = {
+    __proto__: Parser.prototype,
+
+    /**
+     * Parses fence events and sets up state in the importer.
+     */
+    initEvent(eventName, cpuNumber, pid,
+        ts, eventBase) {
+      const event = fenceRE.exec(eventBase.details);
+      if (!event) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+
+      const thread = this.importer.getOrCreatePseudoThread(event[2]);
+      thread.lastActiveTs = ts;
+
+      return true;
+    },
+
+    fenceDestroyEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = fenceRE.exec(eventBase.details);
+      if (!event) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+      const thread = this.importer.getOrCreatePseudoThread(event[2]);
+      const name = 'fence_destroy(' + event[4] + ')';
+      const colorName = 'fence(' + event[4] + ')';
+
+      if (thread.lastActiveTs !== undefined) {
+        const duration = ts - thread.lastActiveTs;
+        const slice = new tr.model.ThreadSlice(
+            '', name,
+            ColorScheme.getColorIdForGeneralPurposeString(colorName),
+            thread.lastActiveTs, {
+              driver: event[1],
+              context: event[3]
+            },
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      if (thread.thread.sliceGroup.openSliceCount > 0) {
+        thread.thread.sliceGroup.endSlice(ts);
+      }
+      thread.lastActiveTs = ts;
+    },
+
+    fenceEnableSignalEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = fenceRE.exec(eventBase.details);
+      if (!event) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+      const thread = this.importer.getOrCreatePseudoThread(event[2]);
+      const name = 'fence_enable(' + event[4] + ')';
+      const colorName = 'fence(' + event[4] + ')';
+
+      if (thread.lastActiveTs !== undefined) {
+        const duration = ts - thread.lastActiveTs;
+        const slice = new tr.model.ThreadSlice(
+            '', name,
+            ColorScheme.getColorIdForGeneralPurposeString(colorName),
+            thread.lastActiveTs, {
+              driver: event[1],
+              context: event[3]
+            },
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      if (thread.thread.sliceGroup.openSliceCount > 0) {
+        thread.thread.sliceGroup.endSlice(ts);
+      }
+      thread.lastActiveTs = ts;
+    },
+
+    fenceSignaledEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      const event = fenceRE.exec(eventBase.details);
+      if (!event) return false;
+
+      if (eventBase.tgid === undefined) {
+        return false;
+      }
+      const thread = this.importer.getOrCreatePseudoThread(event[2]);
+      const name = 'fence_signal(' + event[4] + ')';
+      const colorName = 'fence(' + event[4] + ')';
+
+      if (thread.lastActiveTs !== undefined) {
+        const duration = ts - thread.lastActiveTs;
+        const slice = new tr.model.ThreadSlice(
+            '', name,
+            ColorScheme.getColorIdForGeneralPurposeString(colorName),
+            thread.lastActiveTs, {
+              driver: event[1],
+              context: event[3]
+            },
+            duration);
+        thread.thread.sliceGroup.pushSlice(slice);
+      }
+      if (thread.thread.sliceGroup.openSliceCount > 0) {
+        thread.thread.sliceGroup.endSlice(ts);
+      }
+      thread.lastActiveTs = ts;
+
+      return true;
+    },
+
+    fenceWaitEvent(eventName, cpuNumber, pid, ts, eventBase) {
+      if (eventBase.tgid === undefined) return false;
+      const event = fenceRE.exec(eventBase.details);
+      if (!event) return false;
+
+      const tgid = parseInt(eventBase.tgid);
+      const thread = this.model_.getOrCreateProcess(tgid)
+          .getOrCreateThread(pid);
+      thread.name = eventBase.threadName;
+
+      const slices = thread.kernelSliceGroup;
+      if (!slices.isTimestampValidForBeginOrEnd(ts)) {
+        this.model_.importWarning({
+          type: 'parse_error',
+          message: 'Timestamps are moving backward.'
+        });
+        return false;
+      }
+
+      const name = 'dma_fence_wait("' + event[2] + '")';
+      if (eventName.endsWith('start')) {
+        const slice = slices.beginSlice(null, name, ts, {
+          driver: event[1],
+          context: event[3],
+          seqno: event[4],
+        });
+      } else {
+        if (slices.openSliceCount > 0) {
+          slices.endSlice(ts);
+        }
+      }
+
+      return true;
+    },
+  };
+
+  Parser.register(DmaFenceParser);
+
+  return {
+    DmaFenceParser,
+  };
+});
+</script>

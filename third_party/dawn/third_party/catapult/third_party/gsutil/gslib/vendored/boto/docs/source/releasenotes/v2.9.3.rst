@@ -1,0 +1,53 @@
+boto v2.9.3
+===========
+
+:date: 2013/05/15
+
+This release adds ELB support to Opsworks, optimized EBS support in EC2
+AutoScale, Parallel Scan support to DynamoDB v2, a higher-level interface to
+DynamoDB v2 and API updates to DataPipeline.
+
+
+Features
+--------
+
+* ELB support in Opsworks - You can now attach & describe the Elastic Load
+  Balancers within the Opsworks client. (:sha:`ecda87`)
+* Optimized EBS support in EC2 AutoScale - You can now specify whether an
+  AutoScale instance should be optimized for EBS I/O. (:sha:`f8acaa`)
+* Parallel Scan support in DynamoDB v2 - If you have extra read capacity &
+  a large amount of data, you can scan over the records in parallel by
+  telling DynamoDB to split the table into segments, then spinning up
+  threads/processes to each run over their own segment. (:sha:`db7f7b` & :sha:`7ed73c`)
+* Higher-level interface to DynamoDB v2 - A more convenient API for using
+  DynamoDB v2. The :ref:`DynamoDB v2 Tutorial <dynamodb2_tut>` has more
+  information on how to use the new API. (:sha:`0f7c8b`)
+
+
+Backward-Incompatible Changes
+-----------------------------
+
+* API Update for DataPipeline - The ``error_code`` (integer) argument to
+  ``set_task_status`` changed to ``error_id`` (string). Many documentation
+  updates were also added. (:sha:`a78572`)
+
+
+Bugfixes
+--------
+
+* Bumped the AWS Support API version. (:sha:`0323f4`)
+* Fixed the S3 ``ResumableDownloadHandler`` so that it no longer tries to use
+  a hashing algorithm when used outside of GCS. (:sha:`29b046`)
+* Fixed a bug where Sig V4 URIs were improperly canonicalized. (:sha:`5269d8`)
+* Fixed a bug where Sig V4 ports were not included. (:sha:`cfaba3`)
+* Fixed a bug in CloudWatch's ``build_put_params`` that would overwrite
+  existing/necessary variables. (:sha:`550e00`)
+* Several documentation improvements/fixes:
+
+    * Added docs for RDS ``modify/modify_dbinstance``. (:sha:`777d73`)
+    * Fixed a typo in the ``README.rst``. (:sha:`181e0f`)
+    * Documentation fallout from the previous release. (:sha:`14a111`)
+    * Fixed a typo in the EC2 ``Image.run`` docs. (:sha:`5edd6a`)
+    * Added/improved docs for EC2 ``Image.run``. (:sha:`773ce5`)
+    * Added a CONTRIBUTING doc. (:sha:`cecbe8`)
+    * Fixed S3 ``create_bucket`` docs to specify "European Union". (:sha:`ddddfd`)

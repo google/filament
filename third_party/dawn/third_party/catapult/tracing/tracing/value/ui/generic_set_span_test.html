@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+Copyright 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/raf.html">
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/value/diagnostics/generic_set.html">
+<link rel="import" href="/tracing/value/ui/diagnostic_span.html">
+
+<script>
+'use strict';
+
+// See https://crbug.com/1143376.
+tr.b.unittest.skippedTestSuite(function() {
+  test('link_tuple', function() {
+    const diagnostic = new tr.v.d.GenericSet([
+      ['label', 'http://example.com/'],
+    ]);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span, 'a');
+    assert.lengthOf(links, diagnostic.size);
+    assert.strictEqual('label', links[0].textContent);
+    assert.strictEqual('http://example.com/', links[0].href);
+  });
+
+  test('instantiate', function() {
+    const diagnostic = new tr.v.d.GenericSet([{foo: 'bar', baz: [42]}]);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+  });
+
+  test('strings', function() {
+    const diagnostic = new tr.v.d.GenericSet([
+      'foo', 'bar', 1, 0, Infinity, NaN,
+    ]);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span, 'a');
+    assert.lengthOf(links, diagnostic.size);
+    assert.strictEqual(links[0].textContent, '0');
+    assert.strictEqual(links[0].href, '');
+    assert.strictEqual(links[1].textContent, '1');
+    assert.strictEqual(links[1].href, '');
+    assert.strictEqual(links[2].textContent, 'Infinity');
+    assert.strictEqual(links[2].href, '');
+    assert.strictEqual(links[3].textContent, 'NaN');
+    assert.strictEqual(links[3].href, '');
+    assert.strictEqual(links[4].textContent, 'bar');
+    assert.strictEqual(links[4].href, '');
+    assert.strictEqual(links[5].textContent, 'foo');
+    assert.strictEqual(links[5].href, '');
+  });
+
+  test('numbers', function() {
+    const diagnostic = new tr.v.d.GenericSet([10, 1, 0, 2, 11]);
+    const span = tr.v.ui.createDiagnosticSpan(diagnostic);
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span, 'a');
+    assert.lengthOf(links, diagnostic.size);
+    assert.strictEqual(links[0].textContent, '0');
+    assert.strictEqual(links[0].href, '');
+    assert.strictEqual(links[1].textContent, '1');
+    assert.strictEqual(links[1].href, '');
+    assert.strictEqual(links[2].textContent, '2');
+    assert.strictEqual(links[2].href, '');
+    assert.strictEqual(links[3].textContent, '10');
+    assert.strictEqual(links[3].href, '');
+    assert.strictEqual(links[4].textContent, '11');
+    assert.strictEqual(links[4].href, '');
+  });
+
+  test('urls', function() {
+    const urls = [
+      'http://google.com/',
+      'http://cnn.com/',
+    ];
+    const span = tr.v.ui.createDiagnosticSpan(new tr.v.d.GenericSet(urls));
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span, 'a');
+    assert.lengthOf(links, urls.length);
+    assert.strictEqual(links[0].textContent, urls[1]);
+    assert.strictEqual(links[0].href, urls[1]);
+    assert.strictEqual(links[1].textContent, urls[0]);
+    assert.strictEqual(links[1].href, urls[0]);
+  });
+
+  test('traceUrls', function() {
+    const urls = [
+      'https://storage.cloud.google.com/chromium-telemetry/c.html',
+      'file://d/e/f.html',
+    ];
+    const span = tr.v.ui.createDiagnosticSpan(
+        new tr.v.d.GenericSet(urls), tr.v.d.RESERVED_NAMES.TRACE_URLS);
+    assert.strictEqual('TR-V-UI-GENERIC-SET-SPAN', span.tagName);
+    this.addHTMLOutput(span);
+    const links = tr.ui.b.findDeepElementsMatching(span, 'a');
+    assert.lengthOf(links, urls.length);
+    assert.strictEqual(links[0].textContent, 'f.html');
+    assert.strictEqual(links[0].href, urls[1]);
+    assert.strictEqual(links[1].textContent, 'c.html');
+    assert.strictEqual(links[1].href, urls[0]);
+  });
+});
+</script>

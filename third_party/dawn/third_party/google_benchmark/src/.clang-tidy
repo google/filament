@@ -1,0 +1,6 @@
+---
+Checks:          'clang-analyzer-*,readability-redundant-*,performance-*'
+WarningsAsErrors: 'clang-analyzer-*,readability-redundant-*,performance-*'
+HeaderFilterRegex: '.*'
+FormatStyle:     none
+User:            user

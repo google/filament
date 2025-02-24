@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/math/range_utils.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/extras/chrome/cc/input_latency_async_slice.html">
+<link rel="import" href="/tracing/importer/find_input_expectations.html">
+<link rel="import" href="/tracing/importer/find_load_expectations.html">
+<link rel="import" href="/tracing/importer/find_startup_expectations.html">
+<link rel="import" href="/tracing/model/event_info.html">
+<link rel="import" href="/tracing/model/ir_coverage.html">
+<link rel="import" href="/tracing/model/user_model/idle_expectation.html">
+<link rel="import" href="/tracing/model/user_model/segment.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.importer', function() {
+  const INSIGNIFICANT_MS = 1;
+
+  class UserModelBuilder {
+    constructor(model) {
+      this.model = model;
+      this.modelHelper = model.getOrCreateHelper(
+          tr.model.helpers.ChromeModelHelper);
+    }
+
+    static supportsModelHelper(modelHelper) {
+      return modelHelper.browserHelper !== undefined;
+    }
+
+    /**
+     * This is called during the trace model import process.
+     */
+    buildUserModel() {
+      if (!this.modelHelper || !this.modelHelper.browserHelper) return;
+
+      try {
+        for (const ue of this.findUserExpectations()) {
+          // This is an EventSet, not an Array, so it can't use push(...).
+          // https://github.com/catapult-project/catapult/issues/3157
+          this.model.userModel.expectations.push(ue);
+        }
+        this.model.userModel.segments.push(...this.findSegments());
+        // There are not currently any known cases when this could throw,
+        // but there have been in the past and there could be again, so
+        // keep handling exceptions here to be friendly to the future.
+      } catch (error) {
+        this.model.importWarning({
+          type: 'UserModelBuilder',
+          message: error,
+          showToUser: true
+        });
+      }
+    }
+
+    /**
+     * Returns an array of Segments covering the trace Model. A Segment
+     * represents a range of time during which the set of active
+     * UserExpectations does not change. Because of this, segments are
+     * guaranteed to not overlap, whereas UserExpectations can.
+     *
+     * @return {!Array.<!tr.model.um.Segment>}
+     */
+    findSegments() {
+      let timestamps = new Set();
+      for (const expectation of this.model.userModel.expectations) {
+        timestamps.add(expectation.start);
+        timestamps.add(expectation.end);
+      }
+      timestamps = [...timestamps];
+      timestamps.sort((x, y) => x - y);
+      const segments = [];
+      for (let i = 0; i < timestamps.length - 1; ++i) {
+        const segment = new tr.model.um.Segment(
+            timestamps[i], timestamps[i + 1] - timestamps[i]);
+        segments.push(segment);
+        const segmentRange = tr.b.math.Range.fromExplicitRange(
+            segment.start, segment.end);
+        for (const expectation of this.model.userModel.expectations) {
+          const expectationRange = tr.b.math.Range.fromExplicitRange(
+              expectation.start, expectation.end);
+          if (segmentRange.intersectsRangeExclusive(expectationRange)) {
+            segment.expectations.push(expectation);
+          }
+        }
+      }
+      return segments;
+    }
+
+    /**
+     * Returns an array of UserExpectations covering the trace Model. A
+     * UserExpectation represents a range of time during which the user is
+     * expecting something from Chrome, either to startup or load a page or
+     * respond to input or play an animation, or just sit there idle. Users can
+     * have multiple expectations at any given time, so UserExpectations can
+     * overlap.
+     *
+     * @return {!Array.<!tr.model.um.UserExpectation>}
+     */
+    findUserExpectations() {
+      const expectations = [];
+      expectations.push.apply(expectations, tr.importer.findStartupExpectations(
+          this.modelHelper));
+      expectations.push.apply(expectations, tr.importer.findLoadExpectations(
+          this.modelHelper));
+      expectations.push.apply(expectations, tr.importer.findInputExpectations(
+          this.modelHelper));
+      // findIdleExpectations must be called last!
+      expectations.push.apply(
+          expectations, this.findIdleExpectations(expectations));
+      this.collectUnassociatedEvents_(expectations);
+      return expectations;
+    }
+
+    // Find all unassociated top-level ThreadSlices. If they start during an
+    // Idle or Load UE, then add their entire hierarchy to that UE.
+    collectUnassociatedEvents_(expectations) {
+      const vacuumUEs = [];
+      for (const expectation of expectations) {
+        if (expectation instanceof tr.model.um.IdleExpectation ||
+            expectation instanceof tr.model.um.LoadExpectation ||
+            expectation instanceof tr.model.um.StartupExpectation) {
+          vacuumUEs.push(expectation);
+        }
+      }
+      if (vacuumUEs.length === 0) return;
+
+      const allAssociatedEvents = tr.model.getAssociatedEvents(expectations);
+      const unassociatedEvents = tr.model.getUnassociatedEvents(
+          this.model, allAssociatedEvents);
+
+      for (const event of unassociatedEvents) {
+        if (!(event instanceof tr.model.ThreadSlice)) continue;
+
+        if (!event.isTopLevel) continue;
+
+        for (let index = 0; index < vacuumUEs.length; ++index) {
+          const expectation = vacuumUEs[index];
+
+          if ((event.start >= expectation.start) &&
+              (event.start < expectation.end)) {
+            expectation.associatedEvents.addEventSet(event.entireHierarchy);
+            break;
+          }
+        }
+      }
+    }
+
+    // Fill in the empty space between UEs with IdleUEs.
+    findIdleExpectations(otherUEs) {
+      if (this.model.bounds.isEmpty) return;
+
+      const emptyRanges = tr.b.math.findEmptyRangesBetweenRanges(
+          tr.b.math.convertEventsToRanges(otherUEs),
+          this.model.bounds);
+      const expectations = [];
+      const model = this.model;
+      for (const range of emptyRanges) {
+        // Ignore insignificantly tiny idle ranges.
+        if (range.max < (range.min + INSIGNIFICANT_MS)) continue;
+
+        expectations.push(new tr.model.um.IdleExpectation(
+            model, range.min, range.max - range.min));
+      }
+      return expectations;
+    }
+  }
+
+  function createCustomizeModelLinesFromModel(model) {
+    const modelLines = [];
+    modelLines.push('      audits.addEvent(model.browserMain,');
+    modelLines.push('          {title: \'model start\', start: 0, end: 1});');
+
+    const typeNames = {};
+    for (const typeName in tr.e.cc.INPUT_EVENT_TYPE_NAMES) {
+      typeNames[tr.e.cc.INPUT_EVENT_TYPE_NAMES[typeName]] = typeName;
+    }
+
+    let modelEvents = new tr.model.EventSet();
+    for (const ue of model.userModel.expectations) {
+      modelEvents.addEventSet(ue.sourceEvents);
+    }
+    modelEvents = modelEvents.toArray();
+    modelEvents.sort(tr.importer.compareEvents);
+
+    for (const event of modelEvents) {
+      const startAndEnd = 'start: ' + parseInt(event.start) + ', ' +
+                        'end: ' + parseInt(event.end) + '});';
+      if (event instanceof tr.e.cc.InputLatencyAsyncSlice) {
+        modelLines.push('      audits.addInputEvent(model, INPUT_TYPE.' +
+                        typeNames[event.typeName] + ',');
+      } else if (event.title === 'RenderFrameImpl::didCommitProvisionalLoad') {
+        modelLines.push('      audits.addCommitLoadEvent(model,');
+      } else if (event.title ===
+                 'InputHandlerProxy::HandleGestureFling::started') {
+        modelLines.push('      audits.addFlingAnimationEvent(model,');
+      } else if (event.title === tr.model.helpers.IMPL_RENDERING_STATS) {
+        modelLines.push('      audits.addFrameEvent(model,');
+      } else if (event.title === tr.importer.CSS_ANIMATION_TITLE) {
+        modelLines.push('      audits.addEvent(model.rendererMain, {');
+        modelLines.push('        title: \'Animation\', ' + startAndEnd);
+        return;
+      } else {
+        throw new Error(
+            'You must extend createCustomizeModelLinesFromModel()' +
+            'to support this event:\n' + event.title + '\n');
+      }
+      modelLines.push('          {' + startAndEnd);
+    }
+
+    modelLines.push('      audits.addEvent(model.browserMain,');
+    modelLines.push('          {' +
+                    'title: \'model end\', ' +
+                    'start: ' + (parseInt(model.bounds.max) - 1) + ', ' +
+                    'end: ' + parseInt(model.bounds.max) + '});');
+    return modelLines;
+  }
+
+  function createExpectedUELinesFromModel(model) {
+    const expectedLines = [];
+    const ueCount = model.userModel.expectations.length;
+    for (let index = 0; index < ueCount; ++index) {
+      const expectation = model.userModel.expectations[index];
+      let ueString = '      {';
+      ueString += 'title: \'' + expectation.title + '\', ';
+      ueString += 'start: ' + parseInt(expectation.start) + ', ';
+      ueString += 'end: ' + parseInt(expectation.end) + ', ';
+      ueString += 'eventCount: ' + expectation.sourceEvents.length;
+      ueString += '}';
+      if (index < (ueCount - 1)) ueString += ',';
+      expectedLines.push(ueString);
+    }
+    return expectedLines;
+  }
+
+  function createUEFinderTestCaseStringFromModel(model) {
+    const filename = window.location.hash.substr(1);
+    let testName = filename.substr(filename.lastIndexOf('/') + 1);
+    testName = testName.substr(0, testName.indexOf('.'));
+
+    // createCustomizeModelLinesFromModel() throws an error if there's an
+    // unsupported event.
+    try {
+      const testLines = [];
+      testLines.push('  /*');
+      testLines.push('    This test was generated from');
+      testLines.push('    ' + filename + '');
+      testLines.push('   */');
+      testLines.push('  test(\'' + testName + '\', function() {');
+      testLines.push('    const verifier = new UserExpectationVerifier();');
+      testLines.push('    verifier.customizeModelCallback = function(model) {');
+      testLines.push.apply(testLines,
+          createCustomizeModelLinesFromModel(model));
+      testLines.push('    };');
+      testLines.push('    verifier.expectedUEs = [');
+      testLines.push.apply(testLines, createExpectedUELinesFromModel(model));
+      testLines.push('    ];');
+      testLines.push('    verifier.verify();');
+      testLines.push('  });');
+      return testLines.join('\n');
+    } catch (error) {
+      return error;
+    }
+  }
+
+  return {
+    UserModelBuilder,
+    createUEFinderTestCaseStringFromModel,
+  };
+});
+</script>

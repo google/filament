@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/checkbox.html">
+<link rel="import" href="/tracing/ui/base/dom_helpers.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('basicUnchecked', function() {
+    const checkbox = document.createElement('tr-ui-b-checkbox');
+    checkbox.label = 'Yo like pizza?';
+    this.addHTMLOutput(checkbox);
+    assert.strictEqual(checkbox.label, 'Yo like pizza?');
+    assert.isFalse(checkbox.checked);
+  });
+
+  test('basicChecked', function() {
+    const checkbox = document.createElement('tr-ui-b-checkbox');
+    checkbox.label = 'Yo like cookie?';
+    checkbox.checked = true;
+    this.addHTMLOutput(checkbox);
+    assert.strictEqual(checkbox.label, 'Yo like cookie?');
+    assert.isTrue(checkbox.checked);
+  });
+
+  test('testPersistentStateOneSetSettingsKeyBeforeAddToDom', function() {
+    const checkbox = document.createElement('tr-ui-b-checkbox');
+    checkbox.settingsKey = 'checkbox-basic-test-one';
+    checkbox.label = 'I like sushi';
+    checkbox.defaultCheckedValue = false;
+    this.addHTMLOutput(checkbox);
+    assert.isFalse(checkbox.checked);
+    checkbox.checked = true;
+
+    const checkbox2 = document.createElement('tr-ui-b-checkbox');
+    checkbox2.label = 'I like sushi';
+    checkbox2.defaultCheckedValue = false;
+    checkbox2.settingsKey = 'checkbox-basic-test-one';
+    this.addHTMLOutput(checkbox2);
+    assert.isTrue(checkbox2.checked);
+  });
+
+  test('testPersistentStateTwoSetSettingsKeyAfterAddToDom', function() {
+    const checkbox = document.createElement('tr-ui-b-checkbox');
+    this.addHTMLOutput(checkbox);
+    checkbox.label = 'I like Ramen';
+    checkbox.settingsKey = 'checkbox-basic-test-two';
+    checkbox.defaultCheckedValue = false;
+    assert.isFalse(checkbox.checked);
+    checkbox.checked = true;
+
+    const checkbox2 = document.createElement('tr-ui-b-checkbox');
+    this.addHTMLOutput(checkbox2);
+    checkbox2.label = 'I like Ramen';
+    checkbox2.defaultCheckedValue = false;
+    checkbox2.settingsKey = 'checkbox-basic-test-two';
+    assert.isTrue(checkbox2.checked);
+  });
+});
+</script>

@@ -1,0 +1,1 @@
+Checkout the upstream branch of the currently checked out branch.

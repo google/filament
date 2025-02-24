@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Copyright 2019 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="angle_preferences" msgid="6277781974712663825">"ANGLEની પસંદગીઓ"</string>
+    <string name="angle_preferences_summary" msgid="2072062114797067545">"ANGLEના સેટિંગમાં ફેરફાર કરો"</string>
+    <string name="angle_general_title" msgid="3851397617183360026">"સામાન્ય"</string>
+    <string name="use_angle_for_all_apps" msgid="2562678044041239694">"બધી ઍપ માટે ANGLEનો ઉપયોગ કરો"</string>
+    <string name="show_angle_in_use_dialog_box" msgid="3443250434026000754">"જ્યારે ANGLEને લોડ કરવામાં આવે ત્યારે સંવાદ બૉક્સ બતાવો"</string>
+    <string name="select_opengl_driver_title" msgid="3474220741139386304">"OpenGLના ડ્રાઇવર પસંદ કરો"</string>
+    <string name="keywords" msgid="6388635548060461395">"angle, opengl, ગ્રાફિક્સ"</string>
+    <string name="angle_in_use_toast_message" msgid="2259434197861979558">"ANGLEનો ઉપયોગ કરવામાં આવી રહ્યો છે"</string>
+    <string name="no_apps_installed_title" msgid="1651834541419890603">"કોઈ ઍપ ઉપલબ્ધ નથી"</string>
+    <string name="no_apps_installed_summary" msgid="1922829522692497596">"ANGLEનો ઉપયોગ કરી શકે તેવી કોઈ ઍપ ઇન્સ્ટૉલ કરેલી નથી"</string>
+</resources>

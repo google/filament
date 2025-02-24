@@ -1,0 +1,4 @@
+[style]
+based_on_style = yapf
+column_limit = 99
+indent_width = 4

@@ -1,0 +1,637 @@
+Name
+
+    SGI_color_table
+
+Name Strings
+
+    GL_SGI_color_table
+
+Version
+
+    $Date: 1997/03/24 22:02:31 $ $Revision: 1.32 $
+
+Number
+
+    14
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the defnition of this extension
+    EXT_copy_texture affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_matrix affects the definition of this extension
+
+Overview
+
+    This extension defines a new RGBA-format color lookup mechanism.  It does
+    not replace the color lookups defined by the GL Specification, but rather
+    provides additional lookup capabilities with different operation.  The key
+    difference is that the new lookup tables are treated as 1-dimensional images
+    with internal formats, like texture images and convolution filter images.
+    From this follows the fact that the new tables can operate on a subset of
+    the components of passing pixel groups.  For example, a table with internal
+    format ALPHA modifies only the A component of each pixel group, leaving the
+    R, G, and B components unmodified.
+
+    If EXT_copy_texture is implemented, this extension also defines methods to
+    initialize the color lookup tables from the framebuffer, in addition to the
+    standard memory source mechanisms.
+
+Issues
+
+    *	Should a minimum maximum-table-size be imposed?  That is, should all
+	implementations support a table size of 256 entries?
+
+New Procedures and Functions
+
+    void ColorTableSGI(enum target,
+		       enum internalformat,
+		       sizei width,
+		       enum format,
+		       enum type,
+		       const void* table);
+
+    void CopyColorTableSGI(enum target,
+			   enum internalformat,
+			   int x,
+			   int y,
+			   sizei width);
+
+    void ColorTableParameterivSGI(enum target,
+				  enum pname,
+				  const int* params);
+
+    void ColorTableParameterfvSGI(enum target,
+				  enum pname,
+				  const float* params);
+
+    void GetColorTableSGI(enum target,
+			  enum format,
+			  enum type,
+			  void* table);
+
+    void GetColorTableParameterivSGI(enum target,
+				     enum pname,
+				     int* params);
+
+    void GetColorTableParameterfvSGI(enum target,
+				     enum pname,
+				     float* params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by the
+    <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev,
+    and by the <target> parameter of ColorTableSGI, CopyColorTableSGI,
+    ColorTableParameterivSGI, ColorTableParameterfvSGI, GetColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
+
+	COLOR_TABLE_SGI					0x80D0
+	POST_CONVOLUTION_COLOR_TABLE_SGI		0x80D1
+	POST_COLOR_MATRIX_COLOR_TABLE_SGI		0x80D2
+
+    Accepted by the <target> parameter of ColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
+
+	PROXY_COLOR_TABLE_SGI				0x80D3
+	PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI		0x80D4
+	PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI		0x80D5
+
+    Accepted by the <pname> parameter of ColorTableParameterivSGI,
+    ColorTableParameterfvSGI, GetColorTableParameterivSGI, and
+    GetColorTableParameterfvSGI:
+
+	COLOR_TABLE_SCALE_SGI				0x80D6
+	COLOR_TABLE_BIAS_SGI				0x80D7
+
+    Accepted by the <pname> parameter of GetColorTableParameterivSGI and
+    GetColorTableParameterfvSGI:
+
+	COLOR_TABLE_FORMAT_SGI				0x80D8
+	COLOR_TABLE_WIDTH_SGI				0x80D9
+	COLOR_TABLE_RED_SIZE_SGI			0x80DA
+	COLOR_TABLE_GREEN_SIZE_SGI			0x80DB
+	COLOR_TABLE_BLUE_SIZE_SGI			0x80DC
+	COLOR_TABLE_ALPHA_SIZE_SGI			0x80DD
+	COLOR_TABLE_LUMINANCE_SIZE_SGI			0x80DE
+	COLOR_TABLE_INTENSITY_SIZE_SGI			0x80DF
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of color lookup tables is added to the GL Specification in
+    section 3.6.2, "Pixel Transfer Modes." A color lookup table is specified
+    using the ColorTableSGI command.  Its <target> parameter must be
+    COLOR_TABLE_SGI, POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI if a color lookup table is to be
+    specified.  (Optional target values PROXY_COLOR_TABLE_SGI,
+    PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, and
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI are described below.)  Its <width>
+    parameter specifies the number of entries in the color lookup table, and its
+    <internalformat> parameter specifies the format of each table entry.  The
+    error INVALID_VALUE results if <width> is not zero or a non-negative power
+    of two.  The error TABLE_TOO_LARGE_EXT results if the specified color lookup
+    table is too large for the implementation.  (See the PROXY discussion
+    below.)  The error INVALID_ENUM results if <internalformat> is not one of
+    the values accepted by the <components> parameter of TexImage2D (as defined
+    by EXT_texture), or is 1, 2, 3, or 4.
+
+    If no error results from the execution of ColorTableSGI, the specified color
+    lookup table is redefined to have <width> entries, each with the specified
+    internal format.  The entries are indexed as zero through N-1, where N is
+    the <width> of the table.  The values in the previous color lookup table, if
+    any, are lost.  The new values are specified by the contents of the
+    1-dimensional image pointed to by <table>, whose memory format and data type
+    are specified by <format> and <type>.  The specified image is extracted from
+    memory and processed just as if DrawPixels were called, stopping after the
+    Final Expansion to RGBA step.  The R, G, B, and A components of each pixel
+    are then scaled by the four COLOR_TABLE_SCALE_SGI parameters, then biased by
+    the four COLOR_TABLE_BIAS_SGI parameters.  The R, G, B, and A values are
+    then clamped to [0,1]. The scale and bias parameters are specified by
+    calling ColorTableParameterivSGI or ColorTableParameterfvSGI with <target>
+    specifying one of the three color tables (COLOR_TABLE_SGI,
+    POST_CONVOLUTION_COLOR_TABLE_SGI, or POST_COLOR_MATRIX_COLOR_TABLE_SGI),
+    <pname> COLOR_TABLE_SCALE_SGI or COLOR_TABLE_BIAS_SGI, and <params> pointing
+    to a vector of four values: red, green, blue, and alpha, in that order.
+
+    Each pixel is then converted to have the specified internal format.  This
+    conversion simply maps the component values of the pixel (R, G, B, and A) to
+    the values included in the internal format (red, green, blue, alpha,
+    luminance, intensity).  The mapping is as follows:
+
+                                     Stored values
+      Base Internal      ----------------------------------------
+      Format             red green blue alpha luminance intensity
+      ----------------   --- ----- ---- ----- --------- ---------
+      ALPHA				  A
+      LUMINANCE				          R
+      LUMINANCE_ALPHA			  A	  R
+      INTENSITY					            R
+      RGB		  R    G     B
+      RGBA		  R    G     B    A
+
+    (The relationship of internal format tokens to "base internal formats" is
+    described in EXT_texture.)
+    
+    It is acceptable for an implementation to vary its allocation of internal
+    component resolution based any ColorTableSGI parameter, but the allocation
+    must not be a function of any other factor, and cannot be changed once it is
+    established.  In particular, allocations must be invariant -- the same
+    allocation must be made each time a color table is specified with the same
+    parameter values.  Provision is made for an application to determine what
+    component resolutions are available without having to fully specify the
+    color table (see below).
+
+    If EXT_copy_texture is supported, color tables can also be defined using
+    image data in the framebuffer.  CopyColorTableSGI accepts image data from a
+    <width> pixel wide by one pixel high color buffer region whose lower-left
+    pixel has window coordinates <x>,<y>.  If any pixels within this region are
+    outside the window that is associated with the GL context, the values
+    obtained for those pixels are undefined.
+
+    These pixel values are obtained from the framebuffer exactly as if
+    ReadPixels had been called with <format> set to RGBA, with processing
+    continuing through Conversion of RGBA values.  At this point all pixel
+    component values are treated exactly as if ColorTableSGI had been called,
+    beginning with the scaling of the color components by COLOR_TABLE_SCALE_SGI.
+    The semantics and accepted values of the <target> and <internalformat>
+    parameters are exactly equivalent to their ColorTableSGI counterparts.
+
+    The operations of the color lookup tables are added to the GL Specification
+    in section 3.6.3, "Rasterization of Pixel Rectangles.  The three lookup
+    tables exist at different points alongppp the pixel processing path.
+    COLOR_TABLE_SGI is located immediately after the subsection "Index Lookup",
+    and immediately prior to the convolution operation.
+    POST_CONVOLUTION_COLOR_TABLE_SGI is located immediately after the
+    convolution operation (including its scale and bias operations), and
+    immediately prior to the color matrix operation.  Finally,
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI is located immediately after the color
+    matrix operation (including its scale and bias operations) and immediately
+    prior to the histogram operation.  Color tables are enabled and disabled by
+    calling Enable and Disable with color table name passed as the <cap>
+    parameter.  Color table lookup is performed only for RGBA groups, though
+    these groups may have been specified as color indexes and converted to RGBA
+    by index-to-RGBA pixel map table.  When enabled, a color lookup table is
+    applied to all RGBA pixel groups, regardless of the command that they are
+    associated with.  These commands are DrawPixels, CopyPixels, ReadPixels,
+    TexImage1D, TexImage2D, GetTexImage, and the SGI extension commands
+    TexImage3DEXT, TexSubImage1DEXT, TexSubImage2DEXT, TexSubImage3DEXT,
+    CopyTexImage1DEXT, CopyTexImage2DEXT, CopyTexSubImage1DEXT, and
+    CopyTexSubImage2DEXT.
+
+    If a color table is enabled, and its width is non-zero, then its contents
+    are used to replace a subset of the components of each RGBA pixel group,
+    based on the internal format of the table.  The mappings that are applied
+    are:
+
+				      Components of a Pixel
+      Base Internal Format	-------------------------------------
+      of the Color Table	R	    G		B	    A
+      --------------------	-	    -		-	    -
+
+      ALPHA							    alpha
+      LUMINANCE		        luminance   luminance	luminance
+      LUMINANCE_ALPHA		luminance   luminance	luminance   alpha
+      INTENSITY		        intensity   intensity	intensity   intensity
+      RGB			red	    green	blue
+      RGBA			red	    green	blue	    alpha
+
+      Table E14.2 - Assignment of table component to pixel group
+      components.  When there is no assignment, the pixel group component
+      is not changed by the table.
+
+    The color components of each group that are being replaced by table values
+    are converted to indices by clamping the components to [0,1], multiplying
+    each by one less than the width of the color table, and rounding each to the
+    nearest integer.  The component value (R, G, B, or A) is then replaced by
+    the value in color table indicated in table E14.2, at the computed index.
+
+    If a zero-width color table is enabled, no change is made to the component
+    values of any pixel group.
+
+    Query support
+    -------------
+
+    Alternate sets of partial color lookup table state are defined for the proxy
+    tables PROXY_COLOR_TABLE_SGI, PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, and
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI.  Specifically,
+    COLOR_TABLE_FORMAT_SGI, COLOR_TABLE_WIDTH_SGI, COLOR_TABLE_RED_SIZE_SGI,
+    COLOR_TABLE_GREEN_SIZE_SGI, COLOR_TABLE_BLUE_SIZE_SGI,
+    COLOR_TABLE_ALPHA_SIZE_SGI, COLOR_TABLE_LUMINANCE_SIZE_SGI, and
+    COLOR_TABLE_INTENSITY_SIZE_SGI are maintained for proxy tables.  When
+    ColorTableSGI is called with <target> set to one of these proxy values,
+    these proxy state values are always recomputed and updated, even if the
+    color table is too large to actually be defined.  If the color table is too
+    large, all of these state variables are set to zero.  If the color table
+    could be accommodated by ColorTableSGI called with <target> set to the
+    corresponding non-proxy target, these values are set as though that target
+    were being defined.  (COLOR_TABLE_SGI is the non-proxy target corresponding
+    to proxy target PROXY_COLOR_TABLE_SGI, for example.)  All of these state
+    values can be queried with GetColorTableParameterivSGI or
+    GetColorTableParameterfvSGI with <target> set to the appropriate proxy
+    target.  Calling ColorTableSGI with a proxy <target> has no effect on the
+    image or state of any actual color table.
+
+    There is no image associated with any of the proxy targets.  Therefore
+    PROXY_COLOR_TABLE_SGI, PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, and
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI cannot be used as color tables, and
+    their images must never be queried using GetColorTableSGI.  (The error
+    INVALID_ENUM results if this is attempted.)
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of color table lookup during pixel copy and query operations
+    is identical to the operation during pixel drawing and texture image
+    definition.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    ColorTableSGI with a proxy target, GetColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI are not
+    included in display lists, but are instead executed immediately.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Integer and floating point query functions GetColorTableParameterivSGI and
+    GetColorTableParameterfvSGI are provided.  <target> must be COLOR_TABLE_SGI,
+    POST_CONVOLUTION_COLOR_TABLE_SGI, POST_COLOR_MATRIX_COLOR_TABLE_SGI,
+    PROXY_COLOR_TABLE_SGI, PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI.  <pname> is one of
+    COLOR_TABLE_SCALE_SGI, COLOR_TABLE_BIAS_SGI, COLOR_TABLE_FORMAT_SGI,
+    COLOR_TABLE_WIDTH_SGI, COLOR_TABLE_RED_SIZE_SGI, COLOR_TABLE_GREEN_SIZE_SGI,
+    COLOR_TABLE_BLUE_SIZE_SGI, COLOR_TABLE_ALPHA_SIZE_SGI,
+    COLOR_TABLE_LUMINANCE_SIZE_SGI, or COLOR_TABLE_INTENSITY_SIZE_SGI.  The
+    value of the specified parameter is returned in <params>.
+
+    The current contents of a color table are queried using GetColorTableSGI.
+    <target> must be COLOR_TABLE_SGI, POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI.  <format> must be one of RED, GREEN,
+    BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.  <type>
+    must be UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or
+    FLOAT.  The 1-dimensional color table image is returned to <table>.  No
+    pixel transfer operations are performed on this image, but pixel storage
+    modes that are applicable to ReadPixels are performed.  Color components
+    that are requested in the specified <format>, but which are not included in
+    the internal format of the color lookup table, are returned as zero.  The
+    assignments of internal color components to the components requested by
+    <format> are:
+
+		internal component	resulting component
+		------------------	-------------------
+		red			red
+		green			green
+		blue			blue
+		alpha			alpha
+		luminance		red
+		intensity		red
+
+Additions to the GLX Specification
+
+    None
+
+
+GLX Protocol
+
+    Seven new GL commands are added.
+
+    The following three rendering commands are sent to the server as part of
+    a glXRender request:
+
+        CopyColorTableSGI
+            2           24              rendering command length
+            2           2056            rendering command opcode
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           x
+            4           INT32           y
+            4           INT32           width
+
+        ColorTableParameterivSGI
+            2           12+4*n          rendering command length
+            2           2055            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+			0x80D6    n=4	COLOR_TABLE_SCALE_SGI
+			0x80D7    n=4	COLOR_TABLE_BIAS_SGI
+            4*n         LISTofINT32   	params
+
+        ColorTableParameterfvSGI
+            2           12+4*n          rendering command length
+            2           2054            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+			0x80D6    n=4	COLOR_TABLE_SCALE_SGI
+			0x80D7    n=4	COLOR_TABLE_BIAS_SGI
+            4*n         LISTofFLOAT32   params
+
+    The following rendering command contain pixel data and is thus
+    sent to the server as part of a glXRender request or as part of a
+    glXRenderLarge request:
+
+        ColorTableSGI
+            2           44+n+p          rendering command length
+            2           2053            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           width
+            4           ENUM            format
+            4           ENUM            type
+            n           LISTofBYTE      table
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the
+	    command opcode and command length fields above are expanded to
+	    4 bytes each:
+            4           48+n+p          rendering command length
+            4           2053            rendering command opcode
+
+        If <width> < 0, <format> is invalid or <type> is invalid, then the
+	command is erroneous and n=0. The structure of <table> is described
+	in Appendix A of the GLX Protocol Specification, "Pixel Data", using
+	the parameters <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>,
+	<skip_pixels>, <alignment>, <width>, <format>, and <type> as given
+	in the request, and a height of 1.
+
+
+    The remaining commands are non-rendering commands. These commands are
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetColorTableParameterivSGI
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           4100     	vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        Note that n may be zero, indicating that a GL error occurred. 
+
+
+        GetColorTableParameterfvSGI
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           4099            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        Note that n may be zero, indicating that a GL error occurred. 
+
+
+        GetColorTableSGI
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           4098            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            format
+            4           ENUM            type
+            1           BOOL            swap_bytes
+            3                           unused
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+	    8				unused
+            4           INT32		width
+            4           INT32		height
+            8                           unused
+            4*n         LISTofBYTE      table
+
+	Note that n may be zero, indicating that a GL error occurred.
+
+        If <format> or <type> is invalid then the command is erroneous and
+	n=0. The structure of <table> is described in Appendix A of the GLX
+	Protocol Specification, "Pixel Data", using the parameters
+	<swap_bytes>, <format>, and <type>. No extra padding is needed after
+        <pixels> because the image format already pads to 32 bits.
+
+ 
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameters of ColorTableSGI and
+    GetColorTableSGI accept ABGR_EXT.  Otherwise they do not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of internal
+    image format, which is defined by EXT_texture.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, references to TexImage3DEXT are invalid
+    and should be ignored.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not supported, references to TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, CopyTexSubImage1DEXT, and
+    CopyTexSubImage2DEXT are invalid and should be ignored.
+
+Dependencies on EXT_copy_texture
+
+    If EXT_copy_texture is not supported, CopyColorTableSGI is not supported,
+    and references to CopyTexImage1DEXT, CopyTexImage2DEXT,
+    CopyTexSubImage1DEXT, and CopyTexSubImage2DEXT are invalid and should be
+    ignored.
+
+Dependencies on EXT_convolution
+
+    If EXT_convolution is not supported, targets
+    POST_CONVOLUTION_COLOR_TABLE_SGI and PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI
+    are not defined by this specification.
+
+Dependencies on SGI_color_matrix
+
+    If SGI_color_matrix is not supported, targets
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI and
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI are not defined by this
+    specification.
+
+Errors
+
+    INVALID_ENUM is generated if ColorTableSGI parameter <target> is not
+    COLOR_TABLE_SGI, POST_CONVOLUTION_COLOR_TABLE_SGI,
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI, PROXY_COLOR_TABLE_SGI,
+    PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if ColorTableSGI parameter <internalformat> is not
+    ALPHA, RGB, RGBA, LUMINANCE, LUMINANCE_ALPHA, or one of the tokens defined
+    by EXT_texture.
+
+    INVALID_VALUE is generated if ColorTableSGI parameter <width> is not zero or
+    a non-negative power of two.
+
+    INVALID_ENUM is generated if ColorTableSGI parameter <format> is not RED,
+    GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if ColorTableSGI parameter <type> is not BYTE,
+    UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT, or FLOAT.
+
+    INVALID_ENUM is generated if CopyColorTableSGI parameter <target> is not
+    COLOR_TABLE_SGI, POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if CopyColorTableSGI parameter <internalformat> is
+    not ALPHA, RGB, RGBA, LUMINANCE, LUMINANCE_ALPHA, or one of the tokens
+    defined by EXT_texture.
+
+    INVALID_VALUE is generated if CopyColorTableSGI parameter <width> is not
+    zero or a non-negative power of two.
+
+    INVALID_ENUM is generated if GetColorTableSGI parameter <target> is not
+    COLOR_TABLE_SGI, POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if GetColorTableSGI parameter <format> is not RED,
+    GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if GetColorTableSGI parameter <type> is not BYTE,
+    UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT, or FLOAT.
+
+    INVALID_ENUM is generated if ColorTableParameterivSGI or
+    ColorTableParameterfvSGI parameter <target> is not COLOR_TABLE_SGI,
+    POST_CONVOLUTION_COLOR_TABLE_SGI, or POST_C0LOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if ColorTableParameterivSGI or
+    ColorTableParameterfvSGI parameter <pname> is not COLOR_TABLE_SCALE_SGI or
+    COLOR_TABLE_BIAS_SGI.
+
+    INVALID_ENUM is generated if GetColorTableParameterivSGI or
+    GetColorTableParameterfvSGI parameter <target> is not COLOR_TABLE_SGI,
+    POST_CONVOLUTION_COLOR_TABLE_SGI, POST_COLOR_MATRIX_COLOR_TABLE_SGI,
+    PROXY_COLOR_TABLE_SGI, PROXY_POST_CONVOLUTION_COLOR_TABLE_SGI, or
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_ENUM is generated if GetColorTableParameterivSGI or
+    GetColorTableParameterfvSGI parameter <pname> is not COLOR_TABLE_SCALE_SGI,
+    COLOR_TABLE_BIAS_SGI, COLOR_TABLE_FORMAT_SGI, COLOR_TABLE_WIDTH_SGI,
+    COLOR_TABLE_RED_SIZE_SGI, COLOR_TABLE_GREEN_SIZE_SGI,
+    COLOR_TABLE_BLUE_SIZE_SGI, COLOR_TABLE_ALPHA_SIZE_SGI,
+    COLOR_TABLE_LUMINANCE_SIZE_SGI, or COLOR_TABLE_INTENSITY_SIZE_SGI.
+    INVALID_ENUM is also generated if GetColorTableParameterivSGI or
+    GetColorTableParameterfvSGI parameter <target> specifies a proxy table
+    target and <pname> specifies a piece of state which is not maintained for
+    proxy tables.
+
+    TABLE_TOO_LARGE_EXT is generated if the color table requested by
+    ColorTableSGI or CopyColorTableSGI is larger than can be supported by the
+    implementation, and the <target> parameter is COLOR_TABLE_SGI,
+    POST_CONVOLUTION_COLOR_TABLE_SGI, or POST_COLOR_MATRIX_COLOR_TABLE_SGI.
+
+    INVALID_OPERATION is generated if ColorTableSGI, CopyColorTableSGI,
+    ColorTableParameterivSGI, ColorTableParameterfvSGI, GetColorTableSGI,
+    GetColorTableParameterivSGI, or GetColorTableParameterfvSGI is called
+    between execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value				Get Command			Type		Initial Value	Attribute
+    ---------				-----------			----		-------------	---------
+    COLOR_TABLE_SGI			IsEnabled			B		False		pixel/enable
+    POST_CONVOLUTION_COLOR_TABLE_SGI	IsEnabled			B		False		pixel/enable
+    POST_COLOR_MATRIX_COLOR_TABLE_SGI	IsEnabled			B		False		pixel/enable
+    COLOR_TABLE				GetColorTableSGI		3 x I		empty		    -
+    COLOR_TABLE_FORMAT_SGI		GetColorTableParameterivSGI	2 x 3 x Z38	RGBA		    -
+    COLOR_TABLE_WIDTH_SGI		GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_RED_SIZE_SGI		GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_GREEN_SIZE_SGI		GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_BLUE_SIZE_SGI		GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_ALPHA_SIZE_SGI		GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_LUMINANCE_SIZE_SGI	GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_INTENSITY_SIZE_SGI	GetColorTableParameterivSGI	2 x 3 x Z+	0		    -
+    COLOR_TABLE_SCALE_SGI		GetColorTableParameterfvSGI	3 x R4		(1,1,1,1)	pixel
+    COLOR_TABLE_BIAS_SGI		GetColorTableParameterfvSGI	3 x R4		(0,0,0,0)	pixel
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    2006/08/24 - Fixed protocol for GetColorTableSGI per Ian Romanick
+        (opcode was used as the request length).

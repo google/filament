@@ -1,0 +1,158 @@
+XXX - Not complete yet!!!
+XXX - Obsolete; implemented as part of GL_SGIX_igloo_interface
+
+Name
+
+    IGLOO_toggle_color_and_light
+
+Name Strings
+
+    GL_IGLOO_toggle_color_and_lightXXX
+
+    No name should be returned by glGetString, glXQueryExtensionsString, or gluGetString.
+    The name string here is used solely in the registry.
+
+Version
+
+    $Date: 1999/04/03 08:40:50 $ $Revision: 1.3 $
+
+Number
+
+    None
+
+	Igloo extensions should be compatible with *ALL* other extensions.
+	(i.e. igloo extensions must document their interactions with subsequent
+	extensions preceding it, so there is no number).
+
+Dependencies
+
+    None
+
+Overview
+
+       This extension allows for lighting to be disabled and enabled on a per vertex basis.
+       This is to emulate the IrisGL behavior of lmcolor(LMC_COLOR);
+
+Issues
+       This feature could almost be emulated in software, but it would require an enormous
+       number of glMaterial calls.  glMaterial has been shown to be extremely slow
+       on RE and EXPRESS. Lit and unlit primitives would both be very slow.
+
+       Should this be a glEnable?  The only reason it isn't an Enable is that
+       it should be callable within glBegin and glEnd.	Currently
+       we've architected lmcolor with the assumption that it *WILL NOT* be
+       called within glBegin/glEnd anyway.
+
+       Should this work in Color Index mode, It is not useful for emulating
+       IrisGL since lmcolor has no meaning in color index mode, but
+       it could easily be implemented in color index mode and this would
+       preserve orthogonality better.
+
+New Procedures and Functions
+
+	void IGLOOToggleColorAndLightXXX(GLboolean switch);
+
+
+New Tokens
+
+	Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+	GetFloatv, and GetDoublev:
+
+	TOGGLE_COLOR_AND_LIGHTXXX
+
+	If it is decided that this should be implemented using glEnable, then glIsEnabled
+	and glEnable/glDisable should accept this token.
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+    Section 2.12.1 first section.
+    "Lighting is turned either on or off using the generic glEnable or glDisable
+    commands with the symbol LIGHT." becomes
+
+    "If TOGGLE_COLOR_AND_LIGHTXXX is False, then lighting may be turned on or off using
+    the generic glEnable or glDisable.	If TOGGLE_COLOR_AND_LIGHTXXX is True, then lighting
+    is on after each 'normal' command, if it is turned on with glEnable.
+    lighting is off after each 'color' command.
+    Lighting is always off if it
+    has been turned off with glDisable."
+
+    /* XXX I'm trying to make it clear that the ordering of the color and normal
+    commands doesn't persist from befor lighting is enabled, or from befor TOGGLE_COLOR_AND_LIGHTXXX
+    is set to TRUE */
+
+    Section 2.12.3 (ColorMaterial)
+    End of section.
+    "Executing a glVertex when glColorMaterial is Enabled,
+    and TOGGLE_COLOR_AND_LIGHTXXX is TRUE results in indeterminate behavior."
+
+    Section 2.12.4 (Lighting State)
+    First sentence
+    The state required for lighting consists of all of the lighting parameters (front
+    and back material parameters, lighting model parameters, and at least 8 sets of light
+    parameters), a bit indicating whether a back color distinct from the front color should
+    be computed, at least 8 bits to indicate which lights are enabled, a five valued
+    variable indicating the current ColorMaterial mode, a bit indicating whether or not
+    COLOR_MATERIAL is enabled, *** A bit to indicate whether or
+    not TOGGLE_COLOR_AND_LIGHTXXX is TRUE,*** and a single bit to indicate whether
+    lighting is enabled or disabled.
+
+
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+
+*    This command *SHOULD be display listable, hence nothing about display lists
+*    is added here.
+
+     Section 5.1 (Evaluators).
+     After paragraph 12 (which starts with "Finally, if either MAP2_VERTEX_3 or MAP2_VERTEX_4
+     is enabled, then the normal to the surface is computed analytically."
+
+     This paragraph should be followed by
+     "If AUTO_NORMAL is enabled, or if MAP[12]_NORMAL is defined and enabled at the same
+     time that MAP[12]_COLOR is defined and enabled. Then the normal is computed after
+     the color so that lighting may be enabled if TOGGLE_COLOR_AND_LIGHTXXX is TRUE."
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+
+Additions to the GLX Specification
+
+    This extensions does *NOT* need to be recognized by glX.
+
+GLX Protocol
+
+    This extensions should *NOT* be recognized by glX.
+
+Dependencies on SGI_extension_name
+
+    None
+
+Errors
+*	Calling glNormal or glColor when TOGGLECOLORANDLIGHTXXX is TRUE and
+*	ColorMaterial is Enabled results in indeterminate behavior.
+
+New State
+
+*	It is unknown whether this is client state since it is not useful on the
+*	client side, but glX needn't recognize it.
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	------- ------
+    TOGGLE_COLOR_AND_LIGHTXXX		glGet		Boolean  FALSE	lighting
+
+    (I've chosen not to make this a glEnable,  so it isn't part of the Enable Attribute
+    This is perhaps controversial)
+
+New Implementation Dependent State
+
+*	Description of all implementation dependent state in table format.
+
+    None

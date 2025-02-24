@@ -1,0 +1,40 @@
+# Copyright 2023 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gni/angle.gni")
+import("../angle_traces.gni")
+
+angle_trace("angle_capture_tests_multi_frame_trace") {
+  _trace = "CapturedTest_MultiFrame_ES3_Vulkan"
+
+  _trace_data = []
+  _trace_data =
+      read_file("expected/CapturedTest_MultiFrame_ES3_Vulkan.json", "json")
+
+  sources = rebase_path(_trace_data.TraceFiles, ".", "expected/")
+
+  data = [
+    "$_trace.json",
+    "$_trace.angledata",
+  ]
+
+  deps = [ "$angle_root/util:angle_trace_fixture" ]
+}
+
+angle_trace("angle_capture_tests_active_textures_trace") {
+  _trace = "CapturedTest_ActiveTextures_ES3_Vulkan"
+
+  _trace_data = []
+  _trace_data =
+      read_file("expected/CapturedTest_ActiveTextures_ES3_Vulkan.json", "json")
+
+  sources = rebase_path(_trace_data.TraceFiles, ".", "expected/")
+
+  data = [
+    "$_trace.json",
+    "$_trace.angledata",
+  ]
+
+  deps = [ "$angle_root/util:angle_trace_fixture" ]
+}

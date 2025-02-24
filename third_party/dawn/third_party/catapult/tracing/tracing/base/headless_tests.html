@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/unittest.html">
+<link rel="import" href="/tracing/base/unittest/test_runner.html">
+<link rel="import" href="/tracing/base/unittest/text_test_results.html">
+<script>
+'use strict';
+/* eslint-disable no-console */
+
+tr.exportTo('tr.b.unittest', function() {
+  if (!tr.isHeadless) {
+    throw new Error('headless_tests.html only works in headless mode');
+  }
+  function quit(errCode) {
+    if (tr.isVinn) {
+      global.quit(errCode);
+    } else {
+      process.exit(errCode);
+    }
+  }
+
+  function printSpacer() {
+    console.log('\n\n------------------------------------------------------' +
+                '----------------');
+  }
+  function loadAndRunTests(suiteRelpathsToLoad) {
+    const results = new tr.b.unittest.TextTestResults();
+
+    const loader = new tr.b.unittest.SuiteLoader(suiteRelpathsToLoad);
+
+    let p = loader.allSuitesLoadedPromise;
+
+    p = p.then(
+        function didAllSuitesLoad() {
+          const tests = loader.getAllTests().filter(function(testCase) {
+            if (testCase instanceof tr.b.unittest.PerfTestCase) {
+              return false;
+            }
+            return true;
+          });
+          if (tests.length === 0) {
+            printSpacer();
+            console.log('FAILED: No tests to run.');
+            console.log(err.stack);
+            quit(1);
+          }
+          const runner = new tr.b.unittest.TestRunner(results, tests);
+          return runner.beginRunning();
+        },
+        function suiteLoadingFailure(err) {
+          printSpacer();
+          console.log('FAILED: A test suite failed to load.');
+          console.log(err.stack);
+          quit(1);
+        });
+
+    p = p.then(
+        function didAllTestRun() {
+          if (results.numTestsThatFailed > 0) {
+            quit(1);
+          } else {
+            quit(0);
+          }
+        },
+        function testHarnessError(e) {
+          console.log('FAILED: A test harness error has ocurred.');
+          console.log(e.stack);
+          quit(1);
+        });
+    return p;
+  }
+
+  return {
+    loadAndRunTests,
+  };
+});
+</script>

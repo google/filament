@@ -1,0 +1,75 @@
+Name
+
+    ANGLE_platform_angle_webgpu
+
+Name Strings
+
+    EGL_ANGLE_platform_angle_webgpu
+
+Contributors
+
+    Liza Burakova, Google
+    Matt Denton, Google
+    Geoff Lang, Google
+    Shahbaz Youssefi, Google
+
+Contacts
+
+    Liza Burakova, Google (liza 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1,  January 22, 2024
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires ANGLE_platform_angle.
+
+Overview
+
+    This extension enables selection of WebGPU display types.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as values for the EGL_PLATFORM_ANGLE_TYPE_ANGLE attribute:
+
+        EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE               0x34DF
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To request a display that translates to WebGPU, the value of
+    EGL_PLATFORM_ANGLE_TYPE_ANGLE should be
+    EGL_PLATFORM_ANGLE_TYPE_WEBGPU_ANGLE.
+
+Issues
+
+    None
+
+Revision History
+
+    Version 1, 2024-01-22 (Liza Burakova)
+      - Initial draft

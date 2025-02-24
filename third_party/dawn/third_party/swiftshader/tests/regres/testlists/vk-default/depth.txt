@@ -1,0 +1,8 @@
+dEQP-VK.depth.bias_fs_clamp
+dEQP-VK.depth.bias_outside_range
+dEQP-VK.depth.bias_outside_range_fs_clamp
+dEQP-VK.depth.bias_outside_range_fs_clamp_unrestricted
+dEQP-VK.depth.ez_fs_clamp
+dEQP-VK.depth.fs_clamp
+dEQP-VK.depth.out_of_range
+dEQP-VK.depth.out_of_range_unrestricted

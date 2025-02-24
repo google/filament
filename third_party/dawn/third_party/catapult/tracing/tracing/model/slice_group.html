@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/color_scheme.html">
+<link rel="import" href="/tracing/base/guid.html">
+<link rel="import" href="/tracing/base/utils.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/event_container.html">
+<link rel="import" href="/tracing/model/thread_slice.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Provides the SliceGroup class.
+ */
+tr.exportTo('tr.model', function() {
+  const ColorScheme = tr.b.ColorScheme;
+  const ThreadSlice = tr.model.ThreadSlice;
+
+  function getSliceLo(s) {
+    return s.start;
+  }
+
+  function getSliceHi(s) {
+    return s.end;
+  }
+
+  /**
+   * A group of Slices, plus code to create them from B/E events, as
+   * well as arrange them into subRows.
+   *
+   * Do not mutate the slices array directly. Modify it only by
+   * SliceGroup mutation methods.
+   *
+   * @constructor
+   * @param {function(new:Slice, category, title, colorId, start, args)=}
+   *     opt_sliceConstructor The constructor to use when creating slices.
+   * @extends {tr.model.EventContainer}
+   */
+  function SliceGroup(parentContainer, opt_sliceConstructor, opt_name) {
+    tr.model.EventContainer.call(this);
+
+    this.parentContainer_ = parentContainer;
+
+    const sliceConstructor = opt_sliceConstructor || ThreadSlice;
+    this.sliceConstructor = sliceConstructor;
+    this.sliceConstructorSubTypes = this.sliceConstructor.subTypes;
+    if (!this.sliceConstructorSubTypes) {
+      throw new Error('opt_sliceConstructor must have a subtype registry.');
+    }
+
+    this.openPartialSlices_ = [];
+
+    this.slices = [];
+    this.topLevelSlices = [];
+    this.haveTopLevelSlicesBeenBuilt = false;
+    this.name_ = opt_name;
+
+    if (this.model === undefined) {
+      throw new Error('SliceGroup must have model defined.');
+    }
+  }
+
+  SliceGroup.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    get parentContainer() {
+      return this.parentContainer_;
+    },
+
+    get model() {
+      return this.parentContainer_.model;
+    },
+
+    get stableId() {
+      return this.parentContainer_.stableId + '.SliceGroup';
+    },
+
+    getSettingsKey() {
+      if (!this.name_) return undefined;
+      const parentKey = this.parentContainer_.getSettingsKey();
+      if (!parentKey) return undefined;
+      return parentKey + '.' + this.name;
+    },
+
+    /**
+     * @return {Number} The number of slices in this group.
+     */
+    get length() {
+      return this.slices.length;
+    },
+
+    /**
+     * Helper function that pushes the provided slice onto the slices array.
+     * @param {Slice} slice The slice to be added to the slices array.
+     */
+    pushSlice(slice) {
+      this.haveTopLevelSlicesBeenBuilt = false;
+      slice.parentContainer = this.parentContainer_;
+      this.slices.push(slice);
+      return slice;
+    },
+
+    /**
+     * Helper function that pushes the provided slices onto the slices array.
+     * @param {Array.<Slice>} slices An array of slices to be added.
+     */
+    pushSlices(slices) {
+      this.haveTopLevelSlicesBeenBuilt = false;
+      slices.forEach(function(slice) {
+        slice.parentContainer = this.parentContainer_;
+        this.slices.push(slice);
+      }, this);
+    },
+
+    /**
+     * Opens a new slice in the group's slices.
+     *
+     * Calls to beginSlice and
+     * endSlice must be made with non-monotonically-decreasing timestamps.
+     *
+     * @param {String} category Category name of the slice to add.
+     * @param {String} title Title of the slice to add.
+     * @param {Number} ts The timetsamp of the slice, in milliseconds.
+     * @param {Object.<string, Object>=} opt_args Arguments associated with
+     * the slice.
+     * @param {Number=} opt_colorId The color of the slice, defined by
+     * its palette id (see base/color_scheme.html).
+     */
+    beginSlice(category, title, ts, opt_args, opt_tts,
+        opt_argsStripped, opt_colorId, opt_bindId) {
+      const colorId = opt_colorId ||
+          ColorScheme.getColorIdForGeneralPurposeString(title);
+      const sliceConstructorSubTypes = this.sliceConstructorSubTypes;
+      const sliceType = sliceConstructorSubTypes.getConstructor(
+          category, title);
+      const slice = new sliceType(category, title, colorId, ts,
+          opt_args ? opt_args : {}, null,
+          opt_tts, undefined,
+          opt_argsStripped, opt_bindId);
+      this.openPartialSlices_.push(slice);
+      slice.didNotFinish = true;
+      this.pushSlice(slice);
+
+      return slice;
+    },
+
+    isTimestampValidForBeginOrEnd(ts) {
+      if (!this.openPartialSlices_.length) return true;
+      const top = this.openPartialSlices_[this.openPartialSlices_.length - 1];
+      return ts >= top.start;
+    },
+
+    /**
+     * @return {Number} The number of beginSlices for which an endSlice has not
+     * been issued.
+     */
+    get openSliceCount() {
+      return this.openPartialSlices_.length;
+    },
+
+    get mostRecentlyOpenedPartialSlice() {
+      if (!this.openPartialSlices_.length) return undefined;
+      return this.openPartialSlices_[this.openPartialSlices_.length - 1];
+    },
+
+    /**
+     * Ends the last begun slice in this group and pushes it onto the slice
+     * array.
+     *
+     * @param {Number} ts Timestamp when the slice ended
+     * @param {Number=} opt_colorId The color of the slice, defined by
+     * its palette id (see base/color_scheme.html).
+     * @return {Slice} slice.
+     */
+    endSlice(ts, opt_tts, opt_colorId) {
+      if (!this.openSliceCount) {
+        throw new Error('endSlice called without an open slice');
+      }
+
+      const slice = this.openPartialSlices_[this.openSliceCount - 1];
+      this.openPartialSlices_.splice(this.openSliceCount - 1, 1);
+      if (ts < slice.start) {
+        throw new Error('Slice ' + slice.title +
+                        ' end time is before its start.');
+      }
+
+      slice.duration = ts - slice.start;
+      slice.didNotFinish = false;
+      slice.colorId = opt_colorId || slice.colorId;
+
+      if (opt_tts && slice.cpuStart !== undefined) {
+        slice.cpuDuration = opt_tts - slice.cpuStart;
+      }
+
+      return slice;
+    },
+
+    /**
+     * Push a complete event as a Slice into the slice list.
+     * The timestamp can be in any order.
+     *
+     * @param {String} category Category name of the slice to add.
+     * @param {String} title Title of the slice to add.
+     * @param {Number} ts The timetsamp of the slice, in milliseconds.
+     * @param {Number} duration The duration of the slice, in milliseconds.
+     * @param {Object.<string, Object>=} opt_args Arguments associated with
+     * the slice.
+     * @param {Number=} opt_colorId The color of the slice, as defined by
+     * its palette id (see base/color_scheme.html).
+     */
+    pushCompleteSlice(category, title, ts, duration, tts,
+        cpuDuration, opt_args, opt_argsStripped,
+        opt_colorId, opt_bindId) {
+      const colorId = opt_colorId ||
+          ColorScheme.getColorIdForGeneralPurposeString(title);
+      const sliceConstructorSubTypes = this.sliceConstructorSubTypes;
+      const sliceType = sliceConstructorSubTypes.getConstructor(
+          category, title);
+      const slice = new sliceType(category, title, colorId, ts,
+          opt_args ? opt_args : {},
+          duration, tts, cpuDuration,
+          opt_argsStripped, opt_bindId);
+      if (duration === undefined) {
+        slice.didNotFinish = true;
+      }
+      this.pushSlice(slice);
+      return slice;
+    },
+
+    /**
+     * Closes any open slices.
+     * @param {Number=} opt_maxTimestamp The end time to use for the closed
+     * slices. If not provided,
+     * the max timestamp for this slice is provided.
+     */
+    autoCloseOpenSlices() {
+      this.updateBounds();
+      const maxTimestamp = this.bounds.max;
+      for (let sI = 0; sI < this.slices.length; sI++) {
+        const slice = this.slices[sI];
+        if (slice.didNotFinish) {
+          slice.duration = maxTimestamp - slice.start;
+        }
+      }
+      this.openPartialSlices_ = [];
+    },
+
+    /**
+     * Shifts all the timestamps inside this group forward by the amount
+     * specified.
+     */
+    shiftTimestampsForward(amount) {
+      for (let sI = 0; sI < this.slices.length; sI++) {
+        const slice = this.slices[sI];
+        slice.start = (slice.start + amount);
+      }
+    },
+
+    /**
+     * Updates the bounds for this group based on the slices it contains.
+     */
+    updateBounds() {
+      this.bounds.reset();
+      for (let i = 0; i < this.slices.length; i++) {
+        this.bounds.addValue(this.slices[i].start);
+        this.bounds.addValue(this.slices[i].end);
+      }
+    },
+
+    copySlice(slice) {
+      const sliceConstructorSubTypes = this.sliceConstructorSubTypes;
+      const sliceType = sliceConstructorSubTypes.getConstructor(slice.category,
+          slice.title);
+      const newSlice = new sliceType(slice.category, slice.title,
+          slice.colorId, slice.start,
+          slice.args, slice.duration, slice.cpuStart, slice.cpuDuration);
+      newSlice.didNotFinish = slice.didNotFinish;
+      return newSlice;
+    },
+
+    * findTopmostSlicesInThisContainer(eventPredicate, opt_this) {
+      if (!this.haveTopLevelSlicesBeenBuilt) {
+        throw new Error('Nope');
+      }
+
+      for (const s of this.topLevelSlices) {
+        yield* s.findTopmostSlicesRelativeToThisSlice(eventPredicate);
+      }
+    },
+
+    * childEvents() {
+      yield* this.slices;
+    },
+
+    * childEventContainers() {
+    },
+
+    /**
+     * Provides a more efficient implementation than the default implementation
+     * in event_container.html, since child events are sorted.
+     */
+    * getDescendantEventsInSortedRanges(ranges, opt_containerPredicate) {
+      if (ranges.length === 0 || (opt_containerPredicate !== undefined &&
+          !opt_containerPredicate(this))) {
+        return;
+      }
+      let rangeIndex = 0;
+      let range = ranges[rangeIndex];
+      for (const event of this.childEvents()) {
+        while (event.start > range.max) {
+          rangeIndex++;
+          if (rangeIndex >= ranges.length) return;
+          range = ranges[rangeIndex];
+        }
+        if (event.end >= range.min) yield event;
+      }
+    },
+
+    getSlicesOfName(title) {
+      const slices = [];
+      for (let i = 0; i < this.slices.length; i++) {
+        if (this.slices[i].title === title) {
+          slices.push(this.slices[i]);
+        }
+      }
+      return slices;
+    },
+
+    iterSlicesInTimeRange(callback, start, end) {
+      const ret = [];
+      tr.b.iterateOverIntersectingIntervals(
+          this.topLevelSlices,
+          function(s) { return s.start; },
+          function(s) { return s.duration; },
+          start,
+          end,
+          function(topLevelSlice) {
+            callback(topLevelSlice);
+            for (const slice of topLevelSlice.enumerateAllDescendents()) {
+              callback(slice);
+            }
+          });
+      return ret;
+    },
+
+    findFirstSlice() {
+      if (!this.haveTopLevelSlicesBeenBuilt) {
+        throw new Error('Nope');
+      }
+      if (0 === this.slices.length) return undefined;
+      return this.slices[0];
+    },
+
+    findSliceAtTs(ts) {
+      if (!this.haveTopLevelSlicesBeenBuilt) throw new Error('Nope');
+      let i = tr.b.findIndexInSortedClosedIntervals(
+          this.topLevelSlices,
+          getSliceLo, getSliceHi,
+          ts);
+      if (i === -1 || i === this.topLevelSlices.length) {
+        return undefined;
+      }
+
+      let curSlice = this.topLevelSlices[i];
+
+      // Now recurse on slice looking for subSlice of given ts.
+      while (true) {
+        i = tr.b.findIndexInSortedClosedIntervals(
+            curSlice.subSlices,
+            getSliceLo, getSliceHi,
+            ts);
+        if (i === -1 || i === curSlice.subSlices.length) {
+          return curSlice;
+        }
+        curSlice = curSlice.subSlices[i];
+      }
+    },
+
+    findNextSliceAfter(ts, refGuid) {
+      let i = tr.b.findLowIndexInSortedArray(this.slices, getSliceLo, ts);
+      if (i === this.slices.length) {
+        return undefined;
+      }
+      for (; i < this.slices.length; i++) {
+        const slice = this.slices[i];
+        if (slice.start > ts) return slice;
+        if (slice.guid <= refGuid) continue;
+        return slice;
+      }
+      return undefined;
+    },
+
+    /**
+     * This function assumes that if any slice has a cpu duration then
+     * then the group is considered to have cpu duration.
+     */
+    hasCpuDuration_() {
+      if (this.slices.some(function(slice) {
+        return slice.cpuDuration !== undefined;
+      })) return true;
+      return false;
+    },
+
+    /**
+     * Construct subSlices for this group.
+     * Populate the group topLevelSlices, parent slices get a subSlices[],
+     * a selfThreadTime and a selfTime, child slices get a parentSlice
+     * reference.
+     */
+    createSubSlices() {
+      this.haveTopLevelSlicesBeenBuilt = true;
+      this.createSubSlicesImpl_();
+      // If another source has cpu time, we can augment the cpuDuration of the
+      // slices in the group with that cpu time. This should be done only if
+      // the original source does not include cpuDuration.
+      if (!this.hasCpuDuration_() && this.parentContainer.timeSlices) {
+        this.addCpuTimeToSubslices_(this.parentContainer.timeSlices);
+      }
+      this.slices.forEach(function(slice) {
+        let selfTime = slice.duration;
+        for (let i = 0; i < slice.subSlices.length; i++) {
+          selfTime -= slice.subSlices[i].duration;
+        }
+        slice.selfTime = selfTime;
+
+        if (slice.cpuDuration === undefined) return;
+
+        let cpuSelfTime = slice.cpuDuration;
+        for (let i = 0; i < slice.subSlices.length; i++) {
+          if (slice.subSlices[i].cpuDuration !== undefined) {
+            cpuSelfTime -= slice.subSlices[i].cpuDuration;
+          }
+        }
+        slice.cpuSelfTime = cpuSelfTime;
+      });
+    },
+    createSubSlicesImpl_() {
+      const precisionUnit = this.model.intrinsicTimeUnit;
+
+
+      // Note that this doesn't check whether |child| should be added to
+      // |parent|'s descendant slices instead of |parent| directly.
+      function addSliceIfBounds(parent, child) {
+        if (parent.bounds(child, precisionUnit)) {
+          child.parentSlice = parent;
+          if (parent.subSlices === undefined) {
+            parent.subSlices = [];
+          }
+          parent.subSlices.push(child);
+          return true;
+        }
+        return false;
+      }
+
+      if (!this.slices.length) return;
+
+      const ops = [];
+      for (let i = 0; i < this.slices.length; i++) {
+        if (this.slices[i].subSlices) {
+          this.slices[i].subSlices.splice(0,
+              this.slices[i].subSlices.length);
+        }
+        ops.push(i);
+      }
+
+      const originalSlices = this.slices;
+      ops.sort(function(ix, iy) {
+        const x = originalSlices[ix];
+        const y = originalSlices[iy];
+        if (x.start !== y.start) {
+          return x.start - y.start;
+        }
+
+        // Elements get inserted into the slices array in order of when the
+        // slices start. Because slices must be properly nested, we break
+        // start-time ties by assuming that the elements appearing earlier
+        // in the slices array (and thus ending earlier) start earlier.
+        return ix - iy;
+      });
+
+      const slices = new Array(this.slices.length);
+      for (let i = 0; i < ops.length; i++) {
+        slices[i] = originalSlices[ops[i]];
+      }
+
+      // Actually build the subrows.
+      let rootSlice = slices[0];
+      this.topLevelSlices = [];
+      this.topLevelSlices.push(rootSlice);
+      rootSlice.isTopLevel = true;
+      for (let i = 1; i < slices.length; i++) {
+        const slice = slices[i];
+        while (rootSlice !== undefined &&
+               (!addSliceIfBounds(rootSlice, slice))) {
+          rootSlice = rootSlice.parentSlice;
+        }
+        if (rootSlice === undefined) {
+          this.topLevelSlices.push(slice);
+          slice.isTopLevel = true;
+        }
+        rootSlice = slice;
+      }
+
+      // Keep the slices in sorted form.
+      this.slices = slices;
+    },
+    addCpuTimeToSubslices_(timeSlices) {
+      const SCHEDULING_STATE = tr.model.SCHEDULING_STATE;
+      let sliceIdx = 0;
+      timeSlices.forEach(function(timeSlice) {
+        if (timeSlice.schedulingState === SCHEDULING_STATE.RUNNING) {
+          while (sliceIdx < this.topLevelSlices.length) {
+            if (this.addCpuTimeToSubslice_(this.topLevelSlices[sliceIdx],
+                timeSlice)) {
+              // The current top-level slice and children are fully
+              // accounted for, proceed to next top-level slice.
+              sliceIdx++;
+            } else {
+              // The current top-level runs beyond the time slice, break out
+              // so we can potentially add more time slices to it
+              break;
+            }
+          }
+        }
+      }, this);
+    },
+    /* Add run-time of this timeSlice to the passed in slice
+     * and all of it's children (recursively).
+     * Returns whether the slice ends before or at the end of the
+     * time slice, signaling we are done with this slice.
+     */
+    addCpuTimeToSubslice_(slice, timeSlice) {
+      // Make sure they overlap
+      if (slice.start > timeSlice.end || slice.end < timeSlice.start) {
+        return slice.end <= timeSlice.end;
+      }
+
+      // Compute actual overlap
+      let duration = timeSlice.duration;
+      if (slice.start > timeSlice.start) {
+        duration -= slice.start - timeSlice.start;
+      }
+      if (timeSlice.end > slice.end) {
+        duration -= timeSlice.end - slice.end;
+      }
+
+      if (slice.cpuDuration) {
+        slice.cpuDuration += duration;
+      } else {
+        slice.cpuDuration = duration;
+      }
+
+      for (let i = 0; i < slice.subSlices.length; i++) {
+        this.addCpuTimeToSubslice_(slice.subSlices[i], timeSlice);
+      }
+
+      return slice.end <= timeSlice.end;
+    }
+  };
+
+  /**
+   * Merge two slice groups.
+   *
+   * If the two groups do not nest properly some of the slices of groupB will
+   * be split to accomodate the improper nesting.  This is done to accomodate
+   * combined kernel and userland call stacks on Android.  Because userland
+   * tracing is done by writing to the trace_marker file, the kernel calls
+   * that get invoked as part of that write may not be properly nested with
+   * the userland call trace.  For example the following sequence may occur:
+   *
+   *     kernel enter sys_write        (the write to trace_marker)
+   *     user   enter some_function
+   *     kernel exit  sys_write
+   *     ...
+   *     kernel enter sys_write        (the write to trace_marker)
+   *     user   exit  some_function
+   *     kernel exit  sys_write
+   *
+   * This is handled by splitting the sys_write call into two slices as
+   * follows:
+   *
+   *     | sys_write |            some_function            | sys_write (cont.) |
+   *                 | sys_write (cont.) |     | sys_write |
+   *
+   * The colorId of both parts of the split slices are kept the same, and the
+   * " (cont.)" suffix is appended to the later parts of a split slice.
+   *
+   * The two input SliceGroups are not modified by this, and the merged
+   * SliceGroup will contain a copy of each of the input groups' slices (those
+   * copies may be split).
+   */
+  SliceGroup.merge = function(groupA, groupB) {
+    // This is implemented by traversing the two slice groups in reverse
+    // order.  The slices in each group are sorted by ascending end-time, so
+    // we must do the traversal from back to front in order to maintain the
+    // sorting.
+    //
+    // We traverse the two groups simultaneously, merging as we go.  At each
+    // iteration we choose the group from which to take the next slice based
+    // on which group's next slice has the greater end-time.  During this
+    // traversal we maintain a stack of currently "open" slices for each input
+    // group.  A slice is considered "open" from the time it gets reached in
+    // our input group traversal to the time we reach an slice in this
+    // traversal with an end-time before the start time of the "open" slice.
+    //
+    // Each time a slice from groupA is opened or closed (events corresponding
+    // to the end-time and start-time of the input slice, respectively) we
+    // split all of the currently open slices from groupB.
+
+    if (groupA.openPartialSlices_.length > 0) {
+      throw new Error('groupA has open partial slices');
+    }
+
+    if (groupB.openPartialSlices_.length > 0) {
+      throw new Error('groupB has open partial slices');
+    }
+
+    if (groupA.parentContainer !== groupB.parentContainer) {
+      throw new Error('Different parent threads. Cannot merge');
+    }
+
+    if (groupA.sliceConstructor !== groupB.sliceConstructor) {
+      throw new Error('Different slice constructors. Cannot merge');
+    }
+
+    const result = new SliceGroup(groupA.parentContainer,
+        groupA.sliceConstructor,
+        groupA.name_);
+
+    const slicesA = groupA.slices;
+    const slicesB = groupB.slices;
+    let idxA = 0;
+    let idxB = 0;
+    const openA = [];
+    const openB = [];
+
+    const splitOpenSlices = function(when) {
+      for (let i = 0; i < openB.length; i++) {
+        const oldSlice = openB[i];
+        const oldEnd = oldSlice.end;
+        if (when < oldSlice.start || oldEnd < when) {
+          throw new Error('slice should not be split');
+        }
+
+        const newSlice = result.copySlice(oldSlice);
+        newSlice.start = when;
+        newSlice.duration = oldEnd - when;
+        if (newSlice.title.indexOf(' (cont.)') === -1) {
+          newSlice.title += ' (cont.)';
+        }
+        oldSlice.duration = when - oldSlice.start;
+        openB[i] = newSlice;
+        result.pushSlice(newSlice);
+      }
+    };
+
+    const closeOpenSlices = function(upTo) {
+      while (openA.length > 0 || openB.length > 0) {
+        const nextA = openA[openA.length - 1];
+        const nextB = openB[openB.length - 1];
+        const endA = nextA && nextA.end;
+        const endB = nextB && nextB.end;
+
+        if ((endA === undefined || endA > upTo) &&
+            (endB === undefined || endB > upTo)) {
+          return;
+        }
+
+        if (endB === undefined || endA < endB) {
+          splitOpenSlices(endA);
+          openA.pop();
+        } else {
+          openB.pop();
+        }
+      }
+    };
+
+    while (idxA < slicesA.length || idxB < slicesB.length) {
+      const sA = slicesA[idxA];
+      const sB = slicesB[idxB];
+      let nextSlice;
+      let isFromB;
+
+      if (sA === undefined || (sB !== undefined && sA.start > sB.start)) {
+        nextSlice = result.copySlice(sB);
+        isFromB = true;
+        idxB++;
+      } else {
+        nextSlice = result.copySlice(sA);
+        isFromB = false;
+        idxA++;
+      }
+
+      closeOpenSlices(nextSlice.start);
+
+      result.pushSlice(nextSlice);
+
+      if (isFromB) {
+        openB.push(nextSlice);
+      } else {
+        splitOpenSlices(nextSlice.start);
+        openA.push(nextSlice);
+      }
+    }
+
+    closeOpenSlices();
+
+    return result;
+  };
+
+  return {
+    SliceGroup,
+  };
+});
+</script>

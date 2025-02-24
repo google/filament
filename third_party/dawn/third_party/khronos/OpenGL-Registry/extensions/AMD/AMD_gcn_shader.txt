@@ -1,0 +1,156 @@
+Name
+
+    AMD_gcn_shader
+
+Name Strings
+
+    GL_AMD_gcn_shader
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date: 06/24/2019
+    Revision: 4
+
+Number
+
+    OpenGL Extension #453
+
+Dependencies
+
+    This extension is written against Revision 8 of the version 4.40 of the
+    OpenGL Shading Language Specification, dated January 22, 2014.
+
+    This extension builds upon features introduced by the
+    GL_ARB_shader_group_vote extension.
+
+    AMD_gpu_shader_int64 or NV_gpu_shader5 is required.
+
+Overview
+
+    This extension exposes miscellaneous features of the AMD "Graphics Core
+    Next" shader architecture that do not cleanly fit into other extensions
+    and are not significant enough alone to warrant their own extensions.
+    This includes cross-SIMD lane ballots, cube map query functions and
+    a functionality to query the elapsed shader core time.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    None.
+
+Additions to Chapter 7 of the OpenGL Shading Language Specification
+(Built-In Language Variables)
+
+    Modify Section 7.1, Built-In Language Variables
+
+    (add to the list of built-in constants for each shader stage listed in
+     the chapter)
+
+      in int gl_SIMDGroupSizeAMD;
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    Add New Section 8.9.5, Texture Cube Map Addressing Functions
+
+    Syntax:
+
+        float cubeFaceIndexAMD(vec3 P)
+
+    The function cubeFaceIndexAMD returns a single floating point value
+    that represents the index of the cube map face that would be accessed
+    by texture lookup functions for the cube map texture coordinates given
+    as parameter. The returned value correspond to cube map faces as follows:
+
+        * 0.0 for the cube map face facing the positive X direction
+        * 1.0 for the cube map face facing the negative X direction
+        * 2.0 for the cube map face facing the positive Y direction
+        * 3.0 for the cube map face facing the negative Y direction
+        * 4.0 for the cube map face facing the positive Z direction
+        * 5.0 for the cube map face facing the negative Z direction
+
+    Syntax:
+
+        vec2 cubeFaceCoordAMD(vec3 P)
+
+    The function cubeFaceCoordAMD returns a two-component floating point
+    vector that represents the 2D texture coordinates that would be used for
+    accessing the selected cube map face for the given cube map texture
+    coordinates given as parameter P.
+
+    Modify Section 8.18, Shader Invocation Group Functions
+
+    (add to the end of the section)
+
+    Syntax:
+
+        uint64_t ballotAMD(bool value);
+
+    The function ballotAMD returns a bitfield containing the result of
+    evaluating the expression <value> in all active invocations in the group.
+    SIMD groups of up to 64 invocations may be represented by the return value
+    of ballotAMD(). Invocations populate the result starting from the least
+    significant bit. If <value> evaluates to true for an active invocation
+    then the corresponding bit is set in the result, otherwise it is not set.
+    Bits corresponding to invocations that are not active or that do not
+    exist in the SIMD group (because, for example, they are at bit positions
+    beyond the SIMD group size) are set to zero. The following trivial
+    assumptions can be made:
+
+        * ballotAMD(true) returns bitfield where the corresponding bits are
+          set for all active invocations in the SIMD group.
+        * ballotAMD(false) returns 0ul.
+
+
+    Add New Section 8.19, "Timing Functions"
+
+    Syntax:
+
+        uint64_t timeAMD(void);
+
+    The timeAMD function returns a 64-bit value representing the current
+    execution clock as seen by the shader processor. Time monotonically
+    increments as the processor executes instructions. The returned time will
+    wrap after it exceeds the maximum value representable in 64 bits. The
+    units of time are not defined and need not be constant. Time is not
+    dynamically uniform. That is, shader invocations executing as part of a
+    single draw or dispatch will not necessarily see the same value of time.
+    Time is also not guaranteed to be consistent across shader stages. For
+    example, there is no requirement that time sampled inside a fragment
+    shader invocation will be greater than the time sampled in the vertex
+    that lead to its execution.
+
+Dependencies on GL_ARB_shader_group_vote:
+
+    This extension adds to sections introduced by GL_ARB_shader_group_vote.
+    If GL_ARB_shader_group_vote is not supported, introduce the referenced
+    sections, but do not introduce the functionality from that extension.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+      4   06/24/2019  dwitczak  gl_SIMDGroupSizeAMD is no longer a built-in constant.
+      3   03/17/2013  drakos    Internal updates + ready to post
+      2   10/08/2013  gsellers  Internal updates
+      1   09/20/2013  gsellers  Initial revision

@@ -1,0 +1,32 @@
+# Copyright (c) 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Watchlist Rules
+# Refer: https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/infra/watchlists.md
+
+{
+
+  'WATCHLIST_DEFINITIONS': {
+    'this_file': {
+      'filepath': '^WATCHLISTS$',
+    },
+    'depot_tools': {
+      'filepath': '.+',
+    },
+    'build': {
+      'filepath': '.*(ninja|reclient|siso).*',
+    },
+  },
+
+  'WATCHLISTS': {
+    'this_file': [],
+    'depot_tools': [
+      'chops-source-team-auto+depot_tools@google.com',
+    ],
+    'build': [
+      'chrome-build-team@google.com',
+    ],
+  },
+
+}

@@ -1,0 +1,71 @@
+git-footers(1)
+==============
+
+NAME
+----
+git-footers -
+include::_git-footers_desc.helper.txt[]
+
+SYNOPSIS
+--------
+[verse]
+'git footers' [--key FOOTER] REF
+'git footers' [--position | --position-ref | --position-num] REF
+
+DESCRIPTION
+-----------
+
+`git footers` extracts information included in commit messages as "footers",
+which are roughly like HTTP headers except they are at the end.  For example, a
+commit might look like:
+
+    This is a fancy commit message.
+
+    Cr-Commit-Position: refs/heads/main@{#292272}
+    Tech-Debt-Introduced: 17 nanoMSOffices
+
+`git footers` knows how to extract this information.
+
+Footers are order-independent and can appear more than once. Thus they are
+treated as a multimap.
+
+OPTIONS
+-------
+
+If no options are given, all footers are printed, with their names
+case-normalized.
+
+--key FOOTER::
+  Extract all the headers associated with the given key, and print one per 
+  line. If there are no footers with this key, produces no output and exits
+  successfully.
+
+--position::
+  Extract the Chrome commit position from the footers.  This first attempts
+  to get the value of the `Cr-Commit-Position` footer.  If that doesn't exist
+  then it tries a heuristic based on `Git-Svn-Id`.  Output is in one of the
+  following forms:
+
+    refs/heads/main@{#292272}
+    refs/branch-heads/branchname
+
+--position-num::
+  Extracts and prints the Chrome commit position number only (292272 in the
+  example above).  Exits with an error if one cannot be found.
+
+--position-ref::
+  Extracts and prints the Chrome commit position ref name only 
+  (`ref/heads/main` or `refs/branch-heads/branchname` in the example above).
+
+
+EXAMPLE
+-------
+demo:1[]
+
+SEE ALSO
+--------
+linkgit:git-number[1]
+
+include::_footer.txt[]
+
+// vim: ft=asciidoc:

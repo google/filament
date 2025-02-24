@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/model/event_set.html">
+<link rel="import" href="/tracing/model/model.html">
+<link rel="import" href="/tracing/ui/analysis/analysis_view.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const Model = tr.Model;
+  const EventSet = tr.model.EventSet;
+
+  test('analyzeSelectionWithSingleEvent', function() {
+    const model = new Model();
+
+    const fe1 = new tr.model.FlowEvent('cat', 1234, 'title', 7, 10, {});
+    const fe2 = new tr.model.FlowEvent('cat', 1234, 'title', 8, 20, {});
+    model.flowEvents.push(fe1);
+    model.flowEvents.push(fe2);
+
+    const selection = new EventSet();
+    selection.push(fe1);
+    selection.push(fe2);
+    assert.strictEqual(selection.length, 2);
+
+    const subView = document.createElement('tr-ui-a-multi-flow-event-sub-view');
+    subView.selection = selection;
+
+    this.addHTMLOutput(subView);
+  });
+});
+</script>

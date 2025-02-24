@@ -1,0 +1,66 @@
+{
+  "name": "iron-jsonp-library",
+  "version": "2.0.0",
+  "description": "Loads jsonp libraries",
+  "authors": [
+    "Aleks Totic <a@totic.org>",
+    "The Polymer Authors"
+  ],
+  "keywords": [
+    "web-component",
+    "polymer",
+    "behavior"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/PolymerElements/iron-jsonp-library.git"
+  },
+  "main": "iron-jsonp-library.html",
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/PolymerElements/iron-jsonp-library/",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#1.9 - 2"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#1 - 2",
+    "test-fixture": "PolymerElements/test-fixture#^3.0.0-rc.1",
+    "web-component-tester": "^6.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^1.0.0",
+    "paper-styles": "PolymerElements/paper-styles#1 - 2",
+    "paper-spinner": "PolymerElements/paper-spinner#1 - 2"
+  },
+  "variants": {
+    "1.x": {
+      "dependencies": {
+        "polymer": "Polymer/polymer#^1.9"
+      },
+      "devDependencies": {
+        "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+        "test-fixture": "PolymerElements/test-fixture#^1.0.0",
+        "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0",
+        "paper-styles": "PolymerElements/paper-styles#^1.0.2",
+        "paper-spinner": "PolymerElements/paper-spinner#^1.0.1",
+        "web-component-tester": "Polymer/web-component-tester#^4.0.0"
+      },
+      "resolutions": {
+        "webcomponentsjs": "^0.7"
+      }
+    }
+  },
+  "resolutions": {
+    "webcomponentsjs": "^1.0.0"
+  },
+  "_release": "2.0.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.0.0",
+    "commit": "61d47ed327b76bd597d1e1800d3040b2279ae329"
+  },
+  "_source": "https://github.com/PolymerElements/iron-jsonp-library.git",
+  "_target": "1 - 2",
+  "_originalSource": "PolymerElements/iron-jsonp-library"
+}

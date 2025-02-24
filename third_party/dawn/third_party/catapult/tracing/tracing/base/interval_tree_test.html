@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/interval_tree.html">
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function SimpleIntervalTree() {
+    tr.b.IntervalTree.call(this,
+        function(s) { return s.start; },
+        function(s) { return s.end; });
+    return this;
+  }
+  SimpleIntervalTree.prototype = {
+    __proto__: tr.b.IntervalTree.prototype
+  };
+
+  function buildSimpleTree() {
+    const tree = new SimpleIntervalTree();
+    tree.v0 = tree.insert({start: 2, end: 6});
+    tree.v1 = tree.insert({start: 1, end: 3});
+    tree.v2 = tree.insert({start: 5, end: 7});
+    tree.v3 = tree.insert({start: 1, end: 5});
+    tree.v4 = tree.insert({start: 3, end: 5});
+    tree.v5 = tree.insert({start: 3, end: 5});
+    tree.v6 = tree.insert({start: 3, end: 6});
+    tree.v7 = tree.insert({start: 1, end: 1});
+    tree.v8 = tree.insert({start: 4, end: 8});
+    tree.v9 = tree.insert({start: 0, end: 2});
+
+    tree.updateHighValues();
+
+    return tree;
+  }
+
+  function sortSimpleResults(intersection) {
+    intersection.sort(function(a, b) {
+      if (a.start === b.start) return a.end - b.end;
+      return a.start - b.start;
+    });
+  }
+
+  test('findIntersection', function() {
+    const tree = buildSimpleTree();
+    const intersection = tree.findIntersection(2, 4);
+    sortSimpleResults(intersection);
+
+    const expected = [tree.v1, tree.v3, tree.v0, tree.v4, tree.v5, tree.v6];
+    assert.strictEqual(intersection.length, 6);
+    assert.deepEqual(intersection, expected);
+  });
+
+  test('findIntersection_zeroDuration', function() {
+    const tree = buildSimpleTree();
+    const intersection = tree.findIntersection(2, 2);
+    sortSimpleResults(intersection);
+
+    const expected = [tree.v1, tree.v3];
+    assert.strictEqual(intersection.length, 2);
+    assert.deepEqual(intersection, expected);
+  });
+
+  test('findIntersection_noMatching', function() {
+    const tree = buildSimpleTree();
+    const intersection = tree.findIntersection(9, 10);
+    assert.deepEqual(intersection, []);
+  });
+
+  test('findIntersection_emptyTree', function() {
+    const tree = new tr.b.IntervalTree();
+    tree.updateHighValues();
+
+    const intersection = tree.findIntersection(2, 4);
+    assert.deepEqual(intersection, []);
+  });
+
+  test('findIntersection_emptyInterval', function() {
+    const tree = new tr.b.IntervalTree();
+    tree.updateHighValues();
+
+    assert.throws(function() {
+      tree.findIntersection();
+    });
+    assert.throws(function() {
+      tree.findIntersection(1);
+    });
+    assert.throws(function() {
+      tree.findIntersection('a', 'b');
+    });
+  });
+
+  test('insert', function() {
+    const tree = new tr.b.IntervalTree(
+        function(s) { return s.start; },
+        function(s) { return s.end; });
+
+    assert.strictEqual(tree.size, 0);
+
+    tree.insert({start: 1, end: 4});
+    tree.insert({start: 3, end: 5});
+    tree.updateHighValues();
+
+    const outTree = {
+      'left': {
+        'data': [[1, 4]]
+      },
+      'data': [[3, 5]]
+    };
+
+    assert.strictEqual(tree.size, 2);
+    assert.deepEqual(tree.dump_(), outTree);
+  });
+
+  test('insert_withoutEnd', function() {
+    const tree = new tr.b.IntervalTree(
+        function(s) { return s.start; },
+        function(s) { return s.end; });
+
+    assert.strictEqual(tree.size, 0);
+
+    tree.insert({start: 3, end: 5});
+    tree.insert({start: 1, end: 4});
+    tree.updateHighValues();
+
+    const outTree = {
+      'left': {
+        'data': [[1, 4]]
+      },
+      'data': [[3, 5]]
+    };
+
+    assert.strictEqual(tree.size, 2);
+    assert.deepEqual(tree.dump_(), outTree);
+  });
+
+  test('insert_balancesTree', function() {
+    const tree = new tr.b.IntervalTree(
+        function(s) { return s.start; },
+        function(s) { return s.end; });
+
+    assert.strictEqual(tree.size, 0);
+
+    for (let i = 0; i < 10; ++i) {
+      tree.insert({start: i, end: 5});
+    }
+    tree.updateHighValues();
+
+    const outTree = {
+      'left': {
+        'left': {
+          'data': [[0, 5]]
+        },
+        'data': [[1, 5]],
+        'right': {
+          'data': [[2, 5]]
+        }
+      },
+      'data': [[3, 5]],
+      'right': {
+        'left': {
+          'left': {
+            'data': [[4, 5]]
+          },
+          'data': [[5, 5]],
+          'right': {
+            'data': [[6, 5]]
+          }
+        },
+        'data': [[7, 5]],
+        'right': {
+          'left': {
+            'data': [[8, 5]]
+          },
+          'data': [[9, 5]]
+        }
+      }
+    };
+
+    assert.deepEqual(tree.dump_(), outTree);
+  });
+
+  test('insert_withDuplicateIntervals', function() {
+    const tree = new tr.b.IntervalTree(
+        function(s) { return s.start; },
+        function(s) { return s.end; });
+
+    assert.strictEqual(tree.size, 0);
+
+    tree.insert({start: 1, end: 4});
+    tree.insert({start: 3, end: 5});
+    tree.insert({start: 3, end: 5});
+    tree.insert({start: 3, end: 6});
+    tree.updateHighValues();
+
+    const outTree = {
+      'left': {
+        'data': [[1, 4]]
+      },
+      'data': [[3, 5], [3, 5], [3, 6]]
+    };
+
+    assert.strictEqual(tree.size, 4);
+    assert.deepEqual(tree.dump_(), outTree);
+  });
+
+  test('insert_updatesHighValues', function() {
+    const tree = buildSimpleTree();
+
+    const expected = [
+      [undefined, undefined],
+      [2, undefined],
+      [5, 8],
+      [undefined, undefined],
+      [6, 7],
+      [undefined, undefined]
+    ];
+
+    const result = [];
+    function walk(node) {
+      if (node === undefined) return;
+
+      walk(node.leftNode);
+      result.push([node.maxHighLeft, node.maxHighRight]);
+      walk(node.rightNode);
+    }
+    walk(tree.root);
+
+    assert.deepEqual(result, expected);
+  });
+});
+</script>

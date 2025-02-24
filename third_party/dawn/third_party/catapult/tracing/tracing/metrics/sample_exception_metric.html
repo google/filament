@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/metrics/metric_registry.html">
+<link rel="import" href="/tracing/value/histogram.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.metrics', function() {
+  function sampleExceptionMetric(histograms, model) {
+    const hist = new tr.v.Histogram(
+        'foo', tr.b.Unit.byName.sizeInBytes_smallerIsBetter);
+    hist.addSample(9);
+    hist.addSample(91, {bar: new tr.v.d.GenericSet([{hello: 42}])});
+
+    for (const expectation of model.userModel.expectations) {
+      if (expectation instanceof tr.model.um.ResponseExpectation) {
+      } else if (expectation instanceof tr.model.um.AnimationExpectation) {
+      } else if (expectation instanceof tr.model.um.IdleExpectation) {
+      } else if (expectation instanceof tr.model.um.LoadExpectation) {
+      }
+    }
+
+    const chromeHelper = model.getOrCreateHelper(
+        tr.model.helpers.ChromeModelHelper);
+
+    for (const [pid, process] of Object.entries(model.processes)) {
+    }
+
+    histograms.addHistogram(hist);
+    throw new Error('There was an error');
+  }
+
+  tr.metrics.MetricRegistry.register(sampleExceptionMetric);
+
+  return {
+    sampleExceptionMetric,
+  };
+});
+</script>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<link rel="import" href="/tracing/base/base.html">
+<script>
+'use strict';
+
+tr.exportTo('tr.b', function() {
+  let nextGUID = 1;
+
+  const UUID4_PATTERN = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+
+  const GUID = {
+    /* Allocate an integer GUID.
+     *
+     * These GUIDs are not unique between loads, but are fast to generate, and
+     * consume very little memory.
+     *
+     * @return {number} globally unique id.
+     */
+    allocateSimple() {
+      return nextGUID++;
+    },
+
+    /* Return the last GUID allocated without allocating a new one.
+     *
+     * @return {number} last guid.
+     */
+    getLastSimpleGuid() {
+      return nextGUID - 1;
+    },
+
+    /* Generate a random string UUID.
+     *
+     * Version 4 random UUIDs are practically guaranteed to be unique between
+     * loads, so they can be serialized and compared with results from other
+     * loads. These are slower to generate and consume more memory than simple
+     * GUIDs.
+     *
+     * Background on using Math.random() for allocating identifiers:
+     * https://medium.com/@betable/tifu-by-using-math-random-f1c308c4fd9d#.n5b6vgrsh
+     * https://v8project.blogspot.com/2015/12/theres-mathrandom-and-then-theres.html
+     *
+     * @return {string} universally unique id.
+     */
+    allocateUUID4() {
+      return UUID4_PATTERN.replace(/[xy]/g, function(c) {
+        let r = parseInt(Math.random() * 16);
+        if (c === 'y') r = (r & 3) + 8;
+        return r.toString(16);
+      });
+    }
+  };
+
+  return {
+    GUID,
+  };
+});
+</script>

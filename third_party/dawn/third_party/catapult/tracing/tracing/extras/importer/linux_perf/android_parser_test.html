@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  function newModel(events) {
+    return tr.c.TestUtils.newModelWithEvents([events], {
+      shiftWorldToZero: false
+    });
+  }
+
+  test('androidUserlandImport', function() {
+    const lines = [
+      'SurfaceFlinger-4831  [001] ...1 80909.598554: tracing_mark_write: B|4829|onMessageReceived', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598572: tracing_mark_write: B|4829|handleMessageInvalidate', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598590: tracing_mark_write: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598604: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598627: tracing_mark_write: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598651: tracing_mark_write: B|4829|updateTexImage', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598675: tracing_mark_write: B|4829|acquireBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598695: tracing_mark_write: B|4829|' + // @suppress longLineCheck
+          'com.android.launcher/com.android.launcher2.Launcher: 0',
+      'SurfaceFlinger-4831  [001] ...1 80909.598709: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598733: tracing_mark_write: C|4829|' + // @suppress longLineCheck
+          'com.android.launcher/com.android.launcher2.Launcher|0',
+      'SurfaceFlinger-4831  [001] ...1 80909.598746: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598844: tracing_mark_write: B|4829|releaseBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598862: tracing_mark_write: B|4829|' + // @suppress longLineCheck
+          'com.android.launcher/com.android.launcher2.Launcher: 2',
+      'SurfaceFlinger-4831  [001] ...1 80909.598876: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598892: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598925: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598955: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598988: tracing_mark_write: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.599001: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599021: tracing_mark_write: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.599036: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599068: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599087: tracing_mark_write: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599104: tracing_mark_write: E'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 4829);
+    assert.strictEqual(thread.tid, 4831);
+    assert.strictEqual(thread.name, 'SurfaceFlinger');
+    assert.strictEqual(thread.sliceGroup.length, 11);
+  });
+
+  test('androidUserlandImportWithSpacesInThreadName', function() {
+    const lines = [
+      'Surface Flinger -4831  [001] ...1 80909.598590: tracing_mark_write: B|4829|latchBuffer', // @suppress longLineCheck
+      'Surface Flinger -4831  [001] ...1 80909.598604: tracing_mark_write: E' // @suppress longLineCheck
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 4829);
+    assert.strictEqual(thread.tid, 4831);
+    assert.strictEqual(thread.name, 'Surface Flinger ');
+    assert.strictEqual(thread.sliceGroup.length, 1);
+  });
+
+  test('androidAsyncUserlandImport', function() {
+    const lines = [
+      'ndroid.launcher-9649  ( 9649) [000] ...1 1990280.663276: ' +
+          'tracing_mark_write: S|9649|animator:childrenOutlineAlpha|' +
+          '1113053968',
+      'ndroid.launcher-9649  ( 9649) [000] ...1 1990280.781445: ' +
+          'tracing_mark_write: F|9649|animator:childrenOutlineAlpha|' +
+          '1113053968'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 9649);
+    assert.strictEqual(thread.tid, 9649);
+    assert.strictEqual(thread.name, 'ndroid.launcher');
+    assert.strictEqual(thread.sliceGroup.length, 0);
+    assert.strictEqual(thread.asyncSliceGroup.length, 1);
+
+    const slice = thread.asyncSliceGroup.slices[0];
+    assert.strictEqual(slice.title, 'animator:childrenOutlineAlpha');
+    assert.closeTo(118.169, slice.duration, 1e-5);
+
+    // no subslice events created
+    assert.strictEqual(slice.subSlices.length, 0);
+  });
+
+  test('androidUserlandLegacyKernelImport', function() {
+    const lines = [
+      'SurfaceFlinger-4831  [001] ...1 80909.598554: 0: B|4829|onMessageReceived', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598572: 0: B|4829|handleMessageInvalidate', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598590: 0: B|4829|latchBuffer',
+      'SurfaceFlinger-4831  [001] ...1 80909.598604: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598627: 0: B|4829|latchBuffer',
+      'SurfaceFlinger-4831  [001] ...1 80909.598651: 0: B|4829|updateTexImage', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598675: 0: B|4829|acquireBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598695: 0: B|4829|' +
+          'com.android.launcher/com.android.launcher2.Launcher: 0',
+      'SurfaceFlinger-4831  [001] ...1 80909.598709: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598733: 0: C|4829|' +
+          'com.android.launcher/com.android.launcher2.Launcher|0',
+      'SurfaceFlinger-4831  [001] ...1 80909.598746: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598844: 0: B|4829|releaseBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.598862: 0: B|4829|' +
+          'com.android.launcher/com.android.launcher2.Launcher: 2',
+      'SurfaceFlinger-4831  [001] ...1 80909.598876: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598892: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598925: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598955: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.598988: 0: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.599001: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599021: 0: B|4829|latchBuffer', // @suppress longLineCheck
+      'SurfaceFlinger-4831  [001] ...1 80909.599036: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599068: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599087: 0: E',
+      'SurfaceFlinger-4831  [001] ...1 80909.599104: 0: E'
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 4829);
+    assert.strictEqual(thread.tid, 4831);
+    assert.strictEqual(thread.name, 'SurfaceFlinger');
+    assert.strictEqual(thread.sliceGroup.length, 11);
+  });
+
+  test('androidUserlandChromiumImport', function() {
+    const lines = [
+      'SandboxedProces-2894  [001] ...1   253.780659: tracing_mark_write: B|2867|DoWorkLoop|arg1=1|cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780671: tracing_mark_write: B|2867|DeferOrRunPendingTask|source=test=test;task=xyz|cat2', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780671: tracing_mark_write: E|2867|DeferOrRunPendingTask||cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780686: tracing_mark_write: B|2867|MessageLoop::RunTask|source=ipc/ipc_sync_message_filter.cc:Send|cat2', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780700: tracing_mark_write: E|2867|MessageLoop::RunTask||cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780750: tracing_mark_write: C|2867|counter1|10|cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [001] ...1   253.780859: tracing_mark_write: E|2867|DoWorkLoop|arg2=2|cat2', // @suppress longLineCheck
+      'SandboxedProces-2894  [000] ...1   255.663276: tracing_mark_write: S|2867|async|1113053968|arg1=1;arg2=2|cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [000] ...1   255.663276: tracing_mark_write: F|2867|async|1113053968|arg3=3|cat1', // @suppress longLineCheck
+      'SandboxedProces-2894  [000] ...1   255.663276: tracing_mark_write: trace_event_clock_sync: parent_ts=128' // @suppress longLineCheck
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings);
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 2867);
+    assert.strictEqual(thread.tid, 2894);
+    assert.strictEqual(thread.name, 'SandboxedProces');
+    assert.strictEqual(thread.sliceGroup.length, 3);
+
+    assert.strictEqual(thread.sliceGroup.slices[0].args.arg1, '1');
+    assert.strictEqual(thread.sliceGroup.slices[0].args.arg2, '2');
+
+    assert.strictEqual(thread.sliceGroup.slices[1].args.source, 'test=test');
+    assert.strictEqual(thread.sliceGroup.slices[1].category, 'cat2');
+    assert.strictEqual('DeferOrRunPendingTask',
+        thread.sliceGroup.slices[1].title);
+    assert.strictEqual(thread.sliceGroup.slices[1].args.task, 'xyz');
+
+    assert.strictEqual('ipc/ipc_sync_message_filter.cc:Send',
+        thread.sliceGroup.slices[2].args.source);
+
+    assert.strictEqual(thread.asyncSliceGroup.length, 1);
+    assert.strictEqual(thread.asyncSliceGroup.slices[0].args.arg1, '1');
+    assert.strictEqual(thread.asyncSliceGroup.slices[0].args.arg2, '2');
+    assert.strictEqual(thread.asyncSliceGroup.slices[0].args.arg3, '3');
+
+    const counters = m.getAllCounters();
+    assert.strictEqual(counters.length, 1);
+    assert.strictEqual(counters[0].category, 'cat1');
+    assert.strictEqual(counters[0].name, 'counter1');
+
+    assert.strictEqual(counters[0].numSamples, 1);
+    assert.strictEqual(counters[0].getSeries(0).getSample(0).value, 10);
+
+    assert.strictEqual(Math.round((253.780659 - (255.663276 - 128)) * 1000),
+        Math.round(thread.sliceGroup.slices[0].start));
+  });
+
+  test('androidNeedReschedImport', function() {
+    const lines = [
+      'RenderThread-3894  [001] ...1   253.780659: tracing_mark_write: B|3586|DrawFrame', // @suppress longLineCheck
+      'RenderThread-3894  [001] ...1   253.780671: tracing_mark_write: B|3586|waitForTask', // @suppress longLineCheck
+      'RenderThread-3894  [001] .N.1   253.780671: tracing_mark_write: E', // @suppress longLineCheck
+      'RenderThread-3894  [001] ...1   253.780671: tracing_mark_write: B|3586|waitForTask', // @suppress longLineCheck
+      'RenderThread-3894  [001] .n.1   253.780671: tracing_mark_write: E', // @suppress longLineCheck
+      'RenderThread-3894  [001] ...1   253.780671: tracing_mark_write: B|3586|waitForTask', // @suppress longLineCheck
+      'RenderThread-3894  [001] .p.1   253.780671: tracing_mark_write: E', // @suppress longLineCheck
+      'RenderThread-3894  [001] ...1   253.780686: tracing_mark_write: E' // @suppress longLineCheck
+    ];
+    const m = newModel(lines.join('\n'));
+    assert.isFalse(m.hasImportWarnings, 'hasImportWarnings');
+
+    const threads = m.getAllThreads();
+    assert.strictEqual(threads.length, 1);
+
+    const thread = threads[0];
+    assert.strictEqual(thread.parent.pid, 3586);
+    assert.strictEqual(thread.tid, 3894);
+    assert.strictEqual(thread.name, 'RenderThread');
+    assert.strictEqual(thread.sliceGroup.length, 4);
+  });
+});
+</script>

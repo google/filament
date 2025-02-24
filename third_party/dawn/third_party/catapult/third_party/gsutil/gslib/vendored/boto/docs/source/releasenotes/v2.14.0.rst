@@ -1,0 +1,63 @@
+boto v2.14.0
+============
+
+:date: 2013/10/09
+
+This release makes ``s3put`` region-aware, adds some missing features to
+EC2 and SNS, enables EPUB documentation output, and makes the HTTP(S)
+connection pooling port-aware, which in turn enables connecting to
+e.g. mock services running on ``localhost``. It also includes support
+for the latest EC2 and OpsWorks features, as well as several
+important bugfixes for EC2, DynamoDB, MWS, and Python 2.5 support.
+
+
+Features
+--------
+
+* Add support for a ``--region`` argument to ``s3put`` and auto-detect bucket
+    regions if possible (:issue:`1731`, :sha:`d9c28f6`)
+* Add ``delete_notification_configuration`` for EC2 autoscaling
+    (:issue:`1717`, :sha:`ebb7ace`)
+* Add support for registering HVM instances (:issue:`1733`, :sha:`2afc68e`)
+* Add support for ``ReplaceRouteTableAssociation`` for EC2 (:issue:`1736`,
+    :sha:`4296835`)
+* Add ``sms`` as an option for SNS subscribe (:issue:`1744`, :sha:`8ff08e5`)
+* Allow overriding ``has_google_credentials`` (:issue:`1752`, :sha:`052cc91`)
+* Add EPUB output format for docs (:issue:`1759`, :sha:`def7c67`)
+* Add handling of ``Connection: close`` HTTP headers in responses
+    (:issue:`1773`, :sha:`1a38f32`)
+* Make connection pooling port-aware (:issue:`1764`, :issue:`1737`,
+    :sha:`b6c7330`)
+* Add support for ``instance_type`` to ``modify_reserved_instances``
+    (:sha:`bf07eee`)
+* Add support for new OpsWorks features (:sha:`f512898`)
+
+
+Bugfixes
+--------
+
+* Remove erroneous ``dry_run`` parameter (:issue:`1729`, :sha:`35a516e`)
+* Fix task_list override in poll methods of SWF Deciders and Workers (
+    :issue:`1724`, :sha:`fa8d871`)
+* Remove Content-Encoding header from metadata test (:issue:`1735`,
+    :sha:`c8b0130`)
+* Fix the ability to override DynamoDBv2 host and port when creating
+    connections (:issue:`1734`, :sha:`8d2b492`)
+* Fix UnboundLocalError (:sha:`e0e6aeb`)
+* ``self.rules`` is of type IPPermissionsList, remove takes no kwargs
+    (:sha:`3c56b3f`)
+* Nicer error messages for 403s (:issue:`1753`, :sha:`d3d9eab`)
+* Various documentation fixes (:issue:`1762`, :sha:`76aef10`)
+* Various Python 2.5 fixes (:sha:`150aef6`, :sha:`67ae9ff`)
+* Prevent certificate tests from failing for non-govcloud accounts
+    (:sha:`2d3d9f6`)
+* Fix flaky resumable upload test (:issue:`1768`, :sha:`6aa8ae2`)
+* Force the Host HTTP header to fix an issue with older httplibs
+    (:sha:`202c456`)
+* Blacklist S3 from forced Host HTTP header (:sha:`9193226`)
+* Fix ``propagate_at_launch`` spelling error (:issue:`1739`, :sha:`e78d88a`)
+* Remove unused code that causes exceptions with bad response data
+    (:issue:`1771`, :sha:`bec5e70`)
+* Fix ``detach_subnets`` typo (:issue:`1760`, :sha:`4424e1b`)
+* Fix result list handling of ``GetMatchingProductForIdResponse`` for MWS
+    (:issue:`1751`, :sha:`977b7dc`)

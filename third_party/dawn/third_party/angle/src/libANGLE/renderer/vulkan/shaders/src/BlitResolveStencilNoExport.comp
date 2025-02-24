@@ -1,0 +1,130 @@
+//
+// Copyright 2019 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// BlitResolveStencilNoExport.comp: Blit stencil images or resolve multisampled ones into a buffer.
+// This is used where VK_EXT_shader_stencil_export is not available, to output the resolved stencil
+// into a temporary buffer, which is then copied into the stencil aspect of the final image.
+
+#version 450 core
+
+#if IsResolve
+#extension GL_EXT_samplerless_texture_functions : require
+#endif
+
+#define MAKE_SRC_RESOURCE(prefix, type) prefix ## type
+
+#if IsResolve
+
+#define CoordType ivec2
+#if SrcIsArray
+#define SRC_RESOURCE utexture2DMSArray
+#define TEXEL_FETCH(src, coord, sample) texelFetch(src, ivec3(coord, params.srcLayer), sample)
+#else
+#define SRC_RESOURCE utexture2DMS
+#define TEXEL_FETCH(src, coord, sample) texelFetch(src, coord, sample)
+#endif
+
+#else
+
+#define CoordType vec2
+#if SrcIsArray
+#define SRC_RESOURCE utexture2DArray
+#define TEXEL_FETCH(src, coord, sample) texture(usampler2DArray(src, blitSampler), vec3(coord * params.invSrcExtent, params.srcLayer))
+#else
+#define SRC_RESOURCE utexture2D
+#define TEXEL_FETCH(src, coord, sample) texture(usampler2D(src, blitSampler), coord * params.invSrcExtent)
+#endif
+
+#endif  // IsResolve
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    // Translation from source to destination coordinates.
+    CoordType offset;
+    vec2 stretch;
+    vec2 invSrcExtent;
+    int srcLayer;
+    int srcWidth;
+    // Output.
+    ivec4 blitArea;
+    int destPitch;
+    // Flip control.
+    bool flipX;
+    bool flipY;
+    bool rotateXY;
+} params;
+
+layout (set = 0, binding = 0) buffer dst
+{
+    // Note: every invocation handles 4 stencil value and output one value here.
+    uint destData[];
+};
+
+layout(set = 0, binding = 1) uniform SRC_RESOURCE stencil;
+
+#if !IsResolve
+layout(set = 0, binding = 2) uniform sampler blitSampler;
+#endif
+
+void main()
+{
+    ivec2 destSubImageCoords = ivec2(gl_GlobalInvocationID.x * 4, gl_GlobalInvocationID.y);
+    if (any(lessThanEqual(params.blitArea.zw, destSubImageCoords)))
+    {
+        return;
+    }
+
+    // See comment in BlitResolve.frag regarding how the following coordinate transformation is
+    // derived.
+    //
+    // When blitting with the fragment shader, the input coordinates are within the blit area.
+    // With the compute shader however, the input coordinates start from 0,0.  That is, if the
+    // fragment shader input is Xf and the compute shader's input is Xc, we have:
+    //
+    //     Xf = Xc + params.blitOffset
+    //
+    // So we need to offset the input coordinates here by the blit area offset.
+    destSubImageCoords += params.blitArea.xy;
+    CoordType srcImageCoords = CoordType(destSubImageCoords);
+#if !IsResolve
+    srcImageCoords *= params.stretch;
+    srcImageCoords += vec2(0.5);
+#endif
+    srcImageCoords -= params.offset;
+
+    // If flipping, negate the coordinates.
+    if (params.flipX)
+        srcImageCoords.x = -srcImageCoords.x;
+    if (params.flipY)
+        srcImageCoords.y = -srcImageCoords.y;
+    if (params.rotateXY)
+        srcImageCoords.xy = srcImageCoords.yx;
+
+    int xDir = params.flipX ? -1 : 1;
+
+    uint outStencils = 0;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        // Bounds check on X:
+        if (srcImageCoords.x >= 0 && srcImageCoords.x < params.srcWidth)
+        {
+            // Note: always resolve using sample 0.  GLES3 gives us freedom in choosing how
+            // to resolve depth/stencil images.
+            uint stencilValue = TEXEL_FETCH(stencil, srcImageCoords, 0).x;
+
+#if IsBigEndian
+            outStencils |= (stencilValue & 0xFF) << ((3 - i) * 8);
+#else
+            outStencils |= (stencilValue & 0xFF) << (i * 8);
+#endif
+        }
+
+        srcImageCoords.x += xDir;
+    }
+
+    destData[gl_GlobalInvocationID.y * params.destPitch + gl_GlobalInvocationID.x] = outStencils;
+}

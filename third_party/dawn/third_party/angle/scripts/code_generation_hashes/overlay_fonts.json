@@ -1,0 +1,8 @@
+{
+  "src/libANGLE/Overlay_font_autogen.cpp":
+    "b2568efb8872b16b09369cb53c730e6c",
+  "src/libANGLE/Overlay_font_autogen.h":
+    "ca2e38137ec27572e2ad695ff89f464d",
+  "src/libANGLE/gen_overlay_fonts.py":
+    "c8ab0602fb06bf204c2b454901260bd6"
+}

@@ -1,0 +1,49 @@
+#!/usr/bin/env vpython3
+# Copyright 2022 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: We use tags here instead of refs because refs will always hit the
+# network to see if there are any updates.
+
+# [VPYTHON:BEGIN]
+# python_version: "3.8"
+#
+# # Third party dependencies.  These are only listed because pylint itself needs
+# # them.  Feel free to add/remove anything here.
+#
+# wheel: <
+#   name: "infra/python/wheels/click-py3"
+#   version: "version:8.0.3"
+# >
+# wheel: <
+#   name: "infra/python/wheels/mypy-extensions-py3"
+#   version: "version:0.4.3"
+# >
+# wheel: <
+#   name: "infra/python/wheels/pathspec-py3"
+#   version: "version:0.9.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/platformdirs-py3"
+#   version: "version:2.5.2"
+# >
+# wheel: <
+#   name: "infra/python/wheels/tomli-py3"
+#   version: "version:1.1.0"
+# >
+# wheel: <
+#   name: "infra/python/wheels/typing-extensions-py3"
+#   version: "version:4.0.1"
+# >
+#
+# # Black itself.
+#
+# wheel: <
+#   name: "infra/python/wheels/black-py3"
+#   version: "version:22.3.0"
+# >
+#
+# [VPYTHON:END]
+
+import black.__main__

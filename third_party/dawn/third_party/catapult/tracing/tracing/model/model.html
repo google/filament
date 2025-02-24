@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/base.html">
+<link rel="import" href="/tracing/base/event.html">
+<link rel="import" href="/tracing/base/interval_tree.html">
+<link rel="import" href="/tracing/base/math/quad.html">
+<link rel="import" href="/tracing/base/math/range.html">
+<link rel="import" href="/tracing/base/task.html">
+<link rel="import" href="/tracing/base/time_display_modes.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/core/auditor.html">
+<link rel="import" href="/tracing/core/filter.html">
+<link rel="import" href="/tracing/model/alert.html">
+<link rel="import" href="/tracing/model/clock_sync_manager.html">
+<link rel="import" href="/tracing/model/constants.html">
+<link rel="import" href="/tracing/model/device.html">
+<link rel="import" href="/tracing/model/flow_event.html">
+<link rel="import" href="/tracing/model/frame.html">
+<link rel="import" href="/tracing/model/global_memory_dump.html">
+<link rel="import" href="/tracing/model/instant_event.html">
+<link rel="import" href="/tracing/model/kernel.html">
+<link rel="import" href="/tracing/model/model_indices.html">
+<link rel="import" href="/tracing/model/model_stats.html">
+<link rel="import" href="/tracing/model/object_snapshot.html">
+<link rel="import" href="/tracing/model/process.html">
+<link rel="import" href="/tracing/model/process_memory_dump.html">
+<link rel="import" href="/tracing/model/sample.html">
+<link rel="import" href="/tracing/model/stack_frame.html">
+<link rel="import" href="/tracing/model/user_model/user_expectation.html">
+<link rel="import" href="/tracing/model/user_model/user_model.html">
+
+<script>
+'use strict';
+
+/**
+ * @fileoverview Model is a parsed representation of the
+ * TraceEvents obtained from base/trace_event in which the begin-end
+ * tokens are converted into a hierarchy of processes, threads,
+ * subrows, and slices.
+ *
+ * The building block of the model is a slice. A slice is roughly
+ * equivalent to function call executing on a specific thread. As a
+ * result, slices may have one or more subslices.
+ *
+ * A thread contains one or more subrows of slices. Row 0 corresponds to
+ * the "root" slices, e.g. the topmost slices. Row 1 contains slices that
+ * are nested 1 deep in the stack, and so on. We use these subrows to draw
+ * nesting tasks.
+ *
+ */
+tr.exportTo('tr', function() {
+  const Process = tr.model.Process;
+  const Device = tr.model.Device;
+  const Kernel = tr.model.Kernel;
+  const GlobalMemoryDump = tr.model.GlobalMemoryDump;
+  const GlobalInstantEvent = tr.model.GlobalInstantEvent;
+  const FlowEvent = tr.model.FlowEvent;
+  const Alert = tr.model.Alert;
+  const Sample = tr.model.Sample;
+
+  /**
+   * @constructor
+   */
+  function Model() {
+    tr.model.EventContainer.call(this);
+    tr.b.EventTarget.decorate(this);
+
+    this.timestampShiftToZeroAmount_ = 0;
+
+    this.faviconHue = 'blue'; // Should be a key from favicons.html
+
+    this.device = new Device(this);
+    this.kernel = new Kernel(this);
+    this.processes = {};
+    this.metadata = [];
+    this.categories = [];
+    this.instantEvents = [];
+    this.flowEvents = [];
+    this.clockSyncManager = new tr.model.ClockSyncManager();
+    this.intrinsicTimeUnit_ = undefined;
+
+    this.stackFrames = {};
+    this.samples = [];
+
+    this.alerts = [];
+    this.userModel = new tr.model.um.UserModel(this);
+
+    this.flowIntervalTree = new tr.b.IntervalTree((f) => f.start, (f) => f.end);
+    this.globalMemoryDumps = [];
+
+    this.userFriendlyCategoryDrivers_ = [];
+
+    this.annotationsByGuid_ = {};
+    this.modelIndices = undefined;
+
+    this.stats = new tr.model.ModelStats();
+
+    this.importWarnings_ = [];
+    this.reportedImportWarnings_ = {};
+
+    this.isTimeHighResolution_ = true;
+
+    this.patchupsToApply_ = [];
+
+    this.doesHelperGUIDSupportThisModel_ = {};
+    this.helpersByConstructorGUID_ = {};
+    this.eventsByStableId_ = undefined;
+  }
+
+  Model.prototype = {
+    __proto__: tr.model.EventContainer.prototype,
+
+    getEventByStableId(stableId) {
+      if (this.eventsByStableId_ === undefined) {
+        this.eventsByStableId_ = {};
+        for (const event of this.getDescendantEvents()) {
+          this.eventsByStableId_[event.stableId] = event;
+        }
+      }
+      return this.eventsByStableId_[stableId];
+    },
+
+    getOrCreateHelper(constructor) {
+      if (!constructor.guid) {
+        throw new Error('Helper constructors must have GUIDs');
+      }
+
+      if (this.helpersByConstructorGUID_[constructor.guid] === undefined) {
+        if (this.doesHelperGUIDSupportThisModel_[constructor.guid] ===
+            undefined) {
+          this.doesHelperGUIDSupportThisModel_[constructor.guid] =
+            constructor.supportsModel(this);
+        }
+
+        if (!this.doesHelperGUIDSupportThisModel_[constructor.guid]) {
+          return undefined;
+        }
+
+        this.helpersByConstructorGUID_[constructor.guid] = new constructor(
+            this);
+      }
+      return this.helpersByConstructorGUID_[constructor.guid];
+    },
+
+    * childEvents() {
+      yield* this.globalMemoryDumps;
+      yield* this.instantEvents;
+      yield* this.flowEvents;
+      yield* this.alerts;
+      yield* this.samples;
+    },
+
+    * childEventContainers() {
+      yield this.userModel;
+      yield this.device;
+      yield this.kernel;
+      yield* Object.values(this.processes);
+    },
+
+    /**
+     * Some objects in the model can persist their state in ModelSettings.
+     *
+     * This iterates through them.
+     */
+    iterateAllPersistableObjects(callback) {
+      this.kernel.iterateAllPersistableObjects(callback);
+      for (const pid in this.processes) {
+        this.processes[pid].iterateAllPersistableObjects(callback);
+      }
+    },
+
+    updateBounds() {
+      this.bounds.reset();
+      const bounds = this.bounds;
+      for (const ec of this.childEventContainers()) {
+        ec.updateBounds();
+        bounds.addRange(ec.bounds);
+      }
+      for (const event of this.childEvents()) {
+        event.addBoundsToRange(bounds);
+      }
+    },
+
+    shiftWorldToZero() {
+      const shiftAmount = -this.bounds.min;
+      this.timestampShiftToZeroAmount_ = shiftAmount;
+      for (const ec of this.childEventContainers()) {
+        ec.shiftTimestampsForward(shiftAmount);
+      }
+
+      for (const event of this.childEvents()) {
+        event.start += shiftAmount;
+      }
+      this.updateBounds();
+    },
+
+    convertTimestampToModelTime(sourceClockDomainName, ts) {
+      if (sourceClockDomainName !== 'traceEventClock') {
+        throw new Error('Only traceEventClock is supported.');
+      }
+      return tr.b.Unit.timestampFromUs(ts) +
+        this.timestampShiftToZeroAmount_;
+    },
+
+    convertTimestampFromModelTime(targetClockDomainName, ts) {
+      if (targetClockDomainName !== 'traceEventClock') {
+        throw new Error('Only traceEventClock is supported.');
+      }
+      const convertFn = this.clockSyncManager.getModelTimeTransformerInverse(
+          tr.model.ClockDomainId.LINUX_FTRACE_GLOBAL);
+
+      return convertFn(ts) - this.timestampShiftToZeroAmount_;
+    },
+
+    get numProcesses() {
+      let n = 0;
+      for (const p in this.processes) {
+        n++;
+      }
+      return n;
+    },
+
+    /**
+     * @return {Process} Gets a TimelineProcess for a specified pid. Returns
+     * undefined if the process doesn't exist.
+     */
+    getProcess(pid) {
+      return this.processes[pid];
+    },
+
+    /**
+     * @return {Process} Gets a TimelineProcess for a specified pid or
+     * creates one if it does not exist.
+     */
+    getOrCreateProcess(pid) {
+      if (!this.processes[pid]) {
+        this.processes[pid] = new Process(this, pid);
+      }
+      return this.processes[pid];
+    },
+
+    addStackFrame(stackFrame) {
+      if (this.stackFrames[stackFrame.id]) {
+        throw new Error('Stack frame already exists');
+      }
+      this.stackFrames[stackFrame.id] = stackFrame;
+      return stackFrame;
+    },
+
+    /**
+     * Generates the set of categories from the slices and counters.
+     */
+    updateCategories_() {
+      const categoriesDict = {};
+      this.userModel.addCategoriesToDict(categoriesDict);
+      this.device.addCategoriesToDict(categoriesDict);
+      this.kernel.addCategoriesToDict(categoriesDict);
+      for (const pid in this.processes) {
+        this.processes[pid].addCategoriesToDict(categoriesDict);
+      }
+
+      this.categories = [];
+      for (const category in categoriesDict) {
+        if (category !== '') {
+          this.categories.push(category);
+        }
+      }
+    },
+
+    getAllThreads() {
+      const threads = [];
+      for (const tid in this.kernel.threads) {
+        threads.push(process.threads[tid]);
+      }
+      for (const pid in this.processes) {
+        const process = this.processes[pid];
+        for (const tid in process.threads) {
+          threads.push(process.threads[tid]);
+        }
+      }
+      return threads;
+    },
+
+    /**
+     * @param {(!function(!tr.model.Process): boolean)=} opt_predicate Optional
+     *     predicate for filtering the returned processes. If undefined, all
+     *     process in the model will be returned.
+     * @return {!Array<!tr.model.Process>} An array of processes in the model.
+     */
+    getAllProcesses(opt_predicate) {
+      const processes = [];
+      for (const pid in this.processes) {
+        const process = this.processes[pid];
+        if (opt_predicate === undefined || opt_predicate(process)) {
+          processes.push(process);
+        }
+      }
+      return processes;
+    },
+
+    /**
+     * @return {Array} An array of all the counters in the model.
+     */
+    getAllCounters() {
+      const counters = [];
+      counters.push.apply(
+          counters, Object.values(this.device.counters || {}));
+      counters.push.apply(
+          counters, Object.values(this.kernel.counters || {}));
+      for (const pid in this.processes) {
+        const process = this.processes[pid];
+        for (const tid in process.counters) {
+          counters.push(process.counters[tid]);
+        }
+      }
+      return counters;
+    },
+
+    getAnnotationByGUID(guid) {
+      return this.annotationsByGuid_[guid];
+    },
+
+    addAnnotation(annotation) {
+      if (!annotation.guid) {
+        throw new Error('Annotation with undefined guid given');
+      }
+
+      this.annotationsByGuid_[annotation.guid] = annotation;
+      tr.b.dispatchSimpleEvent(this, 'annotationChange');
+    },
+
+    removeAnnotation(annotation) {
+      this.annotationsByGuid_[annotation.guid].onRemove();
+      delete this.annotationsByGuid_[annotation.guid];
+      tr.b.dispatchSimpleEvent(this, 'annotationChange');
+    },
+
+    getAllAnnotations() {
+      return Object.values(this.annotationsByGuid_);
+    },
+
+    addUserFriendlyCategoryDriver(ufcd) {
+      this.userFriendlyCategoryDrivers_.push(ufcd);
+    },
+
+    /**
+     * Gets the user friendly category string from an event.
+     *
+     * Returns undefined if none is known.
+     */
+    getUserFriendlyCategoryFromEvent(event) {
+      for (let i = 0; i < this.userFriendlyCategoryDrivers_.length; i++) {
+        const ufc = this.userFriendlyCategoryDrivers_[i].fromEvent(event);
+        if (ufc !== undefined) return ufc;
+      }
+      return undefined;
+    },
+
+    /**
+     * @param {String} The name of the thread to find.
+     * @return {Array} An array of all the matched threads.
+     */
+    findAllThreadsNamed(name) {
+      const namedThreads = [];
+      namedThreads.push.apply(
+          namedThreads,
+          this.kernel.findAllThreadsNamed(name));
+      for (const pid in this.processes) {
+        namedThreads.push.apply(
+            namedThreads,
+            this.processes[pid].findAllThreadsNamed(name));
+      }
+      return namedThreads;
+    },
+
+    get importOptions() {
+      return this.importOptions_;
+    },
+
+    set importOptions(options) {
+      this.importOptions_ = options;
+    },
+
+    /**
+     * Returns a time unit that is used to format values and determines the
+     * precision of the timestamp values.
+     */
+    get intrinsicTimeUnit() {
+      if (this.intrinsicTimeUnit_ === undefined) {
+        return tr.b.TimeDisplayModes.ms;
+      }
+      return this.intrinsicTimeUnit_;
+    },
+
+    set intrinsicTimeUnit(value) {
+      if (this.intrinsicTimeUnit_ === value) return;
+      if (this.intrinsicTimeUnit_ !== undefined) {
+        throw new Error('Intrinsic time unit already set');
+      }
+      this.intrinsicTimeUnit_ = value;
+    },
+
+    get isTimeHighResolution() {
+      return this.isTimeHighResolution_;
+    },
+
+    set isTimeHighResolution(value) {
+      this.isTimeHighResolution_ = value;
+    },
+
+    /**
+     * Returns a link to a trace data file that this model was imported from.
+     * This is NOT the URL of a site being traced, but instead an indicator of
+     * where the data is stored.
+     */
+    get canonicalUrl() {
+      return this.canonicalUrl_;
+    },
+
+    set canonicalUrl(value) {
+      if (this.canonicalUrl_ === value) return;
+      if (this.canonicalUrl_ !== undefined) {
+        throw new Error('canonicalUrl already set');
+      }
+      this.canonicalUrl_ = value;
+    },
+
+    /**
+     * Saves a warning that happened during import.
+     *
+     * Warnings are typically logged to the console, and optionally, the
+     * more critical ones are shown to the user.
+     *
+     * @param {Object} data The import warning data. Data must provide two
+     *    accessors: type, message. The types are used to determine if we
+     *    should output the message, we'll only output one message of each type.
+     *    The message is the actual warning content.
+     */
+    importWarning(data) {
+      data.showToUser = !!data.showToUser;
+
+      this.importWarnings_.push(data);
+
+      // Only log each warning type once. We may want to add some kind of
+      // flag to allow reporting all importer warnings.
+      if (this.reportedImportWarnings_[data.type] === true) return;
+
+      this.reportedImportWarnings_[data.type] = true;
+    },
+
+    get hasImportWarnings() {
+      return (this.importWarnings_.length > 0);
+    },
+
+    get importWarnings() {
+      return this.importWarnings_;
+    },
+
+    get importWarningsThatShouldBeShownToUser() {
+      return this.importWarnings_.filter(function(warning) {
+        return warning.showToUser;
+      });
+    },
+
+    autoCloseOpenSlices() {
+      // Sort the samples.
+      this.samples.sort(function(x, y) {
+        return x.start - y.start;
+      });
+
+      this.updateBounds();
+      this.kernel.autoCloseOpenSlices();
+      for (const pid in this.processes) {
+        this.processes[pid].autoCloseOpenSlices();
+      }
+    },
+
+    createSubSlices() {
+      this.kernel.createSubSlices();
+      for (const pid in this.processes) {
+        this.processes[pid].createSubSlices();
+      }
+    },
+
+    preInitializeObjects() {
+      for (const pid in this.processes) {
+        this.processes[pid].preInitializeObjects();
+      }
+    },
+
+    initializeObjects() {
+      for (const pid in this.processes) {
+        this.processes[pid].initializeObjects();
+      }
+    },
+
+    pruneEmptyContainers() {
+      this.kernel.pruneEmptyContainers();
+      for (const pid in this.processes) {
+        this.processes[pid].pruneEmptyContainers();
+      }
+    },
+
+    mergeKernelWithUserland() {
+      for (const pid in this.processes) {
+        this.processes[pid].mergeKernelWithUserland();
+      }
+    },
+
+    computeWorldBounds(shiftWorldToZero) {
+      this.updateBounds();
+      this.updateCategories_();
+
+      if (shiftWorldToZero) {
+        this.shiftWorldToZero();
+      }
+    },
+
+    buildFlowEventIntervalTree() {
+      for (let i = 0; i < this.flowEvents.length; ++i) {
+        const flowEvent = this.flowEvents[i];
+        this.flowIntervalTree.insert(flowEvent);
+      }
+      this.flowIntervalTree.updateHighValues();
+    },
+
+    cleanupUndeletedObjects() {
+      for (const pid in this.processes) {
+        this.processes[pid].autoDeleteObjects(this.bounds.max);
+      }
+    },
+
+    sortMemoryDumps() {
+      this.globalMemoryDumps.sort(function(x, y) {
+        return x.start - y.start;
+      });
+
+      for (const pid in this.processes) {
+        this.processes[pid].sortMemoryDumps();
+      }
+    },
+
+    finalizeMemoryGraphs() {
+      this.globalMemoryDumps.forEach(function(dump) {
+        dump.finalizeGraph();
+      });
+    },
+
+    buildEventIndices() {
+      this.modelIndices = new tr.model.ModelIndices(this);
+    },
+
+    sortAlerts() {
+      this.alerts.sort(function(x, y) {
+        return x.start - y.start;
+      });
+    },
+
+    applyObjectRefPatchups() {
+      // Change all the fields pointing at id_refs to their real values.
+      const unresolved = [];
+      this.patchupsToApply_.forEach(function(patchup) {
+        if (patchup.pidRef in this.processes) {
+          const snapshot = this.processes[patchup.pidRef].objects.getSnapshotAt(
+              patchup.scopedId, patchup.ts);
+          if (snapshot) {
+            patchup.object[patchup.field] = snapshot;
+            snapshot.referencedAt(patchup.item, patchup.object, patchup.field);
+            return;
+          }
+        }
+        unresolved.push(patchup);
+      }, this);
+      this.patchupsToApply_ = unresolved;
+    },
+
+    replacePIDRefsInPatchups(oldPidRef, newPidRef) {
+      this.patchupsToApply_.forEach(function(patchup) {
+        if (patchup.pidRef === oldPidRef) {
+          patchup.pidRef = newPidRef;
+        }
+      });
+    },
+
+    /**
+     * Called by the model to join references between objects, after final model
+     * bounds have been computed.
+     */
+    joinRefs() {
+      this.joinObjectRefs_();
+      this.applyObjectRefPatchups();
+    },
+
+    joinObjectRefs_() {
+      for (const [pid, process] of Object.entries(this.processes)) {
+        this.joinObjectRefsForProcess_(pid, process);
+      }
+    },
+
+    joinObjectRefsForProcess_(pid, process) {
+      // Iterate the world, looking for id_refs
+      for (const thread of Object.values(process.threads)) {
+        thread.asyncSliceGroup.slices.forEach(function(item) {
+          this.searchItemForIDRefs_(pid, 'start', item);
+        }, this);
+        thread.sliceGroup.slices.forEach(function(item) {
+          this.searchItemForIDRefs_(pid, 'start', item);
+        }, this);
+      }
+      process.objects.iterObjectInstances(function(instance) {
+        instance.snapshots.forEach(function(item) {
+          this.searchItemForIDRefs_(pid, 'ts', item);
+        }, this);
+      }, this);
+    },
+
+    searchItemForIDRefs_(pid, itemTimestampField, item) {
+      if (!item.args && !item.contexts) return;
+      const patchupsToApply = this.patchupsToApply_;
+
+      function handleField(object, fieldName, fieldValue) {
+        if (!fieldValue || (!fieldValue.id_ref && !fieldValue.idRef)) {
+          return;
+        }
+
+        const scope = fieldValue.scope || tr.model.OBJECT_DEFAULT_SCOPE;
+        const idRef = fieldValue.id_ref || fieldValue.idRef;
+        const scopedId = new tr.model.ScopedId(scope, idRef);
+        const pidRef = fieldValue.pid_ref || fieldValue.pidRef || pid;
+        const ts = item[itemTimestampField];
+        // We have to delay the actual change to the new value until after all
+        // refs have been located. Otherwise, we could end up recursing in
+        // ways we definitely didn't intend.
+        patchupsToApply.push({
+          item,
+          object,
+          field: fieldName,
+          pidRef,
+          scopedId,
+          ts});
+      }
+      function iterObjectFieldsRecursively(object) {
+        if (!(object instanceof Object)) return;
+
+        if ((object instanceof tr.model.ObjectSnapshot) ||
+            (object instanceof Float32Array) ||
+            (object instanceof tr.b.math.Quad)) {
+          return;
+        }
+
+        if (object instanceof Array) {
+          for (let i = 0; i < object.length; i++) {
+            handleField(object, i, object[i]);
+            iterObjectFieldsRecursively(object[i]);
+          }
+          return;
+        }
+
+        for (const key in object) {
+          const value = object[key];
+          handleField(object, key, value);
+          iterObjectFieldsRecursively(value);
+        }
+      }
+
+      iterObjectFieldsRecursively(item.args);
+      iterObjectFieldsRecursively(item.contexts);
+    }
+  };
+
+  return {
+    Model,
+  };
+});
+</script>

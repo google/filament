@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Produces a dot file showing dependency relationships between modules.
+
+The dot file contains a text-based representation of a directed graph that
+explains why given module names were included in a trace_viewer config.
+
+Example usage:
+$ ./why_imported tracing.ui.analysis.analysis_view > ~/analysis_view.dot
+
+This can then be converted to a graphical representation with the dot tool:
+$ dot -Grankdir=LR -Tpng ~/analysis_view.dot -o ~/analysis_view.png
+"""
+
+from __future__ import print_function
+import os
+import sys
+import argparse
+
+
+def Main():
+  project = tracing_project.TracingProject()
+
+  parser = argparse.ArgumentParser(
+      usage='%(prog)s <options> moduleNames', epilog=__doc__)
+  parser.add_argument('--config', choices=project.GetConfigNames())
+  parser.add_argument('module_names', nargs='+')
+  args = parser.parse_args()
+
+  if args.config:
+    names = [project.GetModuleNameForConfigName(options.config)]
+    vulcanizer = project.CreateVulcanizer()
+    load_sequence = vulcanizer.CalcLoadSequenceForModuleNames(names)
+  else:
+    parser.error('No config specified.')
+  print(vulcanizer.GetDominatorGraphForModulesNamed(
+      args.module_names, load_sequence))
+
+
+if __name__ == '__main__':
+  tracing_path = os.path.abspath(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), '..'))
+  sys.path.append(tracing_path)
+  import tracing_project
+  tracing_project.UpdateSysPathIfNeeded()
+  sys.exit(Main())

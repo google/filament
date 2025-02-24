@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/math/statistics.html">
+<link rel="import" href="/tracing/base/scalar.html">
+<link rel="import" href="/tracing/base/unit.html">
+<link rel="import" href="/tracing/ui/base/grouping_table.html">
+<link rel="import" href="/tracing/ui/base/grouping_table_groupby_picker.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel.html">
+<link rel="import" href="/tracing/ui/side_panel/side_panel_registry.html">
+<link rel="import" href="/tracing/value/ui/scalar_span.html">
+
+<dom-module id='tr-ui-sp-file-size-stats-side-panel'>
+  <template>
+    <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    toolbar {
+      align-items: center;
+      background-color: rgb(236, 236, 236);
+      border-bottom: 1px solid #8e8e8e;
+      display: flex;
+      flex-direction: row;
+      flex-direction: row;
+      flex: 0 0 auto;
+      font-size: 12px;
+      padding: 0 10px 0 10px;
+    }
+    table-container {
+      display: flex;
+      min-height: 0px;
+      overflow-y: auto;
+    }
+    </style>
+
+    <toolbar>
+      <span><b>Group by:</b></span>
+      <tr-ui-b-grouping-table-groupby-picker id="picker">
+      </tr-ui-b-grouping-table-groupby-picker>
+    </toolbar>
+    <table-container>
+      <tr-ui-b-grouping-table id="table"></tr-ui-b-grouping-table>
+    </table-container>
+  </template>
+</dom-module>
+
+<script>
+'use strict';
+(function() {
+  Polymer({
+    is: 'tr-ui-sp-file-size-stats-side-panel',
+    behaviors: [tr.ui.behaviors.SidePanel],
+
+    ready() {
+      this.model_ = undefined;
+      this.selection_ = new tr.model.EventSet();
+      this.$.picker.settingsKey = 'tr-ui-sp-file-size-stats-side-panel-picker';
+      this.$.picker.possibleGroups = [
+        {
+          key: 'phase', label: 'Event Type',
+          dataFn(eventStat) { return eventStat.phase; }
+        },
+        {
+          key: 'category', label: 'Category',
+          dataFn(eventStat) { return eventStat.category; }
+        },
+        {
+          key: 'title', label: 'Title',
+          dataFn(eventStat) { return eventStat.title; }
+        }
+      ];
+      // If the picker did not restore currentGroupKeys from Settings,
+      // then set default currentGroupKeys.
+      if (this.$.picker.currentGroupKeys.length === 0) {
+        this.$.picker.currentGroupKeys = ['phase', 'title'];
+      }
+      this.$.picker.addEventListener('current-groups-changed',
+          this.updateContents_.bind(this));
+    },
+
+    get textLabel() {
+      return 'File Size Stats';
+    },
+
+    supportsModel(m) {
+      if (!m) {
+        return {
+          supported: false,
+          reason: 'No stats were collected for this file.'
+        };
+      }
+
+      if (m.stats.allTraceEventStats.length === 0) {
+        return {
+          supported: false,
+          reason: 'No stats were collected for this file.'
+        };
+      }
+      return {
+        supported: true
+      };
+    },
+
+    get model() {
+      return this.model_;
+    },
+
+    set model(model) {
+      this.model_ = model;
+      this.updateContents_();
+    },
+
+    get rangeOfInterest() {
+      return this.rangeOfInterest_;
+    },
+
+    set rangeOfInterest(rangeOfInterest) {
+      this.rangeOfInterest_ = rangeOfInterest;
+    },
+
+    get selection() {
+      return this.selection_;
+    },
+
+    set selection(selection) {
+      this.selection_ = selection;
+    },
+
+    createColumns_(stats) {
+      const columns = [
+        {
+          title: 'Title',
+          value(row) {
+            const titleEl = document.createElement('span');
+            Polymer.dom(titleEl).textContent = row.title;
+            titleEl.style.textOverflow = 'ellipsis';
+            return titleEl;
+          },
+          cmp(a, b) {
+            return a.title.localeCompare(b.title);
+          },
+          width: '400px'
+        },
+        {
+          title: 'Num Events',
+          align: tr.ui.b.TableFormat.ColumnAlignment.RIGHT,
+          value(row) {
+            return row.rowStats.numEvents;
+          },
+          cmp(a, b) {
+            return a.rowStats.numEvents - b.rowStats.numEvents;
+          },
+          width: '80px'
+        }
+      ];
+
+      if (stats && stats.hasEventSizesinBytes) {
+        columns.push({
+          title: 'Bytes',
+          value(row) {
+            const value = new tr.b.Scalar(tr.b.Unit.byName.sizeInBytes,
+                row.rowStats.totalEventSizeinBytes);
+            const spanEl = tr.v.ui.createScalarSpan(value);
+            return spanEl;
+          },
+          cmp(a, b) {
+            return a.rowStats.totalEventSizeinBytes -
+                b.rowStats.totalEventSizeinBytes;
+          },
+          width: '80px'
+        });
+      }
+      return columns;
+    },
+
+    updateContents_() {
+      const table = this.$.table;
+
+      const columns = this.createColumns_(this.model.stats);
+      table.rowStatsConstructor = function ModelStatsRowStats(row) {
+        const sum = tr.b.math.Statistics.sum(row.data, function(x) {
+          return x.numEvents;
+        });
+        const totalEventSizeinBytes = tr.b.math.Statistics.sum(row.data, x =>
+          x.totalEventSizeinBytes
+        );
+        return {
+          numEvents: sum,
+          totalEventSizeinBytes
+        };
+      };
+      table.tableColumns = columns;
+      table.sortColumnIndex = 1;
+      table.sortDescending = true;
+      table.selectionMode = tr.ui.b.TableFormat.SelectionMode.ROW;
+
+      table.groupBy = this.$.picker.currentGroups.map(function(group) {
+        return group.dataFn;
+      });
+
+      if (!this.model) {
+        table.dataToGroup = [];
+      } else {
+        table.dataToGroup = this.model.stats.allTraceEventStats;
+      }
+      this.$.table.rebuild();
+    }
+  });
+
+  tr.ui.side_panel.SidePanelRegistry.register(function() {
+    return document.createElement('tr-ui-sp-file-size-stats-side-panel');
+  });
+})();
+</script>

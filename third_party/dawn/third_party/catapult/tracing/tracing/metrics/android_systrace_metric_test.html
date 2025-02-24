@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/importer/linux_perf/ftrace_importer.html">
+<link rel="import" href="/tracing/extras/importer/trace_event_importer.html">
+<link rel="import" href="/tracing/metrics/android_systrace_metric.html">
+<link rel="import" href="/tracing/value/histogram_set.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const SYSTRACE_CLOCK_SYNC =
+      '<100>-100 (-----) [000] ...1  0.000000: tracing_mark_write: ' +
+      'trace_event_clock_sync: parent_ts=0\n' +
+      '<100>-100 (-----) [000] ...1  0.000000: tracing_mark_write: ' +
+      'trace_event_clock_sync: realtime_ts=1487002000000';
+
+  // Some event is required to help importer detect a parent process.
+  const SYSTRACE_SYSTEM_SERVER_ANNOTATION =
+      'system_server-101 (  101) [000] ...1  0.550000: ' +
+      'tracing_mark_write: S|101|dummyEvent|201\n' +
+      'system_server-101 (  101) [000] ...1  0.551000: ' +
+      'tracing_mark_write: F|101|dummyEvent|201';
+
+  const SYSTRACE_TOUCH_SLICE =
+      'com.android.systemui-102 (  102) [000] ...1  2.500000: ' +
+      'tracing_mark_write: S|102|deliverInputEvent|202\n' +
+      'com.android.systemui-102 (  102) [000] ...1  2.510000: ' +
+      'tracing_mark_write: F|102|deliverInputEvent|202';
+
+  const SYSTRACE_LAUNCH_SLICE =
+      'Binder:101_C-103 (  101) [000] ...1  2.750000: ' +
+      'tracing_mark_write: S|101|launching: com.android.apps.sms|203\n' +
+      'android.display-104 (  101) [000] ...1  4.250000: ' +
+      'tracing_mark_write: F|101|launching: com.android.apps.sms|203';
+
+  const SYSTRACE_DRAW_SLICE =
+      'com.android.apps.sms-105 (  105) [000] ...1  4.450000: ' +
+      'tracing_mark_write: B|105|draw\n' +
+      'com.android.apps.sms-105 (  105) [000] ...1  4.455000: ' +
+      'tracing_mark_write: E';
+
+  function makeModel(systraceLines) {
+    const events = JSON.stringify({
+      traceEvents: [],
+      systemTraceEvents: SYSTRACE_CLOCK_SYNC + '\n' + systraceLines.join('\n')
+    });
+    const model = tr.c.TestUtils.newModelWithEvents([events]);
+    // Fix missing process names.
+    for (const pid in model.processes) {
+      const process = model.processes[pid];
+      if (process.name !== undefined) continue;
+      if (process.threads[pid] !== undefined) {
+        process.name = process.threads[pid].name;
+      }
+    }
+    return model;
+  }
+
+  function testStartup(systrace, expectedTimeInMs) {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidSystraceMetric(histograms, makeModel(systrace));
+    assert.lengthOf(histograms, 1);
+    const startupHist = histograms.getHistogramNamed(
+        'android:systrace:startup:com.android.apps.sms').running;
+    assert.strictEqual(startupHist.count, 1);
+    assert.closeTo(startupHist.mean, expectedTimeInMs, 1e-5);
+  }
+
+  test('androidSystraceMetric_startup_noData', function() {
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidSystraceMetric(histograms, makeModel([]));
+    assert.lengthOf(histograms, 0);
+  });
+
+  test('androidSystraceMetric_startup_simple', function() {
+    const systrace = [
+      SYSTRACE_SYSTEM_SERVER_ANNOTATION,
+      SYSTRACE_TOUCH_SLICE,
+      SYSTRACE_LAUNCH_SLICE,
+      SYSTRACE_DRAW_SLICE
+    ];
+    testStartup(systrace, 1955);
+  });
+
+  test('androidSystraceMetric_startup_noTouch', function() {
+    const systrace = [
+      SYSTRACE_SYSTEM_SERVER_ANNOTATION,
+      SYSTRACE_LAUNCH_SLICE,
+      SYSTRACE_DRAW_SLICE
+    ];
+    testStartup(systrace, 1705);
+  });
+
+  test('androidSystraceMetric_startup_noDraw', function() {
+    const systrace = [
+      SYSTRACE_SYSTEM_SERVER_ANNOTATION,
+      SYSTRACE_TOUCH_SLICE,
+      SYSTRACE_LAUNCH_SLICE,
+    ];
+    testStartup(systrace, 1750);
+  });
+
+  test('androidSystraceMetric_startup_noTouchNoDraw', function() {
+    const systrace = [
+      SYSTRACE_SYSTEM_SERVER_ANNOTATION,
+      SYSTRACE_LAUNCH_SLICE,
+    ];
+    testStartup(systrace, 1500);
+  });
+
+  test('androidSystraceMetric_threadtime_simple', function() {
+    const model = tr.c.TestUtils.newModel(model => {
+      const process = model.getOrCreateProcess(42);
+      process.name = 'garbage_producer';
+      const thread = process.getOrCreateThread(42);
+      thread.timeSlices = [
+        tr.c.TestUtils.newThreadSlice(thread, 'Sleeping', 0, 100),
+        tr.c.TestUtils.newThreadSlice(thread, 'Running', 100, 400)
+      ];
+    });
+
+    const histograms = new tr.v.HistogramSet();
+    tr.metrics.sh.androidSystraceMetric(histograms, model);
+    assert.lengthOf(histograms, 5);
+
+    const assertHistValue = function(name, expectedValue) {
+      const hist = histograms.getHistogramNamed(
+          `android:systrace:threadtime:garbage_producer:${name}`);
+      assert.strictEqual(hist.running.count, 1);
+      assert.closeTo(hist.running.mean, expectedValue, 1e-5);
+    };
+    assertHistValue('running', 0.8);
+    assertHistValue('runnable', 0);
+    assertHistValue('sleeping', 0.2);
+    assertHistValue('blockio', 0);
+    assertHistValue('uninterruptible', 0);
+  });
+});
+</script>

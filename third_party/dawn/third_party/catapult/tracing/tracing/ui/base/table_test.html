@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2014 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/ui/base/deep_utils.html">
+<link rel="import" href="/tracing/ui/base/table.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const THIS_DOC = document.currentScript.ownerDocument;
+  const SelectionMode = tr.ui.b.TableFormat.SelectionMode;
+  const HighlightStyle = tr.ui.b.TableFormat.HighlightStyle;
+  const ColumnAlignment = tr.ui.b.TableFormat.ColumnAlignment;
+
+  function isSelected(element) {
+    if (!element.hasAttribute('selected')) return false;
+    return element.getAttribute('selected') === 'true';
+  }
+
+  function simulateDoubleClick(element) {
+    // See https://developer.mozilla.org/en/docs/Web/API/MouseEvent#Example.
+    const event = new MouseEvent('dblclick', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    });
+    return element.dispatchEvent(event);
+  }
+
+  test('rowExpandedChanged', function() {
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [
+      {
+        title: 'Name',
+        value: row => row.value,
+      }
+    ];
+    table.tableRows = [{value: 'a', subRows: [{value: 'b'}]}];
+    let count = 0;
+    table.addEventListener('row-expanded-changed', e => ++count);
+    this.addHTMLOutput(table);
+    table.rebuild();
+
+    assert.strictEqual(0, count);
+
+    table.setExpandedForTableRow(table.tableRows[0], true);
+    assert.strictEqual(1, count);
+
+    table.setExpandedForTableRow(table.tableRows[0], true);
+    assert.strictEqual(1, count);
+
+    table.setExpandedForTableRow(table.tableRows[0], false);
+    assert.strictEqual(2, count);
+  });
+
+  test('instantiateEmptyTable_withoutEmptyValue', function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '300px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; }
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = [];
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    // Check that the width of the first column was set correctly (despite no
+    // body rows).
+    const firstColumnHeader = table.$.head.children[0].children[0];
+    assert.closeTo(firstColumnHeader.offsetWidth, 300, 20);
+
+    // Check that the first column has a non-empty header.
+    const firstColumnTitle = tr.ui.b.findDeepElementMatchingPredicate(
+        firstColumnHeader, function(element) {
+          return Polymer.dom(element).textContent === 'First Column';
+        });
+    assert.isDefined(firstColumnTitle);
+
+    // Check that empty value was not appended.
+    assert.lengthOf(table.$.body.children, 0);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('instantiateEmptyTable_withEmptyValue', function() {
+    // TODO(#4321): Switch to using skipped instead once it works
+    return;  // https://github.com/catapult-project/catapult/issues/4320
+    /* eslint-disable no-unreachable */
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '300px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; }
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = [];
+    table.emptyValue = 'This table is left intentionally empty';
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    // Check that the width of the first column was set correctly (despite no
+    // body rows).
+    const firstColumnHeader = table.$.head.children[0].children[0];
+    assert.closeTo(firstColumnHeader.offsetWidth, 300, 20);
+
+    // Check that empty value was appended.
+    assert.lengthOf(table.$.body.children, 1);
+    /* eslint-enable no-unreachable */
+  });
+
+  test('instantiateNestedTableNoNests', function() {
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '200px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; }
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2'
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.emptyValue = 'THIS SHOULD NOT BE VISIBLE!!!';
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    // Check that empty value was not appended.
+    assert.lengthOf(table.$.body.children, 2);
+  });
+
+  test('sequentialRebuildsBehaveSanely', function() {
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '200px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; }
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2'
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+    const footerRows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2'
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.footerRows = footerRows;
+    table.rebuild();
+    table.rebuild();
+    assert.strictEqual(table.$.body.children.length, 2);
+    assert.strictEqual(table.$.foot.children.length, 2);
+
+    this.addHTMLOutput(table);
+  });
+
+  test('instantiateNestedTableWithNests', function() {
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '250px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; },
+        width: '50%'
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2',
+        subRows: [
+          {
+            firstData: 'Sub1 A1',
+            secondData: 'Sub1 A2'
+          },
+          {
+            firstData: 'Sub2 A1',
+            secondData: 'Sub2 A2',
+            subRows: [
+              {
+                firstData: 'SubSub1 A1',
+                secondData: 'SubSub1 A2'
+              },
+              {
+                firstData: 'SubSub2 A1',
+                secondData: 'SubSub2 A2'
+              }
+            ]
+          },
+          {
+            firstData: 'Sub3 A1',
+            secondData: 'Sub3 A2'
+          }
+        ]
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+  });
+
+  test('instantiateSortingCallbacksWithNests', function() {
+    const table = document.createElement('tr-ui-b-table');
+
+    const columns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '50%'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; },
+        width: '250px',
+        cmp(rowA, rowB) {
+          return rowA.secondData.toString().localeCompare(
+              rowB.secondData.toString());
+        },
+        showExpandButtons: true
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2',
+        subRows: [
+          {
+            firstData: 'Sub1 A1',
+            secondData: 'Sub1 A2'
+          },
+          {
+            firstData: 'Sub2 A1',
+            secondData: 'Sub2 A2',
+            subRows: [
+              {
+                firstData: 'SubSub1 A1',
+                secondData: 'SubSub1 A2'
+              },
+              {
+                firstData: 'SubSub2 A1',
+                secondData: 'SubSub2 A2'
+              }
+            ]
+          },
+          {
+            firstData: 'Sub3 A1',
+            secondData: 'Sub3 A2'
+          }
+        ]
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+
+    const footerRows = [
+      {
+        firstData: 'F1',
+        secondData: 'F2',
+        subRows: [
+          {
+            firstData: 'Sub1F1',
+            secondData: 'Sub1F2'
+          },
+          {
+            firstData: 'Sub2F1',
+            secondData: 'Sub2F2',
+            subRows: [
+              {
+                firstData: 'SubSub1F1',
+                secondData: 'SubSub1F2'
+              },
+              {
+                firstData: 'SubSub2F1',
+                secondData: 'SubSub2F2'
+              }
+            ]
+          },
+          {
+            firstData: 'Sub3F1',
+            secondData: 'Sub3F2'
+          }
+        ]
+      },
+      {
+        firstData: 'F\'1',
+        secondData: 'F\'2'
+      }
+
+    ];
+
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.footerRows = footerRows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    const button = THIS_DOC.createElement('button');
+    Polymer.dom(button).textContent = 'Sort By Col 0';
+    button.addEventListener('click', function() {
+      table.sortDescending = !table.sortDescending;
+      table.sortColumnIndex = 0;
+    });
+    table.rebuild();
+
+    this.addHTMLOutput(button);
+  });
+
+
+  test('instantiateNestedTableAlreadyExpanded', function() {
+    const columns = [
+      {
+        title: 'a',
+        value(row) { return row.a; },
+        width: '150px'
+      },
+      {
+        title: 'a',
+        value(row) { return row.b; },
+        width: '50%'
+      }
+    ];
+
+    const rows = [
+      {
+        a: 'aToplevel',
+        b: 'bToplevel',
+        isExpanded: true,
+        subRows: [
+          {
+            a: 'a1',
+            b: 'b1'
+          }
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    const a1El = tr.ui.b.findDeepElementMatchingPredicate(
+        table, e => Polymer.dom(e).textContent === 'a1');
+    assert.isDefined(a1El);
+
+    const bToplevelEl = tr.ui.b.findDeepElementMatchingPredicate(
+        table,
+        function(element) {
+          return Polymer.dom(element).textContent === 'bToplevel';
+        });
+    assert.isDefined(bToplevelEl);
+    const expandButton = Polymer.dom(bToplevelEl.parentElement)
+        .querySelector('expand-button');
+    assert.isTrue(Polymer.dom(expandButton).classList.contains(
+        'button-expanded'));
+  });
+
+
+  test('subRowsThatAreRetrievedOnDemand', function() {
+    const columns = [
+      {
+        title: 'a',
+        value(row) { return row.a; },
+        width: '150px'
+      }
+    ];
+
+    const rows = [
+      {
+        a: 'row1',
+        subRows: [
+          {
+            b: 'row1.1',
+            get subRows() {
+              throw new Error('Shold not be called');
+            }
+          }
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+    this.addHTMLOutput(table);
+  });
+
+
+  test('instantiateTableWithHiddenHeader', function() {
+    const columns = [
+      {
+        title: 'a',
+        value(row) { return row.a; },
+        width: '150px'
+      },
+      {
+        title: 'a',
+        value(row) { return row.b; },
+        width: '50%'
+      }
+    ];
+
+    const rows = [
+      {
+        a: 'aToplevel',
+        b: 'bToplevel'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.showHeader = false;
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    const tHead = table.$.head;
+    assert.strictEqual(table.$.head.children.length, 0);
+    assert.strictEqual(0, tHead.getBoundingClientRect().height);
+
+    table.showHeader = true;
+    table.rebuild();
+    table.showHeader = false;
+    table.rebuild();
+    assert.strictEqual(table.$.head.children.length, 0);
+  });
+
+
+  test('sortColumnsNotPossibleOnPercentSizedColumns', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px'
+      },
+      {
+        title: 'Value',
+        value(row) { return row.b; },
+        width: '100%',
+        showExpandButtons: true
+      }
+    ];
+
+    const table1 = document.createElement('tr-ui-b-table');
+    table1.showHeader = true;
+
+    assert.throws(function() {
+      table1.tableColumns = columns;
+    });
+  });
+
+  test('twoTablesFirstColumnMatching', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px'
+      },
+      {
+        title: 'Value',
+        value(row) { return row.b; },
+        width: '100%'
+      }
+    ];
+
+    const table1 = document.createElement('tr-ui-b-table');
+    table1.showHeader = true;
+    table1.tableColumns = columns;
+    table1.tableRows = [
+      {
+        a: 'first',
+        b: 'row'
+      }
+    ];
+    table1.rebuild();
+    this.addHTMLOutput(table1);
+
+    const table2 = document.createElement('tr-ui-b-table');
+    table2.showHeader = false;
+    table2.tableColumns = columns;
+    table2.tableRows = [
+      {
+        a: 'second',
+        b: 'row'
+      }
+    ];
+    table2.rebuild();
+    this.addHTMLOutput(table2);
+
+    const h1FirstCol = table1.$.head.children[0].children[0];
+    const h2FirstCol = table2.$.body.children[0].children[0];
+    assert.strictEqual(h1FirstCol.getBoundingClientRect().width,
+        h2FirstCol.getBoundingClientRect().width);
+  });
+
+  test('programmaticSorting', function() {
+    const table = document.createElement('tr-ui-b-table');
+
+    const columns = [
+      {
+        title: 'Column',
+        value(row) { return row.value; },
+        cmp(rowA, rowB) {
+          return rowA.value.toString().localeCompare(
+              rowB.value.toString());
+        }
+      }
+    ];
+
+    const rows = [
+      {
+        value: 'A1',
+        subRows: [
+          {
+            value: 'A1.1'
+          },
+          {
+            value: 'A1.2',
+            subRows: [
+              {
+                value: 'A1.2.1'
+              },
+              {
+                value: 'A1.2.2'
+              }
+            ]
+          },
+          {
+            value: 'A1.3'
+          }
+        ]
+      },
+      {
+        value: 'A2'
+      }
+    ];
+
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    table.sortDescending = true;
+    table.sortColumnIndex = 0;
+    table.rebuild();
+    const r0 = table.$.body.children[0];
+    assert.strictEqual(r0.rowInfo.userRow, rows[1]);
+
+    const r1 = table.$.body.children[1];
+    assert.strictEqual(r1.rowInfo.userRow, rows[0]);
+  });
+
+  test('sortDispatchesEvent', function() {
+    const table = document.createElement('tr-ui-b-table');
+    const columns = [
+      {
+        title: 'Column 0',
+        value(row) { return row.value0; },
+        cmp(rowA, rowB) { return rowA.value0 - rowB.value0; }
+      },
+      {
+        title: 'Column 1',
+        value(row) { return row.value1; },
+        cmp(rowA, rowB) { return rowA.value1 - rowB.value1; }
+      }
+    ];
+
+    let sortColumnIndex = undefined;
+    let sortDescending = undefined;
+    let numListenerCalls = 0;
+    table.tableColumns = columns;
+    table.addEventListener('sort-column-changed', function(e) {
+      sortColumnIndex = e.sortColumnIndex;
+      sortDescending = e.sortDescending;
+      numListenerCalls++;
+    });
+    table.rebuild();
+
+    table.sortColumnIndex = 0;
+    assert.strictEqual(sortColumnIndex, 0);
+    assert.strictEqual(numListenerCalls, 1);
+
+    table.sortDescending = true;
+    assert.strictEqual(sortColumnIndex, 0);
+    assert.isTrue(sortDescending);
+    assert.strictEqual(numListenerCalls, 2);
+
+    table.sortColumnIndex = 1;
+    table.sortDescending = false;
+    assert.strictEqual(sortColumnIndex, 1);
+    assert.isFalse(sortDescending);
+    assert.strictEqual(numListenerCalls, 4);
+
+    table.sortColumnIndex = undefined;
+    assert.strictEqual(sortColumnIndex, undefined);
+    assert.strictEqual(numListenerCalls, 5);
+  });
+
+  test('sortingAfterExpand', function() {
+    const table = document.createElement('tr-ui-b-table');
+
+    const columns = [
+      {
+        title: 'Column',
+        value(row) { return row.value; },
+        cmp(rowA, rowB) {
+          return rowA.value.toString().localeCompare(
+              rowB.value.toString());
+        }
+      }
+    ];
+
+    const rows = [
+      {
+        value: 'A1',
+        isExpanded: true,
+        subRows: [
+          {
+            value: 'A1.1'
+          },
+          {
+            value: 'A1.2',
+            subRows: [
+              {
+                value: 'A1.2.1'
+              },
+              {
+                value: 'A1.2.2'
+              }
+            ]
+          },
+          {
+            value: 'A1.3'
+          }
+        ]
+      },
+      {
+        value: 'A2'
+      }
+    ];
+
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    table.sortDescending = true;
+    table.sortColumnIndex = 0;
+    table.rebuild();
+    const r0 = table.$.body.children[0];
+    assert.strictEqual(r0.rowInfo.userRow, rows[1]);
+
+    const r1 = table.$.body.children[1];
+    assert.strictEqual(r1.rowInfo.userRow, rows[0]);
+
+    const r2 = table.$.body.children[2];
+    assert.strictEqual(r2.rowInfo.userRow, rows[0].subRows[2]);
+
+    assert.isFalse(table.$.body.hasAttribute('tabindex'));
+  });
+
+  function createSimpleOneColumnNestedTable() {
+    const table = document.createElement('tr-ui-b-table');
+
+    const columns = [
+      {
+        title: 'Column',
+        value(row) { return row.value; },
+        cmp(rowA, rowB) {
+          return rowA.value.toString().localeCompare(
+              rowB.value.toString());
+        }
+      }
+    ];
+
+    const rows = [
+      {
+        value: 'A1',
+        subRows: [
+          {
+            value: 'A1.1'
+          },
+          {
+            value: 'A1.2',
+            subRows: [
+              {
+                value: 'A1.2.1'
+              },
+              {
+                value: 'A1.2.2'
+              }
+            ]
+          },
+          {
+            value: 'A1.3'
+          }
+        ]
+      },
+      {
+        value: 'A2'
+      }
+    ];
+
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    return table;
+  }
+
+  function createMultiColumnNestedTable() {
+    const table = document.createElement('tr-ui-b-table');
+
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.value; },
+        cmp(rowA, rowB) {
+          return rowA.value.toString().localeCompare(
+              rowB.value.toString());
+        },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'A',
+        value(row) { return row.a; },
+        width: '25%'
+      },
+      {
+        title: 'B',
+        value(row) { return row.b; },
+        width: '25%'
+      },
+      {
+        title: 'C',
+        value(row) { return row.c; },
+        width: '25%',
+        supportsCellSelection: false
+      },
+      {
+        title: 'D',
+        value(row) { return row.d; },
+        width: '25%'
+      }
+    ];
+
+    const rows = [
+      {
+        value: 'R1',
+        a: 1, b: 2, c: 3, d: 4,
+        subRows: [
+          {
+            value: 'R1.1',
+            a: 2, b: 3, c: 4, d: 1,
+          },
+          {
+            value: 'R1.2',
+            a: 3, b: 4, c: 1, d: 2,
+          }
+        ]
+      },
+      {
+        value: 'R2',
+        a: 3, b: 4, c: 1, d: 2
+      }
+    ];
+
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    return table;
+  }
+
+  test('expandAfterRebuild', function() {
+    const table = createSimpleOneColumnNestedTable();
+    table.rebuild();
+    const rows = table.tableRows;
+
+    this.addHTMLOutput(table);
+
+    table.rebuild();
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+    table.setExpandedForTableRow(rows[0], true);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    const r1 = table.$.body.children[1];
+    assert.strictEqual(r1.rowInfo.userRow, rows[0].subRows[0]);
+  });
+
+  test('tableSelection', function() {
+    const table = createMultiColumnNestedTable();
+    const rows = table.tableRows;
+
+    table.selectionMode = SelectionMode.ROW;
+    table.selectedTableRow = rows[0];
+    assert.isUndefined(table.selectedColumnIndex);
+
+    table.setExpandedForTableRow(rows[0], true);
+    table.selectedTableRow = rows[0].subRows[1];
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[1]);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    table.selectionMode = SelectionMode.CELL;
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[1]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.setExpandedForTableRow(rows[0], false);
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.selectionMode = SelectionMode.NONE;
+    assert.strictEqual(table.selectedTableRow, undefined);
+
+    table.selectionMode = SelectionMode.ROW;
+    table.setExpandedForTableRow(rows[0].subRows[1], true);
+    this.addHTMLOutput(table);
+
+    assert.isTrue(table.$.body.hasAttribute('tabindex'));
+  });
+
+
+  test('keyMovement_rows', function() {
+    const table = createSimpleOneColumnNestedTable();
+    table.selectionMode = SelectionMode.ROW;
+    this.addHTMLOutput(table);
+
+    const rows = table.tableRows;
+    table.selectedTableRow = rows[0];
+
+    table.performKeyCommand_('ARROW_DOWN');
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+
+    table.performKeyCommand_('ARROW_UP');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+
+    // Enter on collapsed row should expand.
+    table.selectedTableRow = rows[0];
+    table.performKeyCommand_('SPACE');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('SPACE');
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    // Arrow right on collapsed row should expand.
+    table.selectedTableRow = rows[0];
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_DOWN');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[1]);
+
+    // Arrow left on collapsed item should select parent.
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+    // Arrow left on parent should collapse its children.
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    // Arrow right on expanded row should select first child.
+    table.selectedTableRow = rows[0];
+    table.setExpandedForTableRow(rows[0], true);
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+
+    // Arrow right on a non-expandable row should do nothing.
+    table.selectedTableRow = rows[1];
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+    assert.isFalse(table.getExpandedForTableRow(rows[1]));
+  });
+
+  test('keyMovement_cells', function() {
+    const table = createMultiColumnNestedTable();
+    table.selectionMode = SelectionMode.CELL;
+    this.addHTMLOutput(table);
+
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    const rows = table.tableRows;
+    table.selectedTableRow = rows[1];
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+    // No-op (leftmost selectable cell already selected).
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.performKeyCommand_('ARROW_UP');
+    // No-op (top row already selected).
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.performKeyCommand_('ARROW_UP');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 2);
+    // Right arrow should NOT expand nested rows in cell selection mode.
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 4);
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    // No-op (rightmost selectable cell already selected).
+    assert.strictEqual(table.selectedColumnIndex, 4);
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('SPACE');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 4);
+    // Space on collapsed row should expand it.
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_DOWN');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 4);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_LEFT');
+    // Left arrow should NOT move to parent row.
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 2);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[0]);
+    // No-op (leftmost selectable cell already selected).
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_UP');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    // No-op (leftmost selectable cell already selected).
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    // Left arrow should NOT collapse nested rows in cell selection mode.
+    assert.isTrue(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('SPACE');
+    assert.strictEqual(table.selectedTableRow, rows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    // Space on expanded row should collapse it.
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_DOWN');
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+
+    table.performKeyCommand_('ARROW_DOWN');
+    // No-op (bottom row already selected).
+    assert.strictEqual(table.selectedTableRow, rows[1]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    assert.isFalse(table.getExpandedForTableRow(rows[0]));
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('focus_empty', function() {
+    const table = createSimpleOneColumnNestedTable();
+    table.tableRows = [];
+    table.emptyValue = 'This table is left intentionally empty';
+    this.addHTMLOutput(table);
+
+    assert.isFalse(table.$.body.hasAttribute('tabindex'));
+    assert.isFalse(table.isFocused);
+
+    for (const selectionMode of [SelectionMode.ROW, SelectionMode.CELL]) {
+      table.selectionMode = selectionMode;
+      assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+      assert.isFalse(table.isFocused);
+      assert.isUndefined(table.selectedTableRow);
+      assert.isUndefined(table.selectedColumnIndex);
+
+      // Manually focus.
+      table.focus();
+      assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+      assert.isTrue(table.isFocused);
+      assert.isUndefined(table.selectedTableRow);
+      assert.isUndefined(table.selectedColumnIndex);
+
+      // Manually unfocus.
+      table.blur();
+      assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+      assert.isFalse(table.isFocused);
+      assert.isUndefined(table.selectedTableRow);
+      assert.isUndefined(table.selectedColumnIndex);
+
+      // Manually focus again.
+      table.focus();
+      assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+      assert.isTrue(table.isFocused);
+      assert.isUndefined(table.selectedTableRow);
+      assert.isUndefined(table.selectedColumnIndex);
+
+      // Unfocus via removing selection mode.
+      table.selectionMode = SelectionMode.NONE;
+      assert.isFalse(table.$.body.hasAttribute('tabindex'));
+      assert.isFalse(table.isFocused);
+      assert.isUndefined(table.selectedTableRow);
+      assert.isUndefined(table.selectedColumnIndex);
+    }
+
+    // Re-enable selection mode (for interactive testing).
+    table.selectionMode = SelectionMode.ROW;
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('focus_rows', function() {
+    const table = createSimpleOneColumnNestedTable();
+    table.selectionMode = SelectionMode.ROW;
+    this.addHTMLOutput(table);
+
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Manually focus.
+    table.focus();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Manually unfocus.
+    table.blur();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Trigger focus via clicking.
+    table.$.body.children[1].children[0].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[1]);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Unfocus via removing selection mode.
+    table.selectionMode = SelectionMode.NONE;
+    assert.isFalse(table.$.body.hasAttribute('tabindex'));
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Re-enable selection mode.
+    table.selectionMode = SelectionMode.ROW;
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Programatically select row (should NOT steal focus).
+    table.selectedTableRow = table.tableRows[0];
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Trigger focus on the already selected row by clicking.
+    table.$.body.children[0].children[0].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.isUndefined(table.selectedColumnIndex);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('focus_cells', function() {
+    const table = createMultiColumnNestedTable();
+    table.selectionMode = SelectionMode.CELL;
+    this.addHTMLOutput(table);
+
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Manually focus.
+    table.focus();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    // Manually unfocus.
+    table.blur();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    // Trigger focus via clicking.
+    table.$.body.children[1].children[4].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[1]);
+    assert.strictEqual(table.selectedColumnIndex, 4);
+
+    // Unfocus via removing selection mode.
+    table.selectionMode = SelectionMode.NONE;
+    assert.isFalse(table.$.body.hasAttribute('tabindex'));
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Re-enable selection mode.
+    table.selectionMode = SelectionMode.CELL;
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Clicking on an unselectable cell should NOT trigger focus.
+    table.$.body.children[1].children[0].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Programatically select cell (should NOT steal focus).
+    table.selectedTableRow = table.tableRows[0];
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+
+    // Trigger focus on the already selected cell by clicking.
+    table.$.body.children[0].children[1].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.strictEqual(table.selectedTableRow, table.tableRows[0]);
+    assert.strictEqual(table.selectedColumnIndex, 1);
+  });
+
+  // See https://crbug.com/1143376.
+  skipTest('focus_allCellsUnselectable', function() {
+    const table = createMultiColumnNestedTable();
+    table.selectionMode = SelectionMode.CELL;
+    for (const c of table.tableColumns) {
+      c.supportsCellSelection = false;
+    }
+    table.tableColumns = table.tableColumns;
+    this.addHTMLOutput(table);
+
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isFalse(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Manually focus (no automatic selection).
+    table.focus();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+
+    // Trigger focus via clicking (no selection).
+    table.$.body.children[1].children[2].click();
+    assert.strictEqual(table.$.body.getAttribute('tabindex'), '0');
+    assert.isTrue(table.isFocused);
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+  });
+
+  test('RightArrowKeyWhenTableSorted', function() {
+    const table = createSimpleOneColumnNestedTable();
+    table.selectionMode = SelectionMode.ROW;
+    this.addHTMLOutput(table);
+    table.sortDescending = true;
+    table.sortColumnIndex = 0;
+    table.rebuild();
+    const rows = table.tableRows;
+
+    // Arrow right should select the first child showing up on the viewer,
+    // rather than first child in sub rows since sorted.
+    table.selectedTableRow = rows[0];
+    table.performKeyCommand_('ARROW_RIGHT');
+    assert.strictEqual(table.selectedTableRow, rows[0].subRows[2]);
+  });
+
+  test('reduceNumberOfColumnsAfterRebuild', function() {
+    // Create a table with two columns.
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '100px'
+      },
+      {
+        title: 'Second Column',
+        value(row) { return row.secondData; },
+        width: '100px'
+      }
+    ];
+
+    // Build the table.
+    table.rebuild();
+
+    // Check that reducing the number of columns doesn't throw an exception.
+    table.tableColumns = [
+      {
+        title: 'First Column',
+        value(row) { return row.firstData; },
+        width: '200px'
+      }
+    ];
+  });
+
+  test('rowHighlightDark', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'Col1',
+        value(row) { return row.b; },
+        width: '33%'
+      },
+      {
+        title: 'Col2',
+        value(row) { return row.b * 2; },
+        width: '33%'
+      },
+      {
+        title: 'Col3',
+        value(row) { return row.b * 3; },
+        width: '33%'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.showHeader = true;
+    table.rowHighlightStyle = HighlightStyle.DARK;
+    table.tableColumns = columns;
+    table.tableRows = [
+      {
+        a: 'first',
+        b: '1'
+      },
+      {
+        a: 'second',
+        b: '2'
+      }
+    ];
+    table.rebuild();
+    this.addHTMLOutput(table);
+  });
+
+  test('cellHighlightLight', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'Col1',
+        value(row) { return row.b; },
+        width: '33%'
+      },
+      {
+        title: 'Col2',
+        value(row) { return row.b * 2; },
+        width: '33%'
+      },
+      {
+        title: 'Col3',
+        value(row) { return row.b * 3; },
+        width: '33%'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.showHeader = true;
+    table.cellHighlightStyle = HighlightStyle.LIGHT;
+    table.tableColumns = columns;
+    table.tableRows = [
+      {
+        a: 'first',
+        b: '1'
+      },
+      {
+        a: 'second',
+        b: '2'
+      }
+    ];
+    table.rebuild();
+    this.addHTMLOutput(table);
+  });
+
+  test('cellSelectionBasic', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'Col1',
+        value(row) { return row.b; },
+        width: '33%'
+      },
+      {
+        title: 'Col2',
+        value(row) { return row.b * 2; },
+        width: '33%'
+      },
+      {
+        title: 'Col3',
+        value(row) { return row.b * 3; },
+        width: '33%'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.showHeader = true;
+    table.selectionMode = SelectionMode.CELL;
+    table.rowHighlightStyle = HighlightStyle.NONE;
+    table.tableColumns = columns;
+    table.tableRows = [
+      {
+        a: 'first',
+        b: '1'
+      },
+      {
+        a: 'second',
+        b: '2'
+      }
+    ];
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    table.selectedTableRow = table.tableRows[0];
+    assert.strictEqual(table.selectedColumnIndex, 1);
+    let selectedCell = table.selectedCell;
+    assert.strictEqual(selectedCell.row, table.tableRows[0]);
+    assert.strictEqual(selectedCell.column, columns[1]);
+    assert.strictEqual(selectedCell.value, '1');
+
+    table.performKeyCommand_('ARROW_DOWN');
+    table.performKeyCommand_('ARROW_RIGHT');
+    table.performKeyCommand_('ARROW_RIGHT');
+    table.performKeyCommand_('ARROW_LEFT');
+    assert.strictEqual(table.selectedTableRow, table.tableRows[1]);
+    assert.strictEqual(table.selectedColumnIndex, 2);
+    selectedCell = table.selectedCell;
+    assert.strictEqual(selectedCell.row, table.tableRows[1]);
+    assert.strictEqual(selectedCell.column, columns[2]);
+    assert.strictEqual(selectedCell.value, 4);
+
+    table.selectedTableRow = undefined;
+    assert.isUndefined(table.selectedTableRow);
+    assert.isUndefined(table.selectedColumnIndex);
+    assert.isUndefined(table.selectedColumnIndex);
+    assert.isUndefined(table.selectedCell);
+  });
+
+  test('cellSelectionNested', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'Value',
+        value(row) { return row.b; },
+        width: '150px'
+      }
+    ];
+
+    const rows = [
+      {
+        a: 'parent',
+        b: '1',
+        subRows: [
+          {
+            a: 'child',
+            b: '2'
+          }
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.showHeader = true;
+    table.selectionMode = SelectionMode.CELL;
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    // Expand the parent row.
+    table.setExpandedForTableRow(rows[0], true);
+
+    // Select the second cell in the child row.
+    table.selectedTableRow = rows[0].subRows[0];
+    assert.isFalse(isSelected(table.$.body.children[0]));
+    assert.isFalse(isSelected(table.$.body.children[0].children[1]));
+    assert.isTrue(isSelected(table.$.body.children[1]));
+    assert.isTrue(isSelected(table.$.body.children[1].children[1]));
+
+    // Fold the parent row. The second cell in the parent row should be
+    // automatically selected.
+    table.setExpandedForTableRow(rows[0], false);
+    assert.isTrue(isSelected(table.$.body.children[0]));
+    assert.isTrue(isSelected(table.$.body.children[0].children[1]));
+
+    // Expand the parent row again. Only the second cell of the parent row
+    // should still be selected.
+    table.setExpandedForTableRow(rows[0], true);
+    assert.isTrue(isSelected(table.$.body.children[0]));
+    assert.isTrue(isSelected(table.$.body.children[0].children[1]));
+    assert.isFalse(isSelected(table.$.body.children[1]));
+    assert.isFalse(isSelected(table.$.body.children[1].children[1]));
+  });
+
+  test('resolvedHighlightStyle', function() {
+    const table = document.createElement('tr-ui-b-table');
+
+    // Undefined selection mode.
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.NONE);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.NONE);
+
+    // Row selection mode.
+    table.selectionMode = SelectionMode.ROW;
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.DARK);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.NONE);
+
+    // Cell selection mode.
+    table.selectionMode = SelectionMode.CELL;
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.LIGHT);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.DARK);
+
+    // Explicit row highlight style.
+    table.rowHighlightStyle = HighlightStyle.NONE;
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.NONE);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.DARK);
+
+    // Explicit row and cell highlight styles.
+    table.cellHighlightStyle = HighlightStyle.LIGHT;
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.NONE);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.LIGHT);
+
+    // Back to default highlight styles.
+    table.cellHighlightStyle = HighlightStyle.DEFAULT;
+    table.rowHighlightStyle = HighlightStyle.DEFAULT;
+    assert.strictEqual(table.resolvedRowHighlightStyle, HighlightStyle.LIGHT);
+    assert.strictEqual(table.resolvedCellHighlightStyle, HighlightStyle.DARK);
+  });
+
+  test('headersWithHtmlElements', function() {
+    const firstColumnTitle = document.createTextNode('First Column');
+    const secondColumnTitle = document.createElement('span');
+    secondColumnTitle.innerText = 'Second Column';
+    secondColumnTitle.style.color = 'blue';
+
+    const columns = [
+      {
+        title: firstColumnTitle,
+        value(row) { return row.firstData; },
+        width: '200px'
+      },
+      {
+        title: secondColumnTitle,
+        value(row) { return row.secondData; }
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: 'A1',
+        secondData: 'A2'
+      },
+      {
+        firstData: 'B1',
+        secondData: 'B2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    const firstColumnHeader = table.$.head.children[0].children[0].children[0];
+    const secondColumnHeader = table.$.head.children[0].children[1].children[0];
+    assert.strictEqual(Polymer.dom(firstColumnHeader.cellTitle).textContent,
+        'First Column');
+    assert.strictEqual(Polymer.dom(secondColumnHeader.cellTitle).textContent,
+        'Second Column');
+  });
+
+  test('align', function() {
+    const columns = [
+      {
+        title: 'a',
+        align: ColumnAlignment.RIGHT,
+        value(row) {
+          return row.a;
+        }
+      }
+    ];
+    const rows = [{a: 1}, {a: 'long-row-so-that-alignment-would-be-visible'}];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    assert.strictEqual(
+        table.$.body.children[0].children[0].style.textAlign, 'right');
+  });
+
+  test('subRowsPropertyName', function() {
+    const columns = [
+      {
+        title: 'a',
+        value(row) {
+          return row.a;
+        }
+      }
+    ];
+    const rows = [
+      {
+        a: 1,
+        isExpanded: true,
+        children: [
+          {a: 2}
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.subRowsPropertyName = 'children';
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    assert.strictEqual(
+        '2', Polymer.dom(table.$.body.children[1].children[0]).textContent);
+  });
+
+  test('shouldNotRenderUndefined', function() {
+    const columns = [
+      {
+        title: 'Column',
+        value(row) { return row.firstData; }
+      }
+    ];
+
+    const rows = [
+      {
+        firstData: undefined,
+        secondData: 'A2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    // check that we don't have 'undefined' anywhere
+    assert.isTrue(Polymer.dom(table.$.body).innerHTML.indexOf('undefined') < 0);
+  });
+
+  test('customizeTableRowCallback', function() {
+    const columns = [
+      {
+        title: 'Column',
+        value(row) { return row.data; }
+      }
+    ];
+
+    const rows = [
+      {
+        data: 'data'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    let callbackCalled = false;
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.customizeTableRowCallback = function(userRow, trElement) {
+      callbackCalled = (userRow === rows[0]);
+    };
+    table.rebuild();
+    assert.isTrue(callbackCalled);
+
+    this.addHTMLOutput(table);
+
+    // The callback can also be set after the table is first built.
+    table.customizeTableRowCallback = function(userRow, trElement) {
+      callbackCalled = (userRow === rows[0]);
+    };
+
+    // Setting the customize callback should set the body dirty.
+    assert.isTrue(table.bodyDirty_);
+
+    callbackCalled = false;
+
+    // Don't bother waiting for the timeout.
+    table.rebuild();
+
+    assert.isTrue(callbackCalled);
+  });
+
+  test('selectionEdgeCases', function() {
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [
+      {
+        title: 'Column',
+        value(row) { return row.data; },
+        supportsCellSelection: false
+      }
+    ];
+    table.tableRows = [{ data: 'body row' }];
+    table.footerRows = [{ data: 'footer row' }];
+    table.selectionMode = SelectionMode.ROW;
+    this.addHTMLOutput(table);
+
+    // Clicking on the body row should *not* throw an exception (despite the
+    // column not supporting cell selection).
+    table.$.body.children[0].children[0].click();
+
+    // Clicking on the footer row should *not* throw an exception (despite
+    // footer rows not being selectable in general).
+    table.$.foot.children[0].children[0].click();
+  });
+
+  test('defaultExpansionStateCallback', function() {
+    const columns = [
+      {
+        title: 'Name',
+        value(row) { return row.name; }
+      },
+      {
+        title: 'Value',
+        value(row) { return row.value; }
+      }
+    ];
+
+    const rows = [
+      {
+        name: 'A',
+        value: 10,
+        subRows: [
+          {
+            name: 'B',
+            value: 8,
+            subRows: [
+              {
+                name: 'C',
+                value: 4
+              },
+              {
+                name: 'D',
+                value: 4
+              }
+            ]
+          },
+          {
+            name: 'E',
+            value: 2,
+            subRows: [
+              {
+                name: 'F',
+                value: 1
+              },
+              {
+                name: 'G',
+                value: 1
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    let cRow = tr.ui.b.findDeepElementMatchingPredicate(
+        table, function(element) {
+          return Polymer.dom(element).textContent === 'C';
+        });
+    assert.strictEqual(cRow, undefined);
+
+    let callbackCalled = false;
+    table.defaultExpansionStateCallback = function(row, parentRow) {
+      callbackCalled = true;
+
+      if (parentRow === undefined) return true;
+
+      if (row.value >= (parentRow.value * 0.8)) return true;
+
+      return false;
+    };
+
+    // Setting the callback should set the body dirty.
+    assert.isTrue(table.bodyDirty_);
+    assert.isFalse(callbackCalled);
+
+    table.rebuild();
+
+    assert.isTrue(callbackCalled);
+    cRow = tr.ui.b.findDeepElementMatchingPredicate(table, function(element) {
+      return Polymer.dom(element).textContent === 'C';
+    });
+    assert.isDefined(cRow);
+  });
+
+  test('sortExpanded', function() {
+    const columns = [
+      {
+        title: 'Name',
+        value(row) { return row.name; }
+      },
+      {
+        title: 'Value',
+        value(row) { return row.value; },
+        cmp(x, y) { return x.value - y.value; }
+      }
+    ];
+
+    const rows = [
+      {
+        name: 'A',
+        value: 10,
+        subRows: [
+          {
+            name: 'B',
+            value: 8
+          },
+          {
+            name: 'C',
+            value: 4
+          },
+        ]
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    function isB(row) {
+      return row.textContent === 'B';
+    }
+
+    // Check that 'A' row is not expanded.
+    assert.isUndefined(tr.ui.b.findDeepElementMatchingPredicate(table, isB));
+
+    // Expand 'A' row.
+    table.setExpandedForTableRow(rows[0], true);
+
+    // Check that 'A' is expanded.
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(table, isB));
+
+    // Sort by value.
+    table.sortColumnIndex = 1;
+
+    // Rebuild the table synchronously instead of waiting for scheduleRebuild_'s
+    // setTimeout(0).
+    table.rebuild();
+
+    // Check that 'A' is still expanded.
+    assert.isDefined(tr.ui.b.findDeepElementMatchingPredicate(table, isB));
+  });
+
+  test('shouldPreserveSortWhenColumnsChange', function() {
+    const name = {
+      title: 'Name',
+      value(row) { return row.name; },
+    };
+
+    const count = {
+      title: 'Count',
+      value(row) { return row.count; },
+      cmp: (rowA, rowB) => rowA.a - rowB.a,
+    };
+
+    const otherCount = {
+      title: 'Count',
+      value(row) { return row.count; },
+      cmp: (rowA, rowB) => rowA.a - rowB.a,
+    };
+
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [count];
+    table.sortColumnIndex = 0;
+    table.sortDescending = true;
+    table.rebuild();
+
+    this.addHTMLOutput(table);
+
+    table.tableColumns = [name, count];
+    table.rebuild();
+    assert.strictEqual(1, table.sortColumnIndex);
+    assert.isTrue(table.sortDescending);
+
+    table.sortDescending = false;
+    table.tableColumns = [otherCount, name];
+    table.rebuild();
+    assert.strictEqual(0, table.sortColumnIndex);
+    assert.isFalse(table.sortDescending);
+
+    table.tableColumns = [name];
+    table.rebuild();
+    assert.isUndefined(table.sortColumnIndex);
+  });
+
+  test('userCanModifySortOrder', function() {
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [
+      {
+        title: 'Name',
+        value: row => row.name
+      },
+      {
+        title: 'colA',
+        value: row => row.a,
+        cmp: (rowA, rowB) => rowA.a - rowB.a
+      },
+      {
+        title: 'colB',
+        value: row => row.b,
+        cmp: (rowA, rowB) => rowA.b - rowB.b
+      }
+    ];
+    table.tableRows = [
+      {name: 'A', a: 42, b: 0},
+      {name: 'B', a: 89, b: 100},
+      {name: 'C', a: 65, b: -273.15}
+    ];
+    table.userCanModifySortOrder = false;
+    table.sortColumnIndex = 2;
+    table.sortDescending = true;
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    const toggleButton = document.createElement('button');
+    Polymer.dom(toggleButton).textContent =
+        'Toggle table.userCanModifySortOrder';
+    toggleButton.addEventListener('click', function() {
+      table.userCanModifySortOrder = !table.userCanModifySortOrder;
+    });
+    this.addHTMLOutput(toggleButton);
+
+    const unsetButton = document.createElement('button');
+    Polymer.dom(unsetButton).textContent = 'Unset sort order';
+    unsetButton.addEventListener('click', function() {
+      table.sortColumnIndex = undefined;
+    });
+    this.addHTMLOutput(unsetButton);
+  });
+
+  test('columnSelection', function() {
+    const table = document.createElement('tr-ui-b-table');
+    table.tableColumns = [
+      {
+        title: 'Name',
+        value: (row) => row.name
+      },
+      {
+        title: 'colA',
+        selectable: true,
+        value: (row) => row.a,
+        cmp: (rowA, rowB) => rowA.a - rowB.a
+      },
+      {
+        title: 'colB',
+        selectable: true,
+        value: (row) => row.b,
+        cmp: (rowA, rowB) => rowA.b - rowB.b
+      }
+    ];
+    table.tableRows = [
+      {name: 'foo', a: 42, b: -42},
+      {name: 'bar', a: 57, b: 133}
+    ];
+    table.rebuild();
+    table.selectionMode = SelectionMode.CELL;
+    this.addHTMLOutput(table);
+
+    table.selectedTableColumnIndex = 1;
+    let cols = tr.ui.b.findDeepElementMatchingPredicate(table,
+        e => e.tagName === 'COLGROUP').children;
+    assert.isNull(cols[0].getAttribute('selected'));
+    assert.strictEqual(cols[1].getAttribute('selected'), 'true');
+    assert.isNull(cols[2].getAttribute('selected'));
+    assert.strictEqual(1, table.selectedTableColumnIndex);
+
+    table.selectedTableColumnIndex = undefined;
+    cols = tr.ui.b.findDeepElementMatchingPredicate(table,
+        e => e.tagName === 'COLGROUP').children;
+    assert.isNull(cols[0].getAttribute('selected'));
+    assert.isNull(cols[1].getAttribute('selected'));
+    assert.isNull(cols[2].getAttribute('selected'));
+    assert.isUndefined(table.selectedTableColumnIndex);
+
+    table.selectedTableColumnIndex = 2;
+    cols = tr.ui.b.findDeepElementMatchingPredicate(table,
+        e => e.tagName === 'COLGROUP').children;
+    assert.isNull(cols[0].getAttribute('selected'));
+    assert.isNull(cols[1].getAttribute('selected'));
+    assert.strictEqual(cols[2].getAttribute('selected'), 'true');
+    assert.strictEqual(2, table.selectedTableColumnIndex);
+  });
+
+  test('stepInto', function() {
+    const columns = [
+      {
+        title: 'Title',
+        value(row) { return row.a; },
+        width: '150px',
+        supportsCellSelection: false
+      },
+      {
+        title: 'Col1',
+        value(row) { return row.b; },
+        width: '33%'
+      },
+      {
+        title: 'Col2',
+        value(row) { return row.b * 2; },
+        width: '33%'
+      },
+      {
+        title: 'Col3',
+        value(row) { return row.b * 3; },
+        width: '33%'
+      }
+    ];
+    const rows = [
+      {
+        a: 'first',
+        b: '1'
+      },
+      {
+        a: 'second',
+        b: '2'
+      }
+    ];
+
+    const table = document.createElement('tr-ui-b-table');
+
+    const firedStepIntoEvents = [];
+    table.addEventListener('step-into', e => firedStepIntoEvents.push(e));
+
+    table.cellHighlightStyle = HighlightStyle.DARK;
+    table.tableColumns = columns;
+    table.tableRows = rows;
+    table.rebuild();
+    this.addHTMLOutput(table);
+
+    assert.lengthOf(firedStepIntoEvents, 0);
+
+    // Double click.
+    simulateDoubleClick(table.$.body.children[0].children[1]);
+    assert.lengthOf(firedStepIntoEvents, 1);
+    assert.strictEqual(firedStepIntoEvents[0].tableRow, rows[0]);
+    assert.strictEqual(firedStepIntoEvents[0].tableColumn, columns[1]);
+    assert.strictEqual(firedStepIntoEvents[0].columnIndex, 1);
+
+    simulateDoubleClick(table.$.body.children[1].children[3]);
+    assert.lengthOf(firedStepIntoEvents, 2);
+    assert.strictEqual(firedStepIntoEvents[1].tableRow, rows[1]);
+    assert.strictEqual(firedStepIntoEvents[1].tableColumn, columns[3]);
+    assert.strictEqual(firedStepIntoEvents[1].columnIndex, 3);
+
+    // Shift+Enter in cell selection mode.
+    table.selectionMode = SelectionMode.CELL;
+    table.selectedTableRow = rows[0];
+    table.selectedColumnIndex = 2;
+    table.performKeyCommand_('ENTER');
+    assert.lengthOf(firedStepIntoEvents, 3);
+    assert.strictEqual(firedStepIntoEvents[2].tableRow, rows[0]);
+    assert.strictEqual(firedStepIntoEvents[2].tableColumn, columns[2]);
+    assert.strictEqual(firedStepIntoEvents[2].columnIndex, 2);
+
+    // Shift+Enter in row selection mode.
+    table.selectionMode = SelectionMode.ROW;
+    table.selectedTableRow = rows[1];
+    table.performKeyCommand_('ENTER');
+    assert.lengthOf(firedStepIntoEvents, 4);
+    assert.strictEqual(firedStepIntoEvents[3].tableRow, rows[1]);
+    assert.isUndefined(firedStepIntoEvents[3].tableColumn);
+    assert.isUndefined(firedStepIntoEvents[3].columnIndex);
+  });
+});
+</script>

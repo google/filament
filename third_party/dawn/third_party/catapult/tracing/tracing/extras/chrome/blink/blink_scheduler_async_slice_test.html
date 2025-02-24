@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/core/test_utils.html">
+<link rel="import" href="/tracing/extras/chrome/blink/blink_scheduler_async_slice.html">
+<link rel="import" href="/tracing/model/model.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  const AsyncSlice = tr.model.AsyncSlice;
+  const BlinkSchedulerAsyncSlice = tr.e.blink.BlinkSchedulerAsyncSlice;
+
+  test('construct', function() {
+    assert.strictEqual(
+        AsyncSlice.subTypes.getConstructor(
+            'renderer.scheduler', 'Scheduler.Foo'),
+        BlinkSchedulerAsyncSlice);
+    assert.strictEqual(
+        AsyncSlice.subTypes.getConstructor(
+            'disabled-by-default-renderer.scheduler', 'Scheduler.Bar'),
+        BlinkSchedulerAsyncSlice);
+    assert.strictEqual(
+        AsyncSlice.subTypes.getConstructor(
+            'disabled-by-default-renderer.scheduler.debug', 'Scheduler.Baz'),
+        BlinkSchedulerAsyncSlice);
+  });
+
+  test('subgroups', function() {
+    const rendererSlice = new BlinkSchedulerAsyncSlice(
+        'renderer.scheduler', 'Scheduler.Foo', 7, 0, {}, 3);
+    assert.strictEqual(rendererSlice.viewSubGroupGroupingKey,
+        'Renderer Scheduler');
+    assert.strictEqual(rendererSlice.viewSubGroupTitle, 'Foo');
+
+
+    const frameSlice = new BlinkSchedulerAsyncSlice(
+        'renderer.scheduler', 'FrameScheduler.Bar', 7, 0, {}, 3);
+    frameSlice.id = ':ptr:0x1';
+    assert.strictEqual(frameSlice.viewSubGroupGroupingKey, 'Frame:ptr:0x1');
+    assert.strictEqual(frameSlice.viewSubGroupTitle, 'Bar');
+
+    const otherSlice = new BlinkSchedulerAsyncSlice(
+        'renderer.scheduler', 'Something.Baz', 7, 0, {}, 3);
+    assert.isUndefined(otherSlice.viewSubGroupGroupingKey);
+    assert.strictEqual(otherSlice.viewSubGroupTitle, 'Something.Baz');
+  });
+});
+</script>

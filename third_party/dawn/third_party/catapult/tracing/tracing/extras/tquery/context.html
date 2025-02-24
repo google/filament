@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/utils.html">
+
+<script>
+'use strict';
+
+tr.exportTo('tr.e.tquery', function() {
+  function Context() {
+    this.event = undefined;
+    this.ancestors = [];
+  }
+
+  Context.prototype = {
+    push(event) {
+      const ctx = new Context();
+      ctx.ancestors = this.ancestors.slice();
+      ctx.ancestors.push(event);
+      return ctx;
+    },
+
+    pop(event) {
+      const ctx = new Context();
+      ctx.event = this.ancestors[this.ancestors.length - 1];
+      ctx.ancestors = this.ancestors.slice(0, this.ancestors.length - 1);
+      return ctx;
+    }
+  };
+
+  return {
+    Context,
+  };
+});
+</script>

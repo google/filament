@@ -1,0 +1,163 @@
+Name
+
+    ANGLE_power_preference
+
+Name Strings
+
+    EGL_ANGLE_power_preference
+
+Contributors
+
+    Kenneth Russell
+    Kimmo Kinnunen
+
+Contacts
+
+    Kenneth Russell, Google Inc. (kbr 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 3, March 10, 2022
+
+Number
+
+    EGL Extension #??
+
+Dependencies
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension allows selection of the high- or low-power GPU on
+    dual-GPU systems, specifically on macOS.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    void eglReleaseHighPowerGPUANGLE(
+        EGLDisplay dpy,
+        EGLContext context);
+    void eglReacquireHighPowerGPUANGLE(
+        EGLDisplay dpy,
+        EGLContext context);
+    void eglHandleGPUSwitchANGLE(EGLDisplay dpy);
+    void eglForceGPUSwitchANGLE(EGLDisplay dpy, EGLint gpuIDHigh,
+        EGLint gpuIDLow);
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_POWER_PREFERENCE_ANGLE  0x3482
+
+    Accepted as an attribute value in the <*attrib_list> argument to
+    eglCreateContext:
+
+        EGL_LOW_POWER_ANGLE         0x0001
+        EGL_HIGH_POWER_ANGLE        0x0002
+
+Additions to the EGL 1.4 Specification
+
+    Add the following to section 3.7.1 "Creating Rendering Contexts":
+
+    EGL_POWER_PREFERENCE_ANGLE indicates whether the context should be
+    created on the integrated (low-power) or discrete (high-power) GPU
+    on dual-GPU systems. EGL_POWER_PREFERENCE_ANGLE is only a legal
+    context creation attribute when the EGL_ANGLE_power_preference
+    extension is advertised. The valid values for this attribute are
+    EGL_LOW_POWER_ANGLE and EGL_HIGH_POWER_ANGLE. If this extension is
+    advertised and this context creation attribute is not specified,
+    the default value is EGL_LOW_POWER_ANGLE.
+
+    The containing application must set the
+    NSSupportsAutomaticGraphicsSwitching attribute to true in its
+    Info.plist in order for this extension to operate as advertised.
+
+    eglReleaseHighPowerGPUANGLE, when passed an EGLContext allocated
+    with the EGL_POWER_PREFERENCE_ANGLE context creation attribute set
+    to EGL_HIGH_POWER_ANGLE, will cause that context to release its
+    hold on the high-power GPU.
+
+    eglReacquireHighPowerGPUANGLE, when passed an EGLContext allocated
+    with the EGL_POWER_PREFERENCE_ANGLE context creation attribute set
+    to EGL_HIGH_POWER_ANGLE and which was previously released via
+    eglReleaseHighPowerGPUANGLE, will cause that context to reacquire
+    its hold on the high-power GPU.
+
+    eglReleaseHighPowerGPUANGLE and eglReacquireHighPowerGPUANGLE have
+    no effect on contexts that were allocated with the
+    EGL_LOW_POWER_ANGLE preference, or contexts not allocated with
+    either preference.
+
+    For either eglReleaseHighPowerGPUANGLE or
+    eglReacquireHighPowerGPUANGLE:
+
+    If |dpy| is not a valid display, an EGL_BAD_DISPLAY error is
+    generated.
+
+    if |dpy| is an uninitialized display, an EGL_NOT_INITIALIZED error
+    is generated.
+
+    If |context| is not a valid context, an EGL_BAD_CONTEXT error is
+    generated.
+
+    eglHandleGPUSwitchANGLE should be called in response to a display
+    reconfiguration callback (registered via
+    CGDisplayRegisterReconfigurationCallback) in order to complete
+    transitions between the low-power and high-power GPUs. For calls
+    to this function:
+
+    If |dpy| is not a valid display, an EGL_BAD_DISPLAY error is
+    generated.
+
+    if |dpy| is an uninitialized display, an EGL_NOT_INITIALIZED error
+    is generated.
+
+    eglForceGPUSwitchANGLE should be called with an explicit gpuID to transition
+    between the low-power and high-power GPUs. This should be called if
+    the environment is altered in such a way that eglHandleGPUSwitchANGLE
+    will not work.
+    On the macOS platform, the sandbox policy might prevent eglHandleGPUSwitchANGLE
+    from obtaining the current main active GPU. In these cases, the gpuID can
+    be obtained another way (e.g in other process) and communicated via
+    eglForceGPUSwitchANGLE to the OpenGL display.
+    If gpuID does not match any available GPUs in the system,
+    nothing happens.
+
+    For calls to this function:
+
+    If |dpy| is not a valid display, an EGL_BAD_DISPLAY error is
+    generated.
+
+    if |dpy| is an uninitialized display, an EGL_NOT_INITIALIZED error
+    is generated.
+
+    |gpuIDHigh| the high 32 bits of the IOKit registry ID of the GPU to
+    use for all contexts in the display.
+
+    |gpuIDLow| the low 32 bits of the IOKit registry ID of the GPU to
+    use for all contexts in the display.
+
+Issues
+
+    None yet.
+
+Revision History
+
+    Rev.    Date         Author     Changes
+    ----  -------------  ---------  ----------------------------------------
+      1   Apr 16, 2019   kbr        Initial version
+      2   June 5, 2020   kbr        Add eglReleaseHighPowerGPUANGLE,
+                                      eglReacquireHighPowerGPUANGLE, and
+                                      eglHandleGPUSwitchANGLE
+      3   March 10, 2022 kkinnunen  Add eglForceGPUSwitchANGLE

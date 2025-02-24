@@ -1,0 +1,28 @@
+name: doxygen
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    name: Build HTML documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fetching sources
+      uses: actions/checkout@v3
+
+    - name: Installing build dependencies
+      run: |
+        sudo apt update
+        sudo apt install doxygen gcc git
+
+    - name: Creating build directory
+      run: mkdir build
+
+    - name: Building HTML documentation with Doxygen
+      run: |
+        cmake -S . -B build -DBENCHMARK_ENABLE_TESTING:BOOL=OFF -DBENCHMARK_ENABLE_DOXYGEN:BOOL=ON -DBENCHMARK_INSTALL_DOCS:BOOL=ON
+        cmake --build build --target benchmark_doxygen

@@ -1,0 +1,21 @@
+boto v2.17.0
+============
+
+:date: 2013/11/14
+
+This release adds support for the new AWS CloudTrail service, support for
+Amazon Redshift's new features related encryption, audit logging, data load
+from external hosts, WLM configuration, database distribution styles and
+functions, as well as cross region snapshot copying.
+
+
+Features
+--------
+
+* Add support for AWS CloudTrail (:sha:`53ba0c9`)
+* Add support for new Amazon Redshift features (:sha:`d94b48c`)
+
+Bugfixes
+--------
+
+* Add missing argument for Google Storage resumable uploads. (:sha:`b777b62`)

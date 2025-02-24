@@ -1,0 +1,69 @@
+'\" t
+.\"     Title: git-mark-merge-base
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/26/2022
+.\"    Manual: Chromium depot_tools Manual
+.\"    Source: depot_tools 59e95c91
+.\"  Language: English
+.\"
+.TH "GIT\-MARK\-MERGE\-BA" "1" "08/26/2022" "depot_tools 59e95c91" "Chromium depot_tools Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+git-mark-merge-base \- Manually interact with depot_tools\*(Aq merge\-base markers\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit mark\-merge\-base\fR
+\fIgit mark\-merge\-base\fR <commit hash>
+\fIgit mark\-merge\-base\fR [\-d | \-\-delete]
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Inspect, set or delete the current merge\-base marker for the current branch\&. This should not be needed, but is useful if things get into a snarled state\&. Pass no arguments to view the current value\&. If you provide <commit hash>, then \fBgit mark\-merge\-base\fR will attempt to set that as the merge\-base value\&.
+.sp
+It is invalid to pick a commit which is not an ancestor of the current branch\&.
+.sp
+See \fBgit-rebase-update\fR(1)\*(Aqs description of the \fBbranch\&.<name>\&.base\fR configuration variable for more info on what the merge base markers are for\&.
+.SH "OPTIONS"
+.PP
+\-d, \-\-delete
+.RS 4
+Delete the merge\-base marker for the current branch\&.
+.RE
+.PP
+<commit hash>
+.RS 4
+The new value to set for the current branch\(cqs merge\-base marker\&.
+.RE
+.SH "SEE ALSO"
+.sp
+\fBgit-rebase-update\fR(1), \fBgit-reparent-branch\fR(1), \fBgit-rename-branch\fR(1), \fBgit-upstream-diff\fR(1)
+.SH "CHROMIUM DEPOT_TOOLS"
+.sp
+Part of the chromium \fBdepot_tools\fR(7) suite\&. These tools are meant to assist with the development of chromium and related projects\&. Download the tools by checking out the \m[blue]\fBgit repository\fR\m[]\&\s-2\u[1]\d\s+2\&.
+.SH "NOTES"
+.IP " 1." 4
+git repository
+.RS 4
+\%https://chromium.googlesource.com/chromium/tools/depot_tools.git
+.RE

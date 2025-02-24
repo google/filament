@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import codecs
+import json
+import sys
+import os
+
+tracing_path = os.path.abspath(os.path.join(
+  os.path.dirname(os.path.realpath(__file__)), '..'))
+sys.path.append(tracing_path)
+from tracing.value import histogram_set
+from tracing.value.diagnostics import generic_set
+from tracing.value.diagnostics import reserved_infos
+from tracing_build import render_histograms_viewer
+from tracing_build import vulcanize_histograms_viewer
+
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Add a label to Histograms in an HTML or JSON file.',
+      add_help=False)
+  parser.add_argument('path', metavar='PATH',
+                      help='HTML file path (output).')
+  parser.add_argument('label', metavar='LABEL',
+                      help='The label to add to Histograms.')
+  args = parser.parse_args()
+
+  histograms = []
+
+  if args.path.endswith('.html'):
+    histograms.extend(render_histograms_viewer.ReadExistingResults(
+        open(args.path, 'r').read()))
+  elif args.path.endswith('.json'):
+    histograms.extend(json.load(open(json_path, 'r')))
+  else:
+    raise Error('Use either .html or .json extension.')
+  histograms = histogram_set.HistogramSet(histograms)
+  histograms.AddSharedDiagnosticToAllHistograms(
+      reserved_infos.LABELS.name,
+      generic_set.GenericSet([args.label]))
+
+  with codecs.open(args.path,
+                   mode='r+', encoding='utf-8') as output_stream:
+    if args.path.endswith('.html'):
+      vulcanize_histograms_viewer.VulcanizeAndRenderHistogramsViewer(
+          histograms, output_stream)
+    else:
+      json.dump(histograms.AsDicts(), output_stream)
+
+
+if __name__ == '__main__':
+  sys.exit(main())

@@ -1,0 +1,89 @@
+===========
+boto v2.2.0
+===========
+
+The 2.2.0 release of boto is now available on `PyPI`_.
+
+.. _`PyPI`: http://pypi.python.org/pypi/boto
+
+You can view a list of issues that have been closed in this release at
+https://github.com/boto/boto/issues?milestone=5&state=closed.
+
+You can get a comprehensive list of all commits made between the 2.0 release
+and the 2.1.0 release at
+https://github.com/boto/boto/compare/fa0d6a1e49c8468abbe2c99cdc9f5fd8fd19f8f8...26c8eb108873bf8ce1b9d96d642eea2beef78c77.
+
+Some highlights of this release:
+
+* Support for Amazon DynamoDB service.
+* Support for S3 Object Lifecycle (Expiration).
+* Allow anonymous request for S3.
+* Support for creating Load Balancers in VPC.
+* Support for multi-dimension metrics in CloudWatch.
+* Support for Elastic Network Interfaces in EC2.
+* Support for Amazon S3 Multi-Delete capability.
+* Support for new AMIversion and overriding of parameters in EMR.
+* Support for SendMessageBatch request in SQS.
+* Support for DescribeInstanceStatus request in EC2.
+* Many, many improvements and additions to API documentation and Tutorials.
+  Special thanks to Greg Taylor for all of the Sphinx cleanups and new docs.
+
+There were 336 commits in this release from 40 different authors.  The authors
+are listed below, in no particular order:
+
+* Garrett Holmstrom
+* mLewisLogic
+* Warren Turkal
+* Nathan Binkert
+* Scott Moser
+* Jeremy Edberg
+* najeira
+* Marc Cohen
+* Jim Browne
+* Mitch Garnaat
+* David Ormsbee
+* Blake Maltby
+* Thomas O'Dowd
+* Victor Trac
+* David Marin
+* Greg Taylor
+* rdodev
+* Jonathan Sabo
+* rdoci
+* Mike Schwartz
+* l33twolf
+* Keith Fitzgerald
+* Oleksandr Gituliar
+* Jason Allum
+* Ilya Volodarsky
+* Rajesh
+* Felipe Reyes
+* Andy Grimm
+* Seth Davis
+* Dave King
+* andy
+* Chris Moyer
+* ruben
+* Spike Gronim
+* Daniel Norberg
+* Justin Riley
+* Milan Cermak timtebeek
+* unknown
+* Yotam Gingold
+* Brian Oldfield
+
+We processed 21 pull requests for this release from 40 different contributors.
+Here are the github user id's for all of the pull request authors:
+
+* milancermak
+* jsabo
+* gituliar
+* rdodev
+* marccohen
+* tpodowd
+* trun
+* jallum
+* binkert
+* ormsbee
+* timtebeek
+

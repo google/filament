@@ -1,0 +1,33 @@
+#!/usr/bin/env vpython3
+# Copyright 2023 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Runs the Perf Issue Service Python unit test suite."""
+
+import os
+import sys
+
+_CATAPULT_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+_PERF_ISSUE_SERVICE_PATH = os.path.join(_CATAPULT_PATH, 'perf_issue_service')
+
+def _AddToPathIfNeeded(path):
+  if path not in sys.path:
+    sys.path.insert(0, path)
+
+
+if __name__ == '__main__':
+  _AddToPathIfNeeded(_CATAPULT_PATH)
+  _AddToPathIfNeeded(_PERF_ISSUE_SERVICE_PATH)
+
+  from catapult_build import run_with_typ
+
+  return_code = run_with_typ.Run(
+    _PERF_ISSUE_SERVICE_PATH
+    )
+  
+  # root = 'tests'
+  # return_code = run_with_typ.Run(
+  #   os.path.join(_PERF_ISSUE_SERVICE_PATH, root)
+  #   )
+  sys.exit(return_code)

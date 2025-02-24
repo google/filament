@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2015 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<link rel="import" href="/tracing/base/time_display_modes.html">
+<link rel="import" href="/tracing/value/ui/preferred_display_unit.html">
+
+<script>
+'use strict';
+
+tr.b.unittest.testSuite(function() {
+  test('instantiate', function() {
+    const unit = document.createElement('tr-v-ui-preferred-display-unit');
+    const ms = tr.b.TimeDisplayModes.ms;
+    unit.preferredDisplayUnit = ms;
+    assert.strictEqual(unit.preferredDisplayUnit, ms);
+  });
+});
+</script>

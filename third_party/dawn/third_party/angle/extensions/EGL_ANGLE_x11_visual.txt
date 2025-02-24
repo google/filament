@@ -1,0 +1,106 @@
+Name
+
+    ANGLE_x11_visual
+
+Name Strings
+
+    EGL_ANGLE_x11_visual
+
+Contributors
+
+    Corentin Wallez, Google
+    Shannon Woods, Google
+    Jamie Madill, Google
+    Geoff Lang, Google
+
+Contacts
+
+    Corentin Wallez, Google (cwallez 'at' chromium 'dot' org)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, 2015-11-13
+
+Number
+
+    EGL Extension XXX
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_EXT_client_extensions to query its existence without
+    a display.
+
+    Requires EGL_EXT_platform_base.
+
+    This extension is written against the wording of version 9 of the
+    EGL_EXT_platform_base specification.
+
+    Written based on the wording of the EGL 1.5 Specification
+    (August 7 2014).
+
+Overview
+
+    This extension allows passing the X11 visual ID used by the native
+    EGL surface types at display creation time. This will restrict
+    EGLSurfaces to be created from native types with this visual ID,
+    which may allow the created display to be more compatible and
+    performant.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglGetPlatformDisplayEXT:
+
+        EGL_X11_VISUAL_ID_ANGLE 0x33A3
+
+Additions to the EGL Specification
+
+    Modify section 3.5.1 (Creating On-Screen Rendering Surfaces), p. 34
+
+    Append the following to the errors of CreateWindowSurface:
+
+    "If an X11 visual was specified at display creation time using
+    EGL_ANGLE_X11_VISUAL_ID that is not equal to the ID of the
+    native_window's visual, an EGL_BAD_MATCH error is generated and
+    EGL_NO_SURFACE is returned."
+
+New Behavior
+
+    To request a display created with a X11 visual ID, the value of
+    EGL_ANGLE_X11_VISUAL_ID should be set to a valid X11 visual ID. If
+    present, this ID will be used during display creation to make a
+    display that is more compatible and potentially more performant when
+    used with EGLsurfaces created from native types with this ID. If the
+    visual ID passed isn't a valid visual ID, eglGetPlatformDisplay will
+    return EGL_NO_DISPLAY and generate an EGL_NOT_INITIALIZED error.
+
+Issues
+
+    1) When the hint is present, should EGLsurface creation functions
+       only accept native types with the hint's visual ID?
+
+       RESOLVED: Yes, generate an error when the visual of the native
+       surface doesn't match. This will avoid having hidden performance
+       or compatibility losses when using this extension.
+
+Revision History
+
+    Version 1, 2015-11-13 (Corentin Wallez)
+      - Initial draft
+
